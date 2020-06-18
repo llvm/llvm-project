@@ -1,6 +1,6 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-// RUN: llvm-objdump -section-headers %t | FileCheck %s --check-prefix=OBJ
+// RUN: llvm-objdump --section-headers %t | FileCheck %s --check-prefix=OBJ
 // RUN: ld.lld %t -o %t.exe
 // RUN: llvm-objdump -s %t.exe | FileCheck %s
 

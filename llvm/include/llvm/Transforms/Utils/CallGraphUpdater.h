@@ -28,7 +28,7 @@ namespace llvm {
 class CallGraphUpdater {
   /// Containers for functions which we did replace or want to delete when
   /// `finalize` is called. This can happen explicitly or as part of the
-  /// destructor. Dead functions in comdat sections are tracked seperatly
+  /// destructor. Dead functions in comdat sections are tracked separately
   /// because a function with discardable linakage in a COMDAT should only
   /// be dropped if the entire COMDAT is dropped, see git ac07703842cf.
   ///{
@@ -49,6 +49,7 @@ class CallGraphUpdater {
   LazyCallGraph::SCC *SCC = nullptr;
   CGSCCAnalysisManager *AM = nullptr;
   CGSCCUpdateResult *UR = nullptr;
+  FunctionAnalysisManager *FAM = nullptr;
   ///}
 
 public:
@@ -68,6 +69,8 @@ public:
     this->SCC = &SCC;
     this->AM = &AM;
     this->UR = &UR;
+    FAM =
+        &AM.getResult<FunctionAnalysisManagerCGSCCProxy>(SCC, LCG).getManager();
   }
   ///}
 

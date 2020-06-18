@@ -522,7 +522,7 @@ ValueObjectSP ABISysV_arc::GetReturnValueObjectImpl(Thread &thread,
   // Integer return type.
   else if (retType.isIntegerTy()) {
     size_t byte_size = retType.getPrimitiveSizeInBits();
-    if (1 != byte_size) // For boolian type.
+    if (1 != byte_size) // For boolean type.
       byte_size /= CHAR_BIT;
 
     auto raw_value = ReadRawValue(reg_ctx, byte_size);

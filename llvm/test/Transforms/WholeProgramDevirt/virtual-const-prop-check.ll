@@ -1,4 +1,12 @@
 ; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
+; Skipping vf0i1 is identical to setting public LTO visibility. We don't devirtualize vf0i1 and all other
+; virtual call targets.
+; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
+; We have two set of call targets {vf0i1, vf1i1} and {vf1i32, vf2i32, vf3i32, vf4i32}.
+; The command below prevents both of them from devirtualization.
+; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1,vf1i32 %s 2>&1 | FileCheck %s --check-prefix=SKIP-ALL
+; Check wildcard
+; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf?i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
@@ -13,6 +21,15 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: remark: <unknown>:0:0: devirtualized vf3i32
 ; CHECK: remark: <unknown>:0:0: devirtualized vf4i32
 ; CHECK-NOT: devirtualized
+
+; SKIP: remark: <unknown>:0:0: virtual-const-prop: devirtualized a call to vf1i32
+; SKIP: remark: <unknown>:0:0: devirtualized vf1i32
+; SKIP: remark: <unknown>:0:0: devirtualized vf2i32
+; SKIP: remark: <unknown>:0:0: devirtualized vf3i32
+; SKIP: remark: <unknown>:0:0: devirtualized vf4i32
+; SKIP-NOT: devirtualized
+
+; SKIP-ALL-NOT: devirtualized
 
 ; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\01\01\00\00\00", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf1i32 to i8*)], [0 x i8] zeroinitializer }, section "vt1sec", !type [[T8:![0-9]+]]
 @vt1 = constant [3 x i8*] [

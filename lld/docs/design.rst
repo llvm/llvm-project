@@ -326,7 +326,7 @@ Testing
 
 The lld project contains a test suite which is being built up as new code is
 added to lld.  All new lld functionality should have a tests added to the test
-suite.  The test suite is `lit <http://llvm.org/cmds/lit.html/>`_ driven.  Each
+suite.  The test suite is `lit <https://llvm.org/cmds/lit.html/>`_ driven.  Each
 test is a text file with comments telling lit how to run the test and check the
 result To facilitate testing, the lld project builds a tool called lld-core.
 This tool reads a YAML file (default from stdin), parses it into one or more

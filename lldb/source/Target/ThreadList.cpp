@@ -715,6 +715,11 @@ void ThreadList::Update(ThreadList &rhs) {
     // to work around the issue
     collection::iterator rhs_pos, rhs_end = rhs.m_threads.end();
     for (rhs_pos = rhs.m_threads.begin(); rhs_pos != rhs_end; ++rhs_pos) {
+      // If this thread has already been destroyed, we don't need to look for
+      // it to destroy it again.
+      if (!(*rhs_pos)->IsValid())
+        continue;
+
       const lldb::tid_t tid = (*rhs_pos)->GetID();
       bool thread_is_alive = false;
       const uint32_t num_threads = m_threads.size();
@@ -726,8 +731,9 @@ void ThreadList::Update(ThreadList &rhs) {
           break;
         }
       }
-      if (!thread_is_alive)
+      if (!thread_is_alive) {
         (*rhs_pos)->DestroyThread();
+      }
     }
   }
 }

@@ -28,4 +28,4 @@ define i32 @get() #0 {
 ; CHECK: ret i32 %V
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

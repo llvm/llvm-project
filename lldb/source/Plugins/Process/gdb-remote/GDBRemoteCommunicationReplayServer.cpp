@@ -131,22 +131,26 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
     GDBRemotePacket entry = m_packet_history.back();
     m_packet_history.pop_back();
 
+    // Decode run-length encoding.
+    const std::string expanded_data =
+        GDBRemoteCommunication::ExpandRLE(entry.packet.data);
+
     // We've handled the handshake implicitly before. Skip the packet and move
     // on.
     if (entry.packet.data == "+")
       continue;
 
     if (entry.type == GDBRemotePacket::ePacketTypeSend) {
-      if (unexpected(entry.packet.data, packet.GetStringRef())) {
+      if (unexpected(expanded_data, packet.GetStringRef())) {
         LLDB_LOG(log,
                  "GDBRemoteCommunicationReplayServer expected packet: '{0}'",
-                 entry.packet.data);
+                 expanded_data);
         LLDB_LOG(log, "GDBRemoteCommunicationReplayServer actual packet: '{0}'",
                  packet.GetStringRef());
 #ifndef NDEBUG
         // This behaves like a regular assert, but prints the expected and
         // received packet before aborting.
-        printf("Reproducer expected packet: '%s'\n", entry.packet.data.c_str());
+        printf("Reproducer expected packet: '%s'\n", expanded_data.c_str());
         printf("Reproducer received packet: '%s'\n",
                packet.GetStringRef().data());
         llvm::report_fatal_error("Encountered unexpected packet during replay");
@@ -155,7 +159,7 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
       }
 
       // Ignore QEnvironment packets as they're handled earlier.
-      if (entry.packet.data.find("QEnvironment") == 1) {
+      if (expanded_data.find("QEnvironment") == 1) {
         assert(m_packet_history.back().type ==
                GDBRemotePacket::ePacketTypeRecv);
         m_packet_history.pop_back();
@@ -280,6 +284,31 @@ thread_result_t GDBRemoteCommunicationReplayServer::AsyncThread(void *arg) {
       }
     }
   }
+
+  return {};
+}
+
+Status GDBRemoteCommunicationReplayServer::Connect(
+    process_gdb_remote::GDBRemoteCommunicationClient &client) {
+  repro::Loader *loader = repro::Reproducer::Instance().GetLoader();
+  if (!loader)
+    return Status("No loader provided.");
+
+  static std::unique_ptr<repro::MultiLoader<repro::GDBRemoteProvider>>
+      multi_loader = repro::MultiLoader<repro::GDBRemoteProvider>::Create(
+          repro::Reproducer::Instance().GetLoader());
+  if (!multi_loader)
+    return Status("No gdb remote provider found.");
+
+  llvm::Optional<std::string> history_file = multi_loader->GetNextFile();
+  if (!history_file)
+    return Status("No gdb remote packet log found.");
+
+  if (auto error = LoadReplayHistory(FileSpec(*history_file)))
+    return Status("Unable to load replay history");
+
+  if (auto error = GDBRemoteCommunication::ConnectLocally(client, *this))
+    return Status("Unable to connect to replay server");
 
   return {};
 }

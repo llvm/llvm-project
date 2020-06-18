@@ -137,7 +137,7 @@ public:
     }
 
     if (m_use_synthetic) {
-      ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue(m_use_synthetic);
+      ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue();
       if (synthetic_sp)
         value_sp = synthetic_sp;
     }

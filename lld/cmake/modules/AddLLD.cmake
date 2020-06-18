@@ -13,7 +13,7 @@ macro(add_lld_library name)
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
         NOT LLVM_DISTRIBUTION_COMPONENTS)
-      set(export_to_lldtargets EXPORT lldTargets)
+      set(export_to_lldtargets EXPORT LLDTargets)
       set_property(GLOBAL PROPERTY LLD_HAS_EXPORTS True)
     endif()
 
@@ -48,7 +48,7 @@ macro(add_lld_tool name)
   if (LLD_BUILD_TOOLS)
     if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
         NOT LLVM_DISTRIBUTION_COMPONENTS)
-      set(export_to_lldtargets EXPORT lldTargets)
+      set(export_to_lldtargets EXPORT LLDTargets)
       set_property(GLOBAL PROPERTY LLD_HAS_EXPORTS True)
     endif()
 

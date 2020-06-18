@@ -39,8 +39,12 @@
   !9 = !DILocalVariable(name: "q9", scope: !5, file: !4, line: 1, type: !7)
   !20 = !DILocation(line: 0, scope: !5)
 name:            f
+tracksRegLiveness: true
 body:             |
   bb.2.for.body:
+    liveins: $r2
+
+    t2CMPri killed renamable $r2, 5, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.2.for.body, 0, killed $cpsr, debug-location !20
     DBG_VALUE $q8, $noreg, !8, !DIExpression(DW_OP_LLVM_fragment, 0, 64), debug-location !20
     DBG_VALUE $q9, $noreg, !9, !DIExpression(DW_OP_LLVM_fragment, 0, 56), debug-location !20

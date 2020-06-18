@@ -181,7 +181,7 @@ void Mangled::SetValue(ConstString name) {
 // Local helpers for different demangling implementations.
 static char *GetMSVCDemangledStr(const char *M) {
   char *demangled_cstr = llvm::microsoftDemangle(
-      M, nullptr, nullptr, nullptr,
+      M, nullptr, nullptr, nullptr, nullptr,
       llvm::MSDemangleFlags(llvm::MSDF_NoAccessSpecifier |
                             llvm::MSDF_NoCallingConvention |
                             llvm::MSDF_NoMemberType));
@@ -413,8 +413,6 @@ lldb::LanguageType Mangled::GuessLanguage() const {
     const char *mangled_name = mangled.GetCString();
     if (CPlusPlusLanguage::IsCPPMangledName(mangled_name))
       return lldb::eLanguageTypeC_plus_plus;
-    else if (ObjCLanguage::IsPossibleObjCMethodName(mangled_name))
-      return lldb::eLanguageTypeObjC;
   } else {
     // ObjC names aren't really mangled, so they won't necessarily be in the
     // mangled name slot.

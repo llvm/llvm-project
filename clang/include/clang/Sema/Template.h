@@ -95,6 +95,16 @@ class VarDecl;
       return TemplateArgumentLists.size();
     }
 
+    /// Determine how many of the \p OldDepth outermost template parameter
+    /// lists would be removed by substituting these arguments.
+    unsigned getNewDepth(unsigned OldDepth) const {
+      if (OldDepth < NumRetainedOuterLevels)
+        return OldDepth;
+      if (OldDepth < getNumLevels())
+        return NumRetainedOuterLevels;
+      return OldDepth - TemplateArgumentLists.size();
+    }
+
     /// Retrieve the template argument at a given depth and index.
     const TemplateArgument &operator()(unsigned Depth, unsigned Index) const {
       assert(NumRetainedOuterLevels <= Depth && Depth < getNumLevels());
@@ -412,6 +422,9 @@ class VarDecl;
     NamedDecl *
     getPartiallySubstitutedPack(const TemplateArgument **ExplicitArgs = nullptr,
                                 unsigned *NumExplicitArgs = nullptr) const;
+
+    /// Determine whether D is a pack expansion created in this scope.
+    bool isLocalPackExpansion(const Decl *D);
   };
 
   class TemplateDeclInstantiator

@@ -20,6 +20,7 @@ class TestDeletedExecutable(TestBase):
         triple=no_match('aarch64-.*-android'))
         # determining the architecture of the process fails
     @expectedFailureNetBSD
+    @skipIfReproducer # File synchronization is not supported during replay.
     def test(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

@@ -43,6 +43,8 @@ private:
   template <typename T> struct LexOrCompleteWord;
 
   QueryRef parseSetBool(bool QuerySession::*Var);
+  QueryRef
+  parseSetTraversalKind(ast_type_traits::TraversalKind QuerySession::*Var);
   template <typename QueryType> QueryRef parseSetOutputKind();
   QueryRef completeMatcherExpression();
 

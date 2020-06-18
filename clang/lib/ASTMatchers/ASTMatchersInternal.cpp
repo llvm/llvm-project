@@ -42,11 +42,7 @@ namespace ast_matchers {
 
 AST_MATCHER_P(ObjCMessageExpr, hasAnySelectorMatcher, std::vector<std::string>,
               Matches) {
-  std::string SelString = Node.getSelector().getAsString();
-  for (const std::string &S : Matches)
-    if (S == SelString)
-      return true;
-  return false;
+  return llvm::is_contained(Matches, Node.getSelector().getAsString());
 }
 
 namespace internal {
@@ -71,6 +67,30 @@ bool OptionallyVariadicOperator(const DynTypedNode &DynNode,
                                 ASTMatchFinder *Finder,
                                 BoundNodesTreeBuilder *Builder,
                                 ArrayRef<DynTypedMatcher> InnerMatchers);
+
+bool matchesAnyBase(const CXXRecordDecl &Node,
+                    const Matcher<CXXBaseSpecifier> &BaseSpecMatcher,
+                    ASTMatchFinder *Finder, BoundNodesTreeBuilder *Builder) {
+  if (!Node.hasDefinition())
+    return false;
+
+  CXXBasePaths Paths;
+  Paths.setOrigin(&Node);
+
+  const auto basePredicate =
+      [Finder, Builder, &BaseSpecMatcher](const CXXBaseSpecifier *BaseSpec,
+                                          CXXBasePath &IgnoredParam) {
+        BoundNodesTreeBuilder Result(*Builder);
+        if (BaseSpecMatcher.matches(*BaseSpec, Finder, Builder)) {
+          *Builder = std::move(Result);
+          return true;
+        }
+        return false;
+      };
+
+  return Node.lookupInBases(basePredicate, Paths,
+                            /*LookupInDependent =*/true);
+}
 
 void BoundNodesTreeBuilder::visitMatches(Visitor *ResultVisitor) {
   if (Bindings.empty())
@@ -140,6 +160,31 @@ public:
   }
 };
 
+/// A matcher that specifies a particular \c TraversalKind.
+///
+/// The kind provided to the constructor overrides any kind that may be
+/// specified by the `InnerMatcher`.
+class DynTraversalMatcherImpl : public DynMatcherInterface {
+public:
+  explicit DynTraversalMatcherImpl(
+      clang::TraversalKind TK,
+      IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher)
+      : TK(TK), InnerMatcher(std::move(InnerMatcher)) {}
+
+  bool dynMatches(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
+                  BoundNodesTreeBuilder *Builder) const override {
+    return this->InnerMatcher->dynMatches(DynNode, Finder, Builder);
+  }
+
+  llvm::Optional<clang::TraversalKind> TraversalKind() const override {
+    return TK;
+  }
+
+private:
+  clang::TraversalKind TK;
+  IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher;
+};
+
 } // namespace
 
 static llvm::ManagedStatic<TrueMatcherImpl> TrueMatcherInstance;
@@ -205,6 +250,14 @@ DynTypedMatcher::constructRestrictedWrapper(const DynTypedMatcher &InnerMatcher,
                                             ASTNodeKind RestrictKind) {
   DynTypedMatcher Copy = InnerMatcher;
   Copy.RestrictKind = RestrictKind;
+  return Copy;
+}
+
+DynTypedMatcher
+DynTypedMatcher::withTraversalKind(ast_type_traits::TraversalKind TK) {
+  auto Copy = *this;
+  Copy.Implementation =
+      new DynTraversalMatcherImpl(TK, std::move(Copy.Implementation));
   return Copy;
 }
 
@@ -312,11 +365,9 @@ bool AllOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
   // allOf leads to one matcher for each alternative in the first
   // matcher combined with each alternative in the second matcher.
   // Thus, we can reuse the same Builder.
-  for (const DynTypedMatcher &InnerMatcher : InnerMatchers) {
-    if (!InnerMatcher.matchesNoKindCheck(DynNode, Finder, Builder))
-      return false;
-  }
-  return true;
+  return llvm::all_of(InnerMatchers, [&](const DynTypedMatcher &InnerMatcher) {
+    return InnerMatcher.matchesNoKindCheck(DynNode, Finder, Builder);
+  });
 }
 
 bool EachOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
@@ -352,27 +403,27 @@ bool OptionallyVariadicOperator(const DynTypedNode &DynNode,
                                 ASTMatchFinder *Finder,
                                 BoundNodesTreeBuilder *Builder,
                                 ArrayRef<DynTypedMatcher> InnerMatchers) {
-  BoundNodesTreeBuilder Result;
-  for (const DynTypedMatcher &InnerMatcher : InnerMatchers) {
-    BoundNodesTreeBuilder BuilderInner(*Builder);
-    if (InnerMatcher.matches(DynNode, Finder, &BuilderInner))
-      Result.addMatch(BuilderInner);
-  }
-  *Builder = std::move(Result);
+  if (InnerMatchers.size() != 1)
+    return false;
+
+  BoundNodesTreeBuilder Result(*Builder);
+  if (InnerMatchers[0].matches(DynNode, Finder, &Result))
+    *Builder = std::move(Result);
   return true;
 }
 
 inline static
 std::vector<std::string> vectorFromRefs(ArrayRef<const StringRef *> NameRefs) {
   std::vector<std::string> Names;
+  Names.reserve(NameRefs.size());
   for (auto *Name : NameRefs)
     Names.emplace_back(*Name);
   return Names;
 }
 
 Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs) {
-  std::vector<std::string> Names = vectorFromRefs(NameRefs);
-  return internal::Matcher<NamedDecl>(new internal::HasNameMatcher(Names));
+  return internal::Matcher<NamedDecl>(
+      new internal::HasNameMatcher(vectorFromRefs(NameRefs)));
 }
 
 Matcher<ObjCMessageExpr> hasAnySelectorFunc(
@@ -380,10 +431,18 @@ Matcher<ObjCMessageExpr> hasAnySelectorFunc(
   return hasAnySelectorMatcher(vectorFromRefs(NameRefs));
 }
 
+HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs) {
+  return HasOpNameMatcher(vectorFromRefs(NameRefs));
+}
+
+HasOverloadOpNameMatcher
+hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs) {
+  return HasOverloadOpNameMatcher(vectorFromRefs(NameRefs));
+}
+
 HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
-    : UseUnqualifiedMatch(std::all_of(
-          N.begin(), N.end(),
-          [](StringRef Name) { return Name.find("::") == Name.npos; })),
+    : UseUnqualifiedMatch(llvm::all_of(
+          N, [](StringRef Name) { return Name.find("::") == Name.npos; })),
       Names(std::move(N)) {
 #ifndef NDEBUG
   for (StringRef Name : Names)
@@ -441,6 +500,7 @@ namespace {
 class PatternSet {
 public:
   PatternSet(ArrayRef<std::string> Names) {
+    Patterns.reserve(Names.size());
     for (StringRef Name : Names)
       Patterns.push_back({Name, Name.startswith("::")});
   }
@@ -465,10 +525,10 @@ public:
   /// A match will be a pattern that was fully consumed, that also matches the
   /// 'fully qualified' requirement.
   bool foundMatch(bool AllowFullyQualified) const {
-    for (auto& P: Patterns)
-      if (P.P.empty() && (AllowFullyQualified || !P.IsFullyQualified))
-        return true;
-    return false;
+    return llvm::any_of(Patterns, [&](const Pattern &Pattern) {
+      return Pattern.P.empty() &&
+             (AllowFullyQualified || !Pattern.IsFullyQualified);
+    });
   }
 
 private:
@@ -514,7 +574,13 @@ bool HasNameMatcher::matchesNodeFullFast(const NamedDecl &Node) const {
   if (Ctx->isFunctionOrMethod())
     return Patterns.foundMatch(/*AllowFullyQualified=*/false);
 
-  for (; Ctx && isa<NamedDecl>(Ctx); Ctx = Ctx->getParent()) {
+  for (; Ctx; Ctx = Ctx->getParent()) {
+    // Linkage Spec can just be ignored
+    // FIXME: Any other DeclContext kinds that can be safely disregarded
+    if (isa<LinkageSpecDecl>(Ctx))
+      continue;
+    if (!isa<NamedDecl>(Ctx))
+      break;
     if (Patterns.foundMatch(/*AllowFullyQualified=*/false))
       return true;
 
@@ -795,6 +861,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, IntegerLiteral>
     integerLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, FloatingLiteral> floatLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ImaginaryLiteral> imaginaryLiteral;
+const internal::VariadicDynCastAllOfMatcher<Stmt, FixedPointLiteral>
+    fixedPointLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, UserDefinedLiteral>
     userDefinedLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundLiteralExpr>
@@ -848,12 +916,18 @@ const internal::VariadicOperatorMatcherFunc<
 const internal::VariadicOperatorMatcherFunc<
     2, std::numeric_limits<unsigned>::max()>
     allOf = {internal::DynTypedMatcher::VO_AllOf};
-const internal::VariadicOperatorMatcherFunc<
-    1, std::numeric_limits<unsigned>::max()>
-    optionally = {internal::DynTypedMatcher::VO_Optionally};
+const internal::VariadicOperatorMatcherFunc<1, 1> optionally = {
+    internal::DynTypedMatcher::VO_Optionally};
 const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
                                  internal::hasAnyNameFunc>
     hasAnyName = {};
+
+const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
+                                 internal::hasAnyOperatorNameFunc>
+    hasAnyOperatorName = {};
+const internal::VariadicFunction<internal::HasOverloadOpNameMatcher, StringRef,
+                                 internal::hasAnyOverloadedOperatorNameFunc>
+    hasAnyOverloadedOperatorName = {};
 const internal::VariadicFunction<internal::Matcher<ObjCMessageExpr>, StringRef,
                                  internal::hasAnySelectorFunc>
     hasAnySelector = {};

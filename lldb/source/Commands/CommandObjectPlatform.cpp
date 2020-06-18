@@ -133,7 +133,8 @@ public:
   uint32_t m_permissions;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(OptionPermissions);
+  OptionPermissions(const OptionPermissions &) = delete;
+  const OptionPermissions &operator=(const OptionPermissions &) = delete;
 };
 
 // "platform select <platform-name>"
@@ -421,7 +422,6 @@ protected:
     return &m_options;
   }
 
-protected:
   OptionGroupOptions m_options;
   OptionGroupFile m_option_working_dir;
 };
@@ -758,7 +758,9 @@ public:
 
 private:
   // For CommandObjectPlatform only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatformFile);
+  CommandObjectPlatformFile(const CommandObjectPlatformFile &) = delete;
+  const CommandObjectPlatformFile &
+  operator=(const CommandObjectPlatformFile &) = delete;
 };
 
 // "platform get-file remote-file-path host-file-path"
@@ -1020,7 +1022,6 @@ protected:
     return result.Succeeded();
   }
 
-protected:
   ProcessLaunchCommandOptions m_options;
 };
 
@@ -1128,7 +1129,7 @@ protected:
               ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                    m_options.verbose);
               for (uint32_t i = 0; i < matches; ++i) {
-                proc_infos.GetProcessInfoAtIndex(i).DumpAsTableRow(
+                proc_infos[i].DumpAsTableRow(
                     ostrm, platform_sp->GetUserIDResolver(),
                     m_options.show_args, m_options.verbose);
               }
@@ -1462,12 +1463,12 @@ public:
         match_info.SetNameMatchType(NameMatch::StartsWith);
       }
       platform_sp->FindProcesses(match_info, process_infos);
-      const uint32_t num_matches = process_infos.GetSize();
+      const uint32_t num_matches = process_infos.size();
       if (num_matches == 0)
         return;
 
       for (uint32_t i = 0; i < num_matches; ++i) {
-        request.AddCompletion(process_infos.GetProcessNameAtIndex(i));
+        request.AddCompletion(process_infos[i].GetNameAsStringRef());
       }
       return;
     }
@@ -1541,7 +1542,9 @@ public:
 
 private:
   // For CommandObjectPlatform only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatformProcess);
+  CommandObjectPlatformProcess(const CommandObjectPlatformProcess &) = delete;
+  const CommandObjectPlatformProcess &
+  operator=(const CommandObjectPlatformProcess &) = delete;
 };
 
 // "platform shell"
@@ -1567,6 +1570,9 @@ public:
       const char short_option = (char)GetDefinitions()[option_idx].short_option;
 
       switch (short_option) {
+      case 'h':
+        m_use_host_platform = true;
+        break;
       case 't':
         uint32_t timeout_sec;
         if (option_arg.getAsInteger(10, timeout_sec))
@@ -1574,7 +1580,7 @@ public:
               "could not convert \"%s\" to a numeric value.",
               option_arg.str().c_str());
         else
-          timeout = std::chrono::seconds(timeout_sec);
+          m_timeout = std::chrono::seconds(timeout_sec);
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -1583,9 +1589,13 @@ public:
       return error;
     }
 
-    void OptionParsingStarting(ExecutionContext *execution_context) override {}
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_timeout.reset();
+      m_use_host_platform = false;
+    }
 
-    Timeout<std::micro> timeout = std::chrono::seconds(10);
+    Timeout<std::micro> m_timeout = std::chrono::seconds(10);
+    bool m_use_host_platform;
   };
 
   CommandObjectPlatformShell(CommandInterpreter &interpreter)
@@ -1609,6 +1619,7 @@ public:
       return true;
     }
 
+    const bool is_alias = !raw_command_line.contains("platform");
     OptionsWithRaw args(raw_command_line);
     const char *expr = args.GetRawPart().c_str();
 
@@ -1616,8 +1627,16 @@ public:
       if (!ParseOptions(args.GetArgs(), result))
         return false;
 
+    if (args.GetRawPart().empty()) {
+      result.GetOutputStream().Printf("%s <shell-command>\n",
+                                      is_alias ? "shell" : "platform shell");
+      return false;
+    }
+
     PlatformSP platform_sp(
-        GetDebugger().GetPlatformList().GetSelectedPlatform());
+        m_options.m_use_host_platform
+            ? Platform::GetHostPlatform()
+            : GetDebugger().GetPlatformList().GetSelectedPlatform());
     Status error;
     if (platform_sp) {
       FileSpec working_dir{};
@@ -1625,7 +1644,7 @@ public:
       int status = -1;
       int signo = -1;
       error = (platform_sp->RunShellCommand(expr, working_dir, &status, &signo,
-                                            &output, m_options.timeout));
+                                            &output, m_options.m_timeout));
       if (!output.empty())
         result.GetOutputStream().PutCString(output);
       if (status > 0) {

@@ -11,6 +11,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "gtest/gtest.h"
+#include <string>
 
 namespace llvm {
 namespace {
@@ -84,6 +85,166 @@ TEST(VPInstructionTest, moveAfter) {
   CHECK_ITERATOR(VPBB1, I2, I1);
   CHECK_ITERATOR(VPBB2, I4, I3, I5);
   EXPECT_EQ(I3->getParent(), I4->getParent());
+}
+
+TEST(VPBasicBlockTest, getPlan) {
+  {
+    VPBasicBlock *VPBB1 = new VPBasicBlock();
+    VPBasicBlock *VPBB2 = new VPBasicBlock();
+    VPBasicBlock *VPBB3 = new VPBasicBlock();
+    VPBasicBlock *VPBB4 = new VPBasicBlock();
+
+    //     VPBB1
+    //     /   \
+    // VPBB2  VPBB3
+    //    \    /
+    //    VPBB4
+    VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+    VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+    VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+    VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+    VPlan Plan;
+    Plan.setEntry(VPBB1);
+
+    EXPECT_EQ(&Plan, VPBB1->getPlan());
+    EXPECT_EQ(&Plan, VPBB2->getPlan());
+    EXPECT_EQ(&Plan, VPBB3->getPlan());
+    EXPECT_EQ(&Plan, VPBB4->getPlan());
+  }
+
+  {
+    // Region block is entry into VPlan.
+    VPBasicBlock *R1BB1 = new VPBasicBlock();
+    VPBasicBlock *R1BB2 = new VPBasicBlock();
+    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB2, "R1");
+    VPBlockUtils::connectBlocks(R1BB1, R1BB2);
+
+    VPlan Plan;
+    Plan.setEntry(R1);
+    EXPECT_EQ(&Plan, R1->getPlan());
+    EXPECT_EQ(&Plan, R1BB1->getPlan());
+    EXPECT_EQ(&Plan, R1BB2->getPlan());
+  }
+
+  {
+    // VPBasicBlock is the entry into the VPlan, followed by a region.
+    VPBasicBlock *R1BB1 = new VPBasicBlock();
+    VPBasicBlock *R1BB2 = new VPBasicBlock();
+    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB2, "R1");
+    VPBlockUtils::connectBlocks(R1BB1, R1BB2);
+
+    VPBasicBlock *VPBB1 = new VPBasicBlock();
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+
+    VPlan Plan;
+    Plan.setEntry(VPBB1);
+    EXPECT_EQ(&Plan, VPBB1->getPlan());
+    EXPECT_EQ(&Plan, R1->getPlan());
+    EXPECT_EQ(&Plan, R1BB1->getPlan());
+    EXPECT_EQ(&Plan, R1BB2->getPlan());
+  }
+
+  {
+    VPBasicBlock *R1BB1 = new VPBasicBlock();
+    VPBasicBlock *R1BB2 = new VPBasicBlock();
+    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB2, "R1");
+    VPBlockUtils::connectBlocks(R1BB1, R1BB2);
+
+    VPBasicBlock *R2BB1 = new VPBasicBlock();
+    VPBasicBlock *R2BB2 = new VPBasicBlock();
+    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB2, "R2");
+    VPBlockUtils::connectBlocks(R2BB1, R2BB2);
+
+    VPBasicBlock *VPBB1 = new VPBasicBlock();
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+    VPBlockUtils::connectBlocks(VPBB1, R2);
+
+    VPBasicBlock *VPBB2 = new VPBasicBlock();
+    VPBlockUtils::connectBlocks(R1, VPBB2);
+    VPBlockUtils::connectBlocks(R2, VPBB2);
+
+    VPlan Plan;
+    Plan.setEntry(VPBB1);
+    EXPECT_EQ(&Plan, VPBB1->getPlan());
+    EXPECT_EQ(&Plan, R1->getPlan());
+    EXPECT_EQ(&Plan, R1BB1->getPlan());
+    EXPECT_EQ(&Plan, R1BB2->getPlan());
+    EXPECT_EQ(&Plan, R2->getPlan());
+    EXPECT_EQ(&Plan, R2BB1->getPlan());
+    EXPECT_EQ(&Plan, R2BB2->getPlan());
+    EXPECT_EQ(&Plan, VPBB2->getPlan());
+  }
+}
+
+TEST(VPBasicBlockTest, print) {
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
+  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1});
+  VPInstruction *I3 = new VPInstruction(Instruction::Br, {I1, I2});
+
+  VPBasicBlock *VPBB1 = new VPBasicBlock();
+  VPBB1->appendRecipe(I1);
+  VPBB1->appendRecipe(I2);
+  VPBB1->appendRecipe(I3);
+
+  VPInstruction *I4 = new VPInstruction(Instruction::Mul, {I2, I1});
+  VPInstruction *I5 = new VPInstruction(Instruction::Ret, {I4});
+  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBB2->appendRecipe(I4);
+  VPBB2->appendRecipe(I5);
+
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+
+  // Check printing an instruction without associated VPlan.
+  {
+    std::string I3Dump;
+    raw_string_ostream OS(I3Dump);
+    I3->print(OS);
+    OS.flush();
+    EXPECT_EQ("br <badref> <badref>", I3Dump);
+  }
+
+  VPlan Plan;
+  Plan.setEntry(VPBB1);
+  std::string FullDump;
+  raw_string_ostream(FullDump) << Plan;
+
+  const char *ExpectedStr = R"(digraph VPlan {
+graph [labelloc=t, fontsize=30; label="Vectorization Plan"]
+node [shape=rect, fontname=Courier, fontsize=30]
+edge [fontname=Courier, fontsize=30]
+compound=true
+  N0 [label =
+    ":\n" +
+      "EMIT vp<%0> = add\l" +
+      "EMIT vp<%1> = sub vp<%0>\l" +
+      "EMIT br vp<%0> vp<%1>\l"
+  ]
+  N0 -> N1 [ label=""]
+  N1 [label =
+    ":\n" +
+      "EMIT vp<%2> = mul vp<%1> vp<%0>\l" +
+      "EMIT ret vp<%2>\l"
+  ]
+}
+)";
+  EXPECT_EQ(ExpectedStr, FullDump);
+
+  {
+    std::string I3Dump;
+    raw_string_ostream OS(I3Dump);
+    I3->print(OS);
+    OS.flush();
+    EXPECT_EQ("br vp<%0> vp<%1>", I3Dump);
+  }
+
+  {
+    std::string I4Dump;
+    raw_string_ostream OS(I4Dump);
+    OS << *I4;
+    OS.flush();
+    EXPECT_EQ("vp<%2> = mul vp<%1> vp<%0>", I4Dump);
+  }
 }
 
 } // namespace

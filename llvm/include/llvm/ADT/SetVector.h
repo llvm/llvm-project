@@ -174,7 +174,7 @@ public:
     set_.erase(V);
 
     // FIXME: No need to use the non-const iterator when built with
-    // std:vector.erase(const_iterator) as defined in C++11. This is for
+    // std::vector.erase(const_iterator) as defined in C++11. This is for
     // compatibility with non-standard libstdc++ up to 4.8 (fixed in 4.9).
     auto NI = vector_.begin();
     std::advance(NI, std::distance<iterator>(NI, I));

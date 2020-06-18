@@ -1,6 +1,6 @@
 // RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // CHECK-LABEL: @atomic_compare_exchange_weak
   spv.func @atomic_compare_exchange_weak(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 "None" {
     // CHECK: spv.AtomicCompareExchangeWeak "Workgroup" "Release" "Acquire" %{{.*}}, %{{.*}}, %{{.*}} : !spv.ptr<i32, Workgroup>

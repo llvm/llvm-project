@@ -97,6 +97,8 @@ public:
 
   ~SBPlatform();
 
+  static SBPlatform GetHostPlatform();
+
   explicit operator bool() const;
 
   bool IsValid() const;
@@ -151,6 +153,14 @@ public:
   SBError SetFilePermissions(const char *path, uint32_t file_permissions);
 
   SBUnixSignals GetUnixSignals() const;
+
+  /// Return the environment variables of the remote platform connection
+  /// process.
+  ///
+  /// \return
+  ///     An lldb::SBEnvironment object which is a copy of the platform's
+  ///     environment.
+  SBEnvironment GetEnvironment();
 
 protected:
   friend class SBDebugger;

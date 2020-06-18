@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t
 # RUN: ld.lld -r %t -o %t2
-# RUN: llvm-objdump -s -section=.symtab %t2 | FileCheck %s
+# RUN: llvm-objdump -s --section=.symtab %t2 | FileCheck %s
 
 .text
 .abiversion 2

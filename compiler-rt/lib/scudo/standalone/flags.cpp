@@ -9,7 +9,8 @@
 #include "flags.h"
 #include "common.h"
 #include "flags_parser.h"
-#include "interface.h"
+
+#include "scudo/interface.h"
 
 namespace scudo {
 

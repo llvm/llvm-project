@@ -51,7 +51,8 @@ public:
       lldb::SectionType sect_type =
           llvm::StringSwitch<lldb::SectionType>(name)
               .Case("debug_info", lldb::eSectionTypeDWARFDebugInfo)
-              .Case("debug_abbrev", lldb::eSectionTypeDWARFDebugAbbrev);
+              .Case("debug_abbrev", lldb::eSectionTypeDWARFDebugAbbrev)
+              .Case("debug_str", lldb::eSectionTypeDWARFDebugStr);
       auto &membuf = entry.getValue();
       lldb::addr_t file_vm_addr = 0;
       lldb::addr_t vm_size = 0;
@@ -92,7 +93,7 @@ public:
 
 YAMLModuleTester::YAMLModuleTester(llvm::StringRef yaml_data,
                                    llvm::StringRef triple) {
-  auto sections_map = llvm::DWARFYAML::EmitDebugSections(yaml_data, true);
+  auto sections_map = llvm::DWARFYAML::emitDebugSections(yaml_data, true);
   if (!sections_map)
     return;
   m_sections_map = std::move(*sections_map);

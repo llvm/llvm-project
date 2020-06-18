@@ -9,6 +9,15 @@ endif ()
 
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} CLANG_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
+if(CLANG_BUILT_STANDALONE)
+  # Set HAVE_LIBZ according to recorded LLVM_ENABLE_ZLIB value. This
+  # value is forced to 0 if zlib was not found, so it is fine to use it
+  # instead of HAVE_LIBZ (not recorded).
+  if(LLVM_ENABLE_ZLIB)
+    set(HAVE_LIBZ 1)
+  endif()
+endif()
+
 llvm_canonicalize_cmake_booleans(
   CLANG_BUILD_EXAMPLES
   CLANG_ENABLE_ARCMT
@@ -16,7 +25,7 @@ llvm_canonicalize_cmake_booleans(
   CLANG_SPAWN_CC1
   ENABLE_BACKTRACES
   ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER
-  LLVM_ENABLE_ZLIB
+  HAVE_LIBZ
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_PLUGINS
   LLVM_ENABLE_THREADS)
@@ -26,6 +35,16 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIBS_DIR"
+  "SHLIBDIR"
+  "LLVM_LIT_TOOLS_DIR"
+  "CLANG_BINARY_DIR"
+  "CLANG_SOURCE_DIR"
+  "CLANG_TOOLS_DIR"
   )
 
 configure_lit_site_cfg(
@@ -33,6 +52,13 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIBS_DIR"
+  "CLANG_BINARY_DIR"
+  "SHLIBDIR"
   )
 
 option(CLANG_TEST_USE_VG "Run Clang tests under Valgrind" OFF)
@@ -72,6 +98,7 @@ endif ()
 
 if (CLANG_BUILD_EXAMPLES)
   list(APPEND CLANG_TEST_DEPS
+    Attribute
     AnnotateFunctions
     clang-interpreter
     PrintFunctionNames
@@ -79,15 +106,8 @@ if (CLANG_BUILD_EXAMPLES)
 endif ()
 
 set(CLANG_TEST_PARAMS
-  clang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
   USE_Z3_SOLVER=0
   )
-
-set(ANALYZER_TEST_PARAMS
-  USE_Z3_SOLVER=0)
-
-set(ANALYZER_TEST_PARAMS_Z3
-  USE_Z3_SOLVER=1)
 
 if( NOT CLANG_BUILT_STANDALONE )
   list(APPEND CLANG_TEST_DEPS

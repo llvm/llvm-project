@@ -19,7 +19,7 @@
 namespace llvm {
 
 class StringRef;
-class MCOperand;
+
 class RISCVMCExpr : public MCTargetExpr {
 public:
   enum VariantKind {

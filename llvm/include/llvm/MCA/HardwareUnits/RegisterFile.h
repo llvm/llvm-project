@@ -22,7 +22,6 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
-#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace mca {
@@ -84,7 +83,7 @@ class RegisterFile : public HardwareUnit {
   // the target name).
   //
   // Users can limit the number of physical registers that are available in
-  // regsiter file #0 specifying command line flag `-register-file-size=<uint>`.
+  // register file #0 specifying command line flag `-register-file-size=<uint>`.
   SmallVector<RegisterMappingTracker, 4> RegisterFiles;
 
   // This type is used to propagate information about the owner of a register,

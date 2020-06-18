@@ -32,7 +32,7 @@ bar:
   .quad .text.bar1
 
 ## Don't warn on .eh_frame, .debug*, .zdebug*, or .gcc_except_table
-.section .eh_frame,"a"
+.section .eh_frame,"a",@unwind
   .quad .text.bar1
 
 .section .debug_foo

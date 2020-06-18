@@ -37,11 +37,11 @@ def XABORT_DEF : I<0, Pseudo, (outs), (ins), "# XABORT DEF", []>;
 }
 
 def XEND : I<0x01, MRM_D5, (outs), (ins),
-             "xend", [(int_x86_xend)]>, TB, Requires<[HasRTM]>;
+             "xend", [(int_x86_xend)]>, PS, Requires<[HasRTM]>;
 
 let Defs = [EFLAGS] in
 def XTEST : I<0x01, MRM_D6, (outs), (ins),
-              "xtest", [(set EFLAGS, (X86xtest))]>, TB, Requires<[HasRTM]>;
+              "xtest", [(set EFLAGS, (X86xtest))]>, PS, Requires<[HasRTM]>;
 
 def XABORT : Ii8<0xc6, MRM_F8, (outs), (ins i8imm:$imm),
                  "xabort\t$imm",
@@ -52,8 +52,8 @@ def XABORT : Ii8<0xc6, MRM_F8, (outs), (ins i8imm:$imm),
 let SchedRW = [WriteSystem] in {
 
 let isAsmParserOnly = 1 in {
-def XACQUIRE_PREFIX : I<0xF2, RawFrm, (outs), (ins), "xacquire", []>;
-def XRELEASE_PREFIX : I<0xF3, RawFrm, (outs), (ins), "xrelease", []>;
+def XACQUIRE_PREFIX : I<0xF2, PrefixByte, (outs), (ins), "xacquire", []>;
+def XRELEASE_PREFIX : I<0xF3, PrefixByte, (outs), (ins), "xrelease", []>;
 }
 
 } // SchedRW

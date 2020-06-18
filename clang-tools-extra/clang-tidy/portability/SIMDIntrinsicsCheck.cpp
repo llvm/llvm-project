@@ -9,6 +9,7 @@
 #include "SIMDIntrinsicsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Regex.h"
@@ -42,21 +43,15 @@ static StringRef TrySuggestPPC(StringRef Name) {
   if (!Name.consume_front("vec_"))
     return {};
 
-  static const llvm::StringMap<StringRef> Mapping{
-    // [simd.alg]
-    {"max", "$std::max"},
-    {"min", "$std::min"},
-
-    // [simd.binary]
-    {"add", "operator+ on $simd objects"},
-    {"sub", "operator- on $simd objects"},
-    {"mul", "operator* on $simd objects"},
-  };
-
-  auto It = Mapping.find(Name);
-  if (It != Mapping.end())
-    return It->second;
-  return {};
+  return llvm::StringSwitch<StringRef>(Name)
+      // [simd.alg]
+      .Case("max", "$std::max")
+      .Case("min", "$std::min")
+      // [simd.binary]
+      .Case("add", "operator+ on $simd objects")
+      .Case("sub", "operator- on $simd objects")
+      .Case("mul", "operator* on $simd objects")
+      .Default({});
 }
 
 static StringRef TrySuggestX86(StringRef Name) {
@@ -84,7 +79,7 @@ static StringRef TrySuggestX86(StringRef Name) {
 SIMDIntrinsicsCheck::SIMDIntrinsicsCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), Std(Options.get("Std", "")),
-      Suggest(Options.get("Suggest", 0) != 0) {}
+      Suggest(Options.get("Suggest", false)) {}
 
 void SIMDIntrinsicsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Std", "");
@@ -92,12 +87,10 @@ void SIMDIntrinsicsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void SIMDIntrinsicsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
   // If Std is not specified, infer it from the language options.
   // libcxx implementation backports it to C++11 std::experimental::simd.
   if (Std.empty())
-    Std = getLangOpts().CPlusPlus2a ? "std" : "std::experimental";
+    Std = getLangOpts().CPlusPlus20 ? "std" : "std::experimental";
 
   Finder->addMatcher(callExpr(callee(functionDecl(
                                   matchesName("^::(_mm_|_mm256_|_mm512_|vec_)"),

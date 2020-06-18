@@ -13,6 +13,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Object/MachOUniversal.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -113,6 +115,26 @@ iterator_range<CtorDtorIterator> getDestructors(const Module &M) {
                     CtorDtorIterator(DtorsList, true));
 }
 
+bool StaticInitGVIterator::isStaticInitGlobal(GlobalValue &GV) {
+  if (GV.isDeclaration())
+    return false;
+
+  if (GV.hasName() && (GV.getName() == "llvm.global_ctors" ||
+                       GV.getName() == "llvm.global_dtors"))
+    return true;
+
+  if (ObjFmt == Triple::MachO) {
+    // FIXME: These section checks are too strict: We should match first and
+    // second word split by comma.
+    if (GV.hasSection() &&
+        (GV.getSection().startswith("__DATA,__objc_classlist") ||
+         GV.getSection().startswith("__DATA,__objc_selrefs")))
+      return true;
+  }
+
+  return false;
+}
+
 void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
   if (CtorDtors.empty())
     return;
@@ -198,6 +220,30 @@ Error LocalCXXRuntimeOverrides::enable(JITDylib &JD,
   return JD.define(absoluteSymbols(std::move(RuntimeInterposes)));
 }
 
+void ItaniumCXAAtExitSupport::registerAtExit(void (*F)(void *), void *Ctx,
+                                             void *DSOHandle) {
+  std::lock_guard<std::mutex> Lock(AtExitsMutex);
+  AtExitRecords[DSOHandle].push_back({F, Ctx});
+}
+
+void ItaniumCXAAtExitSupport::runAtExits(void *DSOHandle) {
+  std::vector<AtExitRecord> AtExitsToRun;
+
+  {
+    std::lock_guard<std::mutex> Lock(AtExitsMutex);
+    auto I = AtExitRecords.find(DSOHandle);
+    if (I != AtExitRecords.end()) {
+      AtExitsToRun = std::move(I->second);
+      AtExitRecords.erase(I);
+    }
+  }
+
+  while (!AtExitsToRun.empty()) {
+    AtExitsToRun.back().F(AtExitsToRun.back().Ctx);
+    AtExitsToRun.pop_back();
+  }
+}
+
 DynamicLibrarySearchGenerator::DynamicLibrarySearchGenerator(
     sys::DynamicLibrary Dylib, char GlobalPrefix, SymbolPredicate Allow)
     : Dylib(std::move(Dylib)), Allow(std::move(Allow)),
@@ -259,6 +305,51 @@ StaticLibraryDefinitionGenerator::Load(ObjectLayer &L, const char *FileName) {
 }
 
 Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
+StaticLibraryDefinitionGenerator::Load(ObjectLayer &L, const char *FileName,
+                                       const Triple &TT) {
+  auto B = object::createBinary(FileName);
+  if (!B)
+    return B.takeError();
+
+  // If this is a regular archive then create an instance from it.
+  if (isa<object::Archive>(B->getBinary()))
+    return Create(L, std::move(B->takeBinary().second));
+
+  // If this is a universal binary then search for a slice matching the given
+  // Triple.
+  if (auto *UB = cast<object::MachOUniversalBinary>(B->getBinary())) {
+    for (const auto &Obj : UB->objects()) {
+      auto ObjTT = Obj.getTriple();
+      if (ObjTT.getArch() == TT.getArch() &&
+          ObjTT.getSubArch() == TT.getSubArch() &&
+          ObjTT.getVendor() == TT.getVendor()) {
+        // We found a match. Create an instance from a buffer covering this
+        // slice.
+        auto SliceBuffer = MemoryBuffer::getFileSlice(FileName, Obj.getSize(),
+                                                      Obj.getOffset());
+        if (!SliceBuffer)
+          return make_error<StringError>(
+              Twine("Could not create buffer for ") + TT.str() + " slice of " +
+                  FileName + ": [ " + formatv("{0:x}", Obj.getOffset()) +
+                  " .. " + formatv("{0:x}", Obj.getOffset() + Obj.getSize()) +
+                  ": " + SliceBuffer.getError().message(),
+              SliceBuffer.getError());
+        return Create(L, std::move(*SliceBuffer));
+      }
+    }
+
+    return make_error<StringError>(Twine("Universal binary ") + FileName +
+                                       " does not contain a slice for " +
+                                       TT.str(),
+                                   inconvertibleErrorCode());
+  }
+
+  return make_error<StringError>(Twine("Unrecognized file type for ") +
+                                     FileName,
+                                 inconvertibleErrorCode());
+}
+
+Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
 StaticLibraryDefinitionGenerator::Create(
     ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer) {
   Error Err = Error::success();
@@ -305,8 +396,8 @@ Error StaticLibraryDefinitionGenerator::tryToGenerate(
     MemoryBufferRef ChildBufferRef(ChildBufferInfo.first,
                                    ChildBufferInfo.second);
 
-    if (auto Err =
-            L.add(JD, MemoryBuffer::getMemBuffer(ChildBufferRef), VModuleKey()))
+    if (auto Err = L.add(JD, MemoryBuffer::getMemBuffer(ChildBufferRef, false),
+                         VModuleKey()))
       return Err;
   }
 

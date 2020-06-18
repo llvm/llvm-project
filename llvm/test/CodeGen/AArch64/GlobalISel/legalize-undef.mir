@@ -8,9 +8,7 @@ body: |
 
     ; CHECK-LABEL: name: test_implicit_def
     ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[DEF]](s64), [[DEF]](s64)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[MV]](s128)
-    ; CHECK: $x0 = COPY [[TRUNC]](s64)
+    ; CHECK: $x0 = COPY [[DEF]](s64)
     %0:_(s128) = G_IMPLICIT_DEF
     %1:_(s64) = G_TRUNC %0(s128)
     $x0 = COPY %1(s64)

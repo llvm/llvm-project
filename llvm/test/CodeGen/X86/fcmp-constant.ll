@@ -92,8 +92,7 @@ define <2 x i64> @fcmp_ueq_v2f64_undef() {
 define <2 x i64> @fcmp_ueq_v2f64_undef_elt() {
 ; CHECK-LABEL: fcmp_ueq_v2f64_undef_elt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    movq %rax, %xmm0
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [18446744073709551615,0]
 ; CHECK-NEXT:    retq
   %1 = fcmp ueq <2 x double> <double 0x3FF0000000000000, double 0xFFEFFFFFFFFFFFFF>, <double undef, double 0x3FF0000000000000>
   %2 = sext <2 x i1> %1 to <2 x i64>

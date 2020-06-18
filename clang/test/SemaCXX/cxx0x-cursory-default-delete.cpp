@@ -199,3 +199,21 @@ S::S() __attribute((pure)) = default;
 using size_t = decltype(sizeof(0));
 void *operator new(size_t) = delete; // expected-error {{deleted definition must be first declaration}} expected-note {{implicit}}
 void operator delete(void *) noexcept = delete; // expected-error {{deleted definition must be first declaration}} expected-note {{implicit}}
+
+// FIXME: Diagnosing the call as "no matching function" due to substitution
+// failure is not ideal.
+template<typename T> void delete_template_too_late(); // expected-note {{previous}}
+template<typename T> void delete_template_too_late() = delete; // expected-error {{must be first decl}} expected-note {{substitution failure}}
+void use_template_deleted_too_late() { delete_template_too_late<int>(); } // expected-error {{no matching function}}
+
+struct DeletedMemberTemplateTooLate {
+  template<typename T> static void f(); // expected-note {{previous}}
+};
+template<typename T> void DeletedMemberTemplateTooLate::f() = delete; // expected-error {{must be first decl}} expected-note {{substitution failure}}
+void use_member_template_deleted_too_late() { DeletedMemberTemplateTooLate::f<int>(); } // expected-error {{no matching function}}
+
+namespace deleted_overrides_deleted {
+  struct A { virtual void f() = delete; };
+  template<typename T> struct B : A { virtual void f() = delete; };
+  template struct B<int>;
+}

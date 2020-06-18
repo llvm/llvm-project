@@ -30,6 +30,8 @@ private:
   const Driver &D;
   bool IsValid = false;
   CudaVersion Version = CudaVersion::UNKNOWN;
+  std::string DetectedVersion;
+  bool DetectedVersionIsNotSupported = false;
   std::string InstallPath;
   std::string BinPath;
   std::string LibPath;
@@ -75,6 +77,10 @@ public:
   std::string getLibDeviceFile(StringRef Gpu) const {
     return LibDeviceMap.lookup(Gpu);
   }
+  void WarnIfUnsupportedVersion();
+
+private:
+  void ParseCudaVersionFile(llvm::StringRef V);
 };
 
 namespace tools {
@@ -150,8 +156,7 @@ public:
                              Action::OffloadKind DeviceOffloadKind) const override;
 
   llvm::DenormalMode getDefaultDenormalModeForType(
-      const llvm::opt::ArgList &DriverArgs,
-      Action::OffloadKind DeviceOffloadKind,
+      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
       const llvm::fltSemantics *FPType = nullptr) const override;
 
   // Never try to use the integrated assembler with CUDA; always fork out to

@@ -33,6 +33,9 @@ namespace cppcoreguidelines {
 class ProTypeMemberInitCheck : public ClangTidyCheck {
 public:
   ProTypeMemberInitCheck(StringRef Name, ClangTidyContext *Context);
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
@@ -66,7 +69,7 @@ private:
   bool IgnoreArrays;
 
   // Whether fix-its for initialization of fundamental type use assignment
-  // instead of brace initalization. Only effective in C++11 mode. Default is
+  // instead of brace initialization. Only effective in C++11 mode. Default is
   // false.
   bool UseAssignment;
 };

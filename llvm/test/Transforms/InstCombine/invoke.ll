@@ -66,7 +66,7 @@ lpad:
   tail call void @__cxa_call_unexpected(i8* %2) noreturn nounwind
   unreachable
 }
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }
 
 ; CHECK-LABEL: @f3(
 define void @f3() nounwind uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

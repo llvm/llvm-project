@@ -16,7 +16,7 @@ public:
 
  template <typename CHECKER>
  void registerCheck(CHECKER *check) {
-   Checkers.push_back(S<void *>()); // expected-note {{in instantiation of member function 'vector<S<void *> >::push_back' requested here}}
+   Checkers.push_back(S<void *>()); // expected-note {{in instantiation of member function 'vector<S<void *>>::push_back' requested here}}
  }
 };
 

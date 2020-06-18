@@ -1,6 +1,8 @@
-// RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck --dump-input-on-failure %s
+// RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck  %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
@@ -9,9 +11,9 @@ def Test_Dialect : Dialect {
 class NS_Op<string mnemonic, list<OpTrait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
 
-// NoSideEffect trait is included twice to ensure it gets uniqued during
+// IsolatedFromAbove trait is included twice to ensure it gets uniqued during
 // emission.
-def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
+def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
   let arguments = (ins
     I32:$a,
     Variadic<F32>:$b,
@@ -25,7 +27,10 @@ def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
     Variadic<F32>:$s
   );
 
-  let regions = (region AnyRegion:$someRegion);
+  let regions = (region
+    AnyRegion:$someRegion,
+    VariadicRegion<AnyRegion>:$someRegions
+  );
   let builders = [OpBuilder<"Value val">];
   let parser = [{ foo }];
   let printer = [{ bar }];
@@ -40,39 +45,43 @@ def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
   }];
 }
 
-// CHECK: class AOp;
-
 // CHECK-LABEL: NS::AOp declarations
 
-// CHECK: class AOpOperandAdaptor {
+// CHECK: class AOpAdaptor {
 // CHECK: public:
-// CHECK:   AOpOperandAdaptor(ArrayRef<Value> values);
-// CHECK:   ArrayRef<Value> getODSOperands(unsigned index);
+// CHECK:   AOpAdaptor(ValueRange values
+// CHECK:   ValueRange getODSOperands(unsigned index);
 // CHECK:   Value a();
-// CHECK:   ArrayRef<Value> b();
+// CHECK:   ValueRange b();
+// CHECK:   IntegerAttr attr1();
+// CHECL:   FloatAttr attr2();
 // CHECK: private:
-// CHECK:   ArrayRef<Value> tblgen_operands;
+// CHECK:   ValueRange odsOperands;
 // CHECK: };
 
-// CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNResults<1>::Impl, OpTrait::HasNoSideEffect, OpTrait::AtLeastNOperands<1>::Impl
+// CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNRegions<1>::Impl, OpTrait::AtLeastNResults<1>::Impl, OpTrait::ZeroSuccessor, OpTrait::AtLeastNOperands<1>::Impl, OpTrait::IsIsolatedFromAbove
+// CHECK-NOT: OpTrait::IsIsolatedFromAbove
 // CHECK: public:
 // CHECK:   using Op::Op;
-// CHECK:   using OperandAdaptor = AOpOperandAdaptor;
+// CHECK:   using Adaptor = AOpAdaptor;
 // CHECK:   static StringRef getOperationName();
 // CHECK:   Operation::operand_range getODSOperands(unsigned index);
 // CHECK:   Value a();
 // CHECK:   Operation::operand_range b();
+// CHECK:   ::mlir::MutableOperandRange aMutable();
+// CHECK:   ::mlir::MutableOperandRange bMutable();
 // CHECK:   Operation::result_range getODSResults(unsigned index);
 // CHECK:   Value r();
 // CHECK:   Region &someRegion();
+// CHECK:   MutableArrayRef<Region> someRegions();
 // CHECK:   IntegerAttr attr1Attr()
 // CHECK:   APInt attr1();
 // CHECK:   FloatAttr attr2Attr()
 // CHECK:   Optional< APFloat > attr2();
 // CHECK:   static void build(Value val);
-// CHECK:   static void build(Builder *odsBuilder, OperationState &odsState, Type r, ArrayRef<Type> s, Value a, ValueRange b, IntegerAttr attr1, /*optional*/FloatAttr attr2)
-// CHECK:   static void build(Builder *odsBuilder, OperationState &odsState, Type r, ArrayRef<Type> s, Value a, ValueRange b, APInt attr1, /*optional*/FloatAttr attr2)
-// CHECK:   static void build(Builder *, OperationState &odsState, ArrayRef<Type> resultTypes, ValueRange operands, ArrayRef<NamedAttribute> attributes)
+// CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, Type r, ArrayRef<Type> s, Value a, ValueRange b, IntegerAttr attr1, /*optional*/FloatAttr attr2, unsigned someRegionsCount)
+// CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, Type r, ArrayRef<Type> s, Value a, ValueRange b, APInt attr1, /*optional*/FloatAttr attr2, unsigned someRegionsCount)
+// CHECK:   static void build(OpBuilder &, OperationState &odsState, ArrayRef<Type> resultTypes, ValueRange operands, ArrayRef<NamedAttribute> attributes, unsigned numRegions)
 // CHECK:   static ParseResult parse(OpAsmParser &parser, OperationState &result);
 // CHECK:   void print(OpAsmPrinter &p);
 // CHECK:   LogicalResult verify();
@@ -81,6 +90,29 @@ def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
 // CHECK:   // Display a graph for debugging purposes.
 // CHECK:   void displayGraph();
 // CHECK: };
+
+// Check AttrSizedOperandSegments
+// ---
+
+def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
+                                 [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<I32>:$a,
+    Variadic<I32>:$b,
+    I32:$c,
+    Variadic<I32>:$d,
+    I32ElementsAttr:$operand_segment_sizes
+  );
+}
+
+// CHECK-LABEL: AttrSizedOperandOpAdaptor(
+// CHECK-SAME:    ValueRange values
+// CHECK-SAME:    DictionaryAttr attrs
+// CHECK:  ValueRange a();
+// CHECK:  ValueRange b();
+// CHECK:  Value c();
+// CHECK:  ValueRange d();
+// CHECK:  DenseIntElementsAttr operand_segment_sizes();
 
 // Check op trait for different number of operands
 // ---
@@ -105,6 +137,37 @@ def NS_DOp : NS_Op<"op_with_two_operands", []> {
 
 // CHECK-LABEL: NS::DOp declarations
 // CHECK: OpTrait::NOperands<2>::Impl
+
+def NS_EOp : NS_Op<"op_with_optionals", []> {
+  let arguments = (ins Optional<I32>:$a);
+  let results = (outs Optional<F32>:$b);
+}
+
+// CHECK-LABEL: NS::EOp declarations
+// CHECK:   Value a();
+// CHECK:   ::mlir::MutableOperandRange aMutable();
+// CHECK:   Value b();
+// CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, /*optional*/Type b, /*optional*/Value a)
+
+// Check that all types match constraint results in generating builder.
+// ---
+
+def NS_FOp : NS_Op<"op_with_all_types_constraint",
+    [AllTypesMatch<["a", "b"]>]> {
+  let arguments = (ins AnyType:$a);
+  let results = (outs AnyType:$b);
+}
+
+// CHECK-LABEL: class FOp :
+// CHECK: static LogicalResult inferReturnTypes
+
+def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
+  let arguments = (ins AnyType:$a);
+  let results = (outs I32:$b);
+}
+
+// CHECK-LABEL: class GOp :
+// CHECK: static LogicalResult inferReturnTypes
 
 // Check that default builders can be suppressed.
 // ---
@@ -131,3 +194,4 @@ def _BOp : NS_Op<"_op_with_leading_underscore_and_no_namespace", []>;
 
 // CHECK-LABEL: _BOp declarations
 // CHECK: class _BOp : public Op<_BOp
+

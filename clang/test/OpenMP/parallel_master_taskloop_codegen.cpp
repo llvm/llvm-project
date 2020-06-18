@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 #pragma omp parallel master taskloop nogroup grainsize(argc)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: define internal void [[OMP_OUTLINED3]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable(4) %{{.+}}, i8*** dereferenceable(8) %{{.+}}, i64 %{{.+}}, i64 %{{.+}})
+// CHECK: define internal void [[OMP_OUTLINED3]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, i8*** nonnull align 8 dereferenceable(8) %{{.+}}, i64 %{{.+}}, i64 %{{.+}})
 // CHECK:       [[RES:%.+]] = call {{.*}}i32 @__kmpc_master(%struct.ident_t* [[DEFLOC]], i32 [[GTID:%.+]])
 // CHECK-NEXT:  [[IS_MASTER:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK-NEXT:  br i1 [[IS_MASTER]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
@@ -211,7 +211,7 @@ struct S {
   S(int c) {
 // CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEFLOC]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.S*, i32*, i64)* [[OMP_OUTLINED4:@.+]] to void (i32*, i32*, ...)*), %struct.S* %{{.+}}, i32* %{{.+}}, i64 %{{.+}})
 
-// CHECK: define internal void [[OMP_OUTLINED4]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, %struct.S* %{{.+}}, i32* dereferenceable(4) %{{.+}}, i64 %{{.+}})
+// CHECK: define internal void [[OMP_OUTLINED4]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, %struct.S* %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, i64 %{{.+}})
 // CHECK: [[CONV:%.+]] = bitcast i64* %{{.+}} to i8*
 // CHECK: [[CONDI8:%.+]] = load i8, i8* [[CONV]],
 // CHECK: [[COND:%.+]] = trunc i8 [[CONDI8]] to i1

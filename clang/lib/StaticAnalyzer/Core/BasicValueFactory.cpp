@@ -239,7 +239,7 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op,
       if (Amt >= V1.getBitWidth())
         return nullptr;
 
-      if (!Ctx.getLangOpts().CPlusPlus2a) {
+      if (!Ctx.getLangOpts().CPlusPlus20) {
         if (V1.isSigned() && V1.isNegative())
           return nullptr;
 

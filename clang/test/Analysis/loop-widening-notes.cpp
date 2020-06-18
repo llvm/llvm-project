@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha -analyzer-max-loop 2 -analyzer-config widen-loops=true -analyzer-output=text -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-max-loop 2 -analyzer-config widen-loops=true -analyzer-output=text -verify -analyzer-config eagerly-assume=false %s
 
 int *p_a;
 int bar();

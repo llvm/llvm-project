@@ -8,8 +8,11 @@
 
 #include "Headers.h"
 #include "Compiler.h"
-#include "Logger.h"
+#include "Preamble.h"
 #include "SourceCode.h"
+#include "support/Logger.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -28,38 +31,74 @@ public:
 
   // Record existing #includes - both written and resolved paths. Only #includes
   // in the main file are collected.
-  void InclusionDirective(SourceLocation HashLoc, const Token & /*IncludeTok*/,
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          llvm::StringRef /*SearchPath*/,
+                          CharSourceRange /*FilenameRange*/,
+                          const FileEntry *File, llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
                           const Module * /*Imported*/,
                           SrcMgr::CharacteristicKind FileKind) override {
+    auto MainFID = SM.getMainFileID();
+    // If an include is part of the preamble patch, translate #line directives.
+    if (InBuiltinFile)
+      HashLoc = translatePreamblePatchLocation(HashLoc, SM);
+
+    // Record main-file inclusions (including those mapped from the preamble
+    // patch).
     if (isInsideMainFile(HashLoc, SM)) {
       Out->MainFileIncludes.emplace_back();
       auto &Inc = Out->MainFileIncludes.back();
-      Inc.R = halfOpenToRange(SM, FilenameRange);
       Inc.Written =
           (IsAngled ? "<" + FileName + ">" : "\"" + FileName + "\"").str();
       Inc.Resolved = std::string(File ? File->tryGetRealPathName() : "");
       Inc.HashOffset = SM.getFileOffset(HashLoc);
+      Inc.HashLine =
+          SM.getLineNumber(SM.getFileID(HashLoc), Inc.HashOffset) - 1;
       Inc.FileKind = FileKind;
+      Inc.Directive = IncludeTok.getIdentifierInfo()->getPPKeywordID();
     }
+
+    // Record include graph (not just for main-file includes)
     if (File) {
       auto *IncludingFileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc));
       if (!IncludingFileEntry) {
         assert(SM.getBufferName(HashLoc).startswith("<") &&
                "Expected #include location to be a file or <built-in>");
         // Treat as if included from the main file.
-        IncludingFileEntry = SM.getFileEntryForID(SM.getMainFileID());
+        IncludingFileEntry = SM.getFileEntryForID(MainFID);
       }
       Out->recordInclude(IncludingFileEntry->getName(), File->getName(),
                          File->tryGetRealPathName());
     }
   }
 
+  void FileChanged(SourceLocation Loc, FileChangeReason Reason,
+                   SrcMgr::CharacteristicKind FileType,
+                   FileID PrevFID) override {
+    switch (Reason) {
+    case PPCallbacks::EnterFile:
+      if (BuiltinFile.isInvalid() && SM.isWrittenInBuiltinFile(Loc)) {
+        BuiltinFile = SM.getFileID(Loc);
+        InBuiltinFile = true;
+      }
+      break;
+    case PPCallbacks::ExitFile:
+      if (PrevFID == BuiltinFile)
+        InBuiltinFile = false;
+      break;
+    case PPCallbacks::RenameFile:
+    case PPCallbacks::SystemHeaderPragma:
+      break;
+    }
+  }
+
 private:
   const SourceManager &SM;
+  // Set after entering the <built-in> file.
+  FileID BuiltinFile;
+  // Indicates whether <built-in> file is part of include stack.
+  bool InBuiltinFile = false;
+
   IncludeStructure *Out;
 };
 
@@ -227,9 +266,15 @@ IncludeInserter::insert(llvm::StringRef VerbatimHeader) const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Inclusion &Inc) {
   return OS << Inc.Written << " = "
-            << (Inc.Resolved.empty() ? Inc.Resolved : "[unresolved]") << " at "
-            << Inc.R;
+            << (!Inc.Resolved.empty() ? Inc.Resolved : "[unresolved]")
+            << " at line" << Inc.HashLine;
 }
 
+bool operator==(const Inclusion &LHS, const Inclusion &RHS) {
+  return std::tie(LHS.Directive, LHS.FileKind, LHS.HashOffset, LHS.HashLine,
+                  LHS.Resolved, LHS.Written) ==
+         std::tie(RHS.Directive, RHS.FileKind, RHS.HashOffset, RHS.HashLine,
+                  RHS.Resolved, RHS.Written);
+}
 } // namespace clangd
 } // namespace clang

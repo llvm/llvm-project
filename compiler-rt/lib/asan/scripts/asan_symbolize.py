@@ -275,11 +275,14 @@ class DarwinSymbolizer(Symbolizer):
       atos_line = self.atos.readline()
     # A well-formed atos response looks like this:
     #   foo(type1, type2) (in object.name) (filename.cc:80)
+    # NOTE:
+    #   * For C functions atos omits parentheses and argument types.
+    #   * For C++ functions the function name (i.e., `foo` above) may contain
+    #     templates which may contain parentheses.
     match = re.match('^(.*) \(in (.*)\) \((.*:\d*)\)$', atos_line)
     logging.debug('atos_line: %s', atos_line)
     if match:
       function_name = match.group(1)
-      function_name = re.sub('\(.*?\)', '', function_name)
       file_name = fix_filename(match.group(3))
       return ['%s in %s %s' % (addr, function_name, file_name)]
     else:

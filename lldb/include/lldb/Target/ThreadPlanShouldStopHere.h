@@ -130,7 +130,9 @@ protected:
   lldb_private::Flags m_flags;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanShouldStopHere);
+  ThreadPlanShouldStopHere(const ThreadPlanShouldStopHere &) = delete;
+  const ThreadPlanShouldStopHere &
+  operator=(const ThreadPlanShouldStopHere &) = delete;
 };
 
 } // namespace lldb_private

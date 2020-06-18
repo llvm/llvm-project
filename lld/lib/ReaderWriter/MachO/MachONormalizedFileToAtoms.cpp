@@ -1401,7 +1401,7 @@ llvm::Error parseObjCImageInfo(const Section &sect,
 llvm::Expected<std::unique_ptr<lld::File>>
 objectToAtoms(const NormalizedFile &normalizedFile, StringRef path,
               bool copyRefs) {
-  std::unique_ptr<MachOFile> file(new MachOFile(path));
+  auto file = std::make_unique<MachOFile>(path);
   if (auto ec = normalizedObjectToAtoms(file.get(), normalizedFile, copyRefs))
     return std::move(ec);
   return std::unique_ptr<File>(std::move(file));
@@ -1411,7 +1411,7 @@ llvm::Expected<std::unique_ptr<lld::File>>
 dylibToAtoms(const NormalizedFile &normalizedFile, StringRef path,
              bool copyRefs) {
   // Instantiate SharedLibraryFile object.
-  std::unique_ptr<MachODylibFile> file(new MachODylibFile(path));
+  auto file = std::make_unique<MachODylibFile>(path);
   if (auto ec = normalizedDylibToAtoms(file.get(), normalizedFile, copyRefs))
     return std::move(ec);
   return std::unique_ptr<File>(std::move(file));

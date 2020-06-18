@@ -36,6 +36,7 @@
 //  a -> __builtin_va_list
 //  A -> "reference" to __builtin_va_list
 //  V -> Vector, followed by the number of elements and the base type.
+//  q -> Scalable vector, followed by the number of elements and the base type.
 //  E -> ext_vector, followed by the number of elements and the base type.
 //  X -> _Complex, followed by the base type.
 //  Y -> ptrdiff_t
@@ -322,6 +323,9 @@ BUILTIN(__builtin_truncf, "ff", "Fnc")
 BUILTIN(__builtin_truncl, "LdLd", "Fnc")
 BUILTIN(__builtin_truncf16, "hh", "Fnc")
 
+// Access to floating point environment
+BUILTIN(__builtin_flt_rounds, "i", "n")
+
 // C99 complex builtins
 BUILTIN(__builtin_cabs, "dXd", "Fne")
 BUILTIN(__builtin_cabsf, "fXf", "Fne")
@@ -471,7 +475,7 @@ BUILTIN(__builtin___NSStringMakeConstantString, "FC*cC*", "nc")
 BUILTIN(__builtin_va_start, "vA.", "nt")
 BUILTIN(__builtin_va_end, "vA", "n")
 BUILTIN(__builtin_va_copy, "vAA", "n")
-BUILTIN(__builtin_stdarg_start, "vA.", "n")
+BUILTIN(__builtin_stdarg_start, "vA.", "nt")
 BUILTIN(__builtin_assume_aligned, "v*vC*z.", "nc")
 BUILTIN(__builtin_bcmp, "ivC*vC*z", "Fn")
 BUILTIN(__builtin_bcopy, "vv*v*z", "n")
@@ -516,7 +520,6 @@ BUILTIN(__builtin_return_address, "v*IUi", "n")
 BUILTIN(__builtin_extract_return_addr, "v*v*", "n")
 BUILTIN(__builtin_frame_address, "v*IUi", "n")
 BUILTIN(__builtin___clear_cache, "vc*c*", "n")
-BUILTIN(__builtin_flt_rounds, "i", "nc")
 BUILTIN(__builtin_setjmp, "iv**", "j")
 BUILTIN(__builtin_longjmp, "vv**i", "r")
 BUILTIN(__builtin_unwind_init, "v", "")
@@ -573,6 +576,10 @@ BUILTIN(__builtin_convertvector, "v."   , "nct")
 BUILTIN(__builtin_alloca, "v*z"   , "Fn")
 BUILTIN(__builtin_alloca_with_align, "v*zIz", "Fn")
 BUILTIN(__builtin_call_with_static_chain, "v.", "nt")
+
+BUILTIN(__builtin_matrix_transpose, "v.", "nFt")
+BUILTIN(__builtin_matrix_column_major_load, "v.", "nFt")
+BUILTIN(__builtin_matrix_column_major_store, "v.", "nFt")
 
 // "Overloaded" Atomic operator builtins.  These are overloaded to support data
 // types of i8, i16, i32, i64, and i128.  The front-end sees calls to the
@@ -723,7 +730,7 @@ ATOMIC_BUILTIN(__c11_atomic_fetch_max, "v.", "t")
 ATOMIC_BUILTIN(__c11_atomic_fetch_min, "v.", "t")
 BUILTIN(__c11_atomic_thread_fence, "vi", "n")
 BUILTIN(__c11_atomic_signal_fence, "vi", "n")
-BUILTIN(__c11_atomic_is_lock_free, "iz", "n")
+BUILTIN(__c11_atomic_is_lock_free, "bz", "n")
 
 // GNU atomic builtins.
 ATOMIC_BUILTIN(__atomic_load, "v.", "t")
@@ -752,8 +759,8 @@ BUILTIN(__atomic_test_and_set, "bvD*i", "n")
 BUILTIN(__atomic_clear, "vvD*i", "n")
 BUILTIN(__atomic_thread_fence, "vi", "n")
 BUILTIN(__atomic_signal_fence, "vi", "n")
-BUILTIN(__atomic_always_lock_free, "izvCD*", "n")
-BUILTIN(__atomic_is_lock_free, "izvCD*", "n")
+BUILTIN(__atomic_always_lock_free, "bzvCD*", "n")
+BUILTIN(__atomic_is_lock_free, "bzvCD*", "n")
 
 // OpenCL 2.0 atomic builtins.
 ATOMIC_BUILTIN(__opencl_atomic_init, "v.", "t")

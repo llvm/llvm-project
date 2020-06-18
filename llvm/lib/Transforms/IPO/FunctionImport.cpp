@@ -992,6 +992,8 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
     GV.replaceAllUsesWith(NewGV);
     return false;
   }
+  if (!GV.isImplicitDSOLocal())
+    GV.setDSOLocal(false);
   return true;
 }
 
@@ -1230,8 +1232,15 @@ Expected<bool> FunctionImporter::importFunctions(
     // have loaded all the required metadata!
     UpgradeDebugInfo(*SrcModule);
 
+    // Set the partial sample profile ratio in the profile summary module flag
+    // of the imported source module, if applicable, so that the profile summary
+    // module flag will match with that of the destination module when it's
+    // imported.
+    SrcModule->setPartialSampleProfileRatio(Index);
+
     // Link in the specified functions.
-    if (renameModuleForThinLTO(*SrcModule, Index, &GlobalsToImport))
+    if (renameModuleForThinLTO(*SrcModule, Index, ClearDSOLocalOnDeclarations,
+                               &GlobalsToImport))
       return true;
 
     if (PrintImports) {
@@ -1240,10 +1249,12 @@ Expected<bool> FunctionImporter::importFunctions(
                << " from " << SrcModule->getSourceFileName() << "\n";
     }
 
-    if (Mover.move(std::move(SrcModule), GlobalsToImport.getArrayRef(),
-                   [](GlobalValue &, IRMover::ValueAdder) {},
-                   /*IsPerformingImport=*/true))
-      report_fatal_error("Function Import: link error");
+    if (Error Err = Mover.move(
+            std::move(SrcModule), GlobalsToImport.getArrayRef(),
+            [](GlobalValue &, IRMover::ValueAdder) {},
+            /*IsPerformingImport=*/true))
+      report_fatal_error("Function Import: link error: " +
+                         toString(std::move(Err)));
 
     ImportedCount += GlobalsToImport.size();
     NumImportedModules++;
@@ -1300,7 +1311,8 @@ static bool doImportingForModule(Module &M) {
 
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.
-  if (renameModuleForThinLTO(M, *Index, nullptr)) {
+  if (renameModuleForThinLTO(M, *Index, /*clearDSOOnDeclarations=*/false,
+                             /*GlobalsToImport=*/nullptr)) {
     errs() << "Error renaming module\n";
     return false;
   }
@@ -1309,7 +1321,8 @@ static bool doImportingForModule(Module &M) {
   auto ModuleLoader = [&M](StringRef Identifier) {
     return loadFile(std::string(Identifier), M.getContext());
   };
-  FunctionImporter Importer(*Index, ModuleLoader);
+  FunctionImporter Importer(*Index, ModuleLoader,
+                            /*ClearDSOLocalOnDeclarations=*/false);
   Expected<bool> Result = Importer.importFunctions(M, ImportList);
 
   // FIXME: Probably need to propagate Errors through the pass manager.

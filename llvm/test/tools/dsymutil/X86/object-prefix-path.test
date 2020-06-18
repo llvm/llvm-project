@@ -1,0 +1,11 @@
+RUN: rm -rf %t.dir && mkdir %t.dir && mkdir %t.dir/ModuleCacheRenamed
+RUN: cp %p/../Inputs/module-warnings/1.o %t.dir
+RUN: cp %p/../Inputs/module-warnings/Foo.pcm %t.dir/ModuleCacheRenamed
+
+RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y \
+RUN:   %p/dummy-debug-map.map -o %t \
+RUN:   -object-prefix-map=/ModuleCache=/ModuleCacheRenamed \
+RUN:   2>&1 | FileCheck %s
+
+CHECK:     warning: {{.*}}Bar.pcm:
+CHECK-NOT: warning: {{.*}}Foo.pcm:

@@ -92,11 +92,11 @@ lulz:
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK-NEXT: _start:
-// CHECK-NEXT:   201310:  e8 04 00 00 00   callq 4
+// CHECK-NEXT: <_start>:
+// CHECK-NEXT:   201310:  e8 04 00 00 00   callq 0x201319
 // CHECK-NEXT:   201315:
 
-// CHECK:      lulz:
+// CHECK:      <lulz>:
 // CHECK-NEXT:   201319:  90  nop
 
 
@@ -109,7 +109,7 @@ R_X86_64_32:
 // constants in hex.
 // CHECK: Disassembly of section .text2:
 // CHECK-EMPTY:
-// CHECK-NEXT: R_X86_64_32:
+// CHECK-NEXT: <R_X86_64_32>:
 // CHECK-NEXT:  20131a: {{.*}} movl $2102042, %edx
 
 .section .R_X86_64_32S,"ax",@progbits
@@ -119,7 +119,7 @@ R_X86_64_32S:
 
 // CHECK: Disassembly of section .R_X86_64_32S:
 // CHECK-EMPTY:
-// CHECK-NEXT: R_X86_64_32S:
+// CHECK-NEXT: <R_X86_64_32S>:
 // CHECK-NEXT:  {{.*}}: {{.*}} movq 1053465, %rdx
 
 .section .R_X86_64_PC32,"ax",@progbits
@@ -131,8 +131,8 @@ R_X86_64_PC32:
 // 0x201340 + 16 - (0x201327 + 5) = 36
 // CHECK:      Disassembly of section .R_X86_64_PC32:
 // CHECK-EMPTY:
-// CHECK-NEXT: R_X86_64_PC32:
-// CHECK-NEXT:  201327:   {{.*}}  callq  36
+// CHECK-NEXT: <R_X86_64_PC32>:
+// CHECK-NEXT:  201327:   {{.*}}  callq  0x201350
 // CHECK-NEXT:  20132c:   {{.*}}  movl $2102096, %eax
 
 .section .R_X86_64_32S_2,"ax",@progbits
@@ -142,5 +142,5 @@ R_X86_64_32S_2:
 // plt is  at 0x201340. The second plt entry is at 0x201360 == 2102112
 // CHECK:      Disassembly of section .R_X86_64_32S_2:
 // CHECK-EMPTY:
-// CHECK-NEXT: R_X86_64_32S_2:
+// CHECK-NEXT: <R_X86_64_32S_2>:
 // CHECK-NEXT: 201331: {{.*}}  movl    2102112, %eax

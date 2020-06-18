@@ -73,7 +73,7 @@ zed:
 _start:
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: _start:
+// DISASM-NEXT: <_start>:
 
         movl .mysec, %eax
 // addr(0x10) = 2097440

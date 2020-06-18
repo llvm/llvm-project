@@ -22,7 +22,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -125,7 +124,7 @@ Pass *llvm::createCorrelatedValuePropagationPass() {
 
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   if (S->getType()->isVectorTy()) return false;
-  if (isa<Constant>(S->getOperand(0))) return false;
+  if (isa<Constant>(S->getCondition())) return false;
 
   Constant *C = LVI->getConstant(S->getCondition(), S->getParent(), S);
   if (!C) return false;
@@ -133,11 +132,7 @@ static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   ConstantInt *CI = dyn_cast<ConstantInt>(C);
   if (!CI) return false;
 
-  Value *ReplaceWith = S->getTrueValue();
-  Value *Other = S->getFalseValue();
-  if (!CI->isOne()) std::swap(ReplaceWith, Other);
-  if (ReplaceWith == S) ReplaceWith = UndefValue::get(S->getType());
-
+  Value *ReplaceWith = CI->isOne() ? S->getTrueValue() : S->getFalseValue();
   S->replaceAllUsesWith(ReplaceWith);
   S->eraseFromParent();
 
@@ -310,9 +305,10 @@ static bool processCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
   // the comparison is testing local values.  While LVI can sometimes reason
   // about such cases, it's not its primary purpose.  We do make sure to do
   // the block local query for uses from terminator instructions, but that's
-  // handled in the code for each terminator.
+  // handled in the code for each terminator. As an exception, we allow phi
+  // nodes, for which LVI can thread the condition into predecessors.
   auto *I = dyn_cast<Instruction>(Op0);
-  if (I && I->getParent() == Cmp->getParent())
+  if (I && I->getParent() == Cmp->getParent() && !isa<PHINode>(I))
     return false;
 
   LazyValueInfo::Tristate Result =
@@ -535,18 +531,18 @@ static void processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
 }
 
 /// Infer nonnull attributes for the arguments at the specified callsite.
-static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
+static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   SmallVector<unsigned, 4> ArgNos;
   unsigned ArgNo = 0;
 
-  if (auto *WO = dyn_cast<WithOverflowInst>(CS.getInstruction())) {
+  if (auto *WO = dyn_cast<WithOverflowInst>(&CB)) {
     if (WO->getLHS()->getType()->isIntegerTy() && willNotOverflow(WO, LVI)) {
       processOverflowIntrinsic(WO, LVI);
       return true;
     }
   }
 
-  if (auto *SI = dyn_cast<SaturatingInst>(CS.getInstruction())) {
+  if (auto *SI = dyn_cast<SaturatingInst>(&CB)) {
     if (SI->getType()->isIntegerTy() && willNotOverflow(SI, LVI)) {
       processSaturatingInst(SI, LVI);
       return true;
@@ -559,8 +555,8 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
   // desireable since it may allow further optimization of that value (e.g. via
   // single use rules in instcombine).  Since deopt uses tend to,
   // idiomatically, appear along rare conditional paths, it's reasonable likely
-  // we may have a conditional fact with which LVI can fold.   
-  if (auto DeoptBundle = CS.getOperandBundle(LLVMContext::OB_deopt)) {
+  // we may have a conditional fact with which LVI can fold.
+  if (auto DeoptBundle = CB.getOperandBundle(LLVMContext::OB_deopt)) {
     bool Progress = false;
     for (const Use &ConstU : DeoptBundle->Inputs) {
       Use &U = const_cast<Use&>(ConstU);
@@ -568,7 +564,7 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
       if (V->getType()->isVectorTy()) continue;
       if (isa<Constant>(V)) continue;
 
-      Constant *C = LVI->getConstant(V, CS.getParent(), CS.getInstruction());
+      Constant *C = LVI->getConstant(V, CB.getParent(), &CB);
       if (!C) continue;
       U.set(C);
       Progress = true;
@@ -577,30 +573,30 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
       return true;
   }
 
-  for (Value *V : CS.args()) {
+  for (Value *V : CB.args()) {
     PointerType *Type = dyn_cast<PointerType>(V->getType());
     // Try to mark pointer typed parameters as non-null.  We skip the
     // relatively expensive analysis for constants which are obviously either
     // null or non-null to start with.
-    if (Type && !CS.paramHasAttr(ArgNo, Attribute::NonNull) &&
+    if (Type && !CB.paramHasAttr(ArgNo, Attribute::NonNull) &&
         !isa<Constant>(V) &&
         LVI->getPredicateAt(ICmpInst::ICMP_EQ, V,
                             ConstantPointerNull::get(Type),
-                            CS.getInstruction()) == LazyValueInfo::False)
+                            &CB) == LazyValueInfo::False)
       ArgNos.push_back(ArgNo);
     ArgNo++;
   }
 
-  assert(ArgNo == CS.arg_size() && "sanity check");
+  assert(ArgNo == CB.arg_size() && "sanity check");
 
   if (ArgNos.empty())
     return false;
 
-  AttributeList AS = CS.getAttributes();
-  LLVMContext &Ctx = CS.getInstruction()->getContext();
+  AttributeList AS = CB.getAttributes();
+  LLVMContext &Ctx = CB.getContext();
   AS = AS.addParamAttribute(Ctx, ArgNos,
                             Attribute::get(Ctx, Attribute::NonNull));
-  CS.setAttributes(AS);
+  CB.setAttributes(AS);
 
   return true;
 }
@@ -793,7 +789,10 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   if (!RHS || !RHS->getValue().isMask())
     return false;
 
-  ConstantRange LRange = LVI->getConstantRange(LHS, BB, BinOp);
+  // We can only replace the AND with LHS based on range info if the range does
+  // not include undef.
+  ConstantRange LRange =
+      LVI->getConstantRange(LHS, BB, BinOp, /*UndefAllowed=*/false);
   if (!LRange.getUnsignedMax().ule(RHS->getValue()))
     return false;
 
@@ -856,7 +855,7 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::Call:
       case Instruction::Invoke:
-        BBChanged |= processCallSite(CallSite(II), LVI);
+        BBChanged |= processCallSite(cast<CallBase>(*II), LVI);
         break;
       case Instruction::SRem:
         BBChanged |= processSRem(cast<BinaryOperator>(II), LVI);

@@ -9,7 +9,7 @@ declare void @consume(%PackedStruct*)
 
 define i8* @f() "coroutine.presplit"="1" {
 entry:
-  %data = alloca %PackedStruct, align 8
+  %data = alloca %PackedStruct, align 32
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call i8* @malloc(i32 %size)
@@ -32,17 +32,17 @@ suspend:
 }
 
 ; See if the padding was inserted before PackedStruct
-; CHECK-LABEL: %f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i1, i1, [6 x i8], %PackedStruct }
+; CHECK-LABEL: %f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i1, [15 x i8], %PackedStruct }
 
-; See if we used correct index to access packed struct (padding is field 4)
+; See if we used correct index to access packed struct (padding is field 3)
 ; CHECK-LABEL: @f(
-; CHECK:       %[[DATA:.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 5
+; CHECK:       %[[DATA:.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
 ; CHECK-NEXT:  call void @consume(%PackedStruct* %[[DATA]])
 ; CHECK: ret i8*
 
-; See if we used correct index to access packed struct (padding is field 4)
+; See if we used correct index to access packed struct (padding is field 3)
 ; CHECK-LABEL: @f.resume(
-; CHECK:       %[[DATA:.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 5
+; CHECK:       %[[DATA:.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
 ; CHECK-NEXT:  call void @consume(%PackedStruct* %[[DATA]])
 ; CHECK: ret void
 

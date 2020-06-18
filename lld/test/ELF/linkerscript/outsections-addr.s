@@ -83,9 +83,9 @@
 #CHECK:    Flags [
 #CHECK:      SHF_ALLOC
 #CHECK:    ]
-#CHECK:    Address: 0x5010
-#CHECK:    Offset: 0x4010
-#CHECK:    Size: 8
+#CHECK:    Address: 0x5001
+#CHECK:    Offset: 0x4001
+#CHECK:    Size: 23
 #CHECK:    Link: 0
 #CHECK:    Info: 0
 #CHECK:    AddressAlignment: 16

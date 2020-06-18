@@ -1,6 +1,6 @@
 ; RUN: llc -O0 %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
-; CHECK: "version":4
+; CHECK: "version":5
 
 ; namespace test {
 ;  extern int a;
@@ -35,20 +35,24 @@
 ;     - non-constant member S:fn,
 ;     - arguments of S:fn.
 
-; CHECK: "unique source variables":9
+; CHECK: "#unique source variables":9
 ; +1 extra inline i.
-; CHECK: "source variables":10
+; CHECK: "#source variables":10
 ; -1 square::i
-; CHECK: "variables with location":9
-; CHECK: "scope bytes total":[[BYTES:[0-9]+]]
+; CHECK: "#source variables with location":9
+; CHECK: "sum_all_local_vars(#bytes in parent scope)":[[BYTES:[0-9]+]]
 ; Because of the dbg.value in the middle of the function, the pc range coverage
 ; must be below 100%.
-; CHECK-NOT: "scope bytes covered":0
-; CHECK-NOT "scope bytes covered":[[BYTES]]
-; CHECK: "scope bytes covered":
-; CHECK: "total function size":[[FUNCSIZE:[0-9]+]]
-; CHECK: "total inlined function size":[[INLINESIZE:[0-9]+]]
-
+; CHECK-NOT: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":0
+; CHECK-NOT: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":[[BYTES]]
+; CHECK: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":
+; CHECK: "#bytes witin functions":[[FUNCSIZE:[0-9]+]]
+; CHECK: "#bytes witin inlined functions":[[INLINESIZE:[0-9]+]]
+; CHECK: "#bytes in __debug_info":380
+; CHECK: "#bytes in __debug_loc":35
+; CHECK: "#bytes in __debug_abbrev":303
+; CHECK: "#bytes in __debug_line":117
+; CHECK: "#bytes in __debug_str":204
 
 ; ModuleID = '/tmp/quality.cpp'
 source_filename = "/tmp/quality.cpp"

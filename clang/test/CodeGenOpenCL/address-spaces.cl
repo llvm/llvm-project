@@ -53,10 +53,10 @@ void fc(constant int *arg) {}
 
 #ifdef CL20
 int i;
-// CL20-DAG: @i = common {{(dso_local )?}}addrspace(1) global i32 0
+// CL20-DAG: @i = {{(dso_local )?}}addrspace(1) global i32 0
 int *ptr;
 // CL20SPIR-DAG: @ptr = {{(common )?}}{{(dso_local )?}}addrspace(1) global i32 addrspace(4)* null
-// CL20AMDGCN-DAG: @ptr = common {{(dso_local )?}}addrspace(1) global i32* null
+// CL20AMDGCN-DAG: @ptr = {{(dso_local )?}}addrspace(1) global i32* null
 #endif
 
 // SPIR: i32* %arg

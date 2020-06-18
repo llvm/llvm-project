@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-mapping-to-processing-elements %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -test-mapping-to-processing-elements %s | FileCheck %s
 
 // CHECK-LABEL: @map1d
 //       CHECK: (%[[lb:.*]]: index, %[[ub:.*]]: index, %[[step:.*]]: index) {
@@ -9,8 +9,8 @@ func @map1d(%lb: index, %ub: index, %step: index) {
   // CHECK: %[[thread_offset:.*]] = muli %[[step]], %[[threads]]#0
   // CHECK: %[[new_lb:.*]] = addi %[[lb]], %[[thread_offset]]
   // CHECK: %[[new_step:.*]] = muli %[[step]], %[[threads]]#1
-  // CHECK: loop.for %{{.*}} = %[[new_lb]] to %[[ub]] step %[[new_step]] {
-  loop.for %i = %lb to %ub step %step {}
+  // CHECK: scf.for %{{.*}} = %[[new_lb]] to %[[ub]] step %[[new_step]] {
+  scf.for %i = %lb to %ub step %step {}
   return
 }
 
@@ -41,7 +41,7 @@ func @map2d(%lb : index, %ub : index, %step : index) {
   // new_step = step * gridDim.x * blockDim.x
   // CHECK: %[[new_step:.*]] = muli %[[stepXgdimx]], %[[threads]]#1 : index
   //
-  // CHECK: loop.for %{{.*}} = %[[new_lb]] to %[[ub]] step %[[new_step]] {
-  loop.for %i = %lb to %ub step %step {}
+  // CHECK: scf.for %{{.*}} = %[[new_lb]] to %[[ub]] step %[[new_step]] {
+  scf.for %i = %lb to %ub step %step {}
   return
 }

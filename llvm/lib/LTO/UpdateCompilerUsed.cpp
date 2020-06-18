@@ -17,6 +17,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 

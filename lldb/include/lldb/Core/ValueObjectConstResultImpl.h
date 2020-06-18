@@ -71,7 +71,9 @@ private:
   lldb::ValueObjectSP m_load_addr_backend;
   lldb::ValueObjectSP m_address_of_backend;
 
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectConstResultImpl);
+  ValueObjectConstResultImpl(const ValueObjectConstResultImpl &) = delete;
+  const ValueObjectConstResultImpl &
+  operator=(const ValueObjectConstResultImpl &) = delete;
 };
 
 } // namespace lldb_private

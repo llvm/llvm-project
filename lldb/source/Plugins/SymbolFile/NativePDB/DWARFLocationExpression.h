@@ -14,6 +14,7 @@
 
 namespace llvm {
 class APSInt;
+class StringRef;
 namespace codeview {
 class TypeIndex;
 }

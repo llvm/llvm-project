@@ -7,11 +7,6 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-//
-// This test uses new symbols that were not defined in the libc++ shipped on
-// darwin11 and darwin12:
-// XFAIL: availability=macosx10.7
-// XFAIL: availability=macosx10.8
 
 // <memory>
 
@@ -21,7 +16,7 @@
 // void
 // atomic_store_explicit(shared_ptr<T>* p, shared_ptr<T> r, memory_order mo)
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <memory>
 #include <cassert>

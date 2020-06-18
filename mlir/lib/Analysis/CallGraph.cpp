@@ -11,20 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/CallGraph.h"
-#include "mlir/Analysis/CallInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
-
-//===----------------------------------------------------------------------===//
-// CallInterfaces
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Analysis/CallInterfaces.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // CallGraphNode
@@ -93,9 +87,8 @@ static void computeCallGraph(Operation *op, CallGraph &cg,
   }
 
   for (Region &region : op->getRegions())
-    for (Block &block : region)
-      for (Operation &nested : block)
-        computeCallGraph(&nested, cg, parentNode, resolveCalls);
+    for (Operation &nested : region.getOps())
+      computeCallGraph(&nested, cg, parentNode, resolveCalls);
 }
 
 CallGraph::CallGraph(Operation *op) : externalNode(/*callableRegion=*/nullptr) {
@@ -149,6 +142,23 @@ CallGraphNode *CallGraph::resolveCallable(CallOpInterface call) const {
   return getExternalNode();
 }
 
+/// Erase the given node from the callgraph.
+void CallGraph::eraseNode(CallGraphNode *node) {
+  // Erase any children of this node first.
+  if (node->hasChildren()) {
+    for (const CallGraphNode::Edge &edge : llvm::make_early_inc_range(*node))
+      if (edge.isChild())
+        eraseNode(edge.getTarget());
+  }
+  // Erase any edges to this node from any other nodes.
+  for (auto &it : nodes) {
+    it.second->edges.remove_if([node](const CallGraphNode::Edge &edge) {
+      return edge.getTarget() == node;
+    });
+  }
+  nodes.erase(node->getCallableRegion());
+}
+
 //===----------------------------------------------------------------------===//
 // Printing
 
@@ -168,7 +178,8 @@ void CallGraph::print(raw_ostream &os) const {
     auto *parentOp = callableRegion->getParentOp();
     os << "'" << callableRegion->getParentOp()->getName() << "' - Region #"
        << callableRegion->getRegionNumber();
-    if (auto attrs = parentOp->getAttrList().getDictionary())
+    auto attrs = parentOp->getAttrDictionary();
+    if (!attrs.empty())
       os << " : " << attrs;
   };
 

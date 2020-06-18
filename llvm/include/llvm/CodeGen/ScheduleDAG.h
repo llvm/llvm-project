@@ -724,6 +724,10 @@ class TargetRegisterInfo;
   public:
     ScheduleDAGTopologicalSort(std::vector<SUnit> &SUnits, SUnit *ExitSU);
 
+    /// Add a SUnit without predecessors to the end of the topological order. It
+    /// also must be the first new node added to the DAG.
+    void AddSUnitWithoutPredecessors(const SUnit *SU);
+
     /// Creates the initial topological ordering from the DAG to be scheduled.
     void InitDAGTopologicalSorting();
 

@@ -11,13 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/AffineOps/AffineOps.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 
 ///
@@ -43,20 +41,24 @@ static void getForwardSliceImpl(Operation *op,
   }
 
   if (auto forOp = dyn_cast<AffineForOp>(op)) {
-    for (auto *ownerInst : forOp.getInductionVar().getUsers())
-      if (forwardSlice->count(ownerInst) == 0)
-        getForwardSliceImpl(ownerInst, forwardSlice, filter);
-  } else if (auto forOp = dyn_cast<loop::ForOp>(op)) {
-    for (auto *ownerInst : forOp.getInductionVar().getUsers())
-      if (forwardSlice->count(ownerInst) == 0)
-        getForwardSliceImpl(ownerInst, forwardSlice, filter);
+    for (auto *ownerOp : forOp.getInductionVar().getUsers())
+      if (forwardSlice->count(ownerOp) == 0)
+        getForwardSliceImpl(ownerOp, forwardSlice, filter);
+  } else if (auto forOp = dyn_cast<scf::ForOp>(op)) {
+    for (auto *ownerOp : forOp.getInductionVar().getUsers())
+      if (forwardSlice->count(ownerOp) == 0)
+        getForwardSliceImpl(ownerOp, forwardSlice, filter);
+    for (auto result : forOp.getResults())
+      for (auto *ownerOp : result.getUsers())
+        if (forwardSlice->count(ownerOp) == 0)
+          getForwardSliceImpl(ownerOp, forwardSlice, filter);
   } else {
     assert(op->getNumRegions() == 0 && "unexpected generic op with regions");
     assert(op->getNumResults() <= 1 && "unexpected multiple results");
     if (op->getNumResults() > 0) {
-      for (auto *ownerInst : op->getResult(0).getUsers())
-        if (forwardSlice->count(ownerInst) == 0)
-          getForwardSliceImpl(ownerInst, forwardSlice, filter);
+      for (auto *ownerOp : op->getResult(0).getUsers())
+        if (forwardSlice->count(ownerOp) == 0)
+          getForwardSliceImpl(ownerOp, forwardSlice, filter);
     }
   }
 
@@ -84,7 +86,7 @@ static void getBackwardSliceImpl(Operation *op,
     return;
 
   assert((op->getNumRegions() == 0 || isa<AffineForOp>(op) ||
-          isa<loop::ForOp>(op)) &&
+          isa<scf::ForOp>(op)) &&
          "unexpected generic op with regions");
 
   // Evaluate whether we should keep this def.
@@ -101,7 +103,7 @@ static void getBackwardSliceImpl(Operation *op,
         auto *affOp = affIv.getOperation();
         if (backwardSlice->count(affOp) == 0)
           getBackwardSliceImpl(affOp, backwardSlice, filter);
-      } else if (auto loopIv = loop::getForInductionVarOwner(operand)) {
+      } else if (auto loopIv = scf::getForInductionVarOwner(operand)) {
         auto *loopOp = loopIv.getOperation();
         if (backwardSlice->count(loopOp) == 0)
           getBackwardSliceImpl(loopOp, backwardSlice, filter);
@@ -141,15 +143,15 @@ SetVector<Operation *> mlir::getSlice(Operation *op,
   SetVector<Operation *> backwardSlice;
   SetVector<Operation *> forwardSlice;
   while (currentIndex != slice.size()) {
-    auto *currentInst = (slice)[currentIndex];
-    // Compute and insert the backwardSlice starting from currentInst.
+    auto *currentOp = (slice)[currentIndex];
+    // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    getBackwardSlice(currentInst, &backwardSlice, backwardFilter);
+    getBackwardSlice(currentOp, &backwardSlice, backwardFilter);
     slice.insert(backwardSlice.begin(), backwardSlice.end());
 
-    // Compute and insert the forwardSlice starting from currentInst.
+    // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
-    getForwardSlice(currentInst, &forwardSlice, forwardFilter);
+    getForwardSlice(currentOp, &forwardSlice, forwardFilter);
     slice.insert(forwardSlice.begin(), forwardSlice.end());
     ++currentIndex;
   }

@@ -31,36 +31,27 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     LLVMSupport
   )
   target_link_libraries(cuda-runtime-wrappers
+    PUBLIC
     LLVMSupport
     ${CUDA_RUNTIME_LIBRARY}
   )
 
+  get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+  get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
   set(LIBS
+    ${dialect_libs}
+    ${conversion_libs}
     LLVMCore
     LLVMSupport
     MLIRJitRunner
-    MLIRAffineOps
     MLIRAnalysis
     MLIREDSC
     MLIRExecutionEngine
-    MLIRFxpMathOps
-    MLIRGPU
-    MLIRGPUtoCUDATransforms
-    MLIRGPUtoNVVMTransforms
     MLIRIR
-    MLIRLLVMIR
-    MLIRLinalgOps
-    MLIRLoopToStandard
-    MLIROpenMP
     MLIRParser
-    MLIRQuantOps
-    MLIRROCDLIR
-    MLIRSPIRV
-    MLIRSPIRV
-    MLIRStandardOps
-    MLIRStandardToLLVM
     MLIRSupport
     MLIRTargetLLVMIR
+    MLIRTargetNVVMIR
     MLIRTransforms
     MLIRTranslation
     ${CUDA_RUNTIME_LIBRARY}
@@ -79,8 +70,10 @@ if(MLIR_CUDA_RUNNER_ENABLED)
 
   add_llvm_tool(mlir-cuda-runner
     mlir-cuda-runner.cpp
-  )
-  add_dependencies(mlir-cuda-runner cuda-runtime-wrappers)
+
+    DEPENDS
+    cuda-runtime-wrappers
+    )
   target_include_directories(mlir-cuda-runner
     PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   )

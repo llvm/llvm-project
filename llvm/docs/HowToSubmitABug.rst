@@ -26,7 +26,7 @@ contain the following information:
 
 * All information necessary to reproduce the problem.
 * The reduced test-case that triggers the bug.
-* The location where you obtained LLVM (if not from our Subversion
+* The location where you obtained LLVM (if not from our Git
   repository).
 
 Thanks for helping us make LLVM better!

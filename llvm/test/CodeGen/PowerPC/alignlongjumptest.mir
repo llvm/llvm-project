@@ -1,10 +1,10 @@
 # RUN: llc -mcpu=future -mtriple=powerpc64le-unknown-unknown %s \
 # RUN:   -start-before=ppc-branch-select -verify-machineinstrs \
-# RUN:   -filetype=obj -o - | llvm-objdump -mcpu=future -d -r - | \
+# RUN:   -filetype=obj -o - | llvm-objdump --mcpu=future -d -r - | \
 # RUN:   FileCheck --check-prefix=CHECK-LE %s
 # RUN: llc -mcpu=future -mtriple=powerpc64-unknown-unknown %s \
 # RUN:   -start-before=ppc-branch-select -verify-machineinstrs \
-# RUN:   -filetype=obj -o - | llvm-objdump -mcpu=future -d -r - | \
+# RUN:   -filetype=obj -o - | llvm-objdump --mcpu=future -d -r - | \
 # RUN:   FileCheck --check-prefix=CHECK-BE %s
 
 # The purpose of this test is to check that long branches are selected correctly
@@ -70,13 +70,13 @@ body:             |
 ...
 
 # Check for the long branch.
-# CHECK-LE:         08 00 82 4{{[01]}}   b{{[tf]}}  2, .+8
-# CHECK-LE-NEXT:    fc 7f 00 48   b .+32764
+# CHECK-LE:         08 00 82 4{{[01]}}   b{{[tf]}}  2, 0xc
+# CHECK-LE-NEXT:    fc 7f 00 48   b 0x8004
 # CHECK-LE-DAG:     paddi 3, 3, 13, 0
 # CHECK-LE-DAG:     paddi 3, 3, 21, 0
 # CHECK-LE:         blr
-# CHECK-BE:         4{{[01]}} 82 00 08   b{{[tf]}}  2, .+8
-# CHECK-BE-NEXT:    48 00 7f fc   b .+32764
+# CHECK-BE:         4{{[01]}} 82 00 08   b{{[tf]}}  2, 0xc
+# CHECK-BE-NEXT:    48 00 7f fc   b 0x8004
 # CHECK-BE-DAG:     paddi 3, 3, 13, 0
 # CHECK-BE-DAG:     paddi 3, 3, 21, 0
 # CHECK-BE:         blr

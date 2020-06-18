@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64el-unknown-linux -mcpu=mips64r2 %s \
-# RUN:   | llvm-objdump -disassemble - | FileCheck %s
+# RUN:   | llvm-objdump -d - | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=mips64el-unknown-linux -mcpu=mips64r2 %s \
 # RUN:   | llvm-readobj -r | FileCheck %s -check-prefix=CHECK-REL
@@ -10,7 +10,7 @@
 # relocations.
 
 test1:
-# CHECK-LABEL:    test1:
+# CHECK-LABEL:    <test1>:
 
         lui     $5, %highest(func)
         daddiu  $5, $5, %higher(func)
@@ -27,7 +27,7 @@ test1:
 # ((x + 0x800080008000) >> 48) & 0xffff (highest).
 
 test2:
-# CHECK-LABEL:    test2:
+# CHECK-LABEL:    <test2>:
 
 # Check the case where relocations are not modified by adding +1.  The constant
 # is chosen so that it is just below the value that triggers the addition of +1

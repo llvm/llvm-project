@@ -234,11 +234,11 @@ ARCInstKind llvm::objcarc::GetARCInstKind(const Value *V) {
       }
 
       // Otherwise, be conservative.
-      return GetCallSiteClass(CI);
+      return GetCallSiteClass(*CI);
     }
     case Instruction::Invoke:
       // Otherwise, be conservative.
-      return GetCallSiteClass(cast<InvokeInst>(I));
+      return GetCallSiteClass(cast<InvokeInst>(*I));
     case Instruction::BitCast:
     case Instruction::GetElementPtr:
     case Instruction::Select:

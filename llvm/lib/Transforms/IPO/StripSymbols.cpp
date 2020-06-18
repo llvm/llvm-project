@@ -147,10 +147,12 @@ static void RemoveDeadConstant(Constant *C) {
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(C)) {
     if (!GV->hasLocalLinkage()) return;   // Don't delete non-static globals.
     GV->eraseFromParent();
-  }
-  else if (!isa<Function>(C))
-    if (isa<CompositeType>(C->getType()))
+  } else if (!isa<Function>(C)) {
+    // FIXME: Why does the type of the constant matter here?
+    if (isa<StructType>(C->getType()) || isa<ArrayType>(C->getType()) ||
+        isa<VectorType>(C->getType()))
       C->destroyConstant();
+  }
 
   // If the constant referenced anything, see if we can delete it as well.
   for (Constant *O : Operands)

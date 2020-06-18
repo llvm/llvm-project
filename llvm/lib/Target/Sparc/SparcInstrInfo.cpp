@@ -403,7 +403,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
-      MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+      MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
   // On the order of operands here: think "[FrameIdx + 0] = SrcReg".
   if (RC == &SP::I64RegsRegClass)
@@ -442,7 +442,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
-      MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+      MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
   if (RC == &SP::I64RegsRegClass)
     BuildMI(MBB, I, DL, get(SP::LDXri), DestReg).addFrameIndex(FI).addImm(0)

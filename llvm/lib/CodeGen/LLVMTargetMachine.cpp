@@ -157,9 +157,6 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
     if (!MCE || !MAB)
       return true;
 
-    // Don't waste memory on names of temp labels.
-    Context.setUseNamesOnTempLabels(false);
-
     Triple T(getTargetTriple().str());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
         T, Context, std::unique_ptr<MCAsmBackend>(MAB),

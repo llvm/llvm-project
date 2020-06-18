@@ -1,9 +1,18 @@
-file(GLOB globbed *.c *.cpp)
-add_llvm_library(MLIRPass
-  ${globbed}
+add_mlir_library(MLIRPass
+  IRPrinting.cpp
+  Pass.cpp
+  PassManagerOptions.cpp
+  PassRegistry.cpp
+  PassStatistics.cpp
+  PassTiming.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Pass
+
+  DEPENDS
+  mlir-generic-headers
+
+  LINK_LIBS PUBLIC
+  MLIRAnalysis
+  MLIRIR
   )
-add_dependencies(MLIRPass MLIRAnalysis MLIRIR LLVMSupport)
-target_link_libraries(MLIRPass MLIRAnalysis MLIRIR LLVMSupport)

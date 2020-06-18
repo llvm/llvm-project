@@ -332,6 +332,8 @@ class FIORdA<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10-9} = A{5-4};
   let Inst{8-4} = d;
   let Inst{3-0} = A{3-0};
+
+  let DecoderMethod = "decodeFIORdA";
 }
 
 //===----------------------------------------------------------------------===//
@@ -350,6 +352,8 @@ class FIOARr<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{10-9} = A{5-4};
   let Inst{8-4} = r;
   let Inst{3-0} = A{3-0};
+
+  let DecoderMethod = "decodeFIOARr";
 }
 
 //===----------------------------------------------------------------------===//
@@ -374,6 +378,8 @@ class FIOBIT<bits<2> t, dag outs, dag ins, string asmstr, list<dag> pattern>
 
   let Inst{3} = A{0};
   let Inst{2-0} = b{2-0};
+
+  let DecoderMethod = "decodeFIOBIT";
 }
 
 //===----------------------------------------------------------------------===//
@@ -485,7 +491,7 @@ class F32BRk<bits<3> f, dag outs, dag ins, string asmstr, list<dag> pattern>
 }
 
 //===----------------------------------------------------------------------===//
-// 32 bits direct mem instructions: <|1001|00fd|dddd|0000|kkkk|kkkk|kkkk|kkkk|> 
+// 32 bits direct mem instructions: <|1001|00fd|dddd|0000|kkkk|kkkk|kkkk|kkkk|>
 // f = secondary opcode = 1 bit
 // d = destination = 5 bits
 // k = constant address = 16 bits

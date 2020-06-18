@@ -1,12 +1,12 @@
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+d -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+d < %s \
-# RUN:     | llvm-objdump -mattr=+d -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+d -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+d -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+d < %s \
-# RUN:     | llvm-objdump -mattr=+d -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+d -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
 # Support for the 'D' extension implies support for 'F'

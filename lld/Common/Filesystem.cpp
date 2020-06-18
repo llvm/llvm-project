@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Filesystem.h"
-#include "lld/Common/Threads.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Parallel.h"
 #if LLVM_ON_UNIX
 #include <unistd.h>
 #endif
@@ -43,7 +43,7 @@ void lld::unlinkAsync(StringRef path) {
 #if defined(_WIN32)
   sys::fs::remove(path);
 #else
-  if (!threadsEnabled || !sys::fs::exists(path) ||
+  if (parallel::strategy.ThreadsRequested == 1 || !sys::fs::exists(path) ||
       !sys::fs::is_regular_file(path))
     return;
 

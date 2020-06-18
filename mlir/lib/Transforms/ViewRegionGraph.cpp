@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/ViewRegionGraph.h"
+#include "PassDetail.h"
 #include "mlir/IR/RegionGraphTraits.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
@@ -60,7 +60,7 @@ void mlir::Region::viewGraph(const Twine &regionName) {
 void mlir::Region::viewGraph() { viewGraph("region"); }
 
 namespace {
-struct PrintCFGPass : public FunctionPass<PrintCFGPass> {
+struct PrintCFGPass : public PrintCFGBase<PrintCFGPass> {
   PrintCFGPass(raw_ostream &os = llvm::errs(), bool shortNames = false,
                const Twine &title = "")
       : os(os), shortNames(shortNames), title(title.str()) {}
@@ -75,11 +75,8 @@ private:
 };
 } // namespace
 
-std::unique_ptr<mlir::OpPassBase<mlir::FuncOp>>
+std::unique_ptr<mlir::OperationPass<mlir::FuncOp>>
 mlir::createPrintCFGGraphPass(raw_ostream &os, bool shortNames,
                               const Twine &title) {
   return std::make_unique<PrintCFGPass>(os, shortNames, title);
 }
-
-static PassRegistration<PrintCFGPass> pass("print-cfg-graph",
-                                           "Print CFG graph per Function");

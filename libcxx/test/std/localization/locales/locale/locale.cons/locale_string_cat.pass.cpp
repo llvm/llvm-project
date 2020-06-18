@@ -10,9 +10,6 @@
 // REQUIRES: locale.ru_RU.UTF-8
 // UNSUPPORTED: sanitizer-new-delete
 
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
-
 // <locale>
 
 // locale(const locale& other, const string& std_name, category cat);

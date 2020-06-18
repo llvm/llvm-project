@@ -28,6 +28,23 @@ struct Derived : public Base {
   OtherDerived& getOtherRef() override { return other_derived; }
 };
 
+// A regression test for a class with at least two members containing a
+// covariant function, which is referenced through another covariant function.
+struct BaseWithMembers {
+  int a = 42;
+  int b = 47;
+  virtual BaseWithMembers *get() { return this; }
+};
+struct DerivedWithMembers: BaseWithMembers {
+  DerivedWithMembers *get() override { return this; }
+};
+struct ReferencingBase {
+  virtual BaseWithMembers *getOther() { return new BaseWithMembers(); }
+};
+struct ReferencingDerived: ReferencingBase {
+  DerivedWithMembers *getOther() { return new DerivedWithMembers(); }
+};
+
 int main() {
   Derived derived;
   Base base;
@@ -36,5 +53,7 @@ int main() {
   (void)base_ptr_to_derived->getRef();
   (void)base_ptr_to_derived->getOtherPtr();
   (void)base_ptr_to_derived->getOtherRef();
+
+  ReferencingDerived referencing_derived;
   return 0; // break here
 }

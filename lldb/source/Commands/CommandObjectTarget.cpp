@@ -200,7 +200,9 @@ public:
   LoadDependentFiles m_load_dependent_files;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(OptionGroupDependents);
+  OptionGroupDependents(const OptionGroupDependents &) = delete;
+  const OptionGroupDependents &
+  operator=(const OptionGroupDependents &) = delete;
 };
 
 #pragma mark CommandObjectTargetCreate
@@ -271,15 +273,13 @@ protected:
     FileSpec remote_file(m_remote_file.GetOptionValue().GetCurrentValue());
 
     if (core_file) {
-      if (!FileSystem::Instance().Exists(core_file)) {
-        result.AppendErrorWithFormat("core file '%s' doesn't exist",
-                                     core_file.GetPath().c_str());
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
-      if (!FileSystem::Instance().Readable(core_file)) {
-        result.AppendErrorWithFormat("core file '%s' is not readable",
-                                     core_file.GetPath().c_str());
+      auto file = FileSystem::Instance().Open(
+          core_file, lldb_private::File::eOpenOptionRead);
+
+      if (!file) {
+        result.AppendErrorWithFormatv("Cannot open '{0}': {1}.",
+                                      core_file.GetPath(),
+                                      llvm::toString(file.takeError()));
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
@@ -288,18 +288,13 @@ protected:
     if (argc == 1 || core_file || remote_file) {
       FileSpec symfile(m_symbol_file.GetOptionValue().GetCurrentValue());
       if (symfile) {
-        if (FileSystem::Instance().Exists(symfile)) {
-          if (!FileSystem::Instance().Readable(symfile)) {
-            result.AppendErrorWithFormat("symbol file '%s' is not readable",
-                                         symfile.GetPath().c_str());
-            result.SetStatus(eReturnStatusFailed);
-            return false;
-          }
-        } else {
-          char symfile_path[PATH_MAX];
-          symfile.GetPath(symfile_path, sizeof(symfile_path));
-          result.AppendErrorWithFormat("invalid symbol file path '%s'",
-                                       symfile_path);
+        auto file = FileSystem::Instance().Open(
+            symfile, lldb_private::File::eOpenOptionRead);
+
+        if (!file) {
+          result.AppendErrorWithFormatv("Cannot open '{0}': {1}.",
+                                        symfile.GetPath(),
+                                        llvm::toString(file.takeError()));
           result.SetStatus(eReturnStatusFailed);
           return false;
         }
@@ -401,48 +396,34 @@ protected:
           if (module_sp)
             module_sp->SetPlatformFileSpec(remote_file);
         }
+
         if (core_file) {
-          char core_path[PATH_MAX];
-          core_file.GetPath(core_path, sizeof(core_path));
-          if (FileSystem::Instance().Exists(core_file)) {
-            if (!FileSystem::Instance().Readable(core_file)) {
-              result.AppendMessageWithFormat(
-                  "Core file '%s' is not readable.\n", core_path);
+          FileSpec core_file_dir;
+          core_file_dir.GetDirectory() = core_file.GetDirectory();
+          target_sp->AppendExecutableSearchPaths(core_file_dir);
+
+          ProcessSP process_sp(target_sp->CreateProcess(
+              GetDebugger().GetListener(), llvm::StringRef(), &core_file));
+
+          if (process_sp) {
+            // Seems weird that we Launch a core file, but that is what we
+            // do!
+            error = process_sp->LoadCore();
+
+            if (error.Fail()) {
+              result.AppendError(
+                  error.AsCString("can't find plug-in for core file"));
               result.SetStatus(eReturnStatusFailed);
               return false;
-            }
-            FileSpec core_file_dir;
-            core_file_dir.GetDirectory() = core_file.GetDirectory();
-            target_sp->AppendExecutableSearchPaths(core_file_dir);
-
-            ProcessSP process_sp(target_sp->CreateProcess(
-                GetDebugger().GetListener(), llvm::StringRef(), &core_file));
-
-            if (process_sp) {
-              // Seems weird that we Launch a core file, but that is what we
-              // do!
-              error = process_sp->LoadCore();
-
-              if (error.Fail()) {
-                result.AppendError(
-                    error.AsCString("can't find plug-in for core file"));
-                result.SetStatus(eReturnStatusFailed);
-                return false;
-              } else {
-                result.AppendMessageWithFormat(
-                    "Core file '%s' (%s) was loaded.\n", core_path,
-                    target_sp->GetArchitecture().GetArchitectureName());
-                result.SetStatus(eReturnStatusSuccessFinishNoResult);
-              }
             } else {
-              result.AppendErrorWithFormat(
-                  "Unable to find process plug-in for core file '%s'\n",
-                  core_path);
-              result.SetStatus(eReturnStatusFailed);
+              result.AppendMessageWithFormatv("Core file '{0}' ({1}) was loaded.\n", core_file.GetPath(),
+                  target_sp->GetArchitecture().GetArchitectureName());
+              result.SetStatus(eReturnStatusSuccessFinishNoResult);
             }
           } else {
-            result.AppendErrorWithFormat("Core file '%s' does not exist\n",
-                                         core_path);
+            result.AppendErrorWithFormatv(
+                "Unable to find process plug-in for core file '{0}'\n",
+                core_file.GetPath());
             result.SetStatus(eReturnStatusFailed);
           }
         } else {
@@ -571,7 +552,7 @@ protected:
   }
 };
 
-#pragma mark CommandObjectTargetSelect
+#pragma mark CommandObjectTargetDelete
 
 // "target delete"
 
@@ -680,6 +661,41 @@ protected:
   OptionGroupOptions m_option_group;
   OptionGroupBoolean m_all_option;
   OptionGroupBoolean m_cleanup_option;
+};
+
+class CommandObjectTargetShowLaunchEnvironment : public CommandObjectParsed {
+public:
+  CommandObjectTargetShowLaunchEnvironment(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target show-launch-environment",
+            "Shows the environment being passed to the process when launched, "
+            "taking info account 3 settings: target.env-vars, "
+            "target.inherit-env and target.unset-env-vars.",
+            nullptr, eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetShowLaunchEnvironment() override = default;
+
+protected:
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    Environment env = target->GetEnvironment();
+
+    std::vector<Environment::value_type *> env_vector;
+    env_vector.reserve(env.size());
+    for (auto &KV : env)
+      env_vector.push_back(&KV);
+    std::sort(env_vector.begin(), env_vector.end(),
+              [](Environment::value_type *a, Environment::value_type *b) {
+                return a->first() < b->first();
+              });
+
+    auto &strm = result.GetOutputStream();
+    for (auto &KV : env_vector)
+      strm.Format("{0}={1}\n", KV->first(), KV->second);
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return result.Succeeded();
+  }
 };
 
 #pragma mark CommandObjectTargetVariable
@@ -841,21 +857,18 @@ protected:
     Stream &s = result.GetOutputStream();
 
     if (argc > 0) {
-
-      // TODO: Convert to entry-based iteration.  Requires converting
-      // DumpValueObject.
-      for (size_t idx = 0; idx < argc; ++idx) {
+      for (const Args::ArgEntry &arg : args) {
         VariableList variable_list;
         ValueObjectList valobj_list;
 
-        const char *arg = args.GetArgumentAtIndex(idx);
         size_t matches = 0;
         bool use_var_name = false;
         if (m_option_variable.use_regex) {
-          RegularExpression regex(llvm::StringRef::withNullAsEmpty(arg));
+          RegularExpression regex(
+              llvm::StringRef::withNullAsEmpty(arg.c_str()));
           if (!regex.IsValid()) {
             result.GetErrorStream().Printf(
-                "error: invalid regular expression: '%s'\n", arg);
+                "error: invalid regular expression: '%s'\n", arg.c_str());
             result.SetStatus(eReturnStatusFailed);
             return false;
           }
@@ -865,14 +878,14 @@ protected:
           matches = variable_list.GetSize();
         } else {
           Status error(Variable::GetValuesForVariableExpressionPath(
-              arg, m_exe_ctx.GetBestExecutionContextScope(),
+              arg.c_str(), m_exe_ctx.GetBestExecutionContextScope(),
               GetVariableCallback, target, variable_list, valobj_list));
           matches = variable_list.GetSize();
         }
 
         if (matches == 0) {
           result.GetErrorStream().Printf(
-              "error: can't find global variable '%s'\n", arg);
+              "error: can't find global variable '%s'\n", arg.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else {
@@ -888,7 +901,7 @@ protected:
               if (valobj_sp)
                 DumpValueObject(s, var_sp, valobj_sp,
                                 use_var_name ? var_sp->GetName().GetCString()
-                                             : arg);
+                                             : arg.c_str());
             }
           }
         }
@@ -1431,11 +1444,9 @@ static void DumpModuleSections(CommandInterpreter &interpreter, Stream &strm,
       strm.Printf("Sections for '%s' (%s):\n",
                   module->GetSpecificationDescription().c_str(),
                   module->GetArchitecture().GetArchitectureName());
-      strm.IndentMore();
-      section_list->Dump(&strm,
+      section_list->Dump(strm.AsRawOstream(), strm.GetIndentLevel() + 2,
                          interpreter.GetExecutionContext().GetTargetPtr(), true,
                          UINT32_MAX);
-      strm.IndentLess();
     }
   }
 }
@@ -2163,7 +2174,7 @@ protected:
   }
 };
 
-#pragma mark CommandObjectTargetModulesDumpSections
+#pragma mark CommandObjectTargetModulesDumpClangAST
 
 // Clang AST dumping command
 
@@ -3023,17 +3034,14 @@ protected:
           module_list_ptr = &target->GetImages();
         }
       } else {
-        // TODO: Convert to entry based iteration.  Requires converting
-        // FindModulesByName.
-        for (size_t i = 0; i < argc; ++i) {
+        for (const Args::ArgEntry &arg : command) {
           // Dump specified images (by basename or fullpath)
-          const char *arg_cstr = command.GetArgumentAtIndex(i);
           const size_t num_matches = FindModulesByName(
-              target, arg_cstr, module_list, use_global_module_list);
+              target, arg.c_str(), module_list, use_global_module_list);
           if (num_matches == 0) {
             if (argc == 1) {
               result.AppendErrorWithFormat("no modules found that match '%s'",
-                                           arg_cstr);
+                                           arg.c_str());
               result.SetStatus(eReturnStatusFailed);
               return false;
             }
@@ -3991,7 +3999,9 @@ public:
 
 private:
   // For CommandObjectTargetModules only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectTargetModules);
+  CommandObjectTargetModules(const CommandObjectTargetModules &) = delete;
+  const CommandObjectTargetModules &
+  operator=(const CommandObjectTargetModules &) = delete;
 };
 
 class CommandObjectTargetSymbolsAdd : public CommandObjectParsed {
@@ -4389,7 +4399,9 @@ public:
 
 private:
   // For CommandObjectTargetModules only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectTargetSymbols);
+  CommandObjectTargetSymbols(const CommandObjectTargetSymbols &) = delete;
+  const CommandObjectTargetSymbols &
+  operator=(const CommandObjectTargetSymbols &) = delete;
 };
 
 #pragma mark CommandObjectTargetStopHookAdd
@@ -4876,6 +4888,9 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
                  CommandObjectSP(new CommandObjectTargetList(interpreter)));
   LoadSubCommand("select",
                  CommandObjectSP(new CommandObjectTargetSelect(interpreter)));
+  LoadSubCommand("show-launch-environment",
+                 CommandObjectSP(new CommandObjectTargetShowLaunchEnvironment(
+                     interpreter)));
   LoadSubCommand(
       "stop-hook",
       CommandObjectSP(new CommandObjectMultiwordTargetStopHooks(interpreter)));

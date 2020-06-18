@@ -1,9 +1,9 @@
 @ RUN: llvm-mc -mcpu=cortex-a9 -triple armv7-arm-none-eabi -filetype obj -o - %s \
-@ RUN:   | llvm-objdump -mcpu=cortex-a9 -triple armv7-arm-none-eabi -d - \
+@ RUN:   | llvm-objdump --mcpu=cortex-a9 --triple=armv7-arm-none-eabi -d - \
 @ RUN:   | FileCheck %s -check-prefix CHECK-ARM
 
 @ RUN: llvm-mc -mcpu=cortex-m3 -triple thumbv7m-arm-none-eabi -filetype obj -o - %s \
-@ RUN:   | llvm-objdump -mcpu=cortex-m3 -triple thumbv7m-arm-none-eabi -d - \
+@ RUN:   | llvm-objdump --mcpu=cortex-m3 --triple=thumbv7m-arm-none-eabi -d - \
 @ RUN:   | FileCheck %s -check-prefix CHECK-THUMB
 
 b.w .Lbranch

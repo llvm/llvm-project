@@ -24,8 +24,6 @@
 #include "llvm/Support/Path.h"
 using namespace clang;
 
-PPCallbacks::~PPCallbacks() {}
-
 //===----------------------------------------------------------------------===//
 // Miscellaneous Methods.
 //===----------------------------------------------------------------------===//
@@ -417,7 +415,10 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
     }
 
     if (!isEndOfMacro && CurPPLexer &&
-        SourceMgr.getIncludeLoc(CurPPLexer->getFileID()).isValid()) {
+        (SourceMgr.getIncludeLoc(CurPPLexer->getFileID()).isValid() ||
+         // Predefines file doesn't have a valid include location.
+         (PredefinesFileID.isValid() &&
+          CurPPLexer->getFileID() == PredefinesFileID))) {
       // Notify SourceManager to record the number of FileIDs that were created
       // during lexing of the #include'd file.
       unsigned NumFIDs =

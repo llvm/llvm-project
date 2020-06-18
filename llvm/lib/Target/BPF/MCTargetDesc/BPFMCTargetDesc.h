@@ -27,11 +27,7 @@ class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
-class StringRef;
 class Target;
-class Triple;
-class raw_ostream;
-class raw_pwrite_stream;
 
 MCCodeEmitter *createBPFMCCodeEmitter(const MCInstrInfo &MCII,
                                       const MCRegisterInfo &MRI,

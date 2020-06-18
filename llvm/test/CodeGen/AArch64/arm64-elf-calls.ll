@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -o - %s | FileCheck %s
-; RUN: llc -mtriple=arm64-linux-gnu -filetype=obj -o - %s | llvm-objdump -triple=arm64-linux-gnu - -r | FileCheck %s --check-prefix=CHECK-OBJ
+; RUN: llc -mtriple=arm64-linux-gnu -filetype=obj -o - %s | llvm-objdump --triple=arm64-linux-gnu - -r | FileCheck %s --check-prefix=CHECK-OBJ
 
 declare void @callee()
 

@@ -21,8 +21,8 @@
 //   + .starts_data to have $d at 0
 
 
-// CHECK: 00000000 .starts_data 00000000 $d
-// CHECK-NEXT: 00000000 .text 00000000 $x
-// CHECK-NEXT: 00000000 .wibble 00000000 $x
+// CHECK:      0000000000000000 l .starts_data 0000000000000000 $d
+// CHECK-NEXT: 0000000000000000 l .text        0000000000000000 $x
+// CHECK-NEXT: 0000000000000000 l .wibble      0000000000000000 $x
 // CHECK-NOT: ${{[adtx]}}
 

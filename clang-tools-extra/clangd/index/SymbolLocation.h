@@ -30,22 +30,23 @@ struct SymbolLocation {
   // Position is encoded into 32 bits to save space.
   // If Line/Column overflow, the value will be their maximum value.
   struct Position {
-    Position() : Line(0), Column(0) {}
+    Position() : LineColumnPacked(0) {}
     void setLine(uint32_t Line);
-    uint32_t line() const { return Line; }
+    uint32_t line() const { return LineColumnPacked >> ColumnBits; }
     void setColumn(uint32_t Column);
-    uint32_t column() const { return Column; }
+    uint32_t column() const { return LineColumnPacked & MaxColumn; }
+    uint32_t rep() const { return LineColumnPacked; }
 
     bool hasOverflow() const {
-      return Line >= MaxLine || Column >= MaxColumn;
+      return line() == MaxLine || column() == MaxColumn;
     }
 
-    static constexpr uint32_t MaxLine = (1 << 20) - 1;
-    static constexpr uint32_t MaxColumn = (1 << 12) - 1;
+    static constexpr unsigned ColumnBits = 12;
+    static constexpr uint32_t MaxLine = (1 << (32 - ColumnBits)) - 1;
+    static constexpr uint32_t MaxColumn = (1 << ColumnBits) - 1;
 
   private:
-    uint32_t Line : 20;   // 0-based
-    uint32_t Column : 12; // 0-based
+    uint32_t LineColumnPacked; // Top 20 bit line, bottom 12 bits column.
   };
 
   /// The symbol range, using half-open range [Start, End).

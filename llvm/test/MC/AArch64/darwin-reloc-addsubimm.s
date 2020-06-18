@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=aarch64-darwin -filetype=obj %s -o - | \
-// RUN:   llvm-objdump -r -d - | FileCheck -check-prefix=OBJ %s
+// RUN:   llvm-objdump -r -d - | FileCheck --check-prefix=OBJ %s
 
 // OBJ-LABEL: Disassembly of section __TEXT,__text:
 

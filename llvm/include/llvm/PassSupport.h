@@ -17,6 +17,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !defined(LLVM_PASS_H) || defined(LLVM_PASSSUPPORT_H)
+#error "Do not include <PassSupport.h>; include <Pass.h> instead"
+#endif
+
 #ifndef LLVM_PASSSUPPORT_H
 #define LLVM_PASSSUPPORT_H
 

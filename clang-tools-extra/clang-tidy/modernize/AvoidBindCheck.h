@@ -24,6 +24,9 @@ namespace modernize {
 class AvoidBindCheck : public ClangTidyCheck {
 public:
   AvoidBindCheck(StringRef Name, ClangTidyContext *Context);
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus14;
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 

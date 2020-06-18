@@ -19,6 +19,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
@@ -937,8 +938,7 @@ static bool checkTypeParamListConsistency(Sema &S,
 
       // Override the new type parameter's bound type with the previous type,
       // so that it's consistent.
-      newTypeParam->setTypeSourceInfo(
-        S.Context.getTrivialTypeSourceInfo(prevTypeParam->getUnderlyingType()));
+      S.Context.adjustObjCTypeParamBoundType(prevTypeParam, newTypeParam);
       continue;
     }
 
@@ -965,8 +965,7 @@ static bool checkTypeParamListConsistency(Sema &S,
     }
 
     // Update the new type parameter's bound to match the previous one.
-    newTypeParam->setTypeSourceInfo(
-      S.Context.getTrivialTypeSourceInfo(prevTypeParam->getUnderlyingType()));
+    S.Context.adjustObjCTypeParamBoundType(prevTypeParam, newTypeParam);
   }
 
   return false;
@@ -1273,7 +1272,8 @@ Decl *Sema::ActOnStartProtocolInterface(
 
 static bool NestedProtocolHasNoDefinition(ObjCProtocolDecl *PDecl,
                                           ObjCProtocolDecl *&UndefinedProtocol) {
-  if (!PDecl->hasDefinition() || PDecl->getDefinition()->isHidden()) {
+  if (!PDecl->hasDefinition() ||
+      !PDecl->getDefinition()->isUnconditionallyVisible()) {
     UndefinedProtocol = PDecl;
     return true;
   }
@@ -3236,7 +3236,7 @@ bool Sema::MatchTwoMethodDeclarations(const ObjCMethodDecl *left,
     return false;
 
   // If either is hidden, it is not considered to match.
-  if (left->isHidden() || right->isHidden())
+  if (!left->isUnconditionallyVisible() || !right->isUnconditionallyVisible())
     return false;
 
   if (left->isDirectMethod() != right->isDirectMethod())
@@ -3495,7 +3495,7 @@ bool Sema::CollectMultipleMethodsInGlobalPool(
   ObjCMethodList &MethList = InstanceFirst ? Pos->second.first :
                              Pos->second.second;
   for (ObjCMethodList *M = &MethList; M; M = M->getNext())
-    if (M->getMethod() && !M->getMethod()->isHidden()) {
+    if (M->getMethod() && M->getMethod()->isUnconditionallyVisible()) {
       if (FilterMethodsByTypeBound(M->getMethod(), TypeBound))
         Methods.push_back(M->getMethod());
     }
@@ -3511,7 +3511,7 @@ bool Sema::CollectMultipleMethodsInGlobalPool(
   ObjCMethodList &MethList2 = InstanceFirst ? Pos->second.second :
                               Pos->second.first;
   for (ObjCMethodList *M = &MethList2; M; M = M->getNext())
-    if (M->getMethod() && !M->getMethod()->isHidden()) {
+    if (M->getMethod() && M->getMethod()->isUnconditionallyVisible()) {
       if (FilterMethodsByTypeBound(M->getMethod(), TypeBound))
         Methods.push_back(M->getMethod());
     }
@@ -3558,7 +3558,7 @@ ObjCMethodDecl *Sema::LookupMethodInGlobalPool(Selector Sel, SourceRange R,
   ObjCMethodList &MethList = instance ? Pos->second.first : Pos->second.second;
   SmallVector<ObjCMethodDecl *, 4> Methods;
   for (ObjCMethodList *M = &MethList; M; M = M->getNext()) {
-    if (M->getMethod() && !M->getMethod()->isHidden())
+    if (M->getMethod() && M->getMethod()->isUnconditionallyVisible())
       return M->getMethod();
   }
   return nullptr;
@@ -4580,6 +4580,62 @@ static void checkObjCMethodX86VectorTypes(Sema &SemaRef,
       << (Triple.isMacOSX() ? "macOS 10.11" : "iOS 9");
 }
 
+static void mergeObjCDirectMembers(Sema &S, Decl *CD, ObjCMethodDecl *Method) {
+  if (!Method->isDirectMethod() && !Method->hasAttr<UnavailableAttr>() &&
+      CD->hasAttr<ObjCDirectMembersAttr>()) {
+    Method->addAttr(
+        ObjCDirectAttr::CreateImplicit(S.Context, Method->getLocation()));
+  }
+}
+
+static void checkObjCDirectMethodClashes(Sema &S, ObjCInterfaceDecl *IDecl,
+                                         ObjCMethodDecl *Method,
+                                         ObjCImplDecl *ImpDecl = nullptr) {
+  auto Sel = Method->getSelector();
+  bool isInstance = Method->isInstanceMethod();
+  bool diagnosed = false;
+
+  auto diagClash = [&](const ObjCMethodDecl *IMD) {
+    if (diagnosed || IMD->isImplicit())
+      return;
+    if (Method->isDirectMethod() || IMD->isDirectMethod()) {
+      S.Diag(Method->getLocation(), diag::err_objc_direct_duplicate_decl)
+          << Method->isDirectMethod() << /* method */ 0 << IMD->isDirectMethod()
+          << Method->getDeclName();
+      S.Diag(IMD->getLocation(), diag::note_previous_declaration);
+      diagnosed = true;
+    }
+  };
+
+  // Look for any other declaration of this method anywhere we can see in this
+  // compilation unit.
+  //
+  // We do not use IDecl->lookupMethod() because we have specific needs:
+  //
+  // - we absolutely do not need to walk protocols, because
+  //   diag::err_objc_direct_on_protocol has already been emitted
+  //   during parsing if there's a conflict,
+  //
+  // - when we do not find a match in a given @interface container,
+  //   we need to attempt looking it up in the @implementation block if the
+  //   translation unit sees it to find more clashes.
+
+  if (auto *IMD = IDecl->getMethod(Sel, isInstance))
+    diagClash(IMD);
+  else if (auto *Impl = IDecl->getImplementation())
+    if (Impl != ImpDecl)
+      if (auto *IMD = IDecl->getImplementation()->getMethod(Sel, isInstance))
+        diagClash(IMD);
+
+  for (const auto *Cat : IDecl->visible_categories())
+    if (auto *IMD = Cat->getMethod(Sel, isInstance))
+      diagClash(IMD);
+    else if (auto CatImpl = Cat->getImplementation())
+      if (CatImpl != ImpDecl)
+        if (auto *IMD = Cat->getMethod(Sel, isInstance))
+          diagClash(IMD);
+}
+
 Decl *Sema::ActOnMethodDeclaration(
     Scope *S, SourceLocation MethodLoc, SourceLocation EndLoc,
     tok::TokenKind MethodType, ObjCDeclSpec &ReturnQT, ParsedType ReturnType,
@@ -4808,9 +4864,9 @@ Decl *Sema::ActOnMethodDeclaration(
           Diag(ObjCMethod->getLocation(), diag::warn_dealloc_in_category)
             << ObjCMethod->getDeclName();
         }
-      } else if (ImpDecl->hasAttr<ObjCDirectMembersAttr>()) {
-        ObjCMethod->addAttr(
-            ObjCDirectAttr::CreateImplicit(Context, ObjCMethod->getLocation()));
+      } else {
+        mergeObjCDirectMembers(*this, ClassDecl, ObjCMethod);
+        checkObjCDirectMethodClashes(*this, IDecl, ObjCMethod, ImpDecl);
       }
 
       // Warn if a method declared in a protocol to which a category or
@@ -4831,39 +4887,16 @@ Decl *Sema::ActOnMethodDeclaration(
     }
   } else {
     if (!isa<ObjCProtocolDecl>(ClassDecl)) {
-      if (!ObjCMethod->isDirectMethod() &&
-          ClassDecl->hasAttr<ObjCDirectMembersAttr>()) {
-        ObjCMethod->addAttr(
-            ObjCDirectAttr::CreateImplicit(Context, ObjCMethod->getLocation()));
-      }
+      mergeObjCDirectMembers(*this, ClassDecl, ObjCMethod);
 
-      // There can be a single declaration in any @interface container
-      // for a given direct method, look for clashes as we add them.
-      //
-      // For valid code, we should always know the primary interface
-      // declaration by now, however for invalid code we'll keep parsing
-      // but we won't find the primary interface and IDecl will be nil.
       ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(ClassDecl);
       if (!IDecl)
         IDecl = cast<ObjCCategoryDecl>(ClassDecl)->getClassInterface();
-
+      // For valid code, we should always know the primary interface
+      // declaration by now, however for invalid code we'll keep parsing
+      // but we won't find the primary interface and IDecl will be nil.
       if (IDecl)
-        if (auto *IMD = IDecl->lookupMethod(ObjCMethod->getSelector(),
-                                            ObjCMethod->isInstanceMethod(),
-                                            /*shallowCategoryLookup=*/false,
-                                            /*followSuper=*/false)) {
-          if (isa<ObjCProtocolDecl>(IMD->getDeclContext())) {
-            // Do not emit a diagnostic for the Protocol case:
-            // diag::err_objc_direct_on_protocol has already been emitted
-            // during parsing for these with a nicer diagnostic.
-          } else if (ObjCMethod->isDirectMethod() || IMD->isDirectMethod()) {
-            Diag(ObjCMethod->getLocation(),
-                 diag::err_objc_direct_duplicate_decl)
-                << ObjCMethod->isDirectMethod() << /* method */ 0
-                << IMD->isDirectMethod() << ObjCMethod->getDeclName();
-            Diag(IMD->getLocation(), diag::note_previous_declaration);
-          }
-        }
+        checkObjCDirectMethodClashes(*this, IDecl, ObjCMethod);
     }
 
     cast<DeclContext>(ClassDecl)->addDecl(ObjCMethod);

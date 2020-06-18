@@ -80,7 +80,7 @@ specifying a vector width and interleaving count:
 
 See the Clang
 `language extensions
-<http://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-loop-hint-optimizations>`_
+<https://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-loop-hint-optimizations>`_
 for details.
 
 Diagnostics
@@ -133,7 +133,7 @@ switch statement cannot be vectorized.
 
 To ensure line and column numbers are produced include the command line options
 ``-gline-tables-only`` and ``-gcolumn-info``. See the Clang `user manual
-<http://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>`_
+<https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>`_
 for details
 
 Features

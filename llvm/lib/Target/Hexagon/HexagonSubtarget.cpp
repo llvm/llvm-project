@@ -315,13 +315,14 @@ bool HexagonSubtarget::useAA() const {
 
 /// Perform target specific adjustments to the latency of a schedule
 /// dependency.
-void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
+void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
+                                             SUnit *Dst, int DstOpIdx,
                                              SDep &Dep) const {
-  MachineInstr *SrcInst = Src->getInstr();
-  MachineInstr *DstInst = Dst->getInstr();
   if (!Src->isInstr() || !Dst->isInstr())
     return;
 
+  MachineInstr *SrcInst = Src->getInstr();
+  MachineInstr *DstInst = Dst->getInstr();
   const HexagonInstrInfo *QII = getInstrInfo();
 
   // Instructions with .new operands have zero latency.
@@ -423,8 +424,17 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
     int DefIdx = -1;
     for (unsigned OpNum = 0; OpNum < SrcI->getNumOperands(); OpNum++) {
       const MachineOperand &MO = SrcI->getOperand(OpNum);
-      if (MO.isReg() && MO.isDef() && MO.getReg() == DepR)
-        DefIdx = OpNum;
+      bool IsSameOrSubReg = false;
+      if (MO.isReg()) {
+        unsigned MOReg = MO.getReg();
+        if (Register::isVirtualRegister(DepR)) {
+          IsSameOrSubReg = (MOReg == DepR);
+        } else {
+          IsSameOrSubReg = getRegisterInfo()->isSubRegisterEq(DepR, MOReg);
+        }
+        if (MO.isDef() && IsSameOrSubReg)
+          DefIdx = OpNum;
+      }
     }
     assert(DefIdx >= 0 && "Def Reg not found in Src MI");
     MachineInstr *DstI = Dst->getInstr();

@@ -15,7 +15,7 @@
 
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: _start:
+// DISASM-NEXT: <_start>:
 // DISASM-NEXT: 4011d0:       movl %gs:0, %eax
 // DISASM-NEXT:               addl -4104(%ebx), %eax
 // DISASM-NEXT:               movl %gs:0, %eax

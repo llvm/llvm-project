@@ -465,6 +465,10 @@ public:
 
   ASTContext &getASTContext() const LLVM_READONLY;
 
+  /// Helper to get the language options from the ASTContext.
+  /// Defined out of line to avoid depending on ASTContext.h.
+  const LangOptions &getLangOpts() const LLVM_READONLY;
+
   void setAccess(AccessSpecifier AS) {
     Access = AS;
     assert(AccessDeclContextSanity());
@@ -514,7 +518,7 @@ public:
     if (!HasAttrs) return;
 
     AttrVec &Vec = getAttrs();
-    Vec.erase(std::remove_if(Vec.begin(), Vec.end(), isa<T, Attr*>), Vec.end());
+    llvm::erase_if(Vec, [](Attr *A) { return isa<T>(A); });
 
     if (Vec.empty())
       HasAttrs = false;
@@ -626,7 +630,16 @@ protected:
     setModuleOwnershipKind(ModuleOwnershipKind::ModulePrivate);
   }
 
-  /// Set the owning module ID.
+public:
+  /// Set the FromASTFile flag. This indicates that this declaration
+  /// was deserialized and not parsed from source code and enables
+  /// features such as module ownership information.
+  void setFromASTFile() {
+    FromASTFile = true;
+  }
+
+  /// Set the owning module ID.  This may only be called for
+  /// deserialized Decls.
   void setOwningModuleID(unsigned ID) {
     assert(isFromASTFile() && "Only works on a deserialized declaration");
     *((unsigned*)this - 2) = ID;
@@ -767,18 +780,19 @@ public:
   /// all declarations in a global module fragment are unowned.
   Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
 
-  /// Determine whether this declaration might be hidden from name
-  /// lookup. Note that the declaration might be visible even if this returns
-  /// \c false, if the owning module is visible within the query context.
-  // FIXME: Rename this to make it clearer what it does.
-  bool isHidden() const {
-    return (int)getModuleOwnershipKind() > (int)ModuleOwnershipKind::Visible;
+  /// Determine whether this declaration is definitely visible to name lookup,
+  /// independent of whether the owning module is visible.
+  /// Note: The declaration may be visible even if this returns \c false if the
+  /// owning module is visible within the query context. This is a low-level
+  /// helper function; most code should be calling Sema::isVisible() instead.
+  bool isUnconditionallyVisible() const {
+    return (int)getModuleOwnershipKind() <= (int)ModuleOwnershipKind::Visible;
   }
 
   /// Set that this declaration is globally visible, even if it came from a
   /// module that is not visible.
   void setVisibleDespiteOwningModule() {
-    if (isHidden())
+    if (!isUnconditionallyVisible())
       setModuleOwnershipKind(ModuleOwnershipKind::Visible);
   }
 
@@ -856,14 +870,15 @@ public:
     return getParentFunctionOrMethod() == nullptr;
   }
 
-  /// Returns true if this declaration lexically is inside a function.
-  /// It recognizes non-defining declarations as well as members of local
-  /// classes:
+  /// Returns true if this declaration is lexically inside a function or inside
+  /// a variable initializer. It recognizes non-defining declarations as well
+  /// as members of local classes and lambdas:
   /// \code
   ///     void foo() { void bar(); }
   ///     void foo2() { class ABC { void bar(); }; }
+  ///     inline int x = [](){ return 0; }();
   /// \endcode
-  bool isLexicallyWithinFunctionOrMethod() const;
+  bool isInLocalScope() const;
 
   /// If this decl is defined inside a function/method/block it returns
   /// the corresponding DeclContext, otherwise it returns null.

@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
-# RUN: llvm-dwarfdump -v %t.o 2>&1 | FileCheck --check-prefix=OVERLAP %s
+# RUN: not llvm-dwarfdump -v %t.o 2>&1 | FileCheck --check-prefix=OVERLAP %s
 #
 # Test object to verify that llvm-dwarfdump handles an invalid string offsets
 # table with overlapping contributions.

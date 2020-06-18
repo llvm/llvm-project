@@ -67,7 +67,7 @@ def RetCC_Sparc32 : CallingConv<[
 // bits of an integer register while the float goes in a floating point
 // register.
 //
-// The difference is encoded in LLVM IR using the inreg atttribute on function
+// The difference is encoded in LLVM IR using the inreg attribute on function
 // arguments:
 //
 //   C:   void f(float, float);

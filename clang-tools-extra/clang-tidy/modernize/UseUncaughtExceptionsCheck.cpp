@@ -17,9 +17,6 @@ namespace tidy {
 namespace modernize {
 
 void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus17)
-    return;
-
   std::string MatchText = "::std::uncaught_exception";
 
   // Using declaration: warning and fix-it.

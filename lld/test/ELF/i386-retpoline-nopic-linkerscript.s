@@ -14,14 +14,14 @@
 
 // CHECK:      Disassembly of section .plt:
 // CHECK-EMPTY:
-// CHECK-NEXT: .plt:
+// CHECK-NEXT: <.plt>:
 // CHECK-NEXT: 10:       pushl   236
 // CHECK-NEXT: 16:       pushl   %eax
 // CHECK-NEXT: 17:       movl    240, %eax
-// CHECK-NEXT: 1c:       calll   15 <.plt+0x20>
+// CHECK-NEXT: 1c:       calll   0x30 <.plt+0x20>
 // CHECK-NEXT: 21:       pause
 // CHECK-NEXT: 23:       lfence
-// CHECK-NEXT: 26:       jmp     -7 <.plt+0x11>
+// CHECK-NEXT: 26:       jmp     0x21 <.plt+0x11>
 // CHECK-NEXT: 28:       int3
 // CHECK-NEXT: 29:       int3
 // CHECK-NEXT: 2a:       int3
@@ -39,10 +39,10 @@
 // CHECK-NEXT: 3f:       int3
 // CHECK-NEXT: 40:       pushl   %eax
 // CHECK-NEXT: 41:       movl    244, %eax
-// CHECK-NEXT: 46:       calll   -27 <.plt+0x20>
-// CHECK-NEXT: 4b:       jmp     -47 <.plt+0x11>
+// CHECK-NEXT: 46:       calll   0x30 <.plt+0x20>
+// CHECK-NEXT: 4b:       jmp     0x21 <.plt+0x11>
 // CHECK-NEXT: 50:       pushl   $0
-// CHECK-NEXT: 55:       jmp     -74 <.plt>
+// CHECK-NEXT: 55:       jmp     0x10 <.plt>
 // CHECK-NEXT: 5a:       int3
 // CHECK-NEXT: 5b:       int3
 // CHECK-NEXT: 5c:       int3
@@ -51,10 +51,10 @@
 // CHECK-NEXT: 5f:       int3
 // CHECK-NEXT: 60:       pushl   %eax
 // CHECK-NEXT: 61:       movl    248, %eax
-// CHECK-NEXT: 66:       calll   -59 <.plt+0x20>
-// CHECK-NEXT: 6b:       jmp     -79 <.plt+0x11>
+// CHECK-NEXT: 66:       calll   0x30 <.plt+0x20>
+// CHECK-NEXT: 6b:       jmp     0x21 <.plt+0x11>
 // CHECK-NEXT: 70:       pushl   $8
-// CHECK-NEXT: 75:       jmp     -106 <.plt>
+// CHECK-NEXT: 75:       jmp     0x10 <.plt>
 // CHECK-NEXT: 7a:       int3
 // CHECK-NEXT: 7b:       int3
 // CHECK-NEXT: 7c:       int3

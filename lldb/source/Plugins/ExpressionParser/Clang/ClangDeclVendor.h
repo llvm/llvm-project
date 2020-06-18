@@ -35,7 +35,8 @@ public:
   }
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ClangDeclVendor);
+  ClangDeclVendor(const ClangDeclVendor &) = delete;
+  const ClangDeclVendor &operator=(const ClangDeclVendor &) = delete;
 };
 } // namespace lldb_private
 

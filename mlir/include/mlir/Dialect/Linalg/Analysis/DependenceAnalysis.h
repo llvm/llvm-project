@@ -63,6 +63,7 @@ public:
   using dependence_range = iterator_range<dependence_iterator>;
 
   enum DependenceType { RAR = 0, RAW, WAR, WAW, NumTypes };
+  static StringRef getDependenceTypeStr(DependenceType depType);
 
   // Builds a linalg dependence graph for the ops of type LinalgOp under `f`.
   static LinalgDependenceGraph buildDependenceGraph(Aliases &aliases, FuncOp f);

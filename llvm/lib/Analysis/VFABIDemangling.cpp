@@ -214,28 +214,6 @@ ParseRet tryParseLinearWithCompileTimeStep(StringRef &ParseString,
   return ParseRet::None;
 }
 
-/// The function looks for the following strings at the beginning of
-/// the input string `ParseString`:
-///
-/// "u" <number>
-///
-/// On success, it removes the parsed parameter from `ParseString`,
-/// sets `PKind` to the correspondent enum value, sets `Pos` to
-/// <number>, and return success.  On a syntax error, it return a
-/// parsing error. If nothing is parsed, it returns None.
-ParseRet tryParseUniform(StringRef &ParseString, VFParamKind &PKind, int &Pos) {
-  // "u" <Pos>
-  const char *UniformToken = "u";
-  if (ParseString.consume_front(UniformToken)) {
-    PKind = VFABI::getVFParamKindFromString(UniformToken);
-    if (ParseString.consumeInteger(10, Pos))
-      return ParseRet::Error;
-
-    return ParseRet::OK;
-  }
-  return ParseRet::None;
-}
-
 /// Looks into the <parameters> part of the mangled name in search
 /// for valid paramaters at the beginning of the string
 /// `ParseString`.
@@ -252,6 +230,12 @@ ParseRet tryParseParameter(StringRef &ParseString, VFParamKind &PKind,
     return ParseRet::OK;
   }
 
+  if (ParseString.consume_front("u")) {
+    PKind = VFParamKind::OMP_Uniform;
+    StepOrPos = 0;
+    return ParseRet::OK;
+  }
+
   const ParseRet HasLinearRuntime =
       tryParseLinearWithRuntimeStep(ParseString, PKind, StepOrPos);
   if (HasLinearRuntime != ParseRet::None)
@@ -261,10 +245,6 @@ ParseRet tryParseParameter(StringRef &ParseString, VFParamKind &PKind,
       tryParseLinearWithCompileTimeStep(ParseString, PKind, StepOrPos);
   if (HasLinearCompileTime != ParseRet::None)
     return HasLinearCompileTime;
-
-  const ParseRet HasUniform = tryParseUniform(ParseString, PKind, StepOrPos);
-  if (HasUniform != ParseRet::None)
-    return HasUniform;
 
   return ParseRet::None;
 }

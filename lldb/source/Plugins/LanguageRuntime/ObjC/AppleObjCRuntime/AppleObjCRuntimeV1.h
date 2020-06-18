@@ -113,9 +113,9 @@ public:
   DeclVendor *GetDeclVendor() override;
 
 protected:
-  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
-                                                     bool catch_bp,
-                                                     bool throw_bp) override;
+  lldb::BreakpointResolverSP
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
+                          bool catch_bp, bool throw_bp) override;
 
   class HashTableSignature {
   public:

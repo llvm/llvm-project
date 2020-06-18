@@ -86,7 +86,7 @@ public:
     return fallible_iterator(std::move(I), &Err);
   }
 
-  /// Construct a fallible iteratro that can be used as an end-of-range value.
+  /// Construct a fallible iterator that can be used as an end-of-range value.
   ///
   /// A value created by this method can be dereferenced (if the underlying
   /// value points at a valid value) and compared, but not incremented or

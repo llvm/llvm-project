@@ -134,3 +134,24 @@ define i32 addrspace(3)* @inbounds_bitcast_vec_to_array_addrspace_matching_alloc
   %gep = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* %asc, i64 %y, i64 %z
   ret i32 addrspace(3)* %gep
 }
+
+; Negative test - avoid doing bitcast on i8*, because '16' should be scaled by 'vscale'.
+
+define i8* @test_accumulate_constant_offset_vscale_nonzero(<vscale x 16 x i1> %pg, i8* %base) {
+; CHECK-LABEL: @test_accumulate_constant_offset_vscale_nonzero
+; CHECK-NEXT:   %bc = bitcast i8* %base to <vscale x 16 x i8>*
+; CHECK-NEXT:   %gep = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %bc, i64 1, i64 4
+; CHECK-NEXT:   ret i8* %gep
+  %bc = bitcast i8* %base to <vscale x 16 x i8>*
+  %gep = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %bc, i64 1, i64 4
+  ret i8* %gep
+}
+
+define i8* @test_accumulate_constant_offset_vscale_zero(<vscale x 16 x i1> %pg, i8* %base) {
+; CHECK-LABEL: @test_accumulate_constant_offset_vscale_zero
+; CHECK-NEXT:   %[[RES:.*]] = getelementptr i8, i8* %base, i64 4
+; CHECK-NEXT:   ret i8* %[[RES]]
+  %bc = bitcast i8* %base to <vscale x 16 x i8>*
+  %gep = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %bc, i64 0, i64 4
+  ret i8* %gep
+}

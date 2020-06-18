@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -22,22 +22,17 @@ template <class Span>
 constexpr bool testConstexprSpan(Span s)
 {
     bool ret = true;
-    typename Span::iterator b        = s. begin();
-    typename Span::const_iterator cb = s.cbegin();
+    typename Span::iterator b = s.begin();
 
     if (s.empty())
     {
-        ret = ret &&  ( b ==  s.end());
-        ret = ret &&  (cb == s.cend());
+        ret = ret && (b == s.end());
     }
     else
     {
-        ret = ret &&  (  *b ==  s[0]);
-        ret = ret &&  ( &*b == &s[0]);
-        ret = ret &&  ( *cb ==  s[0]);
-        ret = ret &&  (&*cb == &s[0]);
+        ret = ret && ( *b ==  s[0]);
+        ret = ret && (&*b == &s[0]);
     }
-    ret = ret && (b == cb);
     return ret;
 }
 
@@ -45,22 +40,17 @@ constexpr bool testConstexprSpan(Span s)
 template <class Span>
 void testRuntimeSpan(Span s)
 {
-    typename Span::iterator b        = s. begin();
-    typename Span::const_iterator cb = s.cbegin();
+    typename Span::iterator b = s.begin();
 
     if (s.empty())
     {
-        assert( b ==  s.end());
-        assert(cb == s.cend());
+        assert(b == s.end());
     }
     else
     {
-        assert(  *b ==  s[0]);
-        assert( &*b == &s[0]);
-        assert( *cb ==  s[0]);
-        assert(&*cb == &s[0]);
+        assert( *b ==  s[0]);
+        assert(&*b == &s[0]);
     }
-    assert(b == cb);
 }
 
 struct A{};

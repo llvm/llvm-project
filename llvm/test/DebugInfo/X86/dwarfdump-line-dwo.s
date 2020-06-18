@@ -44,6 +44,7 @@ LH_1_end:
 
 # PART1:      Line table prologue:
 # PART1-NEXT: total_length: 0x0000002e
+# PART1-NEXT: format: DWARF32
 # PART1-NEXT: version: 4
 # PART1-NEXT: prologue_length: 0x00000028
 # PART1:      include_directories[  1] = "Directory1"
@@ -90,6 +91,7 @@ LH_2_end:
 
 # PART2:      Line table prologue:
 # PART2-NEXT: total_length: 0x00000028
+# PART2-NEXT: format: DWARF32
 # PART2-NEXT: version: 4
 # PART2-NEXT: prologue_length: 0x00000022
 # PART2-NOT:  prologue:

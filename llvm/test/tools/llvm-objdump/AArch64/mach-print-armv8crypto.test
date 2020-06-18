@@ -1,3 +1,0 @@
-RUN: llvm-objdump -d -m -no-show-raw-insn %p/Inputs/print-armv8crypto.obj.macho-aarch64 | FileCheck %s
-
-CHECK: 0:	sha1su0.4s	v0, v1, v2

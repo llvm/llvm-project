@@ -15,16 +15,18 @@
 #include "Writer.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
 #include "lld/Common/Strings.h"
-#include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
@@ -149,6 +151,20 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   }
 }
 
+static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
+  if (auto *arg = args.getLastArg(OPT_rsp_quoting)) {
+    StringRef s = arg->getValue();
+    if (s != "windows" && s != "posix")
+      error("invalid response file quoting: " + s);
+    if (s == "windows")
+      return cl::TokenizeWindowsCommandLine;
+    return cl::TokenizeGNUCommandLine;
+  }
+  if (Triple(sys::getProcessTriple()).isOSWindows())
+    return cl::TokenizeWindowsCommandLine;
+  return cl::TokenizeGNUCommandLine;
+}
+
 // Find a file by concatenating given paths.
 static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
   SmallString<128> s;
@@ -164,10 +180,15 @@ opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> argv) {
   unsigned missingIndex;
   unsigned missingCount;
 
-  // Expand response files (arguments in the form of @<filename>)
-  cl::ExpandResponseFiles(saver, cl::TokenizeGNUCommandLine, vec);
-
+  // We need to get the quoting style for response files before parsing all
+  // options so we parse here before and ignore all the options but
+  // --rsp-quoting.
   opt::InputArgList args = this->ParseArgs(vec, missingIndex, missingCount);
+
+  // Expand response files (arguments in the form of @<filename>)
+  // and then parse the argument again.
+  cl::ExpandResponseFiles(saver, getQuotingStyle(args), vec);
+  args = this->ParseArgs(vec, missingIndex, missingCount);
 
   handleColorDiagnostics(args);
   for (auto *arg : args.filtered(OPT_UNKNOWN))
@@ -284,6 +305,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     }
   }
+  if (files.empty() && errorCount() == 0)
+    error("no input files");
 }
 
 static StringRef getEntry(opt::InputArgList &args) {
@@ -342,10 +365,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
-  config->thinLTOJobs = args::getInteger(args, OPT_thinlto_jobs, -1u);
   errorHandler().verbose = args.hasArg(OPT_verbose);
   LLVM_DEBUG(errorHandler().verbose = true);
-  threadsEnabled = args.hasFlag(OPT_threads, OPT_no_threads, true);
 
   config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
   config->globalBase = args::getInteger(args, OPT_global_base, 1024);
@@ -356,6 +377,20 @@ static void readConfigs(opt::InputArgList &args) {
   // Default value of exportDynamic depends on `-shared`
   config->exportDynamic =
       args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, config->shared);
+
+  // --threads= takes a positive integer and provides the default value for
+  // --thinlto-jobs=.
+  if (auto *arg = args.getLastArg(OPT_threads)) {
+    StringRef v(arg->getValue());
+    unsigned threads = 0;
+    if (!llvm::to_integer(v, threads, 0) || threads == 0)
+      error(arg->getSpelling() + ": expected a positive integer, but got '" +
+            arg->getValue() + "'");
+    parallel::strategy = hardware_concurrency(threads);
+    config->thinLTOJobs = v;
+  }
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs))
+    config->thinLTOJobs = arg->getValue();
 
   if (auto *arg = args.getLastArg(OPT_features)) {
     config->features =
@@ -395,8 +430,8 @@ static void checkOptions(opt::InputArgList &args) {
     error("invalid optimization level for LTO: " + Twine(config->ltoo));
   if (config->ltoPartitions == 0)
     error("--lto-partitions: number of threads must be > 0");
-  if (config->thinLTOJobs == 0)
-    error("--thinlto-jobs: number of threads must be > 0");
+  if (!get_threadpool_strategy(config->thinLTOJobs))
+    error("--thinlto-jobs: invalid job count: " + config->thinLTOJobs);
 
   if (config->pie && config->shared)
     error("-shared and -pie may not be used together");
@@ -418,6 +453,8 @@ static void checkOptions(opt::InputArgList &args) {
       error("-r -and --undefined may not be used together");
     if (config->pie)
       error("-r and -pie may not be used together");
+    if (config->sharedMemory)
+      error("-r and --shared-memory may not be used together");
   }
 }
 
@@ -452,7 +489,7 @@ static void handleLibcall(StringRef name) {
 static UndefinedGlobal *
 createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   auto *sym = cast<UndefinedGlobal>(symtab->addUndefinedGlobal(
-      name, name, defaultModule, WASM_SYMBOL_UNDEFINED, nullptr, type));
+      name, None, None, WASM_SYMBOL_UNDEFINED, nullptr, type));
   config->allowUndefinedSymbols.insert(sym->getName());
   sym->isUsedInRegularObj = true;
   return sym;
@@ -590,7 +627,7 @@ struct WrappedSymbol {
 };
 
 static Symbol *addUndefined(StringRef name) {
-  return symtab->addUndefinedFunction(name, "", "", WASM_SYMBOL_UNDEFINED,
+  return symtab->addUndefinedFunction(name, None, None, WASM_SYMBOL_UNDEFINED,
                                       nullptr, nullptr, false);
 }
 
@@ -696,16 +733,27 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
 
   readConfigs(args);
+
+  createFiles(args);
+  if (errorCount())
+    return;
+
   setConfigs();
   checkOptions(args);
+  if (errorCount())
+    return;
 
   if (auto *arg = args.getLastArg(OPT_allow_undefined_file))
     readImportFile(arg->getValue());
 
-  if (!args.hasArg(OPT_INPUT)) {
-    error("no input files");
+  // Fail early if the output file or map file is not writable. If a user has a
+  // long link, e.g. due to a large LTO link, they do not wish to run it and
+  // find that it failed because there was a mistake in their command-line.
+  if (auto e = tryCreateFile(config->outputFile))
+    error("cannot open output file " + config->outputFile + ": " + e.message());
+  // TODO(sbc): add check for map file too once we add support for that.
+  if (errorCount())
     return;
-  }
 
   // Handle --trace-symbol.
   for (auto *arg : args.filtered(OPT_trace_symbol))
@@ -715,10 +763,6 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     config->exportedSymbols.insert(arg->getValue());
 
   createSyntheticSymbols();
-
-  createFiles(args);
-  if (errorCount())
-    return;
 
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table.
@@ -742,7 +786,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     if (entrySym && entrySym->isDefined())
       entrySym->forceExport = true;
     else
-      error("entry symbol not defined (pass --no-entry to supress): " +
+      error("entry symbol not defined (pass --no-entry to suppress): " +
             config->entry);
   }
 

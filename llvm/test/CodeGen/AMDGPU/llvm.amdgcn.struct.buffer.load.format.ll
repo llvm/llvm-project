@@ -99,6 +99,16 @@ main_body:
   ret float %data
 }
 
+;CHECK-LABEL: {{^}}buffer_load_x_i32:
+;CHECK: buffer_load_format_x v0, {{v[0-9]+}}, s[0:3], 0 idxen
+;CHECK: s_waitcnt
+define amdgpu_ps float @buffer_load_x_i32(<4 x i32> inreg %rsrc) {
+main_body:
+  %data = call i32 @llvm.amdgcn.struct.buffer.load.format.i32(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %fdata = bitcast i32 %data to float
+  ret float %fdata
+}
+
 ;CHECK-LABEL: {{^}}buffer_load_xy:
 ;CHECK: buffer_load_format_xy v[0:1], {{v[0-9]+}}, s[0:3], 0 idxen
 ;CHECK: s_waitcnt
@@ -111,5 +121,6 @@ main_body:
 declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32) #0
 declare <2 x float> @llvm.amdgcn.struct.buffer.load.format.v2f32(<4 x i32>, i32, i32, i32, i32) #0
 declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32) #0
+declare i32 @llvm.amdgcn.struct.buffer.load.format.i32(<4 x i32>, i32, i32, i32, i32) #0
 
 attributes #0 = { nounwind readonly }

@@ -23,19 +23,40 @@
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {
+    /* SX-Aurora VE target  */ "libomptarget.rtl.ve.so",
     /* PowerPC target */ "libomptarget.rtl.ppc64.so",
     /* x86_64 target  */ "libomptarget.rtl.x86_64.so",
     /* CUDA target    */ "libomptarget.rtl.cuda.so",
     /* AArch64 target */ "libomptarget.rtl.aarch64.so"};
 
-RTLsTy RTLs;
-std::mutex RTLsMtx;
+RTLsTy *RTLs;
+std::mutex *RTLsMtx;
 
-HostEntriesBeginToTransTableTy HostEntriesBeginToTransTable;
-std::mutex TrlTblMtx;
+HostEntriesBeginToTransTableTy *HostEntriesBeginToTransTable;
+std::mutex *TrlTblMtx;
 
-HostPtrToTableMapTy HostPtrToTableMap;
-std::mutex TblMapMtx;
+HostPtrToTableMapTy *HostPtrToTableMap;
+std::mutex *TblMapMtx;
+
+__attribute__((constructor(101))) void init() {
+  DP("Init target library!\n");
+  RTLs = new RTLsTy();
+  RTLsMtx = new std::mutex();
+  HostEntriesBeginToTransTable = new HostEntriesBeginToTransTableTy();
+  TrlTblMtx = new std::mutex();
+  HostPtrToTableMap = new HostPtrToTableMapTy();
+  TblMapMtx = new std::mutex();
+}
+
+__attribute__((destructor(101))) void deinit() {
+  DP("Deinit target library!\n");
+  delete RTLs;
+  delete RTLsMtx;
+  delete HostEntriesBeginToTransTable;
+  delete TrlTblMtx;
+  delete HostPtrToTableMap;
+  delete TblMapMtx;
+}
 
 void RTLsTy::LoadRTLs() {
 #ifdef OMPTARGET_DEBUG
@@ -76,40 +97,55 @@ void RTLsTy::LoadRTLs() {
     R.RTLName = Name;
 #endif
 
-    if (!(*((void**) &R.is_valid_binary) = dlsym(
-              dynlib_handle, "__tgt_rtl_is_valid_binary")))
+    if (!(*((void **)&R.is_valid_binary) =
+              dlsym(dynlib_handle, "__tgt_rtl_is_valid_binary")))
       continue;
-    if (!(*((void**) &R.number_of_devices) = dlsym(
-              dynlib_handle, "__tgt_rtl_number_of_devices")))
+    if (!(*((void **)&R.number_of_devices) =
+              dlsym(dynlib_handle, "__tgt_rtl_number_of_devices")))
       continue;
-    if (!(*((void**) &R.init_device) = dlsym(
-              dynlib_handle, "__tgt_rtl_init_device")))
+    if (!(*((void **)&R.init_device) =
+              dlsym(dynlib_handle, "__tgt_rtl_init_device")))
       continue;
-    if (!(*((void**) &R.load_binary) = dlsym(
-              dynlib_handle, "__tgt_rtl_load_binary")))
+    if (!(*((void **)&R.load_binary) =
+              dlsym(dynlib_handle, "__tgt_rtl_load_binary")))
       continue;
-    if (!(*((void**) &R.data_alloc) = dlsym(
-              dynlib_handle, "__tgt_rtl_data_alloc")))
+    if (!(*((void **)&R.data_alloc) =
+              dlsym(dynlib_handle, "__tgt_rtl_data_alloc")))
       continue;
-    if (!(*((void**) &R.data_submit) = dlsym(
-              dynlib_handle, "__tgt_rtl_data_submit")))
+    if (!(*((void **)&R.data_submit) =
+              dlsym(dynlib_handle, "__tgt_rtl_data_submit")))
       continue;
-    if (!(*((void**) &R.data_retrieve) = dlsym(
-              dynlib_handle, "__tgt_rtl_data_retrieve")))
+    if (!(*((void **)&R.data_retrieve) =
+              dlsym(dynlib_handle, "__tgt_rtl_data_retrieve")))
       continue;
-    if (!(*((void**) &R.data_delete) = dlsym(
-              dynlib_handle, "__tgt_rtl_data_delete")))
+    if (!(*((void **)&R.data_delete) =
+              dlsym(dynlib_handle, "__tgt_rtl_data_delete")))
       continue;
-    if (!(*((void**) &R.run_region) = dlsym(
-              dynlib_handle, "__tgt_rtl_run_target_region")))
+    if (!(*((void **)&R.run_region) =
+              dlsym(dynlib_handle, "__tgt_rtl_run_target_region")))
       continue;
-    if (!(*((void**) &R.run_team_region) = dlsym(
-              dynlib_handle, "__tgt_rtl_run_target_team_region")))
+    if (!(*((void **)&R.run_team_region) =
+              dlsym(dynlib_handle, "__tgt_rtl_run_target_team_region")))
       continue;
 
     // Optional functions
-    *((void**) &R.init_requires) = dlsym(
-        dynlib_handle, "__tgt_rtl_init_requires");
+    *((void **)&R.init_requires) =
+        dlsym(dynlib_handle, "__tgt_rtl_init_requires");
+    *((void **)&R.data_submit_async) =
+        dlsym(dynlib_handle, "__tgt_rtl_data_submit_async");
+    *((void **)&R.data_retrieve_async) =
+        dlsym(dynlib_handle, "__tgt_rtl_data_retrieve_async");
+    *((void **)&R.run_region_async) =
+        dlsym(dynlib_handle, "__tgt_rtl_run_target_region_async");
+    *((void **)&R.run_team_region_async) =
+        dlsym(dynlib_handle, "__tgt_rtl_run_target_team_region_async");
+    *((void **)&R.synchronize) = dlsym(dynlib_handle, "__tgt_rtl_synchronize");
+    *((void **)&R.data_exchange) =
+        dlsym(dynlib_handle, "__tgt_rtl_data_exchange");
+    *((void **)&R.data_exchange_async) =
+        dlsym(dynlib_handle, "__tgt_rtl_data_exchange_async");
+    *((void **)&R.is_data_exchangable) =
+        dlsym(dynlib_handle, "__tgt_rtl_is_data_exchangable");
 
     // No devices are supported by this RTL?
     if (!(R.NumberOfDevices = R.number_of_devices())) {
@@ -117,8 +153,8 @@ void RTLsTy::LoadRTLs() {
       continue;
     }
 
-    DP("Registering RTL %s supporting %d devices!\n",
-        R.RTLName.c_str(), R.NumberOfDevices);
+    DP("Registering RTL %s supporting %d devices!\n", R.RTLName.c_str(),
+       R.NumberOfDevices);
 
     // The RTL is valid! Will save the information in the RTLs list.
     AllRTLs.push_back(R);
@@ -234,7 +270,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
   // Attempt to load all plugins available in the system.
   std::call_once(initFlag, &RTLsTy::LoadRTLs, this);
 
-  RTLsMtx.lock();
+  RTLsMtx->lock();
   // Register the images with the RTLs that understand them, if any.
   for (int32_t i = 0; i < desc->NumDeviceImages; ++i) {
     // Obtain the image.
@@ -244,7 +280,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
-    for (auto &R : RTLs.AllRTLs) {
+    for (auto &R : AllRTLs) {
       if (!R.is_valid_binary(img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
             DPxPTR(img->ImageStart), R.RTLName.c_str());
@@ -269,35 +305,34 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
         }
 
         // Initialize the index of this RTL and save it in the used RTLs.
-        R.Idx = (RTLs.UsedRTLs.empty())
+        R.Idx = (UsedRTLs.empty())
                     ? 0
-                    : RTLs.UsedRTLs.back()->Idx +
-                          RTLs.UsedRTLs.back()->NumberOfDevices;
+                    : UsedRTLs.back()->Idx + UsedRTLs.back()->NumberOfDevices;
         assert((size_t) R.Idx == start &&
             "RTL index should equal the number of devices used so far.");
         R.isUsed = true;
-        RTLs.UsedRTLs.push_back(&R);
+        UsedRTLs.push_back(&R);
 
         DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler), R.Idx);
       }
 
       // Initialize (if necessary) translation table for this library.
-      TrlTblMtx.lock();
-      if(!HostEntriesBeginToTransTable.count(desc->HostEntriesBegin)){
+      TrlTblMtx->lock();
+      if(!HostEntriesBeginToTransTable->count(desc->HostEntriesBegin)){
         TranslationTable &tt =
-            HostEntriesBeginToTransTable[desc->HostEntriesBegin];
+            (*HostEntriesBeginToTransTable)[desc->HostEntriesBegin];
         tt.HostTable.EntriesBegin = desc->HostEntriesBegin;
         tt.HostTable.EntriesEnd = desc->HostEntriesEnd;
       }
 
       // Retrieve translation table for this library.
       TranslationTable &TransTable =
-          HostEntriesBeginToTransTable[desc->HostEntriesBegin];
+          (*HostEntriesBeginToTransTable)[desc->HostEntriesBegin];
 
       DP("Registering image " DPxMOD " with RTL %s!\n",
           DPxPTR(img->ImageStart), R.RTLName.c_str());
       RegisterImageIntoTranslationTable(TransTable, R, img);
-      TrlTblMtx.unlock();
+      TrlTblMtx->unlock();
       FoundRTL = &R;
 
       // Load ctors/dtors for static objects
@@ -311,7 +346,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
       DP("No RTL found for image " DPxMOD "!\n", DPxPTR(img->ImageStart));
     }
   }
-  RTLsMtx.unlock();
+  RTLsMtx->unlock();
 
 
   DP("Done registering entries!\n");
@@ -320,7 +355,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
 void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
   DP("Unloading target library!\n");
 
-  RTLsMtx.lock();
+  RTLsMtx->lock();
   // Find which RTL understands each image, if any.
   for (int32_t i = 0; i < desc->NumDeviceImages; ++i) {
     // Obtain the image.
@@ -330,7 +365,7 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image. We only need to scan RTLs that are already being used.
-    for (auto *R : RTLs.UsedRTLs) {
+    for (auto *R : UsedRTLs) {
 
       assert(R->isUsed && "Expecting used RTLs.");
 
@@ -376,28 +411,28 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
           DPxPTR(img->ImageStart));
     }
   }
-  RTLsMtx.unlock();
+  RTLsMtx->unlock();
   DP("Done unregistering images!\n");
 
   // Remove entries from HostPtrToTableMap
-  TblMapMtx.lock();
+  TblMapMtx->lock();
   for (__tgt_offload_entry *cur = desc->HostEntriesBegin;
       cur < desc->HostEntriesEnd; ++cur) {
-    HostPtrToTableMap.erase(cur->addr);
+    HostPtrToTableMap->erase(cur->addr);
   }
 
   // Remove translation table for this descriptor.
-  auto tt = HostEntriesBeginToTransTable.find(desc->HostEntriesBegin);
-  if (tt != HostEntriesBeginToTransTable.end()) {
+  auto tt = HostEntriesBeginToTransTable->find(desc->HostEntriesBegin);
+  if (tt != HostEntriesBeginToTransTable->end()) {
     DP("Removing translation table for descriptor " DPxMOD "\n",
         DPxPTR(desc->HostEntriesBegin));
-    HostEntriesBeginToTransTable.erase(tt);
+    HostEntriesBeginToTransTable->erase(tt);
   } else {
     DP("Translation table for descriptor " DPxMOD " cannot be found, probably "
         "it has been already removed.\n", DPxPTR(desc->HostEntriesBegin));
   }
 
-  TblMapMtx.unlock();
+  TblMapMtx->unlock();
 
   // TODO: Remove RTL and the devices it manages if it's not used anymore?
   // TODO: Write some RTL->unload_image(...) function?

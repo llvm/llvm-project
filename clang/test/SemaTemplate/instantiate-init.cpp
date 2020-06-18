@@ -1,5 +1,13 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
+namespace std {
+  template<typename T> struct initializer_list {
+    T *p;
+    __SIZE_TYPE__ n;
+    initializer_list(T*, __SIZE_TYPE__);
+  };
+}
+
 struct X0 { // expected-note 8{{candidate}}
   X0(int*, float*); // expected-note 4{{candidate}}
 };
@@ -100,7 +108,7 @@ namespace PR7985 {
     integral_c<1> ic1 = array_lengthof(Description<int>::data);
     (void)sizeof(array_lengthof(Description<float>::data));
 
-    sizeof(array_lengthof( // expected-error{{no matching function for call to 'array_lengthof'}}
+    (void)sizeof(array_lengthof( // expected-error{{no matching function for call to 'array_lengthof'}}
                           Description<int*>::data // expected-note{{in instantiation of static data member 'PR7985::Description<int *>::data' requested here}}
                           ));
 
@@ -157,4 +165,16 @@ namespace InitListUpdate {
 
   void g(AA, AA);
   void h() { f<1, 2>(); } // expected-note {{instantiation of}}
+}
+
+namespace RebuildStdInitList {
+  struct A { A(std::initializer_list<int>, int = 0) {} };
+  struct B : A { using A::A; };
+  struct PES { PES(B); };
+
+  // Check we can rebuild the use of the default argument here. This requires
+  // going to the original (base class) constructor, because we don't copy
+  // default arguments onto our fake derived class inherited constructors.
+  template<typename U> void f() { PES({1, 2, 3}); }
+  void g() { f<int>(); }
 }

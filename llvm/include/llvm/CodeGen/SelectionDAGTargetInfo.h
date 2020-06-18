@@ -160,6 +160,11 @@ public:
   virtual bool generateFMAsInMachineCombiner(CodeGenOpt::Level OptLevel) const {
     return false;
   }
+
+  // Return true if the DAG Combiner should disable generic combines.
+  virtual bool disableGenericCombines(CodeGenOpt::Level OptLevel) const {
+    return false;
+  }
 };
 
 } // end namespace llvm

@@ -26,6 +26,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -93,6 +94,7 @@ PlatformProperties::PlatformProperties() {
   module_cache_dir = FileSpec(user_home_dir.c_str());
   module_cache_dir.AppendPathComponent(".lldb");
   module_cache_dir.AppendPathComponent("module_cache");
+  SetDefaultModuleCacheDirectory(module_cache_dir);
   SetModuleCacheDirectory(module_cache_dir);
 }
 
@@ -115,6 +117,14 @@ FileSpec PlatformProperties::GetModuleCacheDirectory() const {
 bool PlatformProperties::SetModuleCacheDirectory(const FileSpec &dir_spec) {
   return m_collection_sp->SetPropertyAtIndexAsFileSpec(
       nullptr, ePropertyModuleCacheDirectory, dir_spec);
+}
+
+void PlatformProperties::SetDefaultModuleCacheDirectory(
+    const FileSpec &dir_spec) {
+  auto f_spec_opt = m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(
+        nullptr, false, ePropertyModuleCacheDirectory);
+  assert(f_spec_opt);
+  f_spec_opt->SetDefaultValue(dir_spec);
 }
 
 /// Get the native host platform plug-in.
@@ -1144,10 +1154,10 @@ Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
         process_sp->SetShouldDetach(false);
 
         // If we didn't have any file actions, the pseudo terminal might have
-        // been used where the slave side was given as the file to open for
+        // been used where the secondary side was given as the file to open for
         // stdin/out/err after we have already opened the master so we can
         // read/write stdin/out/err.
-        int pty_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
+        int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
         if (pty_fd != PseudoTerminal::invalid_fd) {
           process_sp->SetSTDIOFileDescriptor(pty_fd);
         }
@@ -1812,6 +1822,7 @@ size_t Platform::ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
 size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site) {
   ArchSpec arch = target.GetArchitecture();
+  assert(arch.IsValid());
   const uint8_t *trap_opcode = nullptr;
   size_t trap_opcode_size = 0;
 
@@ -1853,6 +1864,12 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
       trap_opcode = g_arm_breakpoint_opcode;
       trap_opcode_size = sizeof(g_arm_breakpoint_opcode);
     }
+  } break;
+
+  case llvm::Triple::avr: {
+    static const uint8_t g_hex_opcode[] = {0x98, 0x95};
+    trap_opcode = g_hex_opcode;
+    trap_opcode_size = sizeof(g_hex_opcode);
   } break;
 
   case llvm::Triple::mips:
@@ -1902,8 +1919,7 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
   } break;
 
   default:
-    llvm_unreachable(
-        "Unhandled architecture in Platform::GetSoftwareBreakpointTrapOpcode");
+    return 0;
   }
 
   assert(bp_site);

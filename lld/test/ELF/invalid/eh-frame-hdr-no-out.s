@@ -4,7 +4,7 @@
 
 // CHECK: error: corrupted .eh_frame: FDE version 1 or 3 expected, but got 2
 
-.section .eh_frame
+.section .eh_frame,"a",@unwind
   .byte 0x08
   .byte 0x00
   .byte 0x00

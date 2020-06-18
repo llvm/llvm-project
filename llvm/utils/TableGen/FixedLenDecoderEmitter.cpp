@@ -1182,15 +1182,6 @@ unsigned FilterChooser::getDecoderIndex(DecoderSet &Decoders,
   return (unsigned)(P - Decoders.begin());
 }
 
-static void emitSinglePredicateMatch(raw_ostream &o, StringRef str,
-                                     const std::string &PredicateNamespace) {
-  if (str[0] == '!')
-    o << "!Bits[" << PredicateNamespace << "::"
-      << str.slice(1,str.size()) << "]";
-  else
-    o << "Bits[" << PredicateNamespace << "::" << str << "]";
-}
-
 bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
                                        unsigned Opc) const {
   ListInit *Predicates =
@@ -1201,21 +1192,50 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
     if (!Pred->getValue("AssemblerMatcherPredicate"))
       continue;
 
-    StringRef P = Pred->getValueAsString("AssemblerCondString");
-
-    if (P.empty())
+    if (!dyn_cast<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
       continue;
+
+    const DagInit *D = Pred->getValueAsDag("AssemblerCondDag");
+    std::string CombineType = D->getOperator()->getAsString();
+    if (CombineType != "any_of" && CombineType != "all_of")
+      PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
+    if (D->getNumArgs() == 0)
+      PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
+    bool IsOr = CombineType == "any_of";
 
     if (!IsFirstEmission)
       o << " && ";
 
-    std::pair<StringRef, StringRef> pairs = P.split(',');
-    while (!pairs.second.empty()) {
-      emitSinglePredicateMatch(o, pairs.first, Emitter->PredicateNamespace);
-      o << " && ";
-      pairs = pairs.second.split(',');
+    if (IsOr)
+      o << "(";
+
+    bool First = true;
+    for (auto *Arg : D->getArgs()) {
+      if (!First) {
+        if (IsOr)
+          o << " || ";
+        else
+          o << " && ";
+      }
+      if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
+        if (NotArg->getOperator()->getAsString() != "not" ||
+            NotArg->getNumArgs() != 1)
+          PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
+        Arg = NotArg->getArg(0);
+        o << "!";
+      }
+      if (!isa<DefInit>(Arg) ||
+          !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
+        PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
+      o << "Bits[" << Emitter->PredicateNamespace << "::" << Arg->getAsString()
+        << "]";
+
+      First = false;
     }
-    emitSinglePredicateMatch(o, pairs.first, Emitter->PredicateNamespace);
+
+    if (IsOr)
+      o << ")";
+
     IsFirstEmission = false;
   }
   return !Predicates->empty();
@@ -1229,12 +1249,8 @@ bool FilterChooser::doesOpcodeNeedPredicate(unsigned Opc) const {
     if (!Pred->getValue("AssemblerMatcherPredicate"))
       continue;
 
-    StringRef P = Pred->getValueAsString("AssemblerCondString");
-
-    if (P.empty())
-      continue;
-
-    return true;
+    if (dyn_cast<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
+      return true;
   }
   return false;
 }

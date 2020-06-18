@@ -14,9 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/AbstractCallSite.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -33,9 +32,9 @@ STATISTIC(NumInvalidAbstractCallSitesUnknownCallee,
 STATISTIC(NumInvalidAbstractCallSitesNoCallback,
           "Number of invalid abstract call sites created (no callback)");
 
-void AbstractCallSite::getCallbackUses(ImmutableCallSite ICS,
-                                       SmallVectorImpl<const Use *> &CBUses) {
-  const Function *Callee = ICS.getCalledFunction();
+void AbstractCallSite::getCallbackUses(
+    const CallBase &CB, SmallVectorImpl<const Use *> &CallbackUses) {
+  const Function *Callee = CB.getCalledFunction();
   if (!Callee)
     return;
 
@@ -48,56 +47,58 @@ void AbstractCallSite::getCallbackUses(ImmutableCallSite ICS,
     auto *CBCalleeIdxAsCM = cast<ConstantAsMetadata>(OpMD->getOperand(0));
     uint64_t CBCalleeIdx =
         cast<ConstantInt>(CBCalleeIdxAsCM->getValue())->getZExtValue();
-    CBUses.push_back(ICS.arg_begin() + CBCalleeIdx);
+    if (CBCalleeIdx < CB.arg_size())
+      CallbackUses.push_back(CB.arg_begin() + CBCalleeIdx);
   }
 }
 
 /// Create an abstract call site from a use.
-AbstractCallSite::AbstractCallSite(const Use *U) : CS(U->getUser()) {
+AbstractCallSite::AbstractCallSite(const Use *U)
+    : CB(dyn_cast<CallBase>(U->getUser())) {
 
   // First handle unknown users.
-  if (!CS) {
+  if (!CB) {
 
     // If the use is actually in a constant cast expression which itself
     // has only one use, we look through the constant cast expression.
     // This happens by updating the use @p U to the use of the constant
-    // cast expression and afterwards re-initializing CS accordingly.
+    // cast expression and afterwards re-initializing CB accordingly.
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U->getUser()))
-      if (CE->getNumUses() == 1 && CE->isCast()) {
+      if (CE->hasOneUse() && CE->isCast()) {
         U = &*CE->use_begin();
-        CS = CallSite(U->getUser());
+        CB = dyn_cast<CallBase>(U->getUser());
       }
 
-    if (!CS) {
+    if (!CB) {
       NumInvalidAbstractCallSitesUnknownUse++;
       return;
     }
   }
 
   // Then handle direct or indirect calls. Thus, if U is the callee of the
-  // call site CS it is not a callback and we are done.
-  if (CS.isCallee(U)) {
+  // call site CB it is not a callback and we are done.
+  if (CB->isCallee(U)) {
     NumDirectAbstractCallSites++;
     return;
   }
 
   // If we cannot identify the broker function we cannot create a callback and
   // invalidate the abstract call site.
-  Function *Callee = CS.getCalledFunction();
+  Function *Callee = CB->getCalledFunction();
   if (!Callee) {
     NumInvalidAbstractCallSitesUnknownCallee++;
-    CS = CallSite();
+    CB = nullptr;
     return;
   }
 
   MDNode *CallbackMD = Callee->getMetadata(LLVMContext::MD_callback);
   if (!CallbackMD) {
     NumInvalidAbstractCallSitesNoCallback++;
-    CS = CallSite();
+    CB = nullptr;
     return;
   }
 
-  unsigned UseIdx = CS.getArgumentNo(U);
+  unsigned UseIdx = CB->getArgOperandNo(U);
   MDNode *CallbackEncMD = nullptr;
   for (const MDOperand &Op : CallbackMD->operands()) {
     MDNode *OpMD = cast<MDNode>(Op.get());
@@ -112,7 +113,7 @@ AbstractCallSite::AbstractCallSite(const Use *U) : CS(U->getUser()) {
 
   if (!CallbackEncMD) {
     NumInvalidAbstractCallSitesNoCallback++;
-    CS = CallSite();
+    CB = nullptr;
     return;
   }
 
@@ -120,7 +121,7 @@ AbstractCallSite::AbstractCallSite(const Use *U) : CS(U->getUser()) {
 
   assert(CallbackEncMD->getNumOperands() >= 2 && "Incomplete !callback metadata");
 
-  unsigned NumCallOperands = CS.getNumArgOperands();
+  unsigned NumCallOperands = CB->getNumArgOperands();
   // Skip the var-arg flag at the end when reading the metadata.
   for (unsigned u = 0, e = CallbackEncMD->getNumOperands() - 1; u < e; u++) {
     Metadata *OpAsM = CallbackEncMD->getOperand(u).get();

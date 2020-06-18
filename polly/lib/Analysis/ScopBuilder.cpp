@@ -1629,9 +1629,9 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt) {
   if (!GEP)
     return false;
 
-  std::vector<const SCEV *> Subscripts;
-  std::vector<int> Sizes;
-  std::tie(Subscripts, Sizes) = getIndexExpressionsFromGEP(GEP, SE);
+  SmallVector<const SCEV *, 4> Subscripts;
+  SmallVector<int, 4> Sizes;
+  SE.getIndexExpressionsFromGEP(GEP, Subscripts, Sizes);
   auto *BasePtr = GEP->getOperand(0);
 
   if (auto *BasePtrCast = dyn_cast<BitCastInst>(BasePtr))
@@ -2905,7 +2905,7 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
 
   auto &DL = scop->getFunction().getParent()->getDataLayout();
   if (isSafeToLoadUnconditionally(LI->getPointerOperand(), LI->getType(),
-                                  MaybeAlign(LI->getAlignment()), DL)) {
+                                  LI->getAlign(), DL)) {
     SafeToLoad = isl::set::universe(AccessRelation.get_space().range());
   } else if (BB != LI->getParent()) {
     // Skip accesses in non-affine subregions as they might not be executed
@@ -2956,8 +2956,7 @@ bool ScopBuilder::canAlwaysBeHoisted(MemoryAccess *MA,
   // TODO: We can provide more information for better but more expensive
   //       results.
   if (!isDereferenceableAndAlignedPointer(
-          LInst->getPointerOperand(), LInst->getType(),
-          MaybeAlign(LInst->getAlignment()), DL))
+          LInst->getPointerOperand(), LInst->getType(), LInst->getAlign(), DL))
     return false;
 
   // If the location might be overwritten we do not hoist it unconditionally.
@@ -3631,7 +3630,8 @@ static void verifyUses(Scop *S, LoopInfo &LI, DominatorTree &DT) {
 #endif
 
 void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
-  scop.reset(new Scop(R, SE, LI, DT, *SD.getDetectionContext(&R), ORE));
+  scop.reset(new Scop(R, SE, LI, DT, *SD.getDetectionContext(&R), ORE,
+                      SD.getNextID()));
 
   buildStmts(R);
 

@@ -288,6 +288,12 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   for (i = 0; i < argc; ++i) foo();
+#pragma omp target parallel for map(delete: j) // expected-error {{map type 'delete' is not allowed for '#pragma omp target parallel for'}}
+  for (i = 0; i < argc; ++i)
+    foo();
+#pragma omp target parallel for map(release: j) // expected-error {{map type 'release' is not allowed for '#pragma omp target parallel for'}}
+  for (i = 0; i < argc; ++i)
+    foo();
 
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}
 }

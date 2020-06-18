@@ -1604,11 +1604,6 @@ public:
   /// recursion / infinite loops.
   void resolveReferences(Resolver &R, const RecordVal *SkipVal = nullptr);
 
-  /// If anything in this record refers to RV, replace the
-  /// reference to RV with the RHS of RV.  If RV is null, we resolve all
-  /// possible references.
-  void resolveReferencesTo(const RecordVal *RV);
-
   RecordKeeper &getRecords() const {
     return TrackedRecords;
   }

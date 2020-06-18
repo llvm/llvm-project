@@ -2,13 +2,14 @@
 // RUN: llvm-readelf --notes %t | FileCheck %s --check-prefix=GNU
 // RUN: llvm-readobj --notes %t | FileCheck %s --check-prefix=LLVM
 
-// GNU: Displaying notes found at file offset 0x00000040 with length 0x00000020:
+// GNU: Displaying notes found in: .note.gnu.property
 // GNU-NEXT:   Owner                 Data size	Description
 // GNU-NEXT:   GNU                   0x00000010	NT_GNU_PROPERTY_TYPE_0 (property note)
 // GNU-NEXT:     Properties:    aarch64 feature: BTI, PAC
 
 // LLVM:      Notes [
 // LLVM-NEXT:   NoteSection {
+// LLVM-NEXT:     Name: .note.gnu.property
 // LLVM-NEXT:     Offset: 0x40
 // LLVM-NEXT:     Size: 0x20
 // LLVM-NEXT:     Note {

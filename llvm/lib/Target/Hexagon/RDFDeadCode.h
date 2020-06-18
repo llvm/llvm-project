@@ -23,8 +23,8 @@
 #ifndef RDF_DEADCODE_H
 #define RDF_DEADCODE_H
 
-#include "RDFGraph.h"
-#include "RDFLiveness.h"
+#include "llvm/CodeGen/RDFGraph.h"
+#include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/ADT/SetVector.h"
 
 namespace llvm {

@@ -65,7 +65,7 @@ int &fn2(int &v) {
   // CHECK: %[[INITLIST2:.*]] = alloca %struct.B, align 8
   // CHECK: %[[R:.*]] = getelementptr inbounds %struct.B, %struct.B* %[[INITLIST2:.*]], i32 0, i32 0
   // CHECK: store i32* %{{.*}}, i32** %[[R]], align 8
-  // CHECK: call dereferenceable({{[0-9]+}}) i32* @_ZN1B1fEv(%struct.B* %[[INITLIST2:.*]])
+  // CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_ZN1B1fEv(%struct.B* %[[INITLIST2:.*]])
   return B{v}.f();
 }
 

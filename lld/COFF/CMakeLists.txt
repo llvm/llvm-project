@@ -14,6 +14,7 @@ add_lld_library(lldCOFF
   DriverUtils.cpp
   ICF.cpp
   InputFiles.cpp
+  LLDMapFile.cpp
   LTO.cpp
   MapFile.cpp
   MarkLive.cpp

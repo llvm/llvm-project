@@ -5,7 +5,7 @@
 With [Regions](LangRef.md#regions), the multi-level aspect of MLIR is structural
 in the IR. A lot of infrastructure within the compiler is built around this
 nesting structure; including the processing of operations within the
-[pass manager](WritingAPass.md#pass-manager). One advantage of the MLIR design
+[pass manager](PassManagement.md#pass-manager). One advantage of the MLIR design
 is that it is able to process operations in parallel, utilizing multiple
 threads. This is possible due to a property of the IR known as
 [`IsolatedFromAbove`](Traits.md#isolatedfromabove).

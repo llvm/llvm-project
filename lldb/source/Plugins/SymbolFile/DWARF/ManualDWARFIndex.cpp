@@ -13,31 +13,47 @@
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Host/TaskPool.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/Support/ThreadPool.h"
 
 using namespace lldb_private;
 using namespace lldb;
 
 void ManualDWARFIndex::Index() {
-  if (!m_debug_info)
+  if (!m_dwarf)
     return;
 
-  DWARFDebugInfo &debug_info = *m_debug_info;
-  m_debug_info = nullptr;
+  SymbolFileDWARF &main_dwarf = *m_dwarf;
+  m_dwarf = nullptr;
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%p", static_cast<void *>(&debug_info));
+  Timer scoped_timer(func_cat, "%p", static_cast<void *>(&main_dwarf));
+
+  DWARFDebugInfo &main_info = main_dwarf.DebugInfo();
+  SymbolFileDWARFDwo *dwp_dwarf = main_dwarf.GetDwpSymbolFile().get();
+  DWARFDebugInfo *dwp_info = dwp_dwarf ? &dwp_dwarf->DebugInfo() : nullptr;
 
   std::vector<DWARFUnit *> units_to_index;
-  units_to_index.reserve(debug_info.GetNumUnits());
-  for (size_t U = 0; U < debug_info.GetNumUnits(); ++U) {
-    DWARFUnit *unit = debug_info.GetUnitAtIndex(U);
+  units_to_index.reserve(main_info.GetNumUnits() +
+                         (dwp_info ? dwp_info->GetNumUnits() : 0));
+
+  // Process all units in the main file, as well as any type units in the dwp
+  // file. Type units in dwo files are handled when we reach the dwo file in
+  // IndexUnit.
+  for (size_t U = 0; U < main_info.GetNumUnits(); ++U) {
+    DWARFUnit *unit = main_info.GetUnitAtIndex(U);
     if (unit && m_units_to_avoid.count(unit->GetOffset()) == 0)
       units_to_index.push_back(unit);
   }
+  if (dwp_info && dwp_info->ContainsTypeUnits()) {
+    for (size_t U = 0; U < dwp_info->GetNumUnits(); ++U) {
+      if (auto *tu = llvm::dyn_cast<DWARFTypeUnit>(dwp_info->GetUnitAtIndex(U)))
+        units_to_index.push_back(tu);
+    }
+  }
+
   if (units_to_index.empty())
     return;
 
@@ -48,27 +64,34 @@ void ManualDWARFIndex::Index() {
   std::vector<llvm::Optional<DWARFUnit::ScopedExtractDIEs>> clear_cu_dies(
       units_to_index.size());
   auto parser_fn = [&](size_t cu_idx) {
-    IndexUnit(*units_to_index[cu_idx], sets[cu_idx]);
+    IndexUnit(*units_to_index[cu_idx], dwp_dwarf, sets[cu_idx]);
   };
 
   auto extract_fn = [&units_to_index, &clear_cu_dies](size_t cu_idx) {
     clear_cu_dies[cu_idx] = units_to_index[cu_idx]->ExtractDIEsScoped();
   };
 
+  // Share one thread pool across operations to avoid the overhead of
+  // recreating the threads.
+  llvm::ThreadPool pool;
+
   // Create a task runner that extracts dies for each DWARF unit in a
-  // separate thread
+  // separate thread.
   // First figure out which units didn't have their DIEs already
   // parsed and remember this.  If no DIEs were parsed prior to this index
   // function call, we are going to want to clear the CU dies after we are
   // done indexing to make sure we don't pull in all DWARF dies, but we need
   // to wait until all units have been indexed in case a DIE in one
   // unit refers to another and the indexes accesses those DIEs.
-  TaskMapOverInt(0, units_to_index.size(), extract_fn);
+  for (size_t i = 0; i < units_to_index.size(); ++i)
+    pool.async(extract_fn, i);
+  pool.wait();
 
   // Now create a task runner that can index each DWARF unit in a
   // separate thread so we can index quickly.
-
-  TaskMapOverInt(0, units_to_index.size(), parser_fn);
+  for (size_t i = 0; i < units_to_index.size(); ++i)
+    pool.async(parser_fn, i);
+  pool.wait();
 
   auto finalize_fn = [this, &sets](NameToDIE(IndexSet::*index)) {
     NameToDIE &result = m_set.*index;
@@ -77,21 +100,19 @@ void ManualDWARFIndex::Index() {
     result.Finalize();
   };
 
-  TaskPool::RunTasks([&]() { finalize_fn(&IndexSet::function_basenames); },
-                     [&]() { finalize_fn(&IndexSet::function_fullnames); },
-                     [&]() { finalize_fn(&IndexSet::function_methods); },
-                     [&]() { finalize_fn(&IndexSet::function_selectors); },
-                     [&]() { finalize_fn(&IndexSet::objc_class_selectors); },
-                     [&]() { finalize_fn(&IndexSet::globals); },
-                     [&]() { finalize_fn(&IndexSet::types); },
-                     [&]() { finalize_fn(&IndexSet::namespaces); });
+  pool.async(finalize_fn, &IndexSet::function_basenames);
+  pool.async(finalize_fn, &IndexSet::function_fullnames);
+  pool.async(finalize_fn, &IndexSet::function_methods);
+  pool.async(finalize_fn, &IndexSet::function_selectors);
+  pool.async(finalize_fn, &IndexSet::objc_class_selectors);
+  pool.async(finalize_fn, &IndexSet::globals);
+  pool.async(finalize_fn, &IndexSet::types);
+  pool.async(finalize_fn, &IndexSet::namespaces);
+  pool.wait();
 }
 
-void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {
-  assert(
-      !unit.IsDWOUnit() &&
-      "DWARFUnit associated with .dwo or .dwp should not be indexed directly");
-
+void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
+                                 IndexSet &set) {
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS);
 
   if (log) {
@@ -105,9 +126,16 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {
   IndexUnitImpl(unit, cu_language, set);
 
   if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
-    DWARFDebugInfo &dwo_info = *dwo_symbol_file->DebugInfo();
-    for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
-      IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), cu_language, set);
+    // Type units in a dwp file are indexed separately, so we just need to
+    // process the split unit here. However, if the split unit is in a dwo file,
+    // then we need to process type units here.
+    if (dwo_symbol_file == dwp) {
+      IndexUnitImpl(unit.GetNonSkeletonUnit(), cu_language, set);
+    } else {
+      DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
+      for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
+        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), cu_language, set);
+    }
   }
 }
 
@@ -165,12 +193,6 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
             is_declaration = form_value.Unsigned() != 0;
           break;
 
-        //                case DW_AT_artificial:
-        //                    if (attributes.ExtractFormValueAtIndex(i,
-        //                    form_value))
-        //                        is_artificial = form_value.Unsigned() != 0;
-        //                    break;
-
         case DW_AT_MIPS_linkage_name:
         case DW_AT_linkage_name:
           if (attributes.ExtractFormValueAtIndex(i, form_value))
@@ -190,49 +212,8 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
         case DW_AT_location:
         case DW_AT_const_value:
           has_location_or_const_value = true;
-          if (tag == DW_TAG_variable) {
-            const DWARFDebugInfoEntry *parent_die = die.GetParent();
-            while (parent_die != nullptr) {
-              switch (parent_die->Tag()) {
-              case DW_TAG_subprogram:
-              case DW_TAG_lexical_block:
-              case DW_TAG_inlined_subroutine:
-                // Even if this is a function level static, we don't add it. We
-                // could theoretically add these if we wanted to by
-                // introspecting into the DW_AT_location and seeing if the
-                // location describes a hard coded address, but we don't want
-                // the performance penalty of that right now.
-                is_global_or_static_variable = false;
-                // if (attributes.ExtractFormValueAtIndex(dwarf, i,
-                //                                        form_value)) {
-                //   // If we have valid block data, then we have location
-                //   // expression bytesthat are fixed (not a location list).
-                //   const uint8_t *block_data = form_value.BlockData();
-                //   if (block_data) {
-                //     uint32_t block_length = form_value.Unsigned();
-                //     if (block_length == 1 +
-                //     attributes.UnitAtIndex(i)->GetAddressByteSize()) {
-                //       if (block_data[0] == DW_OP_addr)
-                //         add_die = true;
-                //     }
-                //   }
-                // }
-                parent_die = nullptr; // Terminate the while loop.
-                break;
+          is_global_or_static_variable = die.IsGlobalOrStaticScopeVariable();
 
-              case DW_TAG_compile_unit:
-              case DW_TAG_partial_unit:
-                is_global_or_static_variable = true;
-                parent_die = nullptr; // Terminate the while loop.
-                break;
-
-              default:
-                parent_die =
-                    parent_die->GetParent(); // Keep going in the while loop.
-                break;
-              }
-            }
-          }
           break;
 
         case DW_AT_specification:
@@ -347,108 +328,118 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
   }
 }
 
-void ManualDWARFIndex::GetGlobalVariables(ConstString basename, DIEArray &offsets) {
+void ManualDWARFIndex::GetGlobalVariables(
+    ConstString basename, llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
-  m_set.globals.Find(basename, offsets);
+  m_set.globals.Find(basename,
+                     DIERefCallback(callback, basename.GetStringRef()));
 }
 
-void ManualDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
-                                          DIEArray &offsets) {
+void ManualDWARFIndex::GetGlobalVariables(
+    const RegularExpression &regex,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
-  m_set.globals.Find(regex, offsets);
+  m_set.globals.Find(regex, DIERefCallback(callback, regex.GetText()));
 }
 
-void ManualDWARFIndex::GetGlobalVariables(const DWARFUnit &unit,
-                                          DIEArray &offsets) {
+void ManualDWARFIndex::GetGlobalVariables(
+    const DWARFUnit &unit, llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
-  m_set.globals.FindAllEntriesForUnit(unit, offsets);
+  m_set.globals.FindAllEntriesForUnit(unit, DIERefCallback(callback));
 }
 
-void ManualDWARFIndex::GetObjCMethods(ConstString class_name,
-                                      DIEArray &offsets) {
+void ManualDWARFIndex::GetObjCMethods(
+    ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
-  m_set.objc_class_selectors.Find(class_name, offsets);
+  m_set.objc_class_selectors.Find(
+      class_name, DIERefCallback(callback, class_name.GetStringRef()));
 }
 
-void ManualDWARFIndex::GetCompleteObjCClass(ConstString class_name,
-                                            bool must_be_implementation,
-                                            DIEArray &offsets) {
+void ManualDWARFIndex::GetCompleteObjCClass(
+    ConstString class_name, bool must_be_implementation,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
-  m_set.types.Find(class_name, offsets);
+  m_set.types.Find(class_name,
+                   DIERefCallback(callback, class_name.GetStringRef()));
 }
 
-void ManualDWARFIndex::GetTypes(ConstString name, DIEArray &offsets) {
+void ManualDWARFIndex::GetTypes(
+    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
-  m_set.types.Find(name, offsets);
+  m_set.types.Find(name, DIERefCallback(callback, name.GetStringRef()));
 }
 
-void ManualDWARFIndex::GetTypes(const DWARFDeclContext &context,
-                                DIEArray &offsets) {
+void ManualDWARFIndex::GetTypes(
+    const DWARFDeclContext &context,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
-  m_set.types.Find(ConstString(context[0].name), offsets);
+  auto name = context[0].name;
+  m_set.types.Find(ConstString(name),
+                   DIERefCallback(callback, llvm::StringRef(name)));
 }
 
-void ManualDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
+void ManualDWARFIndex::GetNamespaces(
+    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
-  m_set.namespaces.Find(name, offsets);
+  m_set.namespaces.Find(name, DIERefCallback(callback, name.GetStringRef()));
 }
 
-void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
-                                    const CompilerDeclContext &parent_decl_ctx,
-                                    uint32_t name_type_mask,
-                                    std::vector<DWARFDIE> &dies) {
+void ManualDWARFIndex::GetFunctions(
+    ConstString name, SymbolFileDWARF &dwarf,
+    const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
 
   if (name_type_mask & eFunctionNameTypeFull) {
-    DIEArray offsets;
-    m_set.function_fullnames.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = dwarf.GetDIE(die_ref);
-      if (!die)
-        continue;
-      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-        dies.push_back(die);
-    }
+    if (!m_set.function_fullnames.Find(
+            name, DIERefCallback(
+                      [&](DWARFDIE die) {
+                        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
+                                                               die))
+                          return true;
+                        return callback(die);
+                      },
+                      name.GetStringRef())))
+      return;
   }
   if (name_type_mask & eFunctionNameTypeBase) {
-    DIEArray offsets;
-    m_set.function_basenames.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = dwarf.GetDIE(die_ref);
-      if (!die)
-        continue;
-      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-        dies.push_back(die);
-    }
-    offsets.clear();
+    if (!m_set.function_basenames.Find(
+            name, DIERefCallback(
+                      [&](DWARFDIE die) {
+                        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
+                                                               die))
+                          return true;
+                        return callback(die);
+                      },
+                      name.GetStringRef())))
+      return;
   }
 
   if (name_type_mask & eFunctionNameTypeMethod && !parent_decl_ctx.IsValid()) {
-    DIEArray offsets;
-    m_set.function_methods.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      if (DWARFDIE die = dwarf.GetDIE(die_ref))
-        dies.push_back(die);
-    }
+    if (!m_set.function_methods.Find(
+            name, DIERefCallback(callback, name.GetStringRef())))
+      return;
   }
 
   if (name_type_mask & eFunctionNameTypeSelector &&
       !parent_decl_ctx.IsValid()) {
-    DIEArray offsets;
-    m_set.function_selectors.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      if (DWARFDIE die = dwarf.GetDIE(die_ref))
-        dies.push_back(die);
-    }
+    if (!m_set.function_selectors.Find(
+            name, DIERefCallback(callback, name.GetStringRef())))
+      return;
   }
 }
 
-void ManualDWARFIndex::GetFunctions(const RegularExpression &regex,
-                                    DIEArray &offsets) {
+void ManualDWARFIndex::GetFunctions(
+    const RegularExpression &regex,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   Index();
 
-  m_set.function_basenames.Find(regex, offsets);
-  m_set.function_fullnames.Find(regex, offsets);
+  if (!m_set.function_basenames.Find(regex,
+                                     DIERefCallback(callback, regex.GetText())))
+    return;
+  if (!m_set.function_fullnames.Find(regex,
+                                     DIERefCallback(callback, regex.GetText())))
+    return;
 }
 
 void ManualDWARFIndex::Dump(Stream &s) {

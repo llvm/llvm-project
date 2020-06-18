@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVTargetStreamer.h"
+#include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -37,12 +38,16 @@ STATISTIC(RISCVNumInstrsCompressed,
 
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
+  const MCSubtargetInfo *STI;
+
 public:
   explicit RISCVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+      : AsmPrinter(TM, std::move(Streamer)), STI(TM.getMCSubtargetInfo()) {}
 
   StringRef getPassName() const override { return "RISCV Assembly Printer"; }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   void emitInstruction(const MachineInstr *MI) override;
 
@@ -59,6 +64,12 @@ public:
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
     return LowerRISCVMachineOperandToMCOperand(MO, MCOp, *this);
   }
+
+  void emitStartOfAsmFile(Module &M) override;
+  void emitEndOfAsmFile(Module &M) override;
+
+private:
+  void emitAttributes();
 };
 }
 
@@ -66,8 +77,7 @@ public:
 #include "RISCVGenCompressInstEmitter.inc"
 void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
-  bool Res = compressInst(CInst, Inst, *TM.getMCSubtargetInfo(),
-                          OutStreamer->getContext());
+  bool Res = compressInst(CInst, Inst, *STI, OutStreamer->getContext());
   if (Res)
     ++RISCVNumInstrsCompressed;
   AsmPrinter::EmitToStreamer(*OutStreamer, Res ? CInst : Inst);
@@ -152,6 +162,45 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   }
 
   return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
+}
+
+bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  // Set the current MCSubtargetInfo to a copy which has the correct
+  // feature bits for the current MachineFunction
+  MCSubtargetInfo &NewSTI =
+    OutStreamer->getContext().getSubtargetCopy(*TM.getMCSubtargetInfo());
+  NewSTI.setFeatureBits(MF.getSubtarget().getFeatureBits());
+  STI = &NewSTI;
+
+  SetupMachineFunction(MF);
+  emitFunctionBody();
+  return false;
+}
+
+void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
+  if (TM.getTargetTriple().isOSBinFormatELF())
+    emitAttributes();
+}
+
+void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
+  RISCVTargetStreamer &RTS =
+      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+
+  if (TM.getTargetTriple().isOSBinFormatELF())
+    RTS.finishAttributeSection();
+}
+
+void RISCVAsmPrinter::emitAttributes() {
+  RISCVTargetStreamer &RTS =
+      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+
+  const Triple &TT = TM.getTargetTriple();
+  StringRef CPU = TM.getTargetCPU();
+  StringRef FS = TM.getTargetFeatureString();
+  const RISCVTargetMachine &RTM = static_cast<const RISCVTargetMachine &>(TM);
+  const RISCVSubtarget STI(TT, CPU, FS, /*ABIName=*/"", RTM);
+
+  RTS.emitTargetAttributes(STI);
 }
 
 // Force static initialization.

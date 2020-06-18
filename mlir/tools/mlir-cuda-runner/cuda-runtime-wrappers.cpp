@@ -15,6 +15,8 @@
 #include <cassert>
 #include <numeric>
 
+#include "mlir/ExecutionEngine/CRunnerUtils.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "cuda.h"
@@ -28,15 +30,15 @@ int32_t reportErrorIfAny(CUresult result, const char *where) {
 }
 } // anonymous namespace
 
-extern "C" int32_t mcuModuleLoad(void **module, void *data) {
+extern "C" int32_t mgpuModuleLoad(void **module, void *data) {
   int32_t err = reportErrorIfAny(
       cuModuleLoadData(reinterpret_cast<CUmodule *>(module), data),
       "ModuleLoad");
   return err;
 }
 
-extern "C" int32_t mcuModuleGetFunction(void **function, void *module,
-                                        const char *name) {
+extern "C" int32_t mgpuModuleGetFunction(void **function, void *module,
+                                         const char *name) {
   return reportErrorIfAny(
       cuModuleGetFunction(reinterpret_cast<CUfunction *>(function),
                           reinterpret_cast<CUmodule>(module), name),
@@ -46,11 +48,11 @@ extern "C" int32_t mcuModuleGetFunction(void **function, void *module,
 // The wrapper uses intptr_t instead of CUDA's unsigned int to match
 // the type of MLIR's index type. This avoids the need for casts in the
 // generated MLIR code.
-extern "C" int32_t mcuLaunchKernel(void *function, intptr_t gridX,
-                                   intptr_t gridY, intptr_t gridZ,
-                                   intptr_t blockX, intptr_t blockY,
-                                   intptr_t blockZ, int32_t smem, void *stream,
-                                   void **params, void **extra) {
+extern "C" int32_t mgpuLaunchKernel(void *function, intptr_t gridX,
+                                    intptr_t gridY, intptr_t gridZ,
+                                    intptr_t blockX, intptr_t blockY,
+                                    intptr_t blockZ, int32_t smem, void *stream,
+                                    void **params, void **extra) {
   return reportErrorIfAny(
       cuLaunchKernel(reinterpret_cast<CUfunction>(function), gridX, gridY,
                      gridZ, blockX, blockY, blockZ, smem,
@@ -58,13 +60,13 @@ extern "C" int32_t mcuLaunchKernel(void *function, intptr_t gridX,
       "LaunchKernel");
 }
 
-extern "C" void *mcuGetStreamHelper() {
+extern "C" void *mgpuGetStreamHelper() {
   CUstream stream;
   reportErrorIfAny(cuStreamCreate(&stream, CU_STREAM_DEFAULT), "StreamCreate");
   return stream;
 }
 
-extern "C" int32_t mcuStreamSynchronize(void *stream) {
+extern "C" int32_t mgpuStreamSynchronize(void *stream) {
   return reportErrorIfAny(
       cuStreamSynchronize(reinterpret_cast<CUstream>(stream)), "StreamSync");
 }
@@ -73,57 +75,40 @@ extern "C" int32_t mcuStreamSynchronize(void *stream) {
 
 // Allows to register byte array with the CUDA runtime. Helpful until we have
 // transfer functions implemented.
-extern "C" void mcuMemHostRegister(void *ptr, uint64_t sizeBytes) {
+extern "C" void mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
   reportErrorIfAny(cuMemHostRegister(ptr, sizeBytes, /*flags=*/0),
                    "MemHostRegister");
 }
 
-// A struct that corresponds to how MLIR represents memrefs.
-template <typename T, int N> struct MemRefType {
-  T *basePtr;
-  T *data;
-  int64_t offset;
-  int64_t sizes[N];
-  int64_t strides[N];
-};
-
 // Allows to register a MemRef with the CUDA runtime. Initializes array with
 // value. Helpful until we have transfer functions implemented.
-template <typename T, int N>
-void mcuMemHostRegisterMemRef(const MemRefType<T, N> *arg, T value) {
-  auto count = std::accumulate(arg->sizes, arg->sizes + N, 1,
-                               std::multiplies<int64_t>());
-  std::fill_n(arg->data, count, value);
-  mcuMemHostRegister(arg->data, count * sizeof(T));
+template <typename T>
+void mcuMemHostRegisterMemRef(const DynamicMemRefType<T> &mem_ref, T value) {
+  llvm::SmallVector<int64_t, 4> denseStrides(mem_ref.rank);
+  llvm::ArrayRef<int64_t> sizes(mem_ref.sizes, mem_ref.rank);
+  llvm::ArrayRef<int64_t> strides(mem_ref.strides, mem_ref.rank);
+
+  std::partial_sum(sizes.rbegin(), sizes.rend(), denseStrides.rbegin(),
+                   std::multiplies<int64_t>());
+  auto count = denseStrides.front();
+
+  // Only densely packed tensors are currently supported.
+  std::rotate(denseStrides.begin(), denseStrides.begin() + 1,
+              denseStrides.end());
+  denseStrides.back() = 1;
+  assert(strides == llvm::makeArrayRef(denseStrides));
+
+  auto *pointer = mem_ref.data + mem_ref.offset;
+  std::fill_n(pointer, count, value);
+  mgpuMemHostRegister(pointer, count * sizeof(T));
 }
 
-extern "C" void mcuMemHostRegisterMemRef1dFloat(float *allocated,
-                                                float *aligned, int64_t offset,
-                                                int64_t size, int64_t stride) {
-  MemRefType<float, 1> descriptor;
-  descriptor.basePtr = allocated;
-  descriptor.data = aligned;
-  descriptor.offset = offset;
-  descriptor.sizes[0] = size;
-  descriptor.strides[0] = stride;
-  mcuMemHostRegisterMemRef(&descriptor, 1.23f);
+extern "C" void mcuMemHostRegisterFloat(int64_t rank, void *ptr) {
+  UnrankedMemRefType<float> mem_ref = {rank, ptr};
+  mcuMemHostRegisterMemRef(DynamicMemRefType<float>(mem_ref), 1.23f);
 }
 
-extern "C" void mcuMemHostRegisterMemRef3dFloat(float *allocated,
-                                                float *aligned, int64_t offset,
-                                                int64_t size0, int64_t size1,
-                                                int64_t size2, int64_t stride0,
-                                                int64_t stride1,
-                                                int64_t stride2) {
-  MemRefType<float, 3> descriptor;
-  descriptor.basePtr = allocated;
-  descriptor.data = aligned;
-  descriptor.offset = offset;
-  descriptor.sizes[0] = size0;
-  descriptor.strides[0] = stride0;
-  descriptor.sizes[1] = size1;
-  descriptor.strides[1] = stride1;
-  descriptor.sizes[2] = size2;
-  descriptor.strides[2] = stride2;
-  mcuMemHostRegisterMemRef(&descriptor, 1.23f);
+extern "C" void mcuMemHostRegisterInt32(int64_t rank, void *ptr) {
+  UnrankedMemRefType<int32_t> mem_ref = {rank, ptr};
+  mcuMemHostRegisterMemRef(DynamicMemRefType<int32_t>(mem_ref), 123);
 }

@@ -126,6 +126,9 @@ static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus decodeMemoryOpValue(MCInst &Inst, unsigned Insn,
                                         uint64_t Address, const void *Decoder) {
   unsigned Register = (Insn >> 16) & 0xf;
+  if (Register > 11)
+    return MCDisassembler::Fail;
+
   Inst.addOperand(MCOperand::createReg(GPRDecoderTable[Register]));
   unsigned Offset = (Insn & 0xffff);
   Inst.addOperand(MCOperand::createImm(SignExtend32<16>(Offset)));

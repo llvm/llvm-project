@@ -431,7 +431,6 @@ class __merge_task : public tbb::task
     _SizeType _M_ys, _M_ye;
     _SizeType _M_zs;
     _Compare _M_comp;
-    _Cleanup _M_cleanup;
     _LeafMerge _M_leaf_merge;
     _SizeType _M_nsort; //number of elements to be sorted for partial_sort alforithm
 
@@ -440,8 +439,6 @@ class __merge_task : public tbb::task
     bool _root;   //means a task is merging root task
     bool _x_orig; //"true" means X(or left ) subrange is in the original container; false - in the buffer
     bool _y_orig; //"true" means Y(or right) subrange is in the original container; false - in the buffer
-    bool _x_first_move, _y_first_move; //"true" means X and Y subranges are merging into the buffer and move constructor
-    //should be called instead of just moving.
     bool _split; //"true" means a merge task is a split task for parallel merging, the execution logic differs
 
     bool
@@ -450,7 +447,7 @@ class __merge_task : public tbb::task
         return _M_nsort > 0;
     }
 
-    struct move_value
+    struct __move_value
     {
         template <typename Iterator1, typename Iterator2>
         void
@@ -460,7 +457,7 @@ class __merge_task : public tbb::task
         }
     };
 
-    struct move_value_construct
+    struct __move_value_construct
     {
         template <typename Iterator1, typename Iterator2>
         void
@@ -470,7 +467,7 @@ class __merge_task : public tbb::task
         }
     };
 
-    struct move_range
+    struct __move_range
     {
         template <typename Iterator1, typename Iterator2>
         Iterator2
@@ -489,7 +486,7 @@ class __merge_task : public tbb::task
         }
     };
 
-    struct move_range_construct
+    struct __move_range_construct
     {
         template <typename Iterator1, typename Iterator2>
         Iterator2
@@ -498,7 +495,7 @@ class __merge_task : public tbb::task
             if (__last1 - __first1 < __merge_cut_off)
             {
                 for (; __first1 != __last1; ++__first1, ++__first2)
-                    move_value_construct()(__first1, __first2);
+                    __move_value_construct()(__first1, __first2);
                 return __first2;
             }
 
@@ -506,19 +503,38 @@ class __merge_task : public tbb::task
             tbb::parallel_for(tbb::blocked_range<_SizeType>(0, __n, __merge_cut_off),
                               [__first1, __first2](const tbb::blocked_range<_SizeType>& __range) {
                                   for (auto i = __range.begin(); i != __range.end(); ++i)
-                                      move_value_construct()(__first1 + i, __first2 + i);
+                                      __move_value_construct()(__first1 + i, __first2 + i);
                               });
             return __first2 + __n;
         }
     };
 
+    struct __cleanup_range
+    {
+        template <typename Iterator>
+        void
+        operator()(Iterator __first, Iterator __last)
+        {
+            if (__last - __first < __merge_cut_off)
+                _Cleanup()(__first, __last);
+            else
+            {
+                auto __n = __last - __first;
+                tbb::parallel_for(tbb::blocked_range<_SizeType>(0, __n, __merge_cut_off),
+                                  [__first](const tbb::blocked_range<_SizeType>& __range) {
+                                      _Cleanup()(__first + __range.begin(), __first + __range.end());
+                                  });
+            }
+        }
+    };
+
   public:
     __merge_task(_SizeType __xs, _SizeType __xe, _SizeType __ys, _SizeType __ye, _SizeType __zs, _Compare __comp,
-                 _Cleanup __cleanup, _LeafMerge __leaf_merge, _SizeType __nsort, _RandomAccessIterator1 __x_beg,
+                 _Cleanup, _LeafMerge __leaf_merge, _SizeType __nsort, _RandomAccessIterator1 __x_beg,
                  _RandomAccessIterator2 __z_beg, bool __x_orig, bool __y_orig, bool __root)
         : _M_xs(__xs), _M_xe(__xe), _M_ys(__ys), _M_ye(__ye), _M_zs(__zs), _M_x_beg(__x_beg), _M_z_beg(__z_beg),
-          _M_comp(__comp), _M_cleanup(__cleanup), _M_leaf_merge(__leaf_merge), _M_nsort(__nsort), _root(__root),
-          _x_orig(__x_orig), _y_orig(__y_orig), _x_first_move(false), _y_first_move(false), _split(false)
+          _M_comp(__comp), _M_leaf_merge(__leaf_merge), _M_nsort(__nsort), _root(__root),
+          _x_orig(__x_orig), _y_orig(__y_orig), _split(false)
     {
     }
 
@@ -526,16 +542,6 @@ class __merge_task : public tbb::task
     is_left(_SizeType __idx) const
     {
         return _M_xs == __idx;
-    }
-
-    template <typename IndexType>
-    void
-    set_first_move(IndexType __idx, bool __on_off)
-    {
-        if (is_left(__idx))
-            _x_first_move = __on_off;
-        else
-            _y_first_move = __on_off;
     }
 
     template <typename IndexType>
@@ -584,19 +590,11 @@ class __merge_task : public tbb::task
         assert(__nx > 0 && __ny > 0);
 
         if (_x_orig)
-        {
-            if (_x_first_move)
-            {
-                move_range_construct()(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_z_beg + _M_zs);
-                _x_first_move = false;
-            }
-            else
-                move_range()(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_z_beg + _M_zs);
-        }
+            __move_range_construct()(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_z_beg + _M_zs);
         else
         {
-            assert(!_x_first_move);
-            move_range()(_M_z_beg + _M_zs, _M_z_beg + _M_zs + __nx, _M_x_beg + _M_xs);
+            __move_range()(_M_z_beg + _M_zs, _M_z_beg + _M_zs + __nx, _M_x_beg + _M_xs);
+            __cleanup_range()(_M_z_beg + _M_zs, _M_z_beg + _M_zs + __nx);
         }
 
         _x_orig = !_x_orig;
@@ -608,19 +606,11 @@ class __merge_task : public tbb::task
         const auto __ny = (_M_ye - _M_ys);
 
         if (_y_orig)
-        {
-            if (_y_first_move)
-            {
-                move_range_construct()(_M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs + __nx);
-                _y_first_move = false;
-            }
-            else
-                move_range()(_M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs + __nx);
-        }
+            __move_range_construct()(_M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs + __nx);
         else
         {
-            assert(!_y_first_move);
-            move_range()(_M_z_beg + _M_zs + __nx, _M_z_beg + _M_zs + __nx + __ny, _M_x_beg + _M_ys);
+            __move_range()(_M_z_beg + _M_zs + __nx, _M_z_beg + _M_zs + __nx + __ny, _M_x_beg + _M_ys);
+            __cleanup_range()(_M_z_beg + _M_zs + __nx, _M_z_beg + _M_zs + __nx + __ny);
         }
 
         _y_orig = !_y_orig;
@@ -641,41 +631,15 @@ class __merge_task : public tbb::task
         //merge to buffer
         if (_x_orig)
         {
-            assert(is_partial() || std::is_sorted(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_comp));
-            assert(is_partial() || std::is_sorted(_M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_comp));
-
-            if (_x_first_move && _y_first_move)
-            {
-                _M_leaf_merge(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs,
-                              _M_comp, move_value_construct(), move_value_construct(), move_range_construct(),
-                              move_range_construct());
-                _x_first_move = false, _y_first_move = false;
-            }
-            else if (_x_first_move && !_y_first_move)
-            {
-                _M_leaf_merge(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs,
-                              _M_comp, move_value_construct(), move_value(), move_range_construct(), move_range());
-                _x_first_move = false;
-            }
-            else if (!_x_first_move && _y_first_move)
-            {
-                _M_leaf_merge(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs,
-                              _M_comp, move_value(), move_value_construct(), move_range(), move_range_construct());
-                _y_first_move = false;
-            }
-            else
-                _M_leaf_merge(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs,
-                              _M_comp, move_value(), move_value(), move_range(), move_range());
-
-            assert(is_partial() || std::is_sorted(_M_z_beg + _M_zs, _M_z_beg + _M_zs + __nx + __ny, _M_comp));
+            _M_leaf_merge(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs,
+                          _M_comp, __move_value_construct(), __move_value_construct(), __move_range_construct(),
+                          __move_range_construct());
             assert(parent_merge()); //not root merging task
         }
         //merge to "origin"
         else
         {
             assert(_x_orig == _y_orig);
-            assert(!_x_first_move);
-            assert(!_y_first_move);
 
             assert(is_partial() || std::is_sorted(_M_z_beg + _M_xs, _M_z_beg + _M_xe, _M_comp));
             assert(is_partial() || std::is_sorted(_M_z_beg + _M_ys, _M_z_beg + _M_ye, _M_comp));
@@ -684,19 +648,14 @@ class __merge_task : public tbb::task
             const auto __ny = (_M_ye - _M_ys);
 
             _M_leaf_merge(_M_z_beg + _M_xs, _M_z_beg + _M_xe, _M_z_beg + _M_ys, _M_z_beg + _M_ye, _M_x_beg + _M_zs,
-                          _M_comp, move_value(), move_value(), move_range(), move_range());
+                          _M_comp, __move_value(), __move_value(), __move_range(), __move_range());
 
-            assert(is_partial() || std::is_sorted(_M_x_beg + _M_zs, _M_x_beg + _M_zs + __nx + __ny, _M_comp));
-
-            //in case of the root merge task - clean the buffer
-            if (!parent_merge())
-            {
-                _M_cleanup(_M_z_beg + _M_xs, _M_z_beg + _M_xe);
-                _M_cleanup(_M_z_beg + _M_ys, _M_z_beg + _M_ye);
-            }
+            __cleanup_range()(_M_z_beg + _M_xs, _M_z_beg + _M_xe);
+            __cleanup_range()(_M_z_beg + _M_ys, _M_z_beg + _M_ye);
         }
         return nullptr;
     }
+
     tbb::task*
     process_ranges()
     {
@@ -705,49 +664,41 @@ class __merge_task : public tbb::task
 
         auto p = parent_merge();
 
-        //optimization, just for sort algorithm, not for partial_sort
-        //{x} <= {y}
+        if (!p)
+        { //root merging task
+
+            //optimization, just for sort algorithm, //{x} <= {y}
+            if (!is_partial() && x_less_y()) //we have a solution
+            {
+                if (!_x_orig)
+                {                   //we have to move the solution to the origin
+                    move_x_range(); //parallel moving
+                    move_y_range(); //parallel moving
+                }
+                return nullptr;
+            }
+            //else: if we have data in the origin,
+            //we have to move data to the buffer for final merging into the origin.
+            if (_x_orig)
+            {
+                move_x_range(); //parallel moving
+                move_y_range(); //parallel moving
+            }
+            // need to merge {x} and {y}.
+            return merge_ranges();
+        }
+        //else: not root merging task (parent_merge() == NULL)
+        //optimization, just for sort algorithm, //{x} <= {y}
         if (!is_partial() && x_less_y())
         {
-            if (p)
-            {
-                const auto id_range = _M_zs;
-                p->set_odd(id_range, _x_orig);
-                p->set_first_move(id_range, _x_first_move);
-            }
-            else
-            { //root task
-
-                //clean the buffer
-                if (!_x_first_move)
-                    _M_cleanup(_M_z_beg + _M_xs, _M_z_beg + _M_xe);
-
-                if (!_y_first_move)
-                    _M_cleanup(_M_z_beg + _M_ys, _M_z_beg + _M_ye);
-            }
+            const auto id_range = _M_zs;
+            p->set_odd(id_range, _x_orig);
             return nullptr;
         }
+        //else: we have to revert "_x(y)_orig" flag of the parent merging task
+        const auto id_range = _M_zs;
+        p->set_odd(id_range, !_x_orig);
 
-        //in case of the root merge task - move to the buffer firstly
-        //the root merging task
-        if (!p && _x_orig)
-        {
-            assert(_y_orig);
-
-            move_x_range();
-            move_y_range();
-        }
-
-        //we have to revert "_x(y)_orig" flag of the parent merging task
-        if (p)
-        {
-            const auto id_range = _M_zs;
-            p->set_odd(id_range, !_x_orig);
-        }
-
-        const _SizeType __n = (_M_xe - _M_xs) + (_M_ye - _M_ys);
-
-        // need to merge {x} and {y}
         return merge_ranges();
     }
 
@@ -783,11 +734,9 @@ class __merge_task : public tbb::task
         auto __zm = _M_zs + ((__xm - _M_xs) + (__ym - _M_ys));
 
         __merge_task* __right = new (tbb::task::allocate_additional_child_of(*parent()))
-            __merge_task(__xm, _M_xe, __ym, _M_ye, __zm, _M_comp, _M_cleanup, _M_leaf_merge, _M_nsort, _M_x_beg,
+            __merge_task(__xm, _M_xe, __ym, _M_ye, __zm, _M_comp, _Cleanup(), _M_leaf_merge, _M_nsort, _M_x_beg,
                          _M_z_beg, _x_orig, _y_orig, _root);
 
-        __right->_x_first_move = _x_first_move;
-        __right->_y_first_move = _y_first_move;
         __right->_split = true;
 
         tbb::task::spawn(*__right);
@@ -891,7 +840,6 @@ __stable_sort_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, _Le
 
         tbb::task* p = parent();
         const auto id_range = _M_xs - _M_x_beg;
-        static_cast<_MergeTaskType*>(p)->set_first_move(id_range, true);
 
         return nullptr;
     }

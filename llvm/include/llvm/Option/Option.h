@@ -135,6 +135,18 @@ public:
     return Ret;
   }
 
+  /// Get the help text for this option.
+  StringRef getHelpText() const {
+    assert(Info && "Must have a valid info!");
+    return Info->HelpText;
+  }
+
+  /// Get the meta-variable list for this option.
+  StringRef getMetaVar() const {
+    assert(Info && "Must have a valid info!");
+    return Info->MetaVar;
+  }
+
   unsigned getNumArgs() const { return Info->Param; }
 
   bool hasNoOptAsInput() const { return Info->Flags & RenderAsInput;}

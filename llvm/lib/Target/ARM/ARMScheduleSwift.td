@@ -744,7 +744,7 @@ let SchedModel = SwiftModel in {
                                 SwiftWriteLM14CyNo, SwiftWriteLM14CyNo,
                                 SwiftWriteLM14CyNo,  SwiftWriteLM14CyNo,
                                 SwiftWriteP01OneCycle, SwiftVLDMPerm5]>,
-    // Inaccurate: reuse describtion from 9 S registers.
+    // Inaccurate: reuse description from 9 S registers.
     SchedVar<SwiftLMAddr11Pred,[SwiftWriteLM9Cy, SwiftWriteLM10Cy,
                                 SwiftWriteLM13Cy, SwiftWriteLM14CyNo,
                                 SwiftWriteLM17CyNo, SwiftWriteLM18CyNo,
@@ -760,7 +760,7 @@ let SchedModel = SwiftModel in {
                                 SwiftWriteLM11CyNo, SwiftWriteLM11CyNo,
                                 SwiftWriteLM11CyNo, SwiftWriteLM11CyNo,
                                 SwiftWriteP01OneCycle, SwiftVLDMPerm3]>,
-    // Inaccurate: reuse describtion from 9 S registers.
+    // Inaccurate: reuse description from 9 S registers.
     SchedVar<SwiftLMAddr13Pred, [SwiftWriteLM9Cy, SwiftWriteLM10Cy,
                                 SwiftWriteLM13Cy, SwiftWriteLM14CyNo,
                                 SwiftWriteLM17CyNo, SwiftWriteLM18CyNo,
@@ -958,7 +958,7 @@ let SchedModel = SwiftModel in {
   def : InstRW<[SwiftWriteLM7Cy, SwiftWriteP01OneCycle, SwiftWriteLM8Cy,
                 SwiftWriteLM8Cy, SwiftExt1xP0, SwiftVLDMPerm3],
         (instregex "VLD3(LN|DUP)(d|q)(8|16|32)Pseudo_UPD")>;
-  // Four element struture.
+  // Four element structure.
   def : InstRW<[SwiftWriteLM8Cy, SwiftWriteLM9Cy, SwiftWriteLM10CyNo,
                 SwiftWriteLM10CyNo, SwiftExt1xP0, SwiftVLDMPerm5],
         (instregex "VLD4(LN|DUP)(d|q)(8|16|32)$",

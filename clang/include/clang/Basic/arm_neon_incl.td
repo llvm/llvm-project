@@ -35,7 +35,7 @@ class LOp<list<dag> ops> : Operation<ops>;
 // These defs and classes are used internally to implement the SetTheory
 // expansion and should be ignored.
 foreach Index = 0-63 in
-  def sv##Index;
+  def sv#Index;
 class MaskExpand;
 
 //===----------------------------------------------------------------------===//
@@ -60,6 +60,15 @@ def op;
 // example: (call "vget_high", $p0) -> "vgetq_high_s16(__p0)"
 //            (assuming $p0 has type int16x8_t).
 def call;
+// call_mangled - Invoke another intrinsic matching the mangled name variation
+//                of the caller's base type. If there is no intrinsic defined
+//                that has the variation and takes the given types, an error
+//                is generated at tblgen time.
+// example: (call_mangled "vfma_lane", $p0, $p1) -> "vfma_lane(__p0, __p1)"
+//            (assuming non-LaneQ caller)
+//          (call_mangled "vfma_lane", $p0, $p1) -> "vfma_laneq(__p0, __p1)"
+//            (assuming LaneQ caller)
+def call_mangled;
 // cast - Perform a cast to a different type. This gets emitted as a static
 //        C-style cast. For a pure reinterpret cast (T x = *(T*)&y), use
 //        "bitcast".
@@ -79,6 +88,7 @@ def call;
 //          - "D" - Double the number of lanes in the type.
 //          - "8" - Convert type to an equivalent vector of 8-bit signed
 //                  integers.
+//          - "32" - Convert type to an equivalent vector of 32-bit integers.
 // example: (cast "R", "U", $p0) -> "(uint32x4_t)__p0" (assuming the return
 //           value is of type "int32x4_t".
 //          (cast $p0, "D", "8", $p1) -> "(int8x16_t)__p1" (assuming __p0
@@ -100,12 +110,6 @@ def dup;
 // example: (dup_typed $p1, $p2) -> "(float16x4_t) {__p2, __p2, __p2, __p2}"
 //          (assuming __p1 is float16x4_t, and __p2 is a compatible scalar).
 def dup_typed;
-// splat - Take a vector and a lane index, and return a vector of the same type
-//         containing repeated instances of the source vector at the lane index.
-// example: (splat $p0, $p1) ->
-//            "__builtin_shufflevector(__p0, __p0, __p1, __p1, __p1, __p1)"
-//          (assuming __p0 has four elements).
-def splat;
 // save_temp - Create a temporary (local) variable. The variable takes a name
 //             based on the zero'th parameter and can be referenced using
 //             using that name in subsequent DAGs in the same
@@ -211,6 +215,7 @@ def OP_UNAVAILABLE : Operation {
 // f: float
 // h: half-float
 // d: double
+// b: bfloat16
 //
 // Typespec modifiers
 // ------------------
@@ -232,6 +237,7 @@ def OP_UNAVAILABLE : Operation {
 // S: change to signed integer category.
 // U: change to unsigned integer category.
 // F: change to floating category.
+// B: change to BFloat16
 // P: change to polynomial category.
 // p: change polynomial to equivalent integer category. Otherwise nop.
 //
@@ -261,7 +267,6 @@ class Inst <string n, string p, string t, Operation o> {
   string ArchGuard = "";
 
   Operation Operation = o;
-  bit CartesianProductOfTypes = 0;
   bit BigEndianSafe = 0;
   bit isShift = 0;
   bit isScalarShift = 0;
@@ -283,6 +288,8 @@ class Inst <string n, string p, string t, Operation o> {
   // this. Ex: vset_lane which outputs vmov instructions.
   bit isHiddenWInst = 0;
   bit isHiddenLInst = 0;
+
+  string CartesianProductWith = "";
 }
 
 // The following instruction classes are implemented via builtins.

@@ -208,6 +208,6 @@ void ento::registerCloneChecker(CheckerManager &Mgr) {
     .getCheckerStringOption(Checker, "IgnoredFilesPattern");
 }
 
-bool ento::shouldRegisterCloneChecker(const LangOptions &LO) {
+bool ento::shouldRegisterCloneChecker(const CheckerManager &mgr) {
   return true;
 }

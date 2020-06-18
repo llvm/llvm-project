@@ -162,17 +162,17 @@ namespace {
 #pragma omp declare target link(x) // expected-error {{'x' must not appear in both clauses 'to' and 'link'}}
 
 void bazz() {}
-#pragma omp declare target to(bazz) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} host5-note {{marked as 'device_type(nohost)' here}}
+#pragma omp declare target to(bazz) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} host5-note 3{{marked as 'device_type(nohost)' here}}
 void bazzz() {bazz();}
 #pragma omp declare target to(bazzz) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 void any() {bazz();} // host5-error {{function with 'device_type(nohost)' is not available on host}}
-void host1() {bazz();}
-#pragma omp declare target to(host1) device_type(host) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} dev5-note 2 {{marked as 'device_type(host)' here}}
-void host2() {bazz();}
+void host1() {bazz();} // host5-error {{function with 'device_type(nohost)' is not available on host}}
+#pragma omp declare target to(host1) device_type(host) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} dev5-note 4 {{marked as 'device_type(host)' here}}
+void host2() {bazz();} //host5-error {{function with 'device_type(nohost)' is not available on host}}
 #pragma omp declare target to(host2)
-void device() {host1();}
+void device() {host1();} // dev5-error {{function with 'device_type(host)' is not available on device}}
 #pragma omp declare target to(device) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} host5-note 2 {{marked as 'device_type(nohost)' here}}
-void host3() {host1();}
+void host3() {host1();} // dev5-error {{function with 'device_type(host)' is not available on device}}
 #pragma omp declare target to(host3)
 
 #pragma omp declare target

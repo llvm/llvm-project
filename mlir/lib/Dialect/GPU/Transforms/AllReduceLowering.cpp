@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
@@ -151,7 +151,8 @@ private:
 
   /// Adds type to funcOp's workgroup attributions.
   Value createWorkgroupBuffer() {
-    int workgroupMemoryAddressSpace = 3;
+    int workgroupMemoryAddressSpace =
+        gpu::GPUDialect::getWorkgroupAddressSpace();
     auto bufferType =
         MemRefType::get({kSubgroupSize}, valueType, ArrayRef<AffineMap>{},
                         workgroupMemoryAddressSpace);
@@ -212,6 +213,25 @@ private:
       return isFloatingPoint ? getFactory<AddFOp>() : getFactory<AddIOp>();
     if (opName == "mul")
       return isFloatingPoint ? getFactory<MulFOp>() : getFactory<MulIOp>();
+    if (opName == "and") {
+      return getFactory<AndOp>();
+    }
+    if (opName == "or") {
+      return getFactory<OrOp>();
+    }
+    if (opName == "xor") {
+      return getFactory<XOrOp>();
+    }
+    if (opName == "max") {
+      return isFloatingPoint
+                 ? getCmpFactory<CmpFOp, CmpFPredicate, CmpFPredicate::UGT>()
+                 : getCmpFactory<CmpIOp, CmpIPredicate, CmpIPredicate::ugt>();
+    }
+    if (opName == "min") {
+      return isFloatingPoint
+                 ? getCmpFactory<CmpFOp, CmpFPredicate, CmpFPredicate::ULT>()
+                 : getCmpFactory<CmpIOp, CmpIPredicate, CmpIPredicate::ult>();
+    }
     return AccumulatorFactory();
   }
 
@@ -219,6 +239,16 @@ private:
   template <typename T> AccumulatorFactory getFactory() {
     return [&](Value lhs, Value rhs) {
       return create<T>(lhs.getType(), lhs, rhs);
+    };
+  }
+
+  /// Returns an accumulator for comparison such as min, max. T is the type
+  /// of the compare op.
+  template <typename T, typename PredicateEnum, PredicateEnum predicate>
+  AccumulatorFactory getCmpFactory() const {
+    return [&](Value lhs, Value rhs) {
+      Value cmp = rewriter.create<T>(loc, predicate, lhs, rhs);
+      return rewriter.create<SelectOp>(loc, cmp, lhs, rhs);
     };
   }
 
@@ -351,8 +381,8 @@ struct GpuAllReduceConversion : public RewritePattern {
   explicit GpuAllReduceConversion(MLIRContext *context)
       : RewritePattern(gpu::GPUFuncOp::getOperationName(), 1, context) {}
 
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
     auto funcOp = cast<gpu::GPUFuncOp>(op);
     auto callback = [&](gpu::AllReduceOp reduceOp) {
       GpuAllReduceRewriter(funcOp, reduceOp, rewriter).rewrite();
@@ -362,7 +392,7 @@ struct GpuAllReduceConversion : public RewritePattern {
     };
     while (funcOp.walk(callback).wasInterrupted()) {
     }
-    return matchSuccess();
+    return success();
   }
 };
 } // namespace

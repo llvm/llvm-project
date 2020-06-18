@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
   }
   // CHECK: {{ERROR: .*Sanitizer: pvalloc parameters overflow: size .* rounded up to system page size .* cannot be represented in type size_t}}
   // CHECK: {{#0 .*pvalloc}}
-  // CHECK: {{#1 .*main .*pvalloc-overflow.cpp:}}
+  // CHECK: {{#[12] .*main .*pvalloc-overflow.cpp:}}
   // CHECK: {{SUMMARY: .*Sanitizer: pvalloc-overflow}}
 
   // The NULL pointer is printed differently on different systems, while (long)0

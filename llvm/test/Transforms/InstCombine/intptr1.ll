@@ -27,7 +27,7 @@ for.body:                                         ; preds = %for.body, %for.body
   store float %mul.i, float* %a.addr.03, align 4
   %add = getelementptr inbounds float, float* %tmp, i64 1
   %add.int = ptrtoint float* %add to i64
-; CHECK %add = getelementptr
+; CHECK: %add = getelementptr
 ; CHECK-NOT: ptrtoint float*
   %incdec.ptr = getelementptr inbounds float, float* %a.addr.03, i64 1
 ; CHECK: %incdec.ptr = 

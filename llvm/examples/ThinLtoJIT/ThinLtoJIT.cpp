@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Host.h"
 
 #include "ThinLtoDiscoveryThread.h"
 #include "ThinLtoInstrumentationLayer.h"
@@ -158,7 +159,7 @@ ThinLtoJIT::ThinLtoJIT(ArrayRef<std::string> InputFiles,
 
   // We are restricted to a single dylib currently. Add runtime overrides and
   // symbol generators.
-  MainJD = &ES.createJITDylib("main");
+  MainJD = &ES.createBareJITDylib("main");
   Err = setupJITDylib(MainJD, AllowNudgeIntoDiscovery, PrintStats);
   if (Err)
     return;
@@ -190,7 +191,7 @@ Expected<ThreadSafeModule> ThinLtoJIT::setupMainModule(StringRef MainFunction) {
   }
 
   if (auto TSM = GlobalIndex->parseModuleFromFile(*M))
-    return TSM;
+    return std::move(TSM); // Not a redundant move: fix build on gcc-7.5
 
   return createStringError(inconvertibleErrorCode(),
                            "Failed to parse main module");
@@ -265,16 +266,21 @@ void ThinLtoJIT::setupLayers(JITTargetMachineBuilder JTMB,
   CompileThreads = std::make_unique<ThreadPool>(
       llvm::hardware_concurrency(NumCompileThreads));
   ES.setDispatchMaterialization(
-      [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
+      [this](std::unique_ptr<MaterializationUnit> MU,
+             MaterializationResponsibility MR) {
         if (IsTrivialModule(MU.get())) {
           // This should be quick and we may save a few session locks.
-          MU->doMaterialize(JD);
+          MU->materialize(std::move(MR));
         } else {
           // FIXME: Drop the std::shared_ptr workaround once ThreadPool::async()
           // accepts llvm::unique_function to define jobs.
           auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
+          auto SharedMR =
+            std::make_shared<MaterializationResponsibility>(std::move(MR));
           CompileThreads->async(
-              [MU = std::move(SharedMU), &JD]() { MU->doMaterialize(JD); });
+              [MU = std::move(SharedMU), MR = std::move(SharedMR)]() {
+                MU->materialize(std::move(*MR));
+              });
         }
       });
 

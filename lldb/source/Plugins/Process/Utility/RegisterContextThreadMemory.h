@@ -92,7 +92,9 @@ protected:
   uint32_t m_stop_id;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(RegisterContextThreadMemory);
+  RegisterContextThreadMemory(const RegisterContextThreadMemory &) = delete;
+  const RegisterContextThreadMemory &
+  operator=(const RegisterContextThreadMemory &) = delete;
 };
 
 } // namespace lldb_private

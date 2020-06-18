@@ -28,13 +28,19 @@
 # SEC2:      .text.foo   PROGBITS 0000000000000000 001000 000001
 # SEC2-NEXT: .text.bar   PROGBITS 0000000000000001 001001 000001
 
-## .text.bar* are orphans that get assigned to .text.
+## .text.bar* are orphan sections.
 # RUN: echo 'SECTIONS { .text.foo : {*(.text.foo*)} }' > %t3.script
-# RUN: ld.lld %t.o --script %t3.script --icf=all --print-icf-sections -o %t | FileCheck --check-prefix=ICF2 %s
-# RUN: llvm-readelf -S %t | FileCheck --check-prefix=SEC3 %s
+# RUN: ld.lld %t.o -T %t3.script --icf=all --print-icf-sections -o %t3 | FileCheck --check-prefix=ICF3 %s
+# RUN: llvm-readelf -S %t3 | FileCheck --check-prefix=SEC3 %s
 
+# ICF3:      selected section {{.*}}.o:(.text.foo0)
+# ICF3-NEXT:   removing identical section {{.*}}.o:(.text.foo1)
+
+# SEC3:      Name        Type     Address          Off    Size
 # SEC3:      .text.foo   PROGBITS 0000000000000000 001000 000001
-# SEC3-NEXT: .text       PROGBITS 0000000000000004 001004 000001
+# SEC3-NEXT: .text       PROGBITS 0000000000000004 001004 000000
+# SEC3-NEXT: .text.bar0  PROGBITS 0000000000000004 001004 000001
+# SEC3-NEXT: .text.bar1  PROGBITS 0000000000000005 001005 000001
 
 .section .text.foo0,"ax"
 ret

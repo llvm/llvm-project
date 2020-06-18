@@ -319,7 +319,7 @@ Currently
   # direct SVN checkout
   svn co https://user@llvm.org/svn/llvm-project/llvm/trunk llvm
   # or using the read-only Git view, with git-svn
-  git clone http://llvm.org/git/llvm.git
+  git clone https://llvm.org/git/llvm.git
   cd llvm
   git svn init https://llvm.org/svn/llvm-project/llvm/trunk --username=<username>
   git config svn-remote.svn.fetch :refs/remotes/origin/master
@@ -381,29 +381,29 @@ Currently
 
 ::
 
-  svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm -r $REVISION
+  svn co https://llvm.org/svn/llvm-project/llvm/trunk llvm -r $REVISION
   cd llvm/tools
-  svn co http://llvm.org/svn/llvm-project/clang/trunk clang -r $REVISION
+  svn co https://llvm.org/svn/llvm-project/clang/trunk clang -r $REVISION
   cd ../projects
-  svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx -r $REVISION
+  svn co https://llvm.org/svn/llvm-project/libcxx/trunk libcxx -r $REVISION
 
 Or using git-svn::
 
-  git clone http://llvm.org/git/llvm.git
+  git clone https://llvm.org/git/llvm.git
   cd llvm/
   git svn init https://llvm.org/svn/llvm-project/llvm/trunk --username=<username>
   git config svn-remote.svn.fetch :refs/remotes/origin/master
   git svn rebase -l
   git checkout `git svn find-rev -B r258109`
   cd tools
-  git clone http://llvm.org/git/clang.git
+  git clone https://llvm.org/git/clang.git
   cd clang/
   git svn init https://llvm.org/svn/llvm-project/clang/trunk --username=<username>
   git config svn-remote.svn.fetch :refs/remotes/origin/master
   git svn rebase -l
   git checkout `git svn find-rev -B r258109`
   cd ../../projects/
-  git clone http://llvm.org/git/libcxx.git
+  git clone https://llvm.org/git/libcxx.git
   cd libcxx
   git svn init https://llvm.org/svn/llvm-project/libcxx/trunk --username=<username>
   git config svn-remote.svn.fetch :refs/remotes/origin/master
@@ -712,7 +712,7 @@ clang's tree actually looks like in ``Lclang1``.
 Even so, the edge ``U3 -> Llld1`` could be problematic for future
 merges from upstream.  git will think that we've already merged from
 ``U3``, and we have, except for the state of the clang tree.  One
-possible migitation strategy is to manually diff clang between ``U2``
+possible mitigation strategy is to manually diff clang between ``U2``
 and ``U3`` and apply those updates to ``local/zip``.  Another,
 possibly simpler strategy is to freeze local work on downstream
 branches and merge all submodules from the latest upstream before
@@ -921,7 +921,7 @@ ecosystem, essentially extending it with new tools.  If such
 repositories are tightly coupled with LLVM, it may make sense to
 import them into your local mirror of the monorepo.
 
-If such repositores participated in the umbrella repository used
+If such repositories participated in the umbrella repository used
 during the zipping process above, they will automatically be added to
 the monorepo.  For downstream repositories that don't participate in
 an umbrella setup, the ``import-downstream-repo.py`` tool at

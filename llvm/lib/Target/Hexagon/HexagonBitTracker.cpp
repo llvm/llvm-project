@@ -330,7 +330,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
     case PS_fi: {
       int FI = op(1).getIndex();
       int Off = op(2).getImm();
-      unsigned A = MFI.getObjectAlignment(FI) + std::abs(Off);
+      unsigned A = MFI.getObjectAlign(FI).value() + std::abs(Off);
       unsigned L = countTrailingZeros(A);
       RegisterCell RC = RegisterCell::self(Reg[0].Reg, W0);
       RC.fill(0, L, BT::BitValue::Zero);

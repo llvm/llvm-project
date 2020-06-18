@@ -156,6 +156,7 @@ int main(int, char**)
         assert(v == 83);
     }
     {
+        // See PR11871
         const char str[] = "2-";
         ios.setf(zf, ios.basefield);
         std::ios_base::iostate err = ios.goodbit;

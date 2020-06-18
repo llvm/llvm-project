@@ -54,7 +54,7 @@ entry:
 ; CHECK: store { i32, i1 } zeroinitializer,
 ; CHECK: icmp
 ; CHECK: br
-; CHECK: @__msan_warning
+; CHECK: @__msan_warning_with_origin
 ; CHECK: cmpxchg {{.*}} seq_cst seq_cst
 ; CHECK: store i32 0, {{.*}} @__msan_retval_tls
 ; CHECK: ret i32
@@ -73,7 +73,7 @@ entry:
 ; CHECK: store { i32, i1 } zeroinitializer,
 ; CHECK: icmp
 ; CHECK: br
-; CHECK: @__msan_warning
+; CHECK: @__msan_warning_with_origin
 ; CHECK: cmpxchg {{.*}} release monotonic
 ; CHECK: store i32 0, {{.*}} @__msan_retval_tls
 ; CHECK: ret i32

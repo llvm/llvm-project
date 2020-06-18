@@ -91,6 +91,6 @@ void ento::registerSizeofPointerChecker(CheckerManager &mgr) {
   mgr.registerChecker<SizeofPointerChecker>();
 }
 
-bool ento::shouldRegisterSizeofPointerChecker(const LangOptions &LO) {
+bool ento::shouldRegisterSizeofPointerChecker(const CheckerManager &mgr) {
   return true;
 }

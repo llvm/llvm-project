@@ -79,7 +79,7 @@
 # RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.mips \
 # RUN:     | FileCheck %s -check-prefix ELF-MIPS
 
-# ELF-MIPS:      Format: ELF32-mips
+# ELF-MIPS:      Format: elf32-mips
 # ELF-MIPS-NEXT: Arch: mips
 # ELF-MIPS-NEXT: AddressSize: 32bit
 # ELF-MIPS-NEXT: LoadName:
@@ -126,7 +126,7 @@
 # RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.mips64 \
 # RUN:     | FileCheck %s -check-prefix ELF-MIPS64
 
-# ELF-MIPS64:      Format: ELF64-mips
+# ELF-MIPS64:      Format: elf64-mips
 # ELF-MIPS64-NEXT: Arch: mips64
 # ELF-MIPS64-NEXT: AddressSize: 64bit
 # ELF-MIPS64-NEXT: LoadName:

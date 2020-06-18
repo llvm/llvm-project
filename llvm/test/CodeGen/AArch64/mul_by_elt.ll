@@ -133,7 +133,7 @@ define <4 x float> @splat0_before_fmul_fmul_constant(<4 x float> %a) {
 ; CHECK-LABEL: splat0_before_fmul_fmul_constant:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov v1.4s, #3.00000000
-; CHECK-NEXT:    fmul v0.4s, v1.4s, v0.s[0]
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    fmov v1.4s, #6.00000000
 ; CHECK-NEXT:    fmul v0.4s, v1.4s, v0.s[0]
 ; CHECK-NEXT:    ret

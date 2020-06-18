@@ -18,13 +18,13 @@ namespace tidy {
 namespace cert {
 
 void StaticObjectExceptionCheck::registerMatchers(MatchFinder *Finder) {
-  if ((!getLangOpts().CPlusPlus) || (!getLangOpts().CXXExceptions))
-    return;
-
   // Match any static or thread_local variable declaration that has an
   // initializer that can throw.
   Finder->addMatcher(
-      varDecl(anyOf(hasThreadStorageDuration(), hasStaticStorageDuration()),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          varDecl(
+              anyOf(hasThreadStorageDuration(), hasStaticStorageDuration()),
               unless(anyOf(isConstexpr(), hasType(cxxRecordDecl(isLambda())),
                            hasAncestor(functionDecl()))),
               anyOf(hasDescendant(cxxConstructExpr(hasDeclaration(
@@ -33,7 +33,7 @@ void StaticObjectExceptionCheck::registerMatchers(MatchFinder *Finder) {
                         functionDecl(unless(isNoThrow())).bind("func")))),
                     hasDescendant(callExpr(hasDeclaration(
                         functionDecl(unless(isNoThrow())).bind("func"))))))
-          .bind("var"),
+              .bind("var")),
       this);
 }
 

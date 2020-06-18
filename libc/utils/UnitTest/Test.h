@@ -1,4 +1,4 @@
-//===------------------ Base class for libc unittests -----------*- C++ -*-===//
+//===-- Base class for libc unittests ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This file can only include headers from utils/CPP/. No other header should be
-// included.
+#ifndef LLVM_LIBC_UTILS_UNITTEST_H
+#define LLVM_LIBC_UTILS_UNITTEST_H
+
+// This file can only include headers from utils/CPP/ or utils/testutils. No
+// other headers should be included.
 
 #include "utils/CPP/TypeTraits.h"
+#include "utils/testutils/ExecuteFunction.h"
+#include "utils/testutils/StreamWrapper.h"
 
 namespace __llvm_libc {
 namespace testing {
@@ -20,7 +25,7 @@ class RunContext;
 // a TRUE or FALSE condition. That is because, C library funtions do not
 // return boolean values, but use integral return values to indicate true or
 // false conditions. Hence, it is more appropriate to use the other comparison
-// condtions for such cases.
+// conditions for such cases.
 enum TestCondition {
   Cond_None,
   Cond_EQ,
@@ -39,6 +44,15 @@ bool test(RunContext &Ctx, TestCondition Cond, ValType LHS, ValType RHS,
           unsigned long Line);
 
 } // namespace internal
+
+struct MatcherBase {
+  virtual ~MatcherBase() {}
+  virtual void explainError(testutils::StreamWrapper &OS) {
+    OS << "unknown error\n";
+  }
+};
+
+template <typename T> struct Matcher : public MatcherBase { bool match(T &t); };
 
 // NOTE: One should not create instances and call methods on them directly. One
 // should use the macros TEST or TEST_F to write test cases.
@@ -88,6 +102,30 @@ protected:
   static bool testStrNe(RunContext &Ctx, const char *LHS, const char *RHS,
                         const char *LHSStr, const char *RHSStr,
                         const char *File, unsigned long Line);
+
+  static bool testMatch(RunContext &Ctx, bool MatchResult, MatcherBase &Matcher,
+                        const char *LHSStr, const char *RHSStr,
+                        const char *File, unsigned long Line);
+
+  static bool testProcessExits(RunContext &Ctx, testutils::FunctionCaller *Func,
+                               int ExitCode, const char *LHSStr,
+                               const char *RHSStr, const char *File,
+                               unsigned long Line);
+
+  static bool testProcessKilled(RunContext &Ctx,
+                                testutils::FunctionCaller *Func, int Signal,
+                                const char *LHSStr, const char *RHSStr,
+                                const char *File, unsigned long Line);
+
+  template <typename Func> testutils::FunctionCaller *createCallable(Func f) {
+    struct Callable : public testutils::FunctionCaller {
+      Func f;
+      Callable(Func f) : f(f) {}
+      void operator()() override { f(); }
+    };
+
+    return new Callable(f);
+  }
 
 private:
   virtual void Run(RunContext &Ctx) = 0;
@@ -187,3 +225,44 @@ private:
 #define ASSERT_FALSE(VAL)                                                      \
   if (!EXPECT_FALSE(VAL))                                                      \
   return
+
+#define EXPECT_EXITS(FUNC, EXIT)                                               \
+  __llvm_libc::testing::Test::testProcessExits(                                \
+      Ctx, __llvm_libc::testing::Test::createCallable(FUNC), EXIT, #FUNC,      \
+      #EXIT, __FILE__, __LINE__)
+
+#define ASSERT_EXITS(FUNC, EXIT)                                               \
+  if (!EXPECT_EXITS(FUNC, EXIT))                                               \
+  return
+
+#define EXPECT_DEATH(FUNC, SIG)                                                \
+  __llvm_libc::testing::Test::testProcessKilled(                               \
+      Ctx, __llvm_libc::testing::Test::createCallable(FUNC), SIG, #FUNC, #SIG, \
+      __FILE__, __LINE__)
+
+#define ASSERT_DEATH(FUNC, EXIT)                                               \
+  if (!EXPECT_DEATH(FUNC, EXIT))                                               \
+  return
+
+#define __CAT1(a, b) a##b
+#define __CAT(a, b) __CAT1(a, b)
+#define UNIQUE_VAR(prefix) __CAT(prefix, __LINE__)
+
+#define EXPECT_THAT(MATCH, MATCHER)                                            \
+  do {                                                                         \
+    auto UNIQUE_VAR(__matcher) = (MATCHER);                                    \
+    __llvm_libc::testing::Test::testMatch(                                     \
+        Ctx, UNIQUE_VAR(__matcher).match((MATCH)), UNIQUE_VAR(__matcher),      \
+        #MATCH, #MATCHER, __FILE__, __LINE__);                                 \
+  } while (0)
+
+#define ASSERT_THAT(MATCH, MATCHER)                                            \
+  do {                                                                         \
+    auto UNIQUE_VAR(__matcher) = (MATCHER);                                    \
+    if (!__llvm_libc::testing::Test::testMatch(                                \
+            Ctx, UNIQUE_VAR(__matcher).match((MATCH)), UNIQUE_VAR(__matcher),  \
+            #MATCH, #MATCHER, __FILE__, __LINE__))                             \
+      return;                                                                  \
+  } while (0)
+
+#endif // LLVM_LIBC_UTILS_UNITTEST_H

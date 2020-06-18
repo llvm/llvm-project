@@ -245,6 +245,22 @@ private:
       lldb::SBError &sberror) const;
   void DecodeTrace(struct pt_insn_decoder *decoder,
                    Instructions &instruction_list, lldb::SBError &sberror);
+  int HandlePTInstructionEvents(pt_insn_decoder *decoder, int errcode,
+                                Instructions &instruction_list,
+                                lldb::SBError &sberror);
+
+  int AppendErrorToInstructionList(int errcode, pt_insn_decoder *decoder,
+                                   Instructions &instruction_list,
+                                   lldb::SBError &sberror);
+
+  void AppendErrorWithOffsetToInstructionList(int errcode,
+                                              uint64_t decoder_offset,
+                                              Instructions &instruction_list,
+                                              lldb::SBError &sberror);
+
+  void AppendErrorWithoutOffsetToInstructionList(int errcode,
+                                                 Instructions &instruction_list,
+                                                 lldb::SBError &sberror);
 
   // Function to diagnose and indicate errors during raw trace decoding
   void Diagnose(struct pt_insn_decoder *decoder, int errcode,

@@ -25,6 +25,9 @@
 #include <vector>
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace orc {
 
 /// A utility class for building TargetMachines for JITs.
@@ -136,6 +139,12 @@ public:
   /// Access Triple.
   const Triple &getTargetTriple() const { return TT; }
 
+#ifndef NDEBUG
+  /// Debug-dump a JITTargetMachineBuilder.
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const JITTargetMachineBuilder &JTMB);
+#endif
+
 private:
   Triple TT;
   std::string CPU;
@@ -143,7 +152,7 @@ private:
   TargetOptions Options;
   Optional<Reloc::Model> RM;
   Optional<CodeModel::Model> CM;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::None;
+  CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
 };
 
 } // end namespace orc

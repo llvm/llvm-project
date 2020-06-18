@@ -25,7 +25,7 @@
 // DATA-NEXT:   00000000 00000000 00000000 00000000
 // DATA-NEXT:   00000000 00000000 0000
 
-// DISASM:      _start:
+// DISASM:      <_start>:
 // DISASM-NEXT:   movl 25, %eax
 // DISASM-NEXT:   movl 26, %eax
 // DISASM-NEXT:   movl 27, %eax

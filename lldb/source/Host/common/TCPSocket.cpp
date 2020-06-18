@@ -18,6 +18,7 @@
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
 
 #if LLDB_ENABLE_POSIX
@@ -41,6 +42,16 @@ typedef const void *set_socket_option_arg_type;
 
 using namespace lldb;
 using namespace lldb_private;
+
+static Status GetLastSocketError() {
+  std::error_code EC;
+#ifdef _WIN32
+  EC = llvm::mapWindowsError(WSAGetLastError());
+#else
+  EC = std::error_code(errno, std::generic_category());
+#endif
+  return EC;
+}
 
 namespace {
 const int kType = SOCK_STREAM;
@@ -192,10 +203,8 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   for (SocketAddress &address : addresses) {
     int fd = Socket::CreateSocket(address.GetFamily(), kType, IPPROTO_TCP,
                                   m_child_processes_inherit, error);
-    if (error.Fail()) {
-      error.Clear();
+    if (error.Fail())
       continue;
-    }
 
     // enable local address reuse
     int option_value = 1;
@@ -216,6 +225,7 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
       err = ::listen(fd, backlog);
 
     if (-1 == err) {
+      error = GetLastSocketError();
       CLOSE_SOCKET(fd);
       continue;
     }
@@ -228,9 +238,11 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
     m_listen_sockets[fd] = address;
   }
 
-  if (m_listen_sockets.size() == 0)
-    error.SetErrorString("Failed to connect port");
-  return error;
+  if (m_listen_sockets.empty()) {
+    assert(error.Fail());
+    return error;
+  }
+  return Status();
 }
 
 void TCPSocket::CloseListenSockets() {

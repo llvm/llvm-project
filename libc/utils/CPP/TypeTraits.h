@@ -1,10 +1,13 @@
-//===----------------- Self contained C++ type traits -----------*- C++ -*-===//
+//===-- Self contained C++ type traits --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_UTILS_CPP_TYPETRAITS_H
+#define LLVM_LIBC_UTILS_CPP_TYPETRAITS_H
 
 namespace __llvm_libc {
 namespace cpp {
@@ -43,5 +46,23 @@ template <typename T> struct IsPointerType<T *> : public TrueValue {};
 template <typename T1, typename T2> struct IsSame : public FalseValue {};
 template <typename T> struct IsSame<T, T> : public TrueValue {};
 
+template <typename T> struct TypeIdentity { typedef T Type; };
+
+template <typename T> struct RemoveCV : public TypeIdentity<T> {};
+template <typename T> struct RemoveCV<const T> : public TypeIdentity<T> {};
+template <typename T> struct RemoveCV<volatile T> : public TypeIdentity<T> {};
+template <typename T>
+struct RemoveCV<const volatile T> : public TypeIdentity<T> {};
+
+template <typename T> using RemoveCVType = typename RemoveCV<T>::Type;
+
+template <typename Type> struct IsFloatingPointType {
+  static constexpr bool Value = IsSame<float, RemoveCVType<Type>>::Value ||
+                                IsSame<double, RemoveCVType<Type>>::Value ||
+                                IsSame<long double, RemoveCVType<Type>>::Value;
+};
+
 } // namespace cpp
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_UTILS_CPP_TYPETRAITS_H

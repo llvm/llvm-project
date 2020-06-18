@@ -2,24 +2,24 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1
-#RUN: llvm-objdump -section-headers %t1 | FileCheck %s -check-prefix BEFORE
+#RUN: llvm-objdump --section-headers %t1 | FileCheck %s --check-prefix BEFORE
 #BEFORE:       .symtab
 #BEFORE-NEXT:  .shstrtab
 #BEFORE-NEXT:  .strtab
 
 #RUN: ld.lld %t.o --strip-all -o %t1
-#RUN: llvm-objdump -section-headers %t1 | FileCheck %s -check-prefix AFTER
+#RUN: llvm-objdump --section-headers %t1 | FileCheck %s --check-prefix AFTER
 #AFTER-NOT: .symtab
 #AFTER:     .shstrtab
 #AFTER-NOT: .strtab
 
 # Ignore --strip-all if -r is specified
 #RUN: ld.lld %t.o --strip-all -r -o %t1
-#RUN: llvm-objdump -section-headers %t1 | FileCheck %s -check-prefix BEFORE
+#RUN: llvm-objdump --section-headers %t1 | FileCheck %s --check-prefix BEFORE
 
 # Test alias -s
 #RUN: ld.lld %t.o -s -o %t1
-#RUN: llvm-objdump -section-headers %t1 | FileCheck %s -check-prefix AFTER
+#RUN: llvm-objdump --section-headers %t1 | FileCheck %s --check-prefix AFTER
 
 # RUN: not ld.lld %t.o --strip-all --emit-relocs -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 # ERR: error: --strip-all and --emit-relocs may not be used together

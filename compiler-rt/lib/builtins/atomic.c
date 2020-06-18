@@ -23,6 +23,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -293,8 +294,8 @@ OPTIMISED_CASES
 #undef OPTIMISED_CASE
 
 #define OPTIMISED_CASE(n, lockfree, type)                                      \
-  int __atomic_compare_exchange_##n(type *ptr, type *expected, type desired,   \
-                                    int success, int failure) {                \
+  bool __atomic_compare_exchange_##n(type *ptr, type *expected, type desired,  \
+                                     int success, int failure) {               \
     if (lockfree)                                                              \
       return __c11_atomic_compare_exchange_strong(                             \
           (_Atomic(type) *)ptr, expected, desired, success, failure);          \
@@ -303,11 +304,11 @@ OPTIMISED_CASES
     if (*ptr == *expected) {                                                   \
       *ptr = desired;                                                          \
       unlock(l);                                                               \
-      return 1;                                                                \
+      return true;                                                             \
     }                                                                          \
     *expected = *ptr;                                                          \
     unlock(l);                                                                 \
-    return 0;                                                                  \
+    return false;                                                              \
   }
 OPTIMISED_CASES
 #undef OPTIMISED_CASE

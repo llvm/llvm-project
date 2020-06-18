@@ -1,0 +1,11 @@
+## Check that response files can cope with non-ascii characters.
+
+# RUN: echo 'contents' > %t-£.txt
+
+# RUN: rm -f %t-£.a
+# RUN: echo 'r %t-£.a %t-£.txt' > %t-replace.txt
+# RUN: llvm-ar @%t-replace.txt
+
+# RUN: echo 'p %t-£.a %t-£.txt' > %t-print.txt
+# RUN: llvm-ar @%t-print.txt | FileCheck %s
+# CHECK: contents

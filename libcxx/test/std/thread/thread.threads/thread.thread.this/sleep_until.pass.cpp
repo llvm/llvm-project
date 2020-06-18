@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-// FLAKY_TEST.
 
 // <thread>
 
@@ -22,16 +21,15 @@
 
 int main(int, char**)
 {
-    typedef std::chrono::system_clock Clock;
-    typedef Clock::time_point time_point;
-    std::chrono::milliseconds ms(500);
-    time_point t0 = Clock::now();
-    std::this_thread::sleep_until(t0 + ms);
-    time_point t1 = Clock::now();
-    std::chrono::nanoseconds ns = (t1 - t0) - ms;
-    std::chrono::nanoseconds err = 5 * ms / 100;
-    // The time slept is within 5% of 500ms
-    assert(std::abs(ns.count()) < err.count());
+  typedef std::chrono::system_clock Clock;
+  typedef Clock::time_point time_point;
+  std::chrono::milliseconds ms(500);
+  time_point t0 = Clock::now();
+  std::this_thread::sleep_until(t0 + ms);
+  time_point t1 = Clock::now();
+  // NOTE: Operating systems are (by default) best effort and therefore we may
+  // have slept longer, perhaps much longer than we requested.
+  assert(t1 - t0 >= ms);
 
   return 0;
 }

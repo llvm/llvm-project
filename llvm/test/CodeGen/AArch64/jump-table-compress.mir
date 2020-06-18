@@ -46,6 +46,7 @@ jumpTable:
       blocks:          [ '%bb.11' ]
 body:             |
   bb.0 (%ir-block.0):
+    liveins: $x8
 
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: body:

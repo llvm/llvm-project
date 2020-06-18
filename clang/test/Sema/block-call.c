@@ -33,7 +33,7 @@ int main() {
   int (^IPCC6) (int, char (^CArg) (float))  = IPCC4; // expected-error {{incompatible block pointer types initializing 'int (^)(int, char (^)(float))' with an expression of type 'int (^)(int, char (^)(double))'}}
 
   IPCC2 = 0;
-  IPCC2 = 1; // expected-error {{invalid block pointer conversion assigning to 'int *(^)()' from 'int'}}
+  IPCC1 = 1; // expected-error {{invalid block pointer conversion assigning to 'int *const (^)()' from 'int'}}
   int (^x)() = 0;
   int (^y)() = 3;   // expected-error {{invalid block pointer conversion initializing 'int (^)()' with an expression of type 'int'}}
   int a = 1;

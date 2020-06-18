@@ -1,2 +1,7 @@
-RUN: llvm-lib -out:%t.a
-RUN: test ! -e %t.a
+RUN: rm -f %t.lib
+RUN: llvm-lib -out:%t.lib
+RUN: test ! -e %t.lib
+
+RUN: llvm-lib /llvmlibempty -out:%t.lib
+RUN: FileCheck %s < %t.lib
+CHECK: !<arch>

@@ -9,11 +9,12 @@
 #ifndef LLVM_EXECUTIONENGINE_OBJECTCACHE_H
 #define LLVM_EXECUTIONENGINE_OBJECTCACHE_H
 
-#include "llvm/Support/MemoryBuffer.h"
 #include <memory>
 
 namespace llvm {
 
+class MemoryBuffer;
+class MemoryBufferRef;
 class Module;
 
 /// This is the base ObjectCache type which can be provided to an

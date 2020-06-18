@@ -1,12 +1,12 @@
 llvm_canonicalize_cmake_booleans(
   BUILD_SHARED_LIBS
   HAVE_LIBXAR
+  HAVE_LIBZ
   HAVE_OCAMLOPT
   HAVE_OCAML_OUNIT
   LLVM_ENABLE_DIA_SDK
   LLVM_ENABLE_FFI
   LLVM_ENABLE_THREADS
-  LLVM_ENABLE_ZLIB
   LLVM_INCLUDE_GO_TESTS
   LLVM_LIBXML2_ENABLED
   LLVM_LINK_LLVM_DYLIB
@@ -22,12 +22,23 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIBRARY_DIR"
+  "SHLIBDIR"
   )
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "SHLIBDIR"
   )
 
 # Set the depends list as a variable so that it can grow conditionally.
@@ -64,6 +75,7 @@ set(LLVM_TEST_DEPENDS
           llvm-elfabi
           llvm-exegesis
           llvm-extract
+          llvm-gsymutil
           llvm-isel-fuzzer
           llvm-ifs
           llvm-install-name-tool
@@ -122,19 +134,27 @@ if(TARGET LLVMgold)
   set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} LLVMgold)
 endif()
 
+if(TARGET llvm-go)
+  set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} llvm-go)
+endif()
+
 if(TARGET LTO)
   set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} LTO)
 endif()
 
 if(LLVM_BUILD_EXAMPLES)
   list(APPEND LLVM_TEST_DEPENDS
-    Bye
     Kaleidoscope-Ch3
     Kaleidoscope-Ch4
     Kaleidoscope-Ch5
     Kaleidoscope-Ch6
     Kaleidoscope-Ch7
     )
+  if (NOT WIN32)
+    list(APPEND LLVM_TEST_DEPENDS
+      Bye
+      )
+  endif()
 endif()
 
 if(TARGET ocaml_llvm)
@@ -182,8 +202,7 @@ add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${LLVM_TEST_DEPENDS}
   )
 
-# Setup a legacy alias for 'check-llvm'. This will likely change to be an
-# alias for 'check-all' at some point in the future.
+# Setup an alias for 'check-all'.
 add_custom_target(check)
-add_dependencies(check check-llvm)
+add_dependencies(check check-all)
 set_target_properties(check PROPERTIES FOLDER "Tests")

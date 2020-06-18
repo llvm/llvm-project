@@ -8,7 +8,7 @@ define i8* @simplify_phi_common_value_op0(i8* %ptr, i32* %b) {
 ; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq i8* [[PTR:%.*]], null
 ; CHECK-NEXT:    br i1 [[ISNULL]], label [[RETURN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[LB:%.*]] = load i32, i32* [[B:%.*]]
+; CHECK-NEXT:    [[LB:%.*]] = load i32, i32* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[LB]], 1
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[B]]
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -36,7 +36,7 @@ define i8* @simplify_phi_common_value_op1(i8* %ptr, i32* %b) {
 ; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq i8* [[PTR:%.*]], null
 ; CHECK-NEXT:    br i1 [[ISNULL]], label [[RETURN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[LB:%.*]] = load i32, i32* [[B:%.*]]
+; CHECK-NEXT:    [[LB:%.*]] = load i32, i32* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LB]], 1
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[B]]
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -67,7 +67,7 @@ define i8 @simplify_phi_multiple_constants(i8 %x, i32* %b) {
 ; CHECK-NEXT:    [[IS42:%.*]] = icmp eq i8 [[X]], 42
 ; CHECK-NEXT:    br i1 [[IS42]], label [[RETURN]], label [[ELSE2:%.*]]
 ; CHECK:       else2:
-; CHECK-NEXT:    [[LB:%.*]] = load i32, i32* [[B:%.*]]
+; CHECK-NEXT:    [[LB:%.*]] = load i32, i32* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LB]], 1
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[B]]
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -100,7 +100,7 @@ define i8* @simplify_phi_common_value_from_instruction(i8* %ptr_op, i32* %b, i32
 ; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq i8* [[PTR]], null
 ; CHECK-NEXT:    br i1 [[ISNULL]], label [[RETURN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[LB:%.*]] = load i32, i32* [[B:%.*]]
+; CHECK-NEXT:    [[LB:%.*]] = load i32, i32* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[LB]], 1
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[B]]
 ; CHECK-NEXT:    br label [[RETURN]]

@@ -3,34 +3,6 @@
 // General tests that the header search paths for libstdc++ detected by the
 // driver and passed to CC1 are correct on Darwin platforms.
 
-// Check ppc and ppc64
-//
-// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target ppc-apple-darwin \
-// RUN:     -stdlib=libstdc++ \
-// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_libstdcxx_ppc \
-// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_libstdcxx_ppc --check-prefix=CHECK-LIBSTDCXX-PPC %s
-// CHECK-LIBSTDCXX-PPC: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
-// CHECK-LIBSTDCXX-PPC: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1
-// CHECK-LIBSTDCXX-PPC: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1/powerpc-apple-darwin10"
-// CHECK-LIBSTDCXX-PPC: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1/backward"
-// CHECK-LIBSTDCXX-PPC: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.0.0"
-// CHECK-LIBSTDCXX-PPC: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.0.0/powerpc-apple-darwin10"
-// CHECK-LIBSTDCXX-PPC: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.0.0/backward"
-//
-// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target ppc64-apple-darwin \
-// RUN:     -stdlib=libstdc++ \
-// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_libstdcxx_ppc \
-// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_libstdcxx_ppc --check-prefix=CHECK-LIBSTDCXX-PPC64 %s
-// CHECK-LIBSTDCXX-PPC64: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
-// CHECK-LIBSTDCXX-PPC64: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1"
-// CHECK-LIBSTDCXX-PPC64: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1/powerpc-apple-darwin10/ppc64"
-// CHECK-LIBSTDCXX-PPC64: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.2.1/backward"
-// CHECK-LIBSTDCXX-PPC64: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.0.0"
-// CHECK-LIBSTDCXX-PPC64: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.0.0/powerpc-apple-darwin10/ppc64"
-// CHECK-LIBSTDCXX-PPC64: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/4.0.0/backward"
-
 // Check x86 and x86_64
 //
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \

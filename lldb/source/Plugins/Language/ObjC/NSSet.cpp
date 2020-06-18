@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NSSet.h"
+#include "CFBasicHash.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -76,6 +77,36 @@ private:
   DataDescriptor_32 *m_data_32;
   DataDescriptor_64 *m_data_64;
   lldb::addr_t m_data_ptr;
+  std::vector<SetItemDescriptor> m_children;
+};
+
+class NSCFSetSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+public:
+  NSCFSetSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
+
+  size_t CalculateNumChildren() override;
+
+  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+
+  bool Update() override;
+
+  bool MightHaveChildren() override;
+
+  size_t GetIndexOfChildWithName(ConstString name) override;
+
+private:
+  struct SetItemDescriptor {
+    lldb::addr_t item_ptr;
+    lldb::ValueObjectSP valobj_sp;
+  };
+
+  ExecutionContextRef m_exe_ctx_ref;
+  uint8_t m_ptr_size;
+  lldb::ByteOrder m_order;
+
+  CFBasicHash m_hashtable;
+
+  CompilerType m_pair_type;
   std::vector<SetItemDescriptor> m_children;
 };
 
@@ -245,21 +276,25 @@ bool lldb_private::formatters::NSSetSummaryProvider(
 
   uint64_t value = 0;
 
-  ConstString class_name_cs = descriptor->GetClassName();
-  const char *class_name = class_name_cs.GetCString();
+  ConstString class_name(descriptor->GetClassName());
 
-  if (!class_name || !*class_name)
+  static const ConstString g_SetI("__NSSetI");
+  static const ConstString g_OrderedSetI("__NSOrderedSetI");
+  static const ConstString g_SetM("__NSSetM");
+  static const ConstString g_SetCF("__NSCFSet");
+  static const ConstString g_SetCFRef("CFSetRef");
+
+  if (class_name.IsEmpty())
     return false;
 
-  if (!strcmp(class_name, "__NSSetI") ||
-      !strcmp(class_name, "__NSOrderedSetI")) {
+  if (class_name == g_SetI || class_name == g_OrderedSetI) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
       return false;
     value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
-  } else if (!strcmp(class_name, "__NSSetM")) {
+  } else if (class_name == g_SetM) {
     AppleObjCRuntime *apple_runtime =
         llvm::dyn_cast_or_null<AppleObjCRuntime>(runtime);
     Status error;
@@ -272,9 +307,15 @@ bool lldb_private::formatters::NSSetSummaryProvider(
     }
     if (error.Fail())
       return false;
+  } else if (class_name == g_SetCF || class_name == g_SetCFRef) {
+    ExecutionContext exe_ctx(process_sp);
+    CFBasicHash cfbh;
+    if (!cfbh.Update(valobj_addr, exe_ctx))
+      return false;
+    value = cfbh.GetCount();
   } else {
     auto &map(NSSet_Additionals::GetAdditionalSummaries());
-    auto iter = map.find(class_name_cs), end = map.end();
+    auto iter = map.find(class_name), end = map.end();
     if (iter != end)
       return iter->second(valobj, stream, options);
     else
@@ -321,16 +362,20 @@ lldb_private::formatters::NSSetSyntheticFrontEndCreator(
   if (!descriptor || !descriptor->IsValid())
     return nullptr;
 
-  ConstString class_name_cs = descriptor->GetClassName();
-  const char *class_name = class_name_cs.GetCString();
+  ConstString class_name = descriptor->GetClassName();
 
-  if (!class_name || !*class_name)
+  static const ConstString g_SetI("__NSSetI");
+  static const ConstString g_OrderedSetI("__NSOrderedSetI");
+  static const ConstString g_SetM("__NSSetM");
+  static const ConstString g_SetCF("__NSCFSet");
+  static const ConstString g_SetCFRef("CFSetRef");
+
+  if (class_name.IsEmpty())
     return nullptr;
 
-  if (!strcmp(class_name, "__NSSetI") ||
-      !strcmp(class_name, "__NSOrderedSetI")) {
+  if (class_name == g_SetI || class_name == g_OrderedSetI) {
     return (new NSSetISyntheticFrontEnd(valobj_sp));
-  } else if (!strcmp(class_name, "__NSSetM")) {
+  } else if (class_name == g_SetM) {
     AppleObjCRuntime *apple_runtime =
         llvm::dyn_cast_or_null<AppleObjCRuntime>(runtime);
     if (apple_runtime) {
@@ -343,9 +388,11 @@ lldb_private::formatters::NSSetSyntheticFrontEndCreator(
     } else {
       return (new Foundation1300::NSSetMSyntheticFrontEnd(valobj_sp));
     }
+  } else if (class_name == g_SetCF || class_name == g_SetCFRef) {
+    return (new NSCFSetSyntheticFrontEnd(valobj_sp));
   } else {
     auto &map(NSSet_Additionals::GetAdditionalSynthetics());
-    auto iter = map.find(class_name_cs), end = map.end();
+    auto iter = map.find(class_name), end = map.end();
     if (iter != end)
       return iter->second(synth, valobj_sp);
     return nullptr;
@@ -475,16 +522,18 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex(size_t idx) {
     auto ptr_size = process_sp->GetAddressByteSize();
     DataBufferHeap buffer(ptr_size, 0);
     switch (ptr_size) {
-    case 0: // architecture has no clue?? - fail
+    case 0: // architecture has no clue - fail
       return lldb::ValueObjectSP();
     case 4:
-      *((uint32_t *)buffer.GetBytes()) = (uint32_t)set_item.item_ptr;
+      *reinterpret_cast<uint32_t *>(buffer.GetBytes()) =
+          static_cast<uint32_t>(set_item.item_ptr);
       break;
     case 8:
-      *((uint64_t *)buffer.GetBytes()) = (uint64_t)set_item.item_ptr;
+      *reinterpret_cast<uint64_t *>(buffer.GetBytes()) =
+          static_cast<uint64_t>(set_item.item_ptr);
       break;
     default:
-      assert(false && "pointer size is not 4 nor 8 - get out of here ASAP");
+      lldbassert(false && "pointer size is not 4 nor 8");
     }
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
@@ -501,6 +550,128 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex(size_t idx) {
   return set_item.valobj_sp;
 }
 
+lldb_private::formatters::NSCFSetSyntheticFrontEnd::NSCFSetSyntheticFrontEnd(
+    lldb::ValueObjectSP valobj_sp)
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
+      m_order(lldb::eByteOrderInvalid), m_hashtable(), m_pair_type() {}
+
+size_t
+lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetIndexOfChildWithName(
+    ConstString name) {
+  const char *item_name = name.GetCString();
+  const uint32_t idx = ExtractIndexFromString(item_name);
+  if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+    return UINT32_MAX;
+  return idx;
+}
+
+size_t
+lldb_private::formatters::NSCFSetSyntheticFrontEnd::CalculateNumChildren() {
+  if (!m_hashtable.IsValid())
+    return 0;
+  return m_hashtable.GetCount();
+}
+
+bool lldb_private::formatters::NSCFSetSyntheticFrontEnd::Update() {
+  m_children.clear();
+  ValueObjectSP valobj_sp = m_backend.GetSP();
+  m_ptr_size = 0;
+  if (!valobj_sp)
+    return false;
+  m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
+
+  lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
+  if (!process_sp)
+    return false;
+  m_ptr_size = process_sp->GetAddressByteSize();
+  m_order = process_sp->GetByteOrder();
+  return m_hashtable.Update(valobj_sp->GetValueAsUnsigned(0), m_exe_ctx_ref);
+}
+
+bool lldb_private::formatters::NSCFSetSyntheticFrontEnd::MightHaveChildren() {
+  return true;
+}
+
+lldb::ValueObjectSP
+lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetChildAtIndex(
+    size_t idx) {
+  lldb::addr_t m_values_ptr = m_hashtable.GetValuePointer();
+
+  const uint32_t num_children = CalculateNumChildren();
+
+  if (idx >= num_children)
+    return lldb::ValueObjectSP();
+
+  if (m_children.empty()) {
+    ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
+    if (!process_sp)
+      return lldb::ValueObjectSP();
+
+    Status error;
+    lldb::addr_t val_at_idx = 0;
+
+    uint32_t tries = 0;
+    uint32_t test_idx = 0;
+
+    // Iterate over inferior memory, reading value pointers by shifting the
+    // cursor by test_index * m_ptr_size. Returns an empty ValueObject if a read
+    // fails, otherwise, continue until the number of tries matches the number
+    // of childen.
+    while (tries < num_children) {
+      val_at_idx = m_values_ptr + (test_idx * m_ptr_size);
+
+      val_at_idx = process_sp->ReadPointerFromMemory(val_at_idx, error);
+      if (error.Fail())
+        return lldb::ValueObjectSP();
+
+      test_idx++;
+
+      if (!val_at_idx)
+        continue;
+      tries++;
+
+      SetItemDescriptor descriptor = {val_at_idx, lldb::ValueObjectSP()};
+
+      m_children.push_back(descriptor);
+    }
+  }
+
+  if (idx >= m_children.size()) // should never happen
+    return lldb::ValueObjectSP();
+
+  SetItemDescriptor &set_item = m_children[idx];
+  if (!set_item.valobj_sp) {
+
+    DataBufferSP buffer_sp(new DataBufferHeap(m_ptr_size, 0));
+
+    switch (m_ptr_size) {
+    case 0: // architecture has no clue - fail
+      return lldb::ValueObjectSP();
+    case 4:
+      *reinterpret_cast<uint32_t *>(buffer_sp->GetBytes()) =
+          static_cast<uint32_t>(set_item.item_ptr);
+      break;
+    case 8:
+      *reinterpret_cast<uint64_t *>(buffer_sp->GetBytes()) =
+          static_cast<uint64_t>(set_item.item_ptr);
+      break;
+    default:
+      lldbassert(false && "pointer size is not 4 nor 8");
+    }
+    StreamString idx_name;
+    idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
+
+    DataExtractor data(buffer_sp, m_order, m_ptr_size);
+
+    set_item.valobj_sp = CreateValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref,
+        m_backend.GetCompilerType().GetBasicTypeFromAST(
+            lldb::eBasicTypeObjCID));
+  }
+
+  return set_item.valobj_sp;
+}
+
 template <typename D32, typename D64>
 lldb_private::formatters::
   GenericNSSetMSyntheticFrontEnd<D32, D64>::GenericNSSetMSyntheticFrontEnd(
@@ -513,7 +684,7 @@ lldb_private::formatters::
 
 template <typename D32, typename D64>
 lldb_private::formatters::
-  GenericNSSetMSyntheticFrontEnd<D32, D64>::~GenericNSSetMSyntheticFrontEnd() {
+  GenericNSSetMSyntheticFrontEnd<D32, D64>::~GenericNSSetMSyntheticFrontEnd<D32, D64>() {
   delete m_data_32;
   m_data_32 = nullptr;
   delete m_data_64;

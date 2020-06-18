@@ -24,4 +24,4 @@ entry:
         ret void
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

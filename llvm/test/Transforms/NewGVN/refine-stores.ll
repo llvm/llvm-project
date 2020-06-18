@@ -5,6 +5,10 @@
 ;; We also are testing that various variations that cause stores to move classes
 ;; have the right class movement happen
 ;; All of these tests result in verification failures if it does not.
+
+source_filename = "bugpoint-output-daef094.bc"
+target triple = "x86_64-apple-darwin16.5.0"
+
 %struct.eggs = type {}
 
 define void @spam(i32 *%a) {
@@ -78,10 +82,6 @@ e:                                                ; preds = %e, %c
   br i1 undef, label %c, label %e
 }
 
-; ModuleID = 'bugpoint-reduced-simplified.bc'
-source_filename = "bugpoint-output-daef094.bc"
-target triple = "x86_64-apple-darwin16.5.0"
-
 %struct.hoge = type {}
 
 define void @widget(%struct.hoge* %arg) {
@@ -132,8 +132,6 @@ bb7:                                              ; preds = %bb5, %bb2
 }
 
 declare void @quux()
-; ModuleID = 'short.ll'
-source_filename = "short.ll"
 
 %struct.a = type {}
 

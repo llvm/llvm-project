@@ -9,7 +9,7 @@
 #include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
-TEST_F(GISelMITest, TestBuildConstantFConstant) {
+TEST_F(AArch64GISelMITest, TestBuildConstantFConstant) {
   setUp();
   if (!TM)
     return;
@@ -37,11 +37,10 @@ TEST_F(GISelMITest, TestBuildConstantFConstant) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 
-TEST_F(GISelMITest, TestBuildConstantFConstantDeath) {
+TEST_F(AArch64GISelMITest, TestBuildConstantFConstantDeath) {
   setUp();
   if (!TM)
     return;
@@ -73,7 +72,7 @@ TEST_F(GISelMITest, TestBuildConstantFConstantDeath) {
 #endif
 #endif
 
-TEST_F(GISelMITest, DstOpSrcOp) {
+TEST_F(AArch64GISelMITest, DstOpSrcOp) {
   setUp();
   if (!TM)
     return;
@@ -99,7 +98,7 @@ TEST_F(GISelMITest, DstOpSrcOp) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildUnmerge) {
+TEST_F(AArch64GISelMITest, BuildUnmerge) {
   setUp();
   if (!TM)
     return;
@@ -120,7 +119,7 @@ TEST_F(GISelMITest, BuildUnmerge) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, TestBuildFPInsts) {
+TEST_F(AArch64GISelMITest, TestBuildFPInsts) {
   setUp();
   if (!TM)
     return;
@@ -156,7 +155,7 @@ TEST_F(GISelMITest, TestBuildFPInsts) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildIntrinsic) {
+TEST_F(AArch64GISelMITest, BuildIntrinsic) {
   setUp();
   if (!TM)
     return;
@@ -185,7 +184,7 @@ TEST_F(GISelMITest, BuildIntrinsic) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildXor) {
+TEST_F(AArch64GISelMITest, BuildXor) {
   setUp();
   if (!TM)
     return;
@@ -214,7 +213,7 @@ TEST_F(GISelMITest, BuildXor) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildBitCounts) {
+TEST_F(AArch64GISelMITest, BuildBitCounts) {
   setUp();
   if (!TM)
     return;
@@ -242,7 +241,7 @@ TEST_F(GISelMITest, BuildBitCounts) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildCasts) {
+TEST_F(AArch64GISelMITest, BuildCasts) {
   setUp();
   if (!TM)
     return;
@@ -267,7 +266,7 @@ TEST_F(GISelMITest, BuildCasts) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildMinMax) {
+TEST_F(AArch64GISelMITest, BuildMinMax) {
   setUp();
   if (!TM)
     return;
@@ -293,7 +292,7 @@ TEST_F(GISelMITest, BuildMinMax) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildAtomicRMW) {
+TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
   setUp();
   if (!TM)
     return;
@@ -303,11 +302,10 @@ TEST_F(GISelMITest, BuildAtomicRMW) {
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 
-  MachineMemOperand *MMO =
-    MF->getMachineMemOperand(
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo(),
-      MachineMemOperand::MOLoad | MachineMemOperand::MOStore,
-      8, 8, AAMDNodes(), nullptr, SyncScope::System, AtomicOrdering::Unordered);
+      MachineMemOperand::MOLoad | MachineMemOperand::MOStore, 8, Align(8),
+      AAMDNodes(), nullptr, SyncScope::System, AtomicOrdering::Unordered);
 
   auto Ptr = B.buildUndef(P0);
   B.buildAtomicRMWFAdd(S64, Ptr, Copies[0], *MMO);
@@ -324,7 +322,7 @@ TEST_F(GISelMITest, BuildAtomicRMW) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildMerge) {
+TEST_F(AArch64GISelMITest, BuildMerge) {
   setUp();
   if (!TM)
     return;
@@ -358,6 +356,42 @@ TEST_F(GISelMITest, BuildMerge) {
   ; CHECK: [[LOW2x32:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C0]]:_(s32), [[C1]]:_(s32)
   ; CHECK: [[HIGH2x32:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C2]]:_(s32), [[C3]]:_(s32)
   ; CHECK: {{%[0-9]+}}:_(<4 x s32>) = G_CONCAT_VECTORS [[LOW2x32]]:_(<2 x s32>), [[HIGH2x32]]:_(<2 x s32>)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(AArch64GISelMITest, BuildAddoSubo) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT S1 = LLT::scalar(1);
+  LLT S64 = LLT::scalar(64);
+  SmallVector<Register, 4> Copies;
+  collectCopies(Copies, MF);
+
+  auto UAddo = B.buildUAddo(S64, S1, Copies[0], Copies[1]);
+  auto USubo = B.buildUSubo(S64, S1, Copies[0], Copies[1]);
+  auto SAddo = B.buildSAddo(S64, S1, Copies[0], Copies[1]);
+  auto SSubo = B.buildSSubo(S64, S1, Copies[0], Copies[1]);
+
+  B.buildUAdde(S64, S1, Copies[0], Copies[1], UAddo.getReg(1));
+  B.buildUSube(S64, S1, Copies[0], Copies[1], USubo.getReg(1));
+  B.buildSAdde(S64, S1, Copies[0], Copies[1], SAddo.getReg(1));
+  B.buildSSube(S64, S1, Copies[0], Copies[1], SSubo.getReg(1));
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO_FLAG:%[0-9]+]]:_(s1) = G_UADDO [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[USUBO:%[0-9]+]]:_(s64), [[USUBO_FLAG:%[0-9]+]]:_(s1) = G_USUBO [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[SADDO:%[0-9]+]]:_(s64), [[SADDO_FLAG:%[0-9]+]]:_(s1) = G_SADDO [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[SSUBO:%[0-9]+]]:_(s64), [[SSUBO_FLAG:%[0-9]+]]:_(s1) = G_SSUBO [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE_FLAG:%[0-9]+]]:_(s1) = G_UADDE [[COPY0]]:_, [[COPY1]]:_, [[UADDO_FLAG]]
+  ; CHECK: [[USUBE:%[0-9]+]]:_(s64), [[USUBE_FLAG:%[0-9]+]]:_(s1) = G_USUBE [[COPY0]]:_, [[COPY1]]:_, [[USUBO_FLAG]]
+  ; CHECK: [[SADDE:%[0-9]+]]:_(s64), [[SADDE_FLAG:%[0-9]+]]:_(s1) = G_SADDE [[COPY0]]:_, [[COPY1]]:_, [[SADDO_FLAG]]
+  ; CHECK: [[SSUBE:%[0-9]+]]:_(s64), [[SSUBE_FLAG:%[0-9]+]]:_(s1) = G_SSUBE [[COPY0]]:_, [[COPY1]]:_, [[SSUBO_FLAG]]
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

@@ -6,10 +6,10 @@
 // RUN: FileCheck -check-prefix=CHECK-SYMBOLS %s
 
 // CHECK: Symbols:
-// CHECK-DAG:  "_ZN3qux3barEii" : { Type: Func }
-// CHECK-DAG:  "_ZN3baz3addIiEET_S1_S1_" : { Type: Func }
-// CHECK-DAG:  "_Z4fbarff" : { Type: Func }
-// CHECK-DAG:  "_ZN3baz3addIfEET_S1_S1_" : { Type: Func }
+// CHECK-DAG:  - { Name: "_ZN3qux3barEii", Type: Func }
+// CHECK-DAG:  - { Name: "_ZN3baz3addIiEET_S1_S1_",  Type: Func }
+// CHECK-DAG:  - { Name: "_Z4fbarff", Type: Func }
+// CHECK-DAG:  - { Name: "_ZN3baz3addIfEET_S1_S1_", Type: Func }
 
 // Same symbols just different order.
 // CHECK-SYMBOLS-DAG:  _Z4fbarff

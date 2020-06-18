@@ -303,3 +303,29 @@ TEST(FileSystemTest, OpenErrno) {
   EXPECT_EQ(code.value(), ENOENT);
 }
 
+TEST(FileSystemTest, EmptyTest) {
+  FileSpec spec;
+  FileSystem fs;
+
+  {
+    std::error_code ec;
+    fs.DirBegin(spec, ec);
+    EXPECT_EQ(ec.category(), std::system_category());
+    EXPECT_EQ(ec.value(), ENOENT);
+  }
+
+  {
+    llvm::ErrorOr<vfs::Status> status = fs.GetStatus(spec);
+    ASSERT_FALSE(status);
+    EXPECT_EQ(status.getError().category(), std::system_category());
+    EXPECT_EQ(status.getError().value(), ENOENT);
+  }
+
+  EXPECT_EQ(sys::TimePoint<>(), fs.GetModificationTime(spec));
+  EXPECT_EQ(static_cast<uint64_t>(0), fs.GetByteSize(spec));
+  EXPECT_EQ(llvm::sys::fs::perms::perms_not_known, fs.GetPermissions(spec));
+  EXPECT_FALSE(fs.Exists(spec));
+  EXPECT_FALSE(fs.Readable(spec));
+  EXPECT_FALSE(fs.IsDirectory(spec));
+  EXPECT_FALSE(fs.IsLocal(spec));
+}

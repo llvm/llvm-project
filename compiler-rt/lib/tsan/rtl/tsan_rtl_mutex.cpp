@@ -415,8 +415,10 @@ static void UpdateClockCallback(ThreadContextBase *tctx_base, void *arg) {
   ThreadState *thr = reinterpret_cast<ThreadState*>(arg);
   ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);
   u64 epoch = tctx->epoch1;
-  if (tctx->status == ThreadStatusRunning)
+  if (tctx->status == ThreadStatusRunning) {
     epoch = tctx->thr->fast_state.epoch();
+    tctx->thr->clock.NoteGlobalAcquire(epoch);
+  }
   thr->clock.set(&thr->proc()->clock_cache, tctx->tid, epoch);
 }
 
@@ -427,6 +429,18 @@ void AcquireGlobal(ThreadState *thr, uptr pc) {
   ThreadRegistryLock l(ctx->thread_registry);
   ctx->thread_registry->RunCallbackForEachThreadLocked(
       UpdateClockCallback, thr);
+}
+
+void ReleaseStoreAcquire(ThreadState *thr, uptr pc, uptr addr) {
+  DPrintf("#%d: ReleaseStoreAcquire %zx\n", thr->tid, addr);
+  if (thr->ignore_sync)
+    return;
+  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
+  thr->fast_state.IncrementEpoch();
+  // Can't increment epoch w/o writing to the trace as well.
+  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
+  ReleaseStoreAcquireImpl(thr, pc, &s->clock);
+  s->mtx.Unlock();
 }
 
 void Release(ThreadState *thr, uptr pc, uptr addr) {
@@ -480,6 +494,15 @@ void AcquireImpl(ThreadState *thr, uptr pc, SyncClock *c) {
   thr->clock.set(thr->fast_state.epoch());
   thr->clock.acquire(&thr->proc()->clock_cache, c);
   StatInc(thr, StatSyncAcquire);
+}
+
+void ReleaseStoreAcquireImpl(ThreadState *thr, uptr pc, SyncClock *c) {
+  if (thr->ignore_sync)
+    return;
+  thr->clock.set(thr->fast_state.epoch());
+  thr->fast_synch_epoch = thr->fast_state.epoch();
+  thr->clock.releaseStoreAcquire(&thr->proc()->clock_cache, c);
+  StatInc(thr, StatSyncReleaseStoreAcquire);
 }
 
 void ReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {

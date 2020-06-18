@@ -117,55 +117,63 @@ void DanglingHandleCheck::registerMatchersForVariables(MatchFinder *Finder) {
 
   // Find 'Handle foo = ReturnsAValue();'
   Finder->addMatcher(
-      varDecl(
-          hasType(hasUnqualifiedDesugaredType(
-              recordType(hasDeclaration(cxxRecordDecl(IsAHandle))))),
-          unless(parmVarDecl()),
-          hasInitializer(exprWithCleanups(has(ignoringParenImpCasts(handleFrom(
+      traverse(ast_type_traits::TK_AsIs,
+               varDecl(hasType(hasUnqualifiedDesugaredType(recordType(
+                           hasDeclaration(cxxRecordDecl(IsAHandle))))),
+                       unless(parmVarDecl()),
+                       hasInitializer(exprWithCleanups(
+                                          has(ignoringParenImpCasts(handleFrom(
                                               IsAHandle, ConvertedHandle))))
-                             .bind("bad_stmt"))),
+                                          .bind("bad_stmt")))),
       this);
   // Find 'foo = ReturnsAValue();  // foo is Handle'
   Finder->addMatcher(
-      cxxOperatorCallExpr(callee(cxxMethodDecl(ofClass(IsAHandle))),
-                          hasOverloadedOperatorName("="),
-                          hasArgument(1, ConvertedHandle))
-          .bind("bad_stmt"),
+      traverse(ast_type_traits::TK_AsIs,
+               cxxOperatorCallExpr(callee(cxxMethodDecl(ofClass(IsAHandle))),
+                                   hasOverloadedOperatorName("="),
+                                   hasArgument(1, ConvertedHandle))
+                   .bind("bad_stmt")),
       this);
 
   // Container insertions that will dangle.
-  Finder->addMatcher(makeContainerMatcher(IsAHandle).bind("bad_stmt"), this);
+  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs,
+                              makeContainerMatcher(IsAHandle).bind("bad_stmt")),
+                     this);
 }
 
 void DanglingHandleCheck::registerMatchersForReturn(MatchFinder *Finder) {
   // Return a local.
   Finder->addMatcher(
-      returnStmt(
-          // The AST contains two constructor calls:
-          //   1. Value to Handle conversion.
-          //   2. Handle copy construction.
-          // We have to match both.
-          has(ignoringImplicit(handleFrom(
-              IsAHandle,
-              handleFrom(IsAHandle,
-                         declRefExpr(to(varDecl(
-                             // Is function scope ...
-                             hasAutomaticStorageDuration(),
-                             // ... and it is a local array or Value.
-                             anyOf(hasType(arrayType()),
-                                   hasType(hasUnqualifiedDesugaredType(
-                                       recordType(hasDeclaration(recordDecl(
-                                           unless(IsAHandle)))))))))))))),
-          // Temporary fix for false positives inside lambdas.
-          unless(hasAncestor(lambdaExpr())))
-          .bind("bad_stmt"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          returnStmt(
+              // The AST contains two constructor calls:
+              //   1. Value to Handle conversion.
+              //   2. Handle copy construction.
+              // We have to match both.
+              has(ignoringImplicit(handleFrom(
+                  IsAHandle,
+                  handleFrom(IsAHandle,
+                             declRefExpr(to(varDecl(
+                                 // Is function scope ...
+                                 hasAutomaticStorageDuration(),
+                                 // ... and it is a local array or Value.
+                                 anyOf(hasType(arrayType()),
+                                       hasType(hasUnqualifiedDesugaredType(
+                                           recordType(hasDeclaration(recordDecl(
+                                               unless(IsAHandle)))))))))))))),
+              // Temporary fix for false positives inside lambdas.
+              unless(hasAncestor(lambdaExpr())))
+              .bind("bad_stmt")),
       this);
 
   // Return a temporary.
   Finder->addMatcher(
-      returnStmt(has(exprWithCleanups(has(ignoringParenImpCasts(handleFrom(
-                     IsAHandle, handleFromTemporaryValue(IsAHandle)))))))
-          .bind("bad_stmt"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          returnStmt(has(exprWithCleanups(has(ignoringParenImpCasts(handleFrom(
+                         IsAHandle, handleFromTemporaryValue(IsAHandle)))))))
+              .bind("bad_stmt")),
       this);
 }
 

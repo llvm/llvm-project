@@ -23,17 +23,17 @@ public:
       : MCWinCOFFStreamer(C, std::move(AB), std::move(CE), std::move(OW)) {}
 
   void emitThumbFunc(MCSymbol *Symbol) override;
-  void FinishImpl() override;
+  void finishImpl() override;
 };
 
 void ARMWinCOFFStreamer::emitThumbFunc(MCSymbol *Symbol) {
   getAssembler().setIsThumbFunc(Symbol);
 }
 
-void ARMWinCOFFStreamer::FinishImpl() {
-  EmitFrames(nullptr);
+void ARMWinCOFFStreamer::finishImpl() {
+  emitFrames(nullptr);
 
-  MCWinCOFFStreamer::FinishImpl();
+  MCWinCOFFStreamer::finishImpl();
 }
 }
 

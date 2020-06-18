@@ -29,9 +29,9 @@ define i32 @test() #0 {
 ; SUBOPTIMAL-NEXT:    and w0, w8, #0x1
 ; SUBOPTIMAL-NEXT:    ret
 entry:
-  %conv = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 1, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  %conv1 = call float @llvm.experimental.constrained.sitofp.f32.i16(i16 1, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %conv, float %conv1, metadata !"oeq", metadata !"fpexcept.strict")
+  %conv = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 1, metadata !"round.tonearest", metadata !"fpexcept.strict") #1
+  %conv1 = call float @llvm.experimental.constrained.sitofp.f32.i16(i16 1, metadata !"round.tonearest", metadata !"fpexcept.strict") #1
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %conv, float %conv1, metadata !"oeq", metadata !"fpexcept.strict") #1
   %conv2 = zext i1 %cmp to i32
   ret i32 %conv2
 }
@@ -57,11 +57,12 @@ define i32 @test2() #0 {
 ; SUBOPTIMAL-NEXT:    and w0, w8, #0x1
 ; SUBOPTIMAL-NEXT:    ret
 entry:
-  %conv = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 1, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  %conv1 = call float @llvm.experimental.constrained.uitofp.f32.i16(i16 1, metadata !"round.tonearest", metadata !"fpexcept.strict")
-  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %conv, float %conv1, metadata !"oeq", metadata !"fpexcept.strict")
+  %conv = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 1, metadata !"round.tonearest", metadata !"fpexcept.strict") #1
+  %conv1 = call float @llvm.experimental.constrained.uitofp.f32.i16(i16 1, metadata !"round.tonearest", metadata !"fpexcept.strict") #1
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %conv, float %conv1, metadata !"oeq", metadata !"fpexcept.strict") #1
   %conv2 = zext i1 %cmp to i32
   ret i32 %conv2
 }
 
-attributes #0 = { noinline optnone }
+attributes #0 = { strictfp noinline optnone }
+attributes #1 = { strictfp }

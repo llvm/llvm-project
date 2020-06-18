@@ -20,7 +20,7 @@ __kernel void foo(__global int *gip) {
 #if !__OPENCL_CPP_VERSION__
 // expected-error@-2 {{assigning '__constant int *' to '__generic int *__private' changes address space of pointer}}
 #else
-// expected-error@-4 {{assigning to '__generic int *' from incompatible type '__constant int *'}}
+// expected-error@-4 {{assigning '__constant int *' to '__generic int *' changes address space of pointer}}
 #endif
 #endif
 }
@@ -176,46 +176,46 @@ void nested(__global int *g, __global int * __private *gg, __local int *l, __loc
 }
 #else
 void nested(__global int *g, __global int * __private *gg, __local int *l, __local int * __private *ll, __global float * __private *gg_f) {
-  g = gg;    // expected-error {{assigning to '__global int *' from incompatible type '__global int *__private *__private'}}
-  g = l;     // expected-error {{assigning to '__global int *' from incompatible type '__local int *__private'}}
-  g = ll;    // expected-error {{assigning to '__global int *' from incompatible type '__local int *__private *__private'}}
-  g = gg_f;  // expected-error {{assigning to '__global int *' from incompatible type '__global float *__private *__private'}}
+  g = gg;    // expected-error {{assigning '__global int *__private *__private' to '__global int *' changes address space of pointer}}
+  g = l;     // expected-error {{assigning '__local int *__private' to '__global int *' changes address space of pointer}}
+  g = ll;    // expected-error {{assigning '__local int *__private *__private' to '__global int *' changes address space of pointer}}
+  g = gg_f;  // expected-error {{assigning '__global float *__private *__private' to '__global int *' changes address space of pointer}}
   g = (__global int *)gg_f; // expected-error {{C-style cast from '__global float *__private *' to '__global int *' converts between mismatching address spaces}}
 
-  gg = g;    // expected-error {{assigning to '__global int *__private *' from incompatible type '__global int *__private'; take the address with &}}
-  gg = l;    // expected-error {{assigning to '__global int *__private *' from incompatible type '__local int *__private'}}
-  gg = ll;   // expected-error {{assigning to '__global int *__private *' from incompatible type '__local int *__private *__private'}}
-  gg = gg_f; // expected-error {{assigning to '__global int *__private *' from incompatible type '__global float *__private *__private'}}
+  gg = g;    // expected-error {{assigning '__global int *__private' to '__global int *__private *' changes address space of pointer}}
+  gg = l;    // expected-error {{assigning '__local int *__private' to '__global int *__private *' changes address space of pointer}}
+  gg = ll;   // expected-error {{assigning '__local int *__private *__private' to '__global int *__private *' changes address space of nested pointer}}
+  gg = gg_f; // expected-error {{incompatible pointer types assigning to '__global int *__private *' from '__global float *__private *__private'}}
   gg = (__global int * __private *)gg_f;
 
-  l = g;     // expected-error {{assigning to '__local int *' from incompatible type '__global int *__private'}}
-  l = gg;    // expected-error {{assigning to '__local int *' from incompatible type '__global int *__private *__private'}}
-  l = ll;    // expected-error {{assigning to '__local int *' from incompatible type '__local int *__private *__private'}}
-  l = gg_f;  // expected-error {{assigning to '__local int *' from incompatible type '__global float *__private *__private'}}
+  l = g;     // expected-error {{assigning '__global int *__private' to '__local int *' changes address space of pointer}}
+  l = gg;    // expected-error {{assigning '__global int *__private *__private' to '__local int *' changes address space of pointer}}
+  l = ll;    // expected-error {{assigning '__local int *__private *__private' to '__local int *' changes address space of pointer}}
+  l = gg_f;  // expected-error {{assigning '__global float *__private *__private' to '__local int *' changes address space of pointer}}
   l = (__local int *)gg_f; // expected-error {{C-style cast from '__global float *__private *' to '__local int *' converts between mismatching address spaces}}
 
-  ll = g;    // expected-error {{assigning to '__local int *__private *' from incompatible type '__global int *__private'}}
-  ll = gg;   // expected-error {{assigning to '__local int *__private *' from incompatible type '__global int *__private *__private'}}
-  ll = l;    // expected-error {{assigning to '__local int *__private *' from incompatible type '__local int *__private'; take the address with &}}
-  ll = gg_f; // expected-error {{assigning to '__local int *__private *' from incompatible type '__global float *__private *__private'}}
+  ll = g;    // expected-error {{assigning '__global int *__private' to '__local int *__private *' changes address space of pointer}}
+  ll = gg;   // expected-error {{assigning '__global int *__private *__private' to '__local int *__private *' changes address space of nested pointer}}
+  ll = l;    // expected-error {{assigning '__local int *__private' to '__local int *__private *' changes address space of pointer}}
+  ll = gg_f; // expected-error {{assigning '__global float *__private *__private' to '__local int *__private *' changes address space of nested pointer}}
   ll = (__local int *__private *)gg; //expected-warning{{C-style cast from '__global int *__private *' to '__local int *__private *' changes address space of nested pointers}}
 
-  gg_f = g;  // expected-error {{assigning to '__global float *__private *' from incompatible type '__global int *__private'}}
-  gg_f = gg; // expected-error {{assigning to '__global float *__private *' from incompatible type '__global int *__private *__private'}}
-  gg_f = l;  // expected-error {{assigning to '__global float *__private *' from incompatible type '__local int *__private'}}
-  gg_f = ll; // expected-error {{assigning to '__global float *__private *' from incompatible type '__local int *__private *__private'}}
+  gg_f = g;  // expected-error {{assigning '__global int *__private' to '__global float *__private *' changes address space of pointer}}
+  gg_f = gg; // expected-error {{incompatible pointer types assigning to '__global float *__private *' from '__global int *__private *__private'}}
+  gg_f = l;  // expected-error {{assigning '__local int *__private' to '__global float *__private *' changes address space of pointer}}
+  gg_f = ll; // expected-error {{assigning '__local int *__private *__private' to '__global float *__private *' changes address space of nested pointer}}
   gg_f = (__global float * __private *)gg;
 
   typedef __local int * l_t;
   typedef __global int * g_t;
   __private l_t * pl;
   __private g_t * pg;
-  gg = pl;  // expected-error {{assigning to '__global int *__private *' from incompatible type '__private l_t *__private' (aka '__local int *__private *__private')}}
-  pl = gg;  // expected-error {{assigning to '__private l_t *' (aka '__local int *__private *') from incompatible type '__global int *__private *__private'}}
+  gg = pl;  // expected-error {{assigning '__private l_t *__private' (aka '__local int *__private *__private') to '__global int *__private *' changes address space of nested pointer}}
+  pl = gg;  // expected-error {{assigning '__global int *__private *__private' to '__private l_t *' (aka '__local int *__private *') changes address space of nested pointer}}
   gg = pg;
   pg = gg;
-  pg = pl;  // expected-error {{assigning to '__private g_t *' (aka '__global int *__private *') from incompatible type '__private l_t *__private' (aka '__local int *__private *__private')}}
-  pl = pg;  // expected-error {{assigning to '__private l_t *' (aka '__local int *__private *') from incompatible type '__private g_t *__private' (aka '__global int *__private *__private')}}
+  pg = pl;  // expected-error {{assigning '__private l_t *__private' (aka '__local int *__private *__private') to '__private g_t *' (aka '__global int *__private *') changes address space of nested pointer}}
+  pl = pg;  // expected-error {{assigning '__private g_t *__private' (aka '__global int *__private *__private') to '__private l_t *' (aka '__local int *__private *') changes address space of nested pointer}}
 
   ll = (__local int * __private *)(void *)gg;
   void *vp = ll;

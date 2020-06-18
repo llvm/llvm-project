@@ -13,7 +13,7 @@ define i32 @fold_srem_positive_odd(i32 %x) {
 ; CHECK-NEXT:    srawi 4, 4, 6
 ; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    mulli 4, 4, 95
-; CHECK-NEXT:    subf 3, 4, 3
+; CHECK-NEXT:    sub 3, 3, 4
 ; CHECK-NEXT:    blr
   %1 = srem i32 %x, 95
   ret i32 %1
@@ -30,7 +30,7 @@ define i32 @fold_srem_positive_even(i32 %x) {
 ; CHECK-NEXT:    srawi 4, 4, 8
 ; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    mulli 4, 4, 1060
-; CHECK-NEXT:    subf 3, 4, 3
+; CHECK-NEXT:    sub 3, 3, 4
 ; CHECK-NEXT:    blr
   %1 = srem i32 %x, 1060
   ret i32 %1
@@ -47,7 +47,7 @@ define i32 @fold_srem_negative_odd(i32 %x) {
 ; CHECK-NEXT:    srawi 4, 4, 8
 ; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    mulli 4, 4, -723
-; CHECK-NEXT:    subf 3, 4, 3
+; CHECK-NEXT:    sub 3, 3, 4
 ; CHECK-NEXT:    blr
   %1 = srem i32 %x, -723
   ret i32 %1
@@ -64,7 +64,7 @@ define i32 @fold_srem_negative_even(i32 %x) {
 ; CHECK-NEXT:    srawi 4, 4, 8
 ; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    mulli 4, 4, -22981
-; CHECK-NEXT:    subf 3, 4, 3
+; CHECK-NEXT:    sub 3, 3, 4
 ; CHECK-NEXT:    blr
   %1 = srem i32 %x, -22981
   ret i32 %1
@@ -83,7 +83,7 @@ define i32 @combine_srem_sdiv(i32 %x) {
 ; CHECK-NEXT:    srawi 4, 4, 6
 ; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    mulli 5, 4, 95
-; CHECK-NEXT:    subf 3, 5, 3
+; CHECK-NEXT:    sub 3, 3, 5
 ; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    blr
   %1 = srem i32 %x, 95
@@ -99,7 +99,7 @@ define i32 @dont_fold_srem_power_of_two(i32 %x) {
 ; CHECK-NEXT:    srawi 4, 3, 6
 ; CHECK-NEXT:    addze 4, 4
 ; CHECK-NEXT:    slwi 4, 4, 6
-; CHECK-NEXT:    subf 3, 4, 3
+; CHECK-NEXT:    sub 3, 3, 4
 ; CHECK-NEXT:    blr
   %1 = srem i32 %x, 64
   ret i32 %1

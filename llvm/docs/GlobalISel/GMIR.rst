@@ -76,7 +76,7 @@ generic and non-generic). There are some exceptions to this but in general:
   way of getting a given operand's type (as there was no 1:1 mapping between
   instruction types and operands).
   We considered putting the type in some variant of MCInstrDesc instead:
-  See `PR26576 <http://llvm.org/PR26576>`_: [GlobalISel] Generic MachineInstrs
+  See `PR26576 <https://llvm.org/PR26576>`_: [GlobalISel] Generic MachineInstrs
   need a type but this increases the memory footprint of the related objects
 
 .. _gmir-regbank:

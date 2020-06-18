@@ -18,9 +18,6 @@ namespace tidy {
 namespace abseil {
 
 void NoInternalDependenciesCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // TODO: refactor matcher to be configurable or just match on any internal
   // access from outside the enclosing namespace.
 

@@ -16,6 +16,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/UseDefLists.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
 class AsmState;
@@ -91,7 +92,7 @@ public:
     return U(ownerAndKind);
   }
 
-  operator bool() const { return ownerAndKind.getPointer(); }
+  explicit operator bool() const { return ownerAndKind.getPointer(); }
   bool operator==(const Value &other) const {
     return ownerAndKind == other.ownerAndKind;
   }
@@ -115,12 +116,22 @@ public:
   /// defines it.
   Operation *getDefiningOp() const;
 
+  /// If this value is the result of an operation of type OpTy, return the
+  /// operation that defines it.
+  template <typename OpTy>
+  OpTy getDefiningOp() const {
+    return llvm::dyn_cast_or_null<OpTy>(getDefiningOp());
+  }
+
   /// If this value is the result of an operation, use it as a location,
   /// otherwise return an unknown location.
   Location getLoc() const;
 
   /// Return the Region in which this Value is defined.
   Region *getParentRegion();
+
+  /// Return the Block in which this Value is defined.
+  Block *getParentBlock();
 
   //===--------------------------------------------------------------------===//
   // UseLists
@@ -137,11 +148,26 @@ public:
   /// there are zero uses of 'this'.
   void replaceAllUsesWith(Value newValue) const;
 
+  /// Replace all uses of 'this' value with 'newValue', updating anything in the
+  /// IR that uses 'this' to use the other value instead except if the user is
+  /// listed in 'exceptions' .
+  void
+  replaceAllUsesExcept(Value newValue,
+                       const SmallPtrSetImpl<Operation *> &exceptions) const;
+
+  /// Replace all uses of 'this' value with 'newValue' if the given callback
+  /// returns true.
+  void replaceUsesWithIf(Value newValue,
+                         function_ref<bool(OpOperand &)> shouldReplace);
+
+  /// Returns true if the value is used outside of the given block.
+  bool isUsedOutsideOfBlock(Block *block);
+
   //===--------------------------------------------------------------------===//
   // Uses
 
   /// This class implements an iterator over the uses of a value.
-  using use_iterator = FilteredValueUseIterator<OpOperand>;
+  using use_iterator = ValueUseIterator<OpOperand>;
   using use_range = iterator_range<use_iterator>;
 
   use_iterator use_begin() const;
@@ -292,12 +318,21 @@ public:
   /// Returns the number of this result.
   unsigned getResultNumber() const;
 
+  /// Returns the maximum number of results that can be stored inline.
+  static unsigned getMaxInlineResults() {
+    return static_cast<unsigned>(Kind::TrailingOpResult);
+  }
+
 private:
+  /// Given a number of operation results, returns the number that need to be
+  /// stored inline.
+  static unsigned getNumInline(unsigned numResults);
+
   /// Given a number of operation results, returns the number that need to be
   /// stored as trailing.
   static unsigned getNumTrailing(unsigned numResults);
 
-  /// Allow access to `create` and `destroy`.
+  /// Allow access to constructor.
   friend Operation;
 };
 

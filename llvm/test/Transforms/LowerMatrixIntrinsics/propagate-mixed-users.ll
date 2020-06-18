@@ -28,22 +28,22 @@ define <8 x double> @strided_load_4x4(<8 x double> %in, <8 x double>* %Ptr) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> [[TMP16]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x double> [[TMP17]], <4 x double> [[TMP18]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <8 x double>* [[PTR:%.*]] to double*
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast double* [[TMP20]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP21]], align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr double, double* [[TMP20]], i32 2
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast double* [[TMP22]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP23]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr double, double* [[TMP20]], i32 4
-; CHECK-NEXT:    [[TMP25:%.*]] = bitcast double* [[TMP24]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP12]], <2 x double>* [[TMP25]], align 8
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, double* [[TMP20]], i32 6
-; CHECK-NEXT:    [[TMP27:%.*]] = bitcast double* [[TMP26]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP16]], <2 x double>* [[TMP27]], align 8
+; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP20]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[VEC_CAST]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP20]], i64 2
+; CHECK-NEXT:    [[VEC_CAST2:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[VEC_CAST2]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[TMP20]], i64 4
+; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP3]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP12]], <2 x double>* [[VEC_CAST4]], align 8
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, double* [[TMP20]], i64 6
+; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[VEC_GEP5]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP16]], <2 x double>* [[VEC_CAST6]], align 8
 ; CHECK-NEXT:    call void @foo(<8 x double> [[TMP19]])
 ; CHECK-NEXT:    ret <8 x double> [[TMP19]]
 ;
   %transposed = call <8 x double> @llvm.matrix.transpose(<8 x double> %in, i32 4, i32 2)
-  store <8 x double> %transposed, <8 x double>* %Ptr
+  store <8 x double> %transposed, <8 x double>* %Ptr, align 8
   call void @foo(<8 x double> %transposed)
   ret <8 x double> %transposed
 }

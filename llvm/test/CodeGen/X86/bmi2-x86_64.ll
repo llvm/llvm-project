@@ -68,8 +68,8 @@ define i64 @mulx64(i64 %x, i64 %y, i64* %p)   {
 ; CHECK-LABEL: mulx64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    mulq %rsi
+; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    mulxq %rsi, %rax, %rdx
 ; CHECK-NEXT:    movq %rdx, (%rcx)
 ; CHECK-NEXT:    retq
   %x1 = zext i64 %x to i128
@@ -86,8 +86,8 @@ define i64 @mulx64_load(i64 %x, i64* %y, i64* %p)   {
 ; CHECK-LABEL: mulx64_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    mulq (%rsi)
+; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    mulxq (%rsi), %rax, %rdx
 ; CHECK-NEXT:    movq %rdx, (%rcx)
 ; CHECK-NEXT:    retq
   %y1 = load i64, i64* %y

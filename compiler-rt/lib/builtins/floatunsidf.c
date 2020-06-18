@@ -17,7 +17,7 @@
 
 #include "int_lib.h"
 
-COMPILER_RT_ABI fp_t __floatunsidf(unsigned int a) {
+COMPILER_RT_ABI fp_t __floatunsidf(su_int a) {
 
   const int aWidth = sizeof a * CHAR_BIT;
 
@@ -26,7 +26,7 @@ COMPILER_RT_ABI fp_t __floatunsidf(unsigned int a) {
     return fromRep(0);
 
   // Exponent of (fp_t)a is the width of abs(a).
-  const int exponent = (aWidth - 1) - __builtin_clz(a);
+  const int exponent = (aWidth - 1) - clzsi(a);
   rep_t result;
 
   // Shift a into the significand field and clear the implicit bit.
@@ -40,7 +40,7 @@ COMPILER_RT_ABI fp_t __floatunsidf(unsigned int a) {
 
 #if defined(__ARM_EABI__)
 #if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI fp_t __aeabi_ui2d(unsigned int a) { return __floatunsidf(a); }
+AEABI_RTABI fp_t __aeabi_ui2d(su_int a) { return __floatunsidf(a); }
 #else
 COMPILER_RT_ALIAS(__floatunsidf, __aeabi_ui2d)
 #endif

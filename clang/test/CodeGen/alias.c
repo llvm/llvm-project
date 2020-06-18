@@ -5,8 +5,13 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECKGLOBALS %s
 
 int g0;
-// CHECKBASIC-DAG: @g0 = common global i32 0
-// CHECKASM-DAG: .comm g0,4,4
+// CHECKBASIC-DAG: @g0 = global i32 0
+// CHECKASM-DAG:  .bss
+// CHECKASM-DAG:  .globl  g0
+// CHECKASM-DAG:  .p2align  2
+// CHECKASM-DAG:  g0:
+// CHECKASM-DAG:  .long 0
+// CHECKASM-DAG:  .size g0, 4
 __thread int TL_WITH_ALIAS;
 // CHECKBASIC-DAG: @TL_WITH_ALIAS = thread_local global i32 0, align 4
 // CHECKASM-DAG: .globl TL_WITH_ALIAS

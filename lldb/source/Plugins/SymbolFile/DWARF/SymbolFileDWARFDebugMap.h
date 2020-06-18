@@ -57,11 +57,10 @@ public:
   // Compile Unit function calls
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
-
+  lldb_private::XcodeSDK
+  ParseXcodeSDK(lldb_private::CompileUnit &comp_unit) override;
   size_t ParseFunctions(lldb_private::CompileUnit &comp_unit) override;
-
   bool ParseLineTable(lldb_private::CompileUnit &comp_unit) override;
-
   bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
 
   bool ForEachExternalModule(

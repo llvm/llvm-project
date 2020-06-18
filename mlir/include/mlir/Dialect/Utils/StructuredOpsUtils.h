@@ -17,11 +17,35 @@
 #ifndef MLIR_DIALECT_UTILS_STRUCTUREDOPSUTILS_H
 #define MLIR_DIALECT_UTILS_STRUCTUREDOPSUTILS_H
 
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {
+
+inline bool isRowMajorMatmul(ArrayAttr indexingMaps) {
+  auto context = indexingMaps.getContext();
+  AffineExpr m, n, k;
+  bindDims(context, m, n, k);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}, context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}, context));
+  auto maps = ArrayAttr::get({mapA, mapB, mapC}, context);
+  return indexingMaps == maps;
+}
+
+inline bool isColumnMajorMatmul(ArrayAttr indexingMaps) {
+  auto context = indexingMaps.getContext();
+  AffineExpr m, n, k;
+  bindDims(context, m, n, k);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}, context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {n, m}, context));
+  auto maps = ArrayAttr::get({mapA, mapB, mapC}, context);
+  return indexingMaps == maps;
+}
+
 /// Attribute name for the AffineArrayAttr which encodes the relationship
 /// between a structured op iterators' and its operands.
 constexpr StringRef getIndexingMapsAttrName() { return "indexing_maps"; }
@@ -42,22 +66,39 @@ constexpr StringRef getArgsOutAttrName() { return "args_out"; }
 /// string of the structured op.
 constexpr StringRef getDocAttrName() { return "doc"; }
 
-/// Attribute name for the StrArrayAttr which encodes the SymbolAttr for the
-/// MLIR function that implements the body of the structured op.
-constexpr StringRef getFunAttrName() { return "fun"; }
-
 /// Attribute name for the StrArrayAttr which encodes the external library
 /// function that implements the structured op.
 constexpr StringRef getLibraryCallAttrName() { return "library_call"; }
 
+/// Attribute name for the StrArrayAttr which encodes the value of strides.
+constexpr StringRef getStridesAttrName() { return "strides"; }
+
+/// Attribute name for the StrArrayAttr which encodes the value of dilations.
+constexpr StringRef getDilationsAttrName() { return "dilations"; }
+
+/// Attribute name for the StrArrayAttr which encodes the value of paddings.
+constexpr StringRef getPaddingAttrName() { return "padding"; }
+
 /// Use to encode that a particular iterator type has parallel semantics.
 constexpr StringRef getParallelIteratorTypeName() { return "parallel"; }
+inline bool isParallelIterator(Attribute attr) {
+  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
+  return strAttr && strAttr.getValue() == getParallelIteratorTypeName();
+}
 
 /// Use to encode that a particular iterator type has reduction semantics.
 constexpr StringRef getReductionIteratorTypeName() { return "reduction"; }
+inline bool isReductionIterator(Attribute attr) {
+  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
+  return strAttr && strAttr.getValue() == getReductionIteratorTypeName();
+}
 
 /// Use to encode that a particular iterator type has window semantics.
 constexpr StringRef getWindowIteratorTypeName() { return "window"; }
+inline bool isWindowIterator(Attribute attr) {
+  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
+  return strAttr && strAttr.getValue() == getWindowIteratorTypeName();
+}
 
 /// Use to encode that a particular iterator type has window semantics.
 inline ArrayRef<StringRef> getAllIteratorTypeNames() {

@@ -59,13 +59,17 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   }
 }
 
-Function *OpenMPIRBuilder::getOrCreateRuntimeFunction(RuntimeFunction FnID) {
+FunctionCallee
+OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
+  FunctionType *FnTy = nullptr;
   Function *Fn = nullptr;
 
   // Try to find the declation in the module first.
   switch (FnID) {
 #define OMP_RTL(Enum, Str, IsVarArg, ReturnType, ...)                          \
   case Enum:                                                                   \
+    FnTy = FunctionType::get(ReturnType, ArrayRef<Type *>{__VA_ARGS__},        \
+                             IsVarArg);                                        \
     Fn = M.getFunction(Str);                                                   \
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
@@ -74,20 +78,50 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunction(RuntimeFunction FnID) {
   if (!Fn) {
     // Create a new declaration if we need one.
     switch (FnID) {
-#define OMP_RTL(Enum, Str, IsVarArg, ReturnType, ...)                          \
+#define OMP_RTL(Enum, Str, ...)                                                \
   case Enum:                                                                   \
-    Fn = Function::Create(FunctionType::get(ReturnType,                        \
-                                            ArrayRef<Type *>{__VA_ARGS__},     \
-                                            IsVarArg),                         \
-                          GlobalValue::ExternalLinkage, Str, M);               \
+    Fn = Function::Create(FnTy, GlobalValue::ExternalLinkage, Str, M);         \
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
     }
 
+    // Add information if the runtime function takes a callback function
+    if (FnID == OMPRTL___kmpc_fork_call || FnID == OMPRTL___kmpc_fork_teams) {
+      if (!Fn->hasMetadata(LLVMContext::MD_callback)) {
+        LLVMContext &Ctx = Fn->getContext();
+        MDBuilder MDB(Ctx);
+        // Annotate the callback behavior of the runtime function:
+        //  - The callback callee is argument number 2 (microtask).
+        //  - The first two arguments of the callback callee are unknown (-1).
+        //  - All variadic arguments to the runtime function are passed to the
+        //    callback callee.
+        Fn->addMetadata(
+            LLVMContext::MD_callback,
+            *MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                  2, {-1, -1}, /* VarArgsArePassed */ true)}));
+      }
+    }
+
+    LLVM_DEBUG(dbgs() << "Created OpenMP runtime function " << Fn->getName()
+                      << " with type " << *Fn->getFunctionType() << "\n");
     addAttributes(FnID, *Fn);
+
+  } else {
+    LLVM_DEBUG(dbgs() << "Found OpenMP runtime function " << Fn->getName()
+                      << " with type " << *Fn->getFunctionType() << "\n");
   }
 
   assert(Fn && "Failed to create OpenMP runtime function");
+
+  // Cast the function to the expected type if necessary
+  Constant *C = ConstantExpr::getBitCast(Fn, FnTy->getPointerTo());
+  return {FnTy, C};
+}
+
+Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
+  FunctionCallee RTLFn = getOrCreateRuntimeFunction(M, FnID);
+  auto *Fn = dyn_cast<llvm::Function>(RTLFn.getCallee());
+  assert(Fn && "Failed to create OpenMP runtime function pointer");
   return Fn;
 }
 
@@ -218,7 +252,7 @@ OpenMPIRBuilder::getOrCreateSrcLocStr(const LocationDescription &Loc) {
 
 Value *OpenMPIRBuilder::getOrCreateThreadID(Value *Ident) {
   return Builder.CreateCall(
-      getOrCreateRuntimeFunction(OMPRTL___kmpc_global_thread_num), Ident,
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_global_thread_num), Ident,
       "omp_global_thread_num");
 }
 
@@ -265,10 +299,11 @@ OpenMPIRBuilder::emitBarrierImpl(const LocationDescription &Loc, Directive Kind,
   bool UseCancelBarrier =
       !ForceSimpleCall && isLastFinalizationInfoCancellable(OMPD_parallel);
 
-  Value *Result = Builder.CreateCall(
-      getOrCreateRuntimeFunction(UseCancelBarrier ? OMPRTL___kmpc_cancel_barrier
-                                                  : OMPRTL___kmpc_barrier),
-      Args);
+  Value *Result =
+      Builder.CreateCall(getOrCreateRuntimeFunctionPtr(
+                             UseCancelBarrier ? OMPRTL___kmpc_cancel_barrier
+                                              : OMPRTL___kmpc_barrier),
+                         Args);
 
   if (UseCancelBarrier && CheckCancelFlag)
     emitCancelationCheckImpl(Result, OMPD_parallel);
@@ -306,7 +341,7 @@ OpenMPIRBuilder::CreateCancel(const LocationDescription &Loc,
   Value *Ident = getOrCreateIdent(SrcLocStr);
   Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
   Value *Result = Builder.CreateCall(
-      getOrCreateRuntimeFunction(OMPRTL___kmpc_cancel), Args);
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancel), Args);
 
   // The actual cancel logic is shared with others, e.g., cancel_barriers.
   emitCancelationCheckImpl(Result, CanceledDirective);
@@ -371,7 +406,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
         Ident, ThreadID,
         Builder.CreateIntCast(NumThreads, Int32, /*isSigned*/ false)};
     Builder.CreateCall(
-        getOrCreateRuntimeFunction(OMPRTL___kmpc_push_num_threads), Args);
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_threads), Args);
   }
 
   if (ProcBind != OMP_PROC_BIND_default) {
@@ -379,8 +414,8 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
     Value *Args[] = {
         Ident, ThreadID,
         ConstantInt::get(Int32, unsigned(ProcBind), /*isSigned=*/true)};
-    Builder.CreateCall(getOrCreateRuntimeFunction(OMPRTL___kmpc_push_proc_bind),
-                       Args);
+    Builder.CreateCall(
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_proc_bind), Args);
   }
 
   BasicBlock *InsertBB = Builder.GetInsertBlock();
@@ -477,7 +512,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
 
   LLVM_DEBUG(dbgs() << "After  body codegen: " << *OuterFn << "\n");
 
-  FunctionCallee RTLFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_fork_call);
+  FunctionCallee RTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_call);
   if (auto *F = dyn_cast<llvm::Function>(RTLFn.getCallee())) {
     if (!F->hasMetadata(llvm::LLVMContext::MD_callback)) {
       llvm::LLVMContext &Ctx = F->getContext();
@@ -546,7 +581,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
       // Build calls __kmpc_serialized_parallel(&Ident, GTid);
       Value *SerializedParallelCallArgs[] = {Ident, ThreadID};
       Builder.CreateCall(
-          getOrCreateRuntimeFunction(OMPRTL___kmpc_serialized_parallel),
+          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_serialized_parallel),
           SerializedParallelCallArgs);
 
       // OutlinedFn(&GTid, &zero, CapturedStruct);
@@ -556,7 +591,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
       // __kmpc_end_serialized_parallel(&Ident, GTid);
       Value *EndArgs[] = {Ident, ThreadID};
       Builder.CreateCall(
-          getOrCreateRuntimeFunction(OMPRTL___kmpc_end_serialized_parallel),
+          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_serialized_parallel),
           EndArgs);
 
       LLVM_DEBUG(dbgs() << "With serialized parallel region: "
@@ -625,7 +660,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
   LLVM_DEBUG(dbgs() << "Before privatization: " << *OuterFn << "\n");
 
   FunctionCallee TIDRTLFn =
-      getOrCreateRuntimeFunction(OMPRTL___kmpc_global_thread_num);
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_global_thread_num);
 
   auto PrivHelper = [&](Value &V) {
     if (&V == TIDAddr || &V == ZeroAddr)
@@ -681,7 +716,7 @@ void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc) {
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
   Value *Args[] = {getOrCreateIdent(SrcLocStr)};
 
-  Builder.CreateCall(getOrCreateRuntimeFunction(OMPRTL___kmpc_flush), Args);
+  Builder.CreateCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush), Args);
 }
 
 void OpenMPIRBuilder::CreateFlush(const LocationDescription &Loc) {
@@ -698,7 +733,7 @@ void OpenMPIRBuilder::emitTaskwaitImpl(const LocationDescription &Loc) {
   Value *Args[] = {Ident, getOrCreateThreadID(Ident)};
 
   // Ignore return result until untied tasks are supported.
-  Builder.CreateCall(getOrCreateRuntimeFunction(OMPRTL___kmpc_omp_taskwait),
+  Builder.CreateCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_taskwait),
                      Args);
 }
 
@@ -715,7 +750,7 @@ void OpenMPIRBuilder::emitTaskyieldImpl(const LocationDescription &Loc) {
   Constant *I32Null = ConstantInt::getNullValue(Int32);
   Value *Args[] = {Ident, getOrCreateThreadID(Ident), I32Null};
 
-  Builder.CreateCall(getOrCreateRuntimeFunction(OMPRTL___kmpc_omp_taskyield),
+  Builder.CreateCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_taskyield),
                      Args);
 }
 
@@ -739,10 +774,10 @@ OpenMPIRBuilder::CreateMaster(const LocationDescription &Loc,
   Value *ThreadId = getOrCreateThreadID(Ident);
   Value *Args[] = {Ident, ThreadId};
 
-  Function *EntryRTLFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_master);
+  Function *EntryRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_master);
   Instruction *EntryCall = Builder.CreateCall(EntryRTLFn, Args);
 
-  Function *ExitRTLFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_end_master);
+  Function *ExitRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_master);
   Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
 
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
@@ -768,13 +803,14 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::CreateCritical(
   if (HintInst) {
     // Add Hint to entry Args and create call
     EnterArgs.push_back(HintInst);
-    RTFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_critical_with_hint);
+    RTFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_critical_with_hint);
   } else {
-    RTFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_critical);
+    RTFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_critical);
   }
   Instruction *EntryCall = Builder.CreateCall(RTFn, EnterArgs);
 
-  Function *ExitRTLFn = getOrCreateRuntimeFunction(OMPRTL___kmpc_end_critical);
+  Function *ExitRTLFn =
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_critical);
   Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
 
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,

@@ -7,6 +7,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -54,7 +55,7 @@ void foobar3(int &ref) {
 }
 
 void foobar4(int &ref) {
-#pragma omp master taskloop in_reduction(min:ref) // expected-error {{in_reduction variable must appear in a task_reduction clause}}
+#pragma omp master taskloop in_reduction(min:ref)
   for (int i = 0; i < 10; ++i)
   foo();
 }
@@ -181,7 +182,7 @@ T tmain(T argc) {
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskgroup task_reduction(+:c)
-#pragma omp master taskloop in_reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be in_reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}} expected-error 2 {{in_reduction variable must appear in a task_reduction clause}}
+#pragma omp master taskloop in_reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be in_reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp master taskloop in_reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 4 {{arguments of OpenMP clause 'in_reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified variable cannot be in_reduction}}
@@ -199,7 +200,7 @@ T tmain(T argc) {
 #pragma omp master taskloop in_reduction(- : da) // expected-error {{const-qualified variable cannot be in_reduction}} expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp master taskloop in_reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}} expected-error {{in_reduction variable must appear in a task_reduction clause}}
+#pragma omp master taskloop in_reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp master taskloop in_reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
@@ -316,7 +317,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskgroup task_reduction(+:c)
-#pragma omp master taskloop in_reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{const-qualified variable cannot be in_reduction}} expected-error {{'operator+' is a private member of 'S2'}} expected-error {{in_reduction variable must appear in a task_reduction clause}}
+#pragma omp master taskloop in_reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{const-qualified variable cannot be in_reduction}} expected-error {{'operator+' is a private member of 'S2'}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp master taskloop in_reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{arguments of OpenMP clause 'in_reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 2 {{const-qualified variable cannot be in_reduction}}

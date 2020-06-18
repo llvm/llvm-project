@@ -1,3 +1,0 @@
-# RUN: llvm-objdump -macho -objc-meta-data %p/Inputs/empty.macho-armv7 | FileCheck %s
-
-# CHECK: empty.macho-armv7:

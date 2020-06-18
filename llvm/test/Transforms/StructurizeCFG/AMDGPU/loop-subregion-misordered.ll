@@ -28,7 +28,7 @@ define amdgpu_kernel void @loop_subregion_misordered(i32 addrspace(1)* %arg0) #0
 ; CHECK-NEXT:    [[I_INITIAL:%.*]] = load volatile i32, i32 addrspace(1)* [[GEP]], align 4
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       LOOP.HEADER:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INITIAL]], [[ENTRY:%.*]] ], [ [[TMP7:%.*]], [[FLOW3:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INITIAL]], [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[FLOW3:%.*]] ]
 ; CHECK-NEXT:    call void asm sideeffect "s_nop 0x100b
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* null, i64 [[TMP12]]
@@ -50,8 +50,8 @@ define amdgpu_kernel void @loop_subregion_misordered(i32 addrspace(1)* %arg0) #0
 ; CHECK-NEXT:    [[TMP25:%.*]] = mul nuw nsw i32 [[TMP24]], 52
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       Flow2:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP59:%.*]], [[INNER_LOOP_BREAK:%.*]] ], [ [[TMP9:%.*]], [[FLOW]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ true, [[INNER_LOOP_BREAK]] ], [ [[TMP11:%.*]], [[FLOW]] ]
+; CHECK-NEXT:    [[TMP4]] = phi i32 [ [[TMP59:%.*]], [[INNER_LOOP_BREAK:%.*]] ], [ [[TMP8:%.*]], [[FLOW]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ true, [[INNER_LOOP_BREAK]] ], [ [[TMP10:%.*]], [[FLOW]] ]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[END_ELSE_BLOCK:%.*]], label [[FLOW3]]
 ; CHECK:       INNER_LOOP:
 ; CHECK-NEXT:    [[INNER_LOOP_J:%.*]] = phi i32 [ [[INNER_LOOP_J_INC:%.*]], [[INNER_LOOP]] ], [ [[TMP25]], [[BB18:%.*]] ]
@@ -68,28 +68,26 @@ define amdgpu_kernel void @loop_subregion_misordered(i32 addrspace(1)* %arg0) #0
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[LOAD13]], true
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[INCREMENT_I]], label [[FLOW1:%.*]]
 ; CHECK:       Flow3:
-; CHECK-NEXT:    [[TMP7]] = phi i32 [ [[I_FINAL:%.*]], [[END_ELSE_BLOCK]] ], [ undef, [[FLOW2]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ [[CMP_END_ELSE_BLOCK:%.*]], [[END_ELSE_BLOCK]] ], [ true, [[FLOW2]] ]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[FLOW4:%.*]], label [[LOOP_HEADER]]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ [[CMP_END_ELSE_BLOCK:%.*]], [[END_ELSE_BLOCK]] ], [ true, [[FLOW2]] ]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[FLOW4:%.*]], label [[LOOP_HEADER]]
 ; CHECK:       Flow4:
-; CHECK-NEXT:    br i1 [[TMP10:%.*]], label [[BB64:%.*]], label [[RETURN:%.*]]
+; CHECK-NEXT:    br i1 [[TMP9:%.*]], label [[BB64:%.*]], label [[RETURN:%.*]]
 ; CHECK:       bb64:
 ; CHECK-NEXT:    call void asm sideeffect "s_nop 42", "~{memory}"() #0
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP9]] = phi i32 [ [[TMP1]], [[FLOW1]] ], [ undef, [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[TMP10]] = phi i1 [ [[TMP2]], [[FLOW1]] ], [ false, [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[TMP11]] = phi i1 [ [[TMP3]], [[FLOW1]] ], [ false, [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, [[FLOW1]] ], [ true, [[LOOP_HEADER]] ]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[BB18]], label [[FLOW2]]
+; CHECK-NEXT:    [[TMP8]] = phi i32 [ [[TMP1]], [[FLOW1]] ], [ undef, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[TMP9]] = phi i1 [ [[TMP2]], [[FLOW1]] ], [ false, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[TMP10]] = phi i1 [ [[TMP3]], [[FLOW1]] ], [ false, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ false, [[FLOW1]] ], [ true, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[BB18]], label [[FLOW2]]
 ; CHECK:       INCREMENT_I:
 ; CHECK-NEXT:    [[INC_I]] = add i32 [[I]], 1
 ; CHECK-NEXT:    call void asm sideeffect "s_nop 0x1336
 ; CHECK-NEXT:    br label [[FLOW1]]
 ; CHECK:       END_ELSE_BLOCK:
-; CHECK-NEXT:    [[I_FINAL]] = phi i32 [ [[TMP4]], [[FLOW2]] ]
 ; CHECK-NEXT:    call void asm sideeffect "s_nop 0x1337
-; CHECK-NEXT:    [[CMP_END_ELSE_BLOCK]] = icmp eq i32 [[I_FINAL]], -1
+; CHECK-NEXT:    [[CMP_END_ELSE_BLOCK]] = icmp eq i32 [[TMP4]], -1
 ; CHECK-NEXT:    br label [[FLOW3]]
 ; CHECK:       RETURN:
 ; CHECK-NEXT:    call void asm sideeffect "s_nop 0x99

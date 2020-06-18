@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple bpfel -filetype=obj -o %t %s
 # RUN: llvm-objdump -d -r %t | FileCheck --check-prefixes CHECK,CHECK-64 %s
-# RUN: llvm-objdump -mattr=+alu32 -d -r %t | FileCheck --check-prefixes CHECK,CHECK-32 %s
+# RUN: llvm-objdump --mattr=+alu32 -d -r %t | FileCheck --check-prefixes CHECK,CHECK-32 %s
 
 // ======== BPF_LD Class ========
 // Some extra whitespaces are deliberately added to test the parser.
@@ -134,7 +134,7 @@ Llabel0 :
   r8 ^= r9    // BPF_XOR  | BPF_X
   r9 = r10    // BPF_MOV  | BPF_X
   r10 s>>= r0 // BPF_ARSH | BPF_X
-// CHECK:Llabel0:
+// CHECK: <Llabel0>:
 // CHECK: 87 02 00 00 00 00 00 00	r2 = -r2
 // CHECK: 4f 54 00 00 00 00 00 00 	r4 |= r5
 // CHECK: 5f 65 00 00 00 00 00 00 	r5 &= r6

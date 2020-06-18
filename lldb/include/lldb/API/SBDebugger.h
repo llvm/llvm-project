@@ -199,6 +199,10 @@ public:
 
   bool GetUseColor() const;
 
+  bool SetUseSourceCache(bool use_source_cache);
+
+  bool GetUseSourceCache() const;
+
   static bool GetDefaultArchitecture(char *arch_name, size_t arch_name_len);
 
   static bool SetDefaultArchitecture(const char *arch_name);
@@ -286,12 +290,49 @@ public:
 
   SBTypeSynthetic GetSyntheticForType(SBTypeNameSpecifier);
 
+  /// Run the command interpreter.
+  ///
+  /// \param[in] auto_handle_events
+  ///     If true, automatically handle resulting events. This takes precedence
+  ///     and overrides the corresponding option in
+  ///     SBCommandInterpreterRunOptions.
+  ///
+  /// \param[in] spawn_thread
+  ///     If true, start a new thread for IO handling. This takes precedence
+  ///     and overrides the corresponding option in
+  ///     SBCommandInterpreterRunOptions.
   void RunCommandInterpreter(bool auto_handle_events, bool spawn_thread);
 
+  /// Run the command interpreter.
+  ///
+  /// \param[in] auto_handle_events
+  ///     If true, automatically handle resulting events. This takes precedence
+  ///     and overrides the corresponding option in
+  ///     SBCommandInterpreterRunOptions.
+  ///
+  /// \param[in] spawn_thread
+  ///     If true, start a new thread for IO handling. This takes precedence
+  ///     and overrides the corresponding option in
+  ///     SBCommandInterpreterRunOptions.
+  ///
+  /// \param[in] options
+  ///     Parameter collection of type SBCommandInterpreterRunOptions.
+  ///
+  /// \param[out] num_errors
+  ///     The number of errors.
+  ///
+  /// \param[out] quit_requested
+  ///     Whether a quit was requested.
+  ///
+  /// \param[out] stopped_for_crash
+  ///     Whether the interpreter stopped for a crash.
   void RunCommandInterpreter(bool auto_handle_events, bool spawn_thread,
                              SBCommandInterpreterRunOptions &options,
                              int &num_errors, bool &quit_requested,
                              bool &stopped_for_crash);
+
+  SBCommandInterpreterRunResult
+  RunCommandInterpreter(const SBCommandInterpreterRunOptions &options);
 
   SBError RunREPL(lldb::LanguageType language, const char *repl_options);
 

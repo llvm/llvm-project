@@ -58,10 +58,6 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// emitPrologue.
   bool RestoreSPFromFP = false;
 
-  /// LRSpilledForFarJump - True if the LR register has been for spilled to
-  /// enable far jump.
-  bool LRSpilledForFarJump = false;
-
   /// LRSpilled - True if the LR register has been for spilled for
   /// any reason, so it's legal to emit an ARM::tBfar (i.e. "bl").
   bool LRSpilled = false;
@@ -87,6 +83,7 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 
   /// GPRCS1Size, GPRCS2Size, DPRCSSize - Sizes of callee saved register spills
   /// areas.
+  unsigned FPCXTSaveSize = 0;
   unsigned GPRCS1Size = 0;
   unsigned GPRCS2Size = 0;
   unsigned DPRCSAlignGapSize = 0;
@@ -108,6 +105,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 
   /// HasITBlocks - True if IT blocks have been inserted.
   bool HasITBlocks = false;
+
+  // Security Extensions
+  bool IsCmseNSEntry;
+  bool IsCmseNSCall;
 
   /// CPEClones - Track constant pool entries clones created by Constant Island
   /// pass.
@@ -144,6 +145,9 @@ public:
   bool isThumb1OnlyFunction() const { return isThumb && !hasThumb2; }
   bool isThumb2Function() const { return isThumb && hasThumb2; }
 
+  bool isCmseNSEntryFunction() const { return IsCmseNSEntry; }
+  bool isCmseNSCallFunction() const { return IsCmseNSCall; }
+
   unsigned getStoredByValParamsPadding() const { return StByValParamsPadding; }
   void setStoredByValParamsPadding(unsigned p) { StByValParamsPadding = p; }
 
@@ -162,9 +166,6 @@ public:
   bool isLRSpilled() const { return LRSpilled; }
   void setLRIsSpilled(bool s) { LRSpilled = s; }
 
-  bool isLRSpilledForFarJump() const { return LRSpilledForFarJump; }
-  void setLRIsSpilledForFarJump(bool s) { LRSpilledForFarJump = s; }
-
   unsigned getFramePtrSpillOffset() const { return FramePtrSpillOffset; }
   void setFramePtrSpillOffset(unsigned o) { FramePtrSpillOffset = o; }
 
@@ -179,11 +180,13 @@ public:
   void setGPRCalleeSavedArea2Offset(unsigned o) { GPRCS2Offset = o; }
   void setDPRCalleeSavedAreaOffset(unsigned o)  { DPRCSOffset = o; }
 
+  unsigned getFPCXTSaveAreaSize() const       { return FPCXTSaveSize; }
   unsigned getGPRCalleeSavedArea1Size() const { return GPRCS1Size; }
   unsigned getGPRCalleeSavedArea2Size() const { return GPRCS2Size; }
   unsigned getDPRCalleeSavedGapSize() const   { return DPRCSAlignGapSize; }
   unsigned getDPRCalleeSavedAreaSize()  const { return DPRCSSize; }
 
+  void setFPCXTSaveAreaSize(unsigned s)       { FPCXTSaveSize = s; }
   void setGPRCalleeSavedArea1Size(unsigned s) { GPRCS1Size = s; }
   void setGPRCalleeSavedArea2Size(unsigned s) { GPRCS2Size = s; }
   void setDPRCalleeSavedGapSize(unsigned s)   { DPRCSAlignGapSize = s; }
@@ -252,6 +255,7 @@ public:
   }
 
   DenseMap<unsigned, unsigned> EHPrologueRemappedRegs;
+  DenseMap<unsigned, unsigned> EHPrologueOffsetInRegs;
 
   void setPreservesR0() { PreservesR0 = true; }
   bool getPreservesR0() const { return PreservesR0; }

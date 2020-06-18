@@ -8,6 +8,6 @@ DEVICE __SSE3__
 HOST __SSE3__
 #endif
 
-// RUN: %clang -x hip -E -target x86_64-linux-gnu -msse3 --cuda-gpu-arch=gfx803 -nogpulib -o - %s 2>&1 | FileCheck %s
+// RUN: %clang -x hip -E -target x86_64-linux-gnu -msse3 --cuda-gpu-arch=gfx803 -nogpulib -nogpuinc -nobuiltininc -o - %s 2>&1 | FileCheck %s
 
 // CHECK-NOT: SSE3

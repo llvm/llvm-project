@@ -111,13 +111,13 @@ registers:
   - { id: 2, class: vecr }
 # NO_AVX512VL:   %0:vr128 = COPY $xmm0
 # NO_AVX512VL:   %1:vr128 = COPY $xmm1
-# SSE-NEXT:      %2:vr128 = SUBPSrr %0, %1
-# AVX-NEXT:      %2:vr128 = VSUBPSrr %0, %1
-# AVX512F-NEXT:  %2:vr128 = VSUBPSrr %0, %1
+# SSE-NEXT:      %2:vr128 = nofpexcept SUBPSrr %0, %1
+# AVX-NEXT:      %2:vr128 = nofpexcept VSUBPSrr %0, %1
+# AVX512F-NEXT:  %2:vr128 = nofpexcept VSUBPSrr %0, %1
 #
 # AVX512VL:      %0:vr128x = COPY $xmm0
 # AVX512VL:      %1:vr128x = COPY $xmm1
-# AVX512VL-NEXT: %2:vr128x = VSUBPSZ128rr %0, %1
+# AVX512VL-NEXT: %2:vr128x = nofpexcept VSUBPSZ128rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1

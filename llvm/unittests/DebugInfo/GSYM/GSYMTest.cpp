@@ -1362,45 +1362,45 @@ TEST(GSYMTest, TestGsymLookups) {
   LR = GR->lookup(0x100F);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 5}));
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 5, 15}));
 
   LR = GR->lookup(0x1010);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
 
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 10},
-                         SourceLocation{"main", "/tmp", "main.c", 6}));
+                         SourceLocation{"main", "/tmp", "main.c", 6, 16}));
 
   LR = GR->lookup(0x1012);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline2", "/tmp", "foo.h", 20},
-                         SourceLocation{"inline1", "/tmp", "foo.h", 33},
-                         SourceLocation{"main", "/tmp", "main.c", 6}));
+                         SourceLocation{"inline1", "/tmp", "foo.h", 33, 2},
+                         SourceLocation{"main", "/tmp", "main.c", 6, 18}));
 
   LR = GR->lookup(0x1014);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 11},
-                         SourceLocation{"main", "/tmp", "main.c", 6}));
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 11, 4},
+                         SourceLocation{"main", "/tmp", "main.c", 6, 20}));
 
   LR = GR->lookup(0x1016);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline3", "/tmp", "foo.h", 30},
-                         SourceLocation{"inline1", "/tmp", "foo.h", 35},
-                         SourceLocation{"main", "/tmp", "main.c", 6}));
+                         SourceLocation{"inline1", "/tmp", "foo.h", 35, 6},
+                         SourceLocation{"main", "/tmp", "main.c", 6, 22}));
 
   LR = GR->lookup(0x1018);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 12},
-                         SourceLocation{"main", "/tmp", "main.c", 6}));
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 12, 8},
+                         SourceLocation{"main", "/tmp", "main.c", 6, 24}));
 
   LR = GR->lookup(0x1020);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 8}));
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 8, 32}));
 }
 
 
@@ -1457,7 +1457,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
         - AbbrCode:        0x00000000
           Values:
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -1537,7 +1537,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
         - AbbrCode:        0x00000000
           Values:
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -1649,7 +1649,7 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
         - AbbrCode:        0x00000000
           Values:
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -1753,7 +1753,7 @@ TEST(GSYMTest, TestDWARFTextRanges) {
           Values:
 
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -1866,8 +1866,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
         - AbbrCode:        0x00000000
           Values:
   debug_line:
-    - Length:
-        TotalLength:     96
+    - Length:          96
       Version:         2
       PrologueLength:  46
       MinInstLength:   1
@@ -1932,7 +1931,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
           SubOpcode:       DW_LNE_end_sequence
           Data:            3584
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -1968,32 +1967,32 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
   LR = GR->lookup(0x1100-1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10}));
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10, 255}));
 
   LR = GR->lookup(0x1100);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20},
-                         SourceLocation{"main", "/tmp", "main.c", 10}));
+                         SourceLocation{"main", "/tmp", "main.c", 10, 256}));
   LR = GR->lookup(0x1180-1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20},
-                         SourceLocation{"main", "/tmp", "main.c", 10}));
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20, 127},
+                         SourceLocation{"main", "/tmp", "main.c", 10, 383}));
   LR = GR->lookup(0x1180);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21},
-                         SourceLocation{"main", "/tmp", "main.c", 10}));
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21, 128},
+                         SourceLocation{"main", "/tmp", "main.c", 10, 384}));
   LR = GR->lookup(0x1200-1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21},
-                         SourceLocation{"main", "/tmp", "main.c", 10}));
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21, 255},
+                         SourceLocation{"main", "/tmp", "main.c", 10, 511}));
   LR = GR->lookup(0x1200);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 11}));
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 11, 512}));
 }
 
 
@@ -2133,8 +2132,7 @@ TEST(GSYMTest, TestDWARFNoLines) {
         - AbbrCode:        0x00000000
           Values:          []
   debug_line:
-    - Length:
-        TotalLength:     92
+    - Length:          92
       Version:         2
       PrologueLength:  34
       MinInstLength:   1
@@ -2196,7 +2194,7 @@ TEST(GSYMTest, TestDWARFNoLines) {
           SubOpcode:       DW_LNE_end_sequence
           Data:            0
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -2379,7 +2377,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
         - AbbrCode:        0x00000000
           Values:          []
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 4);
@@ -2522,7 +2520,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
         - AbbrCode:        0x00000000
           Values:          []
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);

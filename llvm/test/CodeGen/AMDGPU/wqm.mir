@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-wqm -o -  %s | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass si-wqm -o -  %s | FileCheck %s
 
 ---
 # Check for awareness that s_or_saveexec_b64 clobbers SCC
@@ -13,7 +13,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: sgpr_32, preferred-register: '' }
   - { id: 1, class: sgpr_32, preferred-register: '' }
   - { id: 2, class: sgpr_32, preferred-register: '' }
@@ -27,7 +27,7 @@ registers:
   - { id: 10, class: sreg_32, preferred-register: '' }
   - { id: 11, class: vgpr_32, preferred-register: '' }
   - { id: 12, class: vgpr_32, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$sgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr1', virtual-reg: '%1' }
   - { reg: '$sgpr2', virtual-reg: '%2' }
@@ -35,7 +35,7 @@ liveins:
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
-  
+
     %3 = COPY $vgpr0
     %2 = COPY $sgpr2
     %1 = COPY $sgpr1
@@ -104,6 +104,41 @@ body:             |
     %13:vgpr_32 = V_MOV_B32_dpp %14, killed %10, 323, 12, 15, 0, implicit $exec
     early-clobber %15:vgpr_32 = WWM killed %13, implicit $exec
     BUFFER_STORE_DWORD_OFFSET_exact killed %15, %6, %7, 4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+
+---
+# Ensure that wwm is not put around an EXEC copy
+#CHECK-LABEL: name: copy_exec
+#CHECK: %7:sreg_64 = COPY $exec
+#CHECK-NEXT: %14:sreg_64 = ENTER_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+#CHECK-NEXT: %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+#CHECK-NEXT: $exec = EXIT_WWM %14
+#CHECK-NEXT: %9:vgpr_32 = V_MBCNT_LO_U32_B32_e64 %7.sub0, 0, implicit $exec
+name:            copy_exec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %4:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
+    %5:sreg_32 = S_MOV_B32 0
+    %6:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %4, %5, 0, 0, 0, 0, 0, 0, implicit $exec
+
+    %8:sreg_64 = COPY $exec
+    %9:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %10:vgpr_32 = V_MBCNT_LO_U32_B32_e64 %8.sub0:sreg_64, 0, implicit $exec
+    %11:vgpr_32 = V_MOV_B32_dpp %9:vgpr_32, %10:vgpr_32, 312, 15, 15, 0, implicit $exec
+    %12:sreg_32 = V_READLANE_B32 %11:vgpr_32, 63
+    early-clobber %13:sreg_32 = WWM %9:vgpr_32, implicit $exec
+
+    %14:vgpr_32 = COPY %13
+    BUFFER_STORE_DWORD_OFFSET_exact killed %14, %4, %5, 4, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

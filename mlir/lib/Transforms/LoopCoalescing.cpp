@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LoopOps/LoopOps.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
-#include "mlir/Pass/Pass.h"
+#include "PassDetail.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -20,17 +19,16 @@
 using namespace mlir;
 
 namespace {
-class LoopCoalescingPass : public FunctionPass<LoopCoalescingPass> {
-public:
+struct LoopCoalescingPass : public LoopCoalescingBase<LoopCoalescingPass> {
   void runOnFunction() override {
     FuncOp func = getFunction();
 
-    func.walk([](loop::ForOp op) {
+    func.walk([](scf::ForOp op) {
       // Ignore nested loops.
-      if (op.getParentOfType<loop::ForOp>())
+      if (op.getParentOfType<scf::ForOp>())
         return;
 
-      SmallVector<loop::ForOp, 4> loops;
+      SmallVector<scf::ForOp, 4> loops;
       getPerfectlyNestedLoops(loops, op);
       LLVM_DEBUG(llvm::dbgs()
                  << "found a perfect nest of depth " << loops.size() << '\n');
@@ -87,10 +85,6 @@ public:
 
 } // namespace
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::createLoopCoalescingPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createLoopCoalescingPass() {
   return std::make_unique<LoopCoalescingPass>();
 }
-
-static PassRegistration<LoopCoalescingPass>
-    reg(PASS_NAME,
-        "coalesce nested loops with independent bounds into a single loop");

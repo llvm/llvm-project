@@ -33,6 +33,10 @@ public:
         ReallocList(Options.get("Reallocations", "::realloc")),
         DeallocList(Options.get("Deallocations", "::free")) {}
 
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
+
   /// Make configuration of checker discoverable.
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 

@@ -93,6 +93,8 @@ def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_w_chain>;
 def : GINodeEquiv<G_BR, br>;
 def : GINodeEquiv<G_BSWAP, bswap>;
 def : GINodeEquiv<G_BITREVERSE, bitreverse>;
+def : GINodeEquiv<G_FSHL, fshl>;
+def : GINodeEquiv<G_FSHR, fshr>;
 def : GINodeEquiv<G_CTLZ, ctlz>;
 def : GINodeEquiv<G_CTTZ, cttz>;
 def : GINodeEquiv<G_CTLZ_ZERO_UNDEF, ctlz_zero_undef>;
@@ -121,6 +123,14 @@ def : GINodeEquiv<G_FMAXNUM, fmaxnum>;
 def : GINodeEquiv<G_FMINNUM_IEEE, fminnum_ieee>;
 def : GINodeEquiv<G_FMAXNUM_IEEE, fmaxnum_ieee>;
 def : GINodeEquiv<G_READCYCLECOUNTER, readcyclecounter>;
+
+def : GINodeEquiv<G_STRICT_FADD, strict_fadd>;
+def : GINodeEquiv<G_STRICT_FSUB, strict_fsub>;
+def : GINodeEquiv<G_STRICT_FMUL, strict_fmul>;
+def : GINodeEquiv<G_STRICT_FDIV, strict_fdiv>;
+def : GINodeEquiv<G_STRICT_FREM, strict_frem>;
+def : GINodeEquiv<G_STRICT_FMA, strict_fma>;
+def : GINodeEquiv<G_STRICT_FSQRT, strict_fsqrt>;
 
 // Broadly speaking G_LOAD is equivalent to ISD::LOAD but there are some
 // complications that tablegen must take care of. For example, Predicates such

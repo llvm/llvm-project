@@ -58,6 +58,11 @@ bool InstructionSelector::executeMatchTable(
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 4> OnFailResumeAt;
 
+  // Bypass the flag check on the instruction, and only look at the MCInstrDesc.
+  bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
+
+  const uint16_t Flags = State.MIs[0]->getFlags();
+
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
     DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
@@ -69,6 +74,19 @@ bool InstructionSelector::executeMatchTable(
                     dbgs() << CurrentIdx << ": Resume at " << CurrentIdx << " ("
                            << OnFailResumeAt.size() << " try-blocks remain)\n");
     return RejectAndResume;
+  };
+
+  auto propagateFlags = [=](NewMIVector &OutMIs) {
+    for (auto MIB : OutMIs) {
+      // Set the NoFPExcept flag when no original matched instruction could
+      // raise an FP exception, but the new instruction potentially might.
+      uint16_t MIBFlags = Flags;
+      if (NoFPException && MIB->mayRaiseFPException())
+        MIBFlags |= MachineInstr::NoFPExcept;
+      MIB.setMIFlags(MIBFlags);
+    }
+
+    return true;
   };
 
   while (true) {
@@ -429,7 +447,7 @@ bool InstructionSelector::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIM_CheckMemoryAlignment"
                       << "(MIs[" << InsnID << "]->memoperands() + " << MMOIdx
                       << ")->getAlignment() >= " << MinAlign << ")\n");
-      if (MMO->getAlignment() < MinAlign && handleReject() == RejectAndGiveUp)
+      if (MMO->getAlign() < MinAlign && handleReject() == RejectAndGiveUp)
         return false;
 
       break;
@@ -1065,6 +1083,7 @@ bool InstructionSelector::executeMatchTable(
     case GIR_Done:
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIR_Done\n");
+      propagateFlags(OutMIs);
       return true;
 
     default:

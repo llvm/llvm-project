@@ -246,13 +246,11 @@ TEST(FileSpecTest, GetPath) {
       {R"(\\net)", R"(\\net)"},
       {R"(c:\..)", R"(c:\)"},
       {R"(c:\.)", R"(c:\)"},
-      // TODO: fix llvm::sys::path::remove_dots() to return "\" below.
-      {R"(\..)", R"(\..)"},
+      {R"(\..)", R"(\)"},
       //      {R"(c:..)", R"(c:..)"},
       {R"(..)", R"(..)"},
       {R"(.)", R"(.)"},
-      // TODO: fix llvm::sys::path::remove_dots() to return "c:\" below.
-      {R"(c:..\..)", R"(c:\..\..)"},
+      {R"(c:..\..)", R"(c:)"},
       {R"(..\..)", R"(..\..)"},
       {R"(foo\..)", R"(.)"},
       {R"(foo\..\bar)", R"(bar)"},
@@ -419,4 +417,31 @@ TEST(FileSpecTest, Match) {
   EXPECT_TRUE(Match("", "/foo/bar"));
   EXPECT_TRUE(Match("", ""));
 
+}
+
+TEST(FileSpecTest, Yaml) {
+  std::string buffer;
+  llvm::raw_string_ostream os(buffer);
+
+  // Serialize.
+  FileSpec fs_windows("F:\\bar", FileSpec::Style::windows);
+  llvm::yaml::Output yout(os);
+  yout << fs_windows;
+  os.flush();
+
+  // Deserialize.
+  FileSpec deserialized;
+  llvm::yaml::Input yin(buffer);
+  yin >> deserialized;
+
+  EXPECT_EQ(deserialized.GetPathStyle(), fs_windows.GetPathStyle());
+  EXPECT_EQ(deserialized.GetFilename(), fs_windows.GetFilename());
+  EXPECT_EQ(deserialized.GetDirectory(), fs_windows.GetDirectory());
+  EXPECT_EQ(deserialized, fs_windows);
+}
+
+TEST(FileSpecTest, OperatorBool) {
+  EXPECT_FALSE(FileSpec());
+  EXPECT_FALSE(FileSpec(""));
+  EXPECT_TRUE(FileSpec("/foo/bar"));
 }

@@ -1,4 +1,16 @@
 ; RUN: sed 's#^;.*##' %s | FileCheck -check-prefix=CHECK-PASS -implicit-check-not=warning: %s
+
+; Check we report an error when an unknown prefix is used together with `-implicit-check-not`.
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=UNKNOWN-PREFIX -implicit-check-not=abc %s 2>&1 | FileCheck %s -DPREFIX=UNKNOWN-PREFIX -check-prefix CHECK-PREFIX-ERROR
+; CHECK-PREFIX-ERROR: error: no check strings found with prefix '[[PREFIX]]:'
+
+; Check we report an error when the "CHECK" prefix is used explicitly with `-implicit-check-not`, but not present in the input.
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK -implicit-check-not=abc %s 2>&1 | FileCheck %s -DPREFIX=CHECK -check-prefix CHECK-PREFIX-ERROR
+
+; Check we allow using `-implicit-check-not` when there is no `-check-prefix` specified and there
+; is no default `CHECK` line in an input.
+; RUN: sed 's#^;.*##' %s | FileCheck -implicit-check-not="unique_string" %s
+
 ; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-FAIL1 -implicit-check-not=warning: %s 2>&1 | FileCheck %s -check-prefix CHECK-ERROR1
 ; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-FAIL2 -implicit-check-not=warning: %s 2>&1 | FileCheck %s -check-prefix CHECK-ERROR2
 ; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-FAIL3 -implicit-check-not=warning: %s 2>&1 | FileCheck %s -check-prefix CHECK-ERROR3

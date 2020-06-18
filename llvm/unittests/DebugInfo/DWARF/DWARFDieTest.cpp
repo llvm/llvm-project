@@ -50,7 +50,7 @@ TEST(DWARFDie, getLocations) {
               - Value:           25
   )";
   Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
-      DWARFYAML::EmitDebugSections(StringRef(yamldata), /*ApplyFixups=*/true,
+      DWARFYAML::emitDebugSections(StringRef(yamldata), /*ApplyFixups=*/true,
                                    /*IsLittleEndian=*/true);
   ASSERT_THAT_EXPECTED(Sections, Succeeded());
   std::vector<uint8_t> Loclists{
@@ -105,9 +105,10 @@ TEST(DWARFDie, getLocations) {
           &ErrorInfoBase::message,
           "Unable to resolve indirect address 1 for: DW_LLE_startx_length")));
 
-  EXPECT_THAT_EXPECTED(Die.getLocations(DW_AT_call_data_location),
-                       Failed<ErrorInfoBase>(testing::Property(
-                           &ErrorInfoBase::message, "unexpected end of data")));
+  EXPECT_THAT_EXPECTED(
+      Die.getLocations(DW_AT_call_data_location),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x20 while reading [0x20, 0x21)"));
 
   EXPECT_THAT_EXPECTED(
       Die.getLocations(DW_AT_call_data_value),

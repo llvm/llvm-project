@@ -38,10 +38,15 @@ enum class NodeKind : uint16_t {
   Leaf,
   TranslationUnit,
 
-  // Expressions
+  // Expressions.
   UnknownExpression,
+  PrefixUnaryOperatorExpression,
+  PostfixUnaryOperatorExpression,
+  BinaryOperatorExpression,
+  CxxNullPtrExpression,
+  IntegerLiteralExpression,
 
-  // Statements
+  // Statements.
   UnknownStatement,
   DeclarationStatement,
   EmptyStatement,
@@ -58,23 +63,51 @@ enum class NodeKind : uint16_t {
   ExpressionStatement,
   CompoundStatement,
 
-  // Declarations
+  // Declarations.
   UnknownDeclaration,
   EmptyDeclaration,
   StaticAssertDeclaration,
   LinkageSpecificationDeclaration,
   SimpleDeclaration,
+  TemplateDeclaration,
+  ExplicitTemplateInstantiation,
   NamespaceDefinition,
   NamespaceAliasDefinition,
   UsingNamespaceDirective,
   UsingDeclaration,
-  TypeAliasDeclaration
+  TypeAliasDeclaration,
+
+  // Declarators.
+  SimpleDeclarator,
+  ParenDeclarator,
+
+  ArraySubscript,
+  TrailingReturnType,
+  ParametersAndQualifiers,
+  MemberPointer
 };
 /// For debugging purposes.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeKind K);
 
 /// A relation between a parent and child node, e.g. 'left-hand-side of
 /// a binary expression'. Used for implementing accessors.
+///
+/// Some roles describe parent/child relations that occur multiple times in
+/// language grammar. We define only one role to describe all instances of such
+/// recurring relations. For example, grammar for both "if" and "while"
+/// statements requires an opening paren and a closing paren. The opening
+/// paren token is assigned the OpenParen role regardless of whether it appears
+/// as a child of IfStatement or WhileStatement node. More generally, when
+/// grammar requires a certain fixed token (like a specific keyword, or an
+/// opening paren), we define a role for this token and use it across all
+/// grammar rules with the same requirement. Names of such reusable roles end
+/// with a ~Token or a ~Keyword suffix.
+///
+/// Some roles are assigned only to child nodes of one specific parent syntax
+/// node type. Names of such roles start with the name of the parent syntax tree
+/// node type. For example, a syntax node with a role
+/// BinaryOperatorExpression_leftHandSide can only appear as a child of a
+/// BinaryOperatorExpression node.
 enum class NodeRole : uint8_t {
   // Roles common to multiple node kinds.
   /// A node without a parent
@@ -87,12 +120,21 @@ enum class NodeRole : uint8_t {
   CloseParen,
   /// A keywords that introduces some grammar construct, e.g. 'if', 'try', etc.
   IntroducerKeyword,
+  /// A token that represents a literal, e.g. 'nullptr', '1', 'true', etc.
+  LiteralToken,
+  /// Tokens or Keywords
+  ArrowToken,
+  ExternKeyword,
   /// An inner statement for those that have only a single child of kind
   /// statement, e.g. loop body for while, for, etc; inner statement for case,
   /// default, etc.
   BodyStatement,
 
   // Roles specific to particular node kinds.
+  OperatorExpression_operatorToken,
+  UnaryOperatorExpression_operand,
+  BinaryOperatorExpression_leftHandSide,
+  BinaryOperatorExpression_rightHandSide,
   CaseStatement_value,
   IfStatement_thenStatement,
   IfStatement_elseKeyword,
@@ -101,10 +143,19 @@ enum class NodeRole : uint8_t {
   ExpressionStatement_expression,
   CompoundStatement_statement,
   StaticAssertDeclaration_condition,
-  StaticAssertDeclaration_message
+  StaticAssertDeclaration_message,
+  SimpleDeclaration_declarator,
+  TemplateDeclaration_declaration,
+  ExplicitTemplateInstantiation_declaration,
+  ArraySubscript_sizeExpression,
+  TrailingReturnType_declarator,
+  ParametersAndQualifiers_parameter,
+  ParametersAndQualifiers_trailingReturn
 };
 /// For debugging purposes.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeRole R);
+
+class SimpleDeclarator;
 
 /// A root node for a translation unit. Parent is always null.
 class TranslationUnit final : public Tree {
@@ -134,6 +185,88 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::UnknownExpression;
   }
+};
+
+/// C++11 'nullptr' expression.
+class CxxNullPtrExpression final : public Expression {
+public:
+  CxxNullPtrExpression() : Expression(NodeKind::CxxNullPtrExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::CxxNullPtrExpression;
+  }
+  syntax::Leaf *nullPtrKeyword();
+};
+
+/// Expression for integer literals.
+class IntegerLiteralExpression final : public Expression {
+public:
+  IntegerLiteralExpression() : Expression(NodeKind::IntegerLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::IntegerLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// An abstract class for prefix and postfix unary operators.
+class UnaryOperatorExpression : public Expression {
+public:
+  UnaryOperatorExpression(NodeKind K) : Expression(K) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::PrefixUnaryOperatorExpression ||
+           N->kind() == NodeKind::PostfixUnaryOperatorExpression;
+  }
+  syntax::Leaf *operatorToken();
+  syntax::Expression *operand();
+};
+
+/// <operator> <operand>
+///
+/// For example:
+///   +a          -b
+///   !c          not c
+///   ~d          compl d
+///   *e          &f
+///   ++h         --h
+///   __real i    __imag i
+class PrefixUnaryOperatorExpression final : public UnaryOperatorExpression {
+public:
+  PrefixUnaryOperatorExpression()
+      : UnaryOperatorExpression(NodeKind::PrefixUnaryOperatorExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::PrefixUnaryOperatorExpression;
+  }
+};
+
+/// <operand> <operator>
+///
+/// For example:
+///   a++
+///   b--
+class PostfixUnaryOperatorExpression final : public UnaryOperatorExpression {
+public:
+  PostfixUnaryOperatorExpression()
+      : UnaryOperatorExpression(NodeKind::PostfixUnaryOperatorExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::PostfixUnaryOperatorExpression;
+  }
+};
+
+/// <lhs> <operator> <rhs>
+///
+/// For example:
+///   a + b
+///   a bitor 1
+///   a |= b
+///   a and_eq b
+class BinaryOperatorExpression final : public Expression {
+public:
+  BinaryOperatorExpression() : Expression(NodeKind::BinaryOperatorExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::BinaryOperatorExpression;
+  }
+  syntax::Expression *lhs();
+  syntax::Leaf *operatorToken();
+  syntax::Expression *rhs();
 };
 
 /// An abstract node for C++ statements, e.g. 'while', 'if', etc.
@@ -375,6 +508,36 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::SimpleDeclaration;
   }
+  /// FIXME: use custom iterator instead of 'vector'.
+  std::vector<syntax::SimpleDeclarator *> declarators();
+};
+
+/// template <template-parameters> <declaration>
+class TemplateDeclaration final : public Declaration {
+public:
+  TemplateDeclaration() : Declaration(NodeKind::TemplateDeclaration) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::TemplateDeclaration;
+  }
+  syntax::Leaf *templateKeyword();
+  syntax::Declaration *declaration();
+};
+
+/// template <declaration>
+/// Examples:
+///     template struct X<int>
+///     template void foo<int>()
+///     template int var<double>
+class ExplicitTemplateInstantiation final : public Declaration {
+public:
+  ExplicitTemplateInstantiation()
+      : Declaration(NodeKind::ExplicitTemplateInstantiation) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ExplicitTemplateInstantiation;
+  }
+  syntax::Leaf *templateKeyword();
+  syntax::Leaf *externKeyword();
+  syntax::Declaration *declaration();
 };
 
 /// namespace <name> { <decls> }
@@ -421,6 +584,113 @@ public:
   TypeAliasDeclaration() : Declaration(NodeKind::TypeAliasDeclaration) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::TypeAliasDeclaration;
+  }
+};
+
+/// Covers a name, an initializer and a part of the type outside declaration
+/// specifiers. Examples are:
+///     `*a` in `int *a`
+///     `a[10]` in `int a[10]`
+///     `*a = nullptr` in `int *a = nullptr`
+/// Declarators can be unnamed too:
+///     `**` in `new int**`
+///     `* = nullptr` in `void foo(int* = nullptr)`
+/// Most declarators you encounter are instances of SimpleDeclarator. They may
+/// contain an inner declarator inside parentheses, we represent it as
+/// ParenDeclarator. E.g.
+///     `(*a)` in `int (*a) = 10`
+class Declarator : public Tree {
+public:
+  Declarator(NodeKind K) : Tree(K) {}
+  static bool classof(const Node *N) {
+    return NodeKind::SimpleDeclarator <= N->kind() &&
+           N->kind() <= NodeKind::ParenDeclarator;
+  }
+};
+
+/// A top-level declarator without parentheses. See comment of Declarator for
+/// more details.
+class SimpleDeclarator final : public Declarator {
+public:
+  SimpleDeclarator() : Declarator(NodeKind::SimpleDeclarator) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::SimpleDeclarator;
+  }
+};
+
+/// Declarator inside parentheses.
+/// E.g. `(***a)` from `int (***a) = nullptr;`
+/// See comment of Declarator for more details.
+class ParenDeclarator final : public Declarator {
+public:
+  ParenDeclarator() : Declarator(NodeKind::ParenDeclarator) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ParenDeclarator;
+  }
+  syntax::Leaf *lparen();
+  syntax::Leaf *rparen();
+};
+
+/// Array size specified inside a declarator.
+/// E.g:
+///   `[10]` in `int a[10];`
+///   `[static 10]` in `void f(int xs[static 10]);`
+class ArraySubscript final : public Tree {
+public:
+  ArraySubscript() : Tree(NodeKind::ArraySubscript) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ArraySubscript;
+  }
+  // TODO: add an accessor for the "static" keyword.
+  syntax::Leaf *lbracket();
+  syntax::Expression *sizeExpression();
+  syntax::Leaf *rbracket();
+};
+
+/// Trailing return type after the parameter list, including the arrow token.
+/// E.g. `-> int***`.
+class TrailingReturnType final : public Tree {
+public:
+  TrailingReturnType() : Tree(NodeKind::TrailingReturnType) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::TrailingReturnType;
+  }
+  // TODO: add accessors for specifiers.
+  syntax::Leaf *arrowToken();
+  syntax::SimpleDeclarator *declarator();
+};
+
+/// Parameter list for a function type and a trailing return type, if the
+/// function has one.
+/// E.g.:
+///  `(int a) volatile ` in `int foo(int a) volatile;`
+///  `(int a) &&` in `int foo(int a) &&;`
+///  `() -> int` in `auto foo() -> int;`
+///  `() const` in `int foo() const;`
+///  `() noexcept` in `int foo() noexcept;`
+///  `() throw()` in `int foo() throw();`
+///
+/// (!) override doesn't belong here.
+class ParametersAndQualifiers final : public Tree {
+public:
+  ParametersAndQualifiers() : Tree(NodeKind::ParametersAndQualifiers) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ParametersAndQualifiers;
+  }
+  syntax::Leaf *lparen();
+  /// FIXME: use custom iterator instead of 'vector'.
+  std::vector<syntax::SimpleDeclaration *> parameters();
+  syntax::Leaf *rparen();
+  syntax::TrailingReturnType *trailingReturn();
+};
+
+/// Member pointer inside a declarator
+/// E.g. `X::*` in `int X::* a = 0;`
+class MemberPointer final : public Tree {
+public:
+  MemberPointer() : Tree(NodeKind::MemberPointer) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::MemberPointer;
   }
 };
 

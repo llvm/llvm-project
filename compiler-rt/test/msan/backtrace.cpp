@@ -12,8 +12,14 @@ void f() {
   int sz = backtrace(buf, sizeof(buf) / sizeof(*buf));
   assert(sz > 0);
   for (int i = 0; i < sz; ++i)
-    if (!buf[i])
+    if (!buf[i]) {
+#if defined(__s390x__)
+      // backtrace() may return a bogus trailing NULL on s390x.
+      if (i == sz - 1)
+        continue;
+#endif
       exit(1);
+    }
   char **s = backtrace_symbols(buf, sz);
   assert(s != 0);
   for (int i = 0; i < sz; ++i)

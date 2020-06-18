@@ -24,6 +24,7 @@ class SectionBase;
 
 // Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
 using RelType = uint32_t;
+using JumpModType = uint32_t;
 
 // List of target-independent relocation types. Relocations read
 // from files are converted to these types so that the main code
@@ -80,6 +81,7 @@ enum RelExpr {
   R_AARCH64_PAGE_PC,
   R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   R_AARCH64_TLSDESC_PAGE,
+  R_ARM_PCA,
   R_ARM_SBREL,
   R_MIPS_GOTREL,
   R_MIPS_GOT_GP,
@@ -107,12 +109,24 @@ struct Relocation {
   Symbol *sym;
 };
 
+// Manipulate jump instructions with these modifiers.  These are used to relax
+// jump instruction opcodes at basic block boundaries and are particularly
+// useful when basic block sections are enabled.
+struct JumpInstrMod {
+  JumpModType original;
+  uint64_t offset;
+  unsigned size;
+};
+
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
 template <class ELFT> void scanRelocations(InputSectionBase &);
 
 template <class ELFT> void reportUndefinedSymbols();
+
+void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
+bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
 
 class ThunkSection;
 class Thunk;

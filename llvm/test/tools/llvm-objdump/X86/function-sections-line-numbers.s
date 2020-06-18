@@ -8,14 +8,14 @@
 # clang -gdwarf-5 -ffunction-sections test.cpp -o test.s -S
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux -dwarf-version=5 %s -o %t.o
-# RUN: llvm-objdump -disassemble -line-numbers -r -s -section-headers -t %t.o | FileCheck %s
+# RUN: llvm-objdump -d --line-numbers -r -s --section-headers -t %t.o | FileCheck %s
 
 
-# CHECK: 0000000000000000 _Z2f1v
+# CHECK: 0000000000000000 <_Z2f1v>
 # CHECK-NOT: test.cpp:2
 # CHECK: test.cpp:1
 # CHECK-NOT: test.cpp:2
-# CHECK: 0000000000000000 _Z2f2v
+# CHECK: 0000000000000000 <_Z2f2v>
 # CHECK-NOT: test.cpp:1
 # CHECK: test.cpp:2
 # CHECK-NOT: test.cpp:1

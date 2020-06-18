@@ -30,12 +30,12 @@ using TransitiveFilter = std::function<bool(Operation *)>;
 /// the transitive uses of op), **without** including that operation.
 ///
 /// This additionally takes a TransitiveFilter which acts as a frontier:
-/// when looking at uses transitively, a operation that does not pass the
+/// when looking at uses transitively, an operation that does not pass the
 /// filter is never propagated through. This allows in particular to carve out
 /// the scope within a ForInst or the scope within an IfInst.
 ///
 /// The implementation traverses the use chains in postorder traversal for
-/// efficiency reasons: if a operation is already in `forwardSlice`, no
+/// efficiency reasons: if an operation is already in `forwardSlice`, no
 /// need to traverse its uses again. Since use-def chains form a DAG, this
 /// terminates.
 ///
@@ -76,12 +76,12 @@ void getForwardSlice(
 /// all the transitive defs of op), **without** including that operation.
 ///
 /// This additionally takes a TransitiveFilter which acts as a frontier:
-/// when looking at defs transitively, a operation that does not pass the
+/// when looking at defs transitively, an operation that does not pass the
 /// filter is never propagated through. This allows in particular to carve out
 /// the scope within a ForInst or the scope within an IfInst.
 ///
 /// The implementation traverses the def chains in postorder traversal for
-/// efficiency reasons: if a operation is already in `backwardSlice`, no
+/// efficiency reasons: if an operation is already in `backwardSlice`, no
 /// need to traverse its definitions again. Since useuse-def chains form a DAG,
 /// this terminates.
 ///

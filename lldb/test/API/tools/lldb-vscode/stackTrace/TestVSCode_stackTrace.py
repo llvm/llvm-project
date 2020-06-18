@@ -52,6 +52,7 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
                                                      expected_line))
 
     @skipIfWindows
+    @skipIfRemote
     def test_stackTrace(self):
         '''
             Tests the 'stackTrace' packet and all its variants.
@@ -66,7 +67,7 @@ class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
 
         lines = [self.recurse_end]
 
-        # Set breakoint at a point of deepest recuusion
+        # Set breakpoint at a point of deepest recuusion
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.assertEquals(len(breakpoint_ids), len(lines),
                         "expect correct number of breakpoints")

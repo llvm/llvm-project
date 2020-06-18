@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: objective-c++
+
 #if __has_feature(objc_arc)
 #error "arc should *not* be enabled"
 #endif

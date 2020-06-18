@@ -199,7 +199,7 @@ TEST(SymbolInfoTests, All) {
         )cpp",
               {CreateExpectedSymbolDetails("foo", "", "c:@S@foo")}},
           {
-              R"cpp( // Type Reference - template argumen
+              R"cpp( // Type Reference - template argument
           struct foo {};
           template<class T> struct bar {};
           void baz() {

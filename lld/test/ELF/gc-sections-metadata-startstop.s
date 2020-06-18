@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld --gc-sections %t.o -o %t
-# RUN: llvm-objdump -section-headers -t %t | FileCheck  %s
+# RUN: llvm-objdump --section-headers -t %t | FileCheck  %s
 
 # CHECK: Sections:
 # CHECK-NOT: yy
@@ -11,8 +11,8 @@
 # CHECK-NOT: yy
 
 # CHECK: SYMBOL TABLE:
-# CHECK:   xx    00000000 .protected __start_xx
-# CHECK: w *UND* 00000000 __start_yy
+# CHECK:   xx    0000000000000000 .protected __start_xx
+# CHECK: w *UND* 0000000000000000 __start_yy
 
 .weak __start_xx
 .weak __start_yy

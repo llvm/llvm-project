@@ -15,6 +15,6 @@ A a4; // expected-error{{use of class template 'A' requires template arguments}}
 namespace test0 {
   template <class t> class foo {};
   template <class t> class bar {
-    bar(::test0::foo<tee> *ptr) {} // FIXME(redundant): expected-error 2 {{use of undeclared identifier 'tee'}}
+    bar(::test0::foo<tee> *ptr) {} // expected-error {{use of undeclared identifier 'tee'}}
   };
 }

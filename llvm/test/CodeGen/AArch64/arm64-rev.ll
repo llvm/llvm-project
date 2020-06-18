@@ -293,11 +293,7 @@ define <2 x i32> @test_vrev64D32(<2 x i32>* %A) nounwind {
 ; FALLBACK-LABEL: test_vrev64D32:
 ; FALLBACK:       // %bb.0:
 ; FALLBACK-NEXT:    ldr d0, [x0]
-; FALLBACK-NEXT:    adrp x8, .LCPI13_0
-; FALLBACK-NEXT:    ldr d1, [x8, :lo12:.LCPI13_0]
-; FALLBACK-NEXT:    mov.d v0[1], v0[0]
-; FALLBACK-NEXT:    tbl.16b v0, { v0 }, v1
-; FALLBACK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; FALLBACK-NEXT:    rev64.2s v0, v0
 ; FALLBACK-NEXT:    ret
 	%tmp1 = load <2 x i32>, <2 x i32>* %A
 	%tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
@@ -314,11 +310,7 @@ define <2 x float> @test_vrev64Df(<2 x float>* %A) nounwind {
 ; FALLBACK-LABEL: test_vrev64Df:
 ; FALLBACK:       // %bb.0:
 ; FALLBACK-NEXT:    ldr d0, [x0]
-; FALLBACK-NEXT:    adrp x8, .LCPI14_0
-; FALLBACK-NEXT:    ldr d1, [x8, :lo12:.LCPI14_0]
-; FALLBACK-NEXT:    mov.d v0[1], v0[0]
-; FALLBACK-NEXT:    tbl.16b v0, { v0 }, v1
-; FALLBACK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; FALLBACK-NEXT:    rev64.2s v0, v0
 ; FALLBACK-NEXT:    ret
 	%tmp1 = load <2 x float>, <2 x float>* %A
 	%tmp2 = shufflevector <2 x float> %tmp1, <2 x float> undef, <2 x i32> <i32 1, i32 0>
@@ -368,10 +360,8 @@ define <4 x i32> @test_vrev64Q32(<4 x i32>* %A) nounwind {
 ;
 ; FALLBACK-LABEL: test_vrev64Q32:
 ; FALLBACK:       // %bb.0:
-; FALLBACK-NEXT:    adrp x8, .LCPI17_0
 ; FALLBACK-NEXT:    ldr q0, [x0]
-; FALLBACK-NEXT:    ldr q2, [x8, :lo12:.LCPI17_0]
-; FALLBACK-NEXT:    tbl.16b v0, { v0, v1 }, v2
+; FALLBACK-NEXT:    rev64.4s v0, v0
 ; FALLBACK-NEXT:    ret
 	%tmp1 = load <4 x i32>, <4 x i32>* %A
 	%tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
@@ -387,10 +377,8 @@ define <4 x float> @test_vrev64Qf(<4 x float>* %A) nounwind {
 ;
 ; FALLBACK-LABEL: test_vrev64Qf:
 ; FALLBACK:       // %bb.0:
-; FALLBACK-NEXT:    adrp x8, .LCPI18_0
 ; FALLBACK-NEXT:    ldr q0, [x0]
-; FALLBACK-NEXT:    ldr q2, [x8, :lo12:.LCPI18_0]
-; FALLBACK-NEXT:    tbl.16b v0, { v0, v1 }, v2
+; FALLBACK-NEXT:    rev64.4s v0, v0
 ; FALLBACK-NEXT:    ret
 	%tmp1 = load <4 x float>, <4 x float>* %A
 	%tmp2 = shufflevector <4 x float> %tmp1, <4 x float> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>

@@ -40,13 +40,13 @@
 # GOTPLT-NEXT: 0x004032e0 0b124000
 
 # DISASM:      Disassembly of section .text:
-# DISASM:      00401200 func1:
-# DISASM-NEXT: 401200:       calll   0x2b <func2+0x401230>
-# DISASM-NEXT: 401205:       calll   0x36 <ifunc>
+# DISASM:      00401200 <func1>:
+# DISASM-NEXT: 401200:       calll   0x401230 <func2+0x401230>
+# DISASM-NEXT: 401205:       calll   0x401240 <ifunc>
 # DISASM-NEXT:               retl
 
 # DISASM:      Disassembly of section .plt:
-# DISASM:      00401210 .plt:
+# DISASM:      00401210 <.plt>:
 # DISASM-NEXT: 401210:       pushl   0x4032d4
 # DISASM-NEXT:               jmpl    *0x4032d8
 # DISASM-NEXT:               nop
@@ -55,17 +55,17 @@
 # DISASM-NEXT:               nop
 # DISASM-NEXT:               endbr32
 # DISASM-NEXT:               pushl   $0x0
-# DISASM-NEXT:               jmp     -0x1e <.plt>
+# DISASM-NEXT:               jmp     0x401210 <.plt>
 # DISASM-NEXT:               nop
 
 # DISASM:      Disassembly of section .plt.sec:
-# DISASM:      00401230 .plt.sec:
+# DISASM:      00401230 <.plt.sec>:
 # DISASM-NEXT: 401230:       endbr32
 # DISASM-NEXT:               jmpl    *0x4032dc
 # DISASM-NEXT:               nopw    (%eax,%eax)
 
 # DISASM:      Disassembly of section .iplt:
-# DISASM:      00401240 ifunc:
+# DISASM:      00401240 <ifunc>:
 # DISASM-NEXT: 401240:       endbr32
 # DISASM-NEXT:               jmpl    *0x4032e0
 # DISASM-NEXT:               nopw    (%eax,%eax)

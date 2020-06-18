@@ -121,7 +121,8 @@ private:
   lldb::addr_t m_mach_kernel_addr;
   lldb_private::ConstString m_dyld_plugin_name;
 
-  DISALLOW_COPY_AND_ASSIGN(ProcessMachCore);
+  ProcessMachCore(const ProcessMachCore &) = delete;
+  const ProcessMachCore &operator=(const ProcessMachCore &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_PROCESSMACHCORE_H

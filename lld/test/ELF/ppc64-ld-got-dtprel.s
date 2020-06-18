@@ -36,7 +36,7 @@
   addis 3, 2, j@got@dtprel@h
   addi 3, 2, j@got@dtprel
 
-.section .tbss,"awT",@progbits
+.section .tbss,"awT",@nobits
 .p2align 2
 i:
   .long 0

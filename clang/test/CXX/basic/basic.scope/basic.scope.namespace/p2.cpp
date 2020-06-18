@@ -11,6 +11,8 @@
 #ifdef INTERFACE
 module;
 #include "foo.h"
+// FIXME: The following need to be moved to a header file. The global module
+// fragment is only permitted to contain preprocessor directives.
 int global_module_fragment;
 export module A;
 export int exported;
@@ -28,12 +30,13 @@ module;
 
 void test_early() {
   in_header = 1; // expected-error {{missing '#include "foo.h"'; 'in_header' must be declared before it is used}}
-  // expected-note@*{{previous}}
+  // expected-note@*{{not visible}}
 
   global_module_fragment = 1; // expected-error {{missing '#include'; 'global_module_fragment' must be declared before it is used}}
+  // expected-note@p2.cpp:16 {{not visible}}
 
   exported = 1; // expected-error {{must be imported from module 'A'}}
-  // expected-note@p2.cpp:16 {{previous}}
+  // expected-note@p2.cpp:18 {{not visible}}
 
   not_exported = 1; // expected-error {{undeclared identifier}}
 
@@ -52,16 +55,17 @@ import A;
 
 void test_late() {
   in_header = 1; // expected-error {{missing '#include "foo.h"'; 'in_header' must be declared before it is used}}
-  // expected-note@*{{previous}}
+  // expected-note@*{{not visible}}
 
   global_module_fragment = 1; // expected-error {{missing '#include'; 'global_module_fragment' must be declared before it is used}}
+  // expected-note@p2.cpp:16 {{not visible}}
 
   exported = 1;
 
   not_exported = 1;
 #ifndef IMPLEMENTATION
   // expected-error@-2 {{undeclared identifier 'not_exported'; did you mean 'exported'}}
-  // expected-note@p2.cpp:16 {{declared here}}
+  // expected-note@p2.cpp:18 {{declared here}}
 #endif
 
   internal = 1;

@@ -13,6 +13,7 @@
 
 #include "llvm/Support/ARMTargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include <cctype>
 
 using namespace llvm;
@@ -74,6 +75,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV8_3A:
   case ArchKind::ARMV8_4A:
   case ArchKind::ARMV8_5A:
+  case ArchKind::ARMV8_6A:
   case ArchKind::ARMV8R:
   case ArchKind::ARMV8MBaseline:
   case ArchKind::ARMV8MMainline:
@@ -108,6 +110,7 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   case ArchKind::ARMV8_3A:
   case ArchKind::ARMV8_4A:
   case ArchKind::ARMV8_5A:
+  case ArchKind::ARMV8_6A:
     return ProfileKind::A;
   case ArchKind::ARMV2:
   case ArchKind::ARMV2A:
@@ -150,6 +153,7 @@ StringRef ARM::getArchSynonym(StringRef Arch) {
       .Case("v8.3a", "v8.3-a")
       .Case("v8.4a", "v8.4-a")
       .Case("v8.5a", "v8.5-a")
+      .Case("v8.6a", "v8.6-a")
       .Case("v8r", "v8-r")
       .Case("v8m.base", "v8-m.base")
       .Case("v8m.main", "v8-m.main")

@@ -47,9 +47,6 @@ public:
 
   const char *GetRegisterName(unsigned reg);
 
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
-
   // Note: prefer kernel definitions over user-land
   enum FPRType {
     eNotValid = 0,
@@ -159,8 +156,6 @@ protected:
   bool IsFPR(unsigned reg);
 
   bool IsAVX(unsigned reg);
-
-  lldb::ByteOrder GetByteOrder();
 
   bool CopyXSTATEtoYMM(uint32_t reg, lldb::ByteOrder byte_order);
   bool CopyYMMtoXSTATE(uint32_t reg, lldb::ByteOrder byte_order);

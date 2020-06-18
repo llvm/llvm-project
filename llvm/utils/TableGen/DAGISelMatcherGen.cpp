@@ -707,9 +707,19 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode *N,
     if (Def->isSubClassOf("RegisterOperand"))
       Def = Def->getValueAsDef("RegClass");
     if (Def->isSubClassOf("RegisterClass")) {
-      std::string Value = getQualifiedName(Def) + "RegClassID";
-      AddMatcher(new EmitStringIntegerMatcher(Value, MVT::i32));
-      ResultOps.push_back(NextRecordedOperandNo++);
+      // If the register class has an enum integer value greater than 127, the
+      // encoding overflows the limit of 7 bits, which precludes the use of
+      // StringIntegerMatcher. In this case, fallback to using IntegerMatcher.
+      const CodeGenRegisterClass &RC =
+          CGP.getTargetInfo().getRegisterClass(Def);
+      if (RC.EnumValue <= 127) {
+        std::string Value = getQualifiedName(Def) + "RegClassID";
+        AddMatcher(new EmitStringIntegerMatcher(Value, MVT::i32));
+        ResultOps.push_back(NextRecordedOperandNo++);
+      } else {
+        AddMatcher(new EmitIntegerMatcher(RC.EnumValue, MVT::i32));
+        ResultOps.push_back(NextRecordedOperandNo++);
+      }
       return;
     }
 

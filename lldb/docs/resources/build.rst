@@ -83,10 +83,10 @@ Windows
 * The latest Windows SDK.
 * The Active Template Library (ATL).
 * `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
-* `Python 3.6 <https://www.python.org/downloads/windows/>`_. Python 3.7 is
-  known to be incompatible. More recent versions might work but are untested.
-  Make sure to get the x64 variant if that's what you're targetting and install
-  the debug library if you want to build in debug.
+* `Python 3.6 or 3.8 <https://www.python.org/downloads/windows/>`_. Python 3.7
+  is known to be incompatible. Make sure to (1) get the x64 variant if that's
+  what you're targetting and (2) install the debug library if you want to build
+  a debug lldb.
 * `Python Tools for Visual Studio
   <https://github.com/Microsoft/PTVS/releases>`_. If you plan to debug test
   failures or even write new tests at all, PTVS is an indispensable debugging

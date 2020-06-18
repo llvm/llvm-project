@@ -418,7 +418,7 @@ namespace llvm {
 class raw_ostream;
 class ScaledNumberBase {
 public:
-  static const int DefaultPrecision = 10;
+  static constexpr int DefaultPrecision = 10;
 
   static void dump(uint64_t D, int16_t E, int Width);
   static raw_ostream &print(raw_ostream &OS, uint64_t D, int16_t E, int Width,
@@ -499,7 +499,7 @@ public:
 private:
   typedef std::numeric_limits<DigitsType> DigitsLimits;
 
-  static const int Width = sizeof(DigitsType) * 8;
+  static constexpr int Width = sizeof(DigitsType) * 8;
   static_assert(Width <= 64, "invalid integer width for digits");
 
 private:

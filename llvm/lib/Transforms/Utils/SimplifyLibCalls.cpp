@@ -138,28 +138,6 @@ static Value *convertStrToNumber(CallInst *CI, StringRef &Str, int64_t Base) {
   return ConstantInt::get(CI->getType(), Result);
 }
 
-static bool isLocallyOpenedFile(Value *File, CallInst *CI,
-                                const TargetLibraryInfo *TLI) {
-  CallInst *FOpen = dyn_cast<CallInst>(File);
-  if (!FOpen)
-    return false;
-
-  Function *InnerCallee = FOpen->getCalledFunction();
-  if (!InnerCallee)
-    return false;
-
-  LibFunc Func;
-  if (!TLI->getLibFunc(*InnerCallee, Func) || !TLI->has(Func) ||
-      Func != LibFunc_fopen)
-    return false;
-
-  inferLibFuncAttributes(*CI->getCalledFunction(), *TLI);
-  if (PointerMayBeCaptured(File, true, true))
-    return false;
-
-  return true;
-}
-
 static bool isOnlyUsedInComparisonWithZero(Value *V) {
   for (User *U : V->users()) {
     if (ICmpInst *IC = dyn_cast<ICmpInst>(U))
@@ -1585,9 +1563,14 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
     return emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10, LibFunc_exp10f,
                                 LibFunc_exp10l, B, Attrs);
 
-  // pow(n, x) -> exp2(log2(n) * x)
-  if (Pow->hasOneUse() && Pow->hasApproxFunc() && Pow->hasNoNaNs() &&
-      Pow->hasNoInfs() && BaseF->isNormal() && !BaseF->isNegative()) {
+  // pow(x, y) -> exp2(log2(x) * y)
+  if (Pow->hasApproxFunc() && Pow->hasNoNaNs() && BaseF->isFiniteNonZero() &&
+      !BaseF->isNegative()) {
+    // pow(1, inf) is defined to be 1 but exp2(log2(1) * inf) evaluates to NaN.
+    // Luckily optimizePow has already handled the x == 1 case.
+    assert(!match(Base, m_FPOne()) &&
+           "pow(1.0, y) should have been simplified earlier!");
+
     Value *Log = nullptr;
     if (Ty->isFloatTy())
       Log = ConstantFP::get(Ty, std::log2(BaseF->convertToFloat()));
@@ -1690,10 +1673,6 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   bool AllowApprox = Pow->hasApproxFunc();
   bool Ignored;
 
-  // Bail out if simplifying libcalls to pow() is disabled.
-  if (!hasFloatFn(TLI, Ty, LibFunc_pow, LibFunc_powf, LibFunc_powl))
-    return nullptr;
-
   // Propagate the math semantics from the call to any created instructions.
   IRBuilderBase::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(Pow->getFastMathFlags());
@@ -1745,7 +1724,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
     //       be different) and it should also consider optimizing for size.
     APFloat LimF(ExpoF->getSemantics(), 33),
             ExpoA(abs(*ExpoF));
-    if (ExpoA.compare(LimF) == APFloat::cmpLessThan) {
+    if (ExpoA < LimF) {
       // This transformation applies to integer or integer+0.5 exponents only.
       // For integer+0.5, we create a sqrt(Base) call.
       Value *Sqrt = nullptr;
@@ -1965,7 +1944,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
 
   Intrinsic::ID ArgID = Arg->getIntrinsicID();
   LibFunc ArgLb = NotLibFunc;
-  TLI->getLibFunc(Arg, ArgLb);
+  TLI->getLibFunc(*Arg, ArgLb);
 
   // log(pow(x,y)) -> y*log(x)
   if (ArgLb == PowLb || ArgID == Intrinsic::pow) {
@@ -2128,7 +2107,7 @@ static void insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
     // x86_64 can't use {float, float} since that would be returned in both
     // xmm0 and xmm1, which isn't what a real struct would do.
     ResTy = T.getArch() == Triple::x86_64
-                ? static_cast<Type *>(VectorType::get(ArgTy, 2))
+                ? static_cast<Type *>(FixedVectorType::get(ArgTy, 2))
                 : static_cast<Type *>(StructType::get(ArgTy, ArgTy));
   } else {
     Name = "__sincospi_stret";
@@ -2754,11 +2733,6 @@ Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilderBase &B) {
     }
   }
 
-  if (isLocallyOpenedFile(CI->getArgOperand(3), CI, TLI))
-    return emitFWriteUnlocked(CI->getArgOperand(0), CI->getArgOperand(1),
-                              CI->getArgOperand(2), CI->getArgOperand(3), B, DL,
-                              TLI);
-
   return nullptr;
 }
 
@@ -2773,15 +2747,9 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
   if (OptForSize)
     return nullptr;
 
-  // Check if has any use
-  if (!CI->use_empty()) {
-    if (isLocallyOpenedFile(CI->getArgOperand(1), CI, TLI))
-      return emitFPutSUnlocked(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                               TLI);
-    else
-      // We can't optimize if return value is used.
-      return nullptr;
-  }
+  // We can't optimize if return value is used.
+  if (!CI->use_empty())
+    return nullptr;
 
   // fputs(s,F) --> fwrite(s,strlen(s),1,F)
   uint64_t Len = GetStringLength(CI->getArgOperand(0));
@@ -2793,40 +2761,6 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
       CI->getArgOperand(0),
       ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len - 1),
       CI->getArgOperand(1), B, DL, TLI);
-}
-
-Value *LibCallSimplifier::optimizeFPutc(CallInst *CI, IRBuilderBase &B) {
-  optimizeErrorReporting(CI, B, 1);
-
-  if (isLocallyOpenedFile(CI->getArgOperand(1), CI, TLI))
-    return emitFPutCUnlocked(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                             TLI);
-
-  return nullptr;
-}
-
-Value *LibCallSimplifier::optimizeFGetc(CallInst *CI, IRBuilderBase &B) {
-  if (isLocallyOpenedFile(CI->getArgOperand(0), CI, TLI))
-    return emitFGetCUnlocked(CI->getArgOperand(0), B, TLI);
-
-  return nullptr;
-}
-
-Value *LibCallSimplifier::optimizeFGets(CallInst *CI, IRBuilderBase &B) {
-  if (isLocallyOpenedFile(CI->getArgOperand(2), CI, TLI))
-    return emitFGetSUnlocked(CI->getArgOperand(0), CI->getArgOperand(1),
-                             CI->getArgOperand(2), B, TLI);
-
-  return nullptr;
-}
-
-Value *LibCallSimplifier::optimizeFRead(CallInst *CI, IRBuilderBase &B) {
-  if (isLocallyOpenedFile(CI->getArgOperand(3), CI, TLI))
-    return emitFReadUnlocked(CI->getArgOperand(0), CI->getArgOperand(1),
-                             CI->getArgOperand(2), CI->getArgOperand(3), B, DL,
-                             TLI);
-
-  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilderBase &B) {
@@ -2996,6 +2930,8 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return replaceUnaryCall(CI, Builder, Intrinsic::floor);
   case LibFunc_round:
     return replaceUnaryCall(CI, Builder, Intrinsic::round);
+  case LibFunc_roundeven:
+    return replaceUnaryCall(CI, Builder, Intrinsic::roundeven);
   case LibFunc_nearbyint:
     return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
   case LibFunc_rint:
@@ -3040,7 +2976,7 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   }
 }
 
-Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
+Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
   // TODO: Split out the code below that operates on FP calls so that
   //       we can all non-FP calls with the StrictFP attribute to be
   //       optimized.
@@ -3049,11 +2985,13 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
 
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+  bool isCallingConvC = isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
-  IRBuilder<> Builder(CI, /*FPMathTag=*/nullptr, OpBundles);
-  bool isCallingConvC = isCallingConvCCompatible(CI);
+
+  IRBuilderBase::OperandBundlesGuard Guard(Builder);
+  Builder.setDefaultOperandBundles(OpBundles);
 
   // Command-line parameter overrides instruction attribute.
   // This can't be moved to optimizeFloatingPointLibCall() because it may be
@@ -3093,7 +3031,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
   }
 
   // Also try to simplify calls to fortified library functions.
-  if (Value *SimplifiedFortifiedCI = FortifiedSimplifier.optimizeCall(CI)) {
+  if (Value *SimplifiedFortifiedCI =
+          FortifiedSimplifier.optimizeCall(CI, Builder)) {
     // Try to further simplify the result.
     CallInst *SimplifiedCI = dyn_cast<CallInst>(SimplifiedFortifiedCI);
     if (SimplifiedCI && SimplifiedCI->getCalledFunction()) {
@@ -3101,10 +3040,11 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       // their uses analyzed.
       replaceAllUsesWith(CI, SimplifiedCI);
 
-      // Use an IR Builder from SimplifiedCI if available instead of CI
-      // to guarantee we reach all uses we might replace later on.
-      IRBuilder<> TmpBuilder(SimplifiedCI);
-      if (Value *V = optimizeStringMemoryLibCall(SimplifiedCI, TmpBuilder)) {
+      // Set insertion point to SimplifiedCI to guarantee we reach all uses
+      // we might replace later on.
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(SimplifiedCI);
+      if (Value *V = optimizeStringMemoryLibCall(SimplifiedCI, Builder)) {
         // If we were able to further simplify, remove the now redundant call.
         substituteInParent(SimplifiedCI, V);
         return V;
@@ -3158,16 +3098,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return optimizeFPrintF(CI, Builder);
     case LibFunc_fwrite:
       return optimizeFWrite(CI, Builder);
-    case LibFunc_fread:
-      return optimizeFRead(CI, Builder);
     case LibFunc_fputs:
       return optimizeFPuts(CI, Builder);
-    case LibFunc_fgets:
-      return optimizeFGets(CI, Builder);
-    case LibFunc_fputc:
-      return optimizeFPutc(CI, Builder);
-    case LibFunc_fgetc:
-      return optimizeFGetc(CI, Builder);
     case LibFunc_puts:
       return optimizePuts(CI, Builder);
     case LibFunc_perror:
@@ -3469,7 +3401,8 @@ Value *FortifiedLibCallSimplifier::optimizeVSPrintfChk(CallInst *CI,
   return nullptr;
 }
 
-Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI) {
+Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI,
+                                                IRBuilderBase &Builder) {
   // FIXME: We shouldn't be changing "nobuiltin" or TLI unavailable calls here.
   // Some clang users checked for _chk libcall availability using:
   //   __has_builtin(__builtin___memcpy_chk)
@@ -3485,11 +3418,13 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI) {
 
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+  bool isCallingConvC = isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
-  IRBuilder<> Builder(CI, /*FPMathTag=*/nullptr, OpBundles);
-  bool isCallingConvC = isCallingConvCCompatible(CI);
+
+  IRBuilderBase::OperandBundlesGuard Guard(Builder);
+  Builder.setDefaultOperandBundles(OpBundles);
 
   // First, check that this is a known library functions and that the prototype
   // is correct.

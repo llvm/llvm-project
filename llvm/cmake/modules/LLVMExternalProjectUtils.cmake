@@ -62,7 +62,17 @@ function(llvm_ExternalProject_Add name source_dir)
   foreach(tool ${ARG_TOOLCHAIN_TOOLS})
     if(TARGET ${tool})
       list(APPEND TOOLCHAIN_TOOLS ${tool})
-      list(APPEND TOOLCHAIN_BINS $<TARGET_FILE:${tool}>)
+
+      # $<TARGET_FILE:tgt> only works on add_executable or add_library targets
+      # The below logic mirrors cmake's own implementation
+      get_target_property(target_type "${tool}" TYPE)
+      if(NOT target_type STREQUAL "OBJECT_LIBRARY" AND
+         NOT target_type STREQUAL "UTILITY" AND
+         NOT target_type STREQUAL "GLOBAL_TARGET" AND
+         NOT target_type STREQUAL "INTERFACE_LIBRARY")
+        list(APPEND TOOLCHAIN_BINS $<TARGET_FILE:${tool}>)
+      endif()
+
     endif()
   endforeach()
 
@@ -239,6 +249,7 @@ function(llvm_ExternalProject_Add name source_dir)
                -DLLVM_HOST_TRIPLE=${LLVM_HOST_TRIPLE}
                -DLLVM_HAVE_LINK_VERSION_SCRIPT=${LLVM_HAVE_LINK_VERSION_SCRIPT}
                -DLLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO=${LLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO}
+               -DLLVM_USE_RELATIVE_PATHS_IN_FILES=${LLVM_USE_RELATIVE_PATHS_IN_FILES}
                -DLLVM_SOURCE_PREFIX=${LLVM_SOURCE_PREFIX}
                -DPACKAGE_VERSION=${PACKAGE_VERSION}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}

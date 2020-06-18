@@ -10,11 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDSERVER_H
 
 #include "../clang-tidy/ClangTidyOptions.h"
-#include "Cancellation.h"
 #include "CodeComplete.h"
-#include "FSProvider.h"
-#include "FormattedString.h"
-#include "Function.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
 #include "Protocol.h"
@@ -26,6 +22,9 @@
 #include "index/Index.h"
 #include "refactor/Rename.h"
 #include "refactor/Tweak.h"
+#include "support/Cancellation.h"
+#include "support/FSProvider.h"
+#include "support/Function.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -69,7 +68,7 @@ public:
 
     /// Called by ClangdServer when \p Diagnostics for \p File are ready.
     /// May be called concurrently for separate files, not for a single file.
-    virtual void onDiagnosticsReady(PathRef File,
+    virtual void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
                                     std::vector<Diag> Diagnostics) {}
     /// Called whenever the file status is updated.
     /// May be called concurrently for separate files, not for a single file.
@@ -78,7 +77,7 @@ public:
     /// Called by ClangdServer when some \p Highlightings for \p File are ready.
     /// May be called concurrently for separate files, not for a single file.
     virtual void
-    onHighlightingsReady(PathRef File,
+    onHighlightingsReady(PathRef File, llvm::StringRef Version,
                          std::vector<HighlightingToken> Highlightings) {}
 
     /// Called when background indexing tasks are enqueued/started/completed.
@@ -98,6 +97,9 @@ public:
 
     /// Cached preambles are potentially large. If false, store them on disk.
     bool StorePreamblesInMemory = true;
+    /// Reuse even stale preambles, and rebuild them in the background.
+    /// This improves latency at the cost of accuracy.
+    bool AsyncPreambleBuilds = false;
 
     /// If true, ClangdServer builds a dynamic in-memory index for symbols in
     /// opened files and uses the index to augment code completion results.
@@ -118,6 +120,12 @@ public:
     /// enabled.
     ClangTidyOptionsBuilder GetClangTidyOptions;
 
+    /// If true, turn on the `-frecovery-ast` clang flag.
+    bool BuildRecoveryAST = true;
+
+    /// If true, turn on the `-frecovery-ast-type` clang flag.
+    bool PreserveRecoveryASTType = false;
+
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
     /// FIXME: If not set, should use the current working directory.
@@ -130,8 +138,11 @@ public:
     llvm::Optional<std::string> ResourceDir = llvm::None;
 
     /// Time to wait after a new file version before computing diagnostics.
-    DebouncePolicy UpdateDebounce =
-        DebouncePolicy::fixed(std::chrono::milliseconds(500));
+    DebouncePolicy UpdateDebounce = DebouncePolicy{
+        /*Min=*/std::chrono::milliseconds(50),
+        /*Max=*/std::chrono::milliseconds(500),
+        /*RebuildRatio=*/1,
+    };
 
     bool SuggestMissingIncludes = false;
 
@@ -139,11 +150,8 @@ public:
     /// fetch system include path.
     std::vector<std::string> QueryDriverGlobs;
 
-    /// Enable semantic highlighting features.
-    bool SemanticHighlighting = false;
-
-    /// Enable cross-file rename feature.
-    bool CrossFileRename = false;
+    /// Enable notification-based semantic highlighting.
+    bool TheiaSemanticHighlighting = false;
 
     /// Returns true if the tweak should be enabled.
     std::function<bool(const Tweak &)> TweakFilter = [](const Tweak &T) {
@@ -171,16 +179,17 @@ public:
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
   /// separate thread. When the parsing is complete, DiagConsumer passed in
   /// constructor will receive onDiagnosticsReady callback.
+  /// Version identifies this snapshot and is propagated to ASTs, preambles,
+  /// diagnostics etc built from it.
   void addDocument(PathRef File, StringRef Contents,
+                   llvm::StringRef Version = "null",
                    WantDiagnostics WD = WantDiagnostics::Auto,
                    bool ForceRebuild = false);
-
-  /// Get the contents of \p File, which should have been added.
-  llvm::StringRef getDocument(PathRef File) const;
 
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it. Pending diagnostics for closed files may not
   /// be delivered, even if requested with WantDiags::Auto or WantDiags::Yes.
+  /// An empty set of diagnostics will be delivered, with Version = "".
   void removeDocument(PathRef File);
 
   /// Run code completion for \p File at \p Pos.
@@ -254,6 +263,7 @@ public:
 
   /// Test the validity of a rename operation.
   void prepareRename(PathRef File, Position Pos,
+                     const RenameOptions &RenameOpts,
                      Callback<llvm::Optional<Range>> CB);
 
   /// Rename all occurrences of the symbol at the \p Pos in \p File to
@@ -262,7 +272,7 @@ public:
   /// embedders could use this method to get all occurrences of the symbol (e.g.
   /// highlighting them in prepare stage).
   void rename(PathRef File, Position Pos, llvm::StringRef NewName,
-              bool WantFormat, Callback<FileEdits> CB);
+              const RenameOptions &Opts, Callback<FileEdits> CB);
 
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.
@@ -290,20 +300,23 @@ public:
                   Callback<std::vector<SymbolDetails>> CB);
 
   /// Get semantic ranges around a specified position in a file.
-  void semanticRanges(PathRef File, Position Pos,
-                      Callback<std::vector<Range>> CB);
+  void semanticRanges(PathRef File, const std::vector<Position> &Pos,
+                      Callback<std::vector<SelectionRange>> CB);
 
   /// Get all document links in a file.
   void documentLinks(PathRef File, Callback<std::vector<DocumentLink>> CB);
- 
-  /// Returns estimated memory usage for each of the currently open files.
-  /// The order of results is unspecified.
+
+  void semanticHighlights(PathRef File,
+                          Callback<std::vector<HighlightingToken>>);
+
+  /// Returns estimated memory usage and other statistics for each of the
+  /// currently open files.
   /// Overall memory usage of clangd may be significantly more than reported
   /// here, as this metric does not account (at least) for:
   ///   - memory occupied by static and dynamic index,
   ///   - memory required for in-flight requests,
   /// FIXME: those metrics might be useful too, we should add them.
-  std::vector<std::pair<Path, std::size_t>> getUsedBytesPerFile() const;
+  llvm::StringMap<TUScheduler::FileStats> fileStats() const;
 
   // Blocks the main thread until the server is idle. Only for use in tests.
   // Returns false if the timeout expires.
@@ -340,7 +353,10 @@ private:
   // can be caused by missing includes (e.g. member access in incomplete type).
   bool SuggestMissingIncludes = false;
 
-  bool CrossFileRename = false;
+  // If true, preserve expressions in AST for broken code.
+  bool BuildRecoveryAST = true;
+  // If true, preserve the type for recovery AST.
+  bool PreserveRecoveryASTType = false;
 
   std::function<bool(const Tweak &)> TweakFilter;
 

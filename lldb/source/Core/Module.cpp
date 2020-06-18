@@ -18,6 +18,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -33,7 +34,6 @@
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -297,7 +297,9 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
       const size_t bytes_read =
           process_sp->ReadMemory(header_addr, data_up->GetBytes(),
                                  data_up->GetByteSize(), readmem_error);
-      if (bytes_read == size_to_read) {
+      if (bytes_read < size_to_read)
+        data_up->SetByteSize(bytes_read);
+      if (data_up->GetByteSize() > 0) {
         DataBufferSP data_sp(data_up.release());
         m_objfile_sp = ObjectFile::FindPlugin(shared_from_this(), process_sp,
                                               header_addr, data_sp);
@@ -1412,7 +1414,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
         if (FileSystem::Instance().IsDirectory(file)) {
           std::string new_path(file.GetPath());
           std::string old_path(obj_file->GetFileSpec().GetPath());
-          if (old_path.find(new_path) == 0) {
+          if (llvm::StringRef(old_path).startswith(new_path)) {
             // We specified the same bundle as the symbol file that we already
             // have
             return;
@@ -1592,6 +1594,19 @@ bool Module::RemapSourceFile(llvm::StringRef path,
                              std::string &new_path) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   return m_source_mappings.RemapPath(path, new_path);
+}
+
+void Module::RegisterXcodeSDK(llvm::StringRef sdk_name, llvm::StringRef sysroot) {
+  XcodeSDK sdk(sdk_name.str());
+  ConstString sdk_path(HostInfo::GetXcodeSDKPath(sdk));
+  if (!sdk_path)
+    return;
+  // If the SDK changed for a previously registered source path, update it.
+  // This could happend with -fdebug-prefix-map, otherwise it's unlikely.
+  ConstString sysroot_cs(sysroot);
+  if (!m_source_mappings.Replace(sysroot_cs, sdk_path, true))
+    // In the general case, however, append it to the list.
+    m_source_mappings.Append(sysroot_cs, sdk_path, false);
 }
 
 bool Module::MergeArchitecture(const ArchSpec &arch_spec) {

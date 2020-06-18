@@ -25,6 +25,7 @@
 #include "sanitizer_posix.h"
 
 struct link_map;  // Opaque type returned by dlopen().
+struct utsname;
 
 namespace __sanitizer {
 // Dirent structure for getdents(). Note that this structure is different from
@@ -65,6 +66,7 @@ void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                     int *parent_tidptr, void *newtls, int *child_tidptr);
 #endif
+int internal_uname(struct utsname *buf);
 #elif SANITIZER_FREEBSD
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
 #elif SANITIZER_NETBSD

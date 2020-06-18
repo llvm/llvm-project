@@ -539,7 +539,7 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
 }
 
 std::string ArgType::getRepresentativeTypeName(ASTContext &C) const {
-  std::string S = getRepresentativeType(C).getAsString();
+  std::string S = getRepresentativeType(C).getAsString(C.getPrintingPolicy());
 
   std::string Alias;
   if (Name) {

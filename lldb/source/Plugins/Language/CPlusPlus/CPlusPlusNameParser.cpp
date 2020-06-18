@@ -329,6 +329,37 @@ bool CPlusPlusNameParser::ConsumeOperator() {
   }
 
   const auto &token = Peek();
+
+  // When clang generates debug info it adds template parameters to names.
+  // Since clang doesn't add a space between the name and the template parameter
+  // in some cases we are not generating valid C++ names e.g.:
+  //
+  //   operator<<A::B>
+  //
+  // In some of these cases we will not parse them correctly. This fixes the
+  // issue by detecting this case and inserting tok::less in place of
+  // tok::lessless and returning successfully that we consumed the operator.
+  if (token.getKind() == tok::lessless) {
+    // Make sure we have more tokens before attempting to look ahead one more.
+    if (m_next_token_index + 1 < m_tokens.size()) {
+      // Look ahead two tokens.
+      clang::Token n_token = m_tokens[m_next_token_index + 1];
+      // If we find ( or < then this is indeed operator<< no need for fix.
+      if (n_token.getKind() != tok::l_paren && n_token.getKind() != tok::less) {
+        clang::Token tmp_tok;
+        tmp_tok.startToken();
+        tmp_tok.setLength(1);
+        tmp_tok.setLocation(token.getLocation().getLocWithOffset(1));
+        tmp_tok.setKind(tok::less);
+
+        m_tokens[m_next_token_index] = tmp_tok;
+
+        start_position.Remove();
+        return true;
+      }
+    }
+  }
+
   switch (token.getKind()) {
   case tok::kw_new:
   case tok::kw_delete:

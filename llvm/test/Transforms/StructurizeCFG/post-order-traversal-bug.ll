@@ -15,7 +15,7 @@ entry:
   br label %for.body
 
 ; CHECK: for.body:
-; CHECK: br i1 %{{[0-9]+}}, label %lor.lhs.false, label %Flow
+; CHECK: br i1 %cmp1.inv, label %lor.lhs.false, label %Flow
 for.body:                                         ; preds = %for.body.backedge, %entry
   %indvars.iv = phi i64 [ %indvars.iv.be, %for.body.backedge ], [ 1, %entry ]
   %best_val.027 = phi float [ %best_val.027.be, %for.body.backedge ], [ 5.000000e+01, %entry ]
@@ -59,7 +59,7 @@ for.end:                                          ; preds = %for.body.1, %if.the
 ; CHECK: br i1 %{{[0-9]}}, label %for.body.1, label %Flow2
 
 ; CHECK: for.body.1:
-; CHECK: br i1 %{{[0-9]+}}, label %for.body.6, label %Flow3
+; CHECK: br i1 %cmp1.5.inv, label %for.body.6, label %Flow3
 for.body.1:                                       ; preds = %if.then, %lor.lhs.false
   %best_val.233 = phi float [ %tmp5, %if.then ], [ %best_val.027, %lor.lhs.false ]
   %best_count.231 = phi i32 [ %sub4, %if.then ], [ %best_count.025, %lor.lhs.false ]

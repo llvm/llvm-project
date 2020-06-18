@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -filetype obj -triple i386-pc-linux -o - | \
-# RUN: llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
+# RUN: not llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
 # RUN: FileCheck %s -input-file %t.err -check-prefix=ERR
 
 # ERR: address table at offset 0x0 has unsupported version 6
@@ -7,7 +7,7 @@
 # ERR-NOT: {{.}}
 
 # CHECK: .debug_addr contents
-# CHECK-NEXT:     length = 0x0000000c, version = 0x0005, addr_size = 0x04, seg_size = 0x00
+# CHECK-NEXT:     length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x04, seg_size = 0x00
 # CHECK-NEXT:     Addrs: [
 # CHECK-NEXT:     0x00000002
 # CHECK-NEXT:     0x00000003

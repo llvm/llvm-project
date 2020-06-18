@@ -114,12 +114,12 @@ b4:                                               ; preds = %b3
   %v91 = tail call <16 x i32> @llvm.hexagon.V6.vasrw(<16 x i32> %v90, i32 1)
   %v92 = tail call <16 x i32> @llvm.hexagon.V6.vasrw(<16 x i32> %v91, i32 1)
   %v93 = tail call <16 x i32> @llvm.hexagon.V6.vasrw(<16 x i32> %v92, i32 1)
-  %v94 = tail call <16 x i32> @llvm.hexagon.V6.vsubwnq(<512 x i1> undef, <16 x i32> undef, <16 x i32> %v93)
-  %v95 = tail call <16 x i32> @llvm.hexagon.V6.vsubwnq(<512 x i1> undef, <16 x i32> %v94, <16 x i32> undef)
+  %v94 = tail call <16 x i32> @llvm.hexagon.V6.vsubwnq(<64 x i1> undef, <16 x i32> undef, <16 x i32> %v93)
+  %v95 = tail call <16 x i32> @llvm.hexagon.V6.vsubwnq(<64 x i1> undef, <16 x i32> %v94, <16 x i32> undef)
   %v96 = tail call <16 x i32> @llvm.hexagon.V6.vasrw(<16 x i32> undef, i32 1)
-  %v97 = tail call <512 x i1> @llvm.hexagon.V6.vgtw(<16 x i32> %v96, <16 x i32> %v95)
-  %v98 = tail call <16 x i32> @llvm.hexagon.V6.vaddwnq(<512 x i1> %v97, <16 x i32> undef, <16 x i32> undef)
-  %v99 = tail call <16 x i32> @llvm.hexagon.V6.vaddwnq(<512 x i1> undef, <16 x i32> undef, <16 x i32> undef)
+  %v97 = tail call <64 x i1> @llvm.hexagon.V6.vgtw(<16 x i32> %v96, <16 x i32> %v95)
+  %v98 = tail call <16 x i32> @llvm.hexagon.V6.vaddwnq(<64 x i1> %v97, <16 x i32> undef, <16 x i32> undef)
+  %v99 = tail call <16 x i32> @llvm.hexagon.V6.vaddwnq(<64 x i1> undef, <16 x i32> undef, <16 x i32> undef)
   %v100 = tail call <16 x i32> @llvm.hexagon.V6.vshufeh(<16 x i32> %v99, <16 x i32> %v98)
   %v101 = tail call <16 x i32> @llvm.hexagon.V6.vshuffeb(<16 x i32> %v100, <16 x i32> undef)
   %v102 = getelementptr inbounds <16 x i32>, <16 x i32>* %v2, i32 1
@@ -183,13 +183,13 @@ declare <32 x i32> @llvm.hexagon.V6.vaddw.dv(<32 x i32>, <32 x i32>) #1
 declare <32 x i32> @llvm.hexagon.V6.vadduhw(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vgtw(<16 x i32>, <16 x i32>) #1
+declare <64 x i1> @llvm.hexagon.V6.vgtw(<16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vaddwnq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vaddwnq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
-declare <16 x i32> @llvm.hexagon.V6.vsubwnq(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <16 x i32> @llvm.hexagon.V6.vsubwnq(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vasrw(<16 x i32>, i32) #1

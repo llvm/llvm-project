@@ -94,7 +94,7 @@ class SparseMultiSet {
   /// tombstones, in which case they are actually nodes in a single-linked
   /// freelist of recyclable slots.
   struct SMSNode {
-    static const unsigned INVALID = ~0U;
+    static constexpr unsigned INVALID = ~0U;
 
     ValueT Data;
     unsigned Prev;

@@ -57,9 +57,3 @@ class BacktraceAllTestCase(TestBase):
 
         # Run to completion
         self.runCmd("continue")
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lambda: lldb.SBDebugger.Terminate())
-    unittest2.main()

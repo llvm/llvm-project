@@ -27,20 +27,6 @@ findGeneratorByName(llvm::StringRef Format) {
 
 // Enum conversion
 
-std::string getAccess(AccessSpecifier AS) {
-  switch (AS) {
-  case AccessSpecifier::AS_public:
-    return "public";
-  case AccessSpecifier::AS_protected:
-    return "protected";
-  case AccessSpecifier::AS_private:
-    return "private";
-  case AccessSpecifier::AS_none:
-    return {};
-  }
-  llvm_unreachable("Unknown AccessSpecifier");
-}
-
 std::string getTagType(TagTypeKind AS) {
   switch (AS) {
   case TagTypeKind::TTK_Class:
@@ -82,7 +68,7 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
     // pointing.
     auto It = std::find(I->Children.begin(), I->Children.end(), R.USR);
     if (It != I->Children.end()) {
-      // If it is found, just change I to point the namespace refererence found.
+      // If it is found, just change I to point the namespace reference found.
       I = &*It;
     } else {
       // If it is not found a new reference is created

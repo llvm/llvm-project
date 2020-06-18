@@ -35,16 +35,16 @@ def SPV_SubgroupBallotKHROp : SPV_Op<"SubgroupBallotKHR", []> {
     higher bit number of the last bitmask needed to represent all bits of the
     subgroup invocations.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     subgroup-ballot-op ::= ssa-id `=` `spv.SubgroupBallotKHR`
                                 ssa-use `:` `vector` `<` 4 `x` `i32` `>`
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.SubgroupBallotKHR %predicate : vector<4xi32>
     ```
   }];
@@ -61,7 +61,7 @@ def SPV_SubgroupBallotKHROp : SPV_Op<"SubgroupBallotKHR", []> {
   );
 
   let results = (outs
-    SPV_I32Vec4:$result
+    SPV_Int32Vec4:$result
   );
 
   let verifier = [{ return success(); }];

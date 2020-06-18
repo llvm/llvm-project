@@ -13,7 +13,10 @@ import re
 import pickle
 
 from dex.builder import run_external_build_script
-from dex.debugger.Debuggers import empty_debugger_steps, get_debugger_steps
+from dex.command.ParseCommand import get_command_infos
+from dex.debugger.Debuggers import run_debugger_subprocess
+from dex.debugger.DebuggerControllers.DefaultController import DefaultController
+from dex.dextIR.DextIR import DextIR
 from dex.heuristic import Heuristic
 from dex.tools import TestToolBase
 from dex.utils.Exceptions import DebuggerException, Error
@@ -77,6 +80,23 @@ class Tool(TestToolBase):
 
         return limits
 
+    def handle_options(self, defaults):
+        options = self.context.options
+        if "clang" not in options.builder.lower():
+            raise Error("--builder %s is not supported by the clang-opt-bisect tool - only 'clang' is "
+                        "supported " % options.builder)
+        super(Tool, self).handle_options(defaults)
+
+    def _init_debugger_controller(self):
+        step_collection = DextIR(
+            executable_path=self.context.options.executable,
+            source_paths=self.context.options.source_files,
+            dexter_version=self.context.version)
+        step_collection.commands = get_command_infos(
+            self.context.options.source_files)
+        debugger_controller = DefaultController(self.context, step_collection)
+        return debugger_controller
+
     def _run_test(self, test_name):  # noqa
         options = self.context.options
 
@@ -116,9 +136,15 @@ class Tool(TestToolBase):
                 pass_info = (0, None, None)
 
             try:
-                steps = get_debugger_steps(self.context)
+                debugger_controller =self._init_debugger_controller()
+                debugger_controller = run_debugger_subprocess(
+                    debugger_controller, self.context.working_directory.path)
+                steps = debugger_controller.step_collection
             except DebuggerException:
-                steps = empty_debugger_steps(self.context)
+                steps =  DextIR(
+                    executable_path=self.context.options.executable,
+                    source_paths=self.context.options.source_files,
+                    dexter_version=self.context.version)
 
             steps.builder = builderIR
 
@@ -177,7 +203,7 @@ class Tool(TestToolBase):
                 file_name = ''.join(
                     c for c in file_name
                     if c.isalnum() or c in '()-_./ ').strip().replace(
-                        ' ', '_').replace('/', '_')
+                    ' ', '_').replace('/', '_')
 
                 output_text_path = os.path.join(options.results_directory,
                                                 '{}.txt'.format(file_name))
@@ -188,7 +214,7 @@ class Tool(TestToolBase):
                         heuristic_verbose_output + '\n', stream=Stream(fp))
 
                 output_dextIR_path = os.path.join(options.results_directory,
-                                                '{}.dextIR'.format(file_name))
+                                                  '{}.dextIR'.format(file_name))
                 with open(output_dextIR_path, 'wb') as fp:
                     pickle.dump(steps, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -228,7 +254,6 @@ class Tool(TestToolBase):
         self._write_pass_summary(pass_summary_path,
                                  self._all_bisect_pass_summary)
         return ReturnCode.OK
-
 
     def _clang_opt_bisect_build(self, opt_bisect_limits):
         options = self.context.options

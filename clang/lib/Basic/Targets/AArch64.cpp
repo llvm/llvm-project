@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -25,6 +26,10 @@ const Builtin::Info AArch64TargetInfo::BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
    {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #include "clang/Basic/BuiltinsNEON.def"
+
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+#include "clang/Basic/BuiltinsSVE.def"
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
    {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
@@ -64,6 +69,9 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 
   LongDoubleWidth = LongDoubleAlign = SuitableAlign = 128;
   LongDoubleFormat = &llvm::APFloat::IEEEquad();
+
+  BFloat16Width = BFloat16Align = 16;
+  BFloat16Format = &llvm::APFloat::BFloat();
 
   // Make __builtin_ms_va_list available.
   HasBuiltinMSVaList = true;
@@ -117,15 +125,15 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec,
     return false;
 
   BPI.SignReturnAddr =
-      llvm::StringSwitch<CodeGenOptions::SignReturnAddressScope>(PBP.Scope)
-          .Case("non-leaf", CodeGenOptions::SignReturnAddressScope::NonLeaf)
-          .Case("all", CodeGenOptions::SignReturnAddressScope::All)
-          .Default(CodeGenOptions::SignReturnAddressScope::None);
+      llvm::StringSwitch<LangOptions::SignReturnAddressScopeKind>(PBP.Scope)
+          .Case("non-leaf", LangOptions::SignReturnAddressScopeKind::NonLeaf)
+          .Case("all", LangOptions::SignReturnAddressScopeKind::All)
+          .Default(LangOptions::SignReturnAddressScopeKind::None);
 
   if (PBP.Key == "a_key")
-    BPI.SignKey = CodeGenOptions::SignReturnAddressKeyValue::AKey;
+    BPI.SignKey = LangOptions::SignReturnAddressKeyKind::AKey;
   else
-    BPI.SignKey = CodeGenOptions::SignReturnAddressKeyValue::BKey;
+    BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
   return true;
@@ -147,6 +155,7 @@ void AArch64TargetInfo::fillValidCPUList(
 
 void AArch64TargetInfo::getTargetDefinesARMV81A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
+  // FIXME: Armv8.1 makes __ARM_FEATURE_CRC32 mandatory. Handle it here.
   Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");
 }
 
@@ -167,17 +176,26 @@ void AArch64TargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
 void AArch64TargetInfo::getTargetDefinesARMV84A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Also include the Armv8.3 defines
-  // FIXME: Armv8.4 makes some extensions mandatory. Handle them here.
+  // FIXME: Armv8.4 makes __ARM_FEATURE_ATOMICS, defined in GCC, mandatory.
+  // Add and handle it here.
   getTargetDefinesARMV83A(Opts, Builder);
 }
 
 void AArch64TargetInfo::getTargetDefinesARMV85A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Also include the Armv8.4 defines
-  // FIXME: Armv8.5 makes some extensions mandatory. Handle them here.
   getTargetDefinesARMV84A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV86A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Also include the Armv8.5 defines
+  // FIXME: Armv8.6 makes the following extensions mandatory:
+  // - __ARM_FEATURE_BF16
+  // - __ARM_FEATURE_MATMUL_INT8
+  // Handle them here.
+  getTargetDefinesARMV85A(Opts, Builder);
+}
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
@@ -193,6 +211,13 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_LP64");
     Builder.defineMacro("__LP64__");
   }
+
+  std::string CodeModel = getTargetOpts().CodeModel;
+  if (CodeModel == "default")
+    CodeModel = "small";
+  for (char &c : CodeModel)
+    c = toupper(c);
+  Builder.defineMacro("__AARCH64_CMODEL_" + CodeModel + "__");
 
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
   Builder.defineMacro("__ARM_ACLE", "200");
@@ -258,8 +283,38 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasTME)
     Builder.defineMacro("__ARM_FEATURE_TME", "1");
 
+  if (HasMatMul)
+    Builder.defineMacro("__ARM_FEATURE_MATMUL_INT8", "1");
+
+  if (HasBFloat16) {
+    Builder.defineMacro("__ARM_FEATURE_BF16", "1");
+    Builder.defineMacro("__ARM_FEATURE_BF16_VECTOR_ARITHMETIC", "1");
+    Builder.defineMacro("__ARM_BF16_FORMAT_ALTERNATIVE", "1");
+  }
+
   if ((FPU & NeonMode) && HasFP16FML)
     Builder.defineMacro("__ARM_FEATURE_FP16FML", "1");
+
+  if (Opts.hasSignReturnAddress()) {
+    // Bitmask:
+    // 0: Protection using the A key
+    // 1: Protection using the B key
+    // 2: Protection including leaf functions
+    unsigned Value = 0;
+
+    if (Opts.isSignReturnAddressWithAKey())
+      Value |= (1 << 0);
+    else
+      Value |= (1 << 1);
+
+    if (Opts.isSignReturnAddressScopeAll())
+      Value |= (1 << 2);
+
+    Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", std::to_string(Value));
+  }
+
+  if (Opts.BranchTargetEnforcement)
+    Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
 
   switch (ArchKind) {
   default:
@@ -278,6 +333,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   case llvm::AArch64::ArchKind::ARMV8_5A:
     getTargetDefinesARMV85A(Opts, Builder);
+    break;
+  case llvm::AArch64::ArchKind::ARMV8_6A:
+    getTargetDefinesARMV86A(Opts, Builder);
     break;
   }
 
@@ -310,6 +368,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasFP16FML = false;
   HasMTE = false;
   HasTME = false;
+  HasMatMul = false;
+  HasBFloat16 = false;
   ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   for (const auto &Feature : Features) {
@@ -333,6 +393,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchKind = llvm::AArch64::ArchKind::ARMV8_4A;
     if (Feature == "+v8.5a")
       ArchKind = llvm::AArch64::ArchKind::ARMV8_5A;
+    if (Feature == "+v8.6a")
+      ArchKind = llvm::AArch64::ArchKind::ARMV8_6A;
     if (Feature == "+fullfp16")
       HasFullFP16 = true;
     if (Feature == "+dotprod")
@@ -343,6 +405,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasMTE = true;
     if (Feature == "+tme")
       HasTME = true;
+    if (Feature == "+i8mm")
+      HasMatMul = true;
+    if (Feature == "+bf16")
+      HasBFloat16 = true;
   }
 
   setDataLayout();
@@ -479,15 +545,27 @@ bool AArch64TargetInfo::validateAsmConstraint(
     Info.setAllowsRegister();
     return true;
   case 'U':
+    if (Name[1] == 'p' && (Name[2] == 'l' || Name[2] == 'a')) {
+      // SVE predicate registers ("Upa"=P0-15, "Upl"=P0-P7)
+      Info.setAllowsRegister();
+      Name += 2;
+      return true;
+    }
     // Ump: A memory address suitable for ldp/stp in SI, DI, SF and DF modes.
     // Utf: A memory address suitable for ldp/stp in TF mode.
     // Usa: An absolute symbolic address.
     // Ush: The high part (bits 32:12) of a pc-relative symbolic address.
-    llvm_unreachable("FIXME: Unimplemented support for U* constraints.");
+
+    // Better to return an error saying that it's an unrecognised constraint
+    // even if this is a valid constraint in gcc.
+    return false;
   case 'z': // Zero register, wzr or xzr
     Info.setAllowsRegister();
     return true;
   case 'x': // Floating point and SIMD registers (V0-V15)
+    Info.setAllowsRegister();
+    return true;
+  case 'y': // SVE registers (V0-V7)
     Info.setAllowsRegister();
     return true;
   }

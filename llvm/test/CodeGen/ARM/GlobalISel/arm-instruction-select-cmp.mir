@@ -69,12 +69,12 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_eq_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, $noreg, implicit-def $cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0 /* CC::eq */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
     %1(s32) = COPY $r1
     %2(s1) = G_ICMP intpred(eq),  %0(s32), %1
@@ -99,12 +99,12 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_ne_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, $noreg, implicit-def $cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 1, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 1 /* CC::ne */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
     %1(s32) = COPY $r1
     %2(s1) = G_ICMP intpred(ne),  %0(s32), %1
@@ -129,12 +129,12 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_ugt_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, $noreg, implicit-def $cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 8, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 8 /* CC::hi */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
     %1(s32) = COPY $r1
     %2(s1) = G_ICMP intpred(ugt),  %0(s32), %1
@@ -159,12 +159,12 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_uge_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, $noreg, implicit-def $cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 2, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 2 /* CC::hs */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
     %1(s32) = COPY $r1
     %2(s1) = G_ICMP intpred(uge),  %0(s32), %1
@@ -189,12 +189,12 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_ult_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, $noreg, implicit-def $cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 3, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 3 /* CC::lo */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
     %1(s32) = COPY $r1
     %2(s1) = G_ICMP intpred(ult),  %0(s32), %1
@@ -219,12 +219,12 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_ule_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, $noreg, implicit-def $cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 9, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 9 /* CC::ls */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
     %1(s32) = COPY $r1
     %2(s1) = G_ICMP intpred(ule),  %0(s32), %1
@@ -249,12 +249,12 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_sgt_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, $noreg, implicit-def $cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12 /* CC::gt */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
     %1(s32) = COPY $r1
     %2(s1) = G_ICMP intpred(sgt),  %0(s32), %1
@@ -279,12 +279,12 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_sge_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, $noreg, implicit-def $cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 10, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 10 /* CC::ge */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
     %1(s32) = COPY $r1
     %2(s1) = G_ICMP intpred(sge),  %0(s32), %1
@@ -309,12 +309,12 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_slt_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, $noreg, implicit-def $cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 11, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 11 /* CC::lt */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
     %1(s32) = COPY $r1
     %2(s1) = G_ICMP intpred(slt),  %0(s32), %1
@@ -339,12 +339,12 @@ body:             |
     ; CHECK-LABEL: name: test_icmp_sle_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, $noreg, implicit-def $cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 13, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: CMPrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 13 /* CC::le */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
     %1(s32) = COPY $r1
     %2(s1) = G_ICMP intpred(sle),  %0(s32), %1
@@ -367,10 +367,10 @@ body:             |
     liveins: $s0, $s1
 
     ; CHECK-LABEL: name: test_fcmp_true_s32
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 1, 14, $noreg, $noreg
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 1, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(true),  %0(s32), %1
@@ -393,10 +393,10 @@ body:             |
     liveins: $s0, $s1
 
     ; CHECK-LABEL: name: test_fcmp_false_s32
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(false),  %0(s32), %1
@@ -421,13 +421,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_oeq_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0 /* CC::eq */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(oeq),  %0(s32), %1
@@ -452,13 +452,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ogt_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12 /* CC::gt */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(ogt),  %0(s32), %1
@@ -483,13 +483,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_oge_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 10, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 10 /* CC::ge */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(oge),  %0(s32), %1
@@ -514,13 +514,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_olt_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 4, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 4 /* CC::mi */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(olt),  %0(s32), %1
@@ -545,13 +545,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ole_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 9, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 9 /* CC::ls */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(ole),  %0(s32), %1
@@ -576,13 +576,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ord_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 7, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 7 /* CC::vc */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(ord),  %0(s32), %1
@@ -607,13 +607,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ugt_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 8, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 8 /* CC::hi */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(ugt),  %0(s32), %1
@@ -638,13 +638,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_uge_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 5, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 5 /* CC::pl */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(uge),  %0(s32), %1
@@ -669,13 +669,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ult_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 11, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 11 /* CC::lt */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(ult),  %0(s32), %1
@@ -700,13 +700,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ule_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 13, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 13 /* CC::le */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(ule),  %0(s32), %1
@@ -731,13 +731,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_une_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 1, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 1 /* CC::ne */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(une),  %0(s32), %1
@@ -762,13 +762,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_uno_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 6, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 6 /* CC::vs */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(uno),  %0(s32), %1
@@ -793,16 +793,16 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_one_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12, $cpsr
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 4, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12 /* CC::gt */, $cpsr
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 4 /* CC::mi */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(one),  %0(s32), %1
@@ -827,16 +827,16 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ueq_s32
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0, $cpsr
-    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 6, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0 /* CC::eq */, $cpsr
+    ; CHECK: VCMPS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 6 /* CC::vs */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $s0
     %1(s32) = COPY $s1
     %2(s1) = G_FCMP floatpred(ueq),  %0(s32), %1
@@ -859,10 +859,10 @@ body:             |
     liveins: $d0, $d1
 
     ; CHECK-LABEL: name: test_fcmp_true_s64
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 1, 14, $noreg, $noreg
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 1, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(true),  %0(s64), %1
@@ -885,10 +885,10 @@ body:             |
     liveins: $d0, $d1
 
     ; CHECK-LABEL: name: test_fcmp_false_s64
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(false),  %0(s64), %1
@@ -913,13 +913,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_oeq_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0 /* CC::eq */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(oeq),  %0(s64), %1
@@ -944,13 +944,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ogt_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12 /* CC::gt */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(ogt),  %0(s64), %1
@@ -975,13 +975,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_oge_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 10, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 10 /* CC::ge */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(oge),  %0(s64), %1
@@ -1006,13 +1006,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_olt_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 4, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 4 /* CC::mi */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(olt),  %0(s64), %1
@@ -1037,13 +1037,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ole_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 9, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 9 /* CC::ls */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(ole),  %0(s64), %1
@@ -1068,13 +1068,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ord_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 7, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 7 /* CC::vc */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(ord),  %0(s64), %1
@@ -1099,13 +1099,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ugt_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 8, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 8 /* CC::hi */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(ugt),  %0(s64), %1
@@ -1130,13 +1130,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_uge_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 5, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 5 /* CC::pl */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(uge),  %0(s64), %1
@@ -1161,13 +1161,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ult_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 11, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 11 /* CC::lt */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(ult),  %0(s64), %1
@@ -1192,13 +1192,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ule_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 13, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 13 /* CC::le */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(ule),  %0(s64), %1
@@ -1223,13 +1223,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_une_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 1, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 1 /* CC::ne */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(une),  %0(s64), %1
@@ -1254,13 +1254,13 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_uno_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 6, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 6 /* CC::vs */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(uno),  %0(s64), %1
@@ -1285,16 +1285,16 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_one_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12, $cpsr
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 4, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12 /* CC::gt */, $cpsr
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 4 /* CC::mi */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(one),  %0(s64), %1
@@ -1319,16 +1319,16 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_ueq_s64
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, $noreg, $noreg
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0, $cpsr
-    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, $noreg, implicit-def $fpscr_nzcv
-    ; CHECK: FMSTAT 14, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
-    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 6, $cpsr
-    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14, $noreg, $noreg
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0 /* CC::eq */, $cpsr
+    ; CHECK: VCMPD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    ; CHECK: FMSTAT 14 /* CC::al */, $noreg, implicit-def $cpsr, implicit $fpscr_nzcv
+    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 6 /* CC::vs */, $cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s64) = COPY $d0
     %1(s64) = COPY $d1
     %2(s1) = G_FCMP floatpred(ueq),  %0(s64), %1

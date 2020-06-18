@@ -310,7 +310,7 @@ Symbolizer *Symbolizer::PlatformInit() {
 }
 
 void Symbolizer::LateInitialize() {
-  Symbolizer::GetOrInit();
+  Symbolizer::GetOrInit()->LateInitializeTools();
 }
 
 }  // namespace __sanitizer

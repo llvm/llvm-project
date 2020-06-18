@@ -76,13 +76,3 @@ void PersistentExpressionState::RegisterExecutionUnit(
     }
   }
 }
-
-ConstString PersistentExpressionState::GetNextPersistentVariableName(
-    Target &target, llvm::StringRef Prefix) {
-  llvm::SmallString<64> name;
-  {
-    llvm::raw_svector_ostream os(name);
-    os << Prefix << target.GetNextPersistentVariableIndex();
-  }
-  return ConstString(name);
-}

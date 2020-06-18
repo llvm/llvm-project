@@ -1,5 +1,6 @@
-// RUN: %clang_tsan %s -o %t
-// RUN: %clang_tsan %s -DBUILD_SO -fPIC -o %t-so.so -shared
+// RUN: %clang_tsan %darwin_min_target_with_tls_support %s -o %t
+// RUN: %clang_tsan %darwin_min_target_with_tls_support %s -DBUILD_SO -fPIC -o \
+// RUN:   %t-so.so -shared
 // RUN: %run %t 2>&1 | FileCheck %s
 // XFAIL: netbsd
 

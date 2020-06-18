@@ -19,29 +19,27 @@ namespace bugprone {
 void IntegerDivisionCheck::registerMatchers(MatchFinder *Finder) {
   const auto IntType = hasType(isInteger());
 
-  const auto BinaryOperators = binaryOperator(anyOf(
-      hasOperatorName("%"), hasOperatorName("<<"), hasOperatorName(">>"),
-      hasOperatorName("<<"), hasOperatorName("^"), hasOperatorName("|"),
-      hasOperatorName("&"), hasOperatorName("||"), hasOperatorName("&&"),
-      hasOperatorName("<"), hasOperatorName(">"), hasOperatorName("<="),
-      hasOperatorName(">="), hasOperatorName("=="), hasOperatorName("!=")));
+  const auto BinaryOperators = binaryOperator(
+      hasAnyOperatorName("%", "<<", ">>", "<<", "^", "|", "&", "||", "&&", "<",
+                         ">", "<=", ">=", "==", "!="));
 
-  const auto UnaryOperators =
-      unaryOperator(anyOf(hasOperatorName("~"), hasOperatorName("!")));
+  const auto UnaryOperators = unaryOperator(hasAnyOperatorName("~", "!"));
 
   const auto Exceptions =
       anyOf(BinaryOperators, conditionalOperator(), binaryConditionalOperator(),
             callExpr(IntType), explicitCastExpr(IntType), UnaryOperators);
 
   Finder->addMatcher(
-      binaryOperator(
-          hasOperatorName("/"), hasLHS(expr(IntType)), hasRHS(expr(IntType)),
-          hasAncestor(
-              castExpr(hasCastKind(CK_IntegralToFloating)).bind("FloatCast")),
-          unless(hasAncestor(
-              expr(Exceptions,
-                   hasAncestor(castExpr(equalsBoundNode("FloatCast")))))))
-          .bind("IntDiv"),
+      traverse(ast_type_traits::TK_AsIs,
+               binaryOperator(
+                   hasOperatorName("/"), hasLHS(expr(IntType)),
+                   hasRHS(expr(IntType)),
+                   hasAncestor(castExpr(hasCastKind(CK_IntegralToFloating))
+                                   .bind("FloatCast")),
+                   unless(hasAncestor(expr(
+                       Exceptions,
+                       hasAncestor(castExpr(equalsBoundNode("FloatCast")))))))
+                   .bind("IntDiv")),
       this);
 }
 

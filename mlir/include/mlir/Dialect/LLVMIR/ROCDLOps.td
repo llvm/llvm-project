@@ -14,6 +14,7 @@
 #define ROCDLIR_OPS
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // ROCDL dialect definitions
@@ -86,5 +87,99 @@ def ROCDL_GridDimYOp : ROCDL_DeviceFunctionOp<"grid.dim.y",
 def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
                                                "__ockl_get_global_size", 2>;
 
+//===----------------------------------------------------------------------===//
+// Synchronization primitives
+
+def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
+  string llvmBuilder = [{
+    llvm::LLVMContext &llvmContext = builder.getContext();
+    builder.CreateFence(llvm::AtomicOrdering::Release,
+                        llvmContext.getOrInsertSyncScopeID("workgroup"));
+    createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_barrier);
+    builder.CreateFence(llvm::AtomicOrdering::Acquire,
+                        llvmContext.getOrInsertSyncScopeID("workgroup"));
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+//===---------------------------------------------------------------------===//
+// Xdlops intrinsics
+
+class ROCDL_Mfma_IntrOp<string mnemonic, list<OpTrait> traits = []> :
+  LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
+                  "amdgcn_" # !subst(".","_", mnemonic),
+                  [], [], traits, 1>,
+  Arguments<(ins Variadic<LLVM_Type>:$args)> {
+  let assemblyFormat =
+    "$args attr-dict `:` functional-type($args, $res)";
+}
+
+def ROCDL_mfma_f32_32x32x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x1f32">;
+def ROCDL_mfma_f32_32x32x2f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2f32">;
+def ROCDL_mfma_f32_16x16x4f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f32">;
+def ROCDL_mfma_f32_16x16x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x1f32">;
+def ROCDL_mfma_f32_32x32x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4f16">;
+def ROCDL_mfma_f32_32x32x8f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8f16">;
+def ROCDL_mfma_f32_16x16x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f16">;
+def ROCDL_mfma_f32_16x16x16f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16f16">;
+def ROCDL_mfma_f32_32x32x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2bf16">;
+def ROCDL_mfma_f32_32x32x4bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4bf16">;
+def ROCDL_mfma_f32_16x16x8bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x8bf16">;
+def ROCDL_mfma_f32_16x16x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x2bf16">;
+def ROCDL_mfma_f32_4x4x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x2bf16">;
+def ROCDL_mfma_f32_4x4x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x1f32">;
+def ROCDL_mfma_f32_4x4x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x4f16">;
+def ROCDL_mfma_i32_32x32x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x4i8">;
+def ROCDL_mfma_i32_16x16x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x4i8">;
+def ROCDL_mfma_i32_4x4x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.4x4x4i8">;
+def ROCDL_mfma_i32_32x32x8i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x8i8">;
+def ROCDL_mfma_i32_16x16x16i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x16i8">;
+
+//===---------------------------------------------------------------------===//
+// Vector buffer load/store intrinsics
+
+def ROCDL_MubufLoadOp :
+  ROCDL_Op<"buffer.load">, 
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_Type:$rsrc,
+                 LLVM_Type:$vindex,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$glc,
+                 LLVM_Type:$slc)>{
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_buffer_load, {$rsrc, $vindex, $offset, $glc, 
+          $slc}, {$_resultType});
+  }];
+  let parser = [{ return parseROCDLMubufLoadOp(parser, result); }];
+  let printer = [{ 
+    Operation *op = this->getOperation();
+    p << op->getName() << " " << op->getOperands()
+      << " : " << op->getResultTypes();
+  }];
+}
+
+def ROCDL_MubufStoreOp :
+  ROCDL_Op<"buffer.store">, 
+  Arguments<(ins LLVM_Type:$vdata,
+                 LLVM_Type:$rsrc,
+                 LLVM_Type:$vindex,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$glc,
+                 LLVM_Type:$slc)>{
+  string llvmBuilder = [{
+    auto vdataType = op.vdata().getType().cast<LLVM::LLVMType>()
+                       .getUnderlyingType();
+    createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex, 
+          $offset, $glc, $slc}, {vdataType});
+  }];
+  let parser = [{ return parseROCDLMubufStoreOp(parser, result); }];
+  let printer = [{ 
+    Operation *op = this->getOperation();
+    p << op->getName() << " " << op->getOperands()
+      << " : " << vdata().getType();
+  }];
+}
 
 #endif // ROCDLIR_OPS

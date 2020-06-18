@@ -15,8 +15,8 @@
 // Make sure we abort() when exceptions are disabled and we fetch a key that
 // is not in the map.
 
-// REQUIRES: libcpp-no-exceptions
-// UNSUPPORTED: c++98, c++03
+// REQUIRES: no-exceptions
+// UNSUPPORTED: c++03
 
 #include <csignal>
 #include <cstdlib>

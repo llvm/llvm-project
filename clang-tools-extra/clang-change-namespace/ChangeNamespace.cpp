@@ -832,7 +832,7 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
       std::string AliasName = NamespaceAlias->getNameAsString();
       std::string AliasQualifiedName =
           NamespaceAlias->getQualifiedNameAsString();
-      // We only consider namespace aliases define in the global namepspace or
+      // We only consider namespace aliases define in the global namespace or
       // in namespaces that are directly visible from the reference, i.e.
       // ancestor of the `OldNs`. Note that declarations in ancestor namespaces
       // but not visible in the new namespace is filtered out by

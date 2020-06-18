@@ -58,7 +58,7 @@ body: |
 ---
 
 # GCN-LABEL: name: dead_illegal_physreg_copy
-# GCN %2:vgpr_32 = COPY $vgpr0
+# GCN: %2:vgpr_32 = COPY $vgpr0
 # GCN: %1:sreg_32_xm0 = IMPLICIT_DEF
 # GCN: S_ENDPGM 0, implicit %2
 

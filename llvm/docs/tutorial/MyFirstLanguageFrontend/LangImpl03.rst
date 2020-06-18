@@ -20,7 +20,7 @@ later. LLVM 3.6 and before will not work with it. Also note that you
 need to use a version of this tutorial that matches your LLVM release:
 If you are using an official LLVM release, use the version of the
 documentation included with your release or on the `llvm.org releases
-page <http://llvm.org/releases/>`_.
+page <https://llvm.org/releases/>`_.
 
 Code Generation Setup
 =====================
@@ -90,7 +90,7 @@ detail, we just need a single instance to pass into APIs that require it.
 
 The ``Builder`` object is a helper object that makes it easy to generate
 LLVM instructions. Instances of the
-`IRBuilder <http://llvm.org/doxygen/IRBuilder_8h-source.html>`_
+`IRBuilder <https://llvm.org/doxygen/IRBuilder_8h-source.html>`_
 class template keep track of the current place to insert instructions
 and has methods to create new instructions.
 
@@ -549,7 +549,7 @@ Full Code Listing
 Here is the complete code listing for our running example, enhanced with
 the LLVM code generator. Because this uses the LLVM libraries, we need
 to link them in. To do this, we use the
-`llvm-config <http://llvm.org/cmds/llvm-config.html>`_ tool to inform
+`llvm-config <https://llvm.org/cmds/llvm-config.html>`_ tool to inform
 our makefile/command line about which options to use:
 
 .. code-block:: bash

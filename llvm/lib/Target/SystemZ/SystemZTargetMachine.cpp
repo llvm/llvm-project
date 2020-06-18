@@ -222,6 +222,7 @@ public:
   void addIRPasses() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
+  void addPreRegAlloc() override;
   void addPostRewrite() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
@@ -251,6 +252,10 @@ bool SystemZPassConfig::addInstSelector() {
 bool SystemZPassConfig::addILPOpts() {
   addPass(&EarlyIfConverterID);
   return true;
+}
+
+void SystemZPassConfig::addPreRegAlloc() {
+  addPass(createSystemZCopyPhysRegsPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPostRewrite() {

@@ -386,7 +386,7 @@ DWARF:
 #CHECK:     - N
 #CHECK:     - t
 #CHECK:   debug_abbrev:    
-#CHECK:     - Code:            0x00000001
+#CHECK:     - Code:            0x0000000000000001
 #CHECK:       Tag:             DW_TAG_compile_unit
 #CHECK:       Children:        DW_CHILDREN_yes
 #CHECK:       Attributes:      
@@ -404,7 +404,7 @@ DWARF:
 #CHECK:           Form:            DW_FORM_addr
 #CHECK:         - Attribute:       DW_AT_high_pc
 #CHECK:           Form:            DW_FORM_data4
-#CHECK:     - Code:            0x00000002
+#CHECK:     - Code:            0x0000000000000002
 #CHECK:       Tag:             DW_TAG_base_type
 #CHECK:       Children:        DW_CHILDREN_no
 #CHECK:       Attributes:      
@@ -414,7 +414,7 @@ DWARF:
 #CHECK:           Form:            DW_FORM_data1
 #CHECK:         - Attribute:       DW_AT_byte_size
 #CHECK:           Form:            DW_FORM_data1
-#CHECK:     - Code:            0x00000003
+#CHECK:     - Code:            0x0000000000000003
 #CHECK:       Tag:             DW_TAG_typedef
 #CHECK:       Children:        DW_CHILDREN_no
 #CHECK:       Attributes:      
@@ -426,7 +426,7 @@ DWARF:
 #CHECK:           Form:            DW_FORM_data1
 #CHECK:         - Attribute:       DW_AT_decl_line
 #CHECK:           Form:            DW_FORM_data1
-#CHECK:     - Code:            0x00000004
+#CHECK:     - Code:            0x0000000000000004
 #CHECK:       Tag:             DW_TAG_subprogram
 #CHECK:       Children:        DW_CHILDREN_yes
 #CHECK:       Attributes:      
@@ -448,7 +448,7 @@ DWARF:
 #CHECK:           Form:            DW_FORM_ref4
 #CHECK:         - Attribute:       DW_AT_external
 #CHECK:           Form:            DW_FORM_flag_present
-#CHECK:     - Code:            0x00000005
+#CHECK:     - Code:            0x0000000000000005
 #CHECK:       Tag:             DW_TAG_formal_parameter
 #CHECK:       Children:        DW_CHILDREN_no
 #CHECK:       Attributes:      
@@ -462,7 +462,7 @@ DWARF:
 #CHECK:           Form:            DW_FORM_data1
 #CHECK:         - Attribute:       DW_AT_type
 #CHECK:           Form:            DW_FORM_ref4
-#CHECK:     - Code:            0x00000006
+#CHECK:     - Code:            0x0000000000000006
 #CHECK:       Tag:             DW_TAG_variable
 #CHECK:       Children:        DW_CHILDREN_no
 #CHECK:       Attributes:      
@@ -476,7 +476,7 @@ DWARF:
 #CHECK:           Form:            DW_FORM_data1
 #CHECK:         - Attribute:       DW_AT_type
 #CHECK:           Form:            DW_FORM_ref4
-#CHECK:     - Code:            0x00000007
+#CHECK:     - Code:            0x0000000000000007
 #CHECK:       Tag:             DW_TAG_const_type
 #CHECK:       Children:        DW_CHILDREN_no
 #CHECK:       Attributes:      

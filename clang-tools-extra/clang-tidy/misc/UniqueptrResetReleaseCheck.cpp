@@ -17,11 +17,6 @@ namespace tidy {
 namespace misc {
 
 void UniqueptrResetReleaseCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++11; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   Finder->addMatcher(
       cxxMemberCallExpr(
           on(expr().bind("left")), callee(memberExpr().bind("reset_member")),

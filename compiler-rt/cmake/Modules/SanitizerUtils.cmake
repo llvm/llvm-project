@@ -34,7 +34,7 @@ macro(add_sanitizer_rt_symbols name)
       list(APPEND extra_args "--extra" ${arg})
     endforeach()
     add_custom_command(OUTPUT ${stamp}
-      COMMAND ${PYTHON_EXECUTABLE}
+      COMMAND ${Python3_EXECUTABLE}
         ${SANITIZER_GEN_DYNAMIC_LIST} ${extra_args} $<TARGET_FILE:${target_name}>
         --nm-executable "${SANITIZER_NM}" -o $<TARGET_FILE:${target_name}>.syms
       COMMAND ${CMAKE_COMMAND} -E touch ${stamp}
@@ -84,7 +84,7 @@ macro(add_sanitizer_rt_version_list name)
     list(APPEND args "$<TARGET_FILE:${arg}>")
   endforeach()
   add_custom_command(OUTPUT ${vers}
-    COMMAND ${PYTHON_EXECUTABLE}
+    COMMAND ${Python3_EXECUTABLE}
       ${SANITIZER_GEN_DYNAMIC_LIST} --version-list ${args}
       --nm-executable "${SANITIZER_NM}" -o ${vers}
     DEPENDS ${SANITIZER_GEN_DYNAMIC_LIST} ${ARG_EXTRA} ${ARG_LIBS}
@@ -100,7 +100,7 @@ endmacro()
 if(CMAKE_HOST_UNIX AND NOT OS_NAME MATCHES "OpenBSD")
   add_custom_target(SanitizerLintCheck
     COMMAND env LLVM_CHECKOUT=${LLVM_MAIN_SRC_DIR} SILENT=1 TMPDIR=
-      PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}
+      PYTHON_EXECUTABLE=${Python3_EXECUTABLE}
       COMPILER_RT=${COMPILER_RT_SOURCE_DIR}
       ${SANITIZER_LINT_SCRIPT}
     DEPENDS ${SANITIZER_LINT_SCRIPT}

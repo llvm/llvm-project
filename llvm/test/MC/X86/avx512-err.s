@@ -14,3 +14,9 @@ cvtsd2sil  {rn-sae}, %xmm1, %eax
 
 // ERR: Expected an identifier after {
 cvtsd2sil  {{sae}, %xmm1, %eax
+
+// ERR: invalid instruction mnemonic 'vpmuld'
+vpmuld %xmm1, %xmm2, %xmm3
+
+// ERR: invalid instruction mnemonic 'maskmov'
+maskmov %mm1, %mm2

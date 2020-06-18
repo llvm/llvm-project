@@ -69,7 +69,7 @@ define amdgpu_kernel void @bitcast_int_to_fpvector_extract_0(float addrspace(1)*
 ; GCN-LABEL: bitcast_int_to_fpvector_extract_0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0xd
+; GCN-NEXT:    s_load_dword s12, s[0:1], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s10, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -77,7 +77,7 @@ define amdgpu_kernel void @bitcast_int_to_fpvector_extract_0(float addrspace(1)*
 ; GCN-NEXT:    s_mov_b32 s11, s3
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b64 s[8:9], s[6:7]
-; GCN-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[8:11], 0 addr64
+; GCN-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_mov_b32 s0, s4
 ; GCN-NEXT:    s_mov_b32 s1, s5

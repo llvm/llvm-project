@@ -5,10 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: clang-5, clang-6, clang-7
-// UNSUPPORTED: apple-clang-6, apple-clang-7, apple-clang-8, apple-clang-9
-// UNSUPPORTED: apple-clang-10.0.0
+// UNSUPPORTED: apple-clang-9, apple-clang-10
 
 // <chrono>
 // class year;

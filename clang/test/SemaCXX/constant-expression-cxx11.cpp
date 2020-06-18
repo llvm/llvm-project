@@ -600,6 +600,10 @@ namespace CopyCtor {
   constexpr B c = b;
   static_assert(c.arr[2] == 3, "");
   static_assert(c.arr[7] == 0, "");
+
+  // OK: the copy ctor for X doesn't read any members.
+  struct X { struct Y {} y; } x1;
+  constexpr X x2 = x1;
 }
 
 constexpr int selfref[2][2][2] = {
@@ -874,8 +878,8 @@ static_assert((Derived*)(Base*)pb1 == (Derived*)pok2, "");
 constexpr Base *nullB = 42 - 6 * 7; // expected-error {{cannot initialize a variable of type 'Class::Base *const' with an rvalue of type 'int'}}
 constexpr Base *nullB1 = 0;
 static_assert((Bottom*)nullB == 0, "");
-static_assert((Derived*)nullB == 0, "");
-static_assert((void*)(Bottom*)nullB == (void*)(Derived*)nullB, "");
+static_assert((Derived*)nullB1 == 0, "");
+static_assert((void*)(Bottom*)nullB1 == (void*)(Derived*)nullB1, "");
 Base *nullB2 = '\0'; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'char'}}
 Base *nullB3 = (0);
 Base *nullB4 = false; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'bool'}}
@@ -2042,9 +2046,9 @@ namespace BadDefaultInit {
   // FIXME: The "constexpr constructor must initialize all members" diagnostic
   // here is bogus (we discard the k(k) initializer because the parameter 'k'
   // has been marked invalid).
-  struct B { // expected-note 2{{candidate}}
-    constexpr B( // expected-warning {{initialize all members}} expected-note {{candidate}}
-        int k = X<B().k>::n) : // expected-error {{no matching constructor}}
+  struct B {
+    constexpr B( // expected-warning {{initialize all members}}
+        int k = X<B().k>::n) : // expected-error {{default argument to function 'B' that is declared later}} expected-note {{here}}
       k(k) {}
     int k; // expected-note {{not initialized}}
   };

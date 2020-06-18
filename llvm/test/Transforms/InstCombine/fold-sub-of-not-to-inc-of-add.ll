@@ -13,8 +13,8 @@
 
 define i32 @p0_scalar(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p0_scalar(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = add i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[T0_NEG:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[T0_NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[T1]]
 ;
   %t0 = xor i32 %x, -1
@@ -28,8 +28,8 @@ define i32 @p0_scalar(i32 %x, i32 %y) {
 
 define <4 x i32> @p1_vector_splat(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @p1_vector_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[Y:%.*]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[T0_NEG:%.*]] = add <4 x i32> [[X:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[T0_NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T1]]
 ;
   %t0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -39,8 +39,8 @@ define <4 x i32> @p1_vector_splat(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @p2_vector_undef(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @p2_vector_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[Y:%.*]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[T0_NEG:%.*]] = add <4 x i32> [[X:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[T0_NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T1]]
 ;
   %t0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 undef, i32 -1>
@@ -85,8 +85,8 @@ define i32 @n4(i32 %x, i32 %y) {
 
 define i32 @n5_is_not_not(i32 %x, i32 %y) {
 ; CHECK-LABEL: @n5_is_not_not(
-; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], 2147483647
-; CHECK-NEXT:    [[T1:%.*]] = sub i32 [[Y:%.*]], [[T0]]
+; CHECK-NEXT:    [[T0_NEG:%.*]] = add i32 [[X:%.*]], -2147483647
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[T0_NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[T1]]
 ;
   %t0 = xor i32 %x, 2147483647 ; not -1

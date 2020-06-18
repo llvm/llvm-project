@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // Verify TEST_WORKAROUND_C1XX_BROKEN_IS_TRIVIALLY_COPYABLE.
 

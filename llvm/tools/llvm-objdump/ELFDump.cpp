@@ -11,6 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "ELFDump.h"
+
 #include "llvm-objdump.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -18,9 +20,10 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
+using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::objdump;
 
-namespace llvm {
 template <class ELFT>
 static Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> *Elf) {
   auto DynamicEntriesOrError = Elf->dynamicEntries();
@@ -116,9 +119,9 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   return Error::success();
 }
 
-Error getELFRelocationValueString(const ELFObjectFileBase *Obj,
-                                  const RelocationRef &Rel,
-                                  SmallVectorImpl<char> &Result) {
+Error objdump::getELFRelocationValueString(const ELFObjectFileBase *Obj,
+                                           const RelocationRef &Rel,
+                                           SmallVectorImpl<char> &Result) {
   if (auto *ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj))
     return getRelocationValueString(ELF32LE, Rel, Result);
   if (auto *ELF64LE = dyn_cast<ELF64LEObjectFile>(Obj))
@@ -147,7 +150,7 @@ static uint64_t getSectionLMA(const ELFFile<ELFT> *Obj,
   return Sec.getAddress();
 }
 
-uint64_t getELFSectionLMA(const object::ELFSectionRef &Sec) {
+uint64_t objdump::getELFSectionLMA(const object::ELFSectionRef &Sec) {
   if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Sec.getObject()))
     return getSectionLMA(ELFObj->getELFFile(), Sec);
   else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Sec.getObject()))
@@ -159,7 +162,7 @@ uint64_t getELFSectionLMA(const object::ELFSectionRef &Sec) {
 }
 
 template <class ELFT>
-void printDynamicSection(const ELFFile<ELFT> *Elf, StringRef Filename) {
+static void printDynamicSection(const ELFFile<ELFT> *Elf, StringRef Filename) {
   ArrayRef<typename ELFT::Dyn> DynamicEntries =
       unwrapOrError(Elf->dynamicEntries(), Filename);
 
@@ -195,7 +198,7 @@ void printDynamicSection(const ELFFile<ELFT> *Elf, StringRef Filename) {
   }
 }
 
-template <class ELFT> void printProgramHeaders(const ELFFile<ELFT> *o) {
+template <class ELFT> static void printProgramHeaders(const ELFFile<ELFT> *o) {
   outs() << "Program Header:\n";
   auto ProgramHeaderOrError = o->program_headers();
   if (!ProgramHeaderOrError)
@@ -262,8 +265,8 @@ template <class ELFT> void printProgramHeaders(const ELFFile<ELFT> *o) {
 }
 
 template <class ELFT>
-void printSymbolVersionDependency(ArrayRef<uint8_t> Contents,
-                                  StringRef StrTab) {
+static void printSymbolVersionDependency(ArrayRef<uint8_t> Contents,
+                                         StringRef StrTab) {
   outs() << "Version References:\n";
 
   const uint8_t *Buf = Contents.data();
@@ -287,9 +290,9 @@ void printSymbolVersionDependency(ArrayRef<uint8_t> Contents,
 }
 
 template <class ELFT>
-void printSymbolVersionDefinition(const typename ELFT::Shdr &Shdr,
-                                  ArrayRef<uint8_t> Contents,
-                                  StringRef StrTab) {
+static void printSymbolVersionDefinition(const typename ELFT::Shdr &Shdr,
+                                         ArrayRef<uint8_t> Contents,
+                                         StringRef StrTab) {
   outs() << "Version definitions:\n";
 
   const uint8_t *Buf = Contents.data();
@@ -319,7 +322,8 @@ void printSymbolVersionDefinition(const typename ELFT::Shdr &Shdr,
 }
 
 template <class ELFT>
-void printSymbolVersionInfo(const ELFFile<ELFT> *Elf, StringRef FileName) {
+static void printSymbolVersionInfo(const ELFFile<ELFT> *Elf,
+                                   StringRef FileName) {
   ArrayRef<typename ELFT::Shdr> Sections =
       unwrapOrError(Elf->sections(), FileName);
   for (const typename ELFT::Shdr &Shdr : Sections) {
@@ -340,7 +344,7 @@ void printSymbolVersionInfo(const ELFFile<ELFT> *Elf, StringRef FileName) {
   }
 }
 
-void printELFFileHeader(const object::ObjectFile *Obj) {
+void objdump::printELFFileHeader(const object::ObjectFile *Obj) {
   if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
     printProgramHeaders(ELFObj->getELFFile());
   else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
@@ -351,7 +355,7 @@ void printELFFileHeader(const object::ObjectFile *Obj) {
     printProgramHeaders(ELFObj->getELFFile());
 }
 
-void printELFDynamicSection(const object::ObjectFile *Obj) {
+void objdump::printELFDynamicSection(const object::ObjectFile *Obj) {
   if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
     printDynamicSection(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
@@ -362,7 +366,7 @@ void printELFDynamicSection(const object::ObjectFile *Obj) {
     printDynamicSection(ELFObj->getELFFile(), Obj->getFileName());
 }
 
-void printELFSymbolVersionInfo(const object::ObjectFile *Obj) {
+void objdump::printELFSymbolVersionInfo(const object::ObjectFile *Obj) {
   if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
     printSymbolVersionInfo(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
@@ -372,4 +376,3 @@ void printELFSymbolVersionInfo(const object::ObjectFile *Obj) {
   else if (const auto *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
     printSymbolVersionInfo(ELFObj->getELFFile(), Obj->getFileName());
 }
-} // namespace llvm

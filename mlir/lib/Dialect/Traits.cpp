@@ -202,7 +202,7 @@ LogicalResult OpTrait::impl::verifyCompatibleOperandBroadcast(Operation *op) {
   auto rankedResults = make_filter_range(
       op->getResultTypes(), [](Type t) { return t.isa<RankedTensorType>(); });
 
-  // If all of the results are unranked then no further verfication.
+  // If all of the results are unranked then no further verification.
   if (rankedResults.empty())
     return success();
 

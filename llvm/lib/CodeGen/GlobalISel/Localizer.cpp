@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 
@@ -40,60 +41,6 @@ void Localizer::init(MachineFunction &MF) {
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(MF.getFunction());
 }
 
-bool Localizer::shouldLocalize(const MachineInstr &MI) {
-  // Assuming a spill and reload of a value has a cost of 1 instruction each,
-  // this helper function computes the maximum number of uses we should consider
-  // for remat. E.g. on arm64 global addresses take 2 insts to materialize. We
-  // break even in terms of code size when the original MI has 2 users vs
-  // choosing to potentially spill. Any more than 2 users we we have a net code
-  // size increase. This doesn't take into account register pressure though.
-  auto maxUses = [](unsigned RematCost) {
-    // A cost of 1 means remats are basically free.
-    if (RematCost == 1)
-      return UINT_MAX;
-    if (RematCost == 2)
-      return 2U;
-
-    // Remat is too expensive, only sink if there's one user.
-    if (RematCost > 2)
-      return 1U;
-    llvm_unreachable("Unexpected remat cost");
-  };
-
-  // Helper to walk through uses and terminate if we've reached a limit. Saves
-  // us spending time traversing uses if all we want to know is if it's >= min.
-  auto isUsesAtMost = [&](unsigned Reg, unsigned MaxUses) {
-    unsigned NumUses = 0;
-    auto UI = MRI->use_instr_nodbg_begin(Reg), UE = MRI->use_instr_nodbg_end();
-    for (; UI != UE && NumUses < MaxUses; ++UI) {
-      NumUses++;
-    }
-    // If we haven't reached the end yet then there are more than MaxUses users.
-    return UI == UE;
-  };
-
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-  // Constants-like instructions should be close to their users.
-  // We don't want long live-ranges for them.
-  case TargetOpcode::G_CONSTANT:
-  case TargetOpcode::G_FCONSTANT:
-  case TargetOpcode::G_FRAME_INDEX:
-  case TargetOpcode::G_INTTOPTR:
-    return true;
-  case TargetOpcode::G_GLOBAL_VALUE: {
-    unsigned RematCost = TTI->getGISelRematGlobalCost();
-    Register Reg = MI.getOperand(0).getReg();
-    unsigned MaxUses = maxUses(RematCost);
-    if (MaxUses == UINT_MAX)
-      return true; // Remats are "free" so always localize.
-    bool B = isUsesAtMost(Reg, MaxUses);
-    return B;
-  }
-  }
-}
-
 void Localizer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -119,9 +66,10 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
   // we only localize instructions in the entry block here. This might change if
   // we start doing CSE across blocks.
   auto &MBB = MF.front();
+  auto &TL = *MF.getSubtarget().getTargetLowering();
   for (auto RI = MBB.rbegin(), RE = MBB.rend(); RI != RE; ++RI) {
     MachineInstr &MI = *RI;
-    if (!shouldLocalize(MI))
+    if (!TL.shouldLocalize(MI, TTI))
       continue;
     LLVM_DEBUG(dbgs() << "Should localize: " << MI);
     assert(MI.getDesc().getNumDefs() == 1 &&
@@ -138,8 +86,13 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
       LLVM_DEBUG(MachineInstr &MIUse = *MOUse.getParent();
                  dbgs() << "Checking use: " << MIUse
                         << " #Opd: " << MIUse.getOperandNo(&MOUse) << '\n');
-      if (isLocalUse(MOUse, MI, InsertMBB))
+      if (isLocalUse(MOUse, MI, InsertMBB)) {
+        // Even if we're in the same block, if the block is very large we could
+        // still have many long live ranges. Try to do intra-block localization
+        // too.
+        LocalizedInstrs.insert(&MI);
         continue;
+      }
       LLVM_DEBUG(dbgs() << "Fixing non-local use\n");
       Changed = true;
       auto MBBAndReg = std::make_pair(InsertMBB, Reg);

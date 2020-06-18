@@ -1,7 +1,9 @@
-This directory contains re-implementations of some C++ standard library as well
-as some LLVM utilities. These are to be used with internal LLVM libc code and
-tests. More utilities will be added on an as needed basis. There are certain
-rules to be followed for future changes and additions:
+This directory contains re-implementations of some C++ standard library
+utilities, as well as some LLVM utilities. These utilities are for use with
+internal LLVM libc code and tests.
+
+More utilities will be added on an as needed basis. There are certain rules to
+be followed for future changes and additions:
 
 1. Only two kind of headers can be included: Other headers from this directory,
 and free standing C headers.

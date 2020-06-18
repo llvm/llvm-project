@@ -34,19 +34,15 @@ private:
         .Default(invalid);
   }
 
-  static unsigned getIndexBitWidth(LLVMTypeConverter &type_converter) {
-    auto dialect = type_converter.getDialect();
-    return dialect->getLLVMModule().getDataLayout().getPointerSizeInBits();
-  }
-
 public:
-  explicit GPUIndexIntrinsicOpLowering(LLVMTypeConverter &lowering_)
+  explicit GPUIndexIntrinsicOpLowering(LLVMTypeConverter &typeConverter)
       : ConvertToLLVMPattern(Op::getOperationName(),
-                             lowering_.getDialect()->getContext(), lowering_),
-        indexBitwidth(getIndexBitWidth(lowering_)) {}
+                             typeConverter.getDialect()->getContext(),
+                             typeConverter),
+        indexBitwidth(typeConverter.getIndexTypeBitwidth()) {}
 
   // Convert the kernel arguments to an LLVM type, preserve the rest.
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
@@ -63,7 +59,7 @@ public:
       newOp = rewriter.create<ZOp>(loc, LLVM::LLVMType::getInt32Ty(dialect));
       break;
     default:
-      return matchFailure();
+      return failure();
     }
 
     if (indexBitwidth > 32) {
@@ -75,7 +71,7 @@ public:
     }
 
     rewriter.replaceOp(op, {newOp});
-    return matchSuccess();
+    return success();
   }
 };
 

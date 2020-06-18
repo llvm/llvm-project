@@ -16,13 +16,18 @@
 #define LLVM_ANALYSIS_LEGACY_DIVERGENCE_ANALYSIS_H
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Pass.h"
+#include <memory>
 
 namespace llvm {
-class Value;
 class Function;
 class GPUDivergenceAnalysis;
+class Module;
+class raw_ostream;
+class TargetTransformInfo;
+class Use;
+class Value;
+
 class LegacyDivergenceAnalysis : public FunctionPass {
 public:
   static char ID;

@@ -23,6 +23,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/lldb-private-forward.h"
@@ -32,8 +33,8 @@
 namespace lldb_private {
 
 class ProcessInstanceInfo;
-class ProcessInstanceInfoList;
 class ProcessInstanceInfoMatch;
+typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
 
 class ModuleCache;
 enum MmapFlags { eMmapFlagsPrivate = 1, eMmapFlagsAnon = 2 };
@@ -49,6 +50,9 @@ public:
 
   FileSpec GetModuleCacheDirectory() const;
   bool SetModuleCacheDirectory(const FileSpec &dir_spec);
+
+private:
+  void SetDefaultModuleCacheDirectory(const FileSpec &dir_spec);
 };
 
 typedef std::shared_ptr<PlatformProperties> PlatformPropertiesSP;
@@ -823,6 +827,26 @@ public:
   virtual size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
                                            lldb_private::Status &error);
 
+  /// Gather all of crash informations into a structured data dictionary.
+  ///
+  /// If the platform have a crashed process with crash information entries,
+  /// gather all the entries into an structured data dictionary or return a
+  /// nullptr. This dictionary is generic and extensible, as it contains an
+  /// array for each different type of crash information.
+  ///
+  /// \param[in] process
+  ///     The crashed process.
+  ///
+  /// \return
+  ///     A structured data dictionary containing at each entry, the crash
+  ///     information type as the entry key and the matching  an array as the
+  ///     entry value. \b nullptr if not implemented or  if the process has no
+  ///     crash information entry. \b error if an error occured.
+  virtual llvm::Expected<StructuredData::DictionarySP>
+  FetchExtendedCrashInformation(lldb_private::Process &process) {
+    return nullptr;
+  }
+
 protected:
   bool m_is_host;
   // Set to true when we are able to actually set the OS version while being
@@ -904,7 +928,8 @@ private:
 
   FileSpec GetModuleCacheRoot();
 
-  DISALLOW_COPY_AND_ASSIGN(Platform);
+  Platform(const Platform &) = delete;
+  const Platform &operator=(const Platform &) = delete;
 };
 
 class PlatformList {
@@ -971,7 +996,8 @@ protected:
   lldb::PlatformSP m_selected_platform_sp;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformList);
+  PlatformList(const PlatformList &) = delete;
+  const PlatformList &operator=(const PlatformList &) = delete;
 };
 
 class OptionGroupPlatformRSync : public lldb_private::OptionGroup {
@@ -996,7 +1022,9 @@ public:
   bool m_ignores_remote_hostname;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(OptionGroupPlatformRSync);
+  OptionGroupPlatformRSync(const OptionGroupPlatformRSync &) = delete;
+  const OptionGroupPlatformRSync &
+  operator=(const OptionGroupPlatformRSync &) = delete;
 };
 
 class OptionGroupPlatformSSH : public lldb_private::OptionGroup {
@@ -1019,7 +1047,9 @@ public:
   std::string m_ssh_opts;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(OptionGroupPlatformSSH);
+  OptionGroupPlatformSSH(const OptionGroupPlatformSSH &) = delete;
+  const OptionGroupPlatformSSH &
+  operator=(const OptionGroupPlatformSSH &) = delete;
 };
 
 class OptionGroupPlatformCaching : public lldb_private::OptionGroup {
@@ -1041,7 +1071,9 @@ public:
   std::string m_cache_dir;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(OptionGroupPlatformCaching);
+  OptionGroupPlatformCaching(const OptionGroupPlatformCaching &) = delete;
+  const OptionGroupPlatformCaching &
+  operator=(const OptionGroupPlatformCaching &) = delete;
 };
 
 } // namespace lldb_private

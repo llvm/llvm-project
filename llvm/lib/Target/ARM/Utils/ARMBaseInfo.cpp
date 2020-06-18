@@ -15,6 +15,37 @@
 
 using namespace llvm;
 namespace llvm {
+ARM::PredBlockMask expandPredBlockMask(ARM::PredBlockMask BlockMask,
+                                       ARMVCC::VPTCodes Kind) {
+  using PredBlockMask = ARM::PredBlockMask;
+  assert(Kind != ARMVCC::None && "Cannot expand a mask with None!");
+  assert(countTrailingZeros((unsigned)BlockMask) != 0 &&
+         "Mask is already full");
+
+  auto ChooseMask = [&](PredBlockMask AddedThen, PredBlockMask AddedElse) {
+    return Kind == ARMVCC::Then ? AddedThen : AddedElse;
+  };
+
+  switch (BlockMask) {
+  case PredBlockMask::T:
+    return ChooseMask(PredBlockMask::TT, PredBlockMask::TE);
+  case PredBlockMask::TT:
+    return ChooseMask(PredBlockMask::TTT, PredBlockMask::TTE);
+  case PredBlockMask::TE:
+    return ChooseMask(PredBlockMask::TET, PredBlockMask::TEE);
+  case PredBlockMask::TTT:
+    return ChooseMask(PredBlockMask::TTTT, PredBlockMask::TTTE);
+  case PredBlockMask::TTE:
+    return ChooseMask(PredBlockMask::TTET, PredBlockMask::TTEE);
+  case PredBlockMask::TET:
+    return ChooseMask(PredBlockMask::TETT, PredBlockMask::TETE);
+  case PredBlockMask::TEE:
+    return ChooseMask(PredBlockMask::TEET, PredBlockMask::TEEE);
+  default:
+    llvm_unreachable("Unknown Mask");
+  }
+}
+
 namespace ARMSysReg {
 
 // lookup system register using 12-bit SYSm value.

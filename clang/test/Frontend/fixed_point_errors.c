@@ -137,15 +137,15 @@ _Sat longfract_t td_sat_long_fract;         // expected-error{{'_Sat' specifier 
 _Sat longaccum_t td_sat_long_accum;         // expected-error{{'_Sat' specifier is only valid on '_Fract' or '_Accum', not 'type-name'}}
 
 /* Bad suffixes  */
-_Accum fk = 1.0fk;    // expected-error{{invalid suffix 'fk' on integer constant}}
-_Accum kk = 1.0kk;    // expected-error{{invalid suffix 'kk' on integer constant}}
-_Accum rk = 1.0rk;    // expected-error{{invalid suffix 'rk' on integer constant}}
-_Accum rk = 1.0rr;    // expected-error{{invalid suffix 'rr' on integer constant}}
-_Accum qk = 1.0qr;    // expected-error{{invalid suffix 'qr' on integer constant}}
+_Accum fk = 1.0fk; // expected-error{{invalid suffix 'fk' on fixed-point constant}}
+_Accum kk = 1.0kk; // expected-error{{invalid suffix 'kk' on fixed-point constant}}
+_Accum rk = 1.0rk; // expected-error{{invalid suffix 'rk' on fixed-point constant}}
+_Accum rk = 1.0rr; // expected-error{{invalid suffix 'rr' on fixed-point constant}}
+_Accum qk = 1.0qr; // expected-error{{invalid suffix 'qr' on fixed-point constant}}
 
 /* Using wrong exponent notation */
-_Accum dec_with_hex_exp1 = 0.1p10k;    // expected-error{{invalid suffix 'p10k' on integer constant}}
-_Accum dec_with_hex_exp2 = 0.1P10k;    // expected-error{{invalid suffix 'P10k' on integer constant}}
+_Accum dec_with_hex_exp1 = 0.1p10k;    // expected-error{{invalid suffix 'p10k' on fixed-point constant}}
+_Accum dec_with_hex_exp2 = 0.1P10k;    // expected-error{{invalid suffix 'P10k' on fixed-point constant}}
 _Accum hex_with_dex_exp1 = 0x0.1e10k;  // expected-error{{hexadecimal floating constant requires an exponent}}
 _Accum hex_with_dex_exp2 = 0x0.1E10k;  // expected-error{{hexadecimal floating constant requires an exponent}}
 

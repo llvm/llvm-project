@@ -15,9 +15,10 @@
 #include "toy/Parser.h"
 #include <memory>
 
-#include "mlir/Analysis/Verifier.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -122,6 +123,9 @@ int dumpAST() {
 }
 
 int main(int argc, char **argv) {
+  // Register any command line options.
+  mlir::registerAsmPrinterCLOptions();
+  mlir::registerMLIRContextCLOptions();
   cl::ParseCommandLineOptions(argc, argv, "toy compiler\n");
 
   switch (emitAction) {

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler.h"
-#include "Logger.h"
+#include "support/Logger.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -41,14 +41,14 @@ void IgnoreDiagnostics::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 }
 
 std::unique_ptr<CompilerInvocation>
-buildCompilerInvocation(const ParseInputs &Inputs,
-                        clang::DiagnosticConsumer &D,
+buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
                         std::vector<std::string> *CC1Args) {
   std::vector<const char *> ArgStrs;
   for (const auto &S : Inputs.CompileCommand.CommandLine)
     ArgStrs.push_back(S.c_str());
 
-  if (Inputs.FS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
+  auto VFS = Inputs.FSProvider->getFileSystem();
+  if (VFS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
     log("Couldn't set working directory when creating compiler invocation.");
     // We proceed anyway, our lit-tests rely on results for non-existing working
     // dirs.
@@ -57,7 +57,7 @@ buildCompilerInvocation(const ParseInputs &Inputs,
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
       CompilerInstance::createDiagnostics(new DiagnosticOptions, &D, false);
   std::unique_ptr<CompilerInvocation> CI = createInvocationFromCommandLine(
-      ArgStrs, CommandLineDiagsEngine, Inputs.FS,
+      ArgStrs, CommandLineDiagsEngine, std::move(VFS),
       /*ShouldRecoverOnErrors=*/true, CC1Args);
   if (!CI)
     return nullptr;
@@ -65,6 +65,30 @@ buildCompilerInvocation(const ParseInputs &Inputs,
   CI->getFrontendOpts().DisableFree = false;
   CI->getLangOpts()->CommentOpts.ParseAllComments = true;
   CI->getLangOpts()->RetainCommentsFromSystemHeaders = true;
+
+  // Disable any dependency outputting, we don't want to generate files or write
+  // to stdout/stderr.
+  CI->getDependencyOutputOpts().ShowIncludesDest =
+      ShowIncludesDestination::None;
+  CI->getDependencyOutputOpts().OutputFile.clear();
+  CI->getDependencyOutputOpts().HeaderIncludeOutputFile.clear();
+  CI->getDependencyOutputOpts().DOTOutputFile.clear();
+  CI->getDependencyOutputOpts().ModuleDependencyOutputDir.clear();
+
+  // Disable any pch generation/usage operations. Since serialized preamble
+  // format is unstable, using an incompatible one might result in unexpected
+  // behaviours, including crashes.
+  CI->getPreprocessorOpts().ImplicitPCHInclude.clear();
+  CI->getPreprocessorOpts().PrecompiledPreambleBytes = {0, false};
+  CI->getPreprocessorOpts().PCHThroughHeader.clear();
+  CI->getPreprocessorOpts().PCHWithHdrStop = false;
+  CI->getPreprocessorOpts().PCHWithHdrStopCreate = false;
+
+  // Recovery expression currently only works for C++.
+  if (CI->getLangOpts()->CPlusPlus) {
+    CI->getLangOpts()->RecoveryAST = Inputs.Opts.BuildRecoveryAST;
+    CI->getLangOpts()->RecoveryASTType = Inputs.Opts.PreserveRecoveryASTType;
+  }
   return CI;
 }
 

@@ -14,14 +14,16 @@
 #define LLVM_CLANG_BASIC_SANITIZERBLACKLIST_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/SanitizerSpecialCaseList.h"
-#include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
+#include <vector>
 
 namespace clang {
+
+class SanitizerMask;
+class SourceManager;
+class SanitizerSpecialCaseList;
 
 class SanitizerBlacklist {
   std::unique_ptr<SanitizerSpecialCaseList> SSCL;
@@ -30,6 +32,7 @@ class SanitizerBlacklist {
 public:
   SanitizerBlacklist(const std::vector<std::string> &BlacklistPaths,
                      SourceManager &SM);
+  ~SanitizerBlacklist();
   bool isBlacklistedGlobal(SanitizerMask Mask, StringRef GlobalName,
                            StringRef Category = StringRef()) const;
   bool isBlacklistedType(SanitizerMask Mask, StringRef MangledTypeName,

@@ -15,6 +15,7 @@
 #define MLIR_IR_LOCATION_H
 
 #include "mlir/IR/Attributes.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
 
@@ -54,6 +55,12 @@ public:
   Location(LocationAttr loc) : impl(loc) {
     assert(loc && "location should never be null.");
   }
+  Location(const LocationAttr::ImplType *impl) : impl(impl) {
+    assert(impl && "location should never be null.");
+  }
+
+  /// Return the context this location is uniqued in.
+  MLIRContext *getContext() const { return impl.getContext(); }
 
   /// Access the impl location attribute.
   operator LocationAttr() const { return impl; }
@@ -230,7 +237,7 @@ public:
   template <typename T>
   static Location get(T underlyingLocation, MLIRContext *context) {
     return get(reinterpret_cast<uintptr_t>(underlyingLocation),
-               ClassID::getID<T>(), UnknownLoc::get(context));
+               TypeID::get<T>(), UnknownLoc::get(context));
   }
 
   /// Returns an instance of opaque location which contains a given pointer to
@@ -238,7 +245,7 @@ public:
   template <typename T>
   static Location get(T underlyingLocation, Location fallbackLocation) {
     return get(reinterpret_cast<uintptr_t>(underlyingLocation),
-               ClassID::getID<T>(), fallbackLocation);
+               TypeID::get<T>(), fallbackLocation);
   }
 
   /// Returns a pointer to some data structure that opaque location stores.
@@ -263,14 +270,14 @@ public:
   /// to an object of particular type.
   template <typename T> static bool isa(Location location) {
     auto opaque_loc = location.dyn_cast<OpaqueLoc>();
-    return opaque_loc && opaque_loc.getClassId() == ClassID::getID<T>();
+    return opaque_loc && opaque_loc.getUnderlyingTypeID() == TypeID::get<T>();
   }
 
   /// Returns a pointer to the corresponding object.
   uintptr_t getUnderlyingLocation() const;
 
-  /// Returns a ClassID* that represents the underlying objects c++ type.
-  ClassID *getClassId() const;
+  /// Returns a TypeID that represents the underlying objects c++ type.
+  TypeID getUnderlyingTypeID() const;
 
   /// Returns a fallback location.
   Location getFallbackLocation() const;
@@ -281,7 +288,7 @@ public:
   }
 
 private:
-  static Location get(uintptr_t underlyingLocation, ClassID *classID,
+  static Location get(uintptr_t underlyingLocation, TypeID typeID,
                       Location fallbackLocation);
 };
 

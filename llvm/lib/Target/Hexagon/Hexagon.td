@@ -92,30 +92,30 @@ def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
 
 def UseMEMOPS          : Predicate<"HST->useMemops()">;
 def UseHVX64B          : Predicate<"HST->useHVX64BOps()">,
-                         AssemblerPredicate<"ExtensionHVX64B">;
+                         AssemblerPredicate<(all_of ExtensionHVX64B)>;
 def UseHVX128B         : Predicate<"HST->useHVX128BOps()">,
-                         AssemblerPredicate<"ExtensionHVX128B">;
+                         AssemblerPredicate<(all_of ExtensionHVX128B)>;
 def UseHVX             : Predicate<"HST->useHVXOps()">,
-                         AssemblerPredicate<"ExtensionHVXV60">;
+                         AssemblerPredicate<(all_of ExtensionHVXV60)>;
 def UseHVXV60          : Predicate<"HST->useHVXV60Ops()">,
-                         AssemblerPredicate<"ExtensionHVXV60">;
+                         AssemblerPredicate<(all_of ExtensionHVXV60)>;
 def UseHVXV62          : Predicate<"HST->useHVXV62Ops()">,
-                         AssemblerPredicate<"ExtensionHVXV62">;
+                         AssemblerPredicate<(all_of ExtensionHVXV62)>;
 def UseHVXV65          : Predicate<"HST->useHVXV65Ops()">,
-                         AssemblerPredicate<"ExtensionHVXV65">;
+                         AssemblerPredicate<(all_of ExtensionHVXV65)>;
 def UseHVXV66          : Predicate<"HST->useHVXV66Ops()">,
-                         AssemblerPredicate<"ExtensionHVXV66">;
+                         AssemblerPredicate<(all_of ExtensionHVXV66)>;
 def UseHVXV67          : Predicate<"HST->useHVXV67Ops()">,
-                         AssemblerPredicate<"ExtensionHVXV67">;
+                         AssemblerPredicate<(all_of ExtensionHVXV67)>;
 def UseAudio           : Predicate<"HST->useAudioOps()">,
-                         AssemblerPredicate<"ExtensionAudio">;
+                         AssemblerPredicate<(all_of ExtensionAudio)>;
 def UseZReg            : Predicate<"HST->useZRegOps()">,
-                         AssemblerPredicate<"ExtensionZReg">;
+                         AssemblerPredicate<(all_of ExtensionZReg)>;
 def UseCompound        : Predicate<"HST->useCompound()">;
 def HasPreV65          : Predicate<"HST->hasPreV65()">,
-                         AssemblerPredicate<"FeaturePreV65">;
+                         AssemblerPredicate<(all_of FeaturePreV65)>;
 def HasMemNoShuf       : Predicate<"HST->hasMemNoShuf()">,
-                         AssemblerPredicate<"FeatureMemNoShuf">;
+                         AssemblerPredicate<(all_of FeatureMemNoShuf)>;
 def UseUnsafeMath      : Predicate<"HST->useUnsafeMath()">;
 def NotOptTinyCore     : Predicate<"!HST->isTinyCore() ||"
                                    "MF->getFunction().hasOptSize()"> {

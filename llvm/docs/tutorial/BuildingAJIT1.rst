@@ -320,4 +320,4 @@ Here is the code:
        +-----------------------------+-----------------------------------------------+
 
 .. [3] See the ErrorHandling section in the LLVM Programmer's Manual
-       (http://llvm.org/docs/ProgrammersManual.html#error-handling)
+       (https://llvm.org/docs/ProgrammersManual.html#error-handling)

@@ -15,6 +15,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include <vector>
 
 namespace llvm {
 class Init;
@@ -105,6 +106,10 @@ public:
 
   // Whether the declaration of methods for this trait should be emitted.
   bool shouldDeclareMethods() const;
+
+  // Returns the methods that should always be declared if this interface is
+  // emitting declarations.
+  std::vector<StringRef> getAlwaysDeclaredMethods() const;
 };
 
 } // end namespace tblgen

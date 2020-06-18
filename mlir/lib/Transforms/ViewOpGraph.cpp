@@ -7,19 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/ViewOpGraph.h"
+#include "PassDetail.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 
-static llvm::cl::opt<int> elideIfLarger(
-    "print-op-graph-elide-if-larger",
-    llvm::cl::desc("Upper limit to emit elements attribute rather than elide"),
-    llvm::cl::init(16));
-
 using namespace mlir;
+
+/// Return the size limits for eliding large attributes.
+static int64_t getLargeAttributeSizeLimit() {
+  // Use the default from the printer flags if possible.
+  if (Optional<int64_t> limit = OpPrintingFlags().getLargeElementsAttrLimit())
+    return *limit;
+  return 16;
+}
 
 namespace llvm {
 
@@ -62,9 +64,11 @@ std::string DOTGraphTraits<Block *>::getNodeLabel(Operation *op, Block *b) {
   }
 
   // Print resultant types
-  interleaveComma(op->getResultTypes(), os);
+  llvm::interleaveComma(op->getResultTypes(), os);
   os << "\n";
 
+  // A value used to elide large container attribute.
+  int64_t largeAttrLimit = getLargeAttributeSizeLimit();
   for (auto attr : op->getAttrs()) {
     os << '\n' << attr.first << ": ";
     // Always emit splat attributes.
@@ -75,7 +79,7 @@ std::string DOTGraphTraits<Block *>::getNodeLabel(Operation *op, Block *b) {
 
     // Elide "big" elements attributes.
     auto elements = attr.second.dyn_cast<ElementsAttr>();
-    if (elements && elements.getNumElements() > elideIfLarger) {
+    if (elements && elements.getNumElements() > largeAttrLimit) {
       os << std::string(elements.getType().getRank(), '[') << "..."
          << std::string(elements.getType().getRank(), ']') << " : "
          << elements.getType();
@@ -83,7 +87,7 @@ std::string DOTGraphTraits<Block *>::getNodeLabel(Operation *op, Block *b) {
     }
 
     auto array = attr.second.dyn_cast<ArrayAttr>();
-    if (array && static_cast<int64_t>(array.size()) > elideIfLarger) {
+    if (array && static_cast<int64_t>(array.size()) > largeAttrLimit) {
       os << "[...]";
       continue;
     }
@@ -100,7 +104,7 @@ namespace {
 // PrintOpPass is simple pass to write graph per function.
 // Note: this is a module pass only to avoid interleaving on the same ostream
 // due to multi-threading over functions.
-struct PrintOpPass : public ModulePass<PrintOpPass> {
+struct PrintOpPass : public PrintOpBase<PrintOpPass> {
   explicit PrintOpPass(raw_ostream &os = llvm::errs(), bool short_names = false,
                        const Twine &title = "")
       : os(os), title(title.str()), short_names(short_names) {}
@@ -126,7 +130,7 @@ struct PrintOpPass : public ModulePass<PrintOpPass> {
       for (Region &region : op.getRegions()) {
         for (auto indexed_block : llvm::enumerate(region)) {
           // Suffix block number if there are more than 1 block.
-          auto blockName = region.getBlocks().size() == 1
+          auto blockName = llvm::hasSingleElement(region)
                                ? ""
                                : ("__" + llvm::utostr(indexed_block.index()));
           llvm::WriteGraph(os, &indexed_block.value(), short_names,
@@ -136,7 +140,7 @@ struct PrintOpPass : public ModulePass<PrintOpPass> {
     }
   }
 
-  void runOnModule() override { processModule(getModule()); }
+  void runOnOperation() override { processModule(getOperation()); }
 
 private:
   raw_ostream &os;
@@ -156,11 +160,8 @@ raw_ostream &mlir::writeGraph(raw_ostream &os, Block &block, bool shortNames,
   return llvm::WriteGraph(os, &block, shortNames, title);
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>>
+std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createPrintOpGraphPass(raw_ostream &os, bool shortNames,
                              const Twine &title) {
   return std::make_unique<PrintOpPass>(os, shortNames, title);
 }
-
-static PassRegistration<PrintOpPass> pass("print-op-graph",
-                                          "Print op graph per region");

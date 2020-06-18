@@ -26,7 +26,7 @@ struct TypesAndMemOps {
 
 // Assumes power of 2 memory size. Subtargets that have only naturally-aligned
 // memory access need to perform additional legalization here.
-bool isUnalignedMemmoryAccess(uint64_t MemSize, uint64_t AlignInBits) {
+static bool isUnalignedMemmoryAccess(uint64_t MemSize, uint64_t AlignInBits) {
   assert(isPowerOf2_64(MemSize) && "Expected power of 2 memory size");
   assert(isPowerOf2_64(AlignInBits) && "Expected power of 2 align");
   if (MemSize > AlignInBits)
@@ -333,7 +333,6 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
 
   using namespace TargetOpcode;
 
-  MIRBuilder.setInstr(MI);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
@@ -507,7 +506,6 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
   const MipsInstrInfo &TII = *ST.getInstrInfo();
   const MipsRegisterInfo &TRI = *ST.getRegisterInfo();
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
-  MIRBuilder.setInstr(MI);
 
   switch (MI.getIntrinsicID()) {
   case Intrinsic::memcpy:
@@ -525,12 +523,13 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
   }
   case Intrinsic::vacopy: {
     MachinePointerInfo MPO;
-    auto Tmp = MIRBuilder.buildLoad(LLT::pointer(0, 32), MI.getOperand(2),
-                                    *MI.getMF()->getMachineMemOperand(
-                                        MPO, MachineMemOperand::MOLoad, 4, 4));
+    auto Tmp =
+        MIRBuilder.buildLoad(LLT::pointer(0, 32), MI.getOperand(2),
+                             *MI.getMF()->getMachineMemOperand(
+                                 MPO, MachineMemOperand::MOLoad, 4, Align(4)));
     MIRBuilder.buildStore(Tmp, MI.getOperand(1),
                           *MI.getMF()->getMachineMemOperand(
-                              MPO, MachineMemOperand::MOStore, 4, 4));
+                              MPO, MachineMemOperand::MOStore, 4, Align(4)));
     MI.eraseFromParent();
     return true;
   }

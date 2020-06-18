@@ -117,10 +117,10 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @test_vdupq_m_n_f32(<4 x float> %inactive, float %a, i16 zeroext %p) {
 ; CHECK-LABEL: test_vdupq_m_n_f32:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r1, s4
 ; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vdupt.32 q0, r0
+; CHECK-NEXT:    vdupt.32 q0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32

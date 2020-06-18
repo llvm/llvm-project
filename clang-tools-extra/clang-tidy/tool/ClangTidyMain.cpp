@@ -23,6 +23,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/WithColor.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::driver;
@@ -36,17 +37,20 @@ static cl::extrahelp ClangTidyHelp(R"(
 Configuration files:
   clang-tidy attempts to read configuration for each source file from a
   .clang-tidy file located in the closest parent directory of the source
-  file. If any configuration options have a corresponding command-line
-  option, command-line option takes precedence. The effective
-  configuration can be inspected using -dump-config:
+  file. If InheritParentConfig is true in a config file, the configuration file
+  in the parent directory (if any exists) will be taken and current config file
+  will be applied on top of the parent one. If any configuration options have
+  a corresponding command-line option, command-line option takes precedence.
+  The effective configuration can be inspected using -dump-config:
 
     $ clang-tidy -dump-config
     ---
-    Checks:          '-*,some-check'
-    WarningsAsErrors: ''
-    HeaderFilterRegex: ''
-    FormatStyle:     none
-    User:            user
+    Checks:              '-*,some-check'
+    WarningsAsErrors:    ''
+    HeaderFilterRegex:   ''
+    FormatStyle:         none
+    InheritParentConfig: true
+    User:                user
     CheckOptions:
       - key:             some-check.SomeOption
         value:           'some value'
@@ -294,7 +298,7 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
             parseConfiguration(Config)) {
       return std::make_unique<ConfigOptionsProvider>(
           GlobalOptions,
-          ClangTidyOptions::getDefaults().mergeWith(DefaultOptions),
+          ClangTidyOptions::getDefaults().mergeWith(DefaultOptions, 0),
           *ParsedConfig, OverrideOptions);
     } else {
       llvm::errs() << "Error: invalid configuration specified.\n"
@@ -330,8 +334,14 @@ getVfsFromFile(const std::string &OverlayFile,
 
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
-  CommonOptionsParser OptionsParser(argc, argv, ClangTidyCategory,
-                                    cl::ZeroOrMore);
+  llvm::Expected<CommonOptionsParser> OptionsParser =
+      CommonOptionsParser::create(argc, argv, ClangTidyCategory,
+                                  cl::ZeroOrMore);
+  if (!OptionsParser) {
+    llvm::WithColor::error() << llvm::toString(OptionsParser.takeError());
+    return 1;
+  }
+
   llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS(
       new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
 
@@ -362,7 +372,7 @@ int clangTidyMain(int argc, const char **argv) {
   SmallString<256> ProfilePrefix = MakeAbsolute(StoreCheckProfile);
 
   StringRef FileName("dummy");
-  auto PathList = OptionsParser.getSourcePathList();
+  auto PathList = OptionsParser->getSourcePathList();
   if (!PathList.empty()) {
     FileName = PathList.front();
   }
@@ -406,7 +416,7 @@ int clangTidyMain(int argc, const char **argv) {
         getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
     llvm::outs() << configurationAsText(
                         ClangTidyOptions::getDefaults().mergeWith(
-                            EffectiveOptions))
+                            EffectiveOptions, 0))
                  << "\n";
     return 0;
   }
@@ -430,7 +440,7 @@ int clangTidyMain(int argc, const char **argv) {
   ClangTidyContext Context(std::move(OwningOptionsProvider),
                            AllowEnablingAnalyzerAlphaCheckers);
   std::vector<ClangTidyError> Errors =
-      runClangTidy(Context, OptionsParser.getCompilations(), PathList, BaseFS,
+      runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                    EnableCheckProfile, ProfilePrefix);
   bool FoundErrors = llvm::find_if(Errors, [](const ClangTidyError &E) {
                        return E.DiagLevel == ClangTidyError::Error;
@@ -468,7 +478,7 @@ int clangTidyMain(int argc, const char **argv) {
       llvm::errs() << WErrorCount << " warning" << Plural << " treated as error"
                    << Plural << "\n";
     }
-    return WErrorCount;
+    return 1;
   }
 
   if (FoundErrors) {

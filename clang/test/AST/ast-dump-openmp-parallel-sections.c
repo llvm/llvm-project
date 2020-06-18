@@ -18,7 +18,7 @@ void test_one() {
 // CHECK-NEXT:     `-OMPParallelSectionsDirective {{.*}} <line:9:1, col:30>
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:10:3, col:7>
 // CHECK-NEXT:         `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK-NEXT:           |-CompoundStmt {{.*}} <col:3, col:7> openmp_structured_block
+// CHECK-NEXT:           |-CompoundStmt {{.*}} <col:3, col:7>
 // CHECK-NEXT:           | `-NullStmt {{.*}} <col:5>
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <line:9:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'

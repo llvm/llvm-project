@@ -433,8 +433,7 @@ void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
     break;
 
   case llvm::Triple::UnknownOS:
-    if (triple.getArch() == llvm::Triple::wasm32 ||
-        triple.getArch() == llvm::Triple::wasm64)
+    if (triple.isWasm())
       return;
     break;
   }

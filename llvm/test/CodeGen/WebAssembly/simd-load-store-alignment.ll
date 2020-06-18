@@ -89,6 +89,32 @@ define void @store_v16i8_a32(<16 x i8> *%p, <16 x i8> %v) {
   ret void
 }
 
+; 1 is the default alignment for v8x16.load_splat so no attribute is needed.
+
+; CHECK-LABEL: load_splat_v16i8_a1:
+; CHECK-NEXT: .functype load_splat_v16i8_a1 (i32) -> (v128){{$}}
+; CHECK-NEXT: v8x16.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <16 x i8> @load_splat_v16i8_a1(i8* %p) {
+  %e = load i8, i8* %p, align 1
+  %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
+  %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
+  ret <16 x i8> %v2
+}
+
+; 2 is greater than the default alignment so it is ignored.
+
+; CHECK-LABEL: load_splat_v16i8_a2:
+; CHECK-NEXT: .functype load_splat_v16i8_a2 (i32) -> (v128){{$}}
+; CHECK-NEXT: v8x16.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <16 x i8> @load_splat_v16i8_a2(i8* %p) {
+  %e = load i8, i8* %p, align 2
+  %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
+  %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
+  ret <16 x i8> %v2
+}
+
 ; ==============================================================================
 ; 8 x i16
 ; ==============================================================================
@@ -171,6 +197,146 @@ define void @store_v8i16_a16(<8 x i16> *%p, <8 x i16> %v) {
 define void @store_v8i16_a32(<8 x i16> *%p, <8 x i16> %v) {
   store <8 x i16> %v, <8 x i16>* %p, align 32
   ret void
+}
+
+; CHECK-LABEL: load_ext_v8i16_a1:
+; CHECK-NEXT: .functype load_ext_v8i16_a1 (i32) -> (v128){{$}}
+; CHECK-NEXT: i16x8.load8x8_u $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i8> @load_ext_v8i16_a1(<8 x i8>* %p) {
+  %v = load <8 x i8>, <8 x i8>* %p, align 1
+  ret <8 x i8> %v
+}
+
+; CHECK-LABEL: load_ext_v8i16_a2:
+; CHECK-NEXT: .functype load_ext_v8i16_a2 (i32) -> (v128){{$}}
+; CHECK-NEXT: i16x8.load8x8_u $push[[R:[0-9]+]]=, 0($0):p2align=1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i8> @load_ext_v8i16_a2(<8 x i8>* %p) {
+  %v = load <8 x i8>, <8 x i8>* %p, align 2
+  ret <8 x i8> %v
+}
+
+; CHECK-LABEL: load_ext_v8i16_a4:
+; CHECK-NEXT: .functype load_ext_v8i16_a4 (i32) -> (v128){{$}}
+; CHECK-NEXT: i16x8.load8x8_u $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i8> @load_ext_v8i16_a4(<8 x i8>* %p) {
+  %v = load <8 x i8>, <8 x i8>* %p, align 4
+  ret <8 x i8> %v
+}
+
+; 8 is the default alignment for v128 extending load so no attribute is needed.
+
+; CHECK-LABEL: load_ext_v8i16_a8:
+; CHECK-NEXT: .functype load_ext_v8i16_a8 (i32) -> (v128){{$}}
+; CHECK-NEXT: i16x8.load8x8_u $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i8> @load_ext_v8i16_a8(<8 x i8>* %p) {
+  %v = load <8 x i8>, <8 x i8>* %p, align 8
+  ret <8 x i8> %v
+}
+
+; 16 is greater than the default alignment so it is ignored.
+
+; CHECK-LABEL: load_ext_v8i16_a16:
+; CHECK-NEXT: .functype load_ext_v8i16_a16 (i32) -> (v128){{$}}
+; CHECK-NEXT: i16x8.load8x8_u $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i8> @load_ext_v8i16_a16(<8 x i8>* %p) {
+  %v = load <8 x i8>, <8 x i8>* %p, align 16
+  ret <8 x i8> %v
+}
+
+; CHECK-LABEL: load_sext_v8i16_a1:
+; CHECK-NEXT: .functype load_sext_v8i16_a1 (i32) -> (v128){{$}}
+; CHECK-NEXT: i16x8.load8x8_s $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @load_sext_v8i16_a1(<8 x i8>* %p) {
+  %v = load <8 x i8>, <8 x i8>* %p, align 1
+  %v2 = sext <8 x i8> %v to <8 x i16>
+  ret <8 x i16> %v2
+}
+
+; CHECK-LABEL: load_sext_v8i16_a2:
+; CHECK-NEXT: .functype load_sext_v8i16_a2 (i32) -> (v128){{$}}
+; CHECK-NEXT: i16x8.load8x8_s $push[[R:[0-9]+]]=, 0($0):p2align=1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @load_sext_v8i16_a2(<8 x i8>* %p) {
+  %v = load <8 x i8>, <8 x i8>* %p, align 2
+  %v2 = sext <8 x i8> %v to <8 x i16>
+  ret <8 x i16> %v2
+}
+
+; CHECK-LABEL: load_sext_v8i16_a4:
+; CHECK-NEXT: .functype load_sext_v8i16_a4 (i32) -> (v128){{$}}
+; CHECK-NEXT: i16x8.load8x8_s $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @load_sext_v8i16_a4(<8 x i8>* %p) {
+  %v = load <8 x i8>, <8 x i8>* %p, align 4
+  %v2 = sext <8 x i8> %v to <8 x i16>
+  ret <8 x i16> %v2
+}
+
+; 8 is the default alignment for v128 extending load so no attribute is needed.
+
+; CHECK-LABEL: load_sext_v8i16_a8:
+; CHECK-NEXT: .functype load_sext_v8i16_a8 (i32) -> (v128){{$}}
+; CHECK-NEXT: i16x8.load8x8_s $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @load_sext_v8i16_a8(<8 x i8>* %p) {
+  %v = load <8 x i8>, <8 x i8>* %p, align 8
+  %v2 = sext <8 x i8> %v to <8 x i16>
+  ret <8 x i16> %v2
+}
+
+; 16 is greater than the default alignment so it is ignored.
+
+; CHECK-LABEL: load_sext_v8i16_a16:
+; CHECK-NEXT: .functype load_sext_v8i16_a16 (i32) -> (v128){{$}}
+; CHECK-NEXT: i16x8.load8x8_s $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @load_sext_v8i16_a16(<8 x i8>* %p) {
+  %v = load <8 x i8>, <8 x i8>* %p, align 16
+  %v2 = sext <8 x i8> %v to <8 x i16>
+  ret <8 x i16> %v2
+}
+
+; CHECK-LABEL: load_splat_v8i16_a1:
+; CHECK-NEXT: .functype load_splat_v8i16_a1 (i32) -> (v128){{$}}
+; CHECK-NEXT: v16x8.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @load_splat_v8i16_a1(i16* %p) {
+  %e = load i16, i16* %p, align 1
+  %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
+  %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %v2
+}
+
+; 2 is the default alignment for v16x8.load_splat so no attribute is needed.
+
+; CHECK-LABEL: load_splat_v8i16_a2:
+; CHECK-NEXT: .functype load_splat_v8i16_a2 (i32) -> (v128){{$}}
+; CHECK-NEXT: v16x8.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @load_splat_v8i16_a2(i16* %p) {
+  %e = load i16, i16* %p, align 2
+  %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
+  %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %v2
+}
+
+; 4 is greater than the default alignment so it is ignored.
+
+; CHECK-LABEL: load_splat_v8i16_a4:
+; CHECK-NEXT: .functype load_splat_v8i16_a4 (i32) -> (v128){{$}}
+; CHECK-NEXT: v16x8.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @load_splat_v8i16_a4(i16* %p) {
+  %e = load i16, i16* %p, align 4
+  %v1 = insertelement <8 x i16> undef, i16 %e, i32 0
+  %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %v2
 }
 
 ; ==============================================================================
@@ -257,6 +423,157 @@ define void @store_v4i32_a32(<4 x i32> *%p, <4 x i32> %v) {
   ret void
 }
 
+; CHECK-LABEL: load_ext_v4i32_a1:
+; CHECK-NEXT: .functype load_ext_v4i32_a1 (i32) -> (v128){{$}}
+; CHECK-NEXT: i32x4.load16x4_u $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i16> @load_ext_v4i32_a1(<4 x i16>* %p) {
+  %v = load <4 x i16>, <4 x i16>* %p, align 1
+  ret <4 x i16> %v
+}
+
+; CHECK-LABEL: load_ext_v4i32_a2:
+; CHECK-NEXT: .functype load_ext_v4i32_a2 (i32) -> (v128){{$}}
+; CHECK-NEXT: i32x4.load16x4_u $push[[R:[0-9]+]]=, 0($0):p2align=1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i16> @load_ext_v4i32_a2(<4 x i16>* %p) {
+  %v = load <4 x i16>, <4 x i16>* %p, align 2
+  ret <4 x i16> %v
+}
+
+; CHECK-LABEL: load_ext_v4i32_a4:
+; CHECK-NEXT: .functype load_ext_v4i32_a4 (i32) -> (v128){{$}}
+; CHECK-NEXT: i32x4.load16x4_u $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i16> @load_ext_v4i32_a4(<4 x i16>* %p) {
+  %v = load <4 x i16>, <4 x i16>* %p, align 4
+  ret <4 x i16> %v
+}
+
+; 8 is the default alignment for v128 extending load so no attribute is needed.
+
+; CHECK-LABEL: load_ext_v4i32_a8:
+; CHECK-NEXT: .functype load_ext_v4i32_a8 (i32) -> (v128){{$}}
+; CHECK-NEXT: i32x4.load16x4_u $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i16> @load_ext_v4i32_a8(<4 x i16>* %p) {
+  %v = load <4 x i16>, <4 x i16>* %p, align 8
+  ret <4 x i16> %v
+}
+
+; 16 is greater than the default alignment so it is ignored.
+
+; CHECK-LABEL: load_ext_v4i32_a16:
+; CHECK-NEXT: .functype load_ext_v4i32_a16 (i32) -> (v128){{$}}
+; CHECK-NEXT: i32x4.load16x4_u $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i16> @load_ext_v4i32_a16(<4 x i16>* %p) {
+  %v = load <4 x i16>, <4 x i16>* %p, align 16
+  ret <4 x i16> %v
+}
+
+; CHECK-LABEL: load_sext_v4i32_a1:
+; CHECK-NEXT: .functype load_sext_v4i32_a1 (i32) -> (v128){{$}}
+; CHECK-NEXT: i32x4.load16x4_s $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @load_sext_v4i32_a1(<4 x i16>* %p) {
+  %v = load <4 x i16>, <4 x i16>* %p, align 1
+  %v2 = sext <4 x i16> %v to <4 x i32>
+  ret <4 x i32> %v2
+}
+
+; CHECK-LABEL: load_sext_v4i32_a2:
+; CHECK-NEXT: .functype load_sext_v4i32_a2 (i32) -> (v128){{$}}
+; CHECK-NEXT: i32x4.load16x4_s $push[[R:[0-9]+]]=, 0($0):p2align=1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @load_sext_v4i32_a2(<4 x i16>* %p) {
+  %v = load <4 x i16>, <4 x i16>* %p, align 2
+  %v2 = sext <4 x i16> %v to <4 x i32>
+  ret <4 x i32> %v2
+}
+
+; CHECK-LABEL: load_sext_v4i32_a4:
+; CHECK-NEXT: .functype load_sext_v4i32_a4 (i32) -> (v128){{$}}
+; CHECK-NEXT: i32x4.load16x4_s $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @load_sext_v4i32_a4(<4 x i16>* %p) {
+  %v = load <4 x i16>, <4 x i16>* %p, align 4
+  %v2 = sext <4 x i16> %v to <4 x i32>
+  ret <4 x i32> %v2
+}
+
+; 8 is the default alignment for v128 extending load so no attribute is needed.
+
+; CHECK-LABEL: load_sext_v4i32_a8:
+; CHECK-NEXT: .functype load_sext_v4i32_a8 (i32) -> (v128){{$}}
+; CHECK-NEXT: i32x4.load16x4_s $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @load_sext_v4i32_a8(<4 x i16>* %p) {
+  %v = load <4 x i16>, <4 x i16>* %p, align 8
+  %v2 = sext <4 x i16> %v to <4 x i32>
+  ret <4 x i32> %v2
+}
+
+; 16 is greater than the default alignment so it is ignored.
+
+; CHECK-LABEL: load_sext_v4i32_a16:
+; CHECK-NEXT: .functype load_sext_v4i32_a16 (i32) -> (v128){{$}}
+; CHECK-NEXT: i32x4.load16x4_s $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @load_sext_v4i32_a16(<4 x i16>* %p) {
+  %v = load <4 x i16>, <4 x i16>* %p, align 16
+  %v2 = sext <4 x i16> %v to <4 x i32>
+  ret <4 x i32> %v2
+}
+
+; CHECK-LABEL: load_splat_v4i32_a1:
+; CHECK-NEXT: .functype load_splat_v4i32_a1 (i32) -> (v128){{$}}
+; CHECK-NEXT: v32x4.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @load_splat_v4i32_a1(i32* %addr) {
+  %e = load i32, i32* %addr, align 1
+  %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
+  %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
+  ret <4 x i32> %v2
+}
+
+; CHECK-LABEL: load_splat_v4i32_a2:
+; CHECK-NEXT: .functype load_splat_v4i32_a2 (i32) -> (v128){{$}}
+; CHECK-NEXT: v32x4.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @load_splat_v4i32_a2(i32* %addr) {
+  %e = load i32, i32* %addr, align 2
+  %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
+  %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
+  ret <4 x i32> %v2
+}
+
+; 4 is the default alignment for v32x4.load_splat so no attribute is needed.
+
+; CHECK-LABEL: load_splat_v4i32_a4:
+; CHECK-NEXT: .functype load_splat_v4i32_a4 (i32) -> (v128){{$}}
+; CHECK-NEXT: v32x4.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @load_splat_v4i32_a4(i32* %addr) {
+  %e = load i32, i32* %addr, align 4
+  %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
+  %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
+  ret <4 x i32> %v2
+}
+
+; 8 is greater than the default alignment so it is ignored.
+
+; CHECK-LABEL: load_splat_v4i32_a8:
+; CHECK-NEXT: .functype load_splat_v4i32_a8 (i32) -> (v128){{$}}
+; CHECK-NEXT: v32x4.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @load_splat_v4i32_a8(i32* %addr) {
+  %e = load i32, i32* %addr, align 8
+  %v1 = insertelement <4 x i32> undef, i32 %e, i32 0
+  %v2 = shufflevector <4 x i32> %v1, <4 x i32> undef, <4 x i32> zeroinitializer
+  ret <4 x i32> %v2
+}
+
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
@@ -339,6 +656,65 @@ define void @store_v2i64_a16(<2 x i64> *%p, <2 x i64> %v) {
 define void @store_v2i64_a32(<2 x i64> *%p, <2 x i64> %v) {
   store <2 x i64> %v, <2 x i64>* %p, align 32
   ret void
+}
+
+; CHECK-LABEL: load_splat_v2i64_a1:
+; CHECK-NEXT: .functype load_splat_v2i64_a1 (i32) -> (v128){{$}}
+; CHECK-NEXT: v64x2.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @load_splat_v2i64_a1(i64* %p) {
+  %e = load i64, i64* %p, align 1
+  %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
+  %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
+  ret <2 x i64> %v2
+}
+
+; CHECK-LABEL: load_splat_v2i64_a2:
+; CHECK-NEXT: .functype load_splat_v2i64_a2 (i32) -> (v128){{$}}
+; CHECK-NEXT: v64x2.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @load_splat_v2i64_a2(i64* %p) {
+  %e = load i64, i64* %p, align 2
+  %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
+  %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
+  ret <2 x i64> %v2
+}
+
+; CHECK-LABEL: load_splat_v2i64_a4:
+; CHECK-NEXT: .functype load_splat_v2i64_a4 (i32) -> (v128){{$}}
+; CHECK-NEXT: v64x2.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @load_splat_v2i64_a4(i64* %p) {
+  %e = load i64, i64* %p, align 4
+  %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
+  %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
+  ret <2 x i64> %v2
+}
+
+; 8 is the default alignment for v64x2.load_splat so no attribute is needed.
+
+; CHECK-LABEL: load_splat_v2i64_a8:
+; CHECK-NEXT: .functype load_splat_v2i64_a8 (i32) -> (v128){{$}}
+; CHECK-NEXT: v64x2.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @load_splat_v2i64_a8(i64* %p) {
+  %e = load i64, i64* %p, align 8
+  %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
+  %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
+  ret <2 x i64> %v2
+}
+
+; 16 is greater than the default alignment so it is ignored.
+
+; CHECK-LABEL: load_splat_v2i64_a16:
+; CHECK-NEXT: .functype load_splat_v2i64_a16 (i32) -> (v128){{$}}
+; CHECK-NEXT: v64x2.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @load_splat_v2i64_a16(i64* %p) {
+  %e = load i64, i64* %p, align 16
+  %v1 = insertelement <2 x i64> undef, i64 %e, i32 0
+  %v2 = shufflevector <2 x i64> %v1, <2 x i64> undef, <2 x i32> zeroinitializer
+  ret <2 x i64> %v2
 }
 
 ; ==============================================================================

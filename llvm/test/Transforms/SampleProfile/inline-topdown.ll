@@ -9,7 +9,7 @@
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
-define i32 @_Z3sumii(i32 %x, i32 %y) !dbg !6 {
+define i32 @_Z3sumii(i32 %x, i32 %y) #0 !dbg !6 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
@@ -24,7 +24,7 @@ entry:
   ret i32 %add, !dbg !8
 }
 
-define i32 @_Z3subii(i32 %x, i32 %y) !dbg !9 {
+define i32 @_Z3subii(i32 %x, i32 %y) #0 !dbg !9 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
@@ -36,7 +36,7 @@ entry:
   ret i32 %add, !dbg !11
 }
 
-define i32 @main() !dbg !12 {
+define i32 @main() #0 !dbg !12 {
 entry:
   %retval = alloca i32, align 4
   %s = alloca i32, align 4
@@ -78,6 +78,8 @@ while.end:                                        ; preds = %while.cond
 }
 
 declare i32 @printf(i8*, ...)
+
+attributes #0 = { "use-sample-profile" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

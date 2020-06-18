@@ -18,8 +18,8 @@ namespace misc {
 
 namespace {
 
-AST_MATCHER_P(NamedDecl, usesHeaderFileExtension,
-              utils::HeaderFileExtensionsSet, HeaderFileExtensions) {
+AST_MATCHER_P(NamedDecl, usesHeaderFileExtension, utils::FileExtensionsSet,
+              HeaderFileExtensions) {
   return utils::isExpansionLocInHeaderFile(
       Node.getBeginLoc(), Finder->getASTContext().getSourceManager(),
       HeaderFileExtensions);
@@ -33,8 +33,9 @@ DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(StringRef Name,
       UseHeaderFileExtension(Options.get("UseHeaderFileExtension", true)),
       RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
           "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
-  if (!utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
-                                        HeaderFileExtensions, ',')) {
+  if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
+                                  HeaderFileExtensions,
+                                  utils::defaultFileExtensionDelimiters())) {
     // FIXME: Find a more suitable way to handle invalid configuration
     // options.
     llvm::errs() << "Invalid header file extension: "
@@ -49,8 +50,6 @@ void DefinitionsInHeadersCheck::storeOptions(
 }
 
 void DefinitionsInHeadersCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
   auto DefinitionMatcher =
       anyOf(functionDecl(isDefinition(), unless(isDeleted())),
             varDecl(isDefinition()));

@@ -382,16 +382,16 @@ define <4 x float> @test_extend32_vec4(<4 x half>* %p) #0 {
 ; CHECK-LIBCALL-NEXT:    subq $88, %rsp
 ; CHECK-LIBCALL-NEXT:    movl (%rdi), %eax
 ; CHECK-LIBCALL-NEXT:    movl 4(%rdi), %ecx
-; CHECK-LIBCALL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; CHECK-LIBCALL-NEXT:    movl %eax, (%rsp)
 ; CHECK-LIBCALL-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
-; CHECK-LIBCALL-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; CHECK-LIBCALL-NEXT:    movaps (%rsp), %xmm0
 ; CHECK-LIBCALL-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-LIBCALL-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
-; CHECK-LIBCALL-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; CHECK-LIBCALL-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-LIBCALL-NEXT:    pextrw $1, %xmm0, %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee
 ; CHECK-LIBCALL-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-LIBCALL-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
+; CHECK-LIBCALL-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-LIBCALL-NEXT:    pextrw $0, %xmm0, %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee
 ; CHECK-LIBCALL-NEXT:    punpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -400,11 +400,11 @@ define <4 x float> @test_extend32_vec4(<4 x half>* %p) #0 {
 ; CHECK-LIBCALL-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-LIBCALL-NEXT:    pextrw $1, %xmm0, %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee
-; CHECK-LIBCALL-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; CHECK-LIBCALL-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-LIBCALL-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-LIBCALL-NEXT:    pextrw $0, %xmm0, %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee
-; CHECK-LIBCALL-NEXT:    punpckldq (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-LIBCALL-NEXT:    punpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-LIBCALL-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-LIBCALL-NEXT:    punpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-LIBCALL-NEXT:    # xmm0 = xmm0[0],mem[0]
@@ -413,29 +413,7 @@ define <4 x float> @test_extend32_vec4(<4 x half>* %p) #0 {
 ;
 ; BWON-F16C-LABEL: test_extend32_vec4:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    movl (%rdi), %eax
-; BWON-F16C-NEXT:    movl 4(%rdi), %ecx
-; BWON-F16C-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
-; BWON-F16C-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; BWON-F16C-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
-; BWON-F16C-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm1
-; BWON-F16C-NEXT:    vpextrw $1, %xmm1, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm2
-; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; BWON-F16C-NEXT:    vmovd %xmm1, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm1
-; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; BWON-F16C-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm2
-; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; BWON-F16C-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
-; BWON-F16C-NEXT:    vpextrw $1, %xmm0, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm0
-; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; BWON-F16C-NEXT:    vcvtph2ps (%rdi), %xmm0
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_extend32_vec4:
@@ -525,25 +503,8 @@ define <4 x double> @test_extend64_vec4(<4 x half>* %p) #0 {
 ;
 ; BWON-F16C-LABEL: test_extend64_vec4:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    movzwl (%rdi), %eax
-; BWON-F16C-NEXT:    movzwl 2(%rdi), %ecx
-; BWON-F16C-NEXT:    movzwl 4(%rdi), %edx
-; BWON-F16C-NEXT:    movzwl 6(%rdi), %esi
-; BWON-F16C-NEXT:    vmovd %esi, %xmm0
-; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %edx, %xmm1
-; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; BWON-F16C-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; BWON-F16C-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; BWON-F16C-NEXT:    vmovd %ecx, %xmm1
-; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; BWON-F16C-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; BWON-F16C-NEXT:    vmovd %eax, %xmm2
-; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; BWON-F16C-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; BWON-F16C-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; BWON-F16C-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; BWON-F16C-NEXT:    vcvtph2ps (%rdi), %xmm0
+; BWON-F16C-NEXT:    vcvtps2pd %xmm0, %ymm0
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_extend64_vec4:
@@ -656,17 +617,7 @@ define void @test_trunc32_vec4(<4 x float> %a, <4 x half>* %p) #0 {
 ;
 ; BWON-F16C-LABEL: test_trunc32_vec4:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; BWON-F16C-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; BWON-F16C-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,1,2,3]
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
-; BWON-F16C-NEXT:    vpextrw $0, %xmm3, 6(%rdi)
-; BWON-F16C-NEXT:    vpextrw $0, %xmm2, 4(%rdi)
-; BWON-F16C-NEXT:    vpextrw $0, %xmm1, 2(%rdi)
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, (%rdi)
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_trunc32_vec4:

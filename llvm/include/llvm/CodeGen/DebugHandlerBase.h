@@ -18,8 +18,8 @@
 #include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
 #include "llvm/CodeGen/LexicalScopes.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 
 namespace llvm {
 

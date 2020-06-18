@@ -252,6 +252,6 @@ void ento::registerTrustNonnullChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<TrustNonnullChecker>(Mgr.getASTContext());
 }
 
-bool ento::shouldRegisterTrustNonnullChecker(const LangOptions &LO) {
+bool ento::shouldRegisterTrustNonnullChecker(const CheckerManager &mgr) {
   return true;
 }

@@ -1,5 +1,5 @@
+import itertools
 import os
-from xml.sax.saxutils import quoteattr
 from json import JSONEncoder
 
 from lit.BooleanExpression import BooleanExpression
@@ -9,33 +9,50 @@ from lit.BooleanExpression import BooleanExpression
 class ResultCode(object):
     """Test result codes."""
 
+    # All result codes (including user-defined ones) in declaration order
+    _all_codes = []
+
+    @staticmethod
+    def all_codes():
+        return ResultCode._all_codes
+
     # We override __new__ and __getnewargs__ to ensure that pickling still
     # provides unique ResultCode objects in any particular instance.
     _instances = {}
-    def __new__(cls, name, isFailure):
+
+    def __new__(cls, name, label, isFailure):
         res = cls._instances.get(name)
         if res is None:
             cls._instances[name] = res = super(ResultCode, cls).__new__(cls)
         return res
-    def __getnewargs__(self):
-        return (self.name, self.isFailure)
 
-    def __init__(self, name, isFailure):
+    def __getnewargs__(self):
+        return (self.name, self.label, self.isFailure)
+
+    def __init__(self, name, label, isFailure):
         self.name = name
+        self.label = label
         self.isFailure = isFailure
+        ResultCode._all_codes.append(self)
 
     def __repr__(self):
         return '%s%r' % (self.__class__.__name__,
                          (self.name, self.isFailure))
 
-PASS        = ResultCode('PASS', False)
-FLAKYPASS   = ResultCode('FLAKYPASS', False)
-XFAIL       = ResultCode('XFAIL', False)
-FAIL        = ResultCode('FAIL', True)
-XPASS       = ResultCode('XPASS', True)
-UNRESOLVED  = ResultCode('UNRESOLVED', True)
-UNSUPPORTED = ResultCode('UNSUPPORTED', False)
-TIMEOUT     = ResultCode('TIMEOUT', True)
+
+# Successes
+EXCLUDED    = ResultCode('EXCLUDED',    'Excluded', False)
+SKIPPED     = ResultCode('SKIPPED',     'Skipped', False)
+UNSUPPORTED = ResultCode('UNSUPPORTED', 'Unsupported', False)
+PASS        = ResultCode('PASS',        'Passed', False)
+FLAKYPASS   = ResultCode('FLAKYPASS',   'Passed With Retry', False)
+XFAIL       = ResultCode('XFAIL',       'Expectedly Failed', False)
+# Failures
+UNRESOLVED  = ResultCode('UNRESOLVED',  'Unresolved', True)
+TIMEOUT     = ResultCode('TIMEOUT',     'Timed Out', True)
+FAIL        = ResultCode('FAIL',        'Failed', True)
+XPASS       = ResultCode('XPASS',       'Unexpectedly Passed', True)
+
 
 # Test metric values.
 
@@ -160,7 +177,7 @@ class Result(object):
         addMicroResult(microResult)
 
         Attach a micro-test result to the test result, with the given name and
-        result.  It is an error to attempt to attach a micro-test with the 
+        result.  It is an error to attempt to attach a micro-test with the
         same name multiple times.
 
         Each micro-test result must be an instance of the Result class.
@@ -220,12 +237,30 @@ class Test:
         # triple parts. All of them must be False for the test to run.
         self.unsupported = []
 
+        # An optional number of retries allowed before the test finally succeeds.
+        # The test is run at most once plus the number of retries specified here.
+        self.allowed_retries = getattr(config, 'test_retry_attempts', 0)
+
         # The test result, once complete.
         self.result = None
 
     def setResult(self, result):
         assert self.result is None, "result already set"
         assert isinstance(result, Result), "unexpected result type"
+        try:
+            expected_to_fail = self.isExpectedToFail()
+        except ValueError as err:
+            # Syntax error in an XFAIL line.
+            result.code = UNRESOLVED
+            result.output = str(err)
+        else:
+            if expected_to_fail:
+                # pass -> unexpected pass
+                if result.code is PASS:
+                    result.code = XPASS
+                # fail -> expected fail
+                elif result.code is FAIL:
+                    result.code = XFAIL
         self.result = result
 
     def isFailure(self):
@@ -339,6 +374,26 @@ class Test:
         except ValueError as e:
             raise ValueError('Error in UNSUPPORTED list:\n%s' % str(e))
 
+    def getUsedFeatures(self):
+        """
+        getUsedFeatures() -> list of strings
+
+        Returns a list of all features appearing in XFAIL, UNSUPPORTED and
+        REQUIRES annotations for this test.
+        """
+        import lit.TestRunner
+        parsed = lit.TestRunner._parseKeywords(self.getSourcePath(), require_script=False)
+        feature_keywords = ('UNSUPPORTED:', 'REQUIRES:', 'XFAIL:')
+        boolean_expressions = itertools.chain.from_iterable(
+            parsed[k] or [] for k in feature_keywords
+        )
+        tokens = itertools.chain.from_iterable(
+            BooleanExpression.tokenize(expr) for expr in
+                boolean_expressions if expr != '*'
+        )
+        identifiers = set(filter(BooleanExpression.isIdentifier, tokens))
+        return identifiers
+
     def isEarlyTest(self):
         """
         isEarlyTest() -> bool
@@ -348,45 +403,3 @@ class Test:
         parallelism or where it is desirable to surface their failures early.
         """
         return self.suite.config.is_early
-
-    def writeJUnitXML(self, fil):
-        """Write the test's report xml representation to a file handle."""
-        test_name = quoteattr(self.path_in_suite[-1])
-        test_path = self.path_in_suite[:-1]
-        safe_test_path = [x.replace(".","_") for x in test_path]
-        safe_name = self.suite.name.replace(".","-")
-
-        if safe_test_path:
-            class_name = safe_name + "." + "/".join(safe_test_path) 
-        else:
-            class_name = safe_name + "." + safe_name
-        class_name = quoteattr(class_name)
-        testcase_template = '<testcase classname={class_name} name={test_name} time="{time:.2f}"'
-        elapsed_time = self.result.elapsed if self.result.elapsed is not None else 0.0
-        testcase_xml = testcase_template.format(class_name=class_name, test_name=test_name, time=elapsed_time)
-        fil.write(testcase_xml)
-        if self.isFailure():
-            fil.write(">\n\t<failure ><![CDATA[")
-            # In Python2, 'str' and 'unicode' are distinct types, but in Python3, the type 'unicode' does not exist
-            # and instead 'bytes' is distinct
-            # in Python3, there's no unicode
-            if isinstance(self.result.output, str):
-                encoded_output = self.result.output
-            elif isinstance(self.result.output, bytes):
-                encoded_output = self.result.output.decode("utf-8", 'ignore')
-            else:
-                encoded_output = self.result.output.encode("utf-8", 'ignore')
-            # In the unlikely case that the output contains the CDATA terminator
-            # we wrap it by creating a new CDATA block
-            fil.write(encoded_output.replace("]]>", "]]]]><![CDATA[>"))
-            fil.write("]]></failure>\n</testcase>")
-        elif self.result.code == UNSUPPORTED:
-            unsupported_features = self.getMissingRequiredFeatures()
-            if unsupported_features:
-                skip_message = "Skipping because of: " + ", ".join(unsupported_features)
-            else:
-                skip_message = "Skipping because of configuration."
-
-            fil.write(">\n\t<skipped message={} />\n</testcase>\n".format(quoteattr(skip_message)))
-        else:
-            fil.write("/>")

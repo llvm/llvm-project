@@ -21,7 +21,6 @@ namespace llvm {
 class NVPTXTargetMachine;
 class FunctionPass;
 class MachineFunctionPass;
-class formatted_raw_ostream;
 
 namespace NVPTXCC {
 enum CondCodes {

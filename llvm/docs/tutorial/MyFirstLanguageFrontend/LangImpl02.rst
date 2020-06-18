@@ -314,7 +314,7 @@ Now that we have all of our simple expression-parsing logic in place, we
 can define a helper function to wrap it together into one entry point.
 We call this class of expressions "primary" expressions, for reasons
 that will become more clear `later in the
-tutorial <LangImpl6.html#user-defined-unary-operators>`_. In order to parse an arbitrary
+tutorial <LangImpl06.html#user-defined-unary-operators>`_. In order to parse an arbitrary
 primary expression, we need to determine what sort of expression it is:
 
 .. code-block:: c++
@@ -718,7 +718,7 @@ Full Code Listing
 
 Here is the complete code listing for our running example. Because this
 uses the LLVM libraries, we need to link them in. To do this, we use the
-`llvm-config <http://llvm.org/cmds/llvm-config.html>`_ tool to inform
+`llvm-config <https://llvm.org/cmds/llvm-config.html>`_ tool to inform
 our makefile/command line about which options to use:
 
 .. code-block:: bash

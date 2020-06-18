@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -145,7 +146,7 @@ namespace {
 /// Legacy pass for lowering is.constant intrinsics out of the IR.
 ///
 /// When this pass is run over a function it converts is.constant intrinsics
-/// into 'true' or 'false'. This is completements the normal constand folding
+/// into 'true' or 'false'. This complements the normal constant folding
 /// to 'true' as part of Instruction Simplify passes.
 class LowerConstantIntrinsics : public FunctionPass {
 public:

@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -84,14 +84,32 @@ constexpr bool testConstexprSpan()
     return s1.data() == val.getV() && s1.size() == 1;
 }
 
+template <typename T>
+constexpr bool testConstexprSpanStatic()
+{
+    constexpr IsAContainer<const T> val{};
+    std::span<const T, 1> s1{val};
+    return s1.data() == val.getV() && s1.size() == 1;
+}
 
 template <typename T>
 void testRuntimeSpan()
 {
     IsAContainer<T> val{};
     const IsAContainer<T> cVal;
-    std::span<T>          s1{val};
-    std::span<const T>    s2{cVal};
+    std::span<T>       s1{val};
+    std::span<const T> s2{cVal};
+    assert(s1.data() == val.getV()  && s1.size() == 1);
+    assert(s2.data() == cVal.getV() && s2.size() == 1);
+}
+
+template <typename T>
+void testRuntimeSpanStatic()
+{
+    IsAContainer<T> val{};
+    const IsAContainer<T> cVal;
+    std::span<T, 1>       s1{val};
+    std::span<const T, 1> s2{cVal};
     assert(s1.data() == val.getV()  && s1.size() == 1);
     assert(s2.data() == cVal.getV() && s2.size() == 1);
 }
@@ -105,11 +123,22 @@ int main(int, char**)
     static_assert(testConstexprSpan<double>(), "");
     static_assert(testConstexprSpan<A>(),      "");
 
+    static_assert(testConstexprSpanStatic<int>(),    "");
+    static_assert(testConstexprSpanStatic<long>(),   "");
+    static_assert(testConstexprSpanStatic<double>(), "");
+    static_assert(testConstexprSpanStatic<A>(),      "");
+
     testRuntimeSpan<int>();
     testRuntimeSpan<long>();
     testRuntimeSpan<double>();
     testRuntimeSpan<std::string>();
     testRuntimeSpan<A>();
+
+    testRuntimeSpanStatic<int>();
+    testRuntimeSpanStatic<long>();
+    testRuntimeSpanStatic<double>();
+    testRuntimeSpanStatic<std::string>();
+    testRuntimeSpanStatic<A>();
 
     checkCV();
 

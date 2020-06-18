@@ -262,12 +262,6 @@ def coverage_notes_file : Separate<["-"], "coverage-notes-file">,
   HelpText<"Emit coverage notes to this filename.">;
 def coverage_notes_file_EQ : Joined<["-"], "coverage-notes-file=">,
   Alias<coverage_notes_file>;
-def coverage_cfg_checksum : Flag<["-"], "coverage-cfg-checksum">,
-  HelpText<"Emit CFG checksum for functions in .gcno files.">;
-def coverage_no_function_names_in_data : Flag<["-"], "coverage-no-function-names-in-data">,
-  HelpText<"Emit function names in .gcda files.">;
-def coverage_exit_block_before_body : Flag<["-"], "coverage-exit-block-before-body">,
-  HelpText<"Emit the exit block before the body blocks in .gcno files.">;
 def coverage_version_EQ : Joined<["-"], "coverage-version=">,
   HelpText<"Four-byte version string for gcov files.">;
 def test_coverage : Flag<["-"], "test-coverage">,
@@ -282,10 +276,6 @@ def no_struct_path_tbaa : Flag<["-"], "no-struct-path-tbaa">,
   HelpText<"Turn off struct-path aware Type Based Alias Analysis">;
 def new_struct_path_tbaa : Flag<["-"], "new-struct-path-tbaa">,
   HelpText<"Enable enhanced struct-path aware Type Based Alias Analysis">;
-def masm_verbose : Flag<["-"], "masm-verbose">,
-  HelpText<"Generate verbose assembly output">;
-def mcode_model : Separate<["-"], "mcode-model">,
-  HelpText<"The code model to use">, Values<"tiny,small,kernel,medium,large">;
 def mdebug_pass : Separate<["-"], "mdebug-pass">,
   HelpText<"Enable additional debug output">;
 def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
@@ -315,6 +305,8 @@ def mno_zero_initialized_in_bss : Flag<["-"], "mno-zero-initialized-in-bss">,
   HelpText<"Do not put zero initialized data in the BSS">;
 def mregparm : Separate<["-"], "mregparm">,
   HelpText<"Limit the number of registers available for integer arguments">;
+def msmall_data_limit : Separate<["-"], "msmall-data-limit">,
+  HelpText<"Put global and static data smaller than the limit into a special section">;
 def munwind_tables : Flag<["-"], "munwind-tables">,
   HelpText<"Generate unwinding tables for all functions">;
 def mconstructor_aliases : Flag<["-"], "mconstructor-aliases">,
@@ -357,6 +349,9 @@ def fsanitize_coverage_8bit_counters
 def fsanitize_coverage_inline_8bit_counters
     : Flag<["-"], "fsanitize-coverage-inline-8bit-counters">,
       HelpText<"Enable inline 8-bit counters in sanitizer coverage">;
+def fsanitize_coverage_inline_bool_flag
+    : Flag<["-"], "fsanitize-coverage-inline-bool-flag">,
+      HelpText<"Enable inline bool flag in sanitizer coverage">;
 def fsanitize_coverage_pc_table
     : Flag<["-"], "fsanitize-coverage-pc-table">,
       HelpText<"Create a table of coverage-instrumented PCs">;
@@ -453,8 +448,6 @@ def fspell_checking_limit : Separate<["-"], "fspell-checking-limit">, MetaVarNam
 def fcaret_diagnostics_max_lines :
   Separate<["-"], "fcaret-diagnostics-max-lines">, MetaVarName<"<N>">,
   HelpText<"Set the maximum number of source lines to show in a caret diagnostic">;
-def fmessage_length : Separate<["-"], "fmessage-length">, MetaVarName<"<N>">,
-  HelpText<"Format message diagnostics so that they fit within N columns or fewer, when possible.">;
 def verify_EQ : CommaJoined<["-"], "verify=">,
   MetaVarName<"<prefixes>">,
   HelpText<"Verify diagnostic output using comment directives that start with"
@@ -565,6 +558,15 @@ def fconcepts_ts : Flag<["-"], "fconcepts-ts">,
 def fno_concept_satisfaction_caching : Flag<["-"],
                                             "fno-concept-satisfaction-caching">,
   HelpText<"Disable satisfaction caching for C++2a Concepts.">;
+
+def frecovery_ast : Flag<["-"], "frecovery-ast">,
+  HelpText<"Preserve expressions in AST rather than dropping them when "
+           "encountering semantic errors">;
+def fno_recovery_ast : Flag<["-"], "fno-recovery-ast">;
+def frecovery_ast_type : Flag<["-"], "frecovery-ast-type">,
+  HelpText<"Preserve the type for recovery expressions when possible "
+          "(experimental)">;
+def fno_recovery_ast_type : Flag<["-"], "fno-recovery-ast-type">;
 
 let Group = Action_Group in {
 
@@ -811,6 +813,9 @@ def fsigned_wchar : Flag<["-"], "fsigned-wchar">,
   HelpText<"Use a signed type for wchar_t">;
 def fno_signed_wchar : Flag<["-"], "fno-signed-wchar">,
   HelpText<"Use an unsigned type for wchar_t">;
+def fcompatibility_qualified_id_block_param_type_checking : Flag<["-"], "fcompatibility-qualified-id-block-type-checking">,
+  HelpText<"Allow using blocks with parameters of more specific type than "
+           "the type system guarantees when a parameter is qualified id">;
 
 // FIXME: Remove these entirely once functionality/tests have been excised.
 def fobjc_gc_only : Flag<["-"], "fobjc-gc-only">, Group<f_Group>,

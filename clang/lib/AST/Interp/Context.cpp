@@ -17,6 +17,7 @@
 #include "PrimType.h"
 #include "Program.h"
 #include "clang/AST/Expr.h"
+#include "clang/Basic/TargetInfo.h"
 
 using namespace clang;
 using namespace clang::interp;

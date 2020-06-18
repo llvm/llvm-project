@@ -1123,6 +1123,12 @@ private:
   }
 #endif
 
+#if defined (_LIBUNWIND_TARGET_HEXAGON)
+  compact_unwind_encoding_t dwarfEncoding(Registers_hexagon &) const {
+    return 0;
+  }
+#endif
+
 #if defined (_LIBUNWIND_TARGET_MIPS_O32)
   compact_unwind_encoding_t dwarfEncoding(Registers_mips_o32 &) const {
     return 0;
@@ -1847,6 +1853,12 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   // This matches the behaviour of _Unwind_GetIP on arm.
   pc &= (pint_t)~0x1;
 #endif
+
+  // Exit early if at the top of the stack.
+  if (pc == 0) {
+    _unwindInfoMissing = true;
+    return;
+  }
 
   // If the last line of a function is a "throw" the compiler sometimes
   // emits no instructions after the call to __cxa_throw.  This means

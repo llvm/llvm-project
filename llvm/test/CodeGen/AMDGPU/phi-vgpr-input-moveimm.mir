@@ -1,0 +1,97 @@
+# RUN: llc  -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass=si-fix-sgpr-copies -o - %s | FileCheck -check-prefix=GCN %s
+---
+# GCN_LABEL: phi_moveimm_input
+# GCN-NOT: %{{[0-9]+}}:vgpr_32 = PHI %{{[0-9]+}}, %bb.3, %{{[0-9]+}}, %bb.1
+# GCN:     %{{[0-9]+}}:sreg_32 = PHI %{{[0-9]+}}, %bb.3, %{{[0-9]+}}, %bb.1
+
+name:            phi_moveimm_input
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $sgpr0, $sgpr1
+
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+
+    %4:sreg_32 = COPY $sgpr0
+    %5:sreg_32 = COPY $sgpr1
+
+  bb.1:
+    successors: %bb.2
+    %2:sreg_32 =  S_ADD_U32 %4, %5, implicit-def $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3
+    %3:sreg_32 = PHI %1, %bb.3, %2, %bb.1
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.2
+    %1:sreg_32 = COPY %0
+    S_BRANCH %bb.2
+...
+
+---
+# GCN_LABEL: phi_moveimm_subreg_input
+# GCN-NOT: %{{[0-9]+}}:sreg_64 = PHI %{{[0-9]+}}, %bb.3, %{{[0-9]+}}, %bb.1
+# GCN: %{{[0-9]+}}:vreg_64 = PHI %{{[0-9]+}}, %bb.3, %{{[0-9]+}}, %bb.1
+name:            phi_moveimm_subreg_input
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $sgpr0, $sgpr1
+
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+
+    %4:sreg_32 = COPY $sgpr0
+    %5:sreg_32 = COPY $sgpr1
+
+  bb.1:
+    successors: %bb.2
+    undef %2.sub0:sreg_64 =  S_ADD_U32 %4, %5, implicit-def $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3
+    %3:sreg_64 = PHI %1, %bb.3, %2, %bb.1
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.2
+    undef %1.sub0:sreg_64 = COPY %0
+    S_BRANCH %bb.2
+...
+
+
+---
+# GCN_LABEL: phi_moveimm_bad_opcode_input
+# GCN-NOT: %{{[0-9]+}}:sreg_32 = PHI %{{[0-9]+}}, %bb.3, %{{[0-9]+}}, %bb.1
+# GCN: %{{[0-9]+}}:vgpr_32 = PHI %{{[0-9]+}}, %bb.3, %{{[0-9]+}}, %bb.1
+name:            phi_moveimm_bad_opcode_input
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $sgpr0, $sgpr1, $vgpr0
+    %6:vgpr_32 = COPY $vgpr0
+    %0:vgpr_32 = V_MOV_B32_sdwa 0, %6:vgpr_32, 0, 5, 2, 4,  implicit $exec, implicit %6:vgpr_32(tied-def 0)
+
+    %4:sreg_32 = COPY $sgpr0
+    %5:sreg_32 = COPY $sgpr1
+
+  bb.1:
+
+    successors: %bb.2
+    %2:sreg_32 =  S_ADD_U32 %4, %5, implicit-def $scc
+    S_BRANCH %bb.2
+  bb.2:
+    successors: %bb.3
+    %3:sreg_32 = PHI %1, %bb.3, %2, %bb.1
+    S_BRANCH %bb.3
+  bb.3:
+    successors: %bb.2
+    %1:sreg_32 = COPY %0
+    S_BRANCH %bb.2
+...

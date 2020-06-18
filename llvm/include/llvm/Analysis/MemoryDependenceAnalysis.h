@@ -478,7 +478,8 @@ private:
                                    BasicBlock *BB,
                                    SmallVectorImpl<NonLocalDepResult> &Result,
                                    DenseMap<BasicBlock *, Value *> &Visited,
-                                   bool SkipFirstBlock = false);
+                                   bool SkipFirstBlock = false,
+                                   bool IsIncomplete = false);
   MemDepResult GetNonLocalInfoForBlock(Instruction *QueryInst,
                                        const MemoryLocation &Loc, bool isLoad,
                                        BasicBlock *BB, NonLocalDepInfo *Cache,

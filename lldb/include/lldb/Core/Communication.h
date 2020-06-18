@@ -221,7 +221,7 @@ public:
   ///
   /// \see
   ///     class Connection
-  void SetConnection(Connection *connection);
+  void SetConnection(std::unique_ptr<Connection> connection);
 
   /// Starts a read thread whose sole purpose it to read bytes from the
   /// current connection. This function will call connection's read function:
@@ -359,7 +359,8 @@ protected:
   size_t GetCachedBytes(void *dst, size_t dst_len);
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Communication);
+  Communication(const Communication &) = delete;
+  const Communication &operator=(const Communication &) = delete;
 };
 
 } // namespace lldb_private

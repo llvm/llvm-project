@@ -586,3 +586,37 @@ CallSiteBB:
 End:
   ret void
 }
+
+; CHECK-LABEL: i32 @test_multiple_phis(
+; CHECK:      Header.split:
+; CHECK-NEXT:   %r2 = call i32 @callee(i32* null, i32 1, i32 5)
+; CHECK-NEXT:   br label %Tail
+
+; CHECK:      TBB.split:
+; CHECK-NEXT:   %r1 = call i32 @callee(i32* null, i32 2, i32 10)
+; CHECK-NEXT:   br label %Tail
+
+; CHECK:        Tail:
+; CHECK-NEXT:   %phi.call = phi i32 [ %r1, %TBB.split ], [ %r2, %Header.split ]
+; CHECK-NEXT:   %p.0 = phi i32 [ 0, %Header.split ], [ 99, %TBB.split ]
+; CHECK-NEXT:   %res = add i32 %phi.call, %p.0
+; CHECK-NEXT:   ret i32 %phi.call
+;
+define i32 @test_multiple_phis(i1 %c.1) {
+Header:
+  br i1 %c.1, label %Tail, label %TBB
+
+TBB:
+  br label %Tail
+
+Tail:
+  %p.0 = phi i32 [0, %Header], [99, %TBB]
+  %p.1 = phi i32[1, %Header], [2, %TBB]
+  %p.2 = phi i32 [5, %Header], [10, %TBB]
+  %r = call i32 @callee(i32* null, i32 %p.1, i32 %p.2)
+  %res = add i32 %r, %p.0
+  ret i32 %r
+
+End:
+  ret i32 10
+}

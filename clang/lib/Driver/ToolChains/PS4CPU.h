@@ -88,13 +88,19 @@ public:
   // capable of unit splitting.
   bool canSplitThinLTOUnit() const override { return false; }
 
-  llvm::DenormalMode getDefaultDenormalModeForType(
+  void addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs,
-    Action::OffloadKind DeviceOffloadKind,
-    const llvm::fltSemantics *FPType) const override {
+    llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadingKind) const override;
+
+  llvm::DenormalMode getDefaultDenormalModeForType(
+      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
+      const llvm::fltSemantics *FPType) const override {
     // DAZ and FTZ are on by default.
     return llvm::DenormalMode::getPreserveSign();
   }
+
+  bool useRelaxRelocations() const override { return true; }
 
 protected:
   Tool *buildAssembler() const override;

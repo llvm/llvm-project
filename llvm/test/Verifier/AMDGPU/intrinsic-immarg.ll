@@ -703,3 +703,12 @@ define void @test_mfma_f32_32x32x1f32(float %arg0, float %arg1, <32 x i32> %arg2
 
   ret void
 }
+
+declare void @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1)
+define amdgpu_cs void @test_buffer_atomic_fadd(float %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %offset, i1 %slc) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i1 %slc
+  ; CHECK-ENXT: call void @llvm.amdgcn.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 %offset, i1 %slc)
+  call void @llvm.amdgcn.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 %offset, i1 %slc)
+  ret void
+}

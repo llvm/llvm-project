@@ -11,7 +11,7 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 
 namespace mlir {
@@ -19,6 +19,9 @@ namespace mlir {
 /// Rewriting that replace SourceOp with a CallOp to `f32Func` or `f64Func`
 /// depending on the element type that Op operates upon. The function
 /// declaration is added in case it was not added before.
+///
+/// If the input values are of f16 type, the value is first casted to f32, the
+/// function called and then the result casted back.
 ///
 /// Example with NVVM:
 ///   %exp_f32 = std.exp %arg_f32 : f32
@@ -34,7 +37,7 @@ public:
                              lowering_.getDialect()->getContext(), lowering_),
         f32Func(f32Func), f64Func(f64Func) {}
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     using LLVM::LLVMFuncOp;
@@ -44,21 +47,48 @@ public:
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
 
-    LLVMType resultType = typeConverter.convertType(op->getResult(0).getType())
-                              .template cast<LLVM::LLVMType>();
-    LLVMType funcType = getFunctionType(resultType, operands);
-    StringRef funcName = getFunctionName(resultType);
+    static_assert(std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
+                                  SourceOp>::value,
+                  "expected op with same operand and result types");
+
+    SmallVector<Value, 1> castedOperands;
+    for (Value operand : operands)
+      castedOperands.push_back(maybeCast(operand, rewriter));
+
+    LLVMType resultType =
+        castedOperands.front().getType().cast<LLVM::LLVMType>();
+    LLVMType funcType = getFunctionType(resultType, castedOperands);
+    StringRef funcName = getFunctionName(funcType.getFunctionResultType());
     if (funcName.empty())
-      return matchFailure();
+      return failure();
 
     LLVMFuncOp funcOp = appendOrGetFuncOp(funcName, funcType, op);
     auto callOp = rewriter.create<LLVM::CallOp>(
-        op->getLoc(), resultType, rewriter.getSymbolRefAttr(funcOp), operands);
-    rewriter.replaceOp(op, {callOp.getResult(0)});
-    return matchSuccess();
+        op->getLoc(), resultType, rewriter.getSymbolRefAttr(funcOp),
+        castedOperands);
+
+    if (resultType == operands.front().getType()) {
+      rewriter.replaceOp(op, {callOp.getResult(0)});
+      return success();
+    }
+
+    Value truncated = rewriter.create<LLVM::FPTruncOp>(
+        op->getLoc(), operands.front().getType(), callOp.getResult(0));
+    rewriter.replaceOp(op, {truncated});
+    return success();
   }
 
 private:
+  Value maybeCast(Value operand, PatternRewriter &rewriter) const {
+    LLVM::LLVMType type = operand.getType().cast<LLVM::LLVMType>();
+    if (!type.isHalfTy())
+      return operand;
+
+    return rewriter.create<LLVM::FPExtOp>(
+        operand.getLoc(), LLVM::LLVMType::getFloatTy(&type.getDialect()),
+        operand);
+  }
+
   LLVM::LLVMType getFunctionType(LLVM::LLVMType resultType,
                                  ArrayRef<Value> operands) const {
     using LLVM::LLVMType;
@@ -94,24 +124,6 @@ private:
   const std::string f32Func;
   const std::string f64Func;
 };
-
-namespace gpu {
-/// Returns a predicate to be used with addDynamicallyLegalOp. The predicate
-/// returns false for calls to the provided intrinsics and true otherwise.
-inline std::function<bool(Operation *)>
-filterIllegalLLVMIntrinsics(ArrayRef<StringRef> intrinsics, MLIRContext *ctx) {
-  SmallVector<StringRef, 4> illegalIds(intrinsics.begin(), intrinsics.end());
-  return [illegalIds](Operation *op) -> bool {
-    LLVM::CallOp callOp = dyn_cast<LLVM::CallOp>(op);
-    if (!callOp || !callOp.callee())
-      return true;
-    StringRef callee = callOp.callee().getValue();
-    return !llvm::any_of(illegalIds, [callee](StringRef intrinsic) {
-      return callee.equals(intrinsic);
-    });
-  };
-}
-} // namespace gpu
 
 } // namespace mlir
 

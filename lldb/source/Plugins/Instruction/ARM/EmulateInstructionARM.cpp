@@ -605,9 +605,6 @@ static uint32_t CountITSize(uint32_t ITMask) {
   // First count the trailing zeros of the IT mask.
   uint32_t TZ = llvm::countTrailingZeros(ITMask);
   if (TZ > 3) {
-#ifdef LLDB_CONFIGURATION_DEBUG
-    printf("Encoding error: IT Mask '0000'\n");
-#endif
     return 0;
   }
   return (4 - TZ);
@@ -622,15 +619,9 @@ bool ITSession::InitIT(uint32_t bits7_0) {
   // A8.6.50 IT
   unsigned short FirstCond = Bits32(bits7_0, 7, 4);
   if (FirstCond == 0xF) {
-#ifdef LLDB_CONFIGURATION_DEBUG
-    printf("Encoding error: IT FirstCond '1111'\n");
-#endif
     return false;
   }
   if (FirstCond == 0xE && ITCounter != 1) {
-#ifdef LLDB_CONFIGURATION_DEBUG
-    printf("Encoding error: IT FirstCond '1110' && Mask != '1000'\n");
-#endif
     return false;
   }
 
@@ -7232,7 +7223,7 @@ bool EmulateInstructionARM::EmulateLDRHImmediate(const uint32_t opcode,
   return true;
 }
 
-// LDRH (literal) caculates an address from the PC value and an immediate
+// LDRH (literal) calculates an address from the PC value and an immediate
 // offset, loads a halfword from memory,
 // zero-extends it to form a 32-bit word, and writes it to a register.
 bool EmulateInstructionARM::EmulateLDRHLiteral(const uint32_t opcode,
@@ -8518,7 +8509,7 @@ bool EmulateInstructionARM::EmulateSXTH(const uint32_t opcode,
   return true;
 }
 
-// UXTB extracts an 8-bit value from a register, zero-extneds it to 32 bits, and
+// UXTB extracts an 8-bit value from a register, zero-extends it to 32 bits, and
 // writes the result to the destination
 // register.  You can specify a rotation by 0, 8, 16, or 24 bits before
 // extracting the 8-bit value.

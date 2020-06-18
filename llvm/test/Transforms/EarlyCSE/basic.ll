@@ -291,3 +291,14 @@ entry:
   store i32 2, i32* @c, align 4
   ret void
 }
+
+define i1 @cse_freeze(i1 %a) {
+entry:
+; CHECK-LABEL: @cse_freeze(
+; CHECK: %b = freeze i1 %a
+; CHECK: ret i1 %b
+  %b = freeze i1 %a
+  %c = freeze i1 %a
+  %and = and i1 %b, %c
+  ret i1 %and
+}

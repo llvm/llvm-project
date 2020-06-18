@@ -30,7 +30,7 @@ cleanup:
 ; CHECK-NEXT:    ret { i8*, i32 } [[RET]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal { i8*, i32 } @f.resume.0(i8* noalias nonnull %0, i8 zeroext %1)
+; CHECK-LABEL: define internal { i8*, i32 } @f.resume.0(i8* noalias nonnull align 4 dereferenceable(8) %0, i8 zeroext %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    [[T0:%.*]] = icmp eq i8 %1, 0
 ; CHECK-NEXT:    br i1 [[T0]],

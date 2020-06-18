@@ -770,5 +770,5 @@ define void @PR43833_simple(i32* %0, i32 %1) {
   br i1 %11, label %7, label %8
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}

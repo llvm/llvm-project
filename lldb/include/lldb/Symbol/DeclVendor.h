@@ -67,7 +67,8 @@ public:
 
 private:
   // For DeclVendor only
-  DISALLOW_COPY_AND_ASSIGN(DeclVendor);
+  DeclVendor(const DeclVendor &) = delete;
+  const DeclVendor &operator=(const DeclVendor &) = delete;
 
   const DeclVendorKind m_kind;
 };

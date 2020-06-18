@@ -8,7 +8,6 @@
 
 #include "llvm/Analysis/SparsePropagation.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
 #include "gtest/gtest.h"
 using namespace llvm;
@@ -143,7 +142,7 @@ public:
       SparseSolver<TestLatticeKey, TestLatticeVal> &SS) override {
     switch (I.getOpcode()) {
     case Instruction::Call:
-      return visitCallSite(cast<CallInst>(&I), ChangedValues, SS);
+      return visitCallBase(cast<CallBase>(I), ChangedValues, SS);
     case Instruction::Ret:
       return visitReturn(*cast<ReturnInst>(&I), ChangedValues, SS);
     case Instruction::Store:
@@ -158,12 +157,11 @@ private:
   /// of the current formal argument state with the call site's corresponding
   /// actual argument state. The call site state is the merge of the call site
   /// state with the returned value state of the called function.
-  void visitCallSite(CallSite CS,
+  void visitCallBase(CallBase &I,
                      DenseMap<TestLatticeKey, TestLatticeVal> &ChangedValues,
                      SparseSolver<TestLatticeKey, TestLatticeVal> &SS) {
-    Function *F = CS.getCalledFunction();
-    Instruction *I = CS.getInstruction();
-    auto RegI = TestLatticeKey(I, IPOGrouping::Register);
+    Function *F = I.getCalledFunction();
+    auto RegI = TestLatticeKey(&I, IPOGrouping::Register);
     if (!F) {
       ChangedValues[RegI] = getOverdefinedVal();
       return;
@@ -172,7 +170,7 @@ private:
     for (Argument &A : F->args()) {
       auto RegFormal = TestLatticeKey(&A, IPOGrouping::Register);
       auto RegActual =
-          TestLatticeKey(CS.getArgument(A.getArgNo()), IPOGrouping::Register);
+          TestLatticeKey(I.getArgOperand(A.getArgNo()), IPOGrouping::Register);
       ChangedValues[RegFormal] =
           MergeValues(SS.getValueState(RegFormal), SS.getValueState(RegActual));
     }

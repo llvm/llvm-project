@@ -266,7 +266,7 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                     << "spOffset   : " << spOffset << "\n"
                     << "stackSize  : " << stackSize << "\n"
                     << "alignment  : "
-                    << MF.getFrameInfo().getObjectAlignment(FrameIndex)
+                    << DebugStr(MF.getFrameInfo().getObjectAlign(FrameIndex))
                     << "\n");
 
   eliminateFI(MI, FIOperandNum, FrameIndex, stackSize, spOffset);

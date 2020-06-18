@@ -13,7 +13,11 @@ class CPPAcceleratorTableTestCase(TestBase):
     def test(self):
         """Test that type lookups fail early (performance)"""
         self.build()
+
         logfile = self.getBuildArtifact('dwarf.log')
+        if configuration.is_reproducer_replay():
+            logfile = self.getReproducerRemappedPath(logfile)
+
         self.expect('log enable dwarf lookups -f' + logfile)
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.cpp'))

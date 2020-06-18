@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -104,14 +105,14 @@ unsigned TargetInstrInfo::getInlineAsmLength(
       AtInsnStart = false;
     }
 
-    if (AtInsnStart && !std::isspace(static_cast<unsigned char>(*Str))) {
+    if (AtInsnStart && !isSpace(static_cast<unsigned char>(*Str))) {
       unsigned AddLength = MaxInstLength;
       if (strncmp(Str, ".space", 6) == 0) {
         char *EStr;
         int SpaceSize;
         SpaceSize = strtol(Str + 6, &EStr, 10);
         SpaceSize = SpaceSize < 0 ? 0 : SpaceSize;
-        while (*EStr != '\n' && std::isspace(static_cast<unsigned char>(*EStr)))
+        while (*EStr != '\n' && isSpace(static_cast<unsigned char>(*EStr)))
           ++EStr;
         if (*EStr == '\0' || *EStr == '\n' ||
             isAsmComment(EStr, MAI)) // Successfully parsed .space argument
@@ -143,7 +144,7 @@ TargetInstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
   // from the end of MBB.
   while (Tail != MBB->end()) {
     auto MI = Tail++;
-    if (MI->isCandidateForCallSiteEntry())
+    if (MI->shouldUpdateCallSiteInfo())
       MBB->getParent()->eraseCallSiteInfo(&*MI);
     MBB->erase(MI);
   }
@@ -408,7 +409,7 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 
 void TargetInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
-                                    unsigned DestReg, unsigned SubIdx,
+                                    Register DestReg, unsigned SubIdx,
                                     const MachineInstr &Orig,
                                     const TargetRegisterInfo &TRI) const {
   MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
@@ -591,10 +592,14 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
             NewMI->mayLoad()) &&
            "Folded a use to a non-load!");
     assert(MFI.getObjectOffset(FI) != -1);
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FI), Flags, MemSize,
-        MFI.getObjectAlignment(FI));
+    MachineMemOperand *MMO =
+        MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI),
+                                Flags, MemSize, MFI.getObjectAlign(FI));
     NewMI->addMemOperand(MF, MMO);
+
+    // The pass "x86 speculative load hardening" always attaches symbols to
+    // call instructions. We need copy it form old instruction.
+    NewMI->cloneInstrSymbols(MF, MI);
 
     return NewMI;
   }
@@ -699,10 +704,13 @@ bool TargetInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
     std::swap(MI1, MI2);
 
   // 1. The previous instruction must be the same type as Inst.
-  // 2. The previous instruction must have virtual register definitions for its
+  // 2. The previous instruction must also be associative/commutative (this can
+  //    be different even for instructions with the same opcode if traits like
+  //    fast-math-flags are included).
+  // 3. The previous instruction must have virtual register definitions for its
   //    operands in the same basic block as Inst.
-  // 3. The previous instruction's result must only be used by Inst.
-  return MI1->getOpcode() == AssocOpcode &&
+  // 4. The previous instruction's result must only be used by Inst.
+  return MI1->getOpcode() == AssocOpcode && isAssociativeAndCommutative(*MI1) &&
          hasReassociableOperands(*MI1, MBB) &&
          MRI.hasOneNonDBGUse(MI1->getOperand(0).getReg());
 }
@@ -1033,7 +1041,9 @@ bool TargetInstrInfo::getMemOperandWithOffset(
     const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
     bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
-  if (!getMemOperandsWithOffset(MI, BaseOps, Offset, OffsetIsScalable, TRI) ||
+  unsigned Width;
+  if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
+                                     Width, TRI) ||
       BaseOps.size() != 1)
     return false;
   BaseOp = BaseOps.front();
@@ -1147,6 +1157,11 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
   if (auto DestSrc = isCopyInstr(MI)) {
     Register DestReg = DestSrc->Destination->getReg();
 
+    // If the copy destination is the forwarding reg, describe the forwarding
+    // reg using the copy source as the backup location. Example:
+    //
+    //   x0 = MOV x7
+    //   call callee(x0)      ; x0 described as x7
     if (Reg == DestReg)
       return ParamLoadedValue(*DestSrc->Source, Expr);
 
@@ -1312,6 +1327,62 @@ bool TargetInstrInfo::getInsertSubregInputs(
   InsertedReg.SubReg = MOInsertedReg.getSubReg();
   InsertedReg.SubIdx = (unsigned)MOSubIdx.getImm();
   return true;
+}
+
+// Returns a MIRPrinter comment for this machine operand.
+std::string TargetInstrInfo::createMIROperandComment(
+    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
+    const TargetRegisterInfo *TRI) const {
+
+  if (!MI.isInlineAsm())
+    return "";
+
+  std::string Flags;
+  raw_string_ostream OS(Flags);
+
+  if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
+    // Print HasSideEffects, MayLoad, MayStore, IsAlignStack
+    unsigned ExtraInfo = Op.getImm();
+    bool First = true;
+    for (StringRef Info : InlineAsm::getExtraInfoNames(ExtraInfo)) {
+      if (!First)
+        OS << " ";
+      First = false;
+      OS << Info;
+    }
+
+    return OS.str();
+  }
+
+  int FlagIdx = MI.findInlineAsmFlagIdx(OpIdx);
+  if (FlagIdx < 0 || (unsigned)FlagIdx != OpIdx)
+    return "";
+
+  assert(Op.isImm() && "Expected flag operand to be an immediate");
+  // Pretty print the inline asm operand descriptor.
+  unsigned Flag = Op.getImm();
+  unsigned Kind = InlineAsm::getKind(Flag);
+  OS << InlineAsm::getKindName(Kind);
+
+  unsigned RCID = 0;
+  if (!InlineAsm::isImmKind(Flag) && !InlineAsm::isMemKind(Flag) &&
+      InlineAsm::hasRegClassConstraint(Flag, RCID)) {
+    if (TRI) {
+      OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
+    } else
+      OS << ":RC" << RCID;
+  }
+
+  if (InlineAsm::isMemKind(Flag)) {
+    unsigned MCID = InlineAsm::getMemoryConstraintID(Flag);
+    OS << ":" << InlineAsm::getMemConstraintName(MCID);
+  }
+
+  unsigned TiedTo = 0;
+  if (InlineAsm::isUseOperandTiedToDef(Flag, TiedTo))
+    OS << " tiedto:$" << TiedTo;
+
+  return OS.str();
 }
 
 TargetInstrInfo::PipelinerLoopInfo::~PipelinerLoopInfo() {}

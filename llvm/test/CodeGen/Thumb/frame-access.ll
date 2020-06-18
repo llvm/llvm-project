@@ -404,8 +404,8 @@ entry:
 ; CHECK-NEXT: sub sp, #508
 ; CHECK-NEXT: sub sp, #8
 ; Argument addresses computed relative to BP
-; CHECK:      adds r0, r6, #7
-; CHECK-NEXT: adds r0, #13
+; CHECK:      adds r4, r6, #7
+; CHECK-NEXT: adds r4, #13
 ; CHECK:      adds r1, r6, #7
 ; CHECK-NEXT: adds r1, #9
 ; CHECK:      adds r5, r6, #7

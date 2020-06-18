@@ -13,31 +13,19 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/PriorityWorklist.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/DemandedBits.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Operator.h"
-#include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
 
+template <typename T> class DomTreeNodeBase;
+using DomTreeNode = DomTreeNodeBase<BasicBlock>;
 class AliasSet;
 class AliasSetTracker;
 class BasicBlock;
-class DataLayout;
 class IRBuilderBase;
 class Loop;
 class LoopInfo;
@@ -45,13 +33,24 @@ class MemoryAccess;
 class MemorySSA;
 class MemorySSAUpdater;
 class OptimizationRemarkEmitter;
-class PredicatedScalarEvolution;
 class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
 class SCEVExpander;
 class TargetLibraryInfo;
 class TargetTransformInfo;
+class LPPassManager;
+class Instruction;
+struct RuntimeCheckingPtrGroup;
+typedef std::pair<const RuntimeCheckingPtrGroup *,
+                  const RuntimeCheckingPtrGroup *>
+    RuntimePointerCheck;
+
+template <typename T> class Optional;
+template <typename T, unsigned N> class SmallSetVector;
+template <typename T, unsigned N> class SmallVector;
+template <typename T> class SmallVectorImpl;
+template <typename T, unsigned N> class SmallPriorityWorklist;
 
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU, bool PreserveLCSSA);
@@ -76,7 +75,7 @@ bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
 ///
 /// Returns true if any modifications are made.
 bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
-                              DominatorTree &DT, LoopInfo &LI,
+                              const DominatorTree &DT, const LoopInfo &LI,
                               ScalarEvolution *SE);
 
 /// Put loop into LCSSA form.
@@ -91,7 +90,8 @@ bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 /// If ScalarEvolution is passed in, it will be preserved.
 ///
 /// Returns true if any modifications are made to the loop.
-bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution *SE);
+bool formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
+               ScalarEvolution *SE);
 
 /// Put a loop nest into LCSSA form.
 ///
@@ -102,7 +102,7 @@ bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution *SE);
 /// If ScalarEvolution is passed in, it will be preserved.
 ///
 /// Returns true if any modifications are made to the loop.
-bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
+bool formLCSSARecursively(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
                           ScalarEvolution *SE);
 
 struct SinkAndHoistLICMFlags {
@@ -118,7 +118,7 @@ struct SinkAndHoistLICMFlags {
 /// reverse depth first order w.r.t the DominatorTree. This allows us to visit
 /// uses before definitions, allowing us to sink a loop body in one pass without
 /// iteration. Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree,
-/// DataLayout, TargetLibraryInfo, Loop, AliasSet information for all
+/// TargetLibraryInfo, Loop, AliasSet information for all
 /// instructions of the loop and loop safety information as
 /// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
@@ -130,7 +130,7 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// dominated by the specified block, and that are in the current loop) in depth
 /// first order w.r.t the DominatorTree.  This allows us to visit definitions
 /// before uses, allowing us to hoist a loop body in one pass without iteration.
-/// Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree, DataLayout,
+/// Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree,
 /// TargetLibraryInfo, Loop, AliasSet information for all instructions of the
 /// loop and loop safety information as arguments. Diagnostics is emitted via \p
 /// ORE. It returns changed status.
@@ -380,8 +380,9 @@ enum ReplaceExitVal { NeverRepl, OnlyCheapRepl, NoHardUse, AlwaysRepl };
 /// Return the number of loop exit values that have been replaced, and the
 /// corresponding phi node will be added to DeadInsts.
 int rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
-                          ScalarEvolution *SE, SCEVExpander &Rewriter,
-                          DominatorTree *DT, ReplaceExitVal ReplaceExitValue,
+                          ScalarEvolution *SE, const TargetTransformInfo *TTI,
+                          SCEVExpander &Rewriter, DominatorTree *DT,
+                          ReplaceExitVal ReplaceExitValue,
                           SmallVector<WeakTrackingVH, 16> &DeadInsts);
 
 /// Set weights for \p UnrolledLoop and \p RemainderLoop based on weights for
@@ -425,6 +426,23 @@ void appendReversedLoopsToWorklist(RangeT &&,
 /// already reversed loops in LI.
 /// FIXME: Consider changing the order in LoopInfo.
 void appendLoopsToWorklist(LoopInfo &, SmallPriorityWorklist<Loop *, 4> &);
+
+/// Recursively clone the specified loop and all of its children,
+/// mapping the blocks with the specified map.
+Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
+                LoopInfo *LI, LPPassManager *LPM);
+
+/// Add code that checks at runtime if the accessed arrays in \p PointerChecks
+/// overlap.
+///
+/// Returns a pair of instructions where the first element is the first
+/// instruction generated in possibly a sequence of instructions and the
+/// second value is the final comparator value or NULL if no check is needed.
+std::pair<Instruction *, Instruction *>
+addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
+                 const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
+                 ScalarEvolution *SE);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOOPUTILS_H

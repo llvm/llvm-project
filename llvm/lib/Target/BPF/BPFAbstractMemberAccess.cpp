@@ -92,7 +92,7 @@
 #define DEBUG_TYPE "bpf-abstract-member-access"
 
 namespace llvm {
-const std::string BPFCoreSharedInfo::AmaAttr = "btf_ama";
+constexpr StringRef BPFCoreSharedInfo::AmaAttr;
 } // namespace llvm
 
 using namespace llvm;
@@ -239,7 +239,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
   if (!Call)
     return false;
 
-  const auto *GV = dyn_cast<GlobalValue>(Call->getCalledValue());
+  const auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
   if (!GV)
     return false;
   if (GV->getName().startswith("llvm.preserve.array.access.index")) {
@@ -878,8 +878,8 @@ bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
 
   if (CInfo.Kind == BPFPreserveFieldInfoAI) {
     // Load the global variable which represents the returned field info.
-    auto *LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV);
-    BB->getInstList().insert(Call->getIterator(), LDInst);
+    auto *LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "",
+                                Call);
     Call->replaceAllUsesWith(LDInst);
     Call->eraseFromParent();
     return true;
@@ -896,8 +896,7 @@ bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
   // The original Call inst is removed.
 
   // Load the global variable.
-  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV);
-  BB->getInstList().insert(Call->getIterator(), LDInst);
+  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
 
   // Generate a BitCast
   auto *BCInst = new BitCastInst(Base, Type::getInt8PtrTy(BB->getContext()));

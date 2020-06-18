@@ -1,4 +1,4 @@
-# Introduction and Usage Guide to MLIR's Diagnostics Infrastructure
+# Diagnostic Infrastructure
 
 [TOC]
 
@@ -93,8 +93,8 @@ DiagnosticEngine engine = ctx->getDiagEngine();
 // or failure if the diagnostic should be propagated to the previous handlers.
 DiagnosticEngine::HandlerID id = engine.registerHandler(
     [](Diagnostic &diag) -> LogicalResult {
-  bool should_propage_diagnostic = ...;
-  return failure(should_propage_diagnostic);
+  bool should_propagate_diagnostic = ...;
+  return failure(should_propagate_diagnostic);
 });
 
 
@@ -200,7 +200,9 @@ destroyed.
 ## Diagnostic Configuration Options
 
 Several options are provided to help control and enhance the behavior of
-diagnostics. These options are listed below:
+diagnostics. These options can be configured via the MLIRContext, and registered
+to the command line with the `registerMLIRContextCLOptions` method. These
+options are listed below:
 
 ### Print Operation On Diagnostic
 
@@ -388,8 +390,7 @@ ParallelDiagnosticHandler handler(context);
 
 // Process a list of operations in parallel.
 std::vector<Operation *> opsToProcess = ...;
-llvm::for_each_n(llvm::parallel::par, 0, opsToProcess.size(),
-                 [&](size_t i) {
+llvm::parallelForEachN(0, opsToProcess.size(), [&](size_t i) {
   // Notify the handler that we are processing the i'th operation.
   handler.setOrderIDForThread(i);
   auto *op = opsToProcess[i];

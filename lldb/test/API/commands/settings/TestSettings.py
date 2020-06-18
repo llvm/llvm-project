@@ -58,7 +58,6 @@ class SettingsCommandTestCase(TestBase):
                              '[3]: "b"',
                              '[4]: "c"'])
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr44430")
     def test_replace_target_run_args(self):
         """Test that 'replace target.run-args' works."""
         # Set the run-args and then replace the index-0 element.
@@ -204,11 +203,18 @@ class SettingsCommandTestCase(TestBase):
                     substrs=["5ah"])
 
     @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
+    @skipIfReproducer
     def test_run_args_and_env_vars(self):
+        self.do_test_run_args_and_env_vars(use_launchsimple=False)
+
+    @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
+    @skipIfReproducer
+    def test_launchsimple_args_and_env_vars(self):
+        self.do_test_run_args_and_env_vars(use_launchsimple=True)
+
+    def do_test_run_args_and_env_vars(self, use_launchsimple):
         """Test that run-args and env-vars are passed to the launched process."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Set the run-args and the env-vars.
         # And add hooks to restore the settings during tearDown().
@@ -219,7 +225,29 @@ class SettingsCommandTestCase(TestBase):
         self.addTearDownHook(
             lambda: self.runCmd("settings clear target.env-vars"))
 
-        self.runCmd("process launch --working-dir '{0}'".format(self.get_process_working_directory()),
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        target = self.dbg.GetTargetAtIndex(0)
+        launch_info = target.GetLaunchInfo()
+        found_env_var = False
+        for i in range(0, launch_info.GetNumEnvironmentEntries()):
+            if launch_info.GetEnvironmentEntryAtIndex(i) == "MY_ENV_VAR=YES":
+                found_env_var = True
+                break
+        self.assertTrue(found_env_var,
+                        "MY_ENV_VAR was not set in LunchInfo object")
+
+        self.expect(
+            'target show-launch-environment',
+            substrs=["MY_ENV_VAR=YES"])
+
+        wd = self.get_process_working_directory()
+        if use_launchsimple:
+            process = target.LaunchSimple(None, None, wd)
+            self.assertTrue(process)
+        else:
+            self.runCmd("process launch --working-dir '{0}'".format(wd),
                 RUN_SUCCEEDED)
 
         # Read the output file produced by running the program.
@@ -234,10 +262,46 @@ class SettingsCommandTestCase(TestBase):
                 "argv[3] matches",
                 "Environment variable 'MY_ENV_VAR' successfully passed."])
 
+        # Check that env-vars overrides unset-env-vars.
+        self.runCmd('settings set target.unset-env-vars MY_ENV_VAR')
+
+        self.expect(
+            'target show-launch-environment',
+            'env-vars overrides unset-env-vars',
+            substrs=["MY_ENV_VAR=YES"])
+
+        wd = self.get_process_working_directory()
+        if use_launchsimple:
+            process = target.LaunchSimple(None, None, wd)
+            self.assertTrue(process)
+        else:
+            self.runCmd("process launch --working-dir '{0}'".format(wd),
+                RUN_SUCCEEDED)
+
+        # Read the output file produced by running the program.
+        output = lldbutil.read_file_from_process_wd(self, "output2.txt")
+
+        self.expect(
+            output,
+            exe=False,
+            substrs=[
+                "Environment variable 'MY_ENV_VAR' successfully passed."])
+
     @skipIfRemote  # it doesn't make sense to send host env to remote target
+    @skipIfReproducer
     def test_pass_host_env_vars(self):
         """Test that the host env vars are passed to the launched process."""
         self.build()
+
+        # Set some host environment variables now.
+        os.environ["MY_HOST_ENV_VAR1"] = "VAR1"
+        os.environ["MY_HOST_ENV_VAR2"] = "VAR2"
+
+        # This is the function to unset the two env variables set above.
+        def unset_env_variables():
+            os.environ.pop("MY_HOST_ENV_VAR1")
+            os.environ.pop("MY_HOST_ENV_VAR2")
+        self.addTearDownHook(unset_env_variables)
 
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -248,16 +312,10 @@ class SettingsCommandTestCase(TestBase):
             "Default inherit-env is 'true'",
             startstr="target.inherit-env (boolean) = true")
 
-        # Set some host environment variables now.
-        os.environ["MY_HOST_ENV_VAR1"] = "VAR1"
-        os.environ["MY_HOST_ENV_VAR2"] = "VAR2"
-
-        # This is the function to unset the two env variables set above.
-        def unset_env_variables():
-            os.environ.pop("MY_HOST_ENV_VAR1")
-            os.environ.pop("MY_HOST_ENV_VAR2")
-
-        self.addTearDownHook(unset_env_variables)
+        self.expect(
+            'target show-launch-environment',
+            'Host environment is passed correctly',
+            substrs=['MY_HOST_ENV_VAR1=VAR1', 'MY_HOST_ENV_VAR2=VAR2'])
         self.runCmd("process launch --working-dir '{0}'".format(self.get_process_working_directory()),
                 RUN_SUCCEEDED)
 
@@ -271,7 +329,63 @@ class SettingsCommandTestCase(TestBase):
                 "The host environment variable 'MY_HOST_ENV_VAR1' successfully passed.",
                 "The host environment variable 'MY_HOST_ENV_VAR2' successfully passed."])
 
+        # Now test that we can prevent the inferior from inheriting the
+        # environment.
+        self.runCmd('settings set target.inherit-env false')
+
+        self.expect(
+            'target show-launch-environment',
+            'target.inherit-env affects `target show-launch-environment`',
+            matching=False,
+            substrs = ['MY_HOST_ENV_VAR1=VAR1', 'MY_HOST_ENV_VAR2=VAR2'])
+
+        self.runCmd("process launch --working-dir '{0}'".format(self.get_process_working_directory()),
+                RUN_SUCCEEDED)
+
+        # Read the output file produced by running the program.
+        output = lldbutil.read_file_from_process_wd(self, "output1.txt")
+
+        self.expect(
+            output,
+            exe=False,
+            matching=False,
+            substrs=[
+                "The host environment variable 'MY_HOST_ENV_VAR1' successfully passed.",
+                "The host environment variable 'MY_HOST_ENV_VAR2' successfully passed."])
+
+        # Now test that we can unset variables from the inherited environment.
+        self.runCmd('settings set target.inherit-env true')
+        self.runCmd('settings set target.unset-env-vars MY_HOST_ENV_VAR1')
+        self.runCmd("process launch --working-dir '{0}'".format(self.get_process_working_directory()),
+                RUN_SUCCEEDED)
+
+        # Read the output file produced by running the program.
+        output = lldbutil.read_file_from_process_wd(self, "output1.txt")
+
+        self.expect(
+            'target show-launch-environment',
+            'MY_HOST_ENV_VAR1 is unset, it shouldn\'t be in `target show-launch-environment`',
+            matching=False,
+            substrs = ['MY_HOST_ENV_VAR1=VAR1'])
+        self.expect(
+            'target show-launch-environment',
+            'MY_HOST_ENV_VAR2 shouldn be in `target show-launch-environment`',
+            substrs = ['MY_HOST_ENV_VAR2=VAR2'])
+
+        self.expect(
+            output,
+            exe=False,
+            matching=False,
+            substrs=[
+                "The host environment variable 'MY_HOST_ENV_VAR1' successfully passed."])
+        self.expect(
+            output,
+            exe=False,
+            substrs=[
+                "The host environment variable 'MY_HOST_ENV_VAR2' successfully passed."])
+
     @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
+    @skipIfReproducer
     def test_set_error_output_path(self):
         """Test that setting target.error/output-path for the launched process works."""
         self.build()
@@ -358,7 +472,6 @@ class SettingsCommandTestCase(TestBase):
                     'thread-format (format-string) = "abc def   "')
         self.runCmd('settings clear thread-format')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr44430")
     def test_settings_with_trailing_whitespace(self):
 
         # boolean
@@ -521,6 +634,32 @@ class SettingsCommandTestCase(TestBase):
     def test_settings_remove_empty_arg(self):
         self.expect("settings remove ''", error=True,
                     substrs=["'settings remove' command requires a valid variable name"])
+
+    def test_settings_clear_all(self):
+        # Change a dictionary.
+        self.runCmd("settings set target.env-vars a=1 b=2 c=3")
+        # Change an array.
+        self.runCmd("settings set target.run-args a1 b2 c3")
+        # Change a single boolean value.
+        self.runCmd("settings set auto-confirm true")
+        # Change a single integer value.
+        self.runCmd("settings set tab-size 2")
+
+        # Clear everything.
+        self.runCmd("settings clear --all")
+
+        # Check that settings have their default values after clearing.
+        self.expect("settings show target.env-vars", patterns=['^target.env-vars \(dictionary of strings\) =\s*$'])
+        self.expect("settings show target.run-args", patterns=['^target.run-args \(arguments\) =\s*$'])
+        self.expect("settings show auto-confirm", substrs=["false"])
+        self.expect("settings show tab-size", substrs=["4"])
+
+        # Check that the command fails if we combine '--all' option with any arguments.
+        self.expect(
+            "settings clear --all auto-confirm",
+            COMMAND_FAILED_AS_EXPECTED,
+            error=True,
+            substrs=["'settings clear --all' doesn't take any arguments"])
 
     def test_all_settings_exist(self):
         self.expect("settings show",

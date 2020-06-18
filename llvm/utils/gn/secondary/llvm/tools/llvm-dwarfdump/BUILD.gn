@@ -8,6 +8,7 @@ executable("llvm-dwarfdump") {
     "//llvm/lib/Target:AllTargetsInfos",
   ]
   sources = [
+    "SectionSizes.cpp",
     "Statistics.cpp",
     "llvm-dwarfdump.cpp",
   ]

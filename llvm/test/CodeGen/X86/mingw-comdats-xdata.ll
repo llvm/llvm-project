@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-w64-windows-gnu < %s | FileCheck %s --check-prefix=GNU
-; RUN: llc -mtriple=x86_64-w64-windows-gnu < %s -filetype=obj | llvm-objdump - -headers | FileCheck %s --check-prefix=GNUOBJ
+; RUN: llc -mtriple=x86_64-w64-windows-gnu < %s -filetype=obj | llvm-objdump - --headers | FileCheck %s --check-prefix=GNUOBJ
 
 ; When doing GCC style comdats for MinGW, the .xdata sections don't have a normal comdat
 ; symbol attached, which requires a bit of adjustments for the assembler output.

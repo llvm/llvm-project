@@ -76,12 +76,10 @@ define <4 x float> @fneg_undef(<4 x float> %Q) nounwind {
 define <4 x float> @fsub_neg0_undef_elts_undef(<4 x float> %x) {
 ; X32-SSE-LABEL: fsub_neg0_undef_elts_undef:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    movaps {{.*#+}} xmm0 = <NaN,u,u,NaN>
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fsub_neg0_undef_elts_undef:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = <NaN,u,u,NaN>
 ; X64-SSE-NEXT:    retq
   %r = fsub <4 x float> <float -0.0, float undef, float undef, float -0.0>, undef
   ret <4 x float> %r
@@ -123,7 +121,7 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ; X32-SSE1-NEXT:    pushl %ebp
 ; X32-SSE1-NEXT:    movl %esp, %ebp
 ; X32-SSE1-NEXT:    andl $-16, %esp
-; X32-SSE1-NEXT:    subl $32, %esp
+; X32-SSE1-NEXT:    subl $16, %esp
 ; X32-SSE1-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X32-SSE1-NEXT:    movl 12(%ebp), %ecx
 ; X32-SSE1-NEXT:    xorl %eax, %ecx

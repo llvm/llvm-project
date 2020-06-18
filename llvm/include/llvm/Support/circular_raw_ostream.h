@@ -27,12 +27,12 @@ namespace llvm {
     /// stream and is responsible for cleanup, memory management
     /// issues, etc.
     ///
-    static const bool TAKE_OWNERSHIP = true;
+    static constexpr bool TAKE_OWNERSHIP = true;
 
     /// REFERENCE_ONLY - Tell this stream it should not manage the
     /// held stream.
     ///
-    static const bool REFERENCE_ONLY = false;
+    static constexpr bool REFERENCE_ONLY = false;
 
   private:
     /// TheStream - The real stream we output to. We set it to be

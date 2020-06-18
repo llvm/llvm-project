@@ -5,10 +5,10 @@
 name:            fun0
 stack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 4 }
-# CHECK: --- !Analysis
+# CHECK-LABEL: --- !Analysis
 # CHECK-NEXT: Pass:            prologepilog
 # CHECK-NEXT: Name:            StackSize
-# CHECK-NEXT: Function:        fun0
+# CHECK:      Function:        fun0
 # CHECK-NEXT: Args:
 # CHECK-NEXT:   - NumStackBytes:   '16'
 # CHECK-NEXT:   - String:          ' stack bytes in function'
@@ -23,10 +23,10 @@ body:             |
 name:            fun1
 stack:
   - { id: 0, type: default, offset: 0, size: 19, alignment: 4 }
-# CHECK: --- !Analysis
+# CHECK-LABEL: --- !Analysis
 # CHECK-NEXT: Pass:            prologepilog
 # CHECK-NEXT: Name:            StackSize
-# CHECK-NEXT: Function:        fun1
+# CHECK:      Function:        fun1
 # CHECK-NEXT: Args:
 # CHECK-NEXT:   - NumStackBytes:   '32'
 # CHECK-NEXT:   - String:          ' stack bytes in function'
@@ -41,10 +41,10 @@ body:             |
 name:            fun2
 stack:
   - { id: 0, type: default, offset: 0, size: 1024, alignment: 4 }
-# --- !Analysis
+# CHECK-LABEL: --- !Analysis
 # CHECK: Pass:            prologepilog
 # CHECK-NEXT: Name:            StackSize
-# CHECK-NEXT: Function:        fun2
+# CHECK:      Function:        fun2
 # CHECK-NEXT: Args:
 # CHECK-NEXT:   - NumStackBytes:   '1040'
 # CHECK-NEXT:   - String:          ' stack bytes in function'

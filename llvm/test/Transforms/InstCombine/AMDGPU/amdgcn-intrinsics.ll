@@ -10,7 +10,7 @@ declare double @llvm.amdgcn.rcp.f64(double) nounwind readnone
 
 define float @test_constant_fold_rcp_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_undef(
-; CHECK-NEXT:    ret float undef
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float undef) nounwind readnone
   ret float %val
@@ -50,8 +50,7 @@ define double @test_constant_fold_rcp_f64_half() nounwind {
 
 define float @test_constant_fold_rcp_f32_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0x3F97D05F40000000
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) nounwind readnone
   ret float %val
@@ -59,11 +58,19 @@ define float @test_constant_fold_rcp_f32_43() nounwind {
 
 define double @test_constant_fold_rcp_f64_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f64_43(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01)
-; CHECK-NEXT:    ret double [[VAL]]
+; CHECK-NEXT:    ret double 0x3F97D05F417D05F4
 ;
   %val = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) nounwind readnone
   ret double %val
+}
+
+define float @test_constant_fold_rcp_f32_43_strictfp() nounwind strictfp {
+; CHECK-LABEL: @test_constant_fold_rcp_f32_43_strictfp(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #7
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) strictfp nounwind readnone
+  ret float %val
 }
 
 ; --------------------------------------------------------------------
@@ -74,7 +81,7 @@ declare float @llvm.amdgcn.rsq.f32(float) nounwind readnone
 
 define float @test_constant_fold_rsq_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rsq_f32_undef(
-; CHECK-NEXT:    ret float undef
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %val = call float @llvm.amdgcn.rsq.f32(float undef) nounwind readnone
   ret float %val
@@ -2376,6 +2383,65 @@ define i64 @fcmp_constant_to_rhs_olt(float %x) {
 ;
   %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float 4.0, float %x, i32 4)
   ret i64 %result
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.ballot
+; --------------------------------------------------------------------
+
+declare i64 @llvm.amdgcn.ballot.i64(i1) nounwind readnone convergent
+declare i32 @llvm.amdgcn.ballot.i32(i1) nounwind readnone convergent
+
+define i64 @ballot_nocombine_64(i1 %i) {
+; CHECK-LABEL: @ballot_nocombine_64(
+; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[I:%.*]])
+; CHECK-NEXT:    ret i64 [[B]]
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 %i)
+  ret i64 %b
+}
+
+define i64 @ballot_zero_64() {
+; CHECK-LABEL: @ballot_zero_64(
+; CHECK-NEXT:    ret i64 0
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 0)
+  ret i64 %b
+}
+
+define i64 @ballot_one_64() {
+; CHECK-LABEL: @ballot_one_64(
+; CHECK-NEXT:    %b = call i64 @llvm.read_register.i64(metadata !0) [[CONVERGENT]]
+; CHECK-NEXT:    ret i64 %b
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 1)
+  ret i64 %b
+}
+
+define i32 @ballot_nocombine_32(i1 %i) {
+; CHECK-LABEL: @ballot_nocombine_32(
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[I:%.*]])
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 %i)
+  ret i32 %b
+}
+
+define i32 @ballot_zero_32() {
+; CHECK-LABEL: @ballot_zero_32(
+; CHECK-NEXT:    ret i32 0
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 0)
+  ret i32 %b
+}
+
+define i32 @ballot_one_32() {
+; CHECK-LABEL: @ballot_one_32(
+; CHECK-NEXT:    %b = call i32 @llvm.read_register.i32(metadata !1) [[CONVERGENT]]
+; CHECK-NEXT:    ret i32 %b
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 1)
+  ret i32 %b
 }
 
 ; --------------------------------------------------------------------

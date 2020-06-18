@@ -109,6 +109,16 @@ namespace {
           // Track the operand that kill Reg. We would unset the kill flag of
           // the operand if there is a following redundant load immediate.
           int KillIdx = AfterBBI->findRegisterUseOperandIdx(Reg, true, TRI);
+
+          // We can't just clear implicit kills, so if we encounter one, stop
+          // looking further.
+          if (KillIdx != -1 && AfterBBI->getOperand(KillIdx).isImplicit()) {
+            LLVM_DEBUG(dbgs()
+                       << "Encountered an implicit kill, cannot proceed: ");
+            LLVM_DEBUG(AfterBBI->dump());
+            break;
+          }
+
           if (KillIdx != -1) {
             assert(!DeadOrKillToUnset && "Shouldn't kill same register twice");
             DeadOrKillToUnset = &AfterBBI->getOperand(KillIdx);

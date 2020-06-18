@@ -1060,12 +1060,11 @@ bool HexagonPacketizerList::ignorePseudoInstruction(const MachineInstr &MI,
   // we ignore the instruction.
   const MCInstrDesc& TID = MI.getDesc();
   auto *IS = ResourceTracker->getInstrItins()->beginStage(TID.getSchedClass());
-  unsigned FuncUnits = IS->getUnits();
-  return !FuncUnits;
+  return !IS->getUnits();
 }
 
 bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
-  // Ensure any bundles created by gather packetize remain seperate.
+  // Ensure any bundles created by gather packetize remain separate.
   if (MI.isBundle())
     return true;
 

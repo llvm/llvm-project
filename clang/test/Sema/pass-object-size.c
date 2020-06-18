@@ -44,8 +44,8 @@ void FunctionPtrs() {
   void (*p)(void *) = NotOverloaded; //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
   void (*p2)(void *) = &NotOverloaded; //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
 
-  void (*p3)(void *) = IsOverloaded; //expected-warning{{incompatible pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}}
-  void (*p4)(void *) = &IsOverloaded; //expected-warning{{incompatible pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}}
+  void (*p3)(void *) = IsOverloaded; //expected-warning{{incompatible function pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}}
+  void (*p4)(void *) = &IsOverloaded; //expected-warning{{incompatible function pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}}
 
   void (*p5)(char *) = IsOverloaded;
   void (*p6)(char *) = &IsOverloaded;

@@ -254,7 +254,8 @@ ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
   if (!thr_->ignore_interceptors) FuncEntry(thr, pc);
   DPrintf("#%d: intercept %s()\n", thr_->tid, fname);
   ignoring_ =
-      !thr_->in_ignored_lib && libignore()->IsIgnored(pc, &in_ignored_lib_);
+      !thr_->in_ignored_lib && (flags()->ignore_interceptors_accesses ||
+                                libignore()->IsIgnored(pc, &in_ignored_lib_));
   EnableIgnores();
 }
 
@@ -891,13 +892,16 @@ void DestroyThreadState() {
   ThreadFinish(thr);
   ProcUnwire(proc, thr);
   ProcDestroy(proc);
+  DTLS_Destroy();
+  cur_thread_finalize();
+}
+
+void PlatformCleanUpThreadState(ThreadState *thr) {
   ThreadSignalContext *sctx = thr->signal_ctx;
   if (sctx) {
     thr->signal_ctx = 0;
     UnmapOrDie(sctx, sizeof(*sctx));
   }
-  DTLS_Destroy();
-  cur_thread_finalize();
 }
 }  // namespace __tsan
 
@@ -1016,7 +1020,7 @@ TSAN_INTERCEPTOR(int, pthread_create,
 
 TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   SCOPED_INTERCEPTOR_RAW(pthread_join, th, ret);
-  int tid = ThreadTid(thr, pc, (uptr)th);
+  int tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_join)(th, ret);
   ThreadIgnoreEnd(thr, pc);
@@ -1029,8 +1033,8 @@ TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
 DEFINE_REAL_PTHREAD_FUNCTIONS
 
 TSAN_INTERCEPTOR(int, pthread_detach, void *th) {
-  SCOPED_TSAN_INTERCEPTOR(pthread_detach, th);
-  int tid = ThreadTid(thr, pc, (uptr)th);
+  SCOPED_INTERCEPTOR_RAW(pthread_detach, th);
+  int tid = ThreadConsumeTid(thr, pc, (uptr)th);
   int res = REAL(pthread_detach)(th);
   if (res == 0) {
     ThreadDetach(thr, pc, tid);
@@ -1050,8 +1054,8 @@ TSAN_INTERCEPTOR(void, pthread_exit, void *retval) {
 
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(int, pthread_tryjoin_np, void *th, void **ret) {
-  SCOPED_TSAN_INTERCEPTOR(pthread_tryjoin_np, th, ret);
-  int tid = ThreadTid(thr, pc, (uptr)th);
+  SCOPED_INTERCEPTOR_RAW(pthread_tryjoin_np, th, ret);
+  int tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = REAL(pthread_tryjoin_np)(th, ret);
   ThreadIgnoreEnd(thr, pc);
@@ -1064,8 +1068,8 @@ TSAN_INTERCEPTOR(int, pthread_tryjoin_np, void *th, void **ret) {
 
 TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
                  const struct timespec *abstime) {
-  SCOPED_TSAN_INTERCEPTOR(pthread_timedjoin_np, th, ret, abstime);
-  int tid = ThreadTid(thr, pc, (uptr)th);
+  SCOPED_INTERCEPTOR_RAW(pthread_timedjoin_np, th, ret, abstime);
+  int tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_timedjoin_np)(th, ret, abstime);
   ThreadIgnoreEnd(thr, pc);

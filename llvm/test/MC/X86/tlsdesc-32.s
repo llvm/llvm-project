@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple i386-pc-linux-musl %s -o %t
 # RUN: llvm-readelf -s %t | FileCheck --check-prefix=SYM %s
-# RUN: llvm-objdump -dr --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-objdump -d -r --no-show-raw-insn %t | FileCheck %s
 
 # PRINT:      leal a@tlsdesc(%ebx), %eax
 # PRINT-NEXT: calll *a@tlscall(%eax)

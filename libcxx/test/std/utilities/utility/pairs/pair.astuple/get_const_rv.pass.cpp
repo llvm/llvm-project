@@ -14,7 +14,7 @@
 //     const typename tuple_element<I, std::pair<T1, T2> >::type&&
 //     get(const pair<T1, T2>&&);
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <utility>
 #include <memory>

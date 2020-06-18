@@ -19,6 +19,7 @@ class FunctionStartsTestCase(TestBase):
 
     @skipIfRemote
     @skipUnlessDarwin
+    @skipIfReproducer # File synchronization is not supported during replay.
     def test_function_starts_binary(self):
         """Test that we make synthetic symbols when we have the binary."""
         self.build()
@@ -26,13 +27,14 @@ class FunctionStartsTestCase(TestBase):
 
     @skipIfRemote
     @skipUnlessDarwin
+    @skipIfReproducer # File synchronization is not supported during replay.
     def test_function_starts_no_binary(self):
         """Test that we make synthetic symbols when we don't have the binary"""
         self.build()
         self.do_function_starts(True)
 
     def do_function_starts(self, in_memory):
-        """Run the binary, stop at our unstripped function, 
+        """Run the binary, stop at our unstripped function,
            make sure the caller has synthetic symbols"""
 
         exe = self.getBuildArtifact(exe_name)
@@ -57,7 +59,7 @@ class FunctionStartsTestCase(TestBase):
         pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
 
         if in_memory:
-          remove_file(exe)            
+          remove_file(exe)
 
         target = self.dbg.CreateTarget(None)
         self.assertTrue(target.IsValid(), "Got a vaid empty target.")
@@ -67,10 +69,10 @@ class FunctionStartsTestCase(TestBase):
         attach_info.SetIgnoreExisting(False)
         process = target.Attach(attach_info, error)
         self.assertTrue(error.Success(), "Didn't attach successfully to %d: %s"%(popen.pid, error.GetCString()))
-        
+
         bkpt = target.BreakpointCreateByName("dont_strip_me", exe)
         self.assertTrue(bkpt.GetNumLocations() > 0, "Didn't set the dont_strip_me bkpt.")
-        
+
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertEqual(len(threads), 1, "Didn't hit my breakpoint.")
 
@@ -81,6 +83,6 @@ class FunctionStartsTestCase(TestBase):
         name = thread.frame[1].GetFunctionName()
         self.assertTrue(name.startswith("___lldb_unnamed_symbol"))
         self.assertTrue(name.endswith("$$StripMe"))
-        
 
-        
+
+

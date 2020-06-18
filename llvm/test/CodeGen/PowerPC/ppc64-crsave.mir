@@ -1,10 +1,15 @@
 # RUN: llc -mtriple powerpc64le-unknown-linux-gnu -x mir -mcpu=pwr8 \
 # RUN: -run-pass=prologepilog --verify-machineinstrs < %s | \
-# RUN: FileCheck %s --check-prefixes=CHECK,PWR8
+# RUN: FileCheck %s --check-prefixes=CHECK,SAVEONE
 
 # RUN: llc -mtriple powerpc64-unknown-linux-gnu -x mir -mcpu=pwr7 \
 # RUN: -run-pass=prologepilog --verify-machineinstrs < %s | \
-# RUN: FileCheck %s --check-prefixes=CHECK,PWR7
+# RUN: FileCheck %s --check-prefixes=CHECK,SAVEALL
+
+
+# RUN: llc -mtriple powerpc64-unknown-aix-xcoff -x mir -mcpu=pwr4 \
+# RUN: -run-pass=prologepilog --verify-machineinstrs < %s | \
+# RUN: FileCheck %s --check-prefixes=CHECK,SAVEALL
 
 ---
 name:            CRAllSave
@@ -21,6 +26,16 @@ body:             |
     renamable $x3 = COPY $x29
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
+    ; CHECK-LABEL: fixedStack:
+    ; CHECK-NEXT:     - { id: 0, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
+    ; CHECK-NEXT:         callee-saved-register: '$x29', callee-saved-restored: true, debug-info-variable: '',
+    ; CHECK-NEXT:         debug-info-expression: '', debug-info-location: '' }
+    ; CHECK-NEXT:     - { id: 1, type: default, offset: 8, size: 4, alignment: 8, stack-id: default,
+    ; CHECK-NEXT:         isImmutable: true, isAliased: false, callee-saved-register: '$cr4',
+    ; CHECK-NEXT:         callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
+    ; CHECK-NEXT:         debug-info-location: '' }
+    ; CHECK-LABEL:  stack:
+
     ; Verify the proper live-ins have been added in the prologue.
     ; CHECK:    liveins: $x3, $x29, $cr2, $cr4
 
@@ -32,7 +47,6 @@ body:             |
     ; CHECK:     $x12 = LWZ8 8, $x1
     ; CHECK:     $cr2 = MTOCRF8 $x12
     ; CHECK:     $cr4 = MTOCRF8 killed $x12
-
 
 ...
 ---
@@ -49,12 +63,25 @@ body:             |
     renamable $x3 = COPY $x14
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
-    ; CHECK: CR2Save
+    ; CHECK-LABEL: CR2Save
+
+    ; CHECK-LABEL: fixedStack:
+    ; CHECK-NEXT:   - { id: 0, type: spill-slot, offset: -144, size: 8, alignment: 16, stack-id: default,
+    ; CHECK-NEXT:       callee-saved-register: '$x14', callee-saved-restored: true, debug-info-variable: '',
+    ; CHECK-NEXT:       debug-info-expression: '', debug-info-location: '' }
+    ; CHECK-NEXT:   - { id: 1, type: default, offset: 8, size: 4, alignment: 8, stack-id: default,
+    ; CHECK-NEXT:       isImmutable: true, isAliased: false, callee-saved-register: '$cr2',
+    ; CHECK-NEXT:       callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
+    ; CHECK-NEXT:       debug-info-location: '' }
+    ; CHECK-LABEL:  stack:
+
     ; Verify the proper live-ins have been added in the prologue.
     ; CHECK:    liveins: $x3, $x14, $cr2
 
-    ; PWR8:     $x12 = MFOCRF8 killed $cr2
-    ; PWR7:     $x12 = MFCR8 implicit killed $cr2
+    ; ELF V2 ABI allows saving only the clobbered cr fields,
+    ; whereas the other ABIs do not.
+    ; SAVEONE:     $x12 = MFOCRF8 killed $cr2
+    ; SAVEALL:     $x12 = MFCR8 implicit killed $cr2
 
     ; CHECK-DAG: STD killed $x14, -144, $x1 :: (store 8 into %fixed-stack.0, align 16)
     ; CHECK-DAG: STW8 killed $x12, 8, $x1

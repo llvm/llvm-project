@@ -37,6 +37,7 @@ public:
 
   /// Print implementations for various things an operation contains.
   virtual void printOperand(Value value) = 0;
+  virtual void printOperand(Value value, raw_ostream &os) = 0;
 
   /// Print a comma separated list of operands.
   template <typename ContainerType>
@@ -62,9 +63,12 @@ public:
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr) = 0;
 
-  /// Print a successor, and use list, of a terminator operation given the
-  /// terminator and the successor index.
-  virtual void printSuccessorAndUseList(Operation *term, unsigned index) = 0;
+  /// Print the given successor.
+  virtual void printSuccessor(Block *successor) = 0;
+
+  /// Print the successor and its operands.
+  virtual void printSuccessorAndUseList(Block *successor,
+                                        ValueRange succOperands) = 0;
 
   /// If the specified operation has attributes, print out an attribute
   /// dictionary with their values.  elidedAttrs allows the client to ignore
@@ -109,26 +113,25 @@ public:
   void printArrowTypeList(TypeRange &&types) {
     auto &os = getStream() << " -> ";
 
-    bool wrapped = !has_single_element(types) ||
+    bool wrapped = !llvm::hasSingleElement(types) ||
                    (*types.begin()).template isa<FunctionType>();
     if (wrapped)
       os << '(';
-    interleaveComma(types, *this);
+    llvm::interleaveComma(types, *this);
     if (wrapped)
       os << ')';
   }
 
   /// Print the complete type of an operation in functional form.
   void printFunctionalType(Operation *op) {
-    printFunctionalType(op->getNonSuccessorOperands().getTypes(),
-                        op->getResultTypes());
+    printFunctionalType(op->getOperandTypes(), op->getResultTypes());
   }
   /// Print the two given type ranges in a functional form.
   template <typename InputRangeT, typename ResultRangeT>
   void printFunctionalType(InputRangeT &&inputs, ResultRangeT &&results) {
     auto &os = getStream();
     os << "(";
-    interleaveComma(inputs, *this);
+    llvm::interleaveComma(inputs, *this);
     os << ")";
     printArrowTypeList(results);
   }
@@ -188,14 +191,19 @@ inline OpAsmPrinter &operator<<(OpAsmPrinter &p, bool value) {
   return p << (value ? StringRef("true") : "false");
 }
 
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p, Block *value) {
+  p.printSuccessor(value);
+  return p;
+}
+
 template <typename ValueRangeT>
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p,
                                 const ValueTypeRange<ValueRangeT> &types) {
-  interleaveComma(types, p);
+  llvm::interleaveComma(types, p);
   return p;
 }
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p, ArrayRef<Type> types) {
-  interleaveComma(types, p);
+  llvm::interleaveComma(types, p);
   return p;
 }
 
@@ -237,6 +245,24 @@ public:
     *loc = getCurrentLocation();
     return success();
   }
+
+  /// Return the name of the specified result in the specified syntax, as well
+  /// as the sub-element in the name.  It returns an empty string and ~0U for
+  /// invalid result numbers.  For example, in this operation:
+  ///
+  ///  %x, %y:2, %z = foo.op
+  ///
+  ///    getResultName(0) == {"x", 0 }
+  ///    getResultName(1) == {"y", 0 }
+  ///    getResultName(2) == {"y", 1 }
+  ///    getResultName(3) == {"z", 0 }
+  ///    getResultName(4) == {"", ~0U }
+  virtual std::pair<StringRef, unsigned>
+  getResultName(unsigned resultNo) const = 0;
+
+  /// Return the number of declared SSA results.  This returns 4 for the foo.op
+  /// example in the comment for `getResultName`.
+  virtual size_t getNumResults() const = 0;
 
   /// Return the location of the original name token.
   virtual llvm::SMLoc getNameLoc() const = 0;
@@ -340,28 +366,28 @@ public:
   /// Parse an arbitrary attribute and return it in result.  This also adds the
   /// attribute to the specified attribute list with the specified name.
   ParseResult parseAttribute(Attribute &result, StringRef attrName,
-                             SmallVectorImpl<NamedAttribute> &attrs) {
+                             NamedAttrList &attrs) {
     return parseAttribute(result, Type(), attrName, attrs);
   }
 
   /// Parse an attribute of a specific kind and type.
   template <typename AttrType>
   ParseResult parseAttribute(AttrType &result, StringRef attrName,
-                             SmallVectorImpl<NamedAttribute> &attrs) {
+                             NamedAttrList &attrs) {
     return parseAttribute(result, Type(), attrName, attrs);
   }
 
   /// Parse an arbitrary attribute of a given type and return it in result. This
   /// also adds the attribute to the specified attribute list with the specified
   /// name.
-  virtual ParseResult
-  parseAttribute(Attribute &result, Type type, StringRef attrName,
-                 SmallVectorImpl<NamedAttribute> &attrs) = 0;
+  virtual ParseResult parseAttribute(Attribute &result, Type type,
+                                     StringRef attrName,
+                                     NamedAttrList &attrs) = 0;
 
   /// Parse an attribute of a specific kind and type.
   template <typename AttrType>
   ParseResult parseAttribute(AttrType &result, Type type, StringRef attrName,
-                             SmallVectorImpl<NamedAttribute> &attrs) {
+                             NamedAttrList &attrs) {
     llvm::SMLoc loc = getCurrentLocation();
 
     // Parse any kind of attribute.
@@ -378,13 +404,12 @@ public:
   }
 
   /// Parse a named dictionary into 'result' if it is present.
-  virtual ParseResult
-  parseOptionalAttrDict(SmallVectorImpl<NamedAttribute> &result) = 0;
+  virtual ParseResult parseOptionalAttrDict(NamedAttrList &result) = 0;
 
   /// Parse a named dictionary into 'result' if the `attributes` keyword is
   /// present.
   virtual ParseResult
-  parseOptionalAttrDictWithKeyword(SmallVectorImpl<NamedAttribute> &result) = 0;
+  parseOptionalAttrDictWithKeyword(NamedAttrList &result) = 0;
 
   /// Parse an affine map instance into 'map'.
   virtual ParseResult parseAffineMap(AffineMap &map) = 0;
@@ -399,7 +424,7 @@ public:
   /// Parse an @-identifier and store it (without the '@' symbol) in a string
   /// attribute named 'attrName'.
   ParseResult parseSymbolName(StringAttr &result, StringRef attrName,
-                              SmallVectorImpl<NamedAttribute> &attrs) {
+                              NamedAttrList &attrs) {
     if (failed(parseOptionalSymbolName(result, attrName, attrs)))
       return emitError(getCurrentLocation())
              << "expected valid '@'-identifier for symbol name";
@@ -408,9 +433,9 @@ public:
 
   /// Parse an optional @-identifier and store it (without the '@' symbol) in a
   /// string attribute named 'attrName'.
-  virtual ParseResult
-  parseOptionalSymbolName(StringAttr &result, StringRef attrName,
-                          SmallVectorImpl<NamedAttribute> &attrs) = 0;
+  virtual ParseResult parseOptionalSymbolName(StringAttr &result,
+                                              StringRef attrName,
+                                              NamedAttrList &attrs) = 0;
 
   //===--------------------------------------------------------------------===//
   // Operand Parsing
@@ -425,6 +450,9 @@ public:
 
   /// Parse a single operand.
   virtual ParseResult parseOperand(OperandType &result) = 0;
+
+  /// Parse a single operand if present.
+  virtual OptionalParseResult parseOptionalOperand(OperandType &result) = 0;
 
   /// These are the supported delimiters around operand lists and region
   /// argument lists, used by parseOperandList and parseRegionArgumentList.
@@ -496,9 +524,16 @@ public:
         return failure();
     return success();
   }
+  template <typename Operands>
+  ParseResult resolveOperands(Operands &&operands, Type type, llvm::SMLoc loc,
+                              SmallVectorImpl<Value> &result) {
+    return resolveOperands(std::forward<Operands>(operands),
+                           ArrayRef<Type>(type), loc, result);
+  }
   template <typename Operands, typename Types>
-  ParseResult resolveOperands(Operands &&operands, Types &&types,
-                              llvm::SMLoc loc, SmallVectorImpl<Value> &result) {
+  std::enable_if_t<!std::is_convertible<Types, Type>::value, ParseResult>
+  resolveOperands(Operands &&operands, Types &&types, llvm::SMLoc loc,
+                  SmallVectorImpl<Value> &result) {
     size_t operandSize = std::distance(operands.begin(), operands.end());
     size_t typeSize = std::distance(types.begin(), types.end());
     if (operandSize != typeSize)
@@ -516,8 +551,7 @@ public:
   /// dimensions/symbol identifiers according to mlir::isValidDim/Symbol.
   virtual ParseResult
   parseAffineMapOfSSAIds(SmallVectorImpl<OperandType> &operands, Attribute &map,
-                         StringRef attrName,
-                         SmallVectorImpl<NamedAttribute> &attrs,
+                         StringRef attrName, NamedAttrList &attrs,
                          Delimiter delimiter = Delimiter::Square) = 0;
 
   //===--------------------------------------------------------------------===//
@@ -568,6 +602,12 @@ public:
   // Successor Parsing
   //===--------------------------------------------------------------------===//
 
+  /// Parse a single operation successor.
+  virtual ParseResult parseSuccessor(Block *&dest) = 0;
+
+  /// Parse an optional operation successor.
+  virtual OptionalParseResult parseOptionalSuccessor(Block *&dest) = 0;
+
   /// Parse a single operation successor and its operand list.
   virtual ParseResult
   parseSuccessorAndUseList(Block *&dest, SmallVectorImpl<Value> &operands) = 0;
@@ -578,6 +618,9 @@ public:
 
   /// Parse a type.
   virtual ParseResult parseType(Type &result) = 0;
+
+  /// Parse an optional type.
+  virtual OptionalParseResult parseOptionalType(Type &result) = 0;
 
   /// Parse a type of a specific type.
   template <typename TypeT>
@@ -607,6 +650,9 @@ public:
     } while (succeeded(parseOptionalComma()));
     return success();
   }
+
+  /// Parse an arrow followed by a type list.
+  virtual ParseResult parseArrowTypeList(SmallVectorImpl<Type> &result) = 0;
 
   /// Parse an optional arrow followed by a type list.
   virtual ParseResult
@@ -640,6 +686,13 @@ public:
   /// have at least one type.
   virtual ParseResult
   parseOptionalColonTypeList(SmallVectorImpl<Type> &result) = 0;
+
+  /// Parse a list of assignments of the form
+  /// (%x1 = %y1 : type1, %x2 = %y2 : type2, ...).
+  /// The list must contain at least one entry
+  virtual ParseResult
+  parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
+                      SmallVectorImpl<OperandType> &rhs) = 0;
 
   /// Parse a keyword followed by a type.
   ParseResult parseKeywordType(const char *keyword, Type &result) {

@@ -146,7 +146,9 @@ static bool isSubclass(const Decl *D,
 }
 
 static bool isOSObjectSubclass(const Decl *D) {
-  return D && isSubclass(D, "OSMetaClassBase");
+  // OSSymbols are particular OSObjects that are allocated globally
+  // and therefore aren't really refcounted, so we ignore them.
+  return D && isSubclass(D, "OSMetaClassBase") && !isSubclass(D, "OSSymbol");
 }
 
 static bool isOSObjectDynamicCast(StringRef S) {
@@ -663,6 +665,7 @@ RetainSummaryManager::getSummary(AnyCall C,
   switch (C.getKind()) {
   case AnyCall::Function:
   case AnyCall::Constructor:
+  case AnyCall::InheritedConstructor:
   case AnyCall::Allocator:
   case AnyCall::Deallocator:
     Summ = getFunctionSummary(cast_or_null<FunctionDecl>(C.getDecl()));

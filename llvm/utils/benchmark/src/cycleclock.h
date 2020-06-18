@@ -84,13 +84,21 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   return (high << 32) | low;
 #elif defined(__powerpc__) || defined(__ppc__)
   // This returns a time-base, which is not always precisely a cycle-count.
-  int64_t tbl, tbu0, tbu1;
-  asm("mftbu %0" : "=r"(tbu0));
-  asm("mftb  %0" : "=r"(tbl));
-  asm("mftbu %0" : "=r"(tbu1));
-  tbl &= -static_cast<int64_t>(tbu0 == tbu1);
-  // high 32 bits in tbu1; low 32 bits in tbl  (tbu0 is garbage)
-  return (tbu1 << 32) | tbl;
+#if defined(__powerpc64__) || defined(__ppc64__)
+  int64_t tb;
+  asm volatile("mfspr %0, 268" : "=r"(tb));
+  return tb;
+#else
+  uint32_t tbl, tbu0, tbu1;
+  asm volatile(
+      "mftbu %0\n"
+      "mftbl %1\n"
+      "mftbu %2"
+      : "=r"(tbu0), "=r"(tbl), "=r"(tbu1));
+  tbl &= -static_cast<int32_t>(tbu0 == tbu1);
+  // high 32 bits in tbu1; low 32 bits in tbl  (tbu0 is no longer needed)
+  return (static_cast<uint64_t>(tbu1) << 32) | tbl;
+#endif
 #elif defined(__sparc__)
   int64_t tick;
   asm(".byte 0x83, 0x41, 0x00, 0x00");
@@ -167,16 +175,22 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
 #elif defined(__riscv) // RISC-V
   // Use RDCYCLE (and RDCYCLEH on riscv32)
 #if __riscv_xlen == 32
-  uint64_t cycles_low, cycles_hi0, cycles_hi1;
-  asm("rdcycleh %0" : "=r"(cycles_hi0));
-  asm("rdcycle %0" : "=r"(cycles_lo));
-  asm("rdcycleh %0" : "=r"(cycles_hi1));
-  // This matches the PowerPC overflow detection, above
-  cycles_lo &= -static_cast<int64_t>(cycles_hi0 == cycles_hi1);
-  return (cycles_hi1 << 32) | cycles_lo;
+  uint32_t cycles_lo, cycles_hi0, cycles_hi1;
+  // This asm also includes the PowerPC overflow handling strategy, as above.
+  // Implemented in assembly because Clang insisted on branching.
+  asm volatile(
+      "rdcycleh %0\n"
+      "rdcycle %1\n"
+      "rdcycleh %2\n"
+      "sub %0, %0, %2\n"
+      "seqz %0, %0\n"
+      "sub %0, zero, %0\n"
+      "and %1, %1, %0\n"
+      : "=r"(cycles_hi0), "=r"(cycles_lo), "=r"(cycles_hi1));
+  return (static_cast<uint64_t>(cycles_hi1) << 32) | cycles_lo;
 #else
   uint64_t cycles;
-  asm("rdcycle %0" : "=r"(cycles));
+  asm volatile("rdcycle %0" : "=r"(cycles));
   return cycles;
 #endif
 #else

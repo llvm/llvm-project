@@ -21,6 +21,10 @@ EXT_DECL("some_module")
 // CHECK: [[@LINE-1]]:12 | class/Swift | I2 | c:@M@some_module@objc(cs)I2 | {{.*}} | Decl | rel: 0
 -(void)method;
 // CHECK: [[@LINE-1]]:8 | instance-method/Swift | method | c:@M@some_module@objc(cs)I2(im)method | -[I2 method] | Decl,Dyn,RelChild | rel: 1
+@property int prop;
+// CHECK: [[@LINE-1]]:15 | instance-method/acc-get/Swift | prop | c:@M@some_module@objc(cs)I2(im)prop |
+// CHECK: [[@LINE-2]]:15 | instance-method/acc-set/Swift | setProp: | c:@M@some_module@objc(cs)I2(im)setProp: |
+// CHECK: [[@LINE-3]]:15 | instance-property/Swift | prop | c:@M@some_module@objc(cs)I2(py)prop |
 @end
 
 void test1(I1 *o) {
@@ -45,6 +49,10 @@ EXT_DECL("cat_module")
 // CHECK: [[@LINE-1]]:15 | extension/Swift | cat2 | c:@CM@cat_module@some_module@objc(cy)I1@cat2 |
 -(void)cat_method2;
 // CHECK: [[@LINE-1]]:8 | instance-method/Swift | cat_method2 | c:@CM@cat_module@some_module@objc(cs)I1(im)cat_method2
+@property int cat_prop2;
+// CHECK: [[@LINE-1]]:15 | instance-method/acc-get/Swift | cat_prop2 | c:@CM@cat_module@some_module@objc(cs)I1(im)cat_prop2 |
+// CHECK: [[@LINE-2]]:15 | instance-method/acc-set/Swift | setCat_prop2: | c:@CM@cat_module@some_module@objc(cs)I1(im)setCat_prop2: |
+// CHECK: [[@LINE-3]]:15 | instance-property/Swift | cat_prop2 | c:@CM@cat_module@some_module@objc(cs)I1(py)cat_prop2 |
 @end
 
 #define NS_ENUM(_name, _type) enum _name:_type _name; enum _name : _type

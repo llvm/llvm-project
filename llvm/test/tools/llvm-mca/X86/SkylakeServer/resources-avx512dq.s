@@ -252,12 +252,12 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  2      9     1.00    *                   vfpclassss	$171, (%rax), %k1
 # CHECK-NEXT:  1      4     1.00                        vfpclassss	$171, %xmm16, %k1 {%k2}
 # CHECK-NEXT:  2      9     1.00    *                   vfpclassss	$171, (%rax), %k1 {%k2}
-# CHECK-NEXT:  3      12    1.50                        vpmullq	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  4      19    1.00    *                   vpmullq	(%rax), %zmm17, %zmm19
-# CHECK-NEXT:  3      12    1.50                        vpmullq	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  4      19    1.00    *                   vpmullq	(%rax), %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  3      12    1.50                        vpmullq	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  4      19    1.00    *                   vpmullq	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  3      15    1.50                        vpmullq	%zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  4      22    1.50    *                   vpmullq	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  3      15    1.50                        vpmullq	%zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  4      22    1.50    *                   vpmullq	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  3      15    1.50                        vpmullq	%zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  4      22    1.50    *                   vpmullq	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      1     0.50                        vxorpd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vxorpd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  2      8     0.50    *                   vxorpd	(%rax){1to8}, %zmm17, %zmm19
@@ -291,7 +291,7 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -      -     55.50  7.00   37.50  37.50   -     81.50   -      -
+# CHECK-NEXT:  -      -     57.00  4.00   37.50  37.50   -     83.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -397,11 +397,11 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vfpclassss	$171, %xmm16, %k1 {%k2}
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vfpclassss	$171, (%rax), %k1 {%k2}
 # CHECK-NEXT:  -      -     1.50    -      -      -      -     1.50    -      -     vpmullq	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -     1.00    -      -     vpmullq	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.50    -     0.50   0.50    -     1.50    -      -     vpmullq	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -     1.50    -      -      -      -     1.50    -      -     vpmullq	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -     1.00    -      -     vpmullq	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.50    -     0.50   0.50    -     1.50    -      -     vpmullq	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -     1.50    -      -      -      -     1.50    -      -     vpmullq	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -     1.00    -      -     vpmullq	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.50    -     0.50   0.50    -     1.50    -      -     vpmullq	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -     vxorpd	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vxorpd	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -     vxorpd	(%rax){1to8}, %zmm17, %zmm19

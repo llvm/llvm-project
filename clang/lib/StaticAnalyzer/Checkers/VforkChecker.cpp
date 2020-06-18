@@ -217,6 +217,6 @@ void ento::registerVforkChecker(CheckerManager &mgr) {
   mgr.registerChecker<VforkChecker>();
 }
 
-bool ento::shouldRegisterVforkChecker(const LangOptions &LO) {
+bool ento::shouldRegisterVforkChecker(const CheckerManager &mgr) {
   return true;
 }

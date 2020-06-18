@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 // RUN: ld.lld %t -o %tout
-// RUN: llvm-readobj --symbols --sections -l %tout | FileCheck %s
+// RUN: llvm-readobj -S -l --symbols %tout | FileCheck %s
 // RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DIS
 
 .global _start
@@ -101,6 +101,30 @@ d:
 // CHECK-NEXT:     EntrySize:
 // CHECK-NEXT:   }
 
+// Check that the TLS NOBITS sections weren't added to the R/W PT_LOAD's size.
+
+// CHECK:      ProgramHeaders [
+// CHECK:          Type: PT_LOAD
+// CHECK:          Type: PT_LOAD
+// CHECK:          Type: PT_LOAD
+// CHECK:          FileSize: 8
+// CHECK-NEXT:     MemSize: 8
+// CHECK-NEXT:     Flags [
+// CHECK-NEXT:       PF_R
+// CHECK-NEXT:       PF_W
+// CHECK-NEXT:     ]
+// CHECK:          Type: PT_TLS
+// CHECK-NEXT:     Offset:
+// CHECK-NEXT:     VirtualAddress: [[TDATA_ADDR]]
+// CHECK-NEXT:     PhysicalAddress: [[TDATA_ADDR]]
+// CHECK-NEXT:     FileSize: 8
+// CHECK-NEXT:     MemSize: 16
+// CHECK-NEXT:     Flags [
+// CHECK-NEXT:       PF_R
+// CHECK-NEXT:     ]
+// CHECK-NEXT:     Alignment:
+// CHECK-NEXT:   }
+
 // CHECK:      Symbols [
 // CHECK:          Name: a
 // CHECK-NEXT:     Value: 0x8
@@ -138,33 +162,9 @@ d:
 // CHECK-NEXT:     Section: .thread_data
 // CHECK-NEXT:   }
 
-// Check that the TLS NOBITS sections weren't added to the R/W PT_LOAD's size.
-
-// CHECK:      ProgramHeaders [
-// CHECK:          Type: PT_LOAD
-// CHECK:          Type: PT_LOAD
-// CHECK:          Type: PT_LOAD
-// CHECK:          FileSize: 8
-// CHECK-NEXT:     MemSize: 8
-// CHECK-NEXT:     Flags [
-// CHECK-NEXT:       PF_R
-// CHECK-NEXT:       PF_W
-// CHECK-NEXT:     ]
-// CHECK:          Type: PT_TLS
-// CHECK-NEXT:     Offset:
-// CHECK-NEXT:     VirtualAddress: [[TDATA_ADDR]]
-// CHECK-NEXT:     PhysicalAddress: [[TDATA_ADDR]]
-// CHECK-NEXT:     FileSize: 8
-// CHECK-NEXT:     MemSize: 16
-// CHECK-NEXT:     Flags [
-// CHECK-NEXT:       PF_R
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Alignment:
-// CHECK-NEXT:   }
-
 // DIS:      Disassembly of section .text:
 // DIS-EMPTY:
-// DIS-NEXT: _start:
+// DIS-NEXT: <_start>:
 // DIS-NEXT:   movl    %fs:-8, %eax
 // DIS-NEXT:   movl    %fs:-16, %eax
 // DIS-NEXT:   movl    %fs:-4, %eax

@@ -20,6 +20,7 @@
 // RUN:     -target x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
+// RUN:     --sysroot="" \
 // RUN:   | FileCheck -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain --check-prefix=CHECK-LIBCXX-TOOLCHAIN-1 %s
 // CHECK-LIBCXX-TOOLCHAIN-1: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CHECK-LIBCXX-TOOLCHAIN-1: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"

@@ -390,9 +390,7 @@ public:
   /// @name Virtual File System
   /// {
 
-  llvm::vfs::FileSystem &getVirtualFileSystem() const {
-    return getFileManager().getVirtualFileSystem();
-  }
+  llvm::vfs::FileSystem &getVirtualFileSystem() const;
 
   /// }
   /// @name File Manager
@@ -515,7 +513,7 @@ public:
   /// {
 
   IntrusiveRefCntPtr<ASTReader> getASTReader() const;
-  void setModuleManager(IntrusiveRefCntPtr<ASTReader> Reader);
+  void setASTReader(IntrusiveRefCntPtr<ASTReader> Reader);
 
   std::shared_ptr<ModuleDependencyCollector> getModuleDepCollector() const;
   void setModuleDepCollector(
@@ -781,7 +779,6 @@ public:
     return std::move(OutputStream);
   }
 
-  // Create module manager.
   void createASTReader();
 
   bool loadModuleFile(StringRef FileName);

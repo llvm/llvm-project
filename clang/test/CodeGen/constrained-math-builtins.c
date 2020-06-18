@@ -154,9 +154,9 @@ void bar(float f) {
   (double)f * f - f;
   (long double)-f * f + f;
 
-// CHECK: call float @llvm.experimental.constrained.fmuladd.f32
-// CHECK: fneg
-// CHECK: call double @llvm.experimental.constrained.fmuladd.f64
-// CHECK: fneg
-// CHECK: call x86_fp80 @llvm.experimental.constrained.fmuladd.f80
+  // CHECK: call float @llvm.experimental.constrained.fmuladd.f32
+  // CHECK: fneg
+  // CHECK: call double @llvm.experimental.constrained.fmuladd.f64
+  // CHECK: fneg
+  // CHECK: call x86_fp80 @llvm.experimental.constrained.fmuladd.f80
 };

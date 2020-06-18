@@ -7,7 +7,7 @@
 #===----------------------------------------------------------------------===//
 
 import importlib
-import locale
+import lit.util
 import os
 import platform
 import re
@@ -30,15 +30,9 @@ class DefaultTargetInfo(object):
     def is_darwin(self):
         return self.platform() == 'darwin'
 
-    def add_locale_features(self, features):
-        self.full_config.lit_config.warning(
-            "No locales entry for target_system: %s" % self.platform())
-
     def add_cxx_compile_flags(self, flags): pass
     def add_cxx_link_flags(self, flags): pass
-    def configure_env(self, env): pass
     def allow_cxxabi_link(self): return True
-    def add_sanitizer_features(self, sanitizer_type, features): pass
     def use_lit_shell_default(self): return False
 
     def add_path(self, dest_env, new_path):
@@ -51,51 +45,18 @@ class DefaultTargetInfo(object):
             dest_env['PATH'] = '%s%s%s' % (new_path, split_char,
                                            dest_env['PATH'])
 
-    def _test_locale(self, loc):
-        assert loc is not None
-        default_locale = locale.setlocale(locale.LC_ALL)
-        try:
-            locale.setlocale(locale.LC_ALL, loc)
-            return True
-        except locale.Error:
-            return False
-        finally:
-            locale.setlocale(locale.LC_ALL, default_locale)
-
-    def add_common_locales(self, features, is_windows=False):
-        # A list of locales needed by the test-suite.
-        # The list uses the canonical name for the locale used in the test-suite
-        # TODO: On Linux ISO8859 *may* needs to hyphenated.
-        locales = [
-            ('en_US.UTF-8', 'English_United States.1252'),
-            ('fr_FR.UTF-8', 'French_France.1252'),
-            ('ru_RU.UTF-8', 'Russian_Russia.1251'),
-            ('zh_CN.UTF-8', 'Chinese_China.936'),
-            ('fr_CA.ISO8859-1', 'French_Canada.1252'),
-            ('cs_CZ.ISO8859-2', 'Czech_Czech Republic.1250')
-        ]
-        for loc_id, windows_loc_name in locales:
-            loc_name = windows_loc_name if is_windows else loc_id
-            if self._test_locale(loc_name):
-                features.add('locale.{0}'.format(loc_id))
-            else:
-                self.full_config.lit_config.warning('The locale {0} is not supported by '
-                                'your platform. Some tests will be '
-                                'unsupported.'.format(loc_name))
-
 
 class DarwinLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(DarwinLocalTI, self).__init__(full_config)
 
     def is_host_macosx(self):
-        name = subprocess.check_output(['sw_vers', '-productName']).strip()
+        name = lit.util.to_string(subprocess.check_output(['sw_vers', '-productName'])).strip()
         return name == "Mac OS X"
 
     def get_macosx_version(self):
         assert self.is_host_macosx()
-        version = subprocess.check_output(
-            ['sw_vers', '-productVersion']).strip()
+        version = lit.util.to_string(subprocess.check_output(['sw_vers', '-productVersion'])).strip()
         version = re.sub(r'([0-9]+\.[0-9]+)(\..*)?', r'\1', version)
         return version
 
@@ -134,9 +95,6 @@ class DarwinLocalTI(DefaultTargetInfo):
             version = self.get_sdk_version(name)
         return (True, name, version)
 
-    def add_locale_features(self, features):
-        self.add_common_locales(features)
-
     def add_cxx_compile_flags(self, flags):
         if self.full_config.use_deployment:
             _, name, _ = self.full_config.config.deployment
@@ -155,21 +113,6 @@ class DarwinLocalTI(DefaultTargetInfo):
     def add_cxx_link_flags(self, flags):
         flags += ['-lSystem']
 
-    def configure_env(self, env):
-        library_paths = []
-        # Configure the library path for libc++
-        if self.full_config.cxx_runtime_root:
-            library_paths += [self.full_config.cxx_runtime_root]
-        elif self.full_config.use_system_cxx_lib:
-            if (os.path.isdir(str(self.full_config.use_system_cxx_lib))):
-                library_paths += [self.full_config.use_system_cxx_lib]
-
-        # Configure the abi library path
-        if self.full_config.abi_library_root:
-            library_paths += [self.full_config.abi_library_root]
-        if library_paths:
-            env['DYLD_LIBRARY_PATH'] = ':'.join(library_paths)
-
     def allow_cxxabi_link(self):
         # Don't link libc++abi explicitly on OS X because the symbols
         # should be available in libc++ directly.
@@ -180,9 +123,6 @@ class FreeBSDLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(FreeBSDLocalTI, self).__init__(full_config)
 
-    def add_locale_features(self, features):
-        self.add_common_locales(features)
-
     def add_cxx_link_flags(self, flags):
         flags += ['-lc', '-lm', '-lpthread', '-lgcc_s', '-lcxxrt']
 
@@ -190,9 +130,6 @@ class FreeBSDLocalTI(DefaultTargetInfo):
 class NetBSDLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(NetBSDLocalTI, self).__init__(full_config)
-
-    def add_locale_features(self, features):
-        self.add_common_locales(features)
 
     def add_cxx_link_flags(self, flags):
         flags += ['-lc', '-lm', '-lpthread', '-lgcc_s', '-lc++abi',
@@ -228,18 +165,6 @@ class LinuxLocalTI(DefaultTargetInfo):
         ver = ver.lower().strip().replace(' ', '-')
         return ver # Permitted to be None.
 
-    def add_locale_features(self, features):
-        self.add_common_locales(features)
-        # Some linux distributions have different locale data than others.
-        # Insert the distributions name and name-version into the available
-        # features to allow tests to XFAIL on them.
-        name = self.platform_name()
-        ver = self.platform_ver()
-        if name:
-            features.add(name)
-        if name and ver:
-            features.add('%s-%s' % (name, ver))
-
     def add_cxx_compile_flags(self, flags):
         flags += ['-D__STDC_FORMAT_MACROS',
                   '-D__STDC_LIMIT_MACROS',
@@ -267,8 +192,8 @@ class LinuxLocalTI(DefaultTargetInfo):
             flags += [builtins_lib]
         else:
             flags += ['-lgcc']
-        use_libatomic = self.full_config.get_lit_bool('use_libatomic', False)
-        if use_libatomic:
+        has_libatomic = self.full_config.get_lit_bool('has_libatomic', False)
+        if has_libatomic:
             flags += ['-latomic']
         san = self.full_config.get_lit_conf('use_sanitizer', '').strip()
         if san:
@@ -280,27 +205,10 @@ class LinuxLocalTI(DefaultTargetInfo):
 class LinuxRemoteTI(LinuxLocalTI):
     def __init__(self, full_config):
         super(LinuxRemoteTI, self).__init__(full_config)
-        self.__cached_locales = None
-    
-    def _test_locale(self, loc):
-        if self.__cached_locales is None:
-            self.full_config.lit_config.note('asking the remote host for supported locales...')
-            _, out, err, exit_code = self.executor.execute_command_remote(['locale', '-a'])
-            if exit_code != 0:
-                raise RuntimeError(err)
-            self.__cached_locales = out.splitlines()
-
-        # It is possible that the output will use 'en_US.utf8' instead of 'en_US.UTF-8',
-        # so we check both variants.
-        return loc in self.__cached_locales or \
-               loc.replace('UTF-8', 'utf8') in self.__cached_locales
 
 class WindowsLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(WindowsLocalTI, self).__init__(full_config)
-
-    def add_locale_features(self, features):
-        self.add_common_locales(features, is_windows=True)
 
     def use_lit_shell_default(self):
         # Default to the internal shell on Windows, as bash on Windows is

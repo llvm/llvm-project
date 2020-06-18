@@ -552,3 +552,29 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetTraceConfigPacket) {
       incorrect_custom_params2);
   ASSERT_FALSE(result4.get().Success());
 }
+
+TEST_F(GDBRemoteCommunicationClientTest, GetQOffsets) {
+  const auto &GetQOffsets = [&](llvm::StringRef response) {
+    std::future<Optional<QOffsets>> result = std::async(
+        std::launch::async, [&] { return client.GetQOffsets(); });
+
+    HandlePacket(server, "qOffsets", response);
+    return result.get();
+  };
+  EXPECT_EQ((QOffsets{false, {0x1234, 0x1234}}),
+            GetQOffsets("Text=1234;Data=1234"));
+  EXPECT_EQ((QOffsets{false, {0x1234, 0x1234, 0x1234}}),
+            GetQOffsets("Text=1234;Data=1234;Bss=1234"));
+  EXPECT_EQ((QOffsets{true, {0x1234}}), GetQOffsets("TextSeg=1234"));
+  EXPECT_EQ((QOffsets{true, {0x1234, 0x2345}}),
+            GetQOffsets("TextSeg=1234;DataSeg=2345"));
+
+  EXPECT_EQ(llvm::None, GetQOffsets("E05"));
+  EXPECT_EQ(llvm::None, GetQOffsets("Text=bogus"));
+  EXPECT_EQ(llvm::None, GetQOffsets("Text=1234"));
+  EXPECT_EQ(llvm::None, GetQOffsets("Text=1234;Data=1234;"));
+  EXPECT_EQ(llvm::None, GetQOffsets("Text=1234;Data=1234;Bss=1234;"));
+  EXPECT_EQ(llvm::None, GetQOffsets("TEXTSEG=1234"));
+  EXPECT_EQ(llvm::None, GetQOffsets("TextSeg=0x1234"));
+  EXPECT_EQ(llvm::None, GetQOffsets("TextSeg=12345678123456789"));
+}

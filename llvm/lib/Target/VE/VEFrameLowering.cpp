@@ -30,12 +30,13 @@ using namespace llvm;
 
 VEFrameLowering::VEFrameLowering(const VESubtarget &ST)
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(16), 0,
-                          Align(16)) {}
+                          Align(16)),
+      STI(ST) {}
 
 void VEFrameLowering::emitPrologueInsns(MachineFunction &MF,
                                         MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
-                                        int NumBytes,
+                                        uint64_t NumBytes,
                                         bool RequireFPUpdate) const {
 
   DebugLoc dl;
@@ -47,24 +48,35 @@ void VEFrameLowering::emitPrologueInsns(MachineFunction &MF,
   //    st %lr, 8(,%sp)
   //    st %got, 24(,%sp)
   //    st %plt, 32(,%sp)
+  //    st %s17, 40(,%sp) iff this function is using s17 as BP
   //    or %fp, 0, %sp
 
-  BuildMI(MBB, MBBI, dl, TII.get(VE::STSri))
+  BuildMI(MBB, MBBI, dl, TII.get(VE::STrii))
       .addReg(VE::SX11)
       .addImm(0)
+      .addImm(0)
       .addReg(VE::SX9);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::STSri))
+  BuildMI(MBB, MBBI, dl, TII.get(VE::STrii))
       .addReg(VE::SX11)
+      .addImm(0)
       .addImm(8)
       .addReg(VE::SX10);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::STSri))
+  BuildMI(MBB, MBBI, dl, TII.get(VE::STrii))
       .addReg(VE::SX11)
+      .addImm(0)
       .addImm(24)
       .addReg(VE::SX15);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::STSri))
+  BuildMI(MBB, MBBI, dl, TII.get(VE::STrii))
       .addReg(VE::SX11)
+      .addImm(0)
       .addImm(32)
       .addReg(VE::SX16);
+  if (hasBP(MF))
+    BuildMI(MBB, MBBI, dl, TII.get(VE::STrii))
+        .addReg(VE::SX11)
+        .addImm(0)
+        .addImm(40)
+        .addReg(VE::SX17);
   BuildMI(MBB, MBBI, dl, TII.get(VE::ORri), VE::SX9)
       .addReg(VE::SX11)
       .addImm(0);
@@ -73,7 +85,7 @@ void VEFrameLowering::emitPrologueInsns(MachineFunction &MF,
 void VEFrameLowering::emitEpilogueInsns(MachineFunction &MF,
                                         MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
-                                        int NumBytes,
+                                        uint64_t NumBytes,
                                         bool RequireFPUpdate) const {
 
   DebugLoc dl;
@@ -82,6 +94,7 @@ void VEFrameLowering::emitEpilogueInsns(MachineFunction &MF,
   // Insert following codes here as epilogue
   //
   //    or %sp, 0, %fp
+  //    ld %s17, 40(,%sp) iff this function is using s17 as BP
   //    ld %got, 32(,%sp)
   //    ld %plt, 24(,%sp)
   //    ld %lr, 8(,%sp)
@@ -90,30 +103,40 @@ void VEFrameLowering::emitEpilogueInsns(MachineFunction &MF,
   BuildMI(MBB, MBBI, dl, TII.get(VE::ORri), VE::SX11)
       .addReg(VE::SX9)
       .addImm(0);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LDSri), VE::SX16)
+  if (hasBP(MF))
+    BuildMI(MBB, MBBI, dl, TII.get(VE::LDrii), VE::SX17)
+        .addReg(VE::SX11)
+        .addImm(0)
+        .addImm(40);
+  BuildMI(MBB, MBBI, dl, TII.get(VE::LDrii), VE::SX16)
       .addReg(VE::SX11)
+      .addImm(0)
       .addImm(32);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LDSri), VE::SX15)
+  BuildMI(MBB, MBBI, dl, TII.get(VE::LDrii), VE::SX15)
       .addReg(VE::SX11)
+      .addImm(0)
       .addImm(24);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LDSri), VE::SX10)
+  BuildMI(MBB, MBBI, dl, TII.get(VE::LDrii), VE::SX10)
       .addReg(VE::SX11)
+      .addImm(0)
       .addImm(8);
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LDSri), VE::SX9)
+  BuildMI(MBB, MBBI, dl, TII.get(VE::LDrii), VE::SX9)
       .addReg(VE::SX11)
+      .addImm(0)
       .addImm(0);
 }
 
 void VEFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                        MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI,
-                                       int NumBytes) const {
+                                       int64_t NumBytes,
+                                       MaybeAlign MaybeAlign) const {
   DebugLoc dl;
   const VEInstrInfo &TII =
       *static_cast<const VEInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
   if (NumBytes >= -64 && NumBytes < 63) {
-    BuildMI(MBB, MBBI, dl, TII.get(VE::ADXri), VE::SX11)
+    BuildMI(MBB, MBBI, dl, TII.get(VE::ADDSLri), VE::SX11)
         .addReg(VE::SX11)
         .addImm(NumBytes);
     return;
@@ -124,20 +147,28 @@ void VEFrameLowering::emitSPAdjustment(MachineFunction &MF,
   //   lea     %s13,%lo(NumBytes)
   //   and     %s13,%s13,(32)0
   //   lea.sl  %sp,%hi(NumBytes)(%sp, %s13)
-  BuildMI(MBB, MBBI, dl, TII.get(VE::LEAzzi), VE::SX13)
+  BuildMI(MBB, MBBI, dl, TII.get(VE::LEAzii), VE::SX13)
+      .addImm(0)
+      .addImm(0)
       .addImm(Lo_32(NumBytes));
-  BuildMI(MBB, MBBI, dl, TII.get(VE::ANDrm0), VE::SX13)
+  BuildMI(MBB, MBBI, dl, TII.get(VE::ANDrm), VE::SX13)
       .addReg(VE::SX13)
-      .addImm(32);
+      .addImm(M0(32));
   BuildMI(MBB, MBBI, dl, TII.get(VE::LEASLrri), VE::SX11)
       .addReg(VE::SX11)
       .addReg(VE::SX13)
       .addImm(Hi_32(NumBytes));
+
+  if (MaybeAlign) {
+    // and %sp, %sp, Align-1
+    BuildMI(MBB, MBBI, dl, TII.get(VE::ANDrm), VE::SX11)
+        .addReg(VE::SX11)
+        .addImm(M1(64 - Log2_64(MaybeAlign.valueOrOne().value())));
+  }
 }
 
 void VEFrameLowering::emitSPExtend(MachineFunction &MF, MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI,
-                                   int NumBytes) const {
+                                   MachineBasicBlock::iterator MBBI) const {
   DebugLoc dl;
   const VEInstrInfo &TII =
       *static_cast<const VEInstrInfo *>(MF.getSubtarget().getInstrInfo());
@@ -176,11 +207,8 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const VESubtarget &Subtarget = MF.getSubtarget<VESubtarget>();
-  const VEInstrInfo &TII =
-      *static_cast<const VEInstrInfo *>(Subtarget.getInstrInfo());
-  const VERegisterInfo &RegInfo =
-      *static_cast<const VERegisterInfo *>(Subtarget.getRegisterInfo());
+  const VEInstrInfo &TII = *STI.getInstrInfo();
+  const VERegisterInfo &RegInfo = *STI.getRegisterInfo();
   MachineBasicBlock::iterator MBBI = MBB.begin();
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
@@ -192,39 +220,22 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
   // rather than reporting an error, as would be sensible. This is
   // poor, but fixing that bogosity is going to be a large project.
   // For now, just see if it's lied, and report an error here.
-  if (!NeedsStackRealignment && MFI.getMaxAlignment() > getStackAlignment())
+  if (!NeedsStackRealignment && MFI.getMaxAlign() > getStackAlign())
     report_fatal_error("Function \"" + Twine(MF.getName()) +
                        "\" required "
                        "stack re-alignment, but LLVM couldn't handle it "
                        "(probably because it has a dynamic alloca).");
 
   // Get the number of bytes to allocate from the FrameInfo
-  int NumBytes = (int)MFI.getStackSize();
-  // The VE ABI requires a reserved 176-byte area in the user's stack, starting
-  // at %sp + 16. This is for the callee Register Save Area (RSA).
-  //
-  // We therefore need to add that offset to the total stack size
-  // after all the stack objects are placed by
-  // PrologEpilogInserter calculateFrameObjectOffsets. However, since the stack
-  // needs to be aligned *after* the extra size is added, we need to disable
-  // calculateFrameObjectOffsets's built-in stack alignment, by having
-  // targetHandlesStackFrameRounding return true.
+  uint64_t NumBytes = MFI.getStackSize();
 
-  // Add the extra call frame stack size, if needed. (This is the same
-  // code as in PrologEpilogInserter, but also gets disabled by
-  // targetHandlesStackFrameRounding)
-  if (MFI.adjustsStack() && hasReservedCallFrame(MF))
-    NumBytes += MFI.getMaxCallFrameSize();
-
-  // Adds the VE subtarget-specific spill area to the stack
-  // size. Also ensures target-required alignment.
-  NumBytes = Subtarget.getAdjustedFrameSize(NumBytes);
+  // The VE ABI requires a reserved 176 bytes area at the top
+  // of stack as described in VESubtarget.cpp.  So, we adjust it here.
+  NumBytes = STI.getAdjustedFrameSize(NumBytes);
 
   // Finally, ensure that the size is sufficiently aligned for the
   // data on the stack.
-  if (MFI.getMaxAlignment() > 0) {
-    NumBytes = alignTo(NumBytes, MFI.getMaxAlignment());
-  }
+  NumBytes = alignTo(NumBytes, MFI.getMaxAlign());
 
   // Update stack size with corrected value.
   MFI.setStackSize(NumBytes);
@@ -233,16 +244,25 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
   emitPrologueInsns(MF, MBB, MBBI, NumBytes, true);
 
   // Emit stack adjust instructions
-  emitSPAdjustment(MF, MBB, MBBI, -NumBytes);
+  MaybeAlign RuntimeAlign =
+      NeedsStackRealignment ? MaybeAlign(MFI.getMaxAlign()) : None;
+  emitSPAdjustment(MF, MBB, MBBI, -(int64_t)NumBytes, RuntimeAlign);
+
+  if (hasBP(MF)) {
+    // Copy SP to BP.
+    BuildMI(MBB, MBBI, dl, TII.get(VE::ORri), VE::SX17)
+        .addReg(VE::SX11)
+        .addImm(0);
+  }
 
   // Emit stack extend instructions
-  emitSPExtend(MF, MBB, MBBI, -NumBytes);
+  emitSPExtend(MF, MBB, MBBI);
 
-  unsigned regFP = RegInfo.getDwarfRegNum(VE::SX9, true);
+  Register RegFP = RegInfo.getDwarfRegNum(VE::SX9, true);
 
   // Emit ".cfi_def_cfa_register 30".
   unsigned CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(nullptr, regFP));
+      MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(nullptr, RegFP));
   BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
@@ -257,7 +277,7 @@ MachineBasicBlock::iterator VEFrameLowering::eliminateCallFramePseudoInstr(
     MachineBasicBlock::iterator I) const {
   if (!hasReservedCallFrame(MF)) {
     MachineInstr &MI = *I;
-    int Size = MI.getOperand(0).getImm();
+    int64_t Size = MI.getOperand(0).getImm();
     if (MI.getOpcode() == VE::ADJCALLSTACKDOWN)
       Size = -Size;
 
@@ -273,20 +293,17 @@ void VEFrameLowering::emitEpilogue(MachineFunction &MF,
   DebugLoc dl = MBBI->getDebugLoc();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  int NumBytes = (int)MFI.getStackSize();
+  uint64_t NumBytes = MFI.getStackSize();
 
   // Emit Epilogue instructions to restore %lr
   emitEpilogueInsns(MF, MBB, MBBI, NumBytes, true);
 }
 
-bool VEFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
-  // Reserve call frame if there are no variable sized objects on the stack.
-  return !MF.getFrameInfo().hasVarSizedObjects();
-}
-
 // hasFP - Return true if the specified function should have a dedicated frame
-// pointer register.  This is true if the function has variable sized allocas or
-// if frame pointer elimination is disabled.
+// pointer register.  This is true if the function has variable sized allocas
+// or if frame pointer elimination is disabled.  For the case of VE, we don't
+// implement FP eliminator yet, but we returns false from this function to
+// not refer fp from generated code.
 bool VEFrameLowering::hasFP(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
@@ -296,44 +313,41 @@ bool VEFrameLowering::hasFP(const MachineFunction &MF) const {
          MFI.isFrameAddressTaken();
 }
 
-int VEFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
-                                            unsigned &FrameReg) const {
-  const VESubtarget &Subtarget = MF.getSubtarget<VESubtarget>();
+bool VEFrameLowering::hasBP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const VERegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+
+  return MFI.hasVarSizedObjects() && TRI->needsStackRealignment(MF);
+}
+
+int VEFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
+                                            Register &FrameReg) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const VERegisterInfo *RegInfo = STI.getRegisterInfo();
   const VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
   bool isFixed = MFI.isFixedObjectIndex(FI);
 
-  // Addressable stack objects are accessed using neg. offsets from
-  // %fp, or positive offsets from %sp.
-  bool UseFP = true;
+  int64_t FrameOffset = MF.getFrameInfo().getObjectOffset(FI);
 
-  // VE uses FP-based references in general, even when "hasFP" is
-  // false. That function is rather a misnomer, because %fp is
-  // actually always available, unless isLeafProc.
   if (FuncInfo->isLeafProc()) {
     // If there's a leaf proc, all offsets need to be %sp-based,
     // because we haven't caused %fp to actually point to our frame.
-    UseFP = false;
-  } else if (isFixed) {
-    // Otherwise, argument access should always use %fp.
-    UseFP = true;
-  } else if (RegInfo->needsStackRealignment(MF)) {
+    FrameReg = VE::SX11; // %sp
+    return FrameOffset + MF.getFrameInfo().getStackSize();
+  }
+  if (RegInfo->needsStackRealignment(MF) && !isFixed) {
     // If there is dynamic stack realignment, all local object
-    // references need to be via %sp, to take account of the
-    // re-alignment.
-    UseFP = false;
+    // references need to be via %sp or %s17 (bp), to take account
+    // of the re-alignment.
+    if (hasBP(MF))
+      FrameReg = VE::SX17; // %bp
+    else
+      FrameReg = VE::SX11; // %sp
+    return FrameOffset + MF.getFrameInfo().getStackSize();
   }
-
-  int64_t FrameOffset = MF.getFrameInfo().getObjectOffset(FI);
-
-  if (UseFP) {
-    FrameReg = RegInfo->getFrameRegister(MF);
-    return FrameOffset;
-  }
-
-  FrameReg = VE::SX11; // %sp
-  return FrameOffset + MF.getFrameInfo().getStackSize();
+  // Finally, default to using %fp.
+  FrameReg = RegInfo->getFrameRegister(MF);
+  return FrameOffset;
 }
 
 bool VEFrameLowering::isLeafProc(MachineFunction &MF) const {

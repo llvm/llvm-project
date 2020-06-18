@@ -208,6 +208,12 @@ __m256i test_mm256_broadcastsi128_si256(__m128i a) {
   return _mm256_broadcastsi128_si256(a);
 }
 
+__m256i test_mm_broadcastsi128_si256(__m128i a) {
+  // CHECK-LABEL: test_mm_broadcastsi128_si256
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  return _mm_broadcastsi128_si256(a);
+}
+
 __m128 test_mm_broadcastss_ps(__m128 a) {
   // CHECK-LABEL: test_mm_broadcastss_ps
   // CHECK-NOT: @llvm.x86.avx2.vbroadcast.ss.ps

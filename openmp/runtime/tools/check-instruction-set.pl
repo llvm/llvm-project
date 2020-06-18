@@ -124,7 +124,7 @@ sub check_file($;$$) {
 
     my $n = 0;
     my $errors = 0;
-    my $current_func  = "";    # Name of current fuction.
+    my $current_func  = "";    # Name of current function.
     my $reported_func = "";    # name of last reported function.
     foreach my $line ( @bulk ) {
         ++ $n;

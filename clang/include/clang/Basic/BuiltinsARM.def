@@ -202,6 +202,8 @@ BUILTIN(__builtin_arm_wsrp, "vcC*vC*", "nc")
 // aren't included from both here and BuiltinsAArch64.def.)
 #include "clang/Basic/arm_mve_builtins.inc"
 
+#include "clang/Basic/arm_cde_builtins.inc"
+
 // MSVC
 LANGBUILTIN(__emit, "vIUiC", "", ALL_MS_LANGUAGES)
 

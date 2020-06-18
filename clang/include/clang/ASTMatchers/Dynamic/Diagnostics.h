@@ -65,6 +65,7 @@ public:
     ET_RegistryNotBindable = 4,
     ET_RegistryAmbiguousOverload = 5,
     ET_RegistryValueNotFound = 6,
+    ET_RegistryUnknownEnumWithReplace = 7,
 
     ET_ParserStringError = 100,
     ET_ParserNoOpenParen = 101,

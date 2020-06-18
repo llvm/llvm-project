@@ -1,4 +1,4 @@
-//===---------------------------- Memory utils ----------------------------===//
+//===-- Memory utils --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,6 +43,11 @@ static constexpr size_t ge_power2(size_t value) {
   return is_power2_or_zero(value) ? value : 1ULL << (log2(value) + 1);
 }
 
+template <size_t alignment> intptr_t offset_from_last_aligned(const void *ptr) {
+  static_assert(is_power2(alignment), "alignment must be a power of 2");
+  return reinterpret_cast<uintptr_t>(ptr) & (alignment - 1U);
+}
+
 template <size_t alignment> intptr_t offset_to_next_aligned(const void *ptr) {
   static_assert(is_power2(alignment), "alignment must be a power of 2");
   // The logic is not straightforward and involves unsigned modulo arithmetic
@@ -51,7 +56,7 @@ template <size_t alignment> intptr_t offset_to_next_aligned(const void *ptr) {
 }
 
 // Returns the offset from `ptr` to the next cache line.
-static intptr_t offset_to_next_cache_line(const void *ptr) {
+static inline intptr_t offset_to_next_cache_line(const void *ptr) {
   return offset_to_next_aligned<LLVM_LIBC_CACHELINE_SIZE>(ptr);
 }
 

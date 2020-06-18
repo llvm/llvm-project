@@ -71,13 +71,15 @@ static cl::alias
     ClPrintInliningAliasInlines("inlines", cl::desc("Alias for -inlining"),
                                 cl::NotHidden, cl::aliasopt(ClPrintInlining));
 
-// -basenames, -s
 static cl::opt<bool> ClBasenames("basenames", cl::init(false),
                                  cl::desc("Strip directory names from paths"));
 static cl::alias ClBasenamesShort("s", cl::desc("Alias for -basenames"),
                                   cl::NotHidden, cl::aliasopt(ClBasenames));
 
-// -demangle, -C, -no-demangle
+static cl::opt<bool>
+    ClRelativenames("relativenames", cl::init(false),
+                    cl::desc("Strip the compilation directory from paths"));
+
 static cl::opt<bool>
 ClDemangle("demangle", cl::init(true), cl::desc("Demangle function names"));
 static cl::alias
@@ -91,7 +93,6 @@ static cl::opt<std::string> ClDefaultArch("default-arch", cl::init(""),
                                           cl::desc("Default architecture "
                                                    "(for multi-arch objects)"));
 
-// -obj, -exe, -e
 static cl::opt<std::string>
 ClBinaryName("obj", cl::init(""),
              cl::desc("Path to object file to be symbolized (if not provided, "
@@ -112,7 +113,6 @@ ClDsymHint("dsym-hint", cl::ZeroOrMore,
            cl::desc("Path to .dSYM bundles to search for debug info for the "
                     "object files"));
 
-// -print-address, -addresses, -a
 static cl::opt<bool>
 ClPrintAddress("print-address", cl::init(false),
                cl::desc("Show address before line information"));
@@ -123,7 +123,6 @@ static cl::alias
 ClPrintAddressAliasA("a", cl::desc("Alias for -print-address"),
                      cl::NotHidden, cl::aliasopt(ClPrintAddress), cl::Grouping);
 
-// -pretty-print, -p
 static cl::opt<bool>
     ClPrettyPrint("pretty-print", cl::init(false),
                   cl::desc("Make the output more human friendly"));
@@ -138,7 +137,6 @@ static cl::opt<int> ClPrintSourceContextLines(
 static cl::opt<bool> ClVerbose("verbose", cl::init(false),
                                cl::desc("Print verbose line info"));
 
-// -adjust-vma
 static cl::opt<uint64_t>
     ClAdjustVMA("adjust-vma", cl::init(0), cl::value_desc("offset"),
                 cl::desc("Add specified offset to object file addresses"));
@@ -165,6 +163,10 @@ static cl::opt<DIPrinter::OutputStyle>
                              clEnumValN(DIPrinter::OutputStyle::GNU, "GNU",
                                         "GNU addr2line style")));
 
+static cl::opt<bool>
+    ClUseNativePDBReader("use-native-pdb-reader", cl::init(0),
+                         cl::desc("Use native PDB functionality"));
+
 static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 
@@ -183,7 +185,7 @@ enum class Command {
   Frame,
 };
 
-static bool parseCommand(StringRef InputString, Command &Cmd,
+static bool parseCommand(bool IsAddr2Line, StringRef InputString, Command &Cmd,
                          std::string &ModuleName, uint64_t &ModuleOffset) {
   const char kDelimiters[] = " \n\r";
   ModuleName = "";
@@ -197,38 +199,44 @@ static bool parseCommand(StringRef InputString, Command &Cmd,
     // If no cmd, assume it's CODE.
     Cmd = Command::Code;
   }
-  const char *pos = InputString.data();
+  const char *Pos = InputString.data();
   // Skip delimiters and parse input filename (if needed).
   if (ClBinaryName.empty()) {
-    pos += strspn(pos, kDelimiters);
-    if (*pos == '"' || *pos == '\'') {
-      char quote = *pos;
-      pos++;
-      const char *end = strchr(pos, quote);
-      if (!end)
+    Pos += strspn(Pos, kDelimiters);
+    if (*Pos == '"' || *Pos == '\'') {
+      char Quote = *Pos;
+      Pos++;
+      const char *End = strchr(Pos, Quote);
+      if (!End)
         return false;
-      ModuleName = std::string(pos, end - pos);
-      pos = end + 1;
+      ModuleName = std::string(Pos, End - Pos);
+      Pos = End + 1;
     } else {
-      int name_length = strcspn(pos, kDelimiters);
-      ModuleName = std::string(pos, name_length);
-      pos += name_length;
+      int NameLength = strcspn(Pos, kDelimiters);
+      ModuleName = std::string(Pos, NameLength);
+      Pos += NameLength;
     }
   } else {
     ModuleName = ClBinaryName;
   }
   // Skip delimiters and parse module offset.
-  pos += strspn(pos, kDelimiters);
-  int offset_length = strcspn(pos, kDelimiters);
-  return !StringRef(pos, offset_length).getAsInteger(0, ModuleOffset);
+  Pos += strspn(Pos, kDelimiters);
+  int OffsetLength = strcspn(Pos, kDelimiters);
+  StringRef Offset(Pos, OffsetLength);
+  // GNU addr2line assumes the offset is hexadecimal and allows a redundant
+  // "0x" or "0X" prefix; do the same for compatibility.
+  if (IsAddr2Line)
+    Offset.consume_front("0x") || Offset.consume_front("0X");
+  return !Offset.getAsInteger(IsAddr2Line ? 16 : 0, ModuleOffset);
 }
 
-static void symbolizeInput(StringRef InputString, LLVMSymbolizer &Symbolizer,
-                           DIPrinter &Printer) {
+static void symbolizeInput(bool IsAddr2Line, StringRef InputString,
+                           LLVMSymbolizer &Symbolizer, DIPrinter &Printer) {
   Command Cmd;
   std::string ModuleName;
   uint64_t Offset = 0;
-  if (!parseCommand(StringRef(InputString), Cmd, ModuleName, Offset)) {
+  if (!parseCommand(IsAddr2Line, StringRef(InputString), Cmd, ModuleName,
+                    Offset)) {
     outs() << InputString << "\n";
     return;
   }
@@ -309,6 +317,14 @@ int main(int argc, char **argv) {
   Opts.FallbackDebugPath = ClFallbackDebugPath;
   Opts.DWPName = ClDwpName;
   Opts.DebugFileDirectory = ClDebugFileDirectory;
+  Opts.UseNativePDBReader = ClUseNativePDBReader;
+  Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath;
+  // If both --basenames and --relativenames are specified then pick the last
+  // one.
+  if (ClBasenames.getPosition() > ClRelativenames.getPosition())
+    Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::BaseNameOnly;
+  else if (ClRelativenames)
+    Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath;
 
   for (const auto &hint : ClDsymHint) {
     if (sys::path::extension(hint) == ".dSYM") {
@@ -322,7 +338,7 @@ int main(int argc, char **argv) {
 
   DIPrinter Printer(outs(), ClPrintFunctions != FunctionNameKind::None,
                     ClPrettyPrint, ClPrintSourceContextLines, ClVerbose,
-                    ClBasenames, ClOutputStyle);
+                    ClOutputStyle);
 
   if (ClInputAddresses.empty()) {
     const int kMaxInputStringLength = 1024;
@@ -335,12 +351,12 @@ int main(int argc, char **argv) {
           std::remove_if(StrippedInputString.begin(), StrippedInputString.end(),
                          [](char c) { return c == '\r' || c == '\n'; }),
           StrippedInputString.end());
-      symbolizeInput(StrippedInputString, Symbolizer, Printer);
+      symbolizeInput(IsAddr2Line, StrippedInputString, Symbolizer, Printer);
       outs().flush();
     }
   } else {
     for (StringRef Address : ClInputAddresses)
-      symbolizeInput(Address, Symbolizer, Printer);
+      symbolizeInput(IsAddr2Line, Address, Symbolizer, Printer);
   }
 
   return 0;

@@ -16,19 +16,15 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 
+#include "mlir/Dialect/OpenMP/OpenMPOpsEnums.h.inc"
+
 namespace mlir {
 namespace omp {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.h.inc"
 
-class OpenMPDialect : public Dialect {
-public:
-  explicit OpenMPDialect(MLIRContext *context);
-
-  static StringRef getDialectNamespace() { return "omp"; }
-};
-
+#include "mlir/Dialect/OpenMP/OpenMPOpsDialect.h.inc"
 } // namespace omp
 } // namespace mlir
 

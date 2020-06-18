@@ -16,6 +16,7 @@ CHECK-NEXT:      -Wformat-security
 CHECK-NEXT:      -Wformat-y2k
 CHECK-NEXT:      -Wformat-invalid-specifier
 CHECK-NEXT:    -Wfor-loop-analysis
+CHECK-NEXT:    -Wframe-address
 CHECK-NEXT:    -Wimplicit
 CHECK-NEXT:      -Wimplicit-function-declaration
 CHECK-NEXT:      -Wimplicit-int
@@ -54,6 +55,7 @@ CHECK-NEXT:    -Wtrigraphs
 CHECK-NEXT:    -Wuninitialized
 CHECK-NEXT:      -Wsometimes-uninitialized
 CHECK-NEXT:      -Wstatic-self-init
+CHECK-NEXT:      -Wuninitialized-const-reference
 CHECK-NEXT:    -Wunknown-pragmas
 CHECK-NEXT:    -Wunused
 CHECK-NEXT:      -Wunused-argument

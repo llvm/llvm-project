@@ -61,14 +61,13 @@ declare void @_ZN4Impl3RunEv(%class.Impl* %this)
   Inst = &*++F->front().rbegin();
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
-  CallSite CS(CI);
-  ASSERT_FALSE(CS.getCalledFunction());
-  bool IsPromoted = tryPromoteCall(CS);
+  ASSERT_FALSE(CI->getCalledFunction());
+  bool IsPromoted = tryPromoteCall(*CI);
   EXPECT_TRUE(IsPromoted);
   GV = M->getNamedValue("_ZN4Impl3RunEv");
   ASSERT_TRUE(GV);
   auto *F1 = dyn_cast<Function>(GV);
-  EXPECT_EQ(F1, CS.getCalledFunction());
+  EXPECT_EQ(F1, CI->getCalledFunction());
 }
 
 TEST(CallPromotionUtilsTest, TryPromoteCall_NoFPLoad) {
@@ -92,9 +91,8 @@ entry:
   Instruction *Inst = &F->front().front();
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
-  CallSite CS(CI);
-  ASSERT_FALSE(CS.getCalledFunction());
-  bool IsPromoted = tryPromoteCall(CS);
+  ASSERT_FALSE(CI->getCalledFunction());
+  bool IsPromoted = tryPromoteCall(*CI);
   EXPECT_FALSE(IsPromoted);
 }
 
@@ -120,9 +118,8 @@ entry:
   Instruction *Inst = &*++F->front().rbegin();
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
-  CallSite CS(CI);
-  ASSERT_FALSE(CS.getCalledFunction());
-  bool IsPromoted = tryPromoteCall(CS);
+  ASSERT_FALSE(CI->getCalledFunction());
+  bool IsPromoted = tryPromoteCall(*CI);
   EXPECT_FALSE(IsPromoted);
 }
 
@@ -156,9 +153,8 @@ declare void @_ZN4Impl3RunEv(%class.Impl* %this)
   Instruction *Inst = &*++F->front().rbegin();
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
-  CallSite CS(CI);
-  ASSERT_FALSE(CS.getCalledFunction());
-  bool IsPromoted = tryPromoteCall(CS);
+  ASSERT_FALSE(CI->getCalledFunction());
+  bool IsPromoted = tryPromoteCall(*CI);
   EXPECT_FALSE(IsPromoted);
 }
 
@@ -199,9 +195,8 @@ declare void @_ZN4Impl3RunEv(%class.Impl* %this)
   Inst = &*++F->front().rbegin();
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
-  CallSite CS(CI);
-  ASSERT_FALSE(CS.getCalledFunction());
-  bool IsPromoted = tryPromoteCall(CS);
+  ASSERT_FALSE(CI->getCalledFunction());
+  bool IsPromoted = tryPromoteCall(*CI);
   EXPECT_FALSE(IsPromoted);
 }
 
@@ -242,9 +237,8 @@ declare void @_ZN4Impl3RunEv(%class.Impl* %this)
   Inst = &*++F->front().rbegin();
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
-  CallSite CS(CI);
-  ASSERT_FALSE(CS.getCalledFunction());
-  bool IsPromoted = tryPromoteCall(CS);
+  ASSERT_FALSE(CI->getCalledFunction());
+  bool IsPromoted = tryPromoteCall(*CI);
   EXPECT_FALSE(IsPromoted);
 }
 
@@ -302,14 +296,13 @@ declare i32 @_ZN1A3vf2Ev(%struct.A* %this)
   Inst = &*++F->front().rbegin();
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
-  CallSite CS1(CI);
-  ASSERT_FALSE(CS1.getCalledFunction());
-  bool IsPromoted1 = tryPromoteCall(CS1);
+  ASSERT_FALSE(CI->getCalledFunction());
+  bool IsPromoted1 = tryPromoteCall(*CI);
   EXPECT_TRUE(IsPromoted1);
   GV = M->getNamedValue("_ZN1A3vf1Ev");
   ASSERT_TRUE(GV);
   F = dyn_cast<Function>(GV);
-  EXPECT_EQ(F, CS1.getCalledFunction());
+  EXPECT_EQ(F, CI->getCalledFunction());
 
   GV = M->getNamedValue("_Z2g2v");
   ASSERT_TRUE(GV);
@@ -321,12 +314,57 @@ declare i32 @_ZN1A3vf2Ev(%struct.A* %this)
   Inst = &*++F->front().rbegin();
   CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
-  CallSite CS2(CI);
-  ASSERT_FALSE(CS2.getCalledFunction());
-  bool IsPromoted2 = tryPromoteCall(CS2);
+  ASSERT_FALSE(CI->getCalledFunction());
+  bool IsPromoted2 = tryPromoteCall(*CI);
   EXPECT_TRUE(IsPromoted2);
   GV = M->getNamedValue("_ZN1A3vf2Ev");
   ASSERT_TRUE(GV);
   F = dyn_cast<Function>(GV);
-  EXPECT_EQ(F, CS2.getCalledFunction());
+  EXPECT_EQ(F, CI->getCalledFunction());
+}
+
+// Check that it isn't crashing due to missing promotion legality.
+TEST(CallPromotionUtilsTest, TryPromoteCall_Legality) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"IR(
+%struct1 = type <{ i32, i64 }>
+%struct2 = type <{ i32, i64 }>
+
+%class.Impl = type <{ %class.Interface, i32, [4 x i8] }>
+%class.Interface = type { i32 (...)** }
+
+@_ZTV4Impl = constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* null, i8* bitcast (%struct2 (%class.Impl*)* @_ZN4Impl3RunEv to i8*)] }
+
+define %struct1 @f() {
+entry:
+  %o = alloca %class.Impl
+  %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
+  store i32 3, i32* %f
+  %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
+  %c = bitcast %class.Interface* %base.i to %struct1 (%class.Interface*)***
+  %vtable.i = load %struct1 (%class.Interface*)**, %struct1 (%class.Interface*)*** %c
+  %fp = load %struct1 (%class.Interface*)*, %struct1 (%class.Interface*)** %vtable.i
+  %rv = call %struct1 %fp(%class.Interface* nonnull %base.i)
+  ret %struct1 %rv
+}
+
+declare %struct2 @_ZN4Impl3RunEv(%class.Impl* %this)
+)IR");
+
+  auto *GV = M->getNamedValue("f");
+  ASSERT_TRUE(GV);
+  auto *F = dyn_cast<Function>(GV);
+  ASSERT_TRUE(F);
+  Instruction *Inst = &F->front().front();
+  auto *AI = dyn_cast<AllocaInst>(Inst);
+  ASSERT_TRUE(AI);
+  Inst = &*++F->front().rbegin();
+  auto *CI = dyn_cast<CallInst>(Inst);
+  ASSERT_TRUE(CI);
+  ASSERT_FALSE(CI->getCalledFunction());
+  bool IsPromoted = tryPromoteCall(*CI);
+  EXPECT_FALSE(IsPromoted);
 }

@@ -388,10 +388,10 @@ IPC is computed dividing the total number of simulated instructions by the total
 number of cycles.
 
 Field *Block RThroughput* is the reciprocal of the block throughput. Block
-throuhgput is a theoretical quantity computed as the maximum number of blocks
+throughput is a theoretical quantity computed as the maximum number of blocks
 (i.e. iterations) that can be executed per simulated clock cycle in the absence
-of loop carried dependencies. Block throughput is is superiorly
-limited by the dispatch rate, and the availability of hardware resources.
+of loop carried dependencies. Block throughput is superiorly limited by the
+dispatch rate, and the availability of hardware resources.
 
 In the absence of loop-carried data dependencies, the observed IPC tends to a
 theoretical maximum which can be computed by dividing the number of instructions

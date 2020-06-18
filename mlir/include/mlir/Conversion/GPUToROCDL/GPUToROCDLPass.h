@@ -11,14 +11,23 @@
 #include <memory>
 
 namespace mlir {
+class LLVMTypeConverter;
+class OwningRewritePatternList;
+
+template <typename OpT>
+class OperationPass;
 
 namespace gpu {
 class GPUModuleOp;
 } // namespace gpu
-template <typename OpT> class OpPassBase;
+
+/// Collect a set of patterns to convert from the GPU dialect to ROCDL.
+void populateGpuToROCDLConversionPatterns(LLVMTypeConverter &converter,
+                                          OwningRewritePatternList &patterns);
 
 /// Creates a pass that lowers GPU dialect operations to ROCDL counterparts.
-std::unique_ptr<OpPassBase<gpu::GPUModuleOp>> createLowerGpuOpsToROCDLOpsPass();
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
+createLowerGpuOpsToROCDLOpsPass();
 
 } // namespace mlir
 

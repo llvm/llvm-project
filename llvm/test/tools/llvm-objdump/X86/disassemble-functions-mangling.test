@@ -1,35 +1,35 @@
-## Show that the --disassemble-functions switch takes demangled names when
+## Show that the --disassemble-symbols switch takes demangled names when
 ## --demangle is specified, otherwise the switch takes mangled names.
 
 # RUN: yaml2obj %s -o %t.o
 
-## --disassemble-functions without --demangle.
-# RUN: llvm-objdump --disassemble-functions=_Z3foov %t.o | FileCheck %s --check-prefix=MANGLED
-# RUN: llvm-objdump --disassemble-functions='foo()' %t.o 2>&1 \
+## --disassemble-symbols without --demangle.
+# RUN: llvm-objdump --disassemble-symbols=_Z3foov %t.o | FileCheck %s --check-prefix=MANGLED
+# RUN: llvm-objdump --disassemble-symbols='foo()' %t.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=MANGLED-MISS
-# RUN: llvm-objdump --disassemble-functions=foo %t.o 2>&1 \
+# RUN: llvm-objdump --disassemble-symbols=foo %t.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=MANGLED-MISS
-# RUN: llvm-objdump --disassemble-functions='i,f' %t.o | FileCheck %s --check-prefix=NOMANGLE
+# RUN: llvm-objdump --disassemble-symbols='i,f' %t.o | FileCheck %s --check-prefix=NOMANGLE
 
-## --disassemble-functions with --demangle.
-# RUN: llvm-objdump -C --disassemble-functions='foo()' %t.o | FileCheck %s --check-prefix=DEMANGLED
-# RUN: llvm-objdump -C --disassemble-functions='_Z3foov' %t.o 2>&1 \
+## --disassemble-symbols with --demangle.
+# RUN: llvm-objdump -C --disassemble-symbols='foo()' %t.o | FileCheck %s --check-prefix=DEMANGLED
+# RUN: llvm-objdump -C --disassemble-symbols='_Z3foov' %t.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=DEMANGLED-MISS
-# RUN: llvm-objdump -C --disassemble-functions='i,f' %t.o | FileCheck %s --check-prefix=NOMANGLE
-# RUN: llvm-objdump -C --disassemble-functions='std::allocator<wchar_t>::allocator()' %t.o 2>&1 \
+# RUN: llvm-objdump -C --disassemble-symbols='i,f' %t.o | FileCheck %s --check-prefix=NOMANGLE
+# RUN: llvm-objdump -C --disassemble-symbols='std::allocator<wchar_t>::allocator()' %t.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=DEMANGLED-MULTI
 
-# MANGLED: _Z3foov:
-# MANGLED-MISS: warning: '{{.*}}': failed to disassemble missing function foo
+# MANGLED: <_Z3foov>:
+# MANGLED-MISS: warning: '{{.*}}': failed to disassemble missing symbol foo
 
-# DEMANGLED: foo():
-# DEMANGLED-MISS: warning: '{{.*}}': failed to disassemble missing function _Z3foov
+# DEMANGLED: <foo()>:
+# DEMANGLED-MISS: warning: '{{.*}}': failed to disassemble missing symbol _Z3foov
 
-# NOMANGLE: i:
-# NOMANGLE: f:
+# NOMANGLE: <i>:
+# NOMANGLE: <f>:
 
-# DEMANGLED-MULTI: std::allocator<wchar_t>::allocator():
-# DEMANGLED-MULTI: std::allocator<wchar_t>::allocator():
+# DEMANGLED-MULTI: <std::allocator<wchar_t>::allocator()>:
+# DEMANGLED-MULTI: <std::allocator<wchar_t>::allocator()>:
 
 --- !ELF
 FileHeader:

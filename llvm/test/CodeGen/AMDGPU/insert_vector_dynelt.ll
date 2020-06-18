@@ -106,6 +106,15 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}float32_inselt:
+; GCN: v_movreld_b32
+define amdgpu_kernel void @float32_inselt(<32 x float> addrspace(1)* %out, <32 x float> %vec, i32 %sel) {
+entry:
+  %v = insertelement <32 x float> %vec, float 1.000000e+00, i32 %sel
+  store <32 x float> %v, <32 x float> addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}half4_inselt:
 ; GCN-NOT: v_cndmask_b32
 ; GCN-NOT: v_movrel
@@ -268,30 +277,74 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}double5_inselt:
+; GCN-NOT: v_movrel
+; GCN-NOT: buffer_
+; GCN-COUNT-10: v_cndmask_b32
+define amdgpu_kernel void @double5_inselt(<5 x double> addrspace(1)* %out, <5 x double> %vec, i32 %sel) {
+entry:
+  %v = insertelement <5 x double> %vec, double 1.000000e+00, i32 %sel
+  store <5 x double> %v, <5 x double> addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}double8_inselt:
 ; GCN-NOT: v_cndmask
-; GCN: buffer_store_dword
-; GCN: buffer_store_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
+; GCN-NOT: buffer_
+; GCN-NOT: s_or_b32
+; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
+; GCN-DAG: v_movreld_b32_e32 v[[#BASE:]], 0
+; GCN-NOT: s_mov_b32 m0
+; GCN:     v_movreld_b32_e32 v[[#BASE+1]],
 define amdgpu_kernel void @double8_inselt(<8 x double> addrspace(1)* %out, <8 x double> %vec, i32 %sel) {
 entry:
   %v = insertelement <8 x double> %vec, double 1.000000e+00, i32 %sel
   store <8 x double> %v, <8 x double> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}double7_inselt:
+; GCN-NOT: v_cndmask
+; GCN-NOT: buffer_
+; GCN-NOT: s_or_b32
+; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
+; GCN-DAG: v_movreld_b32_e32 v[[#BASE]], 0
+; GCN-NOT: s_mov_b32 m0
+; GCN:     v_movreld_b32_e32 v[[#BASE+1]],
+define amdgpu_kernel void @double7_inselt(<7 x double> addrspace(1)* %out, <7 x double> %vec, i32 %sel) {
+entry:
+  %v = insertelement <7 x double> %vec, double 1.000000e+00, i32 %sel
+  store <7 x double> %v, <7 x double> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}double16_inselt:
+; GCN-NOT: v_cndmask
+; GCN-NOT: buffer_
+; GCN-NOT: s_or_b32
+; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
+; GCN-DAG: v_movreld_b32_e32 v[[#BASE:]], 0
+; GCN-NOT: s_mov_b32 m0
+; GCN:     v_movreld_b32_e32 v[[#BASE+1]],
+define amdgpu_kernel void @double16_inselt(<16 x double> addrspace(1)* %out, <16 x double> %vec, i32 %sel) {
+entry:
+  %v = insertelement <16 x double> %vec, double 1.000000e+00, i32 %sel
+  store <16 x double> %v, <16 x double> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}double15_inselt:
+; GCN-NOT: v_cndmask
+; GCN-NOT: buffer_
+; GCN-NOT: s_or_b32
+; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
+; GCN-DAG: v_movreld_b32_e32 v[[#BASE:]], 0
+; GCN-NOT: s_mov_b32 m0
+; GCN:     v_movreld_b32_e32 v[[#BASE+1]],
+define amdgpu_kernel void @double15_inselt(<15 x double> addrspace(1)* %out, <15 x double> %vec, i32 %sel) {
+entry:
+  %v = insertelement <15 x double> %vec, double 1.000000e+00, i32 %sel
+  store <15 x double> %v, <15 x double> addrspace(1)* %out
   ret void
 }
 
@@ -320,4 +373,38 @@ entry:
   %v = insertelement <128 x i1> %vec, i1 1, i32 %sel
   store <128 x i1> %v, <128 x i1> addrspace(1)* %out
   ret void
+}
+
+; GCN-LABEL: {{^}}float32_inselt_vec:
+; GCN-NOT: buffer_
+; GCN-COUNT-32: v_cmp_ne_u32
+; GCN-COUNT-32: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, 1.0,
+define amdgpu_ps <32 x float> @float32_inselt_vec(<32 x float> %vec, i32 %sel) {
+entry:
+  %v = insertelement <32 x float> %vec, float 1.000000e+00, i32 %sel
+  ret <32 x float> %v
+}
+
+; GCN-LABEL: {{^}}double8_inselt_vec:
+; GCN-NOT: buffer_
+; GCN:         v_cmp_eq_u32
+; GCN-COUNT-2: v_cndmask_b32
+; GCN:         v_cmp_eq_u32
+; GCN-COUNT-2: v_cndmask_b32
+; GCN:         v_cmp_eq_u32
+; GCN-COUNT-2: v_cndmask_b32
+; GCN:         v_cmp_eq_u32
+; GCN-COUNT-2: v_cndmask_b32
+; GCN:         v_cmp_eq_u32
+; GCN-COUNT-2: v_cndmask_b32
+; GCN:         v_cmp_eq_u32
+; GCN-COUNT-2: v_cndmask_b32
+; GCN:         v_cmp_eq_u32
+; GCN-COUNT-2: v_cndmask_b32
+; GCN:         v_cmp_eq_u32
+; GCN-COUNT-2: v_cndmask_b32
+define <8 x double> @double8_inselt_vec(<8 x double> %vec, i32 %sel) {
+entry:
+  %v = insertelement <8 x double> %vec, double 1.000000e+00, i32 %sel
+  ret <8 x double> %v
 }

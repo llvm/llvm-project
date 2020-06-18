@@ -1,3 +1,5 @@
+extern void __gcov_flush();
+extern int remove(const char *);
 int main(void) {
   __gcov_flush();
 

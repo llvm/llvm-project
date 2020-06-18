@@ -564,6 +564,61 @@ void Decoder::InitializePTInstDecoder(
   }
 }
 
+void Decoder::AppendErrorWithOffsetToInstructionList(
+    int errcode, uint64_t decoder_offset, Instructions &instruction_list,
+    lldb::SBError &sberror) {
+  sberror.SetErrorStringWithFormat(
+      "processor trace decoding library: \"%s\"  [decoder_offset] => "
+      "[0x%" PRIu64 "]",
+      pt_errstr(pt_errcode(errcode)), decoder_offset);
+  instruction_list.emplace_back(sberror.GetCString());
+}
+
+void Decoder::AppendErrorWithoutOffsetToInstructionList(
+    int errcode, Instructions &instruction_list, lldb::SBError &sberror) {
+  sberror.SetErrorStringWithFormat("processor trace decoding library: \"%s\"",
+                                   pt_errstr(pt_errcode(errcode)));
+  instruction_list.emplace_back(sberror.GetCString());
+}
+
+int Decoder::AppendErrorToInstructionList(int errcode, pt_insn_decoder *decoder,
+                                          Instructions &instruction_list,
+                                          lldb::SBError &sberror) {
+  uint64_t decoder_offset = 0;
+  int errcode_off = pt_insn_get_offset(decoder, &decoder_offset);
+  if (errcode_off < 0) {
+    AppendErrorWithoutOffsetToInstructionList(errcode, instruction_list,
+                                              sberror);
+    return errcode_off;
+  }
+  AppendErrorWithOffsetToInstructionList(errcode, decoder_offset,
+                                         instruction_list, sberror);
+  return 0;
+}
+
+int Decoder::HandlePTInstructionEvents(pt_insn_decoder *decoder, int errcode,
+                                       Instructions &instruction_list,
+                                       lldb::SBError &sberror) {
+  while (errcode & pts_event_pending) {
+    pt_event event;
+    errcode = pt_insn_event(decoder, &event, sizeof(event));
+    if (errcode < 0)
+      return errcode;
+
+    // The list of events are in
+    // https://github.com/intel/libipt/blob/master/doc/man/pt_qry_event.3.md
+    if (event.type == ptev_overflow) {
+      int append_errcode = AppendErrorToInstructionList(
+          errcode, decoder, instruction_list, sberror);
+      if (append_errcode < 0)
+        return append_errcode;
+    }
+    // Other events don't signal stream errors
+  }
+
+  return 0;
+}
+
 // Start actual decoding of raw trace
 void Decoder::DecodeTrace(struct pt_insn_decoder *decoder,
                           Instructions &instruction_list,
@@ -585,10 +640,8 @@ void Decoder::DecodeTrace(struct pt_insn_decoder *decoder,
 
       int errcode_off = pt_insn_get_offset(decoder, &decoder_offset);
       if (errcode_off < 0) {
-        sberror.SetErrorStringWithFormat(
-            "processor trace decoding library: \"%s\"",
-            pt_errstr(pt_errcode(errcode)));
-        instruction_list.emplace_back(sberror.GetCString());
+        AppendErrorWithoutOffsetToInstructionList(errcode, instruction_list,
+                                                  sberror);
         return;
       }
 
@@ -619,16 +672,22 @@ void Decoder::DecodeTrace(struct pt_insn_decoder *decoder,
           // progress further. Hence, returning in this situation.
           return;
         }
-        sberror.SetErrorStringWithFormat(
-            "processor trace decoding library: \"%s\"  [decoder_offset] => "
-            "[0x%" PRIu64 "]",
-            pt_errstr(pt_errcode(errcode)), new_decoder_offset);
-        instruction_list.emplace_back(sberror.GetCString());
+        AppendErrorWithOffsetToInstructionList(errcode, new_decoder_offset,
+                                               instruction_list, sberror);
         decoder_offset = new_decoder_offset;
       }
     }
 
     while (1) {
+      errcode = HandlePTInstructionEvents(decoder, errcode, instruction_list,
+                                          sberror);
+      if (errcode < 0) {
+        int append_errcode = AppendErrorToInstructionList(
+            errcode, decoder, instruction_list, sberror);
+        if (append_errcode < 0)
+          return;
+        break;
+      }
       errcode = pt_insn_next(decoder, &insn, sizeof(insn));
       if (errcode < 0) {
         if (insn.iclass == ptic_error)

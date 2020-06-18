@@ -137,7 +137,8 @@ public:
     lldb::BreakpointSP m_new_breakpoint_sp;
     BreakpointLocationCollection m_locations;
 
-    DISALLOW_COPY_AND_ASSIGN(BreakpointEventData);
+    BreakpointEventData(const BreakpointEventData &) = delete;
+    const BreakpointEventData &operator=(const BreakpointEventData &) = delete;
   };
 
   // Saving & restoring breakpoints:
@@ -669,7 +670,8 @@ private:
 
   void SendBreakpointChangedEvent(BreakpointEventData *data);
 
-  DISALLOW_COPY_AND_ASSIGN(Breakpoint);
+  Breakpoint(const Breakpoint &) = delete;
+  const Breakpoint &operator=(const Breakpoint &) = delete;
 };
 
 } // namespace lldb_private

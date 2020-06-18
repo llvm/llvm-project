@@ -65,6 +65,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -72,7 +73,6 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -111,6 +111,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -809,7 +810,12 @@ static bool isAddressUse(const TargetTransformInfo &TTI,
     switch (II->getIntrinsicID()) {
     case Intrinsic::memset:
     case Intrinsic::prefetch:
+    case Intrinsic::masked_load:
       if (II->getArgOperand(0) == OperandVal)
+        isAddress = true;
+      break;
+    case Intrinsic::masked_store:
+      if (II->getArgOperand(1) == OperandVal)
         isAddress = true;
       break;
     case Intrinsic::memmove:
@@ -860,6 +866,15 @@ static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
     case Intrinsic::memcpy:
       AccessTy.AddrSpace = OperandVal->getType()->getPointerAddressSpace();
       AccessTy.MemTy = OperandVal->getType();
+      break;
+    case Intrinsic::masked_load:
+      AccessTy.AddrSpace =
+          II->getArgOperand(0)->getType()->getPointerAddressSpace();
+      break;
+    case Intrinsic::masked_store:
+      AccessTy.MemTy = II->getOperand(0)->getType();
+      AccessTy.AddrSpace =
+          II->getArgOperand(1)->getType()->getPointerAddressSpace();
       break;
     default: {
       MemIntrinsicInfo IntrInfo;
@@ -1217,7 +1232,7 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
     // for now LSR only handles innermost loops).
     if (AR->getLoop() != L) {
       // If the AddRec exists, consider it's register free and leave it alone.
-      if (isExistingPhi(AR, *SE))
+      if (isExistingPhi(AR, *SE) && !TTI->shouldFavorPostInc())
         return;
 
       // It is bad to allow LSR for current loop to add induction variables
@@ -1994,6 +2009,7 @@ class LSRInstance {
   void NarrowSearchSpaceByCollapsingUnrolledCode();
   void NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters();
   void NarrowSearchSpaceByFilterFormulaWithSameScaledReg();
+  void NarrowSearchSpaceByFilterPostInc();
   void NarrowSearchSpaceByDeletingCostlyFormulas();
   void NarrowSearchSpaceByPickingWinnerRegs();
   void NarrowSearchSpaceUsingHeuristics();
@@ -2806,9 +2822,10 @@ bool IVChain::isProfitableIncrement(const SCEV *OperExpr,
 /// increments can be computed in fewer registers when chained.
 ///
 /// TODO: Consider IVInc free if it's already used in another chains.
-static bool
-isProfitableChain(IVChain &Chain, SmallPtrSetImpl<Instruction*> &Users,
-                  ScalarEvolution &SE) {
+static bool isProfitableChain(IVChain &Chain,
+                              SmallPtrSetImpl<Instruction *> &Users,
+                              ScalarEvolution &SE,
+                              const TargetTransformInfo &TTI) {
   if (StressIVChain)
     return true;
 
@@ -2837,7 +2854,14 @@ isProfitableChain(IVChain &Chain, SmallPtrSetImpl<Instruction*> &Users,
   unsigned NumConstIncrements = 0;
   unsigned NumVarIncrements = 0;
   unsigned NumReusedIncrements = 0;
+
+  if (TTI.isProfitableLSRChainElement(Chain.Incs[0].UserInst))
+    return true;
+
   for (const IVInc &Inc : Chain) {
+    if (TTI.isProfitableLSRChainElement(Inc.UserInst))
+      return true;
+
     if (Inc.IncExpr->isZero())
       continue;
 
@@ -3068,7 +3092,7 @@ void LSRInstance::CollectChains() {
   for (unsigned UsersIdx = 0, NChains = IVChainVec.size();
        UsersIdx < NChains; ++UsersIdx) {
     if (!isProfitableChain(IVChainVec[UsersIdx],
-                           ChainUsersVec[UsersIdx].FarUsers, SE))
+                           ChainUsersVec[UsersIdx].FarUsers, SE, TTI))
       continue;
     // Preserve the chain at UsesIdx.
     if (ChainIdx != UsersIdx)
@@ -3529,9 +3553,6 @@ static bool mayUsePostIncMode(const TargetTransformInfo &TTI,
     return false;
   const SCEV *LoopStep = AR->getStepRecurrence(SE);
   if (!isa<SCEVConstant>(LoopStep))
-    return false;
-  if (LU.AccessTy.getType()->getScalarSizeInBits() !=
-      LoopStep->getType()->getScalarSizeInBits())
     return false;
   // Check if a post-indexed load/store can be used.
   if (TTI.isIndexedLoadLegal(TTI.MIM_PostInc, AR->getType()) ||
@@ -4650,6 +4671,54 @@ void LSRInstance::NarrowSearchSpaceByFilterFormulaWithSameScaledReg() {
   });
 }
 
+/// If we are over the complexity limit, filter out any post-inc prefering
+/// variables to only post-inc values.
+void LSRInstance::NarrowSearchSpaceByFilterPostInc() {
+  if (!TTI.shouldFavorPostInc())
+    return;
+  if (EstimateSearchSpaceComplexity() < ComplexityLimit)
+    return;
+
+  LLVM_DEBUG(dbgs() << "The search space is too complex.\n"
+                       "Narrowing the search space by choosing the lowest "
+                       "register Formula for PostInc Uses.\n");
+
+  for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
+    LSRUse &LU = Uses[LUIdx];
+
+    if (LU.Kind != LSRUse::Address)
+      continue;
+    if (!TTI.isIndexedLoadLegal(TTI.MIM_PostInc, LU.AccessTy.getType()) &&
+        !TTI.isIndexedStoreLegal(TTI.MIM_PostInc, LU.AccessTy.getType()))
+      continue;
+
+    size_t MinRegs = std::numeric_limits<size_t>::max();
+    for (const Formula &F : LU.Formulae)
+      MinRegs = std::min(F.getNumRegs(), MinRegs);
+
+    bool Any = false;
+    for (size_t FIdx = 0, NumForms = LU.Formulae.size(); FIdx != NumForms;
+         ++FIdx) {
+      Formula &F = LU.Formulae[FIdx];
+      if (F.getNumRegs() > MinRegs) {
+        LLVM_DEBUG(dbgs() << "  Filtering out formula "; F.print(dbgs());
+                   dbgs() << "\n");
+        LU.DeleteFormula(F);
+        --FIdx;
+        --NumForms;
+        Any = true;
+      }
+    }
+    if (Any)
+      LU.RecomputeRegs(LUIdx, RegUses);
+
+    if (EstimateSearchSpaceComplexity() < ComplexityLimit)
+      break;
+  }
+
+  LLVM_DEBUG(dbgs() << "After pre-selection:\n"; print_uses(dbgs()));
+}
+
 /// The function delete formulas with high registers number expectation.
 /// Assuming we don't know the value of each formula (already delete
 /// all inefficient), generate probability of not selecting for each
@@ -4860,6 +4929,7 @@ void LSRInstance::NarrowSearchSpaceUsingHeuristics() {
   NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters();
   if (FilterSameScaledReg)
     NarrowSearchSpaceByFilterFormulaWithSameScaledReg();
+  NarrowSearchSpaceByFilterPostInc();
   if (LSRExpNarrow)
     NarrowSearchSpaceByDeletingCostlyFormulas();
   else
@@ -4900,19 +4970,24 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
     // Ignore formulae which may not be ideal in terms of register reuse of
     // ReqRegs.  The formula should use all required registers before
     // introducing new ones.
-    int NumReqRegsToFind = std::min(F.getNumRegs(), ReqRegs.size());
-    for (const SCEV *Reg : ReqRegs) {
-      if ((F.ScaledReg && F.ScaledReg == Reg) ||
-          is_contained(F.BaseRegs, Reg)) {
-        --NumReqRegsToFind;
-        if (NumReqRegsToFind == 0)
-          break;
+    // This can sometimes (notably when trying to favour postinc) lead to
+    // sub-optimial decisions. There it is best left to the cost modelling to
+    // get correct.
+    if (!TTI.shouldFavorPostInc() || LU.Kind != LSRUse::Address) {
+      int NumReqRegsToFind = std::min(F.getNumRegs(), ReqRegs.size());
+      for (const SCEV *Reg : ReqRegs) {
+        if ((F.ScaledReg && F.ScaledReg == Reg) ||
+            is_contained(F.BaseRegs, Reg)) {
+          --NumReqRegsToFind;
+          if (NumReqRegsToFind == 0)
+            break;
+        }
       }
-    }
-    if (NumReqRegsToFind != 0) {
-      // If none of the formulae satisfied the required registers, then we could
-      // clear ReqRegs and try again. Currently, we simply give up in this case.
-      continue;
+      if (NumReqRegsToFind != 0) {
+        // If none of the formulae satisfied the required registers, then we could
+        // clear ReqRegs and try again. Currently, we simply give up in this case.
+        continue;
+      }
     }
 
     // Evaluate the cost of the current formula. If it's already worse than

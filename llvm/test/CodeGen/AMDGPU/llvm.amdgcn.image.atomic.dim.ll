@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX6789 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX6789 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=GFX10 %s
 
 ; GCN-LABEL: {{^}}atomic_swap_1d:
 ; GFX6789: image_atomic_swap v0, v1, s[0:7] dmask:0x1 unorm glc{{$}}
@@ -10,6 +10,16 @@ main_body:
   %v = call i32 @llvm.amdgcn.image.atomic.swap.1d.i32.i32(i32 %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   %out = bitcast i32 %v to float
   ret float %out
+}
+
+; GCN-LABEL: {{^}}atomic_swap_1d_i64:
+; GFX6789: image_atomic_swap v[0:1], v2, s[0:7] dmask:0x3 unorm glc{{$}}
+; GFX10: image_atomic_swap v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm glc ;
+define amdgpu_ps <2 x float> @atomic_swap_1d_i64(<8 x i32> inreg %rsrc, i64 %data, i32 %s) {
+main_body:
+  %v = call i64 @llvm.amdgcn.image.atomic.swap.1d.i64.i32(i64 %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  %out = bitcast i64 %v to <2 x float>
+  ret <2 x float> %out
 }
 
 ; GCN-LABEL: {{^}}atomic_add_1d:
@@ -132,6 +142,16 @@ main_body:
   ret float %out
 }
 
+; GCN-LABEL: {{^}}atomic_cmpswap_1d_64:
+; GFX6789: image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm glc{{$}}
+; GFX10: image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc ;
+define amdgpu_ps <2 x float> @atomic_cmpswap_1d_64(<8 x i32> inreg %rsrc, i64 %cmp, i64 %swap, i32 %s) {
+main_body:
+  %v = call i64 @llvm.amdgcn.image.atomic.cmpswap.1d.i64.i32(i64 %cmp, i64 %swap, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  %out = bitcast i64 %v to <2 x float>
+  ret <2 x float> %out
+}
+
 ; GCN-LABEL: {{^}}atomic_add_2d:
 ; GFX6789: image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 unorm glc{{$}}
 ; GFX10: image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm glc ;
@@ -143,8 +163,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}atomic_add_3d:
-; GFX6789: image_atomic_add v0, v[1:4], s[0:7] dmask:0x1 unorm glc{{$}}
-; GFX10: image_atomic_add v0, v[1:4], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D unorm glc ;
+; GFX6789: image_atomic_add v0, v[1:3], s[0:7] dmask:0x1 unorm glc{{$}}
+; GFX10: image_atomic_add v0, v[1:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D unorm glc ;
 define amdgpu_ps float @atomic_add_3d(<8 x i32> inreg %rsrc, i32 %data, i32 %s, i32 %t, i32 %r) {
 main_body:
   %v = call i32 @llvm.amdgcn.image.atomic.add.3d.i32.i32(i32 %data, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 0, i32 0)
@@ -153,8 +173,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}atomic_add_cube:
-; GFX6789: image_atomic_add v0, v[1:4], s[0:7] dmask:0x1 unorm glc da{{$}}
-; GFX10: image_atomic_add v0, v[1:4], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_CUBE unorm glc ;
+; GFX6789: image_atomic_add v0, v[1:3], s[0:7] dmask:0x1 unorm glc da{{$}}
+; GFX10: image_atomic_add v0, v[1:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_CUBE unorm glc ;
 define amdgpu_ps float @atomic_add_cube(<8 x i32> inreg %rsrc, i32 %data, i32 %s, i32 %t, i32 %face) {
 main_body:
   %v = call i32 @llvm.amdgcn.image.atomic.add.cube.i32.i32(i32 %data, i32 %s, i32 %t, i32 %face, <8 x i32> %rsrc, i32 0, i32 0)
@@ -173,8 +193,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}atomic_add_2darray:
-; GFX6789: image_atomic_add v0, v[1:4], s[0:7] dmask:0x1 unorm glc da{{$}}
-; GFX10: image_atomic_add v0, v[1:4], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY unorm glc ;
+; GFX6789: image_atomic_add v0, v[1:3], s[0:7] dmask:0x1 unorm glc da{{$}}
+; GFX10: image_atomic_add v0, v[1:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY unorm glc ;
 define amdgpu_ps float @atomic_add_2darray(<8 x i32> inreg %rsrc, i32 %data, i32 %s, i32 %t, i32 %slice) {
 main_body:
   %v = call i32 @llvm.amdgcn.image.atomic.add.2darray.i32.i32(i32 %data, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 0, i32 0)
@@ -183,8 +203,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}atomic_add_2dmsaa:
-; GFX6789: image_atomic_add v0, v[1:4], s[0:7] dmask:0x1 unorm glc{{$}}
-; GFX10: image_atomic_add v0, v[1:4], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm glc ;
+; GFX6789: image_atomic_add v0, v[1:3], s[0:7] dmask:0x1 unorm glc{{$}}
+; GFX10: image_atomic_add v0, v[1:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm glc ;
 define amdgpu_ps float @atomic_add_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, i32 %s, i32 %t, i32 %fragid) {
 main_body:
   %v = call i32 @llvm.amdgcn.image.atomic.add.2dmsaa.i32.i32(i32 %data, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
@@ -225,6 +245,9 @@ declare i32 @llvm.amdgcn.image.atomic.xor.1d.i32.i32(i32, i32, <8 x i32>, i32, i
 declare i32 @llvm.amdgcn.image.atomic.inc.1d.i32.i32(i32, i32, <8 x i32>, i32, i32) #0
 declare i32 @llvm.amdgcn.image.atomic.dec.1d.i32.i32(i32, i32, <8 x i32>, i32, i32) #0
 declare i32 @llvm.amdgcn.image.atomic.cmpswap.1d.i32.i32(i32, i32, i32, <8 x i32>, i32, i32) #0
+
+declare i64 @llvm.amdgcn.image.atomic.swap.1d.i64.i32(i64, i32, <8 x i32>, i32, i32) #0
+declare i64 @llvm.amdgcn.image.atomic.cmpswap.1d.i64.i32(i64, i64, i32, <8 x i32>, i32, i32) #0
 
 declare i32 @llvm.amdgcn.image.atomic.add.2d.i32.i32(i32, i32, i32, <8 x i32>, i32, i32) #0
 declare i32 @llvm.amdgcn.image.atomic.add.3d.i32.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #0

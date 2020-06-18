@@ -47,11 +47,20 @@ template <class T> struct SpecificAlloc : public SpecificAllocBase {
   llvm::SpecificBumpPtrAllocator<T> alloc;
 };
 
+// Use a static local for these singletons so they are only registered if an
+// object of this instance is ever constructed. Otherwise we will create and
+// register ELF allocators for COFF and the reverse.
+template <typename T>
+inline llvm::SpecificBumpPtrAllocator<T> &getSpecificAllocSingleton() {
+  static SpecificAlloc<T> instance;
+  return instance.alloc;
+}
+
 // Use this arena if your object has a destructor.
 // Your destructor will be invoked from freeArena().
 template <typename T, typename... U> T *make(U &&... args) {
-  static SpecificAlloc<T> alloc;
-  return new (alloc.alloc.Allocate()) T(std::forward<U>(args)...);
+  return new (getSpecificAllocSingleton<T>().Allocate())
+      T(std::forward<U>(args)...);
 }
 
 } // namespace lld

@@ -46,6 +46,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
@@ -69,6 +70,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -329,7 +331,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
   BasicBlock *Preheader = L->getLoopPreheader();
 
   // Compute loop safety information.
-  ICFLoopSafetyInfo SafetyInfo(DT);
+  ICFLoopSafetyInfo SafetyInfo;
   SafetyInfo.computeLoopSafetyInfo(L);
 
   // We want to visit all of the instructions in this loop... that are not parts
@@ -481,6 +483,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       // used in the loop, instead, just delete it.
       if (isInstructionTriviallyDead(&I, TLI)) {
         LLVM_DEBUG(dbgs() << "LICM deleting dead inst: " << I << '\n');
+        salvageKnowledge(&I);
         salvageDebugInfo(I);
         ++II;
         eraseInstruction(I, *SafetyInfo, CurAST, MSSAU);
@@ -494,13 +497,14 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       // operands of the instruction are loop invariant.
       //
       bool FreeInLoop = false;
-      if (isNotUsedOrFreeInLoop(I, CurLoop, SafetyInfo, TTI, FreeInLoop) &&
+      if (!I.mayHaveSideEffects() &&
+          isNotUsedOrFreeInLoop(I, CurLoop, SafetyInfo, TTI, FreeInLoop) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true, &Flags,
-                             ORE) &&
-          !I.mayHaveSideEffects()) {
+                             ORE)) {
         if (sink(I, LI, DT, CurLoop, SafetyInfo, MSSAU, ORE)) {
           if (!FreeInLoop) {
             ++II;
+            salvageDebugInfo(I);
             eraseInstruction(I, *SafetyInfo, CurAST, MSSAU);
           }
           Changed = true;
@@ -742,41 +746,6 @@ public:
 };
 } // namespace
 
-
-/// Return true if we know how to rewrite all uses of the given alloca after
-/// hoisting it out of the loop.  The main concerns are a) potential captures
-/// and b) invariant.start markers which don't capture, but are no longer
-/// valid w/o a corresponding invariant.end.
-static bool canRewriteUsesOfAlloca(AllocaInst &AI) {
-  // TODO: This looks a lot like capture tracking, but we need to remove any
-  // invariant starts if we extend the lifetime of the alloca by hoisting it.
-  // We should probably refactor capture tracking into a form which allows us
-  // to reuse the relevant bits and remove the duplicated logic here.
-
-  SmallVector<Use *, 16> Worklist;
-  for (Use &U : AI.uses())
-    Worklist.push_back(&U);
-  
-  unsigned NumUsesExplored = 0;
-  while (!Worklist.empty()) {
-    Use *U = Worklist.pop_back_val();
-    Instruction *I = cast<Instruction>(U->getUser());
-    NumUsesExplored++;
-    if (NumUsesExplored > DefaultMaxUsesToExplore)
-      return false;
-    // Non capturing, terminating uses
-    if (isa<LoadInst>(I) ||
-        (isa<StoreInst>(I) && U->getOperandNo() == 1))
-      continue;
-    // Non capturing, non-terminating
-    if (!isa<BitCastInst>(I) && !isa<GetElementPtrInst>(I))
-      return false;
-    for (Use &U : I->uses())
-      Worklist.push_back(&U);
-  }
-  return true;
-}
-
 /// Walk the specified region of the CFG (defined by all blocks dominated by
 /// the specified block, and that are in the current loop) in depth first
 /// order w.r.t the DominatorTree.  This allows us to visit definitions before
@@ -853,9 +822,8 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 
       // Attempt to remove floating point division out of the loop by
       // converting it to a reciprocal multiplication.
-      if (I.getOpcode() == Instruction::FDiv &&
-          CurLoop->isLoopInvariant(I.getOperand(1)) &&
-          I.hasAllowReciprocal()) {
+      if (I.getOpcode() == Instruction::FDiv && I.hasAllowReciprocal() &&
+          CurLoop->isLoopInvariant(I.getOperand(1))) {
         auto Divisor = I.getOperand(1);
         auto One = llvm::ConstantFP::get(Divisor->getType(), 1.0);
         auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);
@@ -890,16 +858,6 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       if ((IsInvariantStart(I) || isGuard(&I)) &&
           CurLoop->hasLoopInvariantOperands(&I) &&
           MustExecuteWithoutWritesBefore(I)) {
-        hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
-              MSSAU, SE, ORE);
-        HoistedInstructions.push_back(&I);
-        Changed = true;
-        continue;
-      }
-
-      if (isa<AllocaInst>(&I) &&
-          SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop) &&
-          canRewriteUsesOfAlloca(cast<AllocaInst>(I))) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, SE, ORE);
         HoistedInstructions.push_back(&I);
@@ -1033,12 +991,12 @@ namespace {
 bool isHoistableAndSinkableInst(Instruction &I) {
   // Only these instructions are hoistable/sinkable.
   return (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
-          isa<FenceInst>(I) || isa<CastInst>(I) ||
-          isa<UnaryOperator>(I) || isa<BinaryOperator>(I) ||
-          isa<SelectInst>(I) || isa<GetElementPtrInst>(I) || isa<CmpInst>(I) ||
+          isa<FenceInst>(I) || isa<CastInst>(I) || isa<UnaryOperator>(I) ||
+          isa<BinaryOperator>(I) || isa<SelectInst>(I) ||
+          isa<GetElementPtrInst>(I) || isa<CmpInst>(I) ||
           isa<InsertElementInst>(I) || isa<ExtractElementInst>(I) ||
           isa<ShuffleVectorInst>(I) || isa<ExtractValueInst>(I) ||
-          isa<InsertValueInst>(I));
+          isa<InsertValueInst>(I) || isa<FreezeInst>(I));
 }
 /// Return true if all of the alias sets within this AST are known not to
 /// contain a Mod, or if MSSA knows thare are no MemoryDefs in the loop.
@@ -1303,7 +1261,8 @@ static bool isFreeInLoop(const Instruction &I, const Loop *CurLoop,
                          const TargetTransformInfo *TTI) {
 
   if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-    if (TTI->getUserCost(GEP) != TargetTransformInfo::TCC_Free)
+    if (TTI->getUserCost(GEP, TargetTransformInfo::TCK_SizeAndLatency) !=
+        TargetTransformInfo::TCC_Free)
       return false;
     // For a GEP, we cannot simply use getUserCost because currently it
     // optimistically assume that a GEP will fold into addressing mode
@@ -1318,7 +1277,8 @@ static bool isFreeInLoop(const Instruction &I, const Loop *CurLoop,
     }
     return true;
   } else
-    return TTI->getUserCost(&I) == TargetTransformInfo::TCC_Free;
+    return TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
+           TargetTransformInfo::TCC_Free;
 }
 
 /// Return true if the only users of this instruction are outside of
@@ -1489,7 +1449,8 @@ static bool canSplitPredecessors(PHINode *PN, LoopSafetyInfo *SafetyInfo) {
     return false;
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
     BasicBlock *BBPred = *PI;
-    if (isa<IndirectBrInst>(BBPred->getTerminator()))
+    if (isa<IndirectBrInst>(BBPred->getTerminator()) ||
+        isa<CallBrInst>(BBPred->getTerminator()))
       return false;
   }
   return true;
@@ -1809,7 +1770,7 @@ public:
       StoreInst *NewSI = new StoreInst(LiveInValue, Ptr, InsertPos);
       if (UnorderedAtomic)
         NewSI->setOrdering(AtomicOrdering::Unordered);
-      NewSI->setAlignment(MaybeAlign(Alignment));
+      NewSI->setAlignment(Align(Alignment));
       NewSI->setDebugLoc(DL);
       if (AATags)
         NewSI->setAAMetadata(AATags);
@@ -2042,8 +2003,7 @@ bool llvm::promoteLoopAccessesToScalars(
         if (!DereferenceableInPH) {
           DereferenceableInPH = isDereferenceableAndAlignedPointer(
               Store->getPointerOperand(), Store->getValueOperand()->getType(),
-              MaybeAlign(Store->getAlignment()), MDL,
-              Preheader->getTerminator(), DT);
+              Store->getAlign(), MDL, Preheader->getTerminator(), DT);
         }
       } else
         return false; // Not a load or store.
@@ -2108,11 +2068,11 @@ bool llvm::promoteLoopAccessesToScalars(
   });
   ++NumPromoted;
 
-  // Grab a debug location for the inserted loads/stores; given that the
-  // inserted loads/stores have little relation to the original loads/stores,
-  // this code just arbitrarily picks a location from one, since any debug
-  // location is better than none.
-  DebugLoc DL = LoopUses[0]->getDebugLoc();
+  // Look at all the loop uses, and try to merge their locations.
+  std::vector<const DILocation *> LoopUsesLocs;
+  for (auto U : LoopUses)
+    LoopUsesLocs.push_back(U->getDebugLoc().get());
+  auto DL = DebugLoc(DILocation::getMergedLocations(LoopUsesLocs));
 
   // We use the SSAUpdater interface to insert phi nodes as required.
   SmallVector<PHINode *, 16> NewPHIs;
@@ -2128,8 +2088,8 @@ bool llvm::promoteLoopAccessesToScalars(
       SomePtr->getName() + ".promoted", Preheader->getTerminator());
   if (SawUnorderedAtomic)
     PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
-  PreheaderLoad->setAlignment(MaybeAlign(Alignment));
-  PreheaderLoad->setDebugLoc(DL);
+  PreheaderLoad->setAlignment(Align(Alignment));
+  PreheaderLoad->setDebugLoc(DebugLoc());
   if (AATags)
     PreheaderLoad->setAAMetadata(AATags);
   SSA.AddAvailableValue(Preheader, PreheaderLoad);

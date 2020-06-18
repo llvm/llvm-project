@@ -16,7 +16,7 @@ void test_POD_65_bytes() {
     char a[65];
   };
 
-  // expected-warning@+3 {{loop variable 'r' of type 'const Record' creates a copy from type 'const Record'}}
+  // expected-warning@+3 {{loop variable 'r' creates a copy from type 'const Record'}}
   // expected-note@+2 {{use reference type 'const Record &' to prevent copying}}
   Record records[8];
   for (const auto r : records)
@@ -40,7 +40,7 @@ void test_TriviallyCopyable_65_bytes() {
     char a[65];
   };
 
-  // expected-warning@+3 {{loop variable 'r' of type 'const Record' creates a copy from type 'const Record'}}
+  // expected-warning@+3 {{loop variable 'r' creates a copy from type 'const Record'}}
   // expected-note@+2 {{use reference type 'const Record &' to prevent copying}}
   Record records[8];
   for (const auto r : records)
@@ -55,7 +55,7 @@ void test_NonTriviallyCopyable() {
     int b;
   };
 
-  // expected-warning@+3 {{loop variable 'r' of type 'const Record' creates a copy from type 'const Record'}}
+  // expected-warning@+3 {{loop variable 'r' creates a copy from type 'const Record'}}
   // expected-note@+2 {{use reference type 'const Record &' to prevent copying}}
   Record records[8];
   for (const auto r : records)
@@ -81,7 +81,7 @@ void test_TrivialABI_65_bytes() {
     char a[65];
   };
 
-  // expected-warning@+3 {{loop variable 'r' of type 'const Record' creates a copy from type 'const Record'}}
+  // expected-warning@+3 {{loop variable 'r' creates a copy from type 'const Record'}}
   // expected-note@+2 {{use reference type 'const Record &' to prevent copying}}
   Record records[8];
   for (const auto r : records)

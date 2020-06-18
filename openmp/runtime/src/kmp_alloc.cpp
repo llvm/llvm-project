@@ -186,7 +186,7 @@ typedef struct thr_data {
                        -1: not all pool blocks are the same size
                        >0: (common) block size for all bpool calls made so far
                     */
-  bfhead_t *last_pool; /* Last pool owned by this thread (delay dealocation) */
+  bfhead_t *last_pool; /* Last pool owned by this thread (delay deallocation) */
 } thr_data_t;
 
 /*  Minimum allocation quantum: */
@@ -195,7 +195,7 @@ typedef struct thr_data {
 #define MaxSize                                                                \
   (bufsize)(                                                                   \
       ~(((bufsize)(1) << (sizeof(bufsize) * CHAR_BIT - 1)) | (SizeQuant - 1)))
-// Maximun for the requested size.
+// Maximum for the requested size.
 
 /* End sentinel: value placed in bsize field of dummy block delimiting
    end of pool block.  The most negative number which will  fit  in  a
@@ -577,7 +577,7 @@ static void *bget(kmp_info_t *th, bufsize requested_size) {
   if (thr->acqfcn != 0) {
     if (size > (bufsize)(thr->exp_incr - sizeof(bhead_t))) {
       /* Request is too large to fit in a single expansion block.
-         Try to satisy it by a direct buffer acquisition. */
+         Try to satisfy it by a direct buffer acquisition. */
       bdhead_t *bdh;
 
       size += sizeof(bdhead_t) - sizeof(bhead_t);
@@ -1961,7 +1961,7 @@ void ___kmp_fast_free(kmp_info_t *this_thr, void *ptr KMP_SRC_LOC_DECL) {
         this_thr->th.th_free_lists[index].th_free_list_other = ptr;
       } else {
         // either queue blocks owner is changing or size limit exceeded
-        // return old queue to allocating thread (q_th) synchroneously,
+        // return old queue to allocating thread (q_th) synchronously,
         // and start new list for alloc_thr's tasks
         void *old_ptr;
         void *tail = head;

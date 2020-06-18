@@ -28,11 +28,14 @@ include "mlir/Dialect/SPIRV/SPIRVBitOps.td"
 include "mlir/Dialect/SPIRV/SPIRVCastOps.td"
 include "mlir/Dialect/SPIRV/SPIRVCompositeOps.td"
 include "mlir/Dialect/SPIRV/SPIRVControlFlowOps.td"
+include "mlir/Dialect/SPIRV/SPIRVCooperativeMatrixOps.td"
 include "mlir/Dialect/SPIRV/SPIRVGLSLOps.td"
 include "mlir/Dialect/SPIRV/SPIRVGroupOps.td"
 include "mlir/Dialect/SPIRV/SPIRVLogicalOps.td"
+include "mlir/Dialect/SPIRV/SPIRVMatrixOps.td"
 include "mlir/Dialect/SPIRV/SPIRVNonUniformOps.td"
 include "mlir/Dialect/SPIRV/SPIRVStructureOps.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
@@ -66,16 +69,16 @@ def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
 
     - must be an OpConstant when indexing into a structure.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
     ```
     access-chain-op ::= ssa-id `=` `spv.AccessChain` ssa-use
                         `[` ssa-use (',' ssa-use)* `]`
                         `:` pointer-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = "spv.constant"() { value = 1: i32} : () -> i32
     %1 = spv.Variable : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Function>
     %2 = spv.AccessChain %1[%0] : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Function>
@@ -92,7 +95,7 @@ def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
     SPV_AnyPtr:$component_ptr
   );
 
-  let builders = [OpBuilder<[{Builder *builder, OperationState &state,
+  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
                               Value basePtr, ValueRange indices}]>];
 
   let hasCanonicalizer = 1;
@@ -133,7 +136,7 @@ def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
     OpControlBarrier will be visible to any other invocation after return
     from that OpControlBarrier.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"CrossDevice"` | `"Device"` | `"Workgroup"` | ...
@@ -143,9 +146,9 @@ def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
     control-barrier-op ::= `spv.ControlBarrier` scope, scope, memory-semantics
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     spv.ControlBarrier "Workgroup", "Device", "Acquire|UniformMemory"
 
     ```
@@ -183,7 +186,7 @@ def SPV_ExecutionModeOp : SPV_Op<"ExecutionMode", [InModuleScope]> {
     mode that takes no Extra Operands, or takes Extra Operands that are not
     <id> operands.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     execution-mode ::= "Invocations" | "SpacingEqual" |
@@ -193,9 +196,9 @@ def SPV_ExecutionModeOp : SPV_Op<"ExecutionMode", [InModuleScope]> {
                           (integer-literal (`, ` integer-literal)* )?
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     spv.ExecutionMode @foo "ContractionOff"
     spv.ExecutionMode @bar "LocalSizeHint", 3, 4, 5
     ```
@@ -213,7 +216,7 @@ def SPV_ExecutionModeOp : SPV_Op<"ExecutionMode", [InModuleScope]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{Builder *builder, OperationState &state,
+  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
                               spirv::FuncOp function,
                               spirv::ExecutionMode executionMode,
                               ArrayRef<int32_t> params}]>];
@@ -236,7 +239,7 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
     literal. If not present, it is the same as specifying the memory operand
     None.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     memory-access ::= `"None"` | `"Volatile"` | `"Aligned", ` integer-literal
@@ -246,9 +249,9 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
                 (`[` memory-access `]`)? ` : ` spirv-element-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.Variable : !spv.ptr<f32, Function>
     %1 = spv.Load "Function" %0 : f32
     %2 = spv.Load "Function" %0 ["Volatile"] : f32
@@ -268,7 +271,7 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
 
   let builders = [
     OpBuilder<[{
-      Builder *builder, OperationState &state,
+      OpBuilder &builder, OperationState &state,
       Value basePtr, IntegerAttr memory_access = {},
       IntegerAttr alignment = {}
     }]>
@@ -295,7 +298,7 @@ def SPV_MemoryBarrierOp : SPV_Op<"MemoryBarrier", []> {
     To execute both a memory barrier and a control barrier, see
     OpControlBarrier.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     scope ::= `"CrossDevice"` | `"Device"` | `"Workgroup"` | ...
@@ -305,9 +308,9 @@ def SPV_MemoryBarrierOp : SPV_Op<"MemoryBarrier", []> {
     memory-barrier-op ::= `spv.MemoryBarrier` scope, memory-semantics
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     spv.MemoryBarrier "Device", "Acquire|UniformMemory"
 
     ```
@@ -342,21 +345,22 @@ def SPV_StoreOp : SPV_Op<"Store", []> {
     literal. If not present, it is the same as specifying the memory operand
     None.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     store-op ::= `spv.Store ` storage-class ssa-use `, ` ssa-use `, `
                   (`[` memory-access `]`)? `:` spirv-element-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.Variable : !spv.ptr<f32, Function>
     %1 = spv.FMul ... : f32
     spv.Store "Function" %0, %1 : f32
     spv.Store "Function" %0, %1 ["Volatile"] : f32
     spv.Store "Function" %0, %1 ["Aligned", 4] : f32
+    ```
   }];
 
   let arguments = (ins
@@ -366,16 +370,16 @@ def SPV_StoreOp : SPV_Op<"Store", []> {
     OptionalAttr<I32Attr>:$alignment
   );
 
+  let results = (outs);
+
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &state, "
+    OpBuilder<"OpBuilder &builder, OperationState &state, "
       "Value ptr, Value value, ArrayRef<NamedAttribute> namedAttrs = {}", [{
       state.addOperands(ptr);
       state.addOperands(value);
       state.addAttributes(namedAttrs);
     }]>
   ];
-
-  let results = (outs);
 }
 
 // -----
@@ -390,15 +394,15 @@ def SPV_UndefOp : SPV_Op<"undef", []> {
     bit pattern or abstract value resulting in possibly different concrete,
     abstract, or opaque values.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     undef-op ::= `spv.undef` `:` spirv-type
     ```
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.undef : f32
     %1 = spv.undef : !spv.struct<!spv.array<4 x vector<4xi32>>>
     ```
@@ -440,7 +444,7 @@ def SPV_VariableOp : SPV_Op<"Variable", []> {
     instruction. Initializer must have the same type as the type pointed to
     by Result Type.
 
-    ### Custom assembly form
+    <!-- End of AutoGen section -->
 
     ```
     variable-op ::= ssa-id `=` `spv.Variable` (`init(` ssa-use `)`)?
@@ -453,9 +457,9 @@ def SPV_VariableOp : SPV_Op<"Variable", []> {
     descriptor set and binding number. `built_in` specifies SPIR-V
     BuiltIn decoration associated with the op.
 
-    For example:
+    #### Example:
 
-    ```
+    ```mlir
     %0 = spv.constant ...
 
     %1 = spv.Variable : !spv.ptr<f32, Function>
@@ -467,7 +471,7 @@ def SPV_VariableOp : SPV_Op<"Variable", []> {
 
   let arguments = (ins
     SPV_StorageClassAttr:$storage_class,
-    SPV_Optional<AnyType>:$initializer
+    Optional<AnyType>:$initializer
   );
 
   let results = (outs

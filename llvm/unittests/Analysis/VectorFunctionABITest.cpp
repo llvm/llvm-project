@@ -83,6 +83,7 @@ protected:
 
     return false;
   }
+
   // Checks that 1. the last Parameter in the Shape is of type
   // VFParamKind::GlobalPredicate and 2. it is the only one of such
   // type.
@@ -97,6 +98,14 @@ protected:
   }
 };
 } // unnamed namespace
+
+// This test makes sure correct mangling occurs for given string.
+TEST_F(VFABIParserTest, ManglingVectorTLINames) {
+  EXPECT_EQ(VFABI::mangleTLIVectorName("vec", "scalar", 3, 4),
+            "_ZGV_LLVM_N4vvv_scalar(vec)");
+  EXPECT_EQ(VFABI::mangleTLIVectorName("custom.call.v5", "custom.call", 1, 5),
+            "_ZGV_LLVM_N5v_custom.call(custom.call.v5)");
+}
 
 // This test makes sure that the demangling method succeeds only on
 // valid values of the string.
@@ -317,7 +326,7 @@ TEST_F(VFABIParserTest, Align) {
 }
 
 TEST_F(VFABIParserTest, ParseUniform) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2u0_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVnN2u_sin"));
   EXPECT_EQ(VF, (unsigned)2);
   EXPECT_FALSE(IsMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
@@ -325,10 +334,10 @@ TEST_F(VFABIParserTest, ParseUniform) {
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Uniform, 0}));
   EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "_ZGVnN2u0_sin");
+  EXPECT_EQ(VectorName, "_ZGVnN2u_sin");
 
-  EXPECT_FALSE(invokeParser("_ZGVnN2u_sin"));
-  EXPECT_FALSE(invokeParser("_ZGVnN2ul_sin"));
+  // Uniform doesn't expect extra data.
+  EXPECT_FALSE(invokeParser("_ZGVnN2u0_sin"));
 }
 
 TEST_F(VFABIParserTest, ISAIndependentMangling) {
@@ -344,7 +353,7 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
       VFParameter({6, VFParamKind::OMP_LinearVal, 10}),
       VFParameter({7, VFParamKind::OMP_LinearUVal, 100}),
       VFParameter({8, VFParamKind::OMP_LinearRef, 1000}),
-      VFParameter({9, VFParamKind::OMP_Uniform, 2}),
+      VFParameter({9, VFParamKind::OMP_Uniform, 0}),
   };
 
 #define __COMMON_CHECKS                                                        \
@@ -358,54 +367,54 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
   } while (0)
 
   // Advanced SIMD: <isa> = "n"
-  EXPECT_TRUE(invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin");
+  EXPECT_EQ(VectorName, "_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // SVE: <isa> = "s"
-  EXPECT_TRUE(invokeParser("_ZGVsN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVsN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVsN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin");
+  EXPECT_EQ(VectorName, "_ZGVsN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // SSE: <isa> = "b"
-  EXPECT_TRUE(invokeParser("_ZGVbN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVbN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
   EXPECT_EQ(ISA, VFISAKind::SSE);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVbN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin");
+  EXPECT_EQ(VectorName, "_ZGVbN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // AVX: <isa> = "c"
-  EXPECT_TRUE(invokeParser("_ZGVcN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVcN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
   EXPECT_EQ(ISA, VFISAKind::AVX);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVcN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin");
+  EXPECT_EQ(VectorName, "_ZGVcN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // AVX2: <isa> = "d"
-  EXPECT_TRUE(invokeParser("_ZGVdN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVdN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
   EXPECT_EQ(ISA, VFISAKind::AVX2);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVdN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin");
+  EXPECT_EQ(VectorName, "_ZGVdN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // AVX512: <isa> = "e"
-  EXPECT_TRUE(invokeParser("_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
   EXPECT_EQ(ISA, VFISAKind::AVX512);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin");
+  EXPECT_EQ(VectorName, "_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // LLVM: <isa> = "_LLVM_" internal vector function.
   EXPECT_TRUE(invokeParser(
-      "_ZGV_LLVM_N2vls2Ls27Us4Rs5l1L10U100R1000u2_sin(vectorf)", "vectorf"));
+      "_ZGV_LLVM_N2vls2Ls27Us4Rs5l1L10U100R1000u_sin(vectorf)", "vectorf"));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   __COMMON_CHECKS;
   EXPECT_EQ(VectorName, "vectorf");
 
   // Unknown ISA (randomly using "q"). This test will need update if
   // some targets decide to use "q" as their ISA token.
-  EXPECT_TRUE(invokeParser("_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
   EXPECT_EQ(ISA, VFISAKind::Unknown);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin");
+  EXPECT_EQ(VectorName, "_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
 #undef __COMMON_CHECKS
 }

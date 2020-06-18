@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++03 -fdiagnostics-show-option -Wbind-to-temporary-copy -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++03 -Wbind-to-temporary-copy -verify %s
 
 // C++03 requires that we check for a copy constructor when binding a
 // reference to a temporary, since we are allowed to make a copy, Even
@@ -42,8 +42,8 @@ struct X4 {
 
 // Check for "dangerous" default arguments that could cause recursion.
 struct X5 {
-  X5(); // expected-note {{requires 0 arguments}}
-  X5(const X5&, const X5& = X5()); // expected-warning{{no viable constructor copying parameter of type 'X5'}} expected-note {{requires 2 arguments}}
+  X5();
+  X5(const X5&, const X5& = X5()); // expected-error {{recursive evaluation of default argument}} expected-note {{used here}}
 };
 
 void g1(const X1&);
@@ -57,7 +57,7 @@ void test() {
   g2(X2()); // expected-warning{{C++98 requires an accessible copy constructor for class 'X2' when binding a reference to a temporary; was private}}
   g3(X3()); // expected-warning{{no viable constructor copying parameter of type 'X3'}}
   g4(X4<int>());
-  g5(X5());  // Generates a warning in the default argument.
+  g5(X5());
 }
 
 // Check that unavailable copy constructors still cause SFINAE failures.

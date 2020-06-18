@@ -167,7 +167,8 @@ protected:
       m_data; ///< The data for this object file so things can be parsed lazily.
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ObjectContainer);
+  ObjectContainer(const ObjectContainer &) = delete;
+  const ObjectContainer &operator=(const ObjectContainer &) = delete;
 };
 
 } // namespace lldb_private

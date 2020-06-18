@@ -13,6 +13,7 @@
 
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExpressionOptions.h"
 #include "lldb/API/SBFileSpec.h"
@@ -371,10 +372,19 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
     Module *exe_module = target_sp->GetExecutableModulePointer();
     if (exe_module)
       launch_info.SetExecutableFile(exe_module->GetPlatformFileSpec(), true);
-    if (argv)
+    if (argv) {
       launch_info.GetArguments().AppendArguments(argv);
-    if (envp)
+    } else {
+      auto default_launch_info = target_sp->GetProcessLaunchInfo();
+      launch_info.GetArguments().AppendArguments(
+          default_launch_info.GetArguments());
+    }
+    if (envp) {
       launch_info.GetEnvironment() = Environment(envp);
+    } else {
+      auto default_launch_info = target_sp->GetProcessLaunchInfo();
+      launch_info.GetEnvironment() = default_launch_info.GetEnvironment();
+    }
 
     if (listener.IsValid())
       launch_info.SetListener(listener.GetSP());
@@ -2330,16 +2340,6 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
     Target *target = exe_ctx.GetTargetPtr();
 
     if (target) {
-#ifdef LLDB_CONFIGURATION_DEBUG
-      StreamString frame_description;
-      if (frame)
-        frame->DumpUsingSettingsFormat(&frame_description);
-      llvm::PrettyStackTraceFormat stack_trace(
-          "SBTarget::EvaluateExpression (expr = \"%s\", fetch_dynamic_value = "
-          "%u) %s",
-          expr, options.GetFetchDynamicValue(),
-          frame_description.GetString().str().c_str());
-#endif
       target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
 
       expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
@@ -2386,6 +2386,17 @@ void SBTarget::SetLaunchInfo(const lldb::SBLaunchInfo &launch_info) {
   TargetSP target_sp(GetSP());
   if (target_sp)
     m_opaque_sp->SetProcessLaunchInfo(launch_info.ref());
+}
+
+SBEnvironment SBTarget::GetEnvironment() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBTarget, GetEnvironment);
+  TargetSP target_sp(GetSP());
+
+  if (target_sp) {
+    return LLDB_RECORD_RESULT(SBEnvironment(target_sp->GetEnvironment()));
+  }
+
+  return LLDB_RECORD_RESULT(SBEnvironment());
 }
 
 namespace lldb_private {
@@ -2643,6 +2654,7 @@ void RegisterMethods<SBTarget>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBTarget,
                        GetInstructionsWithFlavor,
                        (lldb::addr_t, const char *, const void *, size_t));
+  LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBTarget, GetEnvironment, ());
 }
 
 }

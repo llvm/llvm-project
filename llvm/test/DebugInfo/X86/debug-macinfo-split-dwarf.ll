@@ -8,6 +8,7 @@
 ; CHECK:       DW_AT_macro_info  (0x00000000)
 
 ;CHECK-LABEL:.debug_macinfo.dwo contents:
+;CHECK-NEXT: 0x00000000:
 ;CHECK-NEXT:  DW_MACINFO_start_file - lineno: 0 filenum: 1
 ;CHECK-NEXT:    DW_MACINFO_start_file - lineno: 1 filenum: 2
 ;CHECK-NEXT:      DW_MACINFO_define - lineno: 1 macro: define_1 12

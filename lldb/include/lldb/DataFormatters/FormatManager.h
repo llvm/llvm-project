@@ -170,7 +170,6 @@ public:
   GetPossibleMatches(ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
     FormattersMatchVector matches;
     GetPossibleMatches(valobj, valobj.GetCompilerType(),
-                       lldb_private::eFormatterChoiceCriterionDirectChoice,
                        use_dynamic, matches, false, false, false, true);
     return matches;
   }
@@ -184,7 +183,7 @@ public:
 
 private:
   static void GetPossibleMatches(ValueObject &valobj,
-                                 CompilerType compiler_type, uint32_t reason,
+                                 CompilerType compiler_type,
                                  lldb::DynamicValueType use_dynamic,
                                  FormattersMatchVector &entries,
                                  bool did_strip_ptr, bool did_strip_ref,

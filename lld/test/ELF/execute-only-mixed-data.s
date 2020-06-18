@@ -7,7 +7,7 @@
 // RUN:  .text : { *(.text) *(.rodata.foo) } \
 // RUN:  .rodata : { *(.rodata.bar) } \
 // RUN: }" > %t.lds
-// RUN: not ld.lld -T%t.lds %t.o -o /dev/null -execute-only 2>&1 | FileCheck %s
+// RUN: not ld.lld -T%t.lds %t.o -o /dev/null --execute-only 2>&1 | FileCheck %s
 
 // RUN: echo "SECTIONS \
 // RUN: { \

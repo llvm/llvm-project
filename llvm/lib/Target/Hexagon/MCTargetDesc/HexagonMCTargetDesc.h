@@ -47,7 +47,6 @@
 
 namespace llvm {
 
-struct InstrItinerary;
 struct InstrStage;
 class FeatureBitset;
 class MCAsmBackend;
@@ -61,8 +60,6 @@ class MCTargetOptions;
 class Target;
 class Triple;
 class StringRef;
-class raw_ostream;
-class raw_pwrite_stream;
 
 extern cl::opt<bool> HexagonDisableCompound;
 extern cl::opt<bool> HexagonDisableDuplex;

@@ -128,6 +128,26 @@ public:
     return cast_or_null<ObjFile<ELFT>>(file);
   }
 
+  // If basic block sections are enabled, many code sections could end up with
+  // one or two jump instructions at the end that could be relaxed to a smaller
+  // instruction. The members below help trimming the trailing jump instruction
+  // and shrinking a section.
+  unsigned bytesDropped = 0;
+
+  void drop_back(uint64_t num) { bytesDropped += num; }
+
+  void push_back(uint64_t num) {
+    assert(bytesDropped >= num);
+    bytesDropped -= num;
+  }
+
+  void trim() {
+    if (bytesDropped) {
+      rawData = rawData.drop_back(bytesDropped);
+      bytesDropped = 0;
+    }
+  }
+
   ArrayRef<uint8_t> data() const {
     if (uncompressedSize >= 0)
       uncompress();
@@ -183,11 +203,24 @@ public:
   // the mmap'ed output buffer.
   template <class ELFT> void relocate(uint8_t *buf, uint8_t *bufEnd);
   void relocateAlloc(uint8_t *buf, uint8_t *bufEnd);
+  static uint64_t getRelocTargetVA(const InputFile *File, RelType Type,
+                                   int64_t A, uint64_t P, const Symbol &Sym,
+                                   RelExpr Expr);
 
   // The native ELF reloc data type is not very convenient to handle.
   // So we convert ELF reloc records to our own records in Relocations.cpp.
   // This vector contains such "cooked" relocations.
   std::vector<Relocation> relocations;
+
+  // Indicates that this section needs to be padded with a NOP filler if set to
+  // true.
+  bool nopFiller = false;
+
+  // These are modifiers to jump instructions that are necessary when basic
+  // block sections are enabled.  Basic block sections creates opportunities to
+  // relax jump instructions at basic block boundaries after reordering the
+  // basic blocks.
+  std::vector<JumpInstrMod> jumpInstrMods;
 
   // A function compiled with -fsplit-stack calling a function
   // compiled without -fsplit-stack needs its prologue adjusted. Find
@@ -363,6 +396,11 @@ inline bool isDebugSection(const InputSectionBase &sec) {
 
 // The list of all input sections.
 extern std::vector<InputSectionBase *> inputSections;
+
+// The set of TOC entries (.toc + addend) for which we should not apply
+// toc-indirect to toc-relative relaxation. const Symbol * refers to the
+// STT_SECTION symbol associated to the .toc input section.
+extern llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
 } // namespace elf
 

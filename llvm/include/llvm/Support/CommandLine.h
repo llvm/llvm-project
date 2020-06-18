@@ -45,7 +45,6 @@
 namespace llvm {
 
 class StringSaver;
-class raw_ostream;
 
 /// cl Namespace - This namespace contains all of the command line option
 /// processing machinery.  It is intentionally a short name to make qualified
@@ -1606,8 +1605,8 @@ public:
   reference front() { return Storage.front(); }
   const_reference front() const { return Storage.front(); }
 
-  operator std::vector<DataType>&() { return Storage; }
-  operator ArrayRef<DataType>() { return Storage; }
+  operator std::vector<DataType> &() { return Storage; }
+  operator ArrayRef<DataType>() const { return Storage; }
   std::vector<DataType> *operator&() { return &Storage; }
   const std::vector<DataType> *operator&() const { return &Storage; }
 
@@ -2026,6 +2025,13 @@ void TokenizeGNUCommandLine(StringRef Source, StringSaver &Saver,
 void TokenizeWindowsCommandLine(StringRef Source, StringSaver &Saver,
                                 SmallVectorImpl<const char *> &NewArgv,
                                 bool MarkEOLs = false);
+
+/// Tokenizes a Windows command line while attempting to avoid copies. If no
+/// quoting or escaping was used, this produces substrings of the original
+/// string. If a token requires unquoting, it will be allocated with the
+/// StringSaver.
+void TokenizeWindowsCommandLineNoCopy(StringRef Source, StringSaver &Saver,
+                                      SmallVectorImpl<StringRef> &NewArgv);
 
 /// String tokenization function type.  Should be compatible with either
 /// Windows or Unix command line tokenizers.

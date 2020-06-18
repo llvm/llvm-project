@@ -89,7 +89,7 @@ clang_tablegen("AttrHasAttributeImpl") {
   td_file = "Attr.td"
 }
 
-# ARM NEON and MVE
+# ARM CDE, MVE, and NEON.
 
 clang_tablegen("arm_neon") {
   args = [ "-gen-arm-neon-sema" ]
@@ -117,4 +117,44 @@ clang_tablegen("arm_mve_builtin_sema") {
 clang_tablegen("arm_mve_builtin_aliases") {
   args = [ "-gen-arm-mve-builtin-aliases" ]
   td_file = "arm_mve.td"
+}
+
+clang_tablegen("arm_sve_builtins") {
+  args = [ "-gen-arm-sve-builtins" ]
+  td_file = "arm_sve.td"
+}
+
+clang_tablegen("arm_sve_builtin_cg") {
+  args = [ "-gen-arm-sve-builtin-codegen" ]
+  td_file = "arm_sve.td"
+}
+
+clang_tablegen("arm_sve_typeflags") {
+  args = [ "-gen-arm-sve-typeflags" ]
+  td_file = "arm_sve.td"
+}
+
+clang_tablegen("arm_sve_sema_rangechecks") {
+  args = [ "-gen-arm-sve-sema-rangechecks" ]
+  td_file = "arm_sve.td"
+}
+
+clang_tablegen("arm_cde_builtins") {
+  args = [ "-gen-arm-cde-builtin-def" ]
+  td_file = "arm_cde.td"
+}
+
+clang_tablegen("arm_cde_builtin_cg") {
+  args = [ "-gen-arm-cde-builtin-codegen" ]
+  td_file = "arm_cde.td"
+}
+
+clang_tablegen("arm_cde_builtin_sema") {
+  args = [ "-gen-arm-cde-builtin-sema" ]
+  td_file = "arm_cde.td"
+}
+
+clang_tablegen("arm_cde_builtin_aliases") {
+  args = [ "-gen-arm-cde-builtin-aliases" ]
+  td_file = "arm_cde.td"
 }

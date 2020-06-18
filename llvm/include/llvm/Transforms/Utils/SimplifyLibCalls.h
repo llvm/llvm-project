@@ -25,7 +25,6 @@ class DataLayout;
 class Instruction;
 class IRBuilderBase;
 class TargetLibraryInfo;
-class BasicBlock;
 class Function;
 class OptimizationRemarkEmitter;
 class BlockFrequencyInfo;
@@ -50,7 +49,7 @@ public:
   /// optimal value to replace the instruction with or 0 if a more
   /// optimal form can't be found.
   /// The call must not be an indirect call.
-  Value *optimizeCall(CallInst *CI);
+  Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
 
 private:
   Value *optimizeMemCpyChk(CallInst *CI, IRBuilderBase &B);
@@ -151,7 +150,7 @@ public:
   /// other instructions that use the given instruction were modified
   /// and the given instruction is dead.
   /// The call must not be an indirect call.
-  Value *optimizeCall(CallInst *CI);
+  Value *optimizeCall(CallInst *CI, IRBuilderBase &B);
 
 private:
   // String and Memory Library Call Optimizations
@@ -220,11 +219,7 @@ private:
   Value *optimizeSnPrintF(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFPrintF(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFWrite(CallInst *CI, IRBuilderBase &B);
-  Value *optimizeFRead(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFPuts(CallInst *CI, IRBuilderBase &B);
-  Value *optimizeFGets(CallInst *CI, IRBuilderBase &B);
-  Value *optimizeFPutc(CallInst *CI, IRBuilderBase &B);
-  Value *optimizeFGetc(CallInst *CI, IRBuilderBase &B);
   Value *optimizePuts(CallInst *CI, IRBuilderBase &B);
 
   // Helper methods

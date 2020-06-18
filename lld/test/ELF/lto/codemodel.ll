@@ -12,9 +12,9 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 define i32* @_start() nounwind readonly {
 entry:
-; CHECK-SMALL-LABEL:  _start:
+; CHECK-SMALL-LABEL:  <_start>:
 ; CHECK-SMALL: movl    $2097440, %eax
-; CHECK-LARGE-LABEL: _start:
+; CHECK-LARGE-LABEL: <_start>:
 ; CHECK-LARGE: movabsq $2097440, %rax
     ret i32* getelementptr ([0 x i32], [0 x i32]* @data, i64 0, i64 0)
 }

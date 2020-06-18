@@ -1,0 +1,212 @@
+# RUN: llc --run-pass=simple-register-coalescing -o - %s | FileCheck %s
+# pr45489
+# Coalescing variables across a setjmp call can add a undefined
+# variable value when longjmp if such variables are spilled and
+# altered between the setjmp and longjmp.
+
+# This file tests a very particular case for
+# no coalescing stack pointers across the
+# setjmp call.
+# CHECK: %[[R1:[0-9]+]]:gpr = ADDri %stack.0.P0, 0, 14
+
+# Stack pointer
+# CHECK: %[[R2:[0-9]+]]:gpr = nuw ADDri %[[R1]], 8, 14
+# CHECK: @setjmp
+
+# Not changed between setjmp and bar(longjmp)
+# CHECK-NOT: %{{[0-9]+}}:dpr, %[[R2]]:gpr = VLD1d32wb_fixed %[[R2]], 0,
+# CHECK: BL @_Z3barPx3S37{{.*}}
+# CHECK: %[[R3:[0-9]+]]:gpr = COPY %[[R2]]
+
+# Used after bar
+# CHECK-NOT: VLD1d32wb_fixed %[[R2]]
+# CHECK: VLD1d32wb_fixed %[[R3]]
+--- |
+  target triple = "armv8-arm-none-eabi"
+
+  %"class.std::__1::ios_base::Init" = type { i8 }
+  %struct.S37 = type <{ i8, [7 x i8], %struct.S38, [2 x %"class.std::__1::complex"], float, [4 x i8], i64, i32, [4 x i8] }>
+  %struct.S38 = type { double, i8 }
+  %"class.std::__1::complex" = type { double, double }
+  %struct.S18 = type <{ i32, [4 x i8], double, double, double, i32, [4 x i8], %struct.S23, i32, [4 x i8] }>
+  %struct.S23 = type { [2 x double], half }
+  define i32 @main() {
+  entry:
+    %P0 = alloca %struct.S37, align 8
+    %0 = bitcast %struct.S37* %P0 to %struct.S18*
+    %jb1 = alloca [20 x i64], align 8
+    %P1 = alloca %struct.S18, align 8
+    %jb2 = alloca [20 x i64], align 8
+    %1 = bitcast %struct.S37* %P0 to i8*
+    %M2.i = getelementptr inbounds %struct.S37, %struct.S37* %P0, i32 0, i32 2
+    %2 = bitcast %struct.S38* %M2.i to i8*
+    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(48) %2, i8 0, i64 48, i1 false)
+    %M6.i = getelementptr inbounds %struct.S37, %struct.S37* %P0, i32 0, i32 7
+    store i32 0, i32* %M6.i, align 8
+    %3 = bitcast [20 x i64]* %jb1 to i8*
+    %arraydecay1 = bitcast [20 x i64]* %jb1 to i64*
+    %call1 = call i32 @setjmp(i64* nonnull %arraydecay1)
+    %tobool = icmp eq i32 %call1, 0
+    br i1 %tobool, label %if.then, label %if.end
+  if.then:                                          ; preds = %entry
+    %4 = bitcast [20 x i64]* %jb1 to i64*
+    call void (i64*, %struct.S37*, ...) @_Z3barPx3S37z(i64* nonnull %4, %struct.S37* nonnull byval(%struct.S37) align 8 %P0)
+    unreachable
+  if.end:                                           ; preds = %entry
+    %5 = bitcast [20 x i64]* %jb1 to i8*
+    %6 = bitcast %struct.S37* %P0 to i8*
+    call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{sp},~{lr}"()
+    %7 = bitcast %struct.S18* %0 to i8*
+    %BM0.i = getelementptr inbounds %struct.S18, %struct.S18* %0, i32 0, i32 2
+    store double 0.000000e+00, double* %BM0.i, align 8
+    %M0.i = getelementptr inbounds %struct.S18, %struct.S18* %0, i32 0, i32 5
+    store i32 42, i32* %M0.i, align 8
+    %M3.i = getelementptr inbounds %struct.S18, %struct.S18* %0, i32 0, i32 7
+    %8 = bitcast %struct.S23* %M3.i to i8*
+    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(28) %8, i8 0, i64 28, i1 false)
+    %9 = bitcast [20 x i64]* %jb1 to i8*
+    %arraydecay42 = bitcast [20 x i64]* %jb1 to i64*
+    %call5 = call i32 @setjmp(i64* nonnull %arraydecay42)
+    %tobool6 = icmp eq i32 %call5, 0
+    br i1 %tobool6, label %if.then7, label %if.end10
+  if.then7:                                         ; preds = %if.end
+    %10 = bitcast [20 x i64]* %jb1 to i64*
+    call void (i64*, %struct.S18*, ...) @_Z3fooPx3S18z(i64* nonnull %10, %struct.S18* nonnull byval(%struct.S18) align 8 %0)
+    unreachable
+  if.end10:                                         ; preds = %if.end
+    %11 = bitcast [20 x i64]* %jb1 to i8*
+    %12 = bitcast %struct.S18* %0 to i8*
+    ret i32 0
+  }
+  declare i32 @setjmp(i64*)
+  declare void @_Z3barPx3S37z(i64*, %struct.S37* byval(%struct.S37) align 8, ...)
+  declare void @_Z3fooPx3S18z(i64*, %struct.S18* byval(%struct.S18) align 8, ...)
+  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
+...
+---
+name:            main
+exposesReturnsTwice: true
+stack:
+  - { id: 0, name: P0, size: 80, alignment: 8, local-offset: -80 }
+  - { id: 1, name: jb1, size: 160, alignment: 8, local-offset: -240 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.1(0x00000001), %bb.4(0x7fffffff)
+    %0:qpr = VMOVv4i32 0, 14, $noreg
+    %1:gpr = ADDri %stack.0.P0, 0, 14, $noreg, $noreg
+    %2:gpr = ADDri %1, 40, 14, $noreg, $noreg
+    VST1q64 %2, 0, %0, 14, $noreg
+    %3:gpr = ADDri %1, 24, 14, $noreg, $noreg
+    VST1q64 killed %3, 0, %0, 14, $noreg
+    %4:gpr = nuw ADDri %1, 8, 14, $noreg, $noreg
+    VST1q64 %4, 0, %0, 14, $noreg
+    %5:gpr = MOVi 0, 14, $noreg, $noreg
+    STRi12 %5, %stack.0.P0, 72, 14, $noreg
+    ADJCALLSTACKDOWN 0, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
+    %6:gpr = ADDri %stack.1.jb1, 0, 14, $noreg, $noreg
+    $r0 = COPY killed %6
+    BL @setjmp, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0
+    ADJCALLSTACKUP 0, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
+    %7:gpr = COPY killed $r0
+    CMPri killed %7, 0, 14, $noreg, implicit-def $cpsr
+    Bcc %bb.4, 1, killed $cpsr
+    B %bb.1
+  bb.1:
+    ADJCALLSTACKDOWN 72, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
+    %24:gpr = LDRi12 %stack.0.P0, 0, 14, $noreg
+    %25:gpr = LDRi12 %stack.0.P0, 4, 14, $noreg
+    %27:gpr = COPY $sp
+    %29:gpr = MOVi16 72, 14, $noreg
+    %61:gpr = COPY killed %29
+    %62:gpr = COPY killed %4
+    %63:gpr = COPY killed %27
+  bb.2:
+    %35:gpr = COPY killed %63
+    %33:gpr = COPY killed %62
+    %31:gpr = COPY killed %61
+    %32:gpr = COPY killed %33
+    %36:dpr, %32:gpr = VLD1d32wb_fixed %32, 0, 14, $noreg
+    %34:gpr = COPY killed %35
+    %34:gpr = VST1d32wb_fixed %34, 0, killed %36, 14, $noreg
+    %30:gpr = SUBri killed %31, 8, 14, $noreg, def $cpsr
+    %61:gpr = COPY killed %30
+    %62:gpr = COPY killed %32
+    %63:gpr = COPY killed %34
+    Bcc %bb.2, 1, killed $cpsr
+  bb.3:
+    successors:
+    %28:gpr = ADDri %stack.1.jb1, 0, 14, $noreg, $noreg
+    $r0 = COPY killed %28
+    $r2 = COPY killed %24
+    $r3 = COPY killed %25
+    BL @_Z3barPx3S37z, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r2, implicit killed $r3, implicit-def $sp
+    ADJCALLSTACKUP 72, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
+  bb.4:
+    successors: %bb.5(0x00000001), %bb.6(0x7fffffff)
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0, 12, implicit-def dead early-clobber $r1, 12, implicit-def dead early-clobber $r2, 12, implicit-def dead early-clobber $r3, 12, implicit-def dead early-clobber $r4, 12, implicit-def dead early-clobber $r5, 12, implicit-def dead early-clobber $r6, 12, implicit-def dead early-clobber $r7, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def early-clobber $sp, 12, implicit-def dead early-clobber $lr
+    VST1q64 killed %2, 0, %0, 14, $noreg
+    %11:gpr = ADDri killed %1, 52, 14, $noreg, $noreg
+    VST1q32 killed %11, 0, killed %0, 14, $noreg
+    STRi12 %5, %stack.0.P0, 12, 14, $noreg
+    STRi12 killed %5, %stack.0.P0, 8, 14, $noreg
+    %13:gpr = MOVi 42, 14, $noreg, $noreg
+    STRi12 killed %13, %stack.0.P0, 32, 14, $noreg
+    ADJCALLSTACKDOWN 0, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
+    %14:gpr = ADDri %stack.1.jb1, 0, 14, $noreg, $noreg
+    $r0 = COPY killed %14
+    BL @setjmp, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0
+    ADJCALLSTACKUP 0, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
+    %15:gpr = COPY killed $r0
+    CMPri killed %15, 0, 14, $noreg, implicit-def $cpsr
+    Bcc %bb.6, 1, killed $cpsr
+    B %bb.5
+  bb.5:
+    successors:
+    ADJCALLSTACKDOWN 64, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
+    %18:gpr = LDRi12 %stack.0.P0, 0, 14, $noreg
+    %19:gpr = LDRi12 %stack.0.P0, 4, 14, $noreg
+    %21:gpr = COPY $sp
+    %37:gpr = COPY killed %4
+    %39:dpr, %37:gpr = VLD1d32wb_fixed %37, 0, 14, $noreg
+    %38:gpr = COPY killed %21
+    %38:gpr = VST1d32wb_fixed %38, 0, killed %39, 14, $noreg
+    %40:gpr = COPY killed %37
+    %42:dpr, %40:gpr = VLD1d32wb_fixed %40, 0, 14, $noreg
+    %41:gpr = COPY killed %38
+    %41:gpr = VST1d32wb_fixed %41, 0, killed %42, 14, $noreg
+    %43:gpr = COPY killed %40
+    %45:dpr, %43:gpr = VLD1d32wb_fixed %43, 0, 14, $noreg
+    %44:gpr = COPY killed %41
+    %44:gpr = VST1d32wb_fixed %44, 0, killed %45, 14, $noreg
+    %46:gpr = COPY killed %43
+    %48:dpr, %46:gpr = VLD1d32wb_fixed %46, 0, 14, $noreg
+    %47:gpr = COPY killed %44
+    %47:gpr = VST1d32wb_fixed %47, 0, killed %48, 14, $noreg
+    %49:gpr = COPY killed %46
+    %51:dpr, %49:gpr = VLD1d32wb_fixed %49, 0, 14, $noreg
+    %50:gpr = COPY killed %47
+    %50:gpr = VST1d32wb_fixed %50, 0, killed %51, 14, $noreg
+    %52:gpr = COPY killed %49
+    %54:dpr, %52:gpr = VLD1d32wb_fixed %52, 0, 14, $noreg
+    %53:gpr = COPY killed %50
+    %53:gpr = VST1d32wb_fixed %53, 0, killed %54, 14, $noreg
+    %55:gpr = COPY killed %52
+    %57:dpr, %55:gpr = VLD1d32wb_fixed %55, 0, 14, $noreg
+    %56:gpr = COPY killed %53
+    %56:gpr = VST1d32wb_fixed %56, 0, killed %57, 14, $noreg
+    %58:gpr = COPY killed %55
+    %60:dpr, dead %58:gpr = VLD1d32wb_fixed %58, 0, 14, $noreg
+    %59:gpr = COPY killed %56
+    dead %59:gpr = VST1d32wb_fixed %59, 0, killed %60, 14, $noreg
+    %22:gpr = ADDri %stack.1.jb1, 0, 14, $noreg, $noreg
+    $r0 = COPY killed %22
+    $r2 = COPY killed %18
+    $r3 = COPY killed %19
+    BL @_Z3fooPx3S18z, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r2, implicit killed $r3, implicit-def $sp
+    ADJCALLSTACKUP 64, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
+  bb.6:
+    %16:gpr = MOVi 0, 14, $noreg, $noreg
+    $r0 = COPY killed %16
+    BX_RET 14, $noreg, implicit killed $r0
+...

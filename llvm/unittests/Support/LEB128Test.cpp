@@ -113,6 +113,9 @@ TEST(LEB128Test, DecodeULEB128) {
     EXPECT_EQ(EXPECTED, Actual); \
   } while (0)
 
+  // Don't crash
+  EXPECT_EQ(0u, decodeULEB128(nullptr, nullptr, nullptr));
+
   // Decode ULEB128
   EXPECT_DECODE_ULEB128_EQ(0u, "\x00");
   EXPECT_DECODE_ULEB128_EQ(1u, "\x01");
@@ -147,6 +150,9 @@ TEST(LEB128Test, DecodeSLEB128) {
     EXPECT_EQ(sizeof(VALUE) - 1, ActualSize); \
     EXPECT_EQ(EXPECTED, Actual); \
   } while (0)
+
+  // Don't crash
+  EXPECT_EQ(0, decodeSLEB128(nullptr, nullptr, nullptr));
 
   // Decode SLEB128
   EXPECT_DECODE_SLEB128_EQ(0L, "\x00");

@@ -1,4 +1,3 @@
-; REQUIRES: x86
 
 ; RUN: llc -o - %s -filetype=obj -O0 -debugger-tune=lldb -generate-type-units -mtriple=x86_64-unknown-linux-gnu | llvm-dwarfdump -debug-types - | FileCheck %s
 

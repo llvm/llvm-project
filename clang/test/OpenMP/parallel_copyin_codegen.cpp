@@ -106,7 +106,7 @@ int main() {
 #pragma omp parallel copyin(g)
   {
     // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}})
-    // TLS-LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable(4) %{{.+}})
+    // TLS-LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}})
 
     // threadprivate_g = g;
     // LAMBDA: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[G]]
@@ -161,7 +161,7 @@ int main() {
 #pragma omp parallel copyin(g)
   {
     // BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}})
-    // TLS-BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable(4) %{{.+}})
+    // TLS-BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}})
 
     // threadprivate_g = g;
     // BLOCKS: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[G]]
@@ -495,13 +495,13 @@ void array_func() {
 // ARRAY: @__kmpc_fork_call(
 // ARRAY: call i8* @__kmpc_threadprivate_cached(
 // ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 bitcast ([2 x i32]* @{{.+}} to i8*), i64 8, i1 false)
-// ARRAY: call dereferenceable(8) %struct.St* @{{.+}}(%struct.St* %{{.+}}, %struct.St* dereferenceable(8) %{{.+}})
+// ARRAY: call nonnull align 4 dereferenceable(8) %struct.St* @{{.+}}(%struct.St* %{{.+}}, %struct.St* nonnull align 4 dereferenceable(8) %{{.+}})
 
 // TLS-ARRAY: @__kmpc_fork_call(
 // TLS-ARRAY: [[REFT:%.+]] = load [2 x i32]*, [2 x i32]** [[ADDR:%.+]],
 // TLS-ARRAY: [[REF:%.+]] = bitcast [2 x i32]* [[REFT]] to i8*
 // TLS-ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 bitcast ([2 x i32]* @{{.+}} to i8*), i8* align 4 [[REF]], i64 8, i1 false)
-// TLS-ARRAY: call dereferenceable(8) %struct.St* @{{.+}}(%struct.St* %{{.+}}, %struct.St* dereferenceable(8) %{{.+}})
+// TLS-ARRAY: call nonnull align 4 dereferenceable(8) %struct.St* @{{.+}}(%struct.St* %{{.+}}, %struct.St* nonnull align 4 dereferenceable(8) %{{.+}})
 
 #pragma omp threadprivate(a, s)
 #pragma omp parallel copyin(a, s)

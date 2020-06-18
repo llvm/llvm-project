@@ -11,15 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/MLIRContext.h"
+#include "PassDetail.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
+
 using namespace mlir;
 
 namespace {
 /// Canonicalize operations in nested regions.
-struct Canonicalizer : public OperationPass<Canonicalizer> {
+struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
   void runOnOperation() override {
     OwningRewritePatternList patterns;
 
@@ -31,7 +32,7 @@ struct Canonicalizer : public OperationPass<Canonicalizer> {
       op->getCanonicalizationPatterns(patterns, context);
 
     Operation *op = getOperation();
-    applyPatternsGreedily(op->getRegions(), patterns);
+    applyPatternsAndFoldGreedily(op->getRegions(), patterns);
   }
 };
 } // end anonymous namespace
@@ -40,6 +41,3 @@ struct Canonicalizer : public OperationPass<Canonicalizer> {
 std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
   return std::make_unique<Canonicalizer>();
 }
-
-static PassRegistration<Canonicalizer> pass("canonicalize",
-                                            "Canonicalize operations");

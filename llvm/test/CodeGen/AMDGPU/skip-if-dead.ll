@@ -12,7 +12,11 @@ define amdgpu_ps void @test_kill_depth_0_imm_pos() #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_neg:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: s_mov_b64 exec, 0
+; CHECK-NEXT: s_cbranch_execnz BB1_2
 ; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: exp null off, off, off, off done vm
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB1_2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
   call void @llvm.amdgcn.kill(i1 false)
@@ -23,9 +27,15 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_neg_x2:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: s_mov_b64 exec, 0
-; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: s_cbranch_execnz BB2_2
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK:      BB2_2:
 ; CHECK-NEXT: s_mov_b64 exec, 0
-; CHECK-NEXT: ; %bb.2:
+; CHECK-NEXT: s_cbranch_execnz BB2_4
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB2_4:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
   call void @llvm.amdgcn.kill(i1 false)
@@ -36,7 +46,10 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_var:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: s_cbranch_execnz BB3_2
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB3_2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
   %cmp = fcmp olt float %x, 0.0
@@ -48,9 +61,15 @@ define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2_same:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: s_cbranch_execnz BB4_2
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB4_2:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; %bb.2:
+; CHECK-NEXT: s_cbranch_execnz BB4_4
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB4_4:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
   %cmp = fcmp olt float %x, 0.0
@@ -59,12 +78,19 @@ define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
   ret void
 }
 
+; FIXME: Ideally only one early-exit would be emitted
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; %bb.1:
+; CHECK-NEXT: s_cbranch_execnz BB5_2
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB5_2:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v1
-; CHECK-NEXT: ; %bb.2:
+; CHECK-NEXT: s_cbranch_execnz BB5_4
+; CHECK:      exp null
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB5_4:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
   %cmp.x = fcmp olt float %x, 0.0
@@ -119,14 +145,12 @@ define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
 ; CHECK: v_nop_e64
 
 ; CHECK: v_cmpx_gt_f32_e32 vcc, 0, v7
-; CHECK-NEXT: s_cbranch_execnz [[SPLIT_BB:BB[0-9]+_[0-9]+]]
-; CHECK-NEXT: ; %bb.2:
-; CHECK-NEXT: exp null off, off, off, off done vm
-; CHECK-NEXT: s_endpgm
 
-; CHECK-NEXT: {{^}}[[SPLIT_BB]]:
-; CHECK-NEXT: s_endpgm
-define amdgpu_ps void @test_kill_control_flow(i32 inreg %arg) #0 {
+; TODO: We could do an early-exit here (the branch above is uniform!)
+; CHECK-NOT: exp null
+
+; CHECK: v_mov_b32_e32 v0, 1.0
+define amdgpu_ps float @test_kill_control_flow(i32 inreg %arg) #0 {
 entry:
   %cmp = icmp eq i32 %arg, 0
   br i1 %cmp, label %bb, label %exit
@@ -149,7 +173,7 @@ bb:
   br label %exit
 
 exit:
-  ret void
+  ret float 1.0
 }
 
 ; CHECK-LABEL: {{^}}test_kill_control_flow_remainder:
@@ -171,13 +195,10 @@ exit:
 ; CHECK: v_mov_b32_e64 v8, -1
 ; CHECK: ;;#ASMEND
 ; CHECK: v_cmpx_gt_f32_e32 vcc, 0, v7
-; CHECK-NEXT: s_cbranch_execnz [[SPLIT_BB:BB[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ; %bb.2:
-; CHECK-NEXT: exp null off, off, off, off done vm
-; CHECK-NEXT: s_endpgm
+; TODO: We could do an early-exit here (the branch above is uniform!)
+; CHECK-NOT: exp null
 
-; CHECK-NEXT: {{^}}[[SPLIT_BB]]:
 ; CHECK: buffer_store_dword v8
 ; CHECK: v_mov_b32_e64 v9, -2
 
@@ -433,6 +454,56 @@ export:
   ret void
 }
 
+; CHECK-LABEL: {{^}}complex_loop:
+; CHECK: s_mov_b64 exec, 0
+; CHECK-NOT: exp null
+define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
+.entry:
+  %flaga = icmp sgt i32 %cmpa, 0
+  br i1 %flaga, label %.lr.ph, label %._crit_edge
+
+.lr.ph:
+  br label %hdr
+
+hdr:
+  %ctr = phi i32 [ 0, %.lr.ph ], [ %ctr.next, %latch ]
+  %flagb = icmp ugt i32 %ctr, %cmpb
+  br i1 %flagb, label %kill, label %latch
+
+kill:
+  call void @llvm.amdgcn.kill(i1 false)
+  br label %latch
+
+latch:
+  %ctr.next = add nuw nsw i32 %ctr, 1
+  %flagc = icmp slt i32 %ctr.next, %cmpc
+  br i1 %flagc, label %hdr, label %._crit_edge
+
+._crit_edge:
+  %tmp = phi i32 [ -1, %.entry ], [ %ctr.next, %latch ]
+  %out = bitcast i32 %tmp to <2 x half>
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> %out, <2 x half> undef, i1 immarg true, i1 immarg true)
+  ret void
+}
+
+; CHECK-LABEL: {{^}}skip_mode_switch:
+; CHECK: s_and_saveexec_b64
+; CHECK-NEXT: s_cbranch_execz
+; CHECK: s_setreg_imm32
+; CHECK: s_or_b64 exec, exec
+define void @skip_mode_switch(i32 %arg) {
+entry:
+  %cmp = icmp eq i32 %arg, 0
+  br i1 %cmp, label %bb.0, label %bb.1
+
+bb.0:
+  call void @llvm.amdgcn.s.setreg(i32 2049, i32 3)
+  br label %bb.1
+
+bb.1:
+  ret void
+}
+
 declare float @llvm.amdgcn.interp.p1(float, i32 immarg, i32 immarg, i32) #2
 declare float @llvm.amdgcn.interp.p2(float, float, i32 immarg, i32 immarg, i32) #2
 declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) #3
@@ -440,6 +511,8 @@ declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #2
 declare float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
 declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare void @llvm.amdgcn.kill(i1) #0
+
+declare void @llvm.amdgcn.s.setreg(i32 immarg, i32)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

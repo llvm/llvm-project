@@ -1219,9 +1219,11 @@ HeaderSearch::getExistingFileInfo(const FileEntry *FE,
 }
 
 bool HeaderSearch::isFileMultipleIncludeGuarded(const FileEntry *File) {
-  // Check if we've ever seen this file as a header.
+  // Check if we've entered this file and found an include guard or #pragma
+  // once. Note that we dor't check for #import, because that's not a property
+  // of the file itself.
   if (auto *HFI = getExistingFileInfo(File))
-    return HFI->isPragmaOnce || HFI->isImport || HFI->ControllingMacro ||
+    return HFI->isPragmaOnce || HFI->ControllingMacro ||
            HFI->ControllingMacroID;
   return false;
 }
@@ -1274,14 +1276,12 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
     //
     // It's common that libc++ and system modules will both define such
     // submodules. Make sure cached results for a builtin header won't
-    // prevent other builtin modules to potentially enter the builtin header.
-    // Note that builtins are header guarded and the decision to actually
-    // enter them is postponed to the controlling macros logic below.
+    // prevent other builtin modules from potentially entering the builtin
+    // header. Note that builtins are header guarded and the decision to
+    // actually enter them is postponed to the controlling macros logic below.
     bool TryEnterHdr = false;
     if (FileInfo.isCompilingModuleHeader && FileInfo.isModuleHeader)
-      TryEnterHdr = File->getDir() == ModMap.getBuiltinDir() &&
-                    ModuleMap::isBuiltinHeader(
-                        llvm::sys::path::filename(File->getName()));
+      TryEnterHdr = ModMap.isBuiltinHeader(File);
 
     // Textual headers can be #imported from different modules. Since ObjC
     // headers find in the wild might rely only on #import and do not contain
@@ -1399,24 +1399,45 @@ HeaderSearch::findModuleForHeader(const FileEntry *File,
   return ModMap.findModuleForHeader(File, AllowTextual);
 }
 
+ArrayRef<ModuleMap::KnownHeader>
+HeaderSearch::findAllModulesForHeader(const FileEntry *File) const {
+  if (ExternalSource) {
+    // Make sure the external source has handled header info about this file,
+    // which includes whether the file is part of a module.
+    (void)getExistingFileInfo(File);
+  }
+  return ModMap.findAllModulesForHeader(File);
+}
+
 static bool suggestModule(HeaderSearch &HS, const FileEntry *File,
                           Module *RequestingModule,
                           ModuleMap::KnownHeader *SuggestedModule) {
   ModuleMap::KnownHeader Module =
       HS.findModuleForHeader(File, /*AllowTextual*/true);
-  if (SuggestedModule)
-    *SuggestedModule = (Module.getRole() & ModuleMap::TextualHeader)
-                           ? ModuleMap::KnownHeader()
-                           : Module;
 
   // If this module specifies [no_undeclared_includes], we cannot find any
   // file that's in a non-dependency module.
   if (RequestingModule && Module && RequestingModule->NoUndeclaredIncludes) {
-    HS.getModuleMap().resolveUses(RequestingModule, /*Complain*/false);
+    HS.getModuleMap().resolveUses(RequestingModule, /*Complain*/ false);
     if (!RequestingModule->directlyUses(Module.getModule())) {
+      // Builtin headers are a special case. Multiple modules can use the same
+      // builtin as a modular header (see also comment in
+      // ShouldEnterIncludeFile()), so the builtin header may have been
+      // "claimed" by an unrelated module. This shouldn't prevent us from
+      // including the builtin header textually in this module.
+      if (HS.getModuleMap().isBuiltinHeader(File)) {
+        if (SuggestedModule)
+          *SuggestedModule = ModuleMap::KnownHeader();
+        return true;
+      }
       return false;
     }
   }
+
+  if (SuggestedModule)
+    *SuggestedModule = (Module.getRole() & ModuleMap::TextualHeader)
+                           ? ModuleMap::KnownHeader()
+                           : Module;
 
   return true;
 }
@@ -1568,6 +1589,16 @@ HeaderSearch::lookupModuleMapFile(const DirectoryEntry *Dir, bool IsFramework) {
   llvm::sys::path::append(ModuleMapFileName, "module.map");
   if (auto F = FileMgr.getFile(ModuleMapFileName))
     return *F;
+
+  // For frameworks, allow to have a private module map with a preferred
+  // spelling when a public module map is absent.
+  if (IsFramework) {
+    ModuleMapFileName = Dir->getName();
+    llvm::sys::path::append(ModuleMapFileName, "Modules",
+                            "module.private.modulemap");
+    if (auto F = FileMgr.getFile(ModuleMapFileName))
+      return *F;
+  }
   return nullptr;
 }
 

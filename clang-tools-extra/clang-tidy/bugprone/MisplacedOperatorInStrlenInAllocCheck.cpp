@@ -57,16 +57,22 @@ void MisplacedOperatorInStrlenInAllocCheck::registerMatchers(
               hasInitializer(ignoringParenImpCasts(
                   declRefExpr(hasDeclaration(Alloc1Func)))));
 
-  Finder->addMatcher(callExpr(callee(decl(anyOf(Alloc0Func, Alloc0FuncPtr))),
-                              hasArgument(0, BadArg))
-                         .bind("Alloc"),
-                     this);
-  Finder->addMatcher(callExpr(callee(decl(anyOf(Alloc1Func, Alloc1FuncPtr))),
-                              hasArgument(1, BadArg))
-                         .bind("Alloc"),
-                     this);
   Finder->addMatcher(
-      cxxNewExpr(isArray(), hasArraySize(BadArg)).bind("Alloc"), this);
+      traverse(ast_type_traits::TK_AsIs,
+               callExpr(callee(decl(anyOf(Alloc0Func, Alloc0FuncPtr))),
+                        hasArgument(0, BadArg))
+                   .bind("Alloc")),
+      this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               callExpr(callee(decl(anyOf(Alloc1Func, Alloc1FuncPtr))),
+                        hasArgument(1, BadArg))
+                   .bind("Alloc")),
+      this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               cxxNewExpr(isArray(), hasArraySize(BadArg)).bind("Alloc")),
+      this);
 }
 
 void MisplacedOperatorInStrlenInAllocCheck::check(
@@ -74,7 +80,7 @@ void MisplacedOperatorInStrlenInAllocCheck::check(
   const Expr *Alloc = Result.Nodes.getNodeAs<CallExpr>("Alloc");
   if (!Alloc)
     Alloc = Result.Nodes.getNodeAs<CXXNewExpr>("Alloc");
-  assert(Alloc && "Matched node bound by 'Alloc' shoud be either 'CallExpr'"
+  assert(Alloc && "Matched node bound by 'Alloc' should be either 'CallExpr'"
          " or 'CXXNewExpr'");
 
   const auto *StrLen = Result.Nodes.getNodeAs<CallExpr>("StrLen");

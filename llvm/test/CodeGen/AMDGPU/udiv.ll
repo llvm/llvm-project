@@ -1,7 +1,8 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -mattr=-fp32-denormals < %s | FileCheck -check-prefix=SI -check-prefix=FUNC -check-prefix=VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -denormal-fp-math-f32=preserve-sign < %s | FileCheck -check-prefix=SI -check-prefix=FUNC -check-prefix=VI %s
 
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+fp32-denormals < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=fiji -denormal-fp-math-f32=ieee < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx1030 -denormal-fp-math-f32=ieee < %s | FileCheck -check-prefix=GCN -check-prefix=GFX1030 %s
 
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
@@ -186,6 +187,7 @@ define amdgpu_kernel void @test_udiv_3_mulhu(i32 %p) {
 
 ; GCN-LABEL: {{^}}fdiv_test_denormals
 ; VI: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX1030: v_fmac_f32_e64 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @fdiv_test_denormals(i8 addrspace(1)* nocapture readonly %arg) {
 bb:
   %tmp = load i8, i8 addrspace(1)* null, align 1

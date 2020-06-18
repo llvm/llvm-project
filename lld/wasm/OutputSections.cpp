@@ -12,9 +12,9 @@
 #include "OutputSegment.h"
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Threads.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Parallel.h"
 
 #define DEBUG_TYPE "lld"
 

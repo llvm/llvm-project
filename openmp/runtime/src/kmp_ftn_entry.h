@@ -1371,6 +1371,13 @@ void FTN_STDCALL FTN_FULFILL_EVENT(kmp_event_t *event) {
 #endif
 }
 
+// display environment variables when requested
+void FTN_STDCALL FTN_DISPLAY_ENV(int verbose) {
+#ifndef KMP_STUB
+  __kmp_omp_display_env(verbose);
+#endif
+}
+
 // GCC compatibility (versioned symbols)
 #ifdef KMP_USE_VERSION_SYMBOLS
 

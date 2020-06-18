@@ -39,44 +39,34 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
   )
 
   target_include_directories(vulkan-runtime-wrappers
-    PRIVATE ${Vulkan_INCLUDE_DIR}
-    LLVMSupport
+    PUBLIC
+    ${Vulkan_INCLUDE_DIR}
   )
 
+  # *IMPORTANT*: This library cannot depend on LLVM libraries. Otherwise,
+  # it may cause LLVM version conflict when used together with other shared
+  # libraries depending on LLVM. Notably, Mesa, who implemnents Vulkan
+  # drivers on Linux, depends on the system libLLVM.so.
   target_link_libraries(vulkan-runtime-wrappers
-    LLVMSupport
-    MLIRSPIRVSerialization
-    LLVMCore
-    LLVMSupport
+    PUBLIC
     ${Vulkan_LIBRARY}
   )
 
+  get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+  get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
   set(LIBS
+    ${dialect_libs}
+    ${conversion_libs}
     LLVMCore
     LLVMSupport
-    MLIRJitRunner
-    MLIRAffineOps
     MLIRAnalysis
     MLIREDSC
     MLIRExecutionEngine
-    MLIRFxpMathOps
-    MLIRGPU
-    MLIRGPUtoCUDATransforms
-    MLIRGPUtoNVVMTransforms
-    MLIRGPUtoSPIRVTransforms
-    MLIRGPUtoVulkanTransforms
     MLIRIR
+    MLIRJitRunner
     MLIRLLVMIR
-    MLIRLinalgOps
-    MLIRLoopToStandard
-    MLIROpenMP
     MLIRParser
-    MLIRQuantOps
-    MLIRROCDLIR
-    MLIRSPIRV
     MLIRSPIRVTransforms
-    MLIRStandardOps
-    MLIRStandardToLLVM
     MLIRSupport
     MLIRTargetLLVMIR
     MLIRTransforms

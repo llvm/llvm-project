@@ -294,10 +294,16 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   TrivialModuleLoader ModLoader;
   HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                           Diags, LangOpts, &*Target);
+
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
                   SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
+  // Ensure we can get expanded locations in presence of implicit includes.
+  // These are different than normal includes since predefines buffer doesn't
+  // have a valid insertion location.
+  PP.setPredefines("#include \"/implicit-header.h\"");
+  FileMgr.getVirtualFile("/implicit-header.h", 0, 0);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
 
@@ -483,6 +489,30 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
   // The INC2 expansion in #include M(INC2) comes before the second
   // MACRO_IN_INCLUDE definition of the included file.
   EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(Macros[10].Loc, Macros[11].Loc));
+}
+
+TEST_F(SourceManagerTest, isMainFile) {
+  const char *Source = "int x;";
+
+  std::unique_ptr<llvm::MemoryBuffer> Buf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+  const FileEntry *SourceFile =
+      FileMgr.getVirtualFile("mainFile.cpp", Buf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(SourceFile, std::move(Buf));
+
+  std::unique_ptr<llvm::MemoryBuffer> Buf2 =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+  const FileEntry *SecondFile =
+      FileMgr.getVirtualFile("file2.cpp", Buf2->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(SecondFile, std::move(Buf2));
+
+  FileID MainFileID = SourceMgr.getOrCreateFileID(SourceFile, SrcMgr::C_User);
+  SourceMgr.setMainFileID(MainFileID);
+
+  EXPECT_TRUE(SourceMgr.isMainFile(FileEntryRef("mainFile.cpp", *SourceFile)));
+  EXPECT_TRUE(
+      SourceMgr.isMainFile(FileEntryRef("anotherName.cpp", *SourceFile)));
+  EXPECT_FALSE(SourceMgr.isMainFile(FileEntryRef("mainFile.cpp", *SecondFile)));
 }
 
 #endif

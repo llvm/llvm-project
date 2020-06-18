@@ -43,8 +43,8 @@ X<int>::X *xi; // expected-error{{qualified reference to 'X' is a constructor na
 X<float>::X *xf; // expected-error{{qualified reference to 'X' is a constructor name rather than a type}}
 
 void test_naming() {
-  c1 = c2; // expected-error{{assigning to 'X<int>::C *' from incompatible type 'X<float>::C *'}}
-  xi = xf;  // expected-error{{assigning to 'X<int>::X<int> *' from incompatible type 'X<float>::X<float> *'}}
+  c1 = c2; // expected-error{{incompatible pointer types assigning to 'X<int>::C *' from 'X<float>::C *'}}
+  xi = xf;  // expected-error{{incompatible pointer types assigning to 'X<int>::X<int> *' from 'X<float>::X<float> *'}}
     // FIXME: error above doesn't print the type X<int>::X cleanly!
 }
 

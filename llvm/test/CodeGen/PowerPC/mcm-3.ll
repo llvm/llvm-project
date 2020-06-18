@@ -33,11 +33,13 @@ entry:
 ; LARGE: ld [[REG2:[0-9]+]], [[VAR]]@toc@l([[REG1]])
 ; LARGE: lwz {{[0-9]+}}, 0([[REG2]])
 ; LARGE: stw {{[0-9]+}}, 0([[REG2]])
-; LARGE: [[VAR]]:
-; LARGE: .tc [[VAR2:[a-z0-9A-Z_.]+]][TC],[[VAR2]]
-; LARGE: .type [[VAR2]],@object
-; LARGE: .data
-; LARGE: .globl [[VAR2]]
-; LARGE: [[VAR2]]:
-; LARGE: .long 5
+; LARGE:      .type gi,@object
+; LARGE-NEXT: .data
+; LARGE-NEXT: .globl gi
+; LARGE-NEXT: .p2align 2
+; LARGE-NEXT: gi:
+; LARGE-NEXT: .long 5
 
+; LARGE:      .section .toc,"aw",@progbits
+; LARGE-NEXT: [[VAR]]:
+; LARGE-NEXT: .tc gi[TC],gi

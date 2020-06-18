@@ -42,3 +42,6 @@ void foo(void) {
 
 // RUN: not c-index-test -write-pch %t.pch foobar.c 2>&1 | FileCheck -check-prefix=NONEXISTENT %s
 // NONEXISTENT: Unable to load translation unit
+
+// RUN: %clang -x c-header %s -o %t-clang.h.pch -Xclang -detailed-preprocessing-record -Xclang -fallow-pch-with-compiler-errors
+// RUN: c-index-test -index-file %s -include %t-clang.h -Xclang -detailed-preprocessing-record | FileCheck -check-prefix=CHECK-INDEX %s

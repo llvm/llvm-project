@@ -258,7 +258,8 @@ public:
 
   /// Perform target specific adjustments to the latency of a schedule
   /// dependency.
-  void adjustSchedDependency(SUnit *def, SUnit *use, SDep& dep) const override;
+  void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
+                             SDep &Dep) const override;
 
   unsigned getVectorLength() const {
     assert(useHVXOps());
@@ -286,9 +287,6 @@ public:
     ArrayRef<MVT> ElemTypes = getHVXElementTypes();
 
     if (IncludeBool && ElemTy == MVT::i1) {
-      // Special case for the v512i1, etc.
-      if (8*HwLen == NumElems)
-        return true;
       // Boolean HVX vector types are formed from regular HVX vector types
       // by replacing the element type with i1.
       for (MVT T : ElemTypes)

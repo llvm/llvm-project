@@ -766,6 +766,7 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   bool AllAGPRUses = true;
   SetVector<const MachineInstr *> worklist;
   SmallSet<const MachineInstr *, 4> Visited;
+  SetVector<MachineInstr *> PHIOperands;
   worklist.insert(&MI);
   Visited.insert(&MI);
   while (!worklist.empty()) {
@@ -810,6 +811,11 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   if (AllAGPRUses && numVGPRUses && !TRI->hasAGPRs(RC0)) {
     LLVM_DEBUG(dbgs() << "Moving PHI to AGPR: " << MI);
     MRI->setRegClass(PHIRes, TRI->getEquivalentAGPRClass(RC0));
+    for (unsigned I = 1, N = MI.getNumOperands(); I != N; I += 2) {
+      MachineInstr *DefMI = MRI->getVRegDef(MI.getOperand(I).getReg());
+      if (DefMI && DefMI->isPHI())
+        PHIOperands.insert(DefMI);
+    }
   }
 
   bool hasVGPRInput = false;
@@ -829,8 +835,22 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
     }
     else if (Def->isCopy() &&
       TRI->isVectorRegister(*MRI, Def->getOperand(1).getReg())) {
-      hasVGPRInput = true;
-      break;
+      Register SrcReg = Def->getOperand(1).getReg();
+      MachineInstr *SrcDef = MRI->getVRegDef(SrcReg);
+      unsigned SMovOp;
+      int64_t Imm;
+      if (!isSafeToFoldImmIntoCopy(Def, SrcDef, TII, SMovOp, Imm)) {
+        hasVGPRInput = true;
+        break;
+      } else {
+        // Formally, if we did not do this right away
+        // it would be done on the next iteration of the
+        // runOnMachineFunction main loop. But why not if we can?
+        MachineFunction *MF = MI.getParent()->getParent();
+        Def->getOperand(1).ChangeToImmediate(Imm);
+        Def->addImplicitDefUseOperands(*MF);
+        Def->setDesc(TII->get(SMovOp));
+      }
     }
   }
 
@@ -845,4 +865,8 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
     TII->legalizeOperands(MI, MDT);
   }
 
+  // Propagate register class back to PHI operands which are PHI themselves.
+  while (!PHIOperands.empty()) {
+    processPHINode(*PHIOperands.pop_back_val());
+  }
 }

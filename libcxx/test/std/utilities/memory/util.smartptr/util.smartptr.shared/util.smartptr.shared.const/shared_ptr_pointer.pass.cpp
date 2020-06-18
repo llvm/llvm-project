@@ -44,6 +44,7 @@ int main(int, char**)
     {
         std::shared_ptr<A> pA(new A);
         assert(pA.use_count() == 1);
+
         {
             B b;
             std::shared_ptr<B> pB(pA, &b);
@@ -60,5 +61,41 @@ int main(int, char**)
     assert(A::count == 0);
     assert(B::count == 0);
 
-  return 0;
+    int *pi = new int;
+    {
+      std::shared_ptr<int> p1(nullptr);
+      std::shared_ptr<int> p2(p1, pi);
+      assert(p2.get() == pi);
+    }
+    delete pi;
+    {
+      std::shared_ptr<int> p1(new int);
+      std::shared_ptr<int> p2(p1, nullptr);
+      assert(p2.get() == nullptr);
+    }
+
+#if TEST_STD_VER > 17 && defined(_LIBCPP_VERSION)
+    // This won't pass when LWG-2996 is implemented.
+    {
+      std::shared_ptr<A> pA(new A);
+      assert(pA.use_count() == 1);
+
+      {
+        B b;
+        std::shared_ptr<B> pB(std::move(pA), &b);
+        assert(A::count == 1);
+        assert(B::count == 1);
+        assert(pA.use_count() == 2);
+        assert(pB.use_count() == 2);
+        assert(pB.get() == &b);
+      }
+      assert(pA.use_count() == 1);
+      assert(A::count == 1);
+      assert(B::count == 0);
+    }
+    assert(A::count == 0);
+    assert(B::count == 0);
+#endif
+
+    return 0;
 }

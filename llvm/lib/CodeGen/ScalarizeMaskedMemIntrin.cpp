@@ -43,6 +43,7 @@ namespace {
 
 class ScalarizeMaskedMemIntrin : public FunctionPass {
   const TargetTransformInfo *TTI = nullptr;
+  const DataLayout *DL = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -82,7 +83,7 @@ static bool isConstantIntVector(Value *Mask) {
   if (!C)
     return false;
 
-  unsigned NumElts = Mask->getType()->getVectorNumElements();
+  unsigned NumElts = cast<VectorType>(Mask->getType())->getNumElements();
   for (unsigned i = 0; i != NumElts; ++i) {
     Constant *CElt = C->getAggregateElement(i);
     if (!CElt || !isa<ConstantInt>(CElt))
@@ -521,9 +522,10 @@ static void scalarizeMaskedScatter(CallInst *CI, bool &ModifiedDT) {
 
   assert(isa<VectorType>(Src->getType()) &&
          "Unexpected data type in masked scatter intrinsic");
-  assert(isa<VectorType>(Ptrs->getType()) &&
-         isa<PointerType>(Ptrs->getType()->getVectorElementType()) &&
-         "Vector of pointers is expected in masked scatter intrinsic");
+  assert(
+      isa<VectorType>(Ptrs->getType()) &&
+      isa<PointerType>(cast<VectorType>(Ptrs->getType())->getElementType()) &&
+      "Vector of pointers is expected in masked scatter intrinsic");
 
   IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
@@ -532,7 +534,7 @@ static void scalarizeMaskedScatter(CallInst *CI, bool &ModifiedDT) {
   Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   MaybeAlign AlignVal(cast<ConstantInt>(Alignment)->getZExtValue());
-  unsigned VectorWidth = Src->getType()->getVectorNumElements();
+  unsigned VectorWidth = cast<VectorType>(Src->getType())->getNumElements();
 
   // Shorten the way if the mask is a vector of constants.
   if (isConstantIntVector(Mask)) {
@@ -725,7 +727,7 @@ static void scalarizeMaskedCompressStore(CallInst *CI, bool &ModifiedDT) {
   Builder.SetInsertPoint(InsertPt);
   Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
-  Type *EltTy = VecType->getVectorElementType();
+  Type *EltTy = VecType->getElementType();
 
   unsigned VectorWidth = VecType->getNumElements();
 
@@ -813,6 +815,7 @@ bool ScalarizeMaskedMemIntrin::runOnFunction(Function &F) {
   bool EverMadeChange = false;
 
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  DL = &F.getParent()->getDataLayout();
 
   bool MadeChange = true;
   while (MadeChange) {
@@ -870,18 +873,23 @@ bool ScalarizeMaskedMemIntrin::optimizeCallInst(CallInst *CI,
       scalarizeMaskedStore(CI, ModifiedDT);
       return true;
     case Intrinsic::masked_gather: {
-      unsigned Alignment =
+      unsigned AlignmentInt =
           cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      if (TTI->isLegalMaskedGather(CI->getType(), MaybeAlign(Alignment)))
+      Type *LoadTy = CI->getType();
+      Align Alignment =
+          DL->getValueOrABITypeAlignment(MaybeAlign(AlignmentInt), LoadTy);
+      if (TTI->isLegalMaskedGather(LoadTy, Alignment))
         return false;
       scalarizeMaskedGather(CI, ModifiedDT);
       return true;
     }
     case Intrinsic::masked_scatter: {
-      unsigned Alignment =
+      unsigned AlignmentInt =
           cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-      if (TTI->isLegalMaskedScatter(CI->getArgOperand(0)->getType(),
-                                    MaybeAlign(Alignment)))
+      Type *StoreTy = CI->getArgOperand(0)->getType();
+      Align Alignment =
+          DL->getValueOrABITypeAlignment(MaybeAlign(AlignmentInt), StoreTy);
+      if (TTI->isLegalMaskedScatter(StoreTy, Alignment))
         return false;
       scalarizeMaskedScatter(CI, ModifiedDT);
       return true;

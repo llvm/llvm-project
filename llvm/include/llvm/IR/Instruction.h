@@ -332,9 +332,6 @@ public:
   /// Returns false if no metadata was found.
   bool extractProfTotalWeight(uint64_t &TotalVal) const;
 
-  /// Sets the branch_weights metadata to \p W for CallInst.
-  void setProfWeight(uint64_t W);
-
   /// Set the debug location information for this instruction.
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }
 
@@ -395,6 +392,11 @@ public:
   /// an operator which supports this flag. See LangRef.html for the meaning of
   /// this flag.
   void setHasAllowReciprocal(bool B);
+
+  /// Set or clear the allow-contract flag on this instruction, which must be
+  /// an operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasAllowContract(bool B);
 
   /// Set or clear the approximate-math-functions flag on this instruction,
   /// which must be an operator which supports this flag. See LangRef.html for

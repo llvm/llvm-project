@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <tuple>
 
@@ -71,22 +71,22 @@ int main(int, char**) {
     {
         static_assert(std::is_constructible<
             std::tuple<A>,
-            std::allocator_arg_t, std::allocator<void>,
+            std::allocator_arg_t, std::allocator<int>,
             std::tuple<A> const&
         >::value, "");
         static_assert(std::is_constructible<
             std::tuple<A>,
-            std::allocator_arg_t, std::allocator<void>,
+            std::allocator_arg_t, std::allocator<int>,
             std::tuple<A> &&
         >::value, "");
         static_assert(std::is_constructible<
             std::tuple<ExplicitA>,
-            std::allocator_arg_t, std::allocator<void>,
+            std::allocator_arg_t, std::allocator<int>,
             std::tuple<ExplicitA> const&
         >::value, "");
         static_assert(std::is_constructible<
             std::tuple<ExplicitA>,
-            std::allocator_arg_t, std::allocator<void>,
+            std::allocator_arg_t, std::allocator<int>,
             std::tuple<ExplicitA> &&
         >::value, "");
     }

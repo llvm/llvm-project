@@ -364,7 +364,7 @@ static void __kmp_stg_parse_int(
     char const
         *name, // I: Name of environment variable (used in warning messages).
     char const *value, // I: Value of environment variable to parse.
-    int min, // I: Miminal allowed value.
+    int min, // I: Minimum allowed value.
     int max, // I: Maximum allowed value.
     int *out // O: Output (parsed) value.
     ) {
@@ -1305,7 +1305,7 @@ static void __kmp_stg_print_max_task_priority(kmp_str_buf_t *buffer,
 } // __kmp_stg_print_max_task_priority
 
 // KMP_TASKLOOP_MIN_TASKS
-// taskloop threashold to switch from recursive to linear tasks creation
+// taskloop threshold to switch from recursive to linear tasks creation
 static void __kmp_stg_parse_taskloop_min_tasks(char const *name,
                                                char const *value, void *data) {
   int tmp;
@@ -2041,7 +2041,7 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
 // If we see a parse error, emit a warning and scan to the next ",".
 //
 // FIXME - there's got to be a better way to print an error
-// message, hopefully without overwritting peices of buf.
+// message, hopefully without overwriting peices of buf.
 #define EMIT_WARN(skip, errlist)                                               \
   {                                                                            \
     char ch;                                                                   \
@@ -4395,7 +4395,7 @@ static void __kmp_stg_print_speculative_statsfile(kmp_str_buf_t *buffer,
 // -----------------------------------------------------------------------------
 // KMP_HW_SUBSET (was KMP_PLACE_THREADS)
 
-// The longest observable sequense of items is
+// The longest observable sequence of items is
 // Socket-Node-Tile-Core-Thread
 // So, let's limit to 5 levels for now
 // The input string is usually short enough, let's use 512 limit for now
@@ -5720,7 +5720,11 @@ void __kmp_env_print() {
 } // __kmp_env_print
 
 void __kmp_env_print_2() {
+  __kmp_display_env_impl(__kmp_display_env, __kmp_display_env_verbose);
+} // __kmp_env_print_2
 
+
+void __kmp_display_env_impl(int display_env, int display_env_verbose) {
   kmp_env_blk_t block;
   kmp_str_buf_t buffer;
 
@@ -5737,9 +5741,9 @@ void __kmp_env_print_2() {
 
   for (int i = 0; i < __kmp_stg_count; ++i) {
     if (__kmp_stg_table[i].print != NULL &&
-        ((__kmp_display_env &&
+        ((display_env &&
           strncmp(__kmp_stg_table[i].name, "OMP_", 4) == 0) ||
-         __kmp_display_env_verbose)) {
+         display_env_verbose)) {
       __kmp_stg_table[i].print(&buffer, __kmp_stg_table[i].name,
                                __kmp_stg_table[i].data);
     }
@@ -5754,7 +5758,6 @@ void __kmp_env_print_2() {
   __kmp_str_buf_free(&buffer);
 
   __kmp_printf("\n");
-
-} // __kmp_env_print_2
+}
 
 // end of file

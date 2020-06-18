@@ -215,9 +215,6 @@ bool VirtualNearMissCheck::isOverriddenByDerivedClass(
 }
 
 void VirtualNearMissCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       cxxMethodDecl(
           unless(anyOf(isOverride(), isImplicit(), cxxConstructorDecl(),

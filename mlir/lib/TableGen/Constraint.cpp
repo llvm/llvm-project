@@ -23,6 +23,8 @@ Constraint::Constraint(const llvm::Record *record)
     kind = CK_Attr;
   } else if (record->isSubClassOf("RegionConstraint")) {
     kind = CK_Region;
+  } else if (record->isSubClassOf("SuccessorConstraint")) {
+    kind = CK_Successor;
   } else {
     assert(record->isSubClassOf("Constraint"));
   }

@@ -184,7 +184,7 @@ class FoundationTestCase(TestBase):
 
         # isa should be accessible.
         self.expect("expression self->isa", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=["(Class)"])
+                    substrs=["Class)"])
 
         # This should fail expectedly.
         self.expect(

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86MacroFusion.h"
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"

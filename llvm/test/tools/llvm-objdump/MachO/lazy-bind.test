@@ -1,0 +1,7 @@
+# RUN: llvm-objdump --macho --lazy-bind %p/Inputs/lazy-bind.macho-x86_64 \
+# RUN:   | FileCheck %s 
+
+
+# CHECK: __DATA   __la_symbol_ptr    0x100001010   libfoo          _foo
+# CHECK: __DATA   __la_symbol_ptr    0x100001018   libbar          _bar
+# CHECK: __DATA   __la_symbol_ptr    0x100001020   libSystem       _malloc

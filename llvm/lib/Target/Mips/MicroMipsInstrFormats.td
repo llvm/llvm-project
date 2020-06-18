@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This files descributes the formats of the microMIPS instruction set.
+// This files describes the formats of the microMIPS instruction set.
 //
 //===----------------------------------------------------------------------===//
 

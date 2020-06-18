@@ -133,3 +133,41 @@ namespace ValidButUnsupported {
     int arr[&f<X> ? 1 : 2];
   } C; // expected-note {{by this typedef}}
 }
+
+namespace ImplicitDecls {
+struct Destructor {
+  ~Destructor() {}
+};
+typedef struct {
+} Empty;
+
+typedef struct {
+  Destructor x;
+} A;
+
+typedef struct {
+  Empty E;
+} B;
+
+typedef struct {
+  const Empty E;
+} C;
+} // namespace ImplicitDecls
+
+struct {
+  static int x; // expected-error {{static data member 'x' not allowed in anonymous struct}}
+} static_member_1;
+
+class {
+  struct A {
+    static int x; // expected-error {{static data member 'x' not allowed in anonymous class}}
+  } x;
+} static_member_2;
+
+union {
+  struct A {
+    struct B {
+      static int x; // expected-error {{static data member 'x' not allowed in anonymous union}}
+    } x;
+  } x;
+} static_member_3;

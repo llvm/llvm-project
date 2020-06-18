@@ -20,6 +20,9 @@ endif()
 # We need to include the llvm components we depend on manually, as liblldb does
 # not re-export those.
 set(LLVM_LINK_COMPONENTS Support)
+set(LLVM_TARGET_DEFINITIONS Options.td)
+tablegen(LLVM Options.inc -gen-opt-parser-defs)
+add_public_tablegen_target(LLDBVSCodeOptionsTableGen)
 add_lldb_tool(lldb-vscode
   lldb-vscode.cpp
   BreakpointBase.cpp
@@ -37,6 +40,7 @@ add_lldb_tool(lldb-vscode
     ${extra_libs}
 
   LINK_COMPONENTS
+    Option
     Support
   )
 

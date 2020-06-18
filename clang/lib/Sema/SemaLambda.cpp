@@ -800,7 +800,7 @@ QualType Sema::buildLambdaInitCaptureInitialization(
   }
   if (EllipsisLoc.isValid()) {
     if (Init->containsUnexpandedParameterPack()) {
-      Diag(EllipsisLoc, getLangOpts().CPlusPlus2a
+      Diag(EllipsisLoc, getLangOpts().CPlusPlus20
                             ? diag::warn_cxx17_compat_init_capture_pack
                             : diag::ext_init_capture_pack);
       DeductType = Context.getPackExpansionType(DeductType, NumExpansions);
@@ -1053,8 +1053,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       //  "&identifier", "this", or "* this". [ Note: The form [&,this] is
       //  redundant but accepted for compatibility with ISO C++14. --end note ]
       if (Intro.Default == LCD_ByCopy && C->Kind != LCK_StarThis)
-        Diag(C->Loc, !getLangOpts().CPlusPlus2a
-                         ? diag::ext_equals_this_lambda_capture_cxx2a
+        Diag(C->Loc, !getLangOpts().CPlusPlus20
+                         ? diag::ext_equals_this_lambda_capture_cxx20
                          : diag::warn_cxx17_compat_equals_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p12:
@@ -1629,7 +1629,8 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
   // If the variable being captured has an invalid type, mark the class as
   // invalid as well.
   if (!FieldType->isDependentType()) {
-    if (RequireCompleteType(Loc, FieldType, diag::err_field_incomplete)) {
+    if (RequireCompleteSizedType(Loc, FieldType,
+                                 diag::err_field_incomplete_or_sizeless)) {
       RD->setInvalidDecl();
       Field->setInvalidDecl();
     } else {
@@ -1747,7 +1748,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
           // Capturing 'this' implicitly with a default of '[=]' is deprecated,
           // because it results in a reference capture. Don't warn prior to
           // C++2a; there's nothing that can be done about it before then.
-          if (getLangOpts().CPlusPlus2a && IsImplicit &&
+          if (getLangOpts().CPlusPlus20 && IsImplicit &&
               CaptureDefault == LCD_ByCopy) {
             Diag(From.getLocation(), diag::warn_deprecated_this_capture);
             Diag(CaptureDefaultLoc, diag::note_deprecated_this_capture)
@@ -1781,6 +1782,8 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       CaptureInits.push_back(Init.get());
     }
 
+    Class->setCaptures(Captures);
+
     // C++11 [expr.prim.lambda]p6:
     //   The closure type for a lambda-expression with no lambda-capture
     //   has a public non-virtual non-explicit const conversion function
@@ -1810,7 +1813,6 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
   LambdaExpr *Lambda = LambdaExpr::Create(Context, Class, IntroducerRange,
                                           CaptureDefault, CaptureDefaultLoc,
-                                          Captures,
                                           ExplicitParams, ExplicitResultType,
                                           CaptureInits, EndLoc,
                                           ContainsUnexpandedParameterPack);

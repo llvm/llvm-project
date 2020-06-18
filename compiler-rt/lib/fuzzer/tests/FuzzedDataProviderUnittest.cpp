@@ -190,14 +190,26 @@ TEST(FuzzedDataProvider, ConsumeRandomLengthString) {
                 "\x1D\xBD\x4E\x17\x04\x1E\xBA\x26\xAC\x1F\xE3\x37\x1C\x15\x43"
                 "\x60\x41\x2A\x7C\xCA\x70\xCE\xAB\x20\x24\xF8\xD9\x1F\x14\x7C"),
             DataProv.ConsumeRandomLengthString(31337));
-  EXPECT_EQ(std::string(Data + 141, Data + 141 + 5),
+  size_t Offset = 141;
+  EXPECT_EQ(std::string(Data + Offset, Data + Offset + 5),
             DataProv.ConsumeRandomLengthString(5));
-  EXPECT_EQ(std::string(Data + 141 + 5, Data + 141 + 5 + 2),
+  Offset += 5;
+  EXPECT_EQ(std::string(Data + Offset, Data + Offset + 2),
             DataProv.ConsumeRandomLengthString(2));
+  Offset += 2;
+
+  // Call the overloaded method without arguments (uses max length available).
+  EXPECT_EQ(std::string(Data + Offset, Data + Offset + 664),
+            DataProv.ConsumeRandomLengthString());
+  Offset += 664 + 2; // +2 because of '\' character followed by any other byte.
+
+  EXPECT_EQ(std::string(Data + Offset, Data + Offset + 92),
+            DataProv.ConsumeRandomLengthString());
+  Offset += 92 + 2;
 
   // Exhaust the buffer.
   auto String = DataProv.ConsumeBytesAsString(31337);
-  EXPECT_EQ(size_t(876), String.length());
+  EXPECT_EQ(size_t(116), String.length());
   EXPECT_EQ(std::string(), DataProv.ConsumeRandomLengthString(1));
 }
 

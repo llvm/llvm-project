@@ -44,9 +44,8 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::support;
 using namespace llvm::support::endian;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 // Helper functions to identify instructions and conditions needed to trigger
 // the Cortex-A53-843419 erratum.
@@ -371,7 +370,7 @@ static uint64_t scanCortexA53Errata843419(InputSection *isec, uint64_t &off,
   return patchOff;
 }
 
-class Patch843419Section : public SyntheticSection {
+class elf::Patch843419Section : public SyntheticSection {
 public:
   Patch843419Section(InputSection *p, uint64_t off);
 
@@ -645,5 +644,3 @@ bool AArch64Err843419Patcher::createFixes() {
   }
   return addressesChanged;
 }
-} // namespace elf
-} // namespace lld

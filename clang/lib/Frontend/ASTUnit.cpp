@@ -224,7 +224,7 @@ struct ASTUnit::ASTWriterData {
 };
 
 void ASTUnit::clearFileLevelDecls() {
-  llvm::DeleteContainerSeconds(FileDecls);
+  FileDecls.clear();
 }
 
 /// After failing to build a precompiled preamble (due to
@@ -2436,9 +2436,9 @@ void ASTUnit::addFileLevelDecl(Decl *D) {
   if (FID.isInvalid())
     return;
 
-  LocDeclsTy *&Decls = FileDecls[FID];
+  std::unique_ptr<LocDeclsTy> &Decls = FileDecls[FID];
   if (!Decls)
-    Decls = new LocDeclsTy();
+    Decls = std::make_unique<LocDeclsTy>();
 
   std::pair<unsigned, Decl *> LocDecl(Offset, D);
 

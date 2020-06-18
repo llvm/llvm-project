@@ -35,6 +35,8 @@ static cl::opt<bool> ImportConstantsWithRefs(
     "import-constants-with-refs", cl::init(true), cl::Hidden,
     cl::desc("Import constant global variables with references"));
 
+constexpr uint32_t FunctionSummary::ParamAccess::RangeWidth;
+
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary({});
 
@@ -300,7 +302,7 @@ void ModuleSummaryIndex::dumpSCCs(raw_ostream &O) {
       if (V.getSummaryList().size())
         F = cast<FunctionSummary>(V.getSummaryList().front().get());
       O << " " << (F == nullptr ? "External" : "") << " " << utostr(V.getGUID())
-        << (I.hasLoop() ? " (has loop)" : "") << "\n";
+        << (I.hasCycle() ? " (has cycle)" : "") << "\n";
     }
     O << "}\n";
   }

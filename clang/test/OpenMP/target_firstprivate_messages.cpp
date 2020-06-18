@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 
 void xxx(int argc) {
   int fp, fp1; // expected-note {{initialize the variable 'fp' to silence this warning}} expected-note {{initialize the variable 'fp1' to silence this warning}}
@@ -10,6 +10,7 @@ void xxx(int argc) {
 }
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -128,7 +129,7 @@ int foomain(I argc, C **argv) {
 {}
 #pragma omp target firstprivate(argv[1]) // expected-error {{expected variable name}}
 {}
-#pragma omp target firstprivate(e, g) allocate(omp_thread_mem_alloc: e) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target' directive}}
+#pragma omp target firstprivate(e, g) allocate(omp_thread_mem_alloc: e) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target' directive}} expected-error {{allocator must be specified in the 'uses_allocators' clause}}
 {}
 #pragma omp target firstprivate(h) // expected-error {{threadprivate or thread local variable cannot be firstprivate}}
 {}
@@ -211,7 +212,7 @@ int main(int argc, char **argv) {
 #pragma omp target map(i) firstprivate(i) // expected-error {{firstprivate variable cannot be in a map clause in '#pragma omp target' directive}}
   {}
   s6 = s6_0; // expected-note {{in instantiation of member function 'S6<float>::operator=' requested here}}
-  s7 = s7_0; // expected-note {{in instantiation of member function 'S7<S6<float> >::operator=' requested here}}
+  s7 = s7_0; // expected-note {{in instantiation of member function 'S7<S6<float>>::operator=' requested here}}
   return foomain(argc, argv); // expected-note {{in instantiation of function template specialization 'foomain<int, char>' requested here}}
 }
 

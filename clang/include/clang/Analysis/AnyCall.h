@@ -41,6 +41,9 @@ public:
     /// An implicit or explicit C++ constructor call
     Constructor,
 
+    /// A C++ inherited constructor produced by a "using T::T" directive
+    InheritedConstructor,
+
     /// A C++ allocation function call (operator `new`), via C++ new-expression
     Allocator,
 
@@ -84,6 +87,9 @@ public:
   AnyCall(const CXXConstructExpr *NE)
       : E(NE), D(NE->getConstructor()), K(Constructor) {}
 
+  AnyCall(const CXXInheritedCtorInitExpr *CIE)
+      : E(CIE), D(CIE->getConstructor()), K(InheritedConstructor) {}
+
   AnyCall(const CXXDestructorDecl *D) : E(nullptr), D(D), K(Destructor) {}
 
   AnyCall(const CXXConstructorDecl *D) : E(nullptr), D(D), K(Constructor) {}
@@ -114,6 +120,8 @@ public:
       return AnyCall(CXDE);
     } else if (const auto *CXCE = dyn_cast<CXXConstructExpr>(E)) {
       return AnyCall(CXCE);
+    } else if (const auto *CXCIE = dyn_cast<CXXInheritedCtorInitExpr>(E)) {
+      return AnyCall(CXCIE);
     } else {
       return None;
     }
@@ -169,6 +177,7 @@ public:
       return cast<CallExpr>(E)->getCallReturnType(Ctx);
     case Destructor:
     case Constructor:
+    case InheritedConstructor:
     case Allocator:
     case Deallocator:
       return cast<FunctionDecl>(D)->getReturnType();

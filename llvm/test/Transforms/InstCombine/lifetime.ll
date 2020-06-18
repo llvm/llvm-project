@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -instcombine -instcombine-infinite-loop-threshold=2 -S | FileCheck %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)

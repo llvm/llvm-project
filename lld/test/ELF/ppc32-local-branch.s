@@ -7,12 +7,12 @@
 ## R_PPC_REL24 and R_PPC_PLTREL24 are converted to PC relative relocations if the
 ## symbol is non-preemptable. The addend of R_PPC_PLTREL24 should be ignored.
 
-# CHECK:      _start:
-# CHECK-NEXT:   b .+12
-# CHECK-NEXT:   b .+8
-# CHECK-NEXT:   b .+4
+# CHECK:      [[#%x,ADDR:]] <_start>:
+# CHECK-NEXT:   b 0x[[#%x,ADDR+12]]
+# CHECK-NEXT:   b 0x[[#%x,ADDR+12]]
+# CHECK-NEXT:   b 0x[[#%x,ADDR+12]]
 # CHECK-EMPTY:
-# CHECK-NEXT: foo:
+# CHECK-NEXT: <foo>:
 
 .globl _start
 _start:

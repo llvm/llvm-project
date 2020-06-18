@@ -1,4 +1,4 @@
-REQUIRES: x86_64-linux
+REQUIRES: x86-registered-target
 RUN: not sancov -covered-functions %p/Inputs/test-linux_x86_64 2>&1 | FileCheck --check-prefix=NOCFILE %s
 
 NOCFILE: WARNING: No coverage file for {{.*}}test-linux_x86_64

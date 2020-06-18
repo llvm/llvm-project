@@ -1,8 +1,14 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-objcopy --strip-non-alloc %t %t2
-# RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-objcopy --strip-non-alloc %t %t.out
+# RUN: llvm-readobj --file-headers --sections %t.out | FileCheck %s
 
-!ELF
+# CHECK: SectionHeaderCount: 5
+# CHECK: Name: non_alloc_in_segment
+# CHECK: Name: .bss
+# CHECK: Name: .text
+# CHECK: Name: .shstrtab
+
+--- !ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
@@ -19,18 +25,38 @@ Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-  - Name:            .blarg
-    Type:            SHT_PROGBITS
-    Flags:           [ ]
 ProgramHeaders:
   # Use an arbitrary segment type to show that the segment type is unimportant.
   - Type: 0x61234567
     Sections:
       - Section: non_alloc_in_segment
 
-# CHECK: SectionHeaderCount: 5
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-objcopy --strip-non-alloc %t2 %t2.out
+# RUN: llvm-readobj --file-headers --sections %t2.out | FileCheck --check-prefix=CHECK2 %s
 
-# CHECK: Name: non_alloc_in_segment
-# CHECK: Name: .bss
-# CHECK: Name: .text
-# CHECK: Name: .shstrtab
+# CHECK2: SectionHeaderCount: 3
+# CHECK2: Name: .text
+# CHECK2: Name: .shstrtab
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+## empty_trailing_non_alloc is considered included by the segment,
+## so it will be retained.
+  - Name:    empty_trailing_non_alloc
+    Type:    SHT_PROGBITS
+  - Name:    trailing_non_alloc
+    Type:    SHT_PROGBITS
+    Content: 00
+ProgramHeaders:
+  - Type: 0x61234567
+    Sections:
+      - Section: .text

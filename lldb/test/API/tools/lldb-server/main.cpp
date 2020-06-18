@@ -1,11 +1,3 @@
-//===-- main.cpp ------------------------------------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
@@ -158,11 +150,39 @@ static void signal_handler(int signo) {
 }
 
 static void swap_chars() {
+#if defined(__x86_64__) || defined(__i386__)
+  asm volatile("movb %1, (%2)\n\t"
+               "movb %0, (%3)\n\t"
+               "movb %0, (%2)\n\t"
+               "movb %1, (%3)\n\t"
+               :
+               : "i"('0'), "i"('1'), "r"(&g_c1), "r"(&g_c2)
+               : "memory");
+#elif defined(__aarch64__)
+  asm volatile("strb %w1, [%2]\n\t"
+               "strb %w0, [%3]\n\t"
+               "strb %w0, [%2]\n\t"
+               "strb %w1, [%3]\n\t"
+               :
+               : "r"('0'), "r"('1'), "r"(&g_c1), "r"(&g_c2)
+               : "memory");
+#elif defined(__arm__)
+  asm volatile("strb %1, [%2]\n\t"
+               "strb %0, [%3]\n\t"
+               "strb %0, [%2]\n\t"
+               "strb %1, [%3]\n\t"
+               :
+               : "r"('0'), "r"('1'), "r"(&g_c1), "r"(&g_c2)
+               : "memory");
+#else
+#warning This may generate unpredictible assembly and cause the single-stepping test to fail.
+#warning Please add appropriate assembly for your target.
   g_c1 = '1';
   g_c2 = '0';
 
   g_c1 = '0';
   g_c2 = '1';
+#endif
 }
 
 static void hello() {
@@ -317,7 +337,7 @@ int main(int argc, char **argv) {
     } else if (std::strstr(argv[i], CALL_FUNCTION_PREFIX)) {
       void (*func_p)() = nullptr;
 
-      // Defaut to providing the address of main.
+      // Default to providing the address of main.
       if (std::strcmp(argv[i] + strlen(CALL_FUNCTION_PREFIX), "hello") == 0)
         func_p = hello;
       else if (std::strcmp(argv[i] + strlen(CALL_FUNCTION_PREFIX),

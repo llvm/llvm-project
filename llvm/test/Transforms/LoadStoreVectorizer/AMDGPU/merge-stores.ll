@@ -111,7 +111,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_i32_f32(i32 addrspace(
 }
 
 ; CHECK-LABEL: @merge_global_store_2_constants_f32_i32
-; CHECK  store <2 x float> <float 4.000000e+00, float 0x370EC00000000000>, <2 x float> addrspace(1)* %{{[0-9]+$}}
+; CHECK: store <2 x i32> <i32 1082130432, i32 123>, <2 x i32> addrspace(1)*
 define amdgpu_kernel void @merge_global_store_2_constants_f32_i32(float addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %out.gep.1.bc = bitcast float addrspace(1)* %out.gep.1 to i32 addrspace(1)*

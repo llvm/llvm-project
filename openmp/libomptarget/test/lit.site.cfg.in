@@ -13,6 +13,7 @@ config.operating_system = "@CMAKE_SYSTEM_NAME@"
 config.libomptarget_all_targets = "@LIBOMPTARGET_ALL_TARGETS@".split()
 config.libomptarget_system_targets = "@LIBOMPTARGET_SYSTEM_TARGETS@".split()
 config.libomptarget_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
+config.libomptarget_not = "@OPENMP_NOT_EXECUTABLE@"
 config.libomptarget_debug = @LIBOMPTARGET_DEBUG@
 
 # Let the main config do the real work.

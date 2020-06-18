@@ -37,16 +37,23 @@ struct X4 {
   X4(const X4&, T = get_value_badly<T>());
 };
 
+struct X5 {
+  X5();
+  X5(const X5&, const X5& = X5());
+};
+
 void g1(const X1&);
 void g2(const X2&);
 void g3(const X3&);
 void g4(const X4<int>&);
+void g5(const X5&);
 
 void test() {
   g1(X1());
   g2(X2());
   g3(X3());
   g4(X4<int>());
+  g5(X5());
 }
 
 // Check that unavailable copy constructors do not cause SFINAE failures.

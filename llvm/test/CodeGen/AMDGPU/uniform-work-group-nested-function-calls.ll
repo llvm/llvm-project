@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd- -amdgpu-annotate-kernel-features %s | FileCheck %s 
+; RUN: opt -S -mtriple=amdgcn-amd- -amdgpu-annotate-kernel-features %s | FileCheck %s
 
 ; Test to verify if the attribute gets propagated across nested function calls
 
@@ -13,7 +13,7 @@ define void @func2() #1 {
   ret void
 }
 
-; CHECK: define amdgpu_kernel void @kernel3() #[[FUNC:[0-9]+]] {
+; CHECK: define amdgpu_kernel void @kernel3() #[[KERNEL:[0-9]+]] {
 define amdgpu_kernel void @kernel3() #2 {
   call void @func2()
   ret void
@@ -22,3 +22,4 @@ define amdgpu_kernel void @kernel3() #2 {
 attributes #2 = { "uniform-work-group-size"="true" }
 
 ; CHECK: attributes #[[FUNC]] = { "uniform-work-group-size"="true" }
+; CHECK: attributes #[[KERNEL]] = { "amdgpu-calls" "uniform-work-group-size"="true" }

@@ -13,7 +13,7 @@
 ; FIXME: We should be able to get rid of those instructions with the variable
 ;        value registers.
 
-; ALL-LABEL: spill_reload:
+; ALL-LABEL: spill_reload{{>?}}:
 
 define <4 x i8>  @spill_reload(<4 x i8> %a, <4 x i8> %b, i32 %g) {
 entry:

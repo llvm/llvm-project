@@ -36,15 +36,11 @@ SymbolFileDWARFDwo::SymbolFileDWARFDwo(SymbolFileDWARF &base_symbol_file,
 }
 
 DWARFCompileUnit *SymbolFileDWARFDwo::GetDWOCompileUnitForHash(uint64_t hash) {
-  DWARFDebugInfo *debug_info = DebugInfo();
-  if (!debug_info)
-    return nullptr;
-
   if (const llvm::DWARFUnitIndex &index = m_context.GetAsLLVM().getCUIndex()) {
     if (const llvm::DWARFUnitIndex::Entry *entry = index.getFromHash(hash)) {
-      if (auto *unit_contrib = entry->getOffset())
+      if (auto *unit_contrib = entry->getContribution())
         return llvm::dyn_cast_or_null<DWARFCompileUnit>(
-            debug_info->GetUnitAtOffset(DIERef::Section::DebugInfo,
+            DebugInfo().GetUnitAtOffset(DIERef::Section::DebugInfo,
                                         unit_contrib->Offset));
     }
     return nullptr;
@@ -60,19 +56,19 @@ DWARFCompileUnit *SymbolFileDWARFDwo::GetDWOCompileUnitForHash(uint64_t hash) {
 }
 
 DWARFCompileUnit *SymbolFileDWARFDwo::FindSingleCompileUnit() {
-  DWARFDebugInfo *debug_info = DebugInfo();
+  DWARFDebugInfo &debug_info = DebugInfo();
 
   // Right now we only support dwo files with one compile unit. If we don't have
   // type units, we can just check for the unit count.
-  if (!debug_info->ContainsTypeUnits() && debug_info->GetNumUnits() == 1)
-    return llvm::cast<DWARFCompileUnit>(debug_info->GetUnitAtIndex(0));
+  if (!debug_info.ContainsTypeUnits() && debug_info.GetNumUnits() == 1)
+    return llvm::cast<DWARFCompileUnit>(debug_info.GetUnitAtIndex(0));
 
   // Otherwise, we have to run through all units, and find the compile unit that
   // way.
   DWARFCompileUnit *cu = nullptr;
-  for (size_t i = 0; i < debug_info->GetNumUnits(); ++i) {
+  for (size_t i = 0; i < debug_info.GetNumUnits(); ++i) {
     if (auto *candidate =
-            llvm::dyn_cast<DWARFCompileUnit>(debug_info->GetUnitAtIndex(i))) {
+            llvm::dyn_cast<DWARFCompileUnit>(debug_info.GetUnitAtIndex(i))) {
       if (cu)
         return nullptr; // More that one CU found.
       cu = candidate;
@@ -99,10 +95,10 @@ SymbolFileDWARFDwo::GetForwardDeclClangTypeToDie() {
   return GetBaseSymbolFile().GetForwardDeclClangTypeToDie();
 }
 
-size_t SymbolFileDWARFDwo::GetObjCMethodDIEOffsets(
-    lldb_private::ConstString class_name, DIEArray &method_die_offsets) {
-  return GetBaseSymbolFile().GetObjCMethodDIEOffsets(class_name,
-                                                     method_die_offsets);
+void SymbolFileDWARFDwo::GetObjCMethods(
+    lldb_private::ConstString class_name,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  GetBaseSymbolFile().GetObjCMethods(class_name, callback);
 }
 
 UniqueDWARFASTTypeMap &SymbolFileDWARFDwo::GetUniqueDWARFASTTypeMap() {
@@ -129,7 +125,7 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
-  if (*die_ref.dwo_num() == GetDwoNum())
-    return DebugInfo()->GetDIE(die_ref);
+  if (die_ref.dwo_num() == GetDwoNum())
+    return DebugInfo().GetDIE(die_ref);
   return GetBaseSymbolFile().GetDIE(die_ref);
 }

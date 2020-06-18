@@ -75,6 +75,7 @@ private:
   void BuildScopeInformation(Decl *D, unsigned &ParentScope);
   void BuildScopeInformation(VarDecl *D, const BlockDecl *BDecl,
                              unsigned &ParentScope);
+  void BuildScopeInformation(CompoundLiteralExpr *CLE, unsigned &ParentScope);
   void BuildScopeInformation(Stmt *S, unsigned &origParentScope);
 
   void VerifyJumps();
@@ -274,6 +275,16 @@ void JumpScopeChecker::BuildScopeInformation(VarDecl *D,
                                Diags.first, Diags.second, Loc));
     ParentScope = Scopes.size()-1;
   }
+}
+
+/// Build scope information for compound literals of C struct types that are
+/// non-trivial to destruct.
+void JumpScopeChecker::BuildScopeInformation(CompoundLiteralExpr *CLE,
+                                             unsigned &ParentScope) {
+  unsigned InDiag = diag::note_enters_compound_literal_scope;
+  unsigned OutDiag = diag::note_exits_compound_literal_scope;
+  Scopes.push_back(GotoScope(ParentScope, InDiag, OutDiag, CLE->getExprLoc()));
+  ParentScope = Scopes.size() - 1;
 }
 
 /// BuildScopeInformation - The statements from CI to CE are known to form a
@@ -529,11 +540,15 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     // implementable but a lot of work which we haven't felt up to doing.
     ExprWithCleanups *EWC = cast<ExprWithCleanups>(S);
     for (unsigned i = 0, e = EWC->getNumObjects(); i != e; ++i) {
-      const BlockDecl *BDecl = EWC->getObject(i);
-      for (const auto &CI : BDecl->captures()) {
-        VarDecl *variable = CI.getVariable();
-        BuildScopeInformation(variable, BDecl, origParentScope);
-      }
+      if (auto *BDecl = EWC->getObject(i).dyn_cast<BlockDecl *>())
+        for (const auto &CI : BDecl->captures()) {
+          VarDecl *variable = CI.getVariable();
+          BuildScopeInformation(variable, BDecl, origParentScope);
+        }
+      else if (auto *CLE = EWC->getObject(i).dyn_cast<CompoundLiteralExpr *>())
+        BuildScopeInformation(CLE, origParentScope);
+      else
+        llvm_unreachable("unexpected cleanup object type");
     }
     break;
   }

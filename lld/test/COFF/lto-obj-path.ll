@@ -11,6 +11,18 @@
 ; RUN: llvm-nm %t4.obj 2>&1 | FileCheck %s -check-prefix=SYMBOLS
 ; RUN: llvm-nm %t4.obj 2>&1 | count 1
 
+;; Ensure lld emits empty combined module if specific obj-path.
+; RUN: rm -fr %t.dir/objpath && mkdir -p %t.dir/objpath
+; RUN: lld-link /out:%t.dir/objpath/a.exe -lto-obj-path:%t4.obj \
+; RUN:     -entry:main %t1.obj %t2.obj -lldsavetemps
+; RUN: ls %t.dir/objpath/a.exe.lto.* | count 3
+
+;; Ensure lld does not emit empty combined module in default.
+; RUN: rm -fr %t.dir/objpath && mkdir -p %t.dir/objpath
+; RUN: lld-link /out:%t.dir/objpath/a.exe \
+; RUN:     -entry:main %t1.obj %t2.obj -lldsavetemps
+; RUN: ls %t.dir/objpath/a.exe.lto.* | count 2
+
 ; CHECK: Format: COFF-x86-64
 ; SYMBOLS: @feat.00
 

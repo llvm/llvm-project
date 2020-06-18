@@ -17,6 +17,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PatternMatch.h"
@@ -71,6 +72,7 @@ static llvm::Optional<ExpandedMatch> matchExpandedRem(Instruction &I) {
   return M;
 }
 
+namespace {
 /// A thin wrapper to store two values that we matched as div-rem pair.
 /// We want this extra indirection to avoid dealing with RAUW'ing the map keys.
 struct DivRemPairWorklistEntry {
@@ -111,6 +113,7 @@ struct DivRemPairWorklistEntry {
     }
   }
 };
+} // namespace
 using DivRemWorklistTy = SmallVector<DivRemPairWorklistEntry, 4>;
 
 /// Find matching pairs of integer div/rem ops (they have the same numerator,
@@ -218,6 +221,7 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       NumRecomposed++;
       // Note that we have left ((X / Y) * Y) around.
       // If it had other uses we could rewrite it as X - X % Y
+      Changed = true;
     }
 
     assert((!E.isRemExpanded() || !HasDivRemOp) &&
@@ -300,6 +304,29 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
         DivInst->moveBefore(RemInst);
       Mul->insertAfter(RemInst);
       Sub->insertAfter(Mul);
+
+      // If X can be undef, X should be frozen first.
+      // For example, let's assume that Y = 1 & X = undef:
+      //   %div = sdiv undef, 1 // %div = undef
+      //   %rem = srem undef, 1 // %rem = 0
+      // =>
+      //   %div = sdiv undef, 1 // %div = undef
+      //   %mul = mul %div, 1   // %mul = undef
+      //   %rem = sub %x, %mul  // %rem = undef - undef = undef
+      // If X is not frozen, %rem becomes undef after transformation.
+      // TODO: We need a undef-specific checking function in ValueTracking
+      if (!isGuaranteedNotToBeUndefOrPoison(X, DivInst, &DT)) {
+        auto *FrX = new FreezeInst(X, X->getName() + ".frozen", DivInst);
+        DivInst->setOperand(0, FrX);
+        Sub->setOperand(0, FrX);
+      }
+      // Same for Y. If X = 1 and Y = (undef | 1), %rem in src is either 1 or 0,
+      // but %rem in tgt can be one of many integer values.
+      if (!isGuaranteedNotToBeUndefOrPoison(Y, DivInst, &DT)) {
+        auto *FrY = new FreezeInst(Y, Y->getName() + ".frozen", DivInst);
+        DivInst->setOperand(1, FrY);
+        Mul->setOperand(1, FrY);
+      }
 
       // Now kill the explicit remainder. We have replaced it with:
       // (sub X, (mul (div X, Y), Y)

@@ -501,6 +501,8 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     launch_info.SetArguments(args, first_arg_is_executable);
   }
 
+  launch_info.GetEnvironment() = Host::GetEnvironment();
+
   if (working_dir)
     launch_info.SetWorkingDirectory(working_dir);
   llvm::SmallString<64> output_file_path;
@@ -519,7 +521,7 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     }
   }
 
-  FileSpec output_file_spec(output_file_path.c_str());
+  FileSpec output_file_spec(output_file_path.str());
   // Set up file descriptors.
   launch_info.AppendSuppressFileAction(STDIN_FILENO, true, false);
   if (output_file_spec)
@@ -677,4 +679,24 @@ void llvm::format_provider<WaitStatus>::format(const WaitStatus &WS,
     break;
   }
   OS << desc << " " << int(WS.status);
+}
+
+uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                             ProcessInstanceInfoList &process_infos) {
+
+  if (llvm::Optional<ProcessInstanceInfoList> infos =
+          repro::GetReplayProcessInstanceInfoList()) {
+    process_infos = *infos;
+    return process_infos.size();
+  }
+
+  uint32_t result = FindProcessesImpl(match_info, process_infos);
+
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
+    g->GetOrCreate<repro::ProcessInfoProvider>()
+        .GetNewProcessInfoRecorder()
+        ->Record(process_infos);
+  }
+
+  return result;
 }

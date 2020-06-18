@@ -1735,6 +1735,7 @@ public:
 
   void initializeLocal(ASTContext &Context, SourceLocation loc) {
     setAttrNameLoc(loc);
+    setAttrOperandParensRange(loc);
     setAttrOperandParensRange(SourceRange(loc));
     setAttrExprOperand(getTypePtr()->getAddrSpaceExpr());
   }
@@ -1773,6 +1774,68 @@ class DependentSizedExtVectorTypeLoc :
                                      DependentSizedExtVectorTypeLoc,
                                      DependentSizedExtVectorType> {
 };
+
+struct MatrixTypeLocInfo {
+  SourceLocation AttrLoc;
+  SourceRange OperandParens;
+  Expr *RowOperand;
+  Expr *ColumnOperand;
+};
+
+class MatrixTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc, MatrixTypeLoc,
+                                             MatrixType, MatrixTypeLocInfo> {
+public:
+  /// The location of the attribute name, i.e.
+  ///    float __attribute__((matrix_type(4, 2)))
+  ///                         ^~~~~~~~~~~~~~~~~
+  SourceLocation getAttrNameLoc() const { return getLocalData()->AttrLoc; }
+  void setAttrNameLoc(SourceLocation loc) { getLocalData()->AttrLoc = loc; }
+
+  /// The attribute's row operand, if it has one.
+  ///    float __attribute__((matrix_type(4, 2)))
+  ///                                     ^
+  Expr *getAttrRowOperand() const { return getLocalData()->RowOperand; }
+  void setAttrRowOperand(Expr *e) { getLocalData()->RowOperand = e; }
+
+  /// The attribute's column operand, if it has one.
+  ///    float __attribute__((matrix_type(4, 2)))
+  ///                                        ^
+  Expr *getAttrColumnOperand() const { return getLocalData()->ColumnOperand; }
+  void setAttrColumnOperand(Expr *e) { getLocalData()->ColumnOperand = e; }
+
+  /// The location of the parentheses around the operand, if there is
+  /// an operand.
+  ///    float __attribute__((matrix_type(4, 2)))
+  ///                                    ^    ^
+  SourceRange getAttrOperandParensRange() const {
+    return getLocalData()->OperandParens;
+  }
+  void setAttrOperandParensRange(SourceRange range) {
+    getLocalData()->OperandParens = range;
+  }
+
+  SourceRange getLocalSourceRange() const {
+    SourceRange range(getAttrNameLoc());
+    range.setEnd(getAttrOperandParensRange().getEnd());
+    return range;
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setAttrNameLoc(loc);
+    setAttrOperandParensRange(loc);
+    setAttrRowOperand(nullptr);
+    setAttrColumnOperand(nullptr);
+  }
+};
+
+class ConstantMatrixTypeLoc
+    : public InheritingConcreteTypeLoc<MatrixTypeLoc, ConstantMatrixTypeLoc,
+                                       ConstantMatrixType> {};
+
+class DependentSizedMatrixTypeLoc
+    : public InheritingConcreteTypeLoc<MatrixTypeLoc,
+                                       DependentSizedMatrixTypeLoc,
+                                       DependentSizedMatrixType> {};
 
 // FIXME: location of the '_Complex' keyword.
 class ComplexTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
@@ -2450,6 +2513,12 @@ inline T TypeLoc::getAsAdjusted() const {
   }
   return Cur.getAs<T>();
 }
+class ExtIntTypeLoc final
+    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, ExtIntTypeLoc,
+                                        ExtIntType> {};
+class DependentExtIntTypeLoc final
+    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, DependentExtIntTypeLoc,
+                                        DependentExtIntType> {};
 
 } // namespace clang
 

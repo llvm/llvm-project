@@ -16,5 +16,5 @@
 .err
 .endif
 
-# CHECK: 00000007         *ABS*  00000000 a
-# CHECK: 0000000b         *ABS*  00000000 b
+# CHECK: 00000007 l       *ABS*  00000000 a
+# CHECK: 0000000b l       *ABS*  00000000 b

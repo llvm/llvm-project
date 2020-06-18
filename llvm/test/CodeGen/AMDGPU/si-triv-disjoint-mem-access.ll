@@ -88,10 +88,10 @@ define amdgpu_kernel void @no_reorder_barrier_local_load_global_store_local_load
 ; GCN-LABEL: {{^}}reorder_constant_load_global_store_constant_load:
 ; GCN-DAG: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
 ; GCN: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
-; CI: buffer_store_dword
 
-; CI-DAG: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x1
-; CI-DAG: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x3
+; CI: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x1
+; CI: buffer_store_dword
+; CI: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x3
 
 ; GFX9: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x4
 ; GFX9: global_store_dword

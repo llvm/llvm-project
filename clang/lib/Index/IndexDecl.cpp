@@ -765,6 +765,9 @@ bool IndexingContext::indexTopLevelDecl(const Decl *D) {
   if (isa<ObjCMethodDecl>(D))
     return true; // Wait for the objc container.
 
+  if (IndexOpts.ShouldTraverseDecl && !IndexOpts.ShouldTraverseDecl(D))
+    return true; // skip
+
   return indexDecl(D);
 }
 

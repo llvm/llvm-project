@@ -20,6 +20,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -468,6 +469,18 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     // encode these in an object file but MSVC doesn't do anything with it.
     if (getTarget().getCXXABI().isMicrosoft())
       return;
+    // In wasm we currently treat 'throw()' in the same way as 'noexcept'. In
+    // case of throw with types, we ignore it and print a warning for now.
+    // TODO Correctly handle exception specification in wasm
+    if (CGM.getLangOpts().WasmExceptions) {
+      if (EST == EST_DynamicNone)
+        EHStack.pushTerminate();
+      else
+        CGM.getDiags().Report(D->getLocation(),
+                              diag::warn_wasm_dynamic_exception_spec_ignored)
+            << FD->getExceptionSpecSourceRange();
+      return;
+    }
     unsigned NumExceptions = Proto->getNumExceptions();
     EHFilterScope *Filter = EHStack.pushFilter(NumExceptions);
 
@@ -544,6 +557,14 @@ void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
     // encode these in an object file but MSVC doesn't do anything with it.
     if (getTarget().getCXXABI().isMicrosoft())
       return;
+    // In wasm we currently treat 'throw()' in the same way as 'noexcept'. In
+    // case of throw with types, we ignore it and print a warning for now.
+    // TODO Correctly handle exception specification in wasm
+    if (CGM.getLangOpts().WasmExceptions) {
+      if (EST == EST_DynamicNone)
+        EHStack.popTerminate();
+      return;
+    }
     EHFilterScope &filterScope = cast<EHFilterScope>(*EHStack.begin());
     emitFilterDispatchBlock(*this, filterScope);
     EHStack.popFilter();
@@ -1639,6 +1660,19 @@ struct PerformSEHFinally final : EHScopeStack::Cleanup {
 
     llvm::Value *IsForEH =
         llvm::ConstantInt::get(CGF.ConvertType(ArgTys[0]), F.isForEHCleanup());
+
+    // Except _leave and fall-through at the end, all other exits in a _try
+    //   (return/goto/continue/break) are considered as abnormal terminations
+    //   since _leave/fall-through is always Indexed 0,
+    //   just use NormalCleanupDestSlot (>= 1 for goto/return/..),
+    //   as 1st Arg to indicate abnormal termination
+    if (!F.isForEHCleanup() && F.hasExitSwitch()) {
+      Address Addr = CGF.getNormalCleanupDestSlot();
+      llvm::Value *Load = CGF.Builder.CreateLoad(Addr, "cleanup.dest");
+      llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int32Ty);
+      IsForEH = CGF.Builder.CreateICmpNE(Load, Zero);
+    }
+
     Args.add(RValue::get(IsForEH), ArgTys[0]);
     Args.add(RValue::get(FP), ArgTys[1]);
 

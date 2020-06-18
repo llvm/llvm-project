@@ -17,9 +17,6 @@ namespace tidy {
 namespace hicpp {
 
 void ExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       cxxThrowExpr(
           unless(has(expr(anyOf(isTypeDependent(), isValueDependent())))),
@@ -33,7 +30,7 @@ void ExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
                     hasType(substTemplateTypeParmType().bind("templ_type")))),
                 anything()),
           // Bind to the declaration of the type of the value that
-          // is thrown. 'anything()' is necessary to always suceed
+          // is thrown. 'anything()' is necessary to always succeed
           // in the 'eachOf' because builtin types are not
           // 'namedDecl'.
           eachOf(has(expr(hasType(namedDecl().bind("decl")))), anything()))

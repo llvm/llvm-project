@@ -112,7 +112,7 @@ struct float_int32_s f_ret_float_int32_s() {
 // CHECK: define void @f_float_int64_s_arg(%struct.float_int64_s* %a)
 void f_float_int64_s_arg(struct float_int64_s a) {}
 
-// CHECK: define void @f_ret_float_int64_s(%struct.float_int64_s* noalias sret %agg.result)
+// CHECK: define void @f_ret_float_int64_s(%struct.float_int64_s* noalias sret align 8 %agg.result)
 struct float_int64_s f_ret_float_int64_s() {
   return (struct float_int64_s){1.0, 2};
 }
@@ -236,7 +236,7 @@ struct int_float_int_s { int a; float b; int c; };
 // CHECK: define void @f_int_float_int_s_arg(%struct.int_float_int_s* %a)
 void f_int_float_int_s_arg(struct int_float_int_s a) {}
 
-// CHECK: define void @f_ret_int_float_int_s(%struct.int_float_int_s* noalias sret %agg.result)
+// CHECK: define void @f_ret_int_float_int_s(%struct.int_float_int_s* noalias sret align 4 %agg.result)
 struct int_float_int_s f_ret_int_float_int_s() {
   return (struct int_float_int_s){1, 2.0, 3};
 }
@@ -246,7 +246,7 @@ struct int64_float_s { int64_t a; float b; };
 // CHECK: define void @f_int64_float_s_arg(%struct.int64_float_s* %a)
 void f_int64_float_s_arg(struct int64_float_s a) {}
 
-// CHECK: define void @f_ret_int64_float_s(%struct.int64_float_s* noalias sret %agg.result)
+// CHECK: define void @f_ret_int64_float_s(%struct.int64_float_s* noalias sret align 8 %agg.result)
 struct int64_float_s f_ret_int64_float_s() {
   return (struct int64_float_s){1, 2.0};
 }

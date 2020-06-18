@@ -129,7 +129,7 @@ public:
   virtual Value *CreateInsertElement(Constant *Vec, Constant *NewElt,
                                      Constant *Idx) const = 0;
   virtual Value *CreateShuffleVector(Constant *V1, Constant *V2,
-                                     Constant *Mask) const = 0;
+                                     ArrayRef<int> Mask) const = 0;
   virtual Value *CreateExtractValue(Constant *Agg,
                                     ArrayRef<unsigned> IdxList) const = 0;
   virtual Value *CreateInsertValue(Constant *Agg, Constant *Val,

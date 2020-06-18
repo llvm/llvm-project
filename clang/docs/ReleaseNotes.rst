@@ -54,17 +54,55 @@ Improvements to Clang's diagnostics
 - -Wpointer-to-int-cast is a new warning group. This group warns about C-style
   casts of pointers to a integer type too small to hold all possible values.
 
+- -Wuninitialized-const-reference is a new warning controlled by 
+  -Wuninitialized. It warns on cases where uninitialized variables are passed
+  as const reference arguments to a function.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- For the ARM target, C-language intrinsics are now provided for the full Arm
+  v8.1-M MVE instruction set. ``<arm_mve.h>`` supports the complete API defined
+  in the Arm C Language Extensions.
+
+- For the ARM target, C-language intrinsics ``<arm_cde.h>`` for the CDE
+  instruction set are now provided.
+
+- clang adds support for a set of  extended integer types (``_ExtInt(N)``) that
+  permit non-power of 2 integers, exposing the LLVM integer types. Since a major
+  motivating use case for these types is to limit 'bit' usage, these types don't
+  automatically promote to 'int' when operations are done between two
+  ``ExtInt(N)`` types, instead math occurs at the size of the largest
+  ``ExtInt(N)`` type.
+
+- Users of UBSan, PGO, and coverage on Windows will now need to add clang's
+  library resource directory to their library search path. These features all
+  use runtime libraries, and Clang provides these libraries in its resource
+  directory. For example, if LLVM is installed in ``C:\Program Files\LLVM``,
+  then the profile runtime library will appear at
+  ``C:\Program Files\LLVM\lib\clang\11.0.0\lib\windows\clang_rt.profile-x86_64.lib``.
+  To ensure that the linker can find the appropriate library, users should pass
+  ``/LIBPATH:C:\Program Files\LLVM\lib\clang\11.0.0\lib\windows`` to the
+  linker. If the user links the program with the ``clang`` or ``clang-cl``
+  drivers, the driver will pass this flag for them.
+
+- Clang's profile files generated through ``-fprofile-instr-generate`` are using
+  a fixed hashing algorithm that prevents some collision when loading
+  out-of-date profile informations. Clang can still read old profile files.
 
 New Compiler Flags
 ------------------
 
-
 - -fstack-clash-protection will provide a protection against the stack clash
-  attack for x86 architecture through automatic probing of each page of
-  allocated stack.
+  attack for x86 and s390x architectures through automatic probing of each page
+  of allocated stack.
+
+- -ffp-exception-behavior={ignore,maytrap,strict} allows the user to specify
+  the floating-point exception behavior. The default setting is ``ignore``.
+
+- -ffp-model={precise,strict,fast} provides the user an umbrella option to
+  simplify access to the many single purpose floating point options. The default
+  setting is ``precise``.
 
 Deprecated Compiler Flags
 -------------------------
@@ -77,6 +115,29 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
+- -fno-common has been enabled as the default for all targets.  Therefore, C
+  code that uses tentative definitions as definitions of a variable in multiple
+  translation units will trigger multiple-definition linker errors. Generally,
+  this occurs when the use of the ``extern`` keyword is neglected in the
+  declaration of a variable in a header file. In some cases, no specific
+  translation unit provides a definition of the variable. The previous
+  behavior can be restored by specifying ``-fcommon``.
+- -Wasm-ignored-qualifier (ex. `asm const ("")`) has been removed and replaced
+  with an error (this matches a recent change in GCC-9).
+- -Wasm-file-asm-volatile (ex. `asm volatile ("")` at global scope) has been
+  removed and replaced with an error (this matches GCC's behavior).
+- Duplicate qualifiers on asm statements (ex. `asm volatile volatile ("")`) no
+  longer produces a warning via -Wduplicate-decl-specifier, but now an error
+  (this matches GCC's behavior).
+- The deprecated argument ``-f[no-]sanitize-recover`` has changed to mean
+  ``-f[no-]sanitize-recover=all`` instead of
+  ``-f[no-]sanitize-recover=undefined,integer`` and is no longer deprecated.
+- The argument to ``-f[no-]sanitize-trap=...`` is now optional and defaults to
+  ``all``.
+- ``-fno-char8_t`` now disables the ``char8_t`` keyword, not just the use of
+  ``char8_t`` as the character type of ``u8`` literals. This restores the
+  Clang 8 behavior that regressed in Clang 9 and 10.
+- -print-targets has been added to print the registered targets.
 
 New Pragmas in Clang
 --------------------
@@ -86,7 +147,9 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- ...
+- Attributes can now be specified by clang plugins. See the
+  `Clang Plugins <ClangPlugins.html#defining-attributes>`_ documentation for
+  details.
 
 Windows Support
 ---------------
@@ -94,12 +157,13 @@ Windows Support
 C Language Changes in Clang
 ---------------------------
 
+- The default C language standard used when `-std=` is not specified has been
+  upgraded from gnu11 to gnu17.
+
+- Clang now supports the GNU C extension `asm inline`; it won't do anything
+  *yet*, but it will be parsed.
+
 - ...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
 
 C++ Language Changes in Clang
 -----------------------------
@@ -119,7 +183,7 @@ C++ Language Changes in Clang
   Previous versions of Clang rejected some constructs of this form
   (specifically, where the linkage of the type happened to be computed
   before the parser reached the typedef name); those cases are still rejected
-  in Clang 11.  In addition, cases that previous versions of Clang did not
+  in Clang 11. In addition, cases that previous versions of Clang did not
   reject now produce an extension warning. This warning can be disabled with
   the warning flag ``-Wno-non-c-typedef-for-linkage``.
 
@@ -150,7 +214,6 @@ C++1z Feature Support
 Objective-C Language Changes in Clang
 -------------------------------------
 
-
 OpenCL C Language Changes in Clang
 ----------------------------------
 
@@ -158,7 +221,6 @@ OpenCL C Language Changes in Clang
 
 ABI Changes in Clang
 --------------------
-
 
 OpenMP Support in Clang
 -----------------------
@@ -177,31 +239,84 @@ These are major API changes that have happened since the 10.0.0 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
-
 Build System Changes
 --------------------
 
 These are major changes to the build system that have happened since the 10.0.0
 release of Clang. Users of the build system should adjust accordingly.
 
-- ...
+- clang-tidy and clang-include-fixer are no longer compiled into libclang by
+  default. You can set ``LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA=ON`` to undo that,
+  but it's expected that that setting will go away eventually. If this is
+  something you need, please reach out to the mailing list to discuss possible
+  ways forward.
 
 AST Matchers
 ------------
 
-- ...
+- Traversal in AST Matchers was simplified to use the
+  ``TK_IgnoreUnlessSpelledInSource`` mode by default, instead of ``TK_AsIs``.
+  This means that many uses of the ``ignoringImplicit()`` and similar matchers
+  is no longer necessary.  Clients of AST Matchers which wish to match on
+  implicit AST nodes can wrap their matcher in ``traverse(TK_AsIs, ...)`` or
+  use ``TraversalKindScope`` if appropriate.  The ``clang-query`` tool also
+  uses ``IgnoreUnlessSpelledInSource`` by default.  The mode can be changed
+  using ``set traversal AsIs`` in the ``clang-query`` environment.
+
+  As this change requires downstream tools which use AST Matchers to adapt
+  to the new default, a porting guide may be useful for downstream tools
+  needing to adapt.
+
+  Note that although there are many steps below, only the first is
+  non-optional. The steps are intentionally extemely granular to facilitate
+  understanding of the guide itself. It is reasonable to do some of the
+  steps at the same time if you understand the guide:
+
+  1. Use ``(your ASTContext instance).getParentMapContext().setTraversalKind(TK_AsIs)``
+     to restore the previous behavior for your tool.  All further steps in
+     this porting guide are optional.
+  2. Wrap your existing matcher expressions with ``traverse(TK_AsIs, ...)``
+     before passing them to ``ASTMatchFinder::addMatcher``.
+  3. Remove ``(your ASTContext instance).getParentMapContext().setTraversalKind(TK_AsIs)``
+     from your tool so that the default behavior of your tool matches the
+     default behavior of upstream clang. This is made possible by wrapping
+     your matchers in ``traverse(TK_AsIs, ...)`` from step (2).
+  4. Audit your matcher expressions and remove ``traverse(TK_AsIs, ...)``
+     where not needed.
+  5. Audit your matcher expressions and remove calls to ``ignoring*()``
+     matchers where not needed.
+  6. Audit your matcher expressions and consider whether the matcher is
+     better using the ``TK_AsIs`` mode or if it can be better expressed in
+     the default mode. For example, some matchers explicitly match
+     ``has(implicitCastExpr(has(...)))``. Such matchers are sometimes
+     written by author who were unaware of the existence of the
+     ``ignoring*()`` matchers.
+
 
 clang-format
 ------------
 
+- Option ``IndentExternBlock`` has been added to optionally apply indenting inside ``extern "C"`` and ``extern "C++"`` blocks.
+
+- ``IndentExternBlock`` option accepts ``AfterExternBlock`` to use the old behavior, as well as Indent and NoIndent options, which map to true and false, respectively.
+
+  .. code-block:: c++
+
+    Indent:                       NoIndent:
+     #ifdef __cplusplus          #ifdef __cplusplus
+     extern "C" {                extern "C++" {
+     #endif                      #endif
+
+          void f(void);          void f(void);
+
+     #ifdef __cplusplus          #ifdef __cplusplus
+     }                           }
+     #endif                      #endif
 
 - Option ``IndentCaseBlocks`` has been added to support treating the block
   following a switch case label as a scope block which gets indented itself.
   It helps avoid having the closing bracket align with the switch statement's
   closing bracket (when ``IndentCaseLabels`` is ``false``).
-
-- Option ``ObjCBreakBeforeNestedBlockParam`` has been added to optionally apply
-  linebreaks for function arguments declarations before nested blocks.
 
   .. code-block:: c++
 
@@ -216,6 +331,9 @@ clang-format
         plop();
       }
     }
+
+- Option ``ObjCBreakBeforeNestedBlockParam`` has been added to optionally apply
+  linebreaks for function arguments declarations before nested blocks.
 
 - Option ``InsertTrailingCommas`` can be set to ``TCS_Wrapped`` to insert
   trailing commas in container literals (arrays and objects) that wrap across
@@ -241,6 +359,41 @@ clang-format
           bar();
         });
 
+- Option ``AlignConsecutiveBitFields`` has been added to align bit field
+  declarations across multiple adjacent lines
+
+  .. code-block:: c++
+
+      true:
+        bool aaa  : 1;
+        bool a    : 1;
+        bool bb   : 1;
+
+      false:
+        bool aaa : 1;
+        bool a : 1;
+        bool bb : 1;
+
+- Option ``BraceWrapping.BeforeWhile`` has been added to allow wrapping
+  before the ```while`` in a do..while loop. By default the value is (``false``)
+
+  In previous releases ``IndentBraces`` implied ``BraceWrapping.BeforeWhile``.
+  If using a Custom BraceWrapping style you may need to now set
+  ``BraceWrapping.BeforeWhile`` to (``true``) to be explicit.
+
+  .. code-block:: c++
+
+      true:
+      do {
+        foo();
+      }
+      while(1);
+
+      false:
+      do {
+        foo();
+      } while(1);
+
 libclang
 --------
 
@@ -255,7 +408,6 @@ Static Analyzer
 
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
-
 
 Core Analysis Improvements
 ==========================
@@ -282,7 +434,7 @@ Additional Information
 
 A wide variety of additional information is available on the `Clang web
 page <https://clang.llvm.org/>`_. The web page contains versions of the
-API documentation which are up-to-date with the Subversion version of
+API documentation which are up-to-date with the Git version of
 the source code. You can access versions of these documents specific to
 this release by going into the "``clang/docs/``" directory in the Clang
 tree.

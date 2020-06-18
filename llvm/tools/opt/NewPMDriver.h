@@ -22,7 +22,6 @@
 
 namespace llvm {
 class StringRef;
-class LLVMContext;
 class Module;
 class TargetMachine;
 class ToolOutputFile;

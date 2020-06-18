@@ -54,6 +54,7 @@
 // FNOSANICOVERALL-NEXT: func
 // FNOSANICOVERALL-NEXT: indirect-calls
 // FNOSANICOVERALL-NEXT: inline-8bit-counters
+// FNOSANICOVERALL-NEXT: inline-bool-flag
 // FNOSANICOVERALL-NEXT: no-prune
 // FNOSANICOVERALL-NEXT: trace-bb
 // FNOSANICOVERALL-NEXT: trace-cmp

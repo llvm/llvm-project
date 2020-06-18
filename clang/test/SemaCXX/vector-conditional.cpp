@@ -97,7 +97,7 @@ void Operands() {
 
   // When there is a vector and a scalar, conversions must be legal.
   (void)(four_ints ? four_floats : 3); // should work, ints can convert to floats.
-  (void)(four_ints ? four_uints : e);  // should work, non-scoped enum can convert to uint.
+  (void)(four_ints ? four_uints : e);  // expected-error {{cannot convert between scalar type 'E' and vector type 'FourUInts'}}
   (void)(four_ints ? four_uints : se); // expected-error {{cannot convert between vector and non-scalar values ('FourUInts' (vector of 4 'unsigned int' values) and 'SE'}}
   // GCC permits this, but our conversion rules reject this for truncation.
   (void)(two_ints ? two_ints : us);        // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'TwoInts'}}

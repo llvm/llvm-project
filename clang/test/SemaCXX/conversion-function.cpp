@@ -62,6 +62,24 @@ public:
   operator const B(); // expected-warning{{conversion function converting 'B' to itself will never be used}}
 };
 
+class BaseA {};
+class DerivedA;
+
+class BaseB {
+  virtual operator BaseA &() = 0;
+  virtual operator DerivedA &() = 0;
+};
+
+class DerivedA : public BaseA, BaseB {
+  virtual operator BaseA &();    // OK. Overrides BaseB::operatorBaseA&()
+  virtual operator DerivedA &(); // OK. Overrides BaseB::operatorDerivedA&()
+};
+
+class DerivedB : public BaseA {
+  virtual operator DerivedB &(); // expected-warning{{conversion function converting 'DerivedB' to itself will never be used}}
+  virtual operator BaseA &();    // expected-warning{{conversion function converting 'DerivedB' to its base class 'BaseA' will never be used}}
+};
+
 // This used to crash Clang.
 struct Flip;
 struct Flop {

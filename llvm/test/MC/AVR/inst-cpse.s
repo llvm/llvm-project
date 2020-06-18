@@ -1,4 +1,5 @@
 ; RUN: llvm-mc -triple avr -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -filetype=obj -triple avr < %s | llvm-objdump -d - | FileCheck --check-prefix=CHECK-INST %s
 
 
 foo:
@@ -12,3 +13,8 @@ foo:
 ; CHECK: cpse r9, r0                   ; encoding: [0x90,0x10]
 ; CHECK: cpse r5, r31                  ; encoding: [0x5f,0x12]
 ; CHECK: cpse r3, r3                   ; encoding: [0x33,0x10]
+
+; CHECK-INST: cpse r2, r13
+; CHECK-INST: cpse r9, r0
+; CHECK-INST: cpse r5, r31
+; CHECK-INST: cpse r3, r3

@@ -1,4 +1,5 @@
 ; RUN: llvm-mc -triple avr -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -filetype=obj -triple avr < %s | llvm-objdump -d - | FileCheck --check-prefix=CHECK-INST %s
 
 
 foo:
@@ -16,3 +17,10 @@ foo:
 
 ; CHECK: ori     r19, _start           ; encoding: [0x30'A',0x60]
 ; CHECK:                               ;   fixup A - offset: 0, value: _start, kind: fixup_ldi
+
+; CHECK-INST: ori r17, 208
+; CHECK-INST: ori r24, 190
+; CHECK-INST: ori r20, 173
+; CHECK-INST: ori r31, 0
+
+; CHECK-INST: ori r19, 0

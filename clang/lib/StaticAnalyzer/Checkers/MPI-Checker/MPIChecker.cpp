@@ -190,6 +190,6 @@ void clang::ento::registerMPIChecker(CheckerManager &MGR) {
   MGR.registerChecker<clang::ento::mpi::MPIChecker>();
 }
 
-bool clang::ento::shouldRegisterMPIChecker(const LangOptions &LO) {
+bool clang::ento::shouldRegisterMPIChecker(const CheckerManager &mgr) {
   return true;
 }

@@ -1006,7 +1006,7 @@ class MULADD_Common <bits<5> inst> : R600_3OP <
 
 class MULADD_IEEE_Common <bits<5> inst> : R600_3OP <
   inst, "MULADD_IEEE",
-  [(set f32:$dst, (fmad f32:$src0, f32:$src1, f32:$src2))]
+  [(set f32:$dst, (any_fmad f32:$src0, f32:$src1, f32:$src2))]
 >;
 
 class FMA_Common <bits<5> inst> : R600_3OP <

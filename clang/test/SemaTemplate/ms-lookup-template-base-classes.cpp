@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++1y -fms-compatibility -fno-spell-checking -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++20 -fms-compatibility -fno-spell-checking -fsyntax-only -verify %s
 
 
 template <class T>

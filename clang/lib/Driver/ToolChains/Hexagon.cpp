@@ -264,18 +264,43 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     UseG0 = G.getValue() == 0;
   }
 
-  //----------------------------------------------------------------------------
-  //
-  //----------------------------------------------------------------------------
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
+
+  if (HTC.getTriple().isMusl()) {
+    if (!Args.hasArg(options::OPT_shared, options::OPT_static))
+      CmdArgs.push_back("-dynamic-linker=/lib/ld-musl-hexagon.so.1");
+
+    if (!Args.hasArg(options::OPT_shared, options::OPT_nostartfiles,
+                     options::OPT_nostdlib))
+      CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crt1.o"));
+    else if (Args.hasArg(options::OPT_shared) &&
+             !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib))
+      CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crti.o"));
+
+    CmdArgs.push_back(
+        Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib"));
+    Args.AddAllArgs(CmdArgs,
+                    {options::OPT_T_Group, options::OPT_e, options::OPT_s,
+                     options::OPT_t, options::OPT_u_Group});
+    AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
+
+    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
+      CmdArgs.push_back("-lc");
+    }
+    if (D.CCCIsCXX()) {
+      if (HTC.ShouldLinkCXXStdlib(Args))
+        HTC.AddCXXStdlibLibArgs(Args, CmdArgs);
+    }
+    return;
+  }
 
   //----------------------------------------------------------------------------
   // moslib
   //----------------------------------------------------------------------------
   std::vector<std::string> OsLibs;
   bool HasStandalone = false;
-
   for (const Arg *A : Args.filtered(options::OPT_moslib_EQ)) {
     A->claim();
     OsLibs.emplace_back(A->getValue());
@@ -487,6 +512,22 @@ HexagonToolChain::HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
 
 HexagonToolChain::~HexagonToolChain() {}
 
+void HexagonToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
+                                           ArgStringList &CmdArgs) const {
+  CXXStdlibType Type = GetCXXStdlibType(Args);
+  switch (Type) {
+  case ToolChain::CST_Libcxx:
+    CmdArgs.push_back("-lc++");
+    CmdArgs.push_back("-lc++abi");
+    CmdArgs.push_back("-lunwind");
+    break;
+
+  case ToolChain::CST_Libstdcxx:
+    CmdArgs.push_back("-lstdc++");
+    break;
+  }
+}
+
 Tool *HexagonToolChain::buildAssembler() const {
   return new tools::hexagon::Assembler(*this);
 }
@@ -523,6 +564,14 @@ unsigned HexagonToolChain::getOptimizationLevel(
 void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args,
                                              Action::OffloadKind) const {
+
+  bool UseInitArrayDefault = getTriple().isMusl();
+
+  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
+                          options::OPT_fno_use_init_array,
+                          UseInitArrayDefault))
+    CC1Args.push_back("-fno-use-init-array");
+
   if (DriverArgs.hasArg(options::OPT_ffixed_r19)) {
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+reserved-r19");
@@ -542,7 +591,10 @@ void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const Driver &D = getDriver();
   if (!D.SysRoot.empty()) {
     SmallString<128> P(D.SysRoot);
-    llvm::sys::path::append(P, "include");
+    if (getTriple().isMusl())
+      llvm::sys::path::append(P, "usr/include");
+    else
+      llvm::sys::path::append(P, "include");
     addExternCSystemInclude(DriverArgs, CC1Args, P.str());
     return;
   }
@@ -552,7 +604,22 @@ void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addExternCSystemInclude(DriverArgs, CC1Args, TargetDir + "/hexagon/include");
 }
 
-
+void HexagonToolChain::addLibCxxIncludePaths(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  const Driver &D = getDriver();
+  if (!D.SysRoot.empty() && getTriple().isMusl())
+    addLibStdCXXIncludePaths(D.SysRoot + "/usr/include/c++/v1", "", "", "", "",
+                             "", DriverArgs, CC1Args);
+  else if (getTriple().isMusl())
+    addLibStdCXXIncludePaths("/usr/include/c++/v1", "", "", "", "", "",
+                             DriverArgs, CC1Args);
+  else {
+    std::string TargetDir = getHexagonTargetDir(D.InstalledDir, D.PrefixDirs);
+    addLibStdCXXIncludePaths(TargetDir, "/hexagon/include/c++/v1", "", "", "",
+                             "", DriverArgs, CC1Args);
+  }
+}
 void HexagonToolChain::addLibStdCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
@@ -565,14 +632,22 @@ void HexagonToolChain::addLibStdCxxIncludePaths(
 ToolChain::CXXStdlibType
 HexagonToolChain::GetCXXStdlibType(const ArgList &Args) const {
   Arg *A = Args.getLastArg(options::OPT_stdlib_EQ);
-  if (!A)
-    return ToolChain::CST_Libstdcxx;
-
+  if (!A) {
+    if (getTriple().isMusl())
+      return ToolChain::CST_Libcxx;
+    else
+      return ToolChain::CST_Libstdcxx;
+  }
   StringRef Value = A->getValue();
-  if (Value != "libstdc++")
+  if (Value != "libstdc++" && Value != "libc++")
     getDriver().Diag(diag::err_drv_invalid_stdlib_name) << A->getAsString(Args);
 
-  return ToolChain::CST_Libstdcxx;
+  if (Value == "libstdc++")
+    return ToolChain::CST_Libstdcxx;
+  else if (Value == "libc++")
+    return ToolChain::CST_Libcxx;
+  else
+    return ToolChain::CST_Libstdcxx;
 }
 
 bool HexagonToolChain::isAutoHVXEnabled(const llvm::opt::ArgList &Args) {

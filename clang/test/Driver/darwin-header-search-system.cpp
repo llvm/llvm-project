@@ -95,6 +95,7 @@
 // RUN:     -target x86_64-apple-darwin \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot="" \
 // RUN:   | FileCheck -DRESOURCE=%S/Inputs/resource_dir \
 // RUN:               --check-prefix=CHECK-NOSYSROOT %s
 // CHECK-NOSYSROOT: "{{[^"]*}}clang{{[^"]*}}" "-cc1"

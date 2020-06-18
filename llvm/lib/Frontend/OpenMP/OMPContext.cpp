@@ -26,8 +26,9 @@ using namespace omp;
 OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   // Add the appropriate device kind trait based on the triple and the
   // IsDeviceCompilation flag.
-  ActiveTraits.insert(IsDeviceCompilation ? TraitProperty::device_kind_nohost
-                                          : TraitProperty::device_kind_host);
+  ActiveTraits.set(unsigned(IsDeviceCompilation
+                                ? TraitProperty::device_kind_nohost
+                                : TraitProperty::device_kind_host));
   switch (TargetTriple.getArch()) {
   case Triple::arm:
   case Triple::armeb:
@@ -43,12 +44,12 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   case Triple::ppc64le:
   case Triple::x86:
   case Triple::x86_64:
-    ActiveTraits.insert(TraitProperty::device_kind_cpu);
+    ActiveTraits.set(unsigned(TraitProperty::device_kind_cpu));
     break;
   case Triple::amdgcn:
   case Triple::nvptx:
   case Triple::nvptx64:
-    ActiveTraits.insert(TraitProperty::device_kind_gpu);
+    ActiveTraits.set(unsigned(TraitProperty::device_kind_gpu));
     break;
   default:
     break;
@@ -58,7 +59,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
   if (TraitSelector::TraitSelectorEnum == TraitSelector::device_arch)          \
     if (TargetTriple.getArch() == TargetTriple.getArchTypeForLLVMName(Str))    \
-      ActiveTraits.insert(TraitProperty::Enum);
+      ActiveTraits.set(unsigned(TraitProperty::Enum));
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
   // TODO: What exactly do we want to see as device ISA trait?
@@ -67,20 +68,22 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
 
   // LLVM is the "OpenMP vendor" but we could also interpret vendor as the
   // target vendor.
-  ActiveTraits.insert(TraitProperty::implementation_vendor_llvm);
+  ActiveTraits.set(unsigned(TraitProperty::implementation_vendor_llvm));
 
   // The user condition true is accepted but not false.
-  ActiveTraits.insert(TraitProperty::user_condition_true);
+  ActiveTraits.set(unsigned(TraitProperty::user_condition_true));
 
   // This is for sure some device.
-  ActiveTraits.insert(TraitProperty::device_kind_any);
+  ActiveTraits.set(unsigned(TraitProperty::device_kind_any));
 
   LLVM_DEBUG({
     dbgs() << "[" << DEBUG_TYPE
            << "] New OpenMP context with the following properties:\n";
-    for (auto &Property : ActiveTraits)
+    for (unsigned Bit : ActiveTraits.set_bits()) {
+      TraitProperty Property = TraitProperty(Bit);
       dbgs() << "\t " << getOpenMPContextTraitPropertyFullName(Property)
              << "\n";
+    }
   });
 }
 
@@ -88,8 +91,8 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
 /// expected to be sorted.
 template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
 #ifdef EXPENSIVE_CHECKS
-  assert(std::is_sorted(C0.begin(), C0.end()) &&
-         std::is_sorted(C1.begin(), C1.end()) && "Expected sorted arrays!");
+  assert(llvm::is_sorted(C0) && llvm::is_sorted(C1) &&
+         "Expected sorted arrays!");
 #endif
   if (C0.size() > C1.size())
     return false;
@@ -122,57 +125,133 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
   // If all required traits are a strict subset and the ordered vectors storing
   // the construct traits, we say it is a strict subset. Note that the latter
   // relation is not required to be strict.
-  return set_is_strict_subset(VMI0.RequiredTraits, VMI1.RequiredTraits) &&
-         isSubset<TraitProperty>(VMI0.ConstructTraits, VMI1.ConstructTraits);
+  if (VMI0.RequiredTraits.count() >= VMI1.RequiredTraits.count())
+    return false;
+  for (unsigned Bit : VMI0.RequiredTraits.set_bits())
+    if (!VMI1.RequiredTraits.test(Bit))
+      return false;
+  if (!isSubset<TraitProperty>(VMI0.ConstructTraits, VMI1.ConstructTraits))
+    return false;
+  return true;
 }
 
 static int isVariantApplicableInContextHelper(
     const VariantMatchInfo &VMI, const OMPContext &Ctx,
-    SmallVectorImpl<unsigned> *ConstructMatches) {
+    SmallVectorImpl<unsigned> *ConstructMatches, bool DeviceSetOnly) {
 
-  for (TraitProperty Property : VMI.RequiredTraits) {
+  // The match kind determines if we need to match all traits, any of the
+  // traits, or none of the traits for it to be an applicable context.
+  enum MatchKind { MK_ALL, MK_ANY, MK_NONE };
 
-    bool IsActiveTrait = Ctx.ActiveTraits.count(Property);
-    if (!IsActiveTrait) {
-      LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Property "
-                        << getOpenMPContextTraitPropertyName(Property)
-                        << " was not in the OpenMP context.\n");
-      return false;
-    }
-  }
+  MatchKind MK = MK_ALL;
+  // Determine the match kind the user wants, "all" is the default and provided
+  // to the user only for completeness.
+  if (VMI.RequiredTraits.test(
+          unsigned(TraitProperty::implementation_extension_match_any)))
+    MK = MK_ANY;
+  if (VMI.RequiredTraits.test(
+          unsigned(TraitProperty::implementation_extension_match_none)))
+    MK = MK_NONE;
 
-  // We could use isSubset here but we also want to record the match locations.
-  unsigned ConstructIdx = 0, NoConstructTraits = Ctx.ConstructTraits.size();
-  for (TraitProperty Property : VMI.ConstructTraits) {
-    assert(getOpenMPContextTraitSetForProperty(Property) ==
-               TraitSet::construct &&
-           "Variant context is ill-formed!");
-
-    // Verify the nesting.
-    bool FoundInOrder = false;
-    while (!FoundInOrder && ConstructIdx != NoConstructTraits)
-      FoundInOrder = (Ctx.ConstructTraits[ConstructIdx++] == Property);
-    if (ConstructMatches)
-      ConstructMatches->push_back(ConstructIdx - 1);
-
-    if (!FoundInOrder) {
-      LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Construct property "
-                        << getOpenMPContextTraitPropertyName(Property)
-                        << " was not nested properly.\n");
-      return false;
+  // Helper to deal with a single property that was (not) found in the OpenMP
+  // context based on the match kind selected by the user via
+  // `implementation={extensions(match_[all,any,none])}'
+  auto HandleTrait = [MK](TraitProperty Property,
+                          bool WasFound) -> Optional<bool> /* Result */ {
+    // For kind "any" a single match is enough but we ignore non-matched
+    // properties.
+    if (MK == MK_ANY) {
+      if (WasFound)
+        return true;
+      return None;
     }
 
-    // TODO: Verify SIMD
+    // In "all" or "none" mode we accept a matching or non-matching property
+    // respectively and move on. We are not done yet!
+    if ((WasFound && MK == MK_ALL) || (!WasFound && MK == MK_NONE))
+      return None;
+
+    // We missed a property, provide some debug output and indicate failure.
+    LLVM_DEBUG({
+      if (MK == MK_ALL)
+        dbgs() << "[" << DEBUG_TYPE << "] Property "
+               << getOpenMPContextTraitPropertyName(Property)
+               << " was not in the OpenMP context but match kind is all.\n";
+      if (MK == MK_NONE)
+        dbgs() << "[" << DEBUG_TYPE << "] Property "
+               << getOpenMPContextTraitPropertyName(Property)
+               << " was in the OpenMP context but match kind is none.\n";
+    });
+    return false;
+  };
+
+  for (unsigned Bit : VMI.RequiredTraits.set_bits()) {
+    TraitProperty Property = TraitProperty(Bit);
+    if (DeviceSetOnly &&
+        getOpenMPContextTraitSetForProperty(Property) != TraitSet::device)
+      continue;
+
+    // So far all extensions are handled elsewhere, we skip them here as they
+    // are not part of the OpenMP context.
+    if (getOpenMPContextTraitSelectorForProperty(Property) ==
+        TraitSelector::implementation_extension)
+      continue;
+
+    bool IsActiveTrait = Ctx.ActiveTraits.test(unsigned(Property));
+    Optional<bool> Result = HandleTrait(Property, IsActiveTrait);
+    if (Result.hasValue())
+      return Result.getValue();
   }
 
-  assert(isSubset<TraitProperty>(VMI.ConstructTraits, Ctx.ConstructTraits) &&
-         "Broken invariant!");
+  if (!DeviceSetOnly) {
+    // We could use isSubset here but we also want to record the match
+    // locations.
+    unsigned ConstructIdx = 0, NoConstructTraits = Ctx.ConstructTraits.size();
+    for (TraitProperty Property : VMI.ConstructTraits) {
+      assert(getOpenMPContextTraitSetForProperty(Property) ==
+                 TraitSet::construct &&
+             "Variant context is ill-formed!");
+
+      // Verify the nesting.
+      bool FoundInOrder = false;
+      while (!FoundInOrder && ConstructIdx != NoConstructTraits)
+        FoundInOrder = (Ctx.ConstructTraits[ConstructIdx++] == Property);
+      if (ConstructMatches)
+        ConstructMatches->push_back(ConstructIdx - 1);
+
+      Optional<bool> Result = HandleTrait(Property, FoundInOrder);
+      if (Result.hasValue())
+        return Result.getValue();
+
+      if (!FoundInOrder) {
+        LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Construct property "
+                          << getOpenMPContextTraitPropertyName(Property)
+                          << " was not nested properly.\n");
+        return false;
+      }
+
+      // TODO: Verify SIMD
+    }
+
+    assert(isSubset<TraitProperty>(VMI.ConstructTraits, Ctx.ConstructTraits) &&
+           "Broken invariant!");
+  }
+
+  if (MK == MK_ANY) {
+    LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE
+                      << "] None of the properties was in the OpenMP context "
+                         "but match kind is any.\n");
+    return false;
+  }
+
   return true;
 }
 
 bool llvm::omp::isVariantApplicableInContext(const VariantMatchInfo &VMI,
-                                             const OMPContext &Ctx) {
-  return isVariantApplicableInContextHelper(VMI, Ctx, nullptr);
+                                             const OMPContext &Ctx,
+                                             bool DeviceSetOnly) {
+  return isVariantApplicableInContextHelper(
+      VMI, Ctx, /* ConstructMatches */ nullptr, DeviceSetOnly);
 }
 
 static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
@@ -181,7 +260,8 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
   APInt Score(64, 1);
 
   unsigned NoConstructTraits = VMI.ConstructTraits.size();
-  for (TraitProperty Property : VMI.RequiredTraits) {
+  for (unsigned Bit : VMI.RequiredTraits.set_bits()) {
+    TraitProperty Property = TraitProperty(Bit);
     // If there is a user score attached, use it.
     if (VMI.ScoreMap.count(Property)) {
       const APInt &UserScore = VMI.ScoreMap.lookup(Property);
@@ -256,7 +336,8 @@ int llvm::omp::getBestVariantMatchForContext(
 
     SmallVector<unsigned, 8> ConstructMatches;
     // If the variant is not applicable its not the best.
-    if (!isVariantApplicableInContextHelper(VMI, Ctx, &ConstructMatches))
+    if (!isVariantApplicableInContextHelper(VMI, Ctx, &ConstructMatches,
+                                            /* DeviceSetOnly */ false))
       continue;
     // Check if its clearly not the best.
     APInt Score = getVariantMatchScore(VMI, Ctx, ConstructMatches);
@@ -439,6 +520,8 @@ llvm::omp::listOpenMPContextTraitProperties(TraitSet Set,
       StringRef(Str) != "invalid")                                             \
     S.append("'").append(Str).append("'").append(" ");
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
+  if (S.empty())
+    return "<none>";
   S.pop_back();
   return S;
 }

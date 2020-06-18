@@ -66,7 +66,7 @@ Thumb2InstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
 
   // If the first instruction of Tail is predicated, we may have to update
   // the IT instruction.
-  unsigned PredReg = 0;
+  Register PredReg;
   ARMCC::CondCodes CC = getInstrPredicate(*Tail, PredReg);
   MachineBasicBlock::iterator MBBI = Tail;
   if (CC != ARMCC::AL)
@@ -114,7 +114,7 @@ Thumb2InstrInfo::isLegalToSplitMBBAt(MachineBasicBlock &MBB,
       return false;
   }
 
-  unsigned PredReg = 0;
+  Register PredReg;
   return getITInstrPredicate(*MBBI, PredReg) == ARMCC::AL;
 }
 
@@ -143,7 +143,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
-      MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+      MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
   if (ARM::GPRRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(ARM::t2STRi12))
@@ -183,7 +183,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
-      MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+      MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -229,9 +229,9 @@ void Thumb2InstrInfo::expandLoadStackGuard(
 
 void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator &MBBI,
-                                  const DebugLoc &dl, unsigned DestReg,
-                                  unsigned BaseReg, int NumBytes,
-                                  ARMCC::CondCodes Pred, unsigned PredReg,
+                                  const DebugLoc &dl, Register DestReg,
+                                  Register BaseReg, int NumBytes,
+                                  ARMCC::CondCodes Pred, Register PredReg,
                                   const ARMBaseInstrInfo &TII,
                                   unsigned MIFlags) {
   if (NumBytes == 0 && DestReg != BaseReg) {
@@ -471,7 +471,7 @@ immediateOffsetOpcode(unsigned opcode)
 }
 
 bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
-                               unsigned FrameReg, int &Offset,
+                               Register FrameReg, int &Offset,
                                const ARMBaseInstrInfo &TII,
                                const TargetRegisterInfo *TRI) {
   unsigned Opcode = MI.getOpcode();
@@ -491,7 +491,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   if (IsSP || Opcode == ARM::t2ADDri || Opcode == ARM::t2ADDri12) {
     Offset += MI.getOperand(FrameRegIdx+1).getImm();
 
-    unsigned PredReg;
+    Register PredReg;
     if (Offset == 0 && getInstrPredicate(MI, PredReg) == ARMCC::AL &&
         !MI.definesRegister(ARM::CPSR)) {
       // Turn it into a move.
@@ -634,7 +634,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       assert((Offset & OffsetMask) == 0 && "Can't encode this offset!");
       (void)OffsetMask; // squash unused-variable warning at -NDEBUG
     } else if (AddrMode == ARMII::AddrModeT2_i8s4) {
-      Offset += MI.getOperand(FrameRegIdx + 1).getImm() * 4;
+      Offset += MI.getOperand(FrameRegIdx + 1).getImm();
       NumBits = 8 + 2;
       // MCInst operand expects already scaled value.
       Scale = 1;
@@ -706,7 +706,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 }
 
 ARMCC::CondCodes llvm::getITInstrPredicate(const MachineInstr &MI,
-                                           unsigned &PredReg) {
+                                           Register &PredReg) {
   unsigned Opc = MI.getOpcode();
   if (Opc == ARM::tBcc || Opc == ARM::t2Bcc)
     return ARMCC::AL;
@@ -727,7 +727,7 @@ int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
 }
 
 ARMVCC::VPTCodes llvm::getVPTInstrPredicate(const MachineInstr &MI,
-                                            unsigned &PredReg) {
+                                            Register &PredReg) {
   int PIdx = findFirstVPTPredOperandIdx(MI);
   if (PIdx == -1) {
     PredReg = 0;
@@ -736,4 +736,34 @@ ARMVCC::VPTCodes llvm::getVPTInstrPredicate(const MachineInstr &MI,
 
   PredReg = MI.getOperand(PIdx+1).getReg();
   return (ARMVCC::VPTCodes)MI.getOperand(PIdx).getImm();
+}
+
+void llvm::recomputeVPTBlockMask(MachineInstr &Instr) {
+  assert(isVPTOpcode(Instr.getOpcode()) && "Not a VPST or VPT Instruction!");
+
+  MachineOperand &MaskOp = Instr.getOperand(0);
+  assert(MaskOp.isImm() && "Operand 0 is not the block mask of the VPT/VPST?!");
+
+  MachineBasicBlock::iterator Iter = ++Instr.getIterator(),
+                              End = Instr.getParent()->end();
+
+  // Verify that the instruction after the VPT/VPST is predicated (it should
+  // be), and skip it.
+  assert(
+      getVPTInstrPredicate(*Iter) == ARMVCC::Then &&
+      "VPT/VPST should be followed by an instruction with a 'then' predicate!");
+  ++Iter;
+
+  // Iterate over the predicated instructions, updating the BlockMask as we go.
+  ARM::PredBlockMask BlockMask = ARM::PredBlockMask::T;
+  while (Iter != End) {
+    ARMVCC::VPTCodes Pred = getVPTInstrPredicate(*Iter);
+    if (Pred == ARMVCC::None)
+      break;
+    BlockMask = expandPredBlockMask(BlockMask, Pred);
+    ++Iter;
+  }
+
+  // Rewrite the BlockMask.
+  MaskOp.setImm((int64_t)(BlockMask));
 }

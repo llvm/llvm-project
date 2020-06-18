@@ -17,6 +17,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/Initialization.h"
@@ -1092,7 +1093,7 @@ void InitListChecker::CheckImplicitInitList(const InitializedEntity &Entity,
     auto *CXXRD = T->getAsCXXRecordDecl();
     if (!VerifyOnly && CXXRD && CXXRD->hasUserDeclaredConstructor()) {
       SemaRef.Diag(StructuredSubobjectInitList->getBeginLoc(),
-                   diag::warn_cxx2a_compat_aggregate_init_with_ctors)
+                   diag::warn_cxx20_compat_aggregate_init_with_ctors)
           << StructuredSubobjectInitList->getSourceRange() << T;
     }
   }
@@ -1118,14 +1119,14 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
   case InitializedEntity::EK_Parameter_CF_Audited:
   case InitializedEntity::EK_Result:
     // Extra braces here are suspicious.
-    DiagID = diag::warn_braces_around_scalar_init;
+    DiagID = diag::warn_braces_around_init;
     break;
 
   case InitializedEntity::EK_Member:
     // Warn on aggregate initialization but not on ctor init list or
     // default member initializer.
     if (Entity.getParent())
-      DiagID = diag::warn_braces_around_scalar_init;
+      DiagID = diag::warn_braces_around_init;
     break;
 
   case InitializedEntity::EK_Variable:
@@ -1156,9 +1157,9 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
 
   if (DiagID) {
     S.Diag(Braces.getBegin(), DiagID)
-      << Braces
-      << FixItHint::CreateRemoval(Braces.getBegin())
-      << FixItHint::CreateRemoval(Braces.getEnd());
+        << Entity.getType()->isSizelessBuiltinType() << Braces
+        << FixItHint::CreateRemoval(Braces.getBegin())
+        << FixItHint::CreateRemoval(Braces.getEnd());
   }
 }
 
@@ -1202,6 +1203,12 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
               : diag::ext_excess_initializers_in_char_array_initializer;
       SemaRef.Diag(IList->getInit(Index)->getBeginLoc(), DK)
           << IList->getInit(Index)->getSourceRange();
+    } else if (T->isSizelessBuiltinType()) {
+      unsigned DK = ExtraInitsIsError
+                        ? diag::err_excess_initializers_for_sizeless_type
+                        : diag::ext_excess_initializers_for_sizeless_type;
+      SemaRef.Diag(IList->getInit(Index)->getBeginLoc(), DK)
+          << T << IList->getInit(Index)->getSourceRange();
     } else {
       int initKind = T->isArrayType() ? 0 :
                      T->isVectorType() ? 1 :
@@ -1235,7 +1242,7 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
 
       if (!HasEquivCtor) {
         SemaRef.Diag(IList->getBeginLoc(),
-                     diag::warn_cxx2a_compat_aggregate_init_with_ctors)
+                     diag::warn_cxx20_compat_aggregate_init_with_ctors)
             << IList->getSourceRange() << T;
       }
     }
@@ -1294,7 +1301,8 @@ void InitListChecker::CheckListElementTypes(const InitializedEntity &Entity,
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(), diag::err_init_objc_class) << DeclType;
     hadError = true;
-  } else if (DeclType->isOCLIntelSubgroupAVCType()) {
+  } else if (DeclType->isOCLIntelSubgroupAVCType() ||
+             DeclType->isSizelessBuiltinType()) {
     // Checks for scalar type are sufficient for these types too.
     CheckScalarType(Entity, IList, DeclType, Index, StructuredList,
                     StructuredIndex);
@@ -1507,12 +1515,20 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
                                       InitListExpr *StructuredList,
                                       unsigned &StructuredIndex) {
   if (Index >= IList->getNumInits()) {
-    if (!VerifyOnly)
-      SemaRef.Diag(IList->getBeginLoc(),
-                   SemaRef.getLangOpts().CPlusPlus11
-                       ? diag::warn_cxx98_compat_empty_scalar_initializer
-                       : diag::err_empty_scalar_initializer)
-          << IList->getSourceRange();
+    if (!VerifyOnly) {
+      if (DeclType->isSizelessBuiltinType())
+        SemaRef.Diag(IList->getBeginLoc(),
+                     SemaRef.getLangOpts().CPlusPlus11
+                         ? diag::warn_cxx98_compat_empty_sizeless_initializer
+                         : diag::err_empty_sizeless_initializer)
+            << DeclType << IList->getSourceRange();
+      else
+        SemaRef.Diag(IList->getBeginLoc(),
+                     SemaRef.getLangOpts().CPlusPlus11
+                         ? diag::warn_cxx98_compat_empty_scalar_initializer
+                         : diag::err_empty_scalar_initializer)
+            << IList->getSourceRange();
+    }
     hadError = !SemaRef.getLangOpts().CPlusPlus11;
     ++Index;
     ++StructuredIndex;
@@ -1524,17 +1540,18 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
     // FIXME: This is invalid, and accepting it causes overload resolution
     // to pick the wrong overload in some corner cases.
     if (!VerifyOnly)
-      SemaRef.Diag(SubIList->getBeginLoc(),
-                   diag::ext_many_braces_around_scalar_init)
-          << SubIList->getSourceRange();
+      SemaRef.Diag(SubIList->getBeginLoc(), diag::ext_many_braces_around_init)
+          << DeclType->isSizelessBuiltinType() << SubIList->getSourceRange();
 
     CheckScalarType(Entity, SubIList, DeclType, Index, StructuredList,
                     StructuredIndex);
     return;
   } else if (isa<DesignatedInitExpr>(expr)) {
     if (!VerifyOnly)
-      SemaRef.Diag(expr->getBeginLoc(), diag::err_designator_for_scalar_init)
-          << DeclType << expr->getSourceRange();
+      SemaRef.Diag(expr->getBeginLoc(),
+                   diag::err_designator_for_scalar_or_sizeless_init)
+          << DeclType->isSizelessBuiltinType() << DeclType
+          << expr->getSourceRange();
     hadError = true;
     ++Index;
     ++StructuredIndex;
@@ -1621,7 +1638,7 @@ void InitListChecker::CheckReferenceType(const InitializedEntity &Entity,
 
   expr = Result.getAs<Expr>();
   // FIXME: Why are we updating the syntactic init list?
-  if (!VerifyOnly)
+  if (!VerifyOnly && expr)
     IList->setInit(Index, expr);
 
   if (hadError)
@@ -3477,6 +3494,7 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_NonConstLValueReferenceBindingToTemporary:
   case FK_NonConstLValueReferenceBindingToBitfield:
   case FK_NonConstLValueReferenceBindingToVectorElement:
+  case FK_NonConstLValueReferenceBindingToMatrixElement:
   case FK_NonConstLValueReferenceBindingToUnrelated:
   case FK_RValueReferenceBindingToLValue:
   case FK_ReferenceAddrspaceMismatchTemporary:
@@ -4670,7 +4688,8 @@ static void TryReferenceInitialization(Sema &S,
 /// which a reference can never bind). Attempting to bind a reference to
 /// such a glvalue will always create a temporary.
 static bool isNonReferenceableGLValue(Expr *E) {
-  return E->refersToBitField() || E->refersToVectorElement();
+  return E->refersToBitField() || E->refersToVectorElement() ||
+         E->refersToMatrixElement();
 }
 
 /// Reference initialization without resolving overloaded functions.
@@ -4791,6 +4810,9 @@ static void TryReferenceInitializationCore(Sema &S,
         else if (Initializer->refersToVectorElement())
           FK = InitializationSequence::
               FK_NonConstLValueReferenceBindingToVectorElement;
+        else if (Initializer->refersToMatrixElement())
+          FK = InitializationSequence::
+              FK_NonConstLValueReferenceBindingToMatrixElement;
         else
           llvm_unreachable("unexpected kind of compatible initializer");
         break;
@@ -5624,7 +5646,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
       if (S.CheckObjCBridgeRelatedConversions(Initializer->getBeginLoc(),
                                               DestType, Initializer->getType(),
                                               Initializer) ||
-          S.ConversionToObjCStringLiteralCheck(DestType, Initializer))
+          S.CheckConversionToObjCLiteral(DestType, Initializer))
         Args[0] = Initializer;
     }
     if (!isa<InitListExpr>(Initializer))
@@ -6433,12 +6455,14 @@ PerformConstructorInitialization(Sema &S,
     }
     S.MarkFunctionReferenced(Loc, Constructor);
 
-    CurInit = CXXTemporaryObjectExpr::Create(
-        S.Context, Constructor,
-        Entity.getType().getNonLValueExprType(S.Context), TSInfo,
-        ConstructorArgs, ParenOrBraceRange, HadMultipleCandidates,
-        IsListInitialization, IsStdInitListInitialization,
-        ConstructorInitRequiresZeroInit);
+    CurInit = S.CheckForImmediateInvocation(
+        CXXTemporaryObjectExpr::Create(
+            S.Context, Constructor,
+            Entity.getType().getNonLValueExprType(S.Context), TSInfo,
+            ConstructorArgs, ParenOrBraceRange, HadMultipleCandidates,
+            IsListInitialization, IsStdInitListInitialization,
+            ConstructorInitRequiresZeroInit),
+        Constructor);
   } else {
     CXXConstructExpr::ConstructionKind ConstructKind =
       CXXConstructExpr::CK_Complete;
@@ -8176,9 +8200,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
         if (const auto *ToPtrType = Step->Type->getAs<PointerType>()) {
           if (FromPtrType->getPointeeType()->hasAttr(attr::NoDeref) &&
               !ToPtrType->getPointeeType()->hasAttr(attr::NoDeref)) {
-            S.Diag(CurInit.get()->getExprLoc(),
-                   diag::warn_noderef_to_dereferenceable_pointer)
-                << CurInit.get()->getSourceRange();
+            // Do not check static casts here because they are checked earlier
+            // in Sema::ActOnCXXNamedCast()
+            if (!Kind.isStaticCast()) {
+              S.Diag(CurInit.get()->getExprLoc(),
+                     diag::warn_noderef_to_dereferenceable_pointer)
+                  << CurInit.get()->getSourceRange();
+            }
           }
         }
       }
@@ -8779,7 +8807,7 @@ bool InitializationSequence::Diagnose(Sema &S,
   case FK_UTF8StringIntoPlainChar:
     S.Diag(Kind.getLocation(),
            diag::err_array_init_utf8_string_into_char)
-      << S.getLangOpts().CPlusPlus2a;
+      << S.getLangOpts().CPlusPlus20;
     break;
   case FK_ArrayTypeMismatch:
   case FK_NonConstantArrayInit:
@@ -8904,6 +8932,11 @@ bool InitializationSequence::Diagnose(Sema &S,
     S.Diag(Kind.getLocation(), diag::err_reference_bind_to_vector_element)
       << DestType.isVolatileQualified()
       << Args[0]->getSourceRange();
+    break;
+
+  case FK_NonConstLValueReferenceBindingToMatrixElement:
+    S.Diag(Kind.getLocation(), diag::err_reference_bind_to_matrix_element)
+        << DestType.isVolatileQualified() << Args[0]->getSourceRange();
     break;
 
   case FK_RValueReferenceBindingToLValue:
@@ -9249,6 +9282,10 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case FK_NonConstLValueReferenceBindingToVectorElement:
       OS << "non-const lvalue reference bound to vector element";
+      break;
+
+    case FK_NonConstLValueReferenceBindingToMatrixElement:
+      OS << "non-const lvalue reference bound to matrix element";
       break;
 
     case FK_NonConstLValueReferenceBindingToUnrelated:

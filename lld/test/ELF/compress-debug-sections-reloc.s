@@ -17,7 +17,7 @@
 a_sym:
 nop
 
-.section .debug_str,"",@progbits
+.section .debug_str,"MS",@progbits,1
 .long a_sym
 .long a_debug_sym
 

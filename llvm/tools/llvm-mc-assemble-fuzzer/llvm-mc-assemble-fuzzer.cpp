@@ -9,7 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Target.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -24,15 +23,17 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.inc"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -161,7 +162,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
     abort();
   }
 
-  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI) {

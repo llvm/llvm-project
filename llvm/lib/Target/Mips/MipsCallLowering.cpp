@@ -179,8 +179,9 @@ Register IncomingValueHandler::getStackAddress(const CCValAssign &VA,
       MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
 
   const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
-  unsigned Align = MinAlign(TFL->getStackAlignment(), Offset);
-  MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size, Align);
+  Align Alignment = commonAlignment(TFL->getStackAlign(), Offset);
+  MMO =
+      MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size, Alignment);
 
   return MIRBuilder.buildFrameIndex(LLT::pointer(0, 32), FI).getReg(0);
 }
@@ -270,8 +271,9 @@ Register OutgoingValueHandler::getStackAddress(const CCValAssign &VA,
   MachinePointerInfo MPO =
       MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
   unsigned Size = alignTo(VA.getValVT().getSizeInBits(), 8) / 8;
-  unsigned Align = MinAlign(TFL->getStackAlignment(), Offset);
-  MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, Size, Align);
+  Align Alignment = commonAlignment(TFL->getStackAlign(), Offset);
+  MMO =
+      MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, Size, Alignment);
 
   return AddrReg.getReg(0);
 }
@@ -449,7 +451,7 @@ bool MipsCallLowering::lowerFormalArguments(
       static_cast<const MipsTargetMachine &>(MF.getTarget());
   const MipsABIInfo &ABI = TM.getABI();
   CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(F.getCallingConv()),
-                       1);
+                       Align(1));
   CCInfo.AnalyzeFormalArguments(Ins, TLI.CCAssignFnForCall());
   setLocInfo(ArgLocs, Ins);
 
@@ -484,9 +486,8 @@ bool MipsCallLowering::lowerFormalArguments(
       MachinePointerInfo MPO = MachinePointerInfo::getFixedStack(MF, FI);
       MachineInstrBuilder FrameIndex =
           MIRBuilder.buildFrameIndex(LLT::pointer(MPO.getAddrSpace(), 32), FI);
-      MachineMemOperand *MMO =
-          MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, RegSize,
-                                  /* Alignment */ RegSize);
+      MachineMemOperand *MMO = MF.getMachineMemOperand(
+          MPO, MachineMemOperand::MOStore, RegSize, Align(RegSize));
       MIRBuilder.buildStore(Copy, FrameIndex, *MMO);
     }
   }
@@ -571,7 +572,8 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MipsCCState CCInfo(F.getCallingConv(), IsCalleeVarArg, MF, ArgLocs,
                      F.getContext());
 
-  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(Info.CallConv), 1);
+  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(Info.CallConv),
+                       Align(1));
   const char *Call =
       Info.Callee.isSymbol() ? Info.Callee.getSymbolName() : nullptr;
   CCInfo.AnalyzeCallOperands(Outs, TLI.CCAssignFnForCall(), FuncOrigArgs, Call);

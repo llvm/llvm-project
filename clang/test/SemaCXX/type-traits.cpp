@@ -2789,3 +2789,64 @@ namespace ErrorType {
   };
   bool b = __has_unique_object_representations(T);
 };
+
+namespace PR46209 {
+  // Foo has both a trivial assignment operator and a non-trivial one.
+  struct Foo {
+    Foo &operator=(const Foo &) & { return *this; }
+    Foo &operator=(const Foo &) && = default;
+  };
+
+  // Bar's copy assignment calls Foo's non-trivial assignment.
+  struct Bar {
+    Foo foo;
+  };
+
+  static_assert(!__is_trivially_assignable(Foo &, const Foo &), "");
+  static_assert(!__is_trivially_assignable(Bar &, const Bar &), "");
+
+  // Foo2 has both a trivial assignment operator and a non-trivial one.
+  struct Foo2 {
+    Foo2 &operator=(const Foo2 &) & = default;
+    Foo2 &operator=(const Foo2 &) && { return *this; }
+  };
+
+  // Bar2's copy assignment calls Foo2's trivial assignment.
+  struct Bar2 {
+    Foo2 foo;
+  };
+
+  static_assert(__is_trivially_assignable(Foo2 &, const Foo2 &), "");
+  static_assert(__is_trivially_assignable(Bar2 &, const Bar2 &), "");
+}
+
+namespace ConstClass {
+  struct A {
+    A &operator=(const A&) = default;
+  };
+  struct B {
+    const A a;
+  };
+  static_assert(!__is_trivially_assignable(B&, const B&), "");
+}
+
+namespace type_trait_expr_numargs_overflow {
+// Make sure that TypeTraitExpr can store 16 bits worth of arguments.
+#define T4(X) X,X,X,X
+#define T16(X) T4(X),T4(X),T4(X),T4(X)
+#define T64(X) T16(X),T16(X),T16(X),T16(X)
+#define T256(X) T64(X),T64(X),T64(X),T64(X)
+#define T1024(X) T256(X),T256(X),T256(X),T256(X)
+#define T4096(X) T1024(X),T1024(X),T1024(X),T1024(X)
+#define T16384(X) T4096(X),T4096(X),T4096(X),T4096(X)
+#define T32768(X) T16384(X),T16384(X)
+void test() { (void) __is_constructible(int, T32768(int)); }
+#undef T4
+#undef T16
+#undef T64
+#undef T256
+#undef T1024
+#undef T4096
+#undef T16384
+#undef T32768
+} // namespace type_trait_expr_numargs_overflow

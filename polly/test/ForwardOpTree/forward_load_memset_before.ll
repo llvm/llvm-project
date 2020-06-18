@@ -66,7 +66,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_val[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx
+; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_bodyC
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
@@ -75,7 +75,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyC[i0] -> MemRef_A[o0] : 8i0 <= o0 <= 7 + 8i0 };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx
-; CHECK-NEXT:                   store double %val, double* %A_idx
+; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
+; CHECK-NEXT:                   store double %val, double* %A_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

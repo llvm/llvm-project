@@ -81,7 +81,7 @@ define i8* @test1(i8* %str, i32 %c) {
   ret i8* %ret
 }
 
-define i8* @test2(i8* %str, i32 %c) "null-pointer-is-valid"="true" {
+define i8* @test2(i8* %str, i32 %c) null_pointer_is_valid {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[RET:%.*]] = call i8* @strrchr(i8* [[STR:%.*]], i32 [[C:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]

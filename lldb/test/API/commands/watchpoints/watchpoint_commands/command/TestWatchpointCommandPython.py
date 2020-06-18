@@ -96,6 +96,7 @@ class WatchpointPythonCommandTestCase(TestBase):
                     substrs=['(int32_t)', 'cookie = 777'])
 
     @skipIfFreeBSD  # timing out on buildbot
+    @skipIfReproducer
     def test_continue_in_watchpoint_command(self):
         """Test continue in a watchpoint command."""
         self.build(dictionary=self.d)

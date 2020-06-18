@@ -1,4 +1,3 @@
-; REQUIRES: x86
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s | llvm-dwarfdump -v - | \
 ; RUN:    FileCheck --check-prefix=DEFAULT --check-prefix=BOTH %s
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=obj -generate-type-units < %s |  \

@@ -1258,14 +1258,24 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // Operand 'count' is interpreted as:
     // - Signed integer (version 0)
     // - Metadata node  (version 1)
+    // Operand 'lowerBound' is interpreted as:
+    // - Signed integer (version 0 and 1)
+    // - Metadata node  (version 2)
+    // Operands 'upperBound' and 'stride' are interpreted as:
+    // - Metadata node  (version 2)
     switch (Record[0] >> 1) {
     case 0:
       Val = GET_OR_DISTINCT(DISubrange,
-                            (Context, Record[1], unrotateSign(Record.back())));
+                            (Context, Record[1], unrotateSign(Record[2])));
       break;
     case 1:
       Val = GET_OR_DISTINCT(DISubrange, (Context, getMDOrNull(Record[1]),
-                                         unrotateSign(Record.back())));
+                                         unrotateSign(Record[2])));
+      break;
+    case 2:
+      Val = GET_OR_DISTINCT(
+          DISubrange, (Context, getMDOrNull(Record[1]), getMDOrNull(Record[2]),
+                       getMDOrNull(Record[3]), getMDOrNull(Record[4])));
       break;
     default:
       return error("Invalid record: Unsupported version of DISubrange");
@@ -1277,14 +1287,24 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_ENUMERATOR: {
-    if (Record.size() != 3)
+    if (Record.size() < 3)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
     bool IsUnsigned = Record[0] & 2;
+    bool IsBigInt = Record[0] & 4;
+    APInt Value;
+
+    if (IsBigInt) {
+      const uint64_t BitWidth = Record[1];
+      const size_t NumWords = Record.size() - 3;
+      Value = readWideAPInt(makeArrayRef(&Record[3], NumWords), BitWidth);
+    } else
+      Value = APInt(64, unrotateSign(Record[1]), !IsUnsigned);
+
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DIEnumerator, (Context, unrotateSign(Record[1]),
-                                       IsUnsigned, getMDString(Record[2]))),
+        GET_OR_DISTINCT(DIEnumerator,
+                        (Context, Value, IsUnsigned, getMDString(Record[2]))),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1330,7 +1350,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPOSITE_TYPE: {
-    if (Record.size() < 16 || Record.size() > 17)
+    if (Record.size() < 16 || Record.size() > 18)
       return error("Invalid record");
 
     // If we have a UUID and this is not a forward declaration, lookup the
@@ -1354,6 +1374,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *VTableHolder = nullptr;
     Metadata *TemplateParams = nullptr;
     Metadata *Discriminator = nullptr;
+    Metadata *DataLocation = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
     // into another module, composite types only need to be imported
@@ -1376,13 +1397,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       TemplateParams = getMDOrNull(Record[14]);
       if (Record.size() > 16)
         Discriminator = getMDOrNull(Record[16]);
+      if (Record.size() > 17)
+        DataLocation = getMDOrNull(Record[17]);
     }
     DICompositeType *CT = nullptr;
     if (Identifier)
       CT = DICompositeType::buildODRType(
           Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
           SizeInBits, AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-          VTableHolder, TemplateParams, Discriminator);
+          VTableHolder, TemplateParams, Discriminator, DataLocation);
 
     // Create a node if we didn't get a lazy ODR type.
     if (!CT)
@@ -1390,7 +1413,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                            (Context, Tag, Name, File, Line, Scope, BaseType,
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
-                            Identifier, Discriminator));
+                            Identifier, Discriminator, DataLocation));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 
@@ -1418,14 +1441,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   }
 
   case bitc::METADATA_MODULE: {
-    if (Record.size() < 5 || Record.size() > 6)
+    if (Record.size() < 5 || Record.size() > 8)
       return error("Invalid record");
 
+    unsigned Offset = Record.size() >= 7 ? 2 : 1;
     IsDistinct = Record[0];
     MetadataList.assignValue(
         GET_OR_DISTINCT(
-            DIModule, (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
-                       getMDString(Record[3]), getMDString(Record[4]))),
+            DIModule,
+            (Context, Record.size() >= 7 ? getMDOrNull(Record[1]) : nullptr,
+             getMDOrNull(Record[0 + Offset]), getMDString(Record[1 + Offset]),
+             getMDString(Record[2 + Offset]), getMDString(Record[3 + Offset]),
+             getMDString(Record[4 + Offset]),
+             Record.size() <= 7 ? 0 : Record[7])),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1456,7 +1484,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPILE_UNIT: {
-    if (Record.size() < 14 || Record.size() > 21)
+    if (Record.size() < 14 || Record.size() > 22)
       return error("Invalid record");
 
     // Ignore Record[0], which indicates whether this compile unit is
@@ -1472,9 +1500,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Record.size() <= 16 ? true : Record[16],
         Record.size() <= 17 ? false : Record[17],
         Record.size() <= 18 ? 0 : Record[18],
-        false, // FIXME: https://reviews.llvm.org/rGc51b45e32ef7f35c11891f60871aa9c2c04cd991
-               // Record.size() <= 19 ? 0 : Record[19],
-        Record.size() <= 20 ? nullptr : getMDString(Record[20]));
+        Record.size() <= 19 ? 0 : Record[19],
+        Record.size() <= 20 ? nullptr : getMDString(Record[20]),
+        Record.size() <= 21 ? nullptr : getMDString(Record[21]));
 
     MetadataList.assignValue(CU, NextMetadataNo);
     NextMetadataNo++;
@@ -1668,27 +1696,34 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_TEMPLATE_TYPE: {
-    if (Record.size() != 3)
-      return error("Invalid record");
-
-    IsDistinct = Record[0];
-    MetadataList.assignValue(GET_OR_DISTINCT(DITemplateTypeParameter,
-                                             (Context, getMDString(Record[1]),
-                                              getDITypeRefOrNull(Record[2]))),
-                             NextMetadataNo);
-    NextMetadataNo++;
-    break;
-  }
-  case bitc::METADATA_TEMPLATE_VALUE: {
-    if (Record.size() != 5)
+    if (Record.size() < 3 || Record.size() > 4)
       return error("Invalid record");
 
     IsDistinct = Record[0];
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DITemplateValueParameter,
-                        (Context, Record[1], getMDString(Record[2]),
-                         getDITypeRefOrNull(Record[3]),
-                         getMDOrNull(Record[4]))),
+        GET_OR_DISTINCT(DITemplateTypeParameter,
+                        (Context, getMDString(Record[1]),
+                         getDITypeRefOrNull(Record[2]),
+                         (Record.size() == 4) ? getMDOrNull(Record[3])
+                                              : getMDOrNull(false))),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_TEMPLATE_VALUE: {
+    if (Record.size() < 5 || Record.size() > 6)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(
+            DITemplateValueParameter,
+            (Context, Record[1], getMDString(Record[2]),
+             getDITypeRefOrNull(Record[3]),
+             (Record.size() == 6) ? getMDOrNull(Record[4]) : getMDOrNull(false),
+             (Record.size() == 6) ? getMDOrNull(Record[5])
+                                  : getMDOrNull(Record[4]))),
         NextMetadataNo);
     NextMetadataNo++;
     break;

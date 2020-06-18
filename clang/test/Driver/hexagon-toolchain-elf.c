@@ -514,7 +514,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK051 %s
 // CHECK051:      "-cc1"
-// CHECK051       {{hexagon-link|ld}}
+// CHECK051:      {{hexagon-link|ld}}
 // CHECK051-NOT:  "-pie"
 
 // -----------------------------------------------------------------------------
@@ -531,7 +531,7 @@
 // CHECK060:      "-cc1"
 // CHECK060-NEXT: llvm-mc
 // CHECK060:      "--noexecstack" "--trap" "--keep-locals"
-// CHECK060       {{hexagon-link|ld}}
+// CHECK060:      {{hexagon-link|ld}}
 
 // -----------------------------------------------------------------------------
 // ffixed-r19
@@ -588,3 +588,12 @@
 // RUN:   | FileCheck -check-prefix=CHECK083 %s
 // CHECK083:          "-isysroot" "/hexagon"
 // CHECK083:          "-internal-externc-isystem" "/hexagon{{/|\\\\}}include"
+// -----------------------------------------------------------------------------
+// Passing -fno-use-init-array
+// -----------------------------------------------------------------------------
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK084 %s
+// CHECK084:          "-fno-use-init-array"

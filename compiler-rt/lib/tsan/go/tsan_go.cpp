@@ -244,6 +244,10 @@ void __tsan_acquire(ThreadState *thr, void *addr) {
   Acquire(thr, 0, (uptr)addr);
 }
 
+void __tsan_release_acquire(ThreadState *thr, void *addr) {
+  ReleaseStoreAcquire(thr, 0, (uptr)addr);
+}
+
 void __tsan_release(ThreadState *thr, void *addr) {
   ReleaseStore(thr, 0, (uptr)addr);
 }

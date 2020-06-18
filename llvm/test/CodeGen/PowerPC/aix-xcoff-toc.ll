@@ -56,21 +56,21 @@ define void @foobar() {
 ; CHECK32: .lcomm ptr,4,ptr[BS],2
 ; CHECK64: .lcomm ptr,8,ptr[BS],2
 ; CHECK:      .toc
-; CHECK-NEXT: LC0:
+; CHECK-NEXT: L..C0:
 ; CHECK-NEXT: .tc   a[TC],a[UA]
-; CHECK-NEXT: LC1:
+; CHECK-NEXT: L..C1:
 ; CHECK-NEXT: .tc   b[TC],b[UA]
-; CHECK-NEXT: LC2:
+; CHECK-NEXT: L..C2:
 ; CHECK-NEXT: .tc   c[TC],c[UA]
-; CHECK-NEXT: LC3:
+; CHECK-NEXT: L..C3:
 ; CHECK-NEXT: .tc   globa[TC],globa[RW]
-; CHECK-NEXT: LC4:
+; CHECK-NEXT: L..C4:
 ; CHECK-NEXT: .tc   ptr[TC],ptr[BS]
-; CHECK-NEXT: LC5:
+; CHECK-NEXT: L..C5:
 ; CHECK-NEXT: .tc   bar[TC],bar[DS]
-; CHECK-NEXT: LC6:
+; CHECK-NEXT: L..C6:
 ; CHECK-NEXT: .tc   foo[TC],foo[DS]
-; CHECK-NEXT: LC7:
+; CHECK-NEXT: L..C7:
 ; CHECK-NEXT: .tc   foobar[TC],foobar[DS]
 
 

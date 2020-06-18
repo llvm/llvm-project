@@ -17,8 +17,10 @@ $mystr = comdat any
 ; CHECK: @dead_global = global { i32, [60 x i8] } { i32 42, [60 x i8] zeroinitializer }, comdat, align 32
 ; CHECK: @private_str = internal constant { [8 x i8], [56 x i8] } { [8 x i8] c"private\00", [56 x i8] zeroinitializer }, comdat, align 32
 
-; CHECK: @__asan_global_dead_global = private global { {{.*}} }, section ".ASAN$GL", comdat($dead_global), align 64
-; CHECK: @__asan_global_private_str = private global { {{.*}} }, section ".ASAN$GL", comdat($private_str), align 64
+; CHECK: @__asan_global_dead_global = private global { {{.*}} }, section ".ASAN$GL", comdat($dead_global), align 64, !associated
+; CHECK: @__asan_global_private_str = private global { {{.*}} }, section ".ASAN$GL", comdat($private_str), align 64, !associated
+
+; CHECK: @llvm.compiler.used {{.*}} @__asan_global_dead_global {{.*}} @__asan_global_private_str {{.*}} section "llvm.metadata"
 
 @dead_global = local_unnamed_addr global i32 42, align 4
 @mystr = linkonce_odr unnamed_addr constant [5 x i8] c"main\00", comdat, align 1

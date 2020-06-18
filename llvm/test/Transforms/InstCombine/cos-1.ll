@@ -151,7 +151,7 @@ declare void @use(double)
 
 define double @sin_negated_arg_extra_use(double %x) {
 ; ANY-LABEL: @sin_negated_arg_extra_use(
-; ANY-NEXT:    [[NEG:%.*]] = fsub double -0.000000e+00, [[X:%.*]]
+; ANY-NEXT:    [[NEG:%.*]] = fneg double [[X:%.*]]
 ; ANY-NEXT:    [[R:%.*]] = call double @sin(double [[NEG]])
 ; ANY-NEXT:    call void @use(double [[NEG]])
 ; ANY-NEXT:    ret double [[R]]

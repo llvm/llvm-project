@@ -57,9 +57,12 @@ public:
   }
 
   bool SingleStepEnabled() { return m_single_step; }
+  
+  Thread &GetThread();
 
 protected:
-  Thread &m_thread;
+  Process &m_process;
+  lldb::tid_t m_tid;
 
   Stream *GetLogStream();
 
@@ -71,6 +74,7 @@ private:
   bool m_single_step;
   bool m_enabled;
   lldb::StreamSP m_stream_sp;
+  Thread *m_thread;
 };
 
 class ThreadPlanAssemblyTracer : public ThreadPlanTracer {

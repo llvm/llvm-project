@@ -47,7 +47,7 @@ typedef struct {
 } kmp_omp_nthr_item_t;
 
 typedef struct {
-  kmp_int32 num; // Number of items in the arrray.
+  kmp_int32 num; // Number of items in the array.
   kmp_uint64 array; // Address of array of kmp_omp_num_threads_item_t.
 } kmp_omp_nthr_info_t;
 

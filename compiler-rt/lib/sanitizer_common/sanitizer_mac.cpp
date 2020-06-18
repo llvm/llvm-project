@@ -27,9 +27,9 @@
 #include "sanitizer_flags.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
-#include "sanitizer_placement_new.h"
 #include "sanitizer_platform_limits_posix.h"
 #include "sanitizer_procmaps.h"
+#include "sanitizer_ptrauth.h"
 
 #if !SANITIZER_IOS
 #include <crt_externs.h>  // for _NSGetEnviron
@@ -246,7 +246,8 @@ int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
                       (size_t)newlen);
 }
 
-static fd_t internal_spawn_impl(const char *argv[], pid_t *pid) {
+static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
+                                pid_t *pid) {
   fd_t master_fd = kInvalidFd;
   fd_t slave_fd = kInvalidFd;
 
@@ -302,8 +303,8 @@ static fd_t internal_spawn_impl(const char *argv[], pid_t *pid) {
 
   // posix_spawn
   char **argv_casted = const_cast<char **>(argv);
-  char **env = GetEnviron();
-  res = posix_spawn(pid, argv[0], &acts, &attrs, argv_casted, env);
+  char **envp_casted = const_cast<char **>(envp);
+  res = posix_spawn(pid, argv[0], &acts, &attrs, argv_casted, envp_casted);
   if (res != 0) return kInvalidFd;
 
   // Disable echo in the new terminal, disable CR.
@@ -320,7 +321,7 @@ static fd_t internal_spawn_impl(const char *argv[], pid_t *pid) {
   return fd;
 }
 
-fd_t internal_spawn(const char *argv[], pid_t *pid) {
+fd_t internal_spawn(const char *argv[], const char *envp[], pid_t *pid) {
   // The client program may close its stdin and/or stdout and/or stderr thus
   // allowing open/posix_openpt to reuse file descriptors 0, 1 or 2. In this
   // case the communication is broken if either the parent or the child tries to
@@ -335,7 +336,7 @@ fd_t internal_spawn(const char *argv[], pid_t *pid) {
       break;
   }
 
-  fd_t fd = internal_spawn_impl(argv, pid);
+  fd_t fd = internal_spawn_impl(argv, envp, pid);
 
   for (; count > 0; count--) {
     internal_close(low_fds[count]);
@@ -386,7 +387,7 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
   // pthread_get_stacksize_np() returns an incorrect stack size for the main
   // thread on Mavericks. See
   // https://github.com/google/sanitizers/issues/261
-  if ((GetMacosVersion() >= MACOS_VERSION_MAVERICKS) && at_initialization &&
+  if ((GetMacosAlignedVersion() >= MacosVersion(10, 9)) && at_initialization &&
       stacksize == (1 << 19))  {
     struct rlimit rl;
     CHECK_EQ(getrlimit(RLIMIT_STACK, &rl), 0);
@@ -605,68 +606,49 @@ HandleSignalMode GetHandleSignalMode(int signum) {
   return result;
 }
 
-MacosVersion cached_macos_version = MACOS_VERSION_UNINITIALIZED;
+static MacosVersion GetMacosAlignedVersionInternal() {
+  u16 kernel_major = GetDarwinKernelVersion().major;
+  const u16 version_offset = 4;
+  CHECK_GE(kernel_major, version_offset);
+  u16 macos_major = kernel_major - version_offset;
+  return MacosVersion(10, macos_major);
+}
 
-MacosVersion GetMacosVersionInternal() {
-  int mib[2] = { CTL_KERN, KERN_OSRELEASE };
-  char version[100];
-  uptr len = 0, maxlen = sizeof(version) / sizeof(version[0]);
-  for (uptr i = 0; i < maxlen; i++) version[i] = '\0';
-  // Get the version length.
-  CHECK_NE(internal_sysctl(mib, 2, 0, &len, 0, 0), -1);
-  CHECK_LT(len, maxlen);
-  CHECK_NE(internal_sysctl(mib, 2, version, &len, 0, 0), -1);
+static_assert(sizeof(MacosVersion) == sizeof(atomic_uint32_t::Type),
+              "MacosVersion cache size");
+static atomic_uint32_t cached_macos_version;
 
-  // Expect <major>.<minor>(.<patch>)
-  CHECK_GE(len, 3);
-  const char *p = version;
-  int major = internal_simple_strtoll(p, &p, /*base=*/10);
-  if (*p != '.') return MACOS_VERSION_UNKNOWN;
+MacosVersion GetMacosAlignedVersion() {
+  atomic_uint32_t::Type result =
+      atomic_load(&cached_macos_version, memory_order_acquire);
+  if (!result) {
+    MacosVersion version = GetMacosAlignedVersionInternal();
+    result = *reinterpret_cast<atomic_uint32_t::Type *>(&version);
+    atomic_store(&cached_macos_version, result, memory_order_release);
+  }
+  return *reinterpret_cast<MacosVersion *>(&result);
+}
+
+void ParseVersion(const char *vers, u16 *major, u16 *minor) {
+  // Format: <major>.<minor>.<patch>\0
+  CHECK_GE(internal_strlen(vers), 5);
+  const char *p = vers;
+  *major = internal_simple_strtoll(p, &p, /*base=*/10);
+  CHECK_EQ(*p, '.');
   p += 1;
-  int minor = internal_simple_strtoll(p, &p, /*base=*/10);
-  if (*p != '.') return MACOS_VERSION_UNKNOWN;
-
-  switch (major) {
-    case 9: return MACOS_VERSION_LEOPARD;
-    case 10: return MACOS_VERSION_SNOW_LEOPARD;
-    case 11: return MACOS_VERSION_LION;
-    case 12: return MACOS_VERSION_MOUNTAIN_LION;
-    case 13: return MACOS_VERSION_MAVERICKS;
-    case 14: return MACOS_VERSION_YOSEMITE;
-    case 15: return MACOS_VERSION_EL_CAPITAN;
-    case 16: return MACOS_VERSION_SIERRA;
-    case 17:
-      // Not a typo, 17.5 Darwin Kernel Version maps to High Sierra 10.13.4.
-      if (minor >= 5)
-        return MACOS_VERSION_HIGH_SIERRA_DOT_RELEASE_4;
-      return MACOS_VERSION_HIGH_SIERRA;
-    case 18: return MACOS_VERSION_MOJAVE;
-    case 19: return MACOS_VERSION_CATALINA;
-    default:
-      if (major < 9) return MACOS_VERSION_UNKNOWN;
-      return MACOS_VERSION_UNKNOWN_NEWER;
-  }
+  *minor = internal_simple_strtoll(p, &p, /*base=*/10);
 }
 
-MacosVersion GetMacosVersion() {
-  atomic_uint32_t *cache =
-      reinterpret_cast<atomic_uint32_t*>(&cached_macos_version);
-  MacosVersion result =
-      static_cast<MacosVersion>(atomic_load(cache, memory_order_acquire));
-  if (result == MACOS_VERSION_UNINITIALIZED) {
-    result = GetMacosVersionInternal();
-    atomic_store(cache, result, memory_order_release);
-  }
-  return result;
-}
+DarwinKernelVersion GetDarwinKernelVersion() {
+  char buf[100];
+  size_t len = sizeof(buf);
+  int res = internal_sysctlbyname("kern.osrelease", buf, &len, nullptr, 0);
+  CHECK_EQ(res, 0);
 
-bool PlatformHasDifferentMemcpyAndMemmove() {
-  // On OS X 10.7 memcpy() and memmove() are both resolved
-  // into memmove$VARIANT$sse42.
-  // See also https://github.com/google/sanitizers/issues/34.
-  // TODO(glider): need to check dynamically that memcpy() and memmove() are
-  // actually the same function.
-  return GetMacosVersion() == MACOS_VERSION_SNOW_LEOPARD;
+  u16 major, minor;
+  ParseVersion(buf, &major, &minor);
+
+  return DarwinKernelVersion(major, minor);
 }
 
 uptr GetRSS() {
@@ -715,7 +697,7 @@ void LogFullErrorReport(const char *buffer) {
 #if !SANITIZER_GO
   // Log with os_trace. This will make it into the crash log.
 #if SANITIZER_OS_TRACE
-  if (GetMacosVersion() >= MACOS_VERSION_YOSEMITE) {
+  if (GetMacosAlignedVersion() >= MacosVersion(10, 10)) {
     // os_trace requires the message (format parameter) to be a string literal.
     if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
                          sizeof("AddressSanitizer") - 1) == 0)
@@ -764,16 +746,24 @@ bool SignalContext::IsTrueFaultingAddress() const {
   return si->si_signo == SIGSEGV && si->si_code != 0;
 }
 
+#if defined(__aarch64__) && defined(arm_thread_state64_get_sp)
+  #define AARCH64_GET_REG(r) \
+    (uptr)ptrauth_strip(     \
+        (void *)arm_thread_state64_get_##r(ucontext->uc_mcontext->__ss), 0)
+#else
+  #define AARCH64_GET_REG(r) ucontext->uc_mcontext->__ss.__##r
+#endif
+
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   ucontext_t *ucontext = (ucontext_t*)context;
 # if defined(__aarch64__)
-  *pc = ucontext->uc_mcontext->__ss.__pc;
+  *pc = AARCH64_GET_REG(pc);
 #   if defined(__IPHONE_8_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_8_0
-  *bp = ucontext->uc_mcontext->__ss.__fp;
+  *bp = AARCH64_GET_REG(fp);
 #   else
-  *bp = ucontext->uc_mcontext->__ss.__lr;
+  *bp = AARCH64_GET_REG(lr);
 #   endif
-  *sp = ucontext->uc_mcontext->__ss.__sp;
+  *sp = AARCH64_GET_REG(sp);
 # elif defined(__x86_64__)
   *pc = ucontext->uc_mcontext->__ss.__rip;
   *bp = ucontext->uc_mcontext->__ss.__rbp;
@@ -791,13 +781,16 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 # endif
 }
 
-void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
+void SignalContext::InitPcSpBp() {
+  addr = (uptr)ptrauth_strip((void *)addr, 0);
+  GetPcSpBp(context, &pc, &sp, &bp);
+}
 
 void InitializePlatformEarly() {
-  // Only use xnu_fast_mmap when on x86_64 and the OS supports it.
+  // Only use xnu_fast_mmap when on x86_64 and the kernel supports it.
   use_xnu_fast_mmap =
 #if defined(__x86_64__)
-      GetMacosVersion() >= MACOS_VERSION_HIGH_SIERRA_DOT_RELEASE_4;
+      GetDarwinKernelVersion() >= DarwinKernelVersion(17, 5);
 #else
       false;
 #endif
@@ -851,9 +844,9 @@ bool DyldNeedsEnvVariable() {
   if (!&dyldVersionNumber) return true;
   // If running on OS X 10.11+ or iOS 9.0+, dyld will interpose even if
   // DYLD_INSERT_LIBRARIES is not set. However, checking OS version via
-  // GetMacosVersion() doesn't work for the simulator. Let's instead check
-  // `dyldVersionNumber`, which is exported by dyld, against a known version
-  // number from the first OS release where this appeared.
+  // GetMacosAlignedVersion() doesn't work for the simulator. Let's instead
+  // check `dyldVersionNumber`, which is exported by dyld, against a known
+  // version number from the first OS release where this appeared.
   return dyldVersionNumber < kMinDyldVersionWithAutoInterposition;
 }
 
@@ -1127,6 +1120,8 @@ void SignalContext::DumpAllRegisters(void *context) {
   ucontext_t *ucontext = (ucontext_t*)context;
 # define DUMPREG64(r) \
     Printf("%s = 0x%016llx  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
+# define DUMPREGA64(r) \
+    Printf("   %s = 0x%016llx  ", #r, AARCH64_GET_REG(r));
 # define DUMPREG32(r) \
     Printf("%s = 0x%08x  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREG_(r)   Printf(" "); DUMPREG(r);
@@ -1152,7 +1147,7 @@ void SignalContext::DumpAllRegisters(void *context) {
   DUMPREG(x[16]); DUMPREG(x[17]); DUMPREG(x[18]); DUMPREG(x[19]); Printf("\n");
   DUMPREG(x[20]); DUMPREG(x[21]); DUMPREG(x[22]); DUMPREG(x[23]); Printf("\n");
   DUMPREG(x[24]); DUMPREG(x[25]); DUMPREG(x[26]); DUMPREG(x[27]); Printf("\n");
-  DUMPREG(x[28]); DUMPREG___(fp); DUMPREG___(lr); DUMPREG___(sp); Printf("\n");
+  DUMPREG(x[28]); DUMPREGA64(fp); DUMPREGA64(lr); DUMPREGA64(sp); Printf("\n");
 # elif defined(__arm__)
 #  define DUMPREG(r) DUMPREG32(r)
   DUMPREG_(r[0]); DUMPREG_(r[1]); DUMPREG_(r[2]); DUMPREG_(r[3]); Printf("\n");

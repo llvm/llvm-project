@@ -33,7 +33,7 @@ HWASAN_FLAG(bool, disable_allocator_tagging, false, "")
 HWASAN_FLAG(bool, random_tags, true, "")
 
 HWASAN_FLAG(
-    int, max_malloc_fill_size, 0x1000,  // By default, fill only the first 4K.
+    int, max_malloc_fill_size, 0,
     "HWASan allocator flag. max_malloc_fill_size is the maximal amount of "
     "bytes that will be filled with malloc_fill_byte on malloc.")
 

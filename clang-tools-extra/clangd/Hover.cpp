@@ -11,23 +11,28 @@
 #include "AST.h"
 #include "CodeCompletionStrings.h"
 #include "FindTarget.h"
-#include "FormattedString.h"
-#include "Logger.h"
 #include "ParsedAST.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "index/SymbolCollector.h"
+#include "support/Logger.h"
+#include "support/Markup.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Index/IndexSymbol.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -274,7 +279,7 @@ void enhanceFromIndex(HoverInfo &Hover, const NamedDecl &ND,
 // arguments for example. This function returns the default argument if it is
 // available.
 const Expr *getDefaultArg(const ParmVarDecl *PVD) {
-  // Default argument can be unparsed or uninstatiated. For the former we
+  // Default argument can be unparsed or uninstantiated. For the former we
   // can't do much, as token information is only stored in Sema and not
   // attached to the AST node. For the latter though, it is safe to proceed as
   // the expression is still valid.
@@ -367,11 +372,102 @@ llvm::Optional<std::string> printExprValue(const SelectionTree::Node *N,
   return llvm::None;
 }
 
+llvm::Optional<StringRef> fieldName(const Expr *E) {
+  const auto *ME = llvm::dyn_cast<MemberExpr>(E->IgnoreCasts());
+  if (!ME || !llvm::isa<CXXThisExpr>(ME->getBase()->IgnoreCasts()))
+    return llvm::None;
+  const auto *Field = llvm::dyn_cast<FieldDecl>(ME->getMemberDecl());
+  if (!Field || !Field->getDeclName().isIdentifier())
+    return llvm::None;
+  return Field->getDeclName().getAsIdentifierInfo()->getName();
+}
+
+// If CMD is of the form T foo() { return FieldName; } then returns "FieldName".
+llvm::Optional<StringRef> getterVariableName(const CXXMethodDecl *CMD) {
+  assert(CMD->hasBody());
+  if (CMD->getNumParams() != 0 || CMD->isVariadic())
+    return llvm::None;
+  const auto *Body = llvm::dyn_cast<CompoundStmt>(CMD->getBody());
+  const auto *OnlyReturn = (Body && Body->size() == 1)
+                               ? llvm::dyn_cast<ReturnStmt>(Body->body_front())
+                               : nullptr;
+  if (!OnlyReturn || !OnlyReturn->getRetValue())
+    return llvm::None;
+  return fieldName(OnlyReturn->getRetValue());
+}
+
+// If CMD is one of the forms:
+//   void foo(T arg) { FieldName = arg; }
+//   R foo(T arg) { FieldName = arg; return *this; }
+// then returns "FieldName"
+llvm::Optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
+  assert(CMD->hasBody());
+  if (CMD->isConst() || CMD->getNumParams() != 1 || CMD->isVariadic())
+    return llvm::None;
+  const ParmVarDecl *Arg = CMD->getParamDecl(0);
+  if (Arg->isParameterPack())
+    return llvm::None;
+
+  const auto *Body = llvm::dyn_cast<CompoundStmt>(CMD->getBody());
+  if (!Body || Body->size() == 0 || Body->size() > 2)
+    return llvm::None;
+  // If the second statement exists, it must be `return this` or `return *this`.
+  if (Body->size() == 2) {
+    auto *Ret = llvm::dyn_cast<ReturnStmt>(Body->body_back());
+    if (!Ret || !Ret->getRetValue())
+      return llvm::None;
+    const Expr *RetVal = Ret->getRetValue()->IgnoreCasts();
+    if (const auto *UO = llvm::dyn_cast<UnaryOperator>(RetVal)) {
+      if (UO->getOpcode() != UO_Deref)
+        return llvm::None;
+      RetVal = UO->getSubExpr()->IgnoreCasts();
+    }
+    if (!llvm::isa<CXXThisExpr>(RetVal))
+      return llvm::None;
+  }
+  // The first statement must be an assignment of the arg to a field.
+  const Expr *LHS, *RHS;
+  if (const auto *BO = llvm::dyn_cast<BinaryOperator>(Body->body_front())) {
+    if (BO->getOpcode() != BO_Assign)
+      return llvm::None;
+    LHS = BO->getLHS();
+    RHS = BO->getRHS();
+  } else if (const auto *COCE =
+                 llvm::dyn_cast<CXXOperatorCallExpr>(Body->body_front())) {
+    if (COCE->getOperator() != OO_Equal || COCE->getNumArgs() != 2)
+      return llvm::None;
+    LHS = COCE->getArg(0);
+    RHS = COCE->getArg(1);
+  } else {
+    return llvm::None;
+  }
+  auto *DRE = llvm::dyn_cast<DeclRefExpr>(RHS->IgnoreCasts());
+  if (!DRE || DRE->getDecl() != Arg)
+    return llvm::None;
+  return fieldName(LHS);
+}
+
+std::string synthesizeDocumentation(const NamedDecl *ND) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
+    // Is this an ordinary, non-static method whose definition is visible?
+    if (CMD->getDeclName().isIdentifier() && !CMD->isStatic() &&
+        (CMD = llvm::dyn_cast_or_null<CXXMethodDecl>(CMD->getDefinition())) &&
+        CMD->hasBody()) {
+      if (const auto GetterField = getterVariableName(CMD))
+        return llvm::formatv("Trivial accessor for `{0}`.", *GetterField);
+      if (const auto SetterField = setterVariableName(CMD))
+        return llvm::formatv("Trivial setter for `{0}`.", *SetterField);
+    }
+  }
+  return "";
+}
+
 /// Generate a \p Hover object given the declaration \p D.
 HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
   HoverInfo HI;
   const ASTContext &Ctx = D->getASTContext();
 
+  HI.AccessSpecifier = getAccessSpelling(D->getAccess()).str();
   HI.NamespaceScope = getNamespaceScope(D);
   if (!HI.NamespaceScope->empty())
     HI.NamespaceScope->append("::");
@@ -384,6 +480,8 @@ HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
   const auto *CommentD = getDeclForComment(D);
   HI.Documentation = getDeclComment(Ctx, *CommentD);
   enhanceFromIndex(HI, *CommentD, Index);
+  if (HI.Documentation.empty())
+    HI.Documentation = synthesizeDocumentation(D);
 
   HI.Kind = index::getSymbolInfo(D).Kind;
 
@@ -452,12 +550,19 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   HI.Name = std::string(Macro.Name);
   HI.Kind = index::SymbolKind::Macro;
   // FIXME: Populate documentation
-  // FIXME: Pupulate parameters
+  // FIXME: Populate parameters
 
   // Try to get the full definition, not just the name
   SourceLocation StartLoc = Macro.Info->getDefinitionLoc();
   SourceLocation EndLoc = Macro.Info->getDefinitionEndLoc();
-  if (EndLoc.isValid()) {
+  // Ensure that EndLoc is a valid offset. For example it might come from
+  // preamble, and source file might've changed, in such a scenario EndLoc still
+  // stays valid, but getLocForEndOfToken will fail as it is no longer a valid
+  // offset.
+  // Note that this check is just to ensure there's text data inside the range.
+  // It will still succeed even when the data inside the range is irrelevant to
+  // macro definition.
+  if (SM.getPresumedLoc(EndLoc, /*UseLineDirectives=*/false).isValid()) {
     EndLoc = Lexer::getLocForEndOfToken(EndLoc, 0, SM, AST.getLangOpts());
     bool Invalid;
     StringRef Buffer = SM.getBufferData(SM.getFileID(StartLoc), &Invalid);
@@ -517,32 +622,126 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST) {
   }
   return llvm::None;
 }
+
+bool isParagraphBreak(llvm::StringRef Rest) {
+  return Rest.ltrim(" \t").startswith("\n");
+}
+
+bool punctuationIndicatesLineBreak(llvm::StringRef Line) {
+  constexpr llvm::StringLiteral Punctuation = R"txt(.:,;!?)txt";
+
+  Line = Line.rtrim();
+  return !Line.empty() && Punctuation.contains(Line.back());
+}
+
+bool isHardLineBreakIndicator(llvm::StringRef Rest) {
+  // '-'/'*' md list, '@'/'\' documentation command, '>' md blockquote,
+  // '#' headings, '`' code blocks
+  constexpr llvm::StringLiteral LinebreakIndicators = R"txt(-*@\>#`)txt";
+
+  Rest = Rest.ltrim(" \t");
+  if (Rest.empty())
+    return false;
+
+  if (LinebreakIndicators.contains(Rest.front()))
+    return true;
+
+  if (llvm::isDigit(Rest.front())) {
+    llvm::StringRef AfterDigit = Rest.drop_while(llvm::isDigit);
+    if (AfterDigit.startswith(".") || AfterDigit.startswith(")"))
+      return true;
+  }
+  return false;
+}
+
+bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest) {
+  // Should we also consider whether Line is short?
+  return punctuationIndicatesLineBreak(Line) || isHardLineBreakIndicator(Rest);
+}
+
+void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
+  const auto &Ctx = ND.getASTContext();
+
+  if (auto *RD = llvm::dyn_cast<RecordDecl>(&ND)) {
+    if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RD->getTypeForDecl()))
+      HI.Size = Size->getQuantity();
+    return;
+  }
+
+  if (const auto *FD = llvm::dyn_cast<FieldDecl>(&ND)) {
+    const auto *Record = FD->getParent();
+    if (Record)
+      Record = Record->getDefinition();
+    if (Record && !Record->isDependentType()) {
+      uint64_t OffsetBits = Ctx.getFieldOffset(FD);
+      if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType())) {
+        HI.Size = Size->getQuantity();
+        HI.Offset = OffsetBits / 8;
+      }
+    }
+    return;
+  }
+}
+
 } // namespace
 
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
                                    format::FormatStyle Style,
                                    const SymbolIndex *Index) {
   const SourceManager &SM = AST.getSourceManager();
-  llvm::Optional<HoverInfo> HI;
-  SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
+  auto CurLoc = sourceLocationInMainFile(SM, Pos);
+  if (!CurLoc) {
+    llvm::consumeError(CurLoc.takeError());
+    return llvm::None;
+  }
+  const auto &TB = AST.getTokens();
+  auto TokensTouchingCursor = syntax::spelledTokensTouching(*CurLoc, TB);
+  // Early exit if there were no tokens around the cursor.
+  if (TokensTouchingCursor.empty())
+    return llvm::None;
 
-  if (auto Deduced = getDeducedType(AST.getASTContext(), SourceLocationBeg)) {
-    HI = getHoverContents(*Deduced, AST.getASTContext(), Index);
-  } else if (auto M = locateMacroAt(SourceLocationBeg, AST.getPreprocessor())) {
-    HI = getHoverContents(*M, AST);
-  } else {
-    auto Offset = positionToOffset(SM.getBufferData(SM.getMainFileID()), Pos);
-    if (!Offset) {
-      llvm::consumeError(Offset.takeError());
-      return llvm::None;
+  // To be used as a backup for highlighting the selected token, we use back as
+  // it aligns better with biases elsewhere (editors tend to send the position
+  // for the left of the hovered token).
+  CharSourceRange HighlightRange =
+      TokensTouchingCursor.back().range(SM).toCharRange(SM);
+  llvm::Optional<HoverInfo> HI;
+  // Macros and deducedtype only works on identifiers and auto/decltype keywords
+  // respectively. Therefore they are only trggered on whichever works for them,
+  // similar to SelectionTree::create().
+  for (const auto &Tok : TokensTouchingCursor) {
+    if (Tok.kind() == tok::identifier) {
+      // Prefer the identifier token as a fallback highlighting range.
+      HighlightRange = Tok.range(SM).toCharRange(SM);
+      if (auto M = locateMacroAt(Tok, AST.getPreprocessor())) {
+        HI = getHoverContents(*M, AST);
+        break;
+      }
+    } else if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
+      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+        HI = getHoverContents(*Deduced, AST.getASTContext(), Index);
+        HighlightRange = Tok.range(SM).toCharRange(SM);
+        break;
+      }
     }
-    SelectionTree Selection(AST.getASTContext(), AST.getTokens(), *Offset);
+  }
+
+  // If it wasn't auto/decltype or macro, look for decls and expressions.
+  if (!HI) {
+    auto Offset = SM.getFileOffset(*CurLoc);
+    // Editors send the position on the left of the hovered character.
+    // So our selection tree should be biased right. (Tested with VSCode).
+    SelectionTree ST =
+        SelectionTree::createRight(AST.getASTContext(), TB, Offset, Offset);
     std::vector<const Decl *> Result;
-    if (const SelectionTree::Node *N = Selection.commonAncestor()) {
+    if (const SelectionTree::Node *N = ST.commonAncestor()) {
+      // FIXME: Fill in HighlightRange with range coming from N->ASTNode.
       auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias);
       if (!Decls.empty()) {
         HI = getHoverContents(Decls.front(), Index);
+        // Layout info only shown when hovering on the field/class itself.
+        if (Decls.front() == N->ASTNode.get<Decl>())
+          addLayoutInfo(*Decls.front(), *HI);
         // Look for a close enclosing expression to show the value of.
         if (!HI->Value)
           HI->Value = printExprValue(N, AST.getASTContext());
@@ -562,9 +761,8 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   if (auto Formatted =
           tooling::applyAllReplacements(HI->Definition, Replacements))
     HI->Definition = *Formatted;
+  HI->SymRange = halfOpenToRange(SM, HighlightRange);
 
-  HI->SymRange = getTokenRange(AST.getSourceManager(), AST.getLangOpts(),
-                               SourceLocationBeg);
   return HI;
 }
 
@@ -584,7 +782,7 @@ markup::Document HoverInfo::present() const {
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
   if (Kind != index::SymbolKind::Unknown)
-    Header.appendText(std::string(index::getSymbolKindString(Kind)));
+    Header.appendText(index::getSymbolKindString(Kind)).appendSpace();
   assert(!Name.empty() && "hover triggered on a nameless symbol");
   Header.appendCode(Name);
 
@@ -598,9 +796,9 @@ markup::Document HoverInfo::present() const {
     // Parameters:
     // - `bool param1`
     // - `int param2 = 5`
-    Output.addParagraph().appendText("→").appendCode(*ReturnType);
+    Output.addParagraph().appendText("→ ").appendCode(*ReturnType);
     if (Parameters && !Parameters->empty()) {
-      Output.addParagraph().appendText("Parameters:");
+      Output.addParagraph().appendText("Parameters: ");
       markup::BulletList &L = Output.addBulletList();
       for (const auto &Param : *Parameters) {
         std::string Buffer;
@@ -615,12 +813,20 @@ markup::Document HoverInfo::present() const {
 
   if (Value) {
     markup::Paragraph &P = Output.addParagraph();
-    P.appendText("Value =");
+    P.appendText("Value = ");
     P.appendCode(*Value);
   }
 
+  if (Offset)
+    Output.addParagraph().appendText(
+        llvm::formatv("Offset: {0} byte{1}", *Offset, *Offset == 1 ? "" : "s")
+            .str());
+  if (Size)
+    Output.addParagraph().appendText(
+        llvm::formatv("Size: {0} byte{1}", *Size, *Size == 1 ? "" : "s").str());
+
   if (!Documentation.empty())
-    Output.addParagraph().appendText(Documentation);
+    parseDocumentation(Documentation, Output);
 
   if (!Definition.empty()) {
     Output.addRuler();
@@ -628,7 +834,7 @@ markup::Document HoverInfo::present() const {
     // Drop trailing "::".
     if (!LocalScope.empty()) {
       // Container name, e.g. class, method, function.
-      // We might want to propogate some info about container type to print
+      // We might want to propagate some info about container type to print
       // function foo, class X, method X::bar, etc.
       ScopeComment =
           "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
@@ -636,11 +842,89 @@ markup::Document HoverInfo::present() const {
       ScopeComment = "// In namespace " +
                      llvm::StringRef(*NamespaceScope).rtrim(':').str() + '\n';
     }
+    std::string DefinitionWithAccess = !AccessSpecifier.empty()
+                                           ? AccessSpecifier + ": " + Definition
+                                           : Definition;
     // Note that we don't print anything for global namespace, to not annoy
     // non-c++ projects or projects that are not making use of namespaces.
-    Output.addCodeBlock(ScopeComment + Definition);
+    Output.addCodeBlock(ScopeComment + DefinitionWithAccess);
   }
   return Output;
+}
+
+// If the backtick at `Offset` starts a probable quoted range, return the range
+// (including the quotes).
+llvm::Optional<llvm::StringRef> getBacktickQuoteRange(llvm::StringRef Line,
+                                                      unsigned Offset) {
+  assert(Line[Offset] == '`');
+
+  // The open-quote is usually preceded by whitespace.
+  llvm::StringRef Prefix = Line.substr(0, Offset);
+  constexpr llvm::StringLiteral BeforeStartChars = " \t(=";
+  if (!Prefix.empty() && !BeforeStartChars.contains(Prefix.back()))
+    return llvm::None;
+
+  // The quoted string must be nonempty and usually has no leading/trailing ws.
+  auto Next = Line.find('`', Offset + 1);
+  if (Next == llvm::StringRef::npos)
+    return llvm::None;
+  llvm::StringRef Contents = Line.slice(Offset + 1, Next);
+  if (Contents.empty() || isWhitespace(Contents.front()) ||
+      isWhitespace(Contents.back()))
+    return llvm::None;
+
+  // The close-quote is usually followed by whitespace or punctuation.
+  llvm::StringRef Suffix = Line.substr(Next + 1);
+  constexpr llvm::StringLiteral AfterEndChars = " \t)=.,;:";
+  if (!Suffix.empty() && !AfterEndChars.contains(Suffix.front()))
+    return llvm::None;
+
+  return Line.slice(Offset, Next + 1);
+}
+
+void parseDocumentationLine(llvm::StringRef Line, markup::Paragraph &Out) {
+  // Probably this is appendText(Line), but scan for something interesting.
+  for (unsigned I = 0; I < Line.size(); ++I) {
+    switch (Line[I]) {
+    case '`':
+      if (auto Range = getBacktickQuoteRange(Line, I)) {
+        Out.appendText(Line.substr(0, I));
+        Out.appendCode(Range->trim("`"), /*Preserve=*/true);
+        return parseDocumentationLine(Line.substr(I + Range->size()), Out);
+      }
+      break;
+    }
+  }
+  Out.appendText(Line).appendSpace();
+}
+
+void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
+  std::vector<llvm::StringRef> ParagraphLines;
+  auto FlushParagraph = [&] {
+    if (ParagraphLines.empty())
+      return;
+    auto &P = Output.addParagraph();
+    for (llvm::StringRef Line : ParagraphLines)
+      parseDocumentationLine(Line, P);
+    ParagraphLines.clear();
+  };
+
+  llvm::StringRef Line, Rest;
+  for (std::tie(Line, Rest) = Input.split('\n');
+       !(Line.empty() && Rest.empty());
+       std::tie(Line, Rest) = Rest.split('\n')) {
+
+    // After a linebreak remove spaces to avoid 4 space markdown code blocks.
+    // FIXME: make FlushParagraph handle this.
+    Line = Line.ltrim();
+    if (!Line.empty())
+      ParagraphLines.push_back(Line);
+
+    if (isParagraphBreak(Rest) || isHardLineBreakAfter(Line, Rest)) {
+      FlushParagraph();
+    }
+  }
+  FlushParagraph();
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,

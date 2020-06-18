@@ -53,9 +53,9 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -93,6 +93,7 @@
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1009,6 +1010,29 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   return true;
 }
 
+class ExpandedValuesCleaner {
+  SCEVExpander &Expander;
+  TargetLibraryInfo *TLI;
+  SmallVector<Value *, 4> ExpandedValues;
+  bool Commit = false;
+
+public:
+  ExpandedValuesCleaner(SCEVExpander &Expander, TargetLibraryInfo *TLI)
+      : Expander(Expander), TLI(TLI) {}
+
+  void add(Value *V) { ExpandedValues.push_back(V); }
+
+  void commit() { Commit = true; }
+
+  ~ExpandedValuesCleaner() {
+    if (!Commit) {
+      Expander.clear();
+      for (auto *V : ExpandedValues)
+        RecursivelyDeleteTriviallyDeadInstructions(V, TLI);
+    }
+  }
+};
+
 /// If the stored value is a strided load in the same loop with the same stride
 /// this may be transformable into a memcpy.  This kicks in for stuff like
 /// for (i) A[i] = B[i];
@@ -1039,6 +1063,8 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   IRBuilder<> Builder(Preheader->getTerminator());
   SCEVExpander Expander(*SE, *DL, "loop-idiom");
 
+  ExpandedValuesCleaner EVC(Expander, TLI);
+
   const SCEV *StrStart = StoreEv->getStart();
   unsigned StrAS = SI->getPointerAddressSpace();
   Type *IntIdxTy = Builder.getIntNTy(DL->getIndexSizeInBits(StrAS));
@@ -1055,16 +1081,13 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   // checking everything.
   Value *StoreBasePtr = Expander.expandCodeFor(
       StrStart, Builder.getInt8PtrTy(StrAS), Preheader->getTerminator());
+  EVC.add(StoreBasePtr);
 
   SmallPtrSet<Instruction *, 1> Stores;
   Stores.insert(SI);
   if (mayLoopAccessLocation(StoreBasePtr, ModRefInfo::ModRef, CurLoop, BECount,
-                            StoreSize, *AA, Stores)) {
-    Expander.clear();
-    // If we generated new code for the base pointer, clean up.
-    RecursivelyDeleteTriviallyDeadInstructions(StoreBasePtr, TLI);
+                            StoreSize, *AA, Stores))
     return false;
-  }
 
   const SCEV *LdStart = LoadEv->getStart();
   unsigned LdAS = LI->getPointerAddressSpace();
@@ -1077,15 +1100,11 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   // mutated by the loop.
   Value *LoadBasePtr = Expander.expandCodeFor(
       LdStart, Builder.getInt8PtrTy(LdAS), Preheader->getTerminator());
+  EVC.add(LoadBasePtr);
 
   if (mayLoopAccessLocation(LoadBasePtr, ModRefInfo::Mod, CurLoop, BECount,
-                            StoreSize, *AA, Stores)) {
-    Expander.clear();
-    // If we generated new code for the base pointer, clean up.
-    RecursivelyDeleteTriviallyDeadInstructions(LoadBasePtr, TLI);
-    RecursivelyDeleteTriviallyDeadInstructions(StoreBasePtr, TLI);
+                            StoreSize, *AA, Stores))
     return false;
-  }
 
   if (avoidLIRForMultiBlockLoop())
     return false;
@@ -1097,6 +1116,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 
   Value *NumBytes =
       Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
+  EVC.add(NumBytes);
 
   CallInst *NewCall = nullptr;
   // Check whether to generate an unordered atomic memcpy:
@@ -1108,11 +1128,9 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   else {
     // We cannot allow unaligned ops for unordered load/store, so reject
     // anything where the alignment isn't at least the element size.
-    const MaybeAlign StoreAlign = SI->getAlign();
-    const MaybeAlign LoadAlign = LI->getAlign();
-    if (StoreAlign == None || LoadAlign == None)
-      return false;
-    if (*StoreAlign < StoreSize || *LoadAlign < StoreSize)
+    const Align StoreAlign = SI->getAlign();
+    const Align LoadAlign = LI->getAlign();
+    if (StoreAlign < StoreSize || LoadAlign < StoreSize)
       return false;
 
     // If the element.atomic memcpy is not lowered into explicit
@@ -1126,7 +1144,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
     // Note that unordered atomic loads/stores are *required* by the spec to
     // have an alignment but non-atomic loads/stores may not.
     NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
-        StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes,
+        StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign, NumBytes,
         StoreSize);
   }
   NewCall->setDebugLoc(SI->getDebugLoc());
@@ -1158,6 +1176,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
   ++NumMemCpy;
+  EVC.commit();
   return true;
 }
 
@@ -1534,7 +1553,7 @@ bool LoopIdiomRecognize::recognizeAndInsertFFS() {
   //  %inc = add nsw %i.0, 1
   //  br i1 %tobool
 
-  const Value *Args[] =
+  Value *Args[] =
       {InitX, ZeroCheck ? ConstantInt::getTrue(InitX->getContext())
                         : ConstantInt::getFalse(InitX->getContext())};
 
@@ -1543,9 +1562,11 @@ bool LoopIdiomRecognize::recognizeAndInsertFFS() {
   uint32_t HeaderSize =
       std::distance(InstWithoutDebugIt.begin(), InstWithoutDebugIt.end());
 
+  IntrinsicCostAttributes Attrs(IntrinID, InitX->getType(), Args);
+  int Cost =
+    TTI->getIntrinsicInstrCost(Attrs, TargetTransformInfo::TCK_SizeAndLatency);
   if (HeaderSize != IdiomCanonicalSize &&
-      TTI->getIntrinsicCost(IntrinID, InitX->getType(), Args) >
-          TargetTransformInfo::TCC_Basic)
+      Cost > TargetTransformInfo::TCC_Basic)
     return false;
 
   transformLoopToCountable(IntrinID, PH, CntInst, CntPhi, InitX, DefX,

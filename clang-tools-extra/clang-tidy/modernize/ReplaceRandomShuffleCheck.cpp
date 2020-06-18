@@ -23,22 +23,23 @@ namespace modernize {
 ReplaceRandomShuffleCheck::ReplaceRandomShuffleCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
+      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
+                                            utils::IncludeSorter::getMapping(),
+                                            utils::IncludeSorter::IS_LLVM)) {}
 
 void ReplaceRandomShuffleCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   const auto Begin = hasArgument(0, expr());
   const auto End = hasArgument(1, expr());
   const auto RandomFunc = hasArgument(2, expr().bind("randomFunc"));
   Finder->addMatcher(
-      callExpr(anyOf(allOf(Begin, End, argumentCountIs(2)),
-                     allOf(Begin, End, RandomFunc, argumentCountIs(3))),
-               hasDeclaration(functionDecl(hasName("::std::random_shuffle"))),
-               has(implicitCastExpr(has(declRefExpr().bind("name")))))
-          .bind("match"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          callExpr(
+              anyOf(allOf(Begin, End, argumentCountIs(2)),
+                    allOf(Begin, End, RandomFunc, argumentCountIs(3))),
+              hasDeclaration(functionDecl(hasName("::std::random_shuffle"))),
+              has(implicitCastExpr(has(declRefExpr().bind("name")))))
+              .bind("match")),
       this);
 }
 
@@ -51,8 +52,8 @@ void ReplaceRandomShuffleCheck::registerPPCallbacks(
 
 void ReplaceRandomShuffleCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle",
-                utils::IncludeSorter::toString(IncludeStyle));
+  Options.store(Opts, "IncludeStyle", IncludeStyle,
+                utils::IncludeSorter::getMapping());
 }
 
 void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {

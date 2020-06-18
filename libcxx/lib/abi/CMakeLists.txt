@@ -21,7 +21,8 @@ if (EXISTS "${ABILIST_FILE}"
     AND TARGET cxx_shared
     AND ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxabi" OR
          (APPLE AND "${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "default"))
-    AND NOT LIBCXX_ABI_UNSTABLE)
+    AND NOT LIBCXX_ABI_UNSTABLE
+    AND LIBCXX_ENABLE_EXCEPTIONS)
     add_custom_target(check-cxx-abilist
             ${SYMDIFF_EXE} --only-stdlib-symbols --strict ${ABILIST_FILE}
             $<TARGET_SONAME_FILE:cxx_shared>

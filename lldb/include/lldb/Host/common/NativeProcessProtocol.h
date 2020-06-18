@@ -379,16 +379,10 @@ public:
   /// \param[in] traceid
   ///     The user id of the tracing instance.
   ///
-  /// \param[in] config
-  ///     The thread id of the tracing instance, in case configuration
-  ///     for a specific thread is needed should be specified in the
-  ///     config.
-  ///
-  /// \param[out] error
-  ///     Status indicates what went wrong.
-  ///
   /// \param[out] config
-  ///     The actual configuration being used for tracing.
+  ///     The configuration being used for tracing.
+  ///
+  /// \return A status indicating what went wrong.
   virtual Status GetTraceConfig(lldb::user_id_t traceid, TraceOptions &config) {
     return Status("Not implemented");
   }

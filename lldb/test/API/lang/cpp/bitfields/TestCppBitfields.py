@@ -103,3 +103,10 @@ class CppBitfieldsTestCase(TestBase):
                    '(uint64_t:1) k = 1',
                 ])
 
+        self.expect(
+            "frame variable --show-types derived",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                '(uint32_t) b_a = 2',
+                '(uint32_t:1) d_a = 1',
+                ])

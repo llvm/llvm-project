@@ -2,7 +2,7 @@
 ## sh_info field of a relocation section is invalid.
 
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-dwarfdump %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
+# RUN: not llvm-dwarfdump %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
 
 # ERR: error: failed to get relocated section: invalid section index: 255
 

@@ -117,7 +117,7 @@ entry:
 define i32 @test8(i1 %cnd, i32* %p) {
 ; CHECK-LABEL: test8
 ; CHECK: @bar
-; CHECK: load i32, i32* %p2, !invariant.load
+; CHECK: load i32, i32* %p2, align 4, !invariant.load
 ; CHECK: br label %merge
 entry:
   %v1 = load i32, i32* %p, !invariant.load !0

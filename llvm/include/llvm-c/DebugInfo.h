@@ -252,6 +252,8 @@ void LLVMDIBuilderFinalize(LLVMDIBuilderRef Builder);
  *                              profile collection.
  * \param SysRoot         The Clang system root (value of -isysroot).
  * \param SysRootLen      The length of the C string passed to \c SysRoot.
+ * \param SDK           The SDK. On Darwin, the last component of the sysroot.
+ * \param SDKLen        The length of the C string passed to \c SDK.
  */
 LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
     LLVMDIBuilderRef Builder, LLVMDWARFSourceLanguage Lang,
@@ -259,7 +261,8 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
     LLVMBool isOptimized, const char *Flags, size_t FlagsLen,
     unsigned RuntimeVer, const char *SplitName, size_t SplitNameLen,
     LLVMDWARFEmissionKind Kind, unsigned DWOId, LLVMBool SplitDebugInlining,
-    LLVMBool DebugInfoForProfiling, const char *SysRoot, size_t SysRootLen);
+    LLVMBool DebugInfoForProfiling, const char *SysRoot, size_t SysRootLen,
+    const char *SDK, size_t SDKLen);
 
 /**
  * Create a file descriptor to hold debugging information for a file.
@@ -285,12 +288,15 @@ LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder, const char *Filename,
  * \param ConfigMacrosLen The length of the C string passed to \c ConfigMacros.
  * \param IncludePath     The path to the module map file.
  * \param IncludePathLen  The length of the C string passed to \c IncludePath.
+ * \param APINotesFile    The path to an API notes file for the module.
+ * \param APINotesFileLen The length of the C string passed to \c APINotestFile.
  */
 LLVMMetadataRef
 LLVMDIBuilderCreateModule(LLVMDIBuilderRef Builder, LLVMMetadataRef ParentScope,
                           const char *Name, size_t NameLen,
                           const char *ConfigMacros, size_t ConfigMacrosLen,
-                          const char *IncludePath, size_t IncludePathLen);
+                          const char *IncludePath, size_t IncludePathLen,
+                          const char *APINotesFile, size_t APINotesFileLen);
 
 /**
  * Creates a new descriptor for a namespace with the specified parent scope.

@@ -30,6 +30,10 @@ pythonize_bool(LIBOMP_OMPT_OPTIONAL)
 pythonize_bool(LIBOMP_HAVE_LIBM)
 pythonize_bool(LIBOMP_HAVE_LIBATOMIC)
 
+add_library(ompt-print-callback INTERFACE)
+target_include_directories(ompt-print-callback INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/ompt)
+
+
 add_openmp_testsuite(check-libomp "Running libomp tests" ${CMAKE_CURRENT_BINARY_DIR} DEPENDS omp)
 # Add target check-ompt, but make sure to not add the tests twice to check-openmp.
 add_openmp_testsuite(check-ompt "Running OMPT tests" ${CMAKE_CURRENT_BINARY_DIR}/ompt EXCLUDE_FROM_CHECK_ALL DEPENDS omp)

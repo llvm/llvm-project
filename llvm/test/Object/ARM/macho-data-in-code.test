@@ -1,4 +1,4 @@
-RUN: llvm-objdump -triple thumbv7-apple-iOS -disassemble %p/../Inputs/macho-data-in-code.macho-thumbv7 -macho | FileCheck %s
+RUN: llvm-objdump --triple=thumbv7-apple-iOS -d %p/../Inputs/macho-data-in-code.macho-thumbv7 --macho | FileCheck %s
 
 CHECK:      12:	80 bd                                        	pop	{r7, pc}
 

@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -Wno-return-type -Wno-unused-value -emit-llvm %s -w -o - | FileCheck %s
 
-// CHECK: @i = common {{(dso_local )?}}global [[INT:i[0-9]+]] 0
+// CHECK: @i = {{(dso_local )?}}global [[INT:i[0-9]+]] 0
 volatile int i, j, k;
 volatile int ar[5];
 volatile char c;
-// CHECK: @ci = common {{(dso_local )?}}global [[CINT:.*]] zeroinitializer
+// CHECK: @ci = {{(dso_local )?}}global [[CINT:.*]] zeroinitializer
 volatile _Complex int ci;
 volatile struct S {
 #ifdef __cplusplus

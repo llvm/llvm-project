@@ -18,6 +18,8 @@
 
 UBSAN_CHECK(GenericUB, "undefined-behavior", "undefined")
 UBSAN_CHECK(NullPointerUse, "null-pointer-use", "null")
+UBSAN_CHECK(NullPointerUseWithNullability, "null-pointer-use",
+            "nullability-assign")
 UBSAN_CHECK(NullptrWithOffset, "nullptr-with-offset", "pointer-overflow")
 UBSAN_CHECK(NullptrWithNonZeroOffset, "nullptr-with-nonzero-offset",
             "pointer-overflow")
@@ -59,6 +61,10 @@ UBSAN_CHECK(InvalidEnumLoad, "invalid-enum-load", "enum")
 UBSAN_CHECK(FunctionTypeMismatch, "function-type-mismatch", "function")
 UBSAN_CHECK(InvalidNullReturn, "invalid-null-return",
             "returns-nonnull-attribute")
+UBSAN_CHECK(InvalidNullReturnWithNullability, "invalid-null-return",
+            "nullability-return")
 UBSAN_CHECK(InvalidNullArgument, "invalid-null-argument", "nonnull-attribute")
+UBSAN_CHECK(InvalidNullArgumentWithNullability, "invalid-null-argument",
+            "nullability-arg")
 UBSAN_CHECK(DynamicTypeMismatch, "dynamic-type-mismatch", "vptr")
 UBSAN_CHECK(CFIBadType, "cfi-bad-type", "cfi")

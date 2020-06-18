@@ -973,10 +973,15 @@ define <16 x i8> @trunc_v4i32_shuffle(<16 x i8> %a) {
 ; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: trunc_v4i32_shuffle:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    retq
+; AVX1OR2-LABEL: trunc_v4i32_shuffle:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: trunc_v4i32_shuffle:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmovdb %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <16 x i8> %shuffle
 }
@@ -1964,59 +1969,37 @@ define <16 x i8> @shuffle_v16i8_02_03_04_05_06_07_00_01_10_11_12_13_14_15_08_09(
 }
 
 define <16 x i8> @PR12412(<16 x i8> %inval1, <16 x i8> %inval2) {
-; SSE2-LABEL: PR12412:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    packuswb %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: PR12412:
-; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; SSSE3-NEXT:    pshufb %xmm2, %xmm1
-; SSSE3-NEXT:    pshufb %xmm2, %xmm0
-; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: PR12412:
-; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; SSE41-NEXT:    pshufb %xmm2, %xmm1
-; SSE41-NEXT:    pshufb %xmm2, %xmm0
-; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE41-NEXT:    retq
+; SSE-LABEL: PR12412:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR12412:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR12412:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: PR12412:
-; AVX512VLBW:       # %bb.0: # %entry
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX512VLBW-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX512VLBW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512VLBW-NEXT:    retq
-;
-; AVX512VLVBMI-LABEL: PR12412:
-; AVX512VLVBMI:       # %bb.0: # %entry
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
-; AVX512VLVBMI-NEXT:    vpermt2b %xmm1, %xmm2, %xmm0
-; AVX512VLVBMI-NEXT:    retq
+; AVX512VL-LABEL: PR12412:
+; AVX512VL:       # %bb.0: # %entry
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpmovwb %ymm0, %xmm0
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
 ;
 ; XOP-LABEL: PR12412:
 ; XOP:       # %bb.0: # %entry

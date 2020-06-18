@@ -3,10 +3,8 @@
 
 define void @shift_undef_64(i64* %p) {
 ; CHECK-LABEL: @shift_undef_64(
-; CHECK-NEXT:    [[R1:%.*]] = lshr i64 -1, 4294967296
-; CHECK-NEXT:    store i64 [[R1]], i64* [[P:%.*]]
-; CHECK-NEXT:    [[R2:%.*]] = ashr i64 -1, 4294967297
-; CHECK-NEXT:    store i64 [[R2]], i64* [[P]]
+; CHECK-NEXT:    store i64 0, i64* [[P:%.*]]
+; CHECK-NEXT:    store i64 -1, i64* [[P]]
 ; CHECK-NEXT:    [[R3:%.*]] = shl i64 -1, 4294967298
 ; CHECK-NEXT:    store i64 [[R3]], i64* [[P]]
 ; CHECK-NEXT:    ret void
@@ -25,10 +23,8 @@ define void @shift_undef_64(i64* %p) {
 
 define void @shift_undef_65(i65* %p) {
 ; CHECK-LABEL: @shift_undef_65(
-; CHECK-NEXT:    [[R1:%.*]] = lshr i65 2, -18446744073709551615
-; CHECK-NEXT:    store i65 [[R1]], i65* [[P:%.*]]
-; CHECK-NEXT:    [[R2:%.*]] = ashr i65 4, -18446744073709551615
-; CHECK-NEXT:    store i65 [[R2]], i65* [[P]]
+; CHECK-NEXT:    store i65 0, i65* [[P:%.*]]
+; CHECK-NEXT:    store i65 0, i65* [[P]]
 ; CHECK-NEXT:    [[R3:%.*]] = shl i65 1, -18446744073709551615
 ; CHECK-NEXT:    store i65 [[R3]], i65* [[P]]
 ; CHECK-NEXT:    ret void
@@ -47,10 +43,8 @@ define void @shift_undef_65(i65* %p) {
 
 define void @shift_undef_256(i256* %p) {
 ; CHECK-LABEL: @shift_undef_256(
-; CHECK-NEXT:    [[R1:%.*]] = lshr i256 2, 18446744073709551617
-; CHECK-NEXT:    store i256 [[R1]], i256* [[P:%.*]]
-; CHECK-NEXT:    [[R2:%.*]] = ashr i256 4, 18446744073709551618
-; CHECK-NEXT:    store i256 [[R2]], i256* [[P]]
+; CHECK-NEXT:    store i256 0, i256* [[P:%.*]]
+; CHECK-NEXT:    store i256 0, i256* [[P]]
 ; CHECK-NEXT:    [[R3:%.*]] = shl i256 1, 18446744073709551619
 ; CHECK-NEXT:    store i256 [[R3]], i256* [[P]]
 ; CHECK-NEXT:    ret void
@@ -69,10 +63,8 @@ define void @shift_undef_256(i256* %p) {
 
 define void @shift_undef_511(i511* %p) {
 ; CHECK-LABEL: @shift_undef_511(
-; CHECK-NEXT:    [[R1:%.*]] = lshr i511 -1, 1208925819614629174706276
-; CHECK-NEXT:    store i511 [[R1]], i511* [[P:%.*]]
-; CHECK-NEXT:    [[R2:%.*]] = ashr i511 -2, 1208925819614629174706200
-; CHECK-NEXT:    store i511 [[R2]], i511* [[P]]
+; CHECK-NEXT:    store i511 0, i511* [[P:%.*]]
+; CHECK-NEXT:    store i511 -1, i511* [[P]]
 ; CHECK-NEXT:    [[R3:%.*]] = shl i511 -3, 1208925819614629174706180
 ; CHECK-NEXT:    store i511 [[R3]], i511* [[P]]
 ; CHECK-NEXT:    ret void

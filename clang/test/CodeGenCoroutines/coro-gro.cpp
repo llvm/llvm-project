@@ -49,7 +49,7 @@ int f() {
   // CHECK: %[[GroActive:.+]] = alloca i1
 
   // CHECK: %[[Size:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call i8* @_Znwm(i64 %[[Size]])
+  // CHECK: call noalias nonnull i8* @_Znwm(i64 %[[Size]])
   // CHECK: store i1 false, i1* %[[GroActive]]
   // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJiEE12promise_typeC1Ev(
   // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJiEE12promise_type17get_return_objectEv(

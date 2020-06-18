@@ -98,10 +98,8 @@ public:
   /// Emit DIE containing warnings.
   virtual void emitPaperTrailWarningsDie(DIE &Die) = 0;
 
-  /// Emit section named SecName with content equals to
-  /// corresponding section in Obj.
-  virtual void emitSectionContents(const object::ObjectFile &Obj,
-                                   StringRef SecName) = 0;
+  /// Emit section named SecName with data SecData.
+  virtual void emitSectionContents(StringRef SecData, StringRef SecName) = 0;
 
   /// Emit the abbreviation table \p Abbrevs to the debug_abbrev section.
   virtual void
@@ -202,19 +200,21 @@ public:
 
 using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
 
-/// this class represents Object File and it`s additional info.
-class DwarfLinkerObjFile {
+/// this class represents DWARF information for source file
+/// and it`s address map.
+class DwarfFile {
 public:
-  DwarfLinkerObjFile(StringRef Name, const object::ObjectFile *File,
-                     const std::vector<std::string> &Warnings)
-      : FileName(Name), ObjFile(File), Warnings(Warnings) {}
+  DwarfFile(StringRef Name, DWARFContext *Dwarf, AddressesMap *Addresses,
+            const std::vector<std::string> &Warnings)
+      : FileName(Name), Dwarf(Dwarf), Addresses(Addresses), Warnings(Warnings) {
+  }
 
   /// object file name.
   StringRef FileName;
-  /// object file.
-  const object::ObjectFile *ObjFile;
+  /// source DWARF information.
+  DWARFContext *Dwarf = nullptr;
   /// helpful address information(list of valid address ranges, relocations).
-  std::unique_ptr<AddressesMap> Addresses;
+  AddressesMap *Addresses = nullptr;
   /// warnings for object file.
   const std::vector<std::string> &Warnings;
 };
@@ -222,10 +222,11 @@ public:
 typedef std::function<void(const Twine &Warning, StringRef Context,
                            const DWARFDie *DIE)>
     messageHandler;
-typedef std::function<ErrorOr<DwarfLinkerObjFile &>(StringRef ContainerName,
-                                                    StringRef Path)>
+typedef std::function<ErrorOr<DwarfFile &>(StringRef ContainerName,
+                                           StringRef Path)>
     objFileLoader;
 typedef std::map<std::string, std::string> swiftInterfacesMap;
+typedef std::map<std::string, std::string> objectPrefixMap;
 
 /// The core of the Dwarf linking logic.
 ///
@@ -248,7 +249,7 @@ public:
       : TheDwarfEmitter(Emitter), DwarfLinkerClientID(ClientID) {}
 
   /// Add object file to be linked.
-  void addObjectFile(DwarfLinkerObjFile &ObjFile);
+  void addObjectFile(DwarfFile &File);
 
   /// Link debug info for added objFiles. Object
   /// files are linked all together.
@@ -258,6 +259,9 @@ public:
 
   /// Allows to generate log of linking process to the standard output.
   void setVerbosity(bool Verbose) { Options.Verbose = Verbose; }
+
+  /// Print statistics to standard output.
+  void setStatistics(bool Statistics) { Options.Statistics = Statistics; }
 
   /// Do not emit linked dwarf info.
   void setNoOutput(bool NoOut) { Options.NoOutput = NoOut; }
@@ -309,6 +313,11 @@ public:
   /// Set map for Swift interfaces.
   void setSwiftInterfacesMap(swiftInterfacesMap *Map) {
     Options.ParseableSwiftInterfaces = Map;
+  }
+
+  /// Set prefix map for objects.
+  void setObjectPrefixMap(objectPrefixMap *Map) {
+    Options.ObjectPrefixMap = Map;
   }
 
 private:
@@ -367,16 +376,16 @@ private:
   /// returns true if we need to translate strings.
   bool needToTranslateStrings() { return StringsTranslator != nullptr; }
 
-  void reportWarning(const Twine &Warning, const DwarfLinkerObjFile &OF,
+  void reportWarning(const Twine &Warning, const DwarfFile &File,
                      const DWARFDie *DIE = nullptr) const {
     if (Options.WarningHandler != nullptr)
-      Options.WarningHandler(Warning, OF.FileName, DIE);
+      Options.WarningHandler(Warning, File.FileName, DIE);
   }
 
-  void reportError(const Twine &Warning, const DwarfLinkerObjFile &OF,
+  void reportError(const Twine &Warning, const DwarfFile &File,
                    const DWARFDie *DIE = nullptr) const {
     if (Options.ErrorHandler != nullptr)
-      Options.ErrorHandler(Warning, OF.FileName, DIE);
+      Options.ErrorHandler(Warning, File.FileName, DIE);
   }
 
   /// Remembers the oldest and newest DWARF version we've seen in a unit.
@@ -389,30 +398,24 @@ private:
   void updateAccelKind(DWARFContext &Dwarf);
 
   /// Emit warnings as Dwarf compile units to leave a trail after linking.
-  bool emitPaperTrailWarnings(const DwarfLinkerObjFile &OF,
+  bool emitPaperTrailWarnings(const DwarfFile &File,
                               OffsetsStringPool &StringPool);
 
-  void copyInvariantDebugSection(const object::ObjectFile &Obj);
+  void copyInvariantDebugSection(DWARFContext &Dwarf);
 
   /// Keeps track of data associated with one object during linking.
   struct LinkContext {
-    DwarfLinkerObjFile &ObjectFile;
-    std::unique_ptr<DWARFContext> DwarfContext;
+    DwarfFile &File;
     UnitListTy CompileUnits;
     bool Skip = false;
 
-    LinkContext(DwarfLinkerObjFile &objFile) : ObjectFile(objFile) {
-
-      if (ObjectFile.ObjFile)
-        DwarfContext = DWARFContext::create(*ObjectFile.ObjFile);
-    }
+    LinkContext(DwarfFile &File) : File(File) {}
 
     /// Clear part of the context that's no longer needed when we're done with
     /// the debug object.
     void clear() {
-      DwarfContext.reset(nullptr);
       CompileUnits.clear();
-      ObjectFile.Addresses->clear();
+      File.Addresses->clear();
     }
   };
 
@@ -435,7 +438,7 @@ private:
   /// kept. All DIEs referenced though attributes should be kept.
   void lookForRefDIEsToKeep(const DWARFDie &Die, CompileUnit &CU,
                             unsigned Flags, const UnitListTy &Units,
-                            const DwarfLinkerObjFile &OF,
+                            const DwarfFile &File,
                             SmallVectorImpl<WorklistItem> &Worklist);
 
   /// \defgroup FindRootDIEs Find DIEs corresponding to Address map entries.
@@ -447,7 +450,7 @@ private:
   /// The return value indicates whether the DIE is incomplete.
   void lookForDIEsToKeep(AddressesMap &RelocMgr, RangesTy &Ranges,
                          const UnitListTy &Units, const DWARFDie &DIE,
-                         const DwarfLinkerObjFile &OF, CompileUnit &CU,
+                         const DwarfFile &File, CompileUnit &CU,
                          unsigned Flags);
 
   /// If this compile unit is really a skeleton CU that points to a
@@ -457,7 +460,7 @@ private:
   /// pointing to the module, and a DW_AT_gnu_dwo_id with the module
   /// hash.
   bool registerModuleReference(DWARFDie CUDie, const DWARFUnit &Unit,
-                               const DwarfLinkerObjFile &OF,
+                               const DwarfFile &File,
                                OffsetsStringPool &OffsetsStringPool,
                                UniquingStringPool &UniquingStringPoolStringPool,
                                DeclContextTree &ODRContexts,
@@ -470,7 +473,7 @@ private:
   /// to Units.
   Error loadClangModule(DWARFDie CUDie, StringRef FilePath,
                         StringRef ModuleName, uint64_t DwoId,
-                        const DwarfLinkerObjFile &OF,
+                        const DwarfFile &File,
                         OffsetsStringPool &OffsetsStringPool,
                         UniquingStringPool &UniquingStringPool,
                         DeclContextTree &ODRContexts, uint64_t ModulesEndOffset,
@@ -481,11 +484,11 @@ private:
   void keepDIEAndDependencies(AddressesMap &RelocMgr, RangesTy &Ranges,
                               const UnitListTy &Units, const DWARFDie &DIE,
                               CompileUnit::DIEInfo &MyInfo,
-                              const DwarfLinkerObjFile &OF, CompileUnit &CU,
+                              const DwarfFile &File, CompileUnit &CU,
                               bool UseODR);
 
   unsigned shouldKeepDIE(AddressesMap &RelocMgr, RangesTy &Ranges,
-                         const DWARFDie &DIE, const DwarfLinkerObjFile &OF,
+                         const DWARFDie &DIE, const DwarfFile &File,
                          CompileUnit &Unit, CompileUnit::DIEInfo &MyInfo,
                          unsigned Flags);
 
@@ -496,8 +499,7 @@ private:
                                  CompileUnit::DIEInfo &MyInfo, unsigned Flags);
 
   unsigned shouldKeepSubprogramDIE(AddressesMap &RelocMgr, RangesTy &Ranges,
-                                   const DWARFDie &DIE,
-                                   const DwarfLinkerObjFile &OF,
+                                   const DWARFDie &DIE, const DwarfFile &File,
                                    CompileUnit &Unit,
                                    CompileUnit::DIEInfo &MyInfo,
                                    unsigned Flags);
@@ -506,8 +508,7 @@ private:
   /// RefValue. The resulting DIE might be in another CompileUnit which is
   /// stored into \p ReferencedCU. \returns null if resolving fails for any
   /// reason.
-  DWARFDie resolveDIEReference(const DwarfLinkerObjFile &OF,
-                               const UnitListTy &Units,
+  DWARFDie resolveDIEReference(const DwarfFile &File, const UnitListTy &Units,
                                const DWARFFormValue &RefValue,
                                const DWARFDie &DIE, CompileUnit *&RefCU);
 
@@ -522,7 +523,7 @@ private:
   class DIECloner {
     DWARFLinker &Linker;
     DwarfEmitter *Emitter;
-    DwarfLinkerObjFile &ObjFile;
+    DwarfFile &ObjFile;
 
     /// Allocator used for all the DIEValue objects.
     BumpPtrAllocator &DIEAlloc;
@@ -532,8 +533,8 @@ private:
     bool Update;
 
   public:
-    DIECloner(DWARFLinker &Linker, DwarfEmitter *Emitter,
-              DwarfLinkerObjFile &ObjFile, BumpPtrAllocator &DIEAlloc,
+    DIECloner(DWARFLinker &Linker, DwarfEmitter *Emitter, DwarfFile &ObjFile,
+              BumpPtrAllocator &DIEAlloc,
               std::vector<std::unique_ptr<CompileUnit>> &CompileUnits,
               bool Update)
         : Linker(Linker), Emitter(Emitter), ObjFile(ObjFile),
@@ -550,7 +551,7 @@ private:
     /// applied to the entry point of the function to get the linked address.
     /// \param Die the output DIE to use, pass NULL to create one.
     /// \returns the root of the cloned tree or null if nothing was selected.
-    DIE *cloneDIE(const DWARFDie &InputDIE, const DwarfLinkerObjFile &OF,
+    DIE *cloneDIE(const DWARFDie &InputDIE, const DwarfFile &File,
                   CompileUnit &U, OffsetsStringPool &StringPool,
                   int64_t PCOffset, uint32_t OutOffset, unsigned Flags,
                   bool IsLittleEndian, DIE *Die = nullptr);
@@ -558,10 +559,10 @@ private:
     /// Construct the output DIE tree by cloning the DIEs we
     /// chose to keep above. If there are no valid relocs, then there's
     /// nothing to clone/emit.
-    void cloneAllCompileUnits(DWARFContext &DwarfContext,
-                              const DwarfLinkerObjFile &OF,
-                              OffsetsStringPool &StringPool,
-                              bool IsLittleEndian);
+    uint64_t cloneAllCompileUnits(DWARFContext &DwarfContext,
+                                  const DwarfFile &File,
+                                  OffsetsStringPool &StringPool,
+                                  bool IsLittleEndian);
 
   private:
     using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
@@ -585,6 +586,9 @@ private:
       /// Value of DW_AT_call_return_pc in the input DIE
       uint64_t OrigCallReturnPc = 0;
 
+      /// Value of DW_AT_call_pc in the input DIE
+      uint64_t OrigCallPc = 0;
+
       /// Offset to apply to PC addresses inside a function.
       int64_t PCOffset = 0;
 
@@ -602,7 +606,7 @@ private:
 
     /// Helper for cloneDIE.
     unsigned cloneAttribute(DIE &Die, const DWARFDie &InputDIE,
-                            const DwarfLinkerObjFile &OF, CompileUnit &U,
+                            const DwarfFile &File, CompileUnit &U,
                             OffsetsStringPool &StringPool,
                             const DWARFFormValue &Val,
                             const AttributeSpec AttrSpec, unsigned AttrSize,
@@ -623,18 +627,18 @@ private:
                                         AttributeSpec AttrSpec,
                                         unsigned AttrSize,
                                         const DWARFFormValue &Val,
-                                        const DwarfLinkerObjFile &OF,
+                                        const DwarfFile &File,
                                         CompileUnit &Unit);
 
     /// Clone a DWARF expression that may be referencing another DIE.
     void cloneExpression(DataExtractor &Data, DWARFExpression Expression,
-                         const DwarfLinkerObjFile &OF, CompileUnit &Unit,
+                         const DwarfFile &File, CompileUnit &Unit,
                          SmallVectorImpl<uint8_t> &OutputBuffer);
 
     /// Clone an attribute referencing another DIE and add
     /// it to \p Die.
     /// \returns the size of the new attribute.
-    unsigned cloneBlockAttribute(DIE &Die, const DwarfLinkerObjFile &OF,
+    unsigned cloneBlockAttribute(DIE &Die, const DwarfFile &File,
                                  CompileUnit &Unit, AttributeSpec AttrSpec,
                                  const DWARFFormValue &Val, unsigned AttrSize,
                                  bool IsLittleEndian);
@@ -650,7 +654,7 @@ private:
     /// Clone a scalar attribute  and add it to \p Die.
     /// \returns the size of the new attribute.
     unsigned cloneScalarAttribute(DIE &Die, const DWARFDie &InputDIE,
-                                  const DwarfLinkerObjFile &OF, CompileUnit &U,
+                                  const DwarfFile &File, CompileUnit &U,
                                   AttributeSpec AttrSpec,
                                   const DWARFFormValue &Val, unsigned AttrSize,
                                   AttributesInfo &Info);
@@ -666,7 +670,7 @@ private:
     void copyAbbrev(const DWARFAbbreviationDeclaration &Abbrev, bool hasODR);
 
     uint32_t hashFullyQualifiedName(DWARFDie DIE, CompileUnit &U,
-                                    const DwarfLinkerObjFile &OF,
+                                    const DwarfFile &File,
                                     int RecurseDepth = 0);
 
     /// Helper for cloneDIE.
@@ -681,7 +685,7 @@ private:
   /// Compute and emit debug_ranges section for \p Unit, and
   /// patch the attributes referencing it.
   void patchRangesForUnit(const CompileUnit &Unit, DWARFContext &Dwarf,
-                          const DwarfLinkerObjFile &OF) const;
+                          const DwarfFile &File) const;
 
   /// Generate and emit the DW_AT_ranges attribute for a compile_unit if it had
   /// one.
@@ -691,7 +695,7 @@ private:
   /// parts according to the linked function ranges and emit the result in the
   /// debug_line section.
   void patchLineTableForUnit(CompileUnit &Unit, DWARFContext &OrigDwarf,
-                             const DwarfLinkerObjFile &OF);
+                             const DwarfFile &File);
 
   /// Emit the accelerator entries for \p Unit.
   void emitAcceleratorEntriesForUnit(CompileUnit &Unit);
@@ -699,7 +703,7 @@ private:
   void emitAppleAcceleratorEntriesForUnit(CompileUnit &Unit);
 
   /// Patch the frame info for an object file and emit it.
-  void patchFrameInfoForObject(const DwarfLinkerObjFile &, RangesTy &Ranges,
+  void patchFrameInfoForObject(const DwarfFile &, RangesTy &Ranges,
                                DWARFContext &, unsigned AddressSize);
 
   /// FoldingSet that uniques the abbreviations.
@@ -757,6 +761,9 @@ private:
     /// Generate processing log to the standard output.
     bool Verbose = false;
 
+    /// Print statistics.
+    bool Statistics = false;
+
     /// Skip emitting output
     bool NoOutput = false;
 
@@ -789,6 +796,9 @@ private:
     /// per compile unit, which is why this is a std::map.
     /// this is dsymutil specific fag.
     swiftInterfacesMap *ParseableSwiftInterfaces = nullptr;
+
+    /// A list of remappings to apply to file paths.
+    objectPrefixMap *ObjectPrefixMap = nullptr;
   } Options;
 };
 

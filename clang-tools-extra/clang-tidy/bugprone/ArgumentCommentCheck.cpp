@@ -19,20 +19,27 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace bugprone {
+namespace {
+AST_MATCHER(Decl, isFromStdNamespace) {
+  if (const auto *D = Node.getDeclContext()->getEnclosingNamespaceContext())
+    return D->isStdNamespace();
+  return false;
+}
+} // namespace
 
 ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", 0) != 0),
-      IgnoreSingleArgument(Options.get("IgnoreSingleArgument", 0) != 0),
-      CommentBoolLiterals(Options.get("CommentBoolLiterals", 0) != 0),
-      CommentIntegerLiterals(Options.get("CommentIntegerLiterals", 0) != 0),
-      CommentFloatLiterals(Options.get("CommentFloatLiterals", 0) != 0),
-      CommentStringLiterals(Options.get("CommentStringLiterals", 0) != 0),
-      CommentUserDefinedLiterals(Options.get("CommentUserDefinedLiterals", 0) !=
-                                 0),
-      CommentCharacterLiterals(Options.get("CommentCharacterLiterals", 0) != 0),
-      CommentNullPtrs(Options.get("CommentNullPtrs", 0) != 0),
+      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      IgnoreSingleArgument(Options.get("IgnoreSingleArgument", false)),
+      CommentBoolLiterals(Options.get("CommentBoolLiterals", false)),
+      CommentIntegerLiterals(Options.get("CommentIntegerLiterals", false)),
+      CommentFloatLiterals(Options.get("CommentFloatLiterals", false)),
+      CommentStringLiterals(Options.get("CommentStringLiterals", false)),
+      CommentUserDefinedLiterals(
+          Options.get("CommentUserDefinedLiterals", false)),
+      CommentCharacterLiterals(Options.get("CommentCharacterLiterals", false)),
+      CommentNullPtrs(Options.get("CommentNullPtrs", false)),
       IdentRE("^(/\\* *)([_A-Za-z][_A-Za-z0-9]*)( *= *\\*/)$") {}
 
 void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -54,10 +61,18 @@ void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
                // don't check them against NewCallback's parameter names.
                // FIXME: Make this configurable.
                unless(hasDeclaration(functionDecl(
-                   hasAnyName("NewCallback", "NewPermanentCallback")))))
+                   hasAnyName("NewCallback", "NewPermanentCallback")))),
+               // Ignore APIs from the standard library, since their names are
+               // not specified by the standard, and standard library
+               // implementations in practice have to use reserved names to
+               // avoid conflicts with same-named macros.
+               unless(hasDeclaration(isFromStdNamespace())))
           .bind("expr"),
       this);
-  Finder->addMatcher(cxxConstructExpr().bind("expr"), this);
+  Finder->addMatcher(
+      cxxConstructExpr(unless(hasDeclaration(isFromStdNamespace())))
+          .bind("expr"),
+      this);
 }
 
 static std::vector<std::pair<SourceLocation, StringRef>>

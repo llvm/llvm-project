@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-nacl %s \
-# RUN:   | llvm-objdump -disassemble -z -no-show-raw-insn - | FileCheck %s
+# RUN:   | llvm-objdump -d -z --no-show-raw-insn - | FileCheck %s
 
 # This test tests that address-masking sandboxing is added when given assembly
 # input.
@@ -17,7 +17,7 @@ test1:
         jr	$ra
         nop
 
-# CHECK-LABEL:   test1:
+# CHECK-LABEL:   <test1>:
 
 # CHECK:         and     $4, $4, $14
 # CHECK-NEXT:    jr      $4
@@ -54,7 +54,7 @@ test2:
         lw      $4, 0($sp)
         lw      $4, 0($t8)
 
-# CHECK-LABEL:   test2:
+# CHECK-LABEL:   <test2>:
 
 # CHECK:         and     $1, $1, $15
 # CHECK-NEXT:    lb      $4, 0($1)
@@ -122,7 +122,7 @@ test3:
         sw      $4, 0($sp)
         sw      $4, 0($t8)
 
-# CHECK-LABEL:   test3:
+# CHECK-LABEL:   <test3>:
 
 # CHECK:         and     $1, $1, $15
 # CHECK-NEXT:    sb      $4, 0($1)
@@ -179,7 +179,7 @@ test4:
         lw      $sp, 123($sp)
         sw      $sp, 123($sp)
 
-# CHECK-LABEL:   test4:
+# CHECK-LABEL:   <test4>:
 
 # CHECK:         addiu   $sp, $sp, 24
 # CHECK-NEXT:    and     $sp, $sp, $15
@@ -254,7 +254,7 @@ test5:
 
 # CHECK:             nop
 # CHECK-NEXT:        nop
-# CHECK-LABEL:       test5:
+# CHECK-LABEL:       <test5>:
 # CHECK-NEXT:        jal
 # CHECK-NEXT:        addiu   $4, $zero, 1
 
@@ -304,7 +304,7 @@ test6:
 
 # CHECK:             nop
 # CHECK-NEXT:        nop
-# CHECK-LABEL:       test6:
+# CHECK-LABEL:       <test6>:
 # CHECK-NEXT:        jal
 # CHECK-NEXT:        sw      $4, 0($sp)
 

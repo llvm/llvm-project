@@ -24,6 +24,13 @@ StringRef tblgen::Dialect::getCppNamespace() const {
   return def->getValueAsString("cppNamespace");
 }
 
+std::string tblgen::Dialect::getCppClassName() const {
+  // Simply use the name and remove any '_' tokens.
+  std::string cppName = def->getName().str();
+  llvm::erase_if(cppName, [](char c) { return c == '_'; });
+  return cppName;
+}
+
 static StringRef getAsStringOrEmpty(const llvm::Record &record,
                                     StringRef fieldName) {
   if (auto valueInit = record.getValueInit(fieldName)) {
@@ -40,6 +47,27 @@ StringRef tblgen::Dialect::getSummary() const {
 
 StringRef tblgen::Dialect::getDescription() const {
   return getAsStringOrEmpty(*def, "description");
+}
+
+llvm::Optional<StringRef> tblgen::Dialect::getExtraClassDeclaration() const {
+  auto value = def->getValueAsString("extraClassDeclaration");
+  return value.empty() ? llvm::Optional<StringRef>() : value;
+}
+
+bool tblgen::Dialect::hasConstantMaterializer() const {
+  return def->getValueAsBit("hasConstantMaterializer");
+}
+
+bool tblgen::Dialect::hasOperationAttrVerify() const {
+  return def->getValueAsBit("hasOperationAttrVerify");
+}
+
+bool tblgen::Dialect::hasRegionArgAttrVerify() const {
+  return def->getValueAsBit("hasRegionArgAttrVerify");
+}
+
+bool tblgen::Dialect::hasRegionResultAttrVerify() const {
+  return def->getValueAsBit("hasRegionResultAttrVerify");
 }
 
 bool Dialect::operator==(const Dialect &other) const {

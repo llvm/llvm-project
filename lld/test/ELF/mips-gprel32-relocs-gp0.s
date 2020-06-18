@@ -15,9 +15,9 @@
 # REL: GP: 0x0
 
 # DUMP: SYMBOL TABLE:
-# DUMP: 00020008         .text          00000000 bar
-# DUMP: 00020004         .text          00000000 foo
-# DUMP: 00028000         .got           00000000 .hidden _gp
+# DUMP: 00020008 l       .text          00000000 bar
+# DUMP: 00020004 l       .text          00000000 foo
+# DUMP: 00028000 l       .got           00000000 .hidden _gp
 
 # DUMP: Contents of section .rodata:
 # DUMP: 1000 fffffff4 fffffff8

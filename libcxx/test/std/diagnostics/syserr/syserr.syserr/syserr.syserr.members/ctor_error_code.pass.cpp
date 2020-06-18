@@ -17,11 +17,13 @@
 #include <system_error>
 #include <string>
 #include <cassert>
+#include <clocale>
 
 #include "test_macros.h"
 
 int main(int, char**)
 {
+    std::setlocale (LC_ALL, "C");
     std::system_error se(static_cast<int>(std::errc::not_a_directory),
                          std::generic_category(), "some text");
     assert(se.code() == std::make_error_code(std::errc::not_a_directory));

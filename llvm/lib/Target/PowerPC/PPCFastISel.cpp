@@ -536,7 +536,7 @@ bool PPCFastISel::PPCEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
         MachinePointerInfo::getFixedStack(*FuncInfo.MF, Addr.Base.FI,
                                           Addr.Offset),
         MachineMemOperand::MOLoad, MFI.getObjectSize(Addr.Base.FI),
-        MFI.getObjectAlignment(Addr.Base.FI));
+        MFI.getObjectAlign(Addr.Base.FI));
 
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
       .addImm(Addr.Offset).addFrameIndex(Addr.Base.FI).addMemOperand(MMO);
@@ -682,7 +682,7 @@ bool PPCFastISel::PPCEmitStore(MVT VT, unsigned SrcReg, Address &Addr) {
         MachinePointerInfo::getFixedStack(*FuncInfo.MF, Addr.Base.FI,
                                           Addr.Offset),
         MachineMemOperand::MOStore, MFI.getObjectSize(Addr.Base.FI),
-        MFI.getObjectAlignment(Addr.Base.FI));
+        MFI.getObjectAlign(Addr.Base.FI));
 
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc))
         .addReg(SrcReg)
@@ -1384,7 +1384,7 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value*> &Args,
 
   // Reserve space for the linkage area on the stack.
   unsigned LinkageSize = PPCSubTarget->getFrameLowering()->getLinkageSize();
-  CCInfo.AllocateStack(LinkageSize, 8);
+  CCInfo.AllocateStack(LinkageSize, Align(8));
 
   CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, CC_PPC64_ELF_FIS);
 
@@ -1686,9 +1686,6 @@ bool PPCFastISel::fastLowerCall(CallLoweringInfo &CLI) {
 bool PPCFastISel::SelectRet(const Instruction *I) {
 
   if (!FuncInfo.CanLowerReturn)
-    return false;
-
-  if (TLI.supportSplitCSR(FuncInfo.MF))
     return false;
 
   const ReturnInst *Ret = cast<ReturnInst>(I);
@@ -1996,9 +1993,8 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
     return 0;
 
   // All FP constants are loaded from the constant pool.
-  unsigned Align = DL.getPrefTypeAlignment(CFP->getType());
-  assert(Align > 0 && "Unexpectedly missing alignment information!");
-  unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Align);
+  Align Alignment = DL.getPrefTypeAlign(CFP->getType());
+  unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment);
   const bool HasSPE = PPCSubTarget->hasSPE();
   const TargetRegisterClass *RC;
   if (HasSPE)
@@ -2011,7 +2007,7 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
 
   MachineMemOperand *MMO = FuncInfo.MF->getMachineMemOperand(
       MachinePointerInfo::getConstantPool(*FuncInfo.MF),
-      MachineMemOperand::MOLoad, (VT == MVT::f32) ? 4 : 8, Align);
+      MachineMemOperand::MOLoad, (VT == MVT::f32) ? 4 : 8, Alignment);
 
   unsigned Opc;
 

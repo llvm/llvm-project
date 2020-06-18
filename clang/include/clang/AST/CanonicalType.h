@@ -264,6 +264,8 @@ public:
   // Type predicates
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isObjectType)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isIncompleteType)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isSizelessType)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isSizelessBuiltinType)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isIncompleteOrObjectType)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isVariablyModifiedType)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isIntegerType)

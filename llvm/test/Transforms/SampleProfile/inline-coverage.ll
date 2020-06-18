@@ -32,7 +32,7 @@
 ; 110% coverage check.
 ; CHECK: warning: coverage.cc:7: 78834 of 78834 available profile samples (100%) were applied
 
-define i64 @_Z3fool(i64 %i) !dbg !4 {
+define i64 @_Z3fool(i64 %i) #0 !dbg !4 {
 entry:
   %i.addr = alloca i64, align 8
   store i64 %i, i64* %i.addr, align 8
@@ -48,7 +48,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 declare i32 @rand()
 
-define i32 @main() !dbg !9 {
+define i32 @main() #0 !dbg !9 {
 entry:
   %retval = alloca i32, align 4
   %sum = alloca i64, align 8
@@ -86,6 +86,8 @@ for.end:                                          ; preds = %for.cond
   %cond = select i1 %cmp1, i32 0, i32 1, !dbg !40
   ret i32 %cond, !dbg !42
 }
+
+attributes #0 = { "use-sample-profile" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !14}

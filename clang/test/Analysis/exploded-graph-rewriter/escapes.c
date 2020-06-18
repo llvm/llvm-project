@@ -5,9 +5,6 @@
 // RUN: %exploded_graph_rewriter %t.dot | FileCheck %s
 // REQUIRES: asserts
 
-// FIXME: Substitution doesn't seem to work on Windows.
-// UNSUPPORTED: system-windows
-
 void escapes() {
   // CHECK: <td align="left"><b>Store: </b> <font color="gray">(0x{{[0-9a-f]*}})</font></td>
   // CHECK-SAME: <td align="left">foo</td><td align="left">0</td>

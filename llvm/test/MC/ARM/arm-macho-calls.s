@@ -1,7 +1,7 @@
 @ RUN: llvm-mc -triple armv7-apple-ios -filetype=obj -o %t %s
 @ RUN: llvm-objdump -d -r %t | FileCheck %s
 
-@ CHECK: _func:
+@ CHECK: <_func>:
 @ CHECK:    bl #0 <_func+0x8>
 @ CHECK:  ARM_RELOC_BR24 __text
 @ CHECK:    bl #-12 <_func>

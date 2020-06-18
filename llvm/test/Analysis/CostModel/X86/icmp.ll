@@ -2,8 +2,8 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE2
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse3 | FileCheck %s --check-prefixes=CHECK,SSE,SSE3
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+ssse3 | FileCheck %s --check-prefixes=CHECK,SSE,SSSE3
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse4.1 | FileCheck %s --check-prefixes=CHECK,SSE,SSE41
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse4.2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse4.1 | FileCheck %s --check-prefixes=CHECK,SSE,SSE4,SSE41
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse4.2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE4,SSE42
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX,AVX1
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512F
@@ -13,7 +13,7 @@
 ;
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SSE,SLM
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=BTVER2
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=CHECK,AVX,BTVER2
 
 define i32 @cmp_int_eq(i32 %arg) {
 ; SSE2-LABEL: 'cmp_int_eq'
@@ -508,13 +508,13 @@ define i32 @cmp_int_ne(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ne <32 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ne <64 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ne <128 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = icmp ne <64 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V128I8 = icmp ne <128 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ne <16 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ne <32 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ne <64 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = icmp ne <32 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I16 = icmp ne <64 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ne <4 x i32> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp ne <8 x i32> undef, undef
@@ -835,13 +835,13 @@ define i32 @cmp_int_sge(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sge <32 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sge <64 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sge <128 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = icmp sge <64 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V128I8 = icmp sge <128 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sge <16 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sge <32 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sge <64 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = icmp sge <32 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I16 = icmp sge <64 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sge <4 x i32> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp sge <8 x i32> undef, undef
@@ -1162,13 +1162,13 @@ define i32 @cmp_int_uge(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp uge i8 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp uge <16 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp uge <32 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp uge <64 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp uge <128 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = icmp uge <64 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V128I8 = icmp uge <128 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp uge i16 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp uge <8 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp uge <16 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp uge <32 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp uge <64 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = icmp uge <32 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I16 = icmp uge <64 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp uge i32 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp uge <4 x i32> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp uge <8 x i32> undef, undef
@@ -1816,13 +1816,13 @@ define i32 @cmp_int_ugt(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = icmp ugt <32 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = icmp ugt <64 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V128I8 = icmp ugt <128 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ugt <64 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ugt <128 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = icmp ugt <16 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = icmp ugt <32 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I16 = icmp ugt <64 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ugt <32 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ugt <64 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ugt <4 x i32> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp ugt <8 x i32> undef, undef
@@ -2143,13 +2143,13 @@ define i32 @cmp_int_sle(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sle <32 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sle <64 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sle <128 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = icmp sle <64 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V128I8 = icmp sle <128 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sle <16 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sle <32 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sle <64 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = icmp sle <32 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I16 = icmp sle <64 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sle <4 x i32> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp sle <8 x i32> undef, undef
@@ -2470,13 +2470,13 @@ define i32 @cmp_int_ule(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ule i8 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ule <16 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp ule <32 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ule <64 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ule <128 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = icmp ule <64 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V128I8 = icmp ule <128 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ule i16 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ule <8 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp ule <16 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ule <32 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ule <64 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = icmp ule <32 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I16 = icmp ule <64 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ule i32 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ule <4 x i32> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp ule <8 x i32> undef, undef
@@ -3124,13 +3124,13 @@ define i32 @cmp_int_ult(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = icmp ult <32 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = icmp ult <64 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V128I8 = icmp ult <128 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp ult <64 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp ult <128 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = icmp ult <16 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = icmp ult <32 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I16 = icmp ult <64 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp ult <32 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp ult <64 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp ult <4 x i32> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = icmp ult <8 x i32> undef, undef

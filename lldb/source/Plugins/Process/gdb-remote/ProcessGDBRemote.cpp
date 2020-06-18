@@ -649,7 +649,10 @@ Status ProcessGDBRemote::DoConnectRemote(Stream *strm,
   if (error.Fail())
     return error;
 
-  error = ConnectToDebugserver(remote_url);
+  if (repro::Reproducer::Instance().IsReplaying())
+    error = ConnectToReplayServer();
+  else
+    error = ConnectToDebugserver(remote_url);
 
   if (error.Fail())
     return error;
@@ -827,22 +830,23 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
         // since 'O' packets can really slow down debugging if the inferior
         // does a lot of output.
         if ((!stdin_file_spec || !stdout_file_spec || !stderr_file_spec) &&
-            pty.OpenFirstAvailableMaster(O_RDWR | O_NOCTTY, nullptr, 0)) {
-          FileSpec slave_name{pty.GetSlaveName(nullptr, 0)};
+            pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY, nullptr, 0)) {
+          FileSpec secondary_name{pty.GetSecondaryName(nullptr, 0)};
 
           if (!stdin_file_spec)
-            stdin_file_spec = slave_name;
+            stdin_file_spec = secondary_name;
 
           if (!stdout_file_spec)
-            stdout_file_spec = slave_name;
+            stdout_file_spec = secondary_name;
 
           if (!stderr_file_spec)
-            stderr_file_spec = slave_name;
+            stderr_file_spec = secondary_name;
         }
         LLDB_LOGF(
             log,
             "ProcessGDBRemote::%s adjusted STDIO paths for local platform "
-            "(IsHost() is true) using slave: stdin=%s, stdout=%s, stderr=%s",
+            "(IsHost() is true) using secondary: stdin=%s, stdout=%s, "
+            "stderr=%s",
             __FUNCTION__,
             stdin_file_spec ? stdin_file_spec.GetCString() : "<null>",
             stdout_file_spec ? stdout_file_spec.GetCString() : "<null>",
@@ -927,8 +931,8 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
         SetPrivateState(SetThreadStopInfo(response));
 
         if (!disable_stdio) {
-          if (pty.GetMasterFileDescriptor() != PseudoTerminal::invalid_fd)
-            SetSTDIOFileDescriptor(pty.ReleaseMasterFileDescriptor());
+          if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd)
+            SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
         }
       }
     } else {
@@ -960,7 +964,7 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
       uint32_t retry_count = 0;
       while (!m_gdb_comm.IsConnected()) {
         if (conn_up->Connect(connect_url, &error) == eConnectionStatusSuccess) {
-          m_gdb_comm.SetConnection(conn_up.release());
+          m_gdb_comm.SetConnection(std::move(conn_up));
           break;
         } else if (error.WasInterrupted()) {
           // If we were interrupted, don't keep retrying.
@@ -1102,11 +1106,38 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
     }
   }
 
+  MaybeLoadExecutableModule();
+
   // Find out which StructuredDataPlugins are supported by the debug monitor.
   // These plugins transmit data over async $J packets.
   if (StructuredData::Array *supported_packets =
           m_gdb_comm.GetSupportedStructuredDataPlugins())
     MapSupportedStructuredDataPlugins(*supported_packets);
+}
+
+void ProcessGDBRemote::MaybeLoadExecutableModule() {
+  ModuleSP module_sp = GetTarget().GetExecutableModule();
+  if (!module_sp)
+    return;
+
+  llvm::Optional<QOffsets> offsets = m_gdb_comm.GetQOffsets();
+  if (!offsets)
+    return;
+
+  bool is_uniform =
+      size_t(llvm::count(offsets->offsets, offsets->offsets[0])) ==
+      offsets->offsets.size();
+  if (!is_uniform)
+    return; // TODO: Handle non-uniform responses.
+
+  bool changed = false;
+  module_sp->SetLoadAddress(GetTarget(), offsets->offsets[0],
+                            /*value_is_offset=*/true, changed);
+  if (changed) {
+    ModuleList list;
+    list.Append(module_sp);
+    m_process->GetTarget().ModulesDidLoad(list);
+  }
 }
 
 void ProcessGDBRemote::DidLaunch() {
@@ -3096,7 +3127,7 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
     if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware)) {
       if (error_no != UINT8_MAX)
         error.SetErrorStringWithFormat(
-            "error: %d sending the breakpoint request", errno);
+            "error: %d sending the breakpoint request", error_no);
       else
         error.SetErrorString("error sending the breakpoint request");
       return error;
@@ -3325,30 +3356,10 @@ Status ProcessGDBRemote::DoSignal(int signo) {
   return error;
 }
 
-Status ProcessGDBRemote::ConnectToReplayServer(repro::Loader *loader) {
-  if (!loader)
-    return Status("No loader provided.");
-
-  static std::unique_ptr<repro::MultiLoader<repro::GDBRemoteProvider>>
-      multi_loader = repro::MultiLoader<repro::GDBRemoteProvider>::Create(
-          repro::Reproducer::Instance().GetLoader());
-
-  if (!multi_loader)
-    return Status("No gdb remote provider found.");
-
-  llvm::Optional<std::string> history_file = multi_loader->GetNextFile();
-  if (!history_file)
-    return Status("No gdb remote packet log found.");
-
-  // Load replay history.
-  if (auto error =
-          m_gdb_replay_server.LoadReplayHistory(FileSpec(*history_file)))
-    return Status("Unable to load replay history");
-
-  // Make a local connection.
-  if (auto error = GDBRemoteCommunication::ConnectLocally(m_gdb_comm,
-                                                          m_gdb_replay_server))
-    return Status("Unable to connect to replay server");
+Status ProcessGDBRemote::ConnectToReplayServer() {
+  Status status = m_gdb_replay_server.Connect(m_gdb_comm);
+  if (status.Fail())
+    return status;
 
   // Enable replay mode.
   m_replay_mode = true;
@@ -3373,8 +3384,8 @@ ProcessGDBRemote::EstablishConnectionIfNeeded(const ProcessInfo &process_info) {
   if (platform_sp && !platform_sp->IsHost())
     return Status("Lost debug server connection");
 
-  if (repro::Loader *loader = repro::Reproducer::Instance().GetLoader())
-    return ConnectToReplayServer(loader);
+  if (repro::Reproducer::Instance().IsReplaying())
+    return ConnectToReplayServer();
 
   auto error = LaunchAndConnectToDebugserver(process_info);
   if (error.Fail()) {
@@ -3455,7 +3466,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
       // Our process spawned correctly, we can now set our connection to use
       // our end of the socket pair
       cleanup_our.release();
-      m_gdb_comm.SetConnection(new ConnectionFileDescriptor(our_socket, true));
+      m_gdb_comm.SetConnection(
+          std::make_unique<ConnectionFileDescriptor>(our_socket, true));
 #endif
       StartAsyncThread();
     }
@@ -3763,7 +3775,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
               } // switch(stop_state)
             }   // else // if in All-stop-mode
           }     // if (continue_packet)
-        }       // case eBroadcastBitAysncContinue
+        }       // case eBroadcastBitAsyncContinue
         break;
 
         case eBroadcastBitAsyncThreadShouldExit:
@@ -4391,7 +4403,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
         });
 
         if (!gdb_type.empty() && !(encoding_set || format_set)) {
-          if (gdb_type.find("int") == 0) {
+          if (llvm::StringRef(gdb_type).startswith("int")) {
             reg_info.format = eFormatHex;
             reg_info.encoding = eEncodingUint;
           } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
@@ -4654,7 +4666,7 @@ llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
                   // value.
                   module.set_base_is_offset(true);
                 } else if (name == "l_ld") {
-                  // the memory address of the libraries PT_DYAMIC section.
+                  // the memory address of the libraries PT_DYNAMIC section.
                   module.set_dynamic(StringConvert::ToUInt64(
                       value.data(), LLDB_INVALID_ADDRESS, 0));
                 }

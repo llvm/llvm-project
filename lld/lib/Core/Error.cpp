@@ -62,7 +62,7 @@ public:
 
   int add(std::string msg) {
     std::lock_guard<std::recursive_mutex> lock(_mutex);
-    // Value zero is always the successs value.
+    // Value zero is always the success value.
     if (_messages.empty())
       _messages.push_back("Success");
     _messages.push_back(msg);

@@ -297,13 +297,11 @@ namespace dr420 { // dr420: yes
   void test2(T p) {
     p->template Y<int>::~Y<int>();
     p->~Y<int>();
-    // FIXME: This is ill-formed, but this diagnostic is terrible. We should
-    // reject this in the parser.
-    p->template ~Y<int>(); // expected-error 2{{no member named '~typename Y<int>'}}
+    p->template ~Y<int>(); // expected-error {{'template' keyword not permitted in destructor name}}
   }
   template<typename T> struct Y {};
-  template void test2(Y<int>*); // expected-note {{instantiation}}
-  template void test2(ptr<Y<int> >); // expected-note {{instantiation}}
+  template void test2(Y<int>*);
+  template void test2(ptr<Y<int> >);
 
   void test3(int *p, ptr<int> q) {
     typedef int Int;

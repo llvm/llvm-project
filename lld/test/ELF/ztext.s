@@ -16,6 +16,10 @@
 
 # If the preference is to have text relocations, don't create plt of copy relocations.
 
+# CHECK: DynamicSection [
+# CHECK:   FLAGS TEXTREL
+# CHECK:   TEXTREL 0x0
+
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section {{.*}} .rela.dyn {
 # CHECK-NEXT:     0x12A0 R_X86_64_RELATIVE - 0x12A0
@@ -24,9 +28,9 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# CHECK: DynamicSection [
-# CHECK:   FLAGS TEXTREL
-# CHECK:   TEXTREL 0x0
+# STATIC: DynamicSection [
+# STATIC:   FLAGS TEXTREL
+# STATIC:   TEXTREL 0x0
 
 # STATIC:      Relocations [
 # STATIC-NEXT:   Section {{.*}} .rela.dyn {
@@ -34,10 +38,6 @@
 # STATIC-NEXT:     0x201298 R_X86_64_PC64 zed 0x0
 # STATIC-NEXT:   }
 # STATIC-NEXT: ]
-
-# STATIC: DynamicSection [
-# STATIC:   FLAGS TEXTREL
-# STATIC:   TEXTREL 0x0
 
 foo:
 .quad foo

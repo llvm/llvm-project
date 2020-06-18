@@ -31,7 +31,8 @@ def CortexA57Model : SchedMachineModel {
   let LoopMicroOpBufferSize = 16;
   let CompleteModel = 1;
 
-  list<Predicate> UnsupportedFeatures = SVEUnsupported.F;
+  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
+                                                    PAUnsupported.F);
 }
 
 //===----------------------------------------------------------------------===//

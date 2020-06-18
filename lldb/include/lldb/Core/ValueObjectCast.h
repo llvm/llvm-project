@@ -57,7 +57,8 @@ protected:
   CompilerType m_cast_type;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectCast);
+  ValueObjectCast(const ValueObjectCast &) = delete;
+  const ValueObjectCast &operator=(const ValueObjectCast &) = delete;
 };
 
 } // namespace lldb_private

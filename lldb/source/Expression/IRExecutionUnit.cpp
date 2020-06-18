@@ -741,19 +741,22 @@ void IRExecutionUnit::CollectFallbackNames(
   for (const SearchSpec &C_spec : C_specs) {
     ConstString name = C_spec.name;
 
-    if (CPlusPlusLanguage::IsCPPMangledName(name.GetCString())) {
-      Mangled mangled_name(name);
-      ConstString demangled_name = mangled_name.GetDemangledName();
-      if (!demangled_name.IsEmpty()) {
-        const char *demangled_cstr = demangled_name.AsCString();
-        const char *lparen_loc = strchr(demangled_cstr, '(');
-        if (lparen_loc) {
-          llvm::StringRef base_name(demangled_cstr,
-                                    lparen_loc - demangled_cstr);
-          fallback_specs.push_back(ConstString(base_name));
-        }
-      }
-    }
+    if (!CPlusPlusLanguage::IsCPPMangledName(name.GetCString()))
+      continue;
+
+    Mangled mangled_name(name);
+    ConstString demangled_name = mangled_name.GetDemangledName();
+    if (demangled_name.IsEmpty())
+      continue;
+
+    const char *demangled_cstr = demangled_name.AsCString();
+    const char *lparen_loc = strchr(demangled_cstr, '(');
+    if (!lparen_loc)
+      continue;
+
+    llvm::StringRef base_name(demangled_cstr,
+                              lparen_loc - demangled_cstr);
+    fallback_specs.push_back(ConstString(base_name));
   }
 }
 

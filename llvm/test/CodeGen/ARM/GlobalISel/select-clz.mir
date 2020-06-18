@@ -22,12 +22,12 @@ body:             |
     ; THUMB: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
 
     %1(s32) = G_CTLZ %0(s32)
-    ; ARM: [[VREGR:%[0-9]+]]:gpr = CLZ [[VREGX]], 14, $noreg
-    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2CLZ [[VREGX]], 14, $noreg
+    ; ARM: [[VREGR:%[0-9]+]]:gpr = CLZ [[VREGX]], 14 /* CC::al */, $noreg
+    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2CLZ [[VREGX]], 14 /* CC::al */, $noreg
 
     $r0 = COPY %1(s32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...

@@ -143,6 +143,11 @@ void Block::recomputeOpOrder() {
 // Argument list management.
 //===----------------------------------------------------------------------===//
 
+/// Return a range containing the types of the arguments for this block.
+auto Block::getArgumentTypes() -> ValueTypeRange<BlockArgListType> {
+  return ValueTypeRange<BlockArgListType>(getArguments());
+}
+
 BlockArgument Block::addArgument(Type type) {
   BlockArgument arg = BlockArgument::create(type, this);
   arguments.push_back(arg);
@@ -150,13 +155,11 @@ BlockArgument Block::addArgument(Type type) {
 }
 
 /// Add one argument to the argument list for each type specified in the list.
-auto Block::addArguments(ArrayRef<Type> types)
-    -> iterator_range<args_iterator> {
-  arguments.reserve(arguments.size() + types.size());
-  auto initialSize = arguments.size();
-  for (auto type : types) {
+auto Block::addArguments(TypeRange types) -> iterator_range<args_iterator> {
+  size_t initialSize = arguments.size();
+  arguments.reserve(initialSize + types.size());
+  for (auto type : types)
     addArgument(type);
-  }
   return {arguments.data() + initialSize, arguments.data() + arguments.size()};
 }
 
@@ -167,22 +170,8 @@ BlockArgument Block::insertArgument(unsigned index, Type type) {
   return arg;
 }
 
-void Block::eraseArgument(unsigned index, bool updatePredTerms) {
+void Block::eraseArgument(unsigned index) {
   assert(index < arguments.size());
-
-  // If requested, update predecessors. We do this first since this block might
-  // be a predecessor of itself and use this block argument as a successor
-  // operand.
-  if (updatePredTerms) {
-    // Erase this argument from each of the predecessor's terminator.
-    for (auto predIt = pred_begin(), predE = pred_end(); predIt != predE;
-         ++predIt) {
-      auto *predTerminator = (*predIt)->getTerminator();
-      predTerminator->eraseSuccessorOperand(predIt.getSuccessorIndex(), index);
-    }
-  }
-
-  // Delete the argument.
   arguments[index].destroy();
   arguments.erase(arguments.begin() + index);
 }
@@ -238,6 +227,21 @@ Block *Block::getSinglePredecessor() {
   auto *firstPred = *it;
   ++it;
   return it == pred_end() ? firstPred : nullptr;
+}
+
+/// If this block has a unique predecessor, i.e., all incoming edges originate
+/// from one block, return it. Otherwise, return null.
+Block *Block::getUniquePredecessor() {
+  auto it = pred_begin(), e = pred_end();
+  if (it == e)
+    return nullptr;
+
+  // Check for any conflicting predecessors.
+  auto *firstPred = *it;
+  for (++it; it != e; ++it)
+    if (*it != firstPred)
+      return nullptr;
+  return firstPred;
 }
 
 //===----------------------------------------------------------------------===//

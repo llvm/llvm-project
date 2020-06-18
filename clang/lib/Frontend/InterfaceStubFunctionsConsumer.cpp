@@ -8,6 +8,7 @@
 
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Sema/TemplateInstCallback.h"
@@ -289,7 +290,7 @@ public:
                              const ASTContext &context, StringRef Format,
                              raw_ostream &OS) -> void {
       OS << "--- !" << Format << "\n";
-      OS << "IfsVersion: 1.0\n";
+      OS << "IfsVersion: 2.0\n";
       OS << "Triple: " << T.str() << "\n";
       OS << "ObjectFileFormat: "
          << "ELF"
@@ -298,11 +299,11 @@ public:
       for (const auto &E : Symbols) {
         const MangledSymbol &Symbol = E.second;
         for (auto Name : Symbol.Names) {
-          OS << "  \""
+          OS << "  - { Name: \""
              << (Symbol.ParentName.empty() || Instance.getLangOpts().CPlusPlus
                      ? ""
                      : (Symbol.ParentName + "."))
-             << Name << "\" : { Type: ";
+             << Name << "\", Type: ";
           switch (Symbol.Type) {
           default:
             llvm_unreachable(
@@ -329,15 +330,15 @@ public:
       OS.flush();
     };
 
-    assert(Format == "experimental-ifs-v1" && "Unexpected IFS Format.");
+    assert(Format == "experimental-ifs-v2" && "Unexpected IFS Format.");
     writeIfsV1(Instance.getTarget().getTriple(), Symbols, context, Format, *OS);
   }
 };
 } // namespace
 
 std::unique_ptr<ASTConsumer>
-GenerateInterfaceIfsExpV1Action::CreateASTConsumer(CompilerInstance &CI,
-                                                   StringRef InFile) {
+GenerateInterfaceStubsAction::CreateASTConsumer(CompilerInstance &CI,
+                                                StringRef InFile) {
   return std::make_unique<InterfaceStubFunctionsConsumer>(
-      CI, InFile, "experimental-ifs-v1");
+      CI, InFile, "experimental-ifs-v2");
 }

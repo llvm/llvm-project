@@ -61,6 +61,17 @@ T foo() {
       foo();
     }
   }
+  #pragma omp for ordered
+  for (int i = 0; i < 10; ++i) {
+    #pragma omp ordered // expected-note {{previous 'ordered' directive used here}}
+    {
+      foo();
+    }
+    #pragma omp ordered // expected-error {{exactly one 'ordered' directive must appear in the loop body of an enclosing directive}}
+    {
+      foo();
+    }
+  }
   #pragma omp ordered simd simd // expected-error {{directive '#pragma omp ordered' cannot contain more than one 'simd' clause}}
   {
     foo();
@@ -79,7 +90,18 @@ T foo() {
       foo();
     }
   }
-  #pragma omp for simd
+  #pragma omp simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp ordered simd // expected-note {{previous 'ordered' directive used here}}
+    {
+      foo();
+    }
+#pragma omp ordered simd // expected-error {{exactly one 'ordered' directive must appear in the loop body of an enclosing directive}}
+    {
+      foo();
+    }
+  }
+#pragma omp for simd
   for (int i = 0; i < 10; ++i) {
     #pragma omp ordered // expected-error {{OpenMP constructs may not be nested inside a simd region}}
     {
@@ -113,14 +135,14 @@ T foo() {
     #pragma omp ordered depend(source) // expected-error {{'ordered' directive with 'depend' clause cannot be closely nested inside ordered region without specified parameter}}
     #pragma omp ordered depend(sink : i) // expected-error {{'ordered' directive with 'depend' clause cannot be closely nested inside ordered region without specified parameter}}
   }
-#pragma omp parallel for ordered(2) // expected-note 5 {{'ordered' clause with specified parameter}}
+#pragma omp parallel for ordered(2) // expected-note 3 {{'ordered' clause with specified parameter}}
   for (int i = 0; i < 10; ++i) {
     for (int j = 0; j < 10; ++j) {
 #pragma omp ordered depend // expected-error {{expected '(' after 'depend'}} expected-error {{'ordered' directive without any clauses cannot be closely nested inside ordered region with specified parameter}}
 #pragma omp ordered depend( // expected-error {{expected ')'}} expected-error {{expected 'source' or 'sink' in OpenMP clause 'depend'}} expected-error {{'ordered' directive without any clauses cannot be closely nested inside ordered region with specified parameter}} expected-warning {{missing ':' or ')' after dependency type - ignoring}} expected-note {{to match this '('}}
 #pragma omp ordered depend(source // expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp ordered depend(sink // expected-error {{expected expression}} expected-warning {{missing ':' or ')' after dependency type - ignoring}} expected-error {{expected ')'}} expected-error {{'ordered' directive without any clauses cannot be closely nested inside ordered region with specified parameter}} expected-note {{to match this '('}}
-#pragma omp ordered depend(sink : // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}} expected-error {{'ordered' directive without any clauses cannot be closely nested inside ordered region with specified parameter}}
+#pragma omp ordered depend(sink // expected-error {{expected expression}} expected-warning {{missing ':' or ')' after dependency type - ignoring}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'i' loop iteration variable}}
+#pragma omp ordered depend(sink : // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}} expected-error {{expected 'i' loop iteration variable}}
 #pragma omp ordered depend(sink : i // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'j' loop iteration variable}}
 #pragma omp ordered depend(sink : i) // expected-error {{expected 'j' loop iteration variable}}
 #pragma omp ordered depend(source)
@@ -250,14 +272,14 @@ int k;
     #pragma omp ordered depend(source) // expected-error {{'ordered' directive with 'depend' clause cannot be closely nested inside ordered region without specified parameter}}
     #pragma omp ordered depend(sink : i) // expected-error {{'ordered' directive with 'depend' clause cannot be closely nested inside ordered region without specified parameter}}
   }
-#pragma omp parallel for ordered(2) // expected-note 5 {{'ordered' clause with specified parameter}}
+#pragma omp parallel for ordered(2) // expected-note 3 {{'ordered' clause with specified parameter}}
   for (int i = 0; i < 10; ++i) {
     for (int j = 0; j < 10; ++j) {
 #pragma omp ordered depend // expected-error {{expected '(' after 'depend'}} expected-error {{'ordered' directive without any clauses cannot be closely nested inside ordered region with specified parameter}}
 #pragma omp ordered depend( // expected-error {{expected ')'}} expected-error {{expected 'source' or 'sink' in OpenMP clause 'depend'}} expected-error {{'ordered' directive without any clauses cannot be closely nested inside ordered region with specified parameter}} expected-warning {{missing ':' or ')' after dependency type - ignoring}} expected-note {{to match this '('}}
 #pragma omp ordered depend(source // expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp ordered depend(sink // expected-error {{expected expression}} expected-warning {{missing ':' or ')' after dependency type - ignoring}} expected-error {{expected ')'}} expected-error {{'ordered' directive without any clauses cannot be closely nested inside ordered region with specified parameter}} expected-note {{to match this '('}}
-#pragma omp ordered depend(sink : // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}} expected-error {{'ordered' directive without any clauses cannot be closely nested inside ordered region with specified parameter}}
+#pragma omp ordered depend(sink // expected-error {{expected expression}} expected-warning {{missing ':' or ')' after dependency type - ignoring}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'i' loop iteration variable}}
+#pragma omp ordered depend(sink : // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}} expected-error {{expected 'i' loop iteration variable}}
 #pragma omp ordered depend(sink : i // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'j' loop iteration variable}}
 #pragma omp ordered depend(sink : i) // expected-error {{expected 'j' loop iteration variable}}
 #pragma omp ordered depend(source)

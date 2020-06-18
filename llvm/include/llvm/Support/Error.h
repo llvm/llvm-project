@@ -269,9 +269,13 @@ private:
   }
 
   ErrorInfoBase *getPtr() const {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     return reinterpret_cast<ErrorInfoBase*>(
              reinterpret_cast<uintptr_t>(Payload) &
              ~static_cast<uintptr_t>(0x1));
+#else
+    return Payload;
+#endif
   }
 
   void setPtr(ErrorInfoBase *EI) {
@@ -294,10 +298,12 @@ private:
   }
 
   void setChecked(bool V) {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     Payload = reinterpret_cast<ErrorInfoBase*>(
                 (reinterpret_cast<uintptr_t>(Payload) &
                   ~static_cast<uintptr_t>(0x1)) |
                   (V ? 0 : 1));
+#endif
   }
 
   std::unique_ptr<ErrorInfoBase> takePayload() {
@@ -434,7 +440,7 @@ template <class T> class LLVM_NODISCARD Expected {
   template <class T1> friend class ExpectedAsOutParameter;
   template <class OtherT> friend class Expected;
 
-  static const bool isRef = std::is_reference<T>::value;
+  static constexpr bool isRef = std::is_reference<T>::value;
 
   using wrap = std::reference_wrapper<std::remove_reference_t<T>>;
 

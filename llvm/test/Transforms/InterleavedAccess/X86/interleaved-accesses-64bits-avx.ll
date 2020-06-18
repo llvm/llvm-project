@@ -5,7 +5,7 @@
 
 define <4 x double> @load_factorf64_4(<16 x double>* %ptr) {
 ; CHECK-LABEL: @load_factorf64_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x double>* %ptr to <4 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x double>* [[PTR:%.*]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x double>, <4 x double>* [[TMP2]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP1]], i32 1
@@ -40,7 +40,7 @@ define <4 x double> @load_factorf64_4(<16 x double>* %ptr) {
 
 define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) {
 ; CHECK-LABEL: @load_factori64_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i64>* %ptr to <4 x i64>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i64>* [[PTR:%.*]] to <4 x i64>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <4 x i64>, <4 x i64>* [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <4 x i64>, <4 x i64>* [[TMP1]], i32 1
@@ -75,7 +75,7 @@ define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) {
 
 define <4 x double> @load_factorf64_1(<16 x double>* %ptr) {
 ; CHECK-LABEL: @load_factorf64_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x double>* %ptr to <4 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x double>* [[PTR:%.*]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x double>, <4 x double>* [[TMP2]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <4 x double>, <4 x double>* [[TMP1]], i32 1
@@ -228,6 +228,13 @@ define void @store_factorf64_4_arbitraryMask(<16 x double>* %ptr, <16 x double> 
 @a = local_unnamed_addr global <4 x double> zeroinitializer, align 32
 ; Function Attrs: norecurse nounwind readonly uwtable
 define <4 x double> @test_unhandled(<4 x double> %b) {
+; CHECK-LABEL: @test_unhandled(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, <4 x double>* @a, align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> undef, <4 x i32> <i32 3, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 4, i32 0, i32 0>
+; CHECK-NEXT:    ret <4 x double> [[SHUFFLE]]
+;
 entry:
   %0 = load <4 x double>, <4 x double>* @a, align 32
   %1 = shufflevector <4 x double> %0, <4 x double> undef, <4 x i32> <i32 3, i32 undef, i32 undef, i32 undef>

@@ -23,8 +23,6 @@ Sections:
     Link: .symtab
     Relocations:
       - Type: R_X86_64_PC32
-        Offset: 0
         Symbol: does_not_exist1
       - Type: R_X86_64_PC32
-        Offset: 0
         Symbol: does_not_exist2

@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_SERIALIZATION_MODULEFILE_H
 #define LLVM_CLANG_SERIALIZATION_MODULEFILE_H
 
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ASTBitCodes.h"
@@ -33,8 +34,6 @@
 #include <vector>
 
 namespace clang {
-
-class FileEntry;
 
 namespace serialization {
 
@@ -169,6 +168,10 @@ public:
   /// and modification time to identify this particular file.
   ASTFileSignature Signature;
 
+  /// The signature of the AST block of the module file, this can be used to
+  /// unique module files based on AST contents.
+  ASTFileSignature ASTBlockHash;
+
   /// Whether this module has been directly imported by the
   /// user.
   bool DirectlyImported = false;
@@ -185,6 +188,9 @@ public:
 
   /// The global bit offset (or base) of this module
   uint64_t GlobalBitOffset = 0;
+
+  /// The bit offset of the AST block of this module.
+  uint64_t ASTBlockStartOffset = 0;
 
   /// The serialized bitstream data for this file.
   StringRef Data;
@@ -243,6 +249,9 @@ public:
   /// Cursor used to read source location entries.
   llvm::BitstreamCursor SLocEntryCursor;
 
+  /// The bit offset to the start of the SOURCE_MANAGER_BLOCK.
+  uint64_t SourceManagerBlockStartOffset = 0;
+
   /// The number of source location entries in this AST file.
   unsigned LocalNumSLocEntries = 0;
 
@@ -251,6 +260,10 @@ public:
 
   /// The base offset in the source manager's view of this module.
   unsigned SLocEntryBaseOffset = 0;
+
+  /// Base file offset for the offsets in SLocEntryOffsets. Real file offset
+  /// for the entry is SLocEntryOffsetsBase + SLocEntryOffsets[i].
+  uint64_t SLocEntryOffsetsBase = 0;
 
   /// Offsets for all of the source location entries in the
   /// AST file.
@@ -302,6 +315,10 @@ public:
 
   /// The number of macros in this AST file.
   unsigned LocalNumMacros = 0;
+
+  /// Base file offset for the offsets in MacroOffsets. Real file offset for
+  /// the entry is MacroOffsetsBase + MacroOffsets[i].
+  uint64_t MacroOffsetsBase = 0;
 
   /// Offsets of macros in the preprocessor block.
   ///
@@ -402,10 +419,13 @@ public:
 
   // === Declarations ===
 
-  /// DeclsCursor - This is a cursor to the start of the DECLS_BLOCK block. It
-  /// has read all the abbreviations at the start of the block and is ready to
-  /// jump around with these in context.
+  /// DeclsCursor - This is a cursor to the start of the DECLTYPES_BLOCK block.
+  /// It has read all the abbreviations at the start of the block and is ready
+  /// to jump around with these in context.
   llvm::BitstreamCursor DeclsCursor;
+
+  /// The offset to the start of the DECLTYPES_BLOCK block.
+  uint64_t DeclsBlockStartOffset = 0;
 
   /// The number of declarations in this AST file.
   unsigned LocalNumDecls = 0;
@@ -451,7 +471,7 @@ public:
 
   /// Offset of each type within the bitstream, indexed by the
   /// type ID, or the representation of a Type*.
-  const uint32_t *TypeOffsets = nullptr;
+  const UnderalignedInt64 *TypeOffsets = nullptr;
 
   /// Base type ID for types local to this module as represented in
   /// the global type ID space.

@@ -44,8 +44,11 @@ function(find_darwin_sdk_dir var sdk_name)
 endfunction()
 
 function(find_darwin_sdk_version var sdk_name)
-  # We deliberately don't cache the result here because
-  # CMake's caching causes too many problems.
+  if (DARWIN_${sdk_name}_OVERRIDE_SDK_VERSION)
+    message(WARNING "Overriding ${sdk_name} SDK version to ${DARWIN_${sdk_name}_OVERRIDE_SDK_VERSION}")
+    set(${var} "${DARWIN_${sdk_name}_OVERRIDE_SDK_VERSION}" PARENT_SCOPE)
+    return()
+  endif()
   set(result_process 1)
   if(NOT DARWIN_PREFER_PUBLIC_SDK)
     # Let's first try the internal SDK, otherwise use the public SDK.

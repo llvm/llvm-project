@@ -11,5 +11,3 @@ foo:
 # CHECK: :[[@LINE-1]]:17: error: MIPS does not support one byte relocations
         .byte   x+1
 # CHECK: :[[@LINE-1]]:17: error: MIPS does not support one byte relocations
-        .quad   x-foo
-# CHECK: :[[@LINE-1]]:17: error: MIPS does not support 64-bit PC-relative relocations

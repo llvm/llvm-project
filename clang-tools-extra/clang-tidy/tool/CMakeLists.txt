@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsDescs
   AllTargetsInfos
+  FrontendOpenMP
   support
   )
 
@@ -12,11 +13,15 @@ add_clang_library(clangTidyMain
   ClangTidyMain.cpp
 
   LINK_LIBS
+  clangTidy
+  ${ALL_CLANG_TIDY_CHECKS}
+  )
+
+clang_target_link_libraries(clangTidyMain
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
-  clangTidy
-  ${ALL_CLANG_TIDY_CHECKS}
   clangTooling
   clangToolingCore
   )

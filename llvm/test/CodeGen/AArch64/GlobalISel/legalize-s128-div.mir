@@ -34,7 +34,7 @@ body:             |
     ; CHECK: $x1 = COPY [[UV1]](s64)
     ; CHECK: $x2 = COPY [[UV2]](s64)
     ; CHECK: $x3 = COPY [[UV3]](s64)
-    ; CHECK: BL &__udivti3, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit-def $x0, implicit-def $x1
+    ; CHECK: BL &__udivti3, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit-def $x0, implicit-def $x1
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)
@@ -75,7 +75,7 @@ body:             |
     ; CHECK: $x1 = COPY [[UV1]](s64)
     ; CHECK: $x2 = COPY [[UV2]](s64)
     ; CHECK: $x3 = COPY [[UV3]](s64)
-    ; CHECK: BL &__divti3, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit-def $x0, implicit-def $x1
+    ; CHECK: BL &__divti3, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit-def $x0, implicit-def $x1
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)

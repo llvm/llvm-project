@@ -63,9 +63,8 @@ static bool CC_Sparc_Assign_Split_64(unsigned &ValNo, MVT &ValVT,
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
   } else {
     // Assign whole thing in stack.
-    State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT,
-                                           State.AllocateStack(8,4),
-                                           LocVT, LocInfo));
+    State.addLoc(CCValAssign::getCustomMem(
+        ValNo, ValVT, State.AllocateStack(8, Align(4)), LocVT, LocInfo));
     return true;
   }
 
@@ -73,9 +72,8 @@ static bool CC_Sparc_Assign_Split_64(unsigned &ValNo, MVT &ValVT,
   if (unsigned Reg = State.AllocateReg(RegList))
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
   else
-    State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT,
-                                           State.AllocateStack(4,4),
-                                           LocVT, LocInfo));
+    State.addLoc(CCValAssign::getCustomMem(
+        ValNo, ValVT, State.AllocateStack(4, Align(4)), LocVT, LocInfo));
   return true;
 }
 
@@ -112,7 +110,7 @@ static bool CC_Sparc64_Full(unsigned &ValNo, MVT &ValVT,
 
   // Stack space is allocated for all arguments starting from [%fp+BIAS+128].
   unsigned size      = (LocVT == MVT::f128) ? 16 : 8;
-  unsigned alignment = (LocVT == MVT::f128) ? 16 : 8;
+  Align alignment = (LocVT == MVT::f128) ? Align(16) : Align(8);
   unsigned Offset = State.AllocateStack(size, alignment);
   unsigned Reg = 0;
 
@@ -152,7 +150,7 @@ static bool CC_Sparc64_Half(unsigned &ValNo, MVT &ValVT,
                             MVT &LocVT, CCValAssign::LocInfo &LocInfo,
                             ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   assert(LocVT.getSizeInBits() == 32 && "Can't handle non-32 bits locations");
-  unsigned Offset = State.AllocateStack(4, 4);
+  unsigned Offset = State.AllocateStack(4, Align(4));
 
   if (LocVT == MVT::f32 && Offset < 16*8) {
     // Promote floats to %f0-%f31.
@@ -692,9 +690,9 @@ SparcTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 }
 
 static bool hasReturnsTwiceAttr(SelectionDAG &DAG, SDValue Callee,
-                                ImmutableCallSite CS) {
-  if (CS)
-    return CS.hasFnAttr(Attribute::ReturnsTwice);
+                                const CallBase *Call) {
+  if (Call)
+    return Call->hasFnAttr(Attribute::ReturnsTwice);
 
   const Function *CalleeFn = nullptr;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
@@ -936,7 +934,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     InFlag = Chain.getValue(1);
   }
 
-  bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CS);
+  bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CB);
 
   // If the callee is a GlobalAddress node (quite common, every direct call is)
   // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
@@ -1243,7 +1241,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
   // Likewise ExternalSymbol -> TargetExternalSymbol.
   SDValue Callee = CLI.Callee;
-  bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CS);
+  bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CB);
   unsigned TF = isPositionIndependent() ? SparcMCExpr::VK_Sparc_WPLT30 : 0;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0, TF);
@@ -1292,7 +1290,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
 
   // Set inreg flag manually for codegen generated library calls that
   // return float.
-  if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CS)
+  if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CB)
     CLI.Ins[0].Flags.setInReg();
 
   RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_Sparc64);
@@ -1467,6 +1465,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
   // Turn FP extload into load/fpextend
   for (MVT VT : MVT::fp_valuetypes()) {
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f64, Expand);
   }
@@ -1476,6 +1475,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
 
   // Turn FP truncstore into trunc + store.
+  setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::f16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::f128, MVT::f32, Expand);
   setTruncStoreAction(MVT::f128, MVT::f64, Expand);
@@ -1516,6 +1517,12 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UINT_TO_FP, MVT::i32, Custom);
   setOperationAction(ISD::FP_TO_UINT, MVT::i64, Custom);
   setOperationAction(ISD::UINT_TO_FP, MVT::i64, Custom);
+
+  // Lower f16 conversion operations into library calls
+  setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
+  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
 
   setOperationAction(ISD::BITCAST, MVT::f32, Expand);
   setOperationAction(ISD::BITCAST, MVT::i32, Expand);
@@ -1906,10 +1913,8 @@ SDValue SparcTargetLowering::withTargetFlags(SDValue Op, unsigned TF,
                                       GA->getOffset(), TF);
 
   if (const ConstantPoolSDNode *CP = dyn_cast<ConstantPoolSDNode>(Op))
-    return DAG.getTargetConstantPool(CP->getConstVal(),
-                                     CP->getValueType(0),
-                                     CP->getAlignment(),
-                                     CP->getOffset(), TF);
+    return DAG.getTargetConstantPool(CP->getConstVal(), CP->getValueType(0),
+                                     CP->getAlign(), CP->getOffset(), TF);
 
   if (const BlockAddressSDNode *BA = dyn_cast<BlockAddressSDNode>(Op))
     return DAG.getTargetBlockAddress(BA->getBlockAddress(),
@@ -2239,54 +2244,54 @@ SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
 
   switch(SPCC) {
   default: {
-    SDValue RHS = DAG.getTargetConstant(0, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UL : {
     SDValue Mask   = DAG.getConstant(1, DL, Result.getValueType());
     Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
-    SDValue RHS    = DAG.getTargetConstant(0, DL, Result.getValueType());
+    SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_ULE: {
-    SDValue RHS = DAG.getTargetConstant(2, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(2, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UG :  {
-    SDValue RHS = DAG.getTargetConstant(1, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(1, DL, Result.getValueType());
     SPCC = SPCC::ICC_G;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UGE: {
-    SDValue RHS = DAG.getTargetConstant(1, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(1, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
 
   case SPCC::FCC_U  :  {
-    SDValue RHS = DAG.getTargetConstant(3, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(3, DL, Result.getValueType());
     SPCC = SPCC::ICC_E;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_O  :  {
-    SDValue RHS = DAG.getTargetConstant(3, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(3, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_LG :  {
     SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
     Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
-    SDValue RHS    = DAG.getTargetConstant(0, DL, Result.getValueType());
+    SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UE : {
     SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
     Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
-    SDValue RHS    = DAG.getTargetConstant(0, DL, Result.getValueType());
+    SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_E;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
@@ -2544,15 +2549,15 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                                        const SparcSubtarget *Subtarget) {
   SDValue Chain = Op.getOperand(0);  // Legalize the chain.
   SDValue Size  = Op.getOperand(1);  // Legalize the size.
-  unsigned Align = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
-  unsigned StackAlign = Subtarget->getFrameLowering()->getStackAlignment();
+  MaybeAlign Alignment(cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue());
+  Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
   EVT VT = Size->getValueType(0);
   SDLoc dl(Op);
 
   // TODO: implement over-aligned alloca. (Note: also implies
   // supporting support for overaligned function frames + dynamic
   // allocations, at all, which currently isn't supported)
-  if (Align > StackAlign) {
+  if (Alignment && *Alignment > StackAlign) {
     const MachineFunction &MF = DAG.getMachineFunction();
     report_fatal_error("Function \"" + Twine(MF.getName()) + "\": "
                        "over-aligned dynamic alloca not supported.");

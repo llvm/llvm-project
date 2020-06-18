@@ -79,7 +79,7 @@ SymbolTable::SymbolTable(Operation *symbolTableOp)
          "expected operation to have SymbolTable trait");
   assert(symbolTableOp->getNumRegions() == 1 &&
          "expected operation to have a single region");
-  assert(has_single_element(symbolTableOp->getRegion(0)) &&
+  assert(llvm::hasSingleElement(symbolTableOp->getRegion(0)) &&
          "expected operation to have a single block");
 
   for (auto &op : symbolTableOp->getRegion(0).front()) {
@@ -146,11 +146,6 @@ void SymbolTable::insert(Operation *symbol, Block::iterator insertPt) {
   setSymbolName(symbol, nameBuffer);
 }
 
-/// Returns true if the given operation defines a symbol.
-bool SymbolTable::isSymbol(Operation *op) {
-  return op->hasTrait<OpTrait::Symbol>() || getNameIfSymbol(op).hasValue();
-}
-
 /// Returns the name of the given symbol operation.
 StringRef SymbolTable::getSymbolName(Operation *symbol) {
   Optional<StringRef> name = getNameIfSymbol(symbol);
@@ -212,6 +207,35 @@ Operation *SymbolTable::getNearestSymbolTable(Operation *from) {
   return from;
 }
 
+/// Walks all symbol table operations nested within, and including, `op`. For
+/// each symbol table operation, the provided callback is invoked with the op
+/// and a boolean signifying if the symbols within that symbol table can be
+/// treated as if all uses are visible. `allSymUsesVisible` identifies whether
+/// all of the symbol uses of symbols within `op` are visible.
+void SymbolTable::walkSymbolTables(
+    Operation *op, bool allSymUsesVisible,
+    function_ref<void(Operation *, bool)> callback) {
+  bool isSymbolTable = op->hasTrait<OpTrait::SymbolTable>();
+  if (isSymbolTable) {
+    SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(op);
+    allSymUsesVisible |= !symbol || symbol.isPrivate();
+  } else {
+    // Otherwise if 'op' is not a symbol table, any nested symbols are
+    // guaranteed to be hidden.
+    allSymUsesVisible = true;
+  }
+
+  for (Region &region : op->getRegions())
+    for (Block &block : region)
+      for (Operation &nestedOp : block)
+        walkSymbolTables(&nestedOp, allSymUsesVisible, callback);
+
+  // If 'op' had the symbol table trait, visit it after any nested symbol
+  // tables.
+  if (isSymbolTable)
+    callback(op, allSymUsesVisible);
+}
+
 /// Returns the operation registered with the given symbol name with the
 /// regions of 'symbolTableOp'. 'symbolTableOp' is required to be an operation
 /// with the 'OpTrait::SymbolTable' trait. Returns nullptr if no valid symbol
@@ -221,11 +245,9 @@ Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
   assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
 
   // Look for a symbol with the given name.
-  for (auto &block : symbolTableOp->getRegion(0)) {
-    for (auto &op : block)
-      if (getNameIfSymbol(&op) == symbol)
-        return &op;
-  }
+  for (auto &op : symbolTableOp->getRegion(0).front().without_terminator())
+    if (getNameIfSymbol(&op) == symbol)
+      return &op;
   return nullptr;
 }
 Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
@@ -286,11 +308,11 @@ Operation *SymbolTable::lookupNearestSymbolFrom(Operation *from,
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//
 
-LogicalResult OpTrait::impl::verifySymbolTable(Operation *op) {
+LogicalResult detail::verifySymbolTable(Operation *op) {
   if (op->getNumRegions() != 1)
     return op->emitOpError()
            << "Operations with a 'SymbolTable' must have exactly one region";
-  if (!has_single_element(op->getRegion(0)))
+  if (!llvm::hasSingleElement(op->getRegion(0)))
     return op->emitOpError()
            << "Operations with a 'SymbolTable' must have exactly one block";
 
@@ -316,7 +338,7 @@ LogicalResult OpTrait::impl::verifySymbolTable(Operation *op) {
   return success();
 }
 
-LogicalResult OpTrait::impl::verifySymbol(Operation *op) {
+LogicalResult detail::verifySymbol(Operation *op) {
   // Verify the name attribute.
   if (!op->getAttrOfType<StringAttr>(mlir::SymbolTable::getSymbolAttrName()))
     return op->emitOpError() << "requires string attribute '"
@@ -361,9 +383,9 @@ static WalkResult walkSymbolRefs(
     Operation *op,
     function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
   // Check to see if the operation has any attributes.
-  DictionaryAttr attrDict = op->getAttrList().getDictionary();
-  if (!attrDict)
+  if (op->getMutableAttrDict().empty())
     return WalkResult::advance();
+  DictionaryAttr attrDict = op->getAttrDictionary();
 
   // A worklist of a container attribute and the current index into the held
   // attribute list.
@@ -420,28 +442,26 @@ static Optional<WalkResult> walkSymbolUses(
     function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
   SmallVector<Region *, 1> worklist(llvm::make_pointer_range(regions));
   while (!worklist.empty()) {
-    for (Block &block : *worklist.pop_back_val()) {
-      for (Operation &op : block) {
-        if (walkSymbolRefs(&op, callback).wasInterrupted())
-          return WalkResult::interrupt();
+    for (Operation &op : worklist.pop_back_val()->getOps()) {
+      if (walkSymbolRefs(&op, callback).wasInterrupted())
+        return WalkResult::interrupt();
 
-        // Check that this isn't a potentially unknown symbol table.
-        if (isPotentiallyUnknownSymbolTable(&op))
-          return llvm::None;
+      // Check that this isn't a potentially unknown symbol table.
+      if (isPotentiallyUnknownSymbolTable(&op))
+        return llvm::None;
 
-        // If this op defines a new symbol table scope, we can't traverse. Any
-        // symbol references nested within 'op' are different semantically.
-        if (!op.hasTrait<OpTrait::SymbolTable>()) {
-          for (Region &region : op.getRegions())
-            worklist.push_back(&region);
-        }
+      // If this op defines a new symbol table scope, we can't traverse. Any
+      // symbol references nested within 'op' are different semantically.
+      if (!op.hasTrait<OpTrait::SymbolTable>()) {
+        for (Region &region : op.getRegions())
+          worklist.push_back(&region);
       }
     }
   }
   return WalkResult::advance();
 }
 /// Walk all of the uses, for any symbol, that are nested within the given
-/// operaion 'from', invoking the provided callback for each. This does not
+/// operation 'from', invoking the provided callback for each. This does not
 /// traverse into any nested symbol tables.
 static Optional<WalkResult> walkSymbolUses(
     Operation *from,
@@ -477,8 +497,8 @@ struct SymbolScope {
   /// 'walkSymbolUses'.
   template <typename CallbackT,
             typename std::enable_if_t<!std::is_same<
-                typename FunctionTraits<CallbackT>::result_t, void>::value> * =
-                nullptr>
+                typename llvm::function_traits<CallbackT>::result_t,
+                void>::value> * = nullptr>
   Optional<WalkResult> walk(CallbackT cback) {
     if (Region *region = limit.dyn_cast<Region *>())
       return walkSymbolUses(*region, cback);
@@ -488,8 +508,8 @@ struct SymbolScope {
   /// void(SymbolTable::SymbolUse use)
   template <typename CallbackT,
             typename std::enable_if_t<std::is_same<
-                typename FunctionTraits<CallbackT>::result_t, void>::value> * =
-                nullptr>
+                typename llvm::function_traits<CallbackT>::result_t,
+                void>::value> * = nullptr>
   Optional<WalkResult> walk(CallbackT cback) {
     return walk([=](SymbolTable::SymbolUse use, ArrayRef<int>) {
       return cback(use), WalkResult::advance();
@@ -779,7 +799,7 @@ replaceAllSymbolUsesImpl(SymbolT symbol, StringRef newSymbol, IRUnitT *limit) {
   // Generate a new attribute dictionary for the current operation by replacing
   // references to the old symbol.
   auto generateNewAttrDict = [&] {
-    auto oldDict = curOp->getAttrList().getDictionary();
+    auto oldDict = curOp->getAttrDictionary();
     auto newDict = rebuildAttrAfterRAUW(oldDict, accessChains, /*depth=*/0);
     return newDict.cast<DictionaryAttr>();
   };
@@ -866,3 +886,10 @@ LogicalResult SymbolTable::replaceAllSymbolUses(Operation *oldSymbol,
                                                 Region *from) {
   return replaceAllSymbolUsesImpl(oldSymbol, newSymbol, from);
 }
+
+//===----------------------------------------------------------------------===//
+// Symbol Interfaces
+//===----------------------------------------------------------------------===//
+
+/// Include the generated symbol interfaces.
+#include "mlir/IR/SymbolInterfaces.cpp.inc"

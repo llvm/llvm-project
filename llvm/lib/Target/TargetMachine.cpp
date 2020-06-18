@@ -193,6 +193,14 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     // Check if we can use copy relocations.
     if (!(GV && GV->isThreadLocal()) && RM == Reloc::Static)
       return true;
+  } else if (TT.isOSBinFormatELF()) {
+    // If dso_local allows AsmPrinter::getSymbolPreferLocal to use a local
+    // alias, set the flag. We cannot set dso_local for other global values,
+    // because otherwise direct accesses to a probably interposable symbol (even
+    // if the codegen assumes not) will be rejected by the linker.
+    if (!GV || !GV->canBenefitFromLocalAlias())
+      return false;
+    return TT.isX86() && M.noSemanticInterposition();
   }
 
   // ELF & wasm support preemption of other symbols.
@@ -258,6 +266,10 @@ void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,
 
 MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV) const {
   const TargetLoweringObjectFile *TLOF = getObjFileLowering();
+  // XCOFF symbols could have special naming convention.
+  if (MCSymbol *TargetSymbol = TLOF->getTargetSymbol(GV, *this))
+    return TargetSymbol;
+
   SmallString<128> NameStr;
   getNameWithPrefix(NameStr, GV, TLOF->getMangler());
   return TLOF->getContext().getOrCreateSymbol(NameStr);

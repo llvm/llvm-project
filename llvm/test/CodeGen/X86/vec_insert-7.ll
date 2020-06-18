@@ -8,12 +8,7 @@
 define x86_mmx @mmx_movzl(x86_mmx %x) nounwind {
 ; X32-LABEL: mmx_movzl:
 ; X32:       ## %bb.0:
-; X32-NEXT:    movq2dq %mm0, %xmm0
-; X32-NEXT:    movl $32, %eax
-; X32-NEXT:    pinsrd $0, %eax, %xmm0
-; X32-NEXT:    pxor %xmm1, %xmm1
-; X32-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3],xmm0[4,5,6,7]
-; X32-NEXT:    movdq2q %xmm1, %mm0
+; X32-NEXT:    movq LCPI0_0, %mm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: mmx_movzl:

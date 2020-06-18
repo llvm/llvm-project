@@ -36,7 +36,7 @@ typedef struct red_input {
   void *reduce_shar; /**< shared between tasks item to reduce into */
   size_t reduce_size; /**< size of data item in bytes */
   // three compiler-generated routines (init, fini are optional):
-  void *reduce_init; /**< data initialization routine (single paramemter) */
+  void *reduce_init; /**< data initialization routine (single parameter) */
   void *reduce_fini; /**< data finalization routine */
   void *reduce_comb; /**< data combiner routine */
   unsigned flags; /**< flags for additional info from compiler */

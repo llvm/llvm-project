@@ -132,6 +132,10 @@ StringRef tblgen::Attribute::getDerivedCodeBody() const {
   return def->getValueAsString("body");
 }
 
+tblgen::Dialect tblgen::Attribute::getDialect() const {
+  return Dialect(def->getValueAsDef("dialect"));
+}
+
 tblgen::ConstantAttr::ConstantAttr(const DefInit *init) : def(init->getDef()) {
   assert(def->isSubClassOf("ConstantAttr") &&
          "must be subclass of TableGen 'ConstantAttr' class");
@@ -284,3 +288,5 @@ tblgen::StructAttr::getAllFields() const {
 
   return attributes;
 }
+
+const char *mlir::tblgen::inferTypeOpInterface = "InferTypeOpInterface";

@@ -2,8 +2,12 @@
 
 @test1 = global [2 x i24] [i24 -1, i24 -1]
 ; CHECK-LABEL: test1:
-; CHECK-NEXT: .long	16777215
-; CHECK-NEXT: .long	16777215
+; CHECK-NEXT: .short	65535
+; CHECK-NEXT: .byte	255
+; CHECK-NEXT: .space	1
+; CHECK-NEXT: .short	65535
+; CHECK-NEXT: .byte	255
+; CHECK-NEXT: .space	1
 
 @test2 = global [2 x i7] [i7 1, i7 1]
 ; CHECK-LABEL: test2:

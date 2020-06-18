@@ -7,10 +7,12 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; VI-LABEL: max_alignment_128:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_add_u32 s4, s4, s7
+; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; VI-NEXT:    s_add_u32 s0, s0, s7
+; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    v_mov_b32_e32 v0, 9
 ; VI-NEXT:    s_mov_b32 flat_scratch_lo, s5
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; VI-NEXT:    buffer_store_dword v0, off, s[0:3], s7 offset:128
+; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:128
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:    .section .rodata,#alloc
 ; VI-NEXT:    .p2align 6
@@ -35,7 +37,7 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; VI-NEXT:     .amdhsa_reserve_vcc 0
 ; VI-NEXT:     .amdhsa_float_round_mode_32 0
 ; VI-NEXT:     .amdhsa_float_round_mode_16_64 0
-; VI-NEXT:     .amdhsa_float_denorm_mode_32 0
+; VI-NEXT:     .amdhsa_float_denorm_mode_32 3
 ; VI-NEXT:     .amdhsa_float_denorm_mode_16_64 3
 ; VI-NEXT:     .amdhsa_dx10_clamp 1
 ; VI-NEXT:     .amdhsa_ieee_mode 1
@@ -52,9 +54,11 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9-LABEL: max_alignment_128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s4, s7
-; GFX9-NEXT:    v_mov_b32_e32 v0, 9
 ; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s5, 0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s7 offset:128
+; GFX9-NEXT:    s_add_u32 s0, s0, s7
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 9
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:128
 ; GFX9-NEXT:    s_endpgm
 ; GFX9-NEXT:    .section .rodata,#alloc
 ; GFX9-NEXT:    .p2align 6
@@ -79,7 +83,7 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9-NEXT:     .amdhsa_reserve_vcc 0
 ; GFX9-NEXT:     .amdhsa_float_round_mode_32 0
 ; GFX9-NEXT:     .amdhsa_float_round_mode_16_64 0
-; GFX9-NEXT:     .amdhsa_float_denorm_mode_32 0
+; GFX9-NEXT:     .amdhsa_float_denorm_mode_32 3
 ; GFX9-NEXT:     .amdhsa_float_denorm_mode_16_64 3
 ; GFX9-NEXT:     .amdhsa_dx10_clamp 1
 ; GFX9-NEXT:     .amdhsa_ieee_mode 1
@@ -102,10 +106,12 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; VI-LABEL: stackrealign_attr:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_add_u32 s4, s4, s7
+; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; VI-NEXT:    s_add_u32 s0, s0, s7
+; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    v_mov_b32_e32 v0, 9
 ; VI-NEXT:    s_mov_b32 flat_scratch_lo, s5
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; VI-NEXT:    buffer_store_dword v0, off, s[0:3], s7 offset:4
+; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:    .section .rodata,#alloc
 ; VI-NEXT:    .p2align 6
@@ -130,7 +136,7 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; VI-NEXT:     .amdhsa_reserve_vcc 0
 ; VI-NEXT:     .amdhsa_float_round_mode_32 0
 ; VI-NEXT:     .amdhsa_float_round_mode_16_64 0
-; VI-NEXT:     .amdhsa_float_denorm_mode_32 0
+; VI-NEXT:     .amdhsa_float_denorm_mode_32 3
 ; VI-NEXT:     .amdhsa_float_denorm_mode_16_64 3
 ; VI-NEXT:     .amdhsa_dx10_clamp 1
 ; VI-NEXT:     .amdhsa_ieee_mode 1
@@ -147,9 +153,11 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9-LABEL: stackrealign_attr:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s4, s7
-; GFX9-NEXT:    v_mov_b32_e32 v0, 9
 ; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s5, 0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s7 offset:4
+; GFX9-NEXT:    s_add_u32 s0, s0, s7
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 9
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX9-NEXT:    s_endpgm
 ; GFX9-NEXT:    .section .rodata,#alloc
 ; GFX9-NEXT:    .p2align 6
@@ -174,7 +182,7 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9-NEXT:     .amdhsa_reserve_vcc 0
 ; GFX9-NEXT:     .amdhsa_float_round_mode_32 0
 ; GFX9-NEXT:     .amdhsa_float_round_mode_16_64 0
-; GFX9-NEXT:     .amdhsa_float_denorm_mode_32 0
+; GFX9-NEXT:     .amdhsa_float_denorm_mode_32 3
 ; GFX9-NEXT:     .amdhsa_float_denorm_mode_16_64 3
 ; GFX9-NEXT:     .amdhsa_dx10_clamp 1
 ; GFX9-NEXT:     .amdhsa_ieee_mode 1
@@ -197,10 +205,12 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; VI-LABEL: alignstack_attr:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_add_u32 s4, s4, s7
+; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
+; VI-NEXT:    s_add_u32 s0, s0, s7
+; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    v_mov_b32_e32 v0, 9
 ; VI-NEXT:    s_mov_b32 flat_scratch_lo, s5
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
-; VI-NEXT:    buffer_store_dword v0, off, s[0:3], s7 offset:4
+; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:    .section .rodata,#alloc
 ; VI-NEXT:    .p2align 6
@@ -225,7 +235,7 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; VI-NEXT:     .amdhsa_reserve_vcc 0
 ; VI-NEXT:     .amdhsa_float_round_mode_32 0
 ; VI-NEXT:     .amdhsa_float_round_mode_16_64 0
-; VI-NEXT:     .amdhsa_float_denorm_mode_32 0
+; VI-NEXT:     .amdhsa_float_denorm_mode_32 3
 ; VI-NEXT:     .amdhsa_float_denorm_mode_16_64 3
 ; VI-NEXT:     .amdhsa_dx10_clamp 1
 ; VI-NEXT:     .amdhsa_ieee_mode 1
@@ -242,9 +252,11 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9-LABEL: alignstack_attr:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s4, s7
-; GFX9-NEXT:    v_mov_b32_e32 v0, 9
 ; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s5, 0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s7 offset:4
+; GFX9-NEXT:    s_add_u32 s0, s0, s7
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 9
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX9-NEXT:    s_endpgm
 ; GFX9-NEXT:    .section .rodata,#alloc
 ; GFX9-NEXT:    .p2align 6
@@ -269,7 +281,7 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9-NEXT:     .amdhsa_reserve_vcc 0
 ; GFX9-NEXT:     .amdhsa_float_round_mode_32 0
 ; GFX9-NEXT:     .amdhsa_float_round_mode_16_64 0
-; GFX9-NEXT:     .amdhsa_float_denorm_mode_32 0
+; GFX9-NEXT:     .amdhsa_float_denorm_mode_32 3
 ; GFX9-NEXT:     .amdhsa_float_denorm_mode_16_64 3
 ; GFX9-NEXT:     .amdhsa_dx10_clamp 1
 ; GFX9-NEXT:     .amdhsa_ieee_mode 1

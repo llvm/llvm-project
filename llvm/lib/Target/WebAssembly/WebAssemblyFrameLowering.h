@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
-class MachineFrameInfo;
 
 class WebAssemblyFrameLowering final : public TargetFrameLowering {
 public:

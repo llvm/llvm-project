@@ -132,7 +132,7 @@ int foo(int n, double *ptr) {
   // CHECK:  [[PTR_GEP_ARG:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  {{.+}} = call i32 @__tgt_target(i64 -1, {{.+}}, i32 2, i8** [[BASE_PTR_GEP_ARG]], i8** [[PTR_GEP_ARG]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0))
 
-  // TCHECK:  define weak void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], i32** dereferenceable{{.+}} [[P_IN:%.+]])
+  // TCHECK:  define weak void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], i32** nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[P_IN:%.+]])
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[P_ADDR:%.+]] = alloca i32**,
   // TCHECK:  [[P_PRIV:%.+]] = alloca i32*,
@@ -336,9 +336,8 @@ int foo(int n, double *ptr) {
   }
   // CHECK:  [[PTR_ADDR_REF:%.+]] = load double*, double** [[PTR_ADDR]],
 
-  // CHECK:  [[FP_E_BC:%.+]] = bitcast [[TTII]]* [[FP_E]] to i8*
   // CHECK:  [[E_BC:%.+]] = bitcast [[TTII]]* [[E:%.+]] to i8*
-  // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i{{64|32}}(i8* {{.*}} [[FP_E_BC]], i8* {{.*}} [[E_BC]], i{{64|32}} 8, i1 false)
+  // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i{{64|32}}(i8* {{.*}} bitcast ([[TTII]]* [[FP_E]] to i8*), i8* {{.*}} [[E_BC]], i{{64|32}} 8, i1 false)
   // CHECK:  [[BASE_PTR_GEP3_0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASE_PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP3_0]] to double**
   // CHECK:  store double* [[PTR_ADDR_REF]], double** [[BCAST_TOPTR]],
@@ -356,7 +355,7 @@ int foo(int n, double *ptr) {
   // CHECK:  [[PTR_GEP_ARG3:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK: {{.+}} = call i32 @__tgt_target(i64 -1, {{.+}}, i32 2, i8** [[BASE_PTR_GEP_ARG3]], i8** [[PTR_GEP_ARG3]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET3]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT3]], i32 0, i32 0))
 
-  // TCHECK:  define weak void @__omp_offloading_{{.+}}(double* [[PTR_IN:%.+]], [[TTII]]* dereferenceable{{.+}} [[E:%.+]])
+  // TCHECK:  define weak void @__omp_offloading_{{.+}}(double* [[PTR_IN:%.+]], [[TTII]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[E:%.+]])
   // TCHECK-NOT: alloca [[TTII]],
   // TCHECK:  [[PTR_ADDR:%.+]] = alloca double*,
   // TCHECK-NOT: alloca [[TTII]],

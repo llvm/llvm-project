@@ -50,9 +50,9 @@ public:
   void lookup(const LookupMap &Symbols,
               std::unique_ptr<JITLinkAsyncLookupContinuation> LC) override {
 
-    JITDylibSearchOrder SearchOrder;
-    MR.getTargetJITDylib().withSearchOrderDo(
-        [&](const JITDylibSearchOrder &O) { SearchOrder = O; });
+    JITDylibSearchOrder LinkOrder;
+    MR.getTargetJITDylib().withLinkOrderDo(
+        [&](const JITDylibSearchOrder &LO) { LinkOrder = LO; });
 
     auto &ES = Layer.getExecutionSession();
 
@@ -90,7 +90,7 @@ public:
       MR.addDependencies(KV.first, InternalDeps);
     }
 
-    ES.lookup(LookupKind::Static, SearchOrder, std::move(LookupSet),
+    ES.lookup(LookupKind::Static, LinkOrder, std::move(LookupSet),
               SymbolState::Resolved, std::move(OnResolve),
               [this](const SymbolDependenceMap &Deps) {
                 registerDependencies(Deps);
@@ -144,6 +144,56 @@ public:
     if (!ExtraSymbolsToClaim.empty())
       if (auto Err = MR.defineMaterializing(ExtraSymbolsToClaim))
         return notifyFailed(std::move(Err));
+
+    {
+
+      // Check that InternedResult matches up with MR.getSymbols().
+      // This guards against faulty transformations / compilers / object caches.
+
+      // First check that there aren't any missing symbols.
+      size_t NumMaterializationSideEffectsOnlySymbols = 0;
+      SymbolNameVector ExtraSymbols;
+      SymbolNameVector MissingSymbols;
+      for (auto &KV : MR.getSymbols()) {
+
+        // If this is a materialization-side-effects only symbol then bump
+        // the counter and make sure it's *not* defined, otherwise make
+        // sure that it is defined.
+        if (KV.second.hasMaterializationSideEffectsOnly()) {
+          ++NumMaterializationSideEffectsOnlySymbols;
+          if (InternedResult.count(KV.first))
+            ExtraSymbols.push_back(KV.first);
+          continue;
+        } else if (!InternedResult.count(KV.first))
+          MissingSymbols.push_back(KV.first);
+      }
+
+      // If there were missing symbols then report the error.
+      if (!MissingSymbols.empty()) {
+        ES.reportError(make_error<MissingSymbolDefinitions>(
+            G.getName(), std::move(MissingSymbols)));
+        MR.failMaterialization();
+        return;
+      }
+
+      // If there are more definitions than expected, add them to the
+      // ExtraSymbols vector.
+      if (InternedResult.size() >
+          MR.getSymbols().size() - NumMaterializationSideEffectsOnlySymbols) {
+        for (auto &KV : InternedResult)
+          if (!MR.getSymbols().count(KV.first))
+            ExtraSymbols.push_back(KV.first);
+      }
+
+      // If there were extra definitions then report the error.
+      if (!ExtraSymbols.empty()) {
+        ES.reportError(make_error<UnexpectedSymbolDefinitions>(
+            G.getName(), std::move(ExtraSymbols)));
+        MR.failMaterialization();
+        return;
+      }
+    }
+
     if (auto Err = MR.notifyResolved(InternedResult)) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR.failMaterialization();
@@ -184,8 +234,12 @@ public:
   }
 
 private:
-  using JITLinkSymbolSet = DenseSet<const Symbol *>;
-  using LocalToNamedDependenciesMap = DenseMap<const Symbol *, JITLinkSymbolSet>;
+  struct LocalSymbolNamedDependencies {
+    SymbolNameSet Internal, External;
+  };
+
+  using LocalSymbolNamedDependenciesMap =
+      DenseMap<const Symbol *, LocalSymbolNamedDependencies>;
 
   Error externalizeWeakAndCommonSymbols(LinkGraph &G) {
     auto &ES = Layer.getExecutionSession();
@@ -216,6 +270,7 @@ private:
     auto &ES = MR.getTargetJITDylib().getExecutionSession();
     auto LocalDeps = computeLocalDeps(G);
 
+    // Compute dependencies for symbols defined in the JITLink graph.
     for (auto *Sym : G.defined_symbols()) {
 
       // Skip local symbols: we do not track dependencies for these.
@@ -239,15 +294,12 @@ private:
           assert(TargetSym.isDefined() &&
                  "local symbols must be defined");
           auto I = LocalDeps.find(&TargetSym);
-          if (I != LocalDeps.end())
-            for (auto &S : I->second) {
-              assert(S->hasName() &&
-                     "LocalDeps should only contain named values");
-              if (S->isExternal())
-                ExternalSymDeps.insert(ES.intern(S->getName()));
-              else if (S != Sym)
-                InternalSymDeps.insert(ES.intern(S->getName()));
-            }
+          if (I != LocalDeps.end()) {
+            for (auto &S : I->second.External)
+              ExternalSymDeps.insert(S);
+            for (auto &S : I->second.Internal)
+              InternalSymDeps.insert(S);
+          }
         }
       }
 
@@ -261,11 +313,33 @@ private:
         InternalNamedSymbolDeps[SymName] = std::move(InternalSymDeps);
     }
 
+    for (auto &P : Layer.Plugins) {
+      auto SyntheticLocalDeps = P->getSyntheticSymbolLocalDependencies(MR);
+      if (SyntheticLocalDeps.empty())
+        continue;
+
+      for (auto &KV : SyntheticLocalDeps) {
+        auto &Name = KV.first;
+        auto &LocalDepsForName = KV.second;
+        for (auto *Local : LocalDepsForName) {
+          assert(Local->getScope() == Scope::Local &&
+                 "Dependence on non-local symbol");
+          auto LocalNamedDepsItr = LocalDeps.find(Local);
+          if (LocalNamedDepsItr == LocalDeps.end())
+            continue;
+          for (auto &S : LocalNamedDepsItr->second.Internal)
+            InternalNamedSymbolDeps[Name].insert(S);
+          for (auto &S : LocalNamedDepsItr->second.External)
+            ExternalNamedSymbolDeps[Name].insert(S);
+        }
+      }
+    }
+
     return Error::success();
   }
 
-  LocalToNamedDependenciesMap computeLocalDeps(LinkGraph &G) {
-    LocalToNamedDependenciesMap DepMap;
+  LocalSymbolNamedDependenciesMap computeLocalDeps(LinkGraph &G) {
+    DenseMap<jitlink::Symbol *, DenseSet<jitlink::Symbol *>> DepMap;
 
     // For all local symbols:
     // (1) Add their named dependencies.
@@ -319,7 +393,26 @@ private:
       }
     } while (Changed);
 
-    return DepMap;
+    // Intern the results to produce a mapping of jitlink::Symbol* to internal
+    // and external symbol names.
+    auto &ES = Layer.getExecutionSession();
+    LocalSymbolNamedDependenciesMap Result;
+    for (auto &KV : DepMap) {
+      auto *Local = KV.first;
+      assert(Local->getScope() == Scope::Local &&
+             "DepMap keys should all be local symbols");
+      auto &LocalNamedDeps = Result[Local];
+      for (auto *Named : KV.second) {
+        assert(Named->getScope() != Scope::Local &&
+               "DepMap values should all be non-local symbol sets");
+        if (Named->isExternal())
+          LocalNamedDeps.External.insert(ES.intern(Named->getName()));
+        else
+          LocalNamedDeps.Internal.insert(ES.intern(Named->getName()));
+      }
+    }
+
+    return Result;
   }
 
   void registerDependencies(const SymbolDependenceMap &QueryDeps) {
@@ -452,18 +545,21 @@ EHFrameRegistrationPlugin::EHFrameRegistrationPlugin(
 void EHFrameRegistrationPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, const Triple &TT,
     PassConfiguration &PassConfig) {
-  assert(!InProcessLinks.count(&MR) && "Link for MR already being tracked?");
 
-  PassConfig.PostFixupPasses.push_back(
-      createEHFrameRecorderPass(TT, [this, &MR](JITTargetAddress Addr,
-                                                size_t Size) {
-        if (Addr)
-          InProcessLinks[&MR] = { Addr, Size };
+  PassConfig.PostFixupPasses.push_back(createEHFrameRecorderPass(
+      TT, [this, &MR](JITTargetAddress Addr, size_t Size) {
+        if (Addr) {
+          std::lock_guard<std::mutex> Lock(EHFramePluginMutex);
+          assert(!InProcessLinks.count(&MR) &&
+                 "Link for MR already being tracked?");
+          InProcessLinks[&MR] = {Addr, Size};
+        }
       }));
 }
 
 Error EHFrameRegistrationPlugin::notifyEmitted(
     MaterializationResponsibility &MR) {
+  std::lock_guard<std::mutex> Lock(EHFramePluginMutex);
 
   auto EHFrameRangeItr = InProcessLinks.find(&MR);
   if (EHFrameRangeItr == InProcessLinks.end())
@@ -483,6 +579,8 @@ Error EHFrameRegistrationPlugin::notifyEmitted(
 }
 
 Error EHFrameRegistrationPlugin::notifyRemovingModule(VModuleKey K) {
+  std::lock_guard<std::mutex> Lock(EHFramePluginMutex);
+
   auto EHFrameRangeItr = TrackedEHFrameRanges.find(K);
   if (EHFrameRangeItr == TrackedEHFrameRanges.end())
     return Error::success();
@@ -496,6 +594,7 @@ Error EHFrameRegistrationPlugin::notifyRemovingModule(VModuleKey K) {
 }
 
 Error EHFrameRegistrationPlugin::notifyRemovingAllModules() {
+  std::lock_guard<std::mutex> Lock(EHFramePluginMutex);
 
   std::vector<EHFrameRange> EHFrameRanges =
     std::move(UntrackedEHFrameRanges);

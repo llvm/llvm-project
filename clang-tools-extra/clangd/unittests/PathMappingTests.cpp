@@ -52,7 +52,7 @@ TEST(ParsePathMappingTests, UnixPath) {
   llvm::Expected<PathMappings> ParsedMappings = parsePathMappings("/A/b=/root");
   ASSERT_TRUE(bool(ParsedMappings));
   EXPECT_THAT(*ParsedMappings, ElementsAre(Mapping("/A/b", "/root")));
-  // Aboslute unix path w/ backslash
+  // Absolute unix path w/ backslash
   ParsedMappings = parsePathMappings(R"(/a/b\\ar=/root)");
   ASSERT_TRUE(bool(ParsedMappings));
   EXPECT_THAT(*ParsedMappings, ElementsAre(Mapping(R"(/a/b\\ar)", "/root")));

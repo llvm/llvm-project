@@ -24,11 +24,6 @@ AST_MATCHER(FunctionDecl, hasTrailingReturn) {
 } // namespace
 
 void TrailingReturnCheck::registerMatchers(MatchFinder *Finder) {
-
-  // Requires C++11 or later.
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   // Functions that have trailing returns are disallowed, except for those
   // using decltype specifiers and lambda with otherwise unutterable
   // return types.

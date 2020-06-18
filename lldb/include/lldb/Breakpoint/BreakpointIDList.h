@@ -68,7 +68,8 @@ private:
   BreakpointIDArray m_breakpoint_ids;
   BreakpointID m_invalid_id;
 
-  DISALLOW_COPY_AND_ASSIGN(BreakpointIDList);
+  BreakpointIDList(const BreakpointIDList &) = delete;
+  const BreakpointIDList &operator=(const BreakpointIDList &) = delete;
 };
 
 } // namespace lldb_private

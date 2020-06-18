@@ -1,6 +1,9 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-compatibility-version=19 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-compatibility-version=19 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-compatibility-version=19 -fcxx-exceptions -fexceptions -fsyntax-only -verify %s
 
 // C++0x [class.access]p4:
 
@@ -139,7 +142,7 @@ namespace test3 {
     A local; // expected-error {{variable of type 'test3::A' has private destructor}}
   }
 
-#if __cplusplus < 201103L
+#if __cplusplus < 201103L && !defined(_MSC_VER)
   template <unsigned N> class Base { ~Base(); }; // expected-note 14 {{declared private here}}
   class Base2 : virtual Base<2> { ~Base2(); }; // expected-note 3 {{declared private here}} \
                                                // expected-error {{base class 'Base<2>' has private destructor}}
@@ -161,15 +164,43 @@ namespace test3 {
 
   class Derived3 : // expected-error 2 {{inherited virtual base class 'Base<2>' has private destructor}} \
                    // expected-error 2 {{inherited virtual base class 'Base<3>' has private destructor}} \
-    // expected-note 2{{implicit default constructor}}
+                   // expected-note 2{{implicit default constructor}}
     Base<0>,  // expected-error 2 {{base class 'Base<0>' has private destructor}}
     virtual Base<1>, // expected-error 2 {{base class 'Base<1>' has private destructor}}
     Base2, // expected-error 2 {{base class 'test3::Base2' has private destructor}}
     virtual Base3
-  {}; 
-  Derived3 d3; // expected-note 3{{implicit default constructor}}\
-               // expected-note{{implicit destructor}}}
-#else
+  {};
+  Derived3 d3; // expected-note{{implicit destructor}}} \
+      // expected-note 3 {{implicit default constructor}}
+#elif __cplusplus < 201103L && defined(_MSC_VER)
+  template <unsigned N> class Base { ~Base(); }; // expected-note 14 {{declared private here}}
+  class Base2 : virtual Base<2> { ~Base2(); }; // expected-note 3 {{declared private here}} \
+                                               // expected-error {{base class 'Base<2>' has private destructor}}
+  class Base3 : virtual Base<3> { public: ~Base3(); }; // expected-error {{base class 'Base<3>' has private destructor}}
+
+  // These don't cause diagnostics because we don't need the destructor.
+  class Derived0 : Base<0> { ~Derived0(); };
+  class Derived1 : Base<1> { };
+
+  class Derived2 : // expected-error {{inherited virtual base class 'Base<2>' has private destructor}} \
+                   // expected-error {{inherited virtual base class 'Base<3>' has private destructor}}
+    Base<0>,  // expected-error {{base class 'Base<0>' has private destructor}}
+    virtual Base<1>, // expected-error {{base class 'Base<1>' has private destructor}}
+    Base2, // expected-error {{base class 'test3::Base2' has private destructor}}
+    virtual Base3
+  {
+    ~Derived2() {} // expected-note 2{{in implicit destructor}}
+  };
+
+  class Derived3 : // expected-error 2 {{inherited virtual base class 'Base<2>' has private destructor}} \
+                   // expected-error 2 {{inherited virtual base class 'Base<3>' has private destructor}}
+    Base<0>,  // expected-error 2 {{base class 'Base<0>' has private destructor}}
+    virtual Base<1>, // expected-error 2 {{base class 'Base<1>' has private destructor}}
+    Base2, // expected-error 2 {{base class 'test3::Base2' has private destructor}}
+    virtual Base3
+  {};
+  Derived3 d3; // expected-note{{implicit destructor}}} expected-note {{implicit default constructor}}
+#elif __cplusplus >= 201103L && !defined(_MSC_VER)
   template <unsigned N> class Base { ~Base(); }; // expected-note 4{{declared private here}}
   class Base2 : virtual Base<2> { ~Base2(); }; // expected-note 1{{declared private here}}
   class Base3 : virtual Base<3> { public: ~Base3(); };
@@ -193,8 +224,40 @@ namespace test3 {
     virtual Base<1>,
     Base2,
     virtual Base3
-  {}; 
+  {};
   Derived3 d3; // expected-error {{implicitly-deleted default constructor}}
+#elif __cplusplus >= 201103L && defined(_MSC_VER)
+  template <unsigned N> class Base { ~Base(); }; // expected-note 6{{declared private here}}
+  // expected-error@+1 {{inherited virtual base class 'Base<2>' has private destructor}}
+  class Base2 : virtual Base<2> { ~Base2(); }; // expected-note 1{{declared private here}}
+  // expected-error@+1 {{inherited virtual base class 'Base<3>' has private destructor}}
+  class Base3 : virtual Base<3> { public: ~Base3(); };
+
+  // These don't cause diagnostics because we don't need the destructor.
+  class Derived0 : Base<0> { ~Derived0(); };
+  class Derived1 : Base<1> { };
+
+  class Derived2 : // expected-error {{inherited virtual base class 'Base<2>' has private destructor}} \
+                   // expected-error {{inherited virtual base class 'Base<3>' has private destructor}}
+    Base<0>,  // expected-error {{base class 'Base<0>' has private destructor}}
+    virtual Base<1>, // expected-error {{base class 'Base<1>' has private destructor}}
+    Base2, // expected-error {{base class 'test3::Base2' has private destructor}}
+    virtual Base3
+  {
+    // expected-note@+2 {{in implicit destructor for 'test3::Base2' first required here}}
+    // expected-note@+1 {{in implicit destructor for 'test3::Base3' first required here}}
+    ~Derived2() {}
+  };
+
+  class Derived3 :
+    Base<0>, // expected-note {{deleted because base class 'Base<0>' has an inaccessible destructor}}
+    virtual Base<1>,
+    Base2,
+    virtual Base3
+  {};
+  Derived3 d3; // expected-error {{implicitly-deleted default constructor}}
+#else
+#error "missing case of MSVC cross C++ versions"
 #endif
 }
 

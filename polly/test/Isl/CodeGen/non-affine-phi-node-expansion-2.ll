@@ -4,7 +4,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 
 ; CHECK: polly.stmt.bb3:                                   ; preds = %polly.stmt.bb3.entry
-; CHECK:   %tmp6_p_scalar_ = load double, double* %arg1{{[0-9]*}}, !alias.scope !0, !noalias !2
+; CHECK:   %tmp6_p_scalar_ = load double, double* %arg1{{[0-9]*}}, align 8, !alias.scope !0, !noalias !2
 ; CHECK:   %p_tmp7 = fadd double 1.000000e+00, %tmp6_p_scalar_
 ; CHECK:   %p_tmp8 = fcmp olt double 1.400000e+01, %p_tmp7
 ; CHECK:   br i1 %p_tmp8, label %polly.stmt.bb9, label %polly.stmt.bb10

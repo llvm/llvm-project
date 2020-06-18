@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -170,7 +171,7 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
 
   // Update call site info.
   std::for_each(MBB->begin(), MBB->end(), [MF](const MachineInstr &MI) {
-    if (MI.isCandidateForCallSiteEntry())
+    if (MI.shouldUpdateCallSiteInfo())
       MF->eraseCallSiteInfo(&MI);
   });
   // Remove the block.
@@ -201,14 +202,7 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   if (!UpdateLiveIns)
     MRI.invalidateLiveness();
 
-  // Fix CFG.  The later algorithms expect it to be right.
   bool MadeChange = false;
-  for (MachineBasicBlock &MBB : MF) {
-    MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
-    SmallVector<MachineOperand, 4> Cond;
-    if (!TII->analyzeBranch(MBB, TBB, FBB, Cond, true))
-      MadeChange |= MBB.CorrectExtraCFGEdges(TBB, FBB, !Cond.empty());
-  }
 
   // Recalculate EH scope membership.
   EHScopeMembership = getEHScopeMembership(MF);
@@ -354,6 +348,9 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
         MBBI1->isInlineAsm()) {
       break;
     }
+    if (MBBI1->getFlag(MachineInstr::NoMerge) ||
+        MBBI2->getFlag(MachineInstr::NoMerge))
+      break;
     ++TailLen;
     I1 = MBBI1;
     I2 = MBBI2;
@@ -927,10 +924,10 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
       continue;
     }
 
-    // If one of the blocks is the entire common tail (and not the entry
-    // block, which we can't jump to), we can treat all blocks with this same
-    // tail at once.  Use PredBB if that is one of the possibilities, as that
-    // will not introduce any extra branches.
+    // If one of the blocks is the entire common tail (and is not the entry
+    // block/an EH pad, which we can't jump to), we can treat all blocks with
+    // this same tail at once.  Use PredBB if that is one of the possibilities,
+    // as that will not introduce any extra branches.
     MachineBasicBlock *EntryBB =
         &MergePotentials.front().getBlock()->getParent()->front();
     unsigned commonTailIndex = SameTails.size();
@@ -938,19 +935,21 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
     // into the other.
     if (SameTails.size() == 2 &&
         SameTails[0].getBlock()->isLayoutSuccessor(SameTails[1].getBlock()) &&
-        SameTails[1].tailIsWholeBlock())
+        SameTails[1].tailIsWholeBlock() && !SameTails[1].getBlock()->isEHPad())
       commonTailIndex = 1;
     else if (SameTails.size() == 2 &&
              SameTails[1].getBlock()->isLayoutSuccessor(
-                                                     SameTails[0].getBlock()) &&
-             SameTails[0].tailIsWholeBlock())
+                 SameTails[0].getBlock()) &&
+             SameTails[0].tailIsWholeBlock() &&
+             !SameTails[0].getBlock()->isEHPad())
       commonTailIndex = 0;
     else {
       // Otherwise just pick one, favoring the fall-through predecessor if
       // there is one.
       for (unsigned i = 0, e = SameTails.size(); i != e; ++i) {
         MachineBasicBlock *MBB = SameTails[i].getBlock();
-        if (MBB == EntryBB && SameTails[i].tailIsWholeBlock())
+        if ((MBB == EntryBB || MBB->isEHPad()) &&
+            SameTails[i].tailIsWholeBlock())
           continue;
         if (MBB == PredBB) {
           commonTailIndex = i;
@@ -1335,6 +1334,13 @@ ReoptimizeBlock:
     SameEHScope = MBBEHScope->second == FallThroughEHScope->second;
   }
 
+  // Analyze the branch in the current block. As a side-effect, this may cause
+  // the block to become empty.
+  MachineBasicBlock *CurTBB = nullptr, *CurFBB = nullptr;
+  SmallVector<MachineOperand, 4> CurCond;
+  bool CurUnAnalyzable =
+      TII->analyzeBranch(*MBB, CurTBB, CurFBB, CurCond, true);
+
   // If this block is empty, make everyone use its fall-through, not the block
   // explicitly.  Landing pads should not do this since the landing-pad table
   // points to this block.  Blocks with their addresses taken shouldn't be
@@ -1377,10 +1383,6 @@ ReoptimizeBlock:
   bool PriorUnAnalyzable =
       TII->analyzeBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, true);
   if (!PriorUnAnalyzable) {
-    // If the CFG for the prior block has extra edges, remove them.
-    MadeChange |= PrevBB.CorrectExtraCFGEdges(PriorTBB, PriorFBB,
-                                              !PriorCond.empty());
-
     // If the previous branch is conditional and both conditions go to the same
     // destination, remove the branch, replacing it with an unconditional one or
     // a fall-through.
@@ -1548,15 +1550,7 @@ ReoptimizeBlock:
     }
   }
 
-  // Analyze the branch in the current block.
-  MachineBasicBlock *CurTBB = nullptr, *CurFBB = nullptr;
-  SmallVector<MachineOperand, 4> CurCond;
-  bool CurUnAnalyzable =
-      TII->analyzeBranch(*MBB, CurTBB, CurFBB, CurCond, true);
   if (!CurUnAnalyzable) {
-    // If the CFG for the prior block has extra edges, remove them.
-    MadeChange |= MBB->CorrectExtraCFGEdges(CurTBB, CurFBB, !CurCond.empty());
-
     // If this is a two-way branch, and the FBB branches to this block, reverse
     // the condition so the single-basic-block loop is faster.  Instead of:
     //    Loop: xxx; jcc Out; jmp Loop
@@ -1633,7 +1627,7 @@ ReoptimizeBlock:
               PMBB->ReplaceUsesOfBlockWith(MBB, CurTBB);
               // If this change resulted in PMBB ending in a conditional
               // branch where both conditions go to the same destination,
-              // change this to an unconditional branch (and fix the CFG).
+              // change this to an unconditional branch.
               MachineBasicBlock *NewCurTBB = nullptr, *NewCurFBB = nullptr;
               SmallVector<MachineOperand, 4> NewCurCond;
               bool NewCurUnAnalyzable = TII->analyzeBranch(
@@ -1645,7 +1639,6 @@ ReoptimizeBlock:
                 TII->insertBranch(*PMBB, NewCurTBB, nullptr, NewCurCond, pdl);
                 MadeChange = true;
                 ++NumBranchOpts;
-                PMBB->CorrectExtraCFGEdges(NewCurTBB, nullptr, false);
               }
             }
           }
@@ -1839,8 +1832,7 @@ MachineBasicBlock::iterator findHoistingInsertPosAndDeps(MachineBasicBlock *MBB,
 
   // The terminator is probably a conditional branch, try not to separate the
   // branch from condition setting instruction.
-  MachineBasicBlock::iterator PI =
-    skipDebugInstructionsBackward(std::prev(Loc), MBB->begin());
+  MachineBasicBlock::iterator PI = prev_nodbg(Loc, MBB->begin());
 
   bool IsDef = false;
   for (const MachineOperand &MO : PI->operands()) {

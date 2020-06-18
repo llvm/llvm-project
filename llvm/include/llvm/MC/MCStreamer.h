@@ -40,7 +40,6 @@ class AssemblerConstantPools;
 class formatted_raw_ostream;
 class MCAsmBackend;
 class MCCodeEmitter;
-struct MCCodePaddingContext;
 class MCContext;
 struct MCDwarfFrameInfo;
 class MCExpr;
@@ -378,7 +377,7 @@ public:
   ///
   /// This is called by PopSection and SwitchSection, if the current
   /// section changes.
-  virtual void ChangeSection(MCSection *, const MCExpr *);
+  virtual void changeSection(MCSection *, const MCExpr *);
 
   /// Save the current and previous section on the section stack.
   void PushSection() {
@@ -387,7 +386,7 @@ public:
   }
 
   /// Restore the current and previous section from the section stack.
-  /// Calls ChangeSection as needed.
+  /// Calls changeSection as needed.
   ///
   /// Returns false if the stack was empty.
   bool PopSection() {
@@ -400,7 +399,7 @@ public:
     MCSectionSubPair NewSection = I->first;
 
     if (NewSection.first && OldSection != NewSection)
-      ChangeSection(NewSection.first, NewSection.second);
+      changeSection(NewSection.first, NewSection.second);
     SectionStack.pop_back();
     return true;
   }
@@ -422,7 +421,7 @@ public:
 
   /// Set the current section where code is being emitted to \p Section.
   /// This is required to update CurSection. This version does not call
-  /// ChangeSection.
+  /// changeSection.
   void SwitchSectionNoChange(MCSection *Section,
                              const MCExpr *Subsection = nullptr) {
     assert(Section && "Cannot switch to a null section!");
@@ -566,6 +565,15 @@ public:
                                           MCSymbol *CsectSym,
                                           unsigned ByteAlignment);
 
+  /// Emit a symbol's linkage and visibilty with a linkage directive for XCOFF.
+  ///
+  /// \param Symbol - The symbol to emit.
+  /// \param Linkage - The linkage of the symbol to emit.
+  /// \param Visibility - The visibility of the symbol to emit or MCSA_Invalid
+  /// if the symbol does not have an explicit visibility.
+  virtual void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
+                                                    MCSymbolAttr Linkage,
+                                                    MCSymbolAttr Visibility);
   /// Emit an ELF .size directive.
   ///
   /// This corresponds to an assembler statement such as:
@@ -662,6 +670,11 @@ public:
   virtual void emitIntValueInHex(uint64_t Value, unsigned Size) {
     emitIntValue(Value, Size);
   }
+
+  void emitInt8(uint64_t Value) { emitIntValue(Value, 1); }
+  void emitInt16(uint64_t Value) { emitIntValue(Value, 2); }
+  void emitInt32(uint64_t Value) { emitIntValue(Value, 4); }
+  void emitInt64(uint64_t Value) { emitIntValue(Value, 8); }
 
   /// Special case of EmitValue that avoids the client having to pass
   /// in a MCExpr for constant integers & prints in Hex format for certain
@@ -867,19 +880,19 @@ public:
                                            unsigned IACol, SMLoc Loc);
 
   /// This implements the CodeView '.cv_loc' assembler directive.
-  virtual void EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
+  virtual void emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                   unsigned Line, unsigned Column,
                                   bool PrologueEnd, bool IsStmt,
                                   StringRef FileName, SMLoc Loc);
 
   /// This implements the CodeView '.cv_linetable' assembler directive.
-  virtual void EmitCVLinetableDirective(unsigned FunctionId,
+  virtual void emitCVLinetableDirective(unsigned FunctionId,
                                         const MCSymbol *FnStart,
                                         const MCSymbol *FnEnd);
 
   /// This implements the CodeView '.cv_inline_linetable' assembler
   /// directive.
-  virtual void EmitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
+  virtual void emitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
                                               unsigned SourceFileId,
                                               unsigned SourceLineNum,
                                               const MCSymbol *FnStartSym,
@@ -887,35 +900,35 @@ public:
 
   /// This implements the CodeView '.cv_def_range' assembler
   /// directive.
-  virtual void EmitCVDefRangeDirective(
+  virtual void emitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       StringRef FixedSizePortion);
 
-  virtual void EmitCVDefRangeDirective(
+  virtual void emitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeRegisterRelHeader DRHdr);
 
-  virtual void EmitCVDefRangeDirective(
+  virtual void emitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeSubfieldRegisterHeader DRHdr);
 
-  virtual void EmitCVDefRangeDirective(
+  virtual void emitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeRegisterHeader DRHdr);
 
-  virtual void EmitCVDefRangeDirective(
+  virtual void emitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeFramePointerRelHeader DRHdr);
 
   /// This implements the CodeView '.cv_stringtable' assembler directive.
-  virtual void EmitCVStringTableDirective() {}
+  virtual void emitCVStringTableDirective() {}
 
   /// This implements the CodeView '.cv_filechecksums' assembler directive.
-  virtual void EmitCVFileChecksumsDirective() {}
+  virtual void emitCVFileChecksumsDirective() {}
 
   /// This implements the CodeView '.cv_filechecksumoffset' assembler
   /// directive.
-  virtual void EmitCVFileChecksumOffsetDirective(unsigned FileNo) {}
+  virtual void emitCVFileChecksumOffsetDirective(unsigned FileNo) {}
 
   /// This implements the CodeView '.cv_fpo_data' assembler directive.
   virtual void EmitCVFPOData(const MCSymbol *ProcSym, SMLoc Loc = {}) {}
@@ -1026,7 +1039,7 @@ public:
   void emitRawText(const Twine &String);
 
   /// Streamer specific finalization.
-  virtual void FinishImpl();
+  virtual void finishImpl();
   /// Finish emission of machine code.
   void Finish();
 

@@ -37,12 +37,7 @@ using ConstBlockSet = SmallPtrSet<const BasicBlock *, 4>;
 /// This analysis relates points of divergent control to points of converging
 /// divergent control. The analysis requires all loops to be reducible.
 class SyncDependenceAnalysis {
-  void visitSuccessor(const BasicBlock &succBlock, const Loop *termLoop,
-                      const BasicBlock *defBlock);
-
 public:
-  bool inRegion(const BasicBlock &BB) const;
-
   ~SyncDependenceAnalysis();
   SyncDependenceAnalysis(const DominatorTree &DT, const PostDominatorTree &PDT,
                          const LoopInfo &LI);

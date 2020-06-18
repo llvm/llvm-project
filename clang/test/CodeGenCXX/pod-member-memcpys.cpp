@@ -123,65 +123,65 @@ CALL_AO(InnerClassMember)
 CALL_AO(PackedMembers)
 
 // Basic copy-assignment:
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.Basic* @_ZN5BasicaSERKS_(%struct.Basic* %this, %struct.Basic* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.Basic* @_ZN5BasicaSERKS_(%struct.Basic* %this, %struct.Basic* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
-// CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
 // CHECK: ret %struct.Basic*
 
 // PODMember copy-assignment:
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.PODMember* @_ZN9PODMemberaSERKS_(%struct.PODMember* %this, %struct.PODMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.PODMember* @_ZN9PODMemberaSERKS_(%struct.PODMember* %this, %struct.PODMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 32, i1 {{.*}})
-// CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
 // CHECK: ret %struct.PODMember*
 
 // PODLikeMember copy-assignment:
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.PODLikeMember* @_ZN13PODLikeMemberaSERKS_(%struct.PODLikeMember* %this, %struct.PODLikeMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.PODLikeMember* @_ZN13PODLikeMemberaSERKS_(%struct.PODLikeMember* %this, %struct.PODLikeMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 32, i1 {{.*}})
-// CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
 // CHECK: ret %struct.PODLikeMember*
 
 // ArrayMember copy-assignment:
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.ArrayMember* @_ZN11ArrayMemberaSERKS_(%struct.ArrayMember* %this, %struct.ArrayMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ArrayMember* @_ZN11ArrayMemberaSERKS_(%struct.ArrayMember* %this, %struct.ArrayMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 64, i1 {{.*}})
-// CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 64, i1 {{.*}})
 // CHECK: ret %struct.ArrayMember*
 
 // ZeroLengthArrayMember copy-assignment:
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.ZeroLengthArrayMember* @_ZN21ZeroLengthArrayMemberaSERKS_(%struct.ZeroLengthArrayMember* %this, %struct.ZeroLengthArrayMember* dereferenceable({{[0-9]+}}) %0)
-// CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ZeroLengthArrayMember* @_ZN21ZeroLengthArrayMemberaSERKS_(%struct.ZeroLengthArrayMember* %this, %struct.ZeroLengthArrayMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 8, i1 {{.*}})
 // CHECK: ret %struct.ZeroLengthArrayMember*
 
 // VolatileMember copy-assignment:
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.VolatileMember* @_ZN14VolatileMemberaSERKS_(%struct.VolatileMember* %this, %struct.VolatileMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.VolatileMember* @_ZN14VolatileMemberaSERKS_(%struct.VolatileMember* %this, %struct.VolatileMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
 // CHECK: load volatile i32, i32* {{.*}}, align 4
 // CHECK: store volatile i32 {{.*}}, align 4
-// CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
 // CHECK: ret %struct.VolatileMember*
 
 // BitfieldMember copy-assignment:
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.BitfieldMember* @_ZN14BitfieldMemberaSERKS_(%struct.BitfieldMember* %this, %struct.BitfieldMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.BitfieldMember* @_ZN14BitfieldMemberaSERKS_(%struct.BitfieldMember* %this, %struct.BitfieldMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
-// CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 1 {{.*}} align 1 {{.*}}i64 3, i1 {{.*}})
 // CHECK: ret %struct.BitfieldMember*
 
 // InnerClass copy-assignment:
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.InnerClassMember* @_ZN16InnerClassMemberaSERKS_(%struct.InnerClassMember* %this, %struct.InnerClassMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.InnerClassMember* @_ZN16InnerClassMemberaSERKS_(%struct.InnerClassMember* %this, %struct.InnerClassMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 32, i1 {{.*}})
-// CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
 // CHECK: ret %struct.InnerClassMember*
 
 // PackedMembers copy-assignment:
-// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %struct.PackedMembers* @_ZN13PackedMembersaSERKS_(%struct.PackedMembers* %this, %struct.PackedMembers* dereferenceable({{[0-9]+}}) %0)
-// CHECK: call dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
+// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.PackedMembers* @_ZN13PackedMembersaSERKS_(%struct.PackedMembers* %this, %struct.PackedMembers* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.NonPOD* @_ZN6NonPODaSERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 1 {{.*}} align 1 {{.*}}i64 16, i1 {{.*}})
 // CHECK: ret %struct.PackedMembers*
 
@@ -195,27 +195,27 @@ CALL_AO(PackedMembers)
 
 CALL_CC(PackedMembers)
 // PackedMembers copy-assignment:
-// CHECK-LABEL: define linkonce_odr void @_ZN13PackedMembersC2ERKS_(%struct.PackedMembers* %this, %struct.PackedMembers* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr void @_ZN13PackedMembersC2ERKS_(%struct.PackedMembers* %this, %struct.PackedMembers* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @_ZN6NonPODC1ERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 1 {{.*}} align 1 {{.*}}i64 16, i1 {{.*}})
 // CHECK: ret void
 
 CALL_CC(BitfieldMember2)
 // BitfieldMember2 copy-constructor:
-// CHECK-2-LABEL: define linkonce_odr void @_ZN15BitfieldMember2C2ERKS_(%struct.BitfieldMember2* %this, %struct.BitfieldMember2* dereferenceable({{[0-9]+}}) %0)
+// CHECK-2-LABEL: define linkonce_odr void @_ZN15BitfieldMember2C2ERKS_(%struct.BitfieldMember2* %this, %struct.BitfieldMember2* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK-2: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 false)
 // CHECK-2: call void @_ZN6NonPODC1ERKS_
 // CHECK-2: ret void
 
 CALL_CC(BitfieldMember3)
 // BitfieldMember3 copy-constructor:
-// CHECK-LABEL: define linkonce_odr void @_ZN15BitfieldMember3C2ERKS_(%struct.BitfieldMember3* %this, %struct.BitfieldMember3* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr void @_ZN15BitfieldMember3C2ERKS_(%struct.BitfieldMember3* %this, %struct.BitfieldMember3* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 8 {{.*}} align 8 {{.*}}i64 8, i1 false)
 // CHECK: ret void
 
 CALL_CC(ReferenceMember)
 // ReferenceMember copy-constructor:
-// CHECK-LABEL: define linkonce_odr void @_ZN15ReferenceMemberC2ERKS_(%struct.ReferenceMember* %this, %struct.ReferenceMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr void @_ZN15ReferenceMemberC2ERKS_(%struct.ReferenceMember* %this, %struct.ReferenceMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 8 {{.*}} align 8 {{.*}}i64 16, i1 {{.*}})
 // CHECK: call void @_ZN6NonPODC1ERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 8 {{.*}} align 8 {{.*}}i64 16, i1 {{.*}})
@@ -223,7 +223,7 @@ CALL_CC(ReferenceMember)
 
 CALL_CC(InnerClassMember)
 // InnerClass copy-constructor:
-// CHECK-LABEL: define linkonce_odr void @_ZN16InnerClassMemberC2ERKS_(%struct.InnerClassMember* %this, %struct.InnerClassMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr void @_ZN16InnerClassMemberC2ERKS_(%struct.InnerClassMember* %this, %struct.InnerClassMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 32, i1 {{.*}})
 // CHECK: call void @_ZN6NonPODC1ERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
@@ -231,7 +231,7 @@ CALL_CC(InnerClassMember)
 
 CALL_CC(BitfieldMember)
 // BitfieldMember copy-constructor:
-// CHECK-LABEL: define linkonce_odr void @_ZN14BitfieldMemberC2ERKS_(%struct.BitfieldMember* %this, %struct.BitfieldMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr void @_ZN14BitfieldMemberC2ERKS_(%struct.BitfieldMember* %this, %struct.BitfieldMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
 // CHECK: call void @_ZN6NonPODC1ERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 1 {{.*}} align 1 {{.*}}i64 3, i1 {{.*}})
@@ -239,7 +239,7 @@ CALL_CC(BitfieldMember)
 
 CALL_CC(VolatileMember)
 // VolatileMember copy-constructor:
-// CHECK-LABEL: define linkonce_odr void @_ZN14VolatileMemberC2ERKS_(%struct.VolatileMember* %this, %struct.VolatileMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr void @_ZN14VolatileMemberC2ERKS_(%struct.VolatileMember* %this, %struct.VolatileMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
 // CHECK: load volatile i32, i32* {{.*}}, align 4
 // CHECK: store volatile i32 {{.*}}, align 4
@@ -249,7 +249,7 @@ CALL_CC(VolatileMember)
 
 CALL_CC(ArrayMember)
 // ArrayMember copy-constructor:
-// CHECK-LABEL: define linkonce_odr void @_ZN11ArrayMemberC2ERKS_(%struct.ArrayMember* %this, %struct.ArrayMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr void @_ZN11ArrayMemberC2ERKS_(%struct.ArrayMember* %this, %struct.ArrayMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 64, i1 {{.*}})
 // CHECK: call void @_ZN6NonPODC1ERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 64, i1 {{.*}})
@@ -257,7 +257,7 @@ CALL_CC(ArrayMember)
 
 CALL_CC(PODLikeMember)
 // PODLikeMember copy-constructor:
-// CHECK-LABEL: define linkonce_odr void @_ZN13PODLikeMemberC2ERKS_(%struct.PODLikeMember* %this, %struct.PODLikeMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr void @_ZN13PODLikeMemberC2ERKS_(%struct.PODLikeMember* %this, %struct.PODLikeMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 32, i1 {{.*}})
 // CHECK: invoke void @_ZN6NonPODC1ERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
@@ -267,7 +267,7 @@ CALL_CC(PODLikeMember)
 
 CALL_CC(PODMember)
 // PODMember copy-constructor:
-// CHECK-LABEL: define linkonce_odr void @_ZN9PODMemberC2ERKS_(%struct.PODMember* %this, %struct.PODMember* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr void @_ZN9PODMemberC2ERKS_(%struct.PODMember* %this, %struct.PODMember* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 32, i1 {{.*}})
 // CHECK: call void @_ZN6NonPODC1ERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
@@ -275,7 +275,7 @@ CALL_CC(PODMember)
 
 CALL_CC(Basic)
 // Basic copy-constructor:
-// CHECK-LABEL: define linkonce_odr void @_ZN5BasicC2ERKS_(%struct.Basic* %this, %struct.Basic* dereferenceable({{[0-9]+}}) %0)
+// CHECK-LABEL: define linkonce_odr void @_ZN5BasicC2ERKS_(%struct.Basic* %this, %struct.Basic* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})
 // CHECK: call void @_ZN6NonPODC1ERKS_
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 4 {{.*}} align 4 {{.*}}i64 16, i1 {{.*}})

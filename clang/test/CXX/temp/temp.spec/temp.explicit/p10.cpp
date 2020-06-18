@@ -11,7 +11,7 @@ struct X0 {
 
 template<typename T>
 void X0<T>::f(T& t) { 
-  t = 1; // expected-error{{incompatible type}}
+  t = 1; // expected-error{{incompatible integer to pointer conversion}}
 }
 
 template<typename T>

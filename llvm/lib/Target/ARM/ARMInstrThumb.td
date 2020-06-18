@@ -14,6 +14,10 @@
 // Thumb specific DAG Nodes.
 //
 
+def ARMtsecall : SDNode<"ARMISD::tSECALL", SDT_ARMcall,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                         SDNPVariadic]>;
+
 def imm_sr_XFORM: SDNodeXForm<imm, [{
   unsigned Imm = N->getZExtValue();
   return CurDAG->getTargetConstant((Imm == 32 ? 0 : Imm), SDLoc(N), MVT::i32);
@@ -499,6 +503,10 @@ let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   def tBX_RET : tPseudoExpand<(outs), (ins pred:$p), 2, IIC_Br,
                    [(ARMretflag)], (tBX LR, pred:$p)>, Sched<[WriteBr]>;
 
+  // alternative return for CMSE entry functions
+  def tBXNS_RET : tPseudoInst<(outs), (ins), 2, IIC_Br,
+                  [(ARMseretflag)]>, Sched<[WriteBr]>;
+
   // Alternative return instruction used by vararg functions.
   def tBX_RET_vararg : tPseudoExpand<(outs), (ins tGPR:$Rm, pred:$p),
                    2, IIC_Br, [],
@@ -559,6 +567,10 @@ let isCall = 1,
     let Inst{2-0} = 0b100;
     let Unpredictable{1-0} = 0b11;
   }
+
+  def tBLXNS_CALL : PseudoInst<(outs), (ins GPRnopc:$func), IIC_Br,
+                    [(ARMtsecall GPRnopc:$func)]>,
+                    Requires<[IsThumb, Has8MSecExt]>, Sched<[WriteBr]>;
 
   // ARMv4T
   def tBX_CALL : tPseudoInst<(outs), (ins tGPR:$func),
@@ -1513,7 +1525,7 @@ def tTPsoft : tPseudoInst<(outs), (ins), 4, IIC_Br,
 // tromped upon when we get here from a longjmp(). We force everything out of
 // registers except for our own input by listing the relevant registers in
 // Defs. By doing so, we also cause the prologue/epilogue code to actively
-// preserve all of the callee-saved resgisters, which is exactly what we want.
+// preserve all of the callee-saved registers, which is exactly what we want.
 // $val is a scratch register for our use.
 let Defs = [ R0,  R1,  R2,  R3,  R4,  R5,  R6,  R7, R12, CPSR ],
     hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,

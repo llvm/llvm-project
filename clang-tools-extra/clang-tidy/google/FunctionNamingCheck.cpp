@@ -89,10 +89,6 @@ FixItHint generateFixItHint(const FunctionDecl *Decl) {
 } // namespace
 
 void FunctionNamingCheck::registerMatchers(MatchFinder *Finder) {
-  // This check should only be applied to Objective-C sources.
-  if (!getLangOpts().ObjC)
-    return;
-
   // Enforce Objective-C function naming conventions on all functions except:
   // • Functions defined in system headers.
   // • C++ member functions.

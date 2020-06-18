@@ -1,7 +1,7 @@
 """
 Test that breakpoints do not affect stepping.
 Check for correct StopReason when stepping to the line with breakpoint
-which chould be eStopReasonBreakpoint in general,
+which should be eStopReasonBreakpoint in general,
 and eStopReasonPlanComplete when breakpoint's condition fails.
 """
 
@@ -51,6 +51,7 @@ class StepOverBreakpointsTestCase(TestBase):
         self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(self.process, self.breakpoint1)
         self.assertIsNotNone(self.thread, "Didn't stop at breakpoint 1.")
 
+    @skipIfReproducer
     def test_step_instruction(self):
         # Count instructions between breakpoint_1 and breakpoint_4
         contextList = self.target.FindFunctions('main', lldb.eFunctionNameTypeAuto)
@@ -87,7 +88,6 @@ class StepOverBreakpointsTestCase(TestBase):
 
     @skipIf(bugnumber="llvm.org/pr31972", hostoslist=["windows"])
     def test_step_over(self):
-        #lldb.DBG.EnableLog("lldb", ["step","breakpoint"])
 
         self.thread.StepOver()
         # We should be stopped at the breakpoint_2 line with stop plan complete reason

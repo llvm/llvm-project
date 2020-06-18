@@ -5,13 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <string>
 
 // template <class charT, class traits, class Allocator, class U>
-//   void erase(basic_string<charT, traits, Allocator>& c, const U& value);
-
+//   typename basic_string<charT, traits, Allocator>::size_type
+//   erase(basic_string<charT, traits, Allocator>& c, const U& value);
 
 #include <string>
 #include <optional>
@@ -21,50 +21,48 @@
 #include "min_allocator.h"
 
 template <class S, class U>
-void
-test0(S s,  U val, S expected)
-{
-    ASSERT_SAME_TYPE(void, decltype(std::erase(s, val)));
-    std::erase(s, val);
-    LIBCPP_ASSERT(s.__invariants());
-    assert(s == expected);
+void test0(S s, U val, S expected, size_t expected_erased_count) {
+  ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase(s, val)));
+  assert(expected_erased_count == std::erase(s, val));
+  LIBCPP_ASSERT(s.__invariants());
+  assert(s == expected);
 }
 
 template <class S>
 void test()
 {
 
-    test0(S(""), 'a', S(""));
+  test0(S(""), 'a', S(""), 0);
 
-    test0(S("a"), 'a', S(""));
-    test0(S("a"), 'b', S("a"));
+  test0(S("a"), 'a', S(""), 1);
+  test0(S("a"), 'b', S("a"), 0);
 
-    test0(S("ab"), 'a', S("b"));
-    test0(S("ab"), 'b', S("a"));
-    test0(S("ab"), 'c', S("ab"));
-    test0(S("aa"), 'a', S(""));
-    test0(S("aa"), 'c', S("aa"));
+  test0(S("ab"), 'a', S("b"), 1);
+  test0(S("ab"), 'b', S("a"), 1);
+  test0(S("ab"), 'c', S("ab"), 0);
+  test0(S("aa"), 'a', S(""), 2);
+  test0(S("aa"), 'c', S("aa"), 0);
 
-    test0(S("abc"), 'a', S("bc"));
-    test0(S("abc"), 'b', S("ac"));
-    test0(S("abc"), 'c', S("ab"));
-    test0(S("abc"), 'd', S("abc"));
+  test0(S("abc"), 'a', S("bc"), 1);
+  test0(S("abc"), 'b', S("ac"), 1);
+  test0(S("abc"), 'c', S("ab"), 1);
+  test0(S("abc"), 'd', S("abc"), 0);
 
-    test0(S("aab"), 'a', S("b"));
-    test0(S("aab"), 'b', S("aa"));
-    test0(S("aab"), 'c', S("aab"));
-    test0(S("abb"), 'a', S("bb"));
-    test0(S("abb"), 'b', S("a"));
-    test0(S("abb"), 'c', S("abb"));
-    test0(S("aaa"), 'a', S(""));
-    test0(S("aaa"), 'b', S("aaa"));
+  test0(S("aab"), 'a', S("b"), 2);
+  test0(S("aab"), 'b', S("aa"), 1);
+  test0(S("aab"), 'c', S("aab"), 0);
+  test0(S("abb"), 'a', S("bb"), 1);
+  test0(S("abb"), 'b', S("a"), 2);
+  test0(S("abb"), 'c', S("abb"), 0);
+  test0(S("aaa"), 'a', S(""), 3);
+  test0(S("aaa"), 'b', S("aaa"), 0);
 
-//  Test cross-type erasure
-    using opt = std::optional<typename S::value_type>;
-    test0(S("aba"), opt(),    S("aba"));
-    test0(S("aba"), opt('a'), S("b"));
-    test0(S("aba"), opt('b'), S("aa"));
-    test0(S("aba"), opt('c'), S("aba"));
+  //  Test cross-type erasure
+  using opt = std::optional<typename S::value_type>;
+  test0(S("aba"), opt(), S("aba"), 0);
+  test0(S("aba"), opt('a'), S("b"), 2);
+  test0(S("aba"), opt('b'), S("aa"), 1);
+  test0(S("aba"), opt('c'), S("aba"), 0);
 }
 
 int main(int, char**)

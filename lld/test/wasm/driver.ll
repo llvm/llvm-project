@@ -20,3 +20,7 @@ entry:
 ; RUN: not wasm-ld --export-table --import-table %t.o 2>&1 \
 ; RUN:   | FileCheck -check-prefix=TABLE %s
 ; TABLE: error: --import-table and --export-table may not be used together
+
+; RUN: not wasm-ld --relocatable --shared-memory %t.o 2>&1 \
+; RUN:   | FileCheck -check-prefix=SHARED-MEM %s
+; SHARED-MEM: error: -r and --shared-memory may not be used together

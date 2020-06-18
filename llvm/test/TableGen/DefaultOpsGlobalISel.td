@@ -7,6 +7,7 @@ include "GlobalISelEmitterCommon.td"
 def SelectClamp  : ComplexPattern<untyped, 2, "SelectClamp">;
 def SelectOMod  : ComplexPattern<untyped, 2, "SelectOMod">;
 def SelectClampOMod  : ComplexPattern<untyped, 3, "SelectClampOMod">;
+def SelectSrcMods  : ComplexPattern<untyped, 2, "SelectSrcMods">;
 
 def gi_SelectClamp :
     GIComplexOperandMatcher<s32, "selectClamp">,
@@ -20,9 +21,27 @@ def gi_SelectClampOMod :
     GIComplexOperandMatcher<s32, "selectClampOMod">,
     GIComplexPatternEquiv<SelectClampOMod>;
 
+def gi_SelectSrcMods :
+    GIComplexOperandMatcher<s32, "selectSrcMods">,
+    GIComplexPatternEquiv<SelectSrcMods>;
 
+
+def src_mods : Operand <i32>;
 def omod : OperandWithDefaultOps <i32, (ops (i32 0))>;
 def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
+
+
+// CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_FMAXNUM,
+// CHECK: GIM_CheckComplexPattern, /*MI*/0, /*Op*/1, /*Renderer*/0, GICP_gi_SelectSrcMods,
+// CHECK: GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/1, GICP_gi_SelectSrcMods,
+// CHECK: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FMAX,
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // mods0
+// CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src0
+// CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/1, /*SubOperand*/1, // mods1
+// CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/1, /*SubOperand*/0, // src1
+// CHECK-NEXT: GIR_AddImm, /*InsnID*/0, /*Imm*/0,
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 
 
 // CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_FFLOOR,
@@ -33,6 +52,17 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src0
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/2, // clamp
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // omod
+
+
+// CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_FCANONICALIZE,
+// CHECK: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FMAX,
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // mods
+// CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src
+// CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // mods
+// CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src
+// CHECK-NEXT: GIR_AddImm, /*InsnID*/0, /*Imm*/0,
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 
 
 // CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_FCOS,
@@ -141,4 +171,17 @@ def FEEPLE : I<(outs FPR32:$dst),
 def : Pat <
   (fexp2 (SelectClamp f32:$src0, i1:$clamp)),
   (FEEPLE FPR32:$src0, (FFOO FPR32:$src0), clamp:$clamp)
+>;
+
+// Same instruction is used in two different pattern contexts, one
+// uses the default and one does not.
+def FMAX : I<(outs FPR32:$dst),
+  (ins src_mods:$mods0, FPR32:$src0, src_mods:$mods1, FPR32:$src1, clamp:$clamp),
+  [(set FPR32:$dst, (f32 (fmaxnum (SelectSrcMods f32:$src0, src_mods:$mods0),
+                                  (SelectSrcMods f32:$src1, src_mods:$mods1))))]
+>;
+
+def : Pat<
+  (fcanonicalize (f32 (SelectSrcMods f32:$src, i32:$mods))),
+  (FMAX $mods, $src, $mods, $src, 0)
 >;

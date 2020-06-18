@@ -86,8 +86,9 @@ auto matchSortWithPointers() -> decltype(decl()) {
                                   )))
                               ))));
 
-  auto PointerSortM = stmt(callExpr(allOf(SortFuncM, IteratesPointerEltsM))
-                      ).bind(WarnAtNode);
+  auto PointerSortM = traverse(
+      TK_AsIs,
+      stmt(callExpr(allOf(SortFuncM, IteratesPointerEltsM))).bind(WarnAtNode));
 
   return decl(forEachDescendant(PointerSortM));
 }
@@ -108,6 +109,7 @@ void ento::registerPointerSortingChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<PointerSortingChecker>();
 }
 
-bool ento::shouldRegisterPointerSortingChecker(const LangOptions &LO) {
+bool ento::shouldRegisterPointerSortingChecker(const CheckerManager &mgr) {
+  const LangOptions &LO = mgr.getLangOpts();
   return LO.CPlusPlus;
 }

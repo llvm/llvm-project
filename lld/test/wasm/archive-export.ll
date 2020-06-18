@@ -1,6 +1,6 @@
 Test that --export will also fetch lazy symbols from archives
 
-RUN: llc -filetype=obj %S/Inputs/start.ll -o %t.o
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
 RUN: llc -filetype=obj %S/Inputs/archive1.ll -o %t.a1.o
 RUN: llc -filetype=obj %S/Inputs/archive2.ll -o %t.a2.o
 RUN: rm -f %t.a

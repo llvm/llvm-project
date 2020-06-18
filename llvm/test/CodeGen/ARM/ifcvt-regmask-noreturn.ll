@@ -5,7 +5,7 @@ target triple = "thumbv7s-apple-ios8.0.0"
 
 @debw = external global i8*, align 4
 
-; This test ensures that the stack_chk call correctly puts implicit uses/defs for the regsiters
+; This test ensures that the stack_chk call correctly puts implicit uses/defs for the registers
 ; live across it when if converting.  This will be R0 which is passed to the call to free at the end
 ; of the function.
 ; Prior to this change, the stack_chk call (which does not return) would clobber R0 in its regmask,

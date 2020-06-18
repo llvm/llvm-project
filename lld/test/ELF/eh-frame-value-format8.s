@@ -52,7 +52,7 @@
 foo:
  nop
 
-.section .eh_frame, "ax"
+.section .eh_frame,"a",@unwind
   .long 12   # Size
   .long 0x00 # ID
   .byte 0x01 # Version.

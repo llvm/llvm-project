@@ -8,7 +8,8 @@
 // RUN: not %clang -target arm-unknown-linux-gnu -c %s -fdenormal-fp-math=foo,ieee -v 2>&1 | FileCheck -check-prefix=CHECK-INVALID2 %s
 // RUN: not %clang -target arm-unknown-linux-gnu -c %s -fdenormal-fp-math=foo,foo -v 2>&1 | FileCheck -check-prefix=CHECK-INVALID3 %s
 
-// CHECK-IEEE: -fdenormal-fp-math=ieee,ieee
+// IEEE is the implied default, and the flag is not passed.
+// CHECK-IEEE-NOT: -fdenormal-fp-math=
 // CHECK-PS: "-fdenormal-fp-math=preserve-sign,preserve-sign"
 // CHECK-PZ: "-fdenormal-fp-math=positive-zero,positive-zero"
 // CHECK-NO-UNSAFE-NOT: "-fdenormal-fp-math=ieee"

@@ -80,12 +80,11 @@ declare i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)
 define i32 @n6_fshl(i32 %x, i32 %y, i8 %shamt) nounwind {
 ; CHECK-LABEL: n6_fshl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w9, w2, #0x1f
+; CHECK-NEXT:    ands w9, w2, #0x1f
 ; CHECK-NEXT:    neg w9, w9
 ; CHECK-NEXT:    lsl w8, w0, w2
 ; CHECK-NEXT:    lsr w9, w1, w9
 ; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    tst w2, #0x1f
 ; CHECK-NEXT:    csel w0, w0, w8, eq
 ; CHECK-NEXT:    ret
   %shamt_wide = sext i8 %shamt to i32
@@ -95,12 +94,11 @@ define i32 @n6_fshl(i32 %x, i32 %y, i8 %shamt) nounwind {
 define i32 @n7_fshr(i32 %x, i32 %y, i8 %shamt) nounwind {
 ; CHECK-LABEL: n7_fshr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w9, w2, #0x1f
+; CHECK-NEXT:    ands w9, w2, #0x1f
 ; CHECK-NEXT:    neg w9, w9
 ; CHECK-NEXT:    lsr w8, w1, w2
 ; CHECK-NEXT:    lsl w9, w0, w9
 ; CHECK-NEXT:    orr w8, w9, w8
-; CHECK-NEXT:    tst w2, #0x1f
 ; CHECK-NEXT:    csel w0, w1, w8, eq
 ; CHECK-NEXT:    ret
   %shamt_wide = sext i8 %shamt to i32

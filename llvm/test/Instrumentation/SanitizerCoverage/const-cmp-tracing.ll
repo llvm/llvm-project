@@ -25,7 +25,7 @@ entry:
 ; compare (const, const) - should not be instrumented
   icmp slt i32 1, 0
 ; CHECK-NOT: call void @__sanitizer_cov_trace
-; CHECK icmp slt i32 1, 0
+; CHECK: icmp slt i32 1, 0
 
 ; compare variables of byte size
   %x = trunc i32 %a to i8

@@ -105,15 +105,6 @@ ArrayRef<MCSymbol *> MMIAddrLabelMap::getAddrLabelSymbolToEmit(BasicBlock *BB) {
   Entry.Index = BBCallbacks.size() - 1;
   Entry.Fn = BB->getParent();
   MCSymbol *Sym = Context.createTempSymbol(!BB->hasAddressTaken());
-  if (Context.getObjectFileInfo()->getTargetTriple().isOSBinFormatXCOFF()) {
-    MCSymbol *FnEntryPointSym =
-        Context.lookupSymbol("." + Entry.Fn->getName());
-    assert(FnEntryPointSym && "The function entry pointer symbol should have"
-		              " already been initialized.");
-    MCSectionXCOFF *Csect =
-        cast<MCSymbolXCOFF>(FnEntryPointSym)->getContainingCsect();
-    cast<MCSymbolXCOFF>(Sym)->setContainingCsect(Csect);
-  }
   Entry.Symbols.push_back(Sym);
   return Entry.Symbols;
 }
@@ -234,8 +225,7 @@ MachineModuleInfo::getMachineFunction(const Function &F) const {
   return I != MachineFunctions.end() ? I->second.get() : nullptr;
 }
 
-MachineFunction &
-MachineModuleInfo::getOrCreateMachineFunction(const Function &F) {
+MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
   // Shortcut for the common case where a sequence of MachineFunctionPasses
   // all query for the same Function.
   if (LastRequest == &F)

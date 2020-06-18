@@ -25,7 +25,7 @@ CodeEmitter::getOrCreateEncodingInfo(unsigned MCID) {
   const MCInst &Inst = Sequence[MCID];
   MCInst Relaxed(Sequence[MCID]);
   if (MAB.mayNeedRelaxation(Inst, STI))
-    MAB.relaxInstruction(Inst, STI, Relaxed);
+    MAB.relaxInstruction(Relaxed, STI);
 
   EI.first = Code.size();
   MCE.encodeInstruction(Relaxed, VecOS, Fixups, STI);

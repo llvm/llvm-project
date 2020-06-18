@@ -42,3 +42,34 @@ __attribute__((noreturn)) void f(__attribute__((noreturn)) void (*x)(void)) {
 }
 
 typedef void (*Fun)(void) __attribute__ ((noreturn(2))); // expected-error {{'noreturn' attribute takes no arguments}}
+
+
+typedef void fn_t(void);
+
+fn_t *fp __attribute__((noreturn));
+void __attribute__((noreturn)) f6(int i) {
+  fp();
+}
+
+fn_t *fps[4] __attribute__((noreturn));
+void __attribute__((noreturn)) f7(int i) {
+  fps[i]();
+}
+
+extern fn_t *ifps[] __attribute__((noreturn));
+void __attribute__((noreturn)) f8(int i) {
+  ifps[i]();
+}
+
+void __attribute__((noreturn)) f9(int n) {
+  extern int g9(int, fn_t **);
+  fn_t *fp[n] __attribute__((noreturn));
+  int i = g9(n, fp);
+  fp[i]();
+}
+
+typedef fn_t *fptrs_t[4];
+fptrs_t ps __attribute__((noreturn));
+void __attribute__((noreturn)) f10(int i) {
+  ps[i]();
+}

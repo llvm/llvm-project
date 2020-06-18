@@ -8,6 +8,7 @@
 ; CHECK: Dominator Tree Construction
 ; CHECK: Natural Loop Information
 ; CHECK: Sparse Conditional Constant Propagation
+; CHECK: Post-Dominator Tree Construction
 ; CHECK-NOT: Dominator Tree Construction
 ; CHECK-NOT: Natural Loop Information
 ; CHECK-NOT: Globals Alias Analysis

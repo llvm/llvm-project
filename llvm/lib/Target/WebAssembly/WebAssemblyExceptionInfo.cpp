@@ -46,14 +46,14 @@ bool WebAssemblyExceptionInfo::runOnMachineFunction(MachineFunction &MF) {
 void WebAssemblyExceptionInfo::recalculate(
     MachineDominatorTree &MDT, const MachineDominanceFrontier &MDF) {
   // Postorder traversal of the dominator tree.
-  SmallVector<WebAssemblyException *, 8> Exceptions;
+  SmallVector<std::unique_ptr<WebAssemblyException>, 8> Exceptions;
   for (auto DomNode : post_order(&MDT)) {
     MachineBasicBlock *EHPad = DomNode->getBlock();
     if (!EHPad->isEHPad())
       continue;
-    auto *WE = new WebAssemblyException(EHPad);
-    discoverAndMapException(WE, MDT, MDF);
-    Exceptions.push_back(WE);
+    auto WE = std::make_unique<WebAssemblyException>(EHPad);
+    discoverAndMapException(WE.get(), MDT, MDF);
+    Exceptions.push_back(std::move(WE));
   }
 
   // Add BBs to exceptions
@@ -64,17 +64,21 @@ void WebAssemblyExceptionInfo::recalculate(
       WE->addBlock(MBB);
   }
 
+  SmallVector<WebAssemblyException*, 8> ExceptionPointers;
+  ExceptionPointers.reserve(Exceptions.size());
+
   // Add subexceptions to exceptions
-  for (auto *WE : Exceptions) {
+  for (auto &WE : Exceptions) {
+    ExceptionPointers.push_back(WE.get());
     if (WE->getParentException())
-      WE->getParentException()->getSubExceptions().push_back(WE);
+      WE->getParentException()->getSubExceptions().push_back(std::move(WE));
     else
-      addTopLevelException(WE);
+      addTopLevelException(std::move(WE));
   }
 
   // For convenience, Blocks and SubExceptions are inserted in postorder.
   // Reverse the lists.
-  for (auto *WE : Exceptions) {
+  for (auto *WE : ExceptionPointers) {
     WE->reverseBlock();
     std::reverse(WE->getSubExceptions().begin(), WE->getSubExceptions().end());
   }
@@ -82,7 +86,6 @@ void WebAssemblyExceptionInfo::recalculate(
 
 void WebAssemblyExceptionInfo::releaseMemory() {
   BBMap.clear();
-  DeleteContainerPointers(TopLevelExceptions);
   TopLevelExceptions.clear();
 }
 
@@ -181,6 +184,6 @@ raw_ostream &operator<<(raw_ostream &OS, const WebAssemblyException &WE) {
 }
 
 void WebAssemblyExceptionInfo::print(raw_ostream &OS, const Module *) const {
-  for (auto *WE : TopLevelExceptions)
+  for (auto &WE : TopLevelExceptions)
     WE->print(OS);
 }

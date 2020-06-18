@@ -1,4 +1,7 @@
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+)
 
 # The registry source file ends up generating a lot of sections for each
 # matcher. Each matcher appears to get a vtable and several methods. Each
@@ -11,9 +14,10 @@ endif()
 
 add_clang_library(clangDynamicASTMatchers
   Diagnostics.cpp
-  VariantValue.cpp
+  Marshallers.cpp
   Parser.cpp
   Registry.cpp
+  VariantValue.cpp
 
   LINK_LIBS
   clangAST

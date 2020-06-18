@@ -32,7 +32,7 @@
 ; GCN: v_div_fixup_f32 v{{[0-9]+}}, [[FMAS]],
 define amdgpu_kernel void @fdiv_f32(float addrspace(1)* %out, float %a, float %b) #0 {
 entry:
-  %fdiv = fdiv float %a, %b
+  %fdiv = fdiv ninf float %a, %b
   store float %fdiv, float addrspace(1)* %out
   ret void
 }
@@ -152,7 +152,7 @@ entry:
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @fdiv_f32_arcp_math(float addrspace(1)* %out, float %a, float %b) #0 {
 entry:
-  %fdiv = fdiv arcp float %a, %b
+  %fdiv = fdiv arcp ninf float %a, %b
   store float %fdiv, float addrspace(1)* %out
   ret void
 }
@@ -210,7 +210,7 @@ entry:
 ; GCN: v_rcp_f32
 define amdgpu_kernel void @fdiv_v2f32_arcp_math(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b) #0 {
 entry:
-  %fdiv = fdiv arcp <2 x float> %a, %b
+  %fdiv = fdiv arcp ninf <2 x float> %a, %b
   store <2 x float> %fdiv, <2 x float> addrspace(1)* %out
   ret void
 }
@@ -279,7 +279,7 @@ define amdgpu_kernel void @fdiv_v4f32_arcp_math(<4 x float> addrspace(1)* %out, 
   %b_ptr = getelementptr <4 x float>, <4 x float> addrspace(1)* %in, i32 1
   %a = load <4 x float>, <4 x float> addrspace(1) * %in
   %b = load <4 x float>, <4 x float> addrspace(1) * %b_ptr
-  %result = fdiv arcp <4 x float> %a, %b
+  %result = fdiv arcp ninf <4 x float> %a, %b
   store <4 x float> %result, <4 x float> addrspace(1)* %out
   ret void
 }
@@ -345,9 +345,8 @@ entry:
   ret void
 }
 
-
-attributes #0 = { nounwind "enable-unsafe-fp-math"="false" "target-features"="-fp32-denormals,+fp64-fp16-denormals,-flat-for-global" }
-attributes #1 = { nounwind "enable-unsafe-fp-math"="true" "target-features"="-fp32-denormals,-flat-for-global" }
-attributes #2 = { nounwind "enable-unsafe-fp-math"="false" "target-features"="+fp32-denormals,-flat-for-global" }
+attributes #0 = { nounwind "enable-unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-features"="-flat-for-global" }
+attributes #1 = { nounwind "enable-unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-features"="-flat-for-global" }
+attributes #2 = { nounwind "enable-unsafe-fp-math"="false" "denormal-fp-math-f32"="ieee,ieee" "target-features"="-flat-for-global" }
 
 !0 = !{float 2.500000e+00}

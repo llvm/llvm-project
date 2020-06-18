@@ -8,13 +8,13 @@
 # RUN: rm -rf %t.dir && mkdir -p %t.dir
 # RUN: echo "" > %t.dir/inc.script
 # RUN: ld.lld -o %t.elf --script %s %t.o -L %t.dir
-# RUN: llvm-objdump -section-headers %t.elf | FileCheck %s --check-prefix=CHECK1
+# RUN: llvm-objdump --section-headers %t.elf | FileCheck %s --check-prefix=CHECK1
 # CHECK1: .data         00000008 0000000000002000 DATA
 
 ## Non-empty include file.
 # RUN: echo "QUAD(0)" > %t.dir/inc.script
 # RUN: ld.lld -o %t.elf --script %s %t.o -L %t.dir
-# RUN: llvm-objdump -section-headers %t.elf | FileCheck %s --check-prefix=CHECK2
+# RUN: llvm-objdump --section-headers %t.elf | FileCheck %s --check-prefix=CHECK2
 # CHECK2: .data         00000010 0000000000002000 DATA
 
 MEMORY {

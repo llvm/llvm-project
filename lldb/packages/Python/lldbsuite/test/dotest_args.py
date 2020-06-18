@@ -177,6 +177,13 @@ def create_parser():
         dest='lldb_libs_dir',
         metavar='path',
         help='The path to LLDB library directory (containing liblldb)')
+    group.add_argument(
+        '--enable-plugin',
+        dest='enabled_plugins',
+        action='append',
+        type=str,
+        metavar='A plugin whose tests will be enabled',
+        help='A plugin whose tests will be enabled. The only currently supported plugin is intel-pt.')
 
     # Configuration options
     group = parser.add_argument_group('Remote platform options')
@@ -195,6 +202,17 @@ def create_parser():
         dest='lldb_platform_working_dir',
         metavar='platform-working-dir',
         help='The directory to use on the remote platform.')
+
+    # Reproducer options
+    group = parser.add_argument_group('Reproducer options')
+    group.add_argument(
+        '--capture-path',
+        metavar='reproducer path',
+        help='The reproducer capture path')
+    group.add_argument(
+        '--replay-path',
+        metavar='reproducer path',
+        help='The reproducer replay path')
 
     # Test-suite behaviour
     group = parser.add_argument_group('Runtime behaviour options')

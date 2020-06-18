@@ -38,9 +38,9 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::support::endian;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-namespace elf {
 namespace {
 class ScriptParser final : ScriptLexer {
 public:
@@ -108,7 +108,7 @@ private:
   Expr readConstant();
   Expr getPageSize();
 
-  uint64_t readMemoryAssignment(StringRef, StringRef, StringRef);
+  Expr readMemoryAssignment(StringRef, StringRef, StringRef);
   std::pair<uint32_t, uint32_t> readMemoryAttributes();
 
   Expr combine(StringRef op, Expr l, Expr r);
@@ -175,7 +175,6 @@ static ExprValue bitOr(ExprValue a, ExprValue b) {
 }
 
 void ScriptParser::readDynamicList() {
-  config->hasDynamicList = true;
   expect("{");
   std::vector<SymbolVersion> locals;
   std::vector<SymbolVersion> globals;
@@ -290,22 +289,40 @@ void ScriptParser::addFile(StringRef s) {
   }
 
   if (s.startswith("/")) {
+    // Case 1: s is an absolute path. Just open it.
     driver->addFile(s, /*withLOption=*/false);
   } else if (s.startswith("=")) {
+    // Case 2: relative to the sysroot.
     if (config->sysroot.empty())
       driver->addFile(s.substr(1), /*withLOption=*/false);
     else
       driver->addFile(saver.save(config->sysroot + "/" + s.substr(1)),
                       /*withLOption=*/false);
   } else if (s.startswith("-l")) {
+    // Case 3: search in the list of library paths.
     driver->addLibrary(s.substr(2));
-  } else if (sys::fs::exists(s)) {
-    driver->addFile(s, /*withLOption=*/false);
   } else {
-    if (Optional<std::string> path = findFromSearchPaths(s))
-      driver->addFile(saver.save(*path), /*withLOption=*/true);
-    else
-      setError("unable to find " + s);
+    // Case 4: s is a relative path. Search in the directory of the script file.
+    std::string filename = std::string(getCurrentMB().getBufferIdentifier());
+    StringRef directory = sys::path::parent_path(filename);
+    if (!directory.empty()) {
+      SmallString<0> path(directory);
+      sys::path::append(path, s);
+      if (sys::fs::exists(path)) {
+        driver->addFile(path, /*withLOption=*/false);
+        return;
+      }
+    }
+    // Then search in the current working directory.
+    if (sys::fs::exists(s)) {
+      driver->addFile(s, /*withLOption=*/false);
+    } else {
+      // Finally, search in the list of library paths.
+      if (Optional<std::string> path = findFromSearchPaths(s))
+        driver->addFile(saver.save(*path), /*withLOption=*/true);
+      else
+        setError("unable to find " + s);
+    }
   }
 }
 
@@ -404,6 +421,7 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf64-tradlittlemips", {ELF64LEKind, EM_MIPS})
       .Case("elf32-littleriscv", {ELF32LEKind, EM_RISCV})
       .Case("elf64-littleriscv", {ELF64LEKind, EM_RISCV})
+      .Case("elf64-sparc", {ELF64BEKind, EM_SPARCV9})
       .Default({ELFNoneKind, EM_NONE});
 }
 
@@ -412,14 +430,14 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
 void ScriptParser::readOutputFormat() {
   expect("(");
 
-  StringRef name = unquote(next());
-  StringRef s = name;
+  config->bfdname = unquote(next());
+  StringRef s = config->bfdname;
   if (s.consume_back("-freebsd"))
     config->osabi = ELFOSABI_FREEBSD;
 
   std::tie(config->ekind, config->emachine) = parseBfdName(s);
   if (config->emachine == EM_NONE)
-    setError("unknown output format name: " + name);
+    setError("unknown output format name: " + config->bfdname);
   if (s == "elf32-ntradlittlemips" || s == "elf32-ntradbigmips")
     config->mipsN32Abi = true;
 
@@ -545,12 +563,6 @@ void ScriptParser::readSections() {
                                  v.end());
 
   if (atEOF() || !consume("INSERT")) {
-    // --no-rosegment is used to avoid placing read only non-executable sections
-    // in their own segment. We do the same if SECTIONS command is present in
-    // linker script. See comment for computeFlags().
-    // TODO This rule will be dropped in the future.
-    config->singleRoRx = true;
-
     script->hasSectionsCommand = true;
     return;
   }
@@ -752,6 +764,7 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, Stri
   expect("(");
   if (consume("NOLOAD")) {
     cmd->noload = true;
+    cmd->type = SHT_NOBITS;
   } else {
     skip(); // This is "COPY", "INFO" or "OVERLAY".
     cmd->nonAlloc = true;
@@ -848,9 +861,9 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef outSec) {
       // We handle the FILL command as an alias for =fillexp section attribute,
       // which is different from what GNU linkers do.
       // https://sourceware.org/binutils/docs/ld/Output-Section-Data.html
-      expect("(");
+      if (peek() != "(")
+        setError("( expected, but got " + peek());
       cmd->filler = readFill();
-      expect(")");
     } else if (tok == "SORT") {
       readSort();
     } else if (tok == "INCLUDE") {
@@ -905,8 +918,11 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef outSec) {
 // When reading a hexstring, ld.bfd handles it as a blob of arbitrary
 // size, while ld.gold always handles it as a 32-bit big-endian number.
 // We are compatible with ld.gold because it's easier to implement.
+// Also, we require that expressions with operators must be wrapped into
+// round brackets. We did it to resolve the ambiguity when parsing scripts like:
+// SECTIONS { .foo : { ... } =120+3 /DISCARD/ : { ... } }
 std::array<uint8_t, 4> ScriptParser::readFill() {
-  uint64_t value = readExpr()().val;
+  uint64_t value = readPrimary()().val;
   if (value > UINT32_MAX)
     setError("filler expression result does not fit 32-bit: 0x" +
              Twine::utohexstr(value));
@@ -1302,7 +1318,7 @@ Expr ScriptParser::readPrimary() {
       setError("memory region not defined: " + name);
       return [] { return 0; };
     }
-    return [=] { return script->memoryRegions[name]->length; };
+    return script->memoryRegions[name]->length;
   }
   if (tok == "LOADADDR") {
     StringRef name = readParenLiteral();
@@ -1329,7 +1345,7 @@ Expr ScriptParser::readPrimary() {
       setError("memory region not defined: " + name);
       return [] { return 0; };
     }
-    return [=] { return script->memoryRegions[name]->origin; };
+    return script->memoryRegions[name]->origin;
   }
   if (tok == "SEGMENT_START") {
     expect("(");
@@ -1348,7 +1364,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return cmd->size; };
   }
   if (tok == "SIZEOF_HEADERS")
-    return [=] { return getHeaderSize(); };
+    return [=] { return elf::getHeaderSize(); };
 
   // Tok is the dot.
   if (tok == ".")
@@ -1458,7 +1474,7 @@ void ScriptParser::readVersionDeclaration(StringRef verStr) {
     expect(";");
 }
 
-static bool hasWildcard(StringRef s) {
+bool elf::hasWildcard(StringRef s) {
   return s.find_first_of("?*[") != StringRef::npos;
 }
 
@@ -1519,14 +1535,14 @@ std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
   return ret;
 }
 
-uint64_t ScriptParser::readMemoryAssignment(StringRef s1, StringRef s2,
-                                            StringRef s3) {
+Expr ScriptParser::readMemoryAssignment(StringRef s1, StringRef s2,
+                                        StringRef s3) {
   if (!consume(s1) && !consume(s2) && !consume(s3)) {
     setError("expected one of: " + s1 + ", " + s2 + ", or " + s3);
-    return 0;
+    return [] { return 0; };
   }
   expect("=");
-  return readExpr()().getValue();
+  return readExpr();
 }
 
 // Parse the MEMORY command as specified in:
@@ -1550,9 +1566,9 @@ void ScriptParser::readMemory() {
     }
     expect(":");
 
-    uint64_t origin = readMemoryAssignment("ORIGIN", "org", "o");
+    Expr origin = readMemoryAssignment("ORIGIN", "org", "o");
     expect(",");
-    uint64_t length = readMemoryAssignment("LENGTH", "len", "l");
+    Expr length = readMemoryAssignment("LENGTH", "len", "l");
 
     // Add the memory region to the region map.
     MemoryRegion *mr = make<MemoryRegion>(tok, origin, length, flags, negFlags);
@@ -1590,19 +1606,18 @@ std::pair<uint32_t, uint32_t> ScriptParser::readMemoryAttributes() {
   return {flags, negFlags};
 }
 
-void readLinkerScript(MemoryBufferRef mb) {
+void elf::readLinkerScript(MemoryBufferRef mb) {
   ScriptParser(mb).readLinkerScript();
 }
 
-void readVersionScript(MemoryBufferRef mb) {
+void elf::readVersionScript(MemoryBufferRef mb) {
   ScriptParser(mb).readVersionScript();
 }
 
-void readDynamicList(MemoryBufferRef mb) { ScriptParser(mb).readDynamicList(); }
-
-void readDefsym(StringRef name, MemoryBufferRef mb) {
-  ScriptParser(mb).readDefsym(name);
+void elf::readDynamicList(MemoryBufferRef mb) {
+  ScriptParser(mb).readDynamicList();
 }
 
-} // namespace elf
-} // namespace lld
+void elf::readDefsym(StringRef name, MemoryBufferRef mb) {
+  ScriptParser(mb).readDefsym(name);
+}

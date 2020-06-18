@@ -18,7 +18,7 @@ using namespace mlir;
 using namespace detail;
 
 /// Static mapping of all of the registered passes.
-static llvm::ManagedStatic<DenseMap<const PassID *, PassInfo>> passRegistry;
+static llvm::ManagedStatic<DenseMap<TypeID, PassInfo>> passRegistry;
 
 /// Static mapping of all of the registered pass pipelines.
 static llvm::ManagedStatic<llvm::StringMap<PassPipelineInfo>>
@@ -86,7 +86,7 @@ void mlir::registerPassPipeline(
 // PassInfo
 //===----------------------------------------------------------------------===//
 
-PassInfo::PassInfo(StringRef arg, StringRef description, const PassID *passID,
+PassInfo::PassInfo(StringRef arg, StringRef description, TypeID passID,
                    const PassAllocatorFunction &allocator)
     : PassRegistryEntry(
           arg, description, buildDefaultRegistryFn(allocator),
@@ -96,16 +96,15 @@ PassInfo::PassInfo(StringRef arg, StringRef description, const PassID *passID,
           }) {}
 
 void mlir::registerPass(StringRef arg, StringRef description,
-                        const PassID *passID,
                         const PassAllocatorFunction &function) {
+  // TODO: We should use the 'arg' as the lookup key instead of the pass id.
+  TypeID passID = function()->getTypeID();
   PassInfo passInfo(arg, description, passID, function);
-  bool inserted = passRegistry->try_emplace(passID, passInfo).second;
-  assert(inserted && "Pass registered multiple times");
-  (void)inserted;
+  passRegistry->try_emplace(passID, passInfo);
 }
 
 /// Returns the pass info for the specified pass class or null if unknown.
-const PassInfo *mlir::Pass::lookupPassInfo(const PassID *passID) {
+const PassInfo *mlir::Pass::lookupPassInfo(TypeID passID) {
   auto it = passRegistry->find(passID);
   if (it == passRegistry->end())
     return nullptr;
@@ -185,7 +184,7 @@ void detail::PassOptions::print(raw_ostream &os) {
 
   // Interleave the options with ' '.
   os << '{';
-  interleave(
+  llvm::interleave(
       orderedOps, os, [&](OptionBase *option) { option->print(os); }, " ");
   os << '}';
 }

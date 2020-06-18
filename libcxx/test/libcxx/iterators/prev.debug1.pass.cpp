@@ -7,17 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 // Can't test the system lib because this test enables debug mode
-// MODULES_DEFINES: _LIBCPP_DEBUG=1
-// UNSUPPORTED: with_system_cxx_lib
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: with_system_cxx_lib=macosx
+
+// UNSUPPORTED: c++03
 // UNSUPPORTED: windows
-// UNSUPPORTED: with_system_cxx_lib
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=0
 
 // <list>
 
 // Call prev(forward_iterator, -1)
-
-#define _LIBCPP_DEBUG 0
 
 #include <iterator>
 #include "test_macros.h"

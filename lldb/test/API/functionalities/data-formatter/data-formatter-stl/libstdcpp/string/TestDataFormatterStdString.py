@@ -60,8 +60,7 @@ class StdStringDataFormatterTestCase(TestBase):
         var_Q = self.frame().FindVariable('Q')
         var_uchar = self.frame().FindVariable('uchar')
 
-        # TODO: This is currently broken
-        # self.assertEqual(var_wempty.GetSummary(), 'L""', "wempty summary wrong")
+        self.assertEqual(var_wempty.GetSummary(), 'L""', "wempty summary wrong")
         self.assertEqual(
             var_s.GetSummary(), 'L"hello world! מזל טוב!"',
             "s summary wrong")

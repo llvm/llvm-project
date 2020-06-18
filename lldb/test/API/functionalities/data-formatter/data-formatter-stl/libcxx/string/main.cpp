@@ -18,7 +18,9 @@ static struct {
 // A corrupt libcxx string in long mode with a payload that contains a utf8
 // sequence that's inherently too long.
 static unsigned char garbage_utf8_payload1[] = {
-  250 // This means that we expect a 5-byte sequence, this is invalid.
+  250, // This means that we expect a 5-byte sequence, this is invalid. LLDB
+       // should fall back to ASCII printing.
+  250, 250, 250
 };
 static struct {
   uint64_t cap = 5;
@@ -29,13 +31,14 @@ static struct {
 // A corrupt libcxx string in long mode with a payload that contains a utf8
 // sequence that's too long to fit in the buffer.
 static unsigned char garbage_utf8_payload2[] = {
-  240 // This means that we expect a 4-byte sequence, but the buffer is too
-      // small for this.
+  240, // This means that we expect a 4-byte sequence, but the buffer is too
+       // small for this. LLDB should fall back to ASCII printing.
+  240
 };
 static struct {
   uint64_t cap = 3;
   uint64_t size = 2;
-  unsigned char *data = &garbage_utf8_payload1[0];
+  unsigned char *data = &garbage_utf8_payload2[0];
 } garbage_string_long_mode2;
 
 // A corrupt libcxx string which has an invalid size (i.e. a size greater than

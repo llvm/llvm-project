@@ -763,7 +763,6 @@ static void extractSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
     reportError("input file " +
                 InputBinaries.front().getBinary()->getFileName() +
                 " must be a fat file when the -extract option is specified");
-    exit(EXIT_FAILURE);
   }
 
   SmallVector<std::unique_ptr<MachOObjectFile>, 2> ExtractedObjects;

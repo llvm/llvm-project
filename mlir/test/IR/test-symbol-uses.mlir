@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-symbol-uses -split-input-file -verify-diagnostics
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-symbol-uses -split-input-file -verify-diagnostics
 
 // Symbol references to the module itself don't affect uses of symbols within
 // its table.

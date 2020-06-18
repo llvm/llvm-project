@@ -3,8 +3,8 @@
 
 # test for 3 consecutive _sdwa's
 # GFX9-LABEL: name:            test1_add_co_sdwa
-# GFX9: V_ADD_I32_sdwa
-# GFX9-NEXT: V_ADDC_U32_e32
+# GFX9: = nsw V_ADD_I32_sdwa
+# GFX9-NEXT: = nuw V_ADDC_U32_e32
 # GFX9: V_ADD_I32_sdwa
 # GFX9-NEXT: V_ADDC_U32_e32
 # GFX9: V_ADD_I32_sdwa
@@ -26,8 +26,8 @@ body:             |
     %22:sreg_32_xm0 = S_MOV_B32 255
     %23:vgpr_32 = V_AND_B32_e32 %22, %0, implicit $exec
     %30:vreg_64 = COPY $sgpr0_sgpr1
-    %63:vgpr_32, %65:sreg_64_xexec = V_ADD_I32_e64 %30.sub0, %23, 0, implicit $exec
-    %64:vgpr_32, dead %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, killed %65, 0, implicit $exec
+    %63:vgpr_32, %65:sreg_64_xexec = nsw V_ADD_I32_e64 %30.sub0, %23, 0, implicit $exec
+    %64:vgpr_32, dead %66:sreg_64_xexec = nuw V_ADDC_U32_e64 %30.sub1, %0, killed %65, 0, implicit $exec
     %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %64, %subreg.sub1
     GLOBAL_STORE_DWORDX2_SADDR %30, %62, %1, 0, 0, 0, 0, implicit $exec, implicit $exec :: (store 8)
 

@@ -62,9 +62,9 @@ using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::support::endian;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-namespace elf {
 static Optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
   for (BaseCommand *base : script->sectionCommands)
     if (auto *cmd = dyn_cast<SymbolAssignment>(base))
@@ -96,8 +96,8 @@ static std::string getLocation(InputSectionBase &s, const Symbol &sym,
   return msg + s.getObjMsg(off);
 }
 
-void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
-                      int64_t min, uint64_t max) {
+void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
+                           int64_t min, uint64_t max) {
   ErrorPlace errPlace = getErrorPlace(loc);
   std::string hint;
   if (rel.sym && !rel.sym->isLocal())
@@ -870,7 +870,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
   if (msg.empty())
     msg = "undefined " + visibility() + "symbol: " + toString(sym);
 
-  const size_t maxUndefReferences = 10;
+  const size_t maxUndefReferences = 3;
   size_t i = 0;
   for (UndefinedDiag::Loc l : undef.locs) {
     if (i >= maxUndefReferences)
@@ -901,8 +901,9 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
   }
 
   if (sym.getName().startswith("_ZTV"))
-    msg += "\nthe vtable symbol may be undefined because the class is missing "
-           "its key function (see https://lld.llvm.org/missingkeyfunction)";
+    msg +=
+        "\n>>> the vtable symbol may be undefined because the class is missing "
+        "its key function (see https://lld.llvm.org/missingkeyfunction)";
 
   if (undef.isWarning)
     warn(msg);
@@ -910,7 +911,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
     error(msg);
 }
 
-template <class ELFT> void reportUndefinedSymbols() {
+template <class ELFT> void elf::reportUndefinedSymbols() {
   // Find the first "undefined symbol" diagnostic for each diagnostic, and
   // collect all "referenced from" lines at the first diagnostic.
   DenseMap<Symbol *, UndefinedDiag *> firstRef;
@@ -946,8 +947,12 @@ static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
   // .toc and the .rela.toc are incorrectly not placed in the comdat. The ELF
   // spec says references from outside the group to a STB_LOCAL symbol are not
   // allowed. Work around the bug.
-  if (config->emachine == EM_PPC64 &&
-      cast<Undefined>(sym).discardedSecIdx != 0 && sec.name == ".toc")
+  //
+  // PPC32 .got2 is similar but cannot be fixed. Multiple .got2 is infeasible
+  // because .LC0-.LTOC is not representable if the two labels are in different
+  // .got2
+  if (cast<Undefined>(sym).discardedSecIdx != 0 &&
+      (sec.name == ".got2" || sec.name == ".toc"))
     return false;
 
   bool isWarning =
@@ -1226,6 +1231,7 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
           // PPC32 canonical PLT entries are at the beginning of .glink
           cast<Defined>(sym).value = in.plt->headerSize;
           in.plt->headerSize += 16;
+          cast<PPC32GlinkSection>(in.plt)->canonical_plts.push_back(&sym);
         }
       }
       sym.needsPltAddr = true;
@@ -1288,17 +1294,6 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   if (expr == R_NONE)
     return;
 
-  // We can separate the small code model relocations into 2 categories:
-  // 1) Those that access the compiler generated .toc sections.
-  // 2) Those that access the linker allocated got entries.
-  // lld allocates got entries to symbols on demand. Since we don't try to sort
-  // the got entries in any way, we don't have to track which objects have
-  // got-based small code model relocs. The .toc sections get placed after the
-  // end of the linker allocated .got section and we do sort those so sections
-  // addressed with small code model relocations come first.
-  if (config->emachine == EM_PPC64 && isPPC64SmallCodeModelTocReloc(type))
-    sec.file->ppc64SmallCodeModelTocRelocs = true;
-
   if (sym.isGnuIFunc() && !config->zText && config->warnIfuncTextrel) {
     warn("using ifunc symbols when text relocations are allowed may produce "
          "a binary that will segfault, if the object file is linked with "
@@ -1311,6 +1306,25 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
 
   // Read an addend.
   int64_t addend = computeAddend<ELFT>(rel, end, sec, expr, sym.isLocal());
+
+  if (config->emachine == EM_PPC64) {
+    // We can separate the small code model relocations into 2 categories:
+    // 1) Those that access the compiler generated .toc sections.
+    // 2) Those that access the linker allocated got entries.
+    // lld allocates got entries to symbols on demand. Since we don't try to
+    // sort the got entries in any way, we don't have to track which objects
+    // have got-based small code model relocs. The .toc sections get placed
+    // after the end of the linker allocated .got section and we do sort those
+    // so sections addressed with small code model relocations come first.
+    if (isPPC64SmallCodeModelTocReloc(type))
+      sec.file->ppc64SmallCodeModelTocRelocs = true;
+
+    // Record the TOC entry (.toc + addend) as not relaxable. See the comment in
+    // InputSectionBase::relocateAlloc().
+    if (type == R_PPC64_TOC16_LO && sym.isSection() && isa<Defined>(sym) &&
+        cast<Defined>(sym).section->name == ".toc")
+      ppc64noTocRelax.insert({&sym, addend});
+  }
 
   // Relax relocations.
   //
@@ -1328,6 +1342,12 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
       // stub type. It should be ignored if optimized to R_PC.
       if (config->emachine == EM_PPC && expr == R_PPC32_PLTREL)
         addend &= ~0x8000;
+      // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
+      // call __tls_get_addr even if the symbol is non-preemptible.
+      if (!(config->emachine == EM_HEXAGON &&
+           (type == R_HEX_GD_PLT_B22_PCREL ||
+            type == R_HEX_GD_PLT_B22_PCREL_X ||
+            type == R_HEX_GD_PLT_B32_PCREL_X)))
       expr = fromPlt(expr);
     }
   }
@@ -1494,7 +1514,7 @@ static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
                       });
 }
 
-template <class ELFT> void scanRelocations(InputSectionBase &s) {
+template <class ELFT> void elf::scanRelocations(InputSectionBase &s) {
   if (s.areRelocsRela)
     scanRelocs<ELFT>(s, s.relas<ELFT>());
   else
@@ -1975,14 +1995,49 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
   return addressesChanged;
 }
 
-template void scanRelocations<ELF32LE>(InputSectionBase &);
-template void scanRelocations<ELF32BE>(InputSectionBase &);
-template void scanRelocations<ELF64LE>(InputSectionBase &);
-template void scanRelocations<ELF64BE>(InputSectionBase &);
-template void reportUndefinedSymbols<ELF32LE>();
-template void reportUndefinedSymbols<ELF32BE>();
-template void reportUndefinedSymbols<ELF64LE>();
-template void reportUndefinedSymbols<ELF64BE>();
+// The following aid in the conversion of call x@GDPLT to call __tls_get_addr
+// hexagonNeedsTLSSymbol scans for relocations would require a call to
+// __tls_get_addr.
+// hexagonTLSSymbolUpdate rebinds the relocation to __tls_get_addr.
+bool elf::hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections) {
+  bool needTlsSymbol = false;
+  forEachInputSectionDescription(
+      outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
+        for (InputSection *isec : isd->sections)
+          for (Relocation &rel : isec->relocations)
+            if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
+              needTlsSymbol = true;
+              return;
+            }
+      });
+  return needTlsSymbol;
+}
 
-} // namespace elf
-} // namespace lld
+void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
+  Symbol *sym = symtab->find("__tls_get_addr");
+  if (!sym)
+    return;
+  bool needEntry = true;
+  forEachInputSectionDescription(
+      outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
+        for (InputSection *isec : isd->sections)
+          for (Relocation &rel : isec->relocations)
+            if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
+              if (needEntry) {
+                addPltEntry(in.plt, in.gotPlt, in.relaPlt, target->pltRel,
+                            *sym);
+                needEntry = false;
+              }
+              rel.sym = sym;
+            }
+      });
+}
+
+template void elf::scanRelocations<ELF32LE>(InputSectionBase &);
+template void elf::scanRelocations<ELF32BE>(InputSectionBase &);
+template void elf::scanRelocations<ELF64LE>(InputSectionBase &);
+template void elf::scanRelocations<ELF64BE>(InputSectionBase &);
+template void elf::reportUndefinedSymbols<ELF32LE>();
+template void elf::reportUndefinedSymbols<ELF32BE>();
+template void elf::reportUndefinedSymbols<ELF64LE>();
+template void elf::reportUndefinedSymbols<ELF64BE>();

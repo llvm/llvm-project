@@ -102,6 +102,13 @@ TEST_F(VPlanPredicatorTest, BasicPredicatorTest) {
   EXPECT_EQ(InnerLoopLinSucc, OuterIf);
   EXPECT_EQ(OuterIfLinSucc, InnerIf);
   EXPECT_EQ(InnerIfLinSucc, InnerLoopLatch);
+
+  // Check that the containing VPlan is set correctly.
+  EXPECT_EQ(&*Plan, InnerLoopLinSucc->getPlan());
+  EXPECT_EQ(&*Plan, OuterIfLinSucc->getPlan());
+  EXPECT_EQ(&*Plan, InnerIfLinSucc->getPlan());
+  EXPECT_EQ(&*Plan, InnerIf->getPlan());
+  EXPECT_EQ(&*Plan, InnerLoopLatch->getPlan());
 }
 
 // Test generation of Not and Or during predication.

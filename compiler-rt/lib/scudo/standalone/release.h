@@ -107,7 +107,8 @@ public:
 
   void incRange(uptr From, uptr To) const {
     DCHECK_LE(From, To);
-    for (uptr I = From; I <= To; I++)
+    const uptr Top = Min(To + 1, N);
+    for (uptr I = From; I < Top; I++)
       inc(I);
   }
 
@@ -166,8 +167,7 @@ private:
 template <class TransferBatchT, class ReleaseRecorderT>
 NOINLINE void
 releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
-                      uptr AllocatedPagesCount, uptr BlockSize,
-                      ReleaseRecorderT *Recorder) {
+                      uptr Size, uptr BlockSize, ReleaseRecorderT *Recorder) {
   const uptr PageSize = getPageSizeCached();
 
   // Figure out the number of chunks per page and whether we can take a fast
@@ -204,12 +204,13 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
     }
   }
 
-  PackedCounterArray Counters(AllocatedPagesCount, FullPagesBlockCountMax);
+  const uptr PagesCount = roundUpTo(Size, PageSize) / PageSize;
+  PackedCounterArray Counters(PagesCount, FullPagesBlockCountMax);
   if (!Counters.isAllocated())
     return;
 
   const uptr PageSizeLog = getLog2(PageSize);
-  const uptr End = Base + AllocatedPagesCount * PageSize;
+  const uptr RoundedSize = PagesCount << PageSizeLog;
 
   // Iterate over free chunks and count how many free chunks affect each
   // allocated page.
@@ -223,11 +224,14 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
           (It.getCount() != 0) &&
           (reinterpret_cast<uptr>(It.get(0)) == reinterpret_cast<uptr>(&It));
       for (u32 I = IsTransferBatch ? 1 : 0; I < It.getCount(); I++) {
-        const uptr P = reinterpret_cast<uptr>(It.get(I));
-        if (P >= Base && P < End)
-          Counters.inc((P - Base) >> PageSizeLog);
+        const uptr P = reinterpret_cast<uptr>(It.get(I)) - Base;
+        // This takes care of P < Base and P >= Base + RoundedSize.
+        if (P < RoundedSize)
+          Counters.inc(P >> PageSizeLog);
       }
     }
+    for (uptr P = Size; P < RoundedSize; P += BlockSize)
+      Counters.inc(P >> PageSizeLog);
   } else {
     // In all other cases chunks might affect more than one page.
     for (const auto &It : FreeList) {
@@ -236,12 +240,15 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
           (It.getCount() != 0) &&
           (reinterpret_cast<uptr>(It.get(0)) == reinterpret_cast<uptr>(&It));
       for (u32 I = IsTransferBatch ? 1 : 0; I < It.getCount(); I++) {
-        const uptr P = reinterpret_cast<uptr>(It.get(I));
-        if (P >= Base && P < End)
-          Counters.incRange((P - Base) >> PageSizeLog,
-                            (P - Base + BlockSize - 1) >> PageSizeLog);
+        const uptr P = reinterpret_cast<uptr>(It.get(I)) - Base;
+        // This takes care of P < Base and P >= Base + RoundedSize.
+        if (P < RoundedSize)
+          Counters.incRange(P >> PageSizeLog,
+                            (P + BlockSize - 1) >> PageSizeLog);
       }
     }
+    for (uptr P = Size; P < RoundedSize; P += BlockSize)
+      Counters.incRange(P >> PageSizeLog, (P + BlockSize - 1) >> PageSizeLog);
   }
 
   // Iterate over pages detecting ranges of pages with chunk Counters equal

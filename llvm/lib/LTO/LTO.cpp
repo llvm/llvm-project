@@ -13,6 +13,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -98,22 +99,12 @@ void llvm::computeLTOCacheKey(
   };
   auto AddUnsigned = [&](unsigned I) {
     uint8_t Data[4];
-    Data[0] = I;
-    Data[1] = I >> 8;
-    Data[2] = I >> 16;
-    Data[3] = I >> 24;
+    support::endian::write32le(Data, I);
     Hasher.update(ArrayRef<uint8_t>{Data, 4});
   };
   auto AddUint64 = [&](uint64_t I) {
     uint8_t Data[8];
-    Data[0] = I;
-    Data[1] = I >> 8;
-    Data[2] = I >> 16;
-    Data[3] = I >> 24;
-    Data[4] = I >> 32;
-    Data[5] = I >> 40;
-    Data[6] = I >> 48;
-    Data[7] = I >> 56;
+    support::endian::write64le(Data, I);
     Hasher.update(ArrayRef<uint8_t>{Data, 8});
   };
   AddString(Conf.CPU);
@@ -149,8 +140,17 @@ void llvm::computeLTOCacheKey(
   // Include the hash for the current module
   auto ModHash = Index.getModuleHash(ModuleID);
   Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
+
+  std::vector<uint64_t> ExportsGUID;
+  ExportsGUID.reserve(ExportList.size());
   for (const auto &VI : ExportList) {
     auto GUID = VI.getGUID();
+    ExportsGUID.push_back(GUID);
+  }
+
+  // Sort the export list elements GUIDs.
+  llvm::sort(ExportsGUID);
+  for (uint64_t GUID : ExportsGUID) {
     // The export list can impact the internalization, be conservative here
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
   }
@@ -158,12 +158,23 @@ void llvm::computeLTOCacheKey(
   // Include the hash for every module we import functions from. The set of
   // imported symbols for each module may affect code generation and is
   // sensitive to link order, so include that as well.
-  for (auto &Entry : ImportList) {
-    auto ModHash = Index.getModuleHash(Entry.first());
+  using ImportMapIteratorTy = FunctionImporter::ImportMapTy::const_iterator;
+  std::vector<ImportMapIteratorTy> ImportModulesVector;
+  ImportModulesVector.reserve(ImportList.size());
+
+  for (ImportMapIteratorTy It = ImportList.begin(); It != ImportList.end();
+       ++It) {
+    ImportModulesVector.push_back(It);
+  }
+  llvm::sort(ImportModulesVector,
+             [](const ImportMapIteratorTy &Lhs, const ImportMapIteratorTy &Rhs)
+                 -> bool { return Lhs->getKey() < Rhs->getKey(); });
+  for (const ImportMapIteratorTy &EntryIt : ImportModulesVector) {
+    auto ModHash = Index.getModuleHash(EntryIt->first());
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
-    AddUint64(Entry.second.size());
-    for (auto &Fn : Entry.second)
+    AddUint64(EntryIt->second.size());
+    for (auto &Fn : EntryIt->second)
       AddUint64(Fn);
   }
 
@@ -477,7 +488,8 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
 LTO::ThinLTOState::ThinLTOState(ThinBackend Backend)
     : Backend(Backend), CombinedIndex(/*HaveGVs*/ false) {
   if (!Backend)
-    this->Backend = createInProcessThinBackend();
+    this->Backend =
+        createInProcessThinBackend(llvm::heavyweight_hardware_concurrency());
 }
 
 LTO::LTO(Config Conf, ThinBackend Backend,
@@ -612,6 +624,7 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
   if (LTOInfo->IsThinLTO)
     return addThinLTO(BM, ModSyms, ResI, ResE);
 
+  RegularLTO.EmptyCombinedModule = false;
   Expected<RegularLTOState::AddedModule> ModOrErr =
       addRegularLTO(BM, ModSyms, ResI, ResE);
   if (!ModOrErr)
@@ -765,8 +778,9 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
       // For now they aren't reported correctly by ModuleSymbolTable.
       auto &CommonRes = RegularLTO.Commons[std::string(Sym.getIRName())];
       CommonRes.Size = std::max(CommonRes.Size, Sym.getCommonSize());
-      CommonRes.Align =
-          std::max(CommonRes.Align, MaybeAlign(Sym.getCommonAlignment()));
+      MaybeAlign SymAlign(Sym.getCommonAlignment());
+      if (SymAlign)
+        CommonRes.Align = max(*SymAlign, CommonRes.Align);
       CommonRes.Prevailing |= Res.Prevailing;
     }
 
@@ -857,12 +871,28 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
         "Expected at most one ThinLTO module per bitcode file",
         inconvertibleErrorCode());
 
+  if (!Conf.ThinLTOModulesToCompile.empty()) {
+    if (!ThinLTO.ModulesToCompile)
+      ThinLTO.ModulesToCompile = ModuleMapType();
+    // This is a fuzzy name matching where only modules with name containing the
+    // specified switch values are going to be compiled.
+    for (const std::string &Name : Conf.ThinLTOModulesToCompile) {
+      if (BM.getModuleIdentifier().contains(Name)) {
+        ThinLTO.ModulesToCompile->insert({BM.getModuleIdentifier(), BM});
+        llvm::errs() << "[ThinLTO] Selecting " << BM.getModuleIdentifier()
+                     << " to compile\n";
+      }
+    }
+  }
+
   return Error::success();
 }
 
 unsigned LTO::getMaxTasks() const {
   CalledGetMaxTasks = true;
-  return RegularLTO.ParallelCodeGenParallelismLevel + ThinLTO.ModuleMap.size();
+  auto ModuleCount = ThinLTO.ModulesToCompile ? ThinLTO.ModulesToCompile->size()
+                                              : ThinLTO.ModuleMap.size();
+  return RegularLTO.ParallelCodeGenParallelismLevel + ModuleCount;
 }
 
 // If only some of the modules were split, we cannot correctly handle
@@ -1035,10 +1065,13 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
         !Conf.PostInternalizeModuleHook(0, *RegularLTO.CombinedModule))
       return Error::success();
   }
-  if (Error Err =
-          backend(Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
-                  std::move(RegularLTO.CombinedModule), ThinLTO.CombinedIndex))
-    return Err;
+
+  if (!RegularLTO.EmptyCombinedModule || Conf.AlwaysEmitRegularLTOObj) {
+    if (Error Err = backend(
+            Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
+            std::move(RegularLTO.CombinedModule), ThinLTO.CombinedIndex))
+      return Err;
+  }
 
   return finalizeOptimizationRemarks(std::move(*DiagFileOrErr));
 }
@@ -1090,13 +1123,12 @@ class InProcessThinBackend : public ThinBackendProc {
 public:
   InProcessThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
-      unsigned ThinLTOParallelismLevel,
+      ThreadPoolStrategy ThinLTOParallelism,
       const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, NativeObjectCache Cache)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries),
-        BackendThreadPool(
-            heavyweight_hardware_concurrency(ThinLTOParallelismLevel)),
-        AddStream(std::move(AddStream)), Cache(std::move(Cache)) {
+        BackendThreadPool(ThinLTOParallelism), AddStream(std::move(AddStream)),
+        Cache(std::move(Cache)) {
     for (auto &Name : CombinedIndex.cfiFunctionDefs())
       CfiFunctionDefs.insert(
           GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
@@ -1192,13 +1224,13 @@ public:
 };
 } // end anonymous namespace
 
-ThinBackend lto::createInProcessThinBackend(unsigned ParallelismLevel) {
+ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism) {
   return [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
              const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
              AddStreamFn AddStream, NativeObjectCache Cache) {
     return std::make_unique<InProcessThinBackend>(
-        Conf, CombinedIndex, ParallelismLevel, ModuleToDefinedGVSummaries,
-        AddStream, Cache);
+        Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries, AddStream,
+        Cache);
   };
 }
 
@@ -1296,6 +1328,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
                       const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
   if (ThinLTO.ModuleMap.empty())
     return Error::success();
+
+  if (ThinLTO.ModulesToCompile && ThinLTO.ModulesToCompile->empty()) {
+    llvm::errs() << "warning: [ThinLTO] No module compiled\n";
+    return Error::success();
+  }
 
   if (Conf.CombinedIndexHook &&
       !Conf.CombinedIndexHook(ThinLTO.CombinedIndex, GUIDPreservedSymbols))
@@ -1397,14 +1434,19 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
   thinLTOResolvePrevailingInIndex(ThinLTO.CombinedIndex, isPrevailing,
                                   recordNewLinkage, GUIDPreservedSymbols);
 
+  generateParamAccessSummary(ThinLTO.CombinedIndex);
+
   std::unique_ptr<ThinBackendProc> BackendProc =
       ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, Cache);
 
+  auto &ModuleMap =
+      ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
+
   // Tasks 0 through ParallelCodeGenParallelismLevel-1 are reserved for combined
   // module and parallel code generation partitions.
   unsigned Task = RegularLTO.ParallelCodeGenParallelismLevel;
-  for (auto &Mod : ThinLTO.ModuleMap) {
+  for (auto &Mod : ModuleMap) {
     if (Error E = BackendProc->start(Task, Mod.second, ImportLists[Mod.first],
                                      ExportLists[Mod.first],
                                      ResolvedODR[Mod.first], ThinLTO.ModuleMap))

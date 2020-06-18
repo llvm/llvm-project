@@ -17,11 +17,11 @@ foo:
 
 // 0x202320 - 0x201250 - 5 =  4299
 // 0x202328 - 0x201255 - 5 =  4302
-// DISASM:      _start:
-// DISASM-NEXT:   201250:       callq 4299
-// DISASM-NEXT:   201255:       callq 4302
+// DISASM:      <_start>:
+// DISASM-NEXT:   201250:       callq 0x202320
+// DISASM-NEXT:   201255:       callq 0x202328
 
-// DISASM:      foo:
+// DISASM:      <foo>:
 // DISASM-NEXT:   20125a:       nop
 
 // CHECK:      Name: .got

@@ -94,7 +94,7 @@ ObjCContainerDecl::getMethod(Selector Sel, bool isInstance,
   // methods there.
   if (const auto *Proto = dyn_cast<ObjCProtocolDecl>(this)) {
     if (const ObjCProtocolDecl *Def = Proto->getDefinition())
-      if (Def->isHidden() && !AllowHidden)
+      if (!Def->isUnconditionallyVisible() && !AllowHidden)
         return nullptr;
   }
 
@@ -146,7 +146,8 @@ bool ObjCContainerDecl::HasUserDeclaredSetterMethod(
       // auto-synthesized).
       for (const auto *P : Cat->properties())
         if (P->getIdentifier() == Property->getIdentifier()) {
-          if (P->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_readwrite)
+          if (P->getPropertyAttributes() &
+              ObjCPropertyAttribute::kind_readwrite)
             return true;
           break;
         }
@@ -180,7 +181,7 @@ ObjCPropertyDecl::findPropertyDecl(const DeclContext *DC,
   // property.
   if (const auto *Proto = dyn_cast<ObjCProtocolDecl>(DC)) {
     if (const ObjCProtocolDecl *Def = Proto->getDefinition())
-      if (Def->isHidden())
+      if (!Def->isUnconditionallyVisible())
         return nullptr;
   }
 
@@ -238,7 +239,7 @@ ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(
   // Don't find properties within hidden protocol definitions.
   if (const auto *Proto = dyn_cast<ObjCProtocolDecl>(this)) {
     if (const ObjCProtocolDecl *Def = Proto->getDefinition())
-      if (Def->isHidden())
+      if (!Def->isUnconditionallyVisible())
         return nullptr;
   }
 
@@ -1361,25 +1362,23 @@ ObjCMethodDecl::findPropertyDecl(bool CheckOverrides) const {
         return Found;
     } else {
       // Determine whether the container is a class.
-      ClassDecl = dyn_cast<ObjCInterfaceDecl>(Container);
+      ClassDecl = cast<ObjCInterfaceDecl>(Container);
     }
+    assert(ClassDecl && "Failed to find main class");
 
     // If we have a class, check its visible extensions.
-    if (ClassDecl) {
-      for (const auto *Ext : ClassDecl->visible_extensions()) {
-        if (Ext == Container)
-          continue;
-
-        if (const auto *Found = findMatchingProperty(Ext))
-          return Found;
-      }
+    for (const auto *Ext : ClassDecl->visible_extensions()) {
+      if (Ext == Container)
+        continue;
+      if (const auto *Found = findMatchingProperty(Ext))
+        return Found;
     }
 
     assert(isSynthesizedAccessorStub() && "expected an accessor stub");
+
     for (const auto *Cat : ClassDecl->known_categories()) {
       if (Cat == Container)
         continue;
-
       if (const auto *Found = findMatchingProperty(Cat))
         return Found;
     }
@@ -1920,7 +1919,7 @@ ObjCMethodDecl *ObjCProtocolDecl::lookupMethod(Selector Sel,
   // If there is no definition or the definition is hidden, we don't find
   // anything.
   const ObjCProtocolDecl *Def = getDefinition();
-  if (!Def || Def->isHidden())
+  if (!Def || !Def->isUnconditionallyVisible())
     return nullptr;
 
   if ((MethodDecl = getMethod(Sel, isInstance)))

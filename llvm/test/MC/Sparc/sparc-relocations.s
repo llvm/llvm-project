@@ -1,7 +1,7 @@
 ! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s
 ! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-readobj -r | FileCheck %s --check-prefix=CHECK-OBJ
 
-        ! CHECK-OBJ: Format: ELF64-sparc
+        ! CHECK-OBJ: Format: elf64-sparc
         ! CHECK-OBJ: Relocations [
         ! CHECK-OBJ: 0x{{[0-9,A-F]+}} R_SPARC_WDISP30 foo
         ! CHECK-OBJ: 0x{{[0-9,A-F]+}} R_SPARC_LO10 sym

@@ -13,14 +13,6 @@ from lldbsuite.test import lldbutil
 class TestAutoInstallMainExecutable(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        super(TestAutoInstallMainExecutable, self).setUp()
-        self._initial_platform = lldb.DBG.GetSelectedPlatform()
-
-    def tearDown(self):
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)
-        super(TestAutoInstallMainExecutable, self).tearDown()
-
     @llgs_test
     @no_debug_info_test
     @skipIf(remote=False)
@@ -61,16 +53,11 @@ class TestAutoInstallMainExecutable(gdbremote_testcase.GdbRemoteTestCaseBase):
         # Wait for the new process gets ready.
         time.sleep(0.1)
 
-        new_debugger = lldb.SBDebugger.Create()
-        new_debugger.SetAsync(False)
-
-        def del_debugger(new_debugger=new_debugger):
-            del new_debugger
-        self.addTearDownHook(del_debugger)
+        self.dbg.SetAsync(False)
 
         new_platform = lldb.SBPlatform(lldb.remote_platform.GetName())
-        new_debugger.SetSelectedPlatform(new_platform)
-        new_interpreter = new_debugger.GetCommandInterpreter()
+        self.dbg.SetSelectedPlatform(new_platform)
+        interpreter = self.dbg.GetCommandInterpreter()
 
         connect_url = "%s://%s:%s" % (protocol, hostname, str(hostport+1))
 
@@ -79,7 +66,7 @@ class TestAutoInstallMainExecutable(gdbremote_testcase.GdbRemoteTestCaseBase):
         result = lldb.SBCommandReturnObject()
 
         # Test the default setting.
-        new_interpreter.HandleCommand("settings show target.auto-install-main-executable", result)
+        interpreter.HandleCommand("settings show target.auto-install-main-executable", result)
         self.assertTrue(
             result.Succeeded() and
             "target.auto-install-main-executable (boolean) = true" in result.GetOutput(),
@@ -87,16 +74,16 @@ class TestAutoInstallMainExecutable(gdbremote_testcase.GdbRemoteTestCaseBase):
             (result.GetOutput(), result.GetError()))
 
         # Disable the auto install.
-        new_interpreter.HandleCommand("settings set target.auto-install-main-executable false", result)
-        new_interpreter.HandleCommand("settings show target.auto-install-main-executable", result)
+        interpreter.HandleCommand("settings set target.auto-install-main-executable false", result)
+        interpreter.HandleCommand("settings show target.auto-install-main-executable", result)
         self.assertTrue(
             result.Succeeded() and
             "target.auto-install-main-executable (boolean) = false" in result.GetOutput(),
             "Default settings for target.auto-install-main-executable failed.: %s - %s" %
             (result.GetOutput(), result.GetError()))
 
-        new_interpreter.HandleCommand("platform select %s"%configuration.lldb_platform_name, result)
-        new_interpreter.HandleCommand(command, result)
+        interpreter.HandleCommand("platform select %s"%configuration.lldb_platform_name, result)
+        interpreter.HandleCommand(command, result)
 
         self.assertTrue(
             result.Succeeded(),
@@ -104,7 +91,7 @@ class TestAutoInstallMainExecutable(gdbremote_testcase.GdbRemoteTestCaseBase):
             (result.GetOutput(),result.GetError()))
 
         # Create the target with the original file.
-        new_interpreter.HandleCommand("target create --remote-file %s %s "%
+        interpreter.HandleCommand("target create --remote-file %s %s "%
                                         (os.path.join(working_dir,dest.GetFilename()), self.getBuildArtifact("a.out")),
                                       result)
         self.assertTrue(
@@ -128,7 +115,7 @@ class TestAutoInstallMainExecutable(gdbremote_testcase.GdbRemoteTestCaseBase):
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual(frame.GetFunction().GetName(), "main")
 
-        new_interpreter.HandleCommand("target variable build", result)
+        interpreter.HandleCommand("target variable build", result)
         self.assertTrue(
             result.Succeeded() and
             '"device"' in result.GetOutput(),

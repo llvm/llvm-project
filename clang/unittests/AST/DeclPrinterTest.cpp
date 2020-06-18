@@ -1158,8 +1158,8 @@ TEST(DeclPrinter, TestTemplateArgumentList4) {
     "template<typename T> struct X {};"
     "Z<X<int>> A;",
     "A",
-    "Z<X<int> > A"));
-    // Should be: with semicolon, without extra space in "> >"
+    "Z<X<int>> A"));
+    // Should be: with semicolon
 }
 
 TEST(DeclPrinter, TestTemplateArgumentList5) {

@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 

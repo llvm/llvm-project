@@ -88,12 +88,11 @@ unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
                                        : sys::getHostNumPhysicalCores();
   if (MaxThreadCount <= 0)
     MaxThreadCount = 1;
-
-  // No need to create more threads than there are hardware threads, it would
-  // uselessly induce more context-switching and cache eviction.
-  if (!ThreadsRequested || ThreadsRequested > (unsigned)MaxThreadCount)
+  if (ThreadsRequested == 0)
     return MaxThreadCount;
-  return ThreadsRequested;
+  if (!Limit)
+    return ThreadsRequested;
+  return std::min((unsigned)MaxThreadCount, ThreadsRequested);
 }
 
 namespace {
@@ -132,3 +131,23 @@ void llvm::llvm_execute_on_thread_async(
 }
 
 #endif
+
+Optional<ThreadPoolStrategy>
+llvm::get_threadpool_strategy(StringRef Num, ThreadPoolStrategy Default) {
+  if (Num == "all")
+    return llvm::hardware_concurrency();
+  if (Num.empty())
+    return Default;
+  unsigned V;
+  if (Num.getAsInteger(10, V))
+    return None; // malformed 'Num' value
+  if (V == 0)
+    return Default;
+
+  // Do not take the Default into account. This effectively disables
+  // heavyweight_hardware_concurrency() if the user asks for any number of
+  // threads on the cmd-line.
+  ThreadPoolStrategy S = llvm::hardware_concurrency();
+  S.ThreadsRequested = V;
+  return S;
+}

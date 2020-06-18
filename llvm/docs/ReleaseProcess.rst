@@ -115,7 +115,7 @@ Test Suite
    :local:
 
 Follow the `LNT Quick Start Guide
-<http://llvm.org/docs/lnt/quickstart.html>`__ link on how to set-up the
+<https://llvm.org/docs/lnt/quickstart.html>`__ link on how to set-up the
 test-suite
 
 The binary location you'll have to use for testing is inside the
@@ -160,7 +160,7 @@ candidates, on the previous release.
 You should:
 
 * Download the previous release sources from
-  http://llvm.org/releases/download.html.
+  https://llvm.org/releases/download.html.
 
 * Run the test-release.sh script on ``final`` mode (change ``-rc 1`` to
   ``-final``).
@@ -190,7 +190,7 @@ to them), and run the release test as above.
 You should:
 
 * Download the current candidate sources from where the release manager points
-  you (ex. http://llvm.org/pre-releases/3.3/rc1/).
+  you (ex. https://llvm.org/pre-releases/3.3/rc1/).
 
 * Repeat the steps above with ``-rc 1``, ``-rc 2`` etc modes and run the
   test-suite the same way.

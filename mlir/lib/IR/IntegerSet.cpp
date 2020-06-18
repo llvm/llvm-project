@@ -8,7 +8,6 @@
 
 #include "mlir/IR/IntegerSet.h"
 #include "IntegerSetDetail.h"
-#include "mlir/IR/AffineExpr.h"
 
 using namespace mlir;
 using namespace mlir::detail;

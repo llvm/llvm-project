@@ -1154,6 +1154,9 @@ def : Pat<(store GRRegs:$val, (add GRRegs:$addr, immUs4:$offset)),
 def : Pat<(store GRRegs:$val, GRRegs:$addr),
           (STW_2rus GRRegs:$val, GRRegs:$addr, 0)>;
 
+/// bitrev
+def : Pat<(bitreverse GRRegs:$src), (BITREV_l2r GRRegs:$src)>;
+
 /// cttz
 def : Pat<(cttz GRRegs:$src), (CLZ_l2r (BITREV_l2r GRRegs:$src))>;
 

@@ -114,6 +114,8 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
+  void emitFunctionHeaderComment() override;
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AsmPrinter::getAnalysisUsage(AU);
     AU.setPreservesAll();
@@ -226,19 +228,26 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
 
   // Emit the note header.
   emitAlignment(Align(8));
-  OutStreamer->emitIntValue(4, 4);     // data size for "GNU\0"
-  OutStreamer->emitIntValue(4 * 4, 4); // Elf_Prop size
-  OutStreamer->emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4);
+  OutStreamer->emitInt32(4);     // data size for "GNU\0"
+  OutStreamer->emitInt32(4 * 4); // Elf_Prop size
+  OutStreamer->emitInt32(ELF::NT_GNU_PROPERTY_TYPE_0);
   OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
 
   // Emit the PAC/BTI properties.
-  OutStreamer->emitIntValue(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND, 4);
-  OutStreamer->emitIntValue(4, 4);     // data size
-  OutStreamer->emitIntValue(Flags, 4); // data
-  OutStreamer->emitIntValue(0, 4);     // pad
+  OutStreamer->emitInt32(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND);
+  OutStreamer->emitInt32(4);     // data size
+  OutStreamer->emitInt32(Flags); // data
+  OutStreamer->emitInt32(0);     // pad
 
   OutStreamer->endSection(Nt);
   OutStreamer->SwitchSection(Cur);
+}
+
+void AArch64AsmPrinter::emitFunctionHeaderComment() {
+  const AArch64FunctionInfo *FI = MF->getInfo<AArch64FunctionInfo>();
+  Optional<std::string> OutlinerString = FI->getOutliningStyle();
+  if (OutlinerString != None)
+    OutStreamer->GetCommentOS() << ' ' << OutlinerString;
 }
 
 void AArch64AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI)
@@ -304,7 +313,7 @@ void AArch64AsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
     EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
 
   OutStreamer->emitLabel(Target);
-  recordSled(CurSled, MI, Kind);
+  recordSled(CurSled, MI, Kind, 2);
 }
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
@@ -1104,6 +1113,25 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(AArch64::B);
     TmpInst.addOperand(Dest);
     EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
+  case AArch64::SpeculationBarrierISBDSBEndBB: {
+    // Print DSB SYS + ISB
+    MCInst TmpInstDSB;
+    TmpInstDSB.setOpcode(AArch64::DSB);
+    TmpInstDSB.addOperand(MCOperand::createImm(0xf));
+    EmitToStreamer(*OutStreamer, TmpInstDSB);
+    MCInst TmpInstISB;
+    TmpInstISB.setOpcode(AArch64::ISB);
+    TmpInstISB.addOperand(MCOperand::createImm(0xf));
+    EmitToStreamer(*OutStreamer, TmpInstISB);
+    return;
+  }
+  case AArch64::SpeculationBarrierSBEndBB: {
+    // Print SB
+    MCInst TmpInstSB;
+    TmpInstSB.setOpcode(AArch64::SB);
+    EmitToStreamer(*OutStreamer, TmpInstSB);
     return;
   }
   case AArch64::TLSDESC_CALLSEQ: {

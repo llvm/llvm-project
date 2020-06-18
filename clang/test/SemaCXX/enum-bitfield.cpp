@@ -6,15 +6,15 @@ struct Z {};
 typedef int Integer;
 
 struct X {
-  enum E : 1;
+  enum E : 1; // expected-error{{anonymous bit-field}}
   enum E : Z; // expected-error{{invalid underlying type}}
   enum E2 : int;
   enum E3 : Integer;
 };
 
 struct Y {
-  enum E : int(2);
-  enum E : Z(); // expected-error{{integral constant expression must have integral or unscoped enumeration type, not 'Z'}}
+  enum E : int(2); // expected-error{{anonymous bit-field}}
+  enum E : Z(); // expected-error{{anonymous bit-field}} expected-error{{integral constant expression must have integral or unscoped enumeration type, not 'Z'}}
 };
 
 namespace pr18587 {

@@ -100,6 +100,8 @@ public:
     // for SPIR since it is a generic target.
     getSupportedOpenCLOpts().supportAll();
   }
+
+  bool hasExtIntType() const override { return true; }
 };
 class LLVM_LIBRARY_VISIBILITY SPIR32TargetInfo : public SPIRTargetInfo {
 public:

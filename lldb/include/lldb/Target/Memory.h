@@ -59,7 +59,8 @@ protected:
   uint32_t m_L2_cache_line_byte_size;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(MemoryCache);
+  MemoryCache(const MemoryCache &) = delete;
+  const MemoryCache &operator=(const MemoryCache &) = delete;
 };
 
     
@@ -135,7 +136,8 @@ protected:
   PermissionsToBlockMap m_memory_map;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(AllocatedMemoryCache);
+  AllocatedMemoryCache(const AllocatedMemoryCache &) = delete;
+  const AllocatedMemoryCache &operator=(const AllocatedMemoryCache &) = delete;
 };
 
 } // namespace lldb_private

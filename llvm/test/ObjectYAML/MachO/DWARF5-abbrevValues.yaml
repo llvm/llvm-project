@@ -286,7 +286,7 @@ DWARF:
 
 #CHECK: DWARF:           
 #CHECK:   debug_abbrev:
-#CHECK:     - Code:            0x00000001
+#CHECK:     - Code:            0x0000000000000001
 #CHECK:       Tag:             DW_TAG_compile_unit
 #CHECK:       Children:        DW_CHILDREN_yes
 #CHECK:       Attributes:

@@ -23,6 +23,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -32,6 +33,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/lldb-enumerations.h"
@@ -39,12 +41,58 @@
 class DWARFASTParserClang;
 class PDBASTParser;
 
+namespace clang {
+class FileManager;
+class HeaderSearch;
+class ModuleMap;
+} // namespace clang
+
 namespace lldb_private {
 
 class ClangASTMetadata;
 class ClangASTSource;
 class Declaration;
 
+/// A Clang module ID.
+class OptionalClangModuleID {
+  unsigned m_id = 0;
+
+public:
+  OptionalClangModuleID() = default;
+  explicit OptionalClangModuleID(unsigned id) : m_id(id) {}
+  bool HasValue() const { return m_id != 0; }
+  unsigned GetValue() const { return m_id; }
+};
+
+/// The implementation of lldb::Type's m_payload field for TypeSystemClang.
+class TypePayloadClang {
+  /// The Layout is as follows:
+  /// \verbatim
+  /// bit 0..30 ... Owning Module ID.
+  /// bit 31 ...... IsCompleteObjCClass.
+  /// \endverbatim
+  Type::Payload m_payload = 0;
+
+public:
+  TypePayloadClang() = default;
+  explicit TypePayloadClang(OptionalClangModuleID owning_module,
+                            bool is_complete_objc_class = false);
+  explicit TypePayloadClang(uint32_t opaque_payload) : m_payload(opaque_payload) {}
+  operator Type::Payload() { return m_payload; }
+
+  static constexpr unsigned ObjCClassBit = 1 << 31;
+  bool IsCompleteObjCClass() { return Flags(m_payload).Test(ObjCClassBit); }
+  void SetIsCompleteObjCClass(bool is_complete_objc_class) {
+    m_payload = is_complete_objc_class ? Flags(m_payload).Set(ObjCClassBit)
+                                       : Flags(m_payload).Clear(ObjCClassBit);
+  }
+  OptionalClangModuleID GetOwningModule() {
+    return OptionalClangModuleID(Flags(m_payload).Clear(ObjCClassBit));
+  }
+  void SetOwningModule(OptionalClangModuleID id);
+  /// \}
+};
+  
 /// A TypeSystem implementation based on Clang.
 ///
 /// This class uses a single clang::ASTContext as the backend for storing
@@ -267,7 +315,14 @@ public:
   static uint32_t GetNumBaseClasses(const clang::CXXRecordDecl *cxx_record_decl,
                                     bool omit_empty_base_classes);
 
+  /// Synthesize a clang::Module and return its ID or a default-constructed ID.
+  OptionalClangModuleID GetOrCreateClangModule(llvm::StringRef name,
+                                               OptionalClangModuleID parent,
+                                               bool is_framework = false,
+                                               bool is_explicit = false);
+
   CompilerType CreateRecordType(clang::DeclContext *decl_ctx,
+                                OptionalClangModuleID owning_module,
                                 lldb::AccessType access_type,
                                 llvm::StringRef name, int kind,
                                 lldb::LanguageType language,
@@ -293,6 +348,7 @@ public:
 
   clang::FunctionTemplateDecl *
   CreateFunctionTemplateDecl(clang::DeclContext *decl_ctx,
+                             OptionalClangModuleID owning_module,
                              clang::FunctionDecl *func_decl, const char *name,
                              const TemplateParameterInfos &infos);
 
@@ -302,6 +358,7 @@ public:
 
   clang::ClassTemplateDecl *
   CreateClassTemplateDecl(clang::DeclContext *decl_ctx,
+                          OptionalClangModuleID owning_module,
                           lldb::AccessType access_type, const char *class_name,
                           int kind, const TemplateParameterInfos &infos);
 
@@ -309,7 +366,7 @@ public:
   CreateTemplateTemplateParmDecl(const char *template_name);
 
   clang::ClassTemplateSpecializationDecl *CreateClassTemplateSpecializationDecl(
-      clang::DeclContext *decl_ctx,
+      clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
       clang::ClassTemplateDecl *class_template_decl, int kind,
       const TemplateParameterInfos &infos);
 
@@ -329,8 +386,9 @@ public:
   static bool RecordHasFields(const clang::RecordDecl *record_decl);
 
   CompilerType CreateObjCClass(llvm::StringRef name,
-                               clang::DeclContext *decl_ctx, bool isForwardDecl,
-                               bool isInternal,
+                               clang::DeclContext *decl_ctx,
+                               OptionalClangModuleID owning_module,
+                               bool isForwardDecl, bool isInternal,
                                ClangASTMetadata *metadata = nullptr);
 
   bool SetTagTypeKind(clang::QualType type, int kind) const;
@@ -347,14 +405,16 @@ public:
 
   clang::NamespaceDecl *
   GetUniqueNamespaceDeclaration(const char *name, clang::DeclContext *decl_ctx,
+                                OptionalClangModuleID owning_module,
                                 bool is_inline = false);
 
   // Function Types
 
   clang::FunctionDecl *
-  CreateFunctionDeclaration(clang::DeclContext *decl_ctx, const char *name,
-                            const CompilerType &function_Type, int storage,
-                            bool is_inline);
+  CreateFunctionDeclaration(clang::DeclContext *decl_ctx,
+                            OptionalClangModuleID owning_module,
+                            const char *name, const CompilerType &function_Type,
+                            int storage, bool is_inline);
 
   CompilerType CreateFunctionType(const CompilerType &result_type,
                                   const CompilerType *args, unsigned num_args,
@@ -368,11 +428,11 @@ public:
                               type_quals, clang::CC_C);
   }
 
-  clang::ParmVarDecl *CreateParameterDeclaration(clang::DeclContext *decl_ctx,
-                                                 const char *name,
-                                                 const CompilerType &param_type,
-                                                 int storage,
-                                                 bool add_decl=false);
+  clang::ParmVarDecl *
+  CreateParameterDeclaration(clang::DeclContext *decl_ctx,
+                             OptionalClangModuleID owning_module,
+                             const char *name, const CompilerType &param_type,
+                             int storage, bool add_decl = false);
 
   void SetFunctionParameters(clang::FunctionDecl *function_decl,
                              clang::ParmVarDecl **params, unsigned num_params);
@@ -387,6 +447,7 @@ public:
   // Enumeration Types
   CompilerType CreateEnumerationType(const char *name,
                                      clang::DeclContext *decl_ctx,
+                                     OptionalClangModuleID owning_module,
                                      const Declaration &decl,
                                      const CompilerType &integer_qual_type,
                                      bool is_scoped);
@@ -453,6 +514,10 @@ public:
   /// TypeSystemClang.
   CompilerDeclContext CreateDeclContext(clang::DeclContext *ctx);
 
+  /// Set the owning module for \p decl.
+  static void SetOwningModule(clang::Decl *decl,
+                              OptionalClangModuleID owning_module);
+
   std::vector<CompilerDecl>
   DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
                             const bool ignore_using_decls) override;
@@ -494,6 +559,10 @@ public:
 
   // Tests
 
+#ifndef NDEBUG
+  bool Verify(lldb::opaque_compiler_type_t type) override;
+#endif
+  
   bool IsArrayType(lldb::opaque_compiler_type_t type,
                    CompilerType *element_type, uint64_t *size,
                    bool *is_incomplete) override;
@@ -611,11 +680,13 @@ public:
 
   // Creating related types
 
-  // Using the current type, create a new typedef to that type using
-  // "typedef_name" as the name and "decl_ctx" as the decl context.
+  /// Using the current type, create a new typedef to that type using
+  /// "typedef_name" as the name and "decl_ctx" as the decl context.
+  /// \param payload is an opaque TypePayloadClang.
   static CompilerType
   CreateTypedefType(const CompilerType &type, const char *typedef_name,
-                    const CompilerDeclContext &compiler_decl_ctx);
+                    const CompilerDeclContext &compiler_decl_ctx,
+                    uint32_t opaque_payload);
 
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
                                    uint64_t *stride) override;
@@ -666,7 +737,8 @@ public:
 
   CompilerType CreateTypedef(lldb::opaque_compiler_type_t type,
                              const char *name,
-                             const CompilerDeclContext &decl_ctx) override;
+                             const CompilerDeclContext &decl_ctx,
+                             uint32_t opaque_payload) override;
 
   // If the current object represents a typedef type, get the underlying type
   CompilerType GetTypedefedType(lldb::opaque_compiler_type_t type) override;
@@ -903,10 +975,12 @@ public:
                    lldb::offset_t data_offset, size_t data_byte_size) override;
 
   void DumpTypeDescription(
-      lldb::opaque_compiler_type_t type) override; // Dump to stdout
+      lldb::opaque_compiler_type_t type,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
-  void DumpTypeDescription(lldb::opaque_compiler_type_t type,
-                           Stream *s) override;
+  void DumpTypeDescription(
+      lldb::opaque_compiler_type_t type, Stream *s,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
   static void DumpTypeName(const CompilerType &type);
 
@@ -925,20 +999,24 @@ public:
   GetAsObjCInterfaceDecl(const CompilerType &type);
 
   clang::ClassTemplateDecl *ParseClassTemplateDecl(
-      clang::DeclContext *decl_ctx, lldb::AccessType access_type,
-      const char *parent_name, int tag_decl_kind,
+      clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
+      lldb::AccessType access_type, const char *parent_name, int tag_decl_kind,
       const TypeSystemClang::TemplateParameterInfos &template_param_infos);
 
-  clang::BlockDecl *CreateBlockDeclaration(clang::DeclContext *ctx);
+  clang::BlockDecl *CreateBlockDeclaration(clang::DeclContext *ctx,
+                                           OptionalClangModuleID owning_module);
 
   clang::UsingDirectiveDecl *
   CreateUsingDirectiveDeclaration(clang::DeclContext *decl_ctx,
+                                  OptionalClangModuleID owning_module,
                                   clang::NamespaceDecl *ns_decl);
 
   clang::UsingDecl *CreateUsingDeclaration(clang::DeclContext *current_decl_ctx,
+                                           OptionalClangModuleID owning_module,
                                            clang::NamedDecl *target);
 
   clang::VarDecl *CreateVariableDeclaration(clang::DeclContext *decl_context,
+                                            OptionalClangModuleID owning_module,
                                             const char *name,
                                             clang::QualType type);
 
@@ -961,6 +1039,13 @@ public:
   clang::DeclarationName
   GetDeclarationName(const char *name, const CompilerType &function_clang_type);
 
+  clang::LangOptions *GetLangOpts() const {
+    return m_language_options_up.get();
+  }
+  clang::SourceManager *GetSourceMgr() const {
+    return m_source_manager_up.get();
+  }
+
 private:
   const clang::ClassTemplateSpecializationDecl *
   GetAsTemplateSpecialization(lldb::opaque_compiler_type_t type);
@@ -978,6 +1063,8 @@ private:
   std::unique_ptr<clang::IdentifierTable> m_identifier_table_up;
   std::unique_ptr<clang::SelectorTable> m_selector_table_up;
   std::unique_ptr<clang::Builtin::Context> m_builtins_up;
+  std::unique_ptr<clang::HeaderSearch> m_header_search_up;
+  std::unique_ptr<clang::ModuleMap> m_module_map_up;
   std::unique_ptr<DWARFASTParserClang> m_dwarf_ast_parser_up;
   std::unique_ptr<PDBASTParser> m_pdb_ast_parser_up;
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;

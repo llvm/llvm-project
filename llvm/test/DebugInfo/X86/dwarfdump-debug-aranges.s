@@ -28,11 +28,11 @@
 # CHECK: Address Range Header: length = 0x0000001c,
 .L2version:
     .short  2                       # Version
-    .long   0x11223344              # Debug Info Offset
+    .long   0x112233                # Debug Info Offset
     .byte   4                       # Address Size
     .byte   0                       # Segment Selector Size
 # CHECK-SAME: version = 0x0002,
-# CHECK-SAME: cu_offset = 0x11223344,
+# CHECK-SAME: cu_offset = 0x00112233,
 # CHECK-SAME: addr_size = 0x04,
 # CHECK-SAME: seg_size = 0x00
     .space  4                       # Padding
@@ -48,11 +48,11 @@
 # CHECK: Address Range Header: length = 0x0000002c,
 .L3version:
     .short  2                       # Version
-    .long   0x22334455              # Debug Info Offset
+    .long   0x112233                # Debug Info Offset
     .byte   8                       # Address Size
     .byte   0                       # Segment Selector Size
 # CHECK-SAME: version = 0x0002,
-# CHECK-SAME: cu_offset = 0x22334455,
+# CHECK-SAME: cu_offset = 0x00112233,
 # CHECK-SAME: addr_size = 0x08,
 # CHECK-SAME: seg_size = 0x00
     .space  4                       # Padding
@@ -67,14 +67,15 @@
 ## Case 4: Check that 64-bit DWARF format is supported.
     .long 0xffffffff                # DWARF64 mark
     .quad   .L4end - .L4version     # Length
-# CHECK: Address Range Header: length = 0x0000001c,
+# CHECK: Address Range Header: length = 0x000000000000001c,
+# CHECK-SAME: format = DWARF64,
 .L4version:
     .short  2                       # Version
-    .quad   0x1234567899aabbcc      # Debug Info Offset
+    .quad   0x123456789abc          # Debug Info Offset
     .byte   4                       # Address Size
     .byte   0                       # Segment Selector Size
 # CHECK-SAME: version = 0x0002,
-# CHECK-SAME: cu_offset = 0x1234567899aabbcc,
+# CHECK-SAME: cu_offset = 0x0000123456789abc,
 # CHECK-SAME: addr_size = 0x04,
 # CHECK-SAME: seg_size = 0x00
                                     # No padding

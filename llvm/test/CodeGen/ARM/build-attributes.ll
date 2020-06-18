@@ -233,6 +233,7 @@
 ; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi | FileCheck %s --check-prefix=ARMv81M-MAIN
 ; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve | FileCheck %s --check-prefix=ARMv81M-MAIN-MVEINT
 ; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp | FileCheck %s --check-prefix=ARMv81M-MAIN-MVEFP
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-m55 | FileCheck %s --check-prefix=CORTEX-M55
 
 ; CPU-SUPPORTED-NOT: is not a recognized processor for this target
 
@@ -1722,6 +1723,28 @@
 ; ARMv81M-MAIN-MVEINT: .eabi_attribute 48, 1 @ Tag_MVE_arch
 ; ARMv81M-MAIN-MVEFP: .eabi_attribute 6, 21 @ Tag_CPU_arch
 ; ARMv81M-MAIN-MVEFP: .eabi_attribute 48, 2 @ Tag_MVE_arch
+
+; CORTEX-M55: .cpu cortex-m55
+; CORTEX-M55: .eabi_attribute 6, 21
+; CORTEX-M55: .eabi_attribute 7, 77
+; CORTEX-M55: .eabi_attribute 8, 0
+; CORTEX-M55: .eabi_attribute 9, 3
+; CORTEX-M55: .fpu fpv5-d16
+; CORTEX-M55: .eabi_attribute 36, 1
+; CORTEX-M55-NOT: .eabi_attribute 44
+; CORTEX-M55: .eabi_attribute 46, 1
+; CORTEX-M55: .eabi_attribute 34, 1
+; CORTEX-M55: .eabi_attribute 17, 1
+; CORTEX-M55-NOT: .eabi_attribute 19
+; CORTEX-M55: .eabi_attribute 20, 1
+; CORTEX-M55: .eabi_attribute 21, 1
+; CORTEX-M55: .eabi_attribute 23, 3
+; CORTEX-M55: .eabi_attribute 24, 1
+; CORTEX-M55: .eabi_attribute 25, 1
+; CORTEX-M55-NOT: .eabi_attribute 28
+; CORTEX-M55: .eabi_attribute 38, 1
+; CORTEX-M55: .eabi_attribute 14, 0
+
 define i32 @f(i64 %z) {
     ret i32 0
 }

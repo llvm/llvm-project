@@ -13,6 +13,8 @@
 #include "SymbolLocation.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -132,9 +134,17 @@ public:
     RefSlab build() &&;
 
   private:
+    // A ref we're storing with its symbol to consume with build().
+    // All strings are interned, so DenseMapInfo can use pointer comparisons.
+    struct Entry {
+      SymbolID Symbol;
+      Ref Reference;
+    };
+    friend struct llvm::DenseMapInfo<Entry>;
+
     llvm::BumpPtrAllocator Arena;
     llvm::UniqueStringSaver UniqueStrings; // Contents on the arena.
-    llvm::DenseMap<SymbolID, std::set<Ref>> Refs;
+    llvm::DenseSet<Entry> Entries;
   };
 
 private:
@@ -150,5 +160,32 @@ private:
 
 } // namespace clangd
 } // namespace clang
+
+namespace llvm {
+template <> struct DenseMapInfo<clang::clangd::RefSlab::Builder::Entry> {
+  using Entry = clang::clangd::RefSlab::Builder::Entry;
+  static inline Entry getEmptyKey() {
+    static Entry E{clang::clangd::SymbolID(""), {}};
+    return E;
+  }
+  static inline Entry getTombstoneKey() {
+    static Entry E{clang::clangd::SymbolID("TOMBSTONE"), {}};
+    return E;
+  }
+  static unsigned getHashValue(const Entry &Val) {
+    return llvm::hash_combine(
+        Val.Symbol, reinterpret_cast<uintptr_t>(Val.Reference.Location.FileURI),
+        Val.Reference.Location.Start.rep(), Val.Reference.Location.End.rep());
+  }
+  static bool isEqual(const Entry &LHS, const Entry &RHS) {
+    return std::tie(LHS.Symbol, LHS.Reference.Location.FileURI,
+                    LHS.Reference.Kind) ==
+               std::tie(RHS.Symbol, RHS.Reference.Location.FileURI,
+                        RHS.Reference.Kind) &&
+           LHS.Reference.Location.Start == RHS.Reference.Location.Start &&
+           LHS.Reference.Location.End == RHS.Reference.Location.End;
+  }
+};
+} // namespace llvm
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_REF_H

@@ -6,9 +6,9 @@
 ## Test that we create R_X86_64_RELATIVE relocations with -pie.
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-# CHECK-NEXT:     0x3358 R_X86_64_RELATIVE - 0x3358
-# CHECK-NEXT:     0x3360 R_X86_64_RELATIVE - 0x3360
-# CHECK-NEXT:     0x3368 R_X86_64_RELATIVE - 0x3361
+# CHECK-NEXT:     0x3368 R_X86_64_RELATIVE - 0x3368
+# CHECK-NEXT:     0x3370 R_X86_64_RELATIVE - 0x3370
+# CHECK-NEXT:     0x3378 R_X86_64_RELATIVE - 0x3371
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

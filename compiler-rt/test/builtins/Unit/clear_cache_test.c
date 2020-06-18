@@ -2,14 +2,6 @@
 // UNSUPPORTED: arm, aarch64
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_clear_cache
-//===-- clear_cache_test.c - Test clear_cache -----------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 
 #include <stdio.h>
 #include <string.h>

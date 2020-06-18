@@ -110,6 +110,9 @@ public:
   ConstructionContextItem(const CXXConstructExpr *CE, unsigned Index)
       : Data(CE), Kind(ArgumentKind), Index(Index) {}
 
+  ConstructionContextItem(const CXXInheritedCtorInitExpr *CE, unsigned Index)
+      : Data(CE), Kind(ArgumentKind), Index(Index) {}
+
   ConstructionContextItem(const ObjCMessageExpr *ME, unsigned Index)
       : Data(ME), Kind(ArgumentKind), Index(Index) {}
 
@@ -117,7 +120,7 @@ public:
   ConstructionContextItem(const Expr *E, unsigned Index)
       : Data(E), Kind(ArgumentKind), Index(Index) {
     assert(isa<CallExpr>(E) || isa<CXXConstructExpr>(E) ||
-           isa<ObjCMessageExpr>(E));
+           isa<CXXInheritedCtorInitExpr>(E) || isa<ObjCMessageExpr>(E));
   }
 
   ConstructionContextItem(const CXXCtorInitializer *Init)

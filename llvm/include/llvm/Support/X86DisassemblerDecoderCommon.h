@@ -374,7 +374,7 @@ enum ModRMDecisionType {
   ENUM_ENTRY(ENCODING_IW,     "2-byte")                                        \
   ENUM_ENTRY(ENCODING_ID,     "4-byte")                                        \
   ENUM_ENTRY(ENCODING_IO,     "8-byte")                                        \
-  ENUM_ENTRY(ENCODING_RB,     "(AL..DIL, R8L..R15L) Register code added to "   \
+  ENUM_ENTRY(ENCODING_RB,     "(AL..DIL, R8B..R15B) Register code added to "   \
                               "the opcode byte")                               \
   ENUM_ENTRY(ENCODING_RW,     "(AX..DI, R8W..R15W)")                           \
   ENUM_ENTRY(ENCODING_RD,     "(EAX..EDI, R8D..R15D)")                         \

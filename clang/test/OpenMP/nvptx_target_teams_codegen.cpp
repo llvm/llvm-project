@@ -246,13 +246,13 @@ int bar(int n){
 // CHECK: call void [[L1:@.+]](i32* %{{.+}}, i32* %{{.+}}, i16* %{{.+}})
 // CHECK: ret void
 
-// CHECK: define internal void [[L1]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i16* dereferenceable
+// CHECK: define internal void [[L1]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i16* nonnull align {{[0-9]+}} dereferenceable
 // CHECK: call void @__kmpc_serialized_parallel(
 // CHECK: call void [[L2:@.+]](i32* %{{.+}}, i32* %{{.+}}, i16* %{{.+}})
 // CHECK: call void @__kmpc_end_serialized_parallel(
 // CHECK: ret void
 
-// CHECK: define internal void [[L2]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i16* dereferenceable
+// CHECK: define internal void [[L2]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i16* nonnull align {{[0-9]+}} dereferenceable
 // CHECK: store i16 1, i16* %
 // CHECK: ret void
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcxxabi-no-exceptions
+// UNSUPPORTED: no-exceptions
 
 // Check that the pointer __cxa_allocate_exception returns is aligned to the
 // default alignment for the target architecture.

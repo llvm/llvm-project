@@ -28,4 +28,4 @@ declare i8* @__strcpy_chk(i8*, i8*, i64) nounwind
 
 declare void @func2(i8*)
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

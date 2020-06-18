@@ -5,7 +5,7 @@
 
 ; x86 Darwin uses different register mappings for eh_frame and debug_frame
 ; sections. Check that the right mapping is used in debug_frame.
-; In the debug_frame mapping, regsiter 4 is ESP, thus the below tests that
+; In the debug_frame mapping, register 4 is ESP, thus the below tests that
 ; the CFA is ESP+4 upon function entry.
 
 ; CHECK: .debug_frame contents:

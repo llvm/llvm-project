@@ -20,6 +20,14 @@ func @composite_construct_struct(%arg0: vector<3xf32>, %arg1: !spv.array<4xf32>,
 
 // -----
 
+func @composite_construct_coopmatrix(%arg0 : f32) -> !spv.coopmatrix<8x16xf32, Subgroup> {
+  // CHECK: spv.CompositeConstruct {{%.*}} : !spv.coopmatrix<8x16xf32, Subgroup>
+  %0 = spv.CompositeConstruct %arg0 : !spv.coopmatrix<8x16xf32, Subgroup>
+  return %0: !spv.coopmatrix<8x16xf32, Subgroup>
+}
+
+// -----
+
 func @composite_construct_empty_struct() -> !spv.struct<> {
   // CHECK: spv.CompositeConstruct : !spv.struct<>
   %0 = spv.CompositeConstruct : !spv.struct<>
@@ -52,6 +60,14 @@ func @composite_construct_invalid_operand_type(%arg0: f32, %arg1: f32, %arg2 : f
 
 // -----
 
+func @composite_construct_coopmatrix(%arg0 : f32, %arg1 : f32) -> !spv.coopmatrix<8x16xf32, Subgroup> {
+  // expected-error @+1 {{has incorrect number of operands: expected 1, but provided 2}}
+  %0 = spv.CompositeConstruct %arg0, %arg1 : !spv.coopmatrix<8x16xf32, Subgroup>
+  return %0: !spv.coopmatrix<8x16xf32, Subgroup>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spv.CompositeExtractOp
 //===----------------------------------------------------------------------===//
@@ -80,6 +96,14 @@ func @composite_extract_vector(%arg0 : vector<4xf32>) -> f32 {
 
 // -----
 
+func @composite_extract_coopmatrix(%arg0 : !spv.coopmatrix<8x16xf32, Subgroup>) -> f32 {
+  // CHECK: {{%.*}} = spv.CompositeExtract {{%.*}}[2 : i32] : !spv.coopmatrix<8x16xf32, Subgroup>
+  %0 = spv.CompositeExtract %arg0[2 : i32] : !spv.coopmatrix<8x16xf32, Subgroup>
+  return %0 : f32
+}
+
+// -----
+
 func @composite_extract_no_ssa_operand() -> () {
   // expected-error @+1 {{expected SSA operand}}
   %0 = spv.CompositeExtract [4 : i32, 1 : i32] : !spv.array<4x!spv.array<4xf32>>
@@ -100,7 +124,7 @@ func @composite_extract_invalid_index_type_1() -> () {
 // -----
 
 func @composite_extract_invalid_index_type_2(%arg0 : !spv.array<4x!spv.array<4xf32>>) -> () {
-  // expected-error @+1 {{op attribute 'indices' failed to satisfy constraint: 32-bit integer array attribute}}
+  // expected-error @+1 {{attribute 'indices' failed to satisfy constraint: 32-bit integer array attribute}}
   %0 = spv.CompositeExtract %arg0[1] : !spv.array<4x!spv.array<4xf32>>
   return
 }
@@ -196,6 +220,14 @@ func @composite_insert_struct(%arg0: !spv.struct<!spv.array<4xf32>, f32>, %arg1:
   // CHECK: {{%.*}} = spv.CompositeInsert {{%.*}}, {{%.*}}[0 : i32] : !spv.array<4 x f32> into !spv.struct<!spv.array<4 x f32>, f32>
   %0 = spv.CompositeInsert %arg1, %arg0[0 : i32] : !spv.array<4xf32> into !spv.struct<!spv.array<4xf32>, f32>
   return %0: !spv.struct<!spv.array<4xf32>, f32>
+}
+
+// -----
+
+func @composite_insert_coopmatrix(%arg0: !spv.coopmatrix<8x16xi32, Subgroup>, %arg1: i32) -> !spv.coopmatrix<8x16xi32, Subgroup> {
+  // CHECK: {{%.*}} = spv.CompositeInsert {{%.*}}, {{%.*}}[5 : i32] : i32 into !spv.coopmatrix<8x16xi32, Subgroup>
+  %0 = spv.CompositeInsert %arg1, %arg0[5 : i32] : i32 into !spv.coopmatrix<8x16xi32, Subgroup>
+  return %0: !spv.coopmatrix<8x16xi32, Subgroup>
 }
 
 // -----

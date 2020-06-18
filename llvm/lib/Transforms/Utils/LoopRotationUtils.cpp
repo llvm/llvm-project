@@ -314,8 +314,14 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
                    L->dump());
         return Rotated;
       }
-      if (Metrics.NumInsts > MaxHeaderSize)
+      if (Metrics.NumInsts > MaxHeaderSize) {
+        LLVM_DEBUG(dbgs() << "LoopRotation: NOT rotating - contains "
+                          << Metrics.NumInsts
+                          << " instructions, which is more than the threshold ("
+                          << MaxHeaderSize << " instructions): ";
+                   L->dump());
         return Rotated;
+      }
     }
 
     // Now, this loop is suitable for rotation.

@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/ASTDiff/ASTDiff.h"
-
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/PriorityQueue.h"
 

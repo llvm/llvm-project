@@ -33,7 +33,7 @@ void foo(void)
 {
   // GCC currently allows this (it has some fiarly new support for covariant return types and contravariant argument types).
   // Since registerFunc: expects a Derived object as it's second argument, I don't know why this would be legal.
-  [Derived registerFunc: ExternFunc];  // expected-warning{{incompatible pointer types sending 'NSObject *(NSObject *, NSObject *)' to parameter of type 'FuncSignature *'}}
+  [Derived registerFunc: ExternFunc];  // expected-warning{{incompatible function pointer types sending 'NSObject *(NSObject *, NSObject *)' to parameter of type 'FuncSignature *' (aka 'id (*)(NSObject *, Derived *)')}}
 }
 
 // rdar://10751015

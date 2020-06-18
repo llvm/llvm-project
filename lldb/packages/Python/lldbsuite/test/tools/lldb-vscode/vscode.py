@@ -161,7 +161,7 @@ class DebugCommunication(object):
            indicate a new packet is available. Returns True if the caller
            should keep calling this function for more packets.
         '''
-        # If EOF, notify the read thread by enqueing a None.
+        # If EOF, notify the read thread by enqueuing a None.
         if not packet:
             self.enqueue_recv_packet(None)
             return False
@@ -450,7 +450,7 @@ class DebugCommunication(object):
     def request_attach(self, program=None, pid=None, waitFor=None, trace=None,
                        initCommands=None, preRunCommands=None,
                        stopCommands=None, exitCommands=None,
-                       attachCommands=None):
+                       attachCommands=None, coreFile=None):
         args_dict = {}
         if pid is not None:
             args_dict['pid'] = pid
@@ -471,6 +471,8 @@ class DebugCommunication(object):
             args_dict['exitCommands'] = exitCommands
         if attachCommands:
             args_dict['attachCommands'] = attachCommands
+        if coreFile:
+            args_dict['coreFile'] = coreFile
         command_dict = {
             'command': 'attach',
             'type': 'request',
@@ -570,7 +572,7 @@ class DebugCommunication(object):
                        disableSTDIO=False, shellExpandArguments=False,
                        trace=False, initCommands=None, preRunCommands=None,
                        stopCommands=None, exitCommands=None, sourcePath=None,
-                       debuggerRoot=None, launchCommands=None):
+                       debuggerRoot=None, launchCommands=None, sourceMap=None):
         args_dict = {
             'program': program
         }
@@ -605,6 +607,8 @@ class DebugCommunication(object):
             args_dict['debuggerRoot'] = debuggerRoot
         if launchCommands:
             args_dict['launchCommands'] = launchCommands
+        if sourceMap:
+            args_dict['sourceMap'] = sourceMap
         command_dict = {
             'command': 'launch',
             'type': 'request',
@@ -788,7 +792,7 @@ class DebugCommunication(object):
             self.threads = body['threads']
             for thread in self.threads:
                 # Copy the thread dictionary so we can add key/value pairs to
-                # it without affecfting the original info from the "threads"
+                # it without affecting the original info from the "threads"
                 # command.
                 tid = thread['id']
                 if tid in self.thread_stop_reasons:
@@ -1018,7 +1022,7 @@ def main():
         dest='attach',
         default=False,
         help=('Specify this option to attach to a process by name. The '
-              'process name is the basanme of the executable specified with '
+              'process name is the basename of the executable specified with '
               'the --program option.'))
 
     parser.add_option(

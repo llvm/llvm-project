@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <filesystem>
 
@@ -45,6 +45,7 @@ TEST_CASE(path_ctor) {
 }
 
 TEST_CASE(path_ec_ctor) {
+  static_test_env static_env;
   using namespace fs;
   {
     static_assert(
@@ -60,8 +61,8 @@ TEST_CASE(path_ec_ctor) {
   }
   {
     std::error_code ec = GetTestEC();
-    const directory_entry e(StaticEnv::File, ec);
-    TEST_CHECK(e.path() == StaticEnv::File);
+    const directory_entry e(static_env.File, ec);
+    TEST_CHECK(e.path() == static_env.File);
     TEST_CHECK(!ec);
   }
   {
@@ -120,26 +121,28 @@ TEST_CASE(path_ctor_calls_refresh) {
 TEST_CASE(path_ctor_dne) {
   using namespace fs;
 
+  static_test_env static_env;
+
   {
     std::error_code ec = GetTestEC();
-    directory_entry ent(StaticEnv::DNE, ec);
+    directory_entry ent(static_env.DNE, ec);
     TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
-    TEST_CHECK(ent.path() == StaticEnv::DNE);
+    TEST_CHECK(ent.path() == static_env.DNE);
   }
   // don't report dead symlinks as an error.
   {
     std::error_code ec = GetTestEC();
-    directory_entry ent(StaticEnv::BadSymlink, ec);
+    directory_entry ent(static_env.BadSymlink, ec);
     TEST_CHECK(!ec);
-    TEST_CHECK(ent.path() == StaticEnv::BadSymlink);
+    TEST_CHECK(ent.path() == static_env.BadSymlink);
   }
   // DNE does not cause the constructor to throw
   {
-    directory_entry ent(StaticEnv::DNE);
-    TEST_CHECK(ent.path() == StaticEnv::DNE);
+    directory_entry ent(static_env.DNE);
+    TEST_CHECK(ent.path() == static_env.DNE);
 
-    directory_entry ent_two(StaticEnv::BadSymlink);
-    TEST_CHECK(ent_two.path() == StaticEnv::BadSymlink);
+    directory_entry ent_two(static_env.BadSymlink);
+    TEST_CHECK(ent_two.path() == static_env.BadSymlink);
   }
 }
 

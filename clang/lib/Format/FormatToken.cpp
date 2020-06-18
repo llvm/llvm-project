@@ -50,6 +50,7 @@ bool FormatToken::isSimpleTypeSpecifier() const {
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
+  case tok::kw___bf16:
   case tok::kw__Float16:
   case tok::kw___float128:
   case tok::kw_wchar_t:
@@ -84,8 +85,8 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   const FormatToken *LBrace =
       State.NextToken->Previous->getPreviousNonComment();
   if (!LBrace || !LBrace->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
-      LBrace->BlockKind == BK_Block || LBrace->Type == TT_DictLiteral ||
-      LBrace->Next->Type == TT_DesignatedInitializerPeriod)
+      LBrace->BlockKind == BK_Block || LBrace->getType() == TT_DictLiteral ||
+      LBrace->Next->getType() == TT_DesignatedInitializerPeriod)
     return 0;
 
   // Calculate the number of code points we have to format this list. As the

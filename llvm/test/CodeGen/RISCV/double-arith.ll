@@ -460,9 +460,7 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32IFD-NEXT:    sw a4, 8(sp)
 ; RV32IFD-NEXT:    sw a5, 12(sp)
 ; RV32IFD-NEXT:    fld ft2, 8(sp)
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI15_0)
-; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI15_0)
-; RV32IFD-NEXT:    fld ft3, 0(a0)
+; RV32IFD-NEXT:    fcvt.d.w ft3, zero
 ; RV32IFD-NEXT:    fadd.d ft2, ft2, ft3
 ; RV32IFD-NEXT:    fmsub.d ft0, ft1, ft0, ft2
 ; RV32IFD-NEXT:    fsd ft0, 8(sp)
@@ -473,14 +471,12 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind {
 ;
 ; RV64IFD-LABEL: fmsub_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a3, %hi(.LCPI15_0)
-; RV64IFD-NEXT:    addi a3, a3, %lo(.LCPI15_0)
-; RV64IFD-NEXT:    fld ft0, 0(a3)
-; RV64IFD-NEXT:    fmv.d.x ft1, a1
-; RV64IFD-NEXT:    fmv.d.x ft2, a0
-; RV64IFD-NEXT:    fmv.d.x ft3, a2
-; RV64IFD-NEXT:    fadd.d ft0, ft3, ft0
-; RV64IFD-NEXT:    fmsub.d ft0, ft2, ft1, ft0
+; RV64IFD-NEXT:    fmv.d.x ft0, a1
+; RV64IFD-NEXT:    fmv.d.x ft1, a0
+; RV64IFD-NEXT:    fmv.d.x ft2, a2
+; RV64IFD-NEXT:    fmv.d.x ft3, zero
+; RV64IFD-NEXT:    fadd.d ft2, ft2, ft3
+; RV64IFD-NEXT:    fmsub.d ft0, ft1, ft0, ft2
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %c_ = fadd double 0.0, %c ; avoid negation using xor
@@ -502,9 +498,7 @@ define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 ; RV32IFD-NEXT:    sw a0, 8(sp)
 ; RV32IFD-NEXT:    sw a1, 12(sp)
 ; RV32IFD-NEXT:    fld ft2, 8(sp)
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI16_0)
-; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI16_0)
-; RV32IFD-NEXT:    fld ft3, 0(a0)
+; RV32IFD-NEXT:    fcvt.d.w ft3, zero
 ; RV32IFD-NEXT:    fadd.d ft2, ft2, ft3
 ; RV32IFD-NEXT:    fadd.d ft1, ft1, ft3
 ; RV32IFD-NEXT:    fnmadd.d ft0, ft2, ft0, ft1
@@ -516,15 +510,13 @@ define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 ;
 ; RV64IFD-LABEL: fnmadd_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a3, %hi(.LCPI16_0)
-; RV64IFD-NEXT:    addi a3, a3, %lo(.LCPI16_0)
-; RV64IFD-NEXT:    fld ft0, 0(a3)
-; RV64IFD-NEXT:    fmv.d.x ft1, a1
-; RV64IFD-NEXT:    fmv.d.x ft2, a2
-; RV64IFD-NEXT:    fmv.d.x ft3, a0
-; RV64IFD-NEXT:    fadd.d ft3, ft3, ft0
-; RV64IFD-NEXT:    fadd.d ft0, ft2, ft0
-; RV64IFD-NEXT:    fnmadd.d ft0, ft3, ft1, ft0
+; RV64IFD-NEXT:    fmv.d.x ft0, a1
+; RV64IFD-NEXT:    fmv.d.x ft1, a2
+; RV64IFD-NEXT:    fmv.d.x ft2, a0
+; RV64IFD-NEXT:    fmv.d.x ft3, zero
+; RV64IFD-NEXT:    fadd.d ft2, ft2, ft3
+; RV64IFD-NEXT:    fadd.d ft1, ft1, ft3
+; RV64IFD-NEXT:    fnmadd.d ft0, ft2, ft0, ft1
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %a_ = fadd double 0.0, %a
@@ -548,9 +540,7 @@ define double @fnmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32IFD-NEXT:    sw a0, 8(sp)
 ; RV32IFD-NEXT:    sw a1, 12(sp)
 ; RV32IFD-NEXT:    fld ft2, 8(sp)
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI17_0)
-; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI17_0)
-; RV32IFD-NEXT:    fld ft3, 0(a0)
+; RV32IFD-NEXT:    fcvt.d.w ft3, zero
 ; RV32IFD-NEXT:    fadd.d ft2, ft2, ft3
 ; RV32IFD-NEXT:    fnmsub.d ft0, ft2, ft1, ft0
 ; RV32IFD-NEXT:    fsd ft0, 8(sp)
@@ -561,14 +551,12 @@ define double @fnmsub_d(double %a, double %b, double %c) nounwind {
 ;
 ; RV64IFD-LABEL: fnmsub_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a3, %hi(.LCPI17_0)
-; RV64IFD-NEXT:    addi a3, a3, %lo(.LCPI17_0)
-; RV64IFD-NEXT:    fld ft0, 0(a3)
-; RV64IFD-NEXT:    fmv.d.x ft1, a2
-; RV64IFD-NEXT:    fmv.d.x ft2, a1
-; RV64IFD-NEXT:    fmv.d.x ft3, a0
-; RV64IFD-NEXT:    fadd.d ft0, ft3, ft0
-; RV64IFD-NEXT:    fnmsub.d ft0, ft0, ft2, ft1
+; RV64IFD-NEXT:    fmv.d.x ft0, a2
+; RV64IFD-NEXT:    fmv.d.x ft1, a1
+; RV64IFD-NEXT:    fmv.d.x ft2, a0
+; RV64IFD-NEXT:    fmv.d.x ft3, zero
+; RV64IFD-NEXT:    fadd.d ft2, ft2, ft3
+; RV64IFD-NEXT:    fnmsub.d ft0, ft2, ft1, ft0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %a_ = fadd double 0.0, %a

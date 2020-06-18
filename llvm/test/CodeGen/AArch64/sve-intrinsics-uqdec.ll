@@ -1,4 +1,7 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -asm-verbose=0 < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ; Since UQDEC{B|H|W|D|P} and UQINC{B|H|W|D|P} have identical semantics, the tests for
 ;   * @llvm.aarch64.sve.uqinc{b|h|w|d|p}, and

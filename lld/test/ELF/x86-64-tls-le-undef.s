@@ -6,10 +6,7 @@
 ## Undefined TLS symbols resolve to 0.
 ## In --noinhibit-exec mode, a non-weak undefined symbol is not an error.
 
-# CHECK:      leaq 16(%rax), %rdx
-# CHECK-NEXT: leaq 32(%rax), %rdx
+# CHECK: leaq 32(%rax), %rdx
 
-.weak weak
 movq %fs:0, %rax
-leaq weak@tpoff+16(%rax), %rdx
 leaq global@tpoff+32(%rax), %rdx

@@ -212,13 +212,6 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
         }
       }
     }
-    // Check the summaries to see if the symbol gets resolved to a known local
-    // definition.
-    if (VI && VI.isDSOLocal()) {
-      GV.setDSOLocal(true);
-      if (GV.hasDLLImportStorageClass())
-        GV.setDLLStorageClass(GlobalValue::DefaultStorageClass);
-    }
   }
 
   // We should always have a ValueInfo (i.e. GV in index) for definitions when
@@ -280,6 +273,20 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   } else
     GV.setLinkage(getLinkage(&GV, /* DoPromote */ false));
 
+  // When ClearDSOLocalOnDeclarations is true, clear dso_local if GV is
+  // converted to a declaration, to disable direct access. Don't do this if GV
+  // is implicitly dso_local due to a non-default visibility.
+  if (ClearDSOLocalOnDeclarations && GV.isDeclarationForLinker() &&
+      !GV.isImplicitDSOLocal()) {
+    GV.setDSOLocal(false);
+  } else if (VI && VI.isDSOLocal()) {
+    // If all summaries are dso_local, symbol gets resolved to a known local
+    // definition.
+    GV.setDSOLocal(true);
+    if (GV.hasDLLImportStorageClass())
+      GV.setDLLStorageClass(GlobalValue::DefaultStorageClass);
+  }
+
   // Remove functions imported as available externally defs from comdats,
   // as this is a declaration for the linker, and will be dropped eventually.
   // It is illegal for comdats to contain declarations.
@@ -319,7 +326,9 @@ bool FunctionImportGlobalProcessing::run() {
 }
 
 bool llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
+                                  bool ClearDSOLocalOnDeclarations,
                                   SetVector<GlobalValue *> *GlobalsToImport) {
-  FunctionImportGlobalProcessing ThinLTOProcessing(M, Index, GlobalsToImport);
+  FunctionImportGlobalProcessing ThinLTOProcessing(M, Index, GlobalsToImport,
+                                                   ClearDSOLocalOnDeclarations);
   return ThinLTOProcessing.run();
 }

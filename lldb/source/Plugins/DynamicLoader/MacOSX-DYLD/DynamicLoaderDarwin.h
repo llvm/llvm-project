@@ -238,7 +238,8 @@ protected:
   mutable std::recursive_mutex m_mutex;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderDarwin);
+  DynamicLoaderDarwin(const DynamicLoaderDarwin &) = delete;
+  const DynamicLoaderDarwin &operator=(const DynamicLoaderDarwin &) = delete;
 };
 
 } // namespace lldb_private

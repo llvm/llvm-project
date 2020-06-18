@@ -141,11 +141,13 @@ namespace clang {
 namespace tooling {
 
 /// Returns a clang build invocation initialized from the CC1 flags.
-CompilerInvocation *newInvocation(
-    DiagnosticsEngine *Diagnostics, const llvm::opt::ArgStringList &CC1Args) {
+CompilerInvocation *newInvocation(DiagnosticsEngine *Diagnostics,
+                                  const llvm::opt::ArgStringList &CC1Args,
+                                  const char *const BinaryName) {
   assert(!CC1Args.empty() && "Must at least contain the program name!");
   CompilerInvocation *Invocation = new CompilerInvocation;
-  CompilerInvocation::CreateFromArgs(*Invocation, CC1Args, *Diagnostics);
+  CompilerInvocation::CreateFromArgs(*Invocation, CC1Args, *Diagnostics,
+                                     BinaryName);
   Invocation->getFrontendOpts().DisableFree = false;
   Invocation->getCodeGenOpts().DisableFree = false;
   return Invocation;
@@ -345,7 +347,7 @@ bool ToolInvocation::run() {
   if (!CC1Args)
     return false;
   std::unique_ptr<CompilerInvocation> Invocation(
-      newInvocation(&Diagnostics, *CC1Args));
+      newInvocation(&Diagnostics, *CC1Args, BinaryName));
   // FIXME: remove this when all users have migrated!
   for (const auto &It : MappedFileContents) {
     // Inject the code as the given file name into the preprocessor options.

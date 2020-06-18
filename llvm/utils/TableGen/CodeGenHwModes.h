@@ -12,6 +12,7 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENHWMODES_H
 
 #include "llvm/ADT/StringMap.h"
+#include <cassert>
 #include <map>
 #include <string>
 #include <vector>

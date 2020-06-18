@@ -81,6 +81,7 @@ void verifyfeaturestrings() {
   (void)__builtin_cpu_supports("avx512vnni");
   (void)__builtin_cpu_supports("avx512bitalg");
   (void)__builtin_cpu_supports("avx512bf16");
+  (void)__builtin_cpu_supports("avx512vp2intersect");
 }
 
 void verifycpustrings() {

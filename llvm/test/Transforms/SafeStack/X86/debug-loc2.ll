@@ -17,11 +17,11 @@ entry:
   %1 = bitcast i32* %x2 to i8*, !dbg !14
 
 ; Unhandled dbg.value: expression does not start with OP_DW_deref
-; CHECK: call void @llvm.dbg.value(metadata ![[EMPTY:.*]], metadata !{{.*}}, metadata !{{.*}})
+; CHECK: call void @llvm.dbg.value(metadata i32* undef, metadata !{{.*}}, metadata !{{.*}})
   tail call void @llvm.dbg.value(metadata i32* %x1, metadata !10, metadata !23), !dbg !16
 
 ; Unhandled dbg.value: expression does not start with OP_DW_deref
-; CHECK: call void @llvm.dbg.value(metadata ![[EMPTY]], metadata !{{.*}}, metadata !{{.*}})
+; CHECK: call void @llvm.dbg.value(metadata i32* undef, metadata !{{.*}}, metadata !{{.*}})
   tail call void @llvm.dbg.value(metadata i32* %x1, metadata !10, metadata !24), !dbg !16
 
 ; Supported dbg.value: rewritted based on the [[USP]] value.
@@ -33,8 +33,8 @@ entry:
   tail call void @llvm.dbg.value(metadata i32* %x1, metadata !10, metadata !15), !dbg !16
   call void @capture(i32* nonnull %x1), !dbg !17
 
-; An extra non-dbg.value metadata use of %x2. Replaced with an empty metadata.
-; CHECK: call void @llvm.random.metadata.use(metadata ![[EMPTY]])
+; An extra non-dbg.value metadata use of %x2. Replaced with undef.
+; CHECK: call void @llvm.random.metadata.use(metadata i32* undef
   call void @llvm.random.metadata.use(metadata i32* %x2)
 
 ; CHECK: call void @llvm.dbg.value(metadata i8* %[[USP]], metadata ![[X2:.*]], metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref))
@@ -69,7 +69,6 @@ attributes #4 = { nounwind }
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 (trunk 271022) (llvm/trunk 271027)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "../llvm/2.cc", directory: "/code/build-llvm")
 
-; CHECK-DAG: ![[EMPTY]] = !{}
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}

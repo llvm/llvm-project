@@ -485,6 +485,7 @@ set(armv7_SOURCES ${arm_SOURCES})
 set(armv7s_SOURCES ${arm_SOURCES})
 set(armv7k_SOURCES ${arm_SOURCES})
 set(arm64_SOURCES ${aarch64_SOURCES})
+set(arm64e_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})
@@ -492,7 +493,6 @@ set(armv7m_SOURCES ${arm_SOURCES})
 set(armv7em_SOURCES ${arm_SOURCES})
 
 # hexagon arch
-set(hexagon_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(hexagon_SOURCES
   hexagon/common_entry_exit_abi1.S
   hexagon/common_entry_exit_abi2.S
@@ -524,6 +524,8 @@ set(hexagon_SOURCES
   hexagon/udivsi3.S
   hexagon/umoddi3.S
   hexagon/umodsi3.S
+  ${GENERIC_SOURCES}
+  ${GENERIC_TF_SOURCES}
 )
 
 
@@ -570,6 +572,12 @@ set(wasm64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
+
+set(ve_SOURCES
+  ve/grow_stack.S
+  ve/grow_stack_align.S
+  ${GENERIC_TF_SOURCES}
+  ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
 set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT Misc")

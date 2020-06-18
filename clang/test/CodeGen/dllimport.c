@@ -46,8 +46,8 @@ __declspec(dllimport) extern int GlobalRedecl3;
 USEVAR(GlobalRedecl3)
 
 // Make sure this works even if the decl has been used before it's defined (PR20792).
-// MS: @GlobalRedecl4 = common dso_local dllexport global i32
-// GNU: @GlobalRedecl4 = common dso_local global i32
+// MS: @GlobalRedecl4 = dso_local dllexport global i32
+// GNU: @GlobalRedecl4 = dso_local global i32
 __declspec(dllimport) extern int GlobalRedecl4;
 USEVAR(GlobalRedecl4)
                       int GlobalRedecl4; // dllimport ignored

@@ -55,8 +55,8 @@ INLINE int foo() {
 // RUN: -c -std=gnu89 -xc %s | llvm-nm - 2>&1 | \
 // RUN: FileCheck -check-prefix=CHECK-SYMBOLS %s
 
-// CHECK-TAPI-DAG: foo" : { Type: Func }
-// CHECK-TAPI-DAG: foo.var" : { Type: Object, Size: 4 }
+// CHECK-TAPI-DAG: foo", Type: Func }
+// CHECK-TAPI-DAG: foo.var",  Type: Object, Size: 4 }
 // CHECK-SYMBOLS-DAG: foo
 // CHECK-SYMBOLS-DAG: foo.var
 #include "inline.h"

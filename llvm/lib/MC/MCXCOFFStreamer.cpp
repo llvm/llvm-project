@@ -10,12 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/MCXCOFFStreamer.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
-#include "llvm/MC/MCXCOFFStreamer.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
@@ -34,13 +36,40 @@ bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
 
   switch (Attribute) {
   case MCSA_Global:
+  case MCSA_Extern:
     Symbol->setStorageClass(XCOFF::C_EXT);
     Symbol->setExternal(true);
+    break;
+  case MCSA_LGlobal:
+    Symbol->setStorageClass(XCOFF::C_HIDEXT);
+    Symbol->setExternal(true);
+    break;
+  case llvm::MCSA_Weak:
+    Symbol->setStorageClass(XCOFF::C_WEAKEXT);
+    Symbol->setExternal(true);
+    break;
+  case llvm::MCSA_Hidden:
+    Symbol->setVisibilityType(XCOFF::SYM_V_HIDDEN);
+    break;
+  case llvm::MCSA_Protected:
+    Symbol->setVisibilityType(XCOFF::SYM_V_PROTECTED);
     break;
   default:
     report_fatal_error("Not implemented yet.");
   }
   return true;
+}
+
+void MCXCOFFStreamer::emitXCOFFSymbolLinkageWithVisibility(
+    MCSymbol *Symbol, MCSymbolAttr Linkage, MCSymbolAttr Visibility) {
+
+  emitSymbolAttribute(Symbol, Linkage);
+
+  // When the caller passes `MCSA_Invalid` for the visibility, do not emit one.
+  if (Visibility == MCSA_Invalid)
+    return;
+
+  emitSymbolAttribute(Symbol, Visibility);
 }
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -49,6 +78,11 @@ void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   Symbol->setExternal(cast<MCSymbolXCOFF>(Symbol)->getStorageClass() !=
                       XCOFF::C_HIDEXT);
   Symbol->setCommon(Size, ByteAlignment);
+
+  // Default csect align is 4, but common symbols have explicit alignment values
+  // and we should honor it.
+  cast<MCSymbolXCOFF>(Symbol)->getRepresentedCsect()->setAlignment(
+      Align(ByteAlignment));
 
   // Emit the alignment and storage for the variable to the section.
   emitValueToAlignment(ByteAlignment);
@@ -61,7 +95,7 @@ void MCXCOFFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
   report_fatal_error("Zero fill not implemented for XCOFF.");
 }
 
-void MCXCOFFStreamer::EmitInstToData(const MCInst &Inst,
+void MCXCOFFStreamer::emitInstToData(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
   MCAssembler &Assembler = getAssembler();
   SmallVector<MCFixup, 4> Fixups;

@@ -5,8 +5,8 @@
 # RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
 # RUN: llvm-objdump --source %t.o | FileCheck %s
 
-# CHECK:      0000000000000000 add1:
+# CHECK:      0000000000000000 <add1>:
 # CHECK-NEXT: ; int add1(int a) { return a + 1; }
 #
-# CHECK:      0000000000000010 return4:
+# CHECK:      0000000000000010 <return4>:
 # CHECK-NEXT: ; int return4() { return 4; }

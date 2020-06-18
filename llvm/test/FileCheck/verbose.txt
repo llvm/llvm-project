@@ -1,8 +1,8 @@
-; RUN: %ProtectFileCheckOutput FileCheck -input-file %s %s 2>&1 \
+; RUN: %ProtectFileCheckOutput FileCheck -dump-input=never -input-file %s %s 2>&1 \
 ; RUN: | FileCheck -check-prefix QUIET --allow-empty %s
-; RUN: %ProtectFileCheckOutput FileCheck -v -input-file %s %s 2>&1 \
+; RUN: %ProtectFileCheckOutput FileCheck -dump-input=never -v -input-file %s %s 2>&1 \
 ; RUN: | FileCheck --strict-whitespace -check-prefix V %s
-; RUN: %ProtectFileCheckOutput FileCheck -vv -input-file %s %s 2>&1 \
+; RUN: %ProtectFileCheckOutput FileCheck -dump-input=never -vv -input-file %s %s 2>&1 \
 ; RUN: | FileCheck --strict-whitespace -check-prefixes V,VV %s
 
 foo

@@ -10,7 +10,7 @@
 
 // pointer_safety get_pointer_safety();
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <memory>
 #include <cassert>

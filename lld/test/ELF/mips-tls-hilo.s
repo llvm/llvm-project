@@ -4,7 +4,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck -check-prefix=DIS %s
+# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck --check-prefix=DIS %s
 # RUN: llvm-readobj -r -A %t.exe | FileCheck %s
 
 # RUN: ld.lld %t.o -shared -o %t.so
@@ -12,7 +12,7 @@
 
 # DIS: 00000000 l    O .tdata          00000000 loc0
 
-# DIS:      __start:
+# DIS:      <__start>:
 # DIS-NEXT:    addiu   $2, $3, 0
 #                              ^-- %hi(loc0 - .tdata - 0x8000)
 # DIS-NEXT:    addiu   $2, $3, -32768

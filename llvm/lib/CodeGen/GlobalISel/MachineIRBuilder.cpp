@@ -33,47 +33,9 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
   State.Observer = nullptr;
 }
 
-void MachineIRBuilder::setMBB(MachineBasicBlock &MBB) {
-  State.MBB = &MBB;
-  State.II = MBB.end();
-  assert(&getMF() == MBB.getParent() &&
-         "Basic block is in a different function");
-}
-
-void MachineIRBuilder::setInstr(MachineInstr &MI) {
-  assert(MI.getParent() && "Instruction is not part of a basic block");
-  setMBB(*MI.getParent());
-  State.II = MI.getIterator();
-}
-
-void MachineIRBuilder::setCSEInfo(GISelCSEInfo *Info) { State.CSEInfo = Info; }
-
-void MachineIRBuilder::setInsertPt(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator II) {
-  assert(MBB.getParent() == &getMF() &&
-         "Basic block is in a different function");
-  State.MBB = &MBB;
-  State.II = II;
-}
-
-void MachineIRBuilder::recordInsertion(MachineInstr *InsertedInstr) const {
-  if (State.Observer)
-    State.Observer->createdInstr(*InsertedInstr);
-}
-
-void MachineIRBuilder::setChangeObserver(GISelChangeObserver &Observer) {
-  State.Observer = &Observer;
-}
-
-void MachineIRBuilder::stopObservingChanges() { State.Observer = nullptr; }
-
 //------------------------------------------------------------------------------
 // Build instruction variants.
 //------------------------------------------------------------------------------
-
-MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opcode) {
-  return insertInstr(buildInstrNoInsert(Opcode));
-}
 
 MachineInstrBuilder MachineIRBuilder::buildInstrNoInsert(unsigned Opcode) {
   MachineInstrBuilder MIB = BuildMI(getMF(), getDL(), getTII().get(Opcode));
@@ -135,7 +97,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
-  auto MIB = buildInstr(TargetOpcode::DBG_VALUE);
+  auto MIB = buildInstrNoInsert(TargetOpcode::DBG_VALUE);
   if (auto *CI = dyn_cast<ConstantInt>(&C)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
@@ -148,7 +110,8 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     MIB.addReg(0U);
   }
 
-  return MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
+  MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
+  return insertInstr(MIB);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildDbgLabel(const MDNode *Label) {
@@ -162,12 +125,12 @@ MachineInstrBuilder MachineIRBuilder::buildDbgLabel(const MDNode *Label) {
 
 MachineInstrBuilder MachineIRBuilder::buildDynStackAlloc(const DstOp &Res,
                                                          const SrcOp &Size,
-                                                         unsigned Align) {
+                                                         Align Alignment) {
   assert(Res.getLLTTy(*getMRI()).isPointer() && "expected ptr dst type");
   auto MIB = buildInstr(TargetOpcode::G_DYN_STACKALLOC);
   Res.addDefToMIB(*getMRI(), MIB);
   Size.addSrcToMIB(MIB);
-  MIB.addImm(Align);
+  MIB.addImm(Alignment.value());
   return MIB;
 }
 
@@ -237,17 +200,14 @@ MachineIRBuilder::materializePtrAdd(Register &Res, Register Op0,
   return buildPtrAdd(Res, Op0, Cst.getReg(0));
 }
 
-MachineInstrBuilder MachineIRBuilder::buildPtrMask(const DstOp &Res,
-                                                   const SrcOp &Op0,
-                                                   uint32_t NumBits) {
-  assert(Res.getLLTTy(*getMRI()).isPointer() &&
-         Res.getLLTTy(*getMRI()) == Op0.getLLTTy(*getMRI()) && "type mismatch");
-
-  auto MIB = buildInstr(TargetOpcode::G_PTR_MASK);
-  Res.addDefToMIB(*getMRI(), MIB);
-  Op0.addSrcToMIB(MIB);
-  MIB.addImm(NumBits);
-  return MIB;
+MachineInstrBuilder MachineIRBuilder::buildMaskLowPtrBits(const DstOp &Res,
+                                                          const SrcOp &Op0,
+                                                          uint32_t NumBits) {
+  LLT PtrTy = Res.getLLTTy(*getMRI());
+  LLT MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+  Register MaskReg = getMRI()->createGenericVirtualRegister(MaskTy);
+  buildConstant(MaskReg, maskTrailingZeros<uint64_t>(NumBits));
+  return buildPtrMask(Res, Op0, MaskReg);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {
@@ -290,6 +250,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
   }
 
   auto Const = buildInstr(TargetOpcode::G_CONSTANT);
+  Const->setDebugLoc(DebugLoc());
   Res.addDefToMIB(*getMRI(), Const);
   Const.addCImm(&Val);
   return Const;
@@ -323,6 +284,7 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   }
 
   auto Const = buildInstr(TargetOpcode::G_FCONSTANT);
+  Const->setDebugLoc(DebugLoc());
   Res.addDefToMIB(*getMRI(), Const);
   Const.addFPImm(&Val);
   return Const;
@@ -377,6 +339,23 @@ MachineInstrBuilder MachineIRBuilder::buildLoadInstr(unsigned Opcode,
   return MIB;
 }
 
+MachineInstrBuilder MachineIRBuilder::buildLoadFromOffset(
+  const DstOp &Dst, const SrcOp &BasePtr,
+  MachineMemOperand &BaseMMO, int64_t Offset) {
+  LLT LoadTy = Dst.getLLTTy(*getMRI());
+  MachineMemOperand *OffsetMMO =
+    getMF().getMachineMemOperand(&BaseMMO, Offset, LoadTy.getSizeInBytes());
+
+  if (Offset == 0) // This may be a size or type changing load.
+    return buildLoad(Dst, BasePtr, *OffsetMMO);
+
+  LLT PtrTy = BasePtr.getLLTTy(*getMRI());
+  LLT OffsetTy = LLT::scalar(PtrTy.getSizeInBits());
+  auto ConstOffset = buildConstant(OffsetTy, Offset);
+  auto Ptr = buildPtrAdd(PtrTy, BasePtr, ConstOffset);
+  return buildLoad(Dst, Ptr, *OffsetMMO);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildStore(const SrcOp &Val,
                                                  const SrcOp &Addr,
                                                  MachineMemOperand &MMO) {
@@ -388,22 +367,6 @@ MachineInstrBuilder MachineIRBuilder::buildStore(const SrcOp &Val,
   Addr.addSrcToMIB(MIB);
   MIB.addMemOperand(&MMO);
   return MIB;
-}
-
-MachineInstrBuilder MachineIRBuilder::buildUAddo(const DstOp &Res,
-                                                 const DstOp &CarryOut,
-                                                 const SrcOp &Op0,
-                                                 const SrcOp &Op1) {
-  return buildInstr(TargetOpcode::G_UADDO, {Res, CarryOut}, {Op0, Op1});
-}
-
-MachineInstrBuilder MachineIRBuilder::buildUAdde(const DstOp &Res,
-                                                 const DstOp &CarryOut,
-                                                 const SrcOp &Op0,
-                                                 const SrcOp &Op1,
-                                                 const SrcOp &CarryIn) {
-  return buildInstr(TargetOpcode::G_UADDE, {Res, CarryOut},
-                    {Op0, Op1, CarryIn});
 }
 
 MachineInstrBuilder MachineIRBuilder::buildAnyExt(const DstOp &Res,
@@ -529,7 +492,7 @@ void MachineIRBuilder::buildSequence(Register Res, ArrayRef<Register> Ops,
 #ifndef NDEBUG
   assert(Ops.size() == Indices.size() && "incompatible args");
   assert(!Ops.empty() && "invalid trivial sequence");
-  assert(std::is_sorted(Indices.begin(), Indices.end()) &&
+  assert(llvm::is_sorted(Indices) &&
          "sequence offsets must be in ascending order");
 
   assert(getMRI()->getType(Res).isValid() && "invalid operand type");
@@ -975,7 +938,11 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
   case TargetOpcode::G_SMIN:
   case TargetOpcode::G_SMAX:
   case TargetOpcode::G_UMIN:
-  case TargetOpcode::G_UMAX: {
+  case TargetOpcode::G_UMAX:
+  case TargetOpcode::G_UADDSAT:
+  case TargetOpcode::G_SADDSAT:
+  case TargetOpcode::G_USUBSAT:
+  case TargetOpcode::G_SSUBSAT: {
     // All these are binary ops.
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 2 && "Invalid Srcs");

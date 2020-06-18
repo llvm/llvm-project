@@ -5,7 +5,7 @@
 // writing a local test source. We filter out platform-specific intrinsic
 // includes from the main file to avoid unnecessary dependencies and decrease
 // the test cost. The command-line flags further ensure a specific intrinsic is
-// processed and we only check the ouptut below.
+// processed and we only check the output below.
 // We also verify emission of type specialization for overloadable intrinsics.
 //
 // RUN: cat %S/../../../llvm/include/llvm/IR/Intrinsics.td \
@@ -15,15 +15,16 @@
 
 // CHECK-LABEL: def LLVM_ptrmask
 // CHECK: LLVM_IntrOp<"ptrmask
-// CHECK: Arguments<(ins
-// CHECK: Results<(outs
-// CHECK: llvm::Function *fn = llvm::Intrinsic::getDeclaration(
-// CHECK:        module, llvm::Intrinsic::ptrmask, {
-// CHECK:        opInst.getResult(0).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
-// CHECK:        opInst.getOperand(0).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
-// CHECK:        opInst.getOperand(1).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
-// CHECK: });
-// CHECK:        lookupValues(opInst.getOperands());
+// The result of this intrinsic result is overloadable.
+// CHECK: [0]
+// The second operand is overloadable, but the first operand needs to
+// match the result type.
+// CHECK: [1]
+// It has no additional traits.
+// CHECK: []
+// It has a result.
+// CHECK: 1>
+// CHECK: Arguments<(ins LLVM_Type, LLVM_Type
 
 //---------------------------------------------------------------------------//
 

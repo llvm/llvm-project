@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-insert-skips -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass si-insert-skips -verify-machineinstrs -o - %s | FileCheck -check-prefix=W32 %s
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-pre-emit-peephole -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass si-pre-emit-peephole -verify-machineinstrs -o - %s | FileCheck -check-prefix=W32 %s
 
 ---
 # GCN-LABEL: name: and_execz_mov_vccz
@@ -305,7 +305,7 @@ body:             |
 # GCN-LABEL: name: and_execz_imm_vccz_liveout_scc
 # GCN:      $vcc = S_AND_B64 $exec, -1, implicit-def $scc
 # GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
-# GCN-NEXT  S_ENDPGM 0, implicit $scc
+# GCN-NEXT: S_ENDPGM 0, implicit $scc
 name:            and_execz_imm_vccz_liveout_scc
 body:             |
   bb.0:

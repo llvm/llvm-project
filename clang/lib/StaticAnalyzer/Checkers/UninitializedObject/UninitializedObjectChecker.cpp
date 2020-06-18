@@ -608,7 +608,7 @@ std::string clang::ento::getVariableName(const FieldDecl *Field) {
 void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   auto Chk = Mgr.registerChecker<UninitializedObjectChecker>();
 
-  AnalyzerOptions &AnOpts = Mgr.getAnalyzerOptions();
+  const AnalyzerOptions &AnOpts = Mgr.getAnalyzerOptions();
   UninitObjCheckerOptions &ChOpts = Chk->Opts;
 
   ChOpts.IsPedantic = AnOpts.getCheckerBooleanOption(Chk, "Pedantic");
@@ -628,6 +628,6 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
         "\"" + ErrorMsg + "\"");
 }
 
-bool ento::shouldRegisterUninitializedObjectChecker(const LangOptions &LO) {
+bool ento::shouldRegisterUninitializedObjectChecker(const CheckerManager &mgr) {
   return true;
 }

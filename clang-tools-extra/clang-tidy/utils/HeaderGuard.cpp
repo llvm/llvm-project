@@ -273,13 +273,13 @@ void HeaderGuardCheck::registerPPCallbacks(const SourceManager &SM,
 }
 
 bool HeaderGuardCheck::shouldSuggestEndifComment(StringRef FileName) {
-  return utils::isHeaderFileExtension(FileName, HeaderFileExtensions);
+  return utils::isFileExtension(FileName, HeaderFileExtensions);
 }
 
 bool HeaderGuardCheck::shouldFixHeaderGuard(StringRef FileName) { return true; }
 
 bool HeaderGuardCheck::shouldSuggestToAddHeaderGuard(StringRef FileName) {
-  return utils::isHeaderFileExtension(FileName, HeaderFileExtensions);
+  return utils::isFileExtension(FileName, HeaderFileExtensions);
 }
 
 std::string HeaderGuardCheck::formatEndIf(StringRef HeaderGuard) {

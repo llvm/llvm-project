@@ -98,7 +98,8 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(half addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}v_test_no_denormals_canonicalize_fneg_var_f16:
-; GFX89: v_mul_f16_e32 [[REG:v[0-9]+]], -1.0, v{{[0-9]+}}
+; VI: v_mul_f16_e32 [[REG:v[0-9]+]], -1.0, v{{[0-9]+}}
+; GFX9: v_max_f16_e64 [[REG:v[0-9]+]], -v{{[0-9]+}}, -v{{[0-9]+}}
 ; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REG]]
 define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(half addrspace(1)* %out) #2 {
   %val = load half, half addrspace(1)* %out
@@ -109,7 +110,9 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(half ad
 }
 
 ; GCN-LABEL: {{^}}v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
-; GFX89: v_mul_f16_e64 [[REG:v[0-9]+]], -1.0, |v{{[0-9]+}}|
+; VI: v_mul_f16_e64 [[REG:v[0-9]+]], -1.0, |v{{[0-9]+}}|
+; GFX9: v_max_f16_e64 [[REG:v[0-9]+]], -|v{{[0-9]+}}|, -|v{{[0-9]+}}|
+
 ; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REG]]
 
 ; CI: v_cvt_f32_f16_e64 {{v[0-9]+}}, -|{{v[0-9]+}}|
@@ -344,8 +347,8 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(<2 x half> addrspa
 }
 
 ; GCN-LABEL: {{^}}s_test_canonicalize_var_v2f16:
-; VI: v_max_f16_sdwa [[REG0:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI: v_max_f16_e64 [[REG1:v[0-9]+]], {{s[0-9]+}}, {{s[0-9]+}}
+; VI-DAG: v_max_f16_sdwa [[REG0:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-DAG: v_max_f16_e64 [[REG1:v[0-9]+]], {{s[0-9]+}}, {{s[0-9]+}}
 ; VI-NOT: v_and_b32
 
 ; GFX9: v_pk_max_f16 [[REG:v[0-9]+]], {{s[0-9]+}}, {{s[0-9]+$}}
@@ -739,6 +742,6 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind "target-features"="-fp64-fp16-denormals" }
-attributes #3 = { nounwind "target-features"="+fp64-fp16-denormals" }
+attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #3 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

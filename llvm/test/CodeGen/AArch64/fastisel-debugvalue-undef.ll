@@ -12,14 +12,11 @@ define void @foo() !dbg !6 {
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.debugify = !{!3, !4}
 !llvm.module.flags = !{!5}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "t.ll", directory: "/")
 !2 = !{}
-!3 = !{i32 2}
-!4 = !{i32 1}
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
 !7 = !DISubroutineType(types: !2)

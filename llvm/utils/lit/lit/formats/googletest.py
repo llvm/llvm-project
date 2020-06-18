@@ -12,7 +12,7 @@ kIsWindows = sys.platform in ['win32', 'cygwin']
 
 class GoogleTest(TestFormat):
     def __init__(self, test_sub_dirs, test_suffix):
-        self.test_sub_dirs = os.path.normcase(str(test_sub_dirs)).split(';')
+        self.test_sub_dirs = str(test_sub_dirs).split(';')
 
         # On Windows, assume tests will also end in '.exe'.
         exe_suffix = str(test_suffix)
@@ -41,7 +41,15 @@ class GoogleTest(TestFormat):
             litConfig.warning(
                 "unable to discover google-tests in %r: %s. Process output: %s"
                 % (path, sys.exc_info()[1], exc.output))
-            raise StopIteration
+            # This doesn't look like a valid gtest file.  This can
+            # have a number of causes, none of them good.  For
+            # instance, we could have created a broken executable.
+            # Alternatively, someone has cruft in their test
+            # directory.  If we don't return a test here, then no
+            # failures will get reported, so return a dummy test name
+            # so that the failure is reported later.
+            yield 'failed_to_discover_tests_from_gtest'
+            return
 
         nested_tests = []
         for ln in output.splitlines(False):  # Don't keep newlines.

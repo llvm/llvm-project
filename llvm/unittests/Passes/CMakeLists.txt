@@ -16,7 +16,7 @@ if (NOT WIN32)
   add_llvm_unittest(PluginsTests
     PluginsTest.cpp
     )
-  export_executable_symbols(PluginsTests)
+  export_executable_symbols_for_plugins(PluginsTests)
   target_link_libraries(PluginsTests PRIVATE LLVMTestingSupport)
 
   set(LLVM_LINK_COMPONENTS)

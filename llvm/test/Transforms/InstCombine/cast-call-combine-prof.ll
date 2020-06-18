@@ -32,7 +32,7 @@ lpad:
   unreachable
 }
 
-; CHECK: ![[$PROF]] = !{!"branch_weights", i32 2000}
+; CHECK: ![[$PROF]] = !{!"VP", i32 0, i64 2000, i64 -3913987384944532146, i64 2000}
 !0 = !{!"VP", i32 0, i64 2000, i64 -3913987384944532146, i64 2000}
 
 !llvm.module.flags = !{!1}

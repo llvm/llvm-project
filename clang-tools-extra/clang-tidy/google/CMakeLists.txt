@@ -1,4 +1,7 @@
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
 
 add_clang_library(clangTidyGoogleModule
   AvoidCStyleCastsCheck.cpp
@@ -21,11 +24,15 @@ add_clang_library(clangTidyGoogleModule
   UsingNamespaceDirectiveCheck.cpp
 
   LINK_LIBS
+  clangTidy
+  clangTidyReadabilityModule
+  clangTidyUtils
+  )
+
+clang_target_link_libraries(clangTidyGoogleModule
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
-  clangTidy
-  clangTidyReadabilityModule
-  clangTidyUtils
   )

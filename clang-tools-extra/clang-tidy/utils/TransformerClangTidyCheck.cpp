@@ -30,7 +30,10 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(
                                         const OptionsView &)>
         MakeRule,
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), Rule(MakeRule(getLangOpts(), Options)) {
+    : ClangTidyCheck(Name, Context), Rule(MakeRule(getLangOpts(), Options)),
+      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
+                                            IncludeSorter::getMapping(),
+                                            IncludeSorter::IS_LLVM)) {
   if (Rule)
     assert(llvm::all_of(Rule->Cases, hasExplanation) &&
            "clang-tidy checks must have an explanation by default;"
@@ -40,7 +43,10 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(
 TransformerClangTidyCheck::TransformerClangTidyCheck(RewriteRule R,
                                                      StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), Rule(std::move(R)) {
+    : ClangTidyCheck(Name, Context), Rule(std::move(R)),
+      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
+                                            IncludeSorter::getMapping(),
+                                            IncludeSorter::IS_LLVM)) {
   assert(llvm::all_of(Rule->Cases, hasExplanation) &&
          "clang-tidy checks must have an explanation by default;"
          " explicitly provide an empty explanation if none is desired");
@@ -53,8 +59,8 @@ void TransformerClangTidyCheck::registerPPCallbacks(
   if (Rule && llvm::any_of(Rule->Cases, [](const RewriteRule::Case &C) {
         return !C.AddedIncludes.empty();
       })) {
-    Inserter = std::make_unique<IncludeInserter>(
-        SM, getLangOpts(), utils::IncludeSorter::IS_LLVM);
+    Inserter =
+        std::make_unique<IncludeInserter>(SM, getLangOpts(), IncludeStyle);
     PP->addPPCallbacks(Inserter->CreatePPCallbacks());
   }
 }
@@ -73,16 +79,15 @@ void TransformerClangTidyCheck::check(
 
   assert(Rule && "check() should not fire if Rule is None");
   RewriteRule::Case Case = transformer::detail::findSelectedCase(Result, *Rule);
-  Expected<SmallVector<transformer::detail::Transformation, 1>>
-      Transformations = transformer::detail::translateEdits(Result, Case.Edits);
-  if (!Transformations) {
-    llvm::errs() << "Rewrite failed: "
-                 << llvm::toString(Transformations.takeError()) << "\n";
+  Expected<SmallVector<transformer::Edit, 1>> Edits = Case.Edits(Result);
+  if (!Edits) {
+    llvm::errs() << "Rewrite failed: " << llvm::toString(Edits.takeError())
+                 << "\n";
     return;
   }
 
   // No rewrite applied, but no error encountered either.
-  if (Transformations->empty())
+  if (Edits->empty())
     return;
 
   Expected<std::string> Explanation = Case.Explanation->eval(Result);
@@ -93,9 +98,8 @@ void TransformerClangTidyCheck::check(
   }
 
   // Associate the diagnostic with the location of the first change.
-  DiagnosticBuilder Diag =
-      diag((*Transformations)[0].Range.getBegin(), *Explanation);
-  for (const auto &T : *Transformations)
+  DiagnosticBuilder Diag = diag((*Edits)[0].Range.getBegin(), *Explanation);
+  for (const auto &T : *Edits)
     Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
 
   for (const auto &I : Case.AddedIncludes) {
@@ -106,6 +110,12 @@ void TransformerClangTidyCheck::check(
       Diag << *Fix;
     }
   }
+}
+
+void TransformerClangTidyCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", IncludeStyle,
+                IncludeSorter::getMapping());
 }
 
 } // namespace utils

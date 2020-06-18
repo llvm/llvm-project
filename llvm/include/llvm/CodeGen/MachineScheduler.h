@@ -186,6 +186,9 @@ struct MachineSchedPolicy {
   // first.
   bool DisableLatencyHeuristic = false;
 
+  // Compute DFSResult for use in scheduling heuristics.
+  bool ComputeDFSResult = false;
+
   MachineSchedPolicy() = default;
 };
 
@@ -1061,7 +1064,7 @@ public:
   }
 
 protected:
-  void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand);
+  virtual void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand);
 
   void pickNodeFromQueue(SchedCandidate &Cand);
 };

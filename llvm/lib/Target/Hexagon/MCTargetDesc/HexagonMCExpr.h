@@ -12,7 +12,6 @@
 #include "llvm/MC/MCExpr.h"
 
 namespace llvm {
-class MCInst;
 class HexagonMCExpr : public MCTargetExpr {
 public:
   static HexagonMCExpr *create(MCExpr const *Expr, MCContext &Ctx);

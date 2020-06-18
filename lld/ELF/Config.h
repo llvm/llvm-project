@@ -17,6 +17,7 @@
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/GlobPattern.h"
 #include <atomic>
 #include <vector>
 
@@ -90,6 +91,7 @@ struct Configuration {
   uint32_t andFeatures = 0;
   llvm::CachePruningPolicy thinLTOCachePolicy;
   llvm::StringMap<uint64_t> sectionStartMap;
+  llvm::StringRef bfdname;
   llvm::StringRef chroot;
   llvm::StringRef dynamicLinker;
   llvm::StringRef dwoDir;
@@ -108,11 +110,13 @@ struct Configuration {
   llvm::StringRef optRemarksPasses;
   llvm::StringRef optRemarksFormat;
   llvm::StringRef progName;
+  llvm::StringRef printArchiveStats;
   llvm::StringRef printSymbolOrder;
   llvm::StringRef soName;
   llvm::StringRef sysroot;
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOIndexOnlyArg;
+  llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOPrefixReplace;
   std::string rpath;
@@ -121,6 +125,7 @@ struct Configuration {
   std::vector<llvm::StringRef> filterList;
   std::vector<llvm::StringRef> searchPaths;
   std::vector<llvm::StringRef> symbolOrderingFile;
+  std::vector<llvm::StringRef> thinLTOModulesToCompile;
   std::vector<llvm::StringRef> undefined;
   std::vector<SymbolVersion> dynamicList;
   std::vector<uint8_t> buildIdVector;
@@ -157,13 +162,14 @@ struct Configuration {
   bool gdbIndex;
   bool gnuHash = false;
   bool gnuUnique;
-  bool hasDynamicList = false;
   bool hasDynSymTab;
   bool ignoreDataAddressEquality;
   bool ignoreFunctionAddressEquality;
   bool ltoCSProfileGenerate;
   bool ltoDebugPassManager;
+  bool ltoEmitAsm;
   bool ltoNewPassManager;
+  bool ltoUniqueBasicBlockSectionNames;
   bool ltoWholeProgramVisibility;
   bool mergeArmExidx;
   bool mipsN32Abi = false;
@@ -174,6 +180,7 @@ struct Configuration {
   bool nostdlib;
   bool oFormatBinary;
   bool omagic;
+  bool optimizeBBJumps;
   bool optRemarksWithHotness;
   bool picThunk;
   bool pie;
@@ -182,8 +189,10 @@ struct Configuration {
   bool relocatable;
   bool relrPackDynRelocs;
   bool saveTemps;
+  llvm::Optional<uint32_t> shuffleSectionSeed;
   bool singleRoRx;
   bool shared;
+  bool symbolic;
   bool isStatic = false;
   bool sysvHash = false;
   bool target1Rel;
@@ -193,8 +202,10 @@ struct Configuration {
   bool timeTraceEnabled;
   bool tocOptimize;
   bool undefinedVersion;
+  bool unique;
   bool useAndroidRelrTags = false;
   bool warnBackrefs;
+  std::vector<llvm::GlobPattern> warnBackrefsExclude;
   bool warnCommon;
   bool warnIfuncTextrel;
   bool warnMissingEntry;
@@ -243,7 +254,7 @@ struct Configuration {
   unsigned ltoPartitions;
   unsigned ltoo;
   unsigned optimize;
-  unsigned thinLTOJobs;
+  StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
 

@@ -1,4 +1,6 @@
 #include "clang/AST/JSONNodeDumper.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringSwitch.h"
 
@@ -109,7 +111,7 @@ void JSONNodeDumper::Visit(const Decl *D) {
     JOS.attribute("isReferenced", true);
 
   if (const auto *ND = dyn_cast<NamedDecl>(D))
-    attributeOnlyIfTrue("isHidden", ND->isHidden());
+    attributeOnlyIfTrue("isHidden", !ND->isUnconditionallyVisible());
 
   if (D->getLexicalDeclContext() != D->getDeclContext()) {
     // Because of multiple inheritance, a DeclContext pointer does not produce
@@ -384,6 +386,7 @@ static llvm::json::Object
 createCopyAssignmentDefinitionData(const CXXRecordDecl *RD) {
   llvm::json::Object Ret;
 
+  FIELD2("simple", hasSimpleCopyAssignment);
   FIELD2("trivial", hasTrivialCopyAssignment);
   FIELD2("nonTrivial", hasNonTrivialCopyAssignment);
   FIELD2("hasConstParam", hasCopyAssignmentWithConstParam);
@@ -464,13 +467,10 @@ JSONNodeDumper::createCXXRecordDefinitionData(const CXXRecordDecl *RD) {
 #undef FIELD2
 
 std::string JSONNodeDumper::createAccessSpecifier(AccessSpecifier AS) {
-  switch (AS) {
-  case AS_none: return "none";
-  case AS_private: return "private";
-  case AS_protected: return "protected";
-  case AS_public: return "public";
-  }
-  llvm_unreachable("Unknown access specifier");
+  const auto AccessSpelling = getAccessSpelling(AS);
+  if (AccessSpelling.empty())
+    return "none";
+  return AccessSpelling.str();
 }
 
 llvm::json::Object
@@ -998,31 +998,32 @@ void JSONNodeDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
   case ObjCPropertyDecl::Optional: JOS.attribute("control", "optional"); break;
   }
 
-  ObjCPropertyDecl::PropertyAttributeKind Attrs = D->getPropertyAttributes();
-  if (Attrs != ObjCPropertyDecl::OBJC_PR_noattr) {
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_getter)
+  ObjCPropertyAttribute::Kind Attrs = D->getPropertyAttributes();
+  if (Attrs != ObjCPropertyAttribute::kind_noattr) {
+    if (Attrs & ObjCPropertyAttribute::kind_getter)
       JOS.attribute("getter", createBareDeclRef(D->getGetterMethodDecl()));
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_setter)
+    if (Attrs & ObjCPropertyAttribute::kind_setter)
       JOS.attribute("setter", createBareDeclRef(D->getSetterMethodDecl()));
-    attributeOnlyIfTrue("readonly", Attrs & ObjCPropertyDecl::OBJC_PR_readonly);
-    attributeOnlyIfTrue("assign", Attrs & ObjCPropertyDecl::OBJC_PR_assign);
+    attributeOnlyIfTrue("readonly",
+                        Attrs & ObjCPropertyAttribute::kind_readonly);
+    attributeOnlyIfTrue("assign", Attrs & ObjCPropertyAttribute::kind_assign);
     attributeOnlyIfTrue("readwrite",
-                        Attrs & ObjCPropertyDecl::OBJC_PR_readwrite);
-    attributeOnlyIfTrue("retain", Attrs & ObjCPropertyDecl::OBJC_PR_retain);
-    attributeOnlyIfTrue("copy", Attrs & ObjCPropertyDecl::OBJC_PR_copy);
+                        Attrs & ObjCPropertyAttribute::kind_readwrite);
+    attributeOnlyIfTrue("retain", Attrs & ObjCPropertyAttribute::kind_retain);
+    attributeOnlyIfTrue("copy", Attrs & ObjCPropertyAttribute::kind_copy);
     attributeOnlyIfTrue("nonatomic",
-                        Attrs & ObjCPropertyDecl::OBJC_PR_nonatomic);
-    attributeOnlyIfTrue("atomic", Attrs & ObjCPropertyDecl::OBJC_PR_atomic);
-    attributeOnlyIfTrue("weak", Attrs & ObjCPropertyDecl::OBJC_PR_weak);
-    attributeOnlyIfTrue("strong", Attrs & ObjCPropertyDecl::OBJC_PR_strong);
+                        Attrs & ObjCPropertyAttribute::kind_nonatomic);
+    attributeOnlyIfTrue("atomic", Attrs & ObjCPropertyAttribute::kind_atomic);
+    attributeOnlyIfTrue("weak", Attrs & ObjCPropertyAttribute::kind_weak);
+    attributeOnlyIfTrue("strong", Attrs & ObjCPropertyAttribute::kind_strong);
     attributeOnlyIfTrue("unsafe_unretained",
-                        Attrs & ObjCPropertyDecl::OBJC_PR_unsafe_unretained);
-    attributeOnlyIfTrue("class", Attrs & ObjCPropertyDecl::OBJC_PR_class);
-    attributeOnlyIfTrue("direct", Attrs & ObjCPropertyDecl::OBJC_PR_direct);
+                        Attrs & ObjCPropertyAttribute::kind_unsafe_unretained);
+    attributeOnlyIfTrue("class", Attrs & ObjCPropertyAttribute::kind_class);
+    attributeOnlyIfTrue("direct", Attrs & ObjCPropertyAttribute::kind_direct);
     attributeOnlyIfTrue("nullability",
-                        Attrs & ObjCPropertyDecl::OBJC_PR_nullability);
+                        Attrs & ObjCPropertyAttribute::kind_nullability);
     attributeOnlyIfTrue("null_resettable",
-                        Attrs & ObjCPropertyDecl::OBJC_PR_null_resettable);
+                        Attrs & ObjCPropertyAttribute::kind_null_resettable);
   }
 }
 
@@ -1234,14 +1235,7 @@ void JSONNodeDumper::VisitCallExpr(const CallExpr *CE) {
 
 void JSONNodeDumper::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *TTE) {
-  switch (TTE->getKind()) {
-  case UETT_SizeOf: JOS.attribute("name", "sizeof"); break;
-  case UETT_AlignOf: JOS.attribute("name", "alignof"); break;
-  case UETT_VecStep:  JOS.attribute("name", "vec_step"); break;
-  case UETT_PreferredAlignOf:  JOS.attribute("name", "__alignof"); break;
-  case UETT_OpenMPRequiredSimdAlign:
-    JOS.attribute("name", "__builtin_omp_required_simd_align"); break;
-  }
+  JOS.attribute("name", getTraitSpelling(TTE->getKind()));
   if (TTE->isArgumentType())
     JOS.attribute("argType", createQualType(TTE->getArgumentType()));
 }
@@ -1333,7 +1327,16 @@ void JSONNodeDumper::VisitExprWithCleanups(const ExprWithCleanups *EWC) {
   if (EWC->getNumObjects()) {
     JOS.attributeArray("cleanups", [this, EWC] {
       for (const ExprWithCleanups::CleanupObject &CO : EWC->getObjects())
-        JOS.value(createBareDeclRef(CO));
+        if (auto *BD = CO.dyn_cast<BlockDecl *>()) {
+          JOS.value(createBareDeclRef(BD));
+        } else if (auto *CLE = CO.dyn_cast<CompoundLiteralExpr *>()) {
+          llvm::json::Object Obj;
+          Obj["id"] = createPointerRepresentation(CLE);
+          Obj["kind"] = CLE->getStmtClassName();
+          JOS.value(std::move(Obj));
+        } else {
+          llvm_unreachable("unexpected cleanup object type");
+        }
     });
   }
 }

@@ -9,13 +9,13 @@
 #include "Annotations.h"
 #include "Diagnostics.h"
 #include "ParsedAST.h"
-#include "Path.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "TestIndex.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
+#include "support/Path.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -33,6 +33,7 @@ using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::IsEmpty;
 using ::testing::Pair;
+using testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
 ::testing::Matcher<const Diag &> WithFix(::testing::Matcher<Fix> FixMatcher) {
@@ -49,6 +50,12 @@ WithNote(::testing::Matcher<Note> NoteMatcher) {
   return Field(&Diag::Notes, ElementsAre(NoteMatcher));
 }
 
+::testing::Matcher<const Diag &>
+WithNote(::testing::Matcher<Note> NoteMatcher1,
+         ::testing::Matcher<Note> NoteMatcher2) {
+  return Field(&Diag::Notes, UnorderedElementsAre(NoteMatcher1, NoteMatcher2));
+}
+
 MATCHER_P2(Diag, Range, Message,
            "Diag at " + llvm::to_string(Range) + " = [" + Message + "]") {
   return arg.Range == Range && arg.Message == Message;
@@ -61,9 +68,7 @@ MATCHER_P3(Fix, Range, Replacement, Message,
          arg.Edits[0].range == Range && arg.Edits[0].newText == Replacement;
 }
 
-MATCHER_P(FixMessage, Message, "") {
-  return arg.Message == Message;
-}
+MATCHER_P(FixMessage, Message, "") { return arg.Message == Message; }
 
 MATCHER_P(EqualToLSPDiag, LSPDiag,
           "LSP diagnostic " + llvm::to_string(LSPDiag)) {
@@ -105,6 +110,7 @@ TEST(DiagnosticsTest, DiagnosticRanges) {
   // Check we report correct ranges, including various edge-cases.
   Annotations Test(R"cpp(
     // error-ok
+    #define ID(X) X
     namespace test{};
     void $decl[[foo]]();
     class T{$explicit[[]]$constructor[[T]](int a);};
@@ -117,6 +123,7 @@ o]]();
       struct Foo { int x; }; Foo a;
       a.$nomember[[y]];
       test::$nomembernamespace[[test]];
+      $macro[[ID($macroarg[[fod]])]]();
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
@@ -145,6 +152,10 @@ o]]();
           Diag(Test.range("nomember"), "no member named 'y' in 'Foo'"),
           Diag(Test.range("nomembernamespace"),
                "no member named 'test' in namespace 'test'"),
+          AllOf(Diag(Test.range("macro"),
+                     "use of undeclared identifier 'fod'; did you mean 'foo'?"),
+                WithFix(Fix(Test.range("macroarg"), "foo",
+                            "change 'fod' to 'foo'"))),
           // We make sure here that the entire token is highlighted
           AllOf(Diag(Test.range("constructor"),
                      "single-argument constructors must be marked explicit to "
@@ -258,13 +269,85 @@ TEST(DiagnosticsTest, ClangTidy) {
           Diag(Test.range("macroarg"),
                "multiple unsequenced modifications to 'y'"),
           AllOf(
-            Diag(Test.range("main"),
-                 "use a trailing return type for this function"),
-            DiagSource(Diag::ClangTidy),
-            DiagName("modernize-use-trailing-return-type"),
-            // Verify that we don't have "[check-name]" suffix in the message.
-            WithFix(FixMessage("use a trailing return type for this function")))
-          ));
+              Diag(Test.range("main"),
+                   "use a trailing return type for this function"),
+              DiagSource(Diag::ClangTidy),
+              DiagName("modernize-use-trailing-return-type"),
+              // Verify that we don't have "[check-name]" suffix in the message.
+              WithFix(FixMessage(
+                  "use a trailing return type for this function")))));
+}
+
+TEST(DiagnosticTest, TemplatesInHeaders) {
+  // Diagnostics from templates defined in headers are placed at the expansion.
+  Annotations Main(R"cpp(
+    Derived<int> [[y]]; // error-ok
+  )cpp");
+  Annotations Header(R"cpp(
+    template <typename T>
+    struct Derived : [[T]] {};
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.HeaderCode = Header.code().str();
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(AllOf(
+          Diag(Main.range(), "in template: base specifier must name a class"),
+          WithNote(Diag(Header.range(), "error occurred here"),
+                   Diag(Main.range(), "in instantiation of template class "
+                                      "'Derived<int>' requested here")))));
+}
+
+TEST(DiagnosticTest, MakeUnique) {
+  // We usually miss diagnostics from header functions as we don't parse them.
+  // std::make_unique is an exception.
+  Annotations Main(R"cpp(
+    struct S { S(char*); };
+    auto x = std::[[make_unique]]<S>(42); // error-ok
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.HeaderCode = R"cpp(
+    namespace std {
+    // These mocks aren't quite right - we omit unique_ptr for simplicity.
+    // forward is included to show its body is not needed to get the diagnostic.
+    template <typename T> T&& forward(T& t) { return static_cast<T&&>(t); }
+    template <typename T, typename... A> T* make_unique(A&&... args) {
+       return new T(std::forward<A>(args)...);
+    }
+    }
+  )cpp";
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(
+                  Diag(Main.range(),
+                       "in template: "
+                       "no matching constructor for initialization of 'S'")));
+}
+
+TEST(DiagnosticTest, NoMultipleDiagnosticInFlight) {
+  Annotations Main(R"cpp(
+    template <typename T> struct Foo {
+      T *begin();
+      T *end();
+    };
+    struct LabelInfo {
+      int a;
+      bool b;
+    };
+
+    void f() {
+      Foo<LabelInfo> label_info_map;
+      [[for]] (auto it = label_info_map.begin(); it != label_info_map.end(); ++it) {
+        auto S = *it;
+      }
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyChecks = "modernize-loop-convert";
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(::testing::AllOf(
+          Diag(Main.range(), "use range-based for loop instead"),
+          DiagSource(Diag::ClangTidy), DiagName("modernize-loop-convert"))));
 }
 
 TEST(DiagnosticTest, ClangTidySuppressionComment) {
@@ -274,7 +357,11 @@ TEST(DiagnosticTest, ClangTidySuppressionComment) {
       double d = 8 / i;  // NOLINT
       // NOLINTNEXTLINE
       double e = 8 / i;
-      double f = [[8]] / i;
+      #define BAD 8 / i
+      double f = BAD;  // NOLINT
+      double g = [[8]] / i;
+      #define BAD2 BAD
+      double h = BAD2;  // NOLINT
     }
   )cpp");
   TestTU TU = TestTU::withCode(Main.code());
@@ -338,23 +425,17 @@ n]] = 10; // error-ok
                   Fix(Source.range(), "ident", "change 'ide\\…' to 'ident'"))));
 }
 
-TEST(DiagnosticTest, ClangTidyWarningAsErrorTrumpsSuppressionComment) {
+TEST(DiagnosticTest, ClangTidySuppressionCommentTrumpsWarningAsError) {
   Annotations Main(R"cpp(
     int main() {
       int i = 3;
-      double f = [[8]] / i;  // NOLINT // error-ok
+      double f = [[8]] / i;  // NOLINT
     }
   )cpp");
   TestTU TU = TestTU::withCode(Main.code());
   TU.ClangTidyChecks = "bugprone-integer-division";
   TU.ClangTidyWarningsAsErrors = "bugprone-integer-division";
-  EXPECT_THAT(
-      TU.build().getDiagnostics(),
-      UnorderedElementsAre(::testing::AllOf(
-          Diag(Main.range(), "result of integer division used in a floating "
-                             "point context; possible loss of precision"),
-          DiagSource(Diag::ClangTidy), DiagName("bugprone-integer-division"),
-          DiagSeverity(DiagnosticsEngine::Error))));
+  EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre());
 }
 
 TEST(DiagnosticsTest, Preprocessor) {
@@ -374,6 +455,47 @@ TEST(DiagnosticsTest, Preprocessor) {
   EXPECT_THAT(
       TestTU::withCode(Test.code()).build().getDiagnostics(),
       ElementsAre(Diag(Test.range(), "use of undeclared identifier 'b'")));
+}
+
+// Recursive main-file include is diagnosed, and doesn't crash.
+TEST(DiagnosticsTest, RecursivePreamble) {
+  auto TU = TestTU::withCode(R"cpp(
+    #include "foo.h" // error-ok
+    int symbol;
+  )cpp");
+  TU.Filename = "foo.h";
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(DiagName("pp_including_mainfile_in_preamble")));
+  EXPECT_THAT(TU.build().getLocalTopLevelDecls(), SizeIs(1));
+}
+
+// Recursive main-file include with #pragma once guard is OK.
+TEST(DiagnosticsTest, RecursivePreamblePragmaOnce) {
+  auto TU = TestTU::withCode(R"cpp(
+    #pragma once
+    #include "foo.h"
+    int symbol;
+  )cpp");
+  TU.Filename = "foo.h";
+  EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+  EXPECT_THAT(TU.build().getLocalTopLevelDecls(), SizeIs(1));
+}
+
+// Recursive main-file include with #ifndef guard should be OK.
+// However, it's not yet recognized (incomplete at end of preamble).
+TEST(DiagnosticsTest, RecursivePreambleIfndefGuard) {
+  auto TU = TestTU::withCode(R"cpp(
+    #ifndef FOO
+    #define FOO
+    #include "foo.h" // error-ok
+    int symbol;
+    #endif
+  )cpp");
+  TU.Filename = "foo.h";
+  // FIXME: should be no errors here.
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(DiagName("pp_including_mainfile_in_preamble")));
+  EXPECT_THAT(TU.build().getLocalTopLevelDecls(), SizeIs(1));
 }
 
 TEST(DiagnosticsTest, InsideMacros) {
@@ -425,8 +547,8 @@ TEST(DiagnosticsTest, ToLSP) {
       URIForFile::canonicalize(testPath("foo/bar/header.h"), "");
 
   clangd::Diag D;
-  D.ID = clang::diag::err_enum_class_reference;
-  D.Name = "enum_class_reference";
+  D.ID = clang::diag::err_undeclared_var_use;
+  D.Name = "undeclared_var_use";
   D.Source = clangd::Diag::Clang;
   D.Message = "something terrible happened";
   D.Range = {pos(1, 2), pos(3, 4)};
@@ -462,7 +584,7 @@ TEST(DiagnosticsTest, ToLSP) {
   clangd::Diagnostic MainLSP;
   MainLSP.range = D.Range;
   MainLSP.severity = getSeverity(DiagnosticsEngine::Error);
-  MainLSP.code = "enum_class_reference";
+  MainLSP.code = "undeclared_var_use";
   MainLSP.source = "clang";
   MainLSP.message =
       R"(Something terrible happened (fix available)
@@ -493,7 +615,7 @@ main.cpp:2:3: error: something terrible happened)";
       LSPDiags,
       ElementsAre(Pair(EqualToLSPDiag(MainLSP), ElementsAre(EqualToFix(F))),
                   Pair(EqualToLSPDiag(NoteInMainLSP), IsEmpty())));
-  EXPECT_EQ(LSPDiags[0].first.code, "enum_class_reference");
+  EXPECT_EQ(LSPDiags[0].first.code, "undeclared_var_use");
   EXPECT_EQ(LSPDiags[0].first.source, "clang");
   EXPECT_EQ(LSPDiags[1].first.code, "");
   EXPECT_EQ(LSPDiags[1].first.source, "");
@@ -678,7 +800,7 @@ void foo() {
 TEST(IncludeFixerTest, NoCrashMemebrAccess) {
   Annotations Test(R"cpp(// error-ok
     struct X { int  xyz; };
-    void g() { X x; x.$[[xy]] }
+    void g() { X x; x.$[[xy]]; }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
   auto Index = buildIndexWithSymbol(
@@ -836,8 +958,9 @@ TEST(IncludeFixerTest, NoCrashOnTemplateInstantiations) {
   auto Index = buildIndexWithSymbol({});
   TU.ExternalIndex = Index.get();
 
-  EXPECT_THAT(TU.build().getDiagnostics(),
-              ElementsAre(Diag(Test.range(), "use of undeclared identifier 'a'")));
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(Diag(Test.range(), "use of undeclared identifier 'a'")));
 }
 
 TEST(DiagsInHeaders, DiagInsideHeader) {
@@ -959,6 +1082,20 @@ TEST(DiagsInHeaders, OnlyErrorOrFatal) {
                   Diag(Main.range(), "in included file: C++ requires "
                                      "a type specifier for all declarations"),
                   WithNote(Diag(Header.range(), "error occurred here")))));
+}
+
+TEST(DiagsInHeaders, OnlyDefaultErrorOrFatal) {
+  Annotations Main(R"cpp(
+    #include [["a.h"]] // get unused "foo" warning when building preamble.
+    )cpp");
+  Annotations Header(R"cpp(
+    namespace { void foo() {} }
+    void func() {foo();} ;)cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
+  // promote warnings to errors.
+  TU.ExtraArgs = {"-Werror", "-Wunused"};
+  EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
 }
 
 TEST(DiagsInHeaders, FromNonWrittenSources) {

@@ -93,7 +93,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}s_uint_to_fp_i1_to_f16:
+; GCN-LABEL: {{^}}s_uint_to_fp_i1_to_f16:
 ; GCN-DAG: v_cmp_le_f32_e32 [[CMP0:vcc]], 1.0, {{v[0-9]+}}
 ; GCN-DAG: v_cmp_le_f32_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]], 0, {{v[0-9]+}}
 ; GCN: s_xor_b64 [[R_CMP:s\[[0-9]+:[0-9]+\]]], [[CMP1]], [[CMP0]]

@@ -61,7 +61,7 @@ everything to the LLVM dialect.
 
 ```c++
   mlir::ConversionTarget target(getContext());
-  target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+  target.addLegalDialect<mlir::LLVMDialect>();
   target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
 ```
 
@@ -94,7 +94,7 @@ by relying on [transitive lowering](../../../getting_started/Glossary.md#transit
   mlir::populateLoopToStdConversionPatterns(patterns, &getContext());
   mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
-  // The only remaining operation to lower from the `toy` dialect, is the
+  // The only remaining operation, to lower from the `toy` dialect, is the
   // PrintOp.
   patterns.insert<PrintOpLowering>(&getContext());
 ```
@@ -105,7 +105,7 @@ We want to completely lower to LLVM, so we use a `FullConversion`. This ensures
 that only legal operations will remain after the conversion.
 
 ```c++
-  mlir::ModuleOp module = getModule();
+  mlir::ModuleOp module = getOperation();
   if (mlir::failed(mlir::applyFullConversion(module, target, patterns,
                                              &typeConverter)))
     signalPassFailure();
@@ -115,11 +115,11 @@ Looking back at our current working example:
 
 ```mlir
 func @main() {
-  %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64>
-  %2 = "toy.transpose"(%0) : (tensor<2x3xf64>) -> tensor<3x2xf64>
-  %3 = "toy.mul"(%2, %2) : (tensor<3x2xf64>, tensor<3x2xf64>) -> tensor<3x2xf64>
-  "toy.print"(%3) : (tensor<3x2xf64>) -> ()
-  "toy.return"() : () -> ()
+  %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+  %2 = toy.transpose(%0 : tensor<2x3xf64>) to tensor<3x2xf64>
+  %3 = toy.mul %2, %2 : tensor<3x2xf64>
+  toy.print %3 : tensor<3x2xf64>
+  toy.return
 }
 ```
 
@@ -239,8 +239,8 @@ define void @main()
 }
 ```
 
-The full code listing for dumping LLVM IR can be found in `Ch6/toy.cpp` in the
-`dumpLLVMIR()` function:
+The full code listing for dumping LLVM IR can be found in 
+`examples/toy/Ch6/toy.cpp` in the `dumpLLVMIR()` function:
 
 ```c++
 
@@ -275,7 +275,7 @@ int dumpLLVMIR(mlir::ModuleOp module) {
 Setting up a JIT to run the module containing the LLVM dialect can be done using
 the `mlir::ExecutionEngine` infrastructure. This is a utility wrapper around
 LLVM's JIT that accepts `.mlir` as input. The full code listing for setting up
-the JIT can be found in `Ch6/toy.cpp` in the `runJit()` function:
+the JIT can be found in `Ch6/toyc.cpp` in the `runJit()` function:
 
 ```c++
 int runJit(mlir::ModuleOp module) {
@@ -315,8 +315,11 @@ $ echo 'def main() { print([[1, 2], [3, 4]]); }' | ./bin/toyc-ch6 -emit=jit
 
 You can also play with `-emit=mlir`, `-emit=mlir-affine`, `-emit=mlir-llvm`, and
 `-emit=llvm` to compare the various levels of IR involved. Also try options like
-[`--print-ir-after-all`](../../WritingAPass.md#ir-printing) to track the
+[`--print-ir-after-all`](../../PassManagement.md#ir-printing) to track the
 evolution of the IR throughout the pipeline.
+
+The example code used throughout this section can be found in 
+test/Examples/Toy/Ch6/llvm-lowering.mlir.
 
 So far, we have worked with primitive data types. In the
 [next chapter](Ch-7.md), we will add a composite `struct` type.

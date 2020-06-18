@@ -38,7 +38,7 @@ end:
 ; CHECK-NEXT:             MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [p] -> { Stmt_next[] -> MemRef_val[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load float, float* %A
+; CHECK-NEXT:                   %val = load float, float* %A, align 4
 ; CHECK-NEXT:                   %fcmp = fcmp oeq float %val, 4.100000e+01
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_nonaffine__TO__end
@@ -50,8 +50,8 @@ end:
 ; CHECK-NEXT:             MayWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [p] -> { Stmt_nonaffine__TO__end[] -> MemRef_A[0] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load float, float* %A
-; CHECK-NEXT:                   %val = load float, float* %A
+; CHECK-NEXT:                   %val = load float, float* %A, align 4
+; CHECK-NEXT:                   %val = load float, float* %A, align 4
 ; CHECK-NEXT:                   %fcmp = fcmp oeq float %val, 4.100000e+01
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

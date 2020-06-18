@@ -30,6 +30,7 @@
 namespace llvm {
 
 class GlobalValue;
+class GlobalValueSummary;
 
 namespace object {
 
@@ -83,7 +84,9 @@ public:
     Absolute = 1U << 3,
     Exported = 1U << 4,
     Callable = 1U << 5,
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Callable)
+    MaterializationSideEffectsOnly = 1U << 6,
+    LLVM_MARK_AS_BITMASK_ENUM( // LargestValue =
+        MaterializationSideEffectsOnly)
   };
 
   /// Default-construct a JITSymbolFlags instance.
@@ -145,6 +148,21 @@ public:
   /// Returns true if the given symbol is known to be callable.
   bool isCallable() const { return (Flags & Callable) == Callable; }
 
+  /// Returns true if this symbol is a materialization-side-effects-only
+  /// symbol. Such symbols do not have a real address. They exist to trigger
+  /// and support synchronization of materialization side effects, e.g. for
+  /// collecting initialization information. These symbols will vanish from
+  /// the symbol table immediately upon reaching the ready state, and will
+  /// appear to queries as if they were never defined (except that query
+  /// callback execution will be delayed until they reach the ready state).
+  /// MaterializationSideEffectOnly symbols should only be queried using the
+  /// SymbolLookupFlags::WeaklyReferencedSymbol flag (see
+  /// llvm/include/llvm/ExecutionEngine/Orc/Core.h).
+  bool hasMaterializationSideEffectsOnly() const {
+    return (Flags & MaterializationSideEffectsOnly) ==
+           MaterializationSideEffectsOnly;
+  }
+
   /// Get the underlying flags value as an integer.
   UnderlyingType getRawFlagsValue() const {
     return static_cast<UnderlyingType>(Flags);
@@ -159,6 +177,10 @@ public:
   /// Construct a JITSymbolFlags value based on the flags of the given global
   /// value.
   static JITSymbolFlags fromGlobalValue(const GlobalValue &GV);
+
+  /// Construct a JITSymbolFlags value based on the flags of the given global
+  /// value summary.
+  static JITSymbolFlags fromSummary(GlobalValueSummary *S);
 
   /// Construct a JITSymbolFlags value based on the flags of the given libobject
   /// symbol.
@@ -214,6 +236,13 @@ public:
   /// Create a symbol for the given address and flags.
   JITEvaluatedSymbol(JITTargetAddress Address, JITSymbolFlags Flags)
       : Address(Address), Flags(Flags) {}
+
+  /// Create a symbol from the given pointer with the given flags.
+  template <typename T>
+  static JITEvaluatedSymbol
+  fromPointer(T *P, JITSymbolFlags Flags = JITSymbolFlags::Exported) {
+    return JITEvaluatedSymbol(pointerToJITTargetAddress(P), Flags);
+  }
 
   /// An evaluated symbol converts to 'true' if its address is non-zero.
   explicit operator bool() const { return Address != 0; }

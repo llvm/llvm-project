@@ -31,9 +31,6 @@ for.body:
 ; CHECK-NEXT:    [[I32_IV:%.*]] = phi <4 x i32> [ <i32 0, i32 9, i32 18, i32 27>, [[VECTOR_PH]] ], [ [[I32_IV_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[IV_FROM_TRUNC:%.*]] = phi <4 x i8> [ <i8 0, i8 9, i8 18, i8 27>, [[VECTOR_PH]] ], [ [[IV_FROM_TRUNC_NEXT:%.*]], [[VECTOR_BODY]] ]
 
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[MAIN_IV]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[MAIN_IV]], 0
 
 ; CHECK-NEXT:    [[I8_IV_NEXT]] = add <4 x i8> [[I8_IV]], [[IV_FROM_TRUNC]]

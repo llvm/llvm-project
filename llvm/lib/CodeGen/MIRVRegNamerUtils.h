@@ -17,15 +17,18 @@
 #ifndef LLVM_LIB_CODEGEN_MIRVREGNAMERUTILS_H
 #define LLVM_LIB_CODEGEN_MIRVREGNAMERUTILS_H
 
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/CodeGen/Register.h"
+#include <map>
+#include <vector>
+#include <string>
 
 namespace llvm {
+
+class MachineBasicBlock;
+class MachineInstr;
+class MachineRegisterInfo;
+class StringRef;
+
 /// VRegRenamer - This class is used for renaming vregs in a machine basic
 /// block according to semantics of the instruction.
 class VRegRenamer {
@@ -71,6 +74,7 @@ class VRegRenamer {
 
   /// Create a vreg with name and return it.
   unsigned createVirtualRegisterWithLowerName(unsigned VReg, StringRef Name);
+
   /// Linearly traverse the MachineBasicBlock and rename each instruction's
   /// vreg definition based on the semantics of the instruction.
   /// Names are as follows bb<BBNum>_hash_[0-9]+

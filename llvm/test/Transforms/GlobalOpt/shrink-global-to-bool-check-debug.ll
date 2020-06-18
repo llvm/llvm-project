@@ -11,8 +11,8 @@ entry:
 
 ;CHECK:      @bar
 ;CHECK-NEXT: entry:
-;CHECK-NEXT:   store i1 true, i1* @foo, !dbg ![[DbgLocStore:[0-9]+]]
-;CHECK-NEXT:   %.b = load i1, i1* @foo, !dbg ![[DbgLocLoadSel:[0-9]+]]
+;CHECK-NEXT:   store i1 true, i1* @foo, align 1, !dbg ![[DbgLocStore:[0-9]+]]
+;CHECK-NEXT:   %.b = load i1, i1* @foo, align 1, !dbg ![[DbgLocLoadSel:[0-9]+]]
 ;CHECK-NEXT:   %0 = select i1 %.b, i32 5, i32 0, !dbg ![[DbgLocLoadSel]]
 ;CHECK-NEXT:   call void @llvm.dbg.value({{.*}}), !dbg ![[DbgLocLoadSel]]
 ;CHECK-NEXT:   ret i32 %0, !dbg ![[DbgLocRet:[0-9]+]]

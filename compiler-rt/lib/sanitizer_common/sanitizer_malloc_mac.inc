@@ -61,12 +61,10 @@ INTERCEPTOR(malloc_zone_t *, malloc_create_zone,
   malloc_zone_t *new_zone = (malloc_zone_t *)p;
   internal_memcpy(new_zone, &sanitizer_zone, sizeof(sanitizer_zone));
   new_zone->zone_name = NULL;  // The name will be changed anyway.
-  if (GetMacosVersion() >= MACOS_VERSION_LION) {
-    // Prevent the client app from overwriting the zone contents.
-    // Library functions that need to modify the zone will set PROT_WRITE on it.
-    // This matches the behavior of malloc_create_zone() on OSX 10.7 and higher.
-    mprotect(new_zone, allocated_size, PROT_READ);
-  }
+  // Prevent the client app from overwriting the zone contents.
+  // Library functions that need to modify the zone will set PROT_WRITE on it.
+  // This matches the behavior of malloc_create_zone() on OSX 10.7 and higher.
+  mprotect(new_zone, allocated_size, PROT_READ);
   // We're explicitly *NOT* registering the zone.
   return new_zone;
 }
@@ -75,11 +73,9 @@ INTERCEPTOR(void, malloc_destroy_zone, malloc_zone_t *zone) {
   COMMON_MALLOC_ENTER();
   // We don't need to do anything here.  We're not registering new zones, so we
   // don't to unregister.  Just un-mprotect and free() the zone.
-  if (GetMacosVersion() >= MACOS_VERSION_LION) {
-    uptr page_size = GetPageSizeCached();
-    uptr allocated_size = RoundUpTo(sizeof(sanitizer_zone), page_size);
-    mprotect(zone, allocated_size, PROT_READ | PROT_WRITE);
-  }
+  uptr page_size = GetPageSizeCached();
+  uptr allocated_size = RoundUpTo(sizeof(sanitizer_zone), page_size);
+  mprotect(zone, allocated_size, PROT_READ | PROT_WRITE);
   if (zone->zone_name) {
     COMMON_MALLOC_FREE((void *)zone->zone_name);
   }

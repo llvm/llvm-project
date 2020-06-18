@@ -8,8 +8,6 @@
 # EXE:      Relocations [
 # EXE-NEXT: ]
 
-.text
-.global foo
 .weak foo
 
 _start:

@@ -43,16 +43,14 @@ public:
 
 class FormattersMatchCandidate {
 public:
-  FormattersMatchCandidate(ConstString name, uint32_t reason, bool strip_ptr,
+  FormattersMatchCandidate(ConstString name, bool strip_ptr,
                            bool strip_ref, bool strip_tydef)
-      : m_type_name(name), m_reason(reason), m_stripped_pointer(strip_ptr),
+      : m_type_name(name), m_stripped_pointer(strip_ptr),
         m_stripped_reference(strip_ref), m_stripped_typedef(strip_tydef) {}
 
   ~FormattersMatchCandidate() = default;
 
   ConstString GetTypeName() const { return m_type_name; }
-
-  uint32_t GetReason() const { return m_reason; }
 
   bool DidStripPointer() const { return m_stripped_pointer; }
 
@@ -75,7 +73,6 @@ public:
 
 private:
   ConstString m_type_name;
-  uint32_t m_reason;
   bool m_stripped_pointer;
   bool m_stripped_reference;
   bool m_stripped_typedef;
@@ -154,8 +151,9 @@ private:
   };
   TypeOrName m_type;
 
-private:
-  DISALLOW_COPY_AND_ASSIGN(TypeNameSpecifierImpl);
+  TypeNameSpecifierImpl(const TypeNameSpecifierImpl &) = delete;
+  const TypeNameSpecifierImpl &
+  operator=(const TypeNameSpecifierImpl &) = delete;
 };
 
 } // namespace lldb_private

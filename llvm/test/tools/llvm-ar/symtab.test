@@ -52,6 +52,12 @@
 # RUN: llvm-nm --print-armap %t-to-no-symtab.a \
 # RUN:   | FileCheck %s --check-prefix=NO-SYMTAB
 
+## Thin Archive:
+# RUN: rm -f %t-thin.a
+# RUN: llvm-ar rcT %t-thin.a %t.o
+# RUN: llvm-nm --print-armap %t-thin.a \
+# RUN:   | FileCheck %s --check-prefix=SYMTAB
+
 # SYMTAB:        symbol in
 # NO-SYMTAB-NOT: symbol in
 

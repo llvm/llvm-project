@@ -23,14 +23,14 @@
 
 # DIS: 00000000 l    O .tdata          00000000 loc
 # DIS: 00000004 g    O .tdata          00000000 bar
-# DIS: 00000000 g    O *UND*           00000000 foo
+# DIS: 00000000      O *UND*           00000000 foo
 
 # DIS:      Contents of section .got:
 # DIS-NEXT:  30000 00000000 80000000 00000000 ffff9004
 # DIS-NEXT:  30010 00000000 00000000 00000001 00000000
 # DIS-NEXT:  30020 00000001 ffff8004
 
-# DIS:      __start:
+# DIS:      <__start>:
 # DIS-NEXT:    addiu   $2, $3, -32736
 # DIS-NEXT:    addiu   $2, $3, -32744
 # DIS-NEXT:    addiu   $2, $3, -32728

@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -inline -mlir-disable-inline-simplify | FileCheck %s
-// RUN: mlir-opt %s -inline -mlir-disable-inline-simplify -mlir-print-debuginfo | FileCheck %s --check-prefix INLINE-LOC
-// RUN: mlir-opt %s -inline -mlir-disable-inline-simplify=false | FileCheck %s --check-prefix INLINE_SIMPLIFY
+// RUN: mlir-opt %s -inline="disable-simplify" | FileCheck %s
+// RUN: mlir-opt %s -inline="disable-simplify" -mlir-print-debuginfo | FileCheck %s --check-prefix INLINE-LOC
+// RUN: mlir-opt %s -inline | FileCheck %s --check-prefix INLINE_SIMPLIFY
 
 // Inline a function that takes an argument.
 func @func_with_arg(%c : i32) -> i32 {
@@ -32,7 +32,7 @@ func @func_with_multi_return(%a : i1) -> (i32) {
 
 // CHECK-LABEL: func @inline_with_multi_return() -> i32
 func @inline_with_multi_return() -> i32 {
-// CHECK-NEXT:    [[VAL_7:%.*]] = constant 0 : i1
+// CHECK-NEXT:    [[VAL_7:%.*]] = constant false
 // CHECK-NEXT:    cond_br [[VAL_7]], ^bb1, ^bb2
 // CHECK:       ^bb1:
 // CHECK-NEXT:    [[VAL_8:%.*]] = constant 0 : i32
@@ -43,7 +43,7 @@ func @inline_with_multi_return() -> i32 {
 // CHECK:       ^bb3([[VAL_10:%.*]]: i32):
 // CHECK-NEXT:    return [[VAL_10]] : i32
 
-  %false = constant 0 : i1
+  %false = constant false
   %x = call @func_with_multi_return(%false) : (i1) -> i32
   return %x : i32
 }
@@ -128,6 +128,27 @@ func @inline_convert_call() -> i16 {
   // CHECK: %[[CAST_RESULT:.*]] = "test.cast"(%[[CAST_INPUT]]) : (i32) -> i16
   // CHECK-NEXT: return %[[CAST_RESULT]]
   %res = "test.conversion_call_op"(%test_input) { callee=@convert_callee_fn } : (i16) -> (i16)
+  return %res : i16
+}
+
+func @convert_callee_fn_multiblock() -> i32 {
+  br ^bb0
+^bb0:
+  %0 = constant 0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @inline_convert_result_multiblock
+func @inline_convert_result_multiblock() -> i16 {
+// CHECK:   br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %[[C:.+]] = constant 0 : i32
+// CHECK:   br ^bb2(%[[C]] : i32)
+// CHECK: ^bb2(%[[BBARG:.+]]: i32):
+// CHECK:   %[[CAST_RESULT:.+]] = "test.cast"(%[[BBARG]]) : (i32) -> i16
+// CHECK:   return %[[CAST_RESULT]] : i16
+
+  %res = "test.conversion_call_op"() { callee=@convert_callee_fn_multiblock } : () -> (i16)
   return %res : i16
 }
 

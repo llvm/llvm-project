@@ -149,6 +149,11 @@ uint64_t LLVMGetGlobalValueAddress(LLVMExecutionEngineRef EE, const char *Name);
 
 uint64_t LLVMGetFunctionAddress(LLVMExecutionEngineRef EE, const char *Name);
 
+/// Returns true on error, false on success. If true is returned then the error
+/// message is copied to OutStr and cleared in the ExecutionEngine instance.
+LLVMBool LLVMExecutionEngineGetErrMsg(LLVMExecutionEngineRef EE,
+                                      char **OutError);
+
 /*===-- Operations on memory managers -------------------------------------===*/
 
 typedef uint8_t *(*LLVMMemoryManagerAllocateCodeSectionCallback)(

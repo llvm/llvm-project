@@ -56,12 +56,12 @@
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/TypeName.h"
 #include <type_traits>
 
 namespace llvm {
 
 class PreservedAnalyses;
+class StringRef;
 
 /// This class manages callbacks registration, as well as provides a way for
 /// PassInstrumentation to pass control to the registered callbacks.

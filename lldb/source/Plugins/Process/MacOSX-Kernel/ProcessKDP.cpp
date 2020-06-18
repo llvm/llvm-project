@@ -250,7 +250,7 @@ Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
     const uint16_t reply_port = socket.GetLocalPortNumber();
 
     if (reply_port != 0) {
-      m_comm.SetConnection(conn_up.release());
+      m_comm.SetConnection(std::move(conn_up));
 
       if (m_comm.SendRequestReattach(reply_port)) {
         if (m_comm.SendRequestConnect(reply_port, reply_port,

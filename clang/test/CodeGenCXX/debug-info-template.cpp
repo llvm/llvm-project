@@ -129,9 +129,7 @@ struct NN {
 // CHECK: [[NNV]] = distinct !DIGlobalVariable(name: "nn"
 // CHECK-SAME:                                 type: ![[NNT:[0-9]+]]
 
-// FIXME: these parameters should probably be rendered as 'glb' rather than
-// '&glb', since they're references, not pointers.
-// CHECK: ![[NNT]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "NN<tmpl_impl, &glb, &glb>",
+// CHECK: ![[NNT]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "NN<tmpl_impl, glb, glb>",
 // CHECK-SAME:             templateParams: [[NNARGS:![0-9]*]]
 // CHECK-SAME:             identifier:
 // CHECK: [[NNARGS]] = !{[[NNARG1:![0-9]*]], [[NNARG2:![0-9]*]], [[NNARG3:![0-9]*]]}

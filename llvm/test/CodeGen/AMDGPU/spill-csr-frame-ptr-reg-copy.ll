@@ -2,17 +2,17 @@
 
 ; GCN-LABEL: {{^}}spill_csr_s5_copy:
 ; GCN: s_or_saveexec_b64
-; GCN-NEXT: buffer_store_dword v32, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec
-; GCN: v_writelane_b32 v32, s34, 2
+; GCN: v_writelane_b32 v40, s33, 2
 ; GCN: s_swappc_b64
 
 ; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 9
-; GCN: buffer_store_dword [[K]], off, s[0:3], s34{{$}}
+; GCN: buffer_store_dword [[K]], off, s[0:3], s33{{$}}
 
-; GCN: v_readlane_b32 s34, v32, 2
+; GCN: v_readlane_b32 s33, v40, 2
 ; GCN: s_or_saveexec_b64
-; GCN-NEXT: buffer_load_dword v32, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GCN: s_mov_b64 exec
 ; GCN: s_setpc_b64
 define void @spill_csr_s5_copy() #0 {

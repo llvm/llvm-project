@@ -923,9 +923,9 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         // Stackifying a multivalue def may unlock in-place stackification of
         // subsequent defs. TODO: Handle the case where the consecutive uses are
         // not all in the same instruction.
-        auto *SubsequentDef = DefI->defs().begin();
+        auto *SubsequentDef = Insert->defs().begin();
         auto *SubsequentUse = &Use;
-        while (SubsequentDef != DefI->defs().end() &&
+        while (SubsequentDef != Insert->defs().end() &&
                SubsequentUse != Use.getParent()->uses().end()) {
           if (!SubsequentDef->isReg() || !SubsequentUse->isReg())
             break;

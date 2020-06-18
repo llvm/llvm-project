@@ -4206,7 +4206,7 @@ define void @foo(float %0, float %1) #0 {
   br i1 %3, label %4, label %5
 
 4:                                                ; preds = %2
-  tail call void @bar()
+  tail call void @bar() #0
   br label %5
 
 5:                                                ; preds = %4, %2

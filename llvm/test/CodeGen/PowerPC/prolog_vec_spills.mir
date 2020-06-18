@@ -45,7 +45,6 @@ body:             |
     B %bb.3
 
   bb.2:
-    liveins: $x3
     $r3 = IMPLICIT_DEF
 
   bb.3:

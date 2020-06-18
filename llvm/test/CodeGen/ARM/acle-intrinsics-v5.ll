@@ -80,7 +80,7 @@ define i32 @qsub(i32 %a, i32 %b) nounwind {
 
 define i32 @qdadd(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: qdadd
-; CHECK: qdadd r0, r0, r1
+; CHECK: qdadd r0, r1, r0
   %dbl = call i32 @llvm.arm.qadd(i32 %a, i32 %a)
   %add = call i32 @llvm.arm.qadd(i32 %dbl, i32 %b)
   ret i32 %add

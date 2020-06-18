@@ -1,4 +1,4 @@
-//===-------------------- Unittests for memory_utils ----------------------===//
+//===-- Unittests for memory_utils ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -85,6 +85,14 @@ TEST(UtilsTest, OffsetToNextAligned) {
   EXPECT_EQ(offset_to_next_aligned<16>(forge(16)), I(0));
   EXPECT_EQ(offset_to_next_aligned<16>(forge(15)), I(1));
   EXPECT_EQ(offset_to_next_aligned<32>(forge(16)), I(16));
+}
+
+TEST(UtilsTest, OffsetFromLastAligned) {
+  EXPECT_EQ(offset_from_last_aligned<16>(forge(0)), I(0));
+  EXPECT_EQ(offset_from_last_aligned<16>(forge(1)), I(1));
+  EXPECT_EQ(offset_from_last_aligned<16>(forge(16)), I(0));
+  EXPECT_EQ(offset_from_last_aligned<16>(forge(15)), I(15));
+  EXPECT_EQ(offset_from_last_aligned<32>(forge(16)), I(16));
 }
 
 TEST(UtilsTest, OffsetToNextCacheLine) {

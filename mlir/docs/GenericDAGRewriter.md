@@ -1,4 +1,4 @@
-# MLIR Generic DAG Rewriter Infrastructure
+# Generic DAG Rewriter Infrastructure
 
 ## Introduction and Motivation
 

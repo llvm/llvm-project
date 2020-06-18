@@ -76,5 +76,29 @@ define <4 x float> @double_negative_vector(<4 x float> %x, <4 x float> %y) #0 {
   ret <4 x float> %div
 }
 
+; This test used to fail, depending on how llc was built (e.g. using
+; clang/gcc), due to order of argument evaluation not being well defined. We
+; ended up hitting llvm_unreachable in getNegatedExpression when building with
+; gcc. Just make sure that we get a deterministic result.
+define float @fdiv_fneg_combine(float %a0, float %a1, float %a2) #0 {
+; CHECK-LABEL: fdiv_fneg_combine:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps %xmm0, %xmm3
+; CHECK-NEXT:    subss %xmm1, %xmm3
+; CHECK-NEXT:    subss %xmm0, %xmm1
+; CHECK-NEXT:    mulss %xmm2, %xmm1
+; CHECK-NEXT:    subss %xmm2, %xmm3
+; CHECK-NEXT:    divss %xmm3, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %sub1 = fsub fast float %a0, %a1
+  %mul2 = fmul fast float %sub1, %a2
+  %neg = fneg fast float %a0
+  %add3 = fadd fast float %a1, %neg
+  %sub4 = fadd fast float %add3, %a2
+  %div5 = fdiv fast float %mul2, %sub4
+  ret float %div5
+}
+
 attributes #0 = { "unsafe-fp-math"="false" }
 

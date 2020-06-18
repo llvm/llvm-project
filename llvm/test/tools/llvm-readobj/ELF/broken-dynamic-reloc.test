@@ -28,8 +28,7 @@ Sections:
     Type:    SHT_RELA
     Link:    .dynsym
     Relocations:
-      - Offset: 0x0
-        Symbol: 1 ## Index of a dynamic symbol with a broken st_name.
+      - Symbol: 1 ## Index of a dynamic symbol with a broken st_name.
         Type:   R_X86_64_NONE
   - Name: .dynamic
     Type: SHT_DYNAMIC
@@ -67,8 +66,7 @@ Sections:
   - Name:    .rela.dyn
     Type:    SHT_RELA
     Relocations:
-      - Offset: 0x0
-        Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
   - Name: .dynamic
     Type: SHT_DYNAMIC
     Entries:
@@ -104,8 +102,7 @@ Sections:
   - Name:    .rela.dyn
     Type:    SHT_RELA
     Relocations:
-      - Offset: 0x0
-        Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
   - Name: .dynamic
     Type: SHT_DYNAMIC
     Entries:
@@ -141,8 +138,7 @@ Sections:
   - Name:    .rela.dyn
     Type:    SHT_REL
     Relocations:
-      - Offset: 0x0
-        Type:   R_386_NONE
+      - Type:   R_386_NONE
   - Name: .dynamic
     Type: SHT_DYNAMIC
     Entries:
@@ -178,8 +174,7 @@ Sections:
   - Name:    .rela.dyn
     Type:    SHT_REL
     Relocations:
-      - Offset: 0x0
-        Type:   R_386_NONE
+      - Type:   R_386_NONE
   - Name: .dynamic
     Type: SHT_DYNAMIC
     Entries:
@@ -354,8 +349,7 @@ Sections:
   - Name:  .rela.plt
     Type:  SHT_RELA
     Relocations:
-      - Offset: 0x0
-        Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
   - Name:  .dynamic
     Type:  SHT_DYNAMIC
     Entries:
@@ -403,10 +397,8 @@ Sections:
   - Name:    .rela.dyn
     Type:    SHT_RELA
     Relocations:
-      - Offset: 0x0
-        Type:   R_X86_64_NONE
-      - Offset: 0x0
-        Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
         Symbol: 0x1
   - Name: .dynamic
     Type: SHT_DYNAMIC
@@ -451,8 +443,7 @@ Sections:
   - Name:    .rela.dyn
     Type:    SHT_RELA
     Relocations:
-      - Offset: 0x0
-        Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
         Symbol: 0x2
   - Name: .dynamic
     Type: SHT_DYNAMIC

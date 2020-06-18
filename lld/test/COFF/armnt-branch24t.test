@@ -1,9 +1,9 @@
 # REQUIRES: arm
 
 # RUN: yaml2obj < %s > %t.obj
-# RUN: llvm-objdump -d %t.obj | FileCheck %s -check-prefix BEFORE
+# RUN: llvm-objdump -d %t.obj | FileCheck %s --check-prefix BEFORE
 # RUN: lld-link /entry:function /subsystem:console /out:%t.exe %t.obj
-# RUN: llvm-objdump -d %t.exe | FileCheck %s -check-prefix AFTER
+# RUN: llvm-objdump -d %t.exe | FileCheck %s --check-prefix AFTER
 
 # BEFORE: Disassembly of section .text:
 # BEFORE-EMPTY:
@@ -14,7 +14,7 @@
 
 # AFTER: Disassembly of section .text:
 # AFTER-EMPTY:
-# AFTER: .text:
+# AFTER: <.text>:
 # AFTER:     1000: 70 47         bx lr
 # AFTER:     1002: 00 bf         nop
 # AFTER:     1004: 20 20         movs r0, #32

@@ -15,6 +15,10 @@ using namespace llvm;
 
 MCSectionXCOFF::~MCSectionXCOFF() = default;
 
+void MCSectionXCOFF::printCsectDirective(raw_ostream &OS) const {
+  OS << "\t.csect " << QualName->getName() << "," << Log2_32(getAlignment())
+     << '\n';
+}
 
 void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                           raw_ostream &OS,
@@ -23,14 +27,14 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     if (getMappingClass() != XCOFF::XMC_PR)
       report_fatal_error("Unhandled storage-mapping class for .text csect");
 
-    OS << "\t.csect " << QualName->getName() << '\n';
+    printCsectDirective(OS);
     return;
   }
 
   if (getKind().isReadOnly()) {
     if (getMappingClass() != XCOFF::XMC_RO)
       report_fatal_error("Unhandled storage-mapping class for .rodata csect.");
-    OS << "\t.csect " << QualName->getName() << '\n';
+    printCsectDirective(OS);
     return;
   }
 
@@ -38,7 +42,7 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     switch (getMappingClass()) {
     case XCOFF::XMC_RW:
     case XCOFF::XMC_DS:
-      OS << "\t.csect " << QualName->getName() << '\n';
+      printCsectDirective(OS);
       break;
     case XCOFF::XMC_TC:
       break;

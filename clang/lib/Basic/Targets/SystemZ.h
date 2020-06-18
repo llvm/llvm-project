@@ -64,6 +64,10 @@ public:
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
 
+  bool isSPRegName(StringRef RegName) const override {
+    return RegName.equals("r15");
+  }
+
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 
@@ -150,6 +154,8 @@ public:
   }
 
   const char *getLongDoubleMangling() const override { return "g"; }
+
+  bool hasExtIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

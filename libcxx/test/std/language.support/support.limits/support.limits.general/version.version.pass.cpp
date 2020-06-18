@@ -19,6 +19,7 @@
     __cpp_lib_any                                  201606L [C++17]
     __cpp_lib_apply                                201603L [C++17]
     __cpp_lib_array_constexpr                      201603L [C++17]
+                                                   201811L [C++2a]
     __cpp_lib_as_const                             201510L [C++17]
     __cpp_lib_atomic_is_always_lock_free           201603L [C++17]
     __cpp_lib_atomic_ref                           201806L [C++2a]
@@ -38,7 +39,7 @@
     __cpp_lib_destroying_delete                    201806L [C++2a]
     __cpp_lib_enable_shared_from_this              201603L [C++17]
     __cpp_lib_endian                               201907L [C++2a]
-    __cpp_lib_erase_if                             201811L [C++2a]
+    __cpp_lib_erase_if                             202002L [C++2a]
     __cpp_lib_exchange_function                    201304L [C++14]
     __cpp_lib_execution                            201603L [C++17]
     __cpp_lib_filesystem                           201703L [C++17]
@@ -85,6 +86,7 @@
     __cpp_lib_shared_ptr_arrays                    201611L [C++17]
     __cpp_lib_shared_ptr_weak_type                 201606L [C++17]
     __cpp_lib_shared_timed_mutex                   201402L [C++14]
+    __cpp_lib_span                                 202002L [C++2a]
     __cpp_lib_string_udls                          201304L [C++14]
     __cpp_lib_string_view                          201606L [C++17]
     __cpp_lib_three_way_comparison                 201711L [C++2a]
@@ -389,6 +391,10 @@
 
 # ifdef __cpp_lib_shared_timed_mutex
 #   error "__cpp_lib_shared_timed_mutex should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_span
+#   error "__cpp_lib_span should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_string_udls
@@ -784,6 +790,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_span
+#   error "__cpp_lib_span should not be defined before c++2a"
+# endif
+
 # ifndef __cpp_lib_string_udls
 #   error "__cpp_lib_string_udls should be defined in c++14"
 # endif
@@ -1065,11 +1075,17 @@
 #   error "__cpp_lib_generic_unordered_lookup should not be defined before c++2a"
 # endif
 
-# ifndef __cpp_lib_hardware_interference_size
-#   error "__cpp_lib_hardware_interference_size should be defined in c++17"
-# endif
-# if __cpp_lib_hardware_interference_size != 201703L
-#   error "__cpp_lib_hardware_interference_size should have the value 201703L in c++17"
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_hardware_interference_size
+#     error "__cpp_lib_hardware_interference_size should be defined in c++17"
+#   endif
+#   if __cpp_lib_hardware_interference_size != 201703L
+#     error "__cpp_lib_hardware_interference_size should have the value 201703L in c++17"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_hardware_interference_size
+#     error "__cpp_lib_hardware_interference_size should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # if TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700
@@ -1381,6 +1397,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_span
+#   error "__cpp_lib_span should not be defined before c++2a"
+# endif
+
 # ifndef __cpp_lib_string_udls
 #   error "__cpp_lib_string_udls should be defined in c++17"
 # endif
@@ -1518,8 +1538,8 @@
 # ifndef __cpp_lib_array_constexpr
 #   error "__cpp_lib_array_constexpr should be defined in c++2a"
 # endif
-# if __cpp_lib_array_constexpr != 201603L
-#   error "__cpp_lib_array_constexpr should have the value 201603L in c++2a"
+# if __cpp_lib_array_constexpr != 201811L
+#   error "__cpp_lib_array_constexpr should have the value 201811L in c++2a"
 # endif
 
 # ifndef __cpp_lib_as_const
@@ -1718,8 +1738,8 @@
 # ifndef __cpp_lib_erase_if
 #   error "__cpp_lib_erase_if should be defined in c++2a"
 # endif
-# if __cpp_lib_erase_if != 201811L
-#   error "__cpp_lib_erase_if should have the value 201811L in c++2a"
+# if __cpp_lib_erase_if != 202002L
+#   error "__cpp_lib_erase_if should have the value 202002L in c++2a"
 # endif
 
 # ifndef __cpp_lib_exchange_function
@@ -1776,11 +1796,17 @@
 #   endif
 # endif
 
-# ifndef __cpp_lib_hardware_interference_size
-#   error "__cpp_lib_hardware_interference_size should be defined in c++2a"
-# endif
-# if __cpp_lib_hardware_interference_size != 201703L
-#   error "__cpp_lib_hardware_interference_size should have the value 201703L in c++2a"
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_hardware_interference_size
+#     error "__cpp_lib_hardware_interference_size should be defined in c++2a"
+#   endif
+#   if __cpp_lib_hardware_interference_size != 201703L
+#     error "__cpp_lib_hardware_interference_size should have the value 201703L in c++2a"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_hardware_interference_size
+#     error "__cpp_lib_hardware_interference_size should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # if TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700
@@ -1899,17 +1925,11 @@
 #   error "__cpp_lib_launder should have the value 201606L in c++2a"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_list_remove_return_type
-#     error "__cpp_lib_list_remove_return_type should be defined in c++2a"
-#   endif
-#   if __cpp_lib_list_remove_return_type != 201806L
-#     error "__cpp_lib_list_remove_return_type should have the value 201806L in c++2a"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_list_remove_return_type
-#     error "__cpp_lib_list_remove_return_type should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_list_remove_return_type
+#   error "__cpp_lib_list_remove_return_type should be defined in c++2a"
+# endif
+# if __cpp_lib_list_remove_return_type != 201806L
+#   error "__cpp_lib_list_remove_return_type should have the value 201806L in c++2a"
 # endif
 
 # ifndef __cpp_lib_logical_traits
@@ -2120,6 +2140,13 @@
 #   ifdef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_span
+#   error "__cpp_lib_span should be defined in c++2a"
+# endif
+# if __cpp_lib_span != 202002L
+#   error "__cpp_lib_span should have the value 202002L in c++2a"
 # endif
 
 # ifndef __cpp_lib_string_udls

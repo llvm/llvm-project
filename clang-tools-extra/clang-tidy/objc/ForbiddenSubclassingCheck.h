@@ -26,6 +26,9 @@ namespace objc {
 class ForbiddenSubclassingCheck : public ClangTidyCheck {
 public:
   ForbiddenSubclassingCheck(StringRef Name, ClangTidyContext *Context);
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.ObjC;
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Options) override;

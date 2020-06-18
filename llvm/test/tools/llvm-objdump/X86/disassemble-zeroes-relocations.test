@@ -18,7 +18,7 @@
 ## Check that without -reloc all zeroes would be omitted.
 # RUN: llvm-objdump -D %t | FileCheck %s --check-prefix=SKIP
 
-# SKIP:      0000000000000000 .rodata:
+# SKIP:      0000000000000000 <.rodata>:
 # SKIP-NEXT:   ...
 # SKIP-EMPTY:
 # SKIP-NEXT: Disassembly of section .rela.rodata:

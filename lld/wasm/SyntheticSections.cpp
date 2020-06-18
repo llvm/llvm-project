@@ -156,11 +156,11 @@ void ImportSection::writeBody() {
   for (const Symbol *sym : importedSymbols) {
     WasmImport import;
     if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
-      import.Field = f->importName;
-      import.Module = f->importModule;
+      import.Field = f->importName ? *f->importName : sym->getName();
+      import.Module = f->importModule ? *f->importModule : defaultModule;
     } else if (auto *g = dyn_cast<UndefinedGlobal>(sym)) {
-      import.Field = g->importName;
-      import.Module = g->importModule;
+      import.Field = g->importName ? *g->importName : sym->getName();
+      import.Module = g->importModule ? *g->importModule : defaultModule;
     } else {
       import.Field = sym->getName();
       import.Module = defaultModule;
@@ -240,6 +240,26 @@ void MemorySection::writeBody() {
     writeUleb128(os, maxMemoryPages, "max pages");
 }
 
+void EventSection::writeBody() {
+  raw_ostream &os = bodyOutputStream;
+
+  writeUleb128(os, inputEvents.size(), "event count");
+  for (InputEvent *e : inputEvents) {
+    e->event.Type.SigIndex = out.typeSec->lookupType(e->signature);
+    writeEvent(os, e->event);
+  }
+}
+
+void EventSection::addEvent(InputEvent *event) {
+  if (!event->live)
+    return;
+  uint32_t eventIndex =
+      out.importSec->getNumImportedEvents() + inputEvents.size();
+  LLVM_DEBUG(dbgs() << "addEvent: " << eventIndex << "\n");
+  event->setEventIndex(eventIndex);
+  inputEvents.push_back(event);
+}
+
 void GlobalSection::assignIndexes() {
   uint32_t globalIndex = out.importSec->getNumImportedGlobals();
   for (InputGlobal *g : inputGlobals)
@@ -267,6 +287,7 @@ void GlobalSection::writeBody() {
   writeUleb128(os, numGlobals(), "global count");
   for (InputGlobal *g : inputGlobals)
     writeGlobal(os, g->global);
+  // TODO(wvo): when do these need I64_CONST?
   for (const Symbol *sym : staticGotSymbols) {
     WasmGlobal global;
     global.Type = {WASM_TYPE_I32, false};
@@ -297,26 +318,6 @@ void GlobalSection::addGlobal(InputGlobal *global) {
   inputGlobals.push_back(global);
 }
 
-void EventSection::writeBody() {
-  raw_ostream &os = bodyOutputStream;
-
-  writeUleb128(os, inputEvents.size(), "event count");
-  for (InputEvent *e : inputEvents) {
-    e->event.Type.SigIndex = out.typeSec->lookupType(e->signature);
-    writeEvent(os, e->event);
-  }
-}
-
-void EventSection::addEvent(InputEvent *event) {
-  if (!event->live)
-    return;
-  uint32_t eventIndex =
-      out.importSec->getNumImportedEvents() + inputEvents.size();
-  LLVM_DEBUG(dbgs() << "addEvent: " << eventIndex << "\n");
-  event->setEventIndex(eventIndex);
-  inputEvents.push_back(event);
-}
-
 void ExportSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
@@ -326,7 +327,7 @@ void ExportSection::writeBody() {
 }
 
 bool StartSection::isNeeded() const {
-  return !config->relocatable && numSegments && config->sharedMemory;
+  return !config->relocatable && hasInitializedSegments && config->sharedMemory;
 }
 
 void StartSection::writeBody() {
@@ -391,7 +392,7 @@ void LinkingSection::writeBody() {
     for (const Symbol *sym : symtabEntries) {
       assert(sym->isDefined() || sym->isUndefined());
       WasmSymbolType kind = sym->getWasmType();
-      uint32_t flags = sym->getFlags();
+      uint32_t flags = sym->flags;
 
       writeU8(sub.os, kind, "sym kind");
       writeUleb128(sub.os, flags, "sym flags");

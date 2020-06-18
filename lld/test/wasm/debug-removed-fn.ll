@@ -1,10 +1,15 @@
 ; RUN: llc -filetype=obj < %s -o %t.o
 ; RUN: wasm-ld %t.o --no-entry --export=foo -o %t.wasm
-; RUN: llvm-dwarfdump -debug-line %t.wasm | FileCheck %s
+; RUN: llvm-dwarfdump -debug-line -debug-ranges %t.wasm | FileCheck %s
 
 ; CHECK: Address
 ; CHECK: 0x0000000000000005
 ; CHECK: 0x0000000000000000
+
+; CHECK: .debug_ranges contents:
+; CHECK: 00000000 {{[0-9]+}} {{[0-9]+}}
+; CHECK: 00000000 {{[0-9]+}} {{[0-9]+}}
+; CHECK: 00000000 <End of list>
 
 ; ModuleID = 't.bc'
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"

@@ -355,6 +355,9 @@
 
     extern int __KAI_KMPC_CONVENTION omp_get_supported_active_levels(void);
 
+    /* OpenMP 5.1 Display Environment */
+    extern void omp_display_env(int verbose);
+
 #   undef __KAI_KMPC_CONVENTION
 #   undef __KMP_IMP
 

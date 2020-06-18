@@ -31,10 +31,9 @@
 // }
 // ```
 // Indeed, it has it's queue, which holds pairs of nodes, one from each graph,
-// this is the `DeclsToCheck` and it's pair is in `TentativeEquivalences`.
-// `TentativeEquivalences` also plays the role of the marking (`marked`)
-// functionality above, we use it to check whether we've already seen a pair of
-// nodes.
+// this is the `DeclsToCheck` member. `VisitedDecls` plays the role of the
+// marking (`marked`) functionality above, we use it to check whether we've
+// already seen a pair of nodes.
 //
 // We put in the elements into the queue only in the toplevel decl check
 // function:
@@ -56,11 +55,6 @@
 // working on the same queue. This is wrong and nobody can reason about it's
 // doing. Thus, static implementation functions must not call the **member**
 // functions.
-//
-// So, now `TentativeEquivalences` plays two roles. It is used to store the
-// second half of the decls which we want to compare, plus it plays a role in
-// closing the recursion. On a long term, we could refactor structural
-// equivalency to be more alike to the traditional BFS.
 //
 //===----------------------------------------------------------------------===//
 
@@ -623,6 +617,34 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     break;
   }
 
+  case Type::DependentSizedMatrix: {
+    const DependentSizedMatrixType *Mat1 = cast<DependentSizedMatrixType>(T1);
+    const DependentSizedMatrixType *Mat2 = cast<DependentSizedMatrixType>(T2);
+    // The element types, row and column expressions must be structurally
+    // equivalent.
+    if (!IsStructurallyEquivalent(Context, Mat1->getRowExpr(),
+                                  Mat2->getRowExpr()) ||
+        !IsStructurallyEquivalent(Context, Mat1->getColumnExpr(),
+                                  Mat2->getColumnExpr()) ||
+        !IsStructurallyEquivalent(Context, Mat1->getElementType(),
+                                  Mat2->getElementType()))
+      return false;
+    break;
+  }
+
+  case Type::ConstantMatrix: {
+    const ConstantMatrixType *Mat1 = cast<ConstantMatrixType>(T1);
+    const ConstantMatrixType *Mat2 = cast<ConstantMatrixType>(T2);
+    // The element types must be structurally equivalent and the number of rows
+    // and columns must match.
+    if (!IsStructurallyEquivalent(Context, Mat1->getElementType(),
+                                  Mat2->getElementType()) ||
+        Mat1->getNumRows() != Mat2->getNumRows() ||
+        Mat1->getNumColumns() != Mat2->getNumColumns())
+      return false;
+    break;
+  }
+
   case Type::FunctionProto: {
     const auto *Proto1 = cast<FunctionProtoType>(T1);
     const auto *Proto2 = cast<FunctionProtoType>(T2);
@@ -955,6 +977,24 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                   cast<PipeType>(T2)->getElementType()))
       return false;
     break;
+  case Type::ExtInt: {
+    const auto *Int1 = cast<ExtIntType>(T1);
+    const auto *Int2 = cast<ExtIntType>(T2);
+
+    if (Int1->isUnsigned() != Int2->isUnsigned() ||
+        Int1->getNumBits() != Int2->getNumBits())
+      return false;
+    break;
+  }
+  case Type::DependentExtInt: {
+    const auto *Int1 = cast<DependentExtIntType>(T1);
+    const auto *Int2 = cast<DependentExtIntType>(T2);
+
+    if (Int1->isUnsigned() != Int2->isUnsigned() ||
+        !IsStructurallyEquivalent(Context, Int1->getNumBitsExpr(),
+                                  Int2->getNumBitsExpr()))
+      return false;
+  }
   } // end switch
 
   return true;

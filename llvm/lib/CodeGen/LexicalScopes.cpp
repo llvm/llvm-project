@@ -44,6 +44,7 @@ void LexicalScopes::reset() {
   AbstractScopeMap.clear();
   InlinedLexicalScopeMap.clear();
   AbstractScopesList.clear();
+  DominatedBlocks.clear();
 }
 
 /// initialize - Scan machine function and constuct lexical scope nest.
@@ -229,24 +230,24 @@ LexicalScopes::getOrCreateAbstractScope(const DILocalScope *Scope) {
   return &I->second;
 }
 
-/// constructScopeNest
+/// constructScopeNest - Traverse the Scope tree depth-first, storing
+/// traversal state in WorkStack and recording the depth-first
+/// numbering (setDFSIn, setDFSOut) for edge classification.
 void LexicalScopes::constructScopeNest(LexicalScope *Scope) {
   assert(Scope && "Unable to calculate scope dominance graph!");
-  SmallVector<LexicalScope *, 4> WorkStack;
-  WorkStack.push_back(Scope);
+  SmallVector<std::pair<LexicalScope *, size_t>, 4> WorkStack;
+  WorkStack.push_back(std::make_pair(Scope, 0));
   unsigned Counter = 0;
   while (!WorkStack.empty()) {
-    LexicalScope *WS = WorkStack.back();
+    auto &ScopePosition = WorkStack.back();
+    LexicalScope *WS = ScopePosition.first;
+    size_t ChildNum = ScopePosition.second++;
     const SmallVectorImpl<LexicalScope *> &Children = WS->getChildren();
-    bool visitedChildren = false;
-    for (auto &ChildScope : Children)
-      if (!ChildScope->getDFSOut()) {
-        WorkStack.push_back(ChildScope);
-        visitedChildren = true;
-        ChildScope->setDFSIn(++Counter);
-        break;
-      }
-    if (!visitedChildren) {
+    if (ChildNum < Children.size()) {
+      auto &ChildScope = Children[ChildNum];
+      WorkStack.push_back(std::make_pair(ChildScope, 0));
+      ChildScope->setDFSIn(++Counter);
+    } else {
       WorkStack.pop_back();
       WS->setDFSOut(++Counter);
     }
@@ -291,13 +292,17 @@ void LexicalScopes::getMachineBasicBlocks(
     return;
   }
 
+  // The scope ranges can cover multiple basic blocks in each span. Iterate over
+  // all blocks (in the order they are in the function) until we reach the one
+  // containing the end of the span.
   SmallVectorImpl<InsnRange> &InsnRanges = Scope->getRanges();
   for (auto &R : InsnRanges)
-    MBBs.insert(R.first->getParent());
+    for (auto CurMBBIt = R.first->getParent()->getIterator(),
+              EndBBIt = std::next(R.second->getParent()->getIterator());
+         CurMBBIt != EndBBIt; CurMBBIt++)
+      MBBs.insert(&*CurMBBIt);
 }
 
-/// dominates - Return true if DebugLoc's lexical scope dominates at least one
-/// machine instruction's lexical scope in a given machine basic block.
 bool LexicalScopes::dominates(const DILocation *DL, MachineBasicBlock *MBB) {
   assert(MF && "Unexpected uninitialized LexicalScopes object!");
   LexicalScope *Scope = getOrCreateLexicalScope(DL);
@@ -308,14 +313,18 @@ bool LexicalScopes::dominates(const DILocation *DL, MachineBasicBlock *MBB) {
   if (Scope == CurrentFnLexicalScope && MBB->getParent() == MF)
     return true;
 
-  bool Result = false;
-  for (auto &I : *MBB) {
-    if (const DILocation *IDL = I.getDebugLoc())
-      if (LexicalScope *IScope = getOrCreateLexicalScope(IDL))
-        if (Scope->dominates(IScope))
-          return true;
+  // Fetch all the blocks in DLs scope. Because the range / block list also
+  // contain any subscopes, any instruction that DL dominates can be found in
+  // the block set.
+  //
+  // Cache the set of fetched blocks to avoid repeatedly recomputing the set in
+  // the LiveDebugValues pass.
+  std::unique_ptr<BlockSetT> &Set = DominatedBlocks[DL];
+  if (!Set) {
+    Set = std::make_unique<BlockSetT>();
+    getMachineBasicBlocks(DL, *Set);
   }
-  return Result;
+  return Set->count(MBB) != 0;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

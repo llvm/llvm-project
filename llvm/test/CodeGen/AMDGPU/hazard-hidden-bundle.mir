@@ -32,7 +32,7 @@ body:	|
     S_SENDMSG 3, implicit $exec, implicit $m0
     $m0 = S_MOV_B32 $sgpr8
     BUNDLE implicit-def $vgpr0 {
-      $vgpr0 = V_INTERP_P1_F32 killed $vgpr4, 0, 0, implicit $m0, implicit $exec
+      $vgpr0 = V_INTERP_P1_F32 killed $vgpr4, 0, 0, implicit $mode, implicit $m0, implicit $exec
     }
     S_ENDPGM 0
 ...

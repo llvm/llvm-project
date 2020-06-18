@@ -22,7 +22,7 @@ include "mlir/Dialect/SPIRV/SPIRVAvailability.td"
 // SPIR-V dialect definitions
 //===----------------------------------------------------------------------===//
 
-def SPV_Dialect : Dialect {
+def SPIRV_Dialect : Dialect {
   let name = "spv";
 
   let summary = "The SPIR-V dialect in MLIR.";
@@ -46,6 +46,20 @@ def SPV_Dialect : Dialect {
   }];
 
   let cppNamespace = "spirv";
+  let hasConstantMaterializer = 1;
+  let hasOperationAttrVerify = 1;
+  let hasRegionArgAttrVerify = 1;
+  let hasRegionResultAttrVerify = 1;
+
+  let extraClassDeclaration = [{
+    //===------------------------------------------------------------------===//
+    // Attribute
+    //===------------------------------------------------------------------===//
+
+    /// Returns the attribute name to use when specifying decorations on results
+    /// of operations.
+    static std::string getAttributeName(Decoration decoration);
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -63,7 +77,7 @@ class SPV_BitEnumAttr<string name, string description,
                       list<BitEnumAttrCase> cases> :
     BitEnumAttr<name, description, cases> {
   let predicate = And<[
-    IntegerAttrBase<I32, "">.predicate,
+    I32Attr.predicate,
     SPV_IsKnownEnumCaseFor<name>,
   ]>;
   let cppNamespace = "::mlir::spirv";
@@ -74,7 +88,7 @@ class SPV_I32EnumAttr<string name, string description,
                       list<I32EnumAttrCase> cases> :
     I32EnumAttr<name, description, cases> {
   let predicate = And<[
-    IntegerAttrBase<I32, "">.predicate,
+    I32Attr.predicate,
     SPV_IsKnownEnumCaseFor<name>,
   ]>;
   let cppNamespace = "::mlir::spirv";
@@ -96,12 +110,12 @@ class SPV_StrEnumAttr<string name, string description,
 // SPIR-V availability definitions
 //===----------------------------------------------------------------------===//
 
-def SPV_V_1_0 : I32EnumAttrCase<"V_1_0", 0>;
-def SPV_V_1_1 : I32EnumAttrCase<"V_1_1", 1>;
-def SPV_V_1_2 : I32EnumAttrCase<"V_1_2", 2>;
-def SPV_V_1_3 : I32EnumAttrCase<"V_1_3", 3>;
-def SPV_V_1_4 : I32EnumAttrCase<"V_1_4", 4>;
-def SPV_V_1_5 : I32EnumAttrCase<"V_1_5", 5>;
+def SPV_V_1_0 : I32EnumAttrCase<"V_1_0", 0, "v1.0">;
+def SPV_V_1_1 : I32EnumAttrCase<"V_1_1", 1, "v1.1">;
+def SPV_V_1_2 : I32EnumAttrCase<"V_1_2", 2, "v1.2">;
+def SPV_V_1_3 : I32EnumAttrCase<"V_1_3", 3, "v1.3">;
+def SPV_V_1_4 : I32EnumAttrCase<"V_1_4", 4, "v1.4">;
+def SPV_V_1_5 : I32EnumAttrCase<"V_1_5", 5, "v1.5">;
 
 def SPV_VersionAttr : SPV_I32EnumAttr<"Version", "valid SPIR-V version", [
     SPV_V_1_0, SPV_V_1_1, SPV_V_1_2, SPV_V_1_3, SPV_V_1_4, SPV_V_1_5]>;
@@ -148,23 +162,27 @@ class Extension<list<StrEnumAttrCase> extensions> : Availability {
     AND (`Extension::C`) AND (`Extension::D` OR `Extension::E`) is enabled.
   }];
 
-  // TODO(antiagainst): Using SmallVector<SmallVector<...>> is an anti-pattern.
+  // TODO(antiagainst): Returning SmallVector<ArrayRef<...>> is not recommended.
   // Find a better way for this.
-  let queryFnRetType = "::llvm::SmallVector<::llvm::SmallVector<"
-                          "::mlir::spirv::Extension, 1>, 1>";
+  let queryFnRetType = "::llvm::SmallVector<::llvm::ArrayRef<"
+                          "::mlir::spirv::Extension>, 1>";
   let queryFnName = "getExtensions";
 
   let mergeAction = !if(
       !empty(extensions), "", "$overall.emplace_back($instance)");
   let initializer = "{}";
-  let instanceType = "::llvm::SmallVector<::mlir::spirv::Extension, 1>";
+  let instanceType = "::llvm::ArrayRef<::mlir::spirv::Extension>";
 
-  // Compose all capabilities as an C++ initializer list
-  let instance = "std::initializer_list<::mlir::spirv::Extension>{" #
-                 StrJoin<!foreach(
-                   ext, extensions,
-                   "::mlir::spirv::Extension::" # ext.symbol)>.result #
-                 "}";
+  // Pack all extensions as a static array and get its reference.
+  let instancePreparation = !if(!empty(extensions), "",
+    "static const ::mlir::spirv::Extension exts[] = {" #
+    StrJoin<!foreach(ext, extensions,
+      "::mlir::spirv::Extension::" # ext.symbol)>.result #
+    "}; " #
+    // The following manual ArrayRef constructor call is to satisfy GCC 5.
+    "ArrayRef<::mlir::spirv::Extension> " #
+      "ref(exts, ::llvm::array_lengthof(exts));");
+  let instance = "ref";
 }
 
 class Capability<list<I32EnumAttrCase> capabilities> : Availability {
@@ -187,21 +205,25 @@ class Capability<list<I32EnumAttrCase> capabilities> : Availability {
     AND (`Capability::C`) AND (`Capability::D` OR `Capability::E`) is enabled.
   }];
 
-  let queryFnRetType = "::llvm::SmallVector<::llvm::SmallVector<"
-                          "::mlir::spirv::Capability, 1>, 1>";
+  let queryFnRetType = "::llvm::SmallVector<::llvm::ArrayRef<"
+                          "::mlir::spirv::Capability>, 1>";
   let queryFnName = "getCapabilities";
 
   let mergeAction = !if(
       !empty(capabilities), "", "$overall.emplace_back($instance)");
   let initializer = "{}";
-  let instanceType = "::llvm::SmallVector<::mlir::spirv::Capability, 1>";
+  let instanceType = "::llvm::ArrayRef<::mlir::spirv::Capability>";
 
-  // Compose all capabilities as an C++ initializer list
-  let instance = "std::initializer_list<::mlir::spirv::Capability>{" #
-                 StrJoin<!foreach(
-                   cap, capabilities,
-                   "::mlir::spirv::Capability::" # cap.symbol)>.result #
-                 "}";
+  // Pack all capabilities as a static array and get its reference.
+  let instancePreparation = !if(!empty(capabilities), "",
+    "static const ::mlir::spirv::Capability caps[] = {" #
+    StrJoin<!foreach(cap, capabilities,
+      "::mlir::spirv::Capability::" # cap.symbol)>.result #
+    "}; " #
+    // The following manual ArrayRef constructor call is to satisfy GCC 5.
+    "ArrayRef<::mlir::spirv::Capability> " #
+      "ref(caps, ::llvm::array_lengthof(caps));");
+  let instance = "ref";
 }
 
 // TODO(antiagainst): the following interfaces definitions are duplicating with
@@ -216,13 +238,13 @@ def QueryMaxVersionInterface : OpInterface<"QueryMaxVersionInterface"> {
 def QueryExtensionInterface : OpInterface<"QueryExtensionInterface"> {
   let methods = [InterfaceMethod<
     "",
-    "::llvm::SmallVector<::llvm::SmallVector<::mlir::spirv::Extension, 1>, 1>",
+    "::llvm::SmallVector<::llvm::ArrayRef<::mlir::spirv::Extension>, 1>",
     "getExtensions">];
 }
 def QueryCapabilityInterface : OpInterface<"QueryCapabilityInterface"> {
   let methods = [InterfaceMethod<
     "",
-    "::llvm::SmallVector<::llvm::SmallVector<::mlir::spirv::Capability, 1>, 1>",
+    "::llvm::SmallVector<::llvm::ArrayRef<::mlir::spirv::Capability>, 1>",
     "getCapabilities">];
 }
 
@@ -2942,53 +2964,102 @@ def SPV_SamplerUseAttr:
       [SPV_ISUI_SamplerUnknown, SPV_ISUI_NeedSampler, SPV_ISUI_NoSampler]>;
 
 //===----------------------------------------------------------------------===//
+// SPIR-V attribute definitions
+//===----------------------------------------------------------------------===//
+
+def SPV_VerCapExtAttr : DialectAttr<
+    SPIRV_Dialect,
+    CPred<"$_self.isa<::mlir::spirv::VerCapExtAttr>()">,
+    "version-capability-extension attribute"> {
+  let storageType = "::mlir::spirv::VerCapExtAttr";
+  let returnType = "::mlir::spirv::VerCapExtAttr";
+  let convertFromStorage = "$_self";
+}
+
+//===----------------------------------------------------------------------===//
 // SPIR-V type definitions
 //===----------------------------------------------------------------------===//
 
-def SPV_IsPtrType : CPred<"$_self.isa<::mlir::spirv::PointerType>()">;
+class IOrUI<int width>
+    : Type<Or<[CPred<"$_self.isSignlessInteger(" # width # ")">,
+               CPred<"$_self.isUnsignedInteger(" # width # ")">]>,
+           width # "-bit signless/unsigned integer"> {
+  int bitwidth = width;
+}
+
+class SignlessOrUnsignedIntOfWidths<list<int> widths> :
+    AnyTypeOf<!foreach(w, widths, IOrUI<w>),
+              StrJoinInt<widths, "/">.result # "-bit signless/unsigned integer">;
+
 def SPV_IsArrayType : CPred<"$_self.isa<::mlir::spirv::ArrayType>()">;
+def SPV_IsCooperativeMatrixType :
+  CPred<"$_self.isa<::mlir::spirv::CooperativeMatrixNVType>()">;
+def SPV_IsMatrixType : CPred<"$_self.isa<::mlir::spirv::MatrixType>()">;
+def SPV_IsPtrType : CPred<"$_self.isa<::mlir::spirv::PointerType>()">;
 def SPV_IsRTArrayType : CPred<"$_self.isa<::mlir::spirv::RuntimeArrayType>()">;
 def SPV_IsStructType : CPred<"$_self.isa<::mlir::spirv::StructType>()">;
+
 
 // See https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_types
 // for the definition of the following types and type categories.
 
-def SPV_Void : TypeAlias<NoneType, "void type">;
-def SPV_Bool : I<1>;
-def SPV_Integer : IntOfWidths<[8, 16, 32, 64]>;
+def SPV_Void : TypeAlias<NoneType, "void">;
+def SPV_Bool : TypeAlias<I1, "bool">;
+def SPV_Integer : AnyIntOfWidths<[8, 16, 32, 64]>;
+def SPV_Int32 : TypeAlias<I32, "Int32">;
 def SPV_Float : FloatOfWidths<[16, 32, 64]>;
 def SPV_Float16or32 : FloatOfWidths<[16, 32]>;
 def SPV_Vector : VectorOfLengthAndType<[2, 3, 4],
                                        [SPV_Bool, SPV_Integer, SPV_Float]>;
 // Component type check is done in the type parser for the following SPIR-V
 // dialect-specific types so we use "Any" here.
-def SPV_AnyPtr : Type<SPV_IsPtrType, "any SPIR-V pointer type">;
-def SPV_AnyArray : Type<SPV_IsArrayType, "any SPIR-V array type">;
-def SPV_AnyRTArray : Type<SPV_IsRTArrayType, "any SPIR-V runtime array type">;
-def SPV_AnyStruct : Type<SPV_IsStructType, "any SPIR-V struct type">;
+def SPV_AnyPtr : DialectType<SPIRV_Dialect, SPV_IsPtrType,
+                             "any SPIR-V pointer type">;
+def SPV_AnyArray : DialectType<SPIRV_Dialect, SPV_IsArrayType,
+                               "any SPIR-V array type">;
+def SPV_AnyCooperativeMatrix : DialectType<SPIRV_Dialect,
+                               SPV_IsCooperativeMatrixType,
+                               "any SPIR-V cooperative matrix type">;
+def SPV_AnyMatrix : DialectType<SPIRV_Dialect, SPV_IsMatrixType,
+                                "any SPIR-V matrix type">;
+def SPV_AnyRTArray : DialectType<SPIRV_Dialect, SPV_IsRTArrayType,
+                                 "any SPIR-V runtime array type">;
+def SPV_AnyStruct : DialectType<SPIRV_Dialect, SPV_IsStructType,
+                                "any SPIR-V struct type">;
 
 def SPV_Numerical : AnyTypeOf<[SPV_Integer, SPV_Float]>;
 def SPV_Scalar : AnyTypeOf<[SPV_Numerical, SPV_Bool]>;
-def SPV_Aggregate : AnyTypeOf<[SPV_AnyArray, SPV_AnyStruct]>;
+def SPV_Aggregate : AnyTypeOf<[SPV_AnyArray, SPV_AnyRTArray, SPV_AnyStruct]>;
 def SPV_Composite :
-    AnyTypeOf<[SPV_Vector, SPV_AnyArray, SPV_AnyRTArray, SPV_AnyStruct]>;
+    AnyTypeOf<[SPV_Vector, SPV_AnyArray, SPV_AnyRTArray, SPV_AnyStruct,
+               SPV_AnyCooperativeMatrix, SPV_AnyMatrix]>;
 def SPV_Type : AnyTypeOf<[
     SPV_Void, SPV_Bool, SPV_Integer, SPV_Float, SPV_Vector,
-    SPV_AnyPtr, SPV_AnyArray, SPV_AnyRTArray, SPV_AnyStruct
+    SPV_AnyPtr, SPV_AnyArray, SPV_AnyRTArray, SPV_AnyStruct,
+    SPV_AnyCooperativeMatrix, SPV_AnyMatrix
   ]>;
+
+def SPV_SignlessOrUnsignedInt : SignlessOrUnsignedIntOfWidths<[8, 16, 32, 64]>;
+
+class SPV_CoopMatrixOfType<list<Type> allowedTypes> :
+  ContainerType<AnyTypeOf<allowedTypes>, SPV_IsCooperativeMatrixType,
+    "$_self.cast<::mlir::spirv::CooperativeMatrixNVType>().getElementType()",
+    "Cooperative Matrix">;
 
 class SPV_ScalarOrVectorOf<Type type> :
     AnyTypeOf<[type, VectorOfLengthAndType<[2, 3, 4], [type]>]>;
+
+class SPV_ScalarOrVectorOrCoopMatrixOf<Type type> :
+    AnyTypeOf<[type, VectorOfLengthAndType<[2, 3, 4], [type]>,
+               SPV_CoopMatrixOfType<[type]>]>;
 
 def SPV_ScalarOrVector : AnyTypeOf<[SPV_Scalar, SPV_Vector]>;
 def SPV_ScalarOrVectorOrPtr : AnyTypeOf<[SPV_ScalarOrVector, SPV_AnyPtr]>;
 
 class SPV_Vec4<Type type> : VectorOfLengthAndType<[4], [type]>;
 def SPV_IntVec4 : SPV_Vec4<SPV_Integer>;
-def SPV_I32Vec4 : SPV_Vec4<I32>;
-
-// TODO(antiagainst): Use a more appropriate way to model optional operands
-class SPV_Optional<Type type> : Variadic<type>;
+def SPV_IOrUIVec4 : SPV_Vec4<SPV_SignlessOrUnsignedInt>;
+def SPV_Int32Vec4 : SPV_Vec4<AnyI32>;
 
 // TODO(ravishankarm): From 1.4, this should also include Composite type.
 def SPV_SelectType : AnyTypeOf<[SPV_Scalar, SPV_Vector, SPV_AnyPtr]>;
@@ -3029,6 +3100,7 @@ def SPV_OC_OpSourceExtension           : I32EnumAttrCase<"OpSourceExtension", 4>
 def SPV_OC_OpName                      : I32EnumAttrCase<"OpName", 5>;
 def SPV_OC_OpMemberName                : I32EnumAttrCase<"OpMemberName", 6>;
 def SPV_OC_OpString                    : I32EnumAttrCase<"OpString", 7>;
+def SPV_OC_OpLine                      : I32EnumAttrCase<"OpLine", 8>;
 def SPV_OC_OpExtension                 : I32EnumAttrCase<"OpExtension", 10>;
 def SPV_OC_OpExtInstImport             : I32EnumAttrCase<"OpExtInstImport", 11>;
 def SPV_OC_OpExtInst                   : I32EnumAttrCase<"OpExtInst", 12>;
@@ -3041,6 +3113,7 @@ def SPV_OC_OpTypeBool                  : I32EnumAttrCase<"OpTypeBool", 20>;
 def SPV_OC_OpTypeInt                   : I32EnumAttrCase<"OpTypeInt", 21>;
 def SPV_OC_OpTypeFloat                 : I32EnumAttrCase<"OpTypeFloat", 22>;
 def SPV_OC_OpTypeVector                : I32EnumAttrCase<"OpTypeVector", 23>;
+def SPV_OC_OpTypeMatrix                : I32EnumAttrCase<"OpTypeMatrix", 24>;
 def SPV_OC_OpTypeArray                 : I32EnumAttrCase<"OpTypeArray", 28>;
 def SPV_OC_OpTypeRuntimeArray          : I32EnumAttrCase<"OpTypeRuntimeArray", 29>;
 def SPV_OC_OpTypeStruct                : I32EnumAttrCase<"OpTypeStruct", 30>;
@@ -3091,6 +3164,7 @@ def SPV_OC_OpSRem                      : I32EnumAttrCase<"OpSRem", 138>;
 def SPV_OC_OpSMod                      : I32EnumAttrCase<"OpSMod", 139>;
 def SPV_OC_OpFRem                      : I32EnumAttrCase<"OpFRem", 140>;
 def SPV_OC_OpFMod                      : I32EnumAttrCase<"OpFMod", 141>;
+def SPV_OC_OpMatrixTimesScalar         : I32EnumAttrCase<"OpMatrixTimesScalar", 143>;
 def SPV_OC_OpLogicalEqual              : I32EnumAttrCase<"OpLogicalEqual", 164>;
 def SPV_OC_OpLogicalNotEqual           : I32EnumAttrCase<"OpLogicalNotEqual", 165>;
 def SPV_OC_OpLogicalOr                 : I32EnumAttrCase<"OpLogicalOr", 166>;
@@ -3154,6 +3228,7 @@ def SPV_OC_OpBranchConditional         : I32EnumAttrCase<"OpBranchConditional", 
 def SPV_OC_OpReturn                    : I32EnumAttrCase<"OpReturn", 253>;
 def SPV_OC_OpReturnValue               : I32EnumAttrCase<"OpReturnValue", 254>;
 def SPV_OC_OpUnreachable               : I32EnumAttrCase<"OpUnreachable", 255>;
+def SPV_OC_OpNoLine                    : I32EnumAttrCase<"OpNoLine", 317>;
 def SPV_OC_OpModuleProcessed           : I32EnumAttrCase<"OpModuleProcessed", 330>;
 def SPV_OC_OpGroupNonUniformElect      : I32EnumAttrCase<"OpGroupNonUniformElect", 333>;
 def SPV_OC_OpGroupNonUniformBallot     : I32EnumAttrCase<"OpGroupNonUniformBallot", 339>;
@@ -3168,37 +3243,42 @@ def SPV_OC_OpGroupNonUniformSMax       : I32EnumAttrCase<"OpGroupNonUniformSMax"
 def SPV_OC_OpGroupNonUniformUMax       : I32EnumAttrCase<"OpGroupNonUniformUMax", 357>;
 def SPV_OC_OpGroupNonUniformFMax       : I32EnumAttrCase<"OpGroupNonUniformFMax", 358>;
 def SPV_OC_OpSubgroupBallotKHR         : I32EnumAttrCase<"OpSubgroupBallotKHR", 4421>;
+def SPV_OC_OpTypeCooperativeMatrixNV   : I32EnumAttrCase<"OpTypeCooperativeMatrixNV", 5358>;
+def SPV_OC_OpCooperativeMatrixLoadNV   : I32EnumAttrCase<"OpCooperativeMatrixLoadNV", 5359>;
+def SPV_OC_OpCooperativeMatrixStoreNV  : I32EnumAttrCase<"OpCooperativeMatrixStoreNV", 5360>;
+def SPV_OC_OpCooperativeMatrixMulAddNV : I32EnumAttrCase<"OpCooperativeMatrixMulAddNV", 5361>;
+def SPV_OC_OpCooperativeMatrixLengthNV : I32EnumAttrCase<"OpCooperativeMatrixLengthNV", 5362>;
 
 def SPV_OpcodeAttr :
     SPV_I32EnumAttr<"Opcode", "valid SPIR-V instructions", [
       SPV_OC_OpNop, SPV_OC_OpUndef, SPV_OC_OpSourceContinued, SPV_OC_OpSource,
       SPV_OC_OpSourceExtension, SPV_OC_OpName, SPV_OC_OpMemberName, SPV_OC_OpString,
-      SPV_OC_OpExtension, SPV_OC_OpExtInstImport, SPV_OC_OpExtInst,
+      SPV_OC_OpLine, SPV_OC_OpExtension, SPV_OC_OpExtInstImport, SPV_OC_OpExtInst,
       SPV_OC_OpMemoryModel, SPV_OC_OpEntryPoint, SPV_OC_OpExecutionMode,
       SPV_OC_OpCapability, SPV_OC_OpTypeVoid, SPV_OC_OpTypeBool, SPV_OC_OpTypeInt,
-      SPV_OC_OpTypeFloat, SPV_OC_OpTypeVector, SPV_OC_OpTypeArray,
-      SPV_OC_OpTypeRuntimeArray, SPV_OC_OpTypeStruct, SPV_OC_OpTypePointer,
-      SPV_OC_OpTypeFunction, SPV_OC_OpConstantTrue, SPV_OC_OpConstantFalse,
-      SPV_OC_OpConstant, SPV_OC_OpConstantComposite, SPV_OC_OpConstantNull,
-      SPV_OC_OpSpecConstantTrue, SPV_OC_OpSpecConstantFalse, SPV_OC_OpSpecConstant,
-      SPV_OC_OpSpecConstantComposite, SPV_OC_OpFunction, SPV_OC_OpFunctionParameter,
-      SPV_OC_OpFunctionEnd, SPV_OC_OpFunctionCall, SPV_OC_OpVariable, SPV_OC_OpLoad,
-      SPV_OC_OpStore, SPV_OC_OpAccessChain, SPV_OC_OpDecorate,
-      SPV_OC_OpMemberDecorate, SPV_OC_OpCompositeConstruct,
+      SPV_OC_OpTypeFloat, SPV_OC_OpTypeVector, SPV_OC_OpTypeMatrix,
+      SPV_OC_OpTypeArray, SPV_OC_OpTypeRuntimeArray, SPV_OC_OpTypeStruct,
+      SPV_OC_OpTypePointer, SPV_OC_OpTypeFunction, SPV_OC_OpConstantTrue,
+      SPV_OC_OpConstantFalse, SPV_OC_OpConstant, SPV_OC_OpConstantComposite,
+      SPV_OC_OpConstantNull, SPV_OC_OpSpecConstantTrue, SPV_OC_OpSpecConstantFalse,
+      SPV_OC_OpSpecConstant, SPV_OC_OpSpecConstantComposite, SPV_OC_OpFunction,
+      SPV_OC_OpFunctionParameter, SPV_OC_OpFunctionEnd, SPV_OC_OpFunctionCall,
+      SPV_OC_OpVariable, SPV_OC_OpLoad, SPV_OC_OpStore, SPV_OC_OpAccessChain,
+      SPV_OC_OpDecorate, SPV_OC_OpMemberDecorate, SPV_OC_OpCompositeConstruct,
       SPV_OC_OpCompositeExtract, SPV_OC_OpCompositeInsert, SPV_OC_OpConvertFToU,
       SPV_OC_OpConvertFToS, SPV_OC_OpConvertSToF, SPV_OC_OpConvertUToF,
       SPV_OC_OpUConvert, SPV_OC_OpSConvert, SPV_OC_OpFConvert, SPV_OC_OpBitcast,
       SPV_OC_OpFNegate, SPV_OC_OpIAdd, SPV_OC_OpFAdd, SPV_OC_OpISub, SPV_OC_OpFSub,
       SPV_OC_OpIMul, SPV_OC_OpFMul, SPV_OC_OpUDiv, SPV_OC_OpSDiv, SPV_OC_OpFDiv,
       SPV_OC_OpUMod, SPV_OC_OpSRem, SPV_OC_OpSMod, SPV_OC_OpFRem, SPV_OC_OpFMod,
-      SPV_OC_OpLogicalEqual, SPV_OC_OpLogicalNotEqual, SPV_OC_OpLogicalOr,
-      SPV_OC_OpLogicalAnd, SPV_OC_OpLogicalNot, SPV_OC_OpSelect, SPV_OC_OpIEqual,
-      SPV_OC_OpINotEqual, SPV_OC_OpUGreaterThan, SPV_OC_OpSGreaterThan,
-      SPV_OC_OpUGreaterThanEqual, SPV_OC_OpSGreaterThanEqual, SPV_OC_OpULessThan,
-      SPV_OC_OpSLessThan, SPV_OC_OpULessThanEqual, SPV_OC_OpSLessThanEqual,
-      SPV_OC_OpFOrdEqual, SPV_OC_OpFUnordEqual, SPV_OC_OpFOrdNotEqual,
-      SPV_OC_OpFUnordNotEqual, SPV_OC_OpFOrdLessThan, SPV_OC_OpFUnordLessThan,
-      SPV_OC_OpFOrdGreaterThan, SPV_OC_OpFUnordGreaterThan,
+      SPV_OC_OpMatrixTimesScalar, SPV_OC_OpLogicalEqual, SPV_OC_OpLogicalNotEqual,
+      SPV_OC_OpLogicalOr, SPV_OC_OpLogicalAnd, SPV_OC_OpLogicalNot, SPV_OC_OpSelect,
+      SPV_OC_OpIEqual, SPV_OC_OpINotEqual, SPV_OC_OpUGreaterThan,
+      SPV_OC_OpSGreaterThan, SPV_OC_OpUGreaterThanEqual, SPV_OC_OpSGreaterThanEqual,
+      SPV_OC_OpULessThan, SPV_OC_OpSLessThan, SPV_OC_OpULessThanEqual,
+      SPV_OC_OpSLessThanEqual, SPV_OC_OpFOrdEqual, SPV_OC_OpFUnordEqual,
+      SPV_OC_OpFOrdNotEqual, SPV_OC_OpFUnordNotEqual, SPV_OC_OpFOrdLessThan,
+      SPV_OC_OpFUnordLessThan, SPV_OC_OpFOrdGreaterThan, SPV_OC_OpFUnordGreaterThan,
       SPV_OC_OpFOrdLessThanEqual, SPV_OC_OpFUnordLessThanEqual,
       SPV_OC_OpFOrdGreaterThanEqual, SPV_OC_OpFUnordGreaterThanEqual,
       SPV_OC_OpShiftRightLogical, SPV_OC_OpShiftRightArithmetic,
@@ -3212,14 +3292,17 @@ def SPV_OpcodeAttr :
       SPV_OC_OpAtomicUMax, SPV_OC_OpAtomicAnd, SPV_OC_OpAtomicOr, SPV_OC_OpAtomicXor,
       SPV_OC_OpPhi, SPV_OC_OpLoopMerge, SPV_OC_OpSelectionMerge, SPV_OC_OpLabel,
       SPV_OC_OpBranch, SPV_OC_OpBranchConditional, SPV_OC_OpReturn,
-      SPV_OC_OpReturnValue, SPV_OC_OpUnreachable, SPV_OC_OpModuleProcessed,
-      SPV_OC_OpGroupNonUniformElect, SPV_OC_OpGroupNonUniformBallot,
-      SPV_OC_OpGroupNonUniformIAdd, SPV_OC_OpGroupNonUniformFAdd,
-      SPV_OC_OpGroupNonUniformIMul, SPV_OC_OpGroupNonUniformFMul,
-      SPV_OC_OpGroupNonUniformSMin, SPV_OC_OpGroupNonUniformUMin,
-      SPV_OC_OpGroupNonUniformFMin, SPV_OC_OpGroupNonUniformSMax,
-      SPV_OC_OpGroupNonUniformUMax, SPV_OC_OpGroupNonUniformFMax,
-      SPV_OC_OpSubgroupBallotKHR
+      SPV_OC_OpReturnValue, SPV_OC_OpUnreachable, SPV_OC_OpNoLine,
+      SPV_OC_OpModuleProcessed, SPV_OC_OpGroupNonUniformElect,
+      SPV_OC_OpGroupNonUniformBallot, SPV_OC_OpGroupNonUniformIAdd,
+      SPV_OC_OpGroupNonUniformFAdd, SPV_OC_OpGroupNonUniformIMul,
+      SPV_OC_OpGroupNonUniformFMul, SPV_OC_OpGroupNonUniformSMin,
+      SPV_OC_OpGroupNonUniformUMin, SPV_OC_OpGroupNonUniformFMin,
+      SPV_OC_OpGroupNonUniformSMax, SPV_OC_OpGroupNonUniformUMax,
+      SPV_OC_OpGroupNonUniformFMax, SPV_OC_OpSubgroupBallotKHR,
+      SPV_OC_OpTypeCooperativeMatrixNV, SPV_OC_OpCooperativeMatrixLoadNV,
+      SPV_OC_OpCooperativeMatrixStoreNV, SPV_OC_OpCooperativeMatrixMulAddNV,
+      SPV_OC_OpCooperativeMatrixLengthNV
     ]>;
 
 // End opcode section. Generated from SPIR-V spec; DO NOT MODIFY!
@@ -3230,9 +3313,9 @@ def SPV_OpcodeAttr :
 
 // Base class for all SPIR-V ops.
 class SPV_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<SPV_Dialect, mnemonic, !listconcat(traits, [
+    Op<SPIRV_Dialect, mnemonic, !listconcat(traits, [
          // TODO(antiagainst): We don't need all of the following traits for
-         // every op; only the suitabble ones should be added automatically
+         // every op; only the suitable ones should be added automatically
          // after ODS supports dialect-specific contents.
          DeclareOpInterfaceMethods<QueryMinVersionInterface>,
          DeclareOpInterfaceMethods<QueryMaxVersionInterface>,

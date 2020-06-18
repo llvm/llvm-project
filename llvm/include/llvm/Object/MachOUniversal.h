@@ -90,25 +90,14 @@ public:
       else // Parent->getMagic() == MachO::FAT_MAGIC_64
         return Header64.reserved;
     }
+    Triple getTriple() const {
+      return MachOObjectFile::getArchTriple(getCPUType(), getCPUSubType());
+    }
     std::string getArchFlagName() const {
       const char *McpuDefault, *ArchFlag;
-      if (Parent->getMagic() == MachO::FAT_MAGIC) {
-        Triple T =
-            MachOObjectFile::getArchTriple(Header.cputype, Header.cpusubtype,
-                                           &McpuDefault, &ArchFlag);
-      } else { // Parent->getMagic() == MachO::FAT_MAGIC_64
-        Triple T =
-            MachOObjectFile::getArchTriple(Header64.cputype,
-                                           Header64.cpusubtype,
-                                           &McpuDefault, &ArchFlag);
-      }
-      if (ArchFlag) {
-        std::string ArchFlagName(ArchFlag);
-        return ArchFlagName;
-      } else {
-        std::string ArchFlagName("");
-        return ArchFlagName;
-      }
+      MachOObjectFile::getArchTriple(getCPUType(), getCPUSubType(),
+                                     &McpuDefault, &ArchFlag);
+      return ArchFlag ? ArchFlag : std::string();
     }
 
     Expected<std::unique_ptr<MachOObjectFile>> getAsObjectFile() const;

@@ -52,6 +52,17 @@ main_body:
   ret void
 }
 
+; GCN-LABEL: {{^}}buffer_store_format_i16_x:
+; GCN: s_load_dword s[[LO:[0-9]+]]
+; GCN: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[LO]]
+; GCN: buffer_store_format_d16_x v[[V_LO]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
+define amdgpu_kernel void @buffer_store_format_i16_x(<4 x i32> %rsrc, [8 x i32], i16 %data, [8 x i32], i32 %index) {
+main_body:
+  call void @llvm.amdgcn.struct.buffer.store.format.i16(i16 %data, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.struct.buffer.store.format.f16(half, <4 x i32>, i32, i32, i32, i32)
 declare void @llvm.amdgcn.struct.buffer.store.format.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32)
 declare void @llvm.amdgcn.struct.buffer.store.format.v4f16(<4 x half>, <4 x i32>, i32, i32, i32, i32)
+declare void @llvm.amdgcn.struct.buffer.store.format.i16(i16, <4 x i32>, i32, i32, i32, i32)

@@ -116,8 +116,7 @@ Bar odr_violation = { 42 };
 // CHECK:       DW_AT_type {{.*}}{0x{{0*}}[[PTR:.*]]}
 //
 // CHECK: 0x{{0*}}[[PTR]]: DW_TAG_pointer_type
-// FIXME: The next line doesn't work.
-// CHECK-NEXT   DW_AT_type [DW_FORM_ref_addr] {0x{{0*}}[[INTERFACE]]
+// CHECK-NEXT:  DW_AT_type [DW_FORM_ref_addr] (0x{{0*}}[[INTERFACE]]
 extern int odr_violation;
 
 @import Foo;

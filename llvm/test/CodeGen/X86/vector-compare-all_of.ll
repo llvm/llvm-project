@@ -1100,7 +1100,7 @@ define i1 @bool_reduction_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; SSE-LABEL: bool_reduction_v8i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpgtw %xmm0, %xmm1
-; SSE-NEXT:    packsswb %xmm0, %xmm1
+; SSE-NEXT:    packsswb %xmm1, %xmm1
 ; SSE-NEXT:    pmovmskb %xmm1, %eax
 ; SSE-NEXT:    cmpb $-1, %al
 ; SSE-NEXT:    sete %al
@@ -1227,7 +1227,7 @@ define i1 @bool_reduction_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; SSE-NEXT:    pminud %xmm0, %xmm2
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm2
 ; SSE-NEXT:    packssdw %xmm3, %xmm2
-; SSE-NEXT:    packsswb %xmm0, %xmm2
+; SSE-NEXT:    packsswb %xmm2, %xmm2
 ; SSE-NEXT:    pmovmskb %xmm2, %eax
 ; SSE-NEXT:    cmpb $-1, %al
 ; SSE-NEXT:    sete %al
@@ -1304,10 +1304,8 @@ define i1 @bool_reduction_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ; AVX2-LABEL: bool_reduction_v16i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX2-NEXT:    cmpw $-1, %ax
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
+; AVX2-NEXT:    cmpl $-1, %eax
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

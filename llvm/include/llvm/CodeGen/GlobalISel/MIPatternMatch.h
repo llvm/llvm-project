@@ -12,8 +12,6 @@
 #ifndef LLVM_GMIR_PATTERNMATCH_H
 #define LLVM_GMIR_PATTERNMATCH_H
 
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/InstrTypes.h"
@@ -239,6 +237,12 @@ template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true> m_GOr(const LHS &L,
                                                                 const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SHL, false>
+m_GShl(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SHL, false>(L, R);
 }
 
 template <typename LHS, typename RHS>

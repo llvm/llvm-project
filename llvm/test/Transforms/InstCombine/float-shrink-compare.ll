@@ -160,6 +160,32 @@ define i1 @test6_intrin(float %x, float %y) {
   ret i1 %cmp
 }
 
+define i1 @test6a(float %x, float %y) {
+; CHECK-LABEL: @test6a(
+; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.roundeven.f32(float %x)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ROUND]], %y
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.ext = fpext float %x to double
+  %round = call double @roundeven(double %x.ext) nounwind readnone
+  %y.ext = fpext float %y to double
+  %cmp = fcmp oeq double %round, %y.ext
+  ret i1 %cmp
+}
+
+define i1 @test6a_intrin(float %x, float %y) {
+; CHECK-LABEL: @test6a_intrin(
+; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.roundeven.f32(float %x)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ROUND]], %y
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.ext = fpext float %x to double
+  %round = call double @llvm.roundeven.f64(double %x.ext) nounwind readnone
+  %y.ext = fpext float %y to double
+  %cmp = fcmp oeq double %round, %y.ext
+  ret i1 %cmp
+}
+
 define i1 @test7(float %x, float %y) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = call float @llvm.trunc.f32(float %x)
@@ -329,6 +355,32 @@ define i1 @test13_intrin(float %x, float %y) {
   ret i1 %cmp
 }
 
+define i1 @test13a(float %x, float %y) {
+; CHECK-LABEL: @test13a(
+; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.roundeven.f32(float %x)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ROUND]], %y
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.ext = fpext float %x to double
+  %y.ext = fpext float %y to double
+  %round = call double @roundeven(double %x.ext) nounwind readnone
+  %cmp = fcmp oeq double %y.ext, %round
+  ret i1 %cmp
+}
+
+define i1 @test13a_intrin(float %x, float %y) {
+; CHECK-LABEL: @test13a_intrin(
+; CHECK-NEXT:    [[ROUND:%.*]] = call float @llvm.roundeven.f32(float %x)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ROUND]], %y
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.ext = fpext float %x to double
+  %y.ext = fpext float %y to double
+  %round = call double @llvm.roundeven.f64(double %x.ext) nounwind readnone
+  %cmp = fcmp oeq double %y.ext, %round
+  ret i1 %cmp
+}
+
 define i1 @test14(float %x, float %y) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = call float @llvm.trunc.f32(float %x)
@@ -462,6 +514,7 @@ declare double @floor(double) nounwind readnone
 declare double @nearbyint(double) nounwind readnone
 declare double @rint(double) nounwind readnone
 declare double @round(double) nounwind readnone
+declare double @roundeven(double) nounwind readnone
 declare double @trunc(double) nounwind readnone
 declare double @fmin(double, double) nounwind readnone
 declare double @fmax(double, double) nounwind readnone
@@ -471,4 +524,5 @@ declare double @llvm.ceil.f64(double) nounwind readnone
 declare double @llvm.floor.f64(double) nounwind readnone
 declare double @llvm.nearbyint.f64(double) nounwind readnone
 declare double @llvm.round.f64(double) nounwind readnone
+declare double @llvm.roundeven.f64(double) nounwind readnone
 declare double @llvm.trunc.f64(double) nounwind readnone

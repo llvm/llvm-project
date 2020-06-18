@@ -14,19 +14,16 @@
 #define LLVM_LIB_CODEGEN_SELECTIONDAG_SELECTIONDAGBUILDER_H
 
 #include "StatepointLowering.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Statepoint.h"
@@ -55,7 +52,6 @@ class CatchSwitchInst;
 class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
-class ConstantInt;
 class ConstrainedFPIntrinsic;
 class DbgValueInst;
 class DataLayout;
@@ -77,6 +73,7 @@ class PHINode;
 class ResumeInst;
 class ReturnInst;
 class SDDbgValue;
+class SelectionDAG;
 class StoreInst;
 class SwiftErrorValueTracking;
 class SwitchInst;
@@ -409,6 +406,8 @@ public:
     SelectionDAGBuilder *SDB;
   };
 
+  // Data related to deferred switch lowerings. Used to construct additional
+  // Basic Blocks in SelectionDAGISel::FinishBasicBlock.
   std::unique_ptr<SDAGSwitchLowering> SL;
 
   /// A StackProtectorDescriptor structure used to communicate stack protector
@@ -518,7 +517,6 @@ public:
   void resolveOrClearDbgInfo();
 
   SDValue getValue(const Value *V);
-  bool findValue(const Value *V) const;
 
   /// Return the SDNode for the specified IR value if it exists.
   SDNode *getNodeForIRValue(const Value *V) {
@@ -557,7 +555,7 @@ public:
   bool isExportableFromCurrentBlock(const Value *V, const BasicBlock *FromBB);
   void CopyToExportRegsIfNeeded(const Value *V);
   void ExportFromCurrentBlock(const Value *V);
-  void LowerCallTo(ImmutableCallSite CS, SDValue Callee, bool IsTailCall,
+  void LowerCallTo(const CallBase &CB, SDValue Callee, bool IsTailCall,
                    const BasicBlock *EHPadBB = nullptr);
 
   // Lower range metadata from 0 to N to assert zext to an integer of nearest
@@ -627,7 +625,7 @@ public:
 
   // This function is responsible for the whole statepoint lowering process.
   // It uniformly handles invoke and call statepoints.
-  void LowerStatepoint(ImmutableStatepoint ISP,
+  void LowerStatepoint(const GCStatepointInst &I,
                        const BasicBlock *EHPadBB = nullptr);
 
   void LowerCallSiteWithDeoptBundle(const CallBase *Call, SDValue Callee,
@@ -764,7 +762,7 @@ private:
   void visitStoreToSwiftError(const StoreInst &I);
   void visitFreeze(const FreezeInst &I);
 
-  void visitInlineAsm(ImmutableCallSite CS);
+  void visitInlineAsm(const CallBase &Call);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
@@ -774,8 +772,7 @@ private:
   void visitVAEnd(const CallInst &I);
   void visitVACopy(const CallInst &I);
   void visitStackmap(const CallInst &I);
-  void visitPatchpoint(ImmutableCallSite CS,
-                       const BasicBlock *EHPadBB = nullptr);
+  void visitPatchpoint(const CallBase &CB, const BasicBlock *EHPadBB = nullptr);
 
   // These two are implemented in StatepointLowering.cpp
   void visitGCRelocate(const GCRelocateInst &Relocate);
@@ -795,7 +792,7 @@ private:
 
   void HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB);
 
-  void emitInlineAsmError(ImmutableCallSite CS, const Twine &Message);
+  void emitInlineAsmError(const CallBase &Call, const Twine &Message);
 
   /// If V is an function argument then create corresponding DBG_VALUE machine
   /// instruction for it now. At the end of instruction selection, they will be

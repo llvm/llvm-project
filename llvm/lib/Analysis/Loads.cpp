@@ -27,24 +27,12 @@
 
 using namespace llvm;
 
-static MaybeAlign getBaseAlign(const Value *Base, const DataLayout &DL) {
-  if (const MaybeAlign PA = Base->getPointerAlignment(DL))
-    return *PA;
-  Type *const Ty = Base->getType()->getPointerElementType();
-  if (!Ty->isSized())
-    return None;
-  return Align(DL.getABITypeAlignment(Ty));
-}
-
 static bool isAligned(const Value *Base, const APInt &Offset, Align Alignment,
                       const DataLayout &DL) {
-  if (MaybeAlign BA = getBaseAlign(Base, DL)) {
-    const APInt APBaseAlign(Offset.getBitWidth(), BA->value());
-    const APInt APAlign(Offset.getBitWidth(), Alignment.value());
-    assert(APAlign.isPowerOf2() && "must be a power of 2!");
-    return APBaseAlign.uge(APAlign) && !(Offset & (APAlign - 1));
-  }
-  return false;
+  Align BA = Base->getPointerAlignment(DL);
+  const APInt APAlign(Offset.getBitWidth(), Alignment.value());
+  assert(APAlign.isPowerOf2() && "must be a power of 2!");
+  return BA >= Alignment && !(Offset & (APAlign - 1));
 }
 
 /// Test if V is always a pointer to allocated and suitably aligned memory for
@@ -148,7 +136,7 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
                                               const DominatorTree *DT) {
   // For unsized types or scalable vectors we don't know exactly how many bytes
   // are dereferenced, so bail out.
-  if (!Ty->isSized() || (Ty->isVectorTy() && Ty->getVectorIsScalable()))
+  if (!Ty->isSized() || isa<ScalableVectorType>(Ty))
     return false;
 
   // When dereferenceability information is provided by a dereferenceable
@@ -210,8 +198,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 
   APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
                 DL.getTypeStoreSize(LI->getType()));
-  const Align Alignment = DL.getValueOrABITypeAlignment(
-      MaybeAlign(LI->getAlignment()), LI->getType());
+  const Align Alignment = LI->getAlign();
 
   Instruction *HeaderFirstNonPHI = L->getHeader()->getFirstNonPHI();
 
@@ -267,14 +254,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 ///
 /// This uses the pointee type to determine how many bytes need to be safe to
 /// load from the pointer.
-bool llvm::isSafeToLoadUnconditionally(Value *V, MaybeAlign MA, APInt &Size,
+bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
                                        const DataLayout &DL,
                                        Instruction *ScanFrom,
                                        const DominatorTree *DT) {
-  // Zero alignment means that the load has the ABI alignment for the target
-  const Align Alignment =
-      DL.getValueOrABITypeAlignment(MA, V->getType()->getPointerElementType());
-
   // If DT is not specified we can't make context-sensitive query
   const Instruction* CtxI = DT ? ScanFrom : nullptr;
   if (isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, DT))
@@ -309,7 +292,8 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, MaybeAlign MA, APInt &Size,
       return false;
 
     Value *AccessedPtr;
-    MaybeAlign MaybeAccessedAlign;
+    Type *AccessedTy;
+    Align AccessedAlign;
     if (LoadInst *LI = dyn_cast<LoadInst>(BBI)) {
       // Ignore volatile loads. The execution of a volatile load cannot
       // be used to prove an address is backed by regular memory; it can,
@@ -317,20 +301,18 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, MaybeAlign MA, APInt &Size,
       if (LI->isVolatile())
         continue;
       AccessedPtr = LI->getPointerOperand();
-      MaybeAccessedAlign = MaybeAlign(LI->getAlignment());
+      AccessedTy = LI->getType();
+      AccessedAlign = LI->getAlign();
     } else if (StoreInst *SI = dyn_cast<StoreInst>(BBI)) {
       // Ignore volatile stores (see comment for loads).
       if (SI->isVolatile())
         continue;
       AccessedPtr = SI->getPointerOperand();
-      MaybeAccessedAlign = MaybeAlign(SI->getAlignment());
+      AccessedTy = SI->getValueOperand()->getType();
+      AccessedAlign = SI->getAlign();
     } else
       continue;
 
-    Type *AccessedTy = AccessedPtr->getType()->getPointerElementType();
-
-    const Align AccessedAlign =
-        DL.getValueOrABITypeAlignment(MaybeAccessedAlign, AccessedTy);
     if (AccessedAlign < Alignment)
       continue;
 
@@ -346,7 +328,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, MaybeAlign MA, APInt &Size,
   return false;
 }
 
-bool llvm::isSafeToLoadUnconditionally(Value *V, Type *Ty, MaybeAlign Alignment,
+bool llvm::isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
                                        const DataLayout &DL,
                                        Instruction *ScanFrom,
                                        const DominatorTree *DT) {

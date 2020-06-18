@@ -19,9 +19,8 @@
 #include <string>
 
 namespace llvm {
-  class MCInst;
-  class MCSubtargetInfo;
-  class FeatureBitset;
+
+class MCInst;
 
 //===----------------------------------------------------------------------===//
 // Machine Operand Flags and Description
@@ -197,15 +196,6 @@ public:
   const MCPhysReg *ImplicitUses; // Registers implicitly read by this instr
   const MCPhysReg *ImplicitDefs; // Registers implicitly defined by this instr
   const MCOperandInfo *OpInfo;   // 'NumOperands' entries about operands
-  // Subtarget feature that this is deprecated on, if any
-  // -1 implies this is not deprecated by any single feature. It may still be
-  // deprecated due to a "complex" reason, below.
-  int64_t DeprecatedFeature;
-
-  // A complex method to determine if a certain instruction is deprecated or
-  // not, and return the reason for deprecation.
-  bool (*ComplexDeprecationInfo)(MCInst &, const MCSubtargetInfo &,
-                                 std::string &);
 
   /// Returns the value of the specific constraint if
   /// it is set. Returns -1 if it is not set.
@@ -218,11 +208,6 @@ public:
     }
     return -1;
   }
-
-  /// Returns true if a certain instruction is deprecated and if so
-  /// returns the reason in \p Info.
-  bool getDeprecatedInfo(MCInst &MI, const MCSubtargetInfo &STI,
-                         std::string &Info) const;
 
   /// Return the opcode number for this descriptor.
   unsigned getOpcode() const { return Opcode; }

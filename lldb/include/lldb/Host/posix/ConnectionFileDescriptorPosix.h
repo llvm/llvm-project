@@ -116,7 +116,9 @@ protected:
 private:
   void InitializeSocket(Socket *socket);
 
-  DISALLOW_COPY_AND_ASSIGN(ConnectionFileDescriptor);
+  ConnectionFileDescriptor(const ConnectionFileDescriptor &) = delete;
+  const ConnectionFileDescriptor &
+  operator=(const ConnectionFileDescriptor &) = delete;
 };
 
 } // namespace lldb_private

@@ -44,6 +44,7 @@ FunctionPass *createWebAssemblyOptimizeLiveIntervals();
 FunctionPass *createWebAssemblyMemIntrinsicResults();
 FunctionPass *createWebAssemblyRegStackify();
 FunctionPass *createWebAssemblyRegColoring();
+FunctionPass *createWebAssemblyFixBrTableDefaults();
 FunctionPass *createWebAssemblyFixIrreducibleControlFlow();
 FunctionPass *createWebAssemblyLateEHPrepare();
 FunctionPass *createWebAssemblyCFGSort();
@@ -51,6 +52,7 @@ FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyExplicitLocals();
 FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
+FunctionPass *createWebAssemblyDebugFixup();
 FunctionPass *createWebAssemblyPeephole();
 
 // PassRegistry initialization declarations.
@@ -67,6 +69,7 @@ void initializeWebAssemblyOptimizeLiveIntervalsPass(PassRegistry &);
 void initializeWebAssemblyMemIntrinsicResultsPass(PassRegistry &);
 void initializeWebAssemblyRegStackifyPass(PassRegistry &);
 void initializeWebAssemblyRegColoringPass(PassRegistry &);
+void initializeWebAssemblyFixBrTableDefaultsPass(PassRegistry &);
 void initializeWebAssemblyFixIrreducibleControlFlowPass(PassRegistry &);
 void initializeWebAssemblyLateEHPreparePass(PassRegistry &);
 void initializeWebAssemblyExceptionInfoPass(PassRegistry &);
@@ -75,10 +78,20 @@ void initializeWebAssemblyCFGStackifyPass(PassRegistry &);
 void initializeWebAssemblyExplicitLocalsPass(PassRegistry &);
 void initializeWebAssemblyLowerBrUnlessPass(PassRegistry &);
 void initializeWebAssemblyRegNumberingPass(PassRegistry &);
+void initializeWebAssemblyDebugFixupPass(PassRegistry &);
 void initializeWebAssemblyPeepholePass(PassRegistry &);
 
 namespace WebAssembly {
-enum TargetIndex { TI_LOCAL_START, TI_GLOBAL_START, TI_OPERAND_STACK_START };
+enum TargetIndex {
+  // Followed by a local index (ULEB).
+  TI_LOCAL,
+  // Followed by an absolute global index (ULEB). DEPRECATED.
+  TI_GLOBAL_FIXED,
+  TI_OPERAND_STACK,
+  // Followed by a compilation unit relative global index (uint32_t)
+  // that will have an associated relocation.
+  TI_GLOBAL_RELOC
+};
 } // end namespace WebAssembly
 
 } // end namespace llvm

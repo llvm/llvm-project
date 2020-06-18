@@ -417,21 +417,21 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "offset": 197,
+// CHECK-NEXT:       "col": 33,
+// CHECK-NEXT:       "tokLen": 1
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 193,
+// CHECK-NEXT:        "col": 29,
+// CHECK-NEXT:        "tokLen": 4
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "offset": 197,
 // CHECK-NEXT:        "col": 33,
 // CHECK-NEXT:        "tokLen": 1
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "range": {
-// CHECK-NEXT:        "begin": {
-// CHECK-NEXT:          "offset": 193,
-// CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "tokLen": 4
-// CHECK-NEXT:        },
-// CHECK-NEXT:        "end": {
-// CHECK-NEXT:          "offset": 197,
-// CHECK-NEXT:          "col": 33,
-// CHECK-NEXT:          "tokLen": 1
-// CHECK-NEXT:        }
+// CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "auto:1",
@@ -533,21 +533,21 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "offset": 197,
+// CHECK-NEXT:       "col": 33,
+// CHECK-NEXT:       "tokLen": 1
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 193,
+// CHECK-NEXT:        "col": 29,
+// CHECK-NEXT:        "tokLen": 4
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "offset": 197,
 // CHECK-NEXT:        "col": 33,
 // CHECK-NEXT:        "tokLen": 1
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "range": {
-// CHECK-NEXT:        "begin": {
-// CHECK-NEXT:          "offset": 193,
-// CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "tokLen": 4
-// CHECK-NEXT:        },
-// CHECK-NEXT:        "end": {
-// CHECK-NEXT:          "offset": 197,
-// CHECK-NEXT:          "col": 33,
-// CHECK-NEXT:          "tokLen": 1
-// CHECK-NEXT:        }
+// CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "auto:1",
@@ -608,21 +608,21 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "offset": 197,
+// CHECK-NEXT:       "col": 33,
+// CHECK-NEXT:       "tokLen": 1
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 193,
+// CHECK-NEXT:        "col": 29,
+// CHECK-NEXT:        "tokLen": 4
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "offset": 197,
 // CHECK-NEXT:        "col": 33,
 // CHECK-NEXT:        "tokLen": 1
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "range": {
-// CHECK-NEXT:        "begin": {
-// CHECK-NEXT:          "offset": 193,
-// CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "tokLen": 4
-// CHECK-NEXT:        },
-// CHECK-NEXT:        "end": {
-// CHECK-NEXT:          "offset": 197,
-// CHECK-NEXT:          "col": 33,
-// CHECK-NEXT:          "tokLen": 1
-// CHECK-NEXT:        }
+// CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "auto:1",
@@ -750,6 +750,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -891,6 +892,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -1032,6 +1034,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -1134,6 +1137,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -1258,6 +1262,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -1382,6 +1387,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -1528,6 +1534,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -1656,7 +1663,8 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:   "copyAssign": {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
-// CHECK-NEXT:    "nonTrivial": true
+// CHECK-NEXT:    "nonTrivial": true,
+// CHECK-NEXT:    "simple": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
 // CHECK-NEXT:    "hasConstParam": true,
@@ -1922,6 +1930,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -2024,6 +2033,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -2176,6 +2186,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -2422,6 +2433,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -2554,6 +2566,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -2696,7 +2709,8 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:   "copyAssign": {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
-// CHECK-NEXT:    "nonTrivial": true
+// CHECK-NEXT:    "nonTrivial": true,
+// CHECK-NEXT:    "simple": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
 // CHECK-NEXT:    "hasConstParam": true,
@@ -2962,6 +2976,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -3090,7 +3105,8 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:   "copyAssign": {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
-// CHECK-NEXT:    "nonTrivial": true
+// CHECK-NEXT:    "nonTrivial": true,
+// CHECK-NEXT:    "simple": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
 // CHECK-NEXT:    "hasConstParam": true,
@@ -3356,7 +3372,8 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:   "copyAssign": {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
-// CHECK-NEXT:    "nonTrivial": true
+// CHECK-NEXT:    "nonTrivial": true,
+// CHECK-NEXT:    "simple": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
 // CHECK-NEXT:    "hasConstParam": true,
@@ -3622,6 +3639,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -3741,6 +3759,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -3874,6 +3893,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -4018,6 +4038,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -4121,6 +4142,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -4269,6 +4291,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -4412,13 +4435,14 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:   "copyAssign": {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
-// CHECK-NEXT:    "needsOverloadResolution": true,
+// CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
-// CHECK-NEXT:    "needsOverloadResolution": true,
+// CHECK-NEXT:    "needsImplicit": true,
 // CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
@@ -4505,119 +4529,6 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "mutable": true
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "CXXConstructorDecl",
-// CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1497,
-// CHECK-NEXT:     "line": 102,
-// CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "tokLen": 16
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1497,
-// CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "tokLen": 16
-// CHECK-NEXT:     },
-// CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1497,
-// CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "tokLen": 16
-// CHECK-NEXT:     }
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "name": "HasMutableFields",
-// CHECK-NEXT:    "mangledName": "_ZN16HasMutableFieldsC1ERKS_",
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "void (const HasMutableFields &)"
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "inline": true,
-// CHECK-NEXT:    "constexpr": true,
-// CHECK-NEXT:    "explicitlyDefaulted": "default",
-// CHECK-NEXT:    "inner": [
-// CHECK-NEXT:     {
-// CHECK-NEXT:      "id": "0x{{.*}}",
-// CHECK-NEXT:      "kind": "ParmVarDecl",
-// CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 1497,
-// CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "tokLen": 16
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "range": {
-// CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 1497,
-// CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "tokLen": 16
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 1497,
-// CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "tokLen": 16
-// CHECK-NEXT:       }
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "type": {
-// CHECK-NEXT:       "qualType": "const HasMutableFields &"
-// CHECK-NEXT:      }
-// CHECK-NEXT:     }
-// CHECK-NEXT:    ]
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "CXXMethodDecl",
-// CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1497,
-// CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "tokLen": 16
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1497,
-// CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "tokLen": 16
-// CHECK-NEXT:     },
-// CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1497,
-// CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "tokLen": 16
-// CHECK-NEXT:     }
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "name": "operator=",
-// CHECK-NEXT:    "mangledName": "_ZN16HasMutableFieldsaSERKS_",
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "HasMutableFields &(const HasMutableFields &)"
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "inline": true,
-// CHECK-NEXT:    "constexpr": true,
-// CHECK-NEXT:    "explicitlyDefaulted": "default",
-// CHECK-NEXT:    "inner": [
-// CHECK-NEXT:     {
-// CHECK-NEXT:      "id": "0x{{.*}}",
-// CHECK-NEXT:      "kind": "ParmVarDecl",
-// CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 1497,
-// CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "tokLen": 16
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "range": {
-// CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 1497,
-// CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "tokLen": 16
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 1497,
-// CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "tokLen": 16
-// CHECK-NEXT:       }
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "type": {
-// CHECK-NEXT:       "qualType": "const HasMutableFields &"
-// CHECK-NEXT:      }
-// CHECK-NEXT:     }
-// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -4652,6 +4563,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -4776,6 +4688,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -4872,6 +4785,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "hasConstParam": true,
 // CHECK-NEXT:      "implicitHasConstParam": true,
 // CHECK-NEXT:      "needsImplicit": true,
+// CHECK-NEXT:      "simple": true,
 // CHECK-NEXT:      "trivial": true
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "copyCtor": {
@@ -5025,6 +4939,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -5128,6 +5043,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {
@@ -5277,6 +5193,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "hasConstParam": true,
 // CHECK-NEXT:    "implicitHasConstParam": true,
 // CHECK-NEXT:    "needsImplicit": true,
+// CHECK-NEXT:    "simple": true,
 // CHECK-NEXT:    "trivial": true
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "copyCtor": {

@@ -178,6 +178,11 @@ void integral_conversion()
   fnptr fnp = (fnptr)(l);
   (void)(char)(fnp); // expected-error {{cast from pointer to smaller type 'char' loses information}}
   (void)(long)(fnp);
+
+  (void)(bool)((void*)0);
+  (void)(bool)((int*)0);
+  (void)(char)((void*)0); // expected-error {{cast from pointer to smaller type 'char' loses information}}
+  (void)(char)((int*)0);  // expected-error {{cast from pointer to smaller type 'char' loses information}}
 }
 
 void pointer_conversion()

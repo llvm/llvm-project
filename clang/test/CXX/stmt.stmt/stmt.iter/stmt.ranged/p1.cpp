@@ -22,7 +22,7 @@ namespace X {
 
   template<typename T>
     auto begin(T &&t) -> decltype(t.alt_begin()) { return t.alt_begin(); } // expected-note {{selected 'begin' template [with T = }} \
-                                                                              expected-note 2{{candidate template ignored: substitution failure [with T = }}
+                                                                           // expected-note 2{{candidate template ignored: substitution failure [with T = }}
   template<typename T>
     auto end(T &&t) -> decltype(t.alt_end()) { return t.alt_end(); } // expected-note {{candidate template ignored: substitution failure [with T = }}
 

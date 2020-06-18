@@ -26,7 +26,7 @@ _start:
 // page(0x220300) - page(0x21023c) = 65536
 // 0x23c = 768
 
-// CHECK:      _start:
+// CHECK:      <_start>:
 // CHECK-NEXT: 210238: nop
 // CHECK-NEXT: 21023c: adrp    x0, #65536
 // CHECK-NEXT: 210240: ldr     x0, [x0, #768]

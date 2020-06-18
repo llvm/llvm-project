@@ -50,6 +50,12 @@ class S {
       int b;
     #pragma omp target map(this[1]) // expected-note {{expected 'this' subscript expression on map clause to be 'this[0]'}} // expected-error {{invalid 'this' expression on 'map' clause}}
       int c;
+    #pragma omp target map(foo) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+      int d;
+    #pragma omp target map(zee) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+      int e;
+    #pragma omp target map(this->zee) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+      int f;
   }
 };
 
@@ -109,6 +115,14 @@ int main(int argc, char **argv) {
   [[]] // expected-error {{an attribute list cannot appear here}}
   #pragma omp target
   for (int n = 0; n < 100; ++n) {}
+
+  #pragma omp target map(foo) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
+
+  S s;
+
+  #pragma omp target map(s.zee) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
 
   return 0;
 }

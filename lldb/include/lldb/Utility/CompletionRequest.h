@@ -160,8 +160,8 @@ public:
   /// the suggested completion is stored, so the given string can be free'd
   /// afterwards.
   ///
-  /// \param match The suggested completion.
-  /// \param completion An optional description of the completion string. The
+  /// \param completion The suggested completion.
+  /// \param description An optional description of the completion string. The
   ///     description will be displayed to the user alongside the completion.
   /// \param mode The CompletionMode for this completion.
   void AddCompletion(llvm::StringRef completion,
@@ -173,7 +173,7 @@ public:
   /// Adds a possible completion string if the completion would complete the
   /// current argument.
   ///
-  /// \param match The suggested completion.
+  /// \param completion The suggested completion.
   /// \param description An optional description of the completion string. The
   ///     description will be displayed to the user alongside the completion.
   template <CompletionMode M = CompletionMode::Normal>
@@ -203,7 +203,7 @@ public:
   /// The number of completions and descriptions must be identical.
   ///
   /// \param completions The list of completions.
-  /// \param completions The list of descriptions.
+  /// \param descriptions The list of descriptions.
   ///
   /// \see AddCompletion
   void AddCompletions(const StringList &completions,

@@ -36,10 +36,23 @@ using namespace llvm::object;
 using namespace llvm::sys;
 using namespace llvm::sys::fs;
 using namespace llvm::support::endian;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
+bool InputFile::isInGroup;
+uint32_t InputFile::nextGroupId;
+
+std::vector<ArchiveFile *> elf::archiveFiles;
+std::vector<BinaryFile *> elf::binaryFiles;
+std::vector<BitcodeFile *> elf::bitcodeFiles;
+std::vector<LazyObjFile *> elf::lazyObjFiles;
+std::vector<InputFile *> elf::objectFiles;
+std::vector<SharedFile *> elf::sharedFiles;
+
+std::unique_ptr<TarWriter> elf::tar;
+
 // Returns "<internal>", "foo.a(bar.o)" or "baz.o".
-std::string toString(const elf::InputFile *f) {
+std::string lld::toString(const InputFile *f) {
   if (!f)
     return "<internal>";
 
@@ -51,17 +64,6 @@ std::string toString(const elf::InputFile *f) {
   }
   return f->toStringCache;
 }
-
-namespace elf {
-bool InputFile::isInGroup;
-uint32_t InputFile::nextGroupId;
-std::vector<BinaryFile *> binaryFiles;
-std::vector<BitcodeFile *> bitcodeFiles;
-std::vector<LazyObjFile *> lazyObjFiles;
-std::vector<InputFile *> objectFiles;
-std::vector<SharedFile *> sharedFiles;
-
-std::unique_ptr<TarWriter> tar;
 
 static ELFKind getELFKind(MemoryBufferRef mb, StringRef archiveName) {
   unsigned char size;
@@ -101,7 +103,7 @@ InputFile::InputFile(Kind k, MemoryBufferRef m)
     ++nextGroupId;
 }
 
-Optional<MemoryBufferRef> readFile(StringRef path) {
+Optional<MemoryBufferRef> elf::readFile(StringRef path) {
   // The --chroot option changes our virtual root directory.
   // This is useful when you are dealing with files created by --reproduce.
   if (!config->chroot.empty() && path.startswith("/"))
@@ -138,8 +140,10 @@ static bool isCompatible(InputFile *file) {
       return true;
   }
 
-  if (!config->emulation.empty()) {
-    error(toString(file) + " is incompatible with " + config->emulation);
+  StringRef target =
+      !config->bfdname.empty() ? config->bfdname : config->emulation;
+  if (!target.empty()) {
+    error(toString(file) + " is incompatible with " + target);
     return false;
   }
 
@@ -148,8 +152,11 @@ static bool isCompatible(InputFile *file) {
     existing = objectFiles[0];
   else if (!sharedFiles.empty())
     existing = sharedFiles[0];
-  else
+  else if (!bitcodeFiles.empty())
     existing = bitcodeFiles[0];
+  else
+    llvm_unreachable("Must have -m, OUTPUT_FORMAT or existing input file to "
+                     "determine target emulation");
 
   error(toString(file) + " is incompatible with " + toString(existing));
   return false;
@@ -168,6 +175,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 
   // .a file
   if (auto *f = dyn_cast<ArchiveFile>(file)) {
+    archiveFiles.push_back(f);
     f->parse();
     return;
   }
@@ -201,7 +209,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 }
 
 // Add symbols in File to the symbol table.
-void parseFile(InputFile *file) {
+void elf::parseFile(InputFile *file) {
   switch (config->ekind) {
   case ELF32LEKind:
     doParseFile<ELF32LE>(file);
@@ -264,9 +272,17 @@ std::string InputFile::getSrcMsg(const Symbol &sym, InputSectionBase &sec,
   }
 }
 
-template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
-  dwarf = make<DWARFCache>(std::make_unique<DWARFContext>(
-      std::make_unique<LLDDwarfObj<ELFT>>(this)));
+template <class ELFT> DWARFCache *ObjFile<ELFT>::getDwarf() {
+  llvm::call_once(initDwarf, [this]() {
+    dwarf = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
+        std::make_unique<LLDDwarfObj<ELFT>>(this), "",
+        [&](Error err) { warn(getName() + ": " + toString(std::move(err))); },
+        [&](Error warning) {
+          warn(getName() + ": " + toString(std::move(warning)));
+        }));
+  });
+
+  return dwarf.get();
 }
 
 // Returns the pair of file name and line number describing location of data
@@ -274,9 +290,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
 template <class ELFT>
 Optional<std::pair<std::string, unsigned>>
 ObjFile<ELFT>::getVariableLoc(StringRef name) {
-  llvm::call_once(initDwarfLine, [this]() { initializeDwarf(); });
-
-  return dwarf->getVariableLoc(name);
+  return getDwarf()->getVariableLoc(name);
 }
 
 // Returns source line information for a given offset
@@ -284,8 +298,6 @@ ObjFile<ELFT>::getVariableLoc(StringRef name) {
 template <class ELFT>
 Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *s,
                                                   uint64_t offset) {
-  llvm::call_once(initDwarfLine, [this]() { initializeDwarf(); });
-
   // Detect SectionIndex for specified section.
   uint64_t sectionIndex = object::SectionedAddress::UndefSection;
   ArrayRef<InputSectionBase *> sections = s->file->getSections();
@@ -296,9 +308,7 @@ Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *s,
     }
   }
 
-  // Use fake address calculated by adding section file offset and offset in
-  // section. See comments for ObjectInfo class.
-  return dwarf->getDILineInfo(s->getOffsetInFile() + offset, sectionIndex);
+  return getDwarf()->getDILineInfo(offset, sectionIndex);
 }
 
 ELFFileBase::ELFFileBase(Kind k, MemoryBufferRef mb) : InputFile(k, mb) {
@@ -417,6 +427,9 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
 
 template <class ELFT>
 bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
+  if (!(sec.sh_flags & SHF_MERGE))
+    return false;
+
   // On a regular link we don't merge sections if -O0 (default is -O1). This
   // sometimes makes the linker significantly faster, although the output will
   // be bigger.
@@ -452,10 +465,7 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
           Twine(sec.sh_size) + ") must be a multiple of sh_entsize (" +
           Twine(entSize) + ")");
 
-  uint64_t flags = sec.sh_flags;
-  if (!(flags & SHF_MERGE))
-    return false;
-  if (flags & SHF_WRITE)
+  if (sec.sh_flags & SHF_WRITE)
     fatal(toString(this) + ":(" + name +
           "): writable SHF_MERGE section is not supported");
 
@@ -662,7 +672,9 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
 // the input objects have been compiled.
 static void updateARMVFPArgs(const ARMAttributeParser &attributes,
                              const InputFile *f) {
-  if (!attributes.hasAttribute(ARMBuildAttrs::ABI_VFP_args))
+  Optional<unsigned> attr =
+      attributes.getAttributeValue(ARMBuildAttrs::ABI_VFP_args);
+  if (!attr.hasValue())
     // If an ABI tag isn't present then it is implicitly given the value of 0
     // which maps to ARMBuildAttrs::BaseAAPCS. However many assembler files,
     // including some in glibc that don't use FP args (and should have value 3)
@@ -670,7 +682,7 @@ static void updateARMVFPArgs(const ARMAttributeParser &attributes,
     // as a clash.
     return;
 
-  unsigned vfpArgs = attributes.getAttributeValue(ARMBuildAttrs::ABI_VFP_args);
+  unsigned vfpArgs = attr.getValue();
   ARMVFPArgKind arg;
   switch (vfpArgs) {
   case ARMBuildAttrs::BaseAAPCS:
@@ -707,9 +719,11 @@ static void updateARMVFPArgs(const ARMAttributeParser &attributes,
 // is compiled with an architecture that supports these features then lld is
 // permitted to use them.
 static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
-  if (!attributes.hasAttribute(ARMBuildAttrs::CPU_arch))
+  Optional<unsigned> attr =
+      attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
+  if (!attr.hasValue())
     return;
-  auto arch = attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
+  auto arch = attr.getValue();
   switch (arch) {
   case ARMBuildAttrs::Pre_v4:
   case ARMBuildAttrs::v4:
@@ -842,7 +856,13 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
       break;
     ARMAttributeParser attributes;
     ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(&sec));
-    attributes.Parse(contents, /*isLittle*/ config->ekind == ELF32LEKind);
+    if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
+                                                 ? support::little
+                                                 : support::big)) {
+      auto *isec = make<InputSection>(*this, sec, name);
+      warn(toString(isec) + ": " + llvm::toString(std::move(e)));
+      break;
+    }
     updateSupportedARMFeatures(attributes);
     updateARMVFPArgs(attributes, this);
 
@@ -1097,8 +1117,20 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     // COMDAT member sections, and if a comdat group is discarded, some
     // defined symbol in a .eh_frame becomes dangling symbols.
     if (sec == &InputSection::discarded) {
-      this->symbols[i]->resolve(
-          Undefined{this, name, binding, stOther, type, secIdx});
+      Undefined und{this, name, binding, stOther, type, secIdx};
+      Symbol *sym = this->symbols[i];
+      // !ArchiveFile::parsed or LazyObjFile::fetched means that the file
+      // containing this object has not finished processing, i.e. this symbol is
+      // a result of a lazy symbol fetch. We should demote the lazy symbol to an
+      // Undefined so that any relocations outside of the group to it will
+      // trigger a discarded section error.
+      if ((sym->symbolKind == Symbol::LazyArchiveKind &&
+           !cast<ArchiveFile>(sym->file)->parsed) ||
+          (sym->symbolKind == Symbol::LazyObjectKind &&
+           cast<LazyObjFile>(sym->file)->fetched))
+        sym->replace(und);
+      else
+        sym->resolve(und);
       continue;
     }
 
@@ -1121,6 +1153,10 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&file)
 void ArchiveFile::parse() {
   for (const Archive::Symbol &sym : file->symbols())
     symtab->addSymbol(LazyArchive{*this, sym});
+
+  // Inform a future invocation of ObjFile<ELFT>::initializeSymbols() that this
+  // archive has been processed.
+  parsed = true;
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -1142,10 +1178,22 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
   if (tar && c.getParent()->isThin())
     tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb.getBuffer());
 
-  InputFile *file = createObjectFile(
-      mb, getName(), c.getParent()->isThin() ? 0 : c.getChildOffset());
+  InputFile *file = createObjectFile(mb, getName(), c.getChildOffset());
   file->groupId = groupId;
   parseFile(file);
+}
+
+size_t ArchiveFile::getMemberCount() const {
+  size_t count = 0;
+  Error err = Error::success();
+  for (const Archive::Child &c : file->children(err)) {
+    (void)c;
+    ++count;
+  }
+  // This function is used by --print-archive-stats=, where an error does not
+  // really matter.
+  consumeError(std::move(err));
+  return count;
 }
 
 unsigned SharedFile::vernauxNum;
@@ -1177,6 +1225,40 @@ static std::vector<const void *> parseVerdefs(const uint8_t *base,
     verdefs[verdefIndex] = curVerdef;
   }
   return verdefs;
+}
+
+// Parse SHT_GNU_verneed to properly set the name of a versioned undefined
+// symbol. We detect fatal issues which would cause vulnerabilities, but do not
+// implement sophisticated error checking like in llvm-readobj because the value
+// of such diagnostics is low.
+template <typename ELFT>
+std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
+                                               const typename ELFT::Shdr *sec) {
+  if (!sec)
+    return {};
+  std::vector<uint32_t> verneeds;
+  ArrayRef<uint8_t> data = CHECK(obj.getSectionContents(sec), this);
+  const uint8_t *verneedBuf = data.begin();
+  for (unsigned i = 0; i != sec->sh_info; ++i) {
+    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end())
+      fatal(toString(this) + " has an invalid Verneed");
+    auto *vn = reinterpret_cast<const typename ELFT::Verneed *>(verneedBuf);
+    const uint8_t *vernauxBuf = verneedBuf + vn->vn_aux;
+    for (unsigned j = 0; j != vn->vn_cnt; ++j) {
+      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end())
+        fatal(toString(this) + " has an invalid Vernaux");
+      auto *aux = reinterpret_cast<const typename ELFT::Vernaux *>(vernauxBuf);
+      if (aux->vna_name >= this->stringTable.size())
+        fatal(toString(this) + " has a Vernaux with an invalid vna_name");
+      uint16_t version = aux->vna_other & VERSYM_VERSION;
+      if (version >= verneeds.size())
+        verneeds.resize(version + 1);
+      verneeds[version] = aux->vna_name;
+      vernauxBuf += aux->vna_next;
+    }
+    verneedBuf += vn->vn_next;
+  }
+  return verneeds;
 }
 
 // We do not usually care about alignments of data in shared object
@@ -1222,6 +1304,7 @@ template <class ELFT> void SharedFile::parse() {
 
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
+  const Elf_Shdr *verneedSec = nullptr;
 
   // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
   for (const Elf_Shdr &sec : sections) {
@@ -1237,6 +1320,9 @@ template <class ELFT> void SharedFile::parse() {
       break;
     case SHT_GNU_verdef:
       verdefSec = &sec;
+      break;
+    case SHT_GNU_verneed:
+      verneedSec = &sec;
       break;
     }
   }
@@ -1277,12 +1363,13 @@ template <class ELFT> void SharedFile::parse() {
   sharedFiles.push_back(this);
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
+  std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
   // VER_NDX_GLOBAL.
   size_t size = numELFSyms - firstGlobal;
-  std::vector<uint32_t> versyms(size, VER_NDX_GLOBAL);
+  std::vector<uint16_t> versyms(size, VER_NDX_GLOBAL);
   if (versymSec) {
     ArrayRef<Elf_Versym> versym =
         CHECK(obj.template getSectionContentsAsArray<Elf_Versym>(versymSec),
@@ -1313,7 +1400,22 @@ template <class ELFT> void SharedFile::parse() {
       continue;
     }
 
+    uint16_t idx = versyms[i] & ~VERSYM_HIDDEN;
     if (sym.isUndefined()) {
+      // For unversioned undefined symbols, VER_NDX_GLOBAL makes more sense but
+      // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
+      if (idx != VER_NDX_LOCAL && idx != VER_NDX_GLOBAL) {
+        if (idx >= verneeds.size()) {
+          error("corrupt input file: version need index " + Twine(idx) +
+                " for symbol " + name + " is out of bounds\n>>> defined in " +
+                toString(this));
+          continue;
+        }
+        StringRef verName = this->stringTable.data() + verneeds[idx];
+        versionedNameBuffer.clear();
+        name =
+            saver.save((name + "@" + verName).toStringRef(versionedNameBuffer));
+      }
       Symbol *s = symtab->addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
       s->exportDynamic = true;
@@ -1323,7 +1425,6 @@ template <class ELFT> void SharedFile::parse() {
     // MIPS BFD linker puts _gp_disp symbol into DSO files and incorrectly
     // assigns VER_NDX_LOCAL to this section global symbol. Here is a
     // workaround for this bug.
-    uint32_t idx = versyms[i] & ~VERSYM_HIDDEN;
     if (config->emachine == EM_MIPS && idx == VER_NDX_LOCAL &&
         name == "_gp_disp")
       continue;
@@ -1417,10 +1518,11 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
   // into consideration at LTO time (which very likely causes undefined
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
-  StringRef name = archiveName.empty()
-                       ? saver.save(path)
-                       : saver.save(archiveName + "(" + path + " at " +
-                                    utostr(offsetInArchive) + ")");
+  StringRef name =
+      archiveName.empty()
+          ? saver.save(path)
+          : saver.save(archiveName + "(" + path::filename(path) + " at " +
+                       utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK(lto::InputFile::create(mbref), this);
@@ -1509,8 +1611,8 @@ void BinaryFile::parse() {
                             STV_DEFAULT, STT_OBJECT, data.size(), 0, nullptr});
 }
 
-InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
-                            uint64_t offsetInArchive) {
+InputFile *elf::createObjectFile(MemoryBufferRef mb, StringRef archiveName,
+                                 uint64_t offsetInArchive) {
   if (isBitcode(mb))
     return make<BitcodeFile>(mb, archiveName, offsetInArchive);
 
@@ -1529,13 +1631,12 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
 }
 
 void LazyObjFile::fetch() {
-  if (mb.getBuffer().empty())
+  if (fetched)
     return;
+  fetched = true;
 
   InputFile *file = createObjectFile(mb, archiveName, offsetInArchive);
   file->groupId = groupId;
-
-  mb = {};
 
   // Copy symbol vector so that the new InputFile doesn't have to
   // insert the same defined symbols to the symbol table again.
@@ -1601,7 +1702,7 @@ template <class ELFT> void LazyObjFile::parse() {
   }
 }
 
-std::string replaceThinLTOSuffix(StringRef path) {
+std::string elf::replaceThinLTOSuffix(StringRef path) {
   StringRef suffix = config->thinLTOObjectSuffixReplace.first;
   StringRef repl = config->thinLTOObjectSuffixReplace.second;
 
@@ -1620,15 +1721,12 @@ template void LazyObjFile::parse<ELF32BE>();
 template void LazyObjFile::parse<ELF64LE>();
 template void LazyObjFile::parse<ELF64BE>();
 
-template class ObjFile<ELF32LE>;
-template class ObjFile<ELF32BE>;
-template class ObjFile<ELF64LE>;
-template class ObjFile<ELF64BE>;
+template class elf::ObjFile<ELF32LE>;
+template class elf::ObjFile<ELF32BE>;
+template class elf::ObjFile<ELF64LE>;
+template class elf::ObjFile<ELF64BE>;
 
 template void SharedFile::parse<ELF32LE>();
 template void SharedFile::parse<ELF32BE>();
 template void SharedFile::parse<ELF64LE>();
 template void SharedFile::parse<ELF64BE>();
-
-} // namespace elf
-} // namespace lld

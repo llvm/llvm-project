@@ -16,34 +16,35 @@
 namespace llvm {
 
 enum MCSymbolAttr {
-  MCSA_Invalid = 0,    ///< Not a valid directive.
+  MCSA_Invalid = 0, ///< Not a valid directive.
 
   // Various directives in alphabetical order.
-  MCSA_Cold,                ///< .cold (MachO)
-  MCSA_ELF_TypeFunction,    ///< .type _foo, STT_FUNC  # aka @function
-  MCSA_ELF_TypeIndFunction, ///< .type _foo, STT_GNU_IFUNC
-  MCSA_ELF_TypeObject,      ///< .type _foo, STT_OBJECT  # aka @object
-  MCSA_ELF_TypeTLS,         ///< .type _foo, STT_TLS     # aka @tls_object
-  MCSA_ELF_TypeCommon,      ///< .type _foo, STT_COMMON  # aka @common
-  MCSA_ELF_TypeNoType,      ///< .type _foo, STT_NOTYPE  # aka @notype
+  MCSA_Cold,                    ///< .cold (MachO)
+  MCSA_ELF_TypeFunction,        ///< .type _foo, STT_FUNC  # aka @function
+  MCSA_ELF_TypeIndFunction,     ///< .type _foo, STT_GNU_IFUNC
+  MCSA_ELF_TypeObject,          ///< .type _foo, STT_OBJECT  # aka @object
+  MCSA_ELF_TypeTLS,             ///< .type _foo, STT_TLS     # aka @tls_object
+  MCSA_ELF_TypeCommon,          ///< .type _foo, STT_COMMON  # aka @common
+  MCSA_ELF_TypeNoType,          ///< .type _foo, STT_NOTYPE  # aka @notype
   MCSA_ELF_TypeGnuUniqueObject, /// .type _foo, @gnu_unique_object
-  MCSA_Global,              ///< .globl
-  MCSA_LGlobal,             ///< .lglobl (XCOFF)
-  MCSA_Hidden,              ///< .hidden (ELF)
-  MCSA_IndirectSymbol,      ///< .indirect_symbol (MachO)
-  MCSA_Internal,            ///< .internal (ELF)
-  MCSA_LazyReference,       ///< .lazy_reference (MachO)
-  MCSA_Local,               ///< .local (ELF)
-  MCSA_NoDeadStrip,         ///< .no_dead_strip (MachO)
-  MCSA_SymbolResolver,      ///< .symbol_resolver (MachO)
-  MCSA_AltEntry,            ///< .alt_entry (MachO)
-  MCSA_PrivateExtern,       ///< .private_extern (MachO)
-  MCSA_Protected,           ///< .protected (ELF)
-  MCSA_Reference,           ///< .reference (MachO)
-  MCSA_Weak,                ///< .weak
-  MCSA_WeakDefinition,      ///< .weak_definition (MachO)
-  MCSA_WeakReference,       ///< .weak_reference (MachO)
-  MCSA_WeakDefAutoPrivate   ///< .weak_def_can_be_hidden (MachO)
+  MCSA_Global,                  ///< .globl
+  MCSA_LGlobal,                 ///< .lglobl (XCOFF)
+  MCSA_Extern,                  ///< .extern (XCOFF)
+  MCSA_Hidden,                  ///< .hidden (ELF)
+  MCSA_IndirectSymbol,          ///< .indirect_symbol (MachO)
+  MCSA_Internal,                ///< .internal (ELF)
+  MCSA_LazyReference,           ///< .lazy_reference (MachO)
+  MCSA_Local,                   ///< .local (ELF)
+  MCSA_NoDeadStrip,             ///< .no_dead_strip (MachO)
+  MCSA_SymbolResolver,          ///< .symbol_resolver (MachO)
+  MCSA_AltEntry,                ///< .alt_entry (MachO)
+  MCSA_PrivateExtern,           ///< .private_extern (MachO)
+  MCSA_Protected,               ///< .protected (ELF)
+  MCSA_Reference,               ///< .reference (MachO)
+  MCSA_Weak,                    ///< .weak
+  MCSA_WeakDefinition,          ///< .weak_definition (MachO)
+  MCSA_WeakReference,           ///< .weak_reference (MachO)
+  MCSA_WeakDefAutoPrivate       ///< .weak_def_can_be_hidden (MachO)
 };
 
 enum MCAssemblerFlag {

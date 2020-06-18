@@ -67,6 +67,7 @@ void ento::registerSmartPtrModeling(CheckerManager &Mgr) {
   Mgr.registerChecker<SmartPtrModeling>();
 }
 
-bool ento::shouldRegisterSmartPtrModeling(const LangOptions &LO) {
+bool ento::shouldRegisterSmartPtrModeling(const CheckerManager &mgr) {
+  const LangOptions &LO = mgr.getLangOpts();
   return LO.CPlusPlus;
 }

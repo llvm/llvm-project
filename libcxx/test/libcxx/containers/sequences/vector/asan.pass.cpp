@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: clang-3.3, clang-3.4, clang-3.5
-
 // <vector>
 
 // reference operator[](size_type n);

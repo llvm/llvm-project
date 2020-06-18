@@ -1,11 +1,3 @@
-//===-- main.m ------------------------------------------------*- ObjC -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 #import <Foundation/Foundation.h>
 
 #if defined(__APPLE__)
@@ -25,6 +17,7 @@ int main (int argc, const char * argv[])
     
     NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
 
+      NSString *empty = @"";
 	    NSString *str0 = [[NSNumber numberWithUnsignedLongLong:0xFF] stringValue];
 	    NSString *str1 = [NSString stringWithCString:"A rather short ASCII NSString object is here" encoding:NSASCIIStringEncoding];
 	    NSString *str2 = [NSString stringWithUTF8String:"A rather short UTF8 NSString object is here"];
@@ -77,6 +70,7 @@ int main (int argc, const char * argv[])
 
 	NSArray *components = @[@"usr", @"blah", @"stuff"];
 	NSString *path = [NSString pathWithComponents: components];
+  NSString *empty_path = [empty stringByDeletingPathExtension];
 
   const unichar someOfTheseAreNUL[] = {'a',' ', 'v','e','r','y',' ',
       'm','u','c','h',' ','b','o','r','i','n','g',' ','t','a','s','k',

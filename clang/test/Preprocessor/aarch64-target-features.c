@@ -39,6 +39,11 @@
 // CHECK-NOT: __ARM_SIZEOF_WCHAR_T 2
 // CHECK-NOT: __ARM_FEATURE_SVE
 // CHECK-NOT: __ARM_FEATURE_DOTPROD
+// CHECK-NOT: __ARM_FEATURE_PAC_DEFAULT
+// CHECK-NOT: __ARM_FEATURE_BTI_DEFAULT
+// CHECK-NOT: __ARM_BF16_FORMAT_ALTERNATIVE 1
+// CHECK-NOT: __ARM_FEATURE_BF16 1
+// CHECK-NOT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
 
 // RUN: %clang -target aarch64_be-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-BIGENDIAN
 // CHECK-BIGENDIAN: __ARM_BIG_ENDIAN 1
@@ -163,6 +168,8 @@
 // RUN: %clang -target aarch64 -mcpu=exynos-m5 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-M4 %s
 // RUN: %clang -target aarch64 -mcpu=kryo -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-KRYO %s
 // RUN: %clang -target aarch64 -mcpu=thunderx2t99 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-THUNDERX2T99 %s
+// RUN: %clang -target aarch64 -mcpu=a64fx -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-A64FX %s
+// RUN: %clang -target aarch64 -mcpu=carmel -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MCPU-CARMEL %s
 // CHECK-MCPU-APPLE-A7: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+crypto" "-target-feature" "+zcm" "-target-feature" "+zcz" "-target-feature" "+sha2" "-target-feature" "+aes"
 // CHECK-MCPU-APPLE-A10: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+crc" "-target-feature" "+crypto" "-target-feature" "+rdm" "-target-feature" "+zcm" "-target-feature" "+zcz" "-target-feature" "+sha2" "-target-feature" "+aes"
 // CHECK-MCPU-APPLE-A11: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+v8.2a" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+crc" "-target-feature" "+crypto" "-target-feature" "+ras" "-target-feature" "+lse" "-target-feature" "+rdm" "-target-feature" "+zcm" "-target-feature" "+zcz" "-target-feature" "+sha2" "-target-feature" "+aes"
@@ -178,6 +185,8 @@
 // CHECK-MCPU-M4: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+neon" "-target-feature" "+crc" "-target-feature" "+crypto" "-target-feature" "+dotprod" "-target-feature" "+fullfp16"
 // CHECK-MCPU-KRYO: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+neon" "-target-feature" "+crc" "-target-feature" "+crypto"
 // CHECK-MCPU-THUNDERX2T99: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+neon" "-target-feature" "+crc" "-target-feature" "+crypto"
+// CHECK-MCPU-A64FX: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+v8.2a" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+crc" "-target-feature" "+crypto" "-target-feature" "+fullfp16" "-target-feature" "+ras" "-target-feature" "+lse" "-target-feature" "+rdm" "-target-feature" "+sve" "-target-feature" "+sha2"
+// CHECK-MCPU-CARMEL: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-feature" "+v8.2a" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+crc" "-target-feature" "+crypto" "-target-feature" "+fullfp16" "-target-feature" "+ras" "-target-feature" "+lse" "-target-feature" "+rdm" "-target-feature" "+sha2" "-target-feature" "+aes"
 
 // RUN: %clang -target x86_64-apple-macosx -arch arm64 -### -c %s 2>&1 | FileCheck --check-prefix=CHECK-ARCH-ARM64 %s
 // CHECK-ARCH-ARM64: "-target-cpu" "apple-a7" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+crypto" "-target-feature" "+zcm" "-target-feature" "+zcz"
@@ -335,3 +344,40 @@
 // ================== Check Memory Tagging Extensions (MTE).
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8.5-a+memtag -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-MEMTAG %s
 // CHECK-MEMTAG: __ARM_FEATURE_MEMORY_TAGGING 1
+
+// ================== Check Pointer Authentication Extension (PAuth).
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.5-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-ALL %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY-ALL %s
+// CHECK-PAUTH-OFF-NOT:  __ARM_FEATURE_PAC_DEFAULT
+// CHECK-PAUTH:          #define __ARM_FEATURE_PAC_DEFAULT 1
+// CHECK-PAUTH-BKEY:     #define __ARM_FEATURE_PAC_DEFAULT 2
+// CHECK-PAUTH-ALL:      #define __ARM_FEATURE_PAC_DEFAULT 5
+// CHECK-PAUTH-BKEY-ALL: #define __ARM_FEATURE_PAC_DEFAULT 6
+
+// ================== Check Branch Target Identification (BTI).
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.5-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI %s
+// CHECK-BTI-OFF-NOT: __ARM_FEATURE_BTI_DEFAULT
+// CHECK-BTI:         #define __ARM_FEATURE_BTI_DEFAULT 1
+
+// ================== Check BFloat16 Extensions.
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
+// CHECK-BFLOAT: __ARM_BF16_FORMAT_ALTERNATIVE 1
+// CHECK-BFLOAT: __ARM_FEATURE_BF16 1
+// CHECK-BFLOAT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
+

@@ -14,14 +14,19 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include <algorithm>
 
 namespace clang {
 namespace clangd {
 namespace {
+
+using testing::IsEmpty;
+using testing::SizeIs;
 
 MATCHER_P(LineNumber, L, "") { return arg.Line == L; }
 MATCHER(EmptyHighlightings, "") { return arg.Tokens.empty(); }
@@ -110,7 +115,7 @@ void checkHighlightings(llvm::StringRef Code,
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.
   TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
-  TU.ExtraArgs.push_back("-std=c++2a");
+  TU.ExtraArgs.push_back("-std=c++20");
 
   for (auto File : AdditionalFiles)
     TU.AdditionalFiles.insert({File.first, std::string(File.second)});
@@ -655,6 +660,20 @@ sizeof...($TemplateParameter[[Elements]]);
             ::$DependentType[[Resolver]]::$DependentName[[Value]];
       };
     )cpp",
+      // Dependent name with heuristic target
+      R"cpp(
+      template <typename>
+      struct $Class[[Foo]] {
+        int $Field[[Waldo]];
+        void $Method[[bar]]() {
+          $Class[[Foo]]().$Field[[Waldo]];
+        }
+        template <typename $TemplateParameter[[U]]>
+        void $Method[[bar1]]() {
+          $Class[[Foo]]<$TemplateParameter[[U]]>().$Field[[Waldo]];
+        }
+      };
+    )cpp",
       // Concepts
       R"cpp(
       template <typename $TemplateParameter[[T]]>
@@ -702,7 +721,8 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
     std::atomic<int> Count = {0};
 
     void onHighlightingsReady(
-        PathRef File, std::vector<HighlightingToken> Highlightings) override {
+        PathRef File, llvm::StringRef Version,
+        std::vector<HighlightingToken> Highlightings) override {
       ++Count;
     }
   };
@@ -719,7 +739,78 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
   ASSERT_EQ(Counter.Count, 1);
 }
 
-TEST(SemanticHighlighting, toSemanticHighlightingInformation) {
+// Ranges are highlighted as variables, unless highlighted as $Function etc.
+std::vector<HighlightingToken> tokens(llvm::StringRef MarkedText) {
+  Annotations A(MarkedText);
+  std::vector<HighlightingToken> Results;
+  for (const Range& R : A.ranges())
+    Results.push_back({HighlightingKind::Variable, R});
+  for (unsigned I = 0; I < static_cast<unsigned>(HighlightingKind::LastKind); ++I) {
+    HighlightingKind Kind = static_cast<HighlightingKind>(I);
+    for (const Range& R : A.ranges(llvm::to_string(Kind)))
+      Results.push_back({Kind, R});
+  }
+  llvm::sort(Results);
+  return Results;
+}
+
+TEST(SemanticHighlighting, toSemanticTokens) {
+  auto Results = toSemanticTokens(tokens(R"(
+ [[blah]]
+
+    $Function[[big]] [[bang]]
+  )"));
+
+  ASSERT_THAT(Results, SizeIs(3));
+  EXPECT_EQ(Results[0].tokenType, unsigned(HighlightingKind::Variable));
+  EXPECT_EQ(Results[0].deltaLine, 1u);
+  EXPECT_EQ(Results[0].deltaStart, 1u);
+  EXPECT_EQ(Results[0].length, 4u);
+
+  EXPECT_EQ(Results[1].tokenType, unsigned(HighlightingKind::Function));
+  EXPECT_EQ(Results[1].deltaLine, 2u);
+  EXPECT_EQ(Results[1].deltaStart, 4u);
+  EXPECT_EQ(Results[1].length, 3u);
+
+  EXPECT_EQ(Results[2].tokenType, unsigned(HighlightingKind::Variable));
+  EXPECT_EQ(Results[2].deltaLine, 0u);
+  EXPECT_EQ(Results[2].deltaStart, 4u);
+  EXPECT_EQ(Results[2].length, 4u);
+}
+
+TEST(SemanticHighlighting, diffSemanticTokens) {
+  auto Before = toSemanticTokens(tokens(R"(
+    [[foo]] [[bar]] [[baz]]
+    [[one]] [[two]] [[three]]
+  )"));
+  EXPECT_THAT(diffTokens(Before, Before), IsEmpty());
+
+  auto After = toSemanticTokens(tokens(R"(
+    [[foo]] [[hello]] [[world]] [[baz]]
+    [[one]] [[two]] [[three]]
+  )"));
+
+  // Replace [bar, baz] with [hello, world, baz]
+  auto Diff = diffTokens(Before, After);
+  ASSERT_THAT(Diff, SizeIs(1));
+  EXPECT_EQ(1u, Diff.front().startToken);
+  EXPECT_EQ(2u, Diff.front().deleteTokens);
+  ASSERT_THAT(Diff.front().tokens, SizeIs(3));
+  // hello
+  EXPECT_EQ(0u, Diff.front().tokens[0].deltaLine);
+  EXPECT_EQ(4u, Diff.front().tokens[0].deltaStart);
+  EXPECT_EQ(5u, Diff.front().tokens[0].length);
+  // world
+  EXPECT_EQ(0u, Diff.front().tokens[1].deltaLine);
+  EXPECT_EQ(6u, Diff.front().tokens[1].deltaStart);
+  EXPECT_EQ(5u, Diff.front().tokens[1].length);
+  // baz
+  EXPECT_EQ(0u, Diff.front().tokens[2].deltaLine);
+  EXPECT_EQ(6u, Diff.front().tokens[2].deltaStart);
+  EXPECT_EQ(3u, Diff.front().tokens[2].length);
+}
+
+TEST(SemanticHighlighting, toTheiaSemanticHighlightingInformation) {
   auto CreatePosition = [](int Line, int Character) -> Position {
     Position Pos;
     Pos.line = Line;
@@ -738,9 +829,9 @@ TEST(SemanticHighlighting, toSemanticHighlightingInformation) {
        {{HighlightingKind::Variable,
          Range{CreatePosition(1, 1), CreatePosition(1, 5)}}},
        /* IsInactive = */ true}};
-  std::vector<SemanticHighlightingInformation> ActualResults =
-      toSemanticHighlightingInformation(Tokens);
-  std::vector<SemanticHighlightingInformation> ExpectedResults = {
+  std::vector<TheiaSemanticHighlightingInformation> ActualResults =
+      toTheiaSemanticHighlightingInformation(Tokens);
+  std::vector<TheiaSemanticHighlightingInformation> ExpectedResults = {
       {3, "AAAACAAEAAAAAAAEAAMAAw=="}, {1, "AAAAAQAEAAA="}};
   EXPECT_EQ(ActualResults, ExpectedResults);
 }

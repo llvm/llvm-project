@@ -48,7 +48,9 @@ protected:
                   // functions or not.
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(AddressResolverFileLine);
+  AddressResolverFileLine(const AddressResolverFileLine &) = delete;
+  const AddressResolverFileLine &
+  operator=(const AddressResolverFileLine &) = delete;
 };
 
 } // namespace lldb_private

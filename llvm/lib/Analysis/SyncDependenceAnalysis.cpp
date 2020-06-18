@@ -369,7 +369,7 @@ SyncDependenceAnalysis::join_blocks(const Instruction &Term) {
   // compute all join points
   DivergencePropagator Propagator{FuncRPOT, DT, PDT, LI};
   const auto &TermBlock = *Term.getParent();
-  auto JoinBlocks = Propagator.computeJoinPoints<succ_const_range>(
+  auto JoinBlocks = Propagator.computeJoinPoints<const_succ_range>(
       TermBlock, successors(Term.getParent()), LI.getLoopFor(&TermBlock));
 
   auto ItInserted = CachedBranchJoins.emplace(&Term, std::move(JoinBlocks));

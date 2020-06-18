@@ -3,11 +3,9 @@
 //      where the last source line in the loop is a call. Expect steps out
 //      of a function to a line before the call to count as 'VERTICAL_BACKWARD'.
 //
-// REQUIRES: system-linux, lldb
+// UNSUPPORTED: system-darwin
 //
-// RUN: %dexter_base test --fail-lt 1.0 -w  \
-// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" -- %s \
-// RUN:     | FileCheck %s
+// RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: small_loop.cpp:
 
 int func(int i){

@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -verify-machineinstrs -stop-after=aarch64-prelegalizer-combiner -force-legal-indexing %s -o - | FileCheck %s
+; RUN: llc -debugify-and-strip-all-safe -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -verify-machineinstrs -stop-after=aarch64-prelegalizer-combiner -force-legal-indexing %s -o - | FileCheck %s
 
 define i8* @test_simple_load_pre(i8* %ptr) {
 ; CHECK-LABEL: name: test_simple_load_pre
@@ -11,6 +12,15 @@ define i8* @test_simple_load_pre(i8* %ptr) {
   %next = getelementptr i8, i8* %ptr, i32 42
   load volatile i8, i8* %next
   ret i8* %next
+}
+
+define i8* @test_unused_load_pre(i8* %ptr) {
+; CHECK-LABEL: name: test_unused_load_pre
+; CHECK-NOT: G_INDEXED_LOAD
+
+  %next = getelementptr i8, i8* %ptr, i32 42
+  load volatile i8, i8* %next
+  ret i8* null
 }
 
 define void @test_load_multiple_dominated(i8* %ptr, i1 %tst, i1 %tst2) {

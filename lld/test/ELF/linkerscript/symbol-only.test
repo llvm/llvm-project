@@ -2,7 +2,7 @@
 # RUN: echo '.section bar, "a"' \
 # RUN:   | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t
 # RUN: ld.lld -o %t1 --script %s %t -shared
-# RUN: llvm-objdump -section-headers -t %t1 | FileCheck %s
+# RUN: llvm-objdump --section-headers -t %t1 | FileCheck %s
 
 SECTIONS {
   . = SIZEOF_HEADERS;
@@ -18,4 +18,4 @@ SECTIONS {
 # CHECK:          bar           00000000 0000000000001000
 
 # CHECK: SYMBOL TABLE:
-# CHECK:     [[ADDR]]         abc                00000000 foo
+# CHECK:     [[ADDR]] g       abc  0000000000000000 foo

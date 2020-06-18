@@ -1,4 +1,3 @@
-; REQUIRES: x86
 
 ; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj < %s | not llvm-dwarfdump -verify - | FileCheck %s --check-prefix VERIFY

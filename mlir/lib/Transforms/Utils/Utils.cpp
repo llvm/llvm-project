@@ -13,25 +13,24 @@
 
 #include "mlir/Transforms/Utils.h"
 
-#include "mlir/ADT/TypeSwitch.h"
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/AffineStructures.h"
-#include "mlir/Analysis/Dominance.h"
 #include "mlir/Analysis/Utils.h"
-#include "mlir/Dialect/AffineOps/AffineOps.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/TypeSwitch.h"
 using namespace mlir;
 
 /// Return true if this operation dereferences one or more memref's.
 // Temporary utility: will be replaced when this is modeled through
 // side-effects/op traits. TODO(b/117228571)
 static bool isMemRefDereferencingOp(Operation &op) {
-  if (isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op) ||
+  if (isa<AffineReadOpInterface>(op) || isa<AffineWriteOpInterface>(op) ||
       isa<AffineDmaStartOp>(op) || isa<AffineDmaWaitOp>(op))
     return true;
   return false;
@@ -40,8 +39,8 @@ static bool isMemRefDereferencingOp(Operation &op) {
 /// Return the AffineMapAttr associated with memory 'op' on 'memref'.
 static NamedAttribute getAffineMapAttrForMemRef(Operation *op, Value memref) {
   return TypeSwitch<Operation *, NamedAttribute>(op)
-      .Case<AffineDmaStartOp, AffineLoadOp, AffinePrefetchOp, AffineStoreOp,
-            AffineDmaWaitOp>(
+      .Case<AffineDmaStartOp, AffineReadOpInterface, AffinePrefetchOp,
+            AffineWriteOpInterface, AffineDmaWaitOp>(
           [=](auto op) { return op.getAffineMapAttrForMemRef(memref); });
 }
 
@@ -176,7 +175,6 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 
   // Construct the new operation using this memref.
   OperationState state(op->getLoc(), op->getName());
-  state.setOperandListToResizable(op->hasResizableOperandsList());
   state.operands.reserve(op->getNumOperands() + extraIndices.size());
   // Insert the non-memref operands.
   state.operands.append(op->operand_begin(),

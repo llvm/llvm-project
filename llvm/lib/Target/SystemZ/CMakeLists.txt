@@ -16,6 +16,7 @@ add_llvm_target(SystemZCodeGen
   SystemZAsmPrinter.cpp
   SystemZCallingConv.cpp
   SystemZConstantPoolValue.cpp
+  SystemZCopyPhysRegs.cpp
   SystemZElimCompare.cpp
   SystemZFrameLowering.cpp
   SystemZHazardRecognizer.cpp

@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -filetype=obj -mtriple=aarch64-none-linux < %s | llvm-dwarfdump - | FileCheck %s
 
-; CHECK: file format ELF64-aarch64-little
+; CHECK: file format elf64-littleaarch64
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 

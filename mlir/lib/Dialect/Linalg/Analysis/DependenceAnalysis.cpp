@@ -12,7 +12,7 @@
 
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -23,24 +23,6 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 using llvm::dbgs;
-
-#ifndef NDEBUG
-static StringRef toStringRef(LinalgDependenceGraph::DependenceType dt) {
-  switch (dt) {
-  case LinalgDependenceGraph::DependenceType::RAW:
-    return "RAW";
-  case LinalgDependenceGraph::DependenceType::RAR:
-    return "RAR";
-  case LinalgDependenceGraph::DependenceType::WAR:
-    return "WAR";
-  case LinalgDependenceGraph::DependenceType::WAW:
-    return "WAW";
-  default:
-    break;
-  }
-  llvm_unreachable("Unexpected DependenceType");
-}
-#endif
 
 Value Aliases::find(Value v) {
   if (v.isa<BlockArgument>())
@@ -55,25 +37,50 @@ Value Aliases::find(Value v) {
   while (true) {
     if (v.isa<BlockArgument>())
       return v;
-    if (auto alloc = dyn_cast_or_null<AllocOp>(v.getDefiningOp())) {
-      if (isStrided(alloc.getType()))
-        return alloc.getResult();
+
+    Operation *defOp = v.getDefiningOp();
+    if (!defOp)
+      return v;
+
+    if (auto memEffect = dyn_cast<MemoryEffectOpInterface>(defOp)) {
+      // Collect all memory effects on `v`.
+      SmallVector<MemoryEffects::EffectInstance, 1> effects;
+      memEffect.getEffectsOnValue(v, effects);
+
+      // If we have the 'Allocate' memory effect on `v`, then `v` should be the
+      // original buffer.
+      if (llvm::any_of(
+              effects, [](const MemoryEffects::EffectInstance &instance) {
+                return isa<MemoryEffects::Allocate>(instance.getEffect());
+              }))
+        return v;
     }
-    if (auto slice = dyn_cast_or_null<SliceOp>(v.getDefiningOp())) {
-      auto it = aliases.insert(std::make_pair(v, find(slice.view())));
+
+    if (auto viewLikeOp = dyn_cast<ViewLikeOpInterface>(defOp)) {
+      auto it =
+          aliases.insert(std::make_pair(v, find(viewLikeOp.getViewSource())));
       return it.first->second;
     }
-    if (auto view = dyn_cast_or_null<ViewOp>(v.getDefiningOp())) {
-      auto it = aliases.insert(std::make_pair(v, view.source()));
-      return it.first->second;
-    }
-    if (auto view = dyn_cast_or_null<SubViewOp>(v.getDefiningOp())) {
-      v = view.source();
-      continue;
-    }
+
     llvm::errs() << "View alias analysis reduces to: " << v << "\n";
     llvm_unreachable("unsupported view alias case");
   }
+}
+
+StringRef LinalgDependenceGraph::getDependenceTypeStr(DependenceType depType) {
+  switch (depType) {
+  case LinalgDependenceGraph::DependenceType::RAW:
+    return "RAW";
+  case LinalgDependenceGraph::DependenceType::RAR:
+    return "RAR";
+  case LinalgDependenceGraph::DependenceType::WAR:
+    return "WAR";
+  case LinalgDependenceGraph::DependenceType::WAW:
+    return "WAW";
+  default:
+    break;
+  }
+  llvm_unreachable("Unexpected DependenceType");
 }
 
 LinalgDependenceGraph
@@ -100,7 +107,7 @@ LinalgDependenceGraph::LinalgDependenceGraph(Aliases &aliases,
 void LinalgDependenceGraph::addDependenceElem(DependenceType dt,
                                               LinalgOpView indexingOpView,
                                               LinalgOpView dependentOpView) {
-  LLVM_DEBUG(dbgs() << "\nAdd dep type " << toStringRef(dt) << ":\t"
+  LLVM_DEBUG(dbgs() << "\nAdd dep type " << getDependenceTypeStr(dt) << ":\t"
                     << *indexingOpView.op << " -> " << *dependentOpView.op);
   dependencesFromGraphs[dt][indexingOpView.op].push_back(
       LinalgDependenceGraphElem{dependentOpView, indexingOpView.view});
@@ -227,8 +234,8 @@ LinalgDependenceGraph::findOperationsWithCoveringDependences(
         continue;
       auto *op = dependence.dependentOpView.op;
       LLVM_DEBUG(dbgs() << "\n***Found covering dependence of type "
-                        << toStringRef(dt) << ": " << *src << " -> " << *op
-                        << " on " << dependence.indexingView);
+                        << getDependenceTypeStr(dt) << ": " << *src << " -> "
+                        << *op << " on " << dependence.indexingView);
       res.push_back(op);
     }
   }

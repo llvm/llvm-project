@@ -34,9 +34,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/PassSupport.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -282,21 +280,6 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                       ScalarEvolution &SE, const TargetTransformInfo &TTI,
                       AssumptionCache &AC, DependenceInfo &DI,
                       OptimizationRemarkEmitter &ORE, int OptLevel) {
-  // Quick checks of the correct loop form
-  if (!L->isLoopSimplifyForm() || L->getSubLoops().size() != 1)
-    return LoopUnrollResult::Unmodified;
-  Loop *SubLoop = L->getSubLoops()[0];
-  if (!SubLoop->isLoopSimplifyForm())
-    return LoopUnrollResult::Unmodified;
-
-  BasicBlock *Latch = L->getLoopLatch();
-  BasicBlock *Exit = L->getExitingBlock();
-  BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
-  BasicBlock *SubLoopExit = SubLoop->getExitingBlock();
-
-  if (Latch != Exit || SubLoopLatch != SubLoopExit)
-    return LoopUnrollResult::Unmodified;
-
   TargetTransformInfo::UnrollingPreferences UP =
       gatherUnrollingPreferences(L, SE, TTI, nullptr, nullptr, OptLevel, None,
                                  None, None, None, None, None, None, None);
@@ -326,7 +309,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
-  if (!isSafeToUnrollAndJam(L, SE, DT, DI)) {
+  if (!isSafeToUnrollAndJam(L, SE, DT, DI, *LI)) {
     LLVM_DEBUG(dbgs() << "  Disabled due to not being safe.\n");
     return LoopUnrollResult::Unmodified;
   }
@@ -337,6 +320,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   bool Convergent;
   SmallPtrSet<const Value *, 32> EphValues;
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
+  Loop *SubLoop = L->getSubLoops()[0];
   unsigned InnerLoopSize =
       ApproximateLoopSize(SubLoop, NumInlineCandidates, NotDuplicatable,
                           Convergent, TTI, EphValues, UP.BEInsns);
@@ -374,6 +358,8 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     SubLoop->setLoopID(NewInnerEpilogueLoopID.getValue());
 
   // Find trip count and trip multiple
+  BasicBlock *Latch = L->getLoopLatch();
+  BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
   unsigned OuterTripCount = SE.getSmallConstantTripCount(L, Latch);
   unsigned OuterTripMultiple = SE.getSmallConstantTripMultiple(L, Latch);
   unsigned InnerTripCount = SE.getSmallConstantTripCount(SubLoop, SubLoopLatch);
@@ -391,7 +377,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   Loop *EpilogueOuterLoop = nullptr;
   LoopUnrollResult UnrollResult = UnrollAndJamLoop(
       L, UP.Count, OuterTripCount, OuterTripMultiple, UP.UnrollRemainder, LI,
-      &SE, &DT, &AC, &ORE, &EpilogueOuterLoop);
+      &SE, &DT, &AC, &TTI, &ORE, &EpilogueOuterLoop);
 
   // Assign new loop attributes.
   if (EpilogueOuterLoop) {
@@ -438,11 +424,11 @@ static bool tryToUnrollAndJamLoop(Function &F, DominatorTree &DT, LoopInfo &LI,
                                   int OptLevel) {
   bool DidSomething = false;
 
-  // The loop unroll and jam pass requires loops to be in simplified form, and also needs LCSSA.
-  // Since simplification may add new inner loops, it has to run before the
-  // legality and profitability checks. This means running the loop unroll and jam pass
-  // will simplify all loops, regardless of whether anything end up being
-  // unroll and jammed.
+  // The loop unroll and jam pass requires loops to be in simplified form, and
+  // also needs LCSSA. Since simplification may add new inner loops, it has to
+  // run before the legality and profitability checks. This means running the
+  // loop unroll and jam pass will simplify all loops, regardless of whether
+  // anything end up being unroll and jammed.
   for (auto &L : LI) {
     DidSomething |=
         simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);

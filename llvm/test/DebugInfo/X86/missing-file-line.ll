@@ -1,4 +1,3 @@
-; REQUIRES: x86
 
 ; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj %s -o - | llvm-dwarfdump -all - | FileCheck %s
 

@@ -46,7 +46,9 @@ public:
   bool watch_type_specified;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(OptionGroupWatchpoint);
+  OptionGroupWatchpoint(const OptionGroupWatchpoint &) = delete;
+  const OptionGroupWatchpoint &
+  operator=(const OptionGroupWatchpoint &) = delete;
 };
 
 } // namespace lldb_private

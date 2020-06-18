@@ -30,7 +30,7 @@ cleanup:
 ; CHECK-NEXT:    ret i8* bitcast (i8* (i8*, i32, i1)* @f.resume.0 to i8*)
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal i8* @f.resume.0(i8* noalias nonnull %0, i32 %1, i1 zeroext %2)
+; CHECK-LABEL: define internal i8* @f.resume.0(i8* noalias nonnull align 4 dereferenceable(8) %0, i32 %1, i1 zeroext %2)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast i8* %0 to i32*
 ; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[T0]], align 4

@@ -13,7 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <utility> // for std::pair
 
@@ -24,9 +24,7 @@ class Module;
 class Function;
 class FunctionCallee;
 class GlobalValue;
-class GlobalVariable;
 class Constant;
-class StringRef;
 class Value;
 class Type;
 
@@ -43,6 +41,10 @@ void appendToGlobalDtors(Module &M, Function *F, int Priority,
 
 FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
                                             ArrayRef<Type *> InitArgTypes);
+
+/// Creates sanitizer constructor function.
+/// \return Returns pointer to constructor.
+Function *createSanitizerCtor(Module &M, StringRef CtorName);
 
 /// Creates sanitizer constructor function, and calls sanitizer's init
 /// function from it.

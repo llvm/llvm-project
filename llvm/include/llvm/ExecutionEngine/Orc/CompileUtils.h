@@ -30,7 +30,7 @@ namespace orc {
 
 class JITTargetMachineBuilder;
 
-IRMaterializationUnit::ManglingOptions
+IRSymbolMapper::ManglingOptions
 irManglingOptionsFromTargetOptions(const TargetOptions &Opts);
 
 /// Simple compile functor: Takes a single IR module and returns an ObjectFile.
@@ -52,7 +52,7 @@ public:
   Expected<CompileResult> operator()(Module &M) override;
 
 private:
-  IRMaterializationUnit::ManglingOptions
+  IRSymbolMapper::ManglingOptions
   manglingOptionsForTargetMachine(const TargetMachine &TM);
 
   CompileResult tryToLoadFromObjectCache(const Module &M);

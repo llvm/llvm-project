@@ -24,7 +24,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -55,6 +54,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -878,6 +878,12 @@ findRootsRecursive(Instruction *I, SmallInstructionSet SubsumedInsts) {
 
 bool LoopReroll::DAGRootTracker::validateRootSet(DAGRootSet &DRS) {
   if (DRS.Roots.empty())
+    return false;
+
+  // If the value of the base instruction is used outside the loop, we cannot
+  // reroll the loop. Check for other root instructions is unnecessary because
+  // they don't match any base instructions if their values are used outside.
+  if (hasUsesOutsideLoop(DRS.BaseInst, L))
     return false;
 
   // Consider a DAGRootSet with N-1 roots (so N different values including

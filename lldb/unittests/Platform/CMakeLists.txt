@@ -6,3 +6,5 @@ add_lldb_unittest(LLDBPlatformTests
   LINK_COMPONENTS
     Support
   )
+
+add_subdirectory(Android)

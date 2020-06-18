@@ -9,11 +9,10 @@ target triple = "x86_64-scei-ps4"
 define <4 x float> @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2,3,4,5,6,7]
+; CHECK-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    vmovlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,0],mem[0,2]
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,0,3,1]
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
   %V = load <2 x float>, <2 x float>* @G1, align 8

@@ -3,9 +3,9 @@
 from __future__ import print_function
 
 import argparse
-import cgi
 import errno
 import functools
+import html
 import io
 from multiprocessing import cpu_count
 import os.path
@@ -197,7 +197,7 @@ class IndexRenderer:
         self.max_hottest_remarks_on_index = max_hottest_remarks_on_index
 
     def render_entry(self, r, odd):
-        escaped_name = cgi.escape(r.DemangledFunctionName)
+        escaped_name = html.escape(r.DemangledFunctionName)
         print(u'''
 <tr>
 <td class=\"column-entry-{odd}\"><a href={r.Link}>{r.DebugLocString}</a></td>

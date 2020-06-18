@@ -66,7 +66,7 @@ body:             |
 # GCN-LABEL: name: swap_phys_overlap_x
 # GCN: bb.0:
 # GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
-# GCN-NEXT: $vgpr3_vgpr4 = V_ADD_F64 0, $vgpr0_vgpr1, 0, $vgpr3_vgpr4, 0, 0, implicit $exec
+# GCN-NEXT: $vgpr3_vgpr4 = V_ADD_F64 0, $vgpr0_vgpr1, 0, $vgpr3_vgpr4, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
 ---
@@ -74,7 +74,7 @@ name:            swap_phys_overlap_x
 body:             |
   bb.0:
     $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
-    $vgpr3_vgpr4 = V_ADD_F64 0, $vgpr0_vgpr1, 0, $vgpr3_vgpr4, 0, 0, implicit $exec
+    $vgpr3_vgpr4 = V_ADD_F64 0, $vgpr0_vgpr1, 0, $vgpr3_vgpr4, 0, 0, implicit $mode, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
     $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
 ...

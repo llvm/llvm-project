@@ -14,6 +14,7 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPC.h"
 #include "PPCMachineScheduler.h"
+#include "PPCMacroFusion.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetObjectFile.h"
 #include "PPCTargetTransformInfo.h"
@@ -275,6 +276,9 @@ static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
                           std::make_unique<GenericScheduler>(C));
   // add DAG Mutations here.
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+  if (ST.hasFusion())
+    DAG->addMutation(createPowerPCMacroFusionDAGMutation());
+
   return DAG;
 }
 
@@ -286,6 +290,8 @@ static ScheduleDAGInstrs *createPPCPostMachineScheduler(
                       std::make_unique<PPCPostRASchedStrategy>(C) :
                       std::make_unique<PostGenericScheduler>(C), true);
   // add DAG Mutations here.
+  if (ST.hasFusion())
+    DAG->addMutation(createPowerPCMacroFusionDAGMutation());
   return DAG;
 }
 
@@ -498,7 +504,7 @@ void PPCPassConfig::addPreRegAlloc() {
     // PPCTLSDynamicCallPass uses LiveIntervals which previously dependent on
     // LiveVariables. This (unnecessary) dependency has been removed now,
     // however a stage-2 clang build fails without LiveVariables computed here.
-    addPass(&LiveVariablesID, false);
+    addPass(&LiveVariablesID);
     addPass(createPPCTLSDynamicCallPass());
   }
   if (EnableExtraTOCRegDeps)
@@ -525,9 +531,9 @@ void PPCPassConfig::addPreEmitPass() {
   addPass(createPPCExpandISELPass());
 
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(createPPCEarlyReturnPass(), false);
+    addPass(createPPCEarlyReturnPass());
   // Must run branch selection immediately preceding the asm printer.
-  addPass(createPPCBranchSelectionPass(), false);
+  addPass(createPPCBranchSelectionPass());
 }
 
 TargetTransformInfo

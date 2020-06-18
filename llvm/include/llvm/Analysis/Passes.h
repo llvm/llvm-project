@@ -17,10 +17,7 @@
 namespace llvm {
   class FunctionPass;
   class ImmutablePass;
-  class LoopPass;
   class ModulePass;
-  class Pass;
-  class PassInfo;
 
   //===--------------------------------------------------------------------===//
   //

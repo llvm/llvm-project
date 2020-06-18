@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: echo "SECTIONS { .rw : { *(.rw) } .text : { *(.text) } }" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-objdump -private-headers %t1 | FileCheck %s
+# RUN: llvm-objdump --private-headers %t1 | FileCheck %s
 
 ## We expect 2 PT_LOAD segments
 # CHECK:     Program Header:

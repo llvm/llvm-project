@@ -42,13 +42,12 @@ public:
     return unique_dyn_cast_or_null<T>(getSymbolById(SymbolId));
   }
 
+  virtual std::unique_ptr<PDBSymbol> findSymbolByAddress(uint64_t Address,
+                                                         PDB_SymType Type) = 0;
+  virtual std::unique_ptr<PDBSymbol> findSymbolByRVA(uint32_t RVA,
+                                                     PDB_SymType Type) = 0;
   virtual std::unique_ptr<PDBSymbol>
-  findSymbolByAddress(uint64_t Address, PDB_SymType Type) const = 0;
-  virtual std::unique_ptr<PDBSymbol>
-  findSymbolByRVA(uint32_t RVA, PDB_SymType Type) const = 0;
-  virtual std::unique_ptr<PDBSymbol>
-  findSymbolBySectOffset(uint32_t Sect, uint32_t Offset,
-                         PDB_SymType Type) const = 0;
+  findSymbolBySectOffset(uint32_t Sect, uint32_t Offset, PDB_SymType Type) = 0;
 
   virtual std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbers(const PDBSymbolCompiland &Compiland,

@@ -13,7 +13,7 @@
 //   The process should tolerate the crashes, OOMs, leaks, etc.
 //
 // Algorithm:
-//   The outter process collects the set of files and writes their names
+//   The outer process collects the set of files and writes their names
 //   into a temporary "control" file, then repeatedly launches the inner
 //   process until all inputs are processed.
 //   The outer process does not actually execute the target code.
@@ -22,13 +22,14 @@
 //   and b) the last processed input. Then it starts processing the inputs one
 //   by one. Before processing every input it writes one line to control file:
 //   STARTED INPUT_ID INPUT_SIZE
-//   After processing an input it write another line:
-//   DONE INPUT_ID Feature1 Feature2 Feature3 ...
+//   After processing an input it writes the following lines:
+//   FT INPUT_ID Feature1 Feature2 Feature3 ...
+//   COV INPUT_ID Coverage1 Coverage2 Coverage3 ...
 //   If a crash happens while processing an input the last line in the control
 //   file will be "STARTED INPUT_ID" and so the next process will know
 //   where to resume.
 //
-//   Once all inputs are processed by the innner process(es) the outer process
+//   Once all inputs are processed by the inner process(es) the outer process
 //   reads the control files and does the merge based entirely on the contents
 //   of control file.
 //   It uses a single pass greedy algorithm choosing first the smallest inputs

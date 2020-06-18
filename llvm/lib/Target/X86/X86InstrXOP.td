@@ -40,14 +40,14 @@ let ExeDomain = SSEPackedInt in {
 
 // Scalar load 2 addr operand instructions
 multiclass xop2opsld<bits<8> opc, string OpcodeStr, Intrinsic Int,
-                     Operand memop, ComplexPattern mem_cpat,
+                     Operand memop, PatFrags mem_frags,
                      X86FoldableSchedWrite sched> {
   def rr : IXOP<opc, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
            !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
            [(set VR128:$dst, (Int VR128:$src))]>, XOP, Sched<[sched]>;
   def rm : IXOP<opc, MRMSrcMem, (outs VR128:$dst), (ins memop:$src),
            !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-           [(set VR128:$dst, (Int mem_cpat:$src))]>, XOP,
+           [(set VR128:$dst, (Int (mem_frags addr:$src)))]>, XOP,
            Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 

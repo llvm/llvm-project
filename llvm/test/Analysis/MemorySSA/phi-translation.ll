@@ -193,3 +193,97 @@ if.end:
   br label %while.cond
 }
 
+; CHECK-LABEL: define i32 @use_not_optimized_due_to_backedge
+define i32 @use_not_optimized_due_to_backedge(i32* nocapture %m_i_strides, i32* nocapture readonly %eval_left_dims) {
+entry:
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK_NEXT: store i32 1, i32* %m_i_strides, align 4
+  store i32 1, i32* %m_i_strides, align 4
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.inc
+  ret i32 %m_i_size.1
+
+for.body:                                         ; preds = %entry, %for.inc
+; CHECK: 4 = MemoryPhi({entry,1},{for.inc,3})
+; CHECK-NEXT: %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
+  %m_i_size.022 = phi i32 [ 1, %entry ], [ %m_i_size.1, %for.inc ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %cmp1 = icmp eq i64 %indvars.iv, 0
+  %arrayidx2 = getelementptr inbounds i32, i32* %m_i_strides, i64 %indvars.iv
+; CHECK: MemoryUse(4) MayAlias
+; CHECK-NEXT: %0 = load i32, i32* %arrayidx2, align 4
+  %0 = load i32, i32* %arrayidx2, align 4
+  %arrayidx4 = getelementptr inbounds i32, i32* %eval_left_dims, i64 %indvars.iv
+; CHECK: MemoryUse(4) MayAlias
+; CHECK-NEXT: %1 = load i32, i32* %arrayidx4, align 4
+  %1 = load i32, i32* %arrayidx4, align 4
+  %mul = mul nsw i32 %1, %0
+  br i1 %cmp1, label %if.then, label %for.inc
+
+if.then:                                          ; preds = %for.body
+  %arrayidx7 = getelementptr inbounds i32, i32* %m_i_strides, i64 %indvars.iv.next
+; CHECK: 2 = MemoryDef(4)
+; CHECK-NEXT: store i32 %mul, i32* %arrayidx7, align 4
+  store i32 %mul, i32* %arrayidx7, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.then
+; CHECK: 3 = MemoryPhi({for.body,4},{if.then,2})
+; CHECK-NEXT: %m_i_size.1 = phi i32 [ %m_i_size.022, %if.then ], [ %mul, %for.body ]
+  %m_i_size.1 = phi i32 [ %m_i_size.022, %if.then ], [ %mul, %for.body ]
+  br i1 %cmp1, label %for.body, label %for.cond.cleanup
+}
+
+
+%ArrayType = type { [2 x i64] }
+%StructOverArrayType = type { %ArrayType }
+%BigStruct = type { i8, i8, i8, i8, i8, i8, i8, %ArrayType, %ArrayType}
+
+; CHECK-LABEL: define void @use_not_optimized_due_to_backedge_unknown
+define void @use_not_optimized_due_to_backedge_unknown(%BigStruct* %this) {
+entry:
+  %eval_left_dims = alloca %StructOverArrayType, align 8
+  %tmp0 = bitcast %StructOverArrayType* %eval_left_dims to i8*
+  %eval_right_dims = alloca %StructOverArrayType, align 8
+  %tmp1 = bitcast %StructOverArrayType* %eval_right_dims to i8*
+  %lhs_strides = alloca %ArrayType, align 8
+  %rhs_strides = alloca %ArrayType, align 8
+  br label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  %arrayidx.i527 = getelementptr inbounds %BigStruct, %BigStruct* %this, i64 0, i32 7, i32 0, i64 0
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: store i64 1, i64* %arrayidx.i527, align 8
+  store i64 1, i64* %arrayidx.i527, align 8
+  %arrayidx.i528 = getelementptr inbounds %BigStruct, %BigStruct* %this, i64 0, i32 8, i32 0, i64 0
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: store i64 1, i64* %arrayidx.i528, align 8
+  store i64 1, i64* %arrayidx.i528, align 8
+  br label %for.main.body
+
+for.main.body:               ; preds = %if.end220.if.then185_crit_edge, %for.body.preheader
+; CHECK: 4 = MemoryPhi({for.body.preheader,2},{if.end220.if.then185_crit_edge,3})
+; CHECK-NEXT: %nocontract_idx.0656 = phi i64 [ 0, %for.body.preheader ], [ 1, %if.end220.if.then185_crit_edge ]
+  %nocontract_idx.0656 = phi i64 [ 0, %for.body.preheader ], [ 1, %if.end220.if.then185_crit_edge ]
+  %add199 = add nuw nsw i64 %nocontract_idx.0656, 1
+  %cmp200 = icmp eq i64 %nocontract_idx.0656, 0
+  %arrayidx.i559 = getelementptr inbounds %BigStruct, %BigStruct* %this, i64 0, i32 7, i32 0, i64 %nocontract_idx.0656
+; CHECK: MemoryUse(4) MayAlias
+; CHECK-NEXT: %tmp21 = load i64, i64* %arrayidx.i559, align 8
+  %tmp21 = load i64, i64* %arrayidx.i559, align 8
+  %mul206 = mul nsw i64 %tmp21, %tmp21
+  br i1 %cmp200, label %if.end220.if.then185_crit_edge, label %the.end
+
+if.end220.if.then185_crit_edge:                   ; preds = %for.main.body
+  %arrayidx.i571 = getelementptr inbounds %BigStruct, %BigStruct* %this, i64 0, i32 7, i32 0, i64 %add199
+; CHECK: 3 = MemoryDef(4)
+; CHECK-NEXT: store i64 %mul206, i64* %arrayidx.i571, align 8
+  store i64 %mul206, i64* %arrayidx.i571, align 8
+  br label %for.main.body
+
+the.end:                            ; preds = %for.main.body
+  ret void
+
+}

@@ -12,6 +12,6 @@
 # RUN: FileCheck %s --input-file %t.e --check-prefixes=WARN
 
 # WARN:        warning: '{{.*}}': failed to find source {{.*}}source-interleave-x86_64.c
-# CHECK:       0000000000000010 main:
+# CHECK:       0000000000000010 <main>:
 # SOURCE-NEXT: ; int main() {
 # CHECK-NEXT:   10:   55                      pushq   %rbp

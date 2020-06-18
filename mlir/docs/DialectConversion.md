@@ -152,7 +152,7 @@ After the conversion target has been defined, a set of legalization patterns
 must be provided to transform illegal operations into legal ones. The patterns
 supplied here, that do not [require type changes](#conversion-patterns), are the
 same as those described in the
-[quickstart rewrites guide](QuickstartRewrites.md#adding-patterns), but have a
+[quickstart rewrites guide](Tutorials/QuickstartRewrites.md#adding-patterns), but have a
 few additional [restrictions](#restrictions). The patterns provided do not need
 to generate operations that are directly legal on the target. The framework will
 automatically build a graph of conversions to convert non-legal operations into
@@ -161,7 +161,7 @@ a set of legal ones.
 As an example, say you define a target that supports one operation: `foo.add`.
 When providing the following patterns: [`bar.add` -> `baz.add`, `baz.add` ->
 `foo.add`], the framework will automatically detect that it can legalize
-`baz.add` -> `foo.add` even though a direct conversion does not exist. This
+`bar.add` -> `foo.add` even though a direct conversion does not exist. This
 means that you don’t have to define a direct legalization pattern for `bar.add`
 -> `foo.add`.
 
@@ -217,16 +217,20 @@ class TypeConverter {
   template <typename ConversionFnT>
   void addConversion(ConversionFnT &&callback);
 
-  /// This hook allows for materializing a conversion from a set of types into
-  /// one result type by generating a cast operation of some kind. The generated
-  /// operation should produce one result, of 'resultType', with the provided
-  /// 'inputs' as operands. This hook must be overridden when a type conversion
+  /// Register a materialization function, which must be convertibe to the
+  /// following form
+  ///   `Optional<Value>(PatternRewriter &, T, ValueRange, Location)`,
+  /// where `T` is any subclass of `Type`. This function is responsible for
+  /// creating an operation, using the PatternRewriter and Location provided,
+  /// that "casts" a range of values into a single value of the given type `T`.
+  /// It must return a Value of the converted type on success, an `llvm::None`
+  /// if it failed but other materialization can be attempted, and `nullptr` on
+  /// unrecoverable failure. It will only be called for (sub)types of `T`.
+  /// Materialization functions must be provided when a type conversion
   /// results in more than one type, or if a type conversion may persist after
   /// the conversion has finished.
-  virtual Operation *materializeConversion(PatternRewriter &rewriter,
-                                           Type resultType,
-                                           ArrayRef<Value> inputs,
-                                           Location loc);
+  template <typename FnT>
+  void addMaterialization(FnT &&callback);
 };
 ```
 
@@ -247,7 +251,7 @@ struct MyConversionPattern : public ConversionPattern {
   /// The `matchAndRewrite` hooks on ConversionPatterns take an additional
   /// `operands` parameter, containing the remapped operands of the original
   /// operation.
-  virtual PatternMatchResult
+  virtual LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const;
 };

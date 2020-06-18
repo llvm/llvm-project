@@ -2334,49 +2334,49 @@ class FixedCmpBranchRSYb<CondVariant V, string mnemonic, bits<16> opcode,
 
 class BranchUnaryRI<string mnemonic, bits<12> opcode, RegisterOperand cls>
   : InstRIb<opcode, (outs cls:$R1), (ins cls:$R1src, brtarget16:$RI2),
-            mnemonic##"\t$R1, $RI2", []> {
+            mnemonic#"\t$R1, $RI2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
 
 class BranchUnaryRIL<string mnemonic, bits<12> opcode, RegisterOperand cls>
   : InstRILb<opcode, (outs cls:$R1), (ins cls:$R1src, brtarget32:$RI2),
-             mnemonic##"\t$R1, $RI2", []> {
+             mnemonic#"\t$R1, $RI2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
 
 class BranchUnaryRR<string mnemonic, bits<8> opcode, RegisterOperand cls>
   : InstRR<opcode, (outs cls:$R1), (ins cls:$R1src, GR64:$R2),
-           mnemonic##"\t$R1, $R2", []> {
+           mnemonic#"\t$R1, $R2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
 
 class BranchUnaryRRE<string mnemonic, bits<16> opcode, RegisterOperand cls>
   : InstRRE<opcode, (outs cls:$R1), (ins cls:$R1src, GR64:$R2),
-            mnemonic##"\t$R1, $R2", []> {
+            mnemonic#"\t$R1, $R2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
 
 class BranchUnaryRX<string mnemonic, bits<8> opcode, RegisterOperand cls>
   : InstRXa<opcode, (outs cls:$R1), (ins cls:$R1src, bdxaddr12only:$XBD2),
-            mnemonic##"\t$R1, $XBD2", []> {
+            mnemonic#"\t$R1, $XBD2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
 
 class BranchUnaryRXY<string mnemonic, bits<16> opcode, RegisterOperand cls>
   : InstRXYa<opcode, (outs cls:$R1), (ins cls:$R1src, bdxaddr20only:$XBD2),
-             mnemonic##"\t$R1, $XBD2", []> {
+             mnemonic#"\t$R1, $XBD2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
 
 class BranchBinaryRSI<string mnemonic, bits<8> opcode, RegisterOperand cls>
   : InstRSI<opcode, (outs cls:$R1), (ins cls:$R1src, cls:$R3, brtarget16:$RI2),
-            mnemonic##"\t$R1, $R3, $RI2", []> {
+            mnemonic#"\t$R1, $R3, $RI2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
@@ -2384,7 +2384,7 @@ class BranchBinaryRSI<string mnemonic, bits<8> opcode, RegisterOperand cls>
 class BranchBinaryRIEe<string mnemonic, bits<16> opcode, RegisterOperand cls>
   : InstRIEe<opcode, (outs cls:$R1),
              (ins cls:$R1src, cls:$R3, brtarget16:$RI2),
-             mnemonic##"\t$R1, $R3, $RI2", []> {
+             mnemonic#"\t$R1, $R3, $RI2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
@@ -2392,7 +2392,7 @@ class BranchBinaryRIEe<string mnemonic, bits<16> opcode, RegisterOperand cls>
 class BranchBinaryRS<string mnemonic, bits<8> opcode, RegisterOperand cls>
   : InstRSa<opcode, (outs cls:$R1),
             (ins cls:$R1src, cls:$R3, bdaddr12only:$BD2),
-            mnemonic##"\t$R1, $R3, $BD2", []> {
+            mnemonic#"\t$R1, $R3, $BD2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
@@ -2400,7 +2400,7 @@ class BranchBinaryRS<string mnemonic, bits<8> opcode, RegisterOperand cls>
 class BranchBinaryRSY<string mnemonic, bits<16> opcode, RegisterOperand cls>
   : InstRSYa<opcode,
              (outs cls:$R1), (ins cls:$R1src, cls:$R3, bdaddr20only:$BD2),
-             mnemonic##"\t$R1, $R3, $BD2", []> {
+             mnemonic#"\t$R1, $R3, $BD2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
@@ -2421,7 +2421,7 @@ class LoadMultipleRSY<string mnemonic, bits<16> opcode, RegisterOperand cls,
 
 multiclass LoadMultipleRSPair<string mnemonic, bits<8> rsOpcode,
                               bits<16> rsyOpcode, RegisterOperand cls> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : LoadMultipleRS<mnemonic, rsOpcode, cls, bdaddr12pair>;
     let DispSize = "20" in
@@ -2487,7 +2487,7 @@ class StoreRXY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
 multiclass StoreRXPair<string mnemonic, bits<8> rxOpcode, bits<16> rxyOpcode,
                        SDPatternOperator operator, RegisterOperand cls,
                        bits<5> bytes> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : StoreRX<mnemonic, rxOpcode, operator, cls, bytes, bdxaddr12pair>;
     let DispSize = "20" in
@@ -2567,7 +2567,7 @@ class StoreMultipleRSY<string mnemonic, bits<16> opcode, RegisterOperand cls,
 
 multiclass StoreMultipleRSPair<string mnemonic, bits<8> rsOpcode,
                                bits<16> rsyOpcode, RegisterOperand cls> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : StoreMultipleRS<mnemonic, rsOpcode, cls, bdaddr12pair>;
     let DispSize = "20" in
@@ -2807,6 +2807,10 @@ class CondUnaryRSY<string mnemonic, bits<16> opcode,
   let mayLoad = 1;
   let AccessBytes = bytes;
   let CCMaskLast = 1;
+  let OpKey = mnemonic#"r"#cls;
+  let OpType = "mem";
+  let MemKey = mnemonic#cls;
+  let MemType = "target";
 }
 
 // Like CondUnaryRSY, but used for the raw assembly form.  The condition-code
@@ -2884,7 +2888,7 @@ class UnaryRXY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
 multiclass UnaryRXPair<string mnemonic, bits<8> rxOpcode, bits<16> rxyOpcode,
                        SDPatternOperator operator, RegisterOperand cls,
                        bits<5> bytes> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : UnaryRX<mnemonic, rxOpcode, operator, cls, bytes, bdxaddr12pair>;
     let DispSize = "20" in
@@ -2907,13 +2911,15 @@ class UnaryVRIaGeneric<string mnemonic, bits<16> opcode, ImmOpWithPattern imm>
 
 class UnaryVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                 TypedReg tr1, TypedReg tr2, bits<4> type = 0, bits<4> m4 = 0,
-                bits<4> m5 = 0>
+                bits<4> m5 = 0, string fp_mnemonic = "">
   : InstVRRa<opcode, (outs tr1.op:$V1), (ins tr2.op:$V2),
              mnemonic#"\t$V1, $V2",
              [(set (tr1.vt tr1.op:$V1), (operator (tr2.vt tr2.op:$V2)))]> {
   let M3 = type;
   let M4 = m4;
   let M5 = m5;
+  let OpKey = fp_mnemonic#!subst("VR", "FP", !cast<string>(tr1.op));
+  let OpType = "reg";
 }
 
 class UnaryVRRaGeneric<string mnemonic, bits<16> opcode, bits<4> m4 = 0,
@@ -2948,7 +2954,7 @@ multiclass UnaryExtraVRRaSPair<string mnemonic, bits<16> opcode,
   def : InstAlias<mnemonic#"\t$V1, $V2",
                   (!cast<Instruction>(NAME) tr1.op:$V1, tr2.op:$V2, 0)>;
   let Defs = [CC] in
-    def S : UnaryVRRa<mnemonic##"s", opcode, operator_cc, tr1, tr2,
+    def S : UnaryVRRa<mnemonic#"s", opcode, operator_cc, tr1, tr2,
                       type, 0, 1>;
 }
 
@@ -2992,17 +2998,17 @@ multiclass UnaryVRXAlign<string mnemonic, bits<16> opcode> {
 class SideEffectBinaryRX<string mnemonic, bits<8> opcode,
                          RegisterOperand cls>
   : InstRXa<opcode, (outs), (ins cls:$R1, bdxaddr12only:$XBD2),
-            mnemonic##"\t$R1, $XBD2", []>;
+            mnemonic#"\t$R1, $XBD2", []>;
 
 class SideEffectBinaryRXY<string mnemonic, bits<16> opcode,
                           RegisterOperand cls>
   : InstRXYa<opcode, (outs), (ins cls:$R1, bdxaddr20only:$XBD2),
-             mnemonic##"\t$R1, $XBD2", []>;
+             mnemonic#"\t$R1, $XBD2", []>;
 
 class SideEffectBinaryRILPC<string mnemonic, bits<12> opcode,
                             RegisterOperand cls>
   : InstRILb<opcode, (outs), (ins cls:$R1, pcrel32:$RI2),
-             mnemonic##"\t$R1, $RI2", []> {
+             mnemonic#"\t$R1, $RI2", []> {
   // We want PC-relative addresses to be tried ahead of BD and BDX addresses.
   // However, BDXs have two extra operands and are therefore 6 units more
   // complex.
@@ -3045,16 +3051,16 @@ class SideEffectBinarySIL<string mnemonic, bits<16> opcode,
 
 class SideEffectBinarySSa<string mnemonic, bits<8> opcode>
   : InstSSa<opcode, (outs), (ins bdladdr12onlylen8:$BDL1, bdaddr12only:$BD2),
-            mnemonic##"\t$BDL1, $BD2", []>;
+            mnemonic#"\t$BDL1, $BD2", []>;
 
 class SideEffectBinarySSb<string mnemonic, bits<8> opcode>
   : InstSSb<opcode,
             (outs), (ins bdladdr12onlylen4:$BDL1, bdladdr12onlylen4:$BDL2),
-            mnemonic##"\t$BDL1, $BDL2", []>;
+            mnemonic#"\t$BDL1, $BDL2", []>;
 
 class SideEffectBinarySSf<string mnemonic, bits<8> opcode>
   : InstSSf<opcode, (outs), (ins bdaddr12only:$BD1, bdladdr12onlylen8:$BDL2),
-            mnemonic##"\t$BD1, $BDL2", []>;
+            mnemonic#"\t$BD1, $BDL2", []>;
 
 class SideEffectBinarySSE<string mnemonic, bits<16> opcode>
   : InstSSE<opcode, (outs), (ins bdaddr12only:$BD1, bdaddr12only:$BD2),
@@ -3211,6 +3217,8 @@ class CondBinaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
   let CCMaskLast = 1;
   let NumOpsKey = !subst("loc", "sel", mnemonic);
   let NumOpsValue = "2";
+  let OpKey = mnemonic#cls1;
+  let OpType = "reg";
 }
 
 // Like CondBinaryRRF, but used for the raw assembly form.  The condition-code
@@ -3252,6 +3260,8 @@ class CondBinaryRRFa<string mnemonic, bits<16> opcode, RegisterOperand cls1,
   let CCMaskLast = 1;
   let NumOpsKey = mnemonic;
   let NumOpsValue = "3";
+  let OpKey = mnemonic#cls1;
+  let OpType = "reg";
 }
 
 // Like CondBinaryRRFa, but used for the raw assembly form.  The condition-code
@@ -3299,7 +3309,7 @@ multiclass BinaryRIAndK<string mnemonic, bits<12> opcode1, bits<16> opcode2,
                         ImmOpWithPattern imm> {
   let NumOpsKey = mnemonic in {
     let NumOpsValue = "3" in
-      def K : BinaryRIE<mnemonic##"k", opcode2, operator, cls, imm>,
+      def K : BinaryRIE<mnemonic#"k", opcode2, operator, cls, imm>,
               Requires<[FeatureDistinctOps]>;
     let NumOpsValue = "2" in
       def "" : BinaryRI<mnemonic, opcode1, operator, cls, imm>;
@@ -3376,7 +3386,7 @@ multiclass BinaryRSAndK<string mnemonic, bits<8> opcode1, bits<16> opcode2,
                         SDPatternOperator operator, RegisterOperand cls> {
   let NumOpsKey = mnemonic in {
     let NumOpsValue = "3" in
-      def K  : BinaryRSY<mnemonic##"k", opcode2, operator, cls>,
+      def K  : BinaryRSY<mnemonic#"k", opcode2, operator, cls>,
                Requires<[FeatureDistinctOps]>;
     let NumOpsValue = "2" in
       def "" : BinaryRS<mnemonic, opcode1, operator, cls>;
@@ -3448,7 +3458,7 @@ class BinaryRXY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
 multiclass BinaryRXPair<string mnemonic, bits<8> rxOpcode, bits<16> rxyOpcode,
                         SDPatternOperator operator, RegisterOperand cls,
                         SDPatternOperator load, bits<5> bytes> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : BinaryRX<mnemonic, rxOpcode, operator, cls, load, bytes,
                         bdxaddr12pair>;
@@ -3479,7 +3489,7 @@ class BinarySIY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
 multiclass BinarySIPair<string mnemonic, bits<8> siOpcode,
                         bits<16> siyOpcode, SDPatternOperator operator,
                         Operand imm> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : BinarySI<mnemonic, siOpcode, operator, imm, bdaddr12pair>;
     let DispSize = "20" in
@@ -3575,7 +3585,7 @@ multiclass BinaryVRRbSPair<string mnemonic, bits<16> opcode,
   def "" : BinaryVRRb<mnemonic, opcode, operator, tr1, tr2, type,
                       !and (modifier, 14)>;
   let Defs = [CC] in
-    def S : BinaryVRRb<mnemonic##"s", opcode, operator_cc, tr1, tr2, type,
+    def S : BinaryVRRb<mnemonic#"s", opcode, operator_cc, tr1, tr2, type,
                        !add (!and (modifier, 14), 1)>;
 }
 
@@ -3604,7 +3614,7 @@ multiclass BinaryExtraVRRbSPair<string mnemonic, bits<16> opcode,
                   (!cast<Instruction>(NAME) tr1.op:$V1, tr2.op:$V2,
                                             tr2.op:$V3, 0)>;
   let Defs = [CC] in
-    def S : BinaryVRRb<mnemonic##"s", opcode, operator_cc, tr1, tr2, type, 1>;
+    def S : BinaryVRRb<mnemonic#"s", opcode, operator_cc, tr1, tr2, type, 1>;
 }
 
 multiclass BinaryExtraVRRbSPairGeneric<string mnemonic, bits<16> opcode> {
@@ -3619,7 +3629,7 @@ multiclass BinaryExtraVRRbSPairGeneric<string mnemonic, bits<16> opcode> {
 
 class BinaryVRRc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr1, TypedReg tr2, bits<4> type = 0, bits<4> m5 = 0,
-                 bits<4> m6 = 0>
+                 bits<4> m6 = 0, string fp_mnemonic = "">
   : InstVRRc<opcode, (outs tr1.op:$V1), (ins tr2.op:$V2, tr2.op:$V3),
              mnemonic#"\t$V1, $V2, $V3",
              [(set (tr1.vt tr1.op:$V1), (operator (tr2.vt tr2.op:$V2),
@@ -3627,6 +3637,8 @@ class BinaryVRRc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M4 = type;
   let M5 = m5;
   let M6 = m6;
+  let OpKey = fp_mnemonic#"MemFold"#!subst("VR", "FP", !cast<string>(tr1.op));
+  let OpType = "reg";
 }
 
 class BinaryVRRcGeneric<string mnemonic, bits<16> opcode, bits<4> m5 = 0,
@@ -3655,7 +3667,7 @@ multiclass BinaryVRRcSPair<string mnemonic, bits<16> opcode,
   def "" : BinaryVRRc<mnemonic, opcode, operator, tr1, tr2, type,
                       m5, !and (modifier, 14)>;
   let Defs = [CC] in
-    def S : BinaryVRRc<mnemonic##"s", opcode, operator_cc, tr1, tr2, type,
+    def S : BinaryVRRc<mnemonic#"s", opcode, operator_cc, tr1, tr2, type,
                        m5, !add (!and (modifier, 14), 1)>;
 }
 
@@ -3752,7 +3764,7 @@ class StoreBinaryRSY<string mnemonic, bits<16> opcode, RegisterOperand cls,
 multiclass StoreBinaryRSPair<string mnemonic, bits<8> rsOpcode,
                              bits<16> rsyOpcode, RegisterOperand cls,
                              bits<5> bytes> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : StoreBinaryRS<mnemonic, rsOpcode, cls, bytes, bdaddr12pair>;
     let DispSize = "20" in
@@ -3892,7 +3904,7 @@ class CompareRXY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
 multiclass CompareRXPair<string mnemonic, bits<8> rxOpcode, bits<16> rxyOpcode,
                          SDPatternOperator operator, RegisterOperand cls,
                          SDPatternOperator load, bits<5> bytes> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : CompareRX<mnemonic, rxOpcode, operator, cls,
                          load, bytes, bdxaddr12pair>;
@@ -3920,7 +3932,7 @@ class CompareRSY<string mnemonic, bits<16> opcode, RegisterOperand cls,
 
 multiclass CompareRSPair<string mnemonic, bits<8> rsOpcode, bits<16> rsyOpcode,
                          RegisterOperand cls, bits<5> bytes> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : CompareRS<mnemonic, rsOpcode, cls, bytes, bdaddr12pair>;
     let DispSize = "20" in
@@ -3931,7 +3943,7 @@ multiclass CompareRSPair<string mnemonic, bits<8> rsOpcode, bits<16> rsyOpcode,
 class CompareSSb<string mnemonic, bits<8> opcode>
   : InstSSb<opcode,
             (outs), (ins bdladdr12onlylen4:$BDL1, bdladdr12onlylen4:$BDL2),
-            mnemonic##"\t$BDL1, $BDL2", []> {
+            mnemonic#"\t$BDL1, $BDL2", []> {
   let isCompare = 1;
   let mayLoad = 1;
 }
@@ -3978,7 +3990,7 @@ multiclass CompareSIPair<string mnemonic, bits<8> siOpcode, bits<16> siyOpcode,
 }
 
 class CompareVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
-                  TypedReg tr, bits<4> type>
+                  TypedReg tr, bits<4> type, string fp_mnemonic = "">
   : InstVRRa<opcode, (outs), (ins tr.op:$V1, tr.op:$V2),
              mnemonic#"\t$V1, $V2",
              [(set CC, (operator (tr.vt tr.op:$V1), (tr.vt tr.op:$V2)))]> {
@@ -3986,6 +3998,8 @@ class CompareVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M3 = type;
   let M4 = 0;
   let M5 = 0;
+  let OpKey = fp_mnemonic#!subst("VR", "FP", !cast<string>(tr.op));
+  let OpType = "reg";
 }
 
 class CompareVRRaGeneric<string mnemonic, bits<16> opcode>
@@ -4043,7 +4057,7 @@ class TestVRRg<string mnemonic, bits<16> opcode>
 class SideEffectTernarySSc<string mnemonic, bits<8> opcode>
   : InstSSc<opcode, (outs), (ins bdladdr12onlylen4:$BDL1,
                                  shift12only:$BD2, imm32zx4:$I3),
-            mnemonic##"\t$BDL1, $BD2, $I3", []>;
+            mnemonic#"\t$BDL1, $BD2, $I3", []>;
 
 class SideEffectTernaryRRFa<string mnemonic, bits<16> opcode,
                             RegisterOperand cls1, RegisterOperand cls2,
@@ -4179,7 +4193,7 @@ class TernaryRSY<string mnemonic, bits<16> opcode, RegisterOperand cls,
 
 multiclass TernaryRSPair<string mnemonic, bits<8> rsOpcode, bits<16> rsyOpcode,
                          RegisterOperand cls, bits<5> bytes> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : TernaryRS<mnemonic, rsOpcode, cls, bytes, bdaddr12pair>;
     let DispSize = "20" in
@@ -4303,7 +4317,7 @@ multiclass TernaryOptVRRbSPair<string mnemonic, bits<16> opcode,
                   (!cast<Instruction>(NAME) tr1.op:$V1, tr2.op:$V2,
                                             tr2.op:$V3, 0)>;
   let Defs = [CC] in
-    def S : TernaryVRRb<mnemonic##"s", opcode, operator_cc, tr1, tr2, type,
+    def S : TernaryVRRb<mnemonic#"s", opcode, operator_cc, tr1, tr2, type,
                         imm32zx4even_timm, !add(!and (modifier, 14), 1)>;
   def : InstAlias<mnemonic#"s\t$V1, $V2, $V3",
                   (!cast<Instruction>(NAME#"S") tr1.op:$V1, tr2.op:$V2,
@@ -4371,7 +4385,7 @@ class TernaryVRRdGeneric<string mnemonic, bits<16> opcode>
 }
 
 // Ternary operation where the assembler mnemonic has an extra operand to
-// optionally allow specifiying arbitrary M6 values.
+// optionally allow specifying arbitrary M6 values.
 multiclass TernaryExtraVRRd<string mnemonic, bits<16> opcode,
                              SDPatternOperator operator,
                              TypedReg tr1, TypedReg tr2, bits<4> type> {
@@ -4399,7 +4413,8 @@ multiclass TernaryExtraVRRdGeneric<string mnemonic, bits<16> opcode> {
 }
 
 class TernaryVRRe<string mnemonic, bits<16> opcode, SDPatternOperator operator,
-                  TypedReg tr1, TypedReg tr2, bits<4> m5 = 0, bits<4> type = 0>
+                  TypedReg tr1, TypedReg tr2, bits<4> m5 = 0, bits<4> type = 0,
+                  string fp_mnemonic = "">
   : InstVRRe<opcode, (outs tr1.op:$V1),
              (ins tr2.op:$V2, tr2.op:$V3, tr1.op:$V4),
              mnemonic#"\t$V1, $V2, $V3, $V4",
@@ -4408,6 +4423,8 @@ class TernaryVRRe<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                                                   (tr1.vt tr1.op:$V4)))]> {
   let M5 = m5;
   let M6 = type;
+  let OpKey = fp_mnemonic#"MemFold"#!subst("VR", "FP", !cast<string>(tr1.op));
+  let OpType = "reg";
 }
 
 class TernaryVRReFloatGeneric<string mnemonic, bits<16> opcode>
@@ -4536,7 +4553,7 @@ multiclass QuaternaryOptVRRdSPair<string mnemonic, bits<16> opcode,
                   (!cast<Instruction>(NAME) tr1.op:$V1, tr2.op:$V2,
                                             tr2.op:$V3, tr2.op:$V4, 0)>;
   let Defs = [CC] in
-    def S : QuaternaryVRRd<mnemonic##"s", opcode, operator_cc,
+    def S : QuaternaryVRRd<mnemonic#"s", opcode, operator_cc,
                            tr1, tr2, tr2, tr2, type,
                            imm32zx4even_timm, !add (!and (modifier, 14), 1)>;
   def : InstAlias<mnemonic#"s\t$V1, $V2, $V3, $V4",
@@ -4630,7 +4647,7 @@ class CmpSwapRSY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
 
 multiclass CmpSwapRSPair<string mnemonic, bits<8> rsOpcode, bits<16> rsyOpcode,
                          SDPatternOperator operator, RegisterOperand cls> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     let DispSize = "12" in
       def "" : CmpSwapRS<mnemonic, rsOpcode, operator, cls, bdaddr12pair>;
     let DispSize = "20" in
@@ -4650,13 +4667,13 @@ class RotateSelectRIEf<string mnemonic, bits<16> opcode, RegisterOperand cls1,
 
 class PrefetchRXY<string mnemonic, bits<16> opcode, SDPatternOperator operator>
   : InstRXYb<opcode, (outs), (ins imm32zx4:$M1, bdxaddr20only:$XBD2),
-             mnemonic##"\t$M1, $XBD2",
+             mnemonic#"\t$M1, $XBD2",
              [(operator imm32zx4_timm:$M1, bdxaddr20only:$XBD2)]>;
 
 class PrefetchRILPC<string mnemonic, bits<12> opcode,
                     SDPatternOperator operator>
   : InstRILc<opcode, (outs), (ins imm32zx4_timm:$M1, pcrel32:$RI2),
-             mnemonic##"\t$M1, $RI2",
+             mnemonic#"\t$M1, $RI2",
              [(operator imm32zx4_timm:$M1, pcrel32:$RI2)]> {
   // We want PC-relative addresses to be tried ahead of BD and BDX addresses.
   // However, BDXs have two extra operands and are therefore 6 units more
@@ -4765,13 +4782,49 @@ multiclass BinaryRIAndKPseudo<string key, SDPatternOperator operator,
 class MemFoldPseudo<string mnemonic, RegisterOperand cls, bits<5> bytes,
                     AddressingMode mode>
   : Pseudo<(outs cls:$R1), (ins cls:$R2, mode:$XBD2), []> {
-    let OpKey = mnemonic#"rk"#cls;
+    let OpKey = !subst("mscrk", "msrkc",
+                !subst("msgcrk", "msgrkc",
+                mnemonic#"rk"#cls));
     let OpType = "mem";
     let MemKey = mnemonic#cls;
     let MemType = "pseudo";
     let mayLoad = 1;
     let AccessBytes = bytes;
     let HasIndex = 1;
+    let hasNoSchedulingInfo = 1;
+}
+
+// Same as MemFoldPseudo but for mapping a W... vector instruction
+class MemFoldPseudo_FP<string mnemonic, RegisterOperand cls, bits<5> bytes,
+                    AddressingMode mode>
+  : MemFoldPseudo<mnemonic, cls, bytes, mode> {
+    let OpKey = mnemonic#"r"#"MemFold"#cls;
+}
+
+class MemFoldPseudo_FPTern<string mnemonic, RegisterOperand cls, bits<5> bytes,
+                           AddressingMode mode>
+  : Pseudo<(outs cls:$R1), (ins cls:$R2, cls:$R3, mode:$XBD2), []> {
+    let OpKey = mnemonic#"r"#"MemFold"#cls;
+    let OpType = "mem";
+    let MemKey = mnemonic#cls;
+    let MemType = "pseudo";
+    let mayLoad = 1;
+    let AccessBytes = bytes;
+    let HasIndex = 1;
+    let hasNoSchedulingInfo = 1;
+}
+
+// Same as MemFoldPseudo but for Load On Condition with CC operands.
+class MemFoldPseudo_CondMove<string mnemonic, RegisterOperand cls, bits<5> bytes,
+                             AddressingMode mode>
+  : Pseudo<(outs cls:$R1),
+           (ins cls:$R2, mode:$XBD2, cond4:$valid, cond4:$M3), []> {
+    let OpKey = !subst("loc", "sel", mnemonic)#"r"#cls;
+    let OpType = "mem";
+    let MemKey = mnemonic#cls;
+    let MemType = "pseudo";
+    let mayLoad = 1;
+    let AccessBytes = bytes;
     let hasNoSchedulingInfo = 1;
 }
 
@@ -4813,6 +4866,8 @@ class CondBinaryRRFPseudo<string mnemonic, RegisterOperand cls1,
   let CCMaskLast = 1;
   let NumOpsKey = !subst("loc", "sel", mnemonic);
   let NumOpsValue = "2";
+  let OpKey = mnemonic#cls1;
+  let OpType = "reg";
 }
 
 // Like CondBinaryRRFa, but expanded after RA depending on the choice of
@@ -4826,6 +4881,8 @@ class CondBinaryRRFaPseudo<string mnemonic, RegisterOperand cls1,
   let CCMaskLast = 1;
   let NumOpsKey = mnemonic;
   let NumOpsValue = "3";
+  let OpKey = mnemonic#cls1;
+  let OpType = "reg";
 }
 
 // Like CondBinaryRIE, but expanded after RA depending on the choice of
@@ -4842,8 +4899,9 @@ class CondBinaryRIEPseudo<RegisterOperand cls, ImmOpWithPattern imm>
 
 // Like CondUnaryRSY, but expanded after RA depending on the choice of
 // register.
-class CondUnaryRSYPseudo<SDPatternOperator operator, RegisterOperand cls,
-                         bits<5> bytes, AddressingMode mode = bdaddr20only>
+class CondUnaryRSYPseudo<string mnemonic, SDPatternOperator operator,
+                         RegisterOperand cls, bits<5> bytes,
+                         AddressingMode mode = bdaddr20only>
   : Pseudo<(outs cls:$R1),
            (ins cls:$R1src, mode:$BD2, cond4:$valid, cond4:$R3),
            [(set cls:$R1,
@@ -4854,6 +4912,10 @@ class CondUnaryRSYPseudo<SDPatternOperator operator, RegisterOperand cls,
   let mayLoad = 1;
   let AccessBytes = bytes;
   let CCMaskLast = 1;
+  let OpKey = mnemonic#"r"#cls;
+  let OpType = "mem";
+  let MemKey = mnemonic#cls;
+  let MemType = "target";
 }
 
 // Like CondStoreRSY, but expanded after RA depending on the choice of
@@ -5039,7 +5101,6 @@ multiclass BinaryRXYAndPseudo<string mnemonic, bits<16> opcode,
                               SDPatternOperator operator, RegisterOperand cls,
                               SDPatternOperator load, bits<5> bytes,
                               AddressingMode mode = bdxaddr20only> {
-
   def "" : BinaryRXY<mnemonic, opcode, operator, cls, load, bytes, mode> {
     let MemKey = mnemonic#cls;
     let MemType = "target";
@@ -5052,7 +5113,7 @@ multiclass BinaryRXPairAndPseudo<string mnemonic, bits<8> rxOpcode,
                                  bits<16> rxyOpcode, SDPatternOperator operator,
                                  RegisterOperand cls,
                                  SDPatternOperator load, bits<5> bytes> {
-  let DispKey = mnemonic ## #cls in {
+  let DispKey = mnemonic # cls in {
     def "" : BinaryRX<mnemonic, rxOpcode, operator, cls, load, bytes,
                       bdxaddr12pair> {
       let DispSize = "12";
@@ -5064,6 +5125,43 @@ multiclass BinaryRXPairAndPseudo<string mnemonic, bits<8> rxOpcode,
                          bytes, bdxaddr20pair>;
   }
   def _MemFoldPseudo : MemFoldPseudo<mnemonic, cls, bytes, bdxaddr12pair>;
+}
+
+multiclass BinaryRXEAndPseudo<string mnemonic, bits<16> opcode,
+                              SDPatternOperator operator, RegisterOperand cls,
+                              SDPatternOperator load, bits<5> bytes> {
+  def "" : BinaryRXE<mnemonic, opcode, operator, cls, load, bytes> {
+    let MemKey = mnemonic#cls;
+    let MemType = "target";
+  }
+  def _MemFoldPseudo : MemFoldPseudo_FP<mnemonic, cls, bytes, bdxaddr12pair>;
+}
+
+multiclass TernaryRXFAndPseudo<string mnemonic, bits<16> opcode,
+                               SDPatternOperator operator, RegisterOperand cls1,
+                               RegisterOperand cls2, SDPatternOperator load,
+                               bits<5> bytes> {
+  def "" : TernaryRXF<mnemonic, opcode, operator, cls1, cls2, load, bytes> {
+    let MemKey = mnemonic#cls1;
+    let MemType = "target";
+  }
+  def _MemFoldPseudo : MemFoldPseudo_FPTern<mnemonic, cls1, bytes, bdxaddr12pair>;
+}
+
+multiclass CondUnaryRSYPairAndMemFold<string mnemonic, bits<16> opcode,
+                                      SDPatternOperator operator,
+                                      RegisterOperand cls, bits<5> bytes,
+                                      AddressingMode mode = bdaddr20only> {
+  defm "" : CondUnaryRSYPair<mnemonic, opcode, operator, cls, bytes, mode>;
+  def _MemFoldPseudo : MemFoldPseudo_CondMove<mnemonic, cls, bytes, mode>;
+}
+
+multiclass CondUnaryRSYPseudoAndMemFold<string mnemonic,
+                                        SDPatternOperator operator,
+                                        RegisterOperand cls, bits<5> bytes,
+                                        AddressingMode mode = bdaddr20only> {
+  def "" : CondUnaryRSYPseudo<mnemonic, operator, cls, bytes, mode>;
+  def _MemFoldPseudo : MemFoldPseudo_CondMove<mnemonic, cls, bytes, mode>;
 }
 
 // Define an instruction that operates on two fixed-length blocks of memory,
@@ -5086,7 +5184,7 @@ multiclass MemorySS<string mnemonic, bits<8> opcode,
   }
 }
 
-// The same, but setting a CC result as comparion operator.
+// The same, but setting a CC result as comparison operator.
 multiclass CompareMemorySS<string mnemonic, bits<8> opcode,
                           SDPatternOperator sequence, SDPatternOperator loop> {
   def "" : SideEffectBinarySSa<mnemonic, opcode>;

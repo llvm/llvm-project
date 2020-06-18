@@ -19,6 +19,7 @@ unittest("ADTTests") {
     "BitmaskEnumTest.cpp",
     "BreadthFirstIteratorTest.cpp",
     "BumpPtrListTest.cpp",
+    "CoalescingBitVectorTest.cpp",
     "DAGDeltaAlgorithmTest.cpp",
     "DeltaAlgorithmTest.cpp",
     "DenseMapTest.cpp",
@@ -79,5 +80,8 @@ unittest("ADTTests") {
     "TinyPtrVectorTest.cpp",
     "TripleTest.cpp",
     "TwineTest.cpp",
+    "TypeSwitchTest.cpp",
+    "TypeTraitsTest.cpp",
+    "WaymarkingTest.cpp",
   ]
 }

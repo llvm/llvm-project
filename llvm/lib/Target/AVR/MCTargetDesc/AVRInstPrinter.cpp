@@ -78,7 +78,7 @@ void AVRInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     printOperand(MI, 2, O);
     break;
   default:
-    if (!printAliasInstr(MI, O))
+    if (!printAliasInstr(MI, Address, O))
       printInstruction(MI, Address, O);
 
     printAnnotation(O, Annot);
@@ -100,6 +100,16 @@ const char *AVRInstPrinter::getPrettyRegisterName(unsigned RegNum,
 
 void AVRInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   raw_ostream &O) {
+  if (OpNo >= MI->size()) {
+    // Not all operands are correctly disassembled at the moment. This means
+    // that some machine instructions won't have all the necessary operands
+    // set.
+    // To avoid asserting, print <unknown> instead until the necessary support
+    // has been implemented.
+    O << "<unknown>";
+    return;
+  }
+
   const MCOperand &Op = MI->getOperand(OpNo);
   const MCOperandInfo &MOI = this->MII.get(MI->getOpcode()).OpInfo[OpNo];
 
@@ -125,6 +135,16 @@ void AVRInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 /// being encoded as a pc-relative value.
 void AVRInstPrinter::printPCRelImm(const MCInst *MI, unsigned OpNo,
                                    raw_ostream &O) {
+  if (OpNo >= MI->size()) {
+    // Not all operands are correctly disassembled at the moment. This means
+    // that some machine instructions won't have all the necessary operands
+    // set.
+    // To avoid asserting, print <unknown> instead until the necessary support
+    // has been implemented.
+    O << "<unknown>";
+    return;
+  }
+
   const MCOperand &Op = MI->getOperand(OpNo);
 
   if (Op.isImm()) {

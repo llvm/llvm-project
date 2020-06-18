@@ -10,7 +10,10 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGMACRO_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
@@ -18,6 +21,51 @@ namespace llvm {
 class raw_ostream;
 
 class DWARFDebugMacro {
+  /// DWARFv5 section 6.3.1 Macro Information Header.
+  enum HeaderFlagMask {
+#define HANDLE_MACRO_FLAG(ID, NAME) MACRO_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+  };
+  struct MacroHeader {
+    /// Macro version information number.
+    uint16_t Version = 0;
+
+    /// The bits of the flags field are interpreted as a set of flags, some of
+    /// which may indicate that additional fields follow. The following flags,
+    /// beginning with the least significant bit, are defined:
+    /// offset_size_flag:
+    ///   If the offset_size_flag is zero, the header is for a 32-bit DWARF
+    ///   format macro section and all offsets are 4 bytes long; if it is one,
+    ///   the header is for a 64-bit DWARF format macro section and all offsets
+    ///   are 8 bytes long.
+    /// debug_line_offset_flag:
+    ///   If the debug_line_offset_flag is one, the debug_line_offset field (see
+    ///   below) is present. If zero, that field is omitted.
+    /// opcode_operands_table_flag:
+    ///   If the opcode_operands_table_flag is one, the opcode_operands_table
+    ///   field (see below) is present. If zero, that field is omitted.
+    uint8_t Flags = 0;
+
+    /// debug_line_offset
+    ///   An offset in the .debug_line section of the beginning of the line
+    ///   number information in the containing compilation unit, encoded as a
+    ///   4-byte offset for a 32-bit DWARF format macro section and an 8-byte
+    ///   offset for a 64-bit DWARF format macro section.
+    uint64_t DebugLineOffset;
+
+    /// Print the macro header from the debug_macro section.
+    void dumpMacroHeader(raw_ostream &OS) const;
+
+    /// Parse the debug_macro header.
+    Error parseMacroHeader(DWARFDataExtractor Data, uint64_t *Offset);
+
+    /// Get the DWARF format according to the flags.
+    dwarf::DwarfFormat getDwarfFormat() const;
+
+    /// Get the size of a reference according to the DWARF format.
+    uint8_t getOffsetByteSize() const;
+  };
+
   /// A single macro entry within a macro list.
   struct Entry {
     /// The type of the macro entry.
@@ -27,6 +75,8 @@ class DWARFDebugMacro {
       uint64_t Line;
       /// Vendor extension constant value.
       uint64_t ExtConstant;
+      /// Macro unit import offset.
+      uint64_t ImportOffset;
     };
 
     union {
@@ -39,7 +89,14 @@ class DWARFDebugMacro {
     };
   };
 
-  using MacroList = SmallVector<Entry, 4>;
+  struct MacroList {
+    // A value 0 in the `Header.Version` field indicates that we're parsing
+    // a macinfo[.dwo] section which doesn't have header itself, hence
+    // for that case other fields in the `Header` are uninitialized.
+    MacroHeader Header;
+    SmallVector<Entry, 4> Macros;
+    uint64_t Offset;
+  };
 
   /// A list of all the macro entries in the debug_macinfo section.
   std::vector<MacroList> MacroLists;
@@ -47,14 +104,28 @@ class DWARFDebugMacro {
 public:
   DWARFDebugMacro() = default;
 
-  /// Print the macro list found within the debug_macinfo section.
+  /// Print the macro list found within the debug_macinfo/debug_macro section.
   void dump(raw_ostream &OS) const;
 
-  /// Parse the debug_macinfo section accessible via the 'data' parameter.
-  void parse(DataExtractor data);
+  Error parseMacro(DWARFUnitVector::iterator_range Units,
+                   DataExtractor StringExtractor,
+                   DWARFDataExtractor MacroData) {
+    return parseImpl(Units, StringExtractor, MacroData, /*IsMacro=*/true);
+  }
+
+  Error parseMacinfo(DWARFDataExtractor MacroData) {
+    return parseImpl(None, None, MacroData, /*IsMacro=*/false);
+  }
 
   /// Return whether the section has any entries.
   bool empty() const { return MacroLists.empty(); }
+
+private:
+  /// Parse the debug_macinfo/debug_macro section accessible via the 'MacroData'
+  /// parameter.
+  Error parseImpl(Optional<DWARFUnitVector::iterator_range> Units,
+                  Optional<DataExtractor> StringExtractor,
+                  DWARFDataExtractor Data, bool IsMacro);
 };
 
 } // end namespace llvm

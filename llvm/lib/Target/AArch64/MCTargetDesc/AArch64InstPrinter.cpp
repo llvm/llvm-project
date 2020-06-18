@@ -283,7 +283,8 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 
   if (Opcode == AArch64::SPACE) {
-    O << '\t' << MAI.getCommentString() << " SPACE";
+    O << '\t' << MAI.getCommentString() << " SPACE "
+      << MI->getOperand(1).getImm();
     printAnnotation(O, Annot);
     return;
   }
@@ -295,7 +296,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     return;
   }
 
-  if (!printAliasInstr(MI, STI, O))
+  if (!printAliasInstr(MI, Address, STI, O))
     printInstruction(MI, Address, STI, O);
 
   printAnnotation(O, Annot);
@@ -1347,7 +1348,8 @@ void AArch64InstPrinter::printVectorIndex(const MCInst *MI, unsigned OpNum,
   O << "[" << MI->getOperand(OpNum).getImm() << "]";
 }
 
-void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, unsigned OpNum,
+void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
+                                           unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
@@ -1355,17 +1357,20 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, unsigned OpNum,
   // If the label has already been resolved to an immediate offset (say, when
   // we're running the disassembler), just print the immediate.
   if (Op.isImm()) {
-    O << "#" << formatImm(Op.getImm() * 4);
+    int64_t Offset = Op.getImm() * 4;
+    if (PrintBranchImmAsAddress)
+      O << formatHex(Address + Offset);
+    else
+      O << "#" << formatImm(Offset);
     return;
   }
 
   // If the branch target is simply an address then print it in hex.
   const MCConstantExpr *BranchTarget =
       dyn_cast<MCConstantExpr>(MI->getOperand(OpNum).getExpr());
-  int64_t Address;
-  if (BranchTarget && BranchTarget->evaluateAsAbsolute(Address)) {
-    O << "0x";
-    O.write_hex(Address);
+  int64_t TargetAddress;
+  if (BranchTarget && BranchTarget->evaluateAsAbsolute(TargetAddress)) {
+    O << formatHex(TargetAddress);
   } else {
     // Otherwise, just print the expression.
     MI->getOperand(OpNum).getExpr()->print(O, &MAI);

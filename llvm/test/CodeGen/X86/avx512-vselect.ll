@@ -173,31 +173,20 @@ define <64 x i16> @test8(<64 x i8> %x, <64 x i16> %a, <64 x i16> %b) {
 ;
 ; CHECK-KNL-LABEL: test8:
 ; CHECK-KNL:       # %bb.0:
-; CHECK-KNL-NEXT:    pushq %rbp
-; CHECK-KNL-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-KNL-NEXT:    .cfi_offset %rbp, -16
-; CHECK-KNL-NEXT:    movq %rsp, %rbp
-; CHECK-KNL-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-KNL-NEXT:    andq $-32, %rsp
-; CHECK-KNL-NEXT:    subq $32, %rsp
-; CHECK-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm8
-; CHECK-KNL-NEXT:    vmovdqa 16(%rbp), %ymm9
-; CHECK-KNL-NEXT:    vpxor %xmm10, %xmm10, %xmm10
-; CHECK-KNL-NEXT:    vpcmpeqb %ymm0, %ymm10, %ymm11
-; CHECK-KNL-NEXT:    vpmovsxbw %xmm11, %ymm0
-; CHECK-KNL-NEXT:    vpblendvb %ymm0, %ymm1, %ymm5, %ymm0
-; CHECK-KNL-NEXT:    vextracti128 $1, %ymm11, %xmm1
-; CHECK-KNL-NEXT:    vpmovsxbw %xmm1, %ymm1
-; CHECK-KNL-NEXT:    vpblendvb %ymm1, %ymm2, %ymm6, %ymm1
-; CHECK-KNL-NEXT:    vpcmpeqb %ymm10, %ymm8, %ymm5
-; CHECK-KNL-NEXT:    vpmovsxbw %xmm5, %ymm2
-; CHECK-KNL-NEXT:    vpblendvb %ymm2, %ymm3, %ymm7, %ymm2
+; CHECK-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; CHECK-KNL-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; CHECK-KNL-NEXT:    vpcmpeqb %ymm6, %ymm5, %ymm5
+; CHECK-KNL-NEXT:    vpcmpeqb %ymm6, %ymm0, %ymm0
+; CHECK-KNL-NEXT:    vpmovsxbw %xmm0, %ymm6
+; CHECK-KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; CHECK-KNL-NEXT:    vpmovsxbw %xmm0, %ymm0
+; CHECK-KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm6, %zmm0
+; CHECK-KNL-NEXT:    vpternlogq $202, %zmm3, %zmm1, %zmm0
+; CHECK-KNL-NEXT:    vpmovsxbw %xmm5, %ymm1
 ; CHECK-KNL-NEXT:    vextracti128 $1, %ymm5, %xmm3
 ; CHECK-KNL-NEXT:    vpmovsxbw %xmm3, %ymm3
-; CHECK-KNL-NEXT:    vpblendvb %ymm3, %ymm4, %ymm9, %ymm3
-; CHECK-KNL-NEXT:    movq %rbp, %rsp
-; CHECK-KNL-NEXT:    popq %rbp
-; CHECK-KNL-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-KNL-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
+; CHECK-KNL-NEXT:    vpternlogq $202, %zmm4, %zmm2, %zmm1
 ; CHECK-KNL-NEXT:    retq
   %c = icmp eq <64 x i8> %x, zeroinitializer
   %ret = select <64 x i1> %c, <64 x i16> %a, <64 x i16> %b

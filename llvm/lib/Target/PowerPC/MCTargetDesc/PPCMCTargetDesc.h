@@ -32,9 +32,6 @@ class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
 class Target;
-class Triple;
-class StringRef;
-class raw_pwrite_stream;
 
 MCCodeEmitter *createPPCMCCodeEmitter(const MCInstrInfo &MCII,
                                       const MCRegisterInfo &MRI,

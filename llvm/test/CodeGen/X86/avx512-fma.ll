@@ -125,14 +125,14 @@ define <16 x float> @test_x86_fmadd132_ps(<16 x float> %a0, <16 x float> %a1, <1
 ; KNL-NEXT:    vpmovsxbd %xmm2, %zmm2
 ; KNL-NEXT:    vpslld $31, %zmm2, %zmm2
 ; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; KNL-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm1
+; KNL-NEXT:    vfmadd132ps {{.*#+}} zmm0 {%k1} = (zmm0 * mem) + zmm1
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_x86_fmadd132_ps:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; SKX-NEXT:    vpmovb2m %xmm2, %k1
-; SKX-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm1
+; SKX-NEXT:    vfmadd132ps {{.*#+}} zmm0 {%k1} = (zmm0 * mem) + zmm1
 ; SKX-NEXT:    retq
   %a2   = load <16 x float>,<16 x float> *%a2_ptrt,align 1
   %x = fmul <16 x float> %a0, %a2
@@ -148,7 +148,7 @@ define <16 x float> @test_x86_fmadd231_ps(<16 x float> %a0, <16 x float> %a1, <1
 ; KNL-NEXT:    vpmovsxbd %xmm2, %zmm2
 ; KNL-NEXT:    vpslld $31, %zmm2, %zmm2
 ; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; KNL-NEXT:    vfmadd231ps {{.*#+}} zmm1 = (zmm0 * mem) + zmm1
+; KNL-NEXT:    vfmadd231ps {{.*#+}} zmm1 {%k1} = (zmm0 * mem) + zmm1
 ; KNL-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL-NEXT:    retq
 ;
@@ -156,7 +156,7 @@ define <16 x float> @test_x86_fmadd231_ps(<16 x float> %a0, <16 x float> %a1, <1
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; SKX-NEXT:    vpmovb2m %xmm2, %k1
-; SKX-NEXT:    vfmadd231ps {{.*#+}} zmm1 = (zmm0 * mem) + zmm1
+; SKX-NEXT:    vfmadd231ps {{.*#+}} zmm1 {%k1} = (zmm0 * mem) + zmm1
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %a2   = load <16 x float>,<16 x float> *%a2_ptrt,align 1
@@ -173,7 +173,7 @@ define <16 x float> @test_x86_fmadd213_ps(<16 x float> %a0, <16 x float> %a1, <1
 ; KNL-NEXT:    vpmovsxbd %xmm2, %zmm2
 ; KNL-NEXT:    vpslld $31, %zmm2, %zmm2
 ; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; KNL-NEXT:    vfmadd213ps {{.*#+}} zmm1 = (zmm0 * zmm1) + mem
+; KNL-NEXT:    vfmadd213ps {{.*#+}} zmm1 {%k1} = (zmm0 * zmm1) + mem
 ; KNL-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL-NEXT:    retq
 ;
@@ -181,7 +181,7 @@ define <16 x float> @test_x86_fmadd213_ps(<16 x float> %a0, <16 x float> %a1, <1
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; SKX-NEXT:    vpmovb2m %xmm2, %k1
-; SKX-NEXT:    vfmadd213ps {{.*#+}} zmm1 = (zmm0 * zmm1) + mem
+; SKX-NEXT:    vfmadd213ps {{.*#+}} zmm1 {%k1} = (zmm0 * zmm1) + mem
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %a2   = load <16 x float>,<16 x float> *%a2_ptrt,align 1

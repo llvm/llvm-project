@@ -12,6 +12,7 @@
 ; CHECK-NEXT:    <PERMODULE {{.*}} op4=3 {{.*}} op9={{[0-9]+}}/>
 ; CHECK-NEXT:    <PERMODULE {{.*}} op0=[[ALIASEEID:[0-9]+]]
 ; CHECK-NEXT:    <ALIAS {{.*}} op0=[[ALIASID]] {{.*}} op2=[[ALIASEEID]]/>
+; CHECK-NEXT:    <BLOCK_COUNT op0=3/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; ModuleID = 'thinlto-function-summary-callgraph-cast.ll'

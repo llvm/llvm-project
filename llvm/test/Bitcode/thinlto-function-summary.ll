@@ -25,6 +25,7 @@
 ; BC-NEXT: <PERMODULE {{.*}} op0=3 op1=7
 ; BC-NEXT: <PERMODULE {{.*}} op0=4 op1=0 op2=4 op3=0
 ; BC-NEXT: <ALIAS {{.*}} op0=6 op1=0 op2=3
+; BC-NEXT: <BLOCK_COUNT op0=5/>
 ; BC-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 ; BC: <STRTAB_BLOCK
 ; BC-NEXT: blob data = 'hfoobaranon.{{................................}}.0variadicllvm.va_startf{{.*}}'

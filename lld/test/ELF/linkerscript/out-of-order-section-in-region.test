@@ -4,7 +4,7 @@
 # RUN:   | llvm-mc -filetype=obj -triple=x86_64-pc-linux - -o %t
 # RUN: ld.lld %t --script %s -o %t2
 
-# RUN: llvm-objdump -section-headers %t2 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t2 | FileCheck %s
 # CHECK: .aaa 00000008 0000000000001008 DATA
 # CHECK: .bbb 00000008 0000000000001000 DATA
 

@@ -78,7 +78,7 @@ define i32 @test7_no_null_opt(i32 %X) #0 {
   %R = load i32, i32* %V          ; <i32> [#uses=1]
   ret i32 %R
 }
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }
 
 define i32 @test8(i32* %P) {
 ; CHECK-LABEL: @test8(

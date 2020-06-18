@@ -15,5 +15,5 @@ void call_once() {
   f();
   f1();
 }
-// CHECK: call dereferenceable({{[0-9]+}}) %0* @_Z1fv()
-// CHECK: call dereferenceable({{[0-9]+}}) %0* @_Z2f1v()  
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0* @_Z1fv()
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0* @_Z2f1v()  

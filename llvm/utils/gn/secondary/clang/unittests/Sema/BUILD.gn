@@ -8,6 +8,7 @@ unittest("SemaTests") {
     "//clang/lib/Frontend",
     "//clang/lib/Parse",
     "//clang/lib/Sema",
+    "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",

@@ -17,9 +17,11 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -60,7 +62,7 @@ class CGDebugInfo {
   llvm::DIBuilder DBuilder;
   llvm::DICompileUnit *TheCU = nullptr;
   ModuleMap *ClangModuleMap = nullptr;
-  ExternalASTSource::ASTSourceDescriptor PCHDescriptor;
+  ASTSourceDescriptor PCHDescriptor;
   SourceLocation CurLoc;
   llvm::MDNode *CurInlinedAt = nullptr;
   llvm::DIType *VTablePtrType = nullptr;
@@ -166,6 +168,7 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const BuiltinType *Ty);
   llvm::DIType *CreateType(const ComplexType *Ty);
   llvm::DIType *CreateType(const AutoType *Ty);
+  llvm::DIType *CreateType(const ExtIntType *Ty);
   llvm::DIType *CreateQualifiedType(QualType Ty, llvm::DIFile *Fg);
   llvm::DIType *CreateType(const TypedefType *Ty, llvm::DIFile *Fg);
   llvm::DIType *CreateType(const TemplateSpecializationType *Ty,
@@ -189,6 +192,7 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const ObjCTypeParamType *Ty, llvm::DIFile *Unit);
 
   llvm::DIType *CreateType(const VectorType *Ty, llvm::DIFile *F);
+  llvm::DIType *CreateType(const ConstantMatrixType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const ArrayType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const LValueReferenceType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const RValueReferenceType *Ty, llvm::DIFile *Unit);
@@ -379,9 +383,7 @@ public:
   /// When generating debug information for a clang module or
   /// precompiled header, this module map will be used to determine
   /// the module of origin of each Decl.
-  void setPCHDescriptor(ExternalASTSource::ASTSourceDescriptor PCH) {
-    PCHDescriptor = PCH;
-  }
+  void setPCHDescriptor(ASTSourceDescriptor PCH) { PCHDescriptor = PCH; }
   /// @}
 
   /// Update the current source location. If \arg loc is invalid it is
@@ -507,7 +509,7 @@ public:
   llvm::DIType *getOrCreateStandaloneType(QualType Ty, SourceLocation Loc);
 
   /// Add heapallocsite metadata for MSAllocator calls.
-  void addHeapAllocSiteMetadata(llvm::Instruction *CallSite, QualType Ty,
+  void addHeapAllocSiteMetadata(llvm::CallBase *CallSite, QualType AllocatedTy,
                                 SourceLocation Loc);
 
   void completeType(const EnumDecl *ED);
@@ -590,9 +592,8 @@ private:
 
   /// Get a reference to a clang module.  If \p CreateSkeletonCU is true,
   /// this also creates a split dwarf skeleton compile unit.
-  llvm::DIModule *
-  getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
-                       bool CreateSkeletonCU);
+  llvm::DIModule *getOrCreateModuleRef(ASTSourceDescriptor Mod,
+                                       bool CreateSkeletonCU);
 
   /// DebugTypeExtRefs: If \p D originated in a clang module, return it.
   llvm::DIModule *getParentModuleOrNull(const Decl *D);

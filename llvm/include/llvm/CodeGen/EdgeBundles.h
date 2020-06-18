@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntEqClasses.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {

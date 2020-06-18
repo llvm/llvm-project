@@ -91,7 +91,7 @@ entry:
 ; ELF64: sub_i8
   %a.addr = alloca i8, align 4
   %0 = sub i8 %a, %b
-; ELF64: subf
+; ELF64: sub
   store i8 %0, i8* %a.addr, align 4
   ret void
 }
@@ -111,7 +111,7 @@ entry:
 ; ELF64: sub_i16
   %a.addr = alloca i16, align 4
   %0 = sub i16 %a, %b
-; ELF64: subf
+; ELF64: sub
   store i16 %0, i16* %a.addr, align 4
   ret void
 }
@@ -131,7 +131,7 @@ entry:
 ; ELF64: sub_i16_imm
   %a.addr = alloca i16, align 4
   %0 = sub i16 %a, -32768;
-; ELF64: subf
+; ELF64: sub
   store i16 %0, i16* %a.addr, align 4
   ret void
 }

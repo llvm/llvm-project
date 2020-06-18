@@ -1,7 +1,7 @@
 ; RUN: opt -tbaa -sink -S < %s | FileCheck %s
 
 ; CHECK: a:
-; CHECK:   %f = load float, float* %p, !tbaa [[TAGA:!.*]]
+; CHECK:   %f = load float, float* %p, align 4, !tbaa [[TAGA:!.*]]
 ; CHECK:   store float %f, float* %q
 
 define void @foo(float* %p, i1 %c, float* %q, float* %r) {

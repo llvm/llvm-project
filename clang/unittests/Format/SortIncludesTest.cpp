@@ -38,8 +38,7 @@ protected:
     return *Result;
   }
 
-  std::string sort(StringRef Code,
-                   StringRef FileName = "input.cpp",
+  std::string sort(StringRef Code, StringRef FileName = "input.cpp",
                    unsigned ExpectedNumRanges = 1) {
     return sort(Code, GetCodeRange(Code), FileName, ExpectedNumRanges);
   }
@@ -227,7 +226,8 @@ TEST_F(SortIncludesTest, SupportClangFormatOffCStyle) {
                  "#include <b>\n"
                  "#include <a>\n"
                  "#include <c>\n"
-                 "/* clang-format onwards */\n", "input.h", 2));
+                 "/* clang-format onwards */\n",
+                 "input.h", 2));
 }
 
 TEST_F(SortIncludesTest, IncludeSortingCanBeDisabled) {
@@ -291,7 +291,8 @@ TEST_F(SortIncludesTest, SortsLocallyInEachBlock) {
             sort("#include \"a.h\"\n"
                  "#include \"c.h\"\n"
                  "\n"
-                 "#include \"b.h\"\n", "input.h", 0));
+                 "#include \"b.h\"\n",
+                 "input.h", 0));
 }
 
 TEST_F(SortIncludesTest, SortsAllBlocksWhenMerging) {
@@ -762,7 +763,8 @@ TEST_F(SortIncludesTest, DoNotSortLikelyXml) {
             sort("<!--;\n"
                  "#include <b>\n"
                  "#include <a>\n"
-                 "-->", "input.h", 0));
+                 "-->",
+                 "input.h", 0));
 }
 
 TEST_F(SortIncludesTest, DoNotOutputReplacementsForSortedBlocksWithRegrouping) {

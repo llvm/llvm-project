@@ -70,6 +70,17 @@ public:
 
   ~CommandObjectRegisterRead() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope())
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eRegisterCompletion,
+        request, nullptr);
+  }
+
   Options *GetOptions() override { return &m_option_group; }
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
@@ -322,6 +333,17 @@ public:
   }
 
   ~CommandObjectRegisterWrite() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eRegisterCompletion,
+        request, nullptr);
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {

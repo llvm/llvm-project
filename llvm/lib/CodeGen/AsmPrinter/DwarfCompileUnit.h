@@ -47,9 +47,9 @@ class DwarfCompileUnit final : public DwarfUnit {
   unsigned UniqueID;
   bool HasRangeLists = false;
 
-  /// The attribute index of DW_AT_stmt_list in the compile unit DIE, avoiding
-  /// the need to search for it in applyStmtList.
-  DIE::value_iterator StmtListValue;
+  /// The start of the unit line section, this is also
+  /// reused in appyStmtList.
+  MCSymbol *LineTableStartSym;
 
   /// Skeleton unit associated with this unit.
   DwarfCompileUnit *Skeleton = nullptr;
@@ -122,6 +122,9 @@ public:
 
   /// Apply the DW_AT_stmt_list from this compile unit to the specified DIE.
   void applyStmtList(DIE &D);
+
+  /// Get line table start symbol for this unit.
+  MCSymbol *getLineTableStartSym() const { return LineTableStartSym; }
 
   /// A pair of GlobalVariable and DIExpression.
   struct GlobalExpr {
@@ -230,6 +233,10 @@ public:
 
   void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
 
+  /// Whether to use the GNU analog for a DWARF5 tag, attribute, or location
+  /// atom. Only applicable when emitting otherwise DWARF4-compliant debug info.
+  bool useGNUAnalogForDwarf5Feature() const;
+
   /// This takes a DWARF 5 tag and returns it or a GNU analog.
   dwarf::Tag getDwarf5OrGNUTag(dwarf::Tag Tag) const;
 
@@ -245,10 +252,12 @@ public:
   /// For indirect calls \p CalleeDIE is set to nullptr.
   /// \p IsTail specifies whether the call is a tail call.
   /// \p PCAddr points to the PC value after the call instruction.
+  /// \p CallAddr points to the PC value at the call instruction (or is null).
   /// \p CallReg is a register location for an indirect call. For direct calls
   /// the \p CallReg is set to 0.
   DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, DIE *CalleeDIE, bool IsTail,
-                                 const MCSymbol *PCAddr, unsigned CallReg);
+                                 const MCSymbol *PCAddr,
+                                 const MCSymbol *CallAddr, unsigned CallReg);
   /// Construct call site parameter DIEs for the \p CallSiteDIE. The \p Params
   /// were collected by the \ref collectCallSiteParameters.
   /// Note: The order of parameters does not matter, since debuggers recognize

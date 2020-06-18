@@ -624,17 +624,18 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
         }
       }
       break;
-    case Type::VectorTyID:
-      // if the whole vector is 'undef' just reserve memory for the value.
-      auto* VTy = cast<VectorType>(C->getType());
-      Type *ElemTy = VTy->getElementType();
-      unsigned int elemNum = VTy->getNumElements();
-      Result.AggregateVal.resize(elemNum);
-      if (ElemTy->isIntegerTy())
-        for (unsigned int i = 0; i < elemNum; ++i)
-          Result.AggregateVal[i].IntVal =
-            APInt(ElemTy->getPrimitiveSizeInBits(), 0);
-      break;
+      case Type::FixedVectorTyID:
+      case Type::ScalableVectorTyID:
+        // if the whole vector is 'undef' just reserve memory for the value.
+        auto *VTy = cast<VectorType>(C->getType());
+        Type *ElemTy = VTy->getElementType();
+        unsigned int elemNum = VTy->getNumElements();
+        Result.AggregateVal.resize(elemNum);
+        if (ElemTy->isIntegerTy())
+          for (unsigned int i = 0; i < elemNum; ++i)
+            Result.AggregateVal[i].IntVal =
+                APInt(ElemTy->getPrimitiveSizeInBits(), 0);
+        break;
     }
     return Result;
   }
@@ -914,7 +915,8 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     else
       llvm_unreachable("Unknown constant pointer type!");
     break;
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID: {
     unsigned elemNum;
     Type* ElemTy;
     const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(C);
@@ -1006,8 +1008,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       break;
     }
     llvm_unreachable("Unknown constant pointer type!");
-  }
-  break;
+  } break;
 
   default:
     SmallString<256> Msg;
@@ -1046,7 +1047,8 @@ void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
 
     *((PointerTy*)Ptr) = Val.PointerVal;
     break;
-  case Type::VectorTyID:
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID:
     for (unsigned i = 0; i < Val.AggregateVal.size(); ++i) {
       if (cast<VectorType>(Ty)->getElementType()->isDoubleTy())
         *(((double*)Ptr)+i) = Val.AggregateVal[i].DoubleVal;
@@ -1096,7 +1098,8 @@ void ExecutionEngine::LoadValueFromMemory(GenericValue &Result,
     Result.IntVal = APInt(80, y);
     break;
   }
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID: {
     auto *VT = cast<VectorType>(Ty);
     Type *ElemT = VT->getElementType();
     const unsigned numElems = VT->getNumElements();

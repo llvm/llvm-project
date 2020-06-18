@@ -85,13 +85,11 @@ define i64 @f2ul(float %a) {
 ; CHECK-LABEL: f2ul:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea.sl %s1, 1593835520
-; CHECK-NEXT:    or %s1, 0, %s1
 ; CHECK-NEXT:    fcmp.s %s2, %s0, %s1
 ; CHECK-NEXT:    fsub.s %s1, %s0, %s1
 ; CHECK-NEXT:    cvt.d.s %s1, %s1
 ; CHECK-NEXT:    cvt.l.d.rz %s1, %s1
-; CHECK-NEXT:    lea.sl %s3, -2147483648
-; CHECK-NEXT:    xor %s1, %s1, %s3
+; CHECK-NEXT:    xor %s1, %s1, (1)1
 ; CHECK-NEXT:    cvt.d.s %s0, %s0
 ; CHECK-NEXT:    cvt.l.d.rz %s0, %s0
 ; CHECK-NEXT:    cmov.s.lt %s1, %s0, %s2
@@ -188,8 +186,7 @@ define i64 @d2ul(double %a) {
 ; CHECK-NEXT:    fcmp.d %s2, %s0, %s1
 ; CHECK-NEXT:    fsub.d %s1, %s0, %s1
 ; CHECK-NEXT:    cvt.l.d.rz %s1, %s1
-; CHECK-NEXT:    lea.sl %s3, -2147483648
-; CHECK-NEXT:    xor %s1, %s1, %s3
+; CHECK-NEXT:    xor %s1, %s1, (1)1
 ; CHECK-NEXT:    cvt.l.d.rz %s0, %s0
 ; CHECK-NEXT:    cmov.d.lt %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1

@@ -25,7 +25,7 @@
 # CHECK:      error: undefined symbol: vtable for Foo 
 # CHECK-NEXT: >>> referenced by undef.s
 # CHECK-NEXT: >>>               {{.*}}:(.text+0x15)
-# CHECK-NEXT: the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+# CHECK-NEXT: >>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
 
 # Check that this symbol isn't demangled
 
@@ -51,8 +51,8 @@
 # Show that all line table problems are mentioned as soon as the object's line information
 # is requested, even if that particular part of the line information is not currently required.
 # Also show that the warnings are only printed once.
-# CHECK:      warning: parsing line table prologue at 0x00000000 should have ended at 0x00000038 but it ended at 0x00000037
-# CHECK-NEXT: warning: parsing line table prologue at offset 0x0000005b found unsupported version 1
+# CHECK:      warning: unknown data in line table prologue at offset 0x00000000: parsing ended (at offset 0x00000037) before reaching the prologue end at offset 0x00000038
+# CHECK-NEXT: warning: parsing line table prologue at offset 0x0000005b: unsupported version 1
 # CHECK-NEXT: warning: last sequence in debug line table at offset 0x00000061 is not terminated
 # CHECK:      error: undefined symbol: zed6a
 # CHECK-NEXT: >>> referenced by undef-bad-debug.s:11 (dir{{/|\\}}undef-bad-debug.s:11)

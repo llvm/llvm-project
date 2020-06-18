@@ -813,6 +813,8 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
   LLVM_DEBUG(dbgs() << "\n*** Tail-duplicating " << printMBBReference(*TailBB)
                     << '\n');
 
+  bool ShouldUpdateTerminators = TailBB->canFallThrough();
+
   DenseSet<unsigned> UsedByPhi;
   getRegsUsedByPHIs(*TailBB, &UsedByPhi);
 
@@ -885,6 +887,10 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     for (MachineBasicBlock *Succ : TailBB->successors())
       PredBB->addSuccessor(Succ, MBPI->getEdgeProbability(TailBB, Succ));
 
+    // Update branches in pred to jump to tail's layout successor if needed.
+    if (ShouldUpdateTerminators)
+      PredBB->updateTerminator(TailBB->getNextNode());
+
     Changed = true;
     ++NumTailDups;
   }
@@ -943,6 +949,11 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     PrevBB->removeSuccessor(PrevBB->succ_begin());
     assert(PrevBB->succ_empty());
     PrevBB->transferSuccessors(TailBB);
+
+    // Update branches in PrevBB based on Tail's layout successor.
+    if (ShouldUpdateTerminators)
+      PrevBB->updateTerminator(TailBB->getNextNode());
+
     TDBBs.push_back(PrevBB);
     Changed = true;
   }
@@ -1018,7 +1029,7 @@ void TailDuplicator::removeDeadBlock(
   MachineFunction *MF = MBB->getParent();
   // Update the call site info.
   std::for_each(MBB->begin(), MBB->end(), [MF](const MachineInstr &MI) {
-    if (MI.isCandidateForCallSiteEntry())
+    if (MI.shouldUpdateCallSiteInfo())
       MF->eraseCallSiteInfo(&MI);
   });
 

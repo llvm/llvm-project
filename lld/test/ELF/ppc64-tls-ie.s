@@ -33,11 +33,11 @@
 # INPUT-REL: R_PPC64_GOT_TPREL16_LO_DS c 0x0
 # INPUT-REL: R_PPC64_TLS c 0x0
 ## &.got[0] - .TOC. = -32768
-# IE-LABEL: test1:
+# IE-LABEL: <test1>:
 # IE-NEXT:  addis 3, 2, 0
 # IE-NEXT:  ld 3, -32768(3)
 # IE-NEXT:  lbzx 3, 3, 13
-# LE-LABEL: test1:
+# LE-LABEL: <test1>:
 # LE-NEXT:   nop
 # LE-NEXT:   addis 3, 13, 0
 # LE-NEXT:   lbz 3, -28672(3)
@@ -50,11 +50,11 @@ test1:
 # INPUT-REL: R_PPC64_GOT_TPREL16_LO_DS s 0x0
 # INPUT-REL: R_PPC64_TLS s 0x0
 ## &.got[1] - .TOC. = -32760
-# IE-LABEL: test2:
+# IE-LABEL: <test2>:
 # IE-NEXT:  addis 3, 2, 0
 # IE-NEXT:  ld 3, -32760(3)
 # IE-NEXT:  lhzx 3, 3, 13
-# LE-LABEL: test2:
+# LE-LABEL: <test2>:
 # LE-NEXT:  nop
 # LE-NEXT:  addis 3, 13, 0
 # LE-NEXT:  lhz 3, -28670(3)
@@ -67,11 +67,11 @@ test2:
 # INPUT-REL: R_PPC64_GOT_TPREL16_LO_DS i 0x0
 # INPUT-REL: R_PPC64_TLS i 0x0
 ## &.got[2] - .TOC. = -32752
-# IE-LABEL: test3:
+# IE-LABEL: <test3>:
 # IE-NEXT:  addis 3, 2, 0
 # IE-NEXT:  ld 3, -32752(3)
 # IE-NEXT:  lwzx 3, 3, 13
-# LE-LABEL: test3:
+# LE-LABEL: <test3>:
 # LE-NEXT:  nop
 # LE-NEXT:  addis 3, 13, 0
 # LE-NEXT:  lwz 3, -28668(3)
@@ -84,11 +84,11 @@ test3:
 # INPUT-REL: R_PPC64_GOT_TPREL16_LO_DS l 0x0
 # INPUT-REL: R_PPC64_TLS l 0x0
 ## &.got[3] - .TOC. = -32744
-# IE-LABEL: test4:
+# IE-LABEL: <test4>:
 # IE-NEXT:  addis 3, 2, 0
 # IE-NEXT:  ld 3, -32744(3)
 # IE-NEXT:  ldx 3, 3, 13
-# LE-LABEL: test4:
+# LE-LABEL: <test4>:
 # LE-NEXT:  nop
 # LE-NEXT:  addis 3, 13, 0
 # LE-NEXT:  ld 3, -28664(3)
@@ -97,7 +97,7 @@ test4:
   ld 3, l@got@tprel@l(3)
   ldx 3, 3, l@tls
 
-# LE-LABEL: test5:
+# LE-LABEL: <test5>:
 # LE-NEXT:  nop
 # LE-NEXT:  addis 4, 13, 0
 # LE-NEXT: stb 3, -28672(4)
@@ -107,7 +107,7 @@ test5:
   stbx 3, 4, c@tls
 
 
-# LE-LABEL: test6:
+# LE-LABEL: <test6>:
 # LE-NEXT:  nop
 # LE-NEXT:  addis 4, 13, 0
 # LE-NEXT: sth 3, -28670(4)
@@ -117,7 +117,7 @@ test6:
   sthx 3, 4, s@tls
 
 
-# LE-LABEL: test7:
+# LE-LABEL: <test7>:
 # LE-NEXT:  nop
 # LE-NEXT:  addis 4, 13, 0
 # LE-NEXT: stw 3, -28668(4)
@@ -126,7 +126,7 @@ test7:
   ld 4, i@got@tprel@l(4)
   stwx 3, 4, i@tls
 
-# LE-LABEL: test8:
+# LE-LABEL: <test8>:
 # LE-NEXT:  nop
 # LE-NEXT:  addis 4, 13, 0
 # LE-NEXT: std 3, -28664(4)
@@ -135,7 +135,7 @@ test8:
   ld 4, l@got@tprel@l(4)
   stdx 3, 4, l@tls
 
-# LE-LABEL: test9:
+# LE-LABEL: <test9>:
 # LE-NEXT:  nop
 # LE-NEXT:  addis 3, 13, 0
 # LE-NEXT:  addi 3, 3, -28668
@@ -144,7 +144,7 @@ test9:
   ld 3, i@got@tprel@l(3)
   add 3, 3, i@tls
 
-# LE-LABEL: test_ds:
+# LE-LABEL: <test_ds>:
 # LE-NEXT:  addis 4, 13, 0
 # LE-NEXT: std 3, -28664(4)
 test_ds:

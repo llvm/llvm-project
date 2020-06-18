@@ -48,9 +48,6 @@ public:
     return false;
   }
 
-  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override {}
-
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 };
 

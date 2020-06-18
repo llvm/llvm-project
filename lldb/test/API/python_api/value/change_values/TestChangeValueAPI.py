@@ -134,8 +134,7 @@ class ChangeValueAPITestCase(TestBase):
         # gcc may set multiple locations for breakpoint
         breakpoint.SetEnabled(False)
 
-        # Now continue, grab the stdout and make sure we changed the real
-        # values as well...
+        # Now continue.
         process.Continue()
 
         self.assertEquals(process.GetState(), lldb.eStateStopped)
@@ -145,11 +144,14 @@ class ChangeValueAPITestCase(TestBase):
             thread.IsValid(),
             "There should be a thread stopped due to breakpoint condition")
 
-        expected_value = "Val - 12345 Mine - 55, 98765, 55555555. Ptr - 66, 98765, 66666666"
-        stdout = process.GetSTDOUT(1000)
-        self.assertTrue(
-            expected_value in stdout,
-            "STDOUT showed changed values.")
+        # Grab the stdout and make sure we changed the real values as well.
+        # This doesn't work for reproducers as the inferior doesn't run.
+        if not configuration.is_reproducer():
+            expected_value = "Val - 12345 Mine - 55, 98765, 55555555. Ptr - 66, 98765, 66666666"
+            stdout = process.GetSTDOUT(1000)
+            self.assertTrue(
+                expected_value in stdout,
+                "STDOUT showed changed values.")
 
         # Finally, change the stack pointer to 0, and we should not make it to
         # our end breakpoint.

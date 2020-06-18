@@ -1,0 +1,2 @@
+# Checks enabled in the top-level .clang-tidy minus readability-identifier-naming
+Checks: '-*,clang-diagnostic-*,llvm-*,misc-*,-misc-unused-parameters,-misc-non-private-member-variables-in-classes'

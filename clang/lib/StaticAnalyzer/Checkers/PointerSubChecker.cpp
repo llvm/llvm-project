@@ -74,6 +74,6 @@ void ento::registerPointerSubChecker(CheckerManager &mgr) {
   mgr.registerChecker<PointerSubChecker>();
 }
 
-bool ento::shouldRegisterPointerSubChecker(const LangOptions &LO) {
+bool ento::shouldRegisterPointerSubChecker(const CheckerManager &mgr) {
   return true;
 }

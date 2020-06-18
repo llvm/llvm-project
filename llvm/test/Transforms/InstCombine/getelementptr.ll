@@ -1208,3 +1208,33 @@ define i32* @test_gep_inbounds_of_gep(i32* %base) {
   %ptr2 = getelementptr inbounds i32, i32* %ptr1, i64 4
   ret i32* %ptr2
 }
+
+%struct.f = type { i32 }
+
+@g0 = internal unnamed_addr constant %struct.f zeroinitializer, align 4
+@g1 = internal unnamed_addr constant %struct.f { i32 -1 }, align 4
+
+define i32* @PR45084(i1 %cond) {
+; CHECK-LABEL: @PR45084(
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[COND:%.*]], i32* getelementptr inbounds (%struct.f, %struct.f* @g0, i64 0, i32 0), i32* getelementptr inbounds (%struct.f, %struct.f* @g1, i64 0, i32 0), !prof !0
+; CHECK-NEXT:    ret i32* [[GEP]]
+;
+  %sel = select i1 %cond, %struct.f* @g0, %struct.f* @g1, !prof !0
+  %gep = getelementptr inbounds %struct.f, %struct.f* %sel, i64 0, i32 0
+  ret i32* %gep
+}
+
+define i32* @PR45084_extra_use(i1 %cond, %struct.f** %p) {
+; CHECK-LABEL: @PR45084_extra_use(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], %struct.f* @g0, %struct.f* @g1
+; CHECK-NEXT:    store %struct.f* [[SEL]], %struct.f** [[P:%.*]], align 8
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[COND]], i32* getelementptr inbounds (%struct.f, %struct.f* @g0, i64 0, i32 0), i32* getelementptr inbounds (%struct.f, %struct.f* @g1, i64 0, i32 0)
+; CHECK-NEXT:    ret i32* [[GEP]]
+;
+  %sel = select i1 %cond, %struct.f* @g0, %struct.f* @g1
+  store %struct.f* %sel, %struct.f** %p
+  %gep = getelementptr %struct.f, %struct.f* %sel, i64 0, i32 0
+  ret i32* %gep
+}
+
+!0 = !{!"branch_weights", i32 2, i32 10}

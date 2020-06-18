@@ -26,6 +26,6 @@ LogicalResult MlirOptMain(llvm::raw_ostream &os,
                           std::unique_ptr<llvm::MemoryBuffer> buffer,
                           const PassPipelineCLParser &passPipeline,
                           bool splitInputFile, bool verifyDiagnostics,
-                          bool verifyPasses);
+                          bool verifyPasses, bool allowUnregisteredDialects);
 
 } // end namespace mlir

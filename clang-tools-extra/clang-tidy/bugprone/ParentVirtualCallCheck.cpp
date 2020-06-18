@@ -76,21 +76,23 @@ static std::string getExprAsString(const clang::Expr &E,
   Text.erase(
       llvm::remove_if(
           Text,
-          [](char C) { return std::isspace(static_cast<unsigned char>(C)); }),
+          [](char C) { return llvm::isSpace(static_cast<unsigned char>(C)); }),
       Text.end());
   return Text;
 }
 
 void ParentVirtualCallCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      cxxMemberCallExpr(
-          callee(memberExpr(hasDescendant(implicitCastExpr(
-                                hasImplicitDestinationType(pointsTo(
-                                    type(anything()).bind("castToType"))),
-                                hasSourceExpression(cxxThisExpr(hasType(
-                                    type(anything()).bind("thisType")))))))
-                     .bind("member")),
-          callee(cxxMethodDecl(isVirtual()))),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          cxxMemberCallExpr(
+              callee(memberExpr(hasDescendant(implicitCastExpr(
+                                    hasImplicitDestinationType(pointsTo(
+                                        type(anything()).bind("castToType"))),
+                                    hasSourceExpression(cxxThisExpr(hasType(
+                                        type(anything()).bind("thisType")))))))
+                         .bind("member")),
+              callee(cxxMethodDecl(isVirtual())))),
       this);
 }
 

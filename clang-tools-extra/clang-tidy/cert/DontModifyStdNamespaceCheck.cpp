@@ -17,9 +17,6 @@ namespace tidy {
 namespace cert {
 
 void DontModifyStdNamespaceCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       namespaceDecl(unless(isExpansionInSystemHeader()),
                     anyOf(hasName("std"), hasName("posix")),

@@ -2,7 +2,7 @@
 
 RUN: llvm-readobj --dynamic-table %p/Inputs/ppc64.exe | FileCheck %s
 
-CHECK: Format: ELF64-ppc64
+CHECK: Format: elf64-powerpc
 CHECK: Arch: powerpc64le
 CHECK: AddressSize: 64bit
 

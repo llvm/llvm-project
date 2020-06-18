@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=aarch64-- -mattr=+v8.1a -run-pass=greedy,virtregrewriter | FileCheck %s
+# RUN: llc --debugify-and-strip-all-safe=0 -o - %s -mtriple=aarch64-- -mattr=+v8.1a -run-pass=greedy,virtregrewriter | FileCheck %s
 # Make sure spills/reloads from xseqpairs and wseqpairs work correctly.
 ---
 # CHECK-LABEL: name: spill_reload_xseqpairs
@@ -16,7 +16,7 @@ body: |
     %1 : xseqpairsclass = IMPLICIT_DEF
     %2 : gpr64common = IMPLICIT_DEF
     %0 = CASPALX %0, %1, %2
-    INLINEASM &" ", 0, 0, implicit def dead $x0, implicit def dead $x1, implicit def dead $x2, implicit def dead $x3, implicit def dead $x4, implicit def dead $x5, implicit def dead $x6, implicit def dead $x7, implicit def dead $x8, implicit def dead $x9, implicit def dead $x10, implicit def dead $x11, implicit def dead $x12, implicit def dead $x13, implicit def dead $x14, implicit def dead $x15, implicit def dead $x16, implicit def dead $x17, implicit def dead $x18, implicit def dead $x19, implicit def dead $x20, implicit def dead $x21, implicit def dead $x22, implicit def dead $x23, implicit def dead $x24, implicit def dead $x25, implicit def dead $x26, implicit def dead $x27, implicit def dead $x28, implicit def dead $fp, implicit def dead $lr
+    INLINEASM &" ", 0, 12, implicit def dead $x0, implicit def dead $x1, implicit def dead $x2, implicit def dead $x3, implicit def dead $x4, implicit def dead $x5, implicit def dead $x6, implicit def dead $x7, implicit def dead $x8, implicit def dead $x9, implicit def dead $x10, implicit def dead $x11, implicit def dead $x12, implicit def dead $x13, implicit def dead $x14, implicit def dead $x15, implicit def dead $x16, implicit def dead $x17, implicit def dead $x18, implicit def dead $x19, implicit def dead $x20, implicit def dead $x21, implicit def dead $x22, implicit def dead $x23, implicit def dead $x24, implicit def dead $x25, implicit def dead $x26, implicit def dead $x27, implicit def dead $x28, implicit def dead $fp, implicit def dead $lr
     $xzr = COPY %0.sube64
     $xzr = COPY %0.subo64
 ...
@@ -36,7 +36,7 @@ body: |
     %1 : wseqpairsclass = IMPLICIT_DEF
     %2 : gpr64common = IMPLICIT_DEF
     %0 = CASPALW %0, %1, %2
-    INLINEASM &" ", 0, 0, implicit def dead $x0, implicit def dead $x1, implicit def dead $x2, implicit def dead $x3, implicit def dead $x4, implicit def dead $x5, implicit def dead $x6, implicit def dead $x7, implicit def dead $x8, implicit def dead $x9, implicit def dead $x10, implicit def dead $x11, implicit def dead $x12, implicit def dead $x13, implicit def dead $x14, implicit def dead $x15, implicit def dead $x16, implicit def dead $x17, implicit def dead $x18, implicit def dead $x19, implicit def dead $x20, implicit def dead $x21, implicit def dead $x22, implicit def dead $x23, implicit def dead $x24, implicit def dead $x25, implicit def dead $x26, implicit def dead $x27, implicit def dead $x28, implicit def dead $fp, implicit def dead $lr
+    INLINEASM &" ", 0, 12, implicit def dead $x0, implicit def dead $x1, implicit def dead $x2, implicit def dead $x3, implicit def dead $x4, implicit def dead $x5, implicit def dead $x6, implicit def dead $x7, implicit def dead $x8, implicit def dead $x9, implicit def dead $x10, implicit def dead $x11, implicit def dead $x12, implicit def dead $x13, implicit def dead $x14, implicit def dead $x15, implicit def dead $x16, implicit def dead $x17, implicit def dead $x18, implicit def dead $x19, implicit def dead $x20, implicit def dead $x21, implicit def dead $x22, implicit def dead $x23, implicit def dead $x24, implicit def dead $x25, implicit def dead $x26, implicit def dead $x27, implicit def dead $x28, implicit def dead $fp, implicit def dead $lr
     $xzr = COPY %0.sube32
     $xzr = COPY %0.subo32
 ...

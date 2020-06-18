@@ -41,10 +41,12 @@ StatementMatcher makeCastSequenceMatcher() {
       unless(hasImplicitDestinationType(qualType(substTemplateTypeParmType()))),
       unless(hasSourceExpression(hasType(sugaredNullptrType()))));
 
-  return castExpr(anyOf(ImplicitCastToNull,
-                        explicitCastExpr(hasDescendant(ImplicitCastToNull))),
-                  unless(hasAncestor(explicitCastExpr())))
-      .bind(CastSequence);
+  return traverse(
+      ast_type_traits::TK_AsIs,
+      castExpr(anyOf(ImplicitCastToNull,
+                     explicitCastExpr(hasDescendant(ImplicitCastToNull))),
+               unless(hasAncestor(explicitCastExpr())))
+          .bind(CastSequence));
 }
 
 bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -307,7 +309,7 @@ private:
   /// SourceLocation pointing within the definition of another macro.
   bool getMacroAndArgLocations(SourceLocation Loc, SourceLocation &ArgLoc,
                                SourceLocation &MacroLoc) {
-    assert(Loc.isMacroID() && "Only reasonble to call this on macros");
+    assert(Loc.isMacroID() && "Only reasonable to call this on macros");
 
     ArgLoc = Loc;
 
@@ -473,11 +475,7 @@ void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matcher for C++. Because this checker is used for
-  // modernization, it is reasonable to run it on any C++ standard with the
-  // assumption the user is trying to modernize their codebase.
-  if (getLangOpts().CPlusPlus)
-    Finder->addMatcher(makeCastSequenceMatcher(), this);
+  Finder->addMatcher(makeCastSequenceMatcher(), this);
 }
 
 void UseNullptrCheck::check(const MatchFinder::MatchResult &Result) {

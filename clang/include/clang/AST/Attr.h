@@ -13,14 +13,13 @@
 #ifndef LLVM_CLANG_AST_ATTR_H
 #define LLVM_CLANG_AST_ATTR_H
 
-#include "clang/AST/ASTContextAllocate.h"  // For Attrs.inc
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/Sanitizers.h"
@@ -41,6 +40,7 @@ class Expr;
 class QualType;
 class FunctionDecl;
 class TypeSourceInfo;
+class OMPTraitInfo;
 
 /// Attr - This represents one attribute.
 class Attr : public AttributeCommonInfo {

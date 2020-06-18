@@ -17,7 +17,7 @@ build the analysis results that are used by these transformations, and they
 are, above all, a structuring technique for compiler code.
 
 All LLVM passes are subclasses of the `Pass
-<http://llvm.org/doxygen/classllvm_1_1Pass.html>`_ class, which implement
+<https://llvm.org/doxygen/classllvm_1_1Pass.html>`_ class, which implement
 functionality by overriding virtual methods inherited from ``Pass``.  Depending
 on how your pass works, you should inherit from the :ref:`ModulePass
 <writing-an-llvm-pass-ModulePass>` , :ref:`CallGraphSCCPass
@@ -98,8 +98,8 @@ Start out with:
   #include "llvm/Support/raw_ostream.h"
 
 Which are needed because we are writing a `Pass
-<http://llvm.org/doxygen/classllvm_1_1Pass.html>`_, we are operating on
-`Function <http://llvm.org/doxygen/classllvm_1_1Function.html>`_\ s, and we will
+<https://llvm.org/doxygen/classllvm_1_1Pass.html>`_, we are operating on
+`Function <https://llvm.org/doxygen/classllvm_1_1Function.html>`_\ s, and we will
 be doing some printing.
 
 Next we have:
@@ -336,7 +336,7 @@ The ``ImmutablePass`` class
 ---------------------------
 
 The most plain and boring type of pass is the "`ImmutablePass
-<http://llvm.org/doxygen/classllvm_1_1ImmutablePass.html>`_" class.  This pass
+<https://llvm.org/doxygen/classllvm_1_1ImmutablePass.html>`_" class.  This pass
 type is used for passes that do not have to be run, do not change state, and
 never need to be updated.  This is not a normal type of transformation or
 analysis, but can provide information about the current compiler configuration.
@@ -353,7 +353,7 @@ invalidated, and are never "run".
 The ``ModulePass`` class
 ------------------------
 
-The `ModulePass <http://llvm.org/doxygen/classllvm_1_1ModulePass.html>`_ class
+The `ModulePass <https://llvm.org/doxygen/classllvm_1_1ModulePass.html>`_ class
 is the most general of all superclasses that you can use.  Deriving from
 ``ModulePass`` indicates that your pass uses the entire program as a unit,
 referring to function bodies in no predictable order, or adding and removing
@@ -388,7 +388,7 @@ The ``CallGraphSCCPass`` class
 ------------------------------
 
 The `CallGraphSCCPass
-<http://llvm.org/doxygen/classllvm_1_1CallGraphSCCPass.html>`_ is used by
+<https://llvm.org/doxygen/classllvm_1_1CallGraphSCCPass.html>`_ is used by
 passes that need to traverse the program bottom-up on the call graph (callees
 before callers).  Deriving from ``CallGraphSCCPass`` provides some mechanics
 for building and traversing the ``CallGraph``, but also allows the system to
@@ -460,7 +460,7 @@ The ``FunctionPass`` class
 --------------------------
 
 In contrast to ``ModulePass`` subclasses, `FunctionPass
-<http://llvm.org/doxygen/classllvm_1_1Pass.html>`_ subclasses do have a
+<https://llvm.org/doxygen/classllvm_1_1Pass.html>`_ subclasses do have a
 predictable, local behavior that can be expected by the system.  All
 ``FunctionPass`` execute on each function in the program independent of all of
 the other functions in the program.  ``FunctionPass``\ es do not require that
@@ -498,7 +498,7 @@ being processed.  The ``doInitialization`` method call is not scheduled to
 overlap with any other pass executions (thus it should be very fast).
 
 A good example of how this method should be used is the `LowerAllocations
-<http://llvm.org/doxygen/LowerAllocations_8cpp-source.html>`_ pass.  This pass
+<https://llvm.org/doxygen/LowerAllocations_8cpp-source.html>`_ pass.  This pass
 converts ``malloc`` and ``free`` instructions into platform dependent
 ``malloc()`` and ``free()`` function calls.  It uses the ``doInitialization``
 method to get a reference to the ``malloc`` and ``free`` functions that it
@@ -761,7 +761,7 @@ The ``getAnalysisUsage`` method
 By implementing the ``getAnalysisUsage`` method, the required and invalidated
 sets may be specified for your transformation.  The implementation should fill
 in the `AnalysisUsage
-<http://llvm.org/doxygen/classllvm_1_1AnalysisUsage.html>`_ object with
+<https://llvm.org/doxygen/classllvm_1_1AnalysisUsage.html>`_ object with
 information about which passes are required and not invalidated.  To do this, a
 pass may call any of the following methods on the ``AnalysisUsage`` object:
 
@@ -914,14 +914,14 @@ be registered with :ref:`RegisterAnalysisGroup
 <writing-an-llvm-pass-RegisterAnalysisGroup>`.
 
 As a concrete example of an Analysis Group in action, consider the
-`AliasAnalysis <http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_
+`AliasAnalysis <https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_
 analysis group.  The default implementation of the alias analysis interface
-(the `basicaa <http://llvm.org/doxygen/structBasicAliasAnalysis.html>`_ pass)
+(the `basicaa <https://llvm.org/doxygen/structBasicAliasAnalysis.html>`_ pass)
 just does a few simple checks that don't require significant analysis to
 compute (such as: two different globals can never alias each other, etc).
 Passes that use the `AliasAnalysis
-<http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_ interface (for
-example the `gvn <http://llvm.org/doxygen/classllvm_1_1GVN.html>`_ pass), do not
+<https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_ interface (for
+example the `gvn <https://llvm.org/doxygen/classllvm_1_1GVN.html>`_ pass), do not
 care which implementation of alias analysis is actually provided, they just use
 the designated interface.
 
@@ -963,7 +963,7 @@ implementations of the interface by using the following code:
 
 This just shows a class ``FancyAA`` that uses the ``INITIALIZE_AG_PASS`` macro
 both to register and to "join" the `AliasAnalysis
-<http://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_ analysis group.
+<https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_ analysis group.
 Every implementation of an analysis group should join using this macro.
 
 .. code-block:: c++
@@ -982,13 +982,13 @@ argument to the ``INITIALIZE_AG_PASS`` template).  There must be exactly one
 default implementation available at all times for an Analysis Group to be used.
 Only default implementation can derive from ``ImmutablePass``.  Here we declare
 that the `BasicAliasAnalysis
-<http://llvm.org/doxygen/structBasicAliasAnalysis.html>`_ pass is the default
+<https://llvm.org/doxygen/structBasicAliasAnalysis.html>`_ pass is the default
 implementation for the interface.
 
 Pass Statistics
 ===============
 
-The `Statistic <http://llvm.org/doxygen/Statistic_8h_source.html>`_ class is
+The `Statistic <https://llvm.org/doxygen/Statistic_8h_source.html>`_ class is
 designed to be an easy way to expose various success metrics from passes.
 These statistics are printed at the end of a run, when the :option:`-stats`
 command line option is enabled on the command line.  See the :ref:`Statistics
@@ -999,8 +999,8 @@ section <Statistic>` in the Programmer's Manual for details.
 What PassManager does
 ---------------------
 
-The `PassManager <http://llvm.org/doxygen/PassManager_8h_source.html>`_ `class
-<http://llvm.org/doxygen/classllvm_1_1PassManager.html>`_ takes a list of
+The `PassManager <https://llvm.org/doxygen/PassManager_8h_source.html>`_ `class
+<https://llvm.org/doxygen/classllvm_1_1PassManager.html>`_ takes a list of
 passes, ensures their :ref:`prerequisites <writing-an-llvm-pass-interaction>`
 are set up correctly, and then schedules passes to run efficiently.  All of the
 LLVM tools that run passes use the PassManager for execution of these passes.
@@ -1030,7 +1030,7 @@ series of passes:
    touching the LLVM program representation for a single function at a time,
    instead of traversing the entire program.  It reduces the memory consumption
    of compiler, because, for example, only one `DominatorSet
-   <http://llvm.org/doxygen/classllvm_1_1DominatorSet.html>`_ needs to be
+   <https://llvm.org/doxygen/classllvm_1_1DominatorSet.html>`_ needs to be
    calculated at a time.  This also makes it possible to implement some
    :ref:`interesting enhancements <writing-an-llvm-pass-SMP>` in the future.
 

@@ -99,6 +99,11 @@ define void @load_store_i1(i1* %p, i1* %q) nounwind {
   ret void
 }
 
+define void @freeze_i32(i32 %x) {
+  %t = freeze i32 %x
+  ret void
+}
+
 @crash_test1x = external global <2 x i32>, align 8
 
 define void @crash_test1() nounwind ssp {

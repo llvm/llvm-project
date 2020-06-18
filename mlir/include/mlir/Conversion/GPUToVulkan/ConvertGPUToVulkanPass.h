@@ -21,10 +21,13 @@
 namespace mlir {
 
 class ModuleOp;
-template <typename T> class OpPassBase;
+template <typename T> class OperationPass;
 
-std::unique_ptr<OpPassBase<ModuleOp>>
-createConvertGpuLaunchFuncToVulkanCallsPass();
+std::unique_ptr<OperationPass<ModuleOp>>
+createConvertVulkanLaunchFuncToVulkanCallsPass();
+
+std::unique_ptr<OperationPass<mlir::ModuleOp>>
+createConvertGpuLaunchFuncToVulkanLaunchFuncPass();
 
 } // namespace mlir
 #endif // MLIR_CONVERSION_GPUTOVULKAN_CONVERTGPUTOVULKANPASS_H

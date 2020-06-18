@@ -35,15 +35,13 @@ struct E : D {};
 // expected-error@-1 {{deleted function '~E' cannot override a non-deleted function}}
 // expected-note@-2 {{destructor of 'E' is implicitly deleted because base class 'D' has an inaccessible destructor}}
 // expected-error@-3 {{deleted function 'operator=' cannot override a non-deleted function}}
-// expected-note@-4 {{while declaring the implicit copy assignment operator for 'E'}}
-// expected-note@-5 {{copy assignment operator of 'E' is implicitly deleted because base class 'D' has an inaccessible copy assignment operator}}
+// expected-note@-4 {{copy assignment operator of 'E' is implicitly deleted because base class 'D' has an inaccessible copy assignment operator}}
 struct F : D {};
 struct G : D {};
 // expected-error@-1 {{deleted function '~G' cannot override a non-deleted function}}
 // expected-note@-2 {{destructor of 'G' is implicitly deleted because base class 'D' has an inaccessible destructor}}
 // expected-error@-3 {{deleted function 'operator=' cannot override a non-deleted function}}
-// expected-note@-4 {{while declaring the implicit move assignment operator for 'G'}}
-// expected-note@-5 {{move assignment operator of 'G' is implicitly deleted because base class 'D' has an inaccessible move assignment operator}}
+// expected-note@-4 {{move assignment operator of 'G' is implicitly deleted because base class 'D' has an inaccessible move assignment operator}}
 struct H : D { // expected-note {{deleted because base class 'D' has an inaccessible move assignment}}
   H &operator=(H&&) = default; // expected-warning {{implicitly deleted}}
   // expected-error@-1 {{deleted function 'operator=' cannot override a non-deleted function}}

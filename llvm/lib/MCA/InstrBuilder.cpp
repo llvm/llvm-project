@@ -160,8 +160,11 @@ static void initializeUsedResources(InstrDesc &ID,
     if (countPopulation(RPC.first) > 1 && !RPC.second.isReserved()) {
       // Remove the leading 1 from the resource group mask.
       uint64_t Mask = RPC.first ^ PowerOf2Floor(RPC.first);
-      if ((Mask & UsedResourceUnits) == Mask)
+      uint64_t MaxResourceUnits = countPopulation(Mask);
+      if (RPC.second.NumUnits > countPopulation(Mask)) {
         RPC.second.setReserved();
+        RPC.second.NumUnits = MaxResourceUnits;
+      }
     }
   }
 

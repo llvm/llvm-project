@@ -7,8 +7,8 @@
 # symbols: _baz depends on _foo indirectly via the local symbol _bar. We expect
 # _baz to depend on _foo, and _foo on _external_func.
 
-# CHECK-DAG: In <main> adding dependencies for _foo: { (<main>, { _external_func }) }
-# CHECK-DAG: In <main> adding dependencies for _baz: { (<main>, { _foo }) }
+# CHECK-DAG: In main adding dependencies for _foo: { (main, { _external_func }) }
+# CHECK-DAG: In main adding dependencies for _baz: { (main, { _foo }) }
 
         .section	__TEXT,__text,regular,pure_instructions
 

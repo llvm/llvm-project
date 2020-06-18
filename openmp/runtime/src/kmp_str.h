@@ -72,12 +72,12 @@ struct kmp_str_fname {
 typedef struct kmp_str_fname kmp_str_fname_t;
 void __kmp_str_fname_init(kmp_str_fname_t *fname, char const *path);
 void __kmp_str_fname_free(kmp_str_fname_t *fname);
-// Compares file name with specified patern. If pattern is NULL, any fname
+// Compares file name with specified pattern. If pattern is NULL, any fname
 // matched.
 int __kmp_str_fname_match(kmp_str_fname_t const *fname, char const *pattern);
 
 /* The compiler provides source locations in string form
-   ";file;func;line;col;;". It is not convenient for manupulation. This
+   ";file;func;line;col;;". It is not convenient for manipulation. This
    structure keeps source location in more convenient form.
    Usage:
 

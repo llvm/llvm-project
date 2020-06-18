@@ -14,7 +14,7 @@ define i32 @test_load(i32* %a) sanitize_address {
 ; CHECK-NDS-NOT: __asan_shadow_memory_dynamic_address
 
 ; Shadow address is loaded and added into the whole offset computation.
-; CHECK-FDS add i64 %{{.*}}, %[[SHADOW] ]
+; CHECK-FDS: add i64 %{{.*}}, %[[SHADOW]]
 
 entry:
   %tmp1 = load i32, i32* %a, align 4

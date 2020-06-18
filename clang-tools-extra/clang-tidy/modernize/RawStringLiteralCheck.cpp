@@ -118,10 +118,6 @@ void RawStringLiteralCheck::storeOptions(ClangTidyOptions::OptionMap &Options) {
 }
 
 void RawStringLiteralCheck::registerMatchers(MatchFinder *Finder) {
-  // Raw string literals require C++11 or later.
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   Finder->addMatcher(
       stringLiteral(unless(hasParent(predefinedExpr()))).bind("lit"), this);
 }

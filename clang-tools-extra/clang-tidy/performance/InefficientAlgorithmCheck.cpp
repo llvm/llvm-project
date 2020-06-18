@@ -27,11 +27,6 @@ static bool areTypesCompatible(QualType Left, QualType Right) {
 }
 
 void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto Algorithms =
       hasAnyName("::std::find", "::std::count", "::std::equal_range",
                  "::std::lower_bound", "::std::upper_bound");
@@ -40,7 +35,8 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
       "::std::unordered_set", "::std::unordered_map",
       "::std::unordered_multiset", "::std::unordered_multimap"));
 
-  const auto Matcher =
+  const auto Matcher = traverse(
+      ast_type_traits::TK_AsIs,
       callExpr(
           callee(functionDecl(Algorithms)),
           hasArgument(
@@ -59,7 +55,7 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
                          hasDeclaration(equalsBoundNode("IneffContObj"))))))))),
           hasArgument(2, expr().bind("AlgParam")),
           unless(isInTemplateInstantiation()))
-          .bind("IneffAlg");
+          .bind("IneffAlg"));
 
   Finder->addMatcher(Matcher, this);
 }

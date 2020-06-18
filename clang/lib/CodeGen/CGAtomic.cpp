@@ -119,8 +119,9 @@ namespace {
         ValueTy = lvalue.getType();
         ValueSizeInBits = C.getTypeSize(ValueTy);
         AtomicTy = ValueTy = CGF.getContext().getExtVectorType(
-            lvalue.getType(), lvalue.getExtVectorAddress()
-                                  .getElementType()->getVectorNumElements());
+            lvalue.getType(), cast<llvm::VectorType>(
+                                  lvalue.getExtVectorAddress().getElementType())
+                                  ->getNumElements());
         AtomicSizeInBits = C.getTypeSize(AtomicTy);
         AtomicAlign = ValueAlign = lvalue.getAlignment();
         LVal = lvalue;

@@ -192,6 +192,9 @@ public:
   /// external node if a valid node was not resolved.
   CallGraphNode *resolveCallable(CallOpInterface call) const;
 
+  /// Erase the given node from the callgraph.
+  void eraseNode(CallGraphNode *node);
+
   /// An iterator over the nodes of the graph.
   using iterator = NodeIterator;
   iterator begin() const { return nodes.begin(); }

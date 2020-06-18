@@ -47,3 +47,12 @@ VersionTuple LangOptions::getOpenCLVersionTuple() const {
   const int Ver = OpenCLCPlusPlus ? OpenCLCPlusPlusVersion : OpenCLVersion;
   return VersionTuple(Ver / 100, (Ver % 100) / 10);
 }
+
+FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {
+  FPOptions result(LO);
+  return result;
+}
+
+bool FPOptions::requiresTrailingStorage(const LangOptions &LO) {
+  return getAsOpaqueInt() != defaultWithoutTrailingStorage(LO).getAsOpaqueInt();
+}

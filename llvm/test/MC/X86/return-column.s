@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: llvm-mc -triple i686-unknown-linux-gnu -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-ASM-ROUNDTRIP
-// RUN: llvm-mc -triple i686-unknown-linux-gnu -filetype obj -o - %s | llvm-objdump -dwarf=frames - | FileCheck %s -check-prefix CHECK-EH_FRAME
+// RUN: llvm-mc -triple i686-unknown-linux-gnu -filetype obj -o - %s | llvm-objdump --dwarf=frames - | FileCheck %s --check-prefix=CHECK-EH_FRAME
 
 	.text
 
@@ -30,7 +30,7 @@ h:
 
 // CHECK-ASM-ROUNDTRIP-LABEL: f:
 // CHECK-ASM-ROUNDTRIP: .cfi_startproc
-// CHECK-ASM-ROUNDTRIP-NEXT: .cfi_return_column 0
+// CHECK-ASM-ROUNDTRIP-NEXT: .cfi_return_column %eax
 // CHECK-ASM-ROUNDTRIP: .cfi_endproc
 
 // CHECK-EH_FRAME: 00000000 00000014 00000000 CIE

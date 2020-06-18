@@ -1,8 +1,5 @@
 // RUN: %exploded_graph_rewriter -d %s | FileCheck %s
 
-// FIXME: Substitution doesn't seem to work on Windows.
-// UNSUPPORTED: system-windows
-
 Node0x1 [shape=record,label=
  "{
     {

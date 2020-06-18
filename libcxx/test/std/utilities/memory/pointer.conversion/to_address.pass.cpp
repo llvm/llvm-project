@@ -8,7 +8,7 @@
 
 // <memory>
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <class T> constexpr T* to_address(T* p) noexcept;
 // template <class Ptr> auto to_address(const Ptr& p) noexcept;

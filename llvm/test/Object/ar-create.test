@@ -13,5 +13,5 @@ RUN: rm -f %t.foo.a
 RUN: llvm-ar r %t.foo.a %t 2>&1 | FileCheck --check-prefix=CREATE %s
 RUN: rm -f %t.foo.a
 
-CHECK: llvm-ar{{(.exe|.EXE)?}}: error: error loading '{{[^']+}}.foo.a':
+CHECK: llvm-ar{{(.exe|.EXE)?}}: error: unable to load '{{[^']+}}.foo.a':
 CREATE: creating {{.*}}.foo.a

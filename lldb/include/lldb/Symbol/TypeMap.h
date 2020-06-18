@@ -26,7 +26,8 @@ public:
 
   void Clear();
 
-  void Dump(Stream *s, bool show_context);
+  void Dump(Stream *s, bool show_context,
+            lldb::DescriptionLevel level = lldb::eDescriptionLevelFull);
 
   TypeMap FindTypes(ConstString name);
 
@@ -66,7 +67,8 @@ private:
 
   collection m_types;
 
-  DISALLOW_COPY_AND_ASSIGN(TypeMap);
+  TypeMap(const TypeMap &) = delete;
+  const TypeMap &operator=(const TypeMap &) = delete;
 };
 
 } // namespace lldb_private

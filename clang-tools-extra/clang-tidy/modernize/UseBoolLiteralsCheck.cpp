@@ -23,26 +23,26 @@ UseBoolLiteralsCheck::UseBoolLiteralsCheck(StringRef Name,
       IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
 void UseBoolLiteralsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
-      implicitCastExpr(
-          has(ignoringParenImpCasts(integerLiteral().bind("literal"))),
-          hasImplicitDestinationType(qualType(booleanType())),
-          unless(isInTemplateInstantiation()),
-          anyOf(hasParent(explicitCastExpr().bind("cast")), anything())),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          implicitCastExpr(
+              has(ignoringParenImpCasts(integerLiteral().bind("literal"))),
+              hasImplicitDestinationType(qualType(booleanType())),
+              unless(isInTemplateInstantiation()),
+              anyOf(hasParent(explicitCastExpr().bind("cast")), anything()))),
       this);
 
   Finder->addMatcher(
-      conditionalOperator(
-          hasParent(implicitCastExpr(
-              hasImplicitDestinationType(qualType(booleanType())),
-              unless(isInTemplateInstantiation()))),
-          eachOf(hasTrueExpression(
-                     ignoringParenImpCasts(integerLiteral().bind("literal"))),
-                 hasFalseExpression(
-                     ignoringParenImpCasts(integerLiteral().bind("literal"))))),
+      traverse(ast_type_traits::TK_AsIs,
+               conditionalOperator(
+                   hasParent(implicitCastExpr(
+                       hasImplicitDestinationType(qualType(booleanType())),
+                       unless(isInTemplateInstantiation()))),
+                   eachOf(hasTrueExpression(ignoringParenImpCasts(
+                              integerLiteral().bind("literal"))),
+                          hasFalseExpression(ignoringParenImpCasts(
+                              integerLiteral().bind("literal")))))),
       this);
 }
 

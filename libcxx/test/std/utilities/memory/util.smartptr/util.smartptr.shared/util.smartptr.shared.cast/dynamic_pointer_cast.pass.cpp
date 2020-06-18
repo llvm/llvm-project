@@ -55,6 +55,14 @@ int main(int, char**)
         assert(pA.get() == 0);
         assert(pA.use_count() == 0);
     }
+#if TEST_STD_VER > 14
+    {
+      const std::shared_ptr<B[8]> pB(new B[8]);
+      std::shared_ptr<A[8]> pA = std::dynamic_pointer_cast<A[8]>(pB);
+      assert(pA.get() == 0);
+      assert(pA.use_count() == 0);
+    }
+#endif // TEST_STD_VER > 14
 
-  return 0;
+    return 0;
 }

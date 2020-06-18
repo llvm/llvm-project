@@ -32,7 +32,7 @@ struct OVERALIGNED A {
 
 void *ptr_variable(int align) { return new (std::align_val_t(align)) A; }
 void *ptr_align16() { return new (std::align_val_t(16)) A; }
-void *ptr_align15() { return new (std::align_val_t(15)) A; }
+void *ptr_align15() { return new (std::align_val_t(15)) A; } // expected-warning {{requested alignment is not a power of 2}}
 
 struct alignas(128) S {
   S() {}
@@ -49,11 +49,9 @@ void *alloc_overaligned_struct_with_extra_256_alignment(int align) {
   return new (std::align_val_t(256)) S;
 }
 void *alloc_overaligned_struct_with_extra_255_alignment(int align) {
-  return new (std::align_val_t(255)) S;
+  return new (std::align_val_t(255)) S; // expected-warning {{requested alignment is not a power of 2}}
 }
 
 std::align_val_t align_variable(int align) { return std::align_val_t(align); }
 std::align_val_t align_align16() { return std::align_val_t(16); }
 std::align_val_t align_align15() { return std::align_val_t(15); }
-
-// expected-no-diagnostics

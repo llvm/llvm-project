@@ -383,6 +383,16 @@ Error COFFWriter::write(bool IsBigObj) {
   return Buf.commit();
 }
 
+Expected<uint32_t> COFFWriter::virtualAddressToFileAddress(uint32_t RVA) {
+  for (const auto &S : Obj.getSections()) {
+    if (RVA >= S.Header.VirtualAddress &&
+        RVA < S.Header.VirtualAddress + S.Header.SizeOfRawData)
+      return S.Header.PointerToRawData + RVA - S.Header.VirtualAddress;
+  }
+  return createStringError(object_error::parse_failed,
+                           "debug directory payload not found");
+}
+
 // Locate which sections contain the debug directories, iterate over all
 // the debug_directory structs in there, and set the PointerToRawData field
 // in all of them, according to their new physical location in the file.
@@ -406,10 +416,17 @@ Error COFFWriter::patchDebugDirectory() {
       uint8_t *End = Ptr + Dir->Size;
       while (Ptr < End) {
         debug_directory *Debug = reinterpret_cast<debug_directory *>(Ptr);
-        Debug->PointerToRawData =
-            S.Header.PointerToRawData + Offset + sizeof(debug_directory);
-        Ptr += sizeof(debug_directory) + Debug->SizeOfData;
-        Offset += sizeof(debug_directory) + Debug->SizeOfData;
+        if (!Debug->AddressOfRawData)
+          return createStringError(object_error::parse_failed,
+                                   "debug directory payload outside of "
+                                   "mapped sections not supported");
+        if (Expected<uint32_t> FilePosOrErr =
+                virtualAddressToFileAddress(Debug->AddressOfRawData))
+          Debug->PointerToRawData = *FilePosOrErr;
+        else
+          return FilePosOrErr.takeError();
+        Ptr += sizeof(debug_directory);
+        Offset += sizeof(debug_directory);
       }
       // Debug directory found and patched, all done.
       return Error::success();

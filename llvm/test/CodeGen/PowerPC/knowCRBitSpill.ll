@@ -20,7 +20,7 @@
 define dso_local signext i32 @spillCRSET(i32 signext %p1, i32 signext %p2) {
 ; CHECK-LABEL: spillCRSET:
 ; CHECK:        # %bb.2:
-; CHECK-DAG:    crnor [[CREG:.*]]*cr5+lt, eq, eq
+; CHECK-DAG:    crnot [[CREG:.*]]*cr5+lt, eq
 ; CHECK-DAG:    mfocrf [[REG2:.*]], [[CREG]]
 ; CHECK-DAG:    rlwinm [[REG2]], [[REG2]]
 ; CHECK:        .LBB0_3:

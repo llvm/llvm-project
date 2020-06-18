@@ -114,7 +114,8 @@ void test5() {
 
   __autoreleasing id *a = &x; // expected-error {{initializing '__autoreleasing id *' with an expression of type '__strong id *' changes retain/release properties of pointer}}
 
-  a = &x; // expected-error {{assigning '__strong id *' to '__autoreleasing id *' changes retain/release properties of pointer}}
+  __autoreleasing id *aa;
+  aa = &x; // expected-error {{assigning '__strong id *' to '__autoreleasing id *' changes retain/release properties of pointer}}
 
   extern void test5_helper2(id const *);
   test5_helper2(&x);

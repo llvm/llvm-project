@@ -92,6 +92,12 @@ llvm::Optional<StringRef> OpInterface::getExtraClassDeclaration() const {
   return value.empty() ? llvm::Optional<StringRef>() : value;
 }
 
+// Return the traits extra class declaration code.
+llvm::Optional<StringRef> OpInterface::getExtraTraitClassDeclaration() const {
+  auto value = def->getValueAsString("extraTraitClassDeclaration");
+  return value.empty() ? llvm::Optional<StringRef>() : value;
+}
+
 // Return the body for this method if it has one.
 llvm::Optional<StringRef> OpInterface::getVerify() const {
   auto value = def->getValueAsString("verify");

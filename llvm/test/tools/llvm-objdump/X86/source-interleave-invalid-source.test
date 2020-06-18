@@ -11,7 +11,7 @@
 # RUN: llvm-objdump --source %t2.o 2> %t2.e | FileCheck %s --check-prefixes=CHECK --implicit-check-not="int *b = &a;"
 # RUN: FileCheck %s --input-file %t2.e --check-prefixes=WARN
 
-# CHECK:      main:
+# CHECK:      <main>:
 # CHECK-NEXT: ; int main() {
 # WARN:       warning: '{{.*}}': debug info line number 9999 exceeds the number of lines in {{.*}}source-interleave-x86_64.c
 # GOOD:       ;   int *b = &a;

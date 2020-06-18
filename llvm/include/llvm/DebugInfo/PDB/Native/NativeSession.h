@@ -26,6 +26,11 @@ class PDBFile;
 class NativeExeSymbol;
 
 class NativeSession : public IPDBSession {
+  struct PdbSearchOptions {
+    StringRef ExePath;
+    // FIXME: Add other PDB search options (_NT_SYMBOL_PATH, symsrv)
+  };
+
 public:
   NativeSession(std::unique_ptr<PDBFile> PdbFile,
                 std::unique_ptr<BumpPtrAllocator> Allocator);
@@ -33,8 +38,11 @@ public:
 
   static Error createFromPdb(std::unique_ptr<MemoryBuffer> MB,
                              std::unique_ptr<IPDBSession> &Session);
+  static Error createFromPdbPath(StringRef PdbPath,
+                                 std::unique_ptr<IPDBSession> &Session);
   static Error createFromExe(StringRef Path,
                              std::unique_ptr<IPDBSession> &Session);
+  static Expected<std::string> searchForPdb(const PdbSearchOptions &Opts);
 
   uint64_t getLoadAddress() const override;
   bool setLoadAddress(uint64_t Address) override;
@@ -46,13 +54,13 @@ public:
   bool addressForRVA(uint32_t RVA, uint32_t &Section,
                      uint32_t &Offset) const override;
 
-  std::unique_ptr<PDBSymbol>
-  findSymbolByAddress(uint64_t Address, PDB_SymType Type) const override;
+  std::unique_ptr<PDBSymbol> findSymbolByAddress(uint64_t Address,
+                                                 PDB_SymType Type) override;
   std::unique_ptr<PDBSymbol> findSymbolByRVA(uint32_t RVA,
-                                             PDB_SymType Type) const override;
-  std::unique_ptr<PDBSymbol>
-  findSymbolBySectOffset(uint32_t Sect, uint32_t Offset,
-                         PDB_SymType Type) const override;
+                                             PDB_SymType Type) override;
+  std::unique_ptr<PDBSymbol> findSymbolBySectOffset(uint32_t Sect,
+                                                    uint32_t Offset,
+                                                    PDB_SymType Type) override;
 
   std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbers(const PDBSymbolCompiland &Compiland,
@@ -100,6 +108,8 @@ public:
   NativeExeSymbol &getNativeGlobalScope() const;
   SymbolCache &getSymbolCache() { return Cache; }
   const SymbolCache &getSymbolCache() const { return Cache; }
+  uint32_t getRVAFromSectOffset(uint32_t Section, uint32_t Offset) const;
+  uint64_t getVAFromSectOffset(uint32_t Section, uint32_t Offset) const;
 
 private:
   void initializeExeSymbol();
@@ -109,6 +119,7 @@ private:
 
   SymbolCache Cache;
   SymIndexId ExeSymbol = 0;
+  uint64_t LoadAddress = 0;
 };
 } // namespace pdb
 } // namespace llvm

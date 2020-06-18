@@ -292,9 +292,7 @@ public:
   };
 
   bool isUnknownAnalyzerConfig(StringRef Name) const {
-
-    assert(std::is_sorted(AnalyzerConfigCmdFlags.begin(),
-                          AnalyzerConfigCmdFlags.end()));
+    assert(llvm::is_sorted(AnalyzerConfigCmdFlags));
 
     return !std::binary_search(AnalyzerConfigCmdFlags.begin(),
                                AnalyzerConfigCmdFlags.end(), Name);

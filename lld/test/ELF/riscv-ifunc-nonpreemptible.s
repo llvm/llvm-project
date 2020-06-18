@@ -12,36 +12,36 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefix=DIS64 %s
 
 # RELOC32:      .rela.dyn {
-# RELOC32-NEXT:   0x3218 R_RISCV_IRELATIVE - 0x117C
+# RELOC32-NEXT:   0x3220 R_RISCV_IRELATIVE - 0x117C
 # RELOC32-NEXT: }
 
 # SYM32: 0001190 0 FUNC GLOBAL DEFAULT {{.*}} func
 
-# DIS32:      _start:
+# DIS32:      <_start>:
 # DIS32-NEXT: 1180: auipc a0, 0
 # DIS32-NEXT:       addi a0, a0, 16
 # DIS32:      Disassembly of section .iplt:
-# DIS32:      func:
-## 32-bit: &.got.plt[func]-. = 0x3218-0x1190 = 4096*2+136
+# DIS32:      <func>:
+## 32-bit: &.got.plt[func]-. = 0x3220-0x1190 = 4096*2+144
 # DIS32-NEXT: 1190: auipc t3, 2
-# DIS32-NEXT:       lw t3, 136(t3)
+# DIS32-NEXT:       lw t3, 144(t3)
 # DIS32-NEXT:       jalr t1, t3
 # DIS32-NEXT:       nop
 
 # RELOC64:      .rela.dyn {
-# RELOC64-NEXT:   0x3370 R_RISCV_IRELATIVE - 0x1260
+# RELOC64-NEXT:   0x3380 R_RISCV_IRELATIVE - 0x1260
 # RELOC64-NEXT: }
 
 # SYM64: 000000000001270 0 FUNC GLOBAL DEFAULT {{.*}} func
 
-# DIS64:      _start:
+# DIS64:      <_start>:
 # DIS64-NEXT: 1264: auipc a0, 0
 # DIS64-NEXT:       addi a0, a0, 12
 # DIS64:      Disassembly of section .iplt:
-# DIS64:      func:
-## 64-bit: &.got.plt[func]-. = 0x3370-0x1270 = 4096*2+256
+# DIS64:      <func>:
+## 64-bit: &.got.plt[func]-. = 0x3380-0x1270 = 4096*2+272
 # DIS64-NEXT: 1270: auipc t3, 2
-# DIS64-NEXT:       ld t3, 256(t3)
+# DIS64-NEXT:       ld t3, 272(t3)
 # DIS64-NEXT:       jalr t1, t3
 # DIS64-NEXT:       nop
 

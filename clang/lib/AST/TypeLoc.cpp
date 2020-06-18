@@ -375,6 +375,7 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::SatUShortFract:
   case BuiltinType::SatUFract:
   case BuiltinType::SatULongFract:
+  case BuiltinType::BFloat16:
     llvm_unreachable("Builtin type needs extra local data!");
     // Fall through, if the impossible happens.
 
@@ -403,7 +404,10 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
   case BuiltinType::BuiltinFn:
+  case BuiltinType::IncompleteMatrixIdx:
   case BuiltinType::OMPArraySection:
+  case BuiltinType::OMPArrayShaping:
+  case BuiltinType::OMPIterator:
     return TST_unspecified;
   }
 

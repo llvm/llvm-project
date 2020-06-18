@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // <regex>
-// UNSUPPORTED: libcpp-no-exceptions
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: no-exceptions
+// UNSUPPORTED: c++03
 
 // the "n" and "m" in `a{n,m}` should be within the numeric limits.
 // requirement "m >= n" should be checked.

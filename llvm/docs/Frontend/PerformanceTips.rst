@@ -27,7 +27,7 @@ can often be useful to write a quick C program with the semantics you're trying
 to model and see what decisions Clang's IRGen makes about what IR to emit.
 Studying Clang's CodeGen directory can also be a good source of ideas.  Note
 that Clang and LLVM are explicitly version locked so you'll need to make sure
-you're using a Clang built from the same svn revision or release as the LLVM
+you're using a Clang built from the same git revision or release as the LLVM
 library you're using.  As always, it's *strongly* recommended that you track
 tip of tree development, particularly during bring up of a new project.
 

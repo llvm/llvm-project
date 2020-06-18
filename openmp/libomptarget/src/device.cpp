@@ -157,6 +157,7 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
     bool UpdateRefCount, bool HasCloseModifier) {
   void *rc = NULL;
   IsHostPtr = false;
+  IsNew = false;
   DataMapMtx.lock();
   LookupResult lr = lookupMapping(HstPtrBegin, Size);
 
@@ -189,7 +190,8 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
     // maps are respected.
     // In addition to the mapping rules above, the close map
     // modifier forces the mapping of the variable to the device.
-    if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY && !HasCloseModifier) {
+    if (RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+        !HasCloseModifier) {
       DP("Return HstPtrBegin " DPxMOD " Size=%ld RefCount=%s\n",
          DPxPTR((uintptr_t)HstPtrBegin), Size, (UpdateRefCount ? " updated" : ""));
       IsHostPtr = true;
@@ -235,7 +237,7 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
         (UpdateRefCount ? " updated" : ""),
         HT.isRefCountInf() ? "INF" : std::to_string(HT.getRefCount()).c_str());
     rc = (void *)tp;
-  } else if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+  } else if (RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
@@ -265,7 +267,7 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size) {
 
 int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
                             bool HasCloseModifier) {
-  if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY && !HasCloseModifier)
+  if (RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY && !HasCloseModifier)
     return OFFLOAD_SUCCESS;
   // Check if the pointer is contained in any sub-nodes.
   int rc;
@@ -299,7 +301,7 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
 void DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
   if (RTL->init_requires)
-    RTL->init_requires(RTLs.RequiresFlags);
+    RTL->init_requires(RTLs->RequiresFlags);
   int32_t rc = RTL->init_device(RTLDeviceID);
   if (rc == OFFLOAD_SUCCESS) {
     IsInit = true;
@@ -330,31 +332,76 @@ __tgt_target_table *DeviceTy::load_binary(void *Img) {
   return rc;
 }
 
-// Submit data to device.
+// Submit data to device
 int32_t DeviceTy::data_submit(void *TgtPtrBegin, void *HstPtrBegin,
-    int64_t Size) {
-  return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
+                              int64_t Size, __tgt_async_info *AsyncInfoPtr) {
+  if (!AsyncInfoPtr || !RTL->data_submit_async || !RTL->synchronize)
+    return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
+  else
+    return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
+                                  AsyncInfoPtr);
 }
 
-// Retrieve data from device.
+// Retrieve data from device
 int32_t DeviceTy::data_retrieve(void *HstPtrBegin, void *TgtPtrBegin,
-    int64_t Size) {
-  return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
+                                int64_t Size, __tgt_async_info *AsyncInfoPtr) {
+  if (!AsyncInfoPtr || !RTL->data_retrieve_async || !RTL->synchronize)
+    return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
+  else
+    return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
+                                    AsyncInfoPtr);
+}
+
+// Copy data from current device to destination device directly
+int32_t DeviceTy::data_exchange(void *SrcPtr, DeviceTy DstDev, void *DstPtr,
+                                int64_t Size, __tgt_async_info *AsyncInfoPtr) {
+  if (!AsyncInfoPtr || !RTL->data_exchange_async || !RTL->synchronize) {
+    assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
+    return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
+                              Size);
+  } else
+    return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
+                                    DstPtr, Size, AsyncInfoPtr);
 }
 
 // Run region on device
 int32_t DeviceTy::run_region(void *TgtEntryPtr, void **TgtVarsPtr,
-    ptrdiff_t *TgtOffsets, int32_t TgtVarsSize) {
-  return RTL->run_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
-      TgtVarsSize);
+                             ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
+                             __tgt_async_info *AsyncInfoPtr) {
+  if (!AsyncInfoPtr || !RTL->run_region || !RTL->synchronize)
+    return RTL->run_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
+                           TgtVarsSize);
+  else
+    return RTL->run_region_async(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
+                                 TgtOffsets, TgtVarsSize, AsyncInfoPtr);
 }
 
 // Run team region on device.
 int32_t DeviceTy::run_team_region(void *TgtEntryPtr, void **TgtVarsPtr,
-    ptrdiff_t *TgtOffsets, int32_t TgtVarsSize, int32_t NumTeams,
-    int32_t ThreadLimit, uint64_t LoopTripCount) {
-  return RTL->run_team_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
-      TgtVarsSize, NumTeams, ThreadLimit, LoopTripCount);
+                                  ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
+                                  int32_t NumTeams, int32_t ThreadLimit,
+                                  uint64_t LoopTripCount,
+                                  __tgt_async_info *AsyncInfoPtr) {
+  if (!AsyncInfoPtr || !RTL->run_team_region_async || !RTL->synchronize)
+    return RTL->run_team_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
+                                TgtOffsets, TgtVarsSize, NumTeams, ThreadLimit,
+                                LoopTripCount);
+  else
+    return RTL->run_team_region_async(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
+                                      TgtOffsets, TgtVarsSize, NumTeams,
+                                      ThreadLimit, LoopTripCount, AsyncInfoPtr);
+}
+
+// Whether data can be copied to DstDevice directly
+bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
+  if (RTL != DstDevice.RTL || !RTL->is_data_exchangable)
+    return false;
+
+  if (RTL->is_data_exchangable(RTLDeviceID, DstDevice.RTLDeviceID))
+    return (RTL->data_exchange != nullptr) ||
+           (RTL->data_exchange_async != nullptr);
+
+  return false;
 }
 
 /// Check whether a device has an associated RTL and initialize it if it's not
@@ -363,9 +410,9 @@ bool device_is_ready(int device_num) {
   DP("Checking whether device %d is ready.\n", device_num);
   // Devices.size() can only change while registering a new
   // library, so try to acquire the lock of RTLs' mutex.
-  RTLsMtx.lock();
+  RTLsMtx->lock();
   size_t Devices_size = Devices.size();
-  RTLsMtx.unlock();
+  RTLsMtx->unlock();
   if (Devices_size <= (size_t)device_num) {
     DP("Device ID  %d does not have a matching RTL\n", device_num);
     return false;

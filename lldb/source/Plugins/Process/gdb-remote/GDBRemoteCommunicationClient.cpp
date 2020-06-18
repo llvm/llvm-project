@@ -45,6 +45,13 @@ using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
 using namespace std::chrono;
 
+llvm::raw_ostream &process_gdb_remote::operator<<(llvm::raw_ostream &os,
+                                                  const QOffsets &offsets) {
+  return os << llvm::formatv(
+             "QOffsets({0}, [{1:@[x]}])", offsets.segments,
+             llvm::make_range(offsets.offsets.begin(), offsets.offsets.end()));
+}
+
 // GDBRemoteCommunicationClient constructor
 GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
     : GDBRemoteClientBase("gdb-remote.client", "gdb-remote.client.rx_packet"),
@@ -1046,7 +1053,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
   }
 #endif
 
-#if LLVM_ENABLE_ZLIB
+#if defined(HAVE_LIBZ)
   if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "zlib-deflate") {
@@ -1124,6 +1131,20 @@ bool GDBRemoteCommunicationClient::GetDefaultThreadId(lldb::tid_t &tid) {
   return true;
 }
 
+static void ParseOSType(llvm::StringRef value, std::string &os_name,
+                        std::string &environment) {
+  if (value.equals("iossimulator") || value.equals("tvossimulator") ||
+      value.equals("watchossimulator")) {
+    environment = "simulator";
+    os_name = value.drop_back(environment.size()).str();
+  } else if (value.equals("maccatalyst")) {
+    os_name = "ios";
+    environment = "macabi";
+  } else {
+    os_name = value.str();
+  }
+}
+
 bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS));
 
@@ -1182,11 +1203,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             extractor.GetHexByteString(m_os_kernel);
             ++num_keys_decoded;
           } else if (name.equals("ostype")) {
-            if (value.equals("maccatalyst")) {
-              os_name = "ios";
-              environment = "macabi";
-            } else
-              os_name = std::string(value);
+            ParseOSType(value, os_name, environment);
             ++num_keys_decoded;
           } else if (name.equals("vendor")) {
             vendor_name = std::string(value);
@@ -2046,11 +2063,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           extractor.GetHexByteString(triple);
           ++num_keys_decoded;
         } else if (name.equals("ostype")) {
-          if (value.equals("maccatalyst")) {
-            os_name = "ios";
-            environment = "macabi";
-          } else
-            os_name = std::string(value);
+          ParseOSType(value, os_name, environment);
           ++num_keys_decoded;
         } else if (name.equals("vendor")) {
           vendor_name = std::string(value);
@@ -2141,7 +2154,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
 uint32_t GDBRemoteCommunicationClient::FindProcesses(
     const ProcessInstanceInfoMatch &match_info,
     ProcessInstanceInfoList &process_infos) {
-  process_infos.Clear();
+  process_infos.clear();
 
   if (m_supports_qfProcessInfo) {
     StreamString packet;
@@ -2221,7 +2234,7 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
         ProcessInstanceInfo process_info;
         if (!DecodeProcessInfoResponse(response, process_info))
           break;
-        process_infos.Append(process_info);
+        process_infos.push_back(process_info);
         response = StringExtractorGDBRemote();
       } while (SendPacketAndWaitForResponse("qsProcessInfo", response, false) ==
                PacketResult::Success);
@@ -2230,7 +2243,7 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
       return 0;
     }
   }
-  return process_infos.GetSize();
+  return process_infos.size();
 }
 
 bool GDBRemoteCommunicationClient::GetUserName(uint32_t uid,
@@ -2784,12 +2797,10 @@ size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
       thread_ids.push_back(1);
     }
   } else {
-#if !defined(LLDB_CONFIGURATION_DEBUG)
     Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS |
                                                            GDBR_LOG_PACKETS));
-    LLDB_LOGF(log, "error: failed to get packet sequence mutex, not sending "
-                   "packet 'qfThreadInfo'");
-#endif
+    LLDB_LOG(log, "error: failed to get packet sequence mutex, not sending "
+                  "packet 'qfThreadInfo'");
     sequence_mutex_unavailable = true;
   }
   return thread_ids.size();
@@ -3531,6 +3542,46 @@ Status GDBRemoteCommunicationClient::SendGetTraceDataPacket(
   return error;
 }
 
+llvm::Optional<QOffsets> GDBRemoteCommunicationClient::GetQOffsets() {
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(
+          "qOffsets", response, /*send_async=*/false) != PacketResult::Success)
+    return llvm::None;
+  if (!response.IsNormalResponse())
+    return llvm::None;
+
+  QOffsets result;
+  llvm::StringRef ref = response.GetStringRef();
+  const auto &GetOffset = [&] {
+    addr_t offset;
+    if (ref.consumeInteger(16, offset))
+      return false;
+    result.offsets.push_back(offset);
+    return true;
+  };
+
+  if (ref.consume_front("Text=")) {
+    result.segments = false;
+    if (!GetOffset())
+      return llvm::None;
+    if (!ref.consume_front(";Data=") || !GetOffset())
+      return llvm::None;
+    if (ref.empty())
+      return result;
+    if (ref.consume_front(";Bss=") && GetOffset() && ref.empty())
+      return result;
+  } else if (ref.consume_front("TextSeg=")) {
+    result.segments = true;
+    if (!GetOffset())
+      return llvm::None;
+    if (ref.empty())
+      return result;
+    if (ref.consume_front(";DataSeg=") && GetOffset() && ref.empty())
+      return result;
+  }
+  return llvm::None;
+}
+
 bool GDBRemoteCommunicationClient::GetModuleInfo(
     const FileSpec &module_file_spec, const lldb_private::ArchSpec &arch_spec,
     ModuleSpec &module_spec) {
@@ -3572,7 +3623,7 @@ bool GDBRemoteCommunicationClient::GetModuleInfo(
       StringExtractor extractor(value);
       std::string uuid;
       extractor.GetHexByteString(uuid);
-      module_spec.GetUUID().SetFromStringRef(uuid, uuid.size() / 2);
+      module_spec.GetUUID().SetFromStringRef(uuid);
     } else if (name == "triple") {
       StringExtractor extractor(value);
       std::string triple;
@@ -3608,8 +3659,7 @@ ParseModuleSpec(StructuredData::Dictionary *dict) {
 
   if (!dict->GetValueForKeyAsString("uuid", string))
     return llvm::None;
-  if (result.GetUUID().SetFromStringRef(string, string.size() / 2) !=
-      string.size())
+  if (!result.GetUUID().SetFromStringRef(string))
     return llvm::None;
 
   if (!dict->GetValueForKeyAsInteger("file_offset", integer))

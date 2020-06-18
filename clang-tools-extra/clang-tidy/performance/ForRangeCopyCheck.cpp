@@ -23,7 +23,7 @@ namespace performance {
 
 ForRangeCopyCheck::ForRangeCopyCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WarnOnAllAutoCopies(Options.get("WarnOnAllAutoCopies", 0)),
+      WarnOnAllAutoCopies(Options.get("WarnOnAllAutoCopies", false)),
       AllowedTypes(
           utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
 
@@ -37,15 +37,23 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
   // Match loop variables that are not references or pointers or are already
   // initialized through MaterializeTemporaryExpr which indicates a type
   // conversion.
-  auto LoopVar = varDecl(
-      hasType(qualType(
-          unless(anyOf(hasCanonicalType(anyOf(referenceType(), pointerType())),
-                       hasDeclaration(namedDecl(
-                           matchers::matchesAnyListedName(AllowedTypes))))))),
-      unless(hasInitializer(expr(hasDescendant(materializeTemporaryExpr())))));
-  Finder->addMatcher(cxxForRangeStmt(hasLoopVariable(LoopVar.bind("loopVar")))
-                         .bind("forRange"),
-                     this);
+  auto HasReferenceOrPointerTypeOrIsAllowed = hasType(qualType(
+      unless(anyOf(hasCanonicalType(anyOf(referenceType(), pointerType())),
+                   hasDeclaration(namedDecl(
+                       matchers::matchesAnyListedName(AllowedTypes)))))));
+  auto IteratorReturnsValueType = cxxOperatorCallExpr(
+      hasOverloadedOperatorName("*"),
+      callee(
+          cxxMethodDecl(returns(unless(hasCanonicalType(referenceType()))))));
+  auto LoopVar =
+      varDecl(HasReferenceOrPointerTypeOrIsAllowed,
+              unless(hasInitializer(expr(hasDescendant(expr(anyOf(
+                  materializeTemporaryExpr(), IteratorReturnsValueType)))))));
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               cxxForRangeStmt(hasLoopVariable(LoopVar.bind("loopVar")))
+                   .bind("forRange")),
+      this);
 }
 
 void ForRangeCopyCheck::check(const MatchFinder::MatchResult &Result) {

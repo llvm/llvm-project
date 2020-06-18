@@ -38,11 +38,11 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -681,9 +681,10 @@ bool LoopUnswitch::processCurrentLoop() {
 
   for (const auto BB : CurrentLoop->blocks()) {
     for (auto &I : *BB) {
-      auto CS = CallSite(&I);
-      if (!CS) continue;
-      if (CS.isConvergent())
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB)
+        continue;
+      if (CB->isConvergent())
         return false;
       if (auto *II = dyn_cast<InvokeInst>(&I))
         if (!II->getUnwindDest()->canSplitPredecessors())
@@ -901,30 +902,6 @@ bool LoopUnswitch::unswitchIfProfitable(Value *LoopCond, Constant *Val,
 
   unswitchNontrivialCondition(LoopCond, Val, CurrentLoop, TI);
   return true;
-}
-
-/// Recursively clone the specified loop and all of its children,
-/// mapping the blocks with the specified map.
-static Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM, LoopInfo *LI,
-                       LPPassManager *LPM) {
-  Loop &New = *LI->AllocateLoop();
-  if (PL)
-    PL->addChildLoop(&New);
-  else
-    LI->addTopLevelLoop(&New);
-  LPM->addLoop(New);
-
-  // Add all of the blocks in L to the new loop.
-  for (Loop::block_iterator I = L->block_begin(), E = L->block_end();
-       I != E; ++I)
-    if (LI->getLoopFor(*I) == L)
-      New.addBasicBlockToLoop(cast<BasicBlock>(VM[*I]), *LI);
-
-  // Add all of the subloops to the new loop.
-  for (Loop *I : *L)
-    cloneLoop(I, &New, VM, LI, LPM);
-
-  return &New;
 }
 
 /// Emit a conditional branch on two values if LIC == Val, branch to TrueDst,

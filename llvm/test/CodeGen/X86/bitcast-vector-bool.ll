@@ -49,35 +49,28 @@ define i2 @bitcast_v4i32_to_v2i2(<4 x i32> %a0) nounwind {
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    movmskps %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    movl %eax, %ecx
-; SSE2-SSSE3-NEXT:    andl $3, %ecx
-; SSE2-SSSE3-NEXT:    movq %rcx, %xmm0
-; SSE2-SSSE3-NEXT:    shrl $2, %eax
-; SSE2-SSSE3-NEXT:    movq %rax, %xmm1
-; SSE2-SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    shrb $2, %cl
+; SSE2-SSSE3-NEXT:    andb $3, %al
+; SSE2-SSSE3-NEXT:    addb %cl, %al
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_v4i32_to_v2i2:
 ; AVX12:       # %bb.0:
-; AVX12-NEXT:    vmovmskps %xmm0, %ecx
-; AVX12-NEXT:    movl %ecx, %eax
-; AVX12-NEXT:    shrl $2, %eax
-; AVX12-NEXT:    andl $3, %ecx
+; AVX12-NEXT:    vmovmskps %xmm0, %eax
+; AVX12-NEXT:    movl %eax, %ecx
+; AVX12-NEXT:    shrb $2, %cl
+; AVX12-NEXT:    andb $3, %al
 ; AVX12-NEXT:    addb %cl, %al
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: bitcast_v4i32_to_v2i2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpgtd %xmm0, %xmm1, %k0
-; AVX512-NEXT:    kmovd %k0, %ecx
-; AVX512-NEXT:    movzbl %cl, %eax
-; AVX512-NEXT:    shrl $2, %eax
-; AVX512-NEXT:    andl $3, %eax
-; AVX512-NEXT:    andl $3, %ecx
+; AVX512-NEXT:    vmovmskps %xmm0, %eax
+; AVX512-NEXT:    movl %eax, %ecx
+; AVX512-NEXT:    shrb $2, %cl
+; AVX512-NEXT:    andb $3, %al
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    retq
@@ -94,24 +87,20 @@ define i4 @bitcast_v8i16_to_v2i4(<8 x i16> %a0) nounwind {
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-SSSE3-NEXT:    movzbl %al, %ecx
-; SSE2-SSSE3-NEXT:    shrl $4, %ecx
-; SSE2-SSSE3-NEXT:    movq %rcx, %xmm0
-; SSE2-SSSE3-NEXT:    andl $15, %eax
-; SSE2-SSSE3-NEXT:    movq %rax, %xmm1
-; SSE2-SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-SSSE3-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movl %eax, %ecx
+; SSE2-SSSE3-NEXT:    shrb $4, %cl
+; SSE2-SSSE3-NEXT:    andb $15, %al
+; SSE2-SSSE3-NEXT:    addb %cl, %al
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_v8i16_to_v2i4:
 ; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX12-NEXT:    vpmovmskb %xmm0, %ecx
-; AVX12-NEXT:    movzbl %cl, %eax
-; AVX12-NEXT:    shrl $4, %eax
-; AVX12-NEXT:    andl $15, %ecx
+; AVX12-NEXT:    vpmovmskb %xmm0, %eax
+; AVX12-NEXT:    movl %eax, %ecx
+; AVX12-NEXT:    shrb $4, %cl
+; AVX12-NEXT:    andb $15, %al
 ; AVX12-NEXT:    addb %cl, %al
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    retq
@@ -119,10 +108,10 @@ define i4 @bitcast_v8i16_to_v2i4(<8 x i16> %a0) nounwind {
 ; AVX512-LABEL: bitcast_v8i16_to_v2i4:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovw2m %xmm0, %k0
-; AVX512-NEXT:    kmovd %k0, %ecx
-; AVX512-NEXT:    movzbl %cl, %eax
-; AVX512-NEXT:    shrl $4, %eax
-; AVX512-NEXT:    andl $15, %ecx
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    movl %eax, %ecx
+; AVX512-NEXT:    shrb $4, %cl
+; AVX512-NEXT:    andb $15, %al
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    retq
@@ -155,11 +144,9 @@ define i8 @bitcast_v16i8_to_v2i8(<16 x i8> %a0) nounwind {
 ;
 ; AVX512-LABEL: bitcast_v16i8_to_v2i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovb2m %xmm0, %k0
-; AVX512-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
-; AVX512-NEXT:    vpextrb $0, %xmm0, %ecx
-; AVX512-NEXT:    vpextrb $1, %xmm0, %eax
+; AVX512-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX512-NEXT:    movl %ecx, %eax
+; AVX512-NEXT:    shrl $8, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    retq
@@ -181,22 +168,18 @@ define i2 @bitcast_v4i64_to_v2i2(<4 x i64> %a0) nounwind {
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    movmskps %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    movl %eax, %ecx
-; SSE2-SSSE3-NEXT:    shrl $2, %ecx
-; SSE2-SSSE3-NEXT:    movq %rcx, %xmm0
-; SSE2-SSSE3-NEXT:    andl $3, %eax
-; SSE2-SSSE3-NEXT:    movq %rax, %xmm1
-; SSE2-SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-SSSE3-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    shrb $2, %cl
+; SSE2-SSSE3-NEXT:    andb $3, %al
+; SSE2-SSSE3-NEXT:    addb %cl, %al
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_v4i64_to_v2i2:
 ; AVX12:       # %bb.0:
-; AVX12-NEXT:    vmovmskpd %ymm0, %ecx
-; AVX12-NEXT:    movl %ecx, %eax
-; AVX12-NEXT:    shrl $2, %eax
-; AVX12-NEXT:    andl $3, %ecx
+; AVX12-NEXT:    vmovmskpd %ymm0, %eax
+; AVX12-NEXT:    movl %eax, %ecx
+; AVX12-NEXT:    shrb $2, %cl
+; AVX12-NEXT:    andb $3, %al
 ; AVX12-NEXT:    addb %cl, %al
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    vzeroupper
@@ -204,13 +187,10 @@ define i2 @bitcast_v4i64_to_v2i2(<4 x i64> %a0) nounwind {
 ;
 ; AVX512-LABEL: bitcast_v4i64_to_v2i2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpgtq %ymm0, %ymm1, %k0
-; AVX512-NEXT:    kmovd %k0, %ecx
-; AVX512-NEXT:    movzbl %cl, %eax
-; AVX512-NEXT:    shrl $2, %eax
-; AVX512-NEXT:    andl $3, %eax
-; AVX512-NEXT:    andl $3, %ecx
+; AVX512-NEXT:    vmovmskpd %ymm0, %eax
+; AVX512-NEXT:    movl %eax, %ecx
+; AVX512-NEXT:    shrb $2, %cl
+; AVX512-NEXT:    andb $3, %al
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
@@ -229,23 +209,19 @@ define i4 @bitcast_v8i32_to_v2i4(<8 x i32> %a0) nounwind {
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-SSSE3-NEXT:    movzbl %al, %ecx
-; SSE2-SSSE3-NEXT:    shrl $4, %ecx
-; SSE2-SSSE3-NEXT:    movq %rcx, %xmm0
-; SSE2-SSSE3-NEXT:    andl $15, %eax
-; SSE2-SSSE3-NEXT:    movq %rax, %xmm1
-; SSE2-SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-SSSE3-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movl %eax, %ecx
+; SSE2-SSSE3-NEXT:    shrb $4, %cl
+; SSE2-SSSE3-NEXT:    andb $15, %al
+; SSE2-SSSE3-NEXT:    addb %cl, %al
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_v8i32_to_v2i4:
 ; AVX12:       # %bb.0:
-; AVX12-NEXT:    vmovmskps %ymm0, %ecx
-; AVX12-NEXT:    movl %ecx, %eax
-; AVX12-NEXT:    shrl $4, %eax
-; AVX12-NEXT:    andl $15, %ecx
+; AVX12-NEXT:    vmovmskps %ymm0, %eax
+; AVX12-NEXT:    movl %eax, %ecx
+; AVX12-NEXT:    shrb $4, %cl
+; AVX12-NEXT:    andb $15, %al
 ; AVX12-NEXT:    addb %cl, %al
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    vzeroupper
@@ -253,12 +229,10 @@ define i4 @bitcast_v8i32_to_v2i4(<8 x i32> %a0) nounwind {
 ;
 ; AVX512-LABEL: bitcast_v8i32_to_v2i4:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpgtd %ymm0, %ymm1, %k0
-; AVX512-NEXT:    kmovd %k0, %ecx
-; AVX512-NEXT:    movzbl %cl, %eax
-; AVX512-NEXT:    shrl $4, %eax
-; AVX512-NEXT:    andl $15, %ecx
+; AVX512-NEXT:    vmovmskps %ymm0, %eax
+; AVX512-NEXT:    movl %eax, %ecx
+; AVX512-NEXT:    shrb $4, %cl
+; AVX512-NEXT:    andb $15, %al
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
@@ -311,7 +285,7 @@ define i8 @bitcast_v16i16_to_v2i8(<16 x i16> %a0) nounwind {
 ; AVX512-NEXT:    vpmovw2m %ymm0, %k0
 ; AVX512-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
-; AVX512-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX512-NEXT:    vmovd %xmm0, %ecx
 ; AVX512-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -356,19 +330,11 @@ define i16 @bitcast_v32i8_to_v2i16(<32 x i8> %a0) nounwind {
 ;
 ; AVX512-LABEL: bitcast_v32i8_to_v2i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    pushq %rbp
-; AVX512-NEXT:    movq %rsp, %rbp
-; AVX512-NEXT:    andq $-32, %rsp
-; AVX512-NEXT:    subq $32, %rsp
-; AVX512-NEXT:    vpmovb2m %ymm0, %k0
-; AVX512-NEXT:    kmovd %k0, (%rsp)
-; AVX512-NEXT:    vmovdqa (%rsp), %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %ecx
-; AVX512-NEXT:    vpextrw $1, %xmm0, %eax
+; AVX512-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX512-NEXT:    movl %ecx, %eax
+; AVX512-NEXT:    shrl $16, %eax
 ; AVX512-NEXT:    addl %ecx, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-NEXT:    movq %rbp, %rsp
-; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = icmp slt <32 x i8> %a0, zeroinitializer
@@ -391,15 +357,11 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 ; SSE2-SSSE3-NEXT:    packssdw %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-SSSE3-NEXT:    movzbl %al, %ecx
-; SSE2-SSSE3-NEXT:    shrl $4, %ecx
-; SSE2-SSSE3-NEXT:    movq %rcx, %xmm0
-; SSE2-SSSE3-NEXT:    andl $15, %eax
-; SSE2-SSSE3-NEXT:    movq %rax, %xmm1
-; SSE2-SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-SSSE3-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movl %eax, %ecx
+; SSE2-SSSE3-NEXT:    shrb $4, %cl
+; SSE2-SSSE3-NEXT:    andb $15, %al
+; SSE2-SSSE3-NEXT:    addb %cl, %al
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: bitcast_v8i64_to_v2i4:
@@ -412,10 +374,10 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vmovmskps %ymm0, %ecx
-; AVX1-NEXT:    movl %ecx, %eax
-; AVX1-NEXT:    shrl $4, %eax
-; AVX1-NEXT:    andl $15, %ecx
+; AVX1-NEXT:    vmovmskps %ymm0, %eax
+; AVX1-NEXT:    movl %eax, %ecx
+; AVX1-NEXT:    shrb $4, %cl
+; AVX1-NEXT:    andb $15, %al
 ; AVX1-NEXT:    addb %cl, %al
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1-NEXT:    vzeroupper
@@ -425,10 +387,10 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX2-NEXT:    vmovmskps %ymm0, %ecx
-; AVX2-NEXT:    movl %ecx, %eax
-; AVX2-NEXT:    shrl $4, %eax
-; AVX2-NEXT:    andl $15, %ecx
+; AVX2-NEXT:    vmovmskps %ymm0, %eax
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    shrb $4, %cl
+; AVX2-NEXT:    andb $15, %al
 ; AVX2-NEXT:    addb %cl, %al
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    vzeroupper
@@ -438,10 +400,10 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
-; AVX512-NEXT:    kmovd %k0, %ecx
-; AVX512-NEXT:    movzbl %cl, %eax
-; AVX512-NEXT:    shrl $4, %eax
-; AVX512-NEXT:    andl $15, %ecx
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    movl %eax, %ecx
+; AVX512-NEXT:    shrb $4, %cl
+; AVX512-NEXT:    andb $15, %al
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
@@ -505,7 +467,7 @@ define i8 @bitcast_v16i32_to_v2i8(<16 x i32> %a0) nounwind {
 ; AVX512-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
 ; AVX512-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
-; AVX512-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX512-NEXT:    vmovd %xmm0, %ecx
 ; AVX512-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax

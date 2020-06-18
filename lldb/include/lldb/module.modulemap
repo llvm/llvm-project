@@ -49,7 +49,6 @@ module lldb_Host {
   module SocketAddress { header "Host/SocketAddress.h" export * }
   module Socket { header "Host/Socket.h" export * }
   module StringConvert { textual header "Host/StringConvert.h" export * }
-  module TaskPool { header "Host/TaskPool.h" export * }
   module Terminal { header "Host/Terminal.h" export * }
   module ThreadLauncher { header "Host/ThreadLauncher.h" export * }
   module Time { header "Host/Time.h" export * }

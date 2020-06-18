@@ -1804,8 +1804,8 @@ Expected<uint64_t> MachOObjectFile::getSymbolAddress(DataRefImpl Sym) const {
 }
 
 uint32_t MachOObjectFile::getSymbolAlignment(DataRefImpl DRI) const {
-  uint32_t flags = getSymbolFlags(DRI);
-  if (flags & SymbolRef::SF_Common) {
+  uint32_t Flags = cantFail(getSymbolFlags(DRI));
+  if (Flags & SymbolRef::SF_Common) {
     MachO::nlist_base Entry = getSymbolTableEntryBase(*this, DRI);
     return 1 << MachO::GET_COMM_ALIGN(Entry.n_desc);
   }
@@ -1840,7 +1840,7 @@ MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
   return SymbolRef::ST_Other;
 }
 
-uint32_t MachOObjectFile::getSymbolFlags(DataRefImpl DRI) const {
+Expected<uint32_t> MachOObjectFile::getSymbolFlags(DataRefImpl DRI) const {
   MachO::nlist_base Entry = getSymbolTableEntryBase(*this, DRI);
 
   uint8_t MachOType = Entry.n_type;
@@ -2028,6 +2028,11 @@ bool MachOObjectFile::isSectionBSS(DataRefImpl Sec) const {
   return !(Flags & MachO::S_ATTR_PURE_INSTRUCTIONS) &&
          (SectionType == MachO::S_ZEROFILL ||
           SectionType == MachO::S_GB_ZEROFILL);
+}
+
+bool MachOObjectFile::isDebugSection(StringRef SectionName) const {
+  return SectionName.startswith("__debug") ||
+         SectionName.startswith("__zdebug") || SectionName == "__gdb_index";
 }
 
 unsigned MachOObjectFile::getSectionID(SectionRef Sec) const {
@@ -3214,24 +3219,13 @@ void MachORebaseEntry::moveNext() {
                                        SegmentOffset) << "\n");
       break;
     case MachO::REBASE_OPCODE_ADD_ADDR_IMM_SCALED:
+      SegmentOffset += ImmValue * PointerSize;
       error = O->RebaseEntryCheckSegAndOffsets(SegmentIndex, SegmentOffset,
                                                PointerSize);
       if (error) {
         *E = malformedError("for REBASE_OPCODE_ADD_ADDR_IMM_SCALED " +
                             Twine(error) + " for opcode at: 0x" +
                             Twine::utohexstr(OpcodeStart - Opcodes.begin()));
-        moveToEnd();
-        return;
-      }
-      SegmentOffset += ImmValue * PointerSize;
-      error = O->RebaseEntryCheckSegAndOffsets(SegmentIndex, SegmentOffset,
-                                               PointerSize);
-      if (error) {
-        *E =
-            malformedError("for REBASE_OPCODE_ADD_ADDR_IMM_SCALED "
-                           " (after adding immediate times the pointer size) " +
-                           Twine(error) + " for opcode at: 0x" +
-                           Twine::utohexstr(OpcodeStart - Opcodes.begin()));
         moveToEnd();
         return;
       }
@@ -3803,15 +3797,6 @@ void MachOBindEntry::moveNext() {
         moveToEnd();
         return;
       }
-      error = O->BindEntryCheckSegAndOffsets(SegmentIndex, SegmentOffset,
-                                             PointerSize);
-      if (error) {
-        *E = malformedError("for BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED " +
-                            Twine(error) + " for opcode at: 0x" +
-                            Twine::utohexstr(OpcodeStart - Opcodes.begin()));
-        moveToEnd();
-        return;
-      }
       if (SymbolName == StringRef()) {
         *E = malformedError(
             "for BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED "
@@ -3835,11 +3820,9 @@ void MachOBindEntry::moveNext() {
       error = O->BindEntryCheckSegAndOffsets(SegmentIndex, SegmentOffset +
                                              AdvanceAmount, PointerSize);
       if (error) {
-        *E =
-            malformedError("for BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED "
-                           " (after adding immediate times the pointer size) " +
-                           Twine(error) + " for opcode at: 0x" +
-                           Twine::utohexstr(OpcodeStart - Opcodes.begin()));
+        *E = malformedError("for BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED " +
+                            Twine(error) + " for opcode at: 0x" +
+                            Twine::utohexstr(OpcodeStart - Opcodes.begin()));
         moveToEnd();
         return;
       }

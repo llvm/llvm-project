@@ -3,7 +3,7 @@
 ---
 # LI + XFORM -> DFORM, no killed/dead flag fixup.
 name: testKillPassUpLI1
-#CHECK : name : testKillPassUpLI1
+#CHECK: name: testKillPassUpLI1
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -19,7 +19,7 @@ body: |
 ---
 # LI + XFORM -> DFORM, fixup killed/dead flag for $x3, find no use, set def as
 # dead(LI8 is deleted).
-name : testKillPassUpLI2
+name: testKillPassUpLI2
 # CHECK: name: testKillPassUpLI2
 tracksRegLiveness: true
 body: |

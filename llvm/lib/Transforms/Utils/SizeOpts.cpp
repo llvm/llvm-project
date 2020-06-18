@@ -34,9 +34,14 @@ cl::opt<bool> PGSOColdCodeOnlyForInstrPGO(
              "to cold code under instrumentation PGO."));
 
 cl::opt<bool> PGSOColdCodeOnlyForSamplePGO(
-    "pgso-cold-code-only-for-sample-pgo", cl::Hidden, cl::init(true),
+    "pgso-cold-code-only-for-sample-pgo", cl::Hidden, cl::init(false),
     cl::desc("Apply the profile guided size optimizations only "
              "to cold code under sample PGO."));
+
+cl::opt<bool> PGSOColdCodeOnlyForPartialSamplePGO(
+    "pgso-cold-code-only-for-partial-sample-pgo", cl::Hidden, cl::init(true),
+    cl::desc("Apply the profile guided size optimizations only "
+             "to cold code under partial-profile sample PGO."));
 
 cl::opt<bool> PGSOIRPassOrTestOnly(
     "pgso-ir-pass-or-test-only", cl::Hidden, cl::init(false),
@@ -53,7 +58,7 @@ cl::opt<int> PgsoCutoffInstrProf(
              "for instrumentation profile."));
 
 cl::opt<int> PgsoCutoffSampleProf(
-    "pgso-cutoff-sample-prof", cl::Hidden, cl::init(800000), cl::ZeroOrMore,
+    "pgso-cutoff-sample-prof", cl::Hidden, cl::init(990000), cl::ZeroOrMore,
     cl::desc("The profile guided size optimization profile summary cutoff "
              "for sample profile."));
 
@@ -70,6 +75,12 @@ struct BasicBlockBFIAdapter {
                                                     BlockFrequencyInfo &BFI) {
     return PSI->isFunctionHotInCallGraphNthPercentile(CutOff, F, BFI);
   }
+  static bool isFunctionColdInCallGraphNthPercentile(int CutOff,
+                                                     const Function *F,
+                                                     ProfileSummaryInfo *PSI,
+                                                     BlockFrequencyInfo &BFI) {
+    return PSI->isFunctionColdInCallGraphNthPercentile(CutOff, F, BFI);
+  }
   static bool isColdBlock(const BasicBlock *BB,
                           ProfileSummaryInfo *PSI,
                           BlockFrequencyInfo *BFI) {
@@ -80,6 +91,11 @@ struct BasicBlockBFIAdapter {
                                       ProfileSummaryInfo *PSI,
                                       BlockFrequencyInfo *BFI) {
     return PSI->isHotBlockNthPercentile(CutOff, BB, BFI);
+  }
+  static bool isColdBlockNthPercentile(int CutOff, const BasicBlock *BB,
+                                       ProfileSummaryInfo *PSI,
+                                       BlockFrequencyInfo *BFI) {
+    return PSI->isColdBlockNthPercentile(CutOff, BB, BFI);
   }
 };
 } // end anonymous namespace

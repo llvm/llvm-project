@@ -7,18 +7,23 @@
 struct T {
   char a;
 #ifndef _ARCH_PPC
+  // expected-note@+1 {{'f' defined here}}
   __float128 f;
 #else
+  // expected-note@+1 {{'f' defined here}}
   long double f;
 #endif
   char c;
   T() : a(12), f(15) {}
 #ifndef _ARCH_PPC
-// expected-error@+4 {{host requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+// expected-error@+5 {{'f' requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 #else
-// expected-error@+2 {{host requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+// expected-error@+3 {{'f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 #endif
-  T &operator+(T &b) { f += b.a; return *this;}
+  T &operator+(T &b) {
+    f += b.a;
+    return *this;
+  }
 };
 
 struct T1 {
@@ -27,19 +32,36 @@ struct T1 {
   __int128 f1;
   char c;
   T1() : a(12), f(15) {}
-  T1 &operator/(T1 &b) { f /= b.a; return *this;}
+  T1 &operator/(T1 &b) {
+    f /= b.a;
+    return *this;
+  }
 };
 
+#ifndef _ARCH_PPC
+// expected-note@+1 {{'boo' defined here}}
+void boo(__float128 A) { return; }
+#else
+// expected-note@+1 {{'boo' defined here}}
+void boo(long double A) { return; }
+#endif
 #pragma omp declare target
 T a = T();
 T f = a;
 void foo(T a = T()) {
   a = a + f; // expected-note {{called by 'foo'}}
+#ifndef _ARCH_PPC
+// expected-error@+4 {{'boo' requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+#else
+// expected-error@+2 {{'boo' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+#endif
+  boo(0);
   return;
 }
 T bar() {
   return T();
 }
+
 void baz() {
   T t = bar();
 }
@@ -56,3 +78,56 @@ void baz1() {
   T1 t = bar1();
 }
 #pragma omp end declare target
+
+#ifndef _ARCH_PPC
+// expected-note@+1 3{{'f' defined here}}
+__float128 foo1(__float128 f) {
+#pragma omp target map(f)
+  // expected-error@+1 3{{'f' requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+  f = 1;
+  return f;
+}
+#else
+// expected-note@+1 3{{'f' defined here}}
+long double foo1(long double f) {
+#pragma omp target map(f)
+  // expected-error@+1 3{{'f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
+  f = 1;
+  return f;
+}
+#endif
+
+T foo3() {
+  T S;
+#pragma omp target map(S)
+  S.a = 1;
+  return S;
+}
+
+// Allow all sorts of stuff on host
+#ifndef _ARCH_PPC
+__float128 q, b;
+__float128 c = q + b;
+#else
+long double q, b;
+long double c = q + b;
+#endif
+
+void hostFoo() {
+  boo(c - b);
+}
+
+long double qa, qb;
+decltype(qa + qb) qc;
+double qd[sizeof(-(-(qc * 2)))];
+
+struct A { };
+
+template <bool>
+struct A_type { typedef A type; };
+
+template <class Sp, class Tp>
+struct B {
+  enum { value = bool(Sp::value) || bool(Tp::value) };
+  typedef typename A_type<value>::type type;
+};

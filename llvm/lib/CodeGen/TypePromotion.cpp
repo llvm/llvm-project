@@ -40,6 +40,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "type-promotion"
 #define PASS_NAME "Type Promotion"

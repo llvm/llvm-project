@@ -278,7 +278,7 @@ public:
                                const DebugEpochBase &Epoch)
       : SmallPtrSetIteratorImpl(BP, E), DebugEpochBase::HandleBase(&Epoch) {}
 
-  // Most methods provided by baseclass.
+  // Most methods are provided by the base class.
 
   const PtrTy operator*() const {
     assert(isHandleInSync() && "invalid iterator access!");
@@ -372,7 +372,9 @@ public:
     return erase_imp(PtrTraits::getAsVoidPointer(Ptr));
   }
   /// count - Return 1 if the specified pointer is in the set, 0 otherwise.
-  size_type count(ConstPtrType Ptr) const { return find(Ptr) != end() ? 1 : 0; }
+  size_type count(ConstPtrType Ptr) const {
+    return find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)) != EndPointer();
+  }
   iterator find(ConstPtrType Ptr) const {
     return makeIterator(find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)));
   }

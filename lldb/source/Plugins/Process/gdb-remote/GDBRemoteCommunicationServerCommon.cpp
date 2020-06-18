@@ -334,7 +334,7 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
     StringExtractorGDBRemote &packet) {
   m_proc_infos_index = 0;
-  m_proc_infos.Clear();
+  m_proc_infos.clear();
 
   ProcessInstanceInfoMatch match_info;
   packet.SetFilePos(::strlen("qfProcessInfo"));
@@ -416,10 +416,9 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qsProcessInfo(
     StringExtractorGDBRemote &packet) {
-  if (m_proc_infos_index < m_proc_infos.GetSize()) {
+  if (m_proc_infos_index < m_proc_infos.size()) {
     StreamString response;
-    CreateProcessInfoResponse(
-        m_proc_infos.GetProcessInfoAtIndex(m_proc_infos_index), response);
+    CreateProcessInfoResponse(m_proc_infos[m_proc_infos_index], response);
     ++m_proc_infos_index;
     return SendPacketNoLock(response.GetString());
   }
@@ -843,6 +842,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSupported(
   response.PutCString(";QThreadSuffixSupported+");
   response.PutCString(";QListThreadsInStopReply+");
   response.PutCString(";qEcho+");
+  response.PutCString(";qXfer:features:read+");
 #if defined(__linux__) || defined(__NetBSD__)
   response.PutCString(";QPassSignals+");
   response.PutCString(";qXfer:auxv:read+");

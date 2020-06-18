@@ -382,3 +382,24 @@ define float @v_test_fcmp_select_false(float %a, float %b) {
   %val = select i1 %cmp, float %a, float %b
   ret float %val
 }
+
+define <2 x float> @v_test_fmin_legacy_ole_v2f32(<2 x float> %a, <2 x float> %b) {
+; GFX6-LABEL: v_test_fmin_legacy_ole_v2f32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_min_legacy_f32_e32 v0, v0, v2
+; GFX6-NEXT:    v_min_legacy_f32_e32 v1, v1, v3
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_test_fmin_legacy_ole_v2f32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_le_f32_e32 vcc, v0, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX8-NEXT:    v_cmp_le_f32_e32 vcc, v1, v3
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ole <2 x float> %a, %b
+  %val = select <2 x i1> %cmp, <2 x float> %a, <2 x float> %b
+  ret <2 x float> %val
+}

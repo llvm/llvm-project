@@ -29,3 +29,14 @@ define x86_thiscallcc i8* @t3(i8* %this, <{ i8*, i32 }>* inalloca %args) {
   ret i8* %rv
 }
 declare x86_thiscallcc i8* @t3_callee(i8* %this, <{ i8*, i32 }>* inalloca %args);
+
+; CHECK-LABEL: t4:
+; CHECK: jmp {{_?}}t4_callee
+define x86_thiscallcc i8* @t4(i8* %this, <{ i8*, i32 }>* preallocated(<{ i8*, i32 }>) %args) {
+  %adj = getelementptr i8, i8* %this, i32 4
+  %a_ptr = getelementptr <{ i8*, i32 }>, <{ i8*, i32 }>* %args, i32 0, i32 1
+  store i32 0, i32* %a_ptr
+  %rv = musttail call x86_thiscallcc i8* @t4_callee(i8* %adj, <{ i8*, i32 }>* preallocated(<{ i8*, i32 }>) %args)
+  ret i8* %rv
+}
+declare x86_thiscallcc i8* @t4_callee(i8* %this, <{ i8*, i32 }>* preallocated(<{ i8*, i32 }>) %args);

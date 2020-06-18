@@ -163,7 +163,15 @@ static bool transferSymbol(NListTy NList, bool IsLittleEndian,
   if ((NList.n_type & MachO::N_TYPE) == MachO::N_UNDF)
     return false;
 
+  // Do not transfer N_AST symbols as their content is copied into a section of
+  // the Mach-O companion file.
+  if (NList.n_type == MachO::N_AST)
+    return false;
+
   StringRef Name = StringRef(Strings.begin() + NList.n_strx);
+
+  // An N_SO with a filename opens a debugging scope and another one without a
+  // name closes it. Don't transfer anything in the debugging scope.
   if (InDebugNote) {
     InDebugNote =
         (NList.n_type != MachO::N_SO) || (!Name.empty() && Name[0] != '\0');
@@ -332,7 +340,8 @@ static unsigned segmentLoadCommandSize(bool Is64Bit, unsigned NumSections) {
 // Stream a dSYM companion binary file corresponding to the binary referenced
 // by \a DM to \a OutFile. The passed \a MS MCStreamer is setup to write to
 // \a OutFile and it must be using a MachObjectWriter object to do so.
-bool generateDsymCompanion(const DebugMap &DM, SymbolMapTranslator &Translator,
+bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                           const DebugMap &DM, SymbolMapTranslator &Translator,
                            MCStreamer &MS, raw_fd_ostream &OutFile) {
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
   MCAssembler &MCAsm = ObjectStreamer.getAssembler();
@@ -343,7 +352,7 @@ bool generateDsymCompanion(const DebugMap &DM, SymbolMapTranslator &Translator,
   MCAsmLayout Layout(MCAsm);
   MCAsm.layout(Layout);
 
-  BinaryHolder InputBinaryHolder(false);
+  BinaryHolder InputBinaryHolder(VFS, false);
 
   auto ObjectEntry = InputBinaryHolder.getObjectEntry(DM.getBinaryPath());
   if (!ObjectEntry) {

@@ -218,17 +218,14 @@ void StackFrameList::SetCurrentInlinedDepth(uint32_t new_depth) {
 }
 
 void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
-                                               Unwind *unwinder) {
+                                               Unwind &unwinder) {
   assert(m_thread.IsValid() && "Expected valid thread");
   assert(m_frames.size() <= end_idx && "Expected there to be frames to fill");
 
   if (end_idx < m_concrete_frames_fetched)
     return;
 
-  if (!unwinder)
-    return;
-
-  uint32_t num_frames = unwinder->GetFramesUpTo(end_idx);
+  uint32_t num_frames = unwinder.GetFramesUpTo(end_idx);
   if (num_frames <= end_idx + 1) {
     // Done unwinding.
     m_concrete_frames_fetched = UINT32_MAX;
@@ -239,13 +236,22 @@ void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
   m_frames.resize(num_frames);
 }
 
+/// A sequence of calls that comprise some portion of a backtrace. Each frame
+/// is represented as a pair of a callee (Function *) and an address within the
+/// callee.
+struct CallDescriptor {
+  Function *func;
+  CallEdge::AddrType address_type = CallEdge::AddrType::Call;
+  addr_t address = LLDB_INVALID_ADDRESS;
+};
+using CallSequence = std::vector<CallDescriptor>;
+
 /// Find the unique path through the call graph from \p begin (with return PC
 /// \p return_pc) to \p end. On success this path is stored into \p path, and 
 /// on failure \p path is unchanged.
 static void FindInterveningFrames(Function &begin, Function &end,
                                   ExecutionContext &exe_ctx, Target &target,
-                                  addr_t return_pc,
-                                  std::vector<Function *> &path,
+                                  addr_t return_pc, CallSequence &path,
                                   ModuleList &images, Log *log) {
   LLDB_LOG(log, "Finding frames between {0} and {1}, retn-pc={2:x}",
            begin.GetDisplayName(), end.GetDisplayName(), return_pc);
@@ -278,24 +284,27 @@ static void FindInterveningFrames(Function &begin, Function &end,
   // Fully explore the set of functions reachable from the first edge via tail
   // calls in order to detect ambiguous executions.
   struct DFS {
-    std::vector<Function *> active_path = {};
-    std::vector<Function *> solution_path = {};
+    CallSequence active_path = {};
+    CallSequence solution_path = {};
     llvm::SmallPtrSet<Function *, 2> visited_nodes = {};
     bool ambiguous = false;
     Function *end;
     ModuleList &images;
+    Target &target;
     ExecutionContext &context;
 
-    DFS(Function *end, ModuleList &images, ExecutionContext &context)
-        : end(end), images(images), context(context) {}
+    DFS(Function *end, ModuleList &images, Target &target,
+        ExecutionContext &context)
+        : end(end), images(images), target(target), context(context) {}
 
-    void search(Function &first_callee, std::vector<Function *> &path) {
-      dfs(first_callee);
+    void search(CallEdge &first_edge, Function &first_callee,
+                CallSequence &path) {
+      dfs(first_edge, first_callee);
       if (!ambiguous)
         path = std::move(solution_path);
     }
 
-    void dfs(Function &callee) {
+    void dfs(CallEdge &current_edge, Function &callee) {
       // Found a path to the target function.
       if (&callee == end) {
         if (solution_path.empty())
@@ -315,13 +324,16 @@ static void FindInterveningFrames(Function &begin, Function &end,
       }
 
       // Search the calls made from this callee.
-      active_path.push_back(&callee);
+      active_path.push_back(CallDescriptor{&callee});
       for (const auto &edge : callee.GetTailCallingEdges()) {
         Function *next_callee = edge->GetCallee(images, context);
         if (!next_callee)
           continue;
 
-        dfs(*next_callee);
+        std::tie(active_path.back().address_type, active_path.back().address) =
+            edge->GetCallerAddress(callee, target);
+
+        dfs(*edge, *next_callee);
         if (ambiguous)
           return;
       }
@@ -329,7 +341,7 @@ static void FindInterveningFrames(Function &begin, Function &end,
     }
   };
 
-  DFS(&end, images, exe_ctx).search(*first_callee, path);
+  DFS(&end, images, target, exe_ctx).search(*first_edge, *first_callee, path);
 }
 
 /// Given that \p next_frame will be appended to the frame list, synthesize
@@ -382,7 +394,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
 
   // Try to find the unique sequence of (tail) calls which led from next_frame
   // to prev_frame.
-  std::vector<Function *> path;
+  CallSequence path;
   addr_t return_pc = next_reg_ctx_sp->GetPC();
   Target &target = *target_sp.get();
   ModuleList &images = next_frame.CalculateTarget()->GetImages();
@@ -392,14 +404,17 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
                         path, images, log);
 
   // Push synthetic tail call frames.
-  for (Function *callee : llvm::reverse(path)) {
+  for (auto calleeInfo : llvm::reverse(path)) {
+    Function *callee = calleeInfo.func;
     uint32_t frame_idx = m_frames.size();
     uint32_t concrete_frame_idx = next_frame.GetConcreteFrameIndex();
     addr_t cfa = LLDB_INVALID_ADDRESS;
     bool cfa_is_valid = false;
-    addr_t pc =
-        callee->GetAddressRange().GetBaseAddress().GetLoadAddress(&target);
-    constexpr bool behaves_like_zeroth_frame = false;
+    addr_t pc = calleeInfo.address;
+    // If the callee address refers to the call instruction, we do not want to
+    // subtract 1 from this value.
+    const bool behaves_like_zeroth_frame =
+        calleeInfo.address_type == CallEdge::AddrType::Call;
     SymbolContext sc;
     callee->CalculateSymbolContext(&sc);
     auto synth_frame = std::make_shared<StackFrame>(
@@ -407,7 +422,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
         cfa_is_valid, pc, StackFrame::Kind::Artificial,
         behaves_like_zeroth_frame, &sc);
     m_frames.push_back(synth_frame);
-    LLDB_LOG(log, "Pushed frame {0}", callee->GetDisplayName());
+    LLDB_LOG(log, "Pushed frame {0} at {1:x}", callee->GetDisplayName(), pc);
   }
 
   // If any frames were created, adjust next_frame's index.
@@ -425,7 +440,7 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
   if (m_frames.size() > end_idx || GetAllFramesFetched())
     return;
 
-  Unwind *unwinder = m_thread.GetUnwinder();
+  Unwind &unwinder = m_thread.GetUnwinder();
 
   if (!m_show_inlined_frames) {
     GetOnlyConcreteFramesUpTo(end_idx, unwinder);
@@ -463,9 +478,8 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
         RegisterContextSP reg_ctx_sp(m_thread.GetRegisterContext());
 
         if (reg_ctx_sp) {
-          const bool success = unwinder &&
-                               unwinder->GetFrameInfoAtIndex(
-                                   idx, cfa, pc, behaves_like_zeroth_frame);
+          const bool success = unwinder.GetFrameInfoAtIndex(
+              idx, cfa, pc, behaves_like_zeroth_frame);
           // There shouldn't be any way not to get the frame info for frame
           // 0. But if the unwinder can't make one, lets make one by hand
           // with the SP as the CFA and see if that gets any further.
@@ -484,9 +498,8 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
         cfa = unwind_frame_sp->m_id.GetCallFrameAddress();
       }
     } else {
-      const bool success = unwinder &&
-                           unwinder->GetFrameInfoAtIndex(
-                               idx, cfa, pc, behaves_like_zeroth_frame);
+      const bool success =
+          unwinder.GetFrameInfoAtIndex(idx, cfa, pc, behaves_like_zeroth_frame);
       if (!success) {
         // We've gotten to the end of the stack.
         SetAllFramesFetched();
@@ -669,31 +682,28 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
       // GetFramesUpTo.
       frame_sp = m_frames[idx];
     } else {
-      Unwind *unwinder = m_thread.GetUnwinder();
-      if (unwinder) {
-        addr_t pc, cfa;
-        bool behaves_like_zeroth_frame = (idx == 0);
-        if (unwinder->GetFrameInfoAtIndex(idx, cfa, pc,
-                                          behaves_like_zeroth_frame)) {
-          const bool cfa_is_valid = true;
-          frame_sp = std::make_shared<StackFrame>(
-              m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
-              StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
+      addr_t pc, cfa;
+      bool behaves_like_zeroth_frame = (idx == 0);
+      if (m_thread.GetUnwinder().GetFrameInfoAtIndex(
+              idx, cfa, pc, behaves_like_zeroth_frame)) {
+        const bool cfa_is_valid = true;
+        frame_sp = std::make_shared<StackFrame>(
+            m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
+            StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
 
-          Function *function =
-              frame_sp->GetSymbolContext(eSymbolContextFunction).function;
-          if (function) {
-            // When we aren't showing inline functions we always use the top
-            // most function block as the scope.
-            frame_sp->SetSymbolContextScope(&function->GetBlock(false));
-          } else {
-            // Set the symbol scope from the symbol regardless if it is nullptr
-            // or valid.
-            frame_sp->SetSymbolContextScope(
-                frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol);
-          }
-          SetFrameAtIndex(idx, frame_sp);
+        Function *function =
+            frame_sp->GetSymbolContext(eSymbolContextFunction).function;
+        if (function) {
+          // When we aren't showing inline functions we always use the top
+          // most function block as the scope.
+          frame_sp->SetSymbolContextScope(&function->GetBlock(false));
+        } else {
+          // Set the symbol scope from the symbol regardless if it is nullptr
+          // or valid.
+          frame_sp->SetSymbolContextScope(
+              frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol);
         }
+        SetFrameAtIndex(idx, frame_sp);
       }
     }
   } else if (original_idx == 0) {

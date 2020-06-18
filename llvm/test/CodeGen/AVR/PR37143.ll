@@ -1,4 +1,4 @@
-; RUN: llc -mattr=avr6,sram < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=avr6,sram < %s -march=avr -verify-machineinstrs | FileCheck %s
 
 ; CHECK: ld {{r[0-9]+}}, [[PTR:[XYZ]]]
 ; CHECK: ldd {{r[0-9]+}}, [[PTR]]+1

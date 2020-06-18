@@ -196,14 +196,16 @@ OPTIONS
  to specify at least one of the `-analysis-clusters-output-file=` and
  `-analysis-inconsistencies-output-file=`.
 
-.. option:: -repetition-mode=[duplicate|loop]
+.. option:: -repetition-mode=[duplicate|loop|min]
 
  Specify the repetition mode. `duplicate` will create a large, straight line
  basic block with `num-repetitions` copies of the snippet. `loop` will wrap
  the snippet in a loop which will be run `num-repetitions` times. The `loop`
  mode tends to better hide the effects of the CPU frontend on architectures
  that cache decoded instructions, but consumes a register for counting
- iterations.
+ iterations. If performing an analysis over many opcodes, it may be best
+ to instead use the `min` mode, which will run each other mode, and produce
+ the minimal measured result.
 
 .. option:: -num-repetitions=<Number of repetitions>
 

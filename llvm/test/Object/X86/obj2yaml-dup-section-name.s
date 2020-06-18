@@ -9,16 +9,16 @@
 # CHECK: - Name:            .text.foo{{$}}
 # CHECK: - Name:            .rela.text.foo{{$}}
 # CHECK:   Info:            .text.foo{{$}}
-# CHECK: - Name:            '.group [1]'
+# CHECK: - Name:            '.group (1)'
 # CHECK:   Members:
-# CHECK:     - SectionOrType:   '.text.foo [1]'
-# CHECK:     - SectionOrType:   '.rela.text.foo [1]'
-# CHECK: - Name:            '.text.foo [1]'
-# CHECK: - Name:            '.rela.text.foo [1]'
-# CHECK:   Info:            '.text.foo [1]'
+# CHECK:     - SectionOrType:   '.text.foo (1)'
+# CHECK:     - SectionOrType:   '.rela.text.foo (1)'
+# CHECK: - Name:            '.text.foo (1)'
+# CHECK: - Name:            '.rela.text.foo (1)'
+# CHECK:   Info:            '.text.foo (1)'
 # CHECK: Symbols:
 # CHECK:   Section:         .group{{$}}
-# CHECK:   Section:         '.group [1]'
+# CHECK:   Section:         '.group (1)'
 
 
         .section        .text.foo,"axG",@progbits,sym1,comdat

@@ -11,9 +11,9 @@
 
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Allocator.h"
 #include <map>
 
 namespace clang {
@@ -21,7 +21,9 @@ namespace clang {
 class ASTContext;
 class ASTReader;
 class Decl;
+class DiagnosticsEngine;
 class Preprocessor;
+class SourceManager;
 
 namespace comments {
   class FullComment;
@@ -171,23 +173,6 @@ private:
   const char *extractBriefText(const ASTContext &Context) const;
 
   friend class ASTReader;
-};
-
-/// Compare comments' source locations.
-template<>
-class BeforeThanCompare<RawComment> {
-  const SourceManager &SM;
-
-public:
-  explicit BeforeThanCompare(const SourceManager &SM) : SM(SM) { }
-
-  bool operator()(const RawComment &LHS, const RawComment &RHS) {
-    return SM.isBeforeInTranslationUnit(LHS.getBeginLoc(), RHS.getBeginLoc());
-  }
-
-  bool operator()(const RawComment *LHS, const RawComment *RHS) {
-    return operator()(*LHS, *RHS);
-  }
 };
 
 /// This class represents all comments included in the translation unit,

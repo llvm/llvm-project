@@ -64,5 +64,5 @@ struct S4
 // CHECK: %struct.S4 = type { [3 x i8], %struct.T4, i32 }
 // CHECK: %struct.T4 = type <{ i8, i32 }>
 
-// CHECK: @refs = common global [[struct_ref]]
-// CHECK: @ss = common global [[struct_S]]
+// CHECK: @refs = global [[struct_ref]]
+// CHECK: @ss = global [[struct_S]]

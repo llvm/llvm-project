@@ -35,7 +35,7 @@ void test2() {
 // CHECK-NEXT:  [[SELECTORVAR:%.*]] = alloca i32
 // CHECK-NEXT:  [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 16)
 // CHECK-NEXT:  [[EXN:%.*]] = bitcast i8* [[EXNOBJ]] to [[DSTAR:%[^*]*\*]]
-// CHECK-NEXT:  invoke void @_ZN7test2_DC1ERKS_([[DSTAR]] [[EXN]], [[DSTAR]] dereferenceable({{[0-9]+}}) @d2)
+// CHECK-NEXT:  invoke void @_ZN7test2_DC1ERKS_([[DSTAR]] [[EXN]], [[DSTAR]] nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @d2)
 // CHECK-NEXT:     to label %[[CONT:.*]] unwind label %{{.*}}
 //      :     [[CONT]]:   (can't check this in Release-Asserts builds)
 // CHECK:       call void @__cxa_throw(i8* [[EXNOBJ]], i8* bitcast ({{.*}}* @_ZTI7test2_D to i8*), i8* null) [[NR]]
@@ -431,7 +431,7 @@ namespace test16 {
     // CHECK-NEXT: [[T0:%.*]] = bitcast i8* [[EXN]] to [[B:%.*]]*
     // CHECK-NEXT: invoke void @_ZN6test161AC1Ev([[A]]* [[TEMP]])
     // CHECK:      store i1 true, i1* [[TEMP_ACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN6test161BC1ERKNS_1AE([[B]]* [[T0]], [[A]]* dereferenceable({{[0-9]+}}) [[TEMP]])
+    // CHECK-NEXT: invoke void @_ZN6test161BC1ERKNS_1AE([[B]]* [[T0]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TEMP]])
     // CHECK:      store i1 false, i1* [[EXN_ACTIVE]]
     // CHECK-NEXT: invoke void @__cxa_throw(i8* [[EXN]],
 

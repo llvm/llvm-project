@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objdump -f %t | FileCheck %s
-# RUN: llvm-objdump -file-headers %t | FileCheck %s
+# RUN: llvm-objdump --file-headers %t | FileCheck %s
 
 !COFF
 header: !Header

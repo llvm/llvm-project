@@ -1082,15 +1082,14 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
           for (Record *RWD : RWDefs) {
             if (RWD->getValueAsDef("SchedModel") == RWModelDef &&
                 RWModelDef->getValueAsBit("FullInstRWOverlapCheck")) {
-              for (Record *Inst : InstDefs) {
-                PrintFatalError
-                    (InstRWDef->getLoc(),
-                     "Overlapping InstRW definition for \"" +
-                     Inst->getName() +
-                     "\" also matches previous \"" +
-                     RWD->getValue("Instrs")->getValue()->getAsString() +
-                     "\".");
-              }
+              assert(!InstDefs.empty()); // Checked at function start.
+              PrintFatalError
+                  (InstRWDef->getLoc(),
+                   "Overlapping InstRW definition for \"" +
+                   InstDefs.front()->getName() +
+                   "\" also matches previous \"" +
+                   RWD->getValue("Instrs")->getValue()->getAsString() +
+                   "\".");
             }
           }
           LLVM_DEBUG(dbgs() << "InstRW: Reuse SC " << OldSCIdx << ":"
@@ -1118,15 +1117,14 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
       Record *RWModelDef = InstRWDef->getValueAsDef("SchedModel");
       for (Record *OldRWDef : SchedClasses[OldSCIdx].InstRWs) {
         if (OldRWDef->getValueAsDef("SchedModel") == RWModelDef) {
-          for (Record *InstDef : InstDefs) {
-            PrintFatalError
-                (InstRWDef->getLoc(),
-                 "Overlapping InstRW definition for \"" +
-                 InstDef->getName() +
-                 "\" also matches previous \"" +
-                 OldRWDef->getValue("Instrs")->getValue()->getAsString() +
-                 "\".");
-          }
+          assert(!InstDefs.empty()); // Checked at function start.
+          PrintFatalError
+              (InstRWDef->getLoc(),
+               "Overlapping InstRW definition for \"" +
+               InstDefs.front()->getName() +
+               "\" also matches previous \"" +
+               OldRWDef->getValue("Instrs")->getValue()->getAsString() +
+               "\".");
         }
         assert(OldRWDef != InstRWDef &&
                "SchedClass has duplicate InstRW def");

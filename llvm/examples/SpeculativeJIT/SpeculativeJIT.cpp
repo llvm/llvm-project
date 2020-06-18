@@ -102,7 +102,7 @@ private:
       IndirectStubsManagerBuilderFunction ISMBuilder,
       std::unique_ptr<DynamicLibrarySearchGenerator> ProcessSymbolsGenerator)
       : ES(std::move(ES)), DL(std::move(DL)),
-        MainJD(this->ES->createJITDylib("<main>")), LCTMgr(std::move(LCTMgr)),
+        MainJD(this->ES->createBareJITDylib("<main>")), LCTMgr(std::move(LCTMgr)),
         CompileLayer(*this->ES, ObjLayer,
                      std::make_unique<ConcurrentIRCompiler>(std::move(JTMB))),
         S(Imps, *this->ES),
@@ -112,12 +112,15 @@ private:
     MainJD.addGenerator(std::move(ProcessSymbolsGenerator));
     this->CODLayer.setImplMap(&Imps);
     this->ES->setDispatchMaterialization(
-
-        [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
+        [this](std::unique_ptr<MaterializationUnit> MU,
+               MaterializationResponsibility MR) {
           // FIXME: Switch to move capture once we have C++14.
           auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
-          auto Work = [SharedMU, &JD]() { SharedMU->doMaterialize(JD); };
-          CompileThreads.async(std::move(Work));
+          auto SharedMR =
+            std::make_shared<MaterializationResponsibility>(std::move(MR));
+          CompileThreads.async([SharedMU, SharedMR]() {
+            SharedMU->materialize(std::move(*SharedMR));
+          });
         });
     ExitOnErr(S.addSpeculationRuntime(MainJD, Mangle));
     LocalCXXRuntimeOverrides CXXRuntimeoverrides;

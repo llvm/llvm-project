@@ -162,6 +162,20 @@ MemoryBuffer::getFileSlice(const Twine &FilePath, uint64_t MapSize,
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+template <typename MB>
+constexpr sys::fs::mapped_file_region::mapmode Mapmode =
+    sys::fs::mapped_file_region::readonly;
+template <>
+constexpr sys::fs::mapped_file_region::mapmode Mapmode<MemoryBuffer> =
+    sys::fs::mapped_file_region::readonly;
+template <>
+constexpr sys::fs::mapped_file_region::mapmode Mapmode<WritableMemoryBuffer> =
+    sys::fs::mapped_file_region::priv;
+template <>
+constexpr sys::fs::mapped_file_region::mapmode
+    Mapmode<WriteThroughMemoryBuffer> = sys::fs::mapped_file_region::readwrite;
+
 /// Memory maps a file descriptor using sys::fs::mapped_file_region.
 ///
 /// This handles converting the offset into a legal offset on the platform.
@@ -184,7 +198,7 @@ class MemoryBufferMMapFile : public MB {
 public:
   MemoryBufferMMapFile(bool RequiresNullTerminator, sys::fs::file_t FD, uint64_t Len,
                        uint64_t Offset, std::error_code &EC)
-      : MFR(FD, MB::Mapmode, getLegalMapSize(Len, Offset),
+      : MFR(FD, Mapmode<MB>, getLegalMapSize(Len, Offset),
             getLegalMapOffset(Offset), EC) {
     if (!EC) {
       const char *Start = getStart(Len, Offset);
@@ -315,7 +329,7 @@ static bool shouldUseMmap(sys::fs::file_t FD,
   // mmap may leave the buffer without null terminator if the file size changed
   // by the time the last page is mapped in, so avoid it if the file size is
   // likely to change.
-  if (IsVolatile)
+  if (IsVolatile && RequiresNullTerminator)
     return false;
 
   // We don't use mmap for small files because this can severely fragment our

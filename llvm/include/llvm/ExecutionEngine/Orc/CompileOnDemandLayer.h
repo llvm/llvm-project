@@ -94,6 +94,7 @@ public:
 
   /// Sets the ImplSymbolMap
   void setImplMap(ImplSymbolMap *Imp);
+
   /// Emits the given module. This should not be called by clients: it will be
   /// called by the JIT when a definition added via the add method is requested.
   void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;

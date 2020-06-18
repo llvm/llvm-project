@@ -151,7 +151,7 @@ declare <2 x float> @llvm.sin.v2f32(<2 x float>)
 define <2 x float> @fneg_sin(<2 x float> %x){
 ; CHECK-LABEL: @fneg_sin(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fsub <2 x float> <float -0.0, float -0.0>, %x
@@ -162,7 +162,7 @@ define <2 x float> @fneg_sin(<2 x float> %x){
 define <2 x float> @unary_fneg_sin(<2 x float> %x){
 ; CHECK-LABEL: @unary_fneg_sin(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fneg <2 x float> %x
@@ -175,7 +175,7 @@ define <2 x float> @unary_fneg_sin(<2 x float> %x){
 define <2 x float> @fneg_sin_fmf(<2 x float> %x){
 ; CHECK-LABEL: @fneg_sin_fmf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan arcp afn <2 x float> @llvm.sin.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fsub nnan arcp afn <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fneg nnan arcp afn <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fsub fast <2 x float> <float -0.0, float -0.0>, %x
@@ -186,7 +186,7 @@ define <2 x float> @fneg_sin_fmf(<2 x float> %x){
 define <2 x float> @unary_fneg_sin_fmf(<2 x float> %x){
 ; CHECK-LABEL: @unary_fneg_sin_fmf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan arcp afn <2 x float> @llvm.sin.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fsub nnan arcp afn <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = fneg nnan arcp afn <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fneg fast <2 x float> %x

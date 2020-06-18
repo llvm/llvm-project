@@ -26,6 +26,7 @@ Clang-Tidy Checks
    `abseil-redundant-strcat-calls <abseil-redundant-strcat-calls.html>`_, "Yes"
    `abseil-str-cat-append <abseil-str-cat-append.html>`_, "Yes"
    `abseil-string-find-startswith <abseil-string-find-startswith.html>`_, "Yes"
+   `abseil-string-find-str-contains <abseil-string-find-str-contains.html>`_, "Yes"
    `abseil-time-comparison <abseil-time-comparison.html>`_, "Yes"
    `abseil-time-subtraction <abseil-time-subtraction.html>`_, "Yes"
    `abseil-upgrade-duration-conversions <abseil-upgrade-duration-conversions.html>`_, "Yes"
@@ -72,13 +73,16 @@ Clang-Tidy Checks
    `bugprone-not-null-terminated-result <bugprone-not-null-terminated-result.html>`_, "Yes"
    `bugprone-parent-virtual-call <bugprone-parent-virtual-call.html>`_, "Yes"
    `bugprone-posix-return <bugprone-posix-return.html>`_, "Yes"
+   `bugprone-reserved-identifier <bugprone-reserved-identifier.html>`_, "Yes"
    `bugprone-signed-char-misuse <bugprone-signed-char-misuse.html>`_,
    `bugprone-sizeof-container <bugprone-sizeof-container.html>`_,
    `bugprone-sizeof-expression <bugprone-sizeof-expression.html>`_,
+   `bugprone-spuriously-wake-up-functions <bugprone-spuriously-wake-up-functions.html>`_,
    `bugprone-string-constructor <bugprone-string-constructor.html>`_, "Yes"
    `bugprone-string-integer-assignment <bugprone-string-integer-assignment.html>`_, "Yes"
    `bugprone-string-literal-with-embedded-nul <bugprone-string-literal-with-embedded-nul.html>`_,
    `bugprone-suspicious-enum-usage <bugprone-suspicious-enum-usage.html>`_,
+   `bugprone-suspicious-include <bugprone-suspicious-include.html>`_,
    `bugprone-suspicious-memset-usage <bugprone-suspicious-memset-usage.html>`_, "Yes"
    `bugprone-suspicious-missing-comma <bugprone-suspicious-missing-comma.html>`_,
    `bugprone-suspicious-semicolon <bugprone-suspicious-semicolon.html>`_, "Yes"
@@ -153,7 +157,6 @@ Clang-Tidy Checks
    `fuchsia-default-arguments-declarations <fuchsia-default-arguments-declarations.html>`_, "Yes"
    `fuchsia-multiple-inheritance <fuchsia-multiple-inheritance.html>`_,
    `fuchsia-overloaded-operator <fuchsia-overloaded-operator.html>`_,
-   `fuchsia-restrict-system-includes <fuchsia-restrict-system-includes.html>`_, "Yes"
    `fuchsia-statically-constructed-objects <fuchsia-statically-constructed-objects.html>`_,
    `fuchsia-trailing-return <fuchsia-trailing-return.html>`_,
    `fuchsia-virtual-inheritance <fuchsia-virtual-inheritance.html>`_,
@@ -186,10 +189,13 @@ Clang-Tidy Checks
    `llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm-prefer-isa-or-dyn-cast-in-conditionals.html>`_, "Yes"
    `llvm-prefer-register-over-unsigned <llvm-prefer-register-over-unsigned.html>`_, "Yes"
    `llvm-twine-local <llvm-twine-local.html>`_, "Yes"
+   `llvmlibc-callee-namespace <llvmlibc-calle-namespace.html>`_,
+   `llvmlibc-implementation-in-namespace <llvmlibc-implementation-in-namespace.html>`_,
+   `llvmlibc-restrict-system-libc-headers <llvmlibc-restrict-system-libc-headers.html>`_, "Yes"
    `misc-definitions-in-headers <misc-definitions-in-headers.html>`_, "Yes"
    `misc-misplaced-const <misc-misplaced-const.html>`_,
    `misc-new-delete-overloads <misc-new-delete-overloads.html>`_,
-   `misc-no-recursion <misc-no-recursion>`_,
+   `misc-no-recursion <misc-no-recursion.html>`_,
    `misc-non-copyable-objects <misc-non-copyable-objects.html>`_,
    `misc-non-private-member-variables-in-classes <misc-non-private-member-variables-in-classes.html>`_,
    `misc-redundant-expression <misc-redundant-expression.html>`_, "Yes"
@@ -206,12 +212,13 @@ Clang-Tidy Checks
    `modernize-deprecated-headers <modernize-deprecated-headers.html>`_, "Yes"
    `modernize-deprecated-ios-base-aliases <modernize-deprecated-ios-base-aliases.html>`_, "Yes"
    `modernize-loop-convert <modernize-loop-convert.html>`_, "Yes"
-   `modernize-make-shared <modernize-make-shared.html>`_,
+   `modernize-make-shared <modernize-make-shared.html>`_, "Yes"
    `modernize-make-unique <modernize-make-unique.html>`_, "Yes"
    `modernize-pass-by-value <modernize-pass-by-value.html>`_, "Yes"
    `modernize-raw-string-literal <modernize-raw-string-literal.html>`_, "Yes"
    `modernize-redundant-void-arg <modernize-redundant-void-arg.html>`_, "Yes"
    `modernize-replace-auto-ptr <modernize-replace-auto-ptr.html>`_, "Yes"
+   `modernize-replace-disallow-copy-and-assign-macro <modernize-replace-disallow-copy-and-assign-macro.html>`_, "Yes"
    `modernize-replace-random-shuffle <modernize-replace-random-shuffle.html>`_, "Yes"
    `modernize-return-braced-init-list <modernize-return-braced-init-list.html>`_, "Yes"
    `modernize-shrink-to-fit <modernize-shrink-to-fit.html>`_, "Yes"
@@ -236,6 +243,7 @@ Clang-Tidy Checks
    `objc-dealloc-in-category <objc-dealloc-in-category.html>`_,
    `objc-forbidden-subclassing <objc-forbidden-subclassing.html>`_,
    `objc-missing-hash <objc-missing-hash.html>`_,
+   `objc-nsinvocation-argument-lifetime <objc-nsinvocation-argument-lifetime.html>`_, "Yes"
    `objc-property-declaration <objc-property-declaration.html>`_, "Yes"
    `objc-super-self <objc-super-self.html>`_, "Yes"
    `openmp-exception-escape <openmp-exception-escape.html>`_,
@@ -254,6 +262,7 @@ Clang-Tidy Checks
    `performance-type-promotion-in-math-fn <performance-type-promotion-in-math-fn.html>`_, "Yes"
    `performance-unnecessary-copy-initialization <performance-unnecessary-copy-initialization.html>`_,
    `performance-unnecessary-value-param <performance-unnecessary-value-param.html>`_, "Yes"
+   `portability-restrict-system-includes <portability-restrict-system-includes.html>`_, "Yes"
    `portability-simd-intrinsics <portability-simd-intrinsics.html>`_,
    `readability-avoid-const-params-in-decls <readability-avoid-const-params-in-decls.html>`_,
    `readability-braces-around-statements <readability-braces-around-statements.html>`_, "Yes"
@@ -291,14 +300,19 @@ Clang-Tidy Checks
    `readability-string-compare <readability-string-compare.html>`_, "Yes"
    `readability-uniqueptr-delete-release <readability-uniqueptr-delete-release.html>`_, "Yes"
    `readability-uppercase-literal-suffix <readability-uppercase-literal-suffix.html>`_, "Yes"
+   `readability-use-anyofallof`_, "No"
    `zircon-temporary-objects <zircon-temporary-objects.html>`_,
 
 
 .. csv-table:: Aliases..
    :header: "Name", "Redirect", "Offers fixes"
 
+   `cert-con36-c <cert-con36-c.html>`_, `bugprone-spuriously-wake-up-functions <bugprone-spuriously-wake-up-functions.html>`_,
+   `cert-con54-cpp <cert-con54-cpp.html>`_, `bugprone-spuriously-wake-up-functions <bugprone-spuriously-wake-up-functions.html>`_,
    `cert-dcl03-c <cert-dcl03-c.html>`_, `misc-static-assert <misc-static-assert.html>`_, "Yes"
    `cert-dcl16-c <cert-dcl16-c.html>`_, `readability-uppercase-literal-suffix <readability-uppercase-literal-suffix.html>`_, "Yes"
+   `cert-dcl37-c <cert-dcl37-c.html>`_, `bugprone-reserved-identifier <bugprone-reserved-identifier.html>`_, "Yes"
+   `cert-dcl51-cpp <cert-dcl51-cpp.html>`_, `bugprone-reserved-identifier <bugprone-reserved-identifier.html>`_, "Yes"
    `cert-dcl54-cpp <cert-dcl54-cpp.html>`_, `misc-new-delete-overloads <misc-new-delete-overloads.html>`_,
    `cert-dcl59-cpp <cert-dcl59-cpp.html>`_, `google-build-namespaces <google-build-namespaces.html>`_,
    `cert-err09-cpp <cert-err09-cpp.html>`_, `misc-throw-by-value-catch-by-reference <misc-throw-by-value-catch-by-reference.html>`_,
@@ -309,6 +323,7 @@ Clang-Tidy Checks
    `cert-oop11-cpp <cert-oop11-cpp.html>`_, `performance-move-constructor-init <performance-move-constructor-init.html>`_, "Yes"
    `cert-oop54-cpp <cert-oop54-cpp.html>`_, `bugprone-unhandled-self-assignment <bugprone-unhandled-self-assignment.html>`_,
    `cert-pos44-c <cert-pos44-c.html>`_, `bugprone-bad-signal-to-kill-thread <bugprone-bad-signal-to-kill-thread.html>`_,
+   `cert-str34-c <cert-str34-c.html>`_, `bugprone-signed-char-misuse <bugprone-signed-char-misuse.html>`_,
    `clang-analyzer-core.CallAndMessage <clang-analyzer-core.CallAndMessage.html>`_, `Clang Static Analyzer <https://clang.llvm.org/docs/analyzer/checkers.html>`_,
    `clang-analyzer-core.DivideZero <clang-analyzer-core.DivideZero.html>`_, `Clang Static Analyzer <https://clang.llvm.org/docs/analyzer/checkers.html>`_,
    `clang-analyzer-core.NonNullParamChecker <clang-analyzer-core.NonNullParamChecker.html>`_, `Clang Static Analyzer <https://clang.llvm.org/docs/analyzer/checkers.html>`_,
@@ -375,6 +390,7 @@ Clang-Tidy Checks
    `clang-analyzer-unix.cstring.NullArg <clang-analyzer-unix.cstring.NullArg.html>`_, `Clang Static Analyzer <https://clang.llvm.org/docs/analyzer/checkers.html>`_,
    `cppcoreguidelines-avoid-c-arrays <cppcoreguidelines-avoid-c-arrays.html>`_, `modernize-avoid-c-arrays <modernize-avoid-c-arrays.html>`_,
    `cppcoreguidelines-avoid-magic-numbers <cppcoreguidelines-avoid-magic-numbers.html>`_, `readability-magic-numbers <readability-magic-numbers.html>`_,
+   `cppcoreguidelines-avoid-non-const-global-variables <cppcoreguidelines-avoid-non-const-global-variables.html>`_, , , ""
    `cppcoreguidelines-c-copy-assignment-signature <cppcoreguidelines-c-copy-assignment-signature.html>`_, `misc-unconventional-assign-operator <misc-unconventional-assign-operator.html>`_,
    `cppcoreguidelines-explicit-virtual-functions <cppcoreguidelines-explicit-virtual-functions.html>`_, `modernize-use-override <modernize-use-override.html>`_, "Yes"
    `cppcoreguidelines-non-private-member-variables-in-classes <cppcoreguidelines-non-private-member-variables-in-classes.html>`_, `misc-non-private-member-variables-in-classes <misc-non-private-member-variables-in-classes.html>`_,
@@ -394,7 +410,7 @@ Clang-Tidy Checks
    `hicpp-new-delete-operators <hicpp-new-delete-operators.html>`_, `misc-new-delete-overloads <misc-new-delete-overloads.html>`_,
    `hicpp-no-array-decay <hicpp-no-array-decay.html>`_, `cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines-pro-bounds-array-to-pointer-decay.html>`_,
    `hicpp-no-malloc <hicpp-no-malloc.html>`_, `cppcoreguidelines-no-malloc <cppcoreguidelines-no-malloc.html>`_,
-   `hicpp-noexcept-move <hicpp-noexcept-move.html>`_, `misc-noexcept-moveconstructor <misc-noexcept-moveconstructor.html>`_,
+   `hicpp-noexcept-move <hicpp-noexcept-move.html>`_, `performance-noexcept-move-constructor <performance-noexcept-move-constructor.html>`_,
    `hicpp-special-member-functions <hicpp-special-member-functions.html>`_, `cppcoreguidelines-special-member-functions <cppcoreguidelines-special-member-functions.html>`_,
    `hicpp-static-assert <hicpp-static-assert.html>`_, `misc-static-assert <misc-static-assert.html>`_, "Yes"
    `hicpp-undelegated-constructor <hicpp-undelegated-constructor.html>`_, `bugprone-undelegated-constructor <bugprone-undelegated-constructor.html>`_,
@@ -408,3 +424,4 @@ Clang-Tidy Checks
    `hicpp-use-override <hicpp-use-override.html>`_, `modernize-use-override <modernize-use-override.html>`_, "Yes"
    `hicpp-vararg <hicpp-vararg.html>`_, `cppcoreguidelines-pro-type-vararg <cppcoreguidelines-pro-type-vararg.html>`_,
    `llvm-qualified-auto <llvm-qualified-auto.html>`_, `readability-qualified-auto <readability-qualified-auto.html>`_, "Yes"
+

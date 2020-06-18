@@ -28,7 +28,7 @@ class TestTrivialABI(TestBase):
     @skipUnlessSupportedTypeAttribute("trivial_abi")
     # fixed for SysV-x86_64 ABI, but not Windows-x86_64
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr36870")
-    @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
+    @expectedFailureAll(archs=["arm", "aarch64"], oslist=["linux"],
                         bugnumber="llvm.org/pr44161")
     @expectedFailureAll(archs=["arm64", "arm64e"], bugnumber="<rdar://problem/57844240>")
     def test_call_nontrivial(self):

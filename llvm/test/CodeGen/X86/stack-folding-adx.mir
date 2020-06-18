@@ -4,45 +4,46 @@
 --- |
   ; Function Attrs: nounwind
   define i8 @stack_fold_adcx32(i8 %a0, i32 %a1, i32 %a2, i8* %a3) #0 {
-    %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-    %2 = call { i8, i32 } @llvm.x86.addcarry.32(i8 %a0, i32 %a1, i32 %a2)
-    %3 = extractvalue { i8, i32 } %2, 1
-    %4 = bitcast i8* %a3 to i32*
-    store i32 %3, i32* %4, align 1
-    %5 = extractvalue { i8, i32 } %2, 0
-    ret i8 %5
+    tail call void asm sideeffect "nop", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+    %1 = call { i8, i32 } @llvm.x86.addcarry.32(i8 %a0, i32 %a1, i32 %a2)
+    %2 = extractvalue { i8, i32 } %1, 1
+    %3 = bitcast i8* %a3 to i32*
+    store i32 %2, i32* %3, align 1
+    %4 = extractvalue { i8, i32 } %1, 0
+    ret i8 %4
   }
 
   ; Function Attrs: nounwind
   define i8 @stack_fold_adcx64(i8 %a0, i64 %a1, i64 %a2, i8* %a3) #0 {
-    %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-    %2 = call { i8, i64 } @llvm.x86.addcarry.64(i8 %a0, i64 %a1, i64 %a2)
-    %3 = extractvalue { i8, i64 } %2, 1
-    %4 = bitcast i8* %a3 to i64*
-    store i64 %3, i64* %4, align 1
-    %5 = extractvalue { i8, i64 } %2, 0
-    ret i8 %5
+    tail call void asm sideeffect "nop", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+    %1 = call { i8, i64 } @llvm.x86.addcarry.64(i8 %a0, i64 %a1, i64 %a2)
+    %2 = extractvalue { i8, i64 } %1, 1
+    %3 = bitcast i8* %a3 to i64*
+    store i64 %2, i64* %3, align 1
+    %4 = extractvalue { i8, i64 } %1, 0
+    ret i8 %4
   }
 
+  ; Function Attrs: nounwind
   define i8 @stack_fold_adox32(i8 %a0, i32 %a1, i32 %a2, i8* %a3) #0 {
-    %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-    %2 = call { i8, i32 } @llvm.x86.addcarry.32(i8 %a0, i32 %a1, i32 %a2)
-    %3 = extractvalue { i8, i32 } %2, 1
-    %4 = bitcast i8* %a3 to i32*
-    store i32 %3, i32* %4, align 1
-    %5 = extractvalue { i8, i32 } %2, 0
-    ret i8 %5
+    tail call void asm sideeffect "nop", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+    %1 = call { i8, i32 } @llvm.x86.addcarry.32(i8 %a0, i32 %a1, i32 %a2)
+    %2 = extractvalue { i8, i32 } %1, 1
+    %3 = bitcast i8* %a3 to i32*
+    store i32 %2, i32* %3, align 1
+    %4 = extractvalue { i8, i32 } %1, 0
+    ret i8 %4
   }
 
   ; Function Attrs: nounwind
   define i8 @stack_fold_adox64(i8 %a0, i64 %a1, i64 %a2, i8* %a3) #0 {
-    %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-    %2 = call { i8, i64 } @llvm.x86.addcarry.64(i8 %a0, i64 %a1, i64 %a2)
-    %3 = extractvalue { i8, i64 } %2, 1
-    %4 = bitcast i8* %a3 to i64*
-    store i64 %3, i64* %4, align 1
-    %5 = extractvalue { i8, i64 } %2, 0
-    ret i8 %5
+    tail call void asm sideeffect "nop", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+    %1 = call { i8, i64 } @llvm.x86.addcarry.64(i8 %a0, i64 %a1, i64 %a2)
+    %2 = extractvalue { i8, i64 } %1, 1
+    %3 = bitcast i8* %a3 to i64*
+    store i64 %2, i64* %3, align 1
+    %4 = extractvalue { i8, i64 } %1, 0
+    ret i8 %4
   }
 
   ; Function Attrs: nounwind readnone
@@ -68,11 +69,10 @@ registers:
   - { id: 1, class: gr32 }
   - { id: 2, class: gr32 }
   - { id: 3, class: gr64 }
-  - { id: 4, class: fr64 }
+  - { id: 4, class: gr8 }
   - { id: 5, class: gr8 }
-  - { id: 6, class: gr8 }
-  - { id: 7, class: gr32 }
-  - { id: 8, class: gr8 }
+  - { id: 6, class: gr32 }
+  - { id: 7, class: gr8 }
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$esi', virtual-reg: '%1' }
@@ -88,26 +88,26 @@ body:             |
     ; CHECK: MOV32mr %stack.1, 1, $noreg, 0, $noreg, $edx :: (store 4 into %stack.1)
     ; CHECK: MOV32mr %stack.2, 1, $noreg, 0, $noreg, $esi :: (store 4 into %stack.2)
     ; CHECK: MOV32mr %stack.3, 1, $noreg, 0, $noreg, $edi :: (store 4 into %stack.3)
-    ; CHECK: INLINEASM &nop, 1, 3145738, def dead %4, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15
+    ; CHECK: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15
     ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %stack.3, 1, $noreg, 0, $noreg :: (load 4 from %stack.3)
     ; CHECK: dead [[MOV32rm]].sub_8bit:gr32 = ADD8ri [[MOV32rm]].sub_8bit, -1, implicit-def $eflags
     ; CHECK: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %stack.2, 1, $noreg, 0, $noreg :: (load 4 from %stack.2)
     ; CHECK: [[ADCX32rm:%[0-9]+]]:gr32 = ADCX32rm [[ADCX32rm]], %stack.1, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit killed $eflags :: (load 4 from %stack.1)
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit killed $eflags
     ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
-    ; CHECK: MOV32mr [[MOV64rm]], 1, $noreg, 0, $noreg, [[ADCX32rm]] :: (store 4 into %ir.4, align 1)
+    ; CHECK: MOV32mr [[MOV64rm]], 1, $noreg, 0, $noreg, [[ADCX32rm]] :: (store 4 into %ir.3, align 1)
     ; CHECK: $al = COPY [[SETCCr]]
     ; CHECK: RET 0, $al
     %3:gr64 = COPY $rcx
     %2:gr32 = COPY $edx
-    %7:gr32 = COPY $esi
+    %6:gr32 = COPY $esi
     %0:gr32 = COPY $edi
-    INLINEASM &nop, 1, 3145738, def dead %4, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15
+    INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15
     dead %0.sub_8bit:gr32 = ADD8ri %0.sub_8bit, -1, implicit-def $eflags
-    %7:gr32 = ADCX32rr %7, %2, implicit-def $eflags, implicit killed $eflags
-    %8:gr8 = SETCCr 2, implicit killed $eflags
-    MOV32mr %3, 1, $noreg, 0, $noreg, %7 :: (store 4 into %ir.4, align 1)
-    $al = COPY %8
+    %6:gr32 = ADCX32rr %6, %2, implicit-def $eflags, implicit killed $eflags
+    %7:gr8 = SETCCr 2, implicit killed $eflags
+    MOV32mr %3, 1, $noreg, 0, $noreg, %6 :: (store 4 into %ir.3, align 1)
+    $al = COPY %7
     RET 0, killed $al
 
 ...
@@ -120,11 +120,10 @@ registers:
   - { id: 1, class: gr64 }
   - { id: 2, class: gr64 }
   - { id: 3, class: gr64 }
-  - { id: 4, class: fr64 }
+  - { id: 4, class: gr8 }
   - { id: 5, class: gr8 }
-  - { id: 6, class: gr8 }
-  - { id: 7, class: gr64 }
-  - { id: 8, class: gr8 }
+  - { id: 6, class: gr64 }
+  - { id: 7, class: gr8 }
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$rsi', virtual-reg: '%1' }
@@ -140,26 +139,26 @@ body:             |
     ; CHECK: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rdx :: (store 8 into %stack.1)
     ; CHECK: MOV64mr %stack.2, 1, $noreg, 0, $noreg, $rsi :: (store 8 into %stack.2)
     ; CHECK: MOV32mr %stack.3, 1, $noreg, 0, $noreg, $edi :: (store 4 into %stack.3)
-    ; CHECK: INLINEASM &nop, 1, 3145738, def dead %4, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15
+    ; CHECK: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15
     ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %stack.3, 1, $noreg, 0, $noreg :: (load 4 from %stack.3)
     ; CHECK: dead [[MOV32rm]].sub_8bit:gr32 = ADD8ri [[MOV32rm]].sub_8bit, -1, implicit-def $eflags
     ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.2, 1, $noreg, 0, $noreg :: (load 8 from %stack.2)
     ; CHECK: [[ADCX64rm:%[0-9]+]]:gr64 = ADCX64rm [[ADCX64rm]], %stack.1, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit killed $eflags :: (load 8 from %stack.1)
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit killed $eflags
     ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
-    ; CHECK: MOV64mr [[MOV64rm]], 1, $noreg, 0, $noreg, [[ADCX64rm]] :: (store 8 into %ir.4, align 1)
+    ; CHECK: MOV64mr [[MOV64rm]], 1, $noreg, 0, $noreg, [[ADCX64rm]] :: (store 8 into %ir.3, align 1)
     ; CHECK: $al = COPY [[SETCCr]]
     ; CHECK: RET 0, $al
     %3:gr64 = COPY $rcx
     %2:gr64 = COPY $rdx
-    %7:gr64 = COPY $rsi
+    %6:gr64 = COPY $rsi
     %0:gr32 = COPY $edi
-    INLINEASM &nop, 1, 3145738, def dead %4, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15
+    INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15
     dead %0.sub_8bit:gr32 = ADD8ri %0.sub_8bit, -1, implicit-def $eflags
-    %7:gr64 = ADCX64rr %7, %2, implicit-def $eflags, implicit killed $eflags
-    %8:gr8 = SETCCr 2, implicit killed $eflags
-    MOV64mr %3, 1, $noreg, 0, $noreg, %7 :: (store 8 into %ir.4, align 1)
-    $al = COPY %8
+    %6:gr64 = ADCX64rr %6, %2, implicit-def $eflags, implicit killed $eflags
+    %7:gr8 = SETCCr 2, implicit killed $eflags
+    MOV64mr %3, 1, $noreg, 0, $noreg, %6 :: (store 8 into %ir.3, align 1)
+    $al = COPY %7
     RET 0, killed $al
 
 ...
@@ -172,11 +171,10 @@ registers:
   - { id: 1, class: gr32 }
   - { id: 2, class: gr32 }
   - { id: 3, class: gr64 }
-  - { id: 4, class: fr64 }
+  - { id: 4, class: gr8 }
   - { id: 5, class: gr8 }
-  - { id: 6, class: gr8 }
-  - { id: 7, class: gr32 }
-  - { id: 8, class: gr8 }
+  - { id: 6, class: gr32 }
+  - { id: 7, class: gr8 }
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$esi', virtual-reg: '%1' }
@@ -192,26 +190,26 @@ body:             |
     ; CHECK: MOV32mr %stack.1, 1, $noreg, 0, $noreg, $edx :: (store 4 into %stack.1)
     ; CHECK: MOV32mr %stack.2, 1, $noreg, 0, $noreg, $esi :: (store 4 into %stack.2)
     ; CHECK: MOV32mr %stack.3, 1, $noreg, 0, $noreg, $edi :: (store 4 into %stack.3)
-    ; CHECK: INLINEASM &nop, 1, 3145738, def dead %4, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15
+    ; CHECK: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15
     ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %stack.3, 1, $noreg, 0, $noreg :: (load 4 from %stack.3)
-    ; CHECK: dead [[MOV32rm]].sub_8bit:gr32 = ADD8ri [[MOV32rm]].sub_8bit, 127, implicit-def $eflags
+    ; CHECK: dead [[MOV32rm]].sub_8bit:gr32 = ADD8ri [[MOV32rm]].sub_8bit, -1, implicit-def $eflags
     ; CHECK: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %stack.2, 1, $noreg, 0, $noreg :: (load 4 from %stack.2)
     ; CHECK: [[ADOX32rm:%[0-9]+]]:gr32 = ADOX32rm [[ADOX32rm]], %stack.1, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit killed $eflags :: (load 4 from %stack.1)
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 0, implicit killed $eflags
+    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit killed $eflags
     ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
-    ; CHECK: MOV32mr [[MOV64rm]], 1, $noreg, 0, $noreg, [[ADOX32rm]] :: (store 4 into %ir.4, align 1)
+    ; CHECK: MOV32mr [[MOV64rm]], 1, $noreg, 0, $noreg, [[ADOX32rm]] :: (store 4 into %ir.3, align 1)
     ; CHECK: $al = COPY [[SETCCr]]
     ; CHECK: RET 0, $al
     %3:gr64 = COPY $rcx
     %2:gr32 = COPY $edx
-    %7:gr32 = COPY $esi
+    %6:gr32 = COPY $esi
     %0:gr32 = COPY $edi
-    INLINEASM &nop, 1, 3145738, def dead %4, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15
-    dead %0.sub_8bit:gr32 = ADD8ri %0.sub_8bit, 127, implicit-def $eflags
-    %7:gr32 = ADOX32rr %7, %2, implicit-def $eflags, implicit killed $eflags
-    %8:gr8 = SETCCr 0, implicit killed $eflags
-    MOV32mr %3, 1, $noreg, 0, $noreg, %7 :: (store 4 into %ir.4, align 1)
-    $al = COPY %8
+    INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15
+    dead %0.sub_8bit:gr32 = ADD8ri %0.sub_8bit, -1, implicit-def $eflags
+    %6:gr32 = ADOX32rr %6, %2, implicit-def $eflags, implicit killed $eflags
+    %7:gr8 = SETCCr 2, implicit killed $eflags
+    MOV32mr %3, 1, $noreg, 0, $noreg, %6 :: (store 4 into %ir.3, align 1)
+    $al = COPY %7
     RET 0, killed $al
 
 ...
@@ -224,11 +222,10 @@ registers:
   - { id: 1, class: gr64 }
   - { id: 2, class: gr64 }
   - { id: 3, class: gr64 }
-  - { id: 4, class: fr64 }
+  - { id: 4, class: gr8 }
   - { id: 5, class: gr8 }
-  - { id: 6, class: gr8 }
-  - { id: 7, class: gr64 }
-  - { id: 8, class: gr8 }
+  - { id: 6, class: gr64 }
+  - { id: 7, class: gr8 }
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$rsi', virtual-reg: '%1' }
@@ -244,26 +241,26 @@ body:             |
     ; CHECK: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rdx :: (store 8 into %stack.1)
     ; CHECK: MOV64mr %stack.2, 1, $noreg, 0, $noreg, $rsi :: (store 8 into %stack.2)
     ; CHECK: MOV32mr %stack.3, 1, $noreg, 0, $noreg, $edi :: (store 4 into %stack.3)
-    ; CHECK: INLINEASM &nop, 1, 3145738, def dead %4, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15
+    ; CHECK: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15
     ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %stack.3, 1, $noreg, 0, $noreg :: (load 4 from %stack.3)
-    ; CHECK: dead [[MOV32rm]].sub_8bit:gr32 = ADD8ri [[MOV32rm]].sub_8bit, 127, implicit-def $eflags
+    ; CHECK: dead [[MOV32rm]].sub_8bit:gr32 = ADD8ri [[MOV32rm]].sub_8bit, -1, implicit-def $eflags
     ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.2, 1, $noreg, 0, $noreg :: (load 8 from %stack.2)
     ; CHECK: [[ADOX64rm:%[0-9]+]]:gr64 = ADOX64rm [[ADOX64rm]], %stack.1, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit killed $eflags :: (load 8 from %stack.1)
-    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 0, implicit killed $eflags
+    ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit killed $eflags
     ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
-    ; CHECK: MOV64mr [[MOV64rm]], 1, $noreg, 0, $noreg, [[ADOX64rm]] :: (store 8 into %ir.4, align 1)
+    ; CHECK: MOV64mr [[MOV64rm]], 1, $noreg, 0, $noreg, [[ADOX64rm]] :: (store 8 into %ir.3, align 1)
     ; CHECK: $al = COPY [[SETCCr]]
     ; CHECK: RET 0, $al
     %3:gr64 = COPY $rcx
     %2:gr64 = COPY $rdx
-    %7:gr64 = COPY $rsi
+    %6:gr64 = COPY $rsi
     %0:gr32 = COPY $edi
-    INLINEASM &nop, 1, 3145738, def dead %4, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15
-    dead %0.sub_8bit:gr32 = ADD8ri %0.sub_8bit, 127, implicit-def $eflags
-    %7:gr64 = ADOX64rr %7, %2, implicit-def $eflags, implicit killed $eflags
-    %8:gr8 = SETCCr 0, implicit killed $eflags
-    MOV64mr %3, 1, $noreg, 0, $noreg, %7 :: (store 8 into %ir.4, align 1)
-    $al = COPY %8
+    INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $rax, 12 /* clobber */, implicit-def dead early-clobber $rbx, 12 /* clobber */, implicit-def dead early-clobber $rcx, 12 /* clobber */, implicit-def dead early-clobber $rdx, 12 /* clobber */, implicit-def dead early-clobber $rsi, 12 /* clobber */, implicit-def dead early-clobber $rdi, 12 /* clobber */, implicit-def dead early-clobber $rbp, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15
+    dead %0.sub_8bit:gr32 = ADD8ri %0.sub_8bit, -1, implicit-def $eflags
+    %6:gr64 = ADOX64rr %6, %2, implicit-def $eflags, implicit killed $eflags
+    %7:gr8 = SETCCr 2, implicit killed $eflags
+    MOV64mr %3, 1, $noreg, 0, $noreg, %6 :: (store 8 into %ir.3, align 1)
+    $al = COPY %7
     RET 0, killed $al
 
 ...

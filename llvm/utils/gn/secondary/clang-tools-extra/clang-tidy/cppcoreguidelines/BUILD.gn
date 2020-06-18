@@ -17,6 +17,7 @@ static_library("cppcoreguidelines") {
   ]
   sources = [
     "AvoidGotoCheck.cpp",
+    "AvoidNonConstGlobalVariablesCheck.cpp",
     "CppCoreGuidelinesTidyModule.cpp",
     "InitVariablesCheck.cpp",
     "InterfacesGlobalInitCheck.cpp",

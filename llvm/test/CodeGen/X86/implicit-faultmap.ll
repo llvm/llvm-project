@@ -2,12 +2,12 @@
 
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx -enable-implicit-null-checks \
 ; RUN:    | llvm-mc -triple x86_64-apple-macosx -filetype=obj -o - \
-; RUN:    | llvm-objdump -triple x86_64-apple-macosx -fault-map-section - \
+; RUN:    | llvm-objdump --triple=x86_64-apple-macosx --fault-map-section - \
 ; RUN:    | FileCheck %s -check-prefix OBJDUMP
 
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -enable-implicit-null-checks \
 ; RUN:    | llvm-mc -triple x86_64-unknown-linux-gnu -filetype=obj -o - \
-; RUN:    | llvm-objdump -triple x86_64-unknown-linux-gnu -fault-map-section - \
+; RUN:    | llvm-objdump --triple=x86_64-unknown-linux-gnu --fault-map-section - \
 ; RUN:    | FileCheck %s -check-prefix OBJDUMP
 
 ;; The tests in this file exist just to check basic validity of the FaultMap

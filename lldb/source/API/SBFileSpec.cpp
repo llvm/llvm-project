@@ -143,8 +143,8 @@ void SBFileSpec::SetDirectory(const char *directory) {
 }
 
 uint32_t SBFileSpec::GetPath(char *dst_path, size_t dst_len) const {
-  LLDB_RECORD_METHOD_CONST(uint32_t, SBFileSpec, GetPath, (char *, size_t), "",
-                           dst_len);
+  LLDB_RECORD_CHAR_PTR_METHOD_CONST(uint32_t, SBFileSpec, GetPath,
+                                    (char *, size_t), dst_path, "", dst_len);
 
   uint32_t result = m_opaque_up->GetPath(dst_path, dst_len);
 
@@ -216,7 +216,7 @@ void RegisterMethods<SBFileSpec>(Registry &R) {
   LLDB_REGISTER_METHOD_CONST(bool, SBFileSpec, GetDescription,
                              (lldb::SBStream &));
   LLDB_REGISTER_METHOD(void, SBFileSpec, AppendPathComponent, (const char *));
-  LLDB_REGISTER_CHAR_PTR_REDIRECT_CONST(uint32_t, SBFileSpec, GetPath);
+  LLDB_REGISTER_CHAR_PTR_METHOD_CONST(uint32_t, SBFileSpec, GetPath);
 }
 
 }

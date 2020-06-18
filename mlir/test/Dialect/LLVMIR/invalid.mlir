@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
 // expected-error@+1{{llvm.noalias argument attribute of non boolean type}}
 func @invalid_noalias(%arg0: !llvm.i32 {llvm.noalias = 3}) {
@@ -515,7 +515,7 @@ func @cmpxchg_failure_acq_rel(%i32_ptr : !llvm<"i32*">, %i32 : !llvm.i32) {
 llvm.func @foo(!llvm.i32) -> !llvm.i32
 llvm.func @__gxx_personality_v0(...) -> !llvm.i32
 
-llvm.func @bad_landingpad(%arg0: !llvm<"i8**">) {
+llvm.func @bad_landingpad(%arg0: !llvm<"i8**">) attributes { personality = @__gxx_personality_v0} {
   %0 = llvm.mlir.constant(3 : i32) : !llvm.i32
   %1 = llvm.mlir.constant(2 : i32) : !llvm.i32
   %2 = llvm.invoke @foo(%1) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
@@ -532,7 +532,7 @@ llvm.func @bad_landingpad(%arg0: !llvm<"i8**">) {
 llvm.func @foo(!llvm.i32) -> !llvm.i32
 llvm.func @__gxx_personality_v0(...) -> !llvm.i32
 
-llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 {
+llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 attributes { personality = @__gxx_personality_v0} {
   %0 = llvm.mlir.constant(1 : i32) : !llvm.i32
   %1 = llvm.alloca %0 x !llvm<"i8*"> : (!llvm.i32) -> !llvm<"i8**">
   // expected-note@+1 {{global addresses expected as operand to bitcast used in clauses for landingpad}}
@@ -551,7 +551,7 @@ llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 {
 llvm.func @foo(!llvm.i32) -> !llvm.i32
 llvm.func @__gxx_personality_v0(...) -> !llvm.i32
 
-llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 {
+llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 attributes { personality = @__gxx_personality_v0} {
   %0 = llvm.mlir.constant(1 : i32) : !llvm.i32
   %1 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
 ^bb1: // pred: ^bb0
@@ -560,4 +560,42 @@ llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 {
   // expected-error@+1 {{landingpad instruction expects at least one clause or cleanup attribute}}
   %2 = llvm.landingpad : !llvm<"{ i8*, i32 }">
   llvm.return %0 : !llvm.i32
+}
+
+// -----
+
+llvm.func @foo(!llvm.i32) -> !llvm.i32
+llvm.func @__gxx_personality_v0(...) -> !llvm.i32
+
+llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.mlir.constant(1 : i32) : !llvm.i32
+  %1 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
+^bb1: // pred: ^bb0
+  llvm.return %0 : !llvm.i32
+^bb2: // pred: ^bb0
+  %2 = llvm.landingpad cleanup : !llvm<"{ i8*, i32 }">
+  // expected-error@+1 {{'llvm.resume' op expects landingpad value as operand}}
+  llvm.resume %0 : !llvm.i32
+}
+
+// -----
+
+llvm.func @foo(!llvm.i32) -> !llvm.i32
+
+llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 {
+  %0 = llvm.mlir.constant(1 : i32) : !llvm.i32
+  %1 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
+^bb1: // pred: ^bb0
+  llvm.return %0 : !llvm.i32
+^bb2: // pred: ^bb0
+  // expected-error@+1 {{llvm.landingpad needs to be in a function with a personality}}
+  %2 = llvm.landingpad cleanup : !llvm<"{ i8*, i32 }">
+  llvm.resume %2 : !llvm<"{ i8*, i32 }">
+}
+
+// -----
+
+func @invalid_ordering_in_fence() {
+  // expected-error @+1 {{can be given only acquire, release, acq_rel, and seq_cst orderings}}
+  llvm.fence syncscope("agent") monotonic
 }

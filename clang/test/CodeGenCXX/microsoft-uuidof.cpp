@@ -30,16 +30,22 @@ struct __declspec(uuid("{12345678-1234-1234-1234-1234567890ac}")) Curly;
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890ac}")) Curly;
 #endif
 
+void side_effect();
+
 #ifdef DEFINE_GUID
 // Make sure we can properly generate code when the UUID has curly braces on it.
-GUID thing = __uuidof(Curly);
+GUID thing = (side_effect(), __uuidof(Curly));
 // CHECK-DEFINE-GUID: @thing = global %struct._GUID zeroinitializer, align 4
 // CHECK-DEFINE-WRONG-GUID: @thing = global %struct._GUID zeroinitializer, align 4
 
 // This gets initialized in a static initializer.
 // CHECK-DEFINE-GUID: @g = global %struct._GUID zeroinitializer, align 4
 // CHECK-DEFINE-WRONG-GUID: @g = global %struct._GUID zeroinitializer, align 4
-GUID g = __uuidof(S1);
+GUID g = (side_effect(), __uuidof(S1));
+
+// CHECK-DEFINE-GUID: @const_init = global %struct._GUID { i32 305419896, i16 4660, i16 4660, [8 x i8] c"\124\124Vx\90\AC" }
+// CHECK-DEFINE-WRONG-GUID: @const_init = global %struct._GUID zeroinitializer
+GUID const_init = __uuidof(Curly);
 #endif
 
 // First global use of __uuidof(S1) forces the creation of the global.
@@ -63,12 +69,16 @@ const GUID& zeroiid = __uuidof(0);
 // CHECK: @_GUID_87654321_4321_4321_4321_ba0987654321 = linkonce_odr constant { i32, i16, i16, [8 x i8] } { i32 -2023406815, i16 17185, i16 17185, [8 x i8] c"C!\BA\09\87eC!" }, comdat
 
 // The static initializer for thing.
-// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @thing to i8*), i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ac to i8*), i32 16, i1 false)
+// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @thing to i8*), i8* align 4 bitcast (%struct._GUID* @_GUID_12345678_1234_1234_1234_1234567890ac to i8*), i32 16, i1 false)
 // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @thing to i8*), i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ac to i8*), i32 4, i1 false)
 
 // The static initializer for g.
-// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @g to i8*), i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
+// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @g to i8*), i8* align 4 bitcast (%struct._GUID* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
 // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @g to i8*), i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i1 false)
+
+// We don't constant-initialize const_init if the definition of _GUID is dodgy.
+// CHECK-DEFINE-GUID-NOT: @const_init
+// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 bitcast (%struct._GUID* @const_init to i8*), i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ac to i8*), i32 4, i1 false)
 
 #ifdef DEFINE_GUID
 void fun() {
@@ -81,21 +91,21 @@ void fun() {
 
   // CHECK-DEFINE-GUID: [[U1:%.+]] = bitcast %struct._GUID* %s1_1 to i8*
   // CHECK-DEFINE-WRONG-GUID: [[U1:%.+]] = bitcast %struct._GUID* %s1_1 to i8*
-  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U1]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
+  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U1]], i8* align 4 bitcast (%struct._GUID* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
   // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U1]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i1 false)
-  GUID s1_1 = __uuidof(S1);
+  GUID s1_1 = (side_effect(), __uuidof(S1));
 
   // CHECK-DEFINE-GUID: [[U2:%.+]] = bitcast %struct._GUID* %s1_2 to i8*
   // CHECK-DEFINE-WRONG-GUID: [[U2:%.+]] = bitcast %struct._GUID* %s1_2 to i8*
-  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U2]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
+  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U2]], i8* align 4 bitcast (%struct._GUID* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
   // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U2]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i1 false)
-  GUID s1_2 = __uuidof(S1);
+  GUID s1_2 = (side_effect(), __uuidof(S1));
 
   // CHECK-DEFINE-GUID: [[U3:%.+]] = bitcast %struct._GUID* %s1_3 to i8*
   // CHECK-DEFINE-WRONG-GUID: [[U3:%.+]] = bitcast %struct._GUID* %s1_3 to i8*
-  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U3]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
+  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U3]], i8* align 4 bitcast (%struct._GUID* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 16, i1 false)
   // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[U3]], i8* align 4 bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to i8*), i32 4, i1 false)
-  GUID s1_3 = __uuidof(s1);
+  GUID s1_3 = (side_effect(), __uuidof(s1));
 }
 #endif
 
@@ -120,4 +130,10 @@ void gun() {
   // Special case _uuidof(0), local scope version.
   // CHECK: store %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_00000000_0000_0000_0000_000000000000 to %struct._GUID*), %struct._GUID** %zeroiid, align 4
   const GUID& zeroiid = __uuidof(0);
+}
+
+namespace DeclRefExprNamingGUID {
+  template<const _GUID &g> const _GUID &f() { return g; }
+  struct __declspec(uuid("12345678-1234-1234-1234-123412341234")) S {};
+  auto &r = f<__uuidof(S)>();
 }

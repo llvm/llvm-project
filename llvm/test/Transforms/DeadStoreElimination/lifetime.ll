@@ -12,7 +12,7 @@ define void @test1() {
 
   store i8 0, i8* %A  ;; Written to by memset
   call void @llvm.lifetime.end.p0i8(i64 1, i8* %A)
-; CHECK: lifetime.end
+; CHECK-NOT: lifetime.end
 
   call void @llvm.memset.p0i8.i8(i8* %A, i8 0, i8 -1, i1 false)
 ; CHECK-NOT: memset
@@ -26,11 +26,9 @@ define void @test2(i32* %P) {
   %Q = getelementptr i32, i32* %P, i32 1
   %R = bitcast i32* %Q to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %R)
-; CHECK: lifetime.start
   store i32 0, i32* %Q  ;; This store is dead.
 ; CHECK-NOT: store
   call void @llvm.lifetime.end.p0i8(i64 4, i8* %R)
-; CHECK: lifetime.end
   ret void
 }
 

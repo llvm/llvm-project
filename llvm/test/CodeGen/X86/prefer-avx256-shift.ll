@@ -297,7 +297,7 @@ define <32 x i8> @var_ashr_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX256-LABEL: var_ashr_v32i8:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vpsllw $5, %ymm1, %ymm1
-; AVX256-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31]
+; AVX256-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; AVX256-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; AVX256-NEXT:    vpsraw $4, %ymm3, %ymm4
 ; AVX256-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm3
@@ -308,7 +308,7 @@ define <32 x i8> @var_ashr_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX256-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
 ; AVX256-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm2
 ; AVX256-NEXT:    vpsrlw $8, %ymm2, %ymm2
-; AVX256-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
+; AVX256-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; AVX256-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; AVX256-NEXT:    vpsraw $4, %ymm0, %ymm3
 ; AVX256-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
@@ -333,7 +333,7 @@ define <32 x i8> @var_ashr_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX512VL-LABEL: var_ashr_v32i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $5, %ymm1, %ymm1
-; AVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31]
+; AVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; AVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; AVX512VL-NEXT:    vpsraw $4, %ymm3, %ymm4
 ; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm3
@@ -344,7 +344,7 @@ define <32 x i8> @var_ashr_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX512VL-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm2
 ; AVX512VL-NEXT:    vpsrlw $8, %ymm2, %ymm2
-; AVX512VL-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
+; AVX512VL-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; AVX512VL-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; AVX512VL-NEXT:    vpsraw $4, %ymm0, %ymm3
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
@@ -427,7 +427,7 @@ define <16 x i8> @var_ashr_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX256VL-LABEL: var_ashr_v16i8:
 ; AVX256VL:       # %bb.0:
 ; AVX256VL-NEXT:    vpsllw $5, %xmm1, %xmm1
-; AVX256VL-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; AVX256VL-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; AVX256VL-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; AVX256VL-NEXT:    vpsraw $4, %xmm3, %xmm4
 ; AVX256VL-NEXT:    vpblendvb %xmm2, %xmm4, %xmm3, %xmm3
@@ -438,7 +438,7 @@ define <16 x i8> @var_ashr_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX256VL-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
 ; AVX256VL-NEXT:    vpblendvb %xmm2, %xmm4, %xmm3, %xmm2
 ; AVX256VL-NEXT:    vpsrlw $8, %xmm2, %xmm2
-; AVX256VL-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX256VL-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; AVX256VL-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; AVX256VL-NEXT:    vpsraw $4, %xmm0, %xmm3
 ; AVX256VL-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0

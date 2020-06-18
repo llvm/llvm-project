@@ -49,7 +49,6 @@ namespace llvm {
 
 class AsmPrinter;
 class ByteStreamer;
-class DebugLocEntry;
 class DIE;
 class DwarfCompileUnit;
 class DwarfExpression;
@@ -59,7 +58,6 @@ class LexicalScope;
 class MachineFunction;
 class MCSection;
 class MCSymbol;
-class MDNode;
 class Module;
 
 //===----------------------------------------------------------------------===//
@@ -528,6 +526,9 @@ class DwarfDebug : public DebugHandlerBase {
   void emitDebugMacinfoImpl(MCSection *Section);
   void emitMacro(DIMacro &M);
   void emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U);
+  void emitMacroFileImpl(DIMacroFile &F, DwarfCompileUnit &U,
+                         unsigned StartFile, unsigned EndFile,
+                         StringRef (*MacroFormToString)(unsigned Form));
   void handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U);
 
   /// DWARF 5 Experimental Split Dwarf Emitters
@@ -639,7 +640,6 @@ public:
   void addDwarfTypeUnitType(DwarfCompileUnit &CU, StringRef Identifier,
                             DIE &Die, const DICompositeType *CTy);
 
-  friend class NonTypeUnitContext;
   class NonTypeUnitContext {
     DwarfDebug *DD;
     decltype(DwarfDebug::TypeUnitsUnderConstruction) TypeUnitsUnderConstruction;

@@ -346,33 +346,6 @@ namespace X86 {
     llvm_unreachable("unknown fusion type");
   }
 
-  /// \returns true if the instruction with given opcode is a prefix.
-  inline bool isPrefix(unsigned Opcode) {
-    switch (Opcode) {
-    default:
-      return false;
-      // segment override prefix
-    case X86::CS_PREFIX:
-    case X86::DS_PREFIX:
-    case X86::ES_PREFIX:
-    case X86::FS_PREFIX:
-    case X86::GS_PREFIX:
-    case X86::SS_PREFIX:
-      // operand-size override prefix
-    case X86::DATA16_PREFIX:
-      // lock and repeat prefix
-    case X86::LOCK_PREFIX:
-    case X86::REPNE_PREFIX:
-    case X86::REP_PREFIX:
-      // rex64 prefix
-    case X86::REX64_PREFIX:
-      // acquire and release prefix
-    case X86::XACQUIRE_PREFIX:
-    case X86::XRELEASE_PREFIX:
-      return true;
-    }
-  }
-
   /// Defines the possible values of the branch boundary alignment mask.
   enum AlignBranchBoundaryKind : uint8_t {
     AlignBranchNone = 0,
@@ -383,6 +356,39 @@ namespace X86 {
     AlignBranchRet = 1U << 4,
     AlignBranchIndirect = 1U << 5
   };
+
+  /// Defines the encoding values for segment override prefix.
+  enum EncodingOfSegmentOverridePrefix : uint8_t {
+    CS_Encoding = 0x2E,
+    DS_Encoding = 0x3E,
+    ES_Encoding = 0x26,
+    FS_Encoding = 0x64,
+    GS_Encoding = 0x65,
+    SS_Encoding = 0x36
+  };
+
+  /// Given a segment register, return the encoding of the segment override
+  /// prefix for it.
+  inline EncodingOfSegmentOverridePrefix
+  getSegmentOverridePrefixForReg(unsigned Reg) {
+    switch (Reg) {
+    default:
+      llvm_unreachable("Unknown segment register!");
+    case X86::CS:
+      return CS_Encoding;
+    case X86::DS:
+      return DS_Encoding;
+    case X86::ES:
+      return ES_Encoding;
+    case X86::FS:
+      return FS_Encoding;
+    case X86::GS:
+      return GS_Encoding;
+    case X86::SS:
+      return SS_Encoding;
+    }
+  }
+
 } // end namespace X86;
 
 /// X86II - This namespace holds all of the target specific flags that
@@ -607,6 +613,10 @@ namespace X86II {
     /// AddCCFrm - This form is used for Jcc that encode the condition code
     /// in the lower 4 bits of the opcode.
     AddCCFrm = 9,
+
+    /// PrefixByte - This form is used for instructions that represent a prefix
+    /// byte like data16 or rep.
+    PrefixByte = 10,
 
     /// MRM[0-7][rm] - These forms are used to represent instructions that use
     /// a Mod/RM byte, and use the middle field to hold extended opcode
@@ -927,6 +937,16 @@ namespace X86II {
     NOTRACK = 1ULL << NoTrackShift
   };
 
+  /// \returns true if the instruction with given opcode is a prefix.
+  inline bool isPrefix(uint64_t TSFlags) {
+    return (TSFlags & X86II::FormMask) == PrefixByte;
+  }
+
+  /// \returns true if the instruction with given opcode is a pseudo.
+  inline bool isPseudo(uint64_t TSFlags) {
+    return (TSFlags & X86II::FormMask) == Pseudo;
+  }
+
   /// \returns the "base" X86 opcode for the specified machine
   /// instruction.
   inline uint8_t getBaseOpcodeFor(uint64_t TSFlags) {
@@ -1055,6 +1075,7 @@ namespace X86II {
     case X86II::RawFrmDst:
     case X86II::RawFrmDstSrc:
     case X86II::AddCCFrm:
+    case X86II::PrefixByte:
       return -1;
     case X86II::MRMDestMem:
       return 0;

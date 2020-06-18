@@ -37,7 +37,9 @@ class ThreadAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         self.run_to_address(self.exe_name)
 
+    @skipIfAsan # The output looks different under ASAN.
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["linux"], archs=['arm'], bugnumber="llvm.org/pr45892")
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr20476')
     @expectedFailureAll(oslist=["windows"])
     @expectedFailureNetBSD
@@ -72,7 +74,7 @@ class ThreadAPITestCase(TestBase):
             "main2.cpp", "// we should reach here after 3 step-over's.")
 
         # We'll use the test method name as the exe_name for executable
-        # comppiled from main2.cpp.
+        # compiled from main2.cpp.
         self.exe_name = self.testMethodName
 
     def get_process(self):
@@ -98,7 +100,7 @@ class ThreadAPITestCase(TestBase):
         self.runCmd("process status")
 
         proc_of_thread = thread.GetProcess()
-        #print("proc_of_thread:", proc_of_thread)
+        self.trace("proc_of_thread:", proc_of_thread)
         self.assertTrue(proc_of_thread.GetProcessID()
                         == process.GetProcessID())
 

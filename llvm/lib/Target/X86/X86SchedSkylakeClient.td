@@ -343,8 +343,10 @@ defm : X86WriteRes<WriteVecStoreX,       [SKLPort237,SKLPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [SKLPort237,SKLPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNT,      [SKLPort237,SKLPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNTY,     [SKLPort237,SKLPort4], 1, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore,  [SKLPort237,SKLPort0], 2, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStoreY, [SKLPort237,SKLPort0], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [SKLPort237,SKLPort0], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [SKLPort237,SKLPort0], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [SKLPort237,SKLPort0], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [SKLPort237,SKLPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMove,         [SKLPort05],  1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [SKLPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [SKLPort015], 1, [1], 1>;
@@ -1013,7 +1015,7 @@ def SKLWriteResGroup72 : SchedWriteRes<[SKLPort6,SKLPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKLWriteResGroup72], (instrs FARJMP64)>;
+def: InstRW<[SKLWriteResGroup72], (instrs FARJMP64m)>;
 def: InstRW<[SKLWriteResGroup72], (instregex "JMP(16|32|64)m")>;
 
 def SKLWriteResGroup75 : SchedWriteRes<[SKLPort23,SKLPort15]> {
@@ -1194,7 +1196,7 @@ def SKLWriteResGroup102 : SchedWriteRes<[SKLPort4,SKLPort6,SKLPort23,SKLPort237,
   let ResourceCycles = [1,1,1,1,1];
 }
 def: InstRW<[SKLWriteResGroup102], (instregex "CALL(16|32|64)m")>;
-def: InstRW<[SKLWriteResGroup102], (instrs FARCALL64)>;
+def: InstRW<[SKLWriteResGroup102], (instrs FARCALL64m)>;
 
 def SKLWriteResGroup103 : SchedWriteRes<[SKLPort6,SKLPort06,SKLPort15,SKLPort0156]> {
   let Latency = 7;
@@ -1744,7 +1746,7 @@ def: InstRW<[SKLWriteResGroup223], (instrs FSTENVm)>;
 def: InstRW<[WriteZero], (instrs CLC)>;
 
 
-// Intruction variants handled by the renamer. These might not need execution
+// Instruction variants handled by the renamer. These might not need execution
 // ports in certain conditions.
 // See Agner's Fog "The microarchitecture of Intel, AMD and VIA CPUs",
 // section "Skylake Pipeline" > "Register allocation and renaming".

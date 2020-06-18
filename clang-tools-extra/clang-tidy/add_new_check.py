@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-#===- add_new_check.py - clang-tidy check generator ----------*- python -*--===#
+#===- add_new_check.py - clang-tidy check generator ---------*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===------------------------------------------------------------------------===#
+#===-----------------------------------------------------------------------===#
 
 from __future__ import print_function
 
@@ -15,8 +15,9 @@ import os
 import re
 import sys
 
-# Adapts the module's CMakelist file. Returns 'True' if it could add a new entry
-# and 'False' if the entry already existed.
+
+# Adapts the module's CMakelist file. Returns 'True' if it could add a new
+# entry and 'False' if the entry already existed.
 def adapt_cmake(module_path, check_name_camel):
   filename = os.path.join(module_path, 'CMakeLists.txt')
   with open(filename, 'r') as f:
@@ -172,7 +173,7 @@ def adapt_module(module_path, module, check_name, check_name_camel):
     lines = iter(lines)
     try:
       while True:
-        line = lines.next()
+        line = next(lines)
         if not header_added:
           match = re.search('#include "(.*)"', line)
           if match:
@@ -197,7 +198,7 @@ def adapt_module(module_path, module, check_name, check_name_camel):
                 # If we didn't find the check name on this line, look on the
                 # next one.
                 prev_line = line
-                line = lines.next()
+                line = next(lines)
                 match = re.search(' *"([^"]*)"', line)
                 if match:
                   current_check_name = match.group(1)
@@ -221,27 +222,25 @@ def add_release_notes(module_path, module, check_name):
 
   lineMatcher = re.compile('New checks')
   nextSectionMatcher = re.compile('New check aliases')
-  checkerMatcher = re.compile('- New :doc:`(.*)')
+  checkMatcher = re.compile('- New :doc:`(.*)')
 
   print('Updating %s...' % filename)
   with open(filename, 'w') as f:
     note_added = False
     header_found = False
-    next_header_found = False
     add_note_here = False
 
     for line in lines:
       if not note_added:
         match = lineMatcher.match(line)
         match_next = nextSectionMatcher.match(line)
-        match_checker = checkerMatcher.match(line)
-        if match_checker:
-          last_checker = match_checker.group(1)
-          if last_checker > check_name_dashes:
+        match_check = checkMatcher.match(line)
+        if match_check:
+          last_check = match_check.group(1)
+          if last_check > check_name_dashes:
             add_note_here = True
 
         if match_next:
-          next_header_found = True
           add_note_here = True
 
         if match:

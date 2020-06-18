@@ -8,6 +8,9 @@
 
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_ppr() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr2() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr3() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr4() #0 { entry: unreachable }
 
   attributes #0 = { nounwind "target-features"="+sve" }
 
@@ -88,5 +91,122 @@ body:             |
     $z28_z29_z30_z31 = IMPLICIT_DEF
 
     $z0 = COPY %0
+    RET_ReallyLR
+...
+---
+name: spills_fills_stack_id_zpr2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: zpr2 }
+stack:
+liveins:
+  - { reg: '$z0_z1', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $z0_z1
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_zpr2
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 32, alignment: 16
+    ; CHECK-NEXT:     stack-id: sve-vec
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_zpr2
+    ; EXPAND: STR_ZXI $z0, $sp, 0
+    ; EXPAND: STR_ZXI $z1, $sp, 1
+    ; EXPAND: $z0 = LDR_ZXI $sp, 0
+    ; EXPAND: $z1 = LDR_ZXI $sp, 1
+
+    %0:zpr2 = COPY $z0_z1
+
+    $z0_z1_z2_z3     = IMPLICIT_DEF
+    $z4_z5_z6_z7     = IMPLICIT_DEF
+    $z8_z9_z10_z11   = IMPLICIT_DEF
+    $z12_z13_z14_z15 = IMPLICIT_DEF
+    $z16_z17_z18_z19 = IMPLICIT_DEF
+    $z20_z21_z22_z23 = IMPLICIT_DEF
+    $z24_z25_z26_z27 = IMPLICIT_DEF
+    $z28_z29_z30_z31 = IMPLICIT_DEF
+
+    $z0_z1 = COPY %0
+    RET_ReallyLR
+...
+---
+name: spills_fills_stack_id_zpr3
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: zpr3 }
+stack:
+liveins:
+  - { reg: '$z0_z1_z2', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $z0_z1_z2
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_zpr3
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 48, alignment: 16
+    ; CHECK-NEXT:     stack-id: sve-vec
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_zpr3
+    ; EXPAND: STR_ZXI $z0, $sp, 0
+    ; EXPAND: STR_ZXI $z1, $sp, 1
+    ; EXPAND: STR_ZXI $z2, $sp, 2
+    ; EXPAND: $z0 = LDR_ZXI $sp, 0
+    ; EXPAND: $z1 = LDR_ZXI $sp, 1
+    ; EXPAND: $z2 = LDR_ZXI $sp, 2
+
+    %0:zpr3 = COPY $z0_z1_z2
+
+    $z0_z1_z2_z3     = IMPLICIT_DEF
+    $z4_z5_z6_z7     = IMPLICIT_DEF
+    $z8_z9_z10_z11   = IMPLICIT_DEF
+    $z12_z13_z14_z15 = IMPLICIT_DEF
+    $z16_z17_z18_z19 = IMPLICIT_DEF
+    $z20_z21_z22_z23 = IMPLICIT_DEF
+    $z24_z25_z26_z27 = IMPLICIT_DEF
+    $z28_z29_z30_z31 = IMPLICIT_DEF
+
+    $z0_z1_z2 = COPY %0
+    RET_ReallyLR
+...
+---
+name: spills_fills_stack_id_zpr4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: zpr4 }
+stack:
+liveins:
+  - { reg: '$z0_z1_z2_z3', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $z0_z1_z2_z3
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_zpr4
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 64, alignment: 16
+    ; CHECK-NEXT:     stack-id: sve-vec
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_zpr4
+    ; EXPAND: STR_ZXI $z0, $sp, 0
+    ; EXPAND: STR_ZXI $z1, $sp, 1
+    ; EXPAND: STR_ZXI $z2, $sp, 2
+    ; EXPAND: STR_ZXI $z3, $sp, 3
+    ; EXPAND: $z0 = LDR_ZXI $sp, 0
+    ; EXPAND: $z1 = LDR_ZXI $sp, 1
+    ; EXPAND: $z2 = LDR_ZXI $sp, 2
+    ; EXPAND: $z3 = LDR_ZXI $sp, 3
+
+    %0:zpr4 = COPY $z0_z1_z2_z3
+
+    $z0_z1_z2_z3     = IMPLICIT_DEF
+    $z4_z5_z6_z7     = IMPLICIT_DEF
+    $z8_z9_z10_z11   = IMPLICIT_DEF
+    $z12_z13_z14_z15 = IMPLICIT_DEF
+    $z16_z17_z18_z19 = IMPLICIT_DEF
+    $z20_z21_z22_z23 = IMPLICIT_DEF
+    $z24_z25_z26_z27 = IMPLICIT_DEF
+    $z28_z29_z30_z31 = IMPLICIT_DEF
+
+    $z0_z1_z2_z3 = COPY %0
     RET_ReallyLR
 ...

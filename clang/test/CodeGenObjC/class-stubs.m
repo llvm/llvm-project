@@ -11,18 +11,18 @@
 //
 // Metaclasses do not use the "stub" mechanism and are referenced statically.
 //
-// CHECK-LABEL: @"OBJC_CLASSLIST_SUP_REFS_$_" = internal global %struct._class_t* @"OBJC_METACLASS_$_Derived", section "__DATA,__objc_superrefs,regular,no_dead_strip", align 8
+// CHECK-LABEL: @"OBJC_CLASSLIST_SUP_REFS_$_" = private global %struct._class_t* @"OBJC_METACLASS_$_Derived", section "__DATA,__objc_superrefs,regular,no_dead_strip", align 8
 
 // -- classref for the super message send in anotherInstanceMethod()
 //
 // The class is declared with objc_class_stub, so LSB of the class pointer
 // must be set to 1.
 //
-// CHECK-LABEL: @"OBJC_CLASSLIST_SUP_REFS_$_.1" = internal global i8* getelementptr (i8, i8* bitcast (%struct._class_t* @"OBJC_CLASS_$_Derived" to i8*), i32 1), section "__DATA,__objc_superrefs,regular,no_dead_strip", align 8
+// CHECK-LABEL: @"OBJC_CLASSLIST_SUP_REFS_$_.1" = private global i8* getelementptr (i8, i8* bitcast (%struct._class_t* @"OBJC_CLASS_$_Derived" to i8*), i32 1), section "__DATA,__objc_superrefs,regular,no_dead_strip", align 8
 
 // -- category list for class stubs goes in __objc_catlist2.
 //
-// CHECK-LABEL: @"OBJC_LABEL_STUB_CATEGORY_$" = internal global [1 x i8*] [i8* bitcast (%struct._category_t* @"_OBJC_$_CATEGORY_Derived_$_MyCategory" to i8*)], section "__DATA,__objc_catlist2,regular,no_dead_strip", align 8
+// CHECK-LABEL: @"OBJC_LABEL_STUB_CATEGORY_$" = private global [1 x i8*] [i8* bitcast (%struct._category_t* @"_OBJC_$_CATEGORY_Derived_$_MyCategory" to i8*)], section "__DATA,__objc_catlist2,regular,no_dead_strip", align 8
 
 __attribute__((objc_class_stub))
 __attribute__((objc_subclassing_restricted))

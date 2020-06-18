@@ -101,7 +101,7 @@ class PluginPythonOSPlugin(TestBase):
         self.verify_os_thread_registers(thread)
 
         # Now clear the OS plug-in path to make the OS plug-in created threads
-        # dissappear
+        # disappear
         self.dbg.HandleCommand(
             "settings clear target.process.python-os-plugin-path")
 

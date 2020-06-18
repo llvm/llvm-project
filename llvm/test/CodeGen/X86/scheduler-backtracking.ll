@@ -700,43 +700,37 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; ILP-NEXT:    movl $0, %edx
 ; ILP-NEXT:    sbbq %rdx, %rdx
 ; ILP-NEXT:    sbbq %rcx, %rcx
-; ILP-NEXT:    setae %cl
-; ILP-NEXT:    movzbl %cl, %ecx
-; ILP-NEXT:    subq %rcx, %rax
+; ILP-NEXT:    adcq $-1, %rax
 ; ILP-NEXT:    retq
 ;
 ; HYBRID-LABEL: test4:
 ; HYBRID:       # %bb.0:
-; HYBRID-NEXT:    xorl %eax, %eax
 ; HYBRID-NEXT:    xorl %ecx, %ecx
+; HYBRID-NEXT:    xorl %edx, %edx
 ; HYBRID-NEXT:    incq %rsi
-; HYBRID-NEXT:    sete %cl
-; HYBRID-NEXT:    cmpq %rdi, %rsi
-; HYBRID-NEXT:    sbbq $0, %rcx
-; HYBRID-NEXT:    movl $0, %ecx
-; HYBRID-NEXT:    sbbq %rcx, %rcx
-; HYBRID-NEXT:    sbbq %rax, %rax
-; HYBRID-NEXT:    setae %al
-; HYBRID-NEXT:    movzbl %al, %ecx
+; HYBRID-NEXT:    sete %dl
 ; HYBRID-NEXT:    movl $2, %eax
-; HYBRID-NEXT:    subq %rcx, %rax
+; HYBRID-NEXT:    cmpq %rdi, %rsi
+; HYBRID-NEXT:    sbbq $0, %rdx
+; HYBRID-NEXT:    movl $0, %edx
+; HYBRID-NEXT:    sbbq %rdx, %rdx
+; HYBRID-NEXT:    sbbq %rcx, %rcx
+; HYBRID-NEXT:    adcq $-1, %rax
 ; HYBRID-NEXT:    retq
 ;
 ; BURR-LABEL: test4:
 ; BURR:       # %bb.0:
-; BURR-NEXT:    xorl %eax, %eax
 ; BURR-NEXT:    xorl %ecx, %ecx
+; BURR-NEXT:    xorl %edx, %edx
 ; BURR-NEXT:    incq %rsi
-; BURR-NEXT:    sete %cl
-; BURR-NEXT:    cmpq %rdi, %rsi
-; BURR-NEXT:    sbbq $0, %rcx
-; BURR-NEXT:    movl $0, %ecx
-; BURR-NEXT:    sbbq %rcx, %rcx
-; BURR-NEXT:    sbbq %rax, %rax
-; BURR-NEXT:    setae %al
-; BURR-NEXT:    movzbl %al, %ecx
+; BURR-NEXT:    sete %dl
 ; BURR-NEXT:    movl $2, %eax
-; BURR-NEXT:    subq %rcx, %rax
+; BURR-NEXT:    cmpq %rdi, %rsi
+; BURR-NEXT:    sbbq $0, %rdx
+; BURR-NEXT:    movl $0, %edx
+; BURR-NEXT:    sbbq %rdx, %rdx
+; BURR-NEXT:    sbbq %rcx, %rcx
+; BURR-NEXT:    adcq $-1, %rax
 ; BURR-NEXT:    retq
 ;
 ; SRC-LABEL: test4:
@@ -750,10 +744,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; SRC-NEXT:    movl $0, %eax
 ; SRC-NEXT:    sbbq %rax, %rax
 ; SRC-NEXT:    sbbq %rcx, %rcx
-; SRC-NEXT:    setae %al
-; SRC-NEXT:    movzbl %al, %ecx
 ; SRC-NEXT:    movl $2, %eax
-; SRC-NEXT:    subq %rcx, %rax
+; SRC-NEXT:    adcq $-1, %rax
 ; SRC-NEXT:    retq
 ;
 ; LIN-LABEL: test4:
@@ -768,9 +760,7 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; LIN-NEXT:    movl $0, %edx
 ; LIN-NEXT:    sbbq %rdx, %rdx
 ; LIN-NEXT:    sbbq %rcx, %rcx
-; LIN-NEXT:    setae %cl
-; LIN-NEXT:    movzbl %cl, %ecx
-; LIN-NEXT:    subq %rcx, %rax
+; LIN-NEXT:    adcq $-1, %rax
 ; LIN-NEXT:    retq
   %r = zext i64 %b to i256
   %u = add i256 %r, 1

@@ -1,7 +1,12 @@
 // A basic clang -cc1 command-line, and simple environment check.
+// REQUIRES: platform-linker
 
 // RUN: %clang %s -### -no-canonical-prefixes -target riscv64 2>&1 | FileCheck -check-prefix=CC1 %s
 // CC1: clang{{.*}} "-cc1" "-triple" "riscv64"
+
+// Test interaction with -fuse-ld=lld, if lld is available.
+// RUN: %clang %s -### -no-canonical-prefixes -target riscv32 -fuse-ld=lld 2>&1 | FileCheck -check-prefix=LLD %s
+// LLD: {{(error: invalid linker name in argument '-fuse-ld=lld')|(ld.lld)}}
 
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib
@@ -214,7 +219,7 @@ int align_a_ll = __alignof(_Atomic(long long));
 // CHECK: @align_a_p = dso_local global i32 8
 int align_a_p = __alignof(_Atomic(void*));
 
-// CHECK @align_a_f = dso_local global i32 4
+// CHECK: @align_a_f = dso_local global i32 4
 int align_a_f = __alignof(_Atomic(float));
 
 // CHECK: @align_a_d = dso_local global i32 8

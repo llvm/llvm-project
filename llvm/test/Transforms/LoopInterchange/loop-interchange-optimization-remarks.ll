@@ -5,6 +5,11 @@
 ; RUN:     -pass-remarks='loop-interchange' -S
 ; RUN: cat %t |  FileCheck %s
 
+; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -verify-loop-info \
+; RUN:     -pass-remarks-output=%t -pass-remarks-missed='loop-interchange' \
+; RUN:     -pass-remarks='loop-interchange' -S -da-disable-delinearization-checks
+; RUN: cat %t |  FileCheck --check-prefix=DELIN %s
+
 @A = common global [100 x [100 x i32]] zeroinitializer
 @B = common global [100 x [100 x i32]] zeroinitializer
 @C = common global [100 x i32] zeroinitializer
@@ -61,6 +66,18 @@ for.end19:
 ; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 ; CHECK-NEXT: ...
 
+; DELIN: --- !Missed
+; DELIN-NEXT: Pass:            loop-interchange
+; DELIN-NEXT: Name:            InterchangeNotProfitable
+; DELIN-NEXT: Function:        test01
+; DELIN-NEXT: Args:
+; DELIN-NEXT:   - String:          'Interchanging loops is too costly (cost='
+; DELIN-NEXT:   - Cost:            '2'
+; DELIN-NEXT:   - String:          ', threshold='
+; DELIN-NEXT:   - Threshold:       '0'
+; DELIN-NEXT:   - String:          ') and it does not improve parallelism.'
+; DELIN-NEXT: ...
+
 ;;--------------------------------------Test case 02------------------------------------
 ;; [FIXME] This loop though valid is currently not interchanged due to the
 ;; limitation that we cannot split the inner loop latch due to multiple use of inner induction
@@ -113,6 +130,14 @@ define void @test02(i32 %k, i32 %N) {
 ; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 ; CHECK-NEXT: ...
 
+; DELIN: --- !Missed
+; DELIN-NEXT: Pass:            loop-interchange
+; DELIN-NEXT: Name:            UnsupportedInsBetweenInduction
+; DELIN-NEXT: Function:        test02
+; DELIN-NEXT: Args:
+; DELIN-NEXT:   - String:          Found unsupported instruction between induction variable increment and branch.
+; DELIN-NEXT: ...
+
 ;;-----------------------------------Test case 03-------------------------------
 ;; Test to make sure we can handle output dependencies.
 ;;
@@ -160,6 +185,14 @@ for.body4:                                        ; preds = %for.body4, %for.con
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 ; CHECK-NEXT: ...
+
+; DELIN: --- !Passed
+; DELIN-NEXT: Pass:            loop-interchange
+; DELIN-NEXT: Name:            Interchanged
+; DELIN-NEXT: Function:        test03
+; DELIN-NEXT: Args:
+; DELIN-NEXT:  - String:          Loop interchanged with enclosing loop.
+; DELIN-NEXT: ...
 
 ;;--------------------------------------Test case 04-------------------------------------
 ;; Loops not tightly nested are not interchanged
@@ -215,3 +248,11 @@ for.end17:
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 ; CHECK-NEXT: ...
+
+; DELIN: --- !Missed
+; DELIN-NEXT: Pass:            loop-interchange
+; DELIN-NEXT: Name:            NotTightlyNested
+; DELIN-NEXT: Function:        test04
+; DELIN-NEXT: Args:
+; DELIN-NEXT:  - String:          Cannot interchange loops because they are not tightly nested.
+; DELIN-NEXT: ...

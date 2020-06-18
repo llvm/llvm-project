@@ -39,15 +39,15 @@ CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0) ///< Whether ARC should be EH-safe
 CODEGENOPT(Backchain         , 1, 0) ///< -mbackchain
 CODEGENOPT(ControlFlowGuardNoChecks  , 1, 0) ///< -cfguard-no-checks
 CODEGENOPT(ControlFlowGuard  , 1, 0) ///< -cfguard
-CODEGENOPT(CoverageExtraChecksum, 1, 0) ///< Whether we need a second checksum for functions in GCNO files.
-CODEGENOPT(CoverageNoFunctionNamesInData, 1, 0) ///< Do not include function names in GCDA files.
-CODEGENOPT(CoverageExitBlockBeforeBody, 1, 0) ///< Whether to emit the exit block before the body blocks in GCNO files.
 CODEGENOPT(CXAAtExit         , 1, 1) ///< Use __cxa_atexit for calling destructors.
 CODEGENOPT(RegisterGlobalDtorsWithAtExit, 1, 1) ///< Use atexit or __cxa_atexit to register global destructors.
 CODEGENOPT(CXXCtorDtorAliases, 1, 0) ///< Emit complete ctors/dtors as linker
                                      ///< aliases to base ctors when possible.
 CODEGENOPT(DataSections      , 1, 0) ///< Set when -fdata-sections is enabled.
 CODEGENOPT(UniqueSectionNames, 1, 1) ///< Set for -funique-section-names.
+CODEGENOPT(UniqueBasicBlockSectionNames, 1, 1) ///< Set for -funique-basic-block-section-names,
+                                               ///< Produce unique section names with
+                                               ///< basic block sections.
 ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None) /// frame-pointer: all,non-leaf,none
 
 CODEGENOPT(DisableFree       , 1, 0) ///< Don't free memory.
@@ -63,6 +63,8 @@ CODEGENOPT(ExperimentalNewPassManager, 1, 0) ///< Enables the new, experimental
 CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
                                    ///< pass manager.
 CODEGENOPT(DisableRedZone    , 1, 0) ///< Set when -mno-red-zone is enabled.
+CODEGENOPT(EmitCallSiteInfo, 1, 0) ///< Emit call site info only in the case of
+                                   ///< '-g' + 'O>0' level.
 CODEGENOPT(IndirectTlsSegRefs, 1, 0) ///< Set when -mno-tls-direct-seg-refs
                                      ///< is specified.
 CODEGENOPT(DisableTailCalls  , 1, 0) ///< Do not emit tail calls.
@@ -108,6 +110,9 @@ CODEGENOPT(XRayAlwaysEmitTypedEvents , 1, 0)
 ///< Set when -fxray-ignore-loops is enabled.
 CODEGENOPT(XRayIgnoreLoops , 1, 0)
 
+///< Set with -fno-xray-function-index to omit the index section.
+CODEGENOPT(XRayOmitFunctionIndex , 1, 0)
+
 
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.
@@ -151,14 +156,9 @@ CODEGENOPT(NoInlineLineTables, 1, 0) ///< Whether debug info should contain
                                      ///< inline line tables.
 CODEGENOPT(StackClashProtector, 1, 0) ///< Set when -fstack-clash-protection is enabled.
 CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enabled.
-CODEGENOPT(NoInfsFPMath      , 1, 0) ///< Assume FP arguments, results not +-Inf.
-CODEGENOPT(NoSignedZeros     , 1, 0) ///< Allow ignoring the signedness of FP zero
 CODEGENOPT(NullPointerIsValid , 1, 0) ///< Assume Null pointer deference is defined.
-CODEGENOPT(Reassociate       , 1, 0) ///< Allow reassociation of FP math ops
-CODEGENOPT(ReciprocalMath    , 1, 0) ///< Allow FP divisions to be reassociated.
-CODEGENOPT(NoTrappingMath    , 1, 0) ///< Set when -fno-trapping-math is enabled.
-CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
 CODEGENOPT(CorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
+CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Internal Linkage symbols get unique names.
 
 /// When false, this attempts to generate code as if the result of an
 /// overflowing conversion matches the overflowing behavior of a target's native
@@ -230,6 +230,7 @@ CODEGENOPT(SanitizeCoverageTracePC, 1, 0) ///< Enable PC tracing
 CODEGENOPT(SanitizeCoverageTracePCGuard, 1, 0) ///< Enable PC tracing with guard
                                                ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverageInline8bitCounters, 1, 0) ///< Use inline 8bit counters.
+CODEGENOPT(SanitizeCoverageInlineBoolFlag, 1, 0) ///< Use inline bool flag.
 CODEGENOPT(SanitizeCoveragePCTable, 1, 0) ///< Create a PC Table.
 CODEGENOPT(SanitizeCoverageNoPrune, 1, 0) ///< Disable coverage pruning.
 CODEGENOPT(SanitizeCoverageStackDepth, 1, 0) ///< Enable max stack depth tracing
@@ -247,11 +248,11 @@ VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500) ///< Minimum time granularity (i
 CODEGENOPT(UnrollLoops       , 1, 0) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0) ///< Set when -fno-jump-tables is enabled.
-CODEGENOPT(UnsafeFPMath      , 1, 0) ///< Allow unsafe floating point optzns.
 CODEGENOPT(UnwindTables      , 1, 0) ///< Emit unwind tables.
 CODEGENOPT(VectorizeLoop     , 1, 0) ///< Run loop vectorizer.
 CODEGENOPT(VectorizeSLP      , 1, 0) ///< Run SLP vectorizer.
 CODEGENOPT(ProfileSampleAccurate, 1, 0) ///< Sample profile is accurate.
+CODEGENOPT(CallGraphProfile  , 1, 0) ///< Run call graph profile.
 
   /// Attempt to use register sized accesses to bit-fields in structures, when
   /// possible.
@@ -303,6 +304,9 @@ CODEGENOPT(LTOVisibilityPublicStd, 1, 0)
 /// The user specified number of registers to be used for integral arguments,
 /// or 0 if unspecified.
 VALUE_CODEGENOPT(NumRegisterParameters, 32, 0)
+
+/// The threshold to put data into small data section.
+VALUE_CODEGENOPT(SmallDataLimit, 32, 0)
 
 /// The lower bound for a buffer to be considered for stack protection.
 VALUE_CODEGENOPT(SSPBufferSize, 32, 0)
@@ -381,10 +385,6 @@ CODEGENOPT(ForceEmitVTables, 1, 0)
 /// Whether to emit an address-significance table into the object file.
 CODEGENOPT(Addrsig, 1, 0)
 
-ENUM_CODEGENOPT(SignReturnAddress, SignReturnAddressScope, 2, SignReturnAddressScope::None)
-ENUM_CODEGENOPT(SignReturnAddressKey, SignReturnAddressKeyValue, 1, SignReturnAddressKeyValue::AKey)
-CODEGENOPT(BranchTargetEnforcement, 1, 0)
-
 /// Whether to emit unused static constants.
 CODEGENOPT(KeepStaticConsts, 1, 0)
 
@@ -394,4 +394,3 @@ CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0)
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT
-

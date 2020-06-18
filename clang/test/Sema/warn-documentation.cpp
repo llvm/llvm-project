@@ -294,6 +294,9 @@ int test_param22(int x1, int x2, int x3);
 /// \retval 0 Blah blah.
 int test_param23(int a);
 
+/// \param a \ref test_param23 has an empty paragraph, this doesn't.
+int test_param24(int a);
+
 //===---
 // Test that we treat typedefs to some non-function types as functions for the
 // purposes of documentation comment parsing.

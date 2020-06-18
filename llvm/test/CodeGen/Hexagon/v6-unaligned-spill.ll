@@ -28,7 +28,7 @@ b3:                                               ; preds = %b2
 
 b4:                                               ; preds = %b4, %b3
   %v3 = phi <32 x i32> [ %v5, %b4 ], [ undef, %b3 ]
-  %v4 = tail call <32 x i32> @llvm.hexagon.V6.vsubhnq.128B(<1024 x i1> undef, <32 x i32> undef, <32 x i32> %v3) #2
+  %v4 = tail call <32 x i32> @llvm.hexagon.V6.vsubhnq.128B(<128 x i1> undef, <32 x i32> undef, <32 x i32> %v3) #2
   %v5 = tail call <32 x i32> @llvm.hexagon.V6.vavguh.128B(<32 x i32> %v3, <32 x i32> %v2) #2
   br label %b4
 
@@ -43,7 +43,7 @@ declare void @f1(i8* nocapture readonly, i8* nocapture readonly, i8* nocapture, 
 declare <32 x i32> @llvm.hexagon.V6.vd0.128B() #1
 
 ; Function Attrs: nounwind readnone
-declare <32 x i32> @llvm.hexagon.V6.vsubhnq.128B(<1024 x i1>, <32 x i32>, <32 x i32>) #1
+declare <32 x i32> @llvm.hexagon.V6.vsubhnq.128B(<128 x i1>, <32 x i32>, <32 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.vavguh.128B(<32 x i32>, <32 x i32>) #1

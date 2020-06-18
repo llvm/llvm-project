@@ -27,7 +27,8 @@ private:
                    DIERef::Section section, bool is_dwo)
       : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {}
 
-  DISALLOW_COPY_AND_ASSIGN(DWARFCompileUnit);
+  DWARFCompileUnit(const DWARFCompileUnit &) = delete;
+  const DWARFCompileUnit &operator=(const DWARFCompileUnit &) = delete;
 
   friend class DWARFUnit;
 };

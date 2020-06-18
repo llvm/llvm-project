@@ -61,8 +61,8 @@ body:             |
     ; CHECK-LABEL: name: int32_to_float
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK: [[CVTSI2SSrr:%[0-9]+]]:fr32 = CVTSI2SSrr [[COPY]]
-    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY [[CVTSI2SSrr]]
+    ; CHECK: %1:fr32 = nofpexcept CVTSI2SSrr [[COPY]], implicit $mxcsr
+    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY %1
     ; CHECK: $xmm0 = COPY [[COPY1]]
     ; CHECK: RET 0, implicit $xmm0
     %0:gpr(s32) = COPY $edi
@@ -89,8 +89,8 @@ body:             |
     ; CHECK-LABEL: name: int64_to_float
     ; CHECK: liveins: $rdi
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: [[CVTSI642SSrr:%[0-9]+]]:fr32 = CVTSI642SSrr [[COPY]]
-    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY [[CVTSI642SSrr]]
+    ; CHECK: %1:fr32 = nofpexcept CVTSI642SSrr [[COPY]], implicit $mxcsr
+    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY %1
     ; CHECK: $xmm0 = COPY [[COPY1]]
     ; CHECK: RET 0, implicit $xmm0
     %0:gpr(s64) = COPY $rdi
@@ -145,8 +145,8 @@ body:             |
     ; CHECK-LABEL: name: int64_to_double
     ; CHECK: liveins: $rdi
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: [[CVTSI642SDrr:%[0-9]+]]:fr64 = CVTSI642SDrr [[COPY]]
-    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY [[CVTSI642SDrr]]
+    ; CHECK: %1:fr64 = nofpexcept CVTSI642SDrr [[COPY]], implicit $mxcsr
+    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY %1
     ; CHECK: $xmm0 = COPY [[COPY1]]
     ; CHECK: RET 0, implicit $xmm0
     %0:gpr(s64) = COPY $rdi

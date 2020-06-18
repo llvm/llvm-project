@@ -12,11 +12,10 @@
 
 let Component = "Parse" in {
 
-def warn_asm_qualifier_ignored : Warning<
-  "ignored %0 qualifier on asm">, CatInlineAsm, InGroup<ASMIgnoredQualifier>;
-def warn_file_asm_volatile : Warning<
-  "meaningless 'volatile' on asm outside function">, CatInlineAsm,
-  InGroup<ASMIgnoredQualifier>;
+def err_asm_qualifier_ignored : Error<
+  "expected 'volatile', 'inline', 'goto', or '('">, CatInlineAsm;
+def err_global_asm_qualifier_ignored : Error<
+  "meaningless '%0' on asm outside function">, CatInlineAsm;
 
 let CategoryName = "Inline Assembly Issue" in {
 def err_asm_empty : Error<"__asm used with no assembly instructions">;
@@ -27,8 +26,7 @@ def err_msasm_unable_to_create_target : Error<
   "MS-style inline assembly is not available: %0">;
 def err_gnu_inline_asm_disabled : Error<
   "GNU-style inline assembly is disabled">;
-def err_asm_goto_cannot_have_output : Error<
-  "'asm goto' cannot have output constraints">;
+def err_asm_duplicate_qual : Error<"duplicate asm qualifier '%0'">;
 }
 
 let CategoryName = "Parse Issue" in {
@@ -107,6 +105,25 @@ def ext_clang_c_enum_fixed_underlying_type : Extension<
 def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def ext_enum_base_in_type_specifier : ExtWarn<
+  "non-defining declaration of enumeration with a fixed underlying type is "
+  "only permitted as a standalone declaration"
+  "%select{|; missing list of enumerators?}0">,
+  InGroup<DiagGroup<"elaborated-enum-base">>, DefaultError;
+def ext_elaborated_enum_class : ExtWarn<
+  "reference to enumeration must use 'enum' not 'enum %select{struct|class}0'">,
+  InGroup<DiagGroup<"elaborated-enum-class">>, DefaultError;
+def err_scoped_enum_missing_identifier : Error<
+  "scoped enumeration requires a name">;
+def ext_scoped_enum : ExtWarn<
+  "scoped enumerations are a C++11 extension">, InGroup<CXX11>;
+def warn_cxx98_compat_scoped_enum : Warning<
+  "scoped enumerations are incompatible with C++98">,
+  InGroup<CXX98Compat>, DefaultIgnore;
+def err_anonymous_enum_bitfield : Error<
+  "ISO C++ only allows ':' in member enumeration declaration to introduce "
+  "a fixed underlying type, not an anonymous bit-field">;
+
 def warn_cxx98_compat_alignof : Warning<
   "alignof expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
@@ -181,9 +198,6 @@ def err_unparenthesized_non_primary_expr_in_requires_clause : Error<
   "parentheses are required around this expression in a requires clause">;
 def note_unparenthesized_non_primary_expr_in_requires_clause : Note<
   "parentheses are required around this expression in a requires clause">;
-def err_potential_function_call_in_constraint_logical_or : Error<
-  "function call must be parenthesized to be considered part of the requires "
-  "clause">;
 
 def err_expected_fn_body : Error<
   "expected function body after function declarator">;
@@ -211,7 +225,6 @@ def err_invalid_token_after_declarator_suggest_equal : Error<
   "invalid %0 at end of declaration; did you mean '='?">;
 def err_expected_statement : Error<"expected statement">;
 def err_expected_lparen_after : Error<"expected '(' after '%0'">;
-def err_expected_lbrace_after : Error<"expected '{' after '%0'">;
 def err_expected_rparen_after : Error<"expected ')' after '%0'">;
 def err_expected_punc : Error<"expected ')' or ',' after '%0'">;
 def err_expected_less_after : Error<"expected '<' after '%0'">;
@@ -597,6 +610,8 @@ def warn_cxx17_compat_for_range_init_stmt : Warning<
 def warn_empty_init_statement : Warning<
   "empty initialization statement of '%select{if|switch|range-based for}0' "
   "has no effect">, InGroup<EmptyInitStatement>, DefaultIgnore;
+def err_keyword_as_parameter : Error <
+  "invalid parameter name: '%0' is a keyword">;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;
@@ -680,7 +695,7 @@ def err_ms_property_expected_comma_or_rparen : Error<
 def err_ms_property_initializer : Error<
   "property declaration cannot have an in-class initializer">;
 
-def warn_cxx2a_compat_explicit_bool : Warning<
+def warn_cxx20_compat_explicit_bool : Warning<
   "this expression will be parsed as explicit(bool) in C++20">,
   InGroup<CXX20Compat>, DefaultIgnore;
 def warn_cxx17_compat_explicit_bool : Warning<
@@ -712,6 +727,8 @@ def err_id_after_template_in_nested_name_spec : Error<
   "expected template name after 'template' keyword in nested name specifier">;
 def err_unexpected_template_in_unqualified_id : Error<
   "'template' keyword not permitted here">;
+def err_unexpected_template_in_destructor_name : Error<
+  "'template' keyword not permitted in destructor name">;
 def err_unexpected_template_after_using : Error<
   "'template' keyword not permitted after 'using' keyword">;
 def err_two_right_angle_brackets_need_space : Error<
@@ -744,17 +761,10 @@ def err_friend_explicit_instantiation : Error<
 def err_explicit_instantiation_enum : Error<
   "enumerations cannot be explicitly instantiated">;
 def err_expected_template_parameter : Error<"expected template parameter">;
-def note_ill_formed_requires_expression_outside_template : Note<
-  "requires expression outside a template declaration may not contain invalid "
-  "types or expressions">;
 def err_empty_requires_expr : Error<
   "a requires expression must contain at least one requirement">;
 def err_requires_expr_parameter_list_ellipsis : Error<
   "varargs not allowed in requires expression">;
-def err_requires_expr_type_req_illegal_identifier : Error<
-  "expected identifier or template-id in type requirement">;
-def err_requires_expr_type_req_template_args_on_non_template : Error<
-  "template arguments provided for non-template '%0'">;
 def err_expected_semi_requirement : Error<
   "expected ';' at end of requirement">;
 def err_requires_expr_missing_arrow : Error<
@@ -764,9 +774,6 @@ def err_requires_expr_expected_type_constraint : Error<
 def err_requires_expr_simple_requirement_noexcept : Error<
   "'noexcept' can only be used in a compound requirement (with '{' '}' around "
   "the expression)">;
-def err_requires_expr_simple_requirement_unexpected_tok : Error<
-  "unexpected %0 after expression; did you intend to use a compound "
-  "requirement (with '{' '}' around the expression)?">;
 def warn_requires_expr_in_simple_requirement : Warning<
   "this requires expression will only be checked for syntactic validity; did "
   "you intend to place it in a nested requirement? (add another 'requires' "
@@ -826,7 +833,7 @@ def err_friend_decl_defines_type : Error<
   "cannot define a type in a friend declaration">;
 def err_missing_whitespace_digraph : Error<
   "found '<::' after a "
-  "%select{template name|const_cast|dynamic_cast|reinterpret_cast|static_cast}0"
+  "%select{template name|addrspace_cast|const_cast|dynamic_cast|reinterpret_cast|static_cast}0"
   " which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?">;
 
 def ext_defaulted_deleted_function : ExtWarn<
@@ -896,14 +903,6 @@ def err_access_specifier_interface : Error<
 
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
-
-def err_scoped_enum_missing_identifier : Error<
-  "scoped enumeration requires a name">;
-def ext_scoped_enum : ExtWarn<
-  "scoped enumerations are a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_scoped_enum : Warning<
-  "scoped enumerations are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 
 def err_expected_parameter_pack : Error<
   "expected the name of a parameter pack">;
@@ -1109,9 +1108,9 @@ def warn_pragma_init_seg_unsupported_target : Warning<
   "'#pragma init_seg' is only supported when targeting a "
   "Microsoft environment">,
   InGroup<IgnoredPragmas>;
-// - #pragma fp_contract
-def err_pragma_fp_contract_scope : Error<
-  "'#pragma fp_contract' can only appear at file scope or at the start of a "
+// - #pragma restricted to file scope or start of compound statement
+def err_pragma_file_or_compound_scope : Error<
+  "'#pragma %0' can only appear at file scope or at the start of a "
   "compound statement">;
 // - #pragma stdc unknown
 def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
@@ -1130,6 +1129,10 @@ def warn_pragma_comment_ignored : Warning<"'#pragma comment %0' ignored">,
 def err_pragma_detect_mismatch_malformed : Error<
   "pragma detect_mismatch is malformed; it requires two comma-separated "
   "string literals">;
+// - #pragma float_control
+def err_pragma_float_control_malformed : Error<
+  "pragma float_control is malformed; use 'float_control({push|pop})' or "
+  "'float_control({precise|except}, {on|off} [,push])'">;
 // - #pragma pointers_to_members
 def err_pragma_pointers_to_members_unknown_kind : Error<
   "unexpected %0, expected to see one of %select{|'best_case', 'full_generality', }1"
@@ -1234,6 +1237,10 @@ def err_omp_expected_identifier_for_critical : Error<
   "expected identifier specifying the name of the 'omp critical' directive">;
 def err_omp_expected_reduction_identifier : Error<
   "expected identifier or one of the following operators: '+', '-', '*', '&', '|', '^', '&&', or '||'">;
+def err_omp_expected_equal_in_iterator : Error<
+  "expected '=' in iterator specifier">;
+def err_omp_expected_punc_after_iterator : Error<
+  "expected ',' or ')' after iterator specifier">;
 def err_omp_decl_in_declare_simd_variant : Error<
   "function declaration is expected after 'declare %select{simd|variant}0' directive">;
 def err_omp_unknown_map_type : Error<
@@ -1246,8 +1253,11 @@ def err_omp_map_type_modifier_missing : Error<
   "missing map type modifier">;
 def err_omp_declare_simd_inbranch_notinbranch : Error<
   "unexpected '%0' clause, '%1' is specified already">;
-def err_expected_end_declare_target : Error<
-  "expected '#pragma omp end declare target'">;
+def err_expected_end_declare_target_or_variant : Error<
+  "expected '#pragma omp end declare %select{target|variant}0'">;
+def err_expected_begin_declare_variant
+    : Error<"'#pragma omp end declare variant' with no matching '#pragma omp "
+            "begin declare variant'">;
 def err_omp_declare_target_unexpected_clause: Error<
   "unexpected '%0' clause, only %select{'to' or 'link'|'to', 'link' or 'device_type'}1 clauses expected">;
 def err_omp_expected_clause: Error<
@@ -1320,6 +1330,8 @@ def warn_omp_ctx_incompatible_score_for_property
 def warn_omp_more_one_device_type_clause
     : Warning<"more than one 'device_type' clause is specified">,
       InGroup<OpenMPClauses>;
+def err_omp_variant_ctx_second_match_extension : Error<
+  "only a single match extension allowed per OpenMP context selector">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
@@ -1331,13 +1343,12 @@ def err_pragma_loop_invalid_option : Error<
   "pipeline, pipeline_initiation_interval, vectorize_predicate, or distribute">;
 
 def err_pragma_fp_invalid_option : Error<
-  "%select{invalid|missing}0 option%select{ %1|}0; expected contract">;
+  "%select{invalid|missing}0 option%select{ %1|}0; expected 'contract' or 'reassociate'">;
 def err_pragma_fp_invalid_argument : Error<
   "unexpected argument '%0' to '#pragma clang fp %1'; "
-  "expected 'on', 'fast' or 'off'">;
-def err_pragma_fp_scope : Error<
-  "'#pragma clang fp' can only appear at file scope or at the start of a "
-  "compound statement">;
+  "%select{"
+  "expected 'fast' or 'on' or 'off'|"
+  "expected 'on' or 'off'}2">;
 
 def err_pragma_invalid_keyword : Error<
   "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;
@@ -1417,11 +1428,11 @@ def err_placeholder_expected_auto_or_decltype_auto : Error<
 
 def warn_max_tokens : Warning<
   "the number of preprocessor source tokens (%0) exceeds this token limit (%1)">,
-  InGroup<MaxTokens>;
+  InGroup<MaxTokens>, DefaultIgnore;
 
 def warn_max_tokens_total : Warning<
   "the total number of preprocessor source tokens (%0) exceeds the token limit (%1)">,
-  InGroup<MaxTokens>;
+  InGroup<MaxTokens>, DefaultIgnore;
 
 def note_max_tokens_total_override : Note<"total token limit set here">;
 

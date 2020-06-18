@@ -21,7 +21,7 @@ config.name = 'MLIR'
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = ['.td', '.mlir', '.toy', '.ll']
+config.suffixes = ['.td', '.mlir', '.toy', '.ll', '.tc']
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -31,6 +31,7 @@ config.test_exec_root = os.path.join(config.mlir_obj_root, 'test')
 
 config.substitutions.append(('%PATH%', config.environment['PATH']))
 config.substitutions.append(('%shlibext', config.llvm_shlib_ext))
+config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
 
 llvm_config.with_system_environment(
     ['HOME', 'INCLUDE', 'LIB', 'TMP', 'TEMP'])
@@ -66,9 +67,17 @@ tools.extend([
     ToolSubst('toy-ch3', unresolved='ignore'),
     ToolSubst('toy-ch4', unresolved='ignore'),
     ToolSubst('toy-ch5', unresolved='ignore'),
-    ToolSubst('%linalg_test_lib_dir', config.linalg_test_lib_dir, unresolved='ignore'),
     ToolSubst('%cuda_wrapper_library_dir', config.cuda_wrapper_library_dir, unresolved='ignore'),
+    ToolSubst('%linalg_test_lib_dir', config.linalg_test_lib_dir, unresolved='ignore'),
+    ToolSubst('%mlir_runner_utils_dir', config.mlir_runner_utils_dir, unresolved='ignore'),
+    ToolSubst('%rocm_wrapper_library_dir', config.rocm_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%vulkan_wrapper_library_dir', config.vulkan_wrapper_library_dir, unresolved='ignore')
 ])
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
+
+
+# FileCheck -enable-var-scope is enabled by default in MLIR test
+# This option avoids to accidentally reuse variable across -LABEL match,
+# it can be explicitly opted-in by prefixing the variable name with $
+config.environment['FILECHECK_OPTS'] = "-enable-var-scope"

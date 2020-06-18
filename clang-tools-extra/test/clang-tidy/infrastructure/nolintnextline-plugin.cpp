@@ -1,3 +1,4 @@
+// REQUIRES: libclang_include_clang_tools_extra
 // RUN: c-index-test -test-load-source-reparse 2 all %s -Xclang -add-plugin -Xclang clang-tidy -Xclang -plugin-arg-clang-tidy -Xclang -checks='-*,google-explicit-constructor' 2>&1 | FileCheck %s
 
 class A { A(int i); };

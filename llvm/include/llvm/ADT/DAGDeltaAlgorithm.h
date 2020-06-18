@@ -29,7 +29,7 @@ namespace llvm {
 ///
 ///   P(S) => P(S union pred(S))
 ///
-/// The minization algorithm uses this dependency information to attempt to
+/// The minimization algorithm uses this dependency information to attempt to
 /// eagerly prune large subsets of changes. As with \see DeltaAlgorithm, the DAG
 /// is not required to satisfy this property, but the algorithm will run
 /// substantially fewer tests with appropriate dependencies. \see DeltaAlgorithm

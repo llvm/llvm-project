@@ -101,6 +101,9 @@ public:
     void AddSourceFile(const FileSP &file_sp);
     FileSP FindSourceFile(const FileSpec &file_spec) const;
 
+    // Removes all elements from the cache.
+    void Clear() { m_file_cache.clear(); }
+
   protected:
     typedef std::map<FileSpec, FileSP> FileCache;
     FileCache m_file_cache;
@@ -116,7 +119,7 @@ public:
 
   ~SourceManager();
 
-  FileSP GetLastFile() { return m_last_file_sp; }
+  FileSP GetLastFile() { return GetFile(m_last_file_spec); }
 
   size_t
   DisplaySourceLinesWithLineNumbers(const FileSpec &file, uint32_t line,
@@ -138,7 +141,9 @@ public:
 
   bool GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line);
 
-  bool DefaultFileAndLineSet() { return (m_last_file_sp.get() != nullptr); }
+  bool DefaultFileAndLineSet() {
+    return (GetFile(m_last_file_spec).get() != nullptr);
+  }
 
   void FindLinesMatchingRegex(FileSpec &file_spec, RegularExpression &regex,
                               uint32_t start_line, uint32_t end_line,
@@ -147,7 +152,7 @@ public:
   FileSP GetFile(const FileSpec &file_spec);
 
 protected:
-  FileSP m_last_file_sp;
+  FileSpec m_last_file_spec;
   uint32_t m_last_line;
   uint32_t m_last_count;
   bool m_default_set;
@@ -155,7 +160,8 @@ protected:
   lldb::DebuggerWP m_debugger_wp;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SourceManager);
+  SourceManager(const SourceManager &) = delete;
+  const SourceManager &operator=(const SourceManager &) = delete;
 };
 
 bool operator==(const SourceManager::File &lhs, const SourceManager::File &rhs);

@@ -46,7 +46,7 @@ PROJECT_NUMBER         = @PACKAGE_VERSION@
 
 PROJECT_BRIEF          =
 
-# With the PROJECT_LOGO tag one can specify an logo or icon that is included in
+# With the PROJECT_LOGO tag one can specify a logo or icon that is included in
 # the documentation. The maximum height of the logo should not exceed 55 pixels
 # and the maximum width should not exceed 200 pixels. Doxygen will copy the logo
 # to the output directory.
@@ -1390,7 +1390,7 @@ EXT_LINKS_IN_WINDOW    = NO
 
 FORMULA_FONTSIZE       = 10
 
-# Use the FORMULA_TRANPARENT tag to determine whether or not the images
+# Use the FORMULA_TRANSPARENT tag to determine whether or not the images
 # generated for formulas are transparent PNGs. Transparent PNGs are not
 # supported properly for IE 6.0, but are supported on all modern browsers.
 #

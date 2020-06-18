@@ -414,6 +414,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
       FileSpec oso_file(oso_path);
       ConstString oso_object;
       if (FileSystem::Instance().Exists(oso_file)) {
+        FileSystem::Instance().Collect(oso_file);
         // The modification time returned by the FS can have a higher precision
         // than the one from the CU.
         auto oso_mod_time = std::chrono::time_point_cast<std::chrono::seconds>(
@@ -529,7 +530,7 @@ SymbolFileDWARF *
 SymbolFileDWARFDebugMap::GetSymbolFileAsSymbolFileDWARF(SymbolFile *sym_file) {
   if (sym_file &&
       sym_file->GetPluginName() == SymbolFileDWARF::GetPluginNameStatic())
-    return (SymbolFileDWARF *)sym_file;
+    return static_cast<SymbolFileDWARF *>(sym_file);
   return nullptr;
 }
 
@@ -626,6 +627,14 @@ SymbolFileDWARFDebugMap::ParseLanguage(CompileUnit &comp_unit) {
   if (oso_dwarf)
     return oso_dwarf->ParseLanguage(comp_unit);
   return eLanguageTypeUnknown;
+}
+
+XcodeSDK SymbolFileDWARFDebugMap::ParseXcodeSDK(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
+  if (oso_dwarf)
+    return oso_dwarf->ParseXcodeSDK(comp_unit);
+  return {};
 }
 
 size_t SymbolFileDWARFDebugMap::ParseFunctions(CompileUnit &comp_unit) {

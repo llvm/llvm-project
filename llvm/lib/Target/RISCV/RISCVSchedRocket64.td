@@ -101,10 +101,18 @@ def : WriteRes<WriteAtomicSTW, [Rocket64UnitMem]>;
 def : WriteRes<WriteAtomicSTD, [Rocket64UnitMem]>;
 
 // Most FP single precision operations are 4 cycles
-def : WriteRes<WriteFALU32, [Rocket64UnitFPALU]> { let Latency = 4; }
+let Latency = 4 in {
+def : WriteRes<WriteFALU32, [Rocket64UnitFPALU]>;
+def : WriteRes<WriteFSGNJ32, [Rocket64UnitFPALU]>;
+def : WriteRes<WriteFMinMax32, [Rocket64UnitFPALU]>;
+}
 
+let Latency = 6 in {
 // Most FP double precision operations are 6 cycles
-def : WriteRes<WriteFALU64, [Rocket64UnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteFALU64, [Rocket64UnitFPALU]>;
+def : WriteRes<WriteFSGNJ64, [Rocket64UnitFPALU]>;
+def : WriteRes<WriteFMinMax64, [Rocket64UnitFPALU]>;
+}
 
 // Conversion instructions
 let Latency = 2 in {
@@ -181,6 +189,7 @@ def : ReadAdvance<ReadAtomicLDW, 0>;
 def : ReadAdvance<ReadAtomicLDD, 0>;
 def : ReadAdvance<ReadAtomicSTW, 0>;
 def : ReadAdvance<ReadAtomicSTD, 0>;
+def : ReadAdvance<ReadFMemBase, 0>;
 def : ReadAdvance<ReadFALU32, 0>;
 def : ReadAdvance<ReadFALU64, 0>;
 def : ReadAdvance<ReadFMul32, 0>;
@@ -195,6 +204,10 @@ def : ReadAdvance<ReadFSqrt32, 0>;
 def : ReadAdvance<ReadFSqrt64, 0>;
 def : ReadAdvance<ReadFCmp32, 0>;
 def : ReadAdvance<ReadFCmp64, 0>;
+def : ReadAdvance<ReadFSGNJ32, 0>;
+def : ReadAdvance<ReadFSGNJ64, 0>;
+def : ReadAdvance<ReadFMinMax32, 0>;
+def : ReadAdvance<ReadFMinMax64, 0>;
 def : ReadAdvance<ReadFCvtF32ToI32, 0>;
 def : ReadAdvance<ReadFCvtF32ToI64, 0>;
 def : ReadAdvance<ReadFCvtF64ToI32, 0>;

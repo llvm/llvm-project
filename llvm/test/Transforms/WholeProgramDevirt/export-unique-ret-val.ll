@@ -6,7 +6,7 @@
 ; SUMMARY:      TypeIdMap:
 ; SUMMARY-NEXT:   typeid3:
 ; SUMMARY-NEXT:     TTRes:
-; SUMMARY-NEXT:       Kind:            Unknown
+; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
 ; SUMMARY-NEXT:       AlignLog2:       0
 ; SUMMARY-NEXT:       SizeM1:          0
@@ -24,7 +24,7 @@
 ; SUMMARY-NEXT:             Bit:             0
 ; SUMMARY-NEXT:   typeid4:
 ; SUMMARY-NEXT:     TTRes:
-; SUMMARY-NEXT:       Kind:            Unknown
+; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
 ; SUMMARY-NEXT:       AlignLog2:       0
 ; SUMMARY-NEXT:       SizeM1:          0

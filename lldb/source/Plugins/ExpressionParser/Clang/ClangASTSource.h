@@ -12,6 +12,7 @@
 #include <set>
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "Plugins/ExpressionParser/Clang/NameSearchContext.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -282,14 +283,9 @@ protected:
   ///
   /// \param[in] namespace_decl
   ///     If valid and module is non-NULL, the parent namespace.
-  ///
-  /// \param[in] current_id
-  ///     The ID for the current FindExternalVisibleDecls invocation,
-  ///     for logging purposes.
   void FindExternalVisibleDecls(NameSearchContext &context,
                                 lldb::ModuleSP module,
-                                CompilerDeclContext &namespace_decl,
-                                unsigned int current_id);
+                                CompilerDeclContext &namespace_decl);
 
   /// Find all Objective-C methods matching a given selector.
   ///
@@ -306,6 +302,12 @@ protected:
   ///     Its m_decl_name contains the name and its m_decl_context
   ///     is the containing object.
   void FindObjCPropertyAndIvarDecls(NameSearchContext &context);
+
+  /// Performs lookup into a namespace.
+  ///
+  /// \param context
+  ///     The NameSearchContext for a lookup inside a namespace.
+  void LookupInNamespace(NameSearchContext &context);
 
   /// A wrapper for TypeSystemClang::CopyType that sets a flag that
   /// indicates that we should not respond to queries during import.
@@ -331,7 +333,6 @@ public:
   ///     global lookup for performance reasons.
   bool IgnoreName(const ConstString name, bool ignore_all_dollar_names);
 
-public:
   /// Copies a single Decl into the parser's AST context.
   ///
   /// \param[in] src_decl
@@ -356,8 +357,20 @@ public:
 
 protected:
   bool FindObjCMethodDeclsWithOrigin(
-      unsigned int current_id, NameSearchContext &context,
+      NameSearchContext &context,
       clang::ObjCInterfaceDecl *original_interface_decl, const char *log_info);
+
+  void FindDeclInModules(NameSearchContext &context, ConstString name);
+  void FindDeclInObjCRuntime(NameSearchContext &context, ConstString name);
+
+  /// Fills the namespace map of the given NameSearchContext.
+  ///
+  /// \param context The NameSearchContext with the namespace map to fill.
+  /// \param module_sp The module to search for namespaces or a nullptr if
+  ///                  the current target should be searched.
+  /// \param namespace_decl The DeclContext in which to search for namespaces.
+  void FillNamespaceMap(NameSearchContext &context, lldb::ModuleSP module_sp,
+                        const CompilerDeclContext &namespace_decl);
 
   friend struct NameSearchContext;
 
@@ -376,105 +389,6 @@ protected:
   std::shared_ptr<ClangASTImporter> m_ast_importer_sp;
   std::set<const clang::Decl *> m_active_lexical_decls;
   std::set<const char *> m_active_lookups;
-};
-
-/// \class NameSearchContext ClangASTSource.h
-/// "lldb/Expression/ClangASTSource.h" Container for all objects relevant to a
-/// single name lookup
-///
-/// LLDB needs to create Decls for entities it finds.  This class communicates
-/// what name is being searched for and provides helper functions to construct
-/// Decls given appropriate type information.
-struct NameSearchContext {
-  /// The AST source making the request.
-  ClangASTSource &m_ast_source;
-  /// The list of declarations already constructed.
-  llvm::SmallVectorImpl<clang::NamedDecl *> &m_decls;
-  /// The mapping of all namespaces found for this request back to their
-  /// modules.
-  ClangASTImporter::NamespaceMapSP m_namespace_map;
-  /// The name being looked for.
-  const clang::DeclarationName &m_decl_name;
-  /// The DeclContext to put declarations into.
-  const clang::DeclContext *m_decl_context;
-  /// All the types of functions that have been reported, so we don't
-  /// report conflicts.
-  llvm::SmallSet<CompilerType, 5> m_function_types;
-
-  struct {
-    bool variable : 1;
-    bool function_with_type_info : 1;
-    bool function : 1;
-    bool local_vars_nsp : 1;
-    bool type : 1;
-  } m_found;
-
-  /// Constructor
-  ///
-  /// Initializes class variables.
-  ///
-  /// \param[in] astSource
-  ///     A reference to the AST source making a request.
-  ///
-  /// \param[in] decls
-  ///     A reference to a list into which new Decls will be placed.  This
-  ///     list is typically empty when the function is called.
-  ///
-  /// \param[in] name
-  ///     The name being searched for (always an Identifier).
-  ///
-  /// \param[in] dc
-  ///     The DeclContext to register Decls in.
-  NameSearchContext(ClangASTSource &astSource,
-                    llvm::SmallVectorImpl<clang::NamedDecl *> &decls,
-                    clang::DeclarationName &name, const clang::DeclContext *dc)
-      : m_ast_source(astSource), m_decls(decls), m_decl_name(name),
-        m_decl_context(dc) {
-    memset(&m_found, 0, sizeof(m_found));
-  }
-
-  /// Create a VarDecl with the name being searched for and the provided type
-  /// and register it in the right places.
-  ///
-  /// \param[in] type
-  ///     The opaque QualType for the VarDecl being registered.
-  clang::NamedDecl *AddVarDecl(const CompilerType &type);
-
-  /// Create a FunDecl with the name being searched for and the provided type
-  /// and register it in the right places.
-  ///
-  /// \param[in] type
-  ///     The opaque QualType for the FunDecl being registered.
-  ///
-  /// \param[in] extern_c
-  ///     If true, build an extern "C" linkage specification for this.
-  clang::NamedDecl *AddFunDecl(const CompilerType &type, bool extern_c = false);
-
-  /// Create a FunDecl with the name being searched for and generic type (i.e.
-  /// intptr_t NAME_GOES_HERE(...)) and register it in the right places.
-  clang::NamedDecl *AddGenericFunDecl();
-
-  /// Create a TypeDecl with the name being searched for and the provided type
-  /// and register it in the right places.
-  ///
-  /// \param[in] compiler_type
-  ///     The opaque QualType for the TypeDecl being registered.
-  clang::NamedDecl *AddTypeDecl(const CompilerType &compiler_type);
-
-  /// Add Decls from the provided DeclContextLookupResult to the list of
-  /// results.
-  ///
-  /// \param[in] result
-  ///     The DeclContextLookupResult, usually returned as the result
-  ///     of querying a DeclContext.
-  void AddLookupResult(clang::DeclContextLookupResult result);
-
-  /// Add a NamedDecl to the list of results.
-  ///
-  /// \param[in] decl
-  ///     The NamedDecl, usually returned as the result
-  ///     of querying a DeclContext.
-  void AddNamedDecl(clang::NamedDecl *decl);
 };
 
 } // namespace lldb_private

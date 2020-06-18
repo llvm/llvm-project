@@ -29,8 +29,6 @@ class MCTargetOptions;
 class StringRef;
 class Target;
 class Triple;
-class raw_ostream;
-class raw_pwrite_stream;
 
 MCCodeEmitter *createMipsMCCodeEmitterEB(const MCInstrInfo &MCII,
                                          const MCRegisterInfo &MRI,

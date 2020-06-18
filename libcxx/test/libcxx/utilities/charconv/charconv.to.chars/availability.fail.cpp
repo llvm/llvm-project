@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
-// REQUIRES: availability=macosx10.7 || availability=macosx10.8 || availability=macosx10.9 || availability=macosx10.10 || availability=macosx10.11 || availability=macosx10.12 || availability=macosx10.13 || availability=macosx10.14
+// UNSUPPORTED: c++03
+// REQUIRES: with_system_cxx_lib=macosx
+// REQUIRES: availability=macosx10.9 || availability=macosx10.10 || availability=macosx10.11 || availability=macosx10.12 || availability=macosx10.13 || availability=macosx10.14
 
 // Test the availability markup on std::to_chars.
 

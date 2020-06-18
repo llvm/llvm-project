@@ -26,6 +26,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include <deque>
 #include <map>
 #include <system_error>
 #include <unordered_map>
@@ -34,8 +35,6 @@ using namespace llvm;
 using namespace llvm::object;
 
 namespace llvm {
-
-class Twine;
 
 #define UNIMPLEMENTED_RELOC(RelType) \
   case RelType: \
@@ -190,13 +189,11 @@ public:
 
 class RelocationValueRef {
 public:
-  unsigned SectionID;
-  uint64_t Offset;
-  int64_t Addend;
-  const char *SymbolName;
+  unsigned SectionID = 0;
+  uint64_t Offset = 0;
+  int64_t Addend = 0;
+  const char *SymbolName = nullptr;
   bool IsStubThumb = false;
-  RelocationValueRef() : SectionID(0), Offset(0), Addend(0),
-                         SymbolName(nullptr) {}
 
   inline bool operator==(const RelocationValueRef &Other) const {
     return SectionID == Other.SectionID && Offset == Other.Offset &&
@@ -251,7 +248,9 @@ protected:
 
   // A list of all sections emitted by the dynamic linker.  These sections are
   // referenced in the code by means of their index in this list - SectionID.
-  typedef SmallVector<SectionEntry, 64> SectionList;
+  // Because references may be kept while the list grows, use a container that
+  // guarantees reference stability.
+  typedef std::deque<SectionEntry> SectionList;
   SectionList Sections;
 
   typedef unsigned SID; // Type for SectionIDs
@@ -319,32 +318,18 @@ protected:
   std::string ErrorStr;
 
   void writeInt16BE(uint8_t *Addr, uint16_t Value) {
-    if (IsTargetLittleEndian)
-      sys::swapByteOrder(Value);
-    *Addr       = (Value >> 8) & 0xFF;
-    *(Addr + 1) = Value & 0xFF;
+    llvm::support::endian::write<uint16_t, llvm::support::unaligned>(
+        Addr, Value, IsTargetLittleEndian ? support::little : support::big);
   }
 
   void writeInt32BE(uint8_t *Addr, uint32_t Value) {
-    if (IsTargetLittleEndian)
-      sys::swapByteOrder(Value);
-    *Addr       = (Value >> 24) & 0xFF;
-    *(Addr + 1) = (Value >> 16) & 0xFF;
-    *(Addr + 2) = (Value >> 8) & 0xFF;
-    *(Addr + 3) = Value & 0xFF;
+    llvm::support::endian::write<uint32_t, llvm::support::unaligned>(
+        Addr, Value, IsTargetLittleEndian ? support::little : support::big);
   }
 
   void writeInt64BE(uint8_t *Addr, uint64_t Value) {
-    if (IsTargetLittleEndian)
-      sys::swapByteOrder(Value);
-    *Addr       = (Value >> 56) & 0xFF;
-    *(Addr + 1) = (Value >> 48) & 0xFF;
-    *(Addr + 2) = (Value >> 40) & 0xFF;
-    *(Addr + 3) = (Value >> 32) & 0xFF;
-    *(Addr + 4) = (Value >> 24) & 0xFF;
-    *(Addr + 5) = (Value >> 16) & 0xFF;
-    *(Addr + 6) = (Value >> 8) & 0xFF;
-    *(Addr + 7) = Value & 0xFF;
+    llvm::support::endian::write<uint64_t, llvm::support::unaligned>(
+        Addr, Value, IsTargetLittleEndian ? support::little : support::big);
   }
 
   virtual void setMipsABI(const ObjectFile &Obj) {
@@ -548,9 +533,11 @@ public:
 
   void resolveLocalRelocations();
 
-  static void finalizeAsync(std::unique_ptr<RuntimeDyldImpl> This,
-                            unique_function<void(Error)> OnEmitted,
-                            std::unique_ptr<MemoryBuffer> UnderlyingBuffer);
+  static void finalizeAsync(
+      std::unique_ptr<RuntimeDyldImpl> This,
+      unique_function<void(object::OwningBinary<object::ObjectFile>, Error)>
+          OnEmitted,
+      object::OwningBinary<object::ObjectFile> O);
 
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 

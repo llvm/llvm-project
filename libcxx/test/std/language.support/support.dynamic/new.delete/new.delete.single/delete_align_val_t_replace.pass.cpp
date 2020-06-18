@@ -8,9 +8,7 @@
 
 // test aligned operator delete replacement.
 
-// UNSUPPORTED: sanitizer-new-delete, c++98, c++03, c++11, c++14
-// Older Clang versions do not support this
-// UNSUPPORTED: clang-3, apple-clang-7, apple-clang-8
+// UNSUPPORTED: sanitizer-new-delete, c++03, c++11, c++14
 
 // None of the current GCC compilers support this.
 // UNSUPPORTED: gcc-5, gcc-6
@@ -24,8 +22,6 @@
 // XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.11
 // XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.10
 // XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.9
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.8
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.7
 
 // On AppleClang 10 (and older), instead of getting an availability failure
 // like above, we get a link error when we link against a dylib that does
@@ -34,8 +30,6 @@
 // XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.11
 // XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.10
 // XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.9
-// XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.8
-// XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.7
 
 // On Windows libc++ doesn't provide its own definitions for new/delete
 // but instead depends on the ones in VCRuntime. However VCRuntime does not

@@ -364,7 +364,7 @@ private:
 
   // Try to merge two GOTs. In case of success the `Dst` contains
   // result of merging and the function returns true. In case of
-  // ovwerflow the `Dst` is unchanged and the function returns false.
+  // overflow the `Dst` is unchanged and the function returns false.
   bool tryMergeGots(FileGot & dst, FileGot & src, bool isPrimary);
 };
 
@@ -684,7 +684,6 @@ public:
   size_t getNumEntries() const { return entries.size(); }
 
   size_t headerSize;
-  size_t footerSize = 0;
 
   std::vector<const Symbol *> entries;
 };
@@ -703,6 +702,16 @@ public:
   bool isNeeded() const override { return !entries.empty(); }
   void addSymbols();
   void addEntry(Symbol &sym);
+};
+
+class PPC32GlinkSection : public PltSection {
+public:
+  PPC32GlinkSection();
+  void writeTo(uint8_t *buf) override;
+  size_t getSize() const override;
+
+  std::vector<const Symbol *> canonical_plts;
+  static constexpr size_t footerSize = 64;
 };
 
 // This is x86-only.
@@ -1037,7 +1046,7 @@ public:
   std::vector<InputSection *> exidxSections;
 
 private:
-  size_t size;
+  size_t size = 0;
 
   // Instead of storing pointers to the .ARM.exidx InputSections from
   // InputObjects, we store pointers to the executable sections that need

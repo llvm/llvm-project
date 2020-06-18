@@ -1,47 +1,62 @@
-add_llvm_library(MLIRTestTransforms
-  TestAffineDataCopy.cpp
+# Exclude tests from libMLIR.so
+add_mlir_library(MLIRTestTransforms
   TestAllReduceLowering.cpp
+  TestBufferPlacement.cpp
   TestCallGraph.cpp
   TestConstantFold.cpp
+  TestConvertGPUKernelToCubin.cpp
+  TestConvertGPUKernelToHsaco.cpp
+  TestDominance.cpp
   TestLoopFusion.cpp
   TestGpuMemoryPromotion.cpp
+  TestGpuParallelLoopMapping.cpp
   TestInlining.cpp
+  TestLinalgHoisting.cpp
   TestLinalgTransforms.cpp
   TestLiveness.cpp
   TestLoopMapping.cpp
   TestLoopParametricTiling.cpp
+  TestLoopUnrolling.cpp
   TestOpaqueLoc.cpp
   TestMemRefBoundCheck.cpp
   TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
-  TestParallelismDetection.cpp
-  TestVectorToLoopsConversion.cpp
+  TestSCFUtils.cpp
   TestVectorTransforms.cpp
-  TestVectorizationUtils.cpp
+
+  EXCLUDE_FROM_LIBMLIR
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
-)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../TestDialect)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../TestDialect)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../DeclarativeTransforms)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../DeclarativeTransforms)
-add_dependencies(MLIRTestTransforms MLIRStandardOpsIncGen)
-add_dependencies(MLIRTestTransforms MLIRTestLinalgTransformPatternsIncGen)
-add_dependencies(MLIRTestTransforms MLIRTestVectorTransformPatternsIncGen)
-target_link_libraries(MLIRTestTransforms
+  DEPENDS
+  MLIRStandardOpsIncGen
+  MLIRTestVectorTransformPatternsIncGen
+
+  LINK_LIBS PUBLIC
   MLIRAffineOps
   MLIRAnalysis
   MLIREDSC
   MLIRGPU
+  MLIRGPUtoGPURuntimeTransforms
   MLIRLinalgOps
   MLIRLinalgTransforms
-  MLIRLoopOps
+  MLIRNVVMIR
+  MLIRSCF
+  MLIRSCFTransforms
   MLIRGPU
   MLIRPass
+  MLIRROCDLIR
+  MLIRStandardOpsTransforms
+  MLIRTargetNVVMIR
+  MLIRTargetROCDLIR
   MLIRTestDialect
   MLIRTransformUtils
-  MLIRVectorToLoops
-  MLIRVectorOps
+  MLIRVectorToSCF
+  MLIRVector
   )
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../DeclarativeTransforms)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../DeclarativeTransforms)

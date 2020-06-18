@@ -283,10 +283,14 @@ struct DoesNotNeedImplicitCopyAssignment {
   DoesNotNeedImplicitCopyAssignment& operator=(const DoesNotNeedImplicitCopyAssignment&) {}
 };
 
+struct DeclaresCopyAssignment {
+  DeclaresCopyAssignment &operator=(const DeclaresCopyAssignment&) &;
+};
+
 struct CopyAssignmentNeedsOverloadResolution {
   // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:1> line:[[@LINE-1]]:8 struct CopyAssignmentNeedsOverloadResolution definition
   // CHECK: CopyAssignment {{.*}}needs_overload_resolution{{.*}}
-  mutable int i;
+  DeclaresCopyAssignment i;
 };
 
 struct CopyAssignmentDoesNotNeedOverloadResolution {

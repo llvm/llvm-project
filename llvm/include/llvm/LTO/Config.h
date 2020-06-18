@@ -41,6 +41,7 @@ struct Config {
   std::string CPU;
   TargetOptions Options;
   std::vector<std::string> MAttrs;
+  std::vector<std::string> PassPlugins;
   Optional<Reloc::Model> RelocModel = Reloc::PIC_;
   Optional<CodeModel::Model> CodeModel = None;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
@@ -64,6 +65,11 @@ struct Config {
   /// Asserts whether we can assume whole program visibility during the LTO
   /// link.
   bool HasWholeProgramVisibility = false;
+
+  /// Always emit a Regular LTO object even when it is empty because no Regular
+  /// LTO modules were linked. This option is useful for some build system which
+  /// want to know a priori all possible output files.
+  bool AlwaysEmitRegularLTOObj = false;
 
   /// If this field is set, the set of passes run in the middle-end optimizer
   /// will be the one specified by the string. Only works with the new pass
@@ -123,6 +129,9 @@ struct Config {
 
   /// Statistics output file path.
   std::string StatsFile;
+
+  /// Specific thinLTO modules to compile.
+  std::vector<std::string> ThinLTOModulesToCompile;
 
   /// Time trace enabled.
   bool TimeTraceEnabled = false;

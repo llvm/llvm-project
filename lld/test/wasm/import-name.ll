@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: wasm-ld --allow-undefined -o %t.wasm %t.o
+; RUN: wasm-ld -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"

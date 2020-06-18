@@ -33,7 +33,7 @@ def warn_cxx98_compat_less_colon_colon : Warning<
 def warn_cxx17_compat_spaceship : Warning<
   "'<=>' operator is incompatible with C++ standards before C++20">,
   InGroup<CXXPre20Compat>, DefaultIgnore;
-def warn_cxx2a_compat_spaceship : Warning<
+def warn_cxx20_compat_spaceship : Warning<
   "'<=>' is a single token in C++20; "
   "add a space to avoid a change in behavior">,
   InGroup<CXX20Compat>;
@@ -78,7 +78,7 @@ def ext_token_used : Extension<"extension used">,
 
 def warn_cxx11_keyword : Warning<"'%0' is a keyword in C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
-def warn_cxx2a_keyword : Warning<"'%0' is a keyword in C++20">,
+def warn_cxx20_keyword : Warning<"'%0' is a keyword in C++20">,
   InGroup<CXX20Compat>, DefaultIgnore;
 
 def ext_unterminated_char_or_string : ExtWarn<
@@ -175,7 +175,7 @@ def ext_unknown_escape : ExtWarn<"unknown escape sequence '\\%0'">,
 def err_invalid_digit : Error<
   "invalid digit '%0' in %select{decimal|octal|binary}1 constant">;
 def err_invalid_suffix_constant : Error<
-  "invalid suffix '%0' on %select{integer|floating}1 constant">;
+  "invalid suffix '%0' on %select{integer|floating|fixed-point}1 constant">;
 def warn_cxx11_compat_digit_separator : Warning<
   "digit separators are incompatible with C++ standards before C++14">,
   InGroup<CXXPre14Compat>, DefaultIgnore;

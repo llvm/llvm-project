@@ -126,7 +126,7 @@ class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
             ## the J-Link accepts a register write packet with just the GPRs
             ## defined.
             def writeRegisters(self, registers_hex):
-                # Check that lldb returns the full 704 hex-byte register context, 
+                # Check that lldb returns the full 704 hex-byte register context,
                 # or the 136 hex-byte general purpose register reg ctx.
                 if len(registers_hex) != 704 and len(register_hex) != 136:
                     return "E06"
@@ -141,7 +141,7 @@ class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
 
             def qfThreadInfo(self):
                 return "mdead"
-            
+
             def qC(self):
                 return ""
 
@@ -184,13 +184,15 @@ class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
         err = msp_valobj.GetError()
         self.assertTrue(err.Fail(), "lldb should not be able to fetch the msp register")
 
-        val = b'\x11\x22\x33\x44'
-        error = lldb.SBError()
-        data = lldb.SBData()
-        data.SetData(error, val, lldb.eByteOrderBig, 4)
-        self.assertEqual(r1_valobj.SetData(data, error), True)
-        self.assertTrue(error.Success())
+        # Reproducers don't support SetData (yet) because it takes a void*.
+        if not configuration.is_reproducer():
+          val = b'\x11\x22\x33\x44'
+          error = lldb.SBError()
+          data = lldb.SBData()
+          data.SetData(error, val, lldb.eByteOrderBig, 4)
+          self.assertEqual(r1_valobj.SetData(data, error), True)
+          self.assertTrue(error.Success())
 
-        r1_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("r1")
-        self.assertEqual(r1_valobj.GetValueAsUnsigned(), 0x11223344)
+          r1_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("r1")
+          self.assertEqual(r1_valobj.GetValueAsUnsigned(), 0x11223344)
 

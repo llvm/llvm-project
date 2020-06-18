@@ -329,8 +329,8 @@ protected: // Can only create subclasses.
   /// AvailableFeatures - The current set of available features.
   FeatureBitset AvailableFeatures;
 
-  /// ParsingInlineAsm - Are we parsing ms-style inline assembly?
-  bool ParsingInlineAsm = false;
+  /// ParsingMSInlineAsm - Are we parsing ms-style inline assembly?
+  bool ParsingMSInlineAsm = false;
 
   /// SemaCallback - The Sema callback implementation.  Must be set when parsing
   /// ms-style inline assembly.
@@ -359,8 +359,8 @@ public:
     AvailableFeatures = Value;
   }
 
-  bool isParsingInlineAsm () { return ParsingInlineAsm; }
-  void setParsingInlineAsm (bool Value) { ParsingInlineAsm = Value; }
+  bool isParsingMSInlineAsm () { return ParsingMSInlineAsm; }
+  void setParsingMSInlineAsm (bool Value) { ParsingMSInlineAsm = Value; }
 
   MCTargetOptions getTargetOptions() const { return MCOptions; }
 

@@ -15,6 +15,7 @@ class ImportStdModule(TestBase):
     # but we still add the libc++ category so that this test is only run in
     # test configurations where libc++ is actually supposed to be tested.
     @add_test_categories(["libc++"])
+    @skipIfRemote
     @skipIf(compiler=no_match("clang"))
     def test(self):
         self.build()

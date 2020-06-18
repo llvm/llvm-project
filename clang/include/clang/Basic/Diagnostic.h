@@ -21,11 +21,11 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -36,6 +36,10 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+namespace llvm {
+class Error;
+}
 
 namespace clang {
 
@@ -1006,6 +1010,11 @@ protected:
 /// RAII class that determines when any errors have occurred
 /// between the time the instance was created and the time it was
 /// queried.
+///
+/// Note that you almost certainly do not want to use this. It's usually
+/// meaningless to ask whether a particular scope triggered an error message,
+/// because error messages outside that scope can mark things invalid (or cause
+/// us to reach an error limit), which can suppress errors within that scope.
 class DiagnosticErrorTrap {
   DiagnosticsEngine &Diag;
   unsigned NumErrors;
@@ -1288,6 +1297,29 @@ inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
   return DB;
 }
 
+inline const DiagnosticBuilder &
+operator<<(const DiagnosticBuilder &DB,
+           const llvm::Optional<SourceRange> &Opt) {
+  if (Opt)
+    DB << *Opt;
+  return DB;
+}
+
+inline const DiagnosticBuilder &
+operator<<(const DiagnosticBuilder &DB,
+           const llvm::Optional<CharSourceRange> &Opt) {
+  if (Opt)
+    DB << *Opt;
+  return DB;
+}
+
+inline const DiagnosticBuilder &
+operator<<(const DiagnosticBuilder &DB, const llvm::Optional<FixItHint> &Opt) {
+  if (Opt)
+    DB << *Opt;
+  return DB;
+}
+
 /// A nullability kind paired with a bit indicating whether it used a
 /// context-sensitive keyword.
 using DiagNullabilityKind = std::pair<NullabilityKind, bool>;
@@ -1305,11 +1337,8 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(SourceLocation Loc,
   return DiagnosticBuilder(this);
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           llvm::Error &&E) {
-  DB.AddString(toString(std::move(E)));
-  return DB;
-}
+const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                    llvm::Error &&E);
 
 inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
   return Report(SourceLocation(), DiagID);

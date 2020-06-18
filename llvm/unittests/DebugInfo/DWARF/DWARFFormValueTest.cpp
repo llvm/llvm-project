@@ -10,6 +10,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/LEB128.h"
 #include "gtest/gtest.h"
@@ -302,5 +303,96 @@ INSTANTIATE_TEST_CASE_P(
                   2, false),
         ParamType(/*Unknown=*/Form(0xff), 4, 4, DWARF32, SampleU32, 0,
                   false)), );
+
+using ErrorParams = std::tuple<Form, std::vector<uint8_t>>;
+struct ExtractValueErrorFixture : public testing::TestWithParam<ErrorParams> {
+  void SetUp() override { std::tie(Fm, InitialData) = GetParam(); }
+
+  Form Fm;
+  ArrayRef<uint8_t> InitialData;
+};
+
+TEST_P(ExtractValueErrorFixture, Test) {
+  SCOPED_TRACE(formatv("Fm = {0}, InitialData = {1}", Fm,
+                       make_range(InitialData.begin(), InitialData.end()))
+                   .str());
+
+  DWARFDataExtractor Data(InitialData, sys::IsLittleEndianHost, 4);
+  DWARFFormValue Form(Fm);
+  uint64_t Offset = 0;
+  EXPECT_FALSE(Form.extractValue(Data, &Offset, {0, 0, DWARF32}));
+}
+
+INSTANTIATE_TEST_CASE_P(
+    ExtractValueErrorParams, ExtractValueErrorFixture,
+    testing::Values(
+        ErrorParams{DW_FORM_ref_addr, {}}, ErrorParams{DW_FORM_block, {}},
+        ErrorParams{DW_FORM_block, {1}}, ErrorParams{DW_FORM_block, {2, 0}},
+        ErrorParams{DW_FORM_block1, {}}, ErrorParams{DW_FORM_block2, {}},
+        ErrorParams{DW_FORM_block4, {}}, ErrorParams{DW_FORM_data1, {}},
+        ErrorParams{DW_FORM_data2, {}}, ErrorParams{DW_FORM_strx3, {}},
+        ErrorParams{DW_FORM_data4, {}}, ErrorParams{DW_FORM_data8, {}},
+        ErrorParams{DW_FORM_data16, {}}, ErrorParams{DW_FORM_sdata, {}},
+        ErrorParams{DW_FORM_udata, {}}, ErrorParams{DW_FORM_string, {}},
+        ErrorParams{DW_FORM_indirect, {}},
+        ErrorParams{DW_FORM_indirect, {DW_FORM_data1}},
+        ErrorParams{DW_FORM_strp_sup, {}},
+        ErrorParams{DW_FORM_ref_sig8, {}}), );
+
+using DumpValueParams =
+    std::tuple<Form, ArrayRef<uint8_t>, DwarfFormat, StringRef>;
+struct DumpValueFixture : public testing::TestWithParam<DumpValueParams> {
+  void SetUp() override {
+    std::tie(Fm, InitialData, Format, ExpectedResult) = GetParam();
+  }
+
+  Form Fm;
+  ArrayRef<uint8_t> InitialData;
+  DwarfFormat Format;
+  StringRef ExpectedResult;
+};
+
+TEST_P(DumpValueFixture, Test) {
+  SCOPED_TRACE(formatv("Fm = {0}, InitialData = [{1}], Format = {2}", Fm,
+                       toHex(InitialData),
+                       Format == DWARF64 ? "DWARF64" : "DWARF32"));
+  DWARFDataExtractor Data(InitialData, sys::IsLittleEndianHost, 8);
+  DWARFFormValue Form(Fm);
+  uint64_t Offset = 0;
+  Form.extractValue(Data, &Offset, {0, 0, Format});
+
+  std::string Output;
+  raw_string_ostream OS(Output);
+
+  DIDumpOptions Opts;
+  Opts.Verbose = true;
+  Opts.ShowAddresses = true;
+
+  Form.dump(OS, Opts);
+  OS.flush();
+
+  EXPECT_EQ(Output, ExpectedResult);
+}
+
+const uint32_t DumpTestSample32Val = 0x112233;
+ArrayRef<uint8_t> DumpTestSample32 = toBytes(DumpTestSample32Val);
+const uint64_t DumpTestSample64Val = 0x11223344556677;
+ArrayRef<uint8_t> DumpTestSample64 = toBytes(DumpTestSample64Val);
+
+INSTANTIATE_TEST_CASE_P(
+    DumpValueParams, DumpValueFixture,
+    testing::Values(DumpValueParams{DW_FORM_strp, DumpTestSample32, DWARF32,
+                                    " .debug_str[0x00112233] = "},
+                    DumpValueParams{DW_FORM_strp, DumpTestSample64, DWARF64,
+                                    " .debug_str[0x0011223344556677] = "},
+                    DumpValueParams{DW_FORM_line_strp, DumpTestSample32,
+                                    DWARF32, " .debug_line_str[0x00112233] = "},
+                    DumpValueParams{DW_FORM_line_strp, DumpTestSample64,
+                                    DWARF64,
+                                    " .debug_line_str[0x0011223344556677] = "},
+                    DumpValueParams{DW_FORM_sec_offset, DumpTestSample32,
+                                    DWARF32, "0x00112233"},
+                    DumpValueParams{DW_FORM_sec_offset, DumpTestSample64,
+                                    DWARF64, "0x0011223344556677"}), );
 
 } // end anonymous namespace

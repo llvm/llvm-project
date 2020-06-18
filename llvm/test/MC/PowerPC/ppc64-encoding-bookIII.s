@@ -90,44 +90,44 @@
 # CHECK-LE: mtspr 263, 4                    # encoding: [0xa6,0x43,0x87,0x7c]
             mtsprg7 %r4
 
-# CHECK-BE: mtspr 280, 4                    # encoding: [0x7c,0x98,0x43,0xa6]
-# CHECK-LE: mtspr 280, 4                    # encoding: [0xa6,0x43,0x98,0x7c]
+# CHECK-BE: mtasr 4                         # encoding: [0x7c,0x98,0x43,0xa6]
+# CHECK-LE: mtasr 4                         # encoding: [0xa6,0x43,0x98,0x7c]
             mtasr %r4
 
-# CHECK-BE: mfspr 4, 22                     # encoding: [0x7c,0x96,0x02,0xa6]
-# CHECK-LE: mfspr 4, 22                     # encoding: [0xa6,0x02,0x96,0x7c]
+# CHECK-BE: mfdec 4                         # encoding: [0x7c,0x96,0x02,0xa6]
+# CHECK-LE: mfdec 4                         # encoding: [0xa6,0x02,0x96,0x7c]
             mfdec %r4
 
-# CHECK-BE: mtspr 22, 4                     # encoding: [0x7c,0x96,0x03,0xa6]
-# CHECK-LE: mtspr 22, 4                     # encoding: [0xa6,0x03,0x96,0x7c]
+# CHECK-BE: mtdec 4                         # encoding: [0x7c,0x96,0x03,0xa6]
+# CHECK-LE: mtdec 4                         # encoding: [0xa6,0x03,0x96,0x7c]
             mtdec %r4
 
 # CHECK-BE: mfpvr 4                         # encoding: [0x7c,0x9f,0x42,0xa6]
 # CHECK-LE: mfpvr 4                         # encoding: [0xa6,0x42,0x9f,0x7c]
             mfpvr %r4
 
-# CHECK-BE: mfspr 4, 25                     # encoding: [0x7c,0x99,0x02,0xa6]
-# CHECK-LE: mfspr 4, 25                     # encoding: [0xa6,0x02,0x99,0x7c]
+# CHECK-BE: mfsdr1 4                        # encoding: [0x7c,0x99,0x02,0xa6]
+# CHECK-LE: mfsdr1 4                        # encoding: [0xa6,0x02,0x99,0x7c]
             mfsdr1 %r4
 
-# CHECK-BE: mtspr 25, 4                     # encoding: [0x7c,0x99,0x03,0xa6]
-# CHECK-LE: mtspr 25, 4                     # encoding: [0xa6,0x03,0x99,0x7c]
+# CHECK-BE: mtsdr1 4                        # encoding: [0x7c,0x99,0x03,0xa6]
+# CHECK-LE: mtsdr1 4                        # encoding: [0xa6,0x03,0x99,0x7c]
             mtsdr1 %r4
 
-# CHECK-BE: mfspr 4, 26                     # encoding: [0x7c,0x9a,0x02,0xa6]
-# CHECK-LE: mfspr 4, 26                     # encoding: [0xa6,0x02,0x9a,0x7c]
+# CHECK-BE: mfsrr0 4                        # encoding: [0x7c,0x9a,0x02,0xa6]
+# CHECK-LE: mfsrr0 4                        # encoding: [0xa6,0x02,0x9a,0x7c]
             mfsrr0 %r4
 
-# CHECK-BE: mtspr 26, 4                     # encoding: [0x7c,0x9a,0x03,0xa6]
-# CHECK-LE: mtspr 26, 4                     # encoding: [0xa6,0x03,0x9a,0x7c]
+# CHECK-BE: mtsrr0 4                        # encoding: [0x7c,0x9a,0x03,0xa6]
+# CHECK-LE: mtsrr0 4                        # encoding: [0xa6,0x03,0x9a,0x7c]
             mtsrr0 %r4
 
-# CHECK-BE: mfspr 4, 27                     # encoding: [0x7c,0x9b,0x02,0xa6]
-# CHECK-LE: mfspr 4, 27                     # encoding: [0xa6,0x02,0x9b,0x7c]
+# CHECK-BE: mfsrr1 4                        # encoding: [0x7c,0x9b,0x02,0xa6]
+# CHECK-LE: mfsrr1 4                        # encoding: [0xa6,0x02,0x9b,0x7c]
             mfsrr1 %r4
 
-# CHECK-BE: mtspr 27, 4                     # encoding: [0x7c,0x9b,0x03,0xa6]
-# CHECK-LE: mtspr 27, 4                     # encoding: [0xa6,0x03,0x9b,0x7c]
+# CHECK-BE: mtsrr1 4                        # encoding: [0x7c,0x9b,0x03,0xa6]
+# CHECK-LE: mtsrr1 4                        # encoding: [0xa6,0x03,0x9b,0x7c]
             mtsrr1 %r4
 
 # CHECK-BE: slbie 4                         # encoding: [0x7c,0x00,0x23,0x64]

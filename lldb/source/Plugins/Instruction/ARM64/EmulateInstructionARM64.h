@@ -152,6 +152,9 @@ public:
   } ProcState;
 
 protected:
+  static uint64_t AddWithCarry(uint32_t N, uint64_t x, uint64_t y, bool carry_in,
+                               EmulateInstructionARM64::ProcState &proc_state);
+
   typedef struct {
     uint32_t mask;
     uint32_t value;

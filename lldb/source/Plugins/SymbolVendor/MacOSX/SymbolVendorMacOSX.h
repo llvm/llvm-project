@@ -38,7 +38,8 @@ public:
   virtual uint32_t GetPluginVersion();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SymbolVendorMacOSX);
+  SymbolVendorMacOSX(const SymbolVendorMacOSX &) = delete;
+  const SymbolVendorMacOSX &operator=(const SymbolVendorMacOSX &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_MACOSX_SYMBOLVENDORMACOSX_H

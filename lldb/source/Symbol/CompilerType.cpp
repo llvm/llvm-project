@@ -439,11 +439,11 @@ CompilerType CompilerType::AddRestrictModifier() const {
     return CompilerType();
 }
 
-CompilerType
-CompilerType::CreateTypedef(const char *name,
-                            const CompilerDeclContext &decl_ctx) const {
+CompilerType CompilerType::CreateTypedef(const char *name,
+                                         const CompilerDeclContext &decl_ctx,
+                                         uint32_t payload) const {
   if (IsValid())
-    return m_type_system->CreateTypedef(m_type, name, decl_ctx);
+    return m_type_system->CreateTypedef(m_type, name, decl_ctx, payload);
   else
     return CompilerType();
 }
@@ -744,14 +744,15 @@ void CompilerType::DumpSummary(ExecutionContext *exe_ctx, Stream *s,
                                data_byte_size);
 }
 
-void CompilerType::DumpTypeDescription() const {
+void CompilerType::DumpTypeDescription(lldb::DescriptionLevel level) const {
   if (IsValid())
-    m_type_system->DumpTypeDescription(m_type);
+    m_type_system->DumpTypeDescription(m_type, level);
 }
 
-void CompilerType::DumpTypeDescription(Stream *s) const {
+void CompilerType::DumpTypeDescription(Stream *s,
+                                       lldb::DescriptionLevel level) const {
   if (IsValid()) {
-    m_type_system->DumpTypeDescription(m_type, s);
+    m_type_system->DumpTypeDescription(m_type, s, level);
   }
 }
 
@@ -864,6 +865,12 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
   }
   return false;
 }
+
+#ifndef NDEBUG
+bool CompilerType::Verify() const {
+  return !IsValid() || m_type_system->Verify(m_type);
+}
+#endif
 
 bool lldb_private::operator==(const lldb_private::CompilerType &lhs,
                               const lldb_private::CompilerType &rhs) {

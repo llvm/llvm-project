@@ -1,11 +1,12 @@
-// RUN: mlir-opt -simplify-affine-structures %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -simplify-affine-structures %s | FileCheck %s
 
 // CHECK-LABEL: func @permute()
 func @permute() {
   %A = alloc() : memref<64x256xf32, affine_map<(d0, d1) -> (d1, d0)>>
   affine.for %i = 0 to 64 {
     affine.for %j = 0 to 256 {
-      affine.load %A[%i, %j] : memref<64x256xf32, affine_map<(d0, d1) -> (d1, d0)>>
+      %1 = affine.load %A[%i, %j] : memref<64x256xf32, affine_map<(d0, d1) -> (d1, d0)>>
+      "prevent.dce"(%1) : (f32) -> ()
     }
   }
   dealloc %A : memref<64x256xf32, affine_map<(d0, d1) -> (d1, d0)>>
@@ -17,6 +18,7 @@ func @permute() {
 // CHECK-NEXT: affine.for %[[I:arg[0-9]+]] = 0 to 64 {
 // CHECK-NEXT:   affine.for %[[J:arg[0-9]+]] = 0 to 256 {
 // CHECK-NEXT:     affine.load [[MEM]][%[[J]], %[[I]]] : memref<256x64xf32>
+// CHECK-NEXT:     "prevent.dce"
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT: dealloc [[MEM]]
@@ -29,7 +31,8 @@ func @shift(%idx : index) {
   // CHECK-NEXT: affine.load %{{.*}}[symbol(%arg0) + 1] : memref<65xf32>
   affine.load %A[%idx] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
   affine.for %i = 0 to 64 {
-    affine.load %A[%i] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
+    %1 = affine.load %A[%i] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
+    "prevent.dce"(%1) : (f32) -> ()
     // CHECK: %{{.*}} = affine.load %{{.*}}[%arg{{.*}} + 1] : memref<65xf32>
   }
   return
@@ -45,8 +48,9 @@ func @high_dim_permute() {
     affine.for %j = 0 to 128 {
       // CHECK: %[[K:arg[0-9]+]]
       affine.for %k = 0 to 256 {
-        affine.load %A[%i, %j, %k] : memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
+        %1 = affine.load %A[%i, %j, %k] : memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
         // CHECK: %{{.*}} = affine.load %{{.*}}[%[[K]], %[[I]], %[[J]]] : memref<256x64x128xf32>
+        "prevent.dce"(%1) : (f32) -> ()
       }
     }
   }
@@ -66,7 +70,8 @@ func @data_tiling(%idx : index) {
   // CHECK: alloc() : memref<8x32x8x16xf32>
   %A = alloc() : memref<64x512xf32, affine_map<(d0, d1) -> (d0 floordiv 8, d1 floordiv 16, d0 mod 8, d1 mod 16)>>
   // CHECK: affine.load %{{.*}}[symbol(%arg0) floordiv 8, symbol(%arg0) floordiv 16, symbol(%arg0) mod 8, symbol(%arg0) mod 16]
-  affine.load %A[%idx, %idx] : memref<64x512xf32, affine_map<(d0, d1) -> (d0 floordiv 8, d1 floordiv 16, d0 mod 8, d1 mod 16)>>
+  %1 = affine.load %A[%idx, %idx] : memref<64x512xf32, affine_map<(d0, d1) -> (d0 floordiv 8, d1 floordiv 16, d0 mod 8, d1 mod 16)>>
+  "prevent.dce"(%1) : (f32) -> ()
   return
 }
 
@@ -79,7 +84,8 @@ func @strided() {
     // CHECK: affine.for %[[IV1:.*]] =
     affine.for %j = 0 to 128 {
       // CHECK: affine.load %{{.*}}[%[[IV0]] * 2, %[[IV1]] * 4] : memref<127x509xf32>
-      affine.load %A[%i, %j] : memref<64x128xf32, affine_map<(d0, d1) -> (2*d0, 4*d1)>>
+      %1 = affine.load %A[%i, %j] : memref<64x128xf32, affine_map<(d0, d1) -> (2*d0, 4*d1)>>
+      "prevent.dce"(%1) : (f32) -> ()
     }
   }
   return
@@ -94,7 +100,8 @@ func @strided_cumulative() {
     // CHECK: affine.for %[[IV1:.*]] =
     affine.for %j = 0 to 5 {
       // CHECK: affine.load %{{.*}}[%[[IV0]] * 3 + %[[IV1]] * 17] : memref<72xf32>
-      affine.load %A[%i, %j]  : memref<2x5xf32, affine_map<(d0, d1) -> (3*d0 + 17*d1)>>
+      %1 = affine.load %A[%i, %j]  : memref<2x5xf32, affine_map<(d0, d1) -> (3*d0 + 17*d1)>>
+      "prevent.dce"(%1) : (f32) -> ()
     }
   }
   return
@@ -109,7 +116,8 @@ func @symbolic_operands(%s : index) {
   affine.for %i = 0 to 10 {
     affine.for %j = 0 to 10 {
       // CHECK: affine.load %{{.*}}[%{{.*}} * 10 + %{{.*}}] : memref<100xf32>
-      affine.load %A[%i, %j] : memref<10x10xf32, affine_map<(d0,d1)[s0] -> (10*d0 + d1)>>
+      %1 = affine.load %A[%i, %j] : memref<10x10xf32, affine_map<(d0,d1)[s0] -> (10*d0 + d1)>>
+      "prevent.dce"(%1) : (f32) -> ()
     }
   }
   return

@@ -61,6 +61,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -696,8 +697,8 @@ void MachineInstr::eraseFromBundle() {
   getParent()->erase_instr(this);
 }
 
-bool MachineInstr::isCandidateForCallSiteEntry() const {
-  if (!isCall(MachineInstr::IgnoreBundle))
+bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
+  if (!isCall(Type))
     return false;
   switch (getOpcode()) {
   case TargetOpcode::PATCHABLE_EVENT_CALL:
@@ -708,6 +709,12 @@ bool MachineInstr::isCandidateForCallSiteEntry() const {
     return false;
   }
   return true;
+}
+
+bool MachineInstr::shouldUpdateCallSiteInfo() const {
+  if (isBundle())
+    return isCandidateForCallSiteEntry(MachineInstr::AnyInBundle);
+  return isCandidateForCallSiteEntry();
 }
 
 unsigned MachineInstr::getNumExplicitOperands() const {
@@ -1213,6 +1220,10 @@ bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
   if (!mayStore() && !Other.mayStore())
     return false;
 
+  // Both instructions must be memory operations to be able to alias.
+  if (!mayLoadOrStore() || !Other.mayLoadOrStore())
+    return false;
+
   // Let the target decide if memory accesses cannot possibly overlap.
   if (TII->areMemAccessesTriviallyDisjoint(*this, Other))
     return false;
@@ -1463,6 +1474,37 @@ LLVM_DUMP_METHOD void MachineInstr::dump() const {
   dbgs() << "  ";
   print(dbgs());
 }
+
+LLVM_DUMP_METHOD void MachineInstr::dumprImpl(
+    const MachineRegisterInfo &MRI, unsigned Depth, unsigned MaxDepth,
+    SmallPtrSetImpl<const MachineInstr *> &AlreadySeenInstrs) const {
+  if (Depth >= MaxDepth)
+    return;
+  if (!AlreadySeenInstrs.insert(this).second)
+    return;
+  // PadToColumn always inserts at least one space.
+  // Don't mess up the alignment if we don't want any space.
+  if (Depth)
+    fdbgs().PadToColumn(Depth * 2);
+  print(fdbgs());
+  for (const MachineOperand &MO : operands()) {
+    if (!MO.isReg() || MO.isDef())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg.isPhysical())
+      continue;
+    const MachineInstr *NewMI = MRI.getUniqueVRegDef(Reg);
+    if (NewMI == nullptr)
+      continue;
+    NewMI->dumprImpl(MRI, Depth + 1, MaxDepth, AlreadySeenInstrs);
+  }
+}
+
+LLVM_DUMP_METHOD void MachineInstr::dumpr(const MachineRegisterInfo &MRI,
+                                          unsigned MaxDepth) const {
+  SmallPtrSet<const MachineInstr *, 16> AlreadySeenInstrs;
+  dumprImpl(MRI, 0, MaxDepth, AlreadySeenInstrs);
+}
 #endif
 
 void MachineInstr::print(raw_ostream &OS, bool IsStandalone, bool SkipOpers,
@@ -1487,7 +1529,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
                          bool IsStandalone, bool SkipOpers, bool SkipDebugLoc,
                          bool AddNewLine, const TargetInstrInfo *TII) const {
   // We can be a bit tidier if we know the MachineFunction.
-  const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
   const TargetIntrinsicInfo *IntrinsicInfo = nullptr;
@@ -1554,6 +1595,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "exact ";
   if (getFlag(MachineInstr::NoFPExcept))
     OS << "nofpexcept ";
+  if (getFlag(MachineInstr::NoMerge))
+    OS << "nomerge ";
 
   // Print the opcode name.
   if (TII)
@@ -1632,15 +1675,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       // Pretty print the inline asm operand descriptor.
       OS << '$' << AsmOpCount++;
       unsigned Flag = MO.getImm();
-      switch (InlineAsm::getKind(Flag)) {
-      case InlineAsm::Kind_RegUse:             OS << ":[reguse"; break;
-      case InlineAsm::Kind_RegDef:             OS << ":[regdef"; break;
-      case InlineAsm::Kind_RegDefEarlyClobber: OS << ":[regdef-ec"; break;
-      case InlineAsm::Kind_Clobber:            OS << ":[clobber"; break;
-      case InlineAsm::Kind_Imm:                OS << ":[imm"; break;
-      case InlineAsm::Kind_Mem:                OS << ":[mem"; break;
-      default: OS << ":[??" << InlineAsm::getKind(Flag); break;
-      }
+      OS << ":[";
+      OS << InlineAsm::getKindName(InlineAsm::getKind(Flag));
 
       unsigned RCID = 0;
       if (!InlineAsm::isImmKind(Flag) && !InlineAsm::isMemKind(Flag) &&
@@ -1653,29 +1689,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
       if (InlineAsm::isMemKind(Flag)) {
         unsigned MCID = InlineAsm::getMemoryConstraintID(Flag);
-        switch (MCID) {
-        case InlineAsm::Constraint_es: OS << ":es"; break;
-        case InlineAsm::Constraint_i:  OS << ":i"; break;
-        case InlineAsm::Constraint_m:  OS << ":m"; break;
-        case InlineAsm::Constraint_o:  OS << ":o"; break;
-        case InlineAsm::Constraint_v:  OS << ":v"; break;
-        case InlineAsm::Constraint_Q:  OS << ":Q"; break;
-        case InlineAsm::Constraint_R:  OS << ":R"; break;
-        case InlineAsm::Constraint_S:  OS << ":S"; break;
-        case InlineAsm::Constraint_T:  OS << ":T"; break;
-        case InlineAsm::Constraint_Um: OS << ":Um"; break;
-        case InlineAsm::Constraint_Un: OS << ":Un"; break;
-        case InlineAsm::Constraint_Uq: OS << ":Uq"; break;
-        case InlineAsm::Constraint_Us: OS << ":Us"; break;
-        case InlineAsm::Constraint_Ut: OS << ":Ut"; break;
-        case InlineAsm::Constraint_Uv: OS << ":Uv"; break;
-        case InlineAsm::Constraint_Uy: OS << ":Uy"; break;
-        case InlineAsm::Constraint_X:  OS << ":X"; break;
-        case InlineAsm::Constraint_Z:  OS << ":Z"; break;
-        case InlineAsm::Constraint_ZC: OS << ":ZC"; break;
-        case InlineAsm::Constraint_Zy: OS << ":Zy"; break;
-        default: OS << ":?"; break;
-        }
+        OS << ":" << InlineAsm::getMemConstraintName(MCID);
       }
 
       unsigned TiedTo = 0;
@@ -1779,14 +1793,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
     auto *DV = cast<DILocalVariable>(getOperand(e - 2).getMetadata());
     OS << " line no:" <<  DV->getLine();
-    if (auto *InlinedAt = debugLoc->getInlinedAt()) {
-      DebugLoc InlinedAtDL(InlinedAt);
-      if (InlinedAtDL && MF) {
-        OS << " inlined @[ ";
-        InlinedAtDL.print(OS);
-        OS << " ]";
-      }
-    }
     if (isIndirectDebugValue())
       OS << " indirect";
   }
@@ -2159,7 +2165,7 @@ void MachineInstr::changeDebugValuesDefReg(Register Reg) {
 
 using MMOList = SmallVector<const MachineMemOperand *, 2>;
 
-static unsigned getSpillSlotSize(MMOList &Accesses,
+static unsigned getSpillSlotSize(const MMOList &Accesses,
                                  const MachineFrameInfo &MFI) {
   unsigned Size = 0;
   for (auto A : Accesses)

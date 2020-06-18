@@ -124,12 +124,12 @@ void test_unsafe_unretained(__strong id *sip, __weak id *wip,
                             __autoreleasing id *aip,
                             __unsafe_unretained id *uip,
                             const __unsafe_unretained id *cuip) {
-  uip = sip; // expected-error{{assigning to '__unsafe_unretained id *' from incompatible type '__strong id *'}}
-  uip = wip; // expected-error{{assigning to '__unsafe_unretained id *' from incompatible type '__weak id *'}}
-  uip = aip; // expected-error{{assigning to '__unsafe_unretained id *' from incompatible type '__autoreleasing id *'}}
+  uip = sip; // expected-error{{assigning '__strong id *' to '__unsafe_unretained id *' changes retain/release properties of pointer}}
+  uip = wip; // expected-error{{assigning '__weak id *' to '__unsafe_unretained id *' changes retain/release properties of pointer}}
+  uip = aip; // expected-error{{assigning '__autoreleasing id *' to '__unsafe_unretained id *' changes retain/release properties of pointer}}
 
   cuip = sip;
-  cuip = wip; // expected-error{{assigning to '__unsafe_unretained id const *' from incompatible type '__weak id *'}}
+  cuip = wip; // expected-error{{assigning '__weak id *' to '__unsafe_unretained id const *' changes retain/release properties of pointer}}
   cuip = aip;
 }
 

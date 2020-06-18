@@ -68,7 +68,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture r
 ; 32-REL-NEXT:  }
 ; 32-REL-NEXT:  Relocation {
 ; 32-REL-NEXT:    Virtual Address: 0x38
-; 32-REL-NEXT:    Symbol: TOC (14)
+; 32-REL-NEXT:    Symbol: TOC (10)
 ; 32-REL-NEXT:    IsSigned: No
 ; 32-REL-NEXT:    FixupBitValue: 0
 ; 32-REL-NEXT:    Length: 32
@@ -84,7 +84,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture r
 ; 32-REL-NEXT:  }
 ; 32-REL-NEXT:  Relocation {
 ; 32-REL-NEXT:    Virtual Address: 0x44
-; 32-REL-NEXT:    Symbol: TOC (14)
+; 32-REL-NEXT:    Symbol: TOC (10)
 ; 32-REL-NEXT:    IsSigned: No
 ; 32-REL-NEXT:    FixupBitValue: 0
 ; 32-REL-NEXT:    Length: 32
@@ -96,16 +96,16 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture r
 ; 32-REL-NOT:  Type: R_RBR (0x1A)
 
 ; 32-DIS:      Disassembly of section .text:
-; 32-DIS:      00000000 .text:
+; 32-DIS:      00000000 <.text>:
 ; 32-DIS-NEXT:        0: 38 60 00 03                   li 3, 3
 ; 32-DIS-NEXT:        4: 4e 80 00 20                   blr
 ; 32-DIS-NEXT:        8: 60 00 00 00                   nop
 ; 32-DIS-NEXT:        c: 60 00 00 00                   nop
-; 32-DIS:      00000010 .call_memcpy:
+; 32-DIS:      00000010 <.call_memcpy>:
 ; 32-DIS-NEXT:       10: 7c 08 02 a6                   mflr 0
 ; 32-DIS-NEXT:       14: 90 01 00 08                   stw 0, 8(1)
 ; 32-DIS-NEXT:       18: 94 21 ff c0                   stwu 1, -64(1)
-; 32-DIS-NEXT:       1c: 4b ff ff e5                   bl .-28
+; 32-DIS-NEXT:       1c: 4b ff ff e5                   bl 0x0
 ; 32-DIS-NEXT:       20: 60 00 00 00                   nop
 ; 32-DIS-NEXT:       24: 38 21 00 40                   addi 1, 1, 64
 ; 32-DIS-NEXT:       28: 80 01 00 08                   lwz 0, 8(1)

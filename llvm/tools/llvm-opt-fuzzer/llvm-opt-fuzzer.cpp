@@ -12,7 +12,7 @@
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/IR/Verifier.h"
@@ -21,8 +21,11 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
+
+static codegen::RegisterCodeGenFlags CGF;
 
 static cl::opt<std::string>
     TargetTripleStr("mtriple", cl::desc("Override target triple for module"));
@@ -124,7 +127,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   M->setTargetTriple(TM->getTargetTriple().normalize());
   M->setDataLayout(TM->createDataLayout());
-  setFunctionAttributes(TM->getTargetCPU(), TM->getTargetFeatureString(), *M);
+  codegen::setFunctionAttributes(TM->getTargetCPU(),
+                                 TM->getTargetFeatureString(), *M);
 
   // Create pass pipeline
   //
@@ -214,16 +218,17 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(
 
   std::string Error;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(MArch, TargetTriple, Error);
+      TargetRegistry::lookupTarget(codegen::getMArch(), TargetTriple, Error);
   if (!TheTarget) {
     errs() << *argv[0] << ": " << Error;
     exit(1);
   }
 
-  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
   TM.reset(TheTarget->createTargetMachine(
-      TargetTriple.getTriple(), getCPUStr(), getFeaturesStr(),
-     Options, getRelocModel(), getCodeModel(), CodeGenOpt::Default));
+      TargetTriple.getTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
+      Options, codegen::getExplicitRelocModel(),
+      codegen::getExplicitCodeModel(), CodeGenOpt::Default));
   assert(TM && "Could not allocate target machine!");
 
   // Check that pass pipeline is specified and correct

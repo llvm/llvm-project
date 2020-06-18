@@ -4,9 +4,9 @@ target triple = "x86_64-apple-darwin13.4.0"
 
 ; CHECK-LABEL: compute1
 ; CHECK: MayAlias:	i32* %arrayidx8, i32* %out
-; CHECK: MayAlias:	i32* %arrayidx11, i32* %out
+; CHECK: NoAlias:	i32* %arrayidx11, i32* %out
 ; CHECK: MayAlias:	i32* %arrayidx11, i32* %arrayidx8
-; CHECK: MayAlias:	i32* %arrayidx14, i32* %out
+; CHECK: NoAlias:	i32* %arrayidx14, i32* %out
 ; CHECK: MayAlias:	i32* %arrayidx14, i32* %arrayidx8
 ; CHECK: MayAlias:	i32* %arrayidx11, i32* %arrayidx14
 define void @compute1(i32 %num.0.lcssa, i32* %out) {

@@ -187,7 +187,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; SSE-NEXT:    pmuludq %xmm1, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
-; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    psubd %xmm3, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    pmuludq {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    pxor %xmm2, %xmm2
@@ -213,7 +213,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
@@ -238,7 +238,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX512VL-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX512VL-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX512VL-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
@@ -263,7 +263,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX512DQVL-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
 ; AVX512DQVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; AVX512DQVL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX512DQVL-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX512DQVL-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX512DQVL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX512DQVL-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0

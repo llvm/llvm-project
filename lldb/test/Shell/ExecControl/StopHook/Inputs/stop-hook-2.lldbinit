@@ -1,1 +1,1 @@
-target stop-hook add -f stop-hook.c -l 29 -e 34 -o "expr ptr"
+target stop-hook add -f stop-hook.c -l 21 -e 26 -o "expr ptr"

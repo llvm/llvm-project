@@ -48,6 +48,7 @@ public:
   }
 
   bool operator==(const DWARFDeclContext &rhs) const;
+  bool operator!=(const DWARFDeclContext &rhs) const { return !(*this == rhs); }
 
   uint32_t GetSize() const { return m_entries.size(); }
 

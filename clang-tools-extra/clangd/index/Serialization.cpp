@@ -8,12 +8,12 @@
 
 #include "Serialization.h"
 #include "Headers.h"
-#include "Logger.h"
 #include "RIFF.h"
 #include "SymbolLocation.h"
 #include "SymbolOrigin.h"
-#include "Trace.h"
 #include "dex/Dex.h"
+#include "support/Logger.h"
+#include "support/Trace.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compression.h"
@@ -419,7 +419,7 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 12;
+constexpr static uint32_t Version = 13;
 
 llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
   auto RIFF = riff::readFile(Data);
@@ -699,7 +699,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   vlog("Loaded {0} from {1} with estimated memory usage {2} bytes\n"
        "  - number of symbols: {3}\n"
        "  - number of refs: {4}\n"
-       "  - numnber of relations: {5}",
+       "  - number of relations: {5}",
        UseDex ? "Dex" : "MemIndex", SymbolFilename,
        Index->estimateMemoryUsage(), NumSym, NumRefs, NumRelations);
   return Index;

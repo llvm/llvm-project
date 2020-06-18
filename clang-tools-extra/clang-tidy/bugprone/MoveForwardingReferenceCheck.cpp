@@ -67,9 +67,6 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
 }
 
 void MoveForwardingReferenceCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   // Matches a ParmVarDecl for a forwarding reference, i.e. a non-const rvalue
   // reference of a function template parameter type.
   auto ForwardingReferenceParmMatcher =

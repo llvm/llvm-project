@@ -222,6 +222,8 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
+  SBStructuredData GetExtendedCrashInformation();
+
   /// Start Tracing with the given SBTraceOptions.
   ///
   /// \param[in] options

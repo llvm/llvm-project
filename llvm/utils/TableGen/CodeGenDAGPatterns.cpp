@@ -277,7 +277,7 @@ bool TypeSetByHwMode::intersect(SetType &Out, const SetType &In) {
 
   // Compute the intersection of scalars separately to account for only
   // one set containing iPTR.
-  // The itersection of iPTR with a set of integer scalar types that does not
+  // The intersection of iPTR with a set of integer scalar types that does not
   // include iPTR will result in the most specific scalar type:
   // - iPTR is more specific than any set with two elements or more
   // - iPTR is less specific than any single integer scalar type.
@@ -999,9 +999,9 @@ std::string TreePredicateFn::getPredCode() const {
 
     int64_t MinAlign = getMinAlignment();
     if (MinAlign > 0) {
-      Code += "if (cast<MemSDNode>(N)->getAlignment() < ";
+      Code += "if (cast<MemSDNode>(N)->getAlign() < Align(";
       Code += utostr(MinAlign);
-      Code += ")\nreturn false;\n";
+      Code += "))\nreturn false;\n";
     }
 
     Record *MemoryVT = getMemoryVT();
@@ -2520,6 +2520,9 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       }
     }
 
+    unsigned NumResults = Inst.getNumResults();
+    unsigned NumFixedOperands = InstInfo.Operands.size();
+
     // If one or more operands with a default value appear at the end of the
     // formal operand list for an instruction, we allow them to be overridden
     // by optional operands provided in the pattern.
@@ -2528,14 +2531,15 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
     // operand A with a default, then we don't allow A to be overridden,
     // because there would be no way to specify whether the next operand in
     // the pattern was intended to override A or skip it.
-    unsigned NonOverridableOperands = Inst.getNumOperands();
-    while (NonOverridableOperands > 0 &&
-           CDP.operandHasDefault(Inst.getOperand(NonOverridableOperands-1)))
+    unsigned NonOverridableOperands = NumFixedOperands;
+    while (NonOverridableOperands > NumResults &&
+           CDP.operandHasDefault(InstInfo.Operands[NonOverridableOperands-1].Rec))
       --NonOverridableOperands;
 
     unsigned ChildNo = 0;
-    for (unsigned i = 0, e = Inst.getNumOperands(); i != e; ++i) {
-      Record *OperandNode = Inst.getOperand(i);
+    assert(NumResults <= NumFixedOperands);
+    for (unsigned i = NumResults, e = NumFixedOperands; i != e; ++i) {
+      Record *OperandNode = InstInfo.Operands[i].Rec;
 
       // If the operand has a default value, do we use it? We must use the
       // default if we've run out of children of the pattern DAG to consume,

@@ -55,12 +55,15 @@ void testHeapSymbol() {
 
 void testStackArrayOutOfBound() {
   char buf[1];
-  memset(buf, 0, 1024); // expected-warning {{Memory set function accesses out-of-bound array element}} expected-warning {{'memset' will always overflow; destination buffer has size 1, but size argument is 1024}}
+  memset(buf, 0, 1024);
+  // expected-warning@-1 {{Memory set function overflows the destination buffer}}
+  // expected-warning@-2 {{'memset' will always overflow; destination buffer has size 1, but size argument is 1024}}
 }
 
 void testHeapSymbolOutOfBound() {
   char *buf = (char *)malloc(1);
-  memset(buf, 0, 1024); // expected-warning {{Memory set function accesses out-of-bound array element}}
+  memset(buf, 0, 1024);
+  // expected-warning@-1 {{Memory set function overflows the destination buffer}}
   free(buf);
 }
 

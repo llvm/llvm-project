@@ -46,8 +46,9 @@ AST_MATCHER(CXXRecordDecl, isMoveConstructible) {
 }
 } // namespace
 
-static TypeMatcher constRefType() {
-  return lValueReferenceType(pointee(isConstQualified()));
+static TypeMatcher notTemplateSpecConstRefType() {
+  return lValueReferenceType(
+      pointee(unless(templateSpecializationType()), isConstQualified()));
 }
 
 static TypeMatcher nonConstValueType() {
@@ -119,62 +120,58 @@ collectParamDecls(const CXXConstructorDecl *Ctor,
 
 PassByValueCheck::PassByValueCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))),
-      ValuesOnly(Options.get("ValuesOnly", 0) != 0) {}
+      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
+                                            utils::IncludeSorter::getMapping(),
+                                            utils::IncludeSorter::IS_LLVM)),
+      ValuesOnly(Options.get("ValuesOnly", false)) {}
 
 void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle",
-                utils::IncludeSorter::toString(IncludeStyle));
+  Options.store(Opts, "IncludeStyle", IncludeStyle,
+                utils::IncludeSorter::getMapping());
   Options.store(Opts, "ValuesOnly", ValuesOnly);
 }
 
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
-      cxxConstructorDecl(
-          forEachConstructorInitializer(
-              cxxCtorInitializer(
-                  unless(isBaseInitializer()),
-                  // Clang builds a CXXConstructExpr only when it knows which
-                  // constructor will be called. In dependent contexts a
-                  // ParenListExpr is generated instead of a CXXConstructExpr,
-                  // filtering out templates automatically for us.
-                  withInitializer(cxxConstructExpr(
-                      has(ignoringParenImpCasts(declRefExpr(to(
-                          parmVarDecl(
-                              hasType(qualType(
-                                  // Match only const-ref or a non-const value
-                                  // parameters. Rvalues and const-values
-                                  // shouldn't be modified.
-                                  ValuesOnly ? nonConstValueType()
-                                             : anyOf(constRefType(),
-                                                     nonConstValueType()))))
-                              .bind("Param"))))),
-                      hasDeclaration(cxxConstructorDecl(
-                          isCopyConstructor(), unless(isDeleted()),
-                          hasDeclContext(
-                              cxxRecordDecl(isMoveConstructible())))))))
-                  .bind("Initializer")))
-          .bind("Ctor"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          cxxConstructorDecl(
+              forEachConstructorInitializer(
+                  cxxCtorInitializer(
+                      unless(isBaseInitializer()),
+                      // Clang builds a CXXConstructExpr only when it knows
+                      // which constructor will be called. In dependent contexts
+                      // a ParenListExpr is generated instead of a
+                      // CXXConstructExpr, filtering out templates automatically
+                      // for us.
+                      withInitializer(cxxConstructExpr(
+                          has(ignoringParenImpCasts(declRefExpr(to(
+                              parmVarDecl(
+                                  hasType(qualType(
+                                      // Match only const-ref or a non-const
+                                      // value parameters. Rvalues,
+                                      // TemplateSpecializationValues and
+                                      // const-values shouldn't be modified.
+                                      ValuesOnly
+                                          ? nonConstValueType()
+                                          : anyOf(notTemplateSpecConstRefType(),
+                                                  nonConstValueType()))))
+                                  .bind("Param"))))),
+                          hasDeclaration(cxxConstructorDecl(
+                              isCopyConstructor(), unless(isDeleted()),
+                              hasDeclContext(
+                                  cxxRecordDecl(isMoveConstructible())))))))
+                      .bind("Initializer")))
+              .bind("Ctor")),
       this);
 }
 
 void PassByValueCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {
-  // Only register the preprocessor callbacks for C++; the functionality
-  // currently does not provide any benefit to other languages, despite being
-  // benign.
-  if (getLangOpts().CPlusPlus) {
     Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                          IncludeStyle);
     PP->addPPCallbacks(Inserter->CreatePPCallbacks());
-  }
 }
 
 void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {

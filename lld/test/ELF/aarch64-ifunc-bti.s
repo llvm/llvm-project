@@ -4,37 +4,37 @@
 
 # RUN: ld.lld --shared --soname=t1.so %t1.o -o %t1.so
 # RUN: ld.lld --pie %t1.so %t.o -o %t
-# RUN: llvm-objdump -d --no-show-raw-insn -mattr=+bti -triple=aarch64-linux-gnu %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn --mattr=+bti --triple=aarch64-linux-gnu %t | FileCheck %s
 
 # When the address of an ifunc is taken using a non-got reference which clang
 # can do, LLD exports a canonical PLT entry that may have its address taken so
 # we must use bti c.
 
 # CHECK: Disassembly of section .plt:
-# CHECK: 0000000000010380 .plt:
+# CHECK: 0000000000010380 <.plt>:
 # CHECK-NEXT:    10380:         bti     c
 # CHECK-NEXT:                   stp     x16, x30, [sp, #-16]!
 # CHECK-NEXT:                   adrp    x16, #131072
-# CHECK-NEXT:                   ldr     x17, [x16, #1272]
-# CHECK-NEXT:                   add     x16, x16, #1272
+# CHECK-NEXT:                   ldr     x17, [x16, #1288]
+# CHECK-NEXT:                   add     x16, x16, #1288
 # CHECK-NEXT:                   br      x17
 # CHECK-NEXT:                   nop
 # CHECK-NEXT:                   nop
-# CHECK: 00000000000103a0 func1@plt:
+# CHECK: 00000000000103a0 <func1@plt>:
 # CHECK-NEXT:    103a0:         bti     c
 # CHECK-NEXT:                   adrp    x16, #131072
-# CHECK-NEXT:                   ldr     x17, [x16, #1280]
-# CHECK-NEXT:                   add     x16, x16, #1280
+# CHECK-NEXT:                   ldr     x17, [x16, #1296]
+# CHECK-NEXT:                   add     x16, x16, #1296
 # CHECK-NEXT:                   br      x17
 # CHECK-NEXT:                   nop
 # CHECK-EMPTY:
 # CHECK: Disassembly of section .iplt:
 # CHECK-EMPTY:
-# CHECK-NEXT: 00000000000103c0 myfunc:
+# CHECK-NEXT: 00000000000103c0 <myfunc>:
 # CHECK-NEXT:    103c0:         bti     c
 # CHECK-NEXT:                   adrp    x16, #131072
-# CHECK-NEXT:                   ldr     x17, [x16, #1288]
-# CHECK-NEXT:                   add     x16, x16, #1288
+# CHECK-NEXT:                   ldr     x17, [x16, #1304]
+# CHECK-NEXT:                   add     x16, x16, #1304
 # CHECK-NEXT:                   br      x17
 # CHECK-NEXT:                   nop
 

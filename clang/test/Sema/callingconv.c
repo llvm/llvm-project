@@ -31,7 +31,7 @@ void (__attribute__((fastcall)) *pfoo)(float*) = foo;
 
 void (__attribute__((stdcall)) *pbar)(float*) = bar;
 
-void (__attribute__((cdecl)) *ptest1)(void) = test1; // expected-warning {{incompatible pointer types}}
+void (__attribute__((cdecl)) *ptest1)(void) = test1; // expected-warning {{incompatible function pointer types}}
 
 void (*pctest0)() = ctest0;
 

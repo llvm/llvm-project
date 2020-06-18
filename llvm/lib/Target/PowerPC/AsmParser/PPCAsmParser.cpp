@@ -1731,10 +1731,10 @@ bool PPCAsmParser::ParseDirectiveMachine(SMLoc L) {
   if (parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(" in '.machine' directive");
 
-  PPCTargetStreamer &TStreamer =
-      *static_cast<PPCTargetStreamer *>(
-           getParser().getStreamer().getTargetStreamer());
-  TStreamer.emitMachine(CPU);
+  PPCTargetStreamer *TStreamer = static_cast<PPCTargetStreamer *>(
+      getParser().getStreamer().getTargetStreamer());
+  if (TStreamer != nullptr)
+    TStreamer->emitMachine(CPU);
 
   return false;
 }
@@ -1773,10 +1773,10 @@ bool PPCAsmParser::ParseDirectiveAbiVersion(SMLoc L) {
       parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(" in '.abiversion' directive");
 
-  PPCTargetStreamer &TStreamer =
-      *static_cast<PPCTargetStreamer *>(
-           getParser().getStreamer().getTargetStreamer());
-  TStreamer.emitAbiVersion(AbiVersion);
+  PPCTargetStreamer *TStreamer = static_cast<PPCTargetStreamer *>(
+      getParser().getStreamer().getTargetStreamer());
+  if (TStreamer != nullptr)
+    TStreamer->emitAbiVersion(AbiVersion);
 
   return false;
 }
@@ -1796,10 +1796,10 @@ bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
       parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(" in '.localentry' directive");
 
-  PPCTargetStreamer &TStreamer =
-      *static_cast<PPCTargetStreamer *>(
-           getParser().getStreamer().getTargetStreamer());
-  TStreamer.emitLocalEntry(Sym, Expr);
+  PPCTargetStreamer *TStreamer = static_cast<PPCTargetStreamer *>(
+      getParser().getStreamer().getTargetStreamer());
+  if (TStreamer != nullptr)
+    TStreamer->emitLocalEntry(Sym, Expr);
 
   return false;
 }

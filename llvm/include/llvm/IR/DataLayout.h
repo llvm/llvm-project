@@ -262,7 +262,7 @@ public:
 
   /// Returns true if the given alignment exceeds the natural stack alignment.
   bool exceedsNaturalStackAlignment(Align Alignment) const {
-    return StackNaturalAlign && (Alignment > StackNaturalAlign);
+    return StackNaturalAlign && (Alignment > *StackNaturalAlign);
   }
 
   Align getStackAlignment() const {
@@ -651,6 +651,7 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::IntegerTyID:
     return TypeSize::Fixed(Ty->getIntegerBitWidth());
   case Type::HalfTyID:
+  case Type::BFloatTyID:
     return TypeSize::Fixed(16);
   case Type::FloatTyID:
     return TypeSize::Fixed(32);
@@ -664,7 +665,8 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   // only 80 bits contain information.
   case Type::X86_FP80TyID:
     return TypeSize::Fixed(80);
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
     auto EltCnt = VTy->getElementCount();
     uint64_t MinBits = EltCnt.Min *

@@ -1,16 +1,9 @@
-//===-- main.c --------------------------------------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
 #include <stdio.h>
 
 // This simple program is to test the lldb Python APIs SBTarget, SBFrame,
 // SBFunction, SBSymbol, and SBAddress.
 //
-// When stopped on breakppint 1, we can get the line entry using SBFrame API
+// When stopped on breakpoint 1, we can get the line entry using SBFrame API
 // SBFrame.GetLineEntry().  We'll get the start address for the line entry
 // with the SBAddress type, resolve the symbol context using the SBTarget API
 // SBTarget.ResolveSymbolContextForAddress() in order to get the SBSymbol.

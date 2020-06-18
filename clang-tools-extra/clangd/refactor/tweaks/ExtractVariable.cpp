@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "Logger.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -450,6 +450,10 @@ bool ExtractVariable::prepare(const Selection &Inputs) {
   if (Inputs.SelectionBegin == Inputs.SelectionEnd)
     return false;
   const ASTContext &Ctx = Inputs.AST->getASTContext();
+  // FIXME: Enable non-C++ cases once we start spelling types explicitly instead
+  // of making use of auto.
+  if (!Ctx.getLangOpts().CPlusPlus)
+    return false;
   const SourceManager &SM = Inputs.AST->getSourceManager();
   if (const SelectionTree::Node *N =
           computeExtractedExpr(Inputs.ASTSelection.commonAncestor()))

@@ -17,7 +17,9 @@
 // FIXME: Move to this file: BasicBlock::removePredecessor, BB::splitBasicBlock
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/InstrTypes.h"
@@ -95,6 +97,17 @@ bool MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
                                MemoryDependenceResults *MemDep = nullptr,
                                bool PredecessorWithTwoSuccessors = false);
 
+/// Merge block(s) sucessors, if possible. Return true if at least two
+/// of the blocks were merged together.
+/// In order to merge, each block must be terminated by an unconditional
+/// branch. If L is provided, then the blocks merged into their predecessors
+/// must be in L. In addition, This utility calls on another utility:
+/// MergeBlockIntoPredecessor. Blocks are successfully merged when the call to
+/// MergeBlockIntoPredecessor returns true.
+bool MergeBlockSuccessorsIntoGivenBlocks(
+    SmallPtrSetImpl<BasicBlock *> &MergeBlocks, Loop *L = nullptr,
+    DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
+
 /// Try to remove redundant dbg.value instructions from given basic block.
 /// Returns true if at least one instruction was removed.
 bool RemoveRedundantDbgInstrs(BasicBlock *BB);
@@ -128,6 +141,10 @@ struct CriticalEdgeSplittingOptions {
   bool KeepOneInputPHIs = false;
   bool PreserveLCSSA = false;
   bool IgnoreUnreachableDests = false;
+  /// SplitCriticalEdge is guaranteed to preserve loop-simplify form if LI is
+  /// provided. If it cannot be preserved, no splitting will take place. If it
+  /// is not set, preserve loop-simplify form if possible.
+  bool PreserveLoopSimplify = true;
 
   CriticalEdgeSplittingOptions(DominatorTree *DT = nullptr,
                                LoopInfo *LI = nullptr,
@@ -152,6 +169,11 @@ struct CriticalEdgeSplittingOptions {
 
   CriticalEdgeSplittingOptions &setIgnoreUnreachableDests() {
     IgnoreUnreachableDests = true;
+    return *this;
+  }
+
+  CriticalEdgeSplittingOptions &unsetPreserveLoopSimplify() {
+    PreserveLoopSimplify = false;
     return *this;
   }
 };
@@ -362,6 +384,81 @@ Value *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
 bool SplitIndirectBrCriticalEdges(Function &F,
                                   BranchProbabilityInfo *BPI = nullptr,
                                   BlockFrequencyInfo *BFI = nullptr);
+
+/// Given a set of incoming and outgoing blocks, create a "hub" such that every
+/// edge from an incoming block InBB to an outgoing block OutBB is now split
+/// into two edges, one from InBB to the hub and another from the hub to
+/// OutBB. The hub consists of a series of guard blocks, one for each outgoing
+/// block. Each guard block conditionally branches to the corresponding outgoing
+/// block, or the next guard block in the chain. These guard blocks are returned
+/// in the argument vector.
+///
+/// Since the control flow edges from InBB to OutBB have now been replaced, the
+/// function also updates any PHINodes in OutBB. For each such PHINode, the
+/// operands corresponding to incoming blocks are moved to a new PHINode in the
+/// hub, and the hub is made an operand of the original PHINode.
+///
+/// Input CFG:
+/// ----------
+///
+///                    Def
+///                     |
+///                     v
+///           In1      In2
+///            |        |
+///            |        |
+///            v        v
+///  Foo ---> Out1     Out2
+///                     |
+///                     v
+///                    Use
+///
+///
+/// Create hub: Incoming = {In1, In2}, Outgoing = {Out1, Out2}
+/// ----------------------------------------------------------
+///
+///             Def
+///              |
+///              v
+///  In1        In2          Foo
+///   |    Hub   |            |
+///   |    + - - | - - +      |
+///   |    '     v     '      V
+///   +------> Guard1 -----> Out1
+///        '     |     '
+///        '     v     '
+///        '   Guard2 -----> Out2
+///        '           '      |
+///        + - - - - - +      |
+///                           v
+///                          Use
+///
+/// Limitations:
+/// -----------
+/// 1. This assumes that all terminators in the CFG are direct branches (the
+///    "br" instruction). The presence of any other control flow such as
+///    indirectbr, switch or callbr will cause an assert.
+///
+/// 2. The updates to the PHINodes are not sufficient to restore SSA
+///    form. Consider a definition Def, its use Use, incoming block In2 and
+///    outgoing block Out2, such that:
+///    a. In2 is reachable from D or contains D.
+///    b. U is reachable from Out2 or is contained in Out2.
+///    c. U is not a PHINode if U is contained in Out2.
+///
+///    Clearly, Def dominates Out2 since the program is valid SSA. But when the
+///    hub is introduced, there is a new path through the hub along which Use is
+///    reachable from entry without passing through Def, and SSA is no longer
+///    valid. To fix this, we need to look at all the blocks post-dominated by
+///    the hub on the one hand, and dominated by Out2 on the other. This is left
+///    for the caller to accomplish, since each specific use of this function
+///    may have additional information which simplifies this fixup. For example,
+///    see restoreSSA() in the UnifyLoopExits pass.
+BasicBlock *CreateControlFlowHub(DomTreeUpdater *DTU,
+                                 SmallVectorImpl<BasicBlock *> &GuardBlocks,
+                                 const SetVector<BasicBlock *> &Predecessors,
+                                 const SetVector<BasicBlock *> &Successors,
+                                 const StringRef Prefix);
 
 } // end namespace llvm
 

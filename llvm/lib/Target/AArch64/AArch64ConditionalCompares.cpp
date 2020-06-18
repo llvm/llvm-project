@@ -317,7 +317,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
 
   // Now find the instruction controlling the terminator.
   for (MachineBasicBlock::iterator B = MBB->begin(); I != B;) {
-    --I;
+    I = prev_nodbg(I, MBB->begin());
     assert(!I->isTerminator() && "Spurious terminator");
     switch (I->getOpcode()) {
     // cmp is an alias for subs with a dead destination register.
@@ -710,7 +710,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
         .add(CmpMI->getOperand(1)); // Branch target.
   }
   CmpMI->eraseFromParent();
-  Head->updateTerminator();
+  Head->updateTerminator(CmpBB->getNextNode());
 
   RemovedBlocks.push_back(CmpBB);
   CmpBB->eraseFromParent();

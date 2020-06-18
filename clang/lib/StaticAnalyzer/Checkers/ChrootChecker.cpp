@@ -136,6 +136,6 @@ void ento::registerChrootChecker(CheckerManager &mgr) {
   mgr.registerChecker<ChrootChecker>();
 }
 
-bool ento::shouldRegisterChrootChecker(const LangOptions &LO) {
+bool ento::shouldRegisterChrootChecker(const CheckerManager &mgr) {
   return true;
 }

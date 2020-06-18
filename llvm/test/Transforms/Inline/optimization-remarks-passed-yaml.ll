@@ -8,6 +8,11 @@
 ; RUN:    -pass-remarks-with-hotness 2>&1 | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
+; RUN: opt < %s -S -passes=inliner-wrapper -pass-remarks-output=%t -pass-remarks=inline \
+; RUN:    -pass-remarks-missed=inline -pass-remarks-analysis=inline \
+; RUN:    -pass-remarks-with-hotness 2>&1 | FileCheck %s
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
+
 ; Check the YAML file for inliner-generated passed and analysis remarks.  This
 ; is the input:
 

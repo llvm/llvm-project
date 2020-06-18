@@ -1,0 +1,10 @@
+add_header_library(
+  fputil
+  HDRS
+    BitPatterns.h
+    FloatOperations.h
+    FloatProperties.h
+    ManipulationFunctions.h
+  DEPS
+    libc.utils.CPP.standalone_cpp
+)

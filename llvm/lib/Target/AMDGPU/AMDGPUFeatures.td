@@ -18,15 +18,6 @@ def FeatureFMA : SubtargetFeature<"fmaf",
   "Enable single precision FMA (not as fast as mul+add, but fused)"
 >;
 
-// Some instructions do not support denormals despite this flag. Using
-// fp32 denormals also causes instructions to run at the double
-// precision rate for the device.
-def FeatureFP32Denormals : SubtargetFeature<"fp32-denormals",
-  "FP32Denormals",
-  "true",
-  "Enable single precision denormal handling"
->;
-
 class SubtargetFeatureLocalMemorySize <int Value> : SubtargetFeature<
   "localmemorysize"#Value,
   "LocalMemorySize",
@@ -38,16 +29,16 @@ def FeatureLocalMemorySize0 : SubtargetFeatureLocalMemorySize<0>;
 def FeatureLocalMemorySize32768 : SubtargetFeatureLocalMemorySize<32768>;
 def FeatureLocalMemorySize65536 : SubtargetFeatureLocalMemorySize<65536>;
 
-class SubtargetFeatureWavefrontSize <int Value> : SubtargetFeature<
-  "wavefrontsize"#Value,
-  "WavefrontSize",
-  !cast<string>(Value),
+class SubtargetFeatureWavefrontSize <int ValueLog2> : SubtargetFeature<
+  "wavefrontsize"#!shl(1, ValueLog2),
+  "WavefrontSizeLog2",
+  !cast<string>(ValueLog2),
   "The number of threads per wavefront"
 >;
 
-def FeatureWavefrontSize16 : SubtargetFeatureWavefrontSize<16>;
-def FeatureWavefrontSize32 : SubtargetFeatureWavefrontSize<32>;
-def FeatureWavefrontSize64 : SubtargetFeatureWavefrontSize<64>;
+def FeatureWavefrontSize16 : SubtargetFeatureWavefrontSize<4>;
+def FeatureWavefrontSize32 : SubtargetFeatureWavefrontSize<5>;
+def FeatureWavefrontSize64 : SubtargetFeatureWavefrontSize<6>;
 
 class SubtargetFeatureGeneration <string Value, string FeatureName,
                                  string Subtarget,

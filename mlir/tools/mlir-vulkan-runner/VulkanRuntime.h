@@ -13,15 +13,10 @@
 #ifndef VULKAN_RUNTIME_H
 #define VULKAN_RUNTIME_H
 
-#include "mlir/Analysis/Passes.h"
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/Serialization.h"
-#include "mlir/IR/Module.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/StringExtras.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/ToolOutputFile.h"
 
+#include <unordered_map>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 using namespace mlir;
@@ -58,32 +53,30 @@ struct NumWorkGroups {
 struct DescriptorSetInfo {
   /// Index of a descriptor set in descriptor sets.
   DescriptorSetIndex descriptorSet{0};
-  /// Number of desriptors in a set.
+  /// Number of descriptors in a set.
   uint32_t descriptorSize{0};
   /// Type of a descriptor set.
   VkDescriptorType descriptorType{VK_DESCRIPTOR_TYPE_MAX_ENUM};
 };
 
 /// VulkanHostMemoryBuffer mapped into a descriptor set and a binding.
-using ResourceData =
-    llvm::DenseMap<DescriptorSetIndex,
-                   llvm::DenseMap<BindingIndex, VulkanHostMemoryBuffer>>;
+using ResourceData = std::unordered_map<
+    DescriptorSetIndex,
+    std::unordered_map<BindingIndex, VulkanHostMemoryBuffer>>;
+
+/// SPIR-V storage classes.
+/// Note that this duplicates spirv::StorageClass but it keeps the Vulkan
+/// runtime library detached from SPIR-V dialect, so we can avoid pick up lots
+/// of dependencies.
+enum class SPIRVStorageClass {
+  Uniform = 2,
+  StorageBuffer = 12,
+};
 
 /// StorageClass mapped into a descriptor set and a binding.
 using ResourceStorageClassBindingMap =
-    llvm::DenseMap<DescriptorSetIndex,
-                   llvm::DenseMap<BindingIndex, mlir::spirv::StorageClass>>;
-
-inline void emitVulkanError(const llvm::Twine &message, VkResult error) {
-  llvm::errs()
-      << message.concat(" failed with error code ").concat(llvm::Twine{error});
-}
-
-#define RETURN_ON_VULKAN_ERROR(result, msg)                                    \
-  if ((result) != VK_SUCCESS) {                                                \
-    emitVulkanError(msg, (result));                                            \
-    return failure();                                                          \
-  }
+    std::unordered_map<DescriptorSetIndex,
+                       std::unordered_map<BindingIndex, SPIRVStorageClass>>;
 
 /// Vulkan runtime.
 /// The purpose of this class is to run SPIR-V compute shader on Vulkan
@@ -92,7 +85,7 @@ inline void emitVulkanError(const llvm::Twine &message, VkResult error) {
 /// SPIR-V shader, number of work groups and entry point. After the creation of
 /// VulkanRuntime, special methods must be called in the following
 /// sequence: initRuntime(), run(), updateHostMemoryBuffers(), destroy();
-/// each method in the sequence returns succes or failure depends on the Vulkan
+/// each method in the sequence returns success or failure depends on the Vulkan
 /// result code.
 class VulkanRuntime {
 public:
@@ -130,7 +123,7 @@ private:
 
   LogicalResult createInstance();
   LogicalResult createDevice();
-  LogicalResult getBestComputeQueue(const VkPhysicalDevice &physicalDevice);
+  LogicalResult getBestComputeQueue();
   LogicalResult createMemoryBuffers();
   LogicalResult createShaderModule();
   void initDescriptorSetLayoutBindingMap();
@@ -141,6 +134,7 @@ private:
   LogicalResult allocateDescriptorSets();
   LogicalResult setWriteDescriptors();
   LogicalResult createCommandPool();
+  LogicalResult createQueryPool();
   LogicalResult createComputeCommandBuffer();
   LogicalResult submitCommandBuffersToQueue();
 
@@ -150,12 +144,12 @@ private:
 
   /// Maps storage class to a descriptor type.
   LogicalResult
-  mapStorageClassToDescriptorType(spirv::StorageClass storageClass,
+  mapStorageClassToDescriptorType(SPIRVStorageClass storageClass,
                                   VkDescriptorType &descriptorType);
 
   /// Maps storage class to buffer usage flags.
   LogicalResult
-  mapStorageClassToBufferUsageFlag(spirv::StorageClass storageClass,
+  mapStorageClassToBufferUsageFlag(SPIRVStorageClass storageClass,
                                    VkBufferUsageFlagBits &bufferUsage);
 
   LogicalResult countDeviceMemorySize();
@@ -164,45 +158,51 @@ private:
   // Vulkan objects.
   //===--------------------------------------------------------------------===//
 
-  VkInstance instance;
-  VkDevice device;
-  VkQueue queue;
+  VkInstance instance{VK_NULL_HANDLE};
+  VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
+  VkDevice device{VK_NULL_HANDLE};
+  VkQueue queue{VK_NULL_HANDLE};
 
   /// Specifies VulkanDeviceMemoryBuffers divided into sets.
-  llvm::DenseMap<DescriptorSetIndex,
-                 llvm::SmallVector<VulkanDeviceMemoryBuffer, 1>>
+  std::unordered_map<DescriptorSetIndex, std::vector<VulkanDeviceMemoryBuffer>>
       deviceMemoryBufferMap;
 
   /// Specifies shader module.
-  VkShaderModule shaderModule;
+  VkShaderModule shaderModule{VK_NULL_HANDLE};
 
   /// Specifies layout bindings.
-  llvm::DenseMap<DescriptorSetIndex,
-                 llvm::SmallVector<VkDescriptorSetLayoutBinding, 1>>
+  std::unordered_map<DescriptorSetIndex,
+                     std::vector<VkDescriptorSetLayoutBinding>>
       descriptorSetLayoutBindingMap;
 
   /// Specifies layouts of descriptor sets.
-  llvm::SmallVector<VkDescriptorSetLayout, 1> descriptorSetLayouts;
-  VkPipelineLayout pipelineLayout;
+  std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+  VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
 
   /// Specifies descriptor sets.
-  llvm::SmallVector<VkDescriptorSet, 1> descriptorSets;
+  std::vector<VkDescriptorSet> descriptorSets;
 
   /// Specifies a pool of descriptor set info, each descriptor set must have
   /// information such as type, index and amount of bindings.
-  llvm::SmallVector<DescriptorSetInfo, 1> descriptorSetInfoPool;
-  VkDescriptorPool descriptorPool;
+  std::vector<DescriptorSetInfo> descriptorSetInfoPool;
+  VkDescriptorPool descriptorPool{VK_NULL_HANDLE};
+
+  /// Timestamp query.
+  VkQueryPool queryPool{VK_NULL_HANDLE};
+  // Number of nonoseconds for timestamp to increase 1
+  float timestampPeriod{0.f};
 
   /// Computation pipeline.
-  VkPipeline pipeline;
-  VkCommandPool commandPool;
-  llvm::SmallVector<VkCommandBuffer, 1> commandBuffers;
+  VkPipeline pipeline{VK_NULL_HANDLE};
+  VkCommandPool commandPool{VK_NULL_HANDLE};
+  std::vector<VkCommandBuffer> commandBuffers;
 
   //===--------------------------------------------------------------------===//
   // Vulkan memory context.
   //===--------------------------------------------------------------------===//
 
   uint32_t queueFamilyIndex{0};
+  VkQueueFamilyProperties queueFamilyProperties{};
   uint32_t memoryTypeIndex{VK_MAX_MEMORY_TYPES};
   VkDeviceSize memorySize{0};
 

@@ -135,84 +135,6 @@ static constexpr OptionEnumValueElement g_language_enumerators[] = {
     },
 };
 
-#define MODULE_WITH_FUNC                                                       \
-  "{ "                                                                         \
-  "${module.file.basename}{`${function.name-with-args}"                        \
-  "{${frame.no-debug}${function.pc-offset}}}}"
-
-#define MODULE_WITH_FUNC_NO_ARGS                                               \
-  "{ "                                                                         \
-  "${module.file.basename}{`${function.name-without-args}"                     \
-  "{${frame.no-debug}${function.pc-offset}}}}"
-
-#define FILE_AND_LINE                                                          \
-  "{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}"                    \
-  ":${ansi.fg.yellow}${line.number}${ansi.normal}"                             \
-  "{:${ansi.fg.yellow}${line.column}${ansi.normal}}}"
-
-#define IS_OPTIMIZED "{${function.is-optimized} [opt]}"
-
-#define IS_ARTIFICIAL "{${frame.is-artificial} [artificial]}"
-
-#define DEFAULT_THREAD_FORMAT                                                  \
-  "thread #${thread.index}: tid = ${thread.id%tid}"                            \
-  "{, ${frame.pc}}" MODULE_WITH_FUNC FILE_AND_LINE                             \
-  "{, name = ${ansi.fg.green}'${thread.name}'${ansi.normal}}"                  \
-  "{, queue = ${ansi.fg.green}'${thread.queue}'${ansi.normal}}"                \
-  "{, activity = "                                                             \
-  "${ansi.fg.green}'${thread.info.activity.name}'${ansi.normal}}"              \
-  "{, ${thread.info.trace_messages} messages}"                                 \
-  "{, stop reason = ${ansi.fg.red}${thread.stop-reason}${ansi.normal}}"        \
-  "{\\nReturn value: ${thread.return-value}}"                                  \
-  "{\\nCompleted expression: ${thread.completed-expression}}"                  \
-  "\\n"
-
-#define DEFAULT_THREAD_STOP_FORMAT                                             \
-  "thread #${thread.index}{, name = '${thread.name}'}"                         \
-  "{, queue = ${ansi.fg.green}'${thread.queue}'${ansi.normal}}"                \
-  "{, activity = "                                                             \
-  "${ansi.fg.green}'${thread.info.activity.name}'${ansi.normal}}"              \
-  "{, ${thread.info.trace_messages} messages}"                                 \
-  "{, stop reason = ${ansi.fg.red}${thread.stop-reason}${ansi.normal}}"        \
-  "{\\nReturn value: ${thread.return-value}}"                                  \
-  "{\\nCompleted expression: ${thread.completed-expression}}"                  \
-  "\\n"
-
-#define DEFAULT_FRAME_FORMAT                                                   \
-  "frame #${frame.index}: "                                                    \
-  "${ansi.fg.yellow}${frame.pc}${ansi.normal}" MODULE_WITH_FUNC FILE_AND_LINE  \
-      IS_OPTIMIZED IS_ARTIFICIAL "\\n"
-
-#define DEFAULT_FRAME_FORMAT_NO_ARGS                                           \
-  "frame #${frame.index}: "                                                    \
-  "${ansi.fg.yellow}${frame.pc}${ansi.normal}" MODULE_WITH_FUNC_NO_ARGS        \
-      FILE_AND_LINE IS_OPTIMIZED IS_ARTIFICIAL "\\n"
-
-// Three parts to this disassembly format specification:
-//   1. If this is a new function/symbol (no previous symbol/function), print
-//      dylib`funcname:\n
-//   2. If this is a symbol context change (different from previous
-//   symbol/function), print
-//      dylib`funcname:\n
-//   3. print
-//      address <+offset>:
-#define DEFAULT_DISASSEMBLY_FORMAT                                             \
-  "{${function.initial-function}{${module.file.basename}`}{${function.name-"   \
-  "without-args}}:\\n}{${function.changed}\\n{${module.file.basename}`}{${"    \
-  "function.name-without-args}}:\\n}{${current-pc-arrow} "                     \
-  "}${addr-file-or-load}{ "                                                    \
-  "<${function.concrete-only-addr-offset-no-padding}>}: "
-
-// gdb's disassembly format can be emulated with ${current-pc-arrow}${addr-
-// file-or-load}{ <${function.name-without-args}${function.concrete-only-addr-
-// offset-no-padding}>}:
-
-// lldb's original format for disassembly would look like this format string -
-// {${function.initial-function}{${module.file.basename}`}{${function.name-
-// without-
-// args}}:\n}{${function.changed}\n{${module.file.basename}`}{${function.name-
-// without-args}}:\n}{${current-pc-arrow} }{${addr-file-or-load}}:
-
 static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
     {
         eStopShowColumnAnsiOrCaret,
@@ -290,6 +212,11 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       // use-color changed. Ping the prompt so it can reset the ansi terminal
       // codes.
       SetPrompt(GetPrompt());
+    } else if (property_path == g_debugger_properties[ePropertyUseSourceCache].name) {
+      // use-source-cache changed. Wipe out the cache contents if it was disabled.
+      if (!GetUseSourceCache()) {
+        m_source_file_cache.Clear();
+      }
     } else if (is_load_script && target_sp &&
                load_script_old_value == eLoadScriptFromSymFileWarn) {
       if (target_sp->TargetProperties::GetLoadScriptFromSymbolFile() ==
@@ -388,6 +315,9 @@ uint32_t Debugger::GetTerminalWidth() const {
 }
 
 bool Debugger::SetTerminalWidth(uint32_t term_width) {
+  if (auto handler_sp = m_io_handler_stack.Top())
+    handler_sp->TerminalSizeChanged();
+
   const uint32_t idx = ePropertyTerminalWidth;
   return m_collection_sp->SetPropertyAtIndexAsSInt64(nullptr, idx, term_width);
 }
@@ -416,6 +346,20 @@ bool Debugger::SetUseColor(bool b) {
   return ret;
 }
 
+bool Debugger::GetUseSourceCache() const {
+  const uint32_t idx = ePropertyUseSourceCache;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
+}
+
+bool Debugger::SetUseSourceCache(bool b) {
+  const uint32_t idx = ePropertyUseSourceCache;
+  bool ret = m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  if (!ret) {
+    m_source_file_cache.Clear();
+  }
+  return ret;
+}
 bool Debugger::GetHighlightSource() const {
   const uint32_t idx = ePropertyHighlightSource;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
@@ -435,6 +379,16 @@ llvm::StringRef Debugger::GetStopShowColumnAnsiPrefix() const {
 
 llvm::StringRef Debugger::GetStopShowColumnAnsiSuffix() const {
   const uint32_t idx = ePropertyStopShowColumnAnsiSuffix;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+}
+
+llvm::StringRef Debugger::GetStopShowLineMarkerAnsiPrefix() const {
+  const uint32_t idx = ePropertyStopShowLineMarkerAnsiPrefix;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+}
+
+llvm::StringRef Debugger::GetStopShowLineMarkerAnsiSuffix() const {
+  const uint32_t idx = ePropertyStopShowLineMarkerAnsiSuffix;
   return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
 }
 
@@ -1200,17 +1154,22 @@ bool Debugger::EnableLog(llvm::StringRef channel,
     if (pos != m_log_streams.end())
       log_stream_sp = pos->second.lock();
     if (!log_stream_sp) {
-      llvm::sys::fs::OpenFlags flags = llvm::sys::fs::OF_Text;
+      File::OpenOptions flags =
+          File::eOpenOptionWrite | File::eOpenOptionCanCreate;
       if (log_options & LLDB_LOG_OPTION_APPEND)
-        flags |= llvm::sys::fs::OF_Append;
-      int FD;
-      if (std::error_code ec = llvm::sys::fs::openFileForWrite(
-              log_file, FD, llvm::sys::fs::CD_CreateAlways, flags)) {
-        error_stream << "Unable to open log file: " << ec.message();
+        flags |= File::eOpenOptionAppend;
+      else
+        flags |= File::eOpenOptionTruncate;
+      auto file = FileSystem::Instance().Open(
+          FileSpec(log_file), flags, lldb::eFilePermissionsFileDefault, false);
+      if (!file) {
+        // FIXME: This gets garbled when called from the log command.
+        error_stream << "Unable to open log file: " << log_file;
         return false;
       }
-      log_stream_sp =
-          std::make_shared<llvm::raw_fd_ostream>(FD, should_close, unbuffered);
+
+      log_stream_sp = std::make_shared<llvm::raw_fd_ostream>(
+          (*file)->GetDescriptor(), should_close, unbuffered);
       m_log_streams[log_file] = log_stream_sp;
     }
   }

@@ -12,13 +12,16 @@
 ## sh_offset to sh_addr modulo max-page-size, so that p_vaddr=p_offset (mod
 ## p_align).
 
-# CHECK: Name Type   Address          Off     Size   ES Flg Lk Inf Al
-# CHECK: .bss NOBITS 0000000000000400 001400  000001 00  WA  0   0 1024
+# CHECK:      Name  Type     Address          Off     Size
+# CHECK-NEXT:       NULL     0000000000000000 000000  000000
+# CHECK-NEXT: .text PROGBITS 0000000000000000 000158  000000
+# CHECK-NEXT: .sec1 NOBITS   0000000000000000 000158  000001
+# CHECK-NEXT: .bss  NOBITS   0000000000000400 000400  000001
 
-# CHECK: Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
-# CHECK: LOAD 0x001400 0x0000000000000400 0x0000000000000400 0x000000 0x000001 RW  0x1000
+# CHECK:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK-NEXT: LOAD 0x000400 0x0000000000000400 0x0000000000000400 0x000000 0x000001 RW  0x1000
 
-# CHECK: 00 .bss
+# CHECK:      00 .bss {{$}}
 
 .bss
 .p2align 10

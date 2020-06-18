@@ -235,9 +235,9 @@ bb13:
 ; GFX1064: s_or_b64 [[MASK0:s\[[0-9:]+\]]], [[MASK0]], vcc
 ; GFX1032: s_andn2_b32 [[MASK1:s[0-9]+]], [[MASK1]], exec_lo
 ; GFX1064: s_andn2_b64 [[MASK1:s\[[0-9:]+\]]], [[MASK1]], exec
-; GCN:     global_store_dword
 ; GFX1032: s_and_b32 [[MASK0]], [[MASK0]], exec_lo
 ; GFX1064: s_and_b64 [[MASK0]], [[MASK0]], exec
+; GCN:     global_store_dword
 ; GFX1032: s_or_b32 [[MASK1]], [[MASK1]], [[MASK0]]
 ; GFX1064: s_or_b64 [[MASK1]], [[MASK1]], [[MASK0]]
 ; GCN:   BB{{.*}}: ; %Flow
@@ -336,8 +336,8 @@ bb:
 ; GFX1032: v_add_co_u32_e64 v{{[0-9]+}}, vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX1032: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, 0, v{{[0-9]+}}, vcc_lo
 ; GFX1032: v_sub_co_u32_e64 v{{[0-9]+}}, vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX1032: v_sub_co_ci_u32_e64 v{{[0-9]+}}, s{{[0-9]+}}, {{[vs][0-9]+}}, v{{[0-9]+}}, vcc_lo
-; GFX1032: v_subrev_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, {{[vs][0-9]+}}, v{{[0-9]+}}, vcc_lo
+; GFX1032: v_subrev_co_ci_u32_e64 v{{[0-9]+}}, s{{[0-9]+}}, {{[vs][0-9]+}}, v{{[0-9]+}}, vcc_lo
+; GFX1032: v_sub_co_ci_u32_e32 v{{[0-9]+}}, vcc_lo, {{[vs][0-9]+}}, v{{[0-9]+}}, vcc_lo
 ; GFX1064: v_add_co_u32_e64 v{{[0-9]+}}, [[SDST:s\[[0-9:]+\]]], v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX1064: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc{{$}}
 ; GFX1064: v_add_co_ci_u32_e64 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}, [[SDST]]
@@ -346,8 +346,8 @@ bb:
 ; GFX1064: v_add_co_u32_e64 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX1064: v_add_co_ci_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc{{$}}
 ; GFX1064: v_sub_co_u32_e64 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX1064: v_sub_co_ci_u32_e64 v{{[0-9]+}}, s[{{[0-9:]+}}], {{[vs][0-9]+}}, v{{[0-9]+}}, vcc{{$}}
-; GFX1064: v_subrev_co_ci_u32_e32 v{{[0-9]+}}, vcc, {{[vs][0-9]+}}, v{{[0-9]+}}, vcc{{$}}
+; GFX1064: v_subrev_co_ci_u32_e64 v{{[0-9]+}}, s[{{[0-9:]+}}], {{[vs][0-9]+}}, v{{[0-9]+}}, vcc{{$}}
+; GFX1064: v_sub_co_ci_u32_e32 v{{[0-9]+}}, vcc, {{[vs][0-9]+}}, v{{[0-9]+}}, vcc{{$}}
 define amdgpu_kernel void @test_udiv64(i64 addrspace(1)* %arg) #0 {
 bb:
   %tmp = getelementptr inbounds i64, i64 addrspace(1)* %arg, i64 1
@@ -476,8 +476,8 @@ exit:
 }
 
 ; GCN-LABEL: {{^}}fdiv_f32:
-; GFC1032: v_div_scale_f32 v{{[0-9]+}}, vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
-; GFC1064: v_div_scale_f32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
+; GFX1032: v_div_scale_f32 v{{[0-9]+}}, vcc_lo, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GFX1064: v_div_scale_f32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GCN: v_rcp_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-NOT: vcc
 ; GCN: v_div_fmas_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
@@ -529,14 +529,14 @@ end:
 }
 
 ; GCN-LABEL: {{^}}test_preserve_condition_undef_flag:
-; GFX1032: v_cmp_nlt_f32_e64 s{{[0-9]+}}, s{{[0-9]+}}, 1.0
-; GFX1032: v_cmp_ngt_f32_e64 s{{[0-9]+}}, s{{[0-9]+}}, 0
+; GFX1032-DAG: v_cmp_nlt_f32_e64 s{{[0-9]+}}, s{{[0-9]+}}, 1.0
+; GFX1032-DAG: v_cmp_ngt_f32_e64 s{{[0-9]+}}, s{{[0-9]+}}, 0
 ; GFX1032: v_cmp_nlt_f32_e64 s{{[0-9]+}}, s{{[0-9]+}}, 1.0
 ; GFX1032: s_or_b32 [[OR1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX1032: s_or_b32 [[OR2:s[0-9]+]], [[OR1]], s{{[0-9]+}}
 ; GFX1032: s_and_b32 vcc_lo, exec_lo, [[OR2]]
-; GFX1064: v_cmp_nlt_f32_e64 s[{{[0-9:]+}}], s{{[0-9]+}}, 1.0
-; GFX1064: v_cmp_ngt_f32_e64 s[{{[0-9:]+}}], s{{[0-9]+}}, 0
+; GFX1064-DAG: v_cmp_nlt_f32_e64 s[{{[0-9:]+}}], s{{[0-9]+}}, 1.0
+; GFX1064-DAG: v_cmp_ngt_f32_e64 s[{{[0-9:]+}}], s{{[0-9]+}}, 0
 ; GFX1064: v_cmp_nlt_f32_e64 s[{{[0-9:]+}}], s{{[0-9]+}}, 1.0
 ; GFX1064: s_or_b64 [[OR1:s\[[0-9:]+\]]], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GFX1064: s_or_b64 [[OR2:s\[[0-9:]+\]]], [[OR1]], s[{{[0-9:]+}}]
@@ -1058,30 +1058,30 @@ declare void @external_void_func_void() #1
 
 ; GFX1064-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GFX1032-NEXT: s_or_saveexec_b32 [[COPY_EXEC0:s[0-9]]], -1{{$}}
-; GCN-NEXT: buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT: v_nop
 ; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
 ; GFX1032-NEXT: s_mov_b32 exec_lo, [[COPY_EXEC0]]
 
-; GCN-NEXT: v_writelane_b32 v32, s34, 2
-; GCN: s_mov_b32 s34, s32
+; GCN-NEXT: v_writelane_b32 v40, s33, 2
+; GCN: s_mov_b32 s33, s32
 ; GFX1064: s_add_u32 s32, s32, 0x400
 ; GFX1032: s_add_u32 s32, s32, 0x200
 
 
-; GCN-DAG: v_writelane_b32 v32, s30, 0
-; GCN-DAG: v_writelane_b32 v32, s31, 1
+; GCN-DAG: v_writelane_b32 v40, s30, 0
+; GCN-DAG: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
-; GCN-DAG: v_readlane_b32 s4, v32, 0
-; GCN-DAG: v_readlane_b32 s5, v32, 1
+; GCN-DAG: v_readlane_b32 s4, v40, 0
+; GCN-DAG: v_readlane_b32 s5, v40, 1
 
 
 ; GFX1064: s_sub_u32 s32, s32, 0x400
 ; GFX1032: s_sub_u32 s32, s32, 0x200
-; GCN: v_readlane_b32 s34, v32, 2
+; GCN: v_readlane_b32 s33, v40, 2
 ; GFX1064: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GFX1032: s_or_saveexec_b32 [[COPY_EXEC1:s[0-9]]], -1{{$}}
-; GCN-NEXT: buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
+; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT: v_nop
 ; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
 ; GFX1032-NEXT: s_mov_b32 exec_lo, [[COPY_EXEC1]]

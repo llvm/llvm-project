@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
 
 // Identity maps used in trivial compositions in MemRefs are optimized away.
 // CHECK-NOT: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d0, d1)>
@@ -33,7 +33,7 @@
 // The following reduction should be unique'd out too but such expression
 // simplification is not performed for IR parsing, but only through analyses
 // and transforms.
-// CHECK: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d1 - d0 + (d0 - d1 + 1) * 2 + d1 - 1, d1 + d1 + d1 + d1 + 2)>
+// CHECK: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d1 - d0 + (d0 - d1 + 1) * 2 + d1 - 1, d1 * 4 + 2)>
 #map3l = affine_map<(i, j) -> ((j - i) + 2*(i - j + 1) + j - 1 + 0, j + j + 1 + j + j + 1)>
 
 // CHECK: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d0 + 2, d1)>
@@ -182,6 +182,12 @@
 
 // CHECK: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d0, d0 * 2 + d1 * 4 + 2, 1, 2, (d0 * 4) mod 8)>
 #map56 = affine_map<(d0, d1) -> ((4*d0 + 2) floordiv 4, (4*d0 + 8*d1 + 5) floordiv 2, (2*d0 + 4*d1 + 3) mod 2, (3*d0 - 4) mod 3, (4*d0 + 8*d1) mod 8)>
+
+// CHECK: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d1, d0, 0)>
+#map57 = affine_map<(d0, d1) -> (d0 - d0 + d1, -d0 + d0 + d0, (1 + d0 + d1 floordiv 4) - (d0 + d1 floordiv 4 + 1))>
+
+// CHECK: #map{{[0-9]+}} = affine_map<(d0, d1) -> (d0 * 3, (d0 + d1) * 2, d0 mod 2)>
+#map58 = affine_map<(d0, d1) -> (4*d0 - 2*d0 + d0, (d0 + d1) + (d0 + d1), 2 * (d0 mod 2) - d0 mod 2)>
 
 // Single identity maps are removed.
 // CHECK: func @f0(memref<2x4xi8, 1>)
@@ -361,3 +367,9 @@ func @f54(memref<10xi32, #map54>)
 
 // CHECK: func @f56(memref<1x1xi8, #map{{[0-9]+}}>)
 func @f56(memref<1x1xi8, #map56>)
+
+// CHECK: "f57"() {map = #map{{[0-9]+}}} : () -> ()
+"f57"() {map = #map57} : () -> ()
+
+// CHECK: "f58"() {map = #map{{[0-9]+}}} : () -> ()
+"f58"() {map = #map58} : () -> ()

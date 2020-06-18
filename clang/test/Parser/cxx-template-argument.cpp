@@ -9,8 +9,8 @@ template<typename T> struct A {};
 
 // Check for template argument lists followed by junk
 // FIXME: The diagnostics here aren't great...
-A<int+> int x; // expected-error {{expected '>'}} expected-error {{expected unqualified-id}}
-A<int x; // expected-error {{expected '>'}}
+A<int+> int x; // expected-error {{expected '>'}} expected-note {{to match this '<'}} expected-error {{expected unqualified-id}}
+A<int x; // expected-error {{expected '>'}} expected-note {{to match this '<'}}
 
 // PR8912
 template <bool> struct S {};

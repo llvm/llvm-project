@@ -341,6 +341,17 @@ int main (int argc, char **argv) {
 // RUN: %clang_cc1 -DOMP5 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -DOMP5 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix OMP5
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 void foo() {}
 
 #pragma omp declare target
@@ -353,11 +364,11 @@ int a;
 template <typename T, int C>
 T tmain(T argc, T *argv) {
   T i, j, a[20], always, close;
-#pragma omp target
+#pragma omp target device(argc)
   foo();
-#pragma omp target if (target:argc > 0)
+#pragma omp target if (target:argc > 0) device(device_num: C)
   foo();
-#pragma omp target if (C)
+#pragma omp target if (C) device(ancestor: argc)
   foo();
 #pragma omp target map(i)
   foo();
@@ -458,11 +469,11 @@ T tmain(T argc, T *argv) {
 
 // OMP5: template <typename T, int C> T tmain(T argc, T *argv) {
 // OMP5-NEXT: T i, j, a[20]
-// OMP5-NEXT: #pragma omp target{{$}}
+// OMP5-NEXT: #pragma omp target device(argc){{$}}
 // OMP5-NEXT: foo();
-// OMP5-NEXT: #pragma omp target if(target: argc > 0)
+// OMP5-NEXT: #pragma omp target if(target: argc > 0) device(device_num: C)
 // OMP5-NEXT: foo()
-// OMP5-NEXT: #pragma omp target if(C)
+// OMP5-NEXT: #pragma omp target if(C) device(ancestor: argc)
 // OMP5-NEXT: foo()
 // OMP5-NEXT: #pragma omp target map(tofrom: i)
 // OMP5-NEXT: foo()
@@ -650,11 +661,11 @@ T tmain(T argc, T *argv) {
 // OMP5-NEXT: foo()
 // OMP5: template<> char tmain<char, 1>(char argc, char *argv) {
 // OMP5-NEXT: char i, j, a[20]
-// OMP5-NEXT: #pragma omp target
+// OMP5-NEXT: #pragma omp target device(argc)
 // OMP5-NEXT: foo();
-// OMP5-NEXT: #pragma omp target if(target: argc > 0)
+// OMP5-NEXT: #pragma omp target if(target: argc > 0) device(device_num: 1)
 // OMP5-NEXT: foo()
-// OMP5-NEXT: #pragma omp target if(1)
+// OMP5-NEXT: #pragma omp target if(1) device(ancestor: argc)
 // OMP5-NEXT: foo()
 // OMP5-NEXT: #pragma omp target map(tofrom: i)
 // OMP5-NEXT: foo()
@@ -1048,6 +1059,14 @@ int main (int argc, char **argv) {
 // OMP5-NEXT: #pragma omp target defaultmap(none: scalar)
   bar();
 // OMP5-NEXT: bar();
+#pragma omp target defaultmap(none)
+  // OMP5-NEXT: #pragma omp target defaultmap(none)
+  // OMP5-NEXT: bar();
+  bar();
+#pragma omp target allocate(omp_default_mem_alloc:argv) uses_allocators(omp_default_mem_alloc,omp_large_cap_mem_alloc) allocate(omp_large_cap_mem_alloc:argc) private(argc, argv)
+  // OMP5-NEXT: #pragma omp target allocate(omp_default_mem_alloc: argv) uses_allocators(omp_default_mem_alloc,omp_large_cap_mem_alloc) allocate(omp_large_cap_mem_alloc: argc) private(argc,argv)
+  // OMP5-NEXT: bar();
+  bar();
   return tmain<int, 5>(argc, &argc) + tmain<char, 1>(argv[0][0], argv[0]);
 }
 

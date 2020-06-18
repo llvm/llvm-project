@@ -2,11 +2,9 @@
 //      Check that \DexExpectWatchValue applies no penalties when expected
 //      values are found.
 //
-// REQUIRES: system-linux, lldb
+// UNSUPPORTED: system-darwin
 //
-// RUN: %dexter_base test --fail-lt 1.0 -w \
-// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" -- %s \
-// RUN:     | FileCheck %s
+// RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: expect_watch_value.cpp:
 
 unsigned long Factorial(int n) {

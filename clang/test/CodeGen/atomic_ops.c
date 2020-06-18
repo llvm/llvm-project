@@ -1,7 +1,7 @@
-// XFAIL: hexagon,sparc
-//        (due to not having native load atomic support)
-// RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple mips-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm %s \
+// RUN:   -o - | FileCheck -check-prefixes=CHECK,NATIVE %s
+// RUN: %clang_cc1 -triple riscv32 -target-feature -a -emit-llvm %s \
+// RUN:   -o - | FileCheck -check-prefixes=CHECK,LIBCALL %s
 
 void foo(int x)
 {
@@ -9,32 +9,47 @@ void foo(int x)
   _Atomic(short) j = 0;
   // Check that multiply / divides on atomics produce a cmpxchg loop
   i *= 2;
-  // CHECK: mul nsw i32
-  // CHECK: {{(cmpxchg i32*|i1 @__atomic_compare_exchange\(i32 4,)}}
+  // NATIVE: mul nsw i32
+  // NATIVE: cmpxchg i32*
+  // LIBCALL: mul nsw i32
+  // LIBCALL: i1 @__atomic_compare_exchange(i32 4,
   i /= 2;
-  // CHECK: sdiv i32
-  // CHECK: {{(cmpxchg i32*|i1 @__atomic_compare_exchange\(i32 4, )}}
+  // NATIVE: sdiv i32
+  // NATIVE: cmpxchg i32*
+  // LIBCALL: sdiv i32
+  // LIBCALL: i1 @__atomic_compare_exchange(i32 4,
   j /= x;
-  // CHECK: sdiv i32
-  // CHECK: {{(cmpxchg i16*|i1 @__atomic_compare_exchange\(i32 2, )}}
+  // NATIVE: sdiv i32
+  // NATIVE: cmpxchg i16*
+  // LIBCALL: sdiv i32
+  // LIBCALL: i1 @__atomic_compare_exchange(i32 2,
 
 }
 
 extern _Atomic _Bool b;
 
 _Bool bar() {
-// CHECK-LABEL: @bar
-// CHECK: %[[load:.*]] = load atomic i8, i8* @b seq_cst
-// CHECK: %[[tobool:.*]] = trunc i8 %[[load]] to i1
-// CHECK: ret i1 %[[tobool]]
+// NATIVE-LABEL: @bar
+// NATIVE: %[[load:.*]] = load atomic i8, i8* @b seq_cst
+// NATIVE: %[[tobool:.*]] = trunc i8 %[[load]] to i1
+// NATIVE: ret i1 %[[tobool]]
+// LIBCALL-LABEL: @bar
+// LIBCALL: call void @__atomic_load(i32 1, i8* @b, i8* %atomic-temp, i32 5)
+// LIBCALL: %[[load:.*]] = load i8, i8* %atomic-temp
+// LIBCALL: %[[tobool:.*]] = trunc i8 %[[load]] to i1
+// LIBCALL: ret i1 %[[tobool]]
+
   return b;
 }
 
 extern _Atomic(_Complex int) x;
 
 void baz(int y) {
-// CHECK-LABEL: @baz
-// CHECK: {{store atomic|call void @__atomic_store}}
+// NATIVE-LABEL: @baz
+// NATIVE: store atomic
+// LIBCALL-LABEL: @baz
+// LIBCALL: call void @__atomic_store
+
   x += y;
 }
 
@@ -84,9 +99,11 @@ _Atomic(int) compound_and(_Atomic(int) in) {
 }
 
 _Atomic(int) compound_mul(_Atomic(int) in) {
-// CHECK-LABEL: @compound_mul
-// CHECK: cmpxchg i32* {{%.*}}, i32 {{%.*}}, i32 [[NEW:%.*]] seq_cst seq_cst
-// CHECK: ret i32 [[NEW]]
+// NATIVE-LABEL: @compound_mul
+// NATIVE: cmpxchg i32* {{%.*}}, i32 {{%.*}}, i32 [[NEW:%.*]] seq_cst seq_cst
+// NATIVE: ret i32 [[NEW]]
+// LIBCALL-LABEL: @compound_mul
+// LIBCALL: i1 @__atomic_compare_exchange(i32 4,
 
   return (in *= 5);
 }

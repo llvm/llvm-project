@@ -56,7 +56,7 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   if (MI->getOpcode() == X86::CALLpcrel32 &&
       (STI.getFeatureBits()[X86::Mode64Bit])) {
     OS << "\tcallq\t";
-    printPCRelImm(MI, 0, OS);
+    printPCRelImm(MI, Address, 0, OS);
   }
   // data16 and data32 both have the same encoding of 0x66. While data32 is
   // valid only in 16 bit systems, data16 is valid in the rest.
@@ -68,8 +68,7 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, uint64_t Address,
    OS << "\tdata32";
   }
   // Try to print any aliases first.
-  else if (!printAliasInstr(MI, OS) &&
-           !printVecCompareInstr(MI, OS))
+  else if (!printAliasInstr(MI, Address, OS) && !printVecCompareInstr(MI, OS))
     printInstruction(MI, Address, OS);
 
   // Next always print the annotation.

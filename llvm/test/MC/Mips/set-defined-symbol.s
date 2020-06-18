@@ -9,10 +9,10 @@
 a:
   nop
 # CHECK-NOT: a:
-# CHECK: foo:
+# CHECK: <foo>:
 
 b:
   nop
 # CHECK-NOT: b:
 # CHECK-NOT: foo:
-# CHECK: bar:
+# CHECK: <bar>:

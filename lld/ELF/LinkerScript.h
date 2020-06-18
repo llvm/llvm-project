@@ -109,11 +109,11 @@ struct SymbolAssignment : BaseCommand {
   std::string commandString;
 
   // Address of this assignment command.
-  unsigned addr;
+  uint64_t addr;
 
   // Size of this assignment command. This is usually 0, but if
   // you move '.' this may be greater than 0.
-  unsigned size;
+  uint64_t size;
 };
 
 // Linker scripts allow additional constraints to be put on output sections.
@@ -126,14 +126,14 @@ enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 // target memory. Instances of the struct are created by parsing the
 // MEMORY command.
 struct MemoryRegion {
-  MemoryRegion(StringRef name, uint64_t origin, uint64_t length, uint32_t flags,
+  MemoryRegion(StringRef name, Expr origin, Expr length, uint32_t flags,
                uint32_t negFlags)
       : name(std::string(name)), origin(origin), length(length), flags(flags),
         negFlags(negFlags) {}
 
   std::string name;
-  uint64_t origin;
-  uint64_t length;
+  Expr origin;
+  Expr length;
   uint32_t flags;
   uint32_t negFlags;
   uint64_t curPos = 0;
@@ -245,9 +245,12 @@ class LinkerScript final {
   void expandMemoryRegions(uint64_t size);
 
   std::vector<InputSectionBase *>
-  computeInputSections(const InputSectionDescription *);
+  computeInputSections(const InputSectionDescription *,
+                       ArrayRef<InputSectionBase *>);
 
   std::vector<InputSectionBase *> createInputSectionList(OutputSection &cmd);
+
+  void discardSynthetic(OutputSection &);
 
   std::vector<size_t> getPhdrIndices(OutputSection *sec);
 
@@ -282,6 +285,7 @@ public:
   ExprValue getSymbolValue(StringRef name, const Twine &loc);
 
   void addOrphanSections();
+  void diagnoseOrphanHandling() const;
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();
 
@@ -320,6 +324,9 @@ public:
   // Used to implement INSERT [AFTER|BEFORE]. Contains output sections that need
   // to be reordered.
   std::vector<InsertCommand> insertCommands;
+
+  // Sections that will be warned/errored by --orphan-handling.
+  std::vector<const InputSectionBase *> orphanSections;
 };
 
 extern LinkerScript *script;

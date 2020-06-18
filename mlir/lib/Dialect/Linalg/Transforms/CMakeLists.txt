@@ -1,5 +1,22 @@
-set(LIBS
+add_mlir_dialect_library(MLIRLinalgTransforms
+  DropUnitDims.cpp
+  Fusion.cpp
+  Hoisting.cpp
+  Interchange.cpp
+  Loops.cpp
+  Promotion.cpp
+  TensorsToBuffers.cpp
+  Tiling.cpp
+  Transforms.cpp
+  Vectorization.cpp
 
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
+
+  DEPENDS
+  MLIRLinalgPassIncGen
+
+  LINK_LIBS PUBLIC
   MLIRAffineOps
   MLIRAnalysis
   MLIREDSC
@@ -8,30 +25,11 @@ set(LIBS
   MLIRLinalgEDSC
   MLIRLinalgOps
   MLIRLinalgUtils
-  MLIRLoopOps
+  MLIRSCF
+  MLIRSCFTransforms
   MLIRPass
   MLIRStandardOps
   MLIRStandardToLLVM
   MLIRTransformUtils
-  MLIRVectorOps
+  MLIRVector
   )
-
-add_llvm_library(MLIRLinalgTransforms
-  Fusion.cpp
-  LinalgTransforms.cpp
-  LinalgToLoops.cpp
-  Promotion.cpp
-  Tiling.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
-  DEPENDS
-  intrinsics_gen
-  )
-
-add_dependencies(MLIRLinalgTransforms
-
-  ${LIBS}
-  MLIRLinalgTransformPatternsIncGen
-  )
-target_link_libraries(MLIRLinalgTransforms ${LIBS})

@@ -6,10 +6,10 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @f_0(i32) {
 ; CHECK-LABEL: @f_0(
 ; CHECK: bb:
-; CHECK-NEXT:   %tmp = add i32 %arg, 2
+; CHECK-NEXT:   %i = add i32 %arg, 2
 ; CHECK-NEXT:   br label %bb1
 ; CHECK: bb1:
-; CHECK-NEXT:   ret i32 %tmp
+; CHECK-NEXT:   ret i32 %i
 
   %2 = add i32 %0, 2
   br label %3

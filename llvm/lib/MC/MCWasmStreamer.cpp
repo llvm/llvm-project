@@ -57,7 +57,7 @@ void MCWasmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   llvm_unreachable("invalid assembler flag!");
 }
 
-void MCWasmStreamer::ChangeSection(MCSection *Section,
+void MCWasmStreamer::changeSection(MCSection *Section,
                                    const MCExpr *Subsection) {
   MCAssembler &Asm = getAssembler();
   auto *SectionWasm = cast<MCSectionWasm>(Section);
@@ -65,7 +65,7 @@ void MCWasmStreamer::ChangeSection(MCSection *Section,
   if (Grp)
     Asm.registerSymbol(*Grp);
 
-  this->MCObjectStreamer::ChangeSection(Section, Subsection);
+  this->MCObjectStreamer::changeSection(Section, Subsection);
   Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
@@ -165,12 +165,12 @@ void MCWasmStreamer::emitIdent(StringRef IdentString) {
   // sections in the object format
 }
 
-void MCWasmStreamer::EmitInstToFragment(const MCInst &Inst,
+void MCWasmStreamer::emitInstToFragment(const MCInst &Inst,
                                         const MCSubtargetInfo &STI) {
-  this->MCObjectStreamer::EmitInstToFragment(Inst, STI);
+  this->MCObjectStreamer::emitInstToFragment(Inst, STI);
 }
 
-void MCWasmStreamer::EmitInstToData(const MCInst &Inst,
+void MCWasmStreamer::emitInstToData(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
   MCAssembler &Assembler = getAssembler();
   SmallVector<MCFixup, 4> Fixups;
@@ -191,10 +191,10 @@ void MCWasmStreamer::EmitInstToData(const MCInst &Inst,
   DF->getContents().append(Code.begin(), Code.end());
 }
 
-void MCWasmStreamer::FinishImpl() {
-  EmitFrames(nullptr);
+void MCWasmStreamer::finishImpl() {
+  emitFrames(nullptr);
 
-  this->MCObjectStreamer::FinishImpl();
+  this->MCObjectStreamer::finishImpl();
 }
 
 MCStreamer *llvm::createWasmStreamer(MCContext &Context,

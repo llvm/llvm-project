@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "X86.h"
 #include "X86FrameLowering.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
@@ -198,7 +199,7 @@ bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
   if (CannotReserveFrame)
     return true;
 
-  unsigned StackAlign = TFL->getStackAlignment();
+  Align StackAlign = TFL->getStackAlign();
 
   int64_t Advantage = 0;
   for (auto CC : CallSeqVector) {
@@ -221,7 +222,7 @@ bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
       // We'll need a add after the call.
       Advantage -= 3;
       // If we have to realign the stack, we'll also need a sub before
-      if (CC.ExpectedDist % StackAlign)
+      if (!isAligned(StackAlign, CC.ExpectedDist))
         Advantage -= 3;
       // Now, for each push, we save ~3 bytes. For small constants, we actually,
       // save more (up to 5 bytes), but 3 should be a good approximation.
@@ -530,6 +531,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
           PushOpcode = Is64Bit ? X86::PUSH64i8 : X86::PUSH32i8;
       }
       Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode)).add(PushOp);
+      Push->cloneMemRefs(MF, *Store);
       break;
     case X86::MOV32mr:
     case X86::MOV64mr: {
@@ -549,7 +551,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
 
       // If PUSHrmm is not slow on this target, try to fold the source of the
       // push into the instruction.
-      bool SlowPUSHrmm = STI->isAtom() || STI->isSLM();
+      bool SlowPUSHrmm = STI->slowTwoMemOps();
 
       // Check that this is legal to fold. Right now, we're extremely
       // conservative about that.
@@ -561,6 +563,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         unsigned NumOps = DefMov->getDesc().getNumOperands();
         for (unsigned i = NumOps - X86::AddrNumOperands; i != NumOps; ++i)
           Push->addOperand(DefMov->getOperand(i));
+        Push->cloneMergedMemRefs(MF, {&*DefMov, &*Store});
 
         DefMov->eraseFromParent();
       } else {
@@ -568,6 +571,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
                    .addReg(Reg)
                    .getInstr();
+        Push->cloneMemRefs(MF, *Store);
       }
       break;
     }

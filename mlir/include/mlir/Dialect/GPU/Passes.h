@@ -19,10 +19,10 @@ namespace mlir {
 
 class MLIRContext;
 class ModuleOp;
-template <typename T> class OpPassBase;
+template <typename T> class OperationPass;
 class OwningRewritePatternList;
 
-std::unique_ptr<OpPassBase<ModuleOp>> createGpuKernelOutliningPass();
+std::unique_ptr<OperationPass<ModuleOp>> createGpuKernelOutliningPass();
 
 /// Collect a set of patterns to rewrite ops within the GPU dialect.
 void populateGpuRewritePatterns(MLIRContext *context,

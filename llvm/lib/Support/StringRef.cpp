@@ -19,7 +19,7 @@ using namespace llvm;
 
 // MSVC emits references to this into the translation units which reference it.
 #ifndef _MSC_VER
-const size_t StringRef::npos;
+constexpr size_t StringRef::npos;
 #endif
 
 // strncasecmp() is not available on non-POSIX systems, so define an
@@ -106,19 +106,13 @@ unsigned StringRef::edit_distance(llvm::StringRef Other,
 //===----------------------------------------------------------------------===//
 
 std::string StringRef::lower() const {
-  std::string Result(size(), char());
-  for (size_type i = 0, e = size(); i != e; ++i) {
-    Result[i] = toLower(Data[i]);
-  }
-  return Result;
+  return std::string(map_iterator(begin(), toLower),
+                     map_iterator(end(), toLower));
 }
 
 std::string StringRef::upper() const {
-  std::string Result(size(), char());
-  for (size_type i = 0, e = size(); i != e; ++i) {
-    Result[i] = toUpper(Data[i]);
-  }
-  return Result;
+  return std::string(map_iterator(begin(), toUpper),
+                     map_iterator(end(), toUpper));
 }
 
 //===----------------------------------------------------------------------===//

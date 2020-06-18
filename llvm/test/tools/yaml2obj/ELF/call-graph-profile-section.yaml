@@ -3,13 +3,13 @@
 ## Test that the content of SHT_LLVM_CALL_GRAPH_PROFILE sections
 ## for 32/64-bit little/big endian targets is correct.
 # RUN: yaml2obj --docnum=1 -D BITS=64 -D ENCODE=LSB %s -o %t.le64
-# RUN: llvm-readobj --elf-cg-profile --sections --section-data %t.le64 | FileCheck %s --check-prefixes=BASIC,BASIC-LE
+# RUN: llvm-readobj --cg-profile --sections --section-data %t.le64 | FileCheck %s --check-prefixes=BASIC,BASIC-LE
 # RUN: yaml2obj --docnum=1 -D BITS=64 -D ENCODE=MSB %s -o %t.be64                      
-# RUN: llvm-readobj --elf-cg-profile --sections --section-data %t.be64 | FileCheck %s --check-prefixes=BASIC,BASIC-BE
+# RUN: llvm-readobj --cg-profile --sections --section-data %t.be64 | FileCheck %s --check-prefixes=BASIC,BASIC-BE
 # RUN: yaml2obj --docnum=1 -D BITS=32 -D ENCODE=LSB %s -o %t.le32                      
-# RUN: llvm-readobj --elf-cg-profile --sections --section-data %t.le32 | FileCheck %s --check-prefixes=BASIC,BASIC-LE
+# RUN: llvm-readobj --cg-profile --sections --section-data %t.le32 | FileCheck %s --check-prefixes=BASIC,BASIC-LE
 # RUN: yaml2obj --docnum=1 -D BITS=32 -D ENCODE=MSB %s -o %t.be32                      
-# RUN: llvm-readobj --elf-cg-profile --sections --section-data %t.be32 | FileCheck %s --check-prefixes=BASIC,BASIC-BE
+# RUN: llvm-readobj --cg-profile --sections --section-data %t.be32 | FileCheck %s --check-prefixes=BASIC,BASIC-BE
 
 # BASIC:        Name: .llvm.call-graph-profile
 # BASIC-NEXT:   Type: SHT_LLVM_CALL_GRAPH_PROFILE
@@ -111,7 +111,7 @@ Sections:
 
 ## Check we can refer to symbols by name.
 # RUN: yaml2obj --docnum=4 %s -o %t.sym
-# RUN: llvm-readobj --elf-cg-profile %t.sym | FileCheck %s --check-prefix=SYMBOL-NAMES
+# RUN: llvm-readobj --cg-profile %t.sym | FileCheck %s --check-prefix=SYMBOL-NAMES
 
 # SYMBOL-NAMES:      CGProfile [
 # SYMBOL-NAMES-NEXT:   CGProfileEntry {
@@ -142,12 +142,12 @@ Sections:
         Weight: 10
 ## Case 2: Test we can refer to symbols with suffixes.
       - From:   foo
-        To:     'foo [1]'
+        To:     'foo (1)'
         Weight: 30
 Symbols:
   - Name: foo
   - Name: bar
-  - Name: 'foo [1]'
+  - Name: 'foo (1)'
 
 ## Check we can describe SHT_LLVM_CALL_GRAPH_PROFILE sections using the "Content" tag.
 # RUN: yaml2obj --docnum=5 %s -o %t.content

@@ -29,7 +29,9 @@ public:
   virtual ~ScriptInterpreterLocker() = default;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ScriptInterpreterLocker);
+  ScriptInterpreterLocker(const ScriptInterpreterLocker &) = delete;
+  const ScriptInterpreterLocker &
+  operator=(const ScriptInterpreterLocker &) = delete;
 };
 
 class ScriptInterpreter : public PluginInterface {
@@ -466,8 +468,6 @@ public:
   virtual std::unique_ptr<ScriptInterpreterLocker> AcquireInterpreterLock();
 
   const char *GetScriptInterpreterPtyName();
-
-  int GetMasterFileDescriptor();
 
   virtual llvm::Expected<unsigned>
   GetMaxPositionalArgumentsForCallable(const llvm::StringRef &callable_name) {

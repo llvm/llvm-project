@@ -37,7 +37,9 @@ enum class OrcErrorCode : int {
   UnexpectedRPCCall,
   UnexpectedRPCResponse,
   UnknownErrorCodeFromRemote,
-  UnknownResourceHandle
+  UnknownResourceHandle,
+  MissingSymbolDefinitions,
+  UnexpectedSymbolDefinitions,
 };
 
 std::error_code orcError(OrcErrorCode ErrCode);

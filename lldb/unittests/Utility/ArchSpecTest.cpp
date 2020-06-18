@@ -9,8 +9,9 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Utility/ArchSpec.h"
-#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/YAMLParser.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -200,14 +201,14 @@ TEST(ArchSpecTest, MergeFrom) {
 
     EXPECT_TRUE(A.IsValid());
     EXPECT_TRUE(B.IsValid());
-    
+
     EXPECT_EQ(llvm::Triple::ArchType::arm, B.GetTriple().getArch());
     EXPECT_EQ(llvm::Triple::VendorType::UnknownVendor,
               B.GetTriple().getVendor());
     EXPECT_EQ(llvm::Triple::OSType::Linux, B.GetTriple().getOS());
     EXPECT_EQ(llvm::Triple::EnvironmentType::UnknownEnvironment,
               B.GetTriple().getEnvironment());
-    
+
     A.MergeFrom(B);
     EXPECT_EQ(llvm::Triple::ArchType::arm, A.GetTriple().getArch());
     EXPECT_EQ(llvm::Triple::VendorType::UnknownVendor,
@@ -280,7 +281,7 @@ TEST(ArchSpecTest, Compatibility) {
     ASSERT_TRUE(A.IsCompatibleMatch(B));
   }
   {
-    // The version information is auxiliary to support availablity but
+    // The version information is auxiliary to support availability but
     // doesn't affect compatibility.
     ArchSpec A("x86_64-apple-macosx10.11");
     ArchSpec B("x86_64-apple-macosx10.12");
@@ -405,4 +406,24 @@ TEST(ArchSpecTest, TripleComponentsWereSpecified) {
     ASSERT_TRUE(D.TripleOSWasSpecified());
     ASSERT_TRUE(D.TripleEnvironmentWasSpecified());
   }
+}
+
+TEST(ArchSpecTest, YAML) {
+  std::string buffer;
+  llvm::raw_string_ostream os(buffer);
+
+  // Serialize.
+  llvm::yaml::Output yout(os);
+  std::vector<ArchSpec> archs = {ArchSpec("x86_64-pc-linux"),
+                                 ArchSpec("x86_64-apple-macosx10.12"),
+                                 ArchSpec("i686-pc-windows")};
+  yout << archs;
+  os.flush();
+
+  // Deserialize.
+  std::vector<ArchSpec> deserialized;
+  llvm::yaml::Input yin(buffer);
+  yin >> deserialized;
+
+  EXPECT_EQ(archs, deserialized);
 }

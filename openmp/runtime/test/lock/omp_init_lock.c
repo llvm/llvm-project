@@ -23,7 +23,7 @@ int test_omp_init_lock() {
       omp_unset_lock(&my_lcks[j % LOCKS_PER_ITER]);
     }
   }
-  // Wait until all repititions are done.  The test is exercising growth of
+  // Wait until all repetitions are done.  The test is exercising growth of
   // the global lock pool, which does not shrink when no locks are allocated.
   {
     int j;

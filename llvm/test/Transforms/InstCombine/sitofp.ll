@@ -216,3 +216,32 @@ define i55 @test19(i64 %A) {
   ret i55 %C
 }
 
+; TODO: The mask guarantees that the input is small enough to eliminate the FP casts.
+
+define i25 @masked_input(i25 %A) {
+; CHECK-LABEL: @masked_input(
+; CHECK-NEXT:    [[M:%.*]] = and i25 [[A:%.*]], 65535
+; CHECK-NEXT:    [[B:%.*]] = uitofp i25 [[M]] to float
+; CHECK-NEXT:    [[C:%.*]] = fptoui float [[B]] to i25
+; CHECK-NEXT:    ret i25 [[C]]
+;
+  %m = and i25 %A, 65535
+  %B = uitofp i25 %m to float
+  %C = fptoui float %B to i25
+  ret i25 %C
+}
+
+; TODO: Clear the low bit - guarantees that the input is converted to FP without rounding.
+
+define i25 @low_masked_input(i25 %A) {
+; CHECK-LABEL: @low_masked_input(
+; CHECK-NEXT:    [[M:%.*]] = and i25 [[A:%.*]], -2
+; CHECK-NEXT:    [[B:%.*]] = uitofp i25 [[M]] to float
+; CHECK-NEXT:    [[C:%.*]] = fptoui float [[B]] to i25
+; CHECK-NEXT:    ret i25 [[C]]
+;
+  %m = and i25 %A, -2
+  %B = uitofp i25 %m to float
+  %C = fptoui float %B to i25
+  ret i25 %C
+}

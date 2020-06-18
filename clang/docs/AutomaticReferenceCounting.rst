@@ -1100,32 +1100,282 @@ A pass-by-writeback is evaluated as follows:
 Ownership-qualified fields of structs and unions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A program is ill-formed if it declares a member of a C struct or union to have
-a nontrivially ownership-qualified type.
+A member of a struct or union may be declared to have ownership-qualified
+type.  If the type is qualified with ``__unsafe_unretained``, the semantics
+of the containing aggregate are unchanged from the semantics of an unqualified type in a non-ARC mode.  If the type is qualified with ``__autoreleasing``, the program is ill-formed.  Otherwise, if the type is nontrivially ownership-qualified, additional rules apply.
+
+Both Objective-C and Objective-C++ support nontrivially ownership-qualified
+fields.  Due to formal differences between the standards, the formal
+treatment is different; however, the basic language model is intended to
+be the same for identical code.
 
 .. admonition:: Rationale
 
-  The resulting type would be non-POD in the C++ sense, but C does not give us
-  very good language tools for managing the lifetime of aggregates, so it is
-  more convenient to simply forbid them.  It is still possible to manage this
-  with a ``void*`` or an ``__unsafe_unretained`` object.
+  Permitting ``__strong`` and ``__weak`` references in aggregate types
+  allows programmers to take advantage of the normal language tools of
+  C and C++ while still automatically managing memory.  While it is
+  usually simpler and more idiomatic to use Objective-C objects for
+  secondary data structures, doing so can introduce extra allocation
+  and message-send overhead, which can cause to unacceptable
+  performance.  Using structs can resolve some of this tension.
 
-This restriction does not apply in Objective-C++.  However, nontrivally
-ownership-qualified types are considered non-POD: in C++11 terms, they are not
-trivially default constructible, copy constructible, move constructible, copy
-assignable, move assignable, or destructible.  It is a violation of C++'s One
-Definition Rule to use a class outside of ARC that, under ARC, would have a
-nontrivially ownership-qualified member.
+  ``__autoreleasing`` is forbidden because it is treacherous to rely
+  on autoreleases as an ownership tool outside of a function-local
+  contexts.
+
+  Earlier releases of Clang permitted ``__strong`` and ``__weak`` only
+  references in Objective-C++ classes, not in Objective-C.  This
+  restriction was an undesirable short-term constraint arising from the
+  complexity of adding support for non-trivial struct types to C.
+
+In Objective-C++, nontrivially ownership-qualified types are treated
+for nearly all purposes as if they were class types with non-trivial
+default constructors, copy constructors, move constructors, copy assignment
+operators, move assignment operators, and destructors.  This includes the
+determination of the triviality of special members of classes with a
+non-static data member of such a type.
+
+In Objective-C, the definition cannot be so succinct: because the C
+standard lacks rules for non-trivial types, those rules must first be
+developed.  They are given in the next section.  The intent is that these
+rules are largely consistent with the rules of C++ for code expressible
+in both languages.
+
+Formal rules for non-trivial types in C
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following are base rules which can be added to C to support
+implementation-defined non-trivial types.
+
+A type in C is said to be *non-trivial to copy*, *non-trivial to destroy*,
+or *non-trivial to default-initialize* if:
+
+- it is a struct or union containing a member whose type is non-trivial
+  to (respectively) copy, destroy, or default-initialize;
+
+- it is a qualified type whose unqualified type is non-trivial to
+  (respectively) copy, destroy, or default-initialize (for at least
+  the standard C qualifiers); or
+
+- it is an array type whose element type is non-trivial to (respectively)
+  copy, destroy, or default-initialize.
+
+A type in C is said to be *illegal to copy*, *illegal to destroy*, or
+*illegal to default-initialize* if:
+
+- it is a union which contains a member whose type is either illegal
+  or non-trivial to (respectively) copy, destroy, or initialize;
+
+- it is a qualified type whose unqualified type is illegal to
+  (respectively) copy, destroy, or default-initialize (for at least
+  the standard C qualifiers); or
+
+- it is an array type whose element type is illegal to (respectively)
+  copy, destroy, or default-initialize.
+
+No type describable under the rules of the C standard shall be either
+non-trivial or illegal to copy, destroy, or default-initialize.
+An implementation may provide additional types which have one or more
+of these properties.
+
+An expression calls for a type to be copied if it:
+
+- passes an argument of that type to a function call,
+- defines a function which declares a parameter of that type,
+- calls or defines a function which returns a value of that type,
+- assigns to an l-value of that type, or
+- converts an l-value of that type to an r-value.
+
+A program calls for a type to be destroyed if it:
+
+- passes an argument of that type to a function call,
+- defines a function which declares a parameter of that type,
+- calls or defines a function which returns a value of that type,
+- creates an object of automatic storage duration of that type,
+- assigns to an l-value of that type, or
+- converts an l-value of that type to an r-value.
+
+A program calls for a type to be default-initialized if it:
+
+- declares a variable of that type without an initializer.
+
+An expression is ill-formed if calls for a type to be copied,
+destroyed, or default-initialized and that type is illegal to
+(respectively) copy, destroy, or default-initialize.
+
+A program is ill-formed if it contains a function type specifier
+with a parameter or return type that is illegal to copy or
+destroy.  If a function type specifier would be ill-formed for this
+reason except that the parameter or return type was incomplete at
+that point in the translation unit, the program is ill-formed but
+no diagnostic is required.
+
+A ``goto`` or ``switch`` is ill-formed if it jumps into the scope of
+an object of automatic storage duration whose type is non-trivial to
+destroy.
+
+C specifies that it is generally undefined behavior to access an l-value
+if there is no object of that type at that location.  Implementations
+are often lenient about this, but non-trivial types generally require
+it to be enforced more strictly.  The following rules apply:
+
+The *static subobjects* of a type ``T`` at a location ``L`` are:
+
+  - an object of type ``T`` spanning from ``L`` to ``L + sizeof(T)``;
+
+  - if ``T`` is a struct type, then for each field ``f`` of that struct,
+    the static subobjects of ``T`` at location ``L + offsetof(T, .f)``; and
+
+  - if ``T`` is the array type ``E[N]``, then for each ``i`` satisfying
+    ``0 <= i < N``, the static subobjects of ``E`` at location
+    ``L + i * sizeof(E)``.
+
+If an l-value is converted to an r-value, then all static subobjects
+whose types are non-trivial to copy are accessed.  If an l-value is
+assigned to, or if an object of automatic storage duration goes out of
+scope, then all static subobjects of types that are non-trivial to destroy
+are accessed.
+
+A dynamic object is created at a location if an initialization initializes
+an object of that type there.  A dynamic object ceases to exist at a
+location if the memory is repurposed.  Memory is repurposed if it is
+freed or if a different dynamic object is created there, for example by
+assigning into a different union member.  An implementation may provide
+additional rules for what constitutes creating or destroying a dynamic
+object.
+
+If an object is accessed under these rules at a location where no such
+dynamic object exists, the program has undefined behavior.
+If memory for a location is repurposed while a dynamic object that is
+non-trivial to destroy exists at that location, the program has
+undefined behavior.
 
 .. admonition:: Rationale
 
-  Unlike in C, we can express all the necessary ARC semantics for
-  ownership-qualified subobjects as suboperations of the (default) special
-  member functions for the class.  These functions then become non-trivial.
-  This has the non-obvious result that the class will have a non-trivial copy
-  constructor and non-trivial destructor; if this would not normally be true
-  outside of ARC, objects of the type will be passed and returned in an
-  ABI-incompatible manner.
+  While these rules are far less fine-grained than C++, they are
+  nonetheless sufficient to express a wide spectrum of types.
+  Types that express some sort of ownership will generally be non-trivial
+  to both copy and destroy and either non-trivial or illegal to
+  default-initialize.  Types that don't express ownership may still
+  be non-trivial to copy because of some sort of address sensitivity;
+  for example, a relative reference.  Distinguishing default
+  initialization allows types to impose policies about how they are
+  created.
+
+  These rules assume that assignment into an l-value is always a
+  modification of an existing object rather than an initialization.
+  Assignment is then a compound operation where the old value is
+  read and destroyed, if necessary, and the new value is put into
+  place.  These are the natural semantics of value propagation, where
+  all basic operations on the type come down to copies and destroys,
+  and everything else is just an optimization on top of those.
+
+  The most glaring weakness of programming with non-trivial types in C
+  is that there are no language mechanisms (akin to C++'s placement
+  ``new`` and explicit destructor calls) for explicitly creating and
+  destroying objects.  Clang should consider adding builtins for this
+  purpose, as well as for common optimizations like destructive
+  relocation.
+
+Application of the formal C rules to nontrivial ownership qualifiers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Nontrivially ownership-qualified types are considered non-trivial
+to copy, destroy, and default-initialize.
+
+A dynamic object of nontrivially ownership-qualified type contingently
+exists at a location if the memory is filled with a zero pattern, e.g.
+by ``calloc`` or ``bzero``.  Such an object can be safely accessed in
+all of the cases above, but its memory can also be safely repurposed.
+Assigning a null pointer into an l-value of ``__weak`` or
+``__strong``-qualified type accesses the dynamic object there (and thus
+may have undefined behavior if no such object exists), but afterwards
+the object's memory is guaranteed to be filled with a zero pattern
+and thus may be either further accessed or repurposed as needed.
+The upshot is that programs may safely initialize dynamically-allocated
+memory for nontrivially ownership-qualified types by ensuring it is zero-initialized, and they may safely deinitialize memory before
+freeing it by storing ``nil`` into any ``__strong`` or ``__weak``
+references previously created in that memory.
+
+C/C++ compatibility for structs and unions with non-trivial members
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Structs and unions with non-trivial members are compatible in
+different language modes (e.g. between Objective-C and Objective-C++,
+or between ARC and non-ARC modes) under the following conditions:
+
+- The types must be compatible ignoring ownership qualifiers according
+  to the baseline, non-ARC rules (e.g. C struct compatibility or C++'s
+  ODR).  This condition implies a pairwise correspondance between
+  fields.
+
+  Note that an Objective-C++ class with base classes, a user-provided
+  copy or move constructor, or a user-provided destructor is never
+  compatible with an Objective-C type.
+
+- If two fields correspond as above, and at least one of the fields is
+  ownership-qualified, then:
+
+    - the fields must be identically qualified, or else
+
+    - one type must be unqualified (and thus declared in a non-ARC mode),
+      and the other type must be qualified with ``__unsafe_unretained``
+      or ``__strong``.
+
+  Note that ``__weak`` fields must always be declared ``__weak``  because
+  of the need to pin those fields in memory and keep them properly
+  registered with the Objective-C runtime.  Non-ARC modes may still
+  declare fields ``__weak`` by enabling ``-fobjc-weak``.
+
+These compatibility rules permit a function that takes a parameter
+of non-trivial struct type to be written in ARC and called from
+non-ARC or vice-versa.  The convention for this always transfers
+ownership of objects stored in ``__strong`` fields from the caller
+to the callee, just as for an ``ns_consumed`` argument.  Therefore,
+non-ARC callers must ensure that such fields are initialized to a +1
+reference, and non-ARC callees must balance that +1 by releasing the
+reference or transferring it as appropriate.
+
+Likewise, a function returning a non-trivial struct may be written in
+ARC and called from non-ARC or vice-versa.  The convention for this
+always transfers ownership of objects stored in ``__strong`` fields
+from the callee to the caller, and so callees must initialize such
+fields with +1 references, and callers must balance that +1 by releasing
+or transferring them.
+
+Similar transfers of responsibility occur for ``__weak`` fields, but
+since both sides must use native ``__weak`` support to ensure
+calling convention compatibililty, this transfer is always handled
+automatically by the compiler.
+
+.. admonition:: Rationale
+
+  In earlier releases, when non-trivial ownership was only permitted
+  on fields in Objective-C++, the ABI used for such classees was the
+  ordinary ABI for non-trivial C++ classes, which passes arguments and
+  returns indirectly and does not transfer responsibility for arguments.
+  When support for Objective-C structs was added, it was decided to
+  change to the current ABI for three reasons:
+
+  - It permits ARC / non-ARC compatibility for structs containing only
+    ``__strong`` references, as long as the non-ARC side is careful about
+    transferring ownership.
+
+  - It avoids unnecessary indirection for sufficiently small types that
+    the C ABI would prefer to pass in registers.
+
+  - Given that struct arguments must be produced at +1 to satisfy C's
+    semantics of initializing the local parameter variable, transferring
+    ownership of that copy to the callee is generally better for ARC
+    optimization, since otherwise there will be releases in the caller
+    that are much harder to pair with transfers in the callee.
+
+  Breaking compatibility with existing Objective-C++ structures was
+  considered an acceptable cost, as most Objective-C++ code does not have
+  binary-compatibility requirements.  Any existing code which cannot accept
+  this compatibility break, which is necessarily Objective-C++, should
+  force the use of the standard C++ ABI by declaring an empty (but
+  non-defaulted) destructor.
 
 .. _arc.ownership.inference:
 

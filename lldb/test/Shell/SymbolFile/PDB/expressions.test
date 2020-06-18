@@ -1,6 +1,6 @@
 REQUIRES: system-windows, msvc
 RUN: %build --compiler=msvc --nodefaultlib --output=%t.exe %S/Inputs/ExpressionsTest.cpp
-RUN: %lldb -b -s %S/Inputs/ExpressionsTest0.script -s %S/Inputs/ExpressionsTest1.script -s %S/Inputs/ExpressionsTest2.script -- %t.exe 2>&1 | FileCheck %s
+RUN: not %lldb -b -s %S/Inputs/ExpressionsTest0.script -s %S/Inputs/ExpressionsTest1.script -s %S/Inputs/ExpressionsTest2.script -- %t.exe 2>&1 | FileCheck %s
 
 // Check the variable value through `print`
 CHECK: (lldb) print result

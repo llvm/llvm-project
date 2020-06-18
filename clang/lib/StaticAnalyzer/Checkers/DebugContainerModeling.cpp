@@ -92,7 +92,19 @@ void DebugContainerModeling::analyzerContainerDataField(const CallExpr *CE,
       if (Field) {
         State = State->BindExpr(CE, C.getLocationContext(),
                                 nonloc::SymbolVal(Field));
-        C.addTransition(State);
+
+        // Progpagate interestingness from the container's data (marked
+        // interesting by an `ExprInspection` debug call to the container
+        // itself.
+        const NoteTag *InterestingTag =
+          C.getNoteTag(
+              [Cont, Field](PathSensitiveBugReport &BR) -> std::string {
+                if (BR.isInteresting(Field)) {
+                  BR.markInteresting(Cont);
+                }
+                return "";
+              });
+        C.addTransition(State, InterestingTag);
         return;
       }
     }
@@ -133,6 +145,6 @@ void ento::registerDebugContainerModeling(CheckerManager &mgr) {
   mgr.registerChecker<DebugContainerModeling>();
 }
 
-bool ento::shouldRegisterDebugContainerModeling(const LangOptions &LO) {
+bool ento::shouldRegisterDebugContainerModeling(const CheckerManager &mgr) {
   return true;
 }

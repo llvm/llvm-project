@@ -7,9 +7,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @foo() {
 entry:
 ; CHECK: section "__sancov_cntrs", comdat($foo), align 1
-; CHECK:  %0 = load i8, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @__sancov_gen_, i64 0, i64 0), !nosanitize
+; CHECK:  %0 = load i8, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @__sancov_gen_, i64 0, i64 0), align 1, !nosanitize
 ; CHECK:  %1 = add i8 %0, 1
-; CHECK:  store i8 %1, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @__sancov_gen_, i64 0, i64 0), !nosanitize
+; CHECK:  store i8 %1, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @__sancov_gen_, i64 0, i64 0), align 1, !nosanitize
   ret void
 }
 ; CHECK: call void @__sanitizer_cov_8bit_counters_init(i8* bitcast (i8** @__start___sancov_cntrs to i8*), i8* bitcast (i8** @__stop___sancov_cntrs to i8*))

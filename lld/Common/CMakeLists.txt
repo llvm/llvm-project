@@ -36,7 +36,6 @@ add_lld_library(lldCommon
   Reproduce.cpp
   Strings.cpp
   TargetOptionsCommandFlags.cpp
-  Threads.cpp
   Timer.cpp
   VCSVersion.inc
   Version.cpp

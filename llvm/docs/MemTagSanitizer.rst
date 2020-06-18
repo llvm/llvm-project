@@ -13,7 +13,7 @@ functionality is planned but not implemented.  Hardware capable of
 running MemTagSanitizer does not exist as of Oct 2019.
 
 MemTagSanitizer is a fast memory error detector and **a code hardening
-tool** based on ARMv9 `Memory Tagging Extension`_. It
+tool** based on the Armv8.5-A `Memory Tagging Extension`_. It
 detects a similar class of errors as `AddressSanitizer`_ or `HardwareAssistedAddressSanitizer`_, but with
 **much** lower overhead.
 

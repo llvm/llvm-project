@@ -10,15 +10,16 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/IR/IntrinsicsR600.h" // TODO: Sink this.
 #include "llvm/IR/IntrinsicsAMDGPU.h" // TODO: Sink this.
+#include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 
 class AMDGPUTargetMachine;
 class FunctionPass;
 class GCNTargetMachine;
+class ImmutablePass;
 class ModulePass;
 class Pass;
 class Target;
@@ -30,6 +31,10 @@ class Module;
 // GlobalISel passes
 void initializeAMDGPUPreLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUPreLegalizeCombiner(bool IsOptNone);
+void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
+FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
+FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
+void initializeAMDGPURegBankCombinerPass(PassRegistry &);
 
 // R600 Passes
 FunctionPass *createR600VectorRegMerger();
@@ -59,9 +64,9 @@ FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsPass();
 FunctionPass *createSIFormMemoryClausesPass();
+
 FunctionPass *createSIPostRABundlerPass();
-FunctionPass *createAMDGPUSimplifyLibCallsPass(const TargetOptions &,
-                                               const TargetMachine *);
+FunctionPass *createAMDGPUSimplifyLibCallsPass(const TargetMachine *);
 FunctionPass *createAMDGPUUseNativeCallsPass();
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();
@@ -164,6 +169,9 @@ extern char &SILowerControlFlowID;
 void initializeSIRemoveShortExecBranchesPass(PassRegistry &);
 extern char &SIRemoveShortExecBranchesID;
 
+void initializeSIPreEmitPeepholePass(PassRegistry &);
+extern char &SIPreEmitPeepholeID;
+
 void initializeSIInsertSkipsPass(PassRegistry &);
 extern char &SIInsertSkipsPassID;
 
@@ -189,6 +197,10 @@ extern char &AMDGPUPerfHintAnalysisID;
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaID;
+
+FunctionPass *createAMDGPUPromoteAllocaToVector();
+void initializeAMDGPUPromoteAllocaToVectorPass(PassRegistry&);
+extern char &AMDGPUPromoteAllocaToVectorID;
 
 Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(
@@ -223,6 +235,9 @@ extern char &SIMemoryLegalizerID;
 
 void initializeSIModeRegisterPass(PassRegistry&);
 extern char &SIModeRegisterID;
+
+void initializeSIInsertHardClausesPass(PassRegistry &);
+extern char &SIInsertHardClausesID;
 
 void initializeSIInsertWaitcntsPass(PassRegistry&);
 extern char &SIInsertWaitcntsID;

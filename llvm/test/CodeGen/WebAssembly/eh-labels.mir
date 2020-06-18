@@ -29,6 +29,7 @@ body: |
     EH_LABEL <mcsymbol .Ltmp0>
     CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     EH_LABEL <mcsymbol .Ltmp1>
+    BR %bb.2, implicit-def dead $arguments
 
   bb.1 (landing-pad):
   ; predecessors: %bb.0

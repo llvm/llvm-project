@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
-# RUN: llvm-dwarfdump -debug-aranges %t.o 2>&1 | FileCheck %s
-# RUN: llvm-dwarfdump -lookup 10 %t.o 2>&1 | FileCheck %s
+# RUN: not llvm-dwarfdump -debug-aranges %t.o 2>&1 | FileCheck %s
+# RUN: not llvm-dwarfdump -lookup 10 %t.o 2>&1 | FileCheck %s
 
 ## This checks that llvm-dwarfdump shows parsing errors in .debug_aranges.
 ## For more error cases see unittests/DebugInfo/DWARF/DWARFDebugArangeSetTest.cpp.

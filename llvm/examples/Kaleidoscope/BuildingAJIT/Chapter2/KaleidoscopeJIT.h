@@ -55,7 +55,7 @@ public:
                      std::make_unique<ConcurrentIRCompiler>(std::move(JTMB))),
         OptimizeLayer(ES, CompileLayer, optimizeModule), DL(std::move(DL)),
         Mangle(ES, this->DL), Ctx(std::make_unique<LLVMContext>()),
-        MainJD(ES.createJITDylib("<main>")) {
+        MainJD(ES.createBareJITDylib("<main>")) {
     MainJD.addGenerator(
         cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
             DL.getGlobalPrefix())));

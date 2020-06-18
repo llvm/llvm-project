@@ -11,13 +11,17 @@ int* j = false;
 #endif
 
 #if __cplusplus <= 199711L
-// expected-warning@+6 {{initialization of pointer of type 'int *' to null from a constant boolean expression}}
+// expected-warning@+5 {{initialization of pointer of type 'int *' to null from a constant boolean expression}}
 #else
-// expected-error@+4 {{cannot initialize a parameter of type 'int *' with an rvalue of type 'bool'}}
-// expected-note@+3 {{passing argument to parameter 'j' here}}
-// expected-note@+2 6 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
+// expected-error@+3 {{cannot initialize a parameter of type 'int *' with an rvalue of type 'bool'}}
+// expected-note@+2 {{passing argument to parameter 'j' here}}
 #endif
-void foo(int* i, int *j=(false))
+void bar(int *j = false);
+
+#if __cplusplus > 199711L
+// expected-note@+2 4{{candidate function not viable: no known conversion}}
+#endif
+void foo(int *i)
 {
   foo(false);
 #if __cplusplus <= 199711L
@@ -26,19 +30,8 @@ void foo(int* i, int *j=(false))
 // expected-error@-4 {{no matching function for call to 'foo'}}
 #endif
 
-  foo((int*)false);
-#if __cplusplus <= 199711L
-// no-warning: explicit cast
-#else
-// expected-error@-4 {{no matching function for call to 'foo'}}
-#endif
-
-  foo(0);
-#if __cplusplus <= 199711L
-// no-warning: not a bool, even though its convertible to bool
-#else
-// expected-error@-4 {{no matching function for call to 'foo'}}
-#endif
+  foo((int*)false); // OK: explicit cast
+  foo(0); // OK: not a bool, even though it's convertible to bool
 
   foo(false == true);
 #if __cplusplus <= 199711L

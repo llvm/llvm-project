@@ -191,7 +191,7 @@ void ThinLtoInstrumentationLayer::compileFunctionReachedFlagSetter(
         new StoreInst(ConstantInt::get(Int64Ty, 0),
                       B.CreateIntToPtr(ConstantInt::get(Int64Ty, SyncFlagAddr),
                                        Int64Ty->getPointerTo()),
-                      IsVolatile, MaybeAlign(64), AtomicOrdering::Release,
+                      IsVolatile, Align(64), AtomicOrdering::Release,
                       SyncScope::System, NoInsertBefore));
   }
 }

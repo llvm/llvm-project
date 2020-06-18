@@ -10,7 +10,6 @@ tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr24_sgpr25_sgpr26_sgpr27'
-  scratchWaveOffsetReg: '$sgpr32'
   frameOffsetReg:  '$sgpr32'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:
@@ -34,7 +33,7 @@ body:             |
   ; CHECK:   dead %9:vreg_128 = DS_READ_B128_gfx9 [[V_ADD_U32_e32_]], 0, 0, implicit $exec
   ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
   ; CHECK:   undef %11.sub1:vreg_512 = COPY [[COPY]].sub1
-  ; CHECK:   INLINEASM &"", 1, 851978, def dead [[COPY1]], 851978, def dead [[COPY]].sub1, 2147483657, [[COPY1]], 2147549193, [[COPY]].sub1
+  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_LO16 */, def dead [[COPY1]], 851978 /* regdef:VGPR_LO16 */, def dead [[COPY]].sub1, 2147483657 /* reguse tiedto:$0 */, [[COPY1]], 2147549193 /* reguse tiedto:$1 */, [[COPY]].sub1
   ; CHECK:   %11.sub0:vreg_512 = COPY [[COPY]].sub0
   ; CHECK:   %11.sub3:vreg_512 = COPY [[COPY]].sub3
   ; CHECK:   dead %10:vgpr_32 = V_ADD_I32_e32 4, [[V_MOV_B32_e32_1]], implicit-def dead $vcc, implicit $exec

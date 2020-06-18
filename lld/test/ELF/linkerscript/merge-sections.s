@@ -28,7 +28,7 @@
 # CHECK-NEXT: Value: 0x[[ADDR1]]
 
 # CHECK:      Name: end
-# CHECK-NEXT: Value: 0x230
+# CHECK-NEXT: Value: 0x268
 
 # Check that we don't crash with --gc-sections
 # RUN: ld.lld --gc-sections -o %t2 --script %t.script %t -shared

@@ -44,13 +44,14 @@
 #define LLVM_SUPPORT_DEBUGCOUNTER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/UniqueVector.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 namespace llvm {
+
+class raw_ostream;
 
 class DebugCounter {
 public:

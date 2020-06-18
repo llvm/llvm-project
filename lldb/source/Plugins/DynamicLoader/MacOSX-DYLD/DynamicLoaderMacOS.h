@@ -105,7 +105,8 @@ protected:
                                             // the "reason:exec" annotation.
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderMacOS);
+  DynamicLoaderMacOS(const DynamicLoaderMacOS &) = delete;
+  const DynamicLoaderMacOS &operator=(const DynamicLoaderMacOS &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H

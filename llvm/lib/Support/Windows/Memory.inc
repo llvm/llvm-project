@@ -17,7 +17,7 @@
 #include "llvm/Support/WindowsError.h"
 
 // The Windows.h header must be the last one included.
-#include "WindowsSupport.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 
 static DWORD getWindowsProtectionFlags(unsigned Flags) {
   switch (Flags & llvm::sys::Memory::MF_RWE_MASK) {

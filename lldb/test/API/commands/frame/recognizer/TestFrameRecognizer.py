@@ -18,9 +18,7 @@ class FrameRecognizerTestCase(TestBase):
     @skipUnlessDarwin
     def test_frame_recognizer_1(self):
         self.build()
-
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
+        exe = self.getBuildArtifact("a.out")
 
         # Clear internal & plugins recognizers that get initialized at launch
         self.runCmd("frame recognizer clear")
@@ -33,21 +31,21 @@ class FrameRecognizerTestCase(TestBase):
         self.runCmd("frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo")
 
         self.expect("frame recognizer list",
-                    substrs=['0: recognizer.MyFrameRecognizer, module a.out, function foo'])
+                    substrs=['0: recognizer.MyFrameRecognizer, module a.out, symbol foo'])
 
         self.runCmd("frame recognizer add -l recognizer.MyOtherFrameRecognizer -s a.out -n bar -x")
 
         self.expect(
             "frame recognizer list",
             substrs=[
-                '1: recognizer.MyOtherFrameRecognizer, module a.out, function bar (regexp)',
-                '0: recognizer.MyFrameRecognizer, module a.out, function foo'
+                '1: recognizer.MyOtherFrameRecognizer, module a.out, symbol bar (regexp)',
+                '0: recognizer.MyFrameRecognizer, module a.out, symbol foo'
             ])
 
         self.runCmd("frame recognizer delete 0")
 
         self.expect("frame recognizer list",
-                    substrs=['1: recognizer.MyOtherFrameRecognizer, module a.out, function bar (regexp)'])
+                    substrs=['1: recognizer.MyOtherFrameRecognizer, module a.out, symbol bar (regexp)'])
 
         self.runCmd("frame recognizer clear")
 
@@ -56,18 +54,9 @@ class FrameRecognizerTestCase(TestBase):
 
         self.runCmd("frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo")
 
-        lldbutil.run_break_set_by_symbol(self, "foo")
-        self.runCmd("r")
-
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped', 'stop reason = breakpoint'])
-
-        process = target.GetProcess()
-        thread = process.GetSelectedThread()
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "foo",
+                                                                 exe_name = exe)
         frame = thread.GetSelectedFrame()
-
-        self.assertEqual(frame.GetSymbol().GetName(), "foo")
-        self.assertFalse(frame.GetLineEntry().IsValid())
 
         self.expect("frame variable",
                     substrs=['(int) a = 42', '(int) b = 56'])
@@ -110,8 +99,9 @@ class FrameRecognizerTestCase(TestBase):
 
         # FIXME: The following doesn't work yet, but should be fixed.
         """
-        lldbutil.run_break_set_by_symbol(self, "bar")
-        self.runCmd("c")
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "bar",
+                                                                 exe_name = exe)
+        frame = thread.GetSelectedFrame()
 
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped', 'stop reason = breakpoint'])
@@ -122,3 +112,35 @@ class FrameRecognizerTestCase(TestBase):
         self.expect("frame variable -t *a",
                     substrs=['*a = 78'])
         """
+
+    @skipUnlessDarwin
+    def test_frame_recognizer_multi_symbol(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Clear internal & plugins recognizers that get initialized at launch
+        self.runCmd("frame recognizer clear")
+
+        self.runCmd("command script import " + os.path.join(self.getSourceDir(), "recognizer.py"))
+
+        self.expect("frame recognizer list",
+                    substrs=['no matching results found.'])
+
+        self.runCmd("frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo -n bar")
+
+        self.expect("frame recognizer list",
+                    substrs=['recognizer.MyFrameRecognizer, module a.out, symbol foo, symbol bar'])
+
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "foo",
+                                                                 exe_name = exe)
+        frame = thread.GetSelectedFrame()
+
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])
+
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "bar",
+                                                                 exe_name = exe)
+        frame = thread.GetSelectedFrame()
+
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])

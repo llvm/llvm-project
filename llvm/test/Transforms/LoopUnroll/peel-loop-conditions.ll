@@ -403,76 +403,11 @@ for.end:
   ret void
 }
 
-; In this case we cannot peel the inner loop, because the condition involves
-; the outer induction variable.
-define void @test5(i32 %k) {
-; CHECK-LABEL: @test5(
-; CHECK-NEXT:  for.body.lr.ph:
-; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
-; CHECK:       outer.header:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH:%.*]] ], [ [[J_INC:%.*]], [[OUTER_INC:%.*]] ]
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ 0, [[OUTER_HEADER]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[J]], 2
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    call void @f1()
-; CHECK-NEXT:    br label [[FOR_INC]]
-; CHECK:       if.else:
-; CHECK-NEXT:    call void @f2()
-; CHECK-NEXT:    br label [[FOR_INC]]
-; CHECK:       for.inc:
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_05]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[OUTER_INC]]
-; CHECK:       outer.inc:
-; CHECK-NEXT:    [[J_INC]] = add nsw i32 [[J]], 1
-; CHECK-NEXT:    [[OUTER_CMP:%.*]] = icmp slt i32 [[J_INC]], [[K]]
-; CHECK-NEXT:    br i1 [[OUTER_CMP]], label [[OUTER_HEADER]], label [[FOR_END:%.*]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
-;
-for.body.lr.ph:
-  br label %outer.header
-
-outer.header:
-  %j = phi i32 [ 0, %for.body.lr.ph ], [ %j.inc, %outer.inc ]
-  br label %for.body
-
-for.body:
-  %i.05 = phi i32 [ 0, %outer.header ], [ %inc, %for.inc ]
-  %cmp1 = icmp ult i32 %j, 2
-  br i1 %cmp1, label %if.then, label %if.else
-
-if.then:
-  call void @f1()
-  br label %for.inc
-
-if.else:
-  call void @f2()
-  br label %for.inc
-
-for.inc:
-  %inc = add nsw i32 %i.05, 1
-  %cmp = icmp slt i32 %inc, %k
-  br i1 %cmp, label %for.body, label %outer.inc
-
-outer.inc:
-  %j.inc = add nsw i32 %j, 1
-  %outer.cmp = icmp slt i32 %j.inc, %k
-  br i1 %outer.cmp, label %outer.header, label %for.end
-
-
-for.end:
-  ret void
-}
-
 ; In this test, the condition involves 2 AddRecs. Without evaluating both
 ; AddRecs, we cannot prove that the condition becomes known in the loop body
 ; after peeling.
-define void @test6(i32 %k) {
-; CHECK-LABEL: @test6(
+define void @test5(i32 %k) {
+; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -521,8 +456,8 @@ for.end:
   ret void
 }
 
-define void @test7(i32 %k) {
-; CHECK-LABEL: @test7(
+define void @test6(i32 %k) {
+; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL_BEGIN:%.*]]
 ; CHECK:       for.body.peel.begin:
@@ -615,8 +550,8 @@ for.end:
   ret void
 }
 
-define void @test8(i32 %k) {
-; CHECK-LABEL: @test8(
+define void @test7(i32 %k) {
+; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL_BEGIN:%.*]]
 ; CHECK:       for.body.peel.begin:
@@ -711,8 +646,8 @@ for.end:
 
 ; Comparison with non-monotonic predicate due to possible wrapping, loop
 ; body cannot be simplified.
-define void @test9(i32 %k) {
-; CHECK-LABEL: @test9(
+define void @test8(i32 %k) {
+; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -751,8 +686,8 @@ for.end:
 }
 ; CHECK-NOT: llvm.loop.unroll.disable
 
-define void @test_10__peel_first_iter_via_slt_pred(i32 %len) {
-; CHECK-LABEL: @test_10__peel_first_iter_via_slt_pred(
+define void @test_9__peel_first_iter_via_slt_pred(i32 %len) {
+; CHECK-LABEL: @test_9__peel_first_iter_via_slt_pred(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -818,8 +753,8 @@ if.end:                                           ; preds = %if.then, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define void @test_11__peel_first_iter_via_sgt_pred(i32 %len) {
-; CHECK-LABEL: @test_11__peel_first_iter_via_sgt_pred(
+define void @test_10__peel_first_iter_via_sgt_pred(i32 %len) {
+; CHECK-LABEL: @test_10__peel_first_iter_via_sgt_pred(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -887,8 +822,8 @@ if.end:                                           ; preds = %if.then, %for.body
 
 ; NOTE: here we should only peel the first iteration,
 ;       i.e. all calls to sink() must stay in loop.
-define void @test12__peel_first_iter_via_eq_pred(i32 %len) {
-; CHECK-LABEL: @test12__peel_first_iter_via_eq_pred(
+define void @test11__peel_first_iter_via_eq_pred(i32 %len) {
+; CHECK-LABEL: @test11__peel_first_iter_via_eq_pred(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -956,8 +891,8 @@ if.end:                                           ; preds = %if.then, %for.body
 
 ; NOTE: here we should only peel the first iteration,
 ;       i.e. all calls to sink() must stay in loop.
-define void @test13__peel_first_iter_via_ne_pred(i32 %len) {
-; CHECK-LABEL: @test13__peel_first_iter_via_ne_pred(
+define void @test12__peel_first_iter_via_ne_pred(i32 %len) {
+; CHECK-LABEL: @test12__peel_first_iter_via_ne_pred(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -1024,8 +959,8 @@ if.end:                                           ; preds = %if.then, %for.body
 }
 
 ; No peeling is profitable here.
-define void @test14__ivar_mod2_is_1(i32 %len) {
-; CHECK-LABEL: @test14__ivar_mod2_is_1(
+define void @test13__ivar_mod2_is_1(i32 %len) {
+; CHECK-LABEL: @test13__ivar_mod2_is_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -1074,8 +1009,8 @@ if.end:                                           ; preds = %if.then, %for.body
 }
 
 ; No peeling is profitable here.
-define void @test15__ivar_mod2_is_0(i32 %len) {
-; CHECK-LABEL: @test15__ivar_mod2_is_0(
+define void @test14__ivar_mod2_is_0(i32 %len) {
+; CHECK-LABEL: @test14__ivar_mod2_is_0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -1123,10 +1058,10 @@ if.end:                                           ; preds = %if.then, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-; Similar to @test7, we need to peel one extra iteration, and we can't do that
+; Similar to @test6, we need to peel one extra iteration, and we can't do that
 ; as per the -unroll-peel-max-count=4, so this shouldn't be peeled at all.
-define void @test16(i32 %k) {
-; CHECK-LABEL: @test16(
+define void @test15(i32 %k) {
+; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -1164,10 +1099,10 @@ for.end:
   ret void
 }
 
-; Similar to @test8, we need to peel one extra iteration, and we can't do that
+; Similar to @test7, we need to peel one extra iteration, and we can't do that
 ; as per the -unroll-peel-max-count=4, so this shouldn't be peeled at all.
-define void @test17(i32 %k) {
-; CHECK-LABEL: @test17(
+define void @test16(i32 %k) {
+; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:

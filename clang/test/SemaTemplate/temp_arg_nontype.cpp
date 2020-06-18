@@ -194,7 +194,7 @@ namespace EntityReferenced {
   template<typename T>
   struct Y {
     static void f(T x) { 
-      x = 1; // expected-error{{assigning to 'int *' from incompatible type 'int'}}
+      x = 1; // expected-error{{incompatible integer to pointer conversion assigning to 'int *' from 'int'}}
     }
   };
 

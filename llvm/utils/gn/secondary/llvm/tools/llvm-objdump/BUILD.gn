@@ -39,6 +39,7 @@ executable("llvm-objdump") {
     "ELFDump.cpp",
     "MachODump.cpp",
     "WasmDump.cpp",
+    "XCOFFDump.cpp",
     "llvm-objdump.cpp",
   ]
 }

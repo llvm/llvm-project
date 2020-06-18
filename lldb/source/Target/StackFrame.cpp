@@ -606,7 +606,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   }
 
   // We are dumping at least one child
-  while (separator_idx != std::string::npos) {
+  while (!var_expr.empty()) {
     // Calculate the next separator index ahead of time
     ValueObjectSP child_valobj_sp;
     const char separator_type = var_expr[0];
@@ -940,7 +940,6 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           return ValueObjectSP();
         }
 
-        separator_idx = var_expr.find_first_of(".-[");
         if (use_dynamic != eNoDynamicValues) {
           ValueObjectSP dynamic_value_sp(
               child_valobj_sp->GetDynamicValue(use_dynamic));
@@ -1025,7 +1024,6 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         return ValueObjectSP();
       }
 
-      separator_idx = var_expr.find_first_of(".-[");
       if (use_dynamic != eNoDynamicValues) {
         ValueObjectSP dynamic_value_sp(
             child_valobj_sp->GetDynamicValue(use_dynamic));
@@ -1051,9 +1049,6 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
     if (child_valobj_sp)
       valobj_sp = child_valobj_sp;
-
-    if (var_expr.empty())
-      break;
   }
   if (valobj_sp) {
     if (deref) {
@@ -1321,14 +1316,13 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
   pc_range.GetBaseAddress() = GetFrameCodeAddress();
   pc_range.SetByteSize(target_arch.GetMaximumOpcodeByteSize());
 
-  ExecutionContext exe_ctx(shared_from_this());
-
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
   const bool prefer_file_cache = false;
 
-  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
-      target_arch, plugin_name, flavor, exe_ctx, pc_range, prefer_file_cache);
+  DisassemblerSP disassembler_sp =
+      Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
+                                     *target_sp, pc_range, prefer_file_cache);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1500,7 +1494,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
   // +18 that assigns to rdi, and calls itself recursively for that dereference
   //   DoGuessValueAt(frame, rdi, 8, dis, vars, 0x18) finds the instruction at
   //   +14 that assigns to rdi, and calls itself recursively for that
-  //   derefernece
+  //   dereference
   //     DoGuessValueAt(frame, rbp, -8, dis, vars, 0x14) finds "f" in the
   //     variable list.
   //     Returns a ValueObject for f.  (That's what was stored at rbp-8 at +14)
@@ -1702,13 +1696,12 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
     return ValueObjectSP();
   }
 
-  ExecutionContext exe_ctx(shared_from_this());
-
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
   const bool prefer_file_cache = false;
-  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
-      target_arch, plugin_name, flavor, exe_ctx, pc_range, prefer_file_cache);
+  DisassemblerSP disassembler_sp =
+      Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
+                                     *target_sp, pc_range, prefer_file_cache);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1863,6 +1856,7 @@ void StackFrame::UpdatePreviousFrameFromCurrentFrame(StackFrame &curr_frame) {
   m_concrete_frame_index = curr_frame.m_concrete_frame_index;
   m_reg_context_sp = curr_frame.m_reg_context_sp;
   m_frame_code_addr = curr_frame.m_frame_code_addr;
+  m_behaves_like_zeroth_frame = curr_frame.m_behaves_like_zeroth_frame;
   assert(!m_sc.target_sp || !curr_frame.m_sc.target_sp ||
          m_sc.target_sp.get() == curr_frame.m_sc.target_sp.get());
   assert(!m_sc.module_sp || !curr_frame.m_sc.module_sp ||
@@ -1942,16 +1936,14 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
           const uint32_t disasm_lines = debugger.GetDisassemblyLineCount();
           if (disasm_lines > 0) {
             const ArchSpec &target_arch = target->GetArchitecture();
-            AddressRange pc_range;
-            pc_range.GetBaseAddress() = GetFrameCodeAddress();
-            pc_range.SetByteSize(disasm_lines *
-                                 target_arch.GetMaximumOpcodeByteSize());
             const char *plugin_name = nullptr;
             const char *flavor = nullptr;
             const bool mixed_source_and_assembly = false;
             Disassembler::Disassemble(
                 target->GetDebugger(), target_arch, plugin_name, flavor,
-                exe_ctx, pc_range, disasm_lines, mixed_source_and_assembly, 0,
+                exe_ctx, GetFrameCodeAddress(),
+                {Disassembler::Limit::Instructions, disasm_lines},
+                mixed_source_and_assembly, 0,
                 Disassembler::eOptionMarkPCAddress, strm);
           }
         }

@@ -394,19 +394,31 @@ struct RangeData : public Range<B, S> {
   RangeData(B base, S size, DataType d) : Range<B, S>(base, size), data(d) {}
 };
 
+// We can treat the vector as a flattened Binary Search Tree, augmenting it
+// with upper bounds (max of range endpoints) for every index allows us to
+// query for range containment quicker.
+template <typename B, typename S, typename T>
+struct AugmentedRangeData : public RangeData<B, S, T> {
+  B upper_bound;
+
+  AugmentedRangeData(const RangeData<B, S, T> &rd)
+      : RangeData<B, S, T>(rd), upper_bound() {}
+};
+
 template <typename B, typename S, typename T, unsigned N = 0,
           class Compare = std::less<T>>
 class RangeDataVector {
 public:
   typedef lldb_private::Range<B, S> Range;
   typedef RangeData<B, S, T> Entry;
-  typedef llvm::SmallVector<Entry, N> Collection;
+  typedef AugmentedRangeData<B, S, T> AugmentedEntry;
+  typedef llvm::SmallVector<AugmentedEntry, N> Collection;
 
   RangeDataVector(Compare compare = Compare()) : m_compare(compare) {}
 
   ~RangeDataVector() = default;
 
-  void Append(const Entry &entry) { m_entries.push_back(entry); }
+  void Append(const Entry &entry) { m_entries.emplace_back(entry); }
 
   void Sort() {
     if (m_entries.size() > 1)
@@ -418,13 +430,13 @@ public:
                            return a.size < b.size;
                          return compare(a.data, b.data);
                        });
+    if (!m_entries.empty())
+      ComputeUpperBounds(0, m_entries.size());
   }
 
 #ifdef ASSERT_RANGEMAP_ARE_SORTED
   bool IsSorted() const {
     typename Collection::const_iterator pos, end, prev;
-    // First we determine if we can combine any of the Entry objects so we
-    // don't end up allocating and making a new collection for no reason
     for (pos = m_entries.begin(), end = m_entries.end(), prev = end; pos != end;
          prev = pos++) {
       if (prev != end && *pos < *prev)
@@ -494,26 +506,20 @@ public:
   }
 
   uint32_t FindEntryIndexThatContains(B addr) const {
-    const Entry *entry = FindEntryThatContains(addr);
+    const AugmentedEntry *entry =
+        static_cast<const AugmentedEntry *>(FindEntryThatContains(addr));
     if (entry)
       return std::distance(m_entries.begin(), entry);
     return UINT32_MAX;
   }
 
-  uint32_t FindEntryIndexesThatContain(B addr,
-                                       std::vector<uint32_t> &indexes) const {
+  uint32_t FindEntryIndexesThatContain(B addr, std::vector<uint32_t> &indexes) {
 #ifdef ASSERT_RANGEMAP_ARE_SORTED
     assert(IsSorted());
 #endif
-    // Search the entries until the first entry that has a larger base address
-    // than `addr`. As m_entries is sorted by their base address, all following
-    // entries can't contain `addr` as their base address is already larger.
-    for (const auto &entry : m_entries) {
-      if (entry.Contains(addr))
-        indexes.push_back(entry.data);
-      else if (entry.GetRangeBase() > addr)
-        break;
-    }
+    if (!m_entries.empty())
+      FindEntryIndexesThatContain(addr, 0, m_entries.size(), indexes);
+
     return indexes.size();
   }
 
@@ -599,6 +605,54 @@ public:
 protected:
   Collection m_entries;
   Compare m_compare;
+
+private:
+  // Compute extra information needed for search
+  B ComputeUpperBounds(size_t lo, size_t hi) {
+    size_t mid = (lo + hi) / 2;
+    AugmentedEntry &entry = m_entries[mid];
+
+    entry.upper_bound = entry.base + entry.size;
+
+    if (lo < mid)
+      entry.upper_bound =
+          std::max(entry.upper_bound, ComputeUpperBounds(lo, mid));
+
+    if (mid + 1 < hi)
+      entry.upper_bound =
+          std::max(entry.upper_bound, ComputeUpperBounds(mid + 1, hi));
+
+    return entry.upper_bound;
+  }
+
+  // This is based on the augmented tree implementation found at
+  // https://en.wikipedia.org/wiki/Interval_tree#Augmented_tree
+  void FindEntryIndexesThatContain(B addr, size_t lo, size_t hi,
+                                   std::vector<uint32_t> &indexes) {
+    size_t mid = (lo + hi) / 2;
+    const AugmentedEntry &entry = m_entries[mid];
+
+    // addr is greater than the rightmost point of any interval below mid
+    // so there are cannot be any matches.
+    if (addr > entry.upper_bound)
+      return;
+
+    // Recursively search left subtree
+    if (lo < mid)
+      FindEntryIndexesThatContain(addr, lo, mid, indexes);
+
+    // If addr is smaller than the start of the current interval it
+    // cannot contain it nor can any of its right subtree.
+    if (addr < entry.base)
+      return;
+
+    if (entry.Contains(addr))
+      indexes.push_back(entry.data);
+
+    // Recursively search right subtree
+    if (mid + 1 < hi)
+      FindEntryIndexesThatContain(addr, mid + 1, hi, indexes);
+  }
 };
 
 // A simple range  with data class where you get to define the type of

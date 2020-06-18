@@ -12,20 +12,20 @@ define amdgpu_kernel void @maxnum_f16(
 ; SI-LABEL: maxnum_f16:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
-; SI-NEXT:    s_mov_b32 s11, 0xf000
-; SI-NEXT:    s_mov_b32 s10, -1
-; SI-NEXT:    s_mov_b32 s14, s10
+; SI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b32 s14, s2
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s12, s6
 ; SI-NEXT:    s_mov_b32 s13, s7
-; SI-NEXT:    s_mov_b32 s15, s11
-; SI-NEXT:    s_mov_b32 s2, s10
-; SI-NEXT:    s_mov_b32 s3, s11
+; SI-NEXT:    s_mov_b32 s15, s3
+; SI-NEXT:    s_mov_b32 s10, s2
+; SI-NEXT:    s_mov_b32 s11, s3
 ; SI-NEXT:    buffer_load_ushort v0, off, s[12:15], 0
-; SI-NEXT:    buffer_load_ushort v1, off, s[0:3], 0
-; SI-NEXT:    s_mov_b32 s8, s4
-; SI-NEXT:    s_mov_b32 s9, s5
+; SI-NEXT:    buffer_load_ushort v1, off, s[8:11], 0
+; SI-NEXT:    s_mov_b32 s0, s4
+; SI-NEXT:    s_mov_b32 s1, s5
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -34,7 +34,7 @@ define amdgpu_kernel void @maxnum_f16(
 ; SI-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; SI-NEXT:    v_max_f32_e32 v0, v0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    buffer_store_short v0, off, s[8:11], 0
+; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: maxnum_f16:
@@ -88,7 +88,7 @@ define amdgpu_kernel void @maxnum_f16(
 ; GFX9-NEXT:    s_endpgm
     half addrspace(1)* %r,
     half addrspace(1)* %a,
-    half addrspace(1)* %b) {
+    half addrspace(1)* %b) #0 {
 entry:
   %a.val = load volatile half, half addrspace(1)* %a
   %b.val = load volatile half, half addrspace(1)* %b
@@ -157,7 +157,7 @@ define amdgpu_kernel void @maxnum_f16_imm_a(
 ; GFX9-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
     half addrspace(1)* %r,
-    half addrspace(1)* %b) {
+    half addrspace(1)* %b) #0 {
 entry:
   %b.val = load half, half addrspace(1)* %b
   %r.val = call half @llvm.maxnum.f16(half 3.0, half %b.val)
@@ -225,7 +225,7 @@ define amdgpu_kernel void @maxnum_f16_imm_b(
 ; GFX9-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
     half addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    half addrspace(1)* %a) #0 {
 entry:
   %a.val = load half, half addrspace(1)* %a
   %r.val = call half @llvm.maxnum.f16(half %a.val, half 4.0)
@@ -308,7 +308,7 @@ define amdgpu_kernel void @maxnum_v2f16(
 ; GFX9-NEXT:    s_endpgm
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %b) {
+    <2 x half> addrspace(1)* %b) #0 {
 entry:
   %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
   %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
@@ -376,7 +376,7 @@ define amdgpu_kernel void @maxnum_v2f16_imm_a(
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
     <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %b) {
+    <2 x half> addrspace(1)* %b) #0 {
 entry:
   %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
   %r.val = call <2 x half> @llvm.maxnum.v2f16(<2 x half> <half 3.0, half 4.0>, <2 x half> %b.val)
@@ -443,7 +443,7 @@ define amdgpu_kernel void @maxnum_v2f16_imm_b(
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
     <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) {
+    <2 x half> addrspace(1)* %a) #0 {
 entry:
   %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
   %r.val = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a.val, <2 x half> <half 4.0, half 3.0>)
@@ -542,7 +542,7 @@ define amdgpu_kernel void @maxnum_v3f16(
 ; GFX9-NEXT:    s_endpgm
     <3 x half> addrspace(1)* %r,
     <3 x half> addrspace(1)* %a,
-    <3 x half> addrspace(1)* %b) {
+    <3 x half> addrspace(1)* %b) #0 {
 entry:
   %a.val = load <3 x half>, <3 x half> addrspace(1)* %a
   %b.val = load <3 x half>, <3 x half> addrspace(1)* %b
@@ -655,7 +655,7 @@ define amdgpu_kernel void @maxnum_v4f16(
 ; GFX9-NEXT:    s_endpgm
     <4 x half> addrspace(1)* %r,
     <4 x half> addrspace(1)* %a,
-    <4 x half> addrspace(1)* %b) {
+    <4 x half> addrspace(1)* %b) #0 {
 entry:
   %a.val = load <4 x half>, <4 x half> addrspace(1)* %a
   %b.val = load <4 x half>, <4 x half> addrspace(1)* %b
@@ -746,10 +746,12 @@ define amdgpu_kernel void @fmax_v4f16_imm_a(
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
     <4 x half> addrspace(1)* %r,
-    <4 x half> addrspace(1)* %b) {
+    <4 x half> addrspace(1)* %b) #0 {
 entry:
   %b.val = load <4 x half>, <4 x half> addrspace(1)* %b
   %r.val = call <4 x half> @llvm.maxnum.v4f16(<4 x half> <half 8.0, half 2.0, half 3.0, half 4.0>, <4 x half> %b.val)
   store <4 x half> %r.val, <4 x half> addrspace(1)* %r
   ret void
 }
+
+attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

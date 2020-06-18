@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++14,c++17 %s modernize-use-trailing-return-type %t -- -- -fdeclspec -fexceptions
-// FIXME: Fix the checker to work in C++2a mode, it is performing a
+// FIXME: Fix the checker to work in C++20 mode, it is performing a
 // use-of-uninitialized-value.
 
 namespace std {

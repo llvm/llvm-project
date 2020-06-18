@@ -15,14 +15,6 @@ class TestNoreturnModuleEnd(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        super(TestNoreturnModuleEnd, self).setUp()
-        self._initial_platform = lldb.DBG.GetSelectedPlatform()
-
-    def tearDown(self):
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)
-        super(TestNoreturnModuleEnd, self).tearDown()
-
     def test(self):
         target = self.dbg.CreateTarget("test.out")
         process = target.LoadCore("test.core")

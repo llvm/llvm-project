@@ -43,6 +43,10 @@ bool LibcxxSmartPointerSummaryProvider(
     const TypeSummaryOptions
         &options); // libc++ std::shared_ptr<> and std::weak_ptr<>
 
+// libc++ std::unique_ptr<>
+bool LibcxxUniquePointerSummaryProvider(ValueObject &valobj, Stream &stream,
+                                        const TypeSummaryOptions &options);
+
 bool LibcxxFunctionSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::function<>
@@ -107,12 +111,36 @@ private:
   lldb::ByteOrder m_byte_order;
 };
 
+class LibcxxUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+public:
+  LibcxxUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
+
+  size_t CalculateNumChildren() override;
+
+  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+
+  bool Update() override;
+
+  bool MightHaveChildren() override;
+
+  size_t GetIndexOfChildWithName(ConstString name) override;
+
+  ~LibcxxUniquePtrSyntheticFrontEnd() override;
+
+private:
+  lldb::ValueObjectSP m_compressed_pair_sp;
+};
+
 SyntheticChildrenFrontEnd *
 LibcxxBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
 LibcxxSharedPtrSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxUniquePtrSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                         lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *

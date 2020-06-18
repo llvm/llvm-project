@@ -1,5 +1,44 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
 
+func @correct_int_types_success() {
+  "test.int_types"() : () -> (i16, si32, ui64, i8)
+  "test.int_types"() : () -> (si16, si32, ui64, ui64)
+  "test.int_types"() : () -> (ui16, si32, ui64, si128)
+  return
+}
+
+// -----
+
+func @wrong_int_type_signedness_failure() {
+  // expected-error @+1 {{result #1 must be 32-bit signed integer, but got 'ui32'}}
+  "test.int_types"() : () -> (ui16, ui32, ui64, si8)
+  return
+}
+
+// -----
+
+func @wrong_int_type_signedness_failure() {
+  // expected-error @+1 {{result #2 must be 64-bit unsigned integer, but got 'si64'}}
+  "test.int_types"() : () -> (ui16, si32, si64, ui8)
+  return
+}
+
+// -----
+
+func @wrong_int_type_failure() {
+  // expected-error @+1 {{result #0 must be 16-bit integer, but got 'f16'}}
+  "test.int_types"() : () -> (f16, si32, ui64, i16)
+  return
+}
+
+// -----
+
+func @wrong_int_type_failure() {
+  // expected-error @+1 {{result #3 must be integer, but got 'f64'}}
+  "test.int_types"() : () -> (i16, si32, ui64, f64)
+  return
+}
+
 // -----
 
 // CHECK-LABEL: @complex_f64_success
@@ -50,7 +89,7 @@ func @tuple_empty_success() {
 // -----
 
 func @tuple_wrong_type_scalar() {
-  // expected-error@+1 {{must be tuple with any combination of 32-bit integer or 32-bit float values}}
+  // expected-error@+1 {{must be tuple with any combination of 32-bit signless integer or 32-bit float values}}
   "test.tuple_32_bit"() : () -> (tuple<i64>)
   return
 }
@@ -58,7 +97,7 @@ func @tuple_wrong_type_scalar() {
 // -----
 
 func @tuple_wrong_type_tensor() {
-  // expected-error@+1 {{must be tuple with any combination of 32-bit integer or 32-bit float values}}
+  // expected-error@+1 {{must be tuple with any combination of 32-bit signless integer or 32-bit float values}}
   "test.tuple_32_bit"() : () -> (tuple<tensor<i32>>)
   return
 }
@@ -98,7 +137,7 @@ func @nested_tuple_multi_level_mixed_success() {
 // -----
 
 func @nested_tuple_multi_level_wrong_type() {
-  // expected-error@+1 {{must be nested tuple with any combination of 32-bit integer or 32-bit float values}}
+  // expected-error@+1 {{must be nested tuple with any combination of 32-bit signless integer or 32-bit float values}}
   "test.nested_tuple_32_bit"() : () -> (tuple<i32, tuple<i32, tuple<i64>>>)
   return
 }
@@ -117,7 +156,7 @@ func @rank_less_than_2_I8_F32_memref_success() {
 // -----
 
 func @rank_less_than_2_I8_F32_memref_bad_type() {
-  // expected-error@+1 {{must be 0D/1D memref of 8-bit integer or 32-bit float values}}
+  // expected-error@+1 {{must be 0D/1D memref of 8-bit signless integer or 32-bit float values}}
   "test.rank_less_than_2_I8_F32_memref"() : () -> (memref<i16>)
   return
 }
@@ -125,7 +164,7 @@ func @rank_less_than_2_I8_F32_memref_bad_type() {
 // -----
 
 func @rank_less_than_2_I8_F32_memref_bad_rank() {
-  // expected-error@+1 {{must be 0D/1D memref of 8-bit integer or 32-bit float values}}
+  // expected-error@+1 {{must be 0D/1D memref of 8-bit signless integer or 32-bit float values}}
   "test.rank_less_than_2_I8_F32_memref"() : () -> (memref<1x2xi8>)
   return
 }
@@ -148,7 +187,7 @@ func @nd_tensor_of_success_wrong_type_0d(%arg0: tensor<f32>, %arg1: tensor<10xf3
 // -----
 
 func @nd_tensor_of_success_wrong_type_4d(%arg0: tensor<f32>, %arg1: tensor<10xf32>, %arg2: tensor<20x30xi16>, %arg3: tensor<40x50x60xi16>, %arg4: tensor<70x80x90x100xi32>) {
-  // expected-error @+1 {{'test.nd_tensor_of' op operand #4 must be 4D tensor of 16-bit integer values}}
+  // expected-error @+1 {{'test.nd_tensor_of' op operand #4 must be 4D tensor of 16-bit signless integer values}}
   "test.nd_tensor_of"(%arg0, %arg1, %arg2, %arg3, %arg3) : (tensor<f32>, tensor<10xf32>, tensor<20x30xi16>, tensor<40x50x60xi16>, tensor<40x50x60xi16>) -> ()
   return
 }
@@ -193,7 +232,7 @@ func @multi_tensor_rank_of_success(%arg0: tensor<i8>, %arg1: tensor<i32>, %arg2:
 // -----
 
 func @multi_tensor_rank_of_wrong_unranked_type(%arg0: tensor<2x2xi8>) {
-  // expected-error @+1 {{'test.multi_tensor_rank_of' op operand #0 must be 0D/1D tensor of 8-bit integer or 32-bit integer or 32-bit float values}}
+  // expected-error @+1 {{'test.multi_tensor_rank_of' op operand #0 must be 0D/1D tensor of 8-bit signless integer or 32-bit signless integer or 32-bit float values}}
   "test.multi_tensor_rank_of"(%arg0) : (tensor<2x2xi8>) -> ()
   return
 }
@@ -201,7 +240,7 @@ func @multi_tensor_rank_of_wrong_unranked_type(%arg0: tensor<2x2xi8>) {
 // -----
 
 func @multi_tensor_rank_of_wrong_element_type(%arg0: tensor<2xi16>) {
-  // expected-error @+1 {{'test.multi_tensor_rank_of' op operand #0 must be 0D/1D tensor of 8-bit integer or 32-bit integer or 32-bit float values}}
+  // expected-error @+1 {{'test.multi_tensor_rank_of' op operand #0 must be 0D/1D tensor of 8-bit signless integer or 32-bit signless integer or 32-bit float values}}
   "test.multi_tensor_rank_of"(%arg0) : (tensor<2xi16>) -> ()
   return
 }
@@ -218,7 +257,7 @@ func @fixed_element_types(%ti32: tensor<* x i32>, %tf32: tensor<* x f32>, %mi32 
 // -----
 
 func @fixed_element_types(%arg0: tensor<* x i32>, %arg1: tensor<* x f32>) {
-  // expected-error@+1 {{'res' is 16-bit integer}}
+  // expected-error@+1 {{'res' is 16-bit signless integer}}
   "test.arg_and_res_have_fixed_element_types"(%arg0, %arg1) : (tensor<* x i32>, tensor<* x f32>) -> tensor<* x i32>
   return
 }
@@ -399,7 +438,7 @@ func @operand_rank_equals_result_size_failure(%arg : tensor<1x2x3x4xi32>) {
 // -----
 
 func @same_types_element_mismatch(%arg0: tensor<* x i32>, %arg1: tensor<* x f32>) {
-  // expected-error@+1 {{all of {x, res} have same type}}
+  // expected-error@+1 {{type incompatible with return type of operation}}
   "test.operand0_and_result_have_same_type"(%arg0, %arg1) : (tensor<* x i32>, tensor<* x f32>) -> tensor<* x f32>
   return
 }
@@ -407,7 +446,7 @@ func @same_types_element_mismatch(%arg0: tensor<* x i32>, %arg1: tensor<* x f32>
 // -----
 
 func @same_types_shape_mismatch(%arg0: tensor<1x2xi32>, %arg1: tensor<2x1xi32>) {
-  // expected-error@+1 {{all of {x, res} have same type}}
+  // expected-error@+1 {{type incompatible with return type of operation}}
   "test.operand0_and_result_have_same_type"(%arg0, %arg1) : (tensor<1x2xi32>, tensor<2x1xi32>) -> tensor<2x1xi32>
   return
 }
@@ -430,7 +469,7 @@ func @does_not_have_static_memref(%arg0: memref<?xi32>) {
 // -----
 
 func @elements_attr_not_i32_f32() {
-  // expected-error@+1 {{32-bit integer elements attribute}}
+  // expected-error@+1 {{32-bit signless integer elements attribute}}
   "test.i32ElementsAttr"() {attr = dense<[1.0, 20.0]>:tensor<2xf32>} : () -> ()
   return
 }
@@ -438,7 +477,7 @@ func @elements_attr_not_i32_f32() {
 // -----
 
 func @elements_attr_not_i32_i64() {
-  // expected-error@+1 {{32-bit integer elements attribute}}
+  // expected-error@+1 {{32-bit signless integer elements attribute}}
   "test.i32ElementsAttr"() {attr = dense<[1, 20]>:tensor<2xi64>} : () -> ()
   return
 }
@@ -448,5 +487,20 @@ func @elements_attr_not_i32_i64() {
 
 func @elements_attr_i32(%arg0: tensor<1x2xi32>) {
   "test.i32ElementsAttr"() {attr = dense<[1, 2]>:tensor<2xi32>} : () -> ()
+  return
+}
+
+// -----
+
+func @elements_attr_index() {
+  "test.indexElementsAttr"() {attr = dense<[1, 2]>:tensor<2xindex>} : () -> ()
+  return
+}
+
+// -----
+
+func @elements_attr_not_index() {
+  // expected-error@+1 {{index elements attribute}}
+  "test.indexElementsAttr"() {attr = dense<[1, 2]>:tensor<2xi32>} : () -> ()
   return
 }

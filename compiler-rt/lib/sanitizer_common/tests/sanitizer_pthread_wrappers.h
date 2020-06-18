@@ -35,9 +35,9 @@ struct PthreadHelperCreateThreadInfo {
 inline DWORD WINAPI PthreadHelperThreadProc(void *arg) {
   PthreadHelperCreateThreadInfo *start_data =
       reinterpret_cast<PthreadHelperCreateThreadInfo*>(arg);
-  void *ret = (start_data->start_routine)(start_data->arg);
+  (start_data->start_routine)(start_data->arg);
   delete start_data;
-  return (DWORD)ret;
+  return 0;
 }
 
 inline void PTHREAD_CREATE(pthread_t *thread, void *attr,
@@ -60,7 +60,7 @@ inline void PTHREAD_JOIN(pthread_t thread, void **value_ptr) {
 
 inline void pthread_exit(void *retval) {
   ASSERT_EQ(0, retval) << "Nonzero retval is not supported yet.";
-  ExitThread((DWORD)retval);
+  ExitThread(0);
 }
 #endif  // _WIN32
 

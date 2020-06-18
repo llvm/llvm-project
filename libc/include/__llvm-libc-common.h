@@ -1,4 +1,4 @@
-//===------- Common definitions for LLVM-libc public header files- --------===//
+//===-- Common definitions for LLVM-libc public header files --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,6 +16,9 @@
 
 #undef __END_C_DECLS
 #define __END_C_DECLS }
+
+#undef _Noreturn
+#define _Noreturn [[noreturn]]
 
 #else // not __cplusplus
 

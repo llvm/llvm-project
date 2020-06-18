@@ -366,38 +366,46 @@ trigramsAre(std::initializer_list<std::string> Trigrams) {
   return tokensAre(Trigrams, Token::Kind::Trigram);
 }
 
+std::vector<Token> identifierTrigramTokens(llvm::StringRef S) {
+  std::vector<Trigram> Trigrams;
+  generateIdentifierTrigrams(S, Trigrams);
+  std::vector<Token> Tokens;
+  for (Trigram T : Trigrams)
+    Tokens.emplace_back(Token::Kind::Trigram, T.str());
+  return Tokens;
+}
+
 TEST(DexTrigrams, IdentifierTrigrams) {
-  EXPECT_THAT(generateIdentifierTrigrams("X86"),
-              trigramsAre({"x86", "x", "x8"}));
+  EXPECT_THAT(identifierTrigramTokens("X86"), trigramsAre({"x86", "x", "x8"}));
 
-  EXPECT_THAT(generateIdentifierTrigrams("nl"), trigramsAre({"nl", "n"}));
+  EXPECT_THAT(identifierTrigramTokens("nl"), trigramsAre({"nl", "n"}));
 
-  EXPECT_THAT(generateIdentifierTrigrams("n"), trigramsAre({"n"}));
+  EXPECT_THAT(identifierTrigramTokens("n"), trigramsAre({"n"}));
 
-  EXPECT_THAT(generateIdentifierTrigrams("clangd"),
+  EXPECT_THAT(identifierTrigramTokens("clangd"),
               trigramsAre({"c", "cl", "cla", "lan", "ang", "ngd"}));
 
-  EXPECT_THAT(generateIdentifierTrigrams("abc_def"),
+  EXPECT_THAT(identifierTrigramTokens("abc_def"),
               trigramsAre({"a", "ab", "ad", "abc", "abd", "ade", "bcd", "bde",
                            "cde", "def"}));
 
-  EXPECT_THAT(generateIdentifierTrigrams("a_b_c_d_e_"),
+  EXPECT_THAT(identifierTrigramTokens("a_b_c_d_e_"),
               trigramsAre({"a", "a_", "ab", "abc", "bcd", "cde"}));
 
-  EXPECT_THAT(generateIdentifierTrigrams("unique_ptr"),
+  EXPECT_THAT(identifierTrigramTokens("unique_ptr"),
               trigramsAre({"u", "un", "up", "uni", "unp", "upt", "niq", "nip",
                            "npt", "iqu", "iqp", "ipt", "que", "qup", "qpt",
                            "uep", "ept", "ptr"}));
 
   EXPECT_THAT(
-      generateIdentifierTrigrams("TUDecl"),
+      identifierTrigramTokens("TUDecl"),
       trigramsAre({"t", "tu", "td", "tud", "tde", "ude", "dec", "ecl"}));
 
-  EXPECT_THAT(generateIdentifierTrigrams("IsOK"),
+  EXPECT_THAT(identifierTrigramTokens("IsOK"),
               trigramsAre({"i", "is", "io", "iso", "iok", "sok"}));
 
   EXPECT_THAT(
-      generateIdentifierTrigrams("abc_defGhij__klm"),
+      identifierTrigramTokens("abc_defGhij__klm"),
       trigramsAre({"a",   "ab",  "ad",  "abc", "abd", "ade", "adg", "bcd",
                    "bde", "bdg", "cde", "cdg", "def", "deg", "dgh", "dgk",
                    "efg", "egh", "egk", "fgh", "fgk", "ghi", "ghk", "gkl",

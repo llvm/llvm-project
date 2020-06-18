@@ -61,6 +61,7 @@ def note_fe_backend_invalid_loc : Note<"could "
   "not determine the original source location for %0:%1:%2">, BackendInfo;
 
 def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
+def warn_fe_backend_unsupported : Warning<"%0">, BackendInfo;
 
 def err_fe_invalid_code_complete_file : Error<
     "cannot locate code-completion file %0">, DefaultFatal;
@@ -108,6 +109,9 @@ def err_fe_invalid_exception_model
 def warn_fe_concepts_ts_flag : Warning<
   "-fconcepts-ts is deprecated - use '-std=c++20' for Concepts support">,
   InGroup<Deprecated>;
+
+def err_fe_unable_to_load_basic_block_sections_file : Error<
+    "unable to load basic block sections function list: '%0'">;
 
 def warn_fe_serialized_diag_merge_failure : Warning<
     "unable to merge a subprocess's serialized diagnostics">,

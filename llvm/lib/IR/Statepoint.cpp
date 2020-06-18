@@ -17,40 +17,6 @@
 
 using namespace llvm;
 
-bool llvm::isStatepoint(const CallBase *Call) {
-  if (auto *F = Call->getCalledFunction())
-    return F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint;
-  return false;
-}
-
-bool llvm::isStatepoint(const Value *V) {
-  if (auto *Call = dyn_cast<CallBase>(V))
-    return isStatepoint(Call);
-  return false;
-}
-
-bool llvm::isStatepoint(const Value &V) {
-  return isStatepoint(&V);
-}
-
-bool llvm::isGCRelocate(const CallBase *Call) {
-  return isa<GCRelocateInst>(Call);
-}
-
-bool llvm::isGCRelocate(const Value *V) {
-  if (auto *Call = dyn_cast<CallBase>(V))
-    return isGCRelocate(Call);
-  return false;
-}
-
-bool llvm::isGCResult(const CallBase *Call) { return isa<GCResultInst>(Call); }
-
-bool llvm::isGCResult(const Value *V) {
-  if (auto *Call = dyn_cast<CallBase>(V))
-    return isGCResult(Call);
-  return false;
-}
-
 bool llvm::isStatepointDirectiveAttr(Attribute Attr) {
   return Attr.hasAttribute("statepoint-id") ||
          Attr.hasAttribute("statepoint-num-patch-bytes");

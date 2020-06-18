@@ -652,13 +652,13 @@ main_body:
 ; CHECK-DAG: v_mov_b32_e32 [[CTR:v[0-9]+]], 0
 ; CHECK-DAG: s_mov_b32 [[SEVEN:s[0-9]+]], 0x40e00000
 
-; CHECK: [[LOOPHDR:BB[0-9]+_[0-9]+]]: ; %loop
-; CHECK: v_cmp_lt_f32_e32 vcc, [[SEVEN]], [[CTR]]
-; CHECK: s_cbranch_vccnz
-
 ; CHECK: ; %body
 ; CHECK: v_add_f32_e32 [[CTR]], 2.0, [[CTR]]
-; CHECK: s_branch [[LOOPHDR]]
+; CHECK: [[LOOPHDR:BB[0-9]+_[0-9]+]]: ; %loop
+; CHECK: v_cmp_lt_f32_e32 vcc, [[SEVEN]], [[CTR]]
+; CHECK: s_cbranch_vccz
+
+; CHECK: s_cbranch_vccnz [[LOOPHDR]]
 
 ; CHECK: ; %break
 ; CHECK: ; return
@@ -693,11 +693,11 @@ break:
 ; CHECK: s_and_b64 exec, exec, [[LIVE]]
 ; CHECK: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0
 ; CHECK: s_wqm_b64 exec, exec
-; CHECK: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offset:4{{$}}
+; CHECK: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4{{$}}
 ; CHECK: s_and_b64 exec, exec, [[LIVE]]
 ; CHECK: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 idxen
 ; CHECK: s_wqm_b64 exec, exec
-; CHECK: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen
+; CHECK: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 
 ; CHECK: s_and_b64 exec, exec, [[LIVE]]
 ; CHECK: image_sample
@@ -769,13 +769,12 @@ else:
 ; CHECK: s_wqm_b64 exec, exec
 ; CHECK: s_cmp_
 ; CHECK-NEXT: s_cbranch_scc
-; CHECK: ; %if
-; CHECK: s_and_b64 exec, exec, [[ORIG]]
-; CHECK: image_sample
 ; CHECK: ; %else
-; CHECK: s_and_b64 exec, exec, [[ORIG]]
+; CHECK: image_sample
+; CHECK: ; %if
 ; CHECK: image_sample
 ; CHECK: ; %end
+; CHECK: s_and_b64 exec, exec, [[ORIG]]
 define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
 main_body:
   %cc = icmp sgt i32 %sel, 0

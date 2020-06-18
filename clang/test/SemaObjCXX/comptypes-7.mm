@@ -23,27 +23,27 @@ int main()
 
   /* These should all generate errors.  */
 
-  obj = i; // expected-error {{assigning to 'id' from incompatible type 'int'}}
-  obj = j; // expected-error {{assigning to 'id' from incompatible type 'int *'}}
+  obj = i; // expected-error {{incompatible integer to pointer conversion assigning to 'id' from 'int'}}
+  obj = j; // expected-error {{incompatible pointer types assigning to 'id' from 'int *'}}
 
-  obj_p = i; // expected-error {{assigning to 'id<MyProtocol>' from incompatible type 'int'}}
-  obj_p = j; // expected-error {{assigning to 'id<MyProtocol>' from incompatible type 'int *'}}
+  obj_p = i; // expected-error {{incompatible integer to pointer conversion assigning to 'id<MyProtocol>' from 'int'}}
+  obj_p = j; // expected-error {{incompatible pointer types assigning to 'id<MyProtocol>' from 'int *'}}
 
-  obj_c = i; // expected-error {{assigning to 'MyClass *' from incompatible type 'int'}}
-  obj_c = j; // expected-error {{assigning to 'MyClass *' from incompatible type 'int *'}}
+  obj_c = i; // expected-error {{incompatible integer to pointer conversion assigning to 'MyClass *' from 'int'}}
+  obj_c = j; // expected-error {{incompatible pointer types assigning to 'MyClass *' from 'int *'}}
 
-  obj_C = i; // expected-error {{assigning to 'Class' from incompatible type 'int'}}
-  obj_C = j; // expected-error {{assigning to 'Class' from incompatible type 'int *'}}
+  obj_C = i; // expected-error {{incompatible integer to pointer conversion assigning to 'Class' from 'int'}}
+  obj_C = j; // expected-error {{incompatible pointer types assigning to 'Class' from 'int *'}}
 
-  i = obj;   // expected-error {{assigning to 'int' from incompatible type 'id'}}
-  i = obj_p; // expected-error {{assigning to 'int' from incompatible type 'id<MyProtocol>'}}
-  i = obj_c; // expected-error {{assigning to 'int' from incompatible type 'MyClass *'}}
-  i = obj_C; // expected-error {{assigning to 'int' from incompatible type 'Class'}}
+  i = obj;   // expected-error {{incompatible pointer to integer conversion assigning to 'int' from 'id'}}
+  i = obj_p; // expected-error {{incompatible pointer to integer conversion assigning to 'int' from 'id<MyProtocol>'}}
+  i = obj_c; // expected-error {{incompatible pointer to integer conversion assigning to 'int' from 'MyClass *'}}
+  i = obj_C; // expected-error {{incompatible pointer to integer conversion assigning to 'int' from 'Class'}}
 
-  j = obj;   // expected-error {{assigning to 'int *' from incompatible type 'id'}}
-  j = obj_p; // expected-error {{assigning to 'int *' from incompatible type 'id<MyProtocol>'}}
-  j = obj_c; // expected-error {{assigning to 'int *' from incompatible type 'MyClass *'}}
-  j = obj_C; // expected-error {{assigning to 'int *' from incompatible type 'Class'}}
+  j = obj;   // expected-error {{incompatible pointer types assigning to 'int *' from 'id'}}
+  j = obj_p; // expected-error {{incompatible pointer types assigning to 'int *' from 'id<MyProtocol>'}}
+  j = obj_c; // expected-error {{incompatible pointer types assigning to 'int *' from 'MyClass *'}}
+  j = obj_C; // expected-error {{incompatible pointer types assigning to 'int *' from 'Class'}}
 
   if (obj == i) foo() ; // expected-error {{comparison between pointer and integer ('id' and 'int')}}
   if (i == obj) foo() ; // expected-error {{comparison between pointer and integer ('int' and 'id')}}

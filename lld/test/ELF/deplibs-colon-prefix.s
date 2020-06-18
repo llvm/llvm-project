@@ -1,7 +1,8 @@
 # REQUIRES: x86
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/deplibs-lib_foo.s -o %tfoo.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: echo ".global foo; foo:" | \
+# RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %tfoo.o
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: llvm-ar rc %t.dir/foo.a %tfoo.o

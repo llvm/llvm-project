@@ -217,6 +217,9 @@ public:
   bool isTemplateOrSpecialization();
   bool isRecordLikeDecl();
   bool isClassOrStructDecl();
+  /// \return \c true if the declaration that this comment is attached to
+  /// declares either struct, class or tag typedef.
+  bool isClassOrStructOrTagTypedefDecl();
   bool isUnionDecl();
   bool isObjCInterfaceDecl();
   bool isObjCProtocolDecl();

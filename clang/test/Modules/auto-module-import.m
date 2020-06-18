@@ -18,7 +18,7 @@
 
 #ifdef ERRORS
 Module *mod; // expected-error{{declaration of 'Module' must be imported from module 'Module' before it is required}}
-// expected-note@Inputs/Module.framework/Headers/Module.h:15 {{previous}}
+// expected-note@Inputs/Module.framework/Headers/Module.h:15 {{not visible}}
 #else
 #import <AlsoDependsOnModule/AlsoDependsOnModule.h> // expected-warning{{treating #import as an import of module 'AlsoDependsOnModule'}}
 #endif
@@ -29,7 +29,7 @@ int getDependsOther() { return depends_on_module_other; }
 void testSubframeworkOther() {
 #ifdef ERRORS
   double *sfo1 = sub_framework_other; // expected-error{{declaration of 'sub_framework_other' must be imported from module 'DependsOnModule.SubFramework.Other'}}
-  // expected-note@Inputs/DependsOnModule.framework/Frameworks/SubFramework.framework/Headers/Other.h:15 {{previous}}
+  // expected-note@Inputs/DependsOnModule.framework/Frameworks/SubFramework.framework/Headers/Other.h:15 {{not visible}}
 #endif
 }
 
@@ -73,7 +73,7 @@ int getModulePrivate() { return module_private; }
 int getNoUmbrellaAPrivate() { return no_umbrella_A_private; }
 
 int getNoUmbrellaBPrivateFail() { return no_umbrella_B_private; } // expected-error{{declaration of 'no_umbrella_B_private' must be imported from module 'NoUmbrella.Private.B_Private'}}
-// expected-note@Inputs/NoUmbrella.framework/PrivateHeaders/B_Private.h:1 {{previous}}
+// expected-note@Inputs/NoUmbrella.framework/PrivateHeaders/B_Private.h:1 {{not visible}}
 
 // Test inclusion of headers that are under an umbrella directory but
 // not actually part of the module.

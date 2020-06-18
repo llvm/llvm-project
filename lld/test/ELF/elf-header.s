@@ -3,7 +3,7 @@
 # RUN: ld.lld %t.o -o %t1
 # RUN: llvm-readobj --file-headers %t1 | FileCheck %s
 
-# RUN: ld.lld %t.o -no-rosegment -o %t2
+# RUN: ld.lld %t.o --no-rosegment -o %t2
 # RUN: llvm-readobj --file-headers %t2 | FileCheck %s
 
 # CHECK:      ElfHeader {

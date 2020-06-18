@@ -15,7 +15,7 @@
 ## 2105751 = 0x202197 (bar)
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
-# DISASM-NEXT: _start:
+# DISASM-NEXT: <_start>:
 # DISASM-NEXT:   201158:       adcq  $2105751, %rax
 # DISASM-NEXT:                 addq  $2105751, %rbx
 # DISASM-NEXT:                 andq  $2105751, %rcx
@@ -45,19 +45,19 @@
 # SEC-PIC-NEXT:   AddressAlignment:
 # SEC-PIC-NEXT:   EntrySize:
 # SEC-PIC-NEXT: }
+# SEC-PIC:      0x000000006FFFFFF9 RELACOUNT            1
 # SEC-PIC:      Relocations [
 # SEC-PIC-NEXT:   Section ({{.*}}) .rela.dyn {
 # SEC-PIC-NEXT:     0x2348 R_X86_64_RELATIVE - 0x3350
 # SEC-PIC-NEXT:   }
 # SEC-PIC-NEXT: ]
-# SEC-PIC:      0x000000006FFFFFF9 RELACOUNT            1
 
 ## Check that there was no relaxation performed. All values refer to got entry.
 ## Ex: 0x1000 + 4249 + 7 = 0x20A0
 ##     0x102a + 4207 + 7 = 0x20A0
 # DISASM-PIC:      Disassembly of section .text:
 # DISASM-PIC-EMPTY:
-# DISASM-PIC-NEXT: _start:
+# DISASM-PIC-NEXT: <_start>:
 # DISASM-PIC-NEXT: 1268:       adcq  4313(%rip), %rax
 # DISASM-PIC-NEXT:             addq  4306(%rip), %rbx
 # DISASM-PIC-NEXT:             andq  4299(%rip), %rcx

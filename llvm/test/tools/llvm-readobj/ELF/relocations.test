@@ -129,8 +129,7 @@ Sections:
     Type: SHT_REL
     Info: .text
     Relocations:
-      - Offset: 0x0
-        Symbol: rel_0
+      - Symbol: rel_0
         Type:   R_X86_64_NONE
       - Offset: 0x1
         Symbol: rel_neg
@@ -145,8 +144,7 @@ Sections:
     Type: SHT_RELA
     Info: .text
     Relocations:
-      - Offset: 0x0
-        Symbol: rela_0
+      - Symbol: rela_0
         Type:   R_X86_64_NONE
         Addend: 0
       - Offset: 0x1
@@ -315,8 +313,7 @@ Sections:
     Type: SHT_REL
     Info: .text
     Relocations:
-      - Offset: 0x0
-        Symbol: rel_0
+      - Symbol: rel_0
         Type:   R_386_NONE
       - Offset: 0x1
         Symbol: rel_neg
@@ -328,8 +325,7 @@ Sections:
     Type: SHT_RELA
     Info: .text
     Relocations:
-      - Offset: 0x0
-        Symbol: rela_0
+      - Symbol: rela_0
         Type:   R_386_NONE
         Addend: 0
       - Offset: 0x1

@@ -30,9 +30,6 @@ static bool needsConstCast(QualType SourceType, QualType DestType) {
 }
 
 void ProTypeCstyleCastCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       cStyleCastExpr(unless(isInTemplateInstantiation())).bind("cast"), this);
 }

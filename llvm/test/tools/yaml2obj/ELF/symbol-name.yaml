@@ -76,8 +76,7 @@ Sections:
   - Name: .rela.data
     Type: SHT_RELA
     Relocations:
-      - Offset: 0x0
-        Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
         Symbol: foo
 Symbols:
   - Name:   foo

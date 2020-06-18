@@ -666,6 +666,112 @@ uint32_t DNBArchMachARM64::NumSupportedHardwareWatchpoints() {
   return g_num_supported_hw_watchpoints;
 }
 
+uint32_t DNBArchMachARM64::NumSupportedHardwareBreakpoints() {
+  // Set the init value to something that will let us know that we need to
+  // autodetect how many breakpoints are supported dynamically...
+  static uint32_t g_num_supported_hw_breakpoints = UINT_MAX;
+  if (g_num_supported_hw_breakpoints == UINT_MAX) {
+    // Set this to zero in case we can't tell if there are any HW breakpoints
+    g_num_supported_hw_breakpoints = 0;
+
+    size_t len;
+    uint32_t n = 0;
+    len = sizeof(n);
+    if (::sysctlbyname("hw.optional.breakpoint", &n, &len, NULL, 0) == 0) {
+      g_num_supported_hw_breakpoints = n;
+      DNBLogThreadedIf(LOG_THREAD, "hw.optional.breakpoint=%u", n);
+    } else {
+// For AArch64 we would need to look at ID_AA64DFR0_EL1 but debugserver runs in
+// EL0 so it can't access that reg.  The kernel should have filled in the
+// sysctls based on it though.
+#if defined(__arm__)
+      uint32_t register_DBGDIDR;
+
+      asm("mrc p14, 0, %0, c0, c0, 0" : "=r"(register_DBGDIDR));
+      uint32_t numWRPs = bits(register_DBGDIDR, 31, 28);
+      // Zero is reserved for the WRP count, so don't increment it if it is zero
+      if (numWRPs > 0)
+        numWRPs++;
+      g_num_supported_hw_breakpoints = numWRPs;
+      DNBLogThreadedIf(LOG_THREAD,
+                       "Number of supported hw breakpoint via asm():  %d",
+                       g_num_supported_hw_breakpoints);
+#endif
+    }
+  }
+  return g_num_supported_hw_breakpoints;
+}
+
+uint32_t DNBArchMachARM64::EnableHardwareBreakpoint(nub_addr_t addr,
+                                                    nub_size_t size,
+                                                    bool also_set_on_task) {
+  DNBLogThreadedIf(LOG_WATCHPOINTS,
+                   "DNBArchMachARM64::EnableHardwareBreakpoint(addr = "
+                   "0x%8.8llx, size = %zu)",
+                   (uint64_t)addr, size);
+
+  const uint32_t num_hw_breakpoints = NumSupportedHardwareBreakpoints();
+
+  nub_addr_t aligned_bp_address = addr;
+  uint32_t control_value = 0;
+
+  switch (size) {
+  case 2:
+    control_value = (0x3 << 5) | 7;
+    aligned_bp_address &= ~1;
+    break;
+  case 4:
+    control_value = (0xfu << 5) | 7;
+    aligned_bp_address &= ~3;
+    break;
+  };
+
+  // Read the debug state
+  kern_return_t kret = GetDBGState(false);
+  if (kret == KERN_SUCCESS) {
+    // Check to make sure we have the needed hardware support
+    uint32_t i = 0;
+
+    for (i = 0; i < num_hw_breakpoints; ++i) {
+      if ((m_state.dbg.__bcr[i] & BCR_ENABLE) == 0)
+        break; // We found an available hw breakpoint slot (in i)
+    }
+
+    // See if we found an available hw breakpoint slot above
+    if (i < num_hw_breakpoints) {
+      m_state.dbg.__bvr[i] = aligned_bp_address;
+      m_state.dbg.__bcr[i] = control_value;
+
+      DNBLogThreadedIf(LOG_WATCHPOINTS,
+                       "DNBArchMachARM64::EnableHardwareBreakpoint() "
+                       "adding breakpoint on address 0x%llx with control "
+                       "register value 0x%x",
+                       (uint64_t)m_state.dbg.__bvr[i],
+                       (uint32_t)m_state.dbg.__bcr[i]);
+
+      // The kernel will set the MDE_ENABLE bit in the MDSCR_EL1 for us
+      // automatically, don't need to do it here.
+      kret = SetDBGState(also_set_on_task);
+
+      DNBLogThreadedIf(LOG_WATCHPOINTS,
+                       "DNBArchMachARM64::"
+                       "EnableHardwareBreakpoint() "
+                       "SetDBGState() => 0x%8.8x.",
+                       kret);
+
+      if (kret == KERN_SUCCESS)
+        return i;
+    } else {
+      DNBLogThreadedIf(LOG_WATCHPOINTS,
+                       "DNBArchMachARM64::"
+                       "EnableHardwareBreakpoint(): All "
+                       "hardware resources (%u) are in use.",
+                       num_hw_breakpoints);
+    }
+  }
+  return INVALID_NUB_HW_INDEX;
+}
+
 uint32_t DNBArchMachARM64::EnableHardwareWatchpoint(nub_addr_t addr,
                                                     nub_size_t size, bool read,
                                                     bool write,
@@ -905,6 +1011,32 @@ bool DNBArchMachARM64::DisableHardwareWatchpoint_helper(uint32_t hw_index,
   return (kret == KERN_SUCCESS);
 }
 
+bool DNBArchMachARM64::DisableHardwareBreakpoint(uint32_t hw_index,
+                                                 bool also_set_on_task) {
+  kern_return_t kret = GetDBGState(false);
+  if (kret != KERN_SUCCESS)
+    return false;
+
+  const uint32_t num_hw_points = NumSupportedHardwareBreakpoints();
+  if (hw_index >= num_hw_points)
+    return false;
+
+  m_disabled_breakpoints[hw_index].addr = m_state.dbg.__bvr[hw_index];
+  m_disabled_breakpoints[hw_index].control = m_state.dbg.__bcr[hw_index];
+
+  m_state.dbg.__bcr[hw_index] = 0;
+  DNBLogThreadedIf(LOG_WATCHPOINTS,
+                   "DNBArchMachARM64::"
+                   "DisableHardwareBreakpoint( %u ) - WVR%u = "
+                   "0x%8.8llx  BCR%u = 0x%8.8llx",
+                   hw_index, hw_index, (uint64_t)m_state.dbg.__bvr[hw_index],
+                   hw_index, (uint64_t)m_state.dbg.__bcr[hw_index]);
+
+  kret = SetDBGState(also_set_on_task);
+
+  return (kret == KERN_SUCCESS);
+}
+
 // This is for checking the Byte Address Select bits in the DBRWCRn_EL1 control
 // register.
 // Returns -1 if the trailing bit patterns are not one of:
@@ -935,31 +1067,34 @@ uint32_t DNBArchMachARM64::GetHardwareWatchpointHit(nub_addr_t &addr) {
                    "DNBArchMachARM64::GetHardwareWatchpointHit() addr = 0x%llx",
                    (uint64_t)addr);
 
-  // This is the watchpoint value to match against, i.e., word address.
-  nub_addr_t wp_val = addr & ~((nub_addr_t)3);
   if (kret == KERN_SUCCESS) {
     DBG &debug_state = m_state.dbg;
     uint32_t i, num = NumSupportedHardwareWatchpoints();
     for (i = 0; i < num; ++i) {
       nub_addr_t wp_addr = GetWatchAddress(debug_state, i);
-      DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM64::"
-                                        "GetHardwareWatchpointHit() slot: %u "
-                                        "(addr = 0x%llx).",
-                       i, (uint64_t)wp_addr);
-      if (wp_val == wp_addr) {
-        uint32_t byte_mask = bits(debug_state.__wcr[i], 12, 5);
+      uint32_t byte_mask = bits(debug_state.__wcr[i], 12, 5);
 
-        // Sanity check the byte_mask, first.
-        if (LowestBitSet(byte_mask) < 0)
-          continue;
+      DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchImplX86_64::"
+                       "GetHardwareWatchpointHit() slot: %u "
+                       "(addr = 0x%llx; byte_mask = 0x%x)",
+                       i, static_cast<uint64_t>(wp_addr),
+                       byte_mask);
 
-        // Check that the watchpoint is enabled.
-        if (!IsWatchpointEnabled(debug_state, i))
-          continue;
+      if (!IsWatchpointEnabled(debug_state, i))
+        continue;
 
-        // Compute the starting address (from the point of view of the
-        // debugger).
-        addr = wp_addr + LowestBitSet(byte_mask);
+      if (bits(wp_addr, 48, 3) != bits(addr, 48, 3))
+        continue;
+
+      // Sanity check the byte_mask
+      uint32_t lsb = LowestBitSet(byte_mask);
+      if (lsb < 0)
+        continue;
+
+      uint64_t byte_to_match = bits(addr, 2, 0);
+
+      if (byte_mask & (1 << byte_to_match)) {
+        addr = wp_addr + lsb;
         return i;
       }
     }

@@ -16,8 +16,8 @@
 # CHECK: PASS: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestA
 # CHECK: TIMEOUT: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestB
 # CHECK: TIMEOUT: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestC
-# CHECK: Expected Passes    : 1
-# CHECK: Individual Timeouts: 2
+# CHECK: Passed   : 1
+# CHECK: Timed Out: 2
 
 # Test per test timeout via a config file and on the command line.
 # The value set on the command line should override the config file.

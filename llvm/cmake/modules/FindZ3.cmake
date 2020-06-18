@@ -27,7 +27,7 @@ function(check_z3_version z3_include z3_lib)
   )
 
   if(Z3_COMPILED)
-    string(REGEX REPLACE "([0-9]*\\.[0-9]*\\.[0-9]*\\.[0-9]*)" "\\1"
+    string(REGEX REPLACE "([0-9]*\\.[0-9]*\\.[0-9]*)" "\\1"
            z3_version "${SRC_OUTPUT}")
     set(Z3_VERSION_STRING ${z3_version} PARENT_SCOPE)
   endif()

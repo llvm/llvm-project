@@ -15,7 +15,6 @@
 #ifndef LLVM_CLANG_AST_DECLCXX_H
 #define LLVM_CLANG_AST_DECLCXX_H
 
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -40,6 +39,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -53,6 +53,7 @@
 
 namespace clang {
 
+class ASTContext;
 class ClassTemplateDecl;
 class ConstructorUsingShadowDecl;
 class CXXBasePath;
@@ -712,6 +713,13 @@ public:
   }
 
   /// \c true if we know for sure that this class has a single,
+  /// accessible, unambiguous copy assignment operator that is not deleted.
+  bool hasSimpleCopyAssignment() const {
+    return !hasUserDeclaredCopyAssignment() &&
+           !data().DefaultedCopyAssignmentIsDeleted;
+  }
+
+  /// \c true if we know for sure that this class has a single,
   /// accessible, unambiguous move assignment operator that is not deleted.
   bool hasSimpleMoveAssignment() const {
     return !hasUserDeclaredMoveAssignment() && hasMoveAssignment() &&
@@ -871,6 +879,15 @@ public:
     return data().UserDeclaredSpecialMembers & SMF_CopyAssignment;
   }
 
+  /// Set that we attempted to declare an implicit copy assignment
+  /// operator, but overload resolution failed so we deleted it.
+  void setImplicitCopyAssignmentIsDeleted() {
+    assert((data().DefaultedCopyAssignmentIsDeleted ||
+            needsOverloadResolutionForCopyAssignment()) &&
+           "copy assignment should not be deleted");
+    data().DefaultedCopyAssignmentIsDeleted = true;
+  }
+
   /// Determine whether this class needs an implicit copy
   /// assignment operator to be lazily declared.
   bool needsImplicitCopyAssignment() const {
@@ -880,7 +897,16 @@ public:
   /// Determine whether we need to eagerly declare a defaulted copy
   /// assignment operator for this class.
   bool needsOverloadResolutionForCopyAssignment() const {
-    return data().HasMutableFields;
+    // C++20 [class.copy.assign]p2:
+    //   If the class definition declares a move constructor or move assignment
+    //   operator, the implicitly declared copy assignment operator is defined
+    //   as deleted.
+    // In MSVC mode, sometimes a declared move constructor does not delete an
+    // implicit copy assignment, so defer this choice to Sema.
+    if (data().UserDeclaredSpecialMembers &
+        (SMF_MoveConstructor | SMF_MoveAssignment))
+      return true;
+    return data().NeedOverloadResolutionForCopyAssignment;
   }
 
   /// Determine whether an implicit copy assignment operator for this
@@ -998,6 +1024,9 @@ public:
     return static_cast<LambdaCaptureDefault>(getLambdaData().CaptureDefault);
   }
 
+  /// Set the captures for this lambda closure type.
+  void setCaptures(ArrayRef<LambdaCapture> Captures);
+
   /// For a closure type, retrieve the mapping from captured
   /// variables and \c this to the non-static data members that store the
   /// values or references of the captures.
@@ -1028,6 +1057,8 @@ public:
     return isLambda() ? captures_begin() + getLambdaData().NumCaptures
                       : nullptr;
   }
+
+  unsigned capture_size() const { return getLambdaData().NumCaptures; }
 
   using conversion_iterator = UnresolvedSetIterator;
 
@@ -1166,7 +1197,7 @@ public:
   bool defaultedDefaultConstructorIsConstexpr() const {
     return data().DefaultedDefaultConstructorIsConstexpr &&
            (!isUnion() || hasInClassInitializer() || !hasVariantMembers() ||
-            getASTContext().getLangOpts().CPlusPlus2a);
+            getLangOpts().CPlusPlus20);
   }
 
   /// Determine whether this class has a constexpr default constructor.
@@ -1258,7 +1289,7 @@ public:
   /// would be constexpr.
   bool defaultedDestructorIsConstexpr() const {
     return data().DefaultedDestructorIsConstexpr &&
-           getASTContext().getLangOpts().CPlusPlus2a;
+           getLangOpts().CPlusPlus20;
   }
 
   /// Determine whether this class has a constexpr destructor.
@@ -1355,10 +1386,10 @@ public:
   ///
   /// Only in C++17 and beyond, are lambdas literal types.
   bool isLiteral() const {
-    ASTContext &Ctx = getASTContext();
-    return (Ctx.getLangOpts().CPlusPlus2a ? hasConstexprDestructor()
+    const LangOptions &LangOpts = getLangOpts();
+    return (LangOpts.CPlusPlus20 ? hasConstexprDestructor()
                                           : hasTrivialDestructor()) &&
-           (!isLambda() || Ctx.getLangOpts().CPlusPlus17) &&
+           (!isLambda() || LangOpts.CPlusPlus17) &&
            !hasNonLiteralTypeFieldsOrBases() &&
            (isAggregate() || isLambda() ||
             hasConstexprNonCopyMoveConstructor() ||
@@ -1517,14 +1548,8 @@ public:
   /// returns false if the class has non-computable base classes.
   ///
   /// \param BaseMatches Callback invoked for each (direct or indirect) base
-  /// class of this type, or if \p AllowShortCircuit is true then until a call
-  /// returns false.
-  ///
-  /// \param AllowShortCircuit if false, forces the callback to be called
-  /// for every base class, even if a dependent or non-matching base was
-  /// found.
-  bool forallBases(ForallBasesCallback BaseMatches,
-                   bool AllowShortCircuit = true) const;
+  /// class of this type until a call returns false.
+  bool forallBases(ForallBasesCallback BaseMatches) const;
 
   /// Function type used by lookupInBases() to determine whether a
   /// specific base class subobject matches the lookup criteria.
@@ -2041,7 +2066,8 @@ public:
   method_iterator end_overridden_methods() const;
   unsigned size_overridden_methods() const;
 
-  using overridden_method_range= ASTContext::overridden_method_range;
+  using overridden_method_range = llvm::iterator_range<
+      llvm::TinyPtrVector<const CXXMethodDecl *>::const_iterator>;
 
   overridden_method_range overridden_methods() const;
 
@@ -2421,17 +2447,6 @@ class CXXConstructorDecl final
                      : ExplicitSpecKind::ResolvedFalse);
   }
 
-  void setExplicitSpecifier(ExplicitSpecifier ES) {
-    assert((!ES.getExpr() ||
-            CXXConstructorDeclBits.HasTrailingExplicitSpecifier) &&
-           "cannot set this explicit specifier. no trail-allocated space for "
-           "explicit");
-    if (ES.getExpr())
-      *getCanonicalDecl()->getTrailingObjects<ExplicitSpecifier>() = ES;
-    else
-      CXXConstructorDeclBits.IsSimpleExplicit = ES.isExplicit();
-  }
-
   enum TraillingAllocKind {
     TAKInheritsConstructor = 1,
     TAKHasTailExplicit = 1 << 1,
@@ -2456,6 +2471,17 @@ public:
          ConstexprSpecKind ConstexprKind,
          InheritedConstructor Inherited = InheritedConstructor(),
          Expr *TrailingRequiresClause = nullptr);
+
+  void setExplicitSpecifier(ExplicitSpecifier ES) {
+    assert((!ES.getExpr() ||
+            CXXConstructorDeclBits.HasTrailingExplicitSpecifier) &&
+           "cannot set this explicit specifier. no trail-allocated space for "
+           "explicit");
+    if (ES.getExpr())
+      *getCanonicalDecl()->getTrailingObjects<ExplicitSpecifier>() = ES;
+    else
+      CXXConstructorDeclBits.IsSimpleExplicit = ES.isExplicit();
+  }
 
   ExplicitSpecifier getExplicitSpecifier() {
     return getCanonicalDecl()->getExplicitSpecifierInternal();
@@ -2728,8 +2754,6 @@ class CXXConversionDecl : public CXXMethodDecl {
 
   ExplicitSpecifier ExplicitSpec;
 
-  void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
-
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -2751,6 +2775,7 @@ public:
 
   /// Return true if the declartion is already resolved to be explicit.
   bool isExplicit() const { return getExplicitSpecifier().isExplicit(); }
+  void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
   /// Returns the type that this conversion function is converting to.
   QualType getConversionType() const {
@@ -3966,6 +3991,81 @@ public:
   IdentifierInfo* getGetterId() const { return GetterId; }
   bool hasSetter() const { return SetterId != nullptr; }
   IdentifierInfo* getSetterId() const { return SetterId; }
+};
+
+/// Parts of a decomposed MSGuidDecl. Factored out to avoid unnecessary
+/// dependencies on DeclCXX.h.
+struct MSGuidDeclParts {
+  /// {01234567-...
+  uint32_t Part1;
+  /// ...-89ab-...
+  uint16_t Part2;
+  /// ...-cdef-...
+  uint16_t Part3;
+  /// ...-0123-456789abcdef}
+  uint8_t Part4And5[8];
+
+  uint64_t getPart4And5AsUint64() const {
+    uint64_t Val;
+    memcpy(&Val, &Part4And5, sizeof(Part4And5));
+    return Val;
+  }
+};
+
+/// A global _GUID constant. These are implicitly created by UuidAttrs.
+///
+///   struct _declspec(uuid("01234567-89ab-cdef-0123-456789abcdef")) X{};
+///
+/// X is a CXXRecordDecl that contains a UuidAttr that references the (unique)
+/// MSGuidDecl for the specified UUID.
+class MSGuidDecl : public ValueDecl,
+                   public Mergeable<MSGuidDecl>,
+                   public llvm::FoldingSetNode {
+public:
+  using Parts = MSGuidDeclParts;
+
+private:
+  /// The decomposed form of the UUID.
+  Parts PartVal;
+
+  /// The resolved value of the UUID as an APValue. Computed on demand and
+  /// cached.
+  mutable APValue APVal;
+
+  void anchor() override;
+
+  MSGuidDecl(DeclContext *DC, QualType T, Parts P);
+
+  static MSGuidDecl *Create(const ASTContext &C, QualType T, Parts P);
+  static MSGuidDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+
+  // Only ASTContext::getMSGuidDecl and deserialization create these.
+  friend class ASTContext;
+  friend class ASTReader;
+  friend class ASTDeclReader;
+
+public:
+  /// Print this UUID in a human-readable format.
+  void printName(llvm::raw_ostream &OS) const override;
+
+  /// Get the decomposed parts of this declaration.
+  Parts getParts() const { return PartVal; }
+
+  /// Get the value of this MSGuidDecl as an APValue. This may fail and return
+  /// an absent APValue if the type of the declaration is not of the expected
+  /// shape.
+  APValue &getAsAPValue() const;
+
+  static void Profile(llvm::FoldingSetNodeID &ID, Parts P) {
+    ID.AddInteger(P.Part1);
+    ID.AddInteger(P.Part2);
+    ID.AddInteger(P.Part3);
+    ID.AddInteger(P.getPart4And5AsUint64());
+  }
+  void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, PartVal); }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == Decl::MSGuid; }
 };
 
 /// Insertion operator for diagnostics.  This allows sending an AccessSpecifier

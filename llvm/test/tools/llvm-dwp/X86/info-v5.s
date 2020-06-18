@@ -6,10 +6,10 @@
 # RUN: llvm-dwarfdump -v %t.dwp | FileCheck %s
 
 #CHECK-DAG: .debug_info.dwo contents:
-#CHECK: 0x00000000: Compile Unit: length = 0x00000050 version = 0x0005 unit_type = DW_UT_split_compile abbr_offset = 0x0000 addr_size = 0x08 DWO_id = [[DWOID:.*]] (next unit at 0x00000054)
+#CHECK: 0x00000000: Compile Unit: length = 0x00000050, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = [[DWOID:.*]] (next unit at 0x00000054)
 
 # CHECK-DAG: .debug_cu_index contents:
-# CHECK: version = 2 slots = 2
+# CHECK: version = 2, units = 1, slots = 2
 # CHECK: Index Signature          INFO                     ABBREV
 # CHECK: 1 [[DWOID]] [0x00000000, 0x00000054) [0x00000000, 0x0000002a)
 

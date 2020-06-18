@@ -205,7 +205,7 @@ void ThinLtoModuleIndex::updatePathRank(StringRef Path, unsigned Distance) {
   Entry.Count += 1;
   Entry.MinDist = std::min(Entry.MinDist, Distance);
   assert(Entry.MinDist > 0 && "We want it as a divisor");
-};
+}
 
 // TODO: The size of a ThreadPool's task queue is not accessible. It would
 // be great to know in order to estimate how many modules we schedule. The

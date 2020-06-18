@@ -30,6 +30,7 @@ ProgramHeaders:
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset:
 # LLVM-NEXT:     Size:
 # LLVM-NEXT:     Note {

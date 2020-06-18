@@ -8,11 +8,11 @@
 
 #include "AST.h"
 #include "FindTarget.h"
-#include "Logger.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "XRefs.h"
 #include "refactor/Tweak.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
@@ -151,7 +151,7 @@ llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD,
   //
   // Go over all references inside a function body to generate replacements that
   // will qualify those. So that body can be moved into an arbitrary file.
-  // We perform the qualification by qualyfying the first type/decl in a
+  // We perform the qualification by qualifying the first type/decl in a
   // (un)qualified name. e.g:
   //    namespace a { namespace b { class Bar{}; void foo(); } }
   //    b::Bar x; -> a::b::Bar x;
@@ -305,7 +305,7 @@ renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source) {
         ReplaceRange = CharSourceRange::getCharRange(RefLoc, RefLoc);
       else
         ReplaceRange = CharSourceRange::getTokenRange(RefLoc, RefLoc);
-      // If occurence is coming from a macro expansion, try to get back to the
+      // If occurrence is coming from a macro expansion, try to get back to the
       // file range.
       if (RefLoc.isMacroID()) {
         ReplaceRange = Lexer::makeFileCharRange(ReplaceRange, SM, LangOpts);
@@ -352,7 +352,7 @@ const FunctionDecl *findTarget(const FunctionDecl *FD) {
   return PrevDecl;
 }
 
-// Returns the begining location for a FunctionDecl. Returns location of
+// Returns the beginning location for a FunctionDecl. Returns location of
 // template keyword for templated functions.
 const SourceLocation getBeginLoc(const FunctionDecl *FD) {
   // Include template parameter list.

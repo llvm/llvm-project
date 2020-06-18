@@ -16,18 +16,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
 
 using namespace llvm;
 using namespace lto;
+
+static codegen::RegisterCodeGenFlags CGF;
 
 static cl::opt<char>
     OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -66,9 +70,10 @@ static cl::opt<bool>
                                        "distributed backend case"));
 
 // Default to using all available threads in the system, but using only one
-// thread per core, as indicated by the usage of
-// heavyweight_hardware_concurrency() in the InProcessThinBackend constructor.
-static cl::opt<int> Threads("thinlto-threads", cl::init(0));
+// thread per core (no SMT).
+// Use -thinlto-threads=all to use hardware_concurrency() instead, which means
+// to use all hardware threads or cores in the system.
+static cl::opt<std::string> Threads("thinlto-threads");
 
 static cl::list<std::string> SymbolResolutions(
     "r",
@@ -138,6 +143,10 @@ static cl::opt<bool>
 
 static cl::opt<std::string>
     StatsFile("stats-file", cl::desc("Filename to write statistics to"));
+
+static cl::list<std::string>
+    PassPlugins("load-pass-plugin",
+                cl::desc("Load passes from plugin library"));
 
 static void check(Error E, std::string Msg) {
   if (!E)
@@ -220,12 +229,12 @@ static int run(int argc, char **argv) {
       exit(1);
   };
 
-  Conf.CPU = MCPU;
-  Conf.Options = InitTargetOptionsFromCodeGenFlags();
-  Conf.MAttrs = MAttrs;
-  if (auto RM = getRelocModel())
-    Conf.RelocModel = *RM;
-  Conf.CodeModel = getCodeModel();
+  Conf.CPU = codegen::getMCPU();
+  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags();
+  Conf.MAttrs = codegen::getMAttrs();
+  if (auto RM = codegen::getExplicitRelocModel())
+    Conf.RelocModel = RM.getValue();
+  Conf.CodeModel = codegen::getExplicitCodeModel();
 
   Conf.DebugPassManager = DebugPassManager;
 
@@ -249,6 +258,8 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.UseNewPM = UseNewPM;
+  for (auto &PluginFN : PassPlugins)
+    Conf.PassPlugins.push_back(PluginFN);
   switch (CGOptLevel) {
   case '0':
     Conf.CGOptLevel = CodeGenOpt::None;
@@ -267,8 +278,8 @@ static int run(int argc, char **argv) {
     return 1;
   }
 
-  if (FileType.getNumOccurrences())
-    Conf.CGFileType = FileType;
+  if (auto FT = codegen::getExplicitFileType())
+    Conf.CGFileType = FT.getValue();
 
   Conf.OverrideTriple = OverrideTriple;
   Conf.DefaultTriple = DefaultTriple;
@@ -284,7 +295,8 @@ static int run(int argc, char **argv) {
                                             /* LinkedObjectsFile */ nullptr,
                                             /* OnWrite */ {});
   else
-    Backend = createInProcessThinBackend(Threads);
+    Backend = createInProcessThinBackend(
+        llvm::heavyweight_hardware_concurrency(Threads));
   LTO Lto(std::move(Conf), std::move(Backend));
 
   bool HasErrors = false;

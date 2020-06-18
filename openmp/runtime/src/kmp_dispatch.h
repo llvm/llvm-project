@@ -75,7 +75,7 @@ template <typename T> struct dispatch_private_infoXX_template {
   ST st; // signed
   UT tc; // unsigned
   T static_steal_counter; // for static_steal only; maybe better to put after ub
-
+  kmp_lock_t *th_steal_lock; // lock used for chunk stealing
   /* parm[1-4] are used in different ways by different scheduling algorithms */
 
   // KMP_ALIGN( 32 ) ensures ( if the KMP_ALIGN macro is turned on )

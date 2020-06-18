@@ -83,6 +83,10 @@ BOOL writeToErrorWithIterator(NSError ** error, NSArray *a) {
 - (BOOL) writeToErrorInBlockMultipleTimes:(NSError *__autoreleasing *)error;
 - (BOOL) writeToError:(NSError *__autoreleasing *)error;
 - (BOOL) writeToErrorWithDispatchGroup:(NSError *__autoreleasing *)error;
+- (BOOL)writeToErrorInAutoreleasePool:(NSError *__autoreleasing *)error;
+- (BOOL)writeToStrongErrorInAutoreleasePool:(NSError *__strong *)error;
+- (BOOL)writeToLocalErrorInAutoreleasePool:(NSError *__autoreleasing *)error;
+- (BOOL)writeToErrorInAutoreleasePoolMultipleTimes:(NSError *__autoreleasing *)error;
 @end
 
 @implementation I
@@ -162,6 +166,58 @@ BOOL writeToErrorWithIterator(NSError ** error, NSArray *a) {
     return 0;
 }
 
+- (BOOL)writeToErrorInAutoreleasePool:(NSError *__autoreleasing *)error {
+  @autoreleasepool {
+    if (error) {
+      *error = [NSError errorWithDomain:1]; // expected-warning{{Write to autoreleasing out parameter inside locally-scoped autorelease pool; consider writing first to a strong local variable declared outside of the autorelease pool}}
+    }
+  }
+
+  return 0;
+}
+
+- (BOOL)writeToStrongErrorInAutoreleasePool:(NSError *__strong *)error {
+  @autoreleasepool {
+    if (error) {
+      *error = [NSError errorWithDomain:1]; // no-warning
+    }
+  }
+
+  return 0;
+}
+
+- (BOOL)writeToLocalErrorInAutoreleasePool:(NSError *__autoreleasing *)error {
+  NSError *localError;
+  @autoreleasepool {
+    localError = [NSError errorWithDomain:1]; // no-warning
+  }
+
+  if (error) {
+    *error = localError; // no-warning
+  }
+
+  return 0;
+}
+
+- (BOOL)writeToErrorInAutoreleasePoolMultipleTimes:(NSError *__autoreleasing *)error {
+  @autoreleasepool {
+    if (error) {
+      *error = [NSError errorWithDomain:1]; // expected-warning{{Write to autoreleasing out parameter inside locally-scoped autorelease pool; consider writing first to a strong local variable declared outside of the autorelease pool}}
+    }
+  }
+  if (error) {
+    *error = [NSError errorWithDomain:1]; // no-warning
+  }
+  @autoreleasepool {
+    if (error) {
+      *error = [NSError errorWithDomain:1]; // expected-warning{{Write to autoreleasing out parameter inside locally-scoped autorelease pool; consider writing first to a strong local variable declared outside of the autorelease pool}}
+      *error = [NSError errorWithDomain:1]; // expected-warning{{Write to autoreleasing out parameter inside locally-scoped autorelease pool; consider writing first to a strong local variable declared outside of the autorelease pool}}
+    }
+  }
+
+  return 0;
+}
+
 - (BOOL) writeToError:(NSError *__autoreleasing *)error {
     *error = [NSError errorWithDomain:1]; // no-warning
     return 0;
@@ -178,6 +234,15 @@ BOOL writeToErrorInBlockFromCFunc(NSError *__autoreleasing* error) {
     });
 
     dispatch_semaphore_wait(sem, 100);
+  return 0;
+}
+
+BOOL writeIntoErrorInAutoreleasePoolFromCFunc(NSError *__autoreleasing *error) {
+  @autoreleasepool {
+    if (error) {
+      *error = [NSError errorWithDomain:1]; // expected-warning{{Write to autoreleasing out parameter inside locally-scoped autorelease pool; consider writing first to a strong local variable declared outside of the autorelease pool}}
+    }
+  }
   return 0;
 }
 

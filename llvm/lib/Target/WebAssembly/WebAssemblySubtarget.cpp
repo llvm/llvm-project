@@ -25,13 +25,15 @@ using namespace llvm;
 #include "WebAssemblyGenSubtargetInfo.inc"
 
 WebAssemblySubtarget &
-WebAssemblySubtarget::initializeSubtargetDependencies(StringRef FS) {
+WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
+                                                      StringRef FS) {
   // Determine default and user-specified characteristics
+  LLVM_DEBUG(llvm::dbgs() << "initializeSubtargetDependencies\n");
 
-  if (CPUString.empty())
-    CPUString = "generic";
+  if (CPU.empty())
+    CPU = "generic";
 
-  ParseSubtargetFeatures(CPUString, FS);
+  ParseSubtargetFeatures(CPU, FS);
   return *this;
 }
 
@@ -39,10 +41,9 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
                                            const std::string &CPU,
                                            const std::string &FS,
                                            const TargetMachine &TM)
-    : WebAssemblyGenSubtargetInfo(TT, CPU, FS), CPUString(CPU),
-      TargetTriple(TT), FrameLowering(),
-      InstrInfo(initializeSubtargetDependencies(FS)), TSInfo(),
-      TLInfo(TM, *this) {}
+    : WebAssemblyGenSubtargetInfo(TT, CPU, FS), TargetTriple(TT),
+      FrameLowering(), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
+      TSInfo(), TLInfo(TM, *this) {}
 
 bool WebAssemblySubtarget::enableAtomicExpand() const {
   // If atomics are disabled, atomic ops are lowered instead of expanded

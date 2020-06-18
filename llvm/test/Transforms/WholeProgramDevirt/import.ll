@@ -11,10 +11,10 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; VCP-X86: @__typeid_typeid1_0_1_byte = external hidden global i8, !absolute_symbol !0
-; VCP-X86: @__typeid_typeid1_0_1_bit = external hidden global i8, !absolute_symbol !1
-; VCP-X86: @__typeid_typeid2_8_3_byte = external hidden global i8, !absolute_symbol !0
-; VCP-X86: @__typeid_typeid2_8_3_bit = external hidden global i8, !absolute_symbol !1
+; VCP-X86: @__typeid_typeid1_0_1_byte = external hidden global [0 x i8], !absolute_symbol !0
+; VCP-X86: @__typeid_typeid1_0_1_bit = external hidden global [0 x i8], !absolute_symbol !1
+; VCP-X86: @__typeid_typeid2_8_3_byte = external hidden global [0 x i8], !absolute_symbol !0
+; VCP-X86: @__typeid_typeid2_8_3_bit = external hidden global [0 x i8], !absolute_symbol !1
 
 ; Test cases where the argument values are known and we can apply virtual
 ; constant propagation.
@@ -34,7 +34,7 @@ define i32 @call1(i8* %obj) #0 {
   ; SINGLE-IMPL: call i32 bitcast (void ()* @singleimpl1 to i32 (i8*, i32)*)
   %result = call i32 %fptr_casted(i8* %obj, i32 1)
   ; UNIFORM-RET-VAL: ret i32 42
-  ; VCP-X86: [[GEP1:%.*]] = getelementptr i8, i8* [[VT1]], i32 ptrtoint (i8* @__typeid_typeid1_0_1_byte to i32)
+  ; VCP-X86: [[GEP1:%.*]] = getelementptr i8, i8* [[VT1]], i32 ptrtoint ([0 x i8]* @__typeid_typeid1_0_1_byte to i32)
   ; VCP-ARM: [[GEP1:%.*]] = getelementptr i8, i8* [[VT1]], i32 42
   ; VCP: [[BC1:%.*]] = bitcast i8* [[GEP1]] to i32*
   ; VCP: [[LOAD1:%.*]] = load i32, i32* [[BC1]]
@@ -85,13 +85,13 @@ define i1 @call3(i8* %obj) #0 {
 cont:
   %fptr_casted = bitcast i8* %fptr to i1 (i8*, i32)*
   %result = call i1 %fptr_casted(i8* %obj, i32 3)
-  ; UNIQUE-RET-VAL0: icmp ne i8* %vtablei8, @__typeid_typeid2_8_3_unique_member
-  ; UNIQUE-RET-VAL1: icmp eq i8* %vtablei8, @__typeid_typeid2_8_3_unique_member
+  ; UNIQUE-RET-VAL0: icmp ne i8* %vtablei8, getelementptr inbounds ([0 x i8], [0 x i8]* @__typeid_typeid2_8_3_unique_member, i32 0, i32 0)
+  ; UNIQUE-RET-VAL1: icmp eq i8* %vtablei8, getelementptr inbounds ([0 x i8], [0 x i8]* @__typeid_typeid2_8_3_unique_member, i32 0, i32 0)
   ; VCP: [[VT2:%.*]] = bitcast {{.*}} to i8*
-  ; VCP-X86: [[GEP2:%.*]] = getelementptr i8, i8* [[VT2]], i32 ptrtoint (i8* @__typeid_typeid2_8_3_byte to i32)
+  ; VCP-X86: [[GEP2:%.*]] = getelementptr i8, i8* [[VT2]], i32 ptrtoint ([0 x i8]* @__typeid_typeid2_8_3_byte to i32)
   ; VCP-ARM: [[GEP2:%.*]] = getelementptr i8, i8* [[VT2]], i32 43
   ; VCP: [[LOAD2:%.*]] = load i8, i8* [[GEP2]]
-  ; VCP-X86: [[AND2:%.*]] = and i8 [[LOAD2]], ptrtoint (i8* @__typeid_typeid2_8_3_bit to i8)
+  ; VCP-X86: [[AND2:%.*]] = and i8 [[LOAD2]], ptrtoint ([0 x i8]* @__typeid_typeid2_8_3_bit to i8)
   ; VCP-ARM: [[AND2:%.*]] = and i8 [[LOAD2]], -128
   ; VCP: [[ICMP2:%.*]] = icmp ne i8 [[AND2]], 0
   ; VCP: ret i1 [[ICMP2]]

@@ -49,9 +49,6 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasTailCall = false;
   bool HasReferenceTypes = false;
 
-  /// String name of used CPU.
-  std::string CPUString;
-
   /// What processor and OS we're targeting.
   Triple TargetTriple;
 
@@ -60,9 +57,8 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   WebAssemblySelectionDAGInfo TSInfo;
   WebAssemblyTargetLowering TLInfo;
 
-  /// Initializes using CPUString and the passed in feature string so that we
-  /// can use initializer lists for subtarget initialization.
-  WebAssemblySubtarget &initializeSubtargetDependencies(StringRef FS);
+  WebAssemblySubtarget &initializeSubtargetDependencies(StringRef CPU,
+                                                        StringRef FS);
 
 public:
   /// This constructor initializes the data members to match that

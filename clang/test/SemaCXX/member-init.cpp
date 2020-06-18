@@ -64,7 +64,7 @@ namespace PR10578 {
   template<typename T>
   struct X { 
     X() {
-      T* x = 1; // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}}
+      T* x = 1; // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}} expected-warning {{unused variable}}
     }
   };
 

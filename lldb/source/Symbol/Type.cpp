@@ -143,15 +143,14 @@ Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
            llvm::Optional<uint64_t> byte_size, SymbolContextScope *context,
            user_id_t encoding_uid, EncodingDataType encoding_uid_type,
            const Declaration &decl, const CompilerType &compiler_type,
-           ResolveState compiler_type_resolve_state)
+           ResolveState compiler_type_resolve_state, uint32_t opaque_payload)
     : std::enable_shared_from_this<Type>(), UserID(uid), m_name(name),
       m_symbol_file(symbol_file), m_context(context), m_encoding_type(nullptr),
       m_encoding_uid(encoding_uid), m_encoding_uid_type(encoding_uid_type),
       m_decl(decl), m_compiler_type(compiler_type),
-      m_compiler_type_resolve_state(
-          compiler_type ? compiler_type_resolve_state
-                        : ResolveState::Unresolved),
-      m_is_complete_objc_class(false) {
+      m_compiler_type_resolve_state(compiler_type ? compiler_type_resolve_state
+                                                  : ResolveState::Unresolved),
+      m_payload(opaque_payload) {
   if (byte_size) {
     m_byte_size = *byte_size;
     m_byte_size_has_value = true;
@@ -235,7 +234,7 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
   }
 }
 
-void Type::Dump(Stream *s, bool show_context) {
+void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
   s->Printf("%p: ", static_cast<void *>(this));
   s->Indent();
   *s << "Type" << static_cast<const UserID &>(*this) << ' ';
@@ -256,7 +255,7 @@ void Type::Dump(Stream *s, bool show_context) {
 
   if (m_compiler_type.IsValid()) {
     *s << ", compiler_type = " << m_compiler_type.GetOpaqueQualType() << ' ';
-    GetForwardCompilerType().DumpTypeDescription(s);
+    GetForwardCompilerType().DumpTypeDescription(s, level);
   } else if (m_encoding_uid != LLDB_INVALID_UID) {
     s->Format(", type_data = {0:x-16}", m_encoding_uid);
     switch (m_encoding_uid_type) {
@@ -506,7 +505,7 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
       case eEncodingIsTypedefUID:
         m_compiler_type = encoding_type->GetForwardCompilerType().CreateTypedef(
             m_name.AsCString("__lldb_invalid_typedef_name"),
-            GetSymbolFile()->GetDeclContextContainingUID(GetID()));
+            GetSymbolFile()->GetDeclContextContainingUID(GetID()), m_payload);
         m_name.Clear();
         break;
 
@@ -564,7 +563,7 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         case eEncodingIsTypedefUID:
           m_compiler_type = void_compiler_type.CreateTypedef(
               m_name.AsCString("__lldb_invalid_typedef_name"),
-              GetSymbolFile()->GetDeclContextContainingUID(GetID()));
+              GetSymbolFile()->GetDeclContextContainingUID(GetID()), m_payload);
           break;
 
         case eEncodingIsPointerUID:

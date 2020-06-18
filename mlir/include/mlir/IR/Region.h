@@ -34,6 +34,10 @@ public:
   /// parent container. The region must have a valid parent container.
   Location getLoc();
 
+  //===--------------------------------------------------------------------===//
+  // Block list management
+  //===--------------------------------------------------------------------===//
+
   using BlockListType = llvm::iplist<Block>;
   BlockListType &getBlocks() { return blocks; }
 
@@ -57,6 +61,72 @@ public:
   static BlockListType Region::*getSublistAccess(Block *) {
     return &Region::blocks;
   }
+
+  //===--------------------------------------------------------------------===//
+  // Operation list utilities
+  //===--------------------------------------------------------------------===//
+
+  /// This class provides iteration over the held operations of blocks directly
+  /// within a region.
+  class OpIterator final
+      : public llvm::iterator_facade_base<OpIterator, std::forward_iterator_tag,
+                                          Operation> {
+  public:
+    /// Initialize OpIterator for a region, specify `end` to return the iterator
+    /// to last operation.
+    explicit OpIterator(Region *region, bool end = false);
+
+    using llvm::iterator_facade_base<OpIterator, std::forward_iterator_tag,
+                                     Operation>::operator++;
+    OpIterator &operator++();
+    Operation *operator->() const { return &*operation; }
+    Operation &operator*() const { return *operation; }
+
+    /// Compare this iterator with another.
+    bool operator==(const OpIterator &rhs) const {
+      return operation == rhs.operation;
+    }
+    bool operator!=(const OpIterator &rhs) const { return !(*this == rhs); }
+
+  private:
+    void skipOverBlocksWithNoOps();
+
+    /// The region whose operations are being iterated over.
+    Region *region;
+    /// The block of 'region' whose operations are being iterated over.
+    Region::iterator block;
+    /// The current operation within 'block'.
+    Block::iterator operation;
+  };
+
+  /// This class provides iteration over the held operations of a region for a
+  /// specific operation type.
+  template <typename OpT>
+  using op_iterator = detail::op_iterator<OpT, OpIterator>;
+
+  /// Return iterators that walk the operations nested directly within this
+  /// region.
+  OpIterator op_begin() { return OpIterator(this); }
+  OpIterator op_end() { return OpIterator(this, /*end=*/true); }
+  iterator_range<OpIterator> getOps() { return {op_begin(), op_end()}; }
+
+  /// Return iterators that walk operations of type 'T' nested directly within
+  /// this region.
+  template <typename OpT> op_iterator<OpT> op_begin() {
+    return detail::op_filter_iterator<OpT, OpIterator>(op_begin(), op_end());
+  }
+  template <typename OpT> op_iterator<OpT> op_end() {
+    return detail::op_filter_iterator<OpT, OpIterator>(op_end(), op_end());
+  }
+  template <typename OpT> iterator_range<op_iterator<OpT>> getOps() {
+    auto endIt = op_end();
+    return {detail::op_filter_iterator<OpT, OpIterator>(op_begin(), endIt),
+            detail::op_filter_iterator<OpT, OpIterator>(endIt, endIt)};
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Misc. utilities
+  //===--------------------------------------------------------------------===//
 
   /// Return the region containing this region or nullptr if the region is
   /// attached to a top-level operation.
@@ -110,10 +180,19 @@ public:
   /// the operation with an offending use.
   bool isIsolatedFromAbove(Optional<Location> noteLoc = llvm::None);
 
+  /// Returns 'block' if 'block' lies in this region, or otherwise finds the
+  /// ancestor of 'block' that lies in this region. Returns nullptr if the
+  /// latter fails.
+  Block *findAncestorBlockInRegion(Block &block);
+
   /// Drop all operand uses from operations within this region, which is
   /// an essential step in breaking cyclic dependences between references when
   /// they are to be deleted.
   void dropAllReferences();
+
+  //===--------------------------------------------------------------------===//
+  // Operation Walkers
+  //===--------------------------------------------------------------------===//
 
   /// Walk the operations in this region in postorder, calling the callback for
   /// each operation. This method is invoked for void-returning callbacks.
@@ -137,6 +216,10 @@ public:
     return WalkResult::advance();
   }
 
+  //===--------------------------------------------------------------------===//
+  // CFG view utilities
+  //===--------------------------------------------------------------------===//
+
   /// Displays the CFG in a window. This is for use from the debugger and
   /// depends on Graphviz to generate the graph.
   /// This function is defined in ViewRegionGraph and only works with that
@@ -148,7 +231,7 @@ private:
   BlockListType blocks;
 
   /// This is the object we are part of.
-  Operation *container;
+  Operation *container = nullptr;
 };
 
 /// This class provides an abstraction over the different types of ranges over
@@ -157,7 +240,7 @@ private:
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
 class RegionRange
-    : public detail::indexed_accessor_range_base<
+    : public llvm::detail::indexed_accessor_range_base<
           RegionRange, PointerUnion<Region *, const std::unique_ptr<Region> *>,
           Region *, Region *, Region *> {
   /// The type representing the owner of this range. This is either a list of
@@ -178,9 +261,9 @@ public:
   RegionRange(ArrayRef<std::unique_ptr<Region>> regions);
 
 private:
-  /// See `detail::indexed_accessor_range_base` for details.
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(const OwnerT &owner, ptrdiff_t index);
-  /// See `detail::indexed_accessor_range_base` for details.
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
   static Region *dereference_iterator(const OwnerT &owner, ptrdiff_t index);
 
   /// Allow access to `offset_base` and `dereference_iterator`.

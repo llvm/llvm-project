@@ -62,7 +62,7 @@ define float @fmul_fneg_fmf(float %x) {
 define float @fmul_fsub_extra_use(float %x) {
 ; CHECK-LABEL: @fmul_fsub_extra_use(
 ; CHECK-NEXT:    [[M:%.*]] = fmul float [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[M]]
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[M]]
 ; CHECK-NEXT:    call void @use(float [[M]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -89,20 +89,20 @@ define float @fmul_fneg_extra_use(float %x) {
 
 define <4 x double> @fmul_fsub_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fmul_fsub_vec(
-; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0x7F80000000000000, double 0xFFF0000000000000, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0xFFF8000000000000, double 0xFFF0000000000000, double undef>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF80000000000000, double 0x7FF0000000000000, double undef>
+  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF8000000000000, double 0x7FF0000000000000, double undef>
   %r = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
   ret <4 x double> %r
 }
 
 define <4 x double> @fmul_fneg_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fmul_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0x7F80000000000000, double 0xFFF0000000000000, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0xFFF8000000000000, double 0xFFF0000000000000, double undef>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF80000000000000, double 0x7FF0000000000000, double undef>
+  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF8000000000000, double 0x7FF0000000000000, double undef>
   %r = fneg <4 x double> %m
   ret <4 x double> %r
 }
@@ -156,7 +156,7 @@ define float @fdiv_op1_constant_fneg_fmf(float %x) {
 define float @fdiv_op1_constant_fsub_extra_use(float %x) {
 ; CHECK-LABEL: @fdiv_op1_constant_fsub_extra_use(
 ; CHECK-NEXT:    [[D:%.*]] = fdiv float [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[D]]
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[D]]
 ; CHECK-NEXT:    call void @use(float [[D]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -250,7 +250,7 @@ define float @fdiv_op0_constant_fneg_fmf(float %x) {
 define float @fdiv_op0_constant_fsub_extra_use(float %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fsub_extra_use(
 ; CHECK-NEXT:    [[D:%.*]] = fdiv float -4.200000e+01, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[D]]
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[D]]
 ; CHECK-NEXT:    call void @use(float [[D]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -277,20 +277,20 @@ define float @fdiv_op0_constant_fneg_extra_use(float %x) {
 
 define <4 x double> @fdiv_op0_constant_fsub_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fsub_vec(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0x7F80000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0xFFF8000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %d = fdiv <4 x double> <double -42.0, double 0x7FF80000000000000, double 0xFFF0000000000000, double undef>, %x
+  %d = fdiv <4 x double> <double -42.0, double 0x7FF8000000000000, double 0xFFF0000000000000, double undef>, %x
   %r = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %d
   ret <4 x double> %r
 }
 
 define <4 x double> @fdiv_op0_constant_fneg_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0x7F80000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0xFFF8000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %d = fdiv <4 x double> <double -42.0, double 0x7FF80000000000000, double 0xFFF0000000000000, double undef>, %x
+  %d = fdiv <4 x double> <double -42.0, double 0x7FF8000000000000, double 0xFFF0000000000000, double undef>, %x
   %r = fneg <4 x double> %d
   ret <4 x double> %r
 }
@@ -346,10 +346,10 @@ define float @fneg_fneg_sel_extra_use2(float %x, float %y, i1 %cond) {
 
 define float @fsub_fsub_sel_extra_use1(float %x, float %y, i1 %cond) {
 ; CHECK-LABEL: @fsub_fsub_sel_extra_use1(
-; CHECK-NEXT:    [[N1:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[N1:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[N1]])
 ; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], float [[X]], float [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = fsub float -0.000000e+00, [[SEL_V]]
+; CHECK-NEXT:    [[SEL:%.*]] = fneg float [[SEL_V]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %n1 = fsub float -0.0, %x
@@ -396,7 +396,7 @@ define float @fneg_fadd_constant(float %x) {
 define float @fake_nsz_fadd_constant(float %x) {
 ; CHECK-LABEL: @fake_nsz_fadd_constant(
 ; CHECK-NEXT:    [[A:%.*]] = fadd float [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[A]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = fadd float %x, 42.0
@@ -449,7 +449,7 @@ define float @fake_fneg_nsz_fadd_constant_extra_use(float %x) {
 ; CHECK-LABEL: @fake_fneg_nsz_fadd_constant_extra_use(
 ; CHECK-NEXT:    [[A:%.*]] = fadd float [[X:%.*]], 4.200000e+01
 ; CHECK-NEXT:    call void @use(float [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fsub fast float -0.000000e+00, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = fneg fast float [[A]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = fadd float %x, 42.0

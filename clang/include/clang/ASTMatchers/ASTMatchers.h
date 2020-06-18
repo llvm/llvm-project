@@ -47,12 +47,12 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -60,6 +60,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
@@ -72,6 +73,7 @@
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
@@ -307,7 +309,7 @@ AST_POLYMORPHIC_MATCHER_P(isExpansionInFileMatching,
 ///
 /// FIXME: Change to be a polymorphic matcher that works on any syntactic
 /// node. There's nothing `Stmt`-specific about it.
-AST_MATCHER_P(clang::Stmt, isExpandedFromMacro, llvm::StringRef, MacroName) {
+AST_MATCHER_P(Stmt, isExpandedFromMacro, llvm::StringRef, MacroName) {
   // Verifies that the statement' beginning and ending are both expanded from
   // the same instance of the given macro.
   auto& Context = Finder->getASTContext();
@@ -547,52 +549,72 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl,
 extern const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTypeParmDecl>
     templateTypeParmDecl;
 
-/// Matches public C++ declarations.
+/// Matches public C++ declarations and C++ base specifers that specify public
+/// inheritance.
 ///
-/// Given
+/// Examples:
 /// \code
 ///   class C {
-///   public:    int a;
+///   public:    int a; // fieldDecl(isPublic()) matches 'a'
 ///   protected: int b;
 ///   private:   int c;
 ///   };
 /// \endcode
-/// fieldDecl(isPublic())
-///   matches 'int a;'
-AST_MATCHER(Decl, isPublic) {
-  return Node.getAccess() == AS_public;
+///
+/// \code
+///   class Base {};
+///   class Derived1 : public Base {}; // matches 'Base'
+///   struct Derived2 : Base {}; // matches 'Base'
+/// \endcode
+AST_POLYMORPHIC_MATCHER(isPublic,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl,
+                                                        CXXBaseSpecifier)) {
+  return getAccessSpecifier(Node) == AS_public;
 }
 
-/// Matches protected C++ declarations.
+/// Matches protected C++ declarations and C++ base specifers that specify
+/// protected inheritance.
 ///
-/// Given
+/// Examples:
 /// \code
 ///   class C {
 ///   public:    int a;
-///   protected: int b;
+///   protected: int b; // fieldDecl(isProtected()) matches 'b'
 ///   private:   int c;
 ///   };
 /// \endcode
-/// fieldDecl(isProtected())
-///   matches 'int b;'
-AST_MATCHER(Decl, isProtected) {
-  return Node.getAccess() == AS_protected;
+///
+/// \code
+///   class Base {};
+///   class Derived : protected Base {}; // matches 'Base'
+/// \endcode
+AST_POLYMORPHIC_MATCHER(isProtected,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl,
+                                                        CXXBaseSpecifier)) {
+  return getAccessSpecifier(Node) == AS_protected;
 }
 
-/// Matches private C++ declarations.
+/// Matches private C++ declarations and C++ base specifers that specify private
+/// inheritance.
 ///
-/// Given
+/// Examples:
 /// \code
 ///   class C {
 ///   public:    int a;
 ///   protected: int b;
-///   private:   int c;
+///   private:   int c; // fieldDecl(isPrivate()) matches 'c'
 ///   };
 /// \endcode
-/// fieldDecl(isPrivate())
-///   matches 'int c;'
-AST_MATCHER(Decl, isPrivate) {
-  return Node.getAccess() == AS_private;
+///
+/// \code
+///   struct Base {};
+///   struct Derived1 : private Base {}; // matches 'Base'
+///   class Derived2 : Base {}; // matches 'Base'
+/// \endcode
+AST_POLYMORPHIC_MATCHER(isPrivate,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl,
+                                                        CXXBaseSpecifier)) {
+  return getAccessSpecifier(Node) == AS_private;
 }
 
 /// Matches non-static data members that are bit-fields.
@@ -2270,6 +2292,10 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, FloatingLiteral>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, ImaginaryLiteral>
     imaginaryLiteral;
 
+/// Matches fixed point literals
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, FixedPointLiteral>
+    fixedPointLiteral;
+
 /// Matches user defined literal operator call.
 ///
 /// Example match: "foo"_suffix
@@ -2586,13 +2612,11 @@ extern const internal::VariadicOperatorMatcherFunc<
     2, std::numeric_limits<unsigned>::max()>
     allOf;
 
-/// Matches any node regardless of the submatchers.
+/// Matches any node regardless of the submatcher.
 ///
-/// However, \c optionally will generate a result binding for each matching
-/// submatcher.
-///
-/// Useful when additional information which may or may not present about a
-/// main matching node is desired.
+/// However, \c optionally will retain any bindings generated by the submatcher.
+/// Useful when additional information which may or may not present about a main
+/// matching node is desired.
 ///
 /// For example, in:
 /// \code
@@ -2612,9 +2636,7 @@ extern const internal::VariadicOperatorMatcherFunc<
 /// member named "bar" in that class.
 ///
 /// Usable as: Any Matcher
-extern const internal::VariadicOperatorMatcherFunc<
-    1, std::numeric_limits<unsigned>::max()>
-    optionally;
+extern const internal::VariadicOperatorMatcherFunc<1, 1> optionally;
 
 /// Matches sizeof (C99), alignof (C++11) and vec_step (OpenCL)
 ///
@@ -2661,7 +2683,7 @@ AST_MATCHER_P(UnaryExprOrTypeTraitExpr, ofKind, UnaryExprOrTypeTrait, Kind) {
 
 /// Same as unaryExprOrTypeTraitExpr, but only matching
 /// alignof.
-inline internal::Matcher<Stmt> alignOfExpr(
+inline internal::BindableMatcher<Stmt> alignOfExpr(
     const internal::Matcher<UnaryExprOrTypeTraitExpr> &InnerMatcher) {
   return stmt(unaryExprOrTypeTraitExpr(
       allOf(anyOf(ofKind(UETT_AlignOf), ofKind(UETT_PreferredAlignOf)),
@@ -2670,7 +2692,7 @@ inline internal::Matcher<Stmt> alignOfExpr(
 
 /// Same as unaryExprOrTypeTraitExpr, but only matching
 /// sizeof.
-inline internal::Matcher<Stmt> sizeOfExpr(
+inline internal::BindableMatcher<Stmt> sizeOfExpr(
     const internal::Matcher<UnaryExprOrTypeTraitExpr> &InnerMatcher) {
   return stmt(unaryExprOrTypeTraitExpr(
       allOf(ofKind(UETT_SizeOf), InnerMatcher)));
@@ -2753,13 +2775,29 @@ AST_MATCHER_P(NamedDecl, matchesName, std::string, RegExp) {
 ///
 /// Usable as: Matcher<CXXOperatorCallExpr>, Matcher<FunctionDecl>
 inline internal::PolymorphicMatcherWithParam1<
-    internal::HasOverloadedOperatorNameMatcher, StringRef,
+    internal::HasOverloadedOperatorNameMatcher, std::vector<std::string>,
     AST_POLYMORPHIC_SUPPORTED_TYPES(CXXOperatorCallExpr, FunctionDecl)>
 hasOverloadedOperatorName(StringRef Name) {
   return internal::PolymorphicMatcherWithParam1<
-      internal::HasOverloadedOperatorNameMatcher, StringRef,
-      AST_POLYMORPHIC_SUPPORTED_TYPES(CXXOperatorCallExpr, FunctionDecl)>(Name);
+      internal::HasOverloadedOperatorNameMatcher, std::vector<std::string>,
+      AST_POLYMORPHIC_SUPPORTED_TYPES(CXXOperatorCallExpr, FunctionDecl)>(
+      {std::string(Name)});
 }
+
+/// Matches overloaded operator names.
+///
+/// Matches overloaded operator names specified in strings without the
+/// "operator" prefix: e.g. "<<".
+///
+///   hasAnyOverloadesOperatorName("+", "-")
+/// Is equivalent to
+///   anyOf(hasOverloadedOperatorName("+"), hasOverloadedOperatorName("-"))
+extern const internal::VariadicFunction<
+    internal::PolymorphicMatcherWithParam1<
+        internal::HasOverloadedOperatorNameMatcher, std::vector<std::string>,
+        AST_POLYMORPHIC_SUPPORTED_TYPES(CXXOperatorCallExpr, FunctionDecl)>,
+    StringRef, internal::hasAnyOverloadedOperatorNameFunc>
+    hasAnyOverloadedOperatorName;
 
 /// Matches C++ classes that are directly or indirectly derived from a class
 /// matching \c Base, or Objective-C classes that directly or indirectly
@@ -2820,6 +2858,26 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 
   const auto *InterfaceDecl = cast<ObjCInterfaceDecl>(&Node);
   return Matcher<ObjCInterfaceDecl>(M).matches(*InterfaceDecl, Finder, Builder);
+}
+
+/// Matches C++ classes that have a direct or indirect base matching \p
+/// BaseSpecMatcher.
+///
+/// Example:
+/// matcher hasAnyBase(hasType(cxxRecordDecl(hasName("SpecialBase")))))
+/// \code
+///   class Foo;
+///   class Bar : Foo {};
+///   class Baz : Bar {};
+///   class SpecialBase;
+///   class Proxy : SpecialBase {};  // matches Proxy
+///   class IndirectlyDerived : Proxy {};  //matches IndirectlyDerived
+/// \endcode
+///
+// FIXME: Refactor this and isDerivedFrom to reuse implementation.
+AST_MATCHER_P(CXXRecordDecl, hasAnyBase, internal::Matcher<CXXBaseSpecifier>,
+              BaseSpecMatcher) {
+  return internal::matchesAnyBase(Node, BaseSpecMatcher, Finder, Builder);
 }
 
 /// Similar to \c isDerivedFrom(), but also matches classes that directly
@@ -3452,9 +3510,19 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 ///  class Y { friend class X; };
 /// \endcode
 ///
-/// Usable as: Matcher<Expr>, Matcher<ValueDecl>
+/// Example matches class Derived
+/// (matcher = cxxRecordDecl(hasAnyBase(hasType(cxxRecordDecl(hasName("Base"))))))
+/// \code
+/// class Base {};
+/// class Derived : Base {};
+/// \endcode
+///
+/// Usable as: Matcher<Expr>, Matcher<FriendDecl>, Matcher<ValueDecl>,
+/// Matcher<CXXBaseSpecifier>
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
-    hasType, AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, FriendDecl, ValueDecl),
+    hasType,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, FriendDecl, ValueDecl,
+                                    CXXBaseSpecifier),
     internal::Matcher<Decl>, InnerMatcher, 1) {
   QualType QT = internal::getUnderlyingType(Node);
   if (!QT.isNull())
@@ -4240,6 +4308,34 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
   return Matched;
 }
 
+/// Matches the ParmVarDecl nodes that are at the N'th position in the parameter
+/// list. The parameter list could be that of either a block, function, or
+/// objc-method.
+///
+///
+/// Given
+///
+/// \code
+/// void f(int a, int b, int c) {
+/// }
+/// \endcode
+///
+/// ``parmVarDecl(isAtPosition(0))`` matches ``int a``.
+///
+/// ``parmVarDecl(isAtPosition(1))`` matches ``int b``.
+AST_MATCHER_P(clang::ParmVarDecl, isAtPosition, unsigned, N) {
+  const clang::DeclContext *Context = Node.getParentFunctionOrMethod();
+
+  if (const auto *Decl = dyn_cast_or_null<FunctionDecl>(Context))
+    return N < Decl->param_size() && Decl->getParamDecl(N) == &Node;
+  if (const auto *Decl = dyn_cast_or_null<BlockDecl>(Context))
+    return N < Decl->param_size() && Decl->getParamDecl(N) == &Node;
+  if (const auto *Decl = dyn_cast_or_null<ObjCMethodDecl>(Context))
+    return N < Decl->param_size() && Decl->getParamDecl(N) == &Node;
+
+  return false;
+}
+
 /// Matches any parameter of a function or an ObjC method declaration or a
 /// block.
 ///
@@ -4762,6 +4858,19 @@ AST_POLYMORPHIC_MATCHER_P(hasOperatorName,
   return Name == Node.getOpcodeStr(Node.getOpcode());
 }
 
+/// Matches operator expressions (binary or unary) that have any of the
+/// specified names.
+///
+///    hasAnyOperatorName("+", "-")
+///  Is equivalent to
+///    anyOf(hasOperatorName("+"), hasOperatorName("-"))
+extern const internal::VariadicFunction<
+    internal::PolymorphicMatcherWithParam1<
+        internal::HasAnyOperatorNameMatcher, std::vector<std::string>,
+        AST_POLYMORPHIC_SUPPORTED_TYPES(BinaryOperator, UnaryOperator)>,
+    StringRef, internal::hasAnyOperatorNameFunc>
+    hasAnyOperatorName;
+
 /// Matches all kinds of assignment operators.
 ///
 /// Example 1: matches a += b (matcher = binaryOperator(isAssignmentOperator()))
@@ -4774,12 +4883,32 @@ AST_POLYMORPHIC_MATCHER_P(hasOperatorName,
 ///            (matcher = cxxOperatorCallExpr(isAssignmentOperator()))
 /// \code
 ///   struct S { S& operator=(const S&); };
-///   void x() { S s1, s2; s1 = s2; })
+///   void x() { S s1, s2; s1 = s2; }
 /// \endcode
 AST_POLYMORPHIC_MATCHER(isAssignmentOperator,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(BinaryOperator,
                                                         CXXOperatorCallExpr)) {
   return Node.isAssignmentOp();
+}
+
+/// Matches comparison operators.
+///
+/// Example 1: matches a == b (matcher = binaryOperator(isComparisonOperator()))
+/// \code
+///   if (a == b)
+///     a += b;
+/// \endcode
+///
+/// Example 2: matches s1 < s2
+///            (matcher = cxxOperatorCallExpr(isComparisonOperator()))
+/// \code
+///   struct S { bool operator<(const S& other); };
+///   void x(S s1, S s2) { bool b1 = s1 < s2; }
+/// \endcode
+AST_POLYMORPHIC_MATCHER(isComparisonOperator,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(BinaryOperator,
+                                                        CXXOperatorCallExpr)) {
+  return Node.isComparisonOp();
 }
 
 /// Matches the left hand side of binary operator expressions.
@@ -4817,6 +4946,23 @@ AST_POLYMORPHIC_MATCHER_P(hasRHS,
 inline internal::Matcher<BinaryOperator> hasEitherOperand(
     const internal::Matcher<Expr> &InnerMatcher) {
   return anyOf(hasLHS(InnerMatcher), hasRHS(InnerMatcher));
+}
+
+/// Matches if both matchers match with opposite sides of the binary operator.
+///
+/// Example matcher = binaryOperator(hasOperands(integerLiteral(equals(1),
+///                                              integerLiteral(equals(2)))
+/// \code
+///   1 + 2 // Match
+///   2 + 1 // Match
+///   1 + 1 // No match
+///   2 + 2 // No match
+/// \endcode
+inline internal::Matcher<BinaryOperator>
+hasOperands(const internal::Matcher<Expr> &Matcher1,
+            const internal::Matcher<Expr> &Matcher2) {
+  return anyOf(allOf(hasLHS(Matcher1), hasRHS(Matcher2)),
+               allOf(hasLHS(Matcher2), hasRHS(Matcher1)));
 }
 
 /// Matches if the operand of a unary operator matches.
@@ -4867,7 +5013,7 @@ AST_POLYMORPHIC_MATCHER_P(hasSourceExpression,
 /// \endcode
 ///
 /// If the matcher is use from clang-query, CastKind parameter
-/// should be passed as a quoted string. e.g., ofKind("CK_NullToPointer").
+/// should be passed as a quoted string. e.g., hasCastKind("CK_NullToPointer").
 AST_MATCHER_P(CastExpr, hasCastKind, CastKind, Kind) {
   return Node.getCastKind() == Kind;
 }
@@ -5082,17 +5228,28 @@ AST_MATCHER_P(CXXMethodDecl, forEachOverridden,
   return Matched;
 }
 
-/// Matches if the given method declaration is virtual.
+/// Matches declarations of virtual methods and C++ base specifers that specify
+/// virtual inheritance.
 ///
-/// Given
+/// Example:
 /// \code
 ///   class A {
 ///    public:
-///     virtual void x();
+///     virtual void x(); // matches x
 ///   };
 /// \endcode
-///   matches A::x
-AST_MATCHER(CXXMethodDecl, isVirtual) {
+///
+/// Example:
+/// \code
+///   class Base {};
+///   class DirectlyDerived : virtual Base {}; // matches Base
+///   class IndirectlyDerived : DirectlyDerived, Base {}; // matches Base
+/// \endcode
+///
+/// Usable as: Matcher<CXXMethodDecl>, Matcher<CXXBaseSpecifier>
+AST_POLYMORPHIC_MATCHER(isVirtual,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(CXXMethodDecl,
+                                                        CXXBaseSpecifier)) {
   return Node.isVirtual();
 }
 
@@ -6970,19 +7127,6 @@ AST_MATCHER(OMPExecutableDirective, isStandaloneDirective) {
   return Node.isStandaloneDirective();
 }
 
-/// Matches the Stmt AST node that is marked as being the structured-block
-/// of an OpenMP executable directive.
-///
-/// Given
-///
-/// \code
-///    #pragma omp parallel
-///    {}
-/// \endcode
-///
-/// ``stmt(isOMPStructuredBlock()))`` matches ``{}``.
-AST_MATCHER(Stmt, isOMPStructuredBlock) { return Node.isOMPStructuredBlock(); }
-
 /// Matches the structured-block of the OpenMP executable directive
 ///
 /// Prerequisite: the executable directive must not be standalone directive.
@@ -7086,7 +7230,7 @@ AST_MATCHER(OMPDefaultClause, isSharedKind) {
 /// ``isAllowedToContainClauseKind("OMPC_default").``
 AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
               OpenMPClauseKind, CKind) {
-  return isAllowedClauseForDirective(
+  return llvm::omp::isAllowedClauseForDirective(
       Node.getDirectiveKind(), CKind,
       Finder->getASTContext().getLangOpts().OpenMP);
 }

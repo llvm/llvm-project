@@ -14,7 +14,9 @@
 #include "lldb/Interpreter/OptionGroupBoolean.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
+#include "lldb/Target/Target.h"
 #include "lldb/lldb-private-enumerations.h"
+
 namespace lldb_private {
 
 class CommandObjectExpression : public CommandObjectRaw,
@@ -65,9 +67,22 @@ protected:
 
   bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 
-  bool EvaluateExpression(llvm::StringRef expr, Stream *output_stream,
-                          Stream *error_stream,
-                          CommandReturnObject *result = nullptr);
+  /// Return the appropriate expression options used for evaluating the
+  /// expression in the given target.
+  EvaluateExpressionOptions GetEvalOptions(const Target &target);
+
+  /// Evaluates the given expression.
+  /// \param output_stream The stream to which the evaluation result will be
+  ///                      printed.
+  /// \param error_stream Contains error messages that should be displayed to
+  ///                     the user in case the evaluation fails.
+  /// \param result A CommandReturnObject which status will be set to the
+  ///               appropriate value depending on evaluation success and
+  ///               whether the expression produced any result.
+  /// \return Returns true iff the expression was successfully evaluated,
+  ///         executed and the result could be printed to the output stream.
+  bool EvaluateExpression(llvm::StringRef expr, Stream &output_stream,
+                          Stream &error_stream, CommandReturnObject &result);
 
   void GetMultilineExpression();
 

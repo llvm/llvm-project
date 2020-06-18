@@ -39,7 +39,7 @@ static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
     {
         eScriptLanguageLua,
         "lua",
-        "Commands are in the Python language.",
+        "Commands are in the Lua language.",
     },
     {
         eSortOrderByName,
@@ -282,12 +282,12 @@ are no syntax errors may indicate that a function was declared but never called.
       ExecutionContext exe_ctx(context->exe_ctx_ref);
       Target *target = exe_ctx.GetTargetPtr();
       if (target) {
-        CommandReturnObject result;
         Debugger &debugger = target->GetDebugger();
+        CommandReturnObject result(debugger.GetUseColor());
+
         // Rig up the results secondary output stream to the debugger's, so the
         // output will come out synchronously if the debugger is set up that
         // way.
-
         StreamSP output_stream(debugger.GetAsyncOutputStream());
         StreamSP error_stream(debugger.GetAsyncErrorStream());
         result.SetImmediateOutputStream(output_stream);

@@ -45,12 +45,12 @@ class FlattenCFGOpt {
   bool MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder);
 
   /// Compare a pair of blocks: \p Block1 and \p Block2, which
-  /// are from two if-regions whose entry blocks are \p Head1 and \p
-  /// Head2.  \returns true if \p Block1 and \p Block2 contain identical
+  /// are from two if-regions, where \p Head2 is the entry block of the 2nd
+  /// if-region.  \returns true if \p Block1 and \p Block2 contain identical
   /// instructions, and have no memory reference alias with \p Head2.
   /// This is used as a legality check for merging if-regions.
-  bool CompareIfRegionBlock(BasicBlock *Head1, BasicBlock *Head2,
-                            BasicBlock *Block1, BasicBlock *Block2);
+  bool CompareIfRegionBlock(BasicBlock *Block1, BasicBlock *Block2,
+                            BasicBlock *Head2);
 
 public:
   FlattenCFGOpt(AliasAnalysis *AA) : AA(AA) {}
@@ -315,24 +315,15 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   return true;
 }
 
-/// Compare blocks from two if-regions, where \param Head1 is the entry of the
-/// 1st if-region. \param Head2 is the entry of the 2nd if-region. \param
-/// Block1 is a block in the 1st if-region to compare. \param Block2 is a block
-//  in the 2nd if-region to compare.  \returns true if \param Block1 and \param
-/// Block2 have identical instructions and do not have memory reference alias
-/// with \param Head2.
-bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Head1, BasicBlock *Head2,
-                                         BasicBlock *Block1,
-                                         BasicBlock *Block2) {
+/// Compare blocks from two if-regions, where \param Head2 is the entry of the
+/// 2nd if-region. \param Block1 is a block in the 1st if-region to compare.
+/// \param Block2 is a block in the 2nd if-region to compare.  \returns true if
+/// \param Block1 and \param Block2 have identical instructions and do not have
+/// memory reference alias with \param Head2.
+bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Block1, BasicBlock *Block2,
+                                         BasicBlock *Head2) {
   Instruction *PTI2 = Head2->getTerminator();
   Instruction *PBI2 = &Head2->front();
-
-  bool eq1 = (Block1 == Head1);
-  bool eq2 = (Block2 == Head2);
-  if (eq1 || eq2) {
-    // An empty then-path or else-path.
-    return (eq1 == eq2);
-  }
 
   // Check whether instructions in Block1 and Block2 are identical
   // and do not alias with instructions in Head2.
@@ -395,6 +386,29 @@ bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Head1, BasicBlock *Head2,
 /// To:
 /// if (a || b)
 ///   statement;
+///
+///
+/// And from:
+/// if (a)
+///   ;
+/// else
+///   statement;
+/// if (b)
+///   ;
+/// else
+///   statement;
+///
+/// To:
+/// if (a && b)
+///   ;
+/// else
+///   statement;
+///
+/// We always take the form of the first if-region. This means that if the
+/// statement in the first if-region, is in the "then-path", while in the second
+/// if-region it is in the "else-path", then we convert the second to the first
+/// form, by inverting the condition and the branch successors. The same
+/// approach goes for the opposite case.
 bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   BasicBlock *IfTrue2, *IfFalse2;
   Value *IfCond2 = GetIfCondition(BB, IfTrue2, IfFalse2);
@@ -415,21 +429,41 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   BasicBlock *FirstEntryBlock = CInst1->getParent();
 
   // Either then-path or else-path should be empty.
-  if ((IfTrue1 != FirstEntryBlock) && (IfFalse1 != FirstEntryBlock))
-    return false;
-  if ((IfTrue2 != SecondEntryBlock) && (IfFalse2 != SecondEntryBlock))
+  bool InvertCond2 = false;
+  BinaryOperator::BinaryOps CombineOp;
+  if (IfFalse1 == FirstEntryBlock) {
+    // The else-path is empty, so we must use "or" operation to combine the
+    // conditions.
+    CombineOp = BinaryOperator::Or;
+    if (IfFalse2 != SecondEntryBlock) {
+      if (IfTrue2 != SecondEntryBlock)
+        return false;
+
+      InvertCond2 = true;
+      std::swap(IfTrue2, IfFalse2);
+    }
+
+    if (!CompareIfRegionBlock(IfTrue1, IfTrue2, SecondEntryBlock))
+      return false;
+  } else if (IfTrue1 == FirstEntryBlock) {
+    // The then-path is empty, so we must use "and" operation to combine the
+    // conditions.
+    CombineOp = BinaryOperator::And;
+    if (IfTrue2 != SecondEntryBlock) {
+      if (IfFalse2 != SecondEntryBlock)
+        return false;
+
+      InvertCond2 = true;
+      std::swap(IfTrue2, IfFalse2);
+    }
+
+    if (!CompareIfRegionBlock(IfFalse1, IfFalse2, SecondEntryBlock))
+      return false;
+  } else
     return false;
 
   Instruction *PTI2 = SecondEntryBlock->getTerminator();
   Instruction *PBI2 = &SecondEntryBlock->front();
-
-  if (!CompareIfRegionBlock(FirstEntryBlock, SecondEntryBlock, IfTrue1,
-                            IfTrue2))
-    return false;
-
-  if (!CompareIfRegionBlock(FirstEntryBlock, SecondEntryBlock, IfFalse1,
-                            IfFalse2))
-    return false;
 
   // Check whether \param SecondEntryBlock has side-effect and is safe to
   // speculate.
@@ -445,12 +479,22 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   FirstEntryBlock->getInstList()
       .splice(FirstEntryBlock->end(), SecondEntryBlock->getInstList());
   BranchInst *PBI = cast<BranchInst>(FirstEntryBlock->getTerminator());
-  Value *CC = PBI->getCondition();
+  assert(PBI->getCondition() == IfCond2);
   BasicBlock *SaveInsertBB = Builder.GetInsertBlock();
   BasicBlock::iterator SaveInsertPt = Builder.GetInsertPoint();
   Builder.SetInsertPoint(PBI);
-  Value *NC = Builder.CreateOr(CInst1, CC);
-  PBI->replaceUsesOfWith(CC, NC);
+  if (InvertCond2) {
+    // If this is a "cmp" instruction, only used for branching (and nowhere
+    // else), then we can simply invert the predicate.
+    auto Cmp2 = dyn_cast<CmpInst>(CInst2);
+    if (Cmp2 && Cmp2->hasOneUse())
+      Cmp2->setPredicate(Cmp2->getInversePredicate());
+    else
+      CInst2 = cast<Instruction>(Builder.CreateNot(CInst2));
+    PBI->swapSuccessors();
+  }
+  Value *NC = Builder.CreateBinOp(CombineOp, CInst1, CInst2);
+  PBI->replaceUsesOfWith(IfCond2, NC);
   Builder.SetInsertPoint(SaveInsertBB, SaveInsertPt);
 
   // Handle PHI node to replace its predecessors to FirstEntryBlock.

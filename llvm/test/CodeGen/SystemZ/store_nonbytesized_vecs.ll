@@ -121,18 +121,20 @@ define void @fun2(<8 x i32> %src, <8 x i31>* %p)
 define void @fun3(<3 x i31>* %src, <3 x i31>* %p)
 ; CHECK-LABEL: fun3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    llgf %r0, 3(%r2)
-; CHECK-NEXT:    llgf %r1, 6(%r2)
-; CHECK-NEXT:    llgf %r2, 0(%r2)
-; CHECK-NEXT:    rosbg %r1, %r0, 0, 32, 31
-; CHECK-NEXT:    sllg %r4, %r2, 62
-; CHECK-NEXT:    rosbg %r4, %r0, 0, 32, 31
-; CHECK-NEXT:    srlg %r0, %r4, 32
-; CHECK-NEXT:    st %r1, 8(%r3)
-; CHECK-NEXT:    sllg %r1, %r2, 30
-; CHECK-NEXT:    lr %r1, %r0
-; CHECK-NEXT:    nihh %r1, 8191
-; CHECK-NEXT:    stg %r1, 0(%r3)
+; CHECK-NEXT:    l %r0, 8(%r2)
+; CHECK-NEXT:    lg %r1, 0(%r2)
+; CHECK-NEXT:    sllg %r2, %r1, 32
+; CHECK-NEXT:    lr %r2, %r0
+; CHECK-NEXT:    srlg %r0, %r2, 62
+; CHECK-NEXT:    st %r2, 8(%r3)
+; CHECK-NEXT:    rosbg %r0, %r1, 33, 61, 34
+; CHECK-NEXT:    sllg %r1, %r0, 62
+; CHECK-NEXT:    rosbg %r1, %r2, 2, 32, 0
+; CHECK-NEXT:    srlg %r1, %r1, 32
+; CHECK-NEXT:    sllg %r0, %r0, 30
+; CHECK-NEXT:    lr %r0, %r1
+; CHECK-NEXT:    nihh %r0, 8191
+; CHECK-NEXT:    stg %r0, 0(%r3)
 ; CHECK-NEXT:    br %r14
 {
   %tmp = load <3 x i31>, <3 x i31>* %src

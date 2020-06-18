@@ -165,6 +165,35 @@ struct floatcomplex_s f_ret_floatcomplex_s() {
   return (struct floatcomplex_s){1.0};
 }
 
+// Complex floating-point values or structs containing a single complex
+// floating-point value should be passed in GPRs if no two FPRs is available.
+
+// CHECK: define void @f_floatcomplex_insufficient_fprs1(float %a.coerce0, float %a.coerce1, float %b.coerce0, float %b.coerce1, float %c.coerce0, float %c.coerce1, float %d.coerce0, float %d.coerce1, i64 %e.coerce)
+void f_floatcomplex_insufficient_fprs1(float __complex__ a, float __complex__ b,
+                                       float __complex__ c, float __complex__ d,
+                                       float __complex__ e) {}
+
+
+// CHECK: define void @f_floatcomplex_s_arg_insufficient_fprs1(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7, i64 %e.coerce)
+void f_floatcomplex_s_arg_insufficient_fprs1(struct floatcomplex_s a,
+                                             struct floatcomplex_s b,
+                                             struct floatcomplex_s c,
+                                             struct floatcomplex_s d,
+                                             struct floatcomplex_s e) {}
+
+// CHECK: define void @f_floatcomplex_insufficient_fprs2(float %a, float %b.coerce0, float %b.coerce1, float %c.coerce0, float %c.coerce1, float %d.coerce0, float %d.coerce1, i64 %e.coerce)
+void f_floatcomplex_insufficient_fprs2(float a,
+                                       float __complex__ b, float __complex__ c,
+                                       float __complex__ d, float __complex__ e) {}
+
+
+// CHECK: define void @f_floatcomplex_s_arg_insufficient_fprs2(float %a, float %0, float %1, float %2, float %3, float %4, float %5, i64 %e.coerce)
+void f_floatcomplex_s_arg_insufficient_fprs2(float a,
+                                             struct floatcomplex_s b,
+                                             struct floatcomplex_s c,
+                                             struct floatcomplex_s d,
+                                             struct floatcomplex_s e) {}
+
 // Test single or two-element structs that need flattening. e.g. those
 // containing nested structs, floats in small arrays, zero-length structs etc.
 

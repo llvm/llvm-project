@@ -1,4 +1,4 @@
-# Linalg Dialect
+# 'linalg' Dialect
 
 [TOC]
 
@@ -10,7 +10,7 @@ Linalg is designed to solve the High-level Hierarchical Optimization
 (HHO box) in MLIR and to interoperate nicely within a
 *Mixture Of Expert Compilers* environment (i.e. the *CGSel* box).
 
-The [Rationale Document](https://mlir.llvm.org/docs/RationaleLinalgDialect)
+The [Rationale Document](../Rationale/RationaleLinalgDialect.md)
 goes into significantly more design and architectural decision details.
 
 ## Set of Key Transformations<a name="key_transformations"></a>
@@ -29,7 +29,7 @@ performed on the Linalg IR and that have influenced its design:
 1. Tiled Producer-Consumer Fusion with Parametric Tile-And-Fuse.
 1. Map to Parallel and Reduction Loops and Hardware.
 1. Vectorization: Rewrite in Vector Form.
-1. Lower to Loops (Affine and/or Generic).
+1. Lower to Loops (Affine, Generic, and Parallel).
 1. Lower to Library Calls or Special Instructions, Intrinsics or ISA.
 1. Partially Lower to Iterations Over a Finer-Grained Linalg Op.
 
@@ -49,7 +49,7 @@ https://docs.google.com/presentation/d/1P-j1GrH6Q5gLBjao0afQ-GfvcAeF-QU4GXXeSy0e
 `linalg.generic` (resp. `linalg.indexed_generic`) that can express custom
 operations with *index-free semantics* (resp. *indexing semantics*).
 The properties of these generic ops are the result of applying the
-guiding principles described in the [Rationale Document](https://mlir.llvm.org/docs/RationaleLinalgDialect).
+guiding principles described in the [Rationale Document](../Rationale/RationaleLinalgDialect.md).
 They are listed next, with a brief example and discussion for each.
 
 #### Property 1: Input and Output Operands Define The Iteration Space<a name="prop1"></a>
@@ -130,9 +130,9 @@ Consider the following, partially specified, `linalg.generic` example:
   (i, j) -> (j)
 }
 #attrs = {args_in: 1, args_out: 1, indexings: indexing_maps}
-func @example(%A: memref<?xf32, layout1>,
+func @example(%A: memref<8x?xf32, layout1>,
               %B: memref<?xvector<4xf32, layout2>>) {
-  linalg.generic #attrs (%A, %B): memref<?xf32, layout1>,
+  linalg.generic #attrs (%A, %B): memref<8x?xf32, layout1>,
                                   memref<?xvector<4xf32, layout2>>
   return
 }
@@ -142,21 +142,21 @@ The property "*Reversible Mappings Between Control and Data Structures*" is
 materialized by a lowering into a form that will resemble:
 ```
 #attrs = {args_in: 1, args_out: 1, indexings: indexing_maps}
-func @example(%A: memref<?xf32, layout1>,
+func @example(%A: memref<8x?xf32, layout1>,
               %B: memref<?xvector<4xf32, layout2>>) {
   // loop bounds determined from data sizes by “inverting the map”
-  %J = "dim" %2, 0: index
-  %I = "dim" %2, 1: index
-  %J2 = "dim" %3, 0: index
+  %J = "dim" %A, 0: index
+  %I = "dim" %A, 1: index
+  %J2 = "dim" %B, 0: index
   // iteration space is consistent with data + mapping inference
   %eq = "eq" %J, %J2: i1
   "assert" %eq: (i1) -> ()
   for %i = 0 to %I {           // loop order is fully defined by indexing maps
     for %j = 0 to %J {         // arbitrary permutations are possible
-      %a = "load" %2, %j, %i: memref<8x?xf32>
-      %b = "load" %3, %j: memref<?xvector<4xf32>>
+      %a = "load" %A, %j, %i: memref<8x?xf32>
+      %b = "load" %B, %j: memref<?xvector<4xf32>>
       %c = "some_compute"(%a, %b): (f32, vector<4xf32>) -> (vector<4xf32>)
-      "store" %c, %3, %j: memref<?xvector<4xf32>>
+      "store" %c, %B, %j: memref<?xvector<4xf32>>
     }
   }
   return
@@ -241,7 +241,7 @@ example:
   (i, j) -> (i, j),
   (i, j) -> (i, j)
 }
-#attrs = {args_in: 1, args_out: 1, indexings: #indexing_maps}
+#attrs = {args_in: 2, args_out: 1, indexings: #indexing_maps}
 func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
   linalg.generic #attrs (%A, %B, %C) {
     ^bb0(%a: f32, %b: f32):
@@ -295,7 +295,7 @@ example:
   (i, j) -> (i, j),
   (i, j) -> (i, j)
 }
-#attrs = {args_in: 1, args_out: 1, indexings: #indexing_maps, fun: #fun_attr}
+#attrs = {args_in: 2, args_out: 1, indexings: #indexing_maps, fun: #fun_attr}
 func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
   linalg.generic #attrs (%A, %B, %C) {
     ^bb0(%a: f32, %b: f32):
@@ -451,6 +451,93 @@ from a description in terms of only the generic op interface.
 This is the main reason there are only a small number of ops today: we expect
 them to be auto-generated from Tablegen soon.
 
+### Named Payload Ops Specification
+
+Linalg provides a declarative specification and a generation tool
+(`mlir-linalg-ods-gen`) to automatically produce named ops from a notation that
+is inspired by Einstein notation.
+
+The syntax and semantics used in `mlir-linalg-ods-gen` are very much in flight
+and borrow from Tensor Comprehensions (TC) but differ in a few dimensions, to
+better adapt to Linalg:
+
+1.  The input and output tensor parameters are specified as `id :
+    type(symbolic-affine-expression-list)` (e.g. `A : f32(M, N + M)`) and each
+    new symbol is discovered eagerly. TC on the other hand does not allow
+    general symbolic affine expressions.
+1.  The output shapes are specified explicitly, in TC they are always derived
+    from the input shapes.
+1.  The operations used to specify computations use EDSC intrinsics so that they
+    can easily be parsed and emitted into a simple region builder without
+    resorting to more general MLIR parsing.
+1.  Reduction dimensions are specified with angle bracket notation on the 
+    operation they apply to (e.g. `std_add<k>` specifies that `k` is a reduction
+    dimension). In TC, a reduction is specified with `op=` operator and the
+    reduction dimensions are inferred.
+1.  The parallel and reduction dimension are ordered by the textual program
+    order. For instance, in the comprehension `O(i, j) = std_add<k, l>(...)`,
+    `i` (resp. `j`) is a parallel iterator encoded by affine dimension of
+    position `0` (resp. `1`); `k` (resp. `l`) is a reduction iterator encoded by
+    an affine dimension of position `2` (resp. `3`).
+
+These decisions and syntax are subject to evolution and change. In particular,
+op-specific attributes, dynamic ranks, some form of templating, shape
+calculation function specification, etc. may be added in the future.
+
+At this time, the following restrictions are imposed on the syntax and
+semantics:
+
+1.  Each def may only contain a single comprehension but each comprehension may
+    perform multiple updates.
+2.  Each tensor may only be used with a single indexing expression.
+
+The following specification may be used to define a named `batchmatmul` op:
+
+```
+def batchmatmul(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
+  C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(k, n)));
+}
+```
+
+When `mlir-linalg-ods-gen -gen-ods-decl=1` is called, the following ODS is
+produced:
+
+```
+  def batchmatmulOp : LinalgNamedStructured_Op<"batchmatmul", [
+    NInputs<2>,
+    NOutputs<1>,
+    NamedStructuredOpTraits]> { ... }
+```
+
+When `mlir-linalg-ods-gen -gen-impl=1` is called, the following C++ is produced:
+
+```
+llvm::Optional<SmallVector<StringRef, 8>> batchmatmul::referenceIterators() {
+  return SmallVector<StringRef, 8>{
+    getParallelIteratorTypeName(),
+    getParallelIteratorTypeName(),
+    getParallelIteratorTypeName(),
+    getReductionIteratorTypeName() };
+}
+llvm::Optional<SmallVector<AffineMap, 8>> batchmatmul::referenceIndexingMaps() {
+  MLIRContext *context = getContext();
+  AffineExpr d0, d1, d2, d3;
+  bindDims(context, d0, d1, d2, d3);
+  return SmallVector<AffineMap, 8>{
+      AffineMap::get(4, 0, {d0, d1, d3}),
+      AffineMap::get(4, 0, {d3, d2}),
+      AffineMap::get(4, 0, {d0, d1, d2}) };
+}
+void batchmatmul::regionBuilder(ArrayRef<BlockArgument> args) {
+  using namespace edsc;
+  using namespace intrinsics;
+  Value _0(args[0]), _1(args[1]), _2(args[2]);
+  Value _4 = std_mulf(_0, _1);
+  Value _5 = std_addf(_2, _4);
+  (linalg_yield(ValueRange{ _5 }));
+}
+```
+
 ## Open Issues and Design Alternatives<a name="open_issues"></a>
 Multiple open issues and design alternatives are in flight and it is time to
 lay them out for the community to discuss and pick apart:
@@ -469,3 +556,7 @@ These key questions (and much more) should be really thought of in the general
 context of MLIR in which different levels of IR interoperate seamlessly. In
 practice, it is not necessary (or beneficial) to try and solve all problems in the
 same IR.
+
+## Operations
+
+[include "Dialects/LinalgOps.md"]

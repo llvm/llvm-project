@@ -75,7 +75,7 @@ static bool isVariadicOperandName(const tblgen::Operator &op, StringRef name) {
   if (numOperands == 0)
     return false;
   const auto &operand = op.getOperand(numOperands - 1);
-  return operand.isVariadic() && operand.name == name;
+  return operand.isVariableLength() && operand.name == name;
 }
 
 // Check if `result` is a known name of a result of `op`.

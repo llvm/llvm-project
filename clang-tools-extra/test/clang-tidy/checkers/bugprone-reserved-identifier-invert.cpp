@@ -57,7 +57,7 @@ template <class Up>
 inline reference_wrapper<const Up>
 cref(const Up &u) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: declaration uses identifier 'u', which is not a reserved identifier [bugprone-reserved-identifier]
-  // CHECK-FIXES: {{^}}cref(const Up &__u) noexcept {{{$}}
+  // CHECK-FIXES: {{^}}cref(const _Up &__u) noexcept {{{$}}
   return reference_wrapper<const Up>(u);
 }
 

@@ -12,7 +12,7 @@
   beq 1f
 1:
 # CHECK-LABEL: Disassembly of section .R_PPC64_REL14:
-# CHECK: bt 2, .+4
+# CHECK: bt 2, 0x10010198
 
 .section .R_PPC64_REL16,"ax",@progbits
 .globl rel16
@@ -34,7 +34,7 @@ rel16:
 .section .R_PPC64_REL24,"ax",@progbits
   b rel16
 # CHECK-LABEL: Disassembly of section .R_PPC64_REL24:
-# CHECK: b .+67108840
+# CHECK: 100101b0: b 0x10010198
 
 .section .REL32_AND_REL64,"ax",@progbits
   .cfi_startproc

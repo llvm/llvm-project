@@ -3,7 +3,9 @@
 
 ; CHECK: bigCst:
 ; CHECK-NEXT: .quad 12713950999227904
-; CHECK-NEXT: .quad 26220
+; CHECK-NEXT: .short 26220
+; CHECK-NEXT: .byte 0
+; CHECK-NEXT: .zero 5
 ; CHECK-NEXT: .size bigCst, 16
 
 @bigCst = internal constant i82 483673642326615442599424

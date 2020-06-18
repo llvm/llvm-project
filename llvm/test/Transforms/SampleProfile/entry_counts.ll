@@ -4,17 +4,19 @@
 ; According to the profile, function empty() was called 13,293 times.
 ; CHECK: {{.*}} = !{!"function_entry_count", i64 13294}
 
-define void @empty() !dbg !4 {
+define void @empty() #0 !dbg !4 {
 entry:
   ret void, !dbg !9
 }
 
 ; This function does not have profile, check if function_entry_count is -1
 ; CHECK: {{.*}} = !{!"function_entry_count", i64 -1}
-define void @no_profile() {
+define void @no_profile() #0 {
 entry:
   ret void
 }
+
+attributes #0 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7}

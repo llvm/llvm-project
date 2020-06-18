@@ -61,11 +61,10 @@ void ComparisonInTempFailureRetryCheck::registerMatchers(MatchFinder *Finder) {
   // we need to not complain about things like TEMP_FAILURE_RETRY(foo(x == 1)),
   // so we just match the assignment of `y = (x)` and inspect `x` from there.
   Finder->addMatcher(
-      binaryOperator(
-          hasOperatorName("="),
-          hasRHS(ignoringParenCasts(
-              binaryOperator(matchers::isComparisonOperator()).bind("binop"))),
-          isRHSATempFailureRetryArg()),
+      binaryOperator(hasOperatorName("="),
+                     hasRHS(ignoringParenCasts(
+                         binaryOperator(isComparisonOperator()).bind("binop"))),
+                     isRHSATempFailureRetryArg()),
       this);
 }
 

@@ -30,6 +30,15 @@ __attribute__((objc_root_class))
 - (void)B_OtherCat __attribute__((objc_direct)); // expected-note {{previous declaration is here}}
 @end
 
+@implementation B
+- (void)B_primary {
+}
+- (void)B_extension {
+}
+- (void)B_implOnly __attribute__((objc_direct)) { // expected-note {{previous declaration is here}}
+}
+@end
+
 @implementation B (Cat)
 - (void)B_primary { // expected-error {{direct method was declared in the primary interface but is implemented in a category}}
 }
@@ -38,6 +47,8 @@ __attribute__((objc_root_class))
 - (void)B_Cat {
 }
 - (void)B_OtherCat { // expected-error {{direct method was declared in a category but is implemented in a different category}}
+}
+- (void)B_implOnly __attribute__((objc_direct)) { // expected-error {{direct method declaration conflicts with previous direct declaration of method 'B_implOnly'}}
 }
 @end
 

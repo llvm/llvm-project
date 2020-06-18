@@ -217,6 +217,7 @@ bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   MLI = &getAnalysis<MachineLoopInfo>();
   MDT = &getAnalysis<MachineDominatorTree>();
+  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   TII = MF->getSubtarget().getInstrInfo();
   RegClassInfo.runOnMachineFunction(*MF);
 
@@ -248,6 +249,12 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
   setPragmaPipelineOptions(L);
   if (!canPipelineLoop(L)) {
     LLVM_DEBUG(dbgs() << "\n!!! Can not pipeline loop.\n");
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "canPipelineLoop",
+                                             L.getStartLoc(), L.getHeader())
+             << "Failed to pipeline loop";
+    });
+
     return Changed;
   }
 
@@ -259,6 +266,9 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
 }
 
 void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
+  // Reset the pragma for the next loop in iteration.
+  disabledByPragma = false;
+
   MachineBasicBlock *LBLK = L.getTopBlock();
 
   if (LBLK == nullptr)
@@ -306,11 +316,24 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
 /// restricted to loops with a single basic block.  Make sure that the
 /// branch in the loop can be analyzed.
 bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
-  if (L.getNumBlocks() != 1)
+  if (L.getNumBlocks() != 1) {
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
+                                               L.getStartLoc(), L.getHeader())
+             << "Not a single basic block: "
+             << ore::NV("NumBlocks", L.getNumBlocks());
+    });
     return false;
+  }
 
-  if (disabledByPragma)
+  if (disabledByPragma) {
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
+                                               L.getStartLoc(), L.getHeader())
+             << "Disabled by Pragma.";
+    });
     return false;
+  }
 
   // Check if the branch can't be understood because we can't do pipelining
   // if that's the case.
@@ -318,25 +341,37 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
   LI.FBB = nullptr;
   LI.BrCond.clear();
   if (TII->analyzeBranch(*L.getHeader(), LI.TBB, LI.FBB, LI.BrCond)) {
-    LLVM_DEBUG(
-        dbgs() << "Unable to analyzeBranch, can NOT pipeline current Loop\n");
+    LLVM_DEBUG(dbgs() << "Unable to analyzeBranch, can NOT pipeline Loop\n");
     NumFailBranch++;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
+                                               L.getStartLoc(), L.getHeader())
+             << "The branch can't be understood";
+    });
     return false;
   }
 
   LI.LoopInductionVar = nullptr;
   LI.LoopCompare = nullptr;
   if (!TII->analyzeLoopForPipelining(L.getTopBlock())) {
-    LLVM_DEBUG(
-        dbgs() << "Unable to analyzeLoop, can NOT pipeline current Loop\n");
+    LLVM_DEBUG(dbgs() << "Unable to analyzeLoop, can NOT pipeline Loop\n");
     NumFailLoop++;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
+                                               L.getStartLoc(), L.getHeader())
+             << "The loop structure is not supported";
+    });
     return false;
   }
 
   if (!L.getLoopPreheader()) {
-    LLVM_DEBUG(
-        dbgs() << "Preheader not found, can NOT pipeline current Loop\n");
+    LLVM_DEBUG(dbgs() << "Preheader not found, can NOT pipeline Loop\n");
     NumFailPreheader++;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
+                                               L.getStartLoc(), L.getHeader())
+             << "No loop preheader found";
+    });
     return false;
   }
 
@@ -454,10 +489,13 @@ void SwingSchedulerDAG::schedule() {
 
   // Can't schedule a loop without a valid MII.
   if (MII == 0) {
-    LLVM_DEBUG(
-        dbgs()
-        << "0 is not a valid Minimal Initiation Interval, can NOT schedule\n");
+    LLVM_DEBUG(dbgs() << "Invalid Minimal Initiation Interval: 0\n");
     NumFailZeroMII++;
+    Pass.ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(
+                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+             << "Invalid Minimal Initiation Interval: 0";
+    });
     return;
   }
 
@@ -466,6 +504,14 @@ void SwingSchedulerDAG::schedule() {
     LLVM_DEBUG(dbgs() << "MII > " << SwpMaxMii
                       << ", we don't pipleline large loops\n");
     NumFailLargeMaxMII++;
+    Pass.ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(
+                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+             << "Minimal Initiation Interval too large: "
+             << ore::NV("MII", (int)MII) << " > "
+             << ore::NV("SwpMaxMii", SwpMaxMii) << "."
+             << "Refer to -pipeliner-max-mii.";
+    });
     return;
   }
 
@@ -508,15 +554,24 @@ void SwingSchedulerDAG::schedule() {
   if (!Scheduled){
     LLVM_DEBUG(dbgs() << "No schedule found, return\n");
     NumFailNoSchedule++;
+    Pass.ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(
+                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+             << "Unable to find schedule";
+    });
     return;
   }
 
   unsigned numStages = Schedule.getMaxStageCount();
   // No need to generate pipeline if there are no overlapped iterations.
   if (numStages == 0) {
-    LLVM_DEBUG(
-        dbgs() << "No overlapped iterations, no need to generate pipeline\n");
+    LLVM_DEBUG(dbgs() << "No overlapped iterations, skip.\n");
     NumFailZeroStage++;
+    Pass.ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(
+                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+             << "No need to pipeline - no overlapped iterations in schedule.";
+    });
     return;
   }
   // Check that the maximum stage count is less than user-defined limit.
@@ -524,8 +579,22 @@ void SwingSchedulerDAG::schedule() {
     LLVM_DEBUG(dbgs() << "numStages:" << numStages << ">" << SwpMaxStages
                       << " : too many stages, abort\n");
     NumFailLargeMaxStage++;
+    Pass.ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(
+                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+             << "Too many stages in schedule: "
+             << ore::NV("numStages", (int)numStages) << " > "
+             << ore::NV("SwpMaxStages", SwpMaxStages)
+             << ". Refer to -pipeliner-max-stages.";
+    });
     return;
   }
+
+  Pass.ORE->emit([&]() {
+    return MachineOptimizationRemark(DEBUG_TYPE, "schedule", Loop.getStartLoc(),
+                                     Loop.getHeader())
+           << "Pipelined succesfully!";
+  });
 
   // Generate the schedule as a ModuloSchedule.
   DenseMap<MachineInstr *, int> Cycles, Stages;
@@ -806,7 +875,7 @@ void SwingSchedulerDAG::updatePhiDependences() {
           if (!MI->isPHI()) {
             SDep Dep(SU, SDep::Data, Reg);
             Dep.setLatency(0);
-            ST.adjustSchedDependency(SU, &I, Dep);
+            ST.adjustSchedDependency(SU, 0, &I, MI->getOperandNo(MOI), Dep);
             I.addPred(Dep);
           } else {
             HasPhiUse = Reg;
@@ -909,7 +978,7 @@ namespace {
 struct FuncUnitSorter {
   const InstrItineraryData *InstrItins;
   const MCSubtargetInfo *STI;
-  DenseMap<unsigned, unsigned> Resources;
+  DenseMap<InstrStage::FuncUnits, unsigned> Resources;
 
   FuncUnitSorter(const TargetSubtargetInfo &TSI)
       : InstrItins(TSI.getInstrItineraryData()), STI(&TSI) {}
@@ -917,14 +986,15 @@ struct FuncUnitSorter {
   // Compute the number of functional unit alternatives needed
   // at each stage, and take the minimum value. We prioritize the
   // instructions by the least number of choices first.
-  unsigned minFuncUnits(const MachineInstr *Inst, unsigned &F) const {
+  unsigned minFuncUnits(const MachineInstr *Inst,
+                        InstrStage::FuncUnits &F) const {
     unsigned SchedClass = Inst->getDesc().getSchedClass();
     unsigned min = UINT_MAX;
     if (InstrItins && !InstrItins->isEmpty()) {
       for (const InstrStage &IS :
            make_range(InstrItins->beginStage(SchedClass),
                       InstrItins->endStage(SchedClass))) {
-        unsigned funcUnits = IS.getUnits();
+        InstrStage::FuncUnits funcUnits = IS.getUnits();
         unsigned numAlternatives = countPopulation(funcUnits);
         if (numAlternatives < min) {
           min = numAlternatives;
@@ -970,7 +1040,7 @@ struct FuncUnitSorter {
       for (const InstrStage &IS :
            make_range(InstrItins->beginStage(SchedClass),
                       InstrItins->endStage(SchedClass))) {
-        unsigned FuncUnits = IS.getUnits();
+        InstrStage::FuncUnits FuncUnits = IS.getUnits();
         if (countPopulation(FuncUnits) == 1)
           Resources[FuncUnits]++;
       }
@@ -998,7 +1068,7 @@ struct FuncUnitSorter {
 
   /// Return true if IS1 has less priority than IS2.
   bool operator()(const MachineInstr *IS1, const MachineInstr *IS2) const {
-    unsigned F1 = 0, F2 = 0;
+    InstrStage::FuncUnits F1 = 0, F2 = 0;
     unsigned MFUs1 = minFuncUnits(IS1, F1);
     unsigned MFUs2 = minFuncUnits(IS2, F2);
     if (MFUs1 == MFUs2)
@@ -1076,7 +1146,7 @@ unsigned SwingSchedulerDAG::calculateResMII() {
     }
   }
   int Resmii = Resources.size();
-  LLVM_DEBUG(dbgs() << "Retrun Res MII:" << Resmii << "\n");
+  LLVM_DEBUG(dbgs() << "Return Res MII:" << Resmii << "\n");
   // Delete the memory for each of the DFAs that were created earlier.
   for (ResourceManager *RI : Resources) {
     ResourceManager *D = RI;
@@ -2048,9 +2118,16 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
   LLVM_DEBUG(dbgs() << "Schedule Found? " << scheduleFound << " (II=" << II
                     << ")\n");
 
-  if (scheduleFound)
+  if (scheduleFound) {
     Schedule.finalizeSchedule(this);
-  else
+    Pass.ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(
+                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+             << "Schedule found with Initiation Interval: " << ore::NV("II", II)
+             << ", MaxStageCount: "
+             << ore::NV("MaxStageCount", Schedule.getMaxStageCount());
+    });
+  } else
     Schedule.reset();
 
   return scheduleFound && Schedule.getMaxStageCount() > 0;
@@ -2367,7 +2444,7 @@ int SMSchedule::earliestCycleInChain(const SDep &Dep) {
       continue;
     EarlyCycle = std::min(EarlyCycle, it->second);
     for (const auto &PI : PrevSU->Preds)
-      if (PI.getKind() == SDep::Order || Dep.getKind() == SDep::Output)
+      if (PI.getKind() == SDep::Order || PI.getKind() == SDep::Output)
         Worklist.push_back(PI);
     Visited.insert(PrevSU);
   }
@@ -2390,7 +2467,7 @@ int SMSchedule::latestCycleInChain(const SDep &Dep) {
       continue;
     LateCycle = std::max(LateCycle, it->second);
     for (const auto &SI : SuccSU->Succs)
-      if (SI.getKind() == SDep::Order || Dep.getKind() == SDep::Output)
+      if (SI.getKind() == SDep::Order || SI.getKind() == SDep::Output)
         Worklist.push_back(SI);
     Visited.insert(SuccSU);
   }

@@ -1238,21 +1238,18 @@ bool TwoAddressInstructionPass::tryInstructionCommute(MachineInstr *MI,
                                         Dist)) {
       MadeChange = true;
       ++NumCommuted;
-      if (AggressiveCommute) {
+      if (AggressiveCommute)
         ++NumAggrCommuted;
-        // There might be more than two commutable operands, update BaseOp and
-        // continue scanning.
-        // FIXME: This assumes that the new instruction's operands are in the
-        // same positions and were simply swapped.
-        BaseOpReg = OtherOpReg;
-        BaseOpKilled = OtherOpKilled;
-        // Resamples OpsNum in case the number of operands was reduced. This
-        // happens with X86.
-        OpsNum = MI->getDesc().getNumOperands();
-        continue;
-      }
-      // If this was a commute based on kill, we won't do better continuing.
-      return MadeChange;
+
+      // There might be more than two commutable operands, update BaseOp and
+      // continue scanning.
+      // FIXME: This assumes that the new instruction's operands are in the
+      // same positions and were simply swapped.
+      BaseOpReg = OtherOpReg;
+      BaseOpKilled = OtherOpKilled;
+      // Resamples OpsNum in case the number of operands was reduced. This
+      // happens with X86.
+      OpsNum = MI->getDesc().getNumOperands();
     }
   }
   return MadeChange;
@@ -1422,7 +1419,7 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
             LV->addVirtualRegisterKilled(Reg, *NewMIs[1]);
           }
 
-          SmallVector<unsigned, 4> OrigRegs;
+          SmallVector<Register, 4> OrigRegs;
           if (LIS) {
             for (const MachineOperand &MO : MI.operands()) {
               if (MO.isReg())
@@ -1690,6 +1687,10 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
   // This pass takes the function out of SSA form.
   MRI->leaveSSA();
 
+  // This pass will rewrite the tied-def to meet the RegConstraint.
+  MF->getProperties()
+      .set(MachineFunctionProperties::Property::TiedOpsRewritten);
+
   TiedOperandMap TiedOperands;
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
@@ -1805,7 +1806,7 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
     llvm_unreachable(nullptr);
   }
 
-  SmallVector<unsigned, 4> OrigRegs;
+  SmallVector<Register, 4> OrigRegs;
   if (LIS) {
     OrigRegs.push_back(MI.getOperand(0).getReg());
     for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2)

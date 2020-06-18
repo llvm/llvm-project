@@ -44,3 +44,12 @@ void f2(volatile int *x) {
   refcall();
   1 ? refcall() : *x;
 }
+
+// CHECK: define void @_Z2f3v()
+// CHECK-NOT: load
+// CHECK-NOT: memcpy
+
+void f3(void) {
+  volatile char a[10];
+  a;
+}

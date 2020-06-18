@@ -1,0 +1,241 @@
+## Check we can use "SectionHeaderTable" tag to reorder section header entries.
+
+## This is a general test that has sections with unique prefixes, a fill and a
+## section without the unique prefix. The section header table describes sections
+## in the same order they are listed in the YAML.
+# RUN: yaml2obj %s --docnum=1 -o %t1 -DSEC1=".section (1)" -DSEC2=".section (2)" -DSEC3=".section.foo"
+# RUN: llvm-readelf --section-headers %t1 | FileCheck %s --check-prefix=NO-OP
+
+# NO-OP:      Section Headers:
+# NO-OP-NEXT:   [Nr] Name         Type     Address          Off    Size   ES Flg Lk Inf Al
+# NO-OP-NEXT:   [ 0]              NULL     0000000000000000 000000 000000 00      0   0  0
+# NO-OP-NEXT:   [ 1] .section     PROGBITS 0000000000000000 000040 000010 00      0   0  0
+# NO-OP-NEXT:   [ 2] .section     PROGBITS 0000000000000000 000050 000020 00      0   0  0
+# NO-OP-NEXT:   [ 3] .section.foo PROGBITS 0000000000000000 0000a0 000040 00      0   0  0
+# NO-OP-NEXT:   [ 4] .strtab      STRTAB   0000000000000000 0000e0 000001 00      0   0  1
+# NO-OP-NEXT:   [ 5] .shstrtab    STRTAB   0000000000000000 0000e1 000029 00      0   0  1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .section (1)
+    Type: SHT_PROGBITS
+    Size: 0x10
+  - Name: .section (2)
+    Type: SHT_PROGBITS
+    Size: 0x20
+  - Type:    Fill
+    Name:    .filler
+    Size:    0x30
+    Pattern: ""
+  - Name: .section.foo
+    Type: SHT_PROGBITS
+    Size: 0x40
+SectionHeaderTable:
+  Sections:
+    - Name: [[SEC1]]
+    - Name: [[SEC2]]
+    - Name: [[SEC3]]
+    - Name: .strtab
+    - Name: .shstrtab
+
+## Show we are able to reorder sections.
+# RUN: yaml2obj %s -o %t2 -DSEC3=".section (1)" -DSEC2=".section (2)" -DSEC1=".section.foo"
+# RUN: llvm-readelf --section-headers %t2 | FileCheck %s --check-prefix=REORDERED
+
+# REORDERED:      Section Headers:
+# REORDERED-NEXT:   [Nr] Name         Type     Address          Off    Size   ES Flg Lk Inf Al
+# REORDERED-NEXT:   [ 0]              NULL     0000000000000000 000000 000000 00      0   0  0
+# REORDERED-NEXT:   [ 1] .section.foo PROGBITS 0000000000000000 0000a0 000040 00      0   0  0
+# REORDERED-NEXT:   [ 2] .section     PROGBITS 0000000000000000 000050 000020 00      0   0  0
+# REORDERED-NEXT:   [ 3] .section     PROGBITS 0000000000000000 000040 000010 00      0   0  0
+# REORDERED-NEXT:   [ 4] .strtab      STRTAB   0000000000000000 0000e0 000001 00      0   0  1
+# REORDERED-NEXT:   [ 5] .shstrtab    STRTAB   0000000000000000 0000e1 000029 00      0   0  1
+
+## Show we report proper errors when the section header description:
+##  a) contains a repeated section name.
+##  b) omits any section that exists.
+##  c) contains a non-existent section.
+# RUN: not yaml2obj %s -o /dev/null -DSEC1=".section.foo" -DSEC2="unknown" -DSEC3=".section.foo" 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR1
+#   d) contains a repeated implicit section name.
+#   e) contains a fill name.
+# RUN: not yaml2obj %s -o /dev/null -DSEC1=".strtab" -DSEC2=".shstrtab" -DSEC3=".filler" 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR2
+
+# ERR1:      error: repeated section name: '.section.foo' in the section header description
+# ERR1-NEXT: error: section '.section (1)' should be present in the 'Sections' or 'Excluded' lists
+# ERR1-NEXT: error: section '.section (2)' should be present in the 'Sections' or 'Excluded' lists
+# ERR1-NEXT: error: section header contains undefined section 'unknown'
+
+# ERR2:      error: repeated section name: '.strtab' in the section header description
+# ERR2-NEXT: error: repeated section name: '.shstrtab' in the section header description
+# ERR2-NEXT: error: section '.section (1)' should be present in the 'Sections' or 'Excluded' lists
+# ERR2-NEXT: error: section '.section (2)' should be present in the 'Sections' or 'Excluded' lists
+# ERR2-NEXT: error: section '.section.foo' should be present in the 'Sections' or 'Excluded' lists
+# ERR2-NEXT: error: section header contains undefined section '.filler'
+
+## Check that when the an empty "Sections" list is used, we do not create an empty section header table.
+# RUN: not yaml2obj %s --docnum=2 -o /dev/null 2>&1 | FileCheck %s --check-prefix=EMPTY-SECTIONS
+
+# EMPTY-SECTIONS:      error: section '.foo' should be present in the 'Sections' or 'Excluded' lists
+# EMPTY-SECTIONS-NEXT: error: section '.strtab' should be present in the 'Sections' or 'Excluded' lists
+# EMPTY-SECTIONS-NEXT: error: section '.shstrtab' should be present in the 'Sections' or 'Excluded' lists
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+SectionHeaderTable:
+  Sections: []
+
+## Test that we are able to use "NoHeaders" property to produce an empty section header table.
+# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: llvm-readelf --file-headers %t3 | FileCheck %s --check-prefix=NO-HEADERS
+
+# NO-HEADERS: Start of section headers:          0  (bytes into file)
+# NO-HEADERS: Size of section headers:           64 (bytes)
+# NO-HEADERS: Number of section headers:         0
+# NO-HEADERS: Section header string table index: 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+SectionHeaderTable:
+  NoHeaders: true
+
+## Check we do not allow using "Sections" together with "NoHeaders".
+# RUN: not yaml2obj %s --docnum=4 -o /dev/null 2>&1 | FileCheck %s --check-prefix=SECTIONS-NO-HEADERS
+
+# SECTIONS-NO-HEADERS: error: NoHeaders can't be used together with Sections/Excluded
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+SectionHeaderTable:
+  Sections:  []
+  NoHeaders: true
+
+## Check that we do not allow an empty SectionHeaderTable tag and suggest to use an explicit syntax instead.
+# RUN: not yaml2obj %s --docnum=5 -DVAL="" -o /dev/null 2>&1 | FileCheck %s --check-prefix=NO-VALUE
+
+# NO-VALUE: SectionHeaderTable can't be empty. Use 'NoHeaders' key to drop the section header table
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+SectionHeaderTable: [[VAL]]
+
+## An empty mapping is also not allowed for the SectionHeaderTable tag.
+# RUN: not yaml2obj %s --docnum=5 -DVAL="[]" -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOT-A-MAPPING
+
+# NOT-A-MAPPING: error: not a mapping
+
+## Test that we are still able to override e_shoff, e_shnum and e_shstrndx
+## fields even when we do not produce section headers.
+# RUN: yaml2obj %s --docnum=6 -o %t4
+# RUN: llvm-readelf --file-headers %t4 | FileCheck %s --check-prefix=NO-HEADERS-OVERRIDE
+
+# NO-HEADERS-OVERRIDE: Start of section headers:          2 (bytes into file)
+# NO-HEADERS-OVERRIDE: Number of section headers:         3
+# NO-HEADERS-OVERRIDE: Section header string table index: 4
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+  SHOff:     0x2
+  SHNum:     0x3
+  SHStrNdx:  0x4
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+SectionHeaderTable:
+  NoHeaders: true
+
+## Check that section indices are updated properly in other places when we
+## reorder sections in the section header table.
+# RUN: yaml2obj %s --docnum=7 -o %t5 -DSEC1=".foo" -DSEC2=".bar"
+# RUN: llvm-readelf --section-headers --symbols %t5 | FileCheck %s --check-prefix=INDICES-A
+# RUN: yaml2obj %s --docnum=7 -o %t6 -DSEC2=".foo" -DSEC1=".bar"
+# RUN: llvm-readelf --section-headers --symbols %t6 | FileCheck %s --check-prefix=INDICES-B
+
+# INDICES-A:      [Nr] Name       Type     Address          Off    Size   ES Flg Lk
+# INDICES-A:      [ 1] .foo       PROGBITS 0000000000000000 000040 000000 00      0
+# INDICES-A-NEXT: [ 2] .bar       PROGBITS 0000000000000000 000040 000000 00      0
+# INDICES-A-NEXT: [ 3] .another.1 PROGBITS 0000000000000000 000040 000000 00      1
+# INDICES-A-NEXT: [ 4] .another.2 PROGBITS 0000000000000000 000040 000000 00      2
+
+# INDICES-A:      Num:    Value          Size Type    Bind   Vis       Ndx Name
+# INDICES-A:        1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     1 foo
+# INDICES-A-NEXT:   2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     2 bar
+
+# INDICES-B:      [ 1] .bar       PROGBITS 0000000000000000 000040 000000 00      0
+# INDICES-B-NEXT: [ 2] .foo       PROGBITS 0000000000000000 000040 000000 00      0
+# INDICES-B-NEXT: [ 3] .another.1 PROGBITS 0000000000000000 000040 000000 00      2
+# INDICES-B-NEXT: [ 4] .another.2 PROGBITS 0000000000000000 000040 000000 00      1
+
+# INDICES-B:      Num: Value            Size Type   Bind  Vis     Ndx Name
+# INDICES-B:        1: 0000000000000000    0 NOTYPE LOCAL DEFAULT   2 foo
+# INDICES-B-NEXT:   2: 0000000000000000    0 NOTYPE LOCAL DEFAULT   1 bar
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Name: .bar
+    Type: SHT_PROGBITS
+  - Name: .another.1
+    Link: .foo
+    Type: SHT_PROGBITS
+  - Name: .another.2
+    Link: .bar
+    Type: SHT_PROGBITS
+SectionHeaderTable:
+  Sections:
+    - Name: [[SEC1]]
+    - Name: [[SEC2]]
+    - Name: .another.1
+    - Name: .another.2
+    - Name: .symtab
+    - Name: .strtab
+    - Name: .shstrtab
+Symbols:
+  - Name:    foo
+    Section: .foo
+  - Name:    bar
+    Section: .bar

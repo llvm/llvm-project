@@ -93,7 +93,7 @@ define void @test2i8(<2 x i8>* nocapture %Sink, <2 x i16>* nocapture readonly %S
 ; CHECK-NEXT:    lvx v2, 0, r4
 ; CHECK-NEXT:    vpkuhum v2, v2, v2
 ; CHECK-NEXT:    xxswapd vs0, v2
-; CHECK-NEXT:    mfvsrd r4, f0
+; CHECK-NEXT:    mffprd r4, f0
 ; CHECK-NEXT:    clrldi r4, r4, 48
 ; CHECK-NEXT:    sth r4, 0(r3)
 ; CHECK-NEXT:    blr

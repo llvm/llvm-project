@@ -79,7 +79,7 @@ namespace testCXXRecordDecl {
 // CHECK-NEXT:     DefaultConstructor exists trivial constexpr
 // CHECK-NEXT:     CopyConstructor simple trivial has_const_param
 // CHECK-NEXT:     MoveConstructor exists simple trivial
-// CHECK-NEXT:     CopyAssignment trivial has_const_param
+// CHECK-NEXT:     CopyAssignment simple trivial has_const_param
 // CHECK-NEXT:     MoveAssignment exists simple trivial
 // CHECK-NEXT:     Destructor simple irrelevant trivial
 
@@ -94,7 +94,7 @@ namespace testCXXRecordDecl {
 // CHECK-NEXT:     DefaultConstructor exists non_trivial
 // CHECK-NEXT:     CopyConstructor simple non_trivial has_const_param
 // CHECK-NEXT:     MoveConstructor exists simple non_trivial
-// CHECK-NEXT:     CopyAssignment non_trivial has_const_param
+// CHECK-NEXT:     CopyAssignment simple non_trivial has_const_param
 // CHECK-NEXT:     MoveAssignment exists simple non_trivial
 // CHECK-NEXT:     Destructor simple irrelevant trivial
 // CHECK-NEXT:   virtual private 'testCXXRecordDecl::A'
@@ -283,7 +283,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | | |-DefaultConstructor exists non_trivial user_provided
 // CHECK-NEXT:  | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | | |-MoveConstructor
-// CHECK-NEXT:  | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | | |-MoveAssignment
 // CHECK-NEXT:  | | `-Destructor non_trivial user_declared
 // CHECK-NEXT:  | |-CXXRecordDecl 0x{{.+}} <col:24, col:30> col:30 implicit referenced class TestClassTemplate
@@ -297,7 +297,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | | |-DefaultConstructor exists non_trivial user_provided
 // CHECK-NEXT:  | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
 // CHECK-NEXT:  | | |-MoveConstructor
-// CHECK-NEXT:  | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | | |-MoveAssignment
 // CHECK-NEXT:  | | `-Destructor non_trivial user_declared
 // CHECK-NEXT:  | |-TemplateArgument type 'testClassTemplateDecl::A'
@@ -318,7 +318,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:  | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:  | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:  | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:  |-TemplateArgument type 'testClassTemplateDecl::B'
@@ -330,7 +330,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | |-DefaultConstructor exists non_trivial user_provided
 // CHECK-NEXT:  | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveConstructor
-// CHECK-NEXT:  | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveAssignment
 // CHECK-NEXT:  | `-Destructor non_trivial user_declared
 // CHECK-NEXT:  |-TemplateArgument type 'testClassTemplateDecl::C'
@@ -346,7 +346,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | |-DefaultConstructor exists non_trivial user_provided
 // CHECK-NEXT:  | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveConstructor
-// CHECK-NEXT:  | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveAssignment
 // CHECK-NEXT:  | `-Destructor non_trivial user_declared
 // CHECK-NEXT:  |-TemplateArgument type 'testClassTemplateDecl::D'
@@ -365,7 +365,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:    | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:    | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:    | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    |-CXXRecordDecl 0x{{.+}} <col:38, col:44> col:44 implicit class TestClassTemplatePartial
@@ -376,7 +376,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:  | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:  | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:  | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:  | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:  |-TemplateArgument type 'type-parameter-0-0'
@@ -399,7 +399,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
 // CHECK-NEXT:    | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:    | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:    | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    `-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 implicit struct TestTemplateDefaultType
@@ -427,7 +427,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
 // CHECK-NEXT:    | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:    | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:    | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    `-CXXRecordDecl 0x{{.+}} <col:41, col:48> col:48 implicit struct TestTemplateTemplateDefaultType
@@ -466,7 +466,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT: | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
   // CHECK-NEXT: | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: | | |-MoveConstructor exists simple trivial needs_implicit
-  // CHECK-NEXT: | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT: | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: | | |-MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT: | | `-Destructor simple irrelevant trivial needs_implicit
   // CHECK-NEXT: | |-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate
@@ -479,7 +479,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   | |-DefaultConstructor exists trivial constexpr defaulted_is_constexpr
   // CHECK-NEXT:   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
   // CHECK-NEXT:   | |-MoveConstructor exists simple trivial
-  // CHECK-NEXT:   | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT:   | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT:   | |-MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT:   | `-Destructor simple irrelevant trivial needs_implicit
   // CHECK-NEXT:   |-TemplateArgument type 'testCanonicalTemplate::A'
@@ -510,7 +510,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   | |-DefaultConstructor exists trivial constexpr defaulted_is_constexpr
   // CHECK-NEXT:   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
   // CHECK-NEXT:   | |-MoveConstructor exists simple trivial
-  // CHECK-NEXT:   | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT:   | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT:   | |-MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT:   | `-Destructor simple irrelevant trivial needs_implicit
   // CHECK-NEXT:   |-TemplateArgument type 'testCanonicalTemplate::A'
@@ -534,7 +534,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT: | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
   // CHECK-NEXT: | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: | | |-MoveConstructor exists simple trivial needs_implicit
-  // CHECK-NEXT: | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT: | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: | | |-MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT: | | `-Destructor simple irrelevant trivial needs_implicit
   // CHECK-NEXT: | `-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate2

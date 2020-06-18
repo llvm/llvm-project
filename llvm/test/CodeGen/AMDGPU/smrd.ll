@@ -1,8 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti  -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=SI   -check-prefix=GCN -check-prefix=SICIVI -check-prefix=SICI -check-prefix=SIVIGFX9_10 %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=CI   -check-prefix=GCN -check-prefix=SICIVI -check-prefix=SICI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga   -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=VI   -check-prefix=GCN -check-prefix=SICIVI -check-prefix=VIGFX9_10 -check-prefix=SIVIGFX9_10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900  -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN -check-prefix=VIGFX9_10 -check-prefix=SIVIGFX9_10  %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=GFX10 -check-prefix=GCN -check-prefix=VIGFX9_10 -check-prefix=SIVIGFX9_10  %s
+; RUN: llc -march=amdgcn -mcpu=gfx900  -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=GFX9 -check-prefix=GFX9_10 -check-prefix=GCN -check-prefix=VIGFX9_10 -check-prefix=SIVIGFX9_10  %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=GFX10 -check-prefix=GFX9_10 -check-prefix=GCN -check-prefix=VIGFX9_10 -check-prefix=SIVIGFX9_10  %s
 
 ; SMRD load with an immediate offset.
 ; GCN-LABEL: {{^}}smrd0:
@@ -63,7 +63,9 @@ entry:
 ; SI: s_mov_b32 [[OFFSET:s[0-9]+]], 0xffffc
 ; SI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], [[OFFSET]]
 ; CI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x3ffff
-; VIGFX9_10: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0xffffc
+; VI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0xffffc
+; GFX9_10: s_mov_b32 [[OFFSET:s[0-9]+]], 0xffffc
+; GFX9_10: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], [[OFFSET]]
 define amdgpu_kernel void @smrd4(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) #0 {
 entry:
   %tmp = getelementptr i32, i32 addrspace(4)* %ptr, i64 262143
@@ -81,6 +83,32 @@ entry:
 define amdgpu_kernel void @smrd5(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) #0 {
 entry:
   %tmp = getelementptr i32, i32 addrspace(4)* %ptr, i64 262144
+  %tmp1 = load i32, i32 addrspace(4)* %tmp
+  store i32 %tmp1, i32 addrspace(1)* %out
+  ret void
+}
+
+; GFX9_10 can use a signed immediate byte offset
+; GCN-LABEL: {{^}}smrd6:
+; SICIVI: s_add_u32 s{{[0-9]}}, s{{[0-9]}}, -4
+; SICIVI: s_load_dword s{{[0-9]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9_10: s_load_dword s{{[0-9]}}, s{{\[[0-9]+:[0-9]+\]}}, -0x4
+define amdgpu_kernel void @smrd6(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) #0 {
+entry:
+  %tmp = getelementptr i32, i32 addrspace(4)* %ptr, i64 -1
+  %tmp1 = load i32, i32 addrspace(4)* %tmp
+  store i32 %tmp1, i32 addrspace(1)* %out
+  ret void
+}
+
+; Don't use a negative SGPR offset
+; GCN-LABEL: {{^}}smrd7:
+; GCN: s_add_u32 s{{[0-9]}}, s{{[0-9]}}, 0xffe00000
+; SICIVI: s_load_dword s{{[0-9]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; GFX9_10: s_load_dword s{{[0-9]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
+define amdgpu_kernel void @smrd7(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) #0 {
+entry:
+  %tmp = getelementptr i32, i32 addrspace(4)* %ptr, i64 -524288
   %tmp1 = load i32, i32 addrspace(4)* %tmp
   store i32 %tmp1, i32 addrspace(1)* %out
   ret void
@@ -349,6 +377,7 @@ main_body:
 ; GCN-NEXT: %bb.
 ; SICI-NEXT: s_buffer_load_dwordx4 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x1
 ; SICI-NEXT: s_buffer_load_dwordx2 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x7
+; GFX10-NEXT: s_clause
 ; VIGFX9_10-NEXT: s_buffer_load_dwordx4 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x4
 ; VIGFX9_10-NEXT: s_buffer_load_dwordx2 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x1c
 define amdgpu_ps void @smrd_imm_merged(<4 x i32> inreg %desc) #0 {
@@ -419,6 +448,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}smrd_vgpr_merged:
 ; GCN-NEXT: %bb.
+; GFX10-NEXT: s_clause
 ; GCN-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
 ; GCN-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28
 define amdgpu_ps void @smrd_vgpr_merged(<4 x i32> inreg %desc, i32 %a) #0 {

@@ -105,6 +105,10 @@
 # RUN: llvm-readobj --file-headers %t.elf32_sparcel.o | FileCheck %s --check-prefixes=CHECK,LE,SPARCEL,32,SYSV
 # RUN: llvm-readobj --file-headers %t.elf32_sparcel.dwo | FileCheck %s --check-prefixes=CHECK,LE,SPARCEL,32,SYSV
 
+# RUN: llvm-objcopy %t.o -O elf32-hexagon %t.elf32_hexagon.o --split-dwo=%t.elf32_hexagon.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_hexagon.o | FileCheck %s --check-prefixes=CHECK,LE,HEXAGON,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_hexagon.dwo | FileCheck %s --check-prefixes=CHECK,LE,HEXAGON,32,SYSV
+
 !ELF
 FileHeader:
   Class:           ELFCLASS32
@@ -133,16 +137,17 @@ Symbols:
     Binding:  STB_GLOBAL
 
 # CHECK: Format:
-# 32-SAME:      ELF32-
-# 64-SAME:      ELF64-
+# 32-SAME:      elf32-
+# 64-SAME:      elf64-
 # I386-SAME:    i386
 # IAMCU-SAME:   iamcu
 # AARCH-SAME:   aarch64
-# ARM-SAME:     arm-little
+# ARM-SAME:     littlearm
+# HEXAGON-SAME: hexagon
 # MIPS-SAME:    mips
-# PPC-SAME:     ppc{{$}}
-# PPC64BE-SAME: ppc64{{$}}
-# PPC64LE-SAME: ppc64{{$}}
+# PPC-SAME:     powerpc{{$}}
+# PPC64BE-SAME: powerpc{{$}}
+# PPC64LE-SAME: powerpcle{{$}}
 # RISCV32-SAME: riscv{{$}}
 # RISCV64-SAME: riscv{{$}}
 # SPARC-SAME:   sparc
@@ -153,6 +158,7 @@ Symbols:
 # IAMCU-NEXT:    Arch: i386
 # AARCH-NEXT:    Arch: aarch64
 # ARM-NEXT:      Arch: arm
+# HEXAGON-NEXT:  Arch: hexagon
 # MIPSBE-NEXT:   Arch: mips{{$}}
 # MIPSLE-NEXT:   Arch: mipsel{{$}}
 # MIPS64BE-NEXT: Arch: mips64{{$}}
@@ -181,6 +187,7 @@ Symbols:
 
 # AARCH:   Machine: EM_AARCH64 (0xB7)
 # ARM:     Machine: EM_ARM (0x28)
+# HEXAGON: Machine: EM_HEXAGON (0xA4)
 # I386:    Machine: EM_386 (0x3)
 # IAMCU:   Machine: EM_IAMCU (0x6)
 # MIPS:    Machine: EM_MIPS (0x8)

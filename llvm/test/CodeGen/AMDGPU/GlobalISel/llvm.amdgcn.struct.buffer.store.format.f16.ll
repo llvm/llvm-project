@@ -219,7 +219,43 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ret void
 }
 
+define amdgpu_ps void @struct_buffer_store_format_i16__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset(i16 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
+  ; UNPACKED-LABEL: name: struct_buffer_store_format_i16__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
+  ; UNPACKED: bb.1 (%ir-block.0):
+  ; UNPACKED:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
+  ; UNPACKED:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; UNPACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; UNPACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; UNPACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; UNPACKED:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; UNPACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; UNPACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
+  ; UNPACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
+  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_X_gfx80_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "TargetCustom7", align 1, addrspace 4)
+  ; UNPACKED:   S_ENDPGM 0
+  ; PACKED-LABEL: name: struct_buffer_store_format_i16__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
+  ; PACKED: bb.1 (%ir-block.0):
+  ; PACKED:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
+  ; PACKED:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; PACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; PACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; PACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; PACKED:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; PACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; PACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
+  ; PACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
+  ; PACKED:   BUFFER_STORE_FORMAT_D16_X_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "TargetCustom7", align 1, addrspace 4)
+  ; PACKED:   S_ENDPGM 0
+  call void @llvm.amdgcn.struct.buffer.store.format.i16(i16 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.struct.buffer.store.format.f16(half, <4 x i32>, i32, i32, i32, i32 immarg)
 declare void @llvm.amdgcn.struct.buffer.store.format.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32 immarg)
 declare void @llvm.amdgcn.struct.buffer.store.format.v3f16(<3 x half>, <4 x i32>, i32, i32, i32, i32 immarg)
 declare void @llvm.amdgcn.struct.buffer.store.format.v4f16(<4 x half>, <4 x i32>, i32, i32, i32, i32 immarg)
+declare void @llvm.amdgcn.struct.buffer.store.format.i16(i16, <4 x i32>, i32, i32, i32, i32 immarg)

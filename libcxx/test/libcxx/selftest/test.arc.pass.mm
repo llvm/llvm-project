@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: has-fobjc-arc
+// ADDITIONAL_COMPILE_FLAGS: -fobjc-arc
+
 #if __has_feature(objc_arc) == 0
 #error "arc should be enabled"
 #endif

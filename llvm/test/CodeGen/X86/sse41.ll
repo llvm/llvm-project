@@ -1976,10 +1976,8 @@ define <4 x float> @insertps_5(<4 x float> %A, <4 x float> %B) {
 ;
 ; AVX512-LABEL: insertps_5:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpblendd $2, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x02,0xc1,0x02]
-; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
-; AVX512-NEXT:    vmovq %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x7e,0xc0]
-; AVX512-NEXT:    ## xmm0 = xmm0[0],zero
+; AVX512-NEXT:    vinsertps $92, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x5c]
+; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm1[1],zero,zero
 ; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %vecext = extractelement <4 x float> %A, i32 0
   %vecinit = insertelement <4 x float> undef, float %vecext, i32 0
@@ -2060,8 +2058,6 @@ define <4 x float> @insertps_8(<4 x float> %A, <4 x float> %B) {
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vinsertps $28, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x1c]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm1[0],zero,zero
-; AVX512-NEXT:    vmovq %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x7e,0xc0]
-; AVX512-NEXT:    ## xmm0 = xmm0[0],zero
 ; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %vecext = extractelement <4 x float> %A, i32 0
   %vecinit = insertelement <4 x float> undef, float %vecext, i32 0

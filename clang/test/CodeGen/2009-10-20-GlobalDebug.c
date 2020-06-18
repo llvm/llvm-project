@@ -2,10 +2,10 @@
 // RUN: %clang -target i386-apple-darwin10 -flto -S -g %s -o - | FileCheck %s
 
 // CHECK: @main.localstatic = internal global i32 0, align 4, !dbg [[L:![0-9]+]]
-// CHECK: @global = common global i32 0, align 4, !dbg [[G:![0-9]+]]
+// CHECK: @global = global i32 0, align 4, !dbg [[G:![0-9]+]]
 
 int global;
-int main() { 
+int main() {
   static int localstatic;
   return 0;
 }

@@ -11,5 +11,5 @@ void test() {
 // CHECK-NEXT:     `-OMPSingleDirective {{.*}} <line:4:1, col:19>
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:5:3>
 // CHECK-NEXT:         `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK-NEXT:           |-NullStmt {{.*}} <col:3> openmp_structured_block
+// CHECK-NEXT:           |-NullStmt {{.*}} <col:3>
 // CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-single.c:4:1) *const restrict'

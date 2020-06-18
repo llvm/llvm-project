@@ -50,9 +50,9 @@ template <typename T>
 class A {};
 
 int a1 = A<decltype(1 + 2)>(); // expected-error{{no viable conversion from 'A<decltype(1 + 2)>' (aka 'A<int>') to 'int'}}
-int a2 = A<A<decltype(1 + 2)>>(); // expected-error{{no viable conversion from 'A<A<decltype(1 + 2)> >' (aka 'A<A<int> >') to 'int'}}
+int a2 = A<A<decltype(1 + 2)>>(); // expected-error{{no viable conversion from 'A<A<decltype(1 + 2)>>' (aka 'A<A<int>>') to 'int'}}
 int a3 = A<__typeof(1 + 2)>(); // expected-error{{no viable conversion from 'A<typeof (1 + 2)>' (aka 'A<int>') to 'int'}}
-int a4 = A<A<__typeof(1 + 2)>>(); // expected-error{{no viable conversion from 'A<A<typeof (1 + 2)> >' (aka 'A<A<int> >') to 'int'}}
+int a4 = A<A<__typeof(1 + 2)>>(); // expected-error{{no viable conversion from 'A<A<typeof (1 + 2)>>' (aka 'A<A<int>>') to 'int'}}
 
 using B = A<decltype(1+2)>;
 int a5 = B(); // expected-error{{no viable conversion from 'B' (aka 'A<int>') to 'int'}}

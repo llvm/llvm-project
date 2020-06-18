@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %p/Inputs/hello.ll -o %t.hello.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/hello.s -o %t.hello.o
 ; RUN: llc -filetype=obj %s -o %t.o
 
 target triple = "wasm32-unknown-unknown"

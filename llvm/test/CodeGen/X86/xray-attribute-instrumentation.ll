@@ -49,9 +49,12 @@ NotEqual:
 }
 ; CHECK-LABEL: xray_instr_map
 ; CHECK-LABEL: Lxray_sleds_start1:
-; CHECK:       .quad {{.*}}xray_sled_2
-; CHECK:       .quad {{.*}}xray_sled_3
-; CHECK:       .quad {{.*}}xray_sled_4
+; CHECK:       Ltmp2:
+; CHECK-NEXT:   .quad {{.*}}xray_sled_2-{{\.?}}Ltmp2
+; CHECK:       Ltmp3:
+; CHECK-NEXT:   .quad {{.*}}xray_sled_3-{{\.?}}Ltmp3
+; CHECK:       Ltmp4:
+; CHECK-NEXT:   .quad {{.*}}xray_sled_4-{{\.?}}Ltmp4
 ; CHECK-LABEL: Lxray_sleds_end1:
 ; CHECK-LABEL: xray_fn_idx
 ; CHECK:       .quad {{.*}}xray_sleds_start1

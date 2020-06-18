@@ -534,7 +534,11 @@ private:
   /// decl_list ::= identifier | identifier, decl_list
   std::unique_ptr<PrototypeAST> parsePrototype() {
     auto loc = lexer.getLastLocation();
+
+    if (lexer.getCurToken() != tok_def)
+      return parseError<PrototypeAST>("def", "in prototype");
     lexer.consume(tok_def);
+
     if (lexer.getCurToken() != tok_identifier)
       return parseError<PrototypeAST>("function name", "in prototype");
 
@@ -579,7 +583,7 @@ private:
       } while (true);
     }
     if (lexer.getCurToken() != ')')
-      return parseError<PrototypeAST>("}", "to end function prototype");
+      return parseError<PrototypeAST>(")", "to end function prototype");
 
     // success.
     lexer.consume(Token(')'));

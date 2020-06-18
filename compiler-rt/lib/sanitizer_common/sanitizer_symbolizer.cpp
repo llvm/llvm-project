@@ -126,4 +126,10 @@ Symbolizer::SymbolizerScope::~SymbolizerScope() {
     sym_->end_hook_();
 }
 
+void Symbolizer::LateInitializeTools() {
+  for (auto &tool : tools_) {
+    tool.LateInitialize();
+  }
+}
+
 }  // namespace __sanitizer

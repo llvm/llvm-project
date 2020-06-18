@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestVisitor.h"
+#include "llvm/Support/Host.h"
 #include <stack>
 
 using namespace clang;

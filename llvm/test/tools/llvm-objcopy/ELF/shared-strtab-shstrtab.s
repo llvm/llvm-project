@@ -60,7 +60,7 @@
 ## Case 5: removing a symbol.
 # RUN: llvm-objcopy %t.o %t.remove-symbol -N foo
 # RUN: llvm-readobj --section-headers --symbols %t.remove-symbol \
-# RUN:   | FileCheck %s --check-prefix=SYMBOL-REMOVE --implicit-check-not=.shstrtab --implicit-check-not=foo
+# RUN:   | FileCheck %s --check-prefix=SYMBOL-REMOVE --implicit-check-not=.shstrtab --implicit-check-not="Name: foo"
 
 # SYMBOL-REMOVE: Sections [
 # SYMBOL-REMOVE:   Name: .foo (

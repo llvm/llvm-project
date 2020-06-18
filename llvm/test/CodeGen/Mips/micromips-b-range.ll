@@ -1,7 +1,7 @@
 ; RUN: llc -march=mips -relocation-model=pic -mattr=+micromips \
 ; RUN:     -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
 
-; CHECK-LABEL: foo:
+; CHECK-LABEL: <foo>:
 ; CHECK-NEXT:     0:	41 a2 00 00 	lui	$2, 0
 ; CHECK-NEXT:     4:	30 42 00 00 	addiu	$2, $2, 0
 ; CHECK-NEXT:     8:	03 22 11 50 	addu	$2, $2, $25

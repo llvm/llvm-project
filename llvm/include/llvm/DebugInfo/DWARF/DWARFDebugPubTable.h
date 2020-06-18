@@ -44,6 +44,9 @@ public:
     /// field itself.
     uint64_t Length;
 
+    /// The DWARF format of the set.
+    dwarf::DwarfFormat Format;
+
     /// This number is specific to the name lookup table and is independent of
     /// the DWARF version number.
     uint16_t Version;

@@ -517,7 +517,7 @@ DWARFDIE DWARFFormValue::Reference() const {
 
   case DW_FORM_ref_addr: {
     DWARFUnit *ref_cu =
-        m_unit->GetSymbolFileDWARF().DebugInfo()->GetUnitContainingDIEOffset(
+        m_unit->GetSymbolFileDWARF().DebugInfo().GetUnitContainingDIEOffset(
             DIERef::Section::DebugInfo, value);
     if (!ref_cu) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
@@ -530,7 +530,7 @@ DWARFDIE DWARFFormValue::Reference() const {
 
   case DW_FORM_ref_sig8: {
     DWARFTypeUnit *tu =
-        m_unit->GetSymbolFileDWARF().DebugInfo()->GetTypeUnitForHash(value);
+        m_unit->GetSymbolFileDWARF().DebugInfo().GetTypeUnitForHash(value);
     if (!tu)
       return {};
     return tu->GetDIE(tu->GetTypeOffset());

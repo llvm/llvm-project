@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Logger.h"
 #include "index/Background.h"
+#include "support/Logger.h"
 
 namespace clang {
 namespace clangd {

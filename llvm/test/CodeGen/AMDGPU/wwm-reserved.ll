@@ -44,7 +44,7 @@ entry:
 ; GFX9: v_mov_b32_dpp v[[FIRST_MOV:[0-9]+]], v{{[0-9]+}} row_bcast:31 row_mask:0xc bank_mask:0xf
 ; GFX9: v_add_u32_e32 v[[FIRST_ADD:[0-9]+]], v{{[0-9]+}}, v[[FIRST_MOV]]
 ; GFX9: v_mov_b32_e32 v[[FIRST:[0-9]+]], v[[FIRST_ADD]]
-; GFX9-O0: buffer_store_dword v[[FIRST]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, s[[FIRST_SGPR_OFFSET:[0-9]+]] offset:[[FIRST_IMM_OFFSET:[0-9]+]]
+; GFX9-O0: buffer_store_dword v[[FIRST]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, 0 offset:[[FIRST_IMM_OFFSET:[0-9]+]]
   %tmp120 = tail call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 %tmp105, i32 323, i32 12, i32 15, i1 false)
   %tmp121 = add i32 %tmp105, %tmp120
   %tmp122 = tail call i32 @llvm.amdgcn.wwm.i32(i32 %tmp121)
@@ -58,7 +58,7 @@ if:
 ; GFX9: v_mov_b32_dpp v[[SECOND_MOV:[0-9]+]], v{{[0-9]+}} row_bcast:31 row_mask:0xc bank_mask:0xf
 ; GFX9: v_add_u32_e32 v[[SECOND_ADD:[0-9]+]], v{{[0-9]+}}, v[[SECOND_MOV]]
 ; GFX9: v_mov_b32_e32 v[[SECOND:[0-9]+]], v[[SECOND_ADD]]
-; GFX9-O0: buffer_store_dword v[[SECOND]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, s[[SECOND_SGPR_OFFSET:[0-9]+]] offset:[[SECOND_IMM_OFFSET:[0-9]+]]
+; GFX9-O0: buffer_store_dword v[[SECOND]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, 0 offset:[[SECOND_IMM_OFFSET:[0-9]+]]
   %tmp135 = tail call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 %tmp107, i32 323, i32 12, i32 15, i1 false)
   %tmp136 = add i32 %tmp107, %tmp135
   %tmp137 = tail call i32 @llvm.amdgcn.wwm.i32(i32 %tmp136)
@@ -67,8 +67,8 @@ if:
 merge:
   %merge_value = phi i32 [ 0, %entry ], [%tmp137, %if ]
 ; GFX9-O3: v_cmp_eq_u32_e32 vcc, v[[FIRST]], v[[SECOND]]
-; GFX9-O0: buffer_load_dword v[[SECOND:[0-9]+]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, s[[SECOND_SGPR_OFFSET]] offset:[[SECOND_IMM_OFFSET]]
-; GFX9-O0: buffer_load_dword v[[FIRST:[0-9]+]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, s[[FIRST_SGPR_OFFSET]] offset:[[FIRST_IMM_OFFSET]]
+; GFX9-O0: buffer_load_dword v[[SECOND:[0-9]+]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, 0 offset:[[SECOND_IMM_OFFSET]]
+; GFX9-O0: buffer_load_dword v[[FIRST:[0-9]+]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, 0 offset:[[FIRST_IMM_OFFSET]]
 ; GFX9-O0: v_cmp_eq_u32_e64 s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, v[[FIRST]], v[[SECOND]]
   %tmp138 = icmp eq i32 %tmp122, %merge_value
   %tmp139 = sext i1 %tmp138 to i32
@@ -90,10 +90,10 @@ define i32 @called(i32 %a) noinline {
 }
 
 define amdgpu_kernel void @call(<4 x i32> inreg %tmp14, i32 inreg %arg) {
-; GFX9-O0: v_mov_b32_e32 v0, s2
+; GFX9-O0: v_mov_b32_e32 v0, s0
 ; GFX9-O3: v_mov_b32_e32 v2, s0
 ; GFX9-NEXT: s_not_b64 exec, exec
-; GFX9-O0-NEXT: v_mov_b32_e32 v0, s3
+; GFX9-O0-NEXT: v_mov_b32_e32 v0, s1
 ; GFX9-O3-NEXT: v_mov_b32_e32 v2, 0
 ; GFX9-NEXT: s_not_b64 exec, exec
   %tmp107 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %arg, i32 0)
@@ -136,8 +136,8 @@ define amdgpu_kernel void @call_i64(<4 x i32> inreg %tmp14, i64 inreg %arg) {
 ; GFX9-O0: buffer_store_dword v1
 ; GFX9: s_swappc_b64
   %tmp134 = call i64 @called_i64(i64 %tmp107)
-; GFX9-O0: buffer_load_dword v6
-; GFX9-O0: buffer_load_dword v7
+; GFX9-O0: buffer_load_dword v4
+; GFX9-O0: buffer_load_dword v5
   %tmp136 = add i64 %tmp134, %tmp107
   %tmp137 = tail call i64 @llvm.amdgcn.wwm.i64(i64 %tmp136)
   %tmp138 = bitcast i64 %tmp137 to <2 x i32>

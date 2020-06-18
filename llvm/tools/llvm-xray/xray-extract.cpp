@@ -63,9 +63,9 @@ void exportAsYAML(const InstrumentationMap &Map, raw_ostream &OS,
     auto FuncId = Map.getFunctionId(Sled.Function);
     if (!FuncId)
       return;
-    YAMLSleds.push_back({*FuncId, Sled.Address, Sled.Function, Sled.Kind,
-                         Sled.AlwaysInstrument,
-                         ExtractSymbolize ? FH.SymbolOrNumber(*FuncId) : ""});
+    YAMLSleds.push_back(
+        {*FuncId, Sled.Address, Sled.Function, Sled.Kind, Sled.AlwaysInstrument,
+         ExtractSymbolize ? FH.SymbolOrNumber(*FuncId) : "", Sled.Version});
   }
   Output Out(OS, nullptr, 0);
   Out << YAMLSleds;

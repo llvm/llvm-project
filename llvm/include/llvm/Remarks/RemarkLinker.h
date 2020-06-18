@@ -80,8 +80,7 @@ public:
   /// Return a collection of the linked unique remarks to iterate on.
   /// Ex:
   /// for (const Remark &R : RL.remarks() { [...] }
-  using iterator =
-      pointee_iterator<std::set<std::unique_ptr<Remark>>::iterator>;
+  using iterator = pointee_iterator<decltype(Remarks)::const_iterator>;
 
   iterator_range<iterator> remarks() const {
     return {Remarks.begin(), Remarks.end()};

@@ -349,7 +349,10 @@ define void @f17(float %in, float* %out) #0 {
 ; CHECK: sqebr
 ; CHECK: ste
 ; CHECK: jg bar
-  %sqrt = call float @llvm.sqrt.f32(float %in)
+  %sqrt = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %in,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.ignore") #0
   store float %sqrt, float* %out, align 4
   tail call void @bar() #0
   ret void

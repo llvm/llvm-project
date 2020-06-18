@@ -1,5 +1,5 @@
 # RUN: ld64.lld -arch x86_64 %s -o %t -e _main %p/Inputs/x86_64/libSystem.yaml
-# RUN: llvm-objdump -unwind-info %t | FileCheck %s
+# RUN: llvm-objdump --unwind-info %t | FileCheck %s
 
 # CHECK: Contents of __unwind_info section:
 # CHECK:   Version:                                   0x1

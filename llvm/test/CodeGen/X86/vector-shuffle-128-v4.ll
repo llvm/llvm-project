@@ -1583,11 +1583,18 @@ define <4 x i32> @shuffle_v4i32_2456(<4 x i32> %a, <4 x i32> %b) {
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: shuffle_v4i32_2456:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,2,2]
-; AVX-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10,11]
-; AVX-NEXT:    retq
+; AVX1OR2-LABEL: shuffle_v4i32_2456:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,2,2]
+; AVX1OR2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10,11]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v4i32_2456:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm2 = [6,0,1,2]
+; AVX512VL-NEXT:    vpermi2d %xmm0, %xmm1, %xmm2
+; AVX512VL-NEXT:    vmovdqa %xmm2, %xmm0
+; AVX512VL-NEXT:    retq
   %s1 = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
   %s2 = shufflevector <4 x i32> %s1, <4 x i32> %b, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
   ret <4 x i32> %s2
@@ -2041,6 +2048,80 @@ define <4 x float> @broadcast_v4f32_0101_from_v2f32(<2 x float>* %x) {
   %1 = load <2 x float>, <2 x float>* %x, align 1
   %2 = shufflevector <2 x float> %1, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x float> %2
+}
+
+define <4 x i32> @extract3_insert0_v4i32_7123(<4 x i32> %a0, <4 x i32> %a1) {
+; SSE2-LABEL: extract3_insert0_v4i32_7123:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE2-NEXT:    retq
+;
+; SSE3-LABEL: extract3_insert0_v4i32_7123:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE3-NEXT:    movd %xmm1, %eax
+; SSE3-NEXT:    movd %eax, %xmm1
+; SSE3-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE3-NEXT:    retq
+;
+; SSSE3-LABEL: extract3_insert0_v4i32_7123:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    movd %eax, %xmm1
+; SSSE3-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: extract3_insert0_v4i32_7123:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    extractps $3, %xmm1, %eax
+; SSE41-NEXT:    pinsrd $0, %eax, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: extract3_insert0_v4i32_7123:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextractps $3, %xmm1, %eax
+; AVX-NEXT:    vpinsrd $0, %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = extractelement <4 x i32> %a1, i32 3
+  %2 = insertelement <4 x i32> %a0, i32 %1, i32 0
+  ret <4 x i32> %2
+}
+
+define <4 x i32> @extract3_insert3_v4i32_0127(<4 x i32> %a0, <4 x i32> %a1) {
+; SSE2-LABEL: extract3_insert3_v4i32_0127:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[2,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; SSE2-NEXT:    retq
+;
+; SSE3-LABEL: extract3_insert3_v4i32_0127:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[2,0]
+; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; SSE3-NEXT:    retq
+;
+; SSSE3-LABEL: extract3_insert3_v4i32_0127:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[2,0]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: extract3_insert3_v4i32_0127:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: extract3_insert3_v4i32_0127:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
+; AVX-NEXT:    retq
+  %1 = extractelement <4 x i32> %a1, i32 3
+  %2 = insertelement <4 x i32> %a0, i32 %1, i32 3
+  ret <4 x i32> %2
 }
 
 define <4 x i32> @insert_reg_and_zero_v4i32(i32 %a) {

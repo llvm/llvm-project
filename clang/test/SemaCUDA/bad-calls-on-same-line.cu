@@ -33,8 +33,8 @@ inline __host__ __device__ void hd() {
 
 void host_fn() {
   hd<int>();
-  hd<double>();  // expected-note {{function template specialization 'hd<double>'}}
+  hd<double>();
   // expected-note@-1 {{called by 'host_fn'}}
-  hd<float>();  // expected-note {{function template specialization 'hd<float>'}}
+  hd<float>();
   // expected-note@-1 {{called by 'host_fn'}}
 }

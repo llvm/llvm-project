@@ -1,5 +1,11 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
+// CHECK: llvm.mlir.global external @default_external
+llvm.mlir.global @default_external() : !llvm.i64
+
+// CHECK: llvm.mlir.global external constant @default_external_constant
+llvm.mlir.global constant @default_external_constant(42) : !llvm.i64
+
 // CHECK: llvm.mlir.global internal @global(42 : i64) : !llvm.i64
 llvm.mlir.global internal @global(42 : i64) : !llvm.i64
 
@@ -59,13 +65,13 @@ func @references() {
 
 // -----
 
-// expected-error @+1 {{op requires string attribute 'sym_name'}}
-"llvm.mlir.global"() {type = !llvm.i64, constant, value = 42 : i64} : () -> ()
+// expected-error @+1 {{requires string attribute 'sym_name'}}
+"llvm.mlir.global"() ({}) {type = !llvm.i64, constant, value = 42 : i64} : () -> ()
 
 // -----
 
-// expected-error @+1 {{op requires attribute 'type'}}
-"llvm.mlir.global"() {sym_name = "foo", constant, value = 42 : i64} : () -> ()
+// expected-error @+1 {{requires attribute 'type'}}
+"llvm.mlir.global"() ({}) {sym_name = "foo", constant, value = 42 : i64} : () -> ()
 
 // -----
 
@@ -74,13 +80,13 @@ llvm.mlir.global internal constant @constant(37.0) : !llvm<"label">
 
 // -----
 
-// expected-error @+1 {{'addr_space' failed to satisfy constraint: non-negative 32-bit integer}}
-"llvm.mlir.global"() {sym_name = "foo", type = !llvm.i64, value = 42 : i64, addr_space = -1 : i32, linkage = 0} : () -> ()
+// expected-error @+1 {{'addr_space' failed to satisfy constraint: 32-bit signless integer attribute whose value is non-negative}}
+"llvm.mlir.global"() ({}) {sym_name = "foo", type = !llvm.i64, value = 42 : i64, addr_space = -1 : i32, linkage = 0} : () -> ()
 
 // -----
 
-// expected-error @+1 {{'addr_space' failed to satisfy constraint: non-negative 32-bit integer}}
-"llvm.mlir.global"() {sym_name = "foo", type = !llvm.i64, value = 42 : i64, addr_space = 1.0 : f32, linkage = 0} : () -> ()
+// expected-error @+1 {{'addr_space' failed to satisfy constraint: 32-bit signless integer attribute whose value is non-negative}}
+"llvm.mlir.global"() ({}) {sym_name = "foo", type = !llvm.i64, value = 42 : i64, addr_space = 1.0 : f32, linkage = 0} : () -> ()
 
 // -----
 

@@ -124,11 +124,11 @@ public:
     return CurrentSCC;
   }
 
-  /// Test if the current SCC has a loop.
+  /// Test if the current SCC has a cycle.
   ///
   /// If the SCC has more than one node, this is trivially true.  If not, it may
-  /// still contain a loop if the node has an edge back to itself.
-  bool hasLoop() const;
+  /// still contain a cycle if the node has an edge back to itself.
+  bool hasCycle() const;
 
   /// This informs the \c scc_iterator that the specified \c Old node
   /// has been deleted, and \c New is to be used in its place.
@@ -212,7 +212,7 @@ template <class GraphT, class GT> void scc_iterator<GraphT, GT>::GetNextSCC() {
 }
 
 template <class GraphT, class GT>
-bool scc_iterator<GraphT, GT>::hasLoop() const {
+bool scc_iterator<GraphT, GT>::hasCycle() const {
     assert(!CurrentSCC.empty() && "Dereferencing END SCC iterator!");
     if (CurrentSCC.size() > 1)
       return true;

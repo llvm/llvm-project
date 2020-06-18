@@ -22,13 +22,14 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/iterator_range.h"
 
 namespace llvm {
 
 // Forward declarations.
+class raw_ostream;
+class Value;
+class VPSlotTracker;
 class VPUser;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
@@ -37,11 +38,11 @@ class VPUser;
 // and live-outs which the VPlan will need to fix accordingly.
 class VPValue {
   friend class VPBuilder;
-  friend class VPlanTransforms;
+  friend struct VPlanTransforms;
   friend class VPBasicBlock;
   friend class VPInterleavedAccessInfo;
+  friend class VPSlotTracker;
 
-private:
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
   SmallVector<VPUser *, 1> Users;
@@ -62,6 +63,7 @@ protected:
 
   /// Return the underlying Value attached to this VPValue.
   Value *getUnderlyingValue() { return UnderlyingVal; }
+  const Value *getUnderlyingValue() const { return UnderlyingVal; }
 
   // Set \p Val as the underlying Value of this VPValue.
   void setUnderlyingValue(Value *Val) {
@@ -85,9 +87,8 @@ public:
   /// for any other purpose, as the values may change as LLVM evolves.
   unsigned getVPValueID() const { return SubclassID; }
 
-  void printAsOperand(raw_ostream &OS) const {
-    OS << "%vp" << (unsigned short)(unsigned long long)this;
-  }
+  void printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const;
+  void print(raw_ostream &OS, VPSlotTracker &Tracker) const;
 
   unsigned getNumUsers() const { return Users.size(); }
   void addUser(VPUser &User) { Users.push_back(&User); }
@@ -129,7 +130,6 @@ raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
 class VPUser : public VPValue {
-private:
   SmallVector<VPValue *, 2> Operands;
 
 protected:
@@ -144,6 +144,12 @@ public:
   VPUser(ArrayRef<VPValue *> Operands) : VPUser(VPValue::VPUserSC, Operands) {}
   VPUser(std::initializer_list<VPValue *> Operands)
       : VPUser(ArrayRef<VPValue *>(Operands)) {}
+  template <typename IterT>
+  VPUser(iterator_range<IterT> Operands) : VPValue(VPValue::VPUserSC) {
+    for (VPValue *Operand : Operands)
+      addOperand(Operand);
+  }
+
   VPUser(const VPUser &) = delete;
   VPUser &operator=(const VPUser &) = delete;
 
@@ -178,6 +184,37 @@ public:
   operand_range operands() { return operand_range(op_begin(), op_end()); }
   const_operand_range operands() const {
     return const_operand_range(op_begin(), op_end());
+  }
+};
+class VPlan;
+class VPBasicBlock;
+class VPRegionBlock;
+
+/// This class can be used to assign consecutive numbers to all VPValues in a
+/// VPlan and allows querying the numbering for printing, similar to the
+/// ModuleSlotTracker for IR values.
+class VPSlotTracker {
+  DenseMap<const VPValue *, unsigned> Slots;
+  unsigned NextSlot = 0;
+
+  void assignSlots(const VPBlockBase *VPBB);
+  void assignSlots(const VPRegionBlock *Region);
+  void assignSlots(const VPBasicBlock *VPBB);
+  void assignSlot(const VPValue *V);
+
+  void assignSlots(const VPlan &Plan);
+
+public:
+  VPSlotTracker(const VPlan *Plan) {
+    if (Plan)
+      assignSlots(*Plan);
+  }
+
+  unsigned getSlot(const VPValue *V) const {
+    auto I = Slots.find(V);
+    if (I == Slots.end())
+      return -1;
+    return I->second;
   }
 };
 

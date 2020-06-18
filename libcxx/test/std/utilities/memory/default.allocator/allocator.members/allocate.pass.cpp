@@ -9,7 +9,7 @@
 // <memory>
 
 // allocator:
-// pointer allocate(size_type n, allocator<void>::const_pointer hint=0);
+// T* allocate(size_t n);
 
 #include <memory>
 #include <cassert>
@@ -69,27 +69,6 @@ void test_aligned() {
     assert(T::constructed == 0);
     globalMemCounter.last_delete_align = 0;
     a.deallocate(ap, 3);
-    assert(globalMemCounter.checkOutstandingNewEq(0));
-    assert(globalMemCounter.checkDeleteCalledEq(1));
-    assert(globalMemCounter.checkAlignedDeleteCalledEq(ExpectAligned));
-    assert(globalMemCounter.checkLastDeleteAlignEq(ExpectAligned ? Align : 0));
-    assert(T::constructed == 0);
-  }
-  globalMemCounter.reset();
-  {
-    globalMemCounter.last_new_size = 0;
-    globalMemCounter.last_new_align = 0;
-    T* volatile ap2 = a.allocate(11, (const void*)5);
-    DoNotOptimize(ap2);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
-    assert(globalMemCounter.checkNewCalledEq(1));
-    assert(globalMemCounter.checkAlignedNewCalledEq(ExpectAligned));
-    assert(globalMemCounter.checkLastNewSizeEq(11 * sizeof(T)));
-    assert(globalMemCounter.checkLastNewAlignEq(ExpectAligned ? Align : 0));
-    assert(T::constructed == 0);
-    globalMemCounter.last_delete_align = 0;
-    a.deallocate(ap2, 11);
-    DoNotOptimize(ap2);
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(globalMemCounter.checkDeleteCalledEq(1));
     assert(globalMemCounter.checkAlignedDeleteCalledEq(ExpectAligned));

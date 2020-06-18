@@ -1,0 +1,14 @@
+## Unsupported on windows as marking files "unreadable"
+## is non-trivial on windows.
+# UNSUPPORTED: system-windows
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: echo file1 > %t/1.txt
+
+## No Permission:
+# RUN: llvm-ar rc %t/permission.b %t/1.txt
+# RUN: chmod 100 %t/permission.b
+# RUN: not llvm-ar p %t/permission.b 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO-PERMISSION -DARCHIVE=%t/permission.b
+
+# NO-PERMISSION: error: unable to open '[[ARCHIVE]]': {{[pP]}}ermission denied

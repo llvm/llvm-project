@@ -39,6 +39,11 @@ let Command = "settings read" in {
     Desc<"The file from which to read the settings.">;
 }
 
+let Command = "settings clear" in {
+  def setclear_all : Option<"all", "a">,
+    Desc<"Clear all settings.">;
+}
+
 let Command = "breakpoint list" in {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.
@@ -152,7 +157,7 @@ let Command = "breakpoint set" in {
     "multiple times tomake one breakpoint for multiple methods.">;
   def breakpoint_set_func_regex : Option<"func-regex", "r">, Group<7>,
     Arg<"RegularExpression">, Required, Desc<"Set the breakpoint by function "
-    "name, evaluating a regular-expression to findthe function name(s).">;
+    "name, evaluating a regular-expression to find the function name(s).">;
   def breakpoint_set_basename : Option<"basename", "b">, Group<8>,
     Arg<"FunctionName">, Required, Completion<"Symbol">,
     Desc<"Set the breakpoint by function basename (C++ namespaces and arguments"
@@ -306,7 +311,7 @@ let Command = "disassemble" in {
     Desc<"Address at which to start disassembling.">;
   def disassemble_options_end_address : Option<"end-address", "e">, Group<1>,
     Arg<"AddressOrExpression">, Desc<"Address at which to end disassembling.">;
-  def disassemble_options_count : Option<"count", "c">, Groups<[2,3,4,5]>,
+  def disassemble_options_count : Option<"count", "c">, Groups<[2,3,4,5,7]>,
     Arg<"NumLines">, Desc<"Number of instructions to display.">;
   def disassemble_options_name : Option<"name", "n">, Group<3>,
     Arg<"FunctionName">, Completion<"Symbol">,
@@ -321,6 +326,8 @@ let Command = "disassemble" in {
   def disassemble_options_address : Option<"address", "a">, Group<7>,
     Arg<"AddressOrExpression">,
     Desc<"Disassemble function containing this address.">;
+  def disassemble_options_force : Option<"force", "\\x01">, Groups<[2,3,4,5,7]>,
+    Desc<"Force dissasembly of large functions.">;
 }
 
 let Command = "expression" in {
@@ -384,7 +391,8 @@ let Command = "frame recognizer add" in {
     "to.">;
   def frame_recognizer_function : Option<"function", "n">, Arg<"Name">,
     Completion<"Symbol">,
-    Desc<"Name of the function that this recognizer applies to.">;
+    Desc<"Name of the function that this recognizer applies to. "
+         "Can be specified more than once except if -x|--regex is provided.">;
   def frame_recognizer_python_class : Option<"python-class", "l">, Group<2>,
     Arg<"PythonClass">,
     Desc<"Give the name of a Python class to use for this frame recognizer.">;
@@ -616,6 +624,8 @@ let Command = "platform process attach" in {
 }
 
 let Command = "platform shell" in {
+  def platform_shell_host : Option<"host", "h">,
+    Desc<"Run the commands on the host shell when enabled.">;
   def platform_shell_timeout : Option<"timeout", "t">, Arg<"Value">,
     Desc<"Seconds to wait for the remote host to finish running the command.">;
 }
@@ -670,6 +680,11 @@ let Command = "process handle" in {
     Desc<"Whether or not the signal should be passed to the process.">;
 }
 
+let Command = "process status" in {
+  def process_status_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"Show verbose process status including extended crash information.">;
+}
+
 let Command = "script import" in {
   def script_import_allow_reload : Option<"allow-reload", "r">, Group<1>,
     Desc<"Allow the script to be loaded even if it was already loaded before. "
@@ -690,6 +705,7 @@ let Command = "script add" in {
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
 }
+
 let Command = "source info" in {
   def source_info_count : Option<"count", "c">, Arg<"Count">,
     Desc<"The number of line entries to display.">;
@@ -958,6 +974,11 @@ let Command = "thread plan list" in {
     Desc<"Display more information about the thread plans">;
   def thread_plan_list_internal : Option<"internal", "i">, Group<1>,
     Desc<"Display internal as well as user thread plans">;
+  def thread_plan_list_thread_id : Option<"thread-id", "t">, Group<1>,
+    Arg<"ThreadID">, Desc<"List the thread plans for this TID, can be "
+    "specified more than once.">;
+  def thread_plan_list_unreported : Option<"unreported", "u">, Group<1>,
+    Desc<"Display thread plans for unreported threads">;
 }
 
 let Command = "type summary add" in {

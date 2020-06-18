@@ -713,6 +713,14 @@ bool ScheduleDAGTopologicalSort::WillCreateCycle(SUnit *TargetSU, SUnit *SU) {
   return false;
 }
 
+void ScheduleDAGTopologicalSort::AddSUnitWithoutPredecessors(const SUnit *SU) {
+  assert(SU->NodeNum == Index2Node.size() && "Node cannot be added at the end");
+  assert(SU->NumPreds == 0 && "Can only add SU's with no predecessors");
+  Node2Index.push_back(Index2Node.size());
+  Index2Node.push_back(SU->NodeNum);
+  Visited.resize(Node2Index.size());
+}
+
 bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
                                              const SUnit *TargetSU) {
   FixOrder();

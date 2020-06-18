@@ -6,10 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+
+static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
+  if (!Mod)
+    Err.print("DebugInfoTest", errs());
+  return Mod;
+}
 
 namespace {
 
@@ -77,6 +93,96 @@ TEST(DINodeTest, splitFlags) {
               DINode::FlagZero);
   CHECK_SPLIT(DINode::FlagZero, {}, DINode::FlagZero);
 #undef CHECK_SPLIT
+}
+
+TEST(StripTest, LoopMetadata) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define void @f() !dbg !5 {
+      ret void, !dbg !10, !llvm.loop !11
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.debugify = !{!3, !3}
+    !llvm.module.flags = !{!4}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "loop.ll", directory: "/")
+    !2 = !{}
+    !3 = !{i32 1}
+    !4 = !{i32 2, !"Debug Info Version", i32 3}
+    !5 = distinct !DISubprogram(name: "f", linkageName: "f", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !7)
+    !6 = !DISubroutineType(types: !2)
+    !7 = !{!8}
+    !8 = !DILocalVariable(name: "1", scope: !5, file: !1, line: 1, type: !9)
+    !9 = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_unsigned)
+    !10 = !DILocation(line: 1, column: 1, scope: !5)
+    !11 = distinct !{!11, !10, !10}
+)");
+
+  // Look up the debug info emission kind for the CU via the loop metadata
+  // attached to the terminator. If, when stripping non-line table debug info,
+  // we update the terminator's metadata correctly, we should be able to
+  // observe the change in emission kind for the CU.
+  auto getEmissionKind = [&]() {
+    Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+    MDNode *LoopMD = I.getMetadata(LLVMContext::MD_loop);
+    return cast<DILocation>(LoopMD->getOperand(1))
+        ->getScope()
+        ->getSubprogram()
+        ->getUnit()
+        ->getEmissionKind();
+  };
+
+  EXPECT_EQ(getEmissionKind(), DICompileUnit::FullDebug);
+
+  bool Changed = stripNonLineTableDebugInfo(*M);
+  EXPECT_TRUE(Changed);
+
+  EXPECT_EQ(getEmissionKind(), DICompileUnit::LineTablesOnly);
+
+  bool BrokenDebugInfo = false;
+  bool HardError = verifyModule(*M, &errs(), &BrokenDebugInfo);
+  EXPECT_FALSE(HardError);
+  EXPECT_FALSE(BrokenDebugInfo);
+}
+
+TEST(MetadataTest, DeleteInstUsedByDbgValue) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  // Find %b = add ...
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+
+  // Find the dbg.value using %b.
+  SmallVector<DbgValueInst *, 1> DVIs;
+  findDbgValues(DVIs, &I);
+
+  // Delete %b. The dbg.value should now point to undef.
+  I.eraseFromParent();
+  EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue()));
 }
 
 } // end namespace

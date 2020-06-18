@@ -13,87 +13,46 @@
 #ifndef MLIR_DIALECT_SPIRV_TARGETANDABI_H
 #define MLIR_DIALECT_SPIRV_TARGETANDABI_H
 
-#include "mlir/IR/Attributes.h"
+#include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
-class OpBuilder;
 class Operation;
-class Value;
-
-// Pull in SPIR-V attribute definitions.
-#include "mlir/Dialect/SPIRV/TargetAndABI.h.inc"
 
 namespace spirv {
-enum class Capability : uint32_t;
-enum class Extension;
 enum class StorageClass : uint32_t;
-enum class Version : uint32_t;
 
-namespace detail {
-struct TargetEnvAttributeStorage;
-} // namespace detail
-
-/// SPIR-V dialect-specific attribute kinds.
-// TODO(antiagainst): move to a more suitable place if we have more attributes.
-namespace AttrKind {
-enum Kind {
-  TargetEnv = Attribute::FIRST_SPIRV_ATTR,
-};
-} // namespace AttrKind
-
-/// An attribute that specifies the target version, allowed extensions and
-/// capabilities, and resource limits. These information describles a SPIR-V
-/// target environment.
-class TargetEnvAttr
-    : public Attribute::AttrBase<TargetEnvAttr, Attribute,
-                                 detail::TargetEnvAttributeStorage> {
+/// A wrapper class around a spirv::TargetEnvAttr to provide query methods for
+/// allowed version/capabilities/extensions.
+class TargetEnv {
 public:
-  using Base::Base;
+  explicit TargetEnv(TargetEnvAttr targetAttr);
 
-  /// Gets a TargetEnvAttr instance.
-  static TargetEnvAttr get(IntegerAttr version, ArrayAttr extensions,
-                           ArrayAttr capabilities, DictionaryAttr limits);
-
-  /// Returns the attribute kind's name (without the 'spv.' prefix).
-  static StringRef getKindName();
-
-  /// Returns the target version.
   Version getVersion();
 
-  struct ext_iterator final
-      : public llvm::mapped_iterator<ArrayAttr::iterator,
-                                     Extension (*)(Attribute)> {
-    explicit ext_iterator(ArrayAttr::iterator it);
-  };
-  using ext_range = llvm::iterator_range<ext_iterator>;
+  /// Returns true if the given capability is allowed.
+  bool allows(Capability) const;
+  /// Returns the first allowed one if any of the given capabilities is allowed.
+  /// Returns llvm::None otherwise.
+  Optional<Capability> allows(ArrayRef<Capability>) const;
 
-  /// Returns the target extensions.
-  ext_range getExtensions();
-  /// Returns the target extensions as a string array attribute.
-  ArrayAttr getExtensionsAttr();
+  /// Returns true if the given extension is allowed.
+  bool allows(Extension) const;
+  /// Returns the first allowed one if any of the given extensions is allowed.
+  /// Returns llvm::None otherwise.
+  Optional<Extension> allows(ArrayRef<Extension>) const;
 
-  struct cap_iterator final
-      : public llvm::mapped_iterator<ArrayAttr::iterator,
-                                     Capability (*)(Attribute)> {
-    explicit cap_iterator(ArrayAttr::iterator it);
-  };
-  using cap_range = llvm::iterator_range<cap_iterator>;
+  /// Returns the MLIRContext.
+  MLIRContext *getContext() const;
 
-  /// Returns the target capabilities.
-  cap_range getCapabilities();
-  /// Returns the target capabilities as an integer array attribute.
-  ArrayAttr getCapabilitiesAttr();
+  /// Allows implicity converting to the underlying spirv::TargetEnvAttr.
+  operator TargetEnvAttr() const { return targetAttr; }
 
-  /// Returns the target resource limits.
-  DictionaryAttr getResourceLimits();
-
-  static bool kindof(unsigned kind) { return kind == AttrKind::TargetEnv; }
-
-  static LogicalResult
-  verifyConstructionInvariants(Optional<Location> loc, MLIRContext *context,
-                               IntegerAttr version, ArrayAttr extensions,
-                               ArrayAttr capabilities, DictionaryAttr limits);
+private:
+  TargetEnvAttr targetAttr;
+  llvm::SmallSet<Extension, 4> givenExtensions;    /// Allowed extensions
+  llvm::SmallSet<Capability, 8> givenCapabilities; /// Allowed capabilities
 };
 
 /// Returns the attribute name for specifying argument ABI information.
@@ -102,7 +61,7 @@ StringRef getInterfaceVarABIAttrName();
 /// Gets the InterfaceVarABIAttr given its fields.
 InterfaceVarABIAttr getInterfaceVarABIAttr(unsigned descriptorSet,
                                            unsigned binding,
-                                           StorageClass storageClass,
+                                           Optional<StorageClass> storageClass,
                                            MLIRContext *context);
 
 /// Returns the attribute name for specifying entry point information.
@@ -132,9 +91,13 @@ StringRef getTargetEnvAttrName();
 /// and no extra extensions.
 TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);
 
-/// Queries the target environment from the given `op` or returns the default
-/// target environment (SPIR-V 1.0 with Shader capability and no extra
-/// extensions) if not provided.
+/// Queries the target environment recursively from enclosing symbol table ops
+/// containing the given `op`.
+TargetEnvAttr lookupTargetEnv(Operation *op);
+
+/// Queries the target environment recursively from enclosing symbol table ops
+/// containing the given `op` or returns the default target environment as
+/// returned by getDefaultTargetEnv() if not provided.
 TargetEnvAttr lookupTargetEnvOrDefault(Operation *op);
 
 } // namespace spirv

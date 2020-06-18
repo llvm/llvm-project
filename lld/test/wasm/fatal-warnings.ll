@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj %s -o %t.main.o
-; RUN: llc -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
 ; RUN: wasm-ld -o %t.wasm %t.main.o %t.ret32.o 2>&1 | FileCheck %s -check-prefix=CHECK-WARN
 ; RUN: not wasm-ld --fatal-warnings -o %t.wasm %t.main.o %t.ret32.o 2>&1 | FileCheck %s -check-prefix=CHECK-FATAL
 

@@ -1,9 +1,6 @@
 // FIXME: Actually, "perl".
 REQUIRES: shell
 
-// FIXME: Should ideally work on Windows.
-UNSUPPORTED: system-windows
-
 RUN: %scan-build -h | FileCheck %s
 RUN: %scan-build --help | FileCheck %s
 

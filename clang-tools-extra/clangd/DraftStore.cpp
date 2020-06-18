@@ -8,12 +8,13 @@
 
 #include "DraftStore.h"
 #include "SourceCode.h"
+#include "support/Logger.h"
 #include "llvm/Support/Errc.h"
 
 namespace clang {
 namespace clangd {
 
-llvm::Optional<std::string> DraftStore::getDraft(PathRef File) const {
+llvm::Optional<DraftStore::Draft> DraftStore::getDraft(PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
 
   auto It = Drafts.find(File);
@@ -33,14 +34,32 @@ std::vector<Path> DraftStore::getActiveFiles() const {
   return ResultVector;
 }
 
-void DraftStore::addDraft(PathRef File, llvm::StringRef Contents) {
-  std::lock_guard<std::mutex> Lock(Mutex);
-
-  Drafts[File] = std::string(Contents);
+static void updateVersion(DraftStore::Draft &D,
+                          llvm::Optional<int64_t> Version) {
+  if (Version) {
+    // We treat versions as opaque, but the protocol says they increase.
+    if (*Version <= D.Version)
+      log("File version went from {0} to {1}", D.Version, Version);
+    D.Version = *Version;
+  } else {
+    // Note that if D was newly-created, this will bump D.Version from -1 to 0.
+    ++D.Version;
+  }
 }
 
-llvm::Expected<std::string> DraftStore::updateDraft(
-    PathRef File, llvm::ArrayRef<TextDocumentContentChangeEvent> Changes) {
+int64_t DraftStore::addDraft(PathRef File, llvm::Optional<int64_t> Version,
+                         llvm::StringRef Contents) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+
+  Draft &D = Drafts[File];
+  updateVersion(D, Version);
+  D.Contents = Contents.str();
+  return D.Version;
+}
+
+llvm::Expected<DraftStore::Draft> DraftStore::updateDraft(
+    PathRef File, llvm::Optional<int64_t> Version,
+    llvm::ArrayRef<TextDocumentContentChangeEvent> Changes) {
   std::lock_guard<std::mutex> Lock(Mutex);
 
   auto EntryIt = Drafts.find(File);
@@ -49,8 +68,8 @@ llvm::Expected<std::string> DraftStore::updateDraft(
         "Trying to do incremental update on non-added document: " + File,
         llvm::errc::invalid_argument);
   }
-
-  std::string Contents = EntryIt->second;
+  Draft &D = EntryIt->second;
+  std::string Contents = EntryIt->second.Contents;
 
   for (const TextDocumentContentChangeEvent &Change : Changes) {
     if (!Change.range) {
@@ -104,8 +123,9 @@ llvm::Expected<std::string> DraftStore::updateDraft(
     Contents = std::move(NewContents);
   }
 
-  EntryIt->second = Contents;
-  return Contents;
+  updateVersion(D, Version);
+  D.Contents = std::move(Contents);
+  return D;
 }
 
 void DraftStore::removeDraft(PathRef File) {

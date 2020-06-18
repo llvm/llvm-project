@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -fopenmp-version=50 -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo() {
 }
@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
   #pragma omp target enter data map(to: i) device (S1) // expected-error {{'S1' does not refer to a value}}
   #pragma omp target enter data map(to: i) device (-2) // expected-error {{argument to 'device' clause must be a non-negative integer value}}
   #pragma omp target enter data map(to: i) device (-10u)
+  #pragma omp target enter data map(to: i) device (device_num: -10u) // expected-error {{use of undeclared identifier 'device_num'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp target enter data map(to: i) device (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   foo();
 

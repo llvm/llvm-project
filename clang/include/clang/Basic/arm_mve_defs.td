@@ -133,6 +133,18 @@ def unzip: CGHelperFn<"VectorUnzip"> {
 }
 def zip: CGHelperFn<"VectorZip">;
 
+// Trivial 'codegen' function that just returns its argument. Useful
+// for wrapping up a variable name like $foo into a thing you can pass
+// around as type 'dag'.
+def id: IRBuilderBase {
+  // All the other cases of IRBuilderBase use 'prefix' to specify a function
+  // call, including the open parenthesis. MveEmitter puts the closing paren on
+  // the end. So if we _just_ specify an open paren with no function name
+  // before it, then the generated C++ code will simply wrap the input value in
+  // parentheses, returning it unchanged.
+  let prefix = "(";
+}
+
 // Helper for making boolean flags in IR
 def i1: IRBuilderBase {
   let prefix = "llvm::ConstantInt::get(Builder.getInt1Ty(), ";
@@ -323,8 +335,10 @@ def SVector: VecOf<SScalar>;
 // UHalfVector is a vector of half-sized _unsigned integers_.
 def DblVector: VecOf<DoubleSize<Scalar>>;
 def DblPredicate: PredOf<DoubleSize<Scalar>>;
-def HalfVector: VecOf<HalfSize<Scalar>>;
-def UHalfVector: VecOf<Unsigned<HalfSize<Scalar>>>;
+def HalfScalar: HalfSize<Scalar>;
+def HalfVector: VecOf<HalfScalar>;
+def UHalfScalar: Unsigned<HalfSize<Scalar>>;
+def UHalfVector: VecOf<UHalfScalar>;
 
 // Expands to the 32-bit integer of the same signedness as Scalar.
 def Scalar32: CopyKind<u32, Scalar>;
@@ -474,9 +488,16 @@ class Intrinsic<Type ret_, dag args_, dag codegen_> {
   // True if the builtin has to avoid evaluating its arguments.
   bit nonEvaluating = 0;
 
+  // True if the intrinsic needs only the C header part (no codegen, semantic
+  // checks, etc). Used for redeclaring MVE intrinsics in the arm_cde.h header.
+  bit headerOnly = 0;
+
   // Use to override the suffix letter to make e.g.vfooq_p16
   // with an override suffix letter of "p".
   string overrideKindLetter = "";
+
+  // Name of the architecture extension, used in the Clang builtin name
+  string builtinExtension = "mve";
 }
 
 // Sometimes you have to use two separate Intrinsic declarations to
@@ -506,8 +527,8 @@ multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
   // provides the input value of the output register, i.e. all the
   // inactive lanes in the predicated operation take their values from
   // this.
-  def "_m" # nameSuffix:
-     Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg> {
+  def : Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg>,
+        NameOverride<NAME # "_m" # nameSuffix> {
     let pnt = pnt_m;
   }
 
@@ -515,8 +536,8 @@ multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
     // The _x variant leaves off that parameter, and simply uses an
     // undef value of the same type.
 
-    def "_x" # nameSuffix:
-      Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)> {
+    def : Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)>,
+          NameOverride<NAME # "_x" # nameSuffix> {
       let pnt = pnt_x;
     }
   }
@@ -551,6 +572,7 @@ multiclass IntrinsicMXNameOverride<Type rettype, dag arguments, dag cg,
 // instead of having to repeat a long list every time.
 
 def T {
+  list<Type> None = [Void];
   list<Type> Signed = [s8, s16, s32];
   list<Type> Unsigned = [u8, u16, u32];
   list<Type> Int = Signed # Unsigned;

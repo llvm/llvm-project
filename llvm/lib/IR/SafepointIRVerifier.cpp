@@ -783,7 +783,7 @@ void GCPtrTracker::transferBlock(const BasicBlock *BB, BasicBlockState &BBS,
 
 void GCPtrTracker::transferInstruction(const Instruction &I, bool &Cleared,
                                        AvailableValueSet &Available) {
-  if (isStatepoint(I)) {
+  if (isa<GCStatepointInst>(I)) {
     Cleared = true;
     Available.clear();
   } else if (containsGCPtrType(I.getType()))

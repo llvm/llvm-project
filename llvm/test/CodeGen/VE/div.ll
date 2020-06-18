@@ -94,8 +94,7 @@ define zeroext i8 @divu8(i8 zeroext %a, i8 zeroext %b) {
 define i64 @divi64ri(i64 %a, i64 %b) {
 ; CHECK-LABEL: divi64ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s1, 3, (0)1
-; CHECK-NEXT:    divs.l %s0, %s0, %s1
+; CHECK-NEXT:    divs.l %s0, %s0, (62)0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sdiv i64 %a, 3
   ret i64 %r
@@ -105,8 +104,7 @@ define i64 @divi64ri(i64 %a, i64 %b) {
 define i32 @divi32ri(i32 %a, i32 %b) {
 ; CHECK-LABEL: divi32ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s1, 3, (0)1
-; CHECK-NEXT:    divs.w.sx %s0, %s0, %s1
+; CHECK-NEXT:    divs.w.sx %s0, %s0, (62)0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sdiv i32 %a, 3
   ret i32 %r
@@ -116,8 +114,7 @@ define i32 @divi32ri(i32 %a, i32 %b) {
 define i64 @divu64ri(i64 %a, i64 %b) {
 ; CHECK-LABEL: divu64ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s1, 3, (0)1
-; CHECK-NEXT:    divu.l %s0, %s0, %s1
+; CHECK-NEXT:    divu.l %s0, %s0, (62)0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = udiv i64 %a, 3
   ret i64 %r
@@ -127,8 +124,7 @@ define i64 @divu64ri(i64 %a, i64 %b) {
 define i32 @divu32ri(i32 %a, i32 %b) {
 ; CHECK-LABEL: divu32ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    or %s1, 3, (0)1
-; CHECK-NEXT:    divu.w %s0, %s0, %s1
+; CHECK-NEXT:    divu.w %s0, %s0, (62)0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = udiv i32 %a, 3
   ret i32 %r

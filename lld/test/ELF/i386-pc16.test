@@ -2,7 +2,7 @@
 
 # RUN: yaml2obj %s -o %t.o
 # RUN: ld.lld -Ttext 0x0 %t.o -o %t.exe
-# RUN: llvm-objdump -s -section=.text %t.exe 2>&1 | FileCheck %s
+# RUN: llvm-objdump -s --section=.text %t.exe 2>&1 | FileCheck %s
 
 # CHECK:      Contents of section .text:
 # CHECK-NEXT:  0000 45231111 41231111
@@ -25,8 +25,7 @@ Sections:
     Info:            .text
     AddressAlign:    0x04
     Relocations:
-      - Offset:          0
-        Symbol:          _start
+      - Symbol:          _start
         Type:            R_386_16
       - Offset:          4
         Symbol:          _start

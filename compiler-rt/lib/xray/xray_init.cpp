@@ -84,8 +84,24 @@ void __xray_init() XRAY_NEVER_INSTRUMENT {
     SpinMutexLock Guard(&XRayInstrMapMutex);
     XRayInstrMap.Sleds = __start_xray_instr_map;
     XRayInstrMap.Entries = __stop_xray_instr_map - __start_xray_instr_map;
-    XRayInstrMap.SledsIndex = __start_xray_fn_idx;
-    XRayInstrMap.Functions = __stop_xray_fn_idx - __start_xray_fn_idx;
+    if (__start_xray_fn_idx != nullptr) {
+      XRayInstrMap.SledsIndex = __start_xray_fn_idx;
+      XRayInstrMap.Functions = __stop_xray_fn_idx - __start_xray_fn_idx;
+    } else {
+      size_t CountFunctions = 0;
+      uint64_t LastFnAddr = 0;
+
+      for (std::size_t I = 0; I < XRayInstrMap.Entries; I++) {
+        const auto &Sled = XRayInstrMap.Sleds[I];
+        const auto Function = Sled.function();
+        if (Function != LastFnAddr) {
+          CountFunctions++;
+          LastFnAddr = Function;
+        }
+      }
+
+      XRayInstrMap.Functions = CountFunctions;
+    }
   }
   atomic_store(&XRayInitialized, true, memory_order_release);
 

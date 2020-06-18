@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 typedef struct __llvm_profile_data __llvm_profile_data;
 const __llvm_profile_data *__llvm_profile_begin_data(void);
 const __llvm_profile_data *__llvm_profile_end_data(void);

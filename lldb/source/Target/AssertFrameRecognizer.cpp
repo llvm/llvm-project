@@ -21,8 +21,7 @@ namespace lldb_private {
 /// name.
 struct SymbolLocation {
   FileSpec module_spec;
-  ConstString symbol_name;
-  ConstString alternate_symbol_name;
+  std::vector<ConstString> symbols;
 };
 
 /// Fetches the abort frame location depending on the current platform.
@@ -39,12 +38,13 @@ bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
     location.module_spec = FileSpec("libsystem_kernel.dylib");
-    location.symbol_name.SetString("__pthread_kill");
+    location.symbols.push_back(ConstString("__pthread_kill"));
     break;
   case llvm::Triple::Linux:
     location.module_spec = FileSpec("libc.so.6");
-    location.symbol_name.SetString("raise");
-    location.alternate_symbol_name.SetString("__GI_raise");
+    location.symbols.push_back(ConstString("raise"));
+    location.symbols.push_back(ConstString("__GI_raise"));
+    location.symbols.push_back(ConstString("gsignal"));
     break;
   default:
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
@@ -69,12 +69,12 @@ bool GetAssertLocation(llvm::Triple::OSType os, SymbolLocation &location) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
     location.module_spec = FileSpec("libsystem_c.dylib");
-    location.symbol_name.SetString("__assert_rtn");
+    location.symbols.push_back(ConstString("__assert_rtn"));
     break;
   case llvm::Triple::Linux:
     location.module_spec = FileSpec("libc.so.6");
-    location.symbol_name.SetString("__assert_fail");
-    location.alternate_symbol_name.SetString("__GI___assert_fail");
+    location.symbols.push_back(ConstString("__assert_fail"));
+    location.symbols.push_back(ConstString("__GI___assert_fail"));
     break;
   default:
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
@@ -97,8 +97,7 @@ void RegisterAssertFrameRecognizer(Process *process) {
 
     StackFrameRecognizerManager::AddRecognizer(
         StackFrameRecognizerSP(new AssertFrameRecognizer()),
-        location.module_spec.GetFilename(), ConstString(location.symbol_name),
-        ConstString(location.alternate_symbol_name),
+        location.module_spec.GetFilename(), location.symbols,
         /*first_instruction_only*/ false);
   });
 }
@@ -139,10 +138,7 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
 
     ConstString func_name = sym_ctx.GetFunctionName();
 
-    if (func_name == location.symbol_name ||
-        (!location.alternate_symbol_name.IsEmpty() &&
-         func_name == location.alternate_symbol_name)) {
-
+    if (llvm::is_contained(location.symbols, func_name)) {
       // We go a frame beyond the assert location because the most relevant
       // frame for the user is the one in which the assert function was called.
       // If the assert location is the last frame fetched, then it is set as

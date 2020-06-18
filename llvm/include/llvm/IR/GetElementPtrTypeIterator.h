@@ -75,9 +75,15 @@ namespace llvm {
 
     generic_gep_type_iterator& operator++() {   // Preincrement
       Type *Ty = getIndexedType();
-      if (auto *STy = dyn_cast<SequentialType>(Ty)) {
-        CurTy = STy->getElementType();
-        NumElements = STy->getNumElements();
+      if (auto *ATy = dyn_cast<ArrayType>(Ty)) {
+        CurTy = ATy->getElementType();
+        NumElements = ATy->getNumElements();
+      } else if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+        CurTy = VTy->getElementType();
+        if (isa<ScalableVectorType>(VTy))
+          NumElements = Unbounded;
+        else
+          NumElements = VTy->getNumElements();
       } else
         CurTy = dyn_cast<StructType>(Ty);
       ++OpIt;

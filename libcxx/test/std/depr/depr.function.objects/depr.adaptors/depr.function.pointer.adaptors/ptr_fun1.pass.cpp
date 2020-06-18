@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <functional>
-// REQUIRES: c++98 || c++03 || c++11 || c++14
+// REQUIRES: c++03 || c++11 || c++14
 
 // template <CopyConstructible Arg, Returnable Result>
 // pointer_to_unary_function<Arg, Result>

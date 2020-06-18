@@ -78,6 +78,27 @@ block and entry counts which may not be accurate with sampling.
     i32 <CALL_BRANCH_WEIGHT>
   }
 
+``InvokeInst``
+^^^^^^^^^^^^^^^^^^
+
+Invoke instruction may have branch weight metadata with one or two weights.
+The second weight is optional and corresponds to the unwind branch.
+If only one weight is set then it contains the execution count of the call
+and used in SamplePGO mode only as described for the call instruction. If both
+weights are specified then the second weight contains count of unwind branch
+taken and the first weights contains the execution count of the call minus
+the count of unwind branch taken. Both weights specified are used to calculate
+BranchProbability as for BranchInst and for SamplePGO the sum of both weights
+is used.
+
+.. code-block:: none
+
+  !0 = metadata !{
+    metadata !"branch_weights",
+    i32 <INVOKE_NORMAL_WEIGHT>
+    [ , i32 <INVOKE_UNWIND_WEIGHT> ]
+  }
+
 Other
 ^^^^^
 

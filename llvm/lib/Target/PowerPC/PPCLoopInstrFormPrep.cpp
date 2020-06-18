@@ -53,7 +53,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -74,6 +73,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 #include <iterator>
 #include <utility>
@@ -244,10 +244,10 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(PPCLoopInstrFormPrep, DEBUG_TYPE, name, false, false)
 
-static const std::string PHINodeNameSuffix    = ".phi";
-static const std::string CastNodeNameSuffix   = ".cast";
-static const std::string GEPNodeIncNameSuffix = ".inc";
-static const std::string GEPNodeOffNameSuffix = ".off";
+static constexpr StringRef PHINodeNameSuffix    = ".phi";
+static constexpr StringRef CastNodeNameSuffix   = ".cast";
+static constexpr StringRef GEPNodeIncNameSuffix = ".inc";
+static constexpr StringRef GEPNodeOffNameSuffix = ".off";
 
 FunctionPass *llvm::createPPCLoopInstrFormPrepPass(PPCTargetMachine &TM) {
   return new PPCLoopInstrFormPrep(TM);
@@ -263,7 +263,7 @@ static bool IsPtrInBounds(Value *BasePtr) {
   return false;
 }
 
-static std::string getInstrName(const Value *I, const std::string Suffix) {
+static std::string getInstrName(const Value *I, StringRef Suffix) {
   assert(I && "Invalid paramater!");
   if (I->hasName())
     return (I->getName() + Suffix).str();

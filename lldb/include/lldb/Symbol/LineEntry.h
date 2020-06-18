@@ -118,7 +118,7 @@ struct LineEntry {
   /// range.
   ///
   /// If the initial LineEntry this method is called on is a line #0, only the
-  /// range of contiuous LineEntries with line #0 will be included in the
+  /// range of continuous LineEntries with line #0 will be included in the
   /// complete range.
   ///
   /// @param[in] include_inlined_functions

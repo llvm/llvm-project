@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Format.h"
@@ -18,11 +18,11 @@
 using namespace mlir;
 
 namespace {
-struct PrintOpStatsPass : public ModulePass<PrintOpStatsPass> {
+struct PrintOpStatsPass : public PrintOpStatsBase<PrintOpStatsPass> {
   explicit PrintOpStatsPass(raw_ostream &os = llvm::errs()) : os(os) {}
 
   // Prints the resultant operation statistics post iterating over the module.
-  void runOnModule() override;
+  void runOnOperation() override;
 
   // Print summary of op stats.
   void printSummary();
@@ -33,11 +33,11 @@ private:
 };
 } // namespace
 
-void PrintOpStatsPass::runOnModule() {
+void PrintOpStatsPass::runOnOperation() {
   opCount.clear();
 
   // Compute the operation statistics for each function in the module.
-  for (auto &op : getModule())
+  for (auto &op : getOperation())
     op.walk([&](Operation *op) { ++opCount[op->getName().getStringRef()]; });
   printSummary();
 }
@@ -81,9 +81,6 @@ void PrintOpStatsPass::printSummary() {
   }
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>> mlir::createPrintOpStatsPass() {
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createPrintOpStatsPass() {
   return std::make_unique<PrintOpStatsPass>();
 }
-
-static PassRegistration<PrintOpStatsPass>
-    pass("print-op-stats", "Print statistics of operations");

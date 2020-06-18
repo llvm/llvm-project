@@ -51,7 +51,9 @@ public:
 
   /// Return the language that should be used when parsing.  To use the
   /// default, return eLanguageTypeUnknown.
-  virtual lldb::LanguageType Language() { return lldb::eLanguageTypeUnknown; }
+  virtual lldb::LanguageType Language() const {
+    return lldb::eLanguageTypeUnknown;
+  }
 
   /// Return the Materializer that the parser should use when registering
   /// external values.

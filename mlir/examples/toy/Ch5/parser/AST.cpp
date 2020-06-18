@@ -12,9 +12,8 @@
 
 #include "toy/AST.h"
 
-#include "mlir/ADT/TypeSwitch.h"
-#include "mlir/Support/STLExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace toy;
@@ -76,7 +75,7 @@ template <typename T> static std::string loc(T *node) {
 
 /// Dispatch to a generic expressions to the appropriate subclass using RTTI
 void ASTDumper::dump(ExprAST *expr) {
-  mlir::TypeSwitch<ExprAST *>(expr)
+  llvm::TypeSwitch<ExprAST *>(expr)
       .Case<BinaryExprAST, CallExprAST, LiteralExprAST, NumberExprAST,
             PrintExprAST, ReturnExprAST, VarDeclExprAST, VariableExprAST>(
           [&](auto *node) { this->dump(node); })
@@ -127,12 +126,12 @@ void printLitHelper(ExprAST *litOrNum) {
 
   // Print the dimension for this literal first
   llvm::errs() << "<";
-  mlir::interleaveComma(literal->getDims(), llvm::errs());
+  llvm::interleaveComma(literal->getDims(), llvm::errs());
   llvm::errs() << ">";
 
   // Now print the content, recursing on every element of the list
   llvm::errs() << "[ ";
-  mlir::interleaveComma(literal->getValues(), llvm::errs(),
+  llvm::interleaveComma(literal->getValues(), llvm::errs(),
                         [&](auto &elt) { printLitHelper(elt.get()); });
   llvm::errs() << "]";
 }
@@ -194,7 +193,7 @@ void ASTDumper::dump(PrintExprAST *node) {
 /// Print type: only the shape is printed in between '<' and '>'
 void ASTDumper::dump(const VarType &type) {
   llvm::errs() << "<";
-  mlir::interleaveComma(type.shape, llvm::errs());
+  llvm::interleaveComma(type.shape, llvm::errs());
   llvm::errs() << ">";
 }
 
@@ -202,10 +201,10 @@ void ASTDumper::dump(const VarType &type) {
 /// parameters names.
 void ASTDumper::dump(PrototypeAST *node) {
   INDENT();
-  llvm::errs() << "Proto '" << node->getName() << "' " << loc(node) << "'\n";
+  llvm::errs() << "Proto '" << node->getName() << "' " << loc(node) << "\n";
   indent();
   llvm::errs() << "Params: [";
-  mlir::interleaveComma(node->getArgs(), llvm::errs(),
+  llvm::interleaveComma(node->getArgs(), llvm::errs(),
                         [](auto &arg) { llvm::errs() << arg->getName(); });
   llvm::errs() << "]\n";
 }

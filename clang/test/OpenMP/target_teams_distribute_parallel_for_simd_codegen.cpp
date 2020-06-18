@@ -95,7 +95,7 @@ int target_teams_fun(int *g){
   // CK1-64: [[TH_VAL:%.+]] = load i32, i32* [[TH_CONV]],
   // CK1-32: [[TE_VAL:%.+]] = load i32, i32* [[TE_ADDR]],
   // CK1-32: [[TH_VAL:%.+]] = load i32, i32* [[TH_ADDR]],
-  // CK1: {{%.+}} = call i32 @__kmpc_push_num_teams({{.+}}, {{.+}}, i32 [[TE_VAL]], i32 [[TH_VAL]])
+  // CK1: call void @__kmpc_push_num_teams({{.+}}, {{.+}}, i32 [[TE_VAL]], i32 [[TH_VAL]])
   // CK1: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 3, {{.+}} @[[OUTL1:.+]] to {{.+}}, {{.+}}, {{.+}})
   // CK1: ret void
 

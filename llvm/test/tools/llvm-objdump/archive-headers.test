@@ -1,5 +1,5 @@
 # RUN: llvm-objdump -a %p/Inputs/liblong_filenames.a | FileCheck %s
-# RUN: llvm-objdump -archive-headers %p/Inputs/liblong_filenames.a | FileCheck %s
+# RUN: llvm-objdump --archive-headers %p/Inputs/liblong_filenames.a | FileCheck %s
 
 # CHECK: {{.*}}liblong_filenames.a(1.o): file format elf64-x86-64
 # CHECK: rw-r--r-- 204299/200  1416 {{.*}} 1.o

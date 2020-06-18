@@ -4,13 +4,13 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/relocatable2.s -o %t3.o
 # RUN: ld.lld -r %t1.o %t2.o %t3.o -o %t
 # RUN: llvm-readobj --file-headers --sections -l --symbols -r %t | FileCheck %s
-# RUN: llvm-objdump -section-headers %t | FileCheck -check-prefix=SECTION %s
-# RUN: llvm-objdump -s -d %t | FileCheck -check-prefix=CHECKTEXT %s
+# RUN: llvm-objdump --section-headers %t | FileCheck --check-prefix=SECTION %s
+# RUN: llvm-objdump -s -d %t | FileCheck --check-prefix=CHECKTEXT %s
 
 ## Test --relocatable alias
 # RUN: ld.lld --relocatable %t1.o %t2.o %t3.o -o %t
 # RUN: llvm-readobj --file-headers --sections -l --symbols -r %t | FileCheck %s
-# RUN: llvm-objdump -s -d %t | FileCheck -check-prefix=CHECKTEXT %s
+# RUN: llvm-objdump -s -d %t | FileCheck --check-prefix=CHECKTEXT %s
 
 ## Verify that we can use our relocation output as input to produce executable
 # RUN: ld.lld -e main %t -o %texec
@@ -65,17 +65,17 @@
 
 # CHECKTEXT:      Disassembly of section .text:
 # CHECKTEXT-EMPTY:
-# CHECKTEXT-NEXT: main:
+# CHECKTEXT-NEXT: <main>:
 # CHECKTEXT-NEXT: 0: c7 04 25 00 00 00 00 05 00 00 00 movl $5, 0
 # CHECKTEXT-NEXT: b: c7 04 25 00 00 00 00 07 00 00 00 movl $7, 0
-# CHECKTEXT:      foo:
+# CHECKTEXT:      <foo>:
 # CHECKTEXT-NEXT: 20: c7 04 25 00 00 00 00 01 00 00 00 movl $1, 0
 # CHECKTEXT-NEXT: 2b: c7 04 25 00 00 00 00 02 00 00 00 movl $2, 0
-# CHECKTEXT:      bar:
+# CHECKTEXT:      <bar>:
 # CHECKTEXT-NEXT: 40: c7 04 25 00 00 00 00 08 00 00 00 movl $8, 0
 # CHECKTEXT-NEXT: 4b: c7 04 25 00 00 00 00 09 00 00 00 movl $9, 0
 
-# CHECKEXE:       Format: ELF64-x86-64
+# CHECKEXE:       Format: elf64-x86-64
 # CHECKEXE-NEXT:  Arch: x86_64
 # CHECKEXE-NEXT:  AddressSize: 64bit
 # CHECKEXE-NEXT:  LoadName:

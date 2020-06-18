@@ -311,9 +311,7 @@ ThreadGDBRemote::CreateRegisterContextForFrame(StackFrame *frame) {
           read_all_registers_at_once, write_all_registers_at_once);
     }
   } else {
-    Unwind *unwinder = GetUnwinder();
-    if (unwinder != nullptr)
-      reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
+    reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);
   }
   return reg_ctx_sp;
 }

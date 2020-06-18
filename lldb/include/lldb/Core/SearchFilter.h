@@ -98,6 +98,8 @@ public:
   ///    The file spec to check against the filter.
   /// \return
   ///    \b true if \a spec passes, and \b false otherwise.
+  ///
+  /// \note the default implementation always returns \c true.
   virtual bool ModulePasses(const FileSpec &spec);
 
   /// Call this method with a Module to see if that module passes the filter.
@@ -107,6 +109,8 @@ public:
   ///
   /// \return
   ///    \b true if \a module passes, and \b false otherwise.
+  ///
+  /// \note the default implementation always returns \c true.
   virtual bool ModulePasses(const lldb::ModuleSP &module_sp);
 
   /// Call this method with a Address to see if \a address passes the filter.
@@ -116,6 +120,8 @@ public:
   ///
   /// \return
   ///    \b true if \a address passes, and \b false otherwise.
+  ///
+  /// \note the default implementation always returns \c true.
   virtual bool AddressPasses(Address &addr);
 
   /// Call this method with a FileSpec to see if \a file spec passes the
@@ -126,6 +132,8 @@ public:
   ///
   /// \return
   ///    \b true if \a file spec passes, and \b false otherwise.
+  ///
+  /// \note the default implementation always returns \c true.
   virtual bool CompUnitPasses(FileSpec &fileSpec);
 
   /// Call this method with a CompileUnit to see if \a comp unit passes the
@@ -136,6 +144,8 @@ public:
   ///
   /// \return
   ///    \b true if \a Comp Unit passes, and \b false otherwise.
+  ///
+  /// \note the default implementation always returns \c true.
   virtual bool CompUnitPasses(CompileUnit &compUnit);
 
   /// Call this method with a Function to see if \a function passes the
@@ -321,10 +331,6 @@ public:
 
   bool AddressPasses(Address &address) override;
 
-  bool CompUnitPasses(FileSpec &fileSpec) override;
-
-  bool CompUnitPasses(CompileUnit &compUnit) override;
-
   void GetDescription(Stream *s) override;
 
   uint32_t GetFilterRequiredItems() override;
@@ -372,10 +378,6 @@ public:
 
   bool AddressPasses(Address &address) override;
 
-  bool CompUnitPasses(FileSpec &fileSpec) override;
-
-  bool CompUnitPasses(CompileUnit &compUnit) override;
-
   void GetDescription(Stream *s) override;
 
   uint32_t GetFilterRequiredItems() override;
@@ -396,7 +398,6 @@ public:
 protected:
   lldb::SearchFilterSP DoCreateCopy() override;
 
-protected:
   FileSpecList m_module_spec_list;
 };
 

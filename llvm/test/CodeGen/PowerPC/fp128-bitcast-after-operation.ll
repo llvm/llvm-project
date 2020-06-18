@@ -28,9 +28,9 @@ entry:
 ; PPC32-DAG: stfd 2, 16(1)
 ; PPC32-DAG: lwz [[HI0:[0-9]+]], 24(1)
 ; PPC32-DAG: lwz [[LO0:[0-9]+]], 16(1)
+; PPC32: rlwinm [[FLIP_BIT:[0-9]+]], [[HI0]], 0, 0, 0
 ; PPC32-DAG: lwz [[HI1:[0-9]+]], 28(1)
 ; PPC32-DAG: lwz [[LO1:[0-9]+]], 20(1)
-; PPC32: rlwinm [[FLIP_BIT:[0-9]+]], [[HI0]], 0, 0, 0
 ; PPC32-DAG: xor [[HI0]], [[HI0]], [[FLIP_BIT]]
 ; PPC32-DAG: xor [[LO0]], [[LO0]], [[FLIP_BIT]]
 ; PPC32: blr
@@ -68,9 +68,9 @@ entry:
 ; PPC32-DAG: lwz [[HI0:[0-9]+]], 24(1)
 ; PPC32-DAG: lwz [[LO0:[0-9]+]], 16(1)
 ; PPC32-DAG: lwz [[HI1:[0-9]+]], 28(1)
-; PPC32-DAG: lwz [[LO1:[0-9]+]], 20(1)
 ; PPC32-NOT: BARRIER
 ; PPC32-DAG: xoris [[HI0]], [[HI0]], 32768
+; PPC32-DAG: lwz [[LO1:[0-9]+]], 20(1)
 ; PPC32-DAG: xoris [[LO0]], [[LO0]], 32768
 ; PPC32: blr
 	%0 = fsub ppc_fp128 0xM80000000000000000000000000000000, %x

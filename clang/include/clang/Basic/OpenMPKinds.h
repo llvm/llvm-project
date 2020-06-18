@@ -23,16 +23,7 @@ namespace clang {
 using OpenMPDirectiveKind = llvm::omp::Directive;
 
 /// OpenMP clauses.
-enum OpenMPClauseKind {
-#define OPENMP_CLAUSE(Name, Class) \
-  OMPC_##Name,
-#include "clang/Basic/OpenMPKinds.def"
-  OMPC_threadprivate,
-  OMPC_uniform,
-  OMPC_device_type,
-  OMPC_match,
-  OMPC_unknown
-};
+using OpenMPClauseKind = llvm::omp::Clause;
 
 /// OpenMP attributes for 'schedule' clause.
 enum OpenMPScheduleClauseKind {
@@ -49,6 +40,13 @@ enum OpenMPScheduleClauseModifier {
   OMPC_SCHEDULE_MODIFIER_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_SCHEDULE_MODIFIER_last
+};
+
+/// OpenMP modifiers for 'device' clause.
+enum OpenMPDeviceClauseModifier {
+#define OPENMP_DEVICE_MODIFIER(Name) OMPC_DEVICE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DEVICE_unknown,
 };
 
 /// OpenMP attributes for 'depend' clause.
@@ -83,6 +81,10 @@ enum OpenMPMapModifierKind {
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_MAP_MODIFIER_last
 };
+
+  /// Number of allowed map-type-modifiers.
+static constexpr unsigned NumberOfOMPMapClauseModifiers =
+    OMPC_MAP_MODIFIER_last - OMPC_MAP_MODIFIER_unknown - 1;
 
 /// OpenMP modifier kind for 'to' clause.
 enum OpenMPToModifierKind {
@@ -161,15 +163,15 @@ struct OpenMPScheduleTy final {
   OpenMPScheduleClauseModifier M2 = OMPC_SCHEDULE_MODIFIER_unknown;
 };
 
-OpenMPClauseKind getOpenMPClauseKind(llvm::StringRef Str);
-const char *getOpenMPClauseName(OpenMPClauseKind Kind);
+/// OpenMP modifiers for 'reduction' clause.
+enum OpenMPReductionClauseModifier {
+#define OPENMP_REDUCTION_MODIFIER(Name) OMPC_REDUCTION_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_REDUCTION_unknown,
+};
 
 unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str);
 const char *getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind, unsigned Type);
-
-bool isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
-                                 OpenMPClauseKind CKind,
-                                 unsigned OpenMPVersion);
 
 /// Checks if the specified directive is a directive with an associated
 /// loop construct.

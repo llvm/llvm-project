@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spv.AccessChain
@@ -328,6 +328,14 @@ func @convert_f_to_u_vector(%arg0 : vector<3xf32>) -> vector<3xi32> {
 
 // -----
 
+func @convert_f_to_u_coopmatrix(%arg0 : !spv.coopmatrix<8x16xf32, Subgroup>) {
+  // CHECK: {{%.*}} = spv.ConvertFToU {{%.*}} : !spv.coopmatrix<8x16xf32, Subgroup> to !spv.coopmatrix<8x16xi32, Subgroup>
+  %0 = spv.ConvertFToU %arg0 : !spv.coopmatrix<8x16xf32, Subgroup> to !spv.coopmatrix<8x16xi32, Subgroup>
+  spv.Return
+}
+
+// -----
+
 func @convert_f_to_u_scalar_invalid(%arg0 : f16) -> i32 {
   // expected-error @+1 {{expected the same bit widths for operand type and result type, but provided 'f16' and 'i32'}}
   %0 = spv.ConvertFToU %arg0 : f16 to i32
@@ -380,6 +388,14 @@ func @f_convert_vector(%arg0 : vector<3xf32>) -> vector<3xf64> {
 
 // -----
 
+func @f_convert_coop_matrix(%arg0 : !spv.coopmatrix<8x16xf32, Subgroup>) {
+  // CHECK: {{%.*}} = spv.FConvert {{%.*}} : !spv.coopmatrix<8x16xf32, Subgroup> to !spv.coopmatrix<8x16xf64, Subgroup>
+  %0 = spv.FConvert %arg0 : !spv.coopmatrix<8x16xf32, Subgroup> to !spv.coopmatrix<8x16xf64, Subgroup>
+  spv.Return
+}
+
+// -----
+
 func @f_convert_vector(%arg0 : f32) -> f32 {
   // expected-error @+1 {{expected the different bit widths for operand type and result type, but provided 'f32' and 'f32'}}
   %0 = spv.FConvert %arg0 : f32 to f32
@@ -416,7 +432,7 @@ func @u_convert_scalar(%arg0 : i32) -> i64 {
 // spv.ExecutionMode
 //===----------------------------------------------------------------------===//
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
@@ -425,7 +441,7 @@ spv.module "Logical" "GLSL450" {
    spv.ExecutionMode @do_nothing "ContractionOff"
 }
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
@@ -436,7 +452,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
@@ -639,7 +655,7 @@ func @aligned_load_incorrect_attributes() -> () {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @var0 : !spv.ptr<f32, Input>
   // CHECK_LABEL: @simple_load
   spv.func @simple_load() -> () "None" {
@@ -752,7 +768,7 @@ func @logicalUnary(%arg0 : i1)
 
 func @logicalUnary(%arg0 : i32)
 {
-  // expected-error @+1 {{'spv.LogicalNot' op operand #0 must be 1-bit integer or vector of 1-bit integer values of length 2/3/4, but got 'i32'}}
+  // expected-error @+1 {{operand #0 must be bool or vector of bool values of length 2/3/4, but got 'i32'}}
   %0 = spv.LogicalNot %arg0 : i32
   return
 }
@@ -1057,7 +1073,7 @@ func @aligned_store_incorrect_attributes(%arg0 : f32) -> () {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @var0 : !spv.ptr<f32, Input>
   spv.func @simple_store(%arg0 : f32) -> () "None" {
     %0 = spv._address_of @var0 : !spv.ptr<f32, Input>
@@ -1130,7 +1146,7 @@ func @variable_init_normal_constant() -> () {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @global : !spv.ptr<f32, Workgroup>
   spv.func @variable_init_global_variable() -> () "None" {
     %0 = spv._address_of @global : !spv.ptr<f32, Workgroup>
@@ -1138,14 +1154,11 @@ spv.module "Logical" "GLSL450" {
     %1 = spv.Variable init(%0) : !spv.ptr<!spv.ptr<f32, Workgroup>, Function>
     spv.Return
   }
-} attributes {
-  capability = ["VariablePointers"],
-  extension = ["SPV_KHR_variable_pointers"]
 }
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.specConstant @sc = 42 : i32
   // CHECK-LABEL: @variable_init_spec_constant
   spv.func @variable_init_spec_constant() -> () "None" {

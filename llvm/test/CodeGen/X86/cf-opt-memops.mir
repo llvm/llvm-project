@@ -1,0 +1,109 @@
+# RUN: llc -o - -mtriple=x86_64-- -run-pass=x86-cf-opt %s | FileCheck %s
+
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "code_io.c"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  
+  @.str.8 = private unnamed_addr constant [34 x i8] c"%10s%10s%10s%10s%10s%10s%10s%10s\0A\00", align 1
+  @.str.9 = private unnamed_addr constant [6 x i8] c"nbody\00", align 1
+  @.str.10 = private unnamed_addr constant [6 x i8] c"dtime\00", align 1
+  @.str.11 = private unnamed_addr constant [4 x i8] c"eps\00", align 1
+  @.str.12 = private unnamed_addr constant [4 x i8] c"tol\00", align 1
+  @.str.13 = private unnamed_addr constant [6 x i8] c"dtout\00", align 1
+  @.str.14 = private unnamed_addr constant [6 x i8] c"tstop\00", align 1
+  @.str.15 = private unnamed_addr constant [7 x i8] c"fcells\00", align 1
+  @.str.16 = private unnamed_addr constant [6 x i8] c"NPROC\00", align 1
+  
+  define dso_local void @initoutput() local_unnamed_addr {
+  entry:
+    %call1 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([34 x i8], [34 x i8]* @.str.8, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.9, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.10, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.11, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.12, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.13, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.14, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.15, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.16, i64 0, i64 0))
+    ret void
+  }
+  
+  declare dso_local i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #0
+  
+  attributes #0 = { nounwind }
+
+...
+---
+name:            initoutput
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gr64, preferred-register: '' }
+  - { id: 1, class: gr64, preferred-register: '' }
+  - { id: 2, class: gr64, preferred-register: '' }
+  - { id: 3, class: gr64, preferred-register: '' }
+  - { id: 4, class: gr64, preferred-register: '' }
+  - { id: 5, class: gr64, preferred-register: '' }
+  - { id: 6, class: gr64, preferred-register: '' }
+  - { id: 7, class: gr32, preferred-register: '' }
+  - { id: 8, class: gr8, preferred-register: '' }
+  - { id: 9, class: gr32, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    ADJCALLSTACKDOWN64 24, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %0:gr64 = COPY $rsp
+    MOV64mi32 %0, 1, $noreg, 16, $noreg, @.str.16 :: (store 8 into stack + 16)
+    MOV64mi32 %0, 1, $noreg, 8, $noreg, @.str.15 :: (store 8 into stack + 8)
+    MOV64mi32 %0, 1, $noreg, 0, $noreg, @.str.14 :: (store 8 into stack)
+    %1:gr64 = MOV32ri64 @.str.8
+    %2:gr64 = MOV32ri64 @.str.9
+    %3:gr64 = MOV32ri64 @.str.10
+    %4:gr64 = MOV32ri64 @.str.11
+    %5:gr64 = MOV32ri64 @.str.12
+    %6:gr64 = MOV32ri64 @.str.13
+    %7:gr32 = MOV32r0 implicit-def dead $eflags
+    %8:gr8 = COPY %7.sub_8bit
+    $rdi = COPY %1
+    $rsi = COPY %2
+    $rdx = COPY %3
+    $rcx = COPY %4
+    $r8 = COPY %5
+    $r9 = COPY %6
+    $al = COPY %8
+    CALL64pcrel32 @printf, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $rcx, implicit $r8, implicit $r9, implicit $al, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 24, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    RET 0
+
+# Call frame optimization should propagate memory operands
+# CHECK: PUSH64i32 @{{.*}} :: (store 8 into stack + 16)
+# CHECK: PUSH64i32 @{{.*}} :: (store 8 into stack + 8)
+# CHECK: PUSH64i32 @{{.*}} :: (store 8 into stack)
+
+...

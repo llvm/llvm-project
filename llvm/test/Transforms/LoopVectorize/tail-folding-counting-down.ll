@@ -1,12 +1,11 @@
-; RUN: opt < %s -loop-vectorize -prefer-predicate-over-epilog -S | FileCheck %s
+; RUN: opt < %s -loop-vectorize -prefer-predicate-over-epilog -force-vector-width=4 -S | FileCheck %s
 
-; Check that when we can't predicate this loop that it is still vectorised (with
-; an epilogue).
-; TODO: the reason this can't be predicated is because a primary induction
-; variable can't be found (not yet) for this counting down loop. But with that
-; fixed, this should be able to be predicated.
+; Check that a counting-down loop which has no primary induction variable
+; is vectorized with preferred predication.
 
 ; CHECK-LABEL: vector.body:
+; CHECK-LABEL: middle.block:
+; CHECK-NEXT:    br i1 true,
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
@@ -38,5 +37,38 @@ while.end.loopexit:
   br label %while.end
 
 while.end:
+  ret void
+}
+
+; Make sure a loop is successfully vectorized with fold-tail when the backedge
+; taken count is constant and used inside the loop. Issue revealed by D76992.
+;
+define void @reuse_const_btc(i8* %A) optsize {
+; CHECK-LABEL: @reuse_const_btc
+; CHECK: {{%.*}} = icmp ule <4 x i32> {{%.*}}, <i32 13, i32 13, i32 13, i32 13>
+; CHECK: {{%.*}} = select <4 x i1> {{%.*}}, <4 x i32> <i32 12, i32 12, i32 12, i32 12>, <4 x i32> <i32 13, i32 13, i32 13, i32 13>
+;
+entry:
+  br label %loop
+
+loop:
+  %riv = phi i32 [ 13, %entry ], [ %rivMinus1, %merge ]
+  %sub = sub nuw nsw i32 20, %riv
+  %arrayidx = getelementptr inbounds i8, i8* %A, i32 %sub
+  %cond0 = icmp eq i32 %riv, 7
+  br i1 %cond0, label %then, label %else
+then:
+  br label %merge
+else:
+  br label %merge
+merge:
+  %blend = phi i32 [ 13, %then ], [ 12, %else ]
+  %trunc = trunc i32 %blend to i8
+  store i8 %trunc, i8* %arrayidx, align 1
+  %rivMinus1 = add nuw nsw i32 %riv, -1
+  %cond = icmp eq i32 %riv, 0
+  br i1 %cond, label %exit, label %loop
+
+exit:
   ret void
 }

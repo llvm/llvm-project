@@ -27,18 +27,18 @@
 ## &DTPMOD(a) - .TOC. = &.got[0] - (.got+0x8000) = -32768
 # GD:      addis 3, 2, 0
 # GD-NEXT: addi 3, 3, -32768
-# GD-NEXT: bl .+36
+# GD-NEXT: bl 0x103f4
 # GD-NEXT: ld 2, 24(1)
 
 ## &DTPMOD(b) - .TOC. = &.got[2] - (.got+0x8000) = -32752
 # GD-NEXT: addis 3, 2, 0
 # GD-NEXT: addi 3, 3, -32752
-# GD-NEXT: bl .+20
+# GD-NEXT: bl 0x103f4
 # GD-NEXT: ld 2, 24(1)
 
 ## &DTPMOD(b) - .TOC. = &.got[4] - (.got+0x8000) = -32736
 # GD-NEXT: li 3, -32736
-# GD-NEXT: bl .+8
+# GD-NEXT: bl 0x103f4
 # GD-NEXT: ld 2, 24(1)
 
 # NOREL: no relocations

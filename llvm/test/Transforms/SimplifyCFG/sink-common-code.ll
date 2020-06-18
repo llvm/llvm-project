@@ -291,12 +291,12 @@ entry:
 
 if.then:
   %dummy = add i32 %w, 5
-  %sv1 = call i32 @llvm.ctlz.i32(i32 %x)
+  %sv1 = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
   br label %if.end
 
 if.else:
   %dummy1 = add i32 %w, 6
-  %sv2 = call i32 @llvm.cttz.i32(i32 %x)
+  %sv2 = call i32 @llvm.cttz.i32(i32 %x, i1 false)
   br label %if.end
 
 if.end:
@@ -304,8 +304,8 @@ if.end:
   ret i32 1
 }
 
-declare i32 @llvm.ctlz.i32(i32 %x) readnone
-declare i32 @llvm.cttz.i32(i32 %x) readnone
+declare i32 @llvm.ctlz.i32(i32 %x, i1 immarg) readnone
+declare i32 @llvm.cttz.i32(i32 %x, i1 immarg) readnone
 
 ; CHECK-LABEL: test12
 ; CHECK: call i32 @llvm.ctlz
@@ -769,6 +769,120 @@ if.end:
 ; CHECK-NOT: exact
 ; CHECK: }
 
+
+; FIXME:  Should turn into select
+; CHECK-LABEL: @allow_intrinsic_remove_constant(
+; CHECK: %sv1 = call float @llvm.fma.f32(float %dummy, float 2.000000e+00, float 1.000000e+00)
+; CHECK: %sv2 = call float @llvm.fma.f32(float 2.000000e+00, float %dummy1, float 1.000000e+00)
+define float @allow_intrinsic_remove_constant(i1 zeroext %flag, float %w, float %x, float %y) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  %dummy = fadd float %w, 4.0
+  %sv1 = call float @llvm.fma.f32(float %dummy, float 2.0, float 1.0)
+  br label %if.end
+
+if.else:
+  %dummy1 = fadd float %w, 8.0
+  %sv2 = call float @llvm.fma.f32(float 2.0, float %dummy1, float 1.0)
+  br label %if.end
+
+if.end:
+  %p = phi float [ %sv1, %if.then ], [ %sv2, %if.else ]
+  ret float %p
+}
+
+declare float @llvm.fma.f32(float, float, float)
+
+; CHECK-LABEL: @no_remove_constant_immarg(
+; CHECK: call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+; CHECK: call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+define i32 @no_remove_constant_immarg(i1 zeroext %flag, i32 %w, i32 %x, i32 %y) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  %dummy = add i32 %w, 5
+  %sv1 = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  br label %if.end
+
+if.else:
+  %dummy1 = add i32 %w, 6
+  %sv2 = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  br label %if.end
+
+if.end:
+  %p = phi i32 [ %sv1, %if.then ], [ %sv2, %if.else ]
+  ret i32 1
+}
+
+declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture readonly, i64, i1)
+
+; Make sure a memcpy size isn't replaced with a variable
+; CHECK-LABEL: @no_replace_memcpy_size(
+; CHECK: call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 1024, i1 false)
+; CHECK: call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 4096, i1 false)
+define void @no_replace_memcpy_size(i1 zeroext %flag, i8 addrspace(1)* %dst, i8 addrspace(1)* %src) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 1024, i1 false)
+  br label %if.end
+
+if.else:
+  call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 4096, i1 false)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+declare void @llvm.memmove.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture readonly, i64, i1)
+
+; Make sure a memmove size isn't replaced with a variable
+; CHECK-LABEL: @no_replace_memmove_size(
+; CHECK: call void @llvm.memmove.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 1024, i1 false)
+; CHECK: call void @llvm.memmove.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 4096, i1 false)
+define void @no_replace_memmove_size(i1 zeroext %flag, i8 addrspace(1)* %dst, i8 addrspace(1)* %src) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  call void @llvm.memmove.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 1024, i1 false)
+  br label %if.end
+
+if.else:
+  call void @llvm.memmove.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 4096, i1 false)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+declare void @llvm.memset.p1i8.i64(i8 addrspace(1)* nocapture, i8, i64, i1)
+
+; Make sure a memset size isn't replaced with a variable
+; CHECK-LABEL: @no_replace_memset_size(
+; CHECK: call void @llvm.memset.p1i8.i64(i8 addrspace(1)* %dst, i8 0, i64 1024, i1 false)
+; CHECK: call void @llvm.memset.p1i8.i64(i8 addrspace(1)* %dst, i8 0, i64 4096, i1 false)
+define void @no_replace_memset_size(i1 zeroext %flag, i8 addrspace(1)* %dst) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  call void @llvm.memset.p1i8.i64(i8 addrspace(1)* %dst, i8 0, i64 1024, i1 false)
+  br label %if.end
+
+if.else:
+  call void @llvm.memset.p1i8.i64(i8 addrspace(1)* %dst, i8 0, i64 4096, i1 false)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
 ; Check that simplifycfg doesn't sink and merge inline-asm instructions.
 
 define i32 @test_inline_asm1(i32 %c, i32 %r6) {
@@ -912,7 +1026,6 @@ if.end:
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
-
 
 ; CHECK: ![[$TBAA]] = !{![[TYPE:[0-9]]], ![[TYPE]], i64 0}
 ; CHECK: ![[TYPE]] = !{!"float", ![[TEXT:[0-9]]]}

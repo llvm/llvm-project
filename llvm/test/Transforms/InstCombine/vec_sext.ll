@@ -4,8 +4,8 @@
 define <4 x i32> @vec_select(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_select(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[B:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[SUB]], <4 x i32> [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[B:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A]], <4 x i32> [[SUB]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %cmp = icmp slt <4 x i32> %b, zeroinitializer
@@ -23,8 +23,8 @@ define <4 x i32> @vec_select(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @vec_select_alternate_sign_bit_test(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_select_alternate_sign_bit_test(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[B:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A]], <4 x i32> [[SUB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[B:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[SUB]], <4 x i32> [[A]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %cmp = icmp sgt <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>

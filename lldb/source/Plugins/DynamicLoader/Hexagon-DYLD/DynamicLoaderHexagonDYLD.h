@@ -132,7 +132,9 @@ private:
   const lldb_private::SectionList *
   GetSectionListFromModule(const lldb::ModuleSP module) const;
 
-  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderHexagonDYLD);
+  DynamicLoaderHexagonDYLD(const DynamicLoaderHexagonDYLD &) = delete;
+  const DynamicLoaderHexagonDYLD &
+  operator=(const DynamicLoaderHexagonDYLD &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_HEXAGON_DYLD_DYNAMICLOADERHEXAGONDYLD_H

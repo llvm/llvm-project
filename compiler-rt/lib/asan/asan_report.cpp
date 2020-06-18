@@ -160,6 +160,9 @@ class ScopedInErrorReport {
       BlockingMutexLock l(&error_message_buf_mutex);
       internal_memcpy(buffer_copy.data(),
                       error_message_buffer, kErrorMessageBufferSize);
+      // Clear error_message_buffer so that if we find other errors
+      // we don't re-log this error.
+      error_message_buffer_pos = 0;
     }
 
     LogFullErrorReport(buffer_copy.data());

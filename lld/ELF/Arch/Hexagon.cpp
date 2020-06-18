@@ -19,9 +19,8 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 namespace {
 class Hexagon final : public TargetInfo {
@@ -119,6 +118,9 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_PLT_B22_PCREL:
   case R_HEX_B22_PCREL_X:
   case R_HEX_B32_PCREL_X:
+  case R_HEX_GD_PLT_B22_PCREL:
+  case R_HEX_GD_PLT_B22_PCREL_X:
+  case R_HEX_GD_PLT_B32_PCREL_X:
     return R_PLT_PC;
   case R_HEX_IE_32_6_X:
   case R_HEX_IE_16_X:
@@ -160,6 +162,13 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   }
 }
 
+static bool isDuplex(uint32_t insn) {
+  // Duplex forms have a fixed mask and parse bits 15:14 are always
+  // zero.  Non-duplex insns will always have at least one bit set in the
+  // parse field.
+  return (0xC000 & insn) == 0;
+}
+
 static uint32_t findMaskR6(uint32_t insn) {
   // There are (arguably too) many relocation masks for the DSP's
   // R_HEX_6_X type.  The table below is used to select the correct mask
@@ -184,10 +193,7 @@ static uint32_t findMaskR6(uint32_t insn) {
       {0xd7000000, 0x006020e0}, {0xd8000000, 0x006020e0},
       {0xdb000000, 0x006020e0}, {0xdf000000, 0x006020e0}};
 
-  // Duplex forms have a fixed mask and parse bits 15:14 are always
-  // zero.  Non-duplex insns will always have at least one bit set in the
-  // parse field.
-  if ((0xC000 & insn) == 0x0)
+  if (isDuplex(insn))
     return 0x03f00000;
 
   for (InstructionMask i : r6)
@@ -222,6 +228,9 @@ static uint32_t findMaskR16(uint32_t insn) {
     return 0x00df3fe0;
   if ((0xff000000 & insn) == 0xb0000000)
     return 0x0fe03fe0;
+
+  if (isDuplex(insn))
+    return 0x03f00000;
 
   error("unrecognized instruction for R_HEX_16_X relocation: 0x" +
         utohexstr(insn));
@@ -304,14 +313,17 @@ void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
     or32le(loc, applyMask(0x00df20fe, val & 0x3f));
     break;
   case R_HEX_B22_PCREL:
+  case R_HEX_GD_PLT_B22_PCREL:
   case R_HEX_PLT_B22_PCREL:
     checkInt(loc, val, 22, rel);
     or32le(loc, applyMask(0x1ff3ffe, val >> 2));
     break;
   case R_HEX_B22_PCREL_X:
+  case R_HEX_GD_PLT_B22_PCREL_X:
     or32le(loc, applyMask(0x1ff3ffe, val & 0x3f));
     break;
   case R_HEX_B32_PCREL_X:
+  case R_HEX_GD_PLT_B32_PCREL_X:
     or32le(loc, applyMask(0x0fff3fff, val >> 6));
     break;
   case R_HEX_GOTREL_HI16:
@@ -373,10 +385,7 @@ RelType Hexagon::getDynRel(RelType type) const {
   return R_HEX_NONE;
 }
 
-TargetInfo *getHexagonTargetInfo() {
+TargetInfo *elf::getHexagonTargetInfo() {
   static Hexagon target;
   return &target;
 }
-
-} // namespace elf
-} // namespace lld

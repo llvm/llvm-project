@@ -39,17 +39,12 @@ void Pattern::anchor() {}
 // RewritePattern and PatternRewriter implementation
 //===----------------------------------------------------------------------===//
 
-void RewritePattern::rewrite(Operation *op, std::unique_ptr<PatternState> state,
-                             PatternRewriter &rewriter) const {
-  rewrite(op, rewriter);
-}
-
 void RewritePattern::rewrite(Operation *op, PatternRewriter &rewriter) const {
   llvm_unreachable("need to implement either matchAndRewrite or one of the "
                    "rewrite functions!");
 }
 
-PatternMatchResult RewritePattern::match(Operation *op) const {
+LogicalResult RewritePattern::match(Operation *op) const {
   llvm_unreachable("need to implement either match or matchAndRewrite!");
 }
 
@@ -92,6 +87,14 @@ void PatternRewriter::eraseOp(Operation *op) {
   assert(op->use_empty() && "expected 'op' to have no uses");
   notifyOperationRemoved(op);
   op->erase();
+}
+
+void PatternRewriter::eraseBlock(Block *block) {
+  for (auto &op : llvm::make_early_inc_range(llvm::reverse(*block))) {
+    assert(op.use_empty() && "expected 'op' to have no uses");
+    eraseOp(&op);
+  }
+  block->erase();
 }
 
 /// Merge the operations of block 'source' into the end of block 'dest'.
@@ -191,7 +194,7 @@ bool RewritePatternMatcher::matchAndRewrite(Operation *op,
 
     // Try to match and rewrite this pattern. The patterns are sorted by
     // benefit, so if we match we can immediately rewrite and return.
-    if (pattern->matchAndRewrite(op, rewriter))
+    if (succeeded(pattern->matchAndRewrite(op, rewriter)))
       return true;
   }
   return false;

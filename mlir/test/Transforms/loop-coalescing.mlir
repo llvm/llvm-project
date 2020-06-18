@@ -1,4 +1,4 @@
-// RUN: mlir-opt -loop-coalescing %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -loop-coalescing %s | FileCheck %s
 
 // CHECK-LABEL: @one_3d_nest
 func @one_3d_nest() {
@@ -15,23 +15,23 @@ func @one_3d_nest() {
   %c3 = constant 3 : index
   %c42 = constant 42 : index
   %c56 = constant 56 : index
-  // The range of the new loop.
+  // The range of the new scf.
   // CHECK:     %[[partial_range:.*]] = muli %[[orig_ub_i]], %[[orig_ub_j]]
   // CHECK-NEXT:%[[range:.*]] = muli %[[partial_range]], %[[orig_ub_k]]
 
   // Updated loop bounds.
-  // CHECK: loop.for %[[i:.*]] = %[[orig_lb]] to %[[range]] step %[[orig_step]]
-  loop.for %i = %c0 to %c42 step %c1 {
+  // CHECK: scf.for %[[i:.*]] = %[[orig_lb]] to %[[range]] step %[[orig_step]]
+  scf.for %i = %c0 to %c42 step %c1 {
     // Inner loops must have been removed.
-    // CHECK-NOT: loop.for
+    // CHECK-NOT: scf.for
 
     // Reconstruct original IVs from the linearized one.
     // CHECK: %[[orig_k:.*]] = remi_signed %[[i]], %[[orig_ub_k]]
     // CHECK: %[[div:.*]] = divi_signed %[[i]], %[[orig_ub_k]]
     // CHECK: %[[orig_j:.*]] = remi_signed %[[div]], %[[orig_ub_j]]
     // CHECK: %[[orig_i:.*]] = divi_signed %[[div]], %[[orig_ub_j]]
-    loop.for %j = %c0 to %c56 step %c1 {
-      loop.for %k = %c0 to %c3 step %c1 {
+    scf.for %j = %c0 to %c56 step %c1 {
+      scf.for %k = %c0 to %c3 step %c1 {
         // CHECK: "use"(%[[orig_i]], %[[orig_j]], %[[orig_k]])
         "use"(%i, %j, %k) : (index, index, index) -> ()
       }
@@ -48,10 +48,10 @@ func @multi_use() {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c10 = constant 10 : index
-  // CHECK: loop.for %[[iv:.*]] =
-  loop.for %i = %c1 to %c10 step %c1 {
-    loop.for %j = %c1 to %c10 step %c1 {
-      loop.for %k = %c1 to %c10 step %c1 {
+  // CHECK: scf.for %[[iv:.*]] =
+  scf.for %i = %c1 to %c10 step %c1 {
+    scf.for %j = %c1 to %c10 step %c1 {
+      scf.for %k = %c1 to %c10 step %c1 {
         // CHECK: %[[k_unshifted:.*]] = remi_signed %[[iv]], %[[k_extent:.*]]
         // CHECK: %[[ij:.*]] = divi_signed %[[iv]], %[[k_extent]]
         // CHECK: %[[j_unshifted:.*]] = remi_signed %[[ij]], %[[j_extent:.*]]
@@ -86,14 +86,14 @@ func @unnormalized_loops() {
   %c10 = constant 10 : index
   %c17 = constant 17 : index
 
-  // Number of iterations in the outer loop.
+  // Number of iterations in the outer scf.
   // CHECK: %[[diff_i:.*]] = subi %[[orig_ub_i]], %[[orig_lb_i]]
   // CHECK: %[[c1:.*]] = constant 1
   // CHECK: %[[step_minus_c1:.*]] = subi %[[orig_step_i]], %[[c1]]
   // CHECK: %[[dividend:.*]] = addi %[[diff_i]], %[[step_minus_c1]]
   // CHECK: %[[numiter_i:.*]] = divi_signed %[[dividend]], %[[orig_step_i]]
 
-  // Normalized lower bound and step for the outer loop.
+  // Normalized lower bound and step for the outer scf.
   // CHECK: %[[lb_i:.*]] = constant 0
   // CHECK: %[[step_i:.*]] = constant 1
 
@@ -101,13 +101,13 @@ func @unnormalized_loops() {
   // only capture the final result.
   // CHECK: %[[numiter_j:.*]] = divi_signed {{.*}}, %[[orig_step_j]]
 
-  // New bounds of the outer loop.
+  // New bounds of the outer scf.
   // CHECK: %[[range:.*]] = muli %[[numiter_i]], %[[numiter_j]]
-  // CHECK: loop.for %[[i:.*]] = %[[lb_i]] to %[[range]] step %[[step_i]]
-  loop.for %i = %c5 to %c10 step %c2 {
+  // CHECK: scf.for %[[i:.*]] = %[[lb_i]] to %[[range]] step %[[step_i]]
+  scf.for %i = %c5 to %c10 step %c2 {
     // The inner loop has been removed.
-    // CHECK-NOT: loop.for
-    loop.for %j = %c7 to %c17 step %c3 {
+    // CHECK-NOT: scf.for
+    scf.for %j = %c7 to %c17 step %c3 {
       // The IVs are rewritten.
       // CHECK: %[[normalized_j:.*]] = remi_signed %[[i]], %[[numiter_j]]
       // CHECK: %[[normalized_i:.*]] = divi_signed %[[i]], %[[numiter_j]]
@@ -145,11 +145,11 @@ func @parametric(%lb1 : index, %ub1 : index, %step1 : index,
   // CHECK: %[[range:.*]] = muli %[[numiter1]], %[[numiter2]] : index
 
   // Check that the outer loop is updated.
-  // CHECK: loop.for %[[i:.*]] = %c0{{.*}} to %[[range]] step %c1
-  loop.for %i = %lb1 to %ub1 step %step1 {
+  // CHECK: scf.for %[[i:.*]] = %c0{{.*}} to %[[range]] step %c1
+  scf.for %i = %lb1 to %ub1 step %step1 {
     // Check that the inner loop is removed.
-    // CHECK-NOT: loop.for
-    loop.for %j = %lb2 to %ub2 step %step2 {
+    // CHECK-NOT: scf.for
+    scf.for %j = %lb2 to %ub2 step %step2 {
       // Remapping of the induction variables.
       // CHECK: %[[normalized_j:.*]] = remi_signed %[[i]], %[[numiter2]] : index
       // CHECK: %[[normalized_i:.*]] = divi_signed %[[i]], %[[numiter2]] : index
@@ -171,19 +171,19 @@ func @two_bands() {
   %c1 = constant 1 : index
   %c10 = constant 10 : index
   // CHECK: %[[outer_range:.*]] = muli
-  // CHECK: loop.for %{{.*}} = %{{.*}} to %[[outer_range]]
-  loop.for %i = %c0 to %c10 step %c1 {
+  // CHECK: scf.for %{{.*}} = %{{.*}} to %[[outer_range]]
+  scf.for %i = %c0 to %c10 step %c1 {
     // Check that the "j" loop was removed and that the inner loops were
     // coalesced as well.  The preparation step for coalescing will inject the
     // subtraction operation unlike the IV remapping.
-    // CHECK-NOT: loop.for
+    // CHECK-NOT: scf.for
     // CHECK: subi
-    loop.for %j = %c0 to %c10 step %c1 {
+    scf.for %j = %c0 to %c10 step %c1 {
       // The inner pair of loops is coalesced separately.
-      // CHECK: loop.for
-      loop.for %k = %i to %j step %c1 {
-        // CHECK_NOT: loop.for
-        loop.for %l = %i to %j step %c1 {
+      // CHECK: scf.for
+      scf.for %k = %i to %j step %c1 {
+        // CHECK_NOT: scf.for
+        scf.for %l = %i to %j step %c1 {
           "foo"() : () -> ()
         }
       }

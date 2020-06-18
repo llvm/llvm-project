@@ -28,7 +28,7 @@ public:
 
   void EmitWinEHHandlerData(SMLoc Loc) override;
   void EmitWindowsUnwindTables() override;
-  void FinishImpl() override;
+  void finishImpl() override;
 };
 
 void AArch64WinCOFFStreamer::EmitWinEHHandlerData(SMLoc Loc) {
@@ -45,11 +45,11 @@ void AArch64WinCOFFStreamer::EmitWindowsUnwindTables() {
   EHStreamer.Emit(*this);
 }
 
-void AArch64WinCOFFStreamer::FinishImpl() {
-  EmitFrames(nullptr);
+void AArch64WinCOFFStreamer::finishImpl() {
+  emitFrames(nullptr);
   EmitWindowsUnwindTables();
 
-  MCWinCOFFStreamer::FinishImpl();
+  MCWinCOFFStreamer::finishImpl();
 }
 } // end anonymous namespace
 

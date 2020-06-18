@@ -73,7 +73,7 @@ static void EmitDefCfaOffset(MachineBasicBlock &MBB,
                              int Offset) {
   MachineFunction &MF = *MBB.getParent();
   unsigned CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, -Offset));
+      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, Offset));
   BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 }
@@ -179,7 +179,7 @@ static MachineMemOperand *getFrameIndexMMO(MachineBasicBlock &MBB,
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo::getFixedStack(*MF, FrameIndex), flags,
-      MFI.getObjectSize(FrameIndex), MFI.getObjectAlignment(FrameIndex));
+      MFI.getObjectSize(FrameIndex), MFI.getObjectAlign(FrameIndex));
   return MMO;
 }
 
@@ -233,9 +233,9 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc dl;
 
-  if (MFI.getMaxAlignment() > getStackAlignment())
-    report_fatal_error("emitPrologue unsupported alignment: "
-                       + Twine(MFI.getMaxAlignment()));
+  if (MFI.getMaxAlign() > getStackAlign())
+    report_fatal_error("emitPrologue unsupported alignment: " +
+                       Twine(MFI.getMaxAlign().value()));
 
   const AttributeList &PAL = MF.getFunction().getAttributes();
   if (PAL.hasAttrSomewhere(Attribute::Nest))
@@ -445,25 +445,22 @@ bool XCoreFrameLowering::spillCalleeSavedRegisters(
   return true;
 }
 
-bool XCoreFrameLowering::
-restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI,
-                            std::vector<CalleeSavedInfo> &CSI,
-                            const TargetRegisterInfo *TRI) const{
+bool XCoreFrameLowering::restoreCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
   const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
   bool AtStart = MI == MBB.begin();
   MachineBasicBlock::iterator BeforeI = MI;
   if (!AtStart)
     --BeforeI;
-  for (std::vector<CalleeSavedInfo>::const_iterator it = CSI.begin();
-                                                    it != CSI.end(); ++it) {
-    unsigned Reg = it->getReg();
+  for (const CalleeSavedInfo &CSR : CSI) {
+    unsigned Reg = CSR.getReg();
     assert(Reg != XCore::LR && !(Reg == XCore::R10 && hasFP(*MF)) &&
            "LR & FP are always handled in emitEpilogue");
 
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.loadRegFromStackSlot(MBB, MI, Reg, it->getFrameIdx(), RC, TRI);
+    TII.loadRegFromStackSlot(MBB, MI, Reg, CSR.getFrameIdx(), RC, TRI);
     assert(MI != MBB.begin() &&
            "loadRegFromStackSlot didn't insert any code!");
     // Insert in reverse order.  loadRegFromStackSlot can insert multiple
@@ -493,8 +490,7 @@ MachineBasicBlock::iterator XCoreFrameLowering::eliminateCallFramePseudoInstr(
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
       // alignment boundary.
-      unsigned Align = getStackAlignment();
-      Amount = (Amount+Align-1)/Align*Align;
+      Amount = alignTo(Amount, getStackAlign());
 
       assert(Amount%4 == 0);
       Amount /= 4;

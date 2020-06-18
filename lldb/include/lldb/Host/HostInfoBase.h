@@ -12,6 +12,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UserIDResolver.h"
+#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -90,6 +91,12 @@ public:
 
   static bool ComputePathRelativeToLibrary(FileSpec &file_spec,
                                            llvm::StringRef dir);
+
+  static FileSpec GetXcodeContentsDirectory() { return {}; }
+  static FileSpec GetXcodeDeveloperDirectory() { return {}; }
+  
+  /// Return the directory containing a specific Xcode SDK.
+  static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk) { return {}; }
 
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);

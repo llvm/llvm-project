@@ -115,6 +115,8 @@ public:
   bool hasODR() const { return HasODR; }
   bool isClangModule() const { return !ClangModuleName.empty(); }
   uint16_t getLanguage();
+  /// Return the DW_AT_LLVM_sysroot of the compile unit or an empty StringRef.
+  StringRef getSysRoot();
 
   const std::string &getClangModuleName() const { return ClangModuleName; }
 
@@ -320,6 +322,9 @@ private:
 
   /// The DW_AT_language of this unit.
   uint16_t Language = 0;
+
+  /// The DW_AT_LLVM_sysroot of this unit.
+  std::string SysRoot;
 
   /// If this is a Clang module, this holds the module's name.
   std::string ClangModuleName;

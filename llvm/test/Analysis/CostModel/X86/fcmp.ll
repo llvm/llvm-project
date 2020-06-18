@@ -2,8 +2,8 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE2
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse3 | FileCheck %s --check-prefixes=CHECK,SSE,SSE3
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+ssse3 | FileCheck %s --check-prefixes=CHECK,SSE,SSSE3
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse4.1 | FileCheck %s --check-prefixes=CHECK,SSE,SSE41
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse4.2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse4.1 | FileCheck %s --check-prefixes=CHECK,SSE,SSE4,SSE41
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse4.2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE4,SSE42
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX,AVX1
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512F
@@ -11,7 +11,7 @@
 ;
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=BTVER2
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=CHECK,AVX,BTVER2
 
 define i32 @cmp_float_oeq(i32 %arg) {
 ; SSE2-LABEL: 'cmp_float_oeq'
@@ -104,19 +104,6 @@ define i32 @cmp_float_oeq(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = fcmp oeq <8 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp oeq <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
-; BTVER2-LABEL: 'cmp_float_oeq'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp oeq float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp oeq <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp oeq <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp oeq <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp oeq <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp oeq double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp oeq <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp oeq <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp oeq <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp oeq <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %F32 = fcmp oeq float undef, undef
   %V2F32 = fcmp oeq <2 x float> undef, undef
@@ -225,19 +212,6 @@ define i32 @cmp_float_one(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp one <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; BTVER2-LABEL: 'cmp_float_one'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp one float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp one <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp one <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp one <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp one <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp one double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp one <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp one <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp one <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp one <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
   %F32 = fcmp one float undef, undef
   %V2F32 = fcmp one <2 x float> undef, undef
   %V4F32 = fcmp one <4 x float> undef, undef
@@ -344,19 +318,6 @@ define i32 @cmp_float_ord(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = fcmp ord <8 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp ord <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
-; BTVER2-LABEL: 'cmp_float_ord'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp ord float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp ord <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp ord <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp ord <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp ord <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp ord double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp ord <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp ord <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp ord <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp ord <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %F32 = fcmp ord float undef, undef
   %V2F32 = fcmp ord <2 x float> undef, undef
@@ -465,19 +426,6 @@ define i32 @cmp_float_oge(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp oge <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; BTVER2-LABEL: 'cmp_float_oge'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp oge float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp oge <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp oge <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp oge <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp oge <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp oge double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp oge <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp oge <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp oge <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp oge <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
   %F32 = fcmp oge float undef, undef
   %V2F32 = fcmp oge <2 x float> undef, undef
   %V4F32 = fcmp oge <4 x float> undef, undef
@@ -584,19 +532,6 @@ define i32 @cmp_float_ogt(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = fcmp ogt <8 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp ogt <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
-; BTVER2-LABEL: 'cmp_float_ogt'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp ogt float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp ogt <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp ogt <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp ogt <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp ogt <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp ogt double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp ogt <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp ogt <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp ogt <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp ogt <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %F32 = fcmp ogt float undef, undef
   %V2F32 = fcmp ogt <2 x float> undef, undef
@@ -705,19 +640,6 @@ define i32 @cmp_float_ole(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp ole <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; BTVER2-LABEL: 'cmp_float_ole'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp ole float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp ole <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp ole <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp ole <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp ole <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp ole double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp ole <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp ole <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp ole <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp ole <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
   %F32 = fcmp ole float undef, undef
   %V2F32 = fcmp ole <2 x float> undef, undef
   %V4F32 = fcmp ole <4 x float> undef, undef
@@ -824,19 +746,6 @@ define i32 @cmp_float_olt(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = fcmp olt <8 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp olt <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
-; BTVER2-LABEL: 'cmp_float_olt'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp olt float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp olt <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp olt <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp olt <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp olt <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp olt double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp olt <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp olt <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp olt <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp olt <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %F32 = fcmp olt float undef, undef
   %V2F32 = fcmp olt <2 x float> undef, undef
@@ -945,19 +854,6 @@ define i32 @cmp_float_ueq(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp ueq <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; BTVER2-LABEL: 'cmp_float_ueq'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp ueq float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp ueq <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp ueq <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp ueq <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp ueq <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp ueq double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp ueq <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp ueq <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp ueq <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp ueq <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
   %F32 = fcmp ueq float undef, undef
   %V2F32 = fcmp ueq <2 x float> undef, undef
   %V4F32 = fcmp ueq <4 x float> undef, undef
@@ -1064,19 +960,6 @@ define i32 @cmp_float_une(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = fcmp une <8 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp une <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
-; BTVER2-LABEL: 'cmp_float_une'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp une float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp une <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp une <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp une <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp une <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp une double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp une <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp une <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp une <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp une <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %F32 = fcmp une float undef, undef
   %V2F32 = fcmp une <2 x float> undef, undef
@@ -1185,19 +1068,6 @@ define i32 @cmp_float_uno(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp uno <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; BTVER2-LABEL: 'cmp_float_uno'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp uno float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp uno <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp uno <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp uno <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp uno <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp uno double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp uno <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp uno <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp uno <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp uno <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
   %F32 = fcmp uno float undef, undef
   %V2F32 = fcmp uno <2 x float> undef, undef
   %V4F32 = fcmp uno <4 x float> undef, undef
@@ -1304,19 +1174,6 @@ define i32 @cmp_float_uge(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = fcmp uge <8 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp uge <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
-; BTVER2-LABEL: 'cmp_float_uge'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp uge float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp uge <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp uge <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp uge <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp uge <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp uge double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp uge <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp uge <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp uge <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp uge <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %F32 = fcmp uge float undef, undef
   %V2F32 = fcmp uge <2 x float> undef, undef
@@ -1425,19 +1282,6 @@ define i32 @cmp_float_ugt(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp ugt <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; BTVER2-LABEL: 'cmp_float_ugt'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp ugt float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp ugt <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp ugt <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp ugt <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp ugt <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp ugt double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp ugt <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp ugt <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp ugt <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp ugt <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
   %F32 = fcmp ugt float undef, undef
   %V2F32 = fcmp ugt <2 x float> undef, undef
   %V4F32 = fcmp ugt <4 x float> undef, undef
@@ -1544,19 +1388,6 @@ define i32 @cmp_float_ule(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = fcmp ule <8 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp ule <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
-; BTVER2-LABEL: 'cmp_float_ule'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp ule float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp ule <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp ule <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp ule <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp ule <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp ule double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp ule <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp ule <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp ule <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp ule <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %F32 = fcmp ule float undef, undef
   %V2F32 = fcmp ule <2 x float> undef, undef
@@ -1665,19 +1496,6 @@ define i32 @cmp_float_ult(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp ult <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; BTVER2-LABEL: 'cmp_float_ult'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp ult float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp ult <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp ult <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp ult <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp ult <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp ult double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp ult <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp ult <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp ult <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp ult <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
   %F32 = fcmp ult float undef, undef
   %V2F32 = fcmp ult <2 x float> undef, undef
   %V4F32 = fcmp ult <4 x float> undef, undef
@@ -1785,19 +1603,6 @@ define i32 @cmp_float_false(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp false <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-; BTVER2-LABEL: 'cmp_float_false'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp false float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp false <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp false <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp false <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp false <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp false double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp false <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp false <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp false <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp false <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
   %F32 = fcmp false float undef, undef
   %V2F32 = fcmp false <2 x float> undef, undef
   %V4F32 = fcmp false <4 x float> undef, undef
@@ -1904,19 +1709,6 @@ define i32 @cmp_float_true(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = fcmp true <8 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F64 = fcmp true <16 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
-;
-; BTVER2-LABEL: 'cmp_float_true'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp true float undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp true <2 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp true <4 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = fcmp true <8 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fcmp true <16 x float> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp true double undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp true <2 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = fcmp true <4 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fcmp true <8 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F64 = fcmp true <16 x double> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %F32 = fcmp true float undef, undef
   %V2F32 = fcmp true <2 x float> undef, undef

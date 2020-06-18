@@ -42,6 +42,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -83,10 +84,12 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       HasInheritedConstructor(false), HasInheritedAssignment(false),
       NeedOverloadResolutionForCopyConstructor(false),
       NeedOverloadResolutionForMoveConstructor(false),
+      NeedOverloadResolutionForCopyAssignment(false),
       NeedOverloadResolutionForMoveAssignment(false),
       NeedOverloadResolutionForDestructor(false),
       DefaultedCopyConstructorIsDeleted(false),
       DefaultedMoveConstructorIsDeleted(false),
+      DefaultedCopyAssignmentIsDeleted(false),
       DefaultedMoveAssignmentIsDeleted(false),
       DefaultedDestructorIsDeleted(false), HasTrivialSpecialMembers(SMF_All),
       HasTrivialSpecialMembersForCall(SMF_All),
@@ -434,10 +437,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
 
     // Keep track of the presence of mutable fields.
-    if (BaseClassDecl->hasMutableFields()) {
+    if (BaseClassDecl->hasMutableFields())
       data().HasMutableFields = true;
-      data().NeedOverloadResolutionForCopyConstructor = true;
-    }
 
     if (BaseClassDecl->hasUninitializedReferenceMember())
       data().HasUninitializedReferenceMember = true;
@@ -510,6 +511,8 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   //    -- a direct or virtual base class B that cannot be copied/moved [...]
   //    -- a non-static data member of class type M (or array thereof)
   //        that cannot be copied or moved [...]
+  if (!Subobj->hasSimpleCopyAssignment())
+    data().NeedOverloadResolutionForCopyAssignment = true;
   if (!Subobj->hasSimpleMoveAssignment())
     data().NeedOverloadResolutionForMoveAssignment = true;
 
@@ -663,10 +666,9 @@ bool CXXRecordDecl::lambdaIsDefaultConstructibleAndAssignable() const {
   // C++17 [expr.prim.lambda]p21:
   //   The closure type associated with a lambda-expression has no default
   //   constructor and a deleted copy assignment operator.
-  if (getLambdaCaptureDefault() != LCD_None ||
-      getLambdaData().NumCaptures != 0)
+  if (getLambdaCaptureDefault() != LCD_None || capture_size() != 0)
     return false;
-  return getASTContext().getLangOpts().CPlusPlus2a;
+  return getASTContext().getLangOpts().CPlusPlus20;
 }
 
 void CXXRecordDecl::addedMember(Decl *D) {
@@ -782,7 +784,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // C++20 [dcl.init.aggr]p1:
       //   An aggregate is an array or a class with no user-declared [...]
       //   constructors
-      if (getASTContext().getLangOpts().CPlusPlus2a
+      if (getASTContext().getLangOpts().CPlusPlus20
               ? !Constructor->isImplicit()
               : (Constructor->isUserProvided() || Constructor->isExplicit()))
         data().Aggregate = false;
@@ -978,10 +980,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
     }
 
     // Keep track of the presence of mutable fields.
-    if (Field->isMutable()) {
+    if (Field->isMutable())
       data().HasMutableFields = true;
-      data().NeedOverloadResolutionForCopyConstructor = true;
-    }
 
     // C++11 [class.union]p8, DR1460:
     //   If X is a union, a non-static data member of X that is not an anonymous
@@ -1025,10 +1025,12 @@ void CXXRecordDecl::addedMember(Decl *D) {
         if (isUnion()) {
           data().DefaultedCopyConstructorIsDeleted = true;
           data().DefaultedMoveConstructorIsDeleted = true;
+          data().DefaultedCopyAssignmentIsDeleted = true;
           data().DefaultedMoveAssignmentIsDeleted = true;
           data().DefaultedDestructorIsDeleted = true;
           data().NeedOverloadResolutionForCopyConstructor = true;
           data().NeedOverloadResolutionForMoveConstructor = true;
+          data().NeedOverloadResolutionForCopyAssignment = true;
           data().NeedOverloadResolutionForMoveAssignment = true;
           data().NeedOverloadResolutionForDestructor = true;
         }
@@ -1095,8 +1097,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
     //   A defaulted copy/move assignment operator for a class X is defined
     //   as deleted if X has:
     //    -- a non-static data member of reference type
-    if (T->isReferenceType())
+    if (T->isReferenceType()) {
+      data().DefaultedCopyAssignmentIsDeleted = true;
       data().DefaultedMoveAssignmentIsDeleted = true;
+    }
 
     // Bitfields of length 0 are also zero-sized, but we already bailed out for
     // those because they are always unnamed.
@@ -1115,6 +1119,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
           // parameter.
           data().NeedOverloadResolutionForCopyConstructor = true;
           data().NeedOverloadResolutionForMoveConstructor = true;
+          data().NeedOverloadResolutionForCopyAssignment = true;
           data().NeedOverloadResolutionForMoveAssignment = true;
         }
 
@@ -1128,6 +1133,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
             data().DefaultedCopyConstructorIsDeleted = true;
           if (FieldRec->hasNonTrivialMoveConstructor())
             data().DefaultedMoveConstructorIsDeleted = true;
+          if (FieldRec->hasNonTrivialCopyAssignment())
+            data().DefaultedCopyAssignmentIsDeleted = true;
           if (FieldRec->hasNonTrivialMoveAssignment())
             data().DefaultedMoveAssignmentIsDeleted = true;
           if (FieldRec->hasNonTrivialDestructor())
@@ -1141,6 +1148,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
               FieldRec->data().NeedOverloadResolutionForCopyConstructor;
           data().NeedOverloadResolutionForMoveConstructor |=
               FieldRec->data().NeedOverloadResolutionForMoveConstructor;
+          data().NeedOverloadResolutionForCopyAssignment |=
+              FieldRec->data().NeedOverloadResolutionForCopyAssignment;
           data().NeedOverloadResolutionForMoveAssignment |=
               FieldRec->data().NeedOverloadResolutionForMoveAssignment;
           data().NeedOverloadResolutionForDestructor |=
@@ -1238,9 +1247,15 @@ void CXXRecordDecl::addedMember(Decl *D) {
         }
 
         // Keep track of the presence of mutable fields.
-        if (FieldRec->hasMutableFields()) {
+        if (FieldRec->hasMutableFields())
           data().HasMutableFields = true;
+
+        if (Field->isMutable()) {
+          // Our copy constructor/assignment might call something other than
+          // the subobject's copy constructor/assignment if it's mutable and of
+          // class type.
           data().NeedOverloadResolutionForCopyConstructor = true;
+          data().NeedOverloadResolutionForCopyAssignment = true;
         }
 
         // C++11 [class.copy]p13:
@@ -1288,7 +1303,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // Base element type of field is a non-class type.
       if (!T->isLiteralType(Context) ||
           (!Field->hasInClassInitializer() && !isUnion() &&
-           !Context.getLangOpts().CPlusPlus2a))
+           !Context.getLangOpts().CPlusPlus20))
         data().DefaultedDefaultConstructorIsConstexpr = false;
 
       // C++11 [class.copy]p23:
@@ -1296,8 +1311,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   as deleted if X has:
       //    -- a non-static data member of const non-class type (or array
       //       thereof)
-      if (T.isConstQualified())
+      if (T.isConstQualified()) {
+        data().DefaultedCopyAssignmentIsDeleted = true;
         data().DefaultedMoveAssignmentIsDeleted = true;
+      }
     }
 
     // C++14 [meta.unary.prop]p4:
@@ -1364,6 +1381,27 @@ void CXXRecordDecl::finishedDefaultedOrDeletedMember(CXXMethodDecl *D) {
     data().HasTrivialSpecialMembers |= SMKind;
   else
     data().DeclaredNonTrivialSpecialMembers |= SMKind;
+}
+
+void CXXRecordDecl::setCaptures(ArrayRef<LambdaCapture> Captures) {
+  ASTContext &Context = getASTContext();
+  CXXRecordDecl::LambdaDefinitionData &Data = getLambdaData();
+
+  // Copy captures.
+  Data.NumCaptures = Captures.size();
+  Data.NumExplicitCaptures = 0;
+  Data.Captures = (LambdaCapture *)Context.Allocate(sizeof(LambdaCapture) *
+                                                    Captures.size());
+  LambdaCapture *ToCapture = Data.Captures;
+  for (unsigned I = 0, N = Captures.size(); I != N; ++I) {
+    if (Captures[I].isExplicit())
+      ++Data.NumExplicitCaptures;
+
+    *ToCapture++ = Captures[I];
+  }
+
+  if (!lambdaIsDefaultConstructibleAndAssignable())
+    Data.DefaultedCopyAssignmentIsDeleted = true;
 }
 
 void CXXRecordDecl::setTrivialForCallFlags(CXXMethodDecl *D) {
@@ -2364,17 +2402,15 @@ QualType CXXMethodDecl::getThisType() const {
   // volatile X*, and if the member function is declared const volatile,
   // the type of this is const volatile X*.
   assert(isInstance() && "No 'this' for static methods!");
-
-  return CXXMethodDecl::getThisType(getType()->getAs<FunctionProtoType>(),
+  return CXXMethodDecl::getThisType(getType()->castAs<FunctionProtoType>(),
                                     getParent());
 }
 
 QualType CXXMethodDecl::getThisObjectType() const {
   // Ditto getThisType.
   assert(isInstance() && "No 'this' for static methods!");
-
-  return CXXMethodDecl::getThisObjectType(getType()->getAs<FunctionProtoType>(),
-                                          getParent());
+  return CXXMethodDecl::getThisObjectType(
+      getType()->castAs<FunctionProtoType>(), getParent());
 }
 
 bool CXXMethodDecl::hasInlineBody() const {
@@ -2550,11 +2586,11 @@ CXXConstructorDecl *CXXConstructorDecl::getTargetConstructor() const {
 }
 
 bool CXXConstructorDecl::isDefaultConstructor() const {
-  // C++ [class.ctor]p5:
-  //   A default constructor for a class X is a constructor of class
-  //   X that can be called without an argument.
-  return (getNumParams() == 0) ||
-         (getNumParams() > 0 && getParamDecl(0)->hasDefaultArg());
+  // C++ [class.default.ctor]p1:
+  //   A default constructor for a class X is a constructor of class X for
+  //   which each parameter that is not a function parameter pack has a default
+  //   argument (including the case of a constructor with no parameters)
+  return getMinRequiredArguments() == 0;
 }
 
 bool
@@ -2565,7 +2601,7 @@ CXXConstructorDecl::isCopyConstructor(unsigned &TypeQuals) const {
 
 bool CXXConstructorDecl::isMoveConstructor(unsigned &TypeQuals) const {
   return isCopyOrMoveConstructor(TypeQuals) &&
-    getParamDecl(0)->getType()->isRValueReferenceType();
+         getParamDecl(0)->getType()->isRValueReferenceType();
 }
 
 /// Determine whether this is a copy or move constructor.
@@ -2580,10 +2616,8 @@ bool CXXConstructorDecl::isCopyOrMoveConstructor(unsigned &TypeQuals) const {
   //   first parameter is of type X&&, const X&&, volatile X&&, or
   //   const volatile X&&, and either there are no other parameters or else
   //   all other parameters have default arguments.
-  if ((getNumParams() < 1) ||
-      (getNumParams() > 1 && !getParamDecl(1)->hasDefaultArg()) ||
-      (getPrimaryTemplate() != nullptr) ||
-      (getDescribedFunctionTemplate() != nullptr))
+  if (!hasOneParamOrDefaultArgs() || getPrimaryTemplate() != nullptr ||
+      getDescribedFunctionTemplate() != nullptr)
     return false;
 
   const ParmVarDecl *Param = getParamDecl(0);
@@ -2620,18 +2654,16 @@ bool CXXConstructorDecl::isConvertingConstructor(bool AllowExplicit) const {
   if (isExplicit() && !AllowExplicit)
     return false;
 
-  return (getNumParams() == 0 &&
-          getType()->castAs<FunctionProtoType>()->isVariadic()) ||
-         (getNumParams() == 1) ||
-         (getNumParams() > 1 &&
-          (getParamDecl(1)->hasDefaultArg() ||
-           getParamDecl(1)->isParameterPack()));
+  // FIXME: This has nothing to do with the definition of converting
+  // constructor, but is convenient for how we use this function in overload
+  // resolution.
+  return getNumParams() == 0
+             ? getType()->castAs<FunctionProtoType>()->isVariadic()
+             : getMinRequiredArguments() <= 1;
 }
 
 bool CXXConstructorDecl::isSpecializationCopyingObject() const {
-  if ((getNumParams() < 1) ||
-      (getNumParams() > 1 && !getParamDecl(1)->hasDefaultArg()) ||
-      (getDescribedFunctionTemplate() != nullptr))
+  if (!hasOneParamOrDefaultArgs() || getDescribedFunctionTemplate() != nullptr)
     return false;
 
   const ParmVarDecl *Param = getParamDecl(0);
@@ -3096,7 +3128,7 @@ VarDecl *BindingDecl::getHoldingVar() const {
   if (!DRE)
     return nullptr;
 
-  auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+  auto *VD = cast<VarDecl>(DRE->getDecl());
   assert(VD->isImplicit() && "holding var for binding decl not implicit");
   return VD;
 }
@@ -3157,6 +3189,102 @@ MSPropertyDecl *MSPropertyDecl::CreateDeserialized(ASTContext &C,
   return new (C, ID) MSPropertyDecl(nullptr, SourceLocation(),
                                     DeclarationName(), QualType(), nullptr,
                                     SourceLocation(), nullptr, nullptr);
+}
+
+void MSGuidDecl::anchor() {}
+
+MSGuidDecl::MSGuidDecl(DeclContext *DC, QualType T, Parts P)
+    : ValueDecl(Decl::MSGuid, DC, SourceLocation(), DeclarationName(), T),
+      PartVal(P), APVal() {}
+
+MSGuidDecl *MSGuidDecl::Create(const ASTContext &C, QualType T, Parts P) {
+  DeclContext *DC = C.getTranslationUnitDecl();
+  return new (C, DC) MSGuidDecl(DC, T, P);
+}
+
+MSGuidDecl *MSGuidDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+  return new (C, ID) MSGuidDecl(nullptr, QualType(), Parts());
+}
+
+void MSGuidDecl::printName(llvm::raw_ostream &OS) const {
+  OS << llvm::format("GUID{%08" PRIx32 "-%04" PRIx16 "-%04" PRIx16 "-",
+                     PartVal.Part1, PartVal.Part2, PartVal.Part3);
+  unsigned I = 0;
+  for (uint8_t Byte : PartVal.Part4And5) {
+    OS << llvm::format("%02" PRIx8, Byte);
+    if (++I == 2)
+      OS << '-';
+  }
+  OS << '}';
+}
+
+/// Determine if T is a valid 'struct _GUID' of the shape that we expect.
+static bool isValidStructGUID(ASTContext &Ctx, QualType T) {
+  // FIXME: We only need to check this once, not once each time we compute a
+  // GUID APValue.
+  using MatcherRef = llvm::function_ref<bool(QualType)>;
+
+  auto IsInt = [&Ctx](unsigned N) {
+    return [&Ctx, N](QualType T) {
+      return T->isUnsignedIntegerOrEnumerationType() &&
+             Ctx.getIntWidth(T) == N;
+    };
+  };
+
+  auto IsArray = [&Ctx](MatcherRef Elem, unsigned N) {
+    return [&Ctx, Elem, N](QualType T) {
+      const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(T);
+      return CAT && CAT->getSize() == N && Elem(CAT->getElementType());
+    };
+  };
+
+  auto IsStruct = [](std::initializer_list<MatcherRef> Fields) {
+    return [Fields](QualType T) {
+      const RecordDecl *RD = T->getAsRecordDecl();
+      if (!RD || RD->isUnion())
+        return false;
+      RD = RD->getDefinition();
+      if (!RD)
+        return false;
+      if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+        if (CXXRD->getNumBases())
+          return false;
+      auto MatcherIt = Fields.begin();
+      for (const FieldDecl *FD : RD->fields()) {
+        if (FD->isUnnamedBitfield()) continue;
+        if (FD->isBitField() || MatcherIt == Fields.end() ||
+            !(*MatcherIt)(FD->getType()))
+          return false;
+        ++MatcherIt;
+      }
+      return MatcherIt == Fields.end();
+    };
+  };
+
+  // We expect an {i32, i16, i16, [8 x i8]}.
+  return IsStruct({IsInt(32), IsInt(16), IsInt(16), IsArray(IsInt(8), 8)})(T);
+}
+
+APValue &MSGuidDecl::getAsAPValue() const {
+  if (APVal.isAbsent() && isValidStructGUID(getASTContext(), getType())) {
+    using llvm::APInt;
+    using llvm::APSInt;
+    APVal = APValue(APValue::UninitStruct(), 0, 4);
+    APVal.getStructField(0) = APValue(APSInt(APInt(32, PartVal.Part1), true));
+    APVal.getStructField(1) = APValue(APSInt(APInt(16, PartVal.Part2), true));
+    APVal.getStructField(2) = APValue(APSInt(APInt(16, PartVal.Part3), true));
+    APValue &Arr = APVal.getStructField(3) =
+        APValue(APValue::UninitArray(), 8, 8);
+    for (unsigned I = 0; I != 8; ++I) {
+      Arr.getArrayInitializedElt(I) =
+          APValue(APSInt(APInt(8, PartVal.Part4And5[I]), true));
+    }
+    // Register this APValue to be destroyed if necessary. (Note that the
+    // MSGuidDecl destructor is never run.)
+    getASTContext().addDestruction(&APVal);
+  }
+
+  return APVal;
 }
 
 static const char *getAccessName(AccessSpecifier AS) {

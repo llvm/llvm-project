@@ -134,6 +134,11 @@ public:
   const IdentifierInfo *getScopeName() const { return ScopeName; }
   SourceLocation getScopeLoc() const { return ScopeLoc; }
 
+  /// Gets the normalized full name, which consists of both scope and name and
+  /// with surrounding underscores removed as appropriate (e.g.
+  /// __gnu__::__attr__ will be normalized to gnu::attr).
+  std::string getNormalizedFullName() const;
+
   bool isDeclspecAttribute() const { return SyntaxUsed == AS_Declspec; }
   bool isMicrosoftAttribute() const { return SyntaxUsed == AS_Microsoft; }
 

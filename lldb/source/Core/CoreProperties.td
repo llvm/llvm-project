@@ -22,7 +22,7 @@ let Definition = "debugger" in {
     Desc<"If true all confirmation prompts will receive their default reply.">;
   def DisassemblyFormat: Property<"disassembly-format", "FormatEntity">,
     Global,
-    DefaultStringValue<"{${function.initial-function}{${module.file.basename}`}{${function.name-without-args}}:\\\\n}{${function.changed}\\\\n{${module.file.basename}`}{${function.name-without-args}}:\\\\n}{${current-pc-arrow} }${addr-file-or-load}{ <${function.concrete-only-addr-offset-no-padding}>}: ">,
+    DefaultStringValue<"{${function.initial-function}{${module.file.basename}`}{${function.name-without-args}}:\\\\n}{${function.changed}\\\\n{${module.file.basename}`}{${function.name-without-args}}:\\\\n}{${ansi.fg.yellow}${current-pc-arrow}${ansi.normal} }${addr-file-or-load}{ <${function.concrete-only-addr-offset-no-padding}>}: ">,
     Desc<"The default disassembly format string to use when disassembling instruction sequences.">;
   def FrameFormat: Property<"frame-format", "FormatEntity">,
     Global,
@@ -75,6 +75,14 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying the column marker in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format immediately after the column to be marked.">;
+  def StopShowLineMarkerAnsiPrefix: Property<"stop-show-line-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.yellow}">,
+    Desc<"When displaying the line marker in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format at the immediately before the line to be marked.">;
+  def StopShowLineMarkerAnsiSuffix: Property<"stop-show-line-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the line marker in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format immediately after the line to be marked.">;
   def TerminalWidth: Property<"term-width", "SInt64">,
     Global,
     DefaultUnsignedValue<80>,
@@ -95,6 +103,10 @@ let Definition = "debugger" in {
     Global,
     DefaultTrue,
     Desc<"Whether to use Ansi color codes or not.">;
+  def UseSourceCache: Property<"use-source-cache", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Whether to cache source files in memory or not.">;
   def AutoOneLineSummaries: Property<"auto-one-line-summaries", "Boolean">,
     Global,
     DefaultTrue,

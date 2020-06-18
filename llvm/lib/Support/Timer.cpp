@@ -442,3 +442,7 @@ const char *TimerGroup::printAllJSONValues(raw_ostream &OS, const char *delim) {
 void TimerGroup::ConstructTimerLists() {
   (void)*NamedGroupedTimers;
 }
+
+std::unique_ptr<TimerGroup> TimerGroup::aquireDefaultGroup() {
+  return std::unique_ptr<TimerGroup>(DefaultTimerGroup.claim());
+}

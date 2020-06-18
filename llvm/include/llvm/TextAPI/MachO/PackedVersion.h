@@ -13,10 +13,13 @@
 #ifndef LLVM_TEXTAPI_MACHO_PACKED_VERSION_H
 #define LLVM_TEXTAPI_MACHO_PACKED_VERSION_H
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
+class raw_ostream;
+class StringRef;
+
 namespace MachO {
 
 class PackedVersion {

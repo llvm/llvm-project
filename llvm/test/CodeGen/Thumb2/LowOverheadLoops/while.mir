@@ -92,7 +92,7 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r7
-  ; CHECK:   frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
@@ -100,17 +100,17 @@ body:             |
   ; CHECK: bb.1.while.body.preheader:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $r0, $r1, $r2
-  ; CHECK:   renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 2, 14, $noreg
-  ; CHECK:   renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 2, 14, $noreg
-  ; CHECK:   $lr = tMOVr killed $r2, 14, $noreg
+  ; CHECK:   renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 2, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 2, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr = tMOVr killed $r2, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.while.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1
-  ; CHECK:   renamable $r2, renamable $r1 = t2LDRH_PRE killed renamable $r1, 2, 14, $noreg :: (load 2 from %ir.scevgep4)
-  ; CHECK:   early-clobber renamable $r0 = t2STRH_PRE killed renamable $r2, killed renamable $r0, 2, 14, $noreg :: (store 2 into %ir.scevgep7)
+  ; CHECK:   renamable $r2, renamable $r1 = t2LDRH_PRE killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (load 2 from %ir.scevgep4)
+  ; CHECK:   early-clobber renamable $r0 = t2STRH_PRE killed renamable $r2, killed renamable $r0, 2, 14 /* CC::al */, $noreg :: (store 2 into %ir.scevgep7)
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK: bb.3.while.end:
-  ; CHECK:   tPOP_RET 14, $noreg, def $r7, def $pc
+  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)
     liveins: $r0, $r1, $r2, $r7, $lr

@@ -9,8 +9,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_INDEX_LOADER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_INDEX_LOADER_H
 
-#include "Path.h"
 #include "index/Background.h"
+#include "support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"

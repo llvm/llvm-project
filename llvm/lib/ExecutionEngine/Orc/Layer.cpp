@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Layer.h"
+
+#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Debug.h"
 
@@ -23,10 +27,11 @@ Error IRLayer::add(JITDylib &JD, ThreadSafeModule TSM, VModuleKey K) {
       *this, *getManglingOptions(), std::move(TSM), std::move(K)));
 }
 
-IRMaterializationUnit::IRMaterializationUnit(ExecutionSession &ES,
-                                             const ManglingOptions &MO,
-                                             ThreadSafeModule TSM, VModuleKey K)
-    : MaterializationUnit(SymbolFlagsMap(), std::move(K)), TSM(std::move(TSM)) {
+IRMaterializationUnit::IRMaterializationUnit(
+    ExecutionSession &ES, const IRSymbolMapper::ManglingOptions &MO,
+    ThreadSafeModule TSM, VModuleKey K)
+    : MaterializationUnit(SymbolFlagsMap(), nullptr, std::move(K)),
+      TSM(std::move(TSM)) {
 
   assert(this->TSM && "Module must not be null");
 
@@ -34,6 +39,7 @@ IRMaterializationUnit::IRMaterializationUnit(ExecutionSession &ES,
   this->TSM.withModuleDo([&](Module &M) {
     for (auto &G : M.global_values()) {
       // Skip globals that don't generate symbols.
+
       if (!G.hasName() || G.isDeclaration() || G.hasLocalLinkage() ||
           G.hasAvailableExternallyLinkage() || G.hasAppendingLinkage())
         continue;
@@ -72,13 +78,31 @@ IRMaterializationUnit::IRMaterializationUnit(ExecutionSession &ES,
       SymbolFlags[MangledName] = JITSymbolFlags::fromGlobalValue(G);
       SymbolToDefinition[MangledName] = &G;
     }
+
+    // If we need an init symbol for this module then create one.
+    if (!llvm::empty(getStaticInitGVs(M))) {
+      size_t Counter = 0;
+
+      while (true) {
+        std::string InitSymbolName;
+        raw_string_ostream(InitSymbolName)
+            << "$." << M.getModuleIdentifier() << ".__inits." << Counter++;
+        InitSymbol = ES.intern(InitSymbolName);
+        if (SymbolFlags.count(InitSymbol))
+          continue;
+        SymbolFlags[InitSymbol] =
+            JITSymbolFlags::MaterializationSideEffectsOnly;
+        break;
+      }
+    }
   });
 }
 
 IRMaterializationUnit::IRMaterializationUnit(
     ThreadSafeModule TSM, VModuleKey K, SymbolFlagsMap SymbolFlags,
-    SymbolNameToDefinitionMap SymbolToDefinition)
-    : MaterializationUnit(std::move(SymbolFlags), std::move(K)),
+    SymbolStringPtr InitSymbol, SymbolNameToDefinitionMap SymbolToDefinition)
+    : MaterializationUnit(std::move(SymbolFlags), std::move(InitSymbol),
+                          std::move(K)),
       TSM(std::move(TSM)), SymbolToDefinition(std::move(SymbolToDefinition)) {}
 
 StringRef IRMaterializationUnit::getName() const {
@@ -105,7 +129,8 @@ void IRMaterializationUnit::discard(const JITDylib &JD,
 }
 
 BasicIRLayerMaterializationUnit::BasicIRLayerMaterializationUnit(
-    IRLayer &L, const ManglingOptions &MO, ThreadSafeModule TSM, VModuleKey K)
+    IRLayer &L, const IRSymbolMapper::ManglingOptions &MO, ThreadSafeModule TSM,
+    VModuleKey K)
     : IRMaterializationUnit(L.getExecutionSession(), MO, std::move(TSM),
                             std::move(K)),
       L(L), K(std::move(K)) {}
@@ -150,22 +175,26 @@ Error ObjectLayer::add(JITDylib &JD, std::unique_ptr<MemoryBuffer> O,
 Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>
 BasicObjectLayerMaterializationUnit::Create(ObjectLayer &L, VModuleKey K,
                                             std::unique_ptr<MemoryBuffer> O) {
-  auto SymbolFlags =
-      getObjectSymbolFlags(L.getExecutionSession(), O->getMemBufferRef());
+  auto ObjSymInfo =
+      getObjectSymbolInfo(L.getExecutionSession(), O->getMemBufferRef());
 
-  if (!SymbolFlags)
-    return SymbolFlags.takeError();
+  if (!ObjSymInfo)
+    return ObjSymInfo.takeError();
+
+  auto &SymbolFlags = ObjSymInfo->first;
+  auto &InitSymbol = ObjSymInfo->second;
 
   return std::unique_ptr<BasicObjectLayerMaterializationUnit>(
-      new BasicObjectLayerMaterializationUnit(L, K, std::move(O),
-                                              std::move(*SymbolFlags)));
+      new BasicObjectLayerMaterializationUnit(
+          L, K, std::move(O), std::move(SymbolFlags), std::move(InitSymbol)));
 }
 
 BasicObjectLayerMaterializationUnit::BasicObjectLayerMaterializationUnit(
     ObjectLayer &L, VModuleKey K, std::unique_ptr<MemoryBuffer> O,
-    SymbolFlagsMap SymbolFlags)
-    : MaterializationUnit(std::move(SymbolFlags), std::move(K)), L(L),
-      O(std::move(O)) {}
+    SymbolFlagsMap SymbolFlags, SymbolStringPtr InitSymbol)
+    : MaterializationUnit(std::move(SymbolFlags), std::move(InitSymbol),
+                          std::move(K)),
+      L(L), O(std::move(O)) {}
 
 StringRef BasicObjectLayerMaterializationUnit::getName() const {
   if (O)
@@ -180,38 +209,8 @@ void BasicObjectLayerMaterializationUnit::materialize(
 
 void BasicObjectLayerMaterializationUnit::discard(const JITDylib &JD,
                                                   const SymbolStringPtr &Name) {
-  // FIXME: Support object file level discard. This could be done by building a
-  //        filter to pass to the object layer along with the object itself.
-}
-
-Expected<SymbolFlagsMap> getObjectSymbolFlags(ExecutionSession &ES,
-                                              MemoryBufferRef ObjBuffer) {
-  auto Obj = object::ObjectFile::createObjectFile(ObjBuffer);
-
-  if (!Obj)
-    return Obj.takeError();
-
-  SymbolFlagsMap SymbolFlags;
-  for (auto &Sym : (*Obj)->symbols()) {
-    // Skip symbols not defined in this object file.
-    if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
-      continue;
-
-    // Skip symbols that are not global.
-    if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global))
-      continue;
-
-    auto Name = Sym.getName();
-    if (!Name)
-      return Name.takeError();
-    auto InternedName = ES.intern(*Name);
-    auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
-    if (!SymFlags)
-      return SymFlags.takeError();
-    SymbolFlags[InternedName] = std::move(*SymFlags);
-  }
-
-  return SymbolFlags;
+  // This is a no-op for object files: Having removed 'Name' from SymbolFlags
+  // the symbol will be dead-stripped by the JIT linker.
 }
 
 } // End namespace orc.

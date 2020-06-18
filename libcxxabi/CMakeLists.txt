@@ -1,5 +1,9 @@
 # See www/CMake.html for instructions on how to build libcxxabi with CMake.
 
+if (NOT IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../libcxx")
+  message(FATAL_ERROR "libc++abi now requires being built in a monorepo layout with libcxx available")
+endif()
+
 #===============================================================================
 # Setup Project
 #===============================================================================
@@ -61,10 +65,17 @@ option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
 option(LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY
   "Build libc++abi with an externalized threading library.
    This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON" OFF)
+option(LIBCXXABI_ENABLE_FORGIVING_DYNAMIC_CAST
+"Make dynamic_cast more forgiving when type_info's mistakenly have hidden \
+visibility, and thus multiple type_infos can exist for a single type. \
+When the dynamic_cast would normally fail, this option will cause the \
+library to try comparing the type_info names to see if they are equal \
+instead." OFF)
 
 # FIXME: This option should default to off. Unfortunatly GCC 4.9 fails to link
 # programs to due undefined references to new/delete in libc++abi. Once this
 # has been fixed or worked around the default value should be changed.
+# See https://reviews.llvm.org/D68269 for more details.
 option(LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
     "Build libc++abi with definitions for operator new/delete. Normally libc++
     provides these definitions" ON)
@@ -92,14 +103,6 @@ usual symlinks pointing to that.")
 option(LIBCXXABI_ENABLE_SHARED "Build libc++abi as a shared library." ON)
 option(LIBCXXABI_ENABLE_STATIC "Build libc++abi as a static library." ON)
 
-option(LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI
-       "Whether the libc++abi tests should link with the shared libc++abi library"
-       ${LIBCXXABI_ENABLE_SHARED})
-
-option(LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX
-       "Whether the libc++abi tests should link with the shared libc++ library"
-       ${LIBCXX_ENABLE_SHARED})
-
 cmake_dependent_option(LIBCXXABI_INSTALL_STATIC_LIBRARY
   "Install the static libc++abi library." ON
   "LIBCXXABI_ENABLE_STATIC;LIBCXXABI_INSTALL_LIBRARY" OFF)
@@ -123,73 +126,11 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-if(LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI AND NOT LIBCXXABI_ENABLE_SHARED)
-  message(FATAL_ERROR "LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI being ON requires LIBCXXABI_ENABLE_SHARED to be ON")
-endif()
-
-if(NOT LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI AND NOT LIBCXXABI_ENABLE_STATIC)
-  message(FATAL_ERROR "LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI being OFF requires LIBCXXABI_ENABLE_STATIC to be ON")
-endif()
-
-if(DEFINED LIBCXX_ENABLE_SHARED 
-   AND LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX
-   AND NOT LIBCXX_ENABLE_SHARED)
-  message(FATAL_ERROR "LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX being ON requires LIBCXX_ENABLE_SHARED to be ON")
-endif()
-
-if(DEFINED LIBCXX_ENABLE_STATIC
-   AND NOT LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX 
-   AND NOT LIBCXX_ENABLE_STATIC)
-  message(FATAL_ERROR "LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX being OFF requires LIBCXX_ENABLE_STATIC to be ON")
-endif()
-
-if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR)
-  set(LIBCXXABI_LIBCXX_SRC_DIRS ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
-else()
-  set(LIBCXXABI_LIBCXX_SRC_DIRS
-    "${LLVM_MAIN_SRC_DIR}/projects/libcxx"
-    "${LLVM_MAIN_SRC_DIR}/runtimes/libcxx"
-    "${LLVM_MAIN_SRC_DIR}/../libcxx"
-    )
-endif()
-
-set(LIBCXXABI_LIBCXX_INCLUDE_DIRS "")
-foreach(dir ${LIBCXXABI_LIBCXX_SRC_DIRS})
-  list(APPEND LIBCXXABI_LIBCXX_INCLUDE_DIRS "${dir}/include")
-endforeach()
-
-find_path(
-  LIBCXXABI_LIBCXX_INCLUDES
-  __config
-  PATHS ${LIBCXXABI_LIBCXX_INCLUDES}
-        ${LIBCXXABI_LIBCXX_PATH}/include
-        ${CMAKE_BINARY_DIR}/${LIBCXXABI_LIBCXX_INCLUDES}
-        ${LIBCXXABI_LIBCXX_INCLUDE_DIRS}
-        ${LLVM_INCLUDE_DIR}/c++/v1
-  NO_DEFAULT_PATH
-  NO_CMAKE_FIND_ROOT_PATH
-  )
-
-set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_INCLUDES}" CACHE PATH
-    "Specify path to libc++ includes." FORCE)
-
-find_path(
-  LIBCXXABI_LIBCXX_PATH
-  utils/libcxx/test/__init__.py
-  PATHS ${LIBCXXABI_LIBCXX_PATH}
-        ${LIBCXXABI_LIBCXX_INCLUDES}/../
-        ${LIBCXXABI_LIBCXX_SRC_DIRS}
-  NO_DEFAULT_PATH
-  NO_CMAKE_FIND_ROOT_PATH
-  )
-
-if (LIBCXXABI_LIBCXX_PATH STREQUAL "LIBCXXABI_LIBCXX_PATH-NOTFOUND")
-  message(WARNING "LIBCXXABI_LIBCXX_PATH was not specified and couldn't be infered.")
-  set(LIBCXXABI_LIBCXX_PATH "")
-endif()
-
-set(LIBCXXABI_LIBCXX_PATH "${LIBCXXABI_LIBCXX_PATH}" CACHE PATH
-    "Specify path to libc++ source." FORCE)
+set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
+    "Specify path to libc++ source.")
+set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_PATH}/include" CACHE PATH
+    "Specify path to libc++ includes.")
+message(STATUS "Libc++abi will be using libc++ includes from ${LIBCXXABI_LIBCXX_INCLUDES}")
 
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." OFF)

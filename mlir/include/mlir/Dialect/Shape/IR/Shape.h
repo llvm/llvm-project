@@ -16,16 +16,15 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
-namespace shape {
+class PatternRewriter;
 
-/// This dialect contains shape inference related operations and facilities.
-class ShapeDialect : public Dialect {
-public:
-  /// Create the dialect in the given `context`.
-  explicit ShapeDialect(MLIRContext *context);
-};
+namespace shape {
 
 namespace ShapeTypes {
 enum Kind {
@@ -33,7 +32,9 @@ enum Kind {
   Element,
   Shape,
   Size,
-  ValueShape
+  ValueShape,
+  Witness,
+  LAST_SHAPE_TYPE = Witness
 };
 } // namespace ShapeTypes
 
@@ -108,8 +109,26 @@ public:
   }
 };
 
+/// The Witness represents a runtime constraint, to be used as shape related
+/// preconditions on code execution.
+class WitnessType : public Type::TypeBase<WitnessType, Type> {
+public:
+  using Base::Base;
+
+  static WitnessType get(MLIRContext *context) {
+    return Base::get(context, ShapeTypes::Kind::Witness);
+  }
+
+  /// Support method to enable LLVM-style type casting.
+  static bool kindof(unsigned kind) {
+    return kind == ShapeTypes::Kind::Witness;
+  }
+};
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Shape/IR/ShapeOps.h.inc"
+
+#include "mlir/Dialect/Shape/IR/ShapeOpsDialect.h.inc"
 
 } // namespace shape
 } // namespace mlir

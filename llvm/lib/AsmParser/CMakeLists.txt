@@ -5,7 +5,7 @@ add_llvm_component_library(LLVMAsmParser
   Parser.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ASMParser
 
   DEPENDS
   intrinsics_gen

@@ -12,6 +12,7 @@
 #include "SourceCode.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
@@ -26,9 +27,8 @@ void addIfDistinct(const Range &R, std::vector<Range> &Result) {
 }
 } // namespace
 
-llvm::Expected<std::vector<Range>> getSemanticRanges(ParsedAST &AST,
-                                                     Position Pos) {
-  std::vector<Range> Result;
+llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
+  std::vector<Range> Ranges;
   const auto &SM = AST.getSourceManager();
   const auto &LangOpts = AST.getLangOpts();
 
@@ -39,7 +39,8 @@ llvm::Expected<std::vector<Range>> getSemanticRanges(ParsedAST &AST,
   }
 
   // Get node under the cursor.
-  SelectionTree ST(AST.getASTContext(), AST.getTokens(), *Offset);
+  SelectionTree ST = SelectionTree::createRight(
+      AST.getASTContext(), AST.getTokens(), *Offset, *Offset);
   for (const auto *Node = ST.commonAncestor(); Node != nullptr;
        Node = Node->Parent) {
     if (const Decl *D = Node->ASTNode.get<Decl>()) {
@@ -55,9 +56,29 @@ llvm::Expected<std::vector<Range>> getSemanticRanges(ParsedAST &AST,
     Range R;
     R.start = sourceLocToPosition(SM, SR->getBegin());
     R.end = sourceLocToPosition(SM, SR->getEnd());
-    addIfDistinct(R, Result);
+    addIfDistinct(R, Ranges);
   }
-  return Result;
+
+  if (Ranges.empty()) {
+    // LSP provides no way to signal "the point is not within a semantic range".
+    // Return an empty range at the point.
+    SelectionRange Empty;
+    Empty.range.start = Empty.range.end = Pos;
+    return std::move(Empty);
+  }
+
+  // Convert to the LSP linked-list representation.
+  SelectionRange Head;
+  Head.range = std::move(Ranges.front());
+  SelectionRange *Tail = &Head;
+  for (auto &Range :
+       llvm::makeMutableArrayRef(Ranges.data(), Ranges.size()).drop_front()) {
+    Tail->parent = std::make_unique<SelectionRange>();
+    Tail = Tail->parent.get();
+    Tail->range = std::move(Range);
+  }
+
+  return std::move(Head);
 }
 
 } // namespace clangd

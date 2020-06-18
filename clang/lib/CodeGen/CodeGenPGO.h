@@ -40,8 +40,8 @@ private:
   uint64_t CurrentRegionCount;
 
 public:
-  CodeGenPGO(CodeGenModule &CGM)
-      : CGM(CGM), FuncNameVar(nullptr), NumValueSites({{0}}),
+  CodeGenPGO(CodeGenModule &CGModule)
+      : CGM(CGModule), FuncNameVar(nullptr), NumValueSites({{0}}),
         NumRegionCounters(0), FunctionHash(0), CurrentRegionCount(0) {}
 
   /// Whether or not we have PGO region data for the current function. This is

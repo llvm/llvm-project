@@ -52,23 +52,15 @@ std::string toCOFFString(const Archive::Symbol &b) {
 
 namespace coff {
 
-StringRef Symbol::getName() {
-  // COFF symbol names are read lazily for a performance reason.
-  // Non-external symbol names are never used by the linker except for logging
-  // or debugging. Their internal references are resolved not by name but by
-  // symbol index. And because they are not external, no one can refer them by
-  // name. Object files contain lots of non-external symbols, and creating
-  // StringRefs for them (which involves lots of strlen() on the string table)
-  // is a waste of time.
-  if (nameData == nullptr) {
-    auto *d = cast<DefinedCOFF>(this);
-    StringRef nameStr;
-    cast<ObjFile>(d->file)->getCOFFObj()->getSymbolName(d->sym, nameStr);
-    nameData = nameStr.data();
-    nameSize = nameStr.size();
-    assert(nameSize == nameStr.size() && "name length truncated");
-  }
-  return StringRef(nameData, nameSize);
+void Symbol::computeName() {
+  assert(nameData == nullptr &&
+         "should only compute the name once for DefinedCOFF symbols");
+  auto *d = cast<DefinedCOFF>(this);
+  StringRef nameStr =
+      check(cast<ObjFile>(d->file)->getCOFFObj()->getSymbolName(d->sym));
+  nameData = nameStr.data();
+  nameSize = nameStr.size();
+  assert(nameSize == nameStr.size() && "name length truncated");
 }
 
 InputFile *Symbol::getFile() {

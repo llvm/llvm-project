@@ -153,15 +153,12 @@ define <4 x i32> @build_vec_v4i32_reuse_1(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-NEXT:    [[TMP0_1:%.*]] = add i32 [[V0_1]], [[V1_1]]
 ; CHECK-NEXT:    [[TMP0_2:%.*]] = xor i32 [[V0_0]], [[V1_0]]
 ; CHECK-NEXT:    [[TMP0_3:%.*]] = xor i32 [[V0_1]], [[V1_1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[TMP0_0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> undef, i32 [[TMP0_1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP1_0:%.*]] = sub i32 [[TMP0_0]], [[TMP0_1]]
+; CHECK-NEXT:    [[TMP1_1:%.*]] = sub i32 [[TMP0_0]], [[TMP0_1]]
 ; CHECK-NEXT:    [[TMP1_2:%.*]] = sub i32 [[TMP0_2]], [[TMP0_3]]
 ; CHECK-NEXT:    [[TMP1_3:%.*]] = sub i32 [[TMP0_3]], [[TMP0_2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP2_0:%.*]] = insertelement <4 x i32> undef, i32 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP2_1:%.*]] = insertelement <4 x i32> [[TMP2_0]], i32 [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP2_0:%.*]] = insertelement <4 x i32> undef, i32 [[TMP1_0]], i32 0
+; CHECK-NEXT:    [[TMP2_1:%.*]] = insertelement <4 x i32> [[TMP2_0]], i32 [[TMP1_1]], i32 1
 ; CHECK-NEXT:    [[TMP2_2:%.*]] = insertelement <4 x i32> [[TMP2_1]], i32 [[TMP1_2]], i32 2
 ; CHECK-NEXT:    [[TMP2_3:%.*]] = insertelement <4 x i32> [[TMP2_2]], i32 [[TMP1_3]], i32 3
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2_3]]
@@ -187,21 +184,25 @@ define <4 x i32> @build_vec_v4i32_reuse_1(<2 x i32> %v0, <2 x i32> %v1) {
 
 define <4 x i32> @build_vec_v4i32_3_binops(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-LABEL: @build_vec_v4i32_3_binops(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[V0:%.*]], <2 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[V1:%.*]], <2 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[V0]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[V1]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <2 x i32> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> [[TMP9]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP11:%.*]] = xor <2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <2 x i32> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add <2 x i32> [[TMP5]], [[TMP10]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add <2 x i32> [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP3_3:%.*]] = shufflevector <2 x i32> [[TMP13]], <2 x i32> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[V0_0:%.*]] = extractelement <2 x i32> [[V0:%.*]], i32 0
+; CHECK-NEXT:    [[V0_1:%.*]] = extractelement <2 x i32> [[V0]], i32 1
+; CHECK-NEXT:    [[V1_0:%.*]] = extractelement <2 x i32> [[V1:%.*]], i32 0
+; CHECK-NEXT:    [[V1_1:%.*]] = extractelement <2 x i32> [[V1]], i32 1
+; CHECK-NEXT:    [[TMP0_0:%.*]] = add i32 [[V0_0]], [[V1_0]]
+; CHECK-NEXT:    [[TMP0_1:%.*]] = add i32 [[V0_1]], [[V1_1]]
+; CHECK-NEXT:    [[TMP1_0:%.*]] = mul i32 [[V0_0]], [[V1_0]]
+; CHECK-NEXT:    [[TMP1_1:%.*]] = mul i32 [[V0_1]], [[V1_1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2_0:%.*]] = add i32 [[TMP0_0]], [[TMP0_1]]
+; CHECK-NEXT:    [[TMP2_1:%.*]] = add i32 [[TMP1_0]], [[TMP1_1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP3_0:%.*]] = insertelement <4 x i32> undef, i32 [[TMP2_0]], i32 0
+; CHECK-NEXT:    [[TMP3_1:%.*]] = insertelement <4 x i32> [[TMP3_0]], i32 [[TMP2_1]], i32 1
+; CHECK-NEXT:    [[TMP3_3:%.*]] = shufflevector <4 x i32> [[TMP3_1]], <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3_3]]
 ;
   %v0.0 = extractelement <2 x i32> %v0, i32 0

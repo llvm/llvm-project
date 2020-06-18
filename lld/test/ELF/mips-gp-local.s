@@ -9,10 +9,10 @@
 # RUN: ld.lld --script %t.script -o %t.exe %t.o
 # RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
 
-# CHECK: 00037ff0  .got  00000000 .hidden _gp
-# CHECK: 00011000  .text 00000000 __start
+# CHECK: 00037ff0 l .got  00000000 .hidden _gp
+# CHECK: 00011000 g .text 00000000 __start
 
-# CHECK:      __start:
+# CHECK:      <__start>:
 # CHECK-NEXT:    lui   $8, 3
 # CHECK-NEXT:    addi  $8, $8, 32752
 

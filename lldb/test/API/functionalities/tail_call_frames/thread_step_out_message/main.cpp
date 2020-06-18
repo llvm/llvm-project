@@ -1,18 +1,10 @@
-//===-- main.cpp ------------------------------------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 volatile int x;
 
 void __attribute__((noinline)) sink() {
   x++; //% self.filecheck("finish", "main.cpp", "-implicit-check-not=artificial")
   // CHECK: stop reason = step out
-  // CHECK-NEXT: Stepped out past: frame #1: 0x{{[0-9a-f]+}} a.out`func3{{.*}} [opt] [artificial]
-  // CHECK: frame #0: 0x{{[0-9a-f]+}} a.out`func2{{.*}} [opt]
+  // CHECK-NEXT: Stepped out past: frame #1: 0x{{[0-9a-f]+}} a.out`func3{{.*}} [artificial]
+  // CHECK: frame #0: 0x{{[0-9a-f]+}} a.out`func2{{.*}}
 }
 
 void __attribute__((noinline)) func3() { sink(); /* tail */ }

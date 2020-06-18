@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
@@ -184,11 +185,14 @@ namespace llvm {
     /// The maximum version of dwarf that we should emit.
     uint16_t DwarfVersion = 4;
 
+    /// The format of dwarf that we emit.
+    dwarf::DwarfFormat DwarfFormat = dwarf::DWARF32;
+
     /// Honor temporary labels, this is useful for debugging semantic
     /// differences between temporary and non-temporary labels (primarily on
     /// Darwin).
     bool AllowTemporaryLabels = true;
-    bool UseNamesOnTempLabels = true;
+    bool UseNamesOnTempLabels = false;
 
     /// The Compile Unit ID that we are currently processing.
     unsigned DwarfCompileUnitID = 0;
@@ -306,6 +310,37 @@ namespace llvm {
 
     /// Map of currently defined macros.
     StringMap<MCAsmMacro> MacroMap;
+
+    struct ELFEntrySizeKey {
+      std::string SectionName;
+      unsigned Flags;
+      unsigned EntrySize;
+
+      ELFEntrySizeKey(StringRef SectionName, unsigned Flags, unsigned EntrySize)
+          : SectionName(SectionName), Flags(Flags), EntrySize(EntrySize) {}
+
+      bool operator<(const ELFEntrySizeKey &Other) const {
+        if (SectionName != Other.SectionName)
+          return SectionName < Other.SectionName;
+        if ((Flags & ELF::SHF_STRINGS) != (Other.Flags & ELF::SHF_STRINGS))
+          return Other.Flags & ELF::SHF_STRINGS;
+        return EntrySize < Other.EntrySize;
+      }
+    };
+
+    // Symbols must be assigned to a section with a compatible entry
+    // size. This map is used to assign unique IDs to sections to
+    // distinguish between sections with identical names but incompatible entry
+    // sizes. This can occur when a symbol is explicitly assigned to a
+    // section, e.g. via __attribute__((section("myname"))).
+    std::map<ELFEntrySizeKey, unsigned> ELFEntrySizeMap;
+
+    // This set is used to record the generic mergeable section names seen.
+    // These are sections that are created as mergeable e.g. .debug_str. We need
+    // to avoid assigning non-mergeable symbols to these sections. It is used
+    // to prevent non-mergeable symbols being explicitly assigned  to mergeable
+    // sections (e.g. via _attribute_((section("myname")))).
+    DenseSet<StringRef> ELFSeenGenericMergeableSections;
 
   public:
     explicit MCContext(const MCAsmInfo *MAI, const MCRegisterInfo *MRI,
@@ -465,6 +500,17 @@ namespace llvm {
     void renameELFSection(MCSectionELF *Section, StringRef Name);
 
     MCSectionELF *createELFGroupSection(const MCSymbolELF *Group);
+
+    void recordELFMergeableSectionInfo(StringRef SectionName, unsigned Flags,
+                                       unsigned UniqueID, unsigned EntrySize);
+
+    bool isELFImplicitMergeableSectionNamePrefix(StringRef Name);
+
+    bool isELFGenericMergeableSection(StringRef Name);
+
+    Optional<unsigned> getELFUniqueIDForEntsize(StringRef SectionName,
+                                                unsigned Flags,
+                                                unsigned EntrySize);
 
     MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                   SectionKind Kind, StringRef COMDATSymName,
@@ -651,10 +697,8 @@ namespace llvm {
     void setDwarfDebugProducer(StringRef S) { DwarfDebugProducer = S; }
     StringRef getDwarfDebugProducer() { return DwarfDebugProducer; }
 
-    dwarf::DwarfFormat getDwarfFormat() const {
-      // TODO: Support DWARF64
-      return dwarf::DWARF32;
-    }
+    void setDwarfFormat(dwarf::DwarfFormat f) { DwarfFormat = f; }
+    dwarf::DwarfFormat getDwarfFormat() const { return DwarfFormat; }
 
     void setDwarfVersion(uint16_t v) { DwarfVersion = v; }
     uint16_t getDwarfVersion() const { return DwarfVersion; }

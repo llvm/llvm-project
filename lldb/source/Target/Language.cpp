@@ -139,13 +139,6 @@ Language::GetPossibleFormattersMatches(ValueObject &valobj,
   return {};
 }
 
-lldb_private::formatters::StringPrinter::EscapingHelper
-Language::GetStringPrinterEscapingHelper(
-    lldb_private::formatters::StringPrinter::GetPrintableElementType
-        elem_type) {
-  return StringPrinter::GetDefaultEscapingHelper(elem_type);
-}
-
 struct language_name_pair {
   const char *name;
   LanguageType type;

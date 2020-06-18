@@ -1,5 +1,6 @@
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s > %t
-# RUN: llvm-dwarfdump %t | FileCheck %s
+# RUN: not llvm-dwarfdump %t 2>%t.err | FileCheck %s
+# RUN: FileCheck %s < %t.err -check-prefix=ERR
 
 # CHECK:      DW_AT_name        ("x0")
 # CHECK-NEXT: DW_AT_location    (0x00000000
@@ -7,12 +8,12 @@
 # CHECK-NEXT:    [0x0000000000000002,  0x0000000000000003): DW_OP_reg0 RAX)
 
 # CHECK:      DW_AT_name        ("x1")
-# CHECK-NEXT: DW_AT_location    (0xdeadbeef
-# CHECK-NEXT:    error: unexpected end of data)
+# CHECK-NEXT: DW_AT_location    (0xdeadbeef: )
+# ERR:    error: offset 0xdeadbeef is beyond the end of data at 0x48
 
 # CHECK:      DW_AT_name        ("x2")
-# CHECK-NEXT: DW_AT_location    (0x00000036
-# CHECK-NEXT:    error: unexpected end of data)
+# CHECK-NEXT: DW_AT_location    (0x00000036: )
+# ERR:    error: unexpected end of data at offset 0x48 while reading [0x48, 0xdef5)
 
 
         .type   f,@function

@@ -25,17 +25,17 @@
 # direct objection emission match.
 
 # RUN: llvm-mc %s -triple mips-unknown-linux-gnu -filetype=obj | \
-# RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-O32
+# RUN:   llvm-objdump -d -r - | FileCheck %s --check-prefixes=ELF-O32
 # RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+xgot -filetype=obj | \
-# RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-XO32
+# RUN:   llvm-objdump -d -r - | FileCheck %s --check-prefixes=ELF-XO32
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -filetype=obj | \
-# RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-N32
+# RUN:   llvm-objdump -d -r - | FileCheck %s --check-prefixes=ELF-N32
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -mattr=+xgot -filetype=obj | \
-# RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-XN32
+# RUN:   llvm-objdump -d -r - | FileCheck %s --check-prefixes=ELF-XN32
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -filetype=obj | \
-# RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-N64
+# RUN:   llvm-objdump -d -r - | FileCheck %s --check-prefixes=ELF-N64
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -mattr=+xgot -filetype=obj | \
-# RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-XN64
+# RUN:   llvm-objdump -d -r - | FileCheck %s --check-prefixes=ELF-XN64
 
   .weak weak_label
 

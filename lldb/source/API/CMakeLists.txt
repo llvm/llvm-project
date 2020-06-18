@@ -29,12 +29,14 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBBreakpointOptionCommon.cpp
   SBBroadcaster.cpp
   SBCommandInterpreter.cpp
+  SBCommandInterpreterRunOptions.cpp
   SBCommandReturnObject.cpp
   SBCommunication.cpp
   SBCompileUnit.cpp
   SBData.cpp
   SBDebugger.cpp
   SBDeclaration.cpp
+  SBEnvironment.cpp
   SBError.cpp
   SBEvent.cpp
   SBExecutionContext.cpp
@@ -117,6 +119,11 @@ add_lldb_library(liblldb SHARED ${option_framework}
 # that _lldb.so can be loaded from Python.
 if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX AND NOT APPLE)
   set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
+endif()
+
+if(PYTHON_RPATH)
+  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${PYTHON_RPATH}")
+  set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${PYTHON_RPATH}")
 endif()
 
 if (MSVC)

@@ -54,9 +54,9 @@ namespace llvm {
   /// situations where the character data resides in some other buffer, whose
   /// lifetime extends past that of the StringRef. For this reason, it is not in
   /// general safe to store a StringRef.
-  class StringRef {
+  class LLVM_GSL_POINTER StringRef {
   public:
-    static const size_t npos = ~size_t(0);
+    static constexpr size_t npos = ~size_t(0);
 
     using iterator = const char *;
     using const_iterator = const char *;

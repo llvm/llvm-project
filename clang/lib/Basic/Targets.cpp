@@ -117,6 +117,9 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     return new XCoreTargetInfo(Triple, Opts);
 
   case llvm::Triple::hexagon:
+    if (os == llvm::Triple::Linux &&
+        Triple.getEnvironment() == llvm::Triple::Musl)
+      return new LinuxTargetInfo<HexagonTargetInfo>(Triple, Opts);
     return new HexagonTargetInfo(Triple, Opts);
 
   case llvm::Triple::lanai:
@@ -477,6 +480,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new OpenBSDI386TargetInfo(Triple, Opts);
     case llvm::Triple::FreeBSD:
       return new FreeBSDTargetInfo<X86_32TargetInfo>(Triple, Opts);
+    case llvm::Triple::Fuchsia:
+      return new FuchsiaTargetInfo<X86_32TargetInfo>(Triple, Opts);
     case llvm::Triple::KFreeBSD:
       return new KFreeBSDTargetInfo<X86_32TargetInfo>(Triple, Opts);
     case llvm::Triple::Minix:

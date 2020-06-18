@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcxxabi-no-exceptions
+// UNSUPPORTED: no-exceptions
 
 // This tests that libc++abi still provides __cxa_uncaught_exception() for
 // ABI compatibility, even though the Standard doesn't require it to.

@@ -357,8 +357,8 @@ entry:
 
 ;; Test zero mask generation.
 ;; PR22984: https://llvm.org/bugs/show_bug.cgi?id=22984
-;; Prefer xor+vblendpd over vperm2f128 because that has better performance.
-;; TODO: When building for optsize we should use vperm2f128.
+;; Prefer xor+vblendpd over vperm2f128 because that has better performance,
+;; unless building for optsize where we should still use vperm2f128.
 
 define <4 x double> @shuffle_v4f64_zz01(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_zz01:
@@ -389,8 +389,7 @@ define <4 x double> @shuffle_v4f64_zz23(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_zz23_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_zz23_optsize:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   ret <4 x double> %s
@@ -425,8 +424,7 @@ define <4 x double> @shuffle_v4f64_zz67(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_zz67_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_zz67_optsize:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[2,3]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
   ret <4 x double> %s
@@ -452,7 +450,7 @@ define <4 x double> @shuffle_v4f64_01zz_optsize(<4 x double> %a) optsize {
 define <4 x double> @shuffle_v4f64_23zz(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_23zz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   ret <4 x double> %s
@@ -460,7 +458,7 @@ define <4 x double> @shuffle_v4f64_23zz(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_23zz_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_23zz_optsize:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   ret <4 x double> %s
@@ -486,7 +484,7 @@ define <4 x double> @shuffle_v4f64_45zz_optsize(<4 x double> %a) optsize {
 define <4 x double> @shuffle_v4f64_67zz(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_67zz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 6, i32 7, i32 0, i32 1>
   ret <4 x double> %s
@@ -494,7 +492,7 @@ define <4 x double> @shuffle_v4f64_67zz(<4 x double> %a) {
 define <4 x double> @shuffle_v4f64_67zz_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_67zz_optsize:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 6, i32 7, i32 0, i32 1>
   ret <4 x double> %s
@@ -512,7 +510,7 @@ define <4 x i64> @shuffle_v4i64_67zz(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX2-LABEL: shuffle_v4i64_67zz:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
   %s = shufflevector <4 x i64> <i64 0, i64 0, i64 undef, i64 undef>, <4 x i64> %a, <4 x i32> <i32 6, i32 7, i32 0, i32 1>

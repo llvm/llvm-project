@@ -9,7 +9,6 @@
   define void @fred() {
     ret void
   }
-  !1 = !DIExpression()
 ...
 
 ---
@@ -19,5 +18,5 @@ body: |
   bb.0:
     liveins: $eax
     $ebx = COPY $eax
-    DBG_VALUE $ebx, _, !1, !1
+    DBG_VALUE $ebx, _
 ...

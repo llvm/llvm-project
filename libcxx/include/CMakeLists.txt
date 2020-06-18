@@ -25,6 +25,7 @@ set(files
   any
   array
   atomic
+  barrier
   bit
   bitset
   cassert
@@ -44,6 +45,7 @@ set(files
   compare
   complex
   complex.h
+  concepts
   condition_variable
   csetjmp
   csignal
@@ -103,6 +105,7 @@ set(files
   iostream
   istream
   iterator
+  latch
   limits
   limits.h
   list
@@ -122,6 +125,7 @@ set(files
   ratio
   regex
   scoped_allocator
+  semaphore
   set
   setjmp.h
   shared_mutex
@@ -183,7 +187,7 @@ if (LIBCXX_NEEDS_SITE_CONFIG)
   # Generate a custom __config header. The new header is created
   # by prepending __config_site to the current __config header.
   add_custom_command(OUTPUT ${LIBCXX_BINARY_DIR}/__generated_config
-    COMMAND ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/cat_files.py
+    COMMAND ${Python3_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/cat_files.py
       ${LIBCXX_BINARY_DIR}/__config_site
       ${LIBCXX_SOURCE_DIR}/include/__config
       -o ${LIBCXX_BINARY_DIR}/__generated_config
@@ -267,8 +271,5 @@ if (LIBCXX_INSTALL_HEADERS)
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     # Stripping is a no-op for headers
     add_custom_target(install-${CXX_HEADER_TARGET}-stripped DEPENDS install-${CXX_HEADER_TARGET})
-
-    add_custom_target(install-libcxx-headers DEPENDS install-${CXX_HEADER_TARGET})
-    add_custom_target(install-libcxx-headers-stripped DEPENDS install-${CXX_HEADER_TARGET}-stripped)
   endif()
 endif()

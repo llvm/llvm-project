@@ -54,7 +54,7 @@ private:
   /// Split - Partition a set of changes \p S into one or two subsets.
   void Split(const changeset_ty &S, changesetlist_ty &Res);
 
-  /// Delta - Minimize a set of \p Changes which has been partioned into
+  /// Delta - Minimize a set of \p Changes which has been partitioned into
   /// smaller sets, by attempting to remove individual subsets.
   changeset_ty Delta(const changeset_ty &Changes,
                      const changesetlist_ty &Sets);

@@ -1,14 +1,62 @@
+; REQUIRES: aarch64-registered-target
+
 ; Test IPA over a single combined file
 ; RUN: llvm-as %s -o %t0.bc
 ; RUN: llvm-as %S/Inputs/ipa-alias.ll -o %t1.bc
 ; RUN: llvm-link %t0.bc %t1.bc -o %t.combined.bc
+
 ; RUN: opt -S -analyze -stack-safety-local %t.combined.bc | FileCheck %s --check-prefixes=CHECK,LOCAL
 ; RUN: opt -S -passes="print<stack-safety-local>" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,LOCAL
-; RUN: opt -S -analyze -stack-safety %t.combined.bc | FileCheck %s --check-prefixes=CHECK,GLOBAL
-; RUN: opt -S -passes="print-stack-safety" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
+; RUN: opt -S -analyze -stack-safety %t.combined.bc | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
+; RUN: opt -S -passes="print-stack-safety" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
+
+; Do an end-to-test using the new LTO API
+; RUN: opt -module-summary %s -o %t.summ0.bc
+; RUN: opt -module-summary %S/Inputs/ipa-alias.ll -o %t.summ1.bc
+
+; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
+; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasWrite1, \
+; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
+; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
+; RUN:  -r %t.summ0.bc,AliasCall,px \
+; RUN:  -r %t.summ0.bc,BitcastAliasCall,px \
+; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,AliasToPreemptableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,AliasWrite1,px \
+; RUN:  -r %t.summ1.bc,BitcastAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,Write1,px 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+
+; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -stack-safety-print -stack-safety-run -save-temps -use-new-pm -thinlto-threads 1 -O0 \
+; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasWrite1, \
+; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
+; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
+; RUN:  -r %t.summ0.bc,AliasCall,px \
+; RUN:  -r %t.summ0.bc,BitcastAliasCall,px \
+; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,AliasToPreemptableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,AliasWrite1,px \
+; RUN:  -r %t.summ1.bc,BitcastAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,Write1,px 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+target triple = "aarch64-unknown-linux"
+
+attributes #0 = { sanitize_memtag "target-features"="+mte,+neon" }
 
 declare void @PreemptableAliasWrite1(i8* %p)
 declare void @AliasToPreemptableAliasWrite1(i8* %p)
@@ -22,7 +70,7 @@ declare void @BitcastAliasWrite1(i32* %p)
 declare void @AliasToBitcastAliasWrite1(i8* %p)
 
 ; Call to dso_preemptable alias to a dso_local aliasee
-define void @PreemptableAliasCall() {
+define void @PreemptableAliasCall() #0 {
 ; CHECK-LABEL: @PreemptableAliasCall dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -42,12 +90,13 @@ entry:
 }
 
 ; Call to an interposable alias to a non-interposable aliasee
-define void @InterposableAliasCall() {
+define void @InterposableAliasCall() #0 {
 ; CHECK-LABEL: @InterposableAliasCall dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[1]: empty-set, @InterposableAliasWrite1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: x[1]: full-set, @InterposableAliasWrite1(arg0, [0,1)){{$}}
+; NOLTO-NEXT: x[1]: full-set, @InterposableAliasWrite1(arg0, [0,1)){{$}}
+; LTO-NEXT: x[1]: [0,1), @InterposableAliasWrite1(arg0, [0,1)){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i8
@@ -57,7 +106,7 @@ entry:
 }
 
 ; Call to a dso_local/non-interposable alias/aliasee
-define void @AliasCall() {
+define void @AliasCall() #0 {
 ; CHECK-LABEL: @AliasCall dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -71,7 +120,7 @@ entry:
 }
 
 ; Call to a bitcasted dso_local/non-interposable alias/aliasee
-define void @BitcastAliasCall() {
+define void @BitcastAliasCall() #0 {
 ; CHECK-LABEL: @BitcastAliasCall dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -95,39 +144,3 @@ entry:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NOT: ]:
-
-; GLOBAL-LABEL: @InterposableAliasWrite1 interposable{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
-
-; GLOBAL-LABEL: @PreemptableAliasWrite1 dso_preemptable{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
-
-; GLOBAL-LABEL: @AliasToPreemptableAliasWrite1{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
-
-; GLOBAL-LABEL: @AliasWrite1{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
-
-; GLOBAL-LABEL: @BitcastAliasWrite1{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
-
-; GLOBAL-LABEL: @AliasToBitcastAliasWrite1{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:

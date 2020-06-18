@@ -12,26 +12,24 @@
 // LangRef.  There are obvious parallels to the sanitizer tools, but this pass
 // is focused purely on the semantics of LLVM IR, not any particular source
 // language.   If you're looking for something to see if your C/C++ contains
-// UB, this is not it.  
-// 
+// UB, this is not it.
+//
 // The rewritten semantics of each instruction will include the following
-// components: 
+// components:
 //
 // 1) The original instruction, unmodified.
 // 2) A propagation rule which translates dynamic information about the poison
 //    state of each input to whether the dynamic output of the instruction
 //    produces poison.
-// 3) A flag validation rule which validates any poison producing flags on the
+// 3) A creation rule which validates any poison producing flags on the
 //    instruction itself (e.g. checks for overflow on nsw).
 // 4) A check rule which traps (to a handler function) if this instruction must
 //    execute undefined behavior given the poison state of it's inputs.
 //
-// At the moment, the UB detection is done in a best effort manner; that is,
-// the resulting code may produce a false negative result (not report UB when
-// it actually exists according to the LangRef spec), but should never produce
-// a false positive (report UB where it doesn't exist).  The intention is to
-// eventually support a "strict" mode which never dynamically reports a false
-// negative at the cost of rejecting some valid inputs to translation.
+// This is a must analysis based transform; that is, the resulting code may
+// produce a false negative result (not report UB when actually exists
+// according to the LangRef spec), but should never produce a false positive
+// (report UB where it doesn't exist).
 //
 // Use cases for this pass include:
 // - Understanding (and testing!) the implications of the definition of poison
@@ -40,7 +38,7 @@
 //   are well defined on the specific input used.
 // - Finding/confirming poison specific miscompiles by checking the poison
 //   status of an input/IR pair is the same before and after an optimization
-//   transform. 
+//   transform.
 // - Checking that a bugpoint reduction does not introduce UB which didn't
 //   exist in the original program being reduced.
 //
@@ -56,7 +54,7 @@
 //   moment, all arguments and return values are assumed not to be poison.
 // - Undef is not modeled.  In particular, the optimizer's freedom to pick
 //   concrete values for undef bits so as to maximize potential for producing
-//   poison is not modeled.  
+//   poison is not modeled.
 //
 //===----------------------------------------------------------------------===//
 
@@ -103,10 +101,10 @@ static Value *buildOrChain(IRBuilder<> &B, ArrayRef<Value*> Ops) {
   return Accum;
 }
 
-static void generatePoisonChecksForBinOp(Instruction &I,
-                                         SmallVector<Value*, 2> &Checks) {
+static void generateCreationChecksForBinOp(Instruction &I,
+                                           SmallVectorImpl<Value*> &Checks) {
   assert(isa<BinaryOperator>(I));
-  
+
   IRBuilder<> B(&I);
   Value *LHS = I.getOperand(0);
   Value *RHS = I.getOperand(1);
@@ -183,22 +181,28 @@ static void generatePoisonChecksForBinOp(Instruction &I,
   };
 }
 
-static Value* generatePoisonChecks(Instruction &I) {
+/// Given an instruction which can produce poison on non-poison inputs
+/// (i.e. canCreatePoison returns true), generate runtime checks to produce
+/// boolean indicators of when poison would result.
+static void generateCreationChecks(Instruction &I,
+                                   SmallVectorImpl<Value*> &Checks) {
   IRBuilder<> B(&I);
-  SmallVector<Value*, 2> Checks;
   if (isa<BinaryOperator>(I) && !I.getType()->isVectorTy())
-    generatePoisonChecksForBinOp(I, Checks);
+    generateCreationChecksForBinOp(I, Checks);
 
-  // Handle non-binops seperately
+  // Handle non-binops separately
   switch (I.getOpcode()) {
   default:
+    // Note there are a couple of missing cases here, once implemented, this
+    // should become an llvm_unreachable.
     break;
   case Instruction::ExtractElement: {
     Value *Vec = I.getOperand(0);
-    if (Vec->getType()->getVectorIsScalable())
+    auto *VecVTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecVTy)
       break;
     Value *Idx = I.getOperand(1);
-    unsigned NumElts = Vec->getType()->getVectorNumElements();
+    unsigned NumElts = VecVTy->getNumElements();
     Value *Check =
       B.CreateICmp(ICmpInst::ICMP_UGE, Idx,
                    ConstantInt::get(Idx->getType(), NumElts));
@@ -207,10 +211,11 @@ static Value* generatePoisonChecks(Instruction &I) {
   }
   case Instruction::InsertElement: {
     Value *Vec = I.getOperand(0);
-    if (Vec->getType()->getVectorIsScalable())
+    auto *VecVTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecVTy)
       break;
     Value *Idx = I.getOperand(2);
-    unsigned NumElts = Vec->getType()->getVectorNumElements();
+    unsigned NumElts = VecVTy->getNumElements();
     Value *Check =
       B.CreateICmp(ICmpInst::ICMP_UGE, Idx,
                    ConstantInt::get(Idx->getType(), NumElts));
@@ -218,7 +223,6 @@ static Value* generatePoisonChecks(Instruction &I) {
     break;
   }
   };
-  return buildOrChain(B, Checks);
 }
 
 static Value *getPoisonFor(DenseMap<Value *, Value *> &ValToPoison, Value *V) {
@@ -262,24 +266,23 @@ static bool rewrite(Function &F) {
   for (BasicBlock &BB : F)
     for (auto I = BB.begin(); isa<PHINode>(&*I); I++) {
       auto *OldPHI = cast<PHINode>(&*I);
-      auto *NewPHI = PHINode::Create(Int1Ty, 
-                                     OldPHI->getNumIncomingValues());
+      auto *NewPHI = PHINode::Create(Int1Ty, OldPHI->getNumIncomingValues());
       for (unsigned i = 0; i < OldPHI->getNumIncomingValues(); i++)
         NewPHI->addIncoming(UndefValue::get(Int1Ty),
                             OldPHI->getIncomingBlock(i));
       NewPHI->insertBefore(OldPHI);
       ValToPoison[OldPHI] = NewPHI;
     }
-  
+
   for (BasicBlock &BB : F)
     for (Instruction &I : BB) {
       if (isa<PHINode>(I)) continue;
 
       IRBuilder<> B(cast<Instruction>(&I));
-      
+
       // Note: There are many more sources of documented UB, but this pass only
       // attempts to find UB triggered by propagation of poison.
-      if (Value *Op = const_cast<Value*>(getGuaranteedNonFullPoisonOp(&I)))
+      if (Value *Op = const_cast<Value*>(getGuaranteedNonPoisonOp(&I)))
         CreateAssertNot(B, getPoisonFor(ValToPoison, Op));
 
       if (LocalCheck)
@@ -290,12 +293,12 @@ static bool rewrite(Function &F) {
           }
 
       SmallVector<Value*, 4> Checks;
-      if (propagatesFullPoison(&I))
+      if (propagatesPoison(&I))
         for (Value *V : I.operands())
           Checks.push_back(getPoisonFor(ValToPoison, V));
 
-      if (auto *Check = generatePoisonChecks(I))
-        Checks.push_back(Check);
+      if (canCreatePoison(&I))
+        generateCreationChecks(I, Checks);
       ValToPoison[&I] = buildOrChain(B, Checks);
     }
 
@@ -328,7 +331,6 @@ PreservedAnalyses PoisonCheckingPass::run(Function &F,
   return rewrite(F) ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
-
 /* Major TODO Items:
    - Control dependent poison UB
    - Strict mode - (i.e. must analyze every operand)
@@ -338,10 +340,7 @@ PreservedAnalyses PoisonCheckingPass::run(Function &F,
 
    Instructions w/Unclear Semantics:
    - shufflevector - It would seem reasonable for an out of bounds mask element
-     to produce poison, but the LangRef does not state.  
-   - and/or - It would seem reasonable for poison to propagate from both
-     arguments, but LangRef doesn't state and propagatesFullPoison doesn't
-     include these two.
+     to produce poison, but the LangRef does not state.
    - all binary ops w/vector operands - The likely interpretation would be that
      any element overflowing should produce poison for the entire result, but
      the LangRef does not state.

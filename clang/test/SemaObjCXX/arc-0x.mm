@@ -161,7 +161,7 @@ namespace test_union {
 
   struct S1 {
     union {
-      union { // expected-note 2 {{'S1' is implicitly deleted because variant field '' has a non-trivial}} expected-note 4 {{'S1' is implicitly deleted because field '' has a deleted}}
+      union { // expected-note {{copy constructor of 'S1' is implicitly deleted because field '' has a deleted copy constructor}} expected-note {{copy assignment operator of 'S1' is implicitly deleted because field '' has a deleted copy assignment operator}} expected-note 4 {{'S1' is implicitly deleted because field '' has a deleted}}
         id f0; // expected-note 2 {{'' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
         char f1;
       };

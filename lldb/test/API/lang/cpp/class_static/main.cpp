@@ -1,11 +1,3 @@
-//===-- main.cpp ------------------------------------------------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 // I made this example after noting that I was unable to display an unsized
 // static class array. It turns out that gcc 4.2 will emit DWARF that correctly
 // describes the PointType, but it will incorrectly emit debug info for the

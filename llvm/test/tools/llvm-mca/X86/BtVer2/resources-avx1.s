@@ -1719,8 +1719,8 @@ vzeroupper
 # CHECK-NEXT:  1      6     1.00    *                   vxorps	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  2      1     1.00                        vxorps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      6     2.00    *                   vxorps	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  73     90    36.50   *      *      U     vzeroall
-# CHECK-NEXT:  37     46    18.50   *      *      U     vzeroupper
+# CHECK-NEXT:  73     90    36.50                 U     vzeroall
+# CHECK-NEXT:  37     46    18.50                 U     vzeroupper
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0

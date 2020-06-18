@@ -475,6 +475,8 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   TPC.CollectFeatures([&](size_t Feature) {
     if (Corpus.AddFeature(Feature, Size, Options.Shrink))
       UniqFeatureSetTmp.push_back(Feature);
+    if (Options.Entropic)
+      Corpus.UpdateFeatureFrequency(II, Feature);
     if (Options.ReduceInputs && II)
       if (std::binary_search(II->UniqFeatureSet.begin(),
                              II->UniqFeatureSet.end(), Feature))
@@ -693,6 +695,7 @@ void Fuzzer::MutateAndTestOne() {
     assert(NewSize <= CurrentMaxMutationLen && "Mutator return oversized unit");
     Size = NewSize;
     II.NumExecutedMutations++;
+    Corpus.IncrementNumExecutedMutations();
 
     bool FoundUniqFeatures = false;
     bool NewCov = RunOne(CurrentUnitData, Size, /*MayDeleteFile=*/true, &II,
@@ -706,6 +709,8 @@ void Fuzzer::MutateAndTestOne() {
     if (Options.ReduceDepth && !FoundUniqFeatures)
       break;
   }
+
+  II.NeedsEnergyUpdate = true;
 }
 
 void Fuzzer::PurgeAllocator() {
@@ -770,12 +775,14 @@ void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
   }
 
   PrintStats("INITED");
-  if (!Options.FocusFunction.empty())
+  if (!Options.FocusFunction.empty()) {
     Printf("INFO: %zd/%zd inputs touch the focus function\n",
            Corpus.NumInputsThatTouchFocusFunction(), Corpus.size());
-  if (!Options.DataFlowTrace.empty())
-    Printf("INFO: %zd/%zd inputs have the Data Flow Trace\n",
-           Corpus.NumInputsWithDataFlowTrace(), Corpus.size());
+    if (!Options.DataFlowTrace.empty())
+      Printf("INFO: %zd/%zd inputs have the Data Flow Trace\n",
+             Corpus.NumInputsWithDataFlowTrace(),
+             Corpus.NumInputsThatTouchFocusFunction());
+  }
 
   if (Corpus.empty() && Options.MaxNumberOfRuns) {
     Printf("ERROR: no interesting inputs were found. "

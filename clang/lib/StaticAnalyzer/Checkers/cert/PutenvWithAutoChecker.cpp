@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AllocationState.h"
+#include "../AllocationState.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -24,6 +24,7 @@
 using namespace clang;
 using namespace ento;
 
+namespace {
 class PutenvWithAutoChecker : public Checker<check::PostCall> {
 private:
   BugType BT{this, "'putenv' function should not be called with auto variables",
@@ -33,6 +34,7 @@ private:
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 };
+} // namespace
 
 void PutenvWithAutoChecker::checkPostCall(const CallEvent &Call,
                                           CheckerContext &C) const {
@@ -61,4 +63,4 @@ void ento::registerPutenvWithAuto(CheckerManager &Mgr) {
   Mgr.registerChecker<PutenvWithAutoChecker>();
 }
 
-bool ento::shouldRegisterPutenvWithAuto(const LangOptions &) { return true; }
+bool ento::shouldRegisterPutenvWithAuto(const CheckerManager &) { return true; }

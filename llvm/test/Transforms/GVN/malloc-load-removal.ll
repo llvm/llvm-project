@@ -54,3 +54,28 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK_NO_LIBCALLS: load
 ; CHECK_NO_LIBCALLS: icmp
 }
+
+declare i8* @aligned_alloc(i64, i64) nounwind
+
+define noalias i8* @test3() nounwind uwtable ssp {
+entry:
+  %call = tail call i8* @aligned_alloc(i64 256, i64 32) nounwind
+  %0 = load i8, i8* %call, align 32
+  %tobool = icmp eq i8 %0, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  store i8 0, i8* %call, align 1
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  ret i8* %call
+
+; CHECK-LABEL: @test3(
+; CHECK-NOT: load
+; CHECK-NOT: icmp
+
+; CHECK_NO_LIBCALLS-LABEL: @test3(
+; CHECK_NO_LIBCALLS: load
+; CHECK_NO_LIBCALLS: icmp
+}

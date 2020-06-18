@@ -218,16 +218,15 @@ static llvm::json::Array toJSONSorted(const llvm::StringSet<> &Set) {
   std::vector<llvm::StringRef> Strings;
   for (auto &&I : Set)
     Strings.push_back(I.getKey());
-  std::sort(Strings.begin(), Strings.end());
+  llvm::sort(Strings);
   return llvm::json::Array(Strings);
 }
 
 static llvm::json::Array toJSONSorted(std::vector<ClangModuleDep> V) {
-  std::sort(V.begin(), V.end(),
-            [](const ClangModuleDep &A, const ClangModuleDep &B) {
-              return std::tie(A.ModuleName, A.ContextHash) <
-                     std::tie(B.ModuleName, B.ContextHash);
-            });
+  llvm::sort(V, [](const ClangModuleDep &A, const ClangModuleDep &B) {
+    return std::tie(A.ModuleName, A.ContextHash) <
+           std::tie(B.ModuleName, B.ContextHash);
+  });
 
   llvm::json::Array Ret;
   for (const ClangModuleDep &CMD : V)
@@ -275,16 +274,15 @@ public:
     std::vector<ContextModulePair> ModuleNames;
     for (auto &&M : Modules)
       ModuleNames.push_back(M.first);
-    std::sort(ModuleNames.begin(), ModuleNames.end(),
-              [](const ContextModulePair &A, const ContextModulePair &B) {
-                return std::tie(A.ModuleName, A.InputIndex) <
-                       std::tie(B.ModuleName, B.InputIndex);
-              });
+    llvm::sort(ModuleNames,
+               [](const ContextModulePair &A, const ContextModulePair &B) {
+                 return std::tie(A.ModuleName, A.InputIndex) <
+                        std::tie(B.ModuleName, B.InputIndex);
+               });
 
-    std::sort(Inputs.begin(), Inputs.end(),
-              [](const InputDeps &A, const InputDeps &B) {
-                return A.FileName < B.FileName;
-              });
+    llvm::sort(Inputs, [](const InputDeps &A, const InputDeps &B) {
+      return A.FileName < B.FileName;
+    });
 
     using namespace llvm::json;
 

@@ -15,6 +15,7 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Optional.h"
 
 namespace lld {
 namespace wasm {
@@ -52,21 +53,25 @@ public:
   Symbol *addDefinedFunction(StringRef name, uint32_t flags, InputFile *file,
                              InputFunction *function);
   Symbol *addDefinedData(StringRef name, uint32_t flags, InputFile *file,
-                         InputSegment *segment, uint32_t address,
-                         uint32_t size);
+                         InputSegment *segment, uint64_t address,
+                         uint64_t size);
   Symbol *addDefinedGlobal(StringRef name, uint32_t flags, InputFile *file,
                            InputGlobal *g);
   Symbol *addDefinedEvent(StringRef name, uint32_t flags, InputFile *file,
                           InputEvent *e);
 
-  Symbol *addUndefinedFunction(StringRef name, StringRef importName,
-                               StringRef importModule, uint32_t flags,
-                               InputFile *file, const WasmSignature *signature,
+  Symbol *addUndefinedFunction(StringRef name,
+                               llvm::Optional<StringRef> importName,
+                               llvm::Optional<StringRef> importModule,
+                               uint32_t flags, InputFile *file,
+                               const WasmSignature *signature,
                                bool isCalledDirectly);
   Symbol *addUndefinedData(StringRef name, uint32_t flags, InputFile *file);
-  Symbol *addUndefinedGlobal(StringRef name, StringRef importName,
-                             StringRef importModule,  uint32_t flags,
-                             InputFile *file, const WasmGlobalType *type);
+  Symbol *addUndefinedGlobal(StringRef name,
+                             llvm::Optional<StringRef> importName,
+                             llvm::Optional<StringRef> importModule,
+                             uint32_t flags, InputFile *file,
+                             const WasmGlobalType *type);
 
   void addLazy(ArchiveFile *f, const llvm::object::Archive::Symbol *sym);
 
@@ -103,7 +108,7 @@ private:
   llvm::DenseMap<llvm::CachedHashStringRef, int> symMap;
   std::vector<Symbol *> symVector;
 
-  // For certain symbols types, e.g. function symbols, we allow for muliple
+  // For certain symbols types, e.g. function symbols, we allow for multiple
   // variants of the same symbol with different signatures.
   llvm::DenseMap<llvm::CachedHashStringRef, std::vector<Symbol *>> symVariants;
 

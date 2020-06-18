@@ -12,7 +12,6 @@
 
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -203,22 +202,21 @@ static Value *LowerCTLZ(LLVMContext &Context, Value *V, Instruction *IP) {
 static void ReplaceFPIntrinsicWithCall(CallInst *CI, const char *Fname,
                                        const char *Dname,
                                        const char *LDname) {
-  CallSite CS(CI);
   switch (CI->getArgOperand(0)->getType()->getTypeID()) {
   default: llvm_unreachable("Invalid type in intrinsic");
   case Type::FloatTyID:
-    ReplaceCallWith(Fname, CI, CS.arg_begin(), CS.arg_end(),
-                  Type::getFloatTy(CI->getContext()));
+    ReplaceCallWith(Fname, CI, CI->arg_begin(), CI->arg_end(),
+                    Type::getFloatTy(CI->getContext()));
     break;
   case Type::DoubleTyID:
-    ReplaceCallWith(Dname, CI, CS.arg_begin(), CS.arg_end(),
-                  Type::getDoubleTy(CI->getContext()));
+    ReplaceCallWith(Dname, CI, CI->arg_begin(), CI->arg_end(),
+                    Type::getDoubleTy(CI->getContext()));
     break;
   case Type::X86_FP80TyID:
   case Type::FP128TyID:
   case Type::PPC_FP128TyID:
-    ReplaceCallWith(LDname, CI, CS.arg_begin(), CS.arg_end(),
-                  CI->getArgOperand(0)->getType());
+    ReplaceCallWith(LDname, CI, CI->arg_begin(), CI->arg_end(),
+                    CI->getArgOperand(0)->getType());
     break;
   }
 }
@@ -230,7 +228,6 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
   const Function *Callee = CI->getCalledFunction();
   assert(Callee && "Cannot lower an indirect call!");
 
-  CallSite CS(CI);
   switch (Callee->getIntrinsicID()) {
   case Intrinsic::not_intrinsic:
     report_fatal_error("Cannot lower a call to a non-intrinsic function '"+
@@ -422,6 +419,10 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
   }
   case Intrinsic::round: {
     ReplaceFPIntrinsicWithCall(CI, "roundf", "round", "roundl");
+    break;
+  }
+  case Intrinsic::roundeven: {
+    ReplaceFPIntrinsicWithCall(CI, "roundevenf", "roundeven", "roundevenl");
     break;
   }
   case Intrinsic::copysign: {

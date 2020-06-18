@@ -10,6 +10,17 @@
 #ifndef HEADER
 #define HEADER
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 void foo() {}
 
 struct S {
@@ -33,7 +44,7 @@ public:
   }
   S7 &operator=(S7 &s) {
     int k;
-#pragma omp target teams distribute parallel for simd allocate(a) private(a) private(this->a) linear(k) allocate(k)
+#pragma omp target teams distribute parallel for simd allocate(omp_pteam_mem_alloc: a) private(a) private(this->a) linear(k) allocate(k) uses_allocators(omp_pteam_mem_alloc)
     for (k = 0; k < s.a.a; ++k)
       ++s.a.a;
 
@@ -58,7 +69,7 @@ public:
   }
 };
 // CHECK: #pragma omp target teams distribute parallel for simd private(this->a) private(this->a) private(T::a)
-// CHECK: #pragma omp target teams distribute parallel for simd allocate(this->a) private(this->a) private(this->a) linear(k) allocate(k)
+// CHECK: #pragma omp target teams distribute parallel for simd allocate(omp_pteam_mem_alloc: this->a) private(this->a) private(this->a) linear(k) allocate(k) uses_allocators(omp_pteam_mem_alloc)
 // CHECK: #pragma omp target teams distribute parallel for simd default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
 // CHECK: #pragma omp target teams distribute parallel for simd simdlen(slen1) safelen(slen2) aligned(arr: alen)
 

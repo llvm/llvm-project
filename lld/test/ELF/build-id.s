@@ -5,43 +5,43 @@
 # RUN: ld.lld --build-id %t -o %t2
 # RUN: llvm-readobj -S %t2 | FileCheck -check-prefix=ALIGN %s
 
-# RUN: ld.lld --build-id %t -o %t2 -threads
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=DEFAULT %s
-# RUN: ld.lld --build-id=fast %t -o %t2 -threads
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=DEFAULT %s
-# RUN: ld.lld --build-id %t -o %t2 -no-threads
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=DEFAULT %s
+# RUN: ld.lld --build-id %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
+# RUN: ld.lld --build-id=fast %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
+# RUN: ld.lld --build-id %t -o %t2 --threads=1
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
 
-# RUN: ld.lld --build-id=md5 %t -o %t2 -threads
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=MD5 %s
-# RUN: ld.lld --build-id=md5 %t -o %t2 -no-threads
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=MD5 %s
+# RUN: ld.lld --build-id=md5 %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=MD5 %s
+# RUN: ld.lld --build-id=md5 %t -o %t2 --threads=1
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=MD5 %s
 
-# RUN: ld.lld --build-id=sha1 %t -o %t2 -threads
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=SHA1 %s
-# RUN: ld.lld --build-id=sha1 %t -o %t2 -no-threads
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=SHA1 %s
+# RUN: ld.lld --build-id=sha1 %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
+# RUN: ld.lld --build-id=sha1 %t -o %t2 --threads=1
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
 
-# RUN: ld.lld --build-id=tree %t -o %t2 -threads
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=SHA1 %s
-# RUN: ld.lld --build-id=tree %t -o %t2 -no-threads
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=SHA1 %s
+# RUN: ld.lld --build-id=tree %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
+# RUN: ld.lld --build-id=tree %t -o %t2 --threads=1
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=SHA1 %s
 
 # RUN: ld.lld --build-id=uuid %t -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=UUID %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=UUID %s
 
 # RUN: ld.lld --build-id=0x12345678 %t -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=HEX %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=HEX %s
 
 # RUN: ld.lld %t -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=NONE %s
 
 # RUN: ld.lld --build-id=md5 --build-id=none %t -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=NONE %s
 # RUN: ld.lld --build-id --build-id=none %t -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=NONE %s
 # RUN: ld.lld --build-id=none --build-id %t -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=DEFAULT %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DEFAULT %s
 
 .globl _start
 _start:

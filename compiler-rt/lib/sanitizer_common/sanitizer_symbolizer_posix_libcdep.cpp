@@ -151,9 +151,19 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
   GetArgV(path_, argv);
   pid_t pid;
 
+  // Report how symbolizer is being launched for debugging purposes.
+  if (Verbosity() >= 3) {
+    // Only use `Report` for first line so subsequent prints don't get prefixed
+    // with current PID.
+    Report("Launching Symbolizer process: ");
+    for (unsigned index = 0; index < kArgVMax && argv[index]; ++index)
+      Printf("%s ", argv[index]);
+    Printf("\n");
+  }
+
   if (use_posix_spawn_) {
 #if SANITIZER_MAC
-    fd_t fd = internal_spawn(argv, &pid);
+    fd_t fd = internal_spawn(argv, const_cast<const char **>(GetEnvP()), &pid);
     if (fd == kInvalidFd) {
       Report("WARNING: failed to spawn external symbolizer (errno: %d)\n",
              errno);
@@ -173,7 +183,7 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
       return false;
     }
 
-    pid = StartSubprocess(path_, argv, /* stdin */ outfd[0],
+    pid = StartSubprocess(path_, argv, GetEnvP(), /* stdin */ outfd[0],
                           /* stdout */ infd[1]);
     if (pid < 0) {
       internal_close(infd[0]);
@@ -478,7 +488,7 @@ Symbolizer *Symbolizer::PlatformInit() {
 }
 
 void Symbolizer::LateInitialize() {
-  Symbolizer::GetOrInit();
+  Symbolizer::GetOrInit()->LateInitializeTools();
   InitializeSwiftDemangler();
 }
 

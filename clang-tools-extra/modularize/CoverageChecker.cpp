@@ -267,7 +267,7 @@ bool CoverageChecker::collectUmbrellaHeaders(StringRef UmbrellaDirName) {
   return true;
 }
 
-// Collect headers rferenced from an umbrella file.
+// Collect headers referenced from an umbrella file.
 bool
 CoverageChecker::collectUmbrellaHeaderHeaders(StringRef UmbrellaHeaderName) {
 
@@ -338,7 +338,7 @@ bool CoverageChecker::collectFileSystemHeaders() {
   }
 
   // Sort it, because different file systems might order the file differently.
-  std::sort(FileSystemHeaders.begin(), FileSystemHeaders.end());
+  llvm::sort(FileSystemHeaders);
 
   return true;
 }

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MachineValueType.h"
 
@@ -27,6 +28,7 @@ class MachineInstr;
 class MachineOperand;
 class MachineOptimizationRemarkEmitter;
 class MachineOptimizationRemarkMissed;
+struct MachinePointerInfo;
 class MachineRegisterInfo;
 class MCInstrDesc;
 class RegisterBankInfo;
@@ -113,6 +115,12 @@ void reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                         const char *PassName, StringRef Msg,
                         const MachineInstr &MI);
 
+/// Report an ISel warning as a missed optimization remark to the LLVMContext's
+/// diagnostic stream.
+void reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
+                        MachineOptimizationRemarkEmitter &MORE,
+                        MachineOptimizationRemarkMissed &R);
+
 /// If \p VReg is defined by a G_CONSTANT fits in int64_t
 /// returns it.
 Optional<int64_t> getConstantVRegVal(Register VReg,
@@ -163,11 +171,11 @@ APFloat getAPFloatFromSize(double Val, unsigned Size);
 /// fallback.
 void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);
 
-Optional<APInt> ConstantFoldBinOp(unsigned Opcode, const unsigned Op1,
-                                  const unsigned Op2,
+Optional<APInt> ConstantFoldBinOp(unsigned Opcode, const Register Op1,
+                                  const Register Op2,
                                   const MachineRegisterInfo &MRI);
 
-Optional<APInt> ConstantFoldExtOp(unsigned Opcode, const unsigned Op1,
+Optional<APInt> ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                   uint64_t Imm, const MachineRegisterInfo &MRI);
 
 /// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
@@ -179,6 +187,20 @@ bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
 inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
   return isKnownNeverNaN(Val, MRI, true);
 }
+
+Align inferAlignFromPtrInfo(MachineFunction &MF, const MachinePointerInfo &MPO);
+
+/// Return the least common multiple type of \p Ty0 and \p Ty1, by changing
+/// the number of vector elements or scalar bitwidth. The intent is a
+/// G_MERGE_VALUES can be constructed from \p Ty0 elements, and unmerged into
+/// \p Ty1.
+LLT getLCMType(LLT Ty0, LLT Ty1);
+
+/// Return a type that is greatest common divisor of \p OrigTy and \p
+/// TargetTy. This will either change the number of vector elements, or
+/// bitwidth of scalars. The intent is the result type can be used as the
+/// result of a G_UNMERGE_VALUES from \p OrigTy.
+LLT getGCDType(LLT OrigTy, LLT TargetTy);
 
 } // End namespace llvm.
 #endif

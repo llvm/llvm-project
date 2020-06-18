@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <filesystem>
 
@@ -62,7 +62,8 @@ TEST_CASE(is_socket_status_test)
 
 TEST_CASE(test_exist_not_found)
 {
-    const path p = StaticEnv::DNE;
+    static_test_env static_env;
+    const path p = static_env.DNE;
     TEST_CHECK(is_socket(p) == false);
 }
 

@@ -102,8 +102,6 @@ protected:
   void ExitNotify(const ProcessMessage &message);
   void ExecNotify(const ProcessMessage &message);
 
-  lldb_private::Unwind *GetUnwinder() override;
-
   // FreeBSDThread internal API.
 
   // POSIXThread override

@@ -1,8 +1,9 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 %s -verify \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-config core.CallAndMessage:ArgPointeeInitializedness=true
 //
 // Just exercise the analyzer on code that has at one point caused issues
 // (i.e., no assertions or crashes).
-
 
 static void f1(const char *x, char *y) {
   while (*x != 0) {

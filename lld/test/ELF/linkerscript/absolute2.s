@@ -9,8 +9,8 @@
 # RUN: ld.lld -o %t --script %t.script %t.o
 # RUN: llvm-objdump -t %t | FileCheck %s
 
-# CHECK: 0000000000000001         .text           00000000 _start
-# CHECK: 0000000000000002         .text           00000000 foo
+# CHECK: 0000000000000001 g       .text  0000000000000000 _start
+# CHECK: 0000000000000002 g       .text  0000000000000000 foo
 
         .global _start
         nop

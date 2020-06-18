@@ -314,7 +314,7 @@ bool HexagonStoreWidening::selectStores(InstrGroup::iterator Begin,
   MachineInstr *FirstMI = *Begin;
   assert(!FirstMI->memoperands_empty() && "Expecting some memory operands");
   const MachineMemOperand &FirstMMO = getStoreTarget(FirstMI);
-  unsigned Alignment = FirstMMO.getAlignment();
+  unsigned Alignment = FirstMMO.getAlign().value();
   unsigned SizeAccum = FirstMMO.getSize();
   unsigned FirstOffset = getStoreOffset(FirstMI);
 
@@ -417,9 +417,8 @@ bool HexagonStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
   DebugLoc DL = OG.back()->getDebugLoc();
   const MachineMemOperand &OldM = getStoreTarget(FirstSt);
   MachineMemOperand *NewM =
-    MF->getMachineMemOperand(OldM.getPointerInfo(), OldM.getFlags(),
-                             TotalSize, OldM.getAlignment(),
-                             OldM.getAAInfo());
+      MF->getMachineMemOperand(OldM.getPointerInfo(), OldM.getFlags(),
+                               TotalSize, OldM.getAlign(), OldM.getAAInfo());
 
   if (Acc < 0x10000) {
     // Create mem[hw] = #Acc

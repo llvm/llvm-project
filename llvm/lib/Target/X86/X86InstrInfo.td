@@ -21,9 +21,6 @@ def SDTX86CmpTest : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisInt<1>,
 def SDTX86FCmp    : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisFP<1>,
                                          SDTCisSameAs<1, 2>]>;
 
-def SDTX86Cmps : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisSameAs<1, 2>, SDTCisVT<3, i8>]>;
-//def SDTX86Cmpss : SDTypeProfile<1, 3, [SDTCisVT<0, f32>, SDTCisSameAs<1, 2>, SDTCisVT<3, i8>]>;
-
 def SDTX86Cmov    : SDTypeProfile<1, 4,
                                   [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                    SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
@@ -143,8 +140,8 @@ def X86MFence : SDNode<"X86ISD::MFENCE", SDT_X86MEMBARRIER,
 
 def X86bsf     : SDNode<"X86ISD::BSF",      SDTUnaryArithWithFlags>;
 def X86bsr     : SDNode<"X86ISD::BSR",      SDTUnaryArithWithFlags>;
-def X86shld    : SDNode<"X86ISD::SHLD",     SDTIntShiftDOp>;
-def X86shrd    : SDNode<"X86ISD::SHRD",     SDTIntShiftDOp>;
+def X86fshl    : SDNode<"X86ISD::FSHL",     SDTIntShiftDOp>;
+def X86fshr    : SDNode<"X86ISD::FSHR",     SDTIntShiftDOp>;
 
 def X86cmp     : SDNode<"X86ISD::CMP" ,     SDTX86CmpTest>;
 def X86fcmp    : SDNode<"X86ISD::FCMP",     SDTX86FCmp>;
@@ -290,6 +287,9 @@ def X86bextr  : SDNode<"X86ISD::BEXTR",  SDTIntBinOp>;
 
 def X86bzhi   : SDNode<"X86ISD::BZHI",   SDTIntBinOp>;
 
+def X86pdep   : SDNode<"X86ISD::PDEP",   SDTIntBinOp>;
+def X86pext   : SDNode<"X86ISD::PEXT",   SDTIntBinOp>;
+
 def X86mul_imm : SDNode<"X86ISD::MUL_IMM", SDTIntBinOp>;
 
 def X86WinAlloca : SDNode<"X86ISD::WIN_ALLOCA", SDT_X86WIN_ALLOCA,
@@ -383,14 +383,14 @@ class X86VMemOperand<RegisterClass RC, string printMethod,
   let MIOperandInfo = (ops ptr_rc, i8imm, RC, i32imm, SEGMENT_REG);
 }
 
-def anymem : X86MemOperand<"printanymem">;
+def anymem : X86MemOperand<"printMemReference">;
 def X86any_fcmp : PatFrags<(ops node:$lhs, node:$rhs),
                           [(X86strict_fcmp node:$lhs, node:$rhs),
                            (X86fcmp node:$lhs, node:$rhs)]>;
 
 // FIXME: Right now we allow any size during parsing, but we might want to
 // restrict to only unsized memory.
-def opaquemem : X86MemOperand<"printopaquemem">;
+def opaquemem : X86MemOperand<"printMemReference">;
 
 def i8mem   : X86MemOperand<"printbytemem",   X86Mem8AsmOperand>;
 def i16mem  : X86MemOperand<"printwordmem",  X86Mem16AsmOperand>;
@@ -764,14 +764,14 @@ def i64u8imm : Operand<i64> {
 }
 
 def lea64_32mem : Operand<i32> {
-  let PrintMethod = "printanymem";
+  let PrintMethod = "printMemReference";
   let MIOperandInfo = (ops GR64, i8imm, GR64_NOSP, i32imm, SEGMENT_REG);
   let ParserMatchClass = X86MemAsmOperand;
 }
 
 // Memory operands that use 64-bit pointers in both ILP32 and LP64.
 def lea64mem : Operand<i64> {
-  let PrintMethod = "printanymem";
+  let PrintMethod = "printMemReference";
   let MIOperandInfo = (ops GR64, i8imm, GR64_NOSP, i32imm, SEGMENT_REG);
   let ParserMatchClass = X86MemAsmOperand;
 }
@@ -837,11 +837,10 @@ def tls64baseaddr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
 
 def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr", [],[SDNPWantParent]>;
 
-// A relocatable immediate is either an immediate operand or an operand that can
-// be relocated by the linker to an immediate, such as a regular symbol in
-// non-PIC code.
-def relocImm : ComplexPattern<iAny, 1, "selectRelocImm", [imm, X86Wrapper], [],
-                              0>;
+// A relocatable immediate is an operand that can be relocated by the linker to
+// an immediate, such as a regular symbol in non-PIC code.
+def relocImm : ComplexPattern<iAny, 1, "selectRelocImm",
+                              [X86Wrapper], [], 0>;
 
 //===----------------------------------------------------------------------===//
 // X86 Instruction Predicate Definitions.
@@ -955,18 +954,20 @@ def HasCmpxchg8b : Predicate<"Subtarget->hasCmpxchg8b()">;
 def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;
 def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def HasENQCMD    : Predicate<"Subtarget->hasENQCMD()">;
+def HasSERIALIZE : Predicate<"Subtarget->hasSERIALIZE()">;
+def HasTSXLDTRK  : Predicate<"Subtarget->hasTSXLDTRK()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
-                             AssemblerPredicate<"!Mode64Bit", "Not 64-bit mode">;
+                             AssemblerPredicate<(all_of (not Mode64Bit)), "Not 64-bit mode">;
 def In64BitMode  : Predicate<"Subtarget->is64Bit()">,
-                             AssemblerPredicate<"Mode64Bit", "64-bit mode">;
+                             AssemblerPredicate<(all_of Mode64Bit), "64-bit mode">;
 def IsLP64  : Predicate<"Subtarget->isTarget64BitLP64()">;
 def NotLP64 : Predicate<"!Subtarget->isTarget64BitLP64()">;
 def In16BitMode  : Predicate<"Subtarget->is16Bit()">,
-                             AssemblerPredicate<"Mode16Bit", "16-bit mode">;
+                             AssemblerPredicate<(all_of Mode16Bit), "16-bit mode">;
 def Not16BitMode : Predicate<"!Subtarget->is16Bit()">,
-                             AssemblerPredicate<"!Mode16Bit", "Not 16-bit mode">;
+                             AssemblerPredicate<(all_of (not Mode16Bit)), "Not 16-bit mode">;
 def In32BitMode  : Predicate<"Subtarget->is32Bit()">,
-                             AssemblerPredicate<"Mode32Bit", "32-bit mode">;
+                             AssemblerPredicate<(all_of Mode32Bit), "32-bit mode">;
 def IsWin64      : Predicate<"Subtarget->isTargetWin64()">;
 def NotWin64     : Predicate<"!Subtarget->isTargetWin64()">;
 def NotWin64WithoutFP : Predicate<"!Subtarget->isTargetWin64() ||"
@@ -1003,8 +1004,8 @@ def HasFastLZCNT : Predicate<"Subtarget->hasFastLZCNT()">;
 def HasFastSHLDRotate : Predicate<"Subtarget->hasFastSHLDRotate()">;
 def HasERMSB : Predicate<"Subtarget->hasERMSB()">;
 def HasMFence    : Predicate<"Subtarget->hasMFence()">;
-def UseRetpolineIndirectCalls : Predicate<"Subtarget->useRetpolineIndirectCalls()">;
-def NotUseRetpolineIndirectCalls : Predicate<"!Subtarget->useRetpolineIndirectCalls()">;
+def UseIndirectThunkCalls : Predicate<"Subtarget->useIndirectThunkCalls()">;
+def NotUseIndirectThunkCalls : Predicate<"!Subtarget->useIndirectThunkCalls()">;
 
 //===----------------------------------------------------------------------===//
 // X86 Instruction Format Definitions.
@@ -1040,13 +1041,17 @@ def i32immSExt8  : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
 def i64immSExt8  : ImmLeaf<i64, [{ return isInt<8>(Imm); }]>;
 def i64immSExt32 : ImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 
-// FIXME: Ideally we would just replace the above i*immSExt* matchers with
-// relocImm-based matchers, but then FastISel would be unable to use them.
+def i16relocImmSExt8 : PatLeaf<(i16 relocImm), [{
+  return isSExtAbsoluteSymbolRef(8, N);
+}]>;
+def i32relocImmSExt8 : PatLeaf<(i32 relocImm), [{
+  return isSExtAbsoluteSymbolRef(8, N);
+}]>;
 def i64relocImmSExt8 : PatLeaf<(i64 relocImm), [{
-  return isSExtRelocImm<8>(N);
+  return isSExtAbsoluteSymbolRef(8, N);
 }]>;
 def i64relocImmSExt32 : PatLeaf<(i64 relocImm), [{
-  return isSExtRelocImm<32>(N);
+  return isSExtAbsoluteSymbolRef(32, N);
 }]>;
 
 // If we have multiple users of an immediate, it's much smaller to reuse
@@ -1066,6 +1071,13 @@ def i64relocImmSExt32 : PatLeaf<(i64 relocImm), [{
 // Eventually, it would be nice to allow ConstantHoisting to merge constants
 // globally for potentially added savings.
 //
+def imm_su : PatLeaf<(imm), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+def i64immSExt32_su : PatLeaf<(i64immSExt32), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+
 def relocImm8_su : PatLeaf<(i8 relocImm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
@@ -1076,6 +1088,19 @@ def relocImm32_su : PatLeaf<(i32 relocImm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 
+def i16relocImmSExt8_su : PatLeaf<(i16relocImmSExt8), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+def i32relocImmSExt8_su : PatLeaf<(i32relocImmSExt8), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+def i64relocImmSExt8_su : PatLeaf<(i64relocImmSExt8), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+def i64relocImmSExt32_su : PatLeaf<(i64relocImmSExt32), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+
 def i16immSExt8_su : PatLeaf<(i16immSExt8), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
@@ -1083,13 +1108,6 @@ def i32immSExt8_su : PatLeaf<(i32immSExt8), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 def i64immSExt8_su : PatLeaf<(i64immSExt8), [{
-    return !shouldAvoidImmediateInstFormsForSize(N);
-}]>;
-
-def i64relocImmSExt8_su : PatLeaf<(i64relocImmSExt8), [{
-    return !shouldAvoidImmediateInstFormsForSize(N);
-}]>;
-def i64relocImmSExt32_su : PatLeaf<(i64relocImmSExt32), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 
@@ -1120,7 +1138,7 @@ def loadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   ISD::LoadExtType ExtType = LD->getExtensionType();
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
-  if (ExtType == ISD::EXTLOAD)
+  if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
     return LD->getAlignment() >= 2 && LD->isSimple();
   return false;
 }]>;
@@ -1130,7 +1148,7 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   ISD::LoadExtType ExtType = LD->getExtensionType();
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
-  if (ExtType == ISD::EXTLOAD)
+  if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
     return LD->getAlignment() >= 4 && LD->isSimple();
   return false;
 }]>;
@@ -1557,7 +1575,7 @@ def MOV16ri : Ii16<0xB8, AddRegFrm, (outs GR16:$dst), (ins i16imm:$src),
                    [(set GR16:$dst, imm:$src)]>, OpSize16;
 def MOV32ri : Ii32<0xB8, AddRegFrm, (outs GR32:$dst), (ins i32imm:$src),
                    "mov{l}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, relocImm:$src)]>, OpSize32;
+                   [(set GR32:$dst, imm:$src)]>, OpSize32;
 def MOV64ri32 : RIi32S<0xC7, MRM0r, (outs GR64:$dst), (ins i64i32imm:$src),
                        "mov{q}\t{$src, $dst|$dst, $src}",
                        [(set GR64:$dst, i64immSExt32:$src)]>;
@@ -1565,7 +1583,7 @@ def MOV64ri32 : RIi32S<0xC7, MRM0r, (outs GR64:$dst), (ins i64i32imm:$src),
 let isReMaterializable = 1, isMoveImm = 1 in {
 def MOV64ri : RIi64<0xB8, AddRegFrm, (outs GR64:$dst), (ins i64imm:$src),
                     "movabs{q}\t{$src, $dst|$dst, $src}",
-                    [(set GR64:$dst, relocImm:$src)]>;
+                    [(set GR64:$dst, imm:$src)]>;
 }
 
 // Longer forms that use a ModR/M byte. Needed for disassembler
@@ -1585,18 +1603,30 @@ def MOV32ri_alt : Ii32<0xC7, MRM0r, (outs GR32:$dst), (ins i32imm:$src),
 let SchedRW = [WriteStore] in {
 def MOV8mi  : Ii8 <0xC6, MRM0m, (outs), (ins i8mem :$dst, i8imm :$src),
                    "mov{b}\t{$src, $dst|$dst, $src}",
-                   [(store (i8 relocImm8_su:$src), addr:$dst)]>;
+                   [(store (i8 imm_su:$src), addr:$dst)]>;
 def MOV16mi : Ii16<0xC7, MRM0m, (outs), (ins i16mem:$dst, i16imm:$src),
                    "mov{w}\t{$src, $dst|$dst, $src}",
-                   [(store (i16 relocImm16_su:$src), addr:$dst)]>, OpSize16;
+                   [(store (i16 imm_su:$src), addr:$dst)]>, OpSize16;
 def MOV32mi : Ii32<0xC7, MRM0m, (outs), (ins i32mem:$dst, i32imm:$src),
                    "mov{l}\t{$src, $dst|$dst, $src}",
-                   [(store (i32 relocImm32_su:$src), addr:$dst)]>, OpSize32;
+                   [(store (i32 imm_su:$src), addr:$dst)]>, OpSize32;
 def MOV64mi32 : RIi32S<0xC7, MRM0m, (outs), (ins i64mem:$dst, i64i32imm:$src),
                        "mov{q}\t{$src, $dst|$dst, $src}",
-                       [(store i64relocImmSExt32_su:$src, addr:$dst)]>,
+                       [(store i64immSExt32_su:$src, addr:$dst)]>,
                        Requires<[In64BitMode]>;
 } // SchedRW
+
+def : Pat<(i32 relocImm:$src), (MOV32ri relocImm:$src)>;
+def : Pat<(i64 relocImm:$src), (MOV64ri relocImm:$src)>;
+
+def : Pat<(store (i8 relocImm8_su:$src), addr:$dst),
+          (MOV8mi addr:$dst, relocImm8_su:$src)>;
+def : Pat<(store (i16 relocImm16_su:$src), addr:$dst),
+          (MOV16mi addr:$dst, relocImm16_su:$src)>;
+def : Pat<(store (i32 relocImm32_su:$src), addr:$dst),
+          (MOV32mi addr:$dst, relocImm32_su:$src)>;
+def : Pat<(store (i64 i64relocImmSExt32_su:$src), addr:$dst),
+          (MOV64mi32 addr:$dst, i64immSExt32_su:$src)>;
 
 let hasSideEffects = 0 in {
 
@@ -2169,24 +2199,24 @@ def CMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$dst),
 
 // Lock instruction prefix
 let SchedRW = [WriteMicrocoded] in
-def LOCK_PREFIX : I<0xF0, RawFrm, (outs),  (ins), "lock", []>;
+def LOCK_PREFIX : I<0xF0, PrefixByte, (outs),  (ins), "lock", []>;
 
 let SchedRW = [WriteNop] in {
 
 // Rex64 instruction prefix
-def REX64_PREFIX : I<0x48, RawFrm, (outs),  (ins), "rex64", []>,
+def REX64_PREFIX : I<0x48, PrefixByte, (outs),  (ins), "rex64", []>,
                      Requires<[In64BitMode]>;
 
 // Data16 instruction prefix
-def DATA16_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data16", []>;
+def DATA16_PREFIX : I<0x66, PrefixByte, (outs),  (ins), "data16", []>;
 } // SchedRW
 
 // Repeat string operation instruction prefixes
 let Defs = [ECX], Uses = [ECX,DF], SchedRW = [WriteMicrocoded] in {
 // Repeat (used with INS, OUTS, MOVS, LODS and STOS)
-def REP_PREFIX : I<0xF3, RawFrm, (outs),  (ins), "rep", []>;
+def REP_PREFIX : I<0xF3, PrefixByte, (outs),  (ins), "rep", []>;
 // Repeat while not equal (used with CMPS and SCAS)
-def REPNE_PREFIX : I<0xF2, RawFrm, (outs),  (ins), "repne", []>;
+def REPNE_PREFIX : I<0xF2, PrefixByte, (outs),  (ins), "repne", []>;
 }
 
 // String manipulation instructions
@@ -2587,27 +2617,27 @@ let Predicates = [HasBMI2, NoTBM] in {
 }
 
 multiclass bmi_pdep_pext<string mnemonic, RegisterClass RC,
-                         X86MemOperand x86memop, Intrinsic Int,
+                         X86MemOperand x86memop, SDNode OpNode,
                          PatFrag ld_frag> {
   def rr : I<0xF5, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-             [(set RC:$dst, (Int RC:$src1, RC:$src2))]>,
+             [(set RC:$dst, (OpNode RC:$src1, RC:$src2))]>,
              VEX_4V, Sched<[WriteALU]>;
   def rm : I<0xF5, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-             [(set RC:$dst, (Int RC:$src1, (ld_frag addr:$src2)))]>,
+             [(set RC:$dst, (OpNode RC:$src1, (ld_frag addr:$src2)))]>,
              VEX_4V, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
 }
 
 let Predicates = [HasBMI2] in {
   defm PDEP32 : bmi_pdep_pext<"pdep{l}", GR32, i32mem,
-                               int_x86_bmi_pdep_32, loadi32>, T8XD;
+                               X86pdep, loadi32>, T8XD;
   defm PDEP64 : bmi_pdep_pext<"pdep{q}", GR64, i64mem,
-                               int_x86_bmi_pdep_64, loadi64>, T8XD, VEX_W;
+                               X86pdep, loadi64>, T8XD, VEX_W;
   defm PEXT32 : bmi_pdep_pext<"pext{l}", GR32, i32mem,
-                               int_x86_bmi_pext_32, loadi32>, T8XS;
+                               X86pext, loadi32>, T8XS;
   defm PEXT64 : bmi_pdep_pext<"pext{q}", GR64, i64mem,
-                               int_x86_bmi_pext_64, loadi64>, T8XS, VEX_W;
+                               X86pext, loadi64>, T8XS, VEX_W;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2791,11 +2821,11 @@ let SchedRW = [WriteStore] in {
 def MOVDIRI32 : I<0xF9, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
                   "movdiri\t{$src, $dst|$dst, $src}",
                   [(int_x86_directstore32 addr:$dst, GR32:$src)]>,
-                 T8, Requires<[HasMOVDIRI]>;
+                 T8PS, Requires<[HasMOVDIRI]>;
 def MOVDIRI64 : RI<0xF9, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                    "movdiri\t{$src, $dst|$dst, $src}",
                    [(int_x86_directstore64 addr:$dst, GR64:$src)]>,
-                  T8, Requires<[In64BitMode, HasMOVDIRI]>;
+                  T8PS, Requires<[In64BitMode, HasMOVDIRI]>;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
@@ -2860,6 +2890,23 @@ let SchedRW = [WriteLoad] in {
 
 def : InstAlias<"clzero\t{%eax|eax}", (CLZERO32r)>, Requires<[Not64BitMode]>;
 def : InstAlias<"clzero\t{%rax|rax}", (CLZERO64r)>, Requires<[In64BitMode]>;
+
+//===----------------------------------------------------------------------===//
+// SERIALIZE Instruction
+//
+def SERIALIZE : I<0x01, MRM_E8, (outs), (ins), "serialize",
+                  [(int_x86_serialize)]>, PS,
+                  Requires<[HasSERIALIZE]>;
+
+//===----------------------------------------------------------------------===//
+// TSXLDTRK - TSX Suspend Load Address Tracking
+//
+let Predicates = [HasTSXLDTRK] in {
+  def XSUSLDTRK : I<0x01, MRM_E8, (outs), (ins), "xsusldtrk",
+                    [(int_x86_xsusldtrk)]>, XD;
+  def XRESLDTRK : I<0x01, MRM_E9, (outs), (ins), "xresldtrk",
+                    [(int_x86_xresldtrk)]>, XD;
+}
 
 //===----------------------------------------------------------------------===//
 // Pattern fragments to auto generate TBM instructions.
@@ -2985,7 +3032,7 @@ def CLWB       : I<0xAE, MRM6m, (outs), (ins i8mem:$src), "clwb\t$src",
 
 let Predicates = [HasCLDEMOTE], SchedRW = [WriteLoad] in
 def CLDEMOTE : I<0x1C, MRM0m, (outs), (ins i8mem:$src), "cldemote\t$src",
-                   [(int_x86_cldemote addr:$src)]>, TB;
+                   [(int_x86_cldemote addr:$src)]>, PS;
 
 //===----------------------------------------------------------------------===//
 // Subsystems.

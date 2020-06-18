@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-no-exceptions
+// UNSUPPORTED: no-exceptions
 // UNSUPPORTED: sanitizer-new-delete
 
 // <memory>
@@ -37,6 +37,7 @@ int A::count = 0;
 
 int main(int, char**)
 {
+    globalMemCounter.reset();
     A* ptr = new A;
     globalMemCounter.throw_after = 0;
     try

@@ -47,7 +47,8 @@ private:
   friend lldb::ThreadPlanSP
   Thread::QueueFundamentalPlan(bool abort_other_plans);
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanBase);
+  ThreadPlanBase(const ThreadPlanBase &) = delete;
+  const ThreadPlanBase &operator=(const ThreadPlanBase &) = delete;
 };
 
 } // namespace lldb_private

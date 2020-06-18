@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
 # RUN: ld.lld --eh-frame-hdr %t -o /dev/null
 
-.section .eh_frame
+.section .eh_frame,"a",@unwind
   .byte 0x0E
   .byte 0x00
   .byte 0x00

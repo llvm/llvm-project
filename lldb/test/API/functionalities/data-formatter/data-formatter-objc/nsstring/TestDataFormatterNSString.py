@@ -76,8 +76,8 @@ class NSStringDataFormatterTestCase(TestBase):
         self.expect('frame variable hebrew', substrs=['לילה טוב'])
 
     def nsstring_data_formatter_commands(self):
-        self.expect('frame variable str0 str1 str2 str3 str4 str5 str6 str8 str9 str10 str11 label1 label2 processName str12',
-                    substrs=[
+        self.expect('frame variable empty str0 str1 str2 str3 str4 str5 str6 str8 str9 str10 str11 label1 label2 processName str12',
+                    substrs=['(NSString *) empty = ', ' @""',
                              # '(NSString *) str0 = ',' @"255"',
                              '(NSString *) str1 = ', ' @"A rather short ASCII NSString object is here"',
                              '(NSString *) str2 = ', ' @"A rather short UTF8 NSString object is here"',
@@ -104,6 +104,8 @@ class NSStringDataFormatterTestCase(TestBase):
 
         self.expect('expr -d run-target -- path', substrs=['usr/blah/stuff'])
         self.expect('frame variable path', substrs=['usr/blah/stuff'])
+        self.expect('expr -d run-target -- empty_path', substrs=['@""'])
+        self.expect('frame variable empty_path', substrs=['@""'])
 
     def nsstring_withNULs_commands(self):
         """Check that the NSString formatter supports embedded NULs in the text"""

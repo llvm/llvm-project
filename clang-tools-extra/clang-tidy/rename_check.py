@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-#===- rename_check.py - clang-tidy check renamer -------------*- python -*--===#
+#===- rename_check.py - clang-tidy check renamer ------------*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===------------------------------------------------------------------------===#
+#===-----------------------------------------------------------------------===#
 
 import argparse
 import glob
@@ -25,6 +25,7 @@ def replaceInFileRegex(fileName, sFrom, sTo):
   print("Replacing '%s' -> '%s' in '%s'..." % (sFrom, sTo, fileName))
   with open(fileName, "w") as f:
     f.write(txt)
+
 
 def replaceInFile(fileName, sFrom, sTo):
   if sFrom == sTo:
@@ -66,6 +67,7 @@ def fileRename(fileName, sFrom, sTo):
   os.rename(fileName, newFileName)
   return newFileName
 
+
 def deleteMatchingLines(fileName, pattern):
   lines = None
   with open(fileName, "r") as f:
@@ -82,6 +84,7 @@ def deleteMatchingLines(fileName, pattern):
 
   return True
 
+
 def getListOfFiles(clang_tidy_path):
   files = glob.glob(os.path.join(clang_tidy_path, '*'))
   for dirname in files:
@@ -93,8 +96,9 @@ def getListOfFiles(clang_tidy_path):
                                   'clang-tidy', 'checks', '*'))
   return [filename for filename in files if os.path.isfile(filename)]
 
-# Adapts the module's CMakelist file. Returns 'True' if it could add a new entry
-# and 'False' if the entry already existed.
+
+# Adapts the module's CMakelist file. Returns 'True' if it could add a new
+# entry and 'False' if the entry already existed.
 def adapt_cmake(module_path, check_name_camel):
   filename = os.path.join(module_path, 'CMakeLists.txt')
   with open(filename, 'r') as f:
@@ -169,21 +173,43 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
   with open(filename, 'r') as f:
     lines = f.readlines()
 
+  lineMatcher = re.compile('Renamed checks')
+  nextSectionMatcher = re.compile('Improvements to include-fixer')
+  checkMatcher = re.compile('- The \'(.*)')
+
   print('Updating %s...' % filename)
   with open(filename, 'wb') as f:
     note_added = False
     header_found = False
+    add_note_here = False
 
     for line in lines:
       if not note_added:
-        match = re.search('Renamed checks', line)
+        match = lineMatcher.match(line)
+        match_next = nextSectionMatcher.match(line)
+        match_check = checkMatcher.match(line)
+        if match_check:
+          last_check = match_check.group(1)
+          if last_check > old_check_name:
+            add_note_here = True
+
+        if match_next:
+          add_note_here = True
+
         if match:
           header_found = True
-        elif header_found:
+          f.write(line)
+          continue
+
+        if line.startswith('^^^^'):
+          f.write(line)
+          continue
+
+        if header_found and add_note_here:
           if not line.startswith('^^^^'):
-            f.write("""
-- The '%s' check was renamed to :doc:`%s
+            f.write("""- The '%s' check was renamed to :doc:`%s
   <clang-tidy/checks/%s>`
+
 """ % (old_check_name, new_check_name, new_check_name))
             note_added = True
 
@@ -288,6 +314,7 @@ def main():
   os.system(os.path.join(clang_tidy_path, 'add_new_check.py')
             + ' --update-docs')
   add_release_notes(clang_tidy_path, args.old_check_name, args.new_check_name)
+
 
 if __name__ == '__main__':
   main()

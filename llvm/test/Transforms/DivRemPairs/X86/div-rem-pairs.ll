@@ -281,12 +281,14 @@ end:
 define i128 @dont_hoist_urem(i128 %a, i128 %b) {
 ; CHECK-LABEL: @dont_hoist_urem(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i128 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[A_FROZEN:%.*]] = freeze i128 [[A:%.*]]
+; CHECK-NEXT:    [[B_FROZEN:%.*]] = freeze i128 [[B:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i128 [[A_FROZEN]], [[B_FROZEN]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[DIV]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i128 [[DIV]], [[B]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i128 [[A]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i128 [[DIV]], [[B_FROZEN]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i128 [[A_FROZEN]], [[TMP0]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i128 [ [[REM_DECOMPOSED]], [[IF]] ], [ 3, [[ENTRY:%.*]] ]

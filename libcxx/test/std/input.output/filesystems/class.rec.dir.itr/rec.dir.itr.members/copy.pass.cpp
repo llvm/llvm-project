@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <filesystem>
 
@@ -43,7 +43,8 @@ TEST_CASE(test_copy_end_iterator)
 
 TEST_CASE(test_copy_valid_iterator)
 {
-    const path testDir = StaticEnv::Dir;
+    static_test_env static_env;
+    const path testDir = static_env.Dir;
     const recursive_directory_iterator endIt{};
 
     // build 'it' up with "interesting" non-default state so we can test

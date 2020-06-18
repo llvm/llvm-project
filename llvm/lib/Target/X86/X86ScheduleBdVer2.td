@@ -1093,8 +1093,10 @@ def : InstRW<[PdWriteVMOVDQUYmr], (instrs VMOVDQUYmr)>;
 defm : PdWriteRes<WriteVecStoreNT,          [PdStore, PdFPU1,   PdFPSTO], 2>;
 defm : PdWriteRes<WriteVecStoreNTY,         [PdStore, PdFPU1,   PdFPSTO], 2, [2, 2, 2], 4>;
 
-defm : PdWriteRes<WriteVecMaskedStore,      [PdStore, PdFPU01, PdFPMAL], 6, [1, 1, 4]>;
-defm : PdWriteRes<WriteVecMaskedStoreY,     [PdStore, PdFPU01, PdFPMAL], 6, [2, 2, 4], 2>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore32>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore32Y>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore64>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore64Y>;
 
 defm : PdWriteRes<WriteVecMove,             [PdFPU01, PdFPMAL], 2>;
 defm : PdWriteRes<WriteVecMoveX,            [PdFPU01, PdFPMAL], 1, [1, 2]>;

@@ -61,7 +61,13 @@ static MCRegisterInfo *createAMDGPUMCRegisterInfo(const Triple &TT) {
   if (TT.getArch() == Triple::r600)
     InitR600MCRegisterInfo(X, 0);
   else
-    InitAMDGPUMCRegisterInfo(X, 0);
+    InitAMDGPUMCRegisterInfo(X, AMDGPU::PC_REG);
+  return X;
+}
+
+MCRegisterInfo *llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour DwarfFlavour) {
+  MCRegisterInfo *X = new MCRegisterInfo();
+  InitAMDGPUMCRegisterInfo(X, AMDGPU::PC_REG, DwarfFlavour);
   return X;
 }
 

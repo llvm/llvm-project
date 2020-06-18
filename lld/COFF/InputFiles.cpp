@@ -25,6 +25,8 @@
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -44,11 +46,11 @@ using namespace llvm::COFF;
 using namespace llvm::codeview;
 using namespace llvm::object;
 using namespace llvm::support::endian;
+using namespace lld;
+using namespace lld::coff;
 
 using llvm::Triple;
 using llvm::support::ulittle32_t;
-
-namespace lld {
 
 // Returns the last element of a path, which is supposed to be a filename.
 static StringRef getBasename(StringRef path) {
@@ -56,7 +58,7 @@ static StringRef getBasename(StringRef path) {
 }
 
 // Returns a string in the format of "foo.obj" or "foo.obj(bar.lib)".
-std::string toString(const coff::InputFile *file) {
+std::string lld::toString(const coff::InputFile *file) {
   if (!file)
     return "<internal>";
   if (file->parentName.empty() || file->kind() == coff::InputFile::ImportKind)
@@ -67,9 +69,8 @@ std::string toString(const coff::InputFile *file) {
       .str();
 }
 
-namespace coff {
-
 std::vector<ObjFile *> ObjFile::instances;
+std::map<std::string, PDBInputFile *> PDBInputFile::instances;
 std::vector<ImportFile *> ImportFile::instances;
 std::vector<BitcodeFile *> BitcodeFile::instances;
 
@@ -121,7 +122,7 @@ void ArchiveFile::addMember(const Archive::Symbol &sym) {
   driver->enqueueArchiveMember(c, sym, getName());
 }
 
-std::vector<MemoryBufferRef> getArchiveMembers(Archive *file) {
+std::vector<MemoryBufferRef> lld::coff::getArchiveMembers(Archive *file) {
   std::vector<MemoryBufferRef> v;
   Error err = Error::success();
   for (const Archive::Child &c : file->children(err)) {
@@ -171,8 +172,7 @@ void LazyObjFile::parse() {
     if (coffSym.isUndefined() || !coffSym.isExternal() ||
         coffSym.isWeakExternal())
       continue;
-    StringRef name;
-    coffObj->getSymbolName(coffSym, name);
+    StringRef name = check(coffObj->getSymbolName(coffSym));
     if (coffSym.isAbsolute() && ignoredSymbolName(name))
       continue;
     symtab->addLazyObject(this, name);
@@ -198,11 +198,11 @@ void ObjFile::parse() {
   initializeDependencies();
 }
 
-const coff_section* ObjFile::getSection(uint32_t i) {
-  const coff_section *sec;
-  if (auto ec = coffObj->getSection(i, sec))
-    fatal("getSection failed: #" + Twine(i) + ": " + ec.message());
-  return sec;
+const coff_section *ObjFile::getSection(uint32_t i) {
+  auto sec = coffObj->getSection(i);
+  if (!sec)
+    fatal("getSection failed: #" + Twine(i) + ": " + toString(sec.takeError()));
+  return *sec;
 }
 
 // We set SectionChunk pointers in the SparseChunks vector to this value
@@ -215,7 +215,6 @@ static SectionChunk *const pendingComdat = reinterpret_cast<SectionChunk *>(1);
 
 void ObjFile::initializeChunks() {
   uint32_t numSections = coffObj->getNumberOfSections();
-  chunks.reserve(numSections);
   sparseChunks.resize(numSections + 1);
   for (uint32_t i = 1; i < numSections + 1; ++i) {
     const coff_section *sec = getSection(i);
@@ -279,7 +278,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   else if (name == ".gljmp$y")
     guardLJmpChunks.push_back(c);
   else if (name == ".sxdata")
-    sXDataChunks.push_back(c);
+    sxDataChunks.push_back(c);
   else if (config->tailMerge && sec->NumberOfRelocations == 0 &&
            name == ".rdata" && leaderName.startswith("??_C@"))
     // COFF sections that look like string literal sections (i.e. no
@@ -310,9 +309,9 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef sym,
   int32_t sectionNumber = sym.getSectionNumber();
 
   auto diag = [&]() {
-    StringRef name, parentName;
-    coffObj->getSymbolName(sym, name);
+    StringRef name = check(coffObj->getSymbolName(sym));
 
+    StringRef parentName;
     const coff_section *parentSec = getSection(parentIndex);
     if (Expected<StringRef> e = coffObj->getSectionName(parentSec))
       parentName = *e;
@@ -353,7 +352,7 @@ void ObjFile::recordPrevailingSymbolForMingw(
   SectionChunk *sc = sparseChunks[sectionNumber];
   if (sc && sc->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE) {
     StringRef name;
-    coffObj->getSymbolName(sym, name);
+    name = check(coffObj->getSymbolName(sym));
     if (getMachineType() == I386)
       name.consume_front("_");
     prevailingSectionMap[name] = sectionNumber;
@@ -363,8 +362,7 @@ void ObjFile::recordPrevailingSymbolForMingw(
 void ObjFile::maybeAssociateSEHForMingw(
     COFFSymbolRef sym, const coff_aux_section_definition *def,
     const DenseMap<StringRef, uint32_t> &prevailingSectionMap) {
-  StringRef name;
-  coffObj->getSymbolName(sym, name);
+  StringRef name = check(coffObj->getSymbolName(sym));
   if (name.consume_front(".pdata$") || name.consume_front(".xdata$") ||
       name.consume_front(".eh_frame$")) {
     // For MinGW, treat .[px]data$<func> and .eh_frame$<func> as implicitly
@@ -378,8 +376,7 @@ void ObjFile::maybeAssociateSEHForMingw(
 Symbol *ObjFile::createRegular(COFFSymbolRef sym) {
   SectionChunk *sc = sparseChunks[sym.getSectionNumber()];
   if (sym.isExternal()) {
-    StringRef name;
-    coffObj->getSymbolName(sym, name);
+    StringRef name = check(coffObj->getSymbolName(sym));
     if (sc)
       return symtab->addRegular(this, name, sym.getGeneric(), sc,
                                 sym.getValue());
@@ -447,8 +444,7 @@ void ObjFile::initializeSymbols() {
         maybeAssociateSEHForMingw(sym, def, prevailingSectionMap);
     }
     if (sparseChunks[sym.getSectionNumber()] == pendingComdat) {
-      StringRef name;
-      coffObj->getSymbolName(sym, name);
+      StringRef name = check(coffObj->getSymbolName(sym));
       log("comdat section " + name +
           " without leader and unassociated, discarding");
       continue;
@@ -461,11 +457,13 @@ void ObjFile::initializeSymbols() {
     uint32_t idx = kv.second;
     checkAndSetWeakAlias(symtab, this, sym, symbols[idx]);
   }
+
+  // Free the memory used by sparseChunks now that symbol loading is finished.
+  decltype(sparseChunks)().swap(sparseChunks);
 }
 
 Symbol *ObjFile::createUndefined(COFFSymbolRef sym) {
-  StringRef name;
-  coffObj->getSymbolName(sym, name);
+  StringRef name = check(coffObj->getSymbolName(sym));
   return symtab->addUndefined(name, this, sym.isWeakExternal());
 }
 
@@ -561,8 +559,7 @@ void ObjFile::handleComdatSelection(COFFSymbolRef sym, COMDATType &selection,
   case IMAGE_COMDAT_SELECT_LARGEST:
     if (leaderChunk->getSize() < getSection(sym)->SizeOfRawData) {
       // Replace the existing comdat symbol with the new one.
-      StringRef name;
-      coffObj->getSymbolName(sym, name);
+      StringRef name = check(coffObj->getSymbolName(sym));
       // FIXME: This is incorrect: With /opt:noref, the previous sections
       // make it into the final executable as well. Correct handling would
       // be to undo reading of the whole old section that's being replaced,
@@ -586,11 +583,7 @@ Optional<Symbol *> ObjFile::createDefined(
     std::vector<const coff_aux_section_definition *> &comdatDefs,
     bool &prevailing) {
   prevailing = false;
-  auto getName = [&]() {
-    StringRef s;
-    coffObj->getSymbolName(sym, s);
-    return s;
-  };
+  auto getName = [&]() { return check(coffObj->getSymbolName(sym)); };
 
   if (sym.isCommon()) {
     auto *c = make<CommonChunk>(sym);
@@ -767,10 +760,11 @@ void ObjFile::initializeDependencies() {
   if (data.empty())
     return;
 
+  // Get the first type record. It will indicate if this object uses a type
+  // server (/Zi) or a PCH file (/Yu).
   CVTypeArray types;
   BinaryStreamReader reader(data, support::little);
   cantFail(reader.readArray(types, reader.getLength()));
-
   CVTypeArray::Iterator firstType = types.begin();
   if (firstType == types.end())
     return;
@@ -778,26 +772,118 @@ void ObjFile::initializeDependencies() {
   // Remember the .debug$T or .debug$P section.
   debugTypes = data;
 
+  // This object file is a PCH file that others will depend on.
   if (isPCH) {
     debugTypesObj = makePrecompSource(this);
     return;
   }
 
+  // This object file was compiled with /Zi. Enqueue the PDB dependency.
   if (firstType->kind() == LF_TYPESERVER2) {
     TypeServer2Record ts = cantFail(
         TypeDeserializer::deserializeAs<TypeServer2Record>(firstType->data()));
-    debugTypesObj = makeUseTypeServerSource(this, &ts);
+    debugTypesObj = makeUseTypeServerSource(this, ts);
+    PDBInputFile::enqueue(ts.getName(), this);
     return;
   }
 
+  // This object was compiled with /Yu. It uses types from another object file
+  // with a matching signature.
   if (firstType->kind() == LF_PRECOMP) {
     PrecompRecord precomp = cantFail(
         TypeDeserializer::deserializeAs<PrecompRecord>(firstType->data()));
-    debugTypesObj = makeUsePrecompSource(this, &precomp);
+    debugTypesObj = makeUsePrecompSource(this, precomp);
     return;
   }
 
+  // This is a plain old object file.
   debugTypesObj = makeTpiSource(this);
+}
+
+// Make a PDB path assuming the PDB is in the same folder as the OBJ
+static std::string getPdbBaseName(ObjFile *file, StringRef tSPath) {
+  StringRef localPath =
+      !file->parentName.empty() ? file->parentName : file->getName();
+  SmallString<128> path = sys::path::parent_path(localPath);
+
+  // Currently, type server PDBs are only created by MSVC cl, which only runs
+  // on Windows, so we can assume type server paths are Windows style.
+  sys::path::append(path,
+                    sys::path::filename(tSPath, sys::path::Style::windows));
+  return std::string(path.str());
+}
+
+// The casing of the PDB path stamped in the OBJ can differ from the actual path
+// on disk. With this, we ensure to always use lowercase as a key for the
+// PDBInputFile::instances map, at least on Windows.
+static std::string normalizePdbPath(StringRef path) {
+#if defined(_WIN32)
+  return path.lower();
+#else // LINUX
+  return std::string(path);
+#endif
+}
+
+// If existing, return the actual PDB path on disk.
+static Optional<std::string> findPdbPath(StringRef pdbPath,
+                                         ObjFile *dependentFile) {
+  // Ensure the file exists before anything else. In some cases, if the path
+  // points to a removable device, Driver::enqueuePath() would fail with an
+  // error (EAGAIN, "resource unavailable try again") which we want to skip
+  // silently.
+  if (llvm::sys::fs::exists(pdbPath))
+    return normalizePdbPath(pdbPath);
+  std::string ret = getPdbBaseName(dependentFile, pdbPath);
+  if (llvm::sys::fs::exists(ret))
+    return normalizePdbPath(ret);
+  return None;
+}
+
+PDBInputFile::PDBInputFile(MemoryBufferRef m) : InputFile(PDBKind, m) {}
+
+PDBInputFile::~PDBInputFile() = default;
+
+PDBInputFile *PDBInputFile::findFromRecordPath(StringRef path,
+                                               ObjFile *fromFile) {
+  auto p = findPdbPath(path.str(), fromFile);
+  if (!p)
+    return nullptr;
+  auto it = PDBInputFile::instances.find(*p);
+  if (it != PDBInputFile::instances.end())
+    return it->second;
+  return nullptr;
+}
+
+void PDBInputFile::enqueue(StringRef path, ObjFile *fromFile) {
+  auto p = findPdbPath(path.str(), fromFile);
+  if (!p)
+    return;
+  auto it = PDBInputFile::instances.emplace(*p, nullptr);
+  if (!it.second)
+    return; // already scheduled for load
+  driver->enqueuePDB(*p);
+}
+
+void PDBInputFile::parse() {
+  PDBInputFile::instances[mb.getBufferIdentifier().str()] = this;
+
+  std::unique_ptr<pdb::IPDBSession> thisSession;
+  loadErr.emplace(pdb::NativeSession::createFromPdb(
+      MemoryBuffer::getMemBuffer(mb, false), thisSession));
+  if (*loadErr)
+    return; // fail silently at this point - the error will be handled later,
+            // when merging the debug type stream
+
+  session.reset(static_cast<pdb::NativeSession *>(thisSession.release()));
+
+  pdb::PDBFile &pdbFile = session->getPDBFile();
+  auto expectedInfo = pdbFile.getPDBInfoStream();
+  // All PDB Files should have an Info stream.
+  if (!expectedInfo) {
+    loadErr.emplace(expectedInfo.takeError());
+    return;
+  }
+  debugTypesObj = makeTypeServerSource(this);
 }
 
 // Used only for DWARF debug info, which is not common (except in MinGW
@@ -831,7 +917,7 @@ Optional<DILineInfo> ObjFile::getDILineInfo(uint32_t offset,
   return dwarf->getDILineInfo(offset, sectionIndex);
 }
 
-StringRef ltrim1(StringRef s, const char *chars) {
+static StringRef ltrim1(StringRef s, const char *chars) {
   if (!s.empty() && strchr(chars, s[0]))
     return s.substr(1);
   return s;
@@ -907,8 +993,9 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
   // filename unique.
   MemoryBufferRef mbref(
       mb.getBuffer(),
-      saver.save(archiveName + path +
-                 (archiveName.empty() ? "" : utostr(offsetInArchive))));
+      saver.save(archiveName.empty() ? path
+                                     : archiveName + sys::path::filename(path) +
+                                           utostr(offsetInArchive)));
 
   obj = check(lto::InputFile::create(mbref));
 }
@@ -967,7 +1054,7 @@ MachineTypes BitcodeFile::getMachineType() {
   }
 }
 
-std::string replaceThinLTOSuffix(StringRef path) {
+std::string lld::coff::replaceThinLTOSuffix(StringRef path) {
   StringRef suffix = config->thinLTOObjectSuffixReplace.first;
   StringRef repl = config->thinLTOObjectSuffixReplace.second;
 
@@ -975,6 +1062,3 @@ std::string replaceThinLTOSuffix(StringRef path) {
     return (path + repl).str();
   return std::string(path);
 }
-
-} // namespace coff
-} // namespace lld

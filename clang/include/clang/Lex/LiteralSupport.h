@@ -71,7 +71,9 @@ public:
   bool isFract : 1;         // 1.0hr/r/lr/uhr/ur/ulr
   bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
 
-  bool isFixedPointLiteral() const { return saw_fixed_point_suffix; }
+  bool isFixedPointLiteral() const {
+    return (saw_period || saw_exponent) && saw_fixed_point_suffix;
+  }
 
   bool isIntegerLiteral() const {
     return !saw_period && !saw_exponent && !isFixedPointLiteral();

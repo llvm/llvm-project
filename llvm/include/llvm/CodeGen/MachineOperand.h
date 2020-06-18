@@ -612,14 +612,14 @@ public:
   /// It is sometimes necessary to detach the register mask pointer from its
   /// machine operand. This static method can be used for such detached bit
   /// mask pointers.
-  static bool clobbersPhysReg(const uint32_t *RegMask, unsigned PhysReg) {
+  static bool clobbersPhysReg(const uint32_t *RegMask, MCRegister PhysReg) {
     // See TargetRegisterInfo.h.
     assert(PhysReg < (1u << 30) && "Not a physical register");
     return !(RegMask[PhysReg / 32] & (1u << PhysReg % 32));
   }
 
   /// clobbersPhysReg - Returns true if this RegMask operand clobbers PhysReg.
-  bool clobbersPhysReg(unsigned PhysReg) const {
+  bool clobbersPhysReg(MCRegister PhysReg) const {
      return clobbersPhysReg(getRegMask(), PhysReg);
   }
 
@@ -696,6 +696,11 @@ public:
   void setRegMask(const uint32_t *RegMaskPtr) {
     assert(isRegMask() && "Wrong MachineOperand mutator");
     Contents.RegMask = RegMaskPtr;
+  }
+
+  void setIntrinsicID(Intrinsic::ID IID) {
+    assert(isIntrinsicID() && "Wrong MachineOperand mutator");
+    Contents.IntrinsicID = IID;
   }
 
   void setPredicate(unsigned Predicate) {

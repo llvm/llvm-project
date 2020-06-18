@@ -33,13 +33,7 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
   Machine: EM_X86_64
-Sections:
-  - Name: .foo
-    Type: SHT_PROGBITS
-    Size: 1
 ProgramHeaders:
-  - Type:        PT_LOAD
-    Offset:      0x100000
-    FileSize:    1
-    Sections:
-      - Section: .foo
+  - Type:     PT_LOAD
+    Offset:   0x100000
+    FileSize: 1

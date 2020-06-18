@@ -1710,7 +1710,8 @@ bool Sema::hasVisibleMemberSpecialization(
 /// path (by instantiating a template, you allow it to see the declarations that
 /// your module can see, including those later on in your module).
 bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
-  assert(D->isHidden() && "should not call this: not in slow case");
+  assert(!D->isUnconditionallyVisible() &&
+         "should not call this: not in slow case");
 
   Module *DeclModule = SemaRef.getOwningModule(D);
   assert(DeclModule && "hidden decl has no owning module");
@@ -2966,7 +2967,9 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     // These are fundamental types.
     case Type::Vector:
     case Type::ExtVector:
+    case Type::ConstantMatrix:
     case Type::Complex:
+    case Type::ExtInt:
       break;
 
     // Non-deduced auto types only get here for error cases.
@@ -5165,9 +5168,9 @@ TypoExpr *Sema::CorrectTypoDelayed(
   IdentifierInfo *Typo = TypoName.getName().getAsIdentifierInfo();
   if (!ExternalTypo && ED > 0 && Typo->getName().size() / ED < 3)
     return nullptr;
-
   ExprEvalContexts.back().NumTypos++;
-  return createDelayedTypo(std::move(Consumer), std::move(TDG), std::move(TRC));
+  return createDelayedTypo(std::move(Consumer), std::move(TDG), std::move(TRC),
+                           TypoName.getLoc());
 }
 
 void TypoCorrection::addCorrectionDecl(NamedDecl *CDecl) {
@@ -5349,9 +5352,8 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, NamedDecl *Decl,
 
 /// Get a "quoted.h" or <angled.h> include path to use in a diagnostic
 /// suggesting the addition of a #include of the specified file.
-static std::string getIncludeStringForHeader(Preprocessor &PP,
-                                             const FileEntry *E,
-                                             llvm::StringRef IncludingFile) {
+static std::string getHeaderNameForHeader(Preprocessor &PP, const FileEntry *E,
+                                          llvm::StringRef IncludingFile) {
   bool IsSystem = false;
   auto Path = PP.getHeaderSearchInfo().suggestPathToFileForDiagnostics(
       E, IncludingFile, &IsSystem);
@@ -5365,25 +5367,10 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
   assert(!Modules.empty());
 
   auto NotePrevious = [&] {
-    unsigned DiagID;
-    switch (MIK) {
-    case MissingImportKind::Declaration:
-      DiagID = diag::note_previous_declaration;
-      break;
-    case MissingImportKind::Definition:
-      DiagID = diag::note_previous_definition;
-      break;
-    case MissingImportKind::DefaultArgument:
-      DiagID = diag::note_default_argument_declared_here;
-      break;
-    case MissingImportKind::ExplicitSpecialization:
-      DiagID = diag::note_explicit_specialization_declared_here;
-      break;
-    case MissingImportKind::PartialSpecialization:
-      DiagID = diag::note_partial_specialization_declared_here;
-      break;
-    }
-    Diag(DeclLoc, DiagID);
+    // FIXME: Suppress the note backtrace even under
+    // -fdiagnostics-show-note-include-stack. We don't care how this
+    // declaration was previously reached.
+    Diag(DeclLoc, diag::note_unreachable_entity) << (int)MIK;
   };
 
   // Weed out duplicates from module list.
@@ -5396,26 +5383,24 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
       UniqueModules.push_back(M);
   }
 
-  llvm::StringRef IncludingFile;
-  if (const FileEntry *FE =
-          SourceMgr.getFileEntryForID(SourceMgr.getFileID(UseLoc)))
-    IncludingFile = FE->tryGetRealPathName();
+  // Try to find a suitable header-name to #include.
+  std::string HeaderName;
+  if (const FileEntry *Header =
+          PP.getHeaderToIncludeForDiagnostics(UseLoc, DeclLoc)) {
+    if (const FileEntry *FE =
+            SourceMgr.getFileEntryForID(SourceMgr.getFileID(UseLoc)))
+      HeaderName = getHeaderNameForHeader(PP, Header, FE->tryGetRealPathName());
+  }
 
-  if (UniqueModules.empty()) {
-    // All candidates were global module fragments. Try to suggest a #include.
-    const FileEntry *E =
-        PP.getModuleHeaderToIncludeForDiagnostics(UseLoc, Modules[0], DeclLoc);
+  // If we have a #include we should suggest, or if all definition locations
+  // were in global module fragments, don't suggest an import.
+  if (!HeaderName.empty() || UniqueModules.empty()) {
     // FIXME: Find a smart place to suggest inserting a #include, and add
     // a FixItHint there.
-    Diag(UseLoc, diag::err_module_unimported_use_global_module_fragment)
-        << (int)MIK << Decl << !!E
-        << (E ? getIncludeStringForHeader(PP, E, IncludingFile) : "");
-    // Produce a "previous" note if it will point to a header rather than some
-    // random global module fragment.
-    // FIXME: Suppress the note backtrace even under
-    // -fdiagnostics-show-note-include-stack.
-    if (E)
-      NotePrevious();
+    Diag(UseLoc, diag::err_module_unimported_use_header)
+        << (int)MIK << Decl << !HeaderName.empty() << HeaderName;
+    // Produce a note showing where the entity was declared.
+    NotePrevious();
     if (Recover)
       createImplicitModuleImportForErrorRecovery(UseLoc, Modules[0]);
     return;
@@ -5437,16 +5422,6 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
 
     Diag(UseLoc, diag::err_module_unimported_use_multiple)
       << (int)MIK << Decl << ModuleList;
-  } else if (const FileEntry *E = PP.getModuleHeaderToIncludeForDiagnostics(
-                 UseLoc, Modules[0], DeclLoc)) {
-    // The right way to make the declaration visible is to include a header;
-    // suggest doing so.
-    //
-    // FIXME: Find a smart place to suggest inserting a #include, and add
-    // a FixItHint there.
-    Diag(UseLoc, diag::err_module_unimported_use_header)
-        << (int)MIK << Decl << Modules[0]->getFullModuleName()
-        << getIncludeStringForHeader(PP, E, IncludingFile);
   } else {
     // FIXME: Add a FixItHint that imports the corresponding module.
     Diag(UseLoc, diag::err_module_unimported_use)
@@ -5507,9 +5482,10 @@ void Sema::diagnoseTypo(const TypoCorrection &Correction,
 
 TypoExpr *Sema::createDelayedTypo(std::unique_ptr<TypoCorrectionConsumer> TCC,
                                   TypoDiagnosticGenerator TDG,
-                                  TypoRecoveryCallback TRC) {
+                                  TypoRecoveryCallback TRC,
+                                  SourceLocation TypoLoc) {
   assert(TCC && "createDelayedTypo requires a valid TypoCorrectionConsumer");
-  auto TE = new (Context) TypoExpr(Context.DependentTy);
+  auto TE = new (Context) TypoExpr(Context.DependentTy, TypoLoc);
   auto &State = DelayedTypos[TE];
   State.Consumer = std::move(TCC);
   State.DiagHandler = std::move(TDG);

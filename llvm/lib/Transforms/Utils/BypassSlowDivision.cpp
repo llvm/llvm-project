@@ -213,9 +213,8 @@ bool FastDivInsertionTask::isHashLikeValue(Value *V, VisitedSetTy &Visited) {
       return false;
     // Do not visit nodes that have been visited already. We return true because
     // it means that we couldn't find any value that doesn't look hash-like.
-    if (Visited.find(I) != Visited.end())
+    if (!Visited.insert(I).second)
       return true;
-    Visited.insert(I);
     return llvm::all_of(cast<PHINode>(I)->incoming_values(), [&](Value *V) {
       // Ignore undef values as they probably don't affect the division
       // operands.

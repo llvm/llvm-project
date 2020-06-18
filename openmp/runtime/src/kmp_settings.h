@@ -17,6 +17,7 @@ void __kmp_reset_global_vars(void);
 void __kmp_env_initialize(char const *);
 void __kmp_env_print();
 void __kmp_env_print_2();
+void __kmp_display_env_impl(int display_env, int display_env_verbose);
 
 int __kmp_initial_threads_capacity(int req_nproc);
 void __kmp_init_dflt_team_nth();

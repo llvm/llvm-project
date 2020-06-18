@@ -1,6 +1,6 @@
 // RUN: mlir-translate -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @iequal_scalar(%arg0: i32, %arg1: i32)  "None" {
     // CHECK: {{.*}} = spv.IEqual {{.*}}, {{.*}} : i32
     %0 = spv.IEqual %arg0, %arg1 : i32
@@ -82,7 +82,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.specConstant @condition_scalar = true
   spv.func @select() -> () "None" {
     %0 = spv.constant 4.0 : f32

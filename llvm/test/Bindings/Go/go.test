@@ -1,4 +1,4 @@
-; RUN: CGO_CPPFLAGS="`llvm-config --cppflags`" CGO_CXXFLAGS=-std=c++14 CGO_LDFLAGS="`llvm-config --ldflags --libs --system-libs all`" go test llvm
+; RUN: llvm-go test llvm.org/llvm/bindings/go/llvm
 
 ; REQUIRES: shell
 ; UNSUPPORTED: asan, ubsan, msan

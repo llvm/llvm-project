@@ -140,14 +140,11 @@ kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_i
 
 kernel void basic_subgroup(global uint *out) {
   out[0] = get_sub_group_size();
-#if !defined(__OPENCL_CPP_VERSION__) && __OPENCL_C_VERSION__ < CL_VERSION_2_0
-// expected-error@-2{{implicit declaration of function 'get_sub_group_size' is invalid in OpenCL}}
-// expected-error@-3{{implicit conversion changes signedness: 'int' to 'uint' (aka 'unsigned int')}}
-#elif defined(__OPENCL_CPP_VERSION__)
-// expected-error@-5{{no matching function for call to 'get_sub_group_size'}}
-// expected-note@-6{{candidate unavailable as it requires OpenCL extension 'cl_khr_subgroups' to be enabled}}
+#if defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{no matching function for call to 'get_sub_group_size'}}
+  // expected-note@-3{{candidate unavailable as it requires OpenCL extension 'cl_khr_subgroups' to be enabled}}
 #else
-// expected-error@-8{{use of declaration 'get_sub_group_size' requires cl_khr_subgroups extension to be enabled}}
+  // expected-error@-5{{use of declaration 'get_sub_group_size' requires cl_khr_subgroups extension to be enabled}}
 #endif
 }
 

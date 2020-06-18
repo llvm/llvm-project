@@ -8,8 +8,9 @@
 
 #include "clang/Tooling/AllTUsExecution.h"
 #include "clang/Tooling/ToolExecutorPluginRegistry.h"
-#include "llvm/Support/Threading.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {

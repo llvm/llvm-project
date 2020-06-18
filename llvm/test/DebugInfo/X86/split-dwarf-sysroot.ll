@@ -4,9 +4,11 @@
 
 ; CHECK: DW_TAG_skeleton_unit
 ; CHECK-NOT: DW_AT_LLVM_sysroot
+; CHECK-NOT: DW_AT_LLVM_sdk
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_LLVM_sysroot ("/opt/clang-root")
+; CHECK: DW_AT_APPLE_sdk ("Linux.sdk")
 
 target triple = "x86_64-pc-linux"
 
@@ -21,7 +23,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7, !8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, emissionKind: FullDebug, enums: !2, sysroot: "/opt/clang-root")
+!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, emissionKind: FullDebug, enums: !2, sysroot: "/opt/clang-root", sdk: "Linux.sdk")
 !1 = !DIFile(filename: "a.c", directory: "/")
 !2 = !{}
 !6 = !{i32 2, !"Dwarf Version", i32 5}

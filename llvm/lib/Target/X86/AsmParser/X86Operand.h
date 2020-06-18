@@ -17,9 +17,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <memory>
@@ -456,6 +454,14 @@ struct X86Operand final : public MCParsedAsmOperand {
     return Kind == Register &&
       (X86MCRegisterClasses[X86::GR32RegClassID].contains(getReg()) ||
       X86MCRegisterClasses[X86::GR64RegClassID].contains(getReg()));
+  }
+
+  bool isVectorReg() const {
+    return Kind == Register &&
+           (X86MCRegisterClasses[X86::VR64RegClassID].contains(getReg()) ||
+            X86MCRegisterClasses[X86::VR128XRegClassID].contains(getReg()) ||
+            X86MCRegisterClasses[X86::VR256XRegClassID].contains(getReg()) ||
+            X86MCRegisterClasses[X86::VR512RegClassID].contains(getReg()));
   }
 
   bool isVK1Pair() const {

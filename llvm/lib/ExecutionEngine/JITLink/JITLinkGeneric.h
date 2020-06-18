@@ -80,13 +80,13 @@ protected:
   // For debug dumping of the link graph.
   virtual StringRef getEdgeKindName(Edge::Kind K) const = 0;
 
-  // Alight a JITTargetAddress to conform with block alignment requirements.
+  // Align a JITTargetAddress to conform with block alignment requirements.
   static JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
     uint64_t Delta = (B.getAlignmentOffset() - Addr) % B.getAlignment();
     return Addr + Delta;
   }
 
-  // Alight a pointer to conform with block alignment requirements.
+  // Align a pointer to conform with block alignment requirements.
   static char *alignToBlock(char *P, Block &B) {
     uint64_t PAddr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(P));
     uint64_t Delta = (B.getAlignmentOffset() - PAddr) % B.getAlignment();
@@ -100,14 +100,14 @@ private:
 
   // Copy block contents and apply relocations.
   // Implemented in JITLinker.
-  virtual Error
-  copyAndFixUpBlocks(const SegmentLayoutMap &Layout,
-                     JITLinkMemoryManager::Allocation &Alloc) const = 0;
+  virtual Error fixUpBlocks(LinkGraph &G) const = 0;
 
   SegmentLayoutMap layOutBlocks();
   Error allocateSegments(const SegmentLayoutMap &Layout);
   JITLinkContext::LookupMap getExternalSymbolNames() const;
   void applyLookupResult(AsyncLookupResult LR);
+  void copyBlockContentToWorkingMemory(const SegmentLayoutMap &Layout,
+                                       JITLinkMemoryManager::Allocation &Alloc);
   void deallocateAndBailOut(Error Err);
 
   void dumpGraph(raw_ostream &OS);
@@ -144,88 +144,25 @@ private:
     return static_cast<const LinkerImpl &>(*this);
   }
 
-  Error
-  copyAndFixUpBlocks(const SegmentLayoutMap &Layout,
-                     JITLinkMemoryManager::Allocation &Alloc) const override {
-    LLVM_DEBUG(dbgs() << "Copying and fixing up blocks:\n");
-    for (auto &KV : Layout) {
-      auto &Prot = KV.first;
-      auto &SegLayout = KV.second;
+  Error fixUpBlocks(LinkGraph &G) const override {
+    LLVM_DEBUG(dbgs() << "Fixing up blocks:\n");
 
-      auto SegMem = Alloc.getWorkingMemory(
-          static_cast<sys::Memory::ProtectionFlags>(Prot));
-      char *LastBlockEnd = SegMem.data();
-      char *BlockDataPtr = LastBlockEnd;
+    for (auto *B : G.blocks()) {
+      LLVM_DEBUG(dbgs() << "  " << *B << ":\n");
 
-      LLVM_DEBUG({
-        dbgs() << "  Processing segment "
-               << static_cast<sys::Memory::ProtectionFlags>(Prot) << " [ "
-               << (const void *)SegMem.data() << " .. "
-               << (const void *)((char *)SegMem.data() + SegMem.size())
-               << " ]\n    Processing content sections:\n";
-      });
+      // Copy Block data and apply fixups.
+      LLVM_DEBUG(dbgs() << "    Applying fixups.\n");
+      for (auto &E : B->edges()) {
 
-      for (auto *B : SegLayout.ContentBlocks) {
-        LLVM_DEBUG(dbgs() << "    " << *B << ":\n");
+        // Skip non-relocation edges.
+        if (!E.isRelocation())
+          continue;
 
-        // Pad to alignment/alignment-offset.
-        BlockDataPtr = alignToBlock(BlockDataPtr, *B);
-
-        LLVM_DEBUG({
-          dbgs() << "      Bumped block pointer to "
-                 << (const void *)BlockDataPtr << " to meet block alignment "
-                 << B->getAlignment() << " and alignment offset "
-                 << B->getAlignmentOffset() << "\n";
-        });
-
-        // Zero pad up to alignment.
-        LLVM_DEBUG({
-          if (LastBlockEnd != BlockDataPtr)
-            dbgs() << "      Zero padding from " << (const void *)LastBlockEnd
-                   << " to " << (const void *)BlockDataPtr << "\n";
-        });
-
-        while (LastBlockEnd != BlockDataPtr)
-          *LastBlockEnd++ = 0;
-
-        // Copy initial block content.
-        LLVM_DEBUG({
-          dbgs() << "      Copying block " << *B << " content, "
-                 << B->getContent().size() << " bytes, from "
-                 << (const void *)B->getContent().data() << " to "
-                 << (const void *)BlockDataPtr << "\n";
-        });
-        memcpy(BlockDataPtr, B->getContent().data(), B->getContent().size());
-
-        // Copy Block data and apply fixups.
-        LLVM_DEBUG(dbgs() << "      Applying fixups.\n");
-        for (auto &E : B->edges()) {
-
-          // Skip non-relocation edges.
-          if (!E.isRelocation())
-            continue;
-
-          // Dispatch to LinkerImpl for fixup.
-          if (auto Err = impl().applyFixup(*B, E, BlockDataPtr))
-            return Err;
-        }
-
-        // Point the block's content to the fixed up buffer.
-        B->setContent(StringRef(BlockDataPtr, B->getContent().size()));
-
-        // Update block end pointer.
-        LastBlockEnd = BlockDataPtr + B->getContent().size();
-        BlockDataPtr = LastBlockEnd;
+        // Dispatch to LinkerImpl for fixup.
+        auto *BlockData = const_cast<char *>(B->getContent().data());
+        if (auto Err = impl().applyFixup(*B, E, BlockData))
+          return Err;
       }
-
-      // Zero pad the rest of the segment.
-      LLVM_DEBUG({
-        dbgs() << "    Zero padding end of segment from "
-               << (const void *)LastBlockEnd << " to "
-               << (const void *)((char *)SegMem.data() + SegMem.size()) << "\n";
-      });
-      while (LastBlockEnd != SegMem.data() + SegMem.size())
-        *LastBlockEnd++ = 0;
     }
 
     return Error::success();

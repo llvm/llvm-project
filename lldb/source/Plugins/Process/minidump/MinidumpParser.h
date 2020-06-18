@@ -100,7 +100,6 @@ private:
   MinidumpParser(lldb::DataBufferSP data_sp,
                  std::unique_ptr<llvm::object::MinidumpFile> file);
 
-private:
   lldb::DataBufferSP m_data_sp;
   std::unique_ptr<llvm::object::MinidumpFile> m_file;
   ArchSpec m_arch;

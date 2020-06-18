@@ -3,7 +3,10 @@ LD_EXTRAS := -lobjc -framework Foundation
 
 all:        a.out.stripped
 
+include Makefile.rules
+
 a.out.stripped: a.out.dSYM
 	strip -o a.out.stripped a.out
-
-include Makefile.rules
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -fs - a.out.stripped
+endif

@@ -667,7 +667,7 @@ static void __kmp_team_static_init(ident_t *loc, kmp_int32 gtid,
   // stride for next chunks calculation.
   // Last iteration flag set for the team that will execute
   // the last iteration of the loop.
-  // The routine is called for dist_schedue(static,chunk) only.
+  // The routine is called for dist_schedule(static,chunk) only.
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
   kmp_uint32 team_id;

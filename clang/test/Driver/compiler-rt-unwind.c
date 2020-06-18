@@ -48,3 +48,26 @@
 // RUN:     --gcc-toolchain="" \
 // RUN: FileCheck --input-file=%t.err --check-prefix=RTLIB-GCC-UNWINDLIB-COMPILER_RT %s
 // RTLIB-GCC-UNWINDLIB-COMPILER_RT: "{{[.|\\\n]*}}--rtlib=libgcc requires --unwindlib=libgcc"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
+// RUN:     -shared-libgcc \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT %s
+// MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins-x86_64.a"
+// MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT: "{{.*}}l:libunwind.dll.a"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
+// RUN:     -static-libgcc \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT %s
+// MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins-x86_64.a"
+// MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT: "{{.*}}l:libunwind.a"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
+// MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins-x86_64.a"
+// MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}lunwind"

@@ -135,8 +135,8 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32:
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offset:4092{{$}}
-; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offset:4092{{$}}
+; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092{{$}}
+; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092{{$}}
 ; GCN: {{^}}BB4_2:
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
 entry:
@@ -174,9 +174,9 @@ done:
 ; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32_reserved:
 ; GCN: s_and_saveexec_b64
 ; GCN: v_mov_b32_e32 [[BASE_FI0:v[0-9]+]], 4
-; GCN: buffer_store_dword {{v[0-9]+}}, [[BASE_FI0]], {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:4092{{$}}
+; GCN: buffer_store_dword {{v[0-9]+}}, [[BASE_FI0]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen offset:4092{{$}}
 ; GCN: v_mov_b32_e32 [[BASE_FI1:v[0-9]+]], 4
-; GCN: buffer_load_dword {{v[0-9]+}}, [[BASE_FI1]], {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:4092{{$}}
+; GCN: buffer_load_dword {{v[0-9]+}}, [[BASE_FI1]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen offset:4092{{$}}
 ; GCN: {{^BB[0-9]+}}_2:
 
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32_reserved(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
@@ -213,8 +213,8 @@ done:
 
 ; GCN-LABEL: {{^}}test_no_sink_scratch_large_offset_i32:
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
-; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
+; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
 ; GCN: {{^BB[0-9]+}}_2:
 define amdgpu_kernel void @test_no_sink_scratch_large_offset_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
 entry:

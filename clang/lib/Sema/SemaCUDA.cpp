@@ -14,6 +14,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Cuda.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
@@ -208,6 +209,20 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
     return CFP_Never;
 
   llvm_unreachable("All cases should've been handled by now.");
+}
+
+template <typename AttrT> static bool hasImplicitAttr(const FunctionDecl *D) {
+  if (!D)
+    return false;
+  if (auto *A = D->getAttr<AttrT>())
+    return A->isImplicit();
+  return D->isImplicit();
+}
+
+bool Sema::isCUDAImplicitHostDeviceFunction(const FunctionDecl *D) {
+  bool IsImplicitDevAttr = hasImplicitAttr<CUDADeviceAttr>(D);
+  bool IsImplicitHostAttr = hasImplicitAttr<CUDAHostAttr>(D);
+  return IsImplicitDevAttr && IsImplicitHostAttr;
 }
 
 void Sema::EraseUnwantedCUDAMatches(
@@ -425,6 +440,10 @@ bool Sema::isEmptyCudaConstructor(SourceLocation Loc, CXXConstructorDecl *CD) {
   if (CD->getParent()->isDynamicClass())
     return false;
 
+  // Union ctor does not call ctors of its data members.
+  if (CD->getParent()->isUnion())
+    return true;
+
   // The only form of initializer allowed is an empty constructor.
   // This will recursively check all base classes and member initializers
   if (!llvm::all_of(CD->inits(), [&](const CXXCtorInitializer *CI) {
@@ -463,6 +482,11 @@ bool Sema::isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *DD) {
   // Its class has no virtual functions and no virtual base classes.
   if (ClassDecl->isDynamicClass())
     return false;
+
+  // Union does not have base class and union dtor does not call dtors of its
+  // data members.
+  if (DD->getParent()->isUnion())
+    return true;
 
   // Only empty destructors are allowed. This will recursively check
   // destructors for all base classes...
@@ -503,9 +527,14 @@ void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
     // constructor according to CUDA rules. This deviates from NVCC,
     // but allows us to handle things like constexpr constructors.
     if (!AllowedInit &&
-        (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>()))
-      AllowedInit = VD->getInit()->isConstantInitializer(
-          Context, VD->getType()->isReferenceType());
+        (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>())) {
+      auto *Init = VD->getInit();
+      AllowedInit =
+          ((VD->getType()->isDependentType() || Init->isValueDependent()) &&
+           VD->isConstexpr()) ||
+          Init->isConstantInitializer(Context,
+                                      VD->getType()->isReferenceType());
+    }
 
     // Also make sure that destructor, if there is one, is empty.
     if (AllowedInit)
@@ -602,6 +631,13 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
   NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
 }
 
+void Sema::MaybeAddCUDAConstantAttr(VarDecl *VD) {
+  if (getLangOpts().CUDAIsDevice && VD->isConstexpr() &&
+      (VD->isFileVarDecl() || VD->isStaticDataMember())) {
+    VD->addAttr(CUDAConstantAttr::CreateImplicit(getASTContext()));
+  }
+}
+
 Sema::DeviceDiagBuilder Sema::CUDADiagIfDeviceCode(SourceLocation Loc,
                                                    unsigned DiagID) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
@@ -674,25 +710,6 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   // Otherwise, mark the call in our call graph so we can traverse it later.
   bool CallerKnownEmitted =
       getEmissionStatus(Caller) == FunctionEmissionStatus::Emitted;
-  if (CallerKnownEmitted) {
-    // Host-side references to a __global__ function refer to the stub, so the
-    // function itself is never emitted and therefore should not be marked.
-    if (!shouldIgnoreInHostDeviceCheck(Callee))
-      markKnownEmitted(
-          *this, Caller, Callee, Loc, [](Sema &S, FunctionDecl *FD) {
-            return S.getEmissionStatus(FD) == FunctionEmissionStatus::Emitted;
-          });
-  } else {
-    // If we have
-    //   host fn calls kernel fn calls host+device,
-    // the HD function does not get instantiated on the host.  We model this by
-    // omitting at the call to the kernel from the callgraph.  This ensures
-    // that, when compiling for host, only HD functions actually called from the
-    // host get marked as known-emitted.
-    if (!shouldIgnoreInHostDeviceCheck(Callee))
-      DeviceCallGraph[Caller].insert({Callee, Loc});
-  }
-
   DeviceDiagBuilder::Kind DiagKind = [this, Caller, Callee,
                                       CallerKnownEmitted] {
     switch (IdentifyCUDAPreference(Caller, Callee)) {

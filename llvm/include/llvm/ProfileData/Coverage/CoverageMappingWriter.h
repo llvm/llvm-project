@@ -32,8 +32,9 @@ class CoverageFilenamesSectionWriter {
 public:
   CoverageFilenamesSectionWriter(ArrayRef<StringRef> Filenames);
 
-  /// Write encoded filenames to the given output stream.
-  void write(raw_ostream &OS);
+  /// Write encoded filenames to the given output stream. If \p Compress is
+  /// true, attempt to compress the filenames.
+  void write(raw_ostream &OS, bool Compress = true);
 };
 
 /// Writer for instrumentation based coverage mapping data.

@@ -13,10 +13,12 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Tooling/Tooling.h"
-#include "gtest/gtest.h"
 #include "llvm/IR/DataLayout.h"
+#include "gtest/gtest.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::tooling;
@@ -76,14 +78,9 @@ TEST(Decl, AsmLabelAttr) {
   assert(Ctx.getTargetInfo().getDataLayout().getGlobalPrefix() &&
          "Expected target to have a global prefix");
   DiagnosticsEngine &Diags = AST->getDiagnostics();
-  SourceManager &SM = AST->getSourceManager();
-  FileID MainFileID = SM.getMainFileID();
 
-  // Find the method decls within the AST.
-  SmallVector<Decl *, 1> Decls;
-  AST->findFileRegionDecls(MainFileID, Code.find('{'), 0, Decls);
-  ASSERT_TRUE(Decls.size() == 1);
-  CXXRecordDecl *DeclS = cast<CXXRecordDecl>(Decls[0]);
+  const auto *DeclS =
+      selectFirst<CXXRecordDecl>("d", match(cxxRecordDecl().bind("d"), Ctx));
   NamedDecl *DeclF = *DeclS->method_begin();
   NamedDecl *DeclG = *(++DeclS->method_begin());
 

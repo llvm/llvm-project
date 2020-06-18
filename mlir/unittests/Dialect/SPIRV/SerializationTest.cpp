@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/Serialization.h"
+#include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
@@ -37,7 +38,7 @@ protected:
   SerializationTest() { createModuleOp(); }
 
   void createModuleOp() {
-    Builder builder(&context);
+    OpBuilder builder(&context);
     OperationState state(UnknownLoc::get(&context),
                          spirv::ModuleOp::getOperationName());
     state.addAttribute("addressing_model",
@@ -46,15 +47,19 @@ protected:
     state.addAttribute("memory_model",
                        builder.getI32IntegerAttr(
                            static_cast<uint32_t>(spirv::MemoryModel::GLSL450)));
-    spirv::ModuleOp::build(&builder, state);
+    state.addAttribute("vce_triple",
+                       spirv::VerCapExtAttr::get(
+                           spirv::Version::V_1_0, ArrayRef<spirv::Capability>(),
+                           ArrayRef<spirv::Extension>(), &context));
+    spirv::ModuleOp::build(builder, state);
     module = cast<spirv::ModuleOp>(Operation::create(state));
   }
 
   Type getFloatStructType() {
     OpBuilder opBuilder(module.body());
     llvm::SmallVector<Type, 1> elementTypes{opBuilder.getF32Type()};
-    llvm::SmallVector<spirv::StructType::LayoutInfo, 1> layoutInfo{0};
-    auto structType = spirv::StructType::get(elementTypes, layoutInfo);
+    llvm::SmallVector<spirv::StructType::OffsetInfo, 1> offsetInfo{0};
+    auto structType = spirv::StructType::get(elementTypes, offsetInfo);
     return structType;
   }
 

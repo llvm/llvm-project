@@ -26,10 +26,6 @@ ThrowByValueCatchByReferenceCheck::ThrowByValueCatchByReferenceCheck(
       MaxSize(Options.get("MaxSize", std::numeric_limits<uint64_t>::max())) {}
 
 void ThrowByValueCatchByReferenceCheck::registerMatchers(MatchFinder *Finder) {
-  // This is a C++ only check thus we register the matchers only for C++
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(cxxThrowExpr().bind("throw"), this);
   Finder->addMatcher(cxxCatchStmt().bind("catch"), this);
 }

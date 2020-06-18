@@ -153,17 +153,17 @@ public:
   }
 
 protected:
-  BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override {
+  BreakpointResolverSP CopyForBreakpoint(BreakpointSP &breakpoint) override {
     BreakpointResolverSP ret_sp(
         new ExceptionBreakpointResolver(m_language, m_catch_bp, m_throw_bp));
-    ret_sp->SetBreakpoint(&breakpoint);
+    ret_sp->SetBreakpoint(breakpoint);
     return ret_sp;
   }
 
   bool SetActualResolver() {
-    ProcessSP process_sp;
-    if (m_breakpoint) {
-      process_sp = m_breakpoint->GetTarget().GetProcessSP();
+    BreakpointSP breakpoint_sp = GetBreakpoint();
+    if (breakpoint_sp) {
+      ProcessSP process_sp = breakpoint_sp->GetTarget().GetProcessSP();
       if (process_sp) {
         bool refreash_resolver = !m_actual_resolver_sp;
         if (m_language_runtime == nullptr) {
@@ -180,7 +180,7 @@ protected:
 
         if (refreash_resolver && m_language_runtime) {
           m_actual_resolver_sp = m_language_runtime->CreateExceptionResolver(
-              m_breakpoint, m_catch_bp, m_throw_bp);
+              breakpoint_sp, m_catch_bp, m_throw_bp);
         }
       } else {
         m_actual_resolver_sp.reset();

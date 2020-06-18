@@ -275,7 +275,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_ORDERED_END)(void) {
 #define KMP_DISPATCH_FINI_CHUNK_ULL __kmp_aux_dispatch_fini_chunk_8u
 #define KMP_DISPATCH_NEXT_ULL __kmpc_dispatch_next_8u
 
-// The parallel contruct
+// The parallel construct
 
 #ifndef KMP_DEBUG
 static
@@ -325,7 +325,7 @@ static
                                           enum sched_type schedule, long start,
                                           long end, long incr,
                                           long chunk_size) {
-  // Intialize the loop worksharing construct.
+  // Initialize the loop worksharing construct.
 
   KMP_DISPATCH_INIT(loc, *gtid, schedule, start, end, incr, chunk_size,
                     schedule != kmp_sch_static);

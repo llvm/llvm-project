@@ -25,7 +25,6 @@ template <typename T> class ArrayRef;
 class CallBase;
 class Constant;
 class ConstantExpr;
-class ConstantVector;
 class DataLayout;
 class Function;
 class GlobalValue;
@@ -46,9 +45,9 @@ bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
 Constant *ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
                                   const TargetLibraryInfo *TLI = nullptr);
 
-/// ConstantFoldConstant - Attempt to fold the constant using the
-/// specified DataLayout.
-/// If successful, the constant result is returned, if not, null is returned.
+/// ConstantFoldConstant - Fold the constant using the specified DataLayout.
+/// This function always returns a non-null constant: Either the folding result,
+/// or the original constant if further folding is not possible.
 Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
                                const TargetLibraryInfo *TLI = nullptr);
 
@@ -119,10 +118,11 @@ Constant *ConstantFoldInsertElementInstruction(Constant *Val,
 Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
 
 /// Attempt to constant fold a shufflevector instruction with the
-/// specified operands and indices.  The constant result is returned if
-/// successful; if not, null is returned.
+/// specified operands and mask.  See class ShuffleVectorInst for a description
+/// of the mask representation. The constant result is returned if successful;
+/// if not, null is returned.
 Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
-                                               Constant *Mask);
+                                               ArrayRef<int> Mask);
 
 /// ConstantFoldLoadFromConstPtr - Return the value that a load from C would
 /// produce if it is constant and determinable.  If this is not determinable,

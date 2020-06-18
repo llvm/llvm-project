@@ -187,12 +187,12 @@ sub target_options() {
                 set_target_os( $_[ 1 ] ) or
                     die "Bad value of --target-os option: \"$_[ 1 ]\"\n";
             },
-        "target-architecture|targert-arch|architecture|arch=s" =>
+        "target-architecture|target-arch|architecture|arch=s" =>
            sub {
                set_target_arch( $_[ 1 ] ) or
                    die "Bad value of --target-architecture option: \"$_[ 1 ]\"\n";
            },
-        "target-mic-architecture|targert-mic-arch|mic-architecture|mic-arch=s" =>
+        "target-mic-architecture|target-mic-arch|mic-architecture|mic-arch=s" =>
            sub {
                set_target_mic_arch( $_[ 1 ] ) or
                    die "Bad value of --target-mic-architecture option: \"$_[ 1 ]\"\n";
@@ -390,7 +390,7 @@ naming files, directories, macros, etc.
     my $os     = canon_os( "Windows NT" );     # Returns "win".
 
     print( $host_arch, $host_os, $host_platform );
-    print( $taregt_arch, $target_os, $target_platform );
+    print( $target_arch, $target_os, $target_platform );
 
     tools::get_options(
         Platform::target_options(),

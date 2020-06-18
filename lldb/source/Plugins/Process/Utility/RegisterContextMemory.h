@@ -67,7 +67,9 @@ protected:
                                 // context that is stored in memmory
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(RegisterContextMemory);
+  RegisterContextMemory(const RegisterContextMemory &) = delete;
+  const RegisterContextMemory &
+  operator=(const RegisterContextMemory &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTMEMORY_H

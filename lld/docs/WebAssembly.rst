@@ -112,8 +112,8 @@ The default behaviour is to generate these stub function and to produce
 a warning.  The ``--fatal-warnings`` flag can be used to disable this behaviour
 and error out if mismatched are found.
 
-Imports and Exports
-~~~~~~~~~~~~~~~~~~~
+Exports
+~~~~~~~
 
 When building a shared library any symbols marked as ``visibility=default`` will
 be exported.
@@ -129,6 +129,17 @@ In addition, symbols can be exported via the linker command line using
 Finally, just like with native ELF linker the ``--export-dynamic`` flag can be
 used to export symbols in the executable which are marked as
 ``visibility=default``.
+
+Imports
+~~~~~~~
+
+By default no undefined symbols are allowed in the final binary.  The flag
+``--allow-undefined`` results in a WebAssembly import being defined for each
+undefined symbol.  It is then up to the runtime to provide such symbols.
+
+Alternatively symbols can be marked in the source code as with the
+``import_name`` and/or ``import_module`` clang attributes which signals that
+they are expected to be undefined at static link time.
 
 Garbage Collection
 ~~~~~~~~~~~~~~~~~~

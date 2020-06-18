@@ -51,7 +51,7 @@ body:             |
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_shifts_to_revsh_commutative
@@ -99,7 +99,7 @@ body:             |
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_shifts_no_revsh_constants

@@ -278,5 +278,5 @@ define amdgpu_kernel void @rcp_v2f16_f32_ftzdaz(<2 x half> addrspace(1)* %out, <
   ret void
 }
 
-attributes #0 = { nounwind "target-features"="+fp32-denormals" }
-attributes #1 = { nounwind "target-features"="-fp32-denormals" }
+attributes #0 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
+attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

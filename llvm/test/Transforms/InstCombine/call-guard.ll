@@ -67,7 +67,7 @@ define void @negative_load(i32 %V1, i32* %P) {
   ret void
 }
 
-define void @deref_load(i32 %V1, i32* dereferenceable(4) %P) {
+define void @deref_load(i32 %V1, i32* dereferenceable(4) align 4 %P) {
 ; CHECK-LABEL: @deref_load
 ; CHECK-NEXT:  %V2 = load i32, i32* %P, align 4
 ; CHECK-NEXT:  %1 = and i32 %V2, %V1

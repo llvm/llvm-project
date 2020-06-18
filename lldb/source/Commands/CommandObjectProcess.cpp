@@ -249,7 +249,6 @@ protected:
     return result.Succeeded();
   }
 
-protected:
   ProcessLaunchCommandOptions m_options;
 };
 
@@ -325,34 +324,38 @@ public:
       int opt_arg_pos = opt_element_vector[opt_element_index].opt_arg_pos;
       int opt_defs_index = opt_element_vector[opt_element_index].opt_defs_index;
 
-      // We are only completing the name option for now...
+      switch (GetDefinitions()[opt_defs_index].short_option) {
+      case 'n': {
+        // Look to see if there is a -P argument provided, and if so use that
+        // plugin, otherwise use the default plugin.
 
-      // Are we in the name?
-      if (GetDefinitions()[opt_defs_index].short_option != 'n')
-        return;
+        const char *partial_name = nullptr;
+        partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
 
-      // Look to see if there is a -P argument provided, and if so use that
-      // plugin, otherwise use the default plugin.
+        PlatformSP platform_sp(interpreter.GetPlatform(true));
+        if (!platform_sp)
+          return;
+        ProcessInstanceInfoList process_infos;
+        ProcessInstanceInfoMatch match_info;
+        if (partial_name) {
+          match_info.GetProcessInfo().GetExecutableFile().SetFile(
+              partial_name, FileSpec::Style::native);
+          match_info.SetNameMatchType(NameMatch::StartsWith);
+        }
+        platform_sp->FindProcesses(match_info, process_infos);
+        const size_t num_matches = process_infos.size();
+        if (num_matches == 0)
+          return;
+        for (size_t i = 0; i < num_matches; ++i) {
+          request.AddCompletion(process_infos[i].GetNameAsStringRef());
+        }
+      } break;
 
-      const char *partial_name = nullptr;
-      partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
-
-      PlatformSP platform_sp(interpreter.GetPlatform(true));
-      if (!platform_sp)
-        return;
-      ProcessInstanceInfoList process_infos;
-      ProcessInstanceInfoMatch match_info;
-      if (partial_name) {
-        match_info.GetProcessInfo().GetExecutableFile().SetFile(
-            partial_name, FileSpec::Style::native);
-        match_info.SetNameMatchType(NameMatch::StartsWith);
-      }
-      platform_sp->FindProcesses(match_info, process_infos);
-      const size_t num_matches = process_infos.GetSize();
-      if (num_matches == 0)
-        return;
-      for (size_t i = 0; i < num_matches; ++i) {
-        request.AddCompletion(process_infos.GetProcessNameAtIndex(i));
+      case 'P':
+        CommandCompletions::InvokeCommonCompletionCallbacks(
+            interpreter, CommandCompletions::eProcessPluginCompletion, request,
+            nullptr);
+        break;
       }
     }
 
@@ -1034,6 +1037,20 @@ public:
 
   ~CommandObjectProcessSignal() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
+      return;
+
+    UnixSignalsSP signals = m_exe_ctx.GetProcessPtr()->GetUnixSignals();
+    int signo = signals->GetFirstSignalNumber();
+    while (signo != LLDB_INVALID_SIGNAL_NUMBER) {
+      request.AddCompletion(signals->GetSignalAsCString(signo), "");
+      signo = signals->GetNextSignalNumber(signo);
+    }
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -1201,6 +1218,8 @@ protected:
 
 // CommandObjectProcessStatus
 #pragma mark CommandObjectProcessStatus
+#define LLDB_OPTIONS_process_status
+#include "CommandOptions.inc"
 
 class CommandObjectProcessStatus : public CommandObjectParsed {
 public:
@@ -1209,13 +1228,57 @@ public:
             interpreter, "process status",
             "Show status and stop location for the current target process.",
             "process status",
-            eCommandRequiresProcess | eCommandTryTargetAPILock) {}
+            eCommandRequiresProcess | eCommandTryTargetAPILock),
+        m_options() {}
 
   ~CommandObjectProcessStatus() override = default;
 
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options(), m_verbose(false) {}
+
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'v':
+        m_verbose = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return {};
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_verbose = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_process_status_options);
+    }
+
+    // Instance variables to hold the values for command options.
+    bool m_verbose;
+  };
+
+protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
+
+    if (command.GetArgumentCount()) {
+      result.AppendError("'process status' takes no arguments");
+      result.SetStatus(eReturnStatusFailed);
+      return result.Succeeded();
+    }
+
     // No need to check "process" for validity as eCommandRequiresProcess
     // ensures it is valid
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -1227,8 +1290,37 @@ public:
     process->GetStatus(strm);
     process->GetThreadStatus(strm, only_threads_with_stop_reason, start_frame,
                              num_frames, num_frames_with_source, stop_format);
+
+    if (m_options.m_verbose) {
+      PlatformSP platform_sp = process->GetTarget().GetPlatform();
+      if (!platform_sp) {
+        result.AppendError("Couldn'retrieve the target's platform");
+        result.SetStatus(eReturnStatusFailed);
+        return result.Succeeded();
+      }
+
+      auto expected_crash_info =
+          platform_sp->FetchExtendedCrashInformation(*process);
+
+      if (!expected_crash_info) {
+        result.AppendError(llvm::toString(expected_crash_info.takeError()));
+        result.SetStatus(eReturnStatusFailed);
+        return result.Succeeded();
+      }
+
+      StructuredData::DictionarySP crash_info_sp = *expected_crash_info;
+
+      if (crash_info_sp) {
+        strm.PutCString("Extended Crash Information:\n");
+        crash_info_sp->Dump(strm);
+      }
+    }
+
     return result.Succeeded();
   }
+
+private:
+  CommandOptions m_options;
 };
 
 // CommandObjectProcessHandle

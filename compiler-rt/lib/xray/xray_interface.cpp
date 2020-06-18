@@ -175,6 +175,33 @@ bool patchSled(const XRaySledEntry &Sled, bool Enable,
   return Success;
 }
 
+const XRayFunctionSledIndex
+findFunctionSleds(int32_t FuncId,
+                  const XRaySledMap &InstrMap) XRAY_NEVER_INSTRUMENT {
+  int32_t CurFn = 0;
+  uint64_t LastFnAddr = 0;
+  XRayFunctionSledIndex Index = {nullptr, nullptr};
+
+  for (std::size_t I = 0; I < InstrMap.Entries && CurFn <= FuncId; I++) {
+    const auto &Sled = InstrMap.Sleds[I];
+    const auto Function = Sled.function();
+    if (Function != LastFnAddr) {
+      CurFn++;
+      LastFnAddr = Function;
+    }
+
+    if (CurFn == FuncId) {
+      if (Index.Begin == nullptr)
+        Index.Begin = &Sled;
+      Index.End = &Sled;
+    }
+  }
+
+  Index.End += 1;
+
+  return Index;
+}
+
 XRayPatchingStatus patchFunction(int32_t FuncId,
                                  bool Enable) XRAY_NEVER_INSTRUMENT {
   if (!atomic_load(&XRayInitialized,
@@ -205,10 +232,10 @@ XRayPatchingStatus patchFunction(int32_t FuncId,
   }
 
   // Now we patch ths sleds for this specific function.
-  auto SledRange = InstrMap.SledsIndex[FuncId - 1];
+  auto SledRange = InstrMap.SledsIndex ? InstrMap.SledsIndex[FuncId - 1]
+                                       : findFunctionSleds(FuncId, InstrMap);
   auto *f = SledRange.Begin;
   auto *e = SledRange.End;
-
   bool SucceedOnce = false;
   while (f != e)
     SucceedOnce |= patchSled(*f++, Enable, FuncId);
@@ -264,14 +291,14 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
   // now we're assuming we can mprotect the whole section of text between the
   // minimum sled address and the maximum sled address (+ the largest sled
   // size).
-  auto MinSled = InstrMap.Sleds[0];
-  auto MaxSled = InstrMap.Sleds[InstrMap.Entries - 1];
+  auto *MinSled = &InstrMap.Sleds[0];
+  auto *MaxSled = &InstrMap.Sleds[InstrMap.Entries - 1];
   for (std::size_t I = 0; I < InstrMap.Entries; I++) {
     const auto &Sled = InstrMap.Sleds[I];
-    if (Sled.Address < MinSled.Address)
-      MinSled = Sled;
-    if (Sled.Address > MaxSled.Address)
-      MaxSled = Sled;
+    if (Sled.address() < MinSled->address())
+      MinSled = &Sled;
+    if (Sled.address() > MaxSled->address())
+      MaxSled = &Sled;
   }
 
   const size_t PageSize = flags()->xray_page_size_override > 0
@@ -283,9 +310,10 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
   }
 
   void *PageAlignedAddr =
-      reinterpret_cast<void *>(MinSled.Address & ~(PageSize - 1));
+      reinterpret_cast<void *>(MinSled->address() & ~(PageSize - 1));
   size_t MProtectLen =
-      (MaxSled.Address - reinterpret_cast<uptr>(PageAlignedAddr)) + cSledLength;
+      (MaxSled->address() - reinterpret_cast<uptr>(PageAlignedAddr)) +
+      cSledLength;
   MProtectHelper Protector(PageAlignedAddr, MProtectLen, PageSize);
   if (Protector.MakeWriteable() == -1) {
     Report("Failed mprotect: %d\n", errno);
@@ -294,7 +322,7 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
 
   for (std::size_t I = 0; I < InstrMap.Entries; ++I) {
     auto &Sled = InstrMap.Sleds[I];
-    auto F = Sled.Function;
+    auto F = Sled.function();
     if (CurFun == 0)
       CurFun = F;
     if (F != CurFun) {
@@ -334,23 +362,25 @@ XRayPatchingStatus mprotectAndPatchFunction(int32_t FuncId,
 
   // Here we compute the minumum sled and maximum sled associated with a
   // particular function ID.
-  auto SledRange = InstrMap.SledsIndex[FuncId - 1];
+  auto SledRange = InstrMap.SledsIndex ? InstrMap.SledsIndex[FuncId - 1]
+                                       : findFunctionSleds(FuncId, InstrMap);
   auto *f = SledRange.Begin;
   auto *e = SledRange.End;
-  auto MinSled = *f;
-  auto MaxSled = *(SledRange.End - 1);
+  auto *MinSled = f;
+  auto *MaxSled = (SledRange.End - 1);
   while (f != e) {
-    if (f->Address < MinSled.Address)
-      MinSled = *f;
-    if (f->Address > MaxSled.Address)
-      MaxSled = *f;
+    if (f->address() < MinSled->address())
+      MinSled = f;
+    if (f->address() > MaxSled->address())
+      MaxSled = f;
     ++f;
   }
 
   void *PageAlignedAddr =
-      reinterpret_cast<void *>(MinSled.Address & ~(PageSize - 1));
+      reinterpret_cast<void *>(MinSled->address() & ~(PageSize - 1));
   size_t MProtectLen =
-      (MaxSled.Address - reinterpret_cast<uptr>(PageAlignedAddr)) + cSledLength;
+      (MaxSled->address() - reinterpret_cast<uptr>(PageAlignedAddr)) +
+      cSledLength;
   MProtectHelper Protector(PageAlignedAddr, MProtectLen, PageSize);
   if (Protector.MakeWriteable() == -1) {
     Report("Failed mprotect: %d\n", errno);
@@ -461,10 +491,18 @@ int __xray_set_handler_arg1(void (*entry)(int32_t, XRayEntryType, uint64_t)) {
 int __xray_remove_handler_arg1() { return __xray_set_handler_arg1(nullptr); }
 
 uintptr_t __xray_function_address(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
-  SpinMutexLock Guard(&XRayInstrMapMutex);
-  if (FuncId <= 0 || static_cast<size_t>(FuncId) > XRayInstrMap.Functions)
+  XRaySledMap InstrMap;
+  {
+    SpinMutexLock Guard(&XRayInstrMapMutex);
+    InstrMap = XRayInstrMap;
+  }
+
+  if (FuncId <= 0 || static_cast<size_t>(FuncId) > InstrMap.Functions)
     return 0;
-  return XRayInstrMap.SledsIndex[FuncId - 1].Begin->Function
+  const XRaySledEntry *Sled = InstrMap.SledsIndex
+                                  ? InstrMap.SledsIndex[FuncId - 1].Begin
+                                  : findFunctionSleds(FuncId, InstrMap).Begin;
+  return Sled->function()
 // On PPC, function entries are always aligned to 16 bytes. The beginning of a
 // sled might be a local entry, which is always +8 based on the global entry.
 // Always return the global entry.

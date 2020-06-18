@@ -31,6 +31,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -531,6 +532,14 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
       return false;
     }
 
+    // Don't attempt to analyze GEPs if index scale is not a compile-time
+    // constant.
+    if (isa<ScalableVectorType>(GEPOp->getSourceElementType())) {
+      Decomposed.Base = V;
+      Decomposed.HasCompileTimeConstantScale = false;
+      return false;
+    }
+
     unsigned AS = GEPOp->getPointerAddressSpace();
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
     gep_type_iterator GTI = gep_type_begin(GEPOp);
@@ -556,16 +565,18 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
       if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
         if (CIdx->isZero())
           continue;
-        Decomposed.OtherOffset +=
-          (DL.getTypeAllocSize(GTI.getIndexedType()) *
-            CIdx->getValue().sextOrSelf(MaxPointerSize))
-              .sextOrTrunc(MaxPointerSize);
+        APInt Offset = (DL.getTypeAllocSize(GTI.getIndexedType()) *
+                        CIdx->getValue().sextOrSelf(MaxPointerSize))
+                           .sextOrTrunc(MaxPointerSize);
+        Decomposed.OtherOffset += Offset;
+        Decomposed.MinOtherOffset += Offset;
         continue;
       }
 
       GepHasConstantOffset = false;
 
-      APInt Scale(MaxPointerSize, DL.getTypeAllocSize(GTI.getIndexedType()));
+      APInt Scale(MaxPointerSize,
+                  DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
       unsigned ZExtBits = 0, SExtBits = 0;
 
       // If the integer type is smaller than the pointer size, it is implicitly
@@ -602,7 +613,18 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
         if (PointerSize > Width)
           SExtBits += PointerSize - Width;
       } else {
-        Decomposed.OtherOffset += IndexOffset.sextOrTrunc(MaxPointerSize) * Scale;
+        APInt Offset = IndexOffset.sextOrTrunc(MaxPointerSize) * Scale;
+        Decomposed.OtherOffset += Offset;
+        APInt IndexBound =
+            computeConstantRange(Index, true, AC, dyn_cast<Instruction>(GEPOp))
+                .getLower()
+                .sextOrTrunc(MaxPointerSize);
+        // If we find a non-negative lower bound for the index value, we can
+        // improve the known offset to include it. By just using non-negative
+        // lower bounds, we conveniently skip any index values for which we do
+        // not find a useful lower bound.
+        if (IndexBound.isNonNegative())
+          Decomposed.MinOtherOffset += Offset + IndexBound * Scale;
         Scale *= IndexScale.sextOrTrunc(MaxPointerSize);
       }
 
@@ -960,7 +982,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     }
   }
 
-  // If the call is to malloc or calloc, we can assume that it doesn't
+  // If the call is malloc/calloc like, we can assume that it doesn't
   // modify any IR visible value.  This is only valid because we assume these
   // routines do not read values visible in the IR.  TODO: Consider special
   // casing realloc and strdup routines which access only their arguments as
@@ -1145,11 +1167,11 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
     GEP1->getSourceElementType(), IntermediateIndices);
   StructType *LastIndexedStruct = dyn_cast<StructType>(Ty);
 
-  if (isa<SequentialType>(Ty)) {
+  if (isa<ArrayType>(Ty) || isa<VectorType>(Ty)) {
     // We know that:
     // - both GEPs begin indexing from the exact same pointer;
     // - the last indices in both GEPs are constants, indexing into a sequential
-    //   type (array or pointer);
+    //   type (array or vector);
     // - both GEPs only index through arrays prior to that.
     //
     // Because array indices greater than the number of elements are valid in
@@ -1157,8 +1179,9 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
     // GEP1 and GEP2 we cannot guarantee that the last indexed arrays don't
     // partially overlap. We also need to check that the loaded size matches
     // the element size, otherwise we could still have overlap.
+    Type *LastElementTy = GetElementPtrInst::getTypeAtIndex(Ty, (uint64_t)0);
     const uint64_t ElementSize =
-        DL.getTypeStoreSize(cast<SequentialType>(Ty)->getElementType());
+        DL.getTypeStoreSize(LastElementTy).getFixedSize();
     if (V1Size != ElementSize || V2Size != ElementSize)
       return MayAlias;
 
@@ -1316,14 +1339,26 @@ AliasResult BasicAAResult::aliasGEP(
   unsigned MaxPointerSize = getMaxPointerSize(DL);
   DecompGEP1.StructOffset = DecompGEP1.OtherOffset = APInt(MaxPointerSize, 0);
   DecompGEP2.StructOffset = DecompGEP2.OtherOffset = APInt(MaxPointerSize, 0);
+  DecompGEP1.HasCompileTimeConstantScale =
+      DecompGEP2.HasCompileTimeConstantScale = true;
+  DecompGEP1.MinOtherOffset = APInt(MaxPointerSize, 0);
+  DecompGEP2.MinOtherOffset = APInt(MaxPointerSize, 0);
 
   bool GEP1MaxLookupReached =
     DecomposeGEPExpression(GEP1, DecompGEP1, DL, &AC, DT);
   bool GEP2MaxLookupReached =
     DecomposeGEPExpression(V2, DecompGEP2, DL, &AC, DT);
 
+  // Don't attempt to analyze the decomposed GEP if index scale is not a
+  // compile-time constant.
+  if (!DecompGEP1.HasCompileTimeConstantScale ||
+      !DecompGEP2.HasCompileTimeConstantScale)
+    return MayAlias;
+
   APInt GEP1BaseOffset = DecompGEP1.StructOffset + DecompGEP1.OtherOffset;
   APInt GEP2BaseOffset = DecompGEP2.StructOffset + DecompGEP2.OtherOffset;
+  APInt GEP1BaseOffsetMin = DecompGEP1.StructOffset + DecompGEP1.MinOtherOffset;
+  APInt GEP2BaseOffsetMin = DecompGEP2.StructOffset + DecompGEP2.MinOtherOffset;
 
   assert(DecompGEP1.Base == UnderlyingV1 && DecompGEP2.Base == UnderlyingV2 &&
          "DecomposeGEPExpression returned a result different from "
@@ -1398,6 +1433,7 @@ AliasResult BasicAAResult::aliasGEP(
     // Subtract the GEP2 pointer from the GEP1 pointer to find out their
     // symbolic difference.
     GEP1BaseOffset -= GEP2BaseOffset;
+    GEP1BaseOffsetMin -= GEP2BaseOffsetMin;
     GetIndexDifference(DecompGEP1.VarIndices, DecompGEP2.VarIndices);
 
   } else {
@@ -1516,10 +1552,11 @@ AliasResult BasicAAResult::aliasGEP(
     // If we know all the variables are positive, then GEP1 >= GEP1BasePtr.
     // If GEP1BasePtr > V2 (GEP1BaseOffset > 0) then we know the pointers
     // don't alias if V2Size can fit in the gap between V2 and GEP1BasePtr.
-    if (AllPositive && GEP1BaseOffset.sgt(0) &&
+    if (AllPositive && GEP1BaseOffsetMin.sgt(0) &&
         V2Size != LocationSize::unknown() &&
-        GEP1BaseOffset.uge(V2Size.getValue()))
+        GEP1BaseOffsetMin.uge(V2Size.getValue())) {
       return NoAlias;
+    }
 
     if (constantOffsetHeuristic(DecompGEP1.VarIndices, V1Size, V2Size,
                                 GEP1BaseOffset, &AC, DT))

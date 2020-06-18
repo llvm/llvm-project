@@ -85,9 +85,6 @@ void NonTrivialTypesLibcMemoryCallsCheck::storeOptions(
 
 void NonTrivialTypesLibcMemoryCallsCheck::registerMatchers(
     MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus || getLangOpts().ObjC)
-    return;
-
   using namespace ast_matchers::internal;
   auto IsStructPointer = [](Matcher<CXXRecordDecl> Constraint = anything(),
                             bool Bind = false) {

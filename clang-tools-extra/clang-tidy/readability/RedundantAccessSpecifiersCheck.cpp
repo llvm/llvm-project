@@ -17,9 +17,6 @@ namespace tidy {
 namespace readability {
 
 void RedundantAccessSpecifiersCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       cxxRecordDecl(has(accessSpecDecl())).bind("redundant-access-specifiers"),
       this);

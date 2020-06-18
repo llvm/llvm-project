@@ -71,7 +71,7 @@ To compile Fortran applications, compile with gfortran, link with clang:
 ## Runtime Flags
 
 TSan runtime flags are passed via **TSAN&#95;OPTIONS** environment variable,
-we highly recommend the following option to aviod false alerts for the
+we highly recommend the following option to avoid false alerts for the
 OpenMP or MPI runtime implementation:
 
     export TSAN_OPTIONS="ignore_noninstrumented_modules=1"
@@ -105,14 +105,6 @@ different flags are separated by spaces, e.g.:
 <td class="org-left">flush&#95;shadow</td>
 <td class="org-right">0</td>
 <td class="org-left">Flush shadow memory at the end of an outer OpenMP parallel region. Our experiments show that this can reduce memory overhead by ~30% and runtime overhead by ~10%. This flag is useful for large OpenMP applications that typically require large amounts of memory, causing out-of-memory exceptions when checked by Archer.</td>
-</tr>
-</tbody>
-
-<tbody>
-<tr>
-<td class="org-left">print&#95;ompt&#95;counters</td>
-<td class="org-right">0</td>
-<td class="org-left">Print the number of triggered OMPT events at the end of the execution.</td>
 </tr>
 </tbody>
 

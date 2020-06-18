@@ -60,3 +60,27 @@ clang_tablegen(arm_mve_builtin_sema.inc -gen-arm-mve-builtin-sema
 clang_tablegen(arm_mve_builtin_aliases.inc -gen-arm-mve-builtin-aliases
   SOURCE arm_mve.td
   TARGET ClangARMMveBuiltinAliases)
+clang_tablegen(arm_sve_builtins.inc -gen-arm-sve-builtins
+  SOURCE arm_sve.td
+  TARGET ClangARMSveBuiltins)
+clang_tablegen(arm_sve_builtin_cg.inc -gen-arm-sve-builtin-codegen
+  SOURCE arm_sve.td
+  TARGET ClangARMSveBuiltinCG)
+clang_tablegen(arm_sve_typeflags.inc -gen-arm-sve-typeflags
+  SOURCE arm_sve.td
+  TARGET ClangARMSveTypeFlags)
+clang_tablegen(arm_sve_sema_rangechecks.inc -gen-arm-sve-sema-rangechecks
+  SOURCE arm_sve.td
+  TARGET ClangARMSveSemaRangeChecks)
+clang_tablegen(arm_cde_builtins.inc -gen-arm-cde-builtin-def
+  SOURCE arm_cde.td
+  TARGET ClangARMCdeBuiltinsDef)
+clang_tablegen(arm_cde_builtin_cg.inc -gen-arm-cde-builtin-codegen
+  SOURCE arm_cde.td
+  TARGET ClangARMCdeBuiltinCG)
+clang_tablegen(arm_cde_builtin_sema.inc -gen-arm-cde-builtin-sema
+  SOURCE arm_cde.td
+  TARGET ClangARMCdeBuiltinSema)
+clang_tablegen(arm_cde_builtin_aliases.inc -gen-arm-cde-builtin-aliases
+  SOURCE arm_cde.td
+  TARGET ClangARMCdeBuiltinAliases)

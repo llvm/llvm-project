@@ -1,0 +1,8 @@
+disassemble
+disassemble --line
+disassemble --frame
+disassemble --pc
+disassemble --address 0x4004
+disassemble --address 0xdead
+disassemble --count 7
+disassemble --pc --count 7

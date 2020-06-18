@@ -68,7 +68,7 @@ void test_arm(long *base, long idx) {
 // ARM: %[[MASK:[^ ]*]] = shl i8 1, %[[IDXLO]]
 // ARM: %[[BYTE:[^ ]*]] = load i8, i8* %[[BYTEADDR]], align 1
 // ARM: %[[NEWBYTE:[^ ]*]] = xor i8 %[[BYTE]], %[[MASK]]
-// ARM  store i8 %[[NEWBYTE]], i8* %[[BYTEADDR]], align 1
+// ARM: store i8 %[[NEWBYTE]], i8* %[[BYTEADDR]], align 1
 // ARM: %[[BYTESHR:[^ ]*]] = lshr i8 %[[BYTE]], %[[IDXLO]]
 // ARM: %[[RES:[^ ]*]] = and i8 %[[BYTESHR]], 1
 // ARM: store volatile i8 %[[RES]], i8* @sink, align 1
@@ -82,7 +82,7 @@ void test_arm(long *base, long idx) {
 // ARM: %[[BYTE:[^ ]*]] = load i8, i8* %[[BYTEADDR]], align 1
 // ARM: %[[NOTMASK:[^ ]*]] = xor i8 %[[MASK]], -1
 // ARM: %[[NEWBYTE:[^ ]*]] = and i8 %[[BYTE]], %[[NOTMASK]]
-// ARM  store i8 %[[NEWBYTE]], i8* %[[BYTEADDR]], align 1
+// ARM: store i8 %[[NEWBYTE]], i8* %[[BYTEADDR]], align 1
 // ARM: %[[BYTESHR:[^ ]*]] = lshr i8 %[[BYTE]], %[[IDXLO]]
 // ARM: %[[RES:[^ ]*]] = and i8 %[[BYTESHR]], 1
 // ARM: store volatile i8 %[[RES]], i8* @sink, align 1
@@ -95,7 +95,7 @@ void test_arm(long *base, long idx) {
 // ARM: %[[MASK:[^ ]*]] = shl i8 1, %[[IDXLO]]
 // ARM: %[[BYTE:[^ ]*]] = load i8, i8* %[[BYTEADDR]], align 1
 // ARM: %[[NEWBYTE:[^ ]*]] = or i8 %[[BYTE]], %[[MASK]]
-// ARM  store i8 %[[NEWBYTE]], i8* %[[BYTEADDR]], align 1
+// ARM: store i8 %[[NEWBYTE]], i8* %[[BYTEADDR]], align 1
 // ARM: %[[BYTESHR:[^ ]*]] = lshr i8 %[[BYTE]], %[[IDXLO]]
 // ARM: %[[RES:[^ ]*]] = and i8 %[[BYTESHR]], 1
 // ARM: store volatile i8 %[[RES]], i8* @sink, align 1

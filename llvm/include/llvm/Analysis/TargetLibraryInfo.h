@@ -12,15 +12,15 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 template <typename T> class ArrayRef;
+class Triple;
 
 /// Describes a possible vectorization of a function.
 /// Function 'VectorFnName' is equivalent to 'ScalarFnName' vectorized
@@ -260,6 +260,21 @@ public:
     return *this;
   }
 
+  /// Determine whether a callee with the given TLI can be inlined into
+  /// caller with this TLI, based on 'nobuiltin' attributes. When requested,
+  /// allow inlining into a caller with a superset of the callee's nobuiltin
+  /// attributes, which is conservatively correct.
+  bool areInlineCompatible(const TargetLibraryInfo &CalleeTLI,
+                           bool AllowCallerSuperset) const {
+    if (!AllowCallerSuperset)
+      return OverrideAsUnavailable == CalleeTLI.OverrideAsUnavailable;
+    BitVector B = OverrideAsUnavailable;
+    B |= CalleeTLI.OverrideAsUnavailable;
+    // We can inline if the union of the caller and callee's nobuiltin
+    // attributes is no stricter than the caller's nobuiltin attributes.
+    return B == OverrideAsUnavailable;
+  }
+
   /// Searches for a particular function name.
   ///
   /// If it is one of the known library functions, return true and set F to the
@@ -272,11 +287,11 @@ public:
     return Impl->getLibFunc(FDecl, F);
   }
 
-  /// If a callsite does not have the 'nobuiltin' attribute, return if the
+  /// If a callbase does not have the 'nobuiltin' attribute, return if the
   /// called function is a known library function and set F to that function.
-  bool getLibFunc(ImmutableCallSite CS, LibFunc &F) const {
-    return !CS.isNoBuiltin() && CS.getCalledFunction() &&
-           getLibFunc(*(CS.getCalledFunction()), F);
+  bool getLibFunc(const CallBase &CB, LibFunc &F) const {
+    return !CB.isNoBuiltin() && CB.getCalledFunction() &&
+           getLibFunc(*(CB.getCalledFunction()), F);
   }
 
   /// Disables all builtins.
@@ -335,6 +350,7 @@ public:
     case LibFunc_trunc:        case LibFunc_truncf:     case LibFunc_truncl:
     case LibFunc_log2:         case LibFunc_log2f:      case LibFunc_log2l:
     case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
+    case LibFunc_memcpy:       case LibFunc_memset:     case LibFunc_memmove:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
     case LibFunc_strnlen:      case LibFunc_memchr:     case LibFunc_mempcpy:

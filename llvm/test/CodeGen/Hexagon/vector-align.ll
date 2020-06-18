@@ -1,5 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b < %s \
-; RUN:    | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; Check that the store to Q6VecPredResult does not get expanded into multiple
 ; stores. There should be no memd's. This relies on the alignment specified
@@ -11,25 +10,23 @@
 
 @Q6VecPredResult = common global <16 x i32> zeroinitializer, align 64
 
-; Function Attrs: nounwind
 define i32 @foo() #0 {
 entry:
-  %0 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 1)
-  %1 = tail call <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %0, i32 -2147483648)
-  store <512 x i1> %1, <512 x i1>* bitcast (<16 x i32>* @Q6VecPredResult to <512 x i1>*), align 64, !tbaa !1
+  %v0 = tail call <16 x i32> @llvm.hexagon.V6.lvsplatw(i32 1)
+  %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -2147483648)
+  %v2 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v1, i32 -1)
+  store <16 x i32> %v2, <16 x i32>* @Q6VecPredResult, align 64, !tbaa !1
   tail call void @print_vecpred(i32 64, i8* bitcast (<16 x i32>* @Q6VecPredResult to i8*)) #3
   ret i32 0
 }
 
-; Function Attrs: nounwind readnone
-declare <512 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
-
-; Function Attrs: nounwind readnone
+declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
+declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.lvsplatw(i32) #1
 
 declare void @print_vecpred(i32, i8*) #2
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx" }
+attributes #0 = { nounwind "target-cpu"="hexagonv66" "target-features"="+hvxv66,+hvx-length64b" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 

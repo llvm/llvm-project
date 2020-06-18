@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbvscode_testcase
+import time
 import os
 
 
@@ -18,6 +19,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Flaky
+    @skipIfRemote
     def test_default(self):
         '''
             Tests the default launch of a simple program. No arguments,
@@ -35,6 +37,32 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                         "make sure program path is in first argument")
 
     @skipIfWindows
+    @skipIfRemote
+    def test_termination(self):
+        '''
+            Tests the correct termination of lldb-vscode upon a 'disconnect'
+            request.
+        '''
+        self.create_debug_adaptor()
+        # The underlying lldb-vscode process must be alive
+        self.assertEqual(self.vscode.process.poll(), None)
+
+        # The lldb-vscode process should finish even though
+        # we didn't close the communication socket explicitly
+        self.vscode.request_disconnect()
+
+        # Wait until the underlying lldb-vscode process dies.
+        # We need to do this because the popen.wait function in python2.7
+        # doesn't have a timeout argument.
+        for _ in range(10):
+            time.sleep(1)
+            if self.vscode.process.poll() is not None:
+                break
+        # Check the return code
+        self.assertEqual(self.vscode.process.poll(), 0)
+
+    @skipIfWindows
+    @skipIfRemote
     def test_stopOnEntry(self):
         '''
             Tests the default launch of a simple program that stops at the
@@ -54,6 +82,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                         'verify stop isn\'t "main" breakpoint')
 
     @skipIfWindows
+    @skipIfRemote
     def test_cwd(self):
         '''
             Tests the default launch of a simple program with a current working
@@ -81,6 +110,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue(found, "verified program working directory")
 
     @skipIfWindows
+    @skipIfRemote
     def test_debuggerRoot(self):
         '''
             Tests the "debuggerRoot" will change the working directory of
@@ -109,6 +139,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
+    @skipIfRemote
     def test_sourcePath(self):
         '''
             Tests the "sourcePath" will set the target.source-map.
@@ -134,6 +165,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
+    @skipIfRemote
     def test_disableSTDIO(self):
         '''
             Tests the default launch of a simple program with STDIO disabled.
@@ -150,6 +182,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
     @skipIfLinux # shell argument expansion doesn't seem to work on Linux
     @expectedFailureNetBSD
+    @skipIfRemote
     def test_shellExpandArguments_enabled(self):
         '''
             Tests the default launch of a simple program with shell expansion
@@ -173,6 +206,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                                     glob, program))
 
     @skipIfWindows
+    @skipIfRemote
     def test_shellExpandArguments_disabled(self):
         '''
             Tests the default launch of a simple program with shell expansion
@@ -198,6 +232,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                                     glob, glob))
 
     @skipIfWindows
+    @skipIfRemote
     def test_args(self):
         '''
             Tests launch of a simple program with arguments
@@ -223,6 +258,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                             'arg[%i] "%s" not in "%s"' % (i+1, quoted_arg, lines[i]))
 
     @skipIfWindows
+    @skipIfRemote
     def test_environment(self):
         '''
             Tests launch of a simple program with environment variables
@@ -255,6 +291,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
                                 var, lines))
 
     @skipIfWindows
+    @skipIfRemote
     def test_commands(self):
         '''
             Tests the "initCommands", "preRunCommands", "stopCommands" and
@@ -293,7 +330,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         second_line = line_number(source, '// breakpoint 2')
         lines = [first_line, second_line]
 
-        # Set 2 breakoints so we can verify that "stopCommands" get run as the
+        # Set 2 breakpoints so we can verify that "stopCommands" get run as the
         # breakpoints get hit
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.assertEquals(len(breakpoint_ids), len(lines),
@@ -321,6 +358,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.verify_commands('exitCommands', output, exitCommands)
 
     @skipIfWindows
+    @skipIfRemote
     def test_extra_launch_commands(self):
         '''
             Tests the "luanchCommands" with extra launching settings
@@ -331,7 +369,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         source = 'main.c'
         first_line = line_number(source, '// breakpoint 1')
         second_line = line_number(source, '// breakpoint 2')
-        # Set target binary and 2 breakoints
+        # Set target binary and 2 breakpoints
         # then we can varify the "launchCommands" get run
         # also we can verify that "stopCommands" get run as the
         # breakpoints get hit

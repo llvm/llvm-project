@@ -1,0 +1,49 @@
+// polynomial for approximating 2^x
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+// exp2f parameters
+deg = 3; // poly degree
+N = 32;  // table entries
+b = 1/(2*N); // interval
+a = -b;
+
+//// exp2 parameters
+//deg = 5; // poly degree
+//N = 128; // table entries
+//b = 1/(2*N); // interval
+//a = -b;
+
+// find polynomial with minimal relative error
+
+f = 2^x;
+
+// return p that minimizes |f(x) - poly(x) - x^d*p(x)|/|f(x)|
+approx = proc(poly,d) {
+  return remez(1 - poly(x)/f(x), deg-d, [a;b], x^d/f(x), 1e-10);
+};
+// return p that minimizes |f(x) - poly(x) - x^d*p(x)|
+approx_abs = proc(poly,d) {
+  return remez(f(x) - poly(x), deg-d, [a;b], x^d, 1e-10);
+};
+
+// first coeff is fixed, iteratively find optimal double prec coeffs
+poly = 1;
+for i from 1 to deg do {
+  p = roundcoefficients(approx(poly,i), [|D ...|]);
+//  p = roundcoefficients(approx_abs(poly,i), [|D ...|]);
+  poly = poly + x^i*coeff(p,0);
+};
+
+display = hexadecimal;
+print("rel error:", accurateinfnorm(1-poly(x)/2^x, [a;b], 30));
+print("abs error:", accurateinfnorm(2^x-poly(x), [a;b], 30));
+print("in [",a,b,"]");
+// double interval error for non-nearest rounding:
+print("rel2 error:", accurateinfnorm(1-poly(x)/2^x, [2*a;2*b], 30));
+print("abs2 error:", accurateinfnorm(2^x-poly(x), [2*a;2*b], 30));
+print("in [",2*a,2*b,"]");
+print("coeffs:");
+for i from 0 to deg do coeff(poly,i);

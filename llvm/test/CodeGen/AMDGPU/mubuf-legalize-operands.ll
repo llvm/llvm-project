@@ -16,7 +16,7 @@
 ; W64: v_cmp_eq_u64_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v[2:3]
 ; W64: s_and_b64 [[CMP:s\[[0-9]+:[0-9]+\]]], vcc, [[CMP0]]
 ; W64: s_and_saveexec_b64 [[CMP]], [[CMP]]
-; W64: s_waitcnt vmcnt(0)
+; W64: s_nop 0
 ; W64: buffer_load_format_x [[RES:v[0-9]+]], v4, s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, 0 idxen
 ; W64: s_xor_b64 exec, exec, [[CMP]]
 ; W64: s_cbranch_execnz [[LOOPBB]]
@@ -34,7 +34,7 @@
 ; W32: v_cmp_eq_u64_e64 [[CMP0:s[0-9]+]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v[2:3]
 ; W32: s_and_b32 [[CMP:s[0-9]+]], vcc_lo, [[CMP0]]
 ; W32: s_and_saveexec_b32 [[CMP]], [[CMP]]
-; W32: s_waitcnt vmcnt(0)
+; W32: s_nop 0
 ; W32: buffer_load_format_x [[RES:v[0-9]+]], v4, s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, 0 idxen
 ; W32: s_xor_b32 exec_lo, exec_lo, [[CMP]]
 ; W32: s_cbranch_execnz [[LOOPBB]]
@@ -59,7 +59,7 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64: v_cmp_eq_u64_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v[2:3]
 ; W64: s_and_b64 [[CMP:s\[[0-9]+:[0-9]+\]]], vcc, [[CMP0]]
 ; W64: s_and_saveexec_b64 [[CMP]], [[CMP]]
-; W64: s_waitcnt vmcnt(0)
+; W64: s_nop 0
 ; W64: buffer_load_format_x [[RES0:v[0-9]+]], v8, s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, 0 idxen
 ; W64: s_xor_b64 exec, exec, [[CMP]]
 ; W64: s_cbranch_execnz [[LOOPBB0]]
@@ -77,7 +77,7 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64: v_cmp_eq_u64_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v[6:7]
 ; W64: s_and_b64 [[CMP:s\[[0-9]+:[0-9]+\]]], vcc, [[CMP0]]
 ; W64: s_and_saveexec_b64 [[CMP]], [[CMP]]
-; W64: s_waitcnt vmcnt(0)
+; W64: s_nop 0
 ; W64: buffer_load_format_x [[RES1:v[0-9]+]], v8, s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, 0 idxen
 ; W64: s_xor_b64 exec, exec, [[CMP]]
 ; W64: s_cbranch_execnz [[LOOPBB1]]
@@ -99,7 +99,7 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W32: v_cmp_eq_u64_e64 [[CMP0:s[0-9]+]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v[2:3]
 ; W32: s_and_b32 [[CMP:s[0-9]+]], vcc_lo, [[CMP0]]
 ; W32: s_and_saveexec_b32 [[CMP]], [[CMP]]
-; W32: s_waitcnt vmcnt(0)
+; W32: s_nop 0
 ; W32: buffer_load_format_x [[RES0:v[0-9]+]], v8, s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, 0 idxen
 ; W32: s_xor_b32 exec_lo, exec_lo, [[CMP]]
 ; W32: s_cbranch_execnz [[LOOPBB0]]
@@ -117,7 +117,7 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W32: v_cmp_eq_u64_e64 [[CMP0:s[0-9]+]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v[6:7]
 ; W32: s_and_b32 [[CMP:s[0-9]+]], vcc_lo, [[CMP0]]
 ; W32: s_and_saveexec_b32 [[CMP]], [[CMP]]
-; W32: s_waitcnt vmcnt(0)
+; W32: s_nop 0
 ; W32: buffer_load_format_x [[RES1:v[0-9]+]], v8, s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, 0 idxen
 ; W32: s_xor_b32 exec_lo, exec_lo, [[CMP]]
 ; W32: s_cbranch_execnz [[LOOPBB1]]
@@ -150,7 +150,7 @@ entry:
 ; W64: v_cmp_eq_u64_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v[2:3]
 ; W64: s_and_b64 [[CMP:s\[[0-9]+:[0-9]+\]]], vcc, [[CMP0]]
 ; W64: s_and_saveexec_b64 [[CMP]], [[CMP]]
-; W64: s_waitcnt vmcnt(0)
+; W64: s_nop 0
 ; W64: buffer_load_format_x [[RES:v[0-9]+]], [[IDX]], s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, 0 idxen
 ; W64: s_xor_b64 exec, exec, [[CMP]]
 ; W64: s_cbranch_execnz [[LOOPBB0]]
@@ -171,7 +171,7 @@ entry:
 ; W64: v_cmp_eq_u64_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v[6:7]
 ; W64: s_and_b64 [[CMP:s\[[0-9]+:[0-9]+\]]], vcc, [[CMP0]]
 ; W64: s_and_saveexec_b64 [[CMP]], [[CMP]]
-; W64: s_waitcnt vmcnt(0)
+; W64: s_nop 0
 ; W64: buffer_load_format_x [[RES]], [[IDX]], s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, 0 idxen
 ; W64: s_xor_b64 exec, exec, [[CMP]]
 ; W64: s_cbranch_execnz [[LOOPBB1]]
@@ -196,7 +196,7 @@ entry:
 ; W32: v_cmp_eq_u64_e64 [[CMP0:s[0-9]+]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v[2:3]
 ; W32: s_and_b32 [[CMP:s[0-9]+]], vcc_lo, [[CMP0]]
 ; W32: s_and_saveexec_b32 [[CMP]], [[CMP]]
-; W32: s_waitcnt vmcnt(0)
+; W32: s_nop 0
 ; W32: buffer_load_format_x [[RES:v[0-9]+]], [[IDX]], s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, 0 idxen
 ; W32: s_xor_b32 exec_lo, exec_lo, [[CMP]]
 ; W32: s_cbranch_execnz [[LOOPBB0]]
@@ -217,7 +217,7 @@ entry:
 ; W32: v_cmp_eq_u64_e64 [[CMP0:s[0-9]+]], s{{\[}}[[SRSRC2]]:[[SRSRC3]]{{\]}}, v[6:7]
 ; W32: s_and_b32 [[CMP:s[0-9]+]], vcc_lo, [[CMP0]]
 ; W32: s_and_saveexec_b32 [[CMP]], [[CMP]]
-; W32: s_waitcnt vmcnt(0)
+; W32: s_nop 0
 ; W32: buffer_load_format_x [[RES]], [[IDX]], s{{\[}}[[SRSRC0]]:[[SRSRC3]]{{\]}}, 0 idxen
 ; W32: s_xor_b32 exec_lo, exec_lo, [[CMP]]
 ; W32: s_cbranch_execnz [[LOOPBB1]]
@@ -240,11 +240,8 @@ entry:
 
 ; W64-O0: [[LOOPBB0:BB[0-9]+_[0-9]+]]:
 ; W64-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0: buffer_load_dword v[[VRSRC1:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], {{.*}} ; 4-byte Folded Reload
 ; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP0:[0-9]+]], v[[VRSRC0]]
@@ -278,11 +275,8 @@ entry:
 
 ; W64-O0: [[LOOPBB1:BB[0-9]+_[0-9]+]]:
 ; W64-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0: buffer_load_dword v[[VRSRC1:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], {{.*}} ; 4-byte Folded Reload
 ; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP0:[0-9]+]], v[[VRSRC0]]

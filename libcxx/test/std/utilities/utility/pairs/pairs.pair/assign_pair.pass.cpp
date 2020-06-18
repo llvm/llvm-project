@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <utility>
 
@@ -54,8 +54,8 @@ extern Incomplete inc_obj;
 int main(int, char**)
 {
     {
-        typedef std::pair<CopyAssignable, short> P;
-        const P p1(CopyAssignable(), 4);
+        typedef std::pair<CopyAssignable, int> P;
+        const P p1(CopyAssignable(), short{4});
         P p2;
         p2 = p1;
         assert(p2.second == 4);
@@ -97,7 +97,7 @@ int main(int, char**)
         assert(&p.second == &inc_obj);
     }
 
-  return 0;
+    return 0;
 }
 
 struct Incomplete {};

@@ -24,8 +24,9 @@ AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
 InitVariablesCheck::InitVariablesCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))),
+      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
+                                            utils::IncludeSorter::getMapping(),
+                                            utils::IncludeSorter::IS_LLVM)),
       MathHeader(Options.get("MathHeader", "math.h")) {}
 
 void InitVariablesCheck::registerMatchers(MatchFinder *Finder) {
@@ -96,10 +97,8 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
                    MatchedDecl->getName().size()),
                InitializationString);
     if (AddMathInclude) {
-      auto IncludeHint = IncludeInserter->CreateIncludeInsertion(
+      Diagnostic << IncludeInserter->CreateIncludeInsertion(
           Source.getFileID(MatchedDecl->getBeginLoc()), MathHeader, false);
-      if (IncludeHint)
-        Diagnostic << *IncludeHint;
     }
   }
 }

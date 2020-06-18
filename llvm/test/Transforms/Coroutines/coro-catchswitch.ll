@@ -32,7 +32,7 @@ catch.dispatch:                                   ; preds = %if.else, %if.then
 ; CHECK: catch.dispatch:
 ; CHECK:  %val = phi i32 [ 2, %if.else ], [ 1, %if.then ]
 ; CHECK:  %[[Pad:.+]] = cleanuppad within none []
-; CHECK:  %val.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
+; CHECK:  %val.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 2
 ; CHECK:  store i32 %val, i32* %val.spill.addr
 ; CHECK:  cleanupret from %[[Pad]] unwind label %[[Switch:.+]]
 

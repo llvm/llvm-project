@@ -59,12 +59,9 @@ entry:
   ret i32 %res.2
 }
 
-; x is overdefined, because constant ranges are only used for parameter
-; values.
 ; CHECK-LABEL: f3
-; CHECK: %cmp = icmp sgt i32 %x, 300
-; CHECK: %res = select i1 %cmp, i32 1, i32 2
-; CHECK: ret i32 %res
+; CHECK-LABEL: entry:
+; CHECK: ret i32 undef
 define internal i32 @f3(i32 %x) {
 entry:
   %cmp = icmp sgt i32 %x, 300
@@ -83,13 +80,11 @@ if.true:
 end:
   %res = phi i32 [ 0, %entry], [ 1, %if.true ]
   %call1 = tail call i32 @f3(i32 %res)
-  ret i32 %call1
+  ret i32 2
 }
 
 ; CHECK-LABEL: f4
-; CHECK: %cmp = icmp sgt i32 %x, 300
-; CHECK: %res = select i1 %cmp, i32 1, i32 2
-; CHECK: ret i32 %res
+; CHECK:  ret i32 undef
 define internal i32 @f4(i32 %x) {
 entry:
   %cmp = icmp sgt i32 %x, 300
@@ -97,8 +92,13 @@ entry:
   ret i32 %res
 }
 
-; ICmp could introduce bounds on ConstantRanges.
+; ICmp introduces bounds on ConstantRanges.
 define i32 @caller3(i32 %x) {
+; CHECK-LABEL: define i32 @caller3(i32 %x)
+; CHECK-LABEL: end:
+; CHECK-NEXT:    %res = phi i32 [ 0, %entry ], [ 1, %if.true ]
+; CHECK-NEXT:    ret i32 %res
+;
 entry:
   %cmp = icmp sgt i32 %x, 300
   br i1 %cmp, label %if.true, label %end
@@ -230,7 +230,7 @@ define i32 @caller6() {
 ; CHECK-NEXT:    %call.1 = call i32 @callee6.1(i32 30)
 ; CHECK-NEXT:    %call.2 = call i32 @callee6.1(i32 43)
 ; CHECK-NEXT:    ret i32 2
-
+;
   %call.1 = call i32 @callee6.1(i32 30)
   %call.2 = call i32 @callee6.1(i32 43)
   %res = add i32 %call.1, %call.2

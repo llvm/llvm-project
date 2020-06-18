@@ -20,7 +20,9 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <memory>
 
@@ -39,18 +41,11 @@ class Pattern;
 class Region;
 class ResultRange;
 class RewritePattern;
+class SuccessorRange;
 class Type;
 class Value;
 class ValueRange;
 template <typename ValueRangeT> class ValueTypeRange;
-
-/// This is an adaptor from a list of values to named operands of OpTy.  In a
-/// generic operation context, e.g., in dialect conversions, an ordered array of
-/// `Value`s is treated as operands of `OpTy`.  This adaptor takes a reference
-/// to the array and provides accessors with the same names as `OpTy` for
-/// operands.  This makes possible to create function templates that operate on
-/// either OpTy or OperandAdaptor<OpTy> seamlessly.
-template <typename OpTy> using OperandAdaptor = typename OpTy::OperandAdaptor;
 
 class OwningRewritePatternList;
 
@@ -66,19 +61,15 @@ enum class OperationProperty {
   /// results.
   Commutative = 0x1,
 
-  /// This bit is set for operations that have no side effects: that means that
-  /// they do not read or write memory, or access any hidden state.
-  NoSideEffect = 0x2,
-
   /// This bit is set for an operation if it is a terminator: that means
   /// an operation at the end of a block.
-  Terminator = 0x4,
+  Terminator = 0x2,
 
   /// This bit is set for operations that are completely isolated from above.
   /// This is used for operations whose regions are explicit capture only, i.e.
   /// they are never allowed to implicitly reference values defined above the
   /// parent operation.
-  IsolatedFromAbove = 0x8,
+  IsolatedFromAbove = 0x4,
 };
 
 /// This is a "type erased" representation of a registered operation.  This
@@ -96,7 +87,7 @@ public:
   Dialect &dialect;
 
   /// The unique identifier of the derived Op class.
-  ClassID *classID;
+  TypeID typeID;
 
   /// Use the specified object to parse this ops custom assembly format.
   ParseResult (&parseAssembly)(OpAsmParser &parser, OperationState &result);
@@ -151,7 +142,7 @@ public:
 
   /// Returns if the operation has a particular trait.
   template <template <typename T> class Trait> bool hasTrait() const {
-    return hasRawTrait(ClassID::getID<Trait>());
+    return hasRawTrait(TypeID::get<Trait>());
   }
 
   /// Look up the specified operation in the specified MLIRContext and return a
@@ -164,7 +155,7 @@ public:
   template <typename T> static AbstractOperation get(Dialect &dialect) {
     return AbstractOperation(
         T::getOperationName(), dialect, T::getOperationProperties(),
-        ClassID::getID<T>(), T::parseAssembly, T::printAssembly,
+        TypeID::get<T>(), T::parseAssembly, T::printAssembly,
         T::verifyInvariants, T::foldHook, T::getCanonicalizationPatterns,
         T::getRawInterface, T::hasTrait);
   }
@@ -172,7 +163,7 @@ public:
 private:
   AbstractOperation(
       StringRef name, Dialect &dialect, OperationProperties opProperties,
-      ClassID *classID,
+      TypeID typeID,
       ParseResult (&parseAssembly)(OpAsmParser &parser, OperationState &result),
       void (&printAssembly)(Operation *op, OpAsmPrinter &p),
       LogicalResult (&verifyInvariants)(Operation *op),
@@ -180,9 +171,9 @@ private:
                                 SmallVectorImpl<OpFoldResult> &results),
       void (&getCanonicalizationPatterns)(OwningRewritePatternList &results,
                                           MLIRContext *context),
-      void *(&getRawInterface)(ClassID *interfaceID),
-      bool (&hasTrait)(ClassID *traitID))
-      : name(name), dialect(dialect), classID(classID),
+      void *(&getRawInterface)(TypeID interfaceID),
+      bool (&hasTrait)(TypeID traitID))
+      : name(name), dialect(dialect), typeID(typeID),
         parseAssembly(parseAssembly), printAssembly(printAssembly),
         verifyInvariants(verifyInvariants), foldHook(foldHook),
         getCanonicalizationPatterns(getCanonicalizationPatterns),
@@ -195,11 +186,105 @@ private:
   /// Returns a raw instance of the concept for the given interface id if it is
   /// registered to this operation, nullptr otherwise. This should not be used
   /// directly.
-  void *(&getRawInterface)(ClassID *interfaceID);
+  void *(&getRawInterface)(TypeID interfaceID);
 
   /// This hook returns if the operation contains the trait corresponding
-  /// to the given ClassID.
-  bool (&hasRawTrait)(ClassID *traitID);
+  /// to the given TypeID.
+  bool (&hasRawTrait)(TypeID traitID);
+};
+
+//===----------------------------------------------------------------------===//
+// NamedAttrList
+//===----------------------------------------------------------------------===//
+
+/// NamedAttrList is array of NamedAttributes that tracks whether it is sorted
+/// and does some basic work to remain sorted.
+class NamedAttrList {
+public:
+  using const_iterator = SmallVectorImpl<NamedAttribute>::const_iterator;
+  using const_reference = const NamedAttribute &;
+  using reference = NamedAttribute &;
+  using size_type = size_t;
+
+  NamedAttrList() : dictionarySorted({}, true) {}
+  NamedAttrList(ArrayRef<NamedAttribute> attributes);
+  NamedAttrList(const_iterator in_start, const_iterator in_end);
+
+  bool operator!=(const NamedAttrList &other) const {
+    return !(*this == other);
+  }
+  bool operator==(const NamedAttrList &other) const {
+    return attrs == other.attrs;
+  }
+
+  /// Add an attribute with the specified name.
+  void append(StringRef name, Attribute attr);
+
+  /// Add an attribute with the specified name.
+  void append(Identifier name, Attribute attr);
+
+  /// Add an array of named attributes.
+  void append(ArrayRef<NamedAttribute> newAttributes);
+
+  /// Add a range of named attributes.
+  void append(const_iterator in_start, const_iterator in_end);
+
+  /// Replaces the attributes with new list of attributes.
+  void assign(const_iterator in_start, const_iterator in_end);
+
+  /// Replaces the attributes with new list of attributes.
+  void assign(ArrayRef<NamedAttribute> range) {
+    append(range.begin(), range.end());
+  }
+
+  bool empty() const { return attrs.empty(); }
+
+  void reserve(size_type N) { attrs.reserve(N); }
+
+  /// Add an attribute with the specified name.
+  void push_back(NamedAttribute newAttribute);
+
+  /// Pop last element from list.
+  void pop_back() { attrs.pop_back(); }
+
+  /// Return a dictionary attribute for the underlying dictionary. This will
+  /// return an empty dictionary attribute if empty rather than null.
+  DictionaryAttr getDictionary(MLIRContext *context) const;
+
+  /// Return all of the attributes on this operation.
+  ArrayRef<NamedAttribute> getAttrs() const;
+
+  /// Return the specified attribute if present, null otherwise.
+  Attribute get(Identifier name) const;
+  Attribute get(StringRef name) const;
+
+  /// Return the specified named attribute if present, None otherwise.
+  Optional<NamedAttribute> getNamed(StringRef name) const;
+  Optional<NamedAttribute> getNamed(Identifier name) const;
+
+  /// If the an attribute exists with the specified name, change it to the new
+  /// value.  Otherwise, add a new attribute with the specified name/value.
+  void set(Identifier name, Attribute value);
+  void set(StringRef name, Attribute value);
+
+  const_iterator begin() const { return attrs.begin(); }
+  const_iterator end() const { return attrs.end(); }
+
+  NamedAttrList &operator=(const SmallVectorImpl<NamedAttribute> &rhs);
+  operator ArrayRef<NamedAttribute>() const;
+  operator MutableDictionaryAttr() const;
+
+private:
+  /// Return whether the attributes are sorted.
+  bool isSorted() const { return dictionarySorted.getInt(); }
+
+  // These are marked mutable as they may be modified (e.g., sorted)
+  mutable SmallVector<NamedAttribute, 4> attrs;
+  // Pair with cached DictionaryAttr and status of whether attrs is sorted.
+  // Note: just because sorted does not mean a DictionaryAttr has been created
+  // but the case where there is a DictionaryAttr but attrs isn't sorted should
+  // not occur.
+  mutable llvm::PointerIntPair<Attribute, 1, bool> dictionarySorted;
 };
 
 //===----------------------------------------------------------------------===//
@@ -216,6 +301,9 @@ public:
 
   /// Return the name of the dialect this operation is registered to.
   StringRef getDialect() const;
+
+  /// Return the operation name with dialect name stripped, if it has one.
+  StringRef stripDialect() const;
 
   /// Return the name of this operation.  This always succeeds.
   StringRef getStringRef() const;
@@ -270,13 +358,11 @@ struct OperationState {
   SmallVector<Value, 4> operands;
   /// Types of the results of this operation.
   SmallVector<Type, 4> types;
-  SmallVector<NamedAttribute, 4> attributes;
+  NamedAttrList attributes;
   /// Successors of this operation and their respective operands.
   SmallVector<Block *, 1> successors;
   /// Regions that the op will hold.
   SmallVector<std::unique_ptr<Region>, 1> regions;
-  /// If the operation has a resizable operand list.
-  bool resizableOperandList = false;
 
 public:
   OperationState(Location location, StringRef name);
@@ -286,12 +372,16 @@ public:
   OperationState(Location location, StringRef name, ValueRange operands,
                  ArrayRef<Type> types, ArrayRef<NamedAttribute> attributes,
                  ArrayRef<Block *> successors = {},
-                 MutableArrayRef<std::unique_ptr<Region>> regions = {},
-                 bool resizableOperandList = false);
+                 MutableArrayRef<std::unique_ptr<Region>> regions = {});
 
   void addOperands(ValueRange newOperands);
 
   void addTypes(ArrayRef<Type> newTypes) {
+    types.append(newTypes.begin(), newTypes.end());
+  }
+  template <typename RangeT>
+  std::enable_if_t<!std::is_convertible<RangeT, ArrayRef<Type>>::value>
+  addTypes(RangeT &&newTypes) {
     types.append(newTypes.begin(), newTypes.end());
   }
 
@@ -302,15 +392,20 @@ public:
 
   /// Add an attribute with the specified name.
   void addAttribute(Identifier name, Attribute attr) {
-    attributes.push_back({name, attr});
+    attributes.append(name, attr);
   }
 
   /// Add an array of named attributes.
   void addAttributes(ArrayRef<NamedAttribute> newAttributes) {
-    attributes.append(newAttributes.begin(), newAttributes.end());
+    attributes.append(newAttributes);
   }
 
-  void addSuccessor(Block *successor, ValueRange succOperands);
+  /// Add an array of successors.
+  void addSuccessors(ArrayRef<Block *> newSuccessors) {
+    successors.append(newSuccessors.begin(), newSuccessors.end());
+  }
+  void addSuccessors(Block *successor) { successors.push_back(successor); }
+  void addSuccessors(SuccessorRange newSuccessors);
 
   /// Create a region that should be attached to the operation.  These regions
   /// can be filled in immediately without waiting for Operation to be
@@ -322,13 +417,8 @@ public:
   /// region is null, a new empty region will be attached to the Operation.
   void addRegion(std::unique_ptr<Region> &&region);
 
-  /// Sets the operand list of the operation as resizable.
-  void setOperandListToResizable(bool isResizable = true) {
-    resizableOperandList = isResizable;
-  }
-
   /// Get the context held by this operation state.
-  MLIRContext *getContext() { return location->getContext(); }
+  MLIRContext *getContext() const { return location->getContext(); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -336,137 +426,134 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace detail {
-/// A utility class holding the information necessary to dynamically resize
-/// operands.
-struct ResizableStorage {
-  ResizableStorage(OpOperand *opBegin, unsigned numOperands)
-      : firstOpAndIsDynamic(opBegin, false), capacity(numOperands) {}
-
-  ~ResizableStorage() { cleanupStorage(); }
-
-  /// Cleanup any allocated storage.
-  void cleanupStorage() {
-    // If the storage is dynamic, then we need to free the storage.
-    if (isStorageDynamic())
-      free(firstOpAndIsDynamic.getPointer());
+/// This class contains the information for a trailing operand storage.
+struct TrailingOperandStorage final
+    : public llvm::TrailingObjects<TrailingOperandStorage, OpOperand> {
+  ~TrailingOperandStorage() {
+    for (auto &operand : getOperands())
+      operand.~OpOperand();
   }
 
-  /// Sets the storage pointer to a new dynamically allocated block.
-  void setDynamicStorage(OpOperand *opBegin) {
-    /// Cleanup the old storage if necessary.
-    cleanupStorage();
-    firstOpAndIsDynamic.setPointerAndInt(opBegin, true);
+  /// Return the operands held by this storage.
+  MutableArrayRef<OpOperand> getOperands() {
+    return {getTrailingObjects<OpOperand>(), numOperands};
   }
 
-  /// Returns the current storage pointer.
-  OpOperand *getPointer() { return firstOpAndIsDynamic.getPointer(); }
-
-  /// Returns if the current storage of operands is in the trailing objects is
-  /// in a dynamically allocated memory block.
-  bool isStorageDynamic() const { return firstOpAndIsDynamic.getInt(); }
-
-  /// A pointer to the first operand element. This is either to the trailing
-  /// objects storage, or a dynamically allocated block of memory.
-  llvm::PointerIntPair<OpOperand *, 1, bool> firstOpAndIsDynamic;
-
-  // The maximum number of operands that can be currently held by the storage.
-  unsigned capacity;
+  /// The number of operands within the storage.
+  unsigned numOperands;
+  /// The total capacity number of operands that the storage can hold.
+  unsigned capacity : 31;
+  /// We reserve a range of bits for use by the operand storage.
+  unsigned reserved : 1;
 };
 
 /// This class handles the management of operation operands. Operands are
-/// stored similarly to the elements of a SmallVector except for two key
-/// differences. The first is the inline storage, which is a trailing objects
-/// array. The second is that being able to dynamically resize the operand list
-/// is optional.
+/// stored either in a trailing array, or a dynamically resizable vector.
 class OperandStorage final
-    : private llvm::TrailingObjects<OperandStorage, ResizableStorage,
-                                    OpOperand> {
+    : private llvm::TrailingObjects<OperandStorage, OpOperand> {
 public:
-  OperandStorage(unsigned numOperands, bool resizable)
-      : numOperands(numOperands), resizable(resizable) {
-    // Initialize the resizable storage.
-    if (resizable) {
-      new (&getResizableStorage())
-          ResizableStorage(getTrailingObjects<OpOperand>(), numOperands);
-    }
-  }
-
-  ~OperandStorage() {
-    // Manually destruct the operands.
-    for (auto &operand : getOperands())
-      operand.~OpOperand();
-
-    // If the storage is resizable then destruct the utility.
-    if (resizable)
-      getResizableStorage().~ResizableStorage();
-  }
+  OperandStorage(Operation *owner, ValueRange values);
+  ~OperandStorage();
 
   /// Replace the operands contained in the storage with the ones provided in
-  /// 'operands'.
-  void setOperands(Operation *owner, ValueRange operands);
+  /// 'values'.
+  void setOperands(Operation *owner, ValueRange values);
 
-  /// Erase an operand held by the storage.
-  void eraseOperand(unsigned index);
+  /// Replace the operands beginning at 'start' and ending at 'start' + 'length'
+  /// with the ones provided in 'operands'. 'operands' may be smaller or larger
+  /// than the range pointed to by 'start'+'length'.
+  void setOperands(Operation *owner, unsigned start, unsigned length,
+                   ValueRange operands);
+
+  /// Erase the operands held by the storage within the given range.
+  void eraseOperands(unsigned start, unsigned length);
 
   /// Get the operation operands held by the storage.
   MutableArrayRef<OpOperand> getOperands() {
-    return {getRawOperands(), size()};
+    return getStorage().getOperands();
   }
 
   /// Return the number of operands held in the storage.
-  unsigned size() const { return numOperands; }
+  unsigned size() { return getStorage().numOperands; }
 
   /// Returns the additional size necessary for allocating this object.
-  static size_t additionalAllocSize(unsigned numOperands, bool resizable) {
-    return additionalSizeToAlloc<ResizableStorage, OpOperand>(resizable ? 1 : 0,
-                                                              numOperands);
+  static size_t additionalAllocSize(unsigned numOperands) {
+    return additionalSizeToAlloc<OpOperand>(numOperands);
   }
-
-  /// Returns if this storage is resizable.
-  bool isResizable() const { return resizable; }
 
 private:
-  /// Clear the storage and destroy the current operands held by the storage.
-  void clear() { numOperands = 0; }
+  enum : uint64_t {
+    /// The bit used to mark the storage as dynamic.
+    DynamicStorageBit = 1ull << 63ull
+  };
 
-  /// Returns the current pointer for the raw operands array.
-  OpOperand *getRawOperands() {
-    return resizable ? getResizableStorage().getPointer()
-                     : getTrailingObjects<OpOperand>();
+  /// Resize the storage to the given size. Returns the array containing the new
+  /// operands.
+  MutableArrayRef<OpOperand> resize(Operation *owner, unsigned newSize);
+
+  /// Returns the current internal storage instance.
+  TrailingOperandStorage &getStorage() {
+    return LLVM_UNLIKELY(isDynamicStorage()) ? getDynamicStorage()
+                                             : getInlineStorage();
   }
 
-  /// Returns the resizable operand utility class.
-  ResizableStorage &getResizableStorage() {
-    assert(resizable);
-    return *getTrailingObjects<ResizableStorage>();
+  /// Returns the storage container if the storage is inline.
+  TrailingOperandStorage &getInlineStorage() {
+    assert(!isDynamicStorage() && "expected storage to be inline");
+    static_assert(sizeof(TrailingOperandStorage) == sizeof(uint64_t),
+                  "inline storage representation must match the opaque "
+                  "representation");
+    return inlineStorage;
   }
 
-  /// Grow the internal resizable operand storage.
-  void grow(ResizableStorage &resizeUtil, size_t minSize);
-
-  /// The current number of operands, and the current max operand capacity.
-  unsigned numOperands : 31;
-
-  /// Whether this storage is resizable or not.
-  bool resizable : 1;
-
-  // This stuff is used by the TrailingObjects template.
-  friend llvm::TrailingObjects<OperandStorage, ResizableStorage, OpOperand>;
-  size_t numTrailingObjects(OverloadToken<ResizableStorage>) const {
-    return resizable ? 1 : 0;
+  /// Returns the storage container if this storage is dynamic.
+  TrailingOperandStorage &getDynamicStorage() {
+    assert(isDynamicStorage() && "expected dynamic storage");
+    uint64_t maskedRepresentation = representation & ~DynamicStorageBit;
+    return *reinterpret_cast<TrailingOperandStorage *>(maskedRepresentation);
   }
+
+  /// Returns true if the storage is currently dynamic.
+  bool isDynamicStorage() const { return representation & DynamicStorageBit; }
+
+  /// The current representation of the storage. This is either a
+  /// InlineOperandStorage, or a pointer to a InlineOperandStorage.
+  union {
+    TrailingOperandStorage inlineStorage;
+    uint64_t representation;
+  };
+
+  /// This stuff is used by the TrailingObjects template.
+  friend llvm::TrailingObjects<OperandStorage, OpOperand>;
 };
 } // end namespace detail
 
 //===----------------------------------------------------------------------===//
-// TrailingOpResult
+// ResultStorage
 //===----------------------------------------------------------------------===//
 
 namespace detail {
-/// This class provides the implementation for a trailing operation result.
-struct TrailingOpResult {
-  /// The only element is the trailing result number, or the offset from the
-  /// beginning of the trailing array.
+/// This class provides the implementation for an in-line operation result. This
+/// is an operation result whose number can be stored inline inside of the bits
+/// of an Operation*.
+struct InLineOpResult : public IRObjectWithUseList<OpOperand> {};
+/// This class provides the implementation for an out-of-line operation result.
+/// This is an operation result whose number cannot be stored inline inside of
+/// the bits of an Operation*.
+struct TrailingOpResult : public IRObjectWithUseList<OpOperand> {
+  TrailingOpResult(uint64_t trailingResultNumber)
+      : trailingResultNumber(trailingResultNumber) {}
+
+  /// Returns the parent operation of this trailing result.
+  Operation *getOwner();
+
+  /// Return the proper result number of this op result.
+  unsigned getResultNumber() {
+    return trailingResultNumber + OpResult::getMaxInlineResults();
+  }
+
+  /// The trailing result number, or the offset from the beginning of the
+  /// trailing array.
   uint64_t trailingResultNumber;
 };
 } // end namespace detail
@@ -505,6 +592,9 @@ public:
 
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
+
+  /// Return the size limit for printing large ElementsAttr.
+  Optional<int64_t> getLargeElementsAttrLimit() const;
 
   /// Return if debug information should be printed.
   bool shouldPrintDebugInfo() const;
@@ -547,7 +637,7 @@ private:
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
 class TypeRange
-    : public detail::indexed_accessor_range_base<
+    : public llvm::detail::indexed_accessor_range_base<
           TypeRange,
           llvm::PointerUnion<const Value *, const Type *, OpOperand *>, Type,
           Type, Type> {
@@ -557,10 +647,19 @@ public:
   explicit TypeRange(OperandRange values);
   explicit TypeRange(ResultRange values);
   explicit TypeRange(ValueRange values);
+  explicit TypeRange(ArrayRef<Value> values);
+  explicit TypeRange(ArrayRef<BlockArgument> values)
+      : TypeRange(ArrayRef<Value>(values.data(), values.size())) {}
   template <typename ValueRangeT>
   TypeRange(ValueTypeRange<ValueRangeT> values)
       : TypeRange(ValueRangeT(values.begin().getCurrent(),
                               values.end().getCurrent())) {}
+  template <typename Arg,
+            typename = typename std::enable_if_t<
+                std::is_constructible<ArrayRef<Type>, Arg>::value>>
+  TypeRange(Arg &&arg) : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
+  TypeRange(std::initializer_list<Type> types)
+      : TypeRange(ArrayRef<Type>(types)) {}
 
 private:
   /// The owner of the range is either:
@@ -569,9 +668,9 @@ private:
   /// * A pointer to the first element of an array of operands.
   using OwnerT = llvm::PointerUnion<const Value *, const Type *, OpOperand *>;
 
-  /// See `detail::indexed_accessor_range_base` for details.
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(OwnerT object, ptrdiff_t index);
-  /// See `detail::indexed_accessor_range_base` for details.
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
   static Type dereference_iterator(OwnerT object, ptrdiff_t index);
 
   /// Allow access to `offset_base` and `dereference_iterator`.
@@ -608,6 +707,17 @@ public:
       ValueTypeIterator<typename ValueRangeT::iterator>>::iterator_range;
   template <typename Container>
   ValueTypeRange(Container &&c) : ValueTypeRange(c.begin(), c.end()) {}
+
+  /// Compare this range with another.
+  template <typename OtherT>
+  bool operator==(const OtherT &other) const {
+    return llvm::size(*this) == llvm::size(other) &&
+           std::equal(this->begin(), this->end(), other.begin());
+  }
+  template <typename OtherT>
+  bool operator!=(const OtherT &other) const {
+    return !(*this == other);
+  }
 };
 
 template <typename RangeT>
@@ -620,9 +730,8 @@ inline bool operator==(ArrayRef<Type> lhs, const ValueTypeRange<RangeT> &rhs) {
 // OperandRange
 
 /// This class implements the operand iterators for the Operation class.
-class OperandRange final
-    : public detail::indexed_accessor_range_base<OperandRange, OpOperand *,
-                                                 Value, Value, Value> {
+class OperandRange final : public llvm::detail::indexed_accessor_range_base<
+                               OperandRange, OpOperand *, Value, Value, Value> {
 public:
   using RangeBaseT::RangeBaseT;
   OperandRange(Operation *op);
@@ -633,12 +742,16 @@ public:
   type_range getTypes() const { return {begin(), end()}; }
   auto getType() const { return getTypes(); }
 
+  /// Return the operand index of the first element of this range. The range
+  /// must not be empty.
+  unsigned getBeginOperandIndex() const;
+
 private:
-  /// See `detail::indexed_accessor_range_base` for details.
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OpOperand *offset_base(OpOperand *object, ptrdiff_t index) {
     return object + index;
   }
-  /// See `detail::indexed_accessor_range_base` for details.
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
   static Value dereference_iterator(OpOperand *object, ptrdiff_t index) {
     return object[index].get();
   }
@@ -648,12 +761,75 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// MutableOperandRange
+
+/// This class provides a mutable adaptor for a range of operands. It allows for
+/// setting, inserting, and erasing operands from the given range.
+class MutableOperandRange {
+public:
+  /// A pair of a named attribute corresponding to an operand segment attribute,
+  /// and the index within that attribute. The attribute should correspond to an
+  /// i32 DenseElementsAttr.
+  using OperandSegment = std::pair<unsigned, NamedAttribute>;
+
+  /// Construct a new mutable range from the given operand, operand start index,
+  /// and range length. `operandSegments` is an optional set of operand segments
+  /// to be updated when mutating the operand list.
+  MutableOperandRange(Operation *owner, unsigned start, unsigned length,
+                      ArrayRef<OperandSegment> operandSegments = llvm::None);
+  MutableOperandRange(Operation *owner);
+
+  /// Slice this range into a sub range, with the additional operand segment.
+  MutableOperandRange slice(unsigned subStart, unsigned subLen,
+                            Optional<OperandSegment> segment = llvm::None);
+
+  /// Append the given values to the range.
+  void append(ValueRange values);
+
+  /// Assign this range to the given values.
+  void assign(ValueRange values);
+
+  /// Assign the range to the given value.
+  void assign(Value value);
+
+  /// Erase the operands within the given sub-range.
+  void erase(unsigned subStart, unsigned subLen = 1);
+
+  /// Clear this range and erase all of the operands.
+  void clear();
+
+  /// Returns the current size of the range.
+  unsigned size() const { return length; }
+
+  /// Allow implicit conversion to an OperandRange.
+  operator OperandRange() const;
+
+  /// Returns the owning operation.
+  Operation *getOwner() const { return owner; }
+
+private:
+  /// Update the length of this range to the one provided.
+  void updateLength(unsigned newLength);
+
+  /// The owning operation of this range.
+  Operation *owner;
+
+  /// The start index of the operand range within the owner operand list, and
+  /// the length starting from `start`.
+  unsigned start, length;
+
+  /// Optional set of operand segments that should be updated when mutating the
+  /// length of this range.
+  SmallVector<std::pair<unsigned, NamedAttribute>, 1> operandSegments;
+};
+
+//===----------------------------------------------------------------------===//
 // ResultRange
 
 /// This class implements the result iterators for the Operation class.
 class ResultRange final
-    : public indexed_accessor_range<ResultRange, Operation *, OpResult,
-                                    OpResult, OpResult> {
+    : public llvm::indexed_accessor_range<ResultRange, Operation *, OpResult,
+                                          OpResult, OpResult> {
 public:
   using indexed_accessor_range<ResultRange, Operation *, OpResult, OpResult,
                                OpResult>::indexed_accessor_range;
@@ -666,12 +842,12 @@ public:
   auto getType() const { return getTypes(); }
 
 private:
-  /// See `indexed_accessor_range` for details.
+  /// See `llvm::indexed_accessor_range` for details.
   static OpResult dereference(Operation *op, ptrdiff_t index);
 
   /// Allow access to `dereference_iterator`.
-  friend indexed_accessor_range<ResultRange, Operation *, OpResult, OpResult,
-                                OpResult>;
+  friend llvm::indexed_accessor_range<ResultRange, Operation *, OpResult,
+                                      OpResult, OpResult>;
 };
 
 //===----------------------------------------------------------------------===//
@@ -706,7 +882,7 @@ struct ValueRangeOwner {
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
 class ValueRange final
-    : public detail::indexed_accessor_range_base<
+    : public llvm::detail::indexed_accessor_range_base<
           ValueRange, detail::ValueRangeOwner, Value, Value, Value> {
 public:
   using RangeBaseT::RangeBaseT;
@@ -738,14 +914,45 @@ public:
 private:
   using OwnerT = detail::ValueRangeOwner;
 
-  /// See `detail::indexed_accessor_range_base` for details.
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(const OwnerT &owner, ptrdiff_t index);
-  /// See `detail::indexed_accessor_range_base` for details.
+  /// See `llvm::detail::indexed_accessor_range_base` for details.
   static Value dereference_iterator(const OwnerT &owner, ptrdiff_t index);
 
   /// Allow access to `offset_base` and `dereference_iterator`.
   friend RangeBaseT;
 };
+
+//===----------------------------------------------------------------------===//
+// Operation Equivalency
+//===----------------------------------------------------------------------===//
+
+/// This class provides utilities for computing if two operations are
+/// equivalent.
+struct OperationEquivalence {
+  enum Flags {
+    None = 0,
+
+    /// This flag signals that operands should not be considered when checking
+    /// for equivalence. This allows for users to implement there own
+    /// equivalence schemes for operand values. The number of operands are still
+    /// checked, just not the operands themselves.
+    IgnoreOperands = 1,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreOperands)
+  };
+
+  /// Compute a hash for the given operation.
+  static llvm::hash_code computeHash(Operation *op, Flags flags = Flags::None);
+
+  /// Compare two operations and return if they are equivalent.
+  static bool isEquivalentTo(Operation *lhs, Operation *rhs,
+                             Flags flags = Flags::None);
+};
+
+/// Enable Bitmask enums for OperationEquivalence::Flags.
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
 } // end namespace mlir
 
 namespace llvm {

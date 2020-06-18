@@ -49,9 +49,7 @@ template <typename T> struct Bar { T x; };
 template <typename T = Bar<Weber>>  // expected-error {{use of undeclared identifier 'Weber'}}
 struct Foo {
   static_assert(sizeof(T) == 4, "Bar should have gotten int");
-  // FIXME: These diagnostics are bad.
-}; // expected-error {{expected ',' or '>' in template-parameter-list}}
-// expected-warning@-1 {{does not declare anything}}
+};
 typedef int Weber;
 }
 

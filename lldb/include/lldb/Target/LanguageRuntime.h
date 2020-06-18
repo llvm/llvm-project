@@ -134,7 +134,8 @@ public:
   virtual DeclVendor *GetDeclVendor() { return nullptr; }
 
   virtual lldb::BreakpointResolverSP
-  CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp, bool throw_bp) = 0;
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
+                          bool catch_bp, bool throw_bp) = 0;
 
   virtual lldb::SearchFilterSP CreateExceptionSearchFilter() {
     return m_process->GetTarget().GetSearchFilterForModule(nullptr);
@@ -184,7 +185,8 @@ protected:
   Process *m_process;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(LanguageRuntime);
+  LanguageRuntime(const LanguageRuntime &) = delete;
+  const LanguageRuntime &operator=(const LanguageRuntime &) = delete;
 };
 
 } // namespace lldb_private

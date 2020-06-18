@@ -7,6 +7,7 @@
     .p2align 2
     /* Let C/C++ see the symbol */
     .global __xray_FunctionEntry
+    .hidden __xray_FunctionEntry
     .type __xray_FunctionEntry, %function
     /* In C++ it is void extern "C" __xray_FunctionEntry(uint32_t FuncId) with
          FuncId passed in W0 register. */
@@ -26,10 +27,14 @@ __xray_FunctionEntry:
     STP Q2, Q3, [SP, #-32]!
     STP Q4, Q5, [SP, #-32]!
     STP Q6, Q7, [SP, #-32]!
-    /* Load the address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    LDR X1, =_ZN6__xray19XRayPatchedFunctionE
+    /* X8 is the indirect result register and needs to be preserved for the body
+     of the function to use */
+    STP X8, X0, [SP, #-16]!
+
+    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
+    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
-    LDR X2, [X1]
+    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
     /* Handler address is nullptr if handler is not set */
     CMP X2, #0
     BEQ FunctionEntry_restore
@@ -40,6 +45,7 @@ __xray_FunctionEntry:
     BLR X2
 FunctionEntry_restore:
     /* Pop the saved registers */
+    LDP X8, X0, [SP], #16
     LDP Q6, Q7, [SP], #32
     LDP Q4, Q5, [SP], #32
     LDP Q2, Q3, [SP], #32
@@ -54,6 +60,7 @@ FunctionEntry_restore:
     .p2align 2
     /* Let C/C++ see the symbol */
     .global __xray_FunctionExit
+    .hidden __xray_FunctionExit
     .type __xray_FunctionExit, %function
     /* In C++ it is void extern "C" __xray_FunctionExit(uint32_t FuncId) with
          FuncId passed in W0 register. */
@@ -69,11 +76,18 @@ __xray_FunctionExit:
     STP X3, X4, [SP, #-16]!
     STP X5, X6, [SP, #-16]!
     STP X7, X30, [SP, #-16]!
-    STR Q0, [SP, #-16]!
-    /* Load the address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    LDR X1, =_ZN6__xray19XRayPatchedFunctionE
+    STP Q0, Q1, [SP, #-32]!
+    STP Q2, Q3, [SP, #-32]!
+    STP Q4, Q5, [SP, #-32]!
+    STP Q6, Q7, [SP, #-32]!
+    /* X8 is the indirect result register and needs to be preserved for the body
+     of the function to use */
+    STP X8, X0, [SP, #-16]!
+
+    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
+    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
-    LDR X2, [X1]
+    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
     /* Handler address is nullptr if handler is not set */
     CMP X2, #0
     BEQ FunctionExit_restore
@@ -83,7 +97,11 @@ __xray_FunctionExit:
     /* Call the handler with 2 parameters in W0 and X1 */
     BLR X2
 FunctionExit_restore:
-    LDR Q0, [SP], #16
+    LDP X8, X0, [SP], #16
+    LDP Q6, Q7, [SP], #32
+    LDP Q4, Q5, [SP], #32
+    LDP Q2, Q3, [SP], #32
+    LDP Q0, Q1, [SP], #32
     LDP X7, X30, [SP], #16
     LDP X5, X6, [SP], #16
     LDP X3, X4, [SP], #16
@@ -94,6 +112,7 @@ FunctionExit_restore:
     .p2align 2
     /* Let C/C++ see the symbol */
     .global __xray_FunctionTailExit
+    .hidden __xray_FunctionTailExit
     .type __xray_FunctionTailExit, %function
     /* In C++ it is void extern "C" __xray_FunctionTailExit(uint32_t FuncId)
          with FuncId passed in W0 register. */
@@ -114,10 +133,10 @@ __xray_FunctionTailExit:
     STP Q2, Q3, [SP, #-32]!
     STP Q4, Q5, [SP, #-32]!
     STP Q6, Q7, [SP, #-32]!
-    /* Load the address of _ZN6__xray19XRayPatchedFunctionE into X1 */
-    LDR X1, =_ZN6__xray19XRayPatchedFunctionE
+    /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
+    ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
-    LDR X2, [X1]
+    LDR X2, [X1, #:lo12:_ZN6__xray19XRayPatchedFunctionE]
     /* Handler address is nullptr if handler is not set */
     CMP X2, #0
     BEQ FunctionTailExit_restore

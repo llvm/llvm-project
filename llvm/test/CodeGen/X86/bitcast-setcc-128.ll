@@ -510,7 +510,6 @@ define i64 @v16i8_widened_with_ones(<16 x i8> %a, <16 x i8> %b) {
 ; AVX1-LABEL: v16i8_widened_with_ones:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
 ; AVX1-NEXT:    orl $-65536, %ecx # imm = 0xFFFF0000
 ; AVX1-NEXT:    movabsq $-4294967296, %rax # imm = 0xFFFFFFFF00000000

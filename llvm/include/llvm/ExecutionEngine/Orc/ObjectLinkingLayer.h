@@ -35,6 +35,7 @@ namespace llvm {
 
 namespace jitlink {
 class EHFrameRegistrar;
+class Symbol;
 } // namespace jitlink
 
 namespace object {
@@ -59,10 +60,14 @@ public:
   /// configured.
   class Plugin {
   public:
+    using JITLinkSymbolVector = std::vector<const jitlink::Symbol *>;
+    using LocalDependenciesMap = DenseMap<SymbolStringPtr, JITLinkSymbolVector>;
+
     virtual ~Plugin();
     virtual void modifyPassConfig(MaterializationResponsibility &MR,
                                   const Triple &TT,
                                   jitlink::PassConfiguration &Config) {}
+
     virtual void notifyLoaded(MaterializationResponsibility &MR) {}
     virtual Error notifyEmitted(MaterializationResponsibility &MR) {
       return Error::success();
@@ -71,6 +76,15 @@ public:
       return Error::success();
     }
     virtual Error notifyRemovingAllModules() { return Error::success(); }
+
+    /// Return any dependencies that synthetic symbols (e.g. init symbols)
+    /// have on locally scoped jitlink::Symbols. This is used by the
+    /// ObjectLinkingLayer to update the dependencies for the synthetic
+    /// symbols.
+    virtual LocalDependenciesMap
+    getSyntheticSymbolLocalDependencies(MaterializationResponsibility &MR) {
+      return LocalDependenciesMap();
+    }
   };
 
   using ReturnObjectBufferFunction =
@@ -170,6 +184,7 @@ private:
     size_t Size;
   };
 
+  std::mutex EHFramePluginMutex;
   jitlink::EHFrameRegistrar &Registrar;
   DenseMap<MaterializationResponsibility *, EHFrameRange> InProcessLinks;
   DenseMap<VModuleKey, EHFrameRange> TrackedEHFrameRanges;

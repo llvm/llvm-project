@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
 ; RUN: llc -filetype=obj -o %t.start.o %s
 ; RUN: wasm-ld -o %t.wasm %t.start.o %t.ret32.o -y ret32 -y _start | FileCheck %s -check-prefix=BOTH
 ; RUN: wasm-ld -o %t.wasm %t.ret32.o %t.start.o -y ret32 -y _start | FileCheck %s -check-prefix=REVERSED

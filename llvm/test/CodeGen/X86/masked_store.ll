@@ -353,7 +353,7 @@ define void @store_v8f32_v8i32(<8 x float> %x, <8 x float>* %ptr, <8 x float> %y
 ; SSE2-LABEL: store_v8f32_v8i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    packssdw %xmm5, %xmm4
-; SSE2-NEXT:    packsswb %xmm0, %xmm4
+; SSE2-NEXT:    packsswb %xmm4, %xmm4
 ; SSE2-NEXT:    pmovmskb %xmm4, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB5_1
@@ -425,7 +425,7 @@ define void @store_v8f32_v8i32(<8 x float> %x, <8 x float>* %ptr, <8 x float> %y
 ; SSE4-LABEL: store_v8f32_v8i32:
 ; SSE4:       ## %bb.0:
 ; SSE4-NEXT:    packssdw %xmm5, %xmm4
-; SSE4-NEXT:    packsswb %xmm0, %xmm4
+; SSE4-NEXT:    packsswb %xmm4, %xmm4
 ; SSE4-NEXT:    pmovmskb %xmm4, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    jne LBB5_1
@@ -1423,7 +1423,7 @@ define void @store_v8i16_v8i16(<8 x i16> %trigger, <8 x i16>* %addr, <8 x i16> %
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm2
-; SSE2-NEXT:    packsswb %xmm0, %xmm2
+; SSE2-NEXT:    packsswb %xmm2, %xmm2
 ; SSE2-NEXT:    pmovmskb %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB13_1
@@ -1494,7 +1494,7 @@ define void @store_v8i16_v8i16(<8 x i16> %trigger, <8 x i16>* %addr, <8 x i16> %
 ; SSE4:       ## %bb.0:
 ; SSE4-NEXT:    pxor %xmm2, %xmm2
 ; SSE4-NEXT:    pcmpeqw %xmm0, %xmm2
-; SSE4-NEXT:    packsswb %xmm0, %xmm2
+; SSE4-NEXT:    packsswb %xmm2, %xmm2
 ; SSE4-NEXT:    pmovmskb %xmm2, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    jne LBB13_1

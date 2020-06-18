@@ -1,4 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck -check-prefix=GFX908 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck -check-prefix=GFX908 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s 2>&1 | FileCheck -check-prefix=NOGFX908 %s
 
 v_accvgpr_read_b32 v2, a0
 // GFX908: v_accvgpr_read_b32 v2, a0       ; encoding: [0x02,0x00,0xd8,0xd3,0x00,0x01,0x00,0x08]
@@ -23,6 +24,24 @@ v_accvgpr_write_b32 a2, v1
 
 v_accvgpr_write a2, v255
 // GFX908: v_accvgpr_write_b32 a2, v255    ; encoding: [0x02,0x00,0xd9,0xd3,0xff,0x01,0x00,0x00]
+
+v_accvgpr_write a2, 100
+// NOGFX908: error: invalid operand for instruction
+
+v_accvgpr_write a2, execz
+// NOGFX908: error: source operand must be either a VGPR or an inline constant
+
+v_accvgpr_write a2, vccz
+// NOGFX908: error: source operand must be either a VGPR or an inline constant
+
+v_accvgpr_write a2, scc
+// NOGFX908: error: source operand must be either a VGPR or an inline constant
+
+v_accvgpr_write a2, shared_base
+// NOGFX908: error: source operand must be either a VGPR or an inline constant
+
+v_accvgpr_write a2, pops_exiting_wave_id
+// NOGFX908: error: source operand must be either a VGPR or an inline constant
 
 v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[1:32]
 // GFX908: v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[1:32] ; encoding: [0x00,0x00,0xc0,0xd3,0x00,0x03,0x06,0x04]

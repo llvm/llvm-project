@@ -28,5 +28,7 @@ XCoreMCAsmInfo::XCoreMCAsmInfo(const Triple &TT) {
   // Debug
   ExceptionsType = ExceptionHandling::DwarfCFI;
   DwarfRegNumForCFI = true;
+
+  UseIntegratedAssembler = false;
 }
 

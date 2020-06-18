@@ -16,6 +16,7 @@
 
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/TypeSize.h"
+#include <cassert>
 
 namespace llvm {
 

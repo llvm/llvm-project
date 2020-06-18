@@ -399,7 +399,7 @@ the unabridged code):
       ...
 
 This code is virtually identical to the code `before we allowed mutable
-variables <LangImpl5.html#code-generation-for-the-for-loop>`_. The big difference is that we
+variables <LangImpl05.html#code-generation-for-the-for-loop>`_. The big difference is that we
 no longer have to construct a PHI node, and we use load/store to access
 the variable as needed.
 

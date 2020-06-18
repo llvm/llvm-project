@@ -541,7 +541,7 @@ R600InstrInfo::fitsReadPortLimitations(const std::vector<MachineInstr *> &IG,
 
   std::vector<std::vector<std::pair<int, unsigned>>> IGSrcs;
   ValidSwizzle.clear();
-  unsigned ConstCount = 0;
+  unsigned ConstCount;
   BankSwizzle TransBS = ALU_VEC_012_SCL_210;
   for (unsigned i = 0, e = IG.size(); i < e; ++i) {
     IGSrcs.push_back(ExtractSrcs(*IG[i], PV, ConstCount));
@@ -1224,7 +1224,7 @@ int R600InstrInfo::getIndirectIndexEnd(const MachineFunction &MF) const {
   const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
   const R600FrameLowering *TFL = ST.getFrameLowering();
 
-  unsigned IgnoredFrameReg;
+  Register IgnoredFrameReg;
   Offset = TFL->getFrameIndexReference(MF, -1, IgnoredFrameReg);
 
   return getIndirectIndexBegin(MF) + Offset;

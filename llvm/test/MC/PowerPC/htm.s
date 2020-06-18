@@ -8,11 +8,11 @@
 # CHECK-LE: tbegin. 1                      # encoding: [0x1d,0x05,0x20,0x7c]
             tbegin. 1
 
-# CHECK-BE: tend. 0                        # encoding: [0x7c,0x00,0x05,0x5d]
-# CHECK-LE: tend. 0                        # encoding: [0x5d,0x05,0x00,0x7c]
+# CHECK-BE: tend.                          # encoding: [0x7c,0x00,0x05,0x5d]
+# CHECK-LE: tend.                          # encoding: [0x5d,0x05,0x00,0x7c]
             tend. 0
-# CHECK-BE: tend. 1                        # encoding: [0x7e,0x00,0x05,0x5d]
-# CHECK-LE: tend. 1                        # encoding: [0x5d,0x05,0x00,0x7e]
+# CHECK-BE: tendall.                       # encoding: [0x7e,0x00,0x05,0x5d]
+# CHECK-LE: tendall.                       # encoding: [0x5d,0x05,0x00,0x7e]
             tend. 1
 
 # CHECK-BE: tabort. 9                      # encoding: [0x7c,0x09,0x07,0x1d]
@@ -31,11 +31,11 @@
 # CHECK-LE: tabortwci. 0, 9, 0             # encoding: [0x9d,0x06,0x09,0x7c]
             tabortwci. 0, 9, 0
 
-# CHECK-BE: tsr. 0                         # encoding: [0x7c,0x00,0x05,0xdd]
-# CHECK-LE: tsr. 0                         # encoding: [0xdd,0x05,0x00,0x7c]
+# CHECK-BE: tsuspend.                      # encoding: [0x7c,0x00,0x05,0xdd]
+# CHECK-LE: tsuspend.                      # encoding: [0xdd,0x05,0x00,0x7c]
             tsr. 0
-# CHECK-BE: tsr. 1                         # encoding: [0x7c,0x20,0x05,0xdd]
-# CHECK-LE: tsr. 1                         # encoding: [0xdd,0x05,0x20,0x7c]
+# CHECK-BE: tresume.                       # encoding: [0x7c,0x20,0x05,0xdd]
+# CHECK-LE: tresume.                       # encoding: [0xdd,0x05,0x20,0x7c]
             tsr. 1
 
 # CHECK-BE: tcheck 0                       # encoding: [0x7c,0x00,0x05,0x9c]

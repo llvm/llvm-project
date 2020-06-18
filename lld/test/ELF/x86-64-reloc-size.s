@@ -19,7 +19,7 @@
 # DATA-NEXT: 0x002031cc 00001b00 00000000 00001900 00000000
 # DATA-NEXT: 0x002031dc 00001b00 00000000 0000
 
-# DISASM:      _start:
+# DISASM:      <_start>:
 # DISASM-NEXT:   movl 25, %eax
 # DISASM-NEXT:   movl 27, %eax
 # DISASM-NEXT:   movl 25, %eax
@@ -40,7 +40,7 @@
 # DATA2-NEXT: 00000000 00000000 00001900 00000000
 # DATA2-NEXT: 00001b00 00000000 0000
 
-# DISASM2:      _start:
+# DISASM2:      <_start>:
 # DISASM2-NEXT:   movl 0, %eax
 # DISASM2-NEXT:   movl 0, %eax
 # DISASM2-NEXT:   movl 25, %eax

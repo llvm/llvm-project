@@ -8,6 +8,7 @@
 
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
@@ -294,4 +295,162 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
       arch_64.Clear();
     }
   }
+}
+
+/// Return and cache $DEVELOPER_DIR if it is set and exists.
+static std::string GetEnvDeveloperDir() {
+  static std::string g_env_developer_dir;
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, [&]() {
+    if (const char *developer_dir_env_var = getenv("DEVELOPER_DIR")) {
+      FileSpec fspec(developer_dir_env_var);
+      if (FileSystem::Instance().Exists(fspec))
+        g_env_developer_dir = fspec.GetPath();
+    }});
+  return g_env_developer_dir;
+}
+
+FileSpec HostInfoMacOSX::GetXcodeContentsDirectory() {
+  static FileSpec g_xcode_contents_path;
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, [&]() {
+    // Try the shlib dir first.
+    if (FileSpec fspec = HostInfo::GetShlibDir()) {
+      if (FileSystem::Instance().Exists(fspec)) {
+        std::string xcode_contents_dir =
+            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
+        if (!xcode_contents_dir.empty()) {
+          g_xcode_contents_path = FileSpec(xcode_contents_dir);
+          return;
+        }
+      }
+    }
+
+    llvm::SmallString<128> env_developer_dir(GetEnvDeveloperDir());
+    if (!env_developer_dir.empty()) {
+      llvm::sys::path::append(env_developer_dir, "Contents");
+      std::string xcode_contents_dir =
+          XcodeSDK::FindXcodeContentsDirectoryInPath(env_developer_dir);
+      if (!xcode_contents_dir.empty()) {
+        g_xcode_contents_path = FileSpec(xcode_contents_dir);
+        return;
+      }
+    }
+
+    FileSpec fspec(HostInfo::GetXcodeSDKPath(XcodeSDK::GetAnyMacOS()));
+    if (fspec) {
+      if (FileSystem::Instance().Exists(fspec)) {
+        std::string xcode_contents_dir =
+            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
+        if (!xcode_contents_dir.empty()) {
+          g_xcode_contents_path = FileSpec(xcode_contents_dir);
+          return;
+        }
+      }
+    }
+  });
+  return g_xcode_contents_path;
+}
+
+lldb_private::FileSpec HostInfoMacOSX::GetXcodeDeveloperDirectory() {
+  static lldb_private::FileSpec g_developer_directory;
+  static llvm::once_flag g_once_flag;
+  llvm::call_once(g_once_flag, []() {
+    if (FileSpec fspec = GetXcodeContentsDirectory()) {
+      fspec.AppendPathComponent("Developer");
+      if (FileSystem::Instance().Exists(fspec))
+        g_developer_directory = fspec;
+    }
+  });
+  return g_developer_directory;
+}
+
+static std::string GetXcodeSDK(XcodeSDK sdk) {
+  XcodeSDK::Info info = sdk.Parse();
+  std::string sdk_name = XcodeSDK::GetCanonicalName(info);
+  auto find_sdk = [](std::string sdk_name) -> std::string {
+    std::string xcrun_cmd;
+    std::string developer_dir = GetEnvDeveloperDir();
+    if (developer_dir.empty())
+      if (FileSpec fspec = HostInfo::GetShlibDir())
+        if (FileSystem::Instance().Exists(fspec)) {
+          FileSpec path(
+              XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath()));
+          if (path.RemoveLastPathComponent())
+            developer_dir = path.GetPath();
+        }
+    if (!developer_dir.empty())
+      xcrun_cmd = "/usr/bin/env DEVELOPER_DIR=\"" + developer_dir + "\" ";
+    xcrun_cmd += "xcrun --show-sdk-path --sdk " + sdk_name;
+
+    int status = 0;
+    int signo = 0;
+    std::string output_str;
+    lldb_private::Status error =
+        Host::RunShellCommand(xcrun_cmd.c_str(), FileSpec(), &status, &signo,
+                              &output_str, std::chrono::seconds(15));
+
+    // Check that xcrun return something useful.
+    if (status != 0 || output_str.empty())
+      return {};
+
+    // Convert to a StringRef so we can manipulate the string without modifying
+    // the underlying data.
+    llvm::StringRef output(output_str);
+
+    // Remove any trailing newline characters.
+    output = output.rtrim();
+
+    // Strip any leading newline characters and everything before them.
+    const size_t last_newline = output.rfind('\n');
+    if (last_newline != llvm::StringRef::npos)
+      output = output.substr(last_newline + 1);
+
+    return output.str();
+  };
+
+  std::string path = find_sdk(sdk_name);
+  while (path.empty()) {
+    // Try an alternate spelling of the name ("macosx10.9internal").
+    if (info.type == XcodeSDK::Type::MacOSX && !info.version.empty() &&
+        info.internal) {
+      llvm::StringRef fixed(sdk_name);
+      if (fixed.consume_back(".internal"))
+        sdk_name = fixed.str() + "internal";
+      path = find_sdk(sdk_name);
+      if (!path.empty())
+        break;
+    }
+    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+    LLDB_LOGF(log, "Couldn't find SDK %s on host", sdk_name.c_str());
+
+    // Try without the version.
+    if (!info.version.empty()) {
+      info.version = {};
+      sdk_name = XcodeSDK::GetCanonicalName(info);
+      path = find_sdk(sdk_name);
+      if (!path.empty())
+        break;
+    }
+
+    LLDB_LOGF(log, "Couldn't find any matching SDK on host");
+    return {};
+  }
+
+  // Whatever is left in output should be a valid path.
+  if (!FileSystem::Instance().Exists(path))
+    return {};
+  return path;
+}
+
+llvm::StringRef HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
+  static llvm::StringMap<std::string> g_sdk_path;
+  static std::mutex g_sdk_path_mutex;
+
+  std::lock_guard<std::mutex> guard(g_sdk_path_mutex);
+  auto it = g_sdk_path.find(sdk.GetString());
+  if (it != g_sdk_path.end())
+    return it->second;
+  auto it_new = g_sdk_path.insert({sdk.GetString(), GetXcodeSDK(sdk)});
+  return it_new.first->second;
 }

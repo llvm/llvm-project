@@ -9,12 +9,14 @@
 # RUN: llvm-readelf -S -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-readelf -x .branch_lt %t | FileCheck --check-prefix=BRANCH-LE %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s
 
 # RUN: llvm-mc -filetype=obj -triple=ppc64 %s -o %t.o
 # RUN: ld.lld -T %t.script %t.o -o %t
 # RUN: llvm-readelf -S -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-readelf -x .branch_lt %t | FileCheck --check-prefix=BRANCH-BE %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s
 
 # SEC: Name       Type     Address          Off     Size   ES Flg Lk Inf Al
 # SEC: .got       PROGBITS 0000000002002028 2002028 000008 00  WA  0   0  8
@@ -28,21 +30,21 @@
 # BRANCH-BE:      0x02002030 00000000 02002008 00000000 02002010
 # BRANCH-BE-NEXT: 0x02002040 00000000 00002008
 
-# CHECK:      _start:
-# CHECK-NEXT:     2000:       bl .+24
-# CHECK-NEXT:                 bl .+20
-# CHECK-NEXT:                 bl .+16
-# CHECK-NEXT:                 bl .+33554428
+# CHECK:      <_start>:
+# CHECK-NEXT:     2000:       bl 0x2018
+# CHECK-NEXT:                 bl 0x2018
+# CHECK-NEXT:                 bl 0x2018
+# CHECK-NEXT:                 bl 0x2002008
 
 ## &.branch_lt[0] - .TOC. = .branch_lt - (.got+0x8000) = -32760
-# CHECK:      __long_branch_high:
+# CHECK:      <__long_branch_high>:
 # CHECK-NEXT:     2018:       addis 12, 2, 0
 # CHECK-NEXT:                 ld 12, -32760(12)
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr
 
 ## &.branch_lt[1] - .TOC. = .branch_lt - (.got+0x8000) = -32752
-# CHECK:      __long_branch_:
+# CHECK:      <__long_branch_>:
 # CHECK-NEXT:     2028:       addis 12, 2, 0
 # CHECK-NEXT:                 ld 12, -32752(12)
 # CHECK-NEXT:                 mtctr 12
@@ -60,12 +62,12 @@ blr
 
 # CHECK:      Disassembly of section .text_high:
 # CHECK-EMPTY:
-# CHECK-NEXT: high:
+# CHECK-NEXT: <high>:
 # CHECK-NEXT:  2002000:       addis 2, 12, 1
 # CHECK-NEXT:                 addi 2, 2, -32728
-# CHECK-NEXT:                 bl .-33554432
-# CHECK-NEXT:                 bl .+8
-# CHECK:      __long_branch_:
+# CHECK-NEXT:                 bl 0x2008
+# CHECK-NEXT:                 bl 0x2002014
+# CHECK:      <__long_branch_>:
 # CHECK-NEXT:  2002014:       addis 12, 2, 0
 # CHECK-NEXT:                 ld 12, -32744(12)
 # CHECK-NEXT:                 mtctr 12
@@ -80,3 +82,10 @@ addi 2, 2, .TOC.-high@l
 bl .text_low+8
 bl .text_low+8 # Need a thunk
 blr
+
+# NM:      d .TOC.
+# NM-NEXT: t __long_branch_high
+# NM-NEXT: t __long_branch_{{$}}
+# NM-NEXT: t __long_branch_{{$}}
+# NM-NEXT: T _start
+# NM-NEXT: T high

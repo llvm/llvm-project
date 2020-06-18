@@ -32,7 +32,7 @@ namespace clang {
 namespace ento {
 
 class ProgramStateManager;
-class SubEngine;
+class ExprEngine;
 class SymbolReaper;
 
 class ConditionTruthVal {
@@ -96,11 +96,7 @@ public:
     // If StTrue is infeasible, asserting the falseness of Cond is unnecessary
     // because the existing constraints already establish this.
     if (!StTrue) {
-#ifndef __OPTIMIZE__
-      // This check is expensive and should be disabled even in Release+Asserts
-      // builds.
-      // FIXME: __OPTIMIZE__ is a GNU extension that Clang implements but MSVC
-      // does not. Is there a good equivalent there?
+#ifdef EXPENSIVE_CHECKS
       assert(assume(State, Cond, false) && "System is over constrained.");
 #endif
       return ProgramStatePair((ProgramStateRef)nullptr, State);
@@ -197,10 +193,11 @@ protected:
 
 std::unique_ptr<ConstraintManager>
 CreateRangeConstraintManager(ProgramStateManager &statemgr,
-                             SubEngine *subengine);
+                             ExprEngine *exprengine);
 
 std::unique_ptr<ConstraintManager>
-CreateZ3ConstraintManager(ProgramStateManager &statemgr, SubEngine *subengine);
+CreateZ3ConstraintManager(ProgramStateManager &statemgr,
+                          ExprEngine *exprengine);
 
 } // namespace ento
 } // namespace clang

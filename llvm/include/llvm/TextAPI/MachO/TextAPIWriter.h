@@ -9,9 +9,11 @@
 #ifndef LLVM_TEXTAPI_MACHO_WRITER_H
 #define LLVM_TEXTAPI_MACHO_WRITER_H
 
-#include "llvm/Support/MemoryBuffer.h"
-
 namespace llvm {
+
+class Error;
+class raw_ostream;
+
 namespace MachO {
 
 class InterfaceFile;

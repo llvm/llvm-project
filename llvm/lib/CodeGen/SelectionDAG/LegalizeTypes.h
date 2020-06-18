@@ -159,7 +159,9 @@ private:
   const SDValue &getSDValue(TableId &Id) {
     RemapId(Id);
     assert(Id && "TableId should be non-zero");
-    return IdToValueMap[Id];
+    auto I = IdToValueMap.find(Id);
+    assert(I != IdToValueMap.end() && "cannot find Id in map");
+    return I->second;
   }
 
 public:
@@ -176,25 +178,30 @@ public:
   bool run();
 
   void NoteDeletion(SDNode *Old, SDNode *New) {
+    assert(Old != New && "node replaced with self");
     for (unsigned i = 0, e = Old->getNumValues(); i != e; ++i) {
       TableId NewId = getTableId(SDValue(New, i));
       TableId OldId = getTableId(SDValue(Old, i));
 
-      if (OldId != NewId)
+      if (OldId != NewId) {
         ReplacedValues[OldId] = NewId;
 
-      // Delete Node from tables.
+        // Delete Node from tables.  We cannot do this when OldId == NewId,
+        // because NewId can still have table references to it in
+        // ReplacedValues.
+        IdToValueMap.erase(OldId);
+        PromotedIntegers.erase(OldId);
+        ExpandedIntegers.erase(OldId);
+        SoftenedFloats.erase(OldId);
+        PromotedFloats.erase(OldId);
+        SoftPromotedHalfs.erase(OldId);
+        ExpandedFloats.erase(OldId);
+        ScalarizedVectors.erase(OldId);
+        SplitVectors.erase(OldId);
+        WidenedVectors.erase(OldId);
+      }
+
       ValueToIdMap.erase(SDValue(Old, i));
-      IdToValueMap.erase(OldId);
-      PromotedIntegers.erase(OldId);
-      ExpandedIntegers.erase(OldId);
-      SoftenedFloats.erase(OldId);
-      PromotedFloats.erase(OldId);
-      SoftPromotedHalfs.erase(OldId);
-      ExpandedFloats.erase(OldId);
-      ScalarizedVectors.erase(OldId);
-      SplitVectors.erase(OldId);
-      WidenedVectors.erase(OldId);
     }
   }
 
@@ -265,7 +272,7 @@ private:
     EVT OldVT = Op.getValueType();
     SDLoc dl(Op);
     Op = GetPromotedInteger(Op);
-    return DAG.getZeroExtendInReg(Op, dl, OldVT.getScalarType());
+    return DAG.getZeroExtendInReg(Op, dl, OldVT);
   }
 
   // Get a promoted operand and sign or zero extend it to the final size
@@ -279,7 +286,7 @@ private:
     if (TLI.isSExtCheaperThanZExt(OldVT, Op.getValueType()))
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, Op.getValueType(), Op,
                          DAG.getValueType(OldVT));
-    return DAG.getZeroExtendInReg(Op, DL, OldVT.getScalarType());
+    return DAG.getZeroExtendInReg(Op, DL, OldVT);
   }
 
   // Integer Result Promotion.
@@ -309,6 +316,7 @@ private:
   SDValue PromoteIntRes_EXTRACT_VECTOR_ELT(SDNode *N);
   SDValue PromoteIntRes_FP_TO_XINT(SDNode *N);
   SDValue PromoteIntRes_FP_TO_FP16(SDNode *N);
+  SDValue PromoteIntRes_FREEZE(SDNode *N);
   SDValue PromoteIntRes_INT_EXTEND(SDNode *N);
   SDValue PromoteIntRes_LOAD(LoadSDNode *N);
   SDValue PromoteIntRes_MLOAD(MaskedLoadSDNode *N);
@@ -518,9 +526,11 @@ private:
   SDValue SoftenFloatRes_FP_ROUND(SDNode *N);
   SDValue SoftenFloatRes_FPOW(SDNode *N);
   SDValue SoftenFloatRes_FPOWI(SDNode *N);
+  SDValue SoftenFloatRes_FREEZE(SDNode *N);
   SDValue SoftenFloatRes_FREM(SDNode *N);
   SDValue SoftenFloatRes_FRINT(SDNode *N);
   SDValue SoftenFloatRes_FROUND(SDNode *N);
+  SDValue SoftenFloatRes_FROUNDEVEN(SDNode *N);
   SDValue SoftenFloatRes_FSIN(SDNode *N);
   SDValue SoftenFloatRes_FSQRT(SDNode *N);
   SDValue SoftenFloatRes_FSUB(SDNode *N);
@@ -590,9 +600,11 @@ private:
   void ExpandFloatRes_FP_EXTEND (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FPOW      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FPOWI     (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_FREEZE    (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FREM      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FRINT     (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FROUND    (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_FROUNDEVEN(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FSIN      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FSQRT     (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FSUB      (SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -961,6 +973,7 @@ private:
   void SplitRes_SELECT      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_SELECT_CC   (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_UNDEF       (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitRes_FREEZE      (SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void SplitVSETCC(const SDNode *N);
 

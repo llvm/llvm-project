@@ -5,11 +5,11 @@
 // RUN: ld.lld %t1.so %t.o -o %t
 // RUN: llvm-readobj -S --dyn-relocations %t | FileCheck %s
 
-// This tls global-dynamic sequence is with respect to a preemptible symbol but
-// is in an application so a relaxation to Initial Exec would normally be
-// possible. This would result in an assertion failure on ARM as the
-// relaxation functions can't be implemented on ARM. Check that the sequence
-// is handled as global dynamic
+/// This tls global-dynamic sequence is with respect to a preemptible symbol but
+/// is in an application so a relaxation to Initial Exec would normally be
+/// possible. This would result in an assertion failure on ARM as the
+/// relaxation functions can't be implemented on ARM. Check that the sequence
+/// is handled as global dynamic
 
  .text
  .syntax unified
@@ -25,6 +25,6 @@ func:
  .Lt0: .word   y(TLSGD) + (. - .L0 - 8)
 
 // CHECK: Dynamic Relocations {
-// CHECK-NEXT:   0x12290 R_ARM_TLS_DTPMOD32 y
-// CHECK-NEXT:   0x12294 R_ARM_TLS_DTPOFF32 y
-// CHECK-NEXT:   0x132A4 R_ARM_JUMP_SLOT __tls_get_addr
+// CHECK-NEXT:   0x30290 R_ARM_TLS_DTPMOD32 y
+// CHECK-NEXT:   0x30294 R_ARM_TLS_DTPOFF32 y
+// CHECK-NEXT:   0x402A4 R_ARM_JUMP_SLOT __tls_get_addr

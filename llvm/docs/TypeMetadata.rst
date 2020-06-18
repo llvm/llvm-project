@@ -29,7 +29,7 @@ or functions.
 An intrinsic, :ref:`llvm.type.test <type.test>`, is used to test whether a
 given pointer is associated with a type identifier.
 
-.. _control flow integrity: http://clang.llvm.org/docs/ControlFlowIntegrity.html
+.. _control flow integrity: https://clang.llvm.org/docs/ControlFlowIntegrity.html
 
 Representing Type Information using Type Metadata
 =================================================
@@ -160,7 +160,7 @@ as the former will be the jump table entry if a jump table is necessary.
 The `GlobalLayoutBuilder`_ class is responsible for laying out the globals
 efficiently to minimize the sizes of the underlying bitsets.
 
-.. _control flow integrity design document: http://clang.llvm.org/docs/ControlFlowIntegrityDesign.html
+.. _control flow integrity design document: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html
 
 :Example:
 

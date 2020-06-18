@@ -71,7 +71,7 @@ declare float @fe(i32)
 ; CHECK-LABEL: llvm.func @f1(%arg0: !llvm.i64) -> !llvm.i32 {
 ; CHECK-DAG: %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : !llvm.i32
 ; CHECK-DAG: %[[c42:[0-9]+]] = llvm.mlir.constant(42 : i32) : !llvm.i32
-; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(1 : i1) : !llvm.i1
+; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(true) : !llvm.i1
 ; CHECK-DAG: %[[c43:[0-9]+]] = llvm.mlir.constant(43 : i32) : !llvm.i32
 define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
@@ -282,8 +282,7 @@ define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_person
   ; FIXME: Change filter to a constant array once they are handled. 
   ; Currently, even though it parses this, LLVM module is broken
           filter [1 x i8] [i8 1]
-  ; CHECK: llvm.br ^bb3
-  br label %5
+  resume { i8*, i32 } %3
 
 ; CHECK: ^bb2:
   ; CHECK: llvm.return %{{[0-9]+}} : !llvm.i32
@@ -295,5 +294,27 @@ define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_person
 
 ; CHECK: ^bb4:
   ; CHECK: llvm.return %{{[0-9]+}} : !llvm.i32
+  ret i32 0
+}
+
+;CHECK-LABEL: @useFreezeOp
+define i32 @useFreezeOp(i32 %x) {
+  ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9a-z]+}} : !llvm.i32
+  %1 = freeze i32 %x
+  %2 = add i8 10, 10
+  ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9]+}} : !llvm.i8
+  %3 = freeze i8 %2
+  %poison = add nsw i1 0, undef
+  ret i32 0
+}
+
+;CHECK-LABEL: @useFenceInst
+define i32 @useFenceInst() {
+  ;CHECK: llvm.fence syncscope("agent") seq_cst
+  fence syncscope("agent") seq_cst
+  ;CHECK: llvm.fence release
+  fence release
+  ;CHECK: llvm.fence seq_cst
+  fence syncscope("") seq_cst
   ret i32 0
 }

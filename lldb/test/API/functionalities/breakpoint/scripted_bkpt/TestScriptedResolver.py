@@ -16,6 +16,7 @@ class TestScriptedResolver(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_scripted_resolver(self):
         """Use a scripted resolver to set a by symbol name breakpoint"""
         self.build()

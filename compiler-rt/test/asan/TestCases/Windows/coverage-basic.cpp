@@ -1,6 +1,6 @@
 // RUN: rm -rf %t-dir
 // RUN: mkdir %t-dir && cd %t-dir
-// RUN: %clangxx_asan -fsanitize-coverage=func %s -o test.exe
+// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s -o test.exe
 // RUN: %env_asan_opts=coverage=1 %run ./test.exe
 //
 // RUN: %sancov print *.sancov | FileCheck %s

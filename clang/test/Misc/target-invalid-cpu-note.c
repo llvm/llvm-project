@@ -81,7 +81,7 @@
 // PPC-SAME: 603e, 603ev, 604, 604e, 620, 630, g3, 7400, g4, 7450, g4+, 750,
 // PPC-SAME: 8548, 970, g5, a2, a2q, e500, e500mc, e5500, power3, pwr3, power4,
 // PPC-SAME: pwr4, power5, pwr5, power5x, pwr5x, power6, pwr6, power6x, pwr6x,
-// PPC-SAME: power7, pwr7, power8, pwr8, power9, pwr9, powerpc, ppc, powerpc64,
+// PPC-SAME: power7, pwr7, power8, pwr8, power9, pwr9, power10, pwr10, powerpc, ppc, powerpc64,
 // PPC-SAME: ppc64, powerpc64le, ppc64le, future
 
 // RUN: not %clang_cc1 -triple mips--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix MIPS

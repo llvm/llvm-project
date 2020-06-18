@@ -285,62 +285,62 @@ define void @jt_multiple_jump_tables(%1* %arg, i32 %arg1, i32* %arg2) {
   ; CHECK:   [[C53:%[0-9]+]]:_(s32) = G_CONSTANT i32 4354
   ; CHECK:   [[C54:%[0-9]+]]:_(s32) = G_CONSTANT i32 4355
   ; CHECK:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @global
-  ; CHECK:   [[C55:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[C55]](s64)
-  ; CHECK:   [[C56:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK:   [[C57:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-  ; CHECK:   [[C58:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
-  ; CHECK:   [[C59:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK:   [[C60:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
-  ; CHECK:   [[C61:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
-  ; CHECK:   [[C62:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
-  ; CHECK:   [[C63:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK:   [[C64:%[0-9]+]]:_(s64) = G_CONSTANT i64 9
-  ; CHECK:   [[C65:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
-  ; CHECK:   [[C66:%[0-9]+]]:_(s64) = G_CONSTANT i64 11
-  ; CHECK:   [[C67:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; CHECK:   [[C68:%[0-9]+]]:_(s64) = G_CONSTANT i64 13
-  ; CHECK:   [[C69:%[0-9]+]]:_(s64) = G_CONSTANT i64 14
-  ; CHECK:   [[C70:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-  ; CHECK:   [[C71:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK:   [[C72:%[0-9]+]]:_(s64) = G_CONSTANT i64 17
-  ; CHECK:   [[C73:%[0-9]+]]:_(s64) = G_CONSTANT i64 18
-  ; CHECK:   [[C74:%[0-9]+]]:_(s64) = G_CONSTANT i64 19
-  ; CHECK:   [[C75:%[0-9]+]]:_(s64) = G_CONSTANT i64 20
-  ; CHECK:   [[C76:%[0-9]+]]:_(s64) = G_CONSTANT i64 21
-  ; CHECK:   [[C77:%[0-9]+]]:_(s64) = G_CONSTANT i64 22
-  ; CHECK:   [[C78:%[0-9]+]]:_(s64) = G_CONSTANT i64 23
-  ; CHECK:   [[C79:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; CHECK:   [[C80:%[0-9]+]]:_(s64) = G_CONSTANT i64 25
-  ; CHECK:   [[C81:%[0-9]+]]:_(s64) = G_CONSTANT i64 26
-  ; CHECK:   [[C82:%[0-9]+]]:_(s64) = G_CONSTANT i64 27
-  ; CHECK:   [[C83:%[0-9]+]]:_(s64) = G_CONSTANT i64 28
-  ; CHECK:   [[C84:%[0-9]+]]:_(s64) = G_CONSTANT i64 29
-  ; CHECK:   [[C85:%[0-9]+]]:_(s64) = G_CONSTANT i64 30
-  ; CHECK:   [[C86:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
-  ; CHECK:   [[C87:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; CHECK:   [[C88:%[0-9]+]]:_(s64) = G_CONSTANT i64 33
-  ; CHECK:   [[C89:%[0-9]+]]:_(s64) = G_CONSTANT i64 34
-  ; CHECK:   [[C90:%[0-9]+]]:_(s64) = G_CONSTANT i64 35
-  ; CHECK:   [[C91:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
-  ; CHECK:   [[C92:%[0-9]+]]:_(s64) = G_CONSTANT i64 37
-  ; CHECK:   [[C93:%[0-9]+]]:_(s64) = G_CONSTANT i64 38
-  ; CHECK:   [[C94:%[0-9]+]]:_(s64) = G_CONSTANT i64 39
-  ; CHECK:   [[C95:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
-  ; CHECK:   [[C96:%[0-9]+]]:_(s64) = G_CONSTANT i64 41
-  ; CHECK:   [[C97:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
-  ; CHECK:   [[C98:%[0-9]+]]:_(s64) = G_CONSTANT i64 43
-  ; CHECK:   [[C99:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
-  ; CHECK:   [[C100:%[0-9]+]]:_(s64) = G_CONSTANT i64 45
-  ; CHECK:   [[C101:%[0-9]+]]:_(s64) = G_CONSTANT i64 46
-  ; CHECK:   [[C102:%[0-9]+]]:_(s64) = G_CONSTANT i64 47
-  ; CHECK:   [[C103:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-  ; CHECK:   [[C104:%[0-9]+]]:_(s64) = G_CONSTANT i64 49
-  ; CHECK:   [[C105:%[0-9]+]]:_(s64) = G_CONSTANT i64 50
-  ; CHECK:   [[C106:%[0-9]+]]:_(s64) = G_CONSTANT i64 51
-  ; CHECK:   [[C107:%[0-9]+]]:_(s64) = G_CONSTANT i64 52
-  ; CHECK:   [[C108:%[0-9]+]]:_(s64) = G_CONSTANT i64 53
-  ; CHECK:   [[C109:%[0-9]+]]:_(s64) = G_CONSTANT i64 54
+  ; CHECK:   [[C55:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+  ; CHECK:   [[C56:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[C57:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; CHECK:   [[C58:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; CHECK:   [[C59:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+  ; CHECK:   [[C60:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; CHECK:   [[C61:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+  ; CHECK:   [[C62:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
+  ; CHECK:   [[C63:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+  ; CHECK:   [[C64:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; CHECK:   [[C65:%[0-9]+]]:_(s64) = G_CONSTANT i64 9
+  ; CHECK:   [[C66:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
+  ; CHECK:   [[C67:%[0-9]+]]:_(s64) = G_CONSTANT i64 11
+  ; CHECK:   [[C68:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
+  ; CHECK:   [[C69:%[0-9]+]]:_(s64) = G_CONSTANT i64 13
+  ; CHECK:   [[C70:%[0-9]+]]:_(s64) = G_CONSTANT i64 14
+  ; CHECK:   [[C71:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
+  ; CHECK:   [[C72:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; CHECK:   [[C73:%[0-9]+]]:_(s64) = G_CONSTANT i64 17
+  ; CHECK:   [[C74:%[0-9]+]]:_(s64) = G_CONSTANT i64 18
+  ; CHECK:   [[C75:%[0-9]+]]:_(s64) = G_CONSTANT i64 19
+  ; CHECK:   [[C76:%[0-9]+]]:_(s64) = G_CONSTANT i64 20
+  ; CHECK:   [[C77:%[0-9]+]]:_(s64) = G_CONSTANT i64 21
+  ; CHECK:   [[C78:%[0-9]+]]:_(s64) = G_CONSTANT i64 22
+  ; CHECK:   [[C79:%[0-9]+]]:_(s64) = G_CONSTANT i64 23
+  ; CHECK:   [[C80:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; CHECK:   [[C81:%[0-9]+]]:_(s64) = G_CONSTANT i64 25
+  ; CHECK:   [[C82:%[0-9]+]]:_(s64) = G_CONSTANT i64 26
+  ; CHECK:   [[C83:%[0-9]+]]:_(s64) = G_CONSTANT i64 27
+  ; CHECK:   [[C84:%[0-9]+]]:_(s64) = G_CONSTANT i64 28
+  ; CHECK:   [[C85:%[0-9]+]]:_(s64) = G_CONSTANT i64 29
+  ; CHECK:   [[C86:%[0-9]+]]:_(s64) = G_CONSTANT i64 30
+  ; CHECK:   [[C87:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
+  ; CHECK:   [[C88:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+  ; CHECK:   [[C89:%[0-9]+]]:_(s64) = G_CONSTANT i64 33
+  ; CHECK:   [[C90:%[0-9]+]]:_(s64) = G_CONSTANT i64 34
+  ; CHECK:   [[C91:%[0-9]+]]:_(s64) = G_CONSTANT i64 35
+  ; CHECK:   [[C92:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; CHECK:   [[C93:%[0-9]+]]:_(s64) = G_CONSTANT i64 37
+  ; CHECK:   [[C94:%[0-9]+]]:_(s64) = G_CONSTANT i64 38
+  ; CHECK:   [[C95:%[0-9]+]]:_(s64) = G_CONSTANT i64 39
+  ; CHECK:   [[C96:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+  ; CHECK:   [[C97:%[0-9]+]]:_(s64) = G_CONSTANT i64 41
+  ; CHECK:   [[C98:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
+  ; CHECK:   [[C99:%[0-9]+]]:_(s64) = G_CONSTANT i64 43
+  ; CHECK:   [[C100:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+  ; CHECK:   [[C101:%[0-9]+]]:_(s64) = G_CONSTANT i64 45
+  ; CHECK:   [[C102:%[0-9]+]]:_(s64) = G_CONSTANT i64 46
+  ; CHECK:   [[C103:%[0-9]+]]:_(s64) = G_CONSTANT i64 47
+  ; CHECK:   [[C104:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+  ; CHECK:   [[C105:%[0-9]+]]:_(s64) = G_CONSTANT i64 49
+  ; CHECK:   [[C106:%[0-9]+]]:_(s64) = G_CONSTANT i64 50
+  ; CHECK:   [[C107:%[0-9]+]]:_(s64) = G_CONSTANT i64 51
+  ; CHECK:   [[C108:%[0-9]+]]:_(s64) = G_CONSTANT i64 52
+  ; CHECK:   [[C109:%[0-9]+]]:_(s64) = G_CONSTANT i64 53
+  ; CHECK:   [[C110:%[0-9]+]]:_(s64) = G_CONSTANT i64 54
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.tmp
   ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
   ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.56
@@ -778,12 +778,12 @@ define void @jt_multiple_jump_tables(%1* %arg, i32 %arg1, i32* %arg2) {
   ; CHECK:   successors: %bb.56(0x80000000)
   ; CHECK: bb.56.bb57:
   ; CHECK:   successors: %bb.59(0x80000000)
-  ; CHECK:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[C55]](s64), %bb.1, [[C56]](s64), %bb.2, [[C57]](s64), %bb.3, [[C58]](s64), %bb.4, [[C59]](s64), %bb.5, [[C60]](s64), %bb.6, [[C61]](s64), %bb.7, [[C62]](s64), %bb.8, [[C63]](s64), %bb.9, [[C64]](s64), %bb.10, [[C65]](s64), %bb.11, [[C66]](s64), %bb.12, [[C67]](s64), %bb.13, [[C68]](s64), %bb.14, [[C69]](s64), %bb.15, [[C70]](s64), %bb.16, [[C71]](s64), %bb.17, [[C72]](s64), %bb.18, [[C73]](s64), %bb.19, [[C74]](s64), %bb.20, [[C75]](s64), %bb.21, [[C76]](s64), %bb.22, [[C77]](s64), %bb.23, [[C78]](s64), %bb.24, [[C79]](s64), %bb.25, [[C80]](s64), %bb.26, [[C81]](s64), %bb.27, [[C82]](s64), %bb.28, [[C83]](s64), %bb.29, [[C84]](s64), %bb.30, [[C85]](s64), %bb.31, [[C86]](s64), %bb.32, [[C87]](s64), %bb.33, [[C88]](s64), %bb.34, [[C89]](s64), %bb.35, [[C90]](s64), %bb.36, [[C91]](s64), %bb.37, [[C92]](s64), %bb.38, [[C93]](s64), %bb.39, [[C94]](s64), %bb.40, [[C95]](s64), %bb.41, [[C96]](s64), %bb.42, [[C97]](s64), %bb.43, [[C98]](s64), %bb.44, [[C99]](s64), %bb.45, [[C100]](s64), %bb.46, [[C101]](s64), %bb.47, [[C102]](s64), %bb.48, [[C103]](s64), %bb.49, [[C104]](s64), %bb.50, [[C105]](s64), %bb.51, [[C106]](s64), %bb.52, [[C107]](s64), %bb.53, [[C108]](s64), %bb.54, [[C109]](s64), %bb.55
-  ; CHECK:   [[C110:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[PHI]], [[C110]]
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[C56]](s64), %bb.1, [[C57]](s64), %bb.2, [[C58]](s64), %bb.3, [[C59]](s64), %bb.4, [[C60]](s64), %bb.5, [[C61]](s64), %bb.6, [[C62]](s64), %bb.7, [[C63]](s64), %bb.8, [[C64]](s64), %bb.9, [[C65]](s64), %bb.10, [[C66]](s64), %bb.11, [[C67]](s64), %bb.12, [[C68]](s64), %bb.13, [[C69]](s64), %bb.14, [[C70]](s64), %bb.15, [[C71]](s64), %bb.16, [[C72]](s64), %bb.17, [[C73]](s64), %bb.18, [[C74]](s64), %bb.19, [[C75]](s64), %bb.20, [[C76]](s64), %bb.21, [[C77]](s64), %bb.22, [[C78]](s64), %bb.23, [[C79]](s64), %bb.24, [[C80]](s64), %bb.25, [[C81]](s64), %bb.26, [[C82]](s64), %bb.27, [[C83]](s64), %bb.28, [[C84]](s64), %bb.29, [[C85]](s64), %bb.30, [[C86]](s64), %bb.31, [[C87]](s64), %bb.32, [[C88]](s64), %bb.33, [[C89]](s64), %bb.34, [[C90]](s64), %bb.35, [[C91]](s64), %bb.36, [[C92]](s64), %bb.37, [[C93]](s64), %bb.38, [[C94]](s64), %bb.39, [[C95]](s64), %bb.40, [[C96]](s64), %bb.41, [[C97]](s64), %bb.42, [[C98]](s64), %bb.43, [[C99]](s64), %bb.44, [[C100]](s64), %bb.45, [[C101]](s64), %bb.46, [[C102]](s64), %bb.47, [[C103]](s64), %bb.48, [[C104]](s64), %bb.49, [[C105]](s64), %bb.50, [[C106]](s64), %bb.51, [[C107]](s64), %bb.52, [[C108]](s64), %bb.53, [[C109]](s64), %bb.54, [[C110]](s64), %bb.55
+  ; CHECK:   [[C111:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[PHI]], [[C111]]
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[MUL]](s64)
-  ; CHECK:   [[C111:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C111]](s64)
+  ; CHECK:   [[C112:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C112]](s64)
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD1]](p0) :: (load 8 from %ir.tmp59)
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   $x0 = COPY [[COPY]](p0)
@@ -819,7 +819,7 @@ define void @jt_multiple_jump_tables(%1* %arg, i32 %arg1, i32* %arg2) {
   ; CHECK:   RET_ReallyLR
   ; CHECK: bb.60.bb69:
   ; CHECK:   successors: %bb.58(0x40000000), %bb.57(0x40000000)
-  ; CHECK:   [[ICMP55:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](p0), [[INTTOPTR]]
+  ; CHECK:   [[ICMP55:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](p0), [[C55]]
   ; CHECK:   G_BRCOND [[ICMP55]](s1), %bb.58
   ; CHECK:   G_BR %bb.57
 bb:

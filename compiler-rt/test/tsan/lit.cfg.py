@@ -28,6 +28,7 @@ if config.host_os == 'Darwin':
   # suppresses some races the tests are supposed to find. Let's run without this
   # setting, but turn it back on for Darwin tests (see Darwin/lit.local.cfg.py).
   default_tsan_opts += ':ignore_noninstrumented_modules=0'
+  default_tsan_opts += ':ignore_interceptors_accesses=0'
 
 # Platform-specific default TSAN_OPTIONS for lit tests.
 if default_tsan_opts:
@@ -75,7 +76,7 @@ config.substitutions.append( ("%clangxx_tsan ", build_invocation(clang_tsan_cxxf
 # Define CHECK-%os to check for OS-dependent output.
 config.substitutions.append( ('CHECK-%os', ("CHECK-" + config.host_os)))
 
-config.substitutions.append( ("%deflake ", os.path.join(os.path.dirname(__file__), "deflake.bash") + " " + config.deflake_threshold))
+config.substitutions.append( ("%deflake ", os.path.join(os.path.dirname(__file__), "deflake.bash") + " " + config.deflake_threshold + " "))
 
 # Default test suffixes.
 config.suffixes = ['.c', '.cpp', '.m', '.mm']

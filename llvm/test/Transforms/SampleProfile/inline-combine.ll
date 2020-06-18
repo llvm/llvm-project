@@ -16,7 +16,7 @@ $foo = comdat any
 
 $bar = comdat any
 
-define void @foo(%"class.llvm::FoldingSetNodeID"* %this) comdat align 2 !dbg !3 {
+define void @foo(%"class.llvm::FoldingSetNodeID"* %this) #0 align 2 !dbg !3 {
   %1 = alloca %"class.llvm::FoldingSetNodeID"*, align 8
   store %"class.llvm::FoldingSetNodeID"* %this, %"class.llvm::FoldingSetNodeID"** %1, align 8
   %2 = load %"class.llvm::FoldingSetNodeID"*, %"class.llvm::FoldingSetNodeID"** %1, align 8
@@ -27,9 +27,11 @@ define void @foo(%"class.llvm::FoldingSetNodeID"* %this) comdat align 2 !dbg !3 
   ret void
 }
 
-define void @bar(%"class.llvm::SmallVectorImpl"* %this) comdat align 2 !dbg !8 {
+define void @bar(%"class.llvm::SmallVectorImpl"* %this) #0 align 2 !dbg !8 {
   ret void
 }
+
+attributes #0 = { "comdat" "use-sample-profile" }
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}

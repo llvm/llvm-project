@@ -42,8 +42,10 @@ lldb_framework_path = None
 count = 1
 
 # The 'arch' and 'compiler' can be specified via command line.
-arch = None        # Must be initialized after option parsing
-compiler = None    # Must be initialized after option parsing
+arch = None
+compiler = None
+dsymutil = None
+sdkroot = None
 
 # The overriden dwarf verison.
 dwarf_version = 0
@@ -87,7 +89,6 @@ session_file_format = 'fnmac'
 
 # Set this flag if there is any session info dumped during the test run.
 sdir_has_content = False
-
 # svn_info stores the output from 'svn info lldb.base.dir'.
 svn_info = ''
 
@@ -124,6 +125,10 @@ results_formatter_object = None
 results_formatter_options = None
 test_result = None
 
+# Reproducers
+capture_path = None
+replay_path = None
+
 # Test rerun configuration vars
 rerun_all_issues = False
 
@@ -133,6 +138,9 @@ all_tests = set()
 
 # LLDB library directory.
 lldb_libs_dir = None
+
+# A plugin whose tests will be enabled, like intel-pt.
+enabled_plugins = []
 
 
 def shouldSkipBecauseOfCategories(test_categories):
@@ -154,3 +162,18 @@ def get_filecheck_path():
     """
     if filecheck and os.path.lexists(filecheck):
         return filecheck
+
+def is_reproducer_replay():
+    """
+    Returns true when dotest is being replayed from a reproducer. Never use
+    this method to guard SB API calls as it will cause a divergence between
+    capture and replay.
+    """
+    return replay_path is not None
+
+def is_reproducer():
+    """
+    Returns true when dotest is capturing a reproducer or is being replayed
+    from a reproducer. Use this method to guard SB API calls.
+    """
+    return capture_path or replay_path

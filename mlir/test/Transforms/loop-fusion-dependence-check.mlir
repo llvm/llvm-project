@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-loop-fusion -test-loop-fusion-dependence-check -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -test-loop-fusion -test-loop-fusion-dependence-check -split-input-file -verify-diagnostics | FileCheck %s
 
 // -----
 

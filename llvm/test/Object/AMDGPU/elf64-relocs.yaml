@@ -37,8 +37,7 @@ Sections:
     Info:            .text
     AddressAlign:    0x08
     Relocations:
-      - Offset:          0x0
-        Type:            R_AMDGPU_NONE
+      - Type:            R_AMDGPU_NONE
       - Offset:          0x2
         Type:            R_AMDGPU_ABS32_LO
       - Offset:          0x4

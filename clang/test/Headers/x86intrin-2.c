@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wcast-qual %s -verify
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding -flax-vector-conversions=none -Wcast-qual %s -verify
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wcast-qual -x c++ %s -verify
+// RUN: %clang_cc1 -triple i386-unknown-unknown -fsyntax-only -ffreestanding -Wcast-qual %s -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -ffreestanding -Wcast-qual %s -verify
+// RUN: %clang_cc1 -triple i386-unknown-unknown -fsyntax-only -ffreestanding -flax-vector-conversions=none -Wcast-qual %s -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -ffreestanding -flax-vector-conversions=none -Wcast-qual %s -verify
+// RUN: %clang_cc1 -triple i386-unknown-unknown -fsyntax-only -ffreestanding -Wcast-qual -x c++ %s -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -ffreestanding -Wcast-qual -x c++ %s -verify
 // expected-no-diagnostics
-
-#if defined(i386) || defined(__x86_64__)
 
 // Include the metaheader that includes all x86 intrinsic headers.
 #include <x86intrin.h>
@@ -133,5 +134,3 @@ __m128 __attribute__((__target__("f16c"))) mm_cvtph_ps_wrap(__m128i a) {
 int __attribute__((__target__("rtm"))) xtest_wrap(void) {
   return _xtest();
 }
-
-#endif

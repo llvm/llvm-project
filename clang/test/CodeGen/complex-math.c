@@ -1,13 +1,11 @@
-// FIXME: This file should not be using -O1; that makes it depend on the entire LLVM IR optimizer.
-
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple x86_64-pc-win64 -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple i686-unknown-unknown -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple powerpc-unknown-unknown -o - | FileCheck %s --check-prefix=PPC
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple armv7-none-linux-gnueabi -o - | FileCheck %s --check-prefix=ARM
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple armv7-none-linux-gnueabihf -o - | FileCheck %s --check-prefix=ARMHF
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple thumbv7k-apple-watchos2.0 -o - -target-abi aapcs16 | FileCheck %s --check-prefix=ARM7K
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple aarch64-unknown-unknown -ffast-math -o - | FileCheck %s --check-prefix=AARCH64-FASTMATH
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple x86_64-pc-win64 -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple i686-unknown-unknown -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple powerpc-unknown-unknown -o - | FileCheck %s --check-prefix=PPC
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple armv7-none-linux-gnueabi -o - | FileCheck %s --check-prefix=ARM
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple armv7-none-linux-gnueabihf -o - | FileCheck %s --check-prefix=ARMHF
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple thumbv7k-apple-watchos2.0 -o - -target-abi aapcs16 | FileCheck %s --check-prefix=ARM7K
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple aarch64-unknown-unknown -ffast-math -ffp-contract=fast -o - | FileCheck %s --check-prefix=AARCH64-FASTMATH
 
 float _Complex add_float_rr(float a, float b) {
   // X86-LABEL: @add_float_rr(
@@ -93,14 +91,15 @@ float _Complex mul_float_rc(float a, float _Complex b) {
   // X86: ret
   return a * b;
 }
+
 float _Complex mul_float_cc(float _Complex a, float _Complex b) {
   // X86-LABEL: @mul_float_cc(
   // X86: %[[AC:[^ ]+]] = fmul
   // X86: %[[BD:[^ ]+]] = fmul
   // X86: %[[AD:[^ ]+]] = fmul
   // X86: %[[BC:[^ ]+]] = fmul
-  // X86: %[[RR:[^ ]+]] = fsub float %[[AC]], %[[BD]]
-  // X86: %[[RI:[^ ]+]] = fadd float
+  // X86: %[[RR:[^ ]+]] = fsub
+  // X86: %[[RI:[^ ]+]] = fadd
   // X86-DAG: %[[AD]]
   // X86-DAG: ,
   // X86-DAG: %[[BC]]
@@ -136,23 +135,20 @@ float _Complex div_float_rc(float a, float _Complex b) {
   // AARCH64-FASTMATH-LABEL: @div_float_rc(float %a, [2 x float] %b.coerce)
   // A = a
   // B = 0
-  // AARCH64-FASTMATH: [[C:%.*]] = extractvalue [2 x float] %b.coerce, 0
-  // AARCH64-FASTMATH: [[D:%.*]] = extractvalue [2 x float] %b.coerce, 1
   //
-  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast float [[C]], %a
+  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast float
   // BD = 0
   // ACpBD = AC
   //
-  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast float [[C]], [[C]]
-  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast float [[D]], [[D]]
-  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast float [[CC]], [[DD]]
+  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast float
+  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast float
+  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast float
   //
   // BC = 0
-  // AARCH64-FASTMATH: [[NEGA:%.*]] = fsub fast float -0.000000e+00, %a
-  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast float  [[D]], [[NEGA]]
+  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast float
   //
-  // AARCH64-FASTMATH: fdiv fast float [[AC]], [[CCpDD]]
-  // AARCH64-FASTMATH: fdiv fast float [[AD]], [[CCpDD]]
+  // AARCH64-FASTMATH: fdiv fast float
+  // AARCH64-FASTMATH: fdiv fast float
   // AARCH64-FASTMATH: ret
   return a / b;
 }
@@ -164,25 +160,21 @@ float _Complex div_float_cc(float _Complex a, float _Complex b) {
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
   // AARCH64-FASTMATH-LABEL: @div_float_cc([2 x float] %a.coerce, [2 x float] %b.coerce)
-  // AARCH64-FASTMATH: [[A:%.*]] = extractvalue [2 x float] %a.coerce, 0
-  // AARCH64-FASTMATH: [[B:%.*]] = extractvalue [2 x float] %a.coerce, 1
-  // AARCH64-FASTMATH: [[C:%.*]] = extractvalue [2 x float] %b.coerce, 0
-  // AARCH64-FASTMATH: [[D:%.*]] = extractvalue [2 x float] %b.coerce, 1
   //
-  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast float [[C]], [[A]]
-  // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast float [[D]], [[B]]
-  // AARCH64-FASTMATH: [[ACpBD:%.*]] = fadd fast float [[AC]], [[BD]]
+  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast float
+  // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast float
+  // AARCH64-FASTMATH: [[ACpBD:%.*]] = fadd fast float
   //
-  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast float [[C]], [[C]]
-  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast float [[D]], [[D]]
-  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast float [[CC]], [[DD]]
+  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast float
+  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast float
+  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast float
   //
-  // AARCH64-FASTMATH: [[BC:%.*]] = fmul fast float [[C]], [[B]]
-  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast float [[D]], [[A]]
-  // AARCH64-FASTMATH: [[BCmAD:%.*]] = fsub fast float [[BC]], [[AD]]
+  // AARCH64-FASTMATH: [[BC:%.*]] = fmul fast float
+  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast float
+  // AARCH64-FASTMATH: [[BCmAD:%.*]] = fsub fast float
   //
-  // AARCH64-FASTMATH: fdiv fast float [[ACpBD]], [[CCpDD]]
-  // AARCH64-FASTMATH: fdiv fast float [[BCmAD]], [[CCpDD]]
+  // AARCH64-FASTMATH: fdiv fast float
+  // AARCH64-FASTMATH: fdiv fast float
   // AARCH64-FASTMATH: ret
   return a / b;
 }
@@ -314,23 +306,20 @@ double _Complex div_double_rc(double a, double _Complex b) {
   // AARCH64-FASTMATH-LABEL: @div_double_rc(double %a, [2 x double] %b.coerce)
   // A = a
   // B = 0
-  // AARCH64-FASTMATH: [[C:%.*]] = extractvalue [2 x double] %b.coerce, 0
-  // AARCH64-FASTMATH: [[D:%.*]] = extractvalue [2 x double] %b.coerce, 1
   //
-  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast double [[C]], %a
+  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast double
   // BD = 0
   // ACpBD = AC
   //
-  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast double [[C]], [[C]]
-  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast double [[D]], [[D]]
-  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast double [[CC]], [[DD]]
+  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast double
+  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast double
+  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast double
   //
   // BC = 0
-  // AARCH64-FASTMATH: [[NEGA:%.*]] = fsub fast double -0.000000e+00, %a
-  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast double [[D]], [[NEGA]]
+  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast double
   //
-  // AARCH64-FASTMATH: fdiv fast double [[AC]], [[CCpDD]]
-  // AARCH64-FASTMATH: fdiv fast double [[AD]], [[CCpDD]]
+  // AARCH64-FASTMATH: fdiv fast double
+  // AARCH64-FASTMATH: fdiv fast double
   // AARCH64-FASTMATH: ret
   return a / b;
 }
@@ -342,25 +331,21 @@ double _Complex div_double_cc(double _Complex a, double _Complex b) {
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
   // AARCH64-FASTMATH-LABEL: @div_double_cc([2 x double] %a.coerce, [2 x double] %b.coerce)
-  // AARCH64-FASTMATH: [[A:%.*]] = extractvalue [2 x double] %a.coerce, 0
-  // AARCH64-FASTMATH: [[B:%.*]] = extractvalue [2 x double] %a.coerce, 1
-  // AARCH64-FASTMATH: [[C:%.*]] = extractvalue [2 x double] %b.coerce, 0
-  // AARCH64-FASTMATH: [[D:%.*]] = extractvalue [2 x double] %b.coerce, 1
   //
-  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast double [[C]], [[A]]
-  // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast double [[D]], [[B]]
-  // AARCH64-FASTMATH: [[ACpBD:%.*]] = fadd fast double [[AC]], [[BD]]
+  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast double
+  // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast double
+  // AARCH64-FASTMATH: [[ACpBD:%.*]] = fadd fast double
   //
-  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast double [[C]], [[C]]
-  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast double [[D]], [[D]]
-  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast double [[CC]], [[DD]]
+  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast double
+  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast double
+  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast double
   //
-  // AARCH64-FASTMATH: [[BC:%.*]] = fmul fast double [[C]], [[B]]
-  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast double [[D]], [[A]]
-  // AARCH64-FASTMATH: [[BCmAD:%.*]] = fsub fast double [[BC]], [[AD]]
+  // AARCH64-FASTMATH: [[BC:%.*]] = fmul fast double
+  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast double
+  // AARCH64-FASTMATH: [[BCmAD:%.*]] = fsub fast double
   //
-  // AARCH64-FASTMATH: fdiv fast double [[ACpBD]], [[CCpDD]]
-  // AARCH64-FASTMATH: fdiv fast double [[BCmAD]], [[CCpDD]]
+  // AARCH64-FASTMATH: fdiv fast double
+  // AARCH64-FASTMATH: fdiv fast double
   // AARCH64-FASTMATH: ret
   return a / b;
 }
@@ -510,23 +495,20 @@ long double _Complex div_long_double_rc(long double a, long double _Complex b) {
   // AARCH64-FASTMATH-LABEL: @div_long_double_rc(fp128 %a, [2 x fp128] %b.coerce)
   // A = a
   // B = 0
-  // AARCH64-FASTMATH: [[C:%.*]] = extractvalue [2 x fp128] %b.coerce, 0
-  // AARCH64-FASTMATH: [[D:%.*]] = extractvalue [2 x fp128] %b.coerce, 1
   //
-  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast fp128 [[C]], %a
+  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast fp128
   // BD = 0
   // ACpBD = AC
   //
-  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast fp128 [[C]], [[C]]
-  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast fp128 [[D]], [[D]]
-  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast fp128 [[CC]], [[DD]]
+  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast fp128
+  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast fp128
+  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast fp128
   //
   // BC = 0
-  // AARCH64-FASTMATH: [[NEGA:%.*]] = fsub fast fp128 0xL00000000000000008000000000000000, %a
-  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast fp128 [[D]], [[NEGA]]
+  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast fp128
   //
-  // AARCH64-FASTMATH: fdiv fast fp128 [[AC]], [[CCpDD]]
-  // AARCH64-FASTMATH: fdiv fast fp128 [[AD]], [[CCpDD]]
+  // AARCH64-FASTMATH: fdiv fast fp128
+  // AARCH64-FASTMATH: fdiv fast fp128
   // AARCH64-FASTMATH: ret
   return a / b;
 }
@@ -542,25 +524,21 @@ long double _Complex div_long_double_cc(long double _Complex a, long double _Com
 
   // a / b = (A+iB) / (C+iD) = ((AC+BD)/(CC+DD)) + i((BC-AD)/(CC+DD))
   // AARCH64-FASTMATH-LABEL: @div_long_double_cc([2 x fp128] %a.coerce, [2 x fp128] %b.coerce)
-  // AARCH64-FASTMATH: [[A:%.*]] = extractvalue [2 x fp128] %a.coerce, 0
-  // AARCH64-FASTMATH: [[B:%.*]] = extractvalue [2 x fp128] %a.coerce, 1
-  // AARCH64-FASTMATH: [[C:%.*]] = extractvalue [2 x fp128] %b.coerce, 0
-  // AARCH64-FASTMATH: [[D:%.*]] = extractvalue [2 x fp128] %b.coerce, 1
   //
-  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast fp128 [[C]], [[A]]
-  // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast fp128 [[D]], [[B]]
-  // AARCH64-FASTMATH: [[ACpBD:%.*]] = fadd fast fp128 [[AC]], [[BD]]
+  // AARCH64-FASTMATH: [[AC:%.*]] = fmul fast fp128
+  // AARCH64-FASTMATH: [[BD:%.*]] = fmul fast fp128
+  // AARCH64-FASTMATH: [[ACpBD:%.*]] = fadd fast fp128
   //
-  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast fp128 [[C]], [[C]]
-  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast fp128 [[D]], [[D]]
-  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast fp128 [[CC]], [[DD]]
+  // AARCH64-FASTMATH: [[CC:%.*]] = fmul fast fp128
+  // AARCH64-FASTMATH: [[DD:%.*]] = fmul fast fp128
+  // AARCH64-FASTMATH: [[CCpDD:%.*]] = fadd fast fp128
   //
-  // AARCH64-FASTMATH: [[BC:%.*]] = fmul fast fp128 [[C]], [[B]]
-  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast fp128 [[D]], [[A]]
-  // AARCH64-FASTMATH: [[BCmAD:%.*]] = fsub fast fp128 [[BC]], [[AD]]
+  // AARCH64-FASTMATH: [[BC:%.*]] = fmul fast fp128
+  // AARCH64-FASTMATH: [[AD:%.*]] = fmul fast fp128
+  // AARCH64-FASTMATH: [[BCmAD:%.*]] = fsub fast fp128
   //
-  // AARCH64-FASTMATH: fdiv fast fp128 [[ACpBD]], [[CCpDD]]
-  // AARCH64-FASTMATH: fdiv fast fp128 [[BCmAD]], [[CCpDD]]
+  // AARCH64-FASTMATH: fdiv fast fp128
+  // AARCH64-FASTMATH: fdiv fast fp128
   // AARCH64-FASTMATH: ret
   return a / b;
 }

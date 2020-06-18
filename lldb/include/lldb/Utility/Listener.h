@@ -145,7 +145,8 @@ private:
   //                             bool exact);
 
   // For Listener only
-  DISALLOW_COPY_AND_ASSIGN(Listener);
+  Listener(const Listener &) = delete;
+  const Listener &operator=(const Listener &) = delete;
 };
 
 } // namespace lldb_private

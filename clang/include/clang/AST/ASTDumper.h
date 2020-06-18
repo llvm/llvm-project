@@ -11,6 +11,7 @@
 
 #include "clang/AST/ASTNodeTraverser.h"
 #include "clang/AST/TextNodeDumper.h"
+#include "clang/Basic/SourceManager.h"
 
 namespace clang {
 

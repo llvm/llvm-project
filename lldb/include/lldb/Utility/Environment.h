@@ -50,6 +50,7 @@ public:
   using Base::erase;
   using Base::find;
   using Base::insert;
+  using Base::insert_or_assign;
   using Base::lookup;
   using Base::size;
   using Base::try_emplace;

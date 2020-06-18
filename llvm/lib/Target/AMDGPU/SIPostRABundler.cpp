@@ -76,7 +76,7 @@ bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
     if (!Op.isReg())
       continue;
     Register Reg = Op.getReg();
-    for (const Register Def : Defs)
+    for (Register Def : Defs)
       if (TRI->regsOverlap(Reg, Def))
         return true;
   }
@@ -90,7 +90,7 @@ bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
 
   TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   bool Changed = false;
-  const unsigned MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
+  const uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
                             SIInstrFlags::SMRD | SIInstrFlags::DS |
                             SIInstrFlags::FLAT | SIInstrFlags::MIMG;
 
@@ -101,10 +101,11 @@ bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
     for (auto I = B; I != E; I = Next) {
       Next = std::next(I);
 
-      if (I->isBundled() || !I->mayLoadOrStore() ||
+      const uint64_t IMemFlags = I->getDesc().TSFlags & MemFlags;
+
+      if (IMemFlags == 0 || I->isBundled() || !I->mayLoadOrStore() ||
           B->mayLoad() != I->mayLoad() || B->mayStore() != I->mayStore() ||
-          (B->getDesc().TSFlags & MemFlags) !=
-          (I->getDesc().TSFlags & MemFlags) ||
+          ((B->getDesc().TSFlags & MemFlags) != IMemFlags) ||
           isDependentLoad(*I)) {
 
         if (B != I) {

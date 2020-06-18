@@ -370,7 +370,7 @@ void XCoreInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo::getFixedStack(*MF, FrameIndex),
       MachineMemOperand::MOStore, MFI.getObjectSize(FrameIndex),
-      MFI.getObjectAlignment(FrameIndex));
+      MFI.getObjectAlign(FrameIndex));
   BuildMI(MBB, I, DL, get(XCore::STWFI))
     .addReg(SrcReg, getKillRegState(isKill))
     .addFrameIndex(FrameIndex)
@@ -392,7 +392,7 @@ void XCoreInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo::getFixedStack(*MF, FrameIndex),
       MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
-      MFI.getObjectAlignment(FrameIndex));
+      MFI.getObjectAlign(FrameIndex));
   BuildMI(MBB, I, DL, get(XCore::LDWFI), DestReg)
     .addFrameIndex(FrameIndex)
     .addImm(0)
@@ -443,7 +443,7 @@ MachineBasicBlock::iterator XCoreInstrInfo::loadImmediate(
   MachineConstantPool *ConstantPool = MBB.getParent()->getConstantPool();
   const Constant *C = ConstantInt::get(
         Type::getInt32Ty(MBB.getParent()->getFunction().getContext()), Value);
-  unsigned Idx = ConstantPool->getConstantPoolIndex(C, 4);
+  unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align(4));
   return BuildMI(MBB, MI, dl, get(XCore::LDWCP_lru6), Reg)
       .addConstantPoolIndex(Idx)
       .getInstr();

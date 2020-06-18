@@ -27,3 +27,19 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32(float addrspace(1)* %ptr
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
   ret void
 }
+
+; Make sure this artificially selects with an incorrect subtarget, but the feature set.
+; GCN-LABEL: {{^}}global_atomic_fadd_ret_f32_wrong_subtarget:
+define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(float addrspace(1)* %ptr) #0 {
+  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
+  store float %result, float addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}global_atomic_fadd_noret_f32_wrong_subtarget:
+define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(float addrspace(1)* %ptr) #0 {
+  %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
+  ret void
+}
+
+attributes #0 = { "target-cpu"="gfx803" "target-features"="+atomic-fadd-insts" }

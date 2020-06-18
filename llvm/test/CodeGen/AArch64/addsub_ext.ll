@@ -1,5 +1,5 @@
-; RUN: llc -enable-machine-outliner=never -verify-machineinstrs %s -o - -mtriple=aarch64-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
-; RUN: llc -global-isel -enable-machine-outliner=never -verify-machineinstrs %s -o - -mtriple=aarch64-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s --check-prefix=GISEL
+; RUN: llc -debugify-and-strip-all-safe -enable-machine-outliner=never -verify-machineinstrs %s -o - -mtriple=aarch64-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc -debugify-and-strip-all-safe -global-isel -enable-machine-outliner=never -verify-machineinstrs %s -o - -mtriple=aarch64-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s --check-prefix=GISEL
 
 ; FIXME: GISel only knows how to handle explicit G_SEXT instructions. So when
 ; G_SEXT is lowered to anything else, it won't fold in a stx*.

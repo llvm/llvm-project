@@ -138,6 +138,10 @@ public:
     return CallsExternalNode.get();
   }
 
+  /// Old node has been deleted, and New is to be used in its place, update the
+  /// ExternalCallingNode.
+  void ReplaceExternalCallEdge(CallGraphNode *Old, CallGraphNode *New);
+
   //===---------------------------------------------------------------------
   // Functions to keep a call graph up to date with a function that has been
   // modified.

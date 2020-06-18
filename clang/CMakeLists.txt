@@ -130,16 +130,38 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 
   if(LLVM_INCLUDE_TESTS)
-    include(FindPythonInterp)
-    if(NOT PYTHONINTERP_FOUND)
-      message(FATAL_ERROR
-"Unable to find Python interpreter, required for builds and testing.
+    if(CMAKE_VERSION VERSION_LESS 3.12)
+      include(FindPythonInterp)
+      if(NOT PYTHONINTERP_FOUND)
+        message(FATAL_ERROR
+  "Unable to find Python interpreter, required for builds and testing.
 
-Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
-    endif()
+  Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
+      endif()
 
-    if( ${PYTHON_VERSION_STRING} VERSION_LESS 2.7 )
-      message(FATAL_ERROR "Python 2.7 or newer is required")
+      if( ${PYTHON_VERSION_STRING} VERSION_LESS 2.7 )
+        message(FATAL_ERROR "Python 2.7 or newer is required")
+      endif()
+
+      add_executable(Python3::Interpreter IMPORTED)
+      set_target_properties(Python3::Interpreter PROPERTIES
+        IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
+      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+    else()
+      find_package(Python3 COMPONENTS Interpreter)
+      if(NOT Python3_Interpreter_FOUND)
+        message(WARNING "Python3 not found, using python2 as a fallback")
+        find_package(Python2 COMPONENTS Interpreter REQUIRED)
+        if(Python2_VERSION VERSION_LESS 2.7)
+          message(SEND_ERROR "Python 2.7 or newer is required")
+        endif()
+
+        # Treat python2 as python3
+        add_executable(Python3::Interpreter IMPORTED)
+        set_target_properties(Python3::Interpreter PROPERTIES
+          IMPORTED_LOCATION ${Python2_EXECUTABLE})
+        set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
+      endif()
     endif()
 
     # Check prebuilt llvm/utils.
@@ -226,7 +248,7 @@ set(C_INCLUDE_DIRS "" CACHE STRING
   "Colon separated list of directories clang will search for headers.")
 
 set(GCC_INSTALL_PREFIX "" CACHE PATH "Directory where gcc is installed." )
-set(DEFAULT_SYSROOT "" CACHE PATH
+set(DEFAULT_SYSROOT "" CACHE STRING
   "Default <path> to all compiler invocations for --sysroot=<path>." )
 
 set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
@@ -305,6 +327,8 @@ if (NOT DEFINED MATCHED_ARCH OR "${CMAKE_MATCH_1}" LESS 35)
   set(CLANG_OPENMP_NVPTX_DEFAULT_ARCH "sm_35" CACHE STRING
     "Default architecture for OpenMP offloading to Nvidia GPUs." FORCE)
 endif()
+
+set(CLANG_SYSTEMZ_DEFAULT_ARCH "z10" CACHE STRING "SystemZ Default Arch")
 
 set(CLANG_VENDOR ${PACKAGE_VENDOR} CACHE STRING
   "Vendor-specific text for showing with version information.")
@@ -588,6 +612,7 @@ if(CLANG_LIBS)
     add_dependencies(clang-libraries ${lib})
     if(NOT LLVM_ENABLE_IDE)
       add_dependencies(install-clang-libraries install-${lib})
+      add_dependencies(install-clang-libraries-stripped install-${lib}-stripped)
     endif()
   endforeach()
 endif()
@@ -686,6 +711,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
     CLANG_VERSION_MAJOR
     CLANG_VERSION_MINOR
     CLANG_VERSION_PATCHLEVEL
+    CLANG_VENDOR
     LLVM_VERSION_SUFFIX
     LLVM_BINUTILS_INCDIR
     CLANG_REPOSITORY_STRING
@@ -864,7 +890,7 @@ add_subdirectory(utils/hmaptool)
 
 if(CLANG_BUILT_STANDALONE)
   llvm_distribution_add_targets()
-  process_llvm_pass_plugins(NO_GEN)
+  process_llvm_pass_plugins()
 endif()
 
 configure_file(

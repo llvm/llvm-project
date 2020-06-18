@@ -24,7 +24,18 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
+* New ``--time-trace`` option records a time trace file that can be viewed in
+  chrome://tracing. The file can be specified with ``--time-trace-file``.
+  Trace granularity can be specified with ``--time-trace-granularity``.
+  (`D71060 <https://reviews.llvm.org/D71060>`_)
 * ...
+
+Breaking changes
+----------------
+
+* One-dash form of some long option (``--thinlto-*``, ``--lto-*``, ``--shuffle-sections=``)
+  are no longer supported.
+* ``--export-dynamic-symbol`` no longer implies ``-u``.
 
 COFF Improvements
 -----------------

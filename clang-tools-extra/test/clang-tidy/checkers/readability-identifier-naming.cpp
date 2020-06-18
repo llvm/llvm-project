@@ -80,7 +80,7 @@
 // RUN:     {key: readability-identifier-naming.LocalPointerPrefix, value: 'l_'}, \
 // RUN:     {key: readability-identifier-naming.LocalConstantPointerCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.LocalConstantPointerPrefix, value: 'lc_'}, \
-// RUN:   ]}' -- -fno-delayed-template-parsing \
+// RUN:   ]}' -- -fno-delayed-template-parsing -Dbad_macro \
 // RUN:   -I%S/Inputs/readability-identifier-naming \
 // RUN:   -isystem %S/Inputs/readability-identifier-naming/system
 
@@ -527,3 +527,21 @@ void MyPoiterFunction(int * p_normal_pointer, int * const constant_ptr){
 // CHECK-FIXES: {{^}}    int * const lc_PointerB = nullptr;{{$}}
 }
 
+using namespace FOO_NS;
+// CHECK-FIXES: {{^}}using namespace foo_ns;
+
+using namespace FOO_NS::InlineNamespace;
+// CHECK-FIXES: {{^}}using namespace foo_ns::inline_namespace;
+
+void QualifiedTypeLocTest(THIS___Structure);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure);{{$}}
+void QualifiedTypeLocTest(THIS___Structure &);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure &);{{$}}
+void QualifiedTypeLocTest(THIS___Structure &&);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure &&);{{$}}
+void QualifiedTypeLocTest(const THIS___Structure);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const this_structure);{{$}}
+void QualifiedTypeLocTest(const THIS___Structure &);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const this_structure &);{{$}}
+void QualifiedTypeLocTest(volatile THIS___Structure &);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(volatile this_structure &);{{$}}

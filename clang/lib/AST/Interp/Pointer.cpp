@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Pointer.h"
-#include "Block.h"
 #include "Function.h"
+#include "InterpBlock.h"
 #include "PrimType.h"
 
 using namespace clang;

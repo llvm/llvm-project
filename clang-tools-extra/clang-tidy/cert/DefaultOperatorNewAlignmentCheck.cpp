@@ -9,6 +9,7 @@
 #include "DefaultOperatorNewAlignmentCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/TargetInfo.h"
 
 using namespace clang::ast_matchers;
 
@@ -17,10 +18,6 @@ namespace tidy {
 namespace cert {
 
 void DefaultOperatorNewAlignmentCheck::registerMatchers(MatchFinder *Finder) {
-  // Check not applicable in C++17 (or newer).
-  if (getLangOpts().CPlusPlus17)
-    return;
-
   Finder->addMatcher(
       cxxNewExpr(unless(hasAnyPlacementArg(anything()))).bind("new"), this);
 }

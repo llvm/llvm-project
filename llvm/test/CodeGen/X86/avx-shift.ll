@@ -167,18 +167,38 @@ define <32 x i8> @vshift12(<32 x i8> %a) {
 define <8 x i32> @vshift08(<8 x i32> %a)  {
 ; CHECK-LABEL: vshift08:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpslld $23, %xmm0, %xmm1
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vpslld $23, %xmm1, %xmm1
 ; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vcvttps2dq %xmm1, %xmm1
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpslld $23, %xmm0, %xmm0
 ; CHECK-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %bitop = shl <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %a
   ret <8 x i32> %bitop
+}
+
+define <8 x i32> @vshift08_add(<8 x i32> %a, <8 x i32> %y)  {
+; CHECK-LABEL: vshift08_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpslld $23, %xmm0, %xmm2
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
+; CHECK-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
+; CHECK-NEXT:    vcvttps2dq %xmm2, %xmm2
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vpslld $23, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
+; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; CHECK-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
+; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %bitop = shl <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %a
+  %r = add <8 x i32> %bitop, %y
+  ret <8 x i32> %r
 }
 
 ; PR15141

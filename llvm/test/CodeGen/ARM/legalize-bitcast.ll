@@ -49,9 +49,9 @@ define i16 @int_to_vec(i80 %in) {
 ; CHECK-NEXT:    vmov.32 d16[0], r0
 ; CHECK-NEXT:    @ implicit-def: $q9
 ; CHECK-NEXT:    vmov.f64 d18, d16
-; CHECK-NEXT:    vrev32.16 q9, q9
-; CHECK-NEXT:    @ kill: def $d18 killed $d18 killed $q9
-; CHECK-NEXT:    vmov.u16 r0, d18[0]
+; CHECK-NEXT:    vrev32.16 q8, q9
+; CHECK-NEXT:    @ kill: def $d16 killed $d16 killed $q8
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
 ; CHECK-NEXT:    bx lr
   %vec = bitcast i80 %in to <5 x i16>
   %e0 = extractelement <5 x i16> %vec, i32 0

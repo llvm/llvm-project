@@ -207,6 +207,19 @@ void test_strcasecmp() {
 #else
   ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
 #endif
+
+  char s1[] = "AbZ";
+  char s2[] = "aBy";
+  dfsan_set_label(i_label, &s1[2], 1);
+  dfsan_set_label(j_label, &s2[2], 1);
+
+  rv = strcasecmp(s1, s2);
+  assert(rv > 0); // 'Z' > 'y'
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+#endif
 }
 
 void test_strncasecmp() {
@@ -225,6 +238,31 @@ void test_strncasecmp() {
   rv = strncasecmp(str1, str2, 3);
   assert(rv == 0);
   ASSERT_ZERO_LABEL(rv);
+
+  char s1[] = "AbZ";
+  char s2[] = "aBy";
+  dfsan_set_label(i_label, &s1[2], 1);
+  dfsan_set_label(j_label, &s2[2], 1);
+
+  rv = strncasecmp(s1, s2, 0);
+  assert(rv == 0); // Compare zero chars.
+  ASSERT_ZERO_LABEL(rv);
+
+  rv = strncasecmp(s1, s2, 1);
+  assert(rv == 0); // 'A' == 'a'
+  ASSERT_ZERO_LABEL(rv);
+
+  rv = strncasecmp(s1, s2, 2);
+  assert(rv == 0); // 'b' == 'B'
+  ASSERT_ZERO_LABEL(rv);
+
+  rv = strncasecmp(s1, s2, 3);
+  assert(rv > 0); // 'Z' > 'y'
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+#endif
 }
 
 void test_strchr() {
@@ -245,6 +283,17 @@ void test_strchr() {
 
   crv = strchr(str1, 'x');
   assert(!crv);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(crv);
+#else
+  ASSERT_LABEL(crv, i_label);
+#endif
+
+  // `man strchr` says:
+  // The terminating null byte is considered part of the string, so that if c
+  // is specified as '\0', these functions return a pointer to the terminator.
+  crv = strchr(str1, '\0');
+  assert(crv == &str1[4]);
 #ifdef STRICT_DATA_DEPENDENCIES
   ASSERT_ZERO_LABEL(crv);
 #else

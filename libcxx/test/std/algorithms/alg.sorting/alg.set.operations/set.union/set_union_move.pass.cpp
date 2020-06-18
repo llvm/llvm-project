@@ -18,7 +18,7 @@
 //   set_union(InIter1 first1, InIter1 last1, InIter2 first2, InIter2 last2,
 //             OutIter result, Compare comp);
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <algorithm>
 #include <cassert>

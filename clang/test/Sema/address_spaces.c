@@ -74,6 +74,10 @@ char* cmp(_AS1 char *x,  _AS2 char *y) {
   return x < y ? x : y; // expected-error{{conditional operator with the second and third operands of type  ('_AS1 char *' and '_AS2 char *') which are pointers to non-overlapping address spaces}}
 }
 
+char *sub(_AS1 char *x, _AS2 char *y) {
+  return x - y; // expected-error {{arithmetic operation with operands of type  ('_AS1 char *' and '_AS2 char *') which are pointers to non-overlapping address spaces}}
+}
+
 struct SomeStruct {
   int a;
   long b;

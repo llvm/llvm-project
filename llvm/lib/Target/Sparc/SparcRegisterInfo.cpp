@@ -173,7 +173,7 @@ SparcRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const SparcSubtarget &Subtarget = MF.getSubtarget<SparcSubtarget>();
   const SparcFrameLowering *TFI = getFrameLowering(MF);
 
-  unsigned FrameReg;
+  Register FrameReg;
   int Offset;
   Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg);
 

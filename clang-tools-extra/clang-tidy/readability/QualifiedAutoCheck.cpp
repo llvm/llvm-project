@@ -107,9 +107,6 @@ void QualifiedAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return; // Auto deduction not used in 'C or C++03 and earlier', so don't
-            // register Matchers.
   auto ExplicitSingleVarDecl =
       [](const ast_matchers::internal::Matcher<VarDecl> &InnerMatcher,
          llvm::StringRef ID) {

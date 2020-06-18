@@ -790,6 +790,25 @@ bool HexagonInstrInfo::isProfitableToDupForIfCvt(MachineBasicBlock &MBB,
   return NumInstrs <= 4;
 }
 
+static void getLiveInRegsAt(LivePhysRegs &Regs, const MachineInstr &MI) {
+  SmallVector<std::pair<MCPhysReg, const MachineOperand*>,2> Clobbers;
+  const MachineBasicBlock &B = *MI.getParent();
+  Regs.addLiveIns(B);
+  auto E = MachineBasicBlock::const_iterator(MI.getIterator());
+  for (auto I = B.begin(); I != E; ++I) {
+    Clobbers.clear();
+    Regs.stepForward(*I, Clobbers);
+  }
+}
+
+static void getLiveOutRegsAt(LivePhysRegs &Regs, const MachineInstr &MI) {
+  const MachineBasicBlock &B = *MI.getParent();
+  Regs.addLiveOuts(B);
+  auto E = ++MachineBasicBlock::const_iterator(MI.getIterator()).getReverse();
+  for (auto I = B.rbegin(); I != E; ++I)
+    Regs.stepBackward(*I);
+}
+
 void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, MCRegister DestReg,
@@ -855,11 +874,15 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
   if (Hexagon::HvxWRRegClass.contains(SrcReg, DestReg)) {
-    Register LoSrc = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
-    Register HiSrc = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
+    LivePhysRegs LiveAtMI(HRI);
+    getLiveInRegsAt(LiveAtMI, *I);
+    Register SrcLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
+    Register SrcHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
+    unsigned UndefLo = getUndefRegState(!LiveAtMI.contains(SrcLo));
+    unsigned UndefHi = getUndefRegState(!LiveAtMI.contains(SrcHi));
     BuildMI(MBB, I, DL, get(Hexagon::V6_vcombine), DestReg)
-      .addReg(HiSrc, KillFlag)
-      .addReg(LoSrc, KillFlag);
+      .addReg(SrcHi, KillFlag | UndefHi)
+      .addReg(SrcLo, KillFlag | UndefLo);
     return;
   }
   if (Hexagon::HvxQRRegClass.contains(SrcReg, DestReg)) {
@@ -893,12 +916,11 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  unsigned SlotAlign = MFI.getObjectAlignment(FI);
   unsigned KillFlag = getKillRegState(isKill);
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
-      MFI.getObjectSize(FI), SlotAlign);
+      MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
   if (Hexagon::IntRegsRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::S2_storeri_io))
@@ -940,11 +962,10 @@ void HexagonInstrInfo::loadRegFromStackSlot(
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  unsigned SlotAlign = MFI.getObjectAlignment(FI);
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
-      MFI.getObjectSize(FI), SlotAlign);
+      MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
   if (Hexagon::IntRegsRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::L2_loadri_io), DestReg)
@@ -972,14 +993,6 @@ void HexagonInstrInfo::loadRegFromStackSlot(
   }
 }
 
-static void getLiveRegsAt(LivePhysRegs &Regs, const MachineInstr &MI) {
-  const MachineBasicBlock &B = *MI.getParent();
-  Regs.addLiveOuts(B);
-  auto E = ++MachineBasicBlock::const_iterator(MI.getIterator()).getReverse();
-  for (auto I = B.rbegin(); I != E; ++I)
-    Regs.stepBackward(*I);
-}
-
 /// expandPostRAPseudo - This function is called for all pseudo instructions
 /// that remain after register allocation. Many pseudo instructions are
 /// created to help register allocation. This is the place to convert them
@@ -991,6 +1004,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
+  LivePhysRegs LiveIn(HRI), LiveOut(HRI);
   DebugLoc DL = MI.getDebugLoc();
   unsigned Opc = MI.getOpcode();
 
@@ -1011,10 +1025,9 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   auto UseAligned = [&] (const MachineInstr &MI, unsigned NeedAlign) {
     if (MI.memoperands().empty())
       return false;
-    return all_of(MI.memoperands(),
-                  [NeedAlign] (const MachineMemOperand *MMO) {
-                    return NeedAlign <= MMO->getAlignment();
-                  });
+    return all_of(MI.memoperands(), [NeedAlign](const MachineMemOperand *MMO) {
+      return MMO->getAlign() >= NeedAlign;
+    });
   };
 
   switch (Opc) {
@@ -1038,10 +1051,15 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     case Hexagon::V6_vassignp: {
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
+      Register SrcLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
+      Register SrcHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
+      getLiveInRegsAt(LiveIn, MI);
+      unsigned UndefLo = getUndefRegState(!LiveIn.contains(SrcLo));
+      unsigned UndefHi = getUndefRegState(!LiveIn.contains(SrcHi));
       unsigned Kill = getKillRegState(MI.getOperand(1).isKill());
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vcombine), DstReg)
-        .addReg(HRI.getSubReg(SrcReg, Hexagon::vsub_hi), Kill)
-        .addReg(HRI.getSubReg(SrcReg, Hexagon::vsub_lo), Kill);
+          .addReg(SrcHi, UndefHi)
+          .addReg(SrcLo, Kill | UndefLo);
       MBB.erase(MI);
       return true;
     }
@@ -1261,9 +1279,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       const MachineOperand &Op1 = MI.getOperand(1);
       const MachineOperand &Op2 = MI.getOperand(2);
       const MachineOperand &Op3 = MI.getOperand(3);
-      LivePhysRegs LiveAtMI(HRI);
-      getLiveRegsAt(LiveAtMI, MI);
-      bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
+      getLiveOutRegsAt(LiveOut, MI);
+      bool IsDestLive = !LiveOut.available(MRI, Op0.getReg());
       Register PReg = Op1.getReg();
       assert(Op1.getSubReg() == 0);
       unsigned PState = getRegState(Op1);
@@ -1295,9 +1312,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MachineOperand &Op1 = MI.getOperand(1);
       MachineOperand &Op2 = MI.getOperand(2);
       MachineOperand &Op3 = MI.getOperand(3);
-      LivePhysRegs LiveAtMI(HRI);
-      getLiveRegsAt(LiveAtMI, MI);
-      bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
+      getLiveOutRegsAt(LiveOut, MI);
+      bool IsDestLive = !LiveOut.available(MRI, Op0.getReg());
       Register PReg = Op1.getReg();
       assert(Op1.getSubReg() == 0);
       unsigned PState = getRegState(Op1);
@@ -1355,7 +1371,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       static const CrashPseudoSourceValue CrashPSV(*this);
       MachineMemOperand *MMO = MF.getMachineMemOperand(
           MachinePointerInfo(&CrashPSV),
-          MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8, 1);
+          MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+          Align(1));
       BuildMI(MBB, MI, DL, get(Hexagon::PS_loadrdabs), Hexagon::D13)
         .addImm(0xBADC0FEE)  // Misaligned load.
         .addMemOperand(MMO);
@@ -1741,7 +1758,7 @@ unsigned HexagonInstrInfo::getInlineAsmLength(const char *Str,
     if (*Str == '\n' || strncmp(Str, MAI.getSeparatorString(),
                                 strlen(MAI.getSeparatorString())) == 0)
       atInsnStart = true;
-    if (atInsnStart && !std::isspace(static_cast<unsigned char>(*Str))) {
+    if (atInsnStart && !isSpace(static_cast<unsigned char>(*Str))) {
       Length += MaxInstLength;
       atInsnStart = false;
     }
@@ -1768,8 +1785,8 @@ HexagonInstrInfo::CreateTargetPostRAHazardRecognizer(
 /// \p SrcReg and \p SrcReg2 if having two register operands, and the value it
 /// compares against in CmpValue. Return true if the comparison instruction
 /// can be analyzed.
-bool HexagonInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
-                                      unsigned &SrcReg2, int &Mask,
+bool HexagonInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                                      Register &SrcReg2, int &Mask,
                                       int &Value) const {
   unsigned Opc = MI.getOpcode();
 
@@ -2946,12 +2963,12 @@ bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr &MI1,
 }
 
 /// Get the base register and byte offset of a load/store instr.
-bool HexagonInstrInfo::getMemOperandsWithOffset(
+bool HexagonInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
-  unsigned AccessSize = 0;
+    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    const TargetRegisterInfo *TRI) const {
   OffsetIsScalable = false;
-  const MachineOperand *BaseOp = getBaseAndOffset(LdSt, Offset, AccessSize);
+  const MachineOperand *BaseOp = getBaseAndOffset(LdSt, Offset, Width);
   if (!BaseOp || !BaseOp->isReg())
     return false;
   BaseOps.push_back(BaseOp);
@@ -4485,7 +4502,7 @@ uint64_t HexagonInstrInfo::getType(const MachineInstr &MI) const {
   return (F >> HexagonII::TypePos) & HexagonII::TypeMask;
 }
 
-unsigned HexagonInstrInfo::getUnits(const MachineInstr &MI) const {
+InstrStage::FuncUnits HexagonInstrInfo::getUnits(const MachineInstr &MI) const {
   const InstrItineraryData &II = *Subtarget.getInstrItineraryData();
   const InstrStage &IS = *II.beginStage(MI.getDesc().getSchedClass());
 

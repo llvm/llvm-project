@@ -88,7 +88,8 @@ llvm::opt::Arg *getLastProfileSampleUseArg(const llvm::opt::ArgList &Args);
 
 bool isObjCAutoRefCount(const llvm::opt::ArgList &Args);
 
-unsigned getLTOParallelism(const llvm::opt::ArgList &Args, const Driver &D);
+llvm::StringRef getLTOParallelism(const llvm::opt::ArgList &Args,
+                                  const Driver &D);
 
 bool areOptimizationsEnabled(const llvm::opt::ArgList &Args);
 
@@ -126,6 +127,8 @@ SmallString<128> getStatsFileName(const llvm::opt::ArgList &Args,
 void addMultilibFlag(bool Enabled, const char *const Flag,
                      Multilib::flags_list &Flags);
 
+void addX86AlignBranchArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs, bool IsLTO);
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

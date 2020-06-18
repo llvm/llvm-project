@@ -65,15 +65,9 @@ define void @_Z1dv() local_unnamed_addr #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[TMP0]], [[INDEX]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> undef, i64 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX4:%.*]] = add i64 [[TMP0]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = trunc i64 [[OFFSET_IDX4]] to i32
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x i32> undef, i32 [[TMP18]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT5]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION7:%.*]] = add <4 x i32> [[BROADCAST_SPLAT6]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[TMP18]], 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[CONV]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP20]] to i64

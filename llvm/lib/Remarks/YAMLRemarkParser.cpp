@@ -13,7 +13,6 @@
 
 #include "YAMLRemarkParser.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Path.h"
 

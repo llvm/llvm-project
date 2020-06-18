@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spv.Branch
@@ -24,15 +24,15 @@ func @branch_argument() -> () {
 // -----
 
 func @missing_accessor() -> () {
+  // expected-error @+2 {{expected block name}}
   spv.Branch
-  // expected-error @+1 {{expected block name}}
 }
 
 // -----
 
 func @wrong_accessor_count() -> () {
   %true = spv.constant true
-  // expected-error @+1 {{must have exactly one successor}}
+  // expected-error @+1 {{requires 1 successor but found 2}}
   "spv.Branch"()[^one, ^two] : () -> ()
 ^one:
   spv.Return
@@ -116,8 +116,8 @@ func @wrong_condition_type() -> () {
 
 func @wrong_accessor_count() -> () {
   %true = spv.constant true
-  // expected-error @+1 {{must have exactly two successors}}
-  "spv.BranchConditional"(%true)[^one] : (i1) -> ()
+  // expected-error @+1 {{requires 2 successors but found 1}}
+  "spv.BranchConditional"(%true)[^one] {operand_segment_sizes = dense<[1, 0, 0]>: vector<3xi32>} : (i1) -> ()
 ^one:
   spv.Return
 ^two:
@@ -129,7 +129,8 @@ func @wrong_accessor_count() -> () {
 func @wrong_number_of_weights() -> () {
   %true = spv.constant true
   // expected-error @+1 {{must have exactly two branch weights}}
-  "spv.BranchConditional"(%true)[^one, ^two] {branch_weights = [1 : i32, 2 : i32, 3 : i32]} : (i1) -> ()
+  "spv.BranchConditional"(%true)[^one, ^two] {branch_weights = [1 : i32, 2 : i32, 3 : i32],
+                                              operand_segment_sizes = dense<[1, 0, 0]>: vector<3xi32>} : (i1) -> ()
 ^one:
   spv.Return
 ^two:
@@ -154,7 +155,7 @@ func @weights_cannot_both_be_zero() -> () {
 // spv.FunctionCall
 //===----------------------------------------------------------------------===//
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @fmain(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>, %arg2 : i32) -> i32 "None" {
     // CHECK: {{%.*}} = spv.FunctionCall @f_0({{%.*}}, {{%.*}}) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
     %0 = spv.FunctionCall @f_0(%arg0, %arg1) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
@@ -199,9 +200,9 @@ func @caller() {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @f_invalid_result_type(%arg0 : i32, %arg1 : i32) -> () "None" {
-    // expected-error @+1 {{expected callee function to have 0 or 1 result, but provided 2}}
+    // expected-error @+1 {{result group starting at #0 requires 0 or 1 element, but found 2}}
     %0:2 = spv.FunctionCall @f_invalid_result_type(%arg0, %arg1) : (i32, i32) -> (i32, i32)
     spv.Return
   }
@@ -209,7 +210,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @f_result_type_mismatch(%arg0 : i32, %arg1 : i32) -> () "None" {
     // expected-error @+1 {{has incorrect number of results has for callee: expected 0, but provided 1}}
     %1 = spv.FunctionCall @f_result_type_mismatch(%arg0, %arg0) : (i32, i32) -> (i32)
@@ -219,7 +220,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @f_type_mismatch(%arg0 : i32, %arg1 : i32) -> () "None" {
     // expected-error @+1 {{has incorrect number of operands for callee: expected 2, but provided 1}}
     spv.FunctionCall @f_type_mismatch(%arg0) : (i32) -> ()
@@ -229,7 +230,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @f_type_mismatch(%arg0 : i32, %arg1 : i32) -> () "None" {
     %0 = spv.constant 2.0 : f32
     // expected-error @+1 {{operand type mismatch: expected operand type 'i32', but provided 'f32' for operand number 1}}
@@ -240,7 +241,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @f_type_mismatch(%arg0 : i32, %arg1 : i32) -> i32 "None" {
     %cst = spv.constant 0: i32
     // expected-error @+1 {{result type mismatch: expected 'i32', but provided 'f32'}}
@@ -251,7 +252,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @f_foo(%arg0 : i32, %arg1 : i32) -> i32 "None" {
     // expected-error @+1 {{op callee function 'f_undefined' not found in nearest symbol table}}
     %0 = spv.FunctionCall @f_undefined(%arg0, %arg0) : (i32, i32) -> i32
@@ -517,7 +518,7 @@ func @in_other_func_like_op() {
 // -----
 
 // Return mismatches function signature
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @work() -> (i32) "None" {
     // expected-error @+1 {{cannot be used in functions returning value}}
     spv.Return
@@ -526,7 +527,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @in_nested_region(%cond: i1) -> (i32) "None" {
     spv.selection {
       spv.BranchConditional %cond, ^then, ^merge
@@ -604,7 +605,7 @@ func @in_other_func_like_op(%arg: i32) -> i32 {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @value_count_mismatch() -> () "None" {
     %0 = spv.constant 42 : i32
     // expected-error @+1 {{op returns 1 value but enclosing function requires 0 results}}
@@ -614,7 +615,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @value_type_mismatch() -> (f32) "None" {
     %0 = spv.constant 42 : i32
     // expected-error @+1 {{return value's type ('i32') mismatch with function's result type ('f32')}}
@@ -624,7 +625,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @in_nested_region(%cond: i1) -> () "None" {
     spv.selection {
       spv.BranchConditional %cond, ^then, ^merge

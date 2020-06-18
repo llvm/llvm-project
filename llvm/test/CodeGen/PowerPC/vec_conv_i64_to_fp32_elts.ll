@@ -22,7 +22,7 @@ define i64 @test2elt(<2 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-P8-NEXT:    xxsldwi v2, vs0, vs0, 1
 ; CHECK-P8-NEXT:    vmrglw v2, v3, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
-; CHECK-P8-NEXT:    mfvsrd r3, f0
+; CHECK-P8-NEXT:    mffprd r3, f0
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test2elt:
@@ -315,7 +315,7 @@ define i64 @test2elt_signed(<2 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-P8-NEXT:    xxsldwi v2, vs0, vs0, 1
 ; CHECK-P8-NEXT:    vmrglw v2, v3, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
-; CHECK-P8-NEXT:    mfvsrd r3, f0
+; CHECK-P8-NEXT:    mffprd r3, f0
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test2elt_signed:

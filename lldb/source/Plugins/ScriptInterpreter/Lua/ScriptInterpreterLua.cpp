@@ -33,7 +33,7 @@ public:
     llvm::cantFail(m_script_interpreter.EnterSession(debugger.GetID()));
   }
 
-  ~IOHandlerLuaInterpreter() {
+  ~IOHandlerLuaInterpreter() override {
     llvm::cantFail(m_script_interpreter.LeaveSession());
   }
 
@@ -89,6 +89,7 @@ bool ScriptInterpreterLua::LoadScriptingModule(
     const char *filename, bool init_session, lldb_private::Status &error,
     StructuredData::ObjectSP *module_sp) {
 
+  FileSystem::Instance().Collect(filename);
   if (llvm::Error e = m_lua->LoadModule(filename)) {
     error.SetErrorStringWithFormatv("lua failed to import '{0}': {1}\n",
                                     filename, llvm::toString(std::move(e)));

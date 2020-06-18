@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/KnownBits.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -80,4 +81,29 @@ KnownBits KnownBits::computeForAddSub(bool Add, bool NSW,
   }
 
   return KnownOut;
+}
+
+KnownBits &KnownBits::operator&=(const KnownBits &RHS) {
+  // Result bit is 0 if either operand bit is 0.
+  Zero |= RHS.Zero;
+  // Result bit is 1 if both operand bits are 1.
+  One &= RHS.One;
+  return *this;
+}
+
+KnownBits &KnownBits::operator|=(const KnownBits &RHS) {
+  // Result bit is 0 if both operand bits are 0.
+  Zero &= RHS.Zero;
+  // Result bit is 1 if either operand bit is 1.
+  One |= RHS.One;
+  return *this;
+}
+
+KnownBits &KnownBits::operator^=(const KnownBits &RHS) {
+  // Result bit is 0 if both operand bits are 0 or both are 1.
+  APInt Z = (Zero & RHS.Zero) | (One & RHS.One);
+  // Result bit is 1 if one operand bit is 0 and the other is 1.
+  One = (Zero & RHS.One) | (One & RHS.Zero);
+  Zero = std::move(Z);
+  return *this;
 }

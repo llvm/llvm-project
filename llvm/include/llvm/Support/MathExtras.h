@@ -14,10 +14,11 @@
 #define LLVM_SUPPORT_MATHEXTRAS_H
 
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/SwapByteOrder.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
+#include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <type_traits>
@@ -312,6 +313,34 @@ T reverseBits(T Val) {
   return Val;
 }
 
+#if __has_builtin(__builtin_bitreverse8)
+template<>
+inline uint8_t reverseBits<uint8_t>(uint8_t Val) {
+  return __builtin_bitreverse8(Val);
+}
+#endif
+
+#if __has_builtin(__builtin_bitreverse16)
+template<>
+inline uint16_t reverseBits<uint16_t>(uint16_t Val) {
+  return __builtin_bitreverse16(Val);
+}
+#endif
+
+#if __has_builtin(__builtin_bitreverse32)
+template<>
+inline uint32_t reverseBits<uint32_t>(uint32_t Val) {
+  return __builtin_bitreverse32(Val);
+}
+#endif
+
+#if __has_builtin(__builtin_bitreverse64)
+template<>
+inline uint64_t reverseBits<uint64_t>(uint64_t Val) {
+  return __builtin_bitreverse64(Val);
+}
+#endif
+
 // NOTE: The following support functions use the _32/_64 extensions instead of
 // type overloading so that signed and unsigned integers can be used without
 // ambiguity.
@@ -467,21 +496,6 @@ constexpr inline bool isPowerOf2_32(uint32_t Value) {
 /// Return true if the argument is a power of two > 0 (64 bit edition.)
 constexpr inline bool isPowerOf2_64(uint64_t Value) {
   return Value && !(Value & (Value - 1));
-}
-
-/// Return a byte-swapped representation of the 16-bit argument.
-inline uint16_t ByteSwap_16(uint16_t Value) {
-  return sys::SwapByteOrder_16(Value);
-}
-
-/// Return a byte-swapped representation of the 32-bit argument.
-inline uint32_t ByteSwap_32(uint32_t Value) {
-  return sys::SwapByteOrder_32(Value);
-}
-
-/// Return a byte-swapped representation of the 64-bit argument.
-inline uint64_t ByteSwap_64(uint64_t Value) {
-  return sys::SwapByteOrder_64(Value);
 }
 
 /// Count the number of ones from the most significant bit to the first

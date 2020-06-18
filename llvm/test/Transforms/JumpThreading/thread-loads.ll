@@ -251,7 +251,7 @@ bb3:
 ; branch.
 define void @test8(i32*, i32*, i32*) {
 ; CHECK-LABEL: @test8(
-; CHECK: %a = load i32, i32* %0, !range ![[RANGE4:[0-9]+]]
+; CHECK: %a = load i32, i32* %0, align 4, !range ![[RANGE4:[0-9]+]]
 ; CHECK-NEXT: store i32 %a
 ; CHECK-NEXT: %xxx = tail call i32 (...) @f1()
 ; CHECK-NEXT: ret void
@@ -277,14 +277,14 @@ define void @test9(i32*, i32*, i32*, i1 %c) {
   br i1 %c, label %d1, label %d2
 
 ; CHECK: d1:
-; CHECK-NEXT: %a = load i32, i32* %0{{$}}
+; CHECK-NEXT: %a = load i32, i32* %0, align 4{{$}}
 d1:
   %a = load i32, i32* %0, !range !4, !alias.scope !9, !noalias !10
   br label %d3
 
 ; CHECK: d2:
 ; CHECK-NEXT: %xxxx = tail call i32 (...) @f1()
-; CHECK-NEXT: %b.pr = load i32, i32* %0, !tbaa !0{{$}}
+; CHECK-NEXT: %b.pr = load i32, i32* %0, align 4, !tbaa !0{{$}}
 d2:
   %xxxx = tail call i32 (...) @f1() nounwind
   br label %d3

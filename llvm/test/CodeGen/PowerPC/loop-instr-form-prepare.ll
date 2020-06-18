@@ -500,21 +500,20 @@ define i64 @test_ds_cross_basic_blocks(i8* %0, i32 signext %1) {
 ; CHECK-NEXT:    ld r0, -8(r6)
 ; CHECK-NEXT:    add r29, r0, r29
 ; CHECK-NEXT:  .LBB6_3: #
+; CHECK-NEXT:    addi r6, r6, 1
 ; CHECK-NEXT:    mulld r0, r29, r28
 ; CHECK-NEXT:    mulld r0, r0, r30
 ; CHECK-NEXT:    mulld r0, r0, r12
 ; CHECK-NEXT:    mulld r0, r0, r11
 ; CHECK-NEXT:    maddld r3, r0, r7, r3
-; CHECK-NEXT:    addi r6, r6, 1
 ; CHECK-NEXT:    bdz .LBB6_9
 ; CHECK-NEXT:  .LBB6_4: #
 ; CHECK-NEXT:    lbzu r0, 1(r5)
-; CHECK-NEXT:    clrldi r27, r0, 32
-; CHECK-NEXT:    mulld r27, r27, r4
-; CHECK-NEXT:    rldicl r27, r27, 31, 33
-; CHECK-NEXT:    slwi r26, r27, 1
+; CHECK-NEXT:    mulhwu r27, r0, r4
+; CHECK-NEXT:    rlwinm r26, r27, 0, 0, 30
+; CHECK-NEXT:    srwi r27, r27, 1
 ; CHECK-NEXT:    add r27, r27, r26
-; CHECK-NEXT:    subf r0, r27, r0
+; CHECK-NEXT:    sub r0, r0, r27
 ; CHECK-NEXT:    cmplwi r0, 1
 ; CHECK-NEXT:    beq cr0, .LBB6_2
 ; CHECK-NEXT:  # %bb.5: #

@@ -43,7 +43,7 @@ int main() {
 
   // CHECK-ORIGINS: Memory was marked as uninitialized
   // CHECK-ORIGINS: {{#0 0x.* in __sanitizer_dtor_callback}}
-  // CHECK-ORIGINS: {{#1 0x.* in Simple::~Simple}}
+  // CHECK-ORIGINS: {{#1 0x.* in .*~Simple}}
 
   // CHECK-UAD: SUMMARY: MemorySanitizer: use-of-uninitialized-value {{.*main}}
   // CHECK-UAD-OFF-NOT: SUMMARY: MemorySanitizer: use-of-uninitialized-value

@@ -16,6 +16,7 @@ class TestVSCode_step(lldbvscode_testcase.VSCodeTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
+    @skipIfRemote
     def test_step(self):
         '''
             Tests the stepping in/out/over in threads.
@@ -26,7 +27,7 @@ class TestVSCode_step(lldbvscode_testcase.VSCodeTestCaseBase):
         # source_path = os.path.join(os.getcwd(), source)
         breakpoint1_line = line_number(source, '// breakpoint 1')
         lines = [breakpoint1_line]
-        # Set breakoint in the thread function so we can step the threads
+        # Set breakpoint in the thread function so we can step the threads
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.assertEqual(len(breakpoint_ids), len(lines),
                         "expect correct number of breakpoints")

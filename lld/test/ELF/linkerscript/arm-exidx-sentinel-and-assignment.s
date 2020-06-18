@@ -7,7 +7,7 @@
 ## We used to crash if the last output section command for .ARM.exidx
 ## was anything but an input section description.
 # RUN: ld.lld --no-merge-exidx-entries -T %t.script %t.o -shared -o %t.so
-# RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t.so | FileCheck %s
+# RUN: llvm-objdump -s --triple=armv7a-none-linux-gnueabi %t.so | FileCheck %s
 # RUN: llvm-readobj -S --symbols %t.so | FileCheck %s --check-prefix=SYMBOL
 
  .syntax unified

@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-readobj -a --elf-cg-profile --addrsig %t.o | FileCheck %s
+# RUN: llvm-readobj -a --cg-profile --addrsig %t.o | FileCheck %s
 
 # Test that multiple sections with the same type does not trigger an error.
 

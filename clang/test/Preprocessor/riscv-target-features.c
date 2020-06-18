@@ -7,6 +7,7 @@
 // CHECK-NOT: __riscv_mul
 // CHECK-NOT: __riscv_muldiv
 // CHECK-NOT: __riscv_compressed
+// CHECK-NOT: __riscv_bitmanip
 // CHECK-NOT: __riscv_flen
 // CHECK-NOT: __riscv_fdiv
 // CHECK-NOT: __riscv_fsqrt
@@ -47,6 +48,12 @@
 // RUN: %clang -target riscv64-unknown-linux-gnu -march=rv64ic -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-C-EXT %s
 // CHECK-C-EXT: __riscv_compressed 1
+
+// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions -march=rv32ib0p92 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-B-EXT %s
+// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions -march=rv64ib0p92 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-B-EXT %s
+// CHECK-B-EXT: __riscv_bitmanip 1
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32ifd -mabi=ilp32 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-SOFT %s

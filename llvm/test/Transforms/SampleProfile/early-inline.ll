@@ -54,8 +54,8 @@ define void @no_inline() #1 !dbg !17 {
 
 declare i32 @__gxx_personality_v0(...)
 
-attributes #0 = {"target-features"="+sse4.1"}
-attributes #1 = {"target-features"="+sse4.2"}
+attributes #0 = {"target-features"="+sse4.1" "use-sample-profile"}
+attributes #1 = {"target-features"="+sse4.2" "use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

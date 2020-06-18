@@ -193,11 +193,9 @@ for (int i = 0; i < argc; ++i) {
 // IRBUILDER: br i1 [[CMP]], label %[[CONTINUE:[^,].+]], label %[[EXIT:.+]]
 // IRBUILDER: [[EXIT]]
 // IRBUILDER: br label %[[EXIT2:.+]]
-// IRBUILDER: [[EXIT2]]
-// IRBUILDER: br label %[[EXIT3:.+]]
 // IRBUILDER: [[CONTINUE]]
 // IRBUILDER: br label %[[ELSE:.+]]
-// IRBUILDER: [[EXIT3]]
+// IRBUILDER: [[EXIT2]]
 // IRBUILDER: br label %[[RETURN]]
 
 #endif

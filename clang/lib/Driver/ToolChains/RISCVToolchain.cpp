@@ -142,7 +142,7 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("elf32lriscv");
   }
 
-  std::string Linker = getToolChain().GetProgramPath(getShortName());
+  std::string Linker = getToolChain().GetLinkerPath();
 
   bool WantCRTs =
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);

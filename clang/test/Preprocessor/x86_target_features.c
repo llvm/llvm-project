@@ -483,3 +483,19 @@
 // RUN: %clang -target i386-unknown-unknown -march=atom -mno-enqcmd -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOENQCMD %s
 
 // NOENQCMD-NOT: #define __ENQCMD__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mserialize -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=SERIALIZE %s
+
+// SERIALIZE: #define __SERIALIZE__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mno-serialize -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOSERIALIZE %s
+
+// NOSERIALIZE-NOT: #define __SERIALIZE__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mtsxldtrk -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=TSXLDTRK %s
+
+// TSXLDTRK: #define __TSXLDTRK__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mno-tsxldtrk -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOTSXLDTRK %s
+
+// NOTSXLDTRK-NOT: #define __TSXLDTRK__ 1

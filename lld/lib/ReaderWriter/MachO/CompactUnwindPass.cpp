@@ -576,5 +576,5 @@ void addCompactUnwindPass(PassManager &pm, const MachOLinkingContext &ctx) {
   pm.add(std::make_unique<CompactUnwindPass>(ctx));
 }
 
-} // end namesapce mach_o
-} // end namesapce lld
+} // end namespace mach_o
+} // end namespace lld

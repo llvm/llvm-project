@@ -22,14 +22,7 @@
 # CHECK-NEXT: >>> referenced by {{.*}}tmp.obj:(main)
 # CHECK-NEXT: >>> referenced by {{.*}}tmp.obj:(main)
 # CHECK-NEXT: >>> referenced by {{.*}}tmp2.obj:(bar)
-# CHECK-NEXT: >>> referenced by {{.*}}tmp2.obj:(bar)
-# CHECK-NEXT: >>> referenced by {{.*}}tmp2.obj:(bar)
-# CHECK-NEXT: >>> referenced by {{.*}}tmp2.obj:(bar)
-# CHECK-NEXT: >>> referenced by {{.*}}tmp2.obj:(bar)
-# CHECK-NEXT: >>> referenced by {{.*}}tmp2.obj:(bar)
-# CHECK-NEXT: >>> referenced by {{.*}}tmp2.obj:(bar)
-# CHECK-NEXT: >>> referenced by {{.*}}tmp2.obj:(bar)
-# CHECK-NEXT: >>> referenced 2 more times
+# CHECK-NEXT: >>> referenced 9 more times
 # CHECK-EMPTY:
 # CHECK-NEXT: error: undefined symbol: int __cdecl bar(void)
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(main)

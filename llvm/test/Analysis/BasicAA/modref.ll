@@ -80,7 +80,6 @@ define void @test3a(i8* %P, i8 %X) {
 
   %P2 = getelementptr i8, i8* %P, i32 2
   store i8 %Y, i8* %P2
-; CHECK-NEXT: call void @llvm.lifetime.end
   call void @llvm.lifetime.end.p0i8(i64 10, i8* %P)
   ret void
 ; CHECK-NEXT: ret void

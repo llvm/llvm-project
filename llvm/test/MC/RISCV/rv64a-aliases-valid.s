@@ -3,10 +3,10 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+a \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+a < %s \
-# RUN:     | llvm-objdump -d -mattr=+a -M no-aliases - \
+# RUN:     | llvm-objdump -d --mattr=+a -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+a < %s \
-# RUN:     | llvm-objdump -d -mattr=+a - \
+# RUN:     | llvm-objdump -d --mattr=+a - \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 
 # The below tests for lr.d, sc.d and amo*.d, using `0(reg)` are actually

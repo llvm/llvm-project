@@ -424,6 +424,13 @@ def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
 def FeatureSB       : SubtargetFeature<"sb", "HasSB", "true",
   "Enable v8.5a Speculation Barrier" >;
 
+// Armv8.6-A extensions
+def FeatureBF16     : SubtargetFeature<"bf16", "HasBF16", "true",
+  "Enable support for BFloat16 instructions",  [FeatureNEON]>;
+
+def FeatureMatMulInt8 : SubtargetFeature<"i8mm", "HasMatMulInt8",
+    "true", "Enable Matrix Multiply Int8 Extension", [FeatureNEON]>;
+
 // Armv8.1-M extensions
 
 def FeatureLOB            : SubtargetFeature<"lob", "HasLOB", "true",
@@ -522,6 +529,11 @@ def HasV8_4aOps   : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
 def HasV8_5aOps   : SubtargetFeature<"v8.5a", "HasV8_5aOps", "true",
                                    "Support ARM v8.5a instructions",
                                    [HasV8_4aOps, FeatureSB]>;
+
+def HasV8_6aOps   : SubtargetFeature<"v8.6a", "HasV8_6aOps", "true",
+                                   "Support ARM v8.6a instructions",
+                                   [HasV8_5aOps, FeatureBF16,
+                                    FeatureMatMulInt8]>;
 
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",
@@ -785,6 +797,19 @@ def ARMv84a   : Architecture<"armv8.4-a", "ARMv84a",  [HasV8_4aOps,
                                                        FeatureDotProd]>;
 
 def ARMv85a   : Architecture<"armv8.5-a", "ARMv85a",  [HasV8_5aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCrypto,
+                                                       FeatureCRC,
+                                                       FeatureRAS,
+                                                       FeatureDotProd]>;
+def ARMv86a   : Architecture<"armv8.6-a", "ARMv86a",  [HasV8_6aOps,
                                                        FeatureAClass,
                                                        FeatureDB,
                                                        FeatureFPARMv8,
@@ -1124,6 +1149,14 @@ def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureUseMISched,
                                                          FeatureHasNoBranchPredictor]>;
 
+def : ProcessorModel<"cortex-m55", CortexM4Model,      [ARMv81mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16,
+                                                         FeatureUseMISched,
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeaturePrefLoopAlign32,
+                                                         FeatureHasSlowFPVMLx,
+                                                         HasMVEFloatOps]>;
 
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
                                                          FeatureHWDivThumb,

@@ -32,15 +32,18 @@ namespace symbolize {
 using namespace object;
 
 using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
+using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
 
 class LLVMSymbolizer {
 public:
   struct Options {
     FunctionNameKind PrintFunctions = FunctionNameKind::LinkageName;
+    FileLineInfoKind PathStyle = FileLineInfoKind::AbsoluteFilePath;
     bool UseSymbolTable = true;
     bool Demangle = true;
     bool RelativeAddresses = false;
     bool UntagAddresses = false;
+    bool UseNativePDBReader = false;
     std::string DefaultArch;
     std::vector<std::string> DsymHints;
     std::string FallbackDebugPath;

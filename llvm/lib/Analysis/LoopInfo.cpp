@@ -420,7 +420,7 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
 
 // Check that 'BB' doesn't have any uses outside of the 'L'
 static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
-                               DominatorTree &DT) {
+                               const DominatorTree &DT) {
   for (const Instruction &I : BB) {
     // Tokens can't be used in PHI nodes and live-out tokens prevent loop
     // optimizations, so for the purposes of considered LCSSA form, we
@@ -446,14 +446,15 @@ static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
   return true;
 }
 
-bool Loop::isLCSSAForm(DominatorTree &DT) const {
+bool Loop::isLCSSAForm(const DominatorTree &DT) const {
   // For each block we check that it doesn't have any uses outside of this loop.
   return all_of(this->blocks(), [&](const BasicBlock *BB) {
     return isBlockInLCSSAForm(*this, *BB, DT);
   });
 }
 
-bool Loop::isRecursivelyLCSSAForm(DominatorTree &DT, const LoopInfo &LI) const {
+bool Loop::isRecursivelyLCSSAForm(const DominatorTree &DT,
+                                  const LoopInfo &LI) const {
   // For each block we check that it doesn't have any uses outside of its
   // innermost loop. This process will transitively guarantee that the current
   // loop and all of the nested loops are in LCSSA form.
@@ -480,8 +481,8 @@ bool Loop::isSafeToClone() const {
       return false;
 
     for (Instruction &I : *BB)
-      if (auto CS = CallSite(&I))
-        if (CS.cannotDuplicate())
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (CB->cannotDuplicate())
           return false;
   }
   return true;

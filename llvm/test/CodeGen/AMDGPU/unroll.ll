@@ -99,3 +99,37 @@ for.inc:                                          ; preds = %for.body, %if.then
 for.end:                                          ; preds = %for.cond
   ret void
 }
+
+; Check that runtime unroll is enabled for local memory references
+
+; CHECK-LABEL: @local_memory_runtime
+; CHECK: loop.header:
+; CHECK: load i32, i32 addrspace(3)*
+; CHECK: load i32, i32 addrspace(3)*
+; CHECK: br i1
+; CHECK: loop.header.epil
+; CHECK: load i32, i32 addrspace(3)*
+; CHECK: ret
+define amdgpu_kernel void @local_memory_runtime(i32 addrspace(1)* %out, i32 addrspace(3)* %lds, i32 %n) {
+entry:
+  br label %loop.header
+
+loop.header:
+  %counter = phi i32 [0, %entry], [%inc, %loop.inc]
+  br label %loop.body
+
+loop.body:
+  %ptr_lds = getelementptr i32, i32 addrspace(3)* %lds, i32 %counter
+  %val = load i32, i32 addrspace(3)* %ptr_lds
+  %ptr_out = getelementptr i32, i32 addrspace(1)* %out, i32 %counter
+  store i32 %val, i32 addrspace(1)* %ptr_out
+  br label %loop.inc
+
+loop.inc:
+  %inc = add i32 %counter, 1
+  %cond = icmp sge i32 %counter, %n
+  br i1 %cond, label  %exit, label %loop.header
+
+exit:
+  ret void
+}

@@ -55,6 +55,14 @@ private:
   std::unique_ptr<detail::AsmStateImpl> impl;
 };
 
+//===----------------------------------------------------------------------===//
+// AsmPrinter CommandLine Options
+//===----------------------------------------------------------------------===//
+
+/// Register a set of useful command-line options that can be used to configure
+/// various flags within the AsmPrinter.
+void registerAsmPrinterCLOptions();
+
 } // end namespace mlir
 
 #endif // MLIR_IR_ASMSTATE_H_

@@ -64,7 +64,7 @@ entry:
 ; GCN-LABEL: {{^}}store_global_var_idx_case1:
 ; SI: ds_write_b32
 ; SI: ds_write_b32
-; NONSI: ds_write2_b32
+; NOSI: ds_write2_b32
 define amdgpu_cs void @store_global_var_idx_case1(i32 %idx) #0 {
 entry:
   %ptr.a = getelementptr [512 x i32], [512 x i32] addrspace(3)* @compute_lds, i32 0, i32 %idx
@@ -79,7 +79,7 @@ entry:
 ; GCN-LABEL: {{^}}load_global_var_idx_case1:
 ; SI: ds_read_b32
 ; SI: ds_read_b32
-; NONSI: ds_read2_b32
+; NOSI: ds_read2_b32
 define amdgpu_cs <2 x float> @load_global_var_idx_case1(i32 %idx) #0 {
 entry:
   %ptr.a = getelementptr [512 x i32], [512 x i32] addrspace(3)* @compute_lds, i32 0, i32 %idx

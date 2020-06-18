@@ -126,20 +126,15 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
 
   SBInstructionList sb_instructions;
   if (m_opaque_ptr) {
-    ExecutionContext exe_ctx;
     TargetSP target_sp(target.GetSP());
     std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
-      target_sp->CalculateExecutionContext(exe_ctx);
-      exe_ctx.SetProcessSP(target_sp->GetProcessSP());
-    }
     ModuleSP module_sp(
         m_opaque_ptr->GetAddressRange().GetBaseAddress().GetModule());
-    if (module_sp) {
+    if (target_sp && module_sp) {
+      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
       const bool prefer_file_cache = false;
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
-          module_sp->GetArchitecture(), nullptr, flavor, exe_ctx,
+          module_sp->GetArchitecture(), nullptr, flavor, *target_sp,
           m_opaque_ptr->GetAddressRange(), prefer_file_cache));
     }
   }

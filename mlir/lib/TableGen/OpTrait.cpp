@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/OpTrait.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/OpInterfaces.h"
 #include "mlir/TableGen/Predicate.h"
 #include "llvm/ADT/StringExtras.h"
@@ -63,4 +62,8 @@ llvm::StringRef InterfaceOpTrait::getTrait() const {
 
 bool InterfaceOpTrait::shouldDeclareMethods() const {
   return def->isSubClassOf("DeclareOpInterfaceMethods");
+}
+
+std::vector<StringRef> InterfaceOpTrait::getAlwaysDeclaredMethods() const {
+  return def->getValueAsListOfStrings("alwaysOverriddenMethods");
 }

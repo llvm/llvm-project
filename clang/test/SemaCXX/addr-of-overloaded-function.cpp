@@ -182,19 +182,19 @@ namespace test1 {
   void parameter_number() {
     void (*ptr1)(int, int) = &fun; // expected-error {{cannot initialize a variable of type 'void (*)(int, int)' with an rvalue of type 'void (*)(int)': different number of parameters (2 vs 1)}}
     void (*ptr2)(int, int);
-    ptr2 = &fun;  // expected-error {{assigning to 'void (*)(int, int)' from incompatible type 'void (*)(int)': different number of parameters (2 vs 1)}}
+    ptr2 = &fun;  // expected-error {{incompatible function pointer types assigning to 'void (*)(int, int)' from 'void (*)(int)'}}
   }
 
   void parameter_mismatch() {
     void (*ptr1)(double) = &fun; // expected-error {{cannot initialize a variable of type 'void (*)(double)' with an rvalue of type 'void (*)(int)': type mismatch at 1st parameter ('double' vs 'int')}}
     void (*ptr2)(double);
-    ptr2 = &fun; // expected-error {{assigning to 'void (*)(double)' from incompatible type 'void (*)(int)': type mismatch at 1st parameter ('double' vs 'int')}}
+    ptr2 = &fun; // expected-error {{incompatible function pointer types assigning to 'void (*)(double)' from 'void (*)(int)'}}
   }
 
   void return_type_test() {
     int (*ptr1)(int) = &fun; // expected-error {{cannot initialize a variable of type 'int (*)(int)' with an rvalue of type 'void (*)(int)': different return type ('int' vs 'void')}}
     int (*ptr2)(int);
-    ptr2 = &fun;  // expected-error {{assigning to 'int (*)(int)' from incompatible type 'void (*)(int)': different return type ('int' vs 'void')}}
+    ptr2 = &fun;  // expected-error {{incompatible function pointer types assigning to 'int (*)(int)' from 'void (*)(int)'}}
   }
 
   int foo(double x, double y) {return 0;} // expected-note {{candidate function has different number of parameters (expected 1 but has 2)}}

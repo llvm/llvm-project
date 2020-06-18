@@ -2030,7 +2030,7 @@ public:
   /// declaration to the declaration that is a definition (if there is one).
   bool isDefined(const FunctionDecl *&Definition) const;
 
-  virtual bool isDefined() const {
+  bool isDefined() const {
     const FunctionDecl* Definition;
     return isDefined(Definition);
   }
@@ -2125,19 +2125,17 @@ public:
   bool isTrivialForCall() const { return FunctionDeclBits.IsTrivialForCall; }
   void setTrivialForCall(bool IT) { FunctionDeclBits.IsTrivialForCall = IT; }
 
-  /// Whether this function is defaulted per C++0x. Only valid for
-  /// special member functions.
+  /// Whether this function is defaulted. Valid for e.g.
+  /// special member functions, defaulted comparisions (not methods!).
   bool isDefaulted() const { return FunctionDeclBits.IsDefaulted; }
   void setDefaulted(bool D = true) { FunctionDeclBits.IsDefaulted = D; }
 
-  /// Whether this function is explicitly defaulted per C++0x. Only valid
-  /// for special member functions.
+  /// Whether this function is explicitly defaulted.
   bool isExplicitlyDefaulted() const {
     return FunctionDeclBits.IsExplicitlyDefaulted;
   }
 
-  /// State that this function is explicitly defaulted per C++0x. Only valid
-  /// for special member functions.
+  /// State that this function is explicitly defaulted.
   void setExplicitlyDefaulted(bool ED = true) {
     FunctionDeclBits.IsExplicitlyDefaulted = ED;
   }
@@ -2306,8 +2304,13 @@ public:
   ///    allocation function. [...]
   ///
   /// If this function is an aligned allocation/deallocation function, return
-  /// true through IsAligned.
-  bool isReplaceableGlobalAllocationFunction(bool *IsAligned = nullptr) const;
+  /// the parameter number of the requested alignment through AlignmentParam.
+  ///
+  /// If this function is an allocation/deallocation function that takes
+  /// the `std::nothrow_t` tag, return true through IsNothrow,
+  bool isReplaceableGlobalAllocationFunction(
+      Optional<unsigned> *AlignmentParam = nullptr,
+      bool *IsNothrow = nullptr) const;
 
   /// Determine if this function provides an inline implementation of a builtin.
   bool isInlineBuiltinDeclaration() const;
@@ -2435,6 +2438,14 @@ public:
   /// may be fewer than the number of function parameters, if some of the
   /// parameters have default arguments (in C++).
   unsigned getMinRequiredArguments() const;
+
+  /// Determine whether this function has a single parameter, or multiple
+  /// parameters where all but the first have default arguments.
+  ///
+  /// This notion is used in the definition of copy/move constructors and
+  /// initializer list constructors. Note that, unlike getMinRequiredArguments,
+  /// parameter packs are not treated specially here.
+  bool hasOneParamOrDefaultArgs() const;
 
   /// Find the source location information for how the type of this function
   /// was written. May be absent (for example if the function was declared via
@@ -2915,12 +2926,15 @@ public:
 
   /// Returns the parent of this field declaration, which
   /// is the struct in which this field is defined.
+  ///
+  /// Returns null if this is not a normal class/struct field declaration, e.g.
+  /// ObjCAtDefsFieldDecl, ObjCIvarDecl.
   const RecordDecl *getParent() const {
-    return cast<RecordDecl>(getDeclContext());
+    return dyn_cast<RecordDecl>(getDeclContext());
   }
 
   RecordDecl *getParent() {
-    return cast<RecordDecl>(getDeclContext());
+    return dyn_cast<RecordDecl>(getDeclContext());
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
@@ -3534,6 +3548,7 @@ class EnumDecl : public TagDecl {
   /// negative enumerators of this enum. (see getNumNegativeBits)
   void setNumNegativeBits(unsigned Num) { EnumDeclBits.NumNegativeBits = Num; }
 
+public:
   /// True if this tag declaration is a scoped enumeration. Only
   /// possible in C++11 mode.
   void setScoped(bool Scoped = true) { EnumDeclBits.IsScoped = Scoped; }
@@ -3550,6 +3565,7 @@ class EnumDecl : public TagDecl {
   /// Microsoft-style enumeration with a fixed underlying type.
   void setFixed(bool Fixed = true) { EnumDeclBits.IsFixed = Fixed; }
 
+private:
   /// True if a valid hash is stored in ODRHash.
   bool hasODRHash() const { return EnumDeclBits.HasODRHash; }
   void setHasODRHash(bool Hash = true) { EnumDeclBits.HasODRHash = Hash; }
@@ -3954,6 +3970,11 @@ public:
     return cast_or_null<RecordDecl>(TagDecl::getDefinition());
   }
 
+  /// Returns whether this record is a union, or contains (at any nesting level)
+  /// a union member. This is used by CMSE to warn about possible information
+  /// leaks.
+  bool isOrContainsUnion() const;
+
   // Iterator access to field members. The field iterator only visits
   // the non-static data members of this class, ignoring any static
   // data members, functions, constructors, destructors, etc.
@@ -4335,17 +4356,18 @@ class ImportDecl final : public Decl,
   friend class ASTReader;
   friend TrailingObjects;
 
-  /// The imported module, along with a bit that indicates whether
-  /// we have source-location information for each identifier in the module
-  /// name.
-  ///
-  /// When the bit is false, we only have a single source location for the
-  /// end of the import declaration.
-  llvm::PointerIntPair<Module *, 1, bool> ImportedAndComplete;
+  /// The imported module.
+  Module *ImportedModule = nullptr;
 
   /// The next import in the list of imports local to the translation
   /// unit being parsed (not loaded from an AST file).
-  ImportDecl *NextLocalImport = nullptr;
+  ///
+  /// Includes a bit that indicates whether we have source-location information
+  /// for each identifier in the module name.
+  ///
+  /// When the bit is false, we only have a single source location for the
+  /// end of the import declaration.
+  llvm::PointerIntPair<ImportDecl *, 1, bool> NextLocalImportAndComplete;
 
   ImportDecl(DeclContext *DC, SourceLocation StartLoc, Module *Imported,
              ArrayRef<SourceLocation> IdentifierLocs);
@@ -4354,6 +4376,20 @@ class ImportDecl final : public Decl,
              SourceLocation EndLoc);
 
   ImportDecl(EmptyShell Empty) : Decl(Import, Empty) {}
+
+  bool isImportComplete() const { return NextLocalImportAndComplete.getInt(); }
+
+  void setImportComplete(bool C) { NextLocalImportAndComplete.setInt(C); }
+
+  /// The next import in the list of imports local to the translation
+  /// unit being parsed (not loaded from an AST file).
+  ImportDecl *getNextLocalImport() const {
+    return NextLocalImportAndComplete.getPointer();
+  }
+
+  void setNextLocalImport(ImportDecl *Import) {
+    NextLocalImportAndComplete.setPointer(Import);
+  }
 
 public:
   /// Create a new module import declaration.
@@ -4372,7 +4408,7 @@ public:
                                         unsigned NumLocations);
 
   /// Retrieve the module that was imported by the import declaration.
-  Module *getImportedModule() const { return ImportedAndComplete.getPointer(); }
+  Module *getImportedModule() const { return ImportedModule; }
 
   /// Retrieves the locations of each of the identifiers that make up
   /// the complete module name in the import declaration.
@@ -4518,6 +4554,13 @@ inline bool IsEnumDeclComplete(EnumDecl *ED) {
 /// Type.h and Decl.h.
 inline bool IsEnumDeclScoped(EnumDecl *ED) {
   return ED->isScoped();
+}
+
+/// OpenMP variants are mangled early based on their OpenMP context selector.
+/// The new name looks likes this:
+///  <name> + OpenMPVariantManglingSeparatorStr + <mangled OpenMP context>
+static constexpr StringRef getOpenMPVariantManglingSeparatorStr() {
+  return "$ompvariant";
 }
 
 } // namespace clang

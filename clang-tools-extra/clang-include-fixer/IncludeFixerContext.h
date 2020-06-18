@@ -37,7 +37,7 @@ public:
 
     /// The qualifiers of the scope in which SymbolIdentifier lookup
     /// occurs. It is represented as a sequence of names and scope resolution
-    /// operatiors ::, ending with a scope resolution operator (e.g. a::b::).
+    /// operators ::, ending with a scope resolution operator (e.g. a::b::).
     /// Empty if SymbolIdentifier is not in a specific scope.
     std::string ScopedQualifiers;
 

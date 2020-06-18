@@ -32,5 +32,6 @@ target_link_libraries(clangd
   PRIVATE
   clangTidy
   clangDaemon
+  clangdSupport
   ${CLANGD_XPC_LIBS}
   )

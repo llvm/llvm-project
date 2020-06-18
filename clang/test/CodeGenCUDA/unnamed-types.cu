@@ -36,4 +36,4 @@ void f1(float *p) {
   }(p);
 }
 // HOST: @__hip_register_globals
-// HOST: __hipRegisterFunction{{.*}}@_Z2k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_{{.*}}@0
+// HOST: __hipRegisterFunction{{.*}}@_Z17__device_stub__k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_{{.*}}@0

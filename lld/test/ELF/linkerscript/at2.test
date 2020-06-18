@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/at2.s -o %t.o
 # RUN: ld.lld -o %t.exe %t.o --script %s
 # RUN: llvm-readelf -l %t.exe | FileCheck %s
-# RUN: llvm-objdump -section-headers %t.exe | FileCheck %s --check-prefix=SECTIONS
+# RUN: llvm-objdump --section-headers %t.exe | FileCheck %s --check-prefix=SECTIONS
 
 MEMORY {
   AX (ax)    : ORIGIN = 0x2000, LENGTH = 0x100

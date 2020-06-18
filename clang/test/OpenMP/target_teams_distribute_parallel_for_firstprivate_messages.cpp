@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -113,7 +114,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for firstprivate (argv[1]) // expected-error {{expected variable name}}
   for (i = 0; i < argc; ++i) foo();
 
-#pragma omp target teams distribute parallel for firstprivate(ba) allocate(omp_thread_mem_alloc: ba) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute parallel for' directive}}
+#pragma omp target teams distribute parallel for firstprivate(ba) uses_allocators(omp_thread_mem_alloc) allocate(omp_thread_mem_alloc: ba) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute parallel for' directive}}
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target teams distribute parallel for firstprivate(ca) // expected-error {{no matching constructor for initialization of 'S3'}}

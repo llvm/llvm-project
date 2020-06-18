@@ -179,12 +179,10 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   char *Buffer = allocate(EHCleanupScope::getSizeForCleanupSize(Size));
   bool IsNormalCleanup = Kind & NormalCleanup;
   bool IsEHCleanup = Kind & EHCleanup;
-  bool IsActive = !(Kind & InactiveCleanup);
   bool IsLifetimeMarker = Kind & LifetimeMarker;
   EHCleanupScope *Scope =
     new (Buffer) EHCleanupScope(IsNormalCleanup,
                                 IsEHCleanup,
-                                IsActive,
                                 Size,
                                 BranchFixups.size(),
                                 InnermostNormalCleanup,
@@ -309,9 +307,9 @@ static void createStoreInstBefore(llvm::Value *value, Address addr,
 
 static llvm::LoadInst *createLoadInstBefore(Address addr, const Twine &name,
                                             llvm::Instruction *beforeInst) {
-  auto load = new llvm::LoadInst(addr.getPointer(), name, beforeInst);
-  load->setAlignment(addr.getAlignment().getAsAlign());
-  return load;
+  return new llvm::LoadInst(addr.getElementType(), addr.getPointer(), name,
+                            false, addr.getAlignment().getAsAlign(),
+                            beforeInst);
 }
 
 /// All the branch fixups on the EH stack have propagated out past the
@@ -858,6 +856,9 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
         // TODO: base this on the number of branch-afters and fixups
         const unsigned SwitchCapacity = 10;
+
+        // pass the abnormal exit flag to Fn (SEH cleanup)
+        cleanupFlags.setHasExitSwitch();
 
         llvm::LoadInst *Load =
           createLoadInstBefore(getNormalCleanupDestSlot(), "cleanup.dest",

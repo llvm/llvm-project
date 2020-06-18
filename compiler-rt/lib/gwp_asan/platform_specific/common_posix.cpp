@@ -8,6 +8,9 @@
 
 #include "gwp_asan/common.h"
 
+#include <sys/syscall.h>
+#include <unistd.h>
+
 namespace gwp_asan {
 
 uint64_t getThreadID() {

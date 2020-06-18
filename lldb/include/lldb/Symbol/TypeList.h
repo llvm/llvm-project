@@ -63,7 +63,8 @@ private:
 
   collection m_types;
 
-  DISALLOW_COPY_AND_ASSIGN(TypeList);
+  TypeList(const TypeList &) = delete;
+  const TypeList &operator=(const TypeList &) = delete;
 };
 
 } // namespace lldb_private

@@ -400,6 +400,15 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       else if (os_name == "maccatalyst") {
         image_infos[i].os_type = llvm::Triple::IOS;
         image_infos[i].os_env = llvm::Triple::MacABI;
+      } else if (os_name == "iossimulator") {
+        image_infos[i].os_type = llvm::Triple::IOS;
+        image_infos[i].os_env = llvm::Triple::Simulator;
+      } else if (os_name == "tvossimulator") {
+        image_infos[i].os_type = llvm::Triple::TvOS;
+        image_infos[i].os_env = llvm::Triple::Simulator;
+      } else if (os_name == "watchossimulator") {
+        image_infos[i].os_type = llvm::Triple::WatchOS;
+        image_infos[i].os_env = llvm::Triple::Simulator;
       }
     }
     if (image->HasKey("min_version_os_sdk")) {
@@ -672,19 +681,12 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
         loaded_module_list.AppendIfNeeded(image_module_sp);
       }
 
-      // macCataylst support:
+      // macCatalyst support:
       // Update the module's platform with the DYLD info.
       ArchSpec dyld_spec = image_infos[idx].GetArchitecture();
       if (dyld_spec.GetTriple().getOS() == llvm::Triple::IOS &&
-          dyld_spec.GetTriple().getEnvironment() == llvm::Triple::MacABI) {
+          dyld_spec.GetTriple().getEnvironment() == llvm::Triple::MacABI)
         image_module_sp->MergeArchitecture(dyld_spec);
-        const auto &target_triple = target.GetArchitecture().GetTriple();
-        // If dyld reports the process as being loaded as MACCATALYST,
-        // force-update the target's architecture to MACCATALYST.
-        if (!(target_triple.getOS() == llvm::Triple::IOS &&
-              target_triple.getEnvironment() == llvm::Triple::MacABI))
-          target.SetArchitecture(dyld_spec);
-      }
     }
   }
 

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -o - %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-android -verify-machineinstrs -o - %s | FileCheck --check-prefix=ANDROID-AARCH64 %s
+; RUN: llc -mtriple=aarch64-linux-android -verify-machineinstrs -o - %s | FileCheck %s
 
 @varfloat = global float 0.0
 @vardouble = global double 0.0
@@ -299,7 +299,7 @@ define void @test_exp_finite(double %double) #0 {
   %expdouble = call double @llvm.exp.f64(double %double)
   store double %expdouble, double* @vardouble
   ; ANDROID-AARCH64-NOT: bl __exp_finite
-  ; CHECK: bl __exp_finite
+  ; CHECK: bl exp
 
   ret void
 }
@@ -307,8 +307,8 @@ define void @test_exp_finite(double %double) #0 {
 define void @test_exp2_finite(double %double) #0 {
   %expdouble = call double @llvm.exp2.f64(double %double)
   store double %expdouble, double* @vardouble
-  ; ANDROID-AARCH64-NOT: bl __exp2_finite
-  ; CHECK: bl __exp2_finite
+  ; CHECK-NOT: bl __exp2_finite
+  ; CHECK: bl exp2
 
   ret void
 }
@@ -316,32 +316,32 @@ define void @test_exp2_finite(double %double) #0 {
 define void @test_log_finite(double %double) #0 {
   %logdouble = call double @llvm.log.f64(double %double)
   store double %logdouble, double* @vardouble
-  ; ANDROID-AARCH64-NOT: bl __log_finite
-  ; CHECK: bl __log_finite
+  ; CHECK-NOT: bl __log_finite
+  ; CHECK: bl log
   ret void
 }
 
 define void @test_log2_finite(double %double) #0 {
   %log2double = call double @llvm.log2.f64(double %double)
   store double %log2double, double* @vardouble
-  ; ANDROID-AARCH64-NOT: bl __log2_finite
-  ; CHECK: bl __log2_finite
+  ; CHECK-NOT: bl __log2_finite
+  ; CHECK: bl log2
   ret void
 }
 
 define void @test_log10_finite(double %double) #0 {
   %log10double = call double @llvm.log10.f64(double %double)
   store double %log10double, double* @vardouble
-  ; ANDROID-AARCH64-NOT: bl __log10_finite
-  ; CHECK: bl __log10_finite
+  ; CHECK-NOT: bl __log10_finite
+  ; CHECK: bl log10
   ret void
 }
 
 define void @test_pow_finite(double %double) #0 {
   %powdouble = call double @llvm.pow.f64(double %double, double %double)
   store double %powdouble, double* @vardouble
-  ; ANDROID-AARCH64-NOT: bl __pow_finite
-  ; CHECK: bl __pow_finite
+  ; CHECK-NOT: bl __pow_finite
+  ; CHECK: bl pow
   ret void
 }
 

@@ -118,14 +118,14 @@ static void sectionMapping(IO &IO, WasmYAML::MemorySection &Section) {
   IO.mapOptional("Memories", Section.Memories);
 }
 
-static void sectionMapping(IO &IO, WasmYAML::GlobalSection &Section) {
-  commonSectionMapping(IO, Section);
-  IO.mapOptional("Globals", Section.Globals);
-}
-
 static void sectionMapping(IO &IO, WasmYAML::EventSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Events", Section.Events);
+}
+
+static void sectionMapping(IO &IO, WasmYAML::GlobalSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Globals", Section.Globals);
 }
 
 static void sectionMapping(IO &IO, WasmYAML::ExportSection &Section) {
@@ -227,15 +227,15 @@ void MappingTraits<std::unique_ptr<WasmYAML::Section>>::mapping(
       Section.reset(new WasmYAML::MemorySection());
     sectionMapping(IO, *cast<WasmYAML::MemorySection>(Section.get()));
     break;
-  case wasm::WASM_SEC_GLOBAL:
-    if (!IO.outputting())
-      Section.reset(new WasmYAML::GlobalSection());
-    sectionMapping(IO, *cast<WasmYAML::GlobalSection>(Section.get()));
-    break;
   case wasm::WASM_SEC_EVENT:
     if (!IO.outputting())
       Section.reset(new WasmYAML::EventSection());
     sectionMapping(IO, *cast<WasmYAML::EventSection>(Section.get()));
+    break;
+  case wasm::WASM_SEC_GLOBAL:
+    if (!IO.outputting())
+      Section.reset(new WasmYAML::GlobalSection());
+    sectionMapping(IO, *cast<WasmYAML::GlobalSection>(Section.get()));
     break;
   case wasm::WASM_SEC_EXPORT:
     if (!IO.outputting())

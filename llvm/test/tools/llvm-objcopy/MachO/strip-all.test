@@ -9,7 +9,7 @@
 
 # RUN: llvm-objcopy --strip-all %t.exec %t.exec.stripped
 # RUN: llvm-readobj --sections --relocations --symbols %t.exec.stripped \
-# RUN:   | FileCheck --check-prefixes=COMMON,EXEC %s
+# RUN:   | FileCheck --check-prefix=COMMON %s
 
 # RUN: llvm-objcopy --strip-all %t.dwarf %t.dwarf.stripped
 # RUN: llvm-readobj --sections --relocations --symbols %t.dwarf.stripped \

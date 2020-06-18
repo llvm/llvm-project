@@ -4281,6 +4281,29 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
     return InsertPtOrError.get();
   }
 
+  if (OpName == "REG_SEQUENCE") {
+    auto SuperClass = inferRegClassFromPattern(Dst->getChild(0));
+    M.insertAction<ConstrainOperandToRegClassAction>(
+      InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
+
+    unsigned Num = Dst->getNumChildren();
+    for (unsigned I = 1; I != Num; I += 2) {
+      TreePatternNode *SubRegChild = Dst->getChild(I + 1);
+
+      auto SubIdx = inferSubRegIndexForNode(SubRegChild);
+      if (!SubIdx)
+        return failedImport("REG_SEQUENCE child is not a subreg index");
+
+      const auto SrcRCDstRCPair =
+        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+      assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
+      M.insertAction<ConstrainOperandToRegClassAction>(
+        InsertPt, DstMIBuilder.getInsnID(), I, *SrcRCDstRCPair->second);
+    }
+
+    return InsertPtOrError.get();
+  }
+
   M.insertAction<ConstrainOperandsToDefinitionAction>(InsertPt,
                                                       DstMIBuilder.getInsnID());
   return InsertPtOrError.get();
@@ -4930,6 +4953,30 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
           "Cannot infer register class for SUBREG_TO_REG operand #0");
     M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
     M.addAction<ConstrainOperandToRegClassAction>(0, 2, **SubClass);
+    ++NumPatternImported;
+    return std::move(M);
+  }
+
+  if (DstIName == "REG_SEQUENCE") {
+    auto SuperClass = inferRegClassFromPattern(Dst->getChild(0));
+
+    M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
+
+    unsigned Num = Dst->getNumChildren();
+    for (unsigned I = 1; I != Num; I += 2) {
+      TreePatternNode *SubRegChild = Dst->getChild(I + 1);
+
+      auto SubIdx = inferSubRegIndexForNode(SubRegChild);
+      if (!SubIdx)
+        return failedImport("REG_SEQUENCE child is not a subreg index");
+
+      const auto SrcRCDstRCPair =
+        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+
+      M.addAction<ConstrainOperandToRegClassAction>(0, I,
+                                                    *SrcRCDstRCPair->second);
+    }
+
     ++NumPatternImported;
     return std::move(M);
   }

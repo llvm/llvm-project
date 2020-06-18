@@ -7,16 +7,18 @@ target triple = "x86_64-unknown-linux-gnu"
 define i1 @PR41004(i32 %x, i32 %y, i32 %t1) {
 ; CHECK-LABEL: @PR41004(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[T0:%.*]] = icmp eq i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[MUL_FR:%.*]] = freeze i32 [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = icmp eq i32 [[MUL_FR]], 1
 ; CHECK-NEXT:    br i1 [[T0]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]]
 ; CHECK:       select.true.sink:
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[X:%.*]], 2
 ; CHECK-NEXT:    br label [[SELECT_END]]
 ; CHECK:       select.end:
 ; CHECK-NEXT:    [[MUL:%.*]] = phi i32 [ [[REM]], [[SELECT_TRUE_SINK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[NEG:%.*]] = add i32 [[T1:%.*]], -1
+; CHECK-NEXT:    [[USUB:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[T1:%.*]], i32 1)
+; CHECK-NEXT:    [[NEG:%.*]] = extractvalue { i32, i1 } [[USUB]], 0
+; CHECK-NEXT:    [[TOBOOL:%.*]] = extractvalue { i32, i1 } [[USUB]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[NEG]], [[MUL]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[T1]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
 entry:

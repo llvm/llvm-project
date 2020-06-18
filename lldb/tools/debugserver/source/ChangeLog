@@ -113,7 +113,7 @@
 	(RNBRemote::HandleReceivedPacket): Ditto.
 	(RNBRemote::CommDataReceived): Ditto.
 	* DNB.cpp (DNBProcessLaunch): Changed to take a eror string pointer with 
-	size for more desciptive error reporting (instead of a uint32_t pointer).
+	size for more descriptive error reporting (instead of a uint32_t pointer).
 	* DNB.h (DNBProcessLaunch): Ditto.
 	* DNBError.cpp (DNBError::AsString): Now returns NULL if there is no error.
 	* DNBError.h (DNBError::SetErrorString): New accessor to allow custom error
@@ -268,10 +268,10 @@
 	qualifier to allow arches to auto detect how many hardware watchpoints they 
 	have.
 	* DNBArchImpl.h (DNBArchMachARM::NumSupportedHardwareBreakpoints()): Auto
-	detect how many BRP pairs are avialable and disable for armv7 for the time
+	detect how many BRP pairs are available and disable for armv7 for the time
 	being (rdar://problem/6372672).
 	(DNBArchMachARM::NumSupportedHardwareWatchpoints()): Auto detect how many 
-	WRP pairs are avialable and disable for armv7 for the time being 
+	WRP pairs are available and disable for armv7 for the time being
 	(rdar://problem/6372672).
 
 2009-01-09  Greg Clayton  <gclayton@apple.com>
@@ -692,7 +692,7 @@
 2008-10-17  Greg Clayton  <gclayton@apple.com>
 
 	* test-remotenub.cpp (RNBRunLoopLaunchInferior): Don't listen for
-	the qLaunchSuccess if we aren't doing a lockdown connnection.
+	the qLaunchSuccess if we aren't doing a lockdown connection.
 
 2008-10-13  Greg Clayton  <gclayton@apple.com>
 
@@ -1154,7 +1154,7 @@
 2008-02-14  Jason Molenda  (jmolenda@apple.com)
 
 	* MachProcess.cpp: (MachProcess::SBForkChildForPTraceDebugging):
-	Set mode bits on slave side of pty.
+	Set mode bits on secondary side of pty.
 
 2008-02-12  Greg Clayton  <gclayton@apple.com>
 

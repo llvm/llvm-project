@@ -13,7 +13,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTFS_H
 #include "ClangdServer.h"
 #include "GlobalCompilationDatabase.h"
-#include "Path.h"
+#include "support/Path.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -31,11 +31,12 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
 class MockFSProvider : public FileSystemProvider {
 public:
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
-    return buildTestFS(Files);
+    return buildTestFS(Files, Timestamps);
   }
 
   // If relative paths are used, they are resolved with testPath().
   llvm::StringMap<std::string> Files;
+  llvm::StringMap<time_t> Timestamps;
 };
 
 // A Compilation database that returns a fixed set of compile flags.

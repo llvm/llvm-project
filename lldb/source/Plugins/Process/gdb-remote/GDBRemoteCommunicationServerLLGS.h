@@ -67,7 +67,7 @@ public:
 
   void DidExec(NativeProcessProtocol *process) override;
 
-  Status InitializeConnection(std::unique_ptr<Connection> &&connection);
+  Status InitializeConnection(std::unique_ptr<Connection> connection);
 
 protected:
   MainLoop &m_mainloop;
@@ -199,6 +199,8 @@ protected:
   static std::string XMLEncodeAttributeValue(llvm::StringRef value);
 
 private:
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> BuildTargetXml();
+
   void HandleInferiorState_Exited(NativeProcessProtocol *process);
 
   void HandleInferiorState_Stopped(NativeProcessProtocol *process);
@@ -222,7 +224,10 @@ private:
   void StopSTDIOForwarding();
 
   // For GDBRemoteCommunicationServerLLGS only
-  DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunicationServerLLGS);
+  GDBRemoteCommunicationServerLLGS(const GDBRemoteCommunicationServerLLGS &) =
+      delete;
+  const GDBRemoteCommunicationServerLLGS &
+  operator=(const GDBRemoteCommunicationServerLLGS &) = delete;
 };
 
 } // namespace process_gdb_remote

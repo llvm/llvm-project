@@ -47,11 +47,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AST.h"
-#include "Logger.h"
 #include "ParsedAST.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
@@ -119,7 +119,7 @@ const Node *getParentOfRootStmts(const Node *CommonAnc) {
   const Node *Parent = nullptr;
   switch (CommonAnc->Selected) {
   case SelectionTree::Selection::Unselected:
-    // Typicaly a block, with the { and } unselected, could also be ForStmt etc
+    // Typically a block, with the { and } unselected, could also be ForStmt etc
     // Ensure all Children are RootStmts.
     Parent = CommonAnc;
     break;
@@ -497,7 +497,7 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
     }
 
     bool VisitDeclRefExpr(DeclRefExpr *DRE) {
-      // Find the corresponding Decl and mark it's occurence.
+      // Find the corresponding Decl and mark it's occurrence.
       const Decl *D = DRE->getDecl();
       auto *DeclInfo = Info.getDeclInfoFor(D);
       // If no Decl was found, the Decl must be outside the enclosingFunc.

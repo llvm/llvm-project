@@ -7,7 +7,7 @@
 // SEC:      .got PROGBITS 000021f0
 // SEC-NEXT: .got.plt PROGBITS 000031f4
 
-// CHECK: foo:
+// CHECK: <foo>:
 // CHECK-NEXT: 1194: movl    -4100(%ebx), %eax
 // CHECK-NEXT:       movl    -4092(%ebx), %eax
 

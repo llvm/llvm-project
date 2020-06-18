@@ -343,8 +343,10 @@ defm : X86WriteRes<WriteVecStoreX,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNT,      [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNTY,     [SKXPort237,SKXPort4], 1, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore,  [SKXPort237,SKXPort0], 2, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStoreY, [SKXPort237,SKXPort0], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [SKXPort237,SKXPort0], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [SKXPort237,SKXPort0], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [SKXPort237,SKXPort0], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [SKXPort237,SKXPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMove,         [SKXPort05],  1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [SKXPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [SKXPort015], 1, [1], 1>;
@@ -1180,7 +1182,7 @@ def SKXWriteResGroup76 : SchedWriteRes<[SKXPort6,SKXPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup76], (instrs FARJMP64)>;
+def: InstRW<[SKXWriteResGroup76], (instrs FARJMP64m)>;
 def: InstRW<[SKXWriteResGroup76], (instregex "JMP(16|32|64)m")>;
 
 def SKXWriteResGroup79 : SchedWriteRes<[SKXPort23,SKXPort15]> {
@@ -1465,7 +1467,7 @@ def SKXWriteResGroup109 : SchedWriteRes<[SKXPort4,SKXPort6,SKXPort23,SKXPort237,
   let ResourceCycles = [1,1,1,1,1];
 }
 def: InstRW<[SKXWriteResGroup109], (instregex "CALL(16|32|64)m")>;
-def: InstRW<[SKXWriteResGroup109], (instrs FARCALL64)>;
+def: InstRW<[SKXWriteResGroup109], (instrs FARCALL64m)>;
 
 def SKXWriteResGroup110 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort237,SKXPort0156]> {
   let Latency = 7;
@@ -1963,14 +1965,14 @@ def SKXWriteResGroup171 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
 def: InstRW<[SKXWriteResGroup171], (instrs LOOPE, LOOPNE)>;
 
 def SKXWriteResGroup174 : SchedWriteRes<[SKXPort01]> {
-  let Latency = 12;
+  let Latency = 15;
   let NumMicroOps = 3;
   let ResourceCycles = [3];
 }
 def: InstRW<[SKXWriteResGroup174], (instregex "VPMULLQ(Z128|Z256)rr")>;
 
 def SKXWriteResGroup174z : SchedWriteRes<[SKXPort05]> {
-  let Latency = 12;
+  let Latency = 15;
   let NumMicroOps = 3;
   let ResourceCycles = [3];
 }
@@ -2131,8 +2133,8 @@ def SKXWriteResGroup202 : SchedWriteRes<[SKXPort0,SKXPort1,SKXPort5,SKXPort6,SKX
 }
 def: InstRW<[SKXWriteResGroup202], (instrs XCH_F)>;
 
-def SKXWriteResGroup205 : SchedWriteRes<[SKXPort23,SKXPort015]> {
-  let Latency = 18;
+def SKXWriteResGroup205 : SchedWriteRes<[SKXPort23,SKXPort01]> {
+  let Latency = 21;
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];
 }
@@ -2159,13 +2161,19 @@ def SKXWriteResGroup209 : SchedWriteRes<[SKXPort0,SKXPort23,SKXFPDivider]> {
 }
 def : SchedAlias<WriteFDiv64Ld,  SKXWriteResGroup209>; // TODO - convert to ZnWriteResFpuPair
 
-def SKXWriteResGroup211 : SchedWriteRes<[SKXPort23,SKXPort015]> {
-  let Latency = 19;
+def SKXWriteResGroup211 : SchedWriteRes<[SKXPort23,SKXPort01]> {
+  let Latency = 22;
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];
 }
-def: InstRW<[SKXWriteResGroup211], (instregex "VPMULLQZ256rm(b?)",
-                                              "VPMULLQZrm(b?)")>;
+def: InstRW<[SKXWriteResGroup211], (instregex "VPMULLQZ256rm(b?)")>;
+
+def SKXWriteResGroup211_1 : SchedWriteRes<[SKXPort23,SKXPort05]> {
+  let Latency = 22;
+  let NumMicroOps = 4;
+  let ResourceCycles = [1,3];
+}
+def: InstRW<[SKXWriteResGroup211_1], (instregex "VPMULLQZrm(b?)")>;
 
 def SKXWriteResGroup215 : SchedWriteRes<[SKXPort0]> {
   let Latency = 20;
@@ -2441,7 +2449,7 @@ def: InstRW<[SKXWriteResGroup267], (instrs PAUSE)>;
 def: InstRW<[WriteZero], (instrs CLC)>;
 
 
-// Intruction variants handled by the renamer. These might not need execution
+// Instruction variants handled by the renamer. These might not need execution
 // ports in certain conditions.
 // See Agner's Fog "The microarchitecture of Intel, AMD and VIA CPUs",
 // section "Skylake Pipeline" > "Register allocation and renaming".

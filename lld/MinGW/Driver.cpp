@@ -42,6 +42,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
@@ -248,6 +249,8 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-lldmap:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_reproduce))
     add("-reproduce:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
+    add("-lldltocache:" + StringRef(a->getValue()));
 
   if (auto *a = args.getLastArg(OPT_o))
     add("-out:" + StringRef(a->getValue()));
@@ -293,6 +296,16 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-opt:ref");
   else
     add("-opt:noref");
+
+  if (args.hasFlag(OPT_enable_auto_import, OPT_disable_auto_import, true))
+    add("-auto-import");
+  else
+    add("-auto-import:no");
+  if (args.hasFlag(OPT_enable_runtime_pseudo_reloc,
+                   OPT_disable_runtime_pseudo_reloc, true))
+    add("-runtime-pseudo-reloc");
+  else
+    add("-runtime-pseudo-reloc:no");
 
   if (auto *a = args.getLastArg(OPT_icf)) {
     StringRef s = a->getValue();

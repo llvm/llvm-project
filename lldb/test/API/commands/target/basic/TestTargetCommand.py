@@ -82,7 +82,7 @@ class targetCommandTestCase(TestBase):
                 if match:
                     # We will start from (index + 1) ....
                     base = int(match.group(1), 10) + 1
-                    #print("base is:", base)
+                    self.trace("base is:", base)
                     break
 
         self.runCmd("target create " + exe_a, CURRENT_EXECUTABLE_SET)
@@ -326,21 +326,22 @@ class targetCommandTestCase(TestBase):
     @no_debug_info_test
     def test_target_create_nonexistent_core_file(self):
         self.expect("target create -c doesntexist", error=True,
-                    substrs=["core file 'doesntexist' doesn't exist"])
+                    patterns=["Cannot open 'doesntexist'", ": (No such file or directory|The system cannot find the file specified)"])
 
     # Write only files don't seem to be supported on Windows.
     @skipIfWindows
+    @skipIfReproducer # Cannot be captured in the VFS.
     @no_debug_info_test
     def test_target_create_unreadable_core_file(self):
         tf = tempfile.NamedTemporaryFile()
         os.chmod(tf.name, stat.S_IWRITE)
         self.expect("target create -c '" + tf.name + "'", error=True,
-                    substrs=["core file '", "' is not readable"])
+                    substrs=["Cannot open '", "': Permission denied"])
 
     @no_debug_info_test
     def test_target_create_nonexistent_sym_file(self):
         self.expect("target create -s doesntexist doesntexisteither", error=True,
-                    substrs=["invalid symbol file path 'doesntexist'"])
+                    patterns=["Cannot open '", ": (No such file or directory|The system cannot find the file specified)"])
 
     @skipIfWindows
     @no_debug_info_test
@@ -353,11 +354,12 @@ class targetCommandTestCase(TestBase):
     # Write only files don't seem to be supported on Windows.
     @skipIfWindows
     @no_debug_info_test
+    @skipIfReproducer # Cannot be captured in the VFS.
     def test_target_create_unreadable_sym_file(self):
         tf = tempfile.NamedTemporaryFile()
         os.chmod(tf.name, stat.S_IWRITE)
         self.expect("target create -s '" + tf.name + "' no_exe", error=True,
-                    substrs=["symbol file '", "' is not readable"])
+                    substrs=["Cannot open '", "': Permission denied"])
 
     @no_debug_info_test
     def test_target_delete_all(self):

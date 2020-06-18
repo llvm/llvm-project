@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -t -section-headers %t | FileCheck %s
+# RUN: llvm-objdump -t --section-headers %t | FileCheck %s
 
 ## This checks that:
 ## 1) Address of _etext is the first location after the last read-only loadable segment.
@@ -18,19 +18,19 @@
 # CHECK-NEXT:    2 .data         00000002 0000000000202159 DATA
 # CHECK-NEXT:    3 .bss          00000006 000000000020215c BSS
 # CHECK:      SYMBOL TABLE:
-# CHECK-NEXT:  000000000020215b         .data 00000000 _edata
-# CHECK-NEXT:  0000000000202162         .bss  00000000 _end
-# CHECK-NEXT:  0000000000201159         .text 00000000 _etext
-# CHECK-NEXT:  0000000000201158         .text 00000000 _start
-# CHECK-NEXT:  000000000020215b         .data 00000000 edata
-# CHECK-NEXT:  0000000000202162         .bss  00000000 end
-# CHECK-NEXT:  0000000000201159         .text 00000000 etext
+# CHECK-NEXT:  000000000020215b g       .data 0000000000000000 _edata
+# CHECK-NEXT:  0000000000202162 g       .bss  0000000000000000 _end
+# CHECK-NEXT:  0000000000201159 g       .text 0000000000000000 _etext
+# CHECK-NEXT:  0000000000201158 g       .text 0000000000000000 _start
+# CHECK-NEXT:  000000000020215b g       .data 0000000000000000 edata
+# CHECK-NEXT:  0000000000202162 g       .bss  0000000000000000 end
+# CHECK-NEXT:  0000000000201159 g       .text 0000000000000000 etext
 
 # RUN: ld.lld -r %t.o -o %t2
 # RUN: llvm-objdump -t %t2 | FileCheck %s --check-prefix=RELOCATABLE
-# RELOCATABLE:       0000000000000000 *UND* 00000000 _edata
-# RELOCATABLE-NEXT:  0000000000000000 *UND* 00000000 _end
-# RELOCATABLE-NEXT:  0000000000000000 *UND* 00000000 _etext
+# RELOCATABLE:       0000000000000000 *UND* 0000000000000000 _edata
+# RELOCATABLE-NEXT:  0000000000000000 *UND* 0000000000000000 _end
+# RELOCATABLE-NEXT:  0000000000000000 *UND* 0000000000000000 _etext
 
 .global _start,_end,_etext,_edata,end,etext,edata
 .text

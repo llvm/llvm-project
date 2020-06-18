@@ -8,7 +8,7 @@
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: foo:
+# CHECK-NEXT: <foo>:
 # CHECK-NEXT:    {{.*}}:  lui  $2, 0
 # CHECK-NEXT:    {{.*}}:  lw   $2, -32736($2)
 # CHECK-NEXT:    {{.*}}:  lui  $2, 0

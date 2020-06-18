@@ -17,7 +17,6 @@
 #include "mlir/IR/StorageUniquerSupport.h"
 
 namespace mlir {
-struct ClassID;
 class Dialect;
 class MLIRContext;
 
@@ -36,7 +35,7 @@ class TypeStorage : public StorageUniquer::BaseStorage {
 
 protected:
   /// This constructor is used by derived classes as part of the TypeUniquer.
-  /// When using this constructor, the initializeTypeInfo function must be
+  /// When using this constructor, the initializeDialect function must be
   /// invoked afterwards for the storage to be valid.
   TypeStorage(unsigned subclassData = 0)
       : dialect(nullptr), subclassData(subclassData) {}
@@ -98,12 +97,11 @@ public:
 private:
   /// Get the dialect that the type 'T' was registered with.
   template <typename T> static Dialect &lookupDialectForType(MLIRContext *ctx) {
-    return lookupDialectForType(ctx, T::getClassID());
+    return lookupDialectForType(ctx, T::getTypeID());
   }
 
   /// Get the dialect that registered the type with the provided typeid.
-  static Dialect &lookupDialectForType(MLIRContext *ctx,
-                                       const ClassID *const typeID);
+  static Dialect &lookupDialectForType(MLIRContext *ctx, TypeID typeID);
 };
 } // namespace detail
 

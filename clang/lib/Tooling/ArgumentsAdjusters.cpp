@@ -42,6 +42,12 @@ ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
       if (!Arg.startswith("-fcolor-diagnostics") &&
           !Arg.startswith("-fdiagnostics-color"))
         AdjustedArgs.push_back(Args[i]);
+      // If we strip a color option, make sure we strip any preceeding `-Xclang`
+      // option as well.
+      // FIXME: This should be added to most argument adjusters!
+      else if (!AdjustedArgs.empty() && AdjustedArgs.back() == "-Xclang")
+        AdjustedArgs.pop_back();
+
       if (Arg == "-fsyntax-only")
         HasSyntaxOnly = true;
     }
@@ -92,7 +98,8 @@ ArgumentsAdjuster getClangStripDependencyFileAdjuster() {
       StringRef Arg = Args[i];
       // All dependency-file options begin with -M. These include -MM,
       // -MF, -MG, -MP, -MT, -MQ, -MD, and -MMD.
-      if (!Arg.startswith("-M")) {
+      if (!Arg.startswith("-M") && !Arg.startswith("/showIncludes") &&
+          !Arg.startswith("-showIncludes")) {
         AdjustedArgs.push_back(Args[i]);
         continue;
       }

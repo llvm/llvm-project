@@ -96,14 +96,14 @@ TARGET_BUILTIN(__builtin_HEXAGON_S2_storerd_pcr, "vv*iLLivC*", "", V5)
 TARGET_BUILTIN(__builtin_HEXAGON_prefetch,"vv*","", V5)
 TARGET_BUILTIN(__builtin_HEXAGON_A6_vminub_RdP,"LLiLLiLLi","", V62)
 
-TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstoreq,"vV16iv*V16i","", HVXV60)
-TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorenq,"vV16iv*V16i","", HVXV60)
-TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorentq,"vV16iv*V16i","", HVXV60)
-TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorentnq,"vV16iv*V16i","", HVXV60)
-TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstoreq_128B,"vV32iv*V32i","", HVXV60)
-TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorenq_128B,"vV32iv*V32i","", HVXV60)
-TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorentq_128B,"vV32iv*V32i","", HVXV60)
-TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorentnq_128B,"vV32iv*V32i","", HVXV60)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstoreq,"vV64bv*V16i","", HVXV60)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorenq,"vV64bv*V16i","", HVXV60)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorentq,"vV64bv*V16i","", HVXV60)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorentnq,"vV64bv*V16i","", HVXV60)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstoreq_128B,"vV128bv*V32i","", HVXV60)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorenq_128B,"vV128bv*V32i","", HVXV60)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorentq_128B,"vV128bv*V32i","", HVXV60)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vmaskedstorentnq_128B,"vV128bv*V32i","", HVXV60)
 
 
 // These are only valid on v65

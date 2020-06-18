@@ -139,7 +139,7 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
     return false;
 
   if (RefSec.getSegmentName() == "__DATA" &&
-      RefSec.getSectionName() == "__objc_classrefs")
+      RefSec.getName() == "__objc_classrefs")
     return false;
 
   // FIXME: ld64 currently handles internal pointer-sized relocations
@@ -407,5 +407,5 @@ std::unique_ptr<MCObjectTargetWriter>
 llvm::createAArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype,
                                     bool IsILP32) {
   return std::make_unique<AArch64MachObjectWriter>(CPUType, CPUSubtype,
-                                                    IsILP32);
+                                                   IsILP32);
 }

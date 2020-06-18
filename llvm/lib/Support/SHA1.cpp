@@ -16,12 +16,12 @@
 
 #include "llvm/Support/SHA1.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Host.h"
-using namespace llvm;
-
-#include <stdint.h>
 #include <string.h>
+
+using namespace llvm;
 
 #if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
 #define SHA_BIG_ENDIAN
@@ -236,6 +236,11 @@ void SHA1::update(ArrayRef<uint8_t> Data) {
   // Finish the remainder.
   for (uint8_t C : Data)
     addUncounted(C);
+}
+
+void SHA1::update(StringRef Str) {
+  update(
+      ArrayRef<uint8_t>((uint8_t *)const_cast<char *>(Str.data()), Str.size()));
 }
 
 void SHA1::pad() {

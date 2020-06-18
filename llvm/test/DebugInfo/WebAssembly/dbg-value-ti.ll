@@ -1,7 +1,7 @@
 ; RUN: llc < %s -stop-after=wasm-explicit-locals | FileCheck %s
 
 ; Checks if DBG_VALUEs that correspond to new `local.{tee,set}` are
-; using `target-index(wasm-local-start)` operands.
+; using `target-index(wasm-local)` operands.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown-wasm"
@@ -24,12 +24,12 @@ for.body:                                         ; preds = %entry, %for.body
 
 ; CHECK: %[[REG2:.*]]:i32 = LOCAL_GET_I32 [[LOOP_LOCAL]],
 ; CHECK: %[[REG3:.*]]:i32 = LOCAL_TEE_I32 [[TMP_LOCAL:.*]], %[[REG2]],
-; CHECK: DBG_VALUE target-index(wasm-local-start) + [[TMP_LOCAL]], $noreg,
+; CHECK: DBG_VALUE target-index(wasm-local) + [[TMP_LOCAL]], $noreg,
   call void @llvm.dbg.value(metadata i32 %b.011, metadata !16, metadata !DIExpression()), !dbg !19
 
 ; CHECK: %[[REG4:.*]]:i32 = nsw ADD_I32
 ; CHECK: LOCAL_SET_I32 [[LOOP_LOCAL]], %[[REG4]],
-; CHECK: DBG_VALUE target-index(wasm-local-start) + [[LOOP_LOCAL]], $noreg,
+; CHECK: DBG_VALUE target-index(wasm-local) + [[LOOP_LOCAL]], $noreg,
   %add = add nsw i32 %b.011, %a.010, !dbg !26
   %inc = add nuw nsw i32 %i.09, 1, !dbg !28
   call void @llvm.dbg.value(metadata i32 %add, metadata !16, metadata !DIExpression()), !dbg !19

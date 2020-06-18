@@ -52,7 +52,8 @@ protected:
 
 private:
   // For SymbolVendor only
-  DISALLOW_COPY_AND_ASSIGN(SymbolVendor);
+  SymbolVendor(const SymbolVendor &) = delete;
+  const SymbolVendor &operator=(const SymbolVendor &) = delete;
 };
 
 } // namespace lldb_private

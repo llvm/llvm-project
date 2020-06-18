@@ -69,7 +69,7 @@ public:
   AddClangModuleCompilationOptions(lldb_private::Target *target,
                                    std::vector<std::string> &options) override {
     return PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
-        target, options, PlatformDarwin::SDKType::iPhoneSimulator);
+        target, options, lldb_private::XcodeSDK::Type::iPhoneSimulator);
   }
 
 protected:
@@ -80,7 +80,9 @@ protected:
   const char *GetSDKDirectoryAsCString();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformAppleTVSimulator);
+  PlatformAppleTVSimulator(const PlatformAppleTVSimulator &) = delete;
+  const PlatformAppleTVSimulator &
+  operator=(const PlatformAppleTVSimulator &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLETVSIMULATOR_H

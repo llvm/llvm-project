@@ -319,7 +319,7 @@ let Namespace = "Hexagon" in {
 // HVX types
 
 def VecI1:   ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                               [v512i1, v1024i1, v512i1]>;
+                               [v64i1,  v128i1,  v64i1]>;
 def VecI8:   ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v64i8,  v128i8,  v64i8]>;
 def VecI16:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
@@ -355,10 +355,10 @@ def HvxWR : RegisterClass<"Hexagon", [VecPI8, VecPI16, VecPI32], 1024,
     [RegInfo<1024,1024,1024>, RegInfo<2048,2048,2048>, RegInfo<1024,1024,1024>]>;
 }
 
-def HvxQR : RegisterClass<"Hexagon", [VecI1, VecQ8, VecQ16, VecQ32], 512,
+def HvxQR : RegisterClass<"Hexagon", [VecI1, VecQ8, VecQ16, VecQ32], 128,
   (add Q0, Q1, Q2, Q3)> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
-    [RegInfo<512,512,512>, RegInfo<1024,1024,1024>, RegInfo<512,512,512>]>;
+    [RegInfo<64,512,512>, RegInfo<128,1024,1024>, RegInfo<64,512,512>]>;
 }
 
 def HvxVQR : RegisterClass<"Hexagon", [untyped], 2048,

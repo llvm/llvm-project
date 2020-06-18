@@ -24,11 +24,6 @@ AST_MATCHER(CXXRecordDecl, hasNonTrivialDestructor) {
 } // namespace
 
 void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Look for temporaries that are constructed in-place and immediately
   // destroyed. Look for temporaries created by a functional cast but not for
   // those returned from a call.
@@ -36,13 +31,15 @@ void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
       cxxBindTemporaryExpr(unless(has(ignoringParenImpCasts(callExpr()))))
           .bind("temp");
   Finder->addMatcher(
-      exprWithCleanups(unless(isInTemplateInstantiation()),
-                       hasParent(compoundStmt().bind("compound")),
-                       hasType(cxxRecordDecl(hasNonTrivialDestructor())),
-                       anyOf(has(ignoringParenImpCasts(BindTemp)),
-                             has(ignoringParenImpCasts(cxxFunctionalCastExpr(
-                                 has(ignoringParenImpCasts(BindTemp)))))))
-          .bind("expr"),
+      traverse(ast_type_traits::TK_AsIs,
+               exprWithCleanups(
+                   unless(isInTemplateInstantiation()),
+                   hasParent(compoundStmt().bind("compound")),
+                   hasType(cxxRecordDecl(hasNonTrivialDestructor())),
+                   anyOf(has(ignoringParenImpCasts(BindTemp)),
+                         has(ignoringParenImpCasts(cxxFunctionalCastExpr(
+                             has(ignoringParenImpCasts(BindTemp)))))))
+                   .bind("expr")),
       this);
 }
 
@@ -54,7 +51,7 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
   if (E->getBeginLoc().isMacroID())
     return;
 
-  // Don't emit a warning for the last statement in the surrounding compund
+  // Don't emit a warning for the last statement in the surrounding compound
   // statement.
   const auto *CS = Result.Nodes.getNodeAs<CompoundStmt>("compound");
   if (E == CS->body_back())

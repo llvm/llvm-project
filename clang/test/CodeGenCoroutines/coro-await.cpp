@@ -130,7 +130,7 @@ extern "C" void f1(int) {
   // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::experimental::coroutine_traits<void, int>::promise_type"
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   co_yield 42;
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJviEE12promise_type11yield_valueEi(%struct.suspend_maybe* sret %[[AWAITER:.+]], %"struct.std::experimental::coroutine_traits<void, int>::promise_type"* %[[PROMISE]], i32 42)
+  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJviEE12promise_type11yield_valueEi(%struct.suspend_maybe* sret align 4 %[[AWAITER:.+]], %"struct.std::experimental::coroutine_traits<void, int>::promise_type"* %[[PROMISE]], i32 42)
 
   // See if we need to suspend:
   // --------------------------
@@ -197,20 +197,20 @@ extern "C" void UseAggr(Aggr&&);
 extern "C" void TestAggr() {
   UseAggr(co_await AggrAwaiter{});
   Whatever();
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret %[[AwaitResume:.+]],
-  // CHECK: call void @UseAggr(%struct.Aggr* dereferenceable(12) %[[AwaitResume]])
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret align 4 %[[AwaitResume:.+]],
+  // CHECK: call void @UseAggr(%struct.Aggr* nonnull align 4 dereferenceable(12) %[[AwaitResume]])
   // CHECK: call void @_ZN4AggrD1Ev(%struct.Aggr* %[[AwaitResume]])
   // CHECK: call void @Whatever()
 
   co_await AggrAwaiter{};
   Whatever();
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret %[[AwaitResume2:.+]],
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret align 4 %[[AwaitResume2:.+]],
   // CHECK: call void @_ZN4AggrD1Ev(%struct.Aggr* %[[AwaitResume2]])
   // CHECK: call void @Whatever()
 
   Aggr Val = co_await AggrAwaiter{};
   Whatever();
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret %[[AwaitResume3:.+]],
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret align 4 %[[AwaitResume3:.+]],
   // CHECK: call void @Whatever()
   // CHECK: call void @_ZN4AggrD1Ev(%struct.Aggr* %[[AwaitResume3]])
 }
@@ -253,7 +253,7 @@ extern "C" void TestOpAwait() {
 
   co_await MyAgg{};
   // CHECK: call void @_ZN5MyAggawEv(%struct.MyAgg* %
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret %
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret align 4 %
 }
 
 // CHECK-LABEL: EndlessLoop(
@@ -315,15 +315,15 @@ void AwaitReturnsLValue(double) {
   // CHECK: %[[ZVAR:.+]] = alloca %struct.RefTag*,
   // CHECK-NEXT: %[[TMP2:.+]] = alloca %struct.AwaitResumeReturnsLValue,
 
-  // CHECK: %[[RES1:.+]] = call dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[AVAR]])
+  // CHECK: %[[RES1:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[AVAR]])
   // CHECK-NEXT: store %struct.RefTag* %[[RES1]], %struct.RefTag** %[[XVAR]],
   RefTag& x = co_await a;
 
-  // CHECK: %[[RES2:.+]] = call dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP1]])
+  // CHECK: %[[RES2:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP1]])
   // CHECK-NEXT: store %struct.RefTag* %[[RES2]], %struct.RefTag** %[[YVAR]],
 
   RefTag& y = co_await AwaitResumeReturnsLValue{};
-  // CHECK: %[[RES3:.+]] = call dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP2]])
+  // CHECK: %[[RES3:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP2]])
   // CHECK-NEXT: store %struct.RefTag* %[[RES3]], %struct.RefTag** %[[ZVAR]],
   RefTag& z = co_yield 42;
 }

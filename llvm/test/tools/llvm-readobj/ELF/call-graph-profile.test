@@ -1,6 +1,8 @@
 ## This test checks how we handle the --elf-cg-profile option.
 
 # RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj %t.o --cg-profile | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf %t.o --cg-profile | FileCheck %s --check-prefix=GNU
 # RUN: llvm-readobj %t.o --elf-cg-profile | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-readelf %t.o --elf-cg-profile | FileCheck %s --check-prefix=GNU
 

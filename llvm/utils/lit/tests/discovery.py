@@ -17,6 +17,9 @@
 # CHECK-BASIC-OUT:   top-level-suite - 3 tests
 # CHECK-BASIC-OUT:     Source Root: {{.*[/\\]discovery$}}
 # CHECK-BASIC-OUT:     Exec Root  : {{.*[/\\]discovery$}}
+# CHECK-BASIC-OUT:     Available Features: feature1 feature2
+# CHECK-BASIC-OUT:     Available Substitutions: %key1 => value1
+# CHECK-BASIC-OUT:                              %key2 => value2
 #
 # CHECK-BASIC-OUT: -- Available Tests --
 # CHECK-BASIC-OUT: sub-suite :: test-one
@@ -150,5 +153,7 @@
 #      CHECK-ASEXEC-INTREE:   exec-discovery-in-tree-suite - 1 tests
 # CHECK-ASEXEC-INTREE-NEXT:     Source Root: {{.*[/\\]exec-discovery-in-tree$}}
 # CHECK-ASEXEC-INTREE-NEXT:     Exec Root  : {{.*[/\\]exec-discovery-in-tree[/\\]obj$}}
+# CHECK-ASEXEC-INTREE-NEXT:     Available Features:
+# CHECK-ASEXEC-INTREE-NEXT:     Available Substitutions:
 # CHECK-ASEXEC-INTREE-NEXT: -- Available Tests --
 # CHECK-ASEXEC-INTREE-NEXT: exec-discovery-in-tree-suite :: test-one

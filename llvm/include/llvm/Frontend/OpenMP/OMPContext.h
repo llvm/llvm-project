@@ -16,6 +16,7 @@
 #define LLVM_OPENMP_CONTEXT_H
 
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Triple.h"
@@ -43,6 +44,7 @@ enum class TraitSelector {
 /// IDs for all OpenMP context trait properties (host/gpu/bsc/llvm/...)
 enum class TraitProperty {
 #define OMP_TRAIT_PROPERTY(Enum, ...) Enum,
+#define OMP_LAST_TRAIT_PROPERTY(Enum) Last = Enum
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 };
 
@@ -122,12 +124,12 @@ struct VariantMatchInfo {
   void addTrait(TraitSet Set, TraitProperty Property, APInt *Score = nullptr) {
     if (Score)
       ScoreMap[Property] = *Score;
-    RequiredTraits.insert(Property);
+    RequiredTraits.set(unsigned(Property));
     if (Set == TraitSet::construct)
       ConstructTraits.push_back(Property);
   }
 
-  SmallSet<TraitProperty, 8> RequiredTraits;
+  BitVector RequiredTraits = BitVector(unsigned(TraitProperty::Last) + 1);
   SmallVector<TraitProperty, 8> ConstructTraits;
   SmallDenseMap<TraitProperty, APInt> ScoreMap;
 };
@@ -142,19 +144,22 @@ struct OMPContext {
     addTrait(getOpenMPContextTraitSetForProperty(Property), Property);
   }
   void addTrait(TraitSet Set, TraitProperty Property) {
-    ActiveTraits.insert(Property);
+    ActiveTraits.set(unsigned(Property));
     if (Set == TraitSet::construct)
       ConstructTraits.push_back(Property);
   }
 
-  SmallSet<TraitProperty, 8> ActiveTraits;
+  BitVector ActiveTraits = BitVector(unsigned(TraitProperty::Last) + 1);
   SmallVector<TraitProperty, 8> ConstructTraits;
 };
 
 /// Return true if \p VMI is applicable in \p Ctx, that is, all traits required
-/// by \p VMI are available in the OpenMP context \p Ctx.
+/// by \p VMI are available in the OpenMP context \p Ctx. If \p DeviceSetOnly is
+/// true, only the device selector set, if present, are checked. Note that we
+/// still honor extension traits provided by the user.
 bool isVariantApplicableInContext(const VariantMatchInfo &VMI,
-                                  const OMPContext &Ctx);
+                                  const OMPContext &Ctx,
+                                  bool DeviceSetOnly = false);
 
 /// Return the index (into \p VMIs) of the variant with the highest score
 /// from the ones applicble in \p Ctx. See llvm::isVariantApplicableInContext.

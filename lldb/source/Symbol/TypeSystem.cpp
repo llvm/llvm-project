@@ -70,6 +70,10 @@ lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
   return CreateInstanceHelper(language, nullptr, target);
 }
 
+#ifndef NDEBUG
+bool TypeSystem::Verify(lldb::opaque_compiler_type_t type) { return true; }
+#endif
+
 bool TypeSystem::IsAnonymousType(lldb::opaque_compiler_type_t type) {
   return false;
 }
@@ -109,7 +113,8 @@ TypeSystem::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
 
 CompilerType TypeSystem::CreateTypedef(lldb::opaque_compiler_type_t type,
                                        const char *name,
-                                       const CompilerDeclContext &decl_ctx) {
+                                       const CompilerDeclContext &decl_ctx,
+                                       uint32_t opaque_payload) {
   return CompilerType();
 }
 

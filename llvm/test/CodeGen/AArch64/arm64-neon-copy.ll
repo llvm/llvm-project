@@ -200,7 +200,19 @@ define <2 x double> @ins1f2(<1 x double> %tmp1, <2 x double> %tmp2) {
 ; CHECK-LABEL: ins1f2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %tmp3 = extractelement <1 x double> %tmp1, i32 0
+  %tmp4 = insertelement <2 x double> %tmp2, double %tmp3, i32 1
+  ret <2 x double> %tmp4
+}
+
+define <2 x double> @ins1f2_args_flipped(<2 x double> %tmp2, <1 x double> %tmp1) {
+; CHECK-LABEL: ins1f2_args_flipped:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill:  def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <1 x double> %tmp1, i32 0
   %tmp4 = insertelement <2 x double> %tmp2, double %tmp3, i32 1

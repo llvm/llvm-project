@@ -265,7 +265,7 @@ def Half      : Type<"half",      QualType<"HalfTy">>;
 def Size      : Type<"size_t",    QualType<"getSizeType()">>;
 def PtrDiff   : Type<"ptrdiff_t", QualType<"getPointerDiffType()">>;
 def IntPtr    : Type<"intptr_t",  QualType<"getIntPtrType()">>;
-def UIntPtr   : Type<"uintPtr_t", QualType<"getUIntPtrType()">>;
+def UIntPtr   : Type<"uintptr_t", QualType<"getUIntPtrType()">>;
 def Void      : Type<"void",      QualType<"VoidTy">>;
 
 // OpenCL v1.0/1.2/2.0 s6.1.2: Built-in Vector Data Types.
@@ -288,7 +288,22 @@ def Image2dMsaaDepth      : Type<"image2d_msaa_depth_t", QualType<"OCLImage2dMSA
 def Image2dArrayMsaaDepth : Type<"image2d_array_msaa_depth_t", QualType<"OCLImage2dArrayMSAADepth", 1>>;
 
 def Sampler               : Type<"sampler_t", QualType<"OCLSamplerTy">>;
+def ClkEvent              : Type<"clk_event_t", QualType<"OCLClkEventTy">>;
 def Event                 : Type<"event_t", QualType<"OCLEventTy">>;
+def Queue                 : Type<"queue_t", QualType<"OCLQueueTy">>;
+def ReserveId             : Type<"reserve_id_t", QualType<"OCLReserveIDTy">>;
+
+// OpenCL v2.0 s6.13.11: Atomic integer and floating-point types.
+def AtomicInt             : Type<"atomic_int", QualType<"getAtomicType(Context.IntTy)">>;
+def AtomicUInt            : Type<"atomic_uint", QualType<"getAtomicType(Context.UnsignedIntTy)">>;
+def AtomicLong            : Type<"atomic_long", QualType<"getAtomicType(Context.LongTy)">>;
+def AtomicULong           : Type<"atomic_ulong", QualType<"getAtomicType(Context.UnsignedLongTy)">>;
+def AtomicFloat           : Type<"atomic_float", QualType<"getAtomicType(Context.FloatTy)">>;
+def AtomicDouble          : Type<"atomic_double", QualType<"getAtomicType(Context.DoubleTy)">>;
+def AtomicIntPtr          : Type<"atomic_intptr_t", QualType<"getAtomicType(Context.getIntPtrType())">>;
+def AtomicUIntPtr         : Type<"atomic_uintptr_t", QualType<"getAtomicType(Context.getUIntPtrType())">>;
+def AtomicSize            : Type<"atomic_size_t", QualType<"getAtomicType(Context.getSizeType())">>;
+def AtomicPtrDiff         : Type<"atomic_ptrdiff_t", QualType<"getAtomicType(Context.getPointerDiffType())">>;
 
 //===----------------------------------------------------------------------===//
 //                 Definitions of OpenCL gentype variants
@@ -675,7 +690,7 @@ foreach name = ["isfinite", "isinf", "isnan", "isnormal", "signbit"] in {
   def : Builtin<name, [GenTypeShortVecNoScalar, GenTypeHalfVecNoScalar], Attr.Const>;
 }
 foreach name = ["any", "all"] in {
-  def : Builtin<name, [Int, AIGenTypeN], Attr.Const>;
+  def : Builtin<name, [Int, SGenTypeN], Attr.Const>;
 }
 
 // --- 2 arguments ---
@@ -730,17 +745,17 @@ let MaxVersion = CL20 in {
         def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
       }
       foreach name = ["vstore" # VSize] in {
-        def : Builtin<name, [Void, VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, AS>]>;
-        def : Builtin<name, [Void, VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, AS>]>;
-        def : Builtin<name, [Void, VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, AS>]>;
-        def : Builtin<name, [Void, VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, AS>]>;
-        def : Builtin<name, [Void, VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+        def : Builtin<name, [Void, VectorType<Char, VSize>, Size, PointerType<Char, AS>]>;
+        def : Builtin<name, [Void, VectorType<UChar, VSize>, Size, PointerType<UChar, AS>]>;
+        def : Builtin<name, [Void, VectorType<Short, VSize>, Size, PointerType<Short, AS>]>;
+        def : Builtin<name, [Void, VectorType<UShort, VSize>, Size, PointerType<UShort, AS>]>;
+        def : Builtin<name, [Void, VectorType<Int, VSize>, Size, PointerType<Int, AS>]>;
+        def : Builtin<name, [Void, VectorType<UInt, VSize>, Size, PointerType<UInt, AS>]>;
+        def : Builtin<name, [Void, VectorType<Long, VSize>, Size, PointerType<Long, AS>]>;
+        def : Builtin<name, [Void, VectorType<ULong, VSize>, Size, PointerType<ULong, AS>]>;
+        def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Float, AS>]>;
+        def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Double, AS>]>;
+        def : Builtin<name, [Void, VectorType<Half, VSize>, Size, PointerType<Half, AS>]>;
       }
       foreach name = ["vloada_half" # VSize] in {
         def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
@@ -772,17 +787,17 @@ let MinVersion = CL20 in {
       def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, GenericAS>]>;
     }
     foreach name = ["vstore" # VSize] in {
-      def : Builtin<name, [Void, VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Char, VSize>, Size, PointerType<Char, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<UChar, VSize>, Size, PointerType<UChar, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Short, VSize>, Size, PointerType<Short, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<UShort, VSize>, Size, PointerType<UShort, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Int, VSize>, Size, PointerType<Int, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<UInt, VSize>, Size, PointerType<UInt, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Long, VSize>, Size, PointerType<Long, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<ULong, VSize>, Size, PointerType<ULong, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Float, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Double, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Half, VSize>, Size, PointerType<Half, GenericAS>]>;
     }
     foreach name = ["vloada_half" # VSize] in {
       def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, GenericAS>]>;
@@ -813,24 +828,21 @@ foreach VSize = [2, 3, 4, 8, 16] in {
   foreach name = ["vloada_half" # VSize] in {
     def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, ConstantAS>]>;
   }
-  foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
-    foreach name = ["vstorea_half" # VSize # rnd] in {
-      def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, ConstantAS>]>;
-      def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Half, ConstantAS>]>;
-    }
-  }
 }
 let MaxVersion = CL20 in {
   foreach AS = [GlobalAS, LocalAS, PrivateAS] in {
     def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+    def : Builtin<"vloada_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
     foreach VSize = [2, 3, 4, 8, 16] in {
       foreach name = ["vload_half" # VSize] in {
         def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
       }
     }
     foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
-      def : Builtin<"vstore_half" # rnd, [Void, Float, Size, PointerType<Half, AS>]>;
-      def : Builtin<"vstore_half" # rnd, [Void, Double, Size, PointerType<Half, AS>]>;
+      foreach name = ["vstore_half" # rnd, "vstorea_half" # rnd] in {
+        def : Builtin<name, [Void, Float, Size, PointerType<Half, AS>]>;
+        def : Builtin<name, [Void, Double, Size, PointerType<Half, AS>]>;
+      }
       foreach VSize = [2, 3, 4, 8, 16] in {
         foreach name = ["vstore_half" # VSize # rnd] in {
           def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, AS>]>;
@@ -843,14 +855,17 @@ let MaxVersion = CL20 in {
 let MinVersion = CL20 in {
   foreach AS = [GenericAS] in {
     def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+    def : Builtin<"vloada_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
     foreach VSize = [2, 3, 4, 8, 16] in {
       foreach name = ["vload_half" # VSize] in {
         def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
       }
     }
     foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
-      def : Builtin<"vstore_half" # rnd, [Void, Float, Size, PointerType<Half, AS>]>;
-      def : Builtin<"vstore_half" # rnd, [Void, Double, Size, PointerType<Half, AS>]>;
+      foreach name = ["vstore_half" # rnd, "vstorea_half" # rnd] in {
+        def : Builtin<name, [Void, Float, Size, PointerType<Half, AS>]>;
+        def : Builtin<name, [Void, Double, Size, PointerType<Half, AS>]>;
+      }
       foreach VSize = [2, 3, 4, 8, 16] in {
         foreach name = ["vstore_half" # VSize # rnd] in {
           def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, AS>]>;
@@ -863,6 +878,7 @@ let MinVersion = CL20 in {
 
 foreach AS = [ConstantAS] in {
   def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+  def : Builtin<"vloada_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
   foreach VSize = [2, 3, 4, 8, 16] in {
     foreach name = ["vload_half" # VSize] in {
       def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
@@ -981,6 +997,45 @@ foreach AS = [GlobalAS, LocalAS] in {
     }
     foreach name = ["atomic_cmpxchg"] in {
       def : Builtin<name, [Type, PointerType<VolatileType<Type>, AS>, Type, Type]>;
+    }
+  }
+}
+// OpenCL v2.0 s6.13.11 - Atomic Functions.
+let MinVersion = CL20 in {
+  foreach TypePair = [[AtomicInt, Int], [AtomicUInt, UInt],
+                      [AtomicLong, Long], [AtomicULong, ULong],
+                      [AtomicFloat, Float], [AtomicDouble, Double]] in {
+    def : Builtin<"atomic_init",
+        [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
+    def : Builtin<"atomic_store",
+        [Void, PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
+    def : Builtin<"atomic_load",
+        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>]>;
+    def : Builtin<"atomic_exchange",
+        [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[1]]>;
+    foreach Variant = ["weak", "strong"] in {
+      def : Builtin<"atomic_compare_exchange_" # Variant,
+          [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
+           PointerType<TypePair[1], GenericAS>, TypePair[1]]>;
+    }
+  }
+
+  foreach TypePair = [[AtomicInt, Int, Int], [AtomicUInt, UInt, UInt],
+                      [AtomicLong, Long, Long], [AtomicULong, ULong, ULong],
+                      [AtomicIntPtr, IntPtr, PtrDiff],
+                      [AtomicUIntPtr, UIntPtr, PtrDiff]] in {
+    foreach ModOp = ["add", "sub"] in {
+      def : Builtin<"atomic_fetch_" # ModOp,
+          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2]]>;
+    }
+  }
+  foreach TypePair = [[AtomicInt, Int, Int], [AtomicUInt, UInt, UInt],
+                      [AtomicLong, Long, Long], [AtomicULong, ULong, ULong],
+                      [AtomicIntPtr, IntPtr, IntPtr],
+                      [AtomicUIntPtr, UIntPtr, UIntPtr]] in {
+    foreach ModOp = ["or", "xor", "and", "min", "max"] in {
+      def : Builtin<"atomic_fetch_" # ModOp,
+          [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2]]>;
     }
   }
 }
@@ -1180,14 +1235,43 @@ let MinVersion = CL20 in {
 }
 
 
-// OpenCL v2.0 s9.17.3: Additions to section 6.13.1: Work-Item Functions
-let MinVersion = CL20 in {
-  let Extension = FuncExtKhrSubgroups in {
-    def get_sub_group_size : Builtin<"get_sub_group_size", [UInt]>;
-    def get_max_sub_group_size : Builtin<"get_max_sub_group_size", [UInt]>;
-    def get_num_sub_groups : Builtin<"get_num_sub_groups", [UInt]>;
-  }
-}
+//--------------------------------------------------------------------
+// OpenCL2.0 : 6.13.16 : Pipe Functions
+// --- Table 27 ---
+// Defined in Builtins.def
+
+// --- Table 28 ---
+// Builtins taking pipe arguments are defined in Builtins.def
+def : Builtin<"is_valid_reserve_id", [Bool, ReserveId]>;
+
+// --- Table 29 ---
+// Defined in Builtins.def
+
+
+//--------------------------------------------------------------------
+// OpenCL2.0 : 6.13.17 : Enqueuing Kernels
+// --- Table 30 ---
+// Defined in Builtins.def
+
+// --- Table 32 ---
+// Defined in Builtins.def
+
+// --- Table 33 ---
+def : Builtin<"enqueue_marker",
+    [Int, Queue, UInt, PointerType<ConstType<ClkEvent>, GenericAS>, PointerType<ClkEvent, GenericAS>]>;
+
+// --- Table 34 ---
+def : Builtin<"retain_event", [Void, ClkEvent]>;
+def : Builtin<"release_event", [Void, ClkEvent]>;
+def : Builtin<"create_user_event", [ClkEvent]>;
+def : Builtin<"is_valid_event", [Bool, ClkEvent]>;
+def : Builtin<"set_user_event_status", [Void, ClkEvent, Int]>;
+// TODO: capture_event_profiling_info
+
+// --- Table 35 ---
+def : Builtin<"get_default_queue", [Queue]>;
+// TODO: ndrange functions
+
 
 //--------------------------------------------------------------------
 // End of the builtin functions defined in the OpenCL C specification.
@@ -1357,7 +1441,44 @@ let Extension = FuncExtKhrGlMsaaSharing in {
       }
       def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>], Attr.Const>;
     }
-    def : Builtin<"get_image_array_size", [Size, ImageType<Image2dArrayMsaaDepth, aQual>], Attr.Const>;
+    foreach imgTy = [Image2dArrayMsaa, Image2dArrayMsaaDepth] in {
+      def : Builtin<"get_image_array_size", [Size, ImageType<imgTy, aQual>], Attr.Const>;
+    }
+  }
+}
+
+//--------------------------------------------------------------------
+// OpenCL Extension v2.0 s28 - Subgroups
+// --- Table 28.2.1 ---
+let Extension = FuncExtKhrSubgroups in {
+  foreach name = ["get_sub_group_size", "get_max_sub_group_size",
+                  "get_num_sub_groups", "get_sub_group_id",
+                  "get_sub_group_local_id"] in {
+    def : Builtin<name, [UInt]>;
+  }
+  let MinVersion = CL20 in {
+    foreach name = ["get_enqueued_num_sub_groups"] in {
+      def : Builtin<name, [UInt]>;
+    }
+  }
+}
+
+// --- Table 28.2.2 ---
+// TODO: sub_group_barrier
+
+// --- Table 28.2.4 ---
+let Extension = FuncExtKhrSubgroups in {
+  foreach name = ["sub_group_all", "sub_group_any"] in {
+    def : Builtin<name, [Int, Int], Attr.Convergent>;
+  }
+  foreach name = ["sub_group_broadcast"] in {
+    def : Builtin<name, [IntLongFloatGenType1, IntLongFloatGenType1, UInt], Attr.Convergent>;
+  }
+  foreach name = ["sub_group_reduce_", "sub_group_scan_exclusive_",
+                  "sub_group_scan_inclusive_"] in {
+    foreach op = ["add", "min", "max"] in {
+      def : Builtin<name # op, [IntLongFloatGenType1, IntLongFloatGenType1], Attr.Convergent>;
+    }
   }
 }
 

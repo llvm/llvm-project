@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <filesystem>
 
@@ -29,14 +29,16 @@ TEST_SUITE(recursive_directory_iterator_recursion_pending_tests)
 
 TEST_CASE(initial_value_test)
 {
-    recursive_directory_iterator it(StaticEnv::Dir);
+    static_test_env static_env;
+    recursive_directory_iterator it(static_env.Dir);
     TEST_REQUIRE(it.recursion_pending() == true);
 }
 
 TEST_CASE(value_after_copy_construction_and_assignment_test)
 {
-    recursive_directory_iterator rec_pending_it(StaticEnv::Dir);
-    recursive_directory_iterator no_rec_pending_it(StaticEnv::Dir);
+    static_test_env static_env;
+    recursive_directory_iterator rec_pending_it(static_env.Dir);
+    recursive_directory_iterator no_rec_pending_it(static_env.Dir);
     no_rec_pending_it.disable_recursion_pending();
 
     { // copy construction
@@ -49,14 +51,14 @@ TEST_CASE(value_after_copy_construction_and_assignment_test)
         TEST_CHECK(it2.recursion_pending() == false);
     }
     { // copy assignment
-        recursive_directory_iterator it(StaticEnv::Dir);
+        recursive_directory_iterator it(static_env.Dir);
         it.disable_recursion_pending();
         it = rec_pending_it;
         TEST_CHECK(it.recursion_pending() == true);
         it.disable_recursion_pending();
         TEST_REQUIRE(rec_pending_it.recursion_pending() == true);
 
-        recursive_directory_iterator it2(StaticEnv::Dir);
+        recursive_directory_iterator it2(static_env.Dir);
         it2 = no_rec_pending_it;
         TEST_CHECK(it2.recursion_pending() == false);
     }
@@ -67,8 +69,9 @@ TEST_CASE(value_after_copy_construction_and_assignment_test)
 
 TEST_CASE(value_after_move_construction_and_assignment_test)
 {
-    recursive_directory_iterator rec_pending_it(StaticEnv::Dir);
-    recursive_directory_iterator no_rec_pending_it(StaticEnv::Dir);
+    static_test_env static_env;
+    recursive_directory_iterator rec_pending_it(static_env.Dir);
+    recursive_directory_iterator no_rec_pending_it(static_env.Dir);
     no_rec_pending_it.disable_recursion_pending();
 
     { // move construction
@@ -81,13 +84,13 @@ TEST_CASE(value_after_move_construction_and_assignment_test)
         TEST_CHECK(it2.recursion_pending() == false);
     }
     { // copy assignment
-        recursive_directory_iterator it(StaticEnv::Dir);
+        recursive_directory_iterator it(static_env.Dir);
         it.disable_recursion_pending();
         recursive_directory_iterator it_cp(rec_pending_it);
         it = std::move(it_cp);
         TEST_CHECK(it.recursion_pending() == true);
 
-        recursive_directory_iterator it2(StaticEnv::Dir);
+        recursive_directory_iterator it2(static_env.Dir);
         recursive_directory_iterator it_cp2(no_rec_pending_it);
         it2 = std::move(it_cp2);
         TEST_CHECK(it2.recursion_pending() == false);
@@ -98,9 +101,10 @@ TEST_CASE(value_after_move_construction_and_assignment_test)
 
 TEST_CASE(increment_resets_value)
 {
+    static_test_env static_env;
     const recursive_directory_iterator endIt;
     {
-        recursive_directory_iterator it(StaticEnv::Dir);
+        recursive_directory_iterator it(static_env.Dir);
         it.disable_recursion_pending();
         TEST_CHECK(it.recursion_pending() == false);
         ++it;
@@ -108,7 +112,7 @@ TEST_CASE(increment_resets_value)
         TEST_CHECK(it.depth() == 0);
     }
     {
-        recursive_directory_iterator it(StaticEnv::Dir);
+        recursive_directory_iterator it(static_env.Dir);
         it.disable_recursion_pending();
         TEST_CHECK(it.recursion_pending() == false);
         it++;
@@ -116,7 +120,7 @@ TEST_CASE(increment_resets_value)
         TEST_CHECK(it.depth() == 0);
     }
     {
-        recursive_directory_iterator it(StaticEnv::Dir);
+        recursive_directory_iterator it(static_env.Dir);
         it.disable_recursion_pending();
         TEST_CHECK(it.recursion_pending() == false);
         std::error_code ec;
@@ -128,12 +132,13 @@ TEST_CASE(increment_resets_value)
 
 TEST_CASE(pop_does_not_reset_value)
 {
+    static_test_env static_env;
     const recursive_directory_iterator endIt;
 
-    auto& DE0 = StaticEnv::DirIterationList;
-    std::set<path> notSeenDepth0(std::begin(DE0), std::end(DE0));
+    auto& DE0 = static_env.DirIterationList;
+    std::set<path> notSeenDepth0(DE0.begin(), DE0.end());
 
-    recursive_directory_iterator it(StaticEnv::Dir);
+    recursive_directory_iterator it(static_env.Dir);
     TEST_REQUIRE(it != endIt);
 
     while (it.depth() == 0) {

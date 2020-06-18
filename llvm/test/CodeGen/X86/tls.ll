@@ -210,10 +210,10 @@ entry:
 
 define i32 @f7() {
 ; X86_LINUX-LABEL: f7:
-; X86_LINUX:      movl %gs:.Li4$local@NTPOFF, %eax
+; X86_LINUX:      movl %gs:i4@NTPOFF, %eax
 ; X86_LINUX-NEXT: ret
 ; X64_LINUX-LABEL: f7:
-; X64_LINUX:      movl %fs:.Li4$local@TPOFF, %eax
+; X64_LINUX:      movl %fs:i4@TPOFF, %eax
 ; X64_LINUX-NEXT: ret
 ; MINGW32-LABEL: _f7:
 ; MINGW32: movl __tls_index, %eax
@@ -230,11 +230,11 @@ entry:
 define i32* @f8() {
 ; X86_LINUX-LABEL: f8:
 ; X86_LINUX:      movl %gs:0, %eax
-; X86_LINUX-NEXT: leal .Li4$local@NTPOFF(%eax), %eax
+; X86_LINUX-NEXT: leal i4@NTPOFF(%eax), %eax
 ; X86_LINUX-NEXT: ret
 ; X64_LINUX-LABEL: f8:
 ; X64_LINUX:      movq %fs:0, %rax
-; X64_LINUX-NEXT: leaq .Li4$local@TPOFF(%rax), %rax
+; X64_LINUX-NEXT: leaq i4@TPOFF(%rax), %rax
 ; X64_LINUX-NEXT: ret
 ; MINGW32-LABEL: _f8:
 ; MINGW32: movl __tls_index, %eax

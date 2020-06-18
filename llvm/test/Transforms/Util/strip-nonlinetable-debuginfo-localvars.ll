@@ -3,14 +3,18 @@
 define void @f() !dbg !4 {
 entry:
   %i = alloca i32, align 4
-  ; CHECK-NOT: llvm.dbg.declare
+  ; CHECK-NOT: llvm.dbg.{{addr|declare|value}}
   call void @llvm.dbg.declare(metadata i32* %i, metadata !11, metadata !13), !dbg !14
+  call void @llvm.dbg.addr(metadata i32* %i, metadata !16, metadata !13), !dbg !14
   store i32 42, i32* %i, align 4, !dbg !14
+  call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !13), !dbg !15
   ret void, !dbg !15
 }
 
 ; Function Attrs: nounwind readnone
+declare void @llvm.dbg.addr(metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8, !9}
@@ -22,6 +26,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK: ![[F]] = distinct !DISubprogram(name: "f"
 ; CHECK-NOT: retainedNodes:
 ; CHECK-NOT: distinct !DISubprogram(name: "f"
+; CHECK-NOT: DILocalVariable
 !4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
@@ -34,3 +39,4 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !13 = !DIExpression()
 !14 = !DILocation(line: 1, column: 16, scope: !4)
 !15 = !DILocation(line: 1, column: 24, scope: !4)
+!16 = !DILocalVariable(name: "j", scope: !4, file: !1, line: 1, type: !12)

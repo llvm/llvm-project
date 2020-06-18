@@ -21,9 +21,9 @@
 #include <cstdlib>
 
 EXTERN int omp_get_num_devices(void) {
-  RTLsMtx.lock();
+  RTLsMtx->lock();
   size_t Devices_size = Devices.size();
-  RTLsMtx.unlock();
+  RTLsMtx->unlock();
 
   DP("Call to omp_get_num_devices returning %zd\n", Devices_size);
 
@@ -102,9 +102,9 @@ EXTERN int omp_target_is_present(void *ptr, int device_num) {
     return true;
   }
 
-  RTLsMtx.lock();
+  RTLsMtx->lock();
   size_t Devices_size = Devices.size();
-  RTLsMtx.unlock();
+  RTLsMtx->unlock();
   if (Devices_size <= (size_t)device_num) {
     DP("Call to omp_target_is_present with invalid device ID, returning "
         "false\n");
@@ -120,7 +120,7 @@ EXTERN int omp_target_is_present(void *ptr, int device_num) {
   // getTgtPtrBegin() function which means that there is no device
   // corresponding point for ptr. This function should return false
   // in that situation.
-  if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
+  if (RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
     rc = !IsHostPtr;
   DP("Call to omp_target_is_present returns %d\n", rc);
   return rc;
@@ -161,19 +161,28 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
   } else if (src_device == omp_get_initial_device()) {
     DP("copy from host to device\n");
     DeviceTy& DstDev = Devices[dst_device];
-    rc = DstDev.data_submit(dstAddr, srcAddr, length);
+    rc = DstDev.data_submit(dstAddr, srcAddr, length, nullptr);
   } else if (dst_device == omp_get_initial_device()) {
     DP("copy from device to host\n");
     DeviceTy& SrcDev = Devices[src_device];
-    rc = SrcDev.data_retrieve(dstAddr, srcAddr, length);
+    rc = SrcDev.data_retrieve(dstAddr, srcAddr, length, nullptr);
   } else {
     DP("copy from device to device\n");
+    DeviceTy &SrcDev = Devices[src_device];
+    DeviceTy &DstDev = Devices[dst_device];
+    // First try to use D2D memcpy which is more efficient. If fails, fall back
+    // to unefficient way.
+    if (SrcDev.isDataExchangable(DstDev)) {
+      rc = SrcDev.data_exchange(srcAddr, DstDev, dstAddr, length, nullptr);
+      if (rc == OFFLOAD_SUCCESS)
+        return OFFLOAD_SUCCESS;
+    }
+
     void *buffer = malloc(length);
-    DeviceTy& SrcDev = Devices[src_device];
-    DeviceTy& DstDev = Devices[dst_device];
-    rc = SrcDev.data_retrieve(buffer, srcAddr, length);
+    rc = SrcDev.data_retrieve(buffer, srcAddr, length, nullptr);
     if (rc == OFFLOAD_SUCCESS)
-      rc = DstDev.data_submit(dstAddr, buffer, length);
+      rc = DstDev.data_submit(dstAddr, buffer, length, nullptr);
+    free(buffer);
   }
 
   DP("omp_target_memcpy returns %d\n", rc);

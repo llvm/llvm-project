@@ -149,6 +149,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // HasDSP, HasDSPR2, HasDSPR3 -- supports DSP ASE.
   bool HasDSP, HasDSPR2, HasDSPR3;
 
+  // Has3D -- Supports Mips3D ASE.
+  bool Has3D;
+
   // Allow mixed Mips16 and Mips32 in one source file
   bool AllowMixed16_32;
 
@@ -312,6 +315,7 @@ public:
   bool hasDSP() const { return HasDSP; }
   bool hasDSPR2() const { return HasDSPR2; }
   bool hasDSPR3() const { return HasDSPR3; }
+  bool has3D() const { return Has3D; }
   bool hasMSA() const { return HasMSA; }
   bool disableMadd4() const { return DisableMadd4; }
   bool hasEVA() const { return HasEVA; }

@@ -25,9 +25,6 @@ void UseEqualsDeleteCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseEqualsDeleteCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto PrivateSpecialFn = cxxMethodDecl(
       isPrivate(),
       anyOf(cxxConstructorDecl(anyOf(isDefaultConstructor(),

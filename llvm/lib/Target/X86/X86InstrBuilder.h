@@ -207,7 +207,7 @@ addFrameReference(const MachineInstrBuilder &MIB, int FI, int Offset = 0) {
     Flags |= MachineMemOperand::MOStore;
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI, Offset), Flags,
-      MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
+      MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
   return addOffset(MIB.addFrameIndex(FI), Offset)
             .addMemOperand(MMO);
 }

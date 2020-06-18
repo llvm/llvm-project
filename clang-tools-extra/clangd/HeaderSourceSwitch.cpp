@@ -8,9 +8,9 @@
 
 #include "HeaderSourceSwitch.h"
 #include "AST.h"
-#include "Logger.h"
 #include "SourceCode.h"
 #include "index/SymbolCollector.h"
+#include "support/Logger.h"
 #include "clang/AST/Decl.h"
 
 namespace clang {

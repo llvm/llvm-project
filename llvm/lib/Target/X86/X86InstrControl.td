@@ -193,14 +193,16 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
                             "ljmp{l}\t$seg, $off", []>,
                             OpSize32, Sched<[WriteJump]>;
   }
-  def FARJMP64   : RI<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
-                      "ljmp{q}\t{*}$dst", []>, Sched<[WriteJump]>, Requires<[In64BitMode]>;
+  let mayLoad = 1 in {
+    def FARJMP64m  : RI<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
+                        "ljmp{q}\t{*}$dst", []>, Sched<[WriteJump]>, Requires<[In64BitMode]>;
 
-  let AsmVariantName = "att" in
-  def FARJMP16m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
-                     "ljmp{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
-  def FARJMP32m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
-                     "{l}jmp{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
+    let AsmVariantName = "att" in
+    def FARJMP16m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
+                       "ljmp{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
+    def FARJMP32m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
+                       "{l}jmp{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
+  }
 }
 
 // Loop instructions
@@ -237,13 +239,13 @@ let isCall = 1 in
                         Sched<[WriteJumpLd]>;
     def CALL32r     : I<0xFF, MRM2r, (outs), (ins GR32:$dst),
                         "call{l}\t{*}$dst", [(X86call GR32:$dst)]>, OpSize32,
-                        Requires<[Not64BitMode,NotUseRetpolineIndirectCalls]>,
+                        Requires<[Not64BitMode,NotUseIndirectThunkCalls]>,
                         Sched<[WriteJump]>;
     def CALL32m     : I<0xFF, MRM2m, (outs), (ins i32mem:$dst),
                         "call{l}\t{*}$dst", [(X86call (loadi32 addr:$dst))]>,
                         OpSize32,
                         Requires<[Not64BitMode,FavorMemIndirectCall,
-                                  NotUseRetpolineIndirectCalls]>,
+                                  NotUseIndirectThunkCalls]>,
                         Sched<[WriteJumpLd]>;
 
     // Non-tracking calls for IBT, use with caution.
@@ -275,10 +277,12 @@ let isCall = 1 in
                                OpSize32, Sched<[WriteJump]>;
     }
 
-    def FARCALL16m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
-                        "lcall{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
-    def FARCALL32m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
-                        "{l}call{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
+    let mayLoad = 1 in {
+      def FARCALL16m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
+                          "lcall{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
+      def FARCALL32m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
+                          "{l}call{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
+    }
   }
 
 
@@ -334,11 +338,11 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
                       Requires<[In64BitMode]>;
   def CALL64r       : I<0xFF, MRM2r, (outs), (ins GR64:$dst),
                         "call{q}\t{*}$dst", [(X86call GR64:$dst)]>,
-                      Requires<[In64BitMode,NotUseRetpolineIndirectCalls]>;
+                      Requires<[In64BitMode,NotUseIndirectThunkCalls]>;
   def CALL64m       : I<0xFF, MRM2m, (outs), (ins i64mem:$dst),
                         "call{q}\t{*}$dst", [(X86call (loadi64 addr:$dst))]>,
                       Requires<[In64BitMode,FavorMemIndirectCall,
-                                NotUseRetpolineIndirectCalls]>;
+                                NotUseIndirectThunkCalls]>;
 
   // Non-tracking calls for IBT, use with caution.
   let isCodeGenOnly = 1 in {
@@ -351,7 +355,8 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
                        Requires<[In64BitMode,FavorMemIndirectCall]>, NOTRACK;
   }
 
-  def FARCALL64   : RI<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
+  let mayLoad = 1 in
+  def FARCALL64m  : RI<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
                        "lcall{q}\t{*}$dst", []>;
 }
 
@@ -393,19 +398,19 @@ let isPseudo = 1, isCall = 1, isCodeGenOnly = 1,
     Uses = [RSP, SSP],
     usesCustomInserter = 1,
     SchedRW = [WriteJump] in {
-  def RETPOLINE_CALL32 :
+  def INDIRECT_THUNK_CALL32 :
     PseudoI<(outs), (ins GR32:$dst), [(X86call GR32:$dst)]>,
-            Requires<[Not64BitMode,UseRetpolineIndirectCalls]>;
+            Requires<[Not64BitMode,UseIndirectThunkCalls]>;
 
-  def RETPOLINE_CALL64 :
+  def INDIRECT_THUNK_CALL64 :
     PseudoI<(outs), (ins GR64:$dst), [(X86call GR64:$dst)]>,
-            Requires<[In64BitMode,UseRetpolineIndirectCalls]>;
+            Requires<[In64BitMode,UseIndirectThunkCalls]>;
 
-  // Retpoline variant of indirect tail calls.
+  // Indirect thunk variant of indirect tail calls.
   let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
-    def RETPOLINE_TCRETURN64 :
+    def INDIRECT_THUNK_TCRETURN64 :
       PseudoI<(outs), (ins GR64:$dst, i32imm:$offset), []>;
-    def RETPOLINE_TCRETURN32 :
+    def INDIRECT_THUNK_TCRETURN32 :
       PseudoI<(outs), (ins GR32:$dst, i32imm:$offset), []>;
   }
 }

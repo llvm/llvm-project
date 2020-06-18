@@ -1,15 +1,15 @@
-# Introduction to MLIR Operation Traits
+# Operation Traits
 
 [TOC]
 
 MLIR allows for a truly open operation ecosystem, as any dialect may define
 operations that suit a specific level of abstraction. `Traits` are a mechanism
-in which to abstract implementation details and properties that are common
+which abstracts implementation details and properties that are common
 across many different operations. `Traits` may be used to specify special
 properties and constraints of the operation, including whether the operation has
 side effects or whether its output has the same type as the input. Some examples
 of traits are `Commutative`, `SingleResult`, `Terminator`, etc. See the more
-[comprehensive list](#traits) below for more examples of what is possible.
+[comprehensive list](#trait-list) below for more examples of what is possible.
 
 ## Defining a Trait
 
@@ -135,6 +135,32 @@ section goes as follows:
 *   `Header`
     -   (`C++ class` -- `ODS class`(if applicable))
 
+### AffineScope
+
+*   `OpTrait::AffineScope` -- `AffineScope`
+
+This trait is carried by region holding operations that define a new scope for
+the purposes of polyhedral optimization and the affine dialect in particular.
+Any SSA values of 'index' type that either dominate such operations, or are
+defined at the top-level of such operations, or appear as region arguments for
+such operations automatically become valid symbols for the polyhedral scope
+defined by that operation. As a result, such SSA values could be used as the
+operands or index operands of various affine dialect operations like affine.for,
+affine.load, and affine.store.  The polyhedral scope defined by an operation
+with this trait includes all operations in its region excluding operations that
+are nested inside of other operations that themselves have this trait.
+
+### AutomaticAllocationScope
+
+*   `OpTrait::AutomaticAllocationScope` -- `AutomaticAllocationScope`
+
+This trait is carried by region holding operations that define a new scope for
+automatic allocation. Such allocations are automatically freed when control is
+transferred back from the regions of such operations. As an example, allocations
+performed by [`std.alloca`](Dialects/Standard.md#stdalloca-allocaop) are
+automatically freed when control leaves the region of its closest surrounding op
+that has the trait AutomaticAllocationScope.
+
 ### Broadcastable
 
 *   `OpTrait::ResultsBroadcastableShape` -- `ResultsBroadcastableShape`
@@ -206,13 +232,7 @@ foo.region_op {
 ```
 
 This trait is an important structural property of the IR, and enables operations
-to have [passes](WritingAPass.md) scheduled under them.
-
-### NoSideEffect
-
-*   `OpTrait::HasNoSideEffect` -- `NoSideEffect`
-
-This trait signifies that the operation is pure and has no visible side effects.
+to have [passes](PassManagement.md) scheduled under them.
 
 ### Single Block with Implicit Terminator
 

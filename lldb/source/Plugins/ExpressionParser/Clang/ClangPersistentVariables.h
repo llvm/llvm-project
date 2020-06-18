@@ -51,9 +51,7 @@ public:
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
-  llvm::StringRef GetPersistentVariablePrefix(bool is_error) const override {
-    return "$";
-  }
+  ConstString GetNextPersistentVariableName(bool is_error = false) override;
 
   /// Returns the next file name that should be used for user expressions.
   std::string GetNextExprFileName() {
@@ -78,6 +76,12 @@ public:
 
   const ClangModulesDeclVendor::ModuleVector &GetHandLoadedClangModules() {
     return m_hand_loaded_clang_modules;
+  }
+
+protected:
+  llvm::StringRef
+  GetPersistentVariablePrefix(bool is_error = false) const override {
+    return "$";
   }
 
 private:

@@ -11,15 +11,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
+#include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 
 using namespace mlir;
 
 void spirv::appendModuleHeader(SmallVectorImpl<uint32_t> &header,
-                               uint32_t idBound) {
-  // The major and minor version number for the generated SPIR-V binary.
-  // TODO(antiagainst): use target environment to select the version
-  constexpr uint8_t kMajorVersion = 1;
-  constexpr uint8_t kMinorVersion = 0;
+                               spirv::Version version, uint32_t idBound) {
+  uint32_t majorVersion = 1;
+  uint32_t minorVersion = 0;
+  switch (version) {
+#define MIN_VERSION_CASE(v)                                                    \
+  case spirv::Version::V_1_##v:                                                \
+    minorVersion = v;                                                          \
+    break
+
+    MIN_VERSION_CASE(0);
+    MIN_VERSION_CASE(1);
+    MIN_VERSION_CASE(2);
+    MIN_VERSION_CASE(3);
+    MIN_VERSION_CASE(4);
+    MIN_VERSION_CASE(5);
+#undef MIN_VERSION_CASE
+  }
 
   // See "2.3. Physical Layout of a SPIR-V Module and Instruction" in the SPIR-V
   // spec for the definition of the binary module header.
@@ -37,7 +50,7 @@ void spirv::appendModuleHeader(SmallVectorImpl<uint32_t> &header,
   // | 0 (reserved for instruction schema)                                     |
   // +-------------------------------------------------------------------------+
   header.push_back(spirv::kMagicNumber);
-  header.push_back((kMajorVersion << 16) | (kMinorVersion << 8));
+  header.push_back((majorVersion << 16) | (minorVersion << 8));
   header.push_back(kGeneratorNumber);
   header.push_back(idBound); // <id> bound
   header.push_back(0);       // Schema (reserved word)

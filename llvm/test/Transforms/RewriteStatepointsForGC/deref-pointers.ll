@@ -62,7 +62,7 @@ entry:
 
 define i8 @test_md(i8 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @test_md(
-; CHECK: %tmp = load i8, i8 addrspace(1)* %ptr, !tbaa [[TAG_old:!.*]]
+; CHECK: %tmp = load i8, i8 addrspace(1)* %ptr, align 1, !tbaa [[TAG_old:!.*]]
 entry:
   %tmp = load i8, i8 addrspace(1)* %ptr, !tbaa !0
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
@@ -72,7 +72,7 @@ entry:
 ; Same as test_md() above, but with new-format TBAA metadata.
 define i8 @test_md_new(i8 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @test_md_new(
-; CHECK: %tmp = load i8, i8 addrspace(1)* %ptr, !tbaa [[TAG_new:!.*]]
+; CHECK: %tmp = load i8, i8 addrspace(1)* %ptr, align 1, !tbaa [[TAG_new:!.*]]
 entry:
   %tmp = load i8, i8 addrspace(1)* %ptr, !tbaa !4
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]

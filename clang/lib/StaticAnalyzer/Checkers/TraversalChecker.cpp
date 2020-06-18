@@ -64,7 +64,7 @@ void ento::registerTraversalDumper(CheckerManager &mgr) {
   mgr.registerChecker<TraversalDumper>();
 }
 
-bool ento::shouldRegisterTraversalDumper(const LangOptions &LO) {
+bool ento::shouldRegisterTraversalDumper(const CheckerManager &mgr) {
   return true;
 }
 
@@ -116,6 +116,6 @@ void ento::registerCallDumper(CheckerManager &mgr) {
   mgr.registerChecker<CallDumper>();
 }
 
-bool ento::shouldRegisterCallDumper(const LangOptions &LO) {
+bool ento::shouldRegisterCallDumper(const CheckerManager &mgr) {
   return true;
 }

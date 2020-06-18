@@ -560,7 +560,7 @@ void BuiltinNameEmitter::GroupBySignature() {
       CurSignatureList->push_back(Signature.second);
     }
     // Sort the list to facilitate future comparisons.
-    std::sort(CurSignatureList->begin(), CurSignatureList->end());
+    llvm::sort(*CurSignatureList);
 
     // Check if we have already seen another function with the same list of
     // signatures.  If so, just add the name of the function.

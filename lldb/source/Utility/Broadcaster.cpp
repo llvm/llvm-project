@@ -373,8 +373,8 @@ bool BroadcasterManager::UnregisterListenerForEvents(
 
     if (event_bits_to_remove != iter_event_bits) {
       uint32_t new_event_bits = iter_event_bits & ~event_bits_to_remove;
-      to_be_readded.push_back(
-          BroadcastEventSpec(event_spec.GetBroadcasterClass(), new_event_bits));
+      to_be_readded.emplace_back(event_spec.GetBroadcasterClass(),
+                                 new_event_bits);
     }
     m_event_map.erase(iter);
   }

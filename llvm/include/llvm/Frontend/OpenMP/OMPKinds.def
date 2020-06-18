@@ -91,6 +91,10 @@ __OMP_DIRECTIVE_EXT(parallel_master_taskloop, "parallel master taskloop")
 __OMP_DIRECTIVE_EXT(master_taskloop_simd, "master taskloop simd")
 __OMP_DIRECTIVE_EXT(parallel_master_taskloop_simd,
                     "parallel master taskloop simd")
+__OMP_DIRECTIVE(depobj)
+__OMP_DIRECTIVE(scan)
+__OMP_DIRECTIVE_EXT(begin_declare_variant, "begin declare variant")
+__OMP_DIRECTIVE_EXT(end_declare_variant, "end declare variant")
 
 // Has to be the last because Clang implicitly expects it to be.
 __OMP_DIRECTIVE(unknown)
@@ -98,6 +102,120 @@ __OMP_DIRECTIVE(unknown)
 #undef __OMP_DIRECTIVE_EXT
 #undef __OMP_DIRECTIVE
 #undef OMP_DIRECTIVE
+
+///}
+
+/// OpenMP Clauses
+///
+///{
+
+#ifndef OMP_CLAUSE
+#define OMP_CLAUSE(Enum, Str, Implicit)
+#endif
+#ifndef OMP_CLAUSE_CLASS
+#define OMP_CLAUSE_CLASS(Enum, Str, Class)
+#endif
+#ifndef OMP_CLAUSE_NO_CLASS
+#define OMP_CLAUSE_NO_CLASS(Enum, Str)
+#endif
+
+#define __OMP_CLAUSE(Name, Class)                                              \
+  OMP_CLAUSE(OMPC_##Name, #Name, /* Implicit */ false)                         \
+  OMP_CLAUSE_CLASS(OMPC_##Name, #Name, Class)
+#define __OMP_CLAUSE_NO_CLASS(Name)                                            \
+  OMP_CLAUSE(OMPC_##Name, #Name, /* Implicit */ false)                         \
+  OMP_CLAUSE_NO_CLASS(OMPC_##Name, #Name)
+#define __OMP_IMPLICIT_CLAUSE_CLASS(Name, Str, Class)                          \
+  OMP_CLAUSE(OMPC_##Name, Str, /* Implicit */ true)                            \
+  OMP_CLAUSE_CLASS(OMPC_##Name, Str, Class)
+#define __OMP_IMPLICIT_CLAUSE_NO_CLASS(Name, Str)                              \
+  OMP_CLAUSE(OMPC_##Name, Str, /* Implicit */ true)                            \
+  OMP_CLAUSE_NO_CLASS(OMPC_##Name, Str)
+
+__OMP_CLAUSE(allocator, OMPAllocatorClause)
+__OMP_CLAUSE(if, OMPIfClause)
+__OMP_CLAUSE(final, OMPFinalClause)
+__OMP_CLAUSE(num_threads, OMPNumThreadsClause)
+__OMP_CLAUSE(safelen, OMPSafelenClause)
+__OMP_CLAUSE(simdlen, OMPSimdlenClause)
+__OMP_CLAUSE(collapse, OMPCollapseClause)
+__OMP_CLAUSE(default, OMPDefaultClause)
+__OMP_CLAUSE(private, OMPPrivateClause)
+__OMP_CLAUSE(firstprivate, OMPFirstprivateClause)
+__OMP_CLAUSE(lastprivate, OMPLastprivateClause)
+__OMP_CLAUSE(shared, OMPSharedClause)
+__OMP_CLAUSE(reduction, OMPReductionClause)
+__OMP_CLAUSE(linear, OMPLinearClause)
+__OMP_CLAUSE(aligned, OMPAlignedClause)
+__OMP_CLAUSE(copyin, OMPCopyinClause)
+__OMP_CLAUSE(copyprivate, OMPCopyprivateClause)
+__OMP_CLAUSE(proc_bind, OMPProcBindClause)
+__OMP_CLAUSE(schedule, OMPScheduleClause)
+__OMP_CLAUSE(ordered, OMPOrderedClause)
+__OMP_CLAUSE(nowait, OMPNowaitClause)
+__OMP_CLAUSE(untied, OMPUntiedClause)
+__OMP_CLAUSE(mergeable, OMPMergeableClause)
+__OMP_CLAUSE(read, OMPReadClause)
+__OMP_CLAUSE(write, OMPWriteClause)
+__OMP_CLAUSE(update, OMPUpdateClause)
+__OMP_CLAUSE(capture, OMPCaptureClause)
+__OMP_CLAUSE(seq_cst, OMPSeqCstClause)
+__OMP_CLAUSE(acq_rel, OMPAcqRelClause)
+__OMP_CLAUSE(acquire, OMPAcquireClause)
+__OMP_CLAUSE(release, OMPReleaseClause)
+__OMP_CLAUSE(relaxed, OMPRelaxedClause)
+__OMP_CLAUSE(depend, OMPDependClause)
+__OMP_CLAUSE(device, OMPDeviceClause)
+__OMP_CLAUSE(threads, OMPThreadsClause)
+__OMP_CLAUSE(simd, OMPSIMDClause)
+__OMP_CLAUSE(map, OMPMapClause)
+__OMP_CLAUSE(num_teams, OMPNumTeamsClause)
+__OMP_CLAUSE(thread_limit, OMPThreadLimitClause)
+__OMP_CLAUSE(priority, OMPPriorityClause)
+__OMP_CLAUSE(grainsize, OMPGrainsizeClause)
+__OMP_CLAUSE(nogroup, OMPNogroupClause)
+__OMP_CLAUSE(num_tasks, OMPNumTasksClause)
+__OMP_CLAUSE(hint, OMPHintClause)
+__OMP_CLAUSE(dist_schedule, OMPDistScheduleClause)
+__OMP_CLAUSE(defaultmap, OMPDefaultmapClause)
+__OMP_CLAUSE(to, OMPToClause)
+__OMP_CLAUSE(from, OMPFromClause)
+__OMP_CLAUSE(use_device_ptr, OMPUseDevicePtrClause)
+__OMP_CLAUSE(is_device_ptr, OMPIsDevicePtrClause)
+__OMP_CLAUSE(task_reduction, OMPTaskReductionClause)
+__OMP_CLAUSE(in_reduction, OMPInReductionClause)
+__OMP_CLAUSE(unified_address, OMPUnifiedAddressClause)
+__OMP_CLAUSE(unified_shared_memory, OMPUnifiedSharedMemoryClause)
+__OMP_CLAUSE(reverse_offload, OMPReverseOffloadClause)
+__OMP_CLAUSE(dynamic_allocators, OMPDynamicAllocatorsClause)
+__OMP_CLAUSE(atomic_default_mem_order, OMPAtomicDefaultMemOrderClause)
+__OMP_CLAUSE(allocate, OMPAllocateClause)
+__OMP_CLAUSE(nontemporal, OMPNontemporalClause)
+__OMP_CLAUSE(order, OMPOrderClause)
+__OMP_CLAUSE(destroy, OMPDestroyClause)
+__OMP_CLAUSE(detach, OMPDetachClause)
+__OMP_CLAUSE(inclusive, OMPInclusiveClause)
+__OMP_CLAUSE(exclusive, OMPExclusiveClause)
+__OMP_CLAUSE(uses_allocators, OMPUsesAllocatorsClause)
+__OMP_CLAUSE(affinity, OMPAffinityClause)
+__OMP_CLAUSE(use_device_addr, OMPUseDeviceAddrClause)
+
+__OMP_CLAUSE_NO_CLASS(uniform)
+__OMP_CLAUSE_NO_CLASS(device_type)
+__OMP_CLAUSE_NO_CLASS(match)
+
+__OMP_IMPLICIT_CLAUSE_CLASS(depobj, "depobj", OMPDepobjClause)
+__OMP_IMPLICIT_CLAUSE_CLASS(flush, "flush", OMPFlushClause)
+
+__OMP_IMPLICIT_CLAUSE_NO_CLASS(threadprivate, "threadprivate or thread local")
+__OMP_IMPLICIT_CLAUSE_NO_CLASS(unknown, "unknown")
+
+#undef __OMP_IMPLICIT_CLAUSE_NO_CLASS
+#undef __OMP_IMPLICIT_CLAUSE_CLASS
+#undef __OMP_CLAUSE
+#undef OMP_CLAUSE_NO_CLASS
+#undef OMP_CLAUSE_CLASS
+#undef OMP_CLAUSE
 
 ///}
 
@@ -114,8 +232,23 @@ __OMP_DIRECTIVE(unknown)
 __OMP_TYPE(Void)
 __OMP_TYPE(Int8)
 __OMP_TYPE(Int32)
+__OMP_TYPE(Int64)
 __OMP_TYPE(Int8Ptr)
 __OMP_TYPE(Int32Ptr)
+__OMP_TYPE(Int64Ptr)
+
+OMP_TYPE(SizeTy, M.getDataLayout().getIntPtrType(Ctx))
+
+#define __OMP_PTR_TYPE(NAME, BASE) OMP_TYPE(NAME, BASE->getPointerTo())
+
+__OMP_PTR_TYPE(VoidPtr, Int8)
+__OMP_PTR_TYPE(VoidPtrPtr, VoidPtr)
+__OMP_PTR_TYPE(VoidPtrPtrPtr, VoidPtrPtr)
+
+__OMP_PTR_TYPE(Int8PtrPtr, Int8Ptr)
+__OMP_PTR_TYPE(Int8PtrPtrPtr, Int8PtrPtr)
+
+#undef __OMP_PTR_TYPE
 
 #undef __OMP_TYPE
 #undef OMP_TYPE
@@ -130,7 +263,7 @@ __OMP_TYPE(Int32Ptr)
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)
 #endif
 
-#define __OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize) 						  \
+#define __OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                           \
   OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)
 
 __OMP_ARRAY_TYPE(KmpCriticalName, Int32, 8)
@@ -164,6 +297,13 @@ __OMP_STRUCT_TYPE(Ident, ident_t, Int32, Int32, Int32, Int32, Int8Ptr)
   OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, __VA_ARGS__)
 
 __OMP_FUNCTION_TYPE(ParallelTask, true, Void, Int32Ptr, Int32Ptr)
+__OMP_FUNCTION_TYPE(ReduceFunction, false, Void, VoidPtr, VoidPtr)
+__OMP_FUNCTION_TYPE(CopyFunction, false, Void, VoidPtr, VoidPtr)
+__OMP_FUNCTION_TYPE(KmpcCtor, false, VoidPtr, VoidPtr)
+__OMP_FUNCTION_TYPE(KmpcDtor, false, Void, VoidPtr)
+__OMP_FUNCTION_TYPE(KmpcCopyCtor, false, VoidPtr, VoidPtr, VoidPtr)
+__OMP_FUNCTION_TYPE(TaskRoutineEntry, false, Int32, Int32,
+                    /* kmp_task_t */ VoidPtr)
 
 #undef __OMP_FUNCTION_TYPE
 #undef OMP_FUNCTION_TYPE
@@ -181,6 +321,8 @@ __OMP_FUNCTION_TYPE(ParallelTask, true, Void, Int32Ptr, Int32Ptr)
 #define __OMP_RTL(Name, IsVarArg, ReturnType, ...)                             \
   OMP_RTL(OMPRTL_##Name, #Name, IsVarArg, ReturnType, __VA_ARGS__)
 
+
+
 __OMP_RTL(__kmpc_barrier, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_cancel, false, Int32, IdentPtr, Int32, Int32)
 __OMP_RTL(__kmpc_cancel_barrier, false, Int32, IdentPtr, Int32)
@@ -188,12 +330,14 @@ __OMP_RTL(__kmpc_flush, false, Void, IdentPtr)
 __OMP_RTL(__kmpc_global_thread_num, false, Int32, IdentPtr)
 __OMP_RTL(__kmpc_fork_call, true, Void, IdentPtr, Int32, ParallelTaskPtr)
 __OMP_RTL(__kmpc_omp_taskwait, false, Int32, IdentPtr, Int32)
-__OMP_RTL(__kmpc_omp_taskyield, false, Int32, IdentPtr, Int32, Int32)
+__OMP_RTL(__kmpc_omp_taskyield, false, Int32, IdentPtr, Int32, /* Int */ Int32)
 __OMP_RTL(__kmpc_push_num_threads, false, Void, IdentPtr, Int32,
           /* Int */ Int32)
 __OMP_RTL(__kmpc_push_proc_bind, false, Void, IdentPtr, Int32, /* Int */ Int32)
 __OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_end_serialized_parallel, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_omp_reg_task_with_affinity, false, Int32, IdentPtr, Int32,
+          Int8Ptr, Int32, Int8Ptr)
 
 __OMP_RTL(omp_get_thread_num, false, Int32, )
 __OMP_RTL(omp_get_num_threads, false, Int32, )
@@ -207,8 +351,8 @@ __OMP_RTL(omp_get_thread_limit, false, Int32, )
 __OMP_RTL(omp_get_supported_active_levels, false, Int32, )
 __OMP_RTL(omp_get_max_active_levels, false, Int32, )
 __OMP_RTL(omp_get_level, false, Int32, )
-__OMP_RTL(omp_get_ancestor_thread_num, false, Int32, )
-__OMP_RTL(omp_get_team_size, false, Int32, )
+__OMP_RTL(omp_get_ancestor_thread_num, false, Int32, Int32)
+__OMP_RTL(omp_get_team_size, false, Int32, Int32)
 __OMP_RTL(omp_get_active_level, false, Int32, )
 __OMP_RTL(omp_in_final, false, Int32, )
 __OMP_RTL(omp_get_proc_bind, false, Int32, )
@@ -217,7 +361,7 @@ __OMP_RTL(omp_get_num_procs, false, Int32, )
 __OMP_RTL(omp_get_place_proc_ids, false, Void, Int32, Int32Ptr)
 __OMP_RTL(omp_get_place_num, false, Int32, )
 __OMP_RTL(omp_get_partition_num_places, false, Int32, )
-__OMP_RTL(omp_get_partition_place_nums, false, Int32, )
+__OMP_RTL(omp_get_partition_place_nums, false, Void, Int32Ptr)
 
 __OMP_RTL(omp_set_num_threads, false, Void, Int32)
 __OMP_RTL(omp_set_dynamic, false, Void, Int32)
@@ -228,8 +372,171 @@ __OMP_RTL(omp_set_max_active_levels, false, Void, Int32)
 __OMP_RTL(__kmpc_master, false, Int32, IdentPtr, Int32)
 __OMP_RTL(__kmpc_end_master, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_critical, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy)
-__OMP_RTL(__kmpc_critical_with_hint, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy, Int32)
-__OMP_RTL(__kmpc_end_critical, false, Void, IdentPtr, Int32, KmpCriticalNamePtrTy)
+__OMP_RTL(__kmpc_critical_with_hint, false, Void, IdentPtr, Int32,
+          KmpCriticalNamePtrTy, Int32)
+__OMP_RTL(__kmpc_end_critical, false, Void, IdentPtr, Int32,
+          KmpCriticalNamePtrTy)
+
+__OMP_RTL(__kmpc_begin, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_end, false, Void, IdentPtr)
+
+__OMP_RTL(__kmpc_reduce, false, Int32, IdentPtr, Int32, Int32, SizeTy, VoidPtr,
+          ReduceFunctionPtr, KmpCriticalNamePtrTy)
+__OMP_RTL(__kmpc_reduce_nowait, false, Int32, IdentPtr, Int32, Int32, SizeTy,
+          VoidPtr, ReduceFunctionPtr, KmpCriticalNamePtrTy)
+__OMP_RTL(__kmpc_end_reduce, false, Void, IdentPtr, Int32,
+          KmpCriticalNamePtrTy)
+__OMP_RTL(__kmpc_end_reduce_nowait, false, Void, IdentPtr, Int32,
+          KmpCriticalNamePtrTy)
+
+__OMP_RTL(__kmpc_ordered, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_end_ordered, false, Void, IdentPtr, Int32)
+
+__OMP_RTL(__kmpc_for_static_init_4, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int32Ptr, Int32Ptr, Int32Ptr, Int32, Int32)
+__OMP_RTL(__kmpc_for_static_init_4u, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int32Ptr, Int32Ptr, Int32Ptr, Int32, Int32)
+__OMP_RTL(__kmpc_for_static_init_8, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int64Ptr, Int64Ptr, Int64Ptr, Int64, Int64)
+__OMP_RTL(__kmpc_for_static_init_8u, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int64Ptr, Int64Ptr, Int64Ptr, Int64, Int64)
+__OMP_RTL(__kmpc_for_static_fini, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_dist_dispatch_init_4, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int32, Int32, Int32, Int32)
+__OMP_RTL(__kmpc_dist_dispatch_init_4u, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int32, Int32, Int32, Int32)
+__OMP_RTL(__kmpc_dist_dispatch_init_8, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int64, Int64, Int64, Int64)
+__OMP_RTL(__kmpc_dist_dispatch_init_8u, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int64, Int64, Int64, Int64)
+__OMP_RTL(__kmpc_dispatch_init_4, false, Void, IdentPtr, Int32, Int32, Int32,
+          Int32, Int32, Int32)
+__OMP_RTL(__kmpc_dispatch_init_4u, false, Void, IdentPtr, Int32, Int32, Int32,
+          Int32, Int32, Int32)
+__OMP_RTL(__kmpc_dispatch_init_8, false, Void, IdentPtr, Int32, Int32, Int64,
+          Int64, Int64, Int64)
+__OMP_RTL(__kmpc_dispatch_init_8u, false, Void, IdentPtr, Int32, Int32, Int64,
+          Int64, Int64, Int64)
+__OMP_RTL(__kmpc_dispatch_next_4, false, Int32, IdentPtr, Int32, Int32Ptr,
+          Int32Ptr, Int32Ptr, Int32Ptr)
+__OMP_RTL(__kmpc_dispatch_next_4u, false, Int32, IdentPtr, Int32, Int32Ptr,
+          Int32Ptr, Int32Ptr, Int32Ptr)
+__OMP_RTL(__kmpc_dispatch_next_8, false, Int32, IdentPtr, Int32, Int32Ptr,
+          Int64Ptr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__kmpc_dispatch_next_8u, false, Int32, IdentPtr, Int32, Int32Ptr,
+          Int64Ptr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__kmpc_dispatch_fini_4, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_dispatch_fini_4u, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_dispatch_fini_8, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_dispatch_fini_8u, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_team_static_init_4, false, Void, IdentPtr, Int32, Int32Ptr,
+          Int32Ptr, Int32Ptr, Int32Ptr, Int32, Int32)
+__OMP_RTL(__kmpc_team_static_init_4u, false, Void, IdentPtr, Int32, Int32Ptr,
+          Int32Ptr, Int32Ptr, Int32Ptr, Int32, Int32)
+__OMP_RTL(__kmpc_team_static_init_8, false, Void, IdentPtr, Int32, Int32Ptr,
+          Int64Ptr, Int64Ptr, Int64Ptr, Int64, Int64)
+__OMP_RTL(__kmpc_team_static_init_8u, false, Void, IdentPtr, Int32, Int32Ptr,
+          Int64Ptr, Int64Ptr, Int64Ptr, Int64, Int64)
+__OMP_RTL(__kmpc_dist_for_static_init_4, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int32Ptr, Int32Ptr, Int32Ptr, Int32Ptr, Int32, Int32)
+__OMP_RTL(__kmpc_dist_for_static_init_4u, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int32Ptr, Int32Ptr, Int32Ptr, Int32Ptr, Int32, Int32)
+__OMP_RTL(__kmpc_dist_for_static_init_8, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int64Ptr, Int64Ptr, Int64Ptr, Int64Ptr, Int64, Int64)
+__OMP_RTL(__kmpc_dist_for_static_init_8u, false, Void, IdentPtr, Int32, Int32,
+          Int32Ptr, Int64Ptr, Int64Ptr, Int64Ptr, Int64Ptr, Int64, Int64)
+
+__OMP_RTL(__kmpc_single, false, Int32, IdentPtr, Int32)
+__OMP_RTL(__kmpc_end_single, false, Void, IdentPtr, Int32)
+
+__OMP_RTL(__kmpc_omp_task_alloc, false, /* kmp_task_t */ VoidPtr, IdentPtr,
+          Int32, Int32, SizeTy, SizeTy, TaskRoutineEntryPtr)
+__OMP_RTL(__kmpc_omp_task, false, Int32, IdentPtr, Int32,
+          /* kmp_task_t */ VoidPtr)
+__OMP_RTL(__kmpc_end_taskgroup, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_taskgroup, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_omp_task_begin_if0, false, Void, IdentPtr, Int32,
+          /* kmp_task_t */ VoidPtr)
+__OMP_RTL(__kmpc_omp_task_complete_if0, false, Void, IdentPtr, Int32,
+          /* kmp_tasK_t */ VoidPtr)
+__OMP_RTL(__kmpc_omp_task_with_deps, false, Int32, IdentPtr, Int32,
+          /* kmp_task_t */ VoidPtr, Int32,
+          /* kmp_depend_info_t */ VoidPtr, Int32,
+          /* kmp_depend_info_t */ VoidPtr)
+__OMP_RTL(__kmpc_taskloop, false, Void, IdentPtr, /* Int */ Int32, VoidPtr,
+          /* Int */ Int32, Int64Ptr, Int64Ptr, Int64, /* Int */ Int32,
+          /* Int */ Int32, Int64, VoidPtr)
+__OMP_RTL(__kmpc_omp_target_task_alloc, false, /* kmp_task_t */ VoidPtr,
+          IdentPtr, Int32, Int32, SizeTy, SizeTy, TaskRoutineEntryPtr, Int64)
+__OMP_RTL(__kmpc_taskred_modifier_init, false, VoidPtr, IdentPtr,
+          /* Int */ Int32, /* Int */ Int32, /* Int */ Int32, VoidPtr)
+__OMP_RTL(__kmpc_taskred_init, false, VoidPtr, /* Int */ Int32,
+          /* Int */ Int32, VoidPtr)
+__OMP_RTL(__kmpc_task_reduction_modifier_fini, false, Void, IdentPtr,
+          /* Int */ Int32, /* Int */ Int32)
+__OMP_RTL(__kmpc_task_reduction_get_th_data, false, VoidPtr, Int32, VoidPtr,
+          VoidPtr)
+__OMP_RTL(__kmpc_task_reduction_init, false, VoidPtr, Int32, Int32, VoidPtr)
+__OMP_RTL(__kmpc_task_reduction_modifier_init, false, VoidPtr, VoidPtr, Int32,
+          Int32, Int32, VoidPtr)
+__OMP_RTL(__kmpc_proxy_task_completed_ooo, false, Void, VoidPtr)
+
+__OMP_RTL(__kmpc_omp_wait_deps, false, Void, IdentPtr, Int32, Int32,
+          /* kmp_depend_info_t */ VoidPtr, Int32, VoidPtr)
+__OMP_RTL(__kmpc_cancellationpoint, false, Int32, IdentPtr, Int32, Int32)
+
+__OMP_RTL(__kmpc_fork_teams, true, Void, IdentPtr, Int32, ParallelTaskPtr)
+__OMP_RTL(__kmpc_push_num_teams, false, Void, IdentPtr, Int32, Int32, Int32)
+
+__OMP_RTL(__kmpc_copyprivate, false, Void, IdentPtr, Int32, SizeTy, VoidPtr,
+          CopyFunctionPtr, Int32)
+__OMP_RTL(__kmpc_threadprivate_cached, false, VoidPtr, IdentPtr, Int32, VoidPtr,
+          SizeTy, VoidPtrPtrPtr)
+__OMP_RTL(__kmpc_threadprivate_register, false, Void, IdentPtr, VoidPtr,
+          KmpcCtorPtr, KmpcCopyCtorPtr, KmpcDtorPtr)
+
+__OMP_RTL(__kmpc_doacross_init, false, Void, IdentPtr, Int32, Int32,
+          /* kmp_dim */ VoidPtr)
+__OMP_RTL(__kmpc_doacross_post, false, Void, IdentPtr, Int32, Int64Ptr)
+__OMP_RTL(__kmpc_doacross_wait, false, Void, IdentPtr, Int32, Int64Ptr)
+__OMP_RTL(__kmpc_doacross_fini, false, Void, IdentPtr, Int32)
+
+__OMP_RTL(__kmpc_alloc, false, VoidPtr, /* Int */ Int32, SizeTy, VoidPtr)
+__OMP_RTL(__kmpc_free, false, Void, /* Int */ Int32, VoidPtr, VoidPtr)
+
+__OMP_RTL(__kmpc_init_allocator, false, /* omp_allocator_handle_t */ VoidPtr,
+          /* Int */ Int32, /* omp_memespace_handle_t */ VoidPtr,
+          /* Int */ Int32, /* omp_alloctrait_t */ VoidPtr)
+__OMP_RTL(__kmpc_destroy_allocator, false, Void, /* Int */ Int32,
+          /* omp_allocator_handle_t */ VoidPtr)
+
+__OMP_RTL(__kmpc_push_target_tripcount, false, Void, Int64, Int64)
+__OMP_RTL(__tgt_target, false, Int32, Int64, VoidPtr, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__tgt_target_nowait, false, Int32, Int64, VoidPtr, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__tgt_target_teams, false, Int32, Int64, VoidPtr, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr, Int32, Int32)
+__OMP_RTL(__tgt_target_teams_nowait, false, Int32, Int64, VoidPtr, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, Int32, Int32)
+__OMP_RTL(__tgt_register_requires, false, Void, Int64)
+__OMP_RTL(__tgt_target_data_begin, false, Void, Int64, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__tgt_target_data_begin_nowait, false, Void, Int64, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__tgt_target_data_end, false, Void, Int64, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__tgt_target_data_end_nowait, false, Void, Int64, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__tgt_target_data_update, false, Void, Int64, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__tgt_target_data_update_nowait, false, Void, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__tgt_mapper_num_components, false, Int64, VoidPtr)
+__OMP_RTL(__tgt_push_mapper_component, false, Void, VoidPtr, VoidPtr, VoidPtr,
+          Int64, Int64)
+__OMP_RTL(__kmpc_task_allow_completion_event, false, VoidPtr, IdentPtr,
+          /* Int */ Int32, /* kmp_task_t */ VoidPtr)
 
 __OMP_RTL(__last, false, Void, )
 
@@ -249,17 +556,17 @@ __OMP_RTL(__last, false, Void, )
 __OMP_ATTRS_SET(GetterAttrs,
                 OptimisticAttributes
                     ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(ReadOnly),
-                                   EnumAttr(NoSync), EnumAttr(NoFree))
+                                   EnumAttr(NoSync), EnumAttr(NoFree), EnumAttr(InaccessibleMemOnly))
                     : AttributeSet(EnumAttr(NoUnwind)))
 __OMP_ATTRS_SET(GetterArgWriteAttrs,
                 OptimisticAttributes
                     ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync),
-                                   EnumAttr(NoFree))
+                                   EnumAttr(NoFree), EnumAttr(InaccessibleMemOrArgMemOnly))
                     : AttributeSet(EnumAttr(NoUnwind)))
 __OMP_ATTRS_SET(SetterAttrs,
                 OptimisticAttributes
                     ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(WriteOnly),
-                                   EnumAttr(NoSync), EnumAttr(NoFree))
+                                   EnumAttr(NoSync), EnumAttr(NoFree), EnumAttr(InaccessibleMemOnly))
                     : AttributeSet(EnumAttr(NoUnwind)))
 
 #undef __OMP_ATTRS_SET
@@ -272,10 +579,32 @@ __OMP_ATTRS_SET(SetterAttrs,
 #define __OMP_RTL_ATTRS(Name, FnAttrSet, RetAttrSet, ArgAttrSets)              \
   OMP_RTL_ATTRS(OMPRTL_##Name, FnAttrSet, RetAttrSet, ArgAttrSets)
 
+__OMP_RTL_ATTRS(__kmpc_barrier, AttributeSet(), AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_cancel,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_cancel_barrier, AttributeSet(), AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_flush, AttributeSet(), AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(__kmpc_fork_call, AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_omp_taskwait, AttributeSet(), AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_omp_taskyield,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_push_num_threads,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_push_proc_bind,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_serialized_parallel,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_end_serialized_parallel,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
 
-__OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(omp_get_thread_num, GetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(omp_get_num_threads, GetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(omp_get_max_threads, GetterAttrs, AttributeSet(), {})
@@ -312,6 +641,228 @@ __OMP_RTL_ATTRS(omp_set_dynamic, SetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(omp_set_nested, SetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(omp_set_schedule, SetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(omp_set_max_active_levels, SetterAttrs, AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_master,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_end_master,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_critical,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_critical_with_hint,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_end_critical,
+                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_begin, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_end, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_reduce, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_reduce_nowait, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_end_reduce, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_end_reduce_nowait, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_ordered, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_end_ordered, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_for_static_init_4, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_for_static_init_4u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_for_static_init_8, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_for_static_init_8u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_for_static_fini, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dist_dispatch_init_4, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dist_dispatch_init_4u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dist_dispatch_init_8, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dist_dispatch_init_8u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_init_4, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_init_4u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_init_8, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_init_8u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_next_4, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_next_4u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_next_8, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_next_8u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_fini_4, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_fini_4u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_fini_8, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dispatch_fini_8u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_team_static_init_4, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_team_static_init_4u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_team_static_init_8, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_team_static_init_8u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dist_for_static_init_4, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dist_for_static_init_4u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dist_for_static_init_8, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_dist_for_static_init_8u, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_single, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_end_single, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_omp_task_alloc, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_omp_task, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_end_taskgroup, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_taskgroup, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_omp_task_begin_if0, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_omp_task_complete_if0, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_omp_task_with_deps, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_taskloop, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_omp_target_task_alloc,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_taskred_modifier_init,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_taskred_init,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_task_reduction_modifier_fini,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_task_reduction_get_th_data,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_task_reduction_init,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_task_reduction_modifier_init,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_proxy_task_completed_ooo,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_omp_wait_deps, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_cancellationpoint, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_fork_teams, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_push_num_teams, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_copyprivate, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_threadprivate_cached, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_threadprivate_register, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_doacross_init, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_doacross_post, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_doacross_wait, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_doacross_fini, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_alloc, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_free, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_init_allocator, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_destroy_allocator, AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+
+__OMP_RTL_ATTRS(__kmpc_push_target_tripcount,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_target,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_target_nowait,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_target_teams,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_target_teams_nowait,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_register_requires,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_target_data_begin,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_target_data_begin_nowait,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_target_data_end,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_target_data_end_nowait,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_target_data_update,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_target_data_update_nowait,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_mapper_num_components,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__tgt_push_mapper_component,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_task_allow_completion_event,
+                AttributeSet(EnumAttr(NoUnwind)),
+                AttributeSet(), {})
 
 #undef __OMP_RTL_ATTRS
 #undef OMP_RTL_ATTRS
@@ -425,6 +976,9 @@ __OMP_PROC_BIND_KIND(unknown, 7)
 #ifndef OMP_TRAIT_PROPERTY
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)
 #endif
+#ifndef OMP_LAST_TRAIT_PROPERTY
+#define OMP_LAST_TRAIT_PROPERTY(Enum)
+#endif
 
 #define __OMP_TRAIT_SET(Name) OMP_TRAIT_SET(Name, #Name)
 #define __OMP_TRAIT_SELECTOR(TraitSet, Name, RequiresProperty)                 \
@@ -498,6 +1052,9 @@ __OMP_TRAIT_PROPERTY(implementation, vendor, ti)
 __OMP_TRAIT_PROPERTY(implementation, vendor, unknown)
 
 __OMP_TRAIT_SELECTOR(implementation, extension, true)
+__OMP_TRAIT_PROPERTY(implementation, extension, match_all)
+__OMP_TRAIT_PROPERTY(implementation, extension, match_any)
+__OMP_TRAIT_PROPERTY(implementation, extension, match_none)
 
 __OMP_TRAIT_SET(user)
 
@@ -532,11 +1089,758 @@ __OMP_REQUIRES_TRAIT(reverse_offload)
 __OMP_REQUIRES_TRAIT(dynamic_allocators)
 __OMP_REQUIRES_TRAIT(atomic_default_mem_order)
 
+OMP_LAST_TRAIT_PROPERTY(
+    implementation_atomic_default_mem_order_atomic_default_mem_order)
+
 #undef __OMP_TRAIT_SELECTOR_AND_PROPERTY
 #undef OMP_TRAIT_SELECTOR
 #undef __OMP_TRAIT_SELECTOR
 #undef OMP_TRAIT_PROPERTY
+#undef OMP_LAST_TRAIT_PROPERTY
 #undef __OMP_TRAIT_PROPERTY
 #undef __OMP_REQUIRES_TRAIT
 #undef OMP_REQUIRES_TRAIT
+///}
+
+
+/// Clauses allowed per directive
+///
+///{
+
+#ifndef OMP_DIRECTIVE_CLAUSE
+#define OMP_DIRECTIVE_CLAUSE(Directive, MinVersion, MaxVersion, Clause)
+#endif
+
+#define __OMP_DIRECTIVE_CLAUSE(Directive, MinVersion, MaxVersion, Clause)      \
+  OMP_DIRECTIVE_CLAUSE(OMPD_##Directive, unsigned(MinVersion),                 \
+                       unsigned(MaxVersion), OMPC_##Clause)
+
+__OMP_DIRECTIVE_CLAUSE(scan, 50, ~0, inclusive)
+__OMP_DIRECTIVE_CLAUSE(scan, 50, ~0, exclusive)
+
+__OMP_DIRECTIVE_CLAUSE(parallel, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(parallel, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(parallel, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(parallel, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(parallel, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(parallel, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(parallel, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(parallel, 1, ~0, copyin)
+__OMP_DIRECTIVE_CLAUSE(parallel, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(simd, 50, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(simd, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(for, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(for, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(for, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(for, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(for, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(for, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(for, 1, ~0, ordered)
+__OMP_DIRECTIVE_CLAUSE(for, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(for, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(for, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(for, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~1, ordered)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 50, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(for_simd, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(sections, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(sections, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(sections, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(sections, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(sections, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(sections, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(single, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(single, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(single, 1, ~0, copyprivate)
+__OMP_DIRECTIVE_CLAUSE(single, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(single, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(cancel, 1, ~0, if)
+
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, copyin)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~1, ordered)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(parallel_for, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, copyin)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~1, ordered)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(parallel_for_simd, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(parallel_master, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(parallel_master, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(parallel_master, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(parallel_master, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(parallel_master, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_master, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(parallel_master, 1, ~0, copyin)
+__OMP_DIRECTIVE_CLAUSE(parallel_master, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(parallel_master, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(parallel_master, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, copyin)
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_sections, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, final)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, untied)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, mergeable)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, priority)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, in_reduction)
+__OMP_DIRECTIVE_CLAUSE(task, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(task, 50, ~0, detach)
+__OMP_DIRECTIVE_CLAUSE(task, 50, ~0, affinity)
+
+__OMP_DIRECTIVE_CLAUSE(atomic, 1, ~0, read)
+__OMP_DIRECTIVE_CLAUSE(atomic, 1, ~0, write)
+__OMP_DIRECTIVE_CLAUSE(atomic, 1, ~0, update)
+__OMP_DIRECTIVE_CLAUSE(atomic, 1, ~0, capture)
+__OMP_DIRECTIVE_CLAUSE(atomic, 1, ~0, seq_cst)
+__OMP_DIRECTIVE_CLAUSE(atomic, 50, ~0, acq_rel)
+__OMP_DIRECTIVE_CLAUSE(atomic, 50, ~0, acquire)
+__OMP_DIRECTIVE_CLAUSE(atomic, 50, ~0, release)
+__OMP_DIRECTIVE_CLAUSE(atomic, 50, ~0, relaxed)
+__OMP_DIRECTIVE_CLAUSE(atomic, 50, ~0, hint)
+
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, defaultmap)
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, is_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(target, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target, 50, ~0, uses_allocators)
+
+__OMP_DIRECTIVE_CLAUSE(requires, 1, ~0, unified_address)
+__OMP_DIRECTIVE_CLAUSE(requires, 1, ~0, unified_shared_memory)
+__OMP_DIRECTIVE_CLAUSE(requires, 1, ~0, reverse_offload)
+__OMP_DIRECTIVE_CLAUSE(requires, 1, ~0, dynamic_allocators)
+__OMP_DIRECTIVE_CLAUSE(requires, 1, ~0, atomic_default_mem_order)
+
+__OMP_DIRECTIVE_CLAUSE(allocate, 1, ~0, allocator)
+
+__OMP_DIRECTIVE_CLAUSE(target_data, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_data, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_data, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_data, 1, ~0, use_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target_data, 50, ~0, use_device_addr)
+
+__OMP_DIRECTIVE_CLAUSE(target_enter_data, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_enter_data, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_enter_data, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_enter_data, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_enter_data, 1, ~0, depend)
+
+__OMP_DIRECTIVE_CLAUSE(target_exit_data, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_exit_data, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_exit_data, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_exit_data, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_exit_data, 1, ~0, depend)
+
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, defaultmap)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, is_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 50, ~0, uses_allocators)
+
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, defaultmap)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~1, ordered)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, is_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 50, ~0, uses_allocators)
+
+__OMP_DIRECTIVE_CLAUSE(target_update, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_update, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_update, 1, ~0, to)
+__OMP_DIRECTIVE_CLAUSE(target_update, 1, ~0, from)
+__OMP_DIRECTIVE_CLAUSE(target_update, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_update, 1, ~0, depend)
+
+__OMP_DIRECTIVE_CLAUSE(teams, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(teams, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(teams, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(teams, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(teams, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(teams, 1, ~0, num_teams)
+__OMP_DIRECTIVE_CLAUSE(teams, 1, ~0, thread_limit)
+__OMP_DIRECTIVE_CLAUSE(teams, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(ordered, 1, ~0, threads)
+__OMP_DIRECTIVE_CLAUSE(ordered, 1, ~0, simd)
+__OMP_DIRECTIVE_CLAUSE(ordered, 1, ~0, depend)
+
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, final)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, untied)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, mergeable)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, priority)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, grainsize)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, nogroup)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, num_tasks)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, in_reduction)
+__OMP_DIRECTIVE_CLAUSE(taskloop, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, final)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, untied)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, mergeable)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, priority)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, grainsize)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, nogroup)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, num_tasks)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, in_reduction)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(taskloop_simd, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, final)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, untied)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, mergeable)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, priority)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, grainsize)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, nogroup)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, num_tasks)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, in_reduction)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, final)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, untied)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, mergeable)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, priority)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, grainsize)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, nogroup)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, num_tasks)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, in_reduction)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(master_taskloop_simd, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, final)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, untied)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, mergeable)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, priority)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, grainsize)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, nogroup)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, num_tasks)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop, 1, ~0, copyin)
+
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, final)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, untied)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, mergeable)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, priority)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, grainsize)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, nogroup)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, num_tasks)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, copyin)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(parallel_master_taskloop_simd, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(critical, 1, ~0, hint)
+
+__OMP_DIRECTIVE_CLAUSE(distribute, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(distribute, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(distribute, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(distribute, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(distribute, 1, ~0, dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(distribute, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, copyin)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, copyin)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(distribute_parallel_for_simd, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 50, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(distribute_simd, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, defaultmap)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~1, ordered)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, is_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 50, ~0, uses_allocators)
+
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, defaultmap)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, is_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 50, ~0, uses_allocators)
+
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, num_teams)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, thread_limit)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, num_teams)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, thread_limit)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 50, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_simd, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, num_teams)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, thread_limit)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for_simd, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, num_teams)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, thread_limit)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, copyin)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(teams_distribute_parallel_for, 50, ~0, order)
+
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, defaultmap)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, is_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, num_teams)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, thread_limit)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 50, ~0, uses_allocators)
+
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, defaultmap)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, is_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, num_teams)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, thread_limit)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 50, ~0, uses_allocators)
+
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, defaultmap)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0,
+                       firstprivate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0,
+                       is_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, default)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, num_teams)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0,
+                       thread_limit)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0,
+                       dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, num_threads)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, proc_bind)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, schedule)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 50, ~0,
+                       uses_allocators)
+
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       private)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       defaultmap)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       firstprivate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       is_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       default)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       reduction)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       num_teams)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       thread_limit)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       lastprivate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       collapse)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       num_threads)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       proc_bind)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       schedule)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       aligned)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       safelen)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       simdlen)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
+                       allocate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 50, ~0,
+                       nontemporal)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 50, ~0,
+                       uses_allocators)
+
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, if)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, device)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, map)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, private)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, nowait)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, defaultmap)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, firstprivate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, lastprivate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, is_device_ptr)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, shared)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, reduction)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, num_teams)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, thread_limit)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, collapse)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, dist_schedule)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, linear)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, aligned)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, safelen)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, simdlen)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 50, ~0, nontemporal)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 50, ~0, uses_allocators)
+
+__OMP_DIRECTIVE_CLAUSE(taskgroup, 1, ~0, task_reduction)
+__OMP_DIRECTIVE_CLAUSE(taskgroup, 1, ~0, allocate)
+
+__OMP_DIRECTIVE_CLAUSE(declare_mapper, 1, ~0, map)
+
+__OMP_DIRECTIVE_CLAUSE(declare_variant, 1, ~0, match)
+
+__OMP_DIRECTIVE_CLAUSE(flush, 50, ~0, acq_rel)
+__OMP_DIRECTIVE_CLAUSE(flush, 50, ~0, acquire)
+__OMP_DIRECTIVE_CLAUSE(flush, 50, ~0, release)
+// TODO This should ne `none` instead
+__OMP_DIRECTIVE_CLAUSE(flush, 1, ~0, flush)
+
+__OMP_DIRECTIVE_CLAUSE(depobj, 50, ~0, depend)
+__OMP_DIRECTIVE_CLAUSE(depobj, 50, ~0, destroy)
+__OMP_DIRECTIVE_CLAUSE(depobj, 50, ~0, update)
+// TODO This should ne `none` instead
+__OMP_DIRECTIVE_CLAUSE(depobj, 50, ~0, depobj)
+
+#undef __OMP_DIRECTIVE_CLAUSE
+#undef OMP_DIRECTIVE_CLAUSE
 ///}

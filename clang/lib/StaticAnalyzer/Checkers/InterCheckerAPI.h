@@ -11,13 +11,19 @@
 
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_INTERCHECKERAPI_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_INTERCHECKERAPI_H
-namespace clang {
-class CheckerManager;
 
+// FIXME: This file goes against how a checker should be implemented either in
+// a single file, or be exposed in a header file. Let's try to get rid of it!
+
+namespace clang {
 namespace ento {
+
+class CheckerManager;
 
 /// Register the part of MallocChecker connected to InnerPointerChecker.
 void registerInnerPointerCheckerAux(CheckerManager &Mgr);
 
-}}
+} // namespace ento
+} // namespace clang
+
 #endif /* INTERCHECKERAPI_H_ */

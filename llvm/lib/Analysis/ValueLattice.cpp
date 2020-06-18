@@ -10,13 +10,21 @@
 
 namespace llvm {
 raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val) {
-  if (Val.isUndefined())
-    return OS << "undefined";
+  if (Val.isUnknown())
+    return OS << "unknown";
+  if (Val.isUndef())
+    return OS << "undef";
   if (Val.isOverdefined())
     return OS << "overdefined";
 
   if (Val.isNotConstant())
     return OS << "notconstant<" << *Val.getNotConstant() << ">";
+
+  if (Val.isConstantRangeIncludingUndef())
+    return OS << "constantrange incl. undef <"
+              << Val.getConstantRange(true).getLower() << ", "
+              << Val.getConstantRange(true).getUpper() << ">";
+
   if (Val.isConstantRange())
     return OS << "constantrange<" << Val.getConstantRange().getLower() << ", "
               << Val.getConstantRange().getUpper() << ">";

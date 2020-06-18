@@ -13,7 +13,7 @@
 
 #include "mlir/Transforms/FoldUtils.h"
 
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
@@ -24,8 +24,8 @@ using namespace mlir;
 /// inserted into.
 static Region *getInsertionRegion(
     DialectInterfaceCollection<OpFolderDialectInterface> &interfaces,
-    Operation *op) {
-  while (Region *region = op->getParentRegion()) {
+    Block *insertionBlock) {
+  while (Region *region = insertionBlock->getParent()) {
     // Insert in this region for any of the following scenarios:
     //  * The parent is unregistered, or is known to be isolated from above.
     //  * The parent is a top-level operation.
@@ -40,7 +40,7 @@ static Region *getInsertionRegion(
       return region;
 
     // Traverse up the parent looking for an insertion region.
-    op = parentOp;
+    insertionBlock = parentOp->getBlock();
   }
   llvm_unreachable("expected valid insertion region");
 }
@@ -57,7 +57,7 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
   // Ask the dialect to materialize a constant operation for this value.
   if (auto *constOp = dialect->materializeConstant(builder, value, type, loc)) {
     assert(insertPt == builder.getInsertionPoint());
-    assert(matchPattern(constOp, m_Constant(&value)));
+    assert(matchPattern(constOp, m_Constant()));
     return constOp;
   }
 
@@ -74,7 +74,10 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
 
 LogicalResult OperationFolder::tryToFold(
     Operation *op, function_ref<void(Operation *)> processGeneratedConstants,
-    function_ref<void(Operation *)> preReplaceAction) {
+    function_ref<void(Operation *)> preReplaceAction, bool *inPlaceUpdate) {
+  if (inPlaceUpdate)
+    *inPlaceUpdate = false;
+
   // If this is a unique'd constant, return failure as we know that it has
   // already been folded.
   if (referencedDialects.count(op))
@@ -82,20 +85,24 @@ LogicalResult OperationFolder::tryToFold(
 
   // Try to fold the operation.
   SmallVector<Value, 8> results;
-  if (failed(tryToFold(op, results, processGeneratedConstants)))
+  OpBuilder builder(op);
+  if (failed(tryToFold(builder, op, results, processGeneratedConstants)))
     return failure();
 
+  // Check to see if the operation was just updated in place.
+  if (results.empty()) {
+    if (inPlaceUpdate)
+      *inPlaceUpdate = true;
+    return success();
+  }
+
   // Constant folding succeeded. We will start replacing this op's uses and
-  // eventually erase this op. Invoke the callback provided by the caller to
-  // perform any pre-replacement action.
+  // erase this op. Invoke the callback provided by the caller to perform any
+  // pre-replacement action.
   if (preReplaceAction)
     preReplaceAction(op);
 
-  // Check to see if the operation was just updated in place.
-  if (results.empty())
-    return success();
-
-  // Otherwise, replace all of the result values and erase the operation.
+  // Replace all of the result values and erase the operation.
   for (unsigned i = 0, e = results.size(); i != e; ++i)
     op->getResult(i).replaceAllUsesWith(results[i]);
   op->erase();
@@ -117,7 +124,8 @@ void OperationFolder::notifyRemoval(Operation *op) {
   assert(constValue);
 
   // Get the constant map that this operation was uniqued in.
-  auto &uniquedConstants = foldScopes[getInsertionRegion(interfaces, op)];
+  auto &uniquedConstants =
+      foldScopes[getInsertionRegion(interfaces, op->getBlock())];
 
   // Erase all of the references to this operation.
   auto type = op->getResult(0).getType();
@@ -126,10 +134,37 @@ void OperationFolder::notifyRemoval(Operation *op) {
   referencedDialects.erase(it);
 }
 
+/// Clear out any constants cached inside of the folder.
+void OperationFolder::clear() {
+  foldScopes.clear();
+  referencedDialects.clear();
+}
+
+/// Get or create a constant using the given builder. On success this returns
+/// the constant operation, nullptr otherwise.
+Value OperationFolder::getOrCreateConstant(OpBuilder &builder, Dialect *dialect,
+                                           Attribute value, Type type,
+                                           Location loc) {
+  OpBuilder::InsertionGuard foldGuard(builder);
+
+  // Use the builder insertion block to find an insertion point for the
+  // constant.
+  auto *insertRegion =
+      getInsertionRegion(interfaces, builder.getInsertionBlock());
+  auto &entry = insertRegion->front();
+  builder.setInsertionPoint(&entry, entry.begin());
+
+  // Get the constant map for the insertion region of this operation.
+  auto &uniquedConstants = foldScopes[insertRegion];
+  Operation *constOp = tryGetOrCreateConstant(uniquedConstants, dialect,
+                                              builder, value, type, loc);
+  return constOp ? constOp->getResult(0) : Value();
+}
+
 /// Tries to perform folding on the given `op`. If successful, populates
 /// `results` with the results of the folding.
 LogicalResult OperationFolder::tryToFold(
-    Operation *op, SmallVectorImpl<Value> &results,
+    OpBuilder &builder, Operation *op, SmallVectorImpl<Value> &results,
     function_ref<void(Operation *)> processGeneratedConstants) {
   SmallVector<Attribute, 8> operandConstants;
   SmallVector<OpFoldResult, 8> foldResults;
@@ -158,9 +193,11 @@ LogicalResult OperationFolder::tryToFold(
 
   // Create a builder to insert new operations into the entry block of the
   // insertion region.
-  auto *insertRegion = getInsertionRegion(interfaces, op);
+  auto *insertRegion =
+      getInsertionRegion(interfaces, builder.getInsertionBlock());
   auto &entry = insertRegion->front();
-  OpBuilder builder(&entry, entry.begin());
+  OpBuilder::InsertionGuard foldGuard(builder);
+  builder.setInsertionPoint(&entry, entry.begin());
 
   // Get the constant map for the insertion region of this operation.
   auto &uniquedConstants = foldScopes[insertRegion];

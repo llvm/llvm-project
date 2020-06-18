@@ -55,6 +55,8 @@ protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
   lldb::StateType GetPlanRunState() override;
+  
+  ScriptInterpreter *GetScriptInterpreter();
 
 private:
   std::string m_class_name;
@@ -66,7 +68,8 @@ private:
   StructuredData::ObjectSP m_implementation_sp;
   bool m_did_push;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanPython);
+  ThreadPlanPython(const ThreadPlanPython &) = delete;
+  const ThreadPlanPython &operator=(const ThreadPlanPython &) = delete;
 };
 
 } // namespace lldb_private

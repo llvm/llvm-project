@@ -36,3 +36,4 @@ declare i32 @_ZN1C1fEi(%struct.C*, i32)
 ^6 = typeidCompatibleVTable: (name: "_ZTS1A", summary: ((offset: 16, ^2), (offset: 16, ^4))) ; guid = 7004155349499253778
 ^7 = typeidCompatibleVTable: (name: "_ZTS1B", summary: ((offset: 16, ^2))) ; guid = 6203814149063363976
 ^8 = typeidCompatibleVTable: (name: "_ZTS1C", summary: ((offset: 16, ^4))) ; guid = 1884921850105019584
+^9 = blockcount: 0

@@ -168,8 +168,8 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
   Target *target = exe_ctx.GetTargetPtr();
   if (!target) {
-    LLDB_LOGF(log, "== [UserExpression::Evaluate] Passed a NULL target, can't "
-                   "run expressions.");
+    LLDB_LOG(log, "== [UserExpression::Evaluate] Passed a NULL target, can't "
+                  "run expressions.");
     error.SetErrorString("expression passed a null target");
     return lldb::eExpressionSetupError;
   }
@@ -178,9 +178,8 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
   if (process == nullptr || process->GetState() != lldb::eStateStopped) {
     if (execution_policy == eExecutionPolicyAlways) {
-      LLDB_LOGF(log,
-                "== [UserExpression::Evaluate] Expression may not run, but "
-                "is not constant ==");
+      LLDB_LOG(log, "== [UserExpression::Evaluate] Expression may not run, but "
+                    "is not constant ==");
 
       error.SetErrorString("expression needed to run but couldn't");
 
@@ -225,15 +224,13 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
                                            desired_type, options, ctx_obj,
                                            error));
   if (error.Fail()) {
-    if (log)
-      LLDB_LOGF(log, "== [UserExpression::Evaluate] Getting expression: %s ==",
-                error.AsCString());
+    LLDB_LOG(log, "== [UserExpression::Evaluate] Getting expression: {0} ==",
+             error.AsCString());
     return lldb::eExpressionSetupError;
   }
 
-  if (log)
-    LLDB_LOGF(log, "== [UserExpression::Evaluate] Parsing expression %s ==",
-              expr.str().c_str());
+  LLDB_LOG(log, "== [UserExpression::Evaluate] Parsing expression {0} ==",
+           expr.str());
 
   const bool keep_expression_in_memory = true;
   const bool generate_debug_info = options.GetGenerateDebugInfo();
@@ -262,25 +259,40 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
   // If there is a fixed expression, try to parse it:
   if (!parse_success) {
+    // Delete the expression that failed to parse before attempting to parse
+    // the next expression.
+    user_expression_sp.reset();
+
     execution_results = lldb::eExpressionParseError;
     if (fixed_expression && !fixed_expression->empty() &&
         options.GetAutoApplyFixIts()) {
-      lldb::UserExpressionSP fixed_expression_sp(
-          target->GetUserExpressionForLanguage(fixed_expression->c_str(),
-                                               full_prefix, language,
-                                               desired_type, options, ctx_obj,
-                                               error));
-      DiagnosticManager fixed_diagnostic_manager;
-      parse_success = fixed_expression_sp->Parse(
-          fixed_diagnostic_manager, exe_ctx, execution_policy,
-          keep_expression_in_memory, generate_debug_info);
-      if (parse_success) {
-        diagnostic_manager.Clear();
-        user_expression_sp = fixed_expression_sp;
-      } else {
-        // If the fixed expression failed to parse, don't tell the user about,
-        // that won't help.
-        fixed_expression->clear();
+      const uint64_t max_fix_retries = options.GetRetriesWithFixIts();
+      for (uint64_t i = 0; i < max_fix_retries; ++i) {
+        // Try parsing the fixed expression.
+        lldb::UserExpressionSP fixed_expression_sp(
+            target->GetUserExpressionForLanguage(
+                fixed_expression->c_str(), full_prefix, language, desired_type,
+                options, ctx_obj, error));
+        DiagnosticManager fixed_diagnostic_manager;
+        parse_success = fixed_expression_sp->Parse(
+            fixed_diagnostic_manager, exe_ctx, execution_policy,
+            keep_expression_in_memory, generate_debug_info);
+        if (parse_success) {
+          diagnostic_manager.Clear();
+          user_expression_sp = fixed_expression_sp;
+          break;
+        } else {
+          // The fixed expression also didn't parse. Let's check for any new
+          // Fix-Its we could try.
+          if (fixed_expression_sp->GetFixedText()) {
+            *fixed_expression = fixed_expression_sp->GetFixedText();
+          } else {
+            // Fixed expression didn't compile without a fixit, don't retry and
+            // don't tell the user about it.
+            fixed_expression->clear();
+            break;
+          }
+        }
       }
     }
 
@@ -306,10 +318,8 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
     if (execution_policy == eExecutionPolicyNever &&
         !user_expression_sp->CanInterpret()) {
-      if (log)
-        LLDB_LOGF(log,
-                  "== [UserExpression::Evaluate] Expression may not run, but "
-                  "is not constant ==");
+      LLDB_LOG(log, "== [UserExpression::Evaluate] Expression may not run, but "
+                    "is not constant ==");
 
       if (!diagnostic_manager.Diagnostics().size())
         error.SetExpressionError(lldb::eExpressionSetupError,
@@ -329,17 +339,15 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
       diagnostic_manager.Clear();
 
-      if (log)
-        LLDB_LOGF(log, "== [UserExpression::Evaluate] Executing expression ==");
+      LLDB_LOG(log, "== [UserExpression::Evaluate] Executing expression ==");
 
       execution_results =
           user_expression_sp->Execute(diagnostic_manager, exe_ctx, options,
                                       user_expression_sp, expr_result);
 
       if (execution_results != lldb::eExpressionCompleted) {
-        if (log)
-          LLDB_LOGF(log, "== [UserExpression::Evaluate] Execution completed "
-                         "abnormally ==");
+        LLDB_LOG(log, "== [UserExpression::Evaluate] Execution completed "
+                      "abnormally ==");
 
         if (!diagnostic_manager.Diagnostics().size())
           error.SetExpressionError(
@@ -351,15 +359,13 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
         if (expr_result) {
           result_valobj_sp = expr_result->GetValueObject();
 
-          if (log)
-            LLDB_LOGF(log,
-                      "== [UserExpression::Evaluate] Execution completed "
-                      "normally with result %s ==",
-                      result_valobj_sp->GetValueAsCString());
+          LLDB_LOG(log,
+                   "== [UserExpression::Evaluate] Execution completed "
+                   "normally with result %s ==",
+                   result_valobj_sp->GetValueAsCString());
         } else {
-          if (log)
-            LLDB_LOGF(log, "== [UserExpression::Evaluate] Execution completed "
-                           "normally with no result ==");
+          LLDB_LOG(log, "== [UserExpression::Evaluate] Execution completed "
+                        "normally with no result ==");
 
           error.SetError(UserExpression::kNoResult, lldb::eErrorTypeGeneric);
         }

@@ -1,9 +1,9 @@
 # RUN: llvm-mc -triple=i686-linux -filetype=obj %s -o - | \
-# RUN: llvm-objdump -disassemble -no-show-raw-insn -r - | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn -r - | FileCheck %s
 # RUN: llvm-mc -triple=i686-nacl -filetype=obj %s -o - | \
-# RUN: llvm-objdump -disassemble -no-show-raw-insn -r - | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn -r - | FileCheck %s
 # RUN: llvm-mc -triple=i686-nacl -filetype=obj -mc-relax-all %s -o - | \
-# RUN: llvm-objdump -disassemble -no-show-raw-insn -r - | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn -r - | FileCheck %s
 
         .bundle_align_mode 5
         .text
@@ -11,7 +11,7 @@
         .align  32, 0x90
         .type   main,@function
 main:                                   # @main
-# CHECK-LABEL: main:
+# CHECK-LABEL: <main>:
 # Call + pop sequence for determining the PIC base.
         .bundle_lock align_to_end
         calll   .L0$pb
@@ -81,5 +81,5 @@ tmp3:
         .comm   obj,4,4
         .section .text.foo
         inc %eax
-# CHECK: tmp3:
+# CHECK: <tmp3>:
 # CHECK-NEXT: 1: incl

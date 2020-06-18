@@ -1,6 +1,6 @@
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -fdebug-compilation-dir=/tmp
 // RUN: llvm-dwarfdump -a %t | FileCheck -check-prefix DWARF %s
-// RUN: llvm-objdump -r %t | FileCheck -check-prefix RELOC %s
+// RUN: llvm-objdump -r %t | FileCheck --check-prefix=RELOC %s
 
   .section foo, "ax"
 b:
@@ -28,7 +28,7 @@ b:
 
 
 // DWARF: .debug_aranges contents:
-// DWARF-NEXT: Address Range Header: length = 0x0000001c, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x04, seg_size = 0x00
+// DWARF-NEXT: Address Range Header: length = 0x0000001c, format = DWARF32, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x04, seg_size = 0x00
 // DWARF-NEXT: [0x00000000, 0x00000004)
 
 

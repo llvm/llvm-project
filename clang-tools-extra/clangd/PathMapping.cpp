@@ -21,7 +21,7 @@ namespace clangd {
 llvm::Optional<std::string> doPathMapping(llvm::StringRef S,
                                           PathMapping::Direction Dir,
                                           const PathMappings &Mappings) {
-  // Retrun early to optimize for the common case, wherein S is not a file URI
+  // Return early to optimize for the common case, wherein S is not a file URI
   if (!S.startswith("file://"))
     return llvm::None;
   auto Uri = URI::parse(S);

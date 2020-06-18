@@ -99,12 +99,12 @@ body: |
     liveins: $edi
 
     %0 = COPY $edi
-  ; CHECK:      DBG_VALUE $noreg, i32 0, !DIExpression(), !12
-  ; CHECK-NEXT: DBG_VALUE $noreg, i64 -22, !DIExpression(), !12
-  ; CHECK-NEXT: DBG_VALUE $noreg, i128 123492148938512984928424384934328985928, !DIExpression(), !12
-    DBG_VALUE _, i32 0, !DIExpression(), !13
-    DBG_VALUE _, i64 -22, !DIExpression(), !13
-    DBG_VALUE _, i128 123492148938512984928424384934328985928, !DIExpression(), !13
+  ; CHECK:      DBG_VALUE $noreg, i32 0, !11, !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, i64 -22, !11, !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, i128 123492148938512984928424384934328985928, !11, !DIExpression()
+    DBG_VALUE _, i32 0, !12, !DIExpression(), debug-location !13
+    DBG_VALUE _, i64 -22, !12, !DIExpression(), debug-location !13
+    DBG_VALUE _, i128 123492148938512984928424384934328985928, !12, !DIExpression(), debug-location !13
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
     $eax = COPY %0
     RETQ $eax

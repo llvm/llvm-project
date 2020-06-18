@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11,c++14,c++17,c++2a %s performance-no-automatic-move %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s performance-no-automatic-move %t
 
 struct Obj {
   Obj();

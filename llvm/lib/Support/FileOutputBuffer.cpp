@@ -12,8 +12,8 @@
 
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
 #include <system_error>
@@ -171,6 +171,10 @@ FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags) {
   unsigned Mode = fs::all_read | fs::all_write;
   if (Flags & F_executable)
     Mode |= fs::all_exe;
+
+  // If Size is zero, don't use mmap which will fail with EINVAL.
+  if (Size == 0)
+    return createInMemoryBuffer(Path, Size, Mode);
 
   fs::file_status Stat;
   fs::status(Path, Stat);

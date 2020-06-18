@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ExprConcepts.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclarationName.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
@@ -23,47 +25,33 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <algorithm>
-#include <utility>
 #include <string>
+#include <utility>
 
 using namespace clang;
 
-ConceptSpecializationExpr::ConceptSpecializationExpr(const ASTContext &C,
-    NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
-    DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
-    ConceptDecl *NamedConcept, const ASTTemplateArgumentListInfo *ArgsAsWritten,
+ConceptSpecializationExpr::ConceptSpecializationExpr(
+    const ASTContext &C, NestedNameSpecifierLoc NNS,
+    SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
+    NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten,
     ArrayRef<TemplateArgument> ConvertedArgs,
     const ConstraintSatisfaction *Satisfaction)
-    : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_RValue, OK_Ordinary,
-           /*TypeDependent=*/false,
-           // All the flags below are set in setTemplateArguments.
-           /*ValueDependent=*/!Satisfaction, /*InstantiationDependent=*/false,
-           /*ContainsUnexpandedParameterPacks=*/false),
+    : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_RValue, OK_Ordinary),
       ConceptReference(NNS, TemplateKWLoc, ConceptNameInfo, FoundDecl,
                        NamedConcept, ArgsAsWritten),
       NumTemplateArgs(ConvertedArgs.size()),
-      Satisfaction(Satisfaction ?
-                   ASTConstraintSatisfaction::Create(C, *Satisfaction) :
-                   nullptr) {
+      Satisfaction(Satisfaction
+                       ? ASTConstraintSatisfaction::Create(C, *Satisfaction)
+                       : nullptr) {
   setTemplateArguments(ConvertedArgs);
-  bool IsInstantiationDependent = false;
-  bool ContainsUnexpandedParameterPack = false;
-  for (const TemplateArgumentLoc& ArgLoc : ArgsAsWritten->arguments()) {
-    if (ArgLoc.getArgument().isInstantiationDependent())
-      IsInstantiationDependent = true;
-    if (ArgLoc.getArgument().containsUnexpandedParameterPack())
-      ContainsUnexpandedParameterPack = true;
-    if (ContainsUnexpandedParameterPack && IsInstantiationDependent)
-      break;
-  }
+  setDependence(computeDependence(this, /*ValueDependent=*/!Satisfaction));
 
   // Currently guaranteed by the fact concepts can only be at namespace-scope.
   assert(!NestedNameSpec ||
          (!NestedNameSpec.getNestedNameSpecifier()->isInstantiationDependent() &&
           !NestedNameSpec.getNestedNameSpecifier()
               ->containsUnexpandedParameterPack()));
-  setInstantiationDependent(IsInstantiationDependent);
-  setContainsUnexpandedParameterPack(ContainsUnexpandedParameterPack);
   assert((!isValueDependent() || isInstantiationDependent()) &&
          "should not be value-dependent");
 }
@@ -103,18 +91,23 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
     ArrayRef<TemplateArgument> ConvertedArgs,
     const ConstraintSatisfaction *Satisfaction, bool Dependent,
     bool ContainsUnexpandedParameterPack)
-    : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_RValue, OK_Ordinary,
-           /*TypeDependent=*/false,
-           /*ValueDependent=*/!Satisfaction, Dependent,
-           ContainsUnexpandedParameterPack),
+    : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_RValue, OK_Ordinary),
       ConceptReference(NestedNameSpecifierLoc(), SourceLocation(),
-                       DeclarationNameInfo(), NamedConcept,
-                       NamedConcept, nullptr),
+                       DeclarationNameInfo(), NamedConcept, NamedConcept,
+                       nullptr),
       NumTemplateArgs(ConvertedArgs.size()),
-      Satisfaction(Satisfaction ?
-                   ASTConstraintSatisfaction::Create(C, *Satisfaction) :
-                   nullptr) {
+      Satisfaction(Satisfaction
+                       ? ASTConstraintSatisfaction::Create(C, *Satisfaction)
+                       : nullptr) {
   setTemplateArguments(ConvertedArgs);
+  ExprDependence D = ExprDependence::None;
+  if (!Satisfaction)
+    D |= ExprDependence::Value;
+  if (Dependent)
+    D |= ExprDependence::Instantiation;
+  if (ContainsUnexpandedParameterPack)
+    D |= ExprDependence::UnexpandedPack;
+  setDependence(D);
 }
 
 ConceptSpecializationExpr *
@@ -153,11 +146,9 @@ RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
                            ArrayRef<ParmVarDecl *> LocalParameters,
                            ArrayRef<concepts::Requirement *> Requirements,
                            SourceLocation RBraceLoc)
-  : Expr(RequiresExprClass, C.BoolTy, VK_RValue, OK_Ordinary,
-         /*TD=*/false, /*VD=*/false, /*ID=*/false,
-         /*ContainsUnexpandedParameterPack=*/false),
-    NumLocalParameters(LocalParameters.size()),
-    NumRequirements(Requirements.size()), Body(Body), RBraceLoc(RBraceLoc) {
+    : Expr(RequiresExprClass, C.BoolTy, VK_RValue, OK_Ordinary),
+      NumLocalParameters(LocalParameters.size()),
+      NumRequirements(Requirements.size()), Body(Body), RBraceLoc(RBraceLoc) {
   RequiresExprBits.IsSatisfied = false;
   RequiresExprBits.RequiresKWLoc = RequiresKWLoc;
   bool Dependent = false;
@@ -182,9 +173,15 @@ RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
   std::copy(Requirements.begin(), Requirements.end(),
             getTrailingObjects<concepts::Requirement *>());
   RequiresExprBits.IsSatisfied |= Dependent;
-  setValueDependent(Dependent);
-  setInstantiationDependent(Dependent);
-  setContainsUnexpandedParameterPack(ContainsUnexpandedParameterPack);
+  // FIXME: move the computing dependency logic to ComputeDependence.h
+  if (ContainsUnexpandedParameterPack)
+    setDependence(getDependence() | ExprDependence::UnexpandedPack);
+  // FIXME: this is incorrect for cases where we have a non-dependent
+  // requirement, but its parameters are instantiation-dependent. RequiresExpr
+  // should be instantiation-dependent if it has instantiation-dependent
+  // parameters.
+  if (Dependent)
+    setDependence(getDependence() | ExprDependence::ValueInstantiation);
 }
 
 RequiresExpr::RequiresExpr(ASTContext &C, EmptyShell Empty,

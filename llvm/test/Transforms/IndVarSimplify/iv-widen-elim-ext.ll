@@ -419,3 +419,52 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %cmp = icmp slt i32 %add, %length
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
 }
+
+define i32 @foo6(%struct.image* %input, i32 %length, i32* %in) {
+entry:
+  %stride = getelementptr inbounds %struct.image, %struct.image* %input, i64 0, i32 1
+  %0 = load i32, i32* %stride, align 4
+  %cmp17 = icmp sgt i32 %length, 1
+  br i1 %cmp17, label %for.body.lr.ph, label %for.cond.cleanup
+
+for.body.lr.ph:                                   ; preds = %entry
+  %channel = getelementptr inbounds %struct.image, %struct.image* %input, i64 0, i32 0
+  br label %for.body
+
+for.cond.cleanup.loopexit:                        ; preds = %for.body
+  %1 = phi i32 [ %6, %for.body ]
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  %2 = phi i32 [ 0, %entry ], [ %1, %for.cond.cleanup.loopexit ]
+  ret i32 %2
+
+; Extend foo4 so that any loop variants (%3 and %or) with mul/sub/add then extend will not
+; need a trunc instruction
+; CHECK: for.body:
+; CHECK-NOT: trunc
+; CHECK:      [[TMP0:%.*]] = and i32 %length, %0
+; CHECK-NEXT: zext i32 [[TMP0]] to i64
+; CHECK:      [[TMP1:%.*]] = or i32 %length, [[TMP2:%.*]]
+; CHECK-NEXT: zext i32 [[TMP1]] to i64
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %x.018 = phi i32 [ 1, %for.body.lr.ph ], [ %add, %for.body ]
+  %add = add nuw nsw i32 %x.018, 1
+  %3 = and i32 %length, %0
+  %mul = mul nuw i32 %3, %add
+  %idx.ext = zext i32 %mul to i64
+  %add.ptr = getelementptr inbounds i32, i32* %in, i64 %idx.ext
+  %4 = load i32, i32* %add.ptr, align 4
+  %mul1 = mul nuw i32 %0, %add
+  %idx.ext1 = zext i32 %mul1 to i64
+  %add.ptr1 = getelementptr inbounds i32, i32* %in, i64 %idx.ext1
+  %5 = load i32, i32* %add.ptr1, align 4
+  %or = or i32 %length, %5
+  %sub.or = sub nuw i32 %or, %add
+  %or.ext = zext i32 %sub.or to i64
+  %ptr.or = getelementptr inbounds i32, i32* %in, i64 %or.ext
+  %val.or = load i32, i32* %ptr.or
+  %6 = add i32 %4, %val.or
+  %cmp = icmp ult i32 %add, %length
+  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
+}

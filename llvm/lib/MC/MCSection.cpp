@@ -20,9 +20,11 @@
 
 using namespace llvm;
 
-MCSection::MCSection(SectionVariant V, SectionKind K, MCSymbol *Begin)
+MCSection::MCSection(SectionVariant V, StringRef Name, SectionKind K,
+                     MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      IsRegistered(false), DummyFragment(this), Variant(V), Kind(K) {}
+      IsRegistered(false), DummyFragment(this), Name(Name), Variant(V),
+      Kind(K) {}
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   if (!End)
@@ -85,7 +87,9 @@ MCSection::getSubsectionInsertionPoint(unsigned Subsection) {
   return IP;
 }
 
-void MCSection::addPendingLabel(MCSymbol* label, unsigned Subsection) {
+StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
+
+void MCSection::addPendingLabel(MCSymbol *label, unsigned Subsection) {
   PendingLabels.push_back(PendingLabel(label, Subsection));
 }
 

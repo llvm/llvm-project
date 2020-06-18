@@ -8,7 +8,7 @@
 //  This file implements C++ template instantiation for declarations.
 //
 //===----------------------------------------------------------------------===/
-#include "clang/Sema/SemaInternal.h"
+
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
@@ -19,8 +19,11 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -395,7 +398,8 @@ static void instantiateOMPDeclareVariantAttr(
 
   // Copy the template version of the OMPTraitInfo and run substitute on all
   // score and condition expressiosn.
-  OMPTraitInfo TI = Attr.getTraitInfos();
+  OMPTraitInfo &TI = S.getASTContext().getNewOMPTraitInfo();
+  TI = *Attr.getTraitInfos();
 
   // Try to substitute template parameters in score and condition expressions.
   auto SubstScoreOrConditionExpr = [&S, Subst](Expr *&E, bool) {
@@ -692,6 +696,10 @@ Decl *TemplateDeclInstantiator::VisitPragmaDetectMismatchDecl(
 Decl *
 TemplateDeclInstantiator::VisitExternCContextDecl(ExternCContextDecl *D) {
   llvm_unreachable("extern \"C\" context cannot be instantiated");
+}
+
+Decl *TemplateDeclInstantiator::VisitMSGuidDecl(MSGuidDecl *D) {
+  llvm_unreachable("GUID declaration cannot be instantiated");
 }
 
 Decl *
@@ -1903,6 +1911,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         D->hasWrittenPrototype(), D->getConstexprKind(),
         TrailingRequiresClause);
     Function->setRangeEnd(D->getSourceRange().getEnd());
+    Function->setUsesFPIntrin(D->usesFPIntrin());
   }
 
   if (D->isInlined())
@@ -2036,7 +2045,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     // Look only into the namespace where the friend would be declared to
     // find a previous declaration. This is the innermost enclosing namespace,
     // as described in ActOnFriendFunctionDecl.
-    SemaRef.LookupQualifiedName(Previous, DC);
+    SemaRef.LookupQualifiedName(Previous, DC->getRedeclContext());
 
     // In C++, the previous declaration we find might be a tag type
     // (class or enum). In this case, the new declaration will hide the
@@ -4355,7 +4364,7 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
         EPI.ExceptionSpec.Type != EST_None &&
         EPI.ExceptionSpec.Type != EST_DynamicNone &&
         EPI.ExceptionSpec.Type != EST_BasicNoexcept &&
-        !Tmpl->isLexicallyWithinFunctionOrMethod()) {
+        !Tmpl->isInLocalScope()) {
       FunctionDecl *ExceptionSpecTemplate = Tmpl;
       if (EPI.ExceptionSpec.Type == EST_Uninstantiated)
         ExceptionSpecTemplate = EPI.ExceptionSpec.SourceTemplate;
@@ -4832,6 +4841,7 @@ void Sema::BuildVariableInstantiation(
   NewVar->setCXXForRangeDecl(OldVar->isCXXForRangeDecl());
   NewVar->setObjCForDecl(OldVar->isObjCForDecl());
   NewVar->setConstexpr(OldVar->isConstexpr());
+  MaybeAddCUDAConstantAttr(NewVar);
   NewVar->setInitCapture(OldVar->isInitCapture());
   NewVar->setPreviousDeclInSameBlockScope(
       OldVar->isPreviousDeclInSameBlockScope());
@@ -5692,6 +5702,9 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     bool NeedInstantiate = false;
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D))
       NeedInstantiate = RD->isLocalClass();
+    else if (isa<TypedefNameDecl>(D) &&
+             isa<CXXDeductionGuideDecl>(D->getDeclContext()))
+      NeedInstantiate = true;
     else
       NeedInstantiate = isa<EnumDecl>(D);
     if (NeedInstantiate) {
@@ -5869,10 +5882,11 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     if (!Result) {
       if (isa<UsingShadowDecl>(D)) {
         // UsingShadowDecls can instantiate to nothing because of using hiding.
-      } else if (Diags.hasErrorOccurred()) {
-        // We've already complained about something, so most likely this
-        // declaration failed to instantiate. There's no point in complaining
-        // further, since this is normal in invalid code.
+      } else if (Diags.hasUncompilableErrorOccurred()) {
+        // We've already complained about some ill-formed code, so most likely
+        // this declaration failed to instantiate. There's no point in
+        // complaining further, since this is normal in invalid code.
+        // FIXME: Use more fine-grained 'invalid' tracking for this.
       } else if (IsBeingInstantiated) {
         // The class in which this member exists is currently being
         // instantiated, and we haven't gotten around to instantiating this

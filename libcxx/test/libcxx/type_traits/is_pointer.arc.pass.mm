@@ -5,8 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: c++98, c++03
+
+// UNSUPPORTED: c++03
+// REQUIRES: has-fobjc-arc
+// ADDITIONAL_COMPILE_FLAGS: -fobjc-arc
 
 // <type_traits>
 
@@ -15,31 +17,40 @@
 // Test that we correctly handle Objective-C++ ARC qualifiers on pointers.
 
 #include <type_traits>
+#include "test_macros.h"
 
 
 template <typename T>
-void test_is_pointer() {
+void assert_is_pointer() {
     static_assert(std::is_pointer<T>::value, "");
+#if TEST_STD_VER > 14
+    static_assert(std::is_pointer_v<T>, "");
+#endif
+}
 
-    static_assert(std::is_pointer<T __weak>::value, "");
-    static_assert(std::is_pointer<T __strong>::value, "");
-    static_assert(std::is_pointer<T __autoreleasing>::value, "");
-    static_assert(std::is_pointer<T __unsafe_unretained>::value, "");
+template <typename T>
+void test_is_pointer() {
+    assert_is_pointer<T>();
 
-    static_assert(std::is_pointer<T __weak const>::value, "");
-    static_assert(std::is_pointer<T __strong const>::value, "");
-    static_assert(std::is_pointer<T __autoreleasing const>::value, "");
-    static_assert(std::is_pointer<T __unsafe_unretained const>::value, "");
+    assert_is_pointer<T __weak>();
+    assert_is_pointer<T __strong>();
+    assert_is_pointer<T __autoreleasing>();
+    assert_is_pointer<T __unsafe_unretained>();
 
-    static_assert(std::is_pointer<T __weak volatile>::value, "");
-    static_assert(std::is_pointer<T __strong volatile>::value, "");
-    static_assert(std::is_pointer<T __autoreleasing volatile>::value, "");
-    static_assert(std::is_pointer<T __unsafe_unretained volatile>::value, "");
+    assert_is_pointer<T __weak const>();
+    assert_is_pointer<T __strong const>();
+    assert_is_pointer<T __autoreleasing const>();
+    assert_is_pointer<T __unsafe_unretained const>();
 
-    static_assert(std::is_pointer<T __weak const volatile>::value, "");
-    static_assert(std::is_pointer<T __strong const volatile>::value, "");
-    static_assert(std::is_pointer<T __autoreleasing const volatile>::value, "");
-    static_assert(std::is_pointer<T __unsafe_unretained const volatile>::value, "");
+    assert_is_pointer<T __weak volatile>();
+    assert_is_pointer<T __strong volatile>();
+    assert_is_pointer<T __autoreleasing volatile>();
+    assert_is_pointer<T __unsafe_unretained volatile>();
+
+    assert_is_pointer<T __weak const volatile>();
+    assert_is_pointer<T __strong const volatile>();
+    assert_is_pointer<T __autoreleasing const volatile>();
+    assert_is_pointer<T __unsafe_unretained const volatile>();
 }
 
 @class Foo;

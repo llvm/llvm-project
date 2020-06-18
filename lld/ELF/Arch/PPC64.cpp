@@ -6,20 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 static uint64_t ppc64TocOffset = 0x8000;
 static uint64_t dynamicThreadPointerOffset = 0x8000;
@@ -61,7 +62,7 @@ enum DFormOpcd {
   ADDI = 14
 };
 
-uint64_t getPPC64TocBase() {
+uint64_t elf::getPPC64TocBase() {
   // The TOC consists of sections .got, .toc, .tocbss, .plt in that order. The
   // TOC starts where the first of these sections starts. We always create a
   // .got when we see a relocation that uses it, so for us the start is always
@@ -75,7 +76,7 @@ uint64_t getPPC64TocBase() {
   return tocVA + ppc64TocOffset;
 }
 
-unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
+unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
   // The offset is encoded into the 3 most significant bits of the st_other
   // field, with some special values described in section 3.4.1 of the ABI:
   // 0   --> Zero offset between the GEP and LEP, and the function does NOT use
@@ -100,9 +101,87 @@ unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
   return 0;
 }
 
-bool isPPC64SmallCodeModelTocReloc(RelType type) {
+bool elf::isPPC64SmallCodeModelTocReloc(RelType type) {
   // The only small code model relocations that access the .toc section.
   return type == R_PPC64_TOC16 || type == R_PPC64_TOC16_DS;
+}
+
+static bool addOptional(StringRef name, uint64_t value,
+                        std::vector<Defined *> &defined) {
+  Symbol *sym = symtab->find(name);
+  if (!sym || sym->isDefined())
+    return false;
+  sym->resolve(Defined{/*file=*/nullptr, saver.save(name), STB_GLOBAL,
+                       STV_HIDDEN, STT_FUNC, value,
+                       /*size=*/0, /*section=*/nullptr});
+  defined.push_back(cast<Defined>(sym));
+  return true;
+}
+
+// If from is 14, write ${prefix}14: firstInsn; ${prefix}15:
+// firstInsn+0x200008; ...; ${prefix}31: firstInsn+(31-14)*0x200008; $tail
+// The labels are defined only if they exist in the symbol table.
+static void writeSequence(MutableArrayRef<uint32_t> buf, const char *prefix,
+                          int from, uint32_t firstInsn,
+                          ArrayRef<uint32_t> tail) {
+  std::vector<Defined *> defined;
+  char name[16];
+  int first;
+  uint32_t *ptr = buf.data();
+  for (int r = from; r < 32; ++r) {
+    format("%s%d", prefix, r).snprint(name, sizeof(name));
+    if (addOptional(name, 4 * (r - from), defined) && defined.size() == 1)
+      first = r - from;
+    write32(ptr++, firstInsn + 0x200008 * (r - from));
+  }
+  for (uint32_t insn : tail)
+    write32(ptr++, insn);
+  assert(ptr == &*buf.end());
+
+  if (defined.empty())
+    return;
+  // The full section content has the extent of [begin, end). We drop unused
+  // instructions and write [first,end).
+  auto *sec = make<InputSection>(
+      nullptr, SHF_ALLOC, SHT_PROGBITS, 4,
+      makeArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
+                   4 * (buf.size() - first)),
+      ".text");
+  inputSections.push_back(sec);
+  for (Defined *sym : defined) {
+    sym->section = sec;
+    sym->value -= 4 * first;
+  }
+}
+
+// Implements some save and restore functions as described by ELF V2 ABI to be
+// compatible with GCC. With GCC -Os, when the number of call-saved registers
+// exceeds a certain threshold, GCC generates _savegpr0_* _restgpr0_* calls and
+// expects the linker to define them. See
+// https://sourceware.org/pipermail/binutils/2002-February/017444.html and
+// https://sourceware.org/pipermail/binutils/2004-August/036765.html . This is
+// weird because libgcc.a would be the natural place. The linker generation
+// approach has the advantage that the linker can generate multiple copies to
+// avoid long branch thunks. However, we don't consider the advantage
+// significant enough to complicate our trunk implementation, so we take the
+// simple approach and synthesize .text sections providing the implementation.
+void elf::addPPC64SaveRestore() {
+  static uint32_t savegpr0[20], restgpr0[21], savegpr1[19], restgpr1[19];
+  constexpr uint32_t blr = 0x4e800020, mtlr_0 = 0x7c0803a6;
+
+  // _restgpr0_14: ld 14, -144(1); _restgpr0_15: ld 15, -136(1); ...
+  // Tail: ld 0, 16(1); mtlr 0; blr
+  writeSequence(restgpr0, "_restgpr0_", 14, 0xe9c1ff70,
+                {0xe8010010, mtlr_0, blr});
+  // _restgpr1_14: ld 14, -144(12); _restgpr1_15: ld 15, -136(12); ...
+  // Tail: blr
+  writeSequence(restgpr1, "_restgpr1_", 14, 0xe9ccff70, {blr});
+  // _savegpr0_14: std 14, -144(1); _savegpr0_15: std 15, -136(1); ...
+  // Tail: std 0, 16(1); blr
+  writeSequence(savegpr0, "_savegpr0_", 14, 0xf9c1ff70, {0xf8010010, blr});
+  // _savegpr1_14: std 14, -144(12); _savegpr1_15: std 15, -136(12); ...
+  // Tail: blr
+  writeSequence(savegpr1, "_savegpr1_", 14, 0xf9ccff70, {blr});
 }
 
 // Find the R_PPC64_ADDR64 in .rela.toc with matching offset.
@@ -137,7 +216,7 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
 
 // When accessing a symbol defined in another translation unit, compilers
 // reserve a .toc entry, allocate a local label and generate toc-indirect
-// instuctions:
+// instructions:
 //
 //   addis 3, 2, .LC0@toc@ha  # R_PPC64_TOC16_HA
 //   ld    3, .LC0@toc@l(3)   # R_PPC64_TOC16_LO_DS, load the address from a .toc entry
@@ -155,7 +234,7 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
 //   ld/lwa 3, 0(3)           # load the value from the address
 //
 // Returns true if the relaxation is performed.
-bool tryRelaxPPC64TocIndirection(const Relocation &rel, uint8_t *bufLoc) {
+bool elf::tryRelaxPPC64TocIndirection(const Relocation &rel, uint8_t *bufLoc) {
   assert(config->tocOptimize);
   if (rel.addend < 0)
     return false;
@@ -472,7 +551,7 @@ void PPC64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
-unsigned getPPCDFormOp(unsigned secondaryOp) {
+unsigned elf::getPPCDFormOp(unsigned secondaryOp) {
   switch (secondaryOp) {
   case LBZX:
     return LBZ;
@@ -1110,10 +1189,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   return true;
 }
 
-TargetInfo *getPPC64TargetInfo() {
+TargetInfo *elf::getPPC64TargetInfo() {
   static PPC64 target;
   return &target;
 }
-
-} // namespace elf
-} // namespace lld

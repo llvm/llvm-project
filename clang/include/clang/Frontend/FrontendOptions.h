@@ -90,7 +90,7 @@ enum ActionKind {
   GeneratePCH,
 
   /// Generate Interface Stub Files.
-  GenerateInterfaceIfsExpV1,
+  GenerateInterfaceStubs,
 
   /// Only execute frontend initialization.
   InitOnly,
@@ -296,6 +296,9 @@ public:
 
   /// Should a temporary file be used during compilation.
   unsigned UseTemporary : 1;
+
+  /// When using -emit-module, treat the modulemap as a system module.
+  unsigned IsSystemModule : 1;
 
   CodeCompleteOptions CodeCompleteOpts;
 

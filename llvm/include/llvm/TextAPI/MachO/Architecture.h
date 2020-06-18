@@ -13,16 +13,19 @@
 #ifndef LLVM_TEXTAPI_MACHO_ARCHITECTURE_H
 #define LLVM_TEXTAPI_MACHO_ARCHITECTURE_H
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
+class raw_ostream;
+class StringRef;
+class Triple;
+
 namespace MachO {
 
 /// Defines the architecture slices that are supported by Text-based Stub files.
 enum Architecture : uint8_t {
-#define ARCHINFO(Arch, Type, SubType) AK_##Arch,
+#define ARCHINFO(Arch, Type, SubType, NumBits) AK_##Arch,
 #include "llvm/TextAPI/MachO/Architecture.def"
 #undef ARCHINFO
   AK_unknown, // this has to go last.
@@ -42,6 +45,9 @@ std::pair<uint32_t, uint32_t> getCPUTypeFromArchitecture(Architecture Arch);
 
 /// Convert a target to an architecture slice.
 Architecture mapToArchitecture(const llvm::Triple &Target);
+
+/// Check if architecture is 64 bit.
+bool is64Bit(Architecture);
 
 raw_ostream &operator<<(raw_ostream &OS, Architecture Arch);
 

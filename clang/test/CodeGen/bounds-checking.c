@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsanitize=local-bounds -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fsanitize=local-bounds -fexperimental-new-pass-manager -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s
-// RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -fexperimental-new-pass-manager -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s --check-prefixes=CHECK,NONLOCAL
+// RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -fexperimental-new-pass-manager -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s --check-prefixes=CHECK,NONLOCAL
 //
 // REQUIRES: x86-registered-target
 
@@ -30,4 +30,22 @@ void f3() {
   int a[1];
   // CHECK: call {{.*}} @llvm.trap
   a[2] = 1;
+}
+
+union U { int a[0]; int b[1]; int c[2]; };
+
+// CHECK-LABEL: define {{.*}} @f4
+int f4(union U *u, int i) {
+  // a and b are treated as flexible array members.
+  // CHECK-NOT: @llvm.trap
+  return u->a[i] + u->b[i];
+  // CHECK: }
+}
+
+// CHECK-LABEL: define {{.*}} @f5
+int f5(union U *u, int i) {
+  // c is not a flexible array member.
+  // NONLOCAL: call {{.*}} @llvm.trap
+  return u->c[i];
+  // CHECK: }
 }

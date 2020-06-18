@@ -295,6 +295,22 @@ public:
       const llvm::opt::DerivedArgList &Args, bool SameTripleAsHost,
       SmallVectorImpl<llvm::opt::Arg *> &AllocatedArgs) const;
 
+  /// Append the argument following \p A to \p DAL assuming \p A is an Xarch
+  /// argument. If \p AllocatedArgs is null pointer, synthesized arguments are
+  /// added to \p DAL, otherwise they are appended to \p AllocatedArgs.
+  virtual void TranslateXarchArgs(
+      const llvm::opt::DerivedArgList &Args, llvm::opt::Arg *&A,
+      llvm::opt::DerivedArgList *DAL,
+      SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs = nullptr) const;
+
+  /// Translate -Xarch_ arguments. If there are no such arguments, return
+  /// a null pointer, otherwise return a DerivedArgList containing the
+  /// translated arguments.
+  virtual llvm::opt::DerivedArgList *
+  TranslateXarchArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+                     Action::OffloadKind DeviceOffloadKind,
+                     SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs) const;
+
   /// Choose a tool to use to handle the action \p JA.
   ///
   /// This can be overridden when a particular ToolChain needs to use
@@ -396,6 +412,11 @@ public:
   const char *
   getCompilerRTArgString(const llvm::opt::ArgList &Args, StringRef Component,
                          FileType Type = ToolChain::FT_Static) const;
+
+  std::string getCompilerRTBasename(const llvm::opt::ArgList &Args,
+                                    StringRef Component,
+                                    FileType Type = ToolChain::FT_Static,
+                                    bool AddArch = true) const;
 
   // Returns target specific runtime path if it exists.
   virtual Optional<std::string> getRuntimePath() const;
@@ -515,6 +536,10 @@ public:
   /// FIXME: this really belongs on some sort of DeploymentTarget abstraction
   virtual bool hasBlocksRuntime() const { return true; }
 
+  /// Return the sysroot, possibly searching for a default sysroot using
+  /// target-specific logic.
+  virtual std::string computeSysRoot() const;
+
   /// Add the clang cc1 arguments for system include paths.
   ///
   /// This routine is responsible for adding the necessary cc1 arguments to
@@ -596,6 +621,10 @@ public:
   virtual void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const;
 
+  /// Add arguments to use system-specific HIP includes.
+  virtual void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                 llvm::opt::ArgStringList &CC1Args) const;
+
   /// Add arguments to use MCU GCC toolchain includes.
   virtual void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const;
@@ -620,11 +649,9 @@ public:
   /// environment for the given \p FPType if given. Otherwise, the default
   /// assumed mode for any floating point type.
   virtual llvm::DenormalMode getDefaultDenormalModeForType(
-      const llvm::opt::ArgList &DriverArgs,
-      Action::OffloadKind DeviceOffloadKind,
+      const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
       const llvm::fltSemantics *FPType = nullptr) const {
-    // FIXME: This should be IEEE when default handling is fixed.
-    return llvm::DenormalMode::getInvalid();
+    return llvm::DenormalMode::getIEEE();
   }
 };
 

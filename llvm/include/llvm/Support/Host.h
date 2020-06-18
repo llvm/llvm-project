@@ -13,11 +13,13 @@
 #ifndef LLVM_SUPPORT_HOST_H
 #define LLVM_SUPPORT_HOST_H
 
-#include "llvm/ADT/StringMap.h"
-
 #include <string>
 
 namespace llvm {
+class MallocAllocator;
+class StringRef;
+template <typename ValueTy, typename AllocatorTy> class StringMap;
+
 namespace sys {
 
   /// getDefaultTargetTriple() - Return the default target triple the compiler
@@ -50,7 +52,7 @@ namespace sys {
   /// all valid LLVM feature names.
   ///
   /// \return - True on success.
-  bool getHostCPUFeatures(StringMap<bool> &Features);
+  bool getHostCPUFeatures(StringMap<bool, MallocAllocator> &Features);
 
   /// Get the number of physical cores (as opposed to logical cores returned
   /// from thread::hardware_concurrency(), which includes hyperthreads).

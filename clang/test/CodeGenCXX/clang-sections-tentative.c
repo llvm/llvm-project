@@ -30,7 +30,7 @@ const int cy; // .rodata.2
 
 // CHECK: @x = global i32 0, align 4 #0
 // CHECK: @y = global i32 0, align 4 #1
-// CHECK: @z = common global i32 0, align 4
+// CHECK: @z = global i32 0, align 4
 // CHECK: @cx = constant i32 0, align 4 #2
 // CHECK: @cy = constant i32 0, align 4 #3
 // CHECK: @cz = constant i32 0, align 4 #1

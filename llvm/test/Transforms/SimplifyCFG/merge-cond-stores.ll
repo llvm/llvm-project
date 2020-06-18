@@ -77,9 +77,9 @@ end:
 define void @test_recursive(i32* %p, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @test_recursive(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[X4:%.*]] = icmp eq i32 [[D:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[C:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], [[C:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[X4]], true
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
@@ -273,7 +273,6 @@ define i32 @test_diamond_simple(i32* %p, i32* %q, i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[X1:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[Z2:%.*]] = select i1 [[X1]], i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    [[Z4:%.*]] = select i1 [[X2]], i32 [[Z2]], i32 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP3:%.*]], label [[TMP2:%.*]]
@@ -282,6 +281,7 @@ define i32 @test_diamond_simple(i32* %p, i32* %q, i32 %a, i32 %b) {
 ; CHECK-NEXT:    store i32 [[SIMPLIFYCFG_MERGE]], i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[TMP3]]
 ; CHECK:       3:
+; CHECK-NEXT:    [[Z4:%.*]] = select i1 [[X2]], i32 [[Z2]], i32 3
 ; CHECK-NEXT:    ret i32 [[Z4]]
 ;
 entry:

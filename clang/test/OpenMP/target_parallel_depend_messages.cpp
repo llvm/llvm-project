@@ -32,7 +32,7 @@ int main(int argc, char **argv, char *env[]) {
   foo();
   #pragma omp target parallel depend (source : argc) // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
   foo();
-  #pragma omp target parallel depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}}
+  #pragma omp target parallel depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
   foo();
   #pragma omp target parallel depend (in : argc)) // expected-warning {{extra tokens at the end of '#pragma omp target parallel' are ignored}}
   foo();

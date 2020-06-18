@@ -30,7 +30,6 @@ endif:
 ; GCN: v_cmp_neq_f32_e32 vcc, 1.0, [[VAL]]
 ; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], [[VAL]], [[VAL]]
 ; GCN-DAG: v_mul_f32_e32 [[MUL:v[0-9]+]], [[VAL]], [[VAL]]
-; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], [[ADD]], [[MUL]], vcc
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_vccnz_ifcvt_diamond(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
@@ -247,7 +246,7 @@ endif:
 ; GCN: s_load_dword [[VAL:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; GCN: s_add_i32 [[ADD:s[0-9]+]], [[VAL]], [[VAL]]
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 1
-; GCN-NEXT: s_cselect_b32 [[SELECT:s[0-9]+]], [[ADD]], [[VAL]]
+; GCN-NEXT: s_cselect_b32 [[SELECT:s[0-9]+]], [[VAL]], [[ADD]]
 define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle(i32 addrspace(4)* %in, i32 %cond) #0 {
 entry:
   %v = load i32, i32 addrspace(4)* %in
@@ -363,7 +362,7 @@ endif:
 
 ; GCN-LABEL: {{^}}uniform_if_swap_br_targets_scc_constant_select:
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cselect_b32 s{{[0-9]+}}, 1, 0{{$}}
+; GCN: s_cselect_b32 s{{[0-9]+}}, 0, 1{{$}}
 define amdgpu_kernel void @uniform_if_swap_br_targets_scc_constant_select(i32 %cond, i32 addrspace(1)* %out) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
@@ -384,7 +383,7 @@ done:
 ; GCN-LABEL: {{^}}ifcvt_undef_scc:
 ; GCN: {{^}}; %bb.0:
 ; GCN-NEXT: s_load_dwordx2
-; GCN-NEXT: s_cselect_b32 s{{[0-9]+}}, 1, 0
+; GCN-NEXT: s_cselect_b32 s{{[0-9]+}}, 0, 1{{$}}
 define amdgpu_kernel void @ifcvt_undef_scc(i32 %cond, i32 addrspace(1)* %out) {
 entry:
   br i1 undef, label %else, label %if

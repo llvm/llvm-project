@@ -52,7 +52,6 @@ static_library("MCTargetDesc") {
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target/X86/TargetInfo",
-    "//llvm/lib/Target/X86/Utils",
   ]
   include_dirs = [ ".." ]
   sources = [
@@ -66,6 +65,7 @@ static_library("MCTargetDesc") {
     "X86MCCodeEmitter.cpp",
     "X86MCTargetDesc.cpp",
     "X86MachObjectWriter.cpp",
+    "X86ShuffleDecode.cpp",
     "X86WinCOFFObjectWriter.cpp",
     "X86WinCOFFStreamer.cpp",
     "X86WinCOFFTargetStreamer.cpp",

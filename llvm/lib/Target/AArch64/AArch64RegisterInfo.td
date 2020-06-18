@@ -422,15 +422,20 @@ def Q31   : AArch64Reg<31, "q31", [D31], ["v31", ""]>, DwarfRegAlias<B31>;
 def FPR8  : RegisterClass<"AArch64", [untyped], 8, (sequence "B%u", 0, 31)> {
   let Size = 8;
 }
-def FPR16 : RegisterClass<"AArch64", [f16], 16, (sequence "H%u", 0, 31)> {
+def FPR16 : RegisterClass<"AArch64", [f16, bf16], 16, (sequence "H%u", 0, 31)> {
+  let Size = 16;
+}
+
+def FPR16_lo : RegisterClass<"AArch64", [f16], 16, (trunc FPR16, 16)> {
   let Size = 16;
 }
 def FPR32 : RegisterClass<"AArch64", [f32, i32], 32,(sequence "S%u", 0, 31)>;
 def FPR64 : RegisterClass<"AArch64", [f64, i64, v2f32, v1f64, v8i8, v4i16, v2i32,
-                                    v1i64, v4f16],
-                                    64, (sequence "D%u", 0, 31)>;
+                                      v1i64, v4f16, v4bf16],
+                                     64, (sequence "D%u", 0, 31)>;
 def FPR64_lo : RegisterClass<"AArch64",
-                             [v8i8, v4i16, v2i32, v1i64, v4f16, v2f32, v1f64],
+                             [v8i8, v4i16, v2i32, v1i64, v4f16, v4bf16, v2f32,
+                              v1f64],
                              64, (trunc FPR64, 16)>;
 
 // We don't (yet) have an f128 legal type, so don't use that here. We
@@ -438,13 +443,14 @@ def FPR64_lo : RegisterClass<"AArch64",
 // that here.
 def FPR128 : RegisterClass<"AArch64",
                            [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, f128,
-                            v8f16],
+                            v8f16, v8bf16],
                            128, (sequence "Q%u", 0, 31)>;
 
 // The lower 16 vector registers.  Some instructions can only take registers
 // in this range.
 def FPR128_lo : RegisterClass<"AArch64",
-                              [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16],
+                              [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16,
+                               v8bf16],
                               128, (trunc FPR128, 16)>;
 
 // Pairs, triples, and quads of 64-bit vector registers.
@@ -648,6 +654,10 @@ def FPR16Op  : RegisterOperand<FPR16, "printOperand"> {
   let ParserMatchClass = FPRAsmOperand<"FPR16">;
 }
 
+def FPR16Op_lo  : RegisterOperand<FPR16_lo, "printOperand"> {
+  let ParserMatchClass = FPRAsmOperand<"FPR16_lo">;
+}
+
 def FPR32Op  : RegisterOperand<FPR32, "printOperand"> {
   let ParserMatchClass = FPRAsmOperand<"FPR32">;
 }
@@ -671,11 +681,11 @@ def XSeqPairs : RegisterTuples<[sube64, subo64],
                                [(decimate (rotl GPR64, 0), 2),
                                 (decimate (rotl GPR64, 1), 2)]>;
 
-def WSeqPairsClass   : RegisterClass<"AArch64", [untyped], 32, 
+def WSeqPairsClass   : RegisterClass<"AArch64", [untyped], 32,
                                      (add WSeqPairs)>{
   let Size = 64;
 }
-def XSeqPairsClass   : RegisterClass<"AArch64", [untyped], 64, 
+def XSeqPairsClass   : RegisterClass<"AArch64", [untyped], 64,
                                      (add XSeqPairs)>{
   let Size = 128;
 }
@@ -787,7 +797,7 @@ def Z30   : AArch64Reg<30, "z30", [Q30, Z30_HI]>, DwarfRegNum<[126]>;
 def Z31   : AArch64Reg<31, "z31", [Q31, Z31_HI]>, DwarfRegNum<[127]>;
 }
 
-// Enum descibing the element size for destructive
+// Enum describing the element size for destructive
 // operations.
 class ElementSizeEnum<bits<3> val> {
   bits<3> Value = val;
@@ -869,6 +879,7 @@ def PPR3b64  : PPRRegOp<"d", PPRAsmOp3b64,  ElementSizeD, PPR_3b>;
 class ZPRClass<int lastreg> : RegisterClass<"AArch64",
                                             [nxv16i8, nxv8i16, nxv4i32, nxv2i64,
                                              nxv2f16, nxv4f16, nxv8f16,
+                                             nxv2bf16, nxv4bf16, nxv8bf16,
                                              nxv2f32, nxv4f32,
                                              nxv2f64],
                                             128, (sequence "Z%u", 0, lastreg)> {

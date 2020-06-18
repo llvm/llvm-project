@@ -52,7 +52,7 @@ void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, MI, DL, get(AVR::MOVWRdRr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
     } else {
-      unsigned DestLo, DestHi, SrcLo, SrcHi;
+      Register DestLo, DestHi, SrcLo, SrcHi;
 
       TRI.splitReg(DestReg, DestLo, DestHi);
       TRI.splitReg(SrcReg,  SrcLo,  SrcHi);
@@ -138,7 +138,7 @@ void AVRInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIndex),
       MachineMemOperand::MOStore, MFI.getObjectSize(FrameIndex),
-      MFI.getObjectAlignment(FrameIndex));
+      MFI.getObjectAlign(FrameIndex));
 
   unsigned Opcode = 0;
   if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {
@@ -172,7 +172,7 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIndex),
       MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
-      MFI.getObjectAlignment(FrameIndex));
+      MFI.getObjectAlign(FrameIndex));
 
   unsigned Opcode = 0;
   if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {

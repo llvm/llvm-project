@@ -44,25 +44,30 @@ set(LIBS
   clangSema
   clangSerialization
   clangTooling
-  LLVMSupport
 )
 
 if (CLANG_ENABLE_ARCMT)
   list(APPEND LIBS clangARCMigrate)
 endif ()
 
-if (TARGET clangTidyPlugin)
-  add_definitions(-DCLANG_TOOL_EXTRA_BUILD)
-  list(APPEND LIBS clangTidyPlugin)
-  list(APPEND LIBS clangIncludeFixerPlugin)
-  if(LLVM_ENABLE_MODULES)
-    list(APPEND LLVM_COMPILE_FLAGS "-fmodules-ignore-macro=CLANG_TOOL_EXTRA_BUILD")
-  endif()
+option(LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA
+  "Include code from clang-tools-extra in libclang." OFF)
+
+if (LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA)
+  if (TARGET clangTidyPlugin)
+    add_definitions(-DCLANG_TOOL_EXTRA_BUILD)
+    list(APPEND LIBS clangTidyPlugin)
+    list(APPEND LIBS clangIncludeFixerPlugin)
+    if(LLVM_ENABLE_MODULES)
+      list(APPEND LLVM_COMPILE_FLAGS "-fmodules-ignore-macro=CLANG_TOOL_EXTRA_BUILD")
+    endif()
+  else ()
+    message(FATAL_ERROR "LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA needs clang-tools-extra in LLVM_ENABLE_PROJECTS")
+  endif ()
 endif ()
 
-find_library(DL_LIBRARY_PATH dl)
-if (DL_LIBRARY_PATH)
-  list(APPEND LIBS dl)
+if (HAVE_LIBDL)
+  list(APPEND LIBS ${CMAKE_DL_LIBS})
 endif()
 
 option(LIBCLANG_BUILD_STATIC
@@ -77,12 +82,16 @@ if(MSVC)
   set(LLVM_EXPORTED_SYMBOL_FILE)
 endif()
 
-if(LLVM_ENABLE_PIC OR WIN32)
+if(LLVM_ENABLE_PIC OR (WIN32 AND NOT LIBCLANG_BUILD_STATIC))
   set(ENABLE_SHARED SHARED)
 endif()
 
-if((NOT LLVM_ENABLE_PIC OR LIBCLANG_BUILD_STATIC) AND NOT WIN32)
+if(NOT LLVM_ENABLE_PIC OR LIBCLANG_BUILD_STATIC)
   set(ENABLE_STATIC STATIC)
+endif()
+
+if (WIN32 AND ENABLE_SHARED AND ENABLE_STATIC)
+  unset(ENABLE_STATIC)
 endif()
 
 if(WIN32)
@@ -112,6 +121,14 @@ add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCH
   Core
   Support
   )
+
+if(ENABLE_STATIC)
+  foreach(name libclang obj.libclang libclang_static)
+    if (TARGET ${name})
+      target_compile_definitions(${name} PUBLIC CINDEX_NO_EXPORTS)
+    endif()
+  endforeach()
+endif()
 
 if(ENABLE_SHARED)
   if(WIN32)

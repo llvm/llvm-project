@@ -11,7 +11,7 @@ except ImportError:
     print("For faster parsing, you may want to install libYAML for PyYAML")
     from yaml import Loader
 
-import cgi
+import html
 from collections import defaultdict
 import fnmatch
 import functools
@@ -159,7 +159,7 @@ class Remark(yaml.YAMLObject):
         (key, value) = list(mapping.items())[0]
 
         if key == 'Caller' or key == 'Callee' or key == 'DirectCallee':
-            value = cgi.escape(self.demangle(value))
+            value = html.escape(self.demangle(value))
 
         if dl and key != 'Caller':
             dl_dict = dict(list(dl))

@@ -12,6 +12,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/FixIt.h"
+#include "llvm/ADT/StringExtras.h"
 
 #include <cctype>
 
@@ -356,10 +357,10 @@ bool UseTrailingReturnTypeCheck::keepSpecifiers(
     unsigned int TOffsetInRT = TOffset - ReturnTypeBeginOffset - DeletedChars;
     unsigned int TLengthWithWS = CT.T.getLength();
     while (TOffsetInRT + TLengthWithWS < ReturnType.size() &&
-           std::isspace(ReturnType[TOffsetInRT + TLengthWithWS]))
+           llvm::isSpace(ReturnType[TOffsetInRT + TLengthWithWS]))
       TLengthWithWS++;
     std::string Specifier = ReturnType.substr(TOffsetInRT, TLengthWithWS);
-    if (!std::isspace(Specifier.back()))
+    if (!llvm::isSpace(Specifier.back()))
       Specifier.push_back(' ');
     Auto.insert(Auto.size() - InitialAutoLength, Specifier);
     ReturnType.erase(TOffsetInRT, TLengthWithWS);
@@ -370,9 +371,6 @@ bool UseTrailingReturnTypeCheck::keepSpecifiers(
 }
 
 void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   auto F = functionDecl(unless(anyOf(hasTrailingReturn(), returns(voidType()),
                                      returns(autoType()), cxxConversionDecl(),
                                      cxxMethodDecl(isImplicit()))))
@@ -445,7 +443,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   // FIXME: this could be done better, by performing a lookup of all
   // unqualified names in the return type in the scope of the function. If the
   // lookup finds a different entity than the original entity identified by the
-  // name, then we can either not perform a rewrite or explicitely qualify the
+  // name, then we can either not perform a rewrite or explicitly qualify the
   // entity. Such entities could be function parameter names, (inherited) class
   // members, template parameters, etc.
   UnqualNameVisitor UNV{*F};
@@ -462,7 +460,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
                                     ReturnTypeEnd.getLocWithOffset(1)),
       SM, LangOpts);
   bool NeedSpaceAfterAuto =
-      CharAfterReturnType.empty() || !std::isspace(CharAfterReturnType[0]);
+      CharAfterReturnType.empty() || !llvm::isSpace(CharAfterReturnType[0]);
 
   std::string Auto = NeedSpaceAfterAuto ? "auto " : "auto";
   std::string ReturnType =

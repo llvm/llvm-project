@@ -58,6 +58,11 @@ protected:
   /// Which style to use for printing hexadecimal values.
   HexStyle::Style PrintHexStyle = HexStyle::C;
 
+  /// If true, a branch immediate (e.g. bl 4) will be printed as a hexadecimal
+  /// address (e.g. bl 0x20004). This is useful for a stream disassembler
+  /// (llvm-objdump -d).
+  bool PrintBranchImmAsAddress = false;
+
   /// Utility function for printing annotations.
   void printAnnotation(raw_ostream &OS, StringRef Annot);
 
@@ -79,6 +84,12 @@ public:
   void setCommentStream(raw_ostream &OS) { CommentStream = &OS; }
 
   /// Print the specified MCInst to the specified raw_ostream.
+  ///
+  /// \p Address the address of current instruction on most targets, used to
+  /// print a PC relative immediate as the target address. On targets where a PC
+  /// relative immediate is relative to the next instruction and the length of a
+  /// MCInst is difficult to measure (e.g. x86), this is the address of the next
+  /// instruction. If Address is 0, the immediate will be printed.
   virtual void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                          const MCSubtargetInfo &STI, raw_ostream &OS) = 0;
 
@@ -99,6 +110,10 @@ public:
   void setPrintImmHex(bool Value) { PrintImmHex = Value; }
 
   void setPrintHexStyle(HexStyle::Style Value) { PrintHexStyle = Value; }
+
+  void setPrintBranchImmAsAddress(bool Value) {
+    PrintBranchImmAsAddress = Value;
+  }
 
   /// Utility function to print immediates in decimal or hex.
   format_object<int64_t> formatImm(int64_t Value) const {
@@ -129,14 +144,17 @@ struct AliasPattern {
 
 struct AliasPatternCond {
   enum CondKind : uint8_t {
-    K_Feature,    // Match only if a feature is enabled.
-    K_NegFeature, // Match only if a feature is disabled.
-    K_Ignore,     // Match any operand.
-    K_Reg,        // Match a specific register.
-    K_TiedReg,    // Match another already matched register.
-    K_Imm,        // Match a specific immediate.
-    K_RegClass,   // Match registers in a class.
-    K_Custom,     // Call custom matcher by index.
+    K_Feature,       // Match only if a feature is enabled.
+    K_NegFeature,    // Match only if a feature is disabled.
+    K_OrFeature,     // Match only if one of a set of features is enabled.
+    K_OrNegFeature,  // Match only if one of a set of features is disabled.
+    K_EndOrFeatures, // Note end of list of K_Or(Neg)?Features.
+    K_Ignore,        // Match any operand.
+    K_Reg,           // Match a specific register.
+    K_TiedReg,       // Match another already matched register.
+    K_Imm,           // Match a specific immediate.
+    K_RegClass,      // Match registers in a class.
+    K_Custom,        // Call custom matcher by index.
   };
 
   CondKind Kind;

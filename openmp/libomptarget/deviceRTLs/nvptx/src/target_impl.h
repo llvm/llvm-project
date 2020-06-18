@@ -12,7 +12,10 @@
 #ifndef _TARGET_IMPL_H_
 #define _TARGET_IMPL_H_
 
+#include <assert.h>
 #include <cuda.h>
+#include <inttypes.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "nvptx_interface.h"
@@ -189,6 +192,8 @@ INLINE int GetThreadIdInBlock() { return threadIdx.x; }
 INLINE int GetBlockIdInKernel() { return blockIdx.x; }
 INLINE int GetNumberOfBlocksInKernel() { return gridDim.x; }
 INLINE int GetNumberOfThreadsInBlock() { return blockDim.x; }
+INLINE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
+INLINE unsigned GetLaneId() { return GetThreadIdInBlock() & (WARPSIZE - 1); }
 
 // Return true if this is the first active thread in the warp.
 INLINE bool __kmpc_impl_is_first_active_thread() {

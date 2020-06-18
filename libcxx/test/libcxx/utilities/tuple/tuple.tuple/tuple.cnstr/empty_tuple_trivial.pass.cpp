@@ -9,7 +9,7 @@
 // This test ensures that std::tuple<> is trivially constructible. That is not
 // required by the Standard, but libc++ provides that guarantee.
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <tuple>
 #include <type_traits>

@@ -145,7 +145,7 @@ int main (int argc, char **argv) {
 
 // CK2:  define internal void [[OUTLINED]](
 // CK2:  store i{{[0-9]+}} 0, i{{[0-9]+}}* %
-// CK2-NOT:  {{.+}} = call i32 @__kmpc_push_num_teams(
+// CK2-NOT:  {{.+}} = call void @__kmpc_push_num_teams(
 // CK2-NOT: call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(
 
 // CK2: define {{.*}}void @{{[^,]+}}(i{{[0-9]+}} [[A_IN:%.+]], i{{[0-9]+}} [[BP:%.+]], i{{[0-9]+}}** [[ARGC:%.+]])
@@ -169,7 +169,7 @@ int main (int argc, char **argv) {
 
 // CK2:  define internal void [[OUTLINED]](
 // CK2:  store i{{[0-9]+}}** null, i{{[0-9]+}}*** %
-// CK2-NOT:  {{.+}} = call i32 @__kmpc_push_num_teams(
+// CK2-NOT:  {{.+}} = call void @__kmpc_push_num_teams(
 // CK2-NOT: call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(
 
 #endif // CK2

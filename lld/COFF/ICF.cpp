@@ -21,7 +21,6 @@
 #include "Chunks.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Threads.h"
 #include "lld/Common/Timer.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Debug.h"
@@ -127,15 +126,19 @@ void ICF::segregate(size_t begin, size_t end, bool constant) {
 
 // Returns true if two sections' associative children are equal.
 bool ICF::assocEquals(const SectionChunk *a, const SectionChunk *b) {
-  auto childClasses = [&](const SectionChunk *sc) {
-    std::vector<uint32_t> classes;
-    for (const SectionChunk &c : sc->children())
-      if (!c.getSectionName().startswith(".debug") &&
-          c.getSectionName() != ".gfids$y" && c.getSectionName() != ".gljmp$y")
-        classes.push_back(c.eqClass[cnt % 2]);
-    return classes;
+  // Ignore associated metadata sections that don't participate in ICF, such as
+  // debug info and CFGuard metadata.
+  auto considerForICF = [](const SectionChunk &assoc) {
+    StringRef Name = assoc.getSectionName();
+    return !(Name.startswith(".debug") || Name == ".gfids$y" ||
+             Name == ".gljmp$y");
   };
-  return childClasses(a) == childClasses(b);
+  auto ra = make_filter_range(a->children(), considerForICF);
+  auto rb = make_filter_range(b->children(), considerForICF);
+  return std::equal(ra.begin(), ra.end(), rb.begin(), rb.end(),
+                    [&](const SectionChunk &ia, const SectionChunk &ib) {
+                      return ia.eqClass[cnt % 2] == ib.eqClass[cnt % 2];
+                    });
 }
 
 // Compare "non-moving" part of two sections, namely everything

@@ -66,6 +66,17 @@ namespace {
 using BlockVector = SmallVector<MachineBasicBlock *, 4>;
 using BlockSet = SmallPtrSet<MachineBasicBlock *, 4>;
 
+static BlockVector getSortedEntries(const BlockSet &Entries) {
+  BlockVector SortedEntries(Entries.begin(), Entries.end());
+  llvm::sort(SortedEntries,
+             [](const MachineBasicBlock *A, const MachineBasicBlock *B) {
+               auto ANum = A->getNumber();
+               auto BNum = B->getNumber();
+               return ANum < BNum;
+             });
+  return SortedEntries;
+}
+
 // Calculates reachability in a region. Ignores branches to blocks outside of
 // the region, and ignores branches to the region entry (for the case where
 // the region is the inner part of a loop).
@@ -241,7 +252,6 @@ public:
 bool WebAssemblyFixIrreducibleControlFlow::processRegion(
     MachineBasicBlock *Entry, BlockSet &Blocks, MachineFunction &MF) {
   bool Changed = false;
-
   // Remove irreducibility before processing child loops, which may take
   // multiple iterations.
   while (true) {
@@ -249,11 +259,17 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
 
     bool FoundIrreducibility = false;
 
-    for (auto *LoopEntry : Graph.getLoopEntries()) {
+    for (auto *LoopEntry : getSortedEntries(Graph.getLoopEntries())) {
       // Find mutual entries - all entries which can reach this one, and
       // are reached by it (that always includes LoopEntry itself). All mutual
       // entries must be in the same loop, so if we have more than one, then we
       // have irreducible control flow.
+      //
+      // (Note that we need to sort the entries here, as otherwise the order can
+      // matter: being mutual is a symmetric relationship, and each set of
+      // mutuals will be handled properly no matter which we see first. However,
+      // there can be multiple disjoint sets of mutuals, and which we process
+      // first changes the output.)
       //
       // Note that irreducibility may involve inner loops, e.g. imagine A
       // starts one loop, and it has B inside it which starts an inner loop.
@@ -325,13 +341,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
   assert(Entries.size() >= 2);
 
   // Sort the entries to ensure a deterministic build.
-  BlockVector SortedEntries(Entries.begin(), Entries.end());
-  llvm::sort(SortedEntries,
-             [&](const MachineBasicBlock *A, const MachineBasicBlock *B) {
-               auto ANum = A->getNumber();
-               auto BNum = B->getNumber();
-               return ANum < BNum;
-             });
+  BlockVector SortedEntries = getSortedEntries(Entries);
 
 #ifndef NDEBUG
   for (auto Block : SortedEntries)
@@ -403,31 +413,33 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
   }
 
   // Record if each entry has a layout predecessor. This map stores
-  // <<Predecessor is within the loop?, loop entry>, layout predecessor>
-  std::map<std::pair<bool, MachineBasicBlock *>, MachineBasicBlock *>
+  // <<loop entry, Predecessor is within the loop?>, layout predecessor>
+  DenseMap<PointerIntPair<MachineBasicBlock *, 1, bool>, MachineBasicBlock *>
       EntryToLayoutPred;
-  for (auto *Pred : AllPreds)
+  for (auto *Pred : AllPreds) {
+    bool PredInLoop = InLoop.count(Pred);
     for (auto *Entry : Pred->successors())
       if (Entries.count(Entry) && Pred->isLayoutSuccessor(Entry))
-        EntryToLayoutPred[std::make_pair(InLoop.count(Pred), Entry)] = Pred;
+        EntryToLayoutPred[{Entry, PredInLoop}] = Pred;
+  }
 
   // We need to create at most two routing blocks per entry: one for
   // predecessors outside the loop and one for predecessors inside the loop.
   // This map stores
-  // <<Predecessor is within the loop?, loop entry>, routing block>
-  std::map<std::pair<bool, MachineBasicBlock *>, MachineBasicBlock *> Map;
+  // <<loop entry, Predecessor is within the loop?>, routing block>
+  DenseMap<PointerIntPair<MachineBasicBlock *, 1, bool>, MachineBasicBlock *>
+      Map;
   for (auto *Pred : AllPreds) {
     bool PredInLoop = InLoop.count(Pred);
     for (auto *Entry : Pred->successors()) {
-      if (!Entries.count(Entry) ||
-          Map.count(std::make_pair(InLoop.count(Pred), Entry)))
+      if (!Entries.count(Entry) || Map.count({Entry, PredInLoop}))
         continue;
       // If there exists a layout predecessor of this entry and this predecessor
       // is not that, we rather create a routing block after that layout
       // predecessor to save a branch.
-      if (EntryToLayoutPred.count(std::make_pair(PredInLoop, Entry)) &&
-          EntryToLayoutPred[std::make_pair(PredInLoop, Entry)] != Pred)
-        continue;
+      if (auto *OtherPred = EntryToLayoutPred.lookup({Entry, PredInLoop}))
+        if (OtherPred != Pred)
+          continue;
 
       // This is a successor we need to rewrite.
       MachineBasicBlock *Routing = MF.CreateMachineBasicBlock();
@@ -443,7 +455,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
           .addImm(Indices[Entry]);
       BuildMI(Routing, DebugLoc(), TII.get(WebAssembly::BR)).addMBB(Dispatch);
       Routing->addSuccessor(Dispatch);
-      Map[std::make_pair(PredInLoop, Entry)] = Routing;
+      Map[{Entry, PredInLoop}] = Routing;
     }
   }
 
@@ -453,12 +465,12 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
     for (MachineInstr &Term : Pred->terminators())
       for (auto &Op : Term.explicit_uses())
         if (Op.isMBB() && Indices.count(Op.getMBB()))
-          Op.setMBB(Map[std::make_pair(PredInLoop, Op.getMBB())]);
+          Op.setMBB(Map[{Op.getMBB(), PredInLoop}]);
 
     for (auto *Succ : Pred->successors()) {
       if (!Entries.count(Succ))
         continue;
-      auto *Routing = Map[std::make_pair(PredInLoop, Succ)];
+      auto *Routing = Map[{Succ, PredInLoop}];
       Pred->replaceSuccessor(Succ, Routing);
     }
   }

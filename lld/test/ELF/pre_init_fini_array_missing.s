@@ -21,22 +21,22 @@ _start:
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK-NEXT:  _start:
-// CHECK-NEXT:   201120:       callq    -5
-// CHECK-NEXT:                 callq    -10
-// CHECK-NEXT:                 callq    -15
-// CHECK-NEXT:                 callq    -20
-// CHECK-NEXT:                 callq    -25
-// CHECK-NEXT:                 callq    -30
+// CHECK-NEXT:  <_start>:
+// CHECK-NEXT:   201120:       callq    0x201120
+// CHECK-NEXT:                 callq    0x201120
+// CHECK-NEXT:                 callq    0x201120
+// CHECK-NEXT:                 callq    0x201120
+// CHECK-NEXT:                 callq    0x201120
+// CHECK-NEXT:                 callq    0x201120
 
 // In position-independent binaries, they resolve to .text too.
 
 // PIE:      Disassembly of section .text:
 // PIE-EMPTY:
-// PIE-NEXT: _start:
-// PIE-NEXT:     1210:       callq   -5
-// PIE-NEXT:                 callq   -10
-// PIE-NEXT:                 callq   -15
-// PIE-NEXT:                 callq   -20
-// PIE-NEXT:                 callq   -25
-// PIE-NEXT:                 callq   -30
+// PIE-NEXT: <_start>:
+// PIE-NEXT:     1210:       callq   0x1210
+// PIE-NEXT:                 callq   0x1210
+// PIE-NEXT:                 callq   0x1210
+// PIE-NEXT:                 callq   0x1210
+// PIE-NEXT:                 callq   0x1210
+// PIE-NEXT:                 callq   0x1210

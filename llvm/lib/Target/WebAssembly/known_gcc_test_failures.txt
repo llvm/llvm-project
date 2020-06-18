@@ -86,7 +86,6 @@ lifetime2.C  # violates C++ DR1696
 
 # WASI doesn't have stdjmp.h yet
 pr56982.c
-simd-2.C
 
 # WASI doesn't have pthread.h yet
 thread_local3.C

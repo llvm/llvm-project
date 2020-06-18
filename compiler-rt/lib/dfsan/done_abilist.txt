@@ -33,7 +33,6 @@ fun:dfsan_flush=discard
 # glibc
 ###############################################################################
 fun:malloc=discard
-fun:realloc=discard
 fun:free=discard
 
 # Functions that return a value that depends on the input, but the output might

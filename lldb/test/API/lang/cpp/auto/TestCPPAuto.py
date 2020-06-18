@@ -14,7 +14,6 @@ class CPPAutoTestCase(TestBase):
     @expectedFailureAll(
         compiler="gcc",
         bugnumber="GCC generates incomplete debug info")
-    @expectedFailureNetBSD
     def test_with_run_command(self):
         """Test that auto types work in the expression parser"""
         self.build()

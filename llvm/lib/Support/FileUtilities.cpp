@@ -14,6 +14,7 @@
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -92,9 +93,9 @@ static bool CompareNumbers(const char *&F1P, const char *&F2P,
 
   // If one of the positions is at a space and the other isn't, chomp up 'til
   // the end of the space.
-  while (isspace(static_cast<unsigned char>(*F1P)) && F1P != F1End)
+  while (isSpace(static_cast<unsigned char>(*F1P)) && F1P != F1End)
     ++F1P;
-  while (isspace(static_cast<unsigned char>(*F2P)) && F2P != F2End)
+  while (isSpace(static_cast<unsigned char>(*F2P)) && F2P != F2End)
     ++F2P;
 
   // If we stop on numbers, compare their difference.
@@ -318,9 +319,8 @@ llvm::Error llvm::writeFileAtomically(
         atomic_write_error::output_stream_error);
   }
 
-  if (const std::error_code Error =
-          sys::fs::rename(/*from=*/GeneratedUniqPath.c_str(),
-                          /*to=*/FinalPath.str().c_str())) {
+  if (sys::fs::rename(/*from=*/GeneratedUniqPath.c_str(),
+                      /*to=*/FinalPath.str().c_str())) {
     return llvm::make_error<AtomicFileWriteError>(
         atomic_write_error::failed_to_rename_temp_file);
   }

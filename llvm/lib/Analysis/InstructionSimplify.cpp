@@ -222,7 +222,7 @@ static bool valueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
   // Otherwise, if the instruction is in the entry block and is not an invoke,
   // then it obviously dominates all phi nodes.
   if (I->getParent() == &I->getFunction()->getEntryBlock() &&
-      !isa<InvokeInst>(I))
+      !isa<InvokeInst>(I) && !isa<CallBrInst>(I))
     return true;
 
   return false;
@@ -707,9 +707,8 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
   Offset = Offset.sextOrTrunc(IntIdxTy->getIntegerBitWidth());
 
   Constant *OffsetIntPtr = ConstantInt::get(IntIdxTy, Offset);
-  if (V->getType()->isVectorTy())
-    return ConstantVector::getSplat(V->getType()->getVectorNumElements(),
-                                    OffsetIntPtr);
+  if (VectorType *VecTy = dyn_cast<VectorType>(V->getType()))
+    return ConstantVector::getSplat(VecTy->getElementCount(), OffsetIntPtr);
   return OffsetIntPtr;
 }
 
@@ -943,11 +942,12 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv) {
   if (match(Op1, m_Zero()))
     return UndefValue::get(Ty);
 
-  // If any element of a constant divisor vector is zero or undef, the whole op
-  // is undef.
+  // If any element of a constant divisor fixed width vector is zero or undef,
+  // the whole op is undef.
   auto *Op1C = dyn_cast<Constant>(Op1);
-  if (Op1C && Ty->isVectorTy()) {
-    unsigned NumElts = Ty->getVectorNumElements();
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (Op1C && VTy) {
+    unsigned NumElts = VTy->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = Op1C->getAggregateElement(i);
       if (Elt && (Elt->isNullValue() || isa<UndefValue>(Elt)))
@@ -1222,7 +1222,8 @@ static bool isUndefShift(Value *Amount) {
 
   // If all lanes of a vector shift are undefined the whole shift is.
   if (isa<ConstantVector>(C) || isa<ConstantDataVector>(C)) {
-    for (unsigned I = 0, E = C->getType()->getVectorNumElements(); I != E; ++I)
+    for (unsigned I = 0, E = cast<VectorType>(C->getType())->getNumElements();
+         I != E; ++I)
       if (!isUndefShift(C->getAggregateElement(I)))
         return false;
     return true;
@@ -1479,10 +1480,11 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
   else
     return nullptr;
 
-  // X < Y && Y != 0  -->  X < Y
-  // X < Y || Y != 0  -->  Y != 0
-  if (UnsignedPred == ICmpInst::ICMP_ULT && EqPred == ICmpInst::ICMP_NE)
-    return IsAnd ? UnsignedICmp : ZeroICmp;
+  // X > Y && Y == 0  -->  Y == 0  iff X != 0
+  // X > Y || Y == 0  -->  X > Y   iff X != 0
+  if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
+      isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+    return IsAnd ? ZeroICmp : UnsignedICmp;
 
   // X <= Y && Y != 0  -->  X <= Y  iff X != 0
   // X <= Y || Y != 0  -->  Y != 0  iff X != 0
@@ -1490,15 +1492,19 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
       isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
     return IsAnd ? UnsignedICmp : ZeroICmp;
 
+  // The transforms below here are expected to be handled more generally with
+  // simplifyAndOrOfICmpsWithLimitConst() or in InstCombine's
+  // foldAndOrOfICmpsWithConstEq(). If we are looking to trim optimizer overlap,
+  // these are candidates for removal.
+
+  // X < Y && Y != 0  -->  X < Y
+  // X < Y || Y != 0  -->  Y != 0
+  if (UnsignedPred == ICmpInst::ICMP_ULT && EqPred == ICmpInst::ICMP_NE)
+    return IsAnd ? UnsignedICmp : ZeroICmp;
+
   // X >= Y && Y == 0  -->  Y == 0
   // X >= Y || Y == 0  -->  X >= Y
   if (UnsignedPred == ICmpInst::ICMP_UGE && EqPred == ICmpInst::ICMP_EQ)
-    return IsAnd ? ZeroICmp : UnsignedICmp;
-
-  // X > Y && Y == 0  -->  Y == 0  iff X != 0
-  // X > Y || Y == 0  -->  X > Y   iff X != 0
-  if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
-      isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
     return IsAnd ? ZeroICmp : UnsignedICmp;
 
   // X < Y && Y == 0  -->  false
@@ -1689,6 +1695,64 @@ static Value *simplifyAndOfICmpsWithAdd(ICmpInst *Op0, ICmpInst *Op1,
   return nullptr;
 }
 
+/// Try to eliminate compares with signed or unsigned min/max constants.
+static Value *simplifyAndOrOfICmpsWithLimitConst(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                                 bool IsAnd) {
+  // Canonicalize an equality compare as Cmp0.
+  if (Cmp1->isEquality())
+    std::swap(Cmp0, Cmp1);
+  if (!Cmp0->isEquality())
+    return nullptr;
+
+  // The equality compare must be against a constant. Convert the 'null' pointer
+  // constant to an integer zero value.
+  APInt MinMaxC;
+  const APInt *C;
+  if (match(Cmp0->getOperand(1), m_APInt(C)))
+    MinMaxC = *C;
+  else if (isa<ConstantPointerNull>(Cmp0->getOperand(1)))
+    MinMaxC = APInt::getNullValue(8);
+  else
+    return nullptr;
+
+  // The non-equality compare must include a common operand (X). Canonicalize
+  // the common operand as operand 0 (the predicate is swapped if the common
+  // operand was operand 1).
+  ICmpInst::Predicate Pred0 = Cmp0->getPredicate();
+  Value *X = Cmp0->getOperand(0);
+  ICmpInst::Predicate Pred1;
+  if (!match(Cmp1, m_c_ICmp(Pred1, m_Specific(X), m_Value())) ||
+      ICmpInst::isEquality(Pred1))
+    return nullptr;
+
+  // DeMorganize if this is 'or': P0 || P1 --> !P0 && !P1.
+  if (!IsAnd) {
+    Pred0 = ICmpInst::getInversePredicate(Pred0);
+    Pred1 = ICmpInst::getInversePredicate(Pred1);
+  }
+
+  // Normalize to unsigned compare and unsigned min/max value.
+  // Example for 8-bit: -128 + 128 -> 0; 127 + 128 -> 255
+  if (ICmpInst::isSigned(Pred1)) {
+    Pred1 = ICmpInst::getUnsignedPredicate(Pred1);
+    MinMaxC += APInt::getSignedMinValue(MinMaxC.getBitWidth());
+  }
+
+  // (X != MAX) && (X < Y) --> X < Y
+  // (X == MAX) || (X >= Y) --> X >= Y
+  if (MinMaxC.isMaxValue())
+    if (Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_ULT)
+      return Cmp1;
+
+  // (X != MIN) && (X > Y) -->  X > Y
+  // (X == MIN) || (X <= Y) --> X <= Y
+  if (MinMaxC.isMinValue())
+    if (Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_UGT)
+      return Cmp1;
+
+  return nullptr;
+}
+
 static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
                                  const SimplifyQuery &Q) {
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/true, Q))
@@ -1702,6 +1766,9 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, true))
+    return X;
+
+  if (Value *X = simplifyAndOrOfICmpsWithLimitConst(Op0, Op1, true))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, true))
@@ -1775,6 +1842,9 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, false))
+    return X;
+
+  if (Value *X = simplifyAndOrOfICmpsWithLimitConst(Op0, Op1, false))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, false))
@@ -2125,7 +2195,7 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return Constant::getAllOnesValue(Op1->getType());
 
   // A | ~(A & ?) = -1
-  if (match(Op1, m_Not(m_c_And(m_Specific(Op1), m_Value()))))
+  if (match(Op1, m_Not(m_c_And(m_Specific(Op0), m_Value()))))
     return Constant::getAllOnesValue(Op0->getType());
 
   Value *A, *B;
@@ -2341,10 +2411,9 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
   RHS = RHS->stripPointerCasts();
 
   // A non-null pointer is not equal to a null pointer.
-  if (llvm::isKnownNonZero(LHS, DL, 0, nullptr, nullptr, nullptr,
-                           IIQ.UseInstrInfo) &&
-      isa<ConstantPointerNull>(RHS) &&
-      (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE))
+  if (isa<ConstantPointerNull>(RHS) && ICmpInst::isEquality(Pred) &&
+      llvm::isKnownNonZero(LHS, DL, 0, nullptr, nullptr, nullptr,
+                           IIQ.UseInstrInfo))
     return ConstantInt::get(GetCompareTy(LHS),
                             !CmpInst::isTrueWhenEqual(Pred));
 
@@ -3481,7 +3550,8 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         SmallVector<Value *, 4> IndicesRHS(GRHS->idx_begin(), GRHS->idx_end());
         Constant *NewRHS = ConstantExpr::getGetElementPtr(
             GLHS->getSourceElementType(), Null, IndicesRHS);
-        return ConstantExpr::getICmp(Pred, NewLHS, NewRHS);
+        Constant *NewICmp = ConstantExpr::getICmp(Pred, NewLHS, NewRHS);
+        return ConstantFoldConstant(NewICmp, Q.DL);
       }
     }
   }
@@ -3616,9 +3686,9 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     // Check comparison of [minnum/maxnum with constant] with other constant.
     const APFloat *C2;
     if ((match(LHS, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_APFloat(C2))) &&
-         C2->compare(*C) == APFloat::cmpLessThan) ||
+         *C2 < *C) ||
         (match(LHS, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_APFloat(C2))) &&
-         C2->compare(*C) == APFloat::cmpGreaterThan)) {
+         *C2 > *C)) {
       bool IsMaxNum =
           cast<IntrinsicInst>(LHS)->getIntrinsicID() == Intrinsic::maxnum;
       // The ordered relationship and minnum/maxnum guarantee that we do not
@@ -4012,7 +4082,7 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   Constant *TrueC, *FalseC;
   if (TrueVal->getType()->isVectorTy() && match(TrueVal, m_Constant(TrueC)) &&
       match(FalseVal, m_Constant(FalseC))) {
-    unsigned NumElts = TrueC->getType()->getVectorNumElements();
+    unsigned NumElts = cast<VectorType>(TrueC->getType())->getNumElements();
     SmallVector<Constant *, 16> NewC;
     for (unsigned i = 0; i != NumElts; ++i) {
       // Bail out on incomplete vector constants.
@@ -4081,13 +4151,15 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   if (isa<UndefValue>(Ops[0]))
     return UndefValue::get(GEPTy);
 
+  bool IsScalableVec = isa<ScalableVectorType>(SrcTy);
+
   if (Ops.size() == 2) {
     // getelementptr P, 0 -> P.
     if (match(Ops[1], m_Zero()) && Ops[0]->getType() == GEPTy)
       return Ops[0];
 
     Type *Ty = SrcTy;
-    if (Ty->isSized()) {
+    if (!IsScalableVec && Ty->isSized()) {
       Value *P;
       uint64_t C;
       uint64_t TyAllocSize = Q.DL.getTypeAllocSize(Ty);
@@ -4135,7 +4207,7 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
     }
   }
 
-  if (Q.DL.getTypeAllocSize(LastType) == 1 &&
+  if (!IsScalableVec && Q.DL.getTypeAllocSize(LastType) == 1 &&
       all_of(Ops.slice(1).drop_back(1),
              [](Value *Idx) { return match(Idx, m_Zero()); })) {
     unsigned IdxWidth =
@@ -4167,9 +4239,7 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
 
   auto *CE = ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ops[0]),
                                             Ops.slice(1));
-  if (auto *CEFolded = ConstantFoldConstant(CE, Q.DL))
-    return CEFolded;
-  return CE;
+  return ConstantFoldConstant(CE, Q.DL);
 }
 
 Value *llvm::SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
@@ -4221,10 +4291,10 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (VecC && ValC && IdxC)
     return ConstantFoldInsertElementInstruction(VecC, ValC, IdxC);
 
-  // Fold into undef if index is out of bounds.
+  // For fixed-length vector, fold into undef if index is out of bounds.
   if (auto *CI = dyn_cast<ConstantInt>(Idx)) {
-    uint64_t NumElements = cast<VectorType>(Vec->getType())->getNumElements();
-    if (CI->uge(NumElements))
+    if (isa<FixedVectorType>(Vec->getType()) &&
+        CI->uge(cast<FixedVectorType>(Vec->getType())->getNumElements()))
       return UndefValue::get(Vec->getType());
   }
 
@@ -4232,15 +4302,15 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (isa<UndefValue>(Idx))
     return UndefValue::get(Vec->getType());
 
-  // Inserting an undef scalar? Assume it is the same value as the existing
-  // vector element.
-  if (isa<UndefValue>(Val))
+  // If the scalar is undef, and there is no risk of propagating poison from the
+  // vector value, simplify to the vector value.
+  if (isa<UndefValue>(Val) && isGuaranteedNotToBeUndefOrPoison(Vec))
     return Vec;
 
   // If we are extracting a value from a vector, then inserting it into the same
   // place, that's the input vector:
   // insertelt Vec, (extractelt Vec, Idx), Idx --> Vec
-  if (match(Val, m_ExtractElement(m_Specific(Vec), m_Specific(Idx))))
+  if (match(Val, m_ExtractElt(m_Specific(Vec), m_Specific(Idx))))
     return Vec;
 
   return nullptr;
@@ -4280,6 +4350,7 @@ Value *llvm::SimplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
 /// If not, this returns null.
 static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const SimplifyQuery &,
                                          unsigned) {
+  auto *VecVTy = cast<VectorType>(Vec->getType());
   if (auto *CVec = dyn_cast<Constant>(Vec)) {
     if (auto *CIdx = dyn_cast<Constant>(Idx))
       return ConstantFoldExtractElementInstruction(CVec, CIdx);
@@ -4289,15 +4360,16 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const SimplifyQ
       return Splat;
 
     if (isa<UndefValue>(Vec))
-      return UndefValue::get(Vec->getType()->getVectorElementType());
+      return UndefValue::get(VecVTy->getElementType());
   }
 
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   if (auto *IdxC = dyn_cast<ConstantInt>(Idx)) {
-    if (IdxC->getValue().uge(Vec->getType()->getVectorNumElements()))
-      // definitely out of bounds, thus undefined result
-      return UndefValue::get(Vec->getType()->getVectorElementType());
+    // For fixed-length vector, fold into undef if index is out of bounds.
+    if (isa<FixedVectorType>(VecVTy) &&
+        IdxC->getValue().uge(VecVTy->getNumElements()))
+      return UndefValue::get(VecVTy->getElementType());
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
   }
@@ -4305,7 +4377,7 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const SimplifyQ
   // An undef extract index can be arbitrarily chosen to be an out-of-range
   // index value, which would result in the instruction being undef.
   if (isa<UndefValue>(Idx))
-    return UndefValue::get(Vec->getType()->getVectorElementType());
+    return UndefValue::get(VecVTy->getElementType());
 
   return nullptr;
 }
@@ -4402,7 +4474,7 @@ static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
     return nullptr;
 
   // The mask value chooses which source operand we need to look at next.
-  int InVecNumElts = Op0->getType()->getVectorNumElements();
+  int InVecNumElts = cast<VectorType>(Op0->getType())->getNumElements();
   int RootElt = MaskVal;
   Value *SourceOp = Op0;
   if (MaskVal >= InVecNumElts) {
@@ -4438,36 +4510,31 @@ static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
   return RootVec;
 }
 
-static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
-                                        Type *RetTy, const SimplifyQuery &Q,
+static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
+                                        ArrayRef<int> Mask, Type *RetTy,
+                                        const SimplifyQuery &Q,
                                         unsigned MaxRecurse) {
-  if (isa<UndefValue>(Mask))
+  if (all_of(Mask, [](int Elem) { return Elem == UndefMaskElem; }))
     return UndefValue::get(RetTy);
 
-  Type *InVecTy = Op0->getType();
-  ElementCount MaskEltCount = Mask->getType()->getVectorElementCount();
-  ElementCount InVecEltCount = InVecTy->getVectorElementCount();
+  auto *InVecTy = cast<VectorType>(Op0->getType());
+  unsigned MaskNumElts = Mask.size();
+  ElementCount InVecEltCount = InVecTy->getElementCount();
 
-  assert(MaskEltCount.Scalable == InVecEltCount.Scalable &&
-         "vscale mismatch between input vector and mask");
-
-  bool Scalable = MaskEltCount.Scalable;
+  bool Scalable = InVecEltCount.Scalable;
 
   SmallVector<int, 32> Indices;
-  if (!Scalable) {
-    ShuffleVectorInst::getShuffleMask(Mask, Indices);
-    assert(MaskEltCount.Min == Indices.size() &&
-           "Size of Indices not same as number of mask elements?");
-  }
+  Indices.assign(Mask.begin(), Mask.end());
 
+  // Canonicalization: If mask does not select elements from an input vector,
+  // replace that input vector with undef.
   if (!Scalable) {
-    // Canonicalization: If mask does not select elements from an input vector,
-    // replace that input vector with undef.
     bool MaskSelects0 = false, MaskSelects1 = false;
-    for (unsigned i = 0; i != MaskEltCount.Min; ++i) {
+    unsigned InVecNumElts = InVecEltCount.Min;
+    for (unsigned i = 0; i != MaskNumElts; ++i) {
       if (Indices[i] == -1)
         continue;
-      if ((unsigned)Indices[i] < InVecEltCount.Min)
+      if ((unsigned)Indices[i] < InVecNumElts)
         MaskSelects0 = true;
       else
         MaskSelects1 = true;
@@ -4503,8 +4570,8 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   // known at compile time for scalable vectors
   Constant *C;
   ConstantInt *IndexC;
-  if (!Scalable && match(Op0, m_InsertElement(m_Value(), m_Constant(C),
-                                              m_ConstantInt(IndexC)))) {
+  if (!Scalable && match(Op0, m_InsertElt(m_Value(), m_Constant(C),
+                                          m_ConstantInt(IndexC)))) {
     // Match a splat shuffle mask of the insert index allowing undef elements.
     int InsertIndex = IndexC->getZExtValue();
     if (all_of(Indices, [InsertIndex](int MaskElt) {
@@ -4513,8 +4580,8 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
       assert(isa<UndefValue>(Op1) && "Expected undef operand 1 for splat");
 
       // Shuffle mask undefs become undefined constant result elements.
-      SmallVector<Constant *, 16> VecC(MaskEltCount.Min, C);
-      for (unsigned i = 0; i != MaskEltCount.Min; ++i)
+      SmallVector<Constant *, 16> VecC(MaskNumElts, C);
+      for (unsigned i = 0; i != MaskNumElts; ++i)
         if (Indices[i] == -1)
           VecC[i] = UndefValue::get(C->getType());
       return ConstantVector::get(VecC);
@@ -4525,7 +4592,7 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   // value type is same as the input vectors' type.
   if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op0))
     if (isa<UndefValue>(Op1) && RetTy == InVecTy &&
-        OpShuf->getMask()->getSplatValue())
+        is_splat(OpShuf->getShuffleMask()))
       return Op0;
 
   // All remaining transformation depend on the value of the mask, which is
@@ -4544,7 +4611,7 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   // shuffle. This handles simple identity shuffles as well as chains of
   // shuffles that may widen/narrow and/or move elements across lanes and back.
   Value *RootVec = nullptr;
-  for (unsigned i = 0; i != MaskEltCount.Min; ++i) {
+  for (unsigned i = 0; i != MaskNumElts; ++i) {
     // Note that recursion is limited for each vector element, so if any element
     // exceeds the limit, this will fail to simplify.
     RootVec =
@@ -4558,8 +4625,9 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
 }
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
-Value *llvm::SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
-                                       Type *RetTy, const SimplifyQuery &Q) {
+Value *llvm::SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
+                                       ArrayRef<int> Mask, Type *RetTy,
+                                       const SimplifyQuery &Q) {
   return ::SimplifyShuffleVectorInst(Op0, Op1, Mask, RetTy, Q, RecursionLimit);
 }
 
@@ -4603,14 +4671,24 @@ static Constant *propagateNaN(Constant *In) {
 /// Perform folds that are common to any floating-point operation. This implies
 /// transforms based on undef/NaN because the operation itself makes no
 /// difference to the result.
-static Constant *simplifyFPOp(ArrayRef<Value *> Ops) {
-  if (any_of(Ops, [](Value *V) { return isa<UndefValue>(V); }))
-    return ConstantFP::getNaN(Ops[0]->getType());
+static Constant *simplifyFPOp(ArrayRef<Value *> Ops,
+                              FastMathFlags FMF = FastMathFlags()) {
+  for (Value *V : Ops) {
+    bool IsNan = match(V, m_NaN());
+    bool IsInf = match(V, m_Inf());
+    bool IsUndef = match(V, m_Undef());
 
-  for (Value *V : Ops)
-    if (match(V, m_NaN()))
+    // If this operation has 'nnan' or 'ninf' and at least 1 disallowed operand
+    // (an undef operand can be chosen to be Nan/Inf), then the result of
+    // this operation is poison. That result can be relaxed to undef.
+    if (FMF.noNaNs() && (IsNan || IsUndef))
+      return UndefValue::get(V->getType());
+    if (FMF.noInfs() && (IsInf || IsUndef))
+      return UndefValue::get(V->getType());
+
+    if (IsUndef || IsNan)
       return propagateNaN(cast<Constant>(V));
-
+  }
   return nullptr;
 }
 
@@ -4621,7 +4699,7 @@ static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FAdd, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // fadd X, -0 ==> X
@@ -4668,7 +4746,7 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FSub, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // fsub X, +0 ==> X
@@ -4710,7 +4788,7 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
 static Value *SimplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
                               const SimplifyQuery &Q, unsigned MaxRecurse) {
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // fmul X, 1.0 ==> X
@@ -4777,7 +4855,7 @@ static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FDiv, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // X / 1.0 -> X
@@ -4822,7 +4900,7 @@ static Value *SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FRem, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // Unlike fdiv, the result of frem always matches the sign of the dividend.
@@ -4983,6 +5061,7 @@ static bool IsIdempotent(Intrinsic::ID ID) {
   case Intrinsic::rint:
   case Intrinsic::nearbyint:
   case Intrinsic::round:
+  case Intrinsic::roundeven:
   case Intrinsic::canonicalize:
     return true;
   }
@@ -5098,6 +5177,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   case Intrinsic::trunc:
   case Intrinsic::ceil:
   case Intrinsic::round:
+  case Intrinsic::roundeven:
   case Intrinsic::nearbyint:
   case Intrinsic::rint: {
     // floor (sitofp x) -> sitofp x
@@ -5329,7 +5409,12 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
 }
 
 Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
-  Value *Callee = Call->getCalledValue();
+  Value *Callee = Call->getCalledOperand();
+
+  // musttail calls can only be simplified if they are also DCEd.
+  // As we can't guarantee this here, don't simplify them.
+  if (Call->isMustTailCall())
+    return nullptr;
 
   // call undef -> undef
   // call null -> undef
@@ -5352,8 +5437,11 @@ Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
   ConstantArgs.reserve(NumArgs);
   for (auto &Arg : Call->args()) {
     Constant *C = dyn_cast<Constant>(&Arg);
-    if (!C)
+    if (!C) {
+      if (isa<MetadataAsValue>(Arg.get()))
+        continue;
       return nullptr;
+    }
     ConstantArgs.push_back(C);
   }
 
@@ -5361,16 +5449,16 @@ Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
 }
 
 /// Given operands for a Freeze, see if we can fold the result.
-static Value *SimplifyFreezeInst(Value *Op0) {
+static Value *SimplifyFreezeInst(Value *Op0, const SimplifyQuery &Q) {
   // Use a utility function defined in ValueTracking.
-  if (llvm::isGuaranteedNotToBeUndefOrPoison(Op0))
+  if (llvm::isGuaranteedNotToBeUndefOrPoison(Op0, Q.CxtI, Q.DT))
     return Op0;
   // We have room for improvement.
   return nullptr;
 }
 
 Value *llvm::SimplifyFreezeInst(Value *Op0, const SimplifyQuery &Q) {
-  return ::SimplifyFreezeInst(Op0);
+  return ::SimplifyFreezeInst(Op0, Q);
 }
 
 /// See if we can compute a simplified version of this instruction.
@@ -5504,8 +5592,9 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
   }
   case Instruction::ShuffleVector: {
     auto *SVI = cast<ShuffleVectorInst>(I);
-    Result = SimplifyShuffleVectorInst(SVI->getOperand(0), SVI->getOperand(1),
-                                       SVI->getMask(), SVI->getType(), Q);
+    Result =
+        SimplifyShuffleVectorInst(SVI->getOperand(0), SVI->getOperand(1),
+                                  SVI->getShuffleMask(), SVI->getType(), Q);
     break;
   }
   case Instruction::PHI:
@@ -5528,14 +5617,6 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     // No simplifications for Alloca and it can't be constant folded.
     Result = nullptr;
     break;
-  }
-
-  // In general, it is possible for computeKnownBits to determine all bits in a
-  // value even when the operands are not all constants.
-  if (!Result && I->getType()->isIntOrIntVectorTy()) {
-    KnownBits Known = computeKnownBits(I, Q.DL, /*Depth*/ 0, Q.AC, I, Q.DT, ORE);
-    if (Known.isConstant())
-      Result = ConstantInt::get(I->getType(), Known.getConstant());
   }
 
   /// If called on unreachable code, the above logic may report that the

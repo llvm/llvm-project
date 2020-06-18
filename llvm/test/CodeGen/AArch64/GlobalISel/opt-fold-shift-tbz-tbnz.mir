@@ -49,10 +49,9 @@ body:             |
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   %copy:gpr64 = COPY $x0
   ; CHECK:   %fold_me:gpr64 = UBFMXri %copy, 59, 58
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64all = COPY %fold_me
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]].sub_32
-  ; CHECK:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-  ; CHECK:   TBNZW [[COPY2]], 3, %bb.1
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr32all = COPY %fold_me.sub_32
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+  ; CHECK:   TBNZW [[COPY1]], 3, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
@@ -87,10 +86,9 @@ body:             |
   ; CHECK:   %copy:gpr64 = COPY $x0
   ; CHECK:   %fold_cst:gpr64 = MOVi64imm -5
   ; CHECK:   %fold_me:gpr64 = LSLVXr %copy, %fold_cst
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64all = COPY %fold_me
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]].sub_32
-  ; CHECK:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-  ; CHECK:   TBNZW [[COPY2]], 3, %bb.1
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr32all = COPY %fold_me.sub_32
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+  ; CHECK:   TBNZW [[COPY1]], 3, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
@@ -125,10 +123,9 @@ body:             |
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   %copy:gpr64 = COPY $x0
   ; CHECK:   %shl:gpr64 = UBFMXri %copy, 62, 61
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64all = COPY %shl
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]].sub_32
-  ; CHECK:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-  ; CHECK:   TBNZW [[COPY2]], 3, %bb.1
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr32all = COPY %shl.sub_32
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+  ; CHECK:   TBNZW [[COPY1]], 3, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   %second_use:gpr64sp = ORRXri %shl, 8000

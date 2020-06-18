@@ -28,6 +28,7 @@ static SmallVector<const Stmt *, 1> getParentStmts(const Stmt *S,
                                                    ASTContext *Context) {
   SmallVector<const Stmt *, 1> Result;
 
+  TraversalKindScope RAII(*Context, ast_type_traits::TK_AsIs);
   DynTypedNodeList Parents = Context->getParents(*S);
 
   SmallVector<ast_type_traits::DynTypedNode, 1> NodesToProcess(Parents.begin(),

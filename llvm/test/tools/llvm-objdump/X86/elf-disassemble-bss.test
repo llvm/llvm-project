@@ -6,7 +6,7 @@
 # RUN: llvm-objdump -D %t.2 | FileCheck %s
 
 # CHECK: Disassembly of section .bss:
-# CHECK: .bss:
+# CHECK: <.bss>:
 # CHECK-NEXT: ...
 
 --- !ELF

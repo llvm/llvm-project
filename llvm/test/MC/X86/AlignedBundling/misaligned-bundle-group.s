@@ -1,8 +1,8 @@
 # RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu -mcpu=pentiumpro %s -o - \
-# RUN:   | llvm-objdump -disassemble -no-show-raw-insn - \
+# RUN:   | llvm-objdump -d --no-show-raw-insn - \
 # RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK-OPT %s
 # RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu -mcpu=pentiumpro -mc-relax-all %s -o - \
-# RUN:   | llvm-objdump -disassemble -no-show-raw-insn - \
+# RUN:   | llvm-objdump -d --no-show-raw-insn - \
 # RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK-RELAX %s
 
         .text
@@ -16,8 +16,8 @@ foo:
 # CHECK-RELAX:      1a: nop
 # CHECK-RELAX:      20: nopw %cs:(%eax,%eax)
 # CHECK-RELAX:      2a: nopw %cs:(%eax,%eax)
-# CHECK-OPT:        1b: calll -4
-# CHECK-RELAX:      3b: calll -4
+# CHECK-OPT:        1b: calll 0x1c
+# CHECK-RELAX:      3b: calll 0x3c
         calll   bar # 5 bytes
         .bundle_unlock
         ret         # 1 byte

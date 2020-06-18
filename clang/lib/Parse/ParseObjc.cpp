@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Parse/Parser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Scope.h"
@@ -522,10 +523,9 @@ ObjCTypeParamList *Parser::parseObjCTypeParamListOrProtocolRefs(
     SkipUntil(tok::greater, tok::at, StopBeforeMatch);
     if (Tok.is(tok::greater))
       ConsumeToken();
-  } else if (ParseGreaterThanInTemplateList(rAngleLoc,
+  } else if (ParseGreaterThanInTemplateList(lAngleLoc, rAngleLoc,
                                             /*ConsumeLastToken=*/true,
                                             /*ObjCGenericList=*/true)) {
-    Diag(lAngleLoc, diag::note_matching) << "'<'";
     SkipUntil({tok::greater, tok::greaterequal, tok::at, tok::minus,
                tok::minus, tok::plus, tok::colon, tok::l_paren, tok::l_brace,
                tok::comma, tok::semi },
@@ -740,7 +740,8 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
 
         // Map a nullability property attribute to a context-sensitive keyword
         // attribute.
-        if (OCDS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
+        if (OCDS.getPropertyAttributes() &
+            ObjCPropertyAttribute::kind_nullability)
           addContextSensitiveTypeNullability(*this, FD.D, OCDS.getNullability(),
                                              OCDS.getNullabilityLoc(),
                                              addedToDeclSpec);
@@ -860,25 +861,25 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
     SourceLocation AttrName = ConsumeToken(); // consume last attribute name
 
     if (II->isStr("readonly"))
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_readonly);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_readonly);
     else if (II->isStr("assign"))
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_assign);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_assign);
     else if (II->isStr("unsafe_unretained"))
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_unsafe_unretained);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_unsafe_unretained);
     else if (II->isStr("readwrite"))
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_readwrite);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_readwrite);
     else if (II->isStr("retain"))
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_retain);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_retain);
     else if (II->isStr("strong"))
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_strong);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_strong);
     else if (II->isStr("copy"))
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_copy);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_copy);
     else if (II->isStr("nonatomic"))
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_nonatomic);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_nonatomic);
     else if (II->isStr("atomic"))
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_atomic);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_atomic);
     else if (II->isStr("weak"))
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_weak);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_weak);
     else if (II->isStr("getter") || II->isStr("setter")) {
       bool IsSetter = II->getNameStart()[0] == 's';
 
@@ -910,7 +911,7 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
       }
 
       if (IsSetter) {
-        DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_setter);
+        DS.setPropertyAttributes(ObjCPropertyAttribute::kind_setter);
         DS.setSetterName(SelIdent, SelLoc);
 
         if (ExpectAndConsume(tok::colon,
@@ -919,44 +920,44 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
           return;
         }
       } else {
-        DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_getter);
+        DS.setPropertyAttributes(ObjCPropertyAttribute::kind_getter);
         DS.setGetterName(SelIdent, SelLoc);
       }
     } else if (II->isStr("nonnull")) {
-      if (DS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
+      if (DS.getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)
         diagnoseRedundantPropertyNullability(*this, DS,
                                              NullabilityKind::NonNull,
                                              Tok.getLocation());
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_nullability);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_nullability);
       DS.setNullability(Tok.getLocation(), NullabilityKind::NonNull);
     } else if (II->isStr("nullable")) {
-      if (DS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
+      if (DS.getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)
         diagnoseRedundantPropertyNullability(*this, DS,
                                              NullabilityKind::Nullable,
                                              Tok.getLocation());
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_nullability);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_nullability);
       DS.setNullability(Tok.getLocation(), NullabilityKind::Nullable);
     } else if (II->isStr("null_unspecified")) {
-      if (DS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
+      if (DS.getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)
         diagnoseRedundantPropertyNullability(*this, DS,
                                              NullabilityKind::Unspecified,
                                              Tok.getLocation());
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_nullability);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_nullability);
       DS.setNullability(Tok.getLocation(), NullabilityKind::Unspecified);
     } else if (II->isStr("null_resettable")) {
-      if (DS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
+      if (DS.getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)
         diagnoseRedundantPropertyNullability(*this, DS,
                                              NullabilityKind::Unspecified,
                                              Tok.getLocation());
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_nullability);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_nullability);
       DS.setNullability(Tok.getLocation(), NullabilityKind::Unspecified);
 
       // Also set the null_resettable bit.
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_null_resettable);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_null_resettable);
     } else if (II->isStr("class")) {
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_class);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_class);
     } else if (II->isStr("direct")) {
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_direct);
+      DS.setPropertyAttributes(ObjCPropertyAttribute::kind_direct);
     } else {
       Diag(AttrName, diag::err_objc_expected_property_attr) << II;
       SkipUntil(tok::r_paren, StopAtSemi);
@@ -1550,7 +1551,7 @@ ParseObjCProtocolReferences(SmallVectorImpl<Decl *> &Protocols,
   }
 
   // Consume the '>'.
-  if (ParseGreaterThanInTemplateList(EndLoc, consumeLastToken,
+  if (ParseGreaterThanInTemplateList(LAngleLoc, EndLoc, consumeLastToken,
                                      /*ObjCGenericList=*/false))
     return true;
 
@@ -1648,7 +1649,7 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
   if (allSingleIdentifiers) {
     // Parse the closing '>'.
     SourceLocation rAngleLoc;
-    (void)ParseGreaterThanInTemplateList(rAngleLoc, consumeLastToken,
+    (void)ParseGreaterThanInTemplateList(lAngleLoc, rAngleLoc, consumeLastToken,
                                          /*ObjCGenericList=*/true);
 
     // Let Sema figure out what we parsed.
@@ -1754,7 +1755,7 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
 
   // Parse the closing '>'.
   SourceLocation rAngleLoc;
-  (void)ParseGreaterThanInTemplateList(rAngleLoc, consumeLastToken,
+  (void)ParseGreaterThanInTemplateList(lAngleLoc, rAngleLoc, consumeLastToken,
                                        /*ObjCGenericList=*/true);
 
   if (invalid) {
@@ -2978,7 +2979,7 @@ bool Parser::isStartOfObjCClassMessageMissingOpenBracket() {
       InMessageExpression)
     return false;
 
-  ParsedType Type;
+  TypeResult Type;
 
   if (Tok.is(tok::annot_typename))
     Type = getTypeAnnotation(Tok);
@@ -2988,7 +2989,8 @@ bool Parser::isStartOfObjCClassMessageMissingOpenBracket() {
   else
     return false;
 
-  if (!Type.get().isNull() && Type.get()->isObjCObjectOrInterfaceType()) {
+  // FIXME: Should not be querying properties of types from the parser.
+  if (Type.isUsable() && Type.get().get()->isObjCObjectOrInterfaceType()) {
     const Token &AfterNext = GetLookAheadToken(2);
     if (AfterNext.isOneOf(tok::colon, tok::r_square)) {
       if (Tok.is(tok::identifier))

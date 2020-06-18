@@ -38,7 +38,7 @@ namespace llvm {
   /// This is intended to be trivially copyable, so it should be passed by
   /// value.
   template<typename T>
-  class LLVM_NODISCARD ArrayRef {
+  class LLVM_GSL_POINTER LLVM_NODISCARD ArrayRef {
   public:
     using iterator = const T *;
     using const_iterator = const T *;
@@ -532,8 +532,18 @@ namespace llvm {
     return LHS.equals(RHS);
   }
 
-  template<typename T>
+  template <typename T>
+  inline bool operator==(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
+    return ArrayRef<T>(LHS).equals(RHS);
+  }
+
+  template <typename T>
   inline bool operator!=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS == RHS);
+  }
+
+  template <typename T>
+  inline bool operator!=(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
     return !(LHS == RHS);
   }
 

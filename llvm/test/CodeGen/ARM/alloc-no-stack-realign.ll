@@ -34,7 +34,7 @@ entry:
 ; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r[[R1]]:128]
 ; CHECK: vst1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r0:128]!
 ; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r0:128]
- %retval = alloca <16 x float>, align 16
+ %retval = alloca <16 x float>, align 64
  %0 = load <16 x float>, <16 x float>* @T3_retval, align 16
  store <16 x float> %0, <16 x float>* %retval
  %1 = load <16 x float>, <16 x float>* %retval
@@ -73,7 +73,7 @@ entry:
 ; CHECK: vst1.64 {{{d[0-9]+}}, {{d[0-9]+}}}, [r0:128]
 
 
-%retval = alloca <16 x float>, align 16
+%retval = alloca <16 x float>, align 64
  %0 = load <16 x float>, <16 x float>* @T3_retval, align 16
  store <16 x float> %0, <16 x float>* %retval
  %1 = load <16 x float>, <16 x float>* %retval

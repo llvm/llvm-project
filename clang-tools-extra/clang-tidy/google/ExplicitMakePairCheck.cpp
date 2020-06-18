@@ -26,11 +26,6 @@ namespace build {
 
 void ExplicitMakePairCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Look for std::make_pair with explicit template args. Ignore calls in
   // templates.
   Finder->addMatcher(

@@ -28,7 +28,7 @@ let Uses = [SP32, SP64], isCall = 1 in {
 
 // CALL should take both variadic arguments and produce variadic results, but
 // this is not possible to model directly. Instead, we select calls to a
-// CALL_PARAMS taking variadic aguments linked with a CALL_RESULTS that handles
+// CALL_PARAMS taking variadic arguments linked with a CALL_RESULTS that handles
 // producing the call's variadic results. We recombine the two in a custom
 // inserter hook after DAG ISel, so passes over MachineInstrs will only ever
 // observe CALL nodes with all of the expected variadic uses and defs.

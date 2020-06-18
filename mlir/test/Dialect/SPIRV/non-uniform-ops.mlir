@@ -20,6 +20,14 @@ func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> {
 
 // -----
 
+func @group_non_uniform_ballot(%predicate: i1) -> vector<4xsi32> {
+  // expected-error @+1 {{op result #0 must be vector of 8/16/32/64-bit signless/unsigned integer values of length 4, but got 'vector<4xsi32>'}}
+  %0 = spv.GroupNonUniformBallot "Workgroup" %predicate : vector<4xsi32>
+  return %0: vector<4xsi32>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spv.GroupNonUniformElect
 //===----------------------------------------------------------------------===//

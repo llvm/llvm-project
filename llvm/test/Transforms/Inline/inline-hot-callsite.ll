@@ -39,6 +39,66 @@ define i32 @caller2(i32 %y1) {
   ret i32 %y3
 }
 
+declare i32 @__gxx_personality_v0(...)
+
+define i32 @invoker2(i32 %y1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @invoker2(
+; CHECK: invoke i32 @callee2
+; CHECK-NOT: invoke i32 @callee1
+; CHECK: ret i32
+  %y2 = invoke i32 @callee2(i32 %y1) to label %next unwind label %lpad, !prof !22
+
+next:
+  %y3 = invoke i32 @callee1(i32 %y2) to label %exit unwind label %lpad, !prof !21
+
+exit:
+  ret i32 1
+
+lpad:
+  %ll = landingpad { i8*, i32 } cleanup
+  ret i32 1
+}
+
+define i32 @invoker3(i32 %y1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @invoker3(
+; CHECK: invoke i32 @callee2
+; CHECK-NOT: invoke i32 @callee1
+; CHECK: ret i32
+  %y2 = invoke i32 @callee2(i32 %y1) to label %next unwind label %lpad,
+          !prof !{!"branch_weights", i64 1, i64 0}
+
+next:
+  %y3 = invoke i32 @callee1(i32 %y2) to label %exit unwind label %lpad,
+          !prof !{!"branch_weights", i64 300, i64 1}
+
+exit:
+  ret i32 1
+
+lpad:
+  %ll = landingpad { i8*, i32 } cleanup
+  ret i32 1
+}
+
+define i32 @invoker4(i32 %y1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @invoker4(
+; CHECK: invoke i32 @callee2
+; CHECK-NOT: invoke i32 @callee1
+; CHECK: ret i32
+  %y2 = invoke i32 @callee2(i32 %y1) to label %next unwind label %lpad,
+          !prof !{!"branch_weights", i64 1, i64 0}
+
+next:
+  %y3 = invoke i32 @callee1(i32 %y2) to label %exit unwind label %lpad,
+          !prof !{!"branch_weights", i64 0, i64 300}
+
+exit:
+  ret i32 1
+
+lpad:
+  %ll = landingpad { i8*, i32 } cleanup
+  ret i32 1
+}
+
 declare void @extern()
 
 !llvm.module.flags = !{!1}

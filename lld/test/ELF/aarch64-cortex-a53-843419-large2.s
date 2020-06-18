@@ -8,8 +8,8 @@
 .space 4096 - 8
 adrp x0, thunk
 ldr x1, [x1, #0]
-// CHECK: thunk:
-// CHECK-NEXT: b #67108872 <__CortexA53843419_8001000>
+// CHECK: <thunk>:
+// CHECK-NEXT: b 0xc001008 <__CortexA53843419_8001000>
 thunk:
 ldr x0, [x0, :got_lo12:thunk]
 ret

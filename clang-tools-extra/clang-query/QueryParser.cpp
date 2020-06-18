@@ -128,6 +128,24 @@ template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
   llvm_unreachable("Invalid output kind");
 }
 
+QueryRef QueryParser::parseSetTraversalKind(
+    ast_type_traits::TraversalKind QuerySession::*Var) {
+  StringRef ValStr;
+  unsigned Value =
+      LexOrCompleteWord<unsigned>(this, ValStr)
+          .Case("AsIs", ast_type_traits::TK_AsIs)
+          .Case("IgnoreImplicitCastsAndParentheses",
+                ast_type_traits::TK_IgnoreImplicitCastsAndParentheses)
+          .Case("IgnoreUnlessSpelledInSource",
+                ast_type_traits::TK_IgnoreUnlessSpelledInSource)
+          .Default(~0u);
+  if (Value == ~0u) {
+    return new InvalidQuery("expected traversal kind, got '" + ValStr + "'");
+  }
+  return new SetQuery<ast_type_traits::TraversalKind>(
+      Var, static_cast<ast_type_traits::TraversalKind>(Value));
+}
+
 QueryRef QueryParser::endQuery(QueryRef Q) {
   StringRef Extra = Line;
   StringRef ExtraTrimmed = Extra.drop_while(
@@ -171,7 +189,8 @@ enum ParsedQueryVariable {
   PQV_Invalid,
   PQV_Output,
   PQV_BindRoot,
-  PQV_PrintMatcher
+  PQV_PrintMatcher,
+  PQV_Traversal
 };
 
 QueryRef makeInvalidQueryFromDiagnostics(const Diagnostics &Diag) {
@@ -272,6 +291,7 @@ QueryRef QueryParser::doParse() {
             .Case("output", PQV_Output)
             .Case("bind-root", PQV_BindRoot)
             .Case("print-matcher", PQV_PrintMatcher)
+            .Case("traversal", PQV_Traversal)
             .Default(PQV_Invalid);
     if (VarStr.empty())
       return new InvalidQuery("expected variable name");
@@ -288,6 +308,9 @@ QueryRef QueryParser::doParse() {
       break;
     case PQV_PrintMatcher:
       Q = parseSetBool(&QuerySession::PrintMatcher);
+      break;
+    case PQV_Traversal:
+      Q = parseSetTraversalKind(&QuerySession::TK);
       break;
     case PQV_Invalid:
       llvm_unreachable("Invalid query kind");

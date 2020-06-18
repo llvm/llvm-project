@@ -1,6 +1,6 @@
 RUN: llvm-profdata overlap %p/Inputs/overlap_1.proftext %p/Inputs/overlap_2.proftext | FileCheck %s -check-prefix=OVERLAP
-RUN: llvm-profdata overlap -function=main %p/Inputs/overlap_1.proftext %p/Inputs/overlap_2.proftext | FileCheck %s -check-prefix=MAINFUNC -check-prefix=OVERLAP
-RUN: llvm-profdata overlap -value-cutoff=15000 %p/Inputs/overlap_1.proftext %p/Inputs/overlap_2.proftext | FileCheck %s -check-prefix=MAINFUNC -check-prefix=OVERLAP
+RUN: llvm-profdata overlap -function=main %p/Inputs/overlap_1.proftext %p/Inputs/overlap_2.proftext | FileCheck %s --check-prefixes=MAINFUNC,OVERLAP
+RUN: llvm-profdata overlap -value-cutoff=15000 %p/Inputs/overlap_1.proftext %p/Inputs/overlap_2.proftext | FileCheck %s --check-prefixes=MAINFUNC,OVERLAP
 RUN: llvm-profdata merge %p/Inputs/overlap_1.proftext -o %t_1.profdata
 RUN: llvm-profdata merge %p/Inputs/overlap_2.proftext -o %t_2.profdata
 RUN: llvm-profdata overlap %t_1.profdata %t_2.profdata | FileCheck %s -check-prefix=OVERLAP

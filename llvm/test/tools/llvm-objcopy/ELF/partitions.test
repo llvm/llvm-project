@@ -48,17 +48,6 @@ MAIN-NEXT:   [10] .symtab           SYMTAB          0000000000000000 003008 0000
 MAIN-NEXT:   [11] .shstrtab         STRTAB          0000000000000000 003050 000060 00      0   0  1
 MAIN-NEXT:   [12] .strtab           STRTAB          0000000000000000 0030b0 000011 00      0   0  1
 
-MAIN: Symbol table '.dynsym' contains 2 entries:
-MAIN-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
-MAIN-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
-MAIN-NEXT:      1: 0000000000201000     0 NOTYPE  GLOBAL DEFAULT    6 _start
-
-MAIN: Symbol table '.symtab' contains 3 entries:
-MAIN-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
-MAIN-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
-MAIN-NEXT:      1: 0000000000202000     0 NOTYPE  LOCAL  HIDDEN     7 _DYNAMIC
-MAIN-NEXT:      2: 0000000000201000     0 NOTYPE  GLOBAL DEFAULT    6 _start
-
 MAIN: Program Headers:
 MAIN-NEXT:   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 MAIN-NEXT:   PHDR           0x000040 0x0000000000200040 0x0000000000200040 0x0001c0 0x0001c0 R   0x8
@@ -69,6 +58,17 @@ MAIN-NEXT:   LOAD           0x003000 0x0000000000209000 0x0000000000209000 0x000
 MAIN-NEXT:   DYNAMIC        0x002000 0x0000000000202000 0x0000000000202000 0x000080 0x000080 RW  0x8
 MAIN-NEXT:   GNU_RELRO      0x002000 0x0000000000202000 0x0000000000202000 0x000080 0x001000 R   0x1
 MAIN-NEXT:   GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x0
+
+MAIN: Symbol table '.dynsym' contains 2 entries:
+MAIN-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+MAIN-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+MAIN-NEXT:      1: 0000000000201000     0 NOTYPE  GLOBAL DEFAULT    6 _start
+
+MAIN: Symbol table '.symtab' contains 3 entries:
+MAIN-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+MAIN-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+MAIN-NEXT:      1: 0000000000202000     0 NOTYPE  LOCAL  HIDDEN     7 _DYNAMIC
+MAIN-NEXT:      2: 0000000000201000     0 NOTYPE  GLOBAL DEFAULT    6 _start
 
 PART1: ELF Header:
 PART1-NEXT:   Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
@@ -105,16 +105,6 @@ PART1-NEXT:   [ 8] .symtab           SYMTAB          0000000000000000 002008 000
 PART1-NEXT:   [ 9] .shstrtab         STRTAB          0000000000000000 002038 00004d 00      0   0  1
 PART1-NEXT:   [10] .strtab           STRTAB          0000000000000000 002085 000004 00      0   0  1
 
-PART1: Symbol table '.dynsym' contains 2 entries:
-PART1-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
-PART1-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
-PART1-NEXT:      1: 0000000000205000     0 NOTYPE  GLOBAL DEFAULT   15 g1
-
-PART1: Symbol table '.symtab' contains 2 entries:
-PART1-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
-PART1-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
-PART1-NEXT:      1: 0000000000205000     0 NOTYPE  GLOBAL DEFAULT    6 g1
-
 PART1: Program Headers:
 PART1-NEXT:   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 PART1-NEXT:   PHDR           0x000040 0x0000000000203040 0x0000000000203040 0x000188 0x000188 R   0x1
@@ -124,6 +114,16 @@ PART1-NEXT:   LOAD           0x002000 0x0000000000205000 0x0000000000205000 0x00
 PART1-NEXT:   DYNAMIC        0x001000 0x0000000000204000 0x0000000000204000 0x000090 0x000090 RW  0x8
 PART1-NEXT:   GNU_RELRO      0x001000 0x0000000000204000 0x0000000000204000 0x000090 0x001000 R   0x1
 PART1-NEXT:   GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x0
+
+PART1: Symbol table '.dynsym' contains 2 entries:
+PART1-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+PART1-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+PART1-NEXT:      1: 0000000000205000     0 NOTYPE  GLOBAL DEFAULT   15 g1
+
+PART1: Symbol table '.symtab' contains 2 entries:
+PART1-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+PART1-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+PART1-NEXT:      1: 0000000000205000     0 NOTYPE  GLOBAL DEFAULT    6 g1
 
 PART2: ELF Header:
 PART2-NEXT:   Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
@@ -160,16 +160,6 @@ PART2-NEXT:   [ 8] .symtab           SYMTAB          0000000000000000 002008 000
 PART2-NEXT:   [ 9] .shstrtab         STRTAB          0000000000000000 002038 00004d 00      0   0  1
 PART2-NEXT:   [10] .strtab           STRTAB          0000000000000000 002085 000004 00      0   0  1
 
-PART2: Symbol table '.dynsym' contains 2 entries:
-PART2-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
-PART2-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
-PART2-NEXT:      1: 0000000000208000     0 NOTYPE  GLOBAL DEFAULT   23 g2
-
-PART2: Symbol table '.symtab' contains 2 entries:
-PART2-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
-PART2-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
-PART2-NEXT:      1: 0000000000208000     0 NOTYPE  GLOBAL DEFAULT    6 g2
-
 PART2: Program Headers:
 PART2-NEXT:   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 PART2-NEXT:   PHDR           0x000040 0x0000000000206040 0x0000000000206040 0x000188 0x000188 R   0x1
@@ -179,6 +169,16 @@ PART2-NEXT:   LOAD           0x002000 0x0000000000208000 0x0000000000208000 0x00
 PART2-NEXT:   DYNAMIC        0x001000 0x0000000000207000 0x0000000000207000 0x000090 0x000090 RW  0x8
 PART2-NEXT:   GNU_RELRO      0x001000 0x0000000000207000 0x0000000000207000 0x000090 0x001000 R   0x1
 PART2-NEXT:   GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x0
+
+PART2: Symbol table '.dynsym' contains 2 entries:
+PART2-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+PART2-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+PART2-NEXT:      1: 0000000000208000     0 NOTYPE  GLOBAL DEFAULT   23 g2
+
+PART2: Symbol table '.symtab' contains 2 entries:
+PART2-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
+PART2-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+PART2-NEXT:      1: 0000000000208000     0 NOTYPE  GLOBAL DEFAULT    6 g2
 
 RUN: not llvm-objcopy --extract-partition=part3 %p/Inputs/partitions.elf %t4 2>&1 | FileCheck --check-prefix=ERROR1 %s
 ERROR1: error: could not find partition named 'part3'

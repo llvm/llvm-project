@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 

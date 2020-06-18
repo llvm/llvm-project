@@ -137,6 +137,7 @@
 # CHECK-NEXT: Name Index @ 0x0 {
 # CHECK-NEXT:   Header {
 # CHECK-NEXT:     Length: 0x60
+# CHECK-NEXT:     Format: DWARF32
 # CHECK-NEXT:     Version: 5
 # CHECK-NEXT:     CU count: 1
 # CHECK-NEXT:     Local TU count: 0
@@ -182,6 +183,7 @@
 # CHECK-NEXT: Name Index @ 0x64 {
 # CHECK-NEXT:   Header {
 # CHECK-NEXT:     Length: 0x44
+# CHECK-NEXT:     Format: DWARF32
 # CHECK-NEXT:     Version: 5
 # CHECK-NEXT:     CU count: 1
 # CHECK-NEXT:     Local TU count: 0
@@ -215,6 +217,7 @@
 # CHECK-NEXT: Name Index @ 0xac {
 # CHECK-NEXT:   Header {
 # CHECK-NEXT:     Length: 0x68
+# CHECK-NEXT:     Format: DWARF64
 # CHECK-NEXT:     Version: 5
 # CHECK-NEXT:     CU count: 1
 # CHECK-NEXT:     Local TU count: 1

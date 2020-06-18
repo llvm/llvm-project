@@ -1917,3 +1917,14 @@
 {'is_defined': False, 'name': '__cxa_rethrow_primary_exception', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_throw', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_uncaught_exceptions', 'type': 'FUNC'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__123__libcpp_atomic_monitorEPVKv'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__123__cxx_atomic_notify_allEPVKv'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__123__cxx_atomic_notify_oneEPVKv'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__134__construct_barrier_algorithm_baseERl'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__120__libcpp_atomic_waitEPVKvi'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__123__cxx_atomic_notify_allEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEEi'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__123__cxx_atomic_notify_oneEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE'}

@@ -92,9 +92,9 @@ static void lowerAlignmentHint(const MachineInstr *MI, MCInst &LoweredMI,
     return;
   const MachineMemOperand *MMO = *MI->memoperands_begin();
   unsigned AlignmentHint = 0;
-  if (MMO->getAlignment() >= 16)
+  if (MMO->getAlign() >= Align(16))
     AlignmentHint = 4;
-  else if (MMO->getAlignment() >= 8)
+  else if (MMO->getAlign() >= Align(8))
     AlignmentHint = 3;
   if (AlignmentHint == 0)
     return;

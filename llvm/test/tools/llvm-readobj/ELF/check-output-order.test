@@ -11,19 +11,19 @@
 # CHECK: There are 5 section headers, starting at offset
 # CHECK: Section Headers:
 # CHECK: Key to Flags:
-# CHECK: There are no relocations in this file.
-# CHECK: Symbol table '.symtab' contains 1 entries
-# CHECK:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
-# CHECK: Dynamic section at offset
-# CHECK:   0x0000000000000000 (NULL)               0x0
-# CHECK: NeededLibraries [
-# CHECK: ]
 # CHECK: Elf file type is DYN (Shared object file)
 # CHECK: Entry point 0x0
 # CHECK: There are 1 program headers, starting at offset 64
 # CHECK: DYNAMIC
 # CHECK:  Section to Segment mapping:
 # CHECK:    None   .symtab .strtab .shstrtab
+# CHECK: Dynamic section at offset
+# CHECK:   0x0000000000000000 (NULL)               0x0
+# CHECK: NeededLibraries [
+# CHECK: ]
+# CHECK: There are no relocations in this file.
+# CHECK: Symbol table '.symtab' contains 1 entries
+# CHECK:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
 # CHECK: There are no section groups in this file.
 
 

@@ -1,8 +1,13 @@
-; RUN: llc -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
-; RUN: llc -filetype=obj %p/Inputs/call-ret32.ll -o %t.call.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-ret32.s -o %t.call.o
 ; RUN: llc -filetype=obj %s -o %t.main.o
+
 ; RUN: wasm-ld --export=call_ret32 --export=ret32 -o %t.wasm %t.main.o %t.ret32.o %t.call.o 2>&1 | FileCheck %s -check-prefix=WARN
 ; RUN: obj2yaml %t.wasm | FileCheck %s -check-prefix=YAML
+
+; RUN: wasm-ld -r -o %t.reloc.o %t.main.o %t.ret32.o %t.call.o 2>&1 | FileCheck %s -check-prefix=WARN
+; RUN: obj2yaml %t.reloc.o | FileCheck %s -check-prefix=RELOC
+
 ; RUN: not wasm-ld --fatal-warnings -o %t.wasm %t.main.o %t.ret32.o %t.call.o 2>&1 | FileCheck %s -check-prefix=ERROR
 
 target triple = "wasm32-unknown-unknown"
@@ -49,3 +54,38 @@ declare i32 @ret32(i32, i64, i32) local_unnamed_addr
 ; YAML-NEXT:         Name:            call_ret32
 ; YAML-NEXT: ...
 
+;      RELOC:     Name:            linking
+; RELOC-NEXT:     Version:         2
+; RELOC-NEXT:     SymbolTable:
+; RELOC-NEXT:       - Index:           0
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Name:            _start
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:         Function:        1
+; RELOC-NEXT:       - Index:           1
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Name:            ret32
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:         Function:        2
+; RELOC-NEXT:       - Index:           2
+; RELOC-NEXT:         Kind:            DATA
+; RELOC-NEXT:         Name:            ret32_address_main
+; RELOC-NEXT:         Flags:           [  ]
+; RELOC-NEXT:         Segment:         0
+; RELOC-NEXT:         Size:            4
+; RELOC-NEXT:       - Index:           3
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Name:            call_ret32
+; RELOC-NEXT:         Flags:           [ ]
+; RELOC-NEXT:         Function:        3
+; RELOC-NEXT:       - Index:           4
+; RELOC-NEXT:         Kind:            DATA
+; RELOC-NEXT:         Name:            ret32_address
+; RELOC-NEXT:         Flags:           [  ]
+; RELOC-NEXT:         Segment:         1
+; RELOC-NEXT:         Size:            4
+; RELOC-NEXT:       - Index:           5
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Name:            'signature_mismatch:ret32'
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:         Function:        0

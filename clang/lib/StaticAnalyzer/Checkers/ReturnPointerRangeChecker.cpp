@@ -91,6 +91,6 @@ void ento::registerReturnPointerRangeChecker(CheckerManager &mgr) {
   mgr.registerChecker<ReturnPointerRangeChecker>();
 }
 
-bool ento::shouldRegisterReturnPointerRangeChecker(const LangOptions &LO) {
+bool ento::shouldRegisterReturnPointerRangeChecker(const CheckerManager &mgr) {
   return true;
 }

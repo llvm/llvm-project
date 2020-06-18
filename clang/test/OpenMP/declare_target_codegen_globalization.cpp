@@ -9,7 +9,7 @@ int bar() {
   return foo(a);
 }
 
-// CHECK: define weak void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+5]](i32* dereferenceable{{.*}})
+// CHECK: define weak void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+5]](i32* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %{{.*}})
 // CHECK-NOT: @__kmpc_data_sharing_coalesced_push_stack
 
 int maini1() {
@@ -23,15 +23,15 @@ int maini1() {
 }
 
 // parallel region
-// CHECK: define {{.*}}void @{{.*}}(i32* noalias {{.*}}, i32* noalias {{.*}}, i32* dereferenceable{{.*}})
+// CHECK: define {{.*}}void @{{.*}}(i32* noalias {{.*}}, i32* noalias {{.*}}, i32* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %{{.*}})
 // CHECK-NOT: call i8* @__kmpc_data_sharing_coalesced_push_stack(
 // CHECK: [[B_ADDR:%.+]] = alloca i32,
-// CHECK: call {{.*}}[[FOO:@.*foo.*]](i32* dereferenceable{{.*}} [[B_ADDR]])
+// CHECK: call {{.*}}[[FOO:@.*foo.*]](i32* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[B_ADDR]])
 // CHECK: call {{.*}}[[BAR:@.*bar.*]]()
 // CHECK-NOT: call void @__kmpc_data_sharing_pop_stack(
 // CHECK: ret void
 
-// CHECK: define {{.*}}[[FOO]](i32* dereferenceable{{.*}})
+// CHECK: define {{.*}}[[FOO]](i32* nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // CHECK-NOT: @__kmpc_data_sharing_coalesced_push_stack
 
 // CHECK: define {{.*}}[[BAR]]()
@@ -50,7 +50,7 @@ int maini1() {
 // CHECK: [[LID:%.+]] = and i32 [[TID]], 31
 // CHECK: [[A_GLOBAL_ADDR:%.+]] = getelementptr inbounds [32 x i32], [32 x i32]* [[A_ADDR]], i32 0, i32 [[LID]]
 // CHECK: [[A_ADDR:%.+]] = select i1 [[IS_SPMD]], i32* [[A_LOCAL_ADDR]], i32* [[A_GLOBAL_ADDR]]
-// CHECK: call {{.*}}[[FOO]](i32* dereferenceable{{.*}} [[A_ADDR]])
+// CHECK: call {{.*}}[[FOO]](i32* nonnull align {{[0-9]+}} dereferenceable{{.*}} [[A_ADDR]])
 // CHECK: br i1 [[IS_SPMD]], label
 // CHECK: [[BC:%.+]] = bitcast [[GLOBAL_ST]]* [[ITEMS]] to i8*
 // CHECK: call void @__kmpc_data_sharing_pop_stack(i8* [[BC]])

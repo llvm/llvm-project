@@ -1,7 +1,7 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_60 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 | FileCheck %s
 
-; CHECK-LABEL .func test(
+; CHECK-LABEL: .func test(
 define void @test(double* %dp0, double addrspace(1)* %dp1, double addrspace(3)* %dp3, double %d) {
 ; CHECK: atom.add.f64
   %r1 = call double @llvm.nvvm.atomic.load.add.f64.p0f64(double* %dp0, double %d)
@@ -12,7 +12,7 @@ define void @test(double* %dp0, double addrspace(1)* %dp1, double addrspace(3)* 
   ret void
 }
 
-; CHECK-LABEL .func test2(
+; CHECK-LABEL: .func test2(
 define void @test2(double* %dp0, double addrspace(1)* %dp1, double addrspace(3)* %dp3, double %d) {
 ; CHECK: atom.add.f64
   %r1 = atomicrmw fadd double* %dp0, double %d seq_cst

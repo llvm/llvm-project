@@ -188,7 +188,7 @@ define void @store_i64_by_i8_bswap_uses(i32 signext %t, i8* %p) {
 ; CHECK-PPC64LE-LABEL: store_i64_by_i8_bswap_uses:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
 ; CHECK-PPC64LE-NEXT:    slwi 5, 3, 3
-; CHECK-PPC64LE-NEXT:    subf 3, 3, 5
+; CHECK-PPC64LE-NEXT:    sub 3, 5, 3
 ; CHECK-PPC64LE-NEXT:    extsw 3, 3
 ; CHECK-PPC64LE-NEXT:    stdbrx 3, 0, 4
 ; CHECK-PPC64LE-NEXT:    blr
@@ -196,7 +196,7 @@ define void @store_i64_by_i8_bswap_uses(i32 signext %t, i8* %p) {
 ; CHECK-PPC64-LABEL: store_i64_by_i8_bswap_uses:
 ; CHECK-PPC64:       # %bb.0: # %entry
 ; CHECK-PPC64-NEXT:    slwi 5, 3, 3
-; CHECK-PPC64-NEXT:    subf 3, 3, 5
+; CHECK-PPC64-NEXT:    sub 3, 5, 3
 ; CHECK-PPC64-NEXT:    extsw 3, 3
 ; CHECK-PPC64-NEXT:    stdx 3, 0, 4
 ; CHECK-PPC64-NEXT:    blr

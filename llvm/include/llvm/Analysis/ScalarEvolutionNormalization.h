@@ -37,13 +37,13 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 namespace llvm {
 
 class Loop;
 class ScalarEvolution;
 class SCEV;
+class SCEVAddRecExpr;
 
 typedef SmallPtrSet<const Loop *, 2> PostIncLoopSet;
 

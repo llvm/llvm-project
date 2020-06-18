@@ -30,6 +30,7 @@ class MachineInstr;
 class MachineOperand;
 class GISelKnownBits;
 class MachineDominatorTree;
+class LegalizerInfo;
 
 struct PreferredTuple {
   LLT Ty;                // The result type of the extend.
@@ -56,11 +57,17 @@ protected:
   GISelChangeObserver &Observer;
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
+  const LegalizerInfo *LI;
 
 public:
   CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
                  GISelKnownBits *KB = nullptr,
-                 MachineDominatorTree *MDT = nullptr);
+                 MachineDominatorTree *MDT = nullptr,
+                 const LegalizerInfo *LI = nullptr);
+
+  GISelKnownBits *getKnownBits() const {
+    return KB;
+  }
 
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
   void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg, Register ToReg) const;
@@ -78,7 +85,7 @@ public:
 
   /// Returns true if \p DefMI precedes \p UseMI or they are the same
   /// instruction. Both must be in the same basic block.
-  bool isPredecessor(MachineInstr &DefMI, MachineInstr &UseMI);
+  bool isPredecessor(const MachineInstr &DefMI, const MachineInstr &UseMI);
 
   /// Returns true if \p DefMI dominates \p UseMI. By definition an
   /// instruction dominates itself.
@@ -86,7 +93,7 @@ public:
   /// If we haven't been provided with a MachineDominatorTree during
   /// construction, this function returns a conservative result that tracks just
   /// a single basic block.
-  bool dominates(MachineInstr &DefMI, MachineInstr &UseMI);
+  bool dominates(const MachineInstr &DefMI, const MachineInstr &UseMI);
 
   /// If \p MI is extend that consumes the result of a load, try to combine it.
   /// Returns true if MI changed.
@@ -189,6 +196,58 @@ public:
                                  unsigned &ShiftVal);
   bool applyCombineShiftToUnmerge(MachineInstr &MI, const unsigned &ShiftVal);
   bool tryCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftAmount);
+
+  /// Return true if any explicit use operand on \p MI is defined by a
+  /// G_IMPLICIT_DEF.
+  bool matchAnyExplicitUseIsUndef(MachineInstr &MI);
+
+  /// Return true if all register explicit use operands on \p MI are defined by
+  /// a G_IMPLICIT_DEF.
+  bool matchAllExplicitUsesAreUndef(MachineInstr &MI);
+
+  /// Return true if a G_SHUFFLE_VECTOR instruction \p MI has an undef mask.
+  bool matchUndefShuffleVectorMask(MachineInstr &MI);
+
+  /// Return true if a G_STORE instruction \p MI is storing an undef value.
+  bool matchUndefStore(MachineInstr &MI);
+
+  /// Replace an instruction with a G_FCONSTANT with value \p C.
+  bool replaceInstWithFConstant(MachineInstr &MI, double C);
+
+  /// Replace an instruction with a G_CONSTANT with value \p C.
+  bool replaceInstWithConstant(MachineInstr &MI, int64_t C);
+
+  /// Replace an instruction with a G_IMPLICIT_DEF.
+  bool replaceInstWithUndef(MachineInstr &MI);
+
+  /// Delete \p MI and replace all of its uses with its \p OpIdx-th operand.
+  bool replaceSingleDefInstWithOperand(MachineInstr &MI, unsigned OpIdx);
+
+  /// Return true if \p MOP1 and \p MOP2 are register operands are defined by
+  /// equivalent instructions.
+  bool matchEqualDefs(const MachineOperand &MOP1, const MachineOperand &MOP2);
+
+  /// Return true if \p MOP is defined by a G_CONSTANT with a value equal to
+  /// \p C.
+  bool matchConstantOp(const MachineOperand &MOP, int64_t C);
+
+  /// Optimize (cond ? x : x) -> x
+  bool matchSelectSameVal(MachineInstr &MI);
+
+  /// Optimize (x op x) -> x
+  bool matchBinOpSameVal(MachineInstr &MI);
+
+  /// Check if operand \p OpIdx is zero.
+  bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx);
+
+  /// Erase \p MI
+  bool eraseInst(MachineInstr &MI);
+
+  /// Return true if MI is a G_ADD which can be simplified to a G_SUB.
+  bool matchSimplifyAddToSub(MachineInstr &MI,
+                             std::tuple<Register, Register> &MatchInfo);
+  bool applySimplifyAddToSub(MachineInstr &MI,
+                             std::tuple<Register, Register> &MatchInfo);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

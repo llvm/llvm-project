@@ -11,6 +11,7 @@
 #include "Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include <cctype>
 #include <queue>
@@ -20,7 +21,9 @@ namespace clang {
 namespace clangd {
 namespace dex {
 
-std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
+// Produce trigrams (including duplicates) and pass them to Out().
+template <typename Func>
+static void identifierTrigrams(llvm::StringRef Identifier, Func Out) {
   // Apply fuzzy matching text segmentation.
   std::vector<CharRole> Roles(Identifier.size());
   calculateRoles(Identifier,
@@ -46,13 +49,7 @@ std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
     }
   }
 
-  llvm::DenseSet<Token> UniqueTrigrams;
-
-  auto Add = [&](std::string Chars) {
-    UniqueTrigrams.insert(Token(Token::Kind::Trigram, Chars));
-  };
-
-  // Iterate through valid sequneces of three characters Fuzzy Matcher can
+  // Iterate through valid sequences of three characters Fuzzy Matcher can
   // process.
   for (size_t I = 0; I < LowercaseIdentifier.size(); ++I) {
     // Skip delimiters.
@@ -64,23 +61,41 @@ std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
       for (const unsigned K : Next[J]) {
         if (K == 0)
           continue;
-        Add({{LowercaseIdentifier[I], LowercaseIdentifier[J],
-              LowercaseIdentifier[K]}});
+        Out(Trigram(LowercaseIdentifier[I], LowercaseIdentifier[J],
+                    LowercaseIdentifier[K]));
       }
     }
   }
   // Emit short-query trigrams: FooBar -> f, fo, fb.
   if (!LowercaseIdentifier.empty())
-    Add({LowercaseIdentifier[0]});
+    Out(Trigram(LowercaseIdentifier[0]));
   if (LowercaseIdentifier.size() >= 2)
-    Add({LowercaseIdentifier[0], LowercaseIdentifier[1]});
+    Out(Trigram(LowercaseIdentifier[0], LowercaseIdentifier[1]));
   for (size_t I = 1; I < LowercaseIdentifier.size(); ++I)
     if (Roles[I] == Head) {
-      Add({LowercaseIdentifier[0], LowercaseIdentifier[I]});
+      Out(Trigram(LowercaseIdentifier[0], LowercaseIdentifier[I]));
       break;
     }
+}
 
-  return {UniqueTrigrams.begin(), UniqueTrigrams.end()};
+void generateIdentifierTrigrams(llvm::StringRef Identifier,
+                                std::vector<Trigram> &Result) {
+  // Empirically, scanning for duplicates is faster with fewer trigrams, and
+  // a hashtable is faster with more. This is a hot path, so dispatch based on
+  // expected number of trigrams. Longer identifiers produce more trigrams.
+  // The magic number was tuned by running IndexBenchmark.DexBuild.
+  constexpr unsigned ManyTrigramsIdentifierThreshold = 14;
+  Result.clear();
+  if (Identifier.size() < ManyTrigramsIdentifierThreshold) {
+    identifierTrigrams(Identifier, [&](Trigram T) {
+      if (!llvm::is_contained(Result, T))
+        Result.push_back(T);
+    });
+  } else {
+    identifierTrigrams(Identifier, [&](Trigram T) { Result.push_back(T); });
+    llvm::sort(Result);
+    Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
+  }
 }
 
 std::vector<Token> generateQueryTrigrams(llvm::StringRef Query) {

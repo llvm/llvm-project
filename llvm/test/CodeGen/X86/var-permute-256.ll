@@ -558,29 +558,27 @@ define <4 x i64> @var_shuffle_v4i64_from_v2i64(<2 x i64> %v, <4 x i64> %indices)
 ; XOP-LABEL: var_shuffle_v4i64_from_v2i64:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; XOP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
 ; XOP-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; XOP-NEXT:    vpaddq %xmm1, %xmm1, %xmm3
+; XOP-NEXT:    vpaddq %xmm1, %xmm1, %xmm2
 ; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; XOP-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
-; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
-; XOP-NEXT:    vpermil2pd $0, %ymm1, %ymm2, %ymm0, %ymm0
+; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; XOP-NEXT:    vpermil2pd $0, %ymm1, %ymm0, %ymm0, %ymm0
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: var_shuffle_v4i64_from_v2i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vpaddq %xmm1, %xmm1, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vpaddq %xmm1, %xmm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm4
-; AVX1-NEXT:    vpermilpd %ymm4, %ymm2, %ymm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vpermilpd %ymm4, %ymm0, %ymm0
-; AVX1-NEXT:    vpcmpgtq {{.*}}(%rip), %xmm3, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm3
+; AVX1-NEXT:    vpermilpd %ymm3, %ymm0, %ymm0
+; AVX1-NEXT:    vpcmpgtq {{.*}}(%rip), %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpgtq {{\.LCPI.*}}+{{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-NEXT:    vpermilpd %ymm3, %ymm0, %ymm2
 ; AVX1-NEXT:    vblendvpd %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -590,8 +588,7 @@ define <4 x i64> @var_shuffle_v4i64_from_v2i64(<2 x i64> %v, <4 x i64> %indices)
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [2,2,2,2]
 ; AVX2-NEXT:    vpcmpgtq %ymm2, %ymm1, %ymm2
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[2,3,2,3]
-; AVX2-NEXT:    vpermilpd %ymm1, %ymm3, %ymm3
+; AVX2-NEXT:    vpermilpd %ymm1, %ymm0, %ymm3
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,1]
 ; AVX2-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vblendvpd %ymm2, %ymm3, %ymm0, %ymm0
@@ -984,29 +981,27 @@ define <4 x double> @var_shuffle_v4f64_from_v2f64(<2 x double> %v, <4 x i64> %in
 ; XOP-LABEL: var_shuffle_v4f64_from_v2f64:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; XOP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
 ; XOP-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; XOP-NEXT:    vpaddq %xmm1, %xmm1, %xmm3
+; XOP-NEXT:    vpaddq %xmm1, %xmm1, %xmm2
 ; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; XOP-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
-; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
-; XOP-NEXT:    vpermil2pd $0, %ymm1, %ymm2, %ymm0, %ymm0
+; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; XOP-NEXT:    vpermil2pd $0, %ymm1, %ymm0, %ymm0, %ymm0
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: var_shuffle_v4f64_from_v2f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vpaddq %xmm1, %xmm1, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vpaddq %xmm1, %xmm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm4
-; AVX1-NEXT:    vpermilpd %ymm4, %ymm2, %ymm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vpermilpd %ymm4, %ymm0, %ymm0
-; AVX1-NEXT:    vpcmpgtq {{.*}}(%rip), %xmm3, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm3
+; AVX1-NEXT:    vpermilpd %ymm3, %ymm0, %ymm0
+; AVX1-NEXT:    vpcmpgtq {{.*}}(%rip), %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpgtq {{\.LCPI.*}}+{{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-NEXT:    vpermilpd %ymm3, %ymm0, %ymm2
 ; AVX1-NEXT:    vblendvpd %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -1016,8 +1011,7 @@ define <4 x double> @var_shuffle_v4f64_from_v2f64(<2 x double> %v, <4 x i64> %in
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [2,2,2,2]
 ; AVX2-NEXT:    vpcmpgtq %ymm2, %ymm1, %ymm2
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[2,3,2,3]
-; AVX2-NEXT:    vpermilpd %ymm1, %ymm3, %ymm3
+; AVX2-NEXT:    vpermilpd %ymm1, %ymm0, %ymm3
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,1]
 ; AVX2-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vblendvpd %ymm2, %ymm3, %ymm0, %ymm0

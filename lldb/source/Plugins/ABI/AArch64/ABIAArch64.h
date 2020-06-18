@@ -9,9 +9,24 @@
 #ifndef LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABIAARCH64_H
 #define LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABIAARCH64_H
 
-class ABIAArch64 {
+#include "lldb/Target/ABI.h"
+
+class ABIAArch64: public lldb_private::MCBasedABI {
 public:
   static void Initialize();
   static void Terminate();
+
+protected:
+  std::pair<uint32_t, uint32_t>
+  GetEHAndDWARFNums(llvm::StringRef name) override;
+
+  std::string GetMCName(std::string reg) override {
+    MapRegisterName(reg, "v", "q");
+    return reg;
+  }
+
+  uint32_t GetGenericNum(llvm::StringRef name) override;
+
+  using lldb_private::MCBasedABI::MCBasedABI;
 };
 #endif

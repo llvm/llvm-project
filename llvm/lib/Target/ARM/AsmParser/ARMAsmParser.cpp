@@ -3619,8 +3619,7 @@ public:
     if (Kind == k_RegisterList && Regs.back().second == ARM::APSR)
       Kind = k_RegisterListWithAPSR;
 
-    assert(std::is_sorted(Regs.begin(), Regs.end()) &&
-           "Register list must be sorted by encoding");
+    assert(llvm::is_sorted(Regs) && "Register list must be sorted by encoding");
 
     auto Op = std::make_unique<ARMOperand>(Kind);
     for (const auto &P : Regs)
@@ -6119,20 +6118,35 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   case AsmToken::LCurly:
     return parseRegisterList(Operands, !Mnemonic.startswith("clr"));
   case AsmToken::Dollar:
-  case AsmToken::Hash:
-    // #42 -> immediate.
+  case AsmToken::Hash: {
+    // #42 -> immediate
+    // $ 42 -> immediate
+    // $foo -> symbol name
+    // $42 -> symbol name
     S = Parser.getTok().getLoc();
-    Parser.Lex();
+
+    // Favor the interpretation of $-prefixed operands as symbol names.
+    // Cases where immediates are explicitly expected are handled by their
+    // specific ParseMethod implementations.
+    auto AdjacentToken = getLexer().peekTok(/*ShouldSkipSpace=*/false);
+    bool ExpectIdentifier = Parser.getTok().is(AsmToken::Dollar) &&
+                            (AdjacentToken.is(AsmToken::Identifier) ||
+                             AdjacentToken.is(AsmToken::Integer));
+    if (!ExpectIdentifier) {
+      // Token is not part of identifier. Drop leading $ or # before parsing
+      // expression.
+      Parser.Lex();
+    }
 
     if (Parser.getTok().isNot(AsmToken::Colon)) {
-      bool isNegative = Parser.getTok().is(AsmToken::Minus);
+      bool IsNegative = Parser.getTok().is(AsmToken::Minus);
       const MCExpr *ImmVal;
       if (getParser().parseExpression(ImmVal))
         return true;
       const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(ImmVal);
       if (CE) {
         int32_t Val = CE->getValue();
-        if (isNegative && Val == 0)
+        if (IsNegative && Val == 0)
           ImmVal = MCConstantExpr::create(std::numeric_limits<int32_t>::min(),
                                           getContext());
       }
@@ -6151,7 +6165,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     }
     // w/ a ':' after the '#', it's just like a plain ':'.
     LLVM_FALLTHROUGH;
-
+  }
   case AsmToken::Colon: {
     S = Parser.getTok().getLoc();
     // ":lower16:" and ":upper16:" expression prefixes
@@ -6307,6 +6321,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic == "vrintp" || Mnemonic == "vrintm" || Mnemonic == "hvc" ||
       Mnemonic.startswith("vsel") || Mnemonic == "vins" || Mnemonic == "vmovx" ||
       Mnemonic == "bxns"  || Mnemonic == "blxns" ||
+      Mnemonic == "vdot"  || Mnemonic == "vmmla"  ||
       Mnemonic == "vudot" || Mnemonic == "vsdot" ||
       Mnemonic == "vcmla" || Mnemonic == "vcadd" ||
       Mnemonic == "vfmal" || Mnemonic == "vfmsl" ||
@@ -6447,8 +6462,12 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic,
       Mnemonic == "vudot" || Mnemonic == "vsdot" ||
       Mnemonic == "vcmla" || Mnemonic == "vcadd" ||
       Mnemonic == "vfmal" || Mnemonic == "vfmsl" ||
+      Mnemonic == "vfmat" || Mnemonic == "vfmab" ||
+      Mnemonic == "vdot"  || Mnemonic == "vmmla" ||
       Mnemonic == "sb"    || Mnemonic == "ssbb"  ||
-      Mnemonic == "pssbb" ||
+      Mnemonic == "pssbb" || Mnemonic == "vsmmla" ||
+      Mnemonic == "vummla" || Mnemonic == "vusmmla" ||
+      Mnemonic == "vusdot" || Mnemonic == "vsudot" ||
       Mnemonic == "bfcsel" || Mnemonic == "wls" ||
       Mnemonic == "dls" || Mnemonic == "le" || Mnemonic == "csel" ||
       Mnemonic == "csinc" || Mnemonic == "csinv" || Mnemonic == "csneg" ||
@@ -6962,6 +6981,8 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   //    ITx   -> x100    (ITT -> 0100, ITE -> 1100)
   //    ITxy  -> xy10    (e.g. ITET -> 1010)
   //    ITxyz -> xyz1    (e.g. ITEET -> 1101)
+  // Note: See the ARM::PredBlockMask enum in
+  //   /lib/Target/ARM/Utils/ARMBaseInfo.h
   if (Mnemonic == "it" || Mnemonic.startswith("vpt") ||
       Mnemonic.startswith("vpst")) {
     SMLoc Loc = Mnemonic == "it"  ? SMLoc::getFromPointer(NameLoc.getPointer() + 2) :
@@ -8528,6 +8549,26 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.addOperand(MCOperand::createImm(0));
     TmpInst.addOperand(Inst.getOperand(2));
     TmpInst.addOperand(Inst.getOperand(3));
+    Inst = TmpInst;
+    return true;
+  }
+  // Alias for 'ldr{sb,h,sh}t Rt, [Rn] {, #imm}' for ommitted immediate.
+  case ARM::LDRSBTii:
+  case ARM::LDRHTii:
+  case ARM::LDRSHTii: {
+    MCInst TmpInst;
+
+    if (Inst.getOpcode() == ARM::LDRSBTii)
+      TmpInst.setOpcode(ARM::LDRSBTi);
+    else if (Inst.getOpcode() == ARM::LDRHTii)
+      TmpInst.setOpcode(ARM::LDRHTi);
+    else if (Inst.getOpcode() == ARM::LDRSHTii)
+      TmpInst.setOpcode(ARM::LDRSHTi);
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(1));
+    TmpInst.addOperand(Inst.getOperand(1));
+    TmpInst.addOperand(MCOperand::createImm(256));
+    TmpInst.addOperand(Inst.getOperand(2));
     Inst = TmpInst;
     return true;
   }
@@ -11105,11 +11146,13 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
   TagLoc = Parser.getTok().getLoc();
   if (Parser.getTok().is(AsmToken::Identifier)) {
     StringRef Name = Parser.getTok().getIdentifier();
-    Tag = ARMBuildAttrs::AttrTypeFromString(Name);
-    if (Tag == -1) {
+    Optional<unsigned> Ret =
+        ELFAttrs::attrTypeFromString(Name, ARMBuildAttrs::ARMAttributeTags);
+    if (!Ret.hasValue()) {
       Error(TagLoc, "attribute name not recognised: " + Name);
       return false;
     }
+    Tag = Ret.getValue();
     Parser.Lex();
   } else {
     const MCExpr *AttrExpr;

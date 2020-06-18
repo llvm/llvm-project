@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/GPU/GPUDialect.h"
+
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/FunctionImplementation.h"
@@ -28,15 +30,13 @@ using namespace mlir::gpu;
 // GPUDialect
 //===----------------------------------------------------------------------===//
 
-StringRef GPUDialect::getDialectName() { return "gpu"; }
-
 bool GPUDialect::isKernel(Operation *op) {
   UnitAttr isKernelAttr = op->getAttrOfType<UnitAttr>(getKernelFuncAttrName());
   return static_cast<bool>(isKernelAttr);
 }
 
 GPUDialect::GPUDialect(MLIRContext *context)
-    : Dialect(getDialectName(), context) {
+    : Dialect(getDialectNamespace(), context) {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"
@@ -46,7 +46,7 @@ GPUDialect::GPUDialect(MLIRContext *context)
 LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
                                                    NamedAttribute attr) {
   if (!attr.second.isa<UnitAttr>() ||
-      !attr.first.is(getContainerModuleAttrName()))
+      attr.first != getContainerModuleAttrName())
     return success();
 
   auto module = dyn_cast<ModuleOp>(op);
@@ -64,10 +64,8 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
 
     // Ignore launch ops with missing attributes here. The errors will be
     // reported by the verifiers of those ops.
-    if (!launchOp.getAttrOfType<StringAttr>(
-            LaunchFuncOp::getKernelAttrName()) ||
-        !launchOp.getAttrOfType<SymbolRefAttr>(
-            LaunchFuncOp::getKernelModuleAttrName()))
+    if (!launchOp.getAttrOfType<SymbolRefAttr>(
+            LaunchFuncOp::getKernelAttrName()))
       return success();
 
     // Check that `launch_func` refers to a well-formed GPU kernel module.
@@ -78,13 +76,12 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
              << "kernel module '" << kernelModuleName << "' is undefined";
 
     // Check that `launch_func` refers to a well-formed kernel function.
-    StringRef kernelName = launchOp.kernel();
-    Operation *kernelFunc = kernelModule.lookupSymbol(kernelName);
+    Operation *kernelFunc = module.lookupSymbol(launchOp.kernel());
     auto kernelGPUFunction = dyn_cast_or_null<gpu::GPUFuncOp>(kernelFunc);
     auto kernelLLVMFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(kernelFunc);
     if (!kernelGPUFunction && !kernelLLVMFunction)
       return launchOp.emitOpError("kernel function '")
-             << kernelName << "' is undefined";
+             << launchOp.kernel() << "' is undefined";
     if (!kernelFunc->getAttrOfType<mlir::UnitAttr>(
             GPUDialect::getKernelFuncAttrName()))
       return launchOp.emitOpError("kernel function is missing the '")
@@ -92,7 +89,7 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
 
     // TODO(ntv,zinenko,herhut): if the kernel function has been converted to
     // the LLVM dialect but the caller hasn't (which happens during the
-    // separate compilation), do not check type correspondance as it would
+    // separate compilation), do not check type correspondence as it would
     // require the verifier to be aware of the LLVM type conversion.
     if (kernelLLVMFunction)
       return success();
@@ -148,6 +145,14 @@ static LogicalResult verifyAllReduce(gpu::AllReduceOp allReduce) {
     }
     if (yieldCount == 0)
       return allReduce.emitError("expected gpu.yield op in region");
+  } else {
+    StringRef opName = *allReduce.op();
+    if ((opName == "and" || opName == "or" || opName == "xor") &&
+        !allReduce.getType().isa<IntegerType>()) {
+      return allReduce.emitError()
+             << '`' << opName << '`'
+             << " accumulator is only compatible with Integer type";
+    }
   }
   return success();
 }
@@ -158,7 +163,7 @@ static LogicalResult verifyShuffleOp(gpu::ShuffleOp shuffleOp) {
     return shuffleOp.emitOpError()
            << "requires the same type for value operand and result";
   }
-  if (!type.isIntOrFloat() || type.getIntOrFloatBitWidth() != 32) {
+  if (!type.isSignlessIntOrFloat() || type.getIntOrFloatBitWidth() != 32) {
     return shuffleOp.emitOpError()
            << "requires value operand type to be f32 or i32";
   }
@@ -195,9 +200,9 @@ static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &state) {
 // LaunchOp
 //===----------------------------------------------------------------------===//
 
-void LaunchOp::build(Builder *builder, OperationState &result, Value gridSizeX,
-                     Value gridSizeY, Value gridSizeZ, Value blockSizeX,
-                     Value blockSizeY, Value blockSizeZ) {
+void LaunchOp::build(OpBuilder &builder, OperationState &result,
+                     Value gridSizeX, Value gridSizeY, Value gridSizeZ,
+                     Value blockSizeX, Value blockSizeY, Value blockSizeZ) {
   // Add grid and block sizes as op operands, followed by the data operands.
   result.addOperands(
       {gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ});
@@ -208,30 +213,30 @@ void LaunchOp::build(Builder *builder, OperationState &result, Value gridSizeX,
   Region *kernelRegion = result.addRegion();
   Block *body = new Block();
   body->addArguments(
-      std::vector<Type>(kNumConfigRegionAttributes, builder->getIndexType()));
+      std::vector<Type>(kNumConfigRegionAttributes, builder.getIndexType()));
   kernelRegion->push_back(body);
 }
 
 KernelDim3 LaunchOp::getBlockIds() {
-  assert(!body().getBlocks().empty() && "FuncOp body must not be empty.");
+  assert(!body().empty() && "LaunchOp body must not be empty.");
   auto args = body().getBlocks().front().getArguments();
   return KernelDim3{args[0], args[1], args[2]};
 }
 
 KernelDim3 LaunchOp::getThreadIds() {
-  assert(!body().getBlocks().empty() && "FuncOp body must not be empty.");
+  assert(!body().empty() && "LaunchOp body must not be empty.");
   auto args = body().getBlocks().front().getArguments();
   return KernelDim3{args[3], args[4], args[5]};
 }
 
 KernelDim3 LaunchOp::getGridSize() {
-  assert(!body().getBlocks().empty() && "FuncOp body must not be empty.");
+  assert(!body().empty() && "LaunchOp body must not be empty.");
   auto args = body().getBlocks().front().getArguments();
   return KernelDim3{args[6], args[7], args[8]};
 }
 
 KernelDim3 LaunchOp::getBlockSize() {
-  assert(!body().getBlocks().empty() && "FuncOp body must not be empty.");
+  assert(!body().empty() && "LaunchOp body must not be empty.");
   auto args = body().getBlocks().front().getArguments();
   return KernelDim3{args[9], args[10], args[11]};
 }
@@ -383,7 +388,7 @@ static ParseResult parseLaunchOp(OpAsmParser &parser, OperationState &result) {
 // LaunchFuncOp
 //===----------------------------------------------------------------------===//
 
-void LaunchFuncOp::build(Builder *builder, OperationState &result,
+void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          GPUFuncOp kernelFunc, Value gridSizeX, Value gridSizeY,
                          Value gridSizeZ, Value blockSizeX, Value blockSizeY,
                          Value blockSizeZ, ValueRange kernelOperands) {
@@ -391,22 +396,21 @@ void LaunchFuncOp::build(Builder *builder, OperationState &result,
   result.addOperands(
       {gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ});
   result.addOperands(kernelOperands);
-  result.addAttribute(getKernelAttrName(),
-                      builder->getStringAttr(kernelFunc.getName()));
   auto kernelModule = kernelFunc.getParentOfType<GPUModuleOp>();
-  result.addAttribute(getKernelModuleAttrName(),
-                      builder->getSymbolRefAttr(kernelModule.getName()));
+  auto kernelSymbol = builder.getSymbolRefAttr(
+      kernelModule.getName(), {builder.getSymbolRefAttr(kernelFunc.getName())});
+  result.addAttribute(getKernelAttrName(), kernelSymbol);
 }
 
-void LaunchFuncOp::build(Builder *builder, OperationState &result,
+void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          GPUFuncOp kernelFunc, KernelDim3 gridSize,
                          KernelDim3 blockSize, ValueRange kernelOperands) {
   build(builder, result, kernelFunc, gridSize.x, gridSize.y, gridSize.z,
         blockSize.x, blockSize.y, blockSize.z, kernelOperands);
 }
 
-StringRef LaunchFuncOp::kernel() {
-  return getAttrOfType<StringAttr>(getKernelAttrName()).getValue();
+SymbolRefAttr LaunchFuncOp::kernel() {
+  return getAttrOfType<SymbolRefAttr>(getKernelAttrName());
 }
 
 unsigned LaunchFuncOp::getNumKernelOperands() {
@@ -414,9 +418,10 @@ unsigned LaunchFuncOp::getNumKernelOperands() {
 }
 
 StringRef LaunchFuncOp::getKernelModuleName() {
-  return getAttrOfType<SymbolRefAttr>(getKernelModuleAttrName())
-      .getRootReference();
+  return kernel().getRootReference();
 }
+
+StringRef LaunchFuncOp::getKernelName() { return kernel().getLeafReference(); }
 
 Value LaunchFuncOp::getKernelOperand(unsigned i) {
   return getOperation()->getOperand(i + kNumConfigOperands);
@@ -440,16 +445,10 @@ static LogicalResult verify(LaunchFuncOp op) {
         "expected the closest surrounding module to have the '" +
         GPUDialect::getContainerModuleAttrName() + "' attribute");
 
-  auto kernelAttr = op.getAttrOfType<StringAttr>(op.getKernelAttrName());
+  auto kernelAttr = op.getAttrOfType<SymbolRefAttr>(op.getKernelAttrName());
   if (!kernelAttr)
-    return op.emitOpError("string attribute '" + op.getKernelAttrName() +
-                          "' must be specified");
-
-  auto kernelModuleAttr =
-      op.getAttrOfType<SymbolRefAttr>(op.getKernelModuleAttrName());
-  if (!kernelModuleAttr)
     return op.emitOpError("symbol reference attribute '" +
-                          op.getKernelModuleAttrName() + "' must be specified");
+                          op.getKernelAttrName() + "' must be specified");
 
   return success();
 }
@@ -458,33 +457,34 @@ static LogicalResult verify(LaunchFuncOp op) {
 // GPUFuncOp
 //===----------------------------------------------------------------------===//
 
-/// Adds a workgroup attribution to "op" of the MemRef type with the given shape
-/// and element type.
-Value GPUFuncOp::addWorkgroupAttribution(ArrayRef<int64_t> shape,
-                                         Type elementType) {
-  unsigned pos = getNumFuncArguments() + getNumWorkgroupAttributions();
-  Block &bodyBlock = body().front();
-  Value attribution = bodyBlock.insertArgument(
-      std::next(bodyBlock.args_begin(), pos),
-      MemRefType::get(shape, elementType, /*affineMapComposition=*/{},
-                      GPUDialect::getWorkgroupAddressSpace()));
-  auto numWorkgroupBuffersAttr =
-      getAttrOfType<IntegerAttr>(getNumWorkgroupAttributionsAttrName());
-  setAttr(getNumWorkgroupAttributionsAttrName(),
-          IntegerAttr::get(numWorkgroupBuffersAttr.getType(),
-                           numWorkgroupBuffersAttr.getValue() + 1));
-  return attribution;
+/// Adds a new block argument that corresponds to buffers located in
+/// workgroup memory.
+BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type) {
+  auto attrName = getNumWorkgroupAttributionsAttrName();
+  auto attr = getAttrOfType<IntegerAttr>(attrName);
+  setAttr(attrName, IntegerAttr::get(attr.getType(), attr.getValue() + 1));
+  return getBody().front().insertArgument(
+      getType().getNumInputs() + attr.getInt(), type);
 }
 
-void GPUFuncOp::build(Builder *builder, OperationState &result, StringRef name,
-                      FunctionType type, ArrayRef<Type> workgroupAttributions,
+/// Adds a new block argument that corresponds to buffers located in
+/// private memory.
+BlockArgument GPUFuncOp::addPrivateAttribution(Type type) {
+  // Buffers on the private memory always come after buffers on the workgroup
+  // memory.
+  return getBody().front().addArgument(type);
+}
+
+void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
+                      StringRef name, FunctionType type,
+                      ArrayRef<Type> workgroupAttributions,
                       ArrayRef<Type> privateAttributions,
                       ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(SymbolTable::getSymbolAttrName(),
-                      builder->getStringAttr(name));
+                      builder.getStringAttr(name));
   result.addAttribute(getTypeAttrName(), TypeAttr::get(type));
   result.addAttribute(getNumWorkgroupAttributionsAttrName(),
-                      builder->getI64IntegerAttr(workgroupAttributions.size()));
+                      builder.getI64IntegerAttr(workgroupAttributions.size()));
   result.addAttributes(attrs);
   Region *body = result.addRegion();
   Block *entryBlock = new Block;
@@ -538,8 +538,8 @@ parseAttributions(OpAsmParser &parser, StringRef keyword,
 ///                 function-attributes? region
 static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 8> entryArgs;
-  SmallVector<SmallVector<NamedAttribute, 2>, 1> argAttrs;
-  SmallVector<SmallVector<NamedAttribute, 2>, 1> resultAttrs;
+  SmallVector<NamedAttrList, 1> argAttrs;
+  SmallVector<NamedAttrList, 1> resultAttrs;
   SmallVector<Type, 8> argTypes;
   SmallVector<Type, 4> resultTypes;
   bool isVariadic;
@@ -604,8 +604,8 @@ static void printAttributions(OpAsmPrinter &p, StringRef keyword,
     return;
 
   p << ' ' << keyword << '(';
-  interleaveComma(values, p,
-                  [&p](BlockArgument v) { p << v << " : " << v.getType(); });
+  llvm::interleaveComma(
+      values, p, [&p](BlockArgument v) { p << v << " : " << v.getType(); });
   p << ')';
 }
 
@@ -742,11 +742,11 @@ static LogicalResult verify(gpu::ReturnOp returnOp) {
 // GPUModuleOp
 //===----------------------------------------------------------------------===//
 
-void GPUModuleOp::build(Builder *builder, OperationState &result,
+void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name) {
-  ensureTerminator(*result.addRegion(), *builder, result.location);
-  result.attributes.push_back(builder->getNamedAttr(
-      ::mlir::SymbolTable::getSymbolAttrName(), builder->getStringAttr(name)));
+  ensureTerminator(*result.addRegion(), builder, result.location);
+  result.attributes.push_back(builder.getNamedAttr(
+      ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 }
 
 static ParseResult parseGPUModuleOp(OpAsmParser &parser,
@@ -779,7 +779,7 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
                 /*printBlockTerminators=*/false);
 }
 
-// Namespace avoids ambiguous ReturnOpOperandAdaptor.
+// Namespace avoids ambiguous ReturnOpAdaptor.
 namespace mlir {
 namespace gpu {
 #define GET_OP_CLASSES

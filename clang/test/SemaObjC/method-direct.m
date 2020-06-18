@@ -12,6 +12,7 @@
 
 __attribute__((objc_root_class))
 @interface Root
+- (void)unavailableInChild;
 - (void)rootRegular;                                  // expected-note {{previous declaration is here}}
 + (void)classRootRegular;                             // expected-note {{previous declaration is here}}
 - (void)rootDirect __attribute__((objc_direct));      // expected-note {{previous declaration is here}};
@@ -52,6 +53,7 @@ __attribute__((objc_direct_members))
 __attribute__((objc_direct_members))
 @interface SubDirectMembers : Root
 @property int foo; // expected-note {{previous declaration is here}}
+- (void)unavailableInChild __attribute__((unavailable)); // should not warn
 - (instancetype)init;
 @end
 
@@ -81,6 +83,8 @@ __attribute__((objc_direct_members))
 
 __attribute__((objc_direct_members))
 @implementation Root
+- (void)unavailableInChild {
+}
 - (void)rootRegular {
 }
 + (void)classRootRegular {

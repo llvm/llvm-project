@@ -31,6 +31,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
@@ -38,6 +39,11 @@
 #include <memory>
 
 using namespace llvm;
+
+static cl::opt<bool> LVIInlineAsmHardening(
+    "x86-experimental-lvi-inline-asm-hardening",
+    cl::desc("Harden inline assembly code that may be vulnerable to Load Value"
+             " Injection (LVI). This feature is experimental."), cl::Hidden);
 
 static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
   if (Scale != 1 && Scale != 2 && Scale != 4 && Scale != 8) {
@@ -74,7 +80,7 @@ class X86AsmParser : public MCTargetAsmParser {
 
   enum VEXEncoding {
     VEXEncoding_Default,
-    VEXEncoding_VEX2,
+    VEXEncoding_VEX,
     VEXEncoding_VEX3,
     VEXEncoding_EVEX,
   };
@@ -611,9 +617,9 @@ private:
     }
     bool onIdentifierExpr(const MCExpr *SymRef, StringRef SymRefName,
                           const InlineAsmIdentifierInfo &IDInfo,
-                          bool ParsingInlineAsm, StringRef &ErrMsg) {
+                          bool ParsingMSInlineAsm, StringRef &ErrMsg) {
       // InlineAsm: Treat an enum value as an integer
-      if (ParsingInlineAsm)
+      if (ParsingMSInlineAsm)
         if (IDInfo.isKind(InlineAsmIdentifierInfo::IK_EnumVal))
           return onInteger(IDInfo.Enum.EnumVal, ErrMsg);
       // Treat a symbolic constant like an integer
@@ -634,7 +640,7 @@ private:
         MemExpr = true;
         State = IES_INTEGER;
         IC.pushOperand(IC_IMM);
-        if (ParsingInlineAsm)
+        if (ParsingMSInlineAsm)
           Info = IDInfo;
         break;
       }
@@ -815,7 +821,7 @@ private:
       }
     }
     bool onOffset(const MCExpr *Val, SMLoc OffsetLoc, StringRef ID,
-                  const InlineAsmIdentifierInfo &IDInfo, bool ParsingInlineAsm,
+                  const InlineAsmIdentifierInfo &IDInfo, bool ParsingMSInlineAsm,
                   StringRef &ErrMsg) {
       PrevState = State;
       switch (State) {
@@ -833,7 +839,7 @@ private:
         // As we cannot yet resolve the actual value (offset), we retain
         // the requested semantics by pushing a '0' to the operands stack
         IC.pushOperand(IC_IMM);
-        if (ParsingInlineAsm) {
+        if (ParsingMSInlineAsm) {
           Info = IDInfo;
         }
         break;
@@ -899,10 +905,10 @@ private:
 
   bool ParseIntelMemoryOperandSize(unsigned &Size);
   std::unique_ptr<X86Operand>
-  CreateMemForInlineAsm(unsigned SegReg, const MCExpr *Disp, unsigned BaseReg,
-                        unsigned IndexReg, unsigned Scale, SMLoc Start,
-                        SMLoc End, unsigned Size, StringRef Identifier,
-                        const InlineAsmIdentifierInfo &Info);
+  CreateMemForMSInlineAsm(unsigned SegReg, const MCExpr *Disp, unsigned BaseReg,
+                          unsigned IndexReg, unsigned Scale, SMLoc Start,
+                          SMLoc End, unsigned Size, StringRef Identifier,
+                          const InlineAsmIdentifierInfo &Info);
 
   bool parseDirectiveEven(SMLoc L);
   bool ParseDirectiveCode(StringRef IDVal, SMLoc L);
@@ -929,6 +935,11 @@ private:
 
   bool validateInstruction(MCInst &Inst, const OperandVector &Ops);
   bool processInstruction(MCInst &Inst, const OperandVector &Ops);
+
+  // Load Value Injection (LVI) Mitigations for machine code
+  void emitWarningForSpecialLVIInstruction(SMLoc Loc);
+  void applyLVICFIMitigation(MCInst &Inst, MCStreamer &Out);
+  void applyLVILoadHardeningMitigation(MCInst &Inst, MCStreamer &Out);
 
   /// Wrapper around MCStreamer::emitInstruction(). Possibly adds
   /// instrumentation around Inst.
@@ -1177,7 +1188,7 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
 
   // The "flags" and "mxcsr" registers cannot be referenced directly.
   // Treat it as an identifier instead.
-  if (isParsingInlineAsm() && isParsingIntelSyntax() &&
+  if (isParsingMSInlineAsm() && isParsingIntelSyntax() &&
       (RegNo == X86::EFLAGS || RegNo == X86::MXCSR))
     RegNo = 0;
 
@@ -1458,7 +1469,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseOperand() {
   return ParseATTOperand();
 }
 
-std::unique_ptr<X86Operand> X86AsmParser::CreateMemForInlineAsm(
+std::unique_ptr<X86Operand> X86AsmParser::CreateMemForMSInlineAsm(
     unsigned SegReg, const MCExpr *Disp, unsigned BaseReg, unsigned IndexReg,
     unsigned Scale, SMLoc Start, SMLoc End, unsigned Size, StringRef Identifier,
     const InlineAsmIdentifierInfo &Info) {
@@ -1536,7 +1547,7 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
       return true;
     StringRef ErrMsg;
     ParseError =
-        SM.onOffset(Val, OffsetLoc, ID, Info, isParsingInlineAsm(), ErrMsg);
+        SM.onOffset(Val, OffsetLoc, ID, Info, isParsingMSInlineAsm(), ErrMsg);
     if (ParseError)
       return Error(SMLoc::getFromPointer(Name.data()), ErrMsg);
   } else {
@@ -1595,7 +1606,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       // Symbol reference, when parsing assembly content
       InlineAsmIdentifierInfo Info;
       const MCExpr *Val;
-      if (!isParsingInlineAsm()) {
+      if (!isParsingMSInlineAsm()) {
         if (getParser().parsePrimaryExpr(Val, End)) {
           return Error(Tok.getLoc(), "Unexpected identifier!");
         } else if (SM.onIdentifierExpr(Val, Identifier, Info, false, ErrMsg)) {
@@ -1646,8 +1657,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
             return Error(Loc, "invalid reference to undefined symbol");
           StringRef Identifier = Sym->getName();
           InlineAsmIdentifierInfo Info;
-          if (SM.onIdentifierExpr(Val, Identifier, Info,
-              isParsingInlineAsm(), ErrMsg))
+          if (SM.onIdentifierExpr(Val, Identifier, Info, isParsingMSInlineAsm(),
+                                  ErrMsg))
             return Error(Loc, ErrMsg);
           End = consumeToken();
         } else {
@@ -1741,7 +1752,7 @@ bool X86AsmParser::ParseIntelInlineAsmIdentifier(
     const MCExpr *&Val, StringRef &Identifier, InlineAsmIdentifierInfo &Info,
     bool IsUnevaluatedOperand, SMLoc &End, bool IsParsingOffsetOperator) {
   MCAsmParser &Parser = getParser();
-  assert(isParsingInlineAsm() && "Expected to be parsing inline assembly.");
+  assert(isParsingMSInlineAsm() && "Expected to be parsing inline assembly.");
   Val = nullptr;
 
   StringRef LineBuf(Identifier.data());
@@ -1844,7 +1855,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End) 
     APInt DotDisp;
     DotDispStr.getAsInteger(10, DotDisp);
     Offset = DotDisp.getZExtValue();
-  } else if (isParsingInlineAsm() && Tok.is(AsmToken::Identifier)) {
+  } else if (isParsingMSInlineAsm() && Tok.is(AsmToken::Identifier)) {
     std::pair<StringRef, StringRef> BaseMember = DotDispStr.split('.');
     if (SemaCallback->LookupInlineAsmField(BaseMember.first, BaseMember.second,
                                            Offset))
@@ -1869,7 +1880,7 @@ bool X86AsmParser::ParseIntelOffsetOperator(const MCExpr *&Val, StringRef &ID,
   // Eat offset, mark start of identifier.
   SMLoc Start = Lex().getLoc();
   ID = getTok().getString();
-  if (!isParsingInlineAsm()) {
+  if (!isParsingMSInlineAsm()) {
     if ((getTok().isNot(AsmToken::Identifier) &&
          getTok().isNot(AsmToken::String)) ||
         getParser().parsePrimaryExpr(Val, End))
@@ -1992,7 +2003,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   if (ParseIntelExpression(SM, End))
     return nullptr;
 
-  if (isParsingInlineAsm())
+  if (isParsingMSInlineAsm())
     RewriteIntelExpression(SM, Start, Tok.getLoc());
 
   int64_t Imm = SM.getImm();
@@ -2006,7 +2017,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   // RegNo != 0 specifies a valid segment register,
   // and we are parsing a segment override
   if (!SM.isMemExpr() && !RegNo) {
-    if (isParsingInlineAsm() && SM.isOffsetOperator()) {
+    if (isParsingMSInlineAsm() && SM.isOffsetOperator()) {
       const InlineAsmIdentifierInfo Info = SM.getIdentifierInfo();
       if (Info.isKind(InlineAsmIdentifierInfo::IK_Var)) {
         // Disp includes the address of a variable; make sure this is recorded
@@ -2058,10 +2069,10 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
       CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, is64BitMode(),
                                       ErrMsg))
     return ErrorOperand(Start, ErrMsg);
-  if (isParsingInlineAsm())
-    return CreateMemForInlineAsm(RegNo, Disp, BaseReg, IndexReg,
-                                 Scale, Start, End, Size, SM.getSymName(),
-                                 SM.getIdentifierInfo());
+  if (isParsingMSInlineAsm())
+    return CreateMemForMSInlineAsm(RegNo, Disp, BaseReg, IndexReg, Scale, Start,
+                                   End, Size, SM.getSymName(),
+                                   SM.getIdentifierInfo());
   if (!(BaseReg || IndexReg || RegNo))
     return X86Operand::CreateMem(getPointerWidth(), Disp, Start, End, Size);
   return X86Operand::CreateMem(getPointerWidth(), RegNo, Disp,
@@ -2473,8 +2484,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         return Error(Parser.getTok().getLoc(), "Expected '}'");
       Parser.Lex(); // Eat curly.
 
-      if (Prefix == "vex2")
-        ForcedVEXEncoding = VEXEncoding_VEX2;
+      if (Prefix == "vex" || Prefix == "vex2")
+        ForcedVEXEncoding = VEXEncoding_VEX;
       else if (Prefix == "vex3")
         ForcedVEXEncoding = VEXEncoding_VEX3;
       else if (Prefix == "evex")
@@ -2764,7 +2775,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     // In MS inline asm curly braces mark the beginning/end of a block,
     // therefore they should be interepreted as end of statement
     CurlyAsEndOfStatement =
-        isParsingIntelSyntax() && isParsingInlineAsm() &&
+        isParsingIntelSyntax() && isParsingMSInlineAsm() &&
         (getLexer().is(AsmToken::LCurly) || getLexer().is(AsmToken::RCurly));
     if (getLexer().isNot(AsmToken::EndOfStatement) && !CurlyAsEndOfStatement)
       return TokError("unexpected token in argument list");
@@ -3149,9 +3160,122 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
 
 static const char *getSubtargetFeatureName(uint64_t Val);
 
+void X86AsmParser::emitWarningForSpecialLVIInstruction(SMLoc Loc) {
+  Warning(Loc, "Instruction may be vulnerable to LVI and "
+               "requires manual mitigation");
+  Note(SMLoc(), "See https://software.intel.com/"
+                "security-software-guidance/insights/"
+                "deep-dive-load-value-injection#specialinstructions"
+                " for more information");
+}
+
+/// RET instructions and also instructions that indirect calls/jumps from memory
+/// combine a load and a branch within a single instruction. To mitigate these
+/// instructions against LVI, they must be decomposed into separate load and
+/// branch instructions, with an LFENCE in between. For more details, see:
+/// - X86LoadValueInjectionRetHardening.cpp
+/// - X86LoadValueInjectionIndirectThunks.cpp
+/// - https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection
+///
+/// Returns `true` if a mitigation was applied or warning was emitted.
+void X86AsmParser::applyLVICFIMitigation(MCInst &Inst, MCStreamer &Out) {
+  // Information on control-flow instructions that require manual mitigation can
+  // be found here:
+  // https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection#specialinstructions
+  switch (Inst.getOpcode()) {
+  case X86::RETW:
+  case X86::RETL:
+  case X86::RETQ:
+  case X86::RETIL:
+  case X86::RETIQ:
+  case X86::RETIW: {
+    MCInst ShlInst, FenceInst;
+    bool Parse32 = is32BitMode() || Code16GCC;
+    unsigned Basereg =
+        is64BitMode() ? X86::RSP : (Parse32 ? X86::ESP : X86::SP);
+    const MCExpr *Disp = MCConstantExpr::create(0, getContext());
+    auto ShlMemOp = X86Operand::CreateMem(getPointerWidth(), /*SegReg=*/0, Disp,
+                                          /*BaseReg=*/Basereg, /*IndexReg=*/0,
+                                          /*Scale=*/1, SMLoc{}, SMLoc{}, 0);
+    ShlInst.setOpcode(X86::SHL64mi);
+    ShlMemOp->addMemOperands(ShlInst, 5);
+    ShlInst.addOperand(MCOperand::createImm(0));
+    FenceInst.setOpcode(X86::LFENCE);
+    Out.emitInstruction(ShlInst, getSTI());
+    Out.emitInstruction(FenceInst, getSTI());
+    return;
+  }
+  case X86::JMP16m:
+  case X86::JMP32m:
+  case X86::JMP64m:
+  case X86::CALL16m:
+  case X86::CALL32m:
+  case X86::CALL64m:
+    emitWarningForSpecialLVIInstruction(Inst.getLoc());
+    return;
+  }
+}
+
+/// To mitigate LVI, every instruction that performs a load can be followed by
+/// an LFENCE instruction to squash any potential mis-speculation. There are
+/// some instructions that require additional considerations, and may requre
+/// manual mitigation. For more details, see:
+/// https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection
+///
+/// Returns `true` if a mitigation was applied or warning was emitted.
+void X86AsmParser::applyLVILoadHardeningMitigation(MCInst &Inst,
+                                                   MCStreamer &Out) {
+  auto Opcode = Inst.getOpcode();
+  auto Flags = Inst.getFlags();
+  if ((Flags & X86::IP_HAS_REPEAT) || (Flags & X86::IP_HAS_REPEAT_NE)) {
+    // Information on REP string instructions that require manual mitigation can
+    // be found here:
+    // https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection#specialinstructions
+    switch (Opcode) {
+    case X86::CMPSB:
+    case X86::CMPSW:
+    case X86::CMPSL:
+    case X86::CMPSQ:
+    case X86::SCASB:
+    case X86::SCASW:
+    case X86::SCASL:
+    case X86::SCASQ:
+      emitWarningForSpecialLVIInstruction(Inst.getLoc());
+      return;
+    }
+  } else if (Opcode == X86::REP_PREFIX || Opcode == X86::REPNE_PREFIX) {
+    // If a REP instruction is found on its own line, it may or may not be
+    // followed by a vulnerable instruction. Emit a warning just in case.
+    emitWarningForSpecialLVIInstruction(Inst.getLoc());
+    return;
+  }
+
+  const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+
+  // Can't mitigate after terminators or calls. A control flow change may have
+  // already occurred.
+  if (MCID.isTerminator() || MCID.isCall())
+    return;
+
+  // LFENCE has the mayLoad property, don't double fence.
+  if (MCID.mayLoad() && Inst.getOpcode() != X86::LFENCE) {
+    MCInst FenceInst;
+    FenceInst.setOpcode(X86::LFENCE);
+    Out.emitInstruction(FenceInst, getSTI());
+  }
+}
+
 void X86AsmParser::emitInstruction(MCInst &Inst, OperandVector &Operands,
                                    MCStreamer &Out) {
+  if (LVIInlineAsmHardening &&
+      getSTI().getFeatureBits()[X86::FeatureLVIControlFlowIntegrity])
+    applyLVICFIMitigation(Inst, Out);
+
   Out.emitInstruction(Inst, getSTI());
+
+  if (LVIInlineAsmHardening &&
+      getSTI().getFeatureBits()[X86::FeatureLVILoadHardening])
+    applyLVILoadHardeningMitigation(Inst, Out);
 }
 
 bool X86AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -3223,7 +3347,7 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       (MCID.TSFlags & X86II::EncodingMask) != X86II::EVEX)
     return Match_Unsupported;
 
-  if ((ForcedVEXEncoding == VEXEncoding_VEX2 ||
+  if ((ForcedVEXEncoding == VEXEncoding_VEX ||
        ForcedVEXEncoding == VEXEncoding_VEX3) &&
       (MCID.TSFlags & X86II::EncodingMask) != X86II::VEX)
     return Match_Unsupported;
@@ -3335,20 +3459,47 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   // Otherwise, we assume that this may be an integer instruction, which comes
   // in 8/16/32/64-bit forms using the b,w,l,q suffixes respectively.
   const char *Suffixes = Base[0] != 'f' ? "bwlq" : "slt\0";
+  // MemSize corresponding to Suffixes.  { 8, 16, 32, 64 }    { 32, 64, 80, 0 }
+  const char *MemSize = Base[0] != 'f' ? "\x08\x10\x20\x40" : "\x20\x40\x50\0";
 
   // Check for the various suffix matches.
   uint64_t ErrorInfoIgnore;
   FeatureBitset ErrorInfoMissingFeatures; // Init suppresses compiler warnings.
   unsigned Match[4];
 
+  // Some instruction like VPMULDQ is NOT the variant of VPMULD but a new one.
+  // So we should make sure the suffix matcher only works for memory variant
+  // that has the same size with the suffix.
+  // FIXME: This flag is a workaround for legacy instructions that didn't
+  // declare non suffix variant assembly.
+  bool HasVectorReg = false;
+  X86Operand *MemOp = nullptr;
+  for (const auto &Op : Operands) {
+    X86Operand *X86Op = static_cast<X86Operand *>(Op.get());
+    if (X86Op->isVectorReg())
+      HasVectorReg = true;
+    else if (X86Op->isMem()) {
+      MemOp = X86Op;
+      assert(MemOp->Mem.Size == 0 && "Memory size always 0 under ATT syntax");
+      // Have we found an unqualified memory operand,
+      // break. IA allows only one memory operand.
+      break;
+    }
+  }
+
   for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I) {
     Tmp.back() = Suffixes[I];
-    Match[I] = MatchInstruction(Operands, Inst, ErrorInfoIgnore,
-                                MissingFeatures, MatchingInlineAsm,
-                                isParsingIntelSyntax());
-    // If this returned as a missing feature failure, remember that.
-    if (Match[I] == Match_MissingFeature)
-      ErrorInfoMissingFeatures = MissingFeatures;
+    if (MemOp && HasVectorReg)
+      MemOp->Mem.Size = MemSize[I];
+    Match[I] = Match_MnemonicFail;
+    if (MemOp || !HasVectorReg) {
+      Match[I] =
+          MatchInstruction(Operands, Inst, ErrorInfoIgnore, MissingFeatures,
+                           MatchingInlineAsm, isParsingIntelSyntax());
+      // If this returned as a missing feature failure, remember that.
+      if (Match[I] == Match_MissingFeature)
+        ErrorInfoMissingFeatures = MissingFeatures;
+    }
   }
 
   // Restore the old token.

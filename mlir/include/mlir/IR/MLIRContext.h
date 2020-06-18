@@ -49,10 +49,44 @@ public:
     return static_cast<T *>(getRegisteredDialect(T::getDialectNamespace()));
   }
 
+  /// Return true if we allow to create operation for unregistered dialects.
+  bool allowsUnregisteredDialects();
+
+  /// Enables creating operations in unregistered dialects.
+  void allowUnregisteredDialects(bool allow = true);
+
+  /// Return true if multi-threading is enabled by the context.
+  bool isMultithreadingEnabled();
+
+  /// Set the flag specifying if multi-threading is disabled by the context.
+  void disableMultithreading(bool disable = true);
+  void enableMultithreading(bool enable = true) {
+    disableMultithreading(!enable);
+  }
+
+  /// Return true if we should attach the operation to diagnostics emitted via
+  /// Operation::emit.
+  bool shouldPrintOpOnDiagnostic();
+
+  /// Set the flag specifying if we should attach the operation to diagnostics
+  /// emitted via Operation::emit.
+  void printOpOnDiagnostic(bool enable);
+
+  /// Return true if we should attach the current stacktrace to diagnostics when
+  /// emitted.
+  bool shouldPrintStackTraceOnDiagnostic();
+
+  /// Set the flag specifying if we should attach the current stacktrace when
+  /// emitting diagnostics.
+  void printStackTraceOnDiagnostic(bool enable);
+
   /// Return information about all registered operations.  This isn't very
   /// efficient: typically you should ask the operations about their properties
   /// directly.
   std::vector<AbstractOperation *> getRegisteredOperations();
+
+  /// Return true if this operation name is registered in this context.
+  bool isOperationRegistered(StringRef name);
 
   // This is effectively private given that only MLIRContext.cpp can see the
   // MLIRContextImpl type.
@@ -78,6 +112,16 @@ private:
   MLIRContext(const MLIRContext &) = delete;
   void operator=(const MLIRContext &) = delete;
 };
+
+//===----------------------------------------------------------------------===//
+// MLIRContext CommandLine Options
+//===----------------------------------------------------------------------===//
+
+/// Register a set of useful command-line options that can be used to configure
+/// various flags within the MLIRContext. These flags are used when constructing
+/// an MLIR context for initialization.
+void registerMLIRContextCLOptions();
+
 } // end namespace mlir
 
 #endif // MLIR_IR_MLIRCONTEXT_H

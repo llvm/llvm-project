@@ -109,6 +109,9 @@ void MipsTargetStreamer::emitDirectiveSetHardFloat() {
 void MipsTargetStreamer::emitDirectiveSetDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetDspr2() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoDsp() { forbidModuleDirective(); }
+void MipsTargetStreamer::emitDirectiveSetMips3D() { forbidModuleDirective(); }
+void MipsTargetStreamer::emitDirectiveSetNoMips3D() { forbidModuleDirective(); }
+void MipsTargetStreamer::emitDirectiveCpAdd(unsigned RegNo) {}
 void MipsTargetStreamer::emitDirectiveCpLoad(unsigned RegNo) {}
 void MipsTargetStreamer::emitDirectiveCpLocal(unsigned RegNo) {
   // .cplocal $reg
@@ -609,6 +612,16 @@ void MipsTargetAsmStreamer::emitDirectiveSetNoDsp() {
   MipsTargetStreamer::emitDirectiveSetNoDsp();
 }
 
+void MipsTargetAsmStreamer::emitDirectiveSetMips3D() {
+  OS << "\t.set\tmips3d\n";
+  MipsTargetStreamer::emitDirectiveSetMips3D();
+}
+
+void MipsTargetAsmStreamer::emitDirectiveSetNoMips3D() {
+  OS << "\t.set\tnomips3d\n";
+  MipsTargetStreamer::emitDirectiveSetNoMips3D();
+}
+
 void MipsTargetAsmStreamer::emitDirectiveSetPop() {
   OS << "\t.set\tpop\n";
   MipsTargetStreamer::emitDirectiveSetPop();
@@ -648,6 +661,12 @@ void MipsTargetAsmStreamer::emitFMask(unsigned FPUBitmask,
   OS << "\t.fmask\t";
   printHex32(FPUBitmask, OS);
   OS << "," << FPUTopSavedRegOff << '\n';
+}
+
+void MipsTargetAsmStreamer::emitDirectiveCpAdd(unsigned RegNo) {
+  OS << "\t.cpadd\t$"
+     << StringRef(MipsInstPrinter::getRegisterName(RegNo)).lower() << "\n";
+  forbidModuleDirective();
 }
 
 void MipsTargetAsmStreamer::emitDirectiveCpLoad(unsigned RegNo) {
@@ -1106,6 +1125,17 @@ void MipsTargetELFStreamer::emitFMask(unsigned FPUBitmask,
   FPRInfoSet = true;
   FPRBitMask = FPUBitmask;
   FPROffset = FPUTopSavedRegOff;
+}
+
+void MipsTargetELFStreamer::emitDirectiveCpAdd(unsigned RegNo) {
+  // .cpadd $reg
+  // This directive inserts code to add $gp to the argument's register
+  // when support for position independent code is enabled.
+  if (!Pic)
+    return;
+
+  emitAddu(RegNo, RegNo, GPReg, getABI().IsN64(), &STI);
+  forbidModuleDirective();
 }
 
 void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {

@@ -37,16 +37,14 @@ class PluginCommandTestCase(TestBase):
         # Invoke the library build rule.
         self.buildLibrary("plugin.cpp", plugin_name)
 
-        debugger = lldb.SBDebugger.Create()
-
         retobj = lldb.SBCommandReturnObject()
 
-        retval = debugger.GetCommandInterpreter().HandleCommand(
+        retval = self.dbg.GetCommandInterpreter().HandleCommand(
             "plugin load %s" % self.getBuildArtifact(plugin_lib_name), retobj)
 
         retobj.Clear()
 
-        retval = debugger.GetCommandInterpreter().HandleCommand(
+        retval = self.dbg.GetCommandInterpreter().HandleCommand(
             "plugin_loaded_command child abc def ghi", retobj)
 
         if self.TraceOn():
@@ -57,7 +55,7 @@ class PluginCommandTestCase(TestBase):
         retobj.Clear()
 
         # check that abbreviations work correctly in plugin commands.
-        retval = debugger.GetCommandInterpreter().HandleCommand(
+        retval = self.dbg.GetCommandInterpreter().HandleCommand(
             "plugin_loaded_ ch abc def ghi", retobj)
 
         if self.TraceOn():

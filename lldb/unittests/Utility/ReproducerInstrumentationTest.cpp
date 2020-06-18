@@ -50,13 +50,76 @@ public:
   TestingRegistry();
 };
 
-static llvm::Optional<Serializer> g_serializer;
 static llvm::Optional<TestingRegistry> g_registry;
+static llvm::Optional<Serializer> g_serializer;
+static llvm::Optional<Deserializer> g_deserializer;
 
-#define LLDB_GET_INSTRUMENTATION_DATA()                                        \
-  g_serializer ? InstrumentationData(*g_serializer, *g_registry) : InstrumentationData()
+class TestInstrumentationData : public InstrumentationData {
+public:
+  TestInstrumentationData() : InstrumentationData() {}
+  TestInstrumentationData(Serializer &serializer, Registry &registry)
+      : InstrumentationData(serializer, registry) {}
+  TestInstrumentationData(Deserializer &deserializer, Registry &registry)
+      : InstrumentationData(deserializer, registry) {}
+};
 
-class InstrumentedFoo {
+inline TestInstrumentationData GetTestInstrumentationData() {
+  assert(!(g_serializer && g_deserializer));
+  if (g_serializer)
+    return TestInstrumentationData(*g_serializer, *g_registry);
+  if (g_deserializer)
+    return TestInstrumentationData(*g_deserializer, *g_registry);
+  return TestInstrumentationData();
+}
+
+class TestInstrumentationDataRAII {
+public:
+  TestInstrumentationDataRAII(llvm::raw_string_ostream &os) {
+    g_registry.emplace();
+    g_serializer.emplace(os);
+    g_deserializer.reset();
+  }
+
+  TestInstrumentationDataRAII(llvm::StringRef buffer) {
+    g_registry.emplace();
+    g_serializer.reset();
+    g_deserializer.emplace(buffer);
+  }
+
+  ~TestInstrumentationDataRAII() { Reset(); }
+
+  void Reset() {
+    g_registry.reset();
+    g_serializer.reset();
+    g_deserializer.reset();
+  }
+
+  static std::unique_ptr<TestInstrumentationDataRAII>
+  GetRecordingData(llvm::raw_string_ostream &os) {
+    return std::make_unique<TestInstrumentationDataRAII>(os);
+  }
+
+  static std::unique_ptr<TestInstrumentationDataRAII>
+  GetReplayData(llvm::StringRef buffer) {
+    return std::make_unique<TestInstrumentationDataRAII>(buffer);
+  }
+};
+
+#define LLDB_GET_INSTRUMENTATION_DATA() GetTestInstrumentationData()
+
+enum class Class {
+  Foo,
+  Bar,
+};
+
+class Instrumented {
+public:
+  virtual ~Instrumented() = default;
+  virtual void Validate() = 0;
+  virtual bool IsA(Class c) = 0;
+};
+
+class InstrumentedFoo : public Instrumented {
 public:
   InstrumentedFoo() = default;
   /// Instrumented methods.
@@ -65,13 +128,20 @@ public:
   InstrumentedFoo(const InstrumentedFoo &foo);
   InstrumentedFoo &operator=(const InstrumentedFoo &foo);
   void A(int a);
+  int GetA();
   void B(int &b) const;
+  int &GetB();
   int C(float *c);
+  float GetC();
   int D(const char *d) const;
+  size_t GetD(char *buffer, size_t length);
   static void E(double e);
+  double GetE();
   static int F();
-  void Validate();
+  bool GetF();
+  void Validate() override;
   //// }
+  virtual bool IsA(Class c) override { return c == Class::Foo; }
 
 private:
   int m_a = 0;
@@ -83,7 +153,7 @@ private:
   mutable int m_called = 0;
 };
 
-class InstrumentedBar {
+class InstrumentedBar : public Instrumented {
 public:
   /// Instrumented methods.
   /// {
@@ -93,8 +163,9 @@ public:
   InstrumentedFoo *GetInstrumentedFooPtr();
   void SetInstrumentedFoo(InstrumentedFoo *foo);
   void SetInstrumentedFoo(InstrumentedFoo &foo);
-  void Validate();
+  void Validate() override;
   /// }
+  virtual bool IsA(Class c) override { return c == Class::Bar; }
 
 private:
   bool m_get_instrumend_foo_called = false;
@@ -105,45 +176,42 @@ private:
 double InstrumentedFoo::g_e = 0;
 bool InstrumentedFoo::g_f = false;
 
-static std::vector<InstrumentedFoo *> g_foos;
-static std::vector<InstrumentedBar *> g_bars;
+struct Validator {
+  enum Validation { valid, invalid };
+  Validator(Class clazz, Validation validation)
+      : clazz(clazz), validation(validation) {}
+  Class clazz;
+  Validation validation;
+};
 
-void ClearObjects() {
-  g_registry.reset();
-  g_serializer.reset();
-  g_foos.clear();
-  g_bars.clear();
-}
-
-void ValidateObjects(size_t expected_foos, size_t expected_bars) {
-  EXPECT_EQ(expected_foos, g_foos.size());
-  EXPECT_EQ(expected_bars, g_bars.size());
-
-  for (auto *foo : g_foos) {
-    foo->Validate();
-  }
-
-  for (auto *bar : g_bars) {
-    bar->Validate();
+void ValidateObjects(std::vector<void *> objects,
+                     std::vector<Validator> validators) {
+  ASSERT_EQ(validators.size(), objects.size());
+  for (size_t i = 0; i < validators.size(); ++i) {
+    Validator &validator = validators[i];
+    Instrumented *instrumented = static_cast<Instrumented *>(objects[i]);
+    EXPECT_TRUE(instrumented->IsA(validator.clazz));
+    switch (validator.validation) {
+    case Validator::valid:
+      instrumented->Validate();
+      break;
+    case Validator::invalid:
+      break;
+    }
   }
 }
 
 InstrumentedFoo::InstrumentedFoo(int i) {
   LLDB_RECORD_CONSTRUCTOR(InstrumentedFoo, (int), i);
-  g_foos.push_back(this);
 }
 
 InstrumentedFoo::InstrumentedFoo(const InstrumentedFoo &foo) {
   LLDB_RECORD_CONSTRUCTOR(InstrumentedFoo, (const InstrumentedFoo &), foo);
-  g_foos.erase(std::remove(g_foos.begin(), g_foos.end(), &foo));
-  g_foos.push_back(this);
 }
 
 InstrumentedFoo &InstrumentedFoo::operator=(const InstrumentedFoo &foo) {
   LLDB_RECORD_METHOD(InstrumentedFoo &,
                      InstrumentedFoo, operator=,(const InstrumentedFoo &), foo);
-  g_foos.erase(std::remove(g_foos.begin(), g_foos.end(), &foo));
-  g_foos.push_back(this);
   return *this;
 }
 
@@ -153,10 +221,22 @@ void InstrumentedFoo::A(int a) {
   m_a = a;
 }
 
+int InstrumentedFoo::GetA() {
+  LLDB_RECORD_METHOD_NO_ARGS(int, InstrumentedFoo, GetA);
+
+  return m_a;
+}
+
 void InstrumentedFoo::B(int &b) const {
   LLDB_RECORD_METHOD_CONST(void, InstrumentedFoo, B, (int &), b);
   m_called++;
   m_b = b;
+}
+
+int &InstrumentedFoo::GetB() {
+  LLDB_RECORD_METHOD_NO_ARGS(int &, InstrumentedFoo, GetB);
+
+  return m_b;
 }
 
 int InstrumentedFoo::C(float *c) {
@@ -165,10 +245,23 @@ int InstrumentedFoo::C(float *c) {
   return 1;
 }
 
+float InstrumentedFoo::GetC() {
+  LLDB_RECORD_METHOD_NO_ARGS(float, InstrumentedFoo, GetC);
+
+  return m_c;
+}
+
 int InstrumentedFoo::D(const char *d) const {
   LLDB_RECORD_METHOD_CONST(int, InstrumentedFoo, D, (const char *), d);
   m_d = std::string(d);
   return 2;
+}
+
+size_t InstrumentedFoo::GetD(char *buffer, size_t length) {
+  LLDB_RECORD_CHAR_PTR_METHOD(size_t, InstrumentedFoo, GetD, (char *, size_t),
+                              buffer, "", length);
+  ::snprintf(buffer, length, "%s", m_d.c_str());
+  return m_d.size();
 }
 
 void InstrumentedFoo::E(double e) {
@@ -176,10 +269,22 @@ void InstrumentedFoo::E(double e) {
   g_e = e;
 }
 
+double InstrumentedFoo::GetE() {
+  LLDB_RECORD_METHOD_NO_ARGS(double, InstrumentedFoo, GetE);
+
+  return g_e;
+}
+
 int InstrumentedFoo::F() {
   LLDB_RECORD_STATIC_METHOD_NO_ARGS(int, InstrumentedFoo, F);
   g_f = true;
   return 3;
+}
+
+bool InstrumentedFoo::GetF() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, InstrumentedFoo, GetF);
+
+  return g_f;
 }
 
 void InstrumentedFoo::Validate() {
@@ -195,7 +300,6 @@ void InstrumentedFoo::Validate() {
 
 InstrumentedBar::InstrumentedBar() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(InstrumentedBar);
-  g_bars.push_back(this);
 }
 
 InstrumentedFoo InstrumentedBar::GetInstrumentedFoo() {
@@ -242,7 +346,7 @@ void InstrumentedBar::Validate() {
 }
 
 TestingRegistry::TestingRegistry() {
-  Registry& R = *this;
+  Registry &R = *this;
 
   LLDB_REGISTER_CONSTRUCTOR(InstrumentedFoo, (int i));
   LLDB_REGISTER_CONSTRUCTOR(InstrumentedFoo, (const InstrumentedFoo &));
@@ -268,6 +372,12 @@ TestingRegistry::TestingRegistry() {
   LLDB_REGISTER_METHOD(void, InstrumentedBar, SetInstrumentedFoo,
                        (InstrumentedFoo &));
   LLDB_REGISTER_METHOD(void, InstrumentedBar, Validate, ());
+  LLDB_REGISTER_METHOD(int, InstrumentedFoo, GetA, ());
+  LLDB_REGISTER_METHOD(int &, InstrumentedFoo, GetB, ());
+  LLDB_REGISTER_METHOD(float, InstrumentedFoo, GetC, ());
+  LLDB_REGISTER_METHOD(size_t, InstrumentedFoo, GetD, (char *, size_t));
+  LLDB_REGISTER_METHOD(double, InstrumentedFoo, GetE, ());
+  LLDB_REGISTER_METHOD(bool, InstrumentedFoo, GetF, ());
 }
 
 static const Pod p;
@@ -504,10 +614,10 @@ TEST(SerializationRountripTest, SerializeDeserializeObjectReference) {
 TEST(RecordReplayTest, InstrumentedFoo) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  g_registry.emplace();
-  g_serializer.emplace(os);
 
   {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
     int b = 200;
     float c = 300.3f;
     double e = 400.4;
@@ -522,65 +632,63 @@ TEST(RecordReplayTest, InstrumentedFoo) {
     foo.Validate();
   }
 
-  ClearObjects();
-
   TestingRegistry registry;
-  registry.Replay(os.str());
+  Deserializer deserializer(os.str());
+  registry.Replay(deserializer);
 
-  ValidateObjects(1, 0);
+  ValidateObjects(deserializer.GetAllObjects(),
+                  {{Class::Foo, Validator::valid}});
 }
 
 TEST(RecordReplayTest, InstrumentedFooSameThis) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  g_registry.emplace();
-  g_serializer.emplace(os);
 
-  int b = 200;
-  float c = 300.3f;
-  double e = 400.4;
+  {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
 
-  InstrumentedFoo *foo = new InstrumentedFoo(0);
-  foo->A(100);
-  foo->B(b);
-  foo->C(&c);
-  foo->D("bar");
-  InstrumentedFoo::E(e);
-  InstrumentedFoo::F();
-  foo->Validate();
-  foo->~InstrumentedFoo();
+    int b = 200;
+    float c = 300.3f;
+    double e = 400.4;
 
-  InstrumentedFoo *foo2 = new (foo) InstrumentedFoo(0);
-  foo2->A(100);
-  foo2->B(b);
-  foo2->C(&c);
-  foo2->D("bar");
-  InstrumentedFoo::E(e);
-  InstrumentedFoo::F();
-  foo2->Validate();
-  delete foo2;
+    InstrumentedFoo *foo = new InstrumentedFoo(0);
+    foo->A(100);
+    foo->B(b);
+    foo->C(&c);
+    foo->D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo->Validate();
+    foo->~InstrumentedFoo();
 
-  ClearObjects();
+    InstrumentedFoo *foo2 = new (foo) InstrumentedFoo(0);
+    foo2->A(100);
+    foo2->B(b);
+    foo2->C(&c);
+    foo2->D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo2->Validate();
+    delete foo2;
+  }
 
   TestingRegistry registry;
-  registry.Replay(os.str());
+  Deserializer deserializer(os.str());
+  registry.Replay(deserializer);
 
-  ValidateObjects(2, 0);
+  ValidateObjects(deserializer.GetAllObjects(),
+                  {{Class::Foo, Validator::valid}});
 }
 
 TEST(RecordReplayTest, InstrumentedBar) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  g_registry.emplace();
-  g_serializer.emplace(os);
 
   {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
     InstrumentedBar bar;
     InstrumentedFoo foo = bar.GetInstrumentedFoo();
-#if 0
-    InstrumentedFoo& foo_ref = bar.GetInstrumentedFooRef();
-    InstrumentedFoo* foo_ptr = bar.GetInstrumentedFooPtr();
-#endif
 
     int b = 200;
     float c = 300.3f;
@@ -599,21 +707,26 @@ TEST(RecordReplayTest, InstrumentedBar) {
     bar.Validate();
   }
 
-  ClearObjects();
-
   TestingRegistry registry;
-  registry.Replay(os.str());
+  Deserializer deserializer(os.str());
+  registry.Replay(deserializer);
 
-  ValidateObjects(1, 1);
+  ValidateObjects(
+      deserializer.GetAllObjects(),
+      {
+          {Class::Bar, Validator::valid},   // bar
+          {Class::Foo, Validator::invalid}, // bar.GetInstrumentedFoo()
+          {Class::Foo, Validator::valid},   // foo
+      });
 }
 
 TEST(RecordReplayTest, InstrumentedBarRef) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  g_registry.emplace();
-  g_serializer.emplace(os);
 
   {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
     InstrumentedBar bar;
     InstrumentedFoo &foo = bar.GetInstrumentedFooRef();
 
@@ -634,21 +747,22 @@ TEST(RecordReplayTest, InstrumentedBarRef) {
     bar.Validate();
   }
 
-  ClearObjects();
-
   TestingRegistry registry;
-  registry.Replay(os.str());
+  Deserializer deserializer(os.str());
+  registry.Replay(deserializer);
 
-  ValidateObjects(1, 1);
+  ValidateObjects(
+      deserializer.GetAllObjects(),
+      {{Class::Bar, Validator::valid}, {Class::Foo, Validator::valid}});
 }
 
 TEST(RecordReplayTest, InstrumentedBarPtr) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  g_registry.emplace();
-  g_serializer.emplace(os);
 
   {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
     InstrumentedBar bar;
     InstrumentedFoo &foo = *(bar.GetInstrumentedFooPtr());
 
@@ -669,10 +783,334 @@ TEST(RecordReplayTest, InstrumentedBarPtr) {
     bar.Validate();
   }
 
-  ClearObjects();
-
   TestingRegistry registry;
-  registry.Replay(os.str());
+  Deserializer deserializer(os.str());
+  registry.Replay(deserializer);
 
-  ValidateObjects(1, 1);
+  ValidateObjects(
+      deserializer.GetAllObjects(),
+      {{Class::Bar, Validator::valid}, {Class::Foo, Validator::valid}});
+}
+
+TEST(PassiveReplayTest, InstrumentedFoo) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
+    int b = 200;
+    float c = 300.3f;
+    double e = 400.4;
+
+    InstrumentedFoo foo(0);
+    foo.A(100);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    EXPECT_EQ(foo.GetA(), 100);
+    EXPECT_EQ(foo.GetB(), 200);
+    EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
+    EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
+    EXPECT_EQ(foo.GetF(), true);
+  }
+
+  std::string buffer = os.str();
+
+  {
+    auto data = TestInstrumentationDataRAII::GetReplayData(buffer);
+
+    int b = 999;
+    float c = 999.9f;
+    double e = 999.9;
+
+    InstrumentedFoo foo(9);
+    foo.A(999);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("999");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    EXPECT_EQ(foo.GetA(), 100);
+    EXPECT_EQ(foo.GetB(), 200);
+    EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
+    EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
+    EXPECT_EQ(foo.GetF(), true);
+  }
+}
+
+TEST(PassiveReplayTest, InstrumentedFooInvalid) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
+    int b = 200;
+    float c = 300.3f;
+    double e = 400.4;
+
+    InstrumentedFoo foo(0);
+    foo.A(100);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    EXPECT_EQ(foo.GetA(), 100);
+    EXPECT_EQ(foo.GetB(), 200);
+    EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
+    EXPECT_EQ(foo.GetF(), true);
+  }
+
+  std::string buffer = os.str();
+
+  {
+    auto data = TestInstrumentationDataRAII::GetReplayData(buffer);
+
+    int b = 999;
+    float c = 999.9f;
+    double e = 999.9;
+
+    InstrumentedFoo foo(9);
+    foo.A(999);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("999");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    EXPECT_EQ(foo.GetA(), 100);
+    // Detect divergence.
+    EXPECT_DEATH(foo.GetA(), "");
+  }
+}
+
+TEST(PassiveReplayTest, InstrumentedBar) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
+    InstrumentedBar bar;
+    InstrumentedFoo foo = bar.GetInstrumentedFoo();
+
+    int b = 200;
+    float c = 300.3f;
+    double e = 400.4;
+
+    foo.A(100);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    EXPECT_EQ(foo.GetA(), 100);
+    EXPECT_EQ(foo.GetB(), 200);
+    EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
+    EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
+    EXPECT_EQ(foo.GetF(), true);
+
+    bar.SetInstrumentedFoo(foo);
+    bar.SetInstrumentedFoo(&foo);
+    bar.Validate();
+  }
+
+  std::string buffer = os.str();
+
+  {
+    auto data = TestInstrumentationDataRAII::GetReplayData(buffer);
+
+    InstrumentedBar bar;
+    InstrumentedFoo foo = bar.GetInstrumentedFoo();
+
+    int b = 99;
+    float c = 999.9f;
+    double e = 999.9;
+
+    foo.A(999);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("999");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    EXPECT_EQ(foo.GetA(), 100);
+    EXPECT_EQ(foo.GetB(), 200);
+    EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
+    EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
+    EXPECT_EQ(foo.GetF(), true);
+
+    bar.SetInstrumentedFoo(foo);
+    bar.SetInstrumentedFoo(&foo);
+    bar.Validate();
+  }
+}
+
+TEST(PassiveReplayTest, InstrumentedBarRef) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
+    InstrumentedBar bar;
+    InstrumentedFoo &foo = bar.GetInstrumentedFooRef();
+
+    int b = 200;
+    float c = 300.3f;
+    double e = 400.4;
+
+    foo.A(100);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    EXPECT_EQ(foo.GetA(), 100);
+    EXPECT_EQ(foo.GetB(), 200);
+    EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
+    EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
+    EXPECT_EQ(foo.GetF(), true);
+
+    bar.SetInstrumentedFoo(foo);
+    bar.SetInstrumentedFoo(&foo);
+    bar.Validate();
+  }
+
+  std::string buffer = os.str();
+
+  {
+    auto data = TestInstrumentationDataRAII::GetReplayData(buffer);
+
+    InstrumentedBar bar;
+    InstrumentedFoo &foo = bar.GetInstrumentedFooRef();
+
+    int b = 99;
+    float c = 999.9f;
+    double e = 999.9;
+
+    foo.A(999);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("999");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    EXPECT_EQ(foo.GetA(), 100);
+    EXPECT_EQ(foo.GetB(), 200);
+    EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
+    EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
+    EXPECT_EQ(foo.GetF(), true);
+
+    bar.SetInstrumentedFoo(foo);
+    bar.SetInstrumentedFoo(&foo);
+    bar.Validate();
+  }
+}
+
+TEST(PassiveReplayTest, InstrumentedBarPtr) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
+    InstrumentedBar bar;
+    InstrumentedFoo &foo = *(bar.GetInstrumentedFooPtr());
+
+    int b = 200;
+    float c = 300.3f;
+    double e = 400.4;
+
+    foo.A(100);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("bar");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    EXPECT_EQ(foo.GetA(), 100);
+    EXPECT_EQ(foo.GetB(), 200);
+    EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
+    EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
+    EXPECT_EQ(foo.GetF(), true);
+
+    bar.SetInstrumentedFoo(foo);
+    bar.SetInstrumentedFoo(&foo);
+    bar.Validate();
+  }
+
+  std::string buffer = os.str();
+
+  {
+    auto data = TestInstrumentationDataRAII::GetReplayData(buffer);
+
+    InstrumentedBar bar;
+    InstrumentedFoo &foo = *(bar.GetInstrumentedFooPtr());
+
+    int b = 99;
+    float c = 999.9f;
+    double e = 999.9;
+
+    foo.A(999);
+    foo.B(b);
+    foo.C(&c);
+    foo.D("999");
+    InstrumentedFoo::E(e);
+    InstrumentedFoo::F();
+    foo.Validate();
+
+    EXPECT_EQ(foo.GetA(), 100);
+    EXPECT_EQ(foo.GetB(), 200);
+    EXPECT_NEAR(foo.GetC(), 300.3, 0.01);
+    char buffer[100];
+    foo.GetD(buffer, 100);
+    EXPECT_STREQ(buffer, "bar");
+    EXPECT_NEAR(foo.GetE(), 400.4, 0.01);
+    EXPECT_EQ(foo.GetF(), true);
+
+    bar.SetInstrumentedFoo(foo);
+    bar.SetInstrumentedFoo(&foo);
+    bar.Validate();
+  }
 }

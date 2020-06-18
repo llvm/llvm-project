@@ -1,0 +1,28 @@
+RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 --macho --archive-headers --arch all \
+RUN: | FileCheck %s
+RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 --macho --archive-headers --arch all --archive-member-offsets \
+RUN: | FileCheck %s -check-prefix=OFFSETS
+RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 --macho --archive-headers --arch all --non-verbose \
+RUN: | FileCheck %s -check-prefix=NON-VERBOSE
+
+# Note the date as printed by ctime(3) is time zone dependent and not checked.
+CHECK: Archive : {{.*}}/macho-universal-archive.x86_64.i386 (architecture x86_64)
+CHECK: -rw-r--r--124/11     44 {{.*}} __.SYMDEF SORTED
+CHECK: -rw-r--r--124/0     860 {{.*}} hello.o
+CHECK: Archive : {{.*}}/macho-universal-archive.x86_64.i386 (architecture i386)
+CHECK: -rw-r--r--124/11     60 {{.*}} __.SYMDEF SORTED
+CHECK: -rw-r--r--124/0     388 {{.*}} foo.o
+
+OFFSETS: Archive : {{.*}}/macho-universal-archive.x86_64.i386 (architecture x86_64)
+OFFSETS: 8	-rw-r--r--124/11     44 {{.*}} __.SYMDEF SORTED
+OFFSETS: 112	-rw-r--r--124/0     860 {{.*}} hello.o
+OFFSETS: Archive : {{.*}}/macho-universal-archive.x86_64.i386 (architecture i386)
+OFFSETS: 8	-rw-r--r--124/11     60 {{.*}} __.SYMDEF SORTED
+OFFSETS: 128	-rw-r--r--124/0     388 {{.*}} foo.o
+
+NON-VERBOSE: Archive : {{.*}}/macho-universal-archive.x86_64.i386 (architecture x86_64)
+NON-VERBOSE: 0100644 124/11     44 1399572709 #1/20
+NON-VERBOSE: 0100644 124/0     860 1399501499 #1/12
+NON-VERBOSE: Archive : {{.*}}/macho-universal-archive.x86_64.i386 (architecture i386)
+NON-VERBOSE: 0100644 124/11     60 1399572709 #1/20
+NON-VERBOSE: 0100644 124/0     388 1399572697 #1/12

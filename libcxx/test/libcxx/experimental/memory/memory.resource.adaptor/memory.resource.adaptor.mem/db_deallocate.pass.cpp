@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <experimental/memory_resource>
 
@@ -36,8 +36,13 @@ int main(int, char**)
     ex::resource_adaptor<Alloc> r(Alloc{P});
     ex::memory_resource & m1 = r;
 
+#ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+    std::size_t maxSize = std::numeric_limits<std::size_t>::max()
+                            - __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+#else
     std::size_t maxSize = std::numeric_limits<std::size_t>::max()
                             - alignof(std::max_align_t);
+#endif
 
     m1.deallocate(nullptr, maxSize);
     assert(AssertCount == 0);

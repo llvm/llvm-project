@@ -233,14 +233,14 @@ int bar(int n){
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
-// CHECK: define weak void @__omp_offloading_{{.*}}_l58(i[[SZ:64|32]] %{{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{.*}})
+// CHECK: define weak void @__omp_offloading_{{.*}}_l58(i[[SZ:64|32]] %{{[^,]+}}, [10 x [10 x i32]]* nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // CHECK: call void [[OUTLINED:@__omp_outlined.*]](i32* %{{.+}}, i32* %{{.+}}, i[[SZ]] %{{.*}}, i[[SZ]] %{{.*}}, i[[SZ]] %{{.*}}, [10 x [10 x i32]]* %{{.*}})
-// CHECK: define internal void [[OUTLINED]](i32* noalias %{{.*}}, i32* noalias %{{.*}} i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [10 x [10 x i32]]* dereferenceable{{.*}})
+// CHECK: define internal void [[OUTLINED]](i32* noalias %{{.*}}, i32* noalias %{{.*}} i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [10 x [10 x i32]]* nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // CHECK-DIV64: div i64
 // CHECK-DIV32-NO: div i64
 
-// CHECK: define weak void @__omp_offloading_{{.*}}_l65(i[[SZ:64|32]] %{{[^,]+}}, [1000 x i32]* dereferenceable{{.*}}, i32* %{{[^)]+}})
+// CHECK: define weak void @__omp_offloading_{{.*}}_l65(i[[SZ:64|32]] %{{[^,]+}}, [1000 x i32]* nonnull align {{[0-9]+}} dereferenceable{{.*}}, i32* %{{[^)]+}})
 // CHECK: call void [[OUTLINED:@__omp_outlined.*]](i32* %{{.+}}, i32* %{{.+}}, i[[SZ]] %{{.*}}, i[[SZ]] %{{.*}}, i[[SZ]] %{{.*}}, [1000 x i32]* %{{.*}}, i32* %{{.*}})
-// CHECK: define internal void [[OUTLINED]](i32* noalias %{{.*}}, i32* noalias %{{.*}} i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [1000 x i32]* dereferenceable{{.*}}, i32* %{{.*}})
+// CHECK: define internal void [[OUTLINED]](i32* noalias %{{.*}}, i32* noalias %{{.*}} i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [1000 x i32]* nonnull align {{[0-9]+}} dereferenceable{{.*}}, i32* %{{.*}})
 
 #endif

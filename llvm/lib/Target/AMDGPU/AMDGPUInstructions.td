@@ -77,6 +77,9 @@ class ILFormat<dag outs, dag ins, string asmstr, list<dag> pattern>
 
 def TruePredicate : Predicate<"">;
 
+// FIXME: Tablegen should specially supports this
+def FalsePredicate : Predicate<"false">;
+
 // Add a predicate to the list if does not already exist to deduplicate it.
 class PredConcat<list<Predicate> lst, Predicate pred> {
   list<Predicate> ret =
@@ -736,6 +739,12 @@ multiclass BFEPattern <Instruction UBFE, Instruction SBFE, Instruction MOV> {
   >;
 }
 
+// fshr pattern
+class FSHRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
+  (fshr i32:$src0, i32:$src1, i32:$src2),
+  (BIT_ALIGN $src0, $src1, $src2)
+>;
+
 // rotr pattern
 class ROTRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
   (rotr i32:$src0, i32:$src1),
@@ -800,4 +809,9 @@ def fminnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
 def fmaxnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
   [(fmaxnum_ieee_oneuse node:$src0, node:$src1),
    (fmaxnum_oneuse node:$src0, node:$src1)]
+>;
+
+def any_fmad : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(fmad node:$src0, node:$src1, node:$src2),
+   (AMDGPUfmad_ftz node:$src0, node:$src1, node:$src2)]
 >;

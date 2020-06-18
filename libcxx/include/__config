@@ -102,6 +102,9 @@
 #  define _LIBCPP_ABI_OPTIMIZED_FUNCTION
 // All the regex constants must be distinct and nonzero.
 #  define _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
+// Re-worked external template instantiations for std::string with a focus on
+// performance and fast-path inlining.
+#  define _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
@@ -471,6 +474,10 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_HAS_EXTENSION_BLOCKS
 #endif
 
+#if defined(_LIBCPP_HAS_EXTENSION_BLOCKS) && defined(__APPLE__)
+#  define _LIBCPP_HAS_BLOCKS_RUNTIME
+#endif
+
 #if !(__has_feature(cxx_relaxed_constexpr))
 #define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
 #endif
@@ -494,6 +501,10 @@ typedef __char32_t char32_t;
 
 #if __has_builtin(__builtin_launder)
 #define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
+#endif
+
+#if __has_builtin(__builtin_constant_p)
+#define _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
 #endif
 
 #if !__is_identifier(__has_unique_object_representations)
@@ -537,9 +548,7 @@ typedef __char32_t char32_t;
 
 #if _GNUC_VER >= 700
 #define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
-#endif
-
-#if _GNUC_VER >= 700
+#define _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
 #define _LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS
 #endif
 
@@ -749,14 +758,14 @@ typedef __char32_t char32_t;
 #  endif
 #endif
 
-#ifndef _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT
-# ifdef _LIBCPP_OBJECT_FORMAT_COFF // Windows binaries can't merge typeinfos.
-# define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 0
-#else
-// TODO: This isn't strictly correct on ELF platforms due to llvm.org/PR37398
-// And we should consider defaulting to OFF.
-# define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 1
-#endif
+#ifndef _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION
+#  ifdef _LIBCPP_OBJECT_FORMAT_COFF // Windows binaries can't merge typeinfos.
+#    define _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION 2
+#  else
+     // TODO: This isn't strictly correct on ELF platforms due to llvm.org/PR37398
+     // And we should consider defaulting to OFF.
+#    define _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION 1
+#  endif
 #endif
 
 #ifndef _LIBCPP_HIDE_FROM_ABI
@@ -1101,12 +1110,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 // Try to find out if RTTI is disabled.
 // g++ and cl.exe have RTTI on by default and define a macro when it is.
-// g++ only defines the macro in 4.3.2 and onwards.
 #if !defined(_LIBCPP_NO_RTTI)
-#  if defined(__GNUC__) && \
-      ((__GNUC__ >= 5) || \
-       (__GNUC__ == 4 && (__GNUC_MINOR__ >= 3 || __GNUC_PATCHLEVEL__ >= 2))) && \
-      !defined(__GXX_RTTI)
+#  if defined(__GNUC__) && !defined(__GXX_RTTI)
 #    define _LIBCPP_NO_RTTI
 #  elif defined(_LIBCPP_COMPILER_MSVC) && !defined(_CPPRTTI)
 #    define _LIBCPP_NO_RTTI
@@ -1369,6 +1374,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 // Decide whether to use availability macros.
 #if !defined(_LIBCPP_BUILDING_LIBRARY) &&                                      \
+    !defined(_LIBCXXABI_BUILDING_LIBRARY) &&                                   \
     !defined(_LIBCPP_DISABLE_AVAILABILITY) &&                                  \
     __has_feature(attribute_availability_with_strict) &&                       \
     __has_feature(attribute_availability_in_templates) &&                      \
@@ -1386,10 +1392,10 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
      __attribute__((availability(tvos,strict,introduced=10.0)))                \
      __attribute__((availability(watchos,strict,introduced=3.0)))
 #  define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS                             \
-     __attribute__((availability(macosx,strict,introduced=10.14)))             \
-     __attribute__((availability(ios,strict,introduced=12.0)))                 \
-     __attribute__((availability(tvos,strict,introduced=12.0)))                \
-     __attribute__((availability(watchos,strict,introduced=5.0)))
+     __attribute__((availability(macosx,strict,introduced=10.13)))             \
+     __attribute__((availability(ios,strict,introduced=11.0)))                 \
+     __attribute__((availability(tvos,strict,introduced=11.0)))                \
+     __attribute__((availability(watchos,strict,introduced=4.0)))
 #  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS                              \
      _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
 #  define _LIBCPP_AVAILABILITY_BAD_ANY_CAST                                    \
@@ -1432,6 +1438,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
      _Pragma("clang attribute pop")
 #  define _LIBCPP_AVAILABILITY_TO_CHARS                                        \
      _LIBCPP_AVAILABILITY_FILESYSTEM
+#  define _LIBCPP_AVAILABILITY_SYNC                                            \
+     __attribute__((unavailable))
 #else
 #  define _LIBCPP_AVAILABILITY_SHARED_MUTEX
 #  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
@@ -1447,6 +1455,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM_POP
 #  define _LIBCPP_AVAILABILITY_TO_CHARS
+#  define _LIBCPP_AVAILABILITY_SYNC
 #endif
 
 // Define availability that depends on _LIBCPP_NO_EXCEPTIONS.
@@ -1528,6 +1537,19 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_FOPEN_CLOEXEC_MODE "e"
 #else
 #  define _LIBCPP_FOPEN_CLOEXEC_MODE
+#endif
+
+#ifdef _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
+#define _LIBCPP_BUILTIN_CONSTANT_P(x) __builtin_constant_p(x)
+#else
+#define _LIBCPP_BUILTIN_CONSTANT_P(x) false
+#endif
+
+// Support for _FILE_OFFSET_BITS=64 landed gradually in Android, so the full set
+// of functions used in cstdio may not be available for low API levels when
+// using 64-bit file offsets on LP32.
+#if defined(__BIONIC__) && defined(__USE_FILE_OFFSET64) && __ANDROID_API__ < 24
+#define _LIBCPP_HAS_NO_FGETPOS_FSETPOS
 #endif
 
 #endif // __cplusplus

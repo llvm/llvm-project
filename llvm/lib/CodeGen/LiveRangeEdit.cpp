@@ -232,7 +232,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   LLVM_DEBUG(dbgs() << "                folded: " << *FoldMI);
   LIS.ReplaceMachineInstrInMaps(*UseMI, *FoldMI);
   // Update the call site info.
-  if (UseMI->isCandidateForCallSiteEntry())
+  if (UseMI->shouldUpdateCallSiteInfo())
     UseMI->getMF()->moveCallSiteInfo(UseMI, FoldMI);
   UseMI->eraseFromParent();
   DefMI->addRegisterDead(LI->reg, nullptr);

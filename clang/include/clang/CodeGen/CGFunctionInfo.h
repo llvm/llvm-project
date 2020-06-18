@@ -508,6 +508,9 @@ class CGFunctionInfo final
   /// Whether this is a chain call.
   unsigned ChainCall : 1;
 
+  /// Whether this function is a CMSE nonsecure call
+  unsigned CmseNSCall : 1;
+
   /// Whether this function is noreturn.
   unsigned NoReturn : 1;
 
@@ -598,6 +601,8 @@ public:
 
   bool isChainCall() const { return ChainCall; }
 
+  bool isCmseNSCall() const { return CmseNSCall; }
+
   bool isNoReturn() const { return NoReturn; }
 
   /// In ARC, whether this function retains its return value.  This
@@ -635,7 +640,8 @@ public:
   FunctionType::ExtInfo getExtInfo() const {
     return FunctionType::ExtInfo(isNoReturn(), getHasRegParm(), getRegParm(),
                                  getASTCallingConvention(), isReturnsRetained(),
-                                 isNoCallerSavedRegs(), isNoCfCheck());
+                                 isNoCallerSavedRegs(), isNoCfCheck(),
+                                 isCmseNSCall());
   }
 
   CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
@@ -676,6 +682,7 @@ public:
     ID.AddBoolean(HasRegParm);
     ID.AddInteger(RegParm);
     ID.AddBoolean(NoCfCheck);
+    ID.AddBoolean(CmseNSCall);
     ID.AddInteger(Required.getOpaqueData());
     ID.AddBoolean(HasExtParameterInfos);
     if (HasExtParameterInfos) {
@@ -703,6 +710,7 @@ public:
     ID.AddBoolean(info.getHasRegParm());
     ID.AddInteger(info.getRegParm());
     ID.AddBoolean(info.getNoCfCheck());
+    ID.AddBoolean(info.getCmseNSCall());
     ID.AddInteger(required.getOpaqueData());
     ID.AddBoolean(!paramInfos.empty());
     if (!paramInfos.empty()) {

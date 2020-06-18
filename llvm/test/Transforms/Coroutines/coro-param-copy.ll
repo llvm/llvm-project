@@ -33,7 +33,7 @@ suspend:
 }
 
 ; See that we added both x and y to the frame.
-; CHECK: %f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i1, i1, i64, i64 }
+; CHECK: %f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i64, i64, i1 }
 
 ; See that all of the uses prior to coro-begin stays put.
 ; CHECK-LABEL: define i8* @f() {
@@ -46,10 +46,10 @@ suspend:
 
 ; See that we only copy the x as y was not modified prior to coro.begin.
 ; CHECK:  store void (%f.Frame*)* @f.destroy, void (%f.Frame*)** %destroy.addr
-; CHECK-NEXT:  %0 = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
+; CHECK-NEXT:  %0 = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 2
 ; CHECK-NEXT:  %1 = load i64, i64* %x.addr
 ; CHECK-NEXT:  store i64 %1, i64* %0
-; CHECK-NEXT:  %index.addr1 = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 3
+; CHECK-NEXT:  %index.addr1 = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
 ; CHECK-NEXT:  store i1 false, i1* %index.addr1
 ; CHECK-NEXT:  ret i8* %hdl
 

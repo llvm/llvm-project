@@ -29,7 +29,7 @@ define dso_local i1 @t(%class.A* %this, i32 %color, i32 %vertex) local_unnamed_a
 ; CHECK-P9-NEXT:    li r3, 0
 ; CHECK-P9-NEXT:    blr
 ; CHECK-P9-NEXT:  .LBB0_4: # %lor.lhs.false
-; CHECK-P9-NEXT:    cmplwi cr0, r4, 0
+; CHECK-P9-NEXT:    cmplwi r4, 0
 ; CHECK-P9-NEXT:    bne cr0, .LBB0_2
 ; CHECK-P9-NEXT:  .LBB0_5: # %cleanup16
 ; CHECK-P9-NEXT:    mr r3, r5

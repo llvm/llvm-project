@@ -1,89 +1,89 @@
-; RUN: llc %s -o - -filetype=obj \
+; RUN: llc -debug-entry-values %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
-;
-; CHECK: "entry value scope bytes covered":5
-; CHECK: "formal params scope bytes total":20
-; CHECK: "formal params scope bytes covered":20
-; CHECK: "formal params entry value scope bytes covered":5
-; CHECK: "vars scope bytes total":90
-; CHECK: "vars scope bytes covered":60
-; CHECK: "vars entry value scope bytes covered":0
-; CHECK: "total variables procesed by location statistics":6
-; CHECK: "variables with 0% of its scope covered":1
-; CHECK: "variables with (0%,10%) of its scope covered":0
-; CHECK: "variables with [10%,20%) of its scope covered":0
-; CHECK: "variables with [20%,30%) of its scope covered":0
-; CHECK: "variables with [30%,40%) of its scope covered":0
-; CHECK: "variables with [40%,50%) of its scope covered":0
-; CHECK: "variables with [50%,60%) of its scope covered":1
-; CHECK: "variables with [60%,70%) of its scope covered":0
-; CHECK: "variables with [70%,80%) of its scope covered":0
-; CHECK: "variables with [80%,90%) of its scope covered":1
-; CHECK: "variables with [90%,100%) of its scope covered":0
-; CHECK: "variables with 100% of its scope covered":3
-; CHECK: "variables (excluding the debug entry values) with 0% of its scope covered":1
-; CHECK: "variables (excluding the debug entry values) with (0%,10%) of its scope covered":0
-; CHECK: "variables (excluding the debug entry values) with [10%,20%) of its scope covered":0
-; CHECK: "variables (excluding the debug entry values) with [20%,30%) of its scope covered":0
-; CHECK: "variables (excluding the debug entry values) with [30%,40%) of its scope covered":0
-; CHECK: "variables (excluding the debug entry values) with [40%,50%) of its scope covered":0
-; CHECK: "variables (excluding the debug entry values) with [50%,60%) of its scope covered":2
-; CHECK: "variables (excluding the debug entry values) with [60%,70%) of its scope covered":0
-; CHECK: "variables (excluding the debug entry values) with [70%,80%) of its scope covered":0
-; CHECK: "variables (excluding the debug entry values) with [80%,90%) of its scope covered":1
-; CHECK: "variables (excluding the debug entry values) with [90%,100%) of its scope covered":0
-; CHECK: "variables (excluding the debug entry values) with 100% of its scope covered":2
-; CHECK: "total params procesed by location statistics":2
-; CHECK: "params with 0% of its scope covered":0
-; CHECK: "params with (0%,10%) of its scope covered":0
-; CHECK: "params with [10%,20%) of its scope covered":0
-; CHECK: "params with [20%,30%) of its scope covered":0
-; CHECK: "params with [30%,40%) of its scope covered":0
-; CHECK: "params with [40%,50%) of its scope covered":0
-; CHECK: "params with [50%,60%) of its scope covered":0
-; CHECK: "params with [60%,70%) of its scope covered":0
-; CHECK: "params with [70%,80%) of its scope covered":0
-; CHECK: "params with [80%,90%) of its scope covered":0
-; CHECK: "params with [90%,100%) of its scope covered":0
-; CHECK: "params with 100% of its scope covered":2
-; CHECK: "params (excluding the debug entry values) with 0% of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with (0%,10%) of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with [10%,20%) of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with [20%,30%) of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with [30%,40%) of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with [40%,50%) of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with [50%,60%) of its scope covered":1
-; CHECK: "params (excluding the debug entry values) with [60%,70%) of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with [70%,80%) of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with [80%,90%) of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with [90%,100%) of its scope covered":0
-; CHECK: "params (excluding the debug entry values) with 100% of its scope covered":1
-; CHECK: "total vars procesed by location statistics":4
-; CHECK: "vars with 0% of its scope covered":1
-; CHECK: "vars with (0%,10%) of its scope covered":0
-; CHECK: "vars with [10%,20%) of its scope covered":0
-; CHECK: "vars with [20%,30%) of its scope covered":0
-; CHECK: "vars with [30%,40%) of its scope covered":0
-; CHECK: "vars with [40%,50%) of its scope covered":0
-; CHECK: "vars with [50%,60%) of its scope covered":1
-; CHECK: "vars with [60%,70%) of its scope covered":0
-; CHECK: "vars with [70%,80%) of its scope covered":0
-; CHECK: "vars with [80%,90%) of its scope covered":1
-; CHECK: "vars with [90%,100%) of its scope covered":0
-; CHECK: "vars with 100% of its scope covered":1
-; CHECK: "vars (excluding the debug entry values) with 0% of its scope covered":1
-; CHECK: "vars (excluding the debug entry values) with (0%,10%) of its scope covered":0
-; CHECK: "vars (excluding the debug entry values) with [10%,20%) of its scope covered":0
-; CHECK: "vars (excluding the debug entry values) with [20%,30%) of its scope covered":0
-; CHECK: "vars (excluding the debug entry values) with [30%,40%) of its scope covered":0
-; CHECK: "vars (excluding the debug entry values) with [40%,50%) of its scope covered":0
-; CHECK: "vars (excluding the debug entry values) with [50%,60%) of its scope covered":1
-; CHECK: "vars (excluding the debug entry values) with [60%,70%) of its scope covered":0
-; CHECK: "vars (excluding the debug entry values) with [70%,80%) of its scope covered":0
-; CHECK: "vars (excluding the debug entry values) with [80%,90%) of its scope covered":1
-; CHECK: "vars (excluding the debug entry values) with [90%,100%) of its scope covered":0
-; CHECK: "vars (excluding the debug entry values) with 100% of its scope covered":1
-;
+
+; CHECK: "sum_all_variables(#bytes in parent scope covered by DW_OP_entry_value)":5
+; CHECK: "sum_all_params(#bytes in parent scope)":20
+; CHECK: "sum_all_params(#bytes in parent scope covered by DW_AT_location)":20
+; CHECK: "sum_all_params(#bytes in parent scope covered by DW_OP_entry_value)":5
+; CHECK: "sum_all_local_vars(#bytes in parent scope)":90
+; CHECK: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":60
+; CHECK: "sum_all_local_vars(#bytes in parent scope covered by DW_OP_entry_value)":0
+; CHECK: "#variables processed by location statistics":6
+; CHECK: "#variables with 0% of parent scope covered by DW_AT_location":1
+; CHECK: "#variables with (0%,10%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables with [10%,20%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables with [20%,30%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables with [30%,40%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables with [40%,50%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables with [50%,60%) of parent scope covered by DW_AT_location":1
+; CHECK: "#variables with [60%,70%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables with [70%,80%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables with [80%,90%) of parent scope covered by DW_AT_location":1
+; CHECK: "#variables with [90%,100%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables with 100% of parent scope covered by DW_AT_location":3
+; CHECK: "#variables - entry values with 0% of parent scope covered by DW_AT_location":1
+; CHECK: "#variables - entry values with (0%,10%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables - entry values with [10%,20%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables - entry values with [20%,30%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables - entry values with [30%,40%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables - entry values with [40%,50%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables - entry values with [50%,60%) of parent scope covered by DW_AT_location":2
+; CHECK: "#variables - entry values with [60%,70%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables - entry values with [70%,80%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables - entry values with [80%,90%) of parent scope covered by DW_AT_location":1
+; CHECK: "#variables - entry values with [90%,100%) of parent scope covered by DW_AT_location":0
+; CHECK: "#variables - entry values with 100% of parent scope covered by DW_AT_location":2
+; CHECK: "#params processed by location statistics":2
+; CHECK: "#params with 0% of parent scope covered by DW_AT_location":0
+; CHECK: "#params with (0%,10%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params with [10%,20%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params with [20%,30%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params with [30%,40%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params with [40%,50%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params with [50%,60%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params with [60%,70%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params with [70%,80%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params with [80%,90%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params with [90%,100%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params with 100% of parent scope covered by DW_AT_location":2
+; CHECK: "#params - entry values with 0% of parent scope covered by DW_AT_location":0
+; CHECK: "#params - entry values with (0%,10%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params - entry values with [10%,20%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params - entry values with [20%,30%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params - entry values with [30%,40%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params - entry values with [40%,50%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params - entry values with [50%,60%) of parent scope covered by DW_AT_location":1
+; CHECK: "#params - entry values with [60%,70%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params - entry values with [70%,80%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params - entry values with [80%,90%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params - entry values with [90%,100%) of parent scope covered by DW_AT_location":0
+; CHECK: "#params - entry values with 100% of parent scope covered by DW_AT_location":1
+; CHECK: "#local vars processed by location statistics":4
+; CHECK: "#local vars with 0% of parent scope covered by DW_AT_location":1
+; CHECK: "#local vars with (0%,10%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars with [10%,20%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars with [20%,30%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars with [30%,40%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars with [40%,50%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars with [50%,60%) of parent scope covered by DW_AT_location":1
+; CHECK: "#local vars with [60%,70%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars with [70%,80%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars with [80%,90%) of parent scope covered by DW_AT_location":1
+; CHECK: "#local vars with [90%,100%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars with 100% of parent scope covered by DW_AT_location":1
+; CHECK: "#local vars - entry values with 0% of parent scope covered by DW_AT_location":1
+; CHECK: "#local vars - entry values with (0%,10%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars - entry values with [10%,20%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars - entry values with [20%,30%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars - entry values with [30%,40%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars - entry values with [40%,50%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars - entry values with [50%,60%) of parent scope covered by DW_AT_location":1
+; CHECK: "#local vars - entry values with [60%,70%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars - entry values with [70%,80%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars - entry values with [80%,90%) of parent scope covered by DW_AT_location":1
+; CHECK: "#local vars - entry values with [90%,100%) of parent scope covered by DW_AT_location":0
+; CHECK: "#local vars - entry values with 100% of parent scope covered by DW_AT_location":1
+
 ; The source code of the test case:
 ; extern void fn3(int *);
 ; extern void fn2 (int);
@@ -102,7 +102,7 @@
 ;   fn2 (a);
 ;   u --;
 ; }
-;
+
 ; __attribute__((noinline))
 ; int f()
 ; {
@@ -112,7 +112,7 @@
 ;   fn1 (l, k);
 ;   return 0;
 ; }
-;
+
 ; ModuleID = 'test.c'
 source_filename = "test.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

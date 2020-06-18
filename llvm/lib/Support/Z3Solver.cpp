@@ -516,16 +516,16 @@ public:
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(
         Z3Expr(Context,
-               Z3_mk_fpa_mul(Context.Context, toZ3Expr(*LHS).AST,
-                             toZ3Expr(*RHS).AST, toZ3Expr(*RoundingMode).AST)));
+               Z3_mk_fpa_mul(Context.Context, toZ3Expr(*RoundingMode).AST,
+                             toZ3Expr(*LHS).AST, toZ3Expr(*RHS).AST)));
   }
 
   SMTExprRef mkFPDiv(const SMTExprRef &LHS, const SMTExprRef &RHS) override {
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(
         Z3Expr(Context,
-               Z3_mk_fpa_div(Context.Context, toZ3Expr(*LHS).AST,
-                             toZ3Expr(*RHS).AST, toZ3Expr(*RoundingMode).AST)));
+               Z3_mk_fpa_div(Context.Context, toZ3Expr(*RoundingMode).AST,
+                             toZ3Expr(*LHS).AST, toZ3Expr(*RHS).AST)));
   }
 
   SMTExprRef mkFPRem(const SMTExprRef &LHS, const SMTExprRef &RHS) override {
@@ -538,16 +538,16 @@ public:
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(
         Z3Expr(Context,
-               Z3_mk_fpa_add(Context.Context, toZ3Expr(*LHS).AST,
-                             toZ3Expr(*RHS).AST, toZ3Expr(*RoundingMode).AST)));
+               Z3_mk_fpa_add(Context.Context, toZ3Expr(*RoundingMode).AST,
+                             toZ3Expr(*LHS).AST, toZ3Expr(*RHS).AST)));
   }
 
   SMTExprRef mkFPSub(const SMTExprRef &LHS, const SMTExprRef &RHS) override {
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(
         Z3Expr(Context,
-               Z3_mk_fpa_sub(Context.Context, toZ3Expr(*LHS).AST,
-                             toZ3Expr(*RHS).AST, toZ3Expr(*RoundingMode).AST)));
+               Z3_mk_fpa_sub(Context.Context, toZ3Expr(*RoundingMode).AST,
+                             toZ3Expr(*LHS).AST, toZ3Expr(*RHS).AST)));
   }
 
   SMTExprRef mkFPLt(const SMTExprRef &LHS, const SMTExprRef &RHS) override {

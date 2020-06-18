@@ -83,6 +83,23 @@ MemoryLocation MemoryLocation::get(const AtomicRMWInst *RMWI) {
                         AATags);
 }
 
+Optional<MemoryLocation> MemoryLocation::getOrNone(const Instruction *Inst) {
+  switch (Inst->getOpcode()) {
+  case Instruction::Load:
+    return get(cast<LoadInst>(Inst));
+  case Instruction::Store:
+    return get(cast<StoreInst>(Inst));
+  case Instruction::VAArg:
+    return get(cast<VAArgInst>(Inst));
+  case Instruction::AtomicCmpXchg:
+    return get(cast<AtomicCmpXchgInst>(Inst));
+  case Instruction::AtomicRMW:
+    return get(cast<AtomicRMWInst>(Inst));
+  default:
+    return None;
+  }
+}
+
 MemoryLocation MemoryLocation::getForSource(const MemTransferInst *MTI) {
   return getForSource(cast<AnyMemTransferInst>(MTI));
 }

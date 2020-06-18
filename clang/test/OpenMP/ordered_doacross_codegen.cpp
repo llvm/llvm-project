@@ -25,6 +25,12 @@ void bar() {
   for (i = 0; i < n; ++i)
   for (j = 0; j < n; ++j)
     a[i] = b[i] + 1;
+// CHECK: call void @__kmpc_doacross_init(
+// CHECK: call void @__kmpc_doacross_fini(
+ #pragma omp for collapse(2) ordered(2)
+  for (int i = 0; i < n; i++)
+    for (int j = 0; j < n; j++)
+      ;
 }
 
 // CHECK-LABEL: @main()
@@ -67,6 +73,64 @@ int main() {
 // CHECK-NEXT: sub nsw i32 %{{.+}}, 0
 // CHECK-NEXT: sdiv i32 %{{.+}}, 1
 // CHECK-NEXT: sext i32 %{{.+}} to i64
+// CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[CNT:%.+]], i64 0, i64 0
+// CHECK-NEXT: store i64 %{{.+}}, i64* [[TMP]],
+// CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[CNT]], i64 0, i64 0
+// CHECK-NEXT: call void @__kmpc_doacross_wait([[IDENT]], i32 [[GTID]], i64* [[TMP]])
+#pragma omp ordered depend(sink : i - 2)
+    d[i] = a[i - 2];
+  }
+  // CHECK: landingpad
+  // CHECK: call void @__kmpc_doacross_fini([[IDENT]], i32 [[GTID]])
+  // CHECK: br label %
+
+  // CHECK: call void @__kmpc_for_static_fini(
+  // CHECK: call void @__kmpc_doacross_fini([[IDENT]], i32 [[GTID]])
+  // CHECK: ret i32 0
+  return 0;
+}
+
+// CHECK-LABEL: main1
+int main1() {
+// CHECK: [[DIMS:%.+]] = alloca [1 x [[KMP_DIM]]],
+// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT:%.+]])
+// CHECK: icmp
+// CHECK-NEXT: br i1 %
+// CHECK: [[CAST:%.+]] = bitcast [1 x [[KMP_DIM]]]* [[DIMS]] to i8*
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 [[CAST]], i8 0, i64 24, i1 false)
+// CHECK: [[DIM:%.+]] = getelementptr inbounds [1 x [[KMP_DIM]]], [1 x [[KMP_DIM]]]* [[DIMS]], i64 0, i64 0
+// CHECK: getelementptr inbounds [[KMP_DIM]], [[KMP_DIM]]* [[DIM]], i32 0, i32 1
+// CHECK: store i64 %{{.+}}, i64* %
+// CHECK: getelementptr inbounds [[KMP_DIM]], [[KMP_DIM]]* [[DIM]], i32 0, i32 2
+// CHECK: store i64 1, i64* %
+// CHECK: [[DIM:%.+]] = getelementptr inbounds [1 x [[KMP_DIM]]], [1 x [[KMP_DIM]]]* [[DIMS]], i64 0, i64 0
+// CHECK: [[CAST:%.+]] = bitcast [[KMP_DIM]]* [[DIM]] to i8*
+// CHECK: call void @__kmpc_doacross_init([[IDENT]], i32 [[GTID]], i32 1, i8* [[CAST]])
+// CHECK: call void @__kmpc_for_static_init_4(%struct.ident_t* @{{.+}}, i32 [[GTID]], i32 33, i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32 1, i32 1)
+#pragma omp for ordered(1)
+  for (int i = n; i > 0; --i) {
+    a[i] = b[i] + 1;
+    foo();
+// CHECK: invoke void [[FOO:.+]](
+// CHECK: [[UB_VAL:%.+]] = load i32, i32* [[UB:%.+]],
+// CHECK-NEXT: [[I_VAL:%.+]] = load i32, i32* [[I:%.+]],
+// CHECK-NEXT: sub i32 [[UB_VAL]], [[I_VAL]]
+// CHECK-NEXT: udiv i32 %{{.+}}, 1
+// CHECK-NEXT: zext i32 %{{.+}} to i64
+// CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[CNT:%.+]], i64 0, i64 0
+// CHECK-NEXT: store i64 %{{.+}}, i64* [[TMP]],
+// CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[CNT]], i64 0, i64 0
+// CHECK-NEXT: call void @__kmpc_doacross_post([[IDENT]], i32 [[GTID]], i64* [[TMP]])
+#pragma omp ordered depend(source)
+    c[i] = c[i] + 1;
+    foo();
+// CHECK: invoke void [[FOO]]
+// CHECK: [[UB_VAL:%.+]] = load i32, i32* [[UB]],
+// CHECK-NEXT: [[I_VAL:%.+]] = load i32, i32* [[I]],
+// CHECK-NEXT: [[SUB:%.+]] = sub nsw i32 [[I_VAL]], 2
+// CHECK-NEXT: sub i32 [[UB_VAL]], [[SUB]]
+// CHECK-NEXT: udiv i32 %{{.+}}, 1
+// CHECK-NEXT: zext i32 %{{.+}} to i64
 // CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[CNT:%.+]], i64 0, i64 0
 // CHECK-NEXT: store i64 %{{.+}}, i64* [[TMP]],
 // CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[CNT]], i64 0, i64 0

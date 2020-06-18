@@ -31,7 +31,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -374,7 +373,7 @@ private:
   void writeModuleConstants();
   bool pushValueAndType(const Value *V, unsigned InstID,
                         SmallVectorImpl<unsigned> &Vals);
-  void writeOperandBundles(ImmutableCallSite CS, unsigned InstID);
+  void writeOperandBundles(const CallBase &CB, unsigned InstID);
   void pushValue(const Value *V, unsigned InstID,
                  SmallVectorImpl<unsigned> &Vals);
   void pushValueSigned(const Value *V, unsigned InstID,
@@ -648,6 +647,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_INLINE;
   case Attribute::NoRecurse:
     return bitc::ATTR_KIND_NO_RECURSE;
+  case Attribute::NoMerge:
+    return bitc::ATTR_KIND_NO_MERGE;
   case Attribute::NonLazyBind:
     return bitc::ATTR_KIND_NON_LAZY_BIND;
   case Attribute::NonNull:
@@ -666,6 +667,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NOCF_CHECK;
   case Attribute::NoUnwind:
     return bitc::ATTR_KIND_NO_UNWIND;
+  case Attribute::NullPointerIsValid:
+    return bitc::ATTR_KIND_NULL_POINTER_IS_VALID;
   case Attribute::OptForFuzzing:
     return bitc::ATTR_KIND_OPT_FOR_FUZZING;
   case Attribute::OptimizeForSize:
@@ -726,10 +729,15 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_IMMARG;
   case Attribute::SanitizeMemTag:
     return bitc::ATTR_KIND_SANITIZE_MEMTAG;
+  case Attribute::Preallocated:
+    return bitc::ATTR_KIND_PREALLOCATED;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
     llvm_unreachable("Can not encode none-attribute.");
+  case Attribute::EmptyKey:
+  case Attribute::TombstoneKey:
+    llvm_unreachable("Trying to encode EmptyKey/TombstoneKey");
   }
 
   llvm_unreachable("Trying to encode unknown attribute");
@@ -875,6 +883,7 @@ void ModuleBitcodeWriter::writeTypeTable() {
     switch (T->getTypeID()) {
     case Type::VoidTyID:      Code = bitc::TYPE_CODE_VOID;      break;
     case Type::HalfTyID:      Code = bitc::TYPE_CODE_HALF;      break;
+    case Type::BFloatTyID:    Code = bitc::TYPE_CODE_BFLOAT;    break;
     case Type::FloatTyID:     Code = bitc::TYPE_CODE_FLOAT;     break;
     case Type::DoubleTyID:    Code = bitc::TYPE_CODE_DOUBLE;    break;
     case Type::X86_FP80TyID:  Code = bitc::TYPE_CODE_X86_FP80;  break;
@@ -946,15 +955,16 @@ void ModuleBitcodeWriter::writeTypeTable() {
       AbbrevToUse = ArrayAbbrev;
       break;
     }
-    case Type::VectorTyID: {
+    case Type::FixedVectorTyID:
+    case Type::ScalableVectorTyID: {
       VectorType *VT = cast<VectorType>(T);
       // VECTOR [numelts, eltty] or
       //        [numelts, eltty, scalable]
       Code = bitc::TYPE_CODE_VECTOR;
       TypeVals.push_back(VT->getNumElements());
       TypeVals.push_back(VE.getTypeID(VT->getElementType()));
-      if (VT->isScalable())
-        TypeVals.push_back(VT->isScalable());
+      if (isa<ScalableVectorType>(VT))
+        TypeVals.push_back(true);
       break;
     }
     }
@@ -1509,29 +1519,46 @@ void ModuleBitcodeWriter::writeGenericDINode(const GenericDINode *N,
   Record.clear();
 }
 
-static uint64_t rotateSign(int64_t I) {
-  uint64_t U = I;
-  return I < 0 ? ~(U << 1) : U << 1;
-}
-
 void ModuleBitcodeWriter::writeDISubrange(const DISubrange *N,
                                           SmallVectorImpl<uint64_t> &Record,
                                           unsigned Abbrev) {
-  const uint64_t Version = 1 << 1;
+  const uint64_t Version = 2 << 1;
   Record.push_back((uint64_t)N->isDistinct() | Version);
   Record.push_back(VE.getMetadataOrNullID(N->getRawCountNode()));
-  Record.push_back(rotateSign(N->getLowerBound()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawLowerBound()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawUpperBound()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawStride()));
 
   Stream.EmitRecord(bitc::METADATA_SUBRANGE, Record, Abbrev);
   Record.clear();
 }
 
+static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V) {
+  if ((int64_t)V >= 0)
+    Vals.push_back(V << 1);
+  else
+    Vals.push_back((-V << 1) | 1);
+}
+
+static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
+  // We have an arbitrary precision integer value to write whose
+  // bit width is > 64. However, in canonical unsigned integer
+  // format it is likely that the high bits are going to be zero.
+  // So, we only write the number of active words.
+  unsigned NumWords = A.getActiveWords();
+  const uint64_t *RawData = A.getRawData();
+  for (unsigned i = 0; i < NumWords; i++)
+    emitSignedInt64(Vals, RawData[i]);
+}
+
 void ModuleBitcodeWriter::writeDIEnumerator(const DIEnumerator *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
-  Record.push_back((N->isUnsigned() << 1) | N->isDistinct());
-  Record.push_back(rotateSign(N->getValue()));
+  const uint64_t IsBigInt = 1 << 2;
+  Record.push_back(IsBigInt | (N->isUnsigned() << 1) | N->isDistinct());
+  Record.push_back(N->getValue().getBitWidth());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
+  emitWideAPInt(Record, N->getValue());
 
   Stream.EmitRecord(bitc::METADATA_ENUMERATOR, Record, Abbrev);
   Record.clear();
@@ -1600,6 +1627,7 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getTemplateParams().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawIdentifier()));
   Record.push_back(VE.getMetadataOrNullID(N->getDiscriminator()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawDataLocation()));
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();
@@ -1666,6 +1694,7 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back((unsigned)N->getNameTableKind());
   Record.push_back(N->getRangesBaseAddress());
   Record.push_back(VE.getMetadataOrNullID(N->getRawSysRoot()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawSDK()));
 
   Stream.EmitRecord(bitc::METADATA_COMPILE_UNIT, Record, Abbrev);
   Record.clear();
@@ -1781,6 +1810,7 @@ void ModuleBitcodeWriter::writeDIModule(const DIModule *N,
   Record.push_back(N->isDistinct());
   for (auto &I : N->operands())
     Record.push_back(VE.getMetadataOrNullID(I));
+  Record.push_back(N->getLineNo());
 
   Stream.EmitRecord(bitc::METADATA_MODULE, Record, Abbrev);
   Record.clear();
@@ -1792,6 +1822,7 @@ void ModuleBitcodeWriter::writeDITemplateTypeParameter(
   Record.push_back(N->isDistinct());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getType()));
+  Record.push_back(N->isDefault());
 
   Stream.EmitRecord(bitc::METADATA_TEMPLATE_TYPE, Record, Abbrev);
   Record.clear();
@@ -1804,6 +1835,7 @@ void ModuleBitcodeWriter::writeDITemplateValueParameter(
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getType()));
+  Record.push_back(N->isDefault());
   Record.push_back(VE.getMetadataOrNullID(N->getValue()));
 
   Stream.EmitRecord(bitc::METADATA_TEMPLATE_VALUE, Record, Abbrev);
@@ -2263,13 +2295,6 @@ void ModuleBitcodeWriter::writeSyncScopeNames() {
   Stream.ExitBlock();
 }
 
-static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V) {
-  if ((int64_t)V >= 0)
-    Vals.push_back(V << 1);
-  else
-    Vals.push_back((-V << 1) | 1);
-}
-
 void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
                                          bool isGlobal) {
   if (FirstVal == LastVal) return;
@@ -2356,21 +2381,14 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Code = bitc::CST_CODE_INTEGER;
         AbbrevToUse = CONSTANTS_INTEGER_ABBREV;
       } else {                             // Wide integers, > 64 bits in size.
-        // We have an arbitrary precision integer value to write whose
-        // bit width is > 64. However, in canonical unsigned integer
-        // format it is likely that the high bits are going to be zero.
-        // So, we only write the number of active words.
-        unsigned NWords = IV->getValue().getActiveWords();
-        const uint64_t *RawWords = IV->getValue().getRawData();
-        for (unsigned i = 0; i != NWords; ++i) {
-          emitSignedInt64(Record, RawWords[i]);
-        }
+        emitWideAPInt(Record, IV->getValue());
         Code = bitc::CST_CODE_WIDE_INTEGER;
       }
     } else if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
       Code = bitc::CST_CODE_FLOAT;
       Type *Ty = CFP->getType();
-      if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy()) {
+      if (Ty->isHalfTy() || Ty->isBFloatTy() || Ty->isFloatTy() ||
+          Ty->isDoubleTy()) {
         Record.push_back(CFP->getValueAPF().bitcastToAPInt().getZExtValue());
       } else if (Ty->isX86_FP80Ty()) {
         // api needed to prevent premature destruction
@@ -2417,7 +2435,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
     } else if (const ConstantDataSequential *CDS =
                   dyn_cast<ConstantDataSequential>(C)) {
       Code = bitc::CST_CODE_DATA;
-      Type *EltTy = CDS->getType()->getElementType();
+      Type *EltTy = CDS->getElementType();
       if (isa<IntegerType>(EltTy)) {
         for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(CDS->getElementAsInteger(i));
@@ -2509,7 +2527,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         }
         Record.push_back(VE.getValueID(C->getOperand(0)));
         Record.push_back(VE.getValueID(C->getOperand(1)));
-        Record.push_back(VE.getValueID(C->getOperand(2)));
+        Record.push_back(VE.getValueID(CE->getShuffleMaskForBitcode()));
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:
@@ -2571,10 +2589,10 @@ bool ModuleBitcodeWriter::pushValueAndType(const Value *V, unsigned InstID,
   return false;
 }
 
-void ModuleBitcodeWriter::writeOperandBundles(ImmutableCallSite CS,
+void ModuleBitcodeWriter::writeOperandBundles(const CallBase &CS,
                                               unsigned InstID) {
   SmallVector<unsigned, 64> Record;
-  LLVMContext &C = CS.getInstruction()->getContext();
+  LLVMContext &C = CS.getContext();
 
   for (unsigned i = 0, e = CS.getNumOperandBundles(); i != e; ++i) {
     const auto &Bundle = CS.getOperandBundleAt(i);
@@ -2696,7 +2714,8 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Code = bitc::FUNC_CODE_INST_SHUFFLEVEC;
     pushValueAndType(I.getOperand(0), InstID, Vals);
     pushValue(I.getOperand(1), InstID, Vals);
-    pushValue(I.getOperand(2), InstID, Vals);
+    pushValue(cast<ShuffleVectorInst>(I).getShuffleMaskForBitcode(), InstID,
+              Vals);
     break;
   case Instruction::ICmp:
   case Instruction::FCmp: {
@@ -2761,11 +2780,11 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
 
   case Instruction::Invoke: {
     const InvokeInst *II = cast<InvokeInst>(&I);
-    const Value *Callee = II->getCalledValue();
+    const Value *Callee = II->getCalledOperand();
     FunctionType *FTy = II->getFunctionType();
 
     if (II->hasOperandBundles())
-      writeOperandBundles(II, InstID);
+      writeOperandBundles(*II, InstID);
 
     Code = bitc::FUNC_CODE_INST_INVOKE;
 
@@ -2837,11 +2856,11 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
   }
   case Instruction::CallBr: {
     const CallBrInst *CBI = cast<CallBrInst>(&I);
-    const Value *Callee = CBI->getCalledValue();
+    const Value *Callee = CBI->getCalledOperand();
     FunctionType *FTy = CBI->getFunctionType();
 
     if (CBI->hasOperandBundles())
-      writeOperandBundles(CBI, InstID);
+      writeOperandBundles(*CBI, InstID);
 
     Code = bitc::FUNC_CODE_INST_CALLBR;
 
@@ -2998,7 +3017,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     FunctionType *FTy = CI.getFunctionType();
 
     if (CI.hasOperandBundles())
-      writeOperandBundles(&CI, InstID);
+      writeOperandBundles(CI, InstID);
 
     Code = bitc::FUNC_CODE_INST_CALL;
 
@@ -3015,7 +3034,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
       Vals.push_back(Flags);
 
     Vals.push_back(VE.getTypeID(FTy));
-    pushValueAndType(CI.getCalledValue(), InstID, Vals); // Callee
+    pushValueAndType(CI.getCalledOperand(), InstID, Vals); // Callee
 
     // Emit value #'s for the fixed parameters.
     for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
@@ -3557,6 +3576,29 @@ static void writeFunctionTypeMetadataRecords(BitstreamWriter &Stream,
                      FS->type_test_assume_const_vcalls());
   WriteConstVCallVec(bitc::FS_TYPE_CHECKED_LOAD_CONST_VCALL,
                      FS->type_checked_load_const_vcalls());
+
+  auto WriteRange = [&](ConstantRange Range) {
+    Range = Range.sextOrTrunc(FunctionSummary::ParamAccess::RangeWidth);
+    assert(Range.getLower().getNumWords() == 1);
+    assert(Range.getUpper().getNumWords() == 1);
+    emitSignedInt64(Record, *Range.getLower().getRawData());
+    emitSignedInt64(Record, *Range.getUpper().getRawData());
+  };
+
+  if (!FS->paramAccesses().empty()) {
+    Record.clear();
+    for (auto &Arg : FS->paramAccesses()) {
+      Record.push_back(Arg.ParamNo);
+      WriteRange(Arg.Use);
+      Record.push_back(Arg.Calls.size());
+      for (auto &Call : Arg.Calls) {
+        Record.push_back(Call.ParamNo);
+        Record.push_back(Call.Callee);
+        WriteRange(Call.Offsets);
+      }
+    }
+    Stream.EmitRecord(bitc::FS_PARAM_ACCESS, Record);
+  }
 }
 
 /// Collect type IDs from type tests used by function.
@@ -3887,6 +3929,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     NameVals.clear();
   }
 
+  Stream.EmitRecord(bitc::FS_BLOCK_COUNT,
+                    ArrayRef<uint64_t>{Index->getBlockCount()});
+
   Stream.ExitBlock();
 }
 
@@ -4169,6 +4214,9 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       NameVals.clear();
     }
   }
+
+  Stream.EmitRecord(bitc::FS_BLOCK_COUNT,
+                    ArrayRef<uint64_t>{Index.getBlockCount()});
 
   Stream.ExitBlock();
 }

@@ -2,8 +2,8 @@
 
 define void @Foo(i32 signext %a, i32 signext %b) #0 {
 ; CHECK-LABEL: @Foo
-; CHECK:   cmpw [[CR:[0-9]+]]
-; CHECK-NEXT:   ble [[CR]], [[LABEL:\.[a-zA-Z0-9]+]]
+; CHECK:   cmpw
+; CHECK-NEXT:   ble 0, [[LABEL:\.[a-zA-Z0-9]+]]
 ; CHECK-NEXT:   .p2align  3
 ; CHECK-NEXT: {{\.[a-zA-Z0-9]+}}:
 ; CHECK-NEXT:   blr
@@ -39,8 +39,8 @@ return:
 
 define void @Foo2(i32 signext %a, i32 signext %b) #0 {
 ; CHECK-LABEL: @Foo2
-; CHECK:   cmpw [[CR:[0-9]+]]
-; CHECK-NEXT:   bge [[CR]], [[LABEL:\.[a-zA-Z0-9]+]]
+; CHECK:   cmpw
+; CHECK-NEXT:   bge 0, [[LABEL:\.[a-zA-Z0-9]+]]
 ; CHECK-NEXT:   .p2align  3
 ; CHECK-NEXT: {{\.[a-zA-Z0-9]+}}:
 ; CHECK-NEXT:   blr

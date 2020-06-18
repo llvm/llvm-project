@@ -16,13 +16,13 @@
 #include "LLToken.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/SMLoc.h"
 #include <string>
 
 namespace llvm {
-  class MemoryBuffer;
   class Type;
   class SMDiagnostic;
+  class SourceMgr;
   class LLVMContext;
 
   class LLLexer {

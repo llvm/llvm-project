@@ -12,14 +12,16 @@ define void @t0(<8 x i16>* %dest, <8 x i16>* %old) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
+; X86-NEXT:    movl $1, %edx
+; X86-NEXT:    movd %edx, %xmm0
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t0:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
+; X64-NEXT:    movl $1, %eax
+; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-NEXT:    retq

@@ -13,10 +13,10 @@
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
 using namespace clang::driver;
@@ -104,6 +104,9 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
   if (Args.hasFlag(options::OPT_fxray_ignore_loops,
                    options::OPT_fno_xray_ignore_loops, false))
     XRayIgnoreLoops = true;
+
+  XRayFunctionIndex = Args.hasFlag(options::OPT_fxray_function_index,
+                                   options::OPT_fno_xray_function_index, true);
 
   auto Bundles =
       Args.getAllArgValues(options::OPT_fxray_instrumentation_bundle);
@@ -203,6 +206,9 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
 
   if (XRayIgnoreLoops)
     CmdArgs.push_back("-fxray-ignore-loops");
+
+  if (!XRayFunctionIndex)
+    CmdArgs.push_back("-fno-xray-function-index");
 
   CmdArgs.push_back(Args.MakeArgString(Twine(XRayInstructionThresholdOption) +
                                        Twine(InstructionThreshold)));

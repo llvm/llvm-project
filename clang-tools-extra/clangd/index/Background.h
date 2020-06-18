@@ -9,16 +9,16 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_H
 
-#include "Context.h"
-#include "FSProvider.h"
 #include "GlobalCompilationDatabase.h"
-#include "Path.h"
 #include "SourceCode.h"
-#include "Threading.h"
 #include "index/BackgroundRebuild.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
+#include "support/Context.h"
+#include "support/FSProvider.h"
+#include "support/Path.h"
+#include "support/Threading.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Threading.h"

@@ -16,7 +16,6 @@
 #include "LiveDebugVariables.h"
 #include "RegAllocBase.h"
 #include "SpillPlacement.h"
-#include "Spiller.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -53,6 +52,7 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -3080,7 +3080,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     unsigned NewVRegSizeBefore = NewVRegs.size();
     unsigned PhysReg = trySplit(VirtReg, Order, NewVRegs, FixedRegisters);
     if (PhysReg || (NewVRegs.size() - NewVRegSizeBefore)) {
-      // If VirtReg got split, the eviction info is no longre relevant.
+      // If VirtReg got split, the eviction info is no longer relevant.
       LastEvicted.clearEvicteeInfo(VirtReg.reg);
       return PhysReg;
     }

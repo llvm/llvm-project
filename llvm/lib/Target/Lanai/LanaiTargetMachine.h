@@ -22,7 +22,6 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-class formatted_raw_ostream;
 
 class LanaiTargetMachine : public LLVMTargetMachine {
   LanaiSubtarget Subtarget;

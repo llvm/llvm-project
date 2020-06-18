@@ -193,9 +193,9 @@ const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
 
 MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
                                  const MCAsmInfo *MAI, SMLoc Loc)
-    : MCExpr(MCExpr::SymbolRef, Loc), Kind(Kind),
-      UseParensForSymbolVariant(MAI->useParensForSymbolVariant()),
-      HasSubsectionsViaSymbols(MAI->hasSubsectionsViaSymbols()),
+    : MCExpr(MCExpr::SymbolRef, Loc,
+             encodeSubclassData(Kind, MAI->useParensForSymbolVariant(),
+                                MAI->hasSubsectionsViaSymbols())),
       Symbol(Symbol) {
   assert(Symbol);
 }
@@ -317,8 +317,11 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_GOT_TLSLD_LO: return "got@tlsld@l";
   case VK_PPC_GOT_TLSLD_HI: return "got@tlsld@h";
   case VK_PPC_GOT_TLSLD_HA: return "got@tlsld@ha";
+  case VK_PPC_GOT_PCREL:
+    return "got@pcrel";
   case VK_PPC_TLSLD: return "tlsld";
   case VK_PPC_LOCAL: return "local";
+  case VK_PPC_NOTOC: return "notoc";
   case VK_COFF_IMGREL32: return "IMGREL";
   case VK_Hexagon_LO16: return "LO16";
   case VK_Hexagon_HI16: return "HI16";
@@ -432,6 +435,8 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("got@tlsld@l", VK_PPC_GOT_TLSLD_LO)
     .Case("got@tlsld@h", VK_PPC_GOT_TLSLD_HI)
     .Case("got@tlsld@ha", VK_PPC_GOT_TLSLD_HA)
+    .Case("got@pcrel", VK_PPC_GOT_PCREL)
+    .Case("notoc", VK_PPC_NOTOC)
     .Case("gdgot", VK_Hexagon_GD_GOT)
     .Case("gdplt", VK_Hexagon_GD_PLT)
     .Case("iegot", VK_Hexagon_IE_GOT)
@@ -462,7 +467,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
 }
 
 void MCSymbolRefExpr::printVariantKind(raw_ostream &OS) const {
-  if (UseParensForSymbolVariant)
+  if (useParensForSymbolVariant())
     OS << '(' << MCSymbolRefExpr::getVariantKindName(getKind()) << ')';
   else
     OS << '@' << MCSymbolRefExpr::getVariantKindName(getKind());

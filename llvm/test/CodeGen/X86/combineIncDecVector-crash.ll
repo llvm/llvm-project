@@ -29,11 +29,12 @@ bci_0:
    %token418 = call token (i64, i32, i8 * (i64, i32, i32, i32)*, i32,
 i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64
 2882400000, i32 0, i8 * (i64, i32, i32, i32)* nonnull @newarray, i32 4,
-i32 0, i64 undef, i32 10, i32 10, i32 400, i32 0, i32 35, i32 0, i32 1,
-i32 0, i32 43, i32 1, i32 13, i32 0, i32 3, i32 400, i32 3, i32 %0, i32
-4, i64 %1, i32 7, i8* null, i32 3, i32 -11464, i32 7, i8* null, i32 3,
-i32 -243, i32 3, i32 14, i32 3, i32 117, i32 3, i32 -13, i32 3, i32 -15,
-i32 3, i32 -210, i32 3, i32 541, i32 7, i8* null)
+i32 0, i64 undef, i32 10, i32 10, i32 400, i32 0, i32 0) ["deopt"
+(i32 35, i32 0, i32 1, i32 0, i32 43, i32 1, i32 13, i32 0, i32 3,
+i32 400, i32 3, i32 %0, i32 4, i64 %1, i32 7, i8* null, i32 3,
+i32 -11464, i32 7, i8* null, i32 3, i32 -243, i32 3, i32 14, i32 3,
+i32 117, i32 3, i32 -13, i32 3, i32 -15, i32 3, i32 -210, i32 3,
+i32 541, i32 7, i8* null)]
    %v2 = load atomic float, float * undef unordered, align 4
    %v3 = load <4 x i32>, <4 x i32> * undef, align 4
    %v4 = add <4 x i32> %v3, <i32 1, i32 1, i32 1, i32 1>

@@ -15,6 +15,7 @@
 #define MLIR_PASS_PASSREGISTRY_H_
 
 #include "mlir/Pass/PassOptions.h"
+#include "mlir/Support/TypeID.h"
 #include <functional>
 
 namespace mlir {
@@ -30,10 +31,6 @@ class PassOptions;
 using PassRegistryFunction =
     std::function<LogicalResult(OpPassManager &, StringRef options)>;
 using PassAllocatorFunction = std::function<std::unique_ptr<Pass>()>;
-
-/// A special type used by transformation passes to provide an address that can
-/// act as a unique identifier during pass registration.
-using PassID = ClassID;
 
 //===----------------------------------------------------------------------===//
 // PassRegistry
@@ -105,7 +102,7 @@ class PassInfo : public PassRegistryEntry {
 public:
   /// PassInfo constructor should not be invoked directly, instead use
   /// PassRegistration or registerPass.
-  PassInfo(StringRef arg, StringRef description, const PassID *passID,
+  PassInfo(StringRef arg, StringRef description, TypeID passID,
            const PassAllocatorFunction &allocator);
 };
 
@@ -122,7 +119,7 @@ void registerPassPipeline(
 
 /// Register a specific dialect pass allocator function with the system,
 /// typically used through the PassRegistration template.
-void registerPass(StringRef arg, StringRef description, const PassID *passID,
+void registerPass(StringRef arg, StringRef description,
                   const PassAllocatorFunction &function);
 
 /// PassRegistration provides a global initializer that registers a Pass
@@ -138,7 +135,7 @@ void registerPass(StringRef arg, StringRef description, const PassID *passID,
 template <typename ConcretePass> struct PassRegistration {
   PassRegistration(StringRef arg, StringRef description,
                    const PassAllocatorFunction &constructor) {
-    registerPass(arg, description, PassID::getID<ConcretePass>(), constructor);
+    registerPass(arg, description, constructor);
   }
 
   PassRegistration(StringRef arg, StringRef description)

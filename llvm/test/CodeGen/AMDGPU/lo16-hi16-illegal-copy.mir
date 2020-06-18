@@ -1,0 +1,55 @@
+# RUN: not llc -march=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -amdgpu-keep-16-bit-reg-suffixes -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefixes=ERR,GFX8-ERR %s
+# RUN: not llc -march=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -amdgpu-keep-16-bit-reg-suffixes -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefix=GCN %s
+# RUN: not llc -march=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -amdgpu-keep-16-bit-reg-suffixes -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not llc -march=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -amdgpu-keep-16-bit-reg-suffixes -verify-machineinstrs %s -o - 2>&1 | FileCheck -check-prefixes=GCN,GFX9 %s
+
+# Note: GFX8 did not allow SDWA SGPR sources. Therefor no HI16 subregs can be used there.
+
+# GCN-LABEL: {{^}}lo_to_lo_illegal_vgpr_to_sgpr:
+# GCN: ; illegal copy v0.l to s1.l
+# ERR: error: <unknown>:0:0: in function lo_to_lo_illegal_vgpr_to_sgpr void (): illegal SGPR to VGPR copy
+name: lo_to_lo_illegal_vgpr_to_sgpr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $sgpr1_lo16 = COPY $vgpr0_lo16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}lo_to_hi_sgpr_to_vgpr:
+# GFX8: ; illegal copy s0.l to v1.h
+# GFX9: v_mov_b32_sdwa v1, s0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+# GFX8-ERR: error: <unknown>:0:0: in function lo_to_hi_sgpr_to_vgpr void (): Cannot use hi16 subreg on VI!
+name: lo_to_hi_sgpr_to_vgpr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $sgpr0 = IMPLICIT_DEF
+    $vgpr1_hi16 = COPY killed $sgpr0_lo16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}lo_to_lo_illegal_agpr_to_sgpr:
+# GCN: ; illegal copy a0.l to s1.l
+# ERR: error: <unknown>:0:0: in function lo_to_lo_illegal_agpr_to_sgpr void (): illegal SGPR to VGPR copy
+name: lo_to_lo_illegal_agpr_to_sgpr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $agpr0 = IMPLICIT_DEF
+    $sgpr1_lo16 = COPY $agpr0_lo16
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: {{^}}lo_to_hi_vgpr_to_agpr:
+# GCN: ; illegal copy v0.h to a1.l
+# ERR: error: <unknown>:0:0: in function lo_to_hi_vgpr_to_agpr void (): Cannot use hi16 subreg with an AGPR!
+name: lo_to_hi_vgpr_to_agpr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $agpr1_lo16 = COPY killed $vgpr0_hi16
+    S_ENDPGM 0
+...

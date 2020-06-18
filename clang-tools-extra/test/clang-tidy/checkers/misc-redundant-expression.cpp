@@ -793,4 +793,10 @@ struct Bar {
     return foo < GetFoo() && foo < maybe_foo;
   }
 };
-}
+
+template <class... Values>
+struct Bar2 {
+  static_assert((... && (sizeof(Values) > 0)) == (... && (sizeof(Values) > 0)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:47: warning: both sides of operator are equivalent [misc-redundant-expression]
+};
+} // namespace no_crash

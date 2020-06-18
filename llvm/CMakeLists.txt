@@ -2,6 +2,14 @@
 
 cmake_minimum_required(VERSION 3.4.3)
 
+if ("${CMAKE_VERSION}" VERSION_LESS "3.13.4")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 12.0.0, the "
+    "minimum version of CMake required to build LLVM will become 3.13.4, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.13.4 now to avoid issues in the future!")
+endif()
+
 if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
@@ -64,10 +72,18 @@ endif()
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
 set(LLVM_ALL_PROJECTS "clang;clang-tools-extra;compiler-rt;debuginfo-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;mlir;openmp;parallel-libs;polly;pstl")
+# The flang project is not yet part of "all" projects (see C++ requirements)
+set(LLVM_EXTRA_PROJECTS "flang")
+# List of all known projects in the mono repo
+set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
-	"Semicolon-separated list of projects to build (${LLVM_ALL_PROJECTS}), or \"all\".")
+	"Semicolon-separated list of projects to build (${LLVM_KNOWN_PROJECTS}), or \"all\".")
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
+endif()
+if ("flang" IN_LIST LLVM_ENABLE_PROJECTS AND NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(STATUS "Enabling MLIR as a dependency to flang")
+  list(APPEND LLVM_ENABLE_PROJECTS "mlir")
 endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
@@ -89,7 +105,7 @@ mark_as_advanced(LLVM_ENABLE_PROJECTS_USED)
 
 if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
   set(LLVM_ENABLE_PROJECTS_USED ON CACHE BOOL "" FORCE)
-  foreach(proj ${LLVM_ALL_PROJECTS} ${LLVM_EXTERNAL_PROJECTS})
+  foreach(proj ${LLVM_KNOWN_PROJECTS} ${LLVM_EXTERNAL_PROJECTS})
     string(TOUPPER "${proj}" upper_proj)
     string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
     if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
@@ -289,6 +305,7 @@ set(LLVM_ALL_TARGETS
   AArch64
   AMDGPU
   ARM
+  AVR
   BPF
   Hexagon
   Lanai
@@ -347,13 +364,7 @@ option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON
 
 option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 
-if(CMAKE_SYSTEM_NAME STREQUAL Windows)
-  set(zlib_DEFAULT "OFF")
-else()
-  set(zlib_DEFAULT "ON")
-endif()
-
-set(LLVM_ENABLE_ZLIB "${zlib_DEFAULT}" CACHE STRING "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
+set(LLVM_ENABLE_ZLIB "ON" CACHE STRING "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
 
@@ -394,11 +405,10 @@ option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." ON)
-  option(LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY "Compile with -fmodules-local-submodule-visibility." OFF)
 else()
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." OFF)
-  option(LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY "Compile with -fmodules-local-submodule-visibility." ON)
 endif()
+option(LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY "Compile with -fmodules-local-submodule-visibility." ON)
 option(LLVM_ENABLE_LIBCXX "Use libc++ if available." OFF)
 option(LLVM_STATIC_LINK_CXX_STDLIB "Statically link the standard library." OFF)
 option(LLVM_ENABLE_LLD "Use lld as C and C++ linker." OFF)
@@ -415,11 +425,26 @@ endif()
 
 option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 
+# While adding scalable vector support to LLVM, we temporarily want to
+# allow an implicit conversion of TypeSize to uint64_t, and to allow
+# code to get the fixed number of elements from a possibly scalable vector.
+# This CMake flag enables a more strict mode where it asserts that the type
+# is not a scalable vector type.
+#
+# Enabling this flag makes it easier to find cases where the compiler makes
+# assumptions on the size being 'fixed size', when building tests for
+# SVE/SVE2 or other scalable vector architectures.
+option(LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS
+       "Enable assertions that type is not scalable in implicit conversion from TypeSize to uint64_t and calls to getNumElements" OFF)
+
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")
 
 option(LLVM_FORCE_USE_OLD_TOOLCHAIN
        "Set to ON to force using an old, unsupported host toolchain." OFF)
+
+set(LLVM_LOCAL_RPATH "" CACHE FILEPATH
+  "If set, an absolute path added as rpath on binaries that do not already contain an executable-relative rpath.")
 
 option(LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN
        "Set to ON to only warn when using a toolchain which is about to be deprecated, instead of emitting an error." OFF)
@@ -473,7 +498,7 @@ option(LLVM_USE_SPLIT_DWARF
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
-if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
+if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
   # TODO: support other platforms and toolchains.
   option(LLVM_BUILD_32_BITS "Build 32 bits executables and libraries." OFF)
 endif()
@@ -653,16 +678,38 @@ option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default
 
 include(HandleLLVMOptions)
 
-include(FindPythonInterp)
-if( NOT PYTHONINTERP_FOUND )
-  message(FATAL_ERROR
-"Unable to find Python interpreter, required for builds and testing.
+if(CMAKE_VERSION VERSION_LESS 3.12)
+  include(FindPythonInterp)
+  if( NOT PYTHONINTERP_FOUND )
+    message(FATAL_ERROR
+  "Unable to find Python interpreter, required for builds and testing.
 
-Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
-endif()
+  Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
+  endif()
 
-if( ${PYTHON_VERSION_STRING} VERSION_LESS 2.7 )
-  message(FATAL_ERROR "Python 2.7 or newer is required")
+  if( ${PYTHON_VERSION_STRING} VERSION_LESS 2.7 )
+    message(FATAL_ERROR "Python 2.7 or newer is required")
+  endif()
+
+  add_executable(Python3::Interpreter IMPORTED)
+  set_target_properties(Python3::Interpreter PROPERTIES
+    IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
+  set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+else()
+  find_package(Python3 COMPONENTS Interpreter)
+  if(NOT Python3_Interpreter_FOUND)
+    message(WARNING "Python3 not found, using python2 as a fallback")
+    find_package(Python2 COMPONENTS Interpreter REQUIRED)
+    if(Python2_VERSION VERSION_LESS 2.7)
+      message(SEND_ERROR "Python 2.7 or newer is required")
+    endif()
+
+    # Treat python2 as python3
+    add_executable(Python3::Interpreter IMPORTED)
+    set_target_properties(Python3::Interpreter PROPERTIES
+      IMPORTED_LOCATION ${Python2_EXECUTABLE})
+    set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
+  endif()
 endif()
 
 ######
@@ -698,7 +745,7 @@ endif (LLVM_USE_PERF)
 
 message(STATUS "Constructing LLVMBuild project information")
 execute_process(
-  COMMAND ${PYTHON_EXECUTABLE} -B ${LLVMBUILDTOOL}
+  COMMAND "${Python3_EXECUTABLE}" -B ${LLVMBUILDTOOL}
             --native-target "${LLVM_NATIVE_ARCH}"
             --enable-targets "${LLVM_TARGETS_TO_BUILD}"
             --enable-optional-components "${LLVMOPTIONALCOMPONENTS}"
@@ -834,6 +881,30 @@ endif()
 if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
           add_definitions("-D_XOPEN_SOURCE=700")
           add_definitions("-D_LARGE_FILE_API")
+
+  # CMake versions less than 3.16 set default linker flags to include -brtl, as
+  # well as setting -G when building libraries, so clear them out. Note we only
+  # try to clear the form that CMake will set as part of its initial
+  # configuration, it is still possible the user may force it as part of a
+  # compound option.
+  if(CMAKE_VERSION VERSION_LESS 3.16)
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" "" CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" "" CMAKE_SHARED_LINKER_FLAGS  "${CMAKE_SHARED_LINKER_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" "" CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" "" CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" "" CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" "" CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS}")
+  endif()
+
+  # Modules should be built with -G, so we can use runtime linking with
+  # plugins.
+  string(APPEND CMAKE_MODULE_LINKER_FLAGS " -G")
+
+  # Also set the correct flags for building shared libraries.
+  string(APPEND CMAKE_SHARED_LINKER_FLAGS " -shared")
 endif()
 
 # Build with _FILE_OFFSET_BITS=64 on Solaris to match g++ >= 9.
@@ -1066,6 +1137,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
       add_dependencies(llvm-libraries ${lib})
       if (NOT LLVM_ENABLE_IDE)
         add_dependencies(install-llvm-libraries install-${lib})
+        add_dependencies(install-llvm-libraries-stripped install-${lib}-stripped)
       endif()
     endforeach()
   endif()
@@ -1075,7 +1147,7 @@ endif()
 # after all targets are created.
 include(LLVMDistributionSupport)
 llvm_distribution_add_targets()
-process_llvm_pass_plugins()
+process_llvm_pass_plugins(GEN_CONFIG)
 
 # This allows us to deploy the Universal CRT DLLs by passing -DCMAKE_INSTALL_UCRT_LIBRARIES=ON to CMake
 if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_INSTALL_UCRT_LIBRARIES)

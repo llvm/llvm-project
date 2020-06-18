@@ -23,13 +23,10 @@ struct PassManagerOptions {
       "pass-pipeline-crash-reproducer",
       llvm::cl::desc("Generate a .mlir reproducer file at the given output path"
                      " if the pass manager crashes or fails")};
-
-  //===--------------------------------------------------------------------===//
-  // Multi-threading
-  //===--------------------------------------------------------------------===//
-  llvm::cl::opt<bool> disableThreads{
-      "disable-pass-threading",
-      llvm::cl::desc("Disable multithreading in the pass manager"),
+  llvm::cl::opt<bool> localReproducer{
+      "pass-pipeline-local-reproducer",
+      llvm::cl::desc("When generating a crash reproducer, attempt to generated "
+                     "a reproducer with the smallest pipeline."),
       llvm::cl::init(false)};
 
   //===--------------------------------------------------------------------===//
@@ -96,7 +93,7 @@ struct PassManagerOptions {
 };
 } // end anonymous namespace
 
-static llvm::ManagedStatic<Optional<PassManagerOptions>> options;
+static llvm::ManagedStatic<PassManagerOptions> options;
 
 /// Add an IR printing instrumentation if enabled by any 'print-ir' flags.
 void PassManagerOptions::addPrinterInstrumentation(PassManager &pm) {
@@ -141,33 +138,33 @@ void PassManagerOptions::addPrinterInstrumentation(PassManager &pm) {
 /// Add a pass timing instrumentation if enabled by 'pass-timing' flags.
 void PassManagerOptions::addTimingInstrumentation(PassManager &pm) {
   if (passTiming)
-    pm.enableTiming(passTimingDisplayMode);
+    pm.enableTiming(
+        std::make_unique<PassManager::PassTimingConfig>(passTimingDisplayMode));
 }
 
 void mlir::registerPassManagerCLOptions() {
-  // Reset the options instance if it hasn't been enabled yet.
-  if (!options->hasValue())
-    options->emplace();
+  // Make sure that the options struct has been constructed.
+  *options;
 }
 
 void mlir::applyPassManagerCLOptions(PassManager &pm) {
-  // Generate a reproducer on crash/failure.
-  if ((*options)->reproducerFile.getNumOccurrences())
-    pm.enableCrashReproducerGeneration((*options)->reproducerFile);
+  if (!options.isConstructed())
+    return;
 
-  // Disable multi-threading.
-  if ((*options)->disableThreads)
-    pm.disableMultithreading();
+  // Generate a reproducer on crash/failure.
+  if (options->reproducerFile.getNumOccurrences())
+    pm.enableCrashReproducerGeneration(options->reproducerFile,
+                                       options->localReproducer);
 
   // Enable statistics dumping.
-  if ((*options)->passStatistics)
-    pm.enableStatistics((*options)->passStatisticsDisplayMode);
+  if (options->passStatistics)
+    pm.enableStatistics(options->passStatisticsDisplayMode);
 
   // Add the IR printing instrumentation.
-  (*options)->addPrinterInstrumentation(pm);
+  options->addPrinterInstrumentation(pm);
 
   // Note: The pass timing instrumentation should be added last to avoid any
   // potential "ghost" timing from other instrumentations being unintentionally
   // included in the timing results.
-  (*options)->addTimingInstrumentation(pm);
+  options->addTimingInstrumentation(pm);
 }

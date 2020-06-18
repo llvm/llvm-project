@@ -85,10 +85,8 @@ body:             |
     ; MIPS32: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[MUL1]], [[C7]](s32)
     ; MIPS32: [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[LSHR7]], [[LSHR3]]
     ; MIPS32: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ADD4]](s32), [[C8]](s32)
-    ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-    ; MIPS32: $v0 = COPY [[UV]](s32)
-    ; MIPS32: $v1 = COPY [[UV1]](s32)
+    ; MIPS32: $v0 = COPY [[ADD4]](s32)
+    ; MIPS32: $v1 = COPY [[C8]](s32)
     ; MIPS32: RetRA implicit $v0, implicit $v1
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1

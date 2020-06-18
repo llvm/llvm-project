@@ -22,7 +22,6 @@ define float @func4(float %a) {
 ; CHECK-LABEL: func4:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea.sl %s1, 1084227584
-; CHECK-NEXT:    or %s1, 0, %s1
 ; CHECK-NEXT:    fadd.s %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = fadd float %a, 5.000000e+00
@@ -43,7 +42,6 @@ define float @func7(float %a) {
 ; CHECK-LABEL: func7:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea.sl %s1, 2139095039
-; CHECK-NEXT:    or %s1, 0, %s1
 ; CHECK-NEXT:    fadd.s %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = fadd float %a, 0x47EFFFFFE0000000
@@ -55,9 +53,27 @@ define double @func8(double %a) {
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea %s1, -1
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea.sl %s1, 2146435071(%s1)
+; CHECK-NEXT:    lea.sl %s1, 2146435071(, %s1)
 ; CHECK-NEXT:    fadd.d %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = fadd double %a, 0x7FEFFFFFFFFFFFFF
+  ret double %r
+}
+
+define float @fadds_imm(float %a) {
+; CHECK-LABEL: fadds_imm:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    fadd.s %s0, %s0, (2)1
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fadd float %a, -2.e+00
+  ret float %r
+}
+
+define double @faddd_imm(double %a) {
+; CHECK-LABEL: faddd_imm:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    fadd.d %s0, %s0, (2)1
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fadd double %a, -2.e+00
   ret double %r
 }

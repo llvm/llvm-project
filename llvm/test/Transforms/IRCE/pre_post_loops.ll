@@ -66,7 +66,7 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) {
 
 ; CHECK:      test_02(
 ; CHECK:      entry:
-; CHECK-NEXT:   %len = load i32, i32* %a_len_ptr, !range !0
+; CHECK-NEXT:   %len = load i32, i32* %a_len_ptr, align 4, !range !0
 ; CHECH-NEXT:    br i1 true, label %loop.preloop.preheader
 ; CHECK:      mainloop:
 ; CHECK-NEXT:   br label %loop

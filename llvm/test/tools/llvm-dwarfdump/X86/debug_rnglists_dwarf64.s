@@ -4,14 +4,15 @@
 
 # CHECK:      .debug_rnglists contents:
 # CHECK-NEXT: 0x00000000: range list header:
-# CHECK-SAME:   length = 0x0000001a,
+# CHECK-SAME:   length = 0x000000000000001a,
+# CHECK-SAME:   format = DWARF64,
 # CHECK-SAME:   version = 0x0005,
 # CHECK-SAME:   addr_size = 0x08,
 # CHECK-SAME:   seg_size = 0x00,
 # CHECK-SAME:   offset_entry_count = 0x00000002
 # CHECK-NEXT: offsets: [
-# CHECK-NEXT: 0x00000010 => 0x00000024
-# CHECK-NEXT: 0x00000011 => 0x00000025
+# CHECK-NEXT: 0x0000000000000010 => 0x00000024
+# CHECK-NEXT: 0x0000000000000011 => 0x00000025
 # CHECK-NEXT: ]
 # CHECK-NEXT: ranges:
 # CHECK-NEXT: 0x00000024: [DW_RLE_end_of_list]

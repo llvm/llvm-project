@@ -300,7 +300,7 @@ public:
   }
 
   Instruction *CreateShuffleVector(Constant *V1, Constant *V2,
-                                   Constant *Mask) const override {
+                                   ArrayRef<int> Mask) const override {
     return new ShuffleVectorInst(V1, V2, Mask);
   }
 

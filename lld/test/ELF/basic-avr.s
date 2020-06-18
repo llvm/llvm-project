@@ -8,7 +8,7 @@ main:
 foo:
   jmp foo
 
-# CHECK:      main:
+# CHECK:      <main>:
 # CHECK-NEXT:   0: 0e 94 02 00 <unknown>
-# CHECK:      foo:
+# CHECK:      <foo>:
 # CHECK-NEXT:   4: 0c 94 02 00 <unknown>

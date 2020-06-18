@@ -143,6 +143,7 @@ void RunFreeHooks(const void *ptr);
 class ReservedAddressRange {
  public:
   uptr Init(uptr size, const char *name = nullptr, uptr fixed_addr = 0);
+  uptr InitAligned(uptr size, uptr align, const char *name = nullptr);
   uptr Map(uptr fixed_addr, uptr size, const char *name = nullptr);
   uptr MapOrDie(uptr fixed_addr, uptr size, const char *name = nullptr);
   void Unmap(uptr addr, uptr size);
@@ -976,6 +977,20 @@ INLINE u32 GetNumberOfCPUsCached() {
     NumberOfCPUsCached = GetNumberOfCPUs();
   return NumberOfCPUsCached;
 }
+
+template <typename T>
+class ArrayRef {
+ public:
+  ArrayRef() {}
+  ArrayRef(T *begin, T *end) : begin_(begin), end_(end) {}
+
+  T *begin() { return begin_; }
+  T *end() { return end_; }
+
+ private:
+  T *begin_ = nullptr;
+  T *end_ = nullptr;
+};
 
 }  // namespace __sanitizer
 

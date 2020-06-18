@@ -858,7 +858,7 @@ void RegPressureTracker::recedeSkipDebugValues() {
     static_cast<RegionPressure&>(P).openTop(CurrPos);
 
   // Find the previous instruction.
-  CurrPos = skipDebugInstructionsBackward(std::prev(CurrPos), MBB->begin());
+  CurrPos = prev_nodbg(CurrPos, MBB->begin());
 
   SlotIndex SlotIdx;
   if (RequireIntervals && !CurrPos->isDebugInstr())
@@ -940,7 +940,7 @@ void RegPressureTracker::advance(const RegisterOperands &RegOpers) {
   bumpDeadDefs(RegOpers.DeadDefs);
 
   // Find the next instruction.
-  CurrPos = skipDebugInstructionsForward(std::next(CurrPos), MBB->end());
+  CurrPos = next_nodbg(CurrPos, MBB->end());
 }
 
 void RegPressureTracker::advance() {

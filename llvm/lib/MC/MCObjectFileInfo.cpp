@@ -276,6 +276,9 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   DwarfMacinfoSection =
       Ctx->getMachOSection("__DWARF", "__debug_macinfo", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata(), "debug_macinfo");
+  DwarfMacroSection =
+      Ctx->getMachOSection("__DWARF", "__debug_macro", MachO::S_ATTR_DEBUG,
+                           SectionKind::getMetadata(), "debug_macro");
   DwarfDebugInlineSection =
       Ctx->getMachOSection("__DWARF", "__debug_inlined", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata());
@@ -427,6 +430,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
       Ctx->getELFSection(".debug_ranges", DebugSecType, 0);
   DwarfMacinfoSection =
       Ctx->getELFSection(".debug_macinfo", DebugSecType, 0);
+  DwarfMacroSection = Ctx->getELFSection(".debug_macro", DebugSecType, 0);
 
   // DWARF5 Experimental Debug Info
 
@@ -469,6 +473,8 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
       Ctx->getELFSection(".debug_rnglists.dwo", DebugSecType, ELF::SHF_EXCLUDE);
   DwarfMacinfoDWOSection =
       Ctx->getELFSection(".debug_macinfo.dwo", DebugSecType, ELF::SHF_EXCLUDE);
+  DwarfMacroDWOSection =
+      Ctx->getELFSection(".debug_macro.dwo", DebugSecType, ELF::SHF_EXCLUDE);
 
   DwarfLoclistsDWOSection =
       Ctx->getELFSection(".debug_loclists.dwo", DebugSecType, ELF::SHF_EXCLUDE);
@@ -635,11 +641,21 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
           COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getMetadata(), "debug_macinfo");
+  DwarfMacroSection = Ctx->getCOFFSection(
+      ".debug_macro",
+      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+          COFF::IMAGE_SCN_MEM_READ,
+      SectionKind::getMetadata(), "debug_macro");
   DwarfMacinfoDWOSection = Ctx->getCOFFSection(
       ".debug_macinfo.dwo",
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
           COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getMetadata(), "debug_macinfo.dwo");
+  DwarfMacroDWOSection = Ctx->getCOFFSection(
+      ".debug_macro.dwo",
+      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+          COFF::IMAGE_SCN_MEM_READ,
+      SectionKind::getMetadata(), "debug_macro.dwo");
   DwarfInfoDWOSection = Ctx->getCOFFSection(
       ".debug_info.dwo",
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -771,6 +787,8 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
       Ctx->getWasmSection(".debug_ranges", SectionKind::getMetadata());
   DwarfMacinfoSection =
       Ctx->getWasmSection(".debug_macinfo", SectionKind::getMetadata());
+  DwarfMacroSection =
+      Ctx->getWasmSection(".debug_macro", SectionKind::getMetadata());
   DwarfCUIndexSection = Ctx->getWasmSection(".debug_cu_index", SectionKind::getMetadata());
   DwarfTUIndexSection = Ctx->getWasmSection(".debug_tu_index", SectionKind::getMetadata());
   DwarfInfoSection =
@@ -822,6 +840,22 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
 
   // The TOC-base always has 0 size, but 4 byte alignment.
   TOCBaseSection->setAlignment(Align(4));
+
+  // DWARF sections for XCOFF are not csects. They are special STYP_DWARF
+  // sections, and the individual DWARF sections are distinguished by their
+  // section subtype.
+  // TODO: Populate the DWARF sections appropriately.
+  DwarfAbbrevSection = nullptr;   // SSUBTYP_DWABREV
+  DwarfInfoSection = nullptr;     // SSUBTYP_DWINFO
+  DwarfLineSection = nullptr;     // SSUBTYP_DWLINE
+  DwarfFrameSection = nullptr;    // SSUBTYP_DWFRAME
+  DwarfPubNamesSection = nullptr; // SSUBTYP_DWPBNMS
+  DwarfPubTypesSection = nullptr; // SSUBTYP_DWPBTYP
+  DwarfStrSection = nullptr;      // SSUBTYP_DWSTR
+  DwarfLocSection = nullptr;      // SSUBTYP_DWLOC
+  DwarfARangesSection = nullptr;  // SSUBTYP_DWARNGE
+  DwarfRangesSection = nullptr;   // SSUBTYP_DWRNGES
+  DwarfMacinfoSection = nullptr;  // SSUBTYP_DWMAC
 }
 
 void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,

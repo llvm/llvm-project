@@ -14,7 +14,7 @@
 ---
 name:            add_f16_u32_preserve
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
   - { id: 2, class: sreg_64 }
@@ -32,7 +32,7 @@ registers:
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_sgpr31
-  
+
     %2 = COPY $sgpr30_sgpr31
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
@@ -44,9 +44,9 @@ body:             |
     %7 = V_BFE_U32 %3, 8, 8, implicit $exec
     %8 = V_LSHRREV_B32_e32 24, %4, implicit $exec
 
-    %9 = V_ADD_F16_e64 0, %5, 0, %6, 0, 0, implicit $exec
+    %9 = V_ADD_F16_e64 0, %5, 0, %6, 0, 0, implicit $mode, implicit $exec
     %10 = V_LSHLREV_B16_e64 8, %9, implicit $exec
-    %11 = V_MUL_F32_e64 0, %7, 0, %8, 0, 0, implicit $exec
+    %11 = V_MUL_F32_e64 0, %7, 0, %8, 0, 0, implicit $mode, implicit $exec
     %12 = V_LSHLREV_B32_e64 16, %11, implicit $exec
 
     %13 = V_OR_B32_e64 %10, %12, implicit $exec

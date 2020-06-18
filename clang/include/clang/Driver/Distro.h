@@ -67,6 +67,7 @@ public:
     UbuntuDisco,
     UbuntuEoan,
     UbuntuFocal,
+    UbuntuGroovy,
     UnknownDistro
   };
 
@@ -120,7 +121,7 @@ public:
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuFocal;
+    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuGroovy;
   }
 
   bool IsAlpineLinux() const {

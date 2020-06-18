@@ -85,7 +85,7 @@ TEST(LowLevelTypeTest, Vector) {
 
       // Test Type->LLT conversion.
       Type *IRSTy = IntegerType::get(C, S);
-      Type *IRTy = VectorType::get(IRSTy, Elts);
+      Type *IRTy = FixedVectorType::get(IRSTy, Elts);
       EXPECT_EQ(VTy, getLLTForType(*IRTy, DL));
     }
   }
@@ -222,8 +222,8 @@ TEST(LowLevelTypeTest, Pointer) {
       // Test Type->LLT conversion.
       Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
       EXPECT_EQ(Ty, getLLTForType(*IRTy, DL));
-      Type *IRVTy =
-        VectorType::get(PointerType::get(IntegerType::get(C, 8), AS), NumElts);
+      Type *IRVTy = FixedVectorType::get(
+          PointerType::get(IntegerType::get(C, 8), AS), NumElts);
       EXPECT_EQ(VTy, getLLTForType(*IRVTy, DL));
     }
   }
@@ -236,6 +236,26 @@ TEST(LowLevelTypeTest, Invalid) {
   ASSERT_FALSE(Ty.isScalar());
   ASSERT_FALSE(Ty.isPointer());
   ASSERT_FALSE(Ty.isVector());
+}
+
+TEST(LowLevelTypeTest, Divide) {
+  // Test basic scalar->scalar cases.
+  EXPECT_EQ(LLT::scalar(16), LLT::scalar(32).divide(2));
+  EXPECT_EQ(LLT::scalar(8), LLT::scalar(32).divide(4));
+  EXPECT_EQ(LLT::scalar(8), LLT::scalar(32).divide(4));
+
+  // Test pointer->scalar
+  EXPECT_EQ(LLT::scalar(32), LLT::pointer(0, 64).divide(2));
+
+  // Test dividing vectors.
+  EXPECT_EQ(LLT::scalar(32), LLT::vector(2, 32).divide(2));
+  EXPECT_EQ(LLT::vector(2, 32), LLT::vector(4, 32).divide(2));
+
+  // Test vector of pointers
+  EXPECT_EQ(LLT::pointer(1, 64),
+            LLT::vector(4, LLT::pointer(1, 64)).divide(4));
+  EXPECT_EQ(LLT::vector(2, LLT::pointer(1, 64)),
+            LLT::vector(4, LLT::pointer(1, 64)).divide(2));
 }
 
 }

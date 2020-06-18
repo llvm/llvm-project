@@ -39,23 +39,24 @@ public:
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
 
   int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             unsigned &FrameReg) const override;
+                             Register &FrameReg) const override;
   StackOffset resolveFrameIndexReference(const MachineFunction &MF, int FI,
-                                         unsigned &FrameReg, bool PreferFP,
+                                         Register &FrameReg, bool PreferFP,
                                          bool ForSimm) const;
   StackOffset resolveFrameOffsetReference(const MachineFunction &MF,
                                           int64_t ObjectOffset, bool isFixed,
-                                          bool isSVE, unsigned &FrameReg,
+                                          bool isSVE, Register &FrameReg,
                                           bool PreferFP, bool ForSimm) const;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
                                  const TargetRegisterInfo *TRI) const override;
 
-  bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MI,
-                                  std::vector<CalleeSavedInfo> &CSI,
-                                  const TargetRegisterInfo *TRI) const override;
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override;
 
   /// Can this function use the red zone for local allocations.
   bool canUseRedZone(const MachineFunction &MF) const;
@@ -86,7 +87,7 @@ public:
   unsigned getWinEHFuncletFrameSize(const MachineFunction &MF) const;
 
   int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
-                                     unsigned &FrameReg,
+                                     Register &FrameReg,
                                      bool IgnoreSPUpdates) const override;
   int getNonLocalFrameIndexReference(const MachineFunction &MF,
                                int FI) const override;

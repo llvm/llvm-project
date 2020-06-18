@@ -1,23 +1,23 @@
 ; REQUIRES: x86
-; Test that -lto-whole-program-visibility enables devirtualization.
+; Test that --lto-whole-program-visibility enables devirtualization.
 
 ; Index based WPD
 ; Generate unsplit module with summary for ThinLTO index-based WPD.
-; RUN: opt -thinlto-bc -o %t2.o %s
-; RUN: ld.lld %t2.o -o %t3 -save-temps -lto-whole-program-visibility \
+; RUN: opt --thinlto-bc -o %t2.o %s
+; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ; Hybrid WPD
 ; Generate split module with summary for hybrid Thin/Regular LTO WPD.
-; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
-; RUN: ld.lld %t.o -o %t3 -save-temps -lto-whole-program-visibility \
+; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t.o %s
+; RUN: ld.lld %t.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ; Regular LTO WPD
 ; RUN: opt -o %t4.o %s
-; RUN: ld.lld %t4.o -o %t3 -save-temps -lto-whole-program-visibility \
+; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 

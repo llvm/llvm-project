@@ -9,10 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABISYSV_ARM64_H
 #define LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABISYSV_ARM64_H
 
-#include "lldb/Target/ABI.h"
+#include "Plugins/ABI/AArch64/ABIAArch64.h"
 #include "lldb/lldb-private.h"
 
-class ABISysV_arm64 : public lldb_private::RegInfoBasedABI {
+class ABISysV_arm64 : public ABIAArch64 {
 public:
   ~ABISysV_arm64() override = default;
 
@@ -65,9 +65,6 @@ public:
     return true;
   }
 
-  const lldb_private::RegisterInfo *
-  GetRegisterInfoArray(uint32_t &count) override;
-
   bool GetPointerReturnRegister(const char *&name) override;
 
   // Static Functions
@@ -92,7 +89,7 @@ protected:
                            lldb_private::CompilerType &ast_type) const override;
 
 private:
-  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
+  using ABIAArch64::ABIAArch64; // Call CreateInstance instead.
 };
 
 #endif // LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABISYSV_ARM64_H

@@ -147,4 +147,4 @@ declare i8 addrspace(42)* @llvm.strip.invariant.group.p42i8(i8 addrspace(42)*)
 declare i16* @llvm.strip.invariant.group.p0i16(i16* %c1)
 declare i16 addrspace(42)* @llvm.strip.invariant.group.p42i16(i16 addrspace(42)* %c1)
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

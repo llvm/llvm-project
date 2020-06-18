@@ -143,6 +143,6 @@ void ento::registerNoReturnFunctionChecker(CheckerManager &mgr) {
   mgr.registerChecker<NoReturnFunctionChecker>();
 }
 
-bool ento::shouldRegisterNoReturnFunctionChecker(const LangOptions &LO) {
+bool ento::shouldRegisterNoReturnFunctionChecker(const CheckerManager &mgr) {
   return true;
 }

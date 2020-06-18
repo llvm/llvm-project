@@ -28,6 +28,7 @@ inline std::unique_ptr<TypeSystemClang> createAST() {
 
 inline CompilerType createRecord(TypeSystemClang &ast, llvm::StringRef name) {
   return ast.CreateRecordType(ast.getASTContext().getTranslationUnitDecl(),
+                              OptionalClangModuleID(),
                               lldb::AccessType::eAccessPublic, name, 0,
                               lldb::LanguageType::eLanguageTypeC);
 }

@@ -52,7 +52,7 @@
 ; RUN: -mattr=+call-saved-x18 \
 ; RUN: -global-isel \
 ; RUN: -o - %s | FileCheck %s \
-; RUN: --check-prefix=CHECK-SAVED-ALL
+; RUN: --check-prefix=CHECK-SAVED-ALL-GISEL
 
 ; Used to exhaust the supply of GPRs.
 @var = global [30 x i64] zeroinitializer
@@ -123,6 +123,17 @@ define void @caller() {
 ; CHECK-SAVED-ALL-DAG: ldr x14
 ; CHECK-SAVED-ALL-DAG: ldr x15
 ; CHECK-SAVED-ALL-DAG: ldr x18
+
+; CHECK-SAVED-ALL-GISEL: adrp x16, var
+; CHECK-SAVED-ALL-GISEL-DAG: ldr x8
+; CHECK-SAVED-ALL-GISEL-DAG: ldr x9
+; CHECK-SAVED-ALL-GISEL-DAG: ldr x10
+; CHECK-SAVED-ALL-GISEL-DAG: ldr x11
+; CHECK-SAVED-ALL-GISEL-DAG: ldr x12
+; CHECK-SAVED-ALL-GISEL-DAG: ldr x13
+; CHECK-SAVED-ALL-GISEL-DAG: ldr x14
+; CHECK-SAVED-ALL-GISEL-DAG: ldr x15
+; CHECK-SAVED-ALL-GISEL-DAG: ldr x18
 
   call void @callee()
 ; CHECK: bl callee

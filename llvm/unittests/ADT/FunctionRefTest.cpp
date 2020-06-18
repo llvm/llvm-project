@@ -38,4 +38,14 @@ TEST(FunctionRefTest, Copy) {
   EXPECT_EQ(1, Y());
 }
 
+TEST(FunctionRefTest, BadCopy) {
+  auto A = [] { return 1; };
+  function_ref<int()> X;
+  function_ref<int()> Y = A;
+  function_ref<int()> Z = static_cast<const function_ref<int()> &&>(Y);
+  X = Z;
+  Y = nullptr;
+  ASSERT_EQ(1, X());
 }
+
+} // namespace

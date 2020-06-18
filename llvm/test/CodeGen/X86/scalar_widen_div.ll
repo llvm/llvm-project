@@ -261,8 +261,8 @@ define <4 x i8> @test_char_rem(<4 x i8> %num, <4 x i8> %rem) {
 ; CHECK-NEXT:    cbtw
 ; CHECK-NEXT:    idivb %cl
 ; CHECK-NEXT:    movsbl %ah, %ecx
-; CHECK-NEXT:    pextrb $0, %xmm1, %edx
-; CHECK-NEXT:    pextrb $0, %xmm0, %eax
+; CHECK-NEXT:    movd %xmm1, %edx
+; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    cbtw
 ; CHECK-NEXT:    idivb %dl
 ; CHECK-NEXT:    movsbl %ah, %eax

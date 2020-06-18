@@ -116,17 +116,26 @@ double c02(double *x, char y);
 // AARCH64: "_ZGVnM16uv_c02" "_ZGVnM8uv_c02"
 // AARCH64-NOT: c02
 
+/************************************/
+/* Linear with a constant parameter */
+/************************************/
+
+#pragma omp declare simd notinbranch linear(i)
+double constlinear(const int i);
+// AARCH64: "_ZGVnN2l_constlinear" "_ZGVnN4l_constlinear"
+// AARCH64-NOT: constlinear
+
 /*************************/
 /* sincos-like signature */
 /*************************/
 #pragma omp declare simd linear(sin) linear(cos)
 void sincos(double in, double *sin, double *cos);
-// AARCH64: "_ZGVnN2vll_sincos"
+// AARCH64: "_ZGVnN2vl8l8_sincos"
 // AARCH64-NOT: sincos
 
 #pragma omp declare simd linear(sin : 1) linear(cos : 2)
 void SinCos(double in, double *sin, double *cos);
-// AARCH64: "_ZGVnN2vll2_SinCos"
+// AARCH64: "_ZGVnN2vl8l16_SinCos"
 // AARCH64-NOT: SinCos
 
 // Selection of tests based on the examples provided in chapter 5 of
@@ -149,7 +158,7 @@ int foo3(int *x, int i, unsigned char c);
 // Listing 6, p. 19
 #pragma omp declare simd linear(x) aligned(x : 16) simdlen(4)
 int foo4(int *x, float y);
-// AARCH64: "_ZGVnM4la16v_foo4" "_ZGVnN4la16v_foo4"
+// AARCH64: "_ZGVnM4l4a16v_foo4" "_ZGVnN4l4a16v_foo4"
 // AARCH64-NOT: foo4
 
 static int *I;
@@ -170,6 +179,7 @@ void do_something() {
   D = b03(D);
   *I = c01(D, *S);
   *D = c02(D, *S);
+  constlinear(*I);
   sincos(*D, D, D);
   SinCos(*D, D, D);
   foo2(I, *I);

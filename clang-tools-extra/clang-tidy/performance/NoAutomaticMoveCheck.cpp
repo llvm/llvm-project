@@ -25,10 +25,6 @@ NoAutomaticMoveCheck::NoAutomaticMoveCheck(StringRef Name,
           utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
 
 void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
-  // Automatic move exists only for c++11 onwards.
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   const auto ConstLocalVariable =
       varDecl(hasLocalStorage(), unless(hasType(lValueReferenceType())),
               hasType(qualType(
@@ -48,12 +44,14 @@ void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
                               pointee(type(equalsBoundNode("SrcT")))))))))));
 
   Finder->addMatcher(
-      returnStmt(
-          hasReturnValue(ignoringElidableConstructorCall(ignoringParenImpCasts(
-              cxxConstructExpr(hasDeclaration(LValueRefCtor),
-                               hasArgument(0, ignoringParenImpCasts(declRefExpr(
-                                                  to(ConstLocalVariable)))))
-                  .bind("ctor_call"))))),
+      traverse(ast_type_traits::TK_AsIs,
+               returnStmt(hasReturnValue(
+                   ignoringElidableConstructorCall(ignoringParenImpCasts(
+                       cxxConstructExpr(
+                           hasDeclaration(LValueRefCtor),
+                           hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                              to(ConstLocalVariable)))))
+                           .bind("ctor_call")))))),
       this);
 }
 

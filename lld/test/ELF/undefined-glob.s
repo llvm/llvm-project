@@ -14,7 +14,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 
 # RUN: ld.lld -o %t.exe %t.o %t.a
-# RUN: llvm-readobj --symbols %t.exe | FileCheck --check-prefix=NO-OPT %s
+# RUN: llvm-nm %t.exe | FileCheck --check-prefix=NO-OPT %s
 
 # NO-OPT-NOT: foo
 # NO-OPT-NOT: bar

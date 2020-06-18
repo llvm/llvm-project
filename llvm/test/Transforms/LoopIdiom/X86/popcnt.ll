@@ -1,5 +1,7 @@
 ; RUN: opt -loop-idiom < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 -S | FileCheck %s
 
+target triple = "x86_64-apple-macosx10.8.0"
+
 ;To recognize this pattern:
 ;int popcount(unsigned long long a) {
 ;    int c = 0;
@@ -75,7 +77,6 @@ while.end:                                        ; preds = %while.body, %entry
 }
 
 ; Some variants once cause crash
-target triple = "x86_64-apple-macosx10.8.0"
 
 define i32 @PopCntCrash1(i64 %a) nounwind uwtable readnone ssp {
 entry:

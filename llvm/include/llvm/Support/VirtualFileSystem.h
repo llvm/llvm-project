@@ -19,7 +19,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -38,6 +37,7 @@
 namespace llvm {
 
 class MemoryBuffer;
+class Twine;
 
 namespace vfs {
 
@@ -506,10 +506,12 @@ getVFSFromYAML(std::unique_ptr<llvm::MemoryBuffer> Buffer,
 
 struct YAMLVFSEntry {
   template <typename T1, typename T2>
-  YAMLVFSEntry(T1 &&VPath, T2 &&RPath)
-      : VPath(std::forward<T1>(VPath)), RPath(std::forward<T2>(RPath)) {}
+  YAMLVFSEntry(T1 &&VPath, T2 &&RPath, bool IsDirectory = false)
+      : VPath(std::forward<T1>(VPath)), RPath(std::forward<T2>(RPath)),
+        IsDirectory(IsDirectory) {}
   std::string VPath;
   std::string RPath;
+  bool IsDirectory = false;
 };
 
 class VFSFromYamlDirIterImpl;
@@ -654,7 +656,7 @@ private:
   // In a RedirectingFileSystem, keys can be specified in Posix or Windows
   // style (or even a mixture of both), so this comparison helper allows
   // slashes (representing a root) to match backslashes (and vice versa).  Note
-  // that, other than the root, patch components should not contain slashes or
+  // that, other than the root, path components should not contain slashes or
   // backslashes.
   bool pathComponentMatches(llvm::StringRef lhs, llvm::StringRef rhs) const {
     if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_lower(rhs)))
@@ -771,10 +773,13 @@ class YAMLVFSWriter {
   Optional<bool> UseExternalNames;
   std::string OverlayDir;
 
+  void addEntry(StringRef VirtualPath, StringRef RealPath, bool IsDirectory);
+
 public:
   YAMLVFSWriter() = default;
 
   void addFileMapping(StringRef VirtualPath, StringRef RealPath);
+  void addDirectoryMapping(StringRef VirtualPath, StringRef RealPath);
 
   void setCaseSensitivity(bool CaseSensitive) {
     IsCaseSensitive = CaseSensitive;

@@ -308,7 +308,8 @@ define <2 x i64> @cttz_v2i64_undef(<2 x i64> %x) {
 }
 
 ; CHECK-LABEL: ctpop_v2i64:
-; CHECK: i64.popcnt
+; Note: expansion does not use i64.popcnt
+; CHECK: v128.and
 declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 define <2 x i64> @ctpop_v2i64(<2 x i64> %x) {
   %v = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %x)

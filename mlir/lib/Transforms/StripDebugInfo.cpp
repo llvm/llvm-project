@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
@@ -14,7 +15,7 @@
 using namespace mlir;
 
 namespace {
-struct StripDebugInfo : public OperationPass<StripDebugInfo> {
+struct StripDebugInfo : public StripDebugInfoBase<StripDebugInfo> {
   void runOnOperation() override;
 };
 } // end anonymous namespace
@@ -29,6 +30,3 @@ void StripDebugInfo::runOnOperation() {
 std::unique_ptr<Pass> mlir::createStripDebugInfoPass() {
   return std::make_unique<StripDebugInfo>();
 }
-
-static PassRegistration<StripDebugInfo>
-    pass("strip-debuginfo", "Strip debug info from all operations");

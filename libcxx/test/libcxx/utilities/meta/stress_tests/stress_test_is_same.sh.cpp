@@ -17,8 +17,8 @@
 // std::_IsSame:    689.634 ms     356 K
 // std::is_same:  8,129.180 ms     560 K
 //
-// RUN: %cxx %flags %compile_flags -c %s -o %S/orig.o -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace -std=c++17
-// RUN: %cxx %flags %compile_flags -c %s -o %S/new.o -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace -std=c++17 -DTEST_NEW
+// RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %S/orig.o -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace -std=c++17
+// RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %S/new.o -ggdb  -ggnu-pubnames -ftemplate-depth=5000 -ftime-trace -std=c++17 -DTEST_NEW
 
 #include <type_traits>
 #include <cassert>

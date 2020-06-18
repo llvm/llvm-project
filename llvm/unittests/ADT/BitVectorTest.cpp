@@ -179,6 +179,24 @@ TYPED_TEST(BitVectorTest, TrivialOperation) {
   EXPECT_TRUE(Vec.empty());
 }
 
+TYPED_TEST(BitVectorTest, Equality) {
+  TypeParam A;
+  TypeParam B;
+  EXPECT_TRUE(A == B);
+  A.resize(10);
+  EXPECT_FALSE(A == B);
+  B.resize(10);
+  EXPECT_TRUE(A == B);
+  A.set(5);
+  EXPECT_FALSE(A == B);
+  B.set(5);
+  EXPECT_TRUE(A == B);
+  A.resize(20);
+  EXPECT_FALSE(A == B);
+  B.resize(20);
+  EXPECT_TRUE(A == B);
+}
+
 TYPED_TEST(BitVectorTest, SimpleFindOpsMultiWord) {
   TypeParam A;
 
@@ -279,6 +297,18 @@ TYPED_TEST(BitVectorTest, SimpleFindOpsSingleWord) {
   EXPECT_EQ(-1, A.find_last_unset());
 
   A.resize(20);
+  ASSERT_TRUE(SmallBitVectorIsSmallMode(A));
+  EXPECT_EQ(-1, A.find_first());
+  EXPECT_EQ(-1, A.find_last());
+  EXPECT_EQ(-1, A.find_next(5));
+  EXPECT_EQ(-1, A.find_next(19));
+  EXPECT_EQ(-1, A.find_prev(5));
+  EXPECT_EQ(-1, A.find_prev(20));
+  EXPECT_EQ(0, A.find_first_unset());
+  EXPECT_EQ(19, A.find_last_unset());
+  EXPECT_EQ(6, A.find_next_unset(5));
+  EXPECT_EQ(-1, A.find_next_unset(19));
+
   A.set(3);
   A.set(4);
   A.set(16);
@@ -301,6 +331,19 @@ TYPED_TEST(BitVectorTest, SimpleFindOpsSingleWord) {
   EXPECT_EQ(5, A.find_next_unset(4));
   EXPECT_EQ(13, A.find_next_unset(12));
   EXPECT_EQ(17, A.find_next_unset(15));
+
+  A.set();
+  ASSERT_TRUE(SmallBitVectorIsSmallMode(A));
+  EXPECT_EQ(0, A.find_first());
+  EXPECT_EQ(19, A.find_last());
+  EXPECT_EQ(6, A.find_next(5));
+  EXPECT_EQ(-1, A.find_next(19));
+  EXPECT_EQ(4, A.find_prev(5));
+  EXPECT_EQ(19, A.find_prev(20));
+  EXPECT_EQ(-1, A.find_first_unset());
+  EXPECT_EQ(-1, A.find_last_unset());
+  EXPECT_EQ(-1, A.find_next_unset(5));
+  EXPECT_EQ(-1, A.find_next_unset(19));
 }
 
 TEST(BitVectorTest, FindInRangeMultiWord) {
@@ -1186,4 +1229,34 @@ TYPED_TEST(BitVectorTest, DenseSet) {
   EXPECT_EQ(true, Set.erase(A));
   EXPECT_EQ(0U, Set.size());
 }
+
+/// Test that capacity doesn't affect hashing.
+TYPED_TEST(BitVectorTest, DenseMapHashing) {
+  using DMI = DenseMapInfo<TypeParam>;
+  {
+    TypeParam A;
+    A.resize(200);
+    A.set(100);
+
+    TypeParam B;
+    B.resize(200);
+    B.set(100);
+    B.reserve(1000);
+
+    EXPECT_EQ(DMI::getHashValue(A), DMI::getHashValue(B));
+  }
+  {
+    TypeParam A;
+    A.resize(20);
+    A.set(10);
+
+    TypeParam B;
+    B.resize(20);
+    B.set(10);
+    B.reserve(1000);
+
+    EXPECT_EQ(DMI::getHashValue(A), DMI::getHashValue(B));
+  }
+}
+
 } // namespace

@@ -30,11 +30,12 @@ protected:
   bool HasF;
   bool HasD;
   bool HasC;
+  bool HasB;
 
 public:
   RISCVTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple), HasM(false), HasA(false), HasF(false),
-        HasD(false), HasC(false) {
+        HasD(false), HasC(false), HasB(false) {
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
@@ -75,6 +76,8 @@ public:
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
+
+  bool hasExtIntType() const override { return true; }
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:

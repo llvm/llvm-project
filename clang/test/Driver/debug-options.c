@@ -242,7 +242,7 @@
 // RUN:        | FileCheck -check-prefix=GLIO_ONLY %s
 //
 // NOG_PS4: "-cc1"
-// NOG_PS4-NOT "-dwarf-version=
+// NOG_PS4-NOT: "-dwarf-version=
 // NOG_PS4: "-generate-arange-section"
 // NOG_PS4-NOT: "-dwarf-version=
 //

@@ -42,6 +42,9 @@ protected:
   SUnit *pickNode(bool &IsTopNode) override;
   void enterMBB(MachineBasicBlock *MBB) override;
   void leaveMBB() override;
+
+  void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand) override;
+  bool biasAddiCandidate(SchedCandidate &Cand, SchedCandidate &TryCand) const;
 };
 
 } // end namespace llvm

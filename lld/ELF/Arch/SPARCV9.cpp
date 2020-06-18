@@ -16,9 +16,8 @@
 using namespace llvm;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 namespace {
 class SPARCV9 final : public TargetInfo {
@@ -55,6 +54,14 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
   case R_SPARC_UA32:
   case R_SPARC_64:
   case R_SPARC_UA64:
+  case R_SPARC_H44:
+  case R_SPARC_M44:
+  case R_SPARC_L44:
+  case R_SPARC_HH22:
+  case R_SPARC_HM10:
+  case R_SPARC_LM22:
+  case R_SPARC_HI22:
+  case R_SPARC_LO10:
     return R_ABS;
   case R_SPARC_PC10:
   case R_SPARC_PC22:
@@ -69,6 +76,9 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
     return R_PLT_PC;
   case R_SPARC_NONE:
     return R_NONE;
+  case R_SPARC_TLS_LE_HIX22:
+  case R_SPARC_TLS_LE_LOX10:
+    return R_TLS;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
@@ -103,7 +113,13 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_SPARC_GOT22:
   case R_SPARC_PC22:
+  case R_SPARC_LM22:
     // T-imm22
+    write32be(loc, (read32be(loc) & ~0x003fffff) | ((val >> 10) & 0x003fffff));
+    break;
+  case R_SPARC_HI22:
+    // V-imm22
+    checkUInt(loc, val >> 10, 22, rel);
     write32be(loc, (read32be(loc) & ~0x003fffff) | ((val >> 10) & 0x003fffff));
     break;
   case R_SPARC_WDISP19:
@@ -116,10 +132,44 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     // T-simm10
     write32be(loc, (read32be(loc) & ~0x000003ff) | (val & 0x000003ff));
     break;
+  case R_SPARC_LO10:
+    // T-simm13
+    write32be(loc, (read32be(loc) & ~0x00001fff) | (val & 0x000003ff));
+    break;
   case R_SPARC_64:
   case R_SPARC_UA64:
     // V-xword64
     write64be(loc, val);
+    break;
+  case R_SPARC_HH22:
+    // V-imm22
+    checkUInt(loc, val >> 42, 22, rel);
+    write32be(loc, (read32be(loc) & ~0x003fffff) | ((val >> 42) & 0x003fffff));
+    break;
+  case R_SPARC_HM10:
+    // T-simm13
+    write32be(loc, (read32be(loc) & ~0x00001fff) | ((val >> 32) & 0x000003ff));
+    break;
+  case R_SPARC_H44:
+    // V-imm22
+    checkUInt(loc, val >> 22, 22, rel);
+    write32be(loc, (read32be(loc) & ~0x003fffff) | ((val >> 22) & 0x003fffff));
+    break;
+  case R_SPARC_M44:
+    // T-imm10
+    write32be(loc, (read32be(loc) & ~0x000003ff) | ((val >> 12) & 0x000003ff));
+    break;
+  case R_SPARC_L44:
+    // T-imm13
+    write32be(loc, (read32be(loc) & ~0x00001fff) | (val & 0x00000fff));
+    break;
+  case R_SPARC_TLS_LE_HIX22:
+    // T-imm22
+    write32be(loc, (read32be(loc) & ~0x003fffff) | ((~val >> 10) & 0x003fffff));
+    break;
+  case R_SPARC_TLS_LE_LOX10:
+    // T-simm13
+    write32be(loc, (read32be(loc) & ~0x00001fff) | (val & 0x000003ff) | 0x1C00);
     break;
   default:
     llvm_unreachable("unknown relocation");
@@ -145,10 +195,7 @@ void SPARCV9::writePlt(uint8_t *buf, const Symbol & /*sym*/,
   relocateNoSym(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
 }
 
-TargetInfo *getSPARCV9TargetInfo() {
+TargetInfo *elf::getSPARCV9TargetInfo() {
   static SPARCV9 target;
   return &target;
 }
-
-} // namespace elf
-} // namespace lld

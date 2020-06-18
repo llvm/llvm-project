@@ -9,7 +9,7 @@ define i8 addrspace(1)* @test1(i64 %arg, i8 addrspace(1)* %addr) gc "statepoint-
 ; CHECK: No illegal uses found by SafepointIRVerifier in: test1
 entry:
   %load_addr = getelementptr i8, i8 addrspace(1)* %addr, i64 %arg
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0)
   %cmp = icmp eq i8 addrspace(1)* %load_addr, null
   ret i8 addrspace(1)* null
 }
@@ -19,7 +19,7 @@ define void @test2(i64 %arg, i1 %cond, i8 addrspace(1)* %addr) gc "statepoint-ex
 ; CHECK: No illegal uses found by SafepointIRVerifier in: test2
   %load_addr = getelementptr i8, i8 addrspace(1)* null, i64 %arg
   %load_addr_sel = select i1 %cond, i8 addrspace(1)* null, i8 addrspace(1)* %load_addr
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0)
   %cmp = icmp eq i8 addrspace(1)* %addr, %load_addr_sel
   ret void
 }
@@ -32,7 +32,7 @@ define void @test3(i64 %arg, i32 addrspace(1)* %addr) gc "statepoint-example" {
 entry:
   %load_addr = getelementptr i32, i32 addrspace(1)* %addr, i64 %arg
   %load_addr_const = getelementptr i32, i32 addrspace(1)* inttoptr (i64 15 to i32 addrspace(1)*), i64 %arg
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0)
   %cmp = icmp eq i32 addrspace(1)* %load_addr, %load_addr_const
   ret void
 }
@@ -53,7 +53,7 @@ split:
 
 join:
   %load_addr = phi i8 addrspace(1)* [%load_addr.1, %entry], [%load_addr.2, %split]
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0)
   %cmp = icmp eq i8 addrspace(1)* %load_addr, %base
   ret void
 }
@@ -65,7 +65,7 @@ define void @test5(i64 %arg, i8 addrspace(1)* %base1, i8 addrspace(1)* %base2) g
 ; CHECK: No illegal uses found by SafepointIRVerifier in: test5
   %load_addr1 = getelementptr i8, i8 addrspace(1)* %base1, i64 %arg
   %load_addr2 = getelementptr i8, i8 addrspace(1)* %base2, i64 %arg
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0)
   %cmp = icmp eq i8 addrspace(1)* %load_addr1, %load_addr2
   ret void
 }
@@ -76,8 +76,8 @@ define void @test6(i64 %arg, i8 addrspace(1)* %base1, i8 addrspace(1)* %base2) g
 ; CHECK-LABEL: Verifying gc pointers in function: test6
 ; CHECK: Illegal use of unrelocated value found!
   %load_addr1 = getelementptr i8, i8 addrspace(1)* %base1, i64 %arg
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %base2 , i32 -1, i32 0, i32 0, i32 0)
-  %ptr2.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token, i32 7, i32 7) ; base2, base2
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %base2)]
+  %ptr2.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token, i32 0, i32 0) ; base2, base2
   %cmp = icmp eq i8 addrspace(1)* %load_addr1, %ptr2.relocated
   ret void
 }

@@ -10,7 +10,7 @@
 // not implicitly delete the copy constructor when move constructors are
 // defaulted using extensions.
 
-// XFAIL: c++98, c++03
+// XFAIL: c++03
 
 // test move
 

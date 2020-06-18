@@ -47,7 +47,7 @@ void ParallelLoopGeneratorGOMP::createCallSpawnThreads(Value *SubFn,
   Builder.CreateCall(F, Args);
 }
 
-void ParallelLoopGeneratorGOMP::deployParallelExecution(Value *SubFn,
+void ParallelLoopGeneratorGOMP::deployParallelExecution(Function *SubFn,
                                                         Value *SubFnParam,
                                                         Value *LB, Value *UB,
                                                         Value *Stride) {

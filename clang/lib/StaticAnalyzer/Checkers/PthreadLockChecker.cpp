@@ -725,7 +725,7 @@ void ento::registerPthreadLockBase(CheckerManager &mgr) {
   mgr.registerChecker<PthreadLockChecker>();
 }
 
-bool ento::shouldRegisterPthreadLockBase(const LangOptions &LO) { return true; }
+bool ento::shouldRegisterPthreadLockBase(const CheckerManager &mgr) { return true; }
 
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
@@ -735,7 +735,7 @@ bool ento::shouldRegisterPthreadLockBase(const LangOptions &LO) { return true; }
         mgr.getCurrentCheckerName();                                           \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const LangOptions &LO) { return true; }
+  bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
 
 REGISTER_CHECKER(PthreadLockChecker)
 REGISTER_CHECKER(FuchsiaLockChecker)

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DataCollection.h"
-
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 
 namespace clang {

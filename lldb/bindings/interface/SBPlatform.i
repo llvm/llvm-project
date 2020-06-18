@@ -115,6 +115,8 @@ public:
 
     ~SBPlatform();
 
+    static SBPlatform GetHostPlatform();
+
     bool
     IsValid () const;
 
@@ -191,6 +193,9 @@ public:
 
     lldb::SBUnixSignals
     GetUnixSignals();
+
+    lldb::SBEnvironment
+    GetEnvironment();
 
 };
 

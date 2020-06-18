@@ -83,9 +83,7 @@ ThreadMachCore::CreateRegisterContextForFrame(StackFrame *frame) {
     }
     reg_ctx_sp = m_thread_reg_ctx_sp;
   } else {
-    Unwind *unwinder = GetUnwinder();
-    if (unwinder != nullptr)
-      reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
+    reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);
   }
   return reg_ctx_sp;
 }

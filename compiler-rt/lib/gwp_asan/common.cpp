@@ -59,6 +59,11 @@ void AllocationMetadata::CallSiteInfo::RecordBacktrace(
   uintptr_t UncompressedBuffer[kMaxTraceLengthToCollect];
   size_t BacktraceLength =
       Backtrace(UncompressedBuffer, kMaxTraceLengthToCollect);
+  // Backtrace() returns the number of available frames, which may be greater
+  // than the number of frames in the buffer. In this case, we need to only pack
+  // the number of frames that are in the buffer.
+  if (BacktraceLength > kMaxTraceLengthToCollect)
+    BacktraceLength = kMaxTraceLengthToCollect;
   TraceSize =
       compression::pack(UncompressedBuffer, BacktraceLength, CompressedTrace,
                         AllocationMetadata::kStackFrameStorageBytes);

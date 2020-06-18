@@ -18,11 +18,11 @@
 # 0x1025 + 7 - 43 = 0x1001
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
-# DISASM-NEXT: foo:
+# DISASM-NEXT: <foo>:
 # DISASM-NEXT:     nop
-# DISASM:      hid:
+# DISASM:      <hid>:
 # DISASM-NEXT:     nop
-# DISASM:      _start:
+# DISASM:      <_start>:
 # DISASM-NEXT:    movq    4367(%rip), %rax
 # DISASM-NEXT:    movq    4360(%rip), %rax
 # DISASM-NEXT:    movq    4361(%rip), %rax

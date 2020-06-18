@@ -32,9 +32,9 @@ define <32 x i16> @stack_fold_cvtne2ps2bf16_mask(<16 x float> %a0, <16 x float> 
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
+; CHECK-NEXT:    vmovaps (%rdi), %zmm2
 ; CHECK-NEXT:    vcvtne2ps2bf16 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm2 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    vmovaps %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <32 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.512(<16 x float> %a0, <16 x float> %a1)
@@ -194,9 +194,9 @@ define <16 x i16> @stack_fold_cvtne2ps2bf16_mask_ymm(<8 x float> %a0, <8 x float
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm2
+; CHECK-NEXT:    vmovaps (%rdi), %ymm2
 ; CHECK-NEXT:    vcvtne2ps2bf16 {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm2 {%k1} # 32-byte Folded Reload
-; CHECK-NEXT:    vmovdqa %ymm2, %ymm0
+; CHECK-NEXT:    vmovaps %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <16 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.256(<8 x float> %a0, <8 x float> %a1)
@@ -361,9 +361,9 @@ define <8 x i16> @stack_fold_cvtne2ps2bf16_mask_xmm(<4 x float> %a0, <4 x float>
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm2
+; CHECK-NEXT:    vmovaps (%rdi), %xmm2
 ; CHECK-NEXT:    vcvtne2ps2bf16 {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm2 {%k1} # 16-byte Folded Reload
-; CHECK-NEXT:    vmovdqa %xmm2, %xmm0
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <8 x i16> @llvm.x86.avx512bf16.cvtne2ps2bf16.128(<4 x float> %a0, <4 x float> %a1)

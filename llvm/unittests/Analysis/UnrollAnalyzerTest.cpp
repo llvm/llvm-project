@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopUnrollAnalyzer.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"

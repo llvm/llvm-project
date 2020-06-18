@@ -1,8 +1,0 @@
-# RUN: llvm-objdump -unwind-info %p/Inputs/unwind-info-no-relocs.macho-x86_64 2>/dev/null | FileCheck %s
-
-# Make sure we can deal with __compact_unwind sections that don't have helpful
-# relocations.
-
-# CHECK: Contents of __compact_unwind section:
-# CHECK:   Entry at offset 0x0:
-# CHECK:     start: 0x100000f7e

@@ -427,7 +427,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
         m_execution_unit.FindSymbol(g_CFStringCreateWithBytes_str, 
                                     missing_weak);
     if (CFStringCreateWithBytes_addr == LLDB_INVALID_ADDRESS || missing_weak) {
-        log->PutCString("Couldn't find CFStringCreateWithBytes in the target");
+      LLDB_LOG(log, "Couldn't find CFStringCreateWithBytes in the target");
 
       m_error_stream.Printf("Error [IRForTarget]: Rewriting an Objective-C "
                             "constant string requires "
@@ -1120,7 +1120,9 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   // Now, since the variable is a pointer variable, we will drop in a load of
   // that pointer variable.
 
-  LoadInst *persistent_load = new LoadInst(persistent_global, "", alloc);
+  LoadInst *persistent_load =
+      new LoadInst(persistent_global->getType()->getPointerElementType(),
+                   persistent_global, "", alloc);
 
   LLDB_LOG(log, "Replacing \"{0}\" with \"{1}\"", PrintValue(alloc),
            PrintValue(persistent_load));
@@ -1393,7 +1395,7 @@ bool IRForTarget::RemoveCXAAtExit(BasicBlock &basic_block) {
     if (func && func->getName() == "__cxa_atexit")
       remove = true;
 
-    llvm::Value *val = call->getCalledValue();
+    llvm::Value *val = call->getCalledOperand();
 
     if (val && val->getName() == "__cxa_atexit")
       remove = true;
@@ -1792,7 +1794,9 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
                   get_element_ptr, value->getType()->getPointerTo(), "",
                   entry_instruction);
 
-              LoadInst *load = new LoadInst(bit_cast, "", entry_instruction);
+              LoadInst *load =
+                  new LoadInst(bit_cast->getType()->getPointerElementType(),
+                               bit_cast, "", entry_instruction);
 
               return load;
             } else {

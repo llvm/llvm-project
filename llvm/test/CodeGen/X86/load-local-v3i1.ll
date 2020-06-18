@@ -96,28 +96,25 @@ define void @local_load_v3i1(i32 addrspace(1)* %out, i32 addrspace(1)* %in, <3 x
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movq %rdi, %r14
-; CHECK-NEXT:    movzbl (%rdx), %ebp
-; CHECK-NEXT:    movl %ebp, %eax
-; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %ebp, %ecx
-; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm0
-; CHECK-NEXT:    pinsrd $1, %eax, %xmm0
-; CHECK-NEXT:    shrl $2, %ebp
-; CHECK-NEXT:    andl $1, %ebp
-; CHECK-NEXT:    pinsrd $2, %ebp, %xmm0
-; CHECK-NEXT:    movd %xmm0, %ebx
-; CHECK-NEXT:    pextrd $1, %xmm0, %r15d
+; CHECK-NEXT:    movb (%rdx), %al
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrb %cl
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    shrb $2, %dl
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %ebp
+; CHECK-NEXT:    movzbl %dl, %r15d
+; CHECK-NEXT:    movzbl %cl, %ebx
 ; CHECK-NEXT:    movq %rsi, %rdi
-; CHECK-NEXT:    movl %ebx, %esi
-; CHECK-NEXT:    movl %r15d, %edx
-; CHECK-NEXT:    movl %ebp, %ecx
+; CHECK-NEXT:    movl %ebp, %esi
+; CHECK-NEXT:    movl %ebx, %edx
+; CHECK-NEXT:    movl %r15d, %ecx
 ; CHECK-NEXT:    callq masked_load_v3
 ; CHECK-NEXT:    movq %r14, %rdi
-; CHECK-NEXT:    movl %ebx, %esi
-; CHECK-NEXT:    movl %r15d, %edx
-; CHECK-NEXT:    movl %ebp, %ecx
+; CHECK-NEXT:    movl %ebp, %esi
+; CHECK-NEXT:    movl %ebx, %edx
+; CHECK-NEXT:    movl %r15d, %ecx
 ; CHECK-NEXT:    callq masked_store4_v3
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx

@@ -1,10 +1,13 @@
-//===--------- A self contained equivalent of std::array --------*- C++ -*-===//
+//===-- A self contained equivalent of std::array ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_UTILS_CPP_ARRAY_H
+#define LLVM_LIBC_UTILS_CPP_ARRAY_H
 
 #include <stddef.h> // For size_t.
 
@@ -45,3 +48,5 @@ template <class T, size_t N> struct Array {
 
 } // namespace cpp
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_UTILS_CPP_ARRAY_H

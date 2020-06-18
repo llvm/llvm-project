@@ -71,6 +71,9 @@ public:
   bool supportsMultiplication() const { return m_supportsMultiplication; }
   bool hasBREAK() const { return m_hasBREAK; }
   bool hasTinyEncoding() const { return m_hasTinyEncoding; }
+  bool hasMemMappedGPR() const { return m_hasMemMappedGPR; }
+
+  uint8_t getIORegisterOffset() const { return hasMemMappedGPR() ? 0x20 : 0x0; }
 
   /// Gets the ELF architecture for the e_flags field
   /// of an ELF object file.
@@ -81,10 +84,9 @@ public:
   }
 
 private:
-  AVRInstrInfo InstrInfo;
-  AVRFrameLowering FrameLowering;
-  AVRTargetLowering TLInfo;
-  AVRSelectionDAGInfo TSInfo;
+
+  /// The ELF e_flags architecture.
+  unsigned ELFArch;
 
   // Subtarget feature settings
   // See AVR.td for details.
@@ -106,13 +108,16 @@ private:
   bool m_supportsMultiplication;
   bool m_hasBREAK;
   bool m_hasTinyEncoding;
-
-  /// The ELF e_flags architecture.
-  unsigned ELFArch;
+  bool m_hasMemMappedGPR;
 
   // Dummy member, used by FeatureSet's. We cannot have a SubtargetFeature with
   // no variable, so we instead bind pseudo features to this variable.
   bool m_FeatureSetDummy;
+
+  AVRInstrInfo InstrInfo;
+  AVRFrameLowering FrameLowering;
+  AVRTargetLowering TLInfo;
+  AVRSelectionDAGInfo TSInfo;
 };
 
 } // end namespace llvm

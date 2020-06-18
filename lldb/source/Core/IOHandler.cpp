@@ -125,6 +125,8 @@ void IOHandlerStack::PrintAsync(Stream *stream, const char *s, size_t len) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_top)
       m_top->PrintAsync(stream, s, len);
+    else
+      stream->Write(s, len);
   }
 }
 
@@ -285,6 +287,12 @@ void IOHandlerEditline::Activate() {
 void IOHandlerEditline::Deactivate() {
   IOHandler::Deactivate();
   m_delegate.IOHandlerDeactivated(*this);
+}
+
+void IOHandlerEditline::TerminalSizeChanged() {
+#if LLDB_ENABLE_LIBEDIT
+  m_editline_up->TerminalSizeChanged();
+#endif
 }
 
 // Split out a line from the buffer, if there is a full one to get.

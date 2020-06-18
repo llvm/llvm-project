@@ -23,45 +23,53 @@ define hidden i32 @_Z4loopPiPjiS0_i(i32* noalias nocapture readonly %s1, i32* no
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT71:%.*]] = insertelement <4 x i32> undef, i32 [[X]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT72:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT71]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @llvm.set.loop.iterations.i32(i32 [[TMP3]])
+; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = add i32 [[TRIP_COUNT_MINUS_183]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[LSR_IV9:%.*]] = phi i32* [ [[SCEVGEP10:%.*]], [[VECTOR_BODY]] ], [ [[D:%.*]], [[VECTOR_PH]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP3]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[N]], [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP3]], [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[NUM_ELEMENTS]], [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[LSR_IV911:%.*]] = bitcast i32* [[LSR_IV9]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP5]])
-; CHECK-NEXT:    [[TMP7]] = sub i32 [[TMP5]], 4
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[BROADCAST_SPLAT72]], <4 x i32>* [[LSR_IV911]], i32 4, <4 x i1> [[TMP6]])
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> undef, i32 [[TRIP_COUNT_MINUS_183]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP5]])
+; CHECK-NEXT:    [[TMP9]] = sub i32 [[TMP5]], 4
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[BROADCAST_SPLAT72]], <4 x i32>* [[LSR_IV911]], i32 4, <4 x i1> [[TMP8]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[SCEVGEP10]] = getelementptr i32, i32* [[LSR_IV9]], i32 4
-; CHECK-NEXT:    [[TMP8]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP4]], i32 1)
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i32 [[TMP8]], 0
-; CHECK-NEXT:    br i1 [[TMP9]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP]]
+; CHECK-NEXT:    [[TMP10]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP4]], i32 1)
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0
+; CHECK-NEXT:    br i1 [[TMP11]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       vector.body75:
 ; CHECK-NEXT:    [[LSR_IV6:%.*]] = phi i32* [ [[S1:%.*]], [[VECTOR_BODY75_PREHEADER]] ], [ [[SCEVGEP7:%.*]], [[VECTOR_BODY75]] ]
 ; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i32* [ [[S2:%.*]], [[VECTOR_BODY75_PREHEADER]] ], [ [[SCEVGEP4:%.*]], [[VECTOR_BODY75]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32* [ [[D]], [[VECTOR_BODY75_PREHEADER]] ], [ [[SCEVGEP:%.*]], [[VECTOR_BODY75]] ]
 ; CHECK-NEXT:    [[INDEX80:%.*]] = phi i32 [ [[INDEX_NEXT81:%.*]], [[VECTOR_BODY75]] ], [ 0, [[VECTOR_BODY75_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP2]], [[VECTOR_BODY75_PREHEADER]] ], [ [[TMP15:%.*]], [[VECTOR_BODY75]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i32 [ [[TMP2]], [[VECTOR_BODY75_PREHEADER]] ], [ [[TMP17:%.*]], [[VECTOR_BODY75]] ]
 ; CHECK-NEXT:    [[LSR_IV68:%.*]] = bitcast i32* [[LSR_IV6]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV35:%.*]] = bitcast i32* [[LSR_IV3]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV2:%.*]] = bitcast i32* [[LSR_IV]] to <4 x i32>*
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT84:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX80]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT85:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT84]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION86:%.*]] = add <4 x i32> [[BROADCAST_SPLAT85]], <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> undef, i32 [[TRIP_COUNT_MINUS_183]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ule <4 x i32> [[INDUCTION86]], [[TMP12]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[LSR_IV68]], i32 4, <4 x i1> [[TMP13]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD89:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[LSR_IV35]], i32 4, <4 x i1> [[TMP13]], <4 x i32> undef)
-; CHECK-NEXT:    [[TMP14:%.*]] = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> [[WIDE_MASKED_LOAD89]], <4 x i32> [[WIDE_MASKED_LOAD]])
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[TMP14]], <4 x i32>* [[LSR_IV2]], i32 4, <4 x i1> [[TMP13]])
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> undef, i32 [[TRIP_COUNT_MINUS_183]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ule <4 x i32> [[INDUCTION86]], [[TMP14]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[LSR_IV68]], i32 4, <4 x i1> [[TMP15]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD89:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[LSR_IV35]], i32 4, <4 x i1> [[TMP15]], <4 x i32> undef)
+; CHECK-NEXT:    [[TMP16:%.*]] = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> [[WIDE_MASKED_LOAD89]], <4 x i32> [[WIDE_MASKED_LOAD]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[TMP16]], <4 x i32>* [[LSR_IV2]], i32 4, <4 x i1> [[TMP15]])
 ; CHECK-NEXT:    [[INDEX_NEXT81]] = add i32 [[INDEX80]], 4
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, i32* [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP4]] = getelementptr i32, i32* [[LSR_IV3]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP7]] = getelementptr i32, i32* [[LSR_IV6]], i32 4
-; CHECK-NEXT:    [[TMP15]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP10]], i32 1)
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP15]], 0
-; CHECK-NEXT:    br i1 [[TMP16]], label [[VECTOR_BODY75]], label [[FOR_COND_CLEANUP]]
+; CHECK-NEXT:    [[TMP17]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP12]], i32 1)
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP17]], 0
+; CHECK-NEXT:    br i1 [[TMP18]], label [[VECTOR_BODY75]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -100,11 +108,11 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
   %5 = insertelement <4 x i32> undef, i32 %trip.count.minus.183, i32 0
   %6 = shufflevector <4 x i32> %5, <4 x i32> undef, <4 x i32> zeroinitializer
-  %7 = icmp ule <4 x i32> %induction, %6
+  %7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.183)
   call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %broadcast.splat72, <4 x i32>* %lsr.iv911, i32 4, <4 x i1> %7)
   %index.next = add i32 %index, 4
   %scevgep10 = getelementptr i32, i32* %lsr.iv9, i32 4
-  %8 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %4, i32 1)
+  %8 = call i32 @llvm.loop.decrement.reg.i32(i32 %4, i32 1)
   %9 = icmp ne i32 %8, 0
   br i1 %9, label %vector.body, label %for.cond.cleanup
 
@@ -131,7 +139,7 @@ vector.body75:                                    ; preds = %vector.body75, %vec
   %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
   %scevgep4 = getelementptr i32, i32* %lsr.iv3, i32 4
   %scevgep7 = getelementptr i32, i32* %lsr.iv6, i32 4
-  %15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %10, i32 1)
+  %15 = call i32 @llvm.loop.decrement.reg.i32(i32 %10, i32 1)
   %16 = icmp ne i32 %15, 0
   br i1 %16, label %vector.body75, label %for.cond.cleanup
 
@@ -142,4 +150,8 @@ declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg,
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
 declare <4 x i32> @llvm.usub.sat.v4i32(<4 x i32>, <4 x i32>)
 declare void @llvm.set.loop.iterations.i32(i32)
-declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
+declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
+
+declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
+declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
+declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32)

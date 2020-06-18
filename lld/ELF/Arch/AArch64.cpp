@@ -17,14 +17,13 @@
 using namespace llvm;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 // Page(Expr) is the page address of the expression Expr, defined
 // as (Expr & ~0xFFF). (This applies even if the machine page size
 // supported by the platform has a different value.)
-uint64_t getAArch64Page(uint64_t expr) {
+uint64_t elf::getAArch64Page(uint64_t expr) {
   return expr & ~static_cast<uint64_t>(0xFFF);
 }
 
@@ -698,7 +697,4 @@ static TargetInfo *getTargetInfo() {
   return &t;
 }
 
-TargetInfo *getAArch64TargetInfo() { return getTargetInfo(); }
-
-} // namespace elf
-} // namespace lld
+TargetInfo *elf::getAArch64TargetInfo() { return getTargetInfo(); }

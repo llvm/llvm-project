@@ -14,6 +14,7 @@
 #define TOY_OPS
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Provide a definition of the 'toy' dialect in the ODS framework so that we
 // can define our operations.
@@ -47,9 +48,8 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
     to the operation as an attribute. For example:
 
     ```mlir
-      %0 = "toy.constant"()
-         { value = dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64> }
-        : () -> tensor<2x3xf64>
+      %0 = toy.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]>
+                        : tensor<2x3xf64>
     ```
   }];
 
@@ -59,18 +59,22 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
   // The constant operation returns a single value of TensorType.
   let results = (outs F64Tensor);
 
+  // Specify a parser and printer method.
+  let parser = [{ return ::parseConstantOp(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+
   // Add custom build methods for the constant operation. These method populates
   // the `state` that MLIR uses to create operations, i.e. these are used when
   // using `builder.create<ConstantOp>(...)`.
   let builders = [
     // Build a constant with a given constant tensor value.
-    OpBuilder<"Builder *builder, OperationState &state, "
+    OpBuilder<"OpBuilder &builder, OperationState &state, "
               "DenseElementsAttr value", [{
       build(builder, state, value.getType(), value);
     }]>,
 
     // Build a constant with a given constant floating-point value.
-    OpBuilder<"Builder *builder, OperationState &state, double value">
+    OpBuilder<"OpBuilder &builder, OperationState &state, double value">
   ];
 
   // Invoke a static verify method to verify this constant operation.
@@ -87,9 +91,13 @@ def AddOp : Toy_Op<"add"> {
   let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
   let results = (outs F64Tensor);
 
+  // Specify a parser and printer method.
+  let parser = [{ return ::parseBinaryOp(parser, result); }];
+  let printer = [{ return ::printBinaryOp(p, *this); }];
+
   // Allow building an AddOp with from the two input operands.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, Value lhs, Value rhs">
+    OpBuilder<"OpBuilder &b, OperationState &state, Value lhs, Value rhs">
   ];
 }
 
@@ -102,7 +110,7 @@ def GenericCallOp : Toy_Op<"generic_call"> {
     arguments expected by the callee. For example:
 
     ```mlir
-     %4 = "toy.generic_call"(%1, %3) {callee = @my_func}
+     %4 = toy.generic_call @my_func(%1, %3)
            : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64>
     ```
 
@@ -117,9 +125,14 @@ def GenericCallOp : Toy_Op<"generic_call"> {
   // The generic call operation returns a single value of TensorType.
   let results = (outs F64Tensor);
 
+  // Specialize assembly printing and parsing using a declarative format.
+  let assemblyFormat = [{
+    $callee `(` $inputs `)` attr-dict `:` functional-type($inputs, results)
+  }];
+
   // Add custom build methods for the generic call operation.
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &state, "
+    OpBuilder<"OpBuilder &builder, OperationState &state, "
               "StringRef callee, ArrayRef<Value> arguments">
   ];
 }
@@ -134,9 +147,13 @@ def MulOp : Toy_Op<"mul"> {
   let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
   let results = (outs F64Tensor);
 
+  // Specify a parser and printer method.
+  let parser = [{ return ::parseBinaryOp(parser, result); }];
+  let printer = [{ return ::printBinaryOp(p, *this); }];
+
   // Allow building a MulOp with from the two input operands.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, Value lhs, Value rhs">
+    OpBuilder<"OpBuilder &b, OperationState &state, Value lhs, Value rhs">
   ];
 }
 
@@ -149,6 +166,8 @@ def PrintOp : Toy_Op<"print"> {
 
   // The print operation takes an input tensor to print.
   let arguments = (ins F64Tensor:$input);
+
+  let assemblyFormat = "$input attr-dict `:` type($input)";
 }
 
 def ReshapeOp : Toy_Op<"reshape"> {
@@ -158,7 +177,7 @@ def ReshapeOp : Toy_Op<"reshape"> {
     the same number of elements but different shapes. For example:
 
     ```mlir
-       %0 = "toy.reshape"(%arg1) : (tensor<10xf64>) -> tensor<5x2xf64>
+       %0 = toy.reshape (%arg1 : tensor<10xf64>) to tensor<5x2xf64>
     ```
   }];
 
@@ -166,9 +185,14 @@ def ReshapeOp : Toy_Op<"reshape"> {
 
   // We expect that the reshape operation returns a statically shaped tensor.
   let results = (outs StaticShapeTensorOf<[F64]>);
+
+  let assemblyFormat = [{
+    `(` $input `:` type($input) `)` attr-dict `to` type(results)
+  }];
 }
 
-def ReturnOp : Toy_Op<"return", [Terminator, HasParent<"FuncOp">]> {
+def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+                                 Terminator]> {
   let summary = "return operation";
   let description = [{
     The "return" operation represents a return operation within a function.
@@ -188,9 +212,12 @@ def ReturnOp : Toy_Op<"return", [Terminator, HasParent<"FuncOp">]> {
   // value must match the return type of the enclosing function.
   let arguments = (ins Variadic<F64Tensor>:$input);
 
+  // The return operation only emits the input in the format if it is present.
+  let assemblyFormat = "($input^ `:` type($input))? attr-dict ";
+
   // Allow building a ReturnOp with no return operand.
   let builders = [OpBuilder<
-    "Builder *b, OperationState &state", [{ build(b, state, llvm::None); }]
+    "OpBuilder &b, OperationState &state", [{ build(b, state, llvm::None); }]
   >];
 
   // Provide extra utility definitions on the c++ operation class definition.
@@ -208,9 +235,13 @@ def TransposeOp : Toy_Op<"transpose"> {
   let arguments = (ins F64Tensor:$input);
   let results = (outs F64Tensor);
 
+  let assemblyFormat = [{
+    `(` $input `:` type($input) `)` attr-dict `to` type(results)
+  }];
+
   // Allow building a TransposeOp with from the input operand.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, Value input">
+    OpBuilder<"OpBuilder &b, OperationState &state, Value input">
   ];
 
   // Invoke a static verify method to verify this transpose operation.

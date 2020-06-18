@@ -104,6 +104,54 @@ define i48 @i48_func_void() #0 {
   ret i48 %val
 }
 
+; GCN-LABEL: {{^}}i48_zeroext_func_void:
+; GCN: buffer_load_dword v0, off
+; GCN-NEXT: buffer_load_ushort v1, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define zeroext i48 @i48_zeroext_func_void() #0 {
+  %val = load i48, i48 addrspace(1)* undef, align 8
+  ret i48 %val
+}
+
+; GCN-LABEL: {{^}}i48_signext_func_void:
+; GCN: buffer_load_dword v0, off
+; GCN-NEXT: buffer_load_sshort v1, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define signext i48 @i48_signext_func_void() #0 {
+  %val = load i48, i48 addrspace(1)* undef, align 8
+  ret i48 %val
+}
+
+; GCN-LABEL: {{^}}i63_func_void:
+; GCN: s_waitcnt
+; GCN-NEXT: s_setpc_b64
+define i63 @i63_func_void(i63 %val) #0 {
+  ret i63 %val
+}
+
+; GCN-LABEL: {{^}}i63_zeroext_func_void:
+; GCN: s_waitcnt
+; GCN-NEXT: v_and_b32_e32 v1, 0x7fffffff, v1
+; GCN-NEXT: s_setpc_b64
+define zeroext i63 @i63_zeroext_func_void(i63 %val) #0 {
+  ret i63 %val
+}
+
+; GCN-LABEL: {{^}}i63_signext_func_void:
+; GCN: s_waitcnt
+; CI-NEXT:	v_lshl_b64 v[0:1], v[0:1], 1
+; CI-NEXT: v_ashr_i64 v[0:1], v[0:1], 1
+
+; GFX89-NEXT:	v_lshlrev_b64 v[0:1], 1, v[0:1]
+; GFX89-NEXT: v_ashrrev_i64 v[0:1], 1, v[0:1]
+
+; GCN-NEXT: s_setpc_b64
+define signext i63 @i63_signext_func_void(i63 %val) #0 {
+  ret i63 %val
+}
+
 ; GCN-LABEL: {{^}}i64_func_void:
 ; GCN: buffer_load_dwordx2 v[0:1], off
 ; GCN-NEXT: s_waitcnt vmcnt(0)
@@ -409,8 +457,8 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
 ; GCN-LABEL: {{^}}void_func_sret_struct_i8_i32:
 ; GCN: buffer_load_ubyte [[VAL0:v[0-9]+]]
 ; GCN: buffer_load_dword [[VAL1:v[0-9]+]]
-; GCN: buffer_store_byte [[VAL0]], v0, s[0:3], s33 offen{{$}}
-; GCN: buffer_store_dword [[VAL1]], v0, s[0:3], s33 offen offset:4{{$}}
+; GCN: buffer_store_byte [[VAL0]], v0, s[0:3], 0 offen{{$}}
+; GCN: buffer_store_dword [[VAL1]], v0, s[0:3], 0 offen offset:4{{$}}
 define void @void_func_sret_struct_i8_i32({ i8, i32 } addrspace(5)* sret %arg0) #0 {
   %val0 = load volatile i8, i8 addrspace(1)* undef
   %val1 = load volatile i32, i32 addrspace(1)* undef
@@ -426,39 +474,39 @@ define void @void_func_sret_struct_i8_i32({ i8, i32 } addrspace(5)* sret %arg0) 
 ; AssertZext inserted. Not using it introduces the spills.
 
 ; GCN-LABEL: {{^}}v33i32_func_void:
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:4{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:8{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:12{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:16{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:20{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:24{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:28{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:32{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:36{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:40{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:44{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:48{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:52{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:56{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:60{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:64{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:68{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:72{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:76{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:80{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:84{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:88{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:92{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:96{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:100{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:104{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:108{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:112{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:116{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:120{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:124{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:128{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:4{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:8{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:12{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:16{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:20{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:24{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:28{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:32{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:36{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:40{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:44{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:48{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:52{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:56{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:60{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:64{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:68{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:72{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:76{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:80{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:84{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:88{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:92{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:96{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:100{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:104{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:108{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:112{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:116{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:120{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:124{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:128{{$}}
 ; GFX9: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define <33 x i32> @v33i32_func_void() #0 {
@@ -468,39 +516,39 @@ define <33 x i32> @v33i32_func_void() #0 {
 }
 
 ; GCN-LABEL: {{^}}struct_v32i32_i32_func_void:
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:4{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:8{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:12{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:16{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:20{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:24{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:28{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:32{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:36{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:40{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:44{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:48{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:52{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:56{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:60{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:64{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:68{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:72{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:76{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:80{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:84{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:88{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:92{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:96{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:100{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:104{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:108{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:112{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:116{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:120{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:124{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:128{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:4{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:8{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:12{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:16{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:20{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:24{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:28{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:32{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:36{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:40{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:44{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:48{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:52{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:56{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:60{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:64{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:68{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:72{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:76{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:80{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:84{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:88{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:92{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:96{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:100{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:104{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:108{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:112{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:116{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:120{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:124{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:128{{$}}
 ; GFX9: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
@@ -510,39 +558,39 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
 }
 
 ; GCN-LABEL: {{^}}struct_i32_v32i32_func_void:
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:128{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:132{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:136{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:140{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:144{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:148{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:152{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:156{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:160{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:164{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:168{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:172{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:176{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:180{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:184{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:188{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:192{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:196{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:200{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:204{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:208{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:212{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:216{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:220{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:224{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:228{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:232{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:236{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:240{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:244{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:248{{$}}
-; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s33 offen offset:252{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:128{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:132{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:136{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:140{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:144{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:148{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:152{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:156{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:160{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:164{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:168{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:172{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:176{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:180{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:184{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:188{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:192{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:196{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:200{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:204{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:208{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:212{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:216{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:220{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:224{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:228{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:232{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:236{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:240{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:244{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:248{{$}}
+; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:252{{$}}
 ; GFX9: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {

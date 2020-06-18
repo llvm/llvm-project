@@ -67,6 +67,8 @@ private:
     // `getLangOpts()`).
     CheckFactory<CheckTypes...>::createChecks(&Context, Checks);
     for (auto &Check : Checks) {
+      if (!Check->isLanguageVersionSupported(Context.getLangOpts()))
+        continue;
       Check->registerMatchers(&Finder);
       Check->registerPPCallbacks(Compiler.getSourceManager(), PP, PP);
     }
@@ -158,7 +160,7 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
     *Errors = std::move(Diags);
   auto Result = tooling::applyAllReplacements(Code, Fixes);
   if (!Result) {
-    // FIXME: propogate the error.
+    // FIXME: propagate the error.
     llvm::consumeError(Result.takeError());
     return "";
   }

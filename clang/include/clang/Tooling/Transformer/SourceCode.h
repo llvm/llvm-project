@@ -20,9 +20,10 @@
 namespace clang {
 namespace tooling {
 
-/// Extends \p Range to include the token \p Next, if it immediately follows the
-/// end of the range. Otherwise, returns \p Range unchanged.
-CharSourceRange maybeExtendRange(CharSourceRange Range, tok::TokenKind Next,
+/// Extends \p Range to include the token \p Terminator, if it immediately
+/// follows the end of the range. Otherwise, returns \p Range unchanged.
+CharSourceRange maybeExtendRange(CharSourceRange Range,
+                                 tok::TokenKind Terminator,
                                  ASTContext &Context);
 
 /// Returns the source range spanning the node, extended to include \p Next, if
@@ -34,6 +35,13 @@ CharSourceRange getExtendedRange(const T &Node, tok::TokenKind Next,
   return maybeExtendRange(CharSourceRange::getTokenRange(Node.getSourceRange()),
                           Next, Context);
 }
+
+/// Returns the logical source range of the node extended to include associated
+/// comments and whitespace before and after the node, and associated
+/// terminators. The returned range consists of file locations, if valid file
+/// locations can be found for the associated content; otherwise, an invalid
+/// range is returned.
+CharSourceRange getAssociatedRange(const Decl &D, ASTContext &Context);
 
 /// Returns the source-code text in the specified range.
 StringRef getText(CharSourceRange Range, const ASTContext &Context);

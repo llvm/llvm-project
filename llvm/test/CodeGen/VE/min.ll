@@ -139,7 +139,7 @@ define i64 @min2u64(i64, i64) {
 define i32 @mini32(i32, i32) {
 ; CHECK-LABEL: mini32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    mins.w.zx %s0, %s0, %s1
+; CHECK-NEXT:    mins.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = icmp slt i32 %0, %1
   %4 = select i1 %3, i32 %0, i32 %1
@@ -149,7 +149,7 @@ define i32 @mini32(i32, i32) {
 define i32 @min2i32(i32, i32) {
 ; CHECK-LABEL: min2i32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    mins.w.zx %s0, %s0, %s1
+; CHECK-NEXT:    mins.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = icmp sle i32 %0, %1
   %4 = select i1 %3, i32 %0, i32 %1

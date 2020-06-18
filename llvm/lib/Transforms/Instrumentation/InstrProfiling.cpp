@@ -74,10 +74,6 @@ cl::opt<unsigned> MemOPSizeLarge(
 
 namespace {
 
-cl::opt<bool> DoNameCompression("enable-name-compression",
-                                cl::desc("Enable name string compression"),
-                                cl::init(true));
-
 cl::opt<bool> DoHashBasedCounterSplit(
     "hash-based-counter-split",
     cl::desc("Rename counter variable of a comdat function based on cfg hash"),
@@ -156,7 +152,9 @@ public:
 
   InstrProfilingLegacyPass() : ModulePass(ID) {}
   InstrProfilingLegacyPass(const InstrProfOptions &Options, bool IsCS = false)
-      : ModulePass(ID), InstrProf(Options, IsCS) {}
+      : ModulePass(ID), InstrProf(Options, IsCS) {
+    initializeInstrProfilingLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override {
     return "Frontend instrumentation-based coverage lowering";
@@ -973,7 +971,7 @@ void InstrProfiling::emitNameData() {
 
   std::string CompressedNameStr;
   if (Error E = collectPGOFuncNameStrings(ReferencedNames, CompressedNameStr,
-                                          DoNameCompression)) {
+                                          DoInstrProfNameCompression)) {
     report_fatal_error(toString(std::move(E)), false);
   }
 
@@ -1036,9 +1034,9 @@ void InstrProfiling::emitRegistration() {
 }
 
 bool InstrProfiling::emitRuntimeHook() {
-  // We expect the linker to be invoked with -u<hook_var> flag for linux,
-  // for which case there is no need to emit the user function.
-  if (TT.isOSLinux())
+  // We expect the linker to be invoked with -u<hook_var> flag for Linux or
+  // Fuchsia, in which case there is no need to emit the user function.
+  if (TT.isOSLinux() || TT.isOSFuchsia())
     return false;
 
   // If the module's provided its own runtime, we don't need to do anything.

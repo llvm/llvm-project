@@ -110,7 +110,7 @@ void l() {
 // CHECK-MS-DAG: declare dso_local i32 @atexit(void ()*)
 // CHECK-MS-DYNAMIC-DAG: declare {{.*}} void @_CxxThrowException
 // CHECK-MS-STATIC-DAG: declare {{.*}} void @_CxxThrowException
-// CHECK-MS-DAG: declare dso_local noalias i8* @"??2@YAPAXI@Z"
+// CHECK-MS-DAG: declare dso_local nonnull i8* @"??2@YAPAXI@Z"
 // CHECK-MS-DAG: declare dso_local void @_Init_thread_header(i32*)
 // CHECK-MS-DAG: declare dso_local void @_Init_thread_footer(i32*)
 
@@ -129,7 +129,7 @@ void l() {
 // CHECK-DYNAMIC-NODECL-IA-DAG: declare dllimport i32 @__cxa_guard_acquire(i64*)
 // CHECK-DYNAMIC-IMPORT-IA-DAG: declare dllimport i32 @__cxa_guard_acquire(i64*)
 // CHECK-DYNAMIC-EXPORT-IA-DAG: declare dllexport i32 @__cxa_guard_acquire(i64*)
-// CHECK-IA-DAG: declare dso_local noalias i8* @_Znwj(i32)
+// CHECK-IA-DAG: declare dso_local nonnull i8* @_Znwj(i32)
 // CHECK-DYNAMIC-DECL-IA-DAG: declare dllimport void @__cxa_guard_release(i64*)
 // CHECK-DYNAMIC-NODECL-IA-DAG: declare dllimport void @__cxa_guard_release(i64*)
 // CHECK-DYNAMIC-IMPORT-IA-DAG: declare dllimport void @__cxa_guard_release(i64*)
@@ -147,7 +147,7 @@ void l() {
 // CHECK-STATIC-NODECL-IA-DAG: declare dso_local i32 @__cxa_guard_acquire(i64*)
 // CHECK-STATIC-IMPORT-IA-DAG: declare dso_local i32 @__cxa_guard_acquire(i64*)
 // CHECK-STATIC-EXPORT-IA-DAG: declare dso_local i32 @__cxa_guard_acquire(i64*)
-// CHECK-IA-DAG: declare dso_local noalias i8* @_Znwj(i32)
+// CHECK-IA-DAG: declare dso_local nonnull i8* @_Znwj(i32)
 // CHECK-STATIC-DECL-IA-DAG: declare dso_local void @__cxa_guard_release(i64*)
 // CHECK-STATIC-NODECL-IA-DAG: declare dso_local void @__cxa_guard_release(i64*)
 // CHECK-STATIC-IMPORT-IA-DAG: declare dso_local void @__cxa_guard_release(i64*)
@@ -156,4 +156,3 @@ void l() {
 // CHECK-STATIC-NODECL-IA-DAG: declare dso_local void @_ZSt9terminatev()
 // CHECK-STATIC-IMPORT-IA-DAG: declare dso_local void @_ZSt9terminatev()
 // CHECK-STATIC-EXPORT-IA-DAG: declare dso_local dllexport void @_ZSt9terminatev()
-

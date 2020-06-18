@@ -3529,7 +3529,7 @@ static int __kmp_expand_threads(int nNeed) {
   // > __kmp_max_nth in one of two ways:
   //
   // 1) The initialization thread (gtid = 0) exits.  __kmp_threads[0]
-  //    may not be resused by another thread, so we may need to increase
+  //    may not be reused by another thread, so we may need to increase
   //    __kmp_threads_capacity to __kmp_max_nth + 1.
   //
   // 2) New foreign root(s) are encountered.  We always register new foreign
@@ -4515,11 +4515,11 @@ __kmp_set_thread_affinity_mask_full_tmp(kmp_affin_mask_t *old_mask) {
 #if KMP_AFFINITY_SUPPORTED
 
 // __kmp_partition_places() is the heart of the OpenMP 4.0 affinity mechanism.
-// It calculats the worker + master thread's partition based upon the parent
+// It calculates the worker + master thread's partition based upon the parent
 // thread's partition, and binds each worker to a thread in their partition.
 // The master thread's partition should already include its current binding.
 static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
-  // Copy the master thread's place partion to the team struct
+  // Copy the master thread's place partition to the team struct
   kmp_info_t *master_th = team->t.t_threads[0];
   KMP_DEBUG_ASSERT(master_th != NULL);
   kmp_proc_bind_t proc_bind = team->t.t_proc_bind;
@@ -5536,7 +5536,7 @@ kmp_team_t *__kmp_reap_team(kmp_team_t *team) {
 // locality problems on programs where the size of the hot team regularly
 // grew and shrunk.
 //
-// Now, for single-level parallelism, the OMP tid is alway == gtid.
+// Now, for single-level parallelism, the OMP tid is always == gtid.
 void __kmp_free_thread(kmp_info_t *this_th) {
   int gtid;
   kmp_info_t **scan;
@@ -5609,7 +5609,7 @@ void __kmp_free_thread(kmp_info_t *this_th) {
   // scan is the address of a link in the list, possibly the address of
   // __kmp_thread_pool itself.
   //
-  // In the absence of nested parallism, the for loop will have 0 iterations.
+  // In the absence of nested parallelism, the for loop will have 0 iterations.
   if (__kmp_thread_pool_insert_pt != NULL) {
     scan = &(__kmp_thread_pool_insert_pt->th.th_next_pool);
   } else {
@@ -6088,7 +6088,7 @@ void __kmp_internal_end_library(int gtid_req) {
      only place to clear __kmp_serial_init */
   /* we'll check this later too, after we get the lock */
   // 2009-09-06: We do not set g_abort without setting g_done. This check looks
-  // redundaant, because the next check will work in any case.
+  // redundant, because the next check will work in any case.
   if (__kmp_global.g.g_abort) {
     KA_TRACE(11, ("__kmp_internal_end_library: abort, exiting\n"));
     /* TODO abort? */
@@ -8217,7 +8217,6 @@ __kmp_determine_reduction_method(
 
   return (retval);
 }
-
 // this function is for testing set/get/determine reduce method
 kmp_int32 __kmp_get_reduce_method(void) {
   return ((__kmp_entry_thread()->th.th_local.packed_reduction_method) >> 8);
@@ -8296,4 +8295,13 @@ int __kmp_pause_resource(kmp_pause_status_t level) {
     // error message about invalid level
     return 1;
   }
+}
+
+
+void __kmp_omp_display_env(int verbose) {
+  __kmp_acquire_bootstrap_lock(&__kmp_initz_lock);
+  if (__kmp_init_serial == 0)
+    __kmp_do_serial_initialize();
+  __kmp_display_env_impl(!verbose, verbose);
+  __kmp_release_bootstrap_lock(&__kmp_initz_lock);
 }

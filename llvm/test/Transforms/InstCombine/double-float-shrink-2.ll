@@ -10,6 +10,7 @@
 declare double @floor(double)
 declare double @ceil(double)
 declare double @round(double)
+declare double @roundeven(double)
 declare double @nearbyint(double)
 declare double @trunc(double)
 declare double @fabs(double)
@@ -31,6 +32,9 @@ declare <2 x float> @llvm.rint.v2f32(<2 x float>)
 
 declare double @llvm.round.f64(double)
 declare <2 x double> @llvm.round.v2f64(<2 x double>)
+
+declare double @llvm.roundeven.f64(double)
+declare <2 x double> @llvm.roundeven.v2f64(<2 x double>)
 
 declare double @llvm.trunc.f64(double)
 declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
@@ -67,6 +71,18 @@ define float @test_shrink_libcall_round(float %C) {
   %D = fpext float %C to double
   ; --> roundf
   %E = call double @round(double %D)
+  %F = fptrunc double %E to float
+  ret float %F
+}
+
+define float @test_shrink_libcall_roundeven(float %C) {
+; CHECK-LABEL: @test_shrink_libcall_roundeven(
+; CHECK-NEXT:    [[F:%.*]] = call float @llvm.roundeven.f32(float [[C:%.*]])
+; CHECK-NEXT:    ret float [[F]]
+;
+  %D = fpext float %C to double
+  ; --> roundeven
+  %E = call double @roundeven(double %D)
   %F = fptrunc double %E to float
   ret float %F
 }
@@ -186,6 +202,17 @@ define float @test_shrink_intrin_round(float %C) {
   ret float %F
 }
 
+define float @test_shrink_intrin_roundeven(float %C) {
+; CHECK-LABEL: @test_shrink_intrin_roundeven(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[C:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %D = fpext float %C to double
+  %E = call double @llvm.roundeven.f64(double %D)
+  %F = fptrunc double %E to float
+  ret float %F
+}
+
 define float @test_shrink_intrin_trunc(float %C) {
 ; CHECK-LABEL: @test_shrink_intrin_trunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[C:%.*]])
@@ -292,6 +319,23 @@ define <2 x float> @test_shrink_intrin_round_multi_use(<2 x float> %C) {
   ret <2 x float> %F
 }
 
+define <2 x float> @test_shrink_intrin_roundeven_multi_use(<2 x float> %C) {
+; CHECK-LABEL: @test_shrink_intrin_roundeven_multi_use(
+; CHECK-NEXT:    [[D:%.*]] = fpext <2 x float> [[C:%.*]] to <2 x double>
+; CHECK-NEXT:    [[E:%.*]] = call <2 x double> @llvm.roundeven.v2f64(<2 x double> [[D]])
+; CHECK-NEXT:    [[F:%.*]] = fptrunc <2 x double> [[E]] to <2 x float>
+; CHECK-NEXT:    call void @use_v2f64(<2 x double> [[D]])
+; CHECK-NEXT:    call void @use_v2f64(<2 x double> [[E]])
+; CHECK-NEXT:    ret <2 x float> [[F]]
+;
+  %D = fpext <2 x float> %C to <2 x double>
+  %E = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %D)
+  %F = fptrunc <2 x double> %E to <2 x float>
+  call void @use_v2f64(<2 x double> %D)
+  call void @use_v2f64(<2 x double> %E)
+  ret <2 x float> %F
+}
+
 define <2 x float> @test_shrink_intrin_trunc_multi_use(<2 x float> %C) {
 ; CHECK-LABEL: @test_shrink_intrin_trunc_multi_use(
 ; CHECK-NEXT:    [[D:%.*]] = fpext <2 x float> [[C:%.*]] to <2 x double>
@@ -348,6 +392,17 @@ define float @test_no_shrink_intrin_round(double %D) {
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %E = call double @llvm.round.f64(double %D)
+  %F = fptrunc double %E to float
+  ret float %F
+}
+
+define float @test_no_shrink_intrin_roundeven(double %D) {
+; CHECK-LABEL: @test_no_shrink_intrin_roundeven(
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.roundeven.f64(double [[D:%.*]])
+; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
+; CHECK-NEXT:    ret float [[F]]
+;
+  %E = call double @llvm.roundeven.f64(double %D)
   %F = fptrunc double %E to float
   ret float %F
 }
@@ -424,6 +479,15 @@ define float @test_shrink_float_convertible_constant_intrin_round() {
   ret float %F
 }
 
+define float @test_shrink_float_convertible_constant_intrin_roundeven() {
+; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_roundeven(
+; CHECK-NEXT:    ret float 2.000000e+00
+;
+  %E = call double @llvm.roundeven.f64(double 2.1)
+  %F = fptrunc double %E to float
+  ret float %F
+}
+
 define float @test_shrink_float_convertible_constant_intrin_nearbyint() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_nearbyint(
 ; CHECK-NEXT:    ret float 2.000000e+00
@@ -490,6 +554,17 @@ define half @test_no_shrink_mismatched_type_intrin_round(double %D) {
 ; CHECK-NEXT:    ret half [[F]]
 ;
   %E = call double @llvm.round.f64(double %D)
+  %F = fptrunc double %E to half
+  ret half %F
+}
+
+define half @test_no_shrink_mismatched_type_intrin_roundeven(double %D) {
+; CHECK-LABEL: @test_no_shrink_mismatched_type_intrin_roundeven(
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.roundeven.f64(double [[D:%.*]])
+; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half
+; CHECK-NEXT:    ret half [[F]]
+;
+  %E = call double @llvm.roundeven.f64(double %D)
   %F = fptrunc double %E to half
   ret half %F
 }
@@ -570,6 +645,17 @@ define <2 x double> @test_shrink_intrin_round_fp16_vec(<2 x half> %C) {
 ;
   %D = fpext <2 x  half> %C to <2 x double>
   %E = call <2 x double> @llvm.round.v2f64(<2 x double> %D)
+  ret <2 x double> %E
+}
+
+define <2 x double> @test_shrink_intrin_roundeven_fp16_vec(<2 x half> %C) {
+; CHECK-LABEL: @test_shrink_intrin_roundeven_fp16_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.roundeven.v2f16(<2 x half> [[C:%.*]])
+; CHECK-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>
+; CHECK-NEXT:    ret <2 x double> [[E]]
+;
+  %D = fpext <2 x  half> %C to <2 x double>
+  %E = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %D)
   ret <2 x double> %E
 }
 

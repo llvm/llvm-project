@@ -51,6 +51,7 @@ add_compiler_rt_component(profile)
 set(PROFILE_SOURCES
   GCDAProfiling.c
   InstrProfiling.c
+  InstrProfilingInternal.c
   InstrProfilingValue.c
   InstrProfilingBiasVar.c
   InstrProfilingBuffer.c

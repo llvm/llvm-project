@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Core/Lookup.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallVector.h"
 using namespace clang;
 using namespace clang::tooling;

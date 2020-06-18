@@ -12,9 +12,8 @@ body: |
     ; CHECK-LABEL: name: test_load_trunc
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
     ; CHECK: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX]](p0) :: (load 2)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s10) = G_TRUNC [[LOAD]](s16)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[TRUNC]](s10)
-    ; CHECK: RET_ReallyLR implicit [[TRUNC1]](s1)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[LOAD]](s16)
+    ; CHECK: RET_ReallyLR implicit [[TRUNC]](s1)
     %0:_(p0) = G_FRAME_INDEX %stack.0
     %1:_(s10) = G_LOAD %0(p0) :: (load 2)
     %2:_(s1) = G_TRUNC %1(s10)

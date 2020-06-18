@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
 
 module attributes {gpu.container_module} {
 
@@ -27,7 +27,7 @@ module attributes {gpu.container_module} {
   }
 
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) attributes {gpu.kernel} {
+    gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) kernel {
       %tIdX = "gpu.thread_id"() {dimension = "x"} : () -> (index)
       %tIdY = "gpu.thread_id"() {dimension = "y"} : () -> (index)
       %tIdZ = "gpu.thread_id"() {dimension = "z"} : () -> (index)
@@ -44,6 +44,10 @@ module attributes {gpu.container_module} {
       %gDimY = "gpu.grid_dim"() {dimension = "y"} : () -> (index)
       %gDimZ = "gpu.grid_dim"() {dimension = "z"} : () -> (index)
 
+      %sgId = gpu.subgroup_id : index
+      %numSg = gpu.num_subgroups : index
+      %SgSi = gpu.subgroup_size : index
+
       %one = constant 1.0 : f32
       %sum = "gpu.all_reduce"(%one) ({}) {op = "add"} : (f32) -> (f32)
 
@@ -59,7 +63,7 @@ module attributes {gpu.container_module} {
       gpu.return
     }
 
-    gpu.func @kernel_2(%arg0: f32, %arg1: memref<?xf32, 1>) attributes {gpu.kernel} {
+    gpu.func @kernel_2(%arg0: f32, %arg1: memref<?xf32, 1>) kernel {
       gpu.return
     }
   }
@@ -70,20 +74,20 @@ module attributes {gpu.container_module} {
     // CHECK: %{{.*}} = constant 8
     %cst = constant 8 : index
 
-    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = "kernel_1", kernel_module = @kernels} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
+    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = @kernels::@kernel_1} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1)
-    { kernel = "kernel_1", kernel_module = @kernels }
+    { kernel = @kernels::@kernel_1}
         : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
 
-    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = "kernel_2", kernel_module = @kernels} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
+    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = @kernels::@kernel_2} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1)
-    { kernel = "kernel_2", kernel_module = @kernels }
+    { kernel = @kernels::@kernel_2}
         : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
 
     return
   }
 
-  module @gpu_funcs attributes {gpu.kernel_module} {
+  gpu.module @gpu_funcs {
     // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32)
     // CHECK:       workgroup
     // CHECK:       private
@@ -132,4 +136,11 @@ module attributes {gpu.container_module} {
     }
   }
 
+  gpu.module @explicit_attributions {
+    // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32, {{.*}}: memref<?xf32>) workgroup({{.*}}: memref<5xf32, 3>) private({{.*}}: memref<5xf32, 5>)
+    "gpu.func"() ( {
+    ^bb0(%arg0: f32, %arg1: memref<?xf32>, %arg2: memref<5xf32, 3>, %arg3: memref<5xf32, 5>):
+      "gpu.return"() : () -> ()
+    } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 1: i64} : () -> ()
+  }
 }

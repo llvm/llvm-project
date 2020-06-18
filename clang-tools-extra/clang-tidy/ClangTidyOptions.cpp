@@ -67,12 +67,15 @@ template <> struct MappingTraits<ClangTidyOptions::StringPair> {
 
 struct NOptionMap {
   NOptionMap(IO &) {}
-  NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap)
-      : Options(OptionMap.begin(), OptionMap.end()) {}
+  NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
+    Options.reserve(OptionMap.size());
+    for (const auto &KeyValue : OptionMap)
+      Options.emplace_back(KeyValue.first, KeyValue.second.Value);
+  }
   ClangTidyOptions::OptionMap denormalize(IO &) {
     ClangTidyOptions::OptionMap Map;
     for (const auto &KeyValue : Options)
-      Map[KeyValue.first] = KeyValue.second;
+      Map[KeyValue.first] = ClangTidyOptions::ClangTidyValue(KeyValue.second);
     return Map;
   }
   std::vector<ClangTidyOptions::StringPair> Options;
@@ -92,6 +95,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("CheckOptions", NOpts->Options);
     IO.mapOptional("ExtraArgs", Options.ExtraArgs);
     IO.mapOptional("ExtraArgsBefore", Options.ExtraArgsBefore);
+    IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
   }
 };
 
@@ -109,10 +113,12 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
   Options.User = llvm::None;
+  unsigned Priority = 0;
   for (ClangTidyModuleRegistry::iterator I = ClangTidyModuleRegistry::begin(),
                                          E = ClangTidyModuleRegistry::end();
        I != E; ++I)
-    Options = Options.mergeWith(I->instantiate()->getModuleOptions());
+    Options =
+        Options.mergeWith(I->instantiate()->getModuleOptions(), ++Priority);
   return Options;
 }
 
@@ -138,8 +144,8 @@ static void overrideValue(Optional<T> &Dest, const Optional<T> &Src) {
     Dest = Src;
 }
 
-ClangTidyOptions
-ClangTidyOptions::mergeWith(const ClangTidyOptions &Other) const {
+ClangTidyOptions ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
+                                             unsigned Priority) const {
   ClangTidyOptions Result = *this;
 
   mergeCommaSeparatedLists(Result.Checks, Other.Checks);
@@ -151,8 +157,10 @@ ClangTidyOptions::mergeWith(const ClangTidyOptions &Other) const {
   mergeVectors(Result.ExtraArgs, Other.ExtraArgs);
   mergeVectors(Result.ExtraArgsBefore, Other.ExtraArgsBefore);
 
-  for (const auto &KeyValue : Other.CheckOptions)
-    Result.CheckOptions[KeyValue.first] = KeyValue.second;
+  for (const auto &KeyValue : Other.CheckOptions) {
+    Result.CheckOptions[KeyValue.first] = ClangTidyValue(
+        KeyValue.second.Value, KeyValue.second.Priority + Priority);
+  }
 
   return Result;
 }
@@ -168,8 +176,9 @@ const char
 ClangTidyOptions
 ClangTidyOptionsProvider::getOptions(llvm::StringRef FileName) {
   ClangTidyOptions Result;
+  unsigned Priority = 0;
   for (const auto &Source : getRawOptions(FileName))
-    Result = Result.mergeWith(Source.first);
+    Result = Result.mergeWith(Source.first, ++Priority);
   return Result;
 }
 
@@ -237,6 +246,7 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
       DefaultOptionsProvider::getRawOptions(AbsoluteFilePath.str());
   OptionsSource CommandLineOptions(OverrideOptions,
                                    OptionsSourceTypeCheckCommandLineOption);
+  size_t FirstFileConfig = RawOptions.size();
   // Look for a suitable configuration file in all parent directories of the
   // file. Start with the immediate parent directory and move up.
   StringRef Path = llvm::sys::path::parent_path(AbsoluteFilePath.str());
@@ -256,15 +266,21 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
       while (Path != CurrentPath) {
         LLVM_DEBUG(llvm::dbgs()
                    << "Caching configuration for path " << Path << ".\n");
-        CachedOptions[Path] = *Result;
+        if (!CachedOptions.count(Path))
+          CachedOptions[Path] = *Result;
         Path = llvm::sys::path::parent_path(Path);
       }
       CachedOptions[Path] = *Result;
 
       RawOptions.push_back(*Result);
-      break;
+      if (!Result->first.InheritParentConfig ||
+          !*Result->first.InheritParentConfig)
+        break;
     }
   }
+  // Reverse order of file configs because closer configs should have higher
+  // priority.
+  std::reverse(RawOptions.begin() + FirstFileConfig, RawOptions.end());
   RawOptions.push_back(CommandLineOptions);
   return RawOptions;
 }

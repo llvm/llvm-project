@@ -48,7 +48,8 @@ enum CastType {
   CT_Reinterpret, ///< reinterpret_cast
   CT_Dynamic,     ///< dynamic_cast
   CT_CStyle,      ///< (Type)expr
-  CT_Functional   ///< Type(expr)
+  CT_Functional,  ///< Type(expr)
+  CT_Addrspace    ///< addrspace_cast
 };
 
 namespace {
@@ -88,6 +89,7 @@ namespace {
     void CheckCXXCStyleCast(bool FunctionalCast, bool ListInitialization);
     void CheckCStyleCast();
     void CheckBuiltinBitCast();
+    void CheckAddrspaceCast();
 
     void updatePartOfExplicitCastFlags(CastExpr *CE) {
       // Walk down from the CE to the OrigSrcExpr, and mark all immediate
@@ -159,6 +161,30 @@ namespace {
       PlaceholderKind = (BuiltinType::Kind) 0;
     }
   };
+
+  void CheckNoDeref(Sema &S, const QualType FromType, const QualType ToType,
+                    SourceLocation OpLoc) {
+    if (const auto *PtrType = dyn_cast<PointerType>(FromType)) {
+      if (PtrType->getPointeeType()->hasAttr(attr::NoDeref)) {
+        if (const auto *DestType = dyn_cast<PointerType>(ToType)) {
+          if (!DestType->getPointeeType()->hasAttr(attr::NoDeref)) {
+            S.Diag(OpLoc, diag::warn_noderef_to_dereferenceable_pointer);
+          }
+        }
+      }
+    }
+  }
+
+  struct CheckNoDerefRAII {
+    CheckNoDerefRAII(CastOperation &Op) : Op(Op) {}
+    ~CheckNoDerefRAII() {
+      if (!Op.SrcExpr.isInvalid())
+        CheckNoDeref(Op.Self, Op.SrcExpr.get()->getType(), Op.ResultType,
+                     Op.OpRange.getBegin());
+    }
+
+    CastOperation &Op;
+  };
 }
 
 static void DiagnoseCastQual(Sema &Self, const ExprResult &SrcExpr,
@@ -225,12 +251,14 @@ static TryCastResult TryConstCast(Sema &Self, ExprResult &SrcExpr,
                                   unsigned &msg);
 static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
                                         QualType DestType, bool CStyle,
-                                        SourceRange OpRange,
-                                        unsigned &msg,
+                                        SourceRange OpRange, unsigned &msg,
                                         CastKind &Kind);
+static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
+                                         QualType DestType, bool CStyle,
+                                         unsigned &msg, CastKind &Kind);
 
-
-/// ActOnCXXNamedCast - Parse {dynamic,static,reinterpret,const}_cast's.
+/// ActOnCXXNamedCast - Parse
+/// {dynamic,static,reinterpret,const,addrspace}_cast's.
 ExprResult
 Sema::ActOnCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
                         SourceLocation LAngleBracketLoc, Declarator &D,
@@ -271,6 +299,16 @@ Sema::BuildCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
 
   switch (Kind) {
   default: llvm_unreachable("Unknown C++ cast!");
+
+  case tok::kw_addrspace_cast:
+    if (!TypeDependent) {
+      Op.CheckAddrspaceCast();
+      if (Op.SrcExpr.isInvalid())
+        return ExprError();
+    }
+    return Op.complete(CXXAddrspaceCastExpr::Create(
+        Context, Op.ResultType, Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
+        DestTInfo, OpLoc, Parens.getEnd(), AngleBrackets));
 
   case tok::kw_const_cast:
     if (!TypeDependent) {
@@ -375,6 +413,7 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
   case CT_Const:
   case CT_Reinterpret:
   case CT_Dynamic:
+  case CT_Addrspace:
     return false;
 
   // These do.
@@ -708,6 +747,8 @@ static TryCastResult getCastAwayConstnessCastKind(CastAwayConstnessKind CACK,
 /// Refer to C++ 5.2.7 for details. Dynamic casts are used mostly for runtime-
 /// checked downcasts in class hierarchies.
 void CastOperation::CheckDynamicCast() {
+  CheckNoDerefRAII NoderefCheck(*this);
+
   if (ValueKind == VK_RValue)
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
   else if (isPlaceholder())
@@ -861,6 +902,8 @@ void CastOperation::CheckDynamicCast() {
 /// const char *str = "literal";
 /// legacy_function(const_cast\<char*\>(str));
 void CastOperation::CheckConstCast() {
+  CheckNoDerefRAII NoderefCheck(*this);
+
   if (ValueKind == VK_RValue)
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
   else if (isPlaceholder())
@@ -873,6 +916,18 @@ void CastOperation::CheckConstCast() {
   if (TCR != TC_Success && msg != 0) {
     Self.Diag(OpRange.getBegin(), msg) << CT_Const
       << SrcExpr.get()->getType() << DestType << OpRange;
+  }
+  if (!isValidCast(TCR))
+    SrcExpr = ExprError();
+}
+
+void CastOperation::CheckAddrspaceCast() {
+  unsigned msg = diag::err_bad_cxx_cast_generic;
+  auto TCR =
+      TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ false, msg, Kind);
+  if (TCR != TC_Success && msg != 0) {
+    Self.Diag(OpRange.getBegin(), msg)
+        << CT_Addrspace << SrcExpr.get()->getType() << DestType << OpRange;
   }
   if (!isValidCast(TCR))
     SrcExpr = ExprError();
@@ -1018,6 +1073,8 @@ void CastOperation::CheckReinterpretCast() {
 /// Refer to C++ 5.2.9 for details. Static casts are mostly used for making
 /// implicit conversions explicit and getting rid of data loss warnings.
 void CastOperation::CheckStaticCast() {
+  CheckNoDerefRAII NoderefCheck(*this);
+
   if (isPlaceholder()) {
     checkNonOverloadPlaceholders();
     if (SrcExpr.isInvalid())
@@ -2062,6 +2119,9 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
       return TC_NotApplicable;
       // FIXME: Use a specific diagnostic for the rest of these cases.
     case OK_VectorComponent: inappropriate = "vector element";      break;
+    case OK_MatrixComponent:
+      inappropriate = "matrix element";
+      break;
     case OK_ObjCProperty:    inappropriate = "property expression"; break;
     case OK_ObjCSubscript:   inappropriate = "container subscripting expression";
                              break;
@@ -2204,13 +2264,19 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     // C++ 5.2.10p4: A pointer can be explicitly converted to any integral
     //   type large enough to hold it; except in Microsoft mode, where the
     //   integral type size doesn't matter (except we don't allow bool).
-    bool MicrosoftException = Self.getLangOpts().MicrosoftExt &&
-                              !DestType->isBooleanType();
     if ((Self.Context.getTypeSize(SrcType) >
-         Self.Context.getTypeSize(DestType)) &&
-         !MicrosoftException) {
-      msg = diag::err_bad_reinterpret_cast_small_int;
-      return TC_Failed;
+         Self.Context.getTypeSize(DestType))) {
+      bool MicrosoftException =
+          Self.getLangOpts().MicrosoftExt && !DestType->isBooleanType();
+      if (MicrosoftException) {
+        unsigned Diag = SrcType->isVoidPointerType()
+                            ? diag::warn_void_pointer_to_int_cast
+                            : diag::warn_pointer_to_int_cast;
+        Self.Diag(OpRange.getBegin(), Diag) << SrcType << DestType << OpRange;
+      } else {
+        msg = diag::err_bad_reinterpret_cast_small_int;
+        return TC_Failed;
+      }
     }
     Kind = CK_PointerToIntegral;
     return TC_Success;
@@ -2338,7 +2404,7 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
 
 static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
                                          QualType DestType, bool CStyle,
-                                         unsigned &msg) {
+                                         unsigned &msg, CastKind &Kind) {
   if (!Self.getLangOpts().OpenCL)
     // FIXME: As compiler doesn't have any information about overlapping addr
     // spaces at the moment we have to be permissive here.
@@ -2347,6 +2413,9 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
   // non-OpenCL mode too, we fast-path above because no other languages
   // define overlapping address spaces currently.
   auto SrcType = SrcExpr.get()->getType();
+  // FIXME: Should this be generalized to references? The reference parameter
+  // however becomes a reference pointee type here and therefore rejected.
+  // Perhaps this is the right behavior though according to C++.
   auto SrcPtrType = SrcType->getAs<PointerType>();
   if (!SrcPtrType)
     return TC_NotApplicable;
@@ -2355,9 +2424,7 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
     return TC_NotApplicable;
   auto SrcPointeeType = SrcPtrType->getPointeeType();
   auto DestPointeeType = DestPtrType->getPointeeType();
-  if (SrcPointeeType.getAddressSpace() == DestPointeeType.getAddressSpace())
-    return TC_NotApplicable;
-  if (!DestPtrType->isAddressSpaceOverlapping(*SrcPtrType)) {
+  if (!DestPointeeType.isAddressSpaceOverlapping(SrcPointeeType)) {
     msg = diag::err_bad_cxx_cast_addr_space_mismatch;
     return TC_Failed;
   }
@@ -2365,10 +2432,15 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
       Self.Context.removeAddrSpaceQualType(SrcPointeeType.getCanonicalType());
   auto DestPointeeTypeWithoutAS =
       Self.Context.removeAddrSpaceQualType(DestPointeeType.getCanonicalType());
-  return Self.Context.hasSameType(SrcPointeeTypeWithoutAS,
-                                  DestPointeeTypeWithoutAS)
-             ? TC_Success
-             : TC_NotApplicable;
+  if (Self.Context.hasSameType(SrcPointeeTypeWithoutAS,
+                               DestPointeeTypeWithoutAS)) {
+    Kind = SrcPointeeType.getAddressSpace() == DestPointeeType.getAddressSpace()
+               ? CK_NoOp
+               : CK_AddressSpaceConversion;
+    return TC_Success;
+  } else {
+    return TC_NotApplicable;
+  }
 }
 
 void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
@@ -2395,9 +2467,9 @@ void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
       const PointerType *SrcPPtr = cast<PointerType>(SrcPtr);
       QualType DestPPointee = DestPPtr->getPointeeType();
       QualType SrcPPointee = SrcPPtr->getPointeeType();
-      if (Nested ? DestPPointee.getAddressSpace() !=
-                   SrcPPointee.getAddressSpace()
-                 : !DestPPtr->isAddressSpaceOverlapping(*SrcPPtr)) {
+      if (Nested
+              ? DestPPointee.getAddressSpace() != SrcPPointee.getAddressSpace()
+              : !DestPPointee.isAddressSpaceOverlapping(SrcPPointee)) {
         Self.Diag(OpRange.getBegin(), DiagID)
             << SrcType << DestType << Sema::AA_Casting
             << SrcExpr.get()->getSourceRange();
@@ -2499,22 +2571,21 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   Sema::CheckedConversionKind CCK =
       FunctionalStyle ? Sema::CCK_FunctionalCast : Sema::CCK_CStyleCast;
   if (tcr == TC_NotApplicable) {
-    tcr = TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ true, msg);
+    tcr = TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ true, msg,
+                              Kind);
     if (SrcExpr.isInvalid())
       return;
 
-    if (isValidCast(tcr))
-      Kind = CK_AddressSpaceConversion;
-
     if (tcr == TC_NotApplicable) {
-      // ... or if that is not possible, a static_cast, ignoring const, ...
+      // ... or if that is not possible, a static_cast, ignoring const and
+      // addr space, ...
       tcr = TryStaticCast(Self, SrcExpr, DestType, CCK, OpRange, msg, Kind,
                           BasePath, ListInitialization);
       if (SrcExpr.isInvalid())
         return;
 
       if (tcr == TC_NotApplicable) {
-        // ... and finally a reinterpret_cast, ignoring const.
+        // ... and finally a reinterpret_cast, ignoring const and addr space.
         tcr = TryReinterpretCast(Self, SrcExpr, DestType, /*CStyle*/ true,
                                  OpRange, msg, Kind);
         if (SrcExpr.isInvalid())
@@ -2646,6 +2717,13 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
+  // Allow casting a sizeless built-in type to itself.
+  if (DestType->isSizelessBuiltinType() &&
+      Self.Context.hasSameUnqualifiedType(DestType, SrcType)) {
+    Kind = CK_NoOp;
+    return;
+  }
+
   if (!DestType->isScalarType() && !DestType->isVectorType()) {
     const RecordType *DestRecordTy = DestType->getAs<RecordType>();
 
@@ -2741,6 +2819,20 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
+  // Can't cast to or from bfloat
+  if (DestType->isBFloat16Type() && !SrcType->isBFloat16Type()) {
+    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_cast_to_bfloat16)
+        << SrcExpr.get()->getSourceRange();
+    SrcExpr = ExprError();
+    return;
+  }
+  if (SrcType->isBFloat16Type() && !DestType->isBFloat16Type()) {
+    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_cast_from_bfloat16)
+        << SrcExpr.get()->getSourceRange();
+    SrcExpr = ExprError();
+    return;
+  }
+
   // If either type is a pointer, the other type has to be either an
   // integer or a pointer.
   if (!DestType->isArithmeticType()) {
@@ -2764,17 +2856,21 @@ void CastOperation::CheckCStyleCast() {
     }
 
     if ((Self.Context.getTypeSize(SrcType) >
-         Self.Context.getTypeSize(DestType))) {
+         Self.Context.getTypeSize(DestType)) &&
+        !DestType->isBooleanType()) {
       // C 6.3.2.3p6: Any pointer type may be converted to an integer type.
       // Except as previously specified, the result is implementation-defined.
       // If the result cannot be represented in the integer type, the behavior
       // is undefined. The result need not be in the range of values of any
       // integer type.
-      unsigned Diag = Self.getLangOpts().MicrosoftExt
-                          ? diag::ext_ms_pointer_to_int_cast
-                          : SrcType->isVoidPointerType()
-                                ? diag::warn_void_pointer_to_int_cast
-                                : diag::warn_pointer_to_int_cast;
+      unsigned Diag;
+      if (SrcType->isVoidPointerType())
+        Diag = DestType->isEnumeralType() ? diag::warn_void_pointer_to_enum_cast
+                                          : diag::warn_void_pointer_to_int_cast;
+      else if (DestType->isEnumeralType())
+        Diag = diag::warn_pointer_to_enum_cast;
+      else
+        Diag = diag::warn_pointer_to_int_cast;
       Self.Diag(OpRange.getBegin(), Diag) << SrcType << DestType << OpRange;
     }
   }

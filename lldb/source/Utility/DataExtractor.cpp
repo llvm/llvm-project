@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -133,7 +134,7 @@ DataExtractor::DataExtractor(const void *data, offset_t length,
       m_end(const_cast<uint8_t *>(static_cast<const uint8_t *>(data)) + length),
       m_byte_order(endian), m_addr_size(addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
-  assert(addr_size == 4 || addr_size == 8);
+  assert(addr_size >= 1 && addr_size <= 8);
 }
 
 // Make a shared pointer reference to the shared data in "data_sp" and set the
@@ -146,7 +147,7 @@ DataExtractor::DataExtractor(const DataBufferSP &data_sp, ByteOrder endian,
     : m_start(nullptr), m_end(nullptr), m_byte_order(endian),
       m_addr_size(addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
-  assert(addr_size == 4 || addr_size == 8);
+  assert(addr_size >= 1 && addr_size <= 8);
   SetData(data_sp);
 }
 
@@ -160,7 +161,7 @@ DataExtractor::DataExtractor(const DataExtractor &data, offset_t offset,
     : m_start(nullptr), m_end(nullptr), m_byte_order(data.m_byte_order),
       m_addr_size(data.m_addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
-  assert(m_addr_size == 4 || m_addr_size == 8);
+  assert(m_addr_size >= 1 && m_addr_size <= 8);
   if (data.ValidOffset(offset)) {
     offset_t bytes_available = data.GetByteSize() - offset;
     if (length > bytes_available)
@@ -173,7 +174,7 @@ DataExtractor::DataExtractor(const DataExtractor &rhs)
     : m_start(rhs.m_start), m_end(rhs.m_end), m_byte_order(rhs.m_byte_order),
       m_addr_size(rhs.m_addr_size), m_data_sp(rhs.m_data_sp),
       m_target_byte_size(rhs.m_target_byte_size) {
-  assert(m_addr_size == 4 || m_addr_size == 8);
+  assert(m_addr_size >= 1 && m_addr_size <= 8);
 }
 
 // Assignment operator
@@ -251,7 +252,7 @@ lldb::offset_t DataExtractor::SetData(const DataExtractor &data,
                                       offset_t data_offset,
                                       offset_t data_length) {
   m_addr_size = data.m_addr_size;
-  assert(m_addr_size == 4 || m_addr_size == 8);
+  assert(m_addr_size >= 1 && m_addr_size <= 8);
   // If "data" contains shared pointer to data, then we can use that
   if (data.m_data_sp) {
     m_byte_order = data.m_byte_order;
@@ -680,12 +681,12 @@ long double DataExtractor::GetLongDouble(offset_t *offset_ptr) const {
 //
 // RETURNS the address that was extracted, or zero on failure.
 uint64_t DataExtractor::GetAddress(offset_t *offset_ptr) const {
-  assert(m_addr_size == 4 || m_addr_size == 8);
+  assert(m_addr_size >= 1 && m_addr_size <= 8);
   return GetMaxU64(offset_ptr, m_addr_size);
 }
 
 uint64_t DataExtractor::GetAddress_unchecked(offset_t *offset_ptr) const {
-  assert(m_addr_size == 4 || m_addr_size == 8);
+  assert(m_addr_size >= 1 && m_addr_size <= 8);
   return GetMaxU64_unchecked(offset_ptr, m_addr_size);
 }
 
@@ -877,26 +878,10 @@ uint64_t DataExtractor::GetULEB128(offset_t *offset_ptr) const {
   if (src == nullptr)
     return 0;
 
-  const uint8_t *end = m_end;
-
-  if (src < end) {
-    uint64_t result = *src++;
-    if (result >= 0x80) {
-      result &= 0x7f;
-      int shift = 7;
-      while (src < end) {
-        uint8_t byte = *src++;
-        result |= static_cast<uint64_t>(byte & 0x7f) << shift;
-        if ((byte & 0x80) == 0)
-          break;
-        shift += 7;
-      }
-    }
-    *offset_ptr = src - m_start;
-    return result;
-  }
-
-  return 0;
+  unsigned byte_count = 0;
+  uint64_t result = llvm::decodeULEB128(src, &byte_count, m_end);
+  *offset_ptr += byte_count;
+  return result;
 }
 
 // Extracts an signed LEB128 number from this object's data starting at the
@@ -910,33 +895,10 @@ int64_t DataExtractor::GetSLEB128(offset_t *offset_ptr) const {
   if (src == nullptr)
     return 0;
 
-  const uint8_t *end = m_end;
-
-  if (src < end) {
-    int64_t result = 0;
-    int shift = 0;
-    int size = sizeof(int64_t) * 8;
-
-    uint8_t byte = 0;
-    int bytecount = 0;
-
-    while (src < end) {
-      bytecount++;
-      byte = *src++;
-      result |= static_cast<int64_t>(byte & 0x7f) << shift;
-      shift += 7;
-      if ((byte & 0x80) == 0)
-        break;
-    }
-
-    // Sign bit of byte is 2nd high order bit (0x40)
-    if (shift < size && (byte & 0x40))
-      result |= -(1 << shift);
-
-    *offset_ptr += bytecount;
-    return result;
-  }
-  return 0;
+  unsigned byte_count = 0;
+  int64_t result = llvm::decodeSLEB128(src, &byte_count, m_end);
+  *offset_ptr += byte_count;
+  return result;
 }
 
 // Skips a ULEB128 number (signed or unsigned) from this object's data starting

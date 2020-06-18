@@ -14,8 +14,6 @@
 #define LLVM_CODEGEN_TARGETFRAMELOWERING_H
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/ADT/StringSwitch.h"
-#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -93,6 +91,11 @@ public:
   /// is the largest alignment for any data object in the target.
   ///
   unsigned getStackAlignment() const { return StackAlignment.value(); }
+  /// getStackAlignment - This method returns the number of bytes to which the
+  /// stack pointer must be aligned on entry to a function.  Typically, this
+  /// is the largest alignment for any data object in the target.
+  ///
+  Align getStackAlign() const { return StackAlignment; }
 
   /// alignSPAdjust - This method aligns the stack adjustment to the correct
   /// alignment.
@@ -110,9 +113,15 @@ public:
   /// which the stack pointer must be aligned at all times, even between
   /// calls.
   ///
-  unsigned getTransientStackAlignment() const {
+  LLVM_ATTRIBUTE_DEPRECATED(unsigned getTransientStackAlignment() const,
+                            "Use getTransientStackAlign instead") {
     return TransientStackAlignment.value();
   }
+  /// getTransientStackAlignment - This method returns the number of bytes to
+  /// which the stack pointer must be aligned at all times, even between
+  /// calls.
+  ///
+  Align getTransientStackAlign() const { return TransientStackAlignment; }
 
   /// isStackRealignable - This method returns whether the stack can be
   /// realigned.
@@ -224,10 +233,11 @@ public:
   /// If it returns true, and any of the registers in CSI is not restored,
   /// it sets the corresponding Restored flag in CSI to false.
   /// Returns false otherwise.
-  virtual bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator MI,
-                                           std::vector<CalleeSavedInfo> &CSI,
-                                        const TargetRegisterInfo *TRI) const {
+  virtual bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const {
     return false;
   }
 
@@ -271,7 +281,7 @@ public:
   /// and offset used to reference a frame index location. The offset is
   /// returned directly, and the base register is returned via FrameReg.
   virtual int getFrameIndexReference(const MachineFunction &MF, int FI,
-                                     unsigned &FrameReg) const;
+                                     Register &FrameReg) const;
 
   /// Same as \c getFrameIndexReference, except that the stack pointer (as
   /// opposed to the frame pointer) will be the preferred value for \p
@@ -280,7 +290,7 @@ public:
   /// offset is only guaranteed to be valid with respect to the value of SP at
   /// the end of the prologue.
   virtual int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
-                                             unsigned &FrameReg,
+                                             Register &FrameReg,
                                              bool IgnoreSPUpdates) const {
     // Always safe to dispatch to getFrameIndexReference.
     return getFrameIndexReference(MF, FI, FrameReg);
@@ -293,7 +303,7 @@ public:
                                        int FI) const {
     // By default, dispatch to getFrameIndexReference. Interested targets can
     // override this.
-    unsigned FrameReg;
+    Register FrameReg;
     return getFrameIndexReference(MF, FI, FrameReg);
   }
 
@@ -415,7 +425,7 @@ public:
 
   /// Return initial CFA register value i.e. the one valid at the beginning of
   /// the function (before any stack operations).
-  virtual unsigned getInitialCFARegister(const MachineFunction &MF) const;
+  virtual Register getInitialCFARegister(const MachineFunction &MF) const;
 
   /// Return the frame base information to be encoded in the DWARF subprogram
   /// debug info.

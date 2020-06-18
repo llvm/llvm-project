@@ -12,9 +12,10 @@ def arch : Target {
   let InstructionSet = archInstrInfo;
 }
 
+def AssemblerCondition2 : SubtargetFeature<"cond2", "cond2", "true", "">;
 def Pred1 : Predicate<"Condition1">;
 def Pred2 : Predicate<"Condition2">,
-            AssemblerPredicate<"AssemblerCondition2">;
+            AssemblerPredicate<(all_of AssemblerCondition2)>;
 
 def foo : Instruction {
   let Size = 2;

@@ -87,8 +87,8 @@ bool IsAbsolutePath(const char *path);
 // The child process will close all fds after STDERR_FILENO
 // before passing control to a program.
 pid_t StartSubprocess(const char *filename, const char *const argv[],
-                      fd_t stdin_fd = kInvalidFd, fd_t stdout_fd = kInvalidFd,
-                      fd_t stderr_fd = kInvalidFd);
+                      const char *const envp[], fd_t stdin_fd = kInvalidFd,
+                      fd_t stdout_fd = kInvalidFd, fd_t stderr_fd = kInvalidFd);
 // Checks if specified process is still running
 bool IsProcessRunning(pid_t pid);
 // Waits for the process to finish and returns its exit code.

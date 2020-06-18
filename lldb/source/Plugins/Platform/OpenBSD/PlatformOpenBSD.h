@@ -54,7 +54,8 @@ public:
                                   lldb::addr_t offset) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformOpenBSD);
+  PlatformOpenBSD(const PlatformOpenBSD &) = delete;
+  const PlatformOpenBSD &operator=(const PlatformOpenBSD &) = delete;
 };
 
 } // namespace platform_openbsd

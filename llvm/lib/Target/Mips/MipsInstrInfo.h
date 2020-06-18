@@ -106,6 +106,10 @@ public:
 
   virtual unsigned getOppositeBranchOpc(unsigned Opc) const = 0;
 
+  virtual bool isBranchWithImm(unsigned Opc) const {
+    return false;
+  }
+
   /// Return the number of bytes of code the specified instruction may be.
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
@@ -160,6 +164,12 @@ public:
 
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
+
+  Optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
+                                      Register Reg) const override;
+
+  Optional<ParamLoadedValue> describeLoadedValue(const MachineInstr &MI,
+                                                 Register Reg) const override;
 
 protected:
   bool isZeroImm(const MachineOperand &op) const;

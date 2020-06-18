@@ -26,7 +26,7 @@ void f() {
   (void)get_e();
 }
 
-[[nodiscard]] volatile char &(*fp)();
+[[nodiscard]] volatile char &(*fp)(); // expected-warning {{'nodiscard' attribute only applies to functions, classes, or enumerations}}
 void g() {
   fp(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 

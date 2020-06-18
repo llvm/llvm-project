@@ -15,6 +15,8 @@
 
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Endian.h"
+#include <limits>
 
 namespace llvm {
 namespace object {
@@ -128,6 +130,10 @@ struct XCOFFStringTable {
 };
 
 struct XCOFFCsectAuxEnt32 {
+  static constexpr uint8_t SymbolTypeMask = 0x07;
+  static constexpr uint8_t SymbolAlignmentMask = 0xF8;
+  static constexpr size_t SymbolAlignmentBitOffset = 3;
+
   support::ubig32_t
       SectionOrLength; // If the symbol type is XTY_SD or XTY_CM, the csect
                        // length.
@@ -140,6 +146,17 @@ struct XCOFFCsectAuxEnt32 {
   XCOFF::StorageMappingClass StorageMappingClass;
   support::ubig32_t StabInfoIndex;
   support::ubig16_t StabSectNum;
+
+  uint16_t getAlignmentLog2() const {
+    return (SymbolAlignmentAndType & SymbolAlignmentMask) >>
+           SymbolAlignmentBitOffset;
+  }
+
+  uint8_t getSymbolType() const {
+    return SymbolAlignmentAndType & SymbolTypeMask;
+  }
+
+  bool isLabel() const { return getSymbolType() == XCOFF::XTY_LD; }
 };
 
 struct XCOFFFileAuxEnt {
@@ -247,9 +264,12 @@ private:
   void checkSectionAddress(uintptr_t Addr, uintptr_t TableAddr) const;
 
 public:
+  static constexpr uint64_t InvalidRelocOffset =
+      std::numeric_limits<uint64_t>::max();
+
   // Interface inherited from base classes.
   void moveSymbolNext(DataRefImpl &Symb) const override;
-  uint32_t getSymbolFlags(DataRefImpl Symb) const override;
+  Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
 
@@ -278,6 +298,10 @@ public:
   relocation_iterator section_rel_end(DataRefImpl Sec) const override;
 
   void moveRelocationNext(DataRefImpl &Rel) const override;
+
+  /// \returns the relocation offset with the base address of the containing
+  /// section as zero, or InvalidRelocOffset on errors (such as a relocation
+  /// that does not refer to an address in any section).
   uint64_t getRelocationOffset(DataRefImpl Rel) const override;
   symbol_iterator getRelocationSymbol(DataRefImpl Rel) const override;
   uint64_t getRelocationType(DataRefImpl Rel) const override;

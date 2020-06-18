@@ -100,7 +100,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; }
 
 ; CHECK-LABEL: @fcmp_val_fadd_select1(
-; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x float> %[[V0:.*]], %broadcast.splat2
+; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x float> %[[V0:.*]], %broadcast.splat
 ; CHECK: %[[V3:.*]] = fadd fast <4 x float> %[[V0]], %[[V2:.*]]
 ; CHECK: select <4 x i1> %[[V1]], <4 x float> %[[V3]], <4 x float> %[[V2]]
 define float @fcmp_val_fadd_select1(float* noalias %x, float %y, i32 %N) nounwind readonly {
@@ -143,7 +143,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; }
 
 ; CHECK-LABEL: @fcmp_val_fadd_select2(
-; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x double> %[[V0:.*]], %broadcast.splat2
+; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x double> %[[V0:.*]], %broadcast.splat
 ; CHECK: %[[V3:.*]] = fadd fast <4 x double> %[[V0]], %[[V2:.*]]
 ; CHECK: select <4 x i1> %[[V1]], <4 x double> %[[V3]], <4 x double> %[[V2]]
 define double @fcmp_val_fadd_select2(double* noalias %x, double %y, i32 %N) nounwind readonly {

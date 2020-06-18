@@ -58,8 +58,7 @@ struct ::N::A<int>::X {
 
 template<typename T>
 struct TestA {
-  typedef typename N::template B<T>::type type; // expected-error{{'B' following the 'template' keyword does not refer to a template}} \
-                                                // expected-error{{expected member name}}
+  typedef typename N::template B<T>::type type; // expected-error{{'B' following the 'template' keyword does not refer to a template}}
 };
 
 // Reduced from a Boost failure.
@@ -143,8 +142,7 @@ namespace PR9449 {
 
   template <typename T>
   void f() {
-    int s<T>::template n<T>::* f; // expected-error{{implicit instantiation of undefined template 'PR9449::s<int>'}} \
-    // expected-error{{no member named 'n'}}
+    int s<T>::template n<T>::* f; // expected-error{{implicit instantiation of undefined template 'PR9449::s<int>'}}
   }
 
   template void f<int>(); // expected-note{{in instantiation of}}

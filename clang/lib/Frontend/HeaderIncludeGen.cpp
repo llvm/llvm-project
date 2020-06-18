@@ -127,8 +127,8 @@ void clang::AttachHeaderIncludeGen(Preprocessor &PP,
 
 void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
                                          FileChangeReason Reason,
-                                       SrcMgr::CharacteristicKind NewFileType,
-                                       FileID PrevFID) {
+                                         SrcMgr::CharacteristicKind NewFileType,
+                                         FileID PrevFID) {
   // Unless we are exiting a #include, make sure to skip ahead to the line the
   // #include directive was at.
   PresumedLoc UserLoc = SM.getPresumedLoc(Loc);
@@ -166,6 +166,9 @@ void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
     --IncludeDepth; // Ignore indent from <built-in>.
   else if (!DepOpts.ShowIncludesPretendHeader.empty())
     ++IncludeDepth; // Pretend inclusion by ShowIncludesPretendHeader.
+
+  if (!DepOpts.IncludeSystemHeaders && isSystem(NewFileType))
+    ShowHeader = false;
 
   // Dump the header include information we are past the predefines buffer or
   // are showing all headers and this isn't the magic implicit <command line>

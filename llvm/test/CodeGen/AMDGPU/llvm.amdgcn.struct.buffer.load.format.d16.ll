@@ -36,6 +36,16 @@ main_body:
   ret half %elt
 }
 
+; GCN-LABEL: {{^}}buffer_load_format_i16_x:
+; GCN: buffer_load_format_d16_x v{{[0-9]+}}, {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
+define amdgpu_ps half @buffer_load_format_i16_x(<4 x i32> inreg %rsrc) {
+main_body:
+  %data = call i16 @llvm.amdgcn.struct.buffer.load.format.i16(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %fdata = bitcast i16 %data to half
+  ret half %fdata
+}
+
 declare half @llvm.amdgcn.struct.buffer.load.format.f16(<4 x i32>, i32, i32, i32, i32)
 declare <2 x half> @llvm.amdgcn.struct.buffer.load.format.v2f16(<4 x i32>, i32, i32, i32, i32)
 declare <4 x half> @llvm.amdgcn.struct.buffer.load.format.v4f16(<4 x i32>, i32, i32, i32, i32)
+declare i16 @llvm.amdgcn.struct.buffer.load.format.i16(<4 x i32>, i32, i32, i32, i32)

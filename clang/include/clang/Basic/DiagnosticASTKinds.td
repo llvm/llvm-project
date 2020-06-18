@@ -186,6 +186,9 @@ def note_constexpr_access_inactive_union_member : Note<
   "construction of subobject of|destruction of}0 "
   "member %1 of union with %select{active member %3|no active member}2 "
   "is not allowed in a constant expression">;
+def note_constexpr_union_member_change_during_init : Note<
+  "assignment would change active union member during the initialization of "
+  "a different member of the same union">;
 def note_constexpr_access_static_temporary : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|reconstruction of|"
@@ -241,6 +244,12 @@ def note_constexpr_unsupported_unsized_array : Note<
 def note_constexpr_unsized_array_indexed : Note<
   "indexing of array without known bound is not allowed "
   "in a constant expression">;
+def note_constexpr_memcmp_unsupported : Note<
+  "constant evaluation of %0 between arrays of types %1 and %2 "
+  "is not supported; only arrays of narrow character types can be compared">;
+def note_constexpr_memchr_unsupported : Note<
+  "constant evaluation of %0 on array of type %1 "
+  "is not supported; only arrays of narrow character types can be searched">;
 def note_constexpr_memcpy_null : Note<
   "%select{source|destination}2 of "
   "'%select{%select{memcpy|wmemcpy}1|%select{memmove|wmemmove}1}0' "
@@ -329,6 +338,8 @@ def note_constexpr_delete_base_nonvirt_dtor : Note<
 def note_constexpr_memory_leak : Note<
   "allocation performed here was not deallocated"
   "%plural{0:|: (along with %0 other memory leak%s0)}0">;
+def note_constexpr_unsupported_layout : Note<
+  "type %0 has unexpected layout">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 

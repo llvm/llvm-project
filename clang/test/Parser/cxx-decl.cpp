@@ -240,8 +240,7 @@ namespace PR17255 {
 void foo() {
   typename A::template B<> c; // expected-error {{use of undeclared identifier 'A'}}
 #if __cplusplus <= 199711L
-  // expected-error@-2 {{'typename' occurs outside of a template}}
-  // expected-error@-3 {{'template' keyword outside of a template}}
+  // expected-error@-2 {{'template' keyword outside of a template}}
 #endif
 }
 }

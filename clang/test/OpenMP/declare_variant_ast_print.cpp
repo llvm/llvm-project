@@ -64,8 +64,7 @@ int baz() {
 // CHECK-NEXT: }
 // CHECK-NEXT: template<> void h_ref<double>(double *hp, double *hp2, double *hq, double *lin) {
 // CHECK-NEXT: }
-// CHECK-NEXT: template<> void h_ref<float>(float *hp, float *hp2, float *hq, float *lin) {
-// CHECK-NEXT: }
+// CHECK-NEXT: template<> void h_ref<float>(float *hp, float *hp2, float *hq, float *lin)
 template <class C>
 void h_ref(C *hp, C *hp2, C *hq, C *lin) {
 }

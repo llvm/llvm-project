@@ -19,7 +19,7 @@ define void @test1(i64 %trip, i1 %cond) {
 ; EPILOG-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
 ; EPILOG-NEXT:    br i1 [[TMP1]], label %exit2.loopexit.unr-lcssa, label [[ENTRY_NEW:%.*]]
 ; EPILOG:       entry.new:
-; EPILOG-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TRIP]], [[XTRAITER]]
+; EPILOG-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TRIP]], -8
 ; EPILOG-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; EPILOG:  loop_latch.epil:
 ; EPILOG-NEXT:     %epil.iter.sub = add i64 %epil.iter, -1
@@ -147,7 +147,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
 ; EPILOG-NEXT:    br i1 [[TMP1]], label %exit2.loopexit.unr-lcssa, label [[ENTRY_NEW:%.*]]
 ; EPILOG:       entry.new:
-; EPILOG-NEXT:    %unroll_iter = sub i64 [[TRIP]], [[XTRAITER]]
+; EPILOG-NEXT:    %unroll_iter = and i64 [[TRIP]], -8
 ; EPILOG-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; EPILOG:  loop_header:
 ; EPILOG-NEXT:     %sum = phi i64 [ 0, %entry.new ], [ %sum.next.7, %loop_latch.7 ]

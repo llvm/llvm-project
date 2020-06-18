@@ -28,7 +28,7 @@ void SizeofContainerCheck::registerMatchers(MatchFinder *Finder) {
                .bind("sizeof"),
            // Ignore ARRAYSIZE(<array of containers>) pattern.
            unless(hasAncestor(binaryOperator(
-               anyOf(hasOperatorName("/"), hasOperatorName("%")),
+               hasAnyOperatorName("/", "%"),
                hasLHS(ignoringParenCasts(sizeOfExpr(expr()))),
                hasRHS(ignoringParenCasts(equalsBoundNode("sizeof"))))))),
       this);

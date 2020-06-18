@@ -18,6 +18,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Value.h" // PointerLikeTypeTraits<Value*>
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/DataTypes.h"
@@ -58,8 +59,8 @@ struct MachinePointerInfo {
     AddrSpace = v ? v->getAddressSpace() : 0;
   }
 
-  explicit MachinePointerInfo(unsigned AddressSpace = 0)
-      : V((const Value *)nullptr), Offset(0), StackID(0),
+  explicit MachinePointerInfo(unsigned AddressSpace = 0, int64_t offset = 0)
+      : V((const Value *)nullptr), Offset(offset), StackID(0),
         AddrSpace(AddressSpace) {}
 
   explicit MachinePointerInfo(
@@ -77,10 +78,10 @@ struct MachinePointerInfo {
 
   MachinePointerInfo getWithOffset(int64_t O) const {
     if (V.isNull())
-      return MachinePointerInfo(AddrSpace);
+      return MachinePointerInfo(AddrSpace, Offset + O);
     if (V.is<const Value*>())
-      return MachinePointerInfo(V.get<const Value*>(), Offset+O, StackID);
-    return MachinePointerInfo(V.get<const PseudoSourceValue*>(), Offset+O,
+      return MachinePointerInfo(V.get<const Value*>(), Offset + O, StackID);
+    return MachinePointerInfo(V.get<const PseudoSourceValue*>(), Offset + O,
                               StackID);
   }
 
@@ -169,7 +170,7 @@ private:
   MachinePointerInfo PtrInfo;
   uint64_t Size;
   Flags FlagVals;
-  uint16_t BaseAlignLog2; // log_2(base_alignment) + 1
+  Align BaseAlign;
   MachineAtomicInfo AtomicInfo;
   AAMDNodes AAInfo;
   const MDNode *Ranges;
@@ -181,8 +182,7 @@ public:
   /// atomic operations the atomic ordering requirements when store does not
   /// occur must also be specified.
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, uint64_t s,
-                    uint64_t a,
-                    const AAMDNodes &AAInfo = AAMDNodes(),
+                    Align a, const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
                     SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
@@ -223,13 +223,21 @@ public:
   /// Return the size in bits of the memory reference.
   uint64_t getSizeInBits() const { return Size * 8; }
 
+  LLVM_ATTRIBUTE_DEPRECATED(uint64_t getAlignment() const,
+                            "Use getAlign instead");
+
   /// Return the minimum known alignment in bytes of the actual memory
   /// reference.
-  uint64_t getAlignment() const;
+  Align getAlign() const;
+
+  LLVM_ATTRIBUTE_DEPRECATED(uint64_t getBaseAlignment() const,
+                            "Use getBaseAlign instead") {
+    return BaseAlign.value();
+  }
 
   /// Return the minimum known alignment in bytes of the base address, without
   /// the offset.
-  uint64_t getBaseAlignment() const { return (1ull << BaseAlignLog2) >> 1; }
+  Align getBaseAlign() const { return BaseAlign; }
 
   /// Return the AA tags for the memory reference.
   AAMDNodes getAAInfo() const { return AAInfo; }
@@ -307,7 +315,7 @@ public:
            LHS.getFlags() == RHS.getFlags() &&
            LHS.getAAInfo() == RHS.getAAInfo() &&
            LHS.getRanges() == RHS.getRanges() &&
-           LHS.getAlignment() == RHS.getAlignment() &&
+           LHS.getAlign() == RHS.getAlign() &&
            LHS.getAddrSpace() == RHS.getAddrSpace();
   }
 

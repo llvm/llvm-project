@@ -139,6 +139,28 @@ Users need to implement a single function to capture the counters at startup.
     // Capture this array in order to read/modify the counters.
   }
 
+
+Inline bool-flag
+================
+
+**Experimental, may change or disappear in future**
+
+With ``-fsanitize-coverage=inline-bool-flag`` the compiler will insert
+setting an inline boolean to true on every edge.
+This is similar to ``-fsanitize-coverage=inline-8bit-counter`` but instead of
+an increment of a counter, it just sets a boolean to true.
+
+Users need to implement a single function to capture the flags at startup.
+
+.. code-block:: c++
+
+  extern "C"
+  void __sanitizer_cov_bool_flag_init(bool *start, bool *end) {
+    // [start,end) is the array of boolean flags created for the current DSO.
+    // Capture this array in order to read/modify the flags.
+  }
+
+
 PC-Table
 ========
 
@@ -150,8 +172,8 @@ significant binary size overhead. For more information, see
 `Bug 34636 <https://bugs.llvm.org/show_bug.cgi?id=34636>`_.
 
 With ``-fsanitize-coverage=pc-table`` the compiler will create a table of
-instrumented PCs. Requires either ``-fsanitize-coverage=inline-8bit-counters`` or
-``-fsanitize-coverage=trace-pc-guard``.
+instrumented PCs. Requires either ``-fsanitize-coverage=inline-8bit-counters``,
+or ``-fsanitize-coverage=inline-bool-flag``, or ``-fsanitize-coverage=trace-pc-guard``.
 
 Users need to implement a single function to capture the PC table at startup:
 
@@ -164,8 +186,9 @@ Users need to implement a single function to capture the PC table at startup:
     // pairs [PC,PCFlags] for every instrumented block in the current DSO.
     // Capture this array in order to read the PCs and their Flags.
     // The number of PCs and PCFlags for a given DSO is the same as the number
-    // of 8-bit counters (-fsanitize-coverage=inline-8bit-counters) or
-    // trace_pc_guard callbacks (-fsanitize-coverage=trace-pc-guard)
+    // of 8-bit counters (-fsanitize-coverage=inline-8bit-counters), or
+    // boolean flags (-fsanitize-coverage=inline=bool-flags), or trace_pc_guard
+    // callbacks (-fsanitize-coverage=trace-pc-guard).
     // A PCFlags describes the basic block:
     //  * bit0: 1 if the block is the function entry block, 0 otherwise.
   }
@@ -288,6 +311,58 @@ will not be instrumented.
   // Called before a GetElemementPtr (GEP) instruction
   // for every non-constant array index.
   void __sanitizer_cov_trace_gep(uintptr_t Idx);
+
+Partially disabling instrumentation
+===================================
+
+It is sometimes useful to tell SanitizerCoverage to instrument only a subset of the
+functions in your target.
+With ``-fsanitize-coverage-whitelist=whitelist.txt``
+and ``-fsanitize-coverage-blacklist=blacklist.txt``,
+you can specify such a subset through the combination of a whitelist and a blacklist.
+
+SanitizerCoverage will only instrument functions that satisfy two conditions.
+First, the function should belong to a source file with a path that is both whitelisted
+and not blacklisted.
+Second, the function should have a mangled name that is both whitelisted and not blacklisted.
+
+The whitelist and blacklist format is similar to that of the sanitizer blacklist format.
+The default whitelist will match every source file and every function.
+The default blacklist will match no source file and no function.
+
+A common use case is to have the whitelist list folders or source files for which you want
+instrumentation and allow all function names, while the blacklist will opt out some specific
+files or functions that the whitelist loosely allowed.
+
+Here is an example whitelist:
+
+.. code-block:: none
+
+  # Enable instrumentation for a whole folder
+  src:bar/*
+  # Enable instrumentation for a specific source file
+  src:foo/a.cpp
+  # Enable instrumentation for all functions in those files
+  fun:*
+
+And an example blacklist:
+
+.. code-block:: none
+
+  # Disable instrumentation for a specific source file that the whitelist allowed
+  src:bar/b.cpp
+  # Disable instrumentation for a specific function that the whitelist allowed
+  fun:*myFunc*
+
+The use of ``*`` wildcards above is required because function names are matched after mangling.
+Without the wildcards, one would have to write the whole mangled name.
+
+Be careful that the paths of source files are matched exactly as they are provided on the clang
+command line.
+For example, the whitelist above would include file ``bar/b.cpp`` if the path was provided
+exactly like this, but would it would fail to include it with other ways to refer to the same
+file such as ``./bar/b.cpp``, or ``bar\b.cpp`` on Windows.
+So, please make sure to always double check that your lists are correctly applied.
 
 Default implementation
 ======================

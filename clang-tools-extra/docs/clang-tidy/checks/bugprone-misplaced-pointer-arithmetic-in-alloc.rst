@@ -1,6 +1,6 @@
 .. title:: clang-tidy - bugprone-misplaced-pointer-arithmetic-in-alloc
 
-bugprone-misplaced-pointer-artithmetic-in-alloc
+bugprone-misplaced-pointer-arithmetic-in-alloc
 ===============================================
 
 Finds cases where an integer expression is added to or subtracted from the

@@ -177,7 +177,8 @@ void ARMTargetAsmStreamer::switchVendor(StringRef Vendor) {}
 void ARMTargetAsmStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
   OS << "\t.eabi_attribute\t" << Attribute << ", " << Twine(Value);
   if (IsVerboseAsm) {
-    StringRef Name = ARMBuildAttrs::AttrTypeAsString(Attribute);
+    StringRef Name =
+        ELFAttrs::attrTypeAsString(Attribute, ARMBuildAttrs::ARMAttributeTags);
     if (!Name.empty())
       OS << "\t@ " << Name;
   }
@@ -193,7 +194,8 @@ void ARMTargetAsmStreamer::emitTextAttribute(unsigned Attribute,
   default:
     OS << "\t.eabi_attribute\t" << Attribute << ", \"" << String << "\"";
     if (IsVerboseAsm) {
-      StringRef Name = ARMBuildAttrs::AttrTypeAsString(Attribute);
+      StringRef Name = ELFAttrs::attrTypeAsString(
+          Attribute, ARMBuildAttrs::ARMAttributeTags);
       if (!Name.empty())
         OS << "\t@ " << Name;
     }
@@ -212,7 +214,9 @@ void ARMTargetAsmStreamer::emitIntTextAttribute(unsigned Attribute,
     if (!StringValue.empty())
       OS << ", \"" << StringValue << "\"";
     if (IsVerboseAsm)
-      OS << "\t@ " << ARMBuildAttrs::AttrTypeAsString(Attribute);
+      OS << "\t@ "
+         << ELFAttrs::attrTypeAsString(Attribute,
+                                       ARMBuildAttrs::ARMAttributeTags);
     break;
   }
   OS << "\n";
@@ -440,7 +444,7 @@ public:
 
   ~ARMELFStreamer() override = default;
 
-  void FinishImpl() override;
+  void finishImpl() override;
 
   // ARM exception handling directives
   void emitFnStart();
@@ -460,9 +464,9 @@ public:
     MCObjectStreamer::emitFill(NumBytes, FillValue, Loc);
   }
 
-  void ChangeSection(MCSection *Section, const MCExpr *Subsection) override {
+  void changeSection(MCSection *Section, const MCExpr *Subsection) override {
     LastMappingSymbols[getCurrentSection().first] = std::move(LastEMSInfo);
-    MCELFStreamer::ChangeSection(Section, Subsection);
+    MCELFStreamer::changeSection(Section, Subsection);
     auto LastMappingSymbol = LastMappingSymbols.find(Section);
     if (LastMappingSymbol != LastMappingSymbols.end()) {
       LastEMSInfo = std::move(LastMappingSymbol->second);
@@ -856,6 +860,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV8_3A:
   case ARM::ArchKind::ARMV8_4A:
   case ARM::ArchKind::ARMV8_5A:
+  case ARM::ArchKind::ARMV8_6A:
     setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     setAttributeItem(ARM_ISA_use, Allowed, false);
     setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
@@ -1079,7 +1084,7 @@ void ARMTargetELFStreamer::finishAttributeSection() {
     Streamer.SwitchSection(AttributeSection);
 
     // Format version
-    Streamer.emitIntValue(0x41, 1);
+    Streamer.emitInt8(0x41);
   }
 
   // Vendor size + Vendor name + '\0'
@@ -1090,12 +1095,12 @@ void ARMTargetELFStreamer::finishAttributeSection() {
 
   const size_t ContentsSize = calculateContentSize();
 
-  Streamer.emitIntValue(VendorHeaderSize + TagHeaderSize + ContentsSize, 4);
+  Streamer.emitInt32(VendorHeaderSize + TagHeaderSize + ContentsSize);
   Streamer.emitBytes(CurrentVendor);
-  Streamer.emitIntValue(0, 1); // '\0'
+  Streamer.emitInt8(0); // '\0'
 
-  Streamer.emitIntValue(ARMBuildAttrs::File, 1);
-  Streamer.emitIntValue(TagHeaderSize + ContentsSize, 4);
+  Streamer.emitInt8(ARMBuildAttrs::File);
+  Streamer.emitInt32(TagHeaderSize + ContentsSize);
 
   // Size should have been accounted for already, now
   // emit each field as its type (ULEB or String)
@@ -1109,12 +1114,12 @@ void ARMTargetELFStreamer::finishAttributeSection() {
       break;
     case AttributeItem::TextAttribute:
       Streamer.emitBytes(item.StringValue);
-      Streamer.emitIntValue(0, 1); // '\0'
+      Streamer.emitInt8(0); // '\0'
       break;
     case AttributeItem::NumericAndTextAttributes:
       Streamer.emitULEB128IntValue(item.IntValue);
       Streamer.emitBytes(item.StringValue);
-      Streamer.emitIntValue(0, 1); // '\0'
+      Streamer.emitInt8(0); // '\0'
       break;
     }
   }
@@ -1158,12 +1163,12 @@ void ARMTargetELFStreamer::emitInst(uint32_t Inst, char Suffix) {
 
 void ARMTargetELFStreamer::reset() { AttributeSection = nullptr; }
 
-void ARMELFStreamer::FinishImpl() {
+void ARMELFStreamer::finishImpl() {
   MCTargetStreamer &TS = *getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
   ATS.finishAttributeSection();
 
-  MCELFStreamer::FinishImpl();
+  MCELFStreamer::finishImpl();
 }
 
 void ARMELFStreamer::reset() {
@@ -1189,7 +1194,7 @@ inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
     static_cast<const MCSectionELF &>(Fn.getSection());
 
   // Create the name for new section
-  StringRef FnSecName(FnSection.getSectionName());
+  StringRef FnSecName(FnSection.getName());
   SmallString<128> EHSecName(Prefix);
   if (FnSecName != ".text") {
     EHSecName += FnSecName;
@@ -1201,7 +1206,7 @@ inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
     Flags |= ELF::SHF_GROUP;
   MCSectionELF *EHSection = getContext().getELFSection(
       EHSecName, Type, Flags, 0, Group, FnSection.getUniqueID(),
-      static_cast<const MCSymbolELF *>(&Fn));
+      static_cast<const MCSymbolELF *>(FnSection.getBeginSymbol()));
 
   assert(EHSection && "Failed to get the required EH section");
 
@@ -1275,7 +1280,7 @@ void ARMELFStreamer::emitFnEnd() {
   emitValue(FnStartRef, 4);
 
   if (CantUnwind) {
-    emitIntValue(ARM::EHABI::EXIDX_CANTUNWIND, 4);
+    emitInt32(ARM::EHABI::EXIDX_CANTUNWIND);
   } else if (ExTab) {
     // Emit a reference to the unwind opcodes in the ".ARM.extab" section.
     const MCSymbolRefExpr *ExTabEntryRef =
@@ -1374,7 +1379,7 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
                       Opcodes[I + 1] << 8 |
                       Opcodes[I + 2] << 16 |
                       Opcodes[I + 3] << 24;
-    emitIntValue(Intval, 4);
+    emitInt32(Intval);
   }
 
   // According to ARM EHABI section 9.2, if the __aeabi_unwind_cpp_pr1() or
@@ -1385,7 +1390,7 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
   // In case that the .handlerdata directive is not specified by the
   // programmer, we should emit zero to terminate the handler data.
   if (NoHandlerData && !Personality)
-    emitIntValue(0, 4);
+    emitInt32(0);
 }
 
 void ARMELFStreamer::emitHandlerData() { FlushUnwindOpcodes(false); }

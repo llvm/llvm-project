@@ -97,6 +97,10 @@ void CompilerInstance::setVerboseOutputStream(std::unique_ptr<raw_ostream> Value
 void CompilerInstance::setTarget(TargetInfo *Value) { Target = Value; }
 void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 
+llvm::vfs::FileSystem &CompilerInstance::getVirtualFileSystem() const {
+  return getFileManager().getVirtualFileSystem();
+}
+
 void CompilerInstance::setFileManager(FileManager *Value) {
   FileMgr = Value;
 }
@@ -138,7 +142,7 @@ std::unique_ptr<Sema> CompilerInstance::takeSema() {
 IntrusiveRefCntPtr<ASTReader> CompilerInstance::getASTReader() const {
   return TheASTReader;
 }
-void CompilerInstance::setModuleManager(IntrusiveRefCntPtr<ASTReader> Reader) {
+void CompilerInstance::setASTReader(IntrusiveRefCntPtr<ASTReader> Reader) {
   assert(ModuleCache.get() == &Reader->getModuleManager().getModuleCache() &&
          "Expected ASTReader to use the same PCM cache");
   TheASTReader = std::move(Reader);
@@ -379,7 +383,7 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
 void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   const PreprocessorOptions &PPOpts = getPreprocessorOpts();
 
-  // The module manager holds a reference to the old preprocessor (if any).
+  // The AST reader holds a reference to the old preprocessor (if any).
   TheASTReader.reset();
 
   // Create the Preprocessor.
@@ -1572,7 +1576,7 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
           Stack.push_back(M);
           while (!Stack.empty()) {
             Module *Current = Stack.pop_back_val();
-            if (Current->IsMissingRequirement) continue;
+            if (Current->IsUnimportable) continue;
             Current->IsAvailable = true;
             Stack.insert(Stack.end(),
                          Current->submodule_begin(), Current->submodule_end());

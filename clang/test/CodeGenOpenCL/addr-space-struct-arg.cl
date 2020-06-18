@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -O0 -ffake-address-space-map -triple i686-pc-darwin | FileCheck -enable-var-scope -check-prefixes=COM,X86 %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -O0 -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=COM,AMDGCN %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL2.0 -O0 -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=COM,AMDGCN,AMDGCN20 %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -O0 -ffake-address-space-map -triple i686-pc-darwin | FileCheck -enable-var-scope -check-prefixes=ALL,X86 %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -O0 -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=ALL,AMDGCN %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL2.0 -O0 -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=ALL,AMDGCN,AMDGCN20 %s
 // RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL1.2 -O0 -triple spir-unknown-unknown-unknown | FileCheck -enable-var-scope -check-prefixes=SPIR %s
 
 typedef int int2 __attribute__((ext_vector_type(2)));
@@ -43,14 +43,14 @@ struct LargeStructTwoMember {
 struct LargeStructOneMember g_s;
 #endif
 
-// X86-LABEL: define void @foo(%struct.Mat4X4* noalias sret %agg.result, %struct.Mat3X3* byval(%struct.Mat3X3) align 4 %in)
+// X86-LABEL: define void @foo(%struct.Mat4X4* noalias sret align 4 %agg.result, %struct.Mat3X3* byval(%struct.Mat3X3) align 4 %in)
 // AMDGCN-LABEL: define %struct.Mat4X4 @foo([9 x i32] %in.coerce)
 Mat4X4 __attribute__((noinline)) foo(Mat3X3 in) {
   Mat4X4 out;
   return out;
 }
 
-// COM-LABEL: define {{.*}} void @ker
+// ALL-LABEL: define {{.*}} void @ker
 // Expect two mem copies: one for the argument "in", and one for
 // the return value.
 // X86: call void @llvm.memcpy.p0i8.p1i8.i32(i8*
@@ -63,14 +63,14 @@ kernel void ker(global Mat3X3 *in, global Mat4X4 *out) {
   out[0] = foo(in[1]);
 }
 
-// X86-LABEL: define void @foo_large(%struct.Mat64X64* noalias sret %agg.result, %struct.Mat32X32* byval(%struct.Mat32X32) align 4 %in)
-// AMDGCN-LABEL: define void @foo_large(%struct.Mat64X64 addrspace(5)* noalias sret %agg.result, %struct.Mat32X32 addrspace(5)* byval(%struct.Mat32X32) align 4 %in)
+// X86-LABEL: define void @foo_large(%struct.Mat64X64* noalias sret align 4 %agg.result, %struct.Mat32X32* byval(%struct.Mat32X32) align 4 %in)
+// AMDGCN-LABEL: define void @foo_large(%struct.Mat64X64 addrspace(5)* noalias sret align 4 %agg.result, %struct.Mat32X32 addrspace(5)* byval(%struct.Mat32X32) align 4 %in)
 Mat64X64 __attribute__((noinline)) foo_large(Mat32X32 in) {
   Mat64X64 out;
   return out;
 }
 
-// COM-LABEL: define {{.*}} void @ker_large
+// ALL-LABEL: define {{.*}} void @ker_large
 // Expect two mem copies: one for the argument "in", and one for
 // the return value.
 // X86: call void @llvm.memcpy.p0i8.p1i8.i32(i8*

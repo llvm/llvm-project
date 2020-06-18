@@ -74,7 +74,7 @@ namespace {
     SmallVector<SmallVector<MachineMemOperand *, 8>, 16> SSRefs;
 
     // OrigAlignments - Alignments of stack objects before coloring.
-    SmallVector<unsigned, 16> OrigAlignments;
+    SmallVector<Align, 16> OrigAlignments;
 
     // OrigSizes - Sizess of stack objects before coloring.
     SmallVector<unsigned, 16> OrigSizes;
@@ -227,7 +227,7 @@ void StackSlotColoring::InitializeSlots() {
       continue;
 
     SSIntervals.push_back(&li);
-    OrigAlignments[FI] = MFI->getObjectAlignment(FI);
+    OrigAlignments[FI] = MFI->getObjectAlign(FI);
     OrigSizes[FI]      = MFI->getObjectSize(FI);
 
     auto StackID = MFI->getStackID(FI);
@@ -309,9 +309,9 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
   // Change size and alignment of the allocated slot. If there are multiple
   // objects sharing the same slot, then make sure the size and alignment
   // are large enough for all.
-  unsigned Align = OrigAlignments[FI];
-  if (!Share || Align > MFI->getObjectAlignment(Color))
-    MFI->setObjectAlignment(Color, Align);
+  Align Alignment = OrigAlignments[FI];
+  if (!Share || Alignment > MFI->getObjectAlign(Color))
+    MFI->setObjectAlignment(Color, Alignment);
   int64_t Size = OrigSizes[FI];
   if (!Share || Size > MFI->getObjectSize(Color))
     MFI->setObjectSize(Color, Size);

@@ -97,6 +97,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010: AK = GK_GFX1010; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011: AK = GK_GFX1011; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012: AK = GK_GFX1012; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1030: AK = GK_GFX1030; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   }
 
@@ -148,6 +149,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1010: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010;
   case GK_GFX1011: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011;
   case GK_GFX1012: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012;
+  case GK_GFX1030: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1030;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
 
@@ -393,9 +395,9 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
 // AMDGPUTargetELFStreamer
 //===----------------------------------------------------------------------===//
 
-AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(
-    MCStreamer &S, const MCSubtargetInfo &STI)
-    : AMDGPUTargetStreamer(S), Streamer(S) {
+AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(MCStreamer &S,
+                                                 const MCSubtargetInfo &STI)
+    : AMDGPUTargetStreamer(S), Streamer(S), Os(STI.getTargetTriple().getOS()) {
   MCAssembler &MCA = getStreamer().getAssembler();
   unsigned EFlags = MCA.getELFHeaderEFlags();
 
@@ -438,12 +440,18 @@ void AMDGPUTargetELFStreamer::EmitNote(
 
   auto NameSZ = Name.size() + 1;
 
+  unsigned NoteFlags = 0;
+  // TODO Apparently, this is currently needed for OpenCL as mentioned in
+  // https://reviews.llvm.org/D74995
+  if (Os == Triple::AMDHSA)
+    NoteFlags = ELF::SHF_ALLOC;
+
   S.PushSection();
-  S.SwitchSection(Context.getELFSection(
-    ElfNote::SectionName, ELF::SHT_NOTE, ELF::SHF_ALLOC));
-  S.emitIntValue(NameSZ, 4);                                  // namesz
+  S.SwitchSection(
+      Context.getELFSection(ElfNote::SectionName, ELF::SHT_NOTE, NoteFlags));
+  S.emitInt32(NameSZ);                                        // namesz
   S.emitValue(DescSZ, 4);                                     // descz
-  S.emitIntValue(NoteType, 4);                                // type
+  S.emitInt32(NoteType);                                      // type
   S.emitBytes(Name);                                          // name
   S.emitValueToAlignment(4, 0, 1, 0);                         // padding 0
   EmitDesc(S);                                                // desc
@@ -458,8 +466,8 @@ void AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectVersion(
 
   EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(8, getContext()),
            ElfNote::NT_AMDGPU_HSA_CODE_OBJECT_VERSION, [&](MCELFStreamer &OS) {
-             OS.emitIntValue(Major, 4);
-             OS.emitIntValue(Minor, 4);
+             OS.emitInt32(Major);
+             OS.emitInt32(Minor);
            });
 }
 
@@ -478,15 +486,15 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
 
   EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(DescSZ, getContext()),
            ElfNote::NT_AMDGPU_HSA_ISA, [&](MCELFStreamer &OS) {
-             OS.emitIntValue(VendorNameSize, 2);
-             OS.emitIntValue(ArchNameSize, 2);
-             OS.emitIntValue(Major, 4);
-             OS.emitIntValue(Minor, 4);
-             OS.emitIntValue(Stepping, 4);
+             OS.emitInt16(VendorNameSize);
+             OS.emitInt16(ArchNameSize);
+             OS.emitInt32(Major);
+             OS.emitInt32(Minor);
+             OS.emitInt32(Stepping);
              OS.emitBytes(VendorName);
-             OS.emitIntValue(0, 1); // NULL terminate VendorName
+             OS.emitInt8(0); // NULL terminate VendorName
              OS.emitBytes(ArchName);
-             OS.emitIntValue(0, 1); // NULL terminte ArchName
+             OS.emitInt8(0); // NULL terminte ArchName
            });
 }
 
@@ -604,7 +612,7 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd() {
   OS.PushSection();
   OS.emitValueToAlignment(64, Encoded_s_code_end, 4);
   for (unsigned I = 0; I < 48; ++I)
-    OS.emitIntValue(Encoded_s_code_end, 4);
+    OS.emitInt32(Encoded_s_code_end);
   OS.PopSection();
   return true;
 }

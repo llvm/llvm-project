@@ -12,7 +12,7 @@ declare i32 @llvm.eh.typeid.for(i8*)
 ; CHECK:     successors: %[[GOOD:bb.[0-9]+]]{{.*}}%[[BAD:bb.[0-9]+]]
 ; CHECK:     EH_LABEL
 ; CHECK:     $w0 = COPY
-; CHECK:     BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $w0
+; CHECK:     BL @foo, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $w0
 ; CHECK:     {{%[0-9]+}}:_(s32) = COPY $w0
 ; CHECK:     EH_LABEL
 ; CHECK:     G_BR %[[GOOD]]
@@ -59,8 +59,7 @@ continue:
 
 ; CHECK-LABEL: name: test_invoke_varargs
 
-; CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-; CHECK: [[NULL:%[0-9]+]]:_(p0) = G_INTTOPTR [[ZERO]]
+; CHECK: [[NULL:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
 ; CHECK: [[ANSWER:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
 ; CHECK: [[ONE:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.0
 
@@ -72,7 +71,6 @@ continue:
 ; CHECK: [[ANSWER_EXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ANSWER]]
 ; CHECK: G_STORE [[ANSWER_EXT]](s64), [[SLOT]]
 
-; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFFSET:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
 ; CHECK: [[SLOT:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFFSET]](s64)
 ; CHECK: G_STORE [[ONE]](s32), [[SLOT]]

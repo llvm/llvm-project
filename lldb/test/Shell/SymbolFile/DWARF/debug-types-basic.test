@@ -20,7 +20,7 @@
 
 # And type units+dwo+dwarf5.
 # RUN: %clangxx -target x86_64-pc-linux %S/Inputs/debug-types-basic.cpp \
-# RUN:   -g -gdwarf-5 -fdebug-types-section -c -o %t5dwo.o
+# RUN:   -g -gdwarf-5 -fdebug-types-section -gsplit-dwarf -c -o %t5dwo.o
 # RUN: ld.lld %t5dwo.o -o %t5dwo
 # RUN: %lldb %t5dwo -s %s -o exit | FileCheck %s
 

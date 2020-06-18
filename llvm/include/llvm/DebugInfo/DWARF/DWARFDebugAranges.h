@@ -10,7 +10,7 @@
 #define LLVM_DEBUGINFO_DWARFDEBUGARANGES_H
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include <cstdint>
 #include <vector>
 
@@ -25,7 +25,7 @@ public:
 
 private:
   void clear();
-  void extract(DataExtractor DebugArangesData,
+  void extract(DWARFDataExtractor DebugArangesData,
                function_ref<void(Error)> RecoverableErrorHandler);
 
   /// Call appendRange multiple times and then call construct.

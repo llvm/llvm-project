@@ -41,6 +41,11 @@ N: Jonathan B Coe
 E: jbcoe@me.com
 D: Implementation of propagate_const.
 
+N: Christopher Di Bella
+E: cjdb@google.com
+E: cjdb.ns@gmail.com
+D: Library concepts.
+
 N: Glen Joseph Fernandes
 E: glenjofe@gmail.com
 D: Implementation of to_address.

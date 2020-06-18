@@ -29,8 +29,7 @@ define amdgpu_ps i32 @s_bswap_i32(i32 inreg %src) {
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
   %bswap = call i32 @llvm.bswap.i32(i32 %src)
-  %to.sgpr = call i32 @llvm.amdgcn.readfirstlane(i32 %bswap)
-  ret i32 %to.sgpr
+  ret i32 %bswap
 }
 
 define i32 @v_bswap_i32(i32 %src) {
@@ -96,13 +95,7 @@ define amdgpu_ps <2 x i32> @s_bswap_v2i32(<2 x i32> inreg %src) {
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX9-NEXT:    ; return to shader part epilog
   %bswap = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %src)
-  %bswap.0 = extractelement <2 x i32> %bswap, i32 0
-  %bswap.1 = extractelement <2 x i32> %bswap, i32 1
-  %to.sgpr0 = call i32 @llvm.amdgcn.readfirstlane(i32 %bswap.0)
-  %to.sgpr1 = call i32 @llvm.amdgcn.readfirstlane(i32 %bswap.1)
-  %ins.0 = insertelement <2 x i32> undef, i32 %to.sgpr0, i32 0
-  %ins.1 = insertelement <2 x i32> %ins.0, i32 %to.sgpr1, i32 1
-  ret <2 x i32> %ins.1
+  ret <2 x i32> %bswap
 }
 
 define <2 x i32> @v_bswap_v2i32(<2 x i32> %src) {
@@ -137,7 +130,7 @@ define <2 x i32> @v_bswap_v2i32(<2 x i32> %src) {
   ret <2 x i32> %bswap
 }
 
-define amdgpu_ps <2 x i32> @s_bswap_i64(i64 inreg %src) {
+define amdgpu_ps i64 @s_bswap_i64(i64 inreg %src) {
 ; GFX7-LABEL: s_bswap_i64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_alignbit_b32 v0, s1, s1, 8
@@ -173,14 +166,7 @@ define amdgpu_ps <2 x i32> @s_bswap_i64(i64 inreg %src) {
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX9-NEXT:    ; return to shader part epilog
   %bswap = call i64 @llvm.bswap.i64(i64 %src)
-  %cast = bitcast i64 %bswap to <2 x i32>
-  %elt0 = extractelement <2 x i32> %cast, i32 0
-  %elt1 = extractelement <2 x i32> %cast, i32 1
-  %to.sgpr0 = call i32 @llvm.amdgcn.readfirstlane(i32 %elt0)
-  %to.sgpr1 = call i32 @llvm.amdgcn.readfirstlane(i32 %elt1)
-  %ins.0 = insertelement <2 x i32> undef, i32 %to.sgpr0, i32 0
-  %ins.1 = insertelement <2 x i32> %ins.0, i32 %to.sgpr1, i32 1
-  ret <2 x i32> %ins.1
+  ret i64 %bswap
 }
 
 define i64 @v_bswap_i64(i64 %src) {
@@ -218,7 +204,7 @@ define i64 @v_bswap_i64(i64 %src) {
   ret i64 %bswap
 }
 
-define amdgpu_ps <4 x i32> @s_bswap_v2i64(<2 x i64> inreg %src) {
+define amdgpu_ps <2 x i64> @s_bswap_v2i64(<2 x i64> inreg %src) {
 ; GFX7-LABEL: s_bswap_v2i64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_alignbit_b32 v0, s1, s1, 8
@@ -274,20 +260,7 @@ define amdgpu_ps <4 x i32> @s_bswap_v2i64(<2 x i64> inreg %src) {
 ; GFX9-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX9-NEXT:    ; return to shader part epilog
   %bswap = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %src)
-  %cast = bitcast <2 x i64> %bswap to <4 x i32>
-  %bswap.0 = extractelement <4 x i32> %cast, i32 0
-  %bswap.1 = extractelement <4 x i32> %cast, i32 1
-  %bswap.2 = extractelement <4 x i32> %cast, i32 2
-  %bswap.3 = extractelement <4 x i32> %cast, i32 3
-  %to.sgpr0 = call i32 @llvm.amdgcn.readfirstlane(i32 %bswap.0)
-  %to.sgpr1 = call i32 @llvm.amdgcn.readfirstlane(i32 %bswap.1)
-  %to.sgpr2 = call i32 @llvm.amdgcn.readfirstlane(i32 %bswap.2)
-  %to.sgpr3 = call i32 @llvm.amdgcn.readfirstlane(i32 %bswap.3)
-  %ins.0 = insertelement <4 x i32> undef, i32 %to.sgpr0, i32 0
-  %ins.1 = insertelement <4 x i32> %ins.0, i32 %to.sgpr1, i32 1
-  %ins.2 = insertelement <4 x i32> %ins.1, i32 %to.sgpr2, i32 2
-  %ins.3 = insertelement <4 x i32> %ins.2, i32 %to.sgpr3, i32 3
-  ret <4 x i32> %ins.3
+  ret <2 x i64> %bswap
 }
 
 define <2 x i64> @v_bswap_v2i64(<2 x i64> %src) {
@@ -345,7 +318,6 @@ define amdgpu_ps i16 @s_bswap_i16(i16 inreg %src) {
 ; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX7-NEXT:    s_lshr_b32 s0, s0, 8
 ; GFX7-NEXT:    s_or_b32 s0, s0, s1
-; GFX7-NEXT:    s_bfe_u32 s0, s0, 0x100000
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_bswap_i16:
@@ -364,20 +336,17 @@ define amdgpu_ps i16 @s_bswap_i16(i16 inreg %src) {
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
-  %zext = zext i16 %bswap to i32
-  %to.sgpr = call i32 @llvm.amdgcn.readfirstlane(i32 %zext)
-  %trunc = trunc i32 %to.sgpr to i16
-  ret i16 %trunc
+  ret i16 %bswap
 }
 
 define i16 @v_bswap_i16(i16 %src) {
 ; GFX7-LABEL: v_bswap_i16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
-; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_bswap_i16:
@@ -431,19 +400,18 @@ define amdgpu_ps i32 @s_bswap_v2i16(<2 x i16> inreg %src) {
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
   %bswap = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %src)
-  %cast0 = bitcast <2 x i16> %bswap to i32
-  %to.sgpr = call i32 @llvm.amdgcn.readfirstlane(i32 %cast0)
-  ret i32 %to.sgpr
+  %cast = bitcast <2 x i16> %bswap to i32
+  ret i32 %cast
 }
 
 define i32 @v_bswap_i16_zext_to_i32(i16 %src) {
 ; GFX7-LABEL: v_bswap_i16_zext_to_i32:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
-; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -469,10 +437,10 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ; GFX7-LABEL: v_bswap_i16_sext_to_i32:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
-; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -574,7 +542,6 @@ define i64 @v_bswap_i48(i64 %src) {
   ret i64 %zext
 }
 
-declare i32 @llvm.amdgcn.readfirstlane(i32) #0
 declare i16 @llvm.bswap.i16(i16) #1
 declare <2 x i16> @llvm.bswap.v2i16(<2 x i16>) #1
 declare <3 x i16> @llvm.bswap.v3i16(<3 x i16>) #1

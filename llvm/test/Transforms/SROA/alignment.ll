@@ -130,11 +130,14 @@ entry:
 }
 
 define void @test6() {
-; Test that we promote alignment when the underlying alloca switches to one
-; that innately provides it.
+; We should set the alignment on all load and store operations; make sure
+; we choose an appropriate alignment.
 ; CHECK-LABEL: @test6(
-; CHECK: alloca double
-; CHECK: alloca double
+; CHECK: alloca double, align 8{{$}}
+; CHECK: alloca double, align 8{{$}}
+; CHECK: store{{.*}}, align 8
+; CHECK: load{{.*}}, align 8
+; CHECK: store{{.*}}, align 8
 ; CHECK-NOT: align
 ; CHECK: ret void
 
@@ -226,6 +229,21 @@ define void @test10() {
   call void @populate(i8* %ptr.8)
   %val = load {i32, i8, i8, {i8, i16}}, {i32, i8, i8, {i8, i16}}* %ptr, align 2
   ret void
+}
+
+%struct = type { i32, i32 }
+define dso_local i32 @pr45010(%struct* %A) {
+; CHECK-LABEL: @pr45010
+; CHECK: load atomic volatile i32, {{.*}}, align 4
+
+  %B = alloca %struct, align 4
+  %A.i = getelementptr inbounds %struct, %struct* %A, i32 0, i32 0
+  %B.i = getelementptr inbounds %struct, %struct* %B, i32 0, i32 0
+  %1 = load i32, i32* %A.i, align 4
+  store atomic volatile i32 %1, i32* %B.i release, align 4
+  %2 = bitcast %struct* %B to i32*
+  %x = load atomic volatile i32, i32* %2 acquire, align 4
+  ret i32 %x
 }
 
 declare void @populate(i8*)

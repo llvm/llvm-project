@@ -17,9 +17,14 @@ class ShTest(FileBasedTest):
     The ShTest files contain some number of shell-like command pipelines, along
     with assertions about what should be in the output.
     """
-    def __init__(self, execute_external=False):
+    def __init__(self, execute_external=False, extra_substitutions=[],
+                 preamble_commands=[]):
         self.execute_external = execute_external
+        self.extra_substitutions = extra_substitutions
+        self.preamble_commands = preamble_commands
 
     def execute(self, test, litConfig):
         return lit.TestRunner.executeShTest(test, litConfig,
-                                            self.execute_external)
+                                            self.execute_external,
+                                            self.extra_substitutions,
+                                            self.preamble_commands)

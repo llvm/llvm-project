@@ -31,6 +31,6 @@
 # ZLIBFLAGS-NEXT:    Flags [
 # ZLIBFLAGS-NEXT:      SHF_COMPRESSED
 
-.section .debug_str
+.section .debug_str,"MS",@progbits,1
   .asciz "AAA"
   .asciz "BBB"

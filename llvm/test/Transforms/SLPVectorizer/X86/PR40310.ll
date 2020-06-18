@@ -13,15 +13,7 @@ define void @mainTest(i32 %param, i32 * %vals, i32 %len) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x i32> [[SHUFFLE]], i32 15
 ; CHECK-NEXT:    store atomic i32 [[TMP3]], i32* [[VALS:%.*]] unordered, align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <16 x i32> [[SHUFFLE]], <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 -1>
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x i32> [[TMP4]], <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = and <16 x i32> [[TMP4]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x i32> [[BIN_RDX]], <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX2:%.*]] = and <16 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <16 x i32> [[BIN_RDX2]], <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX4:%.*]] = and <16 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
-; CHECK-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <16 x i32> [[BIN_RDX4]], <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX6:%.*]] = and <16 x i32> [[BIN_RDX4]], [[RDX_SHUF5]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x i32> [[BIN_RDX6]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.vector.reduce.and.v16i32(<16 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = and i32 [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[V44:%.*]] = add i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> undef, i32 [[V44]], i32 0

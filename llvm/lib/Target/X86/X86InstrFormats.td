@@ -27,6 +27,7 @@ def RawFrmDstSrc  : Format<6>;
 def RawFrmImm8    : Format<7>;
 def RawFrmImm16   : Format<8>;
 def AddCCFrm      : Format<9>;
+def PrefixByte    : Format<10>;
 def MRMDestMem     : Format<32>;
 def MRMSrcMem      : Format<33>;
 def MRMSrcMem4VOp3 : Format<34>;

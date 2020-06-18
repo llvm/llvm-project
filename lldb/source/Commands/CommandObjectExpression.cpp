@@ -362,29 +362,13 @@ CanBeUsedForElementCountPrinting(ValueObject &valobj) {
   return Status();
 }
 
-bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
-                                                 Stream *output_stream,
-                                                 Stream *error_stream,
-                                                 CommandReturnObject *result) {
-  // Don't use m_exe_ctx as this might be called asynchronously after the
-  // command object DoExecute has finished when doing multi-line expression
-  // that use an input reader...
-  ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
-
-  Target *target = exe_ctx.GetTargetPtr();
-
-  if (!target)
-    target = &GetDummyTarget();
-
-  lldb::ValueObjectSP result_valobj_sp;
-  bool keep_in_memory = true;
-  StackFrame *frame = exe_ctx.GetFramePtr();
-
+EvaluateExpressionOptions
+CommandObjectExpression::GetEvalOptions(const Target &target) {
   EvaluateExpressionOptions options;
   options.SetCoerceToId(m_varobj_options.use_objc);
   options.SetUnwindOnError(m_command_options.unwind_on_error);
   options.SetIgnoreBreakpoints(m_command_options.ignore_breakpoints);
-  options.SetKeepInMemory(keep_in_memory);
+  options.SetKeepInMemory(true);
   options.SetUseDynamic(m_varobj_options.use_dynamic);
   options.SetTryAllThreads(m_command_options.try_all_threads);
   options.SetDebug(m_command_options.debug);
@@ -396,11 +380,12 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 
   bool auto_apply_fixits;
   if (m_command_options.auto_apply_fixits == eLazyBoolCalculate)
-    auto_apply_fixits = target->GetEnableAutoApplyFixIts();
+    auto_apply_fixits = target.GetEnableAutoApplyFixIts();
   else
     auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes;
 
   options.SetAutoApplyFixIts(auto_apply_fixits);
+  options.SetRetriesWithFixIts(target.GetNumberOfRetriesWithFixits());
 
   if (m_command_options.top_level)
     options.SetExecutionPolicy(eExecutionPolicyTopLevel);
@@ -415,17 +400,36 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
     options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
   else
     options.SetTimeout(llvm::None);
+  return options;
+}
 
+bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
+                                                 Stream &output_stream,
+                                                 Stream &error_stream,
+                                                 CommandReturnObject &result) {
+  // Don't use m_exe_ctx as this might be called asynchronously after the
+  // command object DoExecute has finished when doing multi-line expression
+  // that use an input reader...
+  ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
+
+  Target *target = exe_ctx.GetTargetPtr();
+
+  if (!target)
+    target = &GetDummyTarget();
+
+  lldb::ValueObjectSP result_valobj_sp;
+  StackFrame *frame = exe_ctx.GetFramePtr();
+
+  const EvaluateExpressionOptions options = GetEvalOptions(*target);
   ExpressionResults success = target->EvaluateExpression(
       expr, frame, result_valobj_sp, options, &m_fixed_expression);
 
   // We only tell you about the FixIt if we applied it.  The compiler errors
   // will suggest the FixIt if it parsed.
-  if (error_stream && !m_fixed_expression.empty() &&
-      target->GetEnableNotifyAboutFixIts()) {
+  if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts()) {
     if (success == eExpressionCompleted)
-      error_stream->Printf("  Fix-it applied, fixed expression was: \n    %s\n",
-                           m_fixed_expression.c_str());
+      error_stream.Printf("  Fix-it applied, fixed expression was: \n    %s\n",
+                          m_fixed_expression.c_str());
   }
 
   if (result_valobj_sp) {
@@ -439,10 +443,10 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         if (m_varobj_options.elem_count > 0) {
           Status error(CanBeUsedForElementCountPrinting(*result_valobj_sp));
           if (error.Fail()) {
-            result->AppendErrorWithFormat(
+            result.AppendErrorWithFormat(
                 "expression cannot be used with --element-count %s\n",
                 error.AsCString(""));
-            result->SetStatus(eReturnStatusFailed);
+            result.SetStatus(eReturnStatusFailed);
             return false;
           }
         }
@@ -452,41 +456,39 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         options.SetVariableFormatDisplayLanguage(
             result_valobj_sp->GetPreferredDisplayLanguage());
 
-        result_valobj_sp->Dump(*output_stream, options);
+        result_valobj_sp->Dump(output_stream, options);
 
-        if (result)
-          result->SetStatus(eReturnStatusSuccessFinishResult);
+        result.SetStatus(eReturnStatusSuccessFinishResult);
       }
     } else {
       if (result_valobj_sp->GetError().GetError() ==
           UserExpression::kNoResult) {
         if (format != eFormatVoid && GetDebugger().GetNotifyVoid()) {
-          error_stream->PutCString("(void)\n");
+          error_stream.PutCString("(void)\n");
         }
 
-        if (result)
-          result->SetStatus(eReturnStatusSuccessFinishResult);
+        result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         const char *error_cstr = result_valobj_sp->GetError().AsCString();
         if (error_cstr && error_cstr[0]) {
           const size_t error_cstr_len = strlen(error_cstr);
           const bool ends_with_newline = error_cstr[error_cstr_len - 1] == '\n';
           if (strstr(error_cstr, "error:") != error_cstr)
-            error_stream->PutCString("error: ");
-          error_stream->Write(error_cstr, error_cstr_len);
+            error_stream.PutCString("error: ");
+          error_stream.Write(error_cstr, error_cstr_len);
           if (!ends_with_newline)
-            error_stream->EOL();
+            error_stream.EOL();
         } else {
-          error_stream->PutCString("error: unknown error\n");
+          error_stream.PutCString("error: unknown error\n");
         }
 
-        if (result)
-          result->SetStatus(eReturnStatusFailed);
+        result.SetStatus(eReturnStatusFailed);
       }
     }
   }
 
-  return true;
+  return (success != eExpressionSetupError &&
+          success != eExpressionParseError);
 }
 
 void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
@@ -498,7 +500,9 @@ void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
   StreamFileSP output_sp = io_handler.GetOutputStreamFileSP();
   StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
-  EvaluateExpression(line.c_str(), output_sp.get(), error_sp.get());
+  CommandReturnObject return_obj(
+      GetCommandInterpreter().GetDebugger().GetUseColor());
+  EvaluateExpression(line.c_str(), *output_sp, *error_sp, return_obj);
   if (output_sp)
     output_sp->Flush();
   if (error_sp)
@@ -646,8 +650,8 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
   }
 
   Target &target = GetSelectedOrDummyTarget();
-  if (EvaluateExpression(expr, &(result.GetOutputStream()),
-                         &(result.GetErrorStream()), &result)) {
+  if (EvaluateExpression(expr, result.GetOutputStream(),
+                         result.GetErrorStream(), result)) {
 
     if (!m_fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
       CommandHistory &history = m_interpreter.GetCommandHistory();

@@ -36,8 +36,8 @@ define i32 @test2(i32 %a) #0 {
 
 define i32 @test3(i32 %a) #0 {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[V:%.*]] = or i32 [[A:%.*]], -16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V]], -11
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 5
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i32 5
 ;
@@ -50,8 +50,8 @@ define i32 @test3(i32 %a) #0 {
 
 define i32 @test4(i32 %a) #0 {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[V:%.*]] = or i32 [[A:%.*]], -16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V]], -6
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 10
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i32 2
 ;

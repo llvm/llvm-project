@@ -27,8 +27,10 @@
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
+#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -64,6 +66,10 @@ template <> struct ArgTypeTraits<std::string> {
   static ArgKind getKind() {
     return ArgKind(ArgKind::AK_String);
   }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
+    return llvm::None;
+  }
 };
 
 template <>
@@ -82,6 +88,10 @@ template <class T> struct ArgTypeTraits<ast_matchers::internal::Matcher<T>> {
   static ArgKind getKind() {
     return ArgKind(ASTNodeKind::getFromNodeKind<T>());
   }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
+    return llvm::None;
+  }
 };
 
 template <> struct ArgTypeTraits<bool> {
@@ -93,6 +103,10 @@ template <> struct ArgTypeTraits<bool> {
 
   static ArgKind getKind() {
     return ArgKind(ArgKind::AK_Boolean);
+  }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
+    return llvm::None;
   }
 };
 
@@ -106,6 +120,10 @@ template <> struct ArgTypeTraits<double> {
   static ArgKind getKind() {
     return ArgKind(ArgKind::AK_Double);
   }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
+    return llvm::None;
+  }
 };
 
 template <> struct ArgTypeTraits<unsigned> {
@@ -117,6 +135,10 @@ template <> struct ArgTypeTraits<unsigned> {
 
   static ArgKind getKind() {
     return ArgKind(ArgKind::AK_Unsigned);
+  }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
+    return llvm::None;
   }
 };
 
@@ -141,13 +163,15 @@ public:
   static ArgKind getKind() {
     return ArgKind(ArgKind::AK_String);
   }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
 };
 
 template <> struct ArgTypeTraits<CastKind> {
 private:
   static Optional<CastKind> getCastKind(llvm::StringRef AttrKind) {
     return llvm::StringSwitch<Optional<CastKind>>(AttrKind)
-#define CAST_OPERATION(Name) .Case( #Name, CK_##Name)
+#define CAST_OPERATION(Name) .Case("CK_" #Name, CK_##Name)
 #include "clang/AST/OperationKinds.def"
         .Default(llvm::None);
   }
@@ -164,15 +188,16 @@ public:
   static ArgKind getKind() {
     return ArgKind(ArgKind::AK_String);
   }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
 };
 
 template <> struct ArgTypeTraits<OpenMPClauseKind> {
 private:
   static Optional<OpenMPClauseKind> getClauseKind(llvm::StringRef ClauseKind) {
     return llvm::StringSwitch<Optional<OpenMPClauseKind>>(ClauseKind)
-#define OPENMP_CLAUSE(TextualSpelling, Class)                                  \
-  .Case("OMPC_" #TextualSpelling, OMPC_##TextualSpelling)
-#include "clang/Basic/OpenMPKinds.def"
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) .Case(#Enum, llvm::omp::Clause::Enum)
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
         .Default(llvm::None);
   }
 
@@ -186,6 +211,35 @@ public:
   }
 
   static ArgKind getKind() { return ArgKind(ArgKind::AK_String); }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
+};
+
+template <> struct ArgTypeTraits<UnaryExprOrTypeTrait> {
+private:
+  static Optional<UnaryExprOrTypeTrait>
+  getUnaryOrTypeTraitKind(llvm::StringRef ClauseKind) {
+    return llvm::StringSwitch<Optional<UnaryExprOrTypeTrait>>(ClauseKind)
+#define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key)                          \
+  .Case("UETT_" #Name, UETT_##Name)
+#define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key)                    \
+  .Case("UETT_" #Name, UETT_##Name)
+#include "clang/Basic/TokenKinds.def"
+        .Default(llvm::None);
+  }
+
+public:
+  static bool is(const VariantValue &Value) {
+    return Value.isString() && getUnaryOrTypeTraitKind(Value.getString());
+  }
+
+  static UnaryExprOrTypeTrait get(const VariantValue &Value) {
+    return *getUnaryOrTypeTraitKind(Value.getString());
+  }
+
+  static ArgKind getKind() { return ArgKind(ArgKind::AK_String); }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
 };
 
 /// Matcher descriptor interface.
@@ -319,7 +373,7 @@ static void mergePolyMatchers(const PolyMatcher &Poly,
 /// polymorphic matcher. For the former, we just construct the VariantMatcher.
 /// For the latter, we instantiate all the possible Matcher<T> of the poly
 /// matcher.
-static VariantMatcher outvalueToVariantMatcher(const DynTypedMatcher &Matcher) {
+inline VariantMatcher outvalueToVariantMatcher(const DynTypedMatcher &Matcher) {
   return VariantMatcher::SingleMatcher(Matcher);
 }
 
@@ -496,9 +550,16 @@ private:
 
 #define CHECK_ARG_TYPE(index, type)                                            \
   if (!ArgTypeTraits<type>::is(Args[index].Value)) {                           \
-    Error->addError(Args[index].Range, Error->ET_RegistryWrongArgType)         \
-        << (index + 1) << ArgTypeTraits<type>::getKind().asString()            \
-        << Args[index].Value.getTypeAsString();                                \
+    if (llvm::Optional<std::string> BestGuess =                                \
+            ArgTypeTraits<type>::getBestGuess(Args[index].Value)) {            \
+      Error->addError(Args[index].Range,                                       \
+                      Error->ET_RegistryUnknownEnumWithReplace)                \
+          << index + 1 << Args[index].Value.getString() << *BestGuess;         \
+    } else {                                                                   \
+      Error->addError(Args[index].Range, Error->ET_RegistryWrongArgType)       \
+          << (index + 1) << ArgTypeTraits<type>::getKind().asString()          \
+          << Args[index].Value.getTypeAsString();                              \
+    }                                                                          \
     return VariantMatcher();                                                   \
   }
 

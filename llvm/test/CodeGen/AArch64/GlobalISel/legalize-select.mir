@@ -16,12 +16,13 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sgt), [[COPY]](<2 x s64>), [[BUILD_VECTOR]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: [[UV:%[0-9]+]]:_(s1), [[UV1:%[0-9]+]]:_(s1) = G_UNMERGE_VALUES [[TRUNC]](<2 x s1>)
+    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ICMP]](<2 x s64>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[UV]](s64)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[UV1]](s64)
     ; CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
     ; CHECK: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[UV]](s1), [[UV2]], [[UV4]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[UV1]](s1), [[UV3]], [[UV5]]
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[UV2]], [[UV4]]
+    ; CHECK: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC1]](s1), [[UV3]], [[UV5]]
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SELECT]](s64), [[SELECT1]](s64)
     ; CHECK: $q0 = COPY [[BUILD_VECTOR1]](<2 x s64>)
     ; CHECK: RET_ReallyLR implicit $q0
@@ -50,12 +51,13 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(sgt), [[COPY]](<2 x s32>), [[BUILD_VECTOR]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[ICMP]](<2 x s32>)
-    ; CHECK: [[UV:%[0-9]+]]:_(s1), [[UV1:%[0-9]+]]:_(s1) = G_UNMERGE_VALUES [[TRUNC]](<2 x s1>)
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ICMP]](<2 x s32>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[UV]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[UV1]](s32)
     ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
     ; CHECK: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[UV]](s1), [[UV2]], [[UV4]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[UV1]](s1), [[UV3]], [[UV5]]
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[UV2]], [[UV4]]
+    ; CHECK: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC1]](s1), [[UV3]], [[UV5]]
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
     ; CHECK: $d0 = COPY [[BUILD_VECTOR1]](<2 x s32>)
     ; CHECK: RET_ReallyLR implicit $d0

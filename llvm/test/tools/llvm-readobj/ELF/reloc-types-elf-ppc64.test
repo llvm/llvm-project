@@ -108,189 +108,96 @@ Sections:
   - Name: .rela.text
     Type: SHT_RELA
     Relocations:
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_NONE
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR32
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR24
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_LO
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_HI
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_HA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR14
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR14_BRTAKEN
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR14_BRNTAKEN
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_REL24
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_REL14
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_REL14_BRTAKEN
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_REL14_BRNTAKEN
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT16
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT16_LO
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT16_HI
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT16_HA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_COPY
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GLOB_DAT
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_JMP_SLOT
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_RELATIVE
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_REL32
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR64
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_HIGHER
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_HIGHERA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_HIGHEST
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_HIGHESTA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_REL64
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TOC16
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TOC16_LO
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TOC16_HI
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TOC16_HA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TOC
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_LO_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT16_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT16_LO_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TOC16_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TOC16_LO_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TLS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPMOD64
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_LO
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_HI
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_HA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL64
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_LO
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_HI
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_HA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL64
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TLSGD16
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TLSGD16_LO
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TLSGD16_HI
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TLSGD16_HA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TLSLD16
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TLSLD16_LO
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TLSLD16_HI
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TLSLD16_HA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TPREL16_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TPREL16_LO_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TPREL16_HI
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_TPREL16_HA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_DTPREL16_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_DTPREL16_LO_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_DTPREL16_HI
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_GOT_DTPREL16_HA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_LO_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_HIGHER
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_HIGHERA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_HIGHEST
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_HIGHESTA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_LO_DS
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_HIGHER
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_HIGHERA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_HIGHEST
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_HIGHESTA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TLSGD
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TLSLD
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_HIGH
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_ADDR16_HIGHA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_HIGH
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_TPREL16_HIGHA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_HIGH
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_DTPREL16_HIGHA
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_IRELATIVE
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_REL16
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_REL16_LO
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_REL16_HI
-      - Offset: 0x0000000000000000
-        Type:   R_PPC64_REL16_HA
+      - Type: R_PPC64_NONE
+      - Type: R_PPC64_ADDR32
+      - Type: R_PPC64_ADDR24
+      - Type: R_PPC64_ADDR16
+      - Type: R_PPC64_ADDR16_LO
+      - Type: R_PPC64_ADDR16_HI
+      - Type: R_PPC64_ADDR16_HA
+      - Type: R_PPC64_ADDR14
+      - Type: R_PPC64_ADDR14_BRTAKEN
+      - Type: R_PPC64_ADDR14_BRNTAKEN
+      - Type: R_PPC64_REL24
+      - Type: R_PPC64_REL14
+      - Type: R_PPC64_REL14_BRTAKEN
+      - Type: R_PPC64_REL14_BRNTAKEN
+      - Type: R_PPC64_GOT16
+      - Type: R_PPC64_GOT16_LO
+      - Type: R_PPC64_GOT16_HI
+      - Type: R_PPC64_GOT16_HA
+      - Type: R_PPC64_COPY
+      - Type: R_PPC64_GLOB_DAT
+      - Type: R_PPC64_JMP_SLOT
+      - Type: R_PPC64_RELATIVE
+      - Type: R_PPC64_REL32
+      - Type: R_PPC64_ADDR64
+      - Type: R_PPC64_ADDR16_HIGHER
+      - Type: R_PPC64_ADDR16_HIGHERA
+      - Type: R_PPC64_ADDR16_HIGHEST
+      - Type: R_PPC64_ADDR16_HIGHESTA
+      - Type: R_PPC64_REL64
+      - Type: R_PPC64_TOC16
+      - Type: R_PPC64_TOC16_LO
+      - Type: R_PPC64_TOC16_HI
+      - Type: R_PPC64_TOC16_HA
+      - Type: R_PPC64_TOC
+      - Type: R_PPC64_ADDR16_DS
+      - Type: R_PPC64_ADDR16_LO_DS
+      - Type: R_PPC64_GOT16_DS
+      - Type: R_PPC64_GOT16_LO_DS
+      - Type: R_PPC64_TOC16_DS
+      - Type: R_PPC64_TOC16_LO_DS
+      - Type: R_PPC64_TLS
+      - Type: R_PPC64_DTPMOD64
+      - Type: R_PPC64_TPREL16
+      - Type: R_PPC64_TPREL16_LO
+      - Type: R_PPC64_TPREL16_HI
+      - Type: R_PPC64_TPREL16_HA
+      - Type: R_PPC64_TPREL64
+      - Type: R_PPC64_DTPREL16
+      - Type: R_PPC64_DTPREL16_LO
+      - Type: R_PPC64_DTPREL16_HI
+      - Type: R_PPC64_DTPREL16_HA
+      - Type: R_PPC64_DTPREL64
+      - Type: R_PPC64_GOT_TLSGD16
+      - Type: R_PPC64_GOT_TLSGD16_LO
+      - Type: R_PPC64_GOT_TLSGD16_HI
+      - Type: R_PPC64_GOT_TLSGD16_HA
+      - Type: R_PPC64_GOT_TLSLD16
+      - Type: R_PPC64_GOT_TLSLD16_LO
+      - Type: R_PPC64_GOT_TLSLD16_HI
+      - Type: R_PPC64_GOT_TLSLD16_HA
+      - Type: R_PPC64_GOT_TPREL16_DS
+      - Type: R_PPC64_GOT_TPREL16_LO_DS
+      - Type: R_PPC64_GOT_TPREL16_HI
+      - Type: R_PPC64_GOT_TPREL16_HA
+      - Type: R_PPC64_GOT_DTPREL16_DS
+      - Type: R_PPC64_GOT_DTPREL16_LO_DS
+      - Type: R_PPC64_GOT_DTPREL16_HI
+      - Type: R_PPC64_GOT_DTPREL16_HA
+      - Type: R_PPC64_TPREL16_DS
+      - Type: R_PPC64_TPREL16_LO_DS
+      - Type: R_PPC64_TPREL16_HIGHER
+      - Type: R_PPC64_TPREL16_HIGHERA
+      - Type: R_PPC64_TPREL16_HIGHEST
+      - Type: R_PPC64_TPREL16_HIGHESTA
+      - Type: R_PPC64_DTPREL16_DS
+      - Type: R_PPC64_DTPREL16_LO_DS
+      - Type: R_PPC64_DTPREL16_HIGHER
+      - Type: R_PPC64_DTPREL16_HIGHERA
+      - Type: R_PPC64_DTPREL16_HIGHEST
+      - Type: R_PPC64_DTPREL16_HIGHESTA
+      - Type: R_PPC64_TLSGD
+      - Type: R_PPC64_TLSLD
+      - Type: R_PPC64_ADDR16_HIGH
+      - Type: R_PPC64_ADDR16_HIGHA
+      - Type: R_PPC64_TPREL16_HIGH
+      - Type: R_PPC64_TPREL16_HIGHA
+      - Type: R_PPC64_DTPREL16_HIGH
+      - Type: R_PPC64_DTPREL16_HIGHA
+      - Type: R_PPC64_IRELATIVE
+      - Type: R_PPC64_REL16
+      - Type: R_PPC64_REL16_LO
+      - Type: R_PPC64_REL16_HI
+      - Type: R_PPC64_REL16_HA

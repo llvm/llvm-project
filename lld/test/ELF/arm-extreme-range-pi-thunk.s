@@ -5,11 +5,11 @@
 // RUN: echo "          .text_high 0xf0000000 : AT(0x1000) { *(.text_high) }" >> %t.script
 // RUN: echo "       } " >> %t.script
 // RUN: ld.lld --script %t.script --pie --static %t -o %t2
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi --no-show-raw-insn %t2 | FileCheck %s
+// RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi --no-show-raw-insn %t2 | FileCheck %s
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t3
 // RUN: ld.lld --script %t.script --pie %t3 -o %t4
-// RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi --no-show-raw-insn %t4 | FileCheck -check-prefix=CHECK-THUMB %s
+// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi --no-show-raw-insn %t4 | FileCheck --check-prefix=CHECK-THUMB %s
 
 // Check that we can create Arm and Thumb v7a Position Independent Thunks that
 // can span the address space without triggering overflow errors. We use an
@@ -33,11 +33,11 @@ high:
 
 // CHECK: Disassembly of section .text_low:
 // CHECK-EMPTY:
-// CHECK-NEXT: _start:
+// CHECK-NEXT: <_start>:
 // CHECK-NEXT:      130:       bl      #0 <__ARMV7PILongThunk_high>
 // CHECK-NEXT:      134:       bx      lr
 
-// CHECK: __ARMV7PILongThunk_high:
+// CHECK: <__ARMV7PILongThunk_high>:
 // CHECK-NEXT:      138:       movw    r12, #65208
 // CHECK-NEXT:      13c:       movt    r12, #61439
 // 0x140 + 0xEFFF0000 + 0x0000FEB8 + 8 = 0xf0000000 = high
@@ -46,11 +46,11 @@ high:
 
 // CHECK: Disassembly of section .text_high:
 // CHECK-EMPTY:
-// CHECK-NEXT: high:
+// CHECK-NEXT: <high>:
 // CHECK-NEXT: f0000000:       bl      #0 <__ARMV7PILongThunk__start>
 // CHECK-NEXT: f0000004:       bx      lr
 
-// CHECK: __ARMV7PILongThunk__start:
+// CHECK: <__ARMV7PILongThunk__start>:
 // CHECK-NEXT: f0000008:       movw    r12, #280
 // CHECK-NEXT: f000000c:       movt    r12, #4096
 // 0xf0000010 + 0x10000000 + 0x0000118 + 8 = bits32(0x100000130),0x130 = _start
@@ -60,12 +60,12 @@ high:
 // Thumbv7a instructions and relocations
 // CHECK-THUMB: Disassembly of section .text_low:
 // CHECK-THUMB-EMPTY:
-// CHECK-THUMB-NEXT: _start:
+// CHECK-THUMB-NEXT: <_start>:
 // CHECK-THUMB-NEXT:      130:       bl      #4
 // CHECK-THUMB-NEXT:      134:       bx      lr
 // CHECK-THUMB-NEXT:      136:       bmi     #-88
 
-// CHECK-THUMB: __ThumbV7PILongThunk_high:
+// CHECK-THUMB: <__ThumbV7PILongThunk_high>:
 // CHECK-THUMB-NEXT:      138:       movw    r12, #65213
 // CHECK-THUMB-NEXT:      13c:       movt    r12, #61439
 // 0x140 + 0xEFFF0000 + 0x0000FEBD + 4 = 0xf0000001 = high
@@ -74,11 +74,11 @@ high:
 
 // CHECK-THUMB: Disassembly of section .text_high:
 // CHECK-THUMB-EMPTY:
-// CHECK-THUMB-NEXT: high:
+// CHECK-THUMB-NEXT: <high>:
 // CHECK-THUMB-NEXT: f0000000:       bl      #4
 // CHECK-THUMB-NEXT: f0000004:       bx      lr
 
-// CHECK-THUMB: __ThumbV7PILongThunk__start:
+// CHECK-THUMB: <__ThumbV7PILongThunk__start>:
 // CHECK-THUMB-NEXT: f0000008:       movw    r12, #285
 // CHECK-THUMB-NEXT: f000000c:       movt    r12, #4096
 // 0xf0000010 + 0x10000000 + 0x000011d +4 = bits32(0x100000131),0x131 = _start

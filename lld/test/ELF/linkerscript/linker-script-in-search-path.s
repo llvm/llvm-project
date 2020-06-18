@@ -7,7 +7,7 @@
 # RUN: echo 'OUTPUT("%t.out")' > %t.dir/script
 # RUN: ld.lld -T%t.dir/script %t.o
 # RUN: llvm-readobj %t.out | FileCheck %s
-# CHECK: Format: ELF64-x86-64
+# CHECK: Format: elf64-x86-64
 
 # If the linker script specified with -T is missing we should emit an error
 # RUN: not ld.lld -Tscript %t.o 2>&1 | FileCheck %s -check-prefix ERROR

@@ -136,7 +136,11 @@ enum class DINameKind { None, ShortName, LinkageName };
 struct DILineInfoSpecifier {
   enum class FileLineInfoKind {
     None,
-    Default,
+    // RawValue is whatever the compiler stored in the filename table.  Could be
+    // a full path, could be something else.
+    RawValue,
+    BaseNameOnly,
+    // Relative to the compilation directory.
     RelativeFilePath,
     AbsoluteFilePath
   };
@@ -145,14 +149,14 @@ struct DILineInfoSpecifier {
   FileLineInfoKind FLIKind;
   FunctionNameKind FNKind;
 
-  DILineInfoSpecifier(FileLineInfoKind FLIKind = FileLineInfoKind::Default,
+  DILineInfoSpecifier(FileLineInfoKind FLIKind = FileLineInfoKind::RawValue,
                       FunctionNameKind FNKind = FunctionNameKind::None)
       : FLIKind(FLIKind), FNKind(FNKind) {}
 };
 
 /// This is just a helper to programmatically construct DIDumpType.
 enum DIDumpTypeCounter {
-#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
+#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   DIDT_ID_##ENUM_NAME,
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
@@ -165,7 +169,7 @@ static_assert(DIDT_ID_Count <= 32, "section types overflow storage");
 enum DIDumpType : unsigned {
   DIDT_Null,
   DIDT_All             = ~0U,
-#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
+#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   DIDT_##ENUM_NAME = 1U << DIDT_ID_##ENUM_NAME,
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION

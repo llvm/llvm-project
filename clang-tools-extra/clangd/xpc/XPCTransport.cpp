@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Conversion.h"
-#include "Logger.h"
 #include "Protocol.h" // For LSPError
 #include "Transport.h"
+#include "support/Logger.h"
 #include "llvm/Support/Errno.h"
 
 #include <xpc/xpc.h>

@@ -290,6 +290,6 @@ void ento::registerMismatchedIteratorChecker(CheckerManager &mgr) {
   mgr.registerChecker<MismatchedIteratorChecker>();
 }
 
-bool ento::shouldRegisterMismatchedIteratorChecker(const LangOptions &LO) {
+bool ento::shouldRegisterMismatchedIteratorChecker(const CheckerManager &mgr) {
   return true;
 }

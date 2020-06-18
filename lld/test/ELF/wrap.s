@@ -3,13 +3,13 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/wrap.s -o %t2
 
 // RUN: ld.lld -o %t3 %t %t2 -wrap foo -wrap nosuchsym
-// RUN: llvm-objdump -d -print-imm-hex %t3 | FileCheck %s
+// RUN: llvm-objdump -d --print-imm-hex %t3 | FileCheck %s
 // RUN: ld.lld -o %t3 %t %t2 --wrap foo -wrap=nosuchsym
-// RUN: llvm-objdump -d -print-imm-hex %t3 | FileCheck %s
+// RUN: llvm-objdump -d --print-imm-hex %t3 | FileCheck %s
 // RUN: ld.lld -o %t3 %t %t2 --wrap foo --wrap foo -wrap=nosuchsym
-// RUN: llvm-objdump -d -print-imm-hex %t3 | FileCheck %s
+// RUN: llvm-objdump -d --print-imm-hex %t3 | FileCheck %s
 
-// CHECK: _start:
+// CHECK: <_start>:
 // CHECK-NEXT: movl $0x11010, %edx
 // CHECK-NEXT: movl $0x11010, %edx
 // CHECK-NEXT: movl $0x11000, %edx
@@ -33,12 +33,7 @@
 // SYM2-NEXT: Other [
 // SYM2-NEXT:   STV_PROTECTED
 // SYM2-NEXT: ]
-// SYM3:      Name: __real_foo
-// SYM3-NEXT: Value: 0x11000
-// SYM3-NEXT: Size:
-// SYM3-NEXT: Binding: Global
-// SYM3-NEXT: Type:    None
-// SYM3-NEXT: Other:   0
+// SYM3-NOT:  Name: __real_foo
 
 .global _start
 _start:

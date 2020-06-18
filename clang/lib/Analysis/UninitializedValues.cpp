@@ -268,6 +268,7 @@ public:
     Init,
     Use,
     SelfInit,
+    ConstRefUse,
     Ignore
   };
 
@@ -413,14 +414,16 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
     return;
   }
 
-  // If a value is passed by const pointer or by const reference to a function,
+  // If a value is passed by const pointer to a function,
   // we should not assume that it is initialized by the call, and we
   // conservatively do not assume that it is used.
+  // If a value is passed by const reference to a function,
+  // it should already be initialized.
   for (CallExpr::arg_iterator I = CE->arg_begin(), E = CE->arg_end();
        I != E; ++I) {
     if ((*I)->isGLValue()) {
       if ((*I)->getType().isConstQualified())
-        classify((*I), Ignore);
+        classify((*I), ConstRefUse);
     } else if (isPointerToConst((*I)->getType())) {
       const Expr *Ex = stripCasts(DC->getParentASTContext(), *I);
       const auto *UO = dyn_cast<UnaryOperator>(Ex);
@@ -469,12 +472,14 @@ public:
         handler(handler) {}
 
   void reportUse(const Expr *ex, const VarDecl *vd);
+  void reportConstRefUse(const Expr *ex, const VarDecl *vd);
 
   void VisitBinaryOperator(BinaryOperator *bo);
   void VisitBlockExpr(BlockExpr *be);
   void VisitCallExpr(CallExpr *ce);
   void VisitDeclRefExpr(DeclRefExpr *dr);
   void VisitDeclStmt(DeclStmt *ds);
+  void VisitGCCAsmStmt(GCCAsmStmt *as);
   void VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS);
   void VisitObjCMessageExpr(ObjCMessageExpr *ME);
   void VisitOMPExecutableDirective(OMPExecutableDirective *ED);
@@ -575,6 +580,28 @@ public:
           continue;
         }
 
+        if (AtPredExit == MayUninitialized) {
+          // If the predecessor's terminator is an "asm goto" that initializes
+          // the variable, then it won't be counted as "initialized" on the
+          // non-fallthrough paths.
+          CFGTerminator term = Pred->getTerminator();
+          if (const auto *as = dyn_cast_or_null<GCCAsmStmt>(term.getStmt())) {
+            const CFGBlock *fallthrough = *Pred->succ_begin();
+            if (as->isAsmGoto() &&
+                llvm::any_of(as->outputs(), [&](const Expr *output) {
+                    return vd == findVar(output).getDecl() &&
+                        llvm::any_of(as->labels(),
+                                     [&](const AddrLabelExpr *label) {
+                          return label->getLabel()->getStmt() == B->Label &&
+                              B != fallthrough;
+                        });
+                })) {
+              Use.setUninitAfterDecl();
+              continue;
+            }
+          }
+        }
+
         unsigned &SV = SuccsVisited[Pred->getBlockID()];
         if (!SV) {
           // When visiting the first successor of a block, mark all NULL
@@ -644,6 +671,12 @@ void TransferFunctions::reportUse(const Expr *ex, const VarDecl *vd) {
     handler.handleUseOfUninitVariable(vd, getUninitUse(ex, vd, v));
 }
 
+void TransferFunctions::reportConstRefUse(const Expr *ex, const VarDecl *vd) {
+  Value v = vals[vd];
+  if (isAlwaysUninit(v))
+    handler.handleConstRefUseOfUninitVariable(vd, getUninitUse(ex, vd, v));
+}
+
 void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS) {
   // This represents an initialization of the 'element' value.
   if (const auto *DS = dyn_cast<DeclStmt>(FS->getElement())) {
@@ -711,7 +744,10 @@ void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *dr) {
     vals[cast<VarDecl>(dr->getDecl())] = Initialized;
     break;
   case ClassifyRefs::SelfInit:
-      handler.handleSelfInit(cast<VarDecl>(dr->getDecl()));
+    handler.handleSelfInit(cast<VarDecl>(dr->getDecl()));
+    break;
+  case ClassifyRefs::ConstRefUse:
+    reportConstRefUse(dr, cast<VarDecl>(dr->getDecl()));
     break;
   }
 }
@@ -760,6 +796,20 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
   }
 }
 
+void TransferFunctions::VisitGCCAsmStmt(GCCAsmStmt *as) {
+  // An "asm goto" statement is a terminator that may initialize some variables.
+  if (!as->isAsmGoto())
+    return;
+
+  for (const Expr *o : as->outputs())
+    if (const VarDecl *VD = findVar(o).getDecl())
+      if (vals[VD] != Initialized)
+        // If the variable isn't initialized by the time we get here, then we
+        // mark it as potentially uninitialized for those cases where it's used
+        // on an indirect path, where it's not guaranteed to be defined.
+        vals[VD] = MayUninitialized;
+}
+
 void TransferFunctions::VisitObjCMessageExpr(ObjCMessageExpr *ME) {
   // If the Objective-C message expression is an implicit no-return that
   // is not modeled in the CFG, set the tracked dataflow values to Unknown.
@@ -797,6 +847,10 @@ static bool runOnBlock(const CFGBlock *block, const CFG &cfg,
     if (Optional<CFGStmt> cs = I.getAs<CFGStmt>())
       tf.Visit(const_cast<Stmt *>(cs->getStmt()));
   }
+  CFGTerminator terminator = block->getTerminator();
+  if (auto *as = dyn_cast_or_null<GCCAsmStmt>(terminator.getStmt()))
+    if (as->isAsmGoto())
+      tf.Visit(as);
   return vals.updateValueVectorWithScratch(block);
 }
 
@@ -826,6 +880,12 @@ struct PruneBlocksHandler : public UninitVariablesHandler {
     hadAnyUse = true;
   }
 
+  void handleConstRefUseOfUninitVariable(const VarDecl *vd,
+                                         const UninitUse &use) override {
+    hadUse[currentBlock] = true;
+    hadAnyUse = true;
+  }
+  
   /// Called when the uninitialized variable analysis detects the
   /// idiom 'int x = x'.  All other uses of 'x' within the initializer
   /// are handled by handleUseOfUninitVariable.

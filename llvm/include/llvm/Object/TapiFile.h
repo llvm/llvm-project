@@ -33,13 +33,15 @@ public:
 
   Error printSymbolName(raw_ostream &OS, DataRefImpl DRI) const override;
 
-  uint32_t getSymbolFlags(DataRefImpl DRI) const override;
+  Expected<uint32_t> getSymbolFlags(DataRefImpl DRI) const override;
 
   basic_symbol_iterator symbol_begin() const override;
 
   basic_symbol_iterator symbol_end() const override;
 
   static bool classof(const Binary *v) { return v->isTapiFile(); }
+
+  bool is64Bit() { return MachO::is64Bit(Arch); }
 
 private:
   struct Symbol {
@@ -52,6 +54,7 @@ private:
   };
 
   std::vector<Symbol> Symbols;
+  MachO::Architecture Arch;
 };
 
 } // end namespace object.

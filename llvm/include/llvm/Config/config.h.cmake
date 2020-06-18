@@ -109,6 +109,9 @@
 /* Define to 1 if you have the `pthread_setname_np' function. */
 #cmakedefine HAVE_PTHREAD_SETNAME_NP ${HAVE_PTHREAD_SETNAME_NP}
 
+/* Define to 1 if you have the `z' library (-lz). */
+#cmakedefine HAVE_LIBZ ${HAVE_LIBZ}
+
 /* Define to 1 if you have the <link.h> header file. */
 #cmakedefine HAVE_LINK_H ${HAVE_LINK_H}
 
@@ -156,12 +159,6 @@
 
 /* Define to 1 if you have the `setenv' function. */
 #cmakedefine HAVE_SETENV ${HAVE_SETENV}
-
-/* Define to 1 if you have the `sched_getaffinity' function. */
-#cmakedefine HAVE_SCHED_GETAFFINITY ${HAVE_SCHED_GETAFFINITY}
-
-/* Define to 1 if you have the `CPU_COUNT' macro. */
-#cmakedefine HAVE_CPU_COUNT ${HAVE_CPU_COUNT}
 
 /* Define to 1 if you have the `setrlimit' function. */
 #cmakedefine HAVE_SETRLIMIT ${HAVE_SETRLIMIT}
@@ -222,6 +219,9 @@
 
 /* Define to 1 if you have the <valgrind/valgrind.h> header file. */
 #cmakedefine HAVE_VALGRIND_VALGRIND_H ${HAVE_VALGRIND_VALGRIND_H}
+
+/* Define to 1 if you have the <zlib.h> header file. */
+#cmakedefine HAVE_ZLIB_H ${HAVE_ZLIB_H}
 
 /* Have host's _alloca */
 #cmakedefine HAVE__ALLOCA ${HAVE__ALLOCA}

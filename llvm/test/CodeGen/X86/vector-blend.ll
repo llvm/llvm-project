@@ -619,7 +619,7 @@ define <32 x i8> @constant_pblendvb_avx2(<32 x i8> %xyzw, <32 x i8> %abcd) {
 ;
 ; AVX1-LABEL: constant_pblendvb_avx2:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303]
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [18374686483949879295,18374686483949879295,18374686483949879295,18374686483949879295]
 ; AVX1-NEXT:    vandnps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0

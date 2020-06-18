@@ -982,10 +982,10 @@ class LibcxxPrettyPrinter(object):
         # Don't attempt types known to be inside libstdcxx.
         typename = val.type.name or val.type.tag or str(val.type)
         match = re.match("^std::(__.*?)::", typename)
-        if match is None or match.group(1) in ["__cxx1998",
-                                               "__debug",
-                                               "__7",
-                                               "__g"]:
+        if match is not None and match.group(1) in ["__cxx1998",
+                                                    "__debug",
+                                                    "__7",
+                                                    "__g"]:
             return None
 
         # Handle any using declarations or other typedefs.

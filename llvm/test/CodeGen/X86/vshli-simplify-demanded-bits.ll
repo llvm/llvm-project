@@ -33,7 +33,7 @@ define <8 x i8> @vshli_target_constant(<8 x i16> %arg, <8 x i32> %arg1) {
 ; CHECK-NEXT:    pmullw %xmm4, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; CHECK-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; CHECK-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [128,128,128,128]
 ; CHECK-NEXT:    paddd %xmm2, %xmm1
 ; CHECK-NEXT:    paddd %xmm2, %xmm0

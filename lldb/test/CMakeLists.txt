@@ -1,6 +1,16 @@
 # Test runner infrastructure for LLDB. This configures the LLDB test trees
 # for use by Lit, and delegates to LLVM's lit test handlers.
 
+if(LLDB_BUILT_STANDALONE)
+  # In order to run check-lldb-* we need the correct map_config directives in
+  # llvm-lit. Because this is a standalone build, LLVM doesn't know about LLDB,
+  # and the lldb mappings are missing. We build our own llvm-lit, and tell LLVM
+  # to use the llvm-lit in the lldb build directory.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+    set(LLVM_EXTERNAL_LIT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llvm-lit)
+  endif()
+endif()
+
 # Configure the build directory.
 set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
 
@@ -126,6 +136,7 @@ add_lldb_test_dependency(
   lli
   llvm-config
   llvm-dwarfdump
+  llvm-dwp
   llvm-nm
   llvm-mc
   llvm-objcopy
@@ -147,6 +158,7 @@ endif()
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
+  LLDB_BUILD_INTEL_PT
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
   LLDB_ENABLE_LZMA
@@ -179,3 +191,31 @@ add_custom_target(check-lldb)
 add_dependencies(check-lldb lldb-test-deps)
 set_target_properties(check-lldb PROPERTIES FOLDER "lldb misc")
 add_dependencies(check-lldb check-lldb-lit)
+
+# Add a lit test suite that runs the API & shell test while capturing a
+# reproducer.
+add_lit_testsuite(check-lldb-reproducers-capture
+  "Running lldb test suite with reproducer capture"
+  ${CMAKE_CURRENT_BINARY_DIR}/API
+  ${CMAKE_CURRENT_BINARY_DIR}/Shell
+  PARAMS "lldb-run-with-repro=capture"
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS lldb-test-deps)
+
+# Add a lit test suite that runs the API & shell test by replaying a
+# reproducer.
+add_lit_testsuite(check-lldb-reproducers
+  "Running lldb test suite with reproducer replay"
+  ${CMAKE_CURRENT_BINARY_DIR}/API
+  ${CMAKE_CURRENT_BINARY_DIR}/Shell
+  PARAMS "lldb-run-with-repro=replay"
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS lldb-test-deps)
+add_dependencies(check-lldb-reproducers check-lldb-reproducers-capture)
+
+if(LLDB_BUILT_STANDALONE)
+  # This has to happen *AFTER* add_lit_testsuite.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+  endif()
+endif()

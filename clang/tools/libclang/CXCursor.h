@@ -58,39 +58,36 @@ CXCursor MakeCXCursor(const clang::Stmt *S, const clang::Decl *Parent,
 CXCursor MakeCXCursorInvalid(CXCursorKind K, CXTranslationUnit TU = nullptr);
 
 /// Create an Objective-C superclass reference at the given location.
-CXCursor MakeCursorObjCSuperClassRef(ObjCInterfaceDecl *Super, 
-                                     SourceLocation Loc, 
-                                     CXTranslationUnit TU);
+CXCursor MakeCursorObjCSuperClassRef(ObjCInterfaceDecl *Super,
+                                     SourceLocation Loc, CXTranslationUnit TU);
 
 /// Unpack an ObjCSuperClassRef cursor into the interface it references
 /// and optionally the location where the reference occurred.
 std::pair<const ObjCInterfaceDecl *, SourceLocation>
-  getCursorObjCSuperClassRef(CXCursor C);
+getCursorObjCSuperClassRef(CXCursor C);
 
 /// Create an Objective-C protocol reference at the given location.
 CXCursor MakeCursorObjCProtocolRef(const ObjCProtocolDecl *Proto,
-                                   SourceLocation Loc, 
-                                   CXTranslationUnit TU);
+                                   SourceLocation Loc, CXTranslationUnit TU);
 
 /// Unpack an ObjCProtocolRef cursor into the protocol it references
 /// and optionally the location where the reference occurred.
 std::pair<const ObjCProtocolDecl *, SourceLocation>
-  getCursorObjCProtocolRef(CXCursor C);
+getCursorObjCProtocolRef(CXCursor C);
 
 /// Create an Objective-C class reference at the given location.
 CXCursor MakeCursorObjCClassRef(const ObjCInterfaceDecl *Class,
-                                SourceLocation Loc, 
-                                CXTranslationUnit TU);
+                                SourceLocation Loc, CXTranslationUnit TU);
 
 /// Unpack an ObjCClassRef cursor into the class it references
 /// and optionally the location where the reference occurred.
 std::pair<const ObjCInterfaceDecl *, SourceLocation>
-  getCursorObjCClassRef(CXCursor C);
+getCursorObjCClassRef(CXCursor C);
 
 /// Create a type reference at the given location.
 CXCursor MakeCursorTypeRef(const TypeDecl *Type, SourceLocation Loc,
                            CXTranslationUnit TU);
-                               
+
 /// Unpack a TypeRef cursor into the class it references
 /// and optionally the location where the reference occurred.
 std::pair<const TypeDecl *, SourceLocation> getCursorTypeRef(CXCursor C);
@@ -102,9 +99,9 @@ CXCursor MakeCursorTemplateRef(const TemplateDecl *Template, SourceLocation Loc,
 /// Unpack a TemplateRef cursor into the template it references and
 /// the location where the reference occurred.
 std::pair<const TemplateDecl *, SourceLocation>
-  getCursorTemplateRef(CXCursor C);
+getCursorTemplateRef(CXCursor C);
 
-/// Create a reference to a namespace or namespace alias at the given 
+/// Create a reference to a namespace or namespace alias at the given
 /// location.
 CXCursor MakeCursorNamespaceRef(const NamedDecl *NS, SourceLocation Loc,
                                 CXTranslationUnit TU);
@@ -114,7 +111,7 @@ CXCursor MakeCursorNamespaceRef(const NamedDecl *NS, SourceLocation Loc,
 std::pair<const NamedDecl *, SourceLocation> getCursorNamespaceRef(CXCursor C);
 
 /// Create a reference to a variable at the given location.
-CXCursor MakeCursorVariableRef(const VarDecl *Var, SourceLocation Loc, 
+CXCursor MakeCursorVariableRef(const VarDecl *Var, SourceLocation Loc,
                                CXTranslationUnit TU);
 
 /// Unpack a VariableRef cursor into the variable it references and the
@@ -122,10 +119,10 @@ CXCursor MakeCursorVariableRef(const VarDecl *Var, SourceLocation Loc,
 std::pair<const VarDecl *, SourceLocation> getCursorVariableRef(CXCursor C);
 
 /// Create a reference to a field at the given location.
-CXCursor MakeCursorMemberRef(const FieldDecl *Field, SourceLocation Loc, 
+CXCursor MakeCursorMemberRef(const FieldDecl *Field, SourceLocation Loc,
                              CXTranslationUnit TU);
 
-/// Unpack a MemberRef cursor into the field it references and the 
+/// Unpack a MemberRef cursor into the field it references and the
 /// location where the reference occurred.
 std::pair<const FieldDecl *, SourceLocation> getCursorMemberRef(CXCursor C);
 
@@ -223,7 +220,7 @@ CXCursor MakeCursorOverloadedDeclRef(const Decl *D, SourceLocation Location,
                                      CXTranslationUnit TU);
 
 /// Create a overloaded declaration reference cursor for a template name.
-CXCursor MakeCursorOverloadedDeclRef(TemplateName Template, 
+CXCursor MakeCursorOverloadedDeclRef(TemplateName Template,
                                      SourceLocation Location,
                                      CXTranslationUnit TU);
 
@@ -235,7 +232,7 @@ typedef llvm::PointerUnion<const OverloadExpr *, const Decl *,
 /// Unpack an overloaded declaration reference into an expression,
 /// declaration, or template name along with the source location.
 std::pair<OverloadedDeclRefStorage, SourceLocation>
-  getCursorOverloadedDeclRef(CXCursor C);
+getCursorOverloadedDeclRef(CXCursor C);
 
 const Decl *getCursorDecl(CXCursor Cursor);
 const Expr *getCursorExpr(CXCursor Cursor);
@@ -284,14 +281,13 @@ bool getDeclCursorUSR(const Decl *D, SmallVectorImpl<char> &Buf);
 
 bool operator==(CXCursor X, CXCursor Y);
 
-inline bool operator!=(CXCursor X, CXCursor Y) {
-  return !(X == Y);
-}
+inline bool operator!=(CXCursor X, CXCursor Y) { return !(X == Y); }
 
 /// Return true if the cursor represents a declaration that is the
 /// first in a declaration group.
 bool isFirstInDeclGroup(CXCursor C);
 
-}} // end namespace: clang::cxcursor
+} // namespace cxcursor
+} // namespace clang
 
 #endif

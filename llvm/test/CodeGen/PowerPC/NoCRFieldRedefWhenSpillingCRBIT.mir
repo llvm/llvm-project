@@ -94,7 +94,7 @@ body:             |
     renamable $cr5lt = CRNOR renamable $cr0lt, renamable $cr1gt, implicit killed $cr0
     renamable $cr5gt = COPY renamable $cr1gt, implicit $cr1
     ; CHECK: crnor 4*cr5+lt, lt, 4*cr1+gt
-    ; CHECK: cror 4*cr5+gt, 4*cr1+gt, 4*cr1+gt
+    ; CHECK: crmove 4*cr5+gt, 4*cr1+gt
     SPILL_CRBIT killed renamable $cr5lt, 0, %stack.0 :: (store 4 into %stack.0)
     renamable $cr1 = CMPW renamable $r4, renamable $r5, implicit killed $x5, implicit killed $x4
     SPILL_CRBIT killed renamable $cr5gt, 0, %stack.1 :: (store 4 into %stack.1)

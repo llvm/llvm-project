@@ -14,7 +14,7 @@
 # RUN: echo "REGION_ALIAS (\"ALIAS_TEXT\", ROM);" > %t.script.inc
 # RUN: echo "REGION_ALIAS (\"ALIAS_DATA\", RAM);" >> %t.script.inc
 # RUN: ld.lld %t --script %t.script -o %t2
-# RUN: llvm-objdump -section-headers %t2 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t2 | FileCheck %s
 # CHECK: .text       00000001 0000000000001000 TEXT
 # CHECK: .data       00000008 0000000000002000 DATA
 
@@ -22,7 +22,7 @@
 # RUN: echo "REGION_ALIAS (\"ALIAS_TEXT\", ROM);" > %t.script.inc
 # RUN: echo "REGION_ALIAS (\"ALIAS_DATA\", ROM);" >> %t.script.inc
 # RUN: ld.lld %t --script %t.script -o %t2
-# RUN: llvm-objdump -section-headers %t2 | FileCheck %s --check-prefix=RAM
+# RUN: llvm-objdump --section-headers %t2 | FileCheck %s --check-prefix=RAM
 # RAM: .text         00000001 0000000000001000 TEXT
 # RAM: .data         00000008 0000000000001001 DATA
 

@@ -526,11 +526,6 @@ def NEONzip       : SDNode<"ARMISD::VZIP", SDTARMVSHUF2>;
 def NEONuzp       : SDNode<"ARMISD::VUZP", SDTARMVSHUF2>;
 def NEONtrn       : SDNode<"ARMISD::VTRN", SDTARMVSHUF2>;
 
-def SDTARMVMULL   : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
-                                         SDTCisSameAs<1, 2>]>;
-def NEONvmulls    : SDNode<"ARMISD::VMULLs", SDTARMVMULL>;
-def NEONvmullu    : SDNode<"ARMISD::VMULLu", SDTARMVMULL>;
-
 def SDTARMVTBL1   : SDTypeProfile<1, 2, [SDTCisVT<0, v8i8>, SDTCisVT<1, v8i8>,
                                          SDTCisVT<2, v8i8>]>;
 def SDTARMVTBL2   : SDTypeProfile<1, 3, [SDTCisVT<0, v8i8>, SDTCisVT<1, v8i8>,
@@ -4362,7 +4357,7 @@ def : Pat<(v2f32 (fmul DPR:$Rn, (ARMvdup (f32 SPR:$Rm)))),
             (i32 0))>;
 def : Pat<(v4f16 (fmul DPR:$Rn, (ARMvdup (f16 HPR:$Rm)))),
           (VMULslhd DPR:$Rn,
-            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), HPR:$Rm, ssub_0),
+            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), (f16 HPR:$Rm), ssub_0),
             (i32 0))>;
 def : Pat<(v4f32 (fmul QPR:$Rn, (ARMvdup (f32 SPR:$Rm)))),
           (VMULslfq QPR:$Rn,
@@ -4370,7 +4365,7 @@ def : Pat<(v4f32 (fmul QPR:$Rn, (ARMvdup (f32 SPR:$Rm)))),
             (i32 0))>;
 def : Pat<(v8f16 (fmul QPR:$Rn, (ARMvdup (f16 HPR:$Rm)))),
           (VMULslhq QPR:$Rn,
-            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), HPR:$Rm, ssub_0),
+            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), (f16 HPR:$Rm), ssub_0),
             (i32 0))>;
 }
 
@@ -4428,17 +4423,17 @@ def : Pat<(v4i32 (int_arm_neon_vqrdmulh (v4i32 QPR:$src1),
 let PostEncoderMethod = "NEONThumb2DataIPostEncoder",
     DecoderNamespace = "NEONData" in {
   defm VMULLs   : N3VL_QHS<0,1,0b1100,0, IIC_VMULi16D, IIC_VMULi32D,
-                           "vmull", "s", NEONvmulls, 1>;
+                           "vmull", "s", ARMvmulls, 1>;
   defm VMULLu   : N3VL_QHS<1,1,0b1100,0, IIC_VMULi16D, IIC_VMULi32D,
-                           "vmull", "u", NEONvmullu, 1>;
+                           "vmull", "u", ARMvmullu, 1>;
   def  VMULLp8   :  N3VLInt<0, 1, 0b00, 0b1110, 0, IIC_VMULi16D, "vmull", "p8",
                             v8i16, v8i8, int_arm_neon_vmullp, 1>;
   def  VMULLp64  : N3VLIntnp<0b00101, 0b10, 0b1110, 0, 0, NoItinerary,
                           "vmull", "p64", v2i64, v1i64, int_arm_neon_vmullp, 1>,
                     Requires<[HasV8, HasCrypto]>;
 }
-defm VMULLsls : N3VLSL_HS<0, 0b1010, IIC_VMULi16D, "vmull", "s", NEONvmulls>;
-defm VMULLslu : N3VLSL_HS<1, 0b1010, IIC_VMULi16D, "vmull", "u", NEONvmullu>;
+defm VMULLsls : N3VLSL_HS<0, 0b1010, IIC_VMULi16D, "vmull", "s", ARMvmulls>;
+defm VMULLslu : N3VLSL_HS<1, 0b1010, IIC_VMULi16D, "vmull", "u", ARMvmullu>;
 
 //   VQDMULL  : Vector Saturating Doubling Multiply Long (Q = D * D)
 defm VQDMULL  : N3VLInt_HS<0,1,0b1101,0, IIC_VMULi16D, IIC_VMULi32D,
@@ -4508,12 +4503,12 @@ def : Pat<(v4f32 (fadd_mlx (v4f32 QPR:$src1),
 
 //   VMLAL    : Vector Multiply Accumulate Long (Q += D * D)
 defm VMLALs   : N3VLMulOp_QHS<0,1,0b1000,0, IIC_VMACi16D, IIC_VMACi32D,
-                              "vmlal", "s", NEONvmulls, add>;
+                              "vmlal", "s", ARMvmulls, add>;
 defm VMLALu   : N3VLMulOp_QHS<1,1,0b1000,0, IIC_VMACi16D, IIC_VMACi32D,
-                              "vmlal", "u", NEONvmullu, add>;
+                              "vmlal", "u", ARMvmullu, add>;
 
-defm VMLALsls : N3VLMulOpSL_HS<0, 0b0010, "vmlal", "s", NEONvmulls, add>;
-defm VMLALslu : N3VLMulOpSL_HS<1, 0b0010, "vmlal", "u", NEONvmullu, add>;
+defm VMLALsls : N3VLMulOpSL_HS<0, 0b0010, "vmlal", "s", ARMvmulls, add>;
+defm VMLALslu : N3VLMulOpSL_HS<1, 0b0010, "vmlal", "u", ARMvmullu, add>;
 
 let Predicates = [HasNEON, HasV8_1a] in {
   // v8.1a Neon Rounding Double Multiply-Op vector operations,
@@ -4741,12 +4736,12 @@ def : Pat<(v4f32 (fsub_mlx (v4f32 QPR:$src1),
 
 //   VMLSL    : Vector Multiply Subtract Long (Q -= D * D)
 defm VMLSLs   : N3VLMulOp_QHS<0,1,0b1010,0, IIC_VMACi16D, IIC_VMACi32D,
-                              "vmlsl", "s", NEONvmulls, sub>;
+                              "vmlsl", "s", ARMvmulls, sub>;
 defm VMLSLu   : N3VLMulOp_QHS<1,1,0b1010,0, IIC_VMACi16D, IIC_VMACi32D,
-                              "vmlsl", "u", NEONvmullu, sub>;
+                              "vmlsl", "u", ARMvmullu, sub>;
 
-defm VMLSLsls : N3VLMulOpSL_HS<0, 0b0110, "vmlsl", "s", NEONvmulls, sub>;
-defm VMLSLslu : N3VLMulOpSL_HS<1, 0b0110, "vmlsl", "u", NEONvmullu, sub>;
+defm VMLSLsls : N3VLMulOpSL_HS<0, 0b0110, "vmlsl", "s", ARMvmulls, sub>;
+defm VMLSLslu : N3VLMulOpSL_HS<1, 0b0110, "vmlsl", "u", ARMvmullu, sub>;
 
 //   VQDMLSL  : Vector Saturating Doubling Multiply Subtract Long (Q -= D * D)
 defm VQDMLSL  : N3VLInt3_HS<0, 1, 0b1011, 0, IIC_VMACi16D, IIC_VMACi32D,
@@ -4828,10 +4823,10 @@ def : Pat<(v4f32 (fma (fneg QPR:$Vn), QPR:$Vm, QPR:$src1)),
 // We put them in the VFPV8 decoder namespace because the ARM and Thumb
 // encodings are the same and thus no further bit twiddling is necessary
 // in the disassembler.
-class VDOT<bit op6, bit op4, RegisterClass RegTy, string Asm, string AsmTy,
-           ValueType AccumTy, ValueType InputTy,
+class VDOT<bit op6, bit op4, bit op23, RegisterClass RegTy, string Asm,
+           string AsmTy, ValueType AccumTy, ValueType InputTy,
            SDPatternOperator OpNode> :
-      N3Vnp<0b11000, 0b10, 0b1101, op6, op4, (outs RegTy:$dst),
+      N3Vnp<{0b1100, op23}, 0b10, 0b1101, op6, op4, (outs RegTy:$dst),
             (ins RegTy:$Vd, RegTy:$Vn, RegTy:$Vm), N3RegFrm, IIC_VDOTPROD,
             Asm, AsmTy,
             [(set (AccumTy RegTy:$dst),
@@ -4843,10 +4838,10 @@ class VDOT<bit op6, bit op4, RegisterClass RegTy, string Asm, string AsmTy,
   let Constraints = "$dst = $Vd";
 }
 
-def VUDOTD : VDOT<0, 1, DPR, "vudot", "u8", v2i32, v8i8,  int_arm_neon_udot>;
-def VSDOTD : VDOT<0, 0, DPR, "vsdot", "s8", v2i32, v8i8,  int_arm_neon_sdot>;
-def VUDOTQ : VDOT<1, 1, QPR, "vudot", "u8", v4i32, v16i8, int_arm_neon_udot>;
-def VSDOTQ : VDOT<1, 0, QPR, "vsdot", "s8", v4i32, v16i8, int_arm_neon_sdot>;
+def VUDOTD : VDOT<0, 1, 0, DPR, "vudot", "u8", v2i32, v8i8,  int_arm_neon_udot>;
+def VSDOTD : VDOT<0, 0, 0, DPR, "vsdot", "s8", v2i32, v8i8,  int_arm_neon_sdot>;
+def VUDOTQ : VDOT<1, 1, 0, QPR, "vudot", "u8", v4i32, v16i8, int_arm_neon_udot>;
+def VSDOTQ : VDOT<1, 0, 0, QPR, "vsdot", "s8", v4i32, v16i8, int_arm_neon_sdot>;
 
 // Indexed dot product instructions:
 multiclass DOTI<string opc, string dt, bit Q, bit U, RegisterClass Ty,
@@ -4881,6 +4876,68 @@ defm VUDOTQI : DOTI<"vudot", "u8", 0b1, 0b1, QPR, v4i32, v16i8,
 defm VSDOTQI : DOTI<"vsdot", "s8", 0b1, 0b0, QPR, v4i32, v16i8,
                     int_arm_neon_sdot, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
 
+// v8.6A matrix multiplication extension
+let Predicates = [HasMatMulInt8] in {
+  class N3VMatMul<bit B, bit U, string Asm, string AsmTy,
+                  SDPatternOperator OpNode>
+        : N3Vnp<{0b1100, B}, 0b10, 0b1100, 1, U, (outs QPR:$dst),
+                (ins QPR:$Vd, QPR:$Vn, QPR:$Vm), N3RegFrm, NoItinerary,
+                Asm, AsmTy,
+                [(set (v4i32 QPR:$dst), (OpNode (v4i32 QPR:$Vd),
+                                                (v16i8 QPR:$Vn),
+                                                (v16i8 QPR:$Vm)))]> {
+    let DecoderNamespace = "VFPV8";
+    let Constraints = "$dst = $Vd";
+  }
+
+  multiclass N3VMixedDotLane<bit Q, bit U, string Asm, string AsmTy, RegisterClass RegTy,
+                        ValueType AccumTy, ValueType InputTy, SDPatternOperator OpNode,
+                        dag RHS> {
+
+    def "" : N3Vnp<0b11101, 0b00, 0b1101, Q, U, (outs RegTy:$dst),
+                (ins RegTy:$Vd, RegTy:$Vn, DPR_VFP2:$Vm, VectorIndex32:$lane), N3RegFrm,
+                 NoItinerary, Asm, AsmTy, []> {
+      bit lane;
+      let Inst{5} = lane;
+      let AsmString = !strconcat(Asm, ".", AsmTy, "\t$Vd, $Vn, $Vm$lane");
+      let DecoderNamespace = "VFPV8";
+      let Constraints = "$dst = $Vd";
+    }
+
+    def : Pat<
+      (AccumTy (OpNode (AccumTy RegTy:$Vd),
+                       (InputTy RegTy:$Vn),
+                       (InputTy (bitconvert (AccumTy
+                                (ARMvduplane (AccumTy RegTy:$Vm),
+                                              VectorIndex32:$lane)))))),
+      (!cast<Instruction>(NAME) RegTy:$Vd, RegTy:$Vn, RHS, VectorIndex32:$lane)>;
+
+  }
+
+  multiclass SUDOTLane<bit Q, RegisterClass RegTy, ValueType AccumTy, ValueType InputTy, dag RHS>
+        : N3VMixedDotLane<Q, 1, "vsudot", "u8", RegTy, AccumTy, InputTy, null_frag, null_frag> {
+    def : Pat<
+      (AccumTy (int_arm_neon_usdot (AccumTy RegTy:$Vd),
+                                   (InputTy (bitconvert (AccumTy
+                                            (ARMvduplane (AccumTy RegTy:$Vm),
+                                                          VectorIndex32:$lane)))),
+                                   (InputTy RegTy:$Vn))),
+      (!cast<Instruction>(NAME) RegTy:$Vd, RegTy:$Vn, RHS, VectorIndex32:$lane)>;
+  }
+
+  def VSMMLA  : N3VMatMul<0, 0, "vsmmla",  "s8", int_arm_neon_smmla>;
+  def VUMMLA  : N3VMatMul<0, 1, "vummla",  "u8", int_arm_neon_ummla>;
+  def VUSMMLA : N3VMatMul<1, 0, "vusmmla", "s8", int_arm_neon_usmmla>;
+  def VUSDOTD : VDOT<0, 0, 1, DPR, "vusdot", "s8", v2i32, v8i8,  int_arm_neon_usdot>;
+  def VUSDOTQ : VDOT<1, 0, 1, QPR, "vusdot", "s8", v4i32, v16i8, int_arm_neon_usdot>;
+
+  defm VUSDOTDI : N3VMixedDotLane<0, 0, "vusdot", "s8", DPR, v2i32, v8i8,
+                                  int_arm_neon_usdot, (v2i32 DPR_VFP2:$Vm)>;
+  defm VUSDOTQI : N3VMixedDotLane<1, 0, "vusdot", "s8", QPR, v4i32, v16i8,
+                                  int_arm_neon_usdot, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
+  defm VSUDOTDI : SUDOTLane<0, DPR, v2i32, v8i8, (v2i32 DPR_VFP2:$Vm)>;
+  defm VSUDOTQI : SUDOTLane<1, QPR, v4i32, v16i8, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
+}
 
 // ARMv8.3 complex operations
 class BaseN3VCP8ComplexTied<bit op21, bit op4, bit s, bit q,
@@ -5227,7 +5284,6 @@ class VFMQ<string opc, string type, bits<2> S>
   let Inst{3} = idx{0};
 }
 
-let hasNoSchedulingInfo = 1 in {
 //                                                op1   op2   op3
 def VFMALD  : N3VCP8F16Q0<"vfmal", DPR, SPR, SPR, 0b00, 0b10, 1>;
 def VFMSLD  : N3VCP8F16Q0<"vfmsl", DPR, SPR, SPR, 0b01, 0b10, 1>;
@@ -5237,7 +5293,6 @@ def VFMALDI : VFMD<"vfmal", "f16", 0b00>;
 def VFMSLDI : VFMD<"vfmsl", "f16", 0b01>;
 def VFMALQI : VFMQ<"vfmal", "f16", 0b00>;
 def VFMSLQI : VFMQ<"vfmsl", "f16", 0b01>;
-}
 } // HasNEON, HasFP16FML
 
 
@@ -6437,9 +6492,9 @@ def : Pat<(v4f32 (insertelt QPR:$src1, SPR:$src2, imm:$src3)),
           (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS QPR:$src1, QPR_VFP2)),
                                 SPR:$src2, (SSubReg_f32_reg imm:$src3))>;
 
-def : Pat<(insertelt (v4f16 DPR:$src1), HPR:$src2, imm:$lane),
+def : Pat<(insertelt (v4f16 DPR:$src1), (f16 HPR:$src2), imm:$lane),
           (v4f16 (VSETLNi16 DPR:$src1, (VMOVRH $src2), imm:$lane))>;
-def : Pat<(insertelt (v8f16 QPR:$src1), HPR:$src2, imm:$lane),
+def : Pat<(insertelt (v8f16 QPR:$src1), (f16 HPR:$src2), imm:$lane),
           (v8f16 (INSERT_SUBREG QPR:$src1,
                    (v4i16 (VSETLNi16 (v4i16 (EXTRACT_SUBREG QPR:$src1,
                                       (DSubReg_i16_reg imm:$lane))),
@@ -6583,18 +6638,18 @@ def : Pat<(v4f32 (ARMvduplane (v4f32 QPR:$src), imm:$lane)),
                                    (DSubReg_i32_reg imm:$lane))),
                            (SubReg_i32_lane imm:$lane)))>;
 
-def : Pat<(v4f16 (ARMvdup HPR:$src)),
+def : Pat<(v4f16 (ARMvdup (f16 HPR:$src))),
           (v4f16 (VDUPLN16d (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)),
-                             HPR:$src, ssub_0), (i32 0)))>;
+                             (f16 HPR:$src), ssub_0), (i32 0)))>;
 def : Pat<(v2f32 (ARMvdup (f32 SPR:$src))),
           (v2f32 (VDUPLN32d (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)),
                              SPR:$src, ssub_0), (i32 0)))>;
 def : Pat<(v4f32 (ARMvdup (f32 SPR:$src))),
           (v4f32 (VDUPLN32q (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)),
                              SPR:$src, ssub_0), (i32 0)))>;
-def : Pat<(v8f16 (ARMvdup HPR:$src)),
+def : Pat<(v8f16 (ARMvdup (f16 HPR:$src))),
           (v8f16 (VDUPLN16q (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)),
-                             HPR:$src, ssub_0), (i32 0)))>;
+                             (f16 HPR:$src), ssub_0), (i32 0)))>;
 }
 
 //   VMOVN    : Vector Narrowing Move
@@ -7325,7 +7380,7 @@ def : Pat<(arm_vmovsr GPR:$a),
         Requires<[HasNEON, DontUseVMOVSR]>;
 
 //===----------------------------------------------------------------------===//
-// Non-Instruction Patterns or Endiness - Revert Patterns
+// Non-Instruction Patterns or Endianess - Revert Patterns
 //===----------------------------------------------------------------------===//
 
 // bit_convert
@@ -8926,3 +8981,87 @@ def : NEONInstAlias<"vmov${p}.f32 $Vd, $imm",
                      (VMOVv4i32 QPR:$Vd, nImmVMOVI32:$imm, pred:$p)>;
 def : NEONInstAlias<"vmov${p}.f32 $Vd, $imm",
                      (VMOVv2i32 DPR:$Vd, nImmVMOVI32:$imm, pred:$p)>;
+
+// ARMv8.6a BFloat16 instructions.
+let Predicates = [HasBF16, HasNEON] in {
+class BF16VDOT<bits<5> op27_23, bits<2> op21_20, bit op6,
+               dag oops, dag iops>
+   : N3Vnp<op27_23, op21_20, 0b1101, op6, 0, oops, iops,
+           N3RegFrm, IIC_VDOTPROD, "", "", []> {
+    let DecoderNamespace = "VFPV8";
+}
+
+class BF16VDOTS<bit Q, RegisterClass RegTy, string opc, ValueType AccumTy, ValueType InputTy>
+   : BF16VDOT<0b11000, 0b00,  Q, (outs RegTy:$dst),
+              (ins RegTy:$Vd, RegTy:$Vn, RegTy:$Vm)> {
+  let Constraints = "$dst = $Vd";
+  let AsmString = !strconcat(opc, ".bf16", "\t$Vd, $Vn, $Vm");
+    let DecoderNamespace = "VFPV8";
+}
+
+multiclass BF16VDOTI<bit Q, RegisterClass RegTy, string opc, ValueType AccumTy,
+                     ValueType InputTy, dag RHS> {
+
+  def "" : BF16VDOT<0b11100, 0b00, Q, (outs RegTy:$dst),
+                    (ins RegTy:$Vd, RegTy:$Vn,
+                    DPR_VFP2:$Vm, VectorIndex32:$lane)> {
+    bit lane;
+    let Inst{5} = lane;
+    let Constraints = "$dst = $Vd";
+    let AsmString = !strconcat(opc, ".bf16", "\t$Vd, $Vn, $Vm$lane");
+    let DecoderNamespace = "VFPV8";
+  }
+
+}
+
+def BF16VDOTS_VDOTD : BF16VDOTS<0, DPR, "vdot", v2f32, v8i8>;
+def BF16VDOTS_VDOTQ : BF16VDOTS<1, QPR, "vdot", v4f32, v16i8>;
+
+defm BF16VDOTI_VDOTD : BF16VDOTI<0, DPR, "vdot", v2f32, v8i8, (v2f32 DPR_VFP2:$Vm)>;
+defm BF16VDOTI_VDOTQ : BF16VDOTI<1, QPR, "vdot", v4f32, v16i8, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
+
+class BF16MM<bit Q, RegisterClass RegTy,
+             string opc>
+   : N3Vnp<0b11000, 0b00, 0b1100, Q, 0,
+           (outs RegTy:$dst), (ins RegTy:$Vd, RegTy:$Vn, RegTy:$Vm),
+           N3RegFrm, IIC_VDOTPROD, "", "", []> {
+   let Constraints = "$dst = $Vd";
+   let AsmString = !strconcat(opc, ".bf16", "\t$Vd, $Vn, $Vm");
+   let DecoderNamespace = "VFPV8";
+}
+
+def VMMLA : BF16MM<1, QPR, "vmmla">;
+
+class VBF16MALQ<bit T, string suffix>
+  : N3VCP8<0b00, 0b11, T, 1,
+           (outs QPR:$dst), (ins QPR:$Vd, QPR:$Vn, QPR:$Vm),
+           NoItinerary, "vfma" # suffix, "bf16", "$Vd, $Vn, $Vm", "",
+              []> { // TODO: Add intrinsics
+  let Constraints = "$dst = $Vd";
+  let DecoderNamespace = "VFPV8";
+}
+
+def VBF16MALTQ: VBF16MALQ<1, "t">;
+def VBF16MALBQ: VBF16MALQ<0, "b">;
+
+multiclass VBF16MALQI<bit T, string suffix> {
+  def "" : N3VLaneCP8<0, 0b11, T, 1, (outs QPR:$dst),
+              (ins QPR:$Vd, QPR:$Vn, DPR_8:$Vm, VectorIndex16:$idx),
+               IIC_VMACD, "vfma" # suffix, "bf16", "$Vd, $Vn, $Vm$idx", "", []> {
+  bits<2> idx;
+  let Inst{5} = idx{1};
+  let Inst{3} = idx{0};
+  let Constraints = "$dst = $Vd";
+  let DecoderNamespace = "VFPV8";
+  }
+
+}
+
+defm VBF16MALTQI: VBF16MALQI<1, "t">;
+defm VBF16MALBQI: VBF16MALQI<0, "b">;
+
+def BF16_VCVT :  N2V<0b11, 0b11, 0b01, 0b10, 0b01100, 1, 0,
+                    (outs DPR:$Vd), (ins QPR:$Vm),
+                    NoItinerary, "vcvt", "bf16.f32", "$Vd, $Vm", "", []>;
+}
+// End of BFloat16 instructions

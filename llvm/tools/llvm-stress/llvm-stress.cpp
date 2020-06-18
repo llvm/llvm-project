@@ -300,7 +300,7 @@ protected:
 
     if (len != (unsigned)-1)
       width = len;
-    return VectorType::get(Ty, width);
+    return FixedVectorType::get(Ty, width);
   }
 
   /// Pick a random scalar type.
@@ -343,7 +343,9 @@ struct LoadModifier: public Modifier {
   void Act() override {
     // Try to use predefined pointers. If non-exist, use undef pointer value;
     Value *Ptr = getRandomPointerValue();
-    Value *V = new LoadInst(Ptr, "L", BB->getTerminator());
+    PointerType *Tp = cast<PointerType>(Ptr->getType());
+    Value *V = new LoadInst(Tp->getElementType(), Ptr, "L",
+                            BB->getTerminator());
     PT->push_back(V);
   }
 };
@@ -626,9 +628,10 @@ struct SelectModifier: public Modifier {
 
     // If the value type is a vector, and we allow vector select, then in 50%
     // of the cases generate a vector select.
-    if (Val0->getType()->isVectorTy() && (getRandom() % 1)) {
-      unsigned NumElem = cast<VectorType>(Val0->getType())->getNumElements();
-      CondTy = VectorType::get(CondTy, NumElem);
+    if (isa<FixedVectorType>(Val0->getType()) && (getRandom() % 1)) {
+      unsigned NumElem =
+          cast<FixedVectorType>(Val0->getType())->getNumElements();
+      CondTy = FixedVectorType::get(CondTy, NumElem);
     }
 
     Value *Cond = getRandomValue(CondTy);

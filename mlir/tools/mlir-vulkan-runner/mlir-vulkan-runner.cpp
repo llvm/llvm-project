@@ -19,9 +19,13 @@
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
+#include "mlir/ExecutionEngine/JitRunner.h"
+#include "mlir/ExecutionEngine/OptUtils.h"
+#include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Support/JitRunner.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
 
@@ -34,13 +38,26 @@ static LogicalResult runMLIRPasses(ModuleOp module) {
   passManager.addPass(createConvertGPUToSPIRVPass());
   OpPassManager &modulePM = passManager.nest<spirv::ModuleOp>();
   modulePM.addPass(spirv::createLowerABIAttributesPass());
-  passManager.addPass(createConvertGpuLaunchFuncToVulkanCallsPass());
-  passManager.addPass(createLowerToLLVMPass());
+  modulePM.addPass(spirv::createUpdateVersionCapabilityExtensionPass());
+  passManager.addPass(createConvertGpuLaunchFuncToVulkanLaunchFuncPass());
+  LowerToLLVMOptions llvmOptions = {
+      /*useBarePtrCallConv =*/false,
+      /*emitCWrappers = */ true,
+      /*indexBitwidth =*/kDeriveIndexBitwidthFromDataLayout};
+  passManager.addPass(createLowerToLLVMPass(llvmOptions));
+  passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass());
   return passManager.run(module);
 }
 
 int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj x;
   registerPassManagerCLOptions();
+
+  mlir::registerAllDialects();
+  llvm::InitLLVM y(argc, argv);
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+  mlir::initializeLLVMPasses();
+
   return mlir::JitRunnerMain(argc, argv, &runMLIRPasses);
 }

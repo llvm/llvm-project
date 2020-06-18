@@ -151,23 +151,24 @@ bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
   // opcode and first operand.
   //
   // Prerequisite is to compute the relative offset to the trampoline's address.
+  const uint64_t Address = Sled.address();
   int64_t TrampolineOffset = reinterpret_cast<int64_t>(Trampoline) -
-                             (static_cast<int64_t>(Sled.Address) + 11);
+                             (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
-    Report("XRay Entry trampoline (%p) too far from sled (%p)\n",
-           Trampoline, reinterpret_cast<void *>(Sled.Address));
+    Report("XRay Entry trampoline (%p) too far from sled (%p)\n", Trampoline,
+           reinterpret_cast<void *>(Address));
     return false;
   }
   if (Enable) {
-    *reinterpret_cast<uint32_t *>(Sled.Address + 2) = FuncId;
-    *reinterpret_cast<uint8_t *>(Sled.Address + 6) = CallOpCode;
-    *reinterpret_cast<uint32_t *>(Sled.Address + 7) = TrampolineOffset;
+    *reinterpret_cast<uint32_t *>(Address + 2) = FuncId;
+    *reinterpret_cast<uint8_t *>(Address + 6) = CallOpCode;
+    *reinterpret_cast<uint32_t *>(Address + 7) = TrampolineOffset;
     std::atomic_store_explicit(
-        reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), MovR10Seq,
+        reinterpret_cast<std::atomic<uint16_t> *>(Address), MovR10Seq,
         std::memory_order_release);
   } else {
     std::atomic_store_explicit(
-        reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), Jmp9Seq,
+        reinterpret_cast<std::atomic<uint16_t> *>(Address), Jmp9Seq,
         std::memory_order_release);
     // FIXME: Write out the nops still?
   }
@@ -196,23 +197,24 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
   //
   // Prerequisite is to compute the relative offset fo the
   // __xray_FunctionExit function's address.
+  const uint64_t Address = Sled.address();
   int64_t TrampolineOffset = reinterpret_cast<int64_t>(__xray_FunctionExit) -
-                             (static_cast<int64_t>(Sled.Address) + 11);
+                             (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Exit trampoline (%p) too far from sled (%p)\n",
-           __xray_FunctionExit, reinterpret_cast<void *>(Sled.Address));
+           __xray_FunctionExit, reinterpret_cast<void *>(Address));
     return false;
   }
   if (Enable) {
-    *reinterpret_cast<uint32_t *>(Sled.Address + 2) = FuncId;
-    *reinterpret_cast<uint8_t *>(Sled.Address + 6) = JmpOpCode;
-    *reinterpret_cast<uint32_t *>(Sled.Address + 7) = TrampolineOffset;
+    *reinterpret_cast<uint32_t *>(Address + 2) = FuncId;
+    *reinterpret_cast<uint8_t *>(Address + 6) = JmpOpCode;
+    *reinterpret_cast<uint32_t *>(Address + 7) = TrampolineOffset;
     std::atomic_store_explicit(
-        reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), MovR10Seq,
+        reinterpret_cast<std::atomic<uint16_t> *>(Address), MovR10Seq,
         std::memory_order_release);
   } else {
     std::atomic_store_explicit(
-        reinterpret_cast<std::atomic<uint8_t> *>(Sled.Address), RetOpCode,
+        reinterpret_cast<std::atomic<uint8_t> *>(Address), RetOpCode,
         std::memory_order_release);
     // FIXME: Write out the nops still?
   }
@@ -223,24 +225,25 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
                            const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
   // Here we do the dance of replacing the tail call sled with a similar
   // sequence as the entry sled, but calls the tail exit sled instead.
+  const uint64_t Address = Sled.address();
   int64_t TrampolineOffset =
       reinterpret_cast<int64_t>(__xray_FunctionTailExit) -
-      (static_cast<int64_t>(Sled.Address) + 11);
+      (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Tail Exit trampoline (%p) too far from sled (%p)\n",
-           __xray_FunctionTailExit, reinterpret_cast<void *>(Sled.Address));
+           __xray_FunctionTailExit, reinterpret_cast<void *>(Address));
     return false;
   }
   if (Enable) {
-    *reinterpret_cast<uint32_t *>(Sled.Address + 2) = FuncId;
-    *reinterpret_cast<uint8_t *>(Sled.Address + 6) = CallOpCode;
-    *reinterpret_cast<uint32_t *>(Sled.Address + 7) = TrampolineOffset;
+    *reinterpret_cast<uint32_t *>(Address + 2) = FuncId;
+    *reinterpret_cast<uint8_t *>(Address + 6) = CallOpCode;
+    *reinterpret_cast<uint32_t *>(Address + 7) = TrampolineOffset;
     std::atomic_store_explicit(
-        reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), MovR10Seq,
+        reinterpret_cast<std::atomic<uint16_t> *>(Address), MovR10Seq,
         std::memory_order_release);
   } else {
     std::atomic_store_explicit(
-        reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), Jmp9Seq,
+        reinterpret_cast<std::atomic<uint16_t> *>(Address), Jmp9Seq,
         std::memory_order_release);
     // FIXME: Write out the nops still?
   }
@@ -267,26 +270,28 @@ bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
   //
   // ---
   //
-  // In Version 1:
+  // In Version 1 or 2:
   //
   //   The jump offset is now 15 bytes (0x0f), so when restoring the nopw back
   //   to a jmp, use 15 bytes instead.
   //
+  const uint64_t Address = Sled.address();
   if (Enable) {
     std::atomic_store_explicit(
-        reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), NopwSeq,
+        reinterpret_cast<std::atomic<uint16_t> *>(Address), NopwSeq,
         std::memory_order_release);
   } else {
     switch (Sled.Version) {
     case 1:
+    case 2:
       std::atomic_store_explicit(
-          reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), Jmp15Seq,
+          reinterpret_cast<std::atomic<uint16_t> *>(Address), Jmp15Seq,
           std::memory_order_release);
       break;
     case 0:
     default:
       std::atomic_store_explicit(
-          reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), Jmp20Seq,
+          reinterpret_cast<std::atomic<uint16_t> *>(Address), Jmp20Seq,
           std::memory_order_release);
       break;
     }
@@ -313,14 +318,15 @@ bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
   // unstashes the registers and returns. If the arguments are already in
   // the correct registers, the stashing and unstashing become equivalently
   // sized nops.
+  const uint64_t Address = Sled.address();
   if (Enable) {
     std::atomic_store_explicit(
-        reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), NopwSeq,
+        reinterpret_cast<std::atomic<uint16_t> *>(Address), NopwSeq,
         std::memory_order_release);
   } else {
-      std::atomic_store_explicit(
-          reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), Jmp20Seq,
-          std::memory_order_release);
+    std::atomic_store_explicit(
+        reinterpret_cast<std::atomic<uint16_t> *>(Address), Jmp20Seq,
+        std::memory_order_release);
   }
   return false;
 }

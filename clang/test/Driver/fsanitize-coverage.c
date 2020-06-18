@@ -12,8 +12,10 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=kernel-memory -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=leak -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=bounds -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=bool -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=dataflow -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=thread -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target %itanium_abi_triple -fsanitize=float-divide-by-zero -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu                     -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // CHECK-SANITIZE-COVERAGE-FUNC: fsanitize-coverage-type=1
@@ -105,9 +107,18 @@
 // CHECK_INLINE8BIT-NOT: warning
 // CHECK_INLINE8BIT: -fsanitize-coverage-inline-8bit-counters
 
-// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-8bit-counters,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE
-// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=trace-pc-guard,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE
-// CHECK_PC_TABLE: -fsanitize-coverage-pc-table
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-8bit-counters,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE_FOR_INLINE8BIT
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=trace-pc-guard,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE_FOR_INLINE8BIT
+// CHECK_PC_TABLE_FOR_INLINE8BIT: -fsanitize-coverage-pc-table
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-bool-flag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_INLINE_BOOL_FLAG
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=bb,inline-bool-flag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_INLINE_BOOL_FLAG
+// CHECK_INLINE_BOOL_FLAG-NOT: warning
+// CHECK_INLINE_BOOL_FLAG: -fsanitize-coverage-inline-bool-flag
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-bool-flag,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE_FOR_INLINEBOOL
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=trace-pc-guard,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE_FOR_INLINEBOOL
+// CHECK_PC_TABLE_FOR_INLINEBOOL: -fsanitize-coverage-pc-table
 
 // RUN: %clang_cl --target=i386-pc-win32 -fsanitize=address -fsanitize-coverage=func,trace-pc-guard -c -### -- %s 2>&1 | FileCheck %s -check-prefix=CLANG-CL-COVERAGE
 // CLANG-CL-COVERAGE-NOT: error:

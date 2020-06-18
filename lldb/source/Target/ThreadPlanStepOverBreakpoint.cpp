@@ -30,9 +30,9 @@ ThreadPlanStepOverBreakpoint::ThreadPlanStepOverBreakpoint(Thread &thread)
       m_auto_continue(false), m_reenabled_breakpoint_site(false)
 
 {
-  m_breakpoint_addr = m_thread.GetRegisterContext()->GetPC();
+  m_breakpoint_addr = thread.GetRegisterContext()->GetPC();
   m_breakpoint_site_id =
-      m_thread.GetProcess()->GetBreakpointSiteList().FindIDByAddress(
+      thread.GetProcess()->GetBreakpointSiteList().FindIDByAddress(
           m_breakpoint_addr);
 }
 
@@ -86,7 +86,7 @@ bool ThreadPlanStepOverBreakpoint::DoPlanExplainsStop(Event *event_ptr) {
         // Be careful, however, as we may have "seen a breakpoint under the PC
         // because we stopped without changing the PC, in which case we do want
         // to re-claim this stop so we'll try again.
-        lldb::addr_t pc_addr = m_thread.GetRegisterContext()->GetPC();
+        lldb::addr_t pc_addr = GetThread().GetRegisterContext()->GetPC();
 
         if (pc_addr == m_breakpoint_addr) {
           LLDB_LOGF(log,
@@ -120,10 +120,9 @@ bool ThreadPlanStepOverBreakpoint::DoWillResume(StateType resume_state,
                                                 bool current_plan) {
   if (current_plan) {
     BreakpointSiteSP bp_site_sp(
-        m_thread.GetProcess()->GetBreakpointSiteList().FindByAddress(
-            m_breakpoint_addr));
+        m_process.GetBreakpointSiteList().FindByAddress(m_breakpoint_addr));
     if (bp_site_sp && bp_site_sp->IsEnabled()) {
-      m_thread.GetProcess()->DisableBreakpointSite(bp_site_sp.get());
+      m_process.DisableBreakpointSite(bp_site_sp.get());
       m_reenabled_breakpoint_site = false;
     }
   }
@@ -140,7 +139,7 @@ void ThreadPlanStepOverBreakpoint::WillPop() {
 }
 
 bool ThreadPlanStepOverBreakpoint::MischiefManaged() {
-  lldb::addr_t pc_addr = m_thread.GetRegisterContext()->GetPC();
+  lldb::addr_t pc_addr = GetThread().GetRegisterContext()->GetPC();
 
   if (pc_addr == m_breakpoint_addr) {
     // If we are still at the PC of our breakpoint, then for some reason we
@@ -161,10 +160,9 @@ void ThreadPlanStepOverBreakpoint::ReenableBreakpointSite() {
   if (!m_reenabled_breakpoint_site) {
     m_reenabled_breakpoint_site = true;
     BreakpointSiteSP bp_site_sp(
-        m_thread.GetProcess()->GetBreakpointSiteList().FindByAddress(
-            m_breakpoint_addr));
+        m_process.GetBreakpointSiteList().FindByAddress(m_breakpoint_addr));
     if (bp_site_sp) {
-      m_thread.GetProcess()->EnableBreakpointSite(bp_site_sp.get());
+      m_process.EnableBreakpointSite(bp_site_sp.get());
     }
   }
 }
@@ -181,5 +179,5 @@ bool ThreadPlanStepOverBreakpoint::ShouldAutoContinue(Event *event_ptr) {
 }
 
 bool ThreadPlanStepOverBreakpoint::IsPlanStale() {
-  return m_thread.GetRegisterContext()->GetPC() != m_breakpoint_addr;
+  return GetThread().GetRegisterContext()->GetPC() != m_breakpoint_addr;
 }

@@ -153,9 +153,9 @@ exit:
 ; pattern as well.
 define i64 @uaddo6_xor(i64 %a, i64 %b) {
 ; CHECK-LABEL: @uaddo6_xor(
-; CHECK-NEXT:    [[X:%.*]] = xor i64 [[A:%.*]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X]], [[B:%.*]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
   %x = xor i64 %a, -1
@@ -166,12 +166,12 @@ define i64 @uaddo6_xor(i64 %a, i64 %b) {
 
 define i64 @uaddo6_xor_commuted(i64 %a, i64 %b) {
 ; CHECK-LABEL: @uaddo6_xor_commuted(
-; CHECK-NEXT:    [[X:%.*]] = xor i64 -1, [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X]], [[B:%.*]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
-  %x = xor i64 -1, %a
+  %x = xor i64 %a, -1
   %cmp = icmp ult i64 %x, %b
   %Q = select i1 %cmp, i64 %b, i64 42
   ret i64 %Q
@@ -192,6 +192,23 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
   %Q = select i1 %cmp, i64 %b, i64 42
   call void @use(i64 %x)
   ret i64 %Q
+}
+
+; Make sure we do not use the XOR binary operator as insert point, as it may
+; come before the second operand of the overflow intrinsic.
+define i1 @uaddo6_xor_op_after_XOR(i32 %a, i32* %b.ptr) {
+; CHECK-LABEL: @uaddo6_xor_op_after_XOR(
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 [[B]])
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[OV:%.*]] = xor i1 [[OV1]], true
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %x = xor i32 %a, -1
+  %b = load i32, i32* %b.ptr, align 8
+  %cmp14 = icmp ugt i32 %b, %x
+  %ov = xor i1 %cmp14, true
+  ret i1 %ov
 }
 
 ; When adding 1, the general pattern for add-overflow may be different due to icmp canonicalization.

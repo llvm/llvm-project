@@ -57,6 +57,7 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
             IntegratedTestKeywordParser("MY_DNE_TAG.", ParserKind.TAG),
             IntegratedTestKeywordParser("MY_LIST:", ParserKind.LIST),
             IntegratedTestKeywordParser("MY_BOOL:", ParserKind.BOOLEAN_EXPR),
+            IntegratedTestKeywordParser("MY_INT:", ParserKind.INTEGER),
             IntegratedTestKeywordParser("MY_RUN:", ParserKind.COMMAND),
             IntegratedTestKeywordParser("MY_CUSTOM:", ParserKind.CUSTOM,
                                         custom_parse),
@@ -71,13 +72,16 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         assert False and "parser not found"
 
     @staticmethod
-    def parse_test(parser_list):
+    def parse_test(parser_list, allow_result=False):
         script = parseIntegratedTestScript(
             TestIntegratedTestKeywordParser.inputTestCase,
             additional_parsers=parser_list, require_script=False)
-        assert not isinstance(script, lit.Test.Result)
-        assert isinstance(script, list)
-        assert len(script) == 0
+        if isinstance(script, lit.Test.Result):
+            assert allow_result
+        else:
+            assert isinstance(script, list)
+            assert len(script) == 0
+        return script
 
     def test_tags(self):
         parsers = self.make_parsers()
@@ -112,15 +116,45 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         self.assertEqual(value[0].strip(), "a && (b)")
         self.assertEqual(value[1].strip(), "d")
 
+    def test_integer(self):
+        parsers = self.make_parsers()
+        self.parse_test(parsers)
+        int_parser = self.get_parser(parsers, 'MY_INT:')
+        value = int_parser.getValue()
+        self.assertEqual(len(value), 2)  # there are only two MY_INT: lines
+        self.assertEqual(type(value[0]), int)
+        self.assertEqual(value[0], 4)
+        self.assertEqual(type(value[1]), int)
+        self.assertEqual(value[1], 6)
+
+    def test_bad_parser_type(self):
+        parsers = self.make_parsers() + ["BAD_PARSER_TYPE"]
+        script = self.parse_test(parsers, allow_result=True)
+        self.assertTrue(isinstance(script, lit.Test.Result))
+        self.assertEqual(script.code, lit.Test.UNRESOLVED)
+        self.assertEqual('Additional parser must be an instance of '
+                         'IntegratedTestKeywordParser',
+                         script.output)
+
+    def test_duplicate_keyword(self):
+        parsers = self.make_parsers() + \
+            [IntegratedTestKeywordParser("KEY:", ParserKind.BOOLEAN_EXPR),
+             IntegratedTestKeywordParser("KEY:", ParserKind.BOOLEAN_EXPR)]
+        script = self.parse_test(parsers, allow_result=True)
+        self.assertTrue(isinstance(script, lit.Test.Result))
+        self.assertEqual(script.code, lit.Test.UNRESOLVED)
+        self.assertEqual("Parser for keyword 'KEY:' already exists",
+                         script.output)
+
     def test_boolean_unterminated(self):
         parsers = self.make_parsers() + \
             [IntegratedTestKeywordParser("MY_BOOL_UNTERMINATED:", ParserKind.BOOLEAN_EXPR)]
-        try:
-            self.parse_test(parsers)
-            self.fail('expected exception')
-        except ValueError as e:
-            self.assertIn("Test has unterminated MY_BOOL_UNTERMINATED: lines", str(e))
-
+        script = self.parse_test(parsers, allow_result=True)
+        self.assertTrue(isinstance(script, lit.Test.Result))
+        self.assertEqual(script.code, lit.Test.UNRESOLVED)
+        self.assertEqual("Test has unterminated 'MY_BOOL_UNTERMINATED:' lines "
+                         "(with '\\')",
+                         script.output)
 
     def test_custom(self):
         parsers = self.make_parsers()
@@ -186,6 +220,74 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
             pass
         except BaseException as e:
             self.fail("CUSTOM_NO_PARSER: raised the wrong exception: %r" % e)
+
+class TestApplySubtitutions(unittest.TestCase):
+    def test_simple(self):
+        script = ["echo %bar"]
+        substitutions = [("%bar", "hello")]
+        result = lit.TestRunner.applySubstitutions(script, substitutions)
+        self.assertEqual(result, ["echo hello"])
+
+    def test_multiple_substitutions(self):
+        script = ["echo %bar %baz"]
+        substitutions = [("%bar", "hello"),
+                         ("%baz", "world"),
+                         ("%useless", "shouldnt expand")]
+        result = lit.TestRunner.applySubstitutions(script, substitutions)
+        self.assertEqual(result, ["echo hello world"])
+
+    def test_multiple_script_lines(self):
+        script = ["%cxx %compile_flags -c -o %t.o",
+                  "%cxx %link_flags %t.o -o %t.exe"]
+        substitutions = [("%cxx", "clang++"),
+                         ("%compile_flags", "-std=c++11 -O3"),
+                         ("%link_flags", "-lc++")]
+        result = lit.TestRunner.applySubstitutions(script, substitutions)
+        self.assertEqual(result, ["clang++ -std=c++11 -O3 -c -o %t.o",
+                                  "clang++ -lc++ %t.o -o %t.exe"])
+
+    def test_recursive_substitution_real(self):
+        script = ["%build %s"]
+        substitutions = [("%cxx", "clang++"),
+                         ("%compile_flags", "-std=c++11 -O3"),
+                         ("%link_flags", "-lc++"),
+                         ("%build", "%cxx %compile_flags %link_flags %s -o %t.exe")]
+        result = lit.TestRunner.applySubstitutions(script, substitutions, recursion_limit=3)
+        self.assertEqual(result, ["clang++ -std=c++11 -O3 -lc++ %s -o %t.exe %s"])
+
+    def test_recursive_substitution_limit(self):
+        script = ["%rec5"]
+        # Make sure the substitutions are not in an order where the global
+        # substitution would appear to be recursive just because they are
+        # processed in the right order.
+        substitutions = [("%rec1", "STOP"), ("%rec2", "%rec1"),
+                         ("%rec3", "%rec2"), ("%rec4", "%rec3"), ("%rec5", "%rec4")]
+        for limit in [5, 6, 7]:
+            result = lit.TestRunner.applySubstitutions(script, substitutions, recursion_limit=limit)
+            self.assertEqual(result, ["STOP"])
+
+    def test_recursive_substitution_limit_exceeded(self):
+        script = ["%rec5"]
+        substitutions = [("%rec1", "STOP"), ("%rec2", "%rec1"),
+                         ("%rec3", "%rec2"), ("%rec4", "%rec3"), ("%rec5", "%rec4")]
+        for limit in [0, 1, 2, 3, 4]:
+            try:
+                lit.TestRunner.applySubstitutions(script, substitutions, recursion_limit=limit)
+                self.fail("applySubstitutions should have raised an exception")
+            except ValueError:
+                pass
+
+    def test_recursive_substitution_invalid_value(self):
+        script = ["%rec5"]
+        substitutions = [("%rec1", "STOP"), ("%rec2", "%rec1"),
+                         ("%rec3", "%rec2"), ("%rec4", "%rec3"), ("%rec5", "%rec4")]
+        for limit in [-1, -2, -3, "foo"]:
+            try:
+                lit.TestRunner.applySubstitutions(script, substitutions, recursion_limit=limit)
+                self.fail("applySubstitutions should have raised an exception")
+            except AssertionError:
+                pass
+
 
 if __name__ == '__main__':
     TestIntegratedTestKeywordParser.load_keyword_parser_lit_tests()

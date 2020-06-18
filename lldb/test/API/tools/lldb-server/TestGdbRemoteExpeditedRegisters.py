@@ -1,6 +1,3 @@
-from __future__ import print_function
-
-
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -59,7 +56,7 @@ class TestGdbRemoteExpeditedRegisters(
 
         # Ensure the expedited registers contained it.
         self.assertTrue(reg_info["lldb_register_index"] in expedited_registers)
-        # print("{} reg_info:{}".format(generic_register_name, reg_info))
+        self.trace("{} reg_info:{}".format(generic_register_name, reg_info))
 
     def stop_notification_contains_any_registers(self):
         # Generate a stop reply, parse out expedited registers from stop

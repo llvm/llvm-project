@@ -57,7 +57,7 @@ static MCAsmInfo *createARCMCAsmInfo(const MCRegisterInfo &MRI,
   MCAsmInfo *MAI = new ARCMCAsmInfo(TT);
 
   // Initial state of the frame pointer is SP.
-  MCCFIInstruction Inst = MCCFIInstruction::createDefCfa(nullptr, ARC::SP, 0);
+  MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, ARC::SP, 0);
   MAI->addInitialFrameState(Inst);
 
   return MAI;

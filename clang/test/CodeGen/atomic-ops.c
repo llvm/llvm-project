@@ -343,20 +343,20 @@ struct Incomplete;
 int lock_free(struct Incomplete *incomplete) {
   // CHECK-LABEL: @lock_free
 
-  // CHECK: call i32 @__atomic_is_lock_free(i32 3, i8* null)
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 3, i8* null)
   __c11_atomic_is_lock_free(3);
 
-  // CHECK: call i32 @__atomic_is_lock_free(i32 16, i8* {{.*}}@sixteen{{.*}})
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 16, i8* {{.*}}@sixteen{{.*}})
   __atomic_is_lock_free(16, &sixteen);
 
-  // CHECK: call i32 @__atomic_is_lock_free(i32 17, i8* {{.*}}@seventeen{{.*}})
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 17, i8* {{.*}}@seventeen{{.*}})
   __atomic_is_lock_free(17, &seventeen);
 
-  // CHECK: call i32 @__atomic_is_lock_free(i32 4, {{.*}})
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 4, {{.*}})
   __atomic_is_lock_free(4, incomplete);
 
   char cs[20];
-  // CHECK: call i32 @__atomic_is_lock_free(i32 4, {{.*}})
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 4, {{.*}})
   __atomic_is_lock_free(4, cs+1);
 
   // CHECK-NOT: call

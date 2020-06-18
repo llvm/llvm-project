@@ -44,9 +44,6 @@ const char LambdaId[] = "lambda";
 } // namespace
 
 void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(functionDecl(parameterCountIs(0), unless(isImplicit()),
                                   unless(isInstantiated()), unless(isExternC()))
                          .bind(FunctionId),

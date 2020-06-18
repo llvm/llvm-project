@@ -34,7 +34,7 @@ define <4 x i64> @funcC(i64 %q) nounwind uwtable readnone ssp {
 ; X64-LABEL: funcC:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vmovq %rdi, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
 entry:
@@ -169,12 +169,12 @@ define <2 x double> @splat_load_2f64_11(<2 x double>* %ptr) {
 ; X86-LABEL: splat_load_2f64_11:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    vmovddup 8(%eax), %xmm0 # xmm0 = mem[0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: splat_load_2f64_11:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    vmovddup 8(%rdi), %xmm0 # xmm0 = mem[0,0]
 ; X64-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %ptr
   %x1 = shufflevector <2 x double> %x, <2 x double> undef, <2 x i32> <i32 1, i32 1>

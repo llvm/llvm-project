@@ -22,6 +22,14 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
+namespace {
+// Represents the major and version number components of a RISC-V extension
+struct RISCVExtensionVersion {
+  StringRef Major;
+  StringRef Minor;
+};
+} // end anonymous namespace
+
 static StringRef getExtensionTypeDesc(StringRef Ext) {
   if (Ext.startswith("sx"))
     return "non-standard supervisor-level extension";
@@ -29,6 +37,8 @@ static StringRef getExtensionTypeDesc(StringRef Ext) {
     return "standard supervisor-level extension";
   if (Ext.startswith("x"))
     return "non-standard user-level extension";
+  if (Ext.startswith("z"))
+    return "standard user-level extension";
   return StringRef();
 }
 
@@ -39,10 +49,27 @@ static StringRef getExtensionType(StringRef Ext) {
     return "s";
   if (Ext.startswith("x"))
     return "x";
+  if (Ext.startswith("z"))
+    return "z";
   return StringRef();
 }
 
+// If the extension is supported as experimental, return the version of that
+// extension that the compiler currently supports.
+static Optional<RISCVExtensionVersion>
+isExperimentalExtension(StringRef Ext) {
+  if (Ext == "b" || Ext == "zbb" || Ext == "zbc" || Ext == "zbe" ||
+      Ext == "zbf" || Ext == "zbm" || Ext == "zbp" || Ext == "zbr" ||
+      Ext == "zbs" || Ext == "zbt" || Ext == "zbproposedc")
+    return RISCVExtensionVersion{"0", "92"};
+  return None;
+}
+
 static bool isSupportedExtension(StringRef Ext) {
+  // LLVM supports "z" extensions which are marked as experimental.
+  if (isExperimentalExtension(Ext))
+    return true;
+
   // LLVM does not support "sx", "s" nor "x" extensions.
   return false;
 }
@@ -52,15 +79,13 @@ static bool isSupportedExtension(StringRef Ext) {
 // Version number is divided into major and minor version numbers,
 // separated by a 'p'. If the minor version is 0 then 'p0' can be
 // omitted from the version string. E.g., rv32i2p0, rv32i2, rv32i2p1.
-static bool getExtensionVersion(const Driver &D, StringRef MArch,
-                                StringRef Ext, StringRef In,
+static bool getExtensionVersion(const Driver &D, const ArgList &Args,
+                                StringRef MArch, StringRef Ext, StringRef In,
                                 std::string &Major, std::string &Minor) {
   Major = std::string(In.take_while(isDigit));
   In = In.substr(Major.size());
-  if (Major.empty())
-    return true;
 
-  if (In.consume_front("p")) {
+  if (Major.size() && In.consume_front("p")) {
     Minor = std::string(In.take_while(isDigit));
     In = In.substr(Major.size());
 
@@ -74,7 +99,43 @@ static bool getExtensionVersion(const Driver &D, StringRef MArch,
     }
   }
 
-  // TODO: Handle extensions with version number.
+  // If experimental extension, require use of current version number number
+  if (auto ExperimentalExtension = isExperimentalExtension(Ext)) {
+    if (!Args.hasArg(options::OPT_menable_experimental_extensions)) {
+      std::string Error =
+          "requires '-menable-experimental-extensions' for experimental extension";
+      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
+          << MArch << Error << Ext;
+      return false;
+    } else if (Major.empty() && Minor.empty()) {
+      std::string Error =
+          "experimental extension requires explicit version number";
+      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
+          << MArch << Error << Ext;
+      return false;
+    }
+    auto SupportedVers = *ExperimentalExtension;
+    if (Major != SupportedVers.Major || Minor != SupportedVers.Minor) {
+      std::string Error =
+          "unsupported version number " + Major;
+      if (!Minor.empty())
+        Error += "." + Minor;
+      Error += " for experimental extension (this compiler supports "
+            + SupportedVers.Major.str() + "."
+            + SupportedVers.Minor.str() + ")";
+
+      D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
+          << MArch << Error << Ext;
+      return false;
+    }
+    return true;
+  }
+
+  // Allow extensions to declare no version number
+  if (Major.empty() && Minor.empty())
+    return true;
+
+  // TODO: Handle supported extensions with version number.
   std::string Error = "unsupported version number " + Major;
   if (!Minor.empty())
     Error += "." + Minor;
@@ -89,7 +150,7 @@ static bool getExtensionVersion(const Driver &D, StringRef MArch,
 // Parse the ISA string containing non-standard user-level
 // extensions, standard supervisor-level extensions and
 // non-standard supervisor-level extensions.
-// These extensions start with 'x', 's', 'sx' prefixes, follow a
+// These extensions start with 'z', 'x', 's', 'sx' prefixes, follow a
 // canonical order, might have a version number (major, minor)
 // and are separated by a single underscore '_'.
 // Set the hardware features for the extensions that are supported.
@@ -105,7 +166,7 @@ static void getExtensionFeatures(const Driver &D,
   SmallVector<StringRef, 8> Split;
   Exts.split(Split, StringRef("_"));
 
-  SmallVector<StringRef, 3> Prefix{"x", "s", "sx"};
+  SmallVector<StringRef, 4> Prefix{"z", "x", "s", "sx"};
   auto I = Prefix.begin();
   auto E = Prefix.end();
 
@@ -119,8 +180,10 @@ static void getExtensionFeatures(const Driver &D,
     }
 
     StringRef Type = getExtensionType(Ext);
-    StringRef Name(Ext.substr(Type.size()));
     StringRef Desc = getExtensionTypeDesc(Ext);
+    auto Pos = Ext.find_if(isDigit);
+    StringRef Name(Ext.substr(0, Pos));
+    StringRef Vers(Ext.substr(Pos));
 
     if (Type.empty()) {
       D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
@@ -143,35 +206,30 @@ static void getExtensionFeatures(const Driver &D,
     // The order is OK, do not advance I to the next prefix
     // to allow repeated extension type, e.g.: rv32ixabc_xdef.
 
-    if (Name.empty()) {
+    if (Name.size() == Type.size()) {
       std::string Error = std::string(Desc);
       Error += " name missing after";
       D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-        << MArch << Error << Ext;
+        << MArch << Error << Type;
       return;
     }
 
     std::string Major, Minor;
-    auto Pos = Name.find_if(isDigit);
-    if (Pos != StringRef::npos) {
-      auto Next =  Name.substr(Pos);
-      Name = Name.substr(0, Pos);
-      if (!getExtensionVersion(D, MArch, Ext, Next, Major, Minor))
-        return;
-    }
+    if (!getExtensionVersion(D, Args, MArch, Name, Vers, Major, Minor))
+      return;
 
     // Check if duplicated extension.
-    if (llvm::is_contained(AllExts, Ext)) {
+    if (llvm::is_contained(AllExts, Name)) {
       std::string Error = "duplicated ";
       Error += Desc;
       D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)
-        << MArch << Error << Ext;
+        << MArch << Error << Name;
       return;
     }
 
     // Extension format is correct, keep parsing the extensions.
     // TODO: Save Type, Name, Major, Minor to avoid parsing them later.
-    AllExts.push_back(Ext);
+    AllExts.push_back(Name);
   }
 
   // Set target features.
@@ -186,7 +244,10 @@ static void getExtensionFeatures(const Driver &D,
         << MArch << Error << Ext;
       return;
     }
-    Features.push_back(Args.MakeArgString("+" + Ext));
+    if (isExperimentalExtension(Ext))
+      Features.push_back(Args.MakeArgString("+experimental-" + Ext));
+    else
+      Features.push_back(Args.MakeArgString("+" + Ext));
   }
 }
 
@@ -251,28 +312,35 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
   // Skip rvxxx
   StringRef Exts = MArch.substr(5);
 
-  // Remove non-standard extensions and supervisor-level extensions.
-  // They have 'x', 's', 'sx' prefixes. Parse them at the end.
-  // Find the very first occurrence of 's' or 'x'.
+  // Remove multi-letter standard extensions, non-standard extensions and
+  // supervisor-level extensions. They have 'z', 'x', 's', 'sx' prefixes.
+  // Parse them at the end.
+  // Find the very first occurrence of 's', 'x' or 'z'.
   StringRef OtherExts;
-  size_t Pos = Exts.find_first_of("sx");
+  size_t Pos = Exts.find_first_of("zsx");
   if (Pos != StringRef::npos) {
     OtherExts = Exts.substr(Pos);
     Exts = Exts.substr(0, Pos);
   }
 
   std::string Major, Minor;
-  if (!getExtensionVersion(D, MArch, std::string(1, Baseline), Exts, Major,
-                           Minor))
+  if (!getExtensionVersion(D, Args, MArch, std::string(1, Baseline), Exts,
+                           Major, Minor))
     return false;
 
+  // Consume the base ISA version number and any '_' between rvxxx and the
+  // first extension
+  Exts = Exts.drop_front(Major.size());
+  if (!Minor.empty())
+    Exts = Exts.drop_front(Minor.size() + 1 /*'p'*/);
+  Exts.consume_front("_");
+
   // TODO: Use version number when setting target features
-  // and consume the underscore '_' that might follow.
 
   auto StdExtsItr = StdExts.begin();
   auto StdExtsEnd = StdExts.end();
 
-  for (auto I = Exts.begin(), E = Exts.end(); I != E; ++I) {
+  for (auto I = Exts.begin(), E = Exts.end(); I != E; ) {
     char c = *I;
 
     // Check ISA extensions are specified in the canonical order.
@@ -295,18 +363,15 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
     // Move to next char to prevent repeated letter.
     ++StdExtsItr;
 
-    if (std::next(I) != E) {
-      // Skip c.
-      std::string Next = std::string(std::next(I), E);
-      std::string Major, Minor;
-      if (!getExtensionVersion(D, MArch, std::string(1, c), Next, Major, Minor))
-        return false;
-
-      // TODO: Use version number when setting target features
-      // and consume the underscore '_' that might follow.
-    }
+    std::string Next, Major, Minor;
+    if (std::next(I) != E)
+      Next = std::string(std::next(I), E);
+    if (!getExtensionVersion(D, Args, MArch, std::string(1, c), Next, Major,
+                             Minor))
+      return false;
 
     // The order is OK, then push it into features.
+    // TODO: Use version number when setting target features
     switch (c) {
     default:
       // Currently LLVM supports only "mafdc".
@@ -331,7 +396,19 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
     case 'c':
       Features.push_back("+c");
       break;
+    case 'b':
+      Features.push_back("+experimental-b");
+      break;
     }
+
+    // Consume full extension name and version, including any optional '_'
+    // between this extension and the next
+    ++I;
+    I += Major.size();
+    if (Minor.size())
+      I += Minor.size() + 1 /*'p'*/;
+    if (*I == '_')
+      ++I;
   }
 
   // Dependency check.

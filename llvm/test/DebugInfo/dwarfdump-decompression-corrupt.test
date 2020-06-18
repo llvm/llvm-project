@@ -1,6 +1,6 @@
 REQUIRES: zlib
 
 // dwarfdump-decompression-corrupt.elf-x86-64 is fuzzer output
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-decompression-corrupt.elf-x86-64 2>&1 | FileCheck %s
+RUN: not llvm-dwarfdump %p/Inputs/dwarfdump-decompression-corrupt.elf-x86-64 2>&1 | FileCheck %s
 
 CHECK: error: failed to decompress '', corrupted compressed section header

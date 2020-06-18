@@ -9,7 +9,7 @@
  li      3,1
  sc
 
-// CHECK: Format: ELF32-ppc
+// CHECK:      Format: elf32-powerpc
 // CHECK-NEXT: Arch: powerpc
 // CHECK-NEXT: AddressSize: 32bit
 // CHECK-NEXT: LoadName:

@@ -64,6 +64,7 @@ class SettingsCommandTestCase(TestBase):
     def test_bare_double(self):
         self.do_test_args('a\\"b', 'a"b\0')
 
+    @skipIfReproducer # Reproducers don't know about output.txt
     def do_test_args(self, args_in, args_out):
         """Test argument parsing. Run the program with args_in. The program dumps its arguments
         to stdout. Compare the stdout with args_out."""

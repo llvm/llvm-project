@@ -77,7 +77,8 @@ protected:
   std::recursive_mutex m_unwind_mutex;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Unwind);
+  Unwind(const Unwind &) = delete;
+  const Unwind &operator=(const Unwind &) = delete;
 };
 
 } // namespace lldb_private

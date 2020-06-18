@@ -11,8 +11,8 @@ def gi_shiftl_1 : GICustomOperandRenderer<"renderShiftImml1">,
   GISDNodeXFormEquiv<shiftl_1>;
 
 
-def int_mytarget_sleep : Intrinsic<[], [llvm_i32_ty], [ImmArg<0>]>;
-def int_mytarget_foo : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [ImmArg<1>, IntrNoMem]>;
+def int_mytarget_sleep : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
+def int_mytarget_foo : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>, IntrNoMem]>;
 
 
 def SLEEP : I<(outs), (ins i32imm:$src0), []>;

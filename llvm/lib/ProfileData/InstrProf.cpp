@@ -162,6 +162,10 @@ const char *InstrProfSectNamePrefix[] = {
 
 namespace llvm {
 
+cl::opt<bool> DoInstrProfNameCompression(
+    "enable-name-compression",
+    cl::desc("Enable name/filename string compression"), cl::init(true));
+
 std::string getInstrProfSectionName(InstrProfSectKind IPSK,
                                     Triple::ObjectFormatType OF,
                                     bool AddSegmentInfo) {

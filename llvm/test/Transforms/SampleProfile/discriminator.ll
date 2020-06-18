@@ -62,6 +62,7 @@ while.end:                                        ; preds = %while.cond
   ret i32 %4, !dbg !21
 }
 
+attributes #0 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}

@@ -15,6 +15,7 @@
 
 /*  Constant                                Value
     __cpp_lib_array_constexpr               201603L [C++17]
+                                            201811L [C++2a]
     __cpp_lib_constexpr_misc                201811L [C++2a]
     __cpp_lib_make_reverse_iterator         201402L [C++14]
     __cpp_lib_nonmember_container_access    201411L [C++17]
@@ -126,8 +127,8 @@
 # ifndef __cpp_lib_array_constexpr
 #   error "__cpp_lib_array_constexpr should be defined in c++2a"
 # endif
-# if __cpp_lib_array_constexpr != 201603L
-#   error "__cpp_lib_array_constexpr should have the value 201603L in c++2a"
+# if __cpp_lib_array_constexpr != 201811L
+#   error "__cpp_lib_array_constexpr should have the value 201811L in c++2a"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

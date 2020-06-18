@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+c  -filetype=obj < %s\
-; RUN: | llvm-objdump -triple=riscv32 -mattr=+c -d -M no-aliases -\
+; RUN: | llvm-objdump --triple=riscv32 --mattr=+c -d -M no-aliases -\
 ; RUN: | FileCheck -check-prefix=CHECK %s
 
 @ext = external global i32
 
 define i32 @compress_test(i32 %a) {
-; CHECK-LABEL: compress_test:
+; CHECK-LABEL: <compress_test>:
 ; CHECK:    c.add a0, a1
 ; CHECK-NEXT:    c.jr ra
   %1 = load i32, i32* @ext

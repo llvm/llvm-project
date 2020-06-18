@@ -12,7 +12,7 @@
 // CHECK-OPTIONS2: -fno-gnu-keywords
 // CHECK-OPTIONS2: -fno-builtin
 // CHECK-OPTIONS2: -fshort-enums
-// CHECK-OPTIONS2: -fno-common
+// CHECK-OPTIONS2-NOT: -fcommon
 // CHECK-OPTIONS2: -fno-show-source-location
 
 // RUN: %clang -### -S -Wwrite-strings %s 2>&1 | FileCheck -check-prefix=WRITE-STRINGS1 %s
@@ -67,30 +67,6 @@
 
 // RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof -fno-profile-sample-use -fauto-profile %s 2>&1 | FileCheck -check-prefix=CHECK-AUTO-PROFILE %s
 // RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof -fno-auto-profile -fprofile-sample-use %s 2>&1 | FileCheck -check-prefix=CHECK-AUTO-PROFILE %s
-
-// RUN: %clang -### -S -fprofile-arcs %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-ARCS %s
-// RUN: %clang -### -S -fno-profile-arcs -fprofile-arcs %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-ARCS %s
-// RUN: %clang -### -S -fno-profile-arcs %s 2>&1 | FileCheck -check-prefix=CHECK-NO-PROFILE-ARCS %s
-// RUN: %clang -### -S -fprofile-arcs -fno-profile-arcs %s 2>&1 | FileCheck -check-prefix=CHECK-NO-PROFILE-ARCS %s
-// CHECK-PROFILE-ARCS: "-femit-coverage-data"
-// CHECK-NO-PROFILE-ARCS-NOT: "-femit-coverage-data"
-
-// RUN: %clang -### -S -fprofile-dir=abc %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-DIR-UNUSED %s
-// RUN: %clang -### -S -ftest-coverage -fprofile-dir=abc %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-DIR-UNUSED %s
-// RUN: %clang -### -S -fprofile-arcs -fprofile-dir=abc %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-DIR %s
-// RUN: %clang -### -S --coverage -fprofile-dir=abc %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-DIR %s
-// RUN: %clang -### -S -fprofile-arcs -fno-profile-arcs -fprofile-dir=abc %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-DIR-NEITHER %s
-// CHECK-PROFILE-DIR: "-coverage-data-file" "abc
-// CHECK-PROFILE-DIR-UNUSED: argument unused
-// CHECK-PROFILE-DIR-UNUSED-NOT: "-coverage-data-file" "abc
-// CHECK-PROFILE-DIR-NEITHER-NOT: argument unused
-
-// RUN: %clang_cl -### /c --coverage /Fo/foo/bar.obj -- %s 2>&1 | FileCheck -check-prefix=CHECK-GCNO-LOCATION %s
-// CHECK-GCNO-LOCATION: "-coverage-notes-file" "{{.*}}/foo/bar.gcno"
-
-// RUN: %clang -### -fprofile-arcs -ftest-coverage %s 2>&1 | FileCheck -check-prefix=CHECK-u %s
-// RUN: %clang -### --coverage %s 2>&1 | FileCheck -check-prefix=CHECK-u %s
-// CHECK-u-NOT: "-u{{.*}}"
 
 // RUN: %clang -### -S -fprofile-generate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE-LLVM %s
 // RUN: %clang -### -S -fprofile-instr-generate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE %s
@@ -159,7 +135,7 @@
 // RUN: %clang -### -S -fno-tree-vectorize -fvectorize %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
 // RUN: %clang -### -S -fno-tree-vectorize %s 2>&1 | FileCheck -check-prefix=CHECK-NO-VECTORIZE %s
 // RUN: %clang -### -S -ftree-vectorize -fno-vectorize %s 2>&1 | FileCheck -check-prefix=CHECK-NO-VECTORIZE %s
-// RUN: %clang -### -S -O %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
+// RUN: %clang -### -S -O %s 2>&1 | FileCheck -check-prefix=CHECK-NO-VECTORIZE %s
 // RUN: %clang -### -S -O2 %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
 // RUN: %clang -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
 // RUN: %clang -### -S -O3 %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
@@ -181,7 +157,7 @@
 // RUN: %clang -### -S -fno-tree-slp-vectorize -fslp-vectorize %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
 // RUN: %clang -### -S -fno-tree-slp-vectorize %s 2>&1 | FileCheck -check-prefix=CHECK-NO-SLP-VECTORIZE %s
 // RUN: %clang -### -S -ftree-slp-vectorize -fno-slp-vectorize %s 2>&1 | FileCheck -check-prefix=CHECK-NO-SLP-VECTORIZE %s
-// RUN: %clang -### -S -O %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
+// RUN: %clang -### -S -O %s 2>&1 | FileCheck -check-prefix=CHECK-NO-SLP-VECTORIZE %s
 // RUN: %clang -### -S -O2 %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
 // RUN: %clang -### -S -Os %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
 // RUN: %clang -### -S -Oz %s 2>&1 | FileCheck -check-prefix=CHECK-SLP-VECTORIZE %s
@@ -304,7 +280,6 @@
 // RUN:     -fno-inline-small-functions -finline-small-functions              \
 // RUN:     -fno-fat-lto-objects -ffat-lto-objects                            \
 // RUN:     -fno-merge-constants -fmerge-constants                            \
-// RUN:     -fno-merge-all-constants -fmerge-all-constants                    \
 // RUN:     -fno-caller-saves -fcaller-saves                                  \
 // RUN:     -fno-reorder-blocks -freorder-blocks                              \
 // RUN:     -fno-schedule-insns2 -fschedule-insns2                            \
@@ -544,13 +519,6 @@
 // CHECK-DISCARD-NAMES: "-discard-value-names"
 // CHECK-NO-DISCARD-NAMES-NOT: "-discard-value-names"
 
-// RUN: %clang -### -S -fmerge-all-constants %s 2>&1 | FileCheck -check-prefix=CHECK-MERGE-ALL-CONSTANTS %s
-// RUN: %clang -### -S -fno-merge-all-constants %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MERGE-ALL-CONSTANTS %s
-// RUN: %clang -### -S -fmerge-all-constants -fno-merge-all-constants %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MERGE-ALL-CONSTANTS %s
-// RUN: %clang -### -S -fno-merge-all-constants -fmerge-all-constants %s 2>&1 | FileCheck -check-prefix=CHECK-MERGE-ALL-CONSTANTS %s
-// CHECK-NO-MERGE-ALL-CONSTANTS-NOT: "-fmerge-all-constants"
-// CHECK-MERGE-ALL-CONSTANTS: "-fmerge-all-constants"
-
 // RUN: %clang -### -S -fdelete-null-pointer-checks %s 2>&1 | FileCheck -check-prefix=CHECK-NULL-POINTER-CHECKS %s
 // RUN: %clang -### -S -fno-delete-null-pointer-checks %s 2>&1 | FileCheck -check-prefix=CHECK-NO-NULL-POINTER-CHECKS %s
 // RUN: %clang -### -S -fdelete-null-pointer-checks -fno-delete-null-pointer-checks %s 2>&1 | FileCheck -check-prefix=CHECK-NO-NULL-POINTER-CHECKS %s
@@ -572,6 +540,11 @@
 // CHECK-RECORD-GCC-SWITCHES: "-record-command-line"
 // CHECK-NO-RECORD-GCC-SWITCHES-NOT: "-record-command-line"
 // CHECK-RECORD-GCC-SWITCHES-ERROR: error: unsupported option '-frecord-command-line' for target
+// Test when clang is in a path containing a space.
+// RUN: mkdir -p "%t.r/with spaces"
+// RUN: cp %clang "%t.r/with spaces/clang"
+// RUN: "%t.r/with spaces/clang" -### -S -target x86_64-unknown-linux -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ESCAPED %s
+// CHECK-RECORD-GCC-SWITCHES-ESCAPED: "-record-command-line" "{{.+}}with\\ spaces{{.+}}"
 
 // RUN: %clang -### -S -ftrivial-auto-var-init=uninitialized %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-UNINIT %s
 // RUN: %clang -### -S -ftrivial-auto-var-init=pattern %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN %s
@@ -581,6 +554,19 @@
 // CHECK-TRIVIAL-PATTERN-NOT: hasn't been enabled
 // CHECK-TRIVIAL-ZERO-GOOD-NOT: hasn't been enabled
 // CHECK-TRIVIAL-ZERO-BAD: hasn't been enabled
+
+// RUN: %clang -### -S -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=1 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN-STOP-AFTER %s
+// RUN: %clang -### -S -ftrivial-auto-var-init=zero -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang -ftrivial-auto-var-init-stop-after=1 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-STOP-AFTER %s
+// RUN: %clang -### -S -ftrivial-auto-var-init-stop-after=0 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-STOP-AFTER-MISSING-DEPENDENCY %s
+// RUN: %clang -### -S -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=0 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN-STOP-AFTER-INVALID-VALUE %s
+// RUN: %clang -### -S -ftrivial-auto-var-init=zero -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang -ftrivial-auto-var-init-stop-after=0 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-STOP-AFTER-INVALID-VALUE %s
+// CHECK-TRIVIAL-PATTERN-STOP-AFTER-NOT: is used without -ftrivial-auto-var-init
+// CHECK-TRIVIAL-PATTERN-STOP-AFTER-NOT: only accepts positive integers
+// CHECK-TRIVIAL-ZERO-STOP-AFTER-NOT: is used without -ftrivial-auto-var-init
+// CHECK-TRIVIAL-ZERO-STOP-AFTER-NOT: only accepts positive integers
+// CHECK-TRIVIAL-STOP-AFTER-MISSING-DEPENDENCY: used without -ftrivial-auto-var-init
+// CHECK-TRIVIAL-PATTERN-STOP-AFTER-INVALID-VALUE: only accepts positive integers
+// CHECK-TRIVIAL-ZERO-STOP-AFTER-INVALID-VALUE: only accepts positive integers
 
 // RUN: %clang -### -S -fno-temp-file %s 2>&1 | FileCheck -check-prefix=CHECK-NO-TEMP-FILE %s
 // CHECK-NO-TEMP-FILE: "-fno-temp-file"

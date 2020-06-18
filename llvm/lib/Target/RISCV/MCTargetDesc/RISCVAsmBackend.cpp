@@ -23,12 +23,75 @@
 
 using namespace llvm;
 
+Optional<MCFixupKind> RISCVAsmBackend::getFixupKind(StringRef Name) const {
+  if (STI.getTargetTriple().isOSBinFormatELF()) {
+    unsigned Type;
+    Type = llvm::StringSwitch<unsigned>(Name)
+#define ELF_RELOC(X, Y) .Case(#X, Y)
+#include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
+#undef ELF_RELOC
+               .Default(-1u);
+    if (Type != -1u)
+      return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+  }
+  return None;
+}
+
+const MCFixupKindInfo &
+RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  const static MCFixupKindInfo Infos[] = {
+      // This table *must* be in the order that the fixup_* kinds are defined in
+      // RISCVFixupKinds.h.
+      //
+      // name                      offset bits  flags
+      {"fixup_riscv_hi20", 12, 20, 0},
+      {"fixup_riscv_lo12_i", 20, 12, 0},
+      {"fixup_riscv_lo12_s", 0, 32, 0},
+      {"fixup_riscv_pcrel_hi20", 12, 20,
+       MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget},
+      {"fixup_riscv_pcrel_lo12_i", 20, 12,
+       MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget},
+      {"fixup_riscv_pcrel_lo12_s", 0, 32,
+       MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget},
+      {"fixup_riscv_got_hi20", 12, 20, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_tprel_hi20", 12, 20, 0},
+      {"fixup_riscv_tprel_lo12_i", 20, 12, 0},
+      {"fixup_riscv_tprel_lo12_s", 0, 32, 0},
+      {"fixup_riscv_tprel_add", 0, 0, 0},
+      {"fixup_riscv_tls_got_hi20", 12, 20, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_tls_gd_hi20", 12, 20, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_jal", 12, 20, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_branch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_rvc_jump", 2, 11, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_rvc_branch", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_call", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_call_plt", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_relax", 0, 0, 0},
+      {"fixup_riscv_align", 0, 0, 0}};
+  static_assert((array_lengthof(Infos)) == RISCV::NumTargetFixupKinds,
+                "Not all fixup kinds added to Infos array");
+
+  // Fixup kinds from .reloc directive are like R_RISCV_NONE. They
+  // do not require any extra processing.
+  if (Kind >= FirstLiteralRelocationKind)
+    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+         "Invalid kind!");
+  return Infos[Kind - FirstTargetFixupKind];
+}
+
 // If linker relaxation is enabled, or the relax option had previously been
 // enabled, always emit relocations even if the fixup can be resolved. This is
 // necessary for correctness as offsets may change during relaxation.
 bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                             const MCFixup &Fixup,
                                             const MCValue &Target) {
+  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+    return true;
   switch (Fixup.getTargetKind()) {
   default:
     break;
@@ -76,10 +139,10 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   }
 }
 
-void RISCVAsmBackend::relaxInstruction(const MCInst &Inst,
-                                       const MCSubtargetInfo &STI,
-                                       MCInst &Res) const {
+void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
+                                       const MCSubtargetInfo &STI) const {
   // TODO: replace this with call to auto generated uncompressinstr() function.
+  MCInst Res;
   switch (Inst.getOpcode()) {
   default:
     llvm_unreachable("Opcode not expected!");
@@ -110,6 +173,7 @@ void RISCVAsmBackend::relaxInstruction(const MCInst &Inst,
     Res.addOperand(Inst.getOperand(0));
     break;
   }
+  Inst = std::move(Res);
 }
 
 // Given a compressed control flow instruction this function returns
@@ -318,8 +382,11 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                  MutableArrayRef<char> Data, uint64_t Value,
                                  bool IsResolved,
                                  const MCSubtargetInfo *STI) const {
+  MCFixupKind Kind = Fixup.getKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return;
   MCContext &Ctx = Asm.getContext();
-  MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
+  MCFixupKindInfo Info = getFixupKindInfo(Kind);
   if (!Value)
     return; // Doesn't change encoding.
   // Apply any target-specific value adjustments.

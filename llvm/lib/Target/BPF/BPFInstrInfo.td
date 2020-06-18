@@ -526,7 +526,7 @@ class NOP_I<string OpcodeStr>
   let BPFClass = BPF_ALU64;
 }
 
-let hasSideEffects = 0 in
+let hasSideEffects = 0, isCodeGenOnly = 1 in
   def NOP : NOP_I<"nop">;
 
 class RET<string OpcodeStr>
@@ -732,8 +732,7 @@ let isCodeGenOnly = 1 in {
 def : Pat<(i64 (sext GPR32:$src)),
           (SRA_ri (SLL_ri (MOV_32_64 GPR32:$src), 32), 32)>;
 
-def : Pat<(i64 (zext GPR32:$src)),
-          (SRL_ri (SLL_ri (MOV_32_64 GPR32:$src), 32), 32)>;
+def : Pat<(i64 (zext GPR32:$src)), (MOV_32_64 GPR32:$src)>;
 
 // For i64 -> i32 truncation, use the 32-bit subregister directly.
 def : Pat<(i32 (trunc GPR:$src)),

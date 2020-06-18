@@ -1,10 +1,12 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -pass-remarks-analysis=asm-printer \
+; RUN:       --debugify-and-strip-all-safe=0 \
 ; RUN:       -verify-machineinstrs \
 ; RUN:       -pass-remarks-with-hotness=1 -asm-verbose=0 \
 ; RUN:       -debug-only=lazy-machine-block-freq,block-freq \
 ; RUN:       -debug-pass=Executions 2>&1 | FileCheck %s -check-prefix=HOTNESS
 
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -pass-remarks-analysis=asm-printer \
+; RUN:       --debugify-and-strip-all-safe=0 \
 ; RUN:       -verify-machineinstrs \
 ; RUN:       -pass-remarks-with-hotness=0 -asm-verbose=0 \
 ; RUN:       -debug-only=lazy-machine-block-freq,block-freq \

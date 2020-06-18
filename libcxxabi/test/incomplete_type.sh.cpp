@@ -13,16 +13,16 @@
 // incomplete flags set, equality can be tested by comparing the type_info
 // addresses.
 
-// UNSUPPORTED: libcxxabi-no-exceptions
+// UNSUPPORTED: no-exceptions
 
-// NOTE: Pass -lc++abi explicitly and before -lc++ so that -lc++ doesn't drag
+// NOTE: Link libc++abi explicitly and before libc++ so that libc++ doesn't drag
 // in the system libc++abi installation on OS X. (DYLD_LIBRARY_PATH is ignored
 // for shell tests because of Apple security features).
 
-// RUN: %cxx %flags %compile_flags -c %s -o %t.one.o
-// RUN: %cxx %flags %compile_flags -c %s -o %t.two.o -DTU_ONE
-// RUN: %cxx %flags %t.one.o %t.two.o -lc++abi %link_flags -o %t.exe
-// RUN: %t.exe
+// RUN: %{cxx} %{flags} %{compile_flags} -Wno-unreachable-code -c %s -o %t.one.o
+// RUN: %{cxx} %{flags} %{compile_flags} -Wno-unreachable-code -c %s -o %t.two.o -DTU_ONE
+// RUN: %{cxx} %{flags} %t.one.o %t.two.o %{link_libcxxabi} %{link_flags} -o %t.exe
+// RUN: %{exec} %t.exe
 
 #include <stdio.h>
 #include <cstring>

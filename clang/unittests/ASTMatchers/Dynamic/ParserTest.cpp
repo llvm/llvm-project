@@ -221,6 +221,15 @@ TEST(ParserTest, FullParserTest) {
   EXPECT_FALSE(matches("int x = 1 - false;", M));
   EXPECT_FALSE(matches("int x = true - 1;", M));
 
+  Code = "implicitCastExpr(hasCastKind(\"CK_IntegralToBoolean\"))";
+  llvm::Optional<DynTypedMatcher> implicitIntBooleanCast(
+      Parser::parseMatcherExpression(Code, nullptr, nullptr, &Error));
+  EXPECT_EQ("", Error.toStringFull());
+  Matcher<Stmt> MCastStmt =
+      traverse(TK_AsIs, implicitIntBooleanCast->unconditionalConvertTo<Stmt>());
+  EXPECT_TRUE(matches("bool X = 1;", MCastStmt));
+  EXPECT_FALSE(matches("bool X = true;", MCastStmt));
+
   Code = "functionDecl(hasParameter(1, hasName(\"x\")))";
   llvm::Optional<DynTypedMatcher> HasParameter(
       Parser::parseMatcherExpression(Code, &Error));
@@ -241,6 +250,14 @@ TEST(ParserTest, FullParserTest) {
 
   EXPECT_TRUE(matches("void f(int a, int x);", M));
   EXPECT_FALSE(matches("void f(int x, int a);", M));
+
+  Code = "unaryExprOrTypeTraitExpr(ofKind(\"UETT_SizeOf\"))";
+  llvm::Optional<DynTypedMatcher> UnaryExprSizeOf(
+      Parser::parseMatcherExpression(Code, nullptr, nullptr, &Error));
+  EXPECT_EQ("", Error.toStringFull());
+  Matcher<Stmt> MStmt = UnaryExprSizeOf->unconditionalConvertTo<Stmt>();
+  EXPECT_TRUE(matches("unsigned X = sizeof(int);", MStmt));
+  EXPECT_FALSE(matches("unsigned X = alignof(int);", MStmt));
 
   Code = "hasInitializer(\n    binaryOperator(hasLHS(\"A\")))";
   EXPECT_TRUE(!Parser::parseMatcherExpression(Code, &Error).hasValue());
@@ -317,6 +334,20 @@ TEST(ParserTest, Errors) {
   EXPECT_EQ("Input value has unresolved overloaded type: "
             "Matcher<DoStmt|ForStmt|WhileStmt|CXXForRangeStmt|FunctionDecl>",
             ParseMatcherWithError("hasBody(stmt())"));
+  EXPECT_EQ(
+      "1:1: Error parsing argument 1 for matcher decl.\n"
+      "1:6: Error building matcher hasAttr.\n"
+      "1:14: Unknown value 'attr::Fnal' for arg 1; did you mean 'attr::Final'",
+      ParseMatcherWithError(R"query(decl(hasAttr("attr::Fnal")))query"));
+  EXPECT_EQ("1:1: Error parsing argument 1 for matcher decl.\n"
+            "1:6: Error building matcher hasAttr.\n"
+            "1:14: Unknown value 'Final' for arg 1; did you mean 'attr::Final'",
+            ParseMatcherWithError(R"query(decl(hasAttr("Final")))query"));
+  EXPECT_EQ("1:1: Error parsing argument 1 for matcher decl.\n"
+            "1:6: Error building matcher hasAttr.\n"
+            "1:14: Incorrect type for arg 1. (Expected = string) != (Actual = "
+            "String)",
+            ParseMatcherWithError(R"query(decl(hasAttr("unrelated")))query"));
 }
 
 TEST(ParserTest, OverloadErrors) {

@@ -26,8 +26,7 @@ Sections:
     AddressAlign:    0x0000000000000004
     Info:            .text
     Relocations:
-      - Offset:          0x0000000000000000
-        Type:            R_ARM_V4BX
+      - Type:        R_ARM_V4BX
 Symbols:
   - Name:            .text
     Type:            STT_SECTION

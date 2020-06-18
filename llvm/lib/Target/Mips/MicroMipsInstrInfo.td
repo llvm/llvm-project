@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This files describes the defintions of the microMIPSr3 instructions.
+// This files describes the definitions of the microMIPSr3 instructions.
 //
 //===----------------------------------------------------------------------===//
 

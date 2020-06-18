@@ -348,7 +348,7 @@ public:
   /// program.
   static bool isVisible(Sema &SemaRef, NamedDecl *D) {
     // If this declaration is not hidden, it's visible.
-    if (!D->isHidden())
+    if (D->isUnconditionallyVisible())
       return true;
 
     // During template instantiation, we can refer to hidden declarations, if

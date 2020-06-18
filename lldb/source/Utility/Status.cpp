@@ -42,8 +42,13 @@ Status::Status() : m_code(0), m_type(eErrorTypeInvalid), m_string() {}
 Status::Status(ValueType err, ErrorType type)
     : m_code(err), m_type(type), m_string() {}
 
+// This logic is confusing because c++ calls the traditional (posix) errno codes
+// "generic errors", while we use the term "generic" to mean completely
+// arbitrary (text-based) errors.
 Status::Status(std::error_code EC)
-    : m_code(EC.value()), m_type(ErrorType::eErrorTypeGeneric),
+    : m_code(EC.value()),
+      m_type(EC.category() == std::generic_category() ? eErrorTypePOSIX
+                                                      : eErrorTypeGeneric),
       m_string(EC.message()) {}
 
 Status::Status(const char *format, ...)

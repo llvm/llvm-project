@@ -21,7 +21,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# DISASM:      _start:
+# DISASM:      <_start>:
 # DISASM-NEXT:   callq {{.*}} <func@plt>
 # DISASM-NEXT:   callq {{.*}} <ifunc@plt>
 

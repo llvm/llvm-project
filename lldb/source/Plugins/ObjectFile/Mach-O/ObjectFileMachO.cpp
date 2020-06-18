@@ -1150,6 +1150,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDWARFDebugStrDwo:
         case eSectionTypeDWARFDebugStrOffsets:
         case eSectionTypeDWARFDebugStrOffsetsDwo:
+        case eSectionTypeDWARFDebugTuIndex:
         case eSectionTypeDWARFDebugTypes:
         case eSectionTypeDWARFDebugTypesDwo:
         case eSectionTypeDWARFAppleNames:
@@ -1906,6 +1907,7 @@ protected:
   std::vector<SectionInfo> m_section_infos;
 };
 
+#define TRIE_SYMBOL_IS_THUMB (1ULL << 63)
 struct TrieEntry {
   void Dump() const {
     printf("0x%16.16llx 0x%16.16llx 0x%16.16llx \"%s\"",
@@ -1919,7 +1921,9 @@ struct TrieEntry {
   }
   ConstString name;
   uint64_t address = LLDB_INVALID_ADDRESS;
-  uint64_t flags = 0;
+  uint64_t flags =
+      0; // EXPORT_SYMBOL_FLAGS_REEXPORT, EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER,
+         // TRIE_SYMBOL_IS_THUMB
   uint64_t other = 0;
   ConstString import_name;
 };
@@ -1942,13 +1946,16 @@ struct TrieEntryWithOffset {
 };
 
 static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
-                             const bool is_arm,
+                             const bool is_arm, addr_t text_seg_base_addr,
                              std::vector<llvm::StringRef> &nameSlices,
                              std::set<lldb::addr_t> &resolver_addresses,
-                             std::vector<TrieEntryWithOffset> &output) {
+                             std::vector<TrieEntryWithOffset> &reexports,
+                             std::vector<TrieEntryWithOffset> &ext_symbols) {
   if (!data.ValidOffset(offset))
     return true;
 
+  // Terminal node -- end of a branch, possibly add this to
+  // the symbol table or resolver table.
   const uint64_t terminalSize = data.GetULEB128(&offset);
   lldb::offset_t children_offset = offset + terminalSize;
   if (terminalSize != 0) {
@@ -1961,6 +1968,8 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
       import_name = data.GetCStr(&offset);
     } else {
       e.entry.address = data.GetULEB128(&offset);
+      if (text_seg_base_addr != LLDB_INVALID_ADDRESS)
+        e.entry.address += text_seg_base_addr;
       if (e.entry.flags & EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER) {
         e.entry.other = data.GetULEB128(&offset);
         uint64_t resolver_addr = e.entry.other;
@@ -1970,9 +1979,18 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
       } else
         e.entry.other = 0;
     }
-    // Only add symbols that are reexport symbols with a valid import name
-    if (EXPORT_SYMBOL_FLAGS_REEXPORT & e.entry.flags && import_name &&
-        import_name[0]) {
+    bool add_this_entry = false;
+    if (Flags(e.entry.flags).Test(EXPORT_SYMBOL_FLAGS_REEXPORT) &&
+        import_name && import_name[0]) {
+      // add symbols that are reexport symbols with a valid import name.
+      add_this_entry = true;
+    } else if (e.entry.flags == 0 &&
+               (import_name == nullptr || import_name[0] == '\0')) {
+      // add externally visible symbols, in case the nlist record has
+      // been stripped/omitted.
+      add_this_entry = true;
+    }
+    if (add_this_entry) {
       std::string name;
       if (!nameSlices.empty()) {
         for (auto name_slice : nameSlices)
@@ -1986,7 +2004,15 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
         // Skip the leading '_'
         e.entry.import_name.SetCString(import_name + 1);
       }
-      output.push_back(e);
+      if (Flags(e.entry.flags).Test(EXPORT_SYMBOL_FLAGS_REEXPORT)) {
+        reexports.push_back(e);
+      } else {
+        if (is_arm && (e.entry.address & 1)) {
+          e.entry.flags |= TRIE_SYMBOL_IS_THUMB;
+          e.entry.address &= THUMB_ADDRESS_BIT_MASK;
+        }
+        ext_symbols.push_back(e);
+      }
     }
   }
 
@@ -1999,14 +2025,75 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
       return false; // Corrupt data
     lldb::offset_t childNodeOffset = data.GetULEB128(&children_offset);
     if (childNodeOffset) {
-      if (!ParseTrieEntries(data, childNodeOffset, is_arm, nameSlices,
-                            resolver_addresses, output)) {
+      if (!ParseTrieEntries(data, childNodeOffset, is_arm, text_seg_base_addr,
+                            nameSlices, resolver_addresses, reexports,
+                            ext_symbols)) {
         return false;
       }
     }
     nameSlices.pop_back();
   }
   return true;
+}
+
+static SymbolType GetSymbolType(const char *&symbol_name,
+                                bool &demangled_is_synthesized,
+                                const SectionSP &text_section_sp,
+                                const SectionSP &data_section_sp,
+                                const SectionSP &data_dirty_section_sp,
+                                const SectionSP &data_const_section_sp,
+                                const SectionSP &symbol_section) {
+  SymbolType type = eSymbolTypeInvalid;
+
+  const char *symbol_sect_name = symbol_section->GetName().AsCString();
+  if (symbol_section->IsDescendant(text_section_sp.get())) {
+    if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
+                                S_ATTR_SELF_MODIFYING_CODE |
+                                S_ATTR_SOME_INSTRUCTIONS))
+      type = eSymbolTypeData;
+    else
+      type = eSymbolTypeCode;
+  } else if (symbol_section->IsDescendant(data_section_sp.get()) ||
+             symbol_section->IsDescendant(data_dirty_section_sp.get()) ||
+             symbol_section->IsDescendant(data_const_section_sp.get())) {
+    if (symbol_sect_name &&
+        ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
+      type = eSymbolTypeRuntime;
+
+      if (symbol_name) {
+        llvm::StringRef symbol_name_ref(symbol_name);
+        if (symbol_name_ref.startswith("OBJC_")) {
+          static const llvm::StringRef g_objc_v2_prefix_class("OBJC_CLASS_$_");
+          static const llvm::StringRef g_objc_v2_prefix_metaclass(
+              "OBJC_METACLASS_$_");
+          static const llvm::StringRef g_objc_v2_prefix_ivar("OBJC_IVAR_$_");
+          if (symbol_name_ref.startswith(g_objc_v2_prefix_class)) {
+            symbol_name = symbol_name + g_objc_v2_prefix_class.size();
+            type = eSymbolTypeObjCClass;
+            demangled_is_synthesized = true;
+          } else if (symbol_name_ref.startswith(g_objc_v2_prefix_metaclass)) {
+            symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
+            type = eSymbolTypeObjCMetaClass;
+            demangled_is_synthesized = true;
+          } else if (symbol_name_ref.startswith(g_objc_v2_prefix_ivar)) {
+            symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
+            type = eSymbolTypeObjCIVar;
+            demangled_is_synthesized = true;
+          }
+        }
+      }
+    } else if (symbol_sect_name &&
+               ::strstr(symbol_sect_name, "__gcc_except_tab") ==
+                   symbol_sect_name) {
+      type = eSymbolTypeException;
+    } else {
+      type = eSymbolTypeData;
+    }
+  } else if (symbol_sect_name &&
+             ::strstr(symbol_sect_name, "__IMPORT") == symbol_sect_name) {
+    type = eSymbolTypeTrampoline;
+  }
+  return type;
 }
 
 // Read the UUID out of a dyld_shared_cache file on-disk.
@@ -2065,7 +2152,15 @@ size_t ObjectFileMachO::ParseSymtab() {
   struct symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
   struct linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
   struct dyld_info_command dyld_info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  // The data element of type bool indicates that this entry is thumb
+  // code.
   typedef AddressDataArray<lldb::addr_t, bool, 100> FunctionStarts;
+
+  // Record the address of every function/data that we add to the symtab.
+  // We add symbols to the table in the order of most information (nlist
+  // records) to least (function starts), and avoid duplicating symbols
+  // via this set.
+  std::set<addr_t> symbols_added;
   FunctionStarts function_starts;
   lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
   uint32_t i;
@@ -2090,29 +2185,6 @@ size_t ObjectFileMachO::ParseSymtab() {
       if (m_data.GetU32(&offset, &symtab_load_command.symoff, 4) ==
           nullptr) // fill in symoff, nsyms, stroff, strsize fields
         return 0;
-      if (symtab_load_command.symoff == 0) {
-        if (log)
-          module_sp->LogMessage(log, "LC_SYMTAB.symoff == 0");
-        return 0;
-      }
-
-      if (symtab_load_command.stroff == 0) {
-        if (log)
-          module_sp->LogMessage(log, "LC_SYMTAB.stroff == 0");
-        return 0;
-      }
-
-      if (symtab_load_command.nsyms == 0) {
-        if (log)
-          module_sp->LogMessage(log, "LC_SYMTAB.nsyms == 0");
-        return 0;
-      }
-
-      if (symtab_load_command.strsize == 0) {
-        if (log)
-          module_sp->LogMessage(log, "LC_SYMTAB.strsize == 0");
-        return 0;
-      }
       break;
 
     case LC_DYLD_INFO:
@@ -2353,27 +2425,7 @@ size_t ObjectFileMachO::ParseSymtab() {
     }
   }
 
-  if (nlist_data.GetByteSize() == 0 &&
-      memory_module_load_level == eMemoryModuleLoadLevelComplete) {
-    if (log)
-      module_sp->LogMessage(log, "failed to read nlist data");
-    return 0;
-  }
-
   const bool have_strtab_data = strtab_data.GetByteSize() > 0;
-  if (!have_strtab_data) {
-    if (process) {
-      if (strtab_addr == LLDB_INVALID_ADDRESS) {
-        if (log)
-          module_sp->LogMessage(log, "failed to locate the strtab in memory");
-        return 0;
-      }
-    } else {
-      if (log)
-        module_sp->LogMessage(log, "failed to read strtab data");
-      return 0;
-    }
-  }
 
   ConstString g_segment_name_TEXT = GetSegmentNameTEXT();
   ConstString g_segment_name_DATA = GetSegmentNameDATA();
@@ -2400,6 +2452,7 @@ size_t ObjectFileMachO::ParseSymtab() {
         section_list->FindSectionByName(g_section_name_eh_frame);
 
   const bool is_arm = (m_header.cputype == llvm::MachO::CPU_TYPE_ARM);
+  const bool always_thumb = GetArchitecture().IsAlwaysThumbInstructions();
 
   // lldb works best if it knows the start address of all functions in a
   // module. Linker symbols or debug info are normally the best source of
@@ -2425,6 +2478,14 @@ size_t ObjectFileMachO::ParseSymtab() {
            0) {
       // Now append the current entry
       function_start_entry.addr += delta;
+      if (is_arm) {
+        if (function_start_entry.addr & 1) {
+          function_start_entry.addr &= THUMB_ADDRESS_BIT_MASK;
+          function_start_entry.data = true;
+        } else if (always_thumb) {
+          function_start_entry.data = true;
+        }
+      }
       function_starts.Append(function_start_entry);
     }
   } else {
@@ -2447,6 +2508,14 @@ size_t ObjectFileMachO::ParseSymtab() {
         if (func) {
           FunctionStarts::Entry function_start_entry;
           function_start_entry.addr = func->base - text_base_addr;
+          if (is_arm) {
+            if (function_start_entry.addr & 1) {
+              function_start_entry.addr &= THUMB_ADDRESS_BIT_MASK;
+              function_start_entry.data = true;
+            } else if (always_thumb) {
+              function_start_entry.data = true;
+            }
+          }
           function_starts.Append(function_start_entry);
         }
       }
@@ -2507,25 +2576,21 @@ size_t ObjectFileMachO::ParseSymtab() {
   std::string memory_symbol_name;
   uint32_t unmapped_local_symbols_found = 0;
 
-  std::vector<TrieEntryWithOffset> trie_entries;
+  std::vector<TrieEntryWithOffset> reexport_trie_entries;
+  std::vector<TrieEntryWithOffset> external_sym_trie_entries;
   std::set<lldb::addr_t> resolver_addresses;
 
   if (dyld_trie_data.GetByteSize() > 0) {
-    std::vector<llvm::StringRef> nameSlices;
-    ParseTrieEntries(dyld_trie_data, 0, is_arm, nameSlices, resolver_addresses,
-                     trie_entries);
-
     ConstString text_segment_name("__TEXT");
     SectionSP text_segment_sp =
         GetSectionList()->FindSectionByName(text_segment_name);
-    if (text_segment_sp) {
-      const lldb::addr_t text_segment_file_addr =
-          text_segment_sp->GetFileAddress();
-      if (text_segment_file_addr != LLDB_INVALID_ADDRESS) {
-        for (auto &e : trie_entries)
-          e.entry.address += text_segment_file_addr;
-      }
-    }
+    lldb::addr_t text_segment_file_addr = LLDB_INVALID_ADDRESS;
+    if (text_segment_sp)
+      text_segment_file_addr = text_segment_sp->GetFileAddress();
+    std::vector<llvm::StringRef> nameSlices;
+    ParseTrieEntries(dyld_trie_data, 0, is_arm, text_segment_file_addr,
+                     nameSlices, resolver_addresses, reexport_trie_entries,
+                     external_sym_trie_entries);
   }
 
   typedef std::set<ConstString> IndirectSymbols;
@@ -3505,8 +3570,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                               N_FUN_addr_to_sym_idx.equal_range(nlist.n_value);
                           if (range.first != range.second) {
                             bool found_it = false;
-                            for (const auto pos = range.first;
-                                 pos != range.second; ++pos) {
+                            for (auto pos = range.first; pos != range.second;
+                                 ++pos) {
                               if (sym[sym_idx].GetMangled().GetName(
                                       lldb::eLanguageTypeUnknown,
                                       Mangled::ePreferMangled) ==
@@ -3550,8 +3615,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                               nlist.n_value);
                           if (range.first != range.second) {
                             bool found_it = false;
-                            for (const auto pos = range.first;
-                                 pos != range.second; ++pos) {
+                            for (auto pos = range.first; pos != range.second;
+                                 ++pos) {
                               if (sym[sym_idx].GetMangled().GetName(
                                       lldb::eLanguageTypeUnknown,
                                       Mangled::ePreferMangled) ==
@@ -3597,6 +3662,9 @@ size_t ObjectFileMachO::ParseSymtab() {
                                     symbol_section);
                                 sym[GSYM_sym_idx].GetAddressRef().SetOffset(
                                     symbol_value);
+                                symbols_added.insert(sym[GSYM_sym_idx]
+                                                         .GetAddress()
+                                                         .GetFileAddress());
                                 // We just need the flags from the linker
                                 // symbol, so put these flags
                                 // into the N_GSYM flags to avoid duplicate
@@ -3616,6 +3684,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                       if (set_value) {
                         sym[sym_idx].GetAddressRef().SetSection(symbol_section);
                         sym[sym_idx].GetAddressRef().SetOffset(symbol_value);
+                        symbols_added.insert(
+                            sym[sym_idx].GetAddress().GetFileAddress());
                       }
                       sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
 
@@ -4427,6 +4497,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                 // invalid address of zero when the global is a common symbol.
                 sym[GSYM_sym_idx].GetAddressRef().SetSection(symbol_section);
                 sym[GSYM_sym_idx].GetAddressRef().SetOffset(symbol_value);
+                symbols_added.insert(
+                    sym[GSYM_sym_idx].GetAddress().GetFileAddress());
                 // We just need the flags from the linker symbol, so put these
                 // flags into the N_GSYM flags to avoid duplicate symbols in
                 // the symbol table.
@@ -4444,6 +4516,7 @@ size_t ObjectFileMachO::ParseSymtab() {
       if (set_value) {
         sym[sym_idx].GetAddressRef().SetSection(symbol_section);
         sym[sym_idx].GetAddressRef().SetOffset(symbol_value);
+        symbols_added.insert(sym[sym_idx].GetAddress().GetFileAddress());
       }
       sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
       if (nlist.n_desc & N_WEAK_REF)
@@ -4500,12 +4573,58 @@ size_t ObjectFileMachO::ParseSymtab() {
     }
   }
 
+  // Count how many trie symbols we'll add to the symbol table
+  int trie_symbol_table_augment_count = 0;
+  for (auto &e : external_sym_trie_entries) {
+    if (symbols_added.find(e.entry.address) == symbols_added.end())
+      trie_symbol_table_augment_count++;
+  }
+
+  if (num_syms < sym_idx + trie_symbol_table_augment_count) {
+    num_syms = sym_idx + trie_symbol_table_augment_count;
+    sym = symtab->Resize(num_syms);
+  }
   uint32_t synthetic_sym_id = symtab_load_command.nsyms;
+
+  // Add symbols from the trie to the symbol table.
+  for (auto &e : external_sym_trie_entries) {
+    if (symbols_added.find(e.entry.address) != symbols_added.end())
+      continue;
+
+    // Find the section that this trie address is in, use that to annotate
+    // symbol type as we add the trie address and name to the symbol table.
+    Address symbol_addr;
+    if (module_sp->ResolveFileAddress(e.entry.address, symbol_addr)) {
+      SectionSP symbol_section(symbol_addr.GetSection());
+      const char *symbol_name = e.entry.name.GetCString();
+      bool demangled_is_synthesized = false;
+      SymbolType type =
+          GetSymbolType(symbol_name, demangled_is_synthesized, text_section_sp,
+                        data_section_sp, data_dirty_section_sp,
+                        data_const_section_sp, symbol_section);
+
+      sym[sym_idx].SetType(type);
+      if (symbol_section) {
+        sym[sym_idx].SetID(synthetic_sym_id++);
+        sym[sym_idx].GetMangled().SetMangledName(ConstString(symbol_name));
+        if (demangled_is_synthesized)
+          sym[sym_idx].SetDemangledNameIsSynthesized(true);
+        sym[sym_idx].SetIsSynthetic(true);
+        sym[sym_idx].SetExternal(true);
+        sym[sym_idx].GetAddressRef() = symbol_addr;
+        symbols_added.insert(symbol_addr.GetFileAddress());
+        if (e.entry.flags & TRIE_SYMBOL_IS_THUMB)
+          sym[sym_idx].SetFlags(MACHO_NLIST_ARM_SYMBOL_IS_THUMB);
+        ++sym_idx;
+      }
+    }
+  }
 
   if (function_starts_count > 0) {
     uint32_t num_synthetic_function_symbols = 0;
     for (i = 0; i < function_starts_count; ++i) {
-      if (!function_starts.GetEntryRef(i).data)
+      if (symbols_added.find(function_starts.GetEntryRef(i).addr) ==
+          symbols_added.end())
         ++num_synthetic_function_symbols;
     }
 
@@ -4517,14 +4636,11 @@ size_t ObjectFileMachO::ParseSymtab() {
       for (i = 0; i < function_starts_count; ++i) {
         const FunctionStarts::Entry *func_start_entry =
             function_starts.GetEntryAtIndex(i);
-        if (!func_start_entry->data) {
+        if (symbols_added.find(func_start_entry->addr) == symbols_added.end()) {
           addr_t symbol_file_addr = func_start_entry->addr;
           uint32_t symbol_flags = 0;
-          if (is_arm) {
-            if (symbol_file_addr & 1)
-              symbol_flags = MACHO_NLIST_ARM_SYMBOL_IS_THUMB;
-            symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-          }
+          if (func_start_entry->data)
+            symbol_flags = MACHO_NLIST_ARM_SYMBOL_IS_THUMB;
           Address symbol_addr;
           if (module_sp->ResolveFileAddress(symbol_file_addr, symbol_addr)) {
             SectionSP symbol_section(symbol_addr.GetSection());
@@ -4551,6 +4667,7 @@ size_t ObjectFileMachO::ParseSymtab() {
               sym[sym_idx].SetType(eSymbolTypeCode);
               sym[sym_idx].SetIsSynthetic(true);
               sym[sym_idx].GetAddressRef() = symbol_addr;
+              symbols_added.insert(symbol_addr.GetFileAddress());
               if (symbol_flags)
                 sym[sym_idx].SetFlags(symbol_flags);
               if (symbol_byte_size)
@@ -4651,6 +4768,7 @@ size_t ObjectFileMachO::ParseSymtab() {
                     sym[sym_idx].SetType(eSymbolTypeResolver);
                   sym[sym_idx].SetIsSynthetic(true);
                   sym[sym_idx].GetAddressRef() = so_addr;
+                  symbols_added.insert(so_addr.GetFileAddress());
                   sym[sym_idx].SetByteSize(symbol_stub_byte_size);
                   ++sym_idx;
                 }
@@ -4668,8 +4786,8 @@ size_t ObjectFileMachO::ParseSymtab() {
     }
   }
 
-  if (!trie_entries.empty()) {
-    for (const auto &e : trie_entries) {
+  if (!reexport_trie_entries.empty()) {
+    for (const auto &e : reexport_trie_entries) {
       if (e.entry.import_name) {
         // Only add indirect symbols from the Trie entries if we didn't have
         // a N_INDR nlist entry for this already
@@ -4735,7 +4853,8 @@ void ObjectFileMachO::Dump(Stream *s) {
     *s << "\n";
     SectionList *sections = GetSectionList();
     if (sections)
-      sections->Dump(s, nullptr, true, UINT32_MAX);
+      sections->Dump(s->AsRawOstream(), s->GetIndentLevel(), nullptr, true,
+                     UINT32_MAX);
 
     if (m_symtab_up)
       m_symtab_up->Dump(s, nullptr, eSortOrderNone);
@@ -5080,10 +5199,10 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       std::string loader_path("@loader_path");
       std::string executable_path("@executable_path");
       for (auto &rpath : rpath_paths) {
-        if (rpath.find(loader_path) == 0) {
+        if (llvm::StringRef(rpath).startswith(loader_path)) {
           rpath.erase(0, loader_path.size());
           rpath.insert(0, this_file_spec.GetDirectory().GetCString());
-        } else if (rpath.find(executable_path) == 0) {
+        } else if (llvm::StringRef(rpath).startswith(executable_path)) {
           rpath.erase(0, executable_path.size());
           rpath.insert(0, this_file_spec.GetDirectory().GetCString());
         }

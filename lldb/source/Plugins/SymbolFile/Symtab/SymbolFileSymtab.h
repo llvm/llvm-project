@@ -106,7 +106,8 @@ protected:
   TypeMap m_objc_class_types;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SymbolFileSymtab);
+  SymbolFileSymtab(const SymbolFileSymtab &) = delete;
+  const SymbolFileSymtab &operator=(const SymbolFileSymtab &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_SYMTAB_SYMBOLFILESYMTAB_H

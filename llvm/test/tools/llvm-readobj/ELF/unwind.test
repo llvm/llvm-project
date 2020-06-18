@@ -1,5 +1,16 @@
-# RUN: yaml2obj %s -o %t.exe
-# RUN: llvm-readobj --unwind %t.exe | FileCheck %s
+## In this test we check how the unwind information is dumped with the use of --unwind.
+
+## First, check that both llvm-readobj and llvm-readelf are able to dump a valid unwind information.
+## Check that the output is the same for these tools.
+## The memory size of the PT_GNU_EH_FRAME equals its file size and they both are equal to 0x3c.
+## 0x3c is the size of the .eh_frame_hdr section.
+# RUN: yaml2obj --docnum=1 %s -DMEMSIZE=0x3c -DFILESIZE=0x3c -o %t1.valid
+# RUN: llvm-readobj --unwind %t1.valid | FileCheck %s
+# RUN: llvm-readelf --sections --unwind %t1.valid | FileCheck %s --check-prefixes=SIZE,CHECK
+
+## Validate the size of the .eh_frame_hdr section.
+# SIZE: [Nr] Name          Type     Address          Off    Size
+# SIZE: [ 2] .eh_frame_hdr PROGBITS 00000000004013c0 0000bc 00003c
 
 # CHECK:      EHFrameHeader {
 # CHECK-NEXT:  Address: 0x4013c0
@@ -202,16 +213,151 @@ Symbols:
     Value:           0x0000000000400000
     Binding:         STB_GLOBAL
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0x00400000
-    PAddr: 0x00400000
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x00400000
+    PAddr:    0x00400000
     Sections:
       - Section: .text
   - Type: PT_GNU_EH_FRAME
     Flags: [ PF_X, PF_R ]
     VAddr: 0x004013C0
     PAddr: 0x004013C0
+    MemSize:  [[MEMSIZE]]
+    FileSize: [[FILESIZE]]
     Sections:
       - Section: .eh_frame_hdr
-...
+
+## Document we report a error when the memory size of the PT_GNU_EH_FRAME does not match its file size.
+## TODO: we want to report a warning and continue dumping instead.
+# RUN: yaml2obj --docnum=1 %s -DMEMSIZE=0x3b -DFILESIZE=0x3c -o %t1.size.mismatch
+# RUN: not llvm-readobj --unwind %t1.size.mismatch 2>&1 | \
+# RUN:   FileCheck -DFILE=%t1.size.mismatch %s --check-prefix=SIZE-MISMATCH
+# RUN: not llvm-readelf --unwind %t1.size.mismatch 2>&1 | \
+# RUN:   FileCheck -DFILE=%t1.size.mismatch %s --check-prefix=SIZE-MISMATCH
+
+# SIZE-MISMATCH: error: '[[FILE]]': p_memsz does not match p_filesz for GNU_EH_FRAME
+
+## Check we partially dump the unwind information when the PT_GNU_EH_FRAME segment
+## points to truncated data.
+# RUN: yaml2obj --docnum=1 %s -DMEMSIZE=0x1 -DFILESIZE=0x1 -o %t1.truncated
+# RUN: not llvm-readobj --unwind %t1.truncated 2>&1 | FileCheck -DFILE=%t1.truncated %s --check-prefix=TRUNCATED
+# RUN: not llvm-readelf --unwind %t1.truncated 2>&1 | FileCheck -DFILE=%t1.truncated %s --check-prefix=TRUNCATED
+
+# TRUNCATED:      EHFrameHeader {
+# TRUNCATED-NEXT:   Address: 0x4013c0
+# TRUNCATED-NEXT:   Offset: 0xbc
+# TRUNCATED-NEXT:   Size: 0x1
+# TRUNCATED-NEXT:   Corresponding Section: .eh_frame_hdr
+# TRUNCATED-NEXT:   Header {
+# TRUNCATED-NEXT:     version: 1
+# TRUNCATED-NEXT:     eh_frame_ptr_enc: 0x0
+# TRUNCATED-NEXT: error: '[[FILE]]': unexpected encoding eh_frame_ptr_enc
+
+## Check we report an error when the tool is unable to parse .eh_frame section.
+# RUN: yaml2obj --docnum=2 %s -o %t2.exe
+# RUN: not llvm-readobj --unwind %t2.exe 2>&1 | FileCheck %s -DFILE=%t2.exe --check-prefix=NO-CIE-ERR
+
+# NO-CIE-ERR:      .eh_frame section at offset 0x40 address 0x0:
+# NO-CIE-ERR-NEXT: error: '[[FILE]]': parsing FDE data at 0x0 failed due to missing CIE
+# NO-CIE-ERR-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .eh_frame
+    Type: SHT_X86_64_UNWIND
+## The content is generated from the following code. It has no CIE.
+## See the DebugInfoX86/eh-frame-cie-id.s test case for more history.
+## .section .eh_frame,"a",@unwind
+## .long .Lend - .LCIEptr  # Length
+## .LCIEptr:
+##   .long 0xffffffff # CIE pointer
+##   .quad 0x1111abcd # Initial location
+##   .quad 0x00010000 # Address range
+## .Lend:
+    Content: 14000000FFFFFFFFCDAB1111000000000000010000000000
+
+## Check we report a error when the .eh_frame section contains truncated data.
+# RUN: yaml2obj --docnum=3 %s -o %t3.exe
+# RUN: not llvm-readobj --unwind %t3.exe 2>&1 | FileCheck %s -DFILE=%t3.exe --check-prefix=TRUNCATED-ERR
+
+# TRUNCATED-ERR:      .eh_frame section at offset 0x34 address 0x0:
+# TRUNCATED-ERR-NEXT: error: '[[FILE]]': unexpected end of data at offset 0x4
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+Sections:
+  - Name:    .eh_frame
+    Type:    SHT_PROGBITS
+## Length is set to 0xFF, though the actual section length is 4.
+    Content: "FF000000"
+
+## Check we report an error when we can't read the content of the .eh_frame section.
+
+## Case A: test we report an error when the p_offset of the PT_GNU_EH_FRAME
+##         is invalid (goes past the end of the file).
+
+# RUN: yaml2obj --docnum=4 %s -o %t4 -DOFFSET=0xffff0000 -DSIZE=0x1 -DBITS=32
+# RUN: not llvm-readobj --unwind %t4 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t4 --check-prefix=BROKEN-CONTENT -DOFFSET=0xffff0000 -DSIZE=0x1
+
+# RUN: yaml2obj --docnum=4 %s -o %t5 -DOFFSET=0x1 -DSIZE=0xffff0000 -DBITS=32
+# RUN: not llvm-readobj --unwind %t5 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t5 --check-prefix=BROKEN-CONTENT -DOFFSET=0x1 -DSIZE=0xffff0000
+
+# BROKEN-CONTENT:      EHFrameHeader {
+# BROKEN-CONTENT-NEXT:   Address: 0x0
+# BROKEN-CONTENT-NEXT:   Offset:  [[OFFSET]]
+# BROKEN-CONTENT-NEXT:   Size:    [[SIZE]]
+# BROKEN-CONTENT-NEXT:   Corresponding Section:
+# BROKEN-CONTENT-NEXT: error: '[[FILE]]': program header  [index 0] has a p_offset ([[OFFSET]]) + p_filesz ([[SIZE]]) that is greater than the file size (0xe0)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_NONE
+ProgramHeaders:
+  - Type: PT_GNU_EH_FRAME
+    MemSize:  [[SIZE]]
+    FileSize: [[SIZE]]
+    Offset:   [[OFFSET]]
+    Sections: []
+
+## Case B: test we report an error when the file size of the PT_GNU_EH_FRAME
+##         is invalid (goes past the end of the file).
+# RUN: yaml2obj --docnum=4 %s -o %t6 -DOFFSET=0x100 -DSIZE=0xffff0000 -DBITS=32
+# RUN: not llvm-readobj --unwind %t6 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t6 --check-prefix=BROKEN-CONTENT -DOFFSET=0x100 -DSIZE=0xffff0000
+
+## Case C: test we report an error when the offset + the file size of the PT_GNU_EH_FRAME is so large a
+##         value that it overflows the platform address size type.
+
+# RUN: yaml2obj --docnum=4 %s -o %t7 -DOFFSET=0x1 -DSIZE=0xffffffff -DBITS=32
+# RUN: not llvm-readobj --unwind %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0x1 -DSIZE=0xffffffff
+
+# RUN: yaml2obj --docnum=4 %s -o %t8 -DOFFSET=0xffffffff -DSIZE=0x1 -DBITS=32
+# RUN: not llvm-readobj --unwind %t8 2>&1 | FileCheck %s -DFILE=%t8 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0xffffffff -DSIZE=0x1
+
+# RUN: yaml2obj --docnum=4 %s -o %t9 -DOFFSET=0x1 -DSIZE=0xffffffffffffffff -DBITS=64
+# RUN: not llvm-readelf --unwind %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0x1 -DSIZE=0xffffffffffffffff
+
+# RUN: yaml2obj --docnum=4 %s -o %t10 -DOFFSET=0xffffffffffffffff -DSIZE=0x1 -DBITS=64
+# RUN: not llvm-readelf --unwind %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0xffffffffffffffff -DSIZE=0x1
+
+# BROKEN-CONTENT2:      EHFrameHeader {
+# BROKEN-CONTENT2-NEXT:   Address: 0x0
+# BROKEN-CONTENT2-NEXT:   Offset: [[OFFSET]]
+# BROKEN-CONTENT2-NEXT:   Size:   [[SIZE]]
+# BROKEN-CONTENT2-NEXT:   Corresponding Section:
+# BROKEN-CONTENT2-NEXT: error: '[[FILE]]': program header [index 0] has a p_offset ([[OFFSET]]) + p_filesz ([[SIZE]]) that cannot be represented

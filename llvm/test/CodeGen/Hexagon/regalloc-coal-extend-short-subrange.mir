@@ -1,0 +1,45 @@
+# RUN: llc -march=hexagon -run-pass simple-register-coalescing -verify-coalescing %s -o - | FileCheck %s
+#
+# Check that this doesn't crash.
+# CHECK: ENDLOOP
+
+---
+name:            foo
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $r0, $r1, $r2, $v0, $v1, $v2, $v3
+
+    %0:hvxwr = COPY $v0
+    %1:intregs = COPY $r0
+    %2:predregs = C2_cmpgtui %1, 2
+    %3:intregs = COPY $r1
+    %4:intregs = COPY $r2
+    %5:hvxvr = COPY $v1
+    %6:hvxwr = V6_vcombine $v1, $v0
+    %7:hvxqr = IMPLICIT_DEF
+    J2_loop0r %bb.1, %3, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jumpf %2, %bb.2, implicit-def $pc
+    J2_jump %bb.1, implicit-def $pc
+
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    %8:hvxwr = COPY %0
+    %9:hvxvr = V6_vL32b_ai %4, 0
+    %10:hvxvr = V6_vL32b_ai %4, 128
+    %5:hvxvr = V6_vaddwq %7, %5, %9
+    %11:hvxqr = V6_vgtuw %10, %0.vsub_lo
+    %12:hvxvr = V6_vL32b_ai %4, 256
+    %13:hvxvr = V6_vL32b_ai %4, 384
+    %5:hvxvr = V6_vaddwq %11, %5, %13
+    %7:hvxqr = V6_vgtuw %6.vsub_hi, %13
+    %0:hvxwr = COPY %8
+    %0:hvxwr = V6_vmpyhv_acc %0, %12, %12
+    %6:hvxwr = COPY %8
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def $pc
+
+  bb.2:
+...

@@ -8,7 +8,6 @@ define i64 @test1(i64 %hi, i64 %lo, i64 %bits) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    andl $63, %ecx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    shldq %cl, %rsi, %rax
 ; CHECK-NEXT:    retq
@@ -25,7 +24,6 @@ define i64 @test2(i64 %hi, i64 %lo, i64 %bits) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    andl $63, %ecx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    shrdq %cl, %rdi, %rax
 ; CHECK-NEXT:    retq

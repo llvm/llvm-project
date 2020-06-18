@@ -11,6 +11,8 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
+#include "../bugprone/SignedCharMisuseCheck.h"
+#include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
@@ -42,6 +44,9 @@ class CERTModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     // C++ checkers
+    // CON
+    CheckFactories.registerCheck<bugprone::SpuriouslyWakeUpFunctionsCheck>(
+        "cert-con54-cpp");
     // DCL
     CheckFactories.registerCheck<PostfixOperatorCheck>(
         "cert-dcl21-cpp");
@@ -80,6 +85,9 @@ public:
         "cert-oop58-cpp");
 
     // C checkers
+    // CON
+    CheckFactories.registerCheck<bugprone::SpuriouslyWakeUpFunctionsCheck>(
+        "cert-con36-c");
     // DCL
     CheckFactories.registerCheck<misc::StaticAssertCheck>("cert-dcl03-c");
     CheckFactories.registerCheck<readability::UppercaseLiteralSuffixCheck>(
@@ -101,6 +109,9 @@ public:
     // POS
     CheckFactories.registerCheck<bugprone::BadSignalToKillThreadCheck>(
         "cert-pos44-c");
+    // STR
+    CheckFactories.registerCheck<bugprone::SignedCharMisuseCheck>(
+        "cert-str34-c");
   }
 
   ClangTidyOptions getModuleOptions() override {
@@ -108,6 +119,7 @@ public:
     ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
     Opts["cert-dcl16-c.NewSuffixes"] = "L;LL;LU;LLU";
     Opts["cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField"] = "0";
+    Opts["cert-str34-c.DiagnoseSignedUnsignedCharComparisons"] = "0";
     return Options;
   }
 };

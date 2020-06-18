@@ -9,6 +9,7 @@ entry:
   call void @llvm.dbg.value(metadata i8 42, metadata !17, metadata !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !12
   call void @llvm.dbg.value(metadata i8 %x, metadata !11, metadata !DIExpression()), !dbg !12
   call void @llvm.dbg.value(metadata i8 %x, metadata !13, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !15
+  call void @llvm.dbg.value(metadata i8 51, metadata !18, metadata !DIExpression(DW_OP_LLVM_convert_generic, DW_OP_stack_value)), !dbg !15
   ret i8 %x, !dbg !16
 }
 
@@ -43,3 +44,4 @@ attributes #1 = { nounwind readnone speculatable }
 !15 = !DILocation(line: 3, column: 14, scope: !7)
 !16 = !DILocation(line: 4, column: 3, scope: !7)
 !17 = !DILocalVariable(name: "c", scope: !7, file: !1, line: 3, type: !14)
+!18 = !DILocalVariable(name: "d", scope: !7, file: !1, line: 3, type: !14)

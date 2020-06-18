@@ -369,8 +369,10 @@ def  : WriteRes<WriteVecStoreX,       [AtomPort0]>;
 defm : X86WriteResUnsupported<WriteVecStoreY>;
 def  : WriteRes<WriteVecStoreNT,      [AtomPort0]>;
 defm : X86WriteResUnsupported<WriteVecStoreNTY>;
-def  : WriteRes<WriteVecMaskedStore,  [AtomPort0]>;
-defm : X86WriteResUnsupported<WriteVecMaskedStoreY>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore32>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore64>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore32Y>;
+defm : X86WriteResUnsupported<WriteVecMaskedStore64Y>;
 
 def  : WriteRes<WriteVecMove,          [AtomPort0]>;
 def  : WriteRes<WriteVecMoveX,        [AtomPort01]>;

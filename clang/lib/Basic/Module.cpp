@@ -37,26 +37,21 @@ using namespace clang;
 Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
                bool IsFramework, bool IsExplicit, unsigned VisibilityID)
     : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent),
-      VisibilityID(VisibilityID), IsMissingRequirement(false),
+      VisibilityID(VisibilityID), IsUnimportable(false),
       HasIncompatibleModuleFile(false), IsAvailable(true),
       IsFromModuleFile(false), IsFramework(IsFramework), IsExplicit(IsExplicit),
       IsSystem(false), IsExternC(false), IsInferred(false),
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
-      NameVisibility(Hidden) {
+      HasUmbrellaDir(false), NameVisibility(Hidden) {
   if (Parent) {
-    if (!Parent->isAvailable())
-      IsAvailable = false;
-    if (Parent->IsSystem)
-      IsSystem = true;
-    if (Parent->IsExternC)
-      IsExternC = true;
-    if (Parent->NoUndeclaredIncludes)
-      NoUndeclaredIncludes = true;
-    if (Parent->ModuleMapIsPrivate)
-      ModuleMapIsPrivate = true;
-    IsMissingRequirement = Parent->IsMissingRequirement;
+    IsAvailable = Parent->isAvailable();
+    IsUnimportable = Parent->isUnimportable();
+    IsSystem = Parent->IsSystem;
+    IsExternC = Parent->IsExternC;
+    NoUndeclaredIncludes = Parent->NoUndeclaredIncludes;
+    ModuleMapIsPrivate = Parent->ModuleMapIsPrivate;
 
     Parent->SubModuleIndex[Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
@@ -132,6 +127,29 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
   return HasFeature;
 }
 
+bool Module::isUnimportable(const LangOptions &LangOpts,
+                            const TargetInfo &Target, Requirement &Req,
+                            Module *&ShadowingModule) const {
+  if (!IsUnimportable)
+    return false;
+
+  for (const Module *Current = this; Current; Current = Current->Parent) {
+    if (Current->ShadowingModule) {
+      ShadowingModule = Current->ShadowingModule;
+      return true;
+    }
+    for (unsigned I = 0, N = Current->Requirements.size(); I != N; ++I) {
+      if (hasFeature(Current->Requirements[I].first, LangOpts, Target) !=
+              Current->Requirements[I].second) {
+        Req = Current->Requirements[I];
+        return true;
+      }
+    }
+  }
+
+  llvm_unreachable("could not find a reason why module is unimportable");
+}
+
 bool Module::isAvailable(const LangOptions &LangOpts, const TargetInfo &Target,
                          Requirement &Req,
                          UnresolvedHeaderDirective &MissingHeader,
@@ -139,18 +157,12 @@ bool Module::isAvailable(const LangOptions &LangOpts, const TargetInfo &Target,
   if (IsAvailable)
     return true;
 
+  if (isUnimportable(LangOpts, Target, Req, ShadowingModule))
+    return false;
+
+  // FIXME: All missing headers are listed on the top-level module. Should we
+  // just look there?
   for (const Module *Current = this; Current; Current = Current->Parent) {
-    if (Current->ShadowingModule) {
-      ShadowingModule = Current->ShadowingModule;
-      return false;
-    }
-    for (unsigned I = 0, N = Current->Requirements.size(); I != N; ++I) {
-      if (hasFeature(Current->Requirements[I].first, LangOpts, Target) !=
-              Current->Requirements[I].second) {
-        Req = Current->Requirements[I];
-        return false;
-      }
-    }
     if (!Current->MissingHeaders.empty()) {
       MissingHeader = Current->MissingHeaders.front();
       return false;
@@ -239,7 +251,12 @@ Module::DirectoryName Module::getUmbrellaDir() const {
   if (Header U = getUmbrellaHeader())
     return {"", U.Entry->getDir()};
 
-  return {UmbrellaAsWritten, Umbrella.dyn_cast<const DirectoryEntry *>()};
+  return {UmbrellaAsWritten, static_cast<const DirectoryEntry *>(Umbrella)};
+}
+
+void Module::addTopHeader(const FileEntry *File) {
+  assert(File);
+  TopHeaders.insert(File);
 }
 
 ArrayRef<const FileEntry *> Module::getTopHeaders(FileManager &FileMgr) {
@@ -282,12 +299,12 @@ void Module::addRequirement(StringRef Feature, bool RequiredState,
   if (hasFeature(Feature, LangOpts, Target) == RequiredState)
     return;
 
-  markUnavailable(/*MissingRequirement*/true);
+  markUnavailable(/*Unimportable*/true);
 }
 
-void Module::markUnavailable(bool MissingRequirement) {
-  auto needUpdate = [MissingRequirement](Module *M) {
-    return M->IsAvailable || (!M->IsMissingRequirement && MissingRequirement);
+void Module::markUnavailable(bool Unimportable) {
+  auto needUpdate = [Unimportable](Module *M) {
+    return M->IsAvailable || (!M->IsUnimportable && Unimportable);
   };
 
   if (!needUpdate(this))
@@ -303,7 +320,7 @@ void Module::markUnavailable(bool MissingRequirement) {
       continue;
 
     Current->IsAvailable = false;
-    Current->IsMissingRequirement |= MissingRequirement;
+    Current->IsUnimportable |= Unimportable;
     for (submodule_iterator Sub = Current->submodule_begin(),
                          SubEnd = Current->submodule_end();
          Sub != SubEnd; ++Sub) {
@@ -637,8 +654,8 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     SmallVector<Module *, 16> Exports;
     V.M->getExportedModules(Exports);
     for (Module *E : Exports) {
-      // Don't recurse to unavailable submodules.
-      if (E->isAvailable())
+      // Don't import non-importable modules.
+      if (!E->isUnimportable())
         VisitModule({E, &V});
     }
 
@@ -652,4 +669,19 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     }
   };
   VisitModule({M, nullptr});
+}
+
+ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
+    : Signature(M.Signature), ClangModule(&M) {
+  if (M.Directory)
+    Path = M.Directory->getName();
+  if (auto *File = M.getASTFile())
+    ASTFile = File->getName();
+}
+
+std::string ASTSourceDescriptor::getModuleName() const {
+  if (ClangModule)
+    return ClangModule->Name;
+  else
+    return std::string(PCHModuleName);
 }

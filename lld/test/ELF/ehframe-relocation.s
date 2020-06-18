@@ -19,11 +19,11 @@
 // 0x200120 + 5 = 2097445
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: _start:
+// DISASM-NEXT: <_start>:
 // DISASM-NEXT:   201154: {{.*}} movq 2097440, %rax
 // DISASM-NEXT:   20115c: {{.*}} movq 2097445, %rax
 
-.section .eh_frame,"ax",@unwind
+.section .eh_frame,"a",@unwind
 
 .section .text
 .globl _start

@@ -576,12 +576,9 @@ getForwardedArgumentList(const LambdaProperties &P) {
 }
 AvoidBindCheck::AvoidBindCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      PermissiveParameterList(Options.get("PermissiveParameterList", 0) != 0) {}
+      PermissiveParameterList(Options.get("PermissiveParameterList", false)) {}
 
 void AvoidBindCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus14) // Need C++14 for generic lambdas.
-    return;
-
   Finder->addMatcher(
       callExpr(
           callee(namedDecl(

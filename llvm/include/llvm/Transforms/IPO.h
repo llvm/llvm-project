@@ -25,7 +25,6 @@ class StringRef;
 class ModuleSummaryIndex;
 class ModulePass;
 class Pass;
-class Function;
 class BasicBlock;
 class GlobalValue;
 class raw_ostream;

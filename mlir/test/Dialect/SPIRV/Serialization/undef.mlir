@@ -1,6 +1,6 @@
 // RUN: mlir-translate -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @foo() -> () "None" {
     // CHECK: {{%.*}} = spv.undef : f32
     // CHECK-NEXT: {{%.*}} = spv.undef : f32
@@ -23,7 +23,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // CHECK: spv.func {{@.*}}
   spv.func @ignore_unused_undef() -> () "None" {
     // CHECK-NEXT: spv.Return

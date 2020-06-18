@@ -289,6 +289,22 @@
 #define LLVM_REQUIRE_CONSTANT_INITIALIZATION
 #endif
 
+/// LLVM_GSL_OWNER - Apply this to owning classes like SmallVector to enable
+/// lifetime warnings.
+#if LLVM_HAS_CPP_ATTRIBUTE(gsl::Owner)
+#define LLVM_GSL_OWNER [[gsl::Owner]]
+#else
+#define LLVM_GSL_OWNER
+#endif
+
+/// LLVM_GSL_POINTER - Apply this to non-owning classes like
+/// StringRef to enable lifetime warnings.
+#if LLVM_HAS_CPP_ATTRIBUTE(gsl::Pointer)
+#define LLVM_GSL_POINTER [[gsl::Pointer]]
+#else
+#define LLVM_GSL_POINTER
+#endif
+
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress
 /// pedantic diagnostics.
 #ifdef __GNUC__
@@ -357,7 +373,6 @@
 #if __has_builtin(__builtin_assume_aligned) || LLVM_GNUC_PREREQ(4, 7, 0)
 # define LLVM_ASSUME_ALIGNED(p, a) __builtin_assume_aligned(p, a)
 #elif defined(LLVM_BUILTIN_UNREACHABLE)
-// As of today, clang does not support __builtin_assume_aligned.
 # define LLVM_ASSUME_ALIGNED(p, a) \
            (((uintptr_t(p) % (a)) == 0) ? (p) : (LLVM_BUILTIN_UNREACHABLE, (p)))
 #else
@@ -543,48 +558,4 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_ENABLE_EXCEPTIONS 1
 #endif
 
-#ifdef __cplusplus
-namespace llvm {
-
-/// Allocate a buffer of memory with the given size and alignment.
-///
-/// When the compiler supports aligned operator new, this will use it to to
-/// handle even over-aligned allocations.
-///
-/// However, this doesn't make any attempt to leverage the fancier techniques
-/// like posix_memalign due to portability. It is mostly intended to allow
-/// compatibility with platforms that, after aligned allocation was added, use
-/// reduced default alignment.
-inline void *allocate_buffer(size_t Size, size_t Alignment) {
-  return ::operator new(Size
-#ifdef __cpp_aligned_new
-                        ,
-                        std::align_val_t(Alignment)
-#endif
-  );
-}
-
-/// Deallocate a buffer of memory with the given size and alignment.
-///
-/// If supported, this will used the sized delete operator. Also if supported,
-/// this will pass the alignment to the delete operator.
-///
-/// The pointer must have been allocated with the corresponding new operator,
-/// most likely using the above helper.
-inline void deallocate_buffer(void *Ptr, size_t Size, size_t Alignment) {
-  ::operator delete(Ptr
-#ifdef __cpp_sized_deallocation
-                    ,
-                    Size
-#endif
-#ifdef __cpp_aligned_new
-                    ,
-                    std::align_val_t(Alignment)
-#endif
-  );
-}
-
-} // End namespace llvm
-
-#endif // __cplusplus
 #endif

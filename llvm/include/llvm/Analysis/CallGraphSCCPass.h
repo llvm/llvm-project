@@ -103,6 +103,10 @@ public:
   /// Old node has been deleted, and New is to be used in its place.
   void ReplaceNode(CallGraphNode *Old, CallGraphNode *New);
 
+  /// DeleteNode - This informs the SCC and the pass manager that the specified
+  /// Old node has been deleted.
+  void DeleteNode(CallGraphNode *Old);
+
   using iterator = std::vector<CallGraphNode *>::const_iterator;
 
   iterator begin() const { return Nodes.begin(); }

@@ -79,6 +79,7 @@ class TestToolBase(ToolBase):
             raise Error(e)
 
         options.test_path = os.path.abspath(options.test_path)
+        options.test_path = os.path.normcase(options.test_path)
         if not os.path.isfile(options.test_path) and not os.path.isdir(options.test_path):
             raise Error(
                 '<d>could not find test path</> <r>"{}"</>'.format(

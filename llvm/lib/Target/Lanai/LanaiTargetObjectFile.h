@@ -12,7 +12,6 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 
 namespace llvm {
-class LanaiTargetMachine;
 class LanaiTargetObjectFile : public TargetLoweringObjectFileELF {
   MCSection *SmallDataSection;
   MCSection *SmallBSSSection;
@@ -38,7 +37,7 @@ public:
 
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   unsigned &Align) const override;
+                                   Align &Alignment) const override;
 };
 } // end namespace llvm
 

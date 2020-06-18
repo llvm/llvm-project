@@ -4,8 +4,8 @@ CHECK-SAME:  "files":[
 CHECK-SAME:    {"expansions":[],
 CHECK-SAME:     "filename":"/tmp/binary-formats.c",
 CHECK-SAME:     "segments":
-CHECK-SAME:        4,40,100,true,true
-CHECK-SAME:        4,42,0,false,false
+CHECK-SAME:        4,40,100,true,true,false
+CHECK-SAME:        4,42,0,false,false,false
 CHECK-SAME:     "summary":{"functions":{"count":1,"covered":1,"percent":100},
 CHECK-SAME:                "instantiations":{"count":1,"covered":1,"percent":100},
 CHECK-SAME:                "lines":{"count":1,"covered":1,"percent":100},
@@ -24,4 +24,4 @@ CHECK-SAME:     "lines":{"count":1,"covered":1,"percent":100},
 CHECK-SAME:     "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}}}
 CHECK-SAME: ],
 CHECK-SAME: "type":"llvm.coverage.json.export"
-CHECK-SAME: "version":"2.0.0"
+CHECK-SAME: "version":"2.0.1"

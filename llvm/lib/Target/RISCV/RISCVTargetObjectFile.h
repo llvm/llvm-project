@@ -12,7 +12,6 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 
 namespace llvm {
-class RISCVTargetMachine;
 
 /// This implementation is used for RISCV ELF targets.
 class RISCVELFTargetObjectFile : public TargetLoweringObjectFileELF {
@@ -36,7 +35,7 @@ public:
 
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   unsigned &Align) const override;
+                                   Align &Alignment) const override;
 
   void getModuleMetadata(Module &M) override;
 

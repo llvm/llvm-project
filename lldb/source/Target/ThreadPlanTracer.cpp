@@ -34,23 +34,32 @@ using namespace lldb_private;
 #pragma mark ThreadPlanTracer
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread, lldb::StreamSP &stream_sp)
-    : m_thread(thread), m_single_step(true), m_enabled(false),
-      m_stream_sp(stream_sp) {}
+    : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
+      m_single_step(true), m_enabled(false), m_stream_sp(stream_sp) {}
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread)
-    : m_thread(thread), m_single_step(true), m_enabled(false), m_stream_sp() {}
+    : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
+      m_single_step(true), m_enabled(false), m_stream_sp() {}
 
 Stream *ThreadPlanTracer::GetLogStream() {
   if (m_stream_sp)
     return m_stream_sp.get();
   else {
-    TargetSP target_sp(m_thread.CalculateTarget());
+    TargetSP target_sp(GetThread().CalculateTarget());
     if (target_sp)
       return &(target_sp->GetDebugger().GetOutputStream());
   }
   return nullptr;
 }
 
+Thread &ThreadPlanTracer::GetThread() {
+  if (m_thread)
+    return *m_thread;
+    
+  ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(m_tid);
+  m_thread = thread_sp.get();
+  return *m_thread;
+}
 void ThreadPlanTracer::Log() {
   SymbolContext sc;
   bool show_frame_index = false;
@@ -58,8 +67,8 @@ void ThreadPlanTracer::Log() {
 
   Stream *stream = GetLogStream();
   if (stream) {
-    m_thread.GetStackFrameAtIndex(0)->Dump(stream, show_frame_index,
-                                           show_fullpaths);
+    GetThread().GetStackFrameAtIndex(0)->Dump(stream, show_frame_index,
+                                              show_fullpaths);
     stream->Printf("\n");
     stream->Flush();
   }
@@ -67,7 +76,7 @@ void ThreadPlanTracer::Log() {
 
 bool ThreadPlanTracer::TracerExplainsStop() {
   if (m_enabled && m_single_step) {
-    lldb::StopInfoSP stop_info = m_thread.GetStopInfo();
+    lldb::StopInfoSP stop_info = GetThread().GetStopInfo();
     return (stop_info->GetStopReason() == eStopReasonTrace);
   } else
     return false;
@@ -87,13 +96,13 @@ ThreadPlanAssemblyTracer::ThreadPlanAssemblyTracer(Thread &thread)
 Disassembler *ThreadPlanAssemblyTracer::GetDisassembler() {
   if (!m_disassembler_sp)
     m_disassembler_sp = Disassembler::FindPlugin(
-        m_thread.GetProcess()->GetTarget().GetArchitecture(), nullptr, nullptr);
+        m_process.GetTarget().GetArchitecture(), nullptr, nullptr);
   return m_disassembler_sp.get();
 }
 
 TypeFromUser ThreadPlanAssemblyTracer::GetIntPointerType() {
   if (!m_intptr_type.IsValid()) {
-    if (auto target_sp = m_thread.CalculateTarget()) {
+    if (auto target_sp = m_process.CalculateTarget()) {
       auto type_system_or_err =
           target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
@@ -125,29 +134,27 @@ void ThreadPlanAssemblyTracer::Log() {
   if (!stream)
     return;
 
-  RegisterContext *reg_ctx = m_thread.GetRegisterContext().get();
+  RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
 
   lldb::addr_t pc = reg_ctx->GetPC();
-  ProcessSP process_sp(m_thread.GetProcess());
   Address pc_addr;
   bool addr_valid = false;
   uint8_t buffer[16] = {0}; // Must be big enough for any single instruction
-  addr_valid = process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(
+  addr_valid = m_process.GetTarget().GetSectionLoadList().ResolveLoadAddress(
       pc, pc_addr);
 
-  pc_addr.Dump(stream, &m_thread, Address::DumpStyleResolvedDescription,
+  pc_addr.Dump(stream, &GetThread(), Address::DumpStyleResolvedDescription,
                Address::DumpStyleModuleWithFileAddress);
   stream->PutCString(" ");
 
   Disassembler *disassembler = GetDisassembler();
   if (disassembler) {
     Status err;
-    process_sp->ReadMemory(pc, buffer, sizeof(buffer), err);
+    m_process.ReadMemory(pc, buffer, sizeof(buffer), err);
 
     if (err.Success()) {
-      DataExtractor extractor(buffer, sizeof(buffer),
-                              process_sp->GetByteOrder(),
-                              process_sp->GetAddressByteSize());
+      DataExtractor extractor(buffer, sizeof(buffer), m_process.GetByteOrder(),
+                              m_process.GetAddressByteSize());
 
       bool data_from_file = false;
       if (addr_valid)
@@ -167,10 +174,7 @@ void ThreadPlanAssemblyTracer::Log() {
         Instruction *instruction =
             instruction_list.GetInstructionAtIndex(0).get();
         const FormatEntity::Entry *disassemble_format =
-            m_thread.GetProcess()
-                ->GetTarget()
-                .GetDebugger()
-                .GetDisassemblyFormat();
+            m_process.GetTarget().GetDebugger().GetDisassemblyFormat();
         instruction->Dump(stream, max_opcode_byte_size, show_address,
                           show_bytes, nullptr, nullptr, nullptr,
                           disassemble_format, 0);
@@ -178,7 +182,7 @@ void ThreadPlanAssemblyTracer::Log() {
     }
   }
 
-  const ABI *abi = process_sp->GetABI().get();
+  const ABI *abi = m_process.GetABI().get();
   TypeFromUser intptr_type = GetIntPointerType();
 
   if (abi && intptr_type.IsValid()) {
@@ -192,7 +196,7 @@ void ThreadPlanAssemblyTracer::Log() {
       value_list.PushValue(value);
     }
 
-    if (abi->GetArgumentValues(m_thread, value_list)) {
+    if (abi->GetArgumentValues(GetThread(), value_list)) {
       for (int arg_index = 0; arg_index < num_args; ++arg_index) {
         stream->Printf(
             "\n\targ[%d]=%llx", arg_index,
@@ -205,7 +209,7 @@ void ThreadPlanAssemblyTracer::Log() {
   }
 
   if (m_register_values.empty()) {
-    RegisterContext *reg_ctx = m_thread.GetRegisterContext().get();
+    RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
     m_register_values.resize(reg_ctx->GetRegisterCount());
   }
 

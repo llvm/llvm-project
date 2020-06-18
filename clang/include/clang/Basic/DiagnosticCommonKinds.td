@@ -240,9 +240,17 @@ let CategoryName = "Inline Assembly Issue" in {
   def err_asm_invalid_type_in_input : Error<
     "invalid type %0 in asm input for constraint '%1'">;
 
+  def err_asm_invalid_type : Error<
+    "invalid type %0 in asm %select{input|output}1">;
+
   def warn_stack_clash_protection_inline_asm : Warning<
     "Unable to protect inline asm that clobbers stack pointer against stack clash">,
     InGroup<DiagGroup<"stack-protector">>;
+
+  def warn_slh_does_not_support_asm_goto
+      : Warning<"Speculative load hardening does not protect functions with "
+                "asm goto">,
+        InGroup<DiagGroup<"slh-asm-goto">>;
 }
 
 // Sema && Serialization

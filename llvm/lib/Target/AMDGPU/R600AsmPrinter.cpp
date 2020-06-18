@@ -88,14 +88,14 @@ void R600AsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
     }
   }
 
-  OutStreamer->emitIntValue(RsrcReg, 4);
+  OutStreamer->emitInt32(RsrcReg);
   OutStreamer->emitIntValue(S_NUM_GPRS(MaxGPR + 1) |
                            S_STACK_SIZE(MFI->CFStackSize), 4);
-  OutStreamer->emitIntValue(R_02880C_DB_SHADER_CONTROL, 4);
-  OutStreamer->emitIntValue(S_02880C_KILL_ENABLE(killPixel), 4);
+  OutStreamer->emitInt32(R_02880C_DB_SHADER_CONTROL);
+  OutStreamer->emitInt32(S_02880C_KILL_ENABLE(killPixel));
 
   if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
-    OutStreamer->emitIntValue(R_0288E8_SQ_LDS_ALLOC, 4);
+    OutStreamer->emitInt32(R_0288E8_SQ_LDS_ALLOC);
     OutStreamer->emitIntValue(alignTo(MFI->getLDSSize(), 4) >> 2, 4);
   }
 }

@@ -39,7 +39,6 @@ static_library("Common") {
     "Reproduce.cpp",
     "Strings.cpp",
     "TargetOptionsCommandFlags.cpp",
-    "Threads.cpp",
     "Timer.cpp",
     "Version.cpp",
   ]

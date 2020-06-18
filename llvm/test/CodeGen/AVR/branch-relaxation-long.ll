@@ -2,8 +2,8 @@
 
 ; CHECK-LABEL: relax_to_jmp:
 ; CHECK: cpi     r{{[0-9]+}}, 0
-; CHECK: brne    [[BB1:LBB[0-9]+_[0-9]+]]
-; CHECK: jmp     [[BB2:LBB[0-9]+_[0-9]+]]
+; CHECK: brne    [[BB1:.LBB[0-9]+_[0-9]+]]
+; CHECK: jmp     [[BB2:.LBB[0-9]+_[0-9]+]]
 ; CHECK: [[BB1]]:
 ; CHECK: nop
 ; CHECK: [[BB2]]:
@@ -2069,10 +2069,10 @@ finished:
 }
 
 ; CHECK-LABEL: relax_to_jmp_backwards:
-; CHECK: [[BB1:LBB[0-9]+_[0-9]+]]
+; CHECK: [[BB1:.LBB[0-9]+_[0-9]+]]
 ; CHECK: nop
 ; CHECK: cpi     r{{[0-9]+}}, 0
-; CHECK: breq    [[BB2:LBB[0-9]+_[0-9]+]]
+; CHECK: breq    [[BB2:.LBB[0-9]+_[0-9]+]]
 ; CHECK: jmp     [[BB1]]
 ; CHECK: [[BB2]]:
 define i8 @relax_to_jmp_backwards(i1 %a) {

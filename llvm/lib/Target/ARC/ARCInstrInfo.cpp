@@ -299,11 +299,11 @@ void ARCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   DebugLoc dl = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  unsigned Align = MFI.getObjectAlignment(FrameIndex);
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIndex),
-      MachineMemOperand::MOStore, MFI.getObjectSize(FrameIndex), Align);
+      MachineMemOperand::MOStore, MFI.getObjectSize(FrameIndex),
+      MFI.getObjectAlign(FrameIndex));
 
   assert(MMO && "Couldn't get MachineMemOperand for store to stack.");
   assert(TRI->getSpillSize(*RC) == 4 &&
@@ -327,10 +327,10 @@ void ARCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   DebugLoc dl = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  unsigned Align = MFI.getObjectAlignment(FrameIndex);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIndex),
-      MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex), Align);
+      MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
+      MFI.getObjectAlign(FrameIndex));
 
   assert(MMO && "Couldn't get MachineMemOperand for store to stack.");
   assert(TRI->getSpillSize(*RC) == 4 &&

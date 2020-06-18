@@ -58,7 +58,8 @@ protected:
                   // functions or not.
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(FileLineResolver);
+  FileLineResolver(const FileLineResolver &) = delete;
+  const FileLineResolver &operator=(const FileLineResolver &) = delete;
 };
 
 } // namespace lldb_private

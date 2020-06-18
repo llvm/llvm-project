@@ -608,3 +608,155 @@ s_buffer_atomic_xor_x2 s[10:11], s[4:7], s0 glc
 // GFX9:     s_buffer_atomic_xor_x2 s[10:11], s[4:7], s0 glc ; encoding: [0x82,0x02,0xa9,0xc1,0x00,0x00,0x00,0x00]
 // GFX1012:  s_buffer_atomic_xor_x2 s[10:11], s[4:7], s0 glc ; encoding: [0x82,0x02,0xa9,0xf5,0x00,0x00,0x00,0x00]
 // NOSICIVI: error:
+
+//===----------------------------------------------------------------------===//
+// Unsigned 20-bit offsets (VI+)
+//===----------------------------------------------------------------------===//
+
+s_atc_probe 0x7, s[4:5], 0xFFFFF
+// NOSICI: error: instruction not supported on this GPU
+// GFX89: s_atc_probe 7, s[4:5], 0xfffff ; encoding: [0xc2,0x01,0x9a,0xc0,0xff,0xff,0x0f,0x00]
+// GFX10: s_atc_probe 7, s[4:5], 0xfffff ; encoding: [0xc2,0x01,0x98,0xf4,0xff,0xff,0x0f,0xfa]
+
+s_atc_probe_buffer 0x1, s[8:11], 0xFFFFF
+// NOSICI: error: instruction not supported on this GPU
+// GFX89: s_atc_probe_buffer 1, s[8:11], 0xfffff ; encoding: [0x44,0x00,0x9e,0xc0,0xff,0xff,0x0f,0x00]
+// GFX10: s_atc_probe_buffer 1, s[8:11], 0xfffff ; encoding: [0x44,0x00,0x9c,0xf4,0xff,0xff,0x0f,0xfa]
+
+s_store_dword s1, s[2:3], 0xFFFFF
+// NOSICI: error: instruction not supported on this GPU
+// GFX89: s_store_dword s1, s[2:3], 0xfffff ; encoding: [0x41,0x00,0x42,0xc0,0xff,0xff,0x0f,0x00]
+// GFX10: s_store_dword s1, s[2:3], 0xfffff ; encoding: [0x41,0x00,0x40,0xf4,0xff,0xff,0x0f,0xfa]
+
+s_buffer_store_dword s10, s[92:95], 0xFFFFF
+// NOSICI: error: instruction not supported on this GPU
+// GFX89: s_buffer_store_dword s10, s[92:95], 0xfffff ; encoding: [0xae,0x02,0x62,0xc0,0xff,0xff,0x0f,0x00]
+// GFX10: s_buffer_store_dword s10, s[92:95], 0xfffff ; encoding: [0xae,0x02,0x60,0xf4,0xff,0xff,0x0f,0xfa]
+
+s_atomic_swap s5, s[2:3], 0xFFFFF
+// NOSICIVI: error: instruction not supported on this GPU
+// GFX10: s_atomic_swap s5, s[2:3], 0xfffff ; encoding: [0x41,0x01,0x00,0xf6,0xff,0xff,0x0f,0xfa]
+// GFX9: s_atomic_swap s5, s[2:3], 0xfffff ; encoding: [0x41,0x01,0x02,0xc2,0xff,0xff,0x0f,0x00]
+
+s_buffer_atomic_swap s5, s[4:7], 0xFFFFF
+// NOSICIVI: error: instruction not supported on this GPU
+// GFX10: s_buffer_atomic_swap s5, s[4:7], 0xfffff ; encoding: [0x42,0x01,0x00,0xf5,0xff,0xff,0x0f,0xfa]
+// GFX9: s_buffer_atomic_swap s5, s[4:7], 0xfffff ; encoding: [0x42,0x01,0x02,0xc1,0xff,0xff,0x0f,0x00]
+
+s_atc_probe 0x7, s[4:5], 0x1FFFFF
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 21-bit signed offset
+// NOVI: error: expected a 20-bit unsigned offset
+
+s_atc_probe_buffer 0x1, s[8:11], 0x1FFFFF
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset
+// NOVI: error: expected a 20-bit unsigned offset
+
+s_store_dword s1, s[2:3], 0x1FFFFF
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 21-bit signed offset
+// NOVI: error: expected a 20-bit unsigned offset
+
+s_buffer_store_dword s10, s[92:95], 0x1FFFFF
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset
+// NOVI: error: expected a 20-bit unsigned offset
+
+s_atomic_swap s5, s[2:3], 0x1FFFFF
+// NOSICIVI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 21-bit signed offset
+
+s_buffer_atomic_swap s5, s[4:7], 0x1FFFFF
+// NOSICIVI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset
+
+//===----------------------------------------------------------------------===//
+// Signed offsets (gfx9+)
+//===----------------------------------------------------------------------===//
+
+s_atc_probe 0x7, s[4:5], -1
+// NOVI: error: expected a 20-bit unsigned offset
+// GFX9: s_atc_probe 7, s[4:5], -0x1 ; encoding: [0xc2,0x01,0x9a,0xc0,0xff,0xff,0x1f,0x00]
+// GFX10: s_atc_probe 7, s[4:5], -0x1 ; encoding: [0xc2,0x01,0x98,0xf4,0xff,0xff,0x1f,0xfa]
+// NOSICI: error: instruction not supported on this GPU
+
+s_atc_probe_buffer 0x1, s[8:11], -1
+// NOVI: error: expected a 20-bit unsigned offset
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset
+
+s_store_dword s1, s[2:3], -1
+// NOVI: error: expected a 20-bit unsigned offset
+// GFX9: s_store_dword s1, s[2:3], -0x1 ; encoding: [0x41,0x00,0x42,0xc0,0xff,0xff,0x1f,0x00]
+// GFX10: s_store_dword s1, s[2:3], -0x1 ; encoding: [0x41,0x00,0x40,0xf4,0xff,0xff,0x1f,0xfa]
+// NOSICI: error: instruction not supported on this GPU
+
+s_buffer_store_dword s10, s[92:95], -1
+// NOVI: error: expected a 20-bit unsigned offset
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset
+
+s_load_dword s1, s[2:3], -1
+// NOVI: error: expected a 20-bit unsigned offset
+// GFX9: s_load_dword s1, s[2:3], -0x1 ; encoding: [0x41,0x00,0x02,0xc0,0xff,0xff,0x1f,0x00]
+// GFX10: s_load_dword s1, s[2:3], -0x1 ; encoding: [0x41,0x00,0x00,0xf4,0xff,0xff,0x1f,0xfa]
+// NOSICI: error: instruction not supported on this GPU
+
+s_buffer_load_dword s10, s[92:95], -1
+// NOVI: error: expected a 20-bit unsigned offset
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset
+
+s_atomic_swap s5, s[2:3], -1
+// NOVI: error: instruction not supported on this GPU
+// GFX9: s_atomic_swap s5, s[2:3], -0x1 ; encoding: [0x41,0x01,0x02,0xc2,0xff,0xff,0x1f,0x00]
+// GFX10: s_atomic_swap s5, s[2:3], -0x1 ; encoding: [0x41,0x01,0x00,0xf6,0xff,0xff,0x1f,0xfa]
+// NOSICI: error: instruction not supported on this GPU
+
+s_buffer_atomic_swap s5, s[4:7], -1
+// NOVI: error: instruction not supported on this GPU
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset
+
+s_atc_probe 0x7, s[4:5], 0xFFFFFFFFFFF00000
+// NOSICI: error: instruction not supported on this GPU
+// GFX10: s_atc_probe 7, s[4:5], -0x100000 ; encoding: [0xc2,0x01,0x98,0xf4,0x00,0x00,0x10,0xfa]
+// GFX9: s_atc_probe 7, s[4:5], -0x100000 ; encoding: [0xc2,0x01,0x9a,0xc0,0x00,0x00,0x10,0x00]
+// NOVI: error: expected a 20-bit unsigned offset
+
+s_atc_probe_buffer 0x1, s[8:11], 0xFFFFFFFFFFF00000
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset
+// NOVI: error: expected a 20-bit unsigned offset
+
+s_store_dword s1, s[2:3], 0xFFFFFFFFFFF00000
+// NOSICI: error: instruction not supported on this GPU
+// GFX10: s_store_dword s1, s[2:3], -0x100000 ; encoding: [0x41,0x00,0x40,0xf4,0x00,0x00,0x10,0xfa]
+// GFX9: s_store_dword s1, s[2:3], -0x100000 ; encoding: [0x41,0x00,0x42,0xc0,0x00,0x00,0x10,0x00]
+// NOVI: error: expected a 20-bit unsigned offset
+
+s_buffer_store_dword s10, s[92:95], 0xFFFFFFFFFFF00000
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset
+// NOVI: error: expected a 20-bit unsigned offset
+
+s_load_dword s1, s[2:3], 0xFFFFFFFFFFF00000
+// NOSICI: error: instruction not supported on this GPU
+// GFX10: s_load_dword s1, s[2:3], -0x100000 ; encoding: [0x41,0x00,0x00,0xf4,0x00,0x00,0x10,0xfa]
+// GFX9: s_load_dword s1, s[2:3], -0x100000 ; encoding: [0x41,0x00,0x02,0xc0,0x00,0x00,0x10,0x00]
+// NOVI: error: expected a 20-bit unsigned offset
+
+s_buffer_load_dword s10, s[92:95], 0xFFFFFFFFFFF00000
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset
+// NOVI: error: expected a 20-bit unsigned offset
+
+s_atomic_swap s5, s[2:3], 0xFFFFFFFFFFF00000
+// NOSICIVI: error: instruction not supported on this GPU
+// GFX10: s_atomic_swap s5, s[2:3], -0x100000 ; encoding: [0x41,0x01,0x00,0xf6,0x00,0x00,0x10,0xfa]
+// GFX9: s_atomic_swap s5, s[2:3], -0x100000 ; encoding: [0x41,0x01,0x02,0xc2,0x00,0x00,0x10,0x00]
+
+s_buffer_atomic_swap s5, s[4:7], 0xFFFFFFFFFFF00000
+// NOSICIVI: error: instruction not supported on this GPU
+// NOGFX9: error: expected a 20-bit unsigned offset

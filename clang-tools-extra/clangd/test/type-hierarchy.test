@@ -35,20 +35,23 @@
 # CHECK-NEXT:        "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
+# CHECK-NEXT:    "data": "8A991335E4E67D08",
 # CHECK-NEXT:    "kind": 23,
 # CHECK-NEXT:    "name": "Child2",
 # CHECK-NEXT:    "parents": [
 # CHECK-NEXT:      {
+# CHECK-NEXT:        "data": "ECDC0C46D75120F4",
 # CHECK-NEXT:        "kind": 23,
 # CHECK-NEXT:        "name": "Child1",
 # CHECK-NEXT:        "parents": [
 # CHECK-NEXT:          {
+# CHECK-NEXT:            "data": "FE546E7B648D69A7",
 # CHECK-NEXT:            "kind": 23,
 # CHECK-NEXT:            "name": "Parent",
 # CHECK-NEXT:            "parents": [],
 # CHECK-NEXT:            "range": {
 # CHECK-NEXT:              "end": {
-# CHECK-NEXT:                "character": 15,
+# CHECK-NEXT:                "character": 16,
 # CHECK-NEXT:                "line": 0
 # CHECK-NEXT:              },
 # CHECK-NEXT:              "start": {
@@ -71,7 +74,7 @@
 # CHECK-NEXT:        ],
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
-# CHECK-NEXT:            "character": 24,
+# CHECK-NEXT:            "character": 25,
 # CHECK-NEXT:            "line": 1
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
@@ -94,7 +97,7 @@
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "range": {
 # CHECK-NEXT:      "end": {
-# CHECK-NEXT:        "character": 24,
+# CHECK-NEXT:        "character": 25,
 # CHECK-NEXT:        "line": 2
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "start": {

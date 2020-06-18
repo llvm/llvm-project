@@ -161,8 +161,8 @@
 # CHECK-BE: mfbhrbe 9, 983                  # encoding: [0x7d,0x3e,0xba,0x5c]
 # CHECK-LE: mfbhrbe 9, 983                  # encoding: [0x5c,0xba,0x3e,0x7d]
             mfbhrbe 9, 983
-# CHECK-BE: rfebb 1                         # encoding: [0x4c,0x00,0x09,0x24]
-# CHECK-LE: rfebb 1                         # encoding: [0x24,0x09,0x00,0x4c]
+# CHECK-BE: rfebb                           # encoding: [0x4c,0x00,0x09,0x24]
+# CHECK-LE: rfebb                           # encoding: [0x24,0x09,0x00,0x4c]
             rfebb 1
 
 # Fixed-point facility
@@ -345,11 +345,11 @@
 # CHECK-BE: addo. 2, 3, 4                   # encoding: [0x7c,0x43,0x26,0x15]
 # CHECK-LE: addo. 2, 3, 4                   # encoding: [0x15,0x26,0x43,0x7c]
             addo. 2, 3, 4
-# CHECK-BE: subf 2, 3, 4                    # encoding: [0x7c,0x43,0x20,0x50]
-# CHECK-LE: subf 2, 3, 4                    # encoding: [0x50,0x20,0x43,0x7c]
+# CHECK-BE: sub 2, 4, 3                     # encoding: [0x7c,0x43,0x20,0x50]
+# CHECK-LE: sub 2, 4, 3                     # encoding: [0x50,0x20,0x43,0x7c]
             subf 2, 3, 4
-# CHECK-BE: subf. 2, 3, 4                   # encoding: [0x7c,0x43,0x20,0x51]
-# CHECK-LE: subf. 2, 3, 4                   # encoding: [0x51,0x20,0x43,0x7c]
+# CHECK-BE: sub. 2, 4, 3                    # encoding: [0x7c,0x43,0x20,0x51]
+# CHECK-LE: sub. 2, 4, 3                    # encoding: [0x51,0x20,0x43,0x7c]
             subf. 2, 3, 4
 # CHECK-BE: subfo 2, 3, 4                   # encoding: [0x7c,0x43,0x24,0x50]
 # CHECK-LE: subfo 2, 3, 4                   # encoding: [0x50,0x24,0x43,0x7c]
@@ -379,11 +379,11 @@
 # CHECK-BE: addco. 2, 3, 4                  # encoding: [0x7c,0x43,0x24,0x15]
 # CHECK-LE: addco. 2, 3, 4                  # encoding: [0x15,0x24,0x43,0x7c]
             addco. 2, 3, 4
-# CHECK-BE: subfc 2, 3, 4                   # encoding: [0x7c,0x43,0x20,0x10]
-# CHECK-LE: subfc 2, 3, 4                   # encoding: [0x10,0x20,0x43,0x7c]
+# CHECK-BE: subc 2, 4, 3                    # encoding: [0x7c,0x43,0x20,0x10]
+# CHECK-LE: subc 2, 4, 3                    # encoding: [0x10,0x20,0x43,0x7c]
             subfc 2, 3, 4
-# CHECK-BE: subfc 2, 3, 4                   # encoding: [0x7c,0x43,0x20,0x10]
-# CHECK-LE: subfc 2, 3, 4                   # encoding: [0x10,0x20,0x43,0x7c]
+# CHECK-BE: subc 2, 4, 3                    # encoding: [0x7c,0x43,0x20,0x10]
+# CHECK-LE: subc 2, 4, 3                    # encoding: [0x10,0x20,0x43,0x7c]
             subfc 2, 3, 4
 # CHECK-BE: subfco 2, 3, 4                  # encoding: [0x7c,0x43,0x24,0x10]
 # CHECK-LE: subfco 2, 3, 4                  # encoding: [0x10,0x24,0x43,0x7c]

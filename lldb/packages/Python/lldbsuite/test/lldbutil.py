@@ -797,7 +797,7 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
         test.assertEqual(num_threads, 1, "Expected 1 thread to stop at breakpoint, %d did."%(num_threads))
     else:
         test.assertGreater(num_threads, 0, "No threads stopped at breakpoint")
-        
+
     thread = threads[0]
     return (target, process, thread, bkpt)
 
@@ -1062,7 +1062,7 @@ def print_stacktraces(process, string_buffer=False):
         return output.getvalue()
 
 
-def expect_state_changes(test, listener, process, states, timeout=5):
+def expect_state_changes(test, listener, process, states, timeout=30):
     """Listens for state changed events on the listener and makes sure they match what we
     expect. Stop-and-restart events (where GetRestartedFromEvent() returns true) are ignored."""
 

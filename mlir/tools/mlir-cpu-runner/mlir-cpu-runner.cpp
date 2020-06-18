@@ -12,8 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/JitRunner.h"
+#include "mlir/ExecutionEngine/JitRunner.h"
+#include "mlir/ExecutionEngine/OptUtils.h"
+#include "mlir/InitAllDialects.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/TargetSelect.h"
 
 int main(int argc, char **argv) {
+  mlir::registerAllDialects();
+  llvm::InitLLVM y(argc, argv);
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+  mlir::initializeLLVMPasses();
+
   return mlir::JitRunnerMain(argc, argv, nullptr);
 }

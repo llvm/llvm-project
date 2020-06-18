@@ -60,10 +60,10 @@ b1:                                               ; preds = %b3, %b0
 
 b2:                                               ; preds = %b1
   %v34 = load <16 x i32>, <16 x i32>* %v11, align 64
-  %v35 = bitcast <16 x i32> %v34 to <512 x i1>
+  %v35 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v34, i32 -1)
   %v36 = load <16 x i32>, <16 x i32>* %v14, align 64
   %v37 = load <16 x i32>, <16 x i32>* %v15, align 64
-  %v38 = call <32 x i32> @llvm.hexagon.V6.vswap(<512 x i1> %v35, <16 x i32> %v36, <16 x i32> %v37)
+  %v38 = call <32 x i32> @llvm.hexagon.V6.vswap(<64 x i1> %v35, <16 x i32> %v36, <16 x i32> %v37)
   store <32 x i32> %v38, <32 x i32>* %v13, align 128
   %v39 = load <32 x i32>, <32 x i32>* %v13, align 128
   %v40 = call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v39)
@@ -89,7 +89,7 @@ b4:                                               ; preds = %b1
 }
 
 ; Function Attrs: nounwind readnone
-declare <32 x i32> @llvm.hexagon.V6.vswap(<512 x i1>, <16 x i32>, <16 x i32>) #1
+declare <32 x i32> @llvm.hexagon.V6.vswap(<64 x i1>, <16 x i32>, <16 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.hi(<32 x i32>) #1
@@ -99,6 +99,9 @@ declare <16 x i32> @llvm.hexagon.V6.lo(<32 x i32>) #1
 
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.vdealvdd(<16 x i32>, <16 x i32>, i32) #1
+
+; Function Attrs: nounwind readnone
+declare <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32>, i32) #1
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 attributes #1 = { nounwind readnone }

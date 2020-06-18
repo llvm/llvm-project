@@ -46,7 +46,7 @@ void MSP430InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIdx),
       MachineMemOperand::MOStore, MFI.getObjectSize(FrameIdx),
-      MFI.getObjectAlignment(FrameIdx));
+      MFI.getObjectAlign(FrameIdx));
 
   if (RC == &MSP430::GR16RegClass)
     BuildMI(MBB, MI, DL, get(MSP430::MOV16mr))
@@ -73,7 +73,7 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FrameIdx),
       MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIdx),
-      MFI.getObjectAlignment(FrameIdx));
+      MFI.getObjectAlign(FrameIdx));
 
   if (RC == &MSP430::GR16RegClass)
     BuildMI(MBB, MI, DL, get(MSP430::MOV16rm))
@@ -158,18 +158,6 @@ reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
 
   Cond[0].setImm(CC);
   return false;
-}
-
-bool MSP430InstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
-  if (!MI.isTerminator())
-    return false;
-
-  // Conditional branch is a special case.
-  if (MI.isBranch() && !MI.isBarrier())
-    return true;
-  if (!MI.isPredicable())
-    return true;
-  return !isPredicated(MI);
 }
 
 bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,

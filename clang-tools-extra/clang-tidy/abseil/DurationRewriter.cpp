@@ -41,7 +41,7 @@ getDurationInverseForScale(DurationScale Scale) {
   static const llvm::IndexedMap<std::pair<llvm::StringRef, llvm::StringRef>,
                                 DurationScale2IndexFunctor>
       InverseMap = []() {
-        // TODO: Revisit the immediately invoked lamba technique when
+        // TODO: Revisit the immediately invoked lambda technique when
         // IndexedMap gets an initializer list constructor.
         llvm::IndexedMap<std::pair<llvm::StringRef, llvm::StringRef>,
                          DurationScale2IndexFunctor>

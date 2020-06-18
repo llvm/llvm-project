@@ -1,0 +1,101 @@
+# RUN: llc -mcpu=cortex-m33 -run-pass=arm-pseudo %s -o - | FileCheck %s
+--- |
+  target datalayout = "E-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbebv8m.main-arm-none-eabi"
+
+  ; Function Attrs: cmse_nonsecure_entry nounwind
+  define hidden arm_aapcs_vfpcc void @secure_foo(void (double, double, double, double, double, double, double, double)* %fptr) local_unnamed_addr #0 {
+  entry:
+    %0 = ptrtoint void (double, double, double, double, double, double, double, double)* %fptr to i32
+    %and = and i32 %0, -2
+    %1 = inttoptr i32 %and to void (double, double, double, double, double, double, double, double)*
+    call arm_aapcs_vfpcc void %1(double 0.000000e+00, double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00, double 5.000000e+00, double 6.000000e+00, double 7.000000e+00) #2
+    ret void
+  }
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+
+  attributes #0 = { "cmse_nonsecure_entry" nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+8msecext,+armv8-m.main,-d32,-fp64,+fp-armv8,+hwdiv,+thumb-mode,-crypto,-fullfp16,-neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nounwind }
+  attributes #2 = { "cmse_nonsecure_call" nounwind }
+
+  !llvm.module.flags = !{!0, !1, !2, !3}
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 1, !"static_rwdata", i32 1}
+  !2 = !{i32 1, !"enumsize_buildattr", i32 2}
+  !3 = !{i32 1, !"armlib_unavailable", i32 0}
+
+...
+---
+name:            secure_foo
+alignment:       2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+frameInfo:
+  stackSize:       8
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, stack-id: default,
+      callee-saved-register: '$lr' }
+  - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, stack-id: default,
+      callee-saved-register: '$r7' }
+constants:
+  - id:              0
+    value:           'double 0.000000e+00'
+    alignment:       8
+  - id:              1
+    value:           'double 1.000000e+00'
+    alignment:       8
+  - id:              2
+    value:           'double 2.000000e+00'
+    alignment:       8
+  - id:              3
+    value:           'double 3.000000e+00'
+    alignment:       8
+  - id:              4
+    value:           'double 4.000000e+00'
+    alignment:       8
+  - id:              5
+    value:           'double 5.000000e+00'
+    alignment:       8
+  - id:              6
+    value:           'double 6.000000e+00'
+    alignment:       8
+  - id:              7
+    value:           'double 7.000000e+00'
+    alignment:       8
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r7, $lr
+
+    $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r7, killed $lr
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    renamable $d0 = VLDRD %const.0, 0, 14, $noreg :: (load 8 from constant-pool)
+    renamable $d1 = VLDRD %const.1, 0, 14, $noreg :: (load 8 from constant-pool)
+    renamable $d2 = VLDRD %const.2, 0, 14, $noreg :: (load 8 from constant-pool)
+    renamable $d3 = VLDRD %const.3, 0, 14, $noreg :: (load 8 from constant-pool)
+    renamable $d4 = VLDRD %const.4, 0, 14, $noreg :: (load 8 from constant-pool)
+    renamable $d5 = VLDRD %const.5, 0, 14, $noreg :: (load 8 from constant-pool)
+    renamable $d6 = VLDRD %const.6, 0, 14, $noreg :: (load 8 from constant-pool)
+    renamable $d7 = VLDRD %const.7, 0, 14, $noreg :: (load 8 from constant-pool)
+    renamable $r0 = t2BICri killed renamable $r0, 1, 14, $noreg, $noreg
+    tBLXNS_CALL killed renamable $r0, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $d0, implicit $d1, implicit $d2, implicit $d3, implicit $d4, implicit $d5, implicit $d6, implicit $d7, implicit-def $sp
+    $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r7, def $lr
+    tBXNS_RET
+
+...
+
+# CHECK: VLSTM
+# CHECK-DAG: $s12 = VLDRS $sp, 12, 14 /* CC::al */, $noreg
+# CHECK-DAG: $s13 = VLDRS $sp, 13, 14 /* CC::al */, $noreg
+# CHECK-DAG: $s14 = VLDRS $sp, 14, 14 /* CC::al */, $noreg
+# CHECK-DAG: $s15 = VLDRS $sp, 15, 14 /* CC::al */, $noreg
+# CHECK: tBLXNSr

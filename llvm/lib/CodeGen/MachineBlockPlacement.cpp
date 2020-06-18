@@ -1570,7 +1570,7 @@ MachineBlockPlacement::selectBestSuccessor(
   // For blocks with CFG violations, we may be able to lay them out anyway with
   // tail-duplication. We keep this vector so we can perform the probability
   // calculations the minimum number of times.
-  SmallVector<std::tuple<BranchProbability, MachineBasicBlock *>, 4>
+  SmallVector<std::pair<BranchProbability, MachineBasicBlock *>, 4>
       DupCandidates;
   for (MachineBasicBlock *Succ : Successors) {
     auto RealSuccProb = MBPI->getEdgeProbability(BB, Succ);
@@ -1584,7 +1584,7 @@ MachineBlockPlacement::selectBestSuccessor(
                                    Chain, BlockFilter)) {
       // If tail duplication would make Succ profitable, place it.
       if (allowTailDupPlacement() && shouldTailDuplicate(Succ))
-        DupCandidates.push_back(std::make_tuple(SuccProb, Succ));
+        DupCandidates.emplace_back(SuccProb, Succ);
       continue;
     }
 
@@ -2703,6 +2703,20 @@ void MachineBlockPlacement::buildCFGChains() {
     assert(!BadFunc && "Detected problems with the block placement.");
   });
 
+  // Remember original layout ordering, so we can update terminators after
+  // reordering to point to the original layout successor.
+  SmallVector<MachineBasicBlock *, 4> OriginalLayoutSuccessors(
+      F->getNumBlockIDs());
+  {
+    MachineBasicBlock *LastMBB = nullptr;
+    for (auto &MBB : *F) {
+      if (LastMBB != nullptr)
+        OriginalLayoutSuccessors[LastMBB->getNumber()] = &MBB;
+      LastMBB = &MBB;
+    }
+    OriginalLayoutSuccessors[F->back().getNumber()] = nullptr;
+  }
+
   // Splice the blocks into place.
   MachineFunction::iterator InsertPos = F->begin();
   LLVM_DEBUG(dbgs() << "[MBP] Function: " << F->getName() << "\n");
@@ -2760,15 +2774,18 @@ void MachineBlockPlacement::buildCFGChains() {
     //     TBB = FBB = nullptr;
     //   }
     // }
-    if (!TII->analyzeBranch(*PrevBB, TBB, FBB, Cond))
-      PrevBB->updateTerminator();
+    if (!TII->analyzeBranch(*PrevBB, TBB, FBB, Cond)) {
+      PrevBB->updateTerminator(OriginalLayoutSuccessors[PrevBB->getNumber()]);
+    }
   }
 
   // Fixup the last block.
   Cond.clear();
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For analyzeBranch.
-  if (!TII->analyzeBranch(F->back(), TBB, FBB, Cond))
-    F->back().updateTerminator();
+  if (!TII->analyzeBranch(F->back(), TBB, FBB, Cond)) {
+    MachineBasicBlock *PrevBB = &F->back();
+    PrevBB->updateTerminator(OriginalLayoutSuccessors[PrevBB->getNumber()]);
+  }
 
   BlockWorkList.clear();
   EHPadWorkList.clear();
@@ -2802,7 +2819,6 @@ void MachineBlockPlacement::optimizeBranches() {
         DebugLoc dl; // FIXME: this is nowhere
         TII->removeBranch(*ChainBB);
         TII->insertBranch(*ChainBB, FBB, TBB, Cond, dl);
-        ChainBB->updateTerminator();
       }
     }
   }
@@ -2914,10 +2930,7 @@ bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
   // duplicated into is still small enough to be duplicated again.
   // No need to call markBlockSuccessors in this case, as the blocks being
   // duplicated from here on are already scheduled.
-  // Note that DuplicatedToLPred always implies Removed.
-  while (DuplicatedToLPred) {
-    assert(Removed && "Block must have been removed to be duplicated into its "
-           "layout predecessor.");
+  while (DuplicatedToLPred && Removed) {
     MachineBasicBlock *DupBB, *DupPred;
     // The removal callback causes Chain.end() to be updated when a block is
     // removed. On the first pass through the loop, the chain end should be the
@@ -2956,8 +2969,7 @@ bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
 ///                          chosen in the given order due to unnatural CFG
 ///                          only needed if \p BB is removed and
 ///                          \p PrevUnplacedBlockIt pointed to \p BB.
-/// \p DuplicatedToLPred - True if the block was duplicated into LPred. Will
-///                        only be true if the block was removed.
+/// \p DuplicatedToLPred - True if the block was duplicated into LPred.
 /// \return  - True if the block was duplicated into all preds and removed.
 bool MachineBlockPlacement::maybeTailDuplicateBlock(
     MachineBasicBlock *BB, MachineBasicBlock *LPred,

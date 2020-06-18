@@ -18,5 +18,5 @@
 type = Library
 name = DebugInfoPDB
 parent = DebugInfo
-required_libraries = Object Support DebugInfoCodeView DebugInfoMSF
+required_libraries = BinaryFormat Object Support DebugInfoCodeView DebugInfoMSF
 

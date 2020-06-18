@@ -25,7 +25,6 @@ class VESubtarget;
 
 class VEInstrInfo : public VEGenInstrInfo {
   const VERegisterInfo RI;
-  const VESubtarget &Subtarget;
   virtual void anchor();
 
 public:
@@ -82,6 +81,7 @@ public:
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   bool expandExtendStackPseudo(MachineInstr &MI) const;
+  bool expandGetStackTopPseudo(MachineInstr &MI) const;
 };
 
 } // namespace llvm

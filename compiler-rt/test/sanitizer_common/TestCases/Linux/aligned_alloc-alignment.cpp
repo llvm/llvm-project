@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
   // CHECK: {{ERROR: .*Sanitizer: invalid alignment requested in aligned_alloc}}
   // Handle a case when aligned_alloc is aliased by memalign.
   // CHECK: {{#0 .*}}{{aligned_alloc|memalign}}
-  // CHECK: {{#1 .*main .*aligned_alloc-alignment.cpp:}}[[@LINE-4]]
+  // CHECK: {{#[12] .*main .*aligned_alloc-alignment.cpp:}}[[@LINE-4]]
   // CHECK: {{SUMMARY: .*Sanitizer: invalid-aligned-alloc-alignment}}
 
   // The NULL pointer is printed differently on different systems, while (long)0

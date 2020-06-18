@@ -7,7 +7,7 @@
 # RUN: llvm-objdump -d %t | FileCheck %s
 
 # For a cross .so call, make sure lld produced the conservative call to __morestack_non_split.
-# CHECK: prologue1_cross_so_call:
+# CHECK: <prologue1_cross_so_call>:
 # CHECK-NEXT: stc{{.*$}}
 # CHECK-NEXT: nopl{{.*$}}
 # CHECK: jae{{.*$}}

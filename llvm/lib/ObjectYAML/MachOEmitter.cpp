@@ -15,6 +15,8 @@
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,12 +35,13 @@ public:
     memset(reinterpret_cast<void *>(&Header), 0, sizeof(MachO::mach_header_64));
   }
 
-  void writeMachO(raw_ostream &OS);
+  Error writeMachO(raw_ostream &OS);
 
 private:
   void writeHeader(raw_ostream &OS);
   void writeLoadCommands(raw_ostream &OS);
-  void writeSectionData(raw_ostream &OS);
+  Error writeSectionData(raw_ostream &OS);
+  void writeRelocations(raw_ostream &OS);
   void writeLinkEditData(raw_ostream &OS);
 
   void writeBindOpcodes(raw_ostream &OS,
@@ -58,15 +61,23 @@ private:
   MachOYAML::Object &Obj;
   bool is64Bit;
   uint64_t fileStart;
-
   MachO::mach_header_64 Header;
+
+  // Old PPC Object Files didn't have __LINKEDIT segments, the data was just
+  // stuck at the end of the file.
+  bool FoundLinkEditSeg = false;
 };
 
-void MachOWriter::writeMachO(raw_ostream &OS) {
+Error MachOWriter::writeMachO(raw_ostream &OS) {
   fileStart = OS.tell();
   writeHeader(OS);
   writeLoadCommands(OS);
-  writeSectionData(OS);
+  if (Error Err = writeSectionData(OS))
+    return Err;
+  writeRelocations(OS);
+  if (!FoundLinkEditSeg)
+    writeLinkEditData(OS);
+  return Error::success();
 }
 
 void MachOWriter::writeHeader(raw_ostream &OS) {
@@ -254,8 +265,7 @@ void MachOWriter::writeLoadCommands(raw_ostream &OS) {
   }
 }
 
-void MachOWriter::writeSectionData(raw_ostream &OS) {
-  bool FoundLinkEditSeg = false;
+Error MachOWriter::writeSectionData(raw_ostream &OS) {
   for (auto &LC : Obj.LoadCommands) {
     switch (LC.Data.load_command_data.cmd) {
     case MachO::LC_SEGMENT:
@@ -271,27 +281,37 @@ void MachOWriter::writeSectionData(raw_ostream &OS) {
         ZeroToOffset(OS, Sec.offset);
         // Zero Fill any data between the end of the last thing we wrote and the
         // start of this section.
-        assert((OS.tell() - fileStart <= Sec.offset ||
-                Sec.offset == (uint32_t)0) &&
-               "Wrote too much data somewhere, section offsets don't line up.");
+        if (OS.tell() - fileStart > Sec.offset && Sec.offset != (uint32_t)0)
+          return createStringError(
+              errc::invalid_argument,
+              "wrote too much data somewhere, section offsets don't line up");
         if (0 == strncmp(&Sec.segname[0], "__DWARF", 16)) {
-          if (0 == strncmp(&Sec.sectname[0], "__debug_str", 16)) {
-            DWARFYAML::EmitDebugStr(OS, Obj.DWARF);
-          } else if (0 == strncmp(&Sec.sectname[0], "__debug_abbrev", 16)) {
-            DWARFYAML::EmitDebugAbbrev(OS, Obj.DWARF);
-          } else if (0 == strncmp(&Sec.sectname[0], "__debug_aranges", 16)) {
-            DWARFYAML::EmitDebugAranges(OS, Obj.DWARF);
-          } else if (0 == strncmp(&Sec.sectname[0], "__debug_pubnames", 16)) {
-            DWARFYAML::EmitPubSection(OS, Obj.DWARF.PubNames,
-                                      Obj.IsLittleEndian);
+          Error Err = Error::success();
+          cantFail(std::move(Err));
+
+          if (0 == strncmp(&Sec.sectname[0], "__debug_str", 16))
+            Err = DWARFYAML::emitDebugStr(OS, Obj.DWARF);
+          else if (0 == strncmp(&Sec.sectname[0], "__debug_abbrev", 16))
+            Err = DWARFYAML::emitDebugAbbrev(OS, Obj.DWARF);
+          else if (0 == strncmp(&Sec.sectname[0], "__debug_aranges", 16))
+            Err = DWARFYAML::emitDebugAranges(OS, Obj.DWARF);
+          else if (0 == strncmp(&Sec.sectname[0], "__debug_ranges", 16))
+            Err = DWARFYAML::emitDebugRanges(OS, Obj.DWARF);
+          else if (0 == strncmp(&Sec.sectname[0], "__debug_pubnames", 16)) {
+            if (Obj.DWARF.PubNames)
+              Err = DWARFYAML::emitPubSection(OS, *Obj.DWARF.PubNames,
+                                              Obj.IsLittleEndian);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_pubtypes", 16)) {
-            DWARFYAML::EmitPubSection(OS, Obj.DWARF.PubTypes,
-                                      Obj.IsLittleEndian);
-          } else if (0 == strncmp(&Sec.sectname[0], "__debug_info", 16)) {
-            DWARFYAML::EmitDebugInfo(OS, Obj.DWARF);
-          } else if (0 == strncmp(&Sec.sectname[0], "__debug_line", 16)) {
-            DWARFYAML::EmitDebugLine(OS, Obj.DWARF);
-          }
+            if (Obj.DWARF.PubTypes)
+              Err = DWARFYAML::emitPubSection(OS, *Obj.DWARF.PubTypes,
+                                              Obj.IsLittleEndian);
+          } else if (0 == strncmp(&Sec.sectname[0], "__debug_info", 16))
+            Err = DWARFYAML::emitDebugInfo(OS, Obj.DWARF);
+          else if (0 == strncmp(&Sec.sectname[0], "__debug_line", 16))
+            Err = DWARFYAML::emitDebugLine(OS, Obj.DWARF);
+
+          if (Err)
+            return Err;
 
           continue;
         }
@@ -315,10 +335,62 @@ void MachOWriter::writeSectionData(raw_ostream &OS) {
       break;
     }
   }
-  // Old PPC Object Files didn't have __LINKEDIT segments, the data was just
-  // stuck at the end of the file.
-  if (!FoundLinkEditSeg)
-    writeLinkEditData(OS);
+
+  return Error::success();
+}
+
+// The implementation of makeRelocationInfo and makeScatteredRelocationInfo is
+// consistent with how libObject parses MachO binary files. For the reference
+// see getStruct, getRelocation, getPlainRelocationPCRel,
+// getPlainRelocationLength and related methods in MachOObjectFile.cpp
+static MachO::any_relocation_info
+makeRelocationInfo(const MachOYAML::Relocation &R, bool IsLE) {
+  assert(!R.is_scattered && "non-scattered relocation expected");
+  MachO::any_relocation_info MRE;
+  MRE.r_word0 = R.address;
+  if (IsLE)
+    MRE.r_word1 = ((unsigned)R.symbolnum << 0) | ((unsigned)R.is_pcrel << 24) |
+                  ((unsigned)R.length << 25) | ((unsigned)R.is_extern << 27) |
+                  ((unsigned)R.type << 28);
+  else
+    MRE.r_word1 = ((unsigned)R.symbolnum << 8) | ((unsigned)R.is_pcrel << 7) |
+                  ((unsigned)R.length << 5) | ((unsigned)R.is_extern << 4) |
+                  ((unsigned)R.type << 0);
+  return MRE;
+}
+
+static MachO::any_relocation_info
+makeScatteredRelocationInfo(const MachOYAML::Relocation &R) {
+  assert(R.is_scattered && "scattered relocation expected");
+  MachO::any_relocation_info MRE;
+  MRE.r_word0 = (((unsigned)R.address << 0) | ((unsigned)R.type << 24) |
+                 ((unsigned)R.length << 28) | ((unsigned)R.is_pcrel << 30) |
+                 MachO::R_SCATTERED);
+  MRE.r_word1 = R.value;
+  return MRE;
+}
+
+void MachOWriter::writeRelocations(raw_ostream &OS) {
+  for (const MachOYAML::LoadCommand &LC : Obj.LoadCommands) {
+    switch (LC.Data.load_command_data.cmd) {
+    case MachO::LC_SEGMENT:
+    case MachO::LC_SEGMENT_64:
+      for (const MachOYAML::Section &Sec : LC.Sections) {
+        if (Sec.relocations.empty())
+          continue;
+        ZeroToOffset(OS, Sec.reloff);
+        for (const MachOYAML::Relocation &R : Sec.relocations) {
+          MachO::any_relocation_info MRE =
+              R.is_scattered ? makeScatteredRelocationInfo(R)
+                             : makeRelocationInfo(R, Obj.IsLittleEndian);
+          if (Obj.IsLittleEndian != sys::IsLittleEndianHost)
+            MachO::swapStruct(MRE);
+          OS.write(reinterpret_cast<const char *>(&MRE),
+                   sizeof(MachO::any_relocation_info));
+        }
+      }
+    }
+  }
 }
 
 void MachOWriter::writeBindOpcodes(
@@ -470,7 +542,7 @@ public:
   UniversalWriter(yaml::YamlObjectFile &ObjectFile)
       : ObjectFile(ObjectFile), fileStart(0) {}
 
-  void writeMachO(raw_ostream &OS);
+  Error writeMachO(raw_ostream &OS);
 
 private:
   void writeFatHeader(raw_ostream &OS);
@@ -482,28 +554,33 @@ private:
   uint64_t fileStart;
 };
 
-void UniversalWriter::writeMachO(raw_ostream &OS) {
+Error UniversalWriter::writeMachO(raw_ostream &OS) {
   fileStart = OS.tell();
   if (ObjectFile.MachO) {
     MachOWriter Writer(*ObjectFile.MachO);
-    Writer.writeMachO(OS);
-    return;
+    return Writer.writeMachO(OS);
   }
 
   writeFatHeader(OS);
   writeFatArchs(OS);
 
   auto &FatFile = *ObjectFile.FatMachO;
-  assert(FatFile.FatArchs.size() >= FatFile.Slices.size() &&
-         "Cannot write Slices if not decribed in FatArches");
+  if (FatFile.FatArchs.size() < FatFile.Slices.size())
+    return createStringError(
+        errc::invalid_argument,
+        "cannot write 'Slices' if not described in 'FatArches'");
+
   for (size_t i = 0; i < FatFile.Slices.size(); i++) {
     ZeroToOffset(OS, FatFile.FatArchs[i].offset);
     MachOWriter Writer(FatFile.Slices[i]);
-    Writer.writeMachO(OS);
+    if (Error Err = Writer.writeMachO(OS))
+      return Err;
 
     auto SliceEnd = FatFile.FatArchs[i].offset + FatFile.FatArchs[i].size;
     ZeroToOffset(OS, SliceEnd);
   }
+
+  return Error::success();
 }
 
 void UniversalWriter::writeFatHeader(raw_ostream &OS) {
@@ -571,9 +648,13 @@ void UniversalWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
 namespace llvm {
 namespace yaml {
 
-bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out, ErrorHandler /*EH*/) {
+bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out, ErrorHandler EH) {
   UniversalWriter Writer(Doc);
-  Writer.writeMachO(Out);
+  if (Error Err = Writer.writeMachO(Out)) {
+    handleAllErrors(std::move(Err),
+                    [&](const ErrorInfoBase &Err) { EH(Err.message()); });
+    return false;
+  }
   return true;
 }
 

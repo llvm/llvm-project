@@ -320,15 +320,15 @@ public:
 
   /// isDeclScope - Return true if this is the scope that the specified decl is
   /// declared in.
-  bool isDeclScope(Decl *D) {
-    return DeclsInScope.count(D) != 0;
-  }
+  bool isDeclScope(const Decl *D) const { return DeclsInScope.count(D) != 0; }
 
   DeclContext *getEntity() const { return Entity; }
   void setEntity(DeclContext *E) { Entity = E; }
 
-  bool hasErrorOccurred() const { return ErrorTrap.hasErrorOccurred(); }
-
+  /// Determine whether any unrecoverable errors have occurred within this
+  /// scope. Note that this may return false even if the scope contains invalid
+  /// declarations or statements, if the errors for those invalid constructs
+  /// were suppressed because some prior invalid construct was referenced.
   bool hasUnrecoverableErrorOccurred() const {
     return ErrorTrap.hasUnrecoverableErrorOccurred();
   }

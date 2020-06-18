@@ -14,16 +14,17 @@
 #ifndef LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
 #define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/SectionKind.h"
 #include <cstdint>
 
 namespace llvm {
 
+class Constant;
+class DataLayout;
+class Function;
+class GlobalObject;
 class GlobalValue;
+class MachineBasicBlock;
 class MachineModuleInfo;
 class Mangler;
 class MCContext;
@@ -33,11 +34,12 @@ class MCSymbol;
 class MCSymbolRefExpr;
 class MCStreamer;
 class MCValue;
+class Module;
+class SectionKind;
+class StringRef;
 class TargetMachine;
 
 class TargetLoweringObjectFile : public MCObjectFileInfo {
-  MCContext *Ctx = nullptr;
-
   /// Name-mangler for global names.
   Mangler *Mang = nullptr;
 
@@ -66,7 +68,6 @@ public:
   operator=(const TargetLoweringObjectFile &) = delete;
   virtual ~TargetLoweringObjectFile();
 
-  MCContext &getContext() const { return *Ctx; }
   Mangler &getMangler() const { return *Mang; }
 
   /// This method must be called before any actual lowering is done.  This
@@ -86,9 +87,13 @@ public:
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
-                                           SectionKind Kind,
-                                           const Constant *C,
-                                           unsigned &Align) const;
+                                           SectionKind Kind, const Constant *C,
+                                           Align &Alignment) const;
+
+  virtual MCSection *
+  getSectionForMachineBasicBlock(const Function &F,
+                                 const MachineBasicBlock &MBB,
+                                 const TargetMachine &TM) const;
 
   /// Classify the specified global variable into a set of target independent
   /// categories embodied in SectionKind.
@@ -105,9 +110,7 @@ public:
   /// variable or function definition. This should not be passed external (or
   /// available externally) globals.
   MCSection *SectionForGlobal(const GlobalObject *GO,
-                              const TargetMachine &TM) const {
-    return SectionForGlobal(GO, getKindForGlobal(GO, TM), TM);
-  }
+                              const TargetMachine &TM) const;
 
   virtual void getNameWithPrefix(SmallVectorImpl<char> &OutName,
                                  const GlobalValue *GV,
@@ -214,7 +217,9 @@ public:
 
   /// On targets that use separate function descriptor symbols, return a section
   /// for the descriptor given its symbol. Use only with defined functions.
-  virtual MCSection *getSectionForFunctionDescriptor(const MCSymbol *S) const {
+  virtual MCSection *
+  getSectionForFunctionDescriptor(const Function *F,
+                                  const TargetMachine &TM) const {
     return nullptr;
   }
 
@@ -230,6 +235,20 @@ public:
   virtual MCSection *
   getSectionForExternalReference(const GlobalObject *GO,
                                  const TargetMachine &TM) const {
+    return nullptr;
+  }
+
+  /// Targets that have a special convention for their symbols could use
+  /// this hook to return a specialized symbol.
+  virtual MCSymbol *getTargetSymbol(const GlobalValue *GV,
+                                    const TargetMachine &TM) const {
+    return nullptr;
+  }
+
+  /// If supported, return the function entry point symbol.
+  /// Otherwise, returns nulltpr.
+  virtual MCSymbol *getFunctionEntryPointSymbol(const Function *F,
+                                                const TargetMachine &TM) const {
     return nullptr;
   }
 

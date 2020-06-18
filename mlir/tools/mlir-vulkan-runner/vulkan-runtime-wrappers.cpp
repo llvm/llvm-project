@@ -10,88 +10,201 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iostream>
 #include <mutex>
 #include <numeric>
 
 #include "VulkanRuntime.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace {
 
-// TODO(denis0x0D): This static machinery should be replaced by `initVulkan` and
-// `deinitVulkan` to be more explicit and to avoid static initialization and
-// destruction.
-class VulkanRuntimeManager;
-static llvm::ManagedStatic<VulkanRuntimeManager> vkRuntimeManager;
-
 class VulkanRuntimeManager {
-  public:
-    VulkanRuntimeManager() = default;
-    VulkanRuntimeManager(const VulkanRuntimeManager &) = delete;
-    VulkanRuntimeManager operator=(const VulkanRuntimeManager &) = delete;
-    ~VulkanRuntimeManager() = default;
+public:
+  VulkanRuntimeManager() = default;
+  VulkanRuntimeManager(const VulkanRuntimeManager &) = delete;
+  VulkanRuntimeManager operator=(const VulkanRuntimeManager &) = delete;
+  ~VulkanRuntimeManager() = default;
 
-    void setResourceData(DescriptorSetIndex setIndex, BindingIndex bindIndex,
-                         const VulkanHostMemoryBuffer &memBuffer) {
-      std::lock_guard<std::mutex> lock(mutex);
-      vulkanRuntime.setResourceData(setIndex, bindIndex, memBuffer);
+  void setResourceData(DescriptorSetIndex setIndex, BindingIndex bindIndex,
+                       const VulkanHostMemoryBuffer &memBuffer) {
+    std::lock_guard<std::mutex> lock(mutex);
+    vulkanRuntime.setResourceData(setIndex, bindIndex, memBuffer);
+  }
+
+  void setEntryPoint(const char *entryPoint) {
+    std::lock_guard<std::mutex> lock(mutex);
+    vulkanRuntime.setEntryPoint(entryPoint);
+  }
+
+  void setNumWorkGroups(NumWorkGroups numWorkGroups) {
+    std::lock_guard<std::mutex> lock(mutex);
+    vulkanRuntime.setNumWorkGroups(numWorkGroups);
+  }
+
+  void setShaderModule(uint8_t *shader, uint32_t size) {
+    std::lock_guard<std::mutex> lock(mutex);
+    vulkanRuntime.setShaderModule(shader, size);
+  }
+
+  void runOnVulkan() {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (failed(vulkanRuntime.initRuntime()) || failed(vulkanRuntime.run()) ||
+        failed(vulkanRuntime.updateHostMemoryBuffers()) ||
+        failed(vulkanRuntime.destroy())) {
+      std::cerr << "runOnVulkan failed";
     }
+  }
 
-    void setEntryPoint(const char *entryPoint) {
-      std::lock_guard<std::mutex> lock(mutex);
-      vulkanRuntime.setEntryPoint(entryPoint);
-    }
-
-    void setNumWorkGroups(NumWorkGroups numWorkGroups) {
-      std::lock_guard<std::mutex> lock(mutex);
-      vulkanRuntime.setNumWorkGroups(numWorkGroups);
-    }
-
-    void setShaderModule(uint8_t *shader, uint32_t size) {
-      std::lock_guard<std::mutex> lock(mutex);
-      vulkanRuntime.setShaderModule(shader, size);
-    }
-
-    void runOnVulkan() {
-      std::lock_guard<std::mutex> lock(mutex);
-      if (failed(vulkanRuntime.initRuntime()) || failed(vulkanRuntime.run()) ||
-          failed(vulkanRuntime.updateHostMemoryBuffers()) ||
-          failed(vulkanRuntime.destroy())) {
-        llvm::errs() << "runOnVulkan failed";
-      }
-    }
-
-  private:
-    VulkanRuntime vulkanRuntime;
-    std::mutex mutex;
+private:
+  VulkanRuntime vulkanRuntime;
+  std::mutex mutex;
 };
 
 } // namespace
 
+template <typename T, int N>
+struct MemRefDescriptor {
+  T *allocated;
+  T *aligned;
+  int64_t offset;
+  int64_t sizes[N];
+  int64_t strides[N];
+};
+
 extern "C" {
-/// Fills the given memref with the given value.
-/// Binds the given memref to the given descriptor set and descriptor index.
-void setResourceData(const DescriptorSetIndex setIndex, BindingIndex bindIndex,
-                     float *allocated, float *aligned, int64_t offset,
-                     int64_t size, int64_t stride, float value) {
-  std::fill_n(allocated, size, value);
-  VulkanHostMemoryBuffer memBuffer{allocated,
-                                   static_cast<uint32_t>(size * sizeof(float))};
-  vkRuntimeManager->setResourceData(setIndex, bindIndex, memBuffer);
+/// Initializes `VulkanRuntimeManager` and returns a pointer to it.
+void *initVulkan() { return new VulkanRuntimeManager(); }
+
+/// Deinitializes `VulkanRuntimeManager` by the given pointer.
+void deinitVulkan(void *vkRuntimeManager) {
+  delete reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager);
 }
 
-void setEntryPoint(const char *entryPoint) {
-  vkRuntimeManager->setEntryPoint(entryPoint);
+void runOnVulkan(void *vkRuntimeManager) {
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)->runOnVulkan();
 }
 
-void setNumWorkGroups(uint32_t x, uint32_t y, uint32_t z) {
-  vkRuntimeManager->setNumWorkGroups({x, y, z});
+void setEntryPoint(void *vkRuntimeManager, const char *entryPoint) {
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setEntryPoint(entryPoint);
 }
 
-void setBinaryShader(uint8_t *shader, uint32_t size) {
-  vkRuntimeManager->setShaderModule(shader, size);
+void setNumWorkGroups(void *vkRuntimeManager, uint32_t x, uint32_t y,
+                      uint32_t z) {
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setNumWorkGroups({x, y, z});
 }
 
-void runOnVulkan() { vkRuntimeManager->runOnVulkan(); }
+void setBinaryShader(void *vkRuntimeManager, uint8_t *shader, uint32_t size) {
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setShaderModule(shader, size);
+}
+
+/// Binds the given 1D float memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef1DFloat(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                       BindingIndex bindIndex,
+                       MemRefDescriptor<float, 1> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated, static_cast<uint32_t>(ptr->sizes[0] * sizeof(float))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
+/// Binds the given 2D float memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef2DFloat(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                       BindingIndex bindIndex,
+                       MemRefDescriptor<float, 2> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated,
+      static_cast<uint32_t>(ptr->sizes[0] * ptr->sizes[1] * sizeof(float))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
+/// Binds the given 3D float memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef3DFloat(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                       BindingIndex bindIndex,
+                       MemRefDescriptor<float, 3> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated, static_cast<uint32_t>(ptr->sizes[0] * ptr->sizes[1] *
+                                            ptr->sizes[2] * sizeof(float))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
+/// Binds the given 1D int memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef1DInt(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                     BindingIndex bindIndex,
+                     MemRefDescriptor<int32_t, 1> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated, static_cast<uint32_t>(ptr->sizes[0] * sizeof(int32_t))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
+/// Binds the given 2D int memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef2DInt(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                     BindingIndex bindIndex,
+                     MemRefDescriptor<int32_t, 2> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated,
+      static_cast<uint32_t>(ptr->sizes[0] * ptr->sizes[1] * sizeof(int32_t))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
+/// Binds the given 3D int memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef3DInt(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                     BindingIndex bindIndex,
+                     MemRefDescriptor<int32_t, 3> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated, static_cast<uint32_t>(ptr->sizes[0] * ptr->sizes[1] *
+                                            ptr->sizes[2] * sizeof(int32_t))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
+/// Fills the given 1D float memref with the given float value.
+void _mlir_ciface_fillResource1DFloat(MemRefDescriptor<float, 1> *ptr, // NOLINT
+                                      float value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0], value);
+}
+
+/// Fills the given 2D float memref with the given float value.
+void _mlir_ciface_fillResource2DFloat(MemRefDescriptor<float, 2> *ptr, // NOLINT
+                                      float value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0] * ptr->sizes[1], value);
+}
+
+/// Fills the given 3D float memref with the given float value.
+void _mlir_ciface_fillResource3DFloat(MemRefDescriptor<float, 3> *ptr, // NOLINT
+                                      float value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0] * ptr->sizes[1] * ptr->sizes[2],
+              value);
+}
+
+/// Fills the given 1D int memref with the given int value.
+void _mlir_ciface_fillResource1DInt(MemRefDescriptor<int32_t, 1> *ptr, // NOLINT
+                                    int32_t value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0], value);
+}
+
+/// Fills the given 2D int memref with the given int value.
+void _mlir_ciface_fillResource2DInt(MemRefDescriptor<int32_t, 2> *ptr, // NOLINT
+                                    int32_t value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0] * ptr->sizes[1], value);
+}
+
+/// Fills the given 3D int memref with the given int value.
+void _mlir_ciface_fillResource3DInt(MemRefDescriptor<int32_t, 3> *ptr, // NOLINT
+                                    int32_t value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0] * ptr->sizes[1] * ptr->sizes[2],
+              value);
+}
 }

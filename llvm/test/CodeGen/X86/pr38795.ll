@@ -93,7 +93,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:  # %bb.18: # %if.then41
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl $.Lfn$local, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl $fn, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $.str, (%esp)
 ; CHECK-NEXT:    calll printf
 ; CHECK-NEXT:  .LBB0_19: # %for.end46

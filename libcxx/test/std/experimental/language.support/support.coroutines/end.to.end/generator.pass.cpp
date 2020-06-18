@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++03, c++11
 
 // See https://bugs.llvm.org/show_bug.cgi?id=33271
 // UNSUPPORTED: ubsan

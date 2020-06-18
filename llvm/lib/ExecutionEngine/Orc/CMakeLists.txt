@@ -12,11 +12,14 @@ add_llvm_component_library(LLVMOrcJIT
   Legacy.cpp
   Layer.cpp
   LLJIT.cpp
+  MachOPlatform.cpp
+  Mangling.cpp
   NullResolver.cpp
   ObjectLinkingLayer.cpp
   ObjectTransformLayer.cpp
   OrcABISupport.cpp
   OrcCBindings.cpp
+  OrcV2CBindings.cpp
   OrcMCJITReplacement.cpp
   RTDyldObjectLinkingLayer.cpp
   ThreadSafeModule.cpp

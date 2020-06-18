@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Function.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -23,7 +24,7 @@
 using namespace mlir;
 
 namespace {
-struct Inliner : public FunctionPass<Inliner> {
+struct Inliner : public PassWrapper<Inliner, FunctionPass> {
   void runOnFunction() override {
     auto function = getFunction();
 
@@ -44,9 +45,8 @@ struct Inliner : public FunctionPass<Inliner> {
       // Inline the functional region operation, but only clone the internal
       // region if there is more than one use.
       if (failed(inlineRegion(
-              interface, &callee.body(), caller,
-              llvm::to_vector<8>(caller.getArgOperands()),
-              SmallVector<Value, 8>(caller.getResults()), caller.getLoc(),
+              interface, &callee.body(), caller, caller.getArgOperands(),
+              caller.getResults(), caller.getLoc(),
               /*shouldCloneInlinedRegion=*/!callee.getResult().hasOneUse())))
         continue;
 

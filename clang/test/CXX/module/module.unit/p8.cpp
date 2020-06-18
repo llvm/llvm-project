@@ -36,5 +36,5 @@ export module foo:bar; // expected-error {{not yet supported}} expected-error {{
 int k = n;
 #ifndef IMPORTED
 // expected-error@-2 {{declaration of 'n' must be imported from module 'foo' before it is required}}
-// expected-note@* {{previous}}
+// expected-note@* {{not visible}}
 #endif

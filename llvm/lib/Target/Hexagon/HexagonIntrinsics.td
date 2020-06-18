@@ -205,12 +205,12 @@ def: T_stc_pat<S2_storerf_pci, int_hexagon_circ_sthhi, s4_1ImmPred_timm, I32>;
 
 multiclass MaskedStore <InstHexagon MI, Intrinsic IntID> {
   def : Pat<(IntID HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
-            (MI HvxQR:$src1, IntRegs:$src2, #0, HvxVR:$src3)>,
+            (MI HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>,
         Requires<[UseHVX]>;
 
   def : Pat<(!cast<Intrinsic>(IntID#"_128B") HvxQR:$src1, IntRegs:$src2,
                                              HvxVR:$src3),
-            (MI HvxQR:$src1, IntRegs:$src2, #0, HvxVR:$src3)>,
+            (MI HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>,
         Requires<[UseHVX]>;
 }
 
@@ -235,6 +235,8 @@ def: T_R_pat<Y2_dczeroa,     int_hexagon_Y2_dczeroa>;
 
 def: T_RR_pat<Y4_l2fetch,    int_hexagon_Y4_l2fetch>;
 def: T_RP_pat<Y5_l2fetch,    int_hexagon_Y5_l2fetch>;
+
+def: Pat<(int_hexagon_Y2_dcfetch I32:$Rt), (Y2_dcfetchbo I32:$Rt, 0)>;
 
 //
 // Patterns for optimizing code generations for HVX.
@@ -274,76 +276,6 @@ def : Pat <(v32i32 (int_hexagon_V6_lo_128B (v64i32 HvxWR:$src1))),
 
 def : Pat <(v32i32 (int_hexagon_V6_hi_128B (v64i32 HvxWR:$src1))),
            (v32i32 (EXTRACT_SUBREG (v64i32 HvxWR:$src1), vsub_hi))>,
-           Requires<[UseHVX]>;
-}
-
-def : Pat <(v512i1 (bitconvert (v16i32 HvxVR:$src1))),
-           (v512i1 (V6_vandvrt (v16i32 HvxVR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v512i1 (bitconvert (v32i16 HvxVR:$src1))),
-           (v512i1 (V6_vandvrt (v32i16 HvxVR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v512i1 (bitconvert (v64i8  HvxVR:$src1))),
-           (v512i1 (V6_vandvrt (v64i8  HvxVR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v16i32 (bitconvert (v512i1 HvxQR:$src1))),
-           (v16i32 (V6_vandqrt (v512i1 HvxQR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v32i16 (bitconvert (v512i1 HvxQR:$src1))),
-           (v32i16 (V6_vandqrt (v512i1 HvxQR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v64i8  (bitconvert (v512i1 HvxQR:$src1))),
-           (v64i8  (V6_vandqrt (v512i1 HvxQR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v1024i1 (bitconvert (v32i32 HvxVR:$src1))),
-           (v1024i1 (V6_vandvrt (v32i32 HvxVR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v1024i1 (bitconvert (v64i16 HvxVR:$src1))),
-           (v1024i1 (V6_vandvrt (v64i16 HvxVR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v1024i1 (bitconvert (v128i8 HvxVR:$src1))),
-           (v1024i1 (V6_vandvrt (v128i8 HvxVR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v32i32 (bitconvert (v1024i1 HvxQR:$src1))),
-           (v32i32 (V6_vandqrt (v1024i1 HvxQR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v64i16 (bitconvert (v1024i1 HvxQR:$src1))),
-           (v64i16 (V6_vandqrt (v1024i1 HvxQR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v128i8 (bitconvert (v1024i1 HvxQR:$src1))),
-           (v128i8 (V6_vandqrt (v1024i1 HvxQR:$src1), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-let AddedComplexity = 140 in {
-def : Pat <(store (v512i1 HvxQR:$src1), (i32 IntRegs:$addr)),
-           (V6_vS32b_ai IntRegs:$addr, 0,
-           (v16i32 (V6_vandqrt (v512i1 HvxQR:$src1), (A2_tfrsi 0x01010101))))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v512i1 (load (i32 IntRegs:$addr))),
-           (v512i1 (V6_vandvrt
-           (v16i32 (V6_vL32b_ai IntRegs:$addr, 0)), (A2_tfrsi 0x01010101)))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(store (v1024i1 HvxQR:$src1), (i32 IntRegs:$addr)),
-           (V6_vS32b_ai IntRegs:$addr, 0,
-           (v32i32 (V6_vandqrt (v1024i1 HvxQR:$src1), (A2_tfrsi 0x01010101))))>,
-           Requires<[UseHVX]>;
-
-def : Pat <(v1024i1 (load (i32 IntRegs:$addr))),
-           (v1024i1 (V6_vandvrt
-           (v32i32 (V6_vL32b_ai IntRegs:$addr, 0)), (A2_tfrsi 0x01010101)))>,
            Requires<[UseHVX]>;
 }
 

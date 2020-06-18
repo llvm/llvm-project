@@ -249,6 +249,12 @@ symbols and getting the name and attributes of each symbol via:
 
 The attributes of a symbol include the alignment, visibility, and kind.
 
+Tools working with object files on Darwin (e.g. lipo) may need to know properties like the CPU type:
+
+.. code-block:: c
+
+  lto_module_get_macho_cputype(lto_module_t mod, unsigned int *out_cputype, unsigned int *out_cpusubtype)
+
 ``lto_code_gen_t``
 ------------------
 

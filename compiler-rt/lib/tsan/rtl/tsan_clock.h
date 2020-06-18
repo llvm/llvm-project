@@ -134,10 +134,12 @@ class ThreadClock {
   uptr size() const;
 
   void acquire(ClockCache *c, SyncClock *src);
+  void releaseStoreAcquire(ClockCache *c, SyncClock *src);
   void release(ClockCache *c, SyncClock *dst);
   void acq_rel(ClockCache *c, SyncClock *dst);
   void ReleaseStore(ClockCache *c, SyncClock *dst);
   void ResetCached(ClockCache *c);
+  void NoteGlobalAcquire(u64 v);
 
   void DebugReset();
   void DebugDump(int(*printf)(const char *s, ...));
@@ -149,6 +151,53 @@ class ThreadClock {
   const unsigned reused_;  // tid_ reuse count.
   // Current thread time when it acquired something from other threads.
   u64 last_acquire_;
+
+  // Last time another thread has done a global acquire of this thread's clock.
+  // It helps to avoid problem described in:
+  // https://github.com/golang/go/issues/39186
+  // See test/tsan/java_finalizer2.cpp for a regression test.
+  // Note the failuire is _extremely_ hard to hit, so if you are trying
+  // to reproduce it, you may want to run something like:
+  // $ go get golang.org/x/tools/cmd/stress
+  // $ stress -p=64 ./a.out
+  //
+  // The crux of the problem is roughly as follows.
+  // A number of O(1) optimizations in the clocks algorithm assume proper
+  // transitive cumulative propagation of clock values. The AcquireGlobal
+  // operation may produce an inconsistent non-linearazable view of
+  // thread clocks. Namely, it may acquire a later value from a thread
+  // with a higher ID, but fail to acquire an earlier value from a thread
+  // with a lower ID. If a thread that executed AcquireGlobal then releases
+  // to a sync clock, it will spoil the sync clock with the inconsistent
+  // values. If another thread later releases to the sync clock, the optimized
+  // algorithm may break.
+  //
+  // The exact sequence of events that leads to the failure.
+  // - thread 1 executes AcquireGlobal
+  // - thread 1 acquires value 1 for thread 2
+  // - thread 2 increments clock to 2
+  // - thread 2 releases to sync object 1
+  // - thread 3 at time 1
+  // - thread 3 acquires from sync object 1
+  // - thread 3 increments clock to 2
+  // - thread 1 acquires value 2 for thread 3
+  // - thread 1 releases to sync object 2
+  // - sync object 2 clock has 1 for thread 2 and 2 for thread 3
+  // - thread 3 releases to sync object 2
+  // - thread 3 sees value 2 in the clock for itself
+  //   and decides that it has already released to the clock
+  //   and did not acquire anything from other threads after that
+  //   (the last_acquire_ check in release operation)
+  // - thread 3 does not update the value for thread 2 in the clock from 1 to 2
+  // - thread 4 acquires from sync object 2
+  // - thread 4 detects a false race with thread 2
+  //   as it should have been synchronized with thread 2 up to time 2,
+  //   but because of the broken clock it is now synchronized only up to time 1
+  //
+  // The global_acquire_ value helps to prevent this scenario.
+  // Namely, thread 3 will not trust any own clock values up to global_acquire_
+  // for the purposes of the last_acquire_ optimization.
+  atomic_uint64_t global_acquire_;
 
   // Cached SyncClock (without dirty entries and release_store_tid_).
   // We reuse it for subsequent store-release operations without intervening
@@ -164,6 +213,7 @@ class ThreadClock {
   u64 clk_[kMaxTidInClock];  // Fixed size vector clock.
 
   bool IsAlreadyAcquired(const SyncClock *src) const;
+  bool HasAcquiredAfterRelease(const SyncClock *dst) const;
   void UpdateCurrentThread(ClockCache *c, SyncClock *dst) const;
 };
 
@@ -183,6 +233,14 @@ ALWAYS_INLINE void ThreadClock::tick() {
 
 ALWAYS_INLINE uptr ThreadClock::size() const {
   return nclk_;
+}
+
+ALWAYS_INLINE void ThreadClock::NoteGlobalAcquire(u64 v) {
+  // Here we rely on the fact that AcquireGlobal is protected by
+  // ThreadRegistryLock, thus only one thread at a time executes it
+  // and values passed to this function should not go backwards.
+  CHECK_LE(atomic_load_relaxed(&global_acquire_), v);
+  atomic_store_relaxed(&global_acquire_, v);
 }
 
 ALWAYS_INLINE SyncClock::Iter SyncClock::begin() {

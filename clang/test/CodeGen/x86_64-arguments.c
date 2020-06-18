@@ -47,7 +47,7 @@ void f7(e7 a0) {
 
 // Test merging/passing of upper eightbyte with X87 class.
 //
-// CHECK-LABEL: define void @f8_1(%union.u8* noalias sret %agg.result)
+// CHECK-LABEL: define void @f8_1(%union.u8* noalias sret align 16 %agg.result)
 // CHECK-LABEL: define void @f8_2(%union.u8* byval(%union.u8) align 16 %a0)
 union u8 {
   long double a;
@@ -63,7 +63,7 @@ struct s9 { int a; int b; int : 0; } f9(void) { while (1) {} }
 struct s10 { int a; int b; int : 0; };
 void f10(struct s10 a0) {}
 
-// CHECK-LABEL: define void @f11(%union.anon* noalias sret %agg.result)
+// CHECK-LABEL: define void @f11(%union.anon* noalias sret align 16 %agg.result)
 union { long double a; float b; } f11() { while (1) {} }
 
 // CHECK-LABEL: define i32 @f12_0()
@@ -74,7 +74,7 @@ void f12_1(struct s12 a0) {}
 
 // Check that sret parameter is accounted for when checking available integer
 // registers.
-// CHECK: define void @f13(%struct.s13_0* noalias sret %agg.result, i32 %a, i32 %b, i32 %c, i32 %d, {{.*}}* byval({{.*}}) align 8 %e, i32 %f)
+// CHECK: define void @f13(%struct.s13_0* noalias sret align 8 %agg.result, i32 %a, i32 %b, i32 %c, i32 %d, {{.*}}* byval({{.*}}) align 8 %e, i32 %f)
 
 struct s13_0 { long long f0[3]; };
 struct s13_1 { long long f0[2]; };

@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FormatVariadic.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -140,9 +141,9 @@ formatv_object_base::splitLiteralAndReplacement(StringRef Fmt) {
   return std::make_pair(ReplacementItem{Fmt}, StringRef());
 }
 
-std::vector<ReplacementItem>
+SmallVector<ReplacementItem, 2>
 formatv_object_base::parseFormatString(StringRef Fmt) {
-  std::vector<ReplacementItem> Replacements;
+  SmallVector<ReplacementItem, 2> Replacements;
   ReplacementItem I;
   while (!Fmt.empty()) {
     std::tie(I, Fmt) = splitLiteralAndReplacement(Fmt);

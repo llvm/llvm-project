@@ -675,6 +675,12 @@ bool RegisterCoalescer::adjustCopiesBackFrom(const CoalescerPair &CP,
       S.removeSegment(*SS, true);
       continue;
     }
+    // The subrange may have ended before FillerStart. If so, extend it.
+    if (!S.getVNInfoAt(FillerStart)) {
+      SlotIndex BBStart =
+          LIS->getMBBStartIdx(LIS->getMBBFromIndex(FillerStart));
+      S.extendInBlock(BBStart, FillerStart);
+    }
     VNInfo *SubBValNo = S.getVNInfoAt(CopyIdx);
     S.addSegment(LiveInterval::Segment(FillerStart, FillerEnd, SubBValNo));
     VNInfo *SubValSNo = S.getVNInfoAt(AValNo->def.getPrevSlot());
@@ -1439,6 +1445,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
       SlotIndex CurrIdx = LIS->getInstructionIndex(NewMI);
       LaneBitmask DstMask = TRI->getSubRegIndexLaneMask(NewIdx);
       bool UpdatedSubRanges = false;
+      SlotIndex DefIndex =
+          CurrIdx.getRegSlot(NewMI.getOperand(0).isEarlyClobber());
+      VNInfo::Allocator &Alloc = LIS->getVNInfoAllocator();
       for (LiveInterval::SubRange &SR : DstInt.subranges()) {
         if ((SR.LaneMask & DstMask).none()) {
           LLVM_DEBUG(dbgs()
@@ -1449,6 +1458,14 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
             SR.removeValNo(RmValNo);
             UpdatedSubRanges = true;
           }
+        } else {
+          // We know that this lane is defined by this instruction,
+          // but at this point it may be empty because it is not used by
+          // anything. This happens when updateRegDefUses adds the missing
+          // lanes. Assign that lane a dead def so that the interferences
+          // are properly modeled.
+          if (SR.empty())
+            SR.createDeadDef(DefIndex, Alloc);
         }
       }
       if (UpdatedSubRanges)
@@ -3854,6 +3871,23 @@ void RegisterCoalescer::releaseMemory() {
 }
 
 bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
+  LLVM_DEBUG(dbgs() << "********** SIMPLE REGISTER COALESCING **********\n"
+                    << "********** Function: " << fn.getName() << '\n');
+
+  // Variables changed between a setjmp and a longjump can have undefined value
+  // after the longjmp. This behaviour can be observed if such a variable is
+  // spilled, so longjmp won't restore the value in the spill slot.
+  // RegisterCoalescer should not run in functions with a setjmp to avoid
+  // merging such undefined variables with predictable ones.
+  //
+  // TODO: Could specifically disable coalescing registers live across setjmp
+  // calls
+  if (fn.exposesReturnsTwice()) {
+    LLVM_DEBUG(
+        dbgs() << "* Skipped as it exposes funcions that returns twice.\n");
+    return false;
+  }
+
   MF = &fn;
   MRI = &fn.getRegInfo();
   const TargetSubtargetInfo &STI = fn.getSubtarget();
@@ -3871,9 +3905,6 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   // either be enabled unconditionally or replaced by a more general live range
   // splitting optimization.
   JoinSplitEdges = EnableJoinSplits;
-
-  LLVM_DEBUG(dbgs() << "********** SIMPLE REGISTER COALESCING **********\n"
-                    << "********** Function: " << MF->getName() << '\n');
 
   if (VerifyCoalescing)
     MF->verify(this, "Before register coalescing");

@@ -269,7 +269,8 @@ enum ExpressionResults {
   eExpressionHitBreakpoint,
   eExpressionTimedOut,
   eExpressionResultUnavailable,
-  eExpressionStoppedForDebug
+  eExpressionStoppedForDebug,
+  eExpressionThreadVanished
 };
 
 enum SearchDepth {
@@ -695,6 +696,7 @@ enum SectionType {
   eSectionTypeDWARFDebugRngListsDwo,
   eSectionTypeDWARFDebugLocDwo,
   eSectionTypeDWARFDebugLocListsDwo,
+  eSectionTypeDWARFDebugTuIndex,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){
@@ -1079,6 +1081,20 @@ FLAGS_ENUM(CommandFlags){
 enum TypeSummaryCapping {
   eTypeSummaryCapped = true,
   eTypeSummaryUncapped = false
+};
+
+/// The result from a command interpreter run.
+enum CommandInterpreterResult {
+  /// Command interpreter finished successfully.
+  eCommandInterpreterResultSuccess,
+  /// Stopped because the corresponding option was set and the inferior
+  /// crashed.
+  eCommandInterpreterResultInferiorCrash,
+  /// Stopped because the corresponding option was set and a command returned
+  /// an error.
+  eCommandInterpreterResultCommandError,
+  /// Stopped because quit was requested.
+  eCommandInterpreterResultQuitRequested,
 };
 } // namespace lldb
 

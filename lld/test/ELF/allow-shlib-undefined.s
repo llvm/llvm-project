@@ -9,6 +9,7 @@
 # RUN: not ld.lld --no-allow-shlib-undefined %t.o %t.so -o /dev/null 2>&1 | FileCheck %s
 # Executable defaults to --no-allow-shlib-undefined
 # RUN: not ld.lld %t.o %t.so -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld %t.o %t.so --noinhibit-exec -o /dev/null 2>&1 | FileCheck %s
 # -shared defaults to --allow-shlib-undefined
 # RUN: ld.lld -shared %t.o %t.so -o /dev/null
 
@@ -27,4 +28,4 @@
 _start:
   callq _shared@PLT
 
-# CHECK: undefined reference to _unresolved
+# CHECK: {{.*}}.so: undefined reference to _unresolved [--no-allow-shlib-undefined]

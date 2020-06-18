@@ -16,12 +16,10 @@
 #include "EHStreamer.h"
 
 namespace llvm {
-class Function;
 class GlobalValue;
 class MachineFunction;
 class MCExpr;
 class MCSection;
-class Value;
 struct WinEHFuncInfo;
 
 class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {

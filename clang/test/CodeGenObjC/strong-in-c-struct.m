@@ -89,6 +89,13 @@ StrongOuter2 getStrongOuter2(void);
 void calleeStrongSmall(StrongSmall);
 void func(Strong *);
 
+@interface C
+- (StrongSmall)getStrongSmall;
++ (StrongSmall)getStrongSmallClass;
+@end
+
+id g0;
+
 // CHECK: %[[STRUCT_STRONGOUTER:.*]] = type { %[[STRUCT_STRONG:.*]], i8*, double }
 // CHECK: %[[STRUCT_STRONG]] = type { %[[STRUCT_TRIVIAL:.*]], i8* }
 // CHECK: %[[STRUCT_TRIVIAL]] = type { [4 x i32] }
@@ -476,6 +483,18 @@ void test_destructor_ignored_result(void) {
   getStrongSmall();
 }
 
+// CHECK: define void @test_destructor_ignored_result2(%{{.*}}* %[[C:.*]])
+// CHECK: %[[TMP:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[CALL:.*]] = call [2 x i64]{{.*}}@objc_msgSend
+// CHECK: %[[V5:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to [2 x i64]*
+// CHECK: store [2 x i64] %[[CALL]], [2 x i64]* %[[V5]], align 8
+// CHECK: %[[V6:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V6]])
+
+void test_destructor_ignored_result2(C *c) {
+  [c getStrongSmall];
+}
+
 // CHECK: define void @test_copy_constructor_StrongBlock(
 // CHECK: call void @__copy_constructor_8_8_sb0(
 // CHECK: call void @__destructor_8_sb0(
@@ -520,7 +539,9 @@ void test_copy_assignment_StrongBlock(StrongBlock *d, StrongBlock *s) {
 
 // CHECK: define void @test_copy_constructor_StrongVolatile0(
 // CHECK: call void @__copy_constructor_8_8_t0w4_sv8(
+// CHECK-NOT: call
 // CHECK: call void @__destructor_8_sv8(
+// CHECK-NOT: call
 
 // CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_sv8(
 // CHECK: %[[V8:.*]] = load volatile i8*, i8** %{{.*}}, align 8
@@ -707,6 +728,176 @@ void test_copy_constructor_Bitfield1(Bitfield1 *a) {
 
 void test_copy_constructor_VolatileArray(VolatileArray *a) {
   VolatileArray t = *a;
+}
+
+// CHECK: define void @test_compound_literal0(
+// CHECK: %[[P:.*]] = alloca %[[STRUCT_STRONGSMALL]]*, align 8
+// CHECK: %[[_COMPOUNDLITERAL:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[CLEANUP_COND:.*]] = alloca i1, align 1
+// CHECK: %[[_COMPOUNDLITERAL1:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[CLEANUP_COND4:.*]] = alloca i1, align 1
+
+// CHECK: %[[I:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]], i32 0, i32 0
+// CHECK: store i32 1, i32* %[[I]], align 8
+// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F1]], align 8
+// CHECK: store i1 true, i1* %[[CLEANUP_COND]], align 1
+
+// CHECK: %[[I2:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]], i32 0, i32 0
+// CHECK: store i32 2, i32* %[[I2]], align 8
+// CHECK: %[[F13:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F13]], align 8
+// CHECK: store i1 true, i1* %[[CLEANUP_COND4]], align 1
+
+// CHECK: %[[COND:.*]] = phi %[[STRUCT_STRONGSMALL]]* [ %[[_COMPOUNDLITERAL]], %{{.*}} ], [ %[[_COMPOUNDLITERAL1]], %{{.*}} ]
+// CHECK: store %[[STRUCT_STRONGSMALL]]* %[[COND]], %[[STRUCT_STRONGSMALL]]** %[[P]], align 8
+// CHECK: call void @func(
+
+// CHECK: %[[V1:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V1]])
+
+// CHECK: %[[V2:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V2]])
+
+void test_compound_literal0(int c) {
+  StrongSmall *p = c ? &(StrongSmall){ 1, 0 } : &(StrongSmall){ 2, 0 };
+  func(0);
+}
+
+// Check that there is only one destructor call, which destructs 't'.
+
+// CHECK: define void @test_compound_literal1(
+// CHECK: %[[T:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+
+// CHECK: %[[I:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[T]], i32 0, i32 0
+// CHECK: store i32 1, i32* %[[I]], align 8
+// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[T]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F1]], align 8
+
+// CHECK: %[[I1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[T]], i32 0, i32 0
+// CHECK: store i32 2, i32* %[[I1]], align 8
+// CHECK: %[[F12:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[T]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F12]], align 8
+
+// CHECK: call void @func(
+// CHECK-NOT: call void
+// CHECK: %[[V1:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[T]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V1]])
+// CHECK-NOT: call void
+
+void test_compound_literal1(int c) {
+  StrongSmall t = c ? (StrongSmall){ 1, 0 } : (StrongSmall){ 2, 0 };
+  func(0);
+}
+
+// CHECK: define void @test_compound_literal2(
+// CHECK: %[[P_ADDR:.*]] = alloca %[[STRUCT_STRONGSMALL]]*, align 8
+// CHECK: %[[_COMPOUNDLITERAL:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[CLEANUP_COND:.*]] = alloca i1, align 1
+// CHECK: %[[_COMPOUNDLITERAL1:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[CLEANUP_COND4:.*]] = alloca i1, align 1
+// CHECK: %[[V0:.*]] = load %[[STRUCT_STRONGSMALL]]*, %[[STRUCT_STRONGSMALL]]** %[[P_ADDR]], align 8
+
+// CHECK: %[[I:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]], i32 0, i32 0
+// CHECK: store i32 1, i32* %[[I]], align 8
+// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F1]], align 8
+// CHECK: store i1 true, i1* %[[CLEANUP_COND]], align 1
+// CHECK: %[[V2:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[V0]] to i8**
+// CHECK: %[[V3:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]] to i8**
+// CHECK: call void @__copy_assignment_8_8_t0w4_s8(i8** %[[V2]], i8** %[[V3]])
+
+// CHECK: %[[I2:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]], i32 0, i32 0
+// CHECK: store i32 2, i32* %[[I2]], align 8
+// CHECK: %[[F13:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F13]], align 8
+// CHECK: store i1 true, i1* %[[CLEANUP_COND4]], align 1
+// CHECK: %[[V4:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[V0]] to i8**
+// CHECK: %[[V5:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]] to i8**
+// CHECK: call void @__copy_assignment_8_8_t0w4_s8(i8** %[[V4]], i8** %[[V5]])
+
+// CHECK: call void @func(
+
+// CHECK: %[[V6:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V6]])
+
+// CHECK: %[[V7:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V7]])
+
+void test_compound_literal2(int c, StrongSmall *p) {
+  *p = c ? (StrongSmall){ 1, 0 } : (StrongSmall){ 2, 0 };
+  func(0);
+}
+
+// CHECK: define void @test_member_access(
+// CHECK: %[[TMP:.*]] = alloca %[[STRUCT_STRONGSMALL]],
+// CHECK: %[[V3:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V3]])
+// CHECK: call void @func(
+
+void test_member_access(void) {
+  g0 = getStrongSmall().f1;
+  func(0);
+}
+
+// CHECK: define void @test_member_access2(%{{.*}}* %[[C:.*]])
+// CHECK: %[[COERCE:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[V8:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[COERCE]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V8]])
+// CHECK: call void @func(
+
+void test_member_access2(C *c) {
+  g0 = [c getStrongSmall].f1;
+  func(0);
+}
+
+// CHECK: define void @test_member_access3(
+// CHECK: %[[COERCE:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[V8:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[COERCE]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V8]])
+// CHECK: call void @func(
+
+void test_member_access3(void) {
+  g0 = [C getStrongSmallClass].f1;
+  func(0);
+}
+
+// CHECK: define void @test_member_access4()
+// CHECK: %[[COERCE:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[V5:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[COERCE]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V5]])
+// CHECK: call void @func(
+
+void test_member_access4(void) {
+  g0 = ^{ StrongSmall s; return s; }().f1;
+  func(0);
+}
+
+// CHECK: define void @test_volatile_variable_reference(
+// CHECK: %[[AGG_TMP_ENSURED:.*]] = alloca %[[STRUCT_STRONGSMALL]],
+// CHECK: %[[V1:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[AGG_TMP_ENSURED]] to i8**
+// CHECK: %[[V2:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %{{.*}} to i8**
+// CHECK: call void @__copy_constructor_8_8_tv0w32_sv8(i8** %[[V1]], i8** %[[V2]])
+// CHECK: %[[V3:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[AGG_TMP_ENSURED]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V3]])
+// CHECK: call void @func(
+
+void test_volatile_variable_reference(volatile StrongSmall *a) {
+  (void)*a;
+  func(0);
+}
+
+struct ZeroBitfield {
+  int : 0;
+  id strong;
+};
+
+
+// CHECK: define linkonce_odr hidden void @__default_constructor_8_sv0
+// CHECK: define linkonce_odr hidden void @__copy_assignment_8_8_sv0
+void test_zero_bitfield() {
+  struct ZeroBitfield volatile a, b;
+  a = b;
 }
 
 #endif /* USESTRUCT */

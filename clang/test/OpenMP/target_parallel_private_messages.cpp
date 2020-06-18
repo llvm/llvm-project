@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -96,7 +97,7 @@ int foomain(I argc, C **argv) {
 {}
 #pragma omp target parallel private(argv[1]) // expected-error {{expected variable name}}
 {}
-#pragma omp target parallel allocate(omp_thread_mem_alloc: ba) private(ba) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel' directive}}
+#pragma omp target parallel allocate(omp_thread_mem_alloc: ba) private(ba) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel' directive}} expected-error {{allocator must be specified in the 'uses_allocators' clause}}
 {}
 #pragma omp target parallel private(ca) // expected-error {{const-qualified variable without mutable fields cannot be private}}
 {}

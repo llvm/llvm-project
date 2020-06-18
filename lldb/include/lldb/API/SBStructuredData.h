@@ -91,6 +91,7 @@ protected:
   friend class SBTraceOptions;
   friend class SBDebugger;
   friend class SBTarget;
+  friend class SBProcess;
   friend class SBThread;
   friend class SBThreadPlan;
   friend class SBBreakpoint;

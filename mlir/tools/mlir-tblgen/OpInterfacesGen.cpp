@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DocGenUtilities.h"
-#include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/OpInterfaces.h"
@@ -36,10 +35,10 @@ static void emitMethodNameAndArgs(const OpInterfaceMethod &method,
   os << method.getName() << '(';
   if (addOperationArg)
     os << "Operation *tablegen_opaque_op" << (method.arg_empty() ? "" : ", ");
-  interleaveComma(method.getArguments(), os,
-                  [&](const OpInterfaceMethod::Argument &arg) {
-                    os << arg.type << " " << arg.name;
-                  });
+  llvm::interleaveComma(method.getArguments(), os,
+                        [&](const OpInterfaceMethod::Argument &arg) {
+                          os << arg.type << " " << arg.name;
+                        });
   os << ')';
 }
 
@@ -72,7 +71,7 @@ static void emitInterfaceDef(OpInterface &interface, raw_ostream &os) {
     os << " {\n      return getImpl()->" << method.getName() << '(';
     if (!method.isStatic())
       os << "getOperation()" << (method.arg_empty() ? "" : ", ");
-    interleaveComma(
+    llvm::interleaveComma(
         method.getArguments(), os,
         [&](const OpInterfaceMethod::Argument &arg) { os << arg.name; });
     os << ");\n  }\n";
@@ -135,7 +134,7 @@ static void emitModelDecl(OpInterface &interface, raw_ostream &os) {
 
     // Add the arguments to the call.
     os << method.getName() << '(';
-    interleaveComma(
+    llvm::interleaveComma(
         method.getArguments(), os,
         [&](const OpInterfaceMethod::Argument &arg) { os << arg.name; });
     os << ");\n    }\n";
@@ -147,7 +146,7 @@ static void emitTraitDecl(OpInterface &interface, raw_ostream &os,
                           StringRef interfaceName,
                           StringRef interfaceTraitsName) {
   os << "  template <typename ConcreteOp>\n  "
-     << llvm::formatv("struct Trait : public OpInterface<{0},"
+     << llvm::formatv("struct {0}Trait : public OpInterface<{0},"
                       " detail::{1}>::Trait<ConcreteOp> {{\n",
                       interfaceName, interfaceTraitsName);
 
@@ -172,11 +171,18 @@ static void emitTraitDecl(OpInterface &interface, raw_ostream &os,
   tblgen::FmtContext traitCtx;
   traitCtx.withOp("op");
   if (auto verify = interface.getVerify()) {
-    os << "  static LogicalResult verifyTrait(Operation* op) {\n"
+    os << "    static LogicalResult verifyTrait(Operation* op) {\n"
        << std::string(tblgen::tgfmt(*verify, &traitCtx)) << "\n  }\n";
   }
+  if (auto extraTraitDecls = interface.getExtraTraitClassDeclaration())
+    os << extraTraitDecls << "\n";
 
   os << "  };\n";
+
+  // Emit a utility wrapper trait class.
+  os << "    template <typename ConcreteOp>\n    "
+     << llvm::formatv("struct Trait : public {0}Trait<ConcreteOp> {{};\n",
+                      interfaceName);
 }
 
 static void emitInterfaceDecl(OpInterface &interface, raw_ostream &os) {
@@ -255,10 +261,10 @@ static void emitInterfaceDoc(const Record &interfaceDef, raw_ostream &os) {
     if (method.isStatic())
       os << "static ";
     emitCPPType(method.getReturnType(), os) << method.getName() << '(';
-    interleaveComma(method.getArguments(), os,
-                    [&](const OpInterfaceMethod::Argument &arg) {
-                      emitCPPType(arg.type, os) << arg.name;
-                    });
+    llvm::interleaveComma(method.getArguments(), os,
+                          [&](const OpInterfaceMethod::Argument &arg) {
+                            emitCPPType(arg.type, os) << arg.name;
+                          });
     os << ");\n```\n";
 
     // Emit the description.

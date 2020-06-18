@@ -11,10 +11,10 @@
 // pointer_safety get_pointer_safety();
 
 // The pointer_safety interface is no longer provided in C++03 in the new ABI.
-// XFAIL: c++98, c++03
+// XFAIL: c++03
 
-// MODULES_DEFINES: _LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE
-#define _LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE
+
 #include <memory>
 #include <cassert>
 

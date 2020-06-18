@@ -7,6 +7,7 @@
 # RUN: echo "SECTIONS { foo = 1; }" > %t1.script
 # RUN: ld.lld -o %t1.exe --script %t1.script %tar.a %t.o
 # RUN: llvm-readobj --symbols %t1.exe | FileCheck %s
+# CHECK:     Symbols [
 # CHECK-NOT: bar
 # CHECK:     foo
 # CHECK-NOT: bar

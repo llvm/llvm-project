@@ -16,6 +16,7 @@
 #define LLVM_CLANG_AST_ASTTYPETRAITS_H
 
 #include "clang/AST/ASTFwd.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeLoc.h"
@@ -136,6 +137,7 @@ private:
     NKI_QualType,
     NKI_TypeLoc,
     NKI_LastKindWithoutPointerIdentity = NKI_TypeLoc,
+    NKI_CXXBaseSpecifier,
     NKI_CXXCtorInitializer,
     NKI_NestedNameSpecifier,
     NKI_Decl,
@@ -148,8 +150,8 @@ private:
 #define TYPE(DERIVED, BASE) NKI_##DERIVED##Type,
 #include "clang/AST/TypeNodes.inc"
     NKI_OMPClause,
-#define OPENMP_CLAUSE(TextualSpelling, Class) NKI_##Class,
-#include "clang/Basic/OpenMPKinds.def"
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) NKI_##Class,
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
     NKI_NumberOfKinds
   };
 
@@ -198,14 +200,15 @@ KIND_TO_KIND_ID(Decl)
 KIND_TO_KIND_ID(Stmt)
 KIND_TO_KIND_ID(Type)
 KIND_TO_KIND_ID(OMPClause)
+KIND_TO_KIND_ID(CXXBaseSpecifier)
 #define DECL(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Decl)
 #include "clang/AST/DeclNodes.inc"
 #define STMT(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED)
 #include "clang/AST/StmtNodes.inc"
 #define TYPE(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Type)
 #include "clang/AST/TypeNodes.inc"
-#define OPENMP_CLAUSE(TextualSpelling, Class) KIND_TO_KIND_ID(Class)
-#include "clang/Basic/OpenMPKinds.def"
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) KIND_TO_KIND_ID(Class)
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
 #undef KIND_TO_KIND_ID
 
 inline raw_ostream &operator<<(raw_ostream &OS, ASTNodeKind K) {
@@ -509,6 +512,10 @@ struct DynTypedNode::BaseConverter<QualType,
 template <>
 struct DynTypedNode::BaseConverter<
     TypeLoc, void> : public ValueConverter<TypeLoc> {};
+
+template <>
+struct DynTypedNode::BaseConverter<CXXBaseSpecifier, void>
+    : public PtrConverter<CXXBaseSpecifier> {};
 
 // The only operation we allow on unsupported types is \c get.
 // This allows to conveniently use \c DynTypedNode when having an arbitrary

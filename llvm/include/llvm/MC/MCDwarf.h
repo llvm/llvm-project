@@ -41,6 +41,11 @@ class raw_ostream;
 class SMLoc;
 class SourceMgr;
 
+namespace mcdwarf {
+// Emit the common part of the DWARF 5 range/locations list tables header.
+MCSymbol *emitListsTableHeaderStart(MCStreamer &S);
+} // namespace mcdwarf
+
 /// Instances of this class represent the name of the dwarf .file directive and
 /// its associated dwarf file number in the MC file. MCDwarfFile's are created
 /// and uniqued by the MCContext class. In Dwarf 4 file numbers start from 1;
@@ -477,9 +482,9 @@ private:
 public:
   /// .cfi_def_cfa defines a rule for computing CFA as: take address from
   /// Register and add Offset to it.
-  static MCCFIInstruction createDefCfa(MCSymbol *L, unsigned Register,
-                                       int Offset) {
-    return MCCFIInstruction(OpDefCfa, L, Register, -Offset, "");
+  static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register,
+                                    int Offset) {
+    return MCCFIInstruction(OpDefCfa, L, Register, Offset, "");
   }
 
   /// .cfi_def_cfa_register modifies a rule for computing CFA. From now
@@ -491,8 +496,8 @@ public:
   /// .cfi_def_cfa_offset modifies a rule for computing CFA. Register
   /// remains the same, but offset is new. Note that it is the absolute offset
   /// that will be added to a defined register to the compute CFA address.
-  static MCCFIInstruction createDefCfaOffset(MCSymbol *L, int Offset) {
-    return MCCFIInstruction(OpDefCfaOffset, L, 0, -Offset, "");
+  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int Offset) {
+    return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, "");
   }
 
   /// .cfi_adjust_cfa_offset Same as .cfi_def_cfa_offset, but

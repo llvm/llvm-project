@@ -11,3 +11,5 @@ add_tablegen(libc-hdrgen llvm-libc
   PublicAPICommand.cpp
   PublicAPICommand.h
 )
+
+add_subdirectory(PrototypeTestGen)

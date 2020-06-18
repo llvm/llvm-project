@@ -679,7 +679,7 @@ static int GetVacantWatchIndex(struct pt_watch_regs *regs, lldb::addr_t addr,
     }
 
     if (vacant_watches > 1) {
-      // Split this watchpoint accross several registers
+      // Split this watchpoint across several registers
       struct pt_watch_regs regs_copy;
       regs_copy = *regs;
       lldb::addr_t break_addr;

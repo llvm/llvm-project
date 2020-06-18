@@ -539,6 +539,7 @@ struct Elf_GnuHash_Impl {
   }
 
   ArrayRef<Elf_Word> values(unsigned DynamicSymCount) const {
+    assert(DynamicSymCount >= symndx);
     return ArrayRef<Elf_Word>(buckets().end(), DynamicSymCount - symndx);
   }
 };
@@ -613,6 +614,12 @@ public:
         reinterpret_cast<const uint8_t *>(&Nhdr) + sizeof(Nhdr) +
           alignTo<Elf_Nhdr_Impl<ELFT>::Align>(Nhdr.n_namesz),
         Nhdr.n_descsz);
+  }
+
+  /// Get the note's descriptor as StringRef
+  StringRef getDescAsStringRef() const {
+    ArrayRef<uint8_t> Desc = getDesc();
+    return StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
   }
 
   /// Get the note's type.

@@ -235,14 +235,14 @@ namespace HexagonISD {
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
-    unsigned
+    Register
     getExceptionPointerRegister(const Constant *PersonalityFn) const override {
       return Hexagon::R0;
     }
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
-    unsigned
+    Register
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
       return Hexagon::R1;
     }
@@ -305,8 +305,12 @@ namespace HexagonISD {
     EVT getOptimalMemOpType(const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
+    bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
+        unsigned AddrSpace, unsigned Alignment, MachineMemOperand::Flags Flags,
+        bool *Fast) const override;
+
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
-        unsigned Align, MachineMemOperand::Flags Flags, bool *Fast)
+        unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast)
         const override;
 
     /// Returns relocation base for the given PIC jumptable.
@@ -404,8 +408,14 @@ namespace HexagonISD {
     VectorPair opSplit(SDValue Vec, const SDLoc &dl, SelectionDAG &DAG) const;
     SDValue opCastElem(SDValue Vec, MVT ElemTy, SelectionDAG &DAG) const;
 
+    bool allowsHvxMemoryAccess(MVT VecTy, unsigned Alignment,
+        MachineMemOperand::Flags Flags, bool *Fast) const;
+    bool allowsHvxMisalignedMemoryAccesses(MVT VecTy, unsigned Align,
+        MachineMemOperand::Flags Flags, bool *Fast) const;
+
     bool isHvxSingleTy(MVT Ty) const;
     bool isHvxPairTy(MVT Ty) const;
+    bool isHvxBoolTy(MVT Ty) const;
     SDValue convertToByteIndex(SDValue ElemIdx, MVT ElemTy,
                                SelectionDAG &DAG) const;
     SDValue getIndexInWord32(SDValue Idx, MVT ElemTy, SelectionDAG &DAG) const;
@@ -437,6 +447,8 @@ namespace HexagonISD {
                                    const SDLoc &dl, SelectionDAG &DAG) const;
     SDValue extendHvxVectorPred(SDValue VecV, const SDLoc &dl, MVT ResTy,
                                 bool ZeroExt, SelectionDAG &DAG) const;
+    SDValue compressHvxPred(SDValue VecQ, const SDLoc &dl, MVT ResTy,
+                            SelectionDAG &DAG) const;
 
     SDValue LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG) const;
@@ -444,7 +456,7 @@ namespace HexagonISD {
     SDValue LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxExtractSubvector(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxInsertSubvector(SDValue Op, SelectionDAG &DAG) const;
-
+    SDValue LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxAnyExt(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxSignExt(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxZeroExt(SDValue Op, SelectionDAG &DAG) const;
@@ -454,6 +466,9 @@ namespace HexagonISD {
     SDValue LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxShift(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;
+    SDValue HvxVecPredBitcastComputation(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const;
     SDValue SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const;
@@ -463,8 +478,12 @@ namespace HexagonISD {
         const override;
 
     bool isHvxOperation(SDValue Op) const;
+    bool isHvxOperation(SDNode *N) const;
     SDValue LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const;
-
+    void LowerHvxOperationWrapper(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                                  SelectionDAG &DAG) const;
+    void ReplaceHvxNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                               SelectionDAG &DAG) const;
     SDValue PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   };
 

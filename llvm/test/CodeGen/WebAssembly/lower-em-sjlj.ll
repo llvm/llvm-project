@@ -246,43 +246,6 @@ for.inc:                                          ; preds = %for.cond
   ; CHECK: %var[[VARNO]] = phi i32 [ %var, %for.inc ]
 }
 
-; Debug info test
-define void @setjmp_debug_info() !dbg !3 {
-; CHECK-LABEL: @setjmp_debug_info
-entry:
-  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16, !dbg !4
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0, !dbg !5
-  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0, !dbg !6
-  call void @foo(), !dbg !7
-  ret void, !dbg !8
-; CHECK: entry:
-  ; CHECK-NEXT: call i8* @malloc(i32 40), !dbg ![[DL0:.*]]
-  ; CHECK-NEXT: bitcast {{.*}}, !dbg ![[DL0]]
-  ; CHECK: alloca {{.*}}, !dbg ![[DL0]]
-  ; CHECK: call i32* @saveSetjmp{{.*}}, !dbg ![[DL1:.*]]
-  ; CHECK-NEXT: call i32 @getTempRet0{{.*}}, !dbg ![[DL1]]
-  ; CHECK-NEXT: br {{.*}}, !dbg ![[DL2:.*]]
-
-; CHECK: entry.split:
-  ; CHECK: call {{.*}} void @__invoke_void{{.*}}, !dbg ![[DL2]]
-
-; CHECK: entry.split.split:
-  ; CHECK-NEXT: bitcast {{.*}}, !dbg ![[DL3:.*]]
-  ; CHECK-NEXT: call void @free{{.*}}, !dbg ![[DL3]]
-
-; CHECK: if.then1:
-  ; CHECK: call i32 @testSetjmp{{.*}}, !dbg ![[DL2]]
-
-; CHECK: if.end:
-  ; CHECK: call i32 @getTempRet0{{.*}}, !dbg ![[DL2]]
-
-; CHECK: if.then2:
-  ; CHECK: call void @emscripten_longjmp{{.*}}, !dbg ![[DL2]]
-
-; CHECK: if.end2:
-  ; CHECK: call void @setTempRet0{{.*}}, !dbg ![[DL2]]
-}
-
 declare void @foo()
 ; Function Attrs: returns_twice
 declare i32 @setjmp(%struct.__jmp_buf_tag*) #0
@@ -308,6 +271,18 @@ attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
 attributes #3 = { allocsize(0) }
+; CHECK: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="getTempRet0" }
+; CHECK: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="setTempRet0" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__resumeException" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="llvm_eh_typeid_for" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__cxa_find_matching_catch_3" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp_jmpbuf" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="saveSetjmp" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="testSetjmp" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_i8*_i32_%struct.__jmp_buf_tag*" }
+; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void_%struct.__jmp_buf_tag*_i32" }
 ; CHECK: attributes #[[ALLOCSIZE_ATTR]] = { allocsize(1) }
 
 !llvm.dbg.cu = !{!2}

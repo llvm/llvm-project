@@ -142,7 +142,7 @@ class VectorLegalizer {
   void ExpandUADDSUBO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandSADDSUBO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandMULO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
-  SDValue ExpandFixedPointDiv(SDNode *Node);
+  void ExpandFixedPointDiv(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   SDValue ExpandStrictFPOp(SDNode *Node);
   void ExpandStrictFPOp(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
@@ -182,9 +182,7 @@ bool VectorLegalizer::Run() {
        E = std::prev(DAG.allnodes_end()); I != std::next(E); ++I) {
     // Check if the values of the nodes contain vectors. We don't need to check
     // the operands because we are going to check their values at some point.
-    for (SDNode::value_iterator J = I->value_begin(), E = I->value_end();
-         J != E; ++J)
-      HasVectors |= J->isVector();
+    HasVectors = llvm::any_of(I->values(), [](EVT T) { return T.isVector(); });
 
     // If we found a vector node we can start the legalization.
     if (HasVectors)
@@ -318,12 +316,10 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     }
   }
 
-  bool HasVectorValueOrOp = false;
-  for (auto J = Node->value_begin(), E = Node->value_end(); J != E; ++J)
-    HasVectorValueOrOp |= J->isVector();
-  for (const SDValue &Oper : Node->op_values())
-    HasVectorValueOrOp |= Oper.getValueType().isVector();
-
+  bool HasVectorValueOrOp =
+      llvm::any_of(Node->values(), [](EVT T) { return T.isVector(); }) ||
+      llvm::any_of(Node->op_values(),
+                   [](SDValue O) { return O.getValueType().isVector(); });
   if (!HasVectorValueOrOp)
     return TranslateLegalizeResults(Op, Node);
 
@@ -431,6 +427,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FRINT:
   case ISD::FNEARBYINT:
   case ISD::FROUND:
+  case ISD::FROUNDEVEN:
   case ISD::FFLOOR:
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:
@@ -463,7 +460,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UMULFIX:
   case ISD::UMULFIXSAT:
   case ISD::SDIVFIX:
-  case ISD::UDIVFIX: {
+  case ISD::SDIVFIXSAT:
+  case ISD::UDIVFIX:
+  case ISD::UDIVFIXSAT: {
     unsigned Scale = Node->getConstantOperandVal(2);
     Action = TLI.getFixedPointOperationAction(Node->getOpcode(),
                                               Node->getValueType(0), Scale);
@@ -704,132 +703,7 @@ void VectorLegalizer::PromoteFP_TO_INT(SDNode *Node,
 
 std::pair<SDValue, SDValue> VectorLegalizer::ExpandLoad(SDNode *N) {
   LoadSDNode *LD = cast<LoadSDNode>(N);
-
-  EVT SrcVT = LD->getMemoryVT();
-  EVT SrcEltVT = SrcVT.getScalarType();
-  unsigned NumElem = SrcVT.getVectorNumElements();
-
-  SDValue NewChain;
-  SDValue Value;
-  if (SrcVT.getVectorNumElements() > 1 && !SrcEltVT.isByteSized()) {
-    SDLoc dl(N);
-
-    SmallVector<SDValue, 8> Vals;
-    SmallVector<SDValue, 8> LoadChains;
-
-    EVT DstEltVT = LD->getValueType(0).getScalarType();
-    SDValue Chain = LD->getChain();
-    SDValue BasePTR = LD->getBasePtr();
-    ISD::LoadExtType ExtType = LD->getExtensionType();
-
-    // When elements in a vector is not byte-addressable, we cannot directly
-    // load each element by advancing pointer, which could only address bytes.
-    // Instead, we load all significant words, mask bits off, and concatenate
-    // them to form each element. Finally, they are extended to destination
-    // scalar type to build the destination vector.
-    EVT WideVT = TLI.getPointerTy(DAG.getDataLayout());
-
-    assert(WideVT.isRound() &&
-           "Could not handle the sophisticated case when the widest integer is"
-           " not power of 2.");
-    assert(WideVT.bitsGE(SrcEltVT) &&
-           "Type is not legalized?");
-
-    unsigned WideBytes = WideVT.getStoreSize();
-    unsigned Offset = 0;
-    unsigned RemainingBytes = SrcVT.getStoreSize();
-    SmallVector<SDValue, 8> LoadVals;
-    while (RemainingBytes > 0) {
-      SDValue ScalarLoad;
-      unsigned LoadBytes = WideBytes;
-
-      if (RemainingBytes >= LoadBytes) {
-        ScalarLoad =
-            DAG.getLoad(WideVT, dl, Chain, BasePTR,
-                        LD->getPointerInfo().getWithOffset(Offset),
-                        MinAlign(LD->getAlignment(), Offset),
-                        LD->getMemOperand()->getFlags(), LD->getAAInfo());
-      } else {
-        EVT LoadVT = WideVT;
-        while (RemainingBytes < LoadBytes) {
-          LoadBytes >>= 1; // Reduce the load size by half.
-          LoadVT = EVT::getIntegerVT(*DAG.getContext(), LoadBytes << 3);
-        }
-        ScalarLoad =
-            DAG.getExtLoad(ISD::EXTLOAD, dl, WideVT, Chain, BasePTR,
-                           LD->getPointerInfo().getWithOffset(Offset), LoadVT,
-                           MinAlign(LD->getAlignment(), Offset),
-                           LD->getMemOperand()->getFlags(), LD->getAAInfo());
-      }
-
-      RemainingBytes -= LoadBytes;
-      Offset += LoadBytes;
-
-      BasePTR = DAG.getObjectPtrOffset(dl, BasePTR, LoadBytes);
-
-      LoadVals.push_back(ScalarLoad.getValue(0));
-      LoadChains.push_back(ScalarLoad.getValue(1));
-    }
-
-    unsigned BitOffset = 0;
-    unsigned WideIdx = 0;
-    unsigned WideBits = WideVT.getSizeInBits();
-
-    // Extract bits, pack and extend/trunc them into destination type.
-    unsigned SrcEltBits = SrcEltVT.getSizeInBits();
-    SDValue SrcEltBitMask = DAG.getConstant(
-        APInt::getLowBitsSet(WideBits, SrcEltBits), dl, WideVT);
-
-    for (unsigned Idx = 0; Idx != NumElem; ++Idx) {
-      assert(BitOffset < WideBits && "Unexpected offset!");
-
-      SDValue ShAmt = DAG.getConstant(
-          BitOffset, dl, TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
-      SDValue Lo = DAG.getNode(ISD::SRL, dl, WideVT, LoadVals[WideIdx], ShAmt);
-
-      BitOffset += SrcEltBits;
-      if (BitOffset >= WideBits) {
-        WideIdx++;
-        BitOffset -= WideBits;
-        if (BitOffset > 0) {
-          ShAmt = DAG.getConstant(
-              SrcEltBits - BitOffset, dl,
-              TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
-          SDValue Hi =
-              DAG.getNode(ISD::SHL, dl, WideVT, LoadVals[WideIdx], ShAmt);
-          Lo = DAG.getNode(ISD::OR, dl, WideVT, Lo, Hi);
-        }
-      }
-
-      Lo = DAG.getNode(ISD::AND, dl, WideVT, Lo, SrcEltBitMask);
-
-      switch (ExtType) {
-      default: llvm_unreachable("Unknown extended-load op!");
-      case ISD::EXTLOAD:
-        Lo = DAG.getAnyExtOrTrunc(Lo, dl, DstEltVT);
-        break;
-      case ISD::ZEXTLOAD:
-        Lo = DAG.getZExtOrTrunc(Lo, dl, DstEltVT);
-        break;
-      case ISD::SEXTLOAD:
-        ShAmt =
-            DAG.getConstant(WideBits - SrcEltBits, dl,
-                            TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
-        Lo = DAG.getNode(ISD::SHL, dl, WideVT, Lo, ShAmt);
-        Lo = DAG.getNode(ISD::SRA, dl, WideVT, Lo, ShAmt);
-        Lo = DAG.getSExtOrTrunc(Lo, dl, DstEltVT);
-        break;
-      }
-      Vals.push_back(Lo);
-    }
-
-    NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
-    Value = DAG.getBuildVector(N->getValueType(0), dl, Vals);
-  } else {
-    std::tie(Value, NewChain) = TLI.scalarizeVectorLoad(LD, DAG);
-  }
-
-  return std::make_pair(Value, NewChain);
+  return TLI.scalarizeVectorLoad(LD, DAG);
 }
 
 SDValue VectorLegalizer::ExpandStore(SDNode *N) {
@@ -968,8 +842,11 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   case ISD::SDIVFIX:
   case ISD::UDIVFIX:
-    Results.push_back(ExpandFixedPointDiv(Node));
+    ExpandFixedPointDiv(Node, Results);
     return;
+  case ISD::SDIVFIXSAT:
+  case ISD::UDIVFIXSAT:
+    break;
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
@@ -1454,12 +1331,12 @@ void VectorLegalizer::ExpandMULO(SDNode *Node,
   Results.push_back(Overflow);
 }
 
-SDValue VectorLegalizer::ExpandFixedPointDiv(SDNode *Node) {
+void VectorLegalizer::ExpandFixedPointDiv(SDNode *Node,
+                                          SmallVectorImpl<SDValue> &Results) {
   SDNode *N = Node;
   if (SDValue Expanded = TLI.expandFixedPointDiv(N->getOpcode(), SDLoc(N),
           N->getOperand(0), N->getOperand(1), N->getConstantOperandVal(2), DAG))
-    return Expanded;
-  return DAG.UnrollVectorOp(N);
+    Results.push_back(Expanded);
 }
 
 void VectorLegalizer::ExpandStrictFPOp(SDNode *Node,

@@ -11,17 +11,17 @@
 # RUN: llvm-readelf --symbols %t.so | FileCheck -check-prefix=INT-SO %s
 # RUN: llvm-readelf --symbols %S/Inputs/mips-gp-disp.so \
 # RUN:   | FileCheck -check-prefix=EXT-SO %s
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.so | FileCheck -check-prefix=DIS %s
+# RUN: llvm-objdump -d -t --no-show-raw-insn %t.so | FileCheck --check-prefix=DIS %s
 # RUN: llvm-readelf -r %t.so | FileCheck -check-prefix=REL %s
 
 # INT-SO: 00000000     0 NOTYPE  LOCAL  HIDDEN   ABS _gp_disp
 # EXT-SO: 00020000     0 NOTYPE  GLOBAL DEFAULT    9 _gp_disp
 
-# DIS: 00037ff0  .got   00000000 .hidden _gp
-# DIS: 00002000  .text  00000000 __start
+# DIS: 00037ff0 l .got   00000000 .hidden _gp
+# DIS: 00002000 g .text  00000000 __start
 # DIS:      Disassembly of section .text:
 # DIS-EMPTY:
-# DIS-NEXT: __start:
+# DIS-NEXT: <__start>:
 # DIS-NEXT:    lui   $8, 3
 # DIS-NEXT:    addi  $8, $8, 24560
 #                            ^-- (_gp - __start) & 0xffff

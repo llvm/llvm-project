@@ -1,9 +1,9 @@
-; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,SLH --dump-input-on-failure
-; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,NOSLH --dump-input-on-failure
-; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -global-isel | FileCheck %s --check-prefixes=CHECK,SLH --dump-input-on-failure
-; RUN sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -global-isel | FileCheck %s --check-prefixes=CHECK,NOSLH --dump-input-on-failure
-; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -fast-isel | FileCheck %s --check-prefixes=CHECK,SLH --dump-input-on-failure
-; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -fast-isel | FileCheck %s --check-prefixes=CHECK,NOSLH --dump-input-on-failure
+; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,SLH
+; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,NOSLH
+; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -global-isel | FileCheck %s --check-prefixes=CHECK,SLH
+; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -global-isel | FileCheck %s --check-prefixes=CHECK,NOSLH
+; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -fast-isel | FileCheck %s --check-prefixes=CHECK,SLH
+; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -fast-isel | FileCheck %s --check-prefixes=CHECK,NOSLH
 
 define i32 @f(i8* nocapture readonly %p, i32 %i, i32 %N) local_unnamed_addr SLHATTR {
 ; CHECK-LABEL: f

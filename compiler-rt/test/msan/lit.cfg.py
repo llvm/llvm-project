@@ -18,6 +18,9 @@ clang_msan_cflags = (["-fsanitize=memory",
 # Some Msan tests leverage backtrace() which requires libexecinfo on FreeBSD.
 if config.host_os == 'FreeBSD':
   clang_msan_cflags += ["-lexecinfo", "-fPIC"]
+# On SystemZ we need -mbackchain to make the fast unwinder work.
+if config.target_arch == 's390x':
+  clang_msan_cflags.append("-mbackchain")
 clang_msan_cxxflags = config.cxx_mode_flags + clang_msan_cflags
 
 # Flags for KMSAN invocation. This is C-only, we're not interested in C++.

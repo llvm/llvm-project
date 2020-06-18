@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 #define LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 
+#include "llvm-c/Transforms/PassManagerBuilder.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -216,7 +217,6 @@ private:
   void addLateLTOOptimizationPasses(legacy::PassManagerBase &PM);
   void addPGOInstrPasses(legacy::PassManagerBase &MPM, bool IsCS);
   void addFunctionSimplificationPasses(legacy::PassManagerBase &MPM);
-  void addInstructionCombiningPass(legacy::PassManagerBase &MPM) const;
 
 public:
   /// populateFunctionPassManager - This fills in the function pass manager,
@@ -250,6 +250,14 @@ public:
     PassManagerBuilder::removeGlobalExtension(ExtensionID);
   }
 };
+
+inline PassManagerBuilder *unwrap(LLVMPassManagerBuilderRef P) {
+    return reinterpret_cast<PassManagerBuilder*>(P);
+}
+
+inline LLVMPassManagerBuilderRef wrap(PassManagerBuilder *P) {
+  return reinterpret_cast<LLVMPassManagerBuilderRef>(P);
+}
 
 } // end namespace llvm
 #endif

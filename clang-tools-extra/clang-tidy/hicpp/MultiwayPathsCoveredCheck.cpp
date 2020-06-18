@@ -65,7 +65,7 @@ static std::pair<std::size_t, bool> countCaseLabels(const SwitchStmt *Switch) {
 }
 
 /// This function calculate 2 ** Bits and returns
-/// numeric_limits<std::size_t>::max() if an overflow occured.
+/// numeric_limits<std::size_t>::max() if an overflow occurred.
 static std::size_t twoPow(std::size_t Bits) {
   return Bits >= std::numeric_limits<std::size_t>::digits
              ? std::numeric_limits<std::size_t>::max()
@@ -153,7 +153,7 @@ void MultiwayPathsCoveredCheck::handleSwitchWithoutDefault(
   // matcher used for here does not match on degenerate 'switch'.
   assert(CaseCount > 0 && "Switch statement without any case found. This case "
                           "should be excluded by the matcher and is handled "
-                          "separatly.");
+                          "separately.");
   std::size_t MaxPathsPossible = [&]() {
     if (const auto *GeneralCondition =
             Result.Nodes.getNodeAs<DeclRefExpr>("non-enum-condition")) {

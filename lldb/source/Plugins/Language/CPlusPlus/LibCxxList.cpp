@@ -290,15 +290,6 @@ ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(size_t idx) {
                                    m_element_type);
 }
 
-static ValueObjectSP GetValueOfCompressedPair(ValueObject &pair) {
-  ValueObjectSP value = pair.GetChildMemberWithName(ConstString("__value_"), true);
-  if (! value) {
-    // pre-r300140 member name
-    value = pair.GetChildMemberWithName(ConstString("__first_"), true);
-  }
-  return value;
-}
-
 bool ForwardListFrontEnd::Update() {
   AbstractListFrontEnd::Update();
 
@@ -311,7 +302,7 @@ bool ForwardListFrontEnd::Update() {
       m_backend.GetChildMemberWithName(ConstString("__before_begin_"), true));
   if (!impl_sp)
     return false;
-  impl_sp = GetValueOfCompressedPair(*impl_sp);
+  impl_sp = GetValueOfLibCXXCompressedPair(*impl_sp);
   if (!impl_sp)
     return false;
   m_head = impl_sp->GetChildMemberWithName(ConstString("__next_"), true).get();
@@ -332,7 +323,7 @@ size_t ListFrontEnd::CalculateNumChildren() {
   ValueObjectSP size_alloc(
       m_backend.GetChildMemberWithName(ConstString("__size_alloc_"), true));
   if (size_alloc) {
-    ValueObjectSP value = GetValueOfCompressedPair(*size_alloc);
+    ValueObjectSP value = GetValueOfLibCXXCompressedPair(*size_alloc);
     if (value) {
       m_count = value->GetValueAsUnsigned(UINT32_MAX);
     }

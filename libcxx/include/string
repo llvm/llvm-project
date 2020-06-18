@@ -437,9 +437,11 @@ basic_istream<charT, traits>&
 getline(basic_istream<charT, traits>& is, basic_string<charT, traits, Allocator>& str);
 
 template<class charT, class traits, class Allocator, class U>
-void erase(basic_string<charT, traits, Allocator>& c, const U& value); // C++20
+typename basic_string<charT, traits, Allocator>::size_type
+erase(basic_string<charT, traits, Allocator>& c, const U& value);    // C++20
 template<class charT, class traits, class Allocator, class Predicate>
-void erase_if(basic_string<charT, traits, Allocator>& c, Predicate pred); // C++20
+typename basic_string<charT, traits, Allocator>::size_type
+erase_if(basic_string<charT, traits, Allocator>& c, Predicate pred); // C++20
 
 typedef basic_string<char>    string;
 typedef basic_string<wchar_t> wstring;
@@ -689,13 +691,8 @@ public:
     static_assert(( is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
 
-#if defined(_LIBCPP_RAW_ITERATORS)
-    typedef pointer                                      iterator;
-    typedef const_pointer                                const_iterator;
-#else  // defined(_LIBCPP_RAW_ITERATORS)
     typedef __wrap_iter<pointer>                         iterator;
     typedef __wrap_iter<const_pointer>                   const_iterator;
-#endif  // defined(_LIBCPP_RAW_ITERATORS)
     typedef _VSTD::reverse_iterator<iterator>             reverse_iterator;
     typedef _VSTD::reverse_iterator<const_iterator>       const_reverse_iterator;
 
@@ -1549,6 +1546,16 @@ private:
     inline
     void __init(size_type __n, value_type __c);
 
+    // Slow path for the (inlined) copy constructor for 'long' strings.
+    // Always externally instantiated and not inlined.
+    // Requires that __s is zero terminated.
+    // The main reason for this function to exist is because for unstable, we
+    // want to allow inlining of the copy constructor. However, we don't want
+    // to call the __init() functions as those are marked as inline which may
+    // result in over-aggressive inlining by the compiler, where our aim is
+    // to only inline the fast path code directly in the ctor.
+    void __init_copy_ctor_external(const value_type* __s, size_type __sz);
+
     template <class _InputIterator>
     inline
     _EnableIf
@@ -1571,8 +1578,18 @@ private:
                                size_type __n_copy,  size_type __n_del,
                                size_type __n_add, const value_type* __p_new_stuff);
 
+    // __assign_no_alias is invoked for assignment operations where we
+    // have proof that the input does not alias the current instance.
+    // For example, operator=(basic_string) performs a 'self' check.
+    template <bool __is_short>
+    basic_string& __assign_no_alias(const value_type* __s, size_type __n);
+
     _LIBCPP_INLINE_VISIBILITY
     void __erase_to_end(size_type __pos);
+
+    // __erase_external_with_move is invoked for erase() invocations where
+    // `n ~= npos`, likely requiring memory moves on the string data.
+    void __erase_external_with_move(size_type __pos, size_type __n);
 
     _LIBCPP_INLINE_VISIBILITY
     void __copy_assign_alloc(const basic_string& __str)
@@ -1651,6 +1668,17 @@ private:
     friend basic_string operator+<>(const basic_string&, const value_type*);
     friend basic_string operator+<>(const basic_string&, value_type);
 };
+
+// These declarations must appear before any functions are implicitly used
+// so that they have the correct visibility specifier.
+#ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
+_LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+_LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+#else
+_LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+_LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+#endif
+
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template<class _InputIterator,
@@ -1840,7 +1868,9 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __st
     if (!__str.__is_long())
         __r_.first().__r = __str.__r_.first().__r;
     else
-        __init(_VSTD::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
+        __init_copy_ctor_external(_VSTD::__to_address(__str.__get_long_pointer()),
+                                  __str.__get_long_size());
+
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif
@@ -1854,10 +1884,30 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
     if (!__str.__is_long())
         __r_.first().__r = __str.__r_.first().__r;
     else
-        __init(_VSTD::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
+        __init_copy_ctor_external(_VSTD::__to_address(__str.__get_long_pointer()),
+                                  __str.__get_long_size());
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+void basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(
+    const value_type* __s, size_type __sz) {
+  pointer __p;
+  if (__sz < __min_cap) {
+    __p = __get_short_pointer();
+    __set_short_size(__sz);
+  } else {
+    if (__sz > max_size())
+      this->__throw_length_error();
+    size_t __cap = __recommend(__sz);
+    __p = __alloc_traits::allocate(__alloc(), __cap + 1);
+    __set_long_pointer(__p);
+    __set_long_cap(__cap + 1);
+    __set_long_size(__sz);
+  }
+  traits_type::copy(_VSTD::__to_address(__p), __s, __sz + 1);
 }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -2199,6 +2249,25 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by(size_type __old_cap, size_t
 // assign
 
 template <class _CharT, class _Traits, class _Allocator>
+template <bool __is_short>
+basic_string<_CharT, _Traits, _Allocator>&
+basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(
+    const value_type* __s, size_type __n) {
+  size_type __cap = __is_short ? __min_cap : __get_long_cap();
+  if (__n < __cap) {
+    pointer __p = __is_short ? __get_short_pointer() : __get_long_pointer();
+    __is_short ? __set_short_size(__n) : __set_long_size(__n);
+    traits_type::copy(_VSTD::__to_address(__p), __s, __n);
+    traits_type::assign(__p[__n], value_type());
+    __invalidate_iterators_past(__n);
+  } else {
+    size_type __sz = __is_short ? __get_short_size() : __get_long_size();
+    __grow_by_and_replace(__cap - 1, __n - __cap + 1, __sz, 0, __sz, __n, __s);
+  }
+  return *this;
+}
+
+template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s, size_type __n)
 {
@@ -2264,16 +2333,19 @@ template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::operator=(const basic_string& __str)
 {
-    if (this != &__str)
-    {
-        __copy_assign_alloc(__str);
-        const bool __str_is_long = __str.__is_long(); // Force single branch
-        if (__is_long() || __str_is_long) {
-          return assign(__str.data(), __str.size());
-        }
+  if (this != &__str) {
+    __copy_assign_alloc(__str);
+    if (!__is_long()) {
+      if (!__str.__is_long()) {
         __r_.first().__r = __str.__r_.first().__r;
+      } else {
+        return __assign_no_alias<true>(__str.data(), __str.size());
+      }
+    } else {
+      return __assign_no_alias<false>(__str.data(), __str.size());
     }
-    return *this;
+  }
+  return *this;
 }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -2997,15 +3069,16 @@ basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_it
 
 // erase
 
+// 'externally instantiated' erase() implementation, called when __n != npos.
+// Does not check __pos against size()
 template <class _CharT, class _Traits, class _Allocator>
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::erase(size_type __pos, size_type __n)
+void
+basic_string<_CharT, _Traits, _Allocator>::__erase_external_with_move(
+    size_type __pos, size_type __n)
 {
-    size_type __sz = size();
-    if (__pos > __sz)
-        this->__throw_out_of_range();
     if (__n)
     {
+        size_type __sz = size();
         value_type* __p = _VSTD::__to_address(__get_pointer());
         __n = _VSTD::min(__n, __sz - __pos);
         size_type __n_move = __sz - __pos - __n;
@@ -3016,7 +3089,19 @@ basic_string<_CharT, _Traits, _Allocator>::erase(size_type __pos, size_type __n)
         __invalidate_iterators_past(__sz);
         traits_type::assign(__p[__sz], value_type());
     }
-    return *this;
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+basic_string<_CharT, _Traits, _Allocator>&
+basic_string<_CharT, _Traits, _Allocator>::erase(size_type __pos,
+                                                 size_type __n) {
+  if (__pos > size()) this->__throw_out_of_range();
+  if (__n == npos) {
+    __erase_to_end(__pos);
+  } else {
+    __erase_external_with_move(__pos, __n);
+  }
+  return *this;
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -4291,15 +4376,25 @@ getline(basic_istream<_CharT, _Traits>&& __is,
 #endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 17
-template<class _CharT, class _Traits, class _Allocator, class _Up>
+template <class _CharT, class _Traits, class _Allocator, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY
-void erase(basic_string<_CharT, _Traits, _Allocator>& __str, const _Up& __v)
-{ __str.erase(_VSTD::remove(__str.begin(), __str.end(), __v), __str.end()); }
+    typename basic_string<_CharT, _Traits, _Allocator>::size_type
+    erase(basic_string<_CharT, _Traits, _Allocator>& __str, const _Up& __v) {
+  auto __old_size = __str.size();
+  __str.erase(_VSTD::remove(__str.begin(), __str.end(), __v), __str.end());
+  return __old_size - __str.size();
+}
 
-template<class _CharT, class _Traits, class _Allocator, class _Predicate>
+template <class _CharT, class _Traits, class _Allocator, class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY
-void erase_if(basic_string<_CharT, _Traits, _Allocator>& __str, _Predicate __pred)
-{ __str.erase(_VSTD::remove_if(__str.begin(), __str.end(), __pred), __str.end()); }
+    typename basic_string<_CharT, _Traits, _Allocator>::size_type
+    erase_if(basic_string<_CharT, _Traits, _Allocator>& __str,
+             _Predicate __pred) {
+  auto __old_size = __str.size();
+  __str.erase(_VSTD::remove_if(__str.begin(), __str.end(), __pred),
+              __str.end());
+  return __old_size - __str.size();
+}
 #endif
 
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -4337,9 +4432,6 @@ basic_string<_CharT, _Traits, _Allocator>::__subscriptable(const const_iterator*
 }
 
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
-
-_LIBCPP_STRING_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
-_LIBCPP_STRING_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
 
 #if _LIBCPP_STD_VER > 11
 // Literal suffixes for basic_string [basic.string.literals]

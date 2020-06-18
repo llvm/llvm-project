@@ -13,10 +13,10 @@ thread_local int &r = f();
 int &g() { return r; }
 
 // CHECK: define {{.*}} @[[R_INIT:.*]]()
-// CHECK: call dereferenceable({{[0-9]+}}) i32* @_Z1fv()
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z1fv()
 // CHECK: store i32* %{{.*}}, i32** @r, align 8
 
-// CHECK-LABEL: define dereferenceable({{[0-9]+}}) i32* @_Z1gv()
+// CHECK-LABEL: define nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z1gv()
 // LINUX: call i32* @_ZTW1r()
 // DARWIN: call cxx_fast_tlscc i32* @_ZTW1r()
 // CHECK: ret i32* %{{.*}}

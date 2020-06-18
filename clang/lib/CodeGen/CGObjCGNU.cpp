@@ -255,11 +255,11 @@ protected:
       isDynamic=true) {
     int attrs = property->getPropertyAttributes();
     // For read-only properties, clear the copy and retain flags
-    if (attrs & ObjCPropertyDecl::OBJC_PR_readonly) {
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_copy;
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_retain;
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_weak;
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_strong;
+    if (attrs & ObjCPropertyAttribute::kind_readonly) {
+      attrs &= ~ObjCPropertyAttribute::kind_copy;
+      attrs &= ~ObjCPropertyAttribute::kind_retain;
+      attrs &= ~ObjCPropertyAttribute::kind_weak;
+      attrs &= ~ObjCPropertyAttribute::kind_strong;
     }
     // The first flags field has the same attribute values as clang uses internally
     Fields.addInt(Int8Ty, attrs & 0xff);
@@ -617,6 +617,13 @@ public:
   llvm::Value *GenerateProtocolRef(CodeGenFunction &CGF,
                                    const ObjCProtocolDecl *PD) override;
   void GenerateProtocol(const ObjCProtocolDecl *PD) override;
+
+  virtual llvm::Constant *GenerateProtocolRef(const ObjCProtocolDecl *PD);
+
+  llvm::Constant *GetOrEmitProtocol(const ObjCProtocolDecl *PD) override {
+    return GenerateProtocolRef(PD);
+  }
+
   llvm::Function *ModuleInitFunction() override;
   llvm::FunctionCallee GetPropertyGetFunction() override;
   llvm::FunctionCallee GetPropertySetFunction() override;
@@ -1348,7 +1355,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   void GenerateProtocol(const ObjCProtocolDecl *PD) override {
     // Do nothing - we only emit referenced protocols.
   }
-  llvm::Constant *GenerateProtocolRef(const ObjCProtocolDecl *PD) {
+  llvm::Constant *GenerateProtocolRef(const ObjCProtocolDecl *PD) override {
     std::string ProtocolName = PD->getNameAsString();
     auto *&Protocol = ExistingProtocols[ProtocolName];
     if (Protocol)
@@ -1557,7 +1564,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // We have to do this by hand, rather than with @llvm.ctors, so that the
     // linker can remove the duplicate invocations.
     auto *InitVar = new llvm::GlobalVariable(TheModule, LoadFunction->getType(),
-        /*isConstant*/true, llvm::GlobalValue::LinkOnceAnyLinkage,
+        /*isConstant*/false, llvm::GlobalValue::LinkOnceAnyLinkage,
         LoadFunction, ".objc_ctor");
     // Check that this hasn't been renamed.  This shouldn't happen, because
     // this function should be called precisely once.
@@ -3039,13 +3046,18 @@ CGObjCGNU::GenerateProtocolList(ArrayRef<std::string> Protocols) {
 
 llvm::Value *CGObjCGNU::GenerateProtocolRef(CodeGenFunction &CGF,
                                             const ObjCProtocolDecl *PD) {
+  auto protocol = GenerateProtocolRef(PD);
+  llvm::Type *T =
+      CGM.getTypes().ConvertType(CGM.getContext().getObjCProtoType());
+  return CGF.Builder.CreateBitCast(protocol, llvm::PointerType::getUnqual(T));
+}
+
+llvm::Constant *CGObjCGNU::GenerateProtocolRef(const ObjCProtocolDecl *PD) {
   llvm::Constant *&protocol = ExistingProtocols[PD->getNameAsString()];
   if (!protocol)
     GenerateProtocol(PD);
   assert(protocol && "Unknown protocol");
-  llvm::Type *T =
-    CGM.getTypes().ConvertType(CGM.getContext().getObjCProtoType());
-  return CGF.Builder.CreateBitCast(protocol, llvm::PointerType::getUnqual(T));
+  return protocol;
 }
 
 llvm::Constant *

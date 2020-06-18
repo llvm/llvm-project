@@ -496,7 +496,7 @@ Mutex aa_var_arg_bad_3 ACQUIRED_AFTER(muDoublePointer); // \
 Mutex aa_var_arg_bad_4 ACQUIRED_AFTER(umu); // \
   // expected-warning {{'acquired_after' attribute requires arguments whose type is annotated with 'capability' attribute}}
 UnlockableMu aa_var_arg_bad_5 ACQUIRED_AFTER(mu_aa); // \
-  // expected-warning {{'acquired_after' attribute can only be applied in a context annotated with 'capability("mutex")' attribute}}
+  // expected-warning {{'acquired_after' attribute can only be applied in a context annotated with 'capability' attribute}}
 
 //-----------------------------------------//
 //  Acquired Before (ab)
@@ -559,7 +559,7 @@ Mutex ab_var_arg_bad_3 ACQUIRED_BEFORE(muDoublePointer); // \
 Mutex ab_var_arg_bad_4 ACQUIRED_BEFORE(umu); // \
   // expected-warning {{'acquired_before' attribute requires arguments whose type is annotated with 'capability' attribute}}
 UnlockableMu ab_var_arg_bad_5 ACQUIRED_BEFORE(mu_ab); // \
-  // expected-warning {{'acquired_before' attribute can only be applied in a context annotated with 'capability("mutex")' attribute}}
+  // expected-warning {{'acquired_before' attribute can only be applied in a context annotated with 'capability' attribute}}
 
 
 //-----------------------------------------//

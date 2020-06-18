@@ -6,24 +6,24 @@
 ; RUN: llc < %s -mtriple=thumbv7 | FileCheck %s -check-prefix=THUMB
 
 ; RUN: llc -mtriple=armv7 -mattr=+nacl-trap -filetype=obj %s -o - \
-; RUN:  | llvm-objdump -disassemble -triple armv7 -mattr=+nacl-trap - \
+; RUN:  | llvm-objdump -d --triple=armv7 --mattr=+nacl-trap - \
 ; RUN:  | FileCheck %s -check-prefix=ENCODING-NACL
 ; RUN: llc -verify-machineinstrs -fast-isel -mtriple=armv7 -mattr=+nacl-trap -filetype=obj %s -o - \
-; RUN:  | llvm-objdump -disassemble -triple armv7 -mattr=+nacl-trap - \
+; RUN:  | llvm-objdump -d --triple=armv7 --mattr=+nacl-trap - \
 ; RUN:  | FileCheck %s -check-prefix=ENCODING-NACL
 
 ; RUN: llc -mtriple=armv7 -filetype=obj %s -o - \
-; RUN:  | llvm-objdump -disassemble -triple armv7 - \
+; RUN:  | llvm-objdump -d --triple=armv7 - \
 ; RUN:  | FileCheck %s -check-prefix=ENCODING-ARM
 ; RUN: llc -verify-machineinstrs -fast-isel -mtriple=armv7 -filetype=obj %s -o - \
-; RUN:  | llvm-objdump -disassemble -triple armv7 - \
+; RUN:  | llvm-objdump -d --triple=armv7 - \
 ; RUN:  | FileCheck %s -check-prefix=ENCODING-ARM
 
 ; RUN: llc -mtriple=thumbv7 -filetype=obj %s -o - \
-; RUN:  | llvm-objdump -disassemble -triple thumbv7 - \
+; RUN:  | llvm-objdump -d --triple=thumbv7 - \
 ; RUN:  | FileCheck %s -check-prefix=ENCODING-THUMB
 ; RUN: llc -verify-machineinstrs -fast-isel -mtriple=thumbv7 -filetype=obj %s -o - \
-; RUN:  | llvm-objdump -disassemble -triple thumbv7 - \
+; RUN:  | llvm-objdump -d --triple=thumbv7 - \
 ; RUN:  | FileCheck %s -check-prefix=ENCODING-THUMB
 
 ; rdar://7961298

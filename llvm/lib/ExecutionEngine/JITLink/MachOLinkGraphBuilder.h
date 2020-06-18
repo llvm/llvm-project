@@ -13,6 +13,8 @@
 #ifndef LIB_EXECUTIONENGINE_JITLINK_MACHOLINKGRAPHBUILDER_H
 #define LIB_EXECUTIONENGINE_JITLINK_MACHOLINKGRAPHBUILDER_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
 #include "EHFrameSupportImpl.h"
@@ -58,6 +60,8 @@ protected:
     Symbol *GraphSymbol = nullptr;
   };
 
+  // Normalized section representation. Section and segment names are guaranteed
+  // to be null-terminated, hence the extra bytes on SegName and SectName.
   class NormalizedSection {
     friend class MachOLinkGraphBuilder;
 
@@ -65,12 +69,14 @@ protected:
     NormalizedSection() = default;
 
   public:
-    Section *GraphSection = nullptr;
+    char SectName[17];
+    char SegName[17];
     uint64_t Address = 0;
     uint64_t Size = 0;
     uint64_t Alignment = 0;
     uint32_t Flags = 0;
     const char *Data = nullptr;
+    Section *GraphSection = nullptr;
   };
 
   using SectionParserFunction = std::function<Error(NormalizedSection &S)>;
@@ -110,7 +116,7 @@ protected:
     auto I = IndexToSection.find(Index);
     if (I == IndexToSection.end())
       return make_error<JITLinkError>("No section recorded for index " +
-                                      formatv("{0:u}", Index));
+                                      formatv("{0:d}", Index));
     return I->second;
   }
 
@@ -123,7 +129,7 @@ protected:
     auto *Sym = IndexToSymbol[Index];
     if (!Sym)
       return make_error<JITLinkError>("No symbol at index " +
-                                      formatv("{0:u}", Index));
+                                      formatv("{0:d}", Index));
     return *Sym;
   }
 
@@ -150,6 +156,22 @@ protected:
   static Linkage getLinkage(uint16_t Desc);
   static Scope getScope(StringRef Name, uint8_t Type);
   static bool isAltEntry(const NormalizedSymbol &NSym);
+
+  static bool isDebugSection(const NormalizedSection &NSec);
+
+  MachO::relocation_info
+  getRelocationInfo(const object::relocation_iterator RelItr) {
+    MachO::any_relocation_info ARI =
+        getObject().getRelocation(RelItr->getRawDataRefImpl());
+    MachO::relocation_info RI;
+    RI.r_address = ARI.r_word0;
+    RI.r_symbolnum = ARI.r_word1 & 0xffffff;
+    RI.r_pcrel = (ARI.r_word1 >> 24) & 1;
+    RI.r_length = (ARI.r_word1 >> 25) & 3;
+    RI.r_extern = (ARI.r_word1 >> 27) & 1;
+    RI.r_type = (ARI.r_word1 >> 28);
+    return RI;
+  }
 
 private:
   static unsigned getPointerSize(const object::MachOObjectFile &Obj);

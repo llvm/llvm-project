@@ -211,14 +211,10 @@ define i8 @unsigned_sat_variable_i8_using_cmp_sum(i8 %x, i8 %y) {
 define i8 @unsigned_sat_variable_i8_using_cmp_notval(i8 %x, i8 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i8_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    # kill: def $esi killed $esi def $rsi
-; ANY-NEXT:    # kill: def $edi killed $edi def $rdi
-; ANY-NEXT:    leal (%rdi,%rsi), %eax
-; ANY-NEXT:    notb %sil
-; ANY-NEXT:    cmpb %sil, %dil
-; ANY-NEXT:    movzbl %al, %ecx
+; ANY-NEXT:    addb %dil, %sil
+; ANY-NEXT:    movzbl %sil, %ecx
 ; ANY-NEXT:    movl $255, %eax
-; ANY-NEXT:    cmovbel %ecx, %eax
+; ANY-NEXT:    cmovael %ecx, %eax
 ; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %noty = xor i8 %y, -1
@@ -263,13 +259,9 @@ define i16 @unsigned_sat_variable_i16_using_cmp_sum(i16 %x, i16 %y) {
 define i16 @unsigned_sat_variable_i16_using_cmp_notval(i16 %x, i16 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i16_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    # kill: def $esi killed $esi def $rsi
-; ANY-NEXT:    # kill: def $edi killed $edi def $rdi
-; ANY-NEXT:    leal (%rdi,%rsi), %ecx
-; ANY-NEXT:    notl %esi
-; ANY-NEXT:    cmpw %si, %di
+; ANY-NEXT:    addw %di, %si
 ; ANY-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; ANY-NEXT:    cmovbel %ecx, %eax
+; ANY-NEXT:    cmovael %esi, %eax
 ; ANY-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ANY-NEXT:    retq
   %noty = xor i16 %y, -1
@@ -312,13 +304,9 @@ define i32 @unsigned_sat_variable_i32_using_cmp_sum(i32 %x, i32 %y) {
 define i32 @unsigned_sat_variable_i32_using_cmp_notval(i32 %x, i32 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i32_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    # kill: def $esi killed $esi def $rsi
-; ANY-NEXT:    # kill: def $edi killed $edi def $rdi
-; ANY-NEXT:    leal (%rdi,%rsi), %ecx
-; ANY-NEXT:    notl %esi
-; ANY-NEXT:    cmpl %esi, %edi
+; ANY-NEXT:    addl %esi, %edi
 ; ANY-NEXT:    movl $-1, %eax
-; ANY-NEXT:    cmovbel %ecx, %eax
+; ANY-NEXT:    cmovael %edi, %eax
 ; ANY-NEXT:    retq
   %noty = xor i32 %y, -1
   %a = add i32 %x, %y
@@ -359,11 +347,9 @@ define i64 @unsigned_sat_variable_i64_using_cmp_sum(i64 %x, i64 %y) {
 define i64 @unsigned_sat_variable_i64_using_cmp_notval(i64 %x, i64 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i64_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    leaq (%rdi,%rsi), %rcx
-; ANY-NEXT:    notq %rsi
-; ANY-NEXT:    cmpq %rsi, %rdi
+; ANY-NEXT:    addq %rsi, %rdi
 ; ANY-NEXT:    movq $-1, %rax
-; ANY-NEXT:    cmovbeq %rcx, %rax
+; ANY-NEXT:    cmovaeq %rdi, %rax
 ; ANY-NEXT:    retq
   %noty = xor i64 %y, -1
   %a = add i64 %x, %y

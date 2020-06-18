@@ -69,6 +69,7 @@ add_subdirectory(aarch64)
 add_subdirectory(cuda)
 add_subdirectory(ppc64)
 add_subdirectory(ppc64le)
+add_subdirectory(ve)
 add_subdirectory(x86_64)
 
 # Make sure the parent scope can see the plugins that will be created.

@@ -8,4 +8,4 @@
 @interface Buggy (MyExt) // expected-error {{definition of 'Buggy' must be imported from module 'Foo' before it is required}}
 @end
 
-// expected-note@Foo/RandoPriv.h:3{{previous definition is here}}
+// expected-note@Foo/RandoPriv.h:3{{definition here is not reachable}}

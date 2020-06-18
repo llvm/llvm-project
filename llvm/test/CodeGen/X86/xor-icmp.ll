@@ -87,3 +87,90 @@ bb:                                               ; preds = %entry
 return:                                           ; preds = %entry
   ret i32 undef
 }
+
+; PR45703
+; https://bugs.llvm.org/show_bug.cgi?id=45703
+
+define i1 @xor_not_bools(i1 zeroext %x, i1 zeroext %y) nounwind {
+; X32-LABEL: xor_not_bools:
+; X32:       # %bb.0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb $1, %al
+; X32-NEXT:    retl
+;
+; X64-LABEL: xor_not_bools:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %esi, %eax
+; X64-NEXT:    xorb $1, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+  %xor = xor i1 %x, %y
+  %not = xor i1 %xor, true
+  ret i1 %not
+}
+
+; This is probably not canonical IR; just testing another possible pattern.
+
+define zeroext i1 @xor_not_cmps(i32 %x, i32 %y) nounwind {
+; X32-LABEL: xor_not_cmps:
+; X32:       # %bb.0:
+; X32-NEXT:    cmpl $42, {{[0-9]+}}(%esp)
+; X32-NEXT:    setne %cl
+; X32-NEXT:    cmpl $235, {{[0-9]+}}(%esp)
+; X32-NEXT:    sete %al
+; X32-NEXT:    xorb %cl, %al
+; X32-NEXT:    xorb $1, %al
+; X32-NEXT:    retl
+;
+; X64-LABEL: xor_not_cmps:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpl $42, %edi
+; X64-NEXT:    setne %cl
+; X64-NEXT:    cmpl $235, %esi
+; X64-NEXT:    sete %al
+; X64-NEXT:    xorb %cl, %al
+; X64-NEXT:    xorb $1, %al
+; X64-NEXT:    retq
+  %cmpx = icmp ne i32 %x, 42
+  %cmpy = icmp eq i32 %y, 235
+  %xor = xor i1 %cmpx, %cmpy
+  %not = xor i1 %xor, 1
+  ret i1 %not
+}
+
+define zeroext i1 @xor_not_cmps_extra_use(i32 %x, i32 %y, i32* %p) nounwind {
+; X32-LABEL: xor_not_cmps_extra_use:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    cmpl $42, {{[0-9]+}}(%esp)
+; X32-NEXT:    setne %dl
+; X32-NEXT:    cmpl $235, {{[0-9]+}}(%esp)
+; X32-NEXT:    sete %al
+; X32-NEXT:    xorb %dl, %al
+; X32-NEXT:    movzbl %al, %edx
+; X32-NEXT:    movl %edx, (%ecx)
+; X32-NEXT:    xorb $1, %al
+; X32-NEXT:    retl
+;
+; X64-LABEL: xor_not_cmps_extra_use:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpl $42, %edi
+; X64-NEXT:    setne %al
+; X64-NEXT:    cmpl $235, %esi
+; X64-NEXT:    sete %cl
+; X64-NEXT:    xorb %al, %cl
+; X64-NEXT:    movzbl %cl, %eax
+; X64-NEXT:    movl %eax, (%rdx)
+; X64-NEXT:    xorb $1, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+  %cmpx = icmp ne i32 %x, 42
+  %cmpy = icmp eq i32 %y, 235
+  %xor = xor i1 %cmpx, %cmpy
+  %z = zext i1 %xor to i32
+  store i32 %z, i32* %p
+  %not = xor i1 %xor, 1
+  ret i1 %not
+}

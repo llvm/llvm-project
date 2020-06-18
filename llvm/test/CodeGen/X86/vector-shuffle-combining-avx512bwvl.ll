@@ -99,3 +99,57 @@ define <16 x i8> @combine_shuffle_vrotli_v4i32(<4 x i32> %a0) {
   ret <16 x i8> %3
 }
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
+
+define void @PR46178(i16* %0) {
+; X86-LABEL: PR46178:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovdqu 0, %ymm0
+; X86-NEXT:    vmovdqu (%eax), %ymm1
+; X86-NEXT:    vpmovqw %ymm0, %xmm0
+; X86-NEXT:    vpmovqw %ymm1, %xmm1
+; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vpsllw $8, %ymm0, %ymm0
+; X86-NEXT:    vpsraw $8, %ymm0, %ymm0
+; X86-NEXT:    vmovapd {{.*#+}} ymm1 = [0,0,2,0,4,0,4,0]
+; X86-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; X86-NEXT:    vpermi2pd %ymm2, %ymm0, %ymm1
+; X86-NEXT:    vmovupd %ymm1, (%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR46178:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovdqu 0, %ymm0
+; X64-NEXT:    vmovdqu (%rax), %ymm1
+; X64-NEXT:    vpmovqw %ymm0, %xmm0
+; X64-NEXT:    vpmovqw %ymm1, %xmm1
+; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vpsllw $8, %ymm0, %ymm0
+; X64-NEXT:    vpsraw $8, %ymm0, %ymm0
+; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; X64-NEXT:    vmovdqa %xmm0, %xmm0
+; X64-NEXT:    vmovdqu %ymm0, (%rdi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %2 = load <4 x i64>, <4 x i64>* null, align 8
+  %3 = load <4 x i64>, <4 x i64>* undef, align 8
+  %4 = trunc <4 x i64> %2 to <4 x i16>
+  %5 = trunc <4 x i64> %3 to <4 x i16>
+  %6 = shl <4 x i16> %4, <i16 8, i16 8, i16 8, i16 8>
+  %7 = shl <4 x i16> %5, <i16 8, i16 8, i16 8, i16 8>
+  %8 = ashr exact <4 x i16> %6, <i16 8, i16 8, i16 8, i16 8>
+  %9 = ashr exact <4 x i16> %7, <i16 8, i16 8, i16 8, i16 8>
+  %10 = bitcast i16* %0 to <4 x i16>*
+  %11 = getelementptr inbounds i16, i16* %0, i64 4
+  %12 = bitcast i16* %11 to <4 x i16>*
+  %13 = getelementptr inbounds i16, i16* %0, i64 8
+  %14 = bitcast i16* %13 to <4 x i16>*
+  %15 = getelementptr inbounds i16, i16* %0, i64 12
+  %16 = bitcast i16* %15 to <4 x i16>*
+  store <4 x i16> %8, <4 x i16>* %10, align 2
+  store <4 x i16> %9, <4 x i16>* %12, align 2
+  store <4 x i16> zeroinitializer, <4 x i16>* %14, align 2
+  store <4 x i16> zeroinitializer, <4 x i16>* %16, align 2
+  ret void
+}

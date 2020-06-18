@@ -100,7 +100,7 @@ void parallel_master_private() {
 // CK3:       [[A_VAL:%.+]] = alloca i32
 // CK3:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OMP_OUTLINED:@.+]] to void 
 
-// CK3:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias [[GTID:%.+]], i32* noalias [[BTID:%.+]], i32* dereferenceable(4) [[A_VAL]])
+// CK3:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias [[GTID:%.+]], i32* noalias [[BTID:%.+]], i32* nonnull align 4 dereferenceable(4) [[A_VAL]])
 // CK3:       [[GTID_ADDR:%.+]] = alloca i32*
 // CK3:       [[BTID_ADDR:%.+]] = alloca i32*
 // CK3:       [[A_ADDR:%.+]] = alloca i32* 
@@ -446,6 +446,7 @@ int main() {
 // CK9-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
 // CK9-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;

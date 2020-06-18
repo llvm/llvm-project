@@ -90,7 +90,9 @@ static inline ArrayRef<uint8_t> stabilize(BumpPtrAllocator &Alloc,
 TypeIndex MergingTypeTableBuilder::insertRecordAs(hash_code Hash,
                                                   ArrayRef<uint8_t> &Record) {
   assert(Record.size() < UINT32_MAX && "Record too big");
-  assert(Record.size() % 4 == 0 && "Record is not aligned to 4 bytes!");
+  assert(Record.size() % 4 == 0 &&
+         "The type record size is not a multiple of 4 bytes which will cause "
+         "misalignment in the output TPI stream!");
 
   LocallyHashedType WeakHash{Hash, Record};
   auto Result = HashedRecords.try_emplace(WeakHash, nextTypeIndex());
@@ -120,4 +122,31 @@ MergingTypeTableBuilder::insertRecord(ContinuationRecordBuilder &Builder) {
   for (auto C : Fragments)
     TI = insertRecordBytes(C.RecordData);
   return TI;
+}
+
+bool MergingTypeTableBuilder::replaceType(TypeIndex &Index, CVType Data,
+                                          bool Stabilize) {
+  assert(Index.toArrayIndex() < SeenRecords.size() &&
+         "This function cannot be used to insert records!");
+
+  ArrayRef<uint8_t> Record = Data.data();
+  assert(Record.size() < UINT32_MAX && "Record too big");
+  assert(Record.size() % 4 == 0 &&
+         "The type record size is not a multiple of 4 bytes which will cause "
+         "misalignment in the output TPI stream!");
+
+  LocallyHashedType WeakHash{hash_value(Record), Record};
+  auto Result = HashedRecords.try_emplace(WeakHash, Index.toArrayIndex());
+  if (!Result.second) {
+    Index = Result.first->second;
+    return false; // The record is already there, at a different location
+  }
+
+  if (Stabilize) {
+    Record = stabilize(RecordStorage, Record);
+    Result.first->first.RecordData = Record;
+  }
+
+  SeenRecords[Index.toArrayIndex()] = Record;
+  return true;
 }

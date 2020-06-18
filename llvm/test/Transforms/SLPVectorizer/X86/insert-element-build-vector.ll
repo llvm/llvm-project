@@ -214,77 +214,44 @@ define <4 x float> @simple_select_users(<4 x float> %a, <4 x float> %b, <4 x i32
 
 ; Unused insertelement
 define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
-; BIGTHRESH-LABEL: @simple_select_no_users(
-; BIGTHRESH-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
-; BIGTHRESH-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
-; BIGTHRESH-NEXT:    [[C2:%.*]] = extractelement <4 x i32> [[C]], i32 2
-; BIGTHRESH-NEXT:    [[C3:%.*]] = extractelement <4 x i32> [[C]], i32 3
-; BIGTHRESH-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; BIGTHRESH-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
-; BIGTHRESH-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
-; BIGTHRESH-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
-; BIGTHRESH-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
-; BIGTHRESH-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i32 1
-; BIGTHRESH-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i32 2
-; BIGTHRESH-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i32 3
-; BIGTHRESH-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[C0]], i32 0
-; BIGTHRESH-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[C1]], i32 1
-; BIGTHRESH-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
-; BIGTHRESH-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> undef, i32 [[C2]], i32 0
-; BIGTHRESH-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[C3]], i32 1
-; BIGTHRESH-NEXT:    [[TMP6:%.*]] = icmp ne <2 x i32> [[TMP5]], zeroinitializer
-; BIGTHRESH-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> undef, float [[A0]], i32 0
-; BIGTHRESH-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP7]], float [[A1]], i32 1
-; BIGTHRESH-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> undef, float [[B0]], i32 0
-; BIGTHRESH-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[B1]], i32 1
-; BIGTHRESH-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP3]], <2 x float> [[TMP8]], <2 x float> [[TMP10]]
-; BIGTHRESH-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> undef, float [[A2]], i32 0
-; BIGTHRESH-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP12]], float [[A3]], i32 1
-; BIGTHRESH-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> undef, float [[B2]], i32 0
-; BIGTHRESH-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[B3]], i32 1
-; BIGTHRESH-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP6]], <2 x float> [[TMP13]], <2 x float> [[TMP15]]
-; BIGTHRESH-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP11]], i32 0
-; BIGTHRESH-NEXT:    [[RA:%.*]] = insertelement <4 x float> undef, float [[TMP17]], i32 0
-; BIGTHRESH-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP11]], i32 1
-; BIGTHRESH-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[TMP18]], i32 1
-; BIGTHRESH-NEXT:    [[TMP19:%.*]] = extractelement <2 x float> [[TMP16]], i32 0
-; BIGTHRESH-NEXT:    [[RC:%.*]] = insertelement <4 x float> undef, float [[TMP19]], i32 2
-; BIGTHRESH-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP16]], i32 1
-; BIGTHRESH-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[TMP20]], i32 3
-; BIGTHRESH-NEXT:    ret <4 x float> [[RD]]
-;
-; ZEROTHRESH-LABEL: @simple_select_no_users(
-; ZEROTHRESH-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
-; ZEROTHRESH-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
-; ZEROTHRESH-NEXT:    [[C2:%.*]] = extractelement <4 x i32> [[C]], i32 2
-; ZEROTHRESH-NEXT:    [[C3:%.*]] = extractelement <4 x i32> [[C]], i32 3
-; ZEROTHRESH-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; ZEROTHRESH-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
-; ZEROTHRESH-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
-; ZEROTHRESH-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
-; ZEROTHRESH-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
-; ZEROTHRESH-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i32 1
-; ZEROTHRESH-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i32 2
-; ZEROTHRESH-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i32 3
-; ZEROTHRESH-NEXT:    [[CMP0:%.*]] = icmp ne i32 [[C0]], 0
-; ZEROTHRESH-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[C1]], 0
-; ZEROTHRESH-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[C2]], i32 0
-; ZEROTHRESH-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[C3]], i32 1
-; ZEROTHRESH-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
-; ZEROTHRESH-NEXT:    [[S0:%.*]] = select i1 [[CMP0]], float [[A0]], float [[B0]]
-; ZEROTHRESH-NEXT:    [[S1:%.*]] = select i1 [[CMP1]], float [[A1]], float [[B1]]
-; ZEROTHRESH-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> undef, float [[A2]], i32 0
-; ZEROTHRESH-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[A3]], i32 1
-; ZEROTHRESH-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> undef, float [[B2]], i32 0
-; ZEROTHRESH-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[B3]], i32 1
-; ZEROTHRESH-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP3]], <2 x float> [[TMP5]], <2 x float> [[TMP7]]
-; ZEROTHRESH-NEXT:    [[RA:%.*]] = insertelement <4 x float> undef, float [[S0]], i32 0
-; ZEROTHRESH-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[S1]], i32 1
-; ZEROTHRESH-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i32 0
-; ZEROTHRESH-NEXT:    [[RC:%.*]] = insertelement <4 x float> undef, float [[TMP9]], i32 2
-; ZEROTHRESH-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i32 1
-; ZEROTHRESH-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[TMP10]], i32 3
-; ZEROTHRESH-NEXT:    ret <4 x float> [[RD]]
+; ANY-LABEL: @simple_select_no_users(
+; ANY-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
+; ANY-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
+; ANY-NEXT:    [[C2:%.*]] = extractelement <4 x i32> [[C]], i32 2
+; ANY-NEXT:    [[C3:%.*]] = extractelement <4 x i32> [[C]], i32 3
+; ANY-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; ANY-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
+; ANY-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
+; ANY-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
+; ANY-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; ANY-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i32 1
+; ANY-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i32 2
+; ANY-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i32 3
+; ANY-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[C0]], i32 0
+; ANY-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[C1]], i32 1
+; ANY-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
+; ANY-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> undef, i32 [[C2]], i32 0
+; ANY-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[C3]], i32 1
+; ANY-NEXT:    [[TMP6:%.*]] = icmp ne <2 x i32> [[TMP5]], zeroinitializer
+; ANY-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> undef, float [[A0]], i32 0
+; ANY-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP7]], float [[A1]], i32 1
+; ANY-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> undef, float [[B0]], i32 0
+; ANY-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[B1]], i32 1
+; ANY-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP3]], <2 x float> [[TMP8]], <2 x float> [[TMP10]]
+; ANY-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> undef, float [[A2]], i32 0
+; ANY-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP12]], float [[A3]], i32 1
+; ANY-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> undef, float [[B2]], i32 0
+; ANY-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[B3]], i32 1
+; ANY-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP6]], <2 x float> [[TMP13]], <2 x float> [[TMP15]]
+; ANY-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP11]], i32 0
+; ANY-NEXT:    [[RA:%.*]] = insertelement <4 x float> undef, float [[TMP17]], i32 0
+; ANY-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP11]], i32 1
+; ANY-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[TMP18]], i32 1
+; ANY-NEXT:    [[TMP19:%.*]] = extractelement <2 x float> [[TMP16]], i32 0
+; ANY-NEXT:    [[RC:%.*]] = insertelement <4 x float> undef, float [[TMP19]], i32 2
+; ANY-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP16]], i32 1
+; ANY-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[TMP20]], i32 3
+; ANY-NEXT:    ret <4 x float> [[RD]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1

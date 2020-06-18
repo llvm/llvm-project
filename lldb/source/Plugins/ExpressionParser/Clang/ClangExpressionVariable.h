@@ -197,7 +197,9 @@ public:
   }
 
   /// Members
-  DISALLOW_COPY_AND_ASSIGN(ClangExpressionVariable);
+  ClangExpressionVariable(const ClangExpressionVariable &) = delete;
+  const ClangExpressionVariable &
+  operator=(const ClangExpressionVariable &) = delete;
 };
 
 } // namespace lldb_private

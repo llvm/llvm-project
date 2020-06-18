@@ -22,14 +22,14 @@
 ; CHECK-NEXT:   ]
 ; CHECK-NEXT:   Section:
 ; CHECK-NEXT: }
-; FIRST:      foo:
+; FIRST:      <foo>:
 ; FIRST-NEXT:   movl    $41, %eax
 
 ; Now swap the files order.
 ; RUN: ld.lld %t2.o %t1.o -o %t.so -shared
 ; RUN: llvm-readobj --symbols %t.so | FileCheck %s
 ; RUN: llvm-objdump -d %t.so | FileCheck %s --check-prefix=SECOND
-; SECOND:      foo:
+; SECOND:      <foo>:
 ; SECOND-NEXT:   movl    $42, %eax
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

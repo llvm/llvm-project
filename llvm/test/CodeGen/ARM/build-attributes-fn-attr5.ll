@@ -13,4 +13,4 @@ entry:
   ret i32 42
 }
 
-attributes #0 = { minsize norecurse nounwind optsize readnone "denormal-fp-math"="preserve-sign"}
+attributes #0 = { minsize norecurse nounwind optsize readnone "denormal-fp-math"="preserve-sign,preserve-sign"}

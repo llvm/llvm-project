@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/Ops.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
@@ -14,14 +14,13 @@
 using namespace mlir;
 
 namespace {
-/// Simple constant folding pass.
 struct TestMemRefStrideCalculation
-    : public FunctionPass<struct TestMemRefStrideCalculation> {
+    : public PassWrapper<TestMemRefStrideCalculation, FunctionPass> {
   void runOnFunction() override;
 };
 } // end anonymous namespace
 
-// Traverse AllocOp and compute strides of each MemRefType independently.
+/// Traverse AllocOp and compute strides of each MemRefType independently.
 void TestMemRefStrideCalculation::runOnFunction() {
   llvm::outs() << "Testing: " << getFunction().getName() << "\n";
   getFunction().walk([&](AllocOp allocOp) {
@@ -39,7 +38,7 @@ void TestMemRefStrideCalculation::runOnFunction() {
     else
       llvm::outs() << offset;
     llvm::outs() << " strides: ";
-    interleaveComma(strides, llvm::outs(), [&](int64_t v) {
+    llvm::interleaveComma(strides, llvm::outs(), [&](int64_t v) {
       if (v == MemRefType::getDynamicStrideOrOffset())
         llvm::outs() << "?";
       else

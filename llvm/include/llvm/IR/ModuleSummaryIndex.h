@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
@@ -552,6 +553,34 @@ public:
     unsigned AlwaysInline : 1;
   };
 
+  /// Describes the uses of a parameter by the range of offsets accessed in the
+  /// function and all of the call targets it is passed to.
+  struct ParamAccess {
+    static constexpr uint32_t RangeWidth = 64;
+
+    /// Describes the use of a value in a call instruction, specifying the
+    /// call's target, the value's parameter number, and the possible range of
+    /// offsets from the beginning of the value that are passed.
+    struct Call {
+      uint64_t ParamNo = 0;
+      GlobalValue::GUID Callee = 0;
+      ConstantRange Offsets{RangeWidth, true};
+
+      Call() = default;
+      Call(uint64_t ParamNo, GlobalValue::GUID Callee,
+           const ConstantRange &Offsets)
+          : ParamNo(ParamNo), Callee(Callee), Offsets(Offsets) {}
+    };
+
+    uint64_t ParamNo = 0;
+    ConstantRange Use{RangeWidth, true};
+    std::vector<Call> Calls;
+
+    ParamAccess() = default;
+    ParamAccess(uint64_t ParamNo, const ConstantRange &Use)
+        : ParamNo(ParamNo), Use(Use) {}
+  };
+
   /// Create an empty FunctionSummary (with specified call edges).
   /// Used to represent external nodes and the dummy root node.
   static FunctionSummary
@@ -567,7 +596,8 @@ public:
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::ConstVCall>(),
-        std::vector<FunctionSummary::ConstVCall>());
+        std::vector<FunctionSummary::ConstVCall>(),
+        std::vector<FunctionSummary::ParamAccess>());
   }
 
   /// A dummy node to reference external functions that aren't in the index
@@ -591,6 +621,9 @@ private:
 
   std::unique_ptr<TypeIdInfo> TIdInfo;
 
+  /// Uses for every parameter to this function.
+  std::vector<ParamAccess> ParamAccesses;
+
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
                   uint64_t EntryCount, std::vector<ValueInfo> Refs,
@@ -599,10 +632,12 @@ public:
                   std::vector<VFuncId> TypeTestAssumeVCalls,
                   std::vector<VFuncId> TypeCheckedLoadVCalls,
                   std::vector<ConstVCall> TypeTestAssumeConstVCalls,
-                  std::vector<ConstVCall> TypeCheckedLoadConstVCalls)
+                  std::vector<ConstVCall> TypeCheckedLoadConstVCalls,
+                  std::vector<ParamAccess> ParamAccesses)
       : GlobalValueSummary(FunctionKind, Flags, std::move(Refs)),
         InstCount(NumInsts), FunFlags(FunFlags), EntryCount(EntryCount),
-        CallGraphEdgeList(std::move(CGEdges)) {
+        CallGraphEdgeList(std::move(CGEdges)),
+        ParamAccesses(std::move(ParamAccesses)) {
     if (!TypeTests.empty() || !TypeTestAssumeVCalls.empty() ||
         !TypeCheckedLoadVCalls.empty() || !TypeTestAssumeConstVCalls.empty() ||
         !TypeCheckedLoadConstVCalls.empty())
@@ -679,6 +714,14 @@ public:
     if (TIdInfo)
       return TIdInfo->TypeCheckedLoadConstVCalls;
     return {};
+  }
+
+  /// Returns the list of known uses of pointer parameters.
+  ArrayRef<ParamAccess> paramAccesses() const { return ParamAccesses; }
+
+  /// Sets the list of known uses of pointer parameters.
+  void setParamAccesses(std::vector<ParamAccess> NewParams) {
+    ParamAccesses = std::move(NewParams);
   }
 
   /// Add a type test to the summary. This is used by WholeProgramDevirt if we
@@ -833,8 +876,7 @@ struct TypeTestResolution {
     Single,    ///< Single element (last example in "Short Inline Bit Vectors")
     AllOnes,   ///< All-ones bit vector ("Eliminating Bit Vector Checks for
                ///  All-Ones Bit Vectors")
-    Unknown,   ///< Unknown (analysis not performed, don't lower)
-  } TheKind = Unknown;
+  } TheKind = Unsat;
 
   /// Range of size-1 expressed as a bit width. For example, if the size is in
   /// range [1,256], this number will be 8. This helps generate the most compact
@@ -1008,6 +1050,10 @@ private:
   StringSaver Saver;
   BumpPtrAllocator Alloc;
 
+  // The total number of basic blocks in the module in the per-module summary or
+  // the total number of basic blocks in the LTO unit in the combined index.
+  uint64_t BlockCount;
+
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
 
@@ -1020,15 +1066,15 @@ private:
 public:
   // See HaveGVs variable comment.
   ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false)
-      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit), Saver(Alloc) {
-  }
+      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit), Saver(Alloc),
+        BlockCount(0) {}
 
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 9;
+  static constexpr uint64_t BitcodeSummaryVersion = 8;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {
@@ -1039,6 +1085,10 @@ public:
 
   uint64_t getFlags() const;
   void setFlags(uint64_t Flags);
+
+  uint64_t getBlockCount() const { return BlockCount; }
+  void addBlockCount(uint64_t C) { BlockCount += C; }
+  void setBlockCount(uint64_t C) { BlockCount = C; }
 
   gvsummary_iterator begin() { return GlobalValueMap.begin(); }
   const_gvsummary_iterator begin() const { return GlobalValueMap.begin(); }

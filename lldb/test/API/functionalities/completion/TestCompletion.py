@@ -43,9 +43,10 @@ class CommandLineCompletionTestCase(TestBase):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                           '// Break here', self.main_source_spec)
         self.assertEquals(process.GetState(), lldb.eStateStopped)
-        # FIXME: This pulls in the debug information to make the completions work,
-        # but the completions should also work without.
-        self.runCmd("frame variable fooo")
+        
+        # Since CommandInterpreter has been corrected to update the current execution 
+        # context at the beginning of HandleCompletion, we're here explicitly testing  
+        # the scenario where "frame var" is completed without any preceding commands.
 
         self.complete_from_to('frame variable fo',
                               'frame variable fooo')
@@ -83,6 +84,30 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('process launch --arch ',
                               ['mips',
                                'arm64'])
+
+    def test_process_plugin_completion(self):
+        subcommands = ['attach -P', 'connect -p', 'launch -p']
+
+        for subcommand in subcommands:
+            self.complete_from_to('process ' + subcommand + ' mac',
+                                  'process ' + subcommand + ' mach-o-core')
+
+    def test_process_signal(self):
+        # The tab completion for "process signal"  won't work without a running process.
+        self.complete_from_to('process signal ',
+                              'process signal ')
+
+        # Test with a running process.
+        self.build()
+        self.main_source = "main.cpp"
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
+        lldbutil.run_to_source_breakpoint(self, '// Break here', self.main_source_spec)
+
+        self.complete_from_to('process signal ',
+                              'process signal SIG')
+        self.complete_from_to('process signal SIGA',
+                              ['SIGABRT',
+                               'SIGALRM'])
 
     def test_ambiguous_long_opt(self):
         self.completions_match('breakpoint modify --th',
@@ -346,6 +371,10 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("watchpoint set variable foo --watch w", "watchpoint set variable foo --watch write")
         self.complete_from_to('watchpoint set variable foo -w read_', 'watchpoint set variable foo -w read_write')
 
+    def test_command_script_delete(self):
+        self.runCmd("command script add -h test_desc -f none -s current usercmd1")
+        self.check_completion_with_desc('command script delete ', [['usercmd1', 'test_desc']])
+
     def test_completion_description_commands(self):
         """Test descriptions of top-level command completions"""
         self.check_completion_with_desc("", [
@@ -396,3 +425,103 @@ class CommandLineCompletionTestCase(TestBase):
         # No completion for Qu because the candidate is
         # (anonymous namespace)::Quux().
         self.complete_from_to('breakpoint set -n Qu', '')
+
+    @skipIf(archs=no_match(['x86_64']))
+    def test_register_read_and_write_on_x86(self):
+        """Test the completion of the commands register read and write on x86"""
+
+        # The tab completion for "register read/write"  won't work without a running process.
+        self.complete_from_to('register read ',
+                              'register read ')
+        self.complete_from_to('register write ',
+                              'register write ')
+
+        self.build()
+        self.main_source_spec = lldb.SBFileSpec("main.cpp")
+        lldbutil.run_to_source_breakpoint(self, '// Break here', self.main_source_spec)
+
+        # test cases for register read
+        self.complete_from_to('register read ',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+        self.complete_from_to('register read r',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+        self.complete_from_to('register read ra',
+                              'register read rax')
+        # register read can take multiple register names as arguments
+        self.complete_from_to('register read rax ',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+        # complete with prefix '$'
+        self.completions_match('register read $rb',
+                              ['$rbx',
+                               '$rbp'])
+        self.completions_match('register read $ra',
+                              ['$rax'])
+        self.complete_from_to('register read rax $',
+                              ['\$rax',
+                               '\$rbx',
+                               '\$rcx'])
+        self.complete_from_to('register read $rax ',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+
+        # test cases for register write
+        self.complete_from_to('register write ',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+        self.complete_from_to('register write r',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+        self.complete_from_to('register write ra',
+                              'register write rax')
+        self.complete_from_to('register write rb',
+                              ['rbx',
+                               'rbp'])
+        # register write can only take exact one register name as argument
+        self.complete_from_to('register write rbx ',
+                              [])
+
+    def test_complete_breakpoint_with_ids(self):
+        """These breakpoint subcommands should be completed with a list of breakpoint ids"""
+
+        subcommands = ['enable', 'disable', 'delete', 'modify', 'name add', 'name delete', 'write']
+
+        # The tab completion here is unavailable without a target
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' ',
+                                  'breakpoint ' + subcommand + ' ')
+
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact('a.out'))
+        self.assertTrue(target, VALID_TARGET)
+
+        bp = target.BreakpointCreateByName('main', 'a.out')
+        self.assertTrue(bp)
+        self.assertEqual(bp.GetNumLocations(), 1)
+
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' ',
+                                  ['1'])
+        
+        bp2 = target.BreakpointCreateByName('Bar', 'a.out')
+        self.assertTrue(bp2)
+        self.assertEqual(bp2.GetNumLocations(), 1)
+
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' ',
+                                  ['1',
+                                   '2'])
+        
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' 1 ',
+                                  ['1',
+                                   '2'])
+

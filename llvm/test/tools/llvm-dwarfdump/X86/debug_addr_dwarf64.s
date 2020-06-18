@@ -5,6 +5,7 @@
 # CHECK:      .debug_addr contents:
 # CHECK-NEXT: Address table header:
 # CHECK-SAME: length = 0x000000000000000c,
+# CHECK-SAME: format = DWARF64,
 # CHECK-SAME: version = 0x0005,
 # CHECK-SAME: addr_size = 0x04,
 # CHECK-SAME: seg_size = 0x00

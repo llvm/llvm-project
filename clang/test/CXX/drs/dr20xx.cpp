@@ -49,6 +49,13 @@ namespace dr2026 { // dr2026: 11
   }
 }
 
+namespace dr2082 { // dr2082: 11
+  void test1(int x, int = sizeof(x)); // ok
+#if __cplusplus >= 201103L
+  void test2(int x, int = decltype(x){}); // ok
+#endif
+}
+
 namespace dr2083 { // dr2083: partial
 #if __cplusplus >= 201103L
   void non_const_mem_ptr() {

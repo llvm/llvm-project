@@ -908,7 +908,7 @@ class Sema;
   private:
     friend class OverloadCandidateSet;
     OverloadCandidate()
-        : IsADLCandidate(CallExpr::NotADL), RewriteKind(CRK_None) {}
+        : IsSurrogate(false), IsADLCandidate(CallExpr::NotADL), RewriteKind(CRK_None) {}
   };
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++
@@ -981,6 +981,14 @@ class Sema;
         if (PO == OverloadCandidateParamOrder::Reversed)
           CRK = OverloadCandidateRewriteKind(CRK | CRK_Reversed);
         return CRK;
+      }
+
+      /// Determines whether this operator could be implemented by a function
+      /// with reversed parameter order.
+      bool isReversible() {
+        return AllowRewrittenCandidates && OriginalOperator &&
+               (getRewrittenOverloadedOperator(OriginalOperator) != OO_None ||
+                shouldAddReversed(OriginalOperator));
       }
 
       /// Determine whether we should consider looking for and adding reversed

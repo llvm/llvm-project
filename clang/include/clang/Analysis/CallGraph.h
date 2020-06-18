@@ -66,6 +66,11 @@ public:
   /// Determine if a declaration should be included in the graph.
   static bool includeInGraph(const Decl *D);
 
+  /// Determine if a declaration should be included in the graph for the 
+  /// purposes of being a callee. This is similar to includeInGraph except
+  /// it permits declarations, not just definitions.
+  static bool includeCalleeInGraph(const Decl *D);
+
   /// Lookup the node for the given declaration.
   CallGraphNode *getNode(const Decl *) const;
 
@@ -188,6 +193,10 @@ public:
   void addCallee(CallRecord Call) { CalledFunctions.push_back(Call); }
 
   Decl *getDecl() const { return FD; }
+
+  FunctionDecl *getDefinition() const {
+    return getDecl()->getAsFunction()->getDefinition();
+  }
 
   void print(raw_ostream &os) const;
   void dump() const;

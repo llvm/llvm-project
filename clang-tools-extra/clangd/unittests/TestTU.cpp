@@ -20,7 +20,7 @@
 namespace clang {
 namespace clangd {
 
-ParsedAST TestTU::build() const {
+ParseInputs TestTU::inputs(MockFSProvider &FSProvider) const {
   std::string FullFilename = testPath(Filename),
               FullHeaderName = testPath(HeaderFilename),
               ImportThunk = testPath("import_thunk.h");
@@ -29,49 +29,65 @@ ParsedAST TestTU::build() const {
   // guard without messing up offsets). In this case, use an intermediate file.
   std::string ThunkContents = "#import \"" + FullHeaderName + "\"\n";
 
-  llvm::StringMap<std::string> Files(AdditionalFiles);
-  Files[FullFilename] = Code;
-  Files[FullHeaderName] = HeaderCode;
-  Files[ImportThunk] = ThunkContents;
+  FSProvider.Files = AdditionalFiles;
+  FSProvider.Files[FullFilename] = Code;
+  FSProvider.Files[FullHeaderName] = HeaderCode;
+  FSProvider.Files[ImportThunk] = ThunkContents;
 
-  std::vector<const char *> Cmd = {"clang"};
+  ParseInputs Inputs;
+  auto &Argv = Inputs.CompileCommand.CommandLine;
+  Argv = {"clang"};
   // FIXME: this shouldn't need to be conditional, but it breaks a
   // GoToDefinition test for some reason (getMacroArgExpandedLocation fails).
   if (!HeaderCode.empty()) {
-    Cmd.push_back("-include");
-    Cmd.push_back(ImplicitHeaderGuard ? ImportThunk.c_str()
-                                      : FullHeaderName.c_str());
+    Argv.push_back("-include");
+    Argv.push_back(ImplicitHeaderGuard ? ImportThunk : FullHeaderName);
     // ms-compatibility changes the meaning of #import.
     // The default is OS-dependent (on on windows), ensure it's off.
     if (ImplicitHeaderGuard)
-      Cmd.push_back("-fno-ms-compatibility");
+      Inputs.CompileCommand.CommandLine.push_back("-fno-ms-compatibility");
   }
-  Cmd.insert(Cmd.end(), ExtraArgs.begin(), ExtraArgs.end());
+  Argv.insert(Argv.end(), ExtraArgs.begin(), ExtraArgs.end());
   // Put the file name at the end -- this allows the extra arg (-xc++) to
   // override the language setting.
-  Cmd.push_back(FullFilename.c_str());
-  ParseInputs Inputs;
+  Argv.push_back(FullFilename);
   Inputs.CompileCommand.Filename = FullFilename;
-  Inputs.CompileCommand.CommandLine = {Cmd.begin(), Cmd.end()};
   Inputs.CompileCommand.Directory = testRoot();
   Inputs.Contents = Code;
-  Inputs.FS = buildTestFS(Files);
+  Inputs.FSProvider = &FSProvider;
   Inputs.Opts = ParseOptions();
+  Inputs.Opts.BuildRecoveryAST = true;
+  Inputs.Opts.PreserveRecoveryASTType = true;
   Inputs.Opts.ClangTidyOpts.Checks = ClangTidyChecks;
   Inputs.Opts.ClangTidyOpts.WarningsAsErrors = ClangTidyWarningsAsErrors;
   Inputs.Index = ExternalIndex;
   if (Inputs.Index)
     Inputs.Opts.SuggestMissingIncludes = true;
+  return Inputs;
+}
+
+std::shared_ptr<const PreambleData> TestTU::preamble() const {
+  MockFSProvider FSProvider;
+  auto Inputs = inputs(FSProvider);
+  IgnoreDiagnostics Diags;
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  assert(CI && "Failed to build compilation invocation.");
+  return clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,
+                                      /*StoreInMemory=*/true,
+                                      /*PreambleCallback=*/nullptr);
+}
+
+ParsedAST TestTU::build() const {
+  MockFSProvider FSProvider;
+  auto Inputs = inputs(FSProvider);
   StoreDiags Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   assert(CI && "Failed to build compilation invocation.");
-  auto Preamble =
-      buildPreamble(FullFilename, *CI,
-                    /*OldPreamble=*/nullptr,
-                    /*OldCompileCommand=*/Inputs.CompileCommand, Inputs,
-                    /*StoreInMemory=*/true, /*PreambleCallback=*/nullptr);
-  auto AST =
-      buildAST(FullFilename, std::move(CI), Diags.take(), Inputs, Preamble);
+  auto Preamble = clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,
+                                               /*StoreInMemory=*/true,
+                                               /*PreambleCallback=*/nullptr);
+  auto AST = ParsedAST::build(testPath(Filename), Inputs, std::move(CI),
+                              Diags.take(), Preamble);
   if (!AST.hasValue()) {
     ADD_FAILURE() << "Failed to build code:\n" << Code;
     llvm_unreachable("Failed to build TestTU!");
@@ -80,9 +96,17 @@ ParsedAST TestTU::build() const {
   // This guards against accidental syntax errors silently subverting tests.
   // error-ok is awfully primitive - using clang -verify would be nicer.
   // Ownership and layering makes it pretty hard.
-  if (llvm::none_of(Files, [](const auto &KV) {
-        return llvm::StringRef(KV.second).contains("error-ok");
-      })) {
+  bool ErrorOk = [&, this] {
+    llvm::StringLiteral Marker = "error-ok";
+    if (llvm::StringRef(Code).contains(Marker) ||
+        llvm::StringRef(HeaderCode).contains(Marker))
+      return true;
+    for (const auto &KV : this->AdditionalFiles)
+      if (llvm::StringRef(KV.second).contains(Marker))
+        return true;
+    return false;
+  }();
+  if (!ErrorOk) {
     for (const auto &D : AST->getDiagnostics())
       if (D.Severity >= DiagnosticsEngine::Error) {
         ADD_FAILURE()
@@ -97,17 +121,23 @@ ParsedAST TestTU::build() const {
 
 SymbolSlab TestTU::headerSymbols() const {
   auto AST = build();
-  return std::get<0>(indexHeaderSymbols(AST.getASTContext(),
+  return std::get<0>(indexHeaderSymbols(/*Version=*/"null", AST.getASTContext(),
                                         AST.getPreprocessorPtr(),
                                         AST.getCanonicalIncludes()));
+}
+
+RefSlab TestTU::headerRefs() const {
+  auto AST = build();
+  return std::get<1>(indexMainDecls(AST));
 }
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
   auto Idx = std::make_unique<FileIndex>(/*UseDex=*/true);
-  Idx->updatePreamble(Filename, AST.getASTContext(), AST.getPreprocessorPtr(),
+  Idx->updatePreamble(testPath(Filename), /*Version=*/"null",
+                      AST.getASTContext(), AST.getPreprocessorPtr(),
                       AST.getCanonicalIncludes());
-  Idx->updateMain(Filename, AST);
+  Idx->updateMain(testPath(Filename), AST);
   return std::move(Idx);
 }
 

@@ -30,6 +30,17 @@ namespace {
 cl::opt<bool> Quiet("debugify-quiet",
                     cl::desc("Suppress verbose debugify output"));
 
+enum class Level {
+  Locations,
+  LocationsAndVariables
+};
+cl::opt<Level> DebugifyLevel(
+    "debugify-level", cl::desc("Kind of debug info to add"),
+    cl::values(clEnumValN(Level::Locations, "locations", "Locations only"),
+               clEnumValN(Level::LocationsAndVariables, "location+variables",
+                          "Locations and Variables")),
+    cl::init(Level::LocationsAndVariables));
+
 raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
 
 uint64_t getAllocSizeInBits(Module &M, Type *Ty) {
@@ -51,10 +62,11 @@ Instruction *findTerminatingInstruction(BasicBlock &BB) {
     return I;
   return BB.getTerminator();
 }
+} // end anonymous namespace
 
-bool applyDebugifyMetadata(Module &M,
-                           iterator_range<Module::iterator> Functions,
-                           StringRef Banner) {
+bool llvm::applyDebugifyMetadata(
+    Module &M, iterator_range<Module::iterator> Functions, StringRef Banner,
+    std::function<bool(DIBuilder &DIB, Function &F)> ApplyToMF) {
   // Skip modules with debug info.
   if (M.getNamedMetadata("llvm.dbg.cu")) {
     dbg() << Banner << "Skipping module with debug info\n";
@@ -63,6 +75,7 @@ bool applyDebugifyMetadata(Module &M,
 
   DIBuilder DIB(M);
   LLVMContext &Ctx = M.getContext();
+  auto *Int32Ty = Type::getInt32Ty(Ctx);
 
   // Get a DIType which corresponds to Ty.
   DenseMap<uint64_t, DIType *> TypeCache;
@@ -87,6 +100,7 @@ bool applyDebugifyMetadata(Module &M,
     if (isFunctionSkipped(F))
       continue;
 
+    bool InsertedDbgVal = false;
     auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray(None));
     DISubprogram::DISPFlags SPFlags =
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized;
@@ -95,10 +109,30 @@ bool applyDebugifyMetadata(Module &M,
     auto SP = DIB.createFunction(CU, F.getName(), F.getName(), File, NextLine,
                                  SPType, NextLine, DINode::FlagZero, SPFlags);
     F.setSubprogram(SP);
+
+    // Helper that inserts a dbg.value before \p InsertBefore, copying the
+    // location (and possibly the type, if it's non-void) from \p TemplateInst.
+    auto insertDbgVal = [&](Instruction &TemplateInst,
+                            Instruction *InsertBefore) {
+      std::string Name = utostr(NextVar++);
+      Value *V = &TemplateInst;
+      if (TemplateInst.getType()->isVoidTy())
+        V = ConstantInt::get(Int32Ty, 0);
+      const DILocation *Loc = TemplateInst.getDebugLoc().get();
+      auto LocalVar = DIB.createAutoVariable(SP, Name, File, Loc->getLine(),
+                                             getCachedDIType(V->getType()),
+                                             /*AlwaysPreserve=*/true);
+      DIB.insertDbgValueIntrinsic(V, LocalVar, DIB.createExpression(), Loc,
+                                  InsertBefore);
+    };
+
     for (BasicBlock &BB : F) {
       // Attach debug locations.
       for (Instruction &I : BB)
         I.setDebugLoc(DILocation::get(Ctx, NextLine++, 1, SP));
+
+      if (DebugifyLevel < Level::LocationsAndVariables)
+        continue;
 
       // Inserting debug values into EH pads can break IR invariants.
       if (BB.isEHPad())
@@ -126,25 +160,30 @@ bool applyDebugifyMetadata(Module &M,
         if (!isa<PHINode>(I) && !I->isEHPad())
           InsertBefore = I->getNextNode();
 
-        std::string Name = utostr(NextVar++);
-        const DILocation *Loc = I->getDebugLoc().get();
-        auto LocalVar = DIB.createAutoVariable(SP, Name, File, Loc->getLine(),
-                                               getCachedDIType(I->getType()),
-                                               /*AlwaysPreserve=*/true);
-        DIB.insertDbgValueIntrinsic(I, LocalVar, DIB.createExpression(), Loc,
-                                    InsertBefore);
+        insertDbgVal(*I, InsertBefore);
+        InsertedDbgVal = true;
       }
     }
+    // Make sure we emit at least one dbg.value, otherwise MachineDebugify may
+    // not have anything to work with as it goes about inserting DBG_VALUEs.
+    // (It's common for MIR tests to be written containing skeletal IR with
+    // empty functions -- we're still interested in debugifying the MIR within
+    // those tests, and this helps with that.)
+    if (DebugifyLevel == Level::LocationsAndVariables && !InsertedDbgVal) {
+      auto *Term = findTerminatingInstruction(F.getEntryBlock());
+      insertDbgVal(*Term, Term);
+    }
+    if (ApplyToMF)
+      ApplyToMF(DIB, F);
     DIB.finalizeSubprogram(SP);
   }
   DIB.finalize();
 
   // Track the number of distinct lines and variables.
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.debugify");
-  auto *IntTy = Type::getInt32Ty(Ctx);
   auto addDebugifyOperand = [&](unsigned N) {
     NMD->addOperand(MDNode::get(
-        Ctx, ValueAsMetadata::getConstant(ConstantInt::get(IntTy, N))));
+        Ctx, ValueAsMetadata::getConstant(ConstantInt::get(Int32Ty, N))));
   };
   addDebugifyOperand(NextLine - 1); // Original number of lines.
   addDebugifyOperand(NextVar - 1);  // Original number of variables.
@@ -159,6 +198,54 @@ bool applyDebugifyMetadata(Module &M,
   return true;
 }
 
+bool llvm::stripDebugifyMetadata(Module &M) {
+  bool Changed = false;
+
+  // Remove the llvm.debugify module-level named metadata.
+  NamedMDNode *DebugifyMD = M.getNamedMetadata("llvm.debugify");
+  if (DebugifyMD) {
+    M.eraseNamedMetadata(DebugifyMD);
+    Changed = true;
+  }
+
+  // Strip out all debug intrinsics and supporting metadata (subprograms, types,
+  // variables, etc).
+  Changed |= StripDebugInfo(M);
+
+  // Strip out the dead dbg.value prototype.
+  Function *DbgValF = M.getFunction("llvm.dbg.value");
+  if (DbgValF) {
+    assert(DbgValF->isDeclaration() && DbgValF->use_empty() &&
+           "Not all debug info stripped?");
+    DbgValF->eraseFromParent();
+    Changed = true;
+  }
+
+  // Strip out the module-level Debug Info Version metadata.
+  // FIXME: There must be an easier way to remove an operand from a NamedMDNode.
+  NamedMDNode *NMD = M.getModuleFlagsMetadata();
+  if (!NMD)
+    return Changed;
+  SmallVector<MDNode *, 4> Flags;
+  for (MDNode *Flag : NMD->operands())
+    Flags.push_back(Flag);
+  NMD->clearOperands();
+  for (MDNode *Flag : Flags) {
+    MDString *Key = dyn_cast_or_null<MDString>(Flag->getOperand(1));
+    if (Key->getString() == "Debug Info Version") {
+      Changed = true;
+      continue;
+    }
+    NMD->addOperand(Flag);
+  }
+  // If we left it empty we might as well remove it.
+  if (NMD->getNumOperands() == 0)
+    NMD->eraseFromParent();
+
+  return Changed;
+}
+
+namespace {
 /// Return true if a mis-sized diagnostic is issued for \p DVI.
 bool diagnoseMisSizedDbgValue(Module &M, DbgValueInst *DVI) {
   // The size of a dbg.value's value operand should match the size of the
@@ -206,7 +293,7 @@ bool checkDebugifyMetadata(Module &M,
   // Skip modules without debugify metadata.
   NamedMDNode *NMD = M.getNamedMetadata("llvm.debugify");
   if (!NMD) {
-    dbg() << Banner << "Skipping module without debugify metadata\n";
+    dbg() << Banner << ": Skipping module without debugify metadata\n";
     return false;
   }
 
@@ -233,7 +320,7 @@ bool checkDebugifyMetadata(Module &M,
 
     // Find missing lines.
     for (Instruction &I : instructions(F)) {
-      if (isa<DbgValueInst>(&I))
+      if (isa<DbgValueInst>(&I) || isa<PHINode>(&I))
         continue;
 
       auto DL = I.getDebugLoc();
@@ -287,12 +374,9 @@ bool checkDebugifyMetadata(Module &M,
     dbg() << " [" << NameOfWrappedPass << "]";
   dbg() << ": " << (HasErrors ? "FAIL" : "PASS") << '\n';
 
-  // Strip the Debugify Metadata if required.
-  if (Strip) {
-    StripDebugInfo(M);
-    M.eraseNamedMetadata(NMD);
-    return true;
-  }
+  // Strip debugify metadata if required.
+  if (Strip)
+    return stripDebugifyMetadata(M);
 
   return false;
 }
@@ -301,7 +385,8 @@ bool checkDebugifyMetadata(Module &M,
 /// legacy module pass manager.
 struct DebugifyModulePass : public ModulePass {
   bool runOnModule(Module &M) override {
-    return applyDebugifyMetadata(M, M.functions(), "ModuleDebugify: ");
+    return applyDebugifyMetadata(M, M.functions(),
+                                 "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
   }
 
   DebugifyModulePass() : ModulePass(ID) {}
@@ -320,7 +405,7 @@ struct DebugifyFunctionPass : public FunctionPass {
     Module &M = *F.getParent();
     auto FuncIt = F.getIterator();
     return applyDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
-                                 "FunctionDebugify: ");
+                                 "FunctionDebugify: ", /*ApplyToMF*/ nullptr);
   }
 
   DebugifyFunctionPass() : FunctionPass(ID) {}
@@ -395,7 +480,8 @@ FunctionPass *createDebugifyFunctionPass() {
 }
 
 PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
-  applyDebugifyMetadata(M, M.functions(), "ModuleDebugify: ");
+  applyDebugifyMetadata(M, M.functions(),
+                        "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
   return PreservedAnalyses::all();
 }
 

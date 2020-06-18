@@ -118,9 +118,7 @@ ThreadKDP::CreateRegisterContextForFrame(StackFrame *frame) {
       }
     }
   } else {
-    Unwind *unwinder = GetUnwinder();
-    if (unwinder != nullptr)
-      reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
+    reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);
   }
   return reg_ctx_sp;
 }

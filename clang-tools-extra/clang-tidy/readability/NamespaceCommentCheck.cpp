@@ -36,10 +36,7 @@ void NamespaceCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void NamespaceCommentCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (getLangOpts().CPlusPlus)
-    Finder->addMatcher(namespaceDecl().bind("namespace"), this);
+  Finder->addMatcher(namespaceDecl().bind("namespace"), this);
 }
 
 static bool locationsInSameFile(const SourceManager &Sources,
@@ -105,7 +102,7 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation Loc = AfterRBrace;
   SourceLocation LBraceLoc = ND->getBeginLoc();
 
-  // Currently for nested namepsace (n1::n2::...) the AST matcher will match foo
+  // Currently for nested namespace (n1::n2::...) the AST matcher will match foo
   // then bar instead of a single match. So if we got a nested namespace we have
   // to skip the next ones.
   for (const auto &EndOfNameLocation : Ends) {

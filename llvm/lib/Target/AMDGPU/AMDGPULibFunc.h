@@ -13,6 +13,7 @@
 
 namespace llvm {
 
+class FunctionCallee;
 class FunctionType;
 class Function;
 class Module;

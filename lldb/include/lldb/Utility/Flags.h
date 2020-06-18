@@ -29,7 +29,7 @@ public:
   /// Constructs this object with \a mask as the initial value for all of the
   /// flags.
   ///
-  /// \param[in] mask
+  /// \param[in] flags
   ///     The initial value for all flags.
   Flags(ValueType flags = 0) : m_flags(flags) {}
 

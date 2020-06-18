@@ -34,6 +34,6 @@ void foo() {
 // CHECK: @M = hidden global
 // CHECK: @O = hidden global
 // CHECK: @I = external hidden
-// CHECK: @N = common hidden global
+// CHECK: @N = hidden global
 // CHECK-NOT: @P
 

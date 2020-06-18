@@ -9,7 +9,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:    save %sp, -128, %sp
 ; SPARC-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC-NEXT:    .cfi_window_save
-; SPARC-NEXT:    .cfi_register 15, 31
+; SPARC-NEXT:    .cfi_register %o7, %i7
 ; SPARC-NEXT:    ld [%fp+92], %l3
 ; SPARC-NEXT:    ld [%fp+96], %g2
 ; SPARC-NEXT:    umul %i2, %i5, %g3
@@ -195,7 +195,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC64-NEXT:    save %sp, -176, %sp
 ; SPARC64-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC64-NEXT:    .cfi_window_save
-; SPARC64-NEXT:    .cfi_register 15, 31
+; SPARC64-NEXT:    .cfi_register %o7, %i7
 ; SPARC64-NEXT:    srax %i2, 63, %o0
 ; SPARC64-NEXT:    srax %i1, 63, %o2
 ; SPARC64-NEXT:    mov %i2, %o1

@@ -130,7 +130,7 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
     Register ExtReg = extendRegister(ValVReg, VA);
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, VA.getLocVT().getStoreSize(),
-        /* Alignment */ 1);
+        Align(1));
     MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 
@@ -140,7 +140,10 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
     CCValAssign VA = VAs[0];
     assert(VA.needsCustom() && "Value doesn't need custom handling");
-    assert(VA.getValVT() == MVT::f64 && "Unsupported type");
+
+    // Custom lowering for other types, such as f16, is currently not supported
+    if (VA.getValVT() != MVT::f64)
+      return 0;
 
     CCValAssign NextVA = VAs[1];
     assert(NextVA.needsCustom() && "Value doesn't need custom handling");
@@ -312,19 +315,20 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
       Size = 4;
       assert(MRI.getType(ValVReg).isScalar() && "Only scalars supported atm");
 
-      auto LoadVReg =
-          buildLoad(LLT::scalar(32), Addr, Size, /* Alignment */ 1, MPO);
+      auto LoadVReg = buildLoad(LLT::scalar(32), Addr, Size, MPO);
       MIRBuilder.buildTrunc(ValVReg, LoadVReg);
     } else {
       // If the value is not extended, a simple load will suffice.
-      buildLoad(ValVReg, Addr, Size, /* Alignment */ 1, MPO);
+      buildLoad(ValVReg, Addr, Size, MPO);
     }
   }
 
   MachineInstrBuilder buildLoad(const DstOp &Res, Register Addr, uint64_t Size,
-                                unsigned Alignment, MachinePointerInfo &MPO) {
-    auto MMO = MIRBuilder.getMF().getMachineMemOperand(
-        MPO, MachineMemOperand::MOLoad, Size, Alignment);
+                                MachinePointerInfo &MPO) {
+    MachineFunction &MF = MIRBuilder.getMF();
+
+    auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size,
+                                       inferAlignFromPtrInfo(MF, MPO));
     return MIRBuilder.buildLoad(Res, Addr, *MMO);
   }
 
@@ -359,7 +363,10 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
 
     CCValAssign VA = VAs[0];
     assert(VA.needsCustom() && "Value doesn't need custom handling");
-    assert(VA.getValVT() == MVT::f64 && "Unsupported type");
+
+    // Custom lowering for other types, such as f16, is currently not supported
+    if (VA.getValVT() != MVT::f64)
+      return 0;
 
     CCValAssign NextVA = VAs[1];
     assert(NextVA.needsCustom() && "Value doesn't need custom handling");
@@ -428,7 +435,7 @@ bool ARMCallLowering::lowerFormalArguments(
   for (auto &Arg : F.args()) {
     if (!isSupportedType(DL, TLI, Arg.getType()))
       return false;
-    if (Arg.hasByValOrInAllocaAttr())
+    if (Arg.hasPassPointeeByValueAttr())
       return false;
   }
 

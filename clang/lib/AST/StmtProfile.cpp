@@ -414,9 +414,8 @@ class OMPClauseProfiler : public ConstOMPClauseVisitor<OMPClauseProfiler> {
 
 public:
   OMPClauseProfiler(StmtProfiler *P) : Profiler(P) { }
-#define OPENMP_CLAUSE(Name, Class)                                             \
-  void Visit##Class(const Class *C);
-#include "clang/Basic/OpenMPKinds.def"
+#define OMP_CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(const Class *C);
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
   void VistOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
   void VistOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);
 };
@@ -470,6 +469,11 @@ void OMPClauseProfiler::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
 void OMPClauseProfiler::VisitOMPCollapseClause(const OMPCollapseClause *C) {
   if (C->getNumForLoops())
     Profiler->VisitStmt(C->getNumForLoops());
+}
+
+void OMPClauseProfiler::VisitOMPDetachClause(const OMPDetachClause *C) {
+  if (Expr *Evt = C->getEventHandler())
+    Profiler->VisitStmt(Evt);
 }
 
 void OMPClauseProfiler::VisitOMPDefaultClause(const OMPDefaultClause *C) { }
@@ -531,6 +535,8 @@ void OMPClauseProfiler::VisitOMPThreadsClause(const OMPThreadsClause *) {}
 void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
 
 void OMPClauseProfiler::VisitOMPNogroupClause(const OMPNogroupClause *) {}
+
+void OMPClauseProfiler::VisitOMPDestroyClause(const OMPDestroyClause *) {}
 
 template<typename T>
 void OMPClauseProfiler::VisitOMPClauseList(T *Node) {
@@ -602,6 +608,20 @@ void OMPClauseProfiler::VisitOMPReductionClause(
   for (auto *E : C->reduction_ops()) {
     if (E)
       Profiler->VisitStmt(E);
+  }
+  if (C->getModifier() == clang::OMPC_REDUCTION_inscan) {
+    for (auto *E : C->copy_ops()) {
+      if (E)
+        Profiler->VisitStmt(E);
+    }
+    for (auto *E : C->copy_array_temps()) {
+      if (E)
+        Profiler->VisitStmt(E);
+    }
+    for (auto *E : C->copy_array_elems()) {
+      if (E)
+        Profiler->VisitStmt(E);
+    }
   }
 }
 void OMPClauseProfiler::VisitOMPTaskReductionClause(
@@ -719,6 +739,10 @@ OMPClauseProfiler::VisitOMPCopyprivateClause(const OMPCopyprivateClause *C) {
 void OMPClauseProfiler::VisitOMPFlushClause(const OMPFlushClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPDepobjClause(const OMPDepobjClause *C) {
+  if (const Expr *Depobj = C->getDepobj())
+    Profiler->VisitStmt(Depobj);
+}
 void OMPClauseProfiler::VisitOMPDependClause(const OMPDependClause *C) {
   VisitOMPClauseList(C);
 }
@@ -774,6 +798,10 @@ void OMPClauseProfiler::VisitOMPUseDevicePtrClause(
     const OMPUseDevicePtrClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPUseDeviceAddrClause(
+    const OMPUseDeviceAddrClause *C) {
+  VisitOMPClauseList(C);
+}
 void OMPClauseProfiler::VisitOMPIsDevicePtrClause(
     const OMPIsDevicePtrClause *C) {
   VisitOMPClauseList(C);
@@ -782,6 +810,27 @@ void OMPClauseProfiler::VisitOMPNontemporalClause(
     const OMPNontemporalClause *C) {
   VisitOMPClauseList(C);
   for (auto *E : C->private_refs())
+    Profiler->VisitStmt(E);
+}
+void OMPClauseProfiler::VisitOMPInclusiveClause(const OMPInclusiveClause *C) {
+  VisitOMPClauseList(C);
+}
+void OMPClauseProfiler::VisitOMPExclusiveClause(const OMPExclusiveClause *C) {
+  VisitOMPClauseList(C);
+}
+void OMPClauseProfiler::VisitOMPUsesAllocatorsClause(
+    const OMPUsesAllocatorsClause *C) {
+  for (unsigned I = 0, E = C->getNumberOfAllocators(); I < E; ++I) {
+    OMPUsesAllocatorsClause::Data D = C->getAllocatorData(I);
+    Profiler->VisitStmt(D.Allocator);
+    if (D.AllocatorTraits)
+      Profiler->VisitStmt(D.AllocatorTraits);
+  }
+}
+void OMPClauseProfiler::VisitOMPAffinityClause(const OMPAffinityClause *C) {
+  if (const Expr *Modifier = C->getModifier())
+    Profiler->VisitStmt(Modifier);
+  for (const Expr *E : C->varlists())
     Profiler->VisitStmt(E);
 }
 void OMPClauseProfiler::VisitOMPOrderClause(const OMPOrderClause *C) {}
@@ -882,6 +931,14 @@ void StmtProfiler::VisitOMPTaskgroupDirective(const OMPTaskgroupDirective *S) {
 }
 
 void StmtProfiler::VisitOMPFlushDirective(const OMPFlushDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPDepobjDirective(const OMPDepobjDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPScanDirective(const OMPScanDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
@@ -1165,8 +1222,22 @@ void StmtProfiler::VisitArraySubscriptExpr(const ArraySubscriptExpr *S) {
   VisitExpr(S);
 }
 
+void StmtProfiler::VisitMatrixSubscriptExpr(const MatrixSubscriptExpr *S) {
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitOMPArraySectionExpr(const OMPArraySectionExpr *S) {
   VisitExpr(S);
+}
+
+void StmtProfiler::VisitOMPArrayShapingExpr(const OMPArrayShapingExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitOMPIteratorExpr(const OMPIteratorExpr *S) {
+  VisitExpr(S);
+  for (unsigned I = 0, E = S->numOfIterators(); I < E; ++I)
+    VisitDecl(S->getIteratorDecl(I));
 }
 
 void StmtProfiler::VisitCallExpr(const CallExpr *S) {
@@ -1403,7 +1474,6 @@ static Stmt::StmtClass DecodeOperatorCall(const CXXOperatorCallExpr *S,
   case OO_Array_New:
   case OO_Array_Delete:
   case OO_Arrow:
-  case OO_Call:
   case OO_Conditional:
   case NUM_OVERLOADED_OPERATORS:
     llvm_unreachable("Invalid operator call kind");
@@ -1577,6 +1647,9 @@ static Stmt::StmtClass DecodeOperatorCall(const CXXOperatorCallExpr *S,
   case OO_Subscript:
     return Stmt::ArraySubscriptExprClass;
 
+  case OO_Call:
+    return Stmt::CallExprClass;
+
   case OO_Coawait:
     UnaryOp = UO_Coawait;
     return Stmt::UnaryOperatorClass;
@@ -1617,7 +1690,7 @@ void StmtProfiler::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *S) {
              SC == Stmt::CompoundAssignOperatorClass)
       ID.AddInteger(BinaryOp);
     else
-      assert(SC == Stmt::ArraySubscriptExprClass);
+      assert(SC == Stmt::ArraySubscriptExprClass || SC == Stmt::CallExprClass);
 
     return;
   }
@@ -1678,6 +1751,10 @@ void StmtProfiler::VisitCXXConstCastExpr(const CXXConstCastExpr *S) {
 void StmtProfiler::VisitBuiltinBitCastExpr(const BuiltinBitCastExpr *S) {
   VisitExpr(S);
   VisitType(S->getTypeInfoAsWritten()->getType());
+}
+
+void StmtProfiler::VisitCXXAddrspaceCastExpr(const CXXAddrspaceCastExpr *S) {
+  VisitCXXNamedCastExpr(S);
 }
 
 void StmtProfiler::VisitUserDefinedLiteral(const UserDefinedLiteral *S) {
@@ -1999,6 +2076,8 @@ void StmtProfiler::VisitTypoExpr(const TypoExpr *E) {
 void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
   VisitExpr(E);
 }
+
+void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }
 
 void StmtProfiler::VisitObjCStringLiteral(const ObjCStringLiteral *S) {
   VisitExpr(S);

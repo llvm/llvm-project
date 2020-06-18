@@ -187,6 +187,6 @@ void ento::registerUndefResultChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefResultChecker>();
 }
 
-bool ento::shouldRegisterUndefResultChecker(const LangOptions &LO) {
+bool ento::shouldRegisterUndefResultChecker(const CheckerManager &mgr) {
   return true;
 }

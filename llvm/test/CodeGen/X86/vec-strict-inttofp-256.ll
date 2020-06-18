@@ -641,11 +641,11 @@ define <4 x double> @sitofp_v4i64_v4f64(<4 x i64> %x) #0 {
 ; AVX-32-NEXT:    andl $-8, %esp
 ; AVX-32-NEXT:    subl $64, %esp
 ; AVX-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
-; AVX-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
-; AVX-32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX-32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    fstpl {{[0-9]+}}(%esp)
@@ -830,7 +830,8 @@ define <4 x double> @uitofp_v4i64_v4f64(<4 x i64> %x) #0 {
 ;
 ; AVX512VL-32-LABEL: uitofp_v4i64_v4f64:
 ; AVX512VL-32:       # %bb.0:
-; AVX512VL-32-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm1
+; AVX512VL-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-32-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
 ; AVX512VL-32-NEXT:    vpor {{\.LCPI.*}}, %ymm1, %ymm1
 ; AVX512VL-32-NEXT:    vpsrlq $32, %ymm0, %ymm0
 ; AVX512VL-32-NEXT:    vpor {{\.LCPI.*}}, %ymm0, %ymm0
@@ -840,7 +841,8 @@ define <4 x double> @uitofp_v4i64_v4f64(<4 x i64> %x) #0 {
 ;
 ; AVX512VL-64-LABEL: uitofp_v4i64_v4f64:
 ; AVX512VL-64:       # %bb.0:
-; AVX512VL-64-NEXT:    vpandq {{.*}}(%rip){1to4}, %ymm0, %ymm1
+; AVX512VL-64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-64-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
 ; AVX512VL-64-NEXT:    vporq {{.*}}(%rip){1to4}, %ymm1, %ymm1
 ; AVX512VL-64-NEXT:    vpsrlq $32, %ymm0, %ymm0
 ; AVX512VL-64-NEXT:    vporq {{.*}}(%rip){1to4}, %ymm0, %ymm0
@@ -876,11 +878,11 @@ define <4 x float> @sitofp_v4i64_v4f32(<4 x i64> %x) #0 {
 ; AVX-32-NEXT:    andl $-8, %esp
 ; AVX-32-NEXT:    subl $48, %esp
 ; AVX-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
-; AVX-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
-; AVX-32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX-32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -999,11 +1001,11 @@ define <4 x float> @uitofp_v4i64_v4f32(<4 x i64> %x) #0 {
 ; AVX-32-NEXT:    andl $-8, %esp
 ; AVX-32-NEXT:    subl $48, %esp
 ; AVX-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
-; AVX-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
-; AVX-32-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; AVX-32-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; AVX-32-NEXT:    vmovlps %xmm2, {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    vextractps $1, %xmm0, %eax
 ; AVX-32-NEXT:    shrl $31, %eax

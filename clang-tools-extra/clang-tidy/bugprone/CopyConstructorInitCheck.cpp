@@ -18,9 +18,6 @@ namespace tidy {
 namespace bugprone {
 
 void CopyConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // In the future this might be extended to move constructors?
   Finder->addMatcher(
       cxxConstructorDecl(

@@ -283,7 +283,7 @@ public:
 // A converter is identified by <destination domain, source opcode>
 typedef std::pair<int, unsigned> InstrConverterBaseKeyTy;
 
-typedef DenseMap<InstrConverterBaseKeyTy, InstrConverterBase *>
+typedef DenseMap<InstrConverterBaseKeyTy, std::unique_ptr<InstrConverterBase>>
     InstrConverterBaseMap;
 
 /// A closure is a set of virtual register representing all of the edges in
@@ -471,8 +471,8 @@ void X86DomainReassignment::encloseInstr(Closure &C, MachineInstr *MI) {
   // instruction.
   for (int i = 0; i != NumDomains; ++i) {
     if (C.isLegal((RegDomain)i)) {
-      InstrConverterBase *IC = Converters.lookup({i, MI->getOpcode()});
-      if (!IC || !IC->isLegal(MI, TII))
+      auto I = Converters.find({i, MI->getOpcode()});
+      if (I == Converters.end() || !I->second->isLegal(MI, TII))
         C.setIllegal((RegDomain)i);
     }
   }
@@ -484,8 +484,8 @@ double X86DomainReassignment::calculateCost(const Closure &C,
 
   double Cost = 0.0;
   for (auto *MI : C.instructions())
-    Cost +=
-        Converters.lookup({DstDomain, MI->getOpcode()})->getExtraCost(MI, MRI);
+    Cost += Converters.find({DstDomain, MI->getOpcode()})
+                ->second->getExtraCost(MI, MRI);
   return Cost;
 }
 
@@ -501,8 +501,8 @@ void X86DomainReassignment::reassign(const Closure &C, RegDomain Domain) const {
   // appropriate converter.
   SmallVector<MachineInstr *, 8> ToErase;
   for (auto *MI : C.instructions())
-    if (Converters.lookup({Domain, MI->getOpcode()})
-            ->convertInstr(MI, TII, MRI))
+    if (Converters.find({Domain, MI->getOpcode()})
+            ->second->convertInstr(MI, TII, MRI))
       ToErase.push_back(MI);
 
   // Iterate all registers in the closure, replace them with registers in the
@@ -606,19 +606,21 @@ void X86DomainReassignment::buildClosure(Closure &C, unsigned Reg) {
 
 void X86DomainReassignment::initConverters() {
   Converters[{MaskDomain, TargetOpcode::PHI}] =
-      new InstrIgnore(TargetOpcode::PHI);
+      std::make_unique<InstrIgnore>(TargetOpcode::PHI);
 
   Converters[{MaskDomain, TargetOpcode::IMPLICIT_DEF}] =
-      new InstrIgnore(TargetOpcode::IMPLICIT_DEF);
+      std::make_unique<InstrIgnore>(TargetOpcode::IMPLICIT_DEF);
 
   Converters[{MaskDomain, TargetOpcode::INSERT_SUBREG}] =
-      new InstrReplaceWithCopy(TargetOpcode::INSERT_SUBREG, 2);
+      std::make_unique<InstrReplaceWithCopy>(TargetOpcode::INSERT_SUBREG, 2);
 
   Converters[{MaskDomain, TargetOpcode::COPY}] =
-      new InstrCOPYReplacer(TargetOpcode::COPY, MaskDomain, TargetOpcode::COPY);
+      std::make_unique<InstrCOPYReplacer>(TargetOpcode::COPY, MaskDomain,
+                                          TargetOpcode::COPY);
 
   auto createReplacerDstCOPY = [&](unsigned From, unsigned To) {
-    Converters[{MaskDomain, From}] = new InstrReplacerDstCOPY(From, To);
+    Converters[{MaskDomain, From}] =
+        std::make_unique<InstrReplacerDstCOPY>(From, To);
   };
 
   createReplacerDstCOPY(X86::MOVZX32rm16, X86::KMOVWkm);
@@ -638,7 +640,7 @@ void X86DomainReassignment::initConverters() {
   }
 
   auto createReplacer = [&](unsigned From, unsigned To) {
-    Converters[{MaskDomain, From}] = new InstrReplacer(From, To);
+    Converters[{MaskDomain, From}] = std::make_unique<InstrReplacer>(From, To);
   };
 
   createReplacer(X86::MOV16rm, X86::KMOVWkm);
@@ -778,8 +780,6 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
       Changed = true;
     }
   }
-
-  DeleteContainerSeconds(Converters);
 
   LLVM_DEBUG(
       dbgs() << "***** Machine Function after Domain Reassignment *****\n");

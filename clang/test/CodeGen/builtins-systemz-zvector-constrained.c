@@ -1,10 +1,10 @@
 // REQUIRES: systemz-registered-target
 // RUN: %clang_cc1 -target-cpu z13 -triple s390x-linux-gnu \
-// RUN: -O -fzvector -flax-vector-conversions=none \
+// RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -ffp-exception-behavior=strict \
 // RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -target-cpu z13 -triple s390x-linux-gnu \
-// RUN: -O -fzvector -flax-vector-conversions=none \
+// RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -ffp-exception-behavior=strict \
 // RUN: -Wall -Wno-unused -Werror -S %s -o - | FileCheck %s --check-prefix=CHECK-ASM
 

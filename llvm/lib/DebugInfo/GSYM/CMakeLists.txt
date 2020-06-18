@@ -12,6 +12,7 @@ add_llvm_component_library(LLVMDebugInfoGSYM
   InlineInfo.cpp
   LineTable.cpp
   LookupResult.cpp
+  ObjectFileTransformer.cpp
   Range.cpp
 
   ADDITIONAL_HEADER_DIRS

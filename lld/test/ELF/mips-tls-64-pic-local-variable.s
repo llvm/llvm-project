@@ -12,7 +12,7 @@
 # RUN:         . = 0x20000; .got  : { *(.got)  } \
 # RUN:       }" > %t.script1
 # RUN: ld.lld --version-script %t.script -script %t.script1 -shared %t.o -o %t.so
-# RUN: llvm-objdump --section=.got -s %t.so | FileCheck %s -check-prefix GOT
+# RUN: llvm-objdump --section=.got -s %t.so | FileCheck %s --check-prefix GOT
 # RUN: llvm-readobj -r %t.so | FileCheck %s -check-prefix RELOCS
 
 # GOT:        Contents of section .got:

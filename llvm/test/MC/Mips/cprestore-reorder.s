@@ -2,7 +2,7 @@
 # RUN:  FileCheck %s
 
 # RUN: llvm-mc %s -triple mips-unknown-linux-gnu --position-independent -filetype=obj -o -| \
-# RUN:  llvm-objdump -d -r - | FileCheck %s -check-prefix=CHECK-FOR-STORE
+# RUN:  llvm-objdump -d -r - | FileCheck %s --check-prefix=CHECK-FOR-STORE
 
 # RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+micromips --position-independent -show-encoding | \
 # RUN:  FileCheck %s -check-prefix=MICROMIPS

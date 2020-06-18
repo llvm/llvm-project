@@ -1,12 +1,15 @@
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
 
 add_clang_library(clangTidyUtils
   ASTUtils.cpp
   DeclRefExprUtils.cpp
   ExceptionAnalyzer.cpp
   ExprSequence.cpp
+  FileExtensionsUtils.cpp
   FixItHintUtils.cpp
-  HeaderFileExtensionsUtils.cpp
   HeaderGuard.cpp
   IncludeInserter.cpp
   IncludeSorter.cpp
@@ -19,11 +22,15 @@ add_clang_library(clangTidyUtils
   UsingInserter.cpp
 
   LINK_LIBS
+  clangTidy
+  )
+
+clang_target_link_libraries(clangTidyUtils
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
   clangSema
-  clangTidy
   clangTransformer
   )

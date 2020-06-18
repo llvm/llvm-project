@@ -3,7 +3,7 @@ remote debugging. Why? Normally you need to start the correct GDB and the
 correct GDB server when debugging. If you have mismatch, then things go wrong
 very quickly. LLDB makes extensive use of the GDB remote protocol and we
 wanted to make sure that the experience was a bit more dynamic where we can
-discover information about a remote target with having to know anything up
+discover information about a remote target without having to know anything up
 front. We also ran into performance issues with the existing GDB remote
 protocol that can be overcome when using a reliable communications layer.
 Some packets improve performance, others allow for remote process launching

@@ -9,11 +9,12 @@
 
 ## It does not really matter how we fixup it, but we cannot overflow and
 ## should not generate a call stub (this would waste space).
-# PDE: bl .+0
+# PDE: bl 0x100100b4
 
 ## With -pie or -shared, create a call stub. ld.bfd produces bl .+0
-# PIC: bl .+4
-# PIC: 00000000.plt_pic32.foo:
+# PIC:       bl 0x[[PLT:[0-9a-f]+]]
+# PIC-EMPTY:
+# PIC-NEXT:  000[[PLT]] <00000000.plt_pic32.foo>:
 
 .weak foo
 bl foo

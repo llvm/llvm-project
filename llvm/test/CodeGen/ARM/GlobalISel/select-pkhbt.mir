@@ -46,14 +46,14 @@ body:             |
     %7(s32) = G_AND %5, %6
 
     %8(s32) = G_OR %3, %7
-    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 7, 14, $noreg
-    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 7, 14, $noreg
+    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
+    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
 
     $r0 = COPY %8(s32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_pkhbt_commutative
@@ -92,14 +92,14 @@ body:             |
     %7(s32) = G_AND %5, %6
 
     %8(s32) = G_OR %7, %3
-    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 7, 14, $noreg
-    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 7, 14, $noreg
+    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
+    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
 
     $r0 = COPY %8(s32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_pkhbt_imm16_31
@@ -134,14 +134,14 @@ body:             |
     %5(s32) = G_SHL %1, %4
 
     %6(s32) = G_OR %3, %5
-    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 17, 14, $noreg
-    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 17, 14, $noreg
+    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 17, 14 /* CC::al */, $noreg
+    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 17, 14 /* CC::al */, $noreg
 
     $r0 = COPY %6(s32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_pkhbt_unshifted
@@ -176,14 +176,14 @@ body:             |
     %5(s32) = G_AND %1, %4
 
     %6(s32) = G_OR %3, %5
-    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 0, 14, $noreg
-    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 0, 14, $noreg
+    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 0, 14 /* CC::al */, $noreg
+    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 0, 14 /* CC::al */, $noreg
 
     $r0 = COPY %6(s32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_pkhtb_imm16
@@ -218,14 +218,14 @@ body:             |
     %5(s32) = G_LSHR %1, %4
 
     %6(s32) = G_OR %3, %5
-    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 16, 14, $noreg
-    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHTB [[VREGX]], [[VREGY]], 16, 14, $noreg
+    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 16, 14 /* CC::al */, $noreg
+    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHTB [[VREGX]], [[VREGY]], 16, 14 /* CC::al */, $noreg
 
     $r0 = COPY %6(s32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...
 ---
 name:            test_pkhtb_imm1_15
@@ -264,12 +264,12 @@ body:             |
     %7(s32) = G_AND %5, %6
 
     %8(s32) = G_OR %3, %7
-    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 7, 14, $noreg
-    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHTB [[VREGX]], [[VREGY]], 7, 14, $noreg
+    ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
+    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHTB [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
 
     $r0 = COPY %8(s32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
-    ; CHECK: BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ...

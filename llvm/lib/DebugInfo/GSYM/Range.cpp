@@ -53,6 +53,16 @@ bool AddressRanges::contains(AddressRange Range) const {
   return Range.End <= It[-1].End;
 }
 
+Optional<AddressRange>
+AddressRanges::getRangeThatContains(uint64_t Addr) const {
+  auto It = std::partition_point(
+      Ranges.begin(), Ranges.end(),
+      [=](const AddressRange &R) { return R.Start <= Addr; });
+  if (It != Ranges.begin() && Addr < It[-1].End)
+    return It[-1];
+  return llvm::None;
+}
+
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const AddressRange &R) {
   return OS << '[' << HEX64(R.Start) << " - " << HEX64(R.End) << ")";
 }

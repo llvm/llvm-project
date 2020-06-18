@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fmessage-length 100 %s 2>&1 | FileCheck -strict-whitespace %s
+// RUN: %clang_cc1 -fsyntax-only -fmessage-length=100 %s 2>&1 | FileCheck -strict-whitespace %s
 // REQUIRES: asserts
 
 int main() {

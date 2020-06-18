@@ -42,7 +42,7 @@ typedef struct ident ident_t;
 // ----------------------------------------------------------------------------
 
 // We need to know the size of the area we can assume that the compiler(s)
-// allocated for obects of type omp_lock_t and omp_nest_lock_t.  The Intel
+// allocated for objects of type omp_lock_t and omp_nest_lock_t.  The Intel
 // compiler always allocates a pointer-sized area, as does visual studio.
 //
 // gcc however, only allocates 4 bytes for regular locks, even on 64-bit
@@ -861,11 +861,11 @@ __kmp_destroy_nested_user_lock_with_checks(kmp_user_lock_p lck) {
 //
 // In other cases, the calling code really should differentiate between an
 // unimplemented function and one that is implemented but returning NULL /
-// invalied value.  If this is the case, no get function wrapper exists.
+// invalid value.  If this is the case, no get function wrapper exists.
 
 extern int (*__kmp_is_user_lock_initialized_)(kmp_user_lock_p lck);
 
-// no set function; fields set durining local allocation
+// no set function; fields set during local allocation
 
 extern const ident_t *(*__kmp_get_user_lock_location_)(kmp_user_lock_p lck);
 
@@ -899,7 +899,7 @@ static inline void __kmp_set_user_lock_flags(kmp_user_lock_p lck,
   }
 }
 
-// The fuction which sets up all of the vtbl pointers for kmp_user_lock_t.
+// The function which sets up all of the vtbl pointers for kmp_user_lock_t.
 extern void __kmp_set_user_lock_vptrs(kmp_lock_kind_t user_lock_kind);
 
 // Macros for binding user lock functions.
@@ -1128,7 +1128,7 @@ extern int (**__kmp_direct_unset)(kmp_dyna_lock_t *, kmp_int32);
 extern int (**__kmp_direct_test)(kmp_dyna_lock_t *, kmp_int32);
 
 // Function tables for indirect locks. Set/unset/test differentiate functions
-// with/withuot consistency checking.
+// with/without consistency checking.
 extern void (*__kmp_indirect_init[])(kmp_user_lock_p);
 extern void (**__kmp_indirect_destroy)(kmp_user_lock_p);
 extern int (**__kmp_indirect_set)(kmp_user_lock_p, kmp_int32);

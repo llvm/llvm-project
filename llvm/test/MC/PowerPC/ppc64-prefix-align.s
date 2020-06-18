@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple powerpc64-unknown-linux-gnu --filetype=obj -o - %s | \
-# RUN:   llvm-objdump -D  -r - | FileCheck -check-prefix=CHECK-BE %s
+# RUN:   llvm-objdump -D  -r - | FileCheck --check-prefix=CHECK-BE %s
 # RUN: llvm-mc -triple powerpc64le-unknown-linux-gnu --filetype=obj -o - %s | \
-# RUN:   llvm-objdump -D  -r - | FileCheck -check-prefix=CHECK-LE %s
+# RUN:   llvm-objdump -D  -r - | FileCheck --check-prefix=CHECK-LE %s
 
 # The purpose of this test is to make sure that 8 byte instructions do not
 # cross 64 byte boundaries. If an 8 byte instruction is about to cross such
@@ -13,10 +13,10 @@
 
 beq 0, LAB1               # 4
 beq 1, LAB2               # 8
-# CHECK-BE:       0: 41 82 00 c0        bt 2, .+192
-# CHECK-BE-NEXT:  4: 41 86 00 f8        bt 6, .+248
-# CHECK-LE:       0: c0 00 82 41        bt 2, .+192
-# CHECK-LE-NEXT:  4: f8 00 86 41        bt 6, .+248
+# CHECK-BE:       0: 41 82 00 c0        bt 2, 0xc0
+# CHECK-BE-NEXT:  4: 41 86 00 f8        bt 6, 0xfc
+# CHECK-LE:       0: c0 00 82 41        bt 2, 0xc0
+# CHECK-LE-NEXT:  4: f8 00 86 41        bt 6, 0xfc
 paddi 1, 2, 8589934576, 0 # 16
 paddi 1, 2, 8589934576, 0 # 24
 paddi 1, 2, 8589934576, 0 # 32
@@ -53,12 +53,12 @@ paddi 1, 2, 8589934576, 0
 addi 2, 3, 15             # 60
 # CHECK-BE:      b8:	38 43 00 0f
 # CHECK-BE-NEXT: bc:	60 00 00 00 	nop
-# CHECK-BE:      LAB1:
+# CHECK-BE:      <LAB1>:
 # CHECK-BE-NEXT: c0:	06 01 ff ff
 # CHECK-BE-NEXT: c4:	38 22 ff f0
 # CHECK-LE:      b8:	0f 00 43 38
 # CHECK-LE-NEXT: bc:	00 00 00 60 	nop
-# CHECK-LE:      LAB1:
+# CHECK-LE:      <LAB1>:
 # CHECK-LE-NEXT: c0:	ff ff 01 06
 # CHECK-LE-NEXT: c4:	f0 ff 22 38
 LAB1: paddi 1, 2, 8589934576, 0
@@ -70,12 +70,12 @@ paddi 1, 2, 8589934576, 0
 paddi 1, 2, 8589934576, 0
 addi 2, 3, 15             # 60
 # CHECK-BE:      f8:	38 43 00 0f
-# CHECK-BE:      LAB2:
+# CHECK-BE:      <LAB2>:
 # CHECK-BE-NEXT: fc:	60 00 00 00 	nop
 # CHECK-BE-NEXT: 100:	06 01 ff ff
 # CHECK-BE-NEXT: 104:	38 22 ff f0
 # CHECK-LE:      f8:	0f 00 43 38
-# CHECK-LE:      LAB2:
+# CHECK-LE:      <LAB2>:
 # CHECK-LE-NEXT: fc:	00 00 00 60 	nop
 # CHECK-LE-NEXT: 100:	ff ff 01 06
 # CHECK-LE-NEXT: 104:	f0 ff 22 38

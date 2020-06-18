@@ -17,9 +17,10 @@
 using namespace mlir;
 
 namespace {
-struct TestCallGraphPass : public ModulePass<TestCallGraphPass> {
-  void runOnModule() {
-    llvm::errs() << "Testing : " << getModule().getAttr("test.name") << "\n";
+struct TestCallGraphPass
+    : public PassWrapper<TestCallGraphPass, OperationPass<ModuleOp>> {
+  void runOnOperation() override {
+    llvm::errs() << "Testing : " << getOperation().getAttr("test.name") << "\n";
     getAnalysis<CallGraph>().print(llvm::errs());
   }
 };

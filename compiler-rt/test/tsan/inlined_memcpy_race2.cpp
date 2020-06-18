@@ -31,7 +31,7 @@ int main() {
 
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK:   #0 memset
-// CHECK:   #1 MemSetThread
+// CHECK:   #{{[12]}} MemSetThread
 // CHECK:  Previous write
 // CHECK:   #0 {{(memcpy|memmove)}}
-// CHECK:   #1 MemMoveThread
+// CHECK:   #{{[12]}} MemMoveThread

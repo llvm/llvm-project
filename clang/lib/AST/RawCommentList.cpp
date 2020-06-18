@@ -16,6 +16,7 @@
 #include "clang/AST/CommentSema.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Allocator.h"
 
 using namespace clang;
 
@@ -430,7 +431,7 @@ std::string RawComment::getFormattedText(const SourceManager &SourceMgr,
   };
 
   auto DropTrailingNewLines = [](std::string &Str) {
-    while (Str.back() == '\n')
+    while (!Str.empty() && Str.back() == '\n')
       Str.pop_back();
   };
 

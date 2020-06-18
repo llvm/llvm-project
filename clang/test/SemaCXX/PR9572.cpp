@@ -16,8 +16,7 @@ struct Foo : public Base {
 // expected-error@-2 {{base class 'Base' has private destructor}}
 #else
 // expected-error@-4 {{deleted function '~Foo' cannot override a non-deleted function}}
-// expected-note@-5 {{overridden virtual function is here}}
-// expected-note@-6 3 {{destructor of 'Foo' is implicitly deleted because base class 'Base' has an inaccessible destructor}}
+// expected-note@-5 3{{destructor of 'Foo' is implicitly deleted because base class 'Base' has an inaccessible destructor}}
 #endif
 
   const int kBlah = 3;
@@ -29,10 +28,6 @@ struct Foo : public Base {
 };
 
 struct Bar : public Foo {
-#if __cplusplus >= 201103L
-// expected-error@-2 {{non-deleted function '~Bar' cannot override a deleted function}}
-// expected-note@-3 {{while declaring the implicit destructor for 'Bar'}}
-#endif
   Bar() { }
 #if __cplusplus <= 199711L
   // expected-note@-2 {{implicit destructor for 'Foo' first required here}}

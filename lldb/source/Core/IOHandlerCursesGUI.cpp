@@ -744,7 +744,8 @@ protected:
   bool m_is_subwin;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Window);
+  Window(const Window &) = delete;
+  const Window &operator=(const Window &) = delete;
 };
 
 class MenuDelegate {

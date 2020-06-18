@@ -43,3 +43,12 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
 
   return std::make_tuple(Reg, 0, Def);
 }
+
+bool AMDGPU::isLegalVOP3PShuffleMask(ArrayRef<int> Mask) {
+  assert(Mask.size() == 2);
+
+  // If one half is undef, the other is trivially in the same reg.
+  if (Mask[0] == -1 || Mask[1] == -1)
+    return true;
+  return (Mask[0] & 2) == (Mask[1] & 2);
+}

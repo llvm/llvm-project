@@ -190,13 +190,14 @@ checking omitted for brevity) as:
   CXXLayer.add(LibB, MemoryBuffer::getFile("b1.cpp"));
   CXXLayer.add(LibB, MemoryBuffer::getFile("b2.cpp"));
 
-  // Specify the search order for the main JITDylib. This is equivalent to a
-  // "links against" relationship in a command-line link.
-  ES.getMainJITDylib().setSearchOrder({{&LibA, false}, {&LibB, false}});
-  CXXLayer.add(ES.getMainJITDylib(), MemoryBuffer::getFile("main.cpp"));
+  // Create and specify the search order for the main JITDylib. This is
+  // equivalent to a "links against" relationship in a command-line link.
+  auto &MainJD = ES.createJITDylib("main");
+  MainJD.setSearchOrder({{&LibA, false}, {&LibB, false}});
+  CXXLayer.add(MainJD, MemoryBuffer::getFile("main.cpp"));
 
   // Look up the JIT'd main, cast it to a function pointer, then call it.
-  auto MainSym = ExitOnErr(ES.lookup({&ES.getMainJITDylib()}, "main"));
+  auto MainSym = ExitOnErr(ES.lookup({&MainJD}, "main"));
   auto *Main = (int(*)(int, char*[]))MainSym.getAddress();
 
   int Result = Main(...);
@@ -484,9 +485,10 @@ to be aware of:
      section `Design Overview`_ for more details.
 
      Unless multiple JITDylibs are needed to model linkage relationships, ORCv1
-     clients should place all code in the main JITDylib (returned by
-     ``ExecutionSession::getMainJITDylib()``). MCJIT clients should use LLJIT
-     (see `LLJIT and LLLazyJIT`_).
+     clients should place all code in a single JITDylib.
+     MCJIT clients should use LLJIT (see `LLJIT and LLLazyJIT`_), and can place
+     code in LLJIT's default created main JITDylib (See
+     ``LLJIT::getMainJITDylib()``).
 
   2. All JIT stacks now need an ``ExecutionSession`` instance. ExecutionSession
      manages the string pool, error reporting, synchronization, and symbol
@@ -553,7 +555,7 @@ will perform both jobs for you:
     // ...
 
     // Portable IR-symbol-name lookup:
-    auto Sym = ES.lookup({&ES.getMainJITDylib()}, Mangle("main"));
+    auto Sym = ES.lookup({&MainJD}, Mangle("main"));
 
 How to create JITDylibs and set up linkage relationships
 --------------------------------------------------------
@@ -568,15 +570,6 @@ calling the ``ExecutionSession::createJITDylib`` method with a unique name:
 
 The JITDylib is owned by the ``ExecutionEngine`` instance and will be freed
 when it is destroyed.
-
-A JITDylib representing the JIT main program is created by ExecutionEngine by
-default. A reference to it can be obtained by calling
-``ExecutionSession::getMainJITDylib()``:
-
-  .. code-block:: c++
-
-    ExecutionSession ES;
-    auto &MainJD = ES.getMainJITDylib();
 
 How to use ThreadSafeModule and ThreadSafeContext
 -------------------------------------------------
@@ -665,8 +658,7 @@ constructs a new ThreadSafeContext value from a std::unique_ptr<LLVMContext>:
     for (const auto &IRPath : IRPaths) {
       auto Ctx = std::make_unique<LLVMContext>();
       auto M = std::make_unique<LLVMContext>("M", *Ctx);
-      CompileLayer.add(ES.getMainJITDylib(),
-                       ThreadSafeModule(std::move(M), std::move(Ctx)));
+      CompileLayer.add(MainJD, ThreadSafeModule(std::move(M), std::move(Ctx)));
     }
 
 Clients who plan to run single-threaded may choose to save memory by loading
@@ -678,7 +670,7 @@ all modules on the same context:
     ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
     for (const auto &IRPath : IRPaths) {
       ThreadSafeModule TSM(parsePath(IRPath, *TSCtx.getContext()), TSCtx);
-      CompileLayer.add(ES.getMainJITDylib(), ThreadSafeModule(std::move(TSM));
+      CompileLayer.add(MainJD, ThreadSafeModule(std::move(TSM));
     }
 
 .. _ProcessAndLibrarySymbols:
@@ -705,7 +697,7 @@ function:
     const DataLayout &DL = getDataLayout();
     MangleAndInterner Mangle(ES, DL);
 
-    auto &JD = ES.getMainJITDylib();
+    auto &JD = ES.createJITDylib("main");
 
     JD.define(
       absoluteSymbols({
@@ -728,7 +720,7 @@ For example, to load the whole interface of a runtime library:
   .. code-block:: c++
 
     const DataLayout &DL = getDataLayout();
-    auto &JD = ES.getMainJITDylib();
+    auto &JD = ES.createJITDylib("main");
 
     JD.setGenerator(DynamicLibrarySearchGenerator::Load("/path/to/lib"
                                                         DL.getGlobalPrefix()));
@@ -744,7 +736,7 @@ Or, to expose a whitelisted set of symbols from the main process:
     const DataLayout &DL = getDataLayout();
     MangleAndInterner Mangle(ES, DL);
 
-    auto &JD = ES.getMainJITDylib();
+    auto &JD = ES.createJITDylib("main");
 
     DenseSet<SymbolStringPtr> Whitelist({
         Mangle("puts"),

@@ -173,7 +173,7 @@ SDValue MipsTargetLowering::getTargetNode(JumpTableSDNode *N, EVT Ty,
 SDValue MipsTargetLowering::getTargetNode(ConstantPoolSDNode *N, EVT Ty,
                                           SelectionDAG &DAG,
                                           unsigned Flag) const {
-  return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlignment(),
+  return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlign(),
                                    N->getOffset(), Flag);
 }
 
@@ -2963,7 +2963,8 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
     llvm_unreachable("Cannot handle this ValVT.");
 
   if (!Reg) {
-    unsigned Offset = State.AllocateStack(ValVT.getStoreSize(), OrigAlign);
+    unsigned Offset =
+        State.AllocateStack(ValVT.getStoreSize(), Align(OrigAlign));
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
   } else
     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -3209,13 +3210,16 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // caller side but removing it breaks the frame size calculation.
   unsigned ReservedArgArea =
       MemcpyInByVal ? 0 : ABI.GetCalleeAllocdArgSizeInBytes(CallConv);
-  CCInfo.AllocateStack(ReservedArgArea, 1);
+  CCInfo.AllocateStack(ReservedArgArea, Align(1));
 
   CCInfo.AnalyzeCallOperands(Outs, CC_Mips, CLI.getArgs(),
                              ES ? ES->getSymbol() : nullptr);
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
+
+  // Call site info for function parameters tracking.
+  MachineFunction::CallSiteInfo CSInfo;
 
   // Check if it's really possible to do a tail call. Restrict it to functions
   // that are part of this compilation unit.
@@ -3231,7 +3235,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                      G->getGlobal()->hasProtectedVisibility());
      }
   }
-  if (!IsTailCall && CLI.CS && CLI.CS.isMustTailCall())
+  if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
@@ -3343,6 +3347,17 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // RegsToPass vector
     if (VA.isRegLoc()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+
+      // If the parameter is passed through reg $D, which splits into
+      // two physical registers, avoid creating call site info.
+      if (Mips::AFGR64RegClass.contains(VA.getLocReg()))
+        continue;
+
+      // Collect CSInfo about which register passes which parameter.
+      const TargetOptions &Options = DAG.getTarget().Options;
+      if (Options.SupportsDebugEntryValues)
+        CSInfo.emplace_back(VA.getLocReg(), i);
+
       continue;
     }
 
@@ -3447,11 +3462,15 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    return DAG.getNode(MipsISD::TailCall, DL, MVT::Other, Ops);
+    SDValue Ret = DAG.getNode(MipsISD::TailCall, DL, MVT::Other, Ops);
+    DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
+    return Ret;
   }
 
   Chain = DAG.getNode(MipsISD::JmpLink, DL, NodeTys, Ops);
   SDValue InFlag = Chain.getValue(1);
+
+  DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
 
   // Create the CALLSEQ_END node in the case of where it is not a call to
   // memcpy.
@@ -3613,7 +3632,7 @@ SDValue MipsTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   MipsCCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
                      *DAG.getContext());
-  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(CallConv), 1);
+  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(CallConv), Align(1));
   const Function &Func = DAG.getMachineFunction().getFunction();
   Function::const_arg_iterator FuncArg = Func.arg_begin();
 
@@ -3948,7 +3967,7 @@ MipsTargetLowering::getSingleConstraintMatchWeight(
     break;
   case 'f': // FPU or MSA register
     if (Subtarget.hasMSA() && type->isVectorTy() &&
-        cast<VectorType>(type)->getBitWidth() == 128)
+        type->getPrimitiveSizeInBits().getFixedSize() == 128)
       weight = CW_Register;
     else if (type->isFloatTy())
       weight = CW_Register;
@@ -4503,12 +4522,12 @@ void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
 }
 
 void MipsTargetLowering::HandleByVal(CCState *State, unsigned &Size,
-                                     unsigned Align) const {
+                                     Align Alignment) const {
   const TargetFrameLowering *TFL = Subtarget.getFrameLowering();
 
   assert(Size && "Byval argument's size shouldn't be 0.");
 
-  Align = std::min(Align, TFL->getStackAlignment());
+  Alignment = std::min(Alignment, TFL->getStackAlign());
 
   unsigned FirstReg = 0;
   unsigned NumRegs = 0;
@@ -4522,17 +4541,17 @@ void MipsTargetLowering::HandleByVal(CCState *State, unsigned &Size,
 
     // We used to check the size as well but we can't do that anymore since
     // CCState::HandleByVal() rounds up the size after calling this function.
-    assert(!(Align % RegSizeInBytes) &&
-           "Byval argument's alignment should be a multiple of"
-           "RegSizeInBytes.");
+    assert(
+        Alignment >= Align(RegSizeInBytes) &&
+        "Byval argument's alignment should be a multiple of RegSizeInBytes.");
 
     FirstReg = State->getFirstUnallocated(IntArgRegs);
 
-    // If Align > RegSizeInBytes, the first arg register must be even.
+    // If Alignment > RegSizeInBytes, the first arg register must be even.
     // FIXME: This condition happens to do the right thing but it's not the
     //        right way to test it. We want to check that the stack frame offset
     //        of the register is aligned.
-    if ((Align > RegSizeInBytes) && (FirstReg % 2)) {
+    if ((Alignment > RegSizeInBytes) && (FirstReg % 2)) {
       State->AllocateReg(IntArgRegs[FirstReg], ShadowRegs[FirstReg]);
       ++FirstReg;
     }

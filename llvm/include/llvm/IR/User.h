@@ -218,6 +218,11 @@ public:
     NumUserOperands = NumOps;
   }
 
+  /// A droppable user is a user for which uses can be dropped without affecting
+  /// correctness and should be dropped rather than preventing a transformation
+  /// from happening.
+  bool isDroppable() const;
+
   // ---------------------------------------------------------------------------
   // Operand Iterator interface...
   //

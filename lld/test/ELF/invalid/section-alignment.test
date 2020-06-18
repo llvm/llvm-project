@@ -14,6 +14,7 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     AddressAlign:    0x1000000000000000
+    Offset:          0x100
     Content:         "00000000"
 
 # CHECK: section sh_addralign is too large

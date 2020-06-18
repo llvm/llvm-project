@@ -39,12 +39,12 @@ target triple = "sparcv9-unknown-unknown"
 ; CHECK:  %17 = icmp ne i32 %10, %16
 ; CHECK:  br i1 %17, label %partword.cmpxchg.loop, label %partword.cmpxchg.end
 ; CHECK:partword.cmpxchg.end:
-; CHECK:  %18 = lshr i32 %14, %ShiftAmt
-; CHECK:  %19 = trunc i32 %18 to i8
-; CHECK:  %20 = insertvalue { i8, i1 } undef, i8 %19, 0
-; CHECK:  %21 = insertvalue { i8, i1 } %20, i1 %15, 1
+; CHECK:  %shifted = lshr i32 %14, %ShiftAmt
+; CHECK:  %extracted = trunc i32 %shifted to i8
+; CHECK:  %18 = insertvalue { i8, i1 } undef, i8 %extracted, 0
+; CHECK:  %19 = insertvalue { i8, i1 } %18, i1 %15, 1
 ; CHECK:  fence seq_cst
-; CHECK:  %ret = extractvalue { i8, i1 } %21, 0
+; CHECK:  %ret = extractvalue { i8, i1 } %19, 0
 ; CHECK:  ret i8 %ret
 define i8 @test_cmpxchg_i8(i8* %arg, i8 %old, i8 %new) {
 entry:
@@ -84,12 +84,12 @@ entry:
 ; CHECK:  %17 = icmp ne i32 %10, %16
 ; CHECK:  br i1 %17, label %partword.cmpxchg.loop, label %partword.cmpxchg.end
 ; CHECK:partword.cmpxchg.end:
-; CHECK:  %18 = lshr i32 %14, %ShiftAmt
-; CHECK:  %19 = trunc i32 %18 to i16
-; CHECK:  %20 = insertvalue { i16, i1 } undef, i16 %19, 0
-; CHECK:  %21 = insertvalue { i16, i1 } %20, i1 %15, 1
+; CHECK:  %shifted = lshr i32 %14, %ShiftAmt
+; CHECK:  %extracted = trunc i32 %shifted to i16
+; CHECK:  %18 = insertvalue { i16, i1 } undef, i16 %extracted, 0
+; CHECK:  %19 = insertvalue { i16, i1 } %18, i1 %15, 1
 ; CHECK:  fence seq_cst
-; CHECK:  %ret = extractvalue { i16, i1 } %21, 0
+; CHECK:  %ret = extractvalue { i16, i1 } %19, 0
 ; CHECK:  ret i16 %ret
 define i16 @test_cmpxchg_i16(i16* %arg, i16 %old, i16 %new) {
 entry:
@@ -125,10 +125,10 @@ entry:
 ; CHECK:  %newloaded = extractvalue { i32, i1 } %9, 0
 ; CHECK:  br i1 %success, label %atomicrmw.end, label %atomicrmw.start
 ; CHECK:atomicrmw.end:
-; CHECK:  %10 = lshr i32 %newloaded, %ShiftAmt
-; CHECK:  %11 = trunc i32 %10 to i16
+; CHECK:  %shifted = lshr i32 %newloaded, %ShiftAmt
+; CHECK:  %extracted = trunc i32 %shifted to i16
 ; CHECK:  fence seq_cst
-; CHECK:  ret i16 %11
+; CHECK:  ret i16 %extracted
 define i16 @test_add_i16(i16* %arg, i16 %val) {
 entry:
   %ret = atomicrmw add i16* %arg, i16 %val seq_cst
@@ -174,15 +174,15 @@ entry:
 
 ; CHECK-LABEL: @test_min_i16(
 ; CHECK:atomicrmw.start:
-; CHECK:  %6 = lshr i32 %loaded, %ShiftAmt
-; CHECK:  %7 = trunc i32 %6 to i16
-; CHECK:  %8 = icmp sle i16 %7, %val
-; CHECK:  %new = select i1 %8, i16 %7, i16 %val
-; CHECK:  %9 = zext i16 %new to i32
-; CHECK:  %10 = shl i32 %9, %ShiftAmt
-; CHECK:  %11 = and i32 %loaded, %Inv_Mask
-; CHECK:  %12 = or i32 %11, %10
-; CHECK:  %13 = cmpxchg i32* %AlignedAddr, i32 %loaded, i32 %12 monotonic monotonic
+; CHECK:  %shifted = lshr i32 %loaded, %ShiftAmt
+; CHECK:  %extracted = trunc i32 %shifted to i16
+; CHECK:  %6 = icmp sle i16 %extracted, %val
+; CHECK:  %new = select i1 %6, i16 %extracted, i16 %val
+; CHECK:  %extended = zext i16 %new to i32
+; CHECK:  %shifted1 = shl nuw i32 %extended, %ShiftAmt
+; CHECK:  %unmasked = and i32 %loaded, %Inv_Mask
+; CHECK:  %inserted = or i32 %unmasked, %shifted1
+; CHECK:  %7 = cmpxchg i32* %AlignedAddr, i32 %loaded, i32 %inserted monotonic monotonic
 ; CHECK:atomicrmw.end:
 define i16 @test_min_i16(i16* %arg, i16 %val) {
 entry:

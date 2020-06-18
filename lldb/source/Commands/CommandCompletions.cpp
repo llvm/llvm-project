@@ -18,6 +18,7 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Variable.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
@@ -55,6 +56,9 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {ePlatformPluginCompletion, CommandCompletions::PlatformPluginNames},
       {eArchitectureCompletion, CommandCompletions::ArchitectureNames},
       {eVariablePathCompletion, CommandCompletions::VariablePath},
+      {eRegisterCompletion, CommandCompletions::Registers},
+      {eBreakpointCompletion, CommandCompletions::Breakpoints},
+      {eProcessPluginCompletion, CommandCompletions::ProcessPluginNames},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -93,7 +97,8 @@ protected:
   CompletionRequest &m_request;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Completer);
+  Completer(const Completer &) = delete;
+  const Completer &operator=(const Completer &) = delete;
 };
 } // namespace
 
@@ -150,7 +155,8 @@ private:
   const char *m_file_name;
   const char *m_dir_name;
 
-  DISALLOW_COPY_AND_ASSIGN(SourceFileCompleter);
+  SourceFileCompleter(const SourceFileCompleter &) = delete;
+  const SourceFileCompleter &operator=(const SourceFileCompleter &) = delete;
 };
 } // namespace
 
@@ -222,7 +228,8 @@ private:
   typedef std::set<ConstString> collection;
   collection m_match_set;
 
-  DISALLOW_COPY_AND_ASSIGN(SymbolCompleter);
+  SymbolCompleter(const SymbolCompleter &) = delete;
+  const SymbolCompleter &operator=(const SymbolCompleter &) = delete;
 };
 } // namespace
 
@@ -269,7 +276,8 @@ private:
   const char *m_file_name;
   const char *m_dir_name;
 
-  DISALLOW_COPY_AND_ASSIGN(ModuleCompleter);
+  ModuleCompleter(const ModuleCompleter &) = delete;
+  const ModuleCompleter &operator=(const ModuleCompleter &) = delete;
 };
 } // namespace
 
@@ -530,4 +538,59 @@ void CommandCompletions::VariablePath(CommandInterpreter &interpreter,
                                       CompletionRequest &request,
                                       SearchFilter *searcher) {
   Variable::AutoComplete(interpreter.GetExecutionContext(), request);
+}
+
+void CommandCompletions::Registers(CommandInterpreter &interpreter,
+                                   CompletionRequest &request,
+                                   SearchFilter *searcher) {
+  std::string reg_prefix = "";
+  if (request.GetCursorArgumentPrefix().startswith("$"))
+    reg_prefix = "$";
+
+  RegisterContext *reg_ctx =
+      interpreter.GetExecutionContext().GetRegisterContext();
+  const size_t reg_num = reg_ctx->GetRegisterCount();
+  for (size_t reg_idx = 0; reg_idx < reg_num; ++reg_idx) {
+    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_idx);
+    request.TryCompleteCurrentArg(reg_prefix + reg_info->name,
+                                  reg_info->alt_name);
+  }
+}
+
+void CommandCompletions::Breakpoints(CommandInterpreter &interpreter,
+                                     CompletionRequest &request,
+                                     SearchFilter *searcher) {
+  lldb::TargetSP target = interpreter.GetDebugger().GetSelectedTarget();
+  if (!target)
+    return;
+
+  const BreakpointList &breakpoints = target->GetBreakpointList();
+
+  std::unique_lock<std::recursive_mutex> lock;
+  target->GetBreakpointList().GetListMutex(lock);
+
+  size_t num_breakpoints = breakpoints.GetSize();
+  if (num_breakpoints == 0)
+    return;
+
+  for (size_t i = 0; i < num_breakpoints; ++i) {
+    lldb::BreakpointSP bp = breakpoints.GetBreakpointAtIndex(i);
+
+    StreamString s;
+    bp->GetDescription(&s, lldb::eDescriptionLevelBrief);
+    llvm::StringRef bp_info = s.GetString();
+
+    const size_t colon_pos = bp_info.find_first_of(':');
+    if (colon_pos != llvm::StringRef::npos)
+      bp_info = bp_info.drop_front(colon_pos + 2);
+
+    request.TryCompleteCurrentArg(std::to_string(bp->GetID()), bp_info);
+  }
+}
+
+void CommandCompletions::ProcessPluginNames(CommandInterpreter &interpreter,
+                                            CompletionRequest &request,
+                                            SearchFilter *searcher) {
+  PluginManager::AutoCompleteProcessName(request.GetCursorArgumentPrefix(),
+                                         request);
 }

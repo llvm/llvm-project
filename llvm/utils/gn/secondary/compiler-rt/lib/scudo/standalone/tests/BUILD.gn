@@ -6,9 +6,7 @@ test_cflags = [ "-DSCUDO_DEBUG=1" ]
 unittest("ScudoUnitTest") {
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   cflags = test_cflags
-  deps = [
-    "//compiler-rt/lib/scudo/standalone:sources",
-  ]
+  deps = [ "//compiler-rt/lib/scudo/standalone:sources" ]
   sources = [
     "atomic_test.cpp",
     "bytemap_test.cpp",

@@ -84,6 +84,6 @@ void ento::registerOSObjectCStyleCast(CheckerManager &Mgr) {
   Mgr.registerChecker<OSObjectCStyleCastChecker>();
 }
 
-bool ento::shouldRegisterOSObjectCStyleCast(const LangOptions &LO) {
+bool ento::shouldRegisterOSObjectCStyleCast(const CheckerManager &mgr) {
   return true;
 }

@@ -245,21 +245,25 @@ define i32 @test12_v32i32(<32 x i32> %a, <32 x i32> %b) nounwind {
 define i64 @test12_v64i16(<64 x i16> %a, <64 x i16> %b) nounwind {
 ; KNL-LABEL: test12_v64i16:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpcmpeqw %ymm4, %ymm0, %ymm0 ## encoding: [0xc5,0xfd,0x75,0xc4]
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0 ## encoding: [0x62,0xf2,0x7d,0x48,0x23,0xc0]
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0 ## encoding: [0x62,0xf2,0x7d,0x48,0x27,0xc0]
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm4 ## encoding: [0xc5,0xfd,0x75,0xe2]
+; KNL-NEXT:    vpmovsxwd %ymm4, %zmm4 ## encoding: [0x62,0xf2,0x7d,0x48,0x23,0xe4]
+; KNL-NEXT:    vptestmd %zmm4, %zmm4, %k0 ## encoding: [0x62,0xf2,0x5d,0x48,0x27,0xc4]
 ; KNL-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; KNL-NEXT:    vpcmpeqw %ymm5, %ymm1, %ymm0 ## encoding: [0xc5,0xf5,0x75,0xc5]
+; KNL-NEXT:    vextracti64x4 $1, %zmm2, %ymm2 ## encoding: [0x62,0xf3,0xfd,0x48,0x3b,0xd2,0x01]
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0 ## encoding: [0x62,0xf3,0xfd,0x48,0x3b,0xc0,0x01]
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0 ## encoding: [0xc5,0xfd,0x75,0xc2]
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0 ## encoding: [0x62,0xf2,0x7d,0x48,0x23,0xc0]
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0 ## encoding: [0x62,0xf2,0x7d,0x48,0x27,0xc0]
 ; KNL-NEXT:    kmovw %k0, %ecx ## encoding: [0xc5,0xf8,0x93,0xc8]
 ; KNL-NEXT:    shll $16, %ecx ## encoding: [0xc1,0xe1,0x10]
 ; KNL-NEXT:    orl %eax, %ecx ## encoding: [0x09,0xc1]
-; KNL-NEXT:    vpcmpeqw %ymm6, %ymm2, %ymm0 ## encoding: [0xc5,0xed,0x75,0xc6]
+; KNL-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm0 ## encoding: [0xc5,0xf5,0x75,0xc3]
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0 ## encoding: [0x62,0xf2,0x7d,0x48,0x23,0xc0]
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0 ## encoding: [0x62,0xf2,0x7d,0x48,0x27,0xc0]
 ; KNL-NEXT:    kmovw %k0, %edx ## encoding: [0xc5,0xf8,0x93,0xd0]
-; KNL-NEXT:    vpcmpeqw %ymm7, %ymm3, %ymm0 ## encoding: [0xc5,0xe5,0x75,0xc7]
+; KNL-NEXT:    vextracti64x4 $1, %zmm3, %ymm0 ## encoding: [0x62,0xf3,0xfd,0x48,0x3b,0xd8,0x01]
+; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm1 ## encoding: [0x62,0xf3,0xfd,0x48,0x3b,0xc9,0x01]
+; KNL-NEXT:    vpcmpeqw %ymm0, %ymm1, %ymm0 ## encoding: [0xc5,0xf5,0x75,0xc0]
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0 ## encoding: [0x62,0xf2,0x7d,0x48,0x23,0xc0]
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0 ## encoding: [0x62,0xf2,0x7d,0x48,0x27,0xc0]
 ; KNL-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
@@ -315,9 +319,9 @@ define <16 x i32> @test13(<16 x float>%a, <16 x float>%b)
 define <16 x i32> @test14(<16 x i32>%a, <16 x i32>%b) {
 ; CHECK-LABEL: test14:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm2 ## encoding: [0x62,0xf1,0x7d,0x48,0xfa,0xd1]
-; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm2, %k1 ## encoding: [0x62,0xf1,0x6d,0x48,0x66,0xc8]
-; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xc9,0xfa,0xc1]
+; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm1 ## encoding: [0x62,0xf1,0x7d,0x48,0xfa,0xc9]
+; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1 ## encoding: [0x62,0xf1,0x75,0x48,0x66,0xc8]
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xc9,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %sub_r = sub <16 x i32> %a, %b
   %cmp.i2.i = icmp sgt <16 x i32> %sub_r, %a
@@ -330,9 +334,9 @@ define <16 x i32> @test14(<16 x i32>%a, <16 x i32>%b) {
 define <8 x i64> @test15(<8 x i64>%a, <8 x i64>%b) {
 ; CHECK-LABEL: test15:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm2 ## encoding: [0x62,0xf1,0xfd,0x48,0xfb,0xd1]
-; CHECK-NEXT:    vpcmpgtq %zmm0, %zmm2, %k1 ## encoding: [0x62,0xf2,0xed,0x48,0x37,0xc8]
-; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0xc9,0xfb,0xc1]
+; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm1 ## encoding: [0x62,0xf1,0xfd,0x48,0xfb,0xc9]
+; CHECK-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1 ## encoding: [0x62,0xf2,0xf5,0x48,0x37,0xc8]
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0xc9,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %sub_r = sub <8 x i64> %a, %b
   %cmp.i2.i = icmp sgt <8 x i64> %sub_r, %a
@@ -1554,9 +1558,7 @@ define <8 x i64> @cmp_swap_bug(<16 x i8>* %x, <8 x i64> %y, <8 x i64> %z) {
 ; SKX-LABEL: cmp_swap_bug:
 ; SKX:       ## %bb.0: ## %entry
 ; SKX-NEXT:    vmovdqa (%rdi), %xmm2 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x17]
-; SKX-NEXT:    vpshufb {{.*}}(%rip), %xmm2, %xmm2 ## EVEX TO VEX Compression xmm2 = xmm2[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; SKX-NEXT:    ## encoding: [0xc4,0xe2,0x69,0x00,0x15,A,A,A,A]
-; SKX-NEXT:    ## fixup A - offset: 5, value: LCPI69_0-4, kind: reloc_riprel_4byte
+; SKX-NEXT:    vpmovwb %xmm2, %xmm2 ## encoding: [0x62,0xf2,0x7e,0x08,0x30,0xd2]
 ; SKX-NEXT:    vpmovb2m %xmm2, %k1 ## encoding: [0x62,0xf2,0x7e,0x08,0x29,0xca]
 ; SKX-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x64,0xc0]
 ; SKX-NEXT:    retq ## encoding: [0xc3]
@@ -1573,11 +1575,9 @@ define <2 x i32> @narrow_cmp_select_reverse(<2 x i64> %x, <2 x i32> %y) nounwind
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2 ## encoding: [0xc5,0xe9,0xef,0xd2]
 ; AVX512-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x29,0xc2]
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0 ## encoding: [0x62,0xf3,0xfd,0x48,0x25,0xc0,0x0f]
 ; AVX512-NEXT:    vpshufd $232, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x70,0xc0,0xe8]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0,2,2,3]
-; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0xc1]
-; AVX512-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; AVX512-NEXT:    vpandn %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdf,0xc1]
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
 ;
 ; SKX-LABEL: narrow_cmp_select_reverse:

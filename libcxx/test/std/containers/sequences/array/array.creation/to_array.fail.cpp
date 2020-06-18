@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // <array>
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <array>
 
 #include "test_macros.h"
 #include "MoveOnly.h"
+
+// expected-warning@array:* 0-1 {{suggest braces around initialization of subobject}}
 
 int main(int, char**) {
   {
@@ -20,7 +22,6 @@ int main(int, char**) {
     // expected-error@array:* {{to_array does not accept multidimensional arrays}}
     // expected-error@array:* {{to_array requires copy constructible elements}}
     // expected-error@array:* 3 {{cannot initialize}}
-    // expected-error@array:* {{suggest braces}}
     std::to_array(source); // expected-note {{requested here}}
   }
 

@@ -16,6 +16,7 @@
 #include "Program.h"
 #include "clang/AST/DeclCXX.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Format.h"
 
 using namespace clang;
 using namespace clang::interp;

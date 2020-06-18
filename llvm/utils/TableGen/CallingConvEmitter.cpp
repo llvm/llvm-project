@@ -197,11 +197,12 @@ void CallingConvEmitter::EmitAction(Record *Action,
              "getTypeAllocSize(EVT(LocVT).getTypeForEVT(State.getContext())),"
              " ";
       if (Align)
-        O << Align;
+        O << "Align(" << Align << ")";
       else
-        O << "\n" << IndentStr
+        O << "\n"
+          << IndentStr
           << "  State.getMachineFunction().getDataLayout()."
-             "getABITypeAlignment(EVT(LocVT).getTypeForEVT(State.getContext()"
+             "getABITypeAlign(EVT(LocVT).getTypeForEVT(State.getContext()"
              "))";
       O << ");\n" << IndentStr
         << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
@@ -224,8 +225,7 @@ void CallingConvEmitter::EmitAction(Record *Action,
       O << "\n" << IndentStr << "};\n";
 
       O << IndentStr << "unsigned Offset" << ++Counter
-        << " = State.AllocateStack("
-        << Size << ", " << Align << ", "
+        << " = State.AllocateStack(" << Size << ", Align(" << Align << "), "
         << "ShadowRegList" << ShadowRegListNumber << ");\n";
       O << IndentStr << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
         << Counter << ", LocVT, LocInfo));\n";
@@ -275,9 +275,8 @@ void CallingConvEmitter::EmitAction(Record *Action,
     } else if (Action->isSubClassOf("CCPassByVal")) {
       int Size = Action->getValueAsInt("Size");
       int Align = Action->getValueAsInt("Align");
-      O << IndentStr
-        << "State.HandleByVal(ValNo, ValVT, LocVT, LocInfo, "
-        << Size << ", " << Align << ", ArgFlags);\n";
+      O << IndentStr << "State.HandleByVal(ValNo, ValVT, LocVT, LocInfo, "
+        << Size << ", Align(" << Align << "), ArgFlags);\n";
       O << IndentStr << "return false;\n";
     } else if (Action->isSubClassOf("CCCustom")) {
       O << IndentStr

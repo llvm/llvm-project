@@ -108,26 +108,26 @@
 
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: foo_resolver:
+// DISASM-NEXT: <foo_resolver>:
 // DISASM-NEXT:   4010e4:       retl
-// DISASM: bar_resolver:
+// DISASM: <bar_resolver>:
 // DISASM-NEXT:   4010e5:       retl
-// DISASM:      _start:
-// DISASM-NEXT:   4010e6:       calll 21 <foo>
-// DISASM-NEXT:                 calll 32 <bar>
+// DISASM:      <_start>:
+// DISASM-NEXT:   4010e6:       calll 0x401100 <foo>
+// DISASM-NEXT:                 calll 0x401110 <bar>
 // DISASM-NEXT:                 movl $4194516, %edx
 // DISASM-NEXT:                 movl $4194532, %edx
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: foo:
+// DISASM-NEXT: <foo>:
 // DISASM-NEXT:   401100:       jmpl *4202784
 // DISASM-NEXT:                 pushl $0
-// DISASM-NEXT:                 jmp -4198672
-// DISASM:      bar:
+// DISASM-NEXT:                 jmp 0x0
+// DISASM:      <bar>:
 // DISASM-NEXT:   401110:       jmpl *4202788
 // DISASM-NEXT:                 pushl $8
-// DISASM-NEXT:                 jmp -4198688
+// DISASM-NEXT:                 jmp 0x0
 
 .text
 .type foo STT_GNU_IFUNC

@@ -24,6 +24,7 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
 namespace ROCDL {
@@ -32,12 +33,7 @@ namespace ROCDL {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/ROCDLOps.h.inc"
 
-class ROCDLDialect : public Dialect {
-public:
-  explicit ROCDLDialect(MLIRContext *context);
-
-  static StringRef getDialectNamespace() { return "rocdl"; }
-};
+#include "mlir/Dialect/LLVMIR/ROCDLOpsDialect.h.inc"
 
 } // namespace ROCDL
 } // namespace mlir

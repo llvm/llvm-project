@@ -3222,7 +3222,8 @@ ASTContext::getObjCLayout(const ObjCInterfaceDecl *D,
   if (D->hasExternalLexicalStorage() && !D->getDefinition())
     getExternalSource()->CompleteType(const_cast<ObjCInterfaceDecl*>(D));
   D = D->getDefinition();
-  assert(D && D->isThisDeclarationADefinition() && "Invalid interface decl!");
+  assert(D && !D->isInvalidDecl() && D->isThisDeclarationADefinition() &&
+         "Invalid interface decl!");
 
   // Look up this layout, if already laid out, return what we have.
   const ObjCContainerDecl *Key =

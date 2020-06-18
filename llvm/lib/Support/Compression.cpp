@@ -17,13 +17,13 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#if LLVM_ENABLE_ZLIB
+#if LLVM_ENABLE_ZLIB == 1 && HAVE_ZLIB_H
 #include <zlib.h>
 #endif
 
 using namespace llvm;
 
-#if LLVM_ENABLE_ZLIB
+#if LLVM_ENABLE_ZLIB == 1 && HAVE_LIBZ
 static Error createError(StringRef Err) {
   return make_error<StringError>(Err, inconvertibleErrorCode());
 }
@@ -74,10 +74,10 @@ Error zlib::uncompress(StringRef InputBuffer, char *UncompressedBuffer,
 Error zlib::uncompress(StringRef InputBuffer,
                        SmallVectorImpl<char> &UncompressedBuffer,
                        size_t UncompressedSize) {
-  UncompressedBuffer.resize(UncompressedSize);
+  UncompressedBuffer.reserve(UncompressedSize);
   Error E =
       uncompress(InputBuffer, UncompressedBuffer.data(), UncompressedSize);
-  UncompressedBuffer.resize(UncompressedSize);
+  UncompressedBuffer.set_size(UncompressedSize);
   return E;
 }
 
