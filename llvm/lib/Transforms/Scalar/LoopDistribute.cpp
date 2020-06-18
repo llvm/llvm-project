@@ -789,12 +789,6 @@ public:
     // instructions to partitions.
     Partitions.setupPartitionIdOnInstructions();
 
-    // To keep things simple have an empty preheader before we version or clone
-    // the loop.  (Also split if this has no predecessor, i.e. entry, because we
-    // rely on PH having a predecessor.)
-    if (!PH->getSinglePredecessor() || &*PH->begin() != PH->getTerminator())
-      SplitBlock(PH, PH->getTerminator(), DT, LI);
-
     // If we need run-time checks, version the loop now.
     auto PtrToPartition = Partitions.computePartitionSetForPointers(*LAI);
     const auto *RtPtrChecking = LAI->getRuntimePointerChecking();
@@ -806,6 +800,12 @@ public:
       return fail("RuntimeCheckWithConvergent",
                   "may not insert runtime check with convergent operation");
     }
+
+    // To keep things simple have an empty preheader before we version or clone
+    // the loop.  (Also split if this has no predecessor, i.e. entry, because we
+    // rely on PH having a predecessor.)
+    if (!PH->getSinglePredecessor() || &*PH->begin() != PH->getTerminator())
+      SplitBlock(PH, PH->getTerminator(), DT, LI);
 
     if (!Pred.isAlwaysTrue() || !Checks.empty()) {
       assert(!LAI->hasConvergentOp() && "inserting illegal loop versioning");
