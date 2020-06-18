@@ -639,6 +639,10 @@ LLVM-specific variables
   Rewrite absolute source paths in sources and debug info to relative ones. The
   source prefix can be adjusted via the LLVM_SOURCE_PREFIX variable.
 
+**LLVM_INSTALL_UTILS**:BOOL
+  If enabled, utility binaries like ``FileCheck`` and ``not`` will be installed
+  to CMAKE_INSTALL_PREFIX.
+
 CMake Caches
 ============
 
