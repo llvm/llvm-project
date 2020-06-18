@@ -700,17 +700,14 @@ MODULENAME?=$(DYLIB_NAME)
 PARSE_AS_LIBRARY = -parse-as-library
 endif
 
-ifneq "$(SWIFT_OBJC_HEADER)" ""
-SWIFT_OBJC_HEADER_FLAGS=-emit-objc-header-path $(SWIFT_OBJC_HEADER)
-endif
-
 VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
-%.o: %.swift $(SWIFT_BRIDGING_PCH)
+VPATHDYLIBSOURCES=$(patsubst %,$(VPATH)/%,$(DYLIB_SWIFT_SOURCES))
+
+%.o: %.swift $(SWIFT_BRIDGING_PCH) $(SWIFT_OBJC_HEADER)
 	@echo "### Compiling" $<
 	$(SWIFT_FE) -c -primary-file $< \
 	  $(filter-out $(VPATH)/$<,$(filter-out $<,$(VPATHSOURCES))) \
 	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
-	  $(SWIFT_OBJC_HEADER_FLAGS) \
 	  -module-name $(MODULENAME) -emit-module-path \
 	  $(patsubst %.o,$(BUILDDIR)/%.partial.swiftmodule,$@) \
 	  -o $(BUILDDIR)/$@
@@ -753,6 +750,15 @@ ifneq "$(SWIFT_BRIDGING_PCH)" ""
 $(SWIFT_BRIDGING_PCH): $(SWIFT_BRIDGING_HEADER)
 	@echo "### Precompiling" $<
 	$(SWIFT_FE) -emit-pch $(SWIFT_FEFLAGS) $< -o $(BUILDDIR)/$@
+endif
+
+# Swift Obj-C header.
+ifneq "$(SWIFT_OBJC_HEADER)" ""
+$(SWIFT_OBJC_HEADER): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
+	@echo "### Building Obj-C header"
+	$(SWIFT_FE) -typecheck $(VPATHSOURCES) $(VPATHDYLIBSOURCES) \
+	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) -module-name $(MODULENAME) \
+	  -emit-objc-header-path $(SWIFT_OBJC_HEADER)
 endif
 
 else # USESWIFTDRIVER = 0
