@@ -235,11 +235,8 @@ public:
   // AbstractConverter overrides
   //===--------------------------------------------------------------------===//
 
-  /// Find the symbol in the local map or return null.
-  mlir::Value lookupSymbol(const Fortran::semantics::Symbol &sym) {
-    if (auto v = localSymbols.lookupSymbol(sym))
-      return v;
-    return {};
+  mlir::Value getSymbolAddress(Fortran::lower::SymbolRef sym) override final {
+    return fir::getBase(lookupSymbol(sym));
   }
 
   mlir::Value genExprAddr(const Fortran::lower::SomeExpr &expr,
@@ -353,6 +350,13 @@ private:
   mlir::Value createFIRExpr(mlir::Location loc,
                             const Fortran::semantics::SomeExpr *expr) {
     return createSomeExpression(loc, *this, *expr, localSymbols);
+  }
+
+  /// Find the symbol in the local map or return null.
+  mlir::Value lookupSymbol(const Fortran::semantics::Symbol &sym) {
+    if (auto v = localSymbols.lookupSymbol(sym))
+      return v;
+    return {};
   }
 
   /// Add the symbol to the local map. If the symbol is already in the map, it
