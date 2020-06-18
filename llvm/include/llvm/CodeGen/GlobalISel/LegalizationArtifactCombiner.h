@@ -263,7 +263,7 @@ public:
         const unsigned NumSrcs = DstSize / MergeSrcSize;
         assert(NumSrcs < SrcMI->getNumOperands() - 1 &&
                "trunc(merge) should require less inputs than merge");
-        SmallVector<Register, 2> SrcRegs(NumSrcs);
+        SmallVector<Register, 8> SrcRegs(NumSrcs);
         for (unsigned i = 0; i < NumSrcs; ++i)
           SrcRegs[i] = SrcMI->getOperand(i + 1).getReg();
 
@@ -375,9 +375,11 @@ public:
         Builder.setInstr(MI);
         auto NewUnmerge = Builder.buildUnmerge(UnmergeTy, CastSrcReg);
 
-        SmallVector<Register, 8> Regs(NumDefs);
-        for (unsigned I = 0; I != NumDefs; ++I)
-          Builder.buildTrunc(MI.getOperand(I), NewUnmerge.getReg(I));
+        for (unsigned I = 0; I != NumDefs; ++I) {
+          Register DefReg = MI.getOperand(I).getReg();
+          UpdatedDefs.push_back(DefReg);
+          Builder.buildTrunc(DefReg, NewUnmerge.getReg(I));
+        }
 
         markInstAndDefDead(MI, CastMI, DeadInsts);
         return true;
@@ -402,7 +404,7 @@ public:
         // Gather the original destination registers and create new ones for the
         // unused bits
         const unsigned NewNumDefs = CastSrcSize / DestSize;
-        SmallVector<Register, 2> DstRegs(NewNumDefs);
+        SmallVector<Register, 8> DstRegs(NewNumDefs);
         for (unsigned Idx = 0; Idx < NewNumDefs; ++Idx) {
           if (Idx < NumDefs)
             DstRegs[Idx] = MI.getOperand(Idx).getReg();
@@ -413,7 +415,7 @@ public:
         // Build new unmerge
         Builder.setInstr(MI);
         Builder.buildUnmerge(DstRegs, CastSrcReg);
-        UpdatedDefs.append(DstRegs.begin(), DstRegs.begin() + NumDefs);
+        UpdatedDefs.append(DstRegs.begin(), DstRegs.begin() + NewNumDefs);
         markInstAndDefDead(MI, CastMI, DeadInsts);
         return true;
       }
@@ -547,7 +549,7 @@ public:
 
       const unsigned NewNumDefs = NumDefs / NumMergeRegs;
       for (unsigned Idx = 0; Idx < NumMergeRegs; ++Idx) {
-        SmallVector<Register, 2> DstRegs;
+        SmallVector<Register, 8> DstRegs;
         for (unsigned j = 0, DefIdx = Idx * NewNumDefs; j < NewNumDefs;
              ++j, ++DefIdx)
           DstRegs.push_back(MI.getOperand(DefIdx).getReg());
@@ -602,7 +604,7 @@ public:
 
       const unsigned NumRegs = NumMergeRegs / NumDefs;
       for (unsigned DefIdx = 0; DefIdx < NumDefs; ++DefIdx) {
-        SmallVector<Register, 2> Regs;
+        SmallVector<Register, 8> Regs;
         for (unsigned j = 0, Idx = NumRegs * DefIdx + 1; j < NumRegs;
              ++j, ++Idx)
           Regs.push_back(MergeI->getOperand(Idx).getReg());
