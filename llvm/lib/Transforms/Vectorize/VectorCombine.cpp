@@ -169,9 +169,7 @@ static void foldExtExtCmp(Instruction *Ext0, Instruction *Ext1,
   IRBuilder<> Builder(&I);
   CmpInst::Predicate Pred = cast<CmpInst>(&I)->getPredicate();
   Value *V0 = Ext0->getOperand(0), *V1 = Ext1->getOperand(0);
-  Value *VecCmp =
-      Ext0->getType()->isFloatingPointTy() ? Builder.CreateFCmp(Pred, V0, V1)
-                                           : Builder.CreateICmp(Pred, V0, V1);
+  Value *VecCmp = Builder.CreateCmp(Pred, V0, V1);
   Value *Extract = Builder.CreateExtractElement(VecCmp, Ext0->getOperand(1));
   I.replaceAllUsesWith(Extract);
 }
@@ -413,8 +411,7 @@ static bool scalarizeBinopOrCmp(Instruction &I,
     V1 = ConstantExpr::getExtractElement(VecC1, Builder.getInt64(Index));
 
   Value *Scalar =
-      IsCmp ? Opcode == Instruction::FCmp ? Builder.CreateFCmp(Pred, V0, V1)
-                                          : Builder.CreateICmp(Pred, V0, V1)
+      IsCmp ? Builder.CreateCmp(Pred, V0, V1)
             : Builder.CreateBinOp((Instruction::BinaryOps)Opcode, V0, V1);
 
   Scalar->setName(I.getName() + ".scalar");

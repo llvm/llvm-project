@@ -4280,12 +4280,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
 
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
-      Value *V;
-      if (E->getOpcode() == Instruction::FCmp)
-        V = Builder.CreateFCmp(P0, L, R);
-      else
-        V = Builder.CreateICmp(P0, L, R);
-
+      Value *V = Builder.CreateCmp(P0, L, R);
       propagateIRFlags(V, E->Scalars, VL0);
       if (NeedToShuffleReuses) {
         V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
