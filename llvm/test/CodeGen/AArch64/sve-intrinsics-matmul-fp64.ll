@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve,+f64mm -asm-verbose=0 < %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve,+f64mm -asm-verbose=0 < %s -o - 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
+; WARN-NOT: warning
 
 define <vscale x 2 x double> @fmmla_d(<vscale x 2 x double> %r, <vscale x 2 x double> %a, <vscale x 2 x double> %b) nounwind {
 entry:
