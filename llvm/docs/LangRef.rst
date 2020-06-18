@@ -15466,7 +15466,7 @@ must have <Inner> * <OuterColumns> elements and the returned vector must have
 <OuterRows> * <OuterColumns> elements.
 
 
-'``llvm.matrix.columnwise.load.*``' Intrinsic
+'``llvm.matrix.column.major.load.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -15474,25 +15474,34 @@ Syntax:
 
 ::
 
-      declare vectorty @llvm.matrix.columnwise.load.*(ptrty %Ptr, i32 %Stride, i32 <Rows>, i32 <Cols>)
+      declare vectorty @llvm.matrix.column.major.load.*(
+          ptrty %Ptr, i64 %Stride, i1 <IsVolatile>, i32 <Rows>, i32 <Cols>)
 
 Overview:
 """""""""
 
-The '``llvm.matrix.columnwise.load.*``' intrinsic loads a matrix with <Rows>
+The '``llvm.matrix.column.major.load.*``' intrinsic loads a matrix with <Rows>
 rows and <Cols> columns, using a stride of %Stride between columns. For two
 consecutive columns A and B, %Stride refers to the distance (the number of
 elements) between the start of column A and the start of column B. The result
 matrix is returned embedded in the result vector. This allows for convenient
-loading of sub matrixes.
+loading of sub matrixes.  If <IsVolatile> is true, the intrinsic is considered
+a :ref:`volatile memory access <volatile>.`
+
+If the %Ptr argument is known to be aligned to some boundary, this can be
+specified as an attribute on the argument.
 
 Arguments:
 """"""""""
 
-The <Rows> and <Cols> arguments must be constant integers. The returned vector
-must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
+The <IsVolatile>, <Rows> and <Cols> arguments must be constant integers. The
+returned vector must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
 
-'``llvm.matrix.columnwise.store.*``' Intrinsic
+The :ref:`align <attr_align>` parameter attribute can be provided
+for the %Ptr arguments.
+
+
+'``llvm.matrix.column.major.store.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -15500,22 +15509,31 @@ Syntax:
 
 ::
 
-      declare void @llvm.matrix.columnwise.store.*(vectorty %In, ptrty %Ptr, i32 %Stride, i32 <Rows>, i32 <Cols>)
+      declare void @llvm.matrix.column.major.store.*(
+          vectorty %In, ptrty %Ptr, i64 %Stride, i1 <IsVolatile>, i32 <Rows>, i32 <Cols>)
 
 Overview:
 """""""""
 
-The '``llvm.matrix.columnwise.store.*``' intrinsic stores the matrix with
+The '``llvm.matrix.column.major.store.*``' intrinsic stores the matrix with
 <Rows> rows and <Cols> columns embedded in %In, using a stride of %Stride
 between columns. For two consecutive columns A and B, %Stride refers to the
 distance (the number of elements) between the start of column A and the start
-of column B.
+of column B. If <IsVolatile> is true, the intrinsic is considered a
+:ref:`volatile memory access <volatile>.`
+
+If the %Ptr argument is known to be aligned to some boundary, this can be
+specified as an attribute on the argument.
 
 Arguments:
 """"""""""
 
-The <Rows> and <Cols> arguments must be constant integers. The vector argument
-%In must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
+The <IsVolatile>, <Rows>, <Cols> arguments must be constant integers. The
+vector argument %In must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
+
+The :ref:`align <attr_align>` parameter attribute can be provided
+for the %Ptr arguments.
+
 
 Half Precision Floating-Point Intrinsics
 ----------------------------------------

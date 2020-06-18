@@ -4992,8 +4992,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::matrix_multiply:
   case Intrinsic::matrix_transpose:
-  case Intrinsic::matrix_columnwise_load:
-  case Intrinsic::matrix_columnwise_store: {
+  case Intrinsic::matrix_column_major_load:
+  case Intrinsic::matrix_column_major_store: {
     ConstantInt *NumRows;
     ConstantInt *NumColumns;
     VectorType *TypeToCheck;
@@ -5008,14 +5008,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       NumColumns = cast<ConstantInt>(Call.getArgOperand(2));
       TypeToCheck = cast<VectorType>(Call.getType());
       break;
-    case Intrinsic::matrix_columnwise_load:
-      NumRows = cast<ConstantInt>(Call.getArgOperand(2));
-      NumColumns = cast<ConstantInt>(Call.getArgOperand(3));
-      TypeToCheck = cast<VectorType>(Call.getType());
-      break;
-    case Intrinsic::matrix_columnwise_store:
+    case Intrinsic::matrix_column_major_load:
       NumRows = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
+      TypeToCheck = cast<VectorType>(Call.getType());
+      break;
+    case Intrinsic::matrix_column_major_store:
+      NumRows = cast<ConstantInt>(Call.getArgOperand(4));
+      NumColumns = cast<ConstantInt>(Call.getArgOperand(5));
       TypeToCheck = cast<VectorType>(Call.getArgOperand(0)->getType());
       break;
     default:

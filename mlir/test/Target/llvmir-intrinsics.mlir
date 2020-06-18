@@ -151,7 +151,7 @@ llvm.func @vector_reductions(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">, %a
 // CHECK-LABEL: @matrix_intrinsics
 //                                       4x16                       16x3
 llvm.func @matrix_intrinsics(%A: !llvm<"<64 x float>">, %B: !llvm<"<48 x float>">,
-                             %ptr: !llvm<"float*">, %stride: !llvm.i32) {
+                             %ptr: !llvm<"float*">, %stride: !llvm.i64) {
   // CHECK: call <12 x float> @llvm.matrix.multiply.v12f32.v64f32.v48f32(<64 x float> %0, <48 x float> %1, i32 4, i32 16, i32 3)
   %C = llvm.intr.matrix.multiply %A, %B
     { lhs_rows = 4: i32, lhs_columns = 16: i32 , rhs_columns = 3: i32} :
@@ -159,14 +159,14 @@ llvm.func @matrix_intrinsics(%A: !llvm<"<64 x float>">, %B: !llvm<"<48 x float>"
   // CHECK: call <48 x float> @llvm.matrix.transpose.v48f32(<48 x float> %1, i32 3, i32 16)
   %D = llvm.intr.matrix.transpose %B { rows = 3: i32, columns = 16: i32} :
     !llvm<"<48 x float>"> into !llvm<"<48 x float>">
-  // CHECK: call <48 x float> @llvm.matrix.columnwise.load.v48f32.p0f32(float* %2, i32 %3, i32 3, i32 16)
-  %E = llvm.intr.matrix.columnwise.load %ptr, <stride=%stride>
-    { rows = 3: i32, columns = 16: i32} :
-    !llvm<"<48 x float>"> from !llvm<"float*"> stride !llvm.i32
-  // CHECK: call void @llvm.matrix.columnwise.store.v48f32.p0f32(<48 x float> %7, float* %2, i32 %3, i32 3, i32 16)
-  llvm.intr.matrix.columnwise.store %E, %ptr, <stride=%stride>
-    { rows = 3: i32, columns = 16: i32} :
-    !llvm<"<48 x float>"> to !llvm<"float*"> stride !llvm.i32
+  // CHECK: call <48 x float> @llvm.matrix.column.major.load.v48f32.p0f32(float* align 4 %2, i64 %3, i1 false, i32 3, i32 16)
+  %E = llvm.intr.matrix.column.major.load %ptr, <stride=%stride>
+    { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} :
+    !llvm<"<48 x float>"> from !llvm<"float*"> stride !llvm.i64
+  // CHECK: call void @llvm.matrix.column.major.store.v48f32.p0f32(<48 x float> %7, float* align 4 %2, i64 %3, i1 false, i32 3, i32 16)
+  llvm.intr.matrix.column.major.store %E, %ptr, <stride=%stride>
+    { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} :
+    !llvm<"<48 x float>"> to !llvm<"float*"> stride !llvm.i64
   llvm.return
 }
 
@@ -209,7 +209,7 @@ llvm.func @masked_intrinsics(%A: !llvm<"<7 x float>*">, %mask: !llvm<"<7 x i1>">
 // CHECK-DAG: declare float @llvm.copysign.f32(float, float)
 // CHECK-DAG: declare <12 x float> @llvm.matrix.multiply.v12f32.v64f32.v48f32(<64 x float>, <48 x float>, i32 immarg, i32 immarg, i32 immarg)
 // CHECK-DAG: declare <48 x float> @llvm.matrix.transpose.v48f32(<48 x float>, i32 immarg, i32 immarg)
-// CHECK-DAG: declare <48 x float> @llvm.matrix.columnwise.load.v48f32.p0f32(float* nocapture, i32, i32 immarg, i32 immarg)
-// CHECK-DAG: declare void @llvm.matrix.columnwise.store.v48f32.p0f32(<48 x float>, float* nocapture writeonly, i32, i32 immarg, i32 immarg)
+// CHECK-DAG: declare <48 x float> @llvm.matrix.column.major.load.v48f32.p0f32(float* nocapture, i64, i1 immarg, i32 immarg, i32 immarg)
+// CHECK-DAG: declare void @llvm.matrix.column.major.store.v48f32.p0f32(<48 x float>, float* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg)
 // CHECK-DAG: declare <7 x float> @llvm.masked.load.v7f32.p0v7f32(<7 x float>*, i32 immarg, <7 x i1>, <7 x float>)
 // CHECK-DAG: declare void @llvm.masked.store.v7f32.p0v7f32(<7 x float>, <7 x float>*, i32 immarg, <7 x i1>)
