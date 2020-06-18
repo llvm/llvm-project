@@ -126,6 +126,9 @@ struct ClangTidyOptions {
   /// apply this config file on top of the parent one. If false or missing,
   /// only this configuration file will be used.
   llvm::Optional<bool> InheritParentConfig;
+
+  /// Use colors in diagnostics. If missing, it will be auto detected.
+  llvm::Optional<bool> UseColor;
 };
 
 /// Abstract interface for retrieving various ClangTidy options.

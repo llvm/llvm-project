@@ -96,6 +96,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("ExtraArgs", Options.ExtraArgs);
     IO.mapOptional("ExtraArgsBefore", Options.ExtraArgsBefore);
     IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
+    IO.mapOptional("UseColor", Options.UseColor);
   }
 };
 
@@ -154,6 +155,7 @@ ClangTidyOptions ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(Result.SystemHeaders, Other.SystemHeaders);
   overrideValue(Result.FormatStyle, Other.FormatStyle);
   overrideValue(Result.User, Other.User);
+  overrideValue(Result.UseColor, Other.UseColor);
   mergeVectors(Result.ExtraArgs, Other.ExtraArgs);
   mergeVectors(Result.ExtraArgsBefore, Other.ExtraArgsBefore);
 
