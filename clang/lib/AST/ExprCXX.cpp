@@ -1118,15 +1118,6 @@ LambdaExpr::LambdaExpr(QualType T, SourceRange IntroducerRange,
 LambdaExpr::LambdaExpr(EmptyShell Empty, unsigned NumCaptures)
     : Expr(LambdaExprClass, Empty) {
   LambdaExprBits.NumCaptures = NumCaptures;
-
-  // FIXME: There is no need to do this since these members should be
-  // initialized during deserialization.
-  LambdaExprBits.CaptureDefault = LCD_None;
-  LambdaExprBits.ExplicitParams = false;
-  LambdaExprBits.ExplicitResultType = false;
-
-  // FIXME: Remove once the bug in LambdaExpr::getBody is fixed.
-  getStoredStmts()[capture_size()] = nullptr;
 }
 
 LambdaExpr *LambdaExpr::Create(const ASTContext &Context, CXXRecordDecl *Class,
@@ -1221,17 +1212,6 @@ TemplateParameterList *LambdaExpr::getTemplateParameterList() const {
 ArrayRef<NamedDecl *> LambdaExpr::getExplicitTemplateParameters() const {
   const CXXRecordDecl *Record = getLambdaClass();
   return Record->getLambdaExplicitTemplateParameters();
-}
-
-CompoundStmt *LambdaExpr::getBody() const {
-  // FIXME: this mutation in getBody is bogus. It should be
-  // initialized in ASTStmtReader::VisitLambdaExpr, but for reasons I
-  // don't understand, that doesn't work.
-  if (!getStoredStmts()[capture_size()])
-    *const_cast<Stmt **>(&getStoredStmts()[capture_size()]) =
-        getCallOperator()->getBody();
-
-  return static_cast<CompoundStmt *>(getStoredStmts()[capture_size()]);
 }
 
 bool LambdaExpr::isMutable() const { return !getCallOperator()->isConst(); }
