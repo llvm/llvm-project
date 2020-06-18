@@ -1,7 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -mattr=+sve -asm-verbose=0 < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; WARN-NOT: warning
+; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
 
 ;
 ; Unpredicated dup instruction (which is an alias for mov):
