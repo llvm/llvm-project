@@ -37,6 +37,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -732,20 +733,6 @@ public:
     return Changed;
   }
 
-  LoadInst *createVectorLoad(Value *ColumnPtr, Type *EltType, bool IsVolatile,
-                             IRBuilder<> &Builder) {
-    return Builder.CreateAlignedLoad(ColumnPtr,
-                                     Align(DL.getABITypeAlignment(EltType)),
-                                     IsVolatile, "col.load");
-  }
-
-  StoreInst *createVectorStore(Value *ColumnValue, Value *ColumnPtr,
-                               Type *EltType, bool IsVolatile,
-                               IRBuilder<> &Builder) {
-    return Builder.CreateAlignedStore(ColumnValue, ColumnPtr,
-                                      DL.getABITypeAlign(EltType), IsVolatile);
-  }
-
   /// Turns \p BasePtr into an elementwise pointer to \p EltType.
   Value *createElementPtr(Value *BasePtr, Type *EltType, IRBuilder<> &Builder) {
     unsigned AS = cast<PointerType>(BasePtr->getType())->getAddressSpace();
@@ -777,10 +764,30 @@ public:
     return true;
   }
 
+  /// Compute the alignment for a column/row \p Idx with \p Stride between them.
+  /// The address at \p Idx == 0 has alignment \p A. If \p Stride is a
+  /// ConstantInt, reduce the initial alignment based on the byte offset. For
+  /// non-ConstantInt strides, return the common alignment of the initial
+  /// alignment and the element size in bytes.
+  Align getAlignForIndex(unsigned Idx, Value *Stride, Type *ElementTy,
+                         MaybeAlign A) const {
+    Align InitialAlign = DL.getValueOrABITypeAlignment(A, ElementTy);
+    if (Idx == 0)
+      return InitialAlign;
+
+    TypeSize ElementSizeInBits = DL.getTypeSizeInBits(ElementTy);
+    if (auto *ConstStride = dyn_cast<ConstantInt>(Stride)) {
+      uint64_t StrideInBytes =
+          ConstStride->getZExtValue() * ElementSizeInBits / 8;
+      return commonAlignment(InitialAlign, Idx * StrideInBytes);
+    }
+    return commonAlignment(InitialAlign, ElementSizeInBits / 8);
+  }
+
   /// Load a matrix with \p Shape starting at \p Ptr and using \p Stride between
   /// vectors.
-  MatrixTy loadMatrix(Type *Ty, Value *Ptr, Value *Stride, bool IsVolatile,
-                      ShapeInfo Shape, IRBuilder<> &Builder) {
+  MatrixTy loadMatrix(Type *Ty, Value *Ptr, MaybeAlign MAlign, Value *Stride,
+                      bool IsVolatile, ShapeInfo Shape, IRBuilder<> &Builder) {
     auto VType = cast<VectorType>(Ty);
     Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
     MatrixTy Result;
@@ -788,8 +795,10 @@ public:
       Value *GEP = computeVectorAddr(EltPtr, Builder.getInt64(I), Stride,
                                      Shape.getStride(), VType->getElementType(),
                                      Builder);
-      Value *Vector =
-          createVectorLoad(GEP, VType->getElementType(), IsVolatile, Builder);
+      Value *Vector = Builder.CreateAlignedLoad(
+          GEP, getAlignForIndex(I, Stride, VType->getElementType(), MAlign),
+          IsVolatile, "col.load");
+
       Result.addVector(Vector);
     }
     return Result.addNumLoads(getNumOps(Result.getVectorTy()) *
@@ -798,8 +807,9 @@ public:
 
   /// Loads a sub-matrix with shape \p ResultShape from a \p R x \p C matrix,
   /// starting at \p MatrixPtr[I][J].
-  MatrixTy loadMatrix(Value *MatrixPtr, bool IsVolatile, ShapeInfo MatrixShape,
-                      Value *I, Value *J, ShapeInfo ResultShape, Type *EltTy,
+  MatrixTy loadMatrix(Value *MatrixPtr, MaybeAlign Align, bool IsVolatile,
+                      ShapeInfo MatrixShape, Value *I, Value *J,
+                      ShapeInfo ResultShape, Type *EltTy,
                       IRBuilder<> &Builder) {
 
     Value *Offset = Builder.CreateAdd(
@@ -815,19 +825,19 @@ public:
     Value *TilePtr =
         Builder.CreatePointerCast(TileStart, TilePtrTy, "col.cast");
 
-    return loadMatrix(TileTy, TilePtr,
+    return loadMatrix(TileTy, TilePtr, Align,
                       Builder.getInt64(MatrixShape.getStride()), IsVolatile,
                       ResultShape, Builder);
   }
 
   /// Lower a load instruction with shape information.
-  void LowerLoad(Instruction *Inst, Value *Ptr, Value *Stride, bool IsVolatile,
-                 ShapeInfo Shape) {
+  void LowerLoad(Instruction *Inst, Value *Ptr, MaybeAlign Align, Value *Stride,
+                 bool IsVolatile, ShapeInfo Shape) {
     IRBuilder<> Builder(Inst);
-    finalizeLowering(
-        Inst,
-        loadMatrix(Inst->getType(), Ptr, Stride, IsVolatile, Shape, Builder),
-        Builder);
+    finalizeLowering(Inst,
+                     loadMatrix(Inst->getType(), Ptr, Align, Stride, IsVolatile,
+                                Shape, Builder),
+                     Builder);
   }
 
   /// Lowers llvm.matrix.column.major.load.
@@ -838,16 +848,16 @@ public:
            "Intrinsic only supports column-major layout!");
     Value *Ptr = Inst->getArgOperand(0);
     Value *Stride = Inst->getArgOperand(1);
-    LowerLoad(Inst, Ptr, Stride,
+    LowerLoad(Inst, Ptr, Inst->getParamAlign(0), Stride,
               cast<ConstantInt>(Inst->getArgOperand(2))->isOne(),
               {Inst->getArgOperand(3), Inst->getArgOperand(4)});
   }
 
   /// Stores a sub-matrix \p StoreVal into the \p R x \p C matrix starting at \p
   /// MatrixPtr[I][J].
-  void storeMatrix(const MatrixTy &StoreVal, Value *MatrixPtr, bool IsVolatile,
-                   ShapeInfo MatrixShape, Value *I, Value *J, Type *EltTy,
-                   IRBuilder<> &Builder) {
+  void storeMatrix(const MatrixTy &StoreVal, Value *MatrixPtr,
+                   MaybeAlign MAlign, bool IsVolatile, ShapeInfo MatrixShape,
+                   Value *I, Value *J, Type *EltTy, IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
         Builder.CreateMul(J, Builder.getInt64(MatrixShape.getStride())), I);
 
@@ -861,34 +871,38 @@ public:
     Value *TilePtr =
         Builder.CreatePointerCast(TileStart, TilePtrTy, "col.cast");
 
-    storeMatrix(TileTy, StoreVal, TilePtr,
+    storeMatrix(TileTy, StoreVal, TilePtr, MAlign,
                 Builder.getInt64(MatrixShape.getStride()), IsVolatile, Builder);
   }
 
   /// Store matrix \p StoreVal starting at \p Ptr and using \p Stride between
   /// vectors.
-  MatrixTy storeMatrix(Type *Ty, MatrixTy StoreVal, Value *Ptr, Value *Stride,
-                       bool IsVolatile, IRBuilder<> &Builder) {
+  MatrixTy storeMatrix(Type *Ty, MatrixTy StoreVal, Value *Ptr,
+                       MaybeAlign MAlign, Value *Stride, bool IsVolatile,
+                       IRBuilder<> &Builder) {
     auto VType = cast<VectorType>(Ty);
     Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
     for (auto Vec : enumerate(StoreVal.vectors())) {
       Value *GEP = computeVectorAddr(EltPtr, Builder.getInt64(Vec.index()),
                                      Stride, StoreVal.getStride(),
                                      VType->getElementType(), Builder);
-      createVectorStore(Vec.value(), GEP, VType->getElementType(), IsVolatile,
-                        Builder);
+      Builder.CreateAlignedStore(Vec.value(), GEP,
+                                 getAlignForIndex(Vec.index(), Stride,
+                                                  VType->getElementType(),
+                                                  MAlign),
+                                 IsVolatile);
     }
     return MatrixTy().addNumStores(getNumOps(StoreVal.getVectorTy()) *
                                    StoreVal.getNumVectors());
   }
 
   /// Lower a store instruction with shape information.
-  void LowerStore(Instruction *Inst, Value *Matrix, Value *Ptr, Value *Stride,
-                  bool IsVolatile, ShapeInfo Shape) {
+  void LowerStore(Instruction *Inst, Value *Matrix, Value *Ptr, MaybeAlign A,
+                  Value *Stride, bool IsVolatile, ShapeInfo Shape) {
     IRBuilder<> Builder(Inst);
     auto StoreVal = getMatrix(Matrix, Shape, Builder);
     finalizeLowering(Inst,
-                     storeMatrix(Matrix->getType(), StoreVal, Ptr, Stride,
+                     storeMatrix(Matrix->getType(), StoreVal, Ptr, A, Stride,
                                  IsVolatile, Builder),
                      Builder);
   }
@@ -902,7 +916,7 @@ public:
     Value *Matrix = Inst->getArgOperand(0);
     Value *Ptr = Inst->getArgOperand(1);
     Value *Stride = Inst->getArgOperand(2);
-    LowerStore(Inst, Matrix, Ptr, Stride,
+    LowerStore(Inst, Matrix, Ptr, Inst->getParamAlign(1), Stride,
                cast<ConstantInt>(Inst->getArgOperand(3))->isOne(),
                {Inst->getArgOperand(4), Inst->getArgOperand(5)});
   }
@@ -1215,16 +1229,18 @@ public:
 
         for (unsigned K = 0; K < M; K += TileSize) {
           const unsigned TileM = std::min(M - K, unsigned(TileSize));
-          MatrixTy A = loadMatrix(APtr, LoadOp0->isVolatile(), LShape,
-                                  Builder.getInt64(I), Builder.getInt64(K),
-                                  {TileR, TileM}, EltType, Builder);
-          MatrixTy B = loadMatrix(BPtr, LoadOp1->isVolatile(), RShape,
-                                  Builder.getInt64(K), Builder.getInt64(J),
-                                  {TileM, TileC}, EltType, Builder);
+          MatrixTy A =
+              loadMatrix(APtr, LoadOp0->getAlign(), LoadOp0->isVolatile(),
+                         LShape, Builder.getInt64(I), Builder.getInt64(K),
+                         {TileR, TileM}, EltType, Builder);
+          MatrixTy B =
+              loadMatrix(BPtr, LoadOp1->getAlign(), LoadOp1->isVolatile(),
+                         RShape, Builder.getInt64(K), Builder.getInt64(J),
+                         {TileM, TileC}, EltType, Builder);
           emitMatrixMultiply(Res, A, B, AllowContract, Builder, true);
         }
-        storeMatrix(Res, CPtr, Store->isVolatile(), {R, M}, Builder.getInt64(I),
-                    Builder.getInt64(J), EltType, Builder);
+        storeMatrix(Res, CPtr, Store->getAlign(), Store->isVolatile(), {R, M},
+                    Builder.getInt64(I), Builder.getInt64(J), EltType, Builder);
       }
 
     // Mark eliminated instructions as fused and remove them.
@@ -1337,8 +1353,9 @@ public:
     if (I == ShapeMap.end())
       return false;
 
-    LowerLoad(Inst, Ptr, Builder.getInt64(I->second.getStride()),
-              Inst->isVolatile(), I->second);
+    LowerLoad(Inst, Ptr, Inst->getAlign(),
+              Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
+              I->second);
     return true;
   }
 
@@ -1348,8 +1365,9 @@ public:
     if (I == ShapeMap.end())
       return false;
 
-    LowerStore(Inst, StoredVal, Ptr, Builder.getInt64(I->second.getStride()),
-               Inst->isVolatile(), I->second);
+    LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
+               Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
+               I->second);
     return true;
   }
 
