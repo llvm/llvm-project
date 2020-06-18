@@ -11,6 +11,18 @@ class TestSwiftXcodeSDK(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    def check_log(self, log, expected_path):
+        logfile = open(log, "r")
+        in_expr_log = 0
+        found = 0
+        for line in logfile:
+            if line.startswith(" SwiftASTContextForExpressions::LogConfiguration"):
+                in_expr_log += 1
+            if in_expr_log and "SDK path" in line and expected_path in line:
+                found += 1
+        self.assertEqual(in_expr_log, 1)
+        self.assertEqual(found, 1)
+
     @swiftTest
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
@@ -23,16 +35,26 @@ class TestSwiftXcodeSDK(lldbtest.TestBase):
         lldbutil.run_to_name_breakpoint(self, 'main')
 
         self.expect("p 1")
-        logfile = open(log, "r")
-        in_expr_log = 0
-        found = 0
-        for line in logfile:
-            if line.startswith(" SwiftASTContextForExpressions::LogConfiguration"):
-                in_expr_log += 1
-            if in_expr_log and "SDK path" in line and ".sdk" in line:
-                found += 1
-        self.assertEqual(in_expr_log, 1)
-        self.assertEqual(found, 1)
+        self.check_log(log, ".sdk")
+
+    @swiftTest
+    @skipUnlessDarwin
+    @skipIfDarwinEmbedded
+    @apple_simulator_test('iphone')
+    # FIXME: This test depends on https://reviews.llvm.org/D81980.
+    @expectedFailureAll(bugnumber="rdar://problem/64461839")
+    def test_decode_sim(self):
+        """Test that we can detect an Xcode SDK that is different from the host SDK 
+           from the DW_AT_LLVM_sdk attribute."""
+        arch = self.getArchitecture()
+        self.build(dictionary={'TRIPLE': arch+'-apple-ios-simulator', 'ARCH': arch})
+        log = self.getBuildArtifact("types.log")
+        self.expect("log enable lldb types -f " + log)
+
+        lldbutil.run_to_name_breakpoint(self, 'main')
+
+        self.expect("p 1")
+        self.check_log(log, "iPhoneSimulator")
 
     @swiftTest
     @skipUnlessDarwin
@@ -52,13 +74,4 @@ class TestSwiftXcodeSDK(lldbtest.TestBase):
         lldbutil.run_to_name_breakpoint(self, 'main')
 
         self.expect("p 1")
-        logfile = open(log, "r")
-        in_expr_log = 0
-        found = 0
-        for line in logfile:
-            if line.startswith(" SwiftASTContextForExpressions::LogConfiguration"):
-                in_expr_log += 1
-            if in_expr_log and "SDK path" in line and ios_sdk in line:
-                found += 1
-        self.assertEqual(in_expr_log, 1)
-        self.assertEqual(found, 1)
+        self.check_log(log, ios_sdk)
