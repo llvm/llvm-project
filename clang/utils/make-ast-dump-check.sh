@@ -3,11 +3,20 @@
 # This script is intended as a FileCheck replacement to update the test
 # expectations in a -ast-dump test.
 #
-# Usage:
+# Usage (to generate normal AST dump tests):
 #
 # $ lit -DFileCheck=$PWD/utils/make-ast-dump-check.sh test/AST/ast-dump-openmp-*
+#
+# Usage (to generate serialization AST dump tests):
+#
+# $ lit -DFileCheck="generate_serialization_test=1 $PWD/utils/make-ast-dump-check.sh"
+#     test/AST/ast-dump-openmp-*
 
 prefix=CHECK
+
+if [ -z ${generate_serialization_test+x} ];
+  then generate_serialization_test=0;
+fi
 
 while [[ "$#" -ne 0 ]]; do
   case "$1" in
@@ -54,6 +63,10 @@ BEGIN {
   s = \$0
   gsub("0x[0-9a-fA-F]+", "{{.*}}", s)
   gsub("$testdir/", "{{.*}}", s)
+  if ($generate_serialization_test == 1) {
+    gsub(" imported", "{{( imported)?}}", s)
+    gsub(" <undeserialized declarations>", "{{( <undeserialized declarations>)?}}", s)
+  }
 }
 
 matched_last_line == 0 {
