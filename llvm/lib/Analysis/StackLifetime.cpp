@@ -166,7 +166,17 @@ void StackLifetime::calculateLocalLiveness() {
         // If a predecessor is unreachable, ignore it.
         if (I == BlockLiveness.end())
           continue;
-        LocalLiveIn |= I->second.LiveOut;
+        switch (Type) {
+        case LivenessType::May:
+          LocalLiveIn |= I->second.LiveOut;
+          break;
+        case LivenessType::Must:
+          if (LocalLiveIn.empty())
+            LocalLiveIn = I->second.LiveOut;
+          else
+            LocalLiveIn &= I->second.LiveOut;
+          break;
+        }
       }
 
       // Compute LiveOut by subtracting out lifetimes that end in this
@@ -272,8 +282,9 @@ LLVM_DUMP_METHOD void StackLifetime::dumpLiveRanges() const {
 #endif
 
 StackLifetime::StackLifetime(const Function &F,
-                             ArrayRef<const AllocaInst *> Allocas)
-    : F(F), Allocas(Allocas), NumAllocas(Allocas.size()) {
+                             ArrayRef<const AllocaInst *> Allocas,
+                             LivenessType Type)
+    : F(F), Type(Type), Allocas(Allocas), NumAllocas(Allocas.size()) {
   LLVM_DEBUG(dumpAllocas());
 
   for (unsigned I = 0; I < NumAllocas; ++I)
@@ -351,7 +362,7 @@ PreservedAnalyses StackLifetimePrinterPass::run(Function &F,
   for (auto &I : instructions(F))
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I))
       Allocas.push_back(AI);
-  StackLifetime SL(F, Allocas);
+  StackLifetime SL(F, Allocas, Type);
   SL.run();
   SL.print(OS);
   return PreservedAnalyses::all();
