@@ -10786,6 +10786,18 @@ def warn_import_on_definition : Warning<
 def err_builtin_matrix_arg: Error<
   "%select{first|second}0 argument must be a matrix">;
 
+def err_builtin_matrix_scalar_unsigned_arg: Error<
+  "%0 argument must be a constant unsigned integer expression">;
+
+def err_builtin_matrix_pointer_arg: Error<
+  "%select{first|second}0 argument must be a pointer to a valid matrix element type">;
+
+def err_builtin_matrix_stride_too_small: Error<
+  "stride must be greater or equal to the number of rows">;
+
+def err_builtin_matrix_invalid_dimension: Error<
+  "%0 dimension is outside the allowed range [1, %1]">;
+
 def err_preserve_field_info_not_field : Error<
   "__builtin_preserve_field_info argument %0 not a field access">;
 def err_preserve_field_info_not_const: Error<

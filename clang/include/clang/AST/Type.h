@@ -3476,6 +3476,11 @@ public:
            NumElements <= ConstantMatrixTypeBitfields::MaxElementsPerDimension;
   }
 
+  /// Returns the maximum number of elements per dimension.
+  static unsigned getMaxElementsPerDimension() {
+    return ConstantMatrixTypeBitfields::MaxElementsPerDimension;
+  }
+
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getElementType(), getNumRows(), getNumColumns(),
             getTypeClass());
