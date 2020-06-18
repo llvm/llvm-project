@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
 
-# RUN: lld -flavor darwinnew -arch x86_64 -dylib -install_name @executable_path/libfoo.dylib \
+# RUN: lld -flavor darwinnew -dylib -install_name @executable_path/libfoo.dylib \
 # RUN:   %t.o -o %t.dylib
 # RUN: llvm-objdump --macho --dylib-id %t.dylib | FileCheck %s
 # CHECK: @executable_path/libfoo.dylib
@@ -10,7 +10,7 @@
 ## a flag for a missing entry symbol (since dylibs don't have entry symbols).
 ## Also check that we come up with the right install name if one isn't
 ## specified.
-# RUN: lld -flavor darwinnew -arch x86_64 -dylib %t.o -o %t.defaultInstallName.dylib -e missing_entry
+# RUN: lld -flavor darwinnew -dylib %t.o -o %t.defaultInstallName.dylib -e missing_entry
 # RUN: obj2yaml %t.defaultInstallName.dylib | FileCheck %s -DOUTPUT=%t.defaultInstallName.dylib --check-prefix=DEFAULT-INSTALL-NAME
 # DEFAULT-INSTALL-NAME: [[OUTPUT]]
 
