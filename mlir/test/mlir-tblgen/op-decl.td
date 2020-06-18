@@ -155,7 +155,7 @@ def NS_EOp : NS_Op<"op_with_optionals", []> {
 def NS_FOp : NS_Op<"op_with_all_types_constraint",
     [AllTypesMatch<["a", "b"]>]> {
   let arguments = (ins AnyType:$a);
-  let results = (outs AnyType:$b);
+  let results = (outs Res<AnyType, "output b", []>:$b);
 }
 
 // CHECK-LABEL: class FOp :
