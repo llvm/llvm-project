@@ -12,6 +12,7 @@
 #include "SparcTargetMachine.h"
 #include "LeonPasses.h"
 #include "Sparc.h"
+#include "SparcMachineFunctionInfo.h"
 #include "SparcTargetObjectFile.h"
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -136,6 +137,13 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
                                           this->is64Bit);
   }
   return I.get();
+}
+
+MachineFunctionInfo *SparcTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return SparcMachineFunctionInfo::create<SparcMachineFunctionInfo>(Allocator,
+                                                                    F, STI);
 }
 
 namespace {

@@ -13,6 +13,7 @@
 #include "LanaiTargetMachine.h"
 
 #include "Lanai.h"
+#include "LanaiMachineFunctionInfo.h"
 #include "LanaiTargetObjectFile.h"
 #include "LanaiTargetTransformInfo.h"
 #include "TargetInfo/LanaiTargetInfo.h"
@@ -70,6 +71,13 @@ LanaiTargetMachine::LanaiTargetMachine(
 TargetTransformInfo
 LanaiTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(LanaiTTIImpl(this, F));
+}
+
+MachineFunctionInfo *LanaiTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return LanaiMachineFunctionInfo::create<LanaiMachineFunctionInfo>(Allocator,
+                                                                    F, STI);
 }
 
 namespace {

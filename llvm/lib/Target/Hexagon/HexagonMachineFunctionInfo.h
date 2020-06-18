@@ -40,7 +40,9 @@ class HexagonMachineFunctionInfo : public MachineFunctionInfo {
 public:
   HexagonMachineFunctionInfo() = default;
 
-  HexagonMachineFunctionInfo(MachineFunction &MF) {}
+  HexagonMachineFunctionInfo(const Function &F,
+                             const TargetSubtargetInfo *STI) {}
+
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
