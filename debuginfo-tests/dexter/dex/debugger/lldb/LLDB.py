@@ -103,12 +103,12 @@ class LLDB(DebuggerBase):
     def clear_breakpoints(self):
         self._target.DeleteAllBreakpoints()
 
-    def add_breakpoint(self, file_, line):
+    def _add_breakpoint(self, file_, line):
         if not self._target.BreakpointCreateByLocation(file_, line):
             raise DebuggerException(
                 'could not add breakpoint [{}:{}]'.format(file_, line))
 
-    def add_conditional_breakpoint(self, file_, line, condition):
+    def _add_conditional_breakpoint(self, file_, line, condition):
         bp = self._target.BreakpointCreateByLocation(file_, line)
         if bp:
             bp.SetCondition(condition)
@@ -116,7 +116,7 @@ class LLDB(DebuggerBase):
             raise DebuggerException(
                   'could not add breakpoint [{}:{}]'.format(file_, line))
 
-    def delete_conditional_breakpoint(self, file_, line, condition):
+    def _delete_conditional_breakpoint(self, file_, line, condition):
         bp_count = self._target.GetNumBreakpoints()
         bps = [self._target.GetBreakpointAtIndex(ix) for ix in range(0, bp_count)]
 
@@ -163,7 +163,7 @@ class LLDB(DebuggerBase):
         self._process.Continue()
         return ReturnCode.OK
 
-    def get_step_info(self, watches, step_index):
+    def _get_step_info(self, watches, step_index):
         frames = []
         state_frames = []
 
