@@ -34,8 +34,8 @@ struct X86_64 : TargetInfo {
   void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
                             uint64_t entryAddr) const override;
 
-  void prepareDylibSymbolRelocation(DylibSymbol &, uint8_t type) override;
-  uint64_t getDylibSymbolVA(const DylibSymbol &, uint8_t type) const override;
+  void prepareSymbolRelocation(lld::macho::Symbol &, uint8_t type) override;
+  uint64_t getSymbolVA(const lld::macho::Symbol &, uint8_t type) const override;
 };
 
 } // namespace
@@ -208,30 +208,54 @@ void X86_64::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
                    in.stubHelper->addr);
 }
 
-void X86_64::prepareDylibSymbolRelocation(DylibSymbol &sym, uint8_t type) {
+void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym, uint8_t type) {
   switch (type) {
   case X86_64_RELOC_GOT_LOAD:
     // TODO: implement mov -> lea relaxation for non-dynamic symbols
   case X86_64_RELOC_GOT:
     in.got->addEntry(sym);
     break;
-  case X86_64_RELOC_BRANCH:
-    in.stubs->addEntry(sym);
+  case X86_64_RELOC_BRANCH: {
+    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
+      in.stubs->addEntry(*dysym);
+    break;
+  }
+  case X86_64_RELOC_UNSIGNED:
+  case X86_64_RELOC_SIGNED:
+  case X86_64_RELOC_SIGNED_1:
+  case X86_64_RELOC_SIGNED_2:
+  case X86_64_RELOC_SIGNED_4:
+    break;
+  case X86_64_RELOC_SUBTRACTOR:
+  case X86_64_RELOC_TLV:
+    fatal("TODO: handle relocation type " + std::to_string(type));
     break;
   default:
-    llvm_unreachable("Unexpected dylib relocation type");
+    llvm_unreachable("unexpected relocation type");
   }
 }
 
-uint64_t X86_64::getDylibSymbolVA(const DylibSymbol &sym, uint8_t type) const {
+uint64_t X86_64::getSymbolVA(const lld::macho::Symbol &sym,
+                             uint8_t type) const {
   switch (type) {
   case X86_64_RELOC_GOT_LOAD:
   case X86_64_RELOC_GOT:
     return in.got->addr + sym.gotIndex * WordSize;
   case X86_64_RELOC_BRANCH:
-    return in.stubs->addr + sym.stubsIndex * sizeof(stub);
+    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
+      return in.stubs->addr + dysym->stubsIndex * sizeof(stub);
+    return sym.getVA();
+  case X86_64_RELOC_UNSIGNED:
+  case X86_64_RELOC_SIGNED:
+  case X86_64_RELOC_SIGNED_1:
+  case X86_64_RELOC_SIGNED_2:
+  case X86_64_RELOC_SIGNED_4:
+    return sym.getVA();
+  case X86_64_RELOC_SUBTRACTOR:
+  case X86_64_RELOC_TLV:
+    fatal("TODO: handle relocation type " + std::to_string(type));
   default:
-    llvm_unreachable("Unexpected dylib relocation type");
+    llvm_unreachable("Unexpected relocation type");
   }
 }
 

@@ -78,23 +78,18 @@ class GotSection : public SyntheticSection {
 public:
   GotSection();
 
-  const llvm::SetVector<const DylibSymbol *> &getEntries() const {
-    return entries;
-  }
+  const llvm::SetVector<const Symbol *> &getEntries() const { return entries; }
 
   bool isNeeded() const override { return !entries.empty(); }
 
   uint64_t getSize() const override { return entries.size() * WordSize; }
 
-  void writeTo(uint8_t *buf) const override {
-    // Nothing to write, GOT contains all zeros at link time; it's populated at
-    // runtime by dyld.
-  }
+  void writeTo(uint8_t *buf) const override;
 
-  void addEntry(DylibSymbol &sym);
+  void addEntry(Symbol &sym);
 
 private:
-  llvm::SetVector<const DylibSymbol *> entries;
+  llvm::SetVector<const Symbol *> entries;
 };
 
 // Stores bind opcodes for telling dyld which symbols to load non-lazily.
