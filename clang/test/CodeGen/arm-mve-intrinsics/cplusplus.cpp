@@ -78,19 +78,12 @@ mve_pred16_t test_vcmpeqq_f16(float16x8_t a, float16x8_t b)
 
 // CHECK-LABEL: @_Z18test_vcmpeqq_n_f1619__simd128_float16_tDh(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[B:%.*]] = alloca half, align 2
-// CHECK-NEXT:    [[TMP:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store float [[B_COERCE:%.*]], float* [[TMP]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast half* [[B]] to i8*
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[TMP]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 2 [[TMP0]], i8* align 4 [[TMP1]], i32 2, i1 false)
-// CHECK-NEXT:    [[B1:%.*]] = load half, half* [[B]], align 2
-// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[B1]], i32 0
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[B:%.*]], i32 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x half> [[DOTSPLATINSERT]], <8 x half> undef, <8 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq <8 x half> [[A:%.*]], [[DOTSPLAT]]
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1> [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-// CHECK-NEXT:    ret i16 [[TMP4]]
+// CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq <8 x half> [[A:%.*]], [[DOTSPLAT]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+// CHECK-NEXT:    ret i16 [[TMP2]]
 //
 mve_pred16_t test_vcmpeqq_n_f16(float16x8_t a, float16_t b)
 {
