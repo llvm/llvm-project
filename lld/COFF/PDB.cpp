@@ -250,6 +250,72 @@ static void addTypeInfo(pdb::TpiStreamBuilder &tpiBuilder,
   });
 }
 
+// LF_BUILDINFO records might contain relative paths, and we want to make them
+// absolute. We do this remapping only after the type records were merged,
+// because the full types graph isn't known during merging. In addition, we plan
+// to multi-thread the type merging, and the change below needs to be done
+// atomically, single-threaded.
+
+// A complication could arise when a LF_STRING_ID record already exists with the
+// same content as the new absolutized path. In that case, we simply redirect
+// LF_BUILDINFO's CurrentDirectory index to reference the existing LF_STRING_ID
+// record.
+
+static void remapBuildInfo(TypeCollection &idTable) {
+  SimpleTypeSerializer s;
+  idTable.ForEachRecord([&](TypeIndex ti, const CVType &type) {
+    if (type.kind() != LF_BUILDINFO)
+      return;
+    BuildInfoRecord bi;
+    cantFail(TypeDeserializer::deserializeAs(const_cast<CVType &>(type), bi));
+
+    auto makeAbsoluteRecord =
+        [&](BuildInfoRecord::BuildInfoArg recordType) -> Optional<TypeIndex> {
+      TypeIndex recordTi = bi.getArgs()[recordType];
+      if (recordTi.isNoneType())
+        return None;
+      CVType recordRef = idTable.getType(recordTi);
+
+      StringIdRecord record;
+      cantFail(TypeDeserializer::deserializeAs(recordRef, record));
+
+      SmallString<128> abolutizedPath(record.getString());
+      pdbMakeAbsolute(abolutizedPath);
+
+      if (abolutizedPath == record.getString())
+        return None; // The path is already absolute.
+
+      record.String = abolutizedPath;
+      ArrayRef<uint8_t> recordData = s.serialize(record);
+
+      // Replace the previous LF_STRING_ID record
+      if (!idTable.replaceType(recordTi, CVType(recordData),
+                               /*Stabilize=*/true))
+        return recordTi;
+      return None;
+    };
+
+    Optional<TypeIndex> curDirTI =
+        makeAbsoluteRecord(BuildInfoRecord::CurrentDirectory);
+    Optional<TypeIndex> buildToolTI =
+        makeAbsoluteRecord(BuildInfoRecord::BuildTool);
+
+    if (curDirTI || buildToolTI) {
+      // This new record is already there. We don't want duplicates, so
+      // re-serialize the BuildInfoRecord instead.
+      if (curDirTI)
+        bi.ArgIndices[BuildInfoRecord::CurrentDirectory] = *curDirTI;
+      if (buildToolTI)
+        bi.ArgIndices[BuildInfoRecord::BuildTool] = *buildToolTI;
+
+      ArrayRef<uint8_t> biData = s.serialize(bi);
+      bool r = idTable.replaceType(ti, CVType(biData), /*Stabilize=*/true);
+      assert(r && "Didn't expect two build records pointing to the same OBJ!");
+      (void)r;
+    }
+  });
+}
+
 static bool remapTypeIndex(TypeIndex &ti, ArrayRef<TypeIndex> typeIndexMap) {
   if (ti.isSimple())
     return true;
@@ -987,6 +1053,9 @@ void PDBLinker::addObjectsToPDB() {
 
   builder.getStringTableBuilder().setStrings(pdbStrTab);
   t1.stop();
+
+  // Remap the contents of the LF_BUILDINFO record.
+  remapBuildInfo(tMerger.getIDTable());
 
   // Construct TPI and IPI stream contents.
   ScopedTimer t2(tpiStreamLayoutTimer);
