@@ -27,12 +27,10 @@ class AArch64LegalizerInfo : public LegalizerInfo {
 public:
   AArch64LegalizerInfo(const AArch64Subtarget &ST);
 
-  bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
-                      MachineIRBuilder &MIRBuilder,
-                      GISelChangeObserver &Observer) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 
-  bool legalizeIntrinsic(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-                         GISelChangeObserver &Observer) const override;
+  bool legalizeIntrinsic(LegalizerHelper &Helper,
+                         MachineInstr &MI) const override;
 
 private:
   bool legalizeVaArg(MachineInstr &MI, MachineRegisterInfo &MRI,
