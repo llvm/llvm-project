@@ -547,7 +547,7 @@ private:
         blockList.push_back(blockOfLabel(eval, altReturn->v));
       }
     }
-    blockList.push_back(eval.nonNopSuccessor()->block); // default = fallthrough
+    blockList.push_back(eval.nonNopSuccessor().block); // default = fallthrough
     builder->create<fir::SelectOp>(toLocation(), res, indexList, blockList);
   }
 
@@ -578,7 +578,7 @@ private:
       indexList.push_back(++index);
       blockList.push_back(blockOfLabel(eval, label));
     }
-    blockList.push_back(eval.nonNopSuccessor()->block); // default
+    blockList.push_back(eval.nonNopSuccessor().block); // default
     builder->create<fir::SelectOp>(toLocation(), selectExpr, indexList,
                                    blockList);
   }
@@ -675,7 +675,7 @@ private:
     }
     // Add a nop/fallthrough branch to the switch for a nonconforming program
     // unit that violates the program requirement above.
-    blockList.push_back(eval.nonNopSuccessor()->block); // default
+    blockList.push_back(eval.nonNopSuccessor().block); // default
     builder->create<fir::SelectOp>(loc, selectExpr, indexList, blockList);
   }
 
@@ -1141,12 +1141,12 @@ private:
     }
     if (errBlock) {
       indexList.push_back(0);
-      blockList.push_back(eval.nonNopSuccessor()->block);
+      blockList.push_back(eval.nonNopSuccessor().block);
       // ERR label statement is the default successor.
       blockList.push_back(errBlock);
     } else {
       // Fallthrough successor statement is the default successor.
-      blockList.push_back(eval.nonNopSuccessor()->block);
+      blockList.push_back(eval.nonNopSuccessor().block);
     }
     builder->create<fir::SelectOp>(loc, selector, indexList, blockList);
   }
