@@ -82,6 +82,7 @@ uint64_t X86_64::getImplicitAddend(MemoryBufferRef mb, const section_64 &sec,
   case X86_64_RELOC_SIGNED_2:
   case X86_64_RELOC_SIGNED_4:
   case X86_64_RELOC_GOT_LOAD:
+  case X86_64_RELOC_GOT:
     if (!rel.r_pcrel)
       fatal(getErrorLocation(mb, sec, rel) + ": relocations of type " +
             std::to_string(rel.r_type) + " must be pcrel");
@@ -120,6 +121,7 @@ void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t val) const {
   case X86_64_RELOC_SIGNED_2:
   case X86_64_RELOC_SIGNED_4:
   case X86_64_RELOC_GOT_LOAD:
+  case X86_64_RELOC_GOT:
     // These types are only used for pc-relative relocations, so offset by 4
     // since the RIP has advanced by 4 at this point. This is only valid when
     // r_length = 2, which is enforced by validateLength().
@@ -209,13 +211,13 @@ void X86_64::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
 void X86_64::prepareDylibSymbolRelocation(DylibSymbol &sym, uint8_t type) {
   switch (type) {
   case X86_64_RELOC_GOT_LOAD:
+    // TODO: implement mov -> lea relaxation for non-dynamic symbols
+  case X86_64_RELOC_GOT:
     in.got->addEntry(sym);
     break;
   case X86_64_RELOC_BRANCH:
     in.stubs->addEntry(sym);
     break;
-  case X86_64_RELOC_GOT:
-    fatal("TODO: Unhandled dylib symbol relocation X86_64_RELOC_GOT");
   default:
     llvm_unreachable("Unexpected dylib relocation type");
   }
@@ -224,11 +226,10 @@ void X86_64::prepareDylibSymbolRelocation(DylibSymbol &sym, uint8_t type) {
 uint64_t X86_64::getDylibSymbolVA(const DylibSymbol &sym, uint8_t type) const {
   switch (type) {
   case X86_64_RELOC_GOT_LOAD:
+  case X86_64_RELOC_GOT:
     return in.got->addr + sym.gotIndex * WordSize;
   case X86_64_RELOC_BRANCH:
     return in.stubs->addr + sym.stubsIndex * sizeof(stub);
-  case X86_64_RELOC_GOT:
-    fatal("TODO: Unhandled dylib symbol relocation X86_64_RELOC_GOT");
   default:
     llvm_unreachable("Unexpected dylib relocation type");
   }
