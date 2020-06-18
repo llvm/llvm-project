@@ -35,11 +35,17 @@ struct Reloc {
   llvm::PointerUnion<Symbol *, InputSection *> target;
 };
 
+inline bool isZeroFill(uint8_t flags) {
+  return (flags & llvm::MachO::SECTION_TYPE) == llvm::MachO::S_ZEROFILL;
+}
+
 class InputSection {
 public:
   virtual ~InputSection() = default;
   virtual uint64_t getSize() const { return data.size(); }
-  virtual uint64_t getFileSize() const { return getSize(); }
+  virtual uint64_t getFileSize() const {
+    return isZeroFill(flags) ? 0 : getSize();
+  }
   uint64_t getFileOffset() const;
   uint64_t getVA() const;
 

@@ -17,6 +17,7 @@
 #include "Writer.h"
 
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
 
@@ -210,6 +211,9 @@ void StubHelperSection::setup() {
 ImageLoaderCacheSection::ImageLoaderCacheSection() {
   segname = segment_names::data;
   name = "__data";
+  uint8_t *arr = bAlloc.Allocate<uint8_t>(WordSize);
+  memset(arr, 0, WordSize);
+  data = {arr, WordSize};
 }
 
 LazyPointerSection::LazyPointerSection()

@@ -416,7 +416,7 @@ void Writer::assignAddresses(OutputSegment *seg) {
     addr = alignTo(addr, section->align);
     fileOff = alignTo(fileOff, section->align);
     section->addr = addr;
-    section->fileOff = fileOff;
+    section->fileOff = isZeroFill(section->flags) ? 0 : fileOff;
     section->finalize();
 
     addr += section->getSize();
