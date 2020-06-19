@@ -35,8 +35,8 @@ exit:
 define i64 @test2(i32 %x) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[P:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[EXT:%.*]] = sext i32 [[P]] to i64
-; CHECK-NEXT:    ret i64 [[EXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[P]] to i64
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %p = and i32 %x, 15
   %ext = sext i32 %p to i64
@@ -54,8 +54,8 @@ define i64 @test3(i1 %c.1, i1 %c.2) {
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[TRUE_1]] ], [ 1, [[TRUE_2]] ], [ 3, [[FALSE]] ]
-; CHECK-NEXT:    [[EXT:%.*]] = sext i32 [[P]] to i64
-; CHECK-NEXT:    ret i64 [[EXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[P]] to i64
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   br i1 %c.1, label %true.1, label %false
 
