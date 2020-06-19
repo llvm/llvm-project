@@ -1272,14 +1272,14 @@ private:
     }
   }
 
-  Fortran::lower::ExValue genExprEleValue(const Fortran::lower::SomeExpr &expr,
-                                          llvm::ArrayRef<mlir::Value> lcvs) {
+  fir::ExtendedValue genExprEleValue(const Fortran::lower::SomeExpr &expr,
+                                     llvm::ArrayRef<mlir::Value> lcvs) {
     return createSomeExtendedExpression(toLocation(), *this, expr, localSymbols,
                                         lcvs);
   }
 
-  Fortran::lower::ExValue genExprEleAddr(const Fortran::lower::SomeExpr &expr,
-                                         llvm::ArrayRef<mlir::Value> lcvs) {
+  fir::ExtendedValue genExprEleAddr(const Fortran::lower::SomeExpr &expr,
+                                    llvm::ArrayRef<mlir::Value> lcvs) {
     return createSomeExtendedAddress(toLocation(), *this, expr, localSymbols,
                                      lcvs);
   }

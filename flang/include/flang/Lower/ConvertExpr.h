@@ -58,7 +58,7 @@ mlir::Value createSomeExpression(mlir::Location loc,
                                  SymMap &symMap);
 
 /// Create an extended expression value.
-ExValue
+fir::ExtendedValue
 createSomeExtendedExpression(mlir::Location loc, AbstractConverter &converter,
                              const evaluate::Expr<evaluate::SomeType> &expr,
                              SymMap &symMap, llvm::ArrayRef<mlir::Value> lcvs);
@@ -71,7 +71,7 @@ mlir::Value createSomeAddress(mlir::Location loc, AbstractConverter &converter,
                               SymMap &symMap);
 
 /// Create an extended expression address.
-ExValue
+fir::ExtendedValue
 createSomeExtendedAddress(mlir::Location loc, AbstractConverter &converter,
                           const evaluate::Expr<evaluate::SomeType> &expr,
                           SymMap &symMap, llvm::ArrayRef<mlir::Value> lcvs);
