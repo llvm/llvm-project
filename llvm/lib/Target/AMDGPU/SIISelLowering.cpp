@@ -5461,8 +5461,9 @@ SITargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
 
 static SDValue
 buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
-                        const SDLoc &DL, unsigned Offset, EVT PtrVT,
+                        const SDLoc &DL, int64_t Offset, EVT PtrVT,
                         unsigned GAFlags = SIInstrInfo::MO_NONE) {
+  assert(isInt<32>(Offset + 4) && "32-bit offset is expected!");
   // In order to support pc-relative addressing, the PC_ADD_REL_OFFSET SDNode is
   // lowered to the following code sequence:
   //
