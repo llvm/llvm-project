@@ -46,7 +46,7 @@ struct ParseOptions {
 /// Information required to run clang, e.g. to parse AST or do code completion.
 struct ParseInputs {
   tooling::CompileCommand CompileCommand;
-  const ThreadsafeFS *FSProvider;
+  const ThreadsafeFS *TFS;
   std::string Contents;
   // Version identifier for Contents, provided by the client and opaque to us.
   std::string Version = "null";

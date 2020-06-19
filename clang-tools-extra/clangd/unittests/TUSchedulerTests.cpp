@@ -74,7 +74,7 @@ protected:
   ParseInputs getInputs(PathRef File, std::string Contents) {
     ParseInputs Inputs;
     Inputs.CompileCommand = *CDB.getCompileCommand(File);
-    Inputs.FSProvider = &FSProvider;
+    Inputs.TFS = &FS;
     Inputs.Contents = std::move(Contents);
     Inputs.Opts = ParseOptions();
     return Inputs;
@@ -150,7 +150,7 @@ protected:
                            std::move(CB));
   }
 
-  MockFS FSProvider;
+  MockFS FS;
   MockCompilationDatabase CDB;
 };
 
@@ -161,10 +161,10 @@ TEST_F(TUSchedulerTests, MissingFiles) {
   TUScheduler S(CDB, optsForTest());
 
   auto Added = testPath("added.cpp");
-  FSProvider.Files[Added] = "x";
+  FS.Files[Added] = "x";
 
   auto Missing = testPath("missing.cpp");
-  FSProvider.Files[Missing] = "";
+  FS.Files[Missing] = "";
 
   S.update(Added, getInputs(Added, "x"), WantDiagnostics::No);
 
@@ -425,7 +425,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
     for (int I = 0; I < FilesCount; ++I) {
       std::string Name = "foo" + std::to_string(I) + ".cpp";
       Files.push_back(testPath(Name));
-      this->FSProvider.Files[Files.back()] = "";
+      this->FS.Files[Files.back()] = "";
     }
 
     StringRef Contents1 = R"cpp(int a;)cpp";
@@ -616,8 +616,8 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
   auto Foo = testPath("foo.cpp");
   auto Header = testPath("foo.h");
 
-  FSProvider.Files[Header] = "void foo()";
-  FSProvider.Timestamps[Header] = time_t(0);
+  FS.Files[Header] = "void foo()";
+  FS.Timestamps[Header] = time_t(0);
   auto WithPreamble = R"cpp(
     #include "foo.h"
     int main() {}
@@ -685,8 +685,8 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   auto Source = testPath("foo.cpp");
   auto Header = testPath("foo.h");
 
-  FSProvider.Files[Header] = "int a;";
-  FSProvider.Timestamps[Header] = time_t(0);
+  FS.Files[Header] = "int a;";
+  FS.Timestamps[Header] = time_t(0);
 
   std::string SourceContents = R"cpp(
       #include "foo.h"
@@ -714,7 +714,7 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 1u);
 
   // Update to a header should cause a rebuild, though.
-  FSProvider.Timestamps[Header] = time_t(1);
+  FS.Timestamps[Header] = time_t(1);
   ASSERT_TRUE(DoUpdate(SourceContents));
   ASSERT_FALSE(DoUpdate(SourceContents));
   ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 2u);
@@ -742,8 +742,8 @@ TEST_F(TUSchedulerTests, MissingHeader) {
   CDB.ExtraClangFlags.push_back("-I" + testPath("a"));
   CDB.ExtraClangFlags.push_back("-I" + testPath("b"));
   // Force both directories to exist so they don't get pruned.
-  FSProvider.Files.try_emplace("a/__unused__");
-  FSProvider.Files.try_emplace("b/__unused__");
+  FS.Files.try_emplace("a/__unused__");
+  FS.Files.try_emplace("b/__unused__");
   TUScheduler S(CDB, optsForTest(), captureDiags());
 
   auto Source = testPath("foo.cpp");
@@ -771,8 +771,8 @@ TEST_F(TUSchedulerTests, MissingHeader) {
       });
   S.blockUntilIdle(timeoutSeconds(10));
 
-  FSProvider.Files[HeaderB] = "int b;";
-  FSProvider.Timestamps[HeaderB] = time_t(1);
+  FS.Files[HeaderB] = "int b;";
+  FS.Timestamps[HeaderB] = time_t(1);
 
   // The addition of the missing header file triggers a rebuild, no errors.
   updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
@@ -784,8 +784,8 @@ TEST_F(TUSchedulerTests, MissingHeader) {
   // Ensure previous assertions are done before we touch the FS again.
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   // Add the high-priority header file, which should reintroduce the error.
-  FSProvider.Files[HeaderA] = "int a;";
-  FSProvider.Timestamps[HeaderA] = time_t(1);
+  FS.Files[HeaderA] = "int a;";
+  FS.Timestamps[HeaderA] = time_t(1);
 
   // This isn't detected: we don't stat a/foo.h to validate the preamble.
   updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,

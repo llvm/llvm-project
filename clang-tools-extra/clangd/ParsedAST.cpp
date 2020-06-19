@@ -249,7 +249,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   trace::Span Tracer("BuildAST");
   SPAN_ATTACH(Tracer, "File", Filename);
 
-  auto VFS = Inputs.FSProvider->view(Inputs.CompileCommand.Directory);
+  auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   if (Preamble && Preamble->StatCache)
     VFS = Preamble->StatCache->getConsumingFS(std::move(VFS));
 
@@ -355,8 +355,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   auto BuildDir = VFS->getCurrentWorkingDirectory();
   if (Inputs.Opts.SuggestMissingIncludes && Inputs.Index &&
       !BuildDir.getError()) {
-    auto Style =
-        getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.FSProvider);
+    auto Style = getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS);
     auto Inserter = std::make_shared<IncludeInserter>(
         Filename, Inputs.Contents, Style, BuildDir.get(),
         &Clang->getPreprocessor().getHeaderSearchInfo());

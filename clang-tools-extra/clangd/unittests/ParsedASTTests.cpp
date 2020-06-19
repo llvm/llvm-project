@@ -249,11 +249,11 @@ TEST(ParsedASTTest, NoCrashOnTokensWithTidyCheck) {
 }
 
 TEST(ParsedASTTest, CanBuildInvocationWithUnknownArgs) {
-  MockFS FSProvider;
-  FSProvider.Files = {{testPath("foo.cpp"), "void test() {}"}};
+  MockFS FS;
+  FS.Files = {{testPath("foo.cpp"), "void test() {}"}};
   // Unknown flags should not prevent a build of compiler invocation.
   ParseInputs Inputs;
-  Inputs.FSProvider = &FSProvider;
+  Inputs.TFS = &FS;
   Inputs.CompileCommand.CommandLine = {"clang", "-fsome-unknown-flag",
                                        testPath("foo.cpp")};
   IgnoreDiagnostics IgnoreDiags;
