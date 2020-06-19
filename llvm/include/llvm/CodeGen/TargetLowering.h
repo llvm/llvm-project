@@ -516,6 +516,10 @@ public:
     return PredictableSelectIsExpensive;
   }
 
+  virtual bool fallBackToDAGISel(const Instruction &Inst) const {
+    return false;
+  }
+
   /// If a branch or a select condition is skewed in one direction by more than
   /// this factor, it is very likely to be predicted correctly.
   virtual BranchProbability getPredictableBranchThreshold() const;

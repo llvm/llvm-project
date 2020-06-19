@@ -438,6 +438,9 @@ bool AArch64CallLowering::lowerFormalArguments(
   SmallVector<ArgInfo, 8> SplitArgs;
   unsigned i = 0;
   for (auto &Arg : F.args()) {
+    if (isa<ScalableVectorType>(Arg.getType()))
+      return false;
+
     if (DL.getTypeStoreSize(Arg.getType()).isZero())
       continue;
 
