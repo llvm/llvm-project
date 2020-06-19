@@ -4,7 +4,7 @@
 // RUN:   -fmodules-cache-path=%t -fdisable-module-hash %s
 // RUN: cp %t/MyHeader2.pcm %t1.pcm
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -iquote "/dev/null" -iquote %S/Inputs/ASTHash/ -fsyntax-only \
+// RUN: %clang_cc1 -nostdinc++ -iquote %S/Inputs/ASTHash/ -fsyntax-only \
 // RUN:   -fmodules -fimplicit-module-maps -fmodules-strict-context-hash \
 // RUN:   -fmodules-cache-path=%t -fdisable-module-hash %s
 // RUN: cp %t/MyHeader2.pcm %t2.pcm
