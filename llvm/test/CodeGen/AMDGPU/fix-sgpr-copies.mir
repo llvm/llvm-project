@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass=si-fix-sgpr-copies -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
+# RUN: llc -march=amdgcn -run-pass=si-fix-sgpr-copies -o - %s | FileCheck --check-prefix=GCN %s
 
 # GCN-LABEL: name: fix-sgpr-copies
 # GCN: V_ADD_I32_e32
@@ -110,19 +110,3 @@ body:               |
     %3:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %0, %subreg.sub1
     $vgpr3 = COPY %3.sub0
 ...
-
-# Test to ensure that undef SCC gets properly propagated.
-# GCN-LABEL: name: scc_undef
-# GCN: S_CSELECT_B64 -1, 0, implicit undef $scc
-# GCN: V_CNDMASK
----
-name: scc_undef
-tracksRegLiveness: true
-
-body:               |
-  bb.0:
-  %1:vgpr_32 = IMPLICIT_DEF
-  %2:sreg_32 = S_MOV_B32 1
-  %3:sreg_32 = COPY %1:vgpr_32
-  %4:sreg_32 = S_CSELECT_B32 killed %2:sreg_32, killed %3:sreg_32, implicit undef $scc
----
