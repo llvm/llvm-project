@@ -203,14 +203,16 @@ entry:
 }
 
 ; HARDEN-label: __llvm_slsblr_thunk_x0:
-; HARDEN:    br x0
+; HARDEN:    mov x16, x0
+; HARDEN:    br x16
 ; ISBDSB-NEXT: dsb sy
 ; ISBDSB-NEXT: isb
 ; SB-NEXT:     dsb sy
 ; SB-NEXT:     isb
 ; HARDEN-NEXT: .Lfunc_end
 ; HARDEN-label: __llvm_slsblr_thunk_x19:
-; HARDEN:    br x19
+; HARDEN:    mov x16, x19
+; HARDEN:    br x16
 ; ISBDSB-NEXT: dsb sy
 ; ISBDSB-NEXT: isb
 ; SB-NEXT:     dsb sy

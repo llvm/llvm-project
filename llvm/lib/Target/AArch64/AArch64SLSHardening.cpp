@@ -223,7 +223,12 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
   //      BR xN
   //      barrierInsts
   Entry->addLiveIn(ThunkReg);
-  BuildMI(Entry, DebugLoc(), TII->get(AArch64::BR)).addReg(ThunkReg);
+  // MOV X16, ThunkReg == ORR X16, XZR, ThunkReg, LSL #0
+  BuildMI(Entry, DebugLoc(), TII->get(AArch64::ORRXrs), AArch64::X16)
+      .addReg(AArch64::XZR)
+      .addReg(ThunkReg)
+      .addImm(0);
+  BuildMI(Entry, DebugLoc(), TII->get(AArch64::BR)).addReg(AArch64::X16);
   // Make sure the thunks do not make use of the SB extension in case there is
   // a function somewhere that will call to it that for some reason disabled
   // the SB extension locally on that function, even though it's enabled for
