@@ -9,6 +9,7 @@ def AllInputShapesEq : Constraint<CPred< [{
 }]>>;
 
 // Canonicalization patterns.
+
 def CstrBroadcastableEqOps : Pat<(Shape_CstrBroadcastableOp:$op $lhs, $rhs),
   (Shape_ConstWitnessOp ConstBoolAttrTrue),
   [(EqualBinaryOperands $lhs, $rhs)]>;
@@ -16,3 +17,8 @@ def CstrBroadcastableEqOps : Pat<(Shape_CstrBroadcastableOp:$op $lhs, $rhs),
 def CstrEqEqOps : Pat<(Shape_CstrEqOp:$op $shapes),
   (Shape_ConstWitnessOp ConstBoolAttrTrue),
   [(AllInputShapesEq $shapes)]>;
+
+def IndexToSizeToIndexCanonicalization : Pat<
+  (Shape_SizeToIndexOp (Shape_IndexToSizeOp $arg)),
+  (replaceWithValue $arg)>;
+
