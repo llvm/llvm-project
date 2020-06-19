@@ -272,7 +272,7 @@ int b = a;
 
 TEST_F(ClangdVFSTest, PropagatesContexts) {
   static Key<int> Secret;
-  struct FSProvider : public ThreadsafeFS {
+  struct ContextReadingFS : public ThreadsafeFS {
     IntrusiveRefCntPtr<llvm::vfs::FileSystem>
     view(llvm::NoneType) const override {
       Got = Context::current().getExisting(Secret);
@@ -924,17 +924,17 @@ TEST_F(ClangdVFSTest, ChangedHeaderFromISystem) {
 // Check that running code completion doesn't stat() a bunch of files from the
 // preamble again. (They should be using the preamble's stat-cache)
 TEST(ClangdTests, PreambleVFSStatCache) {
-  class ListenStatsFSProvider : public ThreadsafeFS {
+  class StatRecordingFS : public ThreadsafeFS {
   public:
-    ListenStatsFSProvider(llvm::StringMap<unsigned> &CountStats)
+    StatRecordingFS(llvm::StringMap<unsigned> &CountStats)
         : CountStats(CountStats) {}
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem>
     view(llvm::NoneType) const override {
-      class ListenStatVFS : public llvm::vfs::ProxyFileSystem {
+      class StatRecordingVFS : public llvm::vfs::ProxyFileSystem {
       public:
-        ListenStatVFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                      llvm::StringMap<unsigned> &CountStats)
+        StatRecordingVFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                         llvm::StringMap<unsigned> &CountStats)
             : ProxyFileSystem(std::move(FS)), CountStats(CountStats) {}
 
         llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
@@ -951,8 +951,8 @@ TEST(ClangdTests, PreambleVFSStatCache) {
         llvm::StringMap<unsigned> &CountStats;
       };
 
-      return IntrusiveRefCntPtr<ListenStatVFS>(
-          new ListenStatVFS(buildTestFS(Files), CountStats));
+      return IntrusiveRefCntPtr<StatRecordingVFS>(
+          new StatRecordingVFS(buildTestFS(Files), CountStats));
     }
 
     // If relative paths are used, they are resolved with testPath().
@@ -961,7 +961,7 @@ TEST(ClangdTests, PreambleVFSStatCache) {
   };
 
   llvm::StringMap<unsigned> CountStats;
-  ListenStatsFSProvider FS(CountStats);
+  StatRecordingFS FS(CountStats);
   ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);

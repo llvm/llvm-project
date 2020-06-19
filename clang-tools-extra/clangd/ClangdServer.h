@@ -171,9 +171,8 @@ public:
   /// added file (i.e., when processing a first call to addDocument) and reuses
   /// those arguments for subsequent reparses. However, ClangdServer will check
   /// if compilation arguments changed on calls to forceReparse().
-  ClangdServer(const GlobalCompilationDatabase &CDB,
-               const ThreadsafeFS &FSProvider, const Options &Opts,
-               Callbacks *Callbacks = nullptr);
+  ClangdServer(const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS,
+               const Options &Opts, Callbacks *Callbacks = nullptr);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
@@ -330,7 +329,7 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
-  const ThreadsafeFS &FSProvider;
+  const ThreadsafeFS &TFS;
 
   Path ResourceDir;
   // The index used to look up symbols. This could be:

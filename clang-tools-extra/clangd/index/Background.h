@@ -178,7 +178,7 @@ private:
               bool HadErrors);
 
   // configuration
-  const ThreadsafeFS &FSProvider;
+  const ThreadsafeFS &TFS;
   const GlobalCompilationDatabase &CDB;
   Context BackgroundContext;
 
