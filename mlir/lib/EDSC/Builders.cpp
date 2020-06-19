@@ -140,30 +140,6 @@ Block *mlir::edsc::buildInNewBlock(Region &region, TypeRange argTypes,
   return block;
 }
 
-void mlir::edsc::LoopBuilder::operator()(function_ref<void(void)> fun) {
-  // Call to `exit` must be explicit and asymmetric (cannot happen in the
-  // destructor) because of ordering wrt comma operator.
-  /// The particular use case concerns nested blocks:
-  ///
-  /// ```c++
-  ///    For (&i, lb, ub, 1)({
-  ///      /--- destructor for this `For` is not always called before ...
-  ///      V
-  ///      For (&j1, lb, ub, 1)({
-  ///        some_op_1,
-  ///      }),
-  ///      /--- ... this scope is entered, resulting in improperly nested IR.
-  ///      V
-  ///      For (&j2, lb, ub, 1)({
-  ///        some_op_2,
-  ///      }),
-  ///    });
-  /// ```
-  if (fun)
-    fun();
-  exit();
-}
-
 mlir::edsc::BlockBuilder::BlockBuilder(BlockHandle bh, Append) {
   assert(bh && "Expected already captured BlockHandle");
   enter(bh.getBlock());

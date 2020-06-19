@@ -21,55 +21,6 @@ using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 using namespace mlir::scf;
 
-static void unpackRanges(ArrayRef<SubViewOp::Range> ranges,
-                         SmallVectorImpl<Value> &lbs,
-                         SmallVectorImpl<Value> &ubs,
-                         SmallVectorImpl<Value> &steps) {
-  for (SubViewOp::Range range : ranges) {
-    lbs.emplace_back(range.offset);
-    ubs.emplace_back(range.size);
-    steps.emplace_back(range.stride);
-  }
-}
-
-namespace mlir {
-namespace edsc {
-
-template <>
-GenericLoopNestRangeBuilder<scf::ForOp>::GenericLoopNestRangeBuilder(
-    MutableArrayRef<Value> ivs, ArrayRef<SubViewOp::Range> ranges) {
-  SmallVector<Value, 4> lbs, ubs, steps;
-  unpackRanges(ranges, lbs, ubs, steps);
-  builder = std::make_unique<LoopNestBuilder>(ivs, lbs, ubs, steps);
-}
-
-template <>
-GenericLoopNestRangeBuilder<AffineForOp>::GenericLoopNestRangeBuilder(
-    MutableArrayRef<Value> ivs, ArrayRef<SubViewOp::Range> ranges) {
-  SmallVector<Value, 4> lbs, ubs, steps;
-  unpackRanges(ranges, lbs, ubs, steps);
-  SmallVector<int64_t, 4> constantSteps;
-  constantSteps.reserve(steps.size());
-  for (Value v : steps) {
-    auto op = v.getDefiningOp<ConstantIndexOp>();
-    assert(op && "Affine loops require constant steps");
-    constantSteps.push_back(op.getValue());
-  }
-  builder =
-      std::make_unique<AffineLoopNestBuilder>(ivs, lbs, ubs, constantSteps);
-}
-
-template <>
-GenericLoopNestRangeBuilder<scf::ParallelOp>::GenericLoopNestRangeBuilder(
-    MutableArrayRef<Value> ivs, ArrayRef<SubViewOp::Range> ranges) {
-  SmallVector<Value, 4> lbs, ubs, steps;
-  unpackRanges(ranges, lbs, ubs, steps);
-  builder = std::make_unique<ParallelLoopNestBuilder>(ivs, lbs, ubs, steps);
-}
-
-} // namespace edsc
-} // namespace mlir
-
 Operation *mlir::edsc::makeGenericLinalgOp(
     ArrayRef<IteratorType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
     ArrayRef<StructuredIndexed> outputs,
