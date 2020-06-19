@@ -196,6 +196,61 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
             false);
 }
 
+TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsNEON) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto InVecVT = EVT::getVectorVT(Context, Int8VT, 16);
+  SDValue UnknownOp = DAG->getRegister(0, InVecVT);
+  SDValue Mask1S = DAG->getConstant(0x8A, Loc, Int8VT);
+  SDValue Mask1V = DAG->getSplatBuildVector(InVecVT, Loc, Mask1S);
+  SDValue N0 = DAG->getNode(ISD::AND, Loc, InVecVT, Mask1V, UnknownOp);
+
+  SDValue Mask2S = DAG->getConstant(0x55, Loc, Int8VT);
+  SDValue Mask2V = DAG->getSplatBuildVector(InVecVT, Loc, Mask2S);
+
+  SDValue Op = DAG->getNode(ISD::AND, Loc, InVecVT, N0, Mask2V);
+  // N0 = ?000?0?0
+  // Mask2V = 01010101
+  //  =>
+  // Known.Zero = 00100000 (0xAA)
+  KnownBits Known;
+  APInt DemandedBits = APInt(8, 0xFF);
+  TargetLowering::TargetLoweringOpt TLO(*DAG, false, false);
+  EXPECT_TRUE(TL.SimplifyDemandedBits(Op, DemandedBits, Known, TLO));
+  EXPECT_EQ(Known.Zero, APInt(8, 0xAA));
+}
+
+TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsSVE) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto InVecVT = EVT::getVectorVT(Context, Int8VT, 16, /*IsScalable=*/true);
+  SDValue UnknownOp = DAG->getRegister(0, InVecVT);
+  SDValue Mask1S = DAG->getConstant(0x8A, Loc, Int8VT);
+  SDValue Mask1V = DAG->getSplatVector(InVecVT, Loc, Mask1S);
+  SDValue N0 = DAG->getNode(ISD::AND, Loc, InVecVT, Mask1V, UnknownOp);
+
+  SDValue Mask2S = DAG->getConstant(0x55, Loc, Int8VT);
+  SDValue Mask2V = DAG->getSplatVector(InVecVT, Loc, Mask2S);
+
+  SDValue Op = DAG->getNode(ISD::AND, Loc, InVecVT, N0, Mask2V);
+
+  KnownBits Known;
+  APInt DemandedBits = APInt(8, 0xFF);
+  TargetLowering::TargetLoweringOpt TLO(*DAG, false, false);
+  EXPECT_FALSE(TL.SimplifyDemandedBits(Op, DemandedBits, Known, TLO));
+  EXPECT_EQ(Known.Zero, APInt(8, 0));
+}
+
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
 TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_ADD) {
   if (!TM)

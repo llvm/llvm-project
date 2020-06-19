@@ -590,6 +590,16 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
                                           unsigned Depth,
                                           bool AssumeSingleUse) const {
   EVT VT = Op.getValueType();
+
+  // TODO: We can probably do more work on calculating the known bits and
+  // simplifying the operations for scalable vectors, but for now we just
+  // bail out.
+  if (VT.isScalableVector()) {
+    // Pretend we don't know anything for now.
+    Known = KnownBits(DemandedBits.getBitWidth());
+    return false;
+  }
+
   APInt DemandedElts = VT.isVector()
                            ? APInt::getAllOnesValue(VT.getVectorNumElements())
                            : APInt(1, 1);
@@ -842,6 +852,15 @@ bool TargetLowering::SimplifyDemandedBits(
   assert(Op.getScalarValueSizeInBits() == BitWidth &&
          "Mask size mismatches value type size!");
 
+  // Don't know anything.
+  Known = KnownBits(BitWidth);
+
+  // TODO: We can probably do more work on calculating the known bits and
+  // simplifying the operations for scalable vectors, but for now we just
+  // bail out.
+  if (Op.getValueType().isScalableVector())
+    return false;
+
   unsigned NumElts = OriginalDemandedElts.getBitWidth();
   assert((!Op.getValueType().isVector() ||
           NumElts == Op.getValueType().getVectorNumElements()) &&
@@ -851,9 +870,6 @@ bool TargetLowering::SimplifyDemandedBits(
   APInt DemandedElts = OriginalDemandedElts;
   SDLoc dl(Op);
   auto &DL = TLO.DAG.getDataLayout();
-
-  // Don't know anything.
-  Known = KnownBits(BitWidth);
 
   // Undef operand.
   if (Op.isUndef())
@@ -2256,10 +2272,15 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   APInt DemandedElts = OriginalDemandedElts;
   unsigned NumElts = DemandedElts.getBitWidth();
   assert(VT.isVector() && "Expected vector op");
-  assert(VT.getVectorNumElements() == NumElts &&
-         "Mask size mismatches value type element count!");
 
   KnownUndef = KnownZero = APInt::getNullValue(NumElts);
+
+  // TODO: For now we assume we know nothing about scalable vectors.
+  if (VT.isScalableVector())
+    return false;
+
+  assert(VT.getVectorNumElements() == NumElts &&
+         "Mask size mismatches value type element count!");
 
   // Undef operand.
   if (Op.isUndef()) {
