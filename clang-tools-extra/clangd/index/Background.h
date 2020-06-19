@@ -16,9 +16,9 @@
 #include "index/Index.h"
 #include "index/Serialization.h"
 #include "support/Context.h"
-#include "support/FSProvider.h"
 #include "support/Path.h"
 #include "support/Threading.h"
+#include "support/ThreadsafeFS.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Threading.h"
@@ -132,7 +132,7 @@ public:
   /// rebuilt periodically (one per \p BuildIndexPeriodMs); otherwise, index is
   /// rebuilt for each indexed file.
   BackgroundIndex(
-      Context BackgroundContext, const FileSystemProvider &,
+      Context BackgroundContext, const ThreadsafeFS &,
       const GlobalCompilationDatabase &CDB,
       BackgroundIndexStorage::Factory IndexStorageFactory,
       size_t ThreadPoolSize = 0, // 0 = use all hardware threads
@@ -178,7 +178,7 @@ private:
               bool HadErrors);
 
   // configuration
-  const FileSystemProvider &FSProvider;
+  const ThreadsafeFS &FSProvider;
   const GlobalCompilationDatabase &CDB;
   Context BackgroundContext;
 

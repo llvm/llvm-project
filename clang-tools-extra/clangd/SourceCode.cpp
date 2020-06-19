@@ -12,8 +12,8 @@
 #include "Protocol.h"
 #include "refactor/Tweak.h"
 #include "support/Context.h"
-#include "support/FSProvider.h"
 #include "support/Logger.h"
+#include "support/Threading.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -575,12 +575,12 @@ llvm::Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID) {
   return digest(Content);
 }
 
-format::FormatStyle
-getFormatStyleForFile(llvm::StringRef File, llvm::StringRef Content,
-                      const FileSystemProvider &FSProvider) {
-  auto Style = format::getStyle(
-      format::DefaultFormatStyle, File, format::DefaultFallbackStyle, Content,
-      FSProvider.getFileSystem(/*CWD=*/llvm::None).get());
+format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
+                                          llvm::StringRef Content,
+                                          const ThreadsafeFS &FSProvider) {
+  auto Style = format::getStyle(format::DefaultFormatStyle, File,
+                                format::DefaultFallbackStyle, Content,
+                                FSProvider.view(/*CWD=*/llvm::None).get());
   if (!Style) {
     log("getStyle() failed for file {0}: {1}. Fallback is LLVM style.", File,
         Style.takeError());

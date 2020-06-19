@@ -249,7 +249,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   trace::Span Tracer("BuildAST");
   SPAN_ATTACH(Tracer, "File", Filename);
 
-  auto VFS = Inputs.FSProvider->getFileSystem(Inputs.CompileCommand.Directory);
+  auto VFS = Inputs.FSProvider->view(Inputs.CompileCommand.Directory);
   if (Preamble && Preamble->StatCache)
     VFS = Preamble->StatCache->getConsumingFS(std::move(VFS));
 

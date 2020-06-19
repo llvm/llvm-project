@@ -63,7 +63,7 @@ protected:
       stop();
   }
 
-  MockFSProvider FS;
+  MockFS FS;
   CodeCompleteOptions CCOpts;
   RenameOptions RenameOpts;
   ClangdServer::Options Opts = ClangdServer::optsForTest();

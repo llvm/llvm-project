@@ -1,4 +1,4 @@
-//===--- FSProvider.cpp - VFS provider for ClangdServer -------------------===//
+//===--- ThreadsafeFS.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "support/FSProvider.h"
+#include "support/ThreadsafeFS.h"
 #include "Logger.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -75,15 +75,15 @@ private:
 } // namespace
 
 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-FileSystemProvider::getFileSystem(PathRef CWD) const {
-  auto FS = getFileSystem(/*CWD=*/llvm::None);
+ThreadsafeFS::view(PathRef CWD) const {
+  auto FS = view(llvm::None);
   if (auto EC = FS->setCurrentWorkingDirectory(CWD))
     elog("VFS: failed to set CWD to {0}: {1}", CWD, EC.message());
   return FS;
 }
 
 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-clang::clangd::RealFileSystemProvider::getFileSystem(llvm::NoneType) const {
+RealThreadsafeFS::view(llvm::NoneType) const {
   // Avoid using memory-mapped files.
   // FIXME: Try to use a similar approach in Sema instead of relying on
   //        propagation of the 'isVolatile' flag through all layers.

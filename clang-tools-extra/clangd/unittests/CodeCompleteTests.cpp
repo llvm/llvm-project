@@ -108,7 +108,7 @@ CodeCompleteResult completions(const TestTU &TU, Position Point,
     Opts.Index = OverrideIndex.get();
   }
 
-  MockFSProvider FS;
+  MockFS FS;
   auto Inputs = TU.inputs(FS);
   Inputs.Opts.BuildRecoveryAST = true;
   Inputs.Opts.PreserveRecoveryASTType = true;
@@ -149,7 +149,7 @@ CodeCompleteResult completionsNoCompile(llvm::StringRef Text,
     Opts.Index = OverrideIndex.get();
   }
 
-  MockFSProvider FS;
+  MockFS FS;
   Annotations Test(Text);
   ParseInputs ParseInput{tooling::CompileCommand(), &FS, Test.code().str()};
   return codeComplete(FilePath, Test.point(), /*Preamble=*/nullptr, ParseInput,
@@ -770,7 +770,7 @@ TEST(CompletionTest, CompletionRecoveryASTType) {
 }
 
 TEST(CompletionTest, DynamicIndexIncludeInsertion) {
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   ClangdServer::Options Opts = ClangdServer::optsForTest();
   Opts.BuildDynamicSymbolIndex = true;
@@ -805,7 +805,7 @@ TEST(CompletionTest, DynamicIndexIncludeInsertion) {
 }
 
 TEST(CompletionTest, DynamicIndexMultiFile) {
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   auto Opts = ClangdServer::optsForTest();
   Opts.BuildDynamicSymbolIndex = true;
@@ -865,7 +865,7 @@ TEST(CompletionTest, Documentation) {
 }
 
 TEST(CompletionTest, CommentsFromSystemHeaders) {
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
 
   auto Opts = ClangdServer::optsForTest();
@@ -1057,7 +1057,7 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
     Index = memIndex(IndexSymbols);
 
   auto TU = TestTU::withCode(Text);
-  MockFSProvider FS;
+  MockFS FS;
   auto Inputs = TU.inputs(FS);
   Inputs.Index = Index.get();
   Inputs.Opts.BuildRecoveryAST = true;
@@ -1214,7 +1214,7 @@ TEST(SignatureHelpTest, StalePreamble) {
   TestTU TU;
   TU.Code = "";
   IgnoreDiagnostics Diags;
-  MockFSProvider FS;
+  MockFS FS;
   auto Inputs = TU.inputs(FS);
   auto CI = buildCompilerInvocation(Inputs, Diags);
   ASSERT_TRUE(CI);
@@ -1537,7 +1537,7 @@ TEST(CompletionTest, OverloadBundling) {
 }
 
 TEST(CompletionTest, DocumentationFromChangedFileCrash) {
-  MockFSProvider FS;
+  MockFS FS;
   auto FooH = testPath("foo.h");
   auto FooCpp = testPath("foo.cpp");
   FS.Files[FooH] = R"cpp(
@@ -1632,7 +1632,7 @@ TEST(CompletionTest, CompleteOnInvalidLine) {
   auto FooCpp = testPath("foo.cpp");
 
   MockCompilationDatabase CDB;
-  MockFSProvider FS;
+  MockFS FS;
   FS.Files[FooCpp] = "// empty file";
 
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
@@ -1761,7 +1761,7 @@ TEST(CompletionTest, CodeCompletionContext) {
 }
 
 TEST(CompletionTest, FixItForArrowToDot) {
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
 
   CodeCompleteOptions Opts;
@@ -1872,7 +1872,7 @@ TEST(CompletionTest, RenderWithFixItNonMerged) {
 }
 
 TEST(CompletionTest, CompletionTokenRange) {
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   TestTU TU;
   TU.AdditionalFiles["foo/abc/foo.h"] = "";
@@ -2037,7 +2037,7 @@ TEST(SignatureHelpTest, IndexDocumentation) {
 }
 
 TEST(SignatureHelpTest, DynamicIndexDocumentation) {
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   ClangdServer::Options Opts = ClangdServer::optsForTest();
   Opts.BuildDynamicSymbolIndex = true;
@@ -2209,7 +2209,7 @@ TEST(GuessCompletionPrefix, Filters) {
 }
 
 TEST(CompletionTest, EnableSpeculativeIndexRequest) {
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
