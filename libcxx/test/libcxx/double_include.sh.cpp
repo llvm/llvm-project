@@ -97,6 +97,7 @@
 #include <mutex>
 #endif
 #include <new>
+#include <numbers>
 #include <numeric>
 #include <optional>
 #include <ostream>

@@ -117,6 +117,7 @@ set(files
   module.modulemap
   mutex
   new
+  numbers
   numeric
   optional
   ostream
