@@ -1404,9 +1404,9 @@ define <2 x float> @test44(<2 x i64> %a) {
 ; CHECK-LE-NEXT:    xscvuxdsp f0, f0
 ; CHECK-LE-NEXT:    xscvdpspn vs1, f1
 ; CHECK-LE-NEXT:    xscvdpspn vs0, f0
-; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 1
-; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 1
-; CHECK-LE-NEXT:    vmrglw v2, v3, v2
+; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 3
+; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-LE-NEXT:    vmrghw v2, v3, v2
 ; CHECK-LE-NEXT:    blr
   %v = uitofp <2 x i64> %a to <2 x float>
   ret <2 x float> %v
@@ -1486,9 +1486,9 @@ define <2 x float> @test45(<2 x i64> %a) {
 ; CHECK-LE-NEXT:    xscvsxdsp f0, f0
 ; CHECK-LE-NEXT:    xscvdpspn vs1, f1
 ; CHECK-LE-NEXT:    xscvdpspn vs0, f0
-; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 1
-; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 1
-; CHECK-LE-NEXT:    vmrglw v2, v3, v2
+; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 3
+; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-LE-NEXT:    vmrghw v2, v3, v2
 ; CHECK-LE-NEXT:    blr
   %v = sitofp <2 x i64> %a to <2 x float>
   ret <2 x float> %v
@@ -2437,12 +2437,11 @@ define <2 x i32> @test80(i32 %v) {
 ;
 ; CHECK-LE-LABEL: test80:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    mtfprd f0, r3
+; CHECK-LE-NEXT:    mtfprwz f0, r3
 ; CHECK-LE-NEXT:    addis r4, r2, .LCPI65_0@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r4, .LCPI65_0@toc@l
-; CHECK-LE-NEXT:    xxswapd vs0, vs0
+; CHECK-LE-NEXT:    xxspltw v2, vs0, 1
 ; CHECK-LE-NEXT:    lvx v3, 0, r3
-; CHECK-LE-NEXT:    xxspltw v2, vs0, 3
 ; CHECK-LE-NEXT:    vadduwm v2, v2, v3
 ; CHECK-LE-NEXT:    blr
   %b1 = insertelement <2 x i32> undef, i32 %v, i32 0

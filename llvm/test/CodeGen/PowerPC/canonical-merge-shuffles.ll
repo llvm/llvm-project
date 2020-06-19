@@ -23,18 +23,12 @@ entry:
 define dso_local <16 x i8> @testmrghb2(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrghb2:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-P8-NEXT:    lvx v4, 0, r3
-; CHECK-P8-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P8-NEXT:    vmrghb v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrghb2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-P9-NEXT:    lxvx v4, 0, r3
-; CHECK-P9-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P9-NEXT:    vmrghb v2, v2, v3
 ; CHECK-P9-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 24, i32 8, i32 25, i32 9, i32 26, i32 10, i32 27, i32 11, i32 28, i32 12, i32 29, i32 13, i32 30, i32 14, i32 31, i32 15>
@@ -57,18 +51,12 @@ entry:
 define dso_local <16 x i8> @testmrghh2(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrghh2:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-P8-NEXT:    lvx v4, 0, r3
-; CHECK-P8-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P8-NEXT:    vmrghh v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrghh2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-P9-NEXT:    lxvx v4, 0, r3
-; CHECK-P9-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P9-NEXT:    vmrghh v2, v2, v3
 ; CHECK-P9-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 24, i32 25, i32 8, i32 9, i32 26, i32 27, i32 10, i32 11, i32 28, i32 29, i32 12, i32 13, i32 30, i32 31, i32 14, i32 15>
@@ -91,18 +79,12 @@ entry:
 define dso_local <16 x i8> @testmrglb2(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrglb2:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; CHECK-P8-NEXT:    lvx v4, 0, r3
-; CHECK-P8-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P8-NEXT:    vmrglb v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrglb2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; CHECK-P9-NEXT:    lxvx v4, 0, r3
-; CHECK-P9-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P9-NEXT:    vmrglb v2, v2, v3
 ; CHECK-P9-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 0, i32 17, i32 1, i32 18, i32 2, i32 19, i32 3, i32 20, i32 4, i32 21, i32 5, i32 22, i32 6, i32 23, i32 7>
@@ -125,18 +107,12 @@ entry:
 define dso_local <16 x i8> @testmrglh2(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrglh2:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI7_0@toc@ha
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI7_0@toc@l
-; CHECK-P8-NEXT:    lvx v4, 0, r3
-; CHECK-P8-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P8-NEXT:    vmrglh v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrglh2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI7_0@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI7_0@toc@l
-; CHECK-P9-NEXT:    lxvx v4, 0, r3
-; CHECK-P9-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P9-NEXT:    vmrglh v2, v2, v3
 ; CHECK-P9-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 0, i32 1, i32 18, i32 19, i32 2, i32 3, i32 20, i32 21, i32 4, i32 5, i32 22, i32 23, i32 6, i32 7>
@@ -159,18 +135,12 @@ entry:
 define dso_local <16 x i8> @testmrghw2(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrghw2:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI9_0@toc@ha
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI9_0@toc@l
-; CHECK-P8-NEXT:    lvx v4, 0, r3
-; CHECK-P8-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P8-NEXT:    vmrghw v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrghw2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI9_0@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI9_0@toc@l
-; CHECK-P9-NEXT:    lxvx v4, 0, r3
-; CHECK-P9-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P9-NEXT:    vmrghw v2, v2, v3
 ; CHECK-P9-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 24, i32 25, i32 26, i32 27, i32 8, i32 9, i32 10, i32 11, i32 28, i32 29, i32 30, i32 31, i32 12, i32 13, i32 14, i32 15>
@@ -193,18 +163,12 @@ entry:
 define dso_local <16 x i8> @testmrglw2(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrglw2:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI11_0@toc@ha
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI11_0@toc@l
-; CHECK-P8-NEXT:    lvx v4, 0, r3
-; CHECK-P8-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P8-NEXT:    vmrglw v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrglw2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI11_0@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI11_0@toc@l
-; CHECK-P9-NEXT:    lxvx v4, 0, r3
-; CHECK-P9-NEXT:    vperm v2, v3, v2, v4
+; CHECK-P9-NEXT:    vmrglw v2, v2, v3
 ; CHECK-P9-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 4, i32 5, i32 6, i32 7>
@@ -215,24 +179,16 @@ define dso_local <8 x i16> @testmrglb3(<8 x i8>* nocapture readonly %a) local_un
 ; CHECK-P8-LABEL: testmrglb3:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    ld r3, 0(r3)
-; CHECK-P8-NEXT:    addis r4, r2, .LCPI12_0@toc@ha
-; CHECK-P8-NEXT:    xxlxor v4, v4, v4
-; CHECK-P8-NEXT:    mtfprd f0, r3
-; CHECK-P8-NEXT:    addi r3, r4, .LCPI12_0@toc@l
-; CHECK-P8-NEXT:    lvx v3, 0, r3
-; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    vperm v2, v2, v4, v3
+; CHECK-P8-NEXT:    xxlxor v2, v2, v2
+; CHECK-P8-NEXT:    mtvsrd v3, r3
+; CHECK-P8-NEXT:    vmrghb v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testmrglb3:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lfd f0, 0(r3)
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI12_0@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI12_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r3
-; CHECK-P9-NEXT:    xxswapd v2, f0
-; CHECK-P9-NEXT:    xxlxor v4, v4, v4
-; CHECK-P9-NEXT:    vperm v2, v2, v4, v3
+; CHECK-P9-NEXT:    lxsd v2, 0(r3)
+; CHECK-P9-NEXT:    xxlxor v3, v3, v3
+; CHECK-P9-NEXT:    vmrghb v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 entry:
   %0 = load <8 x i8>, <8 x i8>* %a, align 8
