@@ -48,6 +48,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
     libc.src.math.copysign
     libc.src.math.copysignf
+    libc.src.math.copysignl
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.cosf
@@ -60,10 +61,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floorf
     libc.src.math.frexp
     libc.src.math.frexpf
+    libc.src.math.frexpl
     libc.src.math.logb
     libc.src.math.logbf
+    libc.src.math.logbl
     libc.src.math.modf
     libc.src.math.modff
+    libc.src.math.modfl
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.sincosf
