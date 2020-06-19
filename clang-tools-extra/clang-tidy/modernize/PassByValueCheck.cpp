@@ -217,14 +217,11 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
   // Use std::move in the initialization list.
   Diag << FixItHint::CreateInsertion(Initializer->getRParenLoc(), ")")
        << FixItHint::CreateInsertion(
-              Initializer->getLParenLoc().getLocWithOffset(1), "std::move(");
-
-  if (auto IncludeFixit = Inserter->CreateIncludeInsertion(
-          Result.SourceManager->getFileID(Initializer->getSourceLocation()),
-          "utility",
-          /*IsAngled=*/true)) {
-    Diag << *IncludeFixit;
-  }
+              Initializer->getLParenLoc().getLocWithOffset(1), "std::move(")
+       << Inserter->CreateIncludeInsertion(
+              Result.SourceManager->getFileID(Initializer->getSourceLocation()),
+              "utility",
+              /*IsAngled=*/true);
 }
 
 } // namespace modernize

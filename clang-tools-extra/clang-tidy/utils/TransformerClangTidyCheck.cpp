@@ -103,12 +103,9 @@ void TransformerClangTidyCheck::check(
     Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
 
   for (const auto &I : Case.AddedIncludes) {
-    auto &Header = I.first;
-    if (Optional<FixItHint> Fix = Inserter->CreateIncludeInsertion(
-            Result.SourceManager->getMainFileID(), Header,
-            /*IsAngled=*/I.second == transformer::IncludeFormat::Angled)) {
-      Diag << *Fix;
-    }
+    Diag << Inserter->CreateIncludeInsertion(
+        Result.SourceManager->getMainFileID(), I.first,
+        /*IsAngled=*/I.second == transformer::IncludeFormat::Angled);
   }
 }
 
