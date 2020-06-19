@@ -63,11 +63,10 @@ findSchemeByName(llvm::StringRef Scheme) {
   if (Scheme == "file")
     return std::make_unique<FileSystemScheme>();
 
-  for (auto I = URISchemeRegistry::begin(), E = URISchemeRegistry::end();
-       I != E; ++I) {
-    if (I->getName() != Scheme)
+  for (const auto &URIScheme : URISchemeRegistry::entries()) {
+    if (URIScheme.getName() != Scheme)
       continue;
-    return I->instantiate();
+    return URIScheme.instantiate();
   }
   return make_string_error("Can't find scheme: " + Scheme);
 }

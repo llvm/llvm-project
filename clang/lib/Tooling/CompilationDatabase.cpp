@@ -64,16 +64,14 @@ std::unique_ptr<CompilationDatabase>
 CompilationDatabase::loadFromDirectory(StringRef BuildDirectory,
                                        std::string &ErrorMessage) {
   llvm::raw_string_ostream ErrorStream(ErrorMessage);
-  for (CompilationDatabasePluginRegistry::iterator
-       It = CompilationDatabasePluginRegistry::begin(),
-       Ie = CompilationDatabasePluginRegistry::end();
-       It != Ie; ++It) {
+  for (const CompilationDatabasePluginRegistry::entry &Database :
+       CompilationDatabasePluginRegistry::entries()) {
     std::string DatabaseErrorMessage;
-    std::unique_ptr<CompilationDatabasePlugin> Plugin(It->instantiate());
+    std::unique_ptr<CompilationDatabasePlugin> Plugin(Database.instantiate());
     if (std::unique_ptr<CompilationDatabase> DB =
             Plugin->loadFromDirectory(BuildDirectory, DatabaseErrorMessage))
       return DB;
-    ErrorStream << It->getName() << ": " << DatabaseErrorMessage << "\n";
+    ErrorStream << Database.getName() << ": " << DatabaseErrorMessage << "\n";
   }
   return nullptr;
 }
