@@ -48,6 +48,10 @@ BEGIN {
   skipping_builtins = 0
 }
 
+/^[\`|].* col:/ {
+  skipping_builtins = 0
+}
+
 {
   if (skipping_builtins == 1) {
     matched_last_line = 0
