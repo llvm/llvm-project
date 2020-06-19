@@ -24,6 +24,14 @@ int main() {
       print_fuzzy_address(1);
       print_ids(0);
 
+#pragma omp task depend(mutexinoutset : x)
+      {
+        x++;
+        delay(100);
+      }
+      print_fuzzy_address(2);
+      print_ids(0);
+
 #pragma omp task depend(in : x)
       { x = -1; }
       print_ids(0);
@@ -78,10 +86,28 @@ int main() {
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_dependences:
 // CHECK-SAME: task_id=[[SECOND_TASK]], deps=[([[ADDRX]],
-// CHECK-SAME: ompt_dependence_type_in)], ndeps=1
+// CHECK-SAME: ompt_dependence_type_mutexinoutset)], ndeps=1
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_dependence_pair:
 // CHECK-SAME: first_task_id=[[FIRST_TASK]], second_task_id=[[SECOND_TASK]]
+
+// CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
+// CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
+// CHECK-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]],
+// CHECK-SAME: reenter_frame=[[NULL]]
+
+// CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
+// CHECK-SAME: parent_task_id={{[0-9]+}}, parent_task_frame.exit=[[EXIT]],
+// CHECK-SAME: parent_task_frame.reenter={{0x[0-f]+}},
+// CHECK-SAME: new_task_id=[[THIRD_TASK:[0-f]+]], codeptr_ra={{0x[0-f]+}},
+// CHECK-SAME: task_type=ompt_task_explicit=4, has_dependences=yes
+
+// CHECK: {{^}}[[MASTER_ID]]: ompt_event_dependences:
+// CHECK-SAME: task_id=[[THIRD_TASK]], deps=[([[ADDRX]],
+// CHECK-SAME: ompt_dependence_type_in)], ndeps=1
+
+// CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_dependence_pair:
+// CHECK-SAME: first_task_id=[[SECOND_TASK]], second_task_id=[[THIRD_TASK]]
 
 // CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
 // CHECK-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]],
