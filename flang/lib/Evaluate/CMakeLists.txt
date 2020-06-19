@@ -16,6 +16,7 @@ add_flang_library(FortranEvaluate
   fold-real.cpp
   formatting.cpp
   host.cpp
+  initial-image.cpp
   integer.cpp
   intrinsics.cpp
   intrinsics-library.cpp
