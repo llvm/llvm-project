@@ -13,8 +13,11 @@
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTFS_H
 #include "ClangdServer.h"
 #include "GlobalCompilationDatabase.h"
+#include "support/FSProvider.h"
 #include "support/Path.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -30,8 +33,16 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
 // A VFS provider that returns TestFSes containing a provided set of files.
 class MockFSProvider : public FileSystemProvider {
 public:
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
+  // Prevent name hiding caused by the overload below.
+  using FileSystemProvider::getFileSystem;
+
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const {
     return buildTestFS(Files, Timestamps);
+  }
+
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getFileSystem(llvm::NoneType) const override {
+    return getFileSystem();
   }
 
   // If relative paths are used, they are resolved with testPath().

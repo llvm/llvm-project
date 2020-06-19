@@ -9,7 +9,10 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_FSPROVIDER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_FSPROVIDER_H
 
+#include "Path.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 
@@ -25,14 +28,21 @@ public:
   /// Context::current() will be the context passed to the clang entrypoint,
   /// such as addDocument(), and will also be propagated to result callbacks.
   /// Embedders may use this to isolate filesystem accesses.
+  /// Initial working directory is arbitrary.
   virtual llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  getFileSystem() const = 0;
+  getFileSystem(llvm::NoneType CWD) const = 0;
+
+  /// As above, except it will try to set current working directory to \p CWD.
+  /// This is an overload instead of an optional to make implicit string ->
+  /// StringRef conversion possible.
+  virtual llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getFileSystem(PathRef CWD) const;
 };
 
 class RealFileSystemProvider : public FileSystemProvider {
 public:
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  getFileSystem() const override;
+      getFileSystem(llvm::NoneType) const override;
 };
 
 } // namespace clangd

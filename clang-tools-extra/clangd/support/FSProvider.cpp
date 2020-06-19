@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "support/FSProvider.h"
+#include "Logger.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -72,7 +75,15 @@ private:
 } // namespace
 
 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-clang::clangd::RealFileSystemProvider::getFileSystem() const {
+FileSystemProvider::getFileSystem(PathRef CWD) const {
+  auto FS = getFileSystem(/*CWD=*/llvm::None);
+  if (auto EC = FS->setCurrentWorkingDirectory(CWD))
+    elog("VFS: failed to set CWD to {0}: {1}", CWD, EC.message());
+  return FS;
+}
+
+llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+clang::clangd::RealFileSystemProvider::getFileSystem(llvm::NoneType) const {
   // Avoid using memory-mapped files.
   // FIXME: Try to use a similar approach in Sema instead of relying on
   //        propagation of the 'isVolatile' flag through all layers.

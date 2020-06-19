@@ -16,6 +16,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "gmock/gmock.h"
@@ -52,8 +53,7 @@ private:
     EXPECT_TRUE(static_cast<bool>(CI));
     // The diagnostic options must be set before creating a CompilerInstance.
     CI->getDiagnosticOpts().IgnoreWarnings = true;
-    auto VFS = FS.getFileSystem();
-    VFS->setCurrentWorkingDirectory(Cmd->Directory);
+    auto VFS = PI.FSProvider->getFileSystem(Cmd->Directory);
     auto Clang = prepareCompilerInstance(
         std::move(CI), /*Preamble=*/nullptr,
         llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile),
