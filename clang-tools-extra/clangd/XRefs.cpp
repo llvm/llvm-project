@@ -363,8 +363,8 @@ locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
   if ((Word.ExpandedToken && !isDependentName(NodeKind)) ||
       !Word.LikelyIdentifier || !Index)
     return {};
-  // We don't want to handle words in string literals. It'd be nice to whitelist
-  // comments instead, but they're not retained in TokenBuffer.
+  // We don't want to handle words in string literals. It'd be nice to include
+  // comments, but they're not retained in TokenBuffer.
   if (Word.PartOfSpelledToken &&
       isStringLiteral(Word.PartOfSpelledToken->kind()))
     return {};
@@ -469,8 +469,8 @@ const syntax::Token *findNearbyIdentifier(const SpelledWord &Word,
   // Unlikely identifiers are OK if they were used as identifiers nearby.
   if (Word.ExpandedToken)
     return nullptr;
-  // We don't want to handle words in string literals. It'd be nice to whitelist
-  // comments instead, but they're not retained in TokenBuffer.
+  // We don't want to handle words in string literals. It'd be nice to include
+  // comments, but they're not retained in TokenBuffer.
   if (Word.PartOfSpelledToken &&
       isStringLiteral(Word.PartOfSpelledToken->kind()))
     return {};
