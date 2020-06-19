@@ -515,10 +515,12 @@ enum PointerStripKind {
   PSK_InBounds
 };
 
+template <PointerStripKind StripKind> static void NoopCallback(const Value *) {}
+
 template <PointerStripKind StripKind>
 static const Value *stripPointerCastsAndOffsets(
     const Value *V,
-    function_ref<void(const Value *)> Func = [](const Value *) {}) {
+    function_ref<void(const Value *)> Func = NoopCallback<StripKind>) {
   if (!V->getType()->isPointerTy())
     return V;
 
