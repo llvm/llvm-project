@@ -894,7 +894,7 @@ ThinLTOCodeGenerator::writeGeneratedObject(int count, StringRef CacheEntryPath,
     // Copy failed (could be because the CacheEntry was removed from the cache
     // in the meantime by another process), fall back and try to write down the
     // buffer to the output.
-    errs() << "error: can't link or copy from cached entry '" << CacheEntryPath
+    errs() << "remark: can't link or copy from cached entry '" << CacheEntryPath
            << "' to '" << OutputPath << "'\n";
   }
   // No cache entry, just write out the buffer.
@@ -1134,7 +1134,7 @@ void ThinLTOCodeGenerator::run() {
             auto ReloadedBufferOrErr = CacheEntry.tryLoadingBuffer();
             if (auto EC = ReloadedBufferOrErr.getError()) {
               // On error, keep the preexisting buffer and print a diagnostic.
-              errs() << "error: can't reload cached file '" << CacheEntryPath
+              errs() << "remark: can't reload cached file '" << CacheEntryPath
                      << "': " << EC.message() << "\n";
             } else {
               OutputBuffer = std::move(*ReloadedBufferOrErr);
