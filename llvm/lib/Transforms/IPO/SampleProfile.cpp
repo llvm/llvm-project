@@ -37,6 +37,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -916,9 +917,8 @@ bool SampleProfileLoader::inlineCallInstruction(CallBase &CB) {
   InlineFunctionInfo IFI(nullptr, GetAC);
   if (InlineFunction(CB, IFI).isSuccess()) {
     // The call to InlineFunction erases I, so we can't pass it here.
-    ORE->emit(OptimizationRemark(CSINLINE_DEBUG, "InlineSuccess", DLoc, BB)
-              << "inlined callee '" << ore::NV("Callee", CalledFunction)
-              << "' into '" << ore::NV("Caller", BB->getParent()) << "'");
+    emitInlinedInto(*ORE, DLoc, BB, *CalledFunction, *BB->getParent(), Cost,
+                    true, CSINLINE_DEBUG);
     return true;
   }
   return false;

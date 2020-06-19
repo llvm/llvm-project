@@ -18,6 +18,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -354,14 +355,43 @@ llvm::shouldInline(CallBase &CB,
   return IC;
 }
 
+void llvm::addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc) {
+  if (!DLoc.get())
+    return;
+
+  bool First = true;
+  Remark << " at callsite ";
+  for (DILocation *DIL = DLoc.get(); DIL; DIL = DIL->getInlinedAt()) {
+    if (!First)
+      Remark << " @ ";
+    unsigned int Offset = DIL->getLine();
+    Offset -= DIL->getScope()->getSubprogram()->getLine();
+    unsigned int Discriminator = DIL->getBaseDiscriminator();
+    StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
+    if (Name.empty())
+      Name = DIL->getScope()->getSubprogram()->getName();
+    Remark << Name << ":" << ore::NV("Line", Offset);
+    if (Discriminator)
+      Remark << "." << ore::NV("Disc", Discriminator);
+    First = false;
+  }
+}
+
 void llvm::emitInlinedInto(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
                            const BasicBlock *Block, const Function &Callee,
-                           const Function &Caller, const InlineCost &IC) {
+                           const Function &Caller, const InlineCost &IC,
+                           bool ForProfileContext, const char *PassName) {
   ORE.emit([&]() {
     bool AlwaysInline = IC.isAlways();
     StringRef RemarkName = AlwaysInline ? "AlwaysInline" : "Inlined";
-    return OptimizationRemark(DEBUG_TYPE, RemarkName, DLoc, Block)
-           << ore::NV("Callee", &Callee) << " inlined into "
-           << ore::NV("Caller", &Caller) << " with " << IC;
+    OptimizationRemark Remark(PassName ? PassName : DEBUG_TYPE, RemarkName,
+                              DLoc, Block);
+    Remark << ore::NV("Callee", &Callee) << " inlined into ";
+    Remark << ore::NV("Caller", &Caller);
+    if (ForProfileContext)
+      Remark << " to match profiling context";
+    Remark << " with " << IC;
+    addLocationToRemarks(Remark, DLoc);
+    return Remark;
   });
 }
