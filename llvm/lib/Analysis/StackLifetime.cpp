@@ -27,6 +27,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
+#include <algorithm>
 #include <memory>
 #include <tuple>
 
@@ -297,6 +298,8 @@ void StackLifetime::run() {
 class StackLifetime::LifetimeAnnotationWriter
     : public AssemblyAnnotationWriter {
   const StackLifetime &SL;
+  bool AllInstructions;
+
   void printInstrAlive(unsigned InstrNo, formatted_raw_ostream &OS) {
     SmallVector<StringRef, 16> Names;
     for (const auto &KV : SL.AllocaNumbering) {
@@ -316,19 +319,33 @@ class StackLifetime::LifetimeAnnotationWriter
   }
 
   void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {
-    auto It = llvm::find(SL.Instructions, &V);
-    if (It == SL.Instructions.end())
-      return; // Unintresting.
+    const Instruction *Instr = dyn_cast<Instruction>(&V);
+    if (!Instr)
+      return;
+    auto ItBB = SL.BlockInstRange.find(Instr->getParent());
+    if (ItBB == SL.BlockInstRange.end())
+      return; // Unreachable.
+    // Find the first instruction after the V.
+    auto It =
+        std::upper_bound(SL.Instructions.begin() + ItBB->getSecond().first + 1,
+                         SL.Instructions.begin() + ItBB->getSecond().second,
+                         Instr, [](const Instruction *L, const Instruction *R) {
+                           return L->comesBefore(R);
+                         });
+    --It;
+    if (!AllInstructions && *It != Instr)
+      return;
     OS << "\n";
     printInstrAlive(It - SL.Instructions.begin(), OS);
   }
 
 public:
-  LifetimeAnnotationWriter(const StackLifetime &SL) : SL(SL) {}
+  LifetimeAnnotationWriter(const StackLifetime &SL, bool AllInstructions)
+      : SL(SL), AllInstructions(AllInstructions) {}
 };
 
-void StackLifetime::print(raw_ostream &OS) {
-  LifetimeAnnotationWriter AAW(*this);
+void StackLifetime::print(raw_ostream &OS, bool AllInstructions) {
+  LifetimeAnnotationWriter AAW(*this, AllInstructions);
   F.print(OS, &AAW);
 }
 
@@ -340,6 +357,6 @@ PreservedAnalyses StackLifetimePrinterPass::run(Function &F,
       Allocas.push_back(AI);
   StackLifetime SL(F, Allocas, Type);
   SL.run();
-  SL.print(OS);
+  SL.print(OS, true);
   return PreservedAnalyses::all();
 }
