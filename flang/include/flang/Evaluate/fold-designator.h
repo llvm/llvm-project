@@ -62,10 +62,8 @@ class DesignatorFolder {
 public:
   explicit DesignatorFolder(FoldingContext &c) : context_{c} {}
 
-  DesignatorFolder &Reset() {
-    elementNumber_ = 0;
-    return *this;
-  }
+  bool isEmpty() const { return isEmpty_; }
+  bool isOutOfRange() const { return isOutOfRange_; }
 
   template <typename T>
   std::optional<OffsetSymbol> FoldDesignator(const Expr<T> &expr) {
@@ -75,52 +73,50 @@ public:
   }
 
 private:
+  std::optional<OffsetSymbol> FoldDesignator(const Symbol &, ConstantSubscript);
   std::optional<OffsetSymbol> FoldDesignator(
-      const Symbol &, ConstantSubscript) const;
-  std::optional<OffsetSymbol> FoldDesignator(
-      const SymbolRef &x, ConstantSubscript which) const {
+      const SymbolRef &x, ConstantSubscript which) {
     return FoldDesignator(*x, which);
   }
   std::optional<OffsetSymbol> FoldDesignator(
-      const ArrayRef &, ConstantSubscript) const;
+      const ArrayRef &, ConstantSubscript);
   std::optional<OffsetSymbol> FoldDesignator(
-      const Component &, ConstantSubscript) const;
+      const Component &, ConstantSubscript);
   std::optional<OffsetSymbol> FoldDesignator(
-      const ComplexPart &, ConstantSubscript) const;
+      const ComplexPart &, ConstantSubscript);
   std::optional<OffsetSymbol> FoldDesignator(
-      const Substring &, ConstantSubscript) const;
+      const Substring &, ConstantSubscript);
   std::optional<OffsetSymbol> FoldDesignator(
-      const DataRef &, ConstantSubscript) const;
+      const DataRef &, ConstantSubscript);
   std::optional<OffsetSymbol> FoldDesignator(
-      const NamedEntity &, ConstantSubscript) const;
+      const NamedEntity &, ConstantSubscript);
   std::optional<OffsetSymbol> FoldDesignator(
-      const CoarrayRef &, ConstantSubscript) const;
+      const CoarrayRef &, ConstantSubscript);
   std::optional<OffsetSymbol> FoldDesignator(
-      const ProcedureDesignator &, ConstantSubscript) const;
+      const ProcedureDesignator &, ConstantSubscript);
 
   template <typename T>
   std::optional<OffsetSymbol> FoldDesignator(
-      const Expr<T> &expr, ConstantSubscript which) const {
+      const Expr<T> &expr, ConstantSubscript which) {
     return std::visit(
         [&](const auto &x) { return FoldDesignator(x, which); }, expr.u);
   }
 
   template <typename A>
-  std::optional<OffsetSymbol> FoldDesignator(
-      const A &x, ConstantSubscript) const {
-    DIE("DesignatorFolder::FoldDesignator(): unexpected object in designator");
+  std::optional<OffsetSymbol> FoldDesignator(const A &x, ConstantSubscript) {
+    return std::nullopt;
   }
 
   template <typename T>
   std::optional<OffsetSymbol> FoldDesignator(
-      const Designator<T> &designator, ConstantSubscript which) const {
+      const Designator<T> &designator, ConstantSubscript which) {
     return std::visit(
         [&](const auto &x) { return FoldDesignator(x, which); }, designator.u);
   }
   template <int KIND>
   std::optional<OffsetSymbol> FoldDesignator(
       const Designator<Type<TypeCategory::Character, KIND>> &designator,
-      ConstantSubscript which) const {
+      ConstantSubscript which) {
     return std::visit(
         common::visitors{
             [&](const Substring &ss) {
@@ -128,15 +124,26 @@ private:
                 if (auto result{FoldDesignator(*dataRef, which)}) {
                   if (auto start{ToInt64(ss.lower())}) {
                     std::optional<ConstantSubscript> end;
+                    auto len{dataRef->LEN()};
                     if (ss.upper()) {
                       end = ToInt64(*ss.upper());
-                    } else if (auto len{dataRef->LEN()}) {
+                    } else if (len) {
                       end = ToInt64(*len);
                     }
                     if (end) {
+                      if (*start < 1) {
+                        isOutOfRange_ = true;
+                      }
                       result->Augment(KIND * (*start - 1));
                       result->set_size(
                           *end >= *start ? KIND * (*end - *start + 1) : 0);
+                      if (len) {
+                        if (auto lenVal{ToInt64(*len)}) {
+                          if (*end > *lenVal) {
+                            isOutOfRange_ = true;
+                          }
+                        }
+                      }
                       return result;
                     }
                   }
@@ -151,6 +158,8 @@ private:
 
   FoldingContext &context_;
   ConstantSubscript elementNumber_{0}; // zero-based
+  bool isEmpty_{false};
+  bool isOutOfRange_{false};
 };
 
 // Reconstructs a Designator<> from a symbol and an offset.

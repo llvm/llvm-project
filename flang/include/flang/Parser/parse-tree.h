@@ -1409,7 +1409,7 @@ struct DataStmtConstant {
   std::variant<Scalar<ConstantValue>, Scalar<ConstantSubobject>,
       SignedIntLiteralConstant, SignedRealLiteralConstant,
       SignedComplexLiteralConstant, NullInit, InitialDataTarget,
-      Constant<StructureConstructor>>
+      StructureConstructor>
       u;
 };
 
@@ -1425,7 +1425,7 @@ struct DataStmtRepeat {
 // R843 data-stmt-value -> [data-stmt-repeat *] data-stmt-constant
 struct DataStmtValue {
   TUPLE_CLASS_BOILERPLATE(DataStmtValue);
-  mutable std::size_t repetitions{1}; // replaced during semantics
+  mutable std::int64_t repetitions{1}; // replaced during semantics
   std::tuple<std::optional<DataStmtRepeat>, DataStmtConstant> t;
 };
 

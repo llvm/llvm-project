@@ -6,7 +6,7 @@ module m
     subroutine h
       integer a,b
       !C876
-      !ERROR: Data object part 'first' must not be accessed by host association
+      !ERROR: Host-associated object 'first' must not be initialized in a DATA statement
       DATA first /1/
     end subroutine
 
@@ -23,25 +23,25 @@ module m
       character(len=i), pointer:: charPtr
       character(len=i), allocatable:: charAlloc
       !C876
-      !ERROR: Data object part 'i' must not be a dummy argument
+      !ERROR: Dummy argument 'i' must not be initialized in a DATA statement
       DATA i /1/
       !C876
-      !ERROR: Data object part 'f' must not be a function result
+      !ERROR: Function result 'f' must not be initialized in a DATA statement
       DATA f /1/
       !C876
-      !ERROR: Data object part 'g' must not be a function name
+      !ERROR: Procedure 'g' must not be initialized in a DATA statement
       DATA g /1/
       !C876
-      !ERROR: Data object part 'a' must not be an allocatable object
+      !ERROR: Allocatable 'a' must not be initialized in a DATA statement
       DATA a /1/
       !C876
-      !ERROR: Data object part 'b' must not be an automatic object
+      !ERROR: Automatic variable 'b' must not be initialized in a DATA statement
       DATA b(0) /1/
       !C876
       !Ok: As charPtr is a pointer, it is not an automatic object
       DATA charPtr / NULL() /
       !C876
-      !ERROR: Data object part 'charalloc' must not be an allocatable object
+      !ERROR: Allocatable 'charalloc' must not be initialized in a DATA statement
       DATA charAlloc / 'abc' /
       f = i *1024
     end
@@ -67,11 +67,11 @@ module m
       type(large) :: largeArray(5)
       character :: name(i)
       !C877
-      !OK: Correct use
+      !ERROR: Default-initialized 'largenumber' must not be initialized in a DATA statement
       DATA(largeNumber % numsArray(j) % headOfTheList, j = 1, 10) / 10 * NULL() /
       !C877
       !ERROR: Data object must not contain pointer 'headofthelist' as a non-rightmost part
-      DATA(largeNumber % numsArray(j) % headOfTheList % one, j = 1, 10) / 10 * NULL() /
+      DATA(largeNumber % numsArray(j) % headOfTheList % one, j = 1, 10) / 10 * 1 /
       !C877
       !ERROR: Rightmost data object pointer 'ptoarray' must not be subscripted
       DATA(largeNumber % numsArray(j) % ptoarray(1), j = 1, 10) / 10 * 1 /
@@ -79,19 +79,19 @@ module m
       !ERROR: Rightmost data object pointer 'ptochar' must not be subscripted
       DATA largeNumber % numsArray(0) % ptochar(1:2) / 'ab' /
       !C876
-      !ERROR: Data object part 'elt' must not be an allocatable object
+      !ERROR: Default-initialized 'largenumber' must not be initialized in a DATA statement
       DATA(largeNumber % elt(j) , j = 1, 10) / 10 * 1/
       !C876
-      !ERROR: Data object part 'allocval' must not be an allocatable object
+      !ERROR: Default-initialized 'largearray' must not be initialized in a DATA statement
       DATA(largeArray(j) % allocVal , j = 1, 10) / 10 * 1/
       !C876
-      !ERROR: Data object part 'allocatablelarge' must not be an allocatable object
+      !ERROR: Allocatable 'allocatablelarge' must not be initialized in a DATA statement
       DATA allocatableLarge % val / 1 /
       !C876
-      !ERROR: Data object part 'largenumberarray' must not be an automatic object
+      !ERROR: Automatic variable 'largenumberarray' must not be initialized in a DATA statement
       DATA(largeNumberArray(j) % val, j = 1, 10) / 10 * NULL() /
       !C876
-      !ERROR: Data object part 'name' must not be an automatic object
+      !ERROR: Automatic variable 'name' must not be initialized in a DATA statement
       DATA name( : 2) / 'Ancd' /
     end
   end
@@ -116,10 +116,10 @@ module m
       type(newType) m2_number
       type(newType) m2_number3
       !C876
-      !ERROR: Data object part 'm2_number' must not be a dummy argument
+      !ERROR: Dummy argument 'm2_number' must not be initialized in a DATA statement
       DATA m2_number%number /1/
       !C876
-      !ERROR: Data object part 'm2_number1' must not be accessed by host association
+      !ERROR: Host-associated object 'm2_number1' must not be initialized in a DATA statement
       DATA m2_number1%number /1/
       !C876
       !OK: m2_number3 is not associated through use association
@@ -139,18 +139,18 @@ module m
     COMMON b,a,c,num
     type(newType) m2_number2
     !C876
-    !ERROR: Data object part 'b' must not be in blank COMMON
+    !ERROR: Blank COMMON object 'b' must not be initialized in a DATA statement
     DATA b /1/
     !C876
-    !ERROR: Data object part 'm2_i' must not be accessed by use association
+    !ERROR: USE-associated object 'm2_i' must not be initialized in a DATA statement
     DATA m2_i /1/
     !C876
-    !ERROR: Data object part 'm2_number1' must not be accessed by use association
+    !ERROR: USE-associated object 'm2_number1' must not be initialized in a DATA statement
     DATA m2_number1%number /1/
     !C876
     !OK: m2_number2 is not associated through use association
     DATA m2_number2%number /1/
     !C876
-    !ERROR: Data object part 'num' must not be in blank COMMON
+    !ERROR: Blank COMMON object 'num' must not be initialized in a DATA statement
     DATA num%number /1/
   end program
