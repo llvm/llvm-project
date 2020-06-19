@@ -310,7 +310,7 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
       return std::make_unique<ConfigOptionsProvider>(
           GlobalOptions,
           ClangTidyOptions::getDefaults().mergeWith(DefaultOptions, 0),
-          *ParsedConfig, OverrideOptions);
+          *ParsedConfig, OverrideOptions, std::move(FS));
     } else {
       llvm::errs() << "Error: invalid configuration specified.\n"
                    << ParsedConfig.getError().message() << "\n";
