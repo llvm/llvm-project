@@ -138,6 +138,8 @@ def PPCldvsxlh : SDNode<"PPCISD::LD_VSX_LH", SDT_PPCldvsxlh,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCldsplat : SDNode<"PPCISD::LD_SPLAT", SDT_PPCldsplat,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def PPCSToV : SDNode<"PPCISD::SCALAR_TO_VECTOR_PERMUTED",
+                     SDTypeProfile<1, 1, []>, []>;
 
 //-------------------------- Predicate definitions ---------------------------//
 def HasVSX : Predicate<"PPCSubTarget->hasVSX()">;
@@ -287,6 +289,11 @@ class X_XS6_RA5_RB5<bits<6> opcode, bits<10> xo, string opc,
             !strconcat(opc, " $XT, $dst"), IIC_LdStSTFD, pattern>;
 } // Predicates = HasP9Vector
 } // AddedComplexity = 400, hasSideEffects = 0
+
+multiclass ScalToVecWPermute<ValueType Ty, dag In, dag NonPermOut, dag PermOut> {
+  def : Pat<(Ty (scalar_to_vector In)), (Ty NonPermOut)>;
+  def : Pat<(Ty (PPCSToV In)), (Ty PermOut)>;
+}
 
 //-------------------------- Instruction definitions -------------------------//
 // VSX instructions require the VSX feature, they are to be selected over
@@ -2710,12 +2717,14 @@ def : Pat<(v2i64 (build_vector DblToLong.A, DblToLong.A)),
 def : Pat<(v2i64 (build_vector DblToULong.A, DblToULong.A)),
           (v2i64 (XXPERMDI (COPY_TO_REGCLASS (XSCVDPUXDS $A), VSRC),
                            (COPY_TO_REGCLASS (XSCVDPUXDS $A), VSRC), 0))>;
-def : Pat<(v4i32 (scalar_to_vector FltToIntLoad.A)),
-          (v4i32 (XXSPLTW (COPY_TO_REGCLASS
-                            (XSCVDPSXWSs (XFLOADf32 xoaddr:$A)), VSRC), 1))>;
-def : Pat<(v4i32 (scalar_to_vector FltToUIntLoad.A)),
-          (v4i32 (XXSPLTW (COPY_TO_REGCLASS
-                            (XSCVDPUXWSs (XFLOADf32 xoaddr:$A)), VSRC), 1))>;
+defm : ScalToVecWPermute<
+  v4i32, FltToIntLoad.A,
+  (XXSPLTW (COPY_TO_REGCLASS (XSCVDPSXWSs (XFLOADf32 xoaddr:$A)), VSRC), 1),
+  (COPY_TO_REGCLASS (XSCVDPSXWSs (XFLOADf32 xoaddr:$A)), VSRC)>;
+defm : ScalToVecWPermute<
+  v4i32, FltToUIntLoad.A,
+  (XXSPLTW (COPY_TO_REGCLASS (XSCVDPUXWSs (XFLOADf32 xoaddr:$A)), VSRC), 1),
+  (COPY_TO_REGCLASS (XSCVDPUXWSs (XFLOADf32 xoaddr:$A)), VSRC)>;
 def : Pat<(v4f32 (build_vector f32:$A, f32:$A, f32:$A, f32:$A)),
           (v4f32 (XXSPLTW (v4f32 (XSCVDPSPN $A)), 0))>;
 def : Pat<(v2f64 (PPCldsplat xoaddr:$A)),
@@ -2730,10 +2739,12 @@ def : Pat<(v2i64 (build_vector FltToLong.A, FltToLong.A)),
 def : Pat<(v2i64 (build_vector FltToULong.A, FltToULong.A)),
           (v2i64 (XXPERMDIs
                    (COPY_TO_REGCLASS (XSCVDPUXDSs $A), VSFRC), 0))>;
-def : Pat<(v2i64 (scalar_to_vector DblToLongLoad.A)),
-          (v2i64 (XVCVDPSXDS (LXVDSX xoaddr:$A)))>;
-def : Pat<(v2i64 (scalar_to_vector DblToULongLoad.A)),
-          (v2i64 (XVCVDPUXDS (LXVDSX xoaddr:$A)))>;
+defm : ScalToVecWPermute<
+  v2i64, DblToLongLoad.A,
+  (XVCVDPSXDS (LXVDSX xoaddr:$A)), (XVCVDPSXDS (LXVDSX xoaddr:$A))>;
+defm : ScalToVecWPermute<
+  v2i64, DblToULongLoad.A,
+  (XVCVDPUXDS (LXVDSX xoaddr:$A)), (XVCVDPUXDS (LXVDSX xoaddr:$A))>;
 } // HasVSX
 
 // Any big endian VSX subtarget.
@@ -2831,9 +2842,10 @@ def : Pat<WToDPExtractConv.BV13U,
 
 // Any little endian VSX subtarget.
 let Predicates = [HasVSX, IsLittleEndian] in {
-def : Pat<(v2f64 (scalar_to_vector f64:$A)),
-          (v2f64 (XXPERMDI (SUBREG_TO_REG (i64 1), $A, sub_64),
-                           (SUBREG_TO_REG (i64 1), $A, sub_64), 0))>;
+defm : ScalToVecWPermute<v2f64, (f64 f64:$A),
+                         (XXPERMDI (SUBREG_TO_REG (i64 1), $A, sub_64),
+                                   (SUBREG_TO_REG (i64 1), $A, sub_64), 0),
+                         (SUBREG_TO_REG (i64 1), $A, sub_64)>;
 
 def : Pat<(f64 (extractelt v2f64:$S, 0)),
           (f64 (EXTRACT_SUBREG (XXPERMDI $S, $S, 2), sub_64))>;
@@ -2943,18 +2955,24 @@ def : Pat<(PPCstore_scal_int_from_vsr
           (STXSDX (XSCVDPUXDS f64:$src), xoaddr:$dst)>;
 
 // Load-and-splat with fp-to-int conversion (using X-Form VSX/FP loads).
-def : Pat<(v4i32 (scalar_to_vector DblToIntLoad.A)),
-          (v4i32 (XXSPLTW (COPY_TO_REGCLASS
-                            (XSCVDPSXWS (XFLOADf64 xoaddr:$A)), VSRC), 1))>;
-def : Pat<(v4i32 (scalar_to_vector DblToUIntLoad.A)),
-          (v4i32 (XXSPLTW (COPY_TO_REGCLASS
-                            (XSCVDPUXWS (XFLOADf64 xoaddr:$A)), VSRC), 1))>;
-def : Pat<(v2i64 (scalar_to_vector FltToLongLoad.A)),
-          (v2i64 (XXPERMDIs (XSCVDPSXDS (COPY_TO_REGCLASS
-                                          (XFLOADf32 xoaddr:$A), VSFRC)), 0))>;
-def : Pat<(v2i64 (scalar_to_vector FltToULongLoad.A)),
-          (v2i64 (XXPERMDIs (XSCVDPUXDS (COPY_TO_REGCLASS
-                                          (XFLOADf32 xoaddr:$A), VSFRC)), 0))>;
+defm : ScalToVecWPermute<
+  v4i32, DblToIntLoad.A,
+  (XXSPLTW (COPY_TO_REGCLASS (XSCVDPSXWS (XFLOADf64 xoaddr:$A)), VSRC), 1),
+  (COPY_TO_REGCLASS (XSCVDPSXWS (XFLOADf64 xoaddr:$A)), VSRC)>;
+defm : ScalToVecWPermute<
+  v4i32, DblToUIntLoad.A,
+  (XXSPLTW (COPY_TO_REGCLASS (XSCVDPUXWS (XFLOADf64 xoaddr:$A)), VSRC), 1),
+  (COPY_TO_REGCLASS (XSCVDPUXWS (XFLOADf64 xoaddr:$A)), VSRC)>;
+defm : ScalToVecWPermute<
+  v2i64, FltToLongLoad.A,
+  (XXPERMDIs (XSCVDPSXDS (COPY_TO_REGCLASS (XFLOADf32 xoaddr:$A), VSFRC)), 0),
+  (SUBREG_TO_REG (i64 1), (XSCVDPSXDS (COPY_TO_REGCLASS (XFLOADf32 xoaddr:$A),
+                                                        VSFRC)), sub_64)>;
+defm : ScalToVecWPermute<
+  v2i64, FltToULongLoad.A,
+  (XXPERMDIs (XSCVDPUXDS (COPY_TO_REGCLASS (XFLOADf32 xoaddr:$A), VSFRC)), 0),
+  (SUBREG_TO_REG (i64 1), (XSCVDPUXDS (COPY_TO_REGCLASS (XFLOADf32 xoaddr:$A),
+                                                        VSFRC)), sub_64)>;
 } // HasVSX, NoP9Vector
 
 // Any VSX subtarget that only has loads and stores that load in big endian
@@ -3156,8 +3174,12 @@ def : Pat<DWToSPExtractConv.El1US1,
                             (f64 (COPY_TO_REGCLASS $S1, VSRC)), VSFRC)))>;
 
 // v4f32 scalar <-> vector conversions (LE)
-def : Pat<(v4f32 (scalar_to_vector f32:$A)),
-          (v4f32 (XXSLDWI (XSCVDPSPN $A), (XSCVDPSPN $A), 1))>;
+  // The permuted version is no better than the version that puts the value
+  // into the right element because XSCVDPSPN is different from all the other
+  // instructions used for PPCSToV.
+  defm : ScalToVecWPermute<v4f32, (f32 f32:$A),
+                           (XXSLDWI (XSCVDPSPN $A), (XSCVDPSPN $A), 1),
+                           (XXSLDWI (XSCVDPSPN $A), (XSCVDPSPN $A), 3)>;
 def : Pat<(f32 (vector_extract v4f32:$S, 0)),
           (f32 (XSCVSPDPN (XXSLDWI $S, $S, 3)))>;
 def : Pat<(f32 (vector_extract v4f32:$S, 1)),
@@ -3189,18 +3211,25 @@ def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
 // LIWAX - This instruction is used for sign extending i32 -> i64.
 // LIWZX - This instruction will be emitted for i32, f32, and when
 //         zero-extending i32 to i64 (zext i32 -> i64).
-def : Pat<(v2i64 (scalar_to_vector (i64 (sextloadi32 xoaddr:$src)))),
-          (v2i64 (XXPERMDIs
-          (COPY_TO_REGCLASS (LIWAX xoaddr:$src), VSFRC), 2))>;
-def : Pat<(v2i64 (scalar_to_vector (i64 (zextloadi32 xoaddr:$src)))),
-          (v2i64 (XXPERMDIs
-          (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSFRC), 2))>;
-def : Pat<(v4i32 (scalar_to_vector (i32 (load xoaddr:$src)))),
-          (v4i32 (XXPERMDIs
-          (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSFRC), 2))>;
-def : Pat<(v4f32 (scalar_to_vector (f32 (load xoaddr:$src)))),
-          (v4f32 (XXPERMDIs
-          (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSFRC), 2))>;
+defm : ScalToVecWPermute<
+  v2i64, (i64 (sextloadi32 xoaddr:$src)),
+  (XXPERMDIs (COPY_TO_REGCLASS (LIWAX xoaddr:$src), VSFRC), 2),
+  (SUBREG_TO_REG (i64 1), (LIWAX xoaddr:$src), sub_64)>;
+
+defm : ScalToVecWPermute<
+  v2i64, (i64 (zextloadi32 xoaddr:$src)),
+  (XXPERMDIs (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSFRC), 2),
+  (SUBREG_TO_REG (i64 1), (LIWZX xoaddr:$src), sub_64)>;
+
+defm : ScalToVecWPermute<
+  v4i32, (i32 (load xoaddr:$src)),
+  (XXPERMDIs (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSFRC), 2),
+  (SUBREG_TO_REG (i64 1), (LIWZX xoaddr:$src), sub_64)>;
+
+defm : ScalToVecWPermute<
+  v4f32, (f32 (load xoaddr:$src)),
+  (XXPERMDIs (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSFRC), 2),
+  (SUBREG_TO_REG (i64 1), (LIWZX xoaddr:$src), sub_64)>;
 
 def : Pat<DWToSPExtractConv.BVU,
           (v4f32 (VPKUDUM (XXSLDWI (XVCVUXDSP $S2), (XVCVUXDSP $S2), 3),
@@ -3336,14 +3365,17 @@ def : Pat<(i64 (vector_extract v2i64:$S, i64:$Idx)),
 // Little endian VSX subtarget with direct moves.
 let Predicates = [HasVSX, HasDirectMove, IsLittleEndian] in {
   // v16i8 scalar <-> vector conversions (LE)
-  def : Pat<(v16i8 (scalar_to_vector i32:$A)),
-            (v16i8 (COPY_TO_REGCLASS MovesToVSR.LE_WORD_0, VSRC))>;
-  def : Pat<(v8i16 (scalar_to_vector i32:$A)),
-            (v8i16 (COPY_TO_REGCLASS MovesToVSR.LE_WORD_0, VSRC))>;
-  def : Pat<(v4i32 (scalar_to_vector i32:$A)),
-            (v4i32 MovesToVSR.LE_WORD_0)>;
-  def : Pat<(v2i64 (scalar_to_vector i64:$A)),
-            (v2i64 MovesToVSR.LE_DWORD_0)>;
+  defm : ScalToVecWPermute<v16i8, (i32 i32:$A),
+                           (COPY_TO_REGCLASS MovesToVSR.LE_WORD_0, VSRC),
+                           (COPY_TO_REGCLASS MovesToVSR.LE_WORD_1, VSRC)>;
+  defm : ScalToVecWPermute<v8i16, (i32 i32:$A),
+                           (COPY_TO_REGCLASS MovesToVSR.LE_WORD_0, VSRC),
+                           (COPY_TO_REGCLASS MovesToVSR.LE_WORD_1, VSRC)>;
+  defm : ScalToVecWPermute<v4i32, (i32 i32:$A), MovesToVSR.LE_WORD_0,
+                           (SUBREG_TO_REG (i64 1), (MTVSRWZ $A), sub_64)>;
+  defm : ScalToVecWPermute<v2i64, (i64 i64:$A), MovesToVSR.LE_DWORD_0,
+                           MovesToVSR.LE_DWORD_1>;
+
   // v2i64 scalar <-> vector conversions (LE)
   def : Pat<(i64 (vector_extract v2i64:$S, 0)),
             (i64 VectorExtractions.LE_DWORD_0)>;
@@ -3641,30 +3673,41 @@ def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, xoaddr:$dst),
           (STXVX $rS, xoaddr:$dst)>;
 
 // Build vectors from i8 loads
-def : Pat<(v16i8 (scalar_to_vector ScalarLoads.Li8)),
-          (v16i8 (VSPLTBs 7, (LXSIBZX xoaddr:$src)))>;
-def : Pat<(v8i16 (scalar_to_vector ScalarLoads.ZELi8)),
-          (v8i16 (VSPLTHs 3, (LXSIBZX xoaddr:$src)))>;
-def : Pat<(v4i32 (scalar_to_vector ScalarLoads.ZELi8)),
-         (v4i32 (XXSPLTWs (LXSIBZX xoaddr:$src), 1))>;
-def : Pat<(v2i64 (scalar_to_vector ScalarLoads.ZELi8i64)),
-          (v2i64 (XXPERMDIs (LXSIBZX xoaddr:$src), 0))>;
-def : Pat<(v4i32 (scalar_to_vector ScalarLoads.SELi8)),
-          (v4i32 (XXSPLTWs (VEXTSB2Ws (LXSIBZX xoaddr:$src)), 1))>;
-def : Pat<(v2i64 (scalar_to_vector ScalarLoads.SELi8i64)),
-          (v2i64 (XXPERMDIs (VEXTSB2Ds (LXSIBZX xoaddr:$src)), 0))>;
+defm : ScalToVecWPermute<v16i8, ScalarLoads.Li8,
+                         (VSPLTBs 7, (LXSIBZX xoaddr:$src)),
+                         (VSPLTBs 7, (LXSIBZX xoaddr:$src))>;
+defm : ScalToVecWPermute<v8i16, ScalarLoads.ZELi8,
+                         (VSPLTHs 3, (LXSIBZX xoaddr:$src)),
+                         (VSPLTHs 3, (LXSIBZX xoaddr:$src))>;
+defm : ScalToVecWPermute<v4i32, ScalarLoads.ZELi8,
+                         (XXSPLTWs (LXSIBZX xoaddr:$src), 1),
+                         (XXSPLTWs (LXSIBZX xoaddr:$src), 1)>;
+defm : ScalToVecWPermute<v2i64, ScalarLoads.ZELi8i64,
+                         (XXPERMDIs (LXSIBZX xoaddr:$src), 0),
+                         (XXPERMDIs (LXSIBZX xoaddr:$src), 0)>;
+defm : ScalToVecWPermute<v4i32, ScalarLoads.SELi8,
+                         (XXSPLTWs (VEXTSB2Ws (LXSIBZX xoaddr:$src)), 1),
+                         (XXSPLTWs (VEXTSB2Ws (LXSIBZX xoaddr:$src)), 1)>;
+defm : ScalToVecWPermute<v2i64, ScalarLoads.SELi8i64,
+                         (XXPERMDIs (VEXTSB2Ds (LXSIBZX xoaddr:$src)), 0),
+                         (XXPERMDIs (VEXTSB2Ds (LXSIBZX xoaddr:$src)), 0)>;
 
 // Build vectors from i16 loads
-def : Pat<(v8i16 (scalar_to_vector ScalarLoads.Li16)),
-          (v8i16 (VSPLTHs 3, (LXSIHZX xoaddr:$src)))>;
-def : Pat<(v4i32 (scalar_to_vector ScalarLoads.ZELi16)),
-          (v4i32 (XXSPLTWs (LXSIHZX xoaddr:$src), 1))>;
-def : Pat<(v2i64 (scalar_to_vector ScalarLoads.ZELi16i64)),
-         (v2i64 (XXPERMDIs (LXSIHZX xoaddr:$src), 0))>;
-def : Pat<(v4i32 (scalar_to_vector ScalarLoads.SELi16)),
-          (v4i32 (XXSPLTWs (VEXTSH2Ws (LXSIHZX xoaddr:$src)), 1))>;
-def : Pat<(v2i64 (scalar_to_vector ScalarLoads.SELi16i64)),
-          (v2i64 (XXPERMDIs (VEXTSH2Ds (LXSIHZX xoaddr:$src)), 0))>;
+defm : ScalToVecWPermute<v8i16, ScalarLoads.Li16,
+                         (VSPLTHs 3, (LXSIHZX xoaddr:$src)),
+                         (VSPLTHs 3, (LXSIHZX xoaddr:$src))>;
+defm : ScalToVecWPermute<v4i32, ScalarLoads.ZELi16,
+                         (XXSPLTWs (LXSIHZX xoaddr:$src), 1),
+                         (XXSPLTWs (LXSIHZX xoaddr:$src), 1)>;
+defm : ScalToVecWPermute<v2i64, ScalarLoads.ZELi16i64,
+                         (XXPERMDIs (LXSIHZX xoaddr:$src), 0),
+                         (XXPERMDIs (LXSIHZX xoaddr:$src), 0)>;
+defm : ScalToVecWPermute<v4i32, ScalarLoads.SELi16,
+                         (XXSPLTWs (VEXTSH2Ws (LXSIHZX xoaddr:$src)), 1),
+                         (XXSPLTWs (VEXTSH2Ws (LXSIHZX xoaddr:$src)), 1)>;
+defm : ScalToVecWPermute<v2i64, ScalarLoads.SELi16i64,
+                         (XXPERMDIs (VEXTSH2Ds (LXSIHZX xoaddr:$src)), 0),
+                         (XXPERMDIs (VEXTSH2Ds (LXSIHZX xoaddr:$src)), 0)>;
 
 // Load/convert and convert/store patterns for f16.
 def : Pat<(f64 (extloadf16 xoaddr:$src)),
@@ -3806,8 +3849,7 @@ def : Pat<(f32 (PPCxsminc f32:$XA, f32:$XB)),
                                  VSSRC))>;
 
 // Endianness-neutral patterns for const splats with ISA 3.0 instructions.
-def : Pat<(v4i32 (scalar_to_vector i32:$A)),
-          (v4i32 (MTVSRWS $A))>;
+defm : ScalToVecWPermute<v4i32, (i32 i32:$A), (MTVSRWS $A), (MTVSRWS $A)>;
 def : Pat<(v4i32 (build_vector i32:$A, i32:$A, i32:$A, i32:$A)),
           (v4i32 (MTVSRWS $A))>;
 def : Pat<(v16i8 (build_vector immNonAllOneAnyExt8:$A, immNonAllOneAnyExt8:$A,
@@ -3819,24 +3861,32 @@ def : Pat<(v16i8 (build_vector immNonAllOneAnyExt8:$A, immNonAllOneAnyExt8:$A,
                                immNonAllOneAnyExt8:$A, immNonAllOneAnyExt8:$A,
                                immNonAllOneAnyExt8:$A, immNonAllOneAnyExt8:$A)),
           (v16i8 (COPY_TO_REGCLASS (XXSPLTIB imm:$A), VSRC))>;
-def : Pat<(v4i32 (scalar_to_vector FltToIntLoad.A)),
-          (v4i32 (XVCVSPSXWS (LXVWSX xoaddr:$A)))>;
-def : Pat<(v4i32 (scalar_to_vector FltToUIntLoad.A)),
-          (v4i32 (XVCVSPUXWS (LXVWSX xoaddr:$A)))>;
-def : Pat<(v4i32 (scalar_to_vector DblToIntLoadP9.A)),
-          (v4i32 (XXSPLTW (COPY_TO_REGCLASS
-                            (XSCVDPSXWS (DFLOADf64 iaddrX4:$A)), VSRC), 1))>;
-def : Pat<(v4i32 (scalar_to_vector DblToUIntLoadP9.A)),
-          (v4i32 (XXSPLTW (COPY_TO_REGCLASS
-                            (XSCVDPUXWS (DFLOADf64 iaddrX4:$A)), VSRC), 1))>;
-def : Pat<(v2i64 (scalar_to_vector FltToLongLoadP9.A)),
-          (v2i64 (XXPERMDIs (XSCVDPSXDS (COPY_TO_REGCLASS
-                                          (DFLOADf32 iaddrX4:$A),
-                                          VSFRC)), 0))>;
-def : Pat<(v2i64 (scalar_to_vector FltToULongLoadP9.A)),
-          (v2i64 (XXPERMDIs (XSCVDPUXDS (COPY_TO_REGCLASS
-                                          (DFLOADf32 iaddrX4:$A),
-                                          VSFRC)), 0))>;
+defm : ScalToVecWPermute<v4i32, FltToIntLoad.A,
+                         (XVCVSPSXWS (LXVWSX xoaddr:$A)),
+                         (XVCVSPSXWS (LXVWSX xoaddr:$A))>;
+defm : ScalToVecWPermute<v4i32, FltToUIntLoad.A,
+                         (XVCVSPUXWS (LXVWSX xoaddr:$A)),
+                         (XVCVSPUXWS (LXVWSX xoaddr:$A))>;
+defm : ScalToVecWPermute<
+  v4i32, DblToIntLoadP9.A,
+  (XXSPLTW (COPY_TO_REGCLASS (XSCVDPSXWS (DFLOADf64 iaddrX4:$A)), VSRC), 1),
+  (SUBREG_TO_REG (i64 1), (XSCVDPSXWS (DFLOADf64 iaddrX4:$A)), sub_64)>;
+defm : ScalToVecWPermute<
+  v4i32, DblToUIntLoadP9.A,
+  (XXSPLTW (COPY_TO_REGCLASS (XSCVDPUXWS (DFLOADf64 iaddrX4:$A)), VSRC), 1),
+  (SUBREG_TO_REG (i64 1), (XSCVDPUXWS (DFLOADf64 iaddrX4:$A)), sub_64)>;
+defm : ScalToVecWPermute<
+  v2i64, FltToLongLoadP9.A,
+  (XXPERMDIs (XSCVDPSXDS (COPY_TO_REGCLASS (DFLOADf32 iaddrX4:$A), VSFRC)), 0),
+  (SUBREG_TO_REG
+     (i64 1),
+     (XSCVDPSXDS (COPY_TO_REGCLASS (DFLOADf32 iaddrX4:$A), VSFRC)), sub_64)>;
+defm : ScalToVecWPermute<
+  v2i64, FltToULongLoadP9.A,
+  (XXPERMDIs (XSCVDPUXDS (COPY_TO_REGCLASS (DFLOADf32 iaddrX4:$A), VSFRC)), 0),
+  (SUBREG_TO_REG
+     (i64 1),
+     (XSCVDPUXDS (COPY_TO_REGCLASS (DFLOADf32 iaddrX4:$A), VSFRC)), sub_64)>;
 def : Pat<(v4f32 (PPCldsplat xoaddr:$A)),
           (v4f32 (LXVWSX xoaddr:$A))>;
 def : Pat<(v4i32 (PPCldsplat xoaddr:$A)),
@@ -4116,19 +4166,23 @@ def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 6)), xoaddr:$dst),
 def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 7)), xoaddr:$dst),
           (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 10)), VSRC), xoaddr:$dst)>;
 
-def : Pat<(v2i64 (scalar_to_vector (i64 (load iaddrX4:$src)))),
-          (v2i64 (XXPERMDIs
-          (COPY_TO_REGCLASS (DFLOADf64 iaddrX4:$src), VSFRC), 2))>;
-def : Pat<(v2i64 (scalar_to_vector (i64 (load xaddrX4:$src)))),
-          (v2i64 (XXPERMDIs
-          (COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSFRC), 2))>;
+defm : ScalToVecWPermute<
+  v2i64, (i64 (load iaddrX4:$src)),
+  (XXPERMDIs (COPY_TO_REGCLASS (DFLOADf64 iaddrX4:$src), VSFRC), 2),
+  (SUBREG_TO_REG (i64 1), (DFLOADf64 iaddrX4:$src), sub_64)>;
+defm : ScalToVecWPermute<
+  v2i64, (i64 (load xaddrX4:$src)),
+  (XXPERMDIs (COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSFRC), 2),
+  (SUBREG_TO_REG (i64 1), (XFLOADf64 xaddrX4:$src), sub_64)>;
+defm : ScalToVecWPermute<
+  v2f64, (f64 (load iaddrX4:$src)),
+  (XXPERMDIs (COPY_TO_REGCLASS (DFLOADf64 iaddrX4:$src), VSFRC), 2),
+  (SUBREG_TO_REG (i64 1), (DFLOADf64 iaddrX4:$src), sub_64)>;
+defm : ScalToVecWPermute<
+  v2f64, (f64 (load xaddrX4:$src)),
+  (XXPERMDIs (COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSFRC), 2),
+  (SUBREG_TO_REG (i64 1), (XFLOADf64 xaddrX4:$src), sub_64)>;
 
-def : Pat<(v2f64 (scalar_to_vector (f64 (load iaddrX4:$src)))),
-          (v2f64 (XXPERMDIs
-          (COPY_TO_REGCLASS (DFLOADf64 iaddrX4:$src), VSFRC), 2))>;
-def : Pat<(v2f64 (scalar_to_vector (f64 (load xaddrX4:$src)))),
-          (v2f64 (XXPERMDIs
-          (COPY_TO_REGCLASS (XFLOADf64 xaddrX4:$src), VSFRC), 2))>;
 def : Pat<(store (i64 (extractelt v2i64:$A, 0)), xaddrX4:$src),
           (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
                        sub_64), xaddrX4:$src)>;

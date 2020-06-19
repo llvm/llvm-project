@@ -13,8 +13,7 @@ define void @testExpandPostRAPseudo(i32* nocapture readonly %ptr) {
 ; CHECK-P8:  # %bb.0: # %entry
 ; CHECK-P8:    lfiwzx f0, 0, r3
 ; CHECK-P8:    ld r4, .LC0@toc@l(r4)
-; CHECK-P8:    xxswapd vs0, f0
-; CHECK-P8:    xxspltw v2, vs0, 3
+; CHECK-P8:    xxspltw v2, vs0, 1
 ; CHECK-P8:    stvx v2, 0, r4
 ; CHECK-P8:    lis r4, 1024
 ; CHECK-P8:    lfiwax f0, 0, r3

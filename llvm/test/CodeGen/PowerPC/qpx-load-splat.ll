@@ -53,8 +53,7 @@ define <4 x float> @foof(float* nocapture readonly %a) #0 {
 ; CHECK-LABEL: foof:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfiwzx f0, 0, r3
-; CHECK-NEXT:    xxswapd vs0, f0
-; CHECK-NEXT:    xxspltw v2, vs0, 3
+; CHECK-NEXT:    xxspltw v2, vs0, 1
 ; CHECK-NEXT:    blr
 entry:
   %0 = load float, float* %a, align 4
@@ -68,8 +67,7 @@ define <4 x float> @foofx(float* nocapture readonly %a, i64 %idx) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sldi r4, r4, 2
 ; CHECK-NEXT:    lfiwzx f0, r3, r4
-; CHECK-NEXT:    xxswapd vs0, f0
-; CHECK-NEXT:    xxspltw v2, vs0, 3
+; CHECK-NEXT:    xxspltw v2, vs0, 1
 ; CHECK-NEXT:    blr
 entry:
   %p = getelementptr float, float* %a, i64 %idx
