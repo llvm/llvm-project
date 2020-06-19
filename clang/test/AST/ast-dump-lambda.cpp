@@ -127,7 +127,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:       | | | `-CompoundStmt {{.*}} <col:10, col:11>
 // CHECK-NEXT:       | | `-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'Ts...'
 // CHECK-NEXT:       | |-ParenListExpr {{.*}} <col:4> 'NULL TYPE'
-// CHECK-NEXT:       | | `-DeclRefExpr {{.*}} <col:4> 'Ts...' lvalue ParmVar {{.*}} 'a' 'Ts...'
+// CHECK-NEXT:       | | `-DeclRefExpr {{.*}} <col:4> 'Ts' lvalue ParmVar {{.*}} 'a' 'Ts...'
 // CHECK-NEXT:       | `-CompoundStmt {{.*}} <col:10, col:11>
 // CHECK-NEXT:       |-LambdaExpr {{.*}} <line:24:3, col:8> '(lambda at {{.*}}ast-dump-lambda.cpp:24:3)'
 // CHECK-NEXT:       | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
@@ -228,7 +228,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:       | | |-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'Ts...'
 // CHECK-NEXT:       | | `-FieldDecl {{.*}} <col:10> col:10{{( imported)?}} implicit 'int':'int'
 // CHECK-NEXT:       | |-ParenListExpr {{.*}} <col:4> 'NULL TYPE'
-// CHECK-NEXT:       | | `-DeclRefExpr {{.*}} <col:4> 'Ts...' lvalue ParmVar {{.*}} 'a' 'Ts...'
+// CHECK-NEXT:       | | `-DeclRefExpr {{.*}} <col:4> 'Ts' lvalue ParmVar {{.*}} 'a' 'Ts...'
 // CHECK-NEXT:       | |-IntegerLiteral {{.*}} <col:14> 'int' 12
 // CHECK-NEXT:       | `-CompoundStmt {{.*}} <col:18, col:19>
 // CHECK-NEXT:       |-LambdaExpr {{.*}} <line:30:3, col:19> '(lambda at {{.*}}ast-dump-lambda.cpp:30:3)'
