@@ -12,15 +12,16 @@ define void @test0() {
 	ret void
 }
 
-; PR615. Make sure that we do not move the alloca so that it interferes with the tail call.
+; Make sure that we do not do TRE if pointer to local stack
+; escapes through function call.
 define i32 @test1() {
 ; CHECK: i32 @test1()
 ; CHECK-NEXT: alloca
 	%A = alloca i32		; <i32*> [#uses=2]
 	store i32 5, i32* %A
 	call void @use(i32* %A)
-; CHECK: tail call i32 @test1
-	%X = tail call i32 @test1()		; <i32> [#uses=1]
+; CHECK: call i32 @test1
+	%X = call i32 @test1()		; <i32> [#uses=1]
 	ret i32 %X
 }
 
