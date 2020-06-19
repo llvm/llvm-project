@@ -109,9 +109,9 @@ define i1 @caller.zext() {
 ; x = [100, 301)
 define internal i1 @f.sext(i32 %x, i32 %y) {
 ; CHECK-LABEL: define internal i1 @f.sext(i32 %x, i32 %y) {
-; CHECK-NEXT:    %t.1 = sext i32 %x to i64
-; CHECK-NEXT:    %c.2 = icmp sgt i64 %t.1, 299
-; CHECK-NEXT:    %c.4 = icmp slt i64 %t.1, 101
+; CHECK-NEXT:    [[T_1:%.*]] = zext i32 %x to i64
+; CHECK-NEXT:    %c.2 = icmp sgt i64 [[T_1]], 299
+; CHECK-NEXT:    %c.4 = icmp slt i64 [[T_1]], 101
 ; CHECK-NEXT:    %res.1 = add i1 false, %c.2
 ; CHECK-NEXT:    %res.2 = add i1 %res.1, false
 ; CHECK-NEXT:    %res.3 = add i1 %res.2, %c.4
