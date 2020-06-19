@@ -3151,6 +3151,11 @@ ExprResult Sema::BuildDeclarationNameExpr(
       return ExprError();
     ExprValueKind valueKind = VK_RValue;
 
+    // In 'T ...V;', the type of the declaration 'V' is 'T...', but the type of
+    // a reference to 'V' is simply (unexpanded) 'T'. The type, like the value,
+    // is expanded by some outer '...' in the context of the use.
+    type = type.getNonPackExpansionType();
+
     switch (D->getKind()) {
     // Ignore all the non-ValueDecl kinds.
 #define ABSTRACT_DECL(kind)

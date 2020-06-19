@@ -4724,7 +4724,7 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
   } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
     Expr *E = new (*this) DeclRefExpr(
         *this, NTTP, /*enclosing*/ false,
-        NTTP->getType().getNonLValueExprType(*this),
+        NTTP->getType().getNonPackExpansionType().getNonLValueExprType(*this),
         Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
 
     if (NTTP->isParameterPack())

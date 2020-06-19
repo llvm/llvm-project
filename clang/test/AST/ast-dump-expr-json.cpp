@@ -5042,7 +5042,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "Ts..."
+// CHECK-NEXT:             "qualType": "Ts"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
 // CHECK-NEXT:            "referencedDecl": {
@@ -6622,7 +6622,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "Ts..."
+// CHECK-NEXT:             "qualType": "Ts"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
 // CHECK-NEXT:            "referencedDecl": {
@@ -7603,7 +7603,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "Ts..."
+// CHECK-NEXT:           "qualType": "Ts"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
 // CHECK-NEXT:          "referencedDecl": {
@@ -7656,7 +7656,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "Ts..."
+// CHECK-NEXT:           "qualType": "Ts"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
 // CHECK-NEXT:          "referencedDecl": {
@@ -7707,7 +7707,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "Ts..."
+// CHECK-NEXT:           "qualType": "Ts"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
 // CHECK-NEXT:          "referencedDecl": {
