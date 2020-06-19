@@ -1749,6 +1749,9 @@ static ParseResult parseAffineIfOp(OpAsmParser &parser,
         parser.getNameLoc(),
         "symbol operand count and integer set symbol count must match");
 
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+
   // Create the regions for 'then' and 'else'.  The latter must be created even
   // if it remains empty for the validity of the operation.
   result.regions.reserve(2);
@@ -1782,6 +1785,7 @@ static void print(OpAsmPrinter &p, AffineIfOp op) {
   p << "affine.if " << conditionAttr;
   printDimAndSymbolList(op.operand_begin(), op.operand_end(),
                         conditionAttr.getValue().getNumDims(), p);
+  p.printOptionalArrowTypeList(op.getResultTypes());
   p.printRegion(op.thenRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/op.getNumResults());

@@ -153,7 +153,7 @@ func @valid_symbol_affine_scope(%n : index, %A : memref<?xf32>) {
 
 // -----
 
-// CHECK-LABEL: @parallel
+// CHECK-LABEL: func @parallel
 // CHECK-SAME: (%[[N:.*]]: index)
 func @parallel(%N : index) {
   // CHECK: affine.parallel (%[[I0:.*]], %[[J0:.*]]) = (0, 0) to (symbol(%[[N]]), 100) step (10, 10)
@@ -165,4 +165,22 @@ func @parallel(%N : index) {
     }
   }
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @affine_if
+func @affine_if() -> f32 {
+  // CHECK: %[[ZERO:.*]] = constant {{.*}} : f32
+  %zero = constant 0.0 : f32
+  // CHECK: %[[OUT:.*]] = affine.if {{.*}}() -> f32 {
+  %0 = affine.if affine_set<() : ()> () -> f32 {
+    // CHECK: affine.yield %[[ZERO]] : f32
+    affine.yield %zero : f32
+  } else {
+    // CHECK: affine.yield %[[ZERO]] : f32
+    affine.yield %zero : f32
+  }
+  // CHECK: return %[[OUT]] : f32
+  return %0 : f32
 }

@@ -322,8 +322,8 @@ def AffineIfOp : Affine_Op<"if",
     }
     ```
   }];
-  let results = (outs Variadic<AnyMemRef>:$results);
   let arguments = (ins Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
 
   let skipDefaultBuilders = 1;
@@ -755,8 +755,7 @@ def AffineStoreOp : AffineStoreOpBase<"store", []> {
   let hasFolder = 1;
 }
 
-def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator]>,
-    Arguments<(ins Variadic<AnyMemRef>:$values)> {
+def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator]> {
   let summary = "Yield values to parent operation";
   let description = [{
     "affine.yield" yields zero or more SSA values from an affine op region and
@@ -770,7 +769,7 @@ def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator]>,
     yielded.
     ```
   }];
-  let arguments = (ins Variadic<AnyMemRef>:$results);
+  let arguments = (ins Variadic<AnyType>:$results);
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result",
               [{ /* nothing to do */ }]>
