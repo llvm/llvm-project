@@ -763,7 +763,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
         if (m_bytes[0] == '$' && total_length > 4) {
           for (size_t i = 0; !binary && i < total_length; ++i) {
             unsigned char c = m_bytes[i];
-            if (isprint(c) == 0 && isspace(c) == 0) {
+            if (!llvm::isPrint(c) && !llvm::isSpace(c)) {
               binary = true;
             }
           }

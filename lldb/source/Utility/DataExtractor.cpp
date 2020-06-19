@@ -964,7 +964,7 @@ lldb::offset_t DataExtractor::PutToLog(Log *log, offset_t start_offset,
       break;
     case TypeChar: {
       char ch = GetU8(&offset);
-      sstr.Printf(" %c", isprint(ch) ? ch : ' ');
+      sstr.Printf(" %c", llvm::isPrint(ch) ? ch : ' ');
     } break;
     case TypeUInt16:
       sstr.Printf(" %4.4x", GetU16(&offset));

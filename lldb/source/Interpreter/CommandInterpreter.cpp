@@ -1340,10 +1340,10 @@ static size_t FindArgumentTerminator(const std::string &s) {
     if (pos == std::string::npos)
       break;
     if (pos > 0) {
-      if (isspace(s[pos - 1])) {
+      if (llvm::isSpace(s[pos - 1])) {
         // Check if the string ends "\s--" (where \s is a space character) or
         // if we have "\s--\s".
-        if ((pos + 2 >= s_len) || isspace(s[pos + 2])) {
+        if ((pos + 2 >= s_len) || llvm::isSpace(s[pos + 2])) {
           return pos;
         }
       }

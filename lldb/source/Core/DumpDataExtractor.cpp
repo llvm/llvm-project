@@ -284,7 +284,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
       const uint64_t ch = DE.GetMaxU64Bitfield(&offset, item_byte_size,
                                                item_bit_size, item_bit_offset);
-      if (isprint(ch))
+      if (llvm::isPrint(ch))
         s->Printf("%c", (char)ch);
       else if (item_format != eFormatCharPrintable) {
         switch (ch) {
@@ -375,7 +375,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       s->PutChar('\'');
       for (uint32_t i = 0; i < item_byte_size; ++i) {
         uint8_t ch = (uint8_t)(uval64 >> ((item_byte_size - i - 1) * 8));
-        if (isprint(ch))
+        if (llvm::isPrint(ch))
           s->Printf("%c", ch);
         else {
           switch (ch) {
@@ -425,7 +425,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
         s->PutChar('\"');
 
         while (const char c = *cstr) {
-          if (isprint(c)) {
+          if (llvm::isPrint(c)) {
             s->PutChar(c);
           } else {
             switch (c) {
