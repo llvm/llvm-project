@@ -1,4 +1,4 @@
-//===- LinalgToStandard.cpp - conversion from Linalg to Standard dialect --===//
+//===- ShapeToStandard.cpp - conversion from Shape to Standard dialect ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,6 +19,9 @@ using namespace mlir::shape;
 
 namespace {
 
+/// Generated conversion patterns.
+#include "ShapeToStandardPatterns.inc"
+
 /// Conversion patterns.
 template <typename SrcOpTy, typename DstOpTy>
 class BinaryOpConversion : public OpConversionPattern<SrcOpTy> {
@@ -31,60 +34,6 @@ public:
     typename SrcOpTy::Adaptor adaptor(operands);
     rewriter.replaceOpWithNewOp<DstOpTy>(op.getOperation(), adaptor.lhs(),
                                          adaptor.rhs());
-    return success();
-  }
-};
-
-class FromExtentTensorOpConversion
-    : public OpConversionPattern<FromExtentTensorOp> {
-public:
-  using OpConversionPattern<FromExtentTensorOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(FromExtentTensorOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    FromExtentTensorOp::Adaptor transformed(operands);
-    rewriter.replaceOp(op.getOperation(), transformed.input());
-    return success();
-  }
-};
-
-class IndexToSizeOpConversion : public OpConversionPattern<IndexToSizeOp> {
-public:
-  using OpConversionPattern<IndexToSizeOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(IndexToSizeOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    IndexToSizeOp::Adaptor transformed(operands);
-    rewriter.replaceOp(op.getOperation(), transformed.arg());
-    return success();
-  }
-};
-
-class SizeToIndexOpConversion : public OpConversionPattern<SizeToIndexOp> {
-public:
-  using OpConversionPattern<SizeToIndexOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(SizeToIndexOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    SizeToIndexOp::Adaptor transformed(operands);
-    rewriter.replaceOp(op.getOperation(), transformed.arg());
-    return success();
-  }
-};
-
-class ToExtentTensorOpConversion
-    : public OpConversionPattern<ToExtentTensorOp> {
-public:
-  using OpConversionPattern<ToExtentTensorOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(ToExtentTensorOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    ToExtentTensorOp::Adaptor transformed(operands);
-    rewriter.replaceOp(op.getOperation(), transformed.input());
     return success();
   }
 };
@@ -122,6 +71,7 @@ public:
 /// Conversion pass.
 class ConvertShapeToStandardPass
     : public ConvertShapeToStandardBase<ConvertShapeToStandardPass> {
+
   void runOnOperation() override {
     // Setup type conversion.
     MLIRContext &ctx = getContext();
@@ -132,7 +82,8 @@ class ConvertShapeToStandardPass
     target.addLegalDialect<scf::SCFDialect, StandardOpsDialect>();
     target.addLegalOp<ModuleOp, ModuleTerminatorOp, ReturnOp>();
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
-      return typeConverter.isSignatureLegal(op.getType());
+      return typeConverter.isSignatureLegal(op.getType()) &&
+             typeConverter.isLegal(&op.getBody());
     });
 
     // Setup conversion patterns.
@@ -142,7 +93,7 @@ class ConvertShapeToStandardPass
 
     // Apply conversion.
     auto module = getOperation();
-    if (failed(applyFullConversion(module, target, patterns, &typeConverter)))
+    if (failed(applyFullConversion(module, target, patterns)))
       signalPassFailure();
   }
 };
@@ -151,15 +102,12 @@ class ConvertShapeToStandardPass
 
 void mlir::populateShapeToStandardConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
+  populateWithGenerated(ctx, &patterns);
   // clang-format off
   patterns.insert<
       BinaryOpConversion<AddOp, AddIOp>,
       BinaryOpConversion<MulOp, MulIOp>,
-      ConstSizeOpConverter,
-      FromExtentTensorOpConversion,
-      IndexToSizeOpConversion,
-      SizeToIndexOpConversion,
-      ToExtentTensorOpConversion>(ctx);
+      ConstSizeOpConverter>(ctx);
   // clang-format on
 }
 

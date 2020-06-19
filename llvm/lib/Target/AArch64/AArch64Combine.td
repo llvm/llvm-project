@@ -22,6 +22,8 @@ def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
                                            elide_br_by_inverting_cond,
                                            fconstant_to_constant]> {
   let DisableRuleOption = "aarch64prelegalizercombiner-disable-rule";
+  let StateClass = "AArch64PreLegalizerCombinerHelperState";
+  let AdditionalArguments = [];
 }
 
 // Matchdata for combines which replace a G_SHUFFLE_VECTOR with a

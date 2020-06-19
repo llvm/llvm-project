@@ -114,13 +114,10 @@ uint32x4_t test_vsubq_n_u32(uint32x4_t a, uint32_t b)
 
 // CHECK-LABEL: @test_vsubq_n_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[B_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[B:%.*]], i32 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x half> [[DOTSPLATINSERT]], <8 x half> undef, <8 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = fsub <8 x half> [[A:%.*]], [[DOTSPLAT]]
-// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = fsub <8 x half> [[A:%.*]], [[DOTSPLAT]]
+// CHECK-NEXT:    ret <8 x half> [[TMP0]]
 //
 float16x8_t test_vsubq_n_f16(float16x8_t a, float16_t b)
 {
@@ -187,15 +184,12 @@ uint16x8_t test_vsubq_x_n_u16(uint16x8_t a, uint16_t b, mve_pred16_t p)
 
 // CHECK-LABEL: @test_vsubq_x_n_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[B_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[B:%.*]], i32 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x half> [[DOTSPLATINSERT]], <8 x half> undef, <8 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = call <8 x half> @llvm.arm.mve.sub.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x half> [[DOTSPLAT]], <8 x i1> [[TMP3]], <8 x half> undef)
-// CHECK-NEXT:    ret <8 x half> [[TMP4]]
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.sub.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x half> [[DOTSPLAT]], <8 x i1> [[TMP1]], <8 x half> undef)
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
 //
 float16x8_t test_vsubq_x_n_f16(float16x8_t a, float16_t b, mve_pred16_t p)
 {

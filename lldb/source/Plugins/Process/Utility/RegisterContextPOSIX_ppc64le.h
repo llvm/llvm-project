@@ -39,9 +39,6 @@ public:
 
   const char *GetRegisterName(unsigned reg);
 
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
-
 protected:
   // 64-bit general purpose registers.
   uint64_t m_gpr_ppc64le[k_num_gpr_registers_ppc64le];
@@ -71,7 +68,6 @@ protected:
 
   bool IsVSX(unsigned reg);
 
-  lldb::ByteOrder GetByteOrder();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_PPC64LE_H

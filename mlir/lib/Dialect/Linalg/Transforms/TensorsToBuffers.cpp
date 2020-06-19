@@ -120,10 +120,8 @@ struct ConvertLinalgOnTensorsToBuffers
     target.addLegalDialect<StandardOpsDialect>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
-    auto isIllegalType = [&](Type type) { return !converter.isLegal(type); };
     auto isLegalOperation = [&](Operation *op) {
-      return llvm::none_of(op->getOperandTypes(), isIllegalType) &&
-             llvm::none_of(op->getResultTypes(), isIllegalType);
+      return converter.isLegal(op);
     };
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(
         Optional<ConversionTarget::DynamicLegalityCallbackFn>(
@@ -131,26 +129,26 @@ struct ConvertLinalgOnTensorsToBuffers
 
     // Mark Standard Return operations illegal as long as one operand is tensor.
     target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {
-      return llvm::none_of(returnOp.getOperandTypes(), isIllegalType);
+      return converter.isLegal(returnOp.getOperandTypes());
     });
 
     // Mark the function operation illegal as long as an argument is tensor.
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp funcOp) {
       return converter.isSignatureLegal(funcOp.getType()) &&
              llvm::none_of(funcOp.getType().getResults(),
-                           [&](Type type) { return type.isa<MemRefType>(); });
+                           [&](Type type) { return type.isa<MemRefType>(); }) &&
+             converter.isLegal(&funcOp.getBody());
     });
 
     // Walk over all the functions to apply buffer assignment.
-    getOperation().walk([&](FuncOp function) {
+    getOperation().walk([&](FuncOp function) -> WalkResult {
       OwningRewritePatternList patterns;
       BufferAssignmentPlacer placer(function);
       populateConvertLinalgOnTensorsToBuffersPattern(&context, &placer,
                                                      &converter, &patterns);
 
       // Applying full conversion
-      return WalkResult(
-          applyFullConversion(function, target, patterns, &converter));
+      return applyFullConversion(function, target, patterns);
     });
   }
 };

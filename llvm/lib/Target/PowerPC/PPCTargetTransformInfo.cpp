@@ -293,7 +293,7 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
         if (F->getIntrinsicID() != Intrinsic::not_intrinsic) {
           switch (F->getIntrinsicID()) {
           default: continue;
-          // If we have a call to ppc_is_decremented_ctr_nonzero, or ppc_mtctr
+          // If we have a call to loop_decrement or set_loop_iterations,
           // we're definitely using CTR.
           case Intrinsic::set_loop_iterations:
           case Intrinsic::loop_decrement:
@@ -429,8 +429,9 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
 
       return true;
     } else if (isa<BinaryOperator>(J) &&
-               J->getType()->getScalarType()->isPPC_FP128Ty()) {
-      // Most operations on ppc_f128 values become calls.
+               (J->getType()->getScalarType()->isFP128Ty() ||
+                J->getType()->getScalarType()->isPPC_FP128Ty())) {
+      // Most operations on f128 or ppc_f128 values become calls.
       return true;
     } else if (isa<UIToFPInst>(J) || isa<SIToFPInst>(J) ||
                isa<FPToUIInst>(J) || isa<FPToSIInst>(J)) {

@@ -209,14 +209,17 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
     break;
   }
   case MVT::f16:
+  case MVT::bf16:
   case MVT::f32:
     RegList = SRegList;
     break;
   case MVT::v4f16:
+  case MVT::v4bf16:
   case MVT::f64:
     RegList = DRegList;
     break;
   case MVT::v8f16:
+  case MVT::v8bf16:
   case MVT::v2f64:
     RegList = QRegList;
     break;
@@ -276,6 +279,34 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
 
   // This will be allocated by the last member of the aggregate
   return true;
+}
+
+static bool CustomAssignInRegList(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                  CCValAssign::LocInfo LocInfo, CCState &State,
+                                  ArrayRef<MCPhysReg> RegList) {
+  unsigned Reg = State.AllocateReg(RegList);
+  if (Reg) {
+    State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+    return true;
+  }
+  return false;
+}
+
+static bool CC_ARM_AAPCS_Custom_f16(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                    CCValAssign::LocInfo LocInfo,
+                                    ISD::ArgFlagsTy ArgFlags, CCState &State) {
+  // f16 arguments are extended to i32 and assigned to a register in [r0, r3]
+  return CustomAssignInRegList(ValNo, ValVT, MVT::i32, LocInfo, State,
+                               RRegList);
+}
+
+static bool CC_ARM_AAPCS_VFP_Custom_f16(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                        CCValAssign::LocInfo LocInfo,
+                                        ISD::ArgFlagsTy ArgFlags,
+                                        CCState &State) {
+  // f16 arguments are extended to f32 and assigned to a register in [s0, s15]
+  return CustomAssignInRegList(ValNo, ValVT, MVT::f32, LocInfo, State,
+                               SRegList);
 }
 
 // Include the table generated calling convention implementations.

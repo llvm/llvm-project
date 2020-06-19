@@ -7,7 +7,7 @@
 
 #      CHECK:.debug_macro contents:
 # CHECK-NEXT:0x00000000:
-# CHECK-NEXT:macro header: version = 0x0005, flags = 0x02, debug_line_offset = 0x0000
+# CHECK-NEXT:macro header: version = 0x0005, flags = 0x02, format = DWARF32, debug_line_offset = 0x00000000
 # CHECK-NEXT:DW_MACRO_start_file - lineno: 0 filenum: 0
 # CHECK-NEXT:  DW_MACRO_define_strx - lineno: 1 macro: DWARF_VERSION 5
 # CHECK-NEXT:  DW_MACRO_define_strx - lineno: 2 macro: COMPILE_UNIT 1
@@ -15,7 +15,7 @@
 # CHECK-NEXT:DW_MACRO_end_file
 
 #      CHECK:0x00000015:
-# CHECK-NEXT:macro header: version = 0x0005, flags = 0x02, debug_line_offset = 0x0000
+# CHECK-NEXT:macro header: version = 0x0005, flags = 0x02, format = DWARF32, debug_line_offset = 0x00000000
 # CHECK-NEXT:DW_MACRO_start_file - lineno: 1 filenum: 3
 # CHECK-NEXT:  DW_MACRO_define_strx - lineno: 2 macro: COMPILE_UNIT 2
 # CHECK-NEXT:  DW_MACRO_undef_strx - lineno: 3 macro: COMPILE_UNIT

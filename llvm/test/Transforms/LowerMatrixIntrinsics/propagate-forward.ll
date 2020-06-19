@@ -30,14 +30,14 @@ define void @transpose_store(<8 x double> %a, <8 x double>* %Ptr) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <8 x double>* [[PTR:%.*]] to double*
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP16]] to <4 x double>*
 ; CHECK-NEXT:    store <4 x double> [[TMP7]], <4 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP16]], i32 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP16]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP]] to <4 x double>*
 ; CHECK-NEXT:    store <4 x double> [[TMP15]], <4 x double>* [[VEC_CAST4]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %c  = call <8 x double> @llvm.matrix.transpose(<8 x double> %a, i32 2, i32 4)
-  store <8 x double> %c, <8 x double>* %Ptr
+  store <8 x double> %c, <8 x double>* %Ptr, align 8
   ret void
 }
 

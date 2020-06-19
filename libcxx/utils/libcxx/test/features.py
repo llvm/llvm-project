@@ -108,3 +108,24 @@ for locale, alts in locales.items():
     Feature(name='locale.{}'.format(locale),
             when=lambda cfg: any(hasLocale(cfg, alt) for alt in alts))
   ]
+
+
+# Add a feature representing the platform name: darwin, linux, windows, etc...
+features += [
+  Feature(name=lambda cfg: programOutput(cfg, """
+    #include <cstdio>
+    int main() {
+    #if defined(__APPLE__)
+      std::printf("darwin");
+    #elif defined(_WIN32)
+      std::printf("windows");
+    #elif defined(__NetBSD__)
+      std::printf("netbsd");
+    #elif defined(__linux__)
+      std::printf("linux");
+    #else
+      std::printf("unknown-platform");
+    #endif
+    }
+  """))
+]

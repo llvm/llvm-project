@@ -403,22 +403,25 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
     case FileAction::eFileActionOpen: {
       FileSpec file_spec = file_action->GetFileSpec();
       if (file_spec) {
-        const int master_fd = launch_info.GetPTY().GetMasterFileDescriptor();
+        const int master_fd = launch_info.GetPTY().GetPrimaryFileDescriptor();
         if (master_fd != PseudoTerminal::invalid_fd) {
-          // Check in case our file action open wants to open the slave
-          const char *slave_path = launch_info.GetPTY().GetSlaveName(NULL, 0);
-          if (slave_path) {
-            FileSpec slave_spec(slave_path);
-            if (file_spec == slave_spec) {
-              int slave_fd = launch_info.GetPTY().GetSlaveFileDescriptor();
-              if (slave_fd == PseudoTerminal::invalid_fd)
-                slave_fd = launch_info.GetPTY().OpenSlave(O_RDWR, nullptr, 0);
-              if (slave_fd == PseudoTerminal::invalid_fd) {
-                error.SetErrorStringWithFormat("unable to open slave pty '%s'",
-                                               slave_path);
+          // Check in case our file action open wants to open the secondary
+          const char *secondary_path =
+              launch_info.GetPTY().GetSecondaryName(NULL, 0);
+          if (secondary_path) {
+            FileSpec secondary_spec(secondary_path);
+            if (file_spec == secondary_spec) {
+              int secondary_fd =
+                  launch_info.GetPTY().GetSecondaryFileDescriptor();
+              if (secondary_fd == PseudoTerminal::invalid_fd)
+                secondary_fd =
+                    launch_info.GetPTY().OpenSecondary(O_RDWR, nullptr, 0);
+              if (secondary_fd == PseudoTerminal::invalid_fd) {
+                error.SetErrorStringWithFormat(
+                    "unable to open secondary pty '%s'", secondary_path);
                 return error; // Failure
               }
-              [options setValue:[NSNumber numberWithInteger:slave_fd]
+              [options setValue:[NSNumber numberWithInteger:secondary_fd]
                          forKey:key];
               return error; // Success
             }

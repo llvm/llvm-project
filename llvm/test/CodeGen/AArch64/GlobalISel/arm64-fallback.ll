@@ -219,3 +219,23 @@ entry:
   tail call void asm sideeffect "", "imr,imr,~{memory}"(i32 %x, i32 %y)
   ret void
 }
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower arguments{{.*}}scalable_arg
+; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_arg
+define <vscale x 16 x i8> @scalable_arg(<vscale x 16 x i1> %pred, i8* %addr) #1 {
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, i8* %addr)
+  ret <vscale x 16 x i8> %res
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction{{.*}}scalable_call
+; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_call
+define <vscale x 16 x i8> @scalable_call(i8* %addr) #1 {
+  %pred = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 0)
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, i8* %addr)
+  ret <vscale x 16 x i8> %res
+}
+
+attributes #1 = { "target-features"="+sve" }
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 %pattern)
+declare <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1>, i8*)

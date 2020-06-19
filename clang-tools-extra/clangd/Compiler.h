@@ -18,7 +18,7 @@
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "GlobalCompilationDatabase.h"
 #include "index/Index.h"
-#include "support/FSProvider.h"
+#include "support/ThreadsafeFS.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -46,7 +46,7 @@ struct ParseOptions {
 /// Information required to run clang, e.g. to parse AST or do code completion.
 struct ParseInputs {
   tooling::CompileCommand CompileCommand;
-  const FileSystemProvider *FSProvider;
+  const ThreadsafeFS *TFS;
   std::string Contents;
   // Version identifier for Contents, provided by the client and opaque to us.
   std::string Version = "null";

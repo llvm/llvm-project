@@ -37,6 +37,19 @@ static bool isUnsignedIntegerOrVector(Type type) {
   return false;
 }
 
+/// Returns the bit width of integer, float or vector of float or integer values
+static unsigned getBitWidth(Type type) {
+  assert((type.isIntOrFloat() || type.isa<VectorType>()) &&
+         "bitwidth is not supported for this type");
+  if (type.isIntOrFloat())
+    return type.getIntOrFloatBitWidth();
+  auto vecType = type.dyn_cast<VectorType>();
+  auto elementType = vecType.getElementType();
+  assert(elementType.isIntOrFloat() &&
+         "only integers and floats have a bitwidth");
+  return elementType.getIntOrFloatBitWidth();
+}
+
 //===----------------------------------------------------------------------===//
 // Operation conversion
 //===----------------------------------------------------------------------===//
@@ -58,6 +71,38 @@ public:
       return failure();
     rewriter.template replaceOpWithNewOp<LLVMOp>(operation, dstType, operands);
     return success();
+  }
+};
+
+/// Converts SPIR-V cast ops that do not have straightforward LLVM
+/// equivalent in LLVM dialect.
+template <typename SPIRVOp, typename LLVMExtOp, typename LLVMTruncOp>
+class IndirectCastPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type fromType = operation.operand().getType();
+    Type toType = operation.getType();
+
+    auto dstType = this->typeConverter.convertType(toType);
+    if (!dstType)
+      return failure();
+
+    if (getBitWidth(fromType) < getBitWidth(toType)) {
+      rewriter.template replaceOpWithNewOp<LLVMExtOp>(operation, dstType,
+                                                      operands);
+      return success();
+    }
+    if (getBitWidth(fromType) > getBitWidth(toType)) {
+      rewriter.template replaceOpWithNewOp<LLVMTruncOp>(operation, dstType,
+                                                        operands);
+      return success();
+    }
+    return failure();
   }
 };
 
@@ -168,11 +213,21 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SDivOp, LLVM::SDivOp>,
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
+      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
 
       // Bitwise ops
       DirectConversionPattern<spirv::BitwiseAndOp, LLVM::AndOp>,
       DirectConversionPattern<spirv::BitwiseOrOp, LLVM::OrOp>,
       DirectConversionPattern<spirv::BitwiseXorOp, LLVM::XOrOp>,
+
+      // Cast ops
+      DirectConversionPattern<spirv::ConvertFToSOp, LLVM::FPToSIOp>,
+      DirectConversionPattern<spirv::ConvertFToUOp, LLVM::FPToUIOp>,
+      DirectConversionPattern<spirv::ConvertSToFOp, LLVM::SIToFPOp>,
+      DirectConversionPattern<spirv::ConvertUToFOp, LLVM::UIToFPOp>,
+      IndirectCastPattern<spirv::FConvertOp, LLVM::FPExtOp, LLVM::FPTruncOp>,
+      IndirectCastPattern<spirv::SConvertOp, LLVM::SExtOp, LLVM::TruncOp>,
+      IndirectCastPattern<spirv::UConvertOp, LLVM::ZExtOp, LLVM::TruncOp>,
 
       // Comparison ops
       IComparePattern<spirv::IEqualOp, LLVM::ICmpPredicate::eq>,
@@ -198,6 +253,12 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::UGreaterThanEqualOp, LLVM::ICmpPredicate::uge>,
       IComparePattern<spirv::ULessThanEqualOp, LLVM::ICmpPredicate::ule>,
       IComparePattern<spirv::ULessThanOp, LLVM::ICmpPredicate::ult>,
+
+      // Logical ops
+      DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,
+      DirectConversionPattern<spirv::LogicalOrOp, LLVM::OrOp>,
+      IComparePattern<spirv::LogicalEqualOp, LLVM::ICmpPredicate::eq>,
+      IComparePattern<spirv::LogicalNotEqualOp, LLVM::ICmpPredicate::ne>,
 
       // Shift ops
       ShiftPattern<spirv::ShiftRightArithmeticOp, LLVM::AShrOp>,

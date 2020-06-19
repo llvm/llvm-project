@@ -26,7 +26,10 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
         %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
         %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
         %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
-        linalg.matmul(%11, %14, %17) : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>
+        linalg.matmul %11, %14, %17 :
+          (memref<?x?xf32, offset: ?, strides: [?, 1]>,
+           memref<?x?xf32, offset: ?, strides: [?, 1]>,
+           memref<?x?xf32, offset: ?, strides: [?, 1]>)
       }
     }
   }
@@ -60,9 +63,14 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         linalg.copy(%[[vB]], %[[partialB]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D_dynamic]]>
 //       CHECK:         linalg.copy(%[[vC]], %[[partialC]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D_dynamic]]>
 //
-//       CHECK:         linalg.matmul(%[[partialA]], %[[partialB]], %[[partialC]]) : memref<?x?xf32, #[[$strided2D_dynamic]]>, memref<?x?xf32, #[[$strided2D_dynamic]]>, memref<?x?xf32, #[[$strided2D_dynamic]]>
+//       CHECK:         linalg.matmul %[[partialA]], %[[partialB]], %[[partialC]] :
+//       CHECK:           memref<?x?xf32, #[[$strided2D_dynamic]]>,
+//       CHECK:           memref<?x?xf32, #[[$strided2D_dynamic]]>,
+//       CHECK:           memref<?x?xf32, #[[$strided2D_dynamic]]>
 //
-//       CHECK:         linalg.copy(%[[partialC]], %[[vC]]) : memref<?x?xf32, #[[$strided2D_dynamic]]>, memref<?x?xf32, #[[$strided2D]]>
+//       CHECK:         linalg.copy(%[[partialC]], %[[vC]]) :
+//       CHECK:           memref<?x?xf32, #[[$strided2D_dynamic]]>,
+//       CHECK:           memref<?x?xf32, #[[$strided2D]]>
 //
 //       CHECK:         dealloc %[[tmpA]] : memref<32xi8>
 //       CHECK:         dealloc %[[tmpB]] : memref<48xi8>
@@ -88,7 +96,10 @@ func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
         %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
         %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
         %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
-        linalg.matmul(%11, %14, %17) : memref<?x?xf64, offset: ?, strides: [?, 1]>, memref<?x?xf64, offset: ?, strides: [?, 1]>, memref<?x?xf64, offset: ?, strides: [?, 1]>
+        linalg.matmul %11, %14, %17 :
+          (memref<?x?xf64, offset: ?, strides: [?, 1]>,
+           memref<?x?xf64, offset: ?, strides: [?, 1]>,
+           memref<?x?xf64, offset: ?, strides: [?, 1]>)
       }
     }
   }
@@ -122,72 +133,15 @@ func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         linalg.copy(%[[vB_f64]], %[[partialB_f64]]) : memref<?x?xf64, #[[$strided2D]]>, memref<?x?xf64, #[[$strided2D_dynamic]]>
 //       CHECK:         linalg.copy(%[[vC_f64]], %[[partialC_f64]]) : memref<?x?xf64, #[[$strided2D]]>, memref<?x?xf64, #[[$strided2D_dynamic]]>
 //
-//       CHECK:         linalg.matmul(%[[partialA_f64]], %[[partialB_f64]], %[[partialC_f64]]) : memref<?x?xf64, #[[$strided2D_dynamic]]>, memref<?x?xf64, #[[$strided2D_dynamic]]>, memref<?x?xf64, #[[$strided2D_dynamic]]>
+//       CHECK:         linalg.matmul %[[partialA_f64]], %[[partialB_f64]], %[[partialC_f64]] :
+//       CHECK:           memref<?x?xf64, #[[$strided2D_dynamic]]>,
+//       CHECK:           memref<?x?xf64, #[[$strided2D_dynamic]]>,
+//       CHECK:           memref<?x?xf64, #[[$strided2D_dynamic]]>
 //
-//       CHECK:         linalg.copy(%[[partialC_f64]], %[[vC_f64]]) : memref<?x?xf64, #[[$strided2D_dynamic]]>, memref<?x?xf64, #[[$strided2D]]>
+//       CHECK:         linalg.copy(%[[partialC_f64]], %[[vC_f64]]) :
+//       CHECK:           memref<?x?xf64, #[[$strided2D_dynamic]]>,
+//       CHECK:           memref<?x?xf64, #[[$strided2D]]>
 //
 //       CHECK:         dealloc %[[tmpA_f64]] : memref<64xi8>
 //       CHECK:         dealloc %[[tmpB_f64]] : memref<96xi8>
 //       CHECK:         dealloc %[[tmpC_f64]] : memref<48xi8>
-
-// -----
-
-func @matmul_i32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
-  %c4 = constant 4 : index
-  %c3 = constant 3 : index
-  %c2 = constant 2 : index
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %3 = view %A[%c0][%M, %K] : memref<?xi8> to memref<?x?xi32>
-  %4 = view %A[%c0][%K, %N] : memref<?xi8> to memref<?x?xi32>
-  %5 = view %A[%c0][%M, %N] : memref<?xi8> to memref<?x?xi32>
-  %6 = dim %3, %c0 : memref<?x?xi32>
-  %7 = dim %3, %c1 : memref<?x?xi32>
-  %8 = dim %4, %c1 : memref<?x?xi32>
-  scf.for %arg4 = %c0 to %6 step %c2 {
-    scf.for %arg5 = %c0 to %8 step %c3 {
-      scf.for %arg6 = %c0 to %7 step %c4 {
-        %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
-        %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
-        %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
-        linalg.matmul(%11, %14, %17) : memref<?x?xi32, offset: ?, strides: [?, 1]>, memref<?x?xi32, offset: ?, strides: [?, 1]>, memref<?x?xi32, offset: ?, strides: [?, 1]>
-      }
-    }
-  }
-  return
-}
-
-// CHECK-LABEL: func @matmul_i32(%{{.*}}: memref<?xi8>, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
-//       CHECK:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:         %[[vA_i32:.*]] = subview {{.*}} : memref<?x?xi32>
-//       CHECK:         %[[vB_i32:.*]] = subview {{.*}} : memref<?x?xi32>
-//       CHECK:         %[[vC_i32:.*]] = subview {{.*}} : memref<?x?xi32>
-///
-//       CHECK:         %[[tmpA_i32:.*]] = alloc() : memref<32xi8>
-//       CHECK:         %[[fullA_i32:.*]] = std.view %[[tmpA_i32]][{{.*}}][{{.*}}] : memref<32xi8> to memref<?x?xi32>
-//     DYNAMIC:         std.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?x?xi32>
-//       CHECK:         %[[partialA_i32:.*]] = subview %[[fullA_i32]][%{{.*}}, %{{.*}}] : memref<?x?xi32> to memref<?x?xi32, #[[$strided2D_dynamic]]>
-///
-//       CHECK:         %[[tmpB_i32:.*]] = alloc() : memref<48xi8>
-//       CHECK:         %[[fullB_i32:.*]] = std.view %[[tmpB_i32]][{{.*}}][{{.*}}] : memref<48xi8> to memref<?x?xi32>
-//     DYNAMIC:         std.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?x?xi32>
-//       CHECK:         %[[partialB_i32:.*]] = subview %[[fullB_i32]][%{{.*}}, %{{.*}}] : memref<?x?xi32> to memref<?x?xi32, #[[$strided2D_dynamic]]>
-///
-//       CHECK:         %[[tmpC_i32:.*]] = alloc() : memref<24xi8>
-//       CHECK:         %[[fullC_i32:.*]] = std.view %[[tmpC_i32]][{{.*}}][{{.*}}] : memref<24xi8> to memref<?x?xi32>
-//     DYNAMIC:         std.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?x?xi32>
-//       CHECK:         %[[partialC_i32:.*]] = subview %[[fullC_i32]][%{{.*}}, %{{.*}}] : memref<?x?xi32> to memref<?x?xi32, #[[$strided2D_dynamic]]>
-
-//       CHECK:         linalg.copy(%[[vA_i32]], %[[partialA_i32]]) : memref<?x?xi32, #[[$strided2D]]>, memref<?x?xi32, #[[$strided2D_dynamic]]>
-//       CHECK:         linalg.copy(%[[vB_i32]], %[[partialB_i32]]) : memref<?x?xi32, #[[$strided2D]]>, memref<?x?xi32, #[[$strided2D_dynamic]]>
-//       CHECK:         linalg.copy(%[[vC_i32]], %[[partialC_i32]]) : memref<?x?xi32, #[[$strided2D]]>, memref<?x?xi32, #[[$strided2D_dynamic]]>
-//
-//       CHECK:         linalg.matmul(%[[partialA_i32]], %[[partialB_i32]], %[[partialC_i32]]) : memref<?x?xi32, #[[$strided2D_dynamic]]>, memref<?x?xi32, #[[$strided2D_dynamic]]>, memref<?x?xi32, #[[$strided2D_dynamic]]>
-//
-//       CHECK:         linalg.copy(%[[partialC_i32]], %[[vC_i32]]) : memref<?x?xi32, #[[$strided2D_dynamic]]>, memref<?x?xi32, #[[$strided2D]]>
-//
-//       CHECK:         dealloc %[[tmpA_i32]] : memref<32xi8>
-//       CHECK:         dealloc %[[tmpB_i32]] : memref<48xi8>
-//       CHECK:         dealloc %[[tmpC_i32]] : memref<24xi8>

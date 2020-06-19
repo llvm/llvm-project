@@ -187,6 +187,12 @@ def parse_args():
     else:
         opts.shard = None
 
+    opts.show_results = set()
+    if opts.show_unsupported:
+        opts.show_results.add(lit.Test.UNSUPPORTED)
+    if opts.show_xfail:
+        opts.show_results.add(lit.Test.XFAIL)
+
     opts.reports = filter(None, [opts.output, opts.xunit_xml_output])
 
     return opts

@@ -558,6 +558,9 @@ bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
 bool isGFX10(const MCSubtargetInfo &STI);
+bool isGCN3Encoding(const MCSubtargetInfo &STI);
+bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
+bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
@@ -633,6 +636,13 @@ inline unsigned getOperandSize(const MCInstrDesc &Desc, unsigned OpNo) {
   return getOperandSize(Desc.OpInfo[OpNo]);
 }
 
+/// Is this literal inlinable, and not one of the values intended for floating
+/// point values.
+LLVM_READNONE
+inline bool isInlinableIntLiteral(int64_t Literal) {
+  return Literal >= -16 && Literal <= 64;
+}
+
 /// Is this literal inlinable
 LLVM_READNONE
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi);
@@ -645,6 +655,9 @@ bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
 bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi);
+
+LLVM_READNONE
+bool isInlinableIntLiteralV216(int32_t Literal);
 
 bool isArgPassedInSGPR(const Argument *Arg);
 
@@ -785,9 +798,6 @@ struct SIModeRegisterDefaults {
            oneWayCompatible(FP32OutputDenormals, CalleeMode.FP32OutputDenormals);
   }
 };
-
-LLVM_READNONE
-bool isInlinableIntLiteral(int64_t Literal);
 
 } // end namespace AMDGPU
 } // end namespace llvm

@@ -334,6 +334,8 @@ static void expectOperationValueResult(binop_eval_t Operation, T1 LeftValue,
 
 const int64_t MinInt64 = std::numeric_limits<int64_t>::min();
 const int64_t MaxInt64 = std::numeric_limits<int64_t>::max();
+const uint64_t AbsoluteMinInt64 = static_cast<uint64_t>(-(MinInt64 + 1)) + 1;
+const uint64_t AbsoluteMaxInt64 = static_cast<uint64_t>(MaxInt64);
 
 TEST_F(FileCheckTest, ExpressionValueGetUnsigned) {
   // Test positive value.
@@ -476,6 +478,71 @@ TEST_F(FileCheckTest, ExpressionValueSubtraction) {
 
   // Test both positive values with 0 > result > -(max int64_t)
   expectOperationValueResult(operator-, 10, 11, -1);
+}
+
+TEST_F(FileCheckTest, ExpressionValueMultiplication) {
+  // Test mixed signed values.
+  expectOperationValueResult(operator*, -3, 10, -30);
+  expectOperationValueResult(operator*, 2, -17, -34);
+  expectOperationValueResult(operator*, 0, MinInt64, 0);
+  expectOperationValueResult(operator*, MinInt64, 1, MinInt64);
+  expectOperationValueResult(operator*, 1, MinInt64, MinInt64);
+  expectOperationValueResult(operator*, MaxInt64, -1, -MaxInt64);
+  expectOperationValueResult(operator*, -1, MaxInt64, -MaxInt64);
+
+  // Test both negative values.
+  expectOperationValueResult(operator*, -3, -10, 30);
+  expectOperationValueResult(operator*, -2, -17, 34);
+  expectOperationValueResult(operator*, MinInt64, -1, AbsoluteMinInt64);
+
+  // Test both positive values.
+  expectOperationValueResult(operator*, 3, 10, 30);
+  expectOperationValueResult(operator*, 2, 17, 34);
+  expectOperationValueResult(operator*, 0, MaxUint64, 0);
+
+  // Test negative results that underflow.
+  expectOperationValueResult(operator*, -10, MaxInt64);
+  expectOperationValueResult(operator*, MaxInt64, -10);
+  expectOperationValueResult(operator*, 10, MinInt64);
+  expectOperationValueResult(operator*, MinInt64, 10);
+  expectOperationValueResult(operator*, -1, MaxUint64);
+  expectOperationValueResult(operator*, MaxUint64, -1);
+  expectOperationValueResult(operator*, -1, AbsoluteMaxInt64 + 2);
+  expectOperationValueResult(operator*, AbsoluteMaxInt64 + 2, -1);
+
+  // Test positive results that overflow.
+  expectOperationValueResult(operator*, 10, MaxUint64);
+  expectOperationValueResult(operator*, MaxUint64, 10);
+  expectOperationValueResult(operator*, MinInt64, -10);
+  expectOperationValueResult(operator*, -10, MinInt64);
+}
+
+TEST_F(FileCheckTest, ExpressionValueDivision) {
+  // Test mixed signed values.
+  expectOperationValueResult(operator/, -30, 10, -3);
+  expectOperationValueResult(operator/, 34, -17, -2);
+  expectOperationValueResult(operator/, 0, -10, 0);
+  expectOperationValueResult(operator/, MinInt64, 1, MinInt64);
+  expectOperationValueResult(operator/, MaxInt64, -1, -MaxInt64);
+  expectOperationValueResult(operator/, -MaxInt64, 1, -MaxInt64);
+
+  // Test both negative values.
+  expectOperationValueResult(operator/, -30, -10, 3);
+  expectOperationValueResult(operator/, -34, -17, 2);
+
+  // Test both positive values.
+  expectOperationValueResult(operator/, 30, 10, 3);
+  expectOperationValueResult(operator/, 34, 17, 2);
+  expectOperationValueResult(operator/, 0, 10, 0);
+
+  // Test divide by zero.
+  expectOperationValueResult(operator/, -10, 0);
+  expectOperationValueResult(operator/, 10, 0);
+  expectOperationValueResult(operator/, 0, 0);
+
+  // Test negative result that underflows.
+  expectOperationValueResult(operator/, MaxUint64, -1);
+  expectOperationValueResult(operator/, AbsoluteMaxInt64 + 2, -1);
 }
 
 TEST_F(FileCheckTest, ExpressionValueEquality) {
@@ -1308,8 +1375,8 @@ TEST_F(FileCheckTest, MatchBuiltinFunctions) {
   ASSERT_FALSE(Tester.parsePattern("[[#add(NUMVAR,13)]]"));
   EXPECT_THAT_EXPECTED(Tester.match("31"), Succeeded());
   Tester.initNextPattern();
-  ASSERT_FALSE(Tester.parsePattern("[[#sub(NUMVAR,7)]]"));
-  EXPECT_THAT_EXPECTED(Tester.match("11"), Succeeded());
+  ASSERT_FALSE(Tester.parsePattern("[[#div(NUMVAR,3)]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("6"), Succeeded());
   Tester.initNextPattern();
   ASSERT_FALSE(Tester.parsePattern("[[#max(NUMVAR,5)]]"));
   EXPECT_THAT_EXPECTED(Tester.match("18"), Succeeded());
@@ -1322,6 +1389,12 @@ TEST_F(FileCheckTest, MatchBuiltinFunctions) {
   Tester.initNextPattern();
   ASSERT_FALSE(Tester.parsePattern("[[#min(NUMVAR,99)]]"));
   EXPECT_THAT_EXPECTED(Tester.match("18"), Succeeded());
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#mul(NUMVAR,3)]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("54"), Succeeded());
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#sub(NUMVAR,7)]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("11"), Succeeded());
 
   // Check nested function calls.
   Tester.initNextPattern();

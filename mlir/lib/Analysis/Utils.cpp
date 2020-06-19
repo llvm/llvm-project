@@ -208,13 +208,17 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   LLVM_DEBUG(llvm::dbgs() << "MemRefRegion::compute: " << *op
                           << "depth: " << loopDepth << "\n";);
 
+  // 0-d memrefs.
   if (rank == 0) {
     SmallVector<AffineForOp, 4> ivs;
     getLoopIVs(*op, &ivs);
-    SmallVector<Value, 8> regionSymbols;
+    assert(loopDepth <= ivs.size() && "invalid 'loopDepth'");
+    // The first 'loopDepth' IVs are symbols for this region.
+    ivs.resize(loopDepth);
+    SmallVector<Value, 4> regionSymbols;
     extractForInductionVars(ivs, &regionSymbols);
-    // A rank 0 memref has a 0-d region.
-    cst.reset(rank, loopDepth, 0, regionSymbols);
+    // A 0-d memref has a 0-d region.
+    cst.reset(rank, loopDepth, /*numLocals=*/0, regionSymbols);
     return success();
   }
 

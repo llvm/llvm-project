@@ -617,6 +617,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       return GET_SVE_FP_VEC(DoubleTy, false, 6);
     case BuiltinType::SveFloat64x4:
       return GET_SVE_FP_VEC(DoubleTy, false, 8);
+    case BuiltinType::SveBFloat16:
+      return GET_SVE_FP_VEC(BFloat16Ty, false, 8);
 #undef GET_SVE_FP_VEC
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)

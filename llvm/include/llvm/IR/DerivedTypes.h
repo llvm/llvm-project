@@ -443,8 +443,20 @@ public:
 
   /// This static method is the primary way to construct an VectorType.
   static VectorType *get(Type *ElementType, ElementCount EC);
+
+  /// Base class getter that specifically constructs a FixedVectorType. This
+  /// function is deprecated, and will be removed after LLVM 11 ships. Since
+  /// this always returns a FixedVectorType via a base VectorType pointer,
+  /// FixedVectorType::get(Type *, unsigned) is strictly better since no cast is
+  /// required to call getNumElements() on the result.
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline static VectorType *get(Type *ElementType, unsigned NumElements),
+      "The base class version of get with the scalable argument defaulted to "
+      "false is deprecated. Either call VectorType::get(Type *, unsigned, "
+      "bool) and pass false, or call FixedVectorType::get(Type *, unsigned).");
+
   static VectorType *get(Type *ElementType, unsigned NumElements,
-                         bool Scalable = false) {
+                         bool Scalable) {
     return VectorType::get(ElementType, {NumElements, Scalable});
   }
 
@@ -536,6 +548,10 @@ public:
            T->getTypeID() == ScalableVectorTyID;
   }
 };
+
+inline VectorType *VectorType::get(Type *ElementType, unsigned NumElements) {
+  return VectorType::get(ElementType, NumElements, false);
+}
 
 /// Class to represent fixed width SIMD vectors
 class FixedVectorType : public VectorType {

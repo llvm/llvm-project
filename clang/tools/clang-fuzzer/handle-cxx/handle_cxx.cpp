@@ -37,7 +37,7 @@ void clang_fuzzer::HandleCXX(const std::string &S,
       IntrusiveRefCntPtr<clang::DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
       &Diags, false);
   std::unique_ptr<clang::CompilerInvocation> Invocation(
-      tooling::newInvocation(&Diagnostics, CC1Args));
+      tooling::newInvocation(&Diagnostics, CC1Args, /*BinaryName=*/nullptr));
   std::unique_ptr<llvm::MemoryBuffer> Input =
       llvm::MemoryBuffer::getMemBuffer(S);
   Invocation->getPreprocessorOpts().addRemappedFile(FileName,

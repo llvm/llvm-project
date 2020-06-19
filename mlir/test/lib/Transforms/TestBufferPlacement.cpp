@@ -1,4 +1,4 @@
-//===- TestBufferPlacement.cpp - Test for buffer placement 0----*- C++ -*-===//
+//===- TestBufferPlacement.cpp - Test for buffer placement ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -124,29 +124,24 @@ struct TestBufferPlacementPreparationPass
     target.addLegalDialect<StandardOpsDialect>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
-    auto isIllegalType = [&](Type type) { return !converter.isLegal(type); };
     auto isLegalOperation = [&](Operation *op) {
-      return llvm::none_of(op->getOperandTypes(), isIllegalType) &&
-             llvm::none_of(op->getResultTypes(), isIllegalType);
+      return converter.isLegal(op);
     };
-    target.addDynamicallyLegalDialect<linalg::LinalgDialect>(
-        Optional<ConversionTarget::DynamicLegalityCallbackFn>(
-            isLegalOperation));
+    target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
 
     // Mark Standard Return operations illegal as long as one operand is tensor.
     target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {
-      return llvm::none_of(returnOp.getOperandTypes(), isIllegalType);
+      return converter.isLegal(returnOp.getOperandTypes());
     });
 
     // Mark Standard Call Operation illegal as long as it operates on tensor.
-    target.addDynamicallyLegalOp<mlir::CallOp>([&](mlir::CallOp callOp) {
-      return llvm::none_of(callOp.getOperandTypes(), isIllegalType) &&
-             llvm::none_of(callOp.getResultTypes(), isIllegalType);
-    });
+    target.addDynamicallyLegalOp<mlir::CallOp>(
+        [&](mlir::CallOp callOp) { return converter.isLegal(callOp); });
 
     // Mark the function whose arguments are in tensor-type illegal.
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp funcOp) {
-      return converter.isSignatureLegal(funcOp.getType());
+      return converter.isSignatureLegal(funcOp.getType()) &&
+             converter.isLegal(&funcOp.getBody());
     });
 
     // Walk over all the functions to apply buffer assignment.
@@ -157,7 +152,7 @@ struct TestBufferPlacementPreparationPass
           &context, &placer, &converter, &patterns);
 
       // Applying full conversion
-      return applyFullConversion(function, target, patterns, &converter);
+      return applyFullConversion(function, target, patterns);
     });
   };
 };

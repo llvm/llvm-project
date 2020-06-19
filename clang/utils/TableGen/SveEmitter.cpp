@@ -65,7 +65,7 @@ public:
 
 class SVEType {
   TypeSpec TS;
-  bool Float, Signed, Immediate, Void, Constant, Pointer;
+  bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat;
   bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp;
   unsigned Bitwidth, ElementBitwidth, NumVectors;
 
@@ -74,9 +74,9 @@ public:
 
   SVEType(TypeSpec TS, char CharMod)
       : TS(TS), Float(false), Signed(true), Immediate(false), Void(false),
-        Constant(false), Pointer(false), DefaultType(false), IsScalable(true),
-        Predicate(false), PredicatePattern(false), PrefetchOp(false),
-        Bitwidth(128), ElementBitwidth(~0U), NumVectors(1) {
+        Constant(false), Pointer(false), BFloat(false), DefaultType(false),
+        IsScalable(true), Predicate(false), PredicatePattern(false),
+        PrefetchOp(false), Bitwidth(128), ElementBitwidth(~0U), NumVectors(1) {
     if (!TS.empty())
       applyTypespec();
     applyModifier(CharMod);
@@ -93,9 +93,11 @@ public:
   bool isVoid() const { return Void & !Pointer; }
   bool isDefault() const { return DefaultType; }
   bool isFloat() const { return Float; }
-  bool isInteger() const { return !Float && !Predicate; }
+  bool isBFloat() const { return BFloat; }
+  bool isFloatingPoint() const { return Float || BFloat; }
+  bool isInteger() const { return !isFloatingPoint() && !Predicate; }
   bool isScalarPredicate() const {
-    return !Float && Predicate && NumVectors == 0;
+    return !isFloatingPoint() && Predicate && NumVectors == 0;
   }
   bool isPredicateVector() const { return Predicate; }
   bool isPredicatePattern() const { return PredicatePattern; }
@@ -362,7 +364,7 @@ std::string SVEType::builtin_str() const {
 
   if (isVoidPointer())
     S += "v";
-  else if (!Float)
+  else if (!isFloatingPoint())
     switch (ElementBitwidth) {
     case 1: S += "b"; break;
     case 8: S += "c"; break;
@@ -372,15 +374,19 @@ std::string SVEType::builtin_str() const {
     case 128: S += "LLLi"; break;
     default: llvm_unreachable("Unhandled case!");
     }
-  else
+  else if (isFloat())
     switch (ElementBitwidth) {
     case 16: S += "h"; break;
     case 32: S += "f"; break;
     case 64: S += "d"; break;
     default: llvm_unreachable("Unhandled case!");
     }
+  else if (isBFloat()) {
+    assert(ElementBitwidth == 16 && "Not a valid BFloat.");
+    S += "y";
+  }
 
-  if (!isFloat()) {
+  if (!isFloatingPoint()) {
     if ((isChar() || isPointer()) && !isVoidPointer()) {
       // Make chars and typed pointers explicitly signed.
       if (Signed)
@@ -421,13 +427,15 @@ std::string SVEType::str() const {
   else {
     if (isScalableVector())
       S += "sv";
-    if (!Signed && !Float)
+    if (!Signed && !isFloatingPoint())
       S += "u";
 
     if (Float)
       S += "float";
     else if (isScalarPredicate() || isPredicateVector())
       S += "bool";
+    else if (isBFloat())
+      S += "bfloat";
     else
       S += "int";
 
@@ -480,6 +488,10 @@ void SVEType::applyTypespec() {
     case 'd':
       Float = true;
       ElementBitwidth = 64;
+      break;
+    case 'b':
+      BFloat = true;
+      ElementBitwidth = 16;
       break;
     default:
       llvm_unreachable("Unhandled type code!");
@@ -534,6 +546,7 @@ void SVEType::applyModifier(char Mod) {
   case 'P':
     Signed = true;
     Float = false;
+    BFloat = false;
     Predicate = true;
     Bitwidth = 16;
     ElementBitwidth = 1;
@@ -784,7 +797,6 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
       BaseTypeSpec(BT), Class(Class), Guard(Guard.str()),
       MergeSuffix(MergeSuffix.str()), BaseType(BT, 'd'), Flags(Flags),
       ImmChecks(Checks.begin(), Checks.end()) {
-
   // Types[0] is the return value.
   for (unsigned I = 0; I < Proto.size(); ++I) {
     SVEType T(BaseTypeSpec, Proto[I]);
@@ -848,6 +860,8 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
       TypeCode = T.isSigned() ? 's' : 'u';
     else if (T.isPredicateVector())
       TypeCode = 'b';
+    else if (T.isBFloat())
+      TypeCode = "bf";
     else
       TypeCode = 'f';
     Ret.replace(Pos, NumChars, TypeCode + utostr(T.getElementSizeInBits()));
@@ -921,6 +935,11 @@ uint64_t SVEEmitter::encodeTypeFlags(const SVEType &T) {
     default:
       llvm_unreachable("Unhandled float element bitwidth!");
     }
+  }
+
+  if (T.isBFloat()) {
+    assert(T.getElementSizeInBits() == 16 && "Not a valid BFloat.");
+    return encodeEltType("EltTyBFloat16");
   }
 
   if (T.isPredicateVector()) {
@@ -1067,6 +1086,12 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVUint32_t svuint32_t;\n";
   OS << "typedef __SVUint64_t svuint64_t;\n";
   OS << "typedef __SVFloat16_t svfloat16_t;\n";
+  OS << "typedef __SVBFloat16_t svbfloat16_t;\n\n";
+
+  OS << "#ifdef __ARM_FEATURE_BF16_SCALAR_ARITHMETIC\n";
+  OS << "typedef __bf16 bfloat16_t;\n";
+  OS << "#endif\n\n";
+
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";
   OS << "typedef __clang_svint8x2_t svint8x2_t;\n";

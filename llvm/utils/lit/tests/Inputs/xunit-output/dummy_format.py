@@ -23,9 +23,10 @@ class DummyFormat(lit.formats.FileBasedTest):
         result = lit.Test.Result(getattr(lit.Test, result_code),
                                  result_output)
 
-        required_feature = cfg.get('global', 'required_feature', fallback=None)
-        if required_feature:
-            test.requires.append(required_feature)
+        if cfg.has_option('global', 'required_feature'):
+            required_feature = cfg.get('global', 'required_feature')
+            if required_feature:
+                test.requires.append(required_feature)
 
         # Load additional metrics.
         for key,value_str in cfg.items('results'):

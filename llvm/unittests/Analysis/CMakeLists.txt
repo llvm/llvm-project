@@ -21,6 +21,7 @@ add_llvm_unittest(AnalysisTests
   DivergenceAnalysisTest.cpp
   DomTreeUpdaterTest.cpp
   GlobalsModRefTest.cpp
+  InlineFeaturesAnalysisTest.cpp
   IVDescriptorsTest.cpp
   LazyCallGraphTest.cpp
   LoadsTest.cpp
@@ -41,5 +42,3 @@ add_llvm_unittest(AnalysisTests
   ValueTrackingTest.cpp
   VectorUtilsTest.cpp
   )
-
-add_subdirectory(ML)

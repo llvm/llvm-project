@@ -157,6 +157,7 @@ def MathAPI : PublicAPI<"math.h"> {
    "cosf",
    "fabs",
    "fabsf",
+   "fabsl",
    "floor",
    "floorf",
    "frexp",
@@ -173,6 +174,7 @@ def MathAPI : PublicAPI<"math.h"> {
    "sinf",
    "trunc",
    "truncf",
+   "truncl",
   ];
 }
 

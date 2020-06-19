@@ -2523,7 +2523,7 @@ void MicrosoftCXXABI::EmitGuardedInit(CodeGenFunction &CGF, const VarDecl &D,
       GuardVar->setComdat(
           CGM.getModule().getOrInsertComdat(GuardVar->getName()));
     if (D.getTLSKind())
-      GuardVar->setThreadLocal(true);
+      CGM.setTLSMode(GuardVar, D);
     if (GI && !HasPerVariableGuard)
       GI->Guard = GuardVar;
   }

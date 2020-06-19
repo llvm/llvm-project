@@ -533,6 +533,22 @@ void CodeGenModule::EmitCXXThreadLocalInitFunc() {
   CXXThreadLocals.clear();
 }
 
+static SmallString<128> getTransformedFileName(llvm::Module &M) {
+  SmallString<128> FileName = llvm::sys::path::filename(M.getName());
+
+  if (FileName.empty())
+    FileName = "<null>";
+
+  for (size_t i = 0; i < FileName.size(); ++i) {
+    // Replace everything that's not [a-zA-Z0-9._] with a _. This set happens
+    // to be the set of C preprocessing numbers.
+    if (!isPreprocessingNumberBody(FileName[i]))
+      FileName[i] = '_';
+  }
+
+  return FileName;
+}
+
 void
 CodeGenModule::EmitCXXGlobalInitFunc() {
   while (!CXXGlobalInits.empty() && !CXXGlobalInits.back())
@@ -577,22 +593,12 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
     PrioritizedCXXGlobalInits.clear();
   }
 
-  // Include the filename in the symbol name. Including "sub_" matches gcc and
-  // makes sure these symbols appear lexicographically behind the symbols with
-  // priority emitted above.
-  SmallString<128> FileName = llvm::sys::path::filename(getModule().getName());
-  if (FileName.empty())
-    FileName = "<null>";
-
-  for (size_t i = 0; i < FileName.size(); ++i) {
-    // Replace everything that's not [a-zA-Z0-9._] with a _. This set happens
-    // to be the set of C preprocessing numbers.
-    if (!isPreprocessingNumberBody(FileName[i]))
-      FileName[i] = '_';
-  }
-
+  // Include the filename in the symbol name. Including "sub_" matches gcc
+  // and makes sure these symbols appear lexicographically behind the symbols
+  // with priority emitted above.
   llvm::Function *Fn = CreateGlobalInitOrDestructFunction(
-      FTy, llvm::Twine("_GLOBAL__sub_I_", FileName), FI);
+      FTy,
+      llvm::Twine("_GLOBAL__sub_I_", getTransformedFileName(getModule())), FI);
 
   CodeGenFunction(*this).GenerateCXXGlobalInitFunc(Fn, CXXGlobalInits);
   AddGlobalCtor(Fn);
@@ -631,6 +637,7 @@ void CodeGenModule::EmitCXXGlobalDtorFunc() {
 
   CodeGenFunction(*this).GenerateCXXGlobalDtorsFunc(Fn, CXXGlobalDtors);
   AddGlobalDtor(Fn);
+  CXXGlobalDtors.clear();
 }
 
 /// Emit the code necessary to initialize the given global variable.

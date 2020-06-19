@@ -942,10 +942,10 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv) {
   if (match(Op1, m_Zero()))
     return UndefValue::get(Ty);
 
-  // If any element of a constant divisor vector is zero or undef, the whole op
-  // is undef.
+  // If any element of a constant divisor fixed width vector is zero or undef,
+  // the whole op is undef.
   auto *Op1C = dyn_cast<Constant>(Op1);
-  auto *VTy = dyn_cast<VectorType>(Ty);
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
   if (Op1C && VTy) {
     unsigned NumElts = VTy->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {

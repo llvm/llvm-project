@@ -14,9 +14,6 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = ML
-
 [component_0]
 type = Library
 name = Analysis

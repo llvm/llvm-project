@@ -8,7 +8,9 @@
 
 #include "include/math.h"
 #include "src/math/frexp.h"
+#include "utils/FPUtil/BasicOperations.h"
 #include "utils/FPUtil/BitPatterns.h"
+#include "utils/FPUtil/ClassificationFunctions.h"
 #include "utils/FPUtil/FloatOperations.h"
 #include "utils/FPUtil/FloatProperties.h"
 #include "utils/UnitTest/Test.h"

@@ -61,11 +61,14 @@ def get_line2spell_and_mangled(args, clang_args):
   def parse_clang_ast_json(node):
     node_kind = node['kind']
     # Recurse for the following nodes that can contain nested function decls:
-    if node_kind in ('NamespaceDecl', 'LinkageSpecDecl', 'TranslationUnitDecl'):
-      for inner in node['inner']:
-        parse_clang_ast_json(inner)
+    if node_kind in ('NamespaceDecl', 'LinkageSpecDecl', 'TranslationUnitDecl',
+                     'CXXRecordDecl'):
+      if 'inner' in node:
+        for inner in node['inner']:
+          parse_clang_ast_json(inner)
     # Otherwise we ignore everything except functions:
-    if node['kind'] != 'FunctionDecl':
+    if node_kind not in ('FunctionDecl', 'CXXMethodDecl', 'CXXConstructorDecl',
+                         'CXXDestructorDecl', 'CXXConversionDecl'):
       return
     if node.get('isImplicit') is True and node.get('storageClass') == 'extern':
       common.debug('Skipping builtin function:', node['name'], '@', node['loc'])
@@ -76,8 +79,18 @@ def get_line2spell_and_mangled(args, clang_args):
     if line is None:
       common.debug('Skipping function without line number:', node['name'], '@', node['loc'])
       return
-    # If there is no 'inner' object, it is a function declaration -> skip
-    if 'inner' not in node:
+
+    # If there is no 'inner' object, it is a function declaration and we can
+    # skip it. However, function declarations may also contain an 'inner' list,
+    # but in that case it will only contains ParmVarDecls. If we find an entry
+    # that is not a ParmVarDecl, we know that this is a function definition.
+    has_body = False
+    if 'inner' in node:
+      for i in node['inner']:
+        if i.get('kind', 'ParmVarDecl') != 'ParmVarDecl':
+          has_body = True
+          break
+    if not has_body:
       common.debug('Skipping function without body:', node['name'], '@', node['loc'])
       return
     spell = node['name']

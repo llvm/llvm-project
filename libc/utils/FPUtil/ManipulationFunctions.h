@@ -1,4 +1,4 @@
-//===-- Common operations on floating point numbers -------------*- C++ -*-===//
+//===-- Floating-point manipulation functions -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitPatterns.h"
+#include "ClassificationFunctions.h"
 #include "FloatOperations.h"
 #include "FloatProperties.h"
+#include "NearestIntegerOperations.h"
 
 #include "utils/CPP/TypeTraits.h"
 

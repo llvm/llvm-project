@@ -47,6 +47,8 @@ public:
 
   uint64_t getFileOffset() const;
 
+  uint32_t gotIndex = UINT32_MAX;
+
 protected:
   Symbol(Kind k, StringRefZ name) : symbolKind(k), name(name) {}
 
@@ -80,7 +82,6 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DylibKind; }
 
   DylibFile *file;
-  uint32_t gotIndex = UINT32_MAX;
   uint32_t stubsIndex = UINT32_MAX;
   uint32_t lazyBindOffset = UINT32_MAX;
 };

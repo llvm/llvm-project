@@ -937,6 +937,10 @@ Expected<uint64_t> emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
     Err = DWARFYAML::emitDebugRanges(*OS, DWARF);
   else if (Name == ".debug_line")
     Err = DWARFYAML::emitDebugLine(*OS, DWARF);
+  else if (Name == ".debug_addr")
+    Err = DWARFYAML::emitDebugAddr(*OS, DWARF);
+  else if (Name == ".debug_abbrev")
+    Err = DWARFYAML::emitDebugAbbrev(*OS, DWARF);
   else
     llvm_unreachable("unexpected emitDWARF() call");
 

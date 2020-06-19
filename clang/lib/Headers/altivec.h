@@ -16761,6 +16761,23 @@ static vector signed short __ATTRS_o_ai vec_nabs(vector signed short __a) {
 static vector signed char __ATTRS_o_ai vec_nabs(vector signed char __a) {
   return __builtin_altivec_vminsb(__a, -__a);
 }
+
+#ifdef __POWER10_VECTOR__
+/* vec_pdep */
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_pdep(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vpdepd(__a, __b);
+}
+
+/* vec_pext */
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_pext(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vpextd(__a, __b);
+}
+#endif /* __POWER10_VECTOR__ */
+
 #undef __ATTRS_o_ai
 
 #endif /* __ALTIVEC_H */

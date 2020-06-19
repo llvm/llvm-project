@@ -152,6 +152,10 @@ Expected<ExpressionValue> operator+(const ExpressionValue &Lhs,
                                     const ExpressionValue &Rhs);
 Expected<ExpressionValue> operator-(const ExpressionValue &Lhs,
                                     const ExpressionValue &Rhs);
+Expected<ExpressionValue> operator*(const ExpressionValue &Lhs,
+                                    const ExpressionValue &Rhs);
+Expected<ExpressionValue> operator/(const ExpressionValue &Lhs,
+                                    const ExpressionValue &Rhs);
 Expected<ExpressionValue> max(const ExpressionValue &Lhs,
                               const ExpressionValue &Rhs);
 Expected<ExpressionValue> min(const ExpressionValue &Lhs,

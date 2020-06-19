@@ -874,6 +874,145 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
   }
 }
 
+// Generate a VMEM access which loads or stores the VGPR containing an SGPR
+// spill such that all the lanes set in VGPRLanes are loaded or stored.
+// This generates exec mask manipulation and will use SGPRs available in MI
+// or VGPR lanes in the VGPR to save and restore the exec mask.
+void SIRegisterInfo::buildSGPRSpillLoadStore(MachineBasicBlock::iterator MI,
+                                             int Index, int Offset,
+                                             unsigned EltSize, Register VGPR,
+                                             int64_t VGPRLanes,
+                                             RegScavenger *RS,
+                                             bool IsLoad) const {
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineFunction *MF = MBB->getParent();
+  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
+  Register SuperReg = MI->getOperand(0).getReg();
+  const TargetRegisterClass *RC = getPhysRegClass(SuperReg);
+  ArrayRef<int16_t> SplitParts = getRegSplitParts(RC, EltSize);
+  unsigned NumSubRegs = SplitParts.empty() ? 1 : SplitParts.size();
+  unsigned FirstPart = isWave32 ? Offset * 16 : Offset * 32;
+
+  bool IsKill = MI->getOperand(0).isKill();
+  const DebugLoc &DL = MI->getDebugLoc();
+
+  const bool SuperRegIsExec =
+      SuperReg == AMDGPU::EXEC || SuperReg == AMDGPU::EXEC_LO;
+
+  // If exec mask is stored in the VGPR, make sure it is stored after
+  // any lanes used by the spill (16 lanes on Wave32, 32 lanes on Wave64).
+  const unsigned ExecLoLane = SuperRegIsExec ? 0 : (isWave32 ? 16 : 32);
+  const unsigned ExecHiLane = SuperRegIsExec ? 1 : (isWave32 ? 17 : 33);
+
+  // Try to use the src/dst SGPRs to hold a copy of the exec mask.
+  // Use VGPR lanes when this is not possible, i.e. the src value
+  // must be valid after the spill or src is smaller than exec mask.
+  bool StoreExecInVGPR = !IsLoad && (SuperRegIsExec || !IsKill);
+
+  // On Wave32 only handle EXEC_LO.
+  // On Wave64 only update EXEC_HI if there is sufficent space for a copy.
+  bool OnlyExecLo = isWave32 || NumSubRegs == 1;
+
+  unsigned ExecMovOpc = OnlyExecLo ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+  Register ExecReg = OnlyExecLo ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+  Register SavedExecReg;
+
+  // Backup EXEC
+  if (SuperRegIsExec) {
+    // Do nothing; exec is already stored in VGPR or will be overwritten
+  } else if (StoreExecInVGPR) {
+    BuildMI(*MBB, MI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+            VGPR)
+        .addReg(AMDGPU::EXEC_LO)
+        .addImm(ExecLoLane)
+        .addReg(VGPR, getUndefRegState(IsLoad));
+
+    if (!isWave32) {
+      BuildMI(*MBB, MI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+              VGPR)
+          .addReg(AMDGPU::EXEC_HI)
+          .addImm(ExecHiLane)
+          .addReg(VGPR);
+    }
+  } else {
+    if (OnlyExecLo) {
+      SavedExecReg = NumSubRegs == 1
+                         ? SuperReg
+                         : getSubReg(SuperReg, SplitParts[FirstPart]);
+    } else {
+      SavedExecReg =
+          getMatchingSuperReg(getSubReg(SuperReg, SplitParts[FirstPart]),
+                              AMDGPU::sub0, &AMDGPU::SReg_64_XEXECRegClass);
+      // If src/dst is an odd size it is possible subreg0 is not aligned.
+      if (!SavedExecReg && NumSubRegs > 2)
+        SavedExecReg =
+            getMatchingSuperReg(getSubReg(SuperReg, SplitParts[FirstPart + 1]),
+                                AMDGPU::sub0, &AMDGPU::SReg_64_XEXECRegClass);
+    }
+
+    assert(SavedExecReg);
+    BuildMI(*MBB, MI, DL, TII->get(ExecMovOpc), SavedExecReg).addReg(ExecReg);
+  }
+
+  // Setup EXEC
+  BuildMI(*MBB, MI, DL, TII->get(ExecMovOpc), ExecReg).addImm(VGPRLanes);
+
+  // Load/store VGPR
+  MachineFrameInfo &FrameInfo = MF->getFrameInfo();
+  assert(FrameInfo.getStackID(Index) != TargetStackID::SGPRSpill);
+
+  Register FrameReg = FrameInfo.isFixedObjectIndex(Index) && hasBasePointer(*MF)
+                          ? getBaseRegister()
+                          : getFrameRegister(*MF);
+
+  Align Alignment = FrameInfo.getObjectAlign(Index);
+  MachinePointerInfo PtrInfo =
+      MachinePointerInfo::getFixedStack(*MF, Index);
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      PtrInfo, IsLoad ? MachineMemOperand::MOLoad : MachineMemOperand::MOStore,
+      EltSize, Alignment);
+
+  if (IsLoad) {
+    buildSpillLoadStore(MI, AMDGPU::BUFFER_LOAD_DWORD_OFFSET,
+          Index,
+          VGPR, false,
+          MFI->getScratchRSrcReg(), FrameReg,
+          Offset * EltSize, MMO,
+          RS);
+  } else {
+    buildSpillLoadStore(MI, AMDGPU::BUFFER_STORE_DWORD_OFFSET,
+          Index,
+          VGPR, !StoreExecInVGPR,
+          MFI->getScratchRSrcReg(), FrameReg,
+          Offset * EltSize, MMO,
+          RS);
+    // This only ever adds one VGPR spill
+    MFI->addToSpilledVGPRs(1);
+  }
+
+  // Restore EXEC
+  if (SuperRegIsExec && IsLoad) {
+    // Do nothing; exec will be overwritten
+  } else if (StoreExecInVGPR) {
+    BuildMI(*MBB, MI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
+            AMDGPU::EXEC_LO)
+        .addReg(VGPR, getKillRegState(!IsLoad && isWave32))
+        .addImm(ExecLoLane);
+    if (!isWave32) {
+      BuildMI(*MBB, MI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
+              AMDGPU::EXEC_HI)
+          .addReg(VGPR, getKillRegState(!IsLoad))
+          .addImm(ExecHiLane);
+    }
+  } else {
+    assert(SavedExecReg);
+    BuildMI(*MBB, MI, DL, TII->get(ExecMovOpc), ExecReg)
+        .addReg(SavedExecReg, RegState::Kill);
+  }
+}
+
 bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                                int Index,
                                RegScavenger *RS,
@@ -1910,4 +2049,20 @@ bool SIRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
   default:
     return false;
   }
+}
+
+ArrayRef<MCPhysReg>
+SIRegisterInfo::getAllSGPR128(const MachineFunction &MF) const {
+  return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
+                      ST.getMaxNumSGPRs(MF) / 4);
+}
+
+ArrayRef<MCPhysReg>
+SIRegisterInfo::getAllSGPR32(const MachineFunction &MF) const {
+  return makeArrayRef(AMDGPU::SGPR_32RegClass.begin(), ST.getMaxNumSGPRs(MF));
+}
+
+ArrayRef<MCPhysReg>
+SIRegisterInfo::getAllVGPR32(const MachineFunction &MF) const {
+  return makeArrayRef(AMDGPU::VGPR_32RegClass.begin(), ST.getMaxNumVGPRs(MF));
 }

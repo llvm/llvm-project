@@ -202,7 +202,7 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
            << " inputs (tensor or buffer) and output buffer operands";
 
   auto &region = op.region();
-  if (region.getBlocks().size() != 1)
+  if (!llvm::hasSingleElement(region))
     return op.emitOpError("expected region with 1 block");
   if (failed(BlockArgsVerifier<GenericOpType>::verify(op, region.front())))
     return failure();
@@ -1124,14 +1124,6 @@ LogicalResult IndexedGenericOp::fold(ArrayRef<Attribute>,
                                      SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
 }
-LogicalResult MatvecOp::fold(ArrayRef<Attribute>,
-                             SmallVectorImpl<OpFoldResult> &) {
-  return foldMemRefCast(*this);
-}
-LogicalResult MatmulOp::fold(ArrayRef<Attribute>,
-                             SmallVectorImpl<OpFoldResult> &) {
-  return foldMemRefCast(*this);
-}
 OpFoldResult ReshapeOp::fold(ArrayRef<Attribute>) {
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
@@ -1193,7 +1185,7 @@ static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op) {
   p << op.getOperationName() << ' ';
   p.printOptionalAttrDict(op.getAttrs(), silentAttrNames);
   p << ' ' << op.getOperands();
-  p << ": (" << op.getOperandTypes() << ")";
+  p << " : (" << op.getOperandTypes() << ")";
   auto outputTensorTypes = op.getResultTypes();
   if (!outputTensorTypes.empty())
     p << " -> (" << outputTensorTypes << ")";
@@ -1205,8 +1197,8 @@ static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
   SmallVector<OpAsmParser::OperandType, 8> operandsInfo;
 
   // Optional attributes may be added.
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseOperandList(operandsInfo))
+  if (parser.parseOperandList(operandsInfo) ||
+      parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
   SmallVector<Type, 8> operandTypes;
@@ -1240,5 +1232,13 @@ static LogicalResult verifyNamedStructuredOp(NamedStructuredOpType op) {
 // TODO: Determine whether we can generate the folders and verifiers.
 LogicalResult BatchMatmulOp::fold(ArrayRef<Attribute>,
                                   SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult MatmulOp::fold(ArrayRef<Attribute>,
+                             SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult MatvecOp::fold(ArrayRef<Attribute>,
+                             SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
 }

@@ -65,6 +65,7 @@ Value *GlobalValue::handleOperandChangeImpl(Value *From, Value *To) {
 void GlobalValue::copyAttributesFrom(const GlobalValue *Src) {
   setVisibility(Src->getVisibility());
   setUnnamedAddr(Src->getUnnamedAddr());
+  setThreadLocalMode(Src->getThreadLocalMode());
   setDLLStorageClass(Src->getDLLStorageClass());
   setDSOLocal(Src->isDSOLocal());
   setPartition(Src->getPartition());
@@ -419,7 +420,6 @@ void GlobalVariable::setInitializer(Constant *InitVal) {
 /// from the GlobalVariable Src to this one.
 void GlobalVariable::copyAttributesFrom(const GlobalVariable *Src) {
   GlobalObject::copyAttributesFrom(Src);
-  setThreadLocalMode(Src->getThreadLocalMode());
   setExternallyInitialized(Src->isExternallyInitialized());
   setAttributes(Src->getAttributes());
 }

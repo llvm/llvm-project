@@ -120,7 +120,6 @@ target_link_libraries(ClangdTests
   clangDaemon
   clangdSupport
   clangTidy
-  LLVMSupport
   LLVMTestingSupport
   )
 

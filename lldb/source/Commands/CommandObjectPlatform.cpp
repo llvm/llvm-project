@@ -422,7 +422,6 @@ protected:
     return &m_options;
   }
 
-protected:
   OptionGroupOptions m_options;
   OptionGroupFile m_option_working_dir;
 };
@@ -1023,7 +1022,6 @@ protected:
     return result.Succeeded();
   }
 
-protected:
   ProcessLaunchCommandOptions m_options;
 };
 

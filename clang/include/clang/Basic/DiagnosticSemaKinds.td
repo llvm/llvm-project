@@ -9937,10 +9937,10 @@ def err_omp_prohibited_region_critical_same_name : Error<
   "cannot nest 'critical' regions having the same name %0">;
 def note_omp_previous_critical_region : Note<
   "previous 'critical' region starts here">;
-def err_omp_several_scan_directives_in_region : Error<
-  "exactly one 'scan' directive must appear in the loop body of an enclosing directive">;
-def note_omp_previous_scan_directive : Note<
-  "previous 'scan' directive used here">;
+def err_omp_several_directives_in_region : Error<
+  "exactly one '%0' directive must appear in the loop body of an enclosing directive">;
+def note_omp_previous_directive : Note<
+  "previous '%0' directive used here">;
 def err_omp_sections_not_compound_stmt : Error<
   "the statement for '#pragma omp sections' must be a compound statement">;
 def err_omp_parallel_sections_not_compound_stmt : Error<
@@ -10783,8 +10783,25 @@ def warn_import_on_definition : Warning<
   "import %select{module|name}0 cannot be applied to a function with a definition">,
   InGroup<IgnoredAttributes>;
 
-def err_builtin_matrix_arg: Error<
-  "%select{first|second}0 argument must be a matrix">;
+def err_builtin_matrix_arg: Error<"first argument must be a matrix">;
+
+def err_builtin_matrix_scalar_unsigned_arg: Error<
+  "%0 argument must be a constant unsigned integer expression">;
+
+def err_builtin_matrix_pointer_arg: Error<
+  "%0 argument must be a pointer to a valid matrix element type">;
+
+def err_builtin_matrix_pointer_arg_mismatch: Error<
+  "the pointee of the second argument must match the element type of the first argument (%0 != %1)">;
+
+def err_builtin_matrix_store_to_const: Error<
+  "cannot store matrix to read-only pointer">;
+
+def err_builtin_matrix_stride_too_small: Error<
+  "stride must be greater or equal to the number of rows">;
+
+def err_builtin_matrix_invalid_dimension: Error<
+  "%0 dimension is outside the allowed range [1, %1]">;
 
 def err_preserve_field_info_not_field : Error<
   "__builtin_preserve_field_info argument %0 not a field access">;

@@ -1927,6 +1927,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_matrix_transpose:
     return SemaBuiltinMatrixTranspose(TheCall, TheCallResult);
+
+  case Builtin::BI__builtin_matrix_column_major_load:
+    return SemaBuiltinMatrixColumnMajorLoad(TheCall, TheCallResult);
+
+  case Builtin::BI__builtin_matrix_column_major_store:
+    return SemaBuiltinMatrixColumnMajorStore(TheCall, TheCallResult);
   }
 
   // Since the target specific builtins for each arch overlap, only check those
@@ -2126,6 +2132,18 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                 return V == 0 || V == 90 || V == 180 || V == 270;
               },
               diag::err_rotation_argument_to_cmla))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck0_1:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck0_2:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 2))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck0_3:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 3))
         HasError = true;
       break;
     }
@@ -15077,7 +15095,7 @@ ExprResult Sema::SemaBuiltinMatrixTranspose(CallExpr *TheCall,
 
   auto *MType = Matrix->getType()->getAs<ConstantMatrixType>();
   if (!MType) {
-    Diag(Matrix->getBeginLoc(), diag::err_builtin_matrix_arg) << 0;
+    Diag(Matrix->getBeginLoc(), diag::err_builtin_matrix_arg);
     return ExprError();
   }
 
@@ -15091,5 +15109,230 @@ ExprResult Sema::SemaBuiltinMatrixTranspose(CallExpr *TheCall,
 
   // Update call argument to use the possibly converted matrix argument.
   TheCall->setArg(0, Matrix);
+  return CallResult;
+}
+
+// Get and verify the matrix dimensions.
+static llvm::Optional<unsigned>
+getAndVerifyMatrixDimension(Expr *Expr, StringRef Name, Sema &S) {
+  llvm::APSInt Value(64);
+  SourceLocation ErrorPos;
+  if (!Expr->isIntegerConstantExpr(Value, S.Context, &ErrorPos)) {
+    S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_scalar_unsigned_arg)
+        << Name;
+    return {};
+  }
+  uint64_t Dim = Value.getZExtValue();
+  if (!ConstantMatrixType::isDimensionValid(Dim)) {
+    S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_invalid_dimension)
+        << Name << ConstantMatrixType::getMaxElementsPerDimension();
+    return {};
+  }
+  return Dim;
+}
+
+ExprResult Sema::SemaBuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
+                                                  ExprResult CallResult) {
+  if (!getLangOpts().MatrixTypes) {
+    Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_disabled);
+    return ExprError();
+  }
+
+  if (checkArgCount(*this, TheCall, 4))
+    return ExprError();
+
+  Expr *PtrExpr = TheCall->getArg(0);
+  Expr *RowsExpr = TheCall->getArg(1);
+  Expr *ColumnsExpr = TheCall->getArg(2);
+  Expr *StrideExpr = TheCall->getArg(3);
+
+  bool ArgError = false;
+
+  // Check pointer argument.
+  {
+    ExprResult PtrConv = DefaultFunctionArrayLvalueConversion(PtrExpr);
+    if (PtrConv.isInvalid())
+      return PtrConv;
+    PtrExpr = PtrConv.get();
+    TheCall->setArg(0, PtrExpr);
+    if (PtrExpr->isTypeDependent()) {
+      TheCall->setType(Context.DependentTy);
+      return TheCall;
+    }
+  }
+
+  auto *PtrTy = PtrExpr->getType()->getAs<PointerType>();
+  QualType ElementTy;
+  if (!PtrTy) {
+    Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_pointer_arg)
+        << "first";
+    ArgError = true;
+  } else {
+    ElementTy = PtrTy->getPointeeType().getUnqualifiedType();
+
+    if (!ConstantMatrixType::isValidElementType(ElementTy)) {
+      Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_pointer_arg)
+          << "first";
+      ArgError = true;
+    }
+  }
+
+  // Apply default Lvalue conversions and convert the expression to size_t.
+  auto ApplyArgumentConversions = [this](Expr *E) {
+    ExprResult Conv = DefaultLvalueConversion(E);
+    if (Conv.isInvalid())
+      return Conv;
+
+    return tryConvertExprToType(Conv.get(), Context.getSizeType());
+  };
+
+  // Apply conversion to row and column expressions.
+  ExprResult RowsConv = ApplyArgumentConversions(RowsExpr);
+  if (!RowsConv.isInvalid()) {
+    RowsExpr = RowsConv.get();
+    TheCall->setArg(1, RowsExpr);
+  } else
+    RowsExpr = nullptr;
+
+  ExprResult ColumnsConv = ApplyArgumentConversions(ColumnsExpr);
+  if (!ColumnsConv.isInvalid()) {
+    ColumnsExpr = ColumnsConv.get();
+    TheCall->setArg(2, ColumnsExpr);
+  } else
+    ColumnsExpr = nullptr;
+
+  // If any any part of the result matrix type is still pending, just use
+  // Context.DependentTy, until all parts are resolved.
+  if ((RowsExpr && RowsExpr->isTypeDependent()) ||
+      (ColumnsExpr && ColumnsExpr->isTypeDependent())) {
+    TheCall->setType(Context.DependentTy);
+    return CallResult;
+  }
+
+  // Check row and column dimenions.
+  llvm::Optional<unsigned> MaybeRows;
+  if (RowsExpr)
+    MaybeRows = getAndVerifyMatrixDimension(RowsExpr, "row", *this);
+
+  llvm::Optional<unsigned> MaybeColumns;
+  if (ColumnsExpr)
+    MaybeColumns = getAndVerifyMatrixDimension(ColumnsExpr, "column", *this);
+
+  // Check stride argument.
+  ExprResult StrideConv = ApplyArgumentConversions(StrideExpr);
+  if (StrideConv.isInvalid())
+    return ExprError();
+  StrideExpr = StrideConv.get();
+  TheCall->setArg(3, StrideExpr);
+
+  llvm::APSInt Value(64);
+  if (MaybeRows && StrideExpr->isIntegerConstantExpr(Value, Context)) {
+    uint64_t Stride = Value.getZExtValue();
+    if (Stride < *MaybeRows) {
+      Diag(StrideExpr->getBeginLoc(),
+           diag::err_builtin_matrix_stride_too_small);
+      ArgError = true;
+    }
+  }
+
+  if (ArgError || !MaybeRows || !MaybeColumns)
+    return ExprError();
+
+  TheCall->setType(
+      Context.getConstantMatrixType(ElementTy, *MaybeRows, *MaybeColumns));
+  return CallResult;
+}
+
+ExprResult Sema::SemaBuiltinMatrixColumnMajorStore(CallExpr *TheCall,
+                                                   ExprResult CallResult) {
+  if (checkArgCount(*this, TheCall, 3))
+    return ExprError();
+
+  Expr *MatrixExpr = TheCall->getArg(0);
+  Expr *PtrExpr = TheCall->getArg(1);
+  Expr *StrideExpr = TheCall->getArg(2);
+
+  bool ArgError = false;
+
+  {
+    ExprResult MatrixConv = DefaultLvalueConversion(MatrixExpr);
+    if (MatrixConv.isInvalid())
+      return MatrixConv;
+    MatrixExpr = MatrixConv.get();
+    TheCall->setArg(0, MatrixExpr);
+  }
+  if (MatrixExpr->isTypeDependent()) {
+    TheCall->setType(Context.DependentTy);
+    return TheCall;
+  }
+
+  auto *MatrixTy = MatrixExpr->getType()->getAs<ConstantMatrixType>();
+  if (!MatrixTy) {
+    Diag(MatrixExpr->getBeginLoc(), diag::err_builtin_matrix_arg) << 0;
+    ArgError = true;
+  }
+
+  {
+    ExprResult PtrConv = DefaultFunctionArrayLvalueConversion(PtrExpr);
+    if (PtrConv.isInvalid())
+      return PtrConv;
+    PtrExpr = PtrConv.get();
+    TheCall->setArg(1, PtrExpr);
+    if (PtrExpr->isTypeDependent()) {
+      TheCall->setType(Context.DependentTy);
+      return TheCall;
+    }
+  }
+
+  // Check pointer argument.
+  auto *PtrTy = PtrExpr->getType()->getAs<PointerType>();
+  if (!PtrTy) {
+    Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_pointer_arg)
+        << "second";
+    ArgError = true;
+  } else {
+    QualType ElementTy = PtrTy->getPointeeType();
+    if (ElementTy.isConstQualified()) {
+      Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_store_to_const);
+      ArgError = true;
+    }
+    ElementTy = ElementTy.getUnqualifiedType().getCanonicalType();
+    if (MatrixTy &&
+        !Context.hasSameType(ElementTy, MatrixTy->getElementType())) {
+      Diag(PtrExpr->getBeginLoc(),
+           diag::err_builtin_matrix_pointer_arg_mismatch)
+          << ElementTy << MatrixTy->getElementType();
+      ArgError = true;
+    }
+  }
+
+  // Apply default Lvalue conversions and convert the stride expression to
+  // size_t.
+  {
+    ExprResult StrideConv = DefaultLvalueConversion(StrideExpr);
+    if (StrideConv.isInvalid())
+      return StrideConv;
+
+    StrideConv = tryConvertExprToType(StrideConv.get(), Context.getSizeType());
+    if (StrideConv.isInvalid())
+      return StrideConv;
+    StrideExpr = StrideConv.get();
+    TheCall->setArg(2, StrideExpr);
+  }
+
+  // Check stride argument.
+  llvm::APSInt Value(64);
+  if (MatrixTy && StrideExpr->isIntegerConstantExpr(Value, Context)) {
+    uint64_t Stride = Value.getZExtValue();
+    if (Stride < MatrixTy->getNumRows()) {
+      Diag(StrideExpr->getBeginLoc(),
+           diag::err_builtin_matrix_stride_too_small);
+      ArgError = true;
+    }
+  }
+
+  if (ArgError)
+    return ExprError();
+
   return CallResult;
 }

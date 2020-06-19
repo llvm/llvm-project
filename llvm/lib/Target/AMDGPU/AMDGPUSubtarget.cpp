@@ -153,6 +153,8 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
   TargetTriple(TT),
   Has16BitInsts(false),
   HasMadMixInsts(false),
+  HasMadMacF32Insts(false),
+  HasDsSrc2Insts(false),
   HasSDWA(false),
   HasVOP3PInsts(false),
   HasMulI24(true),
@@ -206,6 +208,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     GFX8Insts(false),
     GFX9Insts(false),
     GFX10Insts(false),
+    GFX10_3Insts(false),
     GFX7GFX8GFX9Insts(false),
     SGPRInitBug(false),
     HasSMemRealTime(false),
@@ -226,6 +229,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasGFX10A16(false),
     HasG16(false),
     HasNSAEncoding(false),
+    GFX10_BEncoding(false),
     HasDLInsts(false),
     HasDot1Insts(false),
     HasDot2Insts(false),
@@ -240,6 +244,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     DoesNotSupportSRAMECC(false),
     HasNoSdstCMPX(false),
     HasVscnt(false),
+    HasGetWaveIdInst(false),
+    HasSMemTimeInst(false),
     HasRegisterBanking(false),
     HasVOP3Literal(false),
     HasNoDataDepHazard(false),
@@ -630,13 +636,12 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
   return 2; // VCC.
 }
 
-unsigned GCNSubtarget::computeOccupancy(const MachineFunction &MF,
-                                        unsigned LDSSize,
+unsigned GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                         unsigned NumSGPRs,
                                         unsigned NumVGPRs) const {
   unsigned Occupancy =
     std::min(getMaxWavesPerEU(),
-             getOccupancyWithLocalMemSize(LDSSize, MF.getFunction()));
+             getOccupancyWithLocalMemSize(LDSSize, F));
   if (NumSGPRs)
     Occupancy = std::min(Occupancy, getOccupancyWithNumSGPRs(NumSGPRs));
   if (NumVGPRs)

@@ -154,9 +154,7 @@ sum = 0.0;
 // CHECK:    store i32 [[TMP63]], i32* [[DOTCAPTURE_EXPR_]],
 // CHECK:    [[TMP64:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]],
 // CHECK:    [[SUB:%.*]] = sub nsw i32 [[TMP64]], 0
-// CHECK:    [[SUB10:%.*]] = sub nsw i32 [[SUB]], 1
-// CHECK:    [[ADD11:%.*]] = add nsw i32 [[SUB10]], 1
-// CHECK:    [[DIV:%.*]] = sdiv i32 [[ADD11]], 1
+// CHECK:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK:    [[SUB12:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK:    store i32 [[SUB12]], i32* [[DOTCAPTURE_EXPR_9]],
 // CHECK:    [[TMP65:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* %{{.+}}, i32 [[TMP0]], i32 1, i64 888, i64 40, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates*)* @{{.+}} to i32 (i32, i8*)*))

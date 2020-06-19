@@ -764,20 +764,21 @@ Error DWARFDebugLine::LineTable::parse(
     Row::dumpTableHeader(*OS, /*Indent=*/Verbose ? 12 : 0);
   }
   while (*OffsetPtr < EndOffset) {
+    DataExtractor::Cursor Cursor(*OffsetPtr);
+
     if (Verbose)
       *OS << format("0x%08.08" PRIx64 ": ", *OffsetPtr);
 
     uint64_t OpcodeOffset = *OffsetPtr;
-    uint8_t Opcode = TableData.getU8(OffsetPtr);
+    uint8_t Opcode = TableData.getU8(Cursor);
     size_t RowCount = Rows.size();
 
-    if (Verbose)
+    if (Cursor && Verbose)
       *OS << format("%02.02" PRIx8 " ", Opcode);
 
     if (Opcode == 0) {
       // Extended Opcodes always start with a zero opcode followed by
       // a uleb128 length so you can skip ones you don't know about
-      DataExtractor::Cursor Cursor(*OffsetPtr);
       uint64_t Len = TableData.getULEB128(Cursor);
       uint64_t ExtOffset = Cursor.tell();
 
@@ -919,9 +920,7 @@ Error DWARFDebugLine::LineTable::parse(
       // by the table. Similarly, continue from the claimed end in the event of
       // a parsing error.
       uint64_t End = ExtOffset + Len;
-      if (!Cursor)
-        RecoverableErrorHandler(Cursor.takeError());
-      else if (Cursor.tell() != End)
+      if (Cursor && Cursor.tell() != End)
         RecoverableErrorHandler(createStringError(
             errc::illegal_byte_sequence,
             "unexpected line op length at offset 0x%8.8" PRIx64
@@ -929,7 +928,6 @@ Error DWARFDebugLine::LineTable::parse(
             ExtOffset, Len, Cursor.tell() - ExtOffset));
       *OffsetPtr = End;
     } else if (Opcode < Prologue.OpcodeBase) {
-      DataExtractor::Cursor Cursor(*OffsetPtr);
       if (Verbose)
         *OS << LNStandardString(Opcode);
       switch (Opcode) {
@@ -1103,15 +1101,6 @@ Error DWARFDebugLine::LineTable::parse(
       }
 
       *OffsetPtr = Cursor.tell();
-
-      // Most standard opcode failures are due to failures to read ULEBs. Bail
-      // out of parsing, since we don't know where to continue reading from as
-      // there is no stated length for such byte sequences.
-      if (!Cursor) {
-        if (Verbose)
-          *OS << "\n\n";
-        return Cursor.takeError();
-      }
     } else {
       // Special Opcodes.
       ParsingState::AddrAndLineDelta Delta =
@@ -1126,12 +1115,26 @@ Error DWARFDebugLine::LineTable::parse(
         State.Row.dump(*OS);
 
       State.appendRowToMatrix();
+      *OffsetPtr = Cursor.tell();
     }
 
     // When a row is added to the matrix, it is also dumped, which includes a
     // new line already, so don't add an extra one.
     if (Verbose && Rows.size() == RowCount)
       *OS << "\n";
+
+    // Most parse failures other than when parsing extended opcodes are due to
+    // failures to read ULEBs. Bail out of parsing, since we don't know where to
+    // continue reading from as there is no stated length for such byte
+    // sequences. Print the final trailing new line if needed before doing so.
+    if (!Cursor && Opcode != 0) {
+      if (Verbose)
+        *OS << "\n";
+      return Cursor.takeError();
+    }
+
+    if (!Cursor)
+      RecoverableErrorHandler(Cursor.takeError());
   }
 
   if (!State.Sequence.Empty)

@@ -129,70 +129,125 @@ template struct mlir::linalg::GenerateLoopNest<scf::ForOp>;
 template struct mlir::linalg::GenerateLoopNest<scf::ParallelOp>;
 template struct mlir::linalg::GenerateLoopNest<AffineForOp>;
 
+/// Given a list of subview ranges, extract individual values for lower, upper
+/// bounds and steps and put them into the corresponding vectors.
+static void unpackRanges(ArrayRef<SubViewOp::Range> ranges,
+                         SmallVectorImpl<Value> &lbs,
+                         SmallVectorImpl<Value> &ubs,
+                         SmallVectorImpl<Value> &steps) {
+  for (SubViewOp::Range range : ranges) {
+    lbs.emplace_back(range.offset);
+    ubs.emplace_back(range.size);
+    steps.emplace_back(range.stride);
+  }
+}
+
 namespace mlir {
 namespace linalg {
-/// Specialization of loop nest generator for scf.parallel loops to handle
-/// iterator types that are not parallel. These are generated as sequential
-/// loops.
+
+/// Specialization to build an scf "for" nest.
 template <>
-void GenerateLoopNest<scf::ForOp>::doit(MutableArrayRef<Value> allIvs,
-                                        ArrayRef<SubViewOp::Range> loopRanges,
-                                        ArrayRef<Attribute> iteratorTypes,
-                                        std::function<void(void)> fun) {
-  edsc::GenericLoopNestRangeBuilder<scf::ForOp>(allIvs, loopRanges)(fun);
+void GenerateLoopNest<scf::ForOp>::doit(
+    ArrayRef<SubViewOp::Range> loopRanges, ArrayRef<Attribute> iteratorTypes,
+    function_ref<void(ValueRange)> bodyBuilderFn) {
+  SmallVector<Value, 4> lbs, ubs, steps;
+  unpackRanges(loopRanges, lbs, ubs, steps);
+  edsc::loopNestBuilder(lbs, ubs, steps, bodyBuilderFn);
 }
 
+/// Specialization to build affine "for" nest.
 template <>
-void GenerateLoopNest<AffineForOp>::doit(MutableArrayRef<Value> allIvs,
-                                         ArrayRef<SubViewOp::Range> loopRanges,
-                                         ArrayRef<Attribute> iteratorTypes,
-                                         std::function<void(void)> fun) {
-  edsc::GenericLoopNestRangeBuilder<AffineForOp>(allIvs, loopRanges)(fun);
+void GenerateLoopNest<AffineForOp>::doit(
+    ArrayRef<SubViewOp::Range> loopRanges, ArrayRef<Attribute> iteratorTypes,
+    function_ref<void(ValueRange)> bodyBuilderFn) {
+  SmallVector<Value, 4> lbs, ubs, steps;
+  unpackRanges(loopRanges, lbs, ubs, steps);
+
+  // Affine loops require constant steps.
+  SmallVector<int64_t, 4> constantSteps;
+  constantSteps.reserve(steps.size());
+  for (Value v : steps) {
+    auto op = v.getDefiningOp<ConstantIndexOp>();
+    assert(op && "Affine loops require constant steps");
+    constantSteps.push_back(op.getValue());
+  }
+
+  edsc::affineLoopNestBuilder(lbs, ubs, constantSteps, bodyBuilderFn);
 }
 
+/// Generates a loop nest consisting of scf.parallel and scf.for, depending on
+/// the `iteratorTypes.` Consecutive parallel loops create a single scf.parallel
+/// operation; each sequential loop creates a new scf.for operation. The body
+/// of the innermost loop is populated by `bodyBuilderFn` that accepts a range
+/// of induction variables for all loops. `ivStorage` is used to store the
+/// partial list of induction variables.
+// TODO(zinenko,ntv): this function can be made iterative instead. However, it
+// will have at most as many recursive calls as nested loops, which rarely
+// exceeds 10.
+static void
+generateParallelLoopNest(ValueRange lbs, ValueRange ubs, ValueRange steps,
+                         ArrayRef<Attribute> iteratorTypes,
+                         function_ref<void(ValueRange)> bodyBuilderFn,
+                         SmallVectorImpl<Value> &ivStorage) {
+  assert(lbs.size() == ubs.size());
+  assert(lbs.size() == steps.size());
+  assert(lbs.size() == iteratorTypes.size());
+
+  // If there are no (more) loops to be generated, generate the body and be
+  // done with it.
+  if (iteratorTypes.empty())
+    return bodyBuilderFn(ivStorage);
+
+  // Find the outermost parallel loops and drop their types from the list.
+  unsigned nLoops = iteratorTypes.size();
+  iteratorTypes = iteratorTypes.drop_while(isParallelIteratorType);
+  unsigned nOuterPar = nLoops - iteratorTypes.size();
+
+  // If there are no outer parallel loops, generate one sequential loop and
+  // recurse. Note that we wouldn't have dropped anything from `iteratorTypes`
+  // in this case.
+  if (nOuterPar == 0) {
+    edsc::loopNestBuilder(lbs[0], ubs[0], steps[0], [&](Value iv) {
+      ivStorage.push_back(iv);
+      generateParallelLoopNest(lbs.drop_front(), ubs.drop_front(),
+                               steps.drop_front(), iteratorTypes.drop_front(),
+                               bodyBuilderFn, ivStorage);
+    });
+    return;
+  }
+
+  // Generate a single parallel loop-nest operation for all outermost parallel
+  // loops and recurse.
+  edsc::OperationBuilder<scf::ParallelOp>(
+      lbs.take_front(nOuterPar), ubs.take_front(nOuterPar),
+      steps.take_front(nOuterPar),
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange localIvs) {
+        edsc::ScopedContext context(nestedBuilder, nestedLoc);
+        ivStorage.append(localIvs.begin(), localIvs.end());
+        generateParallelLoopNest(lbs.drop_front(nOuterPar),
+                                 ubs.drop_front(nOuterPar),
+                                 steps.drop_front(nOuterPar), iteratorTypes,
+                                 bodyBuilderFn, ivStorage);
+      });
+}
+
+/// Specialization for generating a mix of parallel and sequential scf loops.
 template <>
 void GenerateLoopNest<scf::ParallelOp>::doit(
-    MutableArrayRef<Value> allIvs, ArrayRef<SubViewOp::Range> loopRanges,
-    ArrayRef<Attribute> iteratorTypes, std::function<void(void)> fun) {
-  // Check if there is nothing to do here. This is also the recursion
-  // termination.
-  if (loopRanges.empty())
-    return;
-  size_t nOuterPar = iteratorTypes.take_front(loopRanges.size())
-                         .take_while(isParallelIteratorType)
-                         .size();
-  if (nOuterPar == 0 && loopRanges.size() == 1)
-    // Generate the sequential for loop for the remaining non-parallel loop.
-    return GenerateLoopNest<scf::ForOp>::doit(allIvs, loopRanges, iteratorTypes,
-                                              fun);
-  if (nOuterPar == 0) {
-    // The immediate outer loop is not parallel. Generate a scf.for op for this
-    // loop, but there might be subsequent loops that are parallel. Use
-    // recursion to find those.
-    auto nestedFn = [&]() {
-      GenerateLoopNest<scf::ParallelOp>::doit(allIvs.drop_front(),
-                                              loopRanges.drop_front(),
-                                              iteratorTypes.drop_front(), fun);
-    };
-    return GenerateLoopNest<scf::ForOp>::doit(allIvs[0], loopRanges[0],
-                                              iteratorTypes[0], nestedFn);
-  }
-  if (nOuterPar == loopRanges.size()) {
-    // All loops are parallel, so generate the scf.parallel op.
-    return edsc::GenericLoopNestRangeBuilder<scf::ParallelOp>(allIvs,
-                                                              loopRanges)(fun);
-  }
-  // Generate scf.parallel for the outer parallel loops. The next inner loop is
-  // sequential, but there might be more parallel loops after that. So recurse
-  // into the same method.
-  auto nestedFn = [&]() {
-    GenerateLoopNest<scf::ParallelOp>::doit(
-        allIvs.drop_front(nOuterPar), loopRanges.drop_front(nOuterPar),
-        iteratorTypes.drop_front(nOuterPar), fun);
-  };
-  return GenerateLoopNest<scf::ParallelOp>::doit(
-      allIvs.take_front(nOuterPar), loopRanges.take_front(nOuterPar),
-      iteratorTypes.take_front(nOuterPar), nestedFn);
+    ArrayRef<SubViewOp::Range> loopRanges, ArrayRef<Attribute> iteratorTypes,
+    function_ref<void(ValueRange)> bodyBuilderFn) {
+  SmallVector<Value, 8> lbsStorage, ubsStorage, stepsStorage, ivs;
+  unpackRanges(loopRanges, lbsStorage, ubsStorage, stepsStorage);
+  ValueRange lbs(lbsStorage), ubs(ubsStorage), steps(stepsStorage);
+
+  // This function may be passed more iterator types than ranges.
+  assert(iteratorTypes.size() >= loopRanges.size() &&
+         "expected iterator type for all ranges");
+  iteratorTypes = iteratorTypes.take_front(loopRanges.size());
+  ivs.reserve(iteratorTypes.size());
+  generateParallelLoopNest(lbs, ubs, steps, iteratorTypes, bodyBuilderFn, ivs);
+  assert(ivs.size() == iteratorTypes.size() && "did not generate enough loops");
 }
+
 } // namespace linalg
 } // namespace mlir

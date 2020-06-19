@@ -30,6 +30,8 @@ bool getIncrementalLinkerCompatible();
 
 int getDwarfVersion();
 
+bool getDwarf64();
+
 bool getShowMCInst();
 
 bool getFatalWarnings();

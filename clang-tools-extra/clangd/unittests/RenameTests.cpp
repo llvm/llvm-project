@@ -1027,7 +1027,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
     std::string FooHPath = testPath("foo.h");
     std::string FooCCPath = testPath("foo.cc");
 
-    MockFSProvider FS;
+    MockFS FS;
     FS.Files[FooHPath] = std::string(FooH.code());
     FS.Files[FooCCPath] = std::string(FooCC.code());
 

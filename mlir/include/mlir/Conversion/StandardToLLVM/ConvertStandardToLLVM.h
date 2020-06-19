@@ -278,6 +278,7 @@ public:
 
   /// Builds IR extracting the pos-th size from the descriptor.
   Value size(OpBuilder &builder, Location loc, unsigned pos);
+  Value size(OpBuilder &builder, Location loc, Value pos, int64_t rank);
 
   /// Builds IR inserting the pos-th size into the descriptor
   void setSize(OpBuilder &builder, Location loc, unsigned pos, Value size);

@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -arch x86_64 -dylib %t.o -o %t.dylib
+# RUN: lld -flavor darwinnew -dylib %t.o -o %t.dylib
 
 # RUN: llvm-objdump --syms --exports-trie %t.dylib | \
 # RUN:   FileCheck %s --check-prefix=EXPORTS

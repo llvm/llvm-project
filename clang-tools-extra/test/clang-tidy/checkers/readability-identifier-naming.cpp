@@ -214,17 +214,16 @@ public:
 // CHECK-FIXES: {{^}}    static int ClassMember2;{{$}}
 };
 class my_class;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'my_class'
+// No warning needed here as this is tied to the previous declaration.
+// Just make sure the fix is applied.
 // CHECK-FIXES: {{^}}class CMyClass;{{$}}
 
 class my_forward_declared_class; // No warning should be triggered.
 
 const int my_class::classConstant = 4;
-// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for class constant 'classConstant'
 // CHECK-FIXES: {{^}}const int CMyClass::kClassConstant = 4;{{$}}
 
 int my_class::ClassMember_2 = 5;
-// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for class member 'ClassMember_2'
 // CHECK-FIXES: {{^}}int CMyClass::ClassMember2 = 5;{{$}}
 
 class my_derived_class : public virtual my_class {};
@@ -500,7 +499,6 @@ template <typename t_t> struct a {
 
 template<typename t_t>
 char const a<t_t>::MyConstClass_string[] = "123";
-// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for class constant 'MyConstClass_string'
 // CHECK-FIXES: {{^}}char const a<t_t>::kMyConstClassString[] = "123";{{$}}
 
 template <template <typename> class A> struct b { A<int> c; };
@@ -545,3 +543,22 @@ void QualifiedTypeLocTest(const THIS___Structure &);
 // CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const this_structure &);{{$}}
 void QualifiedTypeLocTest(volatile THIS___Structure &);
 // CHECK-FIXES: {{^}}void QualifiedTypeLocTest(volatile this_structure &);{{$}}
+
+namespace redecls {
+// We only want the warning to show up once here for the first decl.
+// CHECK-MESSAGES: :[[@LINE+1]]:6: warning: invalid case style for global function 'badNamedFunction'
+void badNamedFunction();
+void badNamedFunction();
+void badNamedFunction(){}
+//      CHECK-FIXES: {{^}}void BadNamedFunction();
+// CHECK-FIXES-NEXT: {{^}}void BadNamedFunction();
+// CHECK-FIXES-NEXT: {{^}}void BadNamedFunction(){}
+void ReferenceBadNamedFunction() {
+  auto l_Ptr = badNamedFunction;
+  // CHECK-FIXES: {{^}}  auto l_Ptr = BadNamedFunction;
+  l_Ptr();
+  badNamedFunction();
+  // CHECK-FIXES: {{^}}  BadNamedFunction();
+}
+
+} // namespace redecls

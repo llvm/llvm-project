@@ -807,7 +807,7 @@ TEST_F(IRBuilderTest, createArtificialSubprogram) {
 TEST_F(IRBuilderTest, InsertExtractElement) {
   IRBuilder<> Builder(BB);
 
-  auto VecTy = VectorType::get(Builder.getInt64Ty(), 4);
+  auto VecTy = FixedVectorType::get(Builder.getInt64Ty(), 4);
   auto Elt1 = Builder.getInt64(-1);
   auto Elt2 = Builder.getInt64(-2);
   Value *Vec = UndefValue::get(VecTy);

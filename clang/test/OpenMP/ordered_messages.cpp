@@ -61,6 +61,17 @@ T foo() {
       foo();
     }
   }
+  #pragma omp for ordered
+  for (int i = 0; i < 10; ++i) {
+    #pragma omp ordered // expected-note {{previous 'ordered' directive used here}}
+    {
+      foo();
+    }
+    #pragma omp ordered // expected-error {{exactly one 'ordered' directive must appear in the loop body of an enclosing directive}}
+    {
+      foo();
+    }
+  }
   #pragma omp ordered simd simd // expected-error {{directive '#pragma omp ordered' cannot contain more than one 'simd' clause}}
   {
     foo();
@@ -79,7 +90,18 @@ T foo() {
       foo();
     }
   }
-  #pragma omp for simd
+  #pragma omp simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp ordered simd // expected-note {{previous 'ordered' directive used here}}
+    {
+      foo();
+    }
+#pragma omp ordered simd // expected-error {{exactly one 'ordered' directive must appear in the loop body of an enclosing directive}}
+    {
+      foo();
+    }
+  }
+#pragma omp for simd
   for (int i = 0; i < 10; ++i) {
     #pragma omp ordered // expected-error {{OpenMP constructs may not be nested inside a simd region}}
     {

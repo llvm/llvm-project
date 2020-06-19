@@ -1474,7 +1474,7 @@ void ScriptParser::readVersionDeclaration(StringRef verStr) {
     expect(";");
 }
 
-static bool hasWildcard(StringRef s) {
+bool elf::hasWildcard(StringRef s) {
   return s.find_first_of("?*[") != StringRef::npos;
 }
 

@@ -298,6 +298,10 @@ BUILTIN(__builtin_altivec_vrldmi, "V2ULLiV2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vrlwnm, "V4UiV4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vrldnm, "V2ULLiV2ULLiV2ULLi", "")
 
+// P10 Vector Parallel Bits built-ins.
+BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")
+BUILTIN(__builtin_altivec_vpextd, "V2ULLiV2ULLiV2ULLi", "")
+
 // VSX built-ins.
 
 BUILTIN(__builtin_vsx_lxvd2x, "V2divC*", "")
@@ -470,6 +474,8 @@ BUILTIN(__builtin_divweu, "UiUiUi", "")
 BUILTIN(__builtin_divde, "SLLiSLLiSLLi", "")
 BUILTIN(__builtin_divdeu, "ULLiULLiULLi", "")
 BUILTIN(__builtin_bpermd, "SLLiSLLiSLLi", "")
+BUILTIN(__builtin_pdepd, "ULLiULLiULLi", "")
+BUILTIN(__builtin_pextd, "ULLiULLiULLi", "")
 
 // Vector int128 (un)pack
 BUILTIN(__builtin_unpack_vector_int128, "ULLiV1LLLii", "")

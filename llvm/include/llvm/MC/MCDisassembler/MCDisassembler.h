@@ -135,7 +135,7 @@ public:
   /// Base implementation returns None. So all targets by default ignore to
   /// treat symbols separately.
   ///
-  /// \param Name     - The name of the symbol.
+  /// \param Symbol   - The symbol.
   /// \param Size     - The number of bytes consumed.
   /// \param Address  - The address, in the memory space of region, of the first
   ///                   byte of the symbol.
@@ -150,10 +150,9 @@ public:
   ///                   done by buffering the output if needed.
   ///                 - None if the target doesn't want to handle the symbol
   ///                   separately. Value of Size is ignored in this case.
-  virtual Optional<DecodeStatus> onSymbolStart(StringRef Name, uint64_t &Size,
-                                               ArrayRef<uint8_t> Bytes,
-                                               uint64_t Address,
-                                               raw_ostream &CStream) const;
+  virtual Optional<DecodeStatus>
+  onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
+                uint64_t Address, raw_ostream &CStream) const;
   // TODO:
   // Implement similar hooks that can be used at other points during
   // disassembly. Something along the following lines:

@@ -815,40 +815,52 @@ def LLVM_experimental_vector_reduce_v2_fmul : LLVM_VectorReductionV2<"fmul">;
 // LLVM Matrix operations.
 //
 
-/// Create a columnwise, strided 2-D matrix load, as specified in the LLVM
+/// Create a column major, strided 2-D matrix load, as specified in the LLVM
 /// MatrixBuilder.
-/// data    - Start address of the matrix read
-/// rows    - Number of rows in matrix (must be a constant)
-/// columns - Number of columns in matrix (must be a constant)
-/// stride  - Space between columns
-def LLVM_MatrixColumnsWiseLoadOp
-    : LLVM_OneResultOp<"intr.matrix.columnwise.load">,
-      Arguments<(ins LLVM_Type:$data, LLVM_Type:$stride,
+/// data       - Start address of the matrix read
+/// rows       - Number of rows in matrix (must be a constant)
+/// isVolatile - True if the load operation is marked as volatile.
+/// columns    - Number of columns in matrix (must be a constant)
+/// stride     - Space between columns
+def LLVM_MatrixColumnMajorLoadOp
+    : LLVM_OneResultOp<"intr.matrix.column.major.load">,
+      Arguments<(ins LLVM_Type:$data, LLVM_Type:$stride, I1Attr:$isVolatile,
                  I32Attr:$rows, I32Attr:$columns)> {
   string llvmBuilder = [{
     llvm::MatrixBuilder<decltype(builder)> mb(builder);
-    $res = mb.CreateMatrixColumnwiseLoad(
-      $data, $rows.getZExtValue(), $columns.getZExtValue(), $stride);
+    const llvm::DataLayout &dl =
+      builder.GetInsertBlock()->getModule()->getDataLayout();
+    llvm::Align align = dl.getABITypeAlign(
+      $data->getType()->getPointerElementType());
+    $res = mb.CreateColumnMajorLoad(
+      $data, align, $stride, $isVolatile.getZExtValue(), $rows.getZExtValue(),
+      $columns.getZExtValue());
   }];
   let assemblyFormat = "$data `,` `<` `stride` `=` $stride `>` attr-dict"
     "`:` type($res) `from` type($data) `stride` type($stride)";
 }
 
-/// Create a columnwise, strided 2-D matrix store, as specified in the LLVM
+/// Create a column major, strided 2-D matrix store, as specified in the LLVM
 /// MatrixBuilder.
-/// matrix  - Matrix to store
-/// ptr     - Pointer to write back to
-/// rows    - Number of rows in matrix (must be a constant)
-/// columns - Number of columns in matrix (must be a constant)
-/// stride  - Space between columns
-def LLVM_MatrixColumnsWiseStoreOp
-    : LLVM_ZeroResultOp<"intr.matrix.columnwise.store">,
+/// matrix     - Matrix to store
+/// ptr        - Pointer to write back to
+/// isVolatile - True if the load operation is marked as volatile.
+/// rows       - Number of rows in matrix (must be a constant)
+/// columns    - Number of columns in matrix (must be a constant)
+/// stride     - Space between columns
+def LLVM_MatrixColumnMajorStoreOp
+    : LLVM_ZeroResultOp<"intr.matrix.column.major.store">,
       Arguments<(ins LLVM_Type:$matrix, LLVM_Type:$data, LLVM_Type:$stride,
-                 I32Attr:$rows, I32Attr:$columns)> {
+                 I1Attr:$isVolatile, I32Attr:$rows, I32Attr:$columns)> {
   string llvmBuilder = [{
     llvm::MatrixBuilder<decltype(builder)> mb(builder);
-    mb.CreateMatrixColumnwiseStore(
-      $matrix, $data, $stride, $rows.getZExtValue(), $columns.getZExtValue());
+    const llvm::DataLayout &dl =
+      builder.GetInsertBlock()->getModule()->getDataLayout();
+    llvm::Align align = dl.getABITypeAlign(
+      $data->getType()->getPointerElementType());
+    mb.CreateColumnMajorStore(
+      $matrix, $data, align, $stride, $isVolatile.getZExtValue(),
+      $rows.getZExtValue(), $columns.getZExtValue());
   }];
   let assemblyFormat = "$matrix `,` $data `,` `<` `stride` `=` $stride `>` "
     "attr-dict`:` type($matrix) `to` type($data) `stride` type($stride)";

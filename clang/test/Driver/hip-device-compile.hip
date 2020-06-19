@@ -31,9 +31,10 @@
 // BC-SAME: "-emit-llvm-bc"
 // LL-SAME: "-emit-llvm"
 // ASM-NOT: "-emit-llvm"
-// CHECK-SAME: "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
+// CHECK-SAME: "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: {{".*lib1.bc"}}
+// CHECK-SAME: "-target-cpu" "gfx900"
 // BC-SAME: "-o" "a.bc"
 // LL-SAME: "-o" "a.ll"
 // ASM-SAME: "-o" "a.s"
@@ -63,10 +64,10 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN: 2>&1 | FileCheck -check-prefixes=BUNDLE %s
 
-// BUNDLE: {{"*.clang.*"}}
-// BUNDLE: {{"*.llvm-link"}}
-// BUNDLE: {{".*opt"}}
-// BUNDLE: {{".*llc"}}
+// BUNDLE: {{"*.clang.*"}} {{.*}} "-emit-obj"
+// BUNDLE-NOT: {{"*.llvm-link"}}
+// BUNDLE-NOT: {{".*opt"}}
+// BUNDLE-NOT: {{".*llc"}}
 // BUNDLE: {{".*lld.*"}}
 // BUNDLE: {{".*clang-offload-bundler"}}
 

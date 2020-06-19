@@ -232,7 +232,6 @@ define double @reassociate_mamaa_double(double %0, double %1, double %2, double 
   ret double %11
 }
 
-; FIXME: should use xsmaddasp instead of fmadds for pwr7 arch.
 define float @reassociate_mamaa_float(float %0, float %1, float %2, float %3, float %4, float %5) {
 ; CHECK-LABEL: reassociate_mamaa_float:
 ; CHECK:       # %bb.0:
@@ -291,7 +290,6 @@ define double @reassociate_mamama_double(double %0, double %1, double %2, double
   ret double %17
 }
 
-; FIXME: should use xsmaddasp instead of fmadds for pwr7 arch.
 define dso_local float @reassociate_mamama_8(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7, float %8,
                                              float %9, float %10, float %11, float %12, float %13, float %14, float %15, float %16) {
 ; CHECK-LABEL: reassociate_mamama_8:

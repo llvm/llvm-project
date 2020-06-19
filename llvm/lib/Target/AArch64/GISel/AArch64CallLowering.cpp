@@ -438,6 +438,9 @@ bool AArch64CallLowering::lowerFormalArguments(
   SmallVector<ArgInfo, 8> SplitArgs;
   unsigned i = 0;
   for (auto &Arg : F.args()) {
+    if (isa<ScalableVectorType>(Arg.getType()))
+      return false;
+
     if (DL.getTypeStoreSize(Arg.getType()).isZero())
       continue;
 
@@ -776,7 +779,7 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
                               bool IsTailCall) {
   if (!IsTailCall)
-    return IsIndirect ? getBLRCallOpcode(CallerF) : AArch64::BL;
+    return IsIndirect ? getBLRCallOpcode(CallerF) : (unsigned)AArch64::BL;
 
   if (!IsIndirect)
     return AArch64::TCRETURNdi;

@@ -35,7 +35,7 @@
 #if defined(_WIN32)
 #include "lldb/Host/windows/HostInfoWindows.h"
 #define HOST_INFO_TYPE HostInfoWindows
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__EMSCRIPTEN__)
 #if defined(__ANDROID__)
 #include "lldb/Host/android/HostInfoAndroid.h"
 #define HOST_INFO_TYPE HostInfoAndroid

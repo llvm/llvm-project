@@ -439,8 +439,11 @@ func @vector_print_scalar_i1(%arg0: i1) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_i1(
 // CHECK-SAME: %[[A:.*]]: !llvm.i1)
-//       CHECK:    llvm.call @print_i1(%[[A]]) : (!llvm.i1) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK: %[[T:.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+//       CHECK: %[[F:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+//       CHECK: %[[S:.*]] = llvm.select %[[A]], %[[T]], %[[F]] : !llvm.i1, !llvm.i32
+//       CHECK: llvm.call @print_i32(%[[S]]) : (!llvm.i32) -> ()
+//       CHECK: llvm.call @print_newline() : () -> ()
 
 func @vector_print_scalar_i32(%arg0: i32) {
   vector.print %arg0 : i32

@@ -31,6 +31,7 @@
 #include "support/Path.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -119,6 +120,9 @@ public:
   /// using the presumed-location mechanism.
   std::vector<Inclusion> preambleIncludes() const;
 
+  /// Returns preamble bounds for the Modified.
+  PreambleBounds modifiedBounds() const { return ModifiedBounds; }
+
   /// Returns textual patch contents.
   llvm::StringRef text() const { return PatchContents; }
 
@@ -129,6 +133,7 @@ private:
   /// Includes that are present in both \p Baseline and \p Modified. Used for
   /// patching includes of baseline preamble.
   std::vector<Inclusion> PreambleIncludes;
+  PreambleBounds ModifiedBounds = {0, false};
 };
 
 /// Translates locations inside preamble patch to their main-file equivalent

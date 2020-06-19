@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: not lld -flavor darwinnew -arch x86_64 -o %t %t.o 2>&1 | FileCheck %s
+# RUN: not lld -flavor darwinnew -o %t %t.o 2>&1 | FileCheck %s
 #
 # CHECK: error: alignment 32 of section __text is too large
 --- !mach-o

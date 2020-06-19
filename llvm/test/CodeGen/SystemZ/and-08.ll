@@ -371,6 +371,21 @@ define void @f26(i64 *%ptr1, i64 *%ptr2) {
   ret void
 }
 
+; Test a case where one of the loads are optimized by the DAGCombiner to a
+; zero-extending load of half the original size.
+define void @f27(i16* noalias %ptr1, i16* noalias %ptr2) {
+; CHECK-LABEL: f27:
+; CHECK-NOT: nc
+; CHECK: br %r14
+entry:
+  %0 = load i16, i16 *%ptr1, align 2
+  %1 = lshr i16 %0, 8
+  %2 = load i16, i16 *%ptr2, align 2
+  %and7 = and i16 %1, %2
+  store i16 %and7, i16 *%ptr1, align 2
+  ret void
+}
+
 !0 = !{ !"root" }
 !1 = !{ !"set1", !0 }
 !2 = !{ !"set2", !0 }

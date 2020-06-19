@@ -830,22 +830,23 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
         // since 'O' packets can really slow down debugging if the inferior
         // does a lot of output.
         if ((!stdin_file_spec || !stdout_file_spec || !stderr_file_spec) &&
-            pty.OpenFirstAvailableMaster(O_RDWR | O_NOCTTY, nullptr, 0)) {
-          FileSpec slave_name{pty.GetSlaveName(nullptr, 0)};
+            pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY, nullptr, 0)) {
+          FileSpec secondary_name{pty.GetSecondaryName(nullptr, 0)};
 
           if (!stdin_file_spec)
-            stdin_file_spec = slave_name;
+            stdin_file_spec = secondary_name;
 
           if (!stdout_file_spec)
-            stdout_file_spec = slave_name;
+            stdout_file_spec = secondary_name;
 
           if (!stderr_file_spec)
-            stderr_file_spec = slave_name;
+            stderr_file_spec = secondary_name;
         }
         LLDB_LOGF(
             log,
             "ProcessGDBRemote::%s adjusted STDIO paths for local platform "
-            "(IsHost() is true) using slave: stdin=%s, stdout=%s, stderr=%s",
+            "(IsHost() is true) using secondary: stdin=%s, stdout=%s, "
+            "stderr=%s",
             __FUNCTION__,
             stdin_file_spec ? stdin_file_spec.GetCString() : "<null>",
             stdout_file_spec ? stdout_file_spec.GetCString() : "<null>",
@@ -930,8 +931,8 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
         SetPrivateState(SetThreadStopInfo(response));
 
         if (!disable_stdio) {
-          if (pty.GetMasterFileDescriptor() != PseudoTerminal::invalid_fd)
-            SetSTDIOFileDescriptor(pty.ReleaseMasterFileDescriptor());
+          if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd)
+            SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
         }
       }
     } else {

@@ -22,7 +22,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -32,6 +31,7 @@
 
 namespace llvm {
 
+class AssemblyAnnotationWriter;
 class CallInst;
 class Function;
 class LandingPadInst;
@@ -277,6 +277,12 @@ public:
                    static_cast<const BasicBlock *>(this)->getUniqueSuccessor());
   }
 
+  /// Print the basic block to an output stream with an optional
+  /// AssemblyAnnotationWriter.
+  void print(raw_ostream &OS, AssemblyAnnotationWriter *AAW = nullptr,
+             bool ShouldPreserveUseListOrder = false,
+             bool IsForDebug = false) const;
+
   //===--------------------------------------------------------------------===//
   /// Instruction iterator methods
   ///
@@ -377,13 +383,7 @@ public:
   /// If \p KeepOneInputPHIs is true then don't remove PHIs that are left with
   /// zero or one incoming values, and don't simplify PHIs with all incoming
   /// values the same.
-  ///
-  /// If \p MaybeDeadInstrs is not nullptr then whenever we drop a reference to
-  /// an instruction, append it to the vector. The caller should check whether
-  /// these instructions are now trivially dead, and if so delete them.
-  void
-  removePredecessor(BasicBlock *Pred, bool KeepOneInputPHIs = false,
-                    SmallVectorImpl<WeakTrackingVH> *MaybeDeadInstrs = nullptr);
+  void removePredecessor(BasicBlock *Pred, bool KeepOneInputPHIs = false);
 
   bool canSplitPredecessors() const;
 

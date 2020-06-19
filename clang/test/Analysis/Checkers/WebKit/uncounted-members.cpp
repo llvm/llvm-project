@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=webkit.WebKitNoUncountedMemberChecker -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=webkit.NoUncountedMemberChecker -verify %s
 
 #include "mock-types.h"
 

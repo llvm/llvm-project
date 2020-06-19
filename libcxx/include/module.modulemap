@@ -378,6 +378,10 @@ module std [system] {
     header "new"
     export *
   }
+  module numbers {
+    header "numbers"
+    export *
+  }
   module numeric {
     header "numeric"
     export *

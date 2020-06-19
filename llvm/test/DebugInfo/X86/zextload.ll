@@ -23,7 +23,7 @@
 
 ; CHECK-LABEL: @test
 ; CHECK:   [[LOADVAL:%[0-9]+]] = load i32, i32* %ptr, align 4, !dbg [[DEBUGLOC:![0-9]+]]
-; CHECK-NEXT:                    zext i32 [[LOADVAL]] to i64, !dbg [[DEBUGLOC]]
+; CHECK-NEXT:                    zext i32 [[LOADVAL]] to i64
 ; CHECK:   [[DEBUGLOC]] = !DILocation(line: 3
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

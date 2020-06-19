@@ -104,6 +104,9 @@ static DecodeStatus decodeFIORdA(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeFIOBIT(MCInst &Inst, unsigned Insn,
                                  uint64_t Address, const void *Decoder);
 
+static DecodeStatus decodeCallTarget(MCInst &Inst, unsigned Insn,
+                                     uint64_t Address, const void *Decoder);
+
 #include "AVRGenDisassemblerTables.inc"
 
 static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn,
@@ -139,6 +142,14 @@ static DecodeStatus decodeFIOBIT(MCInst &Inst, unsigned Insn,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeCallTarget(MCInst &Inst, unsigned Field,
+                                     uint64_t Address, const void *Decoder) {
+  // Call targets need to be shifted left by one so this needs a custom
+  // decoder.
+  Inst.addOperand(MCOperand::createImm(Field << 1));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
                                       uint64_t &Size, uint32_t &Insn) {
   if (Bytes.size() < 2) {
@@ -161,7 +172,7 @@ static DecodeStatus readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
   }
 
   Size = 4;
-  Insn = (Bytes[0] << 0) | (Bytes[1] << 8) | (Bytes[2] << 16) | (Bytes[3] << 24);
+  Insn = (Bytes[0] << 16) | (Bytes[1] << 24) | (Bytes[2] << 0) | (Bytes[3] << 8);
 
   return MCDisassembler::Success;
 }

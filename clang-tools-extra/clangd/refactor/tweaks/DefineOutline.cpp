@@ -424,10 +424,8 @@ public:
       return llvm::createStringError(Buffer.getError(),
                                      Buffer.getError().message());
     auto Contents = Buffer->get()->getBuffer();
-    auto LangOpts = format::getFormattingLangOpts(
-        getFormatStyleForFile(*CCFile, Contents, &FS));
     auto InsertionPoint = getInsertionPoint(
-        Contents, Source->getQualifiedNameAsString(), LangOpts);
+        Contents, Source->getQualifiedNameAsString(), Sel.AST->getLangOpts());
     if (!InsertionPoint)
       return InsertionPoint.takeError();
 

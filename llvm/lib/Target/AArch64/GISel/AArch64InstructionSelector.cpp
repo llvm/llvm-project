@@ -144,8 +144,9 @@ private:
   bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
-  unsigned emitConstantPoolEntry(Constant *CPVal, MachineFunction &MF) const;
-  MachineInstr *emitLoadFromConstantPool(Constant *CPVal,
+  unsigned emitConstantPoolEntry(const Constant *CPVal,
+                                 MachineFunction &MF) const;
+  MachineInstr *emitLoadFromConstantPool(const Constant *CPVal,
                                          MachineIRBuilder &MIRBuilder) const;
 
   // Emit a vector concat operation.
@@ -2046,6 +2047,20 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       if (emitFMovForFConstant(I, MRI))
         return true;
 
+      // For 64b values, emit a constant pool load instead.
+      if (DefSize == 64) {
+        auto *FPImm = I.getOperand(1).getFPImm();
+        MachineIRBuilder MIB(I);
+        auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
+        if (!LoadMI) {
+          LLVM_DEBUG(dbgs() << "Failed to load double constant pool entry\n");
+          return false;
+        }
+        MIB.buildCopy({DefReg}, {LoadMI->getOperand(0).getReg()});
+        I.eraseFromParent();
+        return RBI.constrainGenericRegister(DefReg, FPRRC, MRI);
+      }
+
       // Nope. Emit a copy and use a normal mov instead.
       const Register DefGPRReg = MRI.createVirtualRegister(&GPRRC);
       MachineOperand &RegOp = I.getOperand(0);
@@ -2590,12 +2605,43 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // %v2(s32) = G_ZEXT %v(s8)
     if (!IsSigned) {
       auto *LoadMI = getOpcodeDef(TargetOpcode::G_LOAD, SrcReg, MRI);
-      if (LoadMI &&
-          RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::GPRRegBankID) {
+      bool IsGPR =
+          RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::GPRRegBankID;
+      if (LoadMI && IsGPR) {
         const MachineMemOperand *MemOp = *LoadMI->memoperands_begin();
         unsigned BytesLoaded = MemOp->getSize();
         if (BytesLoaded < 4 && SrcTy.getSizeInBytes() == BytesLoaded)
           return selectCopy(I, TII, MRI, TRI, RBI);
+      }
+
+      // If we are zero extending from 32 bits to 64 bits, it's possible that
+      // the instruction implicitly does the zero extend for us. In that case,
+      // we can just emit a SUBREG_TO_REG.
+      if (IsGPR && SrcSize == 32 && DstSize == 64) {
+        // Unlike with the G_LOAD case, we don't want to look through copies
+        // here.
+        MachineInstr *Def = MRI.getVRegDef(SrcReg);
+        if (Def && isDef32(*Def)) {
+          MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
+              .addImm(0)
+              .addUse(SrcReg)
+              .addImm(AArch64::sub_32);
+
+          if (!RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass,
+                                            MRI)) {
+            LLVM_DEBUG(dbgs() << "Failed to constrain G_ZEXT destination\n");
+            return false;
+          }
+
+          if (!RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass,
+                                            MRI)) {
+            LLVM_DEBUG(dbgs() << "Failed to constrain G_ZEXT source\n");
+            return false;
+          }
+
+          I.eraseFromParent();
+          return true;
+        }
       }
     }
 
@@ -3572,7 +3618,7 @@ bool AArch64InstructionSelector::selectConcatVectors(
 }
 
 unsigned
-AArch64InstructionSelector::emitConstantPoolEntry(Constant *CPVal,
+AArch64InstructionSelector::emitConstantPoolEntry(const Constant *CPVal,
                                                   MachineFunction &MF) const {
   Type *CPTy = CPVal->getType();
   Align Alignment = MF.getDataLayout().getPrefTypeAlign(CPTy);
@@ -3582,7 +3628,7 @@ AArch64InstructionSelector::emitConstantPoolEntry(Constant *CPVal,
 }
 
 MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
-    Constant *CPVal, MachineIRBuilder &MIRBuilder) const {
+    const Constant *CPVal, MachineIRBuilder &MIRBuilder) const {
   unsigned CPIdx = emitConstantPoolEntry(CPVal, MIRBuilder.getMF());
 
   auto Adrp =

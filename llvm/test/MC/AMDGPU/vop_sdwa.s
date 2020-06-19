@@ -956,12 +956,12 @@ v_exp_f16_sdwa v5, -|0.5|
 
 // NOSICI: error:
 // NOVI: error:
-// GFX9: v_max_i16_sdwa v5, -4.0, v2 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x04,0x0a,0x60,0xf7,0x16,0x86,0x06]
+// NOGFX9: error: invalid operand for instruction
 v_max_i16_sdwa v5, -4.0, v2 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
 
 // NOSICI: error:
 // NOVI: error:
-// GFX9: v_max_i16_sdwa v5, sext(-4.0), v2 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x04,0x0a,0x60,0xf7,0x16,0x8e,0x06]
+// NOGFX9: error: invalid operand for instruction
 v_max_i16_sdwa v5, sext(-4.0), v2 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
 
 // NOSICI: error:

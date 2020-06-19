@@ -276,13 +276,14 @@ def S_ANDN2_B32_term : WrapTerminatorInst<S_ANDN2_B32>;
 def S_AND_B32_term : WrapTerminatorInst<S_AND_B32>;
 }
 
+
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_wave_barrier)]> {
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
   let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
   let isConvergent = 1;
   let FixedSize = 1;
   let Size = 0;
@@ -1001,6 +1002,7 @@ class FMADModsPat<ValueType Ty, Instruction inst, SDPatternOperator mad_opr>
   $src2_mod, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
+let SubtargetPredicate = HasMadMacF32Insts in
 def : FMADModsPat<f32, V_MAD_F32, AMDGPUfmad_ftz>;
 def : FMADModsPat<f16, V_MAD_F16, AMDGPUfmad_ftz> {
   let SubtargetPredicate = Has16BitInsts;

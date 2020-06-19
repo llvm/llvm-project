@@ -52,7 +52,7 @@ OPTIONS
 
  Display the dynamic table.
 
-.. option:: --elf-cg-profile
+.. option:: --cg-profile
 
  Display the callgraph profile section.
 

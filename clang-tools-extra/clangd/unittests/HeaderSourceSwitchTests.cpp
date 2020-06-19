@@ -12,6 +12,7 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
+#include "llvm/ADT/None.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -20,7 +21,7 @@ namespace clangd {
 namespace {
 
 TEST(HeaderSourceSwitchTest, FileHeuristic) {
-  MockFSProvider FS;
+  MockFS FS;
   auto FooCpp = testPath("foo.cpp");
   auto FooH = testPath("foo.h");
   auto Invalid = testPath("main.cpp");
@@ -29,11 +30,11 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   FS.Files[FooH];
   FS.Files[Invalid];
   Optional<Path> PathResult =
-      getCorrespondingHeaderOrSource(FooCpp, FS.getFileSystem());
+      getCorrespondingHeaderOrSource(FooCpp, FS.view(llvm::None));
   EXPECT_TRUE(PathResult.hasValue());
   ASSERT_EQ(PathResult.getValue(), FooH);
 
-  PathResult = getCorrespondingHeaderOrSource(FooH, FS.getFileSystem());
+  PathResult = getCorrespondingHeaderOrSource(FooH, FS.view(llvm::None));
   EXPECT_TRUE(PathResult.hasValue());
   ASSERT_EQ(PathResult.getValue(), FooCpp);
 
@@ -44,7 +45,7 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
 
   FS.Files[FooC];
   FS.Files[FooHH];
-  PathResult = getCorrespondingHeaderOrSource(FooC, FS.getFileSystem());
+  PathResult = getCorrespondingHeaderOrSource(FooC, FS.view(llvm::None));
   EXPECT_TRUE(PathResult.hasValue());
   ASSERT_EQ(PathResult.getValue(), FooHH);
 
@@ -53,7 +54,7 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   auto Foo2HH = testPath("foo2.HH");
   FS.Files[Foo2C];
   FS.Files[Foo2HH];
-  PathResult = getCorrespondingHeaderOrSource(Foo2C, FS.getFileSystem());
+  PathResult = getCorrespondingHeaderOrSource(Foo2C, FS.view(llvm::None));
   EXPECT_TRUE(PathResult.hasValue());
   ASSERT_EQ(PathResult.getValue(), Foo2HH);
 
@@ -63,13 +64,13 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
 
   FS.Files[Foo3C];
   FS.Files[Foo3HXX];
-  PathResult = getCorrespondingHeaderOrSource(Foo3C, FS.getFileSystem());
+  PathResult = getCorrespondingHeaderOrSource(Foo3C, FS.view(llvm::None));
   EXPECT_TRUE(PathResult.hasValue());
   ASSERT_EQ(PathResult.getValue(), Foo3HXX);
 
   // Test if asking for a corresponding file that doesn't exist returns an empty
   // string.
-  PathResult = getCorrespondingHeaderOrSource(Invalid, FS.getFileSystem());
+  PathResult = getCorrespondingHeaderOrSource(Invalid, FS.view(llvm::None));
   EXPECT_FALSE(PathResult.hasValue());
 }
 
@@ -252,7 +253,7 @@ TEST(HeaderSourceSwitchTest, ClangdServerIntegration) {
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags = {"-I" +
                          testPath("src/include")}; // add search directory.
-  MockFSProvider FS;
+  MockFS FS;
   // File heuristic fails here, we rely on the index to find the .h file.
   std::string CppPath = testPath("src/lib/test.cpp");
   std::string HeaderPath = testPath("src/include/test.h");

@@ -31,15 +31,22 @@ def _executeScriptInternal(test, commands):
   """
   parsedCommands = libcxx.test.newformat.parseScript(test, preamble=commands)
 
-  class FakeLitConfig(object):
-    def __init__(self):
-      self.isWindows = platform.system() == 'Windows'
-      self.maxIndividualTestTime = 0
-  litConfig = FakeLitConfig()
+  litConfig = lit.LitConfig.LitConfig(
+    progname='lit',
+    path=[],
+    quiet=False,
+    useValgrind=False,
+    valgrindLeakCheck=False,
+    valgrindArgs=[],
+    noExecute=False,
+    debug=False,
+    isWindows=platform.system() == 'Windows',
+    params={})
   _, tmpBase = libcxx.test.newformat._getTempPaths(test)
   execDir = os.path.dirname(test.getExecPath())
-  if not os.path.exists(execDir):
-    os.makedirs(execDir)
+  for d in (execDir, os.path.dirname(tmpBase)):
+    if not os.path.exists(d):
+      os.makedirs(d)
   res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, parsedCommands, execDir)
   if isinstance(res, lit.Test.Result):
     res = ('', '', 127, None)
@@ -70,7 +77,6 @@ def sourceBuilds(config, source):
     with open(test.getSourcePath(), 'w') as sourceFile:
       sourceFile.write(source)
     out, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
-      "mkdir -p %T",
       "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
     ])
     _executeScriptInternal(test, ['rm %t.exe'])
@@ -90,7 +96,6 @@ def programOutput(config, program, args=[]):
       source.write(program)
     try:
       _, _, exitCode, _ = _executeScriptInternal(test, [
-        "mkdir -p %T",
         "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
       ])
       if exitCode != 0:

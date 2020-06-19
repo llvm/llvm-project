@@ -4,6 +4,7 @@
 Update reference results for static analyzer.
 """
 import SATestBuild
+from ProjectMap import ProjectInfo, ProjectMap
 
 import os
 import shutil
@@ -14,9 +15,9 @@ from subprocess import check_call
 Verbose = 0
 
 
-def update_reference_results(project_name: str, build_mode: int):
-    project_info = SATestBuild.ProjectInfo(project_name, build_mode)
-    tester = SATestBuild.ProjectTester(project_info)
+def update_reference_results(project: ProjectInfo):
+    test_info = SATestBuild.TestInfo(project)
+    tester = SATestBuild.ProjectTester(test_info)
     project_dir = tester.get_project_dir()
 
     tester.is_reference_build = True
@@ -54,7 +55,7 @@ def update_reference_results(project_name: str, build_mode: int):
         SATestBuild.run_cleanup_script(project_dir, build_log_file)
 
         SATestBuild.normalize_reference_results(
-            project_dir, ref_results_path, build_mode)
+            project_dir, ref_results_path, project.mode)
 
         # Clean up the generated difference results.
         SATestBuild.cleanup_reference_results(ref_results_path)
@@ -62,6 +63,7 @@ def update_reference_results(project_name: str, build_mode: int):
         run_cmd(f"git add '{ref_results_path}'")
 
 
+# TODO: use argparse
 def main(argv):
     if len(argv) == 2 and argv[1] in ("-h", "--help"):
         print("Update static analyzer reference results based "
@@ -70,9 +72,9 @@ def main(argv):
               file=sys.stderr)
         sys.exit(1)
 
-    with open(SATestBuild.get_project_map_path(), "r") as f:
-        for project_name, build_mode in SATestBuild.get_projects(f):
-            update_reference_results(project_name, int(build_mode))
+    project_map = ProjectMap()
+    for project in project_map.projects:
+        update_reference_results(project)
 
 
 if __name__ == '__main__':

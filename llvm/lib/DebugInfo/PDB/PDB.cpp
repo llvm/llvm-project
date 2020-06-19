@@ -37,15 +37,10 @@ Error llvm::pdb::loadDataForEXE(PDB_ReaderType Type, StringRef Path,
                                 std::unique_ptr<IPDBSession> &Session) {
   // Create the correct concrete instance type based on the value of Type.
   if (Type == PDB_ReaderType::Native) {
-    if (auto Err = NativeSession::createFromExe(Path, Session)) {
-      consumeError(std::move(Err));
-
-      Expected<std::string> PdbPath = NativeSession::searchForPdb({Path});
-      if (!PdbPath)
-        return PdbPath.takeError();
-      return NativeSession::createFromPdbPath(PdbPath.get(), Session);
-    }
-    return Error::success();
+    Expected<std::string> PdbPath = NativeSession::searchForPdb({Path});
+    if (!PdbPath)
+      return PdbPath.takeError();
+    return NativeSession::createFromPdbPath(PdbPath.get(), Session);
   }
 
 #if LLVM_ENABLE_DIA_SDK

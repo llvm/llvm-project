@@ -264,17 +264,8 @@ uint32_t test_vmaxavq_s32(uint32_t a, int32x4_t b) {
 
 // CHECK-LABEL: @test_vminnmvq_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.arm.mve.minnmv.f16.v8f16(half [[TMP1]], <8 x half> [[B:%.*]])
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[TMP2]] to i16
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast float undef to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_EXT:%.*]] = zext i16 [[TMP3]] to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_MASK:%.*]] = and i32 [[TMP4]], -65536
-// CHECK-NEXT:    [[TMP2_0_INSERT_INSERT:%.*]] = or i32 [[TMP2_0_INSERT_MASK]], [[TMP2_0_INSERT_EXT]]
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP2_0_INSERT_INSERT]] to float
-// CHECK-NEXT:    ret float [[TMP5]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call half @llvm.arm.mve.minnmv.f16.v8f16(half [[A:%.*]], <8 x half> [[B:%.*]])
+// CHECK-NEXT:    ret half [[TMP0]]
 //
 float16_t test_vminnmvq_f16(float16_t a, float16x8_t b) {
 #ifdef POLYMORPHIC
@@ -299,17 +290,8 @@ float32_t test_vminnmvq_f32(float32_t a, float32x4_t b) {
 
 // CHECK-LABEL: @test_vminnmavq_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.arm.mve.minnmav.f16.v8f16(half [[TMP1]], <8 x half> [[B:%.*]])
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[TMP2]] to i16
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast float undef to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_EXT:%.*]] = zext i16 [[TMP3]] to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_MASK:%.*]] = and i32 [[TMP4]], -65536
-// CHECK-NEXT:    [[TMP2_0_INSERT_INSERT:%.*]] = or i32 [[TMP2_0_INSERT_MASK]], [[TMP2_0_INSERT_EXT]]
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP2_0_INSERT_INSERT]] to float
-// CHECK-NEXT:    ret float [[TMP5]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call half @llvm.arm.mve.minnmav.f16.v8f16(half [[A:%.*]], <8 x half> [[B:%.*]])
+// CHECK-NEXT:    ret half [[TMP0]]
 //
 float16_t test_vminnmavq_f16(float16_t a, float16x8_t b) {
 #ifdef POLYMORPHIC
@@ -334,17 +316,8 @@ float32_t test_vminnmavq_f32(float32_t a, float32x4_t b) {
 
 // CHECK-LABEL: @test_vmaxnmvq_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.arm.mve.maxnmv.f16.v8f16(half [[TMP1]], <8 x half> [[B:%.*]])
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[TMP2]] to i16
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast float undef to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_EXT:%.*]] = zext i16 [[TMP3]] to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_MASK:%.*]] = and i32 [[TMP4]], -65536
-// CHECK-NEXT:    [[TMP2_0_INSERT_INSERT:%.*]] = or i32 [[TMP2_0_INSERT_MASK]], [[TMP2_0_INSERT_EXT]]
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP2_0_INSERT_INSERT]] to float
-// CHECK-NEXT:    ret float [[TMP5]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call half @llvm.arm.mve.maxnmv.f16.v8f16(half [[A:%.*]], <8 x half> [[B:%.*]])
+// CHECK-NEXT:    ret half [[TMP0]]
 //
 float16_t test_vmaxnmvq_f16(float16_t a, float16x8_t b) {
 #ifdef POLYMORPHIC
@@ -369,17 +342,8 @@ float32_t test_vmaxnmvq_f32(float32_t a, float32x4_t b) {
 
 // CHECK-LABEL: @test_vmaxnmavq_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.arm.mve.maxnmav.f16.v8f16(half [[TMP1]], <8 x half> [[B:%.*]])
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[TMP2]] to i16
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast float undef to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_EXT:%.*]] = zext i16 [[TMP3]] to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_MASK:%.*]] = and i32 [[TMP4]], -65536
-// CHECK-NEXT:    [[TMP2_0_INSERT_INSERT:%.*]] = or i32 [[TMP2_0_INSERT_MASK]], [[TMP2_0_INSERT_EXT]]
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP2_0_INSERT_INSERT]] to float
-// CHECK-NEXT:    ret float [[TMP5]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call half @llvm.arm.mve.maxnmav.f16.v8f16(half [[A:%.*]], <8 x half> [[B:%.*]])
+// CHECK-NEXT:    ret half [[TMP0]]
 //
 float16_t test_vmaxnmavq_f16(float16_t a, float16x8_t b) {
 #ifdef POLYMORPHIC
@@ -698,19 +662,10 @@ uint32_t test_vmaxavq_p_s32(uint32_t a, int32x4_t b, mve_pred16_t p) {
 
 // CHECK-LABEL: @test_vminnmvq_p_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = call half @llvm.arm.mve.minnmv.predicated.f16.v8f16.v8i1(half [[TMP1]], <8 x half> [[B:%.*]], <8 x i1> [[TMP3]])
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast half [[TMP4]] to i16
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast float undef to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_EXT:%.*]] = zext i16 [[TMP5]] to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_MASK:%.*]] = and i32 [[TMP6]], -65536
-// CHECK-NEXT:    [[TMP2_0_INSERT_INSERT:%.*]] = or i32 [[TMP2_0_INSERT_MASK]], [[TMP2_0_INSERT_EXT]]
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[TMP2_0_INSERT_INSERT]] to float
-// CHECK-NEXT:    ret float [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.arm.mve.minnmv.predicated.f16.v8f16.v8i1(half [[A:%.*]], <8 x half> [[B:%.*]], <8 x i1> [[TMP1]])
+// CHECK-NEXT:    ret half [[TMP2]]
 //
 float16_t test_vminnmvq_p_f16(float16_t a, float16x8_t b, mve_pred16_t p) {
 #ifdef POLYMORPHIC
@@ -737,19 +692,10 @@ float32_t test_vminnmvq_p_f32(float32_t a, float32x4_t b, mve_pred16_t p) {
 
 // CHECK-LABEL: @test_vminnmavq_p_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = call half @llvm.arm.mve.minnmav.predicated.f16.v8f16.v8i1(half [[TMP1]], <8 x half> [[B:%.*]], <8 x i1> [[TMP3]])
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast half [[TMP4]] to i16
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast float undef to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_EXT:%.*]] = zext i16 [[TMP5]] to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_MASK:%.*]] = and i32 [[TMP6]], -65536
-// CHECK-NEXT:    [[TMP2_0_INSERT_INSERT:%.*]] = or i32 [[TMP2_0_INSERT_MASK]], [[TMP2_0_INSERT_EXT]]
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[TMP2_0_INSERT_INSERT]] to float
-// CHECK-NEXT:    ret float [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.arm.mve.minnmav.predicated.f16.v8f16.v8i1(half [[A:%.*]], <8 x half> [[B:%.*]], <8 x i1> [[TMP1]])
+// CHECK-NEXT:    ret half [[TMP2]]
 //
 float16_t test_vminnmavq_p_f16(float16_t a, float16x8_t b, mve_pred16_t p) {
 #ifdef POLYMORPHIC
@@ -776,19 +722,10 @@ float32_t test_vminnmavq_p_f32(float32_t a, float32x4_t b, mve_pred16_t p) {
 
 // CHECK-LABEL: @test_vmaxnmvq_p_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = call half @llvm.arm.mve.maxnmv.predicated.f16.v8f16.v8i1(half [[TMP1]], <8 x half> [[B:%.*]], <8 x i1> [[TMP3]])
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast half [[TMP4]] to i16
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast float undef to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_EXT:%.*]] = zext i16 [[TMP5]] to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_MASK:%.*]] = and i32 [[TMP6]], -65536
-// CHECK-NEXT:    [[TMP2_0_INSERT_INSERT:%.*]] = or i32 [[TMP2_0_INSERT_MASK]], [[TMP2_0_INSERT_EXT]]
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[TMP2_0_INSERT_INSERT]] to float
-// CHECK-NEXT:    ret float [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.arm.mve.maxnmv.predicated.f16.v8f16.v8i1(half [[A:%.*]], <8 x half> [[B:%.*]], <8 x i1> [[TMP1]])
+// CHECK-NEXT:    ret half [[TMP2]]
 //
 float16_t test_vmaxnmvq_p_f16(float16_t a, float16x8_t b, mve_pred16_t p) {
 #ifdef POLYMORPHIC
@@ -815,19 +752,10 @@ float32_t test_vmaxnmvq_p_f32(float32_t a, float32x4_t b, mve_pred16_t p) {
 
 // CHECK-LABEL: @test_vmaxnmavq_p_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = call half @llvm.arm.mve.maxnmav.predicated.f16.v8f16.v8i1(half [[TMP1]], <8 x half> [[B:%.*]], <8 x i1> [[TMP3]])
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast half [[TMP4]] to i16
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast float undef to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_EXT:%.*]] = zext i16 [[TMP5]] to i32
-// CHECK-NEXT:    [[TMP2_0_INSERT_MASK:%.*]] = and i32 [[TMP6]], -65536
-// CHECK-NEXT:    [[TMP2_0_INSERT_INSERT:%.*]] = or i32 [[TMP2_0_INSERT_MASK]], [[TMP2_0_INSERT_EXT]]
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[TMP2_0_INSERT_INSERT]] to float
-// CHECK-NEXT:    ret float [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.arm.mve.maxnmav.predicated.f16.v8f16.v8i1(half [[A:%.*]], <8 x half> [[B:%.*]], <8 x i1> [[TMP1]])
+// CHECK-NEXT:    ret half [[TMP2]]
 //
 float16_t test_vmaxnmavq_p_f16(float16_t a, float16x8_t b, mve_pred16_t p) {
 #ifdef POLYMORPHIC

@@ -24,6 +24,7 @@ unittest("AnalysisTests") {
     "DomTreeUpdaterTest.cpp",
     "GlobalsModRefTest.cpp",
     "IVDescriptorsTest.cpp",
+    "InlineFeaturesAnalysisTest.cpp",
     "LazyCallGraphTest.cpp",
     "LoadsTest.cpp",
     "LoopInfoTest.cpp",

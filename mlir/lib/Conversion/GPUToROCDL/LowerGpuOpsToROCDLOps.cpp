@@ -67,7 +67,7 @@ public:
     target.addLegalDialect<ROCDL::ROCDLDialect>();
     // TODO(whchung): Remove once we support replacing non-root ops.
     target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
-    if (failed(applyPartialConversion(m, target, patterns, &converter)))
+    if (failed(applyPartialConversion(m, target, patterns)))
       signalPassFailure();
   }
 };

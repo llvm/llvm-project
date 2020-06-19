@@ -151,7 +151,6 @@ private:
   };
   TypeOrName m_type;
 
-private:
   TypeNameSpecifierImpl(const TypeNameSpecifierImpl &) = delete;
   const TypeNameSpecifierImpl &
   operator=(const TypeNameSpecifierImpl &) = delete;

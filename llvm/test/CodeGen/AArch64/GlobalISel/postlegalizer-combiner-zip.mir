@@ -3,7 +3,7 @@
 # Check that we can recognize a shuffle mask for a zip instruction, and produce
 # G_ZIP1 or G_ZIP2 where appropriate.
 #
-# RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-combiner --aarch64postlegalizercombinerhelper-disable-rule=ext -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
 ...
 ---
@@ -160,8 +160,9 @@ body:             |
     ; CHECK: liveins: $q0, $q1
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<2 x s64>), [[COPY1]], shufflemask(1, 2)
-    ; CHECK: $q0 = COPY [[SHUF]](<2 x s64>)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; CHECK: [[EXT:%[0-9]+]]:_(<2 x s64>) = G_EXT [[COPY]], [[COPY1]], [[C]](s32)
+    ; CHECK: $q0 = COPY [[EXT]](<2 x s64>)
     ; CHECK: RET_ReallyLR implicit $q0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
@@ -186,8 +187,9 @@ body:             |
     ; CHECK: liveins: $q0, $q1
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<2 x s64>), [[COPY1]], shufflemask(0, 1)
-    ; CHECK: $q0 = COPY [[SHUF]](<2 x s64>)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[EXT:%[0-9]+]]:_(<2 x s64>) = G_EXT [[COPY]], [[COPY1]], [[C]](s32)
+    ; CHECK: $q0 = COPY [[EXT]](<2 x s64>)
     ; CHECK: RET_ReallyLR implicit $q0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1

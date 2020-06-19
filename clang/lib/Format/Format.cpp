@@ -1009,6 +1009,8 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
               "PARSE_TEXT_PROTO",
               "ParseTextOrDie",
               "ParseTextProtoOrDie",
+              "ParseTestProto",
+              "ParsePartialTestProto",
           },
           /*CanonicalDelimiter=*/"",
           /*BasedOnStyle=*/"google",

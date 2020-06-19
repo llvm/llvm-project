@@ -1394,7 +1394,7 @@ SDValue SelectionDAG::getConstantFP(double Val, const SDLoc &DL, EVT VT,
   else if (EltVT == MVT::f64)
     return getConstantFP(APFloat(Val), DL, VT, isTarget);
   else if (EltVT == MVT::f80 || EltVT == MVT::f128 || EltVT == MVT::ppcf128 ||
-           EltVT == MVT::f16) {
+           EltVT == MVT::f16 || EltVT == MVT::bf16) {
     bool Ignored;
     APFloat APF = APFloat(Val);
     APF.convert(EVTToAPFloatSemantics(EltVT), APFloat::rmNearestTiesToEven,
@@ -3539,6 +3539,11 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
 
 unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
   EVT VT = Op.getValueType();
+
+  // TODO: Assume we don't know anything for now.
+  if (VT.isScalableVector())
+    return 1;
+
   APInt DemandedElts = VT.isVector()
                            ? APInt::getAllOnesValue(VT.getVectorNumElements())
                            : APInt(1, 1);
@@ -3562,7 +3567,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   if (Depth >= MaxRecursionDepth)
     return 1;  // Limit search depth.
 
-  if (!DemandedElts)
+  if (!DemandedElts || VT.isScalableVector())
     return 1;  // No demanded elts, better to assume we don't know anything.
 
   unsigned Opcode = Op.getOpcode();
@@ -4315,8 +4320,8 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
                         return Ops[0].getValueType() == Op.getValueType();
                       }) &&
          "Concatenation of vectors with inconsistent value types!");
-  assert((Ops.size() * Ops[0].getValueType().getVectorNumElements()) ==
-             VT.getVectorNumElements() &&
+  assert((Ops[0].getValueType().getVectorElementCount() * Ops.size()) ==
+             VT.getVectorElementCount() &&
          "Incorrect element count in vector concatenation!");
 
   if (Ops.size() == 1)
@@ -4333,7 +4338,7 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
   bool IsIdentity = true;
   for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
     SDValue Op = Ops[i];
-    unsigned IdentityIndex = i * Op.getValueType().getVectorNumElements();
+    unsigned IdentityIndex = i * Op.getValueType().getVectorMinNumElements();
     if (Op.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
         Op.getOperand(0).getValueType() != VT ||
         (IdentitySrc && Op.getOperand(0) != IdentitySrc) ||
@@ -4349,6 +4354,11 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
     assert(IdentitySrc && "Failed to set source vector of extracts");
     return IdentitySrc;
   }
+
+  // The code below this point is only designed to work for fixed width
+  // vectors, so we bail out for now.
+  if (VT.isScalableVector())
+    return SDValue();
 
   // A CONCAT_VECTOR with all UNDEF/BUILD_VECTOR operands can be
   // simplified to one big BUILD_VECTOR.

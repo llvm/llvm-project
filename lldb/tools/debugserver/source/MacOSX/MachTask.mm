@@ -64,6 +64,10 @@ extern "C" {
 #include <pmsample.h>
 #endif
 
+extern "C" int
+proc_get_cpumon_params(pid_t pid, int *percentage,
+                       int *interval); // <libproc_internal.h> SPI
+
 //----------------------------------------------------------------------
 // MachTask constructor
 //----------------------------------------------------------------------
@@ -469,6 +473,16 @@ std::string MachTask::GetProfileData(DNBProfileDataScanType scanType) {
       }
     }
 #endif
+
+    if (scanType & eProfileEnergyCPUCap) {
+      int percentage = -1;
+      int interval = -1;
+      int result = proc_get_cpumon_params(pid, &percentage, &interval);
+      if ((result == 0) && (percentage >= 0) && (interval >= 0)) {
+        profile_data_stream << "cpu_cap_p:" << percentage << ';';
+        profile_data_stream << "cpu_cap_t:" << interval << ';';
+      }
+    }
 
     profile_data_stream << "--end--;";
 

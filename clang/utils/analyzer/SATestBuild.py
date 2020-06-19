@@ -44,9 +44,8 @@ variable. It should contain a comma separated list.
 """
 import CmpRuns
 import SATestUtils
+from ProjectMap import DownloadType, ProjectInfo
 
-import argparse
-import csv
 import glob
 import logging
 import math
@@ -57,11 +56,14 @@ import shutil
 import sys
 import threading
 import time
+import zipfile
 
 from queue import Queue
+# mypy has problems finding InvalidFileException in the module
+# and this is we can shush that false positive
+from plistlib import InvalidFileException  # type:ignore
 from subprocess import CalledProcessError, check_call
-from typing import (cast, Dict, Iterable, IO, List, NamedTuple, Optional,
-                    Tuple, TYPE_CHECKING)
+from typing import Dict, IO, List, NamedTuple, Optional, TYPE_CHECKING
 
 
 ###############################################################################
@@ -104,9 +106,6 @@ CLANG = cc_candidate
 
 # Number of jobs.
 MAX_JOBS = int(math.ceil(multiprocessing.cpu_count() * 0.75))
-
-# Project map stores info about all the "registered" projects.
-PROJECT_MAP_FILE = "projectMap.csv"
 
 # Names of the project specific scripts.
 # The script that downloads the project.
@@ -187,18 +186,6 @@ class StreamToLogger:
 ###############################################################################
 
 
-def get_project_map_path(should_exist: bool = True) -> str:
-    project_map_path = os.path.join(os.path.abspath(os.curdir),
-                                    PROJECT_MAP_FILE)
-
-    if should_exist and not os.path.exists(project_map_path):
-        stderr(f"Error: Cannot find the project map file {project_map_path}"
-               f"\nRunning script for the wrong directory?\n")
-        sys.exit(1)
-
-    return project_map_path
-
-
 def run_cleanup_script(directory: str, build_log_file: IO):
     """
     Run pre-processing script if any.
@@ -211,69 +198,11 @@ def run_cleanup_script(directory: str, build_log_file: IO):
                            verbose=VERBOSE)
 
 
-def download_and_patch(directory: str, build_log_file: IO):
-    """
-    Download the project and apply the local patchfile if it exists.
-    """
-    cached_source = os.path.join(directory, CACHED_SOURCE_DIR_NAME)
-
-    # If the we don't already have the cached source, run the project's
-    # download script to download it.
-    if not os.path.exists(cached_source):
-        download(directory, build_log_file)
-        if not os.path.exists(cached_source):
-            stderr(f"Error: '{cached_source}' not found after download.\n")
-            exit(1)
-
-    patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
-
-    # Remove potentially stale patched source.
-    if os.path.exists(patched_source):
-        shutil.rmtree(patched_source)
-
-    # Copy the cached source and apply any patches to the copy.
-    shutil.copytree(cached_source, patched_source, symlinks=True)
-    apply_patch(directory, build_log_file)
-
-
-def download(directory: str, build_log_file: IO):
-    """
-    Run the script to download the project, if it exists.
-    """
-    script_path = os.path.join(directory, DOWNLOAD_SCRIPT)
-    SATestUtils.run_script(script_path, build_log_file, directory,
-                           out=LOCAL.stdout, err=LOCAL.stderr,
-                           verbose=VERBOSE)
-
-
-def apply_patch(directory: str, build_log_file: IO):
-    patchfile_path = os.path.join(directory, PATCHFILE_NAME)
-    patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
-
-    if not os.path.exists(patchfile_path):
-        stdout("  No local patches.\n")
-        return
-
-    stdout("  Applying patch.\n")
-    try:
-        check_call(f"patch -p1 < '{patchfile_path}'",
-                   cwd=patched_source,
-                   stderr=build_log_file,
-                   stdout=build_log_file,
-                   shell=True)
-
-    except CalledProcessError:
-        stderr(f"Error: Patch failed. "
-               f"See {build_log_file.name} for details.\n")
-        sys.exit(1)
-
-
-class ProjectInfo(NamedTuple):
+class TestInfo(NamedTuple):
     """
     Information about a project and settings for its analysis.
     """
-    name: str
-    build_mode: int
+    project: ProjectInfo
     override_compiler: bool = False
     extra_analyzer_config: str = ""
     is_reference_build: bool = False
@@ -287,44 +216,42 @@ class ProjectInfo(NamedTuple):
 # It is a common workaround for this situation:
 # https://mypy.readthedocs.io/en/stable/common_issues.html#using-classes-that-are-generic-in-stubs-but-not-at-runtime
 if TYPE_CHECKING:
-    ProjectQueue = Queue[ProjectInfo]  # this is only processed by mypy
+    TestQueue = Queue[TestInfo]  # this is only processed by mypy
 else:
-    ProjectQueue = Queue  # this will be executed at runtime
+    TestQueue = Queue  # this will be executed at runtime
 
 
 class RegressionTester:
     """
     A component aggregating all of the project testing.
     """
-    def __init__(self, jobs: int, override_compiler: bool,
-                 extra_analyzer_config: str, regenerate: bool,
-                 strictness: bool):
+    def __init__(self, jobs: int, projects: List[ProjectInfo],
+                 override_compiler: bool, extra_analyzer_config: str,
+                 regenerate: bool, strictness: bool):
         self.jobs = jobs
+        self.projects = projects
         self.override_compiler = override_compiler
         self.extra_analyzer_config = extra_analyzer_config
         self.regenerate = regenerate
         self.strictness = strictness
 
     def test_all(self) -> bool:
-        projects_to_test: List[ProjectInfo] = []
+        projects_to_test: List[TestInfo] = []
 
-        with open(get_project_map_path(), "r") as map_file:
-            validate_project_file(map_file)
-
-            # Test the projects.
-            for proj_name, proj_build_mode in get_projects(map_file):
-                projects_to_test.append(
-                    ProjectInfo(proj_name, int(proj_build_mode),
-                                self.override_compiler,
-                                self.extra_analyzer_config,
-                                self.regenerate, self.strictness))
+        # Test the projects.
+        for project in self.projects:
+            projects_to_test.append(
+                TestInfo(project,
+                         self.override_compiler,
+                         self.extra_analyzer_config,
+                         self.regenerate, self.strictness))
         if self.jobs <= 1:
             return self._single_threaded_test_all(projects_to_test)
         else:
             return self._multi_threaded_test_all(projects_to_test)
 
     def _single_threaded_test_all(self,
-                                  projects_to_test: List[ProjectInfo]) -> bool:
+                                  projects_to_test: List[TestInfo]) -> bool:
         """
         Run all projects.
         :return: whether tests have passed.
@@ -336,7 +263,7 @@ class RegressionTester:
         return success
 
     def _multi_threaded_test_all(self,
-                                 projects_to_test: List[ProjectInfo]) -> bool:
+                                 projects_to_test: List[TestInfo]) -> bool:
         """
         Run each project in a separate thread.
 
@@ -345,7 +272,7 @@ class RegressionTester:
 
         :return: whether tests have passed.
         """
-        tasks_queue = ProjectQueue()
+        tasks_queue = TestQueue()
 
         for project_info in projects_to_test:
             tasks_queue.put(project_info)
@@ -370,13 +297,12 @@ class ProjectTester:
     """
     A component aggregating testing for one project.
     """
-    def __init__(self, project_info: ProjectInfo):
-        self.project_name = project_info.name
-        self.build_mode = project_info.build_mode
-        self.override_compiler = project_info.override_compiler
-        self.extra_analyzer_config = project_info.extra_analyzer_config
-        self.is_reference_build = project_info.is_reference_build
-        self.strictness = project_info.strictness
+    def __init__(self, test_info: TestInfo):
+        self.project = test_info.project
+        self.override_compiler = test_info.override_compiler
+        self.extra_analyzer_config = test_info.extra_analyzer_config
+        self.is_reference_build = test_info.is_reference_build
+        self.strictness = test_info.strictness
 
     def test(self) -> bool:
         """
@@ -384,7 +310,11 @@ class ProjectTester:
         :return tests_passed: Whether tests have passed according
         to the :param strictness: criteria.
         """
-        stdout(f" \n\n--- Building project {self.project_name}\n")
+        if not self.project.enabled:
+            stdout(f" \n\n--- Skipping disabled project {self.project.name}\n")
+            return True
+
+        stdout(f" \n\n--- Building project {self.project.name}\n")
 
         start_time = time.time()
 
@@ -405,13 +335,13 @@ class ProjectTester:
         else:
             passed = run_cmp_results(project_dir, self.strictness)
 
-        stdout(f"Completed tests for project {self.project_name} "
+        stdout(f"Completed tests for project {self.project.name} "
                f"(time: {time.time() - start_time:.2f}).\n")
 
         return passed
 
     def get_project_dir(self) -> str:
-        return os.path.join(os.path.abspath(os.curdir), self.project_name)
+        return os.path.join(os.path.abspath(os.curdir), self.project.name)
 
     def get_output_dir(self) -> str:
         if self.is_reference_build:
@@ -441,8 +371,8 @@ class ProjectTester:
 
         # Build and analyze the project.
         with open(build_log_path, "w+") as build_log_file:
-            if self.build_mode == 1:
-                download_and_patch(directory, build_log_file)
+            if self.project.mode == 1:
+                self._download_and_patch(directory, build_log_file)
                 run_cleanup_script(directory, build_log_file)
                 self.scan_build(directory, output_dir, build_log_file)
             else:
@@ -451,7 +381,7 @@ class ProjectTester:
             if self.is_reference_build:
                 run_cleanup_script(directory, build_log_file)
                 normalize_reference_results(directory, output_dir,
-                                            self.build_mode)
+                                            self.project.mode)
 
         stdout(f"Build complete (time: {time.time() - time_start:.2f}). "
                f"See the log for more details: {build_log_path}\n")
@@ -549,7 +479,7 @@ class ProjectTester:
         prefix += " -Xclang -analyzer-config "
         prefix += f"-Xclang {self.generate_config()} "
 
-        if self.build_mode == 2:
+        if self.project.mode == 2:
             prefix += "-std=c++11 "
 
         plist_path = os.path.join(directory, output_dir, "date")
@@ -599,9 +529,103 @@ class ProjectTester:
 
         return out
 
+    def _download_and_patch(self, directory: str, build_log_file: IO):
+        """
+        Download the project and apply the local patchfile if it exists.
+        """
+        cached_source = os.path.join(directory, CACHED_SOURCE_DIR_NAME)
+
+        # If the we don't already have the cached source, run the project's
+        # download script to download it.
+        if not os.path.exists(cached_source):
+            self._download(directory, build_log_file)
+            if not os.path.exists(cached_source):
+                stderr(f"Error: '{cached_source}' not found after download.\n")
+                exit(1)
+
+        patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
+
+        # Remove potentially stale patched source.
+        if os.path.exists(patched_source):
+            shutil.rmtree(patched_source)
+
+        # Copy the cached source and apply any patches to the copy.
+        shutil.copytree(cached_source, patched_source, symlinks=True)
+        self._apply_patch(directory, build_log_file)
+
+    def _download(self, directory: str, build_log_file: IO):
+        """
+        Run the script to download the project, if it exists.
+        """
+        if self.project.source == DownloadType.GIT:
+            self._download_from_git(directory, build_log_file)
+        elif self.project.source == DownloadType.ZIP:
+            self._unpack_zip(directory, build_log_file)
+        elif self.project.source == DownloadType.SCRIPT:
+            self._run_download_script(directory, build_log_file)
+        else:
+            raise ValueError(
+                f"Unknown source type '{self.project.source}' is found "
+                f"for the '{self.project.name}' project")
+
+    def _download_from_git(self, directory: str, build_log_file: IO):
+        cached_source = os.path.join(directory, CACHED_SOURCE_DIR_NAME)
+        check_call(f"git clone {self.project.origin} {cached_source}",
+                   cwd=directory, stderr=build_log_file,
+                   stdout=build_log_file, shell=True)
+        check_call(f"git checkout --quiet {self.project.commit}",
+                   cwd=cached_source, stderr=build_log_file,
+                   stdout=build_log_file, shell=True)
+
+    def _unpack_zip(self, directory: str, build_log_file: IO):
+        zip_files = list(glob.glob(os.path.join(directory, "/*.zip")))
+
+        if len(zip_files) == 0:
+            raise ValueError(
+                f"Couldn't find any zip files to unpack for the "
+                f"'{self.project.name}' project")
+
+        if len(zip_files) > 1:
+            raise ValueError(
+                f"Couldn't decide which of the zip files ({zip_files}) "
+                f"for the '{self.project.name}' project to unpack")
+
+        with zipfile.ZipFile(zip_files[0], "r") as zip_file:
+            zip_file.extractall(os.path.join(directory,
+                                             CACHED_SOURCE_DIR_NAME))
+
+    @staticmethod
+    def _run_download_script(directory: str, build_log_file: IO):
+        script_path = os.path.join(directory, DOWNLOAD_SCRIPT)
+        SATestUtils.run_script(script_path, build_log_file, directory,
+                               out=LOCAL.stdout, err=LOCAL.stderr,
+                               verbose=VERBOSE)
+
+    @staticmethod
+    def _apply_patch(directory: str, build_log_file: IO):
+        patchfile_path = os.path.join(directory, PATCHFILE_NAME)
+        patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
+
+        if not os.path.exists(patchfile_path):
+            stdout("  No local patches.\n")
+            return
+
+        stdout("  Applying patch.\n")
+        try:
+            check_call(f"patch -p1 < '{patchfile_path}'",
+                       cwd=patched_source,
+                       stderr=build_log_file,
+                       stdout=build_log_file,
+                       shell=True)
+
+        except CalledProcessError:
+            stderr(f"Error: Patch failed. "
+                   f"See {build_log_file.name} for details.\n")
+            sys.exit(1)
+
 
 class TestProjectThread(threading.Thread):
-    def __init__(self, tasks_queue: ProjectQueue,
+    def __init__(self, tasks_queue: TestQueue,
                  results_differ: threading.Event,
                  failure_flag: threading.Event):
         """
@@ -609,7 +633,6 @@ class TestProjectThread(threading.Thread):
                the canonical ones.
         :param failure_flag: Used to signify a failure during the run.
         """
-        self.args = args
         self.tasks_queue = tasks_queue
         self.results_differ = results_differ
         self.failure_flag = failure_flag
@@ -621,13 +644,13 @@ class TestProjectThread(threading.Thread):
     def run(self):
         while not self.tasks_queue.empty():
             try:
-                project_info = self.tasks_queue.get()
+                test_info = self.tasks_queue.get()
 
-                Logger = logging.getLogger(project_info.name)
+                Logger = logging.getLogger(test_info.project.name)
                 LOCAL.stdout = StreamToLogger(Logger, logging.INFO)
                 LOCAL.stderr = StreamToLogger(Logger, logging.ERROR)
 
-                tester = ProjectTester(project_info)
+                tester = ProjectTester(test_info)
                 if not tester.test():
                     self.results_differ.set()
 
@@ -749,14 +772,14 @@ def run_cmp_results(directory: str, strictness: int = 0) -> bool:
 
         patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
 
-        # TODO: get rid of option parser invocation here
-        opts, args = CmpRuns.generate_option_parser().parse_args(
-            ["--rootA", "", "--rootB", patched_source])
+        ref_results = CmpRuns.ResultsDirectory(ref_dir)
+        new_results = CmpRuns.ResultsDirectory(new_dir, patched_source)
+
         # Scan the results, delete empty plist files.
         num_diffs, reports_in_ref, reports_in_new = \
-            CmpRuns.dumpScanBuildResultsDiff(ref_dir, new_dir, opts,
-                                             deleteEmpty=False,
-                                             Stdout=LOCAL.stdout)
+            CmpRuns.dump_scan_build_results_diff(ref_results, new_results,
+                                                 delete_empty=False,
+                                                 out=LOCAL.stdout)
 
         if num_diffs > 0:
             stdout(f"Warning: {num_diffs} differences in diagnostics.\n")
@@ -834,13 +857,14 @@ def clean_up_empty_plists(output_dir: str):
         plist = os.path.join(output_dir, plist)
 
         try:
-            data = plistlib.readPlist(plist)
+            with open(plist, "rb") as plist_file:
+                data = plistlib.load(plist_file)
             # Delete empty reports.
             if not data['files']:
                 os.remove(plist)
                 continue
 
-        except plistlib.InvalidFileException as e:
+        except InvalidFileException as e:
             stderr(f"Error parsing plist file {plist}: {str(e)}")
             continue
 
@@ -855,68 +879,7 @@ def clean_up_empty_folders(output_dir: str):
             os.removedirs(subdir)
 
 
-def get_projects(map_file: IO) -> Iterable[Tuple[str, str]]:
-    """
-    Iterate over all projects defined in the project file handler `map_file`
-    from the start.
-    """
-    map_file.seek(0)
-    # TODO: csv format is not very readable, change it to JSON
-    for project_info in csv.reader(map_file):
-        if SATestUtils.is_comment_csv_line(project_info):
-            continue
-        # suppress mypy error
-        yield cast(Tuple[str, str], project_info)
-
-
-def validate_project_file(map_file: IO):
-    """
-    Validate project file.
-    """
-    for project_info in get_projects(map_file):
-        if len(project_info) != 2:
-            stderr("Error: Rows in the project map file "
-                   "should have 2 entries.")
-            raise Exception()
-
-        if project_info[1] not in ('0', '1', '2'):
-            stderr("Error: Second entry in the project map file should be 0"
-                   " (single file), 1 (project), or 2(single file c++11).")
-            raise Exception()
-
-
 if __name__ == "__main__":
-    # Parse command line arguments.
-    parser = argparse.ArgumentParser(
-        description="Test the Clang Static Analyzer.")
-
-    parser.add_argument("--strictness", dest="strictness", type=int, default=0,
-                        help="0 to fail on runtime errors, 1 to fail when the "
-                        "number of found bugs are different from the "
-                        "reference, 2 to fail on any difference from the "
-                        "reference. Default is 0.")
-    parser.add_argument("-r", dest="regenerate", action="store_true",
-                        default=False, help="Regenerate reference output.")
-    parser.add_argument("--override-compiler", action="store_true",
-                        default=False, help="Call scan-build with "
-                        "--override-compiler option.")
-    parser.add_argument("-j", "--jobs", dest="jobs", type=int,
-                        default=0,
-                        help="Number of projects to test concurrently")
-    parser.add_argument("--extra-analyzer-config",
-                        dest="extra_analyzer_config", type=str,
-                        default="",
-                        help="Arguments passed to to -analyzer-config")
-    parser.add_argument("-v", "--verbose", action="count", default=0)
-
-    args = parser.parse_args()
-
-    VERBOSE = args.verbose
-    tester = RegressionTester(args.jobs, args.override_compiler,
-                              args.extra_analyzer_config, args.regenerate,
-                              args.strictness)
-    tests_passed = tester.test_all()
-
-    if not tests_passed:
-        stderr("ERROR: Tests failed.")
-        sys.exit(42)
+    print("SATestBuild.py should not be used on its own.")
+    print("Please use 'SATest.py build' instead")
+    sys.exit(1)

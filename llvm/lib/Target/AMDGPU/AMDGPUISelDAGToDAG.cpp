@@ -716,7 +716,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
       (Opc == AMDGPUISD::ATOMIC_INC || Opc == AMDGPUISD::ATOMIC_DEC ||
        Opc == ISD::ATOMIC_LOAD_FADD ||
        Opc == AMDGPUISD::ATOMIC_LOAD_FMIN ||
-       Opc == AMDGPUISD::ATOMIC_LOAD_FMAX)) {
+       Opc == AMDGPUISD::ATOMIC_LOAD_FMAX ||
+       Opc == AMDGPUISD::ATOMIC_LOAD_CSUB)) {
     N = glueCopyToM0LDSInit(N);
     SelectCode(N);
     return;

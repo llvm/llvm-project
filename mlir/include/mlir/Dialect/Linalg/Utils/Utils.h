@@ -136,18 +136,18 @@ void applyPermutationToVector(SmallVector<T, N> &inVec,
 }
 
 /// Utility class used to generate nested loops with ranges described by
-/// `loopRanges` and loop type described by the `iteratorTypes`. `allIvs` is
-/// populated with induction variables for all generated loops on return, with
-/// `fun` used to generate the body of the innermost loop.
+/// `loopRanges` and loop type described by the `iteratorTypes`. `bodyBuilderFn`
+/// is used to generate the body of the innermost loop. It is passed a range
+/// of loop induction variables.
 template <typename LoopTy>
 struct GenerateLoopNest {
   using IndexedValueTy =
       typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
                                 AffineIndexedValue, StdIndexedValue>::type;
-  static void doit(MutableArrayRef<Value> allIvs,
-                   ArrayRef<SubViewOp::Range> loopRanges,
+
+  static void doit(ArrayRef<SubViewOp::Range> loopRanges,
                    ArrayRef<Attribute> iteratorTypes,
-                   std::function<void(void)> fun);
+                   function_ref<void(ValueRange)> bodyBuilderFn);
 };
 
 } // namespace linalg

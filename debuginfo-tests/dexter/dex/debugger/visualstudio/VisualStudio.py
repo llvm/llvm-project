@@ -111,14 +111,14 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         for bp in self._debugger.Breakpoints:
             bp.Delete()
 
-    def add_breakpoint(self, file_, line):
+    def _add_breakpoint(self, file_, line):
         self._debugger.Breakpoints.Add('', file_, line)
 
-    def add_conditional_breakpoint(self, file_, line, condition):
+    def _add_conditional_breakpoint(self, file_, line, condition):
         column = 1
         self._debugger.Breakpoints.Add('', file_, line, column, condition)
 
-    def delete_conditional_breakpoint(self, file_, line, condition):
+    def _delete_conditional_breakpoint(self, file_, line, condition):
         for bp in self._debugger.Breakpoints:
             for bound_bp in bp.Children:
                 if (bound_bp.File == file_ and bound_bp.FileLine == line and
@@ -146,7 +146,7 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
             raise Error('attempted to access stack frame {} out of {}'
                 .format(idx, len(stack_frames)))
 
-    def get_step_info(self, watches, step_index):
+    def _get_step_info(self, watches, step_index):
         thread = self._debugger.CurrentThread
         stackframes = thread.StackFrames
 

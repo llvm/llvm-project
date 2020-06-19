@@ -184,6 +184,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv4f32, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv2f64, &AArch64::ZPRRegClass);
 
+    if (useSVEForFixedLengthVectors()) {
+      for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
+        if (useSVEForFixedLengthVectorVT(VT))
+          addRegisterClass(VT, &AArch64::ZPRRegClass);
+
+      for (MVT VT : MVT::fp_fixedlen_vector_valuetypes())
+        if (useSVEForFixedLengthVectorVT(VT))
+          addRegisterClass(VT, &AArch64::ZPRRegClass);
+    }
+
     for (auto VT : { MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64 }) {
       setOperationAction(ISD::SADDSAT, VT, Legal);
       setOperationAction(ISD::UADDSAT, VT, Legal);
@@ -3472,6 +3482,51 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::VSCALE:
     return LowerVSCALE(Op, DAG);
   }
+}
+
+bool AArch64TargetLowering::useSVEForFixedLengthVectors() const {
+  // Prefer NEON unless larger SVE registers are available.
+  return Subtarget->hasSVE() && Subtarget->getMinSVEVectorSizeInBits() >= 256;
+}
+
+bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(MVT VT) const {
+  assert(VT.isFixedLengthVector());
+  if (!useSVEForFixedLengthVectors())
+    return false;
+
+  // Fixed length predicates should be promoted to i8.
+  // NOTE: This is consistent with how NEON (and thus 64/128bit vectors) work.
+  if (VT.getVectorElementType() == MVT::i1)
+    return false;
+
+  // Don't use SVE for vectors we cannot scalarize if required.
+  switch (VT.getVectorElementType().SimpleTy) {
+  default:
+    return false;
+  case MVT::i8:
+  case MVT::i16:
+  case MVT::i32:
+  case MVT::i64:
+  case MVT::f16:
+  case MVT::f32:
+  case MVT::f64:
+    break;
+  }
+
+  // Ensure NEON MVTs only belong to a single register class.
+  if (VT.getSizeInBits() <= 128)
+    return false;
+
+  // Don't use SVE for types that don't fit.
+  if (VT.getSizeInBits() > Subtarget->getMinSVEVectorSizeInBits())
+    return false;
+
+  // TODO: Perhaps an artificial restriction, but worth having whilst getting
+  // the base fixed length SVE support in place.
+  if (!VT.isPow2VectorType())
+    return false;
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -11842,14 +11897,14 @@ static SDValue performExtendCombine(SDNode *N,
   if (!ResVT.isSimple() || !SrcVT.isSimple())
     return SDValue();
 
-  // If the source VT is a 64-bit vector, we can play games and get the
-  // better results we want.
-  if (SrcVT.getSizeInBits() != 64)
+  // If the source VT is a 64-bit fixed or scalable vector, we can play games
+  // and get the better results we want.
+  if (SrcVT.getSizeInBits().getKnownMinSize() != 64)
     return SDValue();
 
   unsigned SrcEltSize = SrcVT.getScalarSizeInBits();
-  unsigned ElementCount = SrcVT.getVectorNumElements();
-  SrcVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize * 2), ElementCount);
+  ElementCount SrcEC = SrcVT.getVectorElementCount();
+  SrcVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize * 2), SrcEC);
   SDLoc DL(N);
   Src = DAG.getNode(N->getOpcode(), DL, SrcVT, Src);
 
@@ -11857,17 +11912,14 @@ static SDValue performExtendCombine(SDNode *N,
   // bit source.
   EVT LoVT, HiVT;
   SDValue Lo, Hi;
-  unsigned NumElements = ResVT.getVectorNumElements();
-  assert(!(NumElements & 1) && "Splitting vector, but not in half!");
-  LoVT = HiVT = EVT::getVectorVT(*DAG.getContext(),
-                                 ResVT.getVectorElementType(), NumElements / 2);
+  LoVT = HiVT = ResVT.getHalfNumVectorElementsVT(*DAG.getContext());
 
   EVT InNVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getVectorElementType(),
-                               LoVT.getVectorNumElements());
+                               LoVT.getVectorElementCount());
   Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InNVT, Src,
                    DAG.getConstant(0, DL, MVT::i64));
   Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InNVT, Src,
-                   DAG.getConstant(InNVT.getVectorNumElements(), DL, MVT::i64));
+                   DAG.getConstant(InNVT.getVectorMinNumElements(), DL, MVT::i64));
   Lo = DAG.getNode(N->getOpcode(), DL, LoVT, Lo);
   Hi = DAG.getNode(N->getOpcode(), DL, HiVT, Hi);
 
@@ -14589,4 +14641,15 @@ bool AArch64TargetLowering::shouldLocalize(
     break;
   }
   return TargetLoweringBase::shouldLocalize(MI, TTI);
+}
+
+bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
+  if (isa<ScalableVectorType>(Inst.getType()))
+    return true;
+
+  for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
+    if (isa<ScalableVectorType>(Inst.getOperand(i)->getType()))
+      return true;
+
+  return false;
 }

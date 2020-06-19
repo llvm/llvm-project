@@ -790,6 +790,9 @@ public:
   /// variable declaration D.
   void setTLSMode(llvm::GlobalValue *GV, const VarDecl &D) const;
 
+  /// Get LLVM TLS mode from CodeGenOptions.
+  llvm::GlobalVariable::ThreadLocalMode GetDefaultLLVMTLSModel() const;
+
   static llvm::GlobalValue::VisibilityTypes GetLLVMVisibility(Visibility V) {
     switch (V) {
     case DefaultVisibility:   return llvm::GlobalValue::DefaultVisibility;

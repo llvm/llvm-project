@@ -554,8 +554,7 @@ bool MLIRContext::isOperationRegistered(StringRef name) {
 }
 
 void Dialect::addOperation(AbstractOperation opInfo) {
-  assert((getNamespace().empty() ||
-          opInfo.name.split('.').first == getNamespace()) &&
+  assert((getNamespace().empty() || opInfo.dialect.name == getNamespace()) &&
          "op name doesn't start with dialect namespace");
   assert(&opInfo.dialect == this && "Dialect object mismatch");
   auto &impl = context->getImpl();

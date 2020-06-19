@@ -14,10 +14,10 @@ func @f1(%A: memref<?x?xf32, offset: 0, strides: [?, 1]>,
   %0 = dim %A, %c0 : memref<?x?xf32, offset: 0, strides: [?, 1]>
   %1 = dim %A, %c1 : memref<?x?xf32, offset: 0, strides: [?, 1]>
   %2 = dim %B, %c1 : memref<?x?xf32, offset: 0, strides: [?, 1]>
-  linalg.matmul(%A, %B, %C) :
-    memref<?x?xf32, offset: 0, strides: [?, 1]>,
-    memref<?x?xf32, offset: 0, strides: [?, 1]>,
-    memref<?x?xf32, offset: 0, strides: [?, 1]>
+  linalg.matmul %A, %B, %C :
+    (memref<?x?xf32, offset: 0, strides: [?, 1]>,
+     memref<?x?xf32, offset: 0, strides: [?, 1]>,
+     memref<?x?xf32, offset: 0, strides: [?, 1]>)
   scf.for %arg5 = %c0 to %0 step %c2 {
     scf.for %arg6 = %c0 to %2 step %c3 {
       scf.for %arg7 = %c0 to %1 step %c4 {
@@ -30,10 +30,10 @@ func @f1(%A: memref<?x?xf32, offset: 0, strides: [?, 1]>,
         %8 = std.subview %C[%arg5, %arg6][%c2, %c3][%c1, %c1] :
           memref<?x?xf32, offset: 0, strides: [?, 1]> to
           memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%5, %7, %8) :
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %5, %7, %8 :
+          (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -61,10 +61,10 @@ func @f2(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   %c4 = constant 4 : index
   %c3 = constant 3 : index
   %c2 = constant 2 : index
-  linalg.matmul(%A, %B, %C) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
+  linalg.matmul %A, %B, %C :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
   %0 = dim %C, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %1 = dim %C, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %2 = dim %D, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
@@ -80,10 +80,10 @@ func @f2(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
         %8 = std.subview %E[%arg5, %arg6][%c2, %c3][%c1, %c1] :
           memref<?x?xf32, offset: 0, strides: [?, ?]> to
           memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%5, %7, %8) :
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %5, %7, %8 :
+          (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -113,10 +113,10 @@ func @f3(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   %c4 = constant 4 : index
   %c3 = constant 3 : index
   %c2 = constant 2 : index
-  linalg.matmul(%A, %B, %C) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
+  linalg.matmul %A, %B, %C :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
   %0 = dim %D, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %1 = dim %D, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %2 = dim %C, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
@@ -132,10 +132,10 @@ func @f3(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
         %8 = std.subview %E[%arg5, %arg6][%c2, %c3][%c1, %c1] :
           memref<?x?xf32, offset: 0, strides: [?, ?]> to
           memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%5, %7, %8) :
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %5, %7, %8 :
+          (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -165,14 +165,14 @@ func @f4(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   %c4 = constant 4 : index
   %c3 = constant 3 : index
   %c2 = constant 2 : index
-  linalg.matmul(%A, %B, %C) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
-  linalg.matmul(%A, %B, %D) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
+  linalg.matmul %A, %B, %C :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
+  linalg.matmul %A, %B, %D :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
   %0 = dim %C, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %1 = dim %C, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %2 = dim %D, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
@@ -188,10 +188,10 @@ func @f4(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
         %8 = std.subview %E[%arg5, %arg6][%c2, %c3][%c1, %c1] :
           memref<?x?xf32, offset: 0, strides: [?, ?]> to
           memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%5, %7, %8) :
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %5, %7, %8 :
+          (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -227,14 +227,14 @@ func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   %0 = dim %B, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %1 = dim %D, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %2 = dim %D, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
-  linalg.matmul(%A, %B, %C) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
-  linalg.matmul(%C, %B, %D) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
+  linalg.matmul %A, %B, %C :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
+  linalg.matmul %C, %B, %D :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
   scf.for %arg5 = %c0 to %1 step %c2 {
     scf.for %arg6 = %c0 to %0 step %c3 {
       scf.for %arg7 = %c0 to %2 step %c4 {
@@ -247,10 +247,10 @@ func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
         %8 = std.subview %E[%arg5, %arg6][%c2, %c3][%c1, %c1] :
           memref<?x?xf32, offset: 0, strides: [?, ?]> to
           memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%5, %7, %8) :
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %5, %7, %8 :
+          (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -275,9 +275,9 @@ func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 // CHECK-DAG:    %[[A_I0:.*]] = subview %[[A]][%[[I]], %{{.*}}]
 // CHECK-DAG:    %[[B_00:.*]] = subview %[[B]][%{{.*}}, %{{.*}}]
 // CHECK-DAG:    %[[C_I0_:.*]] = subview %[[C]][%[[I]], %{{.*}}]
-// CHECK:        linalg.matmul(%[[A_I0]], %[[B_00]], %[[C_I0_]])
-// CHECK:        linalg.matmul(%[[C_I0]], %[[B_0K]], %[[D_IK_]])
-// CHECK:        linalg.matmul(%[[D_IK]], %[[B_KJ]], %[[E_IJ]])
+// CHECK:        linalg.matmul %[[A_I0]], %[[B_00]], %[[C_I0_]]
+// CHECK:        linalg.matmul %[[C_I0]], %[[B_0K]], %[[D_IK_]]
+// CHECK:        linalg.matmul %[[D_IK]], %[[B_KJ]], %[[E_IJ]]
 
 // -----
 
@@ -297,14 +297,14 @@ func @f6(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   %c3 = constant 3 : index
   %c2 = constant 2 : index
   %0 = dim %C, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
-  linalg.matmul(%A, %B, %C) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
-  linalg.matmul(%A, %C, %E) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
+  linalg.matmul %A, %B, %C :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
+  linalg.matmul %A, %C, %E :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
   %1 = dim %C, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %2 = dim %D, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   scf.for %arg5 = %c0 to %1 step %c2 {
@@ -322,10 +322,10 @@ func @f6(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
         %8 = std.subview %E[%arg5, %arg6][%c2, %c3][%c1, %c1] :
           memref<?x?xf32, offset: 0, strides: [?, ?]> to
           memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%5, %7, %8) :
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %5, %7, %8 :
+          (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -359,14 +359,14 @@ func @f7(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   %2 = dim %C, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %3 = dim %C, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %4 = dim %D, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
-  linalg.matmul(%A, %C, %E) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
-  linalg.matmul(%A, %B, %C) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
+  linalg.matmul %A, %C, %E :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
+  linalg.matmul %A, %B, %C :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
   scf.for %arg5 = %c0 to %0 step %c2 {
     scf.for %arg6 = %c0 to %2 step %c3 {
       scf.for %arg7 = %c0 to %1 step %c4 {
@@ -379,10 +379,10 @@ func @f7(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
         %10 = std.subview %E[%arg5, %arg6][%c2, %c3][%c1, %c1] :
           memref<?x?xf32, offset: 0, strides: [?, ?]> to
           memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%7, %9, %10) :
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %7, %9, %10 :
+          (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -398,10 +398,10 @@ func @f7(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
         %10 = std.subview %E[%arg5, %arg6][%c2, %c3][%c1, %c1] :
           memref<?x?xf32, offset: 0, strides: [?, ?]> to
           memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%7, %9, %10) :
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %7, %9, %10 :
+          (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -414,7 +414,7 @@ func @f7(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 // CHECK:  %[[C_1:.*]] = dim %[[C]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  %[[C_0:.*]] = dim %[[C]], %c0{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
 // CHECK:  %[[D_1:.*]] = dim %[[D]], %c1{{_[0-9]*}} : memref<?x?xf32, #[[$strided2D]]>
-// CHECK:  linalg.matmul(%[[A]], %[[C]], %[[E]])
+// CHECK:  linalg.matmul %[[A]], %[[C]], %[[E]]
 // CHECK:  scf.for %{{.*}} = %{{.*}} to %[[A_0]] step %{{.*}} {
 // CHECK:    scf.for %{{.*}} = %{{.*}} to %[[C_1]] step %{{.*}} {
 // CHECK:      scf.for %{{.*}} = %{{.*}} to %[[A_1]] step %{{.*}} {
@@ -445,14 +445,14 @@ func @f8(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   %c2 = constant 2 : index
   %0 = dim %A, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %1 = dim %A, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
-  linalg.matmul(%A, %C, %D) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
-  linalg.matmul(%A, %B, %C) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
+  linalg.matmul %A, %C, %D :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
+  linalg.matmul %A, %B, %C :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
   %2 = dim %D, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   scf.for %arg5 = %c0 to %0 step %c2 {
     scf.for %arg6 = %c0 to %2 step %c3 {
@@ -469,10 +469,10 @@ func @f8(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
         %8 = std.subview %E[%arg5, %arg6][%c2, %c3][%c1, %c1] :
           memref<?x?xf32, offset: 0, strides: [?, ?]> to
           memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%5, %7, %8) :
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %5, %7, %8 :
+          (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -742,10 +742,10 @@ func @accept_different_alloc_ops(%dim: index, %s0 : index, %s1: index) {
   %B = alloca(%dim, %dim)[%s0, %s1] : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %C = alloc(%dim, %dim)[%s0, %s1]  : memref<?x?xf32, offset: 0, strides: [?, ?]>
 
-  linalg.matmul(%A, %B, %C) :
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>,
-    memref<?x?xf32, offset: 0, strides: [?, ?]>
+  linalg.matmul %A, %B, %C :
+    (memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>,
+     memref<?x?xf32, offset: 0, strides: [?, ?]>)
 
   scf.for %i = %c0 to %dim step %c2 {
     scf.for %j = %c0 to %dim step %c3 {
@@ -759,10 +759,10 @@ func @accept_different_alloc_ops(%dim: index, %s0 : index, %s1: index) {
         %2 = std.subview %C[%i, %j][%c2, %c3][%c1, %c1] :
           memref<?x?xf32, offset: 0, strides: [?, ?]> to
           memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%0, %1, %2) :
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>,
-          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %0, %1, %2 :
+          (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>,
+           memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }

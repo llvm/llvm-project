@@ -135,8 +135,8 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "//////////\n";
   OS << "// Options\n\n";
-  for (unsigned i = 0, e = Opts.size(); i != e; ++i) {
-    const Record &R = *Opts[i];
+  for (unsigned I = 0, E = Opts.size(); I != E; ++I) {
+    const Record &R = *Opts[I];
 
     // Start a single option entry.
     OS << "OPTION(";

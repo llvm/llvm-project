@@ -139,6 +139,7 @@ public:
     return charLength_;
   }
   std::optional<common::ConstantSubscript> GetCharLength() const;
+  std::optional<std::size_t> MeasureSizeInBytes() const;
 
   std::string AsFortran() const;
   std::string AsFortran(std::string &&charLenExpr) const;

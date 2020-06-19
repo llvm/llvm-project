@@ -495,25 +495,56 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
-void ParallelOp::build(OpBuilder &builder, OperationState &result,
-                       ValueRange lbs, ValueRange ubs, ValueRange steps,
-                       ValueRange initVals) {
-  result.addOperands(lbs);
-  result.addOperands(ubs);
+void ParallelOp::build(
+    OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
+    ValueRange upperBounds, ValueRange steps, ValueRange initVals,
+    function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
+        bodyBuilderFn) {
+  result.addOperands(lowerBounds);
+  result.addOperands(upperBounds);
   result.addOperands(steps);
   result.addOperands(initVals);
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(lbs.size()),
-                                static_cast<int32_t>(ubs.size()),
+      builder.getI32VectorAttr({static_cast<int32_t>(lowerBounds.size()),
+                                static_cast<int32_t>(upperBounds.size()),
                                 static_cast<int32_t>(steps.size()),
                                 static_cast<int32_t>(initVals.size())}));
+  result.addTypes(initVals.getTypes());
+
+  OpBuilder::InsertionGuard guard(builder);
+  unsigned numIVs = steps.size();
+  SmallVector<Type, 8> argTypes(numIVs, builder.getIndexType());
   Region *bodyRegion = result.addRegion();
+  Block *bodyBlock = builder.createBlock(bodyRegion, {}, argTypes);
+
+  if (bodyBuilderFn) {
+    builder.setInsertionPointToStart(bodyBlock);
+    bodyBuilderFn(builder, result.location,
+                  bodyBlock->getArguments().take_front(numIVs),
+                  bodyBlock->getArguments().drop_front(numIVs));
+  }
   ParallelOp::ensureTerminator(*bodyRegion, builder, result.location);
-  for (size_t i = 0, e = steps.size(); i < e; ++i)
-    bodyRegion->front().addArgument(builder.getIndexType());
-  for (Value init : initVals)
-    result.addTypes(init.getType());
+}
+
+void ParallelOp::build(
+    OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
+    ValueRange upperBounds, ValueRange steps,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
+  // Only pass a non-null wrapper if bodyBuilderFn is non-null itself. Make sure
+  // we don't capture a reference to a temporary by constructing the lambda at
+  // function level.
+  auto wrappedBuilderFn = [&bodyBuilderFn](OpBuilder &nestedBuilder,
+                                           Location nestedLoc, ValueRange ivs,
+                                           ValueRange) {
+    bodyBuilderFn(nestedBuilder, nestedLoc, ivs);
+  };
+  function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> wrapper;
+  if (bodyBuilderFn)
+    wrapper = wrappedBuilderFn;
+
+  build(builder, result, lowerBounds, upperBounds, steps, ValueRange(),
+        wrapper);
 }
 
 static LogicalResult verify(ParallelOp op) {
@@ -679,15 +710,18 @@ ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {
 // ReduceOp
 //===----------------------------------------------------------------------===//
 
-void ReduceOp::build(OpBuilder &builder, OperationState &result,
-                     Value operand) {
+void ReduceOp::build(
+    OpBuilder &builder, OperationState &result, Value operand,
+    function_ref<void(OpBuilder &, Location, Value, Value)> bodyBuilderFn) {
   auto type = operand.getType();
   result.addOperands(operand);
-  Region *bodyRegion = result.addRegion();
 
-  Block *b = new Block();
-  b->addArguments(ArrayRef<Type>{type, type});
-  bodyRegion->getBlocks().insert(bodyRegion->end(), b);
+  OpBuilder::InsertionGuard guard(builder);
+  Region *bodyRegion = result.addRegion();
+  Block *body = builder.createBlock(bodyRegion, {}, ArrayRef<Type>{type, type});
+  if (bodyBuilderFn)
+    bodyBuilderFn(builder, result.location, body->getArgument(0),
+                  body->getArgument(1));
 }
 
 static LogicalResult verify(ReduceOp op) {

@@ -4360,6 +4360,17 @@ void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
   W.printFunction(this);
 }
 
+void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
+                     bool ShouldPreserveUseListOrder,
+                     bool IsForDebug) const {
+  SlotTracker SlotTable(this->getModule());
+  formatted_raw_ostream OS(ROS);
+  AssemblyWriter W(OS, SlotTable, this->getModule(), AAW,
+                   IsForDebug,
+                   ShouldPreserveUseListOrder);
+  W.printBasicBlock(this);
+}
+
 void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                    bool ShouldPreserveUseListOrder, bool IsForDebug) const {
   SlotTracker SlotTable(this);

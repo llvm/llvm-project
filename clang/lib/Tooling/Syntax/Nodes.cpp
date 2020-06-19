@@ -28,6 +28,10 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "PostfixUnaryOperatorExpression";
   case NodeKind::BinaryOperatorExpression:
     return OS << "BinaryOperatorExpression";
+  case NodeKind::UnqualifiedId:
+    return OS << "UnqualifiedId";
+  case NodeKind::IdExpression:
+    return OS << "IdExpression";
   case NodeKind::UnknownStatement:
     return OS << "UnknownStatement";
   case NodeKind::DeclarationStatement:
@@ -94,6 +98,10 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "ParametersAndQualifiers";
   case NodeKind::MemberPointer:
     return OS << "MemberPointer";
+  case NodeKind::NameSpecifier:
+    return OS << "NameSpecifier";
+  case NodeKind::NestedNameSpecifier:
+    return OS << "NestedNameSpecifier";
   }
   llvm_unreachable("unknown node kind");
 }
@@ -158,8 +166,33 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "ParametersAndQualifiers_parameter";
   case syntax::NodeRole::ParametersAndQualifiers_trailingReturn:
     return OS << "ParametersAndQualifiers_trailingReturn";
+  case syntax::NodeRole::IdExpression_id:
+    return OS << "IdExpression_id";
+  case syntax::NodeRole::IdExpression_qualifier:
+    return OS << "IdExpression_qualifier";
+  case syntax::NodeRole::NestedNameSpecifier_specifier:
+    return OS << "NestedNameSpecifier_specifier";
   }
   llvm_unreachable("invalid role");
+}
+
+std::vector<syntax::NameSpecifier *> syntax::NestedNameSpecifier::specifiers() {
+  std::vector<syntax::NameSpecifier *> Children;
+  for (auto *C = firstChild(); C; C = C->nextSibling()) {
+    assert(C->role() == syntax::NodeRole::NestedNameSpecifier_specifier);
+    Children.push_back(llvm::cast<syntax::NameSpecifier>(C));
+  }
+  return Children;
+}
+
+syntax::NestedNameSpecifier *syntax::IdExpression::qualifier() {
+  return llvm::cast_or_null<syntax::NestedNameSpecifier>(
+      findChild(syntax::NodeRole::IdExpression_qualifier));
+}
+
+syntax::UnqualifiedId *syntax::IdExpression::unqualifiedId() {
+  return llvm::cast_or_null<syntax::UnqualifiedId>(
+      findChild(syntax::NodeRole::IdExpression_id));
 }
 
 syntax::Leaf *syntax::IntegerLiteralExpression::literalToken() {
@@ -315,8 +348,8 @@ syntax::Leaf *syntax::CompoundStatement::lbrace() {
 std::vector<syntax::Statement *> syntax::CompoundStatement::statements() {
   std::vector<syntax::Statement *> Children;
   for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    if (C->role() == syntax::NodeRole::CompoundStatement_statement)
-      Children.push_back(llvm::cast<syntax::Statement>(C));
+    assert(C->role() == syntax::NodeRole::CompoundStatement_statement);
+    Children.push_back(llvm::cast<syntax::Statement>(C));
   }
   return Children;
 }

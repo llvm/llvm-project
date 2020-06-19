@@ -186,18 +186,18 @@ TEST(InstructionsTest, CastInst) {
   Type *Int16Ty = Type::getInt16Ty(C);
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *Int64Ty = Type::getInt64Ty(C);
-  Type *V8x8Ty = VectorType::get(Int8Ty, 8);
-  Type *V8x64Ty = VectorType::get(Int64Ty, 8);
+  Type *V8x8Ty = FixedVectorType::get(Int8Ty, 8);
+  Type *V8x64Ty = FixedVectorType::get(Int64Ty, 8);
   Type *X86MMXTy = Type::getX86_MMXTy(C);
 
   Type *HalfTy = Type::getHalfTy(C);
   Type *FloatTy = Type::getFloatTy(C);
   Type *DoubleTy = Type::getDoubleTy(C);
 
-  Type *V2Int32Ty = VectorType::get(Int32Ty, 2);
-  Type *V2Int64Ty = VectorType::get(Int64Ty, 2);
-  Type *V4Int16Ty = VectorType::get(Int16Ty, 4);
-  Type *V1Int16Ty = VectorType::get(Int16Ty, 1);
+  Type *V2Int32Ty = FixedVectorType::get(Int32Ty, 2);
+  Type *V2Int64Ty = FixedVectorType::get(Int64Ty, 2);
+  Type *V4Int16Ty = FixedVectorType::get(Int16Ty, 4);
+  Type *V1Int16Ty = FixedVectorType::get(Int16Ty, 1);
 
   Type *VScaleV2Int32Ty = VectorType::get(Int32Ty, 2, true);
   Type *VScaleV2Int64Ty = VectorType::get(Int64Ty, 2, true);
@@ -210,16 +210,16 @@ TEST(InstructionsTest, CastInst) {
   Type *Int32PtrAS1Ty = PointerType::get(Int32Ty, 1);
   Type *Int64PtrAS1Ty = PointerType::get(Int64Ty, 1);
 
-  Type *V2Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 2);
-  Type *V2Int64PtrAS1Ty = VectorType::get(Int64PtrAS1Ty, 2);
-  Type *V4Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 4);
+  Type *V2Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 2);
+  Type *V2Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 2);
+  Type *V4Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 4);
   Type *VScaleV4Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 4, true);
-  Type *V4Int64PtrAS1Ty = VectorType::get(Int64PtrAS1Ty, 4);
+  Type *V4Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 4);
 
-  Type *V2Int64PtrTy = VectorType::get(Int64PtrTy, 2);
-  Type *V2Int32PtrTy = VectorType::get(Int32PtrTy, 2);
+  Type *V2Int64PtrTy = FixedVectorType::get(Int64PtrTy, 2);
+  Type *V2Int32PtrTy = FixedVectorType::get(Int32PtrTy, 2);
   Type *VScaleV2Int32PtrTy = VectorType::get(Int32PtrTy, 2, true);
-  Type *V4Int32PtrTy = VectorType::get(Int32PtrTy, 4);
+  Type *V4Int32PtrTy = FixedVectorType::get(Int32PtrTy, 4);
   Type *VScaleV4Int32PtrTy = VectorType::get(Int32PtrTy, 4, true);
   Type *VScaleV4Int64PtrTy = VectorType::get(Int64PtrTy, 4, true);
 
@@ -390,8 +390,8 @@ TEST(InstructionsTest, VectorGep) {
   PointerType *Ptri8Ty = PointerType::get(I8Ty, 0);
   PointerType *Ptri32Ty = PointerType::get(I32Ty, 0);
 
-  VectorType *V2xi8PTy = VectorType::get(Ptri8Ty, 2);
-  VectorType *V2xi32PTy = VectorType::get(Ptri32Ty, 2);
+  VectorType *V2xi8PTy = FixedVectorType::get(Ptri8Ty, 2);
+  VectorType *V2xi32PTy = FixedVectorType::get(Ptri32Ty, 2);
 
   // Test different aspects of the vector-of-pointers type
   // and GEPs which use this type.
@@ -1174,7 +1174,7 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
   std::unique_ptr<CallInst> ICall(CallInst::Create(IFnTy, ICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(ICall));
 
-  Type *VITy = VectorType::get(ITy, 2);
+  Type *VITy = FixedVectorType::get(ITy, 2);
   FunctionType *VIFnTy = FunctionType::get(VITy, {});
   Value *VICallee = Constant::getNullValue(VIFnTy->getPointerTo());
   std::unique_ptr<CallInst> VICall(CallInst::Create(VIFnTy, VICallee, {}, ""));
@@ -1192,7 +1192,7 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
   std::unique_ptr<CallInst> FCall(CallInst::Create(FFnTy, FCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(FCall));
 
-  Type *VFTy = VectorType::get(FTy, 2);
+  Type *VFTy = FixedVectorType::get(FTy, 2);
   FunctionType *VFFnTy = FunctionType::get(VFTy, {});
   Value *VFCallee = Constant::getNullValue(VFFnTy->getPointerTo());
   std::unique_ptr<CallInst> VFCall(CallInst::Create(VFFnTy, VFCallee, {}, ""));

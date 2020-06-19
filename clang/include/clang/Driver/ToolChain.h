@@ -536,6 +536,10 @@ public:
   /// FIXME: this really belongs on some sort of DeploymentTarget abstraction
   virtual bool hasBlocksRuntime() const { return true; }
 
+  /// Return the sysroot, possibly searching for a default sysroot using
+  /// target-specific logic.
+  virtual std::string computeSysRoot() const;
+
   /// Add the clang cc1 arguments for system include paths.
   ///
   /// This routine is responsible for adding the necessary cc1 arguments to

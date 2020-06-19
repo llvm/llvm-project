@@ -505,6 +505,7 @@ def DS_GWS_SEMA_P     : DS_GWS_0D<"ds_gws_sema_p">;
 def DS_GWS_BARRIER    : DS_GWS_1D<"ds_gws_barrier">;
 }
 
+let SubtargetPredicate = HasDsSrc2Insts in {
 def DS_ADD_SRC2_U32   : DS_1A<"ds_add_src2_u32">;
 def DS_SUB_SRC2_U32   : DS_1A<"ds_sub_src2_u32">;
 def DS_RSUB_SRC2_U32  : DS_1A<"ds_rsub_src2_u32">;
@@ -537,6 +538,7 @@ def DS_MAX_SRC2_F64   : DS_1A<"ds_max_src2_f64">;
 
 def DS_WRITE_SRC2_B32 : DS_1A<"ds_write_src2_b32">;
 def DS_WRITE_SRC2_B64 : DS_1A<"ds_write_src2_b64">;
+} // End SubtargetPredicate = HasDsSrc2Insts
 
 let Uses = [EXEC], mayLoad = 0, mayStore = 0, isConvergent = 1 in {
 def DS_SWIZZLE_B32 : DS_1A_RET <"ds_swizzle_b32", VGPR_32, 0, SwizzleImm>;
@@ -619,7 +621,7 @@ def DS_BPERMUTE_B32 : DS_1A1D_PERMUTE <"ds_bpermute_b32",
 
 } // let SubtargetPredicate = isGFX8Plus
 
-let SubtargetPredicate = HasLDSFPAtomics in {
+let SubtargetPredicate = HasLDSFPAtomics, OtherPredicates = [HasDsSrc2Insts] in {
 def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
 }
 

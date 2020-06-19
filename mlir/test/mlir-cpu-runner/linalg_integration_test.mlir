@@ -83,7 +83,7 @@ func @matmul() -> f32 {
   %B = view %bB[%c0][%c16, %c2] : memref<?xi8> to memref<?x?xf32>
   %C = view %bC[%c0][%c2, %c2] : memref<?xi8> to memref<?x?xf32>
 
-  linalg.matmul(%A, %B, %C) : memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+  linalg.matmul %A, %B, %C : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>)
   %res = load %C[%c0, %c1] : memref<?x?xf32>
 
   dealloc %bC : memref<?xi8>

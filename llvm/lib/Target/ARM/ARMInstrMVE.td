@@ -1722,8 +1722,8 @@ let Predicates = [HasMVEInt] in {
   def : Pat<(insertelt (v4f32 MQPR:$src1), (f32 SPR:$src2), imm:$lane),
             (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS MQPR:$src1, MQPR)), SPR:$src2, (SSubReg_f32_reg imm:$lane))>;
 
-  def : Pat<(insertelt (v8f16 MQPR:$src1), HPR:$src2, imm:$lane),
-            (MVE_VMOV_to_lane_16 MQPR:$src1, (COPY_TO_REGCLASS HPR:$src2, rGPR), imm:$lane)>;
+  def : Pat<(insertelt (v8f16 MQPR:$src1), (f16 HPR:$src2), imm:$lane),
+            (MVE_VMOV_to_lane_16 MQPR:$src1, (COPY_TO_REGCLASS (f16 HPR:$src2), rGPR), imm:$lane)>;
   def : Pat<(extractelt (v8f16 MQPR:$src), imm_even:$lane),
             (EXTRACT_SUBREG MQPR:$src, (SSubReg_f16_reg imm_even:$lane))>;
   def : Pat<(extractelt (v8f16 MQPR:$src), imm_odd:$lane),
@@ -1735,8 +1735,8 @@ let Predicates = [HasMVEInt] in {
             (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), SPR:$src, ssub_0)>;
   def : Pat<(v4f32 (scalar_to_vector GPR:$src)),
             (MVE_VMOV_to_lane_32 (v4f32 (IMPLICIT_DEF)), rGPR:$src, (i32 0))>;
-  def : Pat<(v8f16 (scalar_to_vector HPR:$src)),
-            (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), HPR:$src, ssub_0)>;
+  def : Pat<(v8f16 (scalar_to_vector (f16 HPR:$src))),
+            (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), (f16 HPR:$src), ssub_0)>;
   def : Pat<(v8f16 (scalar_to_vector GPR:$src)),
             (MVE_VMOV_to_lane_16 (v8f16 (IMPLICIT_DEF)), rGPR:$src, (i32 0))>;
 }

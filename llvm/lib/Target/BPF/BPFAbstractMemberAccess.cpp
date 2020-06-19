@@ -92,7 +92,7 @@
 #define DEBUG_TYPE "bpf-abstract-member-access"
 
 namespace llvm {
-const std::string BPFCoreSharedInfo::AmaAttr = "btf_ama";
+constexpr StringRef BPFCoreSharedInfo::AmaAttr;
 } // namespace llvm
 
 using namespace llvm;

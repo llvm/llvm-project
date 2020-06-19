@@ -105,6 +105,7 @@ protected:
   bool HasP8Crypto;
   bool HasP9Vector;
   bool HasP9Altivec;
+  bool HasP10Vector;
   bool HasPrefixInstrs;
   bool HasPCRelativeMemops;
   bool HasFCPSGN;
@@ -262,6 +263,7 @@ public:
   bool hasP8Crypto() const { return HasP8Crypto; }
   bool hasP9Vector() const { return HasP9Vector; }
   bool hasP9Altivec() const { return HasP9Altivec; }
+  bool hasP10Vector() const { return HasP10Vector; }
   bool hasPrefixInstrs() const { return HasPrefixInstrs; }
   bool hasPCRelativeMemops() const { return HasPCRelativeMemops; }
   bool hasMFOCRF() const { return HasMFOCRF; }

@@ -2387,6 +2387,44 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_matrix_column_major_load: {
+    MatrixBuilder<CGBuilderTy> MB(Builder);
+    // Emit everything that isn't dependent on the first parameter type
+    Value *Stride = EmitScalarExpr(E->getArg(3));
+    const auto *ResultTy = E->getType()->getAs<ConstantMatrixType>();
+    auto *PtrTy = E->getArg(0)->getType()->getAs<PointerType>();
+    assert(PtrTy && "arg0 must be of pointer type");
+    bool IsVolatile = PtrTy->getPointeeType().isVolatileQualified();
+
+    Address Src = EmitPointerWithAlignment(E->getArg(0));
+    EmitNonNullArgCheck(RValue::get(Src.getPointer()), E->getArg(0)->getType(),
+                        E->getArg(0)->getExprLoc(), FD, 0);
+    Value *Result = MB.CreateColumnMajorLoad(
+        Src.getPointer(), Align(Src.getAlignment().getQuantity()), Stride,
+        IsVolatile, ResultTy->getNumRows(), ResultTy->getNumColumns(),
+        "matrix");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_matrix_column_major_store: {
+    MatrixBuilder<CGBuilderTy> MB(Builder);
+    Value *Matrix = EmitScalarExpr(E->getArg(0));
+    Address Dst = EmitPointerWithAlignment(E->getArg(1));
+    Value *Stride = EmitScalarExpr(E->getArg(2));
+
+    const auto *MatrixTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>();
+    auto *PtrTy = E->getArg(1)->getType()->getAs<PointerType>();
+    assert(PtrTy && "arg1 must be of pointer type");
+    bool IsVolatile = PtrTy->getPointeeType().isVolatileQualified();
+
+    EmitNonNullArgCheck(RValue::get(Dst.getPointer()), E->getArg(1)->getType(),
+                        E->getArg(1)->getExprLoc(), FD, 0);
+    Value *Result = MB.CreateColumnMajorStore(
+        Matrix, Dst.getPointer(), Align(Dst.getAlignment().getQuantity()),
+        Stride, IsVolatile, MatrixTy->getNumRows(), MatrixTy->getNumColumns());
+    return RValue::get(Result);
+  }
+
   case Builtin::BIfinite:
   case Builtin::BI__finite:
   case Builtin::BIfinitef:
@@ -4646,7 +4684,7 @@ struct ARMVectorIntrinsicInfo {
   unsigned BuiltinID;
   unsigned LLVMIntrinsic;
   unsigned AltLLVMIntrinsic;
-  unsigned TypeModifier;
+  uint64_t TypeModifier;
 
   bool operator<(unsigned RHSBuiltinID) const {
     return BuiltinID < RHSBuiltinID;
@@ -4970,6 +5008,11 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vaeseq_v, aarch64_crypto_aese, 0),
   NEONMAP1(vaesimcq_v, aarch64_crypto_aesimc, 0),
   NEONMAP1(vaesmcq_v, aarch64_crypto_aesmc, 0),
+  NEONMAP1(vbfdot_v, aarch64_neon_bfdot, 0),
+  NEONMAP1(vbfdotq_v, aarch64_neon_bfdot, 0),
+  NEONMAP1(vbfmlalbq_v, aarch64_neon_bfmlalb, 0),
+  NEONMAP1(vbfmlaltq_v, aarch64_neon_bfmlalt, 0),
+  NEONMAP1(vbfmmlaq_v, aarch64_neon_bfmmla, 0),
   NEONMAP1(vcadd_rot270_v, aarch64_neon_vcadd_rot270, Add1ArgType),
   NEONMAP1(vcadd_rot90_v, aarch64_neon_vcadd_rot90, Add1ArgType),
   NEONMAP1(vcaddq_rot270_v, aarch64_neon_vcadd_rot270, Add1ArgType),
@@ -6141,6 +6184,32 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     llvm::Type *Tys[2] = { Ty, InputTy };
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vusdot");
   }
+  case NEON::BI__builtin_neon_vbfdot_v:
+  case NEON::BI__builtin_neon_vbfdotq_v: {
+    llvm::Type *InputTy =
+        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfdot");
+  }
+  case NEON::BI__builtin_neon_vbfmmlaq_v: {
+    llvm::Type *InputTy =
+        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmmla");
+  }
+  case NEON::BI__builtin_neon_vbfmlalbq_v: {
+    llvm::Type *InputTy =
+        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmlalb");
+  }
+  case NEON::BI__builtin_neon_vbfmlaltq_v: {
+    llvm::Type *InputTy =
+        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmlalt");
+  }
+
   }
 
   assert(Int && "Expected valid intrinsic number");
@@ -7570,6 +7639,9 @@ llvm::Type *CodeGenFunction::getEltType(SVETypeFlags TypeFlags) {
   case SVETypeFlags::EltTyFloat64:
     return Builder.getDoubleTy();
 
+  case SVETypeFlags::EltTyBFloat16:
+    return Builder.getBFloatTy();
+
   case SVETypeFlags::EltTyBool8:
   case SVETypeFlags::EltTyBool16:
   case SVETypeFlags::EltTyBool32:
@@ -7630,6 +7702,8 @@ CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
 
   case SVETypeFlags::EltTyFloat16:
     return llvm::ScalableVectorType::get(Builder.getHalfTy(), 8);
+  case SVETypeFlags::EltTyBFloat16:
+    return llvm::ScalableVectorType::get(Builder.getBFloatTy(), 8);
   case SVETypeFlags::EltTyFloat32:
     return llvm::ScalableVectorType::get(Builder.getFloatTy(), 4);
   case SVETypeFlags::EltTyFloat64:
@@ -7830,6 +7904,84 @@ Value *CodeGenFunction::EmitSVEGatherPrefetch(SVETypeFlags TypeFlags,
   return Builder.CreateCall(F, Ops);
 }
 
+Value *CodeGenFunction::EmitSVEStructLoad(SVETypeFlags TypeFlags,
+                                          SmallVectorImpl<Value*> &Ops,
+                                          unsigned IntID) {
+  llvm::ScalableVectorType *VTy = getSVEType(TypeFlags);
+  auto VecPtrTy = llvm::PointerType::getUnqual(VTy);
+  auto EltPtrTy = llvm::PointerType::getUnqual(VTy->getElementType());
+
+  unsigned N;
+  switch (IntID) {
+  case Intrinsic::aarch64_sve_ld2:
+    N = 2;
+    break;
+  case Intrinsic::aarch64_sve_ld3:
+    N = 3;
+    break;
+  case Intrinsic::aarch64_sve_ld4:
+    N = 4;
+    break;
+  default:
+    llvm_unreachable("unknown intrinsic!");
+  }
+  auto RetTy = llvm::VectorType::get(VTy->getElementType(),
+                                     VTy->getElementCount() * N);
+
+	Value *Predicate = EmitSVEPredicateCast(Ops[0], VTy);
+  Value *BasePtr= Builder.CreateBitCast(Ops[1], VecPtrTy);
+  Value *Offset = Ops.size() > 2 ? Ops[2] : Builder.getInt32(0);
+  BasePtr = Builder.CreateGEP(VTy, BasePtr, Offset);
+  BasePtr = Builder.CreateBitCast(BasePtr, EltPtrTy);
+
+  Function *F = CGM.getIntrinsic(IntID, {RetTy, Predicate->getType()});
+  return Builder.CreateCall(F, { Predicate, BasePtr });
+}
+
+Value *CodeGenFunction::EmitSVEStructStore(SVETypeFlags TypeFlags,
+                                           SmallVectorImpl<Value*> &Ops,
+                                           unsigned IntID) {
+  llvm::ScalableVectorType *VTy = getSVEType(TypeFlags);
+  auto VecPtrTy = llvm::PointerType::getUnqual(VTy);
+  auto EltPtrTy = llvm::PointerType::getUnqual(VTy->getElementType());
+
+  unsigned N;
+  switch (IntID) {
+  case Intrinsic::aarch64_sve_st2:
+    N = 2;
+    break;
+  case Intrinsic::aarch64_sve_st3:
+    N = 3;
+    break;
+  case Intrinsic::aarch64_sve_st4:
+    N = 4;
+    break;
+  default:
+    llvm_unreachable("unknown intrinsic!");
+  }
+  auto TupleTy =
+      llvm::VectorType::get(VTy->getElementType(), VTy->getElementCount() * N);
+
+  Value *Predicate = EmitSVEPredicateCast(Ops[0], VTy);
+  Value *BasePtr = Builder.CreateBitCast(Ops[1], VecPtrTy);
+  Value *Offset = Ops.size() > 3 ? Ops[2] : Builder.getInt32(0);
+  Value *Val = Ops.back();
+  BasePtr = Builder.CreateGEP(VTy, BasePtr, Offset);
+  BasePtr = Builder.CreateBitCast(BasePtr, EltPtrTy);
+
+  // The llvm.aarch64.sve.st2/3/4 intrinsics take legal part vectors, so we
+  // need to break up the tuple vector.
+  SmallVector<llvm::Value*, 5> Operands;
+  Function *FExtr =
+      CGM.getIntrinsic(Intrinsic::aarch64_sve_tuple_get, {VTy, TupleTy});
+  for (unsigned I = 0; I < N; ++I)
+    Operands.push_back(Builder.CreateCall(FExtr, {Val, Builder.getInt32(I)}));
+  Operands.append({Predicate, BasePtr});
+
+  Function *F = CGM.getIntrinsic(IntID, { VTy });
+  return Builder.CreateCall(F, Operands);
+}
+
 // SVE2's svpmullb and svpmullt builtins are similar to the svpmullb_pair and
 // svpmullt_pair intrinsics, with the exception that their results are bitcast
 // to a wider type.
@@ -7967,9 +8119,8 @@ static void InsertExplicitUndefOperand(CGBuilderTy &Builder, llvm::Type *Ty,
   Ops.insert(Ops.begin(), SplatUndef);
 }
 
-SmallVector<llvm::Type *, 2>
-CodeGenFunction::getSVEOverloadTypes(SVETypeFlags TypeFlags,
-                                     ArrayRef<Value *> Ops) {
+SmallVector<llvm::Type *, 2> CodeGenFunction::getSVEOverloadTypes(
+    SVETypeFlags TypeFlags, llvm::Type *ResultType, ArrayRef<Value *> Ops) {
   if (TypeFlags.isOverloadNone())
     return {};
 
@@ -7981,8 +8132,11 @@ CodeGenFunction::getSVEOverloadTypes(SVETypeFlags TypeFlags,
   if (TypeFlags.isOverloadWhileRW())
     return {getSVEPredType(TypeFlags), Ops[0]->getType()};
 
-  if (TypeFlags.isOverloadCvt())
+  if (TypeFlags.isOverloadCvt() || TypeFlags.isTupleSet())
     return {Ops[0]->getType(), Ops.back()->getType()};
+
+  if (TypeFlags.isTupleCreate() || TypeFlags.isTupleGet())
+    return {ResultType, Ops[0]->getType()};
 
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};
@@ -8038,6 +8192,10 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     return EmitSVEPrefetchLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (TypeFlags.isGatherPrefetch())
     return EmitSVEGatherPrefetch(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+	else if (TypeFlags.isStructLoad())
+		return EmitSVEStructLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+	else if (TypeFlags.isStructStore())
+		return EmitSVEStructStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (TypeFlags.isUndef())
     return UndefValue::get(Ty);
   else if (Builtin->LLVMIntrinsic != 0) {
@@ -8081,7 +8239,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     }
 
     Function *F = CGM.getIntrinsic(Builtin->LLVMIntrinsic,
-                                   getSVEOverloadTypes(TypeFlags, Ops));
+                                   getSVEOverloadTypes(TypeFlags, Ty, Ops));
     Value *Call = Builder.CreateCall(F, Ops);
 
     // Predicate results must be converted to svbool_t.
@@ -8233,6 +8391,29 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
 
     Function *F = CGM.getIntrinsic(Intrinsic::vscale, Ty);
     return Builder.CreateMul(NumEls, Builder.CreateCall(F));
+  }
+
+  case SVE::BI__builtin_sve_svtbl2_u8:
+  case SVE::BI__builtin_sve_svtbl2_s8:
+  case SVE::BI__builtin_sve_svtbl2_u16:
+  case SVE::BI__builtin_sve_svtbl2_s16:
+  case SVE::BI__builtin_sve_svtbl2_u32:
+  case SVE::BI__builtin_sve_svtbl2_s32:
+  case SVE::BI__builtin_sve_svtbl2_u64:
+  case SVE::BI__builtin_sve_svtbl2_s64:
+  case SVE::BI__builtin_sve_svtbl2_f16:
+  case SVE::BI__builtin_sve_svtbl2_f32:
+  case SVE::BI__builtin_sve_svtbl2_f64: {
+    SVETypeFlags TF(Builtin->TypeModifier);
+    auto VTy = cast<llvm::VectorType>(getSVEType(TF));
+    auto TupleTy = llvm::VectorType::get(VTy->getElementType(),
+                                         VTy->getElementCount() * 2);
+    Function *FExtr =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_tuple_get, {VTy, TupleTy});
+    Value *V0 = Builder.CreateCall(FExtr, {Ops[0], Builder.getInt32(0)});
+    Value *V1 = Builder.CreateCall(FExtr, {Ops[0], Builder.getInt32(1)});
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_tbl2, VTy);
+    return Builder.CreateCall(F, {V0, V1, Ops[1]});
   }
   }
 

@@ -321,7 +321,6 @@ public:
 
   StructuredData::ObjectSP CreateStructuredObject() const;
 
-public:
   template <typename... T>
   llvm::Expected<PythonObject> CallMethod(const char *name,
                                           const T &... t) const {

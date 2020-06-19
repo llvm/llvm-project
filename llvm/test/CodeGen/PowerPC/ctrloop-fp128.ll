@@ -25,8 +25,8 @@ for.end:                                          ; preds = %for.body
   ret void
 
 ; CHECK-LABEL: fmul_ctrloop_fp128
-; CHECK:         call void @llvm.set.loop.iterations.i64(i64 4)
-; CHECK:         call i1 @llvm.loop.decrement.i64(i64 1)
+; CHECK-NOT:     call void @llvm.set.loop.iterations.i64(i64 4)
+; CHECK-NOT:     call i1 @llvm.loop.decrement.i64(i64 1)
 }
 
 declare void @obfuscate(i8*, ...) local_unnamed_addr #2

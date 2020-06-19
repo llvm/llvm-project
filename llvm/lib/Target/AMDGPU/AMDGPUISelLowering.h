@@ -411,7 +411,6 @@ enum NodeType : unsigned {
   // For emitting ISD::FMAD when f32 denormals are enabled because mac/mad is
   // treated as an illegal operation.
   FMAD_FTZ,
-  TRIG_PREOP, // 1 ULP max error for f64
 
   // RCP, RSQ - For f32, 1 ULP max error, no denormal handling.
   //            For f64, max error 2^29 ULP, handles denormals.
@@ -510,6 +509,7 @@ enum NodeType : unsigned {
   ATOMIC_DEC,
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_FMAX,
+  ATOMIC_LOAD_CSUB,
   BUFFER_LOAD,
   BUFFER_LOAD_UBYTE,
   BUFFER_LOAD_USHORT,
@@ -536,6 +536,7 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_INC,
   BUFFER_ATOMIC_DEC,
   BUFFER_ATOMIC_CMPSWAP,
+  BUFFER_ATOMIC_CSUB,
   BUFFER_ATOMIC_FADD,
   BUFFER_ATOMIC_PK_FADD,
   ATOMIC_PK_FADD,

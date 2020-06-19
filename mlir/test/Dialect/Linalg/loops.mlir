@@ -33,7 +33,7 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %A = view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
   %B = view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
   %C = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
-  linalg.matmul(%A, %B, %C) : memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+  linalg.matmul %A, %B, %C : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>)
   return
 }
 // CHECKLOOP-LABEL: func @matmul(%{{.*}}: memref<?xi8>,
@@ -77,7 +77,7 @@ func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
   %2 = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
   %3 = view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32>
   %4 = view %arg0[%c0][%N] : memref<?xi8> to memref<?xf32>
-  linalg.matvec(%2, %3, %4) : memref<?x?xf32>, memref<?xf32>, memref<?xf32>
+  linalg.matvec %2, %3, %4 : (memref<?x?xf32>, memref<?xf32>, memref<?xf32>)
   return
 }
 // CHECKLOOP-LABEL: func @matvec(%{{.*}}: memref<?xi8>,

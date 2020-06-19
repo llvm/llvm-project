@@ -7699,11 +7699,15 @@ class sve_mem_ldor_ss<bits<2> sz, string asm, RegisterOperand VecList,
 }
 
 multiclass sve_mem_ldor_ss<bits<2> sz, string asm, RegisterOperand listty,
-                           ZPRRegOp zprty, RegisterOperand gprty> {
+                           ZPRRegOp zprty, RegisterOperand gprty, ValueType Ty,
+                           ValueType PredTy, SDNode Ld1ro, ComplexPattern AddrCP> {
   def NAME : sve_mem_ldor_ss<sz, asm, listty, gprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Rm]",
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
+
+    def : Pat<(Ty (Ld1ro (PredTy PPR3bAny:$gp), (AddrCP GPR64sp:$base, gprty:$offset))),
+              (!cast<Instruction>(NAME) PPR3bAny:$gp, GPR64sp:$base, gprty:$offset)>;
 }
 
 //===----------------------------------------------------------------------===//

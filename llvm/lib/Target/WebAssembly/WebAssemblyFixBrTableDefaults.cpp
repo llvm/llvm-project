@@ -52,24 +52,32 @@ MachineBasicBlock *fixBrTable(MachineInstr &MI, MachineBasicBlock *MBB,
 
   // Find the conditional jump to the default target. If it doesn't exist, the
   // default target is unreachable anyway, so we can choose anything.
-  auto JumpMII = --HeaderMBB->end();
-  while (JumpMII->getOpcode() != WebAssembly::BR_IF &&
-         JumpMII != HeaderMBB->begin()) {
-    --JumpMII;
-  }
-  if (JumpMII->getOpcode() == WebAssembly::BR_IF) {
-    // Install the default target and remove the jumps in the header.
-    auto *DefaultMBB = JumpMII->getOperand(0).getMBB();
-    assert(DefaultMBB != MBB && "Expected conditional jump to default target");
-    MI.addOperand(MF, MachineOperand::CreateMBB(DefaultMBB));
-    HeaderMBB->erase(JumpMII, HeaderMBB->end());
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 2> Cond;
+  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  TII.analyzeBranch(*HeaderMBB, TBB, FBB, Cond);
+
+  // Here are the possible outcomes. '_' is nullptr, `J` is the jump table block
+  // aka MBB, 'D' is the default block.
+  //
+  // TBB | FBB | Meaning
+  //  _  |  _  | No default block, header falls through to jump table
+  //  J  |  _  | No default block, header jumps to the jump table
+  //  D  |  _  | Header jumps to the default and falls through to the jump table
+  //  D  |  J  | Header jumps to the default and also to the jump table
+  if (TBB && TBB != MBB) {
+    // Install the default target.
+    assert((FBB == nullptr || FBB == MBB) &&
+           "Expected jump or fallthrough to br_table block");
+    MI.addOperand(MF, MachineOperand::CreateMBB(TBB));
   } else {
     // Arbitrarily choose the first jump target as the default.
     auto *SomeMBB = MI.getOperand(1).getMBB();
     MI.addOperand(MachineOperand::CreateMBB(SomeMBB));
   }
 
-  // Splice the jump table into the header.
+  // Remove any branches from the header and splice in the jump table instead
+  TII.removeBranch(*HeaderMBB, nullptr);
   HeaderMBB->splice(HeaderMBB->end(), MBB, MBB->begin(), MBB->end());
 
   // Update CFG to skip the old jump table block. Remove shared successors

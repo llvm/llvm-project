@@ -19,7 +19,7 @@ namespace {
 using testing::IsEmpty;
 
 TEST(BuildCompilerInvocation, DropsPCH) {
-  MockFSProvider FS;
+  MockFS FS;
   IgnoreDiagnostics Diags;
   TestTU TU;
   TU.AdditionalFiles["test.h.pch"] = "";

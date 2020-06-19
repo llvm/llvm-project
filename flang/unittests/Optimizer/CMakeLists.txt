@@ -1,7 +1,7 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 set(LIBS
-  FIRDialect
+  FIROptimizer
   ${dialect_libs}
 )
 

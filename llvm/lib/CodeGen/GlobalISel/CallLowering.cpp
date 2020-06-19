@@ -298,7 +298,11 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     assert(VA.getValNo() == i && "Location doesn't correspond to current arg");
 
     if (VA.needsCustom()) {
-      j += Handler.assignCustomValue(Args[i], makeArrayRef(ArgLocs).slice(j));
+      unsigned NumArgRegs =
+          Handler.assignCustomValue(Args[i], makeArrayRef(ArgLocs).slice(j));
+      if (!NumArgRegs)
+        return false;
+      j += NumArgRegs;
       continue;
     }
 

@@ -23,7 +23,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__msan_param_origin_tls = external thread_local(initialexec) global [{{.*}}]
 ; CHECK: @__msan_va_arg_tls = external thread_local(initialexec) global [{{.*}}]
 ; CHECK: @__msan_va_arg_overflow_size_tls = external thread_local(initialexec) global i64
-; CHECK: @__msan_origin_tls = external thread_local(initialexec) global i32
 
 
 ; Check instrumentation of stores
@@ -72,7 +71,7 @@ entry:
 ; CHECK: ret void
 
 
-; load followed by cmp: check that we load the shadow and call __msan_warning.
+; load followed by cmp: check that we load the shadow and call __msan_warning_with_origin.
 define void @LoadAndCmp(i32* nocapture %a) nounwind uwtable sanitize_memory {
 entry:
   %0 = load i32, i32* %a, align 4
@@ -90,11 +89,15 @@ if.end:                                           ; preds = %entry, %if.then
 declare void @foo(...)
 
 ; CHECK-LABEL: @LoadAndCmp
+; CHECK: %0 = load i32,
 ; CHECK: = load
-; CHECK: = load
-; CHECK: call void @__msan_warning_noreturn()
+; CHECK-ORIGINS: %[[ORIGIN:.*]] = load
+; CHECK: call void @__msan_warning_with_origin_noreturn(i32
+; CHECK-ORIGINS-SAME %[[ORIGIN]])
+; CHECK-CONT: 
 ; CHECK-NEXT: call void asm sideeffect
 ; CHECK-NEXT: unreachable
+; CHECK: br i1 %tobool
 ; CHECK: ret void
 
 ; Check that we store the shadow for the retval.
@@ -417,7 +420,7 @@ entry:
 
 ; CHECK-LABEL: @Div
 ; CHECK: icmp
-; CHECK: call void @__msan_warning
+; CHECK: call void @__msan_warning_with_origin
 ; CHECK-NOT: icmp
 ; CHECK: udiv
 ; CHECK-NOT: icmp
@@ -464,9 +467,9 @@ define zeroext i1 @ICmpSLTZero(i32 %x) nounwind uwtable readnone sanitize_memory
 
 ; CHECK-LABEL: @ICmpSLTZero
 ; CHECK: icmp slt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp slt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret i1
 
 define zeroext i1 @ICmpSGEZero(i32 %x) nounwind uwtable readnone sanitize_memory {
@@ -476,9 +479,9 @@ define zeroext i1 @ICmpSGEZero(i32 %x) nounwind uwtable readnone sanitize_memory
 
 ; CHECK-LABEL: @ICmpSGEZero
 ; CHECK: icmp slt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp sge
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret i1
 
 define zeroext i1 @ICmpSGTZero(i32 %x) nounwind uwtable readnone sanitize_memory {
@@ -488,9 +491,9 @@ define zeroext i1 @ICmpSGTZero(i32 %x) nounwind uwtable readnone sanitize_memory
 
 ; CHECK-LABEL: @ICmpSGTZero
 ; CHECK: icmp slt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp sgt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret i1
 
 define zeroext i1 @ICmpSLEZero(i32 %x) nounwind uwtable readnone sanitize_memory {
@@ -500,9 +503,9 @@ define zeroext i1 @ICmpSLEZero(i32 %x) nounwind uwtable readnone sanitize_memory
 
 ; CHECK-LABEL: @ICmpSLEZero
 ; CHECK: icmp slt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp sle
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret i1
 
 
@@ -515,9 +518,9 @@ define zeroext i1 @ICmpSLTAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 
 ; CHECK-LABEL: @ICmpSLTAllOnes
 ; CHECK: icmp slt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp slt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret i1
 
 define zeroext i1 @ICmpSGEAllOnes(i32 %x) nounwind uwtable readnone sanitize_memory {
@@ -527,9 +530,9 @@ define zeroext i1 @ICmpSGEAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 
 ; CHECK-LABEL: @ICmpSGEAllOnes
 ; CHECK: icmp slt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp sge
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret i1
 
 define zeroext i1 @ICmpSGTAllOnes(i32 %x) nounwind uwtable readnone sanitize_memory {
@@ -539,9 +542,9 @@ define zeroext i1 @ICmpSGTAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 
 ; CHECK-LABEL: @ICmpSGTAllOnes
 ; CHECK: icmp slt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp sgt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret i1
 
 define zeroext i1 @ICmpSLEAllOnes(i32 %x) nounwind uwtable readnone sanitize_memory {
@@ -551,9 +554,9 @@ define zeroext i1 @ICmpSLEAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 
 ; CHECK-LABEL: @ICmpSLEAllOnes
 ; CHECK: icmp slt
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp sle
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret i1
 
 
@@ -567,9 +570,9 @@ define <2 x i1> @ICmpSLT_vector_Zero(<2 x i32*> %x) nounwind uwtable readnone sa
 
 ; CHECK-LABEL: @ICmpSLT_vector_Zero
 ; CHECK: icmp slt <2 x i64>
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp slt <2 x i32*>
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret <2 x i1>
 
 ; Check that we propagate shadow for x<=-1, x>0, etc (i.e. sign bit tests)
@@ -582,9 +585,9 @@ define <2 x i1> @ICmpSLT_vector_AllOnes(<2 x i32> %x) nounwind uwtable readnone 
 
 ; CHECK-LABEL: @ICmpSLT_vector_AllOnes
 ; CHECK: icmp slt <2 x i32>
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp slt <2 x i32>
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret <2 x i1>
 
 
@@ -599,11 +602,11 @@ entry:
 
 ; CHECK-LABEL: @ICmpUGTConst
 ; CHECK: icmp ugt i32
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp ugt i32
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: icmp ugt i32
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret i1
 
 
@@ -645,7 +648,7 @@ define i32 @ExtractElement(<4 x i32> %vec, i32 %idx) sanitize_memory {
 
 ; CHECK-LABEL: @ExtractElement
 ; CHECK: extractelement
-; CHECK: call void @__msan_warning
+; CHECK: call void @__msan_warning_with_origin
 ; CHECK: extractelement
 ; CHECK: ret i32
 
@@ -656,7 +659,7 @@ define <4 x i32> @InsertElement(<4 x i32> %vec, i32 %idx, i32 %x) sanitize_memor
 
 ; CHECK-LABEL: @InsertElement
 ; CHECK: insertelement
-; CHECK: call void @__msan_warning
+; CHECK: call void @__msan_warning_with_origin
 ; CHECK: insertelement
 ; CHECK: ret <4 x i32>
 
@@ -668,7 +671,7 @@ define <4 x i32> @ShuffleVector(<4 x i32> %vec, <4 x i32> %vec1) sanitize_memory
 
 ; CHECK-LABEL: @ShuffleVector
 ; CHECK: shufflevector
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: shufflevector
 ; CHECK: ret <4 x i32>
 
@@ -682,11 +685,11 @@ define i32 @BSwap(i32 %x) nounwind uwtable readnone sanitize_memory {
 declare i32 @llvm.bswap.i32(i32) nounwind readnone
 
 ; CHECK-LABEL: @BSwap
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: @llvm.bswap.i32
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: @llvm.bswap.i32
-; CHECK-NOT: call void @__msan_warning
+; CHECK-NOT: call void @__msan_warning_with_origin
 ; CHECK: ret i32
 
 ; Test handling of vectors of pointers.
@@ -752,7 +755,7 @@ entry:
 }
 
 ; CHECK-LABEL: @VolatileStore
-; CHECK-NOT: @__msan_warning
+; CHECK-NOT: @__msan_warning_with_origin
 ; CHECK: ret void
 
 
@@ -775,9 +778,9 @@ if.end:                                           ; preds = %entry, %if.then
 declare void @bar()
 
 ; CHECK-LABEL: @NoSanitizeMemory
-; CHECK-NOT: @__msan_warning
+; CHECK-NOT: @__msan_warning_with_origin
 ; CHECK: store i32 0, {{.*}} @__msan_retval_tls
-; CHECK-NOT: @__msan_warning
+; CHECK-NOT: @__msan_warning_with_origin
 ; CHECK: ret i32
 
 

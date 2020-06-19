@@ -225,7 +225,6 @@ private:
   ///     The total number of bytes of data this object refers to.
   size_t GetByteSize() const { return m_end - m_start; }
 
-private:
   /// A pointer to the first byte of data.
   uint8_t *m_start;
 

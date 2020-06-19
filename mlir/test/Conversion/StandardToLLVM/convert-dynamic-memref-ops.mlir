@@ -408,3 +408,26 @@ func @mixed_memref_dim(%mixed : memref<42x?x?x13x?xf32>) {
   %4 = dim %mixed, %c4 : memref<42x?x?x13x?xf32>
   return
 }
+
+// CHECK-LABEL: @memref_dim_with_dyn_index
+// CHECK-SAME: %[[ALLOC_PTR:.*]]: !llvm<"float*">, %[[ALIGN_PTR:.*]]: !llvm<"float*">, %[[OFFSET:.*]]: !llvm.i64, %[[SIZE0:.*]]: !llvm.i64, %[[SIZE1:.*]]: !llvm.i64, %[[STRIDE0:.*]]: !llvm.i64, %[[STRIDE1:.*]]: !llvm.i64, %[[IDX:.*]]: !llvm.i64) -> !llvm.i64
+func @memref_dim_with_dyn_index(%arg : memref<3x?xf32>, %idx : index) -> index {
+  // CHECK-NEXT: %[[DESCR0:.*]] = llvm.mlir.undef : [[DESCR_TY:!llvm<"{ float\*, float\*, i64, \[2 x i64\], \[2 x i64\] }">]]
+  // CHECK-NEXT: %[[DESCR1:.*]] = llvm.insertvalue %[[ALLOC_PTR]], %[[DESCR0]][0] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR2:.*]] = llvm.insertvalue %[[ALIGN_PTR]], %[[DESCR1]][1] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR3:.*]] = llvm.insertvalue %[[OFFSET]],    %[[DESCR2]][2] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR4:.*]] = llvm.insertvalue %[[SIZE0]],     %[[DESCR3]][3, 0] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR5:.*]] = llvm.insertvalue %[[STRIDE0]],   %[[DESCR4]][4, 0] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR6:.*]] = llvm.insertvalue %[[SIZE1]],     %[[DESCR5]][3, 1] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR7:.*]] = llvm.insertvalue %[[STRIDE1]],   %[[DESCR6]][4, 1] : [[DESCR_TY]]
+  // CHECK-DAG: %[[C0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
+  // CHECK-DAG: %[[C1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+  // CHECK-DAG: %[[SIZES:.*]] = llvm.extractvalue %[[DESCR7]][3] : [[DESCR_TY]]
+  // CHECK-DAG: %[[SIZES_PTR:.*]] = llvm.alloca %[[C1]] x !llvm<"[2 x i64]"> : (!llvm.i64) -> !llvm<"[2 x i64]*">
+  // CHECK-DAG: llvm.store %[[SIZES]], %[[SIZES_PTR]] : !llvm<"[2 x i64]*">
+  // CHECK-DAG: %[[RESULT_PTR:.*]] = llvm.getelementptr %[[SIZES_PTR]][%[[C0]], %[[IDX]]] : (!llvm<"[2 x i64]*">, !llvm.i64, !llvm.i64) -> !llvm<"i64*">
+  // CHECK-DAG: %[[RESULT:.*]] = llvm.load %[[RESULT_PTR]] : !llvm<"i64*">
+  // CHECK-DAG: llvm.return %[[RESULT]] : !llvm.i64
+  %result = dim %arg, %idx : memref<3x?xf32>
+  return %result : index
+}

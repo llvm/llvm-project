@@ -1735,6 +1735,29 @@ TEST(CommandLineTest, OptionErrorMessageSuggest) {
   cl::ResetAllOptionOccurrences();
 }
 
+TEST(CommandLineTest, OptionErrorMessageSuggestNoHidden) {
+  // We expect that 'really hidden' option do not show up in option
+  // suggestions.
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> OptLong("aluminium", cl::desc("Some long option"));
+  StackOption<bool> OptLong2("aluminum", cl::desc("Bad option"),
+                             cl::ReallyHidden);
+
+  const char *args[] = {"prog", "--alumnum"};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
+  OS.flush();
+  EXPECT_FALSE(Errs.find("prog: Did you mean '--aluminium'?\n") ==
+               std::string::npos);
+  Errs.clear();
+
+  cl::ResetAllOptionOccurrences();
+}
+
 TEST(CommandLineTest, Callback) {
   cl::ResetCommandLineParser();
 

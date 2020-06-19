@@ -383,10 +383,8 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
   populateLinalgToLLVMConversionPatterns(converter, patterns, &getContext());
 
   LLVMConversionTarget target(getContext());
-  target.addDynamicallyLegalOp<FuncOp>(
-      [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
   target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
-  if (failed(applyFullConversion(module, target, patterns, &converter)))
+  if (failed(applyFullConversion(module, target, patterns)))
     signalPassFailure();
 }
 

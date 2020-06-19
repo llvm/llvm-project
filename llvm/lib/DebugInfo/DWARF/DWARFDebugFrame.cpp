@@ -415,6 +415,11 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       uint8_t Version = Data.getU8(&Offset);
       const char *Augmentation = Data.getCStr(&Offset);
       StringRef AugmentationString(Augmentation ? Augmentation : "");
+      // TODO: we should provide a way to report a warning and continue dumping.
+      if (IsEH && Version != 1)
+        return createStringError(errc::not_supported,
+                                 "unsupported CIE version: %" PRIu8, Version);
+
       uint8_t AddressSize = Version < 4 ? Data.getAddressSize() :
                                           Data.getU8(&Offset);
       Data.setAddressSize(AddressSize);

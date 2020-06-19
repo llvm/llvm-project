@@ -230,6 +230,15 @@ over the real file system.
                                        cl::value_desc("filename"),
                                        cl::cat(ClangTidyCategory));
 
+static cl::opt<bool> UseColor("use-color", cl::desc(R"(
+Use colors in diagnostics. If not set, colors
+will be used if the terminal connected to
+standard output supports colors.
+This option overrides the 'UseColor' option in
+.clang-tidy file, if any.
+)"),
+                              cl::init(false), cl::cat(ClangTidyCategory));
+
 namespace clang {
 namespace tidy {
 
@@ -292,6 +301,8 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
     OverrideOptions.SystemHeaders = SystemHeaders;
   if (FormatStyle.getNumOccurrences() > 0)
     OverrideOptions.FormatStyle = FormatStyle;
+  if (UseColor.getNumOccurrences() > 0)
+    OverrideOptions.UseColor = UseColor;
 
   if (!Config.empty()) {
     if (llvm::ErrorOr<ClangTidyOptions> ParsedConfig =
@@ -299,7 +310,7 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
       return std::make_unique<ConfigOptionsProvider>(
           GlobalOptions,
           ClangTidyOptions::getDefaults().mergeWith(DefaultOptions, 0),
-          *ParsedConfig, OverrideOptions);
+          *ParsedConfig, OverrideOptions, std::move(FS));
     } else {
       llvm::errs() << "Error: invalid configuration specified.\n"
                    << ParsedConfig.getError().message() << "\n";
@@ -478,7 +489,7 @@ int clangTidyMain(int argc, const char **argv) {
       llvm::errs() << WErrorCount << " warning" << Plural << " treated as error"
                    << Plural << "\n";
     }
-    return WErrorCount;
+    return 1;
   }
 
   if (FoundErrors) {

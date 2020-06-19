@@ -1043,8 +1043,9 @@ void
 vector<_Tp, _Allocator>::__construct_at_end(size_type __n)
 {
     _ConstructTransaction __tx(*this, __n);
-    for (; __tx.__pos_ != __tx.__new_end_; ++__tx.__pos_) {
-      __alloc_traits::construct(this->__alloc(), _VSTD::__to_address(__tx.__pos_));
+    const_pointer __new_end = __tx.__new_end_;
+    for (pointer __pos = __tx.__pos_; __pos != __new_end; ++__pos, __tx.__pos_ = __pos) {
+        __alloc_traits::construct(this->__alloc(), _VSTD::__to_address(__pos));
     }
 }
 
@@ -1060,8 +1061,9 @@ void
 vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x)
 {
     _ConstructTransaction __tx(*this, __n);
-    for (; __tx.__pos_ != __tx.__new_end_; ++__tx.__pos_) {
-        __alloc_traits::construct(this->__alloc(), _VSTD::__to_address(__tx.__pos_), __x);
+    const_pointer __new_end = __tx.__new_end_;
+    for (pointer __pos = __tx.__pos_; __pos != __new_end; ++__pos, __tx.__pos_ = __pos) {
+        __alloc_traits::construct(this->__alloc(), _VSTD::__to_address(__pos), __x);
     }
 }
 
@@ -1753,9 +1755,10 @@ vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointe
     {
       pointer __i = __from_s + __n;
       _ConstructTransaction __tx(*this, __from_e - __i);
-      for (; __i < __from_e; ++__i, ++__tx.__pos_) {
+      for (pointer __pos = __tx.__pos_; __i < __from_e;
+           ++__i, ++__pos, __tx.__pos_ = __pos) {
           __alloc_traits::construct(this->__alloc(),
-                                    _VSTD::__to_address(__tx.__pos_),
+                                    _VSTD::__to_address(__pos),
                                     _VSTD::move(*__i));
       }
     }

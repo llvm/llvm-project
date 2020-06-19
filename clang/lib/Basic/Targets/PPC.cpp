@@ -54,6 +54,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFloat128 = true;
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
+    } else if (Feature == "+power10-vector") {
+      HasP10Vector = true;
     } else if (Feature == "+pcrelative-memops") {
       HasPCRelativeMemops = true;
     } else if (Feature == "+spe") {
@@ -193,6 +195,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__FLOAT128__");
   if (HasP9Vector)
     Builder.defineMacro("__POWER9_VECTOR__");
+  if (HasP10Vector)
+    Builder.defineMacro("__POWER10_VECTOR__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -227,6 +231,7 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
 // - direct-move
 // - float128
 // - power9-vector
+// - power10-vector
 // then go ahead and error since the customer has expressed an incompatible
 // set of options.
 static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
@@ -248,6 +253,7 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
   Found |= FindVSXSubfeature("+direct-move", "-mdirect-move");
   Found |= FindVSXSubfeature("+float128", "-mfloat128");
   Found |= FindVSXSubfeature("+power9-vector", "-mpower9-vector");
+  Found |= FindVSXSubfeature("+power10-vector", "-mpower10-vector");
 
   // Return false if any vsx subfeatures was found.
   return !Found;
@@ -348,6 +354,7 @@ bool PPCTargetInfo::initFeatureMap(
 void PPCTargetInfo::addP10SpecificFeatures(
     llvm::StringMap<bool> &Features) const {
   Features["htm"] = false; // HTM was removed for P10.
+  Features["power10-vector"] = true;
   Features["pcrelative-memops"] = true;
   return;
 }
@@ -372,6 +379,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("extdiv", HasExtDiv)
       .Case("float128", HasFloat128)
       .Case("power9-vector", HasP9Vector)
+      .Case("power10-vector", HasP10Vector)
       .Case("pcrelative-memops", HasPCRelativeMemops)
       .Case("spe", HasSPE)
       .Default(false);
@@ -387,12 +395,15 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
                              .Case("direct-move", true)
                              .Case("power8-vector", true)
                              .Case("power9-vector", true)
+                             .Case("power10-vector", true)
                              .Case("float128", true)
                              .Default(false);
     if (FeatureHasVSX)
       Features["vsx"] = Features["altivec"] = true;
     if (Name == "power9-vector")
       Features["power8-vector"] = true;
+    else if (Name == "power10-vector")
+      Features["power8-vector"] = Features["power9-vector"] = true;
     if (Name == "pcrel")
       Features["pcrelative-memops"] = true;
     else
@@ -402,9 +413,12 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
     // features.
     if ((Name == "altivec") || (Name == "vsx"))
       Features["vsx"] = Features["direct-move"] = Features["power8-vector"] =
-          Features["float128"] = Features["power9-vector"] = false;
+          Features["float128"] = Features["power9-vector"] =
+              Features["power10-vector"] = false;
     if (Name == "power8-vector")
-      Features["power9-vector"] = false;
+      Features["power9-vector"] = Features["power10-vector"] = false;
+    else if (Name == "power9-vector")
+      Features["power10-vector"] = false;
     if (Name == "pcrel")
       Features["pcrelative-memops"] = false;
     else

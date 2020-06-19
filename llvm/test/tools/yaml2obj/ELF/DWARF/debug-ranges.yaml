@@ -375,3 +375,46 @@ DWARF:
       Entries:
         - LowOffset:  0x01
           HighOffset: 0x02
+
+## j) Test that yaml2obj still generates a .debug_ranges section if we assign an invalid value
+## to 'AddrSize' when the 'Entries' list is empty.
+
+# RUN: yaml2obj --docnum=10 %s -o %t10.o
+# RUN: llvm-readelf --hex-dump=.debug_ranges %t10.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE
+
+#      ADDRSIZE: Hex dump of section '.debug_ranges':
+# ADDRSIZE-NEXT: 0x00000000 00000000 00000000 00000000 0000
+##                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ terminating entry (2*AddrSize=14-byte)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_ranges:
+    - AddrSize: 0x07
+      Entries:  []
+
+## k) Test that yaml2obj emits an error message if we try to assign an invalid value to
+## 'AddrSize' when the 'Entries' list isn't empty.
+
+# RUN: not yaml2obj --docnum=11 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-SIZE
+
+# INVALID-SIZE: yaml2obj: error: unable to write debug_ranges address offset: invalid integer write size: 7
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_ranges:
+    - AddrSize: 0x07
+      Entries:
+        - LowOffset:  0x1234
+          HighOffset: 0x5678

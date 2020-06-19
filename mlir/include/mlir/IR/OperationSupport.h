@@ -302,6 +302,9 @@ public:
   /// Return the name of the dialect this operation is registered to.
   StringRef getDialect() const;
 
+  /// Return the operation name with dialect name stripped, if it has one.
+  StringRef stripDialect() const;
+
   /// Return the name of this operation.  This always succeeds.
   StringRef getStringRef() const;
 

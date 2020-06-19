@@ -28,7 +28,7 @@ public:
   const InputSection *lastSection() const { return inputs.back(); }
 
   // These accessors will only be valid after finalizing the section
-  size_t getSize() const override { return size; }
+  uint64_t getSize() const override { return size; }
   uint64_t getFileSize() const override { return fileSize; }
 
   void mergeInput(InputSection *input) override;

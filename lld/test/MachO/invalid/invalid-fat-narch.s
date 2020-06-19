@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: yaml2obj %s -o %t.o
-# RUN: not lld -flavor darwinnew -arch x86_64 -o /dev/null %t.o 2>&1 | \
+# RUN: not lld -flavor darwinnew -o /dev/null %t.o 2>&1 | \
 # RUN:    FileCheck %s -DFILE=%t.o
 # CHECK: error: [[FILE]]: fat_arch struct extends beyond end of file
 

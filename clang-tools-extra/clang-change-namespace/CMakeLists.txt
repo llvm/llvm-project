@@ -5,8 +5,10 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangChangeNamespace
   ChangeNamespace.cpp
+)
 
-  LINK_LIBS
+clang_target_link_libraries(clangChangeNamespace
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic

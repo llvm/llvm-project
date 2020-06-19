@@ -18,4 +18,4 @@
 type = Library
 name = Passes
 parent = Libraries
-required_libraries = AggressiveInstCombine Analysis MLPolicies CodeGen Core Coroutines IPO InstCombine Scalar Support Target TransformUtils Vectorize Instrumentation
+required_libraries = AggressiveInstCombine Analysis CodeGen Core Coroutines IPO InstCombine Scalar Support Target TransformUtils Vectorize Instrumentation

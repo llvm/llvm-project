@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -453,10 +454,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FLOG10, MVT::f16, Custom);
   }
 
-  // v_mad_f32 does not support denormals. We report it as unconditionally
-  // legal, and the context where it is formed will disallow it when fp32
-  // denormals are enabled.
-  setOperationAction(ISD::FMAD, MVT::f32, Legal);
+  if (Subtarget->hasMadMacF32Insts())
+    setOperationAction(ISD::FMAD, MVT::f32, Legal);
 
   if (!Subtarget->hasBFI()) {
     // fcopysign can be done in a single instruction with BFI.
@@ -1129,6 +1128,17 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     if (!Vol->isZero())
       Info.flags |= MachineMemOperand::MOVolatile;
 
+    return true;
+  }
+  case Intrinsic::amdgcn_global_atomic_csub: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.align.reset();
+    Info.flags = MachineMemOperand::MOLoad |
+                 MachineMemOperand::MOStore |
+                 MachineMemOperand::MODereferenceable |
+                 MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::amdgcn_ds_gws_init:
@@ -4284,7 +4294,8 @@ bool SITargetLowering::isFMADLegal(const SelectionDAG &DAG,
   // v_mad_f32/v_mac_f32 do not support denormals.
   EVT VT = N->getValueType(0);
   if (VT == MVT::f32)
-    return !hasFP32Denormals(DAG.getMachineFunction());
+    return Subtarget->hasMadMacF32Insts() &&
+           !hasFP32Denormals(DAG.getMachineFunction());
   if (VT == MVT::f16) {
     return Subtarget->hasMadF16() &&
            !hasFP64FP16Denormals(DAG.getMachineFunction());
@@ -6416,9 +6427,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::DIV_FIXUP, DL, VT,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
 
-  case Intrinsic::amdgcn_trig_preop:
-    return DAG.getNode(AMDGPUISD::TRIG_PREOP, DL, VT,
-                       Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::amdgcn_div_scale: {
     const ConstantSDNode *Param = cast<ConstantSDNode>(Op.getOperand(3));
 
@@ -6872,6 +6880,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_buffer_atomic_swap:
   case Intrinsic::amdgcn_buffer_atomic_add:
   case Intrinsic::amdgcn_buffer_atomic_sub:
+  case Intrinsic::amdgcn_buffer_atomic_csub:
   case Intrinsic::amdgcn_buffer_atomic_smin:
   case Intrinsic::amdgcn_buffer_atomic_umin:
   case Intrinsic::amdgcn_buffer_atomic_smax:
@@ -6913,6 +6922,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       break;
     case Intrinsic::amdgcn_buffer_atomic_sub:
       Opcode = AMDGPUISD::BUFFER_ATOMIC_SUB;
+      break;
+    case Intrinsic::amdgcn_buffer_atomic_csub:
+      Opcode = AMDGPUISD::BUFFER_ATOMIC_CSUB;
       break;
     case Intrinsic::amdgcn_buffer_atomic_smin:
       Opcode = AMDGPUISD::BUFFER_ATOMIC_SMIN;
@@ -7161,6 +7173,18 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     return DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_ATOMIC_CMPSWAP, DL,
                                    Op->getVTList(), Ops, VT, M->getMemOperand());
+  }
+  case Intrinsic::amdgcn_global_atomic_csub: {
+    MemSDNode *M = cast<MemSDNode>(Op);
+    SDValue Ops[] = {
+      M->getOperand(0), // Chain
+      M->getOperand(2), // Ptr
+      M->getOperand(3)  // Value
+    };
+
+    return DAG.getMemIntrinsicNode(AMDGPUISD::ATOMIC_LOAD_CSUB, SDLoc(Op),
+                                   M->getVTList(), Ops, M->getMemoryVT(),
+                                   M->getMemOperand());
   }
 
   default:
@@ -9236,7 +9260,6 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case AMDGPUISD::RSQ_CLAMP:
   case AMDGPUISD::RCP_LEGACY:
   case AMDGPUISD::RCP_IFLAG:
-  case AMDGPUISD::TRIG_PREOP:
   case AMDGPUISD::DIV_SCALE:
   case AMDGPUISD::DIV_FMAS:
   case AMDGPUISD::DIV_FIXUP:
@@ -9344,6 +9367,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_rsq_clamp:
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
+    case Intrinsic::amdgcn_trig_preop:
       return true;
     default:
       break;
@@ -11288,6 +11312,27 @@ void SITargetLowering::computeKnownBitsForFrameIndex(
   // wave. We can't use vaddr in MUBUF instructions if we don't know the address
   // calculation won't overflow, so assume the sign bit is never set.
   Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
+}
+
+Align SITargetLowering::computeKnownAlignForTargetInstr(
+  GISelKnownBits &KB, Register R, const MachineRegisterInfo &MRI,
+  unsigned Depth) const {
+  const MachineInstr *MI = MRI.getVRegDef(R);
+  switch (MI->getOpcode()) {
+  case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
+    // FIXME: Can this move to generic code? What about the case where the call
+    // site specifies a lower alignment?
+    Intrinsic::ID IID = MI->getIntrinsicID();
+    LLVMContext &Ctx = KB.getMachineFunction().getFunction().getContext();
+    AttributeList Attrs = Intrinsic::getAttributes(Ctx, IID);
+    if (MaybeAlign RetAlign = Attrs.getRetAlignment())
+      return *RetAlign;
+    return Align(1);
+  }
+  default:
+    return Align(1);
+  }
 }
 
 Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {

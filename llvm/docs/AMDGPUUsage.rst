@@ -263,6 +263,15 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                               .. TODO::
                                                                                  Add product
                                                                                  names.
+     ``gfx1030``                 ``amdgcn``   dGPU  - xnack                   *TBA*
+                                                      [off]
+                                                    - wavefrontsize64
+                                                      [off]
+                                                    - cumode
+                                                      [off]
+                                                                              .. TODO
+                                                                                 Add product
+                                                                                 names.
      =========== =============== ============ ===== ================= ======= ======================
 
 .. _amdgpu-target-features:
@@ -356,8 +365,8 @@ supported for the ``amdgcn`` target.
      Region                            2               N/A         GDS              32      *not implemented for AMDHSA*
      Local                             3               group       LDS              32      0xFFFFFFFF
      Constant                          4               constant    *same as global* 64      0x0000000000000000
-     Private                           5               private     scratch          32      0x00000000
-     Constant 32-bit                   6               *TODO*
+     Private                           5               private     scratch          32      0xFFFFFFFF
+     Constant 32-bit                   6               *TODO*                               0x00000000
      Buffer Fat Pointer (experimental) 7               *TODO*
      ================================= =============== =========== ================ ======= ============================
 
@@ -806,6 +815,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1010`` 0x033      ``gfx1010``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1011`` 0x034      ``gfx1011``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1012`` 0x035      ``gfx1012``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1030`` 0x036      ``gfx1030``
      ================================= ========== =============================
 
 Sections

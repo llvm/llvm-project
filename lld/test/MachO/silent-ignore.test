@@ -1,9 +1,9 @@
-RUN: lld -flavor darwinnew -arch x86_64 -v \
+RUN: lld -flavor darwinnew -v \
 RUN:   -demangle \
 RUN:   -dynamic \
 RUN:   -no_deduplicate \
 RUN:   -lto_library /lib/foo \
 RUN:   -macosx_version_min 0 \
 RUN:   -syslibroot /path/to/MacOSX.platform/Developer/SDKs/MacOSX.sdk
-RUN: not lld -flavor darwinnew -arch x86_64 -v --not-an-ignored-argument 2>&1 | FileCheck %s
+RUN: not lld -flavor darwinnew -v --not-an-ignored-argument 2>&1 | FileCheck %s
 CHECK: error: unknown argument: --not-an-ignored-argument

@@ -10,6 +10,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/Tooling.h"
+#include "clang/Tooling/Transformer/Parsing.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
@@ -132,13 +133,36 @@ TEST(RangeSelectorTest, BeforeOp) {
     int f(int x, int y, int z) { return 3; }
     int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
   )cc";
-  const char *Call = "call";
-  TestMatch Match = matchCode(Code, callExpr().bind(Call));
-  const auto* E = Match.Result.Nodes.getNodeAs<Expr>(Call);
+  StringRef CallID = "call";
+  ast_matchers::internal::Matcher<Stmt> M = callExpr().bind(CallID);
+  RangeSelector R = before(node(CallID.str()));
+
+  TestMatch Match = matchCode(Code, M);
+  const auto *E = Match.Result.Nodes.getNodeAs<Expr>(CallID);
   assert(E != nullptr);
   auto ExprBegin = E->getSourceRange().getBegin();
   EXPECT_THAT_EXPECTED(
-      before(node(Call))(Match.Result),
+      R(Match.Result),
+      HasValue(EqualsCharSourceRange(
+          CharSourceRange::getCharRange(ExprBegin, ExprBegin))));
+}
+
+TEST(RangeSelectorTest, BeforeOpParsed) {
+  StringRef Code = R"cc(
+    int f(int x, int y, int z) { return 3; }
+    int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
+  )cc";
+  StringRef CallID = "call";
+  ast_matchers::internal::Matcher<Stmt> M = callExpr().bind(CallID);
+  auto R = parseRangeSelector(R"rs(before(node("call")))rs");
+  ASSERT_THAT_EXPECTED(R, llvm::Succeeded());
+
+  TestMatch Match = matchCode(Code, M);
+  const auto *E = Match.Result.Nodes.getNodeAs<Expr>(CallID);
+  assert(E != nullptr);
+  auto ExprBegin = E->getSourceRange().getBegin();
+  EXPECT_THAT_EXPECTED(
+      (*R)(Match.Result),
       HasValue(EqualsCharSourceRange(
           CharSourceRange::getCharRange(ExprBegin, ExprBegin))));
 }
@@ -169,45 +193,82 @@ TEST(RangeSelectorTest, AfterOp) {
                        HasValue(EqualsCharSourceRange(ExpectedAfter)));
 }
 
-TEST(RangeSelectorTest, RangeOp) {
+// Node-id specific version.
+TEST(RangeSelectorTest, RangeOpNodes) {
   StringRef Code = R"cc(
     int f(int x, int y, int z) { return 3; }
     int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
   )cc";
-  const char *Arg0 = "a0";
-  const char *Arg1 = "a1";
-  StringRef Call = "call";
-  auto Matcher = callExpr(hasArgument(0, expr().bind(Arg0)),
-                          hasArgument(1, expr().bind(Arg1)))
-                     .bind(Call);
+  auto Matcher = callExpr(hasArgument(0, expr().bind("a0")),
+                          hasArgument(1, expr().bind("a1")));
+  RangeSelector R = range("a0", "a1");
   TestMatch Match = matchCode(Code, Matcher);
+  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, 7"));
+}
 
-  // Node-id specific version:
-  EXPECT_THAT_EXPECTED(select(range(Arg0, Arg1), Match), HasValue("3, 7"));
-  // General version:
-  EXPECT_THAT_EXPECTED(select(range(node(Arg0), node(Arg1)), Match),
-                       HasValue("3, 7"));
+TEST(RangeSelectorTest, RangeOpGeneral) {
+  StringRef Code = R"cc(
+    int f(int x, int y, int z) { return 3; }
+    int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
+  )cc";
+  auto Matcher = callExpr(hasArgument(0, expr().bind("a0")),
+                          hasArgument(1, expr().bind("a1")));
+  RangeSelector R = range(node("a0"), node("a1"));
+  TestMatch Match = matchCode(Code, Matcher);
+  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, 7"));
+}
+
+TEST(RangeSelectorTest, RangeOpNodesParsed) {
+  StringRef Code = R"cc(
+    int f(int x, int y, int z) { return 3; }
+    int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
+  )cc";
+  auto Matcher = callExpr(hasArgument(0, expr().bind("a0")),
+                          hasArgument(1, expr().bind("a1")));
+  auto R = parseRangeSelector(R"rs(encloseNodes("a0", "a1"))rs");
+  ASSERT_THAT_EXPECTED(R, llvm::Succeeded());
+  TestMatch Match = matchCode(Code, Matcher);
+  EXPECT_THAT_EXPECTED(select(*R, Match), HasValue("3, 7"));
+}
+
+TEST(RangeSelectorTest, RangeOpGeneralParsed) {
+  StringRef Code = R"cc(
+    int f(int x, int y, int z) { return 3; }
+    int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
+  )cc";
+  auto Matcher = callExpr(hasArgument(0, expr().bind("a0")),
+                          hasArgument(1, expr().bind("a1")));
+  auto R = parseRangeSelector(R"rs(encloseNodes("a0", "a1"))rs");
+  ASSERT_THAT_EXPECTED(R, llvm::Succeeded());
+  TestMatch Match = matchCode(Code, Matcher);
+  EXPECT_THAT_EXPECTED(select(*R, Match), HasValue("3, 7"));
 }
 
 TEST(RangeSelectorTest, NodeOpStatement) {
   StringRef Code = "int f() { return 3; }";
-  const char *ID = "id";
-  TestMatch Match = matchCode(Code, returnStmt().bind(ID));
-  EXPECT_THAT_EXPECTED(select(node(ID), Match), HasValue("return 3;"));
+  TestMatch Match = matchCode(Code, returnStmt().bind("id"));
+  EXPECT_THAT_EXPECTED(select(node("id"), Match), HasValue("return 3;"));
 }
 
 TEST(RangeSelectorTest, NodeOpExpression) {
   StringRef Code = "int f() { return 3; }";
-  const char *ID = "id";
-  TestMatch Match = matchCode(Code, expr().bind(ID));
-  EXPECT_THAT_EXPECTED(select(node(ID), Match), HasValue("3"));
+  TestMatch Match = matchCode(Code, expr().bind("id"));
+  EXPECT_THAT_EXPECTED(select(node("id"), Match), HasValue("3"));
 }
 
 TEST(RangeSelectorTest, StatementOp) {
   StringRef Code = "int f() { return 3; }";
-  const char *ID = "id";
-  TestMatch Match = matchCode(Code, expr().bind(ID));
-  EXPECT_THAT_EXPECTED(select(statement(ID), Match), HasValue("3;"));
+  TestMatch Match = matchCode(Code, expr().bind("id"));
+  RangeSelector R = statement("id");
+  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3;"));
+}
+
+TEST(RangeSelectorTest, StatementOpParsed) {
+  StringRef Code = "int f() { return 3; }";
+  TestMatch Match = matchCode(Code, expr().bind("id"));
+  auto R = parseRangeSelector(R"rs(statement("id"))rs");
+  ASSERT_THAT_EXPECTED(R, llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(select(*R, Match), HasValue("3;"));
 }
 
 TEST(RangeSelectorTest, MemberOp) {

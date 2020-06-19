@@ -696,7 +696,14 @@ class Base(unittest2.TestCase):
         return os.path.join(self.getSourceDir(), name)
 
     def getReproducerArtifact(self, name):
+        lldbutil.mkdir_p(self.getReproducerDir())
         return os.path.join(self.getReproducerDir(), name)
+
+    def getReproducerRemappedPath(self, path):
+        assert configuration.replay_path
+        assert os.path.isabs(path)
+        path = os.path.relpath(path, '/')
+        return os.path.join(configuration.replay_path, 'root', path)
 
     @classmethod
     def setUpCommands(cls):

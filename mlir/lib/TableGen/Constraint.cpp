@@ -17,21 +17,28 @@ using namespace mlir::tblgen;
 
 Constraint::Constraint(const llvm::Record *record)
     : def(record), kind(CK_Uncategorized) {
-  if (record->isSubClassOf("TypeConstraint")) {
+  // Look through OpVariable's to their constraint.
+  if (def->isSubClassOf("OpVariable"))
+    def = def->getValueAsDef("constraint");
+  if (def->isSubClassOf("TypeConstraint")) {
     kind = CK_Type;
-  } else if (record->isSubClassOf("AttrConstraint")) {
+  } else if (def->isSubClassOf("AttrConstraint")) {
     kind = CK_Attr;
-  } else if (record->isSubClassOf("RegionConstraint")) {
+  } else if (def->isSubClassOf("RegionConstraint")) {
     kind = CK_Region;
-  } else if (record->isSubClassOf("SuccessorConstraint")) {
+  } else if (def->isSubClassOf("SuccessorConstraint")) {
     kind = CK_Successor;
   } else {
-    assert(record->isSubClassOf("Constraint"));
+    assert(def->isSubClassOf("Constraint"));
   }
 }
 
 Constraint::Constraint(Kind kind, const llvm::Record *record)
-    : def(record), kind(kind) {}
+    : def(record), kind(kind) {
+  // Look through OpVariable's to their constraint.
+  if (def->isSubClassOf("OpVariable"))
+    def = def->getValueAsDef("constraint");
+}
 
 Pred Constraint::getPredicate() const {
   auto *val = def->getValue("predicate");

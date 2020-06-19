@@ -17,11 +17,14 @@ class APILogTestCase(TestBase):
 
     def test_api_log(self):
         """Test API logging"""
-        logfile = os.path.join(self.getBuildDir(), "api-log.txt")
+        logfile = self.getBuildArtifact("api-log.txt")
 
         def cleanup():
             if os.path.exists(logfile):
                 os.unlink(logfile)
+
+        if configuration.is_reproducer_replay():
+            logfile = self.getReproducerRemappedPath(logfile)
 
         self.addTearDownHook(cleanup)
         self.expect("log enable lldb api -f {}".format(logfile))
@@ -30,7 +33,7 @@ class APILogTestCase(TestBase):
         self.dbg.GetScriptingLanguage(None)
         target = self.dbg.CreateTarget(None)
 
-        print(logfile)
+        self.assertTrue(os.path.isfile(logfile))
         with open(logfile, 'r') as f:
             log = f.read()
 

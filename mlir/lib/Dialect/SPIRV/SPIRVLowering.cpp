@@ -489,7 +489,9 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                               newFuncOp.end());
-  rewriter.applySignatureConversion(&newFuncOp.getBody(), signatureConverter);
+  if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), typeConverter,
+                                         &signatureConverter)))
+    return failure();
   rewriter.eraseOp(funcOp);
   return success();
 }
@@ -657,10 +659,9 @@ spirv::SPIRVConversionTarget::get(spirv::TargetEnvAttr targetAttr) {
       new SPIRVConversionTarget(targetAttr));
   SPIRVConversionTarget *targetPtr = target.get();
   target->addDynamicallyLegalDialect<SPIRVDialect>(
-      Optional<ConversionTarget::DynamicLegalityCallbackFn>(
-          // We need to capture the raw pointer here because it is stable:
-          // target will be destroyed once this function is returned.
-          [targetPtr](Operation *op) { return targetPtr->isLegalOp(op); }));
+      // We need to capture the raw pointer here because it is stable:
+      // target will be destroyed once this function is returned.
+      [targetPtr](Operation *op) { return targetPtr->isLegalOp(op); });
   return target;
 }
 

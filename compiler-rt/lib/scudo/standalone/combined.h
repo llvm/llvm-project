@@ -297,16 +297,20 @@ public:
       bool UnlockRequired;
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
       Block = TSD->Cache.allocate(ClassId);
-      // If the allocation failed, the most likely reason with a 64-bit primary
-      // is the region being full. In that event, retry once using the
-      // immediately larger class (except if the failing class was already the
-      // largest). This will waste some memory but will allow the application to
-      // not fail. If dealing with the largest class, fallback to the Secondary.
+      // If the allocation failed, the most likely reason with a 32-bit primary
+      // is the region being full. In that event, retry in each successively
+      // larger class until it fits. If it fails to fit in the largest class,
+      // fallback to the Secondary.
       if (UNLIKELY(!Block)) {
-        if (ClassId < SizeClassMap::LargestClassId)
+        while (ClassId < SizeClassMap::LargestClassId) {
           Block = TSD->Cache.allocate(++ClassId);
-        else
+          if (LIKELY(Block)) {
+            break;
+          }
+        }
+        if (UNLIKELY(!Block)) {
           ClassId = 0;
+        }
       }
       if (UnlockRequired)
         TSD->unlock();

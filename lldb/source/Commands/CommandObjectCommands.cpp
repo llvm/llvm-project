@@ -1621,7 +1621,6 @@ protected:
     io_handler.SetIsDone(true);
   }
 
-protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     if (GetDebugger().GetScriptLanguage() != lldb::eScriptLanguagePython) {
       result.AppendError("only scripting language supported for scripted "

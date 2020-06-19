@@ -37,7 +37,7 @@ public:
   uint64_t getSegmentOffset() const;
 
   // How much space the section occupies in the address space.
-  virtual size_t getSize() const = 0;
+  virtual uint64_t getSize() const = 0;
   // How much space the section occupies in the file. Most sections are copied
   // as-is so their file size is the same as their address space size.
   virtual uint64_t getFileSize() const { return getSize(); }

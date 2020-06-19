@@ -150,6 +150,42 @@ constexpr bool test_constexpr() {
       break;
     }
   }
+  {
+    static_assert(std::partial_ordering::less == std::partial_ordering::less);
+    static_assert(std::partial_ordering::less !=
+                  std::partial_ordering::equivalent);
+    static_assert(std::partial_ordering::less !=
+                  std::partial_ordering::greater);
+    static_assert(std::partial_ordering::less !=
+                  std::partial_ordering::unordered);
+
+    static_assert(std::partial_ordering::equivalent !=
+                  std::partial_ordering::less);
+    static_assert(std::partial_ordering::equivalent ==
+                  std::partial_ordering::equivalent);
+    static_assert(std::partial_ordering::equivalent !=
+                  std::partial_ordering::greater);
+    static_assert(std::partial_ordering::equivalent !=
+                  std::partial_ordering::unordered);
+
+    static_assert(std::partial_ordering::greater !=
+                  std::partial_ordering::less);
+    static_assert(std::partial_ordering::greater !=
+                  std::partial_ordering::equivalent);
+    static_assert(std::partial_ordering::greater ==
+                  std::partial_ordering::greater);
+    static_assert(std::partial_ordering::greater !=
+                  std::partial_ordering::unordered);
+
+    static_assert(std::partial_ordering::unordered !=
+                  std::partial_ordering::less);
+    static_assert(std::partial_ordering::unordered !=
+                  std::partial_ordering::equivalent);
+    static_assert(std::partial_ordering::unordered !=
+                  std::partial_ordering::greater);
+    static_assert(std::partial_ordering::unordered ==
+                  std::partial_ordering::unordered);
+  }
 #endif
 
   return true;

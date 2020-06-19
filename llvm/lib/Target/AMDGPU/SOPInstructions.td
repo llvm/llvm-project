@@ -793,7 +793,11 @@ def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "$sdst, $simm16"
 >;
 
+let hasSideEffects = 1 in {
+
 let mayLoad = 1 in {
+// s_getreg_b32 should use hasSideEffects = 1 for tablegen to allow
+// its use in the readcyclecounter selection.
 def S_GETREG_B32 : SOPK_Pseudo <
   "s_getreg_b32",
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
@@ -801,7 +805,7 @@ def S_GETREG_B32 : SOPK_Pseudo <
 >;
 }
 
-let hasSideEffects = 1, mayLoad = 0, mayStore =0 in {
+let mayLoad = 0, mayStore =0 in {
 
 def S_SETREG_B32 : SOPK_Pseudo <
   "s_setreg_b32",
@@ -829,6 +833,7 @@ def S_SETREG_IMM32_B32 : SOPK_Pseudo <
   let Uses = [MODE];
 }
 
+}
 } // End hasSideEffects = 1
 
 class SOPK_WAITCNT<string opName, list<dag> pat=[]> :
@@ -1144,7 +1149,7 @@ def S_WAKEUP : SOPP <0x00000003, (ins), "s_wakeup"> {
   let mayStore = 1;
 }
 
-let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
+let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
 def S_WAITCNT : SOPP <0x0000000c, (ins WAIT_FLAG:$simm16), "s_waitcnt $simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
 def S_SETHALT : SOPP <0x0000000d, (ins i16imm:$simm16), "s_sethalt $simm16">;
@@ -1157,8 +1162,8 @@ def S_SETKILL : SOPP <0x0000000b, (ins i16imm:$simm16), "s_setkill $simm16">;
 def S_SLEEP : SOPP <0x0000000e, (ins i32imm:$simm16),
   "s_sleep $simm16", [(int_amdgcn_s_sleep timm:$simm16)]> {
   let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 def S_SETPRIO : SOPP <0x0000000f, (ins i16imm:$simm16), "s_setprio $simm16">;
@@ -1183,14 +1188,14 @@ def S_ICACHE_INV : SOPP <0x00000013, (ins), "s_icache_inv"> {
 def S_INCPERFLEVEL : SOPP <0x00000014, (ins i32imm:$simm16), "s_incperflevel $simm16",
   [(int_amdgcn_s_incperflevel timm:$simm16)]> {
   let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 def S_DECPERFLEVEL : SOPP <0x00000015, (ins i32imm:$simm16), "s_decperflevel $simm16",
   [(int_amdgcn_s_decperflevel timm:$simm16)]> {
   let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 def S_TTRACEDATA : SOPP <0x00000016, (ins), "s_ttracedata"> {
   let simm16 = 0;

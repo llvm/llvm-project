@@ -539,6 +539,7 @@ struct Elf_GnuHash_Impl {
   }
 
   ArrayRef<Elf_Word> values(unsigned DynamicSymCount) const {
+    assert(DynamicSymCount >= symndx);
     return ArrayRef<Elf_Word>(buckets().end(), DynamicSymCount - symndx);
   }
 };
@@ -617,7 +618,7 @@ public:
 
   /// Get the note's descriptor as StringRef
   StringRef getDescAsStringRef() const {
-    auto &Desc = getDesc();
+    ArrayRef<uint8_t> Desc = getDesc();
     return StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
   }
 

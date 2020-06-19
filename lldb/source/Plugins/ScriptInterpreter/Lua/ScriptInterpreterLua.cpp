@@ -33,7 +33,7 @@ public:
     llvm::cantFail(m_script_interpreter.EnterSession(debugger.GetID()));
   }
 
-  ~IOHandlerLuaInterpreter() {
+  ~IOHandlerLuaInterpreter() override {
     llvm::cantFail(m_script_interpreter.LeaveSession());
   }
 

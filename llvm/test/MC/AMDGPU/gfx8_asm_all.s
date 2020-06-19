@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
 
 ds_add_u32 v1, v2 offset:65535

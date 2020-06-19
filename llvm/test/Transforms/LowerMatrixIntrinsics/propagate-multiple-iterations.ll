@@ -11,13 +11,13 @@ define <16 x double> @backpropagation_iterations(<16 x double>* %A.Ptr, <16 x do
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x double>* [[A_PTR:%.*]] to double*
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP1]] to <4 x double>*
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP1]], i32 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP1]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <4 x double>*
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[TMP1]], i32 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[TMP1]], i64 8
 ; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP3]] to <4 x double>*
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST4]], align 8
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, double* [[TMP1]], i32 12
+; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, double* [[TMP1]], i64 12
 ; CHECK-NEXT:    [[VEC_CAST7:%.*]] = bitcast double* [[VEC_GEP6]] to <4 x double>*
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST7]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[COL_LOAD]], i64 0
@@ -55,13 +55,13 @@ define <16 x double> @backpropagation_iterations(<16 x double>* %A.Ptr, <16 x do
 ; CHECK-NEXT:    [[TMP34:%.*]] = bitcast <16 x double>* [[B_PTR:%.*]] to double*
 ; CHECK-NEXT:    [[VEC_CAST9:%.*]] = bitcast double* [[TMP34]] to <4 x double>*
 ; CHECK-NEXT:    [[COL_LOAD10:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST9]], align 8
-; CHECK-NEXT:    [[VEC_GEP11:%.*]] = getelementptr double, double* [[TMP34]], i32 4
+; CHECK-NEXT:    [[VEC_GEP11:%.*]] = getelementptr double, double* [[TMP34]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST12:%.*]] = bitcast double* [[VEC_GEP11]] to <4 x double>*
 ; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST12]], align 8
-; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr double, double* [[TMP34]], i32 8
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr double, double* [[TMP34]], i64 8
 ; CHECK-NEXT:    [[VEC_CAST15:%.*]] = bitcast double* [[VEC_GEP14]] to <4 x double>*
 ; CHECK-NEXT:    [[COL_LOAD16:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST15]], align 8
-; CHECK-NEXT:    [[VEC_GEP17:%.*]] = getelementptr double, double* [[TMP34]], i32 12
+; CHECK-NEXT:    [[VEC_GEP17:%.*]] = getelementptr double, double* [[TMP34]], i64 12
 ; CHECK-NEXT:    [[VEC_CAST18:%.*]] = bitcast double* [[VEC_GEP17]] to <4 x double>*
 ; CHECK-NEXT:    [[COL_LOAD19:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST18]], align 8
 ; CHECK-NEXT:    [[TMP35:%.*]] = fmul <4 x double> [[COL_LOAD]], [[COL_LOAD10]]
@@ -73,9 +73,9 @@ define <16 x double> @backpropagation_iterations(<16 x double>* %A.Ptr, <16 x do
 ; CHECK-NEXT:    [[TMP41:%.*]] = shufflevector <8 x double> [[TMP39]], <8 x double> [[TMP40]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    ret <16 x double> [[TMP41]]
 ;
-  %A = load <16 x double>, <16 x double>* %A.Ptr
+  %A = load <16 x double>, <16 x double>* %A.Ptr, align 8
   %A.trans = tail call <16 x double> @llvm.matrix.transpose.v16f64(<16 x double> %A, i32 4, i32 4)
-  %B = load <16 x double>, <16 x double>* %B.Ptr
+  %B = load <16 x double>, <16 x double>* %B.Ptr, align 8
   %Mul = fmul <16 x double> %A, %B
   ret <16 x double> %Mul
 }

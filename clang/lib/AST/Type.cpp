@@ -3049,6 +3049,13 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   llvm_unreachable("Invalid builtin type.");
 }
 
+QualType QualType::getNonPackExpansionType() const {
+  // We never wrap type sugar around a PackExpansionType.
+  if (auto *PET = dyn_cast<PackExpansionType>(getTypePtr()))
+    return PET->getPattern();
+  return *this;
+}
+
 QualType QualType::getNonLValueExprType(const ASTContext &Context) const {
   if (const auto *RefType = getTypePtr()->getAs<ReferenceType>())
     return RefType->getPointeeType();

@@ -1,18 +1,6 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_eqsf2vfp
 
-//===-- eqsf2vfp_test.c - Test __eqsf2vfp ---------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __eqsf2vfp for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
