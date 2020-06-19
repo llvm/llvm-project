@@ -94,13 +94,10 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
 
   Diag << FixItHint::CreateRemoval(MatchedDecl->getSourceRange());
   Diag << FixItHint::CreateInsertion(MatchedDecl->getBeginLoc(), NewName);
-
-  if (Optional<FixItHint> IncludeFixit =
-          IncludeInserter->CreateIncludeInsertion(
-              Result.Context->getSourceManager().getFileID(
-                  MatchedCallExpr->getBeginLoc()),
-              "random", /*IsAngled=*/true))
-    Diag << IncludeFixit.getValue();
+  Diag << IncludeInserter->CreateIncludeInsertion(
+      Result.Context->getSourceManager().getFileID(
+          MatchedCallExpr->getBeginLoc()),
+      "random", /*IsAngled=*/true);
 }
 
 } // namespace modernize
