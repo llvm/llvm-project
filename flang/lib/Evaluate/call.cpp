@@ -98,6 +98,7 @@ std::optional<DynamicType> ProcedureDesignator::GetType() const {
 
 int ProcedureDesignator::Rank() const {
   if (const Symbol * symbol{GetSymbol()}) {
+    // Subtle: will be zero for functions returning procedure pointers
     return symbol->Rank();
   }
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&u)}) {
@@ -107,9 +108,9 @@ int ProcedureDesignator::Rank() const {
             characteristics::TypeAndShape::Attr::AssumedRank));
         return typeAndShape->Rank();
       }
+      // Otherwise, intrinsic returns a procedure pointer (e.g. NULL(MOLD=pptr))
     }
   }
-  DIE("ProcedureDesignator::Rank(): no case");
   return 0;
 }
 

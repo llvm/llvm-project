@@ -1,5 +1,4 @@
 //===-- lib/Semantics/resolve-names.cpp -----------------------------------===//
-//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -10,6 +9,7 @@
 #include "assignment.h"
 #include "check-omp-structure.h"
 #include "mod-file.h"
+#include "pointer-assignment.h"
 #include "program-tree.h"
 #include "resolve-names-utils.h"
 #include "rewrite-parse-tree.h"
@@ -18,7 +18,9 @@
 #include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
+#include "flang/Evaluate/fold-designator.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/tools.h"
@@ -808,6 +810,8 @@ public:
       const parser::Name &, const parser::InitialDataTarget &);
   void PointerInitialization(
       const parser::Name &, const parser::ProcPointerInit &);
+  void NonPointerInitialization(
+      const parser::Name &, const parser::ConstantExpr &, bool inComponentDecl);
   void CheckExplicitInterface(const parser::Name &);
   void CheckBindings(const parser::TypeBoundProcedureStmt::WithoutInterface &);
 
@@ -909,7 +913,7 @@ private:
   void SetSaveAttr(Symbol &);
   bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
-  void CheckInitialDataTarget(const Symbol &, const SomeExpr &, SourceName);
+  bool CheckInitialDataTarget(const Symbol &, const SomeExpr &, SourceName);
   void CheckInitialProcTarget(const Symbol &, const parser::Name &, SourceName);
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
@@ -972,6 +976,7 @@ public:
   bool Pre(const parser::AcSpec &);
   bool Pre(const parser::AcImpliedDo &);
   bool Pre(const parser::DataImpliedDo &);
+  bool Pre(const parser::DataIDoObject &);
   bool Pre(const parser::DataStmtObject &);
   bool Pre(const parser::DataStmtValue &);
   bool Pre(const parser::DoConstruct &);
@@ -4372,6 +4377,7 @@ void DeclarationVisitor::CheckEquivalenceSets() {
 bool DeclarationVisitor::Pre(const parser::SaveStmt &x) {
   if (x.v.empty()) {
     saveInfo_.saveAll = currStmtSource();
+    currScope().set_hasSAVE();
   } else {
     for (const parser::SavedEntity &y : x.v) {
       auto kind{std::get<parser::SavedEntity::Kind>(y.t)};
@@ -4399,6 +4405,7 @@ void DeclarationVisitor::CheckSaveStmts() {
           *saveInfo_.saveAll, "Global SAVE statement"_en_US);
     } else if (auto msg{CheckSaveAttr(*symbol)}) {
       Say(name, std::move(*msg));
+      context().SetError(*symbol);
     } else {
       SetSaveAttr(*symbol);
     }
@@ -4450,10 +4457,9 @@ std::optional<MessageFixedText> DeclarationVisitor::CheckSaveAttr(
   }
 }
 
-// Instead of setting SAVE attribute, record the name in saveInfo_.entities.
+// Record SAVEd names in saveInfo_.entities.
 Attrs DeclarationVisitor::HandleSaveName(const SourceName &name, Attrs attrs) {
   if (attrs.test(Attr::SAVE)) {
-    attrs.set(Attr::SAVE, false);
     AddSaveName(saveInfo_.entities, name);
   }
   return attrs;
@@ -5007,23 +5013,32 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
   return false;
 }
 
+// Sets InDataStmt flag on a variable (or misidentified function) in a DATA
+// statement so that the predicate IsInitialized(base symbol) will be true
+// during semantic analysis before the symbol's initializer is constructed.
+bool ConstructVisitor::Pre(const parser::DataIDoObject &x) {
+  std::visit(
+      common::visitors{
+          [&](const parser::Scalar<Indirection<parser::Designator>> &y) {
+            Walk(y.thing.value());
+            const parser::Name &first{parser::GetFirstName(y.thing.value())};
+            if (first.symbol) {
+              first.symbol->set(Symbol::Flag::InDataStmt);
+            }
+          },
+          [&](const Indirection<parser::DataImpliedDo> &y) { Walk(y.value()); },
+      },
+      x.u);
+  return false;
+}
+
 bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
   std::visit(common::visitors{
                  [&](const Indirection<parser::Variable> &y) {
                    Walk(y.value());
-                   if (const auto *designator{
-                           std::get_if<Indirection<parser::Designator>>(
-                               &y.value().u)}) {
-                     if (const parser::Name *
-                         name{ResolveDesignator(designator->value())}) {
-                       if (name->symbol) {
-                         name->symbol->set(Symbol::Flag::InDataStmt);
-                       }
-                     }
-                     // TODO check C874 - C881
-                   } else {
-                     // TODO report C875 error: variable is not a designator
-                     // here?
+                   const parser::Name &first{parser::GetFirstName(y.value())};
+                   if (first.symbol) {
+                     first.symbol->set(Symbol::Flag::InDataStmt);
                    }
                  },
                  [&](const parser::DataImpliedDo &y) {
@@ -5044,8 +5059,9 @@ bool ConstructVisitor::Pre(const parser::DataStmtValue &x) {
       if (const Symbol * symbol{FindSymbol(*name)}) {
         if (const Symbol * ultimate{GetAssociationRoot(*symbol)}) {
           if (ultimate->has<DerivedTypeDetails>()) {
-            mutableData.u = elem->ConvertToStructureConstructor(
-                DerivedTypeSpec{name->source, *ultimate});
+            mutableData.u = parser::Constant<parser::StructureConstructor>{
+                elem->ConvertToStructureConstructor(
+                    DerivedTypeSpec{name->source, *ultimate})};
           }
         }
       }
@@ -5619,25 +5635,16 @@ const parser::Name *DeclarationVisitor::FindComponent(
 }
 
 // C764, C765
-void DeclarationVisitor::CheckInitialDataTarget(
+bool DeclarationVisitor::CheckInitialDataTarget(
     const Symbol &pointer, const SomeExpr &expr, SourceName source) {
-  auto &messages{GetFoldingContext().messages()};
-  auto restorer{messages.SetLocation(source)};
-  if (!evaluate::IsInitialDataTarget(expr, &messages)) {
-    Say(source,
-        "Pointer '%s' cannot be initialized with a reference to a designator with non-constant subscripts"_err_en_US,
-        pointer.name());
-    return;
-  }
-  if (pointer.Rank() != expr.Rank()) {
-    Say(source,
-        "Pointer '%s' of rank %d cannot be initialized with a target of different rank (%d)"_err_en_US,
-        pointer.name(), pointer.Rank(), expr.Rank());
-    return;
-  }
-  // TODO: check type compatibility
-  // TODO: check non-deferred type parameter values
-  // TODO: check contiguity if pointer is CONTIGUOUS
+  auto &context{GetFoldingContext()};
+  auto restorer{context.messages().SetLocation(source)};
+  auto dyType{evaluate::DynamicType::From(pointer)};
+  CHECK(dyType);
+  auto designator{evaluate::TypedWrapper<evaluate::Designator>(
+      *dyType, evaluate::DataRef{pointer})};
+  CHECK(designator);
+  return CheckInitialTarget(context, *designator, expr);
 }
 
 void DeclarationVisitor::CheckInitialProcTarget(
@@ -5666,52 +5673,42 @@ void DeclarationVisitor::CheckInitialProcTarget(
 
 void DeclarationVisitor::Initialization(const parser::Name &name,
     const parser::Initialization &init, bool inComponentDecl) {
-  if (!name.symbol) {
-    return;
-  }
-  if (std::holds_alternative<parser::InitialDataTarget>(init.u)) {
-    // Defer analysis to the end of the specification parts so that forward
-    // references work better.
-    return;
-  }
   // Traversal of the initializer was deferred to here so that the
   // symbol being declared can be available for use in the expression, e.g.:
   //   real, parameter :: x = tiny(x)
-  Walk(init.u);
+  if (!name.symbol) {
+    return;
+  }
   Symbol &ultimate{name.symbol->GetUltimate()};
+  if (IsAllocatable(ultimate)) {
+    Say(name, "Allocatable component '%s' cannot be initialized"_err_en_US);
+    return;
+  }
+  if (std::holds_alternative<parser::InitialDataTarget>(init.u)) {
+    // Defer analysis further to the end of the specification parts so that
+    // forward references and attribute checks (e.g., SAVE) work better.
+    // TODO: But pointer initializers of components in named constants of
+    // derived types may still need more attention.
+    return;
+  }
   if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
     // TODO: check C762 - all bounds and type parameters of component
     // are colons or constant expressions if component is initialized
-    bool isPointer{false};
+    bool isNullPointer{false};
     std::visit(
         common::visitors{
             [&](const parser::ConstantExpr &expr) {
-              if (inComponentDecl) {
-                // Can't convert to type of component, which might not yet
-                // be known; that's done later during instantiation.
-                if (MaybeExpr value{EvaluateExpr(expr)}) {
-                  details->set_init(std::move(*value));
-                }
-              } else {
-                if (MaybeExpr folded{EvaluateConvertedExpr(
-                        ultimate, expr, expr.thing.value().source)}) {
-                  details->set_init(std::move(*folded));
-                }
-              }
+              NonPointerInitialization(name, expr, inComponentDecl);
             },
             [&](const parser::NullInit &) {
-              isPointer = true;
+              isNullPointer = true;
               details->set_init(SomeExpr{evaluate::NullPointer{}});
             },
-            [&](const parser::InitialDataTarget &initExpr) {
-              isPointer = true;
-              if (MaybeExpr expr{EvaluateExpr(initExpr)}) {
-                CheckInitialDataTarget(
-                    ultimate, *expr, initExpr.value().source);
-                details->set_init(std::move(*expr));
-              }
+            [&](const parser::InitialDataTarget &) {
+              DIE("InitialDataTarget can't appear here");
             },
             [&](const std::list<Indirection<parser::DataStmtValue>> &) {
+              // TODO: Need to Walk(init.u); when implementing this case
               if (inComponentDecl) {
                 Say(name,
                     "Component '%s' initialized with DATA statement values"_err_en_US);
@@ -5721,18 +5718,14 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
             },
         },
         init.u);
-    if (isPointer) {
+    if (isNullPointer) {
       if (!IsPointer(ultimate)) {
         Say(name,
-            "Non-pointer component '%s' initialized with pointer target"_err_en_US);
+            "Non-pointer component '%s' initialized with null pointer"_err_en_US);
       }
-    } else {
-      if (IsPointer(ultimate)) {
-        Say(name,
-            "Object pointer component '%s' initialized with non-pointer expression"_err_en_US);
-      } else if (IsAllocatable(ultimate)) {
-        Say(name, "Allocatable component '%s' cannot be initialized"_err_en_US);
-      }
+    } else if (IsPointer(ultimate)) {
+      Say(name,
+          "Object pointer component '%s' initialized with non-pointer expression"_err_en_US);
     }
   }
 }
@@ -5781,6 +5774,31 @@ void DeclarationVisitor::PointerInitialization(
             "'%s' is not a procedure pointer but is initialized "
             "like one"_err_en_US);
         context().SetError(ultimate);
+      }
+    }
+  }
+}
+
+void DeclarationVisitor::NonPointerInitialization(const parser::Name &name,
+    const parser::ConstantExpr &expr, bool inComponentDecl) {
+  if (name.symbol) {
+    Symbol &ultimate{name.symbol->GetUltimate()};
+    if (IsPointer(ultimate)) {
+      Say(name, "'%s' is a pointer but is not initialized like one"_err_en_US);
+    } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
+      CHECK(!details->init());
+      Walk(expr);
+      // TODO: check C762 - all bounds and type parameters of component
+      // are colons or constant expressions if component is initialized
+      if (inComponentDecl) {
+        // Can't convert to type of component, which might not yet
+        // be known; that's done later during instantiation.
+        if (MaybeExpr value{EvaluateExpr(expr)}) {
+          details->set_init(std::move(*value));
+        }
+      } else if (MaybeExpr folded{EvaluateConvertedExpr(
+                     ultimate, expr, expr.thing.value().source)}) {
+        details->set_init(std::move(*folded));
       }
     }
   }
@@ -6064,9 +6082,11 @@ void ResolveNamesVisitor::FinishSpecificationPart() {
       CheckGenericProcedures(symbol);
     }
     if (inModule && symbol.attrs().test(Attr::EXTERNAL) &&
-        !symbol.test(Symbol::Flag::Function)) {
+        !symbol.test(Symbol::Flag::Function) &&
+        !symbol.test(Symbol::Flag::Subroutine)) {
       // in a module, external proc without return type is subroutine
-      symbol.set(Symbol::Flag::Subroutine);
+      symbol.set(
+          symbol.GetType() ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
     }
   }
   currScope().InstantiateDerivedTypes(context());

@@ -84,7 +84,7 @@ bool IsStmtFunctionResult(const Symbol &);
 bool IsPointerDummy(const Symbol &);
 bool IsBindCProcedure(const Symbol &);
 bool IsBindCProcedure(const Scope &);
-bool IsProcName(const Symbol &symbol); // proc-name
+bool IsProcName(const Symbol &); // proc-name
 bool IsFunctionResult(const Symbol &);
 bool IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsExtensibleType(const DerivedTypeSpec *);
@@ -96,9 +96,10 @@ bool IsIsoCType(const DerivedTypeSpec *);
 bool IsEventTypeOrLockType(const DerivedTypeSpec *);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol *);
-bool IsInitialized(const Symbol &);
+bool IsInitialized(const Symbol &, bool ignoreDATAstatements = false);
 bool HasIntrinsicTypeName(const Symbol &);
 bool IsSeparateModuleProcedureInterface(const Symbol *);
+bool IsAutomatic(const Symbol &);
 
 // Return an ultimate component of type that matches predicate, or nullptr.
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &type,
@@ -237,15 +238,17 @@ bool ExprTypeKindIsDefault(
     const SomeExpr &expr, const SemanticsContext &context);
 
 struct GetExprHelper {
-  const SomeExpr *Get(const parser::Expr &);
-  const SomeExpr *Get(const parser::Variable &);
-  template <typename T> const SomeExpr *Get(const common::Indirection<T> &x) {
+  static const SomeExpr *Get(const parser::Expr &);
+  static const SomeExpr *Get(const parser::Variable &);
+  static const SomeExpr *Get(const parser::DataStmtConstant &);
+  template <typename T>
+  static const SomeExpr *Get(const common::Indirection<T> &x) {
     return Get(x.value());
   }
-  template <typename T> const SomeExpr *Get(const std::optional<T> &x) {
+  template <typename T> static const SomeExpr *Get(const std::optional<T> &x) {
     return x ? Get(*x) : nullptr;
   }
-  template <typename T> const SomeExpr *Get(const T &x) {
+  template <typename T> static const SomeExpr *Get(const T &x) {
     if constexpr (ConstraintTrait<T>) {
       return Get(x.thing);
     } else if constexpr (WrapperTrait<T>) {
@@ -521,5 +524,6 @@ private:
       parser::CharBlock stmtLocation, parser::MessageFormattedText &&message,
       parser::CharBlock constructLocation);
 };
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

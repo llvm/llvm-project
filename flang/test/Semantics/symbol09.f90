@@ -47,7 +47,7 @@ subroutine s3
  !REF: /s3/n
  integer, parameter :: n2 = n*n
  !REF: /s3/n
- !DEF: /s3/x ObjectEntity REAL(4)
+ !DEF: /s3/x (InDataStmt) ObjectEntity REAL(4)
  real, dimension(n,n) :: x
  !REF: /s3/x
  !DEF: /s3/ImpliedDos1/k (Implicit) ObjectEntity INTEGER(4)
@@ -129,8 +129,8 @@ end subroutine
 subroutine s8
  !DEF: /s8/one PARAMETER ObjectEntity REAL(4)
  real, parameter :: one = 1.0
- !DEF: /s8/y ObjectEntity REAL(4)
- !DEF: /s8/z ObjectEntity REAL(4)
+ !DEF: /s8/y (InDataStmt) ObjectEntity REAL(4)
+ !DEF: /s8/z (InDataStmt) ObjectEntity REAL(4)
  real y(10), z(10)
  !REF: /s8/y
  !DEF: /s8/ImpliedDos1/i (Implicit) ObjectEntity INTEGER(4)

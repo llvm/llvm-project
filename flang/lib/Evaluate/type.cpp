@@ -472,7 +472,7 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
 
 bool DynamicType::RequiresDescriptor() const {
   return IsPolymorphic() || IsUnknownLengthCharacter() ||
-      (derived_ && CountLenParameters(*derived_) > 0);
+      (derived_ && CountNonConstantLenParameters(*derived_) > 0);
 }
 
 bool DynamicType::HasDeferredTypeParameter() const {

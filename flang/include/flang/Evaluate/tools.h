@@ -913,6 +913,7 @@ bool IsDummy(const Symbol &);
 const Symbol *GetAssociationRoot(const Symbol &);
 const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);
+int CountNonConstantLenParameters(const DerivedTypeSpec &);
 const Symbol &GetUsedModule(const UseDetails &);
 
 } // namespace Fortran::semantics
