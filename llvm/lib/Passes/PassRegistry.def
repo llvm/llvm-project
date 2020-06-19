@@ -239,7 +239,6 @@ FUNCTION_PASS("print<phi-values>", PhiValuesPrinterPass(dbgs()))
 FUNCTION_PASS("print<regions>", RegionInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print<scalar-evolution>", ScalarEvolutionPrinterPass(dbgs()))
 FUNCTION_PASS("print<stack-safety-local>", StackSafetyPrinterPass(dbgs()))
-FUNCTION_PASS("print<stack-lifetime>", StackLifetimePrinterPass(dbgs()))
 FUNCTION_PASS("reassociate", ReassociatePass())
 FUNCTION_PASS("scalarizer", ScalarizerPass())
 FUNCTION_PASS("sccp", SCCPPass())
@@ -302,6 +301,11 @@ FUNCTION_PASS_WITH_PARAMS("gvn",
                              return GVN(Opts);
                            },
                            parseGVNOptions)
+FUNCTION_PASS_WITH_PARAMS("print<stack-lifetime>",
+                           [](StackLifetime::LivenessType Type) {
+                             return StackLifetimePrinterPass(dbgs(), Type);
+                           },
+                           parseStackLifetimeOptions)
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOP_ANALYSIS

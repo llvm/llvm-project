@@ -1,4 +1,5 @@
-; RUN: opt -passes='print<stack-lifetime>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<stack-lifetime><may>' -disable-output %s 2>&1 | FileCheck %s --check-prefixes=CHECK,MAY
+; RUN: opt -passes='print<stack-lifetime><must>' -disable-output %s 2>&1 | FileCheck %s --check-prefixes=CHECK,MUST
 
 define void @f() {
 ; CHECK-LABEL: define void @f()
@@ -710,7 +711,8 @@ entry:
 
 l2:                                               ; preds = %l2, %entry
 ; CHECK: l2:
-; CHECK-NEXT: Alive: <x>
+; MAY-NEXT: Alive: <x>
+; MUST-NEXT: Alive: <>
   call void @capture8(i8* %x)
   call void @llvm.lifetime.end.p0i8(i64 4, i8* %x)
 ; CHECK: call void @llvm.lifetime.end.p0i8(i64 4, i8* %x)
@@ -756,6 +758,55 @@ l2:                                               ; preds = %l2, %entry
   br label %l2
 ; CHECK: br label %l2
 ; CHECK-NEXT: Alive: <x>
+}
+
+define void @if_must(i1 %a) {
+; CHECK-LABEL: define void @if_must
+entry:
+; CHECK: entry:
+; CHECK-NEXT: Alive: <>
+  %x = alloca i8, align 4
+  %y = alloca i8, align 4
+
+  br i1 %a, label %if.then, label %if.else
+; CHECK: br i1 %a
+; CHECK-NEXT: Alive: <>
+
+if.then:
+; CHECK: if.then:
+; CHECK-NEXT: Alive: <>
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %y)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 4, i8* %y)
+; CHECK-NEXT: Alive: <y>
+
+  br label %if.end
+; CHECK: br label %if.end
+; CHECK-NEXT: Alive: <y>
+
+if.else:
+; CHECK: if.else:
+; CHECK-NEXT: Alive: <>
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %y)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 4, i8* %y)
+; CHECK-NEXT: Alive: <y>
+
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %x)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 4, i8* %x)
+; CHECK-NEXT: Alive: <x y>
+
+  br label %if.end
+; CHECK: br label %if.end
+; CHECK-NEXT: Alive: <x y>
+
+if.end:
+; CHECK: if.end:
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <y>
+
+ret void
+; CHECK: ret void
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <y>
 }
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)

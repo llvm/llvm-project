@@ -1851,6 +1851,26 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
   return Result;
 }
 
+Expected<StackLifetime::LivenessType>
+parseStackLifetimeOptions(StringRef Params) {
+  StackLifetime::LivenessType Result = StackLifetime::LivenessType::May;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "may") {
+      Result = StackLifetime::LivenessType::May;
+    } else if (ParamName == "must") {
+      Result = StackLifetime::LivenessType::Must;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid StackLifetime parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
