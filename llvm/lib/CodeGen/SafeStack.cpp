@@ -497,7 +497,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
   DIBuilder DIB(*F.getParent());
 
-  StackLifetime SSC(F, StaticAllocas);
+  StackLifetime SSC(F, StaticAllocas, StackLifetime::LivenessType::May);
   static const StackLifetime::LiveRange NoColoringRange(1, true);
   if (ClColoring)
     SSC.run();
