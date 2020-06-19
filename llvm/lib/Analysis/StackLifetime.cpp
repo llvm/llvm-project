@@ -50,14 +50,6 @@ static bool readMarker(const Instruction *I, bool *IsStart) {
   return true;
 }
 
-std::vector<const IntrinsicInst *> StackLifetime::getMarkers() const {
-  std::vector<const IntrinsicInst *> Markers;
-  for (auto &M : InstructionNumbering)
-    if (M.getFirst()->isLifetimeStartOrEnd())
-      Markers.push_back(M.getFirst());
-  return Markers;
-}
-
 void StackLifetime::collectMarkers() {
   InterestingAllocas.resize(NumAllocas);
   DenseMap<const BasicBlock *, SmallDenseMap<const IntrinsicInst *, Marker>>
@@ -96,29 +88,28 @@ void StackLifetime::collectMarkers() {
   // * the list of markers in the instruction order
   // * the sets of allocas whose lifetime starts or ends in this BB
   LLVM_DEBUG(dbgs() << "Instructions:\n");
-  unsigned InstNo = 0;
   for (const BasicBlock *BB : depth_first(&F)) {
-    LLVM_DEBUG(dbgs() << "  " << InstNo << ": BB " << BB->getName() << "\n");
-    unsigned BBStart = InstNo++;
+    LLVM_DEBUG(dbgs() << "  " << Instructions.size() << ": BB " << BB->getName()
+                      << "\n");
+    auto BBStart = Instructions.size();
+    Instructions.push_back(nullptr);
 
     BlockLifetimeInfo &BlockInfo =
         BlockLiveness.try_emplace(BB, NumAllocas).first->getSecond();
 
     auto &BlockMarkerSet = BBMarkerSet[BB];
     if (BlockMarkerSet.empty()) {
-      unsigned BBEnd = InstNo;
-      BlockInstRange[BB] = std::make_pair(BBStart, BBEnd);
+      BlockInstRange[BB] = std::make_pair(BBStart, Instructions.size());
       continue;
     }
 
     auto ProcessMarker = [&](const IntrinsicInst *I, const Marker &M) {
-      LLVM_DEBUG(dbgs() << "  " << InstNo << ":  "
+      LLVM_DEBUG(dbgs() << "  " << Instructions.size() << ":  "
                         << (M.IsStart ? "start " : "end   ") << M.AllocaNo
                         << ", " << *I << "\n");
 
-      BBMarkers[BB].push_back({InstNo, M});
-
-      InstructionNumbering[I] = InstNo++;
+      BBMarkers[BB].push_back({Instructions.size(), M});
+      Instructions.push_back(I);
 
       if (M.IsStart) {
         BlockInfo.End.reset(M.AllocaNo);
@@ -145,10 +136,8 @@ void StackLifetime::collectMarkers() {
       }
     }
 
-    unsigned BBEnd = InstNo;
-    BlockInstRange[BB] = std::make_pair(BBStart, BBEnd);
+    BlockInstRange[BB] = std::make_pair(BBStart, Instructions.size());
   }
-  NumInst = InstNo;
 }
 
 void StackLifetime::calculateLocalLiveness() {
@@ -294,7 +283,7 @@ StackLifetime::StackLifetime(const Function &F,
 }
 
 void StackLifetime::run() {
-  LiveRanges.resize(NumAllocas, LiveRange(NumInst));
+  LiveRanges.resize(NumAllocas, LiveRange(Instructions.size()));
   for (unsigned I = 0; I < NumAllocas; ++I)
     if (!InterestingAllocas.test(I))
       LiveRanges[I] = getFullLiveRange();
@@ -308,10 +297,8 @@ void StackLifetime::run() {
 class StackLifetime::LifetimeAnnotationWriter
     : public AssemblyAnnotationWriter {
   const StackLifetime &SL;
-  SmallVector<StringRef, 16> Names;
-
   void printInstrAlive(unsigned InstrNo, formatted_raw_ostream &OS) {
-    Names.clear();
+    SmallVector<StringRef, 16> Names;
     for (const auto &KV : SL.AllocaNumbering) {
       if (SL.LiveRanges[KV.getSecond()].test(InstrNo))
         Names.push_back(KV.getFirst()->getName());
@@ -329,11 +316,11 @@ class StackLifetime::LifetimeAnnotationWriter
   }
 
   void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {
-    auto It = SL.InstructionNumbering.find(dyn_cast<IntrinsicInst>(&V));
-    if (It == SL.InstructionNumbering.end())
+    auto It = llvm::find(SL.Instructions, &V);
+    if (It == SL.Instructions.end())
       return; // Unintresting.
     OS << "\n";
-    printInstrAlive(It->getSecond(), OS);
+    printInstrAlive(It - SL.Instructions.begin(), OS);
   }
 
 public:
