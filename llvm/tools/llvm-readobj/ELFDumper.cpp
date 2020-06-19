@@ -325,6 +325,8 @@ public:
     return Table.slice(0, Size);
   }
 
+  Optional<DynRegionInfo> getDynSymRegion() const { return DynSymRegion; }
+
   Elf_Sym_Range dynamic_symbols() const {
     if (!DynSymRegion)
       return Elf_Sym_Range();
@@ -2718,12 +2720,16 @@ template <typename ELFT> void ELFDumper<ELFT>::printHashTable() {
 
 template <class ELFT>
 static Expected<ArrayRef<typename ELFT::Word>>
-getGnuHashTableChains(const typename ELFT::SymRange DynSymTable,
+getGnuHashTableChains(Optional<DynRegionInfo> DynSymRegion,
                       const typename ELFT::GnuHash *GnuHashTable) {
+  if (!DynSymRegion)
+    return createError("no dynamic symbol table found");
+
+  ArrayRef<typename ELFT::Sym> DynSymTable =
+      DynSymRegion->getAsArrayRef<typename ELFT::Sym>();
   size_t NumSyms = DynSymTable.size();
   if (!NumSyms)
-    return createError("unable to dump 'Values' for the SHT_GNU_HASH "
-                       "section: the dynamic symbol table is empty");
+    return createError("the dynamic symbol table is empty");
 
   if (GnuHashTable->symndx < NumSyms)
     return GnuHashTable->values(NumSyms);
@@ -2773,17 +2779,13 @@ void ELFDumper<ELFT>::printGnuHashTable(const object::ObjectFile *Obj) {
   ArrayRef<Elf_Word> Buckets = GnuHashTable->buckets();
   W.printList("Buckets", Buckets);
 
-  if (!DynSymRegion) {
-    reportWarning(createError("unable to dump 'Values' for the SHT_GNU_HASH "
-                              "section: no dynamic symbol table found"),
-                  ObjF->getFileName());
-    return;
-  }
-
   Expected<ArrayRef<Elf_Word>> Chains =
-      getGnuHashTableChains<ELFT>(dynamic_symbols(), GnuHashTable);
+      getGnuHashTableChains<ELFT>(DynSymRegion, GnuHashTable);
   if (!Chains) {
-    reportUniqueWarning(Chains.takeError());
+    reportUniqueWarning(
+        createError("unable to dump 'Values' for the SHT_GNU_HASH "
+                    "section: " +
+                    toString(Chains.takeError())));
     return;
   }
 
@@ -4660,20 +4662,26 @@ void GNUStyle<ELFT>::printHashHistogram(const Elf_Hash &HashTable) {
 
 template <class ELFT>
 void GNUStyle<ELFT>::printGnuHashHistogram(const Elf_GnuHash &GnuHashTable) {
-  size_t NBucket = GnuHashTable.nbuckets;
-  ArrayRef<Elf_Word> Buckets = GnuHashTable.buckets();
-  unsigned NumSyms = this->dumper()->dynamic_symbols().size();
-  if (!NumSyms)
+  Expected<ArrayRef<Elf_Word>> ChainsOrErr = getGnuHashTableChains<ELFT>(
+      this->dumper()->getDynSymRegion(), &GnuHashTable);
+  if (!ChainsOrErr) {
+    this->reportUniqueWarning(
+        createError("unable to print the GNU hash table histogram: " +
+                    toString(ChainsOrErr.takeError())));
     return;
-  ArrayRef<Elf_Word> Chains = GnuHashTable.values(NumSyms);
+  }
+
+  ArrayRef<Elf_Word> Chains = *ChainsOrErr;
   size_t Symndx = GnuHashTable.symndx;
   size_t TotalSyms = 0;
   size_t MaxChain = 1;
   size_t CumulativeNonZero = 0;
 
+  size_t NBucket = GnuHashTable.nbuckets;
   if (Chains.empty() || NBucket == 0)
     return;
 
+  ArrayRef<Elf_Word> Buckets = GnuHashTable.buckets();
   std::vector<size_t> ChainLen(NBucket, 0);
   for (size_t B = 0; B < NBucket; B++) {
     if (!Buckets[B])
