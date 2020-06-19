@@ -81,3 +81,11 @@ llvm_config.add_tool_substitutions(tools, tool_dirs)
 # This option avoids to accidentally reuse variable across -LABEL match,
 # it can be explicitly opted-in by prefixing the variable name with $
 config.environment['FILECHECK_OPTS'] = "-enable-var-scope"
+
+
+# LLVM can be configured with an empty default triple
+# by passing ` -DLLVM_DEFAULT_TARGET_TRIPLE="" `.
+# This is how LLVM filters tests that require the host target
+# to be available for JIT tests.
+if config.target_triple:
+    config.available_features.add('default_triple')
