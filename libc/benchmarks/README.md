@@ -35,8 +35,8 @@ informations** and **benchmarking configuration**.
 
 ```shell
 cd llvm-project
-cmake -B/tmp/build -Sllvm -DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;libc' -DCMAKE_BUILD_TYPE=Release
-make -C /tmp/build -j display-libc-memcpy-benchmark-small
+cmake -B/tmp/build -Sllvm -DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;libc' -DCMAKE_BUILD_TYPE=Release -G Ninja
+ninja -C /tmp/build display-libc-memcpy-benchmark-small
 ```
 
 The display target will attempt to open a window on the machine where you're
