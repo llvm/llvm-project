@@ -320,23 +320,12 @@ class StackLifetime::LifetimeAnnotationWriter
     OS << "  ; Alive: <" << llvm::join(Names, " ") << ">\n";
   }
 
-  void printBBAlive(const BasicBlock *BB, bool Start,
-                    formatted_raw_ostream &OS) {
+  void emitBasicBlockStartAnnot(const BasicBlock *BB,
+                                formatted_raw_ostream &OS) override {
     auto ItBB = SL.BlockInstRange.find(BB);
     if (ItBB == SL.BlockInstRange.end())
       return; // Unreachable.
-    unsigned InstrNo =
-        Start ? ItBB->getSecond().first : (ItBB->getSecond().second - 1);
-    printInstrAlive(InstrNo, OS);
-  }
-
-  void emitBasicBlockStartAnnot(const BasicBlock *BB,
-                                formatted_raw_ostream &OS) override {
-    printBBAlive(BB, true, OS);
-  }
-  void emitBasicBlockEndAnnot(const BasicBlock *BB,
-                              formatted_raw_ostream &OS) override {
-    printBBAlive(BB, false, OS);
+    printInstrAlive(ItBB->getSecond().first, OS);
   }
 
   void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {
