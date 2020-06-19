@@ -612,10 +612,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // Whether this is legal depends on the floating point mode for the function.
   auto &FMad = getActionDefinitionsBuilder(G_FMAD);
-  if (ST.hasMadF16())
+  if (ST.hasMadF16() && ST.hasMadMacF32Insts())
     FMad.customFor({S32, S16});
-  else
+  else if (ST.hasMadMacF32Insts())
     FMad.customFor({S32});
+  else if (ST.hasMadF16())
+    FMad.customFor({S16});
   FMad.scalarize(0)
       .lower();
 
