@@ -4,51 +4,53 @@
 define amdgpu_ps void @i1_copy_from_loop(<4 x i32> inreg %rsrc, i32 %tid) {
 ; SI-LABEL: i1_copy_from_loop:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_mov_b32 s8, 0
 ; SI-NEXT:    s_mov_b64 s[4:5], 0
-; SI-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; SI-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; SI-NEXT:    ; implicit-def: $sgpr10_sgpr11
 ; SI-NEXT:    s_branch BB0_3
-; SI-NEXT:  BB0_1: ; %Flow1
-; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; SI-NEXT:    s_or_b64 exec, exec, s[14:15]
+; SI-NEXT:  BB0_1: ; in Loop: Header=BB0_3 Depth=1
+; SI-NEXT:    ; implicit-def: $sgpr8
 ; SI-NEXT:  BB0_2: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    s_and_b64 s[14:15], exec, s[10:11]
 ; SI-NEXT:    s_or_b64 s[4:5], s[14:15], s[4:5]
-; SI-NEXT:    s_andn2_b64 s[8:9], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
 ; SI-NEXT:    s_and_b64 s[12:13], s[12:13], exec
-; SI-NEXT:    s_or_b64 s[8:9], s[8:9], s[12:13]
+; SI-NEXT:    s_or_b64 s[6:7], s[6:7], s[12:13]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; SI-NEXT:    s_cbranch_execz BB0_6
+; SI-NEXT:    s_cbranch_execz BB0_7
 ; SI-NEXT:  BB0_3: ; %for.body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_cmp_lt_u32 s8, 4
+; SI-NEXT:    s_cselect_b64 s[12:13], 1, 0
 ; SI-NEXT:    s_or_b64 s[10:11], s[10:11], exec
-; SI-NEXT:    s_cmp_gt_u32 s6, 3
-; SI-NEXT:    v_cmp_lt_u32_e64 s[12:13], s6, 4
-; SI-NEXT:    s_cbranch_scc1 BB0_2
+; SI-NEXT:    s_cmp_gt_u32 s8, 3
+; SI-NEXT:    s_cbranch_scc1 BB0_1
 ; SI-NEXT:  ; %bb.4: ; %mid.loop
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; SI-NEXT:    v_mov_b32_e32 v1, s6
+; SI-NEXT:    v_mov_b32_e32 v1, s8
 ; SI-NEXT:    buffer_load_dword v1, v[0:1], s[0:3], 0 idxen offen
 ; SI-NEXT:    s_mov_b64 s[12:13], -1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_le_f32_e32 vcc, 0, v1
 ; SI-NEXT:    s_mov_b64 s[10:11], -1
 ; SI-NEXT:    s_and_saveexec_b64 s[14:15], vcc
-; SI-NEXT:    s_cbranch_execz BB0_1
 ; SI-NEXT:  ; %bb.5: ; %end.loop
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; SI-NEXT:    s_add_i32 s6, s6, 1
+; SI-NEXT:    s_add_i32 s8, s8, 1
 ; SI-NEXT:    s_xor_b64 s[10:11], exec, -1
-; SI-NEXT:    s_branch BB0_1
-; SI-NEXT:  BB0_6: ; %for.end
+; SI-NEXT:  ; %bb.6: ; %Flow1
+; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
+; SI-NEXT:    s_or_b64 exec, exec, s[14:15]
+; SI-NEXT:    s_branch BB0_2
+; SI-NEXT:  BB0_7: ; %for.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SI-NEXT:    s_and_saveexec_b64 s[0:1], s[8:9]
-; SI-NEXT:    s_cbranch_execz BB0_8
-; SI-NEXT:  ; %bb.7: ; %if
+; SI-NEXT:    s_and_saveexec_b64 s[0:1], s[6:7]
+; SI-NEXT:    s_cbranch_execz BB0_9
+; SI-NEXT:  ; %bb.8: ; %if
 ; SI-NEXT:    exp mrt0 v0, v0, v0, v0 done vm
-; SI-NEXT:  BB0_8: ; %end
+; SI-NEXT:  BB0_9: ; %end
 ; SI-NEXT:    s_endpgm
 entry:
   br label %for.body

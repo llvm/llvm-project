@@ -15,7 +15,8 @@ define amdgpu_kernel void @sint_to_fp_i32_to_f64(double addrspace(1)* %out, i32 
 ; uses an SGPR (implicit vcc).
 
 ; GCN-LABEL: {{^}}sint_to_fp_i1_f64:
-; GCN-DAG: v_cmp_eq_u32_e64 vcc,
+; GCN-DAG: s_cmp_eq
+; GCN-DAG: s_cselect_b64
 ; GCN-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, v{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[ZERO]]:[[SEL]]{{\]}}

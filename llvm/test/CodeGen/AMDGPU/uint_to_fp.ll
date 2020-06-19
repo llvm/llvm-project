@@ -77,7 +77,8 @@ define amdgpu_kernel void @v_uint_to_fp_v4i32(<4 x float> addrspace(1)* %out, <4
 }
 
 ; FUNC-LABEL: {{^}}s_uint_to_fp_i1_to_f32:
-; SI: v_cmp_eq_u32_e64 [[CMP:s\[[0-9]+:[0-9]\]]],
+; SI: s_cmp_eq
+; SI: s_cselect_b64 [[CMP:s\[[0-9]+:[0-9]\]]],
 ; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0, [[CMP]]
 ; SI: buffer_store_dword [[RESULT]],
 ; SI: s_endpgm

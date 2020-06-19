@@ -7,10 +7,12 @@
 ; EG-DAG: CNDE_INT {{\** *}}T{{[0-9]+\.[XYZW], PV\.[XYZW], T[0-9]+\.[XYZW]}}, KC0[3].Z
 ; EG-DAG: CNDE_INT {{\** *}}T{{[0-9]+\.[XYZW], PV\.[XYZW], T[0-9]+\.[XYZW]}}, KC0[3].Y
 
-; SI: v_cmp_gt_i32_e32 vcc
-; SI: v_cndmask_b32_e32
-; SI: v_cmp_gt_i32_e32 vcc
-; SI: v_cndmask_b32_e32
+; SI: s_cmp_gt_i32
+; SI: s_cselect_b64 vcc, 1, 0
+; SI: s_cmp_gt_i32
+; SI: s_cselect_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], 1, 0
+; SI-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+; SI-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, [[MASK]]
 
 define amdgpu_kernel void @test_select_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in0, <2 x i32> addrspace(1)* %in1, <2 x i32> %val) {
 entry:
@@ -50,9 +52,9 @@ entry:
 ; EG-DAG: CNDE_INT {{\** *}}T{{[0-9]+\.[XYZW], PV\.[XYZW], T[0-9]+\.[XYZW]}}, KC0[3].Z
 ; EG-DAG: CNDE_INT {{\** *}}T{{[0-9]+\.[XYZW], PV\.[XYZW], T[0-9]+\.[XYZW]}}, KC0[3].Y
 
-; SI: v_cndmask_b32_e32
-; SI: v_cndmask_b32_e32
-; SI: v_cndmask_b32_e32
+; SI: v_cndmask_b32_e64
+; SI: v_cndmask_b32_e64
+; SI: v_cndmask_b32_e64
 ; SI: v_cndmask_b32_e32
 
 define amdgpu_kernel void @test_select_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in0, <4 x i32> addrspace(1)* %in1, <4 x i32> %val) {

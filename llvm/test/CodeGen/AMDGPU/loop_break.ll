@@ -206,33 +206,33 @@ define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s3, s[0:1], 0x9
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
-; GCN-NEXT:    s_mov_b32 s2, lds@abs32@lo
-; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
-; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GCN-NEXT:    ; implicit-def: $sgpr3
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; GCN-NEXT:    ; implicit-def: $sgpr4
 ; GCN-NEXT:  BB2_1: ; %bb1
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    v_cmp_ne_u32_e64 s[8:9], s2, 4
-; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
+; GCN-NEXT:    s_cmp_lg_u32 lds@abs32@lo, 4
+; GCN-NEXT:    s_cselect_b64 s[8:9], 1, 0
+; GCN-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
 ; GCN-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
-; GCN-NEXT:    s_cmp_gt_i32 s3, -1
+; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
+; GCN-NEXT:    s_cmp_gt_i32 s4, -1
 ; GCN-NEXT:    s_cbranch_scc1 BB2_3
 ; GCN-NEXT:  ; %bb.2: ; %bb4
 ; GCN-NEXT:    ; in Loop: Header=BB2_1 Depth=1
-; GCN-NEXT:    buffer_load_dword v1, off, s[4:7], 0
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
+; GCN-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
 ; GCN-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
 ; GCN-NEXT:  BB2_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB2_1 Depth=1
-; GCN-NEXT:    s_add_i32 s3, s3, 1
-; GCN-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
+; GCN-NEXT:    s_add_i32 s4, s4, 1
+; GCN-NEXT:    s_and_b64 s[8:9], exec, s[6:7]
 ; GCN-NEXT:    s_or_b64 s[0:1], s[8:9], s[0:1]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GCN-NEXT:    s_cbranch_execnz BB2_1

@@ -13,12 +13,15 @@ target datalayout = "A5"
 ; GCN-ALLOCA-COUNT-4: buffer_store_dword
 ; GCN-ALLOCA:         buffer_load_dword
 
-; GCN-PROMOTE: v_cmp_eq_u32_e64 [[CC1:[^,]+]], s{{[0-9]+}}, 1
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND1:v[0-9]+]], 0, 1, [[CC1]]
-; GCN-PROMOTE: v_cmp_ne_u32_e64 [[CC2:[^,]+]], s{{[0-9]+}}, 2
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND2:v[0-9]+]], 2, [[IND1]], [[CC2]]
-; GCN-PROMOTE: v_cmp_ne_u32_e64 [[CC3:[^,]+]], s{{[0-9]+}}, 3
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND3:v[0-9]+]], 3, [[IND2]], [[CC3]]
+; GCN-PROMOTE-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 1
+; GCN-PROMOTE-DAG: s_cselect_b64 [[CC1:[^,]+]], 1, 0
+; GCN-PROMOTE-DAG: v_cndmask_b32_e{{32|64}} [[IND1:v[0-9]+]], 0, 1, [[CC1]]
+; GCN-PROMOTE-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 2
+; GCN-PROMOTE-DAG: s_cselect_b64 [[CC2:[^,]+]], 1, 0
+; GCN-PROMOTE-DAG: v_cndmask_b32_e{{32|64}} [[IND2:v[0-9]+]], 2, [[IND1]], [[CC2]]
+; GCN-PROMOTE-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 3
+; GCN-PROMOTE-DAG: s_cselect_b64 [[CC3:[^,]+]], 1, 0
+; GCN-PROMOTE-DAG: v_cndmask_b32_e{{32|64}} [[IND3:v[0-9]+]], 3, [[IND2]], [[CC3]]
 
 ; GCN-PROMOTE: ScratchSize: 0
 
@@ -320,12 +323,15 @@ entry:
 ; GCN-ALLOCA-COUNT-4: buffer_store_dword
 ; GCN-ALLOCA:         buffer_load_dword
 
-; GCN-PROMOTE: v_cmp_eq_u32_e64 [[CC1:[^,]+]], s{{[0-9]+}}, 1
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND1:v[0-9]+]], 0, 1, [[CC1]]
-; GCN-PROMOTE: v_cmp_ne_u32_e64 [[CC2:[^,]+]], s{{[0-9]+}}, 2
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND2:v[0-9]+]], 2, [[IND1]], [[CC2]]
-; GCN-PROMOTE: v_cmp_ne_u32_e64 [[CC3:[^,]+]], s{{[0-9]+}}, 3
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND3:v[0-9]+]], 3, [[IND2]], [[CC3]]
+; GCN-PROMOTE-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 1
+; GCN-PROMOTE-DAG: s_cselect_b64 [[CC1:[^,]+]], 1, 0
+; GCN-PROMOTE-DAG: v_cndmask_b32_e{{32|64}} [[IND1:v[0-9]+]], 0, 1, [[CC1]]
+; GCN-PROMOTE-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 2
+; GCN-PROMOTE-DAG: s_cselect_b64 [[CC2:[^,]+]], 1, 0
+; GCN-PROMOTE-DAG: v_cndmask_b32_e{{32|64}} [[IND2:v[0-9]+]], 2, [[IND1]], [[CC2]]
+; GCN-PROMOTE-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 3
+; GCN-PROMOTE-DAG: s_cselect_b64 [[CC3:[^,]+]], 1, 0
+; GCN-PROMOTE-DAG: v_cndmask_b32_e{{32|64}} [[IND3:v[0-9]+]], 3, [[IND2]], [[CC3]]
 
 ; GCN-PROMOTE: ScratchSize: 0
 
