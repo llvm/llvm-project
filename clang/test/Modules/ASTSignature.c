@@ -12,8 +12,6 @@
 // RUN: llvm-bcanalyzer --dump --disable-histogram %t2.pcm > %t2.dump
 // RUN: cat %t1.dump %t2.dump | FileCheck %s
 
-// UNSUPPORTED: true
-
 #include "my_header_2.h"
 
 my_int var = 42;
