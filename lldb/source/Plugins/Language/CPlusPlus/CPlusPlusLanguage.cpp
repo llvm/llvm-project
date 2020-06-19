@@ -70,7 +70,9 @@ uint32_t CPlusPlusLanguage::GetPluginVersion() { return 1; }
 // Static Functions
 
 Language *CPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {
-  if (Language::LanguageIsCPlusPlus(language))
+  // Use plugin for C++ but not for Objective-C++ (which has its own plugin).
+  if (Language::LanguageIsCPlusPlus(language) &&
+      language != eLanguageTypeObjC_plus_plus)
     return new CPlusPlusLanguage();
   return nullptr;
 }
