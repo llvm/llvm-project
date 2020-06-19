@@ -1,4 +1,11 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump %s | FileCheck -strict-whitespace %s
+// Test without serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump %s \
+// RUN: | FileCheck -strict-whitespace %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -x c++ -include-pch %t -ast-dump-all /dev/null \
+// RUN: | FileCheck -strict-whitespace %s
 
 void test_type_trait() {
   // An unary type trait.
@@ -26,30 +33,30 @@ void test_unary_expr_or_type_trait() {
   (void) alignof(int);
   (void) __alignof(int);
 }
-// CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: |-FunctionDecl {{.*}} <{{.*}}ast-dump-traits.cpp:3:1, line:11:1> line:3:6 test_type_trait 'void ()'
-// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:24, line:11:1>
-// CHECK-NEXT: |   |-DeclStmt {{.*}} <line:5:3, col:12>
-// CHECK-NEXT: |   | `-EnumDecl {{.*}} <col:3, col:11> col:8 referenced E
-// CHECK-NEXT: |   |-CStyleCastExpr {{.*}} <line:6:3, col:21> 'void' <ToVoid>
+// CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>{{( <undeserialized declarations>)?}}
+// CHECK: |-FunctionDecl {{.*}} <{{.*}}ast-dump-traits.cpp:10:1, line:18:1> line:10:6{{( imported)?}} test_type_trait 'void ()'
+// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:24, line:18:1>
+// CHECK-NEXT: |   |-DeclStmt {{.*}} <line:12:3, col:12>
+// CHECK-NEXT: |   | `-EnumDecl {{.*}} <col:3, col:11> col:8{{( imported)?}} referenced E
+// CHECK-NEXT: |   |-CStyleCastExpr {{.*}} <line:13:3, col:21> 'void' <ToVoid>
 // CHECK-NEXT: |   | `-TypeTraitExpr {{.*}} <col:10, col:21> 'bool' __is_enum
-// CHECK-NEXT: |   |-CStyleCastExpr {{.*}} <line:8:3, col:30> 'void' <ToVoid>
+// CHECK-NEXT: |   |-CStyleCastExpr {{.*}} <line:15:3, col:30> 'void' <ToVoid>
 // CHECK-NEXT: |   | `-TypeTraitExpr {{.*}} <col:10, col:30> 'bool' __is_same
-// CHECK-NEXT: |   `-CStyleCastExpr {{.*}} <line:10:3, col:47> 'void' <ToVoid>
+// CHECK-NEXT: |   `-CStyleCastExpr {{.*}} <line:17:3, col:47> 'void' <ToVoid>
 // CHECK-NEXT: |     `-TypeTraitExpr {{.*}} <col:10, col:47> 'bool' __is_constructible
-// CHECK-NEXT: |-FunctionDecl {{.*}} <line:13:1, line:16:1> line:13:6 test_array_type_trait 'void ()'
-// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:30, line:16:1>
-// CHECK-NEXT: |   `-CStyleCastExpr {{.*}} <line:15:3, col:34> 'void' <ToVoid>
+// CHECK-NEXT: |-FunctionDecl {{.*}} <line:20:1, line:23:1> line:20:6{{( imported)?}} test_array_type_trait 'void ()'
+// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:30, line:23:1>
+// CHECK-NEXT: |   `-CStyleCastExpr {{.*}} <line:22:3, col:34> 'void' <ToVoid>
 // CHECK-NEXT: |     `-ArrayTypeTraitExpr {{.*}} <col:10, col:34> 'unsigned long' __array_rank
-// CHECK-NEXT: |-FunctionDecl {{.*}} <line:18:1, line:21:1> line:18:6 test_expression_trait 'void ()'
-// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:30, line:21:1>
-// CHECK-NEXT: |   `-CStyleCastExpr {{.*}} <line:20:3, col:28> 'void' <ToVoid>
+// CHECK-NEXT: |-FunctionDecl {{.*}} <line:25:1, line:28:1> line:25:6{{( imported)?}} test_expression_trait 'void ()'
+// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:30, line:28:1>
+// CHECK-NEXT: |   `-CStyleCastExpr {{.*}} <line:27:3, col:28> 'void' <ToVoid>
 // CHECK-NEXT: |     `-ExpressionTraitExpr {{.*}} <col:10, col:28> 'bool' __is_lvalue_expr
-// CHECK-NEXT: `-FunctionDecl {{.*}} <line:23:1, line:28:1> line:23:6 test_unary_expr_or_type_trait 'void ()'
-// CHECK-NEXT:   `-CompoundStmt {{.*}} <col:38, line:28:1>
-// CHECK-NEXT:     |-CStyleCastExpr {{.*}} <line:25:3, col:20> 'void' <ToVoid>
+// CHECK-NEXT: `-FunctionDecl {{.*}} <line:30:1, line:35:1> line:30:6{{( imported)?}} test_unary_expr_or_type_trait 'void ()'
+// CHECK-NEXT:   `-CompoundStmt {{.*}} <col:38, line:35:1>
+// CHECK-NEXT:     |-CStyleCastExpr {{.*}} <line:32:3, col:20> 'void' <ToVoid>
 // CHECK-NEXT:     | `-UnaryExprOrTypeTraitExpr {{.*}} <col:10, col:20> 'unsigned long' sizeof 'int'
-// CHECK-NEXT:     |-CStyleCastExpr {{.*}} <line:26:3, col:21> 'void' <ToVoid>
+// CHECK-NEXT:     |-CStyleCastExpr {{.*}} <line:33:3, col:21> 'void' <ToVoid>
 // CHECK-NEXT:     | `-UnaryExprOrTypeTraitExpr {{.*}} <col:10, col:21> 'unsigned long' alignof 'int'
-// CHECK-NEXT:     `-CStyleCastExpr {{.*}} <line:27:3, col:23> 'void' <ToVoid>
+// CHECK-NEXT:     `-CStyleCastExpr {{.*}} <line:34:3, col:23> 'void' <ToVoid>
 // CHECK-NEXT:       `-UnaryExprOrTypeTraitExpr {{.*}} <col:10, col:23> 'unsigned long' __alignof 'int'
