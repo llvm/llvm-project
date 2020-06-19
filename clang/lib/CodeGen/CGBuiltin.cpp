@@ -7726,6 +7726,8 @@ CodeGenFunction::getSVEPredType(SVETypeFlags TypeFlags) {
   case SVETypeFlags::EltTyInt64:
     return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 2);
 
+  case SVETypeFlags::EltTyBFloat16:
+    return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 8);
   case SVETypeFlags::EltTyFloat16:
     return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 8);
   case SVETypeFlags::EltTyFloat32:
