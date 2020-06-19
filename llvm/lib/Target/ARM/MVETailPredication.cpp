@@ -64,8 +64,8 @@ using namespace llvm;
 #define DESC "Transform predicated vector loops to use MVE tail predication"
 
 static cl::opt<bool>
-ForceTailPredication("force-tail-predication", cl::Hidden, cl::init(false),
-                     cl::desc("Force tail-predication even if it might be "
+ForceTailPredication("force-mve-tail-predication", cl::Hidden, cl::init(false),
+                     cl::desc("Force MVE tail-predication even if it might be "
                               "unsafe (e.g. possible overflow in loop "
                               "counters)"));
 
