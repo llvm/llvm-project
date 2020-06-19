@@ -67,6 +67,7 @@
     __cpp_lib_make_reverse_iterator                201402L [C++14]
     __cpp_lib_make_unique                          201304L [C++14]
     __cpp_lib_map_try_emplace                      201411L [C++17]
+    __cpp_lib_math_constants                       201907L [C++2a]
     __cpp_lib_math_special_functions               201603L [C++17]
     __cpp_lib_memory_resource                      201603L [C++17]
     __cpp_lib_node_extract                         201606L [C++17]
@@ -315,6 +316,10 @@
 
 # ifdef __cpp_lib_map_try_emplace
 #   error "__cpp_lib_map_try_emplace should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_math_constants
+#   error "__cpp_lib_math_constants should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_math_special_functions
@@ -691,6 +696,10 @@
 
 # ifdef __cpp_lib_map_try_emplace
 #   error "__cpp_lib_map_try_emplace should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_math_constants
+#   error "__cpp_lib_math_constants should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_math_special_functions
@@ -1229,6 +1238,10 @@
 # endif
 # if __cpp_lib_map_try_emplace != 201411L
 #   error "__cpp_lib_map_try_emplace should have the value 201411L in c++17"
+# endif
+
+# ifdef __cpp_lib_math_constants
+#   error "__cpp_lib_math_constants should not be defined before c++2a"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -1965,6 +1978,13 @@
 # endif
 # if __cpp_lib_map_try_emplace != 201411L
 #   error "__cpp_lib_map_try_emplace should have the value 201411L in c++2a"
+# endif
+
+# ifndef __cpp_lib_math_constants
+#   error "__cpp_lib_math_constants should be defined in c++2a"
+# endif
+# if __cpp_lib_math_constants != 201907L
+#   error "__cpp_lib_math_constants should have the value 201907L in c++2a"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
