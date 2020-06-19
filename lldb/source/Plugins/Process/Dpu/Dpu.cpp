@@ -597,7 +597,7 @@ bool Dpu::WriteMRAM(uint32_t offset, const void *buf, size_t size) {
   // fast path, everything is aligned
   if (((offset & mram_aligned_mod) == 0) && ((size & mram_aligned_mod) == 0)) {
     const uint8_t *bytes = static_cast<const uint8_t *>(buf);
-    ret = dpu_copy_to_mram(m_dpu, offset, bytes, size, 0);
+    ret = dpu_copy_to_mram(m_dpu, offset, bytes, size);
     return ret == DPU_OK;
   }
 
@@ -613,7 +613,7 @@ bool Dpu::WriteMRAM(uint32_t offset, const void *buf, size_t size) {
   if (bytes == NULL)
     return false;
 
-  ret = dpu_copy_from_mram(m_dpu, bytes, final_offset, final_size, 0);
+  ret = dpu_copy_from_mram(m_dpu, bytes, final_offset, final_size);
   if (ret != DPU_OK) {
     delete[] bytes;
     return false;
@@ -621,7 +621,7 @@ bool Dpu::WriteMRAM(uint32_t offset, const void *buf, size_t size) {
 
   memcpy(&((uint8_t *)bytes)[padding], buf, size);
 
-  ret = dpu_copy_to_mram(m_dpu, final_offset, bytes, final_size, 0);
+  ret = dpu_copy_to_mram(m_dpu, final_offset, bytes, final_size);
 
   delete[] bytes;
   return ret == DPU_OK;
@@ -641,11 +641,11 @@ bool Dpu::ReadMRAM(uint32_t offset, void *buf, size_t size) {
     if (bytes == NULL)
       return false;
 
-    ret = dpu_copy_from_mram(m_dpu, bytes, final_offset, final_size, 0);
+    ret = dpu_copy_from_mram(m_dpu, bytes, final_offset, final_size);
     memcpy(buf, &bytes[padding], size);
     delete[] bytes;
   } else {
-    ret = dpu_copy_from_mram(m_dpu, bytes, offset, size, 0);
+    ret = dpu_copy_from_mram(m_dpu, bytes, offset, size);
   }
 
   return ret == DPU_OK;
@@ -680,7 +680,7 @@ bool Dpu::GenerateSaveCore(const char *exe_path, const char *core_file_path,
                                         nb_word_in_wram);
     if (status != DPU_OK)
       goto dpu_generate_save_core_exit;
-    status = dpu_copy_from_mram(m_dpu, mram, 0, mram_size, DPU_PRIMARY_MRAM);
+    status = dpu_copy_from_mram(m_dpu, mram, 0, mram_size);
     if (status != DPU_OK)
       goto dpu_generate_save_core_exit;
 
