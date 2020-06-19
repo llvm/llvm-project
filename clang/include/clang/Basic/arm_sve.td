@@ -480,6 +480,16 @@ def SVLDNT1_VNUM : MInst<"svldnt1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfd", [IsLoa
 // Load one quadword and replicate (scalar base)
 def SVLD1RQ : SInst<"svld1rq[_{2}]", "dPc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld1rq">;
 
+// Load N-element structure into N vectors (scalar base)
+def SVLD2 : SInst<"svld2[_{2}]", "2Pc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld2", [IsStructLoad]>;
+def SVLD3 : SInst<"svld3[_{2}]", "3Pc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld3", [IsStructLoad]>;
+def SVLD4 : SInst<"svld4[_{2}]", "4Pc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld4", [IsStructLoad]>;
+
+// Load N-element structure into N vectors (scalar base, VL displacement)
+def SVLD2_VNUM : SInst<"svld2_vnum[_{2}]", "2Pcl", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld2", [IsStructLoad]>;
+def SVLD3_VNUM : SInst<"svld3_vnum[_{2}]", "3Pcl", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld3", [IsStructLoad]>;
+def SVLD4_VNUM : SInst<"svld4_vnum[_{2}]", "4Pcl", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld4", [IsStructLoad]>;
+
 // Load one octoword and replicate (scalar base)
 let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64)" in {
   def SVLD1RO : SInst<"svld1ro[_{2}]", "dPc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld1ro">;
@@ -576,6 +586,16 @@ def SVST1H_SCATTER_32B_INDICES_UU : MInst<"svst1h_scatter_[{3}]index[_{d}]", "vP
 def SVST1_SCATTER_INDEX_S     : MInst<"svst1_scatter[_{2}base]_index[_{d}]",  "vPuld", "ilUiUlfd", [IsScatterStore], MemEltTyDefault, "aarch64_sve_st1_scatter_scalar_offset">;
 def SVST1H_SCATTER_INDEX_S    : MInst<"svst1h_scatter[_{2}base]_index[_{d}]", "vPuld", "ilUiUl",   [IsScatterStore], MemEltTyInt16,   "aarch64_sve_st1_scatter_scalar_offset">;
 def SVST1W_SCATTER_INDEX_S    : MInst<"svst1w_scatter[_{2}base]_index[_{d}]", "vPuld", "lUl",      [IsScatterStore], MemEltTyInt32,   "aarch64_sve_st1_scatter_scalar_offset">;
+
+// Store N vectors into N-element structure (scalar base)
+def SVST2 : SInst<"svst2[_{d}]", "vPp2", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_st2", [IsStructStore]>;
+def SVST3 : SInst<"svst3[_{d}]", "vPp3", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_st3", [IsStructStore]>;
+def SVST4 : SInst<"svst4[_{d}]", "vPp4", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_st4", [IsStructStore]>;
+
+// Store N vectors into N-element structure (scalar base, VL displacement)
+def SVST2_VNUM : SInst<"svst2_vnum[_{d}]", "vPpl2", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_st2", [IsStructStore]>;
+def SVST3_VNUM : SInst<"svst3_vnum[_{d}]", "vPpl3", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_st3", [IsStructStore]>;
+def SVST4_VNUM : SInst<"svst4_vnum[_{d}]", "vPpl4", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_st4", [IsStructStore]>;
 
 // Store one vector, with no truncation, non-temporal (scalar base)
 def SVSTNT1 : MInst<"svstnt1[_{d}]", "vPpd", "csilUcUsUiUlhfd", [IsStore], MemEltTyDefault, "aarch64_sve_stnt1">;
