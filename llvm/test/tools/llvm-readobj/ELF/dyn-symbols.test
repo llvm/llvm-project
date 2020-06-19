@@ -490,3 +490,26 @@ ProgramHeaders:
     Sections:
       - Section: .dynstr
       - Section: .dynamic
+
+## Check we report a warning when the entry size of the dynamic symbol table is zero.
+# RUN: yaml2obj %s --docnum=14 -o %t15
+# RUN: llvm-readobj --dyn-symbols %t15 2>&1 | FileCheck %s -DFILE=%t15 --check-prefix=DYNSYM-ZERO-ENTSIZE-LLVM
+# RUN: llvm-readelf --dyn-symbols %t15 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t15 --check-prefix=DYNSYM-ZERO-ENTSIZE-GNU --implicit-check-not="Symbol table"
+
+# DYNSYM-ZERO-ENTSIZE-LLVM:      DynamicSymbols [
+# DYNSYM-ZERO-ENTSIZE-LLVM-NEXT:  warning: '[[FILE]]': section with index 1 has invalid size (0x10) or entry size (0x0)
+# DYNSYM-ZERO-ENTSIZE-LLVM-NEXT: ]
+
+# DYNSYM-ZERO-ENTSIZE-GNU:  warning: '[[FILE]]': section with index 1 has invalid size (0x10) or entry size (0x0)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    EntSize: 0x0
