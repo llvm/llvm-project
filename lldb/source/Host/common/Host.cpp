@@ -28,7 +28,7 @@
 
 #if defined(__linux__) || defined(__FreeBSD__) ||                              \
     defined(__FreeBSD_kernel__) || defined(__APPLE__) ||                       \
-    defined(__NetBSD__) || defined(__OpenBSD__)
+    defined(__NetBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__)
 #if !defined(__ANDROID__)
 #include <spawn.h>
 #endif
