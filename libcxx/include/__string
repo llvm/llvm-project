@@ -152,7 +152,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, value_type const*, size_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_first_of(value_type const*, size_type, size_type) const) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(value_type const*, size_type)) \
+  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::__assign_external(value_type const*, size_type)) \
+  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::__assign_external(value_type const*)) \
   _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::reserve(size_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(value_type const*, size_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(basic_string const&, size_type, size_type)) \
@@ -176,7 +177,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(value_type const*) const) \
   _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(size_type, size_type, value_type const*) const) \
   _Func(_LIBCPP_FUNC_VIS _CharType& basic_string<_CharType>::at(size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(value_type const*)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find(value_type const*, size_type, size_type) const) \
   _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(size_type, size_type, basic_string const&, size_type, size_type) const) \
   _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(size_type, size_type, value_type const*, size_type) const) \
