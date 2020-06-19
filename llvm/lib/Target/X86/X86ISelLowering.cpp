@@ -38504,6 +38504,25 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
       EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
       Movmsk = DAG.getBitcast(MovmskVT, Match);
     } else {
+      // For all_of(setcc(vec,0,eq)) - avoid vXi64 comparisons if we don't have
+      // PCMPEQQ (SSE41+), use PCMPEQD instead.
+      if (BinOp == ISD::AND && !Subtarget.hasSSE41() &&
+          Match.getOpcode() == ISD::SETCC &&
+          ISD::isBuildVectorAllZeros(Match.getOperand(1).getNode()) &&
+          cast<CondCodeSDNode>(Match.getOperand(2))->get() ==
+              ISD::CondCode::SETEQ) {
+        SDValue Vec = Match.getOperand(0);
+        if (Vec.getValueType().getScalarType() == MVT::i64 &&
+            (2 * NumElts) <= MaxElts) {
+          NumElts *= 2;
+          EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElts);
+          MatchVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElts);
+          Match = DAG.getSetCC(
+              DL, MatchVT, DAG.getBitcast(CmpVT, Match.getOperand(0)),
+              DAG.getBitcast(CmpVT, Match.getOperand(1)), ISD::CondCode::SETEQ);
+        }
+      }
+
       // Use combineBitcastvxi1 to create the MOVMSK.
       while (NumElts > MaxElts) {
         SDValue Lo, Hi;
