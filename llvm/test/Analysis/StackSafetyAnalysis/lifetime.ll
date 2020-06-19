@@ -8,6 +8,8 @@ entry:
 ; CHECK-NEXT: Alive: <>
   %x = alloca i32, align 4
   %y = alloca i32, align 4
+; CHECK: %y = alloca i32, align 4
+; CHECK-NEXT: Alive: <>
   %z = alloca i32, align 4
   %x0 = bitcast i32* %x to i8*
   %y0 = bitcast i32* %y to i8*
@@ -102,6 +104,8 @@ entry:
 ; CHECK-NEXT: Alive: <>
 
   ret void
+; CHECK: ret void
+; CHECK-NEXT: Alive: <>
 }
 
 define void @h() {
@@ -110,6 +114,8 @@ entry:
 ; CHECK: entry:
 ; CHECK-NEXT: Alive: <>
   %x = alloca i32, align 16
+; CHECK: %x = alloca i32, align 16
+; CHECK-NEXT: Alive: <>
   %z = alloca i64, align 4
   %y = alloca i32, align 4
   %x0 = bitcast i32* %x to i8*
@@ -171,6 +177,8 @@ entry:
   call void @capture64(i64* nonnull %x1)
   call void @capture64(i64* nonnull %x2)
   br i1 %a, label %if.then, label %if.else4
+; CHECK: br i1 %a, label %if.then, label %if.else4
+; CHECK-NEXT: Alive: <x1 x2>
 
 if.then:                                          ; preds = %entry
 ; CHECK: if.then:
@@ -225,7 +233,11 @@ if.end:                                           ; preds = %if.else, %if.then3
 if.else4:                                         ; preds = %entry
 ; CHECK: if.else4:
 ; CHECK-NEXT: Alive: <x1 x2>
+
   %5 = bitcast i64* %z to i8*
+; CHECK: %5 = bitcast i64* %z to i8*
+; CHECK-NEXT: Alive: <x1 x2>
+
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
 ; CHECK: call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
 ; CHECK-NEXT: Alive: <x1 x2 z>
@@ -494,6 +506,9 @@ entry:
 ; CHECK-NEXT: Alive: <A.i B.i>
 
   call void @capture100x32([100 x i32]* %A.i)
+; CHECK: call void @capture100x32([100 x i32]* %A.i)
+; CHECK-NEXT: Alive: <A.i B.i>
+
   call void @capture100x32([100 x i32]* %B.i)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0)
 ; CHECK: call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0)
@@ -693,6 +708,8 @@ entry:
   %y = alloca i8, align 4
 
   br i1 %a, label %if.then, label %if.else
+; CHECK: br i1 %a, label %if.then, label %if.else
+; CHECK-NEXT: Alive: <>
 
 if.then:
 ; CHECK: if.then:
@@ -702,6 +719,8 @@ if.then:
 ; CHECK-NEXT: Alive: <y>
 
   br label %if.end
+; CHECK: br label %if.end
+; CHECK-NEXT: Alive: <y>
 
 if.else:
 ; CHECK: if.else:
@@ -715,11 +734,49 @@ if.else:
 ; CHECK-NEXT: Alive: <x y>
 
   br label %if.end
+; CHECK: br label %if.end
+; CHECK-NEXT: Alive: <x y>
 
 if.end:
 ; CHECK: if.end:
 ; MAY-NEXT: Alive: <x y>
 ; MUST-NEXT: Alive: <y>
+
+ret void
+}
+
+define void @unreachable() {
+; CHECK-LABEL: define void @unreachable
+entry:
+; CHECK: entry:
+; CHECK-NEXT: Alive: <>
+  %x = alloca i8, align 4
+  %y = alloca i8, align 4
+
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %y)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 4, i8* %y)
+; CHECK-NEXT: Alive: <y>
+
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %x)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 4, i8* %x)
+; CHECK-NEXT: Alive: <x y>
+
+  br label %end
+; CHECK: br label %end
+; CHECK-NEXT: Alive: <x y>
+
+dead:
+; CHECK: dead:
+; CHECK-NOT: Alive:
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %y)
+
+  br label %end
+; CHECK: br label %end
+; CHECK-NOT: Alive:
+
+end:
+; CHECK: end:
+; CHECK-NEXT: Alive: <x y>
 
 ret void
 }
