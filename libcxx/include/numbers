@@ -60,7 +60,7 @@ namespace std::numbers {
 
 #include <__config>
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER > 17 && defined(__cpp_concepts) && __cpp_concepts >= 201811L
 
 #include <type_traits>
 #include <version>
@@ -136,6 +136,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER > 17 && defined(__cpp_concepts) && __cpp_concepts >= 201811L
 
 #endif // _LIBCPP_NUMBERS

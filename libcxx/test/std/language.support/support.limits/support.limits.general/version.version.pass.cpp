@@ -1980,11 +1980,17 @@
 #   error "__cpp_lib_map_try_emplace should have the value 201411L in c++2a"
 # endif
 
-# ifndef __cpp_lib_math_constants
-#   error "__cpp_lib_math_constants should be defined in c++2a"
-# endif
-# if __cpp_lib_math_constants != 201907L
-#   error "__cpp_lib_math_constants should have the value 201907L in c++2a"
+# if defined(__cpp_concepts) && __cpp_concepts >= 201811L
+#   ifndef __cpp_lib_math_constants
+#     error "__cpp_lib_math_constants should be defined in c++2a"
+#   endif
+#   if __cpp_lib_math_constants != 201907L
+#     error "__cpp_lib_math_constants should have the value 201907L in c++2a"
+#   endif
+# else
+#   ifdef __cpp_lib_math_constants
+#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201811L is not defined!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION)
