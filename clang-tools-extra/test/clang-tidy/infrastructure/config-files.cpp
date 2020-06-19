@@ -18,7 +18,7 @@
 // RUN: clang-tidy -dump-config %S/Inputs/config-files/4/44/- -- | FileCheck %s -check-prefix=CHECK-CHILD4
 // CHECK-CHILD4: Checks: {{.*}}modernize-loop-convert,modernize-use-using,llvm-qualified-auto
 // CHECK-CHILD4: - key: llvm-qualified-auto.AddConstToQualified
-// CHECK-CHILD4-NEXT: value: '1
+// CHECK-CHILD4-NEXT: value: '1'
 // CHECK-CHILD4: - key: modernize-loop-convert.MaxCopySize
 // CHECK-CHILD4-NEXT: value: '20'
 // CHECK-CHILD4: - key: modernize-loop-convert.MinConfidence
@@ -30,3 +30,23 @@
 // CHECK-EXPLAIN: 'llvm-qualified-auto' is enabled in the {{.*}}{{[/\\]}}Inputs{{[/\\]}}config-files{{[/\\]}}4{{[/\\]}}44{{[/\\]}}.clang-tidy.
 // CHECK-EXPLAIN: 'modernize-loop-convert' is enabled in the {{.*}}{{[/\\]}}Inputs{{[/\\]}}config-files{{[/\\]}}4{{[/\\]}}.clang-tidy.
 // CHECK-EXPLAIN: 'modernize-use-using' is enabled in the {{.*}}{{[/\\]}}Inputs{{[/\\]}}config-files{{[/\\]}}4{{[/\\]}}.clang-tidy.
+
+// RUN: clang-tidy -dump-config \
+// RUN: --config='{InheritParentConfig: true, \
+// RUN: Checks: -llvm-qualified-auto, \
+// RUN: CheckOptions: [{key: modernize-loop-convert.MaxCopySize, value: 21}]}' \
+// RUN: %S/Inputs/config-files/4/44/- -- | FileCheck %s -check-prefix=CHECK-CHILD5
+// CHECK-CHILD5: Checks: {{.*}}modernize-loop-convert,modernize-use-using,llvm-qualified-auto,-llvm-qualified-auto
+// CHECK-CHILD5: - key: modernize-loop-convert.MaxCopySize
+// CHECK-CHILD5-NEXT: value: '21'
+// CHECK-CHILD5: - key: modernize-loop-convert.MinConfidence
+// CHECK-CHILD5-NEXT: value: reasonable
+// CHECK-CHILD5: - key: modernize-use-using.IgnoreMacros
+// CHECK-CHILD5-NEXT: value: '0'
+
+// RUN: clang-tidy -dump-config \
+// RUN: --config='{InheritParentConfig: false, \
+// RUN: Checks: -llvm-qualified-auto}' \
+// RUN: %S/Inputs/config-files/4/44/- -- | FileCheck %s -check-prefix=CHECK-CHILD6
+// CHECK-CHILD6: Checks: {{.*}}-llvm-qualified-auto
+// CHECK-CHILD6-NOT: - key: modernize-use-using.IgnoreMacros
