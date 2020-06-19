@@ -769,12 +769,14 @@ def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator]> {
     yielded.
     ```
   }];
-  let arguments = (ins Variadic<AnyType>:$results);
-  let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result",
-              [{ /* nothing to do */ }]>
-  ];
 
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  let builders = [OpBuilder<
+    "OpBuilder &b, OperationState &result", [{ build(b, result, llvm::None); }]
+  >];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
 def AffineVectorLoadOp : AffineLoadOpBase<"vector_load", []> {

@@ -2451,7 +2451,7 @@ struct AffineParallelRank0LoopRemover
     auto &parentOps = rewriter.getInsertionBlock()->getOperations();
     auto &parallelBodyOps = op.region().front().getOperations();
     auto yield = mlir::cast<AffineYieldOp>(std::prev(parallelBodyOps.end()));
-    for (auto it : zip(op.getResults(), yield.results())) {
+    for (auto it : zip(op.getResults(), yield.operands())) {
       std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
     }
     parentOps.splice(mlir::Block::iterator(op), parallelBodyOps,
@@ -2656,24 +2656,6 @@ static LogicalResult verify(AffineYieldOp op) {
   }
 
   return success();
-}
-
-static ParseResult parseAffineYieldOp(OpAsmParser &parser,
-                                      OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 4> operands;
-  SmallVector<Type, 4> types;
-  llvm::SMLoc loc = parser.getCurrentLocation();
-  // Parse variadic operands list, their types, and resolve operands to SSA
-  // values.
-  return failure(parser.parseOperandList(operands) ||
-                 parser.parseOptionalColonTypeList(types) ||
-                 parser.resolveOperands(operands, types, loc, result.operands));
-}
-
-static void print(OpAsmPrinter &p, AffineYieldOp op) {
-  p << op.getOperationName();
-  if (op.getNumOperands() != 0)
-    p << ' ' << op.getOperands() << " : " << op.getOperandTypes();
 }
 
 //===----------------------------------------------------------------------===//
