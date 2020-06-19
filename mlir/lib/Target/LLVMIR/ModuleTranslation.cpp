@@ -611,7 +611,7 @@ static llvm::SetVector<Block *> topologicalSort(LLVMFuncOp f) {
   // predecessors), add it to the list and traverse its successors in DFS
   // preorder.
   llvm::SetVector<Block *> blocks;
-  for (Block &b : f.getBlocks()) {
+  for (Block &b : f) {
     if (blocks.count(&b) == 0)
       topologicalSortImpl(blocks, &b);
   }
