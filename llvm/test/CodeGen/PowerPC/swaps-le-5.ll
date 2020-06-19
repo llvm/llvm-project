@@ -15,10 +15,10 @@ entry:
 }
 
 ; CHECK-LABEL: @bar0
+; CHECK-DAG: xxswapd 1, 1
 ; CHECK-DAG: lxvd2x [[REG1:[0-9]+]]
-; CHECK-DAG: xxspltd [[REG2:[0-9]+]]
-; CHECK: xxpermdi [[REG3:[0-9]+]], [[REG2]], [[REG1]], 1
-; CHECK: stxvd2x [[REG3]]
+; CHECK: xxmrgld [[REG2:[0-9]+]], 1, [[REG1]]
+; CHECK: stxvd2x [[REG2]]
 ; CHECK-NOT: xxswapd
 
 define void @bar1(double %y) {
@@ -30,10 +30,10 @@ entry:
 }
 
 ; CHECK-LABEL: @bar1
+; CHECK-DAG: xxswapd 1, 1
 ; CHECK-DAG: lxvd2x [[REG1:[0-9]+]]
-; CHECK-DAG: xxspltd [[REG2:[0-9]+]]
-; CHECK: xxmrghd [[REG3:[0-9]+]], [[REG1]], [[REG2]]
-; CHECK: stxvd2x [[REG3]]
+; CHECK: xxpermdi [[REG2:[0-9]+]], [[REG1]], 1, 1
+; CHECK: stxvd2x [[REG2]]
 ; CHECK-NOT: xxswapd
 
 define void @baz0() {
