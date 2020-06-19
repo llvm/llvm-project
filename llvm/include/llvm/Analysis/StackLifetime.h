@@ -150,13 +150,19 @@ public:
   /// that is large enough for LiveRange::Overlaps to be correct.
   const LiveRange &getLiveRange(const AllocaInst *AI) const;
 
+  /// Returns true if instruction is reachable from entry.
+  bool isReachable(const Instruction *I) const;
+
+  /// Returns true if the alloca is alive after the instruction.
+  bool isAliveAfter(const AllocaInst *AI, const Instruction *I) const;
+
   /// Returns a live range that represents an alloca that is live throughout the
   /// entire function.
   LiveRange getFullLiveRange() const {
     return LiveRange(Instructions.size(), true);
   }
 
-  void print(raw_ostream &O, bool AllInstructions = false);
+  void print(raw_ostream &O);
 };
 
 static inline raw_ostream &operator<<(raw_ostream &OS, const BitVector &V) {

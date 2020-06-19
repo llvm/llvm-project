@@ -42,6 +42,27 @@ StackLifetime::getLiveRange(const AllocaInst *AI) const {
   return LiveRanges[IT->second];
 }
 
+bool StackLifetime::isReachable(const Instruction *I) const {
+  return BlockInstRange.find(I->getParent()) != BlockInstRange.end();
+}
+
+bool StackLifetime::isAliveAfter(const AllocaInst *AI,
+                                 const Instruction *I) const {
+  const BasicBlock *BB = I->getParent();
+  auto ItBB = BlockInstRange.find(BB);
+  assert(ItBB != BlockInstRange.end() && "Unreachable is not expected");
+
+  // Find the first instruction after the V.
+  auto It = std::upper_bound(Instructions.begin() + ItBB->getSecond().first + 1,
+                             Instructions.begin() + ItBB->getSecond().second, I,
+                             [](const Instruction *L, const Instruction *R) {
+                               return L->comesBefore(R);
+                             });
+  --It;
+  unsigned InstNum = It - Instructions.begin();
+  return getLiveRange(AI).test(InstNum);
+}
+
 static bool readMarker(const Instruction *I, bool *IsStart) {
   if (!I->isLifetimeStartOrEnd())
     return false;
@@ -298,7 +319,6 @@ void StackLifetime::run() {
 class StackLifetime::LifetimeAnnotationWriter
     : public AssemblyAnnotationWriter {
   const StackLifetime &SL;
-  bool AllInstructions;
 
   void printInstrAlive(unsigned InstrNo, formatted_raw_ostream &OS) {
     SmallVector<StringRef, 16> Names;
@@ -320,32 +340,24 @@ class StackLifetime::LifetimeAnnotationWriter
 
   void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {
     const Instruction *Instr = dyn_cast<Instruction>(&V);
-    if (!Instr)
+    if (!Instr || !SL.isReachable(Instr))
       return;
-    auto ItBB = SL.BlockInstRange.find(Instr->getParent());
-    if (ItBB == SL.BlockInstRange.end())
-      return; // Unreachable.
-    // Find the first instruction after the V.
-    auto It =
-        std::upper_bound(SL.Instructions.begin() + ItBB->getSecond().first + 1,
-                         SL.Instructions.begin() + ItBB->getSecond().second,
-                         Instr, [](const Instruction *L, const Instruction *R) {
-                           return L->comesBefore(R);
-                         });
-    --It;
-    if (!AllInstructions && *It != Instr)
-      return;
-    OS << "\n";
-    printInstrAlive(It - SL.Instructions.begin(), OS);
+
+    SmallVector<StringRef, 16> Names;
+    for (const auto &KV : SL.AllocaNumbering) {
+      if (SL.isAliveAfter(KV.getFirst(), Instr))
+        Names.push_back(KV.getFirst()->getName());
+    }
+    llvm::sort(Names);
+    OS << "\n  ; Alive: <" << llvm::join(Names, " ") << ">\n";
   }
 
 public:
-  LifetimeAnnotationWriter(const StackLifetime &SL, bool AllInstructions)
-      : SL(SL), AllInstructions(AllInstructions) {}
+  LifetimeAnnotationWriter(const StackLifetime &SL) : SL(SL) {}
 };
 
-void StackLifetime::print(raw_ostream &OS, bool AllInstructions) {
-  LifetimeAnnotationWriter AAW(*this, AllInstructions);
+void StackLifetime::print(raw_ostream &OS) {
+  LifetimeAnnotationWriter AAW(*this);
   F.print(OS, &AAW);
 }
 
@@ -357,6 +369,6 @@ PreservedAnalyses StackLifetimePrinterPass::run(Function &F,
       Allocas.push_back(AI);
   StackLifetime SL(F, Allocas, Type);
   SL.run();
-  SL.print(OS, true);
+  SL.print(OS);
   return PreservedAnalyses::all();
 }
