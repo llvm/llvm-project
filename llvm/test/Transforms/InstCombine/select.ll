@@ -1697,6 +1697,199 @@ merge:
   ret i32 %s
 }
 
+; More complex CFG: the block with select has multiple predecessors.
+define i32 @select_dominating_cond_multiple_preds(i1 %cond, i1 %cond2, i1 %cond3, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominating_cond_multiple_preds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF_TRUE_1:%.*]], label [[IF_TRUE_2:%.*]]
+; CHECK:       if.true.1:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.true.2:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br i1 [[COND3:%.*]], label [[IF_FALSE_1:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.false.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br i1 %cond2, label %if.true.1, label %if.true.2
+
+if.true.1:
+  br label %merge
+
+if.true.2:
+  br label %merge
+
+if.false:
+  br i1 %cond3, label %if.false.1, label %exit
+
+if.false.1:
+  br label %merge
+
+merge:
+  %s = select i1 %cond, i32 %x, i32 %y
+  ret i32 %s
+
+exit:
+  ret i32 0
+}
+
+; More complex CFG for inverted case: the block with select has multiple predecessors.
+define i32 @select_dominating_cond_inverted_multiple_preds(i1 %cond, i1 %cond2, i1 %cond3, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominating_cond_inverted_multiple_preds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_FALSE:%.*]], label [[IF_TRUE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF_TRUE_1:%.*]], label [[IF_TRUE_2:%.*]]
+; CHECK:       if.true.1:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.true.2:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br i1 [[COND3:%.*]], label [[IF_FALSE_1:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.false.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %inverted = xor i1 %cond, 1
+  br i1 %inverted, label %if.true, label %if.false
+
+if.true:
+  br i1 %cond2, label %if.true.1, label %if.true.2
+
+if.true.1:
+  br label %merge
+
+if.true.2:
+  br label %merge
+
+if.false:
+  br i1 %cond3, label %if.false.1, label %exit
+
+if.false.1:
+  br label %merge
+
+merge:
+  %s = select i1 %cond, i32 %x, i32 %y
+  ret i32 %s
+
+exit:
+  ret i32 0
+}
+
+; Negative test: currently we take condition from IDom, but might be willing to expand it in the future.
+define i32 @select_not_imm_dominating_cond_neg(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_not_imm_dominating_cond_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  br label %exit
+
+exit:
+  %s = select i1 %cond, i32 %x, i32 %y
+  ret i32 %s
+}
+
+; Shows how we can leverage dominance to eliminate duplicating selects.
+; TODO: We can optimize further if we eliminate duplicating Phis and similify the whole thing to phi[x, y] * 3.
+define i32 @select_dominance_chain(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominance_chain(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE_1:%.*]], label [[IF_FALSE_1:%.*]]
+; CHECK:       if.true.1:
+; CHECK-NEXT:    br label [[MERGE_1:%.*]]
+; CHECK:       if.false.1:
+; CHECK-NEXT:    br label [[MERGE_1]]
+; CHECK:       merge.1:
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE_2:%.*]], label [[IF_FALSE_2:%.*]]
+; CHECK:       if.true.2:
+; CHECK-NEXT:    br label [[MERGE_2:%.*]]
+; CHECK:       if.false.2:
+; CHECK-NEXT:    br label [[MERGE_2]]
+; CHECK:       merge.2:
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE_3:%.*]], label [[IF_FALSE_3:%.*]]
+; CHECK:       if.true.3:
+; CHECK-NEXT:    br label [[MERGE_3:%.*]]
+; CHECK:       if.false.3:
+; CHECK-NEXT:    br label [[MERGE_3]]
+; CHECK:       merge.3:
+; CHECK-NEXT:    [[S_2:%.*]] = select i1 [[COND]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[S_1:%.*]] = select i1 [[COND]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[S_3:%.*]] = select i1 [[COND]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[SUM_1:%.*]] = add i32 [[S_1]], [[S_2]]
+; CHECK-NEXT:    [[SUM_2:%.*]] = add i32 [[SUM_1]], [[S_3]]
+; CHECK-NEXT:    ret i32 [[SUM_2]]
+;
+entry:
+  br i1 %cond, label %if.true.1, label %if.false.1
+
+if.true.1:
+  br label %merge.1
+
+if.false.1:
+  br label %merge.1
+
+merge.1:
+  %s.1 = select i1 %cond, i32 %x, i32 %y
+  br i1 %cond, label %if.true.2, label %if.false.2
+
+if.true.2:
+  br label %merge.2
+
+if.false.2:
+  br label %merge.2
+
+merge.2:
+  %s.2 = select i1 %cond, i32 %x, i32 %y
+  br i1 %cond, label %if.true.3, label %if.false.3
+
+if.true.3:
+  br label %merge.3
+
+if.false.3:
+  br label %merge.3
+
+merge.3:
+  %s.3 = select i1 %cond, i32 %x, i32 %y
+  %sum.1 = add i32 %s.1, %s.2
+  %sum.2 = add i32 %sum.1, %s.3
+  ret i32 %sum.2
+}
+
 ; TODO: We can replace select with a Phi and then sink a and b to respective
 ; branches.
 define i32 @select_dominating_cond_and_sink(i1 %cond, i32 %x, i32 %y) {
