@@ -51,7 +51,7 @@ define void @fn1() {
 ; USE_ASSUME-NEXT:    call void @__msan_warning_noreturn()
 ; USE_ASSUME-NEXT:    unreachable
 ; USE_ASSUME:       bb2:
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[F_IBLOCK]], i64 4), "nonnull"(i32* [[F_IBLOCK]]), "align"(i32* [[F_IBLOCK]], i64 4) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.PyFrameObject* [[TMP]], i64 4), "nonnull"(%struct.PyFrameObject* [[TMP]]), "align"(%struct.PyFrameObject* [[TMP]], i64 4) ]
 ; USE_ASSUME-NEXT:    [[TMP4:%.*]] = ptrtoint i32* [[F_IBLOCK]] to i64
 ; USE_ASSUME-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP4]], 0
 ; USE_ASSUME-NEXT:    br i1 [[TOBOOL]], label [[BB13:%.*]], label [[BB15:%.*]]
