@@ -244,8 +244,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   SPAN_ATTACH(Tracer, "file", Cmd.Filename);
   auto AbsolutePath = getAbsolutePath(Cmd);
 
-  auto FS = FSProvider.getFileSystem();
-  FS->setCurrentWorkingDirectory(Cmd.Directory);
+  auto FS = FSProvider.getFileSystem(Cmd.Directory);
   auto Buf = FS->getBufferForFile(AbsolutePath);
   if (!Buf)
     return llvm::errorCodeToError(Buf.getError());
@@ -382,7 +381,7 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
   Rebuilder.loadedShard(LoadedShards);
   Rebuilder.doneLoading();
 
-  auto FS = FSProvider.getFileSystem();
+  auto FS = FSProvider.getFileSystem(/*CWD=*/llvm::None);
   llvm::DenseSet<PathRef> TUsToIndex;
   // We'll accept data from stale shards, but ensure the files get reindexed
   // soon.

@@ -21,6 +21,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -717,7 +718,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     ClangTidyOptProvider = std::make_unique<tidy::FileOptionsProvider>(
         tidy::ClangTidyGlobalOptions(),
         /* Default */ EmptyDefaults,
-        /* Override */ OverrideClangTidyOptions, FSProvider.getFileSystem());
+        /* Override */ OverrideClangTidyOptions,
+        FSProvider.getFileSystem(/*CWD=*/llvm::None));
     Opts.GetClangTidyOptions = [&](llvm::vfs::FileSystem &,
                                    llvm::StringRef File) {
       // This function must be thread-safe and tidy option providers are not.

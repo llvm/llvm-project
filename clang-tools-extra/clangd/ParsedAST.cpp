@@ -46,6 +46,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <memory>
@@ -248,14 +249,9 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   trace::Span Tracer("BuildAST");
   SPAN_ATTACH(Tracer, "File", Filename);
 
-  auto VFS = Inputs.FSProvider->getFileSystem();
+  auto VFS = Inputs.FSProvider->getFileSystem(Inputs.CompileCommand.Directory);
   if (Preamble && Preamble->StatCache)
     VFS = Preamble->StatCache->getConsumingFS(std::move(VFS));
-  if (VFS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
-    log("Couldn't set working directory when building the preamble.");
-    // We proceed anyway, our lit-tests rely on results for non-existing working
-    // dirs.
-  }
 
   assert(CI);
   // Command-line parsing sets DisableFree to true by default, but we don't want
@@ -359,7 +355,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   auto BuildDir = VFS->getCurrentWorkingDirectory();
   if (Inputs.Opts.SuggestMissingIncludes && Inputs.Index &&
       !BuildDir.getError()) {
-    auto Style = getFormatStyleForFile(Filename, Inputs.Contents, VFS.get());
+    auto Style =
+        getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.FSProvider);
     auto Inserter = std::make_shared<IncludeInserter>(
         Filename, Inputs.Contents, Style, BuildDir.get(),
         &Clang->getPreprocessor().getHeaderSearchInfo());
