@@ -2563,7 +2563,8 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
   MachineRegisterInfo *MRI = &MI.getParent()->getParent()->getRegInfo();
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   // If we're in SSA, get the defs through the MRI. Otherwise, only look
-  // within the basic block to see if the register is defined using an LI/LI8.
+  // within the basic block to see if the register is defined using an
+  // LI/LI8/ADDI/ADDI8.
   if (MRI->isSSA()) {
     for (int i = 1, e = MI.getNumOperands(); i < e; i++) {
       if (!MI.getOperand(i).isReg())
@@ -2574,9 +2575,16 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       unsigned TrueReg = TRI->lookThruCopyLike(Reg, MRI);
       if (Register::isVirtualRegister(TrueReg)) {
         DefMI = MRI->getVRegDef(TrueReg);
-        if (DefMI->getOpcode() == PPC::LI || DefMI->getOpcode() == PPC::LI8) {
+        if (DefMI->getOpcode() == PPC::LI || DefMI->getOpcode() == PPC::LI8 ||
+            DefMI->getOpcode() == PPC::ADDI ||
+            DefMI->getOpcode() == PPC::ADDI8) {
           OpNoForForwarding = i;
-          break;
+          // The ADDI and LI operand maybe exist in one instruction at same
+          // time. we prefer to fold LI operand as LI only has one Imm operand
+          // and is more possible to be converted. So if current DefMI is
+          // ADDI/ADDI8, we continue to find possible LI/LI8.
+          if (DefMI->getOpcode() == PPC::LI || DefMI->getOpcode() == PPC::LI8)
+            break;
         }
       }
     }
@@ -2647,10 +2655,6 @@ const unsigned *PPCInstrInfo::getLoadOpcodesForSpillArray() const {
 
 void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
                                      unsigned RegNo) const {
-  const MachineRegisterInfo &MRI =
-      StartMI.getParent()->getParent()->getRegInfo();
-  if (MRI.isSSA())
-    return;
 
   // Instructions between [StartMI, EndMI] should be in same basic block.
   assert((StartMI.getParent() == EndMI.getParent()) &&
@@ -2972,6 +2976,13 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
   bool KillFwdDefMI = !SeenIntermediateUse && IsForwardingOperandKilled;
   if (KilledDef && KillFwdDefMI)
     *KilledDef = DefMI;
+
+  // If this is a imm instruction and its register operands is produced by ADDI,
+  // put the imm into imm inst directly.
+  if (RI.getMappedIdxOpcForImmOpc(MI.getOpcode()) !=
+          PPC::INSTRUCTION_LIST_END &&
+      transformToNewImmFormFedByAdd(MI, *DefMI, ForwardingOperand))
+    return true;
 
   ImmInstrInfo III;
   bool IsVFReg = MI.getOperand(0).isReg()
@@ -3513,6 +3524,10 @@ bool PPCInstrInfo::isDefMIElgibleForForwarding(MachineInstr &DefMI,
   RegMO = &DefMI.getOperand(1);
   ImmMO = &DefMI.getOperand(2);
 
+  // Before RA, ADDI first operand could be a frame index.
+  if (!RegMO->isReg())
+    return false;
+
   // This DefMI is elgible for forwarding if it is:
   // 1. add inst
   // 2. one of the operands is Imm/CPI/Global.
@@ -3561,7 +3576,8 @@ bool PPCInstrInfo::isRegElgibleForForwarding(
 bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
                                              const MachineInstr &DefMI,
                                              const ImmInstrInfo &III,
-                                             int64_t &Imm) const {
+                                             int64_t &Imm,
+                                             int64_t BaseImm) const {
   assert(isAnImmediateOperand(ImmMO) && "ImmMO is NOT an immediate");
   if (DefMI.getOpcode() == PPC::ADDItocL) {
     // The operand for ADDItocL is CPI, which isn't imm at compiling time,
@@ -3584,10 +3600,10 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
 
   if (ImmMO.isImm()) {
     // It is Imm, we need to check if the Imm fit the range.
-    int64_t Immediate = ImmMO.getImm();
     // Sign-extend to 64-bits.
-    Imm = ((uint64_t)Immediate & ~0x7FFFuLL) != 0 ?
-      (Immediate | 0xFFFFFFFFFFFF0000) : Immediate;
+    // DefMI may be folded with another imm form instruction, the result Imm is
+    // the sum of Imm of DefMI and BaseImm which is from imm form instruction.
+    Imm = SignExtend64<16>(ImmMO.getImm() + BaseImm);
 
     if (Imm % III.ImmMustBeMultipleOf)
       return false;
@@ -3838,6 +3854,99 @@ bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
     return true;
   }
   return false;
+}
+
+bool PPCInstrInfo::transformToNewImmFormFedByAdd(
+    MachineInstr &MI, MachineInstr &DefMI, unsigned OpNoForForwarding) const {
+  MachineRegisterInfo *MRI = &MI.getParent()->getParent()->getRegInfo();
+  bool PostRA = !MRI->isSSA();
+  // FIXME: extend this to post-ra. Need to do some change in getForwardingDefMI
+  // for post-ra.
+  if (PostRA)
+    return false;
+
+  // Only handle load/store.
+  if (!MI.mayLoadOrStore())
+    return false;
+
+  unsigned XFormOpcode = RI.getMappedIdxOpcForImmOpc(MI.getOpcode());
+
+  assert((XFormOpcode != PPC::INSTRUCTION_LIST_END) &&
+         "MI must have x-form opcode");
+
+  // get Imm Form info.
+  ImmInstrInfo III;
+  bool IsVFReg = MI.getOperand(0).isReg()
+                     ? isVFRegister(MI.getOperand(0).getReg())
+                     : false;
+
+  if (!instrHasImmForm(XFormOpcode, IsVFReg, III, PostRA))
+    return false;
+
+  if (!III.IsSummingOperands)
+    return false;
+
+  if (OpNoForForwarding != III.OpNoForForwarding)
+    return false;
+
+  MachineOperand ImmOperandMI = MI.getOperand(III.ImmOpNo);
+  if (!ImmOperandMI.isImm())
+    return false;
+
+  // Check DefMI.
+  MachineOperand *ImmMO = nullptr;
+  MachineOperand *RegMO = nullptr;
+  if (!isDefMIElgibleForForwarding(DefMI, III, ImmMO, RegMO))
+    return false;
+  assert(ImmMO && RegMO && "Imm and Reg operand must have been set");
+
+  // Check Imm.
+  // Set ImmBase from imm instruction as base and get new Imm inside
+  // isImmElgibleForForwarding.
+  int64_t ImmBase = ImmOperandMI.getImm();
+  int64_t Imm = 0;
+  if (!isImmElgibleForForwarding(*ImmMO, DefMI, III, Imm, ImmBase))
+    return false;
+
+  // Get killed info in case fixup needed after transformation.
+  unsigned ForwardKilledOperandReg = ~0U;
+  if (MI.getOperand(III.OpNoForForwarding).isKill())
+    ForwardKilledOperandReg = MI.getOperand(III.OpNoForForwarding).getReg();
+
+  // Do the transform
+  LLVM_DEBUG(dbgs() << "Replacing instruction:\n");
+  LLVM_DEBUG(MI.dump());
+  LLVM_DEBUG(dbgs() << "Fed by:\n");
+  LLVM_DEBUG(DefMI.dump());
+
+  MI.getOperand(III.OpNoForForwarding).setReg(RegMO->getReg());
+  MI.getOperand(III.OpNoForForwarding).setIsKill(RegMO->isKill());
+  MI.getOperand(III.ImmOpNo).setImm(Imm);
+
+  // FIXME: fix kill/dead flag if MI and DefMI are not in same basic block.
+  if (DefMI.getParent() == MI.getParent()) {
+    // Check if reg is killed between MI and DefMI.
+    auto IsKilledFor = [&](unsigned Reg) {
+      MachineBasicBlock::const_reverse_iterator It = MI;
+      MachineBasicBlock::const_reverse_iterator E = DefMI;
+      It++;
+      for (; It != E; ++It) {
+        if (It->killsRegister(Reg))
+          return true;
+      }
+      return false;
+    };
+
+    // Update kill flag
+    if (RegMO->isKill() || IsKilledFor(RegMO->getReg()))
+      fixupIsDeadOrKill(DefMI, MI, RegMO->getReg());
+    if (ForwardKilledOperandReg != ~0U)
+      fixupIsDeadOrKill(DefMI, MI, ForwardKilledOperandReg);
+  }
+
+  LLVM_DEBUG(dbgs() << "With:\n");
+  LLVM_DEBUG(MI.dump());
+  return true;
 }
 
 // If an X-Form instruction is fed by an add-immediate and one of its operands
