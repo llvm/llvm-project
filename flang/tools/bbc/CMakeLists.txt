@@ -13,6 +13,6 @@ set(LIBS
   FortranLower
 )
 
-add_llvm_tool(bbc bbc.cpp)
+add_flang_tool(bbc bbc.cpp)
 llvm_update_compile_flags(bbc)
 target_link_libraries(bbc PRIVATE ${LIBS})
