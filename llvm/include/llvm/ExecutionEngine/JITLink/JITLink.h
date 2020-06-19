@@ -352,7 +352,8 @@ private:
                                   JITTargetAddress Size, bool IsCallable,
                                   bool IsLive) {
     assert(SymStorage && "Storage cannot be null");
-    assert(Offset < Base.getSize() && "Symbol offset is outside block");
+    assert((Offset + Size) <= Base.getSize() &&
+           "Symbol extends past end of block");
     auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
     new (Sym) Symbol(Base, Offset, StringRef(), Size, Linkage::Strong,
                      Scope::Local, IsLive, IsCallable);
@@ -364,7 +365,8 @@ private:
                                    JITTargetAddress Size, Linkage L, Scope S,
                                    bool IsLive, bool IsCallable) {
     assert(SymStorage && "Storage cannot be null");
-    assert(Offset < Base.getSize() && "Symbol offset is outside block");
+    assert((Offset + Size) <= Base.getSize() &&
+           "Symbol extends past end of block");
     assert(!Name.empty() && "Name cannot be empty");
     auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
     new (Sym) Symbol(Base, Offset, Name, Size, L, S, IsLive, IsCallable);
