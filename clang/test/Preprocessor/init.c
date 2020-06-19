@@ -7321,8 +7321,6 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-unknown-openbsd6.1-gnueabi < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=i386-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64el-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s

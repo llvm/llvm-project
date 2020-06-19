@@ -476,8 +476,6 @@ public:
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
     case llvm::Triple::ppc:
-    case llvm::Triple::ppc64:
-    case llvm::Triple::ppc64le:
     case llvm::Triple::sparcv9:
       this->MCountName = "_mcount";
       break;
