@@ -143,7 +143,7 @@ extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
           });
       if (Found == std::end(ArgsToPreserve))
         continue;
-      Arg.consume_front(*Found);
+      Arg = Arg.drop_front(Found->size());
       if (Arg.empty() && I + 1 < E) {
         Args.push_back(CommandLine[I]);
         Args.push_back(CommandLine[++I]);
