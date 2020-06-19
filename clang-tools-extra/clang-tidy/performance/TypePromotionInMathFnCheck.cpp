@@ -193,10 +193,9 @@ void TypePromotionInMathFnCheck::check(const MatchFinder::MatchResult &Result) {
   // <math.h>, because the functions we're suggesting moving away from are all
   // declared in <math.h>.
   if (FnInCmath)
-    if (auto IncludeFixit = IncludeInserter->CreateIncludeInsertion(
-            Result.Context->getSourceManager().getFileID(Call->getBeginLoc()),
-            "cmath", /*IsAngled=*/true))
-      Diag << *IncludeFixit;
+    Diag << IncludeInserter->CreateIncludeInsertion(
+        Result.Context->getSourceManager().getFileID(Call->getBeginLoc()),
+        "cmath", /*IsAngled=*/true);
 }
 
 } // namespace performance
