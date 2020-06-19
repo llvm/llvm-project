@@ -14,8 +14,6 @@
 #define MLIR_DIALECT_LINALG_EDSC_BUILDERS_H_
 
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-// TODO(ntv): Needed for SubViewOp::Range, clean this up.
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/EDSC/Builders.h"
 #include "mlir/IR/AffineExpr.h"
@@ -24,37 +22,12 @@
 namespace mlir {
 class AffineForOp;
 class BlockArgument;
-class SubViewOp;
 
 namespace scf {
 class ParallelOp;
 } // namespace scf
 
 namespace edsc {
-class AffineLoopNestBuilder;
-class LoopNestBuilder;
-class ParallelLoopNestBuilder;
-
-/// Helper template class for building scf.for and affine.loop nests from
-/// ranges.
-template <typename LoopTy> class GenericLoopNestRangeBuilder {
-public:
-  GenericLoopNestRangeBuilder(MutableArrayRef<Value> ivs,
-                              ArrayRef<SubViewOp::Range> ranges);
-  void operator()(std::function<void(void)> fun = nullptr) { (*builder)(fun); }
-
-private:
-  using LoopOrAffineLoopBuilder =
-      typename std::conditional_t<std::is_same<LoopTy, AffineForOp>::value,
-                                  AffineLoopNestBuilder, LoopNestBuilder>;
-  using BuilderType =
-      typename std::conditional_t<std::is_same<LoopTy, scf::ParallelOp>::value,
-                                  ParallelLoopNestBuilder,
-                                  LoopOrAffineLoopBuilder>;
-
-  std::unique_ptr<BuilderType> builder;
-};
-
 inline void defaultRegionBuilder(ValueRange args) {}
 
 /// Build a `linalg.generic` op with the specified `inputs`, `outputs` and

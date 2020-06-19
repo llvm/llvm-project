@@ -147,42 +147,6 @@ private:
   ScopedContext *bodyScope = nullptr;
 };
 
-/// A LoopBuilder is a generic NestedBuilder for loop-like MLIR operations.
-/// More specifically it is meant to be used as a temporary object for
-/// representing any nested MLIR construct that is "related to" an mlir::Value
-/// (for now an induction variable).
-/// This is extensible and will evolve in the future as MLIR evolves, hence
-/// the name LoopBuilder (as opposed to say ForBuilder or AffineForBuilder).
-class LoopBuilder : public NestedBuilder {
-public:
-  LoopBuilder(const LoopBuilder &) = delete;
-  LoopBuilder(LoopBuilder &&) = default;
-
-  LoopBuilder &operator=(const LoopBuilder &) = delete;
-  LoopBuilder &operator=(LoopBuilder &&) = default;
-
-  /// The only purpose of this operator is to serve as a sequence point so that
-  /// the evaluation of `fun` (which build IR snippets in a scoped fashion) is
-  /// scoped within a LoopBuilder.
-  void operator()(function_ref<void(void)> fun = nullptr);
-  void setOp(Operation *op) { this->op = op; }
-  Operation *getOp() { return op; }
-
-private:
-  LoopBuilder() = default;
-
-  friend LoopBuilder makeAffineLoopBuilder(Value *iv, ArrayRef<Value> lbs,
-                                           ArrayRef<Value> ubs, int64_t step);
-  friend LoopBuilder makeParallelLoopBuilder(MutableArrayRef<Value> ivs,
-                                             ArrayRef<Value> lbs,
-                                             ArrayRef<Value> ubs,
-                                             ArrayRef<Value> steps);
-  friend LoopBuilder makeLoopBuilder(Value *iv, Value lb, Value ub, Value step,
-                                     MutableArrayRef<Value> iterArgsHandles,
-                                     ValueRange iterArgsInitValues);
-  Operation *op;
-};
-
 // This class exists solely to handle the C++ vexing parse case when
 // trying to enter a Block that has already been constructed.
 class Append {};
