@@ -161,8 +161,9 @@ public:
     DiagnosticOptions *m_options = new DiagnosticOptions(opts);
     m_options->ShowPresumedLoc = true;
     m_options->ShowLevel = false;
-    m_os.reset(new llvm::raw_string_ostream(m_output));
-    m_passthrough.reset(new clang::TextDiagnosticPrinter(*m_os, m_options));
+    m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
+    m_passthrough =
+        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
   }
 
   void ResetManager(DiagnosticManager *manager = nullptr) {

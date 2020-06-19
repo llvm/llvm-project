@@ -428,7 +428,8 @@ protected:
 
   void InitSearchFilter(lldb::TargetSP target) {
     if (!m_filtersp)
-      m_filtersp.reset(new SearchFilterForUnconstrainedSearches(target));
+      m_filtersp =
+          std::make_shared<SearchFilterForUnconstrainedSearches>(target);
   }
 
   void FixupScriptDetails(lldb_renderscript::RSModuleDescriptorSP rsmodule_sp);
