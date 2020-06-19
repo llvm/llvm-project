@@ -245,7 +245,7 @@ inline std::string utostr(uint64_t X, bool isNeg = false) {
 
 inline std::string itostr(int64_t X) {
   if (X < 0)
-    return utostr(static_cast<uint64_t>(-X), true);
+    return utostr(-static_cast<uint64_t>(X), true);
   else
     return utostr(static_cast<uint64_t>(X));
 }
