@@ -2349,7 +2349,7 @@ void MicrosoftCXXABI::EmitThreadLocalInitFuncs(
   if (!NonComdatInits.empty()) {
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-    llvm::Function *InitFunc = CGM.CreateGlobalInitOrDestructFunction(
+    llvm::Function *InitFunc = CGM.CreateGlobalInitOrCleanUpFunction(
         FTy, "__tls_init", CGM.getTypes().arrangeNullaryFunction(),
         SourceLocation(), /*TLS=*/true);
     CodeGenFunction(CGM).GenerateCXXGlobalInitFunc(InitFunc, NonComdatInits);
