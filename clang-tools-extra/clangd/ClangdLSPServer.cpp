@@ -1340,7 +1340,7 @@ void ClangdLSPServer::onSemanticTokensEdits(
 }
 
 ClangdLSPServer::ClangdLSPServer(
-    class Transport &Transp, const FileSystemProvider &FSProvider,
+    class Transport &Transp, const ThreadsafeFS &FSProvider,
     const clangd::CodeCompleteOptions &CCOpts,
     const clangd::RenameOptions &RenameOpts,
     llvm::Optional<Path> CompileCommandsDir, bool UseDirBasedCDB,

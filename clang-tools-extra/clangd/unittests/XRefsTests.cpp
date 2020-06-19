@@ -974,7 +974,7 @@ int [[bar_not_preamble]];
   std::string BuildDir = testPath("build");
   MockCompilationDatabase CDB(BuildDir, RelPathPrefix);
 
-  MockFSProvider FS;
+  MockFS FS;
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   // Fill the filesystem.
@@ -1010,7 +1010,7 @@ int [[bar_not_preamble]];
 }
 
 TEST(GoToInclude, All) {
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
@@ -1084,7 +1084,7 @@ TEST(GoToInclude, All) {
 TEST(LocateSymbol, WithPreamble) {
   // Test stragety: AST should always use the latest preamble instead of last
   // good preamble.
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 

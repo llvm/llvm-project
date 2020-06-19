@@ -249,7 +249,7 @@ TEST(ParsedASTTest, NoCrashOnTokensWithTidyCheck) {
 }
 
 TEST(ParsedASTTest, CanBuildInvocationWithUnknownArgs) {
-  MockFSProvider FSProvider;
+  MockFS FSProvider;
   FSProvider.Files = {{testPath("foo.cpp"), "void test() {}"}};
   // Unknown flags should not prevent a build of compiler invocation.
   ParseInputs Inputs;
@@ -451,7 +451,7 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
   llvm::StringLiteral Baseline = R"cpp(
     #include "a.h"
     #include "c.h")cpp";
-  MockFSProvider FS;
+  MockFS FS;
   TU.Code = Baseline.str();
   auto Inputs = TU.inputs(FS);
   auto BaselinePreamble = TU.preamble();
@@ -539,7 +539,7 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   // Build preamble with no includes.
   TU.Code = "";
   StoreDiags Diags;
-  MockFSProvider FS;
+  MockFS FS;
   auto Inputs = TU.inputs(FS);
   auto CI = buildCompilerInvocation(Inputs, Diags);
   auto EmptyPreamble =
@@ -582,7 +582,7 @@ TEST(ParsedASTTest, PatchesDeletedIncludes) {
   // Build preamble with no includes.
   TU.Code = R"cpp(#include <foo.h>)cpp";
   StoreDiags Diags;
-  MockFSProvider FS;
+  MockFS FS;
   auto Inputs = TU.inputs(FS);
   auto CI = buildCompilerInvocation(Inputs, Diags);
   auto BaselinePreamble =

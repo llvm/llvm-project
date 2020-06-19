@@ -58,7 +58,7 @@ public:
   }
 
 protected:
-  MockFSProvider FSProvider;
+  MockFS FSProvider;
   MockCompilationDatabase CDB;
   ClangdServer Server;
   int Limit = 0;
@@ -310,7 +310,7 @@ public:
   DocumentSymbolsTest() : Server(CDB, FSProvider, optsForTests()) {}
 
 protected:
-  MockFSProvider FSProvider;
+  MockFS FSProvider;
   MockCompilationDatabase CDB;
   ClangdServer Server;
 

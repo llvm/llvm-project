@@ -272,7 +272,7 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   PI.CompileCommand.Filename = FooCpp;
   PI.CompileCommand.CommandLine = {"clang", "-xc++", FooCpp};
 
-  MockFSProvider FSProvider;
+  MockFS FSProvider;
   FSProvider.Files[FooCpp] = "";
   FSProvider.Files[FooH] = R"cpp(
     namespace ns_in_header {

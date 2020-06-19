@@ -36,9 +36,9 @@
 #include "index/Index.h"
 #include "index/Symbol.h"
 #include "index/SymbolOrigin.h"
-#include "support/FSProvider.h"
 #include "support/Logger.h"
 #include "support/Threading.h"
+#include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -1113,7 +1113,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-      Input.ParseInput.FSProvider->getFileSystem(
+      Input.ParseInput.FSProvider->view(
           Input.ParseInput.CompileCommand.Directory);
   if (Input.Preamble.StatCache)
     VFS = Input.Preamble.StatCache->getConsumingFS(std::move(VFS));
@@ -1364,7 +1364,7 @@ public:
   }
 
   CodeCompleteResult runWithoutSema(llvm::StringRef Content, size_t Offset,
-                                    const FileSystemProvider &FSProvider) && {
+                                    const ThreadsafeFS &FSProvider) && {
     trace::Span Tracer("CodeCompleteWithoutSema");
     // Fill in fields normally set by runWithSema()
     HeuristicPrefix = guessCompletionPrefix(Content, Offset);

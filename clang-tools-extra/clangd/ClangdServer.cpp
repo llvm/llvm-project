@@ -27,6 +27,7 @@
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "support/Markup.h"
+#include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -129,8 +130,8 @@ ClangdServer::Options::operator TUScheduler::Options() const {
 }
 
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
-                           const FileSystemProvider &FSProvider,
-                           const Options &Opts, Callbacks *Callbacks)
+                           const ThreadsafeFS &FSProvider, const Options &Opts,
+                           Callbacks *Callbacks)
     : FSProvider(FSProvider),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
@@ -183,8 +184,8 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Opts.ClangTidyOpts = tidy::ClangTidyOptions::getDefaults();
   // FIXME: call tidy options builder on the worker thread, it can do IO.
   if (GetClangTidyOptions)
-    Opts.ClangTidyOpts = GetClangTidyOptions(
-        *FSProvider.getFileSystem(/*CWD=*/llvm::None), File);
+    Opts.ClangTidyOpts =
+        GetClangTidyOptions(*FSProvider.view(/*CWD=*/llvm::None), File);
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
 
   // Compile command is set asynchronously during update, as it can be slow.
@@ -318,9 +319,9 @@ ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos,
   llvm::Expected<size_t> CursorPos = positionToOffset(Code, Pos);
   if (!CursorPos)
     return CursorPos.takeError();
-  auto Style = format::getStyle(
-      format::DefaultFormatStyle, File, format::DefaultFallbackStyle, Code,
-      FSProvider.getFileSystem(/*CWD=*/llvm::None).get());
+  auto Style = format::getStyle(format::DefaultFormatStyle, File,
+                                format::DefaultFallbackStyle, Code,
+                                FSProvider.view(/*CWD=*/llvm::None).get());
   if (!Style)
     return Style.takeError();
 
@@ -549,7 +550,7 @@ void ClangdServer::switchSourceHeader(
   //  2) if 1) fails, we use the AST&Index approach, it is slower but supports
   //     different code layout.
   if (auto CorrespondingFile = getCorrespondingHeaderOrSource(
-          std::string(Path), FSProvider.getFileSystem(llvm::None)))
+          std::string(Path), FSProvider.view(llvm::None)))
     return CB(std::move(CorrespondingFile));
   auto Action = [Path = Path.str(), CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
