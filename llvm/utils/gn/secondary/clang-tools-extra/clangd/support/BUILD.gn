@@ -11,11 +11,11 @@ static_library("support") {
   sources = [
     "Cancellation.cpp",
     "Context.cpp",
-    "FSProvider.cpp",
     "Logger.cpp",
     "Markup.cpp",
     "Shutdown.cpp",
     "Threading.cpp",
+    "ThreadsafeFS.cpp",
     "Trace.cpp",
   ]
 }
