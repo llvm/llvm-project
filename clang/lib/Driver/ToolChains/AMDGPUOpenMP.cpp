@@ -149,15 +149,14 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
   if (Args.hasArg(options::OPT_cuda_device_only))
     BCLibs.append(
         {Args.MakeArgString("libomptarget-amdgcn-" + SubArchName + ".bc"),
-         Args.MakeArgString("libhostcall-amdgcn-" + SubArchName + ".bc"),
          "hip.bc", "ockl.bc",
          std::string(WaveFrontSizeBC)});
   else {
     BCLibs.append(
         {Args.MakeArgString("libomptarget-amdgcn-" + SubArchName + ".bc"),
-         Args.MakeArgString("libhostcall-amdgcn-" + SubArchName + ".bc"),
          Args.MakeArgString("libaompextras-amdgcn-" + SubArchName + ".bc"),
          "hip.bc", "ockl.bc",
+         Args.MakeArgString("libbc-hostrpc-amdgcn.a"),
          std::string(WaveFrontSizeBC)});
 
     if (!Args.hasArg(options::OPT_nostdlibxx) &&
@@ -331,9 +330,11 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   assert(StringRef(SubArchName).startswith("gfx") && "Unsupported sub arch");
 
   // Prefix for temporary file name.
-  std::string Prefix = llvm::sys::path::stem(Inputs[0].getFilename()).str();
-  if (!C.getDriver().isSaveTempsEnabled())
-    Prefix += "-" + SubArchName;
+  std::string Prefix;
+  for (const auto &II : Inputs)
+    if (II.isFilename())
+      Prefix =
+          llvm::sys::path::stem(II.getFilename()).str() + "-" + SubArchName;
   assert(Prefix.length() && "no linker inputs are files ");
 
   // Each command outputs different files.

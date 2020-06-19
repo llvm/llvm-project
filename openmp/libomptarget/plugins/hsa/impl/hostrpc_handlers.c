@@ -28,7 +28,7 @@ SOFTWARE.
 
 */
 
-#include "../../../src/hostrpc_service_id.h"
+#include "../../../hostrpc/src/hostrpc.h"
 #include "atmi_runtime.h"
 #include <ctype.h>
 #include <stdarg.h>
@@ -236,31 +236,31 @@ static void hostrpc_handler_SERVICE_DEMO(uint64_t *payload) {
 //  atmi_hostcall.c and hostrpc_handlers.c into a single hostrpc.c
 extern void handlePayload(uint32_t service, uint64_t *payload) {
   switch (service) {
-  case HOSTCALL_SERVICE_PRINTF:
+  case HOSTRPC_SERVICE_PRINTF:
     hostrpc_handler_SERVICE_PRINTF(payload);
     break;
-  case HOSTCALL_SERVICE_VARFNUINT:
+  case HOSTRPC_SERVICE_VARFNUINT:
     hostrpc_handler_SERVICE_VARFNUINT(payload);
     break;
-  case HOSTCALL_SERVICE_VARFNUINT64:
+  case HOSTRPC_SERVICE_VARFNUINT64:
     hostrpc_handler_SERVICE_VARFNUINT64(payload);
     break;
-  case HOSTCALL_SERVICE_VARFNDOUBLE:
+  case HOSTRPC_SERVICE_VARFNDOUBLE:
     hostrpc_handler_SERVICE_VARFNDOUBLE(payload);
     break;
-  case HOSTCALL_SERVICE_MALLOC_PRINTF:
+  case HOSTRPC_SERVICE_MALLOC_PRINTF:
     hostrpc_handler_SERVICE_MALLOC_PRINTF(payload);
     break;
-  case HOSTCALL_SERVICE_MALLOC:
+  case HOSTRPC_SERVICE_MALLOC:
     hostrpc_handler_SERVICE_MALLOC(payload);
     break;
-  case HOSTCALL_SERVICE_FREE:
+  case HOSTRPC_SERVICE_FREE:
     hostrpc_handler_SERVICE_FREE(payload);
     break;
-  case HOSTCALL_SERVICE_FUNCTIONCALL:
+  case HOSTRPC_SERVICE_FUNCTIONCALL:
     hostrpc_handler_SERVICE_FUNCTIONCALL(payload);
     break;
-  case HOSTCALL_SERVICE_DEMO:
+  case HOSTRPC_SERVICE_DEMO:
     hostrpc_handler_SERVICE_DEMO(payload);
     break;
   default:

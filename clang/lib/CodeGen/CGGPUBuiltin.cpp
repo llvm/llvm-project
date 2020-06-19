@@ -155,66 +155,48 @@ CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
   return RValue::get(Printf);
 }
 
-// For printf in OpenMP on amdgcn, we build a struct of numerics where string
-// pointers are converted to their lengths and then all the strings are
-// written after the struct. We write the length of the numerics struct
-// in the first eelement of the struct. For example
+// EmitHostrpcVargsFn:
 //
-// printf("format string %d %s %ld\n", arg1, "string2", arg3);
-// is converted into
+// For printf in an OpenMP Target region on amdgn and for variable argument
+// functions that have a supporting host service function (hostrpc) a struct
+// is created to represent the vargs for each call site.
+// The struct contains the length, number of args, an array of 4-byte keys
+// that represent the type of of each arg, an array of aligned "data" values
+// for each arg, and finally the runtime string values. If an arg is a string
+// the data value is the runtime length of the string.  Each 4-byte key
+// contains the llvm type ID and the number of bits for the type.
+// encoded by the macro PACK_TY_BITLEN(x,y) ((uint32_t)x << 16) | ((uint32_t)y)
+// The llvm type ID of a string is pointer. To distinguish string pointers
+// from non-string pointers, the number of bitlen is set to 1.
 //
-//  { struct Tmp {24; 25; int arg1; 7; long arg3} ,
-//    "format string %d %s %ld\n",
-//    "string2"
-//  }
-// Return value from printf_alloc is a thread-specific pointer to global
-// memory that will contain all the data values and all strings, INCLUDING
-// the format string. The first data value is the length of the data values.
-// This is followed by the data values themselves.  The data value for a
-// string is the LENGTH of the string, NOT the string itself.  All the strings
-// including the format string are stored consecutively at the end of all the
-// data values. Since the first value is the combined size of all the data
-// values, the second data value is the length of the format string because
-// the format string is always the first argument of a printf.
-// The host routine to parse this buffer, must find the format string by
-// using the length of the data values in the 1st field and jumping that many
-// bytes to the end of the data values. If the format string has any
-// args, their values will start in the 3rd field. If the host parser
-// encounters a string (%s) in the format string, it must get this string
-// value by going to the next string value after the format string.
-// It does this by using the length of the format string. Subsequent strings
-// will be found by using previous string lengths.
+// For example, here is a 4 arg printf function
+//
+// printf("format string %d %s %f \n", (int) 1, "string2", (double) 1.234);
+//
+// is represented by a struct with these 13 elements.
+//
+//  {81, 4, 983041, 720928, 983041, 196672, 25, int 1, 7, 0, double 1.234,
+//     "format string %d %s %ld\n", "string2" }
+//
+// 81 is the total length of the buffer that must be allocated.
+// 4 is the number of arguments.
+// The next 4 key values represent the data types of the 4 args.
+// The format string length is 25.
+// The integer field is next.
+// The string argument "string2" has length 7
+// The 4-byte dummy arg 0 is inserted so the next double arg is aligned.
+// The string arguments follows the header, keys, and data args.
+//
+// Before the struct is written, a hostrpc call is is emitted  to allocate
+// memory for the transfer. Then the struct is emitted.  Then a call
+// to the execute the GPU stub function that initiates the service
+// on the host.  The host runtime passes the buffer to the service routine
+// for processing.
 
-static llvm::Function *GetOmpPrintfAllocDeclaration(CodeGenModule &CGM) {
-  auto &M = CGM.getModule();
-  llvm::Type *ArgTypes[] = {CGM.Int32Ty};
-  llvm::FunctionType *OmpPrintfAllocFuncType = llvm::FunctionType::get(
-      llvm::PointerType::getUnqual(CGM.Int8Ty), ArgTypes, false);
-  if (auto *F = M.getFunction("printf_alloc")) {
-    assert(F->getFunctionType() == OmpPrintfAllocFuncType);
-    return F;
-  }
-  llvm::Function *FN = llvm::Function::Create(
-      OmpPrintfAllocFuncType, llvm::GlobalVariable::ExternalLinkage,
-      "printf_alloc", &M);
-  return FN;
-}
-static llvm::Function *GetOmpPrintfExecuteDeclaration(CodeGenModule &CGM) {
-  auto &M = CGM.getModule();
-  llvm::Type *ArgTypes[] = {llvm::PointerType::getUnqual(CGM.Int8Ty),
-                            CGM.Int32Ty};
-  llvm::FunctionType *OmpPrintfExecuteFuncType =
-      llvm::FunctionType::get(CGM.Int32Ty, ArgTypes, false);
-  if (auto *F = M.getFunction("printf_execute")) {
-    assert(F->getFunctionType() == OmpPrintfExecuteFuncType);
-    return F;
-  }
-  llvm::Function *FN = llvm::Function::Create(
-      OmpPrintfExecuteFuncType, llvm::GlobalVariable::ExternalLinkage,
-      "printf_execute", &M);
-  return FN;
-}
+// These static helper functions support EmitHostrpcVargsFn.
 
+// For strings that vary in length at runtime this strlen_max
+// will stop at a provided maximum.
 static llvm::Function *GetOmpStrlenDeclaration(CodeGenModule &CGM) {
   auto &M = CGM.getModule();
   // Args are pointer to char and maxstringlen
@@ -230,6 +212,7 @@ static llvm::Function *GetOmpStrlenDeclaration(CodeGenModule &CGM) {
   return FN;
 }
 
+// Deterimines if an expression is a string with variable lenth
 static bool isVarString(const clang::Expr *argX, const clang::Type *argXTy,
                         const llvm::Value *Arg) {
   if ((argXTy->isPointerType() || argXTy->isConstantArrayType()) &&
@@ -243,6 +226,7 @@ static bool isVarString(const clang::Expr *argX, const clang::Type *argXTy,
   return false;
 }
 
+// Deterimines if an argument is a string
 static bool isString(const clang::Type *argXTy) {
   if ((argXTy->isPointerType() || argXTy->isConstantArrayType()) &&
       argXTy->getPointeeOrArrayElementType()->isCharType())
@@ -251,6 +235,7 @@ static bool isString(const clang::Type *argXTy) {
     return false;
 }
 
+// Gets a string literal to write into the transfer buffer
 static const StringLiteral *getSL(const clang::Expr *argX,
                                   const clang::Type *argXTy) {
   // String in argX has known constant length
@@ -265,11 +250,52 @@ static const StringLiteral *getSL(const clang::Expr *argX,
   return SL;
 }
 
-RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExprOMP(
-    const CallExpr *E, ReturnValueSlot ReturnValue) {
+// Returns a function pointer to the memory allocation routine
+static llvm::Function *GetVargsFnAllocDeclaration(CodeGenModule &CGM,
+                                                  const char *GPUAllocateName) {
+  auto &M = CGM.getModule();
+  llvm::Type *ArgTypes[] = {CGM.Int32Ty};
+  llvm::Function *FN;
+  llvm::FunctionType *VargsFnAllocFuncType = llvm::FunctionType::get(
+      llvm::PointerType::getUnqual(CGM.Int8Ty), ArgTypes, false);
+
+  if (!(FN = M.getFunction(GPUAllocateName)))
+    FN = llvm::Function::Create(VargsFnAllocFuncType,
+                                llvm::GlobalVariable::ExternalLinkage,
+                                GPUAllocateName, &M);
+  assert(FN->getFunctionType() == VargsFnAllocFuncType);
+  return FN;
+}
+
+// Returns a function pointer to the GPU stub function
+static llvm::Function *
+hostrpcVargsReturnsFnDeclaration(CodeGenModule &CGM, QualType Ty,
+                                 const char *GPUStubFunctionName) {
+  auto &M = CGM.getModule();
+  llvm::Type *ArgTypes[] = {llvm::PointerType::getUnqual(CGM.Int8Ty),
+                            CGM.Int32Ty};
+  llvm::Function *FN;
+  llvm::FunctionType *VarfnFuncType =
+      llvm::FunctionType::get(CGM.getTypes().ConvertType(Ty), ArgTypes, false);
+  if (!(FN = M.getFunction(GPUStubFunctionName)))
+    FN = llvm::Function::Create(VarfnFuncType,
+                                llvm::GlobalVariable::ExternalLinkage,
+                                GPUStubFunctionName, &M);
+  assert(FN->getFunctionType() == VarfnFuncType);
+  return FN;
+}
+
+// The macro to pack the llvm type ID and numbits into 4-byte key
+#define PACK_TY_BITLEN(x, y) ((uint32_t)x << 16) | ((uint32_t)y)
+
+// Emit the code to support a host vargs function such as printf.
+RValue CodeGenFunction::EmitHostrpcVargsFn(const CallExpr *E,
+                                           const char *GPUAllocateName,
+                                           const char *GPUStubFunctionName,
+                                           ReturnValueSlot ReturnValue) {
   assert(getTarget().getTriple().isAMDGCN());
-  assert(E->getBuiltinCallee() == Builtin::BIprintf);
-  assert(E->getNumArgs() >= 1); // printf always has at least one arg.
+  // assert(E->getBuiltinCallee() == Builtin::BIprintf);
+  assert(E->getNumArgs() >= 1); // rpc varfn always has at least one arg.
 
   const llvm::DataLayout &DL = CGM.getDataLayout();
 
@@ -283,20 +309,30 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExprOMP(
   if (std::any_of(Args.begin() + 1, Args.end(), [&](const CallArg &A) {
         return !A.getRValue(*this).isScalar();
       })) {
-    CGM.ErrorUnsupported(E, "non-scalar arg to printf");
+    CGM.ErrorUnsupported(E, "non-scalar arg in GPU vargs function");
     return RValue::get(llvm::ConstantInt::get(IntTy, 0));
   }
 
-  // ---  1st Pass over Args to create ArgTypes and count size ---
-
-  llvm::SmallVector<llvm::Type *, 16> ArgTypes;
-  llvm::SmallVector<llvm::Value *, 16> VarStrLengths;
+  unsigned NumArgs = (unsigned)Args.size();
+  llvm::SmallVector<llvm::Type *, 32> ArgTypes;
+  llvm::SmallVector<llvm::Value *, 32> VarStrLengths;
   llvm::Value *TotalVarStrsLength = llvm::ConstantInt::get(Int32Ty, 0);
-  int AllStringsLen_CT = 0;
-  int DataLen_CT = (int)DL.getTypeAllocSize(Int32Ty);
   bool hasVarStrings = false;
   ArgTypes.push_back(Int32Ty); // First field in struct will be total DataLen
-  for (unsigned I = 0, NumArgs = Args.size(); I < NumArgs; ++I) {
+  ArgTypes.push_back(Int32Ty); // 2nd field in struct will be num args
+  // An array of 4-byte keys that describe the arg type
+  for (unsigned I = 0; I < NumArgs; ++I)
+    ArgTypes.push_back(Int32Ty);
+
+  // Track the size of the numeric data length and string length
+  unsigned DataLen_CT =
+      (unsigned)(DL.getTypeAllocSize(Int32Ty)) * (NumArgs + 2);
+  unsigned AllStringsLen_CT = 0;
+
+  // ---  1st Pass over Args to create ArgTypes and count size ---
+
+  size_t structOffset = 4 * (NumArgs + 2);
+  for (unsigned I = 0; I < NumArgs; I++) {
     llvm::Value *Arg = Args[I].getRValue(*this).getScalarVal();
     llvm::Type *ArgType = Arg->getType();
     const Expr *argX = E->getArg(I)->IgnoreParenCasts();
@@ -323,45 +359,86 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExprOMP(
         // change ArgType from char ptr to int to contain string length
         ArgType = Int32Ty;
       }
+    } // end of processing string argument
+    // if ArgTypeSize is >4 bytes we need to insert dummy align
+    // values in the struct so all stores can be aligned .
+    // These dummy fields must be inserted before the arg.
+    //
+    // In the pass below where the stores are generated careful
+    // tracking of the index into the struct is necessary.
+    size_t needsPadding = (structOffset % (size_t)DL.getTypeAllocSize(ArgType));
+    if (needsPadding) {
+      DataLen_CT += (unsigned)needsPadding;
+      structOffset += needsPadding;
+      ArgTypes.push_back(Int32Ty); // should assert that needsPadding == 4 here
     }
-    DataLen_CT += (int)DL.getTypeAllocSize(ArgType);
+
     ArgTypes.push_back(ArgType);
+    DataLen_CT += ((int)DL.getTypeAllocSize(ArgType));
+    structOffset += (size_t)DL.getTypeAllocSize(ArgType);
   }
 
   // ---  Generate call to printf_alloc to get pointer to data structure  ---
-
   if (hasVarStrings)
     TotalVarStrsLength = Builder.CreateAdd(
         TotalVarStrsLength,
         llvm::ConstantInt::get(Int32Ty, AllStringsLen_CT + DataLen_CT,
                                "const_length_adder"),
         "total_buffer_size");
-
   llvm::Value *BufferLen =
       hasVarStrings
           ? TotalVarStrsLength
           : llvm::ConstantInt::get(Int32Ty, AllStringsLen_CT + DataLen_CT);
 
-  llvm::Value *DataStructPtr =
-      Builder.CreateCall(GetOmpPrintfAllocDeclaration(CGM), {BufferLen});
+  llvm::Value *DataStructPtr = Builder.CreateCall(
+      GetVargsFnAllocDeclaration(CGM, GPUAllocateName), {BufferLen});
 
   // cast the generic return pointer to be a struct in device global memory
   llvm::StructType *DataStructTy =
-      llvm::StructType::create(ArgTypes, "printf_args");
+      llvm::StructType::create(ArgTypes, "varfn_args_store");
   unsigned AS = getContext().getTargetAddressSpace(LangAS::cuda_device);
   llvm::Value *BufferPtr = Builder.CreatePointerCast(
       DataStructPtr, llvm::PointerType::get(DataStructTy, AS),
-      "printf_args_casted");
+      "varfn_args_store_casted");
 
-  // ---  2nd Pass: Store thread-specfic data values to global memory buffer ---
-
-  // Start with length of data structure which is not a user arg
-  llvm::Value *DataLen = llvm::ConstantInt::get(Int32Ty, DataLen_CT);
+  // ---  Header of struct contains length and NumArgs ---
+  llvm::Value *DataLenField = llvm::ConstantInt::get(Int32Ty, DataLen_CT);
   llvm::Value *P = Builder.CreateStructGEP(DataStructTy, BufferPtr, 0);
-  Builder.CreateAlignedStore(DataLen, P,
-                             DL.getPrefTypeAlignment(DataLen->getType()));
+  Builder.CreateAlignedStore(
+      DataLenField, P, DL.getPrefTypeAlign(DataLenField->getType()));
+  llvm::Value *NumArgsField = llvm::ConstantInt::get(Int32Ty, NumArgs);
+  P = Builder.CreateStructGEP(DataStructTy, BufferPtr, 1);
+  Builder.CreateAlignedStore(
+      NumArgsField, P, DL.getPrefTypeAlign(NumArgsField->getType()));
+
+  // ---  2nd Pass: create array of 4-byte keys to describe each arg
+
+  for (unsigned I = 0; I < NumArgs; I++) {
+    llvm::Type *ty = Args[I].getRValue(*this).getScalarVal()->getType();
+    llvm::Type::TypeID argtypeid =
+        Args[I].getRValue(*this).getScalarVal()->getType()->getTypeID();
+
+    // Get type size in bits. Usually 64 or 32.
+    uint32_t numbits = 0;
+    if (isString(E->getArg(I)->IgnoreParenCasts()->getType().getTypePtr()))
+      // The llvm typeID for string is pointer.  Since pointer numbits is 0,
+      // we set numbits to 1 to distinguish pointer type ID as string pointer.
+      numbits = 1;
+    else
+      numbits = ty->getScalarSizeInBits();
+    // Create a key that combines llvm typeID and size
+    llvm::Value *Key =
+        llvm::ConstantInt::get(Int32Ty, PACK_TY_BITLEN(argtypeid, numbits));
+    P = Builder.CreateStructGEP(DataStructTy, BufferPtr, I + 2);
+    Builder.CreateAlignedStore(Key, P, DL.getPrefTypeAlign(Key->getType()));
+  }
+
+  // ---  3rd Pass: Store thread-specfic data values for each arg ---
+
   unsigned varstring_index = 0;
-  for (unsigned I = 0, NumArgs = Args.size(); I < NumArgs; ++I) {
+  unsigned structIndex = 2 + NumArgs;
+  structOffset = 4 * structIndex;
+  for (unsigned I = 0; I < NumArgs; I++) {
     llvm::Value *Arg;
     const Expr *argX = E->getArg(I)->IgnoreParenCasts();
     auto *argXTy = argX->getType().getTypePtr();
@@ -376,13 +453,23 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExprOMP(
         // Change Arg from a char pointer to the integer string length
         Arg = llvm::ConstantInt::get(Int32Ty, ArgStrLen);
       }
-    } else
+    } else {
       Arg = Args[I].getKnownRValue().getScalarVal();
-    P = Builder.CreateStructGEP(DataStructTy, BufferPtr, I + 1);
-    Builder.CreateAlignedStore(Arg, P, DL.getPrefTypeAlignment(Arg->getType()));
+    }
+    size_t structElementSize = (size_t)DL.getTypeAllocSize(Arg->getType());
+    size_t needsPadding = (structOffset % structElementSize);
+    if (needsPadding) {
+      // Skip over dummy fields in struct to align
+      structOffset += needsPadding; // should assert needsPadding == 4
+      structIndex++;
+    }
+    P = Builder.CreateStructGEP(DataStructTy, BufferPtr, structIndex);
+    Builder.CreateAlignedStore(Arg, P, DL.getPrefTypeAlign(Arg->getType()));
+    structOffset += structElementSize;
+    structIndex++;
   }
 
-  // ---  3rd Pass: memcpy all strings after the data values ---
+  // ---  4th Pass: memcpy all strings after the data values ---
 
   // bitcast the struct in device global memory as a char buffer
   Address BufferPtrByteAddr = Address(
@@ -392,7 +479,7 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExprOMP(
   BufferPtrByteAddr = Builder.CreateConstInBoundsByteGEP(
       BufferPtrByteAddr, CharUnits::fromQuantity(DataLen_CT));
   varstring_index = 0;
-  for (unsigned I = 0, NumArgs = Args.size(); I < NumArgs; ++I) {
+  for (unsigned I = 0; I < NumArgs; ++I) {
     llvm::Value *Arg = Args[I].getKnownRValue().getScalarVal();
     const Expr *argX = E->getArg(I)->IgnoreParenCasts();
     auto *argXTy = argX->getType().getTypePtr();
@@ -419,6 +506,7 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExprOMP(
       }
     }
   }
-  return RValue::get(Builder.CreateCall(GetOmpPrintfExecuteDeclaration(CGM),
-                                        {DataStructPtr, BufferLen}));
+  return RValue::get(Builder.CreateCall(
+      hostrpcVargsReturnsFnDeclaration(CGM, E->getType(), GPUStubFunctionName),
+      {DataStructPtr, BufferLen}));
 }

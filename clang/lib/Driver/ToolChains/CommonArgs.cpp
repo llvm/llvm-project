@@ -626,8 +626,11 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   if (RTKind == Driver::OMPRT_GOMP && GompNeedsRT)
       CmdArgs.push_back("-lrt");
 
-  if (IsOffloadingHost)
+  if (IsOffloadingHost) {
+    if (TC.getTriple().isAMDGCN())
+      CmdArgs.push_back("-lhostrpc");
     CmdArgs.push_back("-lomptarget");
+  }
 
   addArchSpecificRPath(TC, Args, CmdArgs);
 
@@ -1051,7 +1054,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   }
 
   // AMDGPU-specific defaults for PIC.
-  if (Triple.getArch() == llvm::Triple::amdgcn)
+  if (Triple.isAMDGCN())
     PIC = true;
 
   // The last argument relating to either PIC or PIE wins, and no

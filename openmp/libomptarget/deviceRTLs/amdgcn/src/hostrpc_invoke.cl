@@ -224,7 +224,7 @@ typedef struct {
     long arg5;
     long arg6;
     long arg7;
-} __ockl_hostcall_result_t;
+} __ockl_hostrpc_result_t;
 
 /** \brief Wait for the host response and return the first two ulong
  *         entries per workitem.
@@ -233,7 +233,7 @@ typedef struct {
  *  the host changes the state to DONE. Each workitem reads the first
  *  two ulong elements in its slot and returns this.
  */
-static __ockl_hostcall_result_t
+static __ockl_hostrpc_result_t
 get_return_value(__global header_t *header, __global payload_t *payload)
 {
     uint me = __ockl_lane_u32();
@@ -267,7 +267,7 @@ get_return_value(__global header_t *header, __global payload_t *payload)
     }
 
     __global long *ptr = (__global long *)(payload->slots + me);
-    __ockl_hostcall_result_t retval;
+    __ockl_hostrpc_result_t retval;
     retval.arg0 = *ptr++;
     retval.arg1 = *ptr++;
     retval.arg2 = *ptr++;
@@ -293,8 +293,8 @@ get_return_value(__global header_t *header, __global payload_t *payload)
  *  function itself will be exposed as an orindary function symbol to
  *  be linked into kernel objects that are loaded after this library.
  */
-__ockl_hostcall_result_t
-hostcall_invoke( uint service_id,
+__ockl_hostrpc_result_t
+hostrpc_invoke( uint service_id,
                        ulong arg0, ulong arg1, ulong arg2, ulong arg3,
                        ulong arg4, ulong arg5, ulong arg6, ulong arg7)
 {
@@ -314,7 +314,7 @@ __asm__("; hostcall_invoke: record need for hostcall support\n\t"
   fill_packet(header, payload, service_id, arg0, arg1, arg2, arg3, arg4,
               arg5, arg6, arg7);
   push_ready_stack(buffer, packet_ptr);
-  __ockl_hostcall_result_t retval = get_return_value(header, payload);
+  __ockl_hostrpc_result_t retval = get_return_value(header, payload);
   return_free_packet(buffer, packet_ptr);
   return retval;
 }

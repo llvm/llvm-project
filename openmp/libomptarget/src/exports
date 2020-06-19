@@ -25,10 +25,6 @@ VERS1.0 {
     omp_target_memcpy_rect;
     omp_target_associate_ptr;
     omp_target_disassociate_ptr;
-    hostrpc_fptr0;
-    hostrpc_varfn_uint;
-    hostrpc_varfn_uint64;
-    hostrpc_varfn_double;
     __kmpc_push_target_tripcount;
   local:
     *;

@@ -81,6 +81,7 @@ endif()
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins)
 add_subdirectory(deviceRTLs)
+add_subdirectory(hostrpc)
 
 # Add tests.
 add_subdirectory(test)

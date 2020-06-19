@@ -30,7 +30,7 @@ SOFTWARE.
 
 */
 
-#include "../../../src/hostrpc_service_id.h"
+#include "../../../hostrpc/src/hostrpc.h"
 #include "amd_hostcall.h"
 #include "atmi_interop_hsa.h"
 #include "atmi_runtime.h"
@@ -112,22 +112,22 @@ static buffer_t *atl_hcq_create_buffer(unsigned int num_packets) {
 // FIXME: Clean up this diagnostic and die properly
 hsa_status_t atmi_hostcall_version_check(unsigned int device_vrm) {
   uint device_version_release = device_vrm >> 6;
-  if (device_version_release != HOSTCALL_VERSION_RELEASE) {
+  if (device_version_release != HOSTRPC_VERSION_RELEASE) {
     printf("ERROR Incompatible device and host release\n      Device "
            "release(%d)\n      Host release(%d)\n",
-           device_version_release, HOSTCALL_VERSION_RELEASE);
+           device_version_release, HOSTRPC_VERSION_RELEASE);
     return HSA_STATUS_ERROR;
   }
-  if (device_vrm > HOSTCALL_VRM) {
+  if (device_vrm > HOSTRPC_VRM) {
     printf("ERROR Incompatible device and host version \n       Device "
            "version(%d)\n      Host version(%d)\n",
-           device_vrm, HOSTCALL_VERSION_RELEASE);
+           device_vrm, HOSTRPC_VERSION_RELEASE);
     return HSA_STATUS_ERROR;
   }
-  if (device_vrm < HOSTCALL_VRM) {
-    unsigned int host_ver = ((unsigned int)HOSTCALL_VRM) >> 12;
-    unsigned int host_rel = (((unsigned int)HOSTCALL_VRM) << 20) >> 26;
-    unsigned int host_mod = (((unsigned int)HOSTCALL_VRM) << 26) >> 26;
+  if (device_vrm < HOSTRPC_VRM) {
+    unsigned int host_ver = ((unsigned int)HOSTRPC_VRM) >> 12;
+    unsigned int host_rel = (((unsigned int)HOSTRPC_VRM) << 20) >> 26;
+    unsigned int host_mod = (((unsigned int)HOSTRPC_VRM) << 26) >> 26;
     unsigned int dev_ver = ((unsigned int)device_vrm) >> 12;
     unsigned int dev_rel = (((unsigned int)device_vrm) << 20) >> 26;
     unsigned int dev_mod = (((unsigned int)device_vrm) << 26) >> 26;

@@ -3886,8 +3886,10 @@ public:
                                        ReturnValueSlot ReturnValue);
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
                                         ReturnValueSlot ReturnValue);
-  RValue EmitAMDGPUDevicePrintfCallExprOMP(const CallExpr *E,
-                                           ReturnValueSlot ReturnValue);
+
+  RValue EmitHostrpcVargsFn(const CallExpr *E, const char *allocate_name,
+                            const char *execute_name,
+                            ReturnValueSlot ReturnValue);
 
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);
