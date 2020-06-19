@@ -146,6 +146,20 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SIGN_EXTEND_VECTOR_INREG) {
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 15u);
 }
 
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_SIGN_EXTEND_VECTOR_INREG) {
+  if (!TM)
+    return;
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int16VT = EVT::getIntegerVT(Context, 16);
+  auto InVecVT = EVT::getVectorVT(Context, Int8VT, 4, /*IsScalable=*/true);
+  auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2, /*IsScalable=*/true);
+  auto InVec = DAG->getConstant(1, Loc, InVecVT);
+  auto Op = DAG->getNode(ISD::SIGN_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
+  auto DemandedElts = APInt(2, 3);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 1u);
+}
+
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_EXTRACT_SUBVECTOR) {
   if (!TM)
     return;
