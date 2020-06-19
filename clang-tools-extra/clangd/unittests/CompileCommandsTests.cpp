@@ -115,7 +115,7 @@ TEST(CommandMangler, ClangPath) {
 
   Cmd = {"foo/unknown-binary", "foo.cc"};
   Mangler.adjust(Cmd);
-  EXPECT_EQ(testPath("fake/unknown-binary"), Cmd.front());
+  EXPECT_EQ("foo/unknown-binary", Cmd.front());
 }
 
 // Only run the PATH/symlink resolving test on unix, we need to fiddle

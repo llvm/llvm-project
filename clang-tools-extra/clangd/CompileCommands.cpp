@@ -135,6 +135,12 @@ static std::string resolveDriver(llvm::StringRef Driver, bool FollowSymlink,
   // First, eliminate relative paths.
   std::string Storage;
   if (!llvm::sys::path::is_absolute(Driver)) {
+    // If it's working-dir relative like bin/clang, we can't resolve it.
+    // FIXME: we could if we had the working directory here.
+    // Let's hope it's not a symlink.
+    if (llvm::any_of(Driver,
+                     [](char C) { return llvm::sys::path::is_separator(C); }))
+      return Driver.str();
     // If the driver is a generic like "g++" with no path, add clang dir.
     if (ClangPath &&
         (Driver == "clang" || Driver == "clang++" || Driver == "gcc" ||
