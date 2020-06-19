@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Layer.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Debug.h"
 
@@ -158,6 +159,8 @@ Expected<SymbolFlagsMap> getObjectSymbolFlags(ExecutionSession &ES,
   if (!Obj)
     return Obj.takeError();
 
+  bool IsMachO = isa<object::MachOObjectFile>(Obj->get());
+
   SymbolFlagsMap SymbolFlags;
   for (auto &Sym : (*Obj)->symbols()) {
     // Skip symbols not defined in this object file.
@@ -175,6 +178,11 @@ Expected<SymbolFlagsMap> getObjectSymbolFlags(ExecutionSession &ES,
     auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
     if (!SymFlags)
       return SymFlags.takeError();
+
+     // Strip the 'exported' flag from MachO linker-private symbols.
+     if (IsMachO && Name->startswith("l"))
+       *SymFlags &= ~JITSymbolFlags::Exported;
+
     SymbolFlags[InternedName] = std::move(*SymFlags);
   }
 
