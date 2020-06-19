@@ -52,7 +52,7 @@ bool StackLifetime::isAliveAfter(const AllocaInst *AI,
   auto ItBB = BlockInstRange.find(BB);
   assert(ItBB != BlockInstRange.end() && "Unreachable is not expected");
 
-  // Find the first instruction after the V.
+  // Search the block for the first instruction following 'I'.
   auto It = std::upper_bound(Instructions.begin() + ItBB->getSecond().first + 1,
                              Instructions.begin() + ItBB->getSecond().second, I,
                              [](const Instruction *L, const Instruction *R) {
