@@ -156,7 +156,7 @@ public:
     return LiveRange(Instructions.size(), true);
   }
 
-  void print(raw_ostream &O);
+  void print(raw_ostream &O, bool AllInstructions = false);
 };
 
 static inline raw_ostream &operator<<(raw_ostream &OS, const BitVector &V) {
