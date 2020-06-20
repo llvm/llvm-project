@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -S -emit-llvm -x c++ \
-// RUN:     -fno-use-cxa-atexit -std=c++2a < %s | \
+// RUN:     -std=c++2a < %s | \
 // RUN:   FileCheck --check-prefixes=CHECK,CHECK32 %s
 
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -S -emit-llvm -x c++ \
-// RUN:     -fno-use-cxa-atexit -std=c++2a < %s | \
+// RUN:     -std=c++2a < %s | \
 // RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 
 namespace test1 {
