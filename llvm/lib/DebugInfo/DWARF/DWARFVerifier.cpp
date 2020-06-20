@@ -1336,9 +1336,7 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   // "The name index must contain an entry for each debugging information entry
   // that defines a named subprogram, label, variable, type, or namespace,
   // subject to ..."
-  // Instead whitelisting all TAGs representing a "type" or a "subprogram", to
-  // make sure we catch any missing items, we instead blacklist all TAGs that we
-  // know shouldn't be indexed.
+  // Explicitly exclude all TAGs that we know shouldn't be indexed.
   switch (Die.getTag()) {
   // Compile units and modules have names but shouldn't be indexed.
   case DW_TAG_compile_unit:
