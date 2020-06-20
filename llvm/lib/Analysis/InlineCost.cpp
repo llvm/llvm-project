@@ -1113,7 +1113,8 @@ bool CallAnalyzer::visitCastInst(CastInst &I) {
       }))
     return true;
 
-  // Disable SROA in the face of arbitrary casts we don't whitelist elsewhere.
+  // Disable SROA in the face of arbitrary casts we don't explicitly list
+  // elsewhere.
   disableSROA(I.getOperand(0));
 
   // If this is a floating-point cast, and the target says this operation

@@ -195,10 +195,10 @@ CleanupPointerRootUsers(GlobalVariable *GV,
                         function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   // A brief explanation of leak checkers.  The goal is to find bugs where
   // pointers are forgotten, causing an accumulating growth in memory
-  // usage over time.  The common strategy for leak checkers is to whitelist the
-  // memory pointed to by globals at exit.  This is popular because it also
-  // solves another problem where the main thread of a C++ program may shut down
-  // before other threads that are still expecting to use those globals.  To
+  // usage over time.  The common strategy for leak checkers is to explicitly
+  // allow the memory pointed to by globals at exit.  This is popular because it
+  // also solves another problem where the main thread of a C++ program may shut
+  // down before other threads that are still expecting to use those globals. To
   // handle that case, we expect the program may create a singleton and never
   // destroy it.
 
