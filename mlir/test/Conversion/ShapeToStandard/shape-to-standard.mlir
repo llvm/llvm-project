@@ -86,3 +86,32 @@ func @size_const() -> !shape.size {
 }
 // CHECK: %[[C1:.*]] = constant 1 : index
 // CHECK: return %[[C1]] : index
+
+// -----
+
+// Lower `shape_of` for statically shaped tensor.
+// CHECK-LABEL: @shape_of_stat
+// CHECK-SAME: (%[[ARG:.*]]: tensor<1x2x3xf32>)
+func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
+  // CHECK-DAG: %[[C1:.*]] = constant 1 : index
+  // CHECK-DAG: %[[C2:.*]] = constant 2 : index
+  // CHECK-DAG: %[[C3:.*]] = constant 3 : index
+  // CHECK-DAG: %[[SHAPE:.*]] = tensor_from_elements(%[[C1]], %[[C2]], %[[C3]]) : tensor<3xindex>
+  %shape = shape.shape_of %arg : tensor<1x2x3xf32>
+  return
+}
+
+// -----
+
+// Lower `shape_of` for dynamically shaped tensor.
+// CHECK-LABEL: @shape_of_dyn
+// CHECK-SAME: (%[[ARG:.*]]: tensor<1x5x?xf32>)
+func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
+  // CHECK-DAG: %[[C1:.*]] = constant 1 : index
+  // CHECK-DAG: %[[C5:.*]] = constant 5 : index
+  // CHECK-DAG: %[[C2:.*]] = constant 2 : index
+  // CHECK-DAG: %[[DYN_DIM:.*]] = dim %[[ARG]], %[[C2]] : tensor<1x5x?xf32>
+  // CHECK-DAG: %[[SHAPE:.*]] = tensor_from_elements(%[[C1]], %[[C5]], %[[DYN_DIM]]) : tensor<3xindex>
+  %shape = shape.shape_of %arg : tensor<1x5x?xf32>
+  return
+}
