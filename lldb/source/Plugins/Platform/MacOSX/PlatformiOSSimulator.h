@@ -79,7 +79,7 @@ protected:
   std::string m_sdk_directory;
   std::string m_build_update;
 
-  const char *GetSDKDirectoryAsCString();
+  llvm::StringRef GetSDKDirectoryAsCString();
 
 private:
   PlatformiOSSimulator(const PlatformiOSSimulator &) = delete;

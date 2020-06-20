@@ -147,8 +147,8 @@ const char *PlatformiOSSimulator::GetDescriptionStatic() {
 
 /// Default Constructor
 PlatformiOSSimulator::PlatformiOSSimulator()
-    : PlatformAppleSimulator(), m_sdk_dir_mutex(), m_sdk_directory(),
-      m_build_update() {}
+    : PlatformAppleSimulator(
+          CoreSimulatorSupport::DeviceType::ProductFamilyID::iPhone) {}
 
 /// Destructor.
 ///
@@ -158,9 +158,9 @@ PlatformiOSSimulator::~PlatformiOSSimulator() {}
 
 void PlatformiOSSimulator::GetStatus(Stream &strm) {
   Platform::GetStatus(strm);
-  const char *sdk_directory = GetSDKDirectoryAsCString();
-  if (sdk_directory)
-    strm.Printf("  SDK Path: \"%s\"\n", sdk_directory);
+  llvm::StringRef sdk_directory = GetSDKDirectoryAsCString();
+  if (!sdk_directory.empty())
+    strm.Printf("  SDK Path: \"%s\"\n", sdk_directory.str().c_str());
   else
     strm.PutCString("  SDK Path: error: unable to locate SDK\n");
   PlatformAppleSimulator::GetStatus(strm);
@@ -242,58 +242,12 @@ Status PlatformiOSSimulator::ResolveExecutable(
   return error;
 }
 
-static FileSystem::EnumerateDirectoryResult
-EnumerateDirectoryCallback(void *baton, llvm::sys::fs::file_type ft,
-                           llvm::StringRef path) {
-  if (ft == llvm::sys::fs::file_type::directory_file) {
-    FileSpec file_spec(path);
-    const char *filename = file_spec.GetFilename().GetCString();
-    if (filename &&
-        strncmp(filename, "iPhoneSimulator", strlen("iPhoneSimulator")) == 0) {
-      ::snprintf((char *)baton, PATH_MAX, "%s", filename);
-      return FileSystem::eEnumerateDirectoryResultQuit;
-    }
-  }
-  return FileSystem::eEnumerateDirectoryResultNext;
-}
-
-const char *PlatformiOSSimulator::GetSDKDirectoryAsCString() {
-  std::lock_guard<std::mutex> guard(m_sdk_dir_mutex);
-  if (m_sdk_directory.empty()) {
-    if (FileSpec fspec = HostInfo::GetXcodeDeveloperDirectory()) {
-      std::string developer_dir = fspec.GetPath();
-      char sdks_directory[PATH_MAX];
-      char sdk_dirname[PATH_MAX];
-      sdk_dirname[0] = '\0';
-      snprintf(sdks_directory, sizeof(sdks_directory),
-               "%s/Platforms/iPhoneSimulator.platform/Developer/SDKs",
-               developer_dir.c_str());
-      FileSpec simulator_sdk_spec;
-      bool find_directories = true;
-      bool find_files = false;
-      bool find_other = false;
-      FileSystem::Instance().EnumerateDirectory(
-          sdks_directory, find_directories, find_files, find_other,
-          EnumerateDirectoryCallback, sdk_dirname);
-
-      if (sdk_dirname[0]) {
-        m_sdk_directory = sdks_directory;
-        m_sdk_directory.append(1, '/');
-        m_sdk_directory.append(sdk_dirname);
-        return m_sdk_directory.c_str();
-      }
-    }
-    // Assign a single NULL character so we know we tried to find the device
-    // support directory and we don't keep trying to find it over and over.
-    m_sdk_directory.assign(1, '\0');
-  }
-
-  // We should have put a single NULL character into m_sdk_directory or it
-  // should have a valid path if the code gets here
-  assert(m_sdk_directory.empty() == false);
-  if (m_sdk_directory[0])
-    return m_sdk_directory.c_str();
-  return NULL;
+llvm::StringRef PlatformiOSSimulator::GetSDKDirectoryAsCString() {
+  llvm::StringRef sdk;
+  sdk = HostInfo::GetXcodeSDKPath(XcodeSDK("iPhoneSimulator.Internal.sdk"));
+  if (sdk.empty())
+    sdk = HostInfo::GetXcodeSDKPath(XcodeSDK("iPhoneSimulator.sdk"));
+  return sdk;
 }
 
 Status PlatformiOSSimulator::GetSymbolFile(const FileSpec &platform_file,
@@ -304,10 +258,10 @@ Status PlatformiOSSimulator::GetSymbolFile(const FileSpec &platform_file,
   if (platform_file.GetPath(platform_file_path, sizeof(platform_file_path))) {
     char resolved_path[PATH_MAX];
 
-    const char *sdk_dir = GetSDKDirectoryAsCString();
-    if (sdk_dir) {
-      ::snprintf(resolved_path, sizeof(resolved_path), "%s/%s", sdk_dir,
-                 platform_file_path);
+    llvm::StringRef sdk_dir = GetSDKDirectoryAsCString();
+    if (!sdk_dir.empty()) {
+      ::snprintf(resolved_path, sizeof(resolved_path), "%s/%s",
+                 sdk_dir.str().c_str(), platform_file_path);
 
       // First try in the SDK and see if the file is in there
       local_file.SetFile(resolved_path, FileSpec::Style::native);
@@ -385,6 +339,7 @@ bool PlatformiOSSimulator::GetSupportedArchitectureAtIndex(uint32_t idx,
     arch = platform_arch;
     if (arch.IsValid()) {
       arch.GetTriple().setOS(llvm::Triple::IOS);
+      arch.GetTriple().setEnvironment(llvm::Triple::Simulator);
       return true;
     }
   } else {
