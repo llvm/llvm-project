@@ -11584,11 +11584,22 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     // C99 6.5.9p2 and C99 6.5.8p2
     if (Context.typesAreCompatible(LCanPointeeTy.getUnqualifiedType(),
                                    RCanPointeeTy.getUnqualifiedType())) {
-      // Valid unless a relational comparison of function pointers
-      if (IsRelational && LCanPointeeTy->isFunctionType()) {
-        Diag(Loc, diag::ext_typecheck_ordered_comparison_of_function_pointers)
-          << LHSType << RHSType << LHS.get()->getSourceRange()
-          << RHS.get()->getSourceRange();
+      if (IsRelational) {
+        // Pointers both need to point to complete or incomplete types
+        if ((LCanPointeeTy->isIncompleteType() !=
+             RCanPointeeTy->isIncompleteType()) &&
+            !getLangOpts().C11) {
+          Diag(Loc, diag::ext_typecheck_compare_complete_incomplete_pointers)
+              << LHS.get()->getSourceRange() << RHS.get()->getSourceRange()
+              << LHSType << RHSType << LCanPointeeTy->isIncompleteType()
+              << RCanPointeeTy->isIncompleteType();
+        }
+        if (LCanPointeeTy->isFunctionType()) {
+          // Valid unless a relational comparison of function pointers
+          Diag(Loc, diag::ext_typecheck_ordered_comparison_of_function_pointers)
+              << LHSType << RHSType << LHS.get()->getSourceRange()
+              << RHS.get()->getSourceRange();
+        }
       }
     } else if (!IsRelational &&
                (LCanPointeeTy->isVoidType() || RCanPointeeTy->isVoidType())) {

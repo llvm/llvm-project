@@ -6446,6 +6446,12 @@ def err_typecheck_ordered_comparison_of_pointer_and_zero : Error<
   "ordered comparison between pointer and zero (%0 and %1)">;
 def err_typecheck_three_way_comparison_of_pointer_and_zero : Error<
   "three-way comparison between pointer and zero">;
+def ext_typecheck_compare_complete_incomplete_pointers : Extension<
+  "pointer comparisons before C11 "
+  "need to be between two complete or two incomplete types; "
+  "%0 is %select{|in}2complete and "
+  "%1 is %select{|in}3complete">,
+  InGroup<C11>;
 def ext_typecheck_ordered_comparison_of_function_pointers : ExtWarn<
   "ordered comparison of function pointers (%0 and %1)">,
   InGroup<DiagGroup<"ordered-compare-function-pointers">>;
