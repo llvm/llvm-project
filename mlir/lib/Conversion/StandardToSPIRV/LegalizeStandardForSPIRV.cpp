@@ -51,6 +51,40 @@ private:
                  ArrayRef<Value> sourceIndices,
                  PatternRewriter &rewriter) const;
 };
+
+template <>
+void LoadOpOfSubViewFolder<LoadOp>::replaceOp(LoadOp loadOp,
+                                              SubViewOp subViewOp,
+                                              ArrayRef<Value> sourceIndices,
+                                              PatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<LoadOp>(loadOp, subViewOp.source(),
+                                      sourceIndices);
+}
+
+template <>
+void LoadOpOfSubViewFolder<vector::TransferReadOp>::replaceOp(
+    vector::TransferReadOp loadOp, SubViewOp subViewOp,
+    ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
+      loadOp, loadOp.getVectorType(), subViewOp.source(), sourceIndices);
+}
+
+template <>
+void StoreOpOfSubViewFolder<StoreOp>::replaceOp(
+    StoreOp storeOp, SubViewOp subViewOp, ArrayRef<Value> sourceIndices,
+    PatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<StoreOp>(storeOp, storeOp.value(),
+                                       subViewOp.source(), sourceIndices);
+}
+
+template <>
+void StoreOpOfSubViewFolder<vector::TransferWriteOp>::replaceOp(
+    vector::TransferWriteOp tranferWriteOp, SubViewOp subViewOp,
+    ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
+      tranferWriteOp, tranferWriteOp.vector(), subViewOp.source(),
+      sourceIndices);
+}
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -118,23 +152,6 @@ LoadOpOfSubViewFolder<OpTy>::matchAndRewrite(OpTy loadOp,
   return success();
 }
 
-template <>
-void LoadOpOfSubViewFolder<LoadOp>::replaceOp(LoadOp loadOp,
-                                              SubViewOp subViewOp,
-                                              ArrayRef<Value> sourceIndices,
-                                              PatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<LoadOp>(loadOp, subViewOp.source(),
-                                      sourceIndices);
-}
-
-template <>
-void LoadOpOfSubViewFolder<vector::TransferReadOp>::replaceOp(
-    vector::TransferReadOp loadOp, SubViewOp subViewOp,
-    ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-      loadOp, loadOp.getVectorType(), subViewOp.source(), sourceIndices);
-}
-
 //===----------------------------------------------------------------------===//
 // Folding SubViewOp and StoreOp/TransferWriteOp.
 //===----------------------------------------------------------------------===//
@@ -154,23 +171,6 @@ StoreOpOfSubViewFolder<OpTy>::matchAndRewrite(OpTy storeOp,
 
   replaceOp(storeOp, subViewOp, sourceIndices, rewriter);
   return success();
-}
-
-template <>
-void StoreOpOfSubViewFolder<StoreOp>::replaceOp(
-    StoreOp storeOp, SubViewOp subViewOp, ArrayRef<Value> sourceIndices,
-    PatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<StoreOp>(storeOp, storeOp.value(),
-                                       subViewOp.source(), sourceIndices);
-}
-
-template <>
-void StoreOpOfSubViewFolder<vector::TransferWriteOp>::replaceOp(
-    vector::TransferWriteOp tranferWriteOp, SubViewOp subViewOp,
-    ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-      tranferWriteOp, tranferWriteOp.vector(), subViewOp.source(),
-      sourceIndices);
 }
 
 //===----------------------------------------------------------------------===//
