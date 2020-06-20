@@ -23087,7 +23087,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       Op1.getOpcode() == ISD::TRUNCATE && Op2.getOpcode() == ISD::TRUNCATE) {
     SDValue T1 = Op1.getOperand(0), T2 = Op2.getOperand(0);
     if (T1.getValueType() == T2.getValueType() &&
-        // Blacklist CopyFromReg to avoid partial register stalls.
+        // Exclude CopyFromReg to avoid partial register stalls.
         T1.getOpcode() != ISD::CopyFromReg && T2.getOpcode()!=ISD::CopyFromReg){
       SDValue Cmov = DAG.getNode(X86ISD::CMOV, DL, T1.getValueType(), T2, T1,
                                  CC, Cond);
