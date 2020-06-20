@@ -1311,7 +1311,8 @@ public:
 ///   %4 = vector.insert %l, %z[0]
 ///   ..
 ///   %x = vector.insert %l, %..[a-1]
-/// which will be folded at LLVM IR level.
+/// until a one-dimensional vector is reached. All these operations
+/// will be folded at LLVM IR level.
 class ConstantMaskOpLowering : public OpRewritePattern<vector::ConstantMaskOp> {
 public:
   using OpRewritePattern<vector::ConstantMaskOp>::OpRewritePattern;
@@ -1325,20 +1326,22 @@ public:
     int64_t rank = dimSizes.size();
     int64_t trueDim = dimSizes[0].cast<IntegerAttr>().getInt();
 
-    Value trueVal;
     if (rank == 1) {
-      trueVal = rewriter.create<ConstantOp>(
-          loc, eltType, rewriter.getIntegerAttr(eltType, 1));
-    } else {
-      VectorType lowType =
-          VectorType::get(dstType.getShape().drop_front(), eltType);
-      SmallVector<int64_t, 4> newDimSizes;
-      for (int64_t r = 1; r < rank; r++)
-        newDimSizes.push_back(dimSizes[r].cast<IntegerAttr>().getInt());
-      trueVal = rewriter.create<vector::ConstantMaskOp>(
-          loc, lowType, rewriter.getI64ArrayAttr(newDimSizes));
+      SmallVector<bool, 4> values(dstType.getDimSize(0));
+      for (int64_t d = 0; d < trueDim; d++)
+        values[d] = true;
+      rewriter.replaceOpWithNewOp<ConstantOp>(
+          op, dstType, rewriter.getBoolVectorAttr(values));
+      return success();
     }
 
+    VectorType lowType =
+        VectorType::get(dstType.getShape().drop_front(), eltType);
+    SmallVector<int64_t, 4> newDimSizes;
+    for (int64_t r = 1; r < rank; r++)
+      newDimSizes.push_back(dimSizes[r].cast<IntegerAttr>().getInt());
+    Value trueVal = rewriter.create<vector::ConstantMaskOp>(
+        loc, lowType, rewriter.getI64ArrayAttr(newDimSizes));
     Value result = rewriter.create<ConstantOp>(loc, dstType,
                                                rewriter.getZeroAttr(dstType));
     for (int64_t d = 0; d < trueDim; d++) {
