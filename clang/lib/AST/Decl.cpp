@@ -4522,11 +4522,11 @@ bool RecordDecl::mayInsertExtraPadding(bool EmitRemark) const {
     ReasonToReject = 5;  // is standard layout.
   else if (Blacklist.isBlacklistedLocation(EnabledAsanMask, getLocation(),
                                            "field-padding"))
-    ReasonToReject = 6;  // is in a blacklisted file.
+    ReasonToReject = 6;  // is in an excluded file.
   else if (Blacklist.isBlacklistedType(EnabledAsanMask,
                                        getQualifiedNameAsString(),
                                        "field-padding"))
-    ReasonToReject = 7;  // is blacklisted.
+    ReasonToReject = 7;  // The type is excluded.
 
   if (EmitRemark) {
     if (ReasonToReject >= 0)
