@@ -1,6 +1,7 @@
 ; RUN: llc -O0 -march=amdgcn -mcpu=gfx900 -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9,GFX9-O0 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9,GFX9-O3 %s
 
+; GFX9-LABEL: {{^}}no_cfg:
 define amdgpu_cs void @no_cfg(<4 x i32> inreg %tmp14) {
   %tmp100 = call <2 x float> @llvm.amdgcn.raw.buffer.load.v2f32(<4 x i32> %tmp14, i32 0, i32 0, i32 0)
   %tmp101 = bitcast <2 x float> %tmp100 to <2 x i32>
@@ -34,6 +35,7 @@ define amdgpu_cs void @no_cfg(<4 x i32> inreg %tmp14) {
   ret void
 }
 
+; GFX9-LABEL: {{^}}cfg:
 define amdgpu_cs void @cfg(<4 x i32> inreg %tmp14, i32 %arg) {
 entry:
   %tmp100 = call <2 x float> @llvm.amdgcn.raw.buffer.load.v2f32(<4 x i32> %tmp14, i32 0, i32 0, i32 0)
@@ -79,6 +81,7 @@ merge:
   ret void
 }
 
+; GFX9-LABEL: {{^}}called:
 define i32 @called(i32 %a) noinline {
 ; GFX9: v_add_u32_e32 v1, v0, v0
   %add = add i32 %a, %a
@@ -89,6 +92,7 @@ define i32 @called(i32 %a) noinline {
   ret i32 %sub
 }
 
+; GFX9-LABEL: {{^}}call:
 define amdgpu_kernel void @call(<4 x i32> inreg %tmp14, i32 inreg %arg) {
 ; GFX9-O0: v_mov_b32_e32 v0, s0
 ; GFX9-O3: v_mov_b32_e32 v2, s0
@@ -113,6 +117,7 @@ define amdgpu_kernel void @call(<4 x i32> inreg %tmp14, i32 inreg %arg) {
   ret void
 }
 
+; GFX9-LABEL: {{^}}called_i64:
 define i64 @called_i64(i64 %a) noinline {
   %add = add i64 %a, %a
   %mul = mul i64 %add, %a
@@ -120,6 +125,7 @@ define i64 @called_i64(i64 %a) noinline {
   ret i64 %sub
 }
 
+; GFX9-LABEL: {{^}}call_i64:
 define amdgpu_kernel void @call_i64(<4 x i32> inreg %tmp14, i64 inreg %arg) {
 ; GFX9-O0: v_mov_b32_e32 v0, s0
 ; GFX9-O0: v_mov_b32_e32 v1, s1
@@ -145,6 +151,7 @@ define amdgpu_kernel void @call_i64(<4 x i32> inreg %tmp14, i64 inreg %arg) {
   ret void
 }
 
+; GFX9-LABEL: {{^}}_amdgpu_cs_main:
 define amdgpu_cs void @_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %index) {
   %tmp17 = shl i32 %index, 5
 ; GFX9: buffer_load_dwordx4
