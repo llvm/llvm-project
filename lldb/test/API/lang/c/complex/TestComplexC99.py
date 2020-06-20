@@ -8,6 +8,7 @@ class TestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @no_debug_info_test
+    @skipIfWindows
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
@@ -21,6 +22,7 @@ class TestCase(TestBase):
     @no_debug_info_test
     # FIXME: LLDB fails to read the imaginary part of the number.
     @expectedFailureAll()
+    @skipIfWindows
     def test_long_double(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
