@@ -106,7 +106,7 @@ int main(int argc, const char **argv) {
   llvm::ErrorOr<std::vector<std::string>> AllowedPatterns =
       GetAllowedSymbolPatterns();
   if (!AllowedPatterns) {
-    llvm::errs() << "Failed to open Allowed file " << AllowedFile << ". "
+    llvm::errs() << "Failed to open allow file " << AllowedFile << ". "
                  << AllowedPatterns.getError().message() << "\n";
     return 1;
   }
