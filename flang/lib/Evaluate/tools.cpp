@@ -981,28 +981,39 @@ bool IsProcedurePointer(const Symbol &symbol) {
   return symbol.has<ProcEntityDetails>() && IsPointer(symbol);
 }
 
-bool IsSaved(const Symbol &symbol) {
-  auto scopeKind{symbol.owner().kind()};
-  if (scopeKind == Scope::Kind::Module || scopeKind == Scope::Kind::BlockData) {
-    return true;
-  } else if (scopeKind == Scope::Kind::DerivedType) {
-    return false; // this is a component
-  } else if (IsNamedConstant(symbol)) {
-    return false;
-  } else if (symbol.attrs().test(Attr::SAVE)) {
-    return true;
-  } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-             object && object->init()) {
-    return true;
-  } else if (IsProcedurePointer(symbol) &&
-      symbol.get<ProcEntityDetails>().init()) {
-    return true;
-  } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
-             block && block->attrs().test(Attr::SAVE)) {
-    return true;
-  } else {
-    return false;
+bool IsSaved(const Symbol &original) {
+  if (const Symbol * root{GetAssociationRoot(original)}) {
+    const Symbol &symbol{*root};
+    const Scope *scope{&symbol.owner()};
+    auto scopeKind{scope->kind()};
+    if (scopeKind == Scope::Kind::Module) {
+      return true; // BLOCK DATA entities must all be in COMMON, handled below
+    } else if (symbol.attrs().test(Attr::SAVE)) {
+      return true;
+    } else if (scopeKind == Scope::Kind::DerivedType) {
+      return false; // this is a component
+    } else if (IsNamedConstant(symbol)) {
+      return false;
+    } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+               object && object->init()) {
+      return true;
+    } else if (IsProcedurePointer(symbol) &&
+        symbol.get<ProcEntityDetails>().init()) {
+      return true;
+    } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
+               block && block->attrs().test(Attr::SAVE)) {
+      return true;
+    } else if (IsDummy(symbol)) {
+      return false;
+    } else {
+      for (; !scope->IsGlobal(); scope = &scope->parent()) {
+        if (scope->hasSAVE()) {
+          return true;
+        }
+      }
+    }
   }
+  return false;
 }
 
 bool IsDummy(const Symbol &symbol) {
@@ -1018,6 +1029,19 @@ bool IsDummy(const Symbol &symbol) {
 int CountLenParameters(const DerivedTypeSpec &type) {
   return std::count_if(type.parameters().begin(), type.parameters().end(),
       [](const auto &pair) { return pair.second.isLen(); });
+}
+
+int CountNonConstantLenParameters(const DerivedTypeSpec &type) {
+  return std::count_if(
+      type.parameters().begin(), type.parameters().end(), [](const auto &pair) {
+        if (!pair.second.isLen()) {
+          return false;
+        } else if (const auto &expr{pair.second.GetExplicit()}) {
+          return !IsConstantExpr(*expr);
+        } else {
+          return true;
+        }
+      });
 }
 
 const Symbol &GetUsedModule(const UseDetails &details) {

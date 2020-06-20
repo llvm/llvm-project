@@ -833,7 +833,7 @@ TYPE_PARSER(sourced(first(
     construct<DataStmtConstant>(scalar(Parser<ConstantValue>{})),
     construct<DataStmtConstant>(nullInit),
     construct<DataStmtConstant>(scalar(constantSubobject)) / !"("_tok,
-    construct<DataStmtConstant>(Parser<StructureConstructor>{}),
+    construct<DataStmtConstant>(constant(Parser<StructureConstructor>{})),
     construct<DataStmtConstant>(signedRealLiteralConstant),
     construct<DataStmtConstant>(signedIntLiteralConstant),
     extension<LanguageFeature::SignedComplexLiteral>(

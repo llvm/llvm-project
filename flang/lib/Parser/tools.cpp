@@ -68,6 +68,61 @@ const Name &GetLastName(const AllocateObject &x) {
       [](const auto &y) -> const Name & { return GetLastName(y); }, x.u);
 }
 
+const Name &GetFirstName(const Name &x) { return x; }
+
+const Name &GetFirstName(const StructureComponent &x) {
+  return GetFirstName(x.base);
+}
+
+const Name &GetFirstName(const DataRef &x) {
+  return std::visit(
+      common::visitors{
+          [](const Name &name) -> const Name & { return name; },
+          [](const common::Indirection<StructureComponent> &sc)
+              -> const Name & { return GetFirstName(sc.value()); },
+          [](const common::Indirection<ArrayElement> &sc) -> const Name & {
+            return GetFirstName(sc.value().base);
+          },
+          [](const common::Indirection<CoindexedNamedObject> &ci)
+              -> const Name & { return GetFirstName(ci.value().base); },
+      },
+      x.u);
+}
+
+const Name &GetFirstName(const Substring &x) {
+  return GetFirstName(std::get<DataRef>(x.t));
+}
+
+const Name &GetFirstName(const Designator &x) {
+  return std::visit(
+      [](const auto &y) -> const Name & { return GetFirstName(y); }, x.u);
+}
+
+const Name &GetFirstName(const ProcComponentRef &x) {
+  return GetFirstName(x.v.thing);
+}
+
+const Name &GetFirstName(const ProcedureDesignator &x) {
+  return std::visit(
+      [](const auto &y) -> const Name & { return GetFirstName(y); }, x.u);
+}
+
+const Name &GetFirstName(const Call &x) {
+  return GetFirstName(std::get<ProcedureDesignator>(x.t));
+}
+
+const Name &GetFirstName(const FunctionReference &x) {
+  return GetFirstName(x.v);
+}
+
+const Name &GetFirstName(const Variable &x) {
+  return std::visit(
+      [](const auto &indirect) -> const Name & {
+        return GetFirstName(indirect.value());
+      },
+      x.u);
+}
+
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
   return std::visit(
       common::visitors{

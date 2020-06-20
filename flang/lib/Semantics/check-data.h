@@ -19,8 +19,6 @@ namespace Fortran::semantics {
 class DataChecker : public virtual BaseChecker {
 public:
   explicit DataChecker(SemanticsContext &context) : exprAnalyzer_{context} {}
-  void Leave(const parser::DataStmtRepeat &);
-  void Leave(const parser::DataStmtConstant &);
   void Leave(const parser::DataStmtObject &);
   void Enter(const parser::DataImpliedDo &);
   void Leave(const parser::DataImpliedDo &);

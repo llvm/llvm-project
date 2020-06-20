@@ -12,23 +12,6 @@
 
 namespace Fortran::semantics {
 
-void DataChecker::Leave(const parser::DataStmtConstant &dataConst) {
-  if (auto *structure{
-          std::get_if<parser::StructureConstructor>(&dataConst.u)}) {
-    for (const auto &component :
-        std::get<std::list<parser::ComponentSpec>>(structure->t)) {
-      const parser::Expr &parsedExpr{
-          std::get<parser::ComponentDataSource>(component.t).v.value()};
-      if (const auto *expr{GetExpr(parsedExpr)}) {
-        if (!evaluate::IsConstantExpr(*expr)) { // C884
-          exprAnalyzer_.Say(parsedExpr.source,
-              "Structure constructor in data value must be a constant expression"_err_en_US);
-        }
-      }
-    }
-  }
-}
-
 // Ensures that references to an implied DO loop control variable are
 // represented as such in the "body" of the implied DO loop.
 void DataChecker::Enter(const parser::DataImpliedDo &x) {
@@ -231,23 +214,6 @@ void DataChecker::Leave(const parser::DataStmtObject &dataObject) {
     if (auto expr{exprAnalyzer_.Analyze(*var)}) {
       DataVarChecker{exprAnalyzer_.context(),
           parser::FindSourceLocation(dataObject)}(expr);
-    }
-  }
-}
-
-void DataChecker::Leave(const parser::DataStmtRepeat &dataRepeat) {
-  if (const auto *designator{parser::Unwrap<parser::Designator>(dataRepeat)}) {
-    if (auto *dataRef{std::get_if<parser::DataRef>(&designator->u)}) {
-      if (MaybeExpr checked{exprAnalyzer_.Analyze(*dataRef)}) {
-        auto expr{evaluate::Fold(
-            exprAnalyzer_.GetFoldingContext(), std::move(checked))};
-        if (auto i64{ToInt64(expr)}) {
-          if (*i64 < 0) { // C882
-            exprAnalyzer_.Say(designator->source,
-                "Repeat count for data value must not be negative"_err_en_US);
-          }
-        }
-      }
     }
   }
 }

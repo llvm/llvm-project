@@ -91,7 +91,7 @@ byte sizes of the data.
 (For `COMPLEX`, the kind type parameter value is the byte size of one of the
 two `REAL` components, or half of the total size.)
 The legacy `DOUBLE PRECISION` intrinsic type is an alias for a kind of `REAL`
-that should be bigger than the default `REAL`.
+that should be more precise, and bigger, than the default `REAL`.
 
 `COMPLEX` is a simple structure that comprises two `REAL` components.
 
@@ -363,3 +363,9 @@ result; e.g., if there is a `PRINT` statement in function `F`, it
 may or may not be executed by the assignment statement `X=0*F()`.
 (Well, it probably will be, in practice, but compilers always reserve
 the right to optimize better.)
+
+Unless they have an explicit suffix (`1.0_8`, `2.0_8`) or a `D`
+exponent (`3.0D0`), real literal constants in Fortran have the
+default `REAL` type -- *not* `double` as in the case in C and C++.
+If you're not careful, you can lose precision at compilation time
+from your constant values and never know it.
