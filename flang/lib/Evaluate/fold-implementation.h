@@ -150,11 +150,9 @@ std::optional<Expr<T>> Folder<T>::GetNamedConstantValue(const Symbol &symbol0) {
               if (symbol.Rank() > 0) {
                 if (constant->Rank() == 0) {
                   // scalar expansion
-                  if (auto symShape{GetShape(context_, symbol)}) {
-                    if (auto extents{AsConstantExtents(context_, *symShape)}) {
-                      *constant = constant->Reshape(std::move(*extents));
-                      CHECK(constant->Rank() == symbol.Rank());
-                    }
+                  if (auto extents{GetConstantExtents(context_, symbol)}) {
+                    *constant = constant->Reshape(std::move(*extents));
+                    CHECK(constant->Rank() == symbol.Rank());
                   }
                 }
                 if (constant->Rank() == symbol.Rank()) {

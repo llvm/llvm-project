@@ -340,6 +340,10 @@ const SomeExpr *GetExprHelper::Get(const parser::Variable &x) {
   CheckMissingAnalysis(!x.typedExpr, x);
   return common::GetPtrFromOptional(x.typedExpr->v);
 }
+const SomeExpr *GetExprHelper::Get(const parser::DataStmtConstant &x) {
+  CheckMissingAnalysis(!x.typedExpr, x);
+  return common::GetPtrFromOptional(x.typedExpr->v);
+}
 
 const evaluate::Assignment *GetAssignment(const parser::AssignmentStmt &x) {
   CheckMissingAnalysis(!x.typedAssignment, x);
@@ -506,16 +510,19 @@ bool CanBeTypeBoundProc(const Symbol *symbol) {
   }
 }
 
-bool IsInitialized(const Symbol &symbol) {
-  if (symbol.test(Symbol::Flag::InDataStmt)) {
+bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements) {
+  if (!ignoreDATAstatements && symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (IsAllocatable(symbol) || object->init()) {
+    if (object->init()) {
       return true;
-    }
-    if (!IsPointer(symbol) && object->type()) {
+    } else if (object->isDummy() || IsFunctionResult(symbol)) {
+      return false;
+    } else if (IsAllocatable(symbol)) {
+      return true;
+    } else if (!IsPointer(symbol) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
         if (derived->HasDefaultInitialization()) {
           return true;
@@ -548,6 +555,49 @@ bool IsSeparateModuleProcedureInterface(const Symbol *symbol) {
   if (symbol && symbol->attrs().test(Attr::MODULE)) {
     if (auto *details{symbol->detailsIf<SubprogramDetails>()}) {
       return details->isInterface();
+    }
+  }
+  return false;
+}
+
+// 3.11 automatic data object
+bool IsAutomatic(const Symbol &symbol) {
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (!object->isDummy() && !IsAllocatable(symbol) && !IsPointer(symbol)) {
+      if (const DeclTypeSpec * type{symbol.GetType()}) {
+        // If a type parameter value is not a constant expression, the
+        // object is automatic.
+        if (type->category() == DeclTypeSpec::Character) {
+          if (const auto &length{
+                  type->characterTypeSpec().length().GetExplicit()}) {
+            if (!evaluate::IsConstantExpr(*length)) {
+              return true;
+            }
+          }
+        } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+          for (const auto &pair : derived->parameters()) {
+            if (const auto &value{pair.second.GetExplicit()}) {
+              if (!evaluate::IsConstantExpr(*value)) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      // If an array bound is not a constant expression, the object is
+      // automatic.
+      for (const ShapeSpec &dim : object->shape()) {
+        if (const auto &lb{dim.lbound().GetExplicit()}) {
+          if (!evaluate::IsConstantExpr(*lb)) {
+            return true;
+          }
+        }
+        if (const auto &ub{dim.ubound().GetExplicit()}) {
+          if (!evaluate::IsConstantExpr(*ub)) {
+            return true;
+          }
+        }
+      }
     }
   }
   return false;
@@ -620,17 +670,8 @@ bool IsAssumedLengthCharacter(const Symbol &symbol) {
 }
 
 bool IsInBlankCommon(const Symbol &symbol) {
-  if (FindCommonBlockContaining(symbol)) {
-    if (const auto *details{
-            symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-      if (details->commonBlock()) {
-        if (details->commonBlock()->name().empty()) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
+  const Symbol *block{FindCommonBlockContaining(symbol)};
+  return block && block->name().empty();
 }
 
 // C722 and C723:  For a function to be assumed length, it must be external and

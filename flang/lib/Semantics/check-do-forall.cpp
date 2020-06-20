@@ -208,7 +208,7 @@ public:
       const char *reason{"block exit"};
       for (auto &pair : blockScope) {
         const Symbol &entity{*pair.second};
-        if (IsAllocatable(entity) && !entity.attrs().test(Attr::SAVE) &&
+        if (IsAllocatable(entity) && !IsSaved(entity) &&
             MightDeallocatePolymorphic(entity, DeallocateAll)) {
           SayDeallocateOfPolymorph(endBlockStmt.source, entity, reason);
         }

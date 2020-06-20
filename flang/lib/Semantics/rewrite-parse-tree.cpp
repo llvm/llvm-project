@@ -21,10 +21,12 @@ namespace Fortran::semantics {
 
 using namespace parser::literals;
 
-/// Convert mis-identified statement functions to array element assignments.
-/// Convert mis-identified format expressions to namelist group names.
-/// Convert mis-identified character variables in I/O units to integer
+/// Convert misidentified statement functions to array element assignments.
+/// Convert misidentified format expressions to namelist group names.
+/// Convert misidentified character variables in I/O units to integer
 /// unit number expressions.
+/// Convert misidentified named constants in data statement values to
+/// initial data targets
 class RewriteMutator {
 public:
   RewriteMutator(SemanticsContext &context)
@@ -41,8 +43,10 @@ public:
   void Post(parser::IoUnit &);
   void Post(parser::ReadStmt &);
   void Post(parser::WriteStmt &);
+  void Post(parser::DataStmtConstant &);
 
   // Name resolution yet implemented:
+  // TODO: Can some/all of these now be enabled?
   bool Pre(parser::EquivalenceStmt &) { return false; }
   bool Pre(parser::Keyword &) { return false; }
   bool Pre(parser::EntryStmt &) { return false; }
@@ -148,6 +152,19 @@ void RewriteMutator::Post(parser::ReadStmt &x) {
 
 void RewriteMutator::Post(parser::WriteStmt &x) {
   FixMisparsedUntaggedNamelistName(x);
+}
+
+void RewriteMutator::Post(parser::DataStmtConstant &x) {
+  if (auto *scalar{std::get_if<parser::Scalar<parser::ConstantValue>>(&x.u)}) {
+    if (auto *named{std::get_if<parser::NamedConstant>(&scalar->thing.u)}) {
+      if (const Symbol * symbol{named->v.symbol}) {
+        if (!IsNamedConstant(*symbol) && symbol->attrs().test(Attr::TARGET)) {
+          x.u = parser::InitialDataTarget{
+              parser::Designator{parser::DataRef{parser::Name{named->v}}}};
+        }
+      }
+    }
+  }
 }
 
 bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {

@@ -15,10 +15,10 @@ subroutine CheckRepeat
   !ERROR: Missing initialization for parameter 'uninitialized'
   integer, parameter :: uninitialized
   !C882
-  !ERROR: Repeat count for data value must not be negative
+  !ERROR: Repeat count (-1) for data value must not be negative
   DATA myName%age / repeat * 35 /
   !C882
-  !ERROR: Repeat count for data value must not be negative
+  !ERROR: Repeat count (-11) for data value must not be negative
   DATA myName%age / digits(1) * 35 /
   !C882
   !ERROR: Must be a constant value
@@ -47,7 +47,7 @@ subroutine CheckValue
   !ERROR: 'persn' is not an array
   data myname / persn(2, 'Abcd Efgh') /
   !C884
-  !ERROR: Structure constructor in data value must be a constant expression
+  !ERROR: Must be a constant value
   data myname / person(myAge, 'Abcd Ijkl') /
   integer, parameter :: a(5) =(/11, 22, 33, 44, 55/)
   integer :: b(5) =(/11, 22, 33, 44, 55/)
