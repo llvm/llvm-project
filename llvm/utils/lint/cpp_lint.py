@@ -53,7 +53,7 @@ def VerifyIncludes(filename, lines):
     if system_header:
       curr_system_header = system_header.group(1)
 
-      # Is it blacklisted?
+      # Is it disallowed?
       if curr_system_header in DISALLOWED_SYSTEM_HEADERS:
         lint.append((filename, line_num,
                      'Disallowed system header: <%s>' % curr_system_header))
