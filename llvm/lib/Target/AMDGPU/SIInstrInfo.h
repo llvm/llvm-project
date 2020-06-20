@@ -84,9 +84,6 @@ private:
   bool moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
                         MachineDominatorTree *MDT = nullptr) const;
 
-  void lowerSelect(SetVectorType &Worklist, MachineInstr &Inst,
-                   MachineDominatorTree *MDT = nullptr) const;
-
   void lowerScalarAbs(SetVectorType &Worklist,
                       MachineInstr &Inst) const;
 
