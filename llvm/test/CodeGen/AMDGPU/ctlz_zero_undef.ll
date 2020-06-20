@@ -99,13 +99,14 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8(i8 addrspace(1)* noalias %out, i
 
 ; FUNC-LABEL: {{^}}s_ctlz_zero_undef_i64:
 ; GCN: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
-; GCN-DAG: s_cmp_eq_u32 s[[HI]], 0{{$}}
+; GCN-DAG: v_cmp_eq_u32_e64 vcc, s[[HI]], 0{{$}}
 ; GCN-DAG: s_flbit_i32_b32 [[FFBH_LO:s[0-9]+]], s[[LO]]
 ; GCN-DAG: s_add_i32 [[ADD:s[0-9]+]], [[FFBH_LO]], 32
 ; GCN-DAG: s_flbit_i32_b32 [[FFBH_HI:s[0-9]+]], s[[HI]]
-; GCN-DAG: s_cselect_b32 [[RES:s[0-9]+]], [[ADD]], [[FFBH_HI]]
+; GCN-DAG: v_mov_b32_e32 [[VFFBH_LO:v[0-9]+]], [[ADD]]
+; GCN-DAG: v_mov_b32_e32 [[VFFBH_HI:v[0-9]+]], [[FFBH_HI]]
+; GCN-DAG: v_cndmask_b32_e32 v[[CTLZ:[0-9]+]], [[VFFBH_HI]], [[VFFBH_LO]]
 ; GCN-DAG: v_mov_b32_e32 v[[CTLZ_HI:[0-9]+]], 0{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[CTLZ:[0-9]+]], [[RES]]
 ; GCN: {{buffer|flat}}_store_dwordx2 v{{\[}}[[CTLZ]]:[[CTLZ_HI]]{{\]}}
 define amdgpu_kernel void @s_ctlz_zero_undef_i64(i64 addrspace(1)* noalias %out, [8 x i32], i64 %val) nounwind {
   %ctlz = call i64 @llvm.ctlz.i64(i64 %val, i1 true)

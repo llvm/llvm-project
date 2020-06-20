@@ -16,8 +16,8 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}select_trunc_i64:
-; CHECK: s_cselect_b32
-; CHECK-NOT: s_cselect_b32
+; CHECK: v_cndmask_b32
+; CHECK-NOT: v_cndmask_b32
 define amdgpu_kernel void @select_trunc_i64(i32 addrspace(1)* %out, i32 %cond, i64 %in) nounwind {
   %cmp = icmp ugt i32 %cond, 5
   %sel = select i1 %cmp, i64 0, i64 %in
@@ -27,8 +27,8 @@ define amdgpu_kernel void @select_trunc_i64(i32 addrspace(1)* %out, i32 %cond, i
 }
 
 ; CHECK-LABEL: {{^}}select_trunc_i64_2:
-; CHECK: s_cselect_b32
-; CHECK-NOT: s_cselect_b32
+; CHECK: v_cndmask_b32
+; CHECK-NOT: v_cndmask_b32
 define amdgpu_kernel void @select_trunc_i64_2(i32 addrspace(1)* %out, i32 %cond, i64 %a, i64 %b) nounwind {
   %cmp = icmp ugt i32 %cond, 5
   %sel = select i1 %cmp, i64 %a, i64 %b
@@ -38,8 +38,8 @@ define amdgpu_kernel void @select_trunc_i64_2(i32 addrspace(1)* %out, i32 %cond,
 }
 
 ; CHECK-LABEL: {{^}}v_select_trunc_i64_2:
-; CHECK: s_cselect_b32
-; CHECK-NOT: s_cselect_b32
+; CHECK: v_cndmask_b32
+; CHECK-NOT: v_cndmask_b32
 define amdgpu_kernel void @v_select_trunc_i64_2(i32 addrspace(1)* %out, i32 %cond, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) nounwind {
   %cmp = icmp ugt i32 %cond, 5
   %a = load i64, i64 addrspace(1)* %aptr, align 8
