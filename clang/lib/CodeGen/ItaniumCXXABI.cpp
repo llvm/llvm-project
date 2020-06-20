@@ -4769,7 +4769,8 @@ void XLCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
     llvm::report_fatal_error("thread local storage not yet implemented on AIX");
 
   // Create __dtor function for the var decl.
-  llvm::Function *dtorStub = CGF.createAtExitStub(D, dtor, addr);
+  llvm::Function *dtorStub =
+      cast<llvm::Function>(CGF.createAtExitStub(D, dtor, addr));
 
   if (CGM.getCodeGenOpts().CXAAtExit)
     llvm::report_fatal_error("using __cxa_atexit unsupported on AIX");
