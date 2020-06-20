@@ -1,4 +1,12 @@
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown -ast-dump %s | FileCheck --strict-whitespace %s
+// Test without serialization:
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -ast-dump %s \
+// RUN: | FileCheck --strict-whitespace %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -x c -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck --strict-whitespace %s
 
 // Test that functions can be redeclared and they retain their attributes.
 
