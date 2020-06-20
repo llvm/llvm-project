@@ -548,3 +548,30 @@ DWARF:
       Entries:
         - AbbrCode: 0
           Values:   []
+
+## h) Test that yaml2obj doesn't crash when the 'Entries' of a compilation unit is empty.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t8.o | \
+# RUN:   FileCheck %s --check-prefix=EMPTY-ENTRIES --match-full-lines
+
+#       EMPTY-ENTRIES: Hex dump of section '.debug_info':
+#  EMPTY-ENTRIES-NEXT: 0x00000000 34120000 05000204 34120000 4.......4...
+# EMPTY-ENTRIES-EMPTY:
+##                                ^- 'Entries' is empty
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_info:
+    - Length:
+        TotalLength: 0x1234
+      Version:    5
+      UnitType:   DW_UT_type
+      AbbrOffset: 0x1234
+      AddrSize:   4
+      Entries:    []
