@@ -322,15 +322,15 @@ public:
   /// List of dynamic shared object files to be loaded as pass plugins.
   std::vector<std::string> PassPlugins;
 
-  /// Path to whitelist file specifying which objects
+  /// Path to allowlist file specifying which objects
   /// (files, functions) should exclusively be instrumented
   /// by sanitizer coverage pass.
-  std::vector<std::string> SanitizeCoverageWhitelistFiles;
+  std::vector<std::string> SanitizeCoverageAllowlistFiles;
 
-  /// Path to blacklist file specifying which objects
+  /// Path to blocklist file specifying which objects
   /// (files, functions) listed for instrumentation by sanitizer
   /// coverage pass should actually not be instrumented.
-  std::vector<std::string> SanitizeCoverageBlacklistFiles;
+  std::vector<std::string> SanitizeCoverageBlocklistFiles;
 
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.

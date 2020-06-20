@@ -996,12 +996,18 @@ def fno_sanitize_coverage
       Group<f_clang_Group>, Flags<[CoreOption, DriverOption]>,
       HelpText<"Disable specified features of coverage instrumentation for "
                "Sanitizers">, Values<"func,bb,edge,indirect-calls,trace-bb,trace-cmp,trace-div,trace-gep,8bit-counters,trace-pc,trace-pc-guard,no-prune,inline-8bit-counters,inline-bool-flag">;
-def fsanitize_coverage_whitelist : Joined<["-"], "fsanitize-coverage-whitelist=">,
+def fsanitize_coverage_allowlist : Joined<["-"], "fsanitize-coverage-allowlist=">,
     Group<f_clang_Group>, Flags<[CoreOption, DriverOption]>,
-    HelpText<"Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blacklisted ones">;
-def fsanitize_coverage_blacklist : Joined<["-"], "fsanitize-coverage-blacklist=">,
+    HelpText<"Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones">;
+def : Joined<["-"], "fsanitize-coverage-whitelist=">,
+  Group<f_clang_Group>, Flags<[CoreOption, HelpHidden]>, Alias<fsanitize_coverage_allowlist>,
+  HelpText<"Deprecated, use -fsanitize-coverage-allowlist= instead">;
+def fsanitize_coverage_blocklist : Joined<["-"], "fsanitize-coverage-blocklist=">,
     Group<f_clang_Group>, Flags<[CoreOption, DriverOption]>,
-    HelpText<"Disable sanitizer coverage instrumentation for modules and functions that match the provided special case list, even the whitelisted ones">;
+    HelpText<"Disable sanitizer coverage instrumentation for modules and functions that match the provided special case list, even the allowed ones">;
+def : Joined<["-"], "fsanitize-coverage-blacklist=">,
+  Group<f_clang_Group>, Flags<[CoreOption, HelpHidden]>, Alias<fsanitize_coverage_blocklist>,
+  HelpText<"Deprecated, use -fsanitize-coverage-blocklist= instead">;
 def fsanitize_memory_track_origins_EQ : Joined<["-"], "fsanitize-memory-track-origins=">,
                                         Group<f_clang_Group>,
                                         HelpText<"Enable origins tracking in MemorySanitizer">;
