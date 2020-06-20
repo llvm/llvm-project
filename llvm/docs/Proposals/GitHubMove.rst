@@ -141,9 +141,9 @@ Unfortunately, GitHub does not support server side hooks to enforce such a
 policy.  We must rely on the community to avoid pushing merge commits.
 
 GitHub offers a feature called `Status Checks`: a branch protected by
-`status checks` requires commits to be whitelisted before the push can happen.
+`status checks` requires commits to be explicitly allowed before the push can happen.
 We could supply a pre-push hook on the client side that would run and check the
-history, before whitelisting the commit being pushed [statuschecks]_.
+history, before allowing the commit being pushed [statuschecks]_.
 However this solution would be somewhat fragile (how do you update a script
 installed on every developer machine?) and prevents SVN access to the
 repository.
