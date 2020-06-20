@@ -53,6 +53,8 @@ enum NodeType : unsigned {
   SBC, // adc, sbc instructions
 
   // Arithmetic instructions
+  ADD_PRED,
+  FADD_PRED,
   SDIV_PRED,
   UDIV_PRED,
   SMIN_PRED,
