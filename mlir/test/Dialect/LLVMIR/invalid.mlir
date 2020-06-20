@@ -5,6 +5,13 @@ func @invalid_noalias(%arg0: !llvm.i32 {llvm.noalias = 3}) {
   "llvm.return"() : () -> ()
 }
 
+// -----
+
+// expected-error@+1{{llvm.align argument attribute of non integer type}}
+func @invalid_align(%arg0: !llvm.i32 {llvm.align = "foo"}) {
+  "llvm.return"() : () -> ()
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Check that parser errors are properly produced and do not crash the compiler.

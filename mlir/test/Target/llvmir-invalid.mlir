@@ -7,6 +7,20 @@ func @foo() {
 
 // -----
 
+// expected-error @+1 {{llvm.noalias attribute attached to LLVM non-pointer argument}}
+llvm.func @invalid_noalias(%arg0 : !llvm.float {llvm.noalias = true}) -> !llvm.float {
+  llvm.return %arg0 : !llvm.float
+}
+
+// -----
+
+// expected-error @+1 {{llvm.align attribute attached to LLVM non-pointer argument}}
+llvm.func @invalid_align(%arg0 : !llvm.float {llvm.align = 4}) -> !llvm.float {
+  llvm.return %arg0 : !llvm.float
+}
+
+// -----
+
 llvm.func @no_nested_struct() -> !llvm<"[2 x [2 x [2 x {i32}]]]"> {
   // expected-error @+1 {{struct types are not supported in constants}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm<"[2 x [2 x [2 x {i32}]]]">

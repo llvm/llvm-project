@@ -724,6 +724,18 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
       if (attr.getValue())
         llvmArg.addAttr(llvm::Attribute::AttrKind::NoAlias);
     }
+
+    if (auto attr = func.getArgAttrOfType<IntegerAttr>(argIdx, "llvm.align")) {
+      // NB: Attribute already verified to be int, so check if we can indeed
+      // attach the attribute to this argument, based on its type.
+      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMType>();
+      if (!argTy.getUnderlyingType()->isPointerTy())
+        return func.emitError(
+            "llvm.align attribute attached to LLVM non-pointer argument");
+      llvmArg.addAttrs(
+          llvm::AttrBuilder().addAlignmentAttr(llvm::Align(attr.getInt())));
+    }
+
     valueMapping[mlirArg] = &llvmArg;
     argIdx++;
   }
