@@ -1074,6 +1074,12 @@ def : Pat<(vector_insert (v4f16 DPR:$src),
 def : Pat<(vector_insert (v8f16 QPR:$src),
                          (f16 (load addrmode6:$addr)), imm:$lane),
           (VLD1LNq16Pseudo addrmode6:$addr, QPR:$src, imm:$lane)>;
+def : Pat<(vector_insert (v4bf16 DPR:$src),
+                         (bf16 (load addrmode6:$addr)), imm:$lane),
+          (VLD1LNd16 addrmode6:$addr, DPR:$src, imm:$lane)>;
+def : Pat<(vector_insert (v8bf16 QPR:$src),
+                         (bf16 (load addrmode6:$addr)), imm:$lane),
+          (VLD1LNq16Pseudo addrmode6:$addr, QPR:$src, imm:$lane)>;
 def : Pat<(vector_insert (v2f32 DPR:$src),
                          (f32 (load addrmode6:$addr)), imm:$lane),
           (VLD1LNd32 addrmode6:$addr, DPR:$src, imm:$lane)>;
