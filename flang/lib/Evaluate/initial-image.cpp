@@ -12,30 +12,40 @@
 
 namespace Fortran::evaluate {
 
-bool InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
-    const Constant<SomeDerived> &x) {
-  CHECK(offset >= 0 && offset + bytes <= data_.size());
-  auto elements{TotalElementCount(x.shape())};
-  auto elementBytes{bytes > 0 ? bytes / elements : 0};
-  CHECK(elements * elementBytes == bytes);
-  auto at{x.lbounds()};
-  for (auto elements{TotalElementCount(x.shape())}; elements-- > 0;
-       x.IncrementSubscripts(at)) {
-    auto scalar{x.At(at)};
-    // TODO: length type parameter values?
-    for (const auto &[symbolRef, indExpr] : scalar) {
-      const Symbol &component{*symbolRef};
-      CHECK(component.offset() + component.size() <= elementBytes);
-      if (IsPointer(component)) {
-        AddPointer(offset + component.offset(), indExpr.value());
-      } else if (!Add(offset + component.offset(), component.size(),
-                     indExpr.value())) {
-        return false;
+auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
+    const Constant<SomeDerived> &x) -> Result {
+  if (offset < 0 || offset + bytes > data_.size()) {
+    return OutOfRange;
+  } else {
+    auto elements{TotalElementCount(x.shape())};
+    auto elementBytes{bytes > 0 ? bytes / elements : 0};
+    if (elements * elementBytes != bytes) {
+      return SizeMismatch;
+    } else {
+      auto at{x.lbounds()};
+      for (auto elements{TotalElementCount(x.shape())}; elements-- > 0;
+           x.IncrementSubscripts(at)) {
+        auto scalar{x.At(at)};
+        // TODO: length type parameter values?
+        for (const auto &[symbolRef, indExpr] : scalar) {
+          const Symbol &component{*symbolRef};
+          if (component.offset() + component.size() > elementBytes) {
+            return SizeMismatch;
+          } else if (IsPointer(component)) {
+            AddPointer(offset + component.offset(), indExpr.value());
+          } else {
+            Result added{Add(offset + component.offset(), component.size(),
+                indExpr.value())};
+            if (added != Ok) {
+              return Ok;
+            }
+          }
+        }
+        offset += elementBytes;
       }
     }
-    offset += elementBytes;
+    return Ok;
   }
-  return true;
 }
 
 void InitialImage::AddPointer(
