@@ -1150,9 +1150,9 @@ GlobalsMetadata::GlobalsMetadata(Module &M) {
       E.Name = Name->getString();
     ConstantInt *IsDynInit = mdconst::extract<ConstantInt>(MDN->getOperand(3));
     E.IsDynInit |= IsDynInit->isOne();
-    ConstantInt *IsBlacklisted =
+    ConstantInt *IsExcluded =
         mdconst::extract<ConstantInt>(MDN->getOperand(4));
-    E.IsBlacklisted |= IsBlacklisted->isOne();
+    E.IsExcluded |= IsExcluded->isOne();
   }
 }
 
@@ -1814,7 +1814,7 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
 
   // FIXME: Metadata should be attched directly to the global directly instead
   // of being added to llvm.asan.globals.
-  if (GlobalsMD.get(G).IsBlacklisted) return false;
+  if (GlobalsMD.get(G).IsExcluded) return false;
   if (!Ty->isSized()) return false;
   if (!G->hasInitializer()) return false;
   // Only instrument globals of default address spaces
@@ -2265,19 +2265,19 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
 
   // Build set of globals that are aliased by some GA, where
   // canInstrumentAliasedGlobal(GA) returns false.
-  SmallPtrSet<const GlobalVariable *, 16> AliasedGlobalBlacklist;
+  SmallPtrSet<const GlobalVariable *, 16> AliasedGlobalExclusions;
   if (CompileKernel) {
     for (auto &GA : M.aliases()) {
       if (const auto *GV = dyn_cast<GlobalVariable>(GA.getAliasee())) {
         if (!canInstrumentAliasedGlobal(GA))
-          AliasedGlobalBlacklist.insert(GV);
+          AliasedGlobalExclusions.insert(GV);
       }
     }
   }
 
   SmallVector<GlobalVariable *, 16> GlobalsToChange;
   for (auto &G : M.globals()) {
-    if (!AliasedGlobalBlacklist.count(&G) && shouldInstrumentGlobal(&G))
+    if (!AliasedGlobalExclusions.count(&G) && shouldInstrumentGlobal(&G))
       GlobalsToChange.push_back(&G);
   }
 

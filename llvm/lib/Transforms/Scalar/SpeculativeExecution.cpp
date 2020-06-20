@@ -247,7 +247,7 @@ static unsigned ComputeSpeculationCost(const Instruction *I,
       return TTI.getUserCost(I, TargetTransformInfo::TCK_SizeAndLatency);
 
     default:
-      return UINT_MAX; // Disallow anything not whitelisted.
+      return UINT_MAX; // Disallow anything not explicitly listed.
   }
 }
 
