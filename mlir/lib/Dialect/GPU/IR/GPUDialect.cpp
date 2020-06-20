@@ -219,19 +219,19 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
 
 KernelDim3 LaunchOp::getBlockIds() {
   assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().getBlocks().front().getArguments();
+  auto args = body().front().getArguments();
   return KernelDim3{args[0], args[1], args[2]};
 }
 
 KernelDim3 LaunchOp::getThreadIds() {
   assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().getBlocks().front().getArguments();
+  auto args = body().front().getArguments();
   return KernelDim3{args[3], args[4], args[5]};
 }
 
 KernelDim3 LaunchOp::getGridSize() {
   assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().getBlocks().front().getArguments();
+  auto args = body().front().getArguments();
   return KernelDim3{args[6], args[7], args[8]};
 }
 
