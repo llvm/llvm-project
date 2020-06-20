@@ -581,7 +581,7 @@ public:
 private:
   ValueTable VN;
 
-  bool isInstructionSinkable(Instruction *I) {
+  bool shouldAvoidSinkingInstruction(Instruction *I) {
     // These instructions may change or break semantics if moved.
     if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
         I->getType()->isTokenTy())
@@ -673,7 +673,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
       NewInsts.push_back(I);
   }
   for (auto *I : NewInsts)
-    if (isInstructionSinkable(I))
+    if (shouldAvoidSinkingInstruction(I))
       return None;
 
   // If we've restricted the incoming blocks, restrict all needed PHIs also
