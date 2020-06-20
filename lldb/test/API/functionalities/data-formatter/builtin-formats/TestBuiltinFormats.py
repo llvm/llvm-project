@@ -42,9 +42,6 @@ class TestCase(TestBase):
         self.assertIn("= 0\n", self.getFormatted("float", "0"))
         self.assertIn("= 2\n", self.getFormatted("float", "0x40000000"))
         self.assertIn("= NaN\n", self.getFormatted("float", "-1"))
-        # Checks the float16 code.
-        self.assertIn("= 2\n", self.getFormatted("float", "(__UINT16_TYPE__)0x4000"))
-        self.assertIn("= error: unsupported byte size (1) for float format\n", self.getFormatted("float", "'a'"))
 
         # enumeration
         self.assertIn("= 0\n", self.getFormatted("enumeration", "0"))
@@ -62,13 +59,6 @@ class TestCase(TestBase):
 
         # octal
         self.assertIn("= 04553207\n", self.getFormatted("octal", "1234567"))
-        self.assertIn("= 0221505317046536757\n", self.getFormatted("octal", "(__uint128_t)0x123456789ABDEFull"))
-
-        # complex float
-        self.assertIn("= error: unsupported byte size (1) for complex float format\n", self.getFormatted("complex float", "'a'"))
-
-        # complex integer
-        self.assertIn("= error: unsupported byte size (1) for complex integer format\n", self.getFormatted("complex integer", "'a'"))
 
         # hex
         self.assertIn("= 0x00abc123\n", self.getFormatted("hex", "0xABC123"))
@@ -95,17 +85,6 @@ class TestCase(TestBase):
         self.assertIn('= " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("printable character", "cstring"))
         self.assertIn('= " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("OSType", "cstring"))
         self.assertIn('= " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("unicode8", "cstring"))
-
-        # FIXME: Passing a 'const char *' will ignore any given format,
-        # so we have to repeat the tests with a void* casts to actually test our formats.
-        self.assertIn('= \\x9a\\x0f\\0\\0\\x01\\0\\0\\0\n', self.getFormatted("character array", "(void *)cstring"))
-        self.assertIn('= \\x9a\\x0f\\0\\0\\x01\\0\\0\\0\n', self.getFormatted("character", "(void *)cstring"))
-        self.assertIn('= " \\e\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("c-string", "(void *)cstring"))
-        # FIXME: Ignores the printables characters at the end.
-        self.assertIn('= ........\n', self.getFormatted("printable character", "(void *)cstring"))
-        self.assertIn('= \'\\0\\0\\0\\x01\\0\\0\\x0f\\x9a\'\n', self.getFormatted("OSType", "(void *)cstring"))
-        # FIXME: This should print a string.
-        self.assertIn('= 0x0000000100000f9a\n', self.getFormatted("unicode8", "(void *)cstring"))
 
         self.assertIn('= \\0\\0\\0\\0\\0\\0\\0\\0\n', self.getFormatted("character array", "(__UINT64_TYPE__)0"))
         self.assertIn('= \\0\\0\\0\\0\\0\\0\\0\\0\n', self.getFormatted("character", "(__UINT64_TYPE__)0"))
@@ -158,11 +137,6 @@ class TestCase(TestBase):
         # There is not int128_t[] style, so this only tests uint128_t[].
         self.assertIn("= {0x00000000000000000123456789abcdef}\n", self.getFormatted("uint128_t[]", "__uint128_t i = 0x123456789ABCDEF; i"))
 
-        # Different fixed-width float type arrays.
-        self.assertIn("{2 2}\n", self.getFormatted("float16[]", "0x40004000"))
-        self.assertIn("{2 2}\n", self.getFormatted("float32[]", "0x4000000040000000ll"))
-        self.assertIn("{2 0}\n", self.getFormatted("float64[]", "__uint128_t i = 0x4000000000000000ll; i"))
-
         # Invalid format string
         self.expect("expr --format invalid_format_string -- 1", error=True,
                     substrs=["error: Invalid format character or name 'invalid_format_string'. Valid values are:"])
@@ -170,12 +144,10 @@ class TestCase(TestBase):
     # Extends to host target pointer width.
     @skipIf(archs=no_match(['x86_64']))
     @no_debug_info_test
-    def test_pointer(self):
+    def test_instruction(self):
         # pointer
         self.assertIn("= 0x000000000012d687\n", self.getFormatted("pointer", "1234567"))
         self.assertIn("= 0x0000000000000000\n", self.getFormatted("pointer", "0"))
-        # FIXME: Just ignores the input value as it's not pointer sized.
-        self.assertIn("= 0x0000000000000000\n", self.getFormatted("pointer", "'a'"))
 
     # Depends on the host target for decoding.
     @skipIf(archs=no_match(['x86_64']))
