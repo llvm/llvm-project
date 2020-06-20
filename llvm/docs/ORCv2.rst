@@ -729,7 +729,7 @@ For example, to load the whole interface of a runtime library:
     // at '/path/to/lib'.
     CompileLayer.add(JD, loadModule(...));
 
-Or, to expose a whitelisted set of symbols from the main process:
+Or, to expose a allowed set of symbols from the main process:
 
   .. code-block:: c++
 
@@ -738,20 +738,20 @@ Or, to expose a whitelisted set of symbols from the main process:
 
     auto &JD = ES.createJITDylib("main");
 
-    DenseSet<SymbolStringPtr> Whitelist({
+    DenseSet<SymbolStringPtr> AllowList({
         Mangle("puts"),
         Mangle("gets")
       });
 
     // Use GetForCurrentProcess with a predicate function that checks the
-    // whitelist.
+    // allowed list.
     JD.setGenerator(
       DynamicLibrarySearchGenerator::GetForCurrentProcess(
         DL.getGlobalPrefix(),
-        [&](const SymbolStringPtr &S) { return Whitelist.count(S); }));
+        [&](const SymbolStringPtr &S) { return AllowList.count(S); }));
 
     // IR added to JD can now link against any symbols exported by the process
-    // and contained in the whitelist.
+    // and contained in the list.
     CompileLayer.add(JD, loadModule(...));
 
 Future Features
