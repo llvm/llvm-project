@@ -763,9 +763,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   for (InputFile *file : objectFiles) {
     ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
     for (Symbol *b : f->getLocalSymbols()) {
-      if (!b->isLocal())
-        fatal(toString(f) +
-              ": broken object: getLocalSymbols returns a non-local symbol");
+      assert(b->isLocal() && "should have been caught in initializeSymbols()");
       auto *dr = dyn_cast<Defined>(b);
 
       // No reason to keep local undefined symbol in symtab.
