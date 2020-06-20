@@ -2,13 +2,13 @@ UNSUPPORTED: darwin
 
 RUN: mkdir -p %t1 %t2
 
-RUN: lld -flavor darwinnew -v -L%t1 -F%t2 2>&1 | FileCheck -DLDIR=%t1 -DFDIR=%t2 %s
+RUN: lld -flavor darwinnew -Z -v -L%t1 -F%t2 2>&1 | FileCheck -DLDIR=%t1 -DFDIR=%t2 %s
 CHECK:      Library search paths:
 CHECK-NEXT: [[LDIR]]
 CHECK-NEXT: Framework search paths:
 CHECK-NEXT: [[FDIR]]
 
-RUN: lld -flavor darwinnew -v -L%t1 -F%t2 -Z 2>&1 | FileCheck -DLDIR=%t1 -DFDIR=%t2 --check-prefix=CHECK_Z %s
+RUN: lld -flavor darwinnew -Z -v -L%t1 -F%t2 -Z 2>&1 | FileCheck -DLDIR=%t1 -DFDIR=%t2 --check-prefix=CHECK_Z %s
 CHECK_Z:      Library search paths:
 CHECK_Z-NEXT: [[LDIR]]
 CHECK_Z-NEXT: Framework search paths:
