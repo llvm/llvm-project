@@ -1,10 +1,15 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=TOVGPR %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; These tests check that the compiler won't crash when it needs to spill
 ; SGPRs.
 
 ; GCN-LABEL: {{^}}main:
+
+; Make sure there are no direct spills for EXEC registers before WQM
+; GCN-NOT: v_writelane_b32 v{{[0-9]+}}, exec_lo
+; GCN-NOT: v_writelane_b32 v{{[0-9]+}}, exec_hi
+
 ; GCN: s_wqm
 
 ; Make sure not emitting unused scratch resource descriptor setup
@@ -16,6 +21,13 @@
 
 ; Writing to M0 from an SMRD instruction will hang the GPU.
 ; GCN-NOT: s_buffer_load_dword m0
+
+; Make sure there are no direct spills/reloads for EXEC registers
+; GCN-NOT: v_writelane_b32 v{{[0-9]+}}, exec_lo
+; GCN-NOT: v_writelane_b32 v{{[0-9]+}}, exec_hi
+; GCN-NOT: v_readlane_b32 exec_lo
+; GCN-NOT: v_readlane_b32 exec_hi
+
 ; GCN: s_endpgm
 
 ; TOVGPR: ScratchSize: 0{{$}}
