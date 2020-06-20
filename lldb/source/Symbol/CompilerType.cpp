@@ -722,7 +722,6 @@ CompilerType::GetIndexOfChildWithName(const char *name,
 }
 
 // Dumping types
-#define DEPTH_INCREMENT 2
 
 void CompilerType::DumpValue(ExecutionContext *exe_ctx, Stream *s,
                              lldb::Format format, const DataExtractor &data,
