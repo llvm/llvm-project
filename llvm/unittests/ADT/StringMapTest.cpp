@@ -387,6 +387,70 @@ TEST_F(StringMapTest, MoveAssignment) {
   ASSERT_EQ(B.count("x"), 0u);
 }
 
+TEST_F(StringMapTest, EqualEmpty) {
+  StringMap<int> A;
+  StringMap<int> B;
+  ASSERT_TRUE(A == B);
+  ASSERT_FALSE(A != B);
+  ASSERT_TRUE(A == A); // self check
+}
+
+TEST_F(StringMapTest, EqualWithValues) {
+  StringMap<int> A;
+  A["A"] = 1;
+  A["B"] = 2;
+  A["C"] = 3;
+  A["D"] = 3;
+
+  StringMap<int> B;
+  B["A"] = 1;
+  B["B"] = 2;
+  B["C"] = 3;
+  B["D"] = 3;
+
+  ASSERT_TRUE(A == B);
+  ASSERT_TRUE(B == A);
+  ASSERT_FALSE(A != B);
+  ASSERT_FALSE(B != A);
+  ASSERT_TRUE(A == A); // self check
+}
+
+TEST_F(StringMapTest, NotEqualMissingKeys) {
+  StringMap<int> A;
+  A["A"] = 1;
+  A["B"] = 2;
+
+  StringMap<int> B;
+  B["A"] = 1;
+  B["B"] = 2;
+  B["C"] = 3;
+  B["D"] = 3;
+
+  ASSERT_FALSE(A == B);
+  ASSERT_FALSE(B == A);
+  ASSERT_TRUE(A != B);
+  ASSERT_TRUE(B != A);
+}
+
+TEST_F(StringMapTest, NotEqualWithDifferentValues) {
+  StringMap<int> A;
+  A["A"] = 1;
+  A["B"] = 2;
+  A["C"] = 100;
+  A["D"] = 3;
+
+  StringMap<int> B;
+  B["A"] = 1;
+  B["B"] = 2;
+  B["C"] = 3;
+  B["D"] = 3;
+
+  ASSERT_FALSE(A == B);
+  ASSERT_FALSE(B == A);
+  ASSERT_TRUE(A != B);
+  ASSERT_TRUE(B != A);
+}
+
 struct Countable {
   int &InstanceCount;
   int Number;
