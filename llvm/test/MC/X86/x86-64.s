@@ -1892,3 +1892,11 @@ xsusldtrk
 // CHECK: xresldtrk
 // CHECK: encoding: [0xf2,0x0f,0x01,0xe9]
 xresldtrk
+
+// CHECK: ud1q %rdx, %rdi
+// CHECK:  encoding: [0x48,0x0f,0xb9,0xfa]
+ud1 %rdx, %rdi
+
+// CHECK: ud1q (%rbx), %rcx
+// CHECK:  encoding: [0x48,0x0f,0xb9,0x0b]
+ud2b (%rbx), %rcx
