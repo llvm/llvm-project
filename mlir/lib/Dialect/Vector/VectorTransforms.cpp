@@ -28,6 +28,7 @@
 #include "mlir/IR/Module.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -1730,6 +1731,11 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
 
   // TODO(ajcbik): implement masks.
   if (llvm::size(op.masks()) != 0)
+    return failure();
+  // TODO(thomasraoux): support mixed mode contract lowering.
+  if (op.getLhsType().getElementType() !=
+          getElementTypeOrSelf(op.getAccType()) ||
+      op.getRhsType().getElementType() != getElementTypeOrSelf(op.getAccType()))
     return failure();
 
   // TODO(ntv, ajcbik): implement benefits, cost models.
