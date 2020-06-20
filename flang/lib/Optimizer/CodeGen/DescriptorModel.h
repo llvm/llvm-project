@@ -18,46 +18,26 @@
 namespace fir {
 
 //===----------------------------------------------------------------------===//
-// Static size information
-//===----------------------------------------------------------------------===//
-
-static constexpr std::size_t sizeOfDimElement() {
-  return sizeof(Fortran::ISO::Fortran_2018::CFI_index_t);
-}
-static constexpr std::size_t sizeOfDimRow() {
-  return sizeof(Fortran::ISO::Fortran_2018::CFI_dim_t);
-}
-static constexpr std::size_t sizeOfBareDesc() {
-  return sizeof(Fortran::ISO::Fortran_2018::CFI_cdesc_t);
-}
-static constexpr std::size_t sizeOfDesc(unsigned rank) {
-  return sizeOfBareDesc() + rank * sizeOfDimRow();
-}
-static constexpr std::size_t sizeOfTypeParam() {
-  return sizeof(Fortran::runtime::TypeParameterValue);
-}
-static constexpr std::size_t sizeOfDescAddendum() {
-  return sizeof(Fortran::runtime::DescriptorAddendum);
-}
-static constexpr std::size_t sizeOfExtendedDesc(unsigned rank,
-                                                unsigned lenParams) {
-  return sizeOfDesc(rank) + sizeOfDescAddendum() +
-         lenParams * sizeOfTypeParam();
-}
-
-//===----------------------------------------------------------------------===//
-// Descriptor reflection
+// LLVM IR dialect models of C++ types.
 //
 // This supplies a set of model builders to decompose the C declaration of a
 // descriptor (as encoded in ISO_Fortran_binding.h and elsewhere) and
 // reconstruct that type in the LLVM IR dialect.
 //
+// TODO: It is understood that this is deeply incorrect as far as building a
+// portability layer for cross-compilation as these reflected types are those of
+// the build machine and not necessarily that of either the host or the target.
+// This assumption that build == host == target is actually pervasive across the
+// compiler.
+//
 //===----------------------------------------------------------------------===//
 
 using TypeBuilderFunc = mlir::LLVM::LLVMType (*)(mlir::LLVM::LLVMDialect *);
 
+/// Get the LLVM IR dialect model for building a particular C++ type, `T`.
 template <typename T>
 TypeBuilderFunc getModel();
+
 template <>
 TypeBuilderFunc getModel<void *>() {
   return [](mlir::LLVM::LLVMDialect *dialect) {
@@ -123,6 +103,8 @@ getModel<Fortran::ISO::cfi_internal::FlexibleArray<Fortran::ISO::CFI_dim_t>>() {
   return getModel<Fortran::ISO::CFI_dim_t>();
 }
 
+//===----------------------------------------------------------------------===//
+// Descriptor reflection
 //===----------------------------------------------------------------------===//
 
 /// Get the type model of the field number `Field` in an ISO descriptor.

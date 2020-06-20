@@ -389,6 +389,8 @@ public:
 
   fir::NameUniquer &getUniquer() { return uniquer; }
 
+  fir::KindMapping &getKindMap() { return kindMapping; }
+
 private:
   fir::KindMapping kindMapping;
   fir::NameUniquer &uniquer;
@@ -1168,9 +1170,10 @@ struct EmboxCharOpConversion : public FIROpConversion<fir::EmboxCharOp> {
   }
 };
 
-/// create a generic box on a memory reference
-struct EmboxOpConversion : public FIROpConversion<fir::EmboxOp> {
-  using FIROpConversion::FIROpConversion;
+// Common base class for lowering of embox to descriptor creation.
+template <typename OP>
+struct EmboxCommonConversion : public FIROpConversion<OP> {
+  using FIROpConversion<OP>::FIROpConversion;
 
   /// Generate an alloca of size `size` and cast it to type `toTy`
   mlir::LLVM::AllocaOp
@@ -1181,89 +1184,217 @@ struct EmboxOpConversion : public FIROpConversion<fir::EmboxOp> {
     auto *thisBlock = rewriter.getInsertionBlock();
     auto func = mlir::cast<mlir::LLVM::LLVMFuncOp>(thisBlock->getParentOp());
     rewriter.setInsertionPointToStart(&func.front());
-    auto sz = genConstantOffset(loc, rewriter, 1);
-    auto al = rewriter.create<mlir::LLVM::AllocaOp>(loc, toTy, sz, alignment);
-    rewriter.restoreInsertionPoint(thisPt);
-    return al;
-  }
-
-  mlir::LLVM::BitcastOp genGEPToField(mlir::Location loc,
-                                      mlir::LLVM::LLVMType ty,
-                                      mlir::ConversionPatternRewriter &rewriter,
-                                      mlir::Value base, mlir::Value zero,
-                                      int field) const {
-    auto fld = genConstantOffset(loc, rewriter, field);
-    auto gep = genGEP(loc, ty, rewriter, base, zero, fld);
-    return rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, gep);
-  }
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::EmboxOp embox, OperandTy operands,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    auto dims = embox.getDims();
-    assert(!dims);
-    auto loc = embox.getLoc();
-    auto *dialect = getDialect();
-    auto ty = unwrap(
-        lowerTy().convertBoxType(embox.getType().dyn_cast<fir::BoxType>(), 0));
-    auto alloca = genAllocaWithType(loc, ty, defaultAlign, dialect, rewriter);
-    auto c0 = genConstantOffset(loc, rewriter, 0);
-    auto rty = unwrap(operands[0].getType()).getPointerTo();
-    auto f0p = genGEP(loc, rty, rewriter, alloca, c0, c0);
-    auto f0p_ = rewriter.create<mlir::LLVM::BitcastOp>(loc, rty, f0p);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, operands[0], f0p_);
-    auto i64Ty = mlir::LLVM::LLVMType::getInt64Ty(dialect);
-    auto i64PtrTy = i64Ty.getPointerTo();
-    auto f1p = genGEPToField(loc, i64PtrTy, rewriter, alloca, c0, 1);
-    auto c0_ = rewriter.create<mlir::LLVM::SExtOp>(loc, i64Ty, c0);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0_, f1p);
-    auto i32PtrTy = mlir::LLVM::LLVMType::getInt32Ty(dialect).getPointerTo();
-    auto f2p = genGEPToField(loc, i32PtrTy, rewriter, alloca, c0, 2);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0, f2p);
-    auto i8Ty = mlir::LLVM::LLVMType::getInt8Ty(dialect);
-    auto i8PtrTy = mlir::LLVM::LLVMType::getInt8PtrTy(dialect);
-    auto c0__ = rewriter.create<mlir::LLVM::TruncOp>(loc, i8Ty, c0);
-    auto f3p = genGEPToField(loc, i8PtrTy, rewriter, alloca, c0, 3);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0__, f3p);
-    auto f4p = genGEPToField(loc, i8PtrTy, rewriter, alloca, c0, 4);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0__, f4p);
-    auto f5p = genGEPToField(loc, i8PtrTy, rewriter, alloca, c0, 5);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0__, f5p);
-    auto f6p = genGEPToField(loc, i8PtrTy, rewriter, alloca, c0, 6);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0__, f6p);
-    rewriter.replaceOp(embox, alloca.getResult());
-    return success();
-  }
-};
-
-/// create a generic box on a memory reference
-struct XEmboxOpConversion : public FIROpConversion<fir::XEmboxOp> {
-  using FIROpConversion::FIROpConversion;
-
-  /// Generate an alloca of size `size` and cast it to type `toTy`
-  mlir::LLVM::AllocaOp
-  genAllocaWithType(mlir::Location loc, mlir::LLVM::LLVMType toTy,
-                    unsigned alignment, mlir::LLVM::LLVMDialect *dialect,
-                    mlir::ConversionPatternRewriter &rewriter) const {
-    auto thisPt = rewriter.saveInsertionPoint();
-    auto *thisBlock = rewriter.getInsertionBlock();
-    auto func = mlir::cast<mlir::LLVM::LLVMFuncOp>(thisBlock->getParentOp());
-    rewriter.setInsertionPointToStart(&func.front());
-    auto sz = genConstantOffset(loc, rewriter, 1);
+    auto sz = this->genConstantOffset(loc, rewriter, 1);
     auto al = rewriter.create<mlir::LLVM::AllocaOp>(loc, toTy, sz, alignment);
     rewriter.restoreInsertionPoint(thisPt);
     return al;
   }
 
   template <typename... FLDS>
-  mlir::LLVM::BitcastOp
-  genGEPToField(mlir::Location loc, mlir::LLVM::LLVMType ty,
-                mlir::ConversionPatternRewriter &rewriter, mlir::Value base,
-                mlir::Value zero, FLDS... fields) const {
-    auto gep = genGEP(loc, ty, rewriter, base, zero,
-                      genConstantOffset(loc, rewriter, fields)...);
-    return rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, gep);
+  mlir::LLVM::GEPOp genGEPToField(mlir::Location loc, mlir::LLVM::LLVMType ty,
+                                  mlir::ConversionPatternRewriter &rewriter,
+                                  mlir::Value base, mlir::Value zero,
+                                  FLDS... fields) const {
+    return this->genGEP(loc, ty.getPointerTo(), rewriter, base, zero,
+                        this->genConstantOffset(loc, rewriter, fields)...);
   }
+
+  static mlir::LLVM::LLVMType getBoxEleTy(mlir::LLVM::LLVMType boxPtrTy,
+                                          unsigned i) {
+    return boxPtrTy.getPointerElementTy().getStructElementType(i);
+  }
+
+  // Perform an extension or truncation as needed on an integer value
+  mlir::Value integerCast(mlir::Location loc,
+                          mlir::ConversionPatternRewriter &rewriter,
+                          mlir::LLVM::LLVMType ty, mlir::Value val) const {
+    auto toSize = ty.getUnderlyingType()->getPrimitiveSizeInBits();
+    auto fromSize = val.getType()
+                        .cast<mlir::LLVM::LLVMType>()
+                        .getUnderlyingType()
+                        ->getPrimitiveSizeInBits();
+    if (toSize < fromSize)
+      return rewriter.create<mlir::LLVM::TruncOp>(loc, ty, val);
+    if (toSize > fromSize)
+      return rewriter.create<mlir::LLVM::SExtOp>(loc, ty, val);
+    return val;
+  }
+
+  // Get the element size and CFI type code of the boxed value.
+  std::tuple<mlir::Value, mlir::Value>
+  getSizeAndTypeCode(mlir::Location loc,
+                     mlir::ConversionPatternRewriter &rewriter,
+                     mlir::Type boxEleTy) const {
+    auto doInteger =
+        [&](unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
+      int typeCode;
+      switch (width) {
+      case 8:
+        typeCode = CFI_type_int8_t;
+        break;
+      case 16:
+        typeCode = CFI_type_int16_t;
+        break;
+      case 32:
+        typeCode = CFI_type_int32_t;
+        break;
+      case 64:
+        typeCode = CFI_type_int64_t;
+        break;
+      case 128:
+        typeCode = CFI_type_int128_t;
+        break;
+      default:
+        llvm_unreachable("unsupported integer size");
+      }
+      return {this->genConstantOffset(loc, rewriter, width / 8),
+              this->genConstantOffset(loc, rewriter, typeCode)};
+    };
+    auto doFloat = [&](unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
+      int typeCode;
+      switch (width) {
+      case 32:
+        typeCode = CFI_type_float;
+        break;
+      case 64:
+        typeCode = CFI_type_double;
+        break;
+      case 80:
+      case 128:
+        typeCode = CFI_type_long_double;
+        break;
+      default:
+        llvm_unreachable("unsupported real size");
+      }
+      return {this->genConstantOffset(loc, rewriter, width / 8),
+              this->genConstantOffset(loc, rewriter, typeCode)};
+    };
+    auto doComplex =
+        [&](unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
+      int typeCode;
+      switch (width) {
+      case 32:
+        typeCode = CFI_type_float_Complex;
+        break;
+      case 64:
+        typeCode = CFI_type_double_Complex;
+        break;
+      case 80:
+      case 128:
+        typeCode = CFI_type_long_double_Complex;
+        break;
+      default:
+        llvm_unreachable("unsupported complex size");
+      }
+      return {this->genConstantOffset(loc, rewriter, width / 4),
+              this->genConstantOffset(loc, rewriter, typeCode)};
+    };
+    auto getKindMap = [&]() -> fir::KindMapping & {
+      return this->lowerTy().getKindMap();
+    };
+
+    if (fir::isa_integer(boxEleTy)) {
+      if (auto ty = boxEleTy.dyn_cast<mlir::IntegerType>())
+        return doInteger(ty.getWidth());
+      auto ty = boxEleTy.cast<fir::IntType>();
+      return doInteger(getKindMap().getIntegerBitsize(ty.getFKind()));
+    }
+    if (fir::isa_real(boxEleTy)) {
+      if (auto ty = boxEleTy.dyn_cast<mlir::FloatType>())
+        return doFloat(ty.getWidth());
+      auto ty = boxEleTy.cast<fir::RealType>();
+      return doFloat(getKindMap().getRealBitsize(ty.getFKind()));
+    }
+    if (fir::isa_complex(boxEleTy)) {
+      if (auto ty = boxEleTy.dyn_cast<mlir::ComplexType>())
+        return doComplex(
+            ty.getElementType().cast<mlir::FloatType>().getWidth());
+      auto ty = boxEleTy.cast<fir::CplxType>();
+      return doComplex(getKindMap().getRealBitsize(ty.getFKind()));
+    }
+    if (auto ty = boxEleTy.dyn_cast<fir::CharacterType>()) {
+      TODO();
+    }
+    if (auto ty = boxEleTy.dyn_cast<fir::LogicalType>())
+      return doInteger(getKindMap().getLogicalBitsize(ty.getFKind()));
+    if (auto seqTy = boxEleTy.dyn_cast<fir::SequenceType>())
+      return getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy());
+    if (boxEleTy.isa<fir::RecordType>()) {
+      TODO();
+    }
+    if (fir::isa_ref_type(boxEleTy)) {
+      // FIXME: use the target pointer size rather than sizeof(void*)
+      return {this->genConstantOffset(loc, rewriter, sizeof(void *)),
+              this->genConstantOffset(loc, rewriter, CFI_type_cptr)};
+    }
+    // fail: unhandled case
+    TODO();
+  }
+};
+
+/// Create a generic box on a memory reference. This conversions lowers the
+/// abstract box to the appropriate, initialized descriptor.
+struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
+  using EmboxCommonConversion::EmboxCommonConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::EmboxOp embox, OperandTy operands,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // There should be no dims on this embox op
+    assert(!embox.getDims());
+
+    auto loc = embox.getLoc();
+    auto *dialect = getDialect();
+    auto boxTy = embox.getType().dyn_cast<fir::BoxType>();
+    assert(boxTy);
+    auto ty = unwrap(lowerTy().convertBoxType(boxTy, 0));
+    auto alloca = genAllocaWithType(loc, ty, defaultAlign, dialect, rewriter);
+    auto c0 = genConstantOffset(loc, rewriter, 0);
+
+    // Basic pattern to write a field in the descriptor
+    auto storeField = [&](unsigned fldIndex, mlir::Value value,
+                          const std::function<mlir::Value(
+                              mlir::LLVM::LLVMType, mlir::Value)> &applyCast) {
+      auto fldTy = getBoxEleTy(ty, fldIndex);
+      auto fldPtr = genGEPToField(loc, fldTy, rewriter, alloca, c0, fldIndex);
+      auto fld = applyCast(fldTy, value);
+      rewriter.create<mlir::LLVM::StoreOp>(loc, fld, fldPtr);
+    };
+
+    // Write each of the fields with the appropriate values
+    storeField(0, operands[0], [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, val).getResult();
+    });
+    auto [eleSize, cfiTy] = getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy());
+    storeField(1, eleSize, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+    auto version = genConstantOffset(loc, rewriter, CFI_VERSION);
+    storeField(2, version, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+    storeField(3, /*rank*/ c0, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+    storeField(4, cfiTy, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+    auto attr = genConstantOffset(loc, rewriter, CFI_attribute_other);
+    storeField(5, attr, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+    storeField(6, /*addend*/ c0, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+
+    rewriter.replaceOp(embox, alloca.getResult());
+    return success();
+  }
+};
+
+/// create a generic box on a memory reference
+struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
+  using EmboxCommonConversion::EmboxCommonConversion;
 
   mlir::LogicalResult
   matchAndRewrite(fir::XEmboxOp xbox, OperandTy operands,
@@ -1271,47 +1402,66 @@ struct XEmboxOpConversion : public FIROpConversion<fir::XEmboxOp> {
     auto loc = xbox.getLoc();
     auto *dialect = getDialect();
     auto rank = xbox.getRank();
-    auto ty = unwrap(lowerTy().convertBoxType(
-        xbox.getType().dyn_cast<fir::BoxType>(), rank));
-
+    auto boxTy = xbox.getType().dyn_cast<fir::BoxType>();
+    assert(boxTy);
+    auto ty = unwrap(lowerTy().convertBoxType(boxTy, rank));
     auto alloca = genAllocaWithType(loc, ty, defaultAlign, dialect, rewriter);
     auto c0 = genConstantOffset(loc, rewriter, 0);
-    auto rty = unwrap(operands[0].getType()).getPointerTo();
-    auto f0p = genGEP(loc, rty, rewriter, alloca, c0, c0);
-    auto f0p_ = rewriter.create<mlir::LLVM::BitcastOp>(loc, rty, f0p);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, operands[0], f0p_);
+
+    // Basic pattern to write a field in the descriptor
+    auto storeField = [&](unsigned fldIndex, mlir::Value value,
+                          const std::function<mlir::Value(
+                              mlir::LLVM::LLVMType, mlir::Value)> &applyCast) {
+      auto fldTy = getBoxEleTy(ty, fldIndex);
+      auto fldPtr = genGEPToField(loc, fldTy, rewriter, alloca, c0, fldIndex);
+      auto fld = applyCast(fldTy, value);
+      rewriter.create<mlir::LLVM::StoreOp>(loc, fld, fldPtr);
+    };
+
+    // Write each of the fields with the appropriate values
+    storeField(0, operands[0], [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, val).getResult();
+    });
+    auto [eleSize, cfiTy] = getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy());
+    storeField(1, eleSize, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+    auto version = genConstantOffset(loc, rewriter, CFI_VERSION);
+    storeField(2, version, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+    auto rankVal = genConstantOffset(loc, rewriter, rank);
+    storeField(3, rankVal, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+    storeField(4, cfiTy, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+    auto attr = genConstantOffset(loc, rewriter, CFI_attribute_other);
+    storeField(5, attr, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+    storeField(6, /*addend*/ c0, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
+      return integerCast(loc, rewriter, ty, val);
+    });
+
+    unsigned dimsOff = 1;
     auto i64Ty = mlir::LLVM::LLVMType::getInt64Ty(dialect);
     auto i64PtrTy = i64Ty.getPointerTo();
-    auto f1p = genGEPToField(loc, i64PtrTy, rewriter, alloca, c0, 1);
-    auto c0_ = rewriter.create<mlir::LLVM::SExtOp>(loc, i64Ty, c0);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0_, f1p);
-    auto i32PtrTy = mlir::LLVM::LLVMType::getInt32Ty(dialect).getPointerTo();
-    auto f2p = genGEPToField(loc, i32PtrTy, rewriter, alloca, c0, 2);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0, f2p);
-    auto i8Ty = mlir::LLVM::LLVMType::getInt8Ty(dialect);
-    auto i8PtrTy = mlir::LLVM::LLVMType::getInt8PtrTy(dialect);
-    auto c0__ = rewriter.create<mlir::LLVM::TruncOp>(loc, i8Ty, c0);
-    auto f3p = genGEPToField(loc, i8PtrTy, rewriter, alloca, c0, 3);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0__, f3p);
-    auto f4p = genGEPToField(loc, i8PtrTy, rewriter, alloca, c0, 4);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0__, f4p);
-    auto f5p = genGEPToField(loc, i8PtrTy, rewriter, alloca, c0, 5);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0__, f5p);
-    auto f6p = genGEPToField(loc, i8PtrTy, rewriter, alloca, c0, 6);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, c0__, f6p);
-    auto dimsIter = xbox.dimsOperands().begin();
     for (unsigned d = 0; d < rank; ++d) {
       // store lower bound (normally 0)
       auto f70p = genGEPToField(loc, i64PtrTy, rewriter, alloca, c0, 7, d, 0);
-      rewriter.create<mlir::LLVM::StoreOp>(loc, *dimsIter++, f70p);
+      rewriter.create<mlir::LLVM::StoreOp>(loc, operands[dimsOff++], f70p);
       // store extent
       auto f71p = genGEPToField(loc, i64PtrTy, rewriter, alloca, c0, 7, d, 1);
-      rewriter.create<mlir::LLVM::StoreOp>(loc, *dimsIter++, f71p);
+      rewriter.create<mlir::LLVM::StoreOp>(loc, operands[dimsOff++], f71p);
       // store step (scaled by extent to save a multiplication)
       auto f72p = genGEPToField(loc, i64PtrTy, rewriter, alloca, c0, 7, d, 2);
-      rewriter.create<mlir::LLVM::StoreOp>(loc, *dimsIter++, f72p);
+      rewriter.create<mlir::LLVM::StoreOp>(loc, operands[dimsOff++], f72p);
     }
-    rewriter.replaceOp(xbox, alloca.getResult());
+    auto desc = rewriter.create<mlir::LLVM::BitcastOp>(
+        loc, lowerTy().convertType(boxTy), alloca);
+    rewriter.replaceOp(xbox, desc.getResult());
     return success();
   }
 };
