@@ -813,12 +813,12 @@ struct Attributor {
   /// \param InfoCache Cache to hold various information accessible for
   ///                  the abstract attributes.
   /// \param CGUpdater Helper to update an underlying call graph.
-  /// \param Whitelist If not null, a set limiting the attribute opportunities.
+  /// \param Allowed If not null, a set limiting the attribute opportunities.
   Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
              CallGraphUpdater &CGUpdater,
-             DenseSet<const char *> *Whitelist = nullptr)
+             DenseSet<const char *> *Allowed = nullptr)
       : Allocator(InfoCache.Allocator), Functions(Functions),
-        InfoCache(InfoCache), CGUpdater(CGUpdater), Whitelist(Whitelist) {}
+        InfoCache(InfoCache), CGUpdater(CGUpdater), Allowed(Allowed) {}
 
   ~Attributor();
 
@@ -894,7 +894,7 @@ struct Attributor {
     registerAA(AA);
 
     // For now we ignore naked and optnone functions.
-    bool Invalidate = Whitelist && !Whitelist->count(&AAType::ID);
+    bool Invalidate = Allowed && !Allowed->count(&AAType::ID);
     const Function *FnScope = IRP.getAnchorScope();
     if (FnScope)
       Invalidate |= FnScope->hasFnAttribute(Attribute::Naked) ||
@@ -902,7 +902,7 @@ struct Attributor {
 
     // Bootstrap the new attribute with an initial update to propagate
     // information, e.g., function -> call site. If it is not on a given
-    // whitelist we will not perform updates at all.
+    // Allowed we will not perform updates at all.
     if (Invalidate) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
@@ -1387,7 +1387,7 @@ private:
   SmallVector<DependenceVector *, 16> DependenceStack;
 
   /// If not null, a set limiting the attribute opportunities.
-  const DenseSet<const char *> *Whitelist;
+  const DenseSet<const char *> *Allowed;
 
   /// A set to remember the functions we already assume to be live and visited.
   DenseSet<const Function *> VisitedFunctions;
