@@ -841,7 +841,7 @@ int GDBRemoteCommunicationClient::SendEnvironmentPacket(
     bool send_hex_encoding = false;
     for (const char *p = name_equal_value; *p != '\0' && !send_hex_encoding;
          ++p) {
-      if (isprint(*p)) {
+      if (llvm::isPrint(*p)) {
         switch (*p) {
         case '$':
         case '#':
