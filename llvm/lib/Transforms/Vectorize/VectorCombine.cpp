@@ -233,6 +233,11 @@ static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
     return false;
 
   if (ConvertToShuffle) {
+    // If the extract can be constant-folded, this code is unsimplified. Defer
+    // to other passes to handle that.
+    if (isa<Constant>(ConvertToShuffle->getOperand(0)))
+      return false;
+
     // The shuffle mask is undefined except for 1 lane that is being translated
     // to the cheap extraction lane. Example:
     // ShufMask = { 2, undef, undef, undef }
