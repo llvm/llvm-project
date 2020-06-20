@@ -273,8 +273,8 @@ def genericize_check_lines(lines, is_analyze, vars_seen):
 
 
 def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, is_asm, is_analyze):
-  # prefix_blacklist are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
-  prefix_blacklist = set()
+  # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
+  prefix_exclusions = set()
   printed_prefixes = []
   for p in prefix_list:
     checkprefixes = p[0]
@@ -282,18 +282,18 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
     # exist for this run line. A subset of the check prefixes might know about the function but only because
     # other run lines created it.
     if any(map(lambda checkprefix: func_name not in func_dict[checkprefix], checkprefixes)):
-        prefix_blacklist |= set(checkprefixes)
+        prefix_exclusions |= set(checkprefixes)
         continue
 
-  # prefix_blacklist is constructed, we can now emit the output
+  # prefix_exclusions is constructed, we can now emit the output
   for p in prefix_list:
     checkprefixes = p[0]
     for checkprefix in checkprefixes:
       if checkprefix in printed_prefixes:
         break
 
-      # Check if the prefix is blacklisted.
-      if checkprefix in prefix_blacklist:
+      # Check if the prefix is excluded.
+      if checkprefix in prefix_exclusions:
         continue
 
       # If we do not have output for this prefix we skip it.
