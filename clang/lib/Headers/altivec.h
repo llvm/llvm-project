@@ -16776,6 +16776,46 @@ static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_pext(vector unsigned long long __a, vector unsigned long long __b) {
   return __builtin_altivec_vpextd(__a, __b);
 }
+
+/* vec_clrl */
+
+static __inline__ vector signed char __ATTRS_o_ai
+vec_clrl(vector signed char __a, unsigned int __n) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vclrrb(__a, __n);
+#else
+  return __builtin_altivec_vclrlb( __a, __n);
+#endif
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_clrl(vector unsigned char __a, unsigned int __n) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vclrrb((vector signed char)__a, __n);
+#else
+  return __builtin_altivec_vclrlb((vector signed char)__a, __n);
+#endif
+}
+
+/* vec_clrr */
+
+static __inline__ vector signed char __ATTRS_o_ai
+vec_clrr(vector signed char __a, unsigned int __n) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vclrlb(__a, __n);
+#else
+  return __builtin_altivec_vclrrb( __a, __n);
+#endif
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_clrr(vector unsigned char __a, unsigned int __n) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vclrlb((vector signed char)__a, __n);
+#else
+  return __builtin_altivec_vclrrb((vector signed char)__a, __n);
+#endif
+}
 #endif /* __POWER10_VECTOR__ */
 
 #undef __ATTRS_o_ai

@@ -417,6 +417,14 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_altivec_vpextd : GCCBuiltin<"__builtin_altivec_vpextd">,
               Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty],
                         [IntrNoMem]>;
+
+   // P10 Vector Clear Bytes
+   def int_ppc_altivec_vclrlb :  GCCBuiltin<"__builtin_altivec_vclrlb">,
+               Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty],
+                         [IntrNoMem]>;
+   def int_ppc_altivec_vclrrb :  GCCBuiltin<"__builtin_altivec_vclrrb">,
+               Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty],
+                         [IntrNoMem]>;
 }
 
 // Vector average.
