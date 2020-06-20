@@ -12,6 +12,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include "clang/Tooling/Transformer/SourceCodeBuilders.h"
@@ -226,12 +227,14 @@ Error evalData(const UnaryOperationData &Data,
 
 Error evalData(const SelectorData &Data, const MatchFinder::MatchResult &Match,
                std::string *Result) {
-  auto Range = Data.Selector(Match);
-  if (!Range)
-    return Range.takeError();
-  if (auto Err = tooling::validateEditRange(*Range, *Match.SourceManager))
+  auto RawRange = Data.Selector(Match);
+  if (!RawRange)
+    return RawRange.takeError();
+  CharSourceRange Range = Lexer::makeFileCharRange(
+      *RawRange, *Match.SourceManager, Match.Context->getLangOpts());
+  if (auto Err = tooling::validateEditRange(Range, *Match.SourceManager))
     return Err;
-  *Result += tooling::getText(*Range, *Match.Context);
+  *Result += tooling::getText(Range, *Match.Context);
   return Error::success();
 }
 
