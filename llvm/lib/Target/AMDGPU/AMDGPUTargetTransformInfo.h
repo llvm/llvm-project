@@ -254,7 +254,7 @@ public:
     : BaseT(TM, F.getParent()->getDataLayout()),
       ST(static_cast<const R600Subtarget*>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()),
-      CommonTTI(TM, F)	{}
+      CommonTTI(TM, F) {}
 
   const R600Subtarget *getST() const { return ST; }
   const AMDGPUTargetLowering *getTLI() const { return TLI; }
@@ -269,7 +269,7 @@ public:
   bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes, unsigned Alignment,
                                   unsigned AddrSpace) const;
   bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
-		                   unsigned Alignment,
+                                   unsigned Alignment,
                                    unsigned AddrSpace) const;
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
                                     unsigned Alignment,
