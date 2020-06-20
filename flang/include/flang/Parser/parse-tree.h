@@ -3718,11 +3718,23 @@ struct OpenMPCancelConstruct {
   std::tuple<Verbatim, OmpCancelType, std::optional<If>> t;
 };
 
-// 2.13.7 flush -> FLUSH [(variable-name-list)]
+// 2.18.8 Flush Construct [OpenMP 5.0]
+// memory-order-clause -> acq_rel
+//                        release
+//                        acquire
+struct OmpFlushMemoryClause {
+  ENUM_CLASS(FlushMemoryOrder, AcqRel, Release, Acquire)
+  WRAPPER_CLASS_BOILERPLATE(OmpFlushMemoryClause, FlushMemoryOrder);
+  CharBlock source;
+};
+
+// 2.18.8 flush -> FLUSH [memory-order-clause] [(variable-name-list)]
 struct OpenMPFlushConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPFlushConstruct);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<OmpObjectList>> t;
+  std::tuple<Verbatim, std::optional<OmpFlushMemoryClause>,
+      std::optional<OmpObjectList>>
+      t;
 };
 
 struct OmpSimpleStandaloneDirective {
