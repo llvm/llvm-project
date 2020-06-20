@@ -12,6 +12,7 @@ class TestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @no_debug_info_test
+    @skipIfWindows
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
@@ -31,6 +32,7 @@ class TestCase(TestBase):
             self.expect_expr("complex_unsigned_long", result_type="_Complex long", result_value="1 + 2i")
 
     @no_debug_info_test
+    @skipIfWindows
     def test_long_long(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
