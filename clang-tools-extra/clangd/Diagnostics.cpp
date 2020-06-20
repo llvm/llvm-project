@@ -76,7 +76,7 @@ bool mentionsMainFile(const Diag &D) {
   return false;
 }
 
-bool isBlacklisted(const Diag &D) {
+bool isExcluded(const Diag &D) {
   // clang will always fail parsing MS ASM, we don't link in desc + asm parser.
   if (D.ID == clang::diag::err_msasm_unable_to_create_target ||
       D.ID == clang::diag::err_msasm_unsupported_arch)
@@ -738,7 +738,7 @@ void StoreDiags::flushLastDiag() {
     LastDiag.reset();
   });
 
-  if (isBlacklisted(*LastDiag))
+  if (isExcluded(*LastDiag))
     return;
   // Move errors that occur from headers into main file.
   if (!LastDiag->InsideMainFile && LastDiagLoc && LastDiagOriginallyError) {

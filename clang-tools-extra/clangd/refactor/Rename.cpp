@@ -98,10 +98,10 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
   return Result;
 }
 
-// By default, we blacklist C++ standard symbols and protobuf symbols as rename
+// By default, we exclude C++ standard symbols and protobuf symbols as rename
 // these symbols would change system/generated files which are unlikely to be
 // modified.
-bool isBlacklisted(const NamedDecl &RenameDecl) {
+bool isExcluded(const NamedDecl &RenameDecl) {
   if (isProtoFile(RenameDecl.getLocation(),
                   RenameDecl.getASTContext().getSourceManager()))
     return true;
@@ -138,7 +138,7 @@ llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
   if (RenameDecl.getParentFunctionOrMethod())
     return None;
 
-  if (isBlacklisted(RenameDecl))
+  if (isExcluded(RenameDecl))
     return ReasonToReject::UnsupportedSymbol;
 
   // Check whether the symbol being rename is indexable.
