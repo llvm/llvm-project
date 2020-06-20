@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: libcpp-no-concepts
 
 #include <numbers>
 
