@@ -40518,6 +40518,7 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
 
   SDValue CmpOp = EFLAGS.getOperand(0);
   unsigned CmpBits = CmpOp.getValueSizeInBits();
+  assert(CmpBits == CmpVal.getBitWidth() && "Value size mismatch");
 
   // Peek through any truncate.
   if (CmpOp.getOpcode() == ISD::TRUNCATE)
@@ -40535,7 +40536,7 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   unsigned NumEltBits = VecVT.getScalarSizeInBits();
 
   bool IsAnyOf = CmpOpcode == X86ISD::CMP && CmpVal.isNullValue();
-  bool IsAllOf = CmpOpcode == X86ISD::SUB && NumElts <= CmpVal.getBitWidth() &&
+  bool IsAllOf = CmpOpcode == X86ISD::SUB && NumElts <= CmpBits &&
                  CmpVal.isMask(NumElts);
   if (!IsAnyOf && !IsAllOf)
     return SDValue();
