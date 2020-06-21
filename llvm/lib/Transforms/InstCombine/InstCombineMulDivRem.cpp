@@ -402,10 +402,12 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
-static Instruction *foldFPSignBitOps(BinaryOperator &I,
-                                     InstCombiner::BuilderTy &Builder) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+static Instruction *foldFPSignBitOps(BinaryOperator &I) {
   BinaryOperator::BinaryOps Opcode = I.getOpcode();
+  assert((Opcode == Instruction::FMul || Opcode == Instruction::FDiv) &&
+         "Expected fmul or fdiv");
+
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Value *X, *Y;
 
   // -X * -Y --> X * Y
@@ -439,7 +441,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   if (Value *FoldedMul = foldMulSelectToNegate(I, Builder))
     return replaceInstUsesWith(I, FoldedMul);
 
-  if (Instruction *R = foldFPSignBitOps(I, Builder))
+  if (Instruction *R = foldFPSignBitOps(I))
     return R;
 
   // X * -1.0 --> -X
@@ -1237,7 +1239,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
   if (Instruction *R = foldFDivConstantDividend(I))
     return R;
 
-  if (Instruction *R = foldFPSignBitOps(I, Builder))
+  if (Instruction *R = foldFPSignBitOps(I))
     return R;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
