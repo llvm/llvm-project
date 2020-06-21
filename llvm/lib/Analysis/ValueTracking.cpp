@@ -3340,14 +3340,15 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
   case Instruction::UIToFP:
     return true;
   case Instruction::FMul:
-    // x*x is always non-negative or a NaN.
+  case Instruction::FDiv:
+    // X * X is always non-negative or a NaN.
+    // X / X is always exactly 1.0 or a NaN.
     if (I->getOperand(0) == I->getOperand(1) &&
         (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()))
       return true;
 
     LLVM_FALLTHROUGH;
   case Instruction::FAdd:
-  case Instruction::FDiv:
   case Instruction::FRem:
     return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
                                            Depth + 1) &&
