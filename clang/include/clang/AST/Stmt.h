@@ -322,26 +322,26 @@ protected:
 
     unsigned : NumExprBits;
 
-    /// The kind of result that is trail-allocated.
+    /// The kind of result that is tail-allocated.
     unsigned ResultKind : 2;
 
-    /// Kind of Result as defined by APValue::Kind
+    /// The kind of Result as defined by APValue::Kind
     unsigned APValueKind : 4;
 
-    /// When ResultKind == RSK_Int64. whether the trail-allocated integer is
-    /// signed.
+    /// When ResultKind == RSK_Int64, true if the tail-allocated integer is
+    /// unsigned.
     unsigned IsUnsigned : 1;
 
-    /// When ResultKind == RSK_Int64. the BitWidth of the trail-allocated
-    /// integer. 7 bits because it is the minimal number of bit to represent a
-    /// value from 0 to 64 (the size of the trail-allocated number).
+    /// When ResultKind == RSK_Int64. the BitWidth of the tail-allocated
+    /// integer. 7 bits because it is the minimal number of bits to represent a
+    /// value from 0 to 64 (the size of the tail-allocated integer).
     unsigned BitWidth : 7;
 
-    /// When ResultKind == RSK_APValue. Wether the ASTContext will cleanup the
-    /// destructor on the trail-allocated APValue.
+    /// When ResultKind == RSK_APValue, true if the ASTContext will cleanup the
+    /// tail-allocated APValue.
     unsigned HasCleanup : 1;
 
-    /// Whether this ConstantExpr was created for immediate invocation.
+    /// True if this ConstantExpr was created for immediate invocation.
     unsigned IsImmediateInvocation : 1;
   };
 
