@@ -325,7 +325,7 @@ protected:
     /// The kind of result that is tail-allocated.
     unsigned ResultKind : 2;
 
-    /// The kind of Result as defined by APValue::Kind
+    /// The kind of Result as defined by APValue::Kind.
     unsigned APValueKind : 4;
 
     /// When ResultKind == RSK_Int64, true if the tail-allocated integer is

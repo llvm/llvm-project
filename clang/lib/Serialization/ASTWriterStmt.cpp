@@ -548,16 +548,27 @@ void ASTStmtWriter::VisitExpr(Expr *E) {
 
 void ASTStmtWriter::VisitConstantExpr(ConstantExpr *E) {
   VisitExpr(E);
-  Record.push_back(static_cast<uint64_t>(E->ConstantExprBits.ResultKind));
+  Record.push_back(E->ConstantExprBits.ResultKind);
+
+  Record.push_back(E->ConstantExprBits.APValueKind);
+  Record.push_back(E->ConstantExprBits.IsUnsigned);
+  Record.push_back(E->ConstantExprBits.BitWidth);
+  // HasCleanup not serialized since we can just query the APValue.
+  Record.push_back(E->ConstantExprBits.IsImmediateInvocation);
+
   switch (E->ConstantExprBits.ResultKind) {
+  case ConstantExpr::RSK_None:
+    break;
   case ConstantExpr::RSK_Int64:
     Record.push_back(E->Int64Result());
-    Record.push_back(E->ConstantExprBits.IsUnsigned |
-                     E->ConstantExprBits.BitWidth << 1);
     break;
   case ConstantExpr::RSK_APValue:
     Record.AddAPValue(E->APValueResult());
+    break;
+  default:
+    llvm_unreachable("unexpected ResultKind!");
   }
+
   Record.AddStmt(E->getSubExpr());
   Code = serialization::EXPR_CONSTANT;
 }
