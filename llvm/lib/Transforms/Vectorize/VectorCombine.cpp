@@ -395,8 +395,9 @@ static bool scalarizeBinopOrCmp(Instruction &I,
   Type *VecTy = I.getType();
   assert(VecTy->isVectorTy() &&
          (IsConst0 || IsConst1 || V0->getType() == V1->getType()) &&
-         (ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy()) &&
-         "Unexpected types for insert into binop");
+         (ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
+          ScalarTy->isPointerTy()) &&
+         "Unexpected types for insert element into binop or cmp");
 
   unsigned Opcode = I.getOpcode();
   int ScalarOpCost, VectorOpCost;
