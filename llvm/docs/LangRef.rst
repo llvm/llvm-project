@@ -2240,7 +2240,7 @@ that will have been done by one of the ``@llvm.call.preallocated.*`` intrinsics.
       ; initialize %b
       call void @bar(i32 42, %foo* preallocated(%foo) %b) ["preallocated"(token %t)]
 
-.. _ob_gc_live
+.. _ob_gc_live:
 
 GC Live Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -6806,7 +6806,7 @@ of ``hotness`` (which can take the values ``Unknown``, ``Cold``, ``None``,
 branch frequency relative to the entry frequency, scaled down by 2^8)
 may be specified. The defaults are ``Unknown`` and ``0``, respectively.
 
-.. _stacksafety_summary:
+.. _params_summary:
 
 Params
 ^^^^^^
@@ -15487,7 +15487,7 @@ must have <Inner> * <OuterColumns> elements and the returned vector must have
 
 
 '``llvm.matrix.column.major.load.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -15506,7 +15506,7 @@ consecutive columns A and B, %Stride refers to the distance (the number of
 elements) between the start of column A and the start of column B. The result
 matrix is returned embedded in the result vector. This allows for convenient
 loading of sub matrixes.  If <IsVolatile> is true, the intrinsic is considered
-a :ref:`volatile memory access <volatile>.`
+a :ref:`volatile memory access <volatile>`.
 
 If the %Ptr argument is known to be aligned to some boundary, this can be
 specified as an attribute on the argument.
@@ -15522,7 +15522,7 @@ for the %Ptr arguments.
 
 
 '``llvm.matrix.column.major.store.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -15540,7 +15540,7 @@ The '``llvm.matrix.column.major.store.*``' intrinsic stores the matrix with
 between columns. For two consecutive columns A and B, %Stride refers to the
 distance (the number of elements) between the start of column A and the start
 of column B. If <IsVolatile> is true, the intrinsic is considered a
-:ref:`volatile memory access <volatile>.`
+:ref:`volatile memory access <volatile>`.
 
 If the %Ptr argument is known to be aligned to some boundary, this can be
 specified as an attribute on the argument.
