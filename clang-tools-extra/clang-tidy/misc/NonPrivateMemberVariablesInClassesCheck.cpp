@@ -48,6 +48,14 @@ NonPrivateMemberVariablesInClassesCheck::
       IgnorePublicMemberVariables(
           Options.get("IgnorePublicMemberVariables", false)) {}
 
+void NonPrivateMemberVariablesInClassesCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreClassesWithAllMemberVariablesBeingPublic",
+                IgnoreClassesWithAllMemberVariablesBeingPublic);
+  Options.store(Opts, "IgnorePublicMemberVariables",
+                IgnorePublicMemberVariables);
+}
+
 void NonPrivateMemberVariablesInClassesCheck::registerMatchers(
     MatchFinder *Finder) {
   // We can ignore structs/classes with all member variables being public.

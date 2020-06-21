@@ -29,6 +29,13 @@ NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
           Options.get("WarnOnFloatingPointNarrowingConversion", true)),
       PedanticMode(Options.get("PedanticMode", false)) {}
 
+void NarrowingConversionsCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "WarnOnFloatingPointNarrowingConversion",
+                WarnOnFloatingPointNarrowingConversion);
+  Options.store(Opts, "PedanticMode", PedanticMode);
+}
+
 void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
   // ceil() and floor() are guaranteed to return integers, even though the type
   // is not integral.
@@ -442,7 +449,6 @@ void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
     return handleImplicitCast(*Result.Context, *Cast);
   llvm_unreachable("must be binary operator or cast expression");
 }
-
 } // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang
