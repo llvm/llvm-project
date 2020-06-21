@@ -9,6 +9,8 @@ int __attribute__((target("arch=goldmont-plus"))) foo(void) {return 4;}
 int __attribute__((target("arch=tremont"))) foo(void) {return 5;}
 int __attribute__((target("arch=icelake-client"))) foo(void) {return 6;}
 int __attribute__((target("arch=icelake-server"))) foo(void) {return 7;}
+int __attribute__((target("arch=cooperlake"))) foo(void) {return 8;}
+int __attribute__((target("arch=tigerlake"))) foo(void) {return 9;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar() {
@@ -85,6 +87,10 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // LINUX: ret i32 6
 // LINUX: define i32 @foo.arch_icelake-server()
 // LINUX: ret i32 7
+// LINUX: define i32 @foo.arch_cooperlake()
+// LINUX: ret i32 8
+// LINUX: define i32 @foo.arch_tigerlake()
+// LINUX: ret i32 9
 // LINUX: define i32 @foo()
 // LINUX: ret i32 2
 // LINUX: define i32 @bar()
