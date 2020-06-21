@@ -1,6 +1,5 @@
-; Tests that coro-split can handle the case when a code after coro.suspend uses
-; a value produces between coro.save and coro.suspend (%Result.i19)
-; and checks whether stray coro.saves are properly removed
+; Tests that coro-split will optimize the lifetime.start maker of each local variable,
+; sink them to the places closest to the actual use.
 ; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
@@ -15,6 +14,9 @@ define void @a() "coroutine.presplit"="1" {
 entry:
   %ref.tmp7 = alloca %"struct.lean_future<int>::Awaiter", align 8
   %testval = alloca i32
+  %cast = bitcast i32* %testval to i8*
+  ; lifetime of %testval starts here, but not used until await.ready.
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %cast)
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %alloc = call i8* @malloc(i64 16) #3
   %vFrame = call noalias nonnull i8* @llvm.coro.begin(token %id, i8* %alloc)
@@ -29,8 +31,6 @@ entry:
 await.ready:
   %StrayCoroSave = call token @llvm.coro.save(i8* null)
   %val = load i32, i32* %Result.i19
-  %cast = bitcast i32* %testval to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %cast)
   %test = load i32, i32* %testval
   call void @print(i32 %test)
   call void @llvm.lifetime.end.p0i8(i64 4, i8*  %cast)
@@ -42,16 +42,15 @@ exit:
 }
 
 ; CHECK-LABEL: @a.resume(
-; CHECK:         %testval = alloca i32
-; CHECK:         getelementptr inbounds %a.Frame
+; CHECK:         %testval = alloca i32, align 4
+; CHECK-NEXT:    getelementptr inbounds %a.Frame
 ; CHECK-NEXT:    getelementptr inbounds %"struct.lean_future<int>::Awaiter"
-; CHECK-NOT:     call token @llvm.coro.save(i8* null)
+; CHECK-NEXT:    %cast1 = bitcast i32* %testval to i8*
 ; CHECK-NEXT:    %val = load i32, i32* %Result
-; CHECK-NEXT:    %cast = bitcast i32* %testval to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* %cast)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* %cast1)
 ; CHECK-NEXT:    %test = load i32, i32* %testval
 ; CHECK-NEXT:    call void @print(i32 %test)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* %cast)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* %cast1)
 ; CHECK-NEXT:    call void @print(i32 %val)
 ; CHECK-NEXT:    ret void
 
