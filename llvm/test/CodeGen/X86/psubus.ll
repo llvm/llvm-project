@@ -576,7 +576,7 @@ define <8 x i16> @test13(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
 ; AVX2-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpandn %xmm0, %xmm2, %xmm0
@@ -926,7 +926,7 @@ define <8 x i16> @test15(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
 ; AVX2-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
@@ -1056,7 +1056,7 @@ define <8 x i16> @test16(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
 ; AVX2-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0

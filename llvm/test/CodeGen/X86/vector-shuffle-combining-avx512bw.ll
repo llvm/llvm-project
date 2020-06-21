@@ -156,7 +156,7 @@ define <64 x i8> @combine_permi2q_pshufb_as_permi2d(<8 x i64> %a0, <8 x i64> %a1
 define <64 x i8> @combine_permi2q_pshufb_as_permi2d_mask(<8 x i64> %a0, <8 x i64> %a1, i64 %m) {
 ; X86-LABEL: combine_permi2q_pshufb_as_permi2d_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [7,0,8,0,5,0,10,0,3,0,12,0,1,0,14,0]
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <7,0,u,u,5,0,u,u,u,u,12,0,u,u,14,0>
 ; X86-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
 ; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm2[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,20,21,22,23,20,21,22,23,20,21,22,23,20,21,22,23,40,41,42,43,40,41,42,43,40,41,42,43,40,41,42,43,60,61,62,63,60,61,62,63,60,61,62,63,60,61,62,63]
@@ -164,7 +164,7 @@ define <64 x i8> @combine_permi2q_pshufb_as_permi2d_mask(<8 x i64> %a0, <8 x i64
 ;
 ; X64-LABEL: combine_permi2q_pshufb_as_permi2d_mask:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [7,8,5,10,3,12,1,14]
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <7,u,5,u,u,12,u,14>
 ; X64-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
 ; X64-NEXT:    kmovq %rdi, %k1
 ; X64-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm2[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,20,21,22,23,20,21,22,23,20,21,22,23,20,21,22,23,40,41,42,43,40,41,42,43,40,41,42,43,40,41,42,43,60,61,62,63,60,61,62,63,60,61,62,63,60,61,62,63]

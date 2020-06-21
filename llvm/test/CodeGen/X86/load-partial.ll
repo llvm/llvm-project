@@ -316,7 +316,7 @@ define i32 @load_partial_illegal_type() {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movzwl {{.*}}(%rip), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[3,4,5,6,7,8,9,10,11,12,13,14,15]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[3,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    por {{.*}}(%rip), %xmm0
 ; SSSE3-NEXT:    movd %xmm0, %eax
 ; SSSE3-NEXT:    retq

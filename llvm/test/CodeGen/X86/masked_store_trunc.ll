@@ -456,7 +456,7 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, <8 x i16>* %p, <8 x i32> %mask
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm4[0,2],ymm0[4,6],ymm4[4,6]
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm1
 ; AVX2-NEXT:    vmovmskps %ymm1, %eax
@@ -3545,7 +3545,7 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, <8 x i16>* %p, <8 x i32> %mask
 ; AVX2-LABEL: truncstore_v8i32_v8i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vmovmskps %ymm1, %eax
