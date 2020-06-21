@@ -183,6 +183,12 @@ namespace {
       return It->second.get();
     }
 
+    void addValueHandle(Value *Val) {
+      auto HandleIt = ValueHandles.find_as(Val);
+      if (HandleIt == ValueHandles.end())
+        ValueHandles.insert({ Val, this });
+    }
+
   public:
     void insertResult(Value *Val, BasicBlock *BB,
                       const ValueLatticeElement &Result) {
@@ -195,9 +201,7 @@ namespace {
       else
         Entry->LatticeElements.insert({ Val, Result });
 
-      auto HandleIt = ValueHandles.find_as(Val);
-      if (HandleIt == ValueHandles.end())
-        ValueHandles.insert({ Val, this });
+      addValueHandle(Val);
     }
 
     Optional<ValueLatticeElement> getCachedValueInfo(Value *V,
