@@ -520,8 +520,6 @@ public:
   NODE(parser, OpenMPDeclareReductionConstruct)
   NODE(parser, OpenMPDeclareSimdConstruct)
   NODE(parser, OpenMPDeclareTargetConstruct)
-  NODE(parser, OmpFlushMemoryClause)
-  NODE_ENUM(OmpFlushMemoryClause, FlushMemoryOrder)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPSimpleStandaloneConstruct)
