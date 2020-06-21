@@ -40561,7 +40561,8 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   }
 
   // MOVMSK(PCMPEQ(X,0)) == -1 -> PTESTZ(X,X).
-  if ((IsAllOf && CC == X86::COND_E) && Subtarget.hasSSE41()) {
+  // MOVMSK(PCMPEQ(X,0)) != -1 -> !PTESTZ(X,X).
+  if (IsAllOf && Subtarget.hasSSE41()) {
     SDValue BC = peekThroughBitcasts(Vec);
     if (BC.getOpcode() == X86ISD::PCMPEQ &&
         ISD::isBuildVectorAllZeros(BC.getOperand(1).getNode())) {
