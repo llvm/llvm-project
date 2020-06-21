@@ -47,17 +47,38 @@ static cl::opt<bool> DisableBinopExtractShuffle(
     "disable-binop-extract-shuffle", cl::init(false), cl::Hidden,
     cl::desc("Disable binop extract to shuffle transforms"));
 
+class VectorCombine {
+public:
+  VectorCombine(Function &F, const TargetTransformInfo &TTI,
+                const DominatorTree &DT)
+      : F(F), TTI(TTI), DT(DT) {}
+
+  bool run();
+
+private:
+  Function &F;
+  const TargetTransformInfo &TTI;
+  const DominatorTree &DT;
+
+  bool isExtractExtractCheap(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
+                             unsigned Opcode,
+                             ExtractElementInst *&ConvertToShuffle,
+                             unsigned PreferredExtractIndex);
+  bool foldExtractExtract(Instruction &I);
+  bool foldBitcastShuf(Instruction &I);
+  bool scalarizeBinopOrCmp(Instruction &I);
+};
 
 /// Compare the relative costs of 2 extracts followed by scalar operation vs.
 /// vector operation(s) followed by extract. Return true if the existing
 /// instructions are cheaper than a vector alternative. Otherwise, return false
 /// and if one of the extracts should be transformed to a shufflevector, set
 /// \p ConvertToShuffle to that extract instruction.
-static bool isExtractExtractCheap(ExtractElementInst *Ext0,
-                                  ExtractElementInst *Ext1, unsigned Opcode,
-                                  const TargetTransformInfo &TTI,
-                                  ExtractElementInst *&ConvertToShuffle,
-                                  unsigned PreferredExtractIndex) {
+bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
+                                          ExtractElementInst *Ext1,
+                                          unsigned Opcode,
+                                          ExtractElementInst *&ConvertToShuffle,
+                                          unsigned PreferredExtractIndex) {
   assert(isa<ConstantInt>(Ext0->getOperand(1)) &&
          isa<ConstantInt>(Ext1->getOperand(1)) &&
          "Expected constant extract indexes");
@@ -84,10 +105,10 @@ static bool isExtractExtractCheap(ExtractElementInst *Ext0,
   unsigned Ext0Index = cast<ConstantInt>(Ext0->getOperand(1))->getZExtValue();
   unsigned Ext1Index = cast<ConstantInt>(Ext1->getOperand(1))->getZExtValue();
 
-  int Extract0Cost = TTI.getVectorInstrCost(Instruction::ExtractElement,
-                                            VecTy, Ext0Index);
-  int Extract1Cost = TTI.getVectorInstrCost(Instruction::ExtractElement,
-                                            VecTy, Ext1Index);
+  int Extract0Cost =
+      TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, Ext0Index);
+  int Extract1Cost =
+      TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, Ext1Index);
 
   // A more expensive extract will always be replaced by a splat shuffle.
   // For example, if Ext0 is more expensive:
@@ -231,7 +252,7 @@ static void foldExtExtBinop(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
 }
 
 /// Match an instruction with extracted vector operands.
-static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
+bool VectorCombine::foldExtractExtract(Instruction &I) {
   // It is not safe to transform things like div, urem, etc. because we may
   // create undefined behavior when executing those on unknown vector elements.
   if (!isSafeToSpeculativelyExecute(&I))
@@ -263,7 +284,7 @@ static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
           m_InsertElt(m_Value(), m_Value(), m_ConstantInt(InsertIndex)));
 
   ExtractElementInst *ExtractToChange;
-  if (isExtractExtractCheap(Ext0, Ext1, I.getOpcode(), TTI, ExtractToChange,
+  if (isExtractExtractCheap(Ext0, Ext1, I.getOpcode(), ExtractToChange,
                             InsertIndex))
     return false;
 
@@ -290,7 +311,7 @@ static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
 /// If this is a bitcast of a shuffle, try to bitcast the source vector to the
 /// destination type followed by shuffle. This can enable further transforms by
 /// moving bitcasts or shuffles together.
-static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
+bool VectorCombine::foldBitcastShuf(Instruction &I) {
   Value *V;
   ArrayRef<int> Mask;
   if (!match(&I, m_BitCast(
@@ -339,8 +360,7 @@ static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
 
 /// Match a vector binop or compare instruction with at least one inserted
 /// scalar operand and convert to scalar binop/cmp followed by insertelement.
-static bool scalarizeBinopOrCmp(Instruction &I,
-                                const TargetTransformInfo &TTI) {
+bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
   Value *Ins0, *Ins1;
   if (!match(&I, m_BinOp(m_Value(Ins0), m_Value(Ins1))) &&
@@ -459,8 +479,7 @@ static bool scalarizeBinopOrCmp(Instruction &I,
 
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
-static bool runImpl(Function &F, const TargetTransformInfo &TTI,
-                    const DominatorTree &DT) {
+bool VectorCombine::run() {
   if (DisableVectorCombine)
     return false;
 
@@ -476,9 +495,9 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
     for (Instruction &I : BB) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
-      MadeChange |= foldExtractExtract(I, TTI);
-      MadeChange |= foldBitcastShuf(I, TTI);
-      MadeChange |= scalarizeBinopOrCmp(I, TTI);
+      MadeChange |= foldExtractExtract(I);
+      MadeChange |= foldBitcastShuf(I);
+      MadeChange |= scalarizeBinopOrCmp(I);
     }
   }
 
@@ -516,7 +535,8 @@ public:
       return false;
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    return runImpl(F, TTI, DT);
+    VectorCombine Combiner(F, TTI, DT);
+    return Combiner.run();
   }
 };
 } // namespace
@@ -536,7 +556,8 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
                                          FunctionAnalysisManager &FAM) {
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  if (!runImpl(F, TTI, DT))
+  VectorCombine Combiner(F, TTI, DT);
+  if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
