@@ -23,11 +23,12 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Threading.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -1026,11 +1027,141 @@ static void showSectionInfo(sampleprof::SampleProfileReader *Reader,
   }
 }
 
+struct HotFuncInfo {
+  StringRef FuncName;
+  uint64_t TotalSample;
+  double TotalSamplePercent;
+  uint64_t MaxSample;
+  uint64_t EntrySample;
+
+  HotFuncInfo()
+      : FuncName(), TotalSample(0), TotalSamplePercent(0.0f), MaxSample(0),
+        EntrySample(0) {}
+
+  HotFuncInfo(StringRef FN, uint64_t TS, double TSP, uint64_t MS, uint64_t ES)
+      : FuncName(FN), TotalSample(TS), TotalSamplePercent(TSP), MaxSample(MS),
+        EntrySample(ES) {}
+};
+
+// Print out detailed information about hot functions in PrinfValues vector.
+// Users specify titles and offset of every columns through ColumnTitle and
+// ColumnOffset. Note that ColumnOffset starts from the offset of the second
+// column (because the first column always starts at offset 0). The size of
+// ColumnTitle and ColumnOffset need to be at least ColNum and ColNum-1. In
+// addition, users can optionally give a HotFuncMetric string to print out or
+// let it be an empty string.
+static void dumpHotFunctionList(
+    const uint64_t &ColNum, const std::vector<std::string> &ColumnTitle,
+    const std::vector<uint64_t> &ColumnOffset,
+    const std::vector<HotFuncInfo> &PrintValues, const uint64_t &HotFuncCount,
+    const uint64_t &TotalFuncCount, const uint64_t &HotProfCount,
+    const uint64_t &TotalProfCount, const std::string &HotFuncMetric,
+    raw_fd_ostream &OS) {
+  assert(ColumnOffset.size() >= ColNum - 1 && ColumnTitle.size() >= ColNum);
+
+  formatted_raw_ostream FOS(OS);
+  FOS << HotFuncCount << " out of " << TotalFuncCount
+      << " functions with profile ("
+      << format("%.2f%%", (((double)HotFuncCount) / TotalFuncCount * 100))
+      << ") are considered hot functions";
+  if (!HotFuncMetric.empty())
+    FOS << " (" << HotFuncMetric << ")";
+  FOS << ".\n";
+  FOS << HotProfCount << " out of " << TotalProfCount << " profile counts ("
+      << format("%.2f%%", (((double)HotProfCount) / TotalProfCount * 100))
+      << ") are from hot functions.\n";
+
+  if (ColNum == 0)
+    return;
+
+  for (size_t I = 0; I < ColNum; ++I) {
+    FOS << ColumnTitle[I];
+    FOS.PadToColumn(ColumnOffset[I]);
+  }
+  FOS << "\n";
+
+  for (const auto &R : PrintValues) {
+    FOS << R.TotalSample << " (" << format("%.2f%%", R.TotalSamplePercent)
+        << ")";
+    FOS.PadToColumn(ColumnOffset.size() > 0 ? ColumnOffset[0] : 0);
+    FOS << R.MaxSample;
+    FOS.PadToColumn(ColumnOffset.size() > 1 ? ColumnOffset[1] : 0);
+    FOS << R.EntrySample;
+    FOS.PadToColumn(ColumnOffset.size() > 2 ? ColumnOffset[2] : 0);
+    FOS << R.FuncName << "\n";
+  }
+  return;
+}
+
+static int
+showHotFunctionList(const StringMap<sampleprof::FunctionSamples> &Profiles,
+                    ProfileSummary &PS, raw_fd_ostream &OS) {
+  using namespace sampleprof;
+
+  const uint64_t HotFuncCutoff = 990000;
+  auto &SummaryVector = PS.getDetailedSummary();
+  uint64_t MinCountThreshold = 0;
+  for (const auto &SummaryEntry : SummaryVector) {
+    if (SummaryEntry.Cutoff == HotFuncCutoff) {
+      MinCountThreshold = SummaryEntry.MinCount;
+      break;
+    }
+  }
+  assert(MinCountThreshold != 0);
+
+  // Traverse all functions in the profile and keep only hot functions.
+  // The following loop also calculates the sum of total samples of all
+  // functions.
+  std::multimap<uint64_t, std::pair<const FunctionSamples *, const uint64_t>,
+                std::greater<uint64_t>>
+      HotFunc;
+  uint64_t ProfileTotalSample = 0;
+  uint64_t HotFuncSample = 0;
+  uint64_t HotFuncCount = 0;
+  uint64_t MaxCount = 0;
+  for (const auto &I : Profiles) {
+    const auto &FuncProf = I.second;
+    ProfileTotalSample += FuncProf.getTotalSamples();
+    MaxCount = FuncProf.getMaxCountInside();
+
+    // MinCountThreshold is a block/line threshold computed for a given cutoff.
+    // We intentionally compare the maximum sample count in a function with this
+    // threshold to get an approximate threshold for hot functions.
+    if (MaxCount >= MinCountThreshold) {
+      HotFunc.emplace(FuncProf.getTotalSamples(),
+                      std::make_pair(&(I.second), MaxCount));
+      HotFuncSample += FuncProf.getTotalSamples();
+      HotFuncCount++;
+    }
+  }
+
+  const uint64_t ColNum = 4;
+  std::vector<std::string> ColumnTitle{"Total sample (%)", "Max sample",
+                                       "Entry sample", "Function name"};
+  std::vector<uint64_t> ColumnOffset{24, 42, 58};
+  std::string Metric =
+      std::string("max sample >= ") + std::to_string(MinCountThreshold);
+  std::vector<HotFuncInfo> PrintValues;
+  for (const auto &FuncPair : HotFunc) {
+    const auto &FuncPtr = FuncPair.second.first;
+    PrintValues.emplace_back(
+        HotFuncInfo(FuncPtr->getFuncName(), FuncPtr->getTotalSamples(),
+                    (FuncPtr->getTotalSamples() * 100.0) / ProfileTotalSample,
+                    FuncPair.second.second, FuncPtr->getEntrySamples()));
+  }
+  dumpHotFunctionList(ColNum, ColumnTitle, ColumnOffset, PrintValues,
+                      HotFuncCount, Profiles.size(), HotFuncSample,
+                      ProfileTotalSample, Metric, OS);
+
+  return 0;
+}
+
 static int showSampleProfile(const std::string &Filename, bool ShowCounts,
                              bool ShowAllFunctions, bool ShowDetailedSummary,
                              const std::string &ShowFunction,
                              bool ShowProfileSymbolList,
-                             bool ShowSectionInfoOnly, raw_fd_ostream &OS) {
+                             bool ShowSectionInfoOnly, bool ShowHotFuncList,
+                             raw_fd_ostream &OS) {
   using namespace sampleprof;
   LLVMContext Context;
   auto ReaderOrErr = SampleProfileReader::create(Filename, Context);
@@ -1064,6 +1195,9 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
     PS.printDetailedSummary(OS);
   }
 
+  if (ShowHotFuncList)
+    showHotFunctionList(Reader->getProfiles(), Reader->getSummary(), OS);
+
   return 0;
 }
 
@@ -1090,6 +1224,9 @@ static int show_main(int argc, const char *argv[]) {
       cl::desc(
           "Cutoff percentages (times 10000) for generating detailed summary"),
       cl::value_desc("800000,901000,999999"));
+  cl::opt<bool> ShowHotFuncList(
+      "hot-func-list", cl::init(false),
+      cl::desc("Show profile summary of a list of hot functions"));
   cl::opt<bool> ShowAllFunctions("all-functions", cl::init(false),
                                  cl::desc("Details for every function"));
   cl::opt<bool> ShowCS("showcs", cl::init(false),
@@ -1153,7 +1290,8 @@ static int show_main(int argc, const char *argv[]) {
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
                              ShowDetailedSummary, ShowFunction,
-                             ShowProfileSymbolList, ShowSectionInfoOnly, OS);
+                             ShowProfileSymbolList, ShowSectionInfoOnly,
+                             ShowHotFuncList, OS);
 }
 
 int main(int argc, const char *argv[]) {
