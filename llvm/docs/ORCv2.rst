@@ -729,7 +729,7 @@ For example, to load the whole interface of a runtime library:
     // at '/path/to/lib'.
     CompileLayer.add(JD, loadModule(...));
 
-Or, to expose a allowed set of symbols from the main process:
+Or, to expose an allowed set of symbols from the main process:
 
   .. code-block:: c++
 
