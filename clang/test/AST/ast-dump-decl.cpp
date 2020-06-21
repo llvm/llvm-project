@@ -1,4 +1,14 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fms-extensions -ast-dump -ast-dump-filter Test %s | FileCheck -strict-whitespace %s
+// Test without serialization:
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fms-extensions \
+// RUN: -ast-dump -ast-dump-filter Test %s \
+// RUN: | FileCheck --strict-whitespace %s
+//
+// Test with serialization: FIXME: Find why the outputs differs and fix it!
+//    : %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fms-extensions -emit-pch -o %t %s
+//    : %clang_cc1 -x c++ -std=c++11 -triple x86_64-linux-gnu -fms-extensions -include-pch %t \
+//    : -ast-dump-all -ast-dump-filter Test /dev/null \
+//    : | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+//    : | FileCheck --strict-whitespace %s
 
 class testEnumDecl {
   enum class TestEnumDeclScoped;
@@ -325,7 +335,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} <col:14, col:20> col:20 implicit class TestClassTemplate
 // CHECK-NEXT:  `-FieldDecl 0x{{.+}} <line:[[@LINE-74]]:5, col:9> col:9 j 'int'
 
-// CHECK:       ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:256:3, col:44> col:25 class TestClassTemplate definition
+// CHECK:       ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:{{.*}}:3, col:44> col:25 class TestClassTemplate definition
 // CHECK-NEXT:  |-DefinitionData standard_layout has_user_declared_ctor can_const_default_init
 // CHECK-NEXT:  | |-DefaultConstructor exists non_trivial user_provided
 // CHECK-NEXT:  | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -411,18 +421,18 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  |     `-IntegerLiteral 0x{{.+}} <col:20> 'int' 42
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 struct TestTemplateDefaultNonType
 
-// CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:275:3, col:68> col:68 TestTemplateTemplateDefaultType
+// CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:{{.*}}:3, col:68> col:68 TestTemplateTemplateDefaultType
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:42> col:37 depth 0 index 0 TT
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0
 // CHECK-NEXT:  | `-TemplateArgument <col:42> template TestClassTemplate
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:61, col:68> col:68 struct TestTemplateTemplateDefaultType
 
-// CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:276:3, col:82> col:48 TestTemplateTemplateDefaultType
+// CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:{{.*}}:3, col:82> col:48 TestTemplateTemplateDefaultType
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:37> col:37 depth 0 index 0 TT
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0
-// CHECK-NEXT:  | `-TemplateArgument <line:275:42> template TestClassTemplate
+// CHECK-NEXT:  | `-TemplateArgument <line:{{.*}}:42> template TestClassTemplate
 // CHECK-NEXT:  |   `-inherited from TemplateTemplateParm 0x{{.+}} 'TT'
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:276:41, col:82> col:48 struct TestTemplateTemplateDefaultType definition
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:{{.*}}:41, col:82> col:48 struct TestTemplateTemplateDefaultType definition
 // CHECK-NEXT:    |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
 // CHECK-NEXT:    | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
