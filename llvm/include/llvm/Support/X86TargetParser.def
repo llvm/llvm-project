@@ -331,7 +331,7 @@ PROC_WITH_FEAT(IcelakeServer, "icelake-server", PROC_64_BIT, FEATURE_AVX512VBMI2
 
 /// \name Tigerlake
 /// Tigerlake microarchitecture based processors.
-PROC(Tigerlake, "tigerlake", PROC_64_BIT)
+PROC_WITH_FEAT(Tigerlake, "tigerlake", PROC_64_BIT, FEATURE_AVX512VP2INTERSECT)
 
 /// \name Knights Landing
 /// Knights Landing processor.
