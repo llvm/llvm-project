@@ -1412,10 +1412,9 @@ namespace {
       Simple = false;
     }
 
-    // Any Stmt not whitelisted will cause the condition to be marked complex.
-    void VisitStmt(Stmt *S) {
-      Simple = false;
-    }
+    // Any Stmt not explicitly listed will cause the condition to be marked
+    // complex.
+    void VisitStmt(Stmt *S) { Simple = false; }
 
     void VisitBinaryOperator(BinaryOperator *E) {
       Visit(E->getLHS());
