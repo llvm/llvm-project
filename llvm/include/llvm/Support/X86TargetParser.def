@@ -110,6 +110,8 @@ X86_CPU_SUBTYPE_COMPAT("icelake-client", INTEL_COREI7_ICELAKE_CLIENT, "icelake-c
 X86_CPU_SUBTYPE_COMPAT("icelake-server", INTEL_COREI7_ICELAKE_SERVER, "icelake-server")
 X86_CPU_SUBTYPE_COMPAT("znver2",         AMDFAM17H_ZNVER2,            "znver2")
 X86_CPU_SUBTYPE_COMPAT("cascadelake",    INTEL_COREI7_CASCADELAKE,    "cascadelake")
+X86_CPU_SUBTYPE_COMPAT("tigerlake",      INTEL_COREI7_TIGERLAKE,      "tigerlake")
+X86_CPU_SUBTYPE_COMPAT("cooperlake",     INTEL_COREI7_COOPERLAKE,     "cooperlake")
 // Entries below this are not in libgcc/compiler-rt.
 X86_CPU_SUBTYPE       ("core2",          INTEL_CORE2_65)
 X86_CPU_SUBTYPE       ("penryn",         INTEL_CORE2_45)
@@ -117,8 +119,6 @@ X86_CPU_SUBTYPE       ("k6",             AMDPENTIUM_K6)
 X86_CPU_SUBTYPE       ("k6-2",           AMDPENTIUM_K62)
 X86_CPU_SUBTYPE       ("k6-3",           AMDPENTIUM_K63)
 X86_CPU_SUBTYPE       ("geode",          AMDPENTIUM_GEODE)
-X86_CPU_SUBTYPE       ("cooperlake",     INTEL_COREI7_COOPERLAKE)
-X86_CPU_SUBTYPE       ("tigerlake",      INTEL_COREI7_TIGERLAKE)
 #undef X86_CPU_SUBTYPE_COMPAT
 #undef X86_CPU_SUBTYPE
 
