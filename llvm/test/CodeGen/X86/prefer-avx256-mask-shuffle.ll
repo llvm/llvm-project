@@ -26,7 +26,7 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(<8 x i32>* %a, <8
 ; AVX256VL-NEXT:    vpslld $31, %ymm3, %ymm3
 ; AVX256VL-NEXT:    vptestmd %ymm3, %ymm3, %k1
 ; AVX256VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
-; AVX256VL-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[6,7,12,13,2,3,14,15,6,7,6,7,14,15,0,1]
+; AVX256VL-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[6,7,12,13,2,3,u,u,6,7,u,u,14,15,0,1]
 ; AVX256VL-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[3],xmm2[4],xmm1[5],xmm2[6,7]
 ; AVX256VL-NEXT:    vpmovsxwd %xmm1, %ymm1
 ; AVX256VL-NEXT:    vpslld $31, %ymm1, %ymm1

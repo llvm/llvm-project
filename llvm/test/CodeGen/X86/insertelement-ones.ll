@@ -430,8 +430,8 @@ define <32 x i8> @insert_v32i8_x123456789ABCDEzGHIJKLMNOPQRSTxx(<32 x i8> %a) {
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm0
 ; SSSE3-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
 ; SSSE3-NEXT:    por %xmm0, %xmm2
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,8,9,10,11,12,13],zero,xmm1[15]
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0],zero
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,8,9,10,11,12,13],zero,xmm1[u]
+; SSSE3-NEXT:    pslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1]
 ; SSSE3-NEXT:    por %xmm3, %xmm1
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14],zero
 ; SSSE3-NEXT:    por %xmm0, %xmm1

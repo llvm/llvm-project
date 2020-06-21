@@ -1060,6 +1060,12 @@ namespace llvm {
                                                  TargetLoweringOpt &TLO,
                                                  unsigned Depth) const override;
 
+    bool SimplifyDemandedVectorEltsForTargetShuffle(SDValue Op,
+                                                    const APInt &DemandedElts,
+                                                    unsigned MaskIndex,
+                                                    TargetLoweringOpt &TLO,
+                                                    unsigned Depth) const;
+
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedBits,
                                            const APInt &DemandedElts,
