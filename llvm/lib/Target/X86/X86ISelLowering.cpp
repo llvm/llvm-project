@@ -30748,6 +30748,12 @@ bool X86TargetLowering::shouldSinkOperands(Instruction *I,
   return false;
 }
 
+bool X86TargetLowering::shouldConvertPhiType(Type *From, Type *To) const {
+  if (!Subtarget.is64Bit())
+    return false;
+  return TargetLowering::shouldConvertPhiType(From, To);
+}
+
 bool X86TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   if (isa<MaskedLoadSDNode>(ExtVal.getOperand(0)))
     return false;

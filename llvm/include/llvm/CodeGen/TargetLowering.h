@@ -2368,6 +2368,14 @@ public:
     return nullptr;
   }
 
+  /// Given a set in interconnected phis of type 'From' that are loaded/stored
+  /// or bitcast to type 'To', return true if the set should be converted to
+  /// 'To'.
+  virtual bool shouldConvertPhiType(Type *From, Type *To) const {
+    return (From->isIntegerTy() || From->isFloatingPointTy()) &&
+           (To->isIntegerTy() || To->isFloatingPointTy());
+  }
+
   /// Returns true if the opcode is a commutative binary operation.
   virtual bool isCommutativeBinOp(unsigned Opcode) const {
     // FIXME: This should get its info from the td file.
