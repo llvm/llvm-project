@@ -244,6 +244,7 @@ static void AssertResultStorageKind(ConstantExpr::ResultStorageKind Kind) {
   assert((Kind == ConstantExpr::RSK_APValue ||
           Kind == ConstantExpr::RSK_Int64 || Kind == ConstantExpr::RSK_None) &&
          "Invalid StorageKind Value");
+  (void)Kind;
 }
 
 ConstantExpr::ResultStorageKind
@@ -268,18 +269,18 @@ ConstantExpr::getStorageKind(const Type *T, const ASTContext &Context) {
   return ConstantExpr::RSK_APValue;
 }
 
-void ConstantExpr::DefaultInit(ResultStorageKind StorageKind) {
+ConstantExpr::ConstantExpr(Expr *SubExpr, ResultStorageKind StorageKind,
+                           bool IsImmediateInvocation)
+    : FullExpr(ConstantExprClass, SubExpr) {
   ConstantExprBits.ResultKind = StorageKind;
   ConstantExprBits.APValueKind = APValue::None;
+  ConstantExprBits.IsUnsigned = false;
+  ConstantExprBits.BitWidth = 0;
   ConstantExprBits.HasCleanup = false;
-  ConstantExprBits.IsImmediateInvocation = false;
+  ConstantExprBits.IsImmediateInvocation = IsImmediateInvocation;
+
   if (StorageKind == ConstantExpr::RSK_APValue)
     ::new (getTrailingObjects<APValue>()) APValue();
-}
-
-ConstantExpr::ConstantExpr(Expr *subexpr, ResultStorageKind StorageKind)
-    : FullExpr(ConstantExprClass, subexpr) {
-  DefaultInit(StorageKind);
 }
 
 ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
@@ -287,14 +288,12 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
                                    bool IsImmediateInvocation) {
   assert(!isa<ConstantExpr>(E));
   AssertResultStorageKind(StorageKind);
+
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
       StorageKind == ConstantExpr::RSK_APValue,
       StorageKind == ConstantExpr::RSK_Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
-  ConstantExpr *Self = new (Mem) ConstantExpr(E, StorageKind);
-  Self->ConstantExprBits.IsImmediateInvocation =
-      IsImmediateInvocation;
-  return Self;
+  return new (Mem) ConstantExpr(E, StorageKind, IsImmediateInvocation);
 }
 
 ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
@@ -305,21 +304,23 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
   return Self;
 }
 
-ConstantExpr::ConstantExpr(ResultStorageKind StorageKind, EmptyShell Empty)
+ConstantExpr::ConstantExpr(EmptyShell Empty, ResultStorageKind StorageKind)
     : FullExpr(ConstantExprClass, Empty) {
-  DefaultInit(StorageKind);
+  ConstantExprBits.ResultKind = StorageKind;
+
+  if (StorageKind == ConstantExpr::RSK_APValue)
+    ::new (getTrailingObjects<APValue>()) APValue();
 }
 
 ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
-                                        ResultStorageKind StorageKind,
-                                        EmptyShell Empty) {
+                                        ResultStorageKind StorageKind) {
   AssertResultStorageKind(StorageKind);
+
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
       StorageKind == ConstantExpr::RSK_APValue,
       StorageKind == ConstantExpr::RSK_Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
-  ConstantExpr *Self = new (Mem) ConstantExpr(StorageKind, Empty);
-  return Self;
+  return new (Mem) ConstantExpr(EmptyShell(), StorageKind);
 }
 
 void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
