@@ -659,6 +659,65 @@ static int GetDICompileUnitCount(const Module& M) {
   return 0;
 }
 
+TEST(CloneFunction, CloneEmptyFunction) {
+  StringRef ImplAssembly = R"(
+    define void @foo() {
+      ret void
+    }
+    declare void @bar()
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+
+  auto ImplModule = parseAssemblyString(ImplAssembly, Error, Context);
+  EXPECT_TRUE(ImplModule != nullptr);
+  auto *ImplFunction = ImplModule->getFunction("foo");
+  EXPECT_TRUE(ImplFunction != nullptr);
+  auto *DeclFunction = ImplModule->getFunction("bar");
+  EXPECT_TRUE(DeclFunction != nullptr);
+
+  ValueToValueMapTy VMap;
+  SmallVector<ReturnInst *, 8> Returns;
+  ClonedCodeInfo CCI;
+  CloneFunctionInto(DeclFunction, ImplFunction, VMap, true, Returns, "", &CCI);
+
+  EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
+  EXPECT_FALSE(CCI.ContainsCalls);
+  EXPECT_FALSE(CCI.ContainsDynamicAllocas);
+}
+
+TEST(CloneFunction, CloneFunctionWithInalloca) {
+  StringRef ImplAssembly = R"(
+    declare void @a(i32* inalloca)
+    define void @foo() {
+      %a = alloca inalloca i32
+      call void @a(i32* inalloca %a)
+      ret void
+    }
+    declare void @bar()
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+
+  auto ImplModule = parseAssemblyString(ImplAssembly, Error, Context);
+  EXPECT_TRUE(ImplModule != nullptr);
+  auto *ImplFunction = ImplModule->getFunction("foo");
+  EXPECT_TRUE(ImplFunction != nullptr);
+  auto *DeclFunction = ImplModule->getFunction("bar");
+  EXPECT_TRUE(DeclFunction != nullptr);
+
+  ValueToValueMapTy VMap;
+  SmallVector<ReturnInst *, 8> Returns;
+  ClonedCodeInfo CCI;
+  CloneFunctionInto(DeclFunction, ImplFunction, VMap, true, Returns, "", &CCI);
+
+  EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
+  EXPECT_TRUE(CCI.ContainsCalls);
+  EXPECT_TRUE(CCI.ContainsDynamicAllocas);
+}
+
 TEST(CloneFunction, CloneFunctionToDifferentModule) {
   StringRef ImplAssembly = R"(
     define void @foo() {

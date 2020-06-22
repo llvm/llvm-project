@@ -46,7 +46,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
 
-  bool hasCalls = false, hasDynamicAllocas = false, hasStaticAllocas = false;
+  bool hasCalls = false, hasDynamicAllocas = false;
   Module *TheModule = F ? F->getParent() : nullptr;
 
   // Loop over all instructions, and copy them over.
@@ -62,18 +62,15 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
 
     hasCalls |= (isa<CallInst>(I) && !isa<DbgInfoIntrinsic>(I));
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
-      if (isa<ConstantInt>(AI->getArraySize()))
-        hasStaticAllocas = true;
-      else
+      if (!AI->isStaticAlloca()) {
         hasDynamicAllocas = true;
+      }
     }
   }
 
   if (CodeInfo) {
     CodeInfo->ContainsCalls          |= hasCalls;
     CodeInfo->ContainsDynamicAllocas |= hasDynamicAllocas;
-    CodeInfo->ContainsDynamicAllocas |= hasStaticAllocas &&
-                                        BB != &BB->getParent()->getEntryBlock();
   }
   return NewBB;
 }
