@@ -36929,12 +36929,10 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // Aggressively peek through ops to get at the demanded elts.
     // TODO - we should do this for all target/faux shuffles ops.
     if (!DemandedElts.isAllOnesValue()) {
-      APInt DemandedSrcBits =
-          APInt::getAllOnesValue(N0.getScalarValueSizeInBits());
-      SDValue NewN0 = SimplifyMultipleUseDemandedBits(
-          N0, DemandedSrcBits, DemandedLHS, TLO.DAG, Depth + 1);
-      SDValue NewN1 = SimplifyMultipleUseDemandedBits(
-          N1, DemandedSrcBits, DemandedRHS, TLO.DAG, Depth + 1);
+      SDValue NewN0 = SimplifyMultipleUseDemandedVectorElts(N0, DemandedLHS,
+                                                            TLO.DAG, Depth + 1);
+      SDValue NewN1 = SimplifyMultipleUseDemandedVectorElts(N1, DemandedRHS,
+                                                            TLO.DAG, Depth + 1);
       if (NewN0 || NewN1) {
         NewN0 = NewN0 ? NewN0 : N0;
         NewN1 = NewN1 ? NewN1 : N1;
@@ -37024,9 +37022,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return true;
     // Aggressively peek through src to get at the demanded elt.
     // TODO - we should do this for all target/faux shuffles ops.
-    APInt SrcBits = APInt::getAllOnesValue(SrcVT.getScalarSizeInBits());
-    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(Src, SrcBits, SrcElts,
-                                                         TLO.DAG, Depth + 1))
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
+            Src, SrcElts, TLO.DAG, Depth + 1))
       return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
     break;
   }
