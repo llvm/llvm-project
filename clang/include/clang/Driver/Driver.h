@@ -548,6 +548,9 @@ public:
   /// handle this action.
   bool ShouldUseFlangCompiler(const JobAction &JA) const;
 
+  /// ShouldEmitStaticLibrary - Should the linker emit a static library.
+  bool ShouldEmitStaticLibrary(const llvm::opt::ArgList &Args) const;
+
   /// Returns true if we are performing any kind of LTO.
   bool isUsingLTO() const { return LTOMode != LTOK_None; }
 
