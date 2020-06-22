@@ -37,7 +37,7 @@
 ; CHECK:     DW_AT_high_pc   (0x{{.*}})
 ; CHECK:     DW_AT_frame_base        (DW_OP_reg1 SPB)
 ; CHECK:     DW_AT_name      ("f")
-; CHECK:     DW_AT_decl_file ("/tmp/dwarf-basics.c")
+; CHECK:     DW_AT_decl_file ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:     DW_AT_decl_line (5)
 ; CHECK:     DW_AT_prototyped        (0x01)
 ; CHECK:     DW_AT_type      (0x{{.*}} "int")
@@ -47,14 +47,14 @@
 ; CHECK:         DW_AT_location        (0x{{.*}}:
 ; CHECK:            [0x0000, 0x0004): DW_OP_reg12 R12B)
 ; CHECK:         DW_AT_name    ("y")
-; CHECK:         DW_AT_decl_file       ("/tmp/dwarf-basics.c")
+; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:         DW_AT_decl_line       (5)
 ; CHECK:         DW_AT_type    (0x{{.*}} "long int")
 
 ; CHECK:       DW_TAG_formal_parameter
 ; CHECK:         DW_AT_location        (DW_OP_reg14 R14B)
 ; CHECK:         DW_AT_name    ("p")
-; CHECK:         DW_AT_decl_file       ("/tmp/dwarf-basics.c")
+; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:         DW_AT_decl_line       (5)
 ; CHECK:         DW_AT_type    (0x{{.*}} "X*")
 
@@ -76,13 +76,13 @@
 ; CHECK:     DW_TAG_structure_type
 ; CHECK:       DW_AT_name      ("X")
 ; CHECK:       DW_AT_byte_size (0x02)
-; CHECK:       DW_AT_decl_file ("/tmp/dwarf-basics.c")
+; CHECK:       DW_AT_decl_file ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:       DW_AT_decl_line (1)
 
 ; CHECK:       DW_TAG_member
 ; CHECK:         DW_AT_name    ("a")
 ; CHECK:         DW_AT_type    (0x{{.*}} "*")
-; CHECK:         DW_AT_decl_file       ("/tmp/dwarf-basics.c")
+; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:         DW_AT_decl_line       (2)
 ; CHECK:         DW_AT_data_member_location    (0x00)
 
