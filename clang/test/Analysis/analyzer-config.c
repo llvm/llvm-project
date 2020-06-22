@@ -13,6 +13,7 @@
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtRead = 0x01
 // CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
 // CHECK-NEXT: apiModeling.StdCLibraryFunctions:DisplayLoadedSummaries = false
+// CHECK-NEXT: apiModeling.StdCLibraryFunctions:ModelPOSIX = false
 // CHECK-NEXT: apply-fixits = false
 // CHECK-NEXT: avoid-suppressing-null-argument-paths = false
 // CHECK-NEXT: c++-allocator-inlining = true
