@@ -90,7 +90,7 @@ bool llvm::canPeel(Loop *L) {
       const BranchInst *T = dyn_cast<BranchInst>(Latch->getTerminator());
       return T && T->isConditional() && L->isLoopExiting(Latch) &&
              all_of(Exits, [](const BasicBlock *BB) {
-               return BB->getTerminatingDeoptimizeCall();
+               return BB->getPostdominatingDeoptimizeCall();
              });
     }
   }
