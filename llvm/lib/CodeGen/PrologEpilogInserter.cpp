@@ -185,7 +185,7 @@ static void stashEntryDbgValues(MachineBasicBlock &MBB,
       break;
     if (!MI.isDebugValue() || !MI.getDebugVariable()->isParameter())
       continue;
-    if (MI.getOperand(0).isFI()) {
+    if (MI.getDebugOperand(0).isFI()) {
       // We can only emit valid locations for frame indices after the frame
       // setup, so do not stash away them.
       FrameIndexValues.push_back(&MI);
@@ -1234,10 +1234,10 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
           bool WithStackValue = true;
           DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
           // Make the DBG_VALUE direct.
-          MI.getOperand(1).ChangeToRegister(0, false);
+          MI.getDebugOffset().ChangeToRegister(0, false);
         }
         DIExpr = DIExpression::prepend(DIExpr, PrependFlags, Offset);
-        MI.getOperand(3).setMetadata(DIExpr);
+        MI.getDebugExpressionOp().setMetadata(DIExpr);
         continue;
       }
 

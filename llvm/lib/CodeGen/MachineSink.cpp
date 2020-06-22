@@ -432,7 +432,7 @@ void MachineSinking::ProcessDbgInst(MachineInstr &MI) {
                     MI.getDebugLoc()->getInlinedAt());
   bool SeenBefore = SeenDbgVars.count(Var) != 0;
 
-  MachineOperand &MO = MI.getOperand(0);
+  MachineOperand &MO = MI.getDebugOperand(0);
   if (MO.isReg() && MO.getReg().isVirtual())
     SeenDbgUsers[MO.getReg()].push_back(SeenDbgUser(&MI, SeenBefore));
 
@@ -796,7 +796,7 @@ static bool attemptDebugCopyProp(MachineInstr &SinkInst, MachineInstr &DbgMI) {
   // Copy DBG_VALUE operand and set the original to undef. We then check to
   // see whether this is something that can be copy-forwarded. If it isn't,
   // continue around the loop.
-  MachineOperand DbgMO = DbgMI.getOperand(0);
+  MachineOperand &DbgMO = DbgMI.getDebugOperand(0);
 
   const MachineOperand *SrcMO = nullptr, *DstMO = nullptr;
   auto CopyOperands = TII.isCopyInstr(SinkInst);
@@ -830,8 +830,8 @@ static bool attemptDebugCopyProp(MachineInstr &SinkInst, MachineInstr &DbgMI) {
   if (PostRA && DbgMO.getReg() != DstMO->getReg())
     return false;
 
-  DbgMI.getOperand(0).setReg(SrcMO->getReg());
-  DbgMI.getOperand(0).setSubReg(SrcMO->getSubReg());
+  DbgMO.setReg(SrcMO->getReg());
+  DbgMO.setSubReg(SrcMO->getSubReg());
   return true;
 }
 
@@ -866,7 +866,7 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
     SuccToSinkTo.insert(InsertPos, NewDbgMI);
 
     if (!attemptDebugCopyProp(MI, *DbgMI))
-      DbgMI->getOperand(0).setReg(0);
+      DbgMI->setDebugValueUndef();
   }
 }
 
@@ -1000,7 +1000,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
         // This DBG_VALUE would re-order assignments. If we can't copy-propagate
         // it, it can't be recovered. Set it undef.
         if (!attemptDebugCopyProp(MI, *DbgMI))
-          DbgMI->getOperand(0).setReg(0);
+          DbgMI->setDebugValueUndef();
       } else {
         DbgUsersToSink.push_back(DbgMI);
       }
@@ -1049,7 +1049,7 @@ void MachineSinking::SalvageUnsunkDebugUsersOfCopy(
       if (User.getParent() == MI.getParent())
         continue;
 
-      assert(User.getOperand(0).isReg() &&
+      assert(User.getDebugOperand(0).isReg() &&
              "DBG_VALUE user of vreg, but non reg operand?");
       DbgDefUsers.push_back(&User);
     }
@@ -1058,8 +1058,8 @@ void MachineSinking::SalvageUnsunkDebugUsersOfCopy(
   // Point the users of this copy that are no longer dominated, at the source
   // of the copy.
   for (auto *User : DbgDefUsers) {
-    User->getOperand(0).setReg(MI.getOperand(1).getReg());
-    User->getOperand(0).setSubReg(MI.getOperand(1).getSubReg());
+    User->getDebugOperand(0).setReg(MI.getOperand(1).getReg());
+    User->getDebugOperand(0).setSubReg(MI.getOperand(1).getSubReg());
   }
 }
 
@@ -1305,7 +1305,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // We must sink this DBG_VALUE if its operand is sunk. To avoid searching
     // for DBG_VALUEs later, record them when they're encountered.
     if (MI->isDebugValue()) {
-      auto &MO = MI->getOperand(0);
+      auto &MO = MI->getDebugOperand(0);
       if (MO.isReg() && Register::isPhysicalRegister(MO.getReg())) {
         // Bail if we can already tell the sink would be rejected, rather
         // than needlessly accumulating lots of DBG_VALUEs.
