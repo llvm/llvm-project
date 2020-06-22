@@ -833,6 +833,9 @@ void WasmObjectWriter::writeGlobalSection(ArrayRef<wasm::WasmGlobal> Globals) {
     case wasm::WASM_TYPE_F64:
       writeI64(0);
       break;
+    case wasm::WASM_TYPE_EXTERNREF:
+      writeValueType(wasm::ValType::EXTERNREF);
+      break;
     default:
       llvm_unreachable("unexpected type");
     }
@@ -1461,6 +1464,9 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
           break;
         case wasm::WASM_TYPE_F64:
           Global.InitExpr.Opcode = wasm::WASM_OPCODE_F64_CONST;
+          break;
+        case wasm::WASM_TYPE_EXTERNREF:
+          Global.InitExpr.Opcode = wasm::WASM_OPCODE_REF_NULL;
           break;
         default:
           llvm_unreachable("unexpected type");
