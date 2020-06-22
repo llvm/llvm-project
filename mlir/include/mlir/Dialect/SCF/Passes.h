@@ -20,6 +20,10 @@ namespace mlir {
 
 class Pass;
 
+/// Creates a pass that specializes for loop for unrolling and
+/// vectorization.
+std::unique_ptr<Pass> createForLoopSpecializationPass();
+
 /// Creates a loop fusion pass which fuses parallel loops.
 std::unique_ptr<Pass> createParallelLoopFusionPass();
 

@@ -160,7 +160,7 @@ void mlir::scf::naivelyFuseParallelOps(Region &region) {
 
 namespace {
 struct ParallelLoopFusion
-    : public LoopParallelLoopFusionBase<ParallelLoopFusion> {
+    : public SCFParallelLoopFusionBase<ParallelLoopFusion> {
   void runOnOperation() override {
     getOperation()->walk([&](Operation *child) {
       for (Region &region : child->getRegions())

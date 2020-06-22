@@ -119,7 +119,7 @@ static bool getInnermostNestedLoops(Block *block,
 
 namespace {
 struct ParallelLoopTiling
-    : public LoopParallelLoopTilingBase<ParallelLoopTiling> {
+    : public SCFParallelLoopTilingBase<ParallelLoopTiling> {
   ParallelLoopTiling() = default;
   explicit ParallelLoopTiling(ArrayRef<int64_t> tileSizes) {
     this->tileSizes = tileSizes;
