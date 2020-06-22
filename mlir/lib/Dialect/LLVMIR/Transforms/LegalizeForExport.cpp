@@ -50,7 +50,7 @@ static void ensureDistinctSuccessors(Block &bb) {
 
 void mlir::LLVM::ensureDistinctSuccessors(Operation *op) {
   op->walk([](LLVMFuncOp f) {
-    for (auto &bb : f.getBlocks()) {
+    for (auto &bb : f) {
       ::ensureDistinctSuccessors(bb);
     }
   });
