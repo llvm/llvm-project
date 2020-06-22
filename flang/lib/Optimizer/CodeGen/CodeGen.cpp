@@ -427,16 +427,16 @@ class FIROpConversion : public mlir::OpConversionPattern<FromOp> {
 public:
   explicit FIROpConversion(mlir::MLIRContext *ctx,
                            FIRToLLVMTypeConverter &lowering)
-      : mlir::OpConversionPattern<FromOp>(ctx, 1), lowering(lowering) {}
+      : mlir::OpConversionPattern<FromOp>(lowering, ctx, 1) {}
 
 protected:
-  LLVMContext &getLLVMContext() const { return lowering.getLLVMContext(); }
-  mlir::LLVM::LLVMDialect *getDialect() const { return lowering.getDialect(); }
+  LLVMContext &getLLVMContext() const { return lowerTy().getLLVMContext(); }
+  mlir::LLVM::LLVMDialect *getDialect() const { return lowerTy().getDialect(); }
   mlir::Type convertType(mlir::Type ty) const {
-    return lowering.convertType(ty);
+    return lowerTy().convertType(ty);
   }
   mlir::LLVM::LLVMType unwrap(mlir::Type ty) const {
-    return lowering.unwrap(ty);
+    return lowerTy().unwrap(ty);
   }
   mlir::LLVM::LLVMType voidPtrTy() const {
     return getVoidPtrType(getDialect());
@@ -446,7 +446,7 @@ protected:
   genConstantOffset(mlir::Location loc,
                     mlir::ConversionPatternRewriter &rewriter,
                     int offset) const {
-    auto ity = lowering.offsetType();
+    auto ity = lowerTy().offsetType();
     auto cattr = rewriter.getI32IntegerAttr(offset);
     return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
   }
@@ -496,7 +496,9 @@ protected:
     return rewriter.create<mlir::LLVM::GEPOp>(loc, ty, base, cv);
   }
 
-  FIRToLLVMTypeConverter &lowering;
+  FIRToLLVMTypeConverter &lowerTy() const {
+    return *static_cast<FIRToLLVMTypeConverter *>(this->getTypeConverter());
+  }
 };
 
 /// FIR conversion pattern template
@@ -571,7 +573,7 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
   matchAndRewrite(fir::AllocaOp alloc, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto loc = alloc.getLoc();
-    auto ity = lowering.indexType();
+    auto ity = lowerTy().indexType();
     auto c1 = genConstantIndex(loc, ity, rewriter, 1);
     auto size = c1.getResult();
     for (auto opnd : operands)
@@ -611,7 +613,7 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
     auto dialect = getDialect();
     auto mallocFunc = getMalloc(heap, rewriter, dialect);
     auto loc = heap.getLoc();
-    auto ity = lowering.indexType();
+    auto ity = lowerTy().indexType();
     auto c1 = genConstantIndex(loc, ity, rewriter, 1);
     auto size = c1.getResult();
     for (auto opnd : operands)
@@ -746,7 +748,7 @@ struct BoxIsAllocOpConversion : public FIROpConversion<fir::BoxIsAllocOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto a = operands[0];
     auto loc = boxisalloc.getLoc();
-    auto ity = lowering.offsetType();
+    auto ity = lowerTy().offsetType();
     auto c0 = genConstantOffset(loc, rewriter, 0);
     auto c5 = genConstantOffset(loc, rewriter, 5);
     auto ty = convertType(boxisalloc.getType());
@@ -788,7 +790,7 @@ struct BoxIsPtrOpConversion : public FIROpConversion<fir::BoxIsPtrOp> {
     auto a = operands[0];
     auto loc = boxisptr.getLoc();
     auto ty = convertType(boxisptr.getType());
-    auto ity = lowering.offsetType();
+    auto ity = lowerTy().offsetType();
     auto c0 = genConstantOffset(loc, rewriter, 0);
     auto c5 = genConstantOffset(loc, rewriter, 5);
     SmallVector<mlir::Value, 4> args{a, c0, c5};
@@ -870,7 +872,7 @@ struct StringLitOpConversion : public FIROpConversion<fir::StringLitOp> {
       auto arr = attr.cast<mlir::ArrayAttr>();
       auto size = constop.getSize().cast<mlir::IntegerAttr>().getInt();
       auto eleTy = constop.getType().cast<fir::SequenceType>().getEleTy();
-      auto bits = lowering.characterBitsize(eleTy.cast<fir::CharacterType>());
+      auto bits = lowerTy().characterBitsize(eleTy.cast<fir::CharacterType>());
       auto charTy = rewriter.getIntegerType(bits);
       auto det = mlir::VectorType::get({size}, charTy);
       // convert each character to a precise bitsize
@@ -967,7 +969,7 @@ struct ConstcOpConversion : public FIROpConversion<fir::ConstcOp> {
     auto ctx = conc.getContext();
     auto ty = convertType(conc.getType());
     auto ct = conc.getType().cast<fir::CplxType>();
-    auto ety = lowering.convertComplexPartType(ct.getFKind());
+    auto ety = lowerTy().convertComplexPartType(ct.getFKind());
     auto ri = mlir::FloatAttr::get(ety, getValue(conc.getReal()));
     auto rp = rewriter.create<mlir::LLVM::ConstantOp>(loc, ety, ri);
     auto ii = mlir::FloatAttr::get(ety, getValue(conc.getImaginary()));
@@ -1203,7 +1205,7 @@ struct EmboxOpConversion : public FIROpConversion<fir::EmboxOp> {
     auto loc = embox.getLoc();
     auto *dialect = getDialect();
     auto ty = unwrap(
-        lowering.convertBoxType(embox.getType().dyn_cast<fir::BoxType>(), 0));
+        lowerTy().convertBoxType(embox.getType().dyn_cast<fir::BoxType>(), 0));
     auto alloca = genAllocaWithType(loc, ty, defaultAlign, dialect, rewriter);
     auto c0 = genConstantOffset(loc, rewriter, 0);
     auto rty = unwrap(operands[0].getType()).getPointerTo();
@@ -1269,8 +1271,8 @@ struct XEmboxOpConversion : public FIROpConversion<fir::XEmboxOp> {
     auto loc = xbox.getLoc();
     auto *dialect = getDialect();
     auto rank = xbox.getRank();
-    auto ty = unwrap(
-        lowering.convertBoxType(xbox.getType().dyn_cast<fir::BoxType>(), rank));
+    auto ty = unwrap(lowerTy().convertBoxType(
+        xbox.getType().dyn_cast<fir::BoxType>(), rank));
 
     auto alloca = genAllocaWithType(loc, ty, defaultAlign, dialect, rewriter);
     auto c0 = genConstantOffset(loc, rewriter, 0);
@@ -1402,7 +1404,7 @@ struct ExtractValueOpConversion
     SmallVector<mlir::Attribute, 8> attrs;
     for (std::size_t i = 1, end{operands.size()}; i < end; ++i)
       attrs.push_back(getValue(operands[i]));
-    toRowMajor(attrs, lowering.unwrap(operands[0].getType()));
+    toRowMajor(attrs, lowerTy().unwrap(operands[0].getType()));
     auto position = mlir::ArrayAttr::get(attrs, extractVal.getContext());
     rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
         extractVal, ty, operands[0], position);
@@ -1425,7 +1427,7 @@ struct InsertValueOpConversion
     SmallVector<mlir::Attribute, 8> attrs;
     for (std::size_t i = 2, end{operands.size()}; i < end; ++i)
       attrs.push_back(getValue(operands[i]));
-    toRowMajor(attrs, lowering.unwrap(operands[0].getType()));
+    toRowMajor(attrs, lowerTy().unwrap(operands[0].getType()));
     auto position = mlir::ArrayAttr::get(attrs, insertVal.getContext());
     rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
         insertVal, ty, operands[0], operands[1], position);
@@ -1464,7 +1466,7 @@ struct XArrayCoorOpConversion
     unsigned indexOff = 1 + coor.dimsOperands().size();
     // Cast the base address to a pointer to T
     auto base = rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, operands[0]);
-    auto idxTy = lowering.indexType();
+    auto idxTy = lowerTy().indexType();
     mlir::Value prevExt = genConstantIndex(loc, idxTy, rewriter, 1);
     mlir::Value off = genConstantIndex(loc, idxTy, rewriter, 0);
     for (unsigned i = 0; i < rank; ++i) {
@@ -1514,7 +1516,7 @@ struct CoordinateOpConversion
   doRewrite(fir::CoordinateOp coor, mlir::Type ty, OperandTy operands,
             mlir::ConversionPatternRewriter &rewriter) const override {
     auto loc = coor.getLoc();
-    auto c0 = genConstantIndex(loc, lowering.indexType(), rewriter, 0);
+    auto c0 = genConstantIndex(loc, lowerTy().indexType(), rewriter, 0);
     mlir::Value base = operands[0];
     auto firTy = coor.getBaseType();
     mlir::Type cpnTy = getReferenceEleTy(firTy);
@@ -1791,7 +1793,7 @@ struct FieldIndexOpConversion : public FIROpConversion<fir::FieldIndexOp> {
         mlir::SymbolRefAttr::get(methodName(field), field.getContext());
     SmallVector<mlir::NamedAttribute, 1> attrs{
         rewriter.getNamedAttr("callee", symAttr)};
-    auto ty = lowering.offsetType();
+    auto ty = lowerTy().offsetType();
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(field, ty, operands, attrs);
     return success();
   }
@@ -1815,7 +1817,7 @@ struct LenParamIndexOpConversion
   mlir::LogicalResult
   matchAndRewrite(fir::LenParamIndexOp lenp, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto ity = lowering.indexType();
+    auto ity = lowerTy().indexType();
     auto onty = lenp.getOnType();
     // size of portable descriptor
     const unsigned boxsize = 24; // FIXME
@@ -1871,7 +1873,7 @@ struct GenTypeDescOpConversion : public FIROpConversion<fir::GenTypeDescOp> {
     if (auto d = type.dyn_cast<fir::RecordType>()) {
       auto name = d.getName();
       auto pair = fir::NameUniquer::deconstruct(name);
-      return lowering.getUniquer().doTypeDescriptor(
+      return lowerTy().getUniquer().doTypeDescriptor(
           pair.second.modules, pair.second.host, pair.second.name,
           pair.second.kinds);
     }
@@ -2101,7 +2103,7 @@ struct SelectOpConversion : public FIROpConversion<fir::SelectOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::SelectOp op, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    selectMatchAndRewrite<fir::SelectOp>(lowering, op, operands, rewriter);
+    selectMatchAndRewrite<fir::SelectOp>(lowerTy(), op, operands, rewriter);
     return success();
   }
 };
@@ -2113,7 +2115,7 @@ struct SelectRankOpConversion : public FIROpConversion<fir::SelectRankOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::SelectRankOp op, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    selectMatchAndRewrite<fir::SelectRankOp>(lowering, op, operands, rewriter);
+    selectMatchAndRewrite<fir::SelectRankOp>(lowerTy(), op, operands, rewriter);
     return success();
   }
 };
@@ -2184,7 +2186,7 @@ struct UnboxOpConversion : public FIROpConversion<fir::UnboxOp> {
     auto loc = unbox.getLoc();
     auto tuple = operands[0];
     auto ty = unwrap(tuple.getType());
-    auto oty = lowering.offsetType();
+    auto oty = lowerTy().offsetType();
     auto c0 = rewriter.create<mlir::LLVM::ConstantOp>(
         loc, oty, rewriter.getI32IntegerAttr(0));
     mlir::Value ptr = genLoadWithIndex(loc, tuple, ty, rewriter, oty, c0, 0);
@@ -2281,7 +2283,7 @@ struct AddfOpConversion : public FIROpConversion<fir::AddfOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::AddfOp op, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    lowerRealBinaryOp<mlir::LLVM::FAddOp>(op, operands, rewriter, lowering);
+    lowerRealBinaryOp<mlir::LLVM::FAddOp>(op, operands, rewriter, lowerTy());
     return success();
   }
 };
@@ -2291,7 +2293,7 @@ struct SubfOpConversion : public FIROpConversion<fir::SubfOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::SubfOp op, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    lowerRealBinaryOp<mlir::LLVM::FSubOp>(op, operands, rewriter, lowering);
+    lowerRealBinaryOp<mlir::LLVM::FSubOp>(op, operands, rewriter, lowerTy());
     return success();
   }
 };
@@ -2301,7 +2303,7 @@ struct MulfOpConversion : public FIROpConversion<fir::MulfOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::MulfOp op, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    lowerRealBinaryOp<mlir::LLVM::FMulOp>(op, operands, rewriter, lowering);
+    lowerRealBinaryOp<mlir::LLVM::FMulOp>(op, operands, rewriter, lowerTy());
     return success();
   }
 };
@@ -2311,7 +2313,7 @@ struct DivfOpConversion : public FIROpConversion<fir::DivfOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::DivfOp op, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    lowerRealBinaryOp<mlir::LLVM::FDivOp>(op, operands, rewriter, lowering);
+    lowerRealBinaryOp<mlir::LLVM::FDivOp>(op, operands, rewriter, lowerTy());
     return success();
   }
 };
@@ -2321,7 +2323,7 @@ struct ModfOpConversion : public FIROpConversion<fir::ModfOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::ModfOp op, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    lowerRealBinaryOp<mlir::LLVM::FRemOp>(op, operands, rewriter, lowering);
+    lowerRealBinaryOp<mlir::LLVM::FRemOp>(op, operands, rewriter, lowerTy());
     return success();
   }
 };
@@ -2373,7 +2375,8 @@ struct AddcOpConversion : public FIROpConversion<fir::AddcOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // given: (x + iy) * (x' + iy')
     // result: (x + x') + i(y + y')
-    auto r = complexSum<mlir::LLVM::FAddOp>(addc, operands, rewriter, lowering);
+    auto r =
+        complexSum<mlir::LLVM::FAddOp>(addc, operands, rewriter, lowerTy());
     addc.replaceAllUsesWith(r.getResult());
     rewriter.replaceOp(addc, r.getResult());
     return success();
@@ -2388,7 +2391,8 @@ struct SubcOpConversion : public FIROpConversion<fir::SubcOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // given: (x + iy) * (x' + iy')
     // result: (x - x') + i(y - y')
-    auto r = complexSum<mlir::LLVM::FSubOp>(subc, operands, rewriter, lowering);
+    auto r =
+        complexSum<mlir::LLVM::FSubOp>(subc, operands, rewriter, lowerTy());
     subc.replaceAllUsesWith(r.getResult());
     rewriter.replaceOp(subc, r.getResult());
     return success();
@@ -2517,7 +2521,6 @@ struct FIRToLLVMLoweringPass
     auto *context{&getContext()};
     FIRToLLVMTypeConverter typeConverter{context, uniquer};
     auto loc = mlir::UnknownLoc::get(context);
-
     mlir::OwningRewritePatternList pattern;
     pattern.insert<
         AddcOpConversion, AddfOpConversion, AddrOfOpConversion,
@@ -2549,8 +2552,8 @@ struct FIRToLLVMLoweringPass
     target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
 
     // apply the patterns
-    if (mlir::failed(mlir::applyFullConversion(
-            getModule(), target, std::move(pattern), &typeConverter))) {
+    if (mlir::failed(mlir::applyFullConversion(getModule(), target,
+                                               std::move(pattern)))) {
       mlir::emitError(loc, "error in converting to LLVM-IR dialect\n");
       signalPassFailure();
     }
