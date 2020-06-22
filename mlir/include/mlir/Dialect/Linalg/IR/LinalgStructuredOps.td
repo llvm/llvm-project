@@ -562,10 +562,10 @@ def GenericOp : GenericOpBase<"generic"> {
     And can be reused in multiple places as:
       ```mlir
       linalg.generic #matmul_trait %A, %B, %C [other-attributes] {
-        (%a: f32, %b: f32, %c: f32) :
+        ^bb0(%a: f32, %b: f32, %c: f32) :
           %d = mulf %a, %b: f32
           %e = addf %c, %d: f32
-          linalg_yield %e : f32
+          linalg.yield %e : f32
       } : memref<?x?xf32, stride_specification>,
           memref<?x?xf32, stride_specification>,
           memref<?x?xf32, stride_specification>
