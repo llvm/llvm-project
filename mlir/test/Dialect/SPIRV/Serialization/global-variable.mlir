@@ -30,7 +30,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %0 = spv._address_of @globalInvocationID : !spv.ptr<vector<3xi32>, Input>
     %1 = spv.constant 0: i32
     // CHECK: spv.AccessChain %[[ADDR]]
-    %2 = spv.AccessChain %0[%1] : !spv.ptr<vector<3xi32>, Input>
+    %2 = spv.AccessChain %0[%1] : !spv.ptr<vector<3xi32>, Input>, i32
     spv.Return
   }
 }
