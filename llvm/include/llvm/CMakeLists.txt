@@ -1,6 +1,5 @@
 add_subdirectory(IR)
 add_subdirectory(Support)
-add_subdirectory(Frontend/OpenMP)
 
 # If we're doing an out-of-tree build, copy a module map for generated
 # header files into the build area.
