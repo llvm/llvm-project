@@ -7,8 +7,8 @@
 //
 // This is a utility class used to parse user-provided text files with
 // "special case lists" for code sanitizers. Such files are used to
-// define an "ABI list" for DataFlowSanitizer and blacklists for sanitizers
-// like AddressSanitizer or UndefinedBehaviorSanitizer.
+// define an "ABI list" for DataFlowSanitizer and allow/exclusion lists for
+// sanitizers like AddressSanitizer or UndefinedBehaviorSanitizer.
 //
 // Empty lines and lines starting with "#" are ignored. Sections are defined
 // using a '[section_name]' header and can be used to specify sanitizers the
@@ -19,18 +19,18 @@
 //   prefix:wildcard_expression[=category]
 // If category is not specified, it is assumed to be empty string.
 // Definitions of "prefix" and "category" are sanitizer-specific. For example,
-// sanitizer blacklists support prefixes "src", "fun" and "global".
+// sanitizer exclusion support prefixes "src", "fun" and "global".
 // Wildcard expressions define, respectively, source files, functions or
 // globals which shouldn't be instrumented.
 // Examples of categories:
 //   "functional": used in DFSan to list functions with pure functional
 //                 semantics.
-//   "init": used in ASan blacklist to disable initialization-order bugs
+//   "init": used in ASan exclusion list to disable initialization-order bugs
 //           detection for certain globals or source files.
 // Full special case list file example:
 // ---
 // [address]
-// # Blacklisted items:
+// # Excluded items:
 // fun:*_ZN4base6subtle*
 // global:*global_with_bad_access_or_initialization*
 // global:*global_with_initialization_issues*=init
@@ -98,7 +98,7 @@ public:
   ///   @Prefix:<E>=@Category
   /// \endcode
   /// where @Query satisfies wildcard expression <E> in a given @Section.
-  /// Returns zero if there is no blacklist entry corresponding to this
+  /// Returns zero if there is no exclusion entry corresponding to this
   /// expression.
   unsigned inSectionBlame(StringRef Section, StringRef Prefix, StringRef Query,
                           StringRef Category = StringRef()) const;
