@@ -23,7 +23,7 @@ class SendSignalTestCase(TestBase):
         bugnumber="llvm.org/pr23318: does not report running state")
     @expectedFailureNetBSD(bugnumber='llvm.org/pr43959')
     @skipIfWindows  # Windows does not support signals
-    @skipIfReproducer # Unexpected packet during replay
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_with_run_command(self):
         """Test that lldb command 'process signal SIGUSR1' sends a signal to the inferior process."""
         self.build()

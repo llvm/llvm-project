@@ -17,6 +17,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Error.h"
+#include <cstdint>
 #include <functional>
 #include <memory>
 
@@ -36,7 +38,7 @@ class PerfEvent {
 public:
   // http://perfmon2.sourceforge.net/manv4/libpfm.html
   // Events are expressed as strings. e.g. "INSTRUCTION_RETIRED"
-  explicit PerfEvent(StringRef pfm_event_string);
+  explicit PerfEvent(StringRef PfmEventString);
 
   PerfEvent(const PerfEvent &) = delete;
   PerfEvent(PerfEvent &&other);
@@ -63,18 +65,27 @@ private:
 
 // Uses a valid PerfEvent to configure the Kernel so we can measure the
 // underlying event.
-struct Counter {
+class Counter {
+public:
   // event: the PerfEvent to measure.
   explicit Counter(PerfEvent &&event);
 
   Counter(const Counter &) = delete;
   Counter(Counter &&other) = default;
 
-  ~Counter();
+  virtual ~Counter();
 
-  void start();         // Starts the measurement of the event.
-  void stop();          // Stops the measurement of the event.
-  int64_t read() const; // Return the current value of the counter.
+  /// Starts the measurement of the event.
+  virtual void start();
+
+  /// Stops the measurement of the event.
+  void stop();
+
+  /// Returns the current value of the counter or -1 if it cannot be read.
+  int64_t read() const;
+
+  /// Returns the current value of the counter or error if it cannot be read.
+  virtual llvm::Expected<int64_t> readOrError() const;
 
 private:
   PerfEvent Event;

@@ -42,14 +42,6 @@ const Scope *FindModuleContaining(const Scope &start) {
       start, [](const Scope &scope) { return scope.IsModule(); });
 }
 
-const Symbol *FindCommonBlockContaining(const Symbol &object) {
-  if (const auto *details{object.detailsIf<ObjectEntityDetails>()}) {
-    return details->commonBlock();
-  } else {
-    return nullptr;
-  }
-}
-
 const Scope *FindProgramUnitContaining(const Scope &start) {
   return FindScopeContaining(start, [](const Scope &scope) {
     switch (scope.kind()) {
@@ -193,21 +185,6 @@ bool IsHostAssociated(const Symbol &symbol, const Scope &scope) {
       DoesScopeContain(FindProgramUnitContaining(symbol), *subprogram);
 }
 
-bool IsDummy(const Symbol &symbol) {
-  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-    return details->isDummy();
-  } else if (const auto *details{symbol.detailsIf<ProcEntityDetails>()}) {
-    return details->isDummy();
-  } else {
-    return false;
-  }
-}
-
-bool IsStmtFunction(const Symbol &symbol) {
-  const auto *subprogram{symbol.detailsIf<SubprogramDetails>()};
-  return subprogram && subprogram->stmtFunction();
-}
-
 bool IsInStmtFunction(const Symbol &symbol) {
   if (const Symbol * function{symbol.owner().symbol()}) {
     return IsStmtFunction(*function);
@@ -227,78 +204,9 @@ bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
 }
 
-// variable-name
-bool IsVariableName(const Symbol &symbol) {
-  if (const Symbol * root{GetAssociationRoot(symbol)}) {
-    return root->has<ObjectEntityDetails>() && !IsNamedConstant(*root);
-  } else {
-    return false;
-  }
-}
-
 // proc-name
 bool IsProcName(const Symbol &symbol) {
   return symbol.GetUltimate().has<ProcEntityDetails>();
-}
-
-bool IsFunction(const Symbol &symbol) {
-  return std::visit(
-      common::visitors{
-          [](const SubprogramDetails &x) { return x.isFunction(); },
-          [&](const SubprogramNameDetails &) {
-            return symbol.test(Symbol::Flag::Function);
-          },
-          [](const ProcEntityDetails &x) {
-            const auto &ifc{x.interface()};
-            return ifc.type() || (ifc.symbol() && IsFunction(*ifc.symbol()));
-          },
-          [](const ProcBindingDetails &x) { return IsFunction(x.symbol()); },
-          [](const UseDetails &x) { return IsFunction(x.symbol()); },
-          [](const auto &) { return false; },
-      },
-      symbol.details());
-}
-
-bool IsPureProcedure(const Symbol &symbol) {
-  if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (const Symbol * procInterface{procDetails->interface().symbol()}) {
-      // procedure component with a pure interface
-      return IsPureProcedure(*procInterface);
-    }
-  } else if (const auto *details{symbol.detailsIf<ProcBindingDetails>()}) {
-    return IsPureProcedure(details->symbol());
-  } else if (!IsProcedure(symbol)) {
-    return false;
-  }
-  if (IsStmtFunction(symbol)) {
-    // Section 15.7(1) states that a statement function is PURE if it does not
-    // reference an IMPURE procedure or a VOLATILE variable
-    const MaybeExpr &expr{symbol.get<SubprogramDetails>().stmtFunction()};
-    if (expr) {
-      for (const Symbol &refSymbol : evaluate::CollectSymbols(*expr)) {
-        if (IsFunction(refSymbol) && !IsPureProcedure(refSymbol)) {
-          return false;
-        }
-        if (const Symbol * root{GetAssociationRoot(refSymbol)}) {
-          if (root->attrs().test(Attr::VOLATILE)) {
-            return false;
-          }
-        }
-      }
-    }
-    return true; // statement function was not found to be impure
-  }
-  return symbol.attrs().test(Attr::PURE) ||
-      (symbol.attrs().test(Attr::ELEMENTAL) &&
-          !symbol.attrs().test(Attr::IMPURE));
-}
-
-bool IsPureProcedure(const Scope &scope) {
-  if (const Symbol * symbol{scope.GetSymbol()}) {
-    return IsPureProcedure(*symbol);
-  } else {
-    return false;
-  }
 }
 
 bool IsBindCProcedure(const Symbol &symbol) {
@@ -317,25 +225,6 @@ bool IsBindCProcedure(const Scope &scope) {
   } else {
     return false;
   }
-}
-
-bool IsProcedure(const Symbol &symbol) {
-  return std::visit(
-      common::visitors{
-          [](const SubprogramDetails &) { return true; },
-          [](const SubprogramNameDetails &) { return true; },
-          [](const ProcEntityDetails &) { return true; },
-          [](const GenericDetails &) { return true; },
-          [](const ProcBindingDetails &) { return true; },
-          [](const UseDetails &x) { return IsProcedure(x.symbol()); },
-          // TODO: FinalProcDetails?
-          [](const auto &) { return false; },
-      },
-      symbol.details());
-}
-
-bool IsProcedurePointer(const Symbol &symbol) {
-  return symbol.has<ProcEntityDetails>() && IsPointer(symbol);
 }
 
 static const Symbol *FindPointerComponent(
@@ -451,6 +340,10 @@ const SomeExpr *GetExprHelper::Get(const parser::Variable &x) {
   CheckMissingAnalysis(!x.typedExpr, x);
   return common::GetPtrFromOptional(x.typedExpr->v);
 }
+const SomeExpr *GetExprHelper::Get(const parser::DataStmtConstant &x) {
+  CheckMissingAnalysis(!x.typedExpr, x);
+  return common::GetPtrFromOptional(x.typedExpr->v);
+}
 
 const evaluate::Assignment *GetAssignment(const parser::AssignmentStmt &x) {
   CheckMissingAnalysis(!x.typedAssignment, x);
@@ -555,33 +448,6 @@ const DeclTypeSpec *FindParentTypeSpec(const Symbol &symbol) {
   return nullptr;
 }
 
-// When a construct association maps to a variable, and that variable
-// is not an array with a vector-valued subscript, return the base
-// Symbol of that variable, else nullptr.  Descends into other construct
-// associations when one associations maps to another.
-static const Symbol *GetAssociatedVariable(const AssocEntityDetails &details) {
-  if (const MaybeExpr & expr{details.expr()}) {
-    if (evaluate::IsVariable(*expr) && !evaluate::HasVectorSubscript(*expr)) {
-      if (const Symbol * varSymbol{evaluate::GetFirstSymbol(*expr)}) {
-        return GetAssociationRoot(*varSymbol);
-      }
-    }
-  }
-  return nullptr;
-}
-
-// Return the Symbol of the variable of a construct association, if it exists
-// Return nullptr if the name is associated with an expression
-const Symbol *GetAssociationRoot(const Symbol &symbol) {
-  const Symbol &ultimate{symbol.GetUltimate()};
-  if (const auto *details{ultimate.detailsIf<AssocEntityDetails>()}) {
-    // We have a construct association
-    return GetAssociatedVariable(*details);
-  } else {
-    return &ultimate;
-  }
-}
-
 bool IsExtensibleType(const DerivedTypeSpec *derived) {
   return derived && !IsIsoCType(derived) &&
       !derived->typeSymbol().attrs().test(Attr::BIND_C) &&
@@ -627,35 +493,6 @@ bool IsOrContainsEventOrLockComponent(const Symbol &symbol) {
   return false;
 }
 
-bool IsSaved(const Symbol &symbol) {
-  auto scopeKind{symbol.owner().kind()};
-  if (scopeKind == Scope::Kind::Module || scopeKind == Scope::Kind::BlockData) {
-    return true;
-  } else if (scopeKind == Scope::Kind::DerivedType) {
-    return false; // this is a component
-  } else if (IsNamedConstant(symbol)) {
-    return false;
-  } else if (symbol.attrs().test(Attr::SAVE)) {
-    return true;
-  } else {
-    if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (object->init()) {
-        return true;
-      }
-    } else if (IsProcedurePointer(symbol)) {
-      if (symbol.get<ProcEntityDetails>().init()) {
-        return true;
-      }
-    }
-    if (const Symbol * block{FindCommonBlockContaining(symbol)}) {
-      if (block->attrs().test(Attr::SAVE)) {
-        return true;
-      }
-    }
-    return false;
-  }
-}
-
 // Check this symbol suitable as a type-bound procedure - C769
 bool CanBeTypeBoundProc(const Symbol *symbol) {
   if (!symbol || IsDummy(*symbol) || IsProcedurePointer(*symbol)) {
@@ -673,16 +510,19 @@ bool CanBeTypeBoundProc(const Symbol *symbol) {
   }
 }
 
-bool IsInitialized(const Symbol &symbol) {
-  if (symbol.test(Symbol::Flag::InDataStmt)) {
+bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements) {
+  if (!ignoreDATAstatements && symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (IsAllocatable(symbol) || object->init()) {
+    if (object->init()) {
       return true;
-    }
-    if (!IsPointer(symbol) && object->type()) {
+    } else if (object->isDummy() || IsFunctionResult(symbol)) {
+      return false;
+    } else if (IsAllocatable(symbol)) {
+      return true;
+    } else if (!IsPointer(symbol) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
         if (derived->HasDefaultInitialization()) {
           return true;
@@ -720,6 +560,49 @@ bool IsSeparateModuleProcedureInterface(const Symbol *symbol) {
   return false;
 }
 
+// 3.11 automatic data object
+bool IsAutomatic(const Symbol &symbol) {
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (!object->isDummy() && !IsAllocatable(symbol) && !IsPointer(symbol)) {
+      if (const DeclTypeSpec * type{symbol.GetType()}) {
+        // If a type parameter value is not a constant expression, the
+        // object is automatic.
+        if (type->category() == DeclTypeSpec::Character) {
+          if (const auto &length{
+                  type->characterTypeSpec().length().GetExplicit()}) {
+            if (!evaluate::IsConstantExpr(*length)) {
+              return true;
+            }
+          }
+        } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+          for (const auto &pair : derived->parameters()) {
+            if (const auto &value{pair.second.GetExplicit()}) {
+              if (!evaluate::IsConstantExpr(*value)) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      // If an array bound is not a constant expression, the object is
+      // automatic.
+      for (const ShapeSpec &dim : object->shape()) {
+        if (const auto &lb{dim.lbound().GetExplicit()}) {
+          if (!evaluate::IsConstantExpr(*lb)) {
+            return true;
+          }
+        }
+        if (const auto &ub{dim.ubound().GetExplicit()}) {
+          if (!evaluate::IsConstantExpr(*ub)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 bool IsFinalizable(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     if (const DerivedTypeSpec * derived{type->AsDerived()}) {
@@ -748,6 +631,35 @@ bool HasImpureFinal(const DerivedTypeSpec &derived) {
 
 bool IsCoarray(const Symbol &symbol) { return symbol.Corank() > 0; }
 
+bool IsAutomaticObject(const Symbol &symbol) {
+  if (IsDummy(symbol) || IsPointer(symbol) || IsAllocatable(symbol)) {
+    return false;
+  }
+  if (const DeclTypeSpec * type{symbol.GetType()}) {
+    if (type->category() == DeclTypeSpec::Character) {
+      ParamValue length{type->characterTypeSpec().length()};
+      if (length.isExplicit()) {
+        if (MaybeIntExpr lengthExpr{length.GetExplicit()}) {
+          if (!ToInt64(lengthExpr)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  if (symbol.IsObjectArray()) {
+    for (const ShapeSpec &spec : symbol.get<ObjectEntityDetails>().shape()) {
+      auto &lbound{spec.lbound().GetExplicit()};
+      auto &ubound{spec.ubound().GetExplicit()};
+      if ((lbound && !evaluate::ToInt64(*lbound)) ||
+          (ubound && !evaluate::ToInt64(*ubound))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->category() == DeclTypeSpec::Character &&
@@ -755,6 +667,11 @@ bool IsAssumedLengthCharacter(const Symbol &symbol) {
   } else {
     return false;
   }
+}
+
+bool IsInBlankCommon(const Symbol &symbol) {
+  const Symbol *block{FindCommonBlockContaining(symbol)};
+  return block && block->name().empty();
 }
 
 // C722 and C723:  For a function to be assumed length, it must be external and

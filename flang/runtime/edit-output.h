@@ -37,14 +37,18 @@ class RealOutputEditingBase {
 protected:
   explicit RealOutputEditingBase(IoStatementState &io) : io_{io} {}
 
-  static bool IsDecimalNumber(const char *p) {
-    if (!p) {
+  static bool IsInfOrNaN(const decimal::ConversionToDecimalResult &res) {
+    const char *p{res.str};
+    if (!p || res.length < 1) {
       return false;
     }
     if (*p == '-' || *p == '+') {
+      if (res.length == 1) {
+        return false;
+      }
       ++p;
     }
-    return *p >= '0' && *p <= '9';
+    return *p < '0' || *p > '9';
   }
 
   const char *FormatExponent(int, const DataEdit &edit, int &length);

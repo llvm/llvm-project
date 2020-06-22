@@ -20,6 +20,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/MathExtras.h"
+#include <numeric>
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -27,6 +28,32 @@
 using llvm::SetVector;
 
 using namespace mlir;
+
+/// Return the number of elements of basis, `0` if empty.
+int64_t mlir::computeMaxLinearIndex(ArrayRef<int64_t> basis) {
+  if (basis.empty())
+    return 0;
+  return std::accumulate(basis.begin(), basis.end(), 1,
+                         std::multiplies<int64_t>());
+}
+
+/// Given a shape with sizes greater than 0 along all dimensions,
+/// return the distance, in number of elements, between a slice in a dimension
+/// and the next slice in the same dimension.
+///   e.g. shape[3, 4, 5] -> linearization_basis[20, 5, 1]
+SmallVector<int64_t, 8> mlir::computeStrides(ArrayRef<int64_t> shape) {
+  if (shape.empty())
+    return {};
+  SmallVector<int64_t, 8> tmp;
+  tmp.reserve(shape.size());
+  int64_t running = 1;
+  for (auto size : llvm::reverse(shape)) {
+    assert(size > 0 && "size must be nonnegative");
+    tmp.push_back(running);
+    running *= size;
+  }
+  return SmallVector<int64_t, 8>(tmp.rbegin(), tmp.rend());
+}
 
 SmallVector<int64_t, 4> mlir::computeStrides(ArrayRef<int64_t> shape,
                                              ArrayRef<int64_t> sizes) {

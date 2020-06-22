@@ -18,7 +18,7 @@ source_filename = "test/Transforms/SampleProfile/cov-zero-samples.ll"
 @N = global i64 8000000000, align 8, !dbg !0
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
-define i32 @_Z12never_calledi(i32 %i) !dbg !11 {
+define i32 @_Z12never_calledi(i32 %i) #1 !dbg !11 {
 entry:
   ret i32 0, !dbg !15
 }
@@ -26,7 +26,7 @@ entry:
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
-define i32 @main() !dbg !17 {
+define i32 @main() #1 !dbg !17 {
 entry:
   %retval = alloca i32, align 4
   %sum = alloca i32, align 4
@@ -85,6 +85,7 @@ for.end:                                          ; preds = %for.cond
 declare i32 @printf(i8*, ...)
 
 attributes #0 = { nounwind readnone }
+attributes #1 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!8, !9}

@@ -45,6 +45,9 @@ cl::opt<bool> NoMemberType("no-member-type", cl::Optional,
                            cl::init(false));
 cl::opt<std::string> RawFile("raw-file", cl::Optional,
                              cl::desc("for fuzzer data"), cl::Hidden);
+cl::opt<bool> WarnTrailing("warn-trailing", cl::Optional,
+                           cl::desc("warn on trailing characters"), cl::Hidden,
+                           cl::init(false));
 cl::list<std::string> Symbols(cl::Positional, cl::desc("<input symbols>"),
                               cl::ZeroOrMore);
 
@@ -62,11 +65,15 @@ static bool msDemangle(const std::string &S) {
   if (NoMemberType)
     Flags = MSDemangleFlags(Flags | MSDF_NoMemberType);
 
+  size_t NRead;
   char *ResultBuf =
-      microsoftDemangle(S.c_str(), nullptr, nullptr, &Status, Flags);
+      microsoftDemangle(S.c_str(), &NRead, nullptr, nullptr, &Status, Flags);
   if (Status == llvm::demangle_success) {
     outs() << ResultBuf << "\n";
     outs().flush();
+    if (WarnTrailing && NRead < S.size())
+      WithColor::warning() << "trailing characters: " << S.c_str() + NRead
+                           << "\n";
   } else {
     WithColor::error() << "Invalid mangled name\n";
   }

@@ -2,7 +2,7 @@
 
 define i32 @foo() nounwind {
 entry:
-; CHECK: cntlzw 3, 4
+; CHECK: cntlzw 3, 3
 	%retval = alloca i32, align 4		; <i32*> [#uses=2]
 	%temp = alloca i32, align 4		; <i32*> [#uses=2]
 	%ctz_x = alloca i32, align 4		; <i32*> [#uses=3]

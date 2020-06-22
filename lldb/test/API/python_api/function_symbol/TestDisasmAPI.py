@@ -38,8 +38,8 @@ class DisasmAPITestCase(TestBase):
         # Now create the two breakpoints inside function 'a'.
         breakpoint1 = target.BreakpointCreateByLocation('main.c', self.line1)
         breakpoint2 = target.BreakpointCreateByLocation('main.c', self.line2)
-        #print("breakpoint1:", breakpoint1)
-        #print("breakpoint2:", breakpoint2)
+        self.trace("breakpoint1:", breakpoint1)
+        self.trace("breakpoint2:", breakpoint2)
         self.assertTrue(breakpoint1 and
                         breakpoint1.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
@@ -64,7 +64,7 @@ class DisasmAPITestCase(TestBase):
         self.assertTrue(lineEntry.GetLine() == self.line1)
 
         address1 = lineEntry.GetStartAddress()
-        #print("address1:", address1)
+        self.trace("address1:", address1)
 
         # Now call SBTarget.ResolveSymbolContextForAddress() with address1.
         context1 = target.ResolveSymbolContextForAddress(
@@ -103,15 +103,11 @@ class DisasmAPITestCase(TestBase):
             print("disassembly=>\n", disasm_output)
 
         sa1 = symbol.GetStartAddress()
-        #print("sa1:", sa1)
-        #print("sa1.GetFileAddress():", hex(sa1.GetFileAddress()))
-        #ea1 = symbol.GetEndAddress()
-        #print("ea1:", ea1)
+        self.trace("sa1:", sa1)
+        self.trace("sa1.GetFileAddress():", hex(sa1.GetFileAddress()))
         sa2 = function.GetStartAddress()
-        #print("sa2:", sa2)
-        #print("sa2.GetFileAddress():", hex(sa2.GetFileAddress()))
-        #ea2 = function.GetEndAddress()
-        #print("ea2:", ea2)
+        self.trace("sa2:", sa2)
+        self.trace("sa2.GetFileAddress():", hex(sa2.GetFileAddress()))
         self.assertTrue(sa1 and sa2 and sa1 == sa2,
                         "The two starting addresses should be the same")
 

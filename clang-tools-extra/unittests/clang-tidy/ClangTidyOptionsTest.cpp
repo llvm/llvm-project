@@ -76,6 +76,7 @@ TEST(ParseConfiguration, MergeConfigurations) {
       User: user1
       ExtraArgs: ['arg1', 'arg2']
       ExtraArgsBefore: ['arg-before1', 'arg-before2']
+      UseColor: false
   )");
   ASSERT_TRUE(!!Options1);
   llvm::ErrorOr<ClangTidyOptions> Options2 = parseConfiguration(R"(
@@ -85,6 +86,7 @@ TEST(ParseConfiguration, MergeConfigurations) {
       User: user2
       ExtraArgs: ['arg3', 'arg4']
       ExtraArgsBefore: ['arg-before3', 'arg-before4']
+      UseColor: true
   )");
   ASSERT_TRUE(!!Options2);
   ClangTidyOptions Options = Options1->mergeWith(*Options2, 0);
@@ -98,6 +100,8 @@ TEST(ParseConfiguration, MergeConfigurations) {
   EXPECT_EQ("arg-before1,arg-before2,arg-before3,arg-before4",
             llvm::join(Options.ExtraArgsBefore->begin(),
                        Options.ExtraArgsBefore->end(), ","));
+  ASSERT_TRUE(Options.UseColor.hasValue());
+  EXPECT_TRUE(*Options.UseColor);
 }
 
 class TestCheck : public ClangTidyCheck {

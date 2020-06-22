@@ -46,7 +46,7 @@ define float @f6(float %dummy, float %a, float *%dest) #0 {
 ; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
 entry:
-  %res = call float @llvm.fabs.f32(float %a)
+  %res = call float @llvm.fabs.f32(float %a) #0
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %res, float 0.0,
                                                metadata !"ogt",
@@ -70,7 +70,7 @@ define float @f7(float %dummy, float %a, float *%dest) #0 {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %abs = call float @llvm.fabs.f32(float %a)
+  %abs = call float @llvm.fabs.f32(float %a) #0
   %res = fneg float %abs
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %res, float 0.0,
@@ -122,7 +122,7 @@ define float @f12(float %dummy, float %val) #0 {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %ret = call float asm "blah $1", "=f,{f0}"(float %val)
+  %ret = call float asm "blah $1", "=f,{f0}"(float %val) #0
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %val, float 0.0,
                                                metadata !"olt",
@@ -130,7 +130,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  call void asm sideeffect "blah", ""()
+  call void asm sideeffect "blah", ""() #0
   br label %exit
 
 exit:

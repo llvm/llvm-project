@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
 ; RUN: llc -filetype=obj %s -o %t.main.o
 ; RUN: wasm-ld --fatal-warnings -o %t.wasm %t.ret32.o %t.main.o
 ; RUN: wasm-ld --fatal-warnings -o %t.wasm %t.main.o %t.ret32.o
@@ -7,7 +7,7 @@
 ; references ret32:
 ; %t.main.o: Does not call ret32 directly; used the wrong signature.
 ; %t.call-ret32.o: Calls ret32 directly; uses the correct signature.
-; RUN: llc -filetype=obj %p/Inputs/call-ret32.ll -o %t.call-ret32.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-ret32.s -o %t.call-ret32.o
 ; RUN: wasm-ld --export=call_ret32 --fatal-warnings -o %t.wasm %t.main.o %t.call-ret32.o %t.ret32.o
 ; RUN: wasm-ld --export=call_ret32 --fatal-warnings -o %t.wasm %t.call-ret32.o %t.main.o %t.ret32.o
 

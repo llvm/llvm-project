@@ -25,13 +25,6 @@ class MLIRContext;
 class OwningRewritePatternList;
 namespace vector {
 
-/// Structure to control the behavior of vector transform patterns.
-struct VectorTransformsOptions {
-  /// Let vector.contract lower to vector.matrix_multiply and LLVM matrix
-  /// intrinsics.
-  bool lowerToLLVMMatrixIntrinsics = false;
-};
-
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context);
@@ -50,6 +43,35 @@ void populateVectorToVectorTransformationPatterns(
 /// "leak" coming in, however, some tuple related ops will remain.
 void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
                                           MLIRContext *context);
+
+/// Enum to control the lowering of `vector.contract` operations.
+enum class VectorContractLowering {
+  /// Progressively lower to finer grained `vector.contract` and `vector.fma`.
+  FMA = 0,
+  /// Lower to `vector.matrix_multiply`, maps 1-1 to LLVM matrix intrinsics.
+  Matmul = 1,
+  /// Lower to `vector.outerproduct`.
+  OuterProduct = 2,
+};
+/// Enum to control the lowering of `vector.transpose` operations.
+enum class VectorTransposeLowering {
+  // Lower transpose into element-wise extract and inserts.
+  EltWise = 0,
+  /// Lower 2-D transpose to `vector.flat_transpose`, maps 1-1 to LLVM matrix
+  /// intrinsics.
+  Flat = 1,
+};
+/// Structure to control the behavior of vector transform patterns.
+struct VectorTransformsOptions {
+  VectorContractLowering vectorContractLowering = VectorContractLowering::FMA;
+  VectorTransposeLowering vectorTransposeLowering =
+      VectorTransposeLowering::EltWise;
+  VectorTransformsOptions &
+  setVectorTransformsOptions(VectorContractLowering opt) {
+    vectorContractLowering = opt;
+    return *this;
+  }
+};
 
 /// Collect a set of transformation patterns that are related to contracting
 /// or expanding vector operations:

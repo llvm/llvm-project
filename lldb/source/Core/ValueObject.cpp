@@ -1723,7 +1723,7 @@ bool ValueObject::IsRuntimeSupportValue() {
     return false;
 
   if (auto *runtime = process->GetLanguageRuntime(GetVariable()->GetLanguage()))
-    if (runtime->IsWhitelistedRuntimeValue(GetName()))
+    if (runtime->IsAllowedRuntimeValue(GetName()))
       return false;
 
   return true;

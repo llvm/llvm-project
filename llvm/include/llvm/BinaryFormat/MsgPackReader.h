@@ -57,6 +57,7 @@ enum class Type : uint8_t {
   Array,
   Map,
   Extension,
+  Empty, // Used by MsgPackDocument to represent an empty node
 };
 
 /// Extension types are composed of a user-defined type ID and an uninterpreted

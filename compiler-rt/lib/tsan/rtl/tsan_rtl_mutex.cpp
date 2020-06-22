@@ -415,8 +415,10 @@ static void UpdateClockCallback(ThreadContextBase *tctx_base, void *arg) {
   ThreadState *thr = reinterpret_cast<ThreadState*>(arg);
   ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);
   u64 epoch = tctx->epoch1;
-  if (tctx->status == ThreadStatusRunning)
+  if (tctx->status == ThreadStatusRunning) {
     epoch = tctx->thr->fast_state.epoch();
+    tctx->thr->clock.NoteGlobalAcquire(epoch);
+  }
   thr->clock.set(&thr->proc()->clock_cache, tctx->tid, epoch);
 }
 

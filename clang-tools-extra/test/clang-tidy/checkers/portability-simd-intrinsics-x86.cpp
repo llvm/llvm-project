@@ -2,7 +2,7 @@
 // RUN:  -config='{CheckOptions: [ \
 // RUN:    {key: portability-simd-intrinsics.Suggest, value: 1} \
 // RUN:  ]}' -- -target x86_64
-// FIXME: Fix the checker to work in C++2a mode.
+// FIXME: Fix the checker to work in C++20 mode.
 
 typedef long long __m128i __attribute__((vector_size(16)));
 typedef double __m256 __attribute__((vector_size(32)));

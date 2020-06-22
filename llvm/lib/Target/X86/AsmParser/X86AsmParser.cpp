@@ -938,8 +938,8 @@ private:
 
   // Load Value Injection (LVI) Mitigations for machine code
   void emitWarningForSpecialLVIInstruction(SMLoc Loc);
-  bool applyLVICFIMitigation(MCInst &Inst);
-  bool applyLVILoadHardeningMitigation(MCInst &Inst, MCStreamer &Out);
+  void applyLVICFIMitigation(MCInst &Inst, MCStreamer &Out);
+  void applyLVILoadHardeningMitigation(MCInst &Inst, MCStreamer &Out);
 
   /// Wrapper around MCStreamer::emitInstruction(). Possibly adds
   /// instrumentation around Inst.
@@ -3178,7 +3178,7 @@ void X86AsmParser::emitWarningForSpecialLVIInstruction(SMLoc Loc) {
 /// - https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection
 ///
 /// Returns `true` if a mitigation was applied or warning was emitted.
-bool X86AsmParser::applyLVICFIMitigation(MCInst &Inst) {
+void X86AsmParser::applyLVICFIMitigation(MCInst &Inst, MCStreamer &Out) {
   // Information on control-flow instructions that require manual mitigation can
   // be found here:
   // https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection#specialinstructions
@@ -3188,7 +3188,23 @@ bool X86AsmParser::applyLVICFIMitigation(MCInst &Inst) {
   case X86::RETQ:
   case X86::RETIL:
   case X86::RETIQ:
-  case X86::RETIW:
+  case X86::RETIW: {
+    MCInst ShlInst, FenceInst;
+    bool Parse32 = is32BitMode() || Code16GCC;
+    unsigned Basereg =
+        is64BitMode() ? X86::RSP : (Parse32 ? X86::ESP : X86::SP);
+    const MCExpr *Disp = MCConstantExpr::create(0, getContext());
+    auto ShlMemOp = X86Operand::CreateMem(getPointerWidth(), /*SegReg=*/0, Disp,
+                                          /*BaseReg=*/Basereg, /*IndexReg=*/0,
+                                          /*Scale=*/1, SMLoc{}, SMLoc{}, 0);
+    ShlInst.setOpcode(X86::SHL64mi);
+    ShlMemOp->addMemOperands(ShlInst, 5);
+    ShlInst.addOperand(MCOperand::createImm(0));
+    FenceInst.setOpcode(X86::LFENCE);
+    Out.emitInstruction(ShlInst, getSTI());
+    Out.emitInstruction(FenceInst, getSTI());
+    return;
+  }
   case X86::JMP16m:
   case X86::JMP32m:
   case X86::JMP64m:
@@ -3196,9 +3212,8 @@ bool X86AsmParser::applyLVICFIMitigation(MCInst &Inst) {
   case X86::CALL32m:
   case X86::CALL64m:
     emitWarningForSpecialLVIInstruction(Inst.getLoc());
-    return true;
+    return;
   }
-  return false;
 }
 
 /// To mitigate LVI, every instruction that performs a load can be followed by
@@ -3208,7 +3223,7 @@ bool X86AsmParser::applyLVICFIMitigation(MCInst &Inst) {
 /// https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection
 ///
 /// Returns `true` if a mitigation was applied or warning was emitted.
-bool X86AsmParser::applyLVILoadHardeningMitigation(MCInst &Inst,
+void X86AsmParser::applyLVILoadHardeningMitigation(MCInst &Inst,
                                                    MCStreamer &Out) {
   auto Opcode = Inst.getOpcode();
   auto Flags = Inst.getFlags();
@@ -3226,38 +3241,41 @@ bool X86AsmParser::applyLVILoadHardeningMitigation(MCInst &Inst,
     case X86::SCASL:
     case X86::SCASQ:
       emitWarningForSpecialLVIInstruction(Inst.getLoc());
-      return true;
+      return;
     }
   } else if (Opcode == X86::REP_PREFIX || Opcode == X86::REPNE_PREFIX) {
     // If a REP instruction is found on its own line, it may or may not be
     // followed by a vulnerable instruction. Emit a warning just in case.
     emitWarningForSpecialLVIInstruction(Inst.getLoc());
-    return true;
+    return;
   }
 
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+
+  // Can't mitigate after terminators or calls. A control flow change may have
+  // already occurred.
+  if (MCID.isTerminator() || MCID.isCall())
+    return;
+
   // LFENCE has the mayLoad property, don't double fence.
   if (MCID.mayLoad() && Inst.getOpcode() != X86::LFENCE) {
     MCInst FenceInst;
     FenceInst.setOpcode(X86::LFENCE);
-    FenceInst.setLoc(Inst.getLoc());
     Out.emitInstruction(FenceInst, getSTI());
-    return true;
   }
-  return false;
 }
 
 void X86AsmParser::emitInstruction(MCInst &Inst, OperandVector &Operands,
                                    MCStreamer &Out) {
+  if (LVIInlineAsmHardening &&
+      getSTI().getFeatureBits()[X86::FeatureLVIControlFlowIntegrity])
+    applyLVICFIMitigation(Inst, Out);
+
   Out.emitInstruction(Inst, getSTI());
 
-  if (LVIInlineAsmHardening) {
-    if (getSTI().getFeatureBits()[X86::FeatureLVIControlFlowIntegrity] &&
-        applyLVICFIMitigation(Inst))
-      return;
-    if (getSTI().getFeatureBits()[X86::FeatureLVILoadHardening])
-      applyLVILoadHardeningMitigation(Inst, Out);
-  }
+  if (LVIInlineAsmHardening &&
+      getSTI().getFeatureBits()[X86::FeatureLVILoadHardening])
+    applyLVILoadHardeningMitigation(Inst, Out);
 }
 
 bool X86AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -3441,20 +3459,47 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   // Otherwise, we assume that this may be an integer instruction, which comes
   // in 8/16/32/64-bit forms using the b,w,l,q suffixes respectively.
   const char *Suffixes = Base[0] != 'f' ? "bwlq" : "slt\0";
+  // MemSize corresponding to Suffixes.  { 8, 16, 32, 64 }    { 32, 64, 80, 0 }
+  const char *MemSize = Base[0] != 'f' ? "\x08\x10\x20\x40" : "\x20\x40\x50\0";
 
   // Check for the various suffix matches.
   uint64_t ErrorInfoIgnore;
   FeatureBitset ErrorInfoMissingFeatures; // Init suppresses compiler warnings.
   unsigned Match[4];
 
+  // Some instruction like VPMULDQ is NOT the variant of VPMULD but a new one.
+  // So we should make sure the suffix matcher only works for memory variant
+  // that has the same size with the suffix.
+  // FIXME: This flag is a workaround for legacy instructions that didn't
+  // declare non suffix variant assembly.
+  bool HasVectorReg = false;
+  X86Operand *MemOp = nullptr;
+  for (const auto &Op : Operands) {
+    X86Operand *X86Op = static_cast<X86Operand *>(Op.get());
+    if (X86Op->isVectorReg())
+      HasVectorReg = true;
+    else if (X86Op->isMem()) {
+      MemOp = X86Op;
+      assert(MemOp->Mem.Size == 0 && "Memory size always 0 under ATT syntax");
+      // Have we found an unqualified memory operand,
+      // break. IA allows only one memory operand.
+      break;
+    }
+  }
+
   for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I) {
     Tmp.back() = Suffixes[I];
-    Match[I] = MatchInstruction(Operands, Inst, ErrorInfoIgnore,
-                                MissingFeatures, MatchingInlineAsm,
-                                isParsingIntelSyntax());
-    // If this returned as a missing feature failure, remember that.
-    if (Match[I] == Match_MissingFeature)
-      ErrorInfoMissingFeatures = MissingFeatures;
+    if (MemOp && HasVectorReg)
+      MemOp->Mem.Size = MemSize[I];
+    Match[I] = Match_MnemonicFail;
+    if (MemOp || !HasVectorReg) {
+      Match[I] =
+          MatchInstruction(Operands, Inst, ErrorInfoIgnore, MissingFeatures,
+                           MatchingInlineAsm, isParsingIntelSyntax());
+      // If this returned as a missing feature failure, remember that.
+      if (Match[I] == Match_MissingFeature)
+        ErrorInfoMissingFeatures = MissingFeatures;
+    }
   }
 
   // Restore the old token.

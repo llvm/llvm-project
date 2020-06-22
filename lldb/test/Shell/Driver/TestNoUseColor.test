@@ -1,4 +1,3 @@
-# RUN: %lldb --no-use-colors -s %s | FileCheck %s
-settings show use-color
-# CHECK: use-color (boolean) = false
-q
+RUN: not %lldb -b --no-use-colors -o 'settings show use-color' -o 'bogus' 2>&1 | FileCheck %s --check-prefix NOCOLOR
+NOCOLOR: use-color (boolean) = false
+NOCOLOR: error: 'bogus' is not a valid command

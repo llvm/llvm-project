@@ -11,6 +11,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -118,6 +119,70 @@ TEST(BitReaderTest, MaterializeFunctionsOutOfOrder) {
   EXPECT_FALSE(G->empty());
   EXPECT_FALSE(H->empty());
   EXPECT_FALSE(J->empty());
+  EXPECT_FALSE(verifyModule(*M, &dbgs()));
+}
+
+TEST(BitReaderTest, MaterializeFunctionsStrictFP) {
+  SmallString<1024> Mem;
+
+  LLVMContext Context;
+  std::unique_ptr<Module> M = getLazyModuleFromAssembly(
+      Context, Mem, "define double @foo(double %a) {\n"
+                    "  %result = call double @bar(double %a) strictfp\n"
+                    "  ret double %result\n"
+                    "}\n"
+                    "declare double @bar(double)\n");
+  Function *Foo = M->getFunction("foo");
+  ASSERT_FALSE(Foo->materialize());
+  EXPECT_FALSE(Foo->empty());
+
+  for (auto &BB : *Foo) {
+    auto It = BB.begin();
+    while (It != BB.end()) {
+      Instruction &I = *It;
+      ++It;
+
+      if (auto *Call = dyn_cast<CallBase>(&I)) {
+        EXPECT_FALSE(Call->isStrictFP());
+        EXPECT_TRUE(Call->isNoBuiltin());
+      }
+    }
+  }
+
+  EXPECT_FALSE(verifyModule(*M, &dbgs()));
+}
+
+TEST(BitReaderTest, MaterializeConstrainedFPStrictFP) {
+  SmallString<1024> Mem;
+
+  LLVMContext Context;
+  std::unique_ptr<Module> M = getLazyModuleFromAssembly(
+      Context, Mem,
+      "define double @foo(double %a) {\n"
+      "  %result = call double @llvm.experimental.constrained.sqrt.f64(double "
+      "%a, metadata !\"round.tonearest\", metadata !\"fpexcept.strict\") "
+      "strictfp\n"
+      "  ret double %result\n"
+      "}\n"
+      "declare double @llvm.experimental.constrained.sqrt.f64(double, "
+      "metadata, metadata)\n");
+  Function *Foo = M->getFunction("foo");
+  ASSERT_FALSE(Foo->materialize());
+  EXPECT_FALSE(Foo->empty());
+
+  for (auto &BB : *Foo) {
+    auto It = BB.begin();
+    while (It != BB.end()) {
+      Instruction &I = *It;
+      ++It;
+
+      if (auto *Call = dyn_cast<CallBase>(&I)) {
+        EXPECT_TRUE(Call->isStrictFP());
+        EXPECT_FALSE(Call->isNoBuiltin());
+      }
+    }
+  }
+
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
 }
 

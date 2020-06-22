@@ -1,4 +1,4 @@
-# RUN: gdb -q -batch -n -iex 'source %llvm_src_root/utils/gdb-scripts/prettyprinters.py' -x %s %llvm_tools_dir/check-gdb-llvm-support | FileCheck %s --dump-input-on-failure
+# RUN: gdb -q -batch -n -iex 'source %llvm_src_root/utils/gdb-scripts/prettyprinters.py' -x %s %llvm_tools_dir/check-gdb-llvm-support | FileCheck %s
 # REQUIRES: debug-info
 
 break main

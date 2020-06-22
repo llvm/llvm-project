@@ -268,7 +268,8 @@ protected:
                                // This is specified as
                                // as a multiple number of a host bytes
 private:
-  DISALLOW_COPY_AND_ASSIGN(Section);
+  Section(const Section &) = delete;
+  const Section &operator=(const Section &) = delete;
 };
 
 } // namespace lldb_private

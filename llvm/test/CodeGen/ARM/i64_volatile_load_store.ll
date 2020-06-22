@@ -155,29 +155,37 @@ entry:
   ret void
 }
 
-define void @test_stack() {
+define i64 @test_stack() {
 ; CHECK-LABEL: test_stack:
-; CHECK-ARMV5TE:      sub sp, sp, #8
-; CHECK-ARMV5TE-NEXT: mov r1, #0
-; CHECK-ARMV5TE-NEXT: mov r0, #5
-; CHECK-ARMV5TE-NEXT: strd r0, r1, [sp]
-; CHECK-ARMV5TE-NEXT: ldrd r0, r1, [sp]
-; CHECK-T2:           sub sp, #8
-; CHECK-T2-NEXT:      mov r0, sp
-; CHECK-T2-NEXT:      movs r1, #0
-; CHECK-T2-NEXT:      movs r2, #5
-; CHECK-T2-NEXT:      strd r2, r1, [r0]
-; CHECK-T2-NEXT:      ldrd r0, r1, [r0]
-; CHECK-ARMV4T:       sub sp, sp, #8
-; CHECK-ARMV4T-NEXT:  mov r0, #0
-; CHECK-ARMV4T-NEXT:  str r0, [sp, #4]
-; CHECK-ARMV4T-NEXT:  mov r0, #5
-; CHECK-ARMV4T-NEXT:  str r0, [sp]
-; CHECK-ARMV4T-NEXT:  ldr r0, [sp]
-; CHECK-ARMV4T-NEXT:  ldr r0, [sp, #4]
+; CHECK-ARMV5TE:      sub sp, sp, #80
+; CHECK-ARMV5TE-NEXT: mov [[R0:r[0-9]+]], #0
+; CHECK-ARMV5TE-NEXT: mov [[R1:r[0-9]+]], #1
+; CHECK-ARMV5TE-NEXT: strd [[R1]], [[R0]], [sp, #8]
+; CHECK-ARMV5TE-NEXT: ldrd r0, r1, [sp, #8]
+; CHECK-ARMV5TE-NEXT: add sp, sp, #80
+; CHECK-ARMV5TE-NEXT: bx lr
+; CHECK-T2:      sub sp, #80
+; CHECK-T2-NEXT: movs [[R0:r[0-9]+]], #0
+; CHECK-T2-NEXT: movs [[R1:r[0-9]+]], #1
+; CHECK-T2-NEXT: strd [[R1]], [[R0]], [sp, #8]
+; CHECK-T2-NEXT: ldrd r0, r1, [sp, #8]
+; CHECK-T2-NEXT: add sp, #80
+; CHECK-T2-NEXT: bx lr
+; CHECK-ARMV4T:      sub sp, sp, #80
+; CHECK-ARMV4T-NEXT: mov [[R0:r[0-9]+]], #0
+; CHECK-ARMV4T-NEXT: str [[R0]], [sp, #12]
+; CHECK-ARMV4T-NEXT: mov [[R1:r[0-9]+]], #1
+; CHECK-ARMV4T-NEXT: str [[R1]], [sp, #8]
+; CHECK-ARMV4T-NEXT: ldr r0, [sp, #8]
+; CHECK-ARMV4T-NEXT: ldr r1, [sp, #12]
+; CHECK-ARMV4T-NEXT: add sp, sp, #80
+; CHECK-ARMV4T-NEXT: bx lr
 entry:
-  %0 = alloca i64
-  store volatile i64 5, i64* %0
-  %1 = load volatile i64, i64* %0
-  ret void
+  %a = alloca [10 x i64], align 8
+  %arrayidx = getelementptr inbounds [10 x i64], [10 x i64]* %a, i32 0, i32 1
+  store volatile i64 1, i64* %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds [10 x i64], [10 x i64]* %a, i32 0, i32 1
+  %0 = load volatile i64, i64* %arrayidx1, align 8
+  ret i64 %0
 }
+

@@ -210,6 +210,8 @@ protected:
   bool UseEL2ForTP = false;
   bool UseEL3ForTP = false;
   bool AllowTaggedGlobals = false;
+  bool HardenSlsRetBr = false;
+  bool HardenSlsBlr = false;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 3;
   uint16_t CacheLineSize = 0;
@@ -362,6 +364,9 @@ public:
            hasFuseAES() || hasFuseArithmeticLogic() ||
            hasFuseCCSelect() || hasFuseLiterals();
   }
+
+  bool hardenSlsRetBr() const { return HardenSlsRetBr; }
+  bool hardenSlsBlr() const { return HardenSlsBlr; }
 
   bool useEL1ForTP() const { return UseEL1ForTP; }
   bool useEL2ForTP() const { return UseEL2ForTP; }
@@ -529,6 +534,12 @@ public:
   }
 
   void mirFileLoaded(MachineFunction &MF) const override;
+
+  // Return the known range for the bit length of SVE data registers. A value
+  // of 0 means nothing is known about that particular limit beyong what's
+  // implied by the architecture.
+  unsigned getMaxSVEVectorSizeInBits() const;
+  unsigned getMinSVEVectorSizeInBits() const;
 };
 } // End llvm namespace
 

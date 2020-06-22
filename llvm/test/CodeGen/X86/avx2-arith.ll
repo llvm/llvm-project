@@ -347,15 +347,13 @@ define <8 x i16> @mul_const8(<8 x i16> %x) {
 define <8 x i32> @mul_const9(<8 x i32> %x) {
 ; X32-LABEL: mul_const9:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl $2, %eax
-; X32-NEXT:    vmovd %eax, %xmm1
+; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,0,0,0]
 ; X32-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: mul_const9:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $2, %eax
-; X64-NEXT:    vmovd %eax, %xmm1
+; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,0,0,0]
 ; X64-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %y = mul <8 x i32> %x, <i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>

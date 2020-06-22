@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{build} -O2
 // RUN: %{run}
 

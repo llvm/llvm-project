@@ -4,8 +4,7 @@ define i64 @func1(i64 %p) {
 ; CHECK-LABEL: func1:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea %s1, -1(, %s0)
-; CHECK-NEXT:    xor %s0, -1, %s0
-; CHECK-NEXT:    and %s0, %s0, %s1
+; CHECK-NEXT:    nnd %s0, %s0, %s1
 ; CHECK-NEXT:    pcnt %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = tail call i64 @llvm.cttz.i64(i64 %p, i1 true)

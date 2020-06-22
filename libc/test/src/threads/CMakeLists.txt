@@ -1,6 +1,22 @@
 add_libc_testsuite(libc_threads_unittests)
 
 add_libc_unittest(
+  call_once_test
+  SUITE
+    libc_threads_unittests
+  SRCS
+    call_once_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.threads.call_once
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+)
+
+add_libc_unittest(
   thrd_test
   SUITE
     libc_threads_unittests

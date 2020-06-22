@@ -1,7 +1,7 @@
 ; Test that PIC code can be linked into static binaries.
 ; In this case the GOT entries will end up as internalized wasm globals with
 ; fixed values.
-; RUN: llc -relocation-model=pic -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
 ; RUN: llc -relocation-model=pic -filetype=obj %s -o %t.o
 ; RUN: wasm-ld --allow-undefined --export-all -o %t.wasm %t.o %t.ret32.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s

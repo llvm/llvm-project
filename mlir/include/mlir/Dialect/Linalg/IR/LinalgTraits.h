@@ -217,6 +217,18 @@ public:
     return getOutputTensorTypes()[i - getNumInputsAndOutputBuffers()]
         .template cast<ShapedType>();
   }
+  /// Return the shaped types for all the inputs and outputs
+  SmallVector<ShapedType, 4> getInputOutputShapedTypes() {
+    SmallVector<Type, 4> inputOutputTypes(
+        this->getOperation()->operand_type_begin(),
+        this->getOperation()->operand_type_end());
+    inputOutputTypes.append(this->getOperation()->result_type_begin(),
+                            this->getOperation()->result_type_end());
+    return llvm::to_vector<4>(
+        llvm::map_range(inputOutputTypes, [](Type type) -> ShapedType {
+          return type.cast<ShapedType>();
+        }));
+  }
 
   //==========================================================================//
   // Other interface methods.
@@ -293,6 +305,13 @@ public:
     // it will impact parser, printer and tests.
     // this->getOperation()->setAttr("indexing_maps", attr);
     return attr;
+  }
+
+  SmallVector<AffineMap, 4> getIndexingMaps() {
+    return llvm::to_vector<4>(
+        llvm::map_range(indexing_maps(), [](Attribute attr) -> AffineMap {
+          return attr.cast<AffineMapAttr>().getValue();
+        }));
   }
 
   AffineMap getIndexingMap(unsigned i) {

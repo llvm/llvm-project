@@ -1100,10 +1100,10 @@ def int_hexagon_C2_cmpgtup :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_C2_cmpgtup">;
 
 def int_hexagon_A4_rcmpeqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_rcmpeqi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_rcmpeqi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_rcmpneqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_rcmpneqi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_rcmpneqi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_rcmpeq :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_rcmpeq">;
@@ -1124,19 +1124,19 @@ def int_hexagon_C4_nbitsclr :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_nbitsclr">;
 
 def int_hexagon_C2_cmpeqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpeqi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpeqi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C2_cmpgti :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgti", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgti", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C2_cmpgtui :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgtui", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgtui", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C2_cmpgei :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgei", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgei", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C2_cmpgeui :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgeui", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpgeui", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C2_cmplt :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmplt">;
@@ -1145,19 +1145,19 @@ def int_hexagon_C2_cmpltu :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_cmpltu">;
 
 def int_hexagon_C2_bitsclri :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_bitsclri", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C2_bitsclri", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C4_nbitsclri :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_nbitsclri", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_nbitsclri", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C4_cmpneqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmpneqi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmpneqi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C4_cmpltei :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmpltei", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmpltei", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C4_cmplteui :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmplteui", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmplteui", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C4_cmpneq :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_C4_cmpneq">;
@@ -1226,13 +1226,13 @@ def int_hexagon_C2_mux :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_mux">;
 
 def int_hexagon_C2_muxii :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxii", [IntrNoMem, ImmArg<1>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxii", [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_C2_muxir :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxir", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxir", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_C2_muxri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxri", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_C2_muxri", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_C2_vmux :
 Hexagon_i64_i32i64i64_Intrinsic<"HEXAGON_C2_vmux">;
@@ -1244,7 +1244,7 @@ def int_hexagon_A2_vcmpbeq :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A2_vcmpbeq">;
 
 def int_hexagon_A4_vcmpbeqi :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbeqi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbeqi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_vcmpbeq_any :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A4_vcmpbeq_any">;
@@ -1253,31 +1253,31 @@ def int_hexagon_A2_vcmpbgtu :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A2_vcmpbgtu">;
 
 def int_hexagon_A4_vcmpbgtui :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbgtui", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbgtui", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_vcmpbgt :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A4_vcmpbgt">;
 
 def int_hexagon_A4_vcmpbgti :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbgti", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpbgti", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_cmpbeq :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbeq">;
 
 def int_hexagon_A4_cmpbeqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbeqi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbeqi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_cmpbgtu :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgtu">;
 
 def int_hexagon_A4_cmpbgtui :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgtui", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgtui", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_cmpbgt :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgt">;
 
 def int_hexagon_A4_cmpbgti :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgti", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpbgti", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A2_vcmpheq :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A2_vcmpheq">;
@@ -1289,13 +1289,13 @@ def int_hexagon_A2_vcmphgtu :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A2_vcmphgtu">;
 
 def int_hexagon_A4_vcmpheqi :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpheqi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpheqi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_vcmphgti :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmphgti", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmphgti", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_vcmphgtui :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmphgtui", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmphgtui", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_cmpheq :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpheq">;
@@ -1307,13 +1307,13 @@ def int_hexagon_A4_cmphgtu :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmphgtu">;
 
 def int_hexagon_A4_cmpheqi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpheqi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmpheqi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_cmphgti :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmphgti", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmphgti", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_cmphgtui :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmphgtui", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cmphgtui", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A2_vcmpweq :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A2_vcmpweq">;
@@ -1325,13 +1325,13 @@ def int_hexagon_A2_vcmpwgtu :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A2_vcmpwgtu">;
 
 def int_hexagon_A4_vcmpweqi :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpweqi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpweqi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_vcmpwgti :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpwgti", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpwgti", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_vcmpwgtui :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpwgtui", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_A4_vcmpwgtui", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_boundscheck :
 Hexagon_i32_i32i64_Intrinsic<"HEXAGON_A4_boundscheck">;
@@ -1784,13 +1784,13 @@ def int_hexagon_M2_mpyud_ll_s1 :
 Hexagon_i64_i32i32_Intrinsic<"HEXAGON_M2_mpyud_ll_s1">;
 
 def int_hexagon_M2_mpysmi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpysmi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_M2_mpysmi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_M2_macsip :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_macsip", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_macsip", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_M2_macsin :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_macsin", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_macsin", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_M2_dpmpyss_s0 :
 Hexagon_i64_i32i32_Intrinsic<"HEXAGON_M2_dpmpyss_s0">;
@@ -1847,13 +1847,13 @@ def int_hexagon_M2_acci :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_acci">;
 
 def int_hexagon_M2_accii :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_accii", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_accii", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_M2_nacci :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_nacci">;
 
 def int_hexagon_M2_naccii :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_naccii", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_naccii", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_M2_subacc :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_subacc">;
@@ -1862,16 +1862,16 @@ def int_hexagon_M4_mpyrr_addr :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyrr_addr">;
 
 def int_hexagon_M4_mpyri_addr_u2 :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addr_u2", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addr_u2", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_M4_mpyri_addr :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addr", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addr", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_M4_mpyri_addi :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addi", [IntrNoMem, ImmArg<0>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyri_addi", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_M4_mpyrr_addi :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyrr_addi", [IntrNoMem, ImmArg<0>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_mpyrr_addi", [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 
 def int_hexagon_M2_vmpy2s_s0 :
 Hexagon_i64_i32i32_Intrinsic<"HEXAGON_M2_vmpy2s_s0">;
@@ -2234,10 +2234,10 @@ def int_hexagon_S2_vcrotate :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_vcrotate">;
 
 def int_hexagon_S4_vrcrotate_acc :
-Hexagon_i64_i64i64i32i32_Intrinsic<"HEXAGON_S4_vrcrotate_acc", [IntrNoMem, ImmArg<3>]>;
+Hexagon_i64_i64i64i32i32_Intrinsic<"HEXAGON_S4_vrcrotate_acc", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_S4_vrcrotate :
-Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S4_vrcrotate", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S4_vrcrotate", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_vcnegh :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_vcnegh">;
@@ -2270,7 +2270,7 @@ def int_hexagon_A2_subsat :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_subsat">;
 
 def int_hexagon_A2_addi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_addi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_addi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A2_addh_l16_ll :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_addh_l16_ll">;
@@ -2411,13 +2411,13 @@ def int_hexagon_A2_tfr :
 Hexagon_i32_i32_Intrinsic<"HEXAGON_A2_tfr">;
 
 def int_hexagon_A2_tfrsi :
-Hexagon_i32_i32_Intrinsic<"HEXAGON_A2_tfrsi", [IntrNoMem, ImmArg<0>]>;
+Hexagon_i32_i32_Intrinsic<"HEXAGON_A2_tfrsi", [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 
 def int_hexagon_A2_tfrp :
 Hexagon_i64_i64_Intrinsic<"HEXAGON_A2_tfrp">;
 
 def int_hexagon_A2_tfrpi :
-Hexagon_i64_i32_Intrinsic<"HEXAGON_A2_tfrpi", [IntrNoMem, ImmArg<0>]>;
+Hexagon_i64_i32_Intrinsic<"HEXAGON_A2_tfrpi", [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 
 def int_hexagon_A2_zxtb :
 Hexagon_i32_i32_Intrinsic<"HEXAGON_A2_zxtb">;
@@ -2435,13 +2435,13 @@ def int_hexagon_A2_combinew :
 Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A2_combinew">;
 
 def int_hexagon_A4_combineri :
-Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_combineri", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_combineri", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_combineir :
-Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_combineir", [IntrNoMem, ImmArg<0>]>;
+Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_combineir", [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 
 def int_hexagon_A2_combineii :
-Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A2_combineii", [IntrNoMem, ImmArg<0>, ImmArg<1>]>;
+Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A2_combineii", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A2_combine_hh :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_combine_hh">;
@@ -2456,10 +2456,10 @@ def int_hexagon_A2_combine_ll :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_combine_ll">;
 
 def int_hexagon_A2_tfril :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_tfril", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_tfril", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A2_tfrih :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_tfrih", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_tfrih", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A2_and :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_and">;
@@ -2492,10 +2492,10 @@ def int_hexagon_A4_ornp :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A4_ornp">;
 
 def int_hexagon_S4_addaddi :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addaddi", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addaddi", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_subaddi :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subaddi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subaddi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_M4_and_and :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_and_and">;
@@ -2522,13 +2522,13 @@ def int_hexagon_M4_or_xor :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_or_xor">;
 
 def int_hexagon_S4_or_andix :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_andix", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_andix", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_or_andi :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_andi", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_andi", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_or_ori :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_ori", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_or_ori", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_M4_xor_and :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_xor_and">;
@@ -2540,13 +2540,13 @@ def int_hexagon_M4_xor_andn :
 Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M4_xor_andn">;
 
 def int_hexagon_A2_subri :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_subri", [IntrNoMem, ImmArg<0>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_subri", [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 
 def int_hexagon_A2_andir :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_andir", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_andir", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A2_orir :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_orir", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A2_orir", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A2_andp :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_andp">;
@@ -2768,19 +2768,19 @@ def int_hexagon_A2_vnavghr :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_A2_vnavghr">;
 
 def int_hexagon_A4_round_ri :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_ri", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_ri", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_round_rr :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_rr">;
 
 def int_hexagon_A4_round_ri_sat :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_ri_sat", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_ri_sat", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_round_rr_sat :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_round_rr_sat">;
 
 def int_hexagon_A4_cround_ri :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cround_ri", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cround_ri", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_cround_rr :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A4_cround_rr">;
@@ -2891,13 +2891,13 @@ def int_hexagon_F2_sfmin :
 Hexagon_float_floatfloat_Intrinsic<"HEXAGON_F2_sfmin", [IntrNoMem, Throws]>;
 
 def int_hexagon_F2_sfclass :
-Hexagon_i32_floati32_Intrinsic<"HEXAGON_F2_sfclass", [IntrNoMem, Throws, ImmArg<1>]>;
+Hexagon_i32_floati32_Intrinsic<"HEXAGON_F2_sfclass", [IntrNoMem, Throws, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_F2_sfimm_p :
-Hexagon_float_i32_Intrinsic<"HEXAGON_F2_sfimm_p", [IntrNoMem, Throws, ImmArg<0>]>;
+Hexagon_float_i32_Intrinsic<"HEXAGON_F2_sfimm_p", [IntrNoMem, Throws, ImmArg<ArgIndex<0>>]>;
 
 def int_hexagon_F2_sfimm_n :
-Hexagon_float_i32_Intrinsic<"HEXAGON_F2_sfimm_n", [IntrNoMem, Throws, ImmArg<0>]>;
+Hexagon_float_i32_Intrinsic<"HEXAGON_F2_sfimm_n", [IntrNoMem, Throws, ImmArg<ArgIndex<0>>]>;
 
 def int_hexagon_F2_sffixupn :
 Hexagon_float_floatfloat_Intrinsic<"HEXAGON_F2_sffixupn", [IntrNoMem, Throws]>;
@@ -2921,13 +2921,13 @@ def int_hexagon_F2_dfcmpuo :
 Hexagon_i32_doubledouble_Intrinsic<"HEXAGON_F2_dfcmpuo", [IntrNoMem, Throws]>;
 
 def int_hexagon_F2_dfclass :
-Hexagon_i32_doublei32_Intrinsic<"HEXAGON_F2_dfclass", [IntrNoMem, Throws, ImmArg<1>]>;
+Hexagon_i32_doublei32_Intrinsic<"HEXAGON_F2_dfclass", [IntrNoMem, Throws, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_F2_dfimm_p :
-Hexagon_double_i32_Intrinsic<"HEXAGON_F2_dfimm_p", [IntrNoMem, Throws, ImmArg<0>]>;
+Hexagon_double_i32_Intrinsic<"HEXAGON_F2_dfimm_p", [IntrNoMem, Throws, ImmArg<ArgIndex<0>>]>;
 
 def int_hexagon_F2_dfimm_n :
-Hexagon_double_i32_Intrinsic<"HEXAGON_F2_dfimm_n", [IntrNoMem, Throws, ImmArg<0>]>;
+Hexagon_double_i32_Intrinsic<"HEXAGON_F2_dfimm_n", [IntrNoMem, Throws, ImmArg<ArgIndex<0>>]>;
 
 def int_hexagon_F2_conv_sf2df :
 Hexagon_double_float_Intrinsic<"HEXAGON_F2_conv_sf2df">;
@@ -3146,160 +3146,160 @@ def int_hexagon_S2_asl_r_r_sat :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asl_r_r_sat">;
 
 def int_hexagon_S2_asr_i_r :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_lsr_i_r :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asl_i_r :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asl_i_r", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asl_i_r", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asr_i_p :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_lsr_i_p :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asl_i_p :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_p", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_p", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asr_i_r_acc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_acc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_acc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_lsr_i_r_acc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_acc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_acc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_r_acc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_acc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_acc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asr_i_p_acc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_acc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_acc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_lsr_i_p_acc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_acc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_acc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_p_acc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_acc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_acc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asr_i_r_nac :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_nac", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_nac", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_lsr_i_r_nac :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_nac", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_nac", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_r_nac :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_nac", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_nac", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asr_i_p_nac :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_nac", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_nac", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_lsr_i_p_nac :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_nac", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_nac", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_p_nac :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_nac", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_nac", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_lsr_i_r_xacc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_xacc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_xacc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_r_xacc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_xacc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_xacc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_lsr_i_p_xacc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_xacc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_xacc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_p_xacc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_xacc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_xacc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asr_i_r_and :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_and", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_and", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_lsr_i_r_and :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_and", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_and", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_r_and :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_and", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_and", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asr_i_r_or :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_or", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_or", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_lsr_i_r_or :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_or", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_lsr_i_r_or", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_r_or :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_or", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_or", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asr_i_p_and :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_and", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_and", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_lsr_i_p_and :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_and", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_and", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_p_and :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_and", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_and", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asr_i_p_or :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_or", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_or", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_lsr_i_p_or :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_or", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_lsr_i_p_or", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_p_or :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_or", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_asl_i_p_or", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_asl_i_r_sat :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_sat", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asl_i_r_sat", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asr_i_r_rnd :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_rnd", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_rnd", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asr_i_r_rnd_goodsyntax :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_rnd_goodsyntax", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_asr_i_r_rnd_goodsyntax", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asr_i_p_rnd :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_rnd", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_rnd", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asr_i_p_rnd_goodsyntax :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_rnd_goodsyntax", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_p_rnd_goodsyntax", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S4_lsli :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_lsli", [IntrNoMem, ImmArg<0>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_lsli", [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 
 def int_hexagon_S2_addasl_rrri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_addasl_rrri", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_addasl_rrri", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_andi_asl_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_andi_asl_ri", [IntrNoMem, ImmArg<0>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_andi_asl_ri", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_ori_asl_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_ori_asl_ri", [IntrNoMem, ImmArg<0>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_ori_asl_ri", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_addi_asl_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addi_asl_ri", [IntrNoMem, ImmArg<0>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addi_asl_ri", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_subi_asl_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subi_asl_ri", [IntrNoMem, ImmArg<0>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subi_asl_ri", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_andi_lsr_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_andi_lsr_ri", [IntrNoMem, ImmArg<0>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_andi_lsr_ri", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_ori_lsr_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_ori_lsr_ri", [IntrNoMem, ImmArg<0>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_ori_lsr_ri", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_addi_lsr_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addi_lsr_ri", [IntrNoMem, ImmArg<0>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_addi_lsr_ri", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S4_subi_lsr_ri :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subi_lsr_ri", [IntrNoMem, ImmArg<0>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_subi_lsr_ri", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_valignib :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_valignib", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_valignib", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_valignrb :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_valignrb">;
 
 def int_hexagon_S2_vspliceib :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_vspliceib", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_vspliceib", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_vsplicerb :
 Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S2_vsplicerb">;
@@ -3311,40 +3311,40 @@ def int_hexagon_S2_vsplatrb :
 Hexagon_i32_i32_Intrinsic<"HEXAGON_S2_vsplatrb">;
 
 def int_hexagon_S2_insert :
-Hexagon_i32_i32i32i32i32_Intrinsic<"HEXAGON_S2_insert", [IntrNoMem, ImmArg<2>, ImmArg<3>]>;
+Hexagon_i32_i32i32i32i32_Intrinsic<"HEXAGON_S2_insert", [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_S2_tableidxb_goodsyntax :
-Hexagon_i32_i32i32i32i32_Intrinsic<"HEXAGON_S2_tableidxb_goodsyntax", [IntrNoMem, ImmArg<2>, ImmArg<3>]>;
+Hexagon_i32_i32i32i32i32_Intrinsic<"HEXAGON_S2_tableidxb_goodsyntax", [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_S2_tableidxh_goodsyntax :
-Hexagon_i32_i32i32i32i32_Intrinsic<"HEXAGON_S2_tableidxh_goodsyntax", [IntrNoMem, ImmArg<2>, ImmArg<3>]>;
+Hexagon_i32_i32i32i32i32_Intrinsic<"HEXAGON_S2_tableidxh_goodsyntax", [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_S2_tableidxw_goodsyntax :
-Hexagon_i32_i32i32i32i32_Intrinsic<"HEXAGON_S2_tableidxw_goodsyntax", [IntrNoMem, ImmArg<2>, ImmArg<3>]>;
+Hexagon_i32_i32i32i32i32_Intrinsic<"HEXAGON_S2_tableidxw_goodsyntax", [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_S2_tableidxd_goodsyntax :
-Hexagon_i32_i32i32i32i32_Intrinsic<"HEXAGON_S2_tableidxd_goodsyntax", [IntrNoMem, ImmArg<2>, ImmArg<3>]>;
+Hexagon_i32_i32i32i32i32_Intrinsic<"HEXAGON_S2_tableidxd_goodsyntax", [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_A4_bitspliti :
-Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_bitspliti", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_bitspliti", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A4_bitsplit :
 Hexagon_i64_i32i32_Intrinsic<"HEXAGON_A4_bitsplit">;
 
 def int_hexagon_S4_extract :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_extract", [IntrNoMem, ImmArg<1>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S4_extract", [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_extractu :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_extractu", [IntrNoMem, ImmArg<1>, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S2_extractu", [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_insertp :
-Hexagon_i64_i64i64i32i32_Intrinsic<"HEXAGON_S2_insertp", [IntrNoMem, ImmArg<2>, ImmArg<3>]>;
+Hexagon_i64_i64i64i32i32_Intrinsic<"HEXAGON_S2_insertp", [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_S4_extractp :
-Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S4_extractp", [IntrNoMem, ImmArg<1>, ImmArg<2>]>;
+Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S4_extractp", [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_extractup :
-Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S2_extractup", [IntrNoMem, ImmArg<1>, ImmArg<2>]>;
+Hexagon_i64_i64i32i32_Intrinsic<"HEXAGON_S2_extractup", [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S2_insert_rp :
 Hexagon_i32_i32i32i64_Intrinsic<"HEXAGON_S2_insert_rp">;
@@ -3365,19 +3365,19 @@ def int_hexagon_S2_extractup_rp :
 Hexagon_i64_i64i64_Intrinsic<"HEXAGON_S2_extractup_rp">;
 
 def int_hexagon_S2_tstbit_i :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_tstbit_i", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_tstbit_i", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S4_ntstbit_i :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_ntstbit_i", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_ntstbit_i", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_setbit_i :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_setbit_i", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_setbit_i", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_togglebit_i :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_togglebit_i", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_togglebit_i", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_clrbit_i :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_clrbit_i", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_clrbit_i", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_tstbit_r :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_tstbit_r">;
@@ -3395,25 +3395,25 @@ def int_hexagon_S2_clrbit_r :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_clrbit_r">;
 
 def int_hexagon_S2_asr_i_vh :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_vh", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_vh", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_lsr_i_vh :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_vh", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_vh", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asl_i_vh :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_vh", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_vh", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asr_r_vh :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_r_vh">;
 
 def int_hexagon_S5_asrhub_rnd_sat_goodsyntax :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S5_asrhub_rnd_sat_goodsyntax", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S5_asrhub_rnd_sat_goodsyntax", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S5_asrhub_sat :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S5_asrhub_sat", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S5_asrhub_sat", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S5_vasrhrnd_goodsyntax :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S5_vasrhrnd_goodsyntax", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S5_vasrhrnd_goodsyntax", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asl_r_vh :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_r_vh">;
@@ -3425,19 +3425,19 @@ def int_hexagon_S2_lsl_r_vh :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsl_r_vh">;
 
 def int_hexagon_S2_asr_i_vw :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_vw", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_i_vw", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asr_i_svw_trun :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S2_asr_i_svw_trun", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S2_asr_i_svw_trun", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asr_r_svw_trun :
 Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S2_asr_r_svw_trun">;
 
 def int_hexagon_S2_lsr_i_vw :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_vw", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_lsr_i_vw", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asl_i_vw :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_vw", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asl_i_vw", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_asr_r_vw :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S2_asr_r_vw">;
@@ -3545,13 +3545,13 @@ def int_hexagon_S2_clbnorm :
 Hexagon_i32_i32_Intrinsic<"HEXAGON_S2_clbnorm">;
 
 def int_hexagon_S4_clbaddi :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_clbaddi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S4_clbaddi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S4_clbpnorm :
 Hexagon_i32_i64_Intrinsic<"HEXAGON_S4_clbpnorm">;
 
 def int_hexagon_S4_clbpaddi :
-Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S4_clbpaddi", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i64i32_Intrinsic<"HEXAGON_S4_clbpaddi", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S2_clb :
 Hexagon_i32_i32_Intrinsic<"HEXAGON_S2_clb">;
@@ -3619,40 +3619,40 @@ Hexagon__ptri64_Intrinsic<"HEXAGON_Y5_l2fetch", []>;
 // V60 Scalar Instructions.
 
 def int_hexagon_S6_rol_i_r :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S6_rol_i_r", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S6_rol_i_r", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S6_rol_i_p :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S6_rol_i_p", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_S6_rol_i_p", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_S6_rol_i_r_acc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_acc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_acc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S6_rol_i_p_acc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_acc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_acc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S6_rol_i_r_nac :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_nac", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_nac", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S6_rol_i_p_nac :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_nac", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_nac", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S6_rol_i_r_xacc :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_xacc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_xacc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S6_rol_i_p_xacc :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_xacc", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_xacc", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S6_rol_i_r_and :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_and", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_and", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S6_rol_i_r_or :
-Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_or", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_S6_rol_i_r_or", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S6_rol_i_p_and :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_and", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_and", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_S6_rol_i_p_or :
-Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_or", [IntrNoMem, ImmArg<2>]>;
+Hexagon_i64_i64i64i32_Intrinsic<"HEXAGON_S6_rol_i_p_or", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 // V62 Scalar Instructions.
 
@@ -3688,7 +3688,7 @@ def int_hexagon_F2_dfsub :
 Hexagon_double_doubledouble_Intrinsic<"HEXAGON_F2_dfsub", [IntrNoMem, Throws]>;
 
 def int_hexagon_S2_mask :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_mask", [IntrNoMem, ImmArg<0>, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_mask", [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
 // V67 Scalar Instructions.
 
@@ -3747,16 +3747,16 @@ def int_hexagon_M7_wcmpyiwc_rnd :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_M7_wcmpyiwc_rnd">;
 
 def int_hexagon_A7_croundd_ri :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_A7_croundd_ri", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_A7_croundd_ri", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A7_croundd_rr :
 Hexagon_i64_i64i32_Intrinsic<"HEXAGON_A7_croundd_rr">;
 
 def int_hexagon_A7_clip :
-Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A7_clip", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A7_clip", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_A7_vclip :
-Hexagon_i64_i64i32_Intrinsic<"HEXAGON_A7_vclip", [IntrNoMem, ImmArg<1>]>;
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_A7_vclip", [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_hexagon_F2_dfmax :
 Hexagon_double_doubledouble_Intrinsic<"HEXAGON_F2_dfmax", [IntrNoMem, Throws]>;
@@ -3815,16 +3815,16 @@ def int_hexagon_V6_vlalignb_128B :
 Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlalignb_128B">;
 
 def int_hexagon_V6_valignbi :
-Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_valignbi", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_valignbi", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_valignbi_128B :
-Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_valignbi_128B", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_valignbi_128B", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vlalignbi :
-Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlalignbi", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlalignbi", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vlalignbi_128B :
-Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlalignbi_128B", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlalignbi_128B", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vror :
 Hexagon_v16i32_v16i32i32_Intrinsic<"HEXAGON_V6_vror">;
@@ -4121,16 +4121,16 @@ def int_hexagon_V6_vrmpybv_acc_128B :
 Hexagon_v32i32_v32i32v32i32v32i32_Intrinsic<"HEXAGON_V6_vrmpybv_acc_128B">;
 
 def int_hexagon_V6_vrmpyubi :
-Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vrmpyubi_128B :
-Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_128B", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_128B", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vrmpyubi_acc :
-Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_acc", [IntrNoMem, ImmArg<3>]>;
+Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_acc", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_V6_vrmpyubi_acc_128B :
-Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_acc_128B", [IntrNoMem, ImmArg<3>]>;
+Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpyubi_acc_128B", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_V6_vrmpybus :
 Hexagon_v16i32_v16i32i32_Intrinsic<"HEXAGON_V6_vrmpybus">;
@@ -4145,16 +4145,16 @@ def int_hexagon_V6_vrmpybus_acc_128B :
 Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vrmpybus_acc_128B">;
 
 def int_hexagon_V6_vrmpybusi :
-Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vrmpybusi_128B :
-Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_128B", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_128B", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vrmpybusi_acc :
-Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_acc", [IntrNoMem, ImmArg<3>]>;
+Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_acc", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_V6_vrmpybusi_acc_128B :
-Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_acc_128B", [IntrNoMem, ImmArg<3>]>;
+Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrmpybusi_acc_128B", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_V6_vrmpybusv :
 Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vrmpybusv">;
@@ -4181,16 +4181,16 @@ def int_hexagon_V6_vdsaduh_acc_128B :
 Hexagon_v64i32_v64i32v64i32i32_Intrinsic<"HEXAGON_V6_vdsaduh_acc_128B">;
 
 def int_hexagon_V6_vrsadubi :
-Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v32i32_v32i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vrsadubi_128B :
-Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_128B", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v64i32_v64i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_128B", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vrsadubi_acc :
-Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_acc", [IntrNoMem, ImmArg<3>]>;
+Hexagon_v32i32_v32i32v32i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_acc", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_V6_vrsadubi_acc_128B :
-Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_acc_128B", [IntrNoMem, ImmArg<3>]>;
+Hexagon_v64i32_v64i32v64i32i32i32_Intrinsic<"HEXAGON_V6_vrsadubi_acc_128B", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_V6_vasrw :
 Hexagon_v16i32_v16i32i32_Intrinsic<"HEXAGON_V6_vasrw">;
@@ -5839,28 +5839,28 @@ def int_hexagon_V6_vaddclbh_128B :
 Hexagon_v32i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vaddclbh_128B">;
 
 def int_hexagon_V6_vlutvvbi :
-Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvvbi", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvvbi", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vlutvvbi_128B :
-Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvvbi_128B", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v32i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvvbi_128B", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vlutvvb_oracci :
-Hexagon_v16i32_v16i32v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvvb_oracci", [IntrNoMem, ImmArg<3>]>;
+Hexagon_v16i32_v16i32v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvvb_oracci", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_V6_vlutvvb_oracci_128B :
-Hexagon_v32i32_v32i32v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvvb_oracci_128B", [IntrNoMem, ImmArg<3>]>;
+Hexagon_v32i32_v32i32v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvvb_oracci_128B", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_V6_vlutvwhi :
-Hexagon_v32i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvwhi", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v32i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvwhi", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vlutvwhi_128B :
-Hexagon_v64i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvwhi_128B", [IntrNoMem, ImmArg<2>]>;
+Hexagon_v64i32_v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvwhi_128B", [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 def int_hexagon_V6_vlutvwh_oracci :
-Hexagon_v32i32_v32i32v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvwh_oracci", [IntrNoMem, ImmArg<3>]>;
+Hexagon_v32i32_v32i32v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvwh_oracci", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_V6_vlutvwh_oracci_128B :
-Hexagon_v64i32_v64i32v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvwh_oracci_128B", [IntrNoMem, ImmArg<3>]>;
+Hexagon_v64i32_v64i32v32i32v32i32i32_Intrinsic<"HEXAGON_V6_vlutvwh_oracci_128B", [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_hexagon_V6_vlutvvb_nm :
 Hexagon_v16i32_v16i32v16i32i32_Intrinsic<"HEXAGON_V6_vlutvvb_nm">;

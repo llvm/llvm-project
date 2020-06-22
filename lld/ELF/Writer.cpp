@@ -264,6 +264,8 @@ void elf::addReservedSymbols() {
     // glibc *crt1.o has a undefined reference to _SDA_BASE_. Since we don't
     // support Small Data Area, define it arbitrarily as 0.
     addOptionalRegular("_SDA_BASE_", nullptr, 0, STV_HIDDEN);
+  } else if (config->emachine == EM_PPC64) {
+    addPPC64SaveRestore();
   }
 
   // The Power Architecture 64-bit v2 ABI defines a TableOfContents (TOC) which
@@ -761,9 +763,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   for (InputFile *file : objectFiles) {
     ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
     for (Symbol *b : f->getLocalSymbols()) {
-      if (!b->isLocal())
-        fatal(toString(f) +
-              ": broken object: getLocalSymbols returns a non-local symbol");
+      assert(b->isLocal() && "should have been caught in initializeSymbols()");
       auto *dr = dyn_cast<Defined>(b);
 
       // No reason to keep local undefined symbol in symtab.
@@ -1978,7 +1978,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (sym->isUndefined() && !sym->isWeak())
         if (auto *f = dyn_cast_or_null<SharedFile>(sym->file))
           if (f->allNeededIsKnown)
-            error(toString(f) + ": undefined reference to " + toString(*sym));
+            errorOrWarn(toString(f) + ": undefined reference to " +
+                        toString(*sym) + " [--no-allow-shlib-undefined]");
   }
 
   // Now that we have defined all possible global symbols including linker-

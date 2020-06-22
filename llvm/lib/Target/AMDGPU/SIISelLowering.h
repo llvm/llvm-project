@@ -119,6 +119,7 @@ private:
   /// Custom lowering for ISD::FP_ROUND for MVT::f16.
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue getSegmentAperture(unsigned AS, const SDLoc &DL,
                              SelectionDAG &DAG) const;
@@ -202,6 +203,11 @@ public:
   /// \returns true if this should use a literal constant for an LDS address,
   /// and not emit a relocation for an LDS global.
   bool shouldUseLDSConstAddress(const GlobalValue *GV) const;
+
+  /// Check if EXTRACT_VECTOR_ELT/INSERT_VECTOR_ELT (<n x e>, var-idx) should be
+  /// expanded into a set of cmp/select instructions.
+  static bool shouldExpandVectorDynExt(unsigned EltSize, unsigned NumElem,
+                                       bool IsDivergentIdx);
 
 private:
   // Analyze a combined offset from an amdgcn_buffer_ intrinsic and store the
@@ -337,6 +343,9 @@ public:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
+  SDValue lowerDYNAMIC_STACKALLOCImpl(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
@@ -383,17 +392,25 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
   ConstraintType getConstraintType(StringRef Constraint) const override;
+  void LowerAsmOperandForConstraint(SDValue Op,
+                                    std::string &Constraint,
+                                    std::vector<SDValue> &Ops,
+                                    SelectionDAG &DAG) const override;
+  void LowerAsmOperandForConstraintA(SDValue Op,
+                                     std::vector<SDValue> &Ops,
+                                     SelectionDAG &DAG) const;
   SDValue copyToM0(SelectionDAG &DAG, SDValue Chain, const SDLoc &DL,
                    SDValue V) const;
 
   void finalizeLowering(MachineFunction &MF) const override;
 
-  void computeKnownBitsForFrameIndex(const SDValue Op,
+  void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
-                                     const APInt &DemandedElts,
-                                     const SelectionDAG &DAG,
-                                     unsigned Depth = 0) const override;
+                                     const MachineFunction &MF) const override;
 
+  Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis, Register R,
+                                        const MachineRegisterInfo &MRI,
+                                        unsigned Depth = 0) const override;
   bool isSDNodeSourceOfDivergence(const SDNode *N,
     FunctionLoweringInfo *FLI, LegacyDivergenceAnalysis *DA) const override;
 

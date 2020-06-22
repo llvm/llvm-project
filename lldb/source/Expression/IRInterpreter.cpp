@@ -173,24 +173,24 @@ public:
 
       return AssignToMatchType(scalar, value_apint.getLimitedValue(),
                                value->getType());
-    } else {
-      lldb::addr_t process_address = ResolveValue(value, module);
-      size_t value_size = m_target_data.getTypeStoreSize(value->getType());
+    }
 
-      lldb_private::DataExtractor value_extractor;
-      lldb_private::Status extract_error;
+    lldb::addr_t process_address = ResolveValue(value, module);
+    size_t value_size = m_target_data.getTypeStoreSize(value->getType());
 
-      m_execution_unit.GetMemoryData(value_extractor, process_address,
-                                     value_size, extract_error);
+    lldb_private::DataExtractor value_extractor;
+    lldb_private::Status extract_error;
 
-      if (!extract_error.Success())
-        return false;
+    m_execution_unit.GetMemoryData(value_extractor, process_address,
+                                   value_size, extract_error);
 
-      lldb::offset_t offset = 0;
-      if (value_size <= 8) {
-        uint64_t u64value = value_extractor.GetMaxU64(&offset, value_size);
-        return AssignToMatchType(scalar, u64value, value->getType());
-      }
+    if (!extract_error.Success())
+      return false;
+
+    lldb::offset_t offset = 0;
+    if (value_size <= 8) {
+      uint64_t u64value = value_extractor.GetMaxU64(&offset, value_size);
+      return AssignToMatchType(scalar, u64value, value->getType());
     }
 
     return false;
@@ -433,8 +433,6 @@ static const char *unsupported_opcode_error =
     "Interpreter doesn't handle one of the expression's opcodes";
 static const char *unsupported_operand_error =
     "Interpreter doesn't handle one of the expression's operands";
-// static const char *interpreter_initialization_error = "Interpreter couldn't
-// be initialized";
 static const char *interpreter_internal_error =
     "Interpreter encountered an internal error";
 static const char *bad_value_error =
@@ -444,8 +442,6 @@ static const char *memory_allocation_error =
 static const char *memory_write_error = "Interpreter couldn't write to memory";
 static const char *memory_read_error = "Interpreter couldn't read from memory";
 static const char *infinite_loop_error = "Interpreter ran for too many cycles";
-// static const char *bad_result_error                 = "Result of expression
-// is in bad memory";
 static const char *too_many_functions_error =
     "Interpreter doesn't handle modules with multiple function bodies.";
 

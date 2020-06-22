@@ -164,7 +164,8 @@ private:
 
   void CopyValueData(ValueObject *source);
 
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectSynthetic);
+  ValueObjectSynthetic(const ValueObjectSynthetic &) = delete;
+  const ValueObjectSynthetic &operator=(const ValueObjectSynthetic &) = delete;
 };
 
 } // namespace lldb_private

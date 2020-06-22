@@ -8,17 +8,17 @@
 void test_sqrt(float a0, double a1, long double a2) {
   // CHECK-YES: call float @sqrtf
   // CHECK-NO: call float @llvm.sqrt.f32(float
-  // CHECK-FAST: call float @llvm.sqrt.f32(float
+  // CHECK-FAST: call reassoc nsz arcp afn float @llvm.sqrt.f32(float
   float l0 = sqrtf(a0);
 
   // CHECK-YES: call double @sqrt
   // CHECK-NO: call double @llvm.sqrt.f64(double
-  // CHECK-FAST: call double @llvm.sqrt.f64(double
+  // CHECK-FAST: call reassoc nsz arcp afn double @llvm.sqrt.f64(double
   double l1 = sqrt(a1);
 
   // CHECK-YES: call x86_fp80 @sqrtl
   // CHECK-NO: call x86_fp80 @llvm.sqrt.f80(x86_fp80
-  // CHECK-FAST: call x86_fp80 @llvm.sqrt.f80(x86_fp80
+  // CHECK-FAST: call reassoc nsz arcp afn x86_fp80 @llvm.sqrt.f80(x86_fp80
   long double l2 = sqrtl(a2);
 }
 

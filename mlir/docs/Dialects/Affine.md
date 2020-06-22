@@ -63,7 +63,7 @@ The affine dialect imposes certain restrictions on dimension and symbolic
 identifiers to enable powerful analysis and transformation. An SSA value's use
 can be bound to a symbolic identifier if that SSA value is either
 1. a region argument for an op with trait `AffineScope` (eg. `FuncOp`),
-2. a value defined at the top level of a `AffineScope` op (i.e., immediately
+2. a value defined at the top level of an `AffineScope` op (i.e., immediately
 enclosed by the latter),
 3. a value that dominates the `AffineScope` op enclosing the value's use,
 4. the result of a [`constant` operation](Standard.md#constant-operation),
@@ -74,6 +74,8 @@ symbolic identifiers, or
 memref that is an argument to a `AffineScope` op or a memref where the
 corresponding dimension is either static or a dynamic one in turn bound to a
 valid symbol.
+*Note:* if the use of an SSA value is not contained in any op with the
+`AffineScope` trait, only the rules 4-6 can be applied.
 
 Note that as a result of rule (3) above, symbol validity is sensitive to the
 location of the SSA use.  Dimensions may be bound not only to anything that a

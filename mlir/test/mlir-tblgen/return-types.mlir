@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-return-type -split-input-file -verify-diagnostics | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -test-return-type -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: testCreateFunctions
 // This function tests invoking the create method with different inference

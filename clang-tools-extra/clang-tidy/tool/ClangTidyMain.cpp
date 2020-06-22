@@ -23,6 +23,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/WithColor.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::driver;
@@ -229,6 +230,15 @@ over the real file system.
                                        cl::value_desc("filename"),
                                        cl::cat(ClangTidyCategory));
 
+static cl::opt<bool> UseColor("use-color", cl::desc(R"(
+Use colors in diagnostics. If not set, colors
+will be used if the terminal connected to
+standard output supports colors.
+This option overrides the 'UseColor' option in
+.clang-tidy file, if any.
+)"),
+                              cl::init(false), cl::cat(ClangTidyCategory));
+
 namespace clang {
 namespace tidy {
 
@@ -291,6 +301,8 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
     OverrideOptions.SystemHeaders = SystemHeaders;
   if (FormatStyle.getNumOccurrences() > 0)
     OverrideOptions.FormatStyle = FormatStyle;
+  if (UseColor.getNumOccurrences() > 0)
+    OverrideOptions.UseColor = UseColor;
 
   if (!Config.empty()) {
     if (llvm::ErrorOr<ClangTidyOptions> ParsedConfig =
@@ -298,7 +310,7 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
       return std::make_unique<ConfigOptionsProvider>(
           GlobalOptions,
           ClangTidyOptions::getDefaults().mergeWith(DefaultOptions, 0),
-          *ParsedConfig, OverrideOptions);
+          *ParsedConfig, OverrideOptions, std::move(FS));
     } else {
       llvm::errs() << "Error: invalid configuration specified.\n"
                    << ParsedConfig.getError().message() << "\n";
@@ -333,8 +345,14 @@ getVfsFromFile(const std::string &OverlayFile,
 
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
-  CommonOptionsParser OptionsParser(argc, argv, ClangTidyCategory,
-                                    cl::ZeroOrMore);
+  llvm::Expected<CommonOptionsParser> OptionsParser =
+      CommonOptionsParser::create(argc, argv, ClangTidyCategory,
+                                  cl::ZeroOrMore);
+  if (!OptionsParser) {
+    llvm::WithColor::error() << llvm::toString(OptionsParser.takeError());
+    return 1;
+  }
+
   llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS(
       new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
 
@@ -365,7 +383,7 @@ int clangTidyMain(int argc, const char **argv) {
   SmallString<256> ProfilePrefix = MakeAbsolute(StoreCheckProfile);
 
   StringRef FileName("dummy");
-  auto PathList = OptionsParser.getSourcePathList();
+  auto PathList = OptionsParser->getSourcePathList();
   if (!PathList.empty()) {
     FileName = PathList.front();
   }
@@ -433,7 +451,7 @@ int clangTidyMain(int argc, const char **argv) {
   ClangTidyContext Context(std::move(OwningOptionsProvider),
                            AllowEnablingAnalyzerAlphaCheckers);
   std::vector<ClangTidyError> Errors =
-      runClangTidy(Context, OptionsParser.getCompilations(), PathList, BaseFS,
+      runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                    EnableCheckProfile, ProfilePrefix);
   bool FoundErrors = llvm::find_if(Errors, [](const ClangTidyError &E) {
                        return E.DiagLevel == ClangTidyError::Error;
@@ -471,7 +489,7 @@ int clangTidyMain(int argc, const char **argv) {
       llvm::errs() << WErrorCount << " warning" << Plural << " treated as error"
                    << Plural << "\n";
     }
-    return WErrorCount;
+    return 1;
   }
 
   if (FoundErrors) {

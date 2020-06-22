@@ -185,7 +185,8 @@ private:
                         ExecutionContext &exe_ctx,
                         std::vector<std::string> modules_to_import,
                         bool for_completion);
-  void UpdateLanguageForExpr();
+  /// Defines how the current expression should be wrapped.
+  ClangExpressionSourceCode::WrapKind GetWrapKind() const;
   bool SetupPersistentState(DiagnosticManager &diagnostic_manager,
                                    ExecutionContext &exe_ctx);
   bool PrepareForParsing(DiagnosticManager &diagnostic_manager,
@@ -208,8 +209,6 @@ private:
     lldb::TargetSP m_target_sp;
   };
 
-  /// The language type of the current expression.
-  lldb::LanguageType m_expr_lang = lldb::eLanguageTypeUnknown;
   /// The include directories that should be used when parsing the expression.
   std::vector<std::string> m_include_directories;
 

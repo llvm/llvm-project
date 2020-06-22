@@ -929,9 +929,8 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK: [[MV:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s96) = G_TRUNC [[MV]](s192)
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](s96)
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
     ; CHECK: S_ENDPGM 0, implicit [[UV]](s32), implicit [[UV1]](s32), implicit [[UV2]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
@@ -952,20 +951,19 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK: [[MV:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s96) = G_TRUNC [[MV]](s192)
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](s96)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[UV1]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[UV1]](s32)
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C]](s32)
-    ; CHECK: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; CHECK: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[UV2]](s32)
+    ; CHECK: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[UV2]](s32)
     ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[UV2]], [[C]](s32)
-    ; CHECK: [[TRUNC6:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
-    ; CHECK: S_ENDPGM 0, implicit [[TRUNC1]](s16), implicit [[TRUNC2]](s16), implicit [[TRUNC3]](s16), implicit [[TRUNC4]](s16), implicit [[TRUNC5]](s16), implicit [[TRUNC6]](s16)
+    ; CHECK: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[TRUNC]](s16), implicit [[TRUNC1]](s16), implicit [[TRUNC2]](s16), implicit [[TRUNC3]](s16), implicit [[TRUNC4]](s16), implicit [[TRUNC5]](s16)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(s64) = COPY $vgpr4_vgpr5

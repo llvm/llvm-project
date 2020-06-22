@@ -16,8 +16,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -76,12 +76,12 @@ ProgramStateManager::ProgramStateManager(ASTContext &Ctx,
                                          StoreManagerCreator CreateSMgr,
                                          ConstraintManagerCreator CreateCMgr,
                                          llvm::BumpPtrAllocator &alloc,
-                                         SubEngine *SubEng)
-  : Eng(SubEng), EnvMgr(alloc), GDMFactory(alloc),
+                                         ExprEngine *ExprEng)
+  : Eng(ExprEng), EnvMgr(alloc), GDMFactory(alloc),
     svalBuilder(createSimpleSValBuilder(alloc, Ctx, *this)),
     CallEventMgr(new CallEventManager(alloc)), Alloc(alloc) {
   StoreMgr = (*CreateSMgr)(*this);
-  ConstraintMgr = (*CreateCMgr)(*this, SubEng);
+  ConstraintMgr = (*CreateCMgr)(*this, ExprEng);
 }
 
 
@@ -189,7 +189,7 @@ ProgramState::invalidateRegionsImpl(ValueList Values,
                                     RegionAndSymbolInvalidationTraits *ITraits,
                                     const CallEvent *Call) const {
   ProgramStateManager &Mgr = getStateManager();
-  SubEngine &Eng = Mgr.getOwningEngine();
+  ExprEngine &Eng = Mgr.getOwningEngine();
 
   InvalidatedSymbols InvalidatedSyms;
   if (!IS)

@@ -155,7 +155,7 @@ int main (int argc, char **argv) {
 // ALL-DEBUG:  ret i32 0
 // ALL-DEBUG-NEXT:  }
 
-// CHECK:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** dereferenceable({{4|8}}) %argc, i{{64|32}}{{.*}} %{{.+}})
+// CHECK:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** nonnull align {{[0-9]+}} dereferenceable({{4|8}}) %argc, i{{64|32}}{{.*}} %{{.+}})
 // IRBUILDER:   define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %{{.*}}, i32* noalias %{{.*}}, i8*** [[ARGC_REF:%.*]], i{{64|32}}{{.*}} %{{.+}})
 // CHECK:       store i8*** %argc, i8**** [[ARGC_PTR_ADDR:%.+]],
 // CHECK:       [[ARGC_REF:%.+]] = load i8***, i8**** [[ARGC_PTR_ADDR]]
@@ -166,7 +166,7 @@ int main (int argc, char **argv) {
 // CHECK:       call {{.*}}void @{{.+terminate.*|abort}}(
 // CHECK-NEXT:  unreachable
 // CHECK-NEXT:  }
-// CHECK-DEBUG:       define internal void [[OMP_OUTLINED_DEBUG:@.+]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** dereferenceable({{4|8}}) %argc, i64 %{{.+}})
+// CHECK-DEBUG:       define internal void [[OMP_OUTLINED_DEBUG:@.+]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** nonnull align {{[0-9]+}} dereferenceable({{4|8}}) %argc, i64 %{{.+}})
 // IRBUILDER-DEBUG:   define internal void [[OMP_OUTLINED_DEBUG:@.+]](i32* noalias %{{.*}}, i32* noalias %{{.*}}, i8*** [[ARGC_REF:%.*]], i64 %{{.+}})
 // CHECK-DEBUG:       store i8*** %argc, i8**** [[ARGC_PTR_ADDR:%.+]],
 // CHECK-DEBUG:       [[ARGC_REF:%.+]] = load i8***, i8**** [[ARGC_PTR_ADDR]]
@@ -180,7 +180,7 @@ int main (int argc, char **argv) {
 
 // ALL: define linkonce_odr {{.*}}void [[FOO1]](i8** %argc)
 // CHECK-DEBUG-DAG: define linkonce_odr void [[FOO1]](i8** %argc)
-// CHECK-DEBUG-DAG: define internal void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** dereferenceable({{4|8}}) %argc, i64 %{{.+}})
+// CHECK-DEBUG-DAG: define internal void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** nonnull align {{[0-9]+}} dereferenceable({{4|8}}) %argc, i64 %{{.+}})
 // CHECK-DEBUG-DAG: call void [[OMP_OUTLINED_DEBUG]]({{[^)]+}}){{[^,]*}}, !dbg
 
 // ALL: attributes #[[FN_ATTRS]] = {{.+}} nounwind

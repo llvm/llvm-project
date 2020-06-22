@@ -270,3 +270,15 @@ define void @v2f64st(<2 x double>* %p, double %s) nounwind {
 ; CHECK: mov  v[[R]].d[1], v{{[0-9]+}}.d[0]
 ; CHECK: str  q[[R]], [x{{[0-9]+}}]
 }
+
+; In this test the illegal type has a preferred alignment greater than the
+; stack alignment, that gets reduced to the alignment of a broken down
+; legal type.
+define <32 x i8> @test_lanex_32xi8(<32 x i8> %a, i32 %x) {
+; CHECK-LABEL: test_lanex_32xi8
+; CHECK:       stp q0, q1, [sp, #-32]!
+; CHECK:       ldp q0, q1, [sp], #32
+  %b = insertelement <32 x i8> %a, i8 30, i32 %x
+  ret <32 x i8> %b
+}
+

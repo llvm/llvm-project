@@ -128,7 +128,9 @@ llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
 
   // Parse an integer at the end of the macro definition.
   const Token &T = FilteredTokens.back();
-  if (!T.isLiteral())
+  // FIXME: EOF macro token coming from a PCH file on macOS while marked as
+  //        literal, doesn't contain any literal data
+  if (!T.isLiteral() || !T.getLiteralData())
     return llvm::None;
   StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
   llvm::APInt IntValue;

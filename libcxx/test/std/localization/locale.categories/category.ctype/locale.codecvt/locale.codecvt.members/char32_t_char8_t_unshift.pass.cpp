@@ -13,7 +13,7 @@
 // result unshift(stateT& state,
 //                externT* to, externT* to_end, externT*& to_next) const;
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // C++20 codecvt specializations for char8_t are not yet implemented:
 // UNSUPPORTED: libc++

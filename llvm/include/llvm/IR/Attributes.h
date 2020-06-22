@@ -397,6 +397,9 @@ public:
   static AttributeList get(LLVMContext &C, unsigned Index,
                            ArrayRef<Attribute::AttrKind> Kinds);
   static AttributeList get(LLVMContext &C, unsigned Index,
+                           ArrayRef<Attribute::AttrKind> Kinds,
+                           ArrayRef<uint64_t> Values);
+  static AttributeList get(LLVMContext &C, unsigned Index,
                            ArrayRef<StringRef> Kind);
   static AttributeList get(LLVMContext &C, unsigned Index,
                            const AttrBuilder &B);
@@ -622,6 +625,9 @@ public:
 
   /// Return the byval type for the specified function parameter.
   Type *getParamByValType(unsigned ArgNo) const;
+
+  /// Return the preallocated type for the specified function parameter.
+  Type *getParamPreallocatedType(unsigned ArgNo) const;
 
   /// Get the stack alignment.
   MaybeAlign getStackAlignment(unsigned Index) const;

@@ -23,11 +23,11 @@ class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
              !listconcat(traits,
                          [NoSideEffect, SameOperandsAndResultShape])> {
   let arguments = (ins
-    SPV_ScalarOrVectorOf<operandType>:$operand
+    SPV_ScalarOrVectorOrCoopMatrixOf<operandType>:$operand
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOf<resultType>:$result
+    SPV_ScalarOrVectorOrCoopMatrixOf<resultType>:$result
   );
 
   let parser = [{ return mlir::impl::parseCastOp(parser, result); }];

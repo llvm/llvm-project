@@ -44,8 +44,8 @@ body:             |
     ; SSE: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
     ; SSE: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
     ; SSE: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; SSE: [[SUBSSrr:%[0-9]+]]:fr32 = SUBSSrr [[COPY1]], [[COPY3]]
-    ; SSE: [[COPY4:%[0-9]+]]:vr128 = COPY [[SUBSSrr]]
+    ; SSE: %4:fr32 = nofpexcept SUBSSrr [[COPY1]], [[COPY3]], implicit $mxcsr
+    ; SSE: [[COPY4:%[0-9]+]]:vr128 = COPY %4
     ; SSE: $xmm0 = COPY [[COPY4]]
     ; SSE: RET 0, implicit $xmm0
     ; AVX-LABEL: name: test_fsub_float
@@ -53,8 +53,8 @@ body:             |
     ; AVX: [[COPY1:%[0-9]+]]:fr32 = COPY [[COPY]]
     ; AVX: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
     ; AVX: [[COPY3:%[0-9]+]]:fr32 = COPY [[COPY2]]
-    ; AVX: [[VSUBSSrr:%[0-9]+]]:fr32 = VSUBSSrr [[COPY1]], [[COPY3]]
-    ; AVX: [[COPY4:%[0-9]+]]:vr128 = COPY [[VSUBSSrr]]
+    ; AVX: %4:fr32 = nofpexcept VSUBSSrr [[COPY1]], [[COPY3]], implicit $mxcsr
+    ; AVX: [[COPY4:%[0-9]+]]:vr128 = COPY %4
     ; AVX: $xmm0 = COPY [[COPY4]]
     ; AVX: RET 0, implicit $xmm0
     ; AVX512F-LABEL: name: test_fsub_float
@@ -62,8 +62,8 @@ body:             |
     ; AVX512F: [[COPY1:%[0-9]+]]:fr32x = COPY [[COPY]]
     ; AVX512F: [[COPY2:%[0-9]+]]:vr128x = COPY $xmm1
     ; AVX512F: [[COPY3:%[0-9]+]]:fr32x = COPY [[COPY2]]
-    ; AVX512F: [[VSUBSSZrr:%[0-9]+]]:fr32x = VSUBSSZrr [[COPY1]], [[COPY3]]
-    ; AVX512F: [[COPY4:%[0-9]+]]:vr128x = COPY [[VSUBSSZrr]]
+    ; AVX512F: %4:fr32x = nofpexcept VSUBSSZrr [[COPY1]], [[COPY3]], implicit $mxcsr
+    ; AVX512F: [[COPY4:%[0-9]+]]:vr128x = COPY %4
     ; AVX512F: $xmm0 = COPY [[COPY4]]
     ; AVX512F: RET 0, implicit $xmm0
     ; AVX512VL-LABEL: name: test_fsub_float
@@ -71,8 +71,8 @@ body:             |
     ; AVX512VL: [[COPY1:%[0-9]+]]:fr32x = COPY [[COPY]]
     ; AVX512VL: [[COPY2:%[0-9]+]]:vr128x = COPY $xmm1
     ; AVX512VL: [[COPY3:%[0-9]+]]:fr32x = COPY [[COPY2]]
-    ; AVX512VL: [[VSUBSSZrr:%[0-9]+]]:fr32x = VSUBSSZrr [[COPY1]], [[COPY3]]
-    ; AVX512VL: [[COPY4:%[0-9]+]]:vr128x = COPY [[VSUBSSZrr]]
+    ; AVX512VL: %4:fr32x = nofpexcept VSUBSSZrr [[COPY1]], [[COPY3]], implicit $mxcsr
+    ; AVX512VL: [[COPY4:%[0-9]+]]:vr128x = COPY %4
     ; AVX512VL: $xmm0 = COPY [[COPY4]]
     ; AVX512VL: RET 0, implicit $xmm0
     %2:vecr(s128) = COPY $xmm0
@@ -113,8 +113,8 @@ body:             |
     ; SSE: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
     ; SSE: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
     ; SSE: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; SSE: [[SUBSDrr:%[0-9]+]]:fr64 = SUBSDrr [[COPY1]], [[COPY3]]
-    ; SSE: [[COPY4:%[0-9]+]]:vr128 = COPY [[SUBSDrr]]
+    ; SSE: %4:fr64 = nofpexcept SUBSDrr [[COPY1]], [[COPY3]], implicit $mxcsr
+    ; SSE: [[COPY4:%[0-9]+]]:vr128 = COPY %4
     ; SSE: $xmm0 = COPY [[COPY4]]
     ; SSE: RET 0, implicit $xmm0
     ; AVX-LABEL: name: test_fsub_double
@@ -122,8 +122,8 @@ body:             |
     ; AVX: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
     ; AVX: [[COPY2:%[0-9]+]]:vr128 = COPY $xmm1
     ; AVX: [[COPY3:%[0-9]+]]:fr64 = COPY [[COPY2]]
-    ; AVX: [[VSUBSDrr:%[0-9]+]]:fr64 = VSUBSDrr [[COPY1]], [[COPY3]]
-    ; AVX: [[COPY4:%[0-9]+]]:vr128 = COPY [[VSUBSDrr]]
+    ; AVX: %4:fr64 = nofpexcept VSUBSDrr [[COPY1]], [[COPY3]], implicit $mxcsr
+    ; AVX: [[COPY4:%[0-9]+]]:vr128 = COPY %4
     ; AVX: $xmm0 = COPY [[COPY4]]
     ; AVX: RET 0, implicit $xmm0
     ; AVX512F-LABEL: name: test_fsub_double
@@ -131,8 +131,8 @@ body:             |
     ; AVX512F: [[COPY1:%[0-9]+]]:fr64x = COPY [[COPY]]
     ; AVX512F: [[COPY2:%[0-9]+]]:vr128x = COPY $xmm1
     ; AVX512F: [[COPY3:%[0-9]+]]:fr64x = COPY [[COPY2]]
-    ; AVX512F: [[VSUBSDZrr:%[0-9]+]]:fr64x = VSUBSDZrr [[COPY1]], [[COPY3]]
-    ; AVX512F: [[COPY4:%[0-9]+]]:vr128x = COPY [[VSUBSDZrr]]
+    ; AVX512F: %4:fr64x = nofpexcept VSUBSDZrr [[COPY1]], [[COPY3]], implicit $mxcsr
+    ; AVX512F: [[COPY4:%[0-9]+]]:vr128x = COPY %4
     ; AVX512F: $xmm0 = COPY [[COPY4]]
     ; AVX512F: RET 0, implicit $xmm0
     ; AVX512VL-LABEL: name: test_fsub_double
@@ -140,8 +140,8 @@ body:             |
     ; AVX512VL: [[COPY1:%[0-9]+]]:fr64x = COPY [[COPY]]
     ; AVX512VL: [[COPY2:%[0-9]+]]:vr128x = COPY $xmm1
     ; AVX512VL: [[COPY3:%[0-9]+]]:fr64x = COPY [[COPY2]]
-    ; AVX512VL: [[VSUBSDZrr:%[0-9]+]]:fr64x = VSUBSDZrr [[COPY1]], [[COPY3]]
-    ; AVX512VL: [[COPY4:%[0-9]+]]:vr128x = COPY [[VSUBSDZrr]]
+    ; AVX512VL: %4:fr64x = nofpexcept VSUBSDZrr [[COPY1]], [[COPY3]], implicit $mxcsr
+    ; AVX512VL: [[COPY4:%[0-9]+]]:vr128x = COPY %4
     ; AVX512VL: $xmm0 = COPY [[COPY4]]
     ; AVX512VL: RET 0, implicit $xmm0
     %2:vecr(s128) = COPY $xmm0

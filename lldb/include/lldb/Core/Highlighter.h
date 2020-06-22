@@ -91,7 +91,8 @@ class Highlighter {
 public:
   Highlighter() = default;
   virtual ~Highlighter() = default;
-  DISALLOW_COPY_AND_ASSIGN(Highlighter);
+  Highlighter(const Highlighter &) = delete;
+  const Highlighter &operator=(const Highlighter &) = delete;
 
   /// Returns a human readable name for the selected highlighter.
   virtual llvm::StringRef GetName() const = 0;

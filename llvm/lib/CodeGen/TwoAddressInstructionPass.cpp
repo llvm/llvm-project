@@ -1687,6 +1687,10 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
   // This pass takes the function out of SSA form.
   MRI->leaveSSA();
 
+  // This pass will rewrite the tied-def to meet the RegConstraint.
+  MF->getProperties()
+      .set(MachineFunctionProperties::Property::TiedOpsRewritten);
+
   TiedOperandMap TiedOperands;
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {

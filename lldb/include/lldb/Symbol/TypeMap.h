@@ -67,7 +67,8 @@ private:
 
   collection m_types;
 
-  DISALLOW_COPY_AND_ASSIGN(TypeMap);
+  TypeMap(const TypeMap &) = delete;
+  const TypeMap &operator=(const TypeMap &) = delete;
 };
 
 } // namespace lldb_private

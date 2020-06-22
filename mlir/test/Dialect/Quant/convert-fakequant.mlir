@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -quant-convert-simulated-quantization | FileCheck %s --dump-input=fail
+// RUN: mlir-opt %s -split-input-file -quant-convert-simulated-quantization | FileCheck %s
 
 // -----
 // Verifies a quint8 single point.

@@ -3,6 +3,10 @@
 // RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.1 -emit-pch -o %t.2 %s
 // RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.2 -verify %s
 
+// RUN: %clang_cc1 -pedantic -std=c++1y -emit-pch -fpch-instantiate-templates -o %t.1 %s
+// RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.1 -emit-pch -fpch-instantiate-templates -o %t.2 %s
+// RUN: %clang_cc1 -pedantic -std=c++1y -include-pch %t.2 -verify %s
+
 #ifndef HEADER_1
 #define HEADER_1
 

@@ -222,7 +222,8 @@ private:
 
   // Subclass identifier (for llvm isa/dyn_cast)
   const unsigned char SubclassID;
-  DISALLOW_COPY_AND_ASSIGN(BreakpointResolver);
+  BreakpointResolver(const BreakpointResolver &) = delete;
+  const BreakpointResolver &operator=(const BreakpointResolver &) = delete;
 };
 
 } // namespace lldb_private

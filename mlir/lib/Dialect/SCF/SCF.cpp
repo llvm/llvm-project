@@ -35,23 +35,40 @@ SCFDialect::SCFDialect(MLIRContext *context)
       >();
 }
 
+/// Default callback for IfOp builders. Inserts a yield without arguments.
+void mlir::scf::buildTerminatedBody(OpBuilder &builder, Location loc) {
+  builder.create<scf::YieldOp>(loc);
+}
+
 //===----------------------------------------------------------------------===//
 // ForOp
 //===----------------------------------------------------------------------===//
 
 void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
-                  Value ub, Value step, ValueRange iterArgs) {
+                  Value ub, Value step, ValueRange iterArgs,
+                  BodyBuilderFn bodyBuilder) {
   result.addOperands({lb, ub, step});
   result.addOperands(iterArgs);
   for (Value v : iterArgs)
     result.addTypes(v.getType());
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block());
-  if (iterArgs.empty())
-    ForOp::ensureTerminator(*bodyRegion, builder, result.location);
-  bodyRegion->front().addArgument(builder.getIndexType());
+  bodyRegion->push_back(new Block);
+  Block &bodyBlock = bodyRegion->front();
+  bodyBlock.addArgument(builder.getIndexType());
   for (Value v : iterArgs)
-    bodyRegion->front().addArgument(v.getType());
+    bodyBlock.addArgument(v.getType());
+
+  // Create the default terminator if the builder is not provided and if the
+  // iteration arguments are not provided. Otherwise, leave this to the caller
+  // because we don't know which values to return from the loop.
+  if (iterArgs.empty() && !bodyBuilder) {
+    ForOp::ensureTerminator(*bodyRegion, builder, result.location);
+  } else if (bodyBuilder) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&bodyBlock);
+    bodyBuilder(builder, result.location, bodyBlock.getArgument(0),
+                bodyBlock.getArguments().drop_front());
+  }
 }
 
 static LogicalResult verify(ForOp op) {
@@ -229,6 +246,92 @@ void ForOp::getSuccessorRegions(Optional<unsigned> index,
   regions.push_back(RegionSuccessor(getResults()));
 }
 
+ValueVector mlir::scf::buildLoopNest(
+    OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
+    ValueRange steps, ValueRange iterArgs,
+    function_ref<ValueVector(OpBuilder &, Location, ValueRange, ValueRange)>
+        bodyBuilder) {
+  assert(lbs.size() == ubs.size() &&
+         "expected the same number of lower and upper bounds");
+  assert(lbs.size() == steps.size() &&
+         "expected the same number of lower bounds and steps");
+
+  // If there are no bounds, call the body-building function and return early.
+  if (lbs.empty()) {
+    ValueVector results =
+        bodyBuilder ? bodyBuilder(builder, loc, ValueRange(), iterArgs)
+                    : ValueVector();
+    assert(results.size() == iterArgs.size() &&
+           "loop nest body must return as many values as loop has iteration "
+           "arguments");
+    return results;
+  }
+
+  // First, create the loop structure iteratively using the body-builder
+  // callback of `ForOp::build`. Do not create `YieldOp`s yet.
+  OpBuilder::InsertionGuard guard(builder);
+  SmallVector<scf::ForOp, 4> loops;
+  SmallVector<Value, 4> ivs;
+  loops.reserve(lbs.size());
+  ivs.reserve(lbs.size());
+  ValueRange currentIterArgs = iterArgs;
+  Location currentLoc = loc;
+  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
+    auto loop = builder.create<scf::ForOp>(
+        currentLoc, lbs[i], ubs[i], steps[i], currentIterArgs,
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, Value iv,
+            ValueRange args) {
+          ivs.push_back(iv);
+          // It is safe to store ValueRange args because it points to block
+          // arguments of a loop operation that we also own.
+          currentIterArgs = args;
+          currentLoc = nestedLoc;
+        });
+    // Set the builder to point to the body of the newly created loop. We don't
+    // do this in the callback because the builder is reset when the callback
+    // returns.
+    builder.setInsertionPointToStart(loop.getBody());
+    loops.push_back(loop);
+  }
+
+  // For all loops but the innermost, yield the results of the nested loop.
+  for (unsigned i = 0, e = loops.size() - 1; i < e; ++i) {
+    builder.setInsertionPointToEnd(loops[i].getBody());
+    builder.create<scf::YieldOp>(loc, loops[i + 1].getResults());
+  }
+
+  // In the body of the innermost loop, call the body building function if any
+  // and yield its results.
+  builder.setInsertionPointToStart(loops.back().getBody());
+  ValueVector results = bodyBuilder
+                            ? bodyBuilder(builder, currentLoc, ivs,
+                                          loops.back().getRegionIterArgs())
+                            : ValueVector();
+  assert(results.size() == iterArgs.size() &&
+         "loop nest body must return as many values as loop has iteration "
+         "arguments");
+  builder.setInsertionPointToEnd(loops.back().getBody());
+  builder.create<scf::YieldOp>(loc, results);
+
+  // Return the results of the outermost loop.
+  return ValueVector(loops.front().result_begin(), loops.front().result_end());
+}
+
+ValueVector mlir::scf::buildLoopNest(
+    OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
+    ValueRange steps,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+  // Delegate to the main function by wrapping the body builder.
+  return buildLoopNest(builder, loc, lbs, ubs, steps, llvm::None,
+                       [&bodyBuilder](OpBuilder &nestedBuilder,
+                                      Location nestedLoc, ValueRange ivs,
+                                      ValueRange) -> ValueVector {
+                         if (bodyBuilder)
+                           bodyBuilder(nestedBuilder, nestedLoc, ivs);
+                         return {};
+                       });
+}
+
 //===----------------------------------------------------------------------===//
 // IfOp
 //===----------------------------------------------------------------------===//
@@ -240,20 +343,43 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
 
 void IfOp::build(OpBuilder &builder, OperationState &result,
                  TypeRange resultTypes, Value cond, bool withElseRegion) {
+  auto addTerminator = [&](OpBuilder &nested, Location loc) {
+    if (resultTypes.empty())
+      IfOp::ensureTerminator(*nested.getInsertionBlock()->getParent(), nested,
+                             loc);
+  };
+
+  build(builder, result, resultTypes, cond, addTerminator,
+        withElseRegion ? addTerminator
+                       : function_ref<void(OpBuilder &, Location)>());
+}
+
+void IfOp::build(OpBuilder &builder, OperationState &result,
+                 TypeRange resultTypes, Value cond,
+                 function_ref<void(OpBuilder &, Location)> thenBuilder,
+                 function_ref<void(OpBuilder &, Location)> elseBuilder) {
+  assert(thenBuilder && "the builder callback for 'then' must be present");
+
   result.addOperands(cond);
   result.addTypes(resultTypes);
 
+  OpBuilder::InsertionGuard guard(builder);
   Region *thenRegion = result.addRegion();
-  thenRegion->push_back(new Block());
-  if (resultTypes.empty())
-    IfOp::ensureTerminator(*thenRegion, builder, result.location);
+  builder.createBlock(thenRegion);
+  thenBuilder(builder, result.location);
 
   Region *elseRegion = result.addRegion();
-  if (withElseRegion) {
-    elseRegion->push_back(new Block());
-    if (resultTypes.empty())
-      IfOp::ensureTerminator(*elseRegion, builder, result.location);
-  }
+  if (!elseBuilder)
+    return;
+
+  builder.createBlock(elseRegion);
+  elseBuilder(builder, result.location);
+}
+
+void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
+                 function_ref<void(OpBuilder &, Location)> thenBuilder,
+                 function_ref<void(OpBuilder &, Location)> elseBuilder) {
+  build(builder, result, TypeRange(), cond, thenBuilder, elseBuilder);
 }
 
 static LogicalResult verify(IfOp op) {
@@ -354,8 +480,6 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
   bool condition;
   if (auto condAttr = operands.front().dyn_cast_or_null<IntegerAttr>()) {
     condition = condAttr.getValue().isOneValue();
-  } else if (auto condAttr = operands.front().dyn_cast_or_null<BoolAttr>()) {
-    condition = condAttr.getValue();
   } else {
     // If the condition isn't constant, both regions may be executed.
     regions.push_back(RegionSuccessor(&thenRegion()));
@@ -371,25 +495,56 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
-void ParallelOp::build(OpBuilder &builder, OperationState &result,
-                       ValueRange lbs, ValueRange ubs, ValueRange steps,
-                       ValueRange initVals) {
-  result.addOperands(lbs);
-  result.addOperands(ubs);
+void ParallelOp::build(
+    OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
+    ValueRange upperBounds, ValueRange steps, ValueRange initVals,
+    function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
+        bodyBuilderFn) {
+  result.addOperands(lowerBounds);
+  result.addOperands(upperBounds);
   result.addOperands(steps);
   result.addOperands(initVals);
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(lbs.size()),
-                                static_cast<int32_t>(ubs.size()),
+      builder.getI32VectorAttr({static_cast<int32_t>(lowerBounds.size()),
+                                static_cast<int32_t>(upperBounds.size()),
                                 static_cast<int32_t>(steps.size()),
                                 static_cast<int32_t>(initVals.size())}));
+  result.addTypes(initVals.getTypes());
+
+  OpBuilder::InsertionGuard guard(builder);
+  unsigned numIVs = steps.size();
+  SmallVector<Type, 8> argTypes(numIVs, builder.getIndexType());
   Region *bodyRegion = result.addRegion();
+  Block *bodyBlock = builder.createBlock(bodyRegion, {}, argTypes);
+
+  if (bodyBuilderFn) {
+    builder.setInsertionPointToStart(bodyBlock);
+    bodyBuilderFn(builder, result.location,
+                  bodyBlock->getArguments().take_front(numIVs),
+                  bodyBlock->getArguments().drop_front(numIVs));
+  }
   ParallelOp::ensureTerminator(*bodyRegion, builder, result.location);
-  for (size_t i = 0, e = steps.size(); i < e; ++i)
-    bodyRegion->front().addArgument(builder.getIndexType());
-  for (Value init : initVals)
-    result.addTypes(init.getType());
+}
+
+void ParallelOp::build(
+    OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
+    ValueRange upperBounds, ValueRange steps,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
+  // Only pass a non-null wrapper if bodyBuilderFn is non-null itself. Make sure
+  // we don't capture a reference to a temporary by constructing the lambda at
+  // function level.
+  auto wrappedBuilderFn = [&bodyBuilderFn](OpBuilder &nestedBuilder,
+                                           Location nestedLoc, ValueRange ivs,
+                                           ValueRange) {
+    bodyBuilderFn(nestedBuilder, nestedLoc, ivs);
+  };
+  function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> wrapper;
+  if (bodyBuilderFn)
+    wrapper = wrappedBuilderFn;
+
+  build(builder, result, lowerBounds, upperBounds, steps, ValueRange(),
+        wrapper);
 }
 
 static LogicalResult verify(ParallelOp op) {
@@ -555,15 +710,18 @@ ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {
 // ReduceOp
 //===----------------------------------------------------------------------===//
 
-void ReduceOp::build(OpBuilder &builder, OperationState &result,
-                     Value operand) {
+void ReduceOp::build(
+    OpBuilder &builder, OperationState &result, Value operand,
+    function_ref<void(OpBuilder &, Location, Value, Value)> bodyBuilderFn) {
   auto type = operand.getType();
   result.addOperands(operand);
-  Region *bodyRegion = result.addRegion();
 
-  Block *b = new Block();
-  b->addArguments(ArrayRef<Type>{type, type});
-  bodyRegion->getBlocks().insert(bodyRegion->end(), b);
+  OpBuilder::InsertionGuard guard(builder);
+  Region *bodyRegion = result.addRegion();
+  Block *body = builder.createBlock(bodyRegion, {}, ArrayRef<Type>{type, type});
+  if (bodyBuilderFn)
+    bodyBuilderFn(builder, result.location, body->getArgument(0),
+                  body->getArgument(1));
 }
 
 static LogicalResult verify(ReduceOp op) {

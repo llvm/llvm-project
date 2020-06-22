@@ -3270,7 +3270,8 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // Issue the call.
   MachineInstrBuilder MIB;
   if (Subtarget->useSmallAddressing()) {
-    const MCInstrDesc &II = TII.get(Addr.getReg() ? AArch64::BLR : AArch64::BL);
+    const MCInstrDesc &II =
+        TII.get(Addr.getReg() ? getBLRCallOpcode(*MF) : (unsigned)AArch64::BL);
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II);
     if (Symbol)
       MIB.addSym(Symbol, 0);
@@ -3303,7 +3304,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     if (!CallReg)
       return false;
 
-    const MCInstrDesc &II = TII.get(AArch64::BLR);
+    const MCInstrDesc &II = TII.get(getBLRCallOpcode(*MF));
     CallReg = constrainOperandRegClass(II, CallReg, 0);
     MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II).addReg(CallReg);
   }

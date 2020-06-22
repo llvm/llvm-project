@@ -715,6 +715,12 @@ kernel void test_mqsad_u32_u8(global uint4* out, ulong src0, uint src1, uint4 sr
   *out = __builtin_amdgcn_mqsad_u32_u8(src0, src1, src2);
 }
 
+// CHECK-LABEL: test_s_setreg(
+// CHECK: call void @llvm.amdgcn.s.setreg(i32 8193, i32 %val)
+kernel void test_s_setreg(uint val) {
+  __builtin_amdgcn_s_setreg(8193, val);
+}
+
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }

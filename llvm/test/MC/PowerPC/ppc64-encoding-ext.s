@@ -3419,6 +3419,12 @@
 # CHECK-BE: mfxer 2                         # encoding: [0x7c,0x41,0x02,0xa6]
 # CHECK-LE: mfxer 2                         # encoding: [0xa6,0x02,0x41,0x7c]
             mfxer 2
+# CHECK-BE: mtudscr 2                       # encoding: [0x7c,0x43,0x03,0xa6]
+# CHECK-LE: mtudscr 2                       # encoding: [0xa6,0x03,0x43,0x7c]
+            mtudscr 2
+# CHECK-BE: mfudscr 2                       # encoding: [0x7c,0x43,0x02,0xa6]
+# CHECK-LE: mfudscr 2                       # encoding: [0xa6,0x02,0x43,0x7c]
+            mfudscr 2
 # CHECK-BE: mfrtcu 2                        # encoding: [0x7c,0x44,0x02,0xa6]
 # CHECK-LE: mfrtcu 2                        # encoding: [0xa6,0x02,0x44,0x7c]
             mfrtcu 2
@@ -3497,6 +3503,18 @@
 # CHECK-BE: mfctr 2                         # encoding: [0x7c,0x49,0x02,0xa6]
 # CHECK-LE: mfctr 2                         # encoding: [0xa6,0x02,0x49,0x7c]
             mfctr 2
+# CHECK-BE: mtuamr 2                        # encoding: [0x7c,0x4d,0x03,0xa6]
+# CHECK-LE: mtuamr 2                        # encoding: [0xa6,0x03,0x4d,0x7c]
+            mtuamr 2
+# CHECK-BE: mfuamr 2                        # encoding: [0x7c,0x4d,0x02,0xa6]
+# CHECK-LE: mfuamr 2                        # encoding: [0xa6,0x02,0x4d,0x7c]
+            mfuamr 2
+# CHECK-BE: mtppr 2                         # encoding: [0x7c,0x40,0xe3,0xa6]
+# CHECK-LE: mtppr 2                         # encoding: [0xa6,0xe3,0x40,0x7c]
+            mtppr 2
+# CHECK-BE: mfppr 2                         # encoding: [0x7c,0x40,0xe2,0xa6]
+# CHECK-LE: mfppr 2                         # encoding: [0xa6,0xe2,0x40,0x7c]
+            mfppr 2
 # CHECK-BE: mfvrsave 2                      # encoding: [0x7c,0x40,0x42,0xa6]
 # CHECK-LE: mfvrsave 2                      # encoding: [0xa6,0x42,0x40,0x7c]
             mfvrsave 2

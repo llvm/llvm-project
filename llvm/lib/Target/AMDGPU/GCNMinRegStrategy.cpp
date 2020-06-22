@@ -214,9 +214,8 @@ void GCNMinRegScheduler::bumpPredsPriority(const SUnit *SchedSU, int Priority) {
   LLVM_DEBUG(dbgs() << "Make the predecessors of SU(" << SchedSU->NodeNum
                     << ")'s non-ready successors of " << Priority
                     << " priority in ready queue: ");
-  const auto SetEnd = Set.end();
   for (auto &C : RQ) {
-    if (Set.find(C.SU) != SetEnd) {
+    if (Set.count(C.SU)) {
       C.Priority = Priority;
       LLVM_DEBUG(dbgs() << " SU(" << C.SU->NodeNum << ')');
     }

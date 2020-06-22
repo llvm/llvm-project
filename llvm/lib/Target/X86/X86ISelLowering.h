@@ -935,17 +935,13 @@ namespace llvm {
     /// and some i16 instructions are slow.
     bool IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const override;
 
-    /// Returns whether computing the negated form of the specified expression
-    /// is more expensive, the same cost or cheaper.
-    NegatibleCost getNegatibleCost(SDValue Op, SelectionDAG &DAG,
-                                   bool LegalOperations, bool ForCodeSize,
-                                   unsigned Depth) const override;
-
-    /// If getNegatibleCost returns Neutral/Cheaper, return the newly negated
-    /// expression.
-    SDValue negateExpression(SDValue Op, SelectionDAG &DAG,
-                             bool LegalOperations, bool ForCodeSize,
-                             unsigned Depth) const override;
+    /// Return the newly negated expression if the cost is not expensive and
+    /// set the cost in \p Cost to indicate that if it is cheaper or neutral to
+    /// do the negation.
+    SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG,
+                                 bool LegalOperations, bool ForCodeSize,
+                                 NegatibleCost &Cost,
+                                 unsigned Depth) const override;
 
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -1063,6 +1059,12 @@ namespace llvm {
                                                  APInt &KnownZero,
                                                  TargetLoweringOpt &TLO,
                                                  unsigned Depth) const override;
+
+    bool SimplifyDemandedVectorEltsForTargetShuffle(SDValue Op,
+                                                    const APInt &DemandedElts,
+                                                    unsigned MaskIndex,
+                                                    TargetLoweringOpt &TLO,
+                                                    unsigned Depth) const;
 
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedBits,
@@ -1185,6 +1187,7 @@ namespace llvm {
 
     bool shouldSinkOperands(Instruction *I,
                             SmallVectorImpl<Use *> &Ops) const override;
+    bool shouldConvertPhiType(Type *From, Type *To) const override;
 
     /// Return true if folding a vector load into ExtVal (a sign, zero, or any
     /// extend node) is profitable.

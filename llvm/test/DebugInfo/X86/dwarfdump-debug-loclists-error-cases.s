@@ -1,11 +1,11 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux --defsym CASE1=0 -o %t1.o
-# RUN: not llvm-dwarfdump -debug-loclists %t1.o 2>&1 | FileCheck %s --check-prefix=ULEB
+# RUN: not llvm-dwarfdump -debug-loclists %t1.o 2>&1 | FileCheck %s --check-prefix=ULEB -DOFFSET=0x0000000d
 
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux --defsym CASE2=0 -o %t2.o
-# RUN: not llvm-dwarfdump -debug-loclists %t2.o 2>&1 | FileCheck %s --check-prefix=ULEB
+# RUN: not llvm-dwarfdump -debug-loclists %t2.o 2>&1 | FileCheck %s --check-prefix=ULEB -DOFFSET=0x0000000e
 
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux --defsym CASE3=0 -o %t3.o
-# RUN: not llvm-dwarfdump -debug-loclists %t3.o 2>&1 | FileCheck %s --check-prefix=ULEB
+# RUN: not llvm-dwarfdump -debug-loclists %t3.o 2>&1 | FileCheck %s --check-prefix=ULEB -DOFFSET=0x0000000f
 
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux --defsym CASE4=0 -o %t4.o
 # RUN: not llvm-dwarfdump -debug-loclists %t4.o 2>&1 | FileCheck %s
@@ -20,7 +20,7 @@
 # RUN: not llvm-dwarfdump -debug-loclists %t7.o 2>&1 | FileCheck %s --check-prefix=UNIMPL
 
 # CHECK: error: unexpected end of data
-# ULEB: error: malformed uleb128, extends past end
+# ULEB: error: unable to decode LEB128 at offset [[OFFSET]]: malformed uleb128, extends past end
 # UNIMPL: error: LLE of kind 47 not supported
 
 .section  .debug_loclists,"",@progbits

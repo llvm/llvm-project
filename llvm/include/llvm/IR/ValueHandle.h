@@ -307,30 +307,10 @@ public:
   ValueTy &operator*() const { return *getValPtr(); }
 };
 
-// Specialize DenseMapInfo to allow AssertingVH to participate in DenseMap.
+// Treat AssertingVH<T> like T* inside maps. This also allows using find_as()
+// to look up a value without constructing a value handle.
 template<typename T>
-struct DenseMapInfo<AssertingVH<T>> {
-  static inline AssertingVH<T> getEmptyKey() {
-    AssertingVH<T> Res;
-    Res.setRawValPtr(DenseMapInfo<Value *>::getEmptyKey());
-    return Res;
-  }
-
-  static inline AssertingVH<T> getTombstoneKey() {
-    AssertingVH<T> Res;
-    Res.setRawValPtr(DenseMapInfo<Value *>::getTombstoneKey());
-    return Res;
-  }
-
-  static unsigned getHashValue(const AssertingVH<T> &Val) {
-    return DenseMapInfo<Value *>::getHashValue(Val.getRawValPtr());
-  }
-
-  static bool isEqual(const AssertingVH<T> &LHS, const AssertingVH<T> &RHS) {
-    return DenseMapInfo<Value *>::isEqual(LHS.getRawValPtr(),
-                                          RHS.getRawValPtr());
-  }
-};
+struct DenseMapInfo<AssertingVH<T>> : DenseMapInfo<T *> {};
 
 /// Value handle that tracks a Value across RAUW.
 ///
@@ -561,6 +541,17 @@ template <typename T> struct DenseMapInfo<PoisoningVH<T>> {
   static bool isEqual(const PoisoningVH<T> &LHS, const PoisoningVH<T> &RHS) {
     return DenseMapInfo<Value *>::isEqual(LHS.getRawValPtr(),
                                           RHS.getRawValPtr());
+  }
+
+  // Allow lookup by T* via find_as(), without constructing a temporary
+  // value handle.
+
+  static unsigned getHashValue(const T *Val) {
+    return DenseMapInfo<Value *>::getHashValue(Val);
+  }
+
+  static bool isEqual(const T *LHS, const PoisoningVH<T> &RHS) {
+    return DenseMapInfo<Value *>::isEqual(LHS, RHS.getRawValPtr());
   }
 };
 

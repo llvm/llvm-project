@@ -490,6 +490,11 @@ template <> struct ScalarTraits<lldb_private::ConstString> {
   static QuotingType mustQuote(StringRef S) { return QuotingType::Double; }
 };
 } // namespace yaml
+
+inline raw_ostream &operator<<(raw_ostream &os, lldb_private::ConstString s) {
+  os << s.GetStringRef();
+  return os;
+}
 } // namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(lldb_private::ConstString)

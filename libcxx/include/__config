@@ -758,13 +758,13 @@ typedef __char32_t char32_t;
 #  endif
 #endif
 
-#ifndef _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT
+#ifndef _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION
 #  ifdef _LIBCPP_OBJECT_FORMAT_COFF // Windows binaries can't merge typeinfos.
-#    define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 0
+#    define _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION 2
 #  else
      // TODO: This isn't strictly correct on ELF platforms due to llvm.org/PR37398
      // And we should consider defaulting to OFF.
-#    define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 1
+#    define _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION 1
 #  endif
 #endif
 
@@ -1392,10 +1392,10 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
      __attribute__((availability(tvos,strict,introduced=10.0)))                \
      __attribute__((availability(watchos,strict,introduced=3.0)))
 #  define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS                             \
-     __attribute__((availability(macosx,strict,introduced=10.14)))             \
-     __attribute__((availability(ios,strict,introduced=12.0)))                 \
-     __attribute__((availability(tvos,strict,introduced=12.0)))                \
-     __attribute__((availability(watchos,strict,introduced=5.0)))
+     __attribute__((availability(macosx,strict,introduced=10.13)))             \
+     __attribute__((availability(ios,strict,introduced=11.0)))                 \
+     __attribute__((availability(tvos,strict,introduced=11.0)))                \
+     __attribute__((availability(watchos,strict,introduced=4.0)))
 #  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS                              \
      _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
 #  define _LIBCPP_AVAILABILITY_BAD_ANY_CAST                                    \

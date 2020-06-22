@@ -626,82 +626,86 @@ namespace X86II {
     /// MRMDestMem - This form is used for instructions that use the Mod/RM byte
     /// to specify a destination, which in this case is memory.
     ///
-    MRMDestMem     = 32,
+    MRMDestMem     = 24,
 
     /// MRMSrcMem - This form is used for instructions that use the Mod/RM byte
     /// to specify a source, which in this case is memory.
     ///
-    MRMSrcMem      = 33,
+    MRMSrcMem      = 25,
 
     /// MRMSrcMem4VOp3 - This form is used for instructions that encode
     /// operand 3 with VEX.VVVV and load from memory.
     ///
-    MRMSrcMem4VOp3 = 34,
+    MRMSrcMem4VOp3 = 26,
 
     /// MRMSrcMemOp4 - This form is used for instructions that use the Mod/RM
     /// byte to specify the fourth source, which in this case is memory.
     ///
-    MRMSrcMemOp4   = 35,
+    MRMSrcMemOp4   = 27,
 
     /// MRMSrcMemCC - This form is used for instructions that use the Mod/RM
     /// byte to specify the operands and also encodes a condition code.
     ///
-    MRMSrcMemCC    = 36,
+    MRMSrcMemCC    = 28,
 
     /// MRMXm - This form is used for instructions that use the Mod/RM byte
     /// to specify a memory source, but doesn't use the middle field. And has
     /// a condition code.
     ///
-    MRMXmCC = 38,
+    MRMXmCC = 30,
 
     /// MRMXm - This form is used for instructions that use the Mod/RM byte
     /// to specify a memory source, but doesn't use the middle field.
     ///
-    MRMXm = 39,
+    MRMXm = 31,
 
     // Next, instructions that operate on a memory r/m operand...
-    MRM0m = 40,  MRM1m = 41,  MRM2m = 42,  MRM3m = 43, // Format /0 /1 /2 /3
-    MRM4m = 44,  MRM5m = 45,  MRM6m = 46,  MRM7m = 47, // Format /4 /5 /6 /7
+    MRM0m = 32,  MRM1m = 33,  MRM2m = 34,  MRM3m = 35, // Format /0 /1 /2 /3
+    MRM4m = 36,  MRM5m = 37,  MRM6m = 38,  MRM7m = 39, // Format /4 /5 /6 /7
 
     /// MRMDestReg - This form is used for instructions that use the Mod/RM byte
     /// to specify a destination, which in this case is a register.
     ///
-    MRMDestReg     = 48,
+    MRMDestReg     = 40,
 
     /// MRMSrcReg - This form is used for instructions that use the Mod/RM byte
     /// to specify a source, which in this case is a register.
     ///
-    MRMSrcReg      = 49,
+    MRMSrcReg      = 41,
 
     /// MRMSrcReg4VOp3 - This form is used for instructions that encode
     /// operand 3 with VEX.VVVV and do not load from memory.
     ///
-    MRMSrcReg4VOp3 = 50,
+    MRMSrcReg4VOp3 = 42,
 
     /// MRMSrcRegOp4 - This form is used for instructions that use the Mod/RM
     /// byte to specify the fourth source, which in this case is a register.
     ///
-    MRMSrcRegOp4   = 51,
+    MRMSrcRegOp4   = 43,
 
     /// MRMSrcRegCC - This form is used for instructions that use the Mod/RM
     /// byte to specify the operands and also encodes a condition code
     ///
-    MRMSrcRegCC    = 52,
+    MRMSrcRegCC    = 44,
 
     /// MRMXCCr - This form is used for instructions that use the Mod/RM byte
     /// to specify a register source, but doesn't use the middle field. And has
     /// a condition code.
     ///
-    MRMXrCC = 54,
+    MRMXrCC = 46,
 
     /// MRMXr - This form is used for instructions that use the Mod/RM byte
     /// to specify a register source, but doesn't use the middle field.
     ///
-    MRMXr = 55,
+    MRMXr = 47,
 
     // Instructions that operate on a register r/m operand...
-    MRM0r = 56,  MRM1r = 57,  MRM2r = 58,  MRM3r = 59, // Format /0 /1 /2 /3
-    MRM4r = 60,  MRM5r = 61,  MRM6r = 62,  MRM7r = 63, // Format /4 /5 /6 /7
+    MRM0r = 48,  MRM1r = 49,  MRM2r = 50,  MRM3r = 51, // Format /0 /1 /2 /3
+    MRM4r = 52,  MRM5r = 53,  MRM6r = 54,  MRM7r = 55, // Format /4 /5 /6 /7
+
+    // Instructions that operate that have mod=11 and an opcode but ignore r/m.
+    MRM0X = 56,  MRM1X = 57,  MRM2X = 58,  MRM3X = 59, // Format /0 /1 /2 /3
+    MRM4X = 60,  MRM5X = 61,  MRM6X = 62,  MRM7X = 63, // Format /4 /5 /6 /7
 
     /// MRM_XX - A mod/rm byte of exactly 0xXX.
     MRM_C0 = 64,  MRM_C1 = 65,  MRM_C2 = 66,  MRM_C3 = 67,
@@ -1104,6 +1108,11 @@ namespace X86II {
     case X86II::MRM2r: case X86II::MRM3r:
     case X86II::MRM4r: case X86II::MRM5r:
     case X86II::MRM6r: case X86II::MRM7r:
+      return -1;
+    case X86II::MRM0X: case X86II::MRM1X:
+    case X86II::MRM2X: case X86II::MRM3X:
+    case X86II::MRM4X: case X86II::MRM5X:
+    case X86II::MRM6X: case X86II::MRM7X:
       return -1;
     case X86II::MRMXmCC:
     case X86II::MRMXm:

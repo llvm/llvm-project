@@ -25,10 +25,10 @@ registers:
 body:             |
   ; CHECK-LABEL: name: test_blockaddress
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[BLOCK_ADDR:%[0-9]+]]:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
-  ; CHECK:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @addr
-  ; CHECK:   G_STORE [[BLOCK_ADDR]](p0), [[GV]](p0) :: (store 8 into @addr)
+  ; CHECK:   [[ADRP:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @addr
+  ; CHECK:   [[ADD_LOW:%[0-9]+]]:_(p0) = G_ADD_LOW [[ADRP]](p0), target-flags(aarch64-pageoff, aarch64-nc) @addr
+  ; CHECK:   G_STORE [[BLOCK_ADDR]](p0), [[ADD_LOW]](p0) :: (store 8 into @addr)
   ; CHECK:   G_BRINDIRECT [[BLOCK_ADDR]](p0)
   ; CHECK: bb.1.block (address-taken):
   ; CHECK:   RET_ReallyLR

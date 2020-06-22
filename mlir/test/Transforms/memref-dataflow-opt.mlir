@@ -1,10 +1,10 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -memref-dataflow-opt | FileCheck %s
 
-// CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 + 1)>
-// CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (d0)>
-// CHECK-DAG: [[MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (d1)>
-// CHECK-DAG: [[MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 - 1)>
-// CHECK-DAG: [[MAP4:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
+// CHECK-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 + 1)>
+// CHECK-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (d0)>
+// CHECK-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (d1)>
+// CHECK-DAG: [[$MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 - 1)>
+// CHECK-DAG: [[$MAP4:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
 
 // CHECK-LABEL: func @simple_store_load() {
 func @simple_store_load() {
@@ -77,10 +77,10 @@ func @store_load_affine_apply() -> memref<10x10xf32> {
 // CHECK-NEXT:  %{{.*}} = alloc() : memref<10x10xf32>
 // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
 // CHECK-NEXT:    affine.for %{{.*}} = 0 to 10 {
-// CHECK-NEXT:      %{{.*}} = affine.apply [[MAP0]](%{{.*}}, %{{.*}})
-// CHECK-NEXT:      %{{.*}} = affine.apply [[MAP1]](%{{.*}}, %{{.*}})
-// CHECK-NEXT:      %{{.*}} = affine.apply [[MAP2]](%{{.*}}, %{{.*}})
-// CHECK-NEXT:      %{{.*}} = affine.apply [[MAP3]](%{{.*}}, %{{.*}})
+// CHECK-NEXT:      %{{.*}} = affine.apply [[$MAP0]](%{{.*}}, %{{.*}})
+// CHECK-NEXT:      %{{.*}} = affine.apply [[$MAP1]](%{{.*}}, %{{.*}})
+// CHECK-NEXT:      %{{.*}} = affine.apply [[$MAP2]](%{{.*}}, %{{.*}})
+// CHECK-NEXT:      %{{.*}} = affine.apply [[$MAP3]](%{{.*}}, %{{.*}})
 // CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 // CHECK-NEXT:      %{{.*}} = addf %{{.*}}, %{{.*}} : f32
 // CHECK-NEXT:    }
@@ -240,7 +240,7 @@ func @store_load_store_nested_fwd(%N : index) -> f32 {
 // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:    affine.for %{{.*}} = 0 to %{{.*}} {
 // CHECK-NEXT:      %{{.*}} = addf %{{.*}}, %{{.*}} : f32
-// CHECK-NEXT:      %{{.*}} = affine.apply [[MAP4]](%{{.*}})
+// CHECK-NEXT:      %{{.*}} = affine.apply [[$MAP4]](%{{.*}})
 // CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }

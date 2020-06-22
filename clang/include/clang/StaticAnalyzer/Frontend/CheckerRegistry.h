@@ -13,6 +13,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <vector>
 
@@ -133,6 +134,9 @@ public:
               DevelopmentStatus == "released") &&
              "Invalid development status!");
     }
+
+    LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+    LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &Out) const;
   };
 
   using CmdLineOptionList = llvm::SmallVector<CmdLineOption, 0>;
@@ -166,6 +170,7 @@ public:
     StateFromCmdLine State = StateFromCmdLine::State_Unspecified;
 
     ConstCheckerInfoList Dependencies;
+    ConstCheckerInfoList WeakDependencies;
 
     bool isEnabled(const CheckerManager &mgr) const {
       return State == StateFromCmdLine::State_Enabled && ShouldRegister(mgr);
@@ -189,6 +194,9 @@ public:
 
     // Used for lower_bound.
     explicit CheckerInfo(StringRef FullName) : FullName(FullName) {}
+
+    LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+    LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &Out) const;
   };
 
   using StateFromCmdLine = CheckerInfo::StateFromCmdLine;
@@ -206,6 +214,9 @@ public:
     }
 
     explicit PackageInfo(StringRef FullName) : FullName(FullName) {}
+
+    LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+    LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &Out) const;
   };
 
   using PackageInfoList = llvm::SmallVector<PackageInfo, 0>;
@@ -245,9 +256,13 @@ public:
                IsHidden);
   }
 
-  /// Makes the checker with the full name \p fullName depends on the checker
+  /// Makes the checker with the full name \p fullName depend on the checker
   /// called \p dependency.
   void addDependency(StringRef FullName, StringRef Dependency);
+
+  /// Makes the checker with the full name \p fullName weak depend on the
+  /// checker called \p dependency.
+  void addWeakDependency(StringRef FullName, StringRef Dependency);
 
   /// Registers an option to a given checker. A checker option will always have
   /// the following format:
@@ -312,7 +327,9 @@ private:
   /// Contains all (Dependendent checker, Dependency) pairs. We need this, as
   /// we'll resolve dependencies after all checkers were added first.
   llvm::SmallVector<std::pair<StringRef, StringRef>, 0> Dependencies;
-  void resolveDependencies();
+  llvm::SmallVector<std::pair<StringRef, StringRef>, 0> WeakDependencies;
+
+  template <bool IsWeak> void resolveDependencies();
 
   /// Contains all (FullName, CmdLineOption) pairs. Similarly to dependencies,
   /// we only modify the actual CheckerInfo and PackageInfo objects once all

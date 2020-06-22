@@ -1,9 +1,7 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck --check-prefixes CHECK,CHK32 %s
+; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck --check-prefixes CHECK,CHK64 %s
 
 ; Test that i1 extending loads and truncating stores are assembled properly.
-
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: load_u_i1_i32:
 ; CHECK:      i32.load8_u $push[[NUM0:[0-9]+]]=, 0($0){{$}}

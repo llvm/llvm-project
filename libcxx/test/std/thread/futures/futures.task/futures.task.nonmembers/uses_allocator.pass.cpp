@@ -12,7 +12,7 @@
 // declaration of packaged_task is available in C++03. Therefore the test
 // should fail because the static_assert fires and not because std::packaged_task
 // in undefined.
-// XFAIL: c++98, c++03
+// XFAIL: c++03
 
 // <future>
 // REQUIRES: c++11 || c++14

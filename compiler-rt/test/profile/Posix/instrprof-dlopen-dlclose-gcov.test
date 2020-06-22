@@ -1,4 +1,3 @@
-UNSUPPORTED: host-byteorder-big-endian
 # atexit(3) not supported in dlopen(3)ed+dlclose(3)d DSO
 XFAIL: netbsd
 

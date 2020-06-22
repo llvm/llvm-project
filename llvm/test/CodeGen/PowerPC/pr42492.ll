@@ -13,12 +13,12 @@ define void @f(i8*, i8*, i64*) {
 ; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB0_2: #
+; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    addi 7, 4, 1
 ; CHECK-NEXT:    sldi 6, 6, 4
 ; CHECK-NEXT:    cmplwi 4, 14
-; CHECK-NEXT:    addi 7, 4, 1
 ; CHECK-NEXT:    bc 12, 1, .LBB0_4
-; CHECK-NEXT:  # %bb.3: #
+; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    cmpd 3, 4
 ; CHECK-NEXT:    mr 4, 7
 ; CHECK-NEXT:    bc 4, 2, .LBB0_2

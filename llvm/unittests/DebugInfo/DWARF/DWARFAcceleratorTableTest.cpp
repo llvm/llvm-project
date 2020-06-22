@@ -43,7 +43,7 @@ TEST(DWARFDebugNames, TooSmallForDWARF64) {
       ExtractDebugNames(StringRef(NamesSecData, sizeof(NamesSecData)),
                         StringRef()),
       FailedWithMessage("parsing .debug_names header at 0x0: unexpected end of "
-                        "data at offset 0x28"));
+                        "data at offset 0x2b while reading [0x28, 0x2c)"));
 }
 
 } // end anonymous namespace

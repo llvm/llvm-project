@@ -32,7 +32,7 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
   std::string options_string(options_args);
   // TODO: Find a way to propagate errors in this CommandReturnObject up the
   // stack.
-  CommandReturnObject result;
+  CommandReturnObject result(false);
   // Check to see if the command being aliased can take any command options.
   Options *options = cmd_obj_sp->GetOptions();
   if (options) {

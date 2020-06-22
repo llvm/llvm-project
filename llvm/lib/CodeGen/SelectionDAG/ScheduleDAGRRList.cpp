@@ -279,7 +279,7 @@ private:
     SUnit *NewNode = newSUnit(N);
     // Update the topological ordering.
     if (NewNode->NodeNum >= NumSUnits)
-      Topo.MarkDirty();
+      Topo.AddSUnitWithoutPredecessors(NewNode);
     return NewNode;
   }
 
@@ -289,7 +289,7 @@ private:
     SUnit *NewNode = Clone(N);
     // Update the topological ordering.
     if (NewNode->NodeNum >= NumSUnits)
-      Topo.MarkDirty();
+      Topo.AddSUnitWithoutPredecessors(NewNode);
     return NewNode;
   }
 

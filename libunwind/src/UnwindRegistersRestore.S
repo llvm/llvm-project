@@ -1117,7 +1117,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_riscv6jumptoEv)
 #endif
 
   // x0 is zero
-  ld    x1, (8 * 1)(a0)
+  ld    x1, (8 * 0)(a0) // restore pc into ra
   ld    x2, (8 * 2)(a0)
   ld    x3, (8 * 3)(a0)
   ld    x4, (8 * 4)(a0)

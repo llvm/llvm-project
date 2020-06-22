@@ -121,7 +121,7 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ; X32-SSE1-NEXT:    pushl %ebp
 ; X32-SSE1-NEXT:    movl %esp, %ebp
 ; X32-SSE1-NEXT:    andl $-16, %esp
-; X32-SSE1-NEXT:    subl $32, %esp
+; X32-SSE1-NEXT:    subl $16, %esp
 ; X32-SSE1-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X32-SSE1-NEXT:    movl 12(%ebp), %ecx
 ; X32-SSE1-NEXT:    xorl %eax, %ecx

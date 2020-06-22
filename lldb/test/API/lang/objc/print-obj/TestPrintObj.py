@@ -24,7 +24,7 @@ class PrintObjTestCase(TestBase):
         # Find the line numbers to break at.
         self.line = line_number(self.source, '// Set a breakpoint here.')
 
-    @skipIfReproducer # Unexpected packet during replay
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_print_obj(self):
         """
         Test "print object" where another thread blocks the print object from making progress.

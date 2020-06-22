@@ -17,10 +17,11 @@ namespace tidy {
 namespace readability {
 
 void RedundantFunctionPtrDereferenceCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(unaryOperator(hasOperatorName("*"),
-                                   has(implicitCastExpr(
-                                       hasCastKind(CK_FunctionToPointerDecay))))
-                         .bind("op"),
+  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs,
+                              unaryOperator(hasOperatorName("*"),
+                                            has(implicitCastExpr(hasCastKind(
+                                                CK_FunctionToPointerDecay))))
+                                  .bind("op")),
                      this);
 }
 

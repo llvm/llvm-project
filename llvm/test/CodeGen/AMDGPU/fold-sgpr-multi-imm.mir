@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-fold-operands %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-fold-operands %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: test_part_fold{{$}}
 # GCN: %2:sreg_32 = S_ADD_I32 70, %1

@@ -3,6 +3,7 @@
 # RUN:   FileCheck %s
 
 # CHECK:      00000000 0000000000000010 ffffffffffffffff CIE
+# CHECK-NEXT:   Format:                DWARF64
 # CHECK-NEXT:   Version:               4
 # CHECK-NEXT:   Augmentation:          ""
 # CHECK-NEXT:   Address size:          8
@@ -14,6 +15,7 @@
 # CHECK-NEXT:   DW_CFA_nop:
 
 # CHECK:      0000001c 0000000000000018 0000000000000000 FDE cie=00000000 pc=00112233...00122233
+# CHECK-NEXT:   Format:       DWARF64
 
     .section .debug_frame, "", @progbits
 .LCIE:

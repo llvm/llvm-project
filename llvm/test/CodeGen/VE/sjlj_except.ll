@@ -1,5 +1,5 @@
-; RUN: llc  -mtriple=x86_64-unknown-unknown --exception-model=sjlj --print-after=sjljehprepare < %s |& FileCheck --check-prefix=CHECK-X86 %s
-; RUN: (llc  -mtriple=ve-unknown-unknown --exception-model=sjlj  --print-after=sjljehprepare < %s || true) |& FileCheck --check-prefix=CHECK-VE %s
+; RUN: llc  -mtriple=x86_64-unknown-unknown --exception-model=sjlj --print-after=sjljehprepare < %s 2>&1 | FileCheck --check-prefix=CHECK-X86 %s
+; RUN: (llc  -mtriple=ve-unknown-unknown --exception-model=sjlj  --print-after=sjljehprepare < %s || true) 2>&1 | FileCheck --check-prefix=CHECK-VE %s
 
 @SomeGlobal = external dso_local global i8
 

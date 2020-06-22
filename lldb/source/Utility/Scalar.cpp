@@ -305,106 +305,6 @@ const char *Scalar::GetTypeAsCString() const {
   return "<invalid Scalar type>";
 }
 
-Scalar &Scalar::operator=(const int v) {
-  m_type = e_sint;
-  m_integer = llvm::APInt(sizeof(int) * 8, v, true);
-  return *this;
-}
-
-Scalar &Scalar::operator=(unsigned int v) {
-  m_type = e_uint;
-  m_integer = llvm::APInt(sizeof(int) * 8, v);
-  return *this;
-}
-
-Scalar &Scalar::operator=(long v) {
-  m_type = e_slong;
-  m_integer = llvm::APInt(sizeof(long) * 8, v, true);
-  return *this;
-}
-
-Scalar &Scalar::operator=(unsigned long v) {
-  m_type = e_ulong;
-  m_integer = llvm::APInt(sizeof(long) * 8, v);
-  return *this;
-}
-
-Scalar &Scalar::operator=(long long v) {
-  m_type = e_slonglong;
-  m_integer = llvm::APInt(sizeof(long) * 8, v, true);
-  return *this;
-}
-
-Scalar &Scalar::operator=(unsigned long long v) {
-  m_type = e_ulonglong;
-  m_integer = llvm::APInt(sizeof(long long) * 8, v);
-  return *this;
-}
-
-Scalar &Scalar::operator=(float v) {
-  m_type = e_float;
-  m_float = llvm::APFloat(v);
-  return *this;
-}
-
-Scalar &Scalar::operator=(double v) {
-  m_type = e_double;
-  m_float = llvm::APFloat(v);
-  return *this;
-}
-
-Scalar &Scalar::operator=(long double v) {
-  m_type = e_long_double;
-  if (m_ieee_quad)
-    m_float = llvm::APFloat(llvm::APFloat::IEEEquad(),
-                            llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                        (reinterpret_cast<type128 *>(&v))->x));
-  else
-    m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
-                            llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                        (reinterpret_cast<type128 *>(&v))->x));
-  return *this;
-}
-
-Scalar &Scalar::operator=(llvm::APInt rhs) {
-  m_integer = llvm::APInt(rhs);
-  switch (m_integer.getBitWidth()) {
-  case 8:
-  case 16:
-  case 32:
-    if (m_integer.isSignedIntN(sizeof(sint_t) * 8))
-      m_type = e_sint;
-    else
-      m_type = e_uint;
-    break;
-  case 64:
-    if (m_integer.isSignedIntN(sizeof(slonglong_t) * 8))
-      m_type = e_slonglong;
-    else
-      m_type = e_ulonglong;
-    break;
-  case 128:
-    if (m_integer.isSignedIntN(BITWIDTH_INT128))
-      m_type = e_sint128;
-    else
-      m_type = e_uint128;
-    break;
-  case 256:
-    if (m_integer.isSignedIntN(BITWIDTH_INT256))
-      m_type = e_sint256;
-    else
-      m_type = e_uint256;
-    break;
-  case 512:
-    if (m_integer.isSignedIntN(BITWIDTH_INT512))
-      m_type = e_sint512;
-    else
-      m_type = e_uint512;
-    break;
-  }
-  return *this;
-}
-
 Scalar::~Scalar() = default;
 
 Scalar::Type Scalar::GetBestTypeForBitSize(size_t bit_size, bool sign) {
@@ -523,8 +423,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, true,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -593,8 +492,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, false,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -659,8 +557,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, true,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -721,8 +618,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, false,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -779,8 +675,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, true,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -833,8 +728,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, false,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -887,8 +781,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, true,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -937,8 +830,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, false,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -987,8 +879,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, true,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -1034,8 +925,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, false,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -1074,8 +964,7 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double: {
       bool ignore;
-      m_float.convert(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                  : llvm::APFloat::x87DoubleExtended(),
+      m_float.convert(llvm::APFloat::x87DoubleExtended(),
                       llvm::APFloat::rmNearestTiesToEven, &ignore);
       success = true;
       break;
@@ -1105,8 +994,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
     case e_long_double: {
       bool ignore;
-      m_float.convert(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                  : llvm::APFloat::x87DoubleExtended(),
+      m_float.convert(llvm::APFloat::x87DoubleExtended(),
                       llvm::APFloat::rmNearestTiesToEven, &ignore);
       success = true;
       break;

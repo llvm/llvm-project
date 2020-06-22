@@ -481,7 +481,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr(float addrspace(1)* inreg %ptr) {
 ; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
-  %val = load float, float addrspace(1)* %ptr
+  %val = load volatile float, float addrspace(1)* %ptr
   ret float %val
 }
 
@@ -508,7 +508,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095(float addrspace(1)* inreg
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4095
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -541,7 +541,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967296(float addrspace(1)*
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967296
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -574,7 +574,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967297(float addrspace(1)*
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967297
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -601,7 +601,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4096(float addrspace(1)* inreg
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4096
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -626,7 +626,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4095(float addrspace(1)* %ptr)
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4095
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -651,7 +651,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967296(float addrspace(1)*
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967296
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -676,7 +676,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967297(float addrspace(1)*
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967297
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -701,7 +701,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4096(float addrspace(1)* %ptr)
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4096
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -734,7 +734,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_sgpr_offset(float addrspace(1)* inre
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i32 %soffset
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -759,7 +759,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset(float addrspace(1)* %ptr
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i32 %soffset
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -785,7 +785,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(float addrspac
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i32 %soffset
   %gep1 = getelementptr float, float addrspace(1)* %gep0, i32 256
-  %val = load float, float addrspace(1)* %gep1
+  %val = load volatile float, float addrspace(1)* %gep1
   ret float %val
 }
 
@@ -823,7 +823,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset256_offset(float addrspac
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 256
   %gep1 = getelementptr float, float addrspace(1)* %gep0, i32 %soffset
-  %val = load float, float addrspace(1)* %gep1
+  %val = load volatile float, float addrspace(1)* %gep1
   ret float %val
 }
 
@@ -852,7 +852,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset(float addrspace(1)* inre
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i32 %voffset
-  %val = load float, float addrspace(1)* %gep
+  %val = load volatile float, float addrspace(1)* %gep
   ret float %val
 }
 
@@ -884,7 +884,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset_offset4095(float addrspa
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i32 %voffset
   %gep1 = getelementptr float, float addrspace(1)* %gep0, i64 4095
-  %val = load float, float addrspace(1)* %gep1
+  %val = load volatile float, float addrspace(1)* %gep1
   ret float %val
 }
 define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095_vgpr_offset(float addrspace(1)* inreg %ptr, i32 %voffset) {
@@ -913,7 +913,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095_vgpr_offset(float addrspa
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 4095
   %gep1 = getelementptr float, float addrspace(1)* %gep0, i32 %voffset
-  %val = load float, float addrspace(1)* %gep1
+  %val = load volatile float, float addrspace(1)* %gep1
   ret float %val
 }
 

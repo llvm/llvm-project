@@ -204,3 +204,38 @@ TEST(XcodeSDKTest, GetSDKTypeForTriple) {
   EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("i386-unknown-netbsd")),
             XcodeSDK::Type::unknown);
 }
+
+TEST(XcodeSDKTest, FindXcodeContentsDirectoryInPath) {
+  std::string standard =
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/"
+      "Developer/SDKs/MacOSX.sdk";
+  EXPECT_EQ("/Applications/Xcode.app/Contents",
+            XcodeSDK::FindXcodeContentsDirectoryInPath(standard));
+
+  std::string standard_version =
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/"
+      "Developer/SDKs/MacOSX10.15.sdk";
+  EXPECT_EQ("/Applications/Xcode.app/Contents",
+            XcodeSDK::FindXcodeContentsDirectoryInPath(standard_version));
+
+  std::string beta = "/Applications/Xcode-beta.app/Contents/Developer/"
+                     "Platforms/MacOSX.platform/"
+                     "Developer/SDKs/MacOSX10.15.sdk";
+  EXPECT_EQ("/Applications/Xcode-beta.app/Contents",
+            XcodeSDK::FindXcodeContentsDirectoryInPath(beta));
+
+  std::string no_app =
+      "/Applications/Xcode/Contents/Developer/Platforms/MacOSX.platform/"
+      "Developer/SDKs/MacOSX10.15.sdk";
+  EXPECT_EQ("", XcodeSDK::FindXcodeContentsDirectoryInPath(no_app));
+
+  std::string no_contents =
+      "/Applications/Xcode.app/Developer/Platforms/MacOSX.platform/"
+      "Developer/SDKs/MacOSX10.15.sdk";
+  EXPECT_EQ("", XcodeSDK::FindXcodeContentsDirectoryInPath(no_contents));
+
+  std::string no_capitalization =
+      "/Applications/Xcode.app/contents/Developer/Platforms/MacOSX.platform/"
+      "Developer/SDKs/MacOSX10.15.sdk";
+  EXPECT_EQ("", XcodeSDK::FindXcodeContentsDirectoryInPath(no_capitalization));
+}

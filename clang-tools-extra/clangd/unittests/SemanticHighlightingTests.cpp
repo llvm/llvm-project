@@ -115,7 +115,7 @@ void checkHighlightings(llvm::StringRef Code,
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.
   TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
-  TU.ExtraArgs.push_back("-std=c++2a");
+  TU.ExtraArgs.push_back("-std=c++20");
 
   for (auto File : AdditionalFiles)
     TU.AdditionalFiles.insert({File.first, std::string(File.second)});
@@ -728,7 +728,7 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
   };
 
   auto FooCpp = testPath("foo.cpp");
-  MockFSProvider FS;
+  MockFS FS;
   FS.Files[FooCpp] = "";
 
   MockCompilationDatabase MCD;

@@ -20,6 +20,7 @@ target datalayout = "E-m:e-p:32:32-i8:8:8-i16:16:16-i64:32:32-f64:32:32-v64:32:3
 ; CHECK: call float @llvm.minnum.f32
 ; CHECK: call float @llvm.maxnum.f32
 ; CHECK: call float @llvm.powi.f32
+; CHECK: call float @llvm.roundeven.f32
 ; CHECK: for.body:
 
 define void @test(float %arg1, float %arg2) {
@@ -45,7 +46,8 @@ for.body:
   %tmp.11 = call float @llvm.minimum.f32(float %tmp.10, float %arg2)
   %tmp.12 = call float @llvm.maximum.f32(float %tmp.11, float %arg2)
   %tmp.13 = call float @llvm.powi.f32(float %tmp.12, i32 4)
-  call void @consume(float %tmp.13)
+  %tmp.14 = call float @llvm.roundeven.f32(float %tmp.13)
+  call void @consume(float %tmp.14)
   %IND.new = add i32 %IND, 1
   br label %for.head
 
@@ -68,3 +70,4 @@ declare float @llvm.maxnum.f32(float, float)
 declare float @llvm.minimum.f32(float, float)
 declare float @llvm.maximum.f32(float, float)
 declare float @llvm.powi.f32(float, i32)
+declare float @llvm.roundeven.f32(float)

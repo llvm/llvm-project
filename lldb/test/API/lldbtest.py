@@ -10,24 +10,6 @@ import lit.TestRunner
 import lit.util
 from lit.formats.base import TestFormat
 
-def getBuildDir(cmd):
-    found = False
-    for arg in cmd:
-        if found:
-            return arg
-        if arg == '--build-dir':
-            found = True
-    return None
-
-def mkdir_p(path):
-    import errno
-    try:
-        os.makedirs(path)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-    if not os.path.isdir(path):
-        raise OSError(errno.ENOTDIR, "%s is not a directory"%path)
 
 class LLDBTest(TestFormat):
     def __init__(self, dotest_cmd):
@@ -73,33 +55,10 @@ class LLDBTest(TestFormat):
         # python exe as the first parameter of the command.
         cmd = [executable] + self.dotest_cmd + [testPath, '-p', testFile]
 
-        builddir = getBuildDir(cmd)
-        mkdir_p(builddir)
-
-        # On macOS, we can't do the DYLD_INSERT_LIBRARIES trick with a shim
-        # python binary as the ASan interceptors get loaded too late. Also,
-        # when SIP is enabled, we can't inject libraries into system binaries
-        # at all, so we need a copy of the "real" python to work with.
-        #
-        # Find the "real" python binary, copy it, and invoke it.
-        if 'DYLD_INSERT_LIBRARIES' in test.config.environment and \
-                platform.system() == 'Darwin':
-            copied_python = os.path.join(builddir, 'copied-system-python')
-            if not os.path.isfile(copied_python):
-                import shutil, subprocess
-                python = subprocess.check_output([
-                    executable,
-                    os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                        'get_darwin_real_python.py')
-                ]).decode('utf-8').strip()
-                shutil.copy(python, copied_python)
-            cmd[0] = copied_python
-
         if 'lldb-repro-capture' in test.config.available_features or \
            'lldb-repro-replay' in test.config.available_features:
-            reproducer_root = os.path.join(builddir, 'reproducers')
-            mkdir_p(reproducer_root)
-            reproducer_path = os.path.join(reproducer_root, testFile)
+            reproducer_path = os.path.join(
+                test.config.lldb_reproducer_directory, testFile)
             if 'lldb-repro-capture' in test.config.available_features:
                 cmd.extend(['--capture-path', reproducer_path])
             else:

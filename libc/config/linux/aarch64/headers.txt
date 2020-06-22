@@ -1,0 +1,5 @@
+set(PUBLIC_HEADERS
+    libc.include.errno
+    libc.include.math
+    libc.include.sys_syscall
+)

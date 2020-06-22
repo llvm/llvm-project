@@ -138,9 +138,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSMutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>33d4584e2bf66b029ab9d152cc9cd8f7</string>
+   <key>issue_hash_content_of_line_in_context</key><string>9be4ccbeebeb5f814eb9ff5cef4907d3</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>incompatibleTypesErased</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -295,9 +295,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSMutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>6edc910aaa9dc1f2d823abc8cb75360f</string>
+   <key>issue_hash_content_of_line_in_context</key><string>567cd90c936f23ea70aca98b9d3af2b7</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>incompatibleTypesErased</string>
   <key>issue_hash_function_offset</key><string>5</string>
@@ -421,9 +421,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSNumber *&apos; to incompatible type &apos;NSString *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>73c71c858082f5d7a2258f707927da3c</string>
+   <key>issue_hash_content_of_line_in_context</key><string>a6e6f9c2db7532f45c07d2c13bcf496b</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>incompatibleTypesErased</string>
   <key>issue_hash_function_offset</key><string>8</string>
@@ -689,9 +689,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSArray&lt;NSNumber *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>82c378fdcfcc5c0318d2f3ca46420ec1</string>
+   <key>issue_hash_content_of_line_in_context</key><string>73523166e7c9e436da86a96fbd7b3d90</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>crossProceduralErasedTypes</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -846,9 +846,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSMutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>234e3c299ee75a4dd4563e0ea88b9ed9</string>
+   <key>issue_hash_content_of_line_in_context</key><string>649d50ef4cf1287ed225396d39995361</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>incompatibleTypesErasedReverseConversion</string>
   <key>issue_hash_function_offset</key><string>4</string>
@@ -970,9 +970,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSNumber *&apos; to incompatible type &apos;NSString *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>e875afc5479fec33a693ce2b550a9573</string>
+   <key>issue_hash_content_of_line_in_context</key><string>d5cc413c71cae912d5ba469f8fa05ac3</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>incompatibleTypesErasedReverseConversion</string>
   <key>issue_hash_function_offset</key><string>6</string>
@@ -1129,9 +1129,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSMutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>d7fa9fa89fe860ed8f5d22631233a5fa</string>
+   <key>issue_hash_content_of_line_in_context</key><string>36d360e268b9ebc2d70e160a15b9a186</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>idErasedIncompatibleTypesReverseConversion</string>
   <key>issue_hash_function_offset</key><string>4</string>
@@ -1252,9 +1252,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSNumber *&apos; to incompatible type &apos;NSString *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>7de91182a5d6e40a85fa3b91cf3fd089</string>
+   <key>issue_hash_content_of_line_in_context</key><string>a7326f4dedbc94e8fa1ee02d851e7810</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>idErasedIncompatibleTypesReverseConversion</string>
   <key>issue_hash_function_offset</key><string>6</string>
@@ -1410,9 +1410,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSMutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>8960776d84319407ac2bf7a1531d19b0</string>
+   <key>issue_hash_content_of_line_in_context</key><string>2b09deaa8c501c7ce9edc693111bfab1</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>idErasedIncompatibleTypes</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -1566,9 +1566,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSMutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>93b114c7a385294dce5c25ed04a8b25a</string>
+   <key>issue_hash_content_of_line_in_context</key><string>be4c414dad5574ca47577731eddc0adb</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>idErasedIncompatibleTypes</string>
   <key>issue_hash_function_offset</key><string>5</string>
@@ -1691,9 +1691,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSNumber *&apos; to incompatible type &apos;NSString *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>4c17f22d7e977f3343d2e2129b9229c3</string>
+   <key>issue_hash_content_of_line_in_context</key><string>e82f5d4de5cf484f9a352aaa72d0d69a</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>idErasedIncompatibleTypes</string>
   <key>issue_hash_function_offset</key><string>7</string>
@@ -1948,9 +1948,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSString *&apos; to incompatible type &apos;NSMutableString *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>24a08781e7d8971a7d8f8f607ce40074</string>
+   <key>issue_hash_content_of_line_in_context</key><string>60492def9369fa10adfd15698ccf13c8</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>pathSensitiveInference</string>
   <key>issue_hash_function_offset</key><string>8</string>
@@ -2106,9 +2106,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>a8534f675404d57d833dc3c371d49845</string>
+   <key>issue_hash_content_of_line_in_context</key><string>7912d07f44fc4afc8ebfc7466bccad59</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>verifyAPIusage</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -2295,9 +2295,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>d113e22b9ee9ded1cd94750c3557eff4</string>
+   <key>issue_hash_content_of_line_in_context</key><string>e8cde4ad9693aa9a93cdec1f7af85d11</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>subtypeOfGeneric</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -2453,9 +2453,9 @@
    <key>description</key><string>Conversion from value of type &apos;ExceptionalArray&lt;NSString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>f1b900572a63726a729714a765595c38</string>
+   <key>issue_hash_content_of_line_in_context</key><string>104cf6a2b6571c090fe079bc8af0e791</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>genericSubtypeOfGeneric</string>
   <key>issue_hash_function_offset</key><string>5</string>
@@ -2579,9 +2579,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSNumber *&apos; to incompatible type &apos;NSString *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>cbb926c9de226a3eac85fb961a93f39a</string>
+   <key>issue_hash_content_of_line_in_context</key><string>45a05502f77ed21d04b722b40d5ee735</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>genericSubtypeOfGeneric</string>
   <key>issue_hash_function_offset</key><string>7</string>
@@ -2740,9 +2740,9 @@
    <key>description</key><string>Conversion from value of type &apos;ExceptionalArray&lt;NSString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>b6ee3b22fbad45f213b4bf14bec7eeaf</string>
+   <key>issue_hash_content_of_line_in_context</key><string>25579e3cacf6d5a4f9de130b2499ce5a</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>genericSubtypeOfGenericReverse</string>
   <key>issue_hash_function_offset</key><string>5</string>
@@ -2866,9 +2866,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSNumber *&apos; to incompatible type &apos;NSString *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>6561f05506a8ceca3afc79fc59912b94</string>
+   <key>issue_hash_content_of_line_in_context</key><string>e7fd3f40a1f32b768ff8fd227b6286fc</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>genericSubtypeOfGenericReverse</string>
   <key>issue_hash_function_offset</key><string>7</string>
@@ -3027,9 +3027,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSMutableString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>6aab15d40b39ec0a6b749e561d486e6a</string>
+   <key>issue_hash_content_of_line_in_context</key><string>91cf30fc85309c3e637dcb5069c41104</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>inferenceFromAPI</string>
   <key>issue_hash_function_offset</key><string>4</string>
@@ -3182,9 +3182,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSMutableString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>bd1da1b7775323773555e5d5c122661f</string>
+   <key>issue_hash_content_of_line_in_context</key><string>610e79d566da3ecb481a4880918b869c</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>inferenceFromAPI2</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -3337,9 +3337,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSMutableString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>3f2abd3c0b4b4a80a71bcbb668124ffb</string>
+   <key>issue_hash_content_of_line_in_context</key><string>b3733a88d560ed410d3f67027c26c948</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>inferenceFromAPIWithLegacyTypes</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -3492,9 +3492,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSMutableString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>73a50f2592e8b3c9af898749f24176f7</string>
+   <key>issue_hash_content_of_line_in_context</key><string>e8906c6b546d90ce508f20ebe236a825</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>inferenceFromAPIWithLegacyTypes2</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -3710,9 +3710,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSMutableString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>23ca540c8961ab9a362a194e1e895f86</string>
+   <key>issue_hash_content_of_line_in_context</key><string>cb3213e9e4a71a8e5fe96c708c5e9537</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>inferenceFromAPIWithLegacyTypes3</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -3866,9 +3866,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSMutableString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>be7e9426f827314f05fd4e15b25909df</string>
+   <key>issue_hash_content_of_line_in_context</key><string>fdbece8e1da487f06bcc3586fdd3d6d7</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>inferenceFromAPIWithBuggyTypes</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -4021,9 +4021,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSMutableString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>0f97a618ccac913d7c8631b5b86a133e</string>
+   <key>issue_hash_content_of_line_in_context</key><string>697e90b8d40d9eb42cc2955ba7916c56</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>InferenceFromAPIWithBuggyTypes2</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -4239,9 +4239,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSMutableString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>725c54c88bb271138b1de545ee59a8aa</string>
+   <key>issue_hash_content_of_line_in_context</key><string>1f981347a159069ead84333d166397a1</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>InferenceFromAPIWithBuggyTypes3</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -4458,9 +4458,9 @@
    <key>description</key><string>Conversion from value of type &apos;MutableArray&lt;NSString *&gt; *&apos; to incompatible type &apos;MutableArray&lt;NSMutableString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>fb867af384c612fe5c09f821127eeaf0</string>
+   <key>issue_hash_content_of_line_in_context</key><string>b7c763b701b33c32892c0f23719eb909</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>InferenceFromAPIWithBuggyTypes4</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -5343,9 +5343,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSString *&apos; to incompatible type &apos;NSMutableString *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>a0fa75143d7a7ac234292642a6d93360</string>
+   <key>issue_hash_content_of_line_in_context</key><string>d2e2edac5234dd2750793699662fe372</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>findMethodDeclInTrackedType</string>
   <key>issue_hash_function_offset</key><string>4</string>
@@ -5564,9 +5564,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSString *&apos; to incompatible type &apos;NSMutableString *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>d0b99c8523e81ec43ba4ea80aeedef1b</string>
+   <key>issue_hash_content_of_line_in_context</key><string>3bf8676fa507b66d643659571359abb9</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>findMethodDeclInTrackedType2</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -5721,9 +5721,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>46aa94b866747bcbe1ded581da7a2633</string>
+   <key>issue_hash_content_of_line_in_context</key><string>8a15a02f23d0fe7c9bf9870b2b6058e4</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>trackedClassVariables</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -5876,9 +5876,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>a759006d1ce88e15fcd6de6a29e2579c</string>
+   <key>issue_hash_content_of_line_in_context</key><string>020a563323ed1afc8f25c3dbb0ae9787</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>trackedClassVariables</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -6032,9 +6032,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>4bb1729ff86647750b458e6f8d883f08</string>
+   <key>issue_hash_content_of_line_in_context</key><string>cd7ff0a199876a9291a9feb137c251cf</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>nestedCollections</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -6221,9 +6221,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>38831553eaecfb6c02b51e71d21ec6ea</string>
+   <key>issue_hash_content_of_line_in_context</key><string>8ba10666e1dab5d0a5bdc4f6e16aeb63</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>returnCollectionToIdVariable</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -6411,9 +6411,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSArray&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSNumber *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>9fcbd4dcf212f004877292aa5085322b</string>
+   <key>issue_hash_content_of_line_in_context</key><string>bf63c6bdf68630cd020bb73e195e1df3</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>eraseSpecialization</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -6912,9 +6912,9 @@
    <key>description</key><string>Conversion from value of type &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSString *&gt; *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>8347f65fb51a85ccd462d75ffd761078</string>
+   <key>issue_hash_content_of_line_in_context</key><string>4cf120bb70d4c304368bb36b4ee7bb49</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>testGetMostInformativeDerivedForId</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -7034,9 +7034,9 @@
    <key>description</key><string>Conversion from value of type &apos;NSNumber *&apos; to incompatible type &apos;NSString *&apos;</string>
    <key>category</key><string>Core Foundation/Objective-C</string>
    <key>type</key><string>Generics</string>
-   <key>check_name</key><string>core.DynamicTypePropagation</string>
+   <key>check_name</key><string>osx.cocoa.ObjCGenerics</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>6528db66f562ac0c2a94933f3ca5f6a8</string>
+   <key>issue_hash_content_of_line_in_context</key><string>c25b5be7d87537d862f7b1eabeb79678</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>testGetMostInformativeDerivedForId</string>
   <key>issue_hash_function_offset</key><string>7</string>

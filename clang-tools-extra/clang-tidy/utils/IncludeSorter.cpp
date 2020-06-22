@@ -83,11 +83,10 @@ DetermineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
 } // namespace
 
 IncludeSorter::IncludeSorter(const SourceManager *SourceMgr,
-                             const LangOptions *LangOpts, const FileID FileID,
-                             StringRef FileName, IncludeStyle Style)
-    : SourceMgr(SourceMgr), LangOpts(LangOpts), Style(Style),
-      CurrentFileID(FileID), CanonicalFile(MakeCanonicalName(FileName, Style)) {
-}
+                             const FileID FileID, StringRef FileName,
+                             IncludeStyle Style)
+    : SourceMgr(SourceMgr), Style(Style), CurrentFileID(FileID),
+      CanonicalFile(MakeCanonicalName(FileName, Style)) {}
 
 void IncludeSorter::AddInclude(StringRef FileName, bool IsAngled,
                                SourceLocation HashLocation,
@@ -173,106 +172,6 @@ Optional<FixItHint> IncludeSorter::CreateIncludeInsertion(StringRef FileName,
   IncludeStmt.append("\n");
   return FixItHint::CreateInsertion(FirstIncludeLocation.getBegin(),
                                     IncludeStmt);
-}
-
-std::vector<FixItHint> IncludeSorter::GetEdits() {
-  if (SourceLocations.empty())
-    return {};
-
-  typedef std::map<int, std::pair<SourceRange, std::string>>
-      FileLineToSourceEditMap;
-  FileLineToSourceEditMap Edits;
-  auto SourceLocationIterator = SourceLocations.begin();
-  auto SourceLocationIteratorEnd = SourceLocations.end();
-
-  // Compute the Edits that need to be done to each line to add, replace, or
-  // delete inclusions.
-  for (int IncludeKind = 0; IncludeKind < IK_InvalidInclude; ++IncludeKind) {
-    std::sort(IncludeBucket[IncludeKind].begin(),
-              IncludeBucket[IncludeKind].end());
-    for (const auto &IncludeEntry : IncludeBucket[IncludeKind]) {
-      auto &Location = IncludeLocations[IncludeEntry];
-      SourceRangeVector::iterator LocationIterator = Location.begin();
-      SourceRangeVector::iterator LocationIteratorEnd = Location.end();
-      SourceRange FirstLocation = *LocationIterator;
-
-      // If the first occurrence of a particular include is on the current
-      // source line we are examining, leave it alone.
-      if (FirstLocation == *SourceLocationIterator)
-        ++LocationIterator;
-
-      // Add the deletion Edits for any (remaining) instances of this inclusion,
-      // and remove their Locations from the source Locations to be processed.
-      for (; LocationIterator != LocationIteratorEnd; ++LocationIterator) {
-        int LineNumber =
-            SourceMgr->getSpellingLineNumber(LocationIterator->getBegin());
-        Edits[LineNumber] = std::make_pair(*LocationIterator, "");
-        SourceLocationIteratorEnd =
-            std::remove(SourceLocationIterator, SourceLocationIteratorEnd,
-                        *LocationIterator);
-      }
-
-      if (FirstLocation == *SourceLocationIterator) {
-        // Do nothing except move to the next source Location (Location of an
-        // inclusion in the original, unchanged source file).
-        ++SourceLocationIterator;
-        continue;
-      }
-
-      // Add (or append to) the replacement text for this line in source file.
-      int LineNumber =
-          SourceMgr->getSpellingLineNumber(SourceLocationIterator->getBegin());
-      if (Edits.find(LineNumber) == Edits.end()) {
-        Edits[LineNumber].first =
-            SourceRange(SourceLocationIterator->getBegin());
-      }
-      StringRef SourceText = Lexer::getSourceText(
-          CharSourceRange::getCharRange(FirstLocation), *SourceMgr, *LangOpts);
-      Edits[LineNumber].second.append(SourceText.data(), SourceText.size());
-    }
-
-    // Clear the bucket.
-    IncludeBucket[IncludeKind].clear();
-  }
-
-  // Go through the single-line Edits and combine them into blocks of Edits.
-  int CurrentEndLine = 0;
-  SourceRange CurrentRange;
-  std::string CurrentText;
-  std::vector<FixItHint> Fixes;
-  for (const auto &LineEdit : Edits) {
-    // If the current edit is on the next line after the previous edit, add it
-    // to the current block edit.
-    if (LineEdit.first == CurrentEndLine + 1 &&
-        CurrentRange.getBegin() != CurrentRange.getEnd()) {
-      SourceRange EditRange = LineEdit.second.first;
-      if (EditRange.getBegin() != EditRange.getEnd()) {
-        ++CurrentEndLine;
-        CurrentRange.setEnd(EditRange.getEnd());
-      }
-      CurrentText += LineEdit.second.second;
-      // Otherwise report the current block edit and start a new block.
-    } else {
-      if (CurrentEndLine) {
-        Fixes.push_back(FixItHint::CreateReplacement(
-            CharSourceRange::getCharRange(CurrentRange), CurrentText));
-      }
-
-      CurrentEndLine = LineEdit.first;
-      CurrentRange = LineEdit.second.first;
-      CurrentText = LineEdit.second.second;
-    }
-  }
-  // Finally, report the current block edit if there is one.
-  if (CurrentEndLine) {
-    Fixes.push_back(FixItHint::CreateReplacement(
-        CharSourceRange::getCharRange(CurrentRange), CurrentText));
-  }
-
-  // Reset the remaining internal state.
-  SourceLocations.clear();
-  IncludeLocations.clear();
-  return Fixes;
 }
 
 llvm::ArrayRef<std::pair<StringRef, IncludeSorter::IncludeStyle>>

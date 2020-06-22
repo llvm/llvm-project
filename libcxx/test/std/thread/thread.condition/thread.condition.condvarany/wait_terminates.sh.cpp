@@ -13,7 +13,6 @@
 
 // class condition_variable_any;
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{build}
 // RUN: %{run} 1
 // RUN: %{run} 2

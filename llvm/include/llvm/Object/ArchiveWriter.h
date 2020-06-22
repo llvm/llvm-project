@@ -13,10 +13,7 @@
 #ifndef LLVM_OBJECT_ARCHIVEWRITER_H
 #define LLVM_OBJECT_ARCHIVEWRITER_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Archive.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 
 namespace llvm {
 

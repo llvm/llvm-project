@@ -7,7 +7,7 @@ define i32 @fun0(i8* %Src, i8* %Dst, i8 %Val) {
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %Ld = load i8, i8* %Src
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %Cmp = icmp eq i8 %Ld, 123
 ; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %Ret = zext i1 %Cmp to i32
-; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   ret i32 %Ret
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   ret i32 %Ret
   %Ld = load i8, i8* %Src
   %Cmp = icmp eq i8 %Ld, 123
   %Ret = zext i1 %Cmp to i32
@@ -19,7 +19,7 @@ define i32 @fun1(i16* %Src, i16* %Dst, i16 %Val) {
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %Ld = load i16, i16* %Src
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %Cmp = icmp eq i16
 ; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %Ret = zext i1 %Cmp to i32
-; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   ret i32 %Ret
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   ret i32 %Ret
   %Ld = load i16, i16* %Src
   %Cmp = icmp eq i16 %Ld, 1234
   %Ret = zext i1 %Cmp to i32

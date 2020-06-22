@@ -63,7 +63,7 @@ struct VFParameter {
   unsigned ParamPos;         // Parameter Position in Scalar Function.
   VFParamKind ParamKind;     // Kind of Parameter.
   int LinearStepOrPos = 0;   // Step or Position of the Parameter.
-  Align Alignment = Align(); // Optional aligment in bytes, defaulted to 1.
+  Align Alignment = Align(); // Optional alignment in bytes, defaulted to 1.
 
   // Comparison operator.
   bool operator==(const VFParameter &Other) const {
@@ -82,7 +82,7 @@ struct VFParameter {
 struct VFShape {
   unsigned VF;     // Vectorization factor.
   bool IsScalable; // True if the function is a scalable function.
-  SmallVector<VFParameter, 8> Parameters; // List of parameter informations.
+  SmallVector<VFParameter, 8> Parameters; // List of parameter information.
   // Comparison operator.
   bool operator==(const VFShape &Other) const {
     return std::tie(VF, IsScalable, Parameters) ==
@@ -145,14 +145,14 @@ static constexpr char const *_LLVM_ = "_LLVM_";
 /// it once vectorization is done.
 static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
 
-/// Function to contruct a VFInfo out of a mangled names in the
+/// Function to construct a VFInfo out of a mangled names in the
 /// following format:
 ///
 /// <VFABI_name>{(<redirection>)}
 ///
 /// where <VFABI_name> is the name of the vector function, mangled according
 /// to the rules described in the Vector Function ABI of the target vector
-/// extentsion (or <isa> from now on). The <VFABI_name> is in the following
+/// extension (or <isa> from now on). The <VFABI_name> is in the following
 /// format:
 ///
 /// _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)]
@@ -166,9 +166,9 @@ static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
 ///
 /// \param MangledName -> input string in the format
 /// _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)].
-/// \param M -> Module used to retrive informations about the vector
+/// \param M -> Module used to retrieve informations about the vector
 /// function that are not possible to retrieve from the mangled
-/// name. At the moment, this parameter is needed only to retrive the
+/// name. At the moment, this parameter is needed only to retrieve the
 /// Vectorization Factor of scalable vector functions from their
 /// respective IR declarations.
 Optional<VFInfo> tryDemangleForVFABI(StringRef MangledName, const Module &M);
@@ -216,11 +216,11 @@ class VFDatabase {
   const Module *M;
   /// The CallInst instance being queried for scalar to vector mappings.
   const CallInst &CI;
-  /// List of vector functions descritors associated to the call
+  /// List of vector functions descriptors associated to the call
   /// instruction.
   const SmallVector<VFInfo, 8> ScalarToVectorMappings;
 
-  /// Retreive the scalar-to-vector mappings associated to the rule of
+  /// Retrieve the scalar-to-vector mappings associated to the rule of
   /// a vector Function ABI.
   static void getVFABIMappings(const CallInst &CI,
                                SmallVectorImpl<VFInfo> &Mappings) {

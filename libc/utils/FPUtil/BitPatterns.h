@@ -11,6 +11,12 @@
 
 #include "FloatProperties.h"
 
+#include <float.h>
+
+static_assert(
+    FLT_RADIX == 2,
+    "LLVM libc only supports radix 2 IEEE 754 floating point formats.");
+
 namespace __llvm_libc {
 namespace fputil {
 

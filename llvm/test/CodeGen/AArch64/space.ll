@@ -8,7 +8,7 @@ entry:
   %dummy = tail call i64 @llvm.aarch64.space(i32 32684, i64 %v)
   ret void
 }
-; CHECK: // SPACE
+; CHECK: // SPACE 32684
 ; CHECK-NEXT: ret
 ; DUMP-LABEL: <f>:
 ; DUMP-NEXT: ret

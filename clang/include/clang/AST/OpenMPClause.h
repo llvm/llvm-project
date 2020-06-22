@@ -2839,6 +2839,41 @@ class OMPReductionClause final
     return llvm::makeArrayRef(getRHSExprs().end(), varlist_size());
   }
 
+  /// Set list of helper copy operations for inscan reductions.
+  /// The form is: Temps[i] = LHS[i];
+  void setInscanCopyOps(ArrayRef<Expr *> Ops);
+
+  /// Get the list of helper inscan copy operations.
+  MutableArrayRef<Expr *> getInscanCopyOps() {
+    return MutableArrayRef<Expr *>(getReductionOps().end(), varlist_size());
+  }
+  ArrayRef<const Expr *> getInscanCopyOps() const {
+    return llvm::makeArrayRef(getReductionOps().end(), varlist_size());
+  }
+
+  /// Set list of helper temp vars for inscan copy array operations.
+  void setInscanCopyArrayTemps(ArrayRef<Expr *> CopyArrayTemps);
+
+  /// Get the list of helper inscan copy temps.
+  MutableArrayRef<Expr *> getInscanCopyArrayTemps() {
+    return MutableArrayRef<Expr *>(getInscanCopyOps().end(), varlist_size());
+  }
+  ArrayRef<const Expr *> getInscanCopyArrayTemps() const {
+    return llvm::makeArrayRef(getInscanCopyOps().end(), varlist_size());
+  }
+
+  /// Set list of helper temp elements vars for inscan copy array operations.
+  void setInscanCopyArrayElems(ArrayRef<Expr *> CopyArrayElems);
+
+  /// Get the list of helper inscan copy temps.
+  MutableArrayRef<Expr *> getInscanCopyArrayElems() {
+    return MutableArrayRef<Expr *>(getInscanCopyArrayTemps().end(),
+                                   varlist_size());
+  }
+  ArrayRef<const Expr *> getInscanCopyArrayElems() const {
+    return llvm::makeArrayRef(getInscanCopyArrayTemps().end(), varlist_size());
+  }
+
 public:
   /// Creates clause with a list of variables \a VL.
   ///
@@ -2869,6 +2904,12 @@ public:
   /// \endcode
   /// Required for proper codegen of final reduction operation performed by the
   /// reduction clause.
+  /// \param CopyOps List of copy operations for inscan reductions:
+  /// \code
+  /// TempExprs = LHSExprs;
+  /// \endcode
+  /// \param CopyArrayTemps Temp arrays for prefix sums.
+  /// \param CopyArrayElems Temp arrays for prefix sums.
   /// \param PreInit Statement that must be executed before entering the OpenMP
   /// region with this clause.
   /// \param PostUpdate Expression that must be executed after exit from the
@@ -2880,13 +2921,18 @@ public:
          ArrayRef<Expr *> VL, NestedNameSpecifierLoc QualifierLoc,
          const DeclarationNameInfo &NameInfo, ArrayRef<Expr *> Privates,
          ArrayRef<Expr *> LHSExprs, ArrayRef<Expr *> RHSExprs,
-         ArrayRef<Expr *> ReductionOps, Stmt *PreInit, Expr *PostUpdate);
+         ArrayRef<Expr *> ReductionOps, ArrayRef<Expr *> CopyOps,
+         ArrayRef<Expr *> CopyArrayTemps, ArrayRef<Expr *> CopyArrayElems,
+         Stmt *PreInit, Expr *PostUpdate);
 
   /// Creates an empty clause with the place for \a N variables.
   ///
   /// \param C AST context.
   /// \param N The number of variables.
-  static OMPReductionClause *CreateEmpty(const ASTContext &C, unsigned N);
+  /// \param Modifier Reduction modifier.
+  static OMPReductionClause *
+  CreateEmpty(const ASTContext &C, unsigned N,
+              OpenMPReductionClauseModifier Modifier);
 
   /// Returns modifier.
   OpenMPReductionClauseModifier getModifier() const { return Modifier; }
@@ -2941,6 +2987,36 @@ public:
   helper_expr_range reduction_ops() {
     return helper_expr_range(getReductionOps().begin(),
                              getReductionOps().end());
+  }
+
+  helper_expr_const_range copy_ops() const {
+    return helper_expr_const_range(getInscanCopyOps().begin(),
+                                   getInscanCopyOps().end());
+  }
+
+  helper_expr_range copy_ops() {
+    return helper_expr_range(getInscanCopyOps().begin(),
+                             getInscanCopyOps().end());
+  }
+
+  helper_expr_const_range copy_array_temps() const {
+    return helper_expr_const_range(getInscanCopyArrayTemps().begin(),
+                                   getInscanCopyArrayTemps().end());
+  }
+
+  helper_expr_range copy_array_temps() {
+    return helper_expr_range(getInscanCopyArrayTemps().begin(),
+                             getInscanCopyArrayTemps().end());
+  }
+
+  helper_expr_const_range copy_array_elems() const {
+    return helper_expr_const_range(getInscanCopyArrayElems().begin(),
+                                   getInscanCopyArrayElems().end());
+  }
+
+  helper_expr_range copy_array_elems() {
+    return helper_expr_range(getInscanCopyArrayElems().begin(),
+                             getInscanCopyArrayElems().end());
   }
 
   child_range children() {
@@ -6594,6 +6670,110 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_use_device_ptr;
+  }
+};
+
+/// This represents clause 'use_device_addr' in the '#pragma omp ...'
+/// directives.
+///
+/// \code
+/// #pragma omp target data use_device_addr(a,b)
+/// \endcode
+/// In this example directive '#pragma omp target data' has clause
+/// 'use_device_addr' with the variables 'a' and 'b'.
+class OMPUseDeviceAddrClause final
+    : public OMPMappableExprListClause<OMPUseDeviceAddrClause>,
+      private llvm::TrailingObjects<
+          OMPUseDeviceAddrClause, Expr *, ValueDecl *, unsigned,
+          OMPClauseMappableExprCommon::MappableComponent> {
+  friend class OMPClauseReader;
+  friend OMPMappableExprListClause;
+  friend OMPVarListClause;
+  friend TrailingObjects;
+
+  /// Build clause with number of variables \a NumVars.
+  ///
+  /// \param Locs Locations needed to build a mappable clause. It includes 1)
+  /// StartLoc: starting location of the clause (the clause keyword); 2)
+  /// LParenLoc: location of '('; 3) EndLoc: ending location of the clause.
+  /// \param Sizes All required sizes to build a mappable clause. It includes 1)
+  /// NumVars: number of expressions listed in this clause; 2)
+  /// NumUniqueDeclarations: number of unique base declarations in this clause;
+  /// 3) NumComponentLists: number of component lists in this clause; and 4)
+  /// NumComponents: total number of expression components in the clause.
+  explicit OMPUseDeviceAddrClause(const OMPVarListLocTy &Locs,
+                                  const OMPMappableExprListSizeTy &Sizes)
+      : OMPMappableExprListClause(llvm::omp::OMPC_use_device_addr, Locs,
+                                  Sizes) {}
+
+  /// Build an empty clause.
+  ///
+  /// \param Sizes All required sizes to build a mappable clause. It includes 1)
+  /// NumVars: number of expressions listed in this clause; 2)
+  /// NumUniqueDeclarations: number of unique base declarations in this clause;
+  /// 3) NumComponentLists: number of component lists in this clause; and 4)
+  /// NumComponents: total number of expression components in the clause.
+  explicit OMPUseDeviceAddrClause(const OMPMappableExprListSizeTy &Sizes)
+      : OMPMappableExprListClause(llvm::omp::OMPC_use_device_addr,
+                                  OMPVarListLocTy(), Sizes) {}
+
+  /// Define the sizes of each trailing object array except the last one. This
+  /// is required for TrailingObjects to work properly.
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return varlist_size();
+  }
+  size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
+    return getUniqueDeclarationsNum();
+  }
+  size_t numTrailingObjects(OverloadToken<unsigned>) const {
+    return getUniqueDeclarationsNum() + getTotalComponentListNum();
+  }
+
+public:
+  /// Creates clause with a list of variables \a Vars.
+  ///
+  /// \param C AST context.
+  /// \param Locs Locations needed to build a mappable clause. It includes 1)
+  /// StartLoc: starting location of the clause (the clause keyword); 2)
+  /// LParenLoc: location of '('; 3) EndLoc: ending location of the clause.
+  /// \param Vars The original expression used in the clause.
+  /// \param Declarations Declarations used in the clause.
+  /// \param ComponentLists Component lists used in the clause.
+  static OMPUseDeviceAddrClause *
+  Create(const ASTContext &C, const OMPVarListLocTy &Locs,
+         ArrayRef<Expr *> Vars, ArrayRef<ValueDecl *> Declarations,
+         MappableExprComponentListsRef ComponentLists);
+
+  /// Creates an empty clause with the place for \a NumVars variables.
+  ///
+  /// \param C AST context.
+  /// \param Sizes All required sizes to build a mappable clause. It includes 1)
+  /// NumVars: number of expressions listed in this clause; 2)
+  /// NumUniqueDeclarations: number of unique base declarations in this clause;
+  /// 3) NumComponentLists: number of component lists in this clause; and 4)
+  /// NumComponents: total number of expression components in the clause.
+  static OMPUseDeviceAddrClause *
+  CreateEmpty(const ASTContext &C, const OMPMappableExprListSizeTy &Sizes);
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPUseDeviceAddrClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_use_device_addr;
   }
 };
 

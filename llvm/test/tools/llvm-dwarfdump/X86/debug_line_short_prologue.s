@@ -17,9 +17,9 @@
 # C0-NEXT:  warning: parsing line table prologue at 0x00000000 found an invalid directory or file table description at 0x00000027
 # C0-NEXT:  warning: failed to parse entry content descriptors: unexpected end of data at offset 0x27
 # C1-NEXT:  warning: parsing line table prologue at 0x00000000 found an invalid directory or file table description at 0x0000002a
-# C1-NEXT:  warning: failed to parse entry content descriptors: malformed uleb128, extends past end
+# C1-NEXT:  warning: failed to parse entry content descriptors: unable to decode LEB128 at offset 0x0000002a: malformed uleb128, extends past end
 # C2-NEXT:  warning: parsing line table prologue at 0x00000000 found an invalid directory or file table description at 0x0000002b
-# C2-NEXT:  warning: failed to parse entry content descriptors: malformed uleb128, extends past end
+# C2-NEXT:  warning: failed to parse entry content descriptors: unable to decode LEB128 at offset 0x0000002b: malformed uleb128, extends past end
 # ALL:      include_directories[  0] = "/tmp"
 # OK:       file_names[  0]:
 # OK-NEXT:             name: "foo"

@@ -34,73 +34,73 @@ static void ErrnoToStr(char *error_str, size_t error_len) {
 
 // PseudoTerminal constructor
 PseudoTerminal::PseudoTerminal()
-    : m_master_fd(invalid_fd), m_slave_fd(invalid_fd) {}
+    : m_primary_fd(invalid_fd), m_secondary_fd(invalid_fd) {}
 
 // Destructor
 //
-// The destructor will close the master and slave file descriptors if they are
-// valid and ownership has not been released using the
-// ReleaseMasterFileDescriptor() or the ReleaseSaveFileDescriptor() member
+// The destructor will close the primary and secondary file descriptors if they
+// are valid and ownership has not been released using the
+// ReleasePrimaryFileDescriptor() or the ReleaseSaveFileDescriptor() member
 // functions.
 PseudoTerminal::~PseudoTerminal() {
-  CloseMasterFileDescriptor();
-  CloseSlaveFileDescriptor();
+  ClosePrimaryFileDescriptor();
+  CloseSecondaryFileDescriptor();
 }
 
-// Close the master file descriptor if it is valid.
-void PseudoTerminal::CloseMasterFileDescriptor() {
-  if (m_master_fd >= 0) {
-    ::close(m_master_fd);
-    m_master_fd = invalid_fd;
+// Close the primary file descriptor if it is valid.
+void PseudoTerminal::ClosePrimaryFileDescriptor() {
+  if (m_primary_fd >= 0) {
+    ::close(m_primary_fd);
+    m_primary_fd = invalid_fd;
   }
 }
 
-// Close the slave file descriptor if it is valid.
-void PseudoTerminal::CloseSlaveFileDescriptor() {
-  if (m_slave_fd >= 0) {
-    ::close(m_slave_fd);
-    m_slave_fd = invalid_fd;
+// Close the secondary file descriptor if it is valid.
+void PseudoTerminal::CloseSecondaryFileDescriptor() {
+  if (m_secondary_fd >= 0) {
+    ::close(m_secondary_fd);
+    m_secondary_fd = invalid_fd;
   }
 }
 
 // Open the first available pseudo terminal with OFLAG as the permissions. The
 // file descriptor is stored in this object and can be accessed with the
-// MasterFileDescriptor() accessor. The ownership of the master file descriptor
-// can be released using the ReleaseMasterFileDescriptor() accessor. If this
-// object has a valid master files descriptor when its destructor is called, it
-// will close the master file descriptor, therefore clients must call
-// ReleaseMasterFileDescriptor() if they wish to use the master file descriptor
-// after this object is out of scope or destroyed.
+// PrimaryFileDescriptor() accessor. The ownership of the primary file
+// descriptor can be released using the ReleasePrimaryFileDescriptor() accessor.
+// If this object has a valid primary files descriptor when its destructor is
+// called, it will close the primary file descriptor, therefore clients must
+// call ReleasePrimaryFileDescriptor() if they wish to use the primary file
+// descriptor after this object is out of scope or destroyed.
 //
 // RETURNS:
 //  True when successful, false indicating an error occurred.
-bool PseudoTerminal::OpenFirstAvailableMaster(int oflag, char *error_str,
-                                              size_t error_len) {
+bool PseudoTerminal::OpenFirstAvailablePrimary(int oflag, char *error_str,
+                                               size_t error_len) {
   if (error_str)
     error_str[0] = '\0';
 
 #if LLDB_ENABLE_POSIX
-  // Open the master side of a pseudo terminal
-  m_master_fd = ::posix_openpt(oflag);
-  if (m_master_fd < 0) {
+  // Open the primary side of a pseudo terminal
+  m_primary_fd = ::posix_openpt(oflag);
+  if (m_primary_fd < 0) {
     if (error_str)
       ErrnoToStr(error_str, error_len);
     return false;
   }
 
-  // Grant access to the slave pseudo terminal
-  if (::grantpt(m_master_fd) < 0) {
+  // Grant access to the secondary pseudo terminal
+  if (::grantpt(m_primary_fd) < 0) {
     if (error_str)
       ErrnoToStr(error_str, error_len);
-    CloseMasterFileDescriptor();
+    ClosePrimaryFileDescriptor();
     return false;
   }
 
-  // Clear the lock flag on the slave pseudo terminal
-  if (::unlockpt(m_master_fd) < 0) {
+  // Clear the lock flag on the secondary pseudo terminal
+  if (::unlockpt(m_primary_fd) < 0) {
     if (error_str)
       ErrnoToStr(error_str, error_len);
-    CloseMasterFileDescriptor();
+    ClosePrimaryFileDescriptor();
     return false;
   }
 
@@ -112,30 +112,32 @@ bool PseudoTerminal::OpenFirstAvailableMaster(int oflag, char *error_str,
 #endif
 }
 
-// Open the slave pseudo terminal for the current master pseudo terminal. A
-// master pseudo terminal should already be valid prior to calling this
-// function (see OpenFirstAvailableMaster()). The file descriptor is stored
+// Open the secondary pseudo terminal for the current primary pseudo terminal. A
+// primary pseudo terminal should already be valid prior to calling this
+// function (see OpenFirstAvailablePrimary()). The file descriptor is stored
 // this object's member variables and can be accessed via the
-// GetSlaveFileDescriptor(), or released using the ReleaseSlaveFileDescriptor()
-// member function.
+// GetSecondaryFileDescriptor(), or released using the
+// ReleaseSecondaryFileDescriptor() member function.
 //
 // RETURNS:
 //  True when successful, false indicating an error occurred.
-bool PseudoTerminal::OpenSlave(int oflag, char *error_str, size_t error_len) {
+bool PseudoTerminal::OpenSecondary(int oflag, char *error_str,
+                                   size_t error_len) {
   if (error_str)
     error_str[0] = '\0';
 
-  CloseSlaveFileDescriptor();
+  CloseSecondaryFileDescriptor();
 
-  // Open the master side of a pseudo terminal
-  const char *slave_name = GetSlaveName(error_str, error_len);
+  // Open the primary side of a pseudo terminal
+  const char *secondary_name = GetSecondaryName(error_str, error_len);
 
-  if (slave_name == nullptr)
+  if (secondary_name == nullptr)
     return false;
 
-  m_slave_fd = llvm::sys::RetryAfterSignal(-1, ::open, slave_name, oflag);
+  m_secondary_fd =
+      llvm::sys::RetryAfterSignal(-1, ::open, secondary_name, oflag);
 
-  if (m_slave_fd < 0) {
+  if (m_secondary_fd < 0) {
     if (error_str)
       ErrnoToStr(error_str, error_len);
     return false;
@@ -144,46 +146,46 @@ bool PseudoTerminal::OpenSlave(int oflag, char *error_str, size_t error_len) {
   return true;
 }
 
-// Get the name of the slave pseudo terminal. A master pseudo terminal should
-// already be valid prior to calling this function (see
-// OpenFirstAvailableMaster()).
+// Get the name of the secondary pseudo terminal. A primary pseudo terminal
+// should already be valid prior to calling this function (see
+// OpenFirstAvailablePrimary()).
 //
 // RETURNS:
-//  NULL if no valid master pseudo terminal or if ptsname() fails.
-//  The name of the slave pseudo terminal as a NULL terminated C string
+//  NULL if no valid primary pseudo terminal or if ptsname() fails.
+//  The name of the secondary pseudo terminal as a NULL terminated C string
 //  that comes from static memory, so a copy of the string should be
 //  made as subsequent calls can change this value.
-const char *PseudoTerminal::GetSlaveName(char *error_str,
-                                         size_t error_len) const {
+const char *PseudoTerminal::GetSecondaryName(char *error_str,
+                                             size_t error_len) const {
   if (error_str)
     error_str[0] = '\0';
 
-  if (m_master_fd < 0) {
+  if (m_primary_fd < 0) {
     if (error_str)
       ::snprintf(error_str, error_len, "%s",
-                 "master file descriptor is invalid");
+                 "primary file descriptor is invalid");
     return nullptr;
   }
-  const char *slave_name = ::ptsname(m_master_fd);
+  const char *secondary_name = ::ptsname(m_primary_fd);
 
-  if (error_str && slave_name == nullptr)
+  if (error_str && secondary_name == nullptr)
     ErrnoToStr(error_str, error_len);
 
-  return slave_name;
+  return secondary_name;
 }
 
 // Fork a child process and have its stdio routed to a pseudo terminal.
 //
-// In the parent process when a valid pid is returned, the master file
+// In the parent process when a valid pid is returned, the primary file
 // descriptor can be used as a read/write access to stdio of the child process.
 //
 // In the child process the stdin/stdout/stderr will already be routed to the
-// slave pseudo terminal and the master file descriptor will be closed as it is
-// no longer needed by the child process.
+// secondary pseudo terminal and the primary file descriptor will be closed as
+// it is no longer needed by the child process.
 //
-// This class will close the file descriptors for the master/slave when the
-// destructor is called, so be sure to call ReleaseMasterFileDescriptor() or
-// ReleaseSlaveFileDescriptor() if any file descriptors are going to be used
+// This class will close the file descriptors for the primary/secondary when the
+// destructor is called, so be sure to call ReleasePrimaryFileDescriptor() or
+// ReleaseSecondaryFileDescriptor() if any file descriptors are going to be used
 // past the lifespan of this object.
 //
 // RETURNS:
@@ -196,8 +198,8 @@ lldb::pid_t PseudoTerminal::Fork(char *error_str, size_t error_len) {
 #if LLDB_ENABLE_POSIX
   int flags = O_RDWR;
   flags |= O_CLOEXEC;
-  if (OpenFirstAvailableMaster(flags, error_str, error_len)) {
-    // Successfully opened our master pseudo terminal
+  if (OpenFirstAvailablePrimary(flags, error_str, error_len)) {
+    // Successfully opened our primary pseudo terminal
 
     pid = ::fork();
     if (pid < 0) {
@@ -208,32 +210,32 @@ lldb::pid_t PseudoTerminal::Fork(char *error_str, size_t error_len) {
       // Child Process
       ::setsid();
 
-      if (OpenSlave(O_RDWR, error_str, error_len)) {
-        // Successfully opened slave
+      if (OpenSecondary(O_RDWR, error_str, error_len)) {
+        // Successfully opened secondary
 
-        // Master FD should have O_CLOEXEC set, but let's close it just in
+        // Primary FD should have O_CLOEXEC set, but let's close it just in
         // case...
-        CloseMasterFileDescriptor();
+        ClosePrimaryFileDescriptor();
 
 #if defined(TIOCSCTTY)
         // Acquire the controlling terminal
-        if (::ioctl(m_slave_fd, TIOCSCTTY, (char *)0) < 0) {
+        if (::ioctl(m_secondary_fd, TIOCSCTTY, (char *)0) < 0) {
           if (error_str)
             ErrnoToStr(error_str, error_len);
         }
 #endif
-        // Duplicate all stdio file descriptors to the slave pseudo terminal
-        if (::dup2(m_slave_fd, STDIN_FILENO) != STDIN_FILENO) {
+        // Duplicate all stdio file descriptors to the secondary pseudo terminal
+        if (::dup2(m_secondary_fd, STDIN_FILENO) != STDIN_FILENO) {
           if (error_str && !error_str[0])
             ErrnoToStr(error_str, error_len);
         }
 
-        if (::dup2(m_slave_fd, STDOUT_FILENO) != STDOUT_FILENO) {
+        if (::dup2(m_secondary_fd, STDOUT_FILENO) != STDOUT_FILENO) {
           if (error_str && !error_str[0])
             ErrnoToStr(error_str, error_len);
         }
 
-        if (::dup2(m_slave_fd, STDERR_FILENO) != STDERR_FILENO) {
+        if (::dup2(m_secondary_fd, STDERR_FILENO) != STDERR_FILENO) {
           if (error_str && !error_str[0])
             ErrnoToStr(error_str, error_len);
         }
@@ -247,41 +249,43 @@ lldb::pid_t PseudoTerminal::Fork(char *error_str, size_t error_len) {
   return pid;
 }
 
-// The master file descriptor accessor. This object retains ownership of the
-// master file descriptor when this accessor is used. Use
-// ReleaseMasterFileDescriptor() if you wish this object to release ownership
-// of the master file descriptor.
+// The primary file descriptor accessor. This object retains ownership of the
+// primary file descriptor when this accessor is used. Use
+// ReleasePrimaryFileDescriptor() if you wish this object to release ownership
+// of the primary file descriptor.
 //
-// Returns the master file descriptor, or -1 if the master file descriptor is
+// Returns the primary file descriptor, or -1 if the primary file descriptor is
 // not currently valid.
-int PseudoTerminal::GetMasterFileDescriptor() const { return m_master_fd; }
+int PseudoTerminal::GetPrimaryFileDescriptor() const { return m_primary_fd; }
 
-// The slave file descriptor accessor.
+// The secondary file descriptor accessor.
 //
-// Returns the slave file descriptor, or -1 if the slave file descriptor is not
-// currently valid.
-int PseudoTerminal::GetSlaveFileDescriptor() const { return m_slave_fd; }
+// Returns the secondary file descriptor, or -1 if the secondary file descriptor
+// is not currently valid.
+int PseudoTerminal::GetSecondaryFileDescriptor() const {
+  return m_secondary_fd;
+}
 
-// Release ownership of the master pseudo terminal file descriptor without
-// closing it. The destructor for this class will close the master file
-// descriptor if the ownership isn't released using this call and the master
+// Release ownership of the primary pseudo terminal file descriptor without
+// closing it. The destructor for this class will close the primary file
+// descriptor if the ownership isn't released using this call and the primary
 // file descriptor has been opened.
-int PseudoTerminal::ReleaseMasterFileDescriptor() {
-  // Release ownership of the master pseudo terminal file descriptor without
+int PseudoTerminal::ReleasePrimaryFileDescriptor() {
+  // Release ownership of the primary pseudo terminal file descriptor without
   // closing it. (the destructor for this class will close it otherwise!)
-  int fd = m_master_fd;
-  m_master_fd = invalid_fd;
+  int fd = m_primary_fd;
+  m_primary_fd = invalid_fd;
   return fd;
 }
 
-// Release ownership of the slave pseudo terminal file descriptor without
-// closing it. The destructor for this class will close the slave file
-// descriptor if the ownership isn't released using this call and the slave
+// Release ownership of the secondary pseudo terminal file descriptor without
+// closing it. The destructor for this class will close the secondary file
+// descriptor if the ownership isn't released using this call and the secondary
 // file descriptor has been opened.
-int PseudoTerminal::ReleaseSlaveFileDescriptor() {
-  // Release ownership of the slave pseudo terminal file descriptor without
+int PseudoTerminal::ReleaseSecondaryFileDescriptor() {
+  // Release ownership of the secondary pseudo terminal file descriptor without
   // closing it (the destructor for this class will close it otherwise!)
-  int fd = m_slave_fd;
-  m_slave_fd = invalid_fd;
+  int fd = m_secondary_fd;
+  m_secondary_fd = invalid_fd;
   return fd;
 }

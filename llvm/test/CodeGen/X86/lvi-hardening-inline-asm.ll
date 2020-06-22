@@ -5,10 +5,11 @@
 ; Test module-level assembly
 module asm "pop %rbx"
 module asm "ret"
-; WARN:      warning: Instruction may be vulnerable to LVI
-; WARN-NEXT: ret
-; WARN-NEXT: ^
-; WARN-NEXT: note: See https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection#specialinstructions for more information
+; X86:      popq %rbx
+; X86-NEXT: lfence
+; X86-NEXT: shlq $0, (%rsp)
+; X86-NEXT: lfence
+; X86-NEXT: retq
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @test_inline_asm() {
@@ -106,18 +107,14 @@ entry:
 ; X86:      pinsrw  $6, (%eax), %xmm0
 ; X86-NEXT: lfence
   call void asm sideeffect "ret", "~{dirflag},~{fpsr},~{flags}"() #1
-; WARN:      warning: Instruction may be vulnerable to LVI
-; WARN-NEXT: ret
-; WARN-NEXT: ^
-; WARN-NEXT: note: See https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection#specialinstructions for more information
-; X86:      retq
+; X86:      shlq $0, (%rsp)
+; X86-NEXT: lfence
+; X86-NEXT: retq
 ; X86-NOT:  lfence
   call void asm sideeffect "ret $$8", "~{dirflag},~{fpsr},~{flags}"() #1
-; WARN:      warning: Instruction may be vulnerable to LVI
-; WARN-NEXT: ret $8
-; WARN-NEXT: ^
-; WARN-NEXT: note: See https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection#specialinstructions for more information
-; X86:      retq  $8
+; X86:      shlq $0, (%rsp)
+; X86-NEXT: lfence
+; X86-NEXT: retq $8
 ; X86-NOT:  lfence
   call void asm sideeffect "jmpq *(%rdx)", "~{dirflag},~{fpsr},~{flags}"() #1
 ; WARN:      warning: Instruction may be vulnerable to LVI

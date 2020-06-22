@@ -19,6 +19,22 @@ class GenericInstruction : StandardPseudoInstruction {
   let isPreISelOpcode = 1;
 }
 
+// Provide a variant of an instruction with the same operands, but
+// different instruction flags. This is intended to provide a
+// convenient way to define strict floating point variants of ordinary
+// floating point instructions.
+class ConstrainedIntruction<GenericInstruction baseInst> :
+  GenericInstruction {
+  let OutOperandList = baseInst.OutOperandList;
+  let InOperandList =  baseInst.InOperandList;
+  let isCommutable = baseInst.isCommutable;
+
+  // TODO: Do we need a better way to mark reads from FP mode than
+  // hasSideEffects?
+  let hasSideEffects = 1;
+  let mayRaiseFPException = 1;
+}
+
 // Extend the underlying scalar type of an operation, leaving the high bits
 // unspecified.
 def G_ANYEXT : GenericInstruction {
@@ -358,9 +374,11 @@ def G_PTR_ADD : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_PTR_MASK : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src, unknown:$bits);
+// Generic pointer mask. type1 should be an integer with the same
+// bitwidth as the pointer type.
+def G_PTRMASK : GenericInstruction {
+  let OutOperandList = (outs ptype0:$dst);
+  let InOperandList = (ins ptype0:$src, type1:$bits);
   let hasSideEffects = 0;
 }
 
@@ -956,7 +974,7 @@ def G_FENCE : GenericInstruction {
 // register banks have been selected.
 def G_EXTRACT : GenericInstruction {
   let OutOperandList = (outs type0:$res);
-  let InOperandList = (ins type1:$src, unknown:$offset);
+  let InOperandList = (ins type1:$src, untyped_imm_0:$offset);
   let hasSideEffects = 0;
 }
 
@@ -975,7 +993,7 @@ def G_UNMERGE_VALUES : GenericInstruction {
 // Insert a smaller register into a larger one at the specified bit-index.
 def G_INSERT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src, type1:$op, unknown:$offset);
+  let InOperandList = (ins type0:$src, type1:$op, untyped_imm_0:$offset);
   let hasSideEffects = 0;
 }
 
@@ -1067,6 +1085,8 @@ def G_BRINDIRECT : GenericInstruction {
   let hasSideEffects = 0;
   let isBranch = 1;
   let isTerminator = 1;
+  let isBarrier = 1;
+  let isIndirectBranch = 1;
 }
 
 // Generic branch to jump table entry
@@ -1076,6 +1096,8 @@ def G_BRJT : GenericInstruction {
   let hasSideEffects = 0;
   let isBranch = 1;
   let isTerminator = 1;
+  let isBarrier = 1;
+  let isIndirectBranch = 1;
 }
 
 def G_READ_REGISTER : GenericInstruction {
@@ -1126,4 +1148,14 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
   let hasSideEffects = 0;
 }
 
-// TODO: Add the other generic opcodes.
+//------------------------------------------------------------------------------
+// Constrained floating point ops
+//------------------------------------------------------------------------------
+
+def G_STRICT_FADD : ConstrainedIntruction<G_FADD>;
+def G_STRICT_FSUB : ConstrainedIntruction<G_FSUB>;
+def G_STRICT_FMUL : ConstrainedIntruction<G_FMUL>;
+def G_STRICT_FDIV : ConstrainedIntruction<G_FDIV>;
+def G_STRICT_FREM : ConstrainedIntruction<G_FREM>;
+def G_STRICT_FMA : ConstrainedIntruction<G_FMA>;
+def G_STRICT_FSQRT : ConstrainedIntruction<G_FSQRT>;

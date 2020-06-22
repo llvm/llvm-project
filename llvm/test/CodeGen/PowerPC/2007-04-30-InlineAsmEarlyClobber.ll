@@ -3,7 +3,7 @@
 ; The first argument of subfc must not be the same as any other register.
 
 ; CHECK: APP
-; CHECK: subfc [[REG:[0-9]+]],
+; CHECK: subc [[REG:[0-9]+]],
 ; CHECK-NOT: [[REG]]
 ; CHECK: NO_APP
 ; PR1357

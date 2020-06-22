@@ -1470,7 +1470,7 @@ public:
         //  L0:
         //     .cfi_def_cfa_offset 80
         //
-        StackSize = std::abs(Inst.getOffset()) / StackDivide;
+        StackSize = Inst.getOffset() / StackDivide;
         ++NumDefCFAOffsets;
         break;
       }

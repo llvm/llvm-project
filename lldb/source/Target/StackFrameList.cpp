@@ -239,7 +239,12 @@ void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
 /// A sequence of calls that comprise some portion of a backtrace. Each frame
 /// is represented as a pair of a callee (Function *) and an address within the
 /// callee.
-using CallSequence = std::vector<std::pair<Function *, addr_t>>;
+struct CallDescriptor {
+  Function *func;
+  CallEdge::AddrType address_type = CallEdge::AddrType::Call;
+  addr_t address = LLDB_INVALID_ADDRESS;
+};
+using CallSequence = std::vector<CallDescriptor>;
 
 /// Find the unique path through the call graph from \p begin (with return PC
 /// \p return_pc) to \p end. On success this path is stored into \p path, and 
@@ -319,14 +324,14 @@ static void FindInterveningFrames(Function &begin, Function &end,
       }
 
       // Search the calls made from this callee.
-      active_path.emplace_back(&callee, LLDB_INVALID_ADDRESS);
+      active_path.push_back(CallDescriptor{&callee});
       for (const auto &edge : callee.GetTailCallingEdges()) {
         Function *next_callee = edge->GetCallee(images, context);
         if (!next_callee)
           continue;
 
-        addr_t tail_call_pc = edge->GetCallInstPC(callee, target);
-        active_path.back().second = tail_call_pc;
+        std::tie(active_path.back().address_type, active_path.back().address) =
+            edge->GetCallerAddress(callee, target);
 
         dfs(*edge, *next_callee);
         if (ambiguous)
@@ -400,16 +405,16 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
 
   // Push synthetic tail call frames.
   for (auto calleeInfo : llvm::reverse(path)) {
-    Function *callee = calleeInfo.first;
+    Function *callee = calleeInfo.func;
     uint32_t frame_idx = m_frames.size();
     uint32_t concrete_frame_idx = next_frame.GetConcreteFrameIndex();
     addr_t cfa = LLDB_INVALID_ADDRESS;
     bool cfa_is_valid = false;
-    addr_t pc = calleeInfo.second;
-    // We do not want to subtract 1 from this PC, as it's the actual address
-    // of the tail-calling branch instruction. This address is provided by the
-    // compiler via DW_AT_call_pc.
-    constexpr bool behaves_like_zeroth_frame = true;
+    addr_t pc = calleeInfo.address;
+    // If the callee address refers to the call instruction, we do not want to
+    // subtract 1 from this value.
+    const bool behaves_like_zeroth_frame =
+        calleeInfo.address_type == CallEdge::AddrType::Call;
     SymbolContext sc;
     callee->CalculateSymbolContext(&sc);
     auto synth_frame = std::make_shared<StackFrame>(

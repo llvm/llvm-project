@@ -184,6 +184,9 @@ private:
   /// Align consecutive assignments over all \c Changes.
   void alignConsecutiveAssignments();
 
+  /// Align consecutive bitfields over all \c Changes.
+  void alignConsecutiveBitFields();
+
   /// Align consecutive declarations over all \c Changes.
   void alignConsecutiveDeclarations();
 

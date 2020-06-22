@@ -369,7 +369,7 @@ int main (int argc, char **argv) {
 // CK5-64:  [[BCONVVAL:%.+]] = load i32, i32* [[BCONV]]
 // CK5-32:  [[ACONVVAL:%.+]] = load i32, i32* [[AADDR]]
 // CK5-32:  [[BCONVVAL:%.+]] = load i32, i32* [[BADDR]]
-// CK5:  {{.+}} = call i32 @__kmpc_push_num_teams(%struct.ident_t* [[DEF_LOC_0]], i32 [[GBL_TH_NUM]], i32 [[ACONVVAL]], i32 [[BCONVVAL]])
+// CK5:  call void @__kmpc_push_num_teams(%struct.ident_t* [[DEF_LOC_0]], i32 [[GBL_TH_NUM]], i32 [[ACONVVAL]], i32 [[BCONVVAL]])
 // CK5-64:  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC_0]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* [[CONV]])
 // CK5-32:  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC_0]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* [[ARGCADDR]])
 
@@ -385,10 +385,10 @@ int main (int argc, char **argv) {
 // CK5-64:  [[BCONV:%.+]] = bitcast i64* [[BADDR]] to i32*
 // CK5-64:  [[ACONVVAL:%.+]] = load i32, i32* [[ACONV]]
 // CK5-64:  [[BCONVVAL:%.+]] = load i32, i32* [[BCONV]]
-// CK5-64:  {{.+}} = call i32 @__kmpc_push_num_teams(%struct.ident_t* [[DEF_LOC_0]], i32 [[GBL_TH_NUM]], i32 [[ACONVVAL]], i32 [[BCONVVAL]])
+// CK5-64:  call void @__kmpc_push_num_teams(%struct.ident_t* [[DEF_LOC_0]], i32 [[GBL_TH_NUM]], i32 [[ACONVVAL]], i32 [[BCONVVAL]])
 // CK5-32:  [[A_VAL:%.+]] = load i32, i32* [[AADDR]]
 // CK5-32:  [[B_VAL:%.+]] = load i32, i32* [[BADDR]]
-// CK5-32:  {{.+}} = call i32 @__kmpc_push_num_teams(%struct.ident_t* [[DEF_LOC_0]], i32 [[GBL_TH_NUM]], i32 [[A_VAL]], i32 [[B_VAL]])
+// CK5-32:  call void @__kmpc_push_num_teams(%struct.ident_t* [[DEF_LOC_0]], i32 [[GBL_TH_NUM]], i32 [[A_VAL]], i32 [[B_VAL]])
 // CK5:  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* [[DEF_LOC_0]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{.+}})* @.omp_outlined.{{.+}} to void (i32*, i32*, ...)*), i{{.+}}*** [[ARGCADDR]])
 // CK5:  ret void
 // CK5-NEXT: }

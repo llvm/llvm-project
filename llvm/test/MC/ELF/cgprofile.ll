@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=asm %s -o - -mtriple x86_64-pc-linux-gnu | FileCheck %s
 ; RUN: llc -filetype=obj %s -o %t -mtriple x86_64-pc-linux-gnu
-; RUN: llvm-readobj --elf-cg-profile %t | FileCheck %s --check-prefix=OBJ
+; RUN: llvm-readobj --cg-profile %t | FileCheck %s --check-prefix=OBJ
 
 declare void @b()
 

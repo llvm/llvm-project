@@ -122,7 +122,8 @@ private:
           reg_ctx_lldb_sp() {}
 
   private:
-    DISALLOW_COPY_AND_ASSIGN(Cursor);
+    Cursor(const Cursor &) = delete;
+    const Cursor &operator=(const Cursor &) = delete;
   };
 
   typedef std::shared_ptr<Cursor> CursorSP;
@@ -149,7 +150,8 @@ private:
   bool AddFirstFrame();
 
   // For UnwindLLDB only
-  DISALLOW_COPY_AND_ASSIGN(UnwindLLDB);
+  UnwindLLDB(const UnwindLLDB &) = delete;
+  const UnwindLLDB &operator=(const UnwindLLDB &) = delete;
 };
 
 } // namespace lldb_private

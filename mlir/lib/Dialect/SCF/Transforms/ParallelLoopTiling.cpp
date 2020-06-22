@@ -30,9 +30,13 @@ using namespace mlir::scf;
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
 ///                                             step (%arg4*tileSize[0],
 ///                                                   %arg5*tileSize[1])
-///     scf.parallel (%j0, %j1) = (0, 0) to (min(tileSize[0], %arg2-%j0)
-///                                           min(tileSize[1], %arg3-%j1))
+///     scf.parallel (%j0, %j1) = (0, 0) to (min(tileSize[0], %arg2-%i0)
+///                                           min(tileSize[1], %arg3-%i1))
 ///                                        step (%arg4, %arg5)
+///
+/// where the uses of %i0 and %i1 in the loop body are replaced by
+/// %i0 + j0 and %i1 + %j1.
+//
 /// The old loop is replaced with the new one.
 void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
   OpBuilder b(op);
@@ -85,6 +89,18 @@ void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
 
   // Steal the body of the old parallel loop and erase it.
   innerLoop.region().takeBody(op.region());
+
+  // Insert computation for new index vectors and replace uses.
+  b.setInsertionPointToStart(innerLoop.getBody());
+  for (auto ivs :
+       llvm::zip(innerLoop.getInductionVars(), outerLoop.getInductionVars())) {
+    Value inner_index = std::get<0>(ivs);
+    AddIOp newIndex =
+        b.create<AddIOp>(op.getLoc(), std::get<0>(ivs), std::get<1>(ivs));
+    inner_index.replaceAllUsesExcept(
+        newIndex, SmallPtrSet<Operation *, 1>{newIndex.getOperation()});
+  }
+
   op.erase();
 }
 

@@ -146,6 +146,15 @@ TARGET_BUILTIN(__builtin_wasm_max_f64x2, "V2dV2dV2d", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_pmin_f64x2, "V2dV2dV2d", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_pmax_f64x2, "V2dV2dV2d", "nc", "simd128")
 
+TARGET_BUILTIN(__builtin_wasm_ceil_f32x4, "V4fV4f", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_floor_f32x4, "V4fV4f", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_trunc_f32x4, "V4fV4f", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_nearest_f32x4, "V4fV4f", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_ceil_f64x2, "V2dV2d", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_floor_f64x2, "V2dV2d", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_trunc_f64x2, "V2dV2d", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_nearest_f64x2, "V2dV2d", "nc", "simd128")
+
 TARGET_BUILTIN(__builtin_wasm_dot_s_i32x4_i16x8, "V4iV8sV8s", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_sqrt_f32x4, "V4fV4f", "nc", "simd128")

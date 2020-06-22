@@ -584,13 +584,15 @@ template <char goal> struct SkipTo {
 //   [[, xyz] ::]     is  optionalBeforeColons(xyz)
 //   [[, xyz]... ::]  is  optionalBeforeColons(nonemptyList(xyz))
 template <typename PA> inline constexpr auto optionalBeforeColons(const PA &p) {
-  return "," >> construct<std::optional<typename PA::resultType>>(p) / "::" ||
-      ("::"_tok || !","_tok) >> defaulted(cut >> maybe(p));
+  using resultType = std::optional<typename PA::resultType>;
+  return "," >> construct<resultType>(p) / "::" ||
+      ("::"_tok || !","_tok) >> pure<resultType>();
 }
 template <typename PA>
 inline constexpr auto optionalListBeforeColons(const PA &p) {
+  using resultType = std::list<typename PA::resultType>;
   return "," >> nonemptyList(p) / "::" ||
-      ("::"_tok || !","_tok) >> defaulted(cut >> nonemptyList(p));
+      ("::"_tok || !","_tok) >> pure<resultType>();
 }
 
 // Skip over empty lines, leading spaces, and some compiler directives (viz.,

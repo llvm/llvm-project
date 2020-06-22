@@ -44,7 +44,7 @@ enum class RoundingMode : int8_t {
   Invalid = -1    ///< Denotes invalid value.
 };
 
-/// Represent ssubnormal handling kind for floating point instruction inputs and
+/// Represent subnormal handling kind for floating point instruction inputs and
 /// outputs.
 struct DenormalMode {
   /// Represent handled modes for denormal (aka subnormal) modes in the floating

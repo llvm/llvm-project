@@ -92,6 +92,9 @@ public:
   static bool ComputePathRelativeToLibrary(FileSpec &file_spec,
                                            llvm::StringRef dir);
 
+  static FileSpec GetXcodeContentsDirectory() { return {}; }
+  static FileSpec GetXcodeDeveloperDirectory() { return {}; }
+  
   /// Return the directory containing a specific Xcode SDK.
   static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk) { return {}; }
 

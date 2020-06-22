@@ -12,18 +12,14 @@
 #include "PDBTypes.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include <memory>
 
 namespace llvm {
 class raw_ostream;
+class StringRef;
 
 namespace pdb {
-
-class IPDBSession;
-class PDBSymbolTypeVTable;
-class PDBSymbolTypeVTableShape;
 
 enum class PdbSymbolIdField : uint32_t {
   None = 0,

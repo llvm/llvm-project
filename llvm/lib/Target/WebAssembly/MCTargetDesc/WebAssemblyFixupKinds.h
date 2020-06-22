@@ -17,6 +17,7 @@ enum Fixups {
   fixup_sleb128_i32 = FirstTargetFixupKind, // 32-bit signed
   fixup_sleb128_i64,                        // 64-bit signed
   fixup_uleb128_i32,                        // 32-bit unsigned
+  fixup_uleb128_i64,                        // 64-bit unsigned
 
   // Marker
   LastTargetFixupKind,

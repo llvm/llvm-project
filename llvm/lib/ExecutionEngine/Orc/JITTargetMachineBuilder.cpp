@@ -10,6 +10,7 @@
 
 #include "llvm/Support/Host.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace orc {
@@ -62,6 +63,79 @@ JITTargetMachineBuilder &JITTargetMachineBuilder::addFeatures(
     Features.AddFeature(F);
   return *this;
 }
+
+#ifndef NDEBUG
+raw_ostream &operator<<(raw_ostream &OS, const JITTargetMachineBuilder &JTMB) {
+  OS << "{ Triple = \"" << JTMB.TT.str() << "\", CPU = \"" << JTMB.CPU
+     << "\", Options = <not-printable>, Relocation Model = ";
+
+  if (JTMB.RM) {
+    switch (*JTMB.RM) {
+    case Reloc::Static:
+      OS << "Static";
+      break;
+    case Reloc::PIC_:
+      OS << "PIC_";
+      break;
+    case Reloc::DynamicNoPIC:
+      OS << "DynamicNoPIC";
+      break;
+    case Reloc::ROPI:
+      OS << "ROPI";
+      break;
+    case Reloc::RWPI:
+      OS << "RWPI";
+      break;
+    case Reloc::ROPI_RWPI:
+      OS << "ROPI_RWPI";
+      break;
+    }
+  } else
+    OS << "unspecified";
+
+  OS << ", Code Model = ";
+
+  if (JTMB.CM) {
+    switch (*JTMB.CM) {
+    case CodeModel::Tiny:
+      OS << "Tiny";
+      break;
+    case CodeModel::Small:
+      OS << "Small";
+      break;
+    case CodeModel::Kernel:
+      OS << "Kernel";
+      break;
+    case CodeModel::Medium:
+      OS << "Medium";
+      break;
+    case CodeModel::Large:
+      OS << "Large";
+      break;
+    }
+  } else
+    OS << "unspecified";
+
+  OS << ", Optimization Level = ";
+  switch (JTMB.OptLevel) {
+  case CodeGenOpt::None:
+    OS << "None";
+    break;
+  case CodeGenOpt::Less:
+    OS << "Less";
+    break;
+  case CodeGenOpt::Default:
+    OS << "Default";
+    break;
+  case CodeGenOpt::Aggressive:
+    OS << "Aggressive";
+    break;
+  }
+
+  OS << " }";
+  return OS;
+}
+#endif // NDEBUG
 
 } // End namespace orc.
 } // End namespace llvm.

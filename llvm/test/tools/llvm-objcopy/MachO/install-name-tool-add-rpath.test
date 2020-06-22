@@ -21,3 +21,12 @@
 # RUN: | FileCheck --check-prefix=NO-INPUT %s
 
 # NO-INPUT: no input file specified
+
+## Check that cmdsize accounts for NULL terminator.
+# RUN: yaml2obj %p/Inputs/x86_64.yaml -o %t.x86_64
+# RUN: llvm-install-name-tool -add_rpath abcd %t.x86_64
+# RUN: llvm-objdump -p %t.x86_64 | FileCheck %s --check-prefix=RPATH-SIZE
+
+# RPATH-SIZE: cmd LC_RPATH
+# RPATH-SIZE-NEXT: cmdsize 24
+# RPATH-SIZE-NEXT: path abcd

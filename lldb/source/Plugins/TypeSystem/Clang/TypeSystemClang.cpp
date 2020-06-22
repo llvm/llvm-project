@@ -344,7 +344,7 @@ static void SetMemberOwningModule(clang::Decl *member,
   member->setFromASTFile();
   member->setOwningModuleID(id.GetValue());
   member->setModuleOwnershipKind(clang::Decl::ModuleOwnershipKind::Visible);
-  if (auto *nd = llvm::dyn_cast<clang::NamedDecl>(member))
+  if (llvm::isa<clang::NamedDecl>(member))
     if (auto *dc = llvm::dyn_cast<clang::DeclContext>(parent)) {
       dc->setHasExternalVisibleStorage(true);
       // This triggers ExternalASTSource::FindExternalVisibleDeclsByName() to be
@@ -4740,6 +4740,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Float128:
     case clang::BuiltinType::Double:
     case clang::BuiltinType::LongDouble:
+    case clang::BuiltinType::BFloat16:
       return lldb::eEncodingIEEE754;
 
     case clang::BuiltinType::ObjCClass:
@@ -4819,16 +4820,53 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
     case clang::BuiltinType::SveBool:
     case clang::BuiltinType::SveInt8:
+    case clang::BuiltinType::SveInt8x2:
+    case clang::BuiltinType::SveInt8x3:
+    case clang::BuiltinType::SveInt8x4:
     case clang::BuiltinType::SveInt16:
+    case clang::BuiltinType::SveInt16x2:
+    case clang::BuiltinType::SveInt16x3:
+    case clang::BuiltinType::SveInt16x4:
     case clang::BuiltinType::SveInt32:
+    case clang::BuiltinType::SveInt32x2:
+    case clang::BuiltinType::SveInt32x3:
+    case clang::BuiltinType::SveInt32x4:
     case clang::BuiltinType::SveInt64:
+    case clang::BuiltinType::SveInt64x2:
+    case clang::BuiltinType::SveInt64x3:
+    case clang::BuiltinType::SveInt64x4:
     case clang::BuiltinType::SveUint8:
+    case clang::BuiltinType::SveUint8x2:
+    case clang::BuiltinType::SveUint8x3:
+    case clang::BuiltinType::SveUint8x4:
     case clang::BuiltinType::SveUint16:
+    case clang::BuiltinType::SveUint16x2:
+    case clang::BuiltinType::SveUint16x3:
+    case clang::BuiltinType::SveUint16x4:
     case clang::BuiltinType::SveUint32:
+    case clang::BuiltinType::SveUint32x2:
+    case clang::BuiltinType::SveUint32x3:
+    case clang::BuiltinType::SveUint32x4:
     case clang::BuiltinType::SveUint64:
+    case clang::BuiltinType::SveUint64x2:
+    case clang::BuiltinType::SveUint64x3:
+    case clang::BuiltinType::SveUint64x4:
     case clang::BuiltinType::SveFloat16:
+    case clang::BuiltinType::SveBFloat16:
+    case clang::BuiltinType::SveFloat16x2:
+    case clang::BuiltinType::SveFloat16x3:
+    case clang::BuiltinType::SveFloat16x4:
     case clang::BuiltinType::SveFloat32:
+    case clang::BuiltinType::SveFloat32x2:
+    case clang::BuiltinType::SveFloat32x3:
+    case clang::BuiltinType::SveFloat32x4:
     case clang::BuiltinType::SveFloat64:
+    case clang::BuiltinType::SveFloat64x2:
+    case clang::BuiltinType::SveFloat64x3:
+    case clang::BuiltinType::SveFloat64x4:
+      break;
+
+    case clang::BuiltinType::IncompleteMatrixIdx:
       break;
     }
     break;
@@ -5172,12 +5210,15 @@ uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
     }
     break;
 
+  case clang::Type::LValueReference:
+  case clang::Type::RValueReference:
   case clang::Type::ObjCObjectPointer: {
-    const clang::ObjCObjectPointerType *pointer_type =
-        llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr());
-    clang::QualType pointee_type = pointer_type->getPointeeType();
-    uint32_t num_pointee_children =
-        GetType(pointee_type).GetNumChildren(omit_empty_base_classes, exe_ctx);
+    CompilerType pointee_clang_type(GetPointeeType(type));
+
+    uint32_t num_pointee_children = 0;
+    if (pointee_clang_type.IsAggregateType())
+      num_pointee_children =
+          pointee_clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
     // If this type points to a simple type, then it has 1 child
     if (num_pointee_children == 0)
       num_children = 1;
@@ -5209,27 +5250,16 @@ uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
     const clang::PointerType *pointer_type =
         llvm::cast<clang::PointerType>(qual_type.getTypePtr());
     clang::QualType pointee_type(pointer_type->getPointeeType());
-    uint32_t num_pointee_children =
-        GetType(pointee_type).GetNumChildren(omit_empty_base_classes, exe_ctx);
+    CompilerType pointee_clang_type(GetType(pointee_type));
+    uint32_t num_pointee_children = 0;
+    if (pointee_clang_type.IsAggregateType())
+      num_pointee_children =
+          pointee_clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
     if (num_pointee_children == 0) {
       // We have a pointer to a pointee type that claims it has no children. We
       // will want to look at
       num_children = GetNumPointeeChildren(pointee_type);
     } else
-      num_children = num_pointee_children;
-  } break;
-
-  case clang::Type::LValueReference:
-  case clang::Type::RValueReference: {
-    const clang::ReferenceType *reference_type =
-        llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
-    clang::QualType pointee_type = reference_type->getPointeeType();
-    uint32_t num_pointee_children =
-        GetType(pointee_type).GetNumChildren(omit_empty_base_classes, exe_ctx);
-    // If this type points to a simple type, then it has 1 child
-    if (num_pointee_children == 0)
-      num_children = 1;
-    else
       num_children = num_pointee_children;
   } break;
 
@@ -7987,9 +8017,13 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
       //  If the class definition declares a move constructor or move assignment
       //  operator, an implicitly declared copy constructor or copy assignment
       //  operator is defined as deleted.
-      if (cxx_record_decl->hasUserDeclaredMoveConstructor() &&
-          cxx_record_decl->needsImplicitCopyConstructor())
-        cxx_record_decl->setImplicitCopyConstructorIsDeleted();
+      if (cxx_record_decl->hasUserDeclaredMoveConstructor() ||
+          cxx_record_decl->hasUserDeclaredMoveAssignment()) {
+        if (cxx_record_decl->needsImplicitCopyConstructor())
+          cxx_record_decl->setImplicitCopyConstructorIsDeleted();
+        if (cxx_record_decl->needsImplicitCopyAssignment())
+          cxx_record_decl->setImplicitCopyAssignmentIsDeleted();
+      }
 
       if (!cxx_record_decl->isCompleteDefinition())
         cxx_record_decl->completeDefinition();

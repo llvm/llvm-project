@@ -128,14 +128,39 @@ public:
   }
 };
 
+class AMDGPUPromoteAllocaToVector : public FunctionPass {
+public:
+  static char ID;
+
+  AMDGPUPromoteAllocaToVector() : FunctionPass(ID) {}
+
+  bool runOnFunction(Function &F) override;
+
+  StringRef getPassName() const override {
+    return "AMDGPU Promote Alloca to vector";
+  }
+
+  bool handleAlloca(AllocaInst &I);
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    FunctionPass::getAnalysisUsage(AU);
+  }
+};
+
 } // end anonymous namespace
 
 char AMDGPUPromoteAlloca::ID = 0;
+char AMDGPUPromoteAllocaToVector::ID = 0;
 
 INITIALIZE_PASS(AMDGPUPromoteAlloca, DEBUG_TYPE,
                 "AMDGPU promote alloca to vector or LDS", false, false)
 
+INITIALIZE_PASS(AMDGPUPromoteAllocaToVector, DEBUG_TYPE "-to-vector",
+                "AMDGPU promote alloca to vector", false, false)
+
 char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
+char &llvm::AMDGPUPromoteAllocaToVectorID = AMDGPUPromoteAllocaToVector::ID;
 
 bool AMDGPUPromoteAlloca::doInitialization(Module &M) {
   Mod = &M;
@@ -314,7 +339,9 @@ static Value *stripBitcasts(Value *V) {
 static Value *
 calculateVectorIndex(Value *Ptr,
                      const std::map<GetElementPtrInst *, Value *> &GEPIdx) {
-  GetElementPtrInst *GEP = cast<GetElementPtrInst>(stripBitcasts(Ptr));
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(stripBitcasts(Ptr));
+  if (!GEP)
+    return nullptr;
 
   auto I = GEPIdx.find(GEP);
   return I == GEPIdx.end() ? nullptr : I->second;
@@ -471,15 +498,17 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL) {
       if (Inst->getType() == AllocaTy || Inst->getType()->isVectorTy())
         break;
 
-      Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
       Value *Ptr = cast<LoadInst>(Inst)->getPointerOperand();
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
+      if (!Index)
+        break;
 
+      Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
       Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
       Value *ExtractElement = Builder.CreateExtractElement(VecValue, Index);
       if (Inst->getType() != VecEltTy)
-        ExtractElement = Builder.CreateBitCast(ExtractElement, Inst->getType());
+        ExtractElement = Builder.CreateBitOrPointerCast(ExtractElement, Inst->getType());
       Inst->replaceAllUsesWith(ExtractElement);
       Inst->eraseFromParent();
       break;
@@ -490,14 +519,17 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL) {
           SI->getValueOperand()->getType()->isVectorTy())
         break;
 
-      Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
       Value *Ptr = SI->getPointerOperand();
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
+      if (!Index)
+        break;
+
+      Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
       Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
       Value *Elt = SI->getValueOperand();
       if (Elt->getType() != VecEltTy)
-        Elt = Builder.CreateBitCast(Elt, VecEltTy);
+        Elt = Builder.CreateBitOrPointerCast(Elt, VecEltTy);
       Value *NewVecValue = Builder.CreateInsertElement(VecValue, Elt, Index);
       Builder.CreateStore(NewVecValue, BitCast);
       Inst->eraseFromParent();
@@ -982,6 +1014,43 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   return true;
 }
 
+bool AMDGPUPromoteAllocaToVector::runOnFunction(Function &F) {
+  if (skipFunction(F) || DisablePromoteAllocaToVector)
+    return false;
+
+  bool Changed = false;
+  BasicBlock &EntryBB = *F.begin();
+
+  SmallVector<AllocaInst *, 16> Allocas;
+  for (Instruction &I : EntryBB) {
+    if (AllocaInst *AI = dyn_cast<AllocaInst>(&I))
+      Allocas.push_back(AI);
+  }
+
+  for (AllocaInst *AI : Allocas) {
+    if (handleAlloca(*AI))
+      Changed = true;
+  }
+
+  return Changed;
+}
+
+bool AMDGPUPromoteAllocaToVector::handleAlloca(AllocaInst &I) {
+  // Array allocations are probably not worth handling, since an allocation of
+  // the array type is the canonical form.
+  if (!I.isStaticAlloca() || I.isArrayAllocation())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Trying to promote " << I << '\n');
+
+  Module *Mod = I.getParent()->getParent()->getParent();
+  return tryPromoteAllocaToVector(&I, Mod->getDataLayout());
+}
+
 FunctionPass *llvm::createAMDGPUPromoteAlloca() {
   return new AMDGPUPromoteAlloca();
+}
+
+FunctionPass *llvm::createAMDGPUPromoteAllocaToVector() {
+  return new AMDGPUPromoteAllocaToVector();
 }

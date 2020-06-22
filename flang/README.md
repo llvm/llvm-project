@@ -140,8 +140,13 @@ cd ~/flang/build
 cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR ~/flang/src
 make
 ```
-### How to Run the Regression Tests
+# How to Run Tests
 
+Flang supports 2 different categories of tests
+1. Regression tests (https://www.llvm.org/docs/TestingGuide.html#regression-tests)
+2. Unit tests (https://www.llvm.org/docs/TestingGuide.html#unit-tests)
+
+## For out of tree builds
 To run all tests:
 ```
 cd ~/flang/build
@@ -157,6 +162,38 @@ flang_site_config and flang_config. And they can be set as shown bellow:
  --param flang_site_config=<path-to-flang-build>/test-lit/lit.site.cfg.py \
  --param flang_config=<path-to-flang-build>/test-lit/lit.cfg.py \
   <path-to-fortran-test>
+
+```
+
+Unit tests:
+
+If flang was built with `-DFLANG_INCLUDE_TESTS=On` (`ON` by default), it is possible to generate unittests.
+Note: Unit-tests will be skipped for LLVM install for an out-of-tree build as it does not include googletest related headers and libraries.
+
+There are various ways to run unit-tests.
+
+```
+
+1. make check-flang-unit
+2. make check-all or make check-flang
+3. <path-to-llvm-lit>/llvm-lit \
+        test/Unit
+4. Invoking tests from <out-of-tree flang build>/unittests/<respective unit test folder>
+
+```
+
+
+## For in tree builds
+If flang was built with `-DFLANG_INCLUDE_TESTS=On` (`On` by default), it is possible to
+generate unittests.
+
+To run all of the flang unit tests use the `check-flang-unit` target:
+```
+make check-flang-unit
+```
+To run all of the flang regression tests use the `check-flang` target:
+```
+make check-flang
 ```
 
 # How to Generate Documentation
@@ -179,4 +216,3 @@ It will generate html in
 
     <build-dir>/tools/flang/docs/doxygen/html # for flang docs
 ```
-

@@ -1621,7 +1621,6 @@ protected:
     io_handler.SetIsDone(true);
   }
 
-protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     if (GetDebugger().GetScriptLanguage() != lldb::eScriptLanguagePython) {
       result.AppendError("only scripting language supported for scripted "
@@ -1766,6 +1765,16 @@ public:
   }
 
   ~CommandObjectCommandsScriptDelete() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_interpreter.HasCommands() || request.GetCursorIndex() != 0)
+      return;
+
+    for (const auto &c : m_interpreter.GetUserCommands())
+      request.TryCompleteCurrentArg(c.first, c.second->GetHelp());
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {

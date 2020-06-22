@@ -218,10 +218,12 @@ SCRUB_IR_COMMENT_RE = re.compile(r'\s*;.*')
 # spaces, commas, paren, or end of the string
 IR_VALUE_RE = re.compile(r'(\s+)%([\w.-]+?)([,\s\(\)]|\Z)')
 
+NAMELESS_PREFIX = "TMP"
+
 # Create a FileCheck variable name based on an IR name.
 def get_value_name(var):
   if var.isdigit():
-    var = 'TMP' + var
+    var = NAMELESS_PREFIX + var
   var = var.replace('.', '_')
   var = var.replace('-', '_')
   return var.upper()
@@ -243,6 +245,8 @@ def genericize_check_lines(lines, is_analyze, vars_seen):
   # into defs, and variables we have seen into uses.
   def transform_line_vars(match):
     var = match.group(2)
+    if NAMELESS_PREFIX.lower() in var.lower():
+      warn("Change IR value name '%s' to prevent possible conflict with scripted FileCheck name." % (var,))
     if var in vars_seen:
       rv = get_value_use(var)
     else:
@@ -269,8 +273,8 @@ def genericize_check_lines(lines, is_analyze, vars_seen):
 
 
 def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, is_asm, is_analyze):
-  # prefix_blacklist are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
-  prefix_blacklist = set()
+  # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
+  prefix_exclusions = set()
   printed_prefixes = []
   for p in prefix_list:
     checkprefixes = p[0]
@@ -278,18 +282,18 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
     # exist for this run line. A subset of the check prefixes might know about the function but only because
     # other run lines created it.
     if any(map(lambda checkprefix: func_name not in func_dict[checkprefix], checkprefixes)):
-        prefix_blacklist |= set(checkprefixes)
+        prefix_exclusions |= set(checkprefixes)
         continue
 
-  # prefix_blacklist is constructed, we can now emit the output
+  # prefix_exclusions is constructed, we can now emit the output
   for p in prefix_list:
     checkprefixes = p[0]
     for checkprefix in checkprefixes:
       if checkprefix in printed_prefixes:
         break
 
-      # Check if the prefix is blacklisted.
-      if checkprefix in prefix_blacklist:
+      # Check if the prefix is excluded.
+      if checkprefix in prefix_exclusions:
         continue
 
       # If we do not have output for this prefix we skip it.

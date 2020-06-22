@@ -2,19 +2,6 @@
 // RUN: %arm_call_apsr -o %t.aspr.o
 // RUN: %clang_builtins %s  %t.aspr.o %librt -o %t && %run %t
 
-//===-- aeabi_cdcmple.c - Test __aeabi_cdcmple and __aeabi_cdrcmple -------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __aeabi_cdcmple and __aeabi_cdrcmple for the compiler_rt
-// library.
-//
-//===----------------------------------------------------------------------===//
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

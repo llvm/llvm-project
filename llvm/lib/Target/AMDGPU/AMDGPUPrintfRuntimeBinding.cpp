@@ -516,7 +516,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
             break;
           }
           if (EleCount > 1) {
-            IType = dyn_cast<Type>(VectorType::get(IType, EleCount));
+            IType = FixedVectorType::get(IType, EleCount);
           }
           Arg = new BitCastInst(Arg, IType, "PrintArgVect", Brnch);
           WhatToStore.push_back(Arg);

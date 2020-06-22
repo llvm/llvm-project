@@ -709,7 +709,8 @@ ProgramStateRef CStringChecker::setCStringLength(ProgramStateRef state,
 
   case MemRegion::SymbolicRegionKind:
   case MemRegion::AllocaRegionKind:
-  case MemRegion::VarRegionKind:
+  case MemRegion::NonParamVarRegionKind:
+  case MemRegion::ParamVarRegionKind:
   case MemRegion::FieldRegionKind:
   case MemRegion::ObjCIvarRegionKind:
     // These are the types we can currently track string lengths for.
@@ -814,7 +815,8 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
   }
   case MemRegion::SymbolicRegionKind:
   case MemRegion::AllocaRegionKind:
-  case MemRegion::VarRegionKind:
+  case MemRegion::NonParamVarRegionKind:
+  case MemRegion::ParamVarRegionKind:
   case MemRegion::FieldRegionKind:
   case MemRegion::ObjCIvarRegionKind:
     return getCStringLengthForRegion(C, state, Ex, MR, hypothetical);
@@ -1009,8 +1011,12 @@ bool CStringChecker::SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
     os << "a C++ temp object of type "
        << cast<TypedValueRegion>(MR)->getValueType().getAsString();
     return true;
-  case MemRegion::VarRegionKind:
+  case MemRegion::NonParamVarRegionKind:
     os << "a variable of type"
+       << cast<TypedValueRegion>(MR)->getValueType().getAsString();
+    return true;
+  case MemRegion::ParamVarRegionKind:
+    os << "a parameter of type"
        << cast<TypedValueRegion>(MR)->getValueType().getAsString();
     return true;
   case MemRegion::FieldRegionKind:

@@ -58,7 +58,9 @@ private:
 
   lldb::addr_t m_pc_value;
 
-  DISALLOW_COPY_AND_ASSIGN(RegisterContextHistory);
+  RegisterContextHistory(const RegisterContextHistory &) = delete;
+  const RegisterContextHistory &
+  operator=(const RegisterContextHistory &) = delete;
 };
 } // namespace lldb_private
 

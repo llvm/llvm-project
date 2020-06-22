@@ -88,7 +88,7 @@ bool InstCombiner::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                           Depth, I);
   if (!NewVal) return false;
   if (Instruction* OpInst = dyn_cast<Instruction>(U))
-    salvageDebugInfoOrMarkUndef(*OpInst);
+    salvageDebugInfo(*OpInst);
     
   replaceUse(U, NewVal);
   return true;
@@ -1144,7 +1144,8 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
 
   Module *M = II->getParent()->getParent()->getParent();
   Type *EltTy = IIVTy->getElementType();
-  Type *NewTy = (NewNumElts == 1) ? EltTy : VectorType::get(EltTy, NewNumElts);
+  Type *NewTy =
+      (NewNumElts == 1) ? EltTy : FixedVectorType::get(EltTy, NewNumElts);
 
   OverloadTys[0] = NewTy;
   Function *NewIntrin = Intrinsic::getDeclaration(M, IID, OverloadTys);

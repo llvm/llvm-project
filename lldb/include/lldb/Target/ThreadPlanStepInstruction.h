@@ -49,7 +49,9 @@ private:
   StackID m_stack_id;
   StackID m_parent_frame_id;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepInstruction);
+  ThreadPlanStepInstruction(const ThreadPlanStepInstruction &) = delete;
+  const ThreadPlanStepInstruction &
+  operator=(const ThreadPlanStepInstruction &) = delete;
 };
 
 } // namespace lldb_private

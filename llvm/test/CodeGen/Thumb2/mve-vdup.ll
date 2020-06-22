@@ -253,10 +253,9 @@ entry:
 define arm_aapcs_vfpcc half @vdup_f16_extract(half* %src1, half* %src2) {
 ; CHECK-LABEL: vdup_f16_extract:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vldr.16 s2, [r1]
+; CHECK-NEXT:    vldr.16 s0, [r1]
+; CHECK-NEXT:    vldr.16 s2, [r0]
 ; CHECK-NEXT:    vadd.f16 s0, s2, s0
-; CHECK-NEXT:    vstr.16 s0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load half, half *%src1, align 2

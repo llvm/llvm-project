@@ -30,8 +30,8 @@ define float @test1_unary(float %x, float %y) {
 
 define float @neg_sub_nsz(float %x, float %y) {
 ; CHECK-LABEL: @neg_sub_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub nsz float [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[T2:%.*]] = fsub nsz float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[T2]]
 ;
   %t1 = fsub float %x, %y
   %t2 = fsub nsz float -0.0, %t1
@@ -755,7 +755,7 @@ define float @fake_fneg_fsub_fast_extra_use(float %x, float %y) {
 ; CHECK-LABEL: @fake_fneg_fsub_fast_extra_use(
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
-; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float [[NEGX:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float [[NEGX]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
   %negx = fsub float -0.0, %x
@@ -783,4 +783,102 @@ define float @fneg_fsub_constant(float %x) {
   %negx = fneg float %x
   %sub = fsub nsz float %negx, 42.0
   ret float %sub
+}
+
+; ((w-x) + y) - z --> (w+y) - (x+z)
+
+define float @fsub_fadd_fsub_reassoc(float %w, float %x, float %y, float %z) {
+; CHECK-LABEL: @fsub_fadd_fsub_reassoc(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[W:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc nsz float [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = fsub reassoc nsz float [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret float [[S2]]
+;
+  %s1 = fsub reassoc nsz float %w, %x
+  %a = fadd reassoc nsz float %s1, %y
+  %s2 = fsub reassoc nsz float %a, %z
+  ret float %s2
+}
+
+; FMF on the last op is enough to do the transform; vectors work too.
+
+define <2 x float> @fsub_fadd_fsub_reassoc_commute(<2 x float> %w, <2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: @fsub_fadd_fsub_reassoc_commute(
+; CHECK-NEXT:    [[D:%.*]] = fdiv <2 x float> [[Y:%.*]], <float 4.200000e+01, float -4.200000e+01>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[D]], [[W:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x float> [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = fsub fast <2 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x float> [[S2]]
+;
+  %d = fdiv <2 x float> %y, <float 42.0, float -42.0> ; thwart complexity-based canonicalization
+  %s1 = fsub <2 x float> %w, %x
+  %a = fadd <2 x float> %d, %s1
+  %s2 = fsub fast <2 x float> %a, %z
+  ret <2 x float> %s2
+}
+
+; (v-w) + (x-y) - z --> (v+x) - (w+y+z)
+
+define float @fsub_fadd_fsub_reassoc_twice(float %v, float %w, float %x, float %y, float %z) {
+; CHECK-LABEL: @fsub_fadd_fsub_reassoc_twice(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc nsz float [[X:%.*]], [[V:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd reassoc nsz float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[S3:%.*]] = fsub reassoc nsz float [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret float [[S3]]
+;
+  %s1 = fsub reassoc nsz float %v, %w
+  %s2 = fsub reassoc nsz float %x, %y
+  %a = fadd reassoc nsz float %s1, %s2
+  %s3 = fsub reassoc nsz float %a, %z
+  ret float %s3
+}
+
+; negative test - FMF
+
+define float @fsub_fadd_fsub_not_reassoc(float %w, float %x, float %y, float %z) {
+; CHECK-LABEL: @fsub_fadd_fsub_not_reassoc(
+; CHECK-NEXT:    [[S1:%.*]] = fsub fast float [[W:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = fadd fast float [[S1]], [[Y:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = fsub nsz float [[A]], [[Z:%.*]]
+; CHECK-NEXT:    ret float [[S2]]
+;
+  %s1 = fsub fast float %w, %x
+  %a = fadd fast float %s1, %y
+  %s2 = fsub nsz float %a, %z
+  ret float %s2
+}
+
+; negative test - uses
+
+define float @fsub_fadd_fsub_reassoc_use1(float %w, float %x, float %y, float %z) {
+; CHECK-LABEL: @fsub_fadd_fsub_reassoc_use1(
+; CHECK-NEXT:    [[S1:%.*]] = fsub fast float [[W:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[S1]])
+; CHECK-NEXT:    [[A:%.*]] = fadd fast float [[S1]], [[Y:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = fsub fast float [[A]], [[Z:%.*]]
+; CHECK-NEXT:    ret float [[S2]]
+;
+  %s1 = fsub fast float %w, %x
+  call void @use(float %s1)
+  %a = fadd fast float %s1, %y
+  %s2 = fsub fast float %a, %z
+  ret float %s2
+}
+
+; negative test - uses
+
+define float @fsub_fadd_fsub_reassoc_use2(float %w, float %x, float %y, float %z) {
+; CHECK-LABEL: @fsub_fadd_fsub_reassoc_use2(
+; CHECK-NEXT:    [[S1:%.*]] = fsub fast float [[W:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = fadd fast float [[S1]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(float [[A]])
+; CHECK-NEXT:    [[S2:%.*]] = fsub fast float [[A]], [[Z:%.*]]
+; CHECK-NEXT:    ret float [[S2]]
+;
+  %s1 = fsub fast float %w, %x
+  %a = fadd fast float %s1, %y
+  call void @use(float %a)
+  %s2 = fsub fast float %a, %z
+  ret float %s2
 }

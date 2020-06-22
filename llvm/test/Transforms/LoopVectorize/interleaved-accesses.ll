@@ -133,20 +133,46 @@ for.end:                                          ; preds = %for.body
 ;   return r;
 ; }
 
-; CHECK-LABEL: @test_struct_load4(
-; CHECK: %wide.vec = load <16 x i32>, <16 x i32>* {{.*}}, align 4
-; CHECK: shufflevector <16 x i32> %wide.vec, <16 x i32> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK: shufflevector <16 x i32> %wide.vec, <16 x i32> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK: shufflevector <16 x i32> %wide.vec, <16 x i32> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK: shufflevector <16 x i32> %wide.vec, <16 x i32> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-; CHECK: add <4 x i32>
-; CHECK: sub <4 x i32>
-; CHECK: add <4 x i32>
-; CHECK: sub <4 x i32>
-
 %struct.ST4 = type { i32, i32, i32, i32 }
 
 define i32 @test_struct_load4(%struct.ST4* nocapture readonly %S) {
+; CHECK-LABEL: @test_struct_load4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ST4:%.*]], %struct.ST4* [[S:%.*]], i64 [[INDEX]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <16 x i32>*
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, <16 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[STRIDED_VEC]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], [[STRIDED_VEC2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[STRIDED_VEC1]], [[STRIDED_VEC3]]
+; CHECK-NEXT:    [[TMP5]] = sub <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !6
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP5]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX5:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[BIN_RDX5]], i32 0
+; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop !7
+; CHECK:       for.end:
+; CHECK-NEXT:    [[SUB8_LCSSA:%.*]] = phi i32 [ undef, [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[SUB8_LCSSA]]
+;
 entry:
   br label %for.body
 
@@ -187,7 +213,7 @@ for.end:                                          ; preds = %for.body
 ; }
 
 ; CHECK-LABEL: @test_struct_store4(
-; CHECK: %[[LD:.*]] = load <4 x i32>, <4 x i32>* 
+; CHECK: %[[LD:.*]] = load <4 x i32>, <4 x i32>*
 ; CHECK: add nsw <4 x i32> %[[LD]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK: shl nsw <4 x i32> %[[LD]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK: add nsw <4 x i32> %[[LD]], <i32 3, i32 3, i32 3, i32 3>
@@ -509,7 +535,7 @@ for.body:                                         ; preds = %for.body, %entry
 ;   int a;
 ;   float b;
 ; };
-; 
+;
 ; int SA;
 ; float SB;
 ;

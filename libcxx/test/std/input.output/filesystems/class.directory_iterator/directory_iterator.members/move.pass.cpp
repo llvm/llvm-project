@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <filesystem>
 
@@ -46,7 +45,8 @@ TEST_CASE(test_move_end_iterator)
 
 TEST_CASE(test_move_valid_iterator)
 {
-    const path testDir = StaticEnv::Dir;
+    static_test_env static_env;
+    const path testDir = static_env.Dir;
     const directory_iterator endIt{};
 
     directory_iterator it(testDir);

@@ -352,6 +352,18 @@ int32_t DeviceTy::data_retrieve(void *HstPtrBegin, void *TgtPtrBegin,
                                     AsyncInfoPtr);
 }
 
+// Copy data from current device to destination device directly
+int32_t DeviceTy::data_exchange(void *SrcPtr, DeviceTy DstDev, void *DstPtr,
+                                int64_t Size, __tgt_async_info *AsyncInfoPtr) {
+  if (!AsyncInfoPtr || !RTL->data_exchange_async || !RTL->synchronize) {
+    assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
+    return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
+                              Size);
+  } else
+    return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
+                                    DstPtr, Size, AsyncInfoPtr);
+}
+
 // Run region on device
 int32_t DeviceTy::run_region(void *TgtEntryPtr, void **TgtVarsPtr,
                              ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
@@ -378,6 +390,18 @@ int32_t DeviceTy::run_team_region(void *TgtEntryPtr, void **TgtVarsPtr,
     return RTL->run_team_region_async(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
                                       TgtOffsets, TgtVarsSize, NumTeams,
                                       ThreadLimit, LoopTripCount, AsyncInfoPtr);
+}
+
+// Whether data can be copied to DstDevice directly
+bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
+  if (RTL != DstDevice.RTL || !RTL->is_data_exchangable)
+    return false;
+
+  if (RTL->is_data_exchangable(RTLDeviceID, DstDevice.RTLDeviceID))
+    return (RTL->data_exchange != nullptr) ||
+           (RTL->data_exchange_async != nullptr);
+
+  return false;
 }
 
 /// Check whether a device has an associated RTL and initialize it if it's not

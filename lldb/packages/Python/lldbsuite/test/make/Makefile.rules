@@ -106,52 +106,54 @@ ifneq "$(TRIPLE)" ""
 	TRIPLE_ENV =$(word 4, $(triple_space))
 	ifeq "$(TRIPLE_VENDOR)" "apple"
 		ifeq "$(TRIPLE_OS)" "ios"
-			CODESIGN := codesign
-			ifeq "$(SDKROOT)" ""
-				# Set SDKROOT if it wasn't set
-				ifneq (,$(findstring arm,$(ARCH)))
-					SDKROOT = $(shell xcrun --sdk iphoneos --show-sdk-path)
-					ifeq "$(TRIPLE_VERSION)" ""
-						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
-					endif
-					ARCH_CFLAGS :=-mios-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
-				else
-					ifeq "$(TRIPLE_ENV)" "macabi"
-						SDKROOT = $(shell xcrun --sdk macosx --show-sdk-path)
-					else
-						SDKROOT = $(shell xcrun --sdk iphonesimulator --show-sdk-path)
-					endif
-					ifeq "$(TRIPLE_VERSION)" ""
-						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
-					endif
-					ifeq "$(TRIPLE_ENV)" "macabi"
-						ARCH_CFLAGS :=-mios-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
-					else
-						ARCH_CFLAGS :=-mios-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
-					endif
-				endif
+			ifeq "$(TRIPLE_ENV)" "simulator"
+				SDK_NAME := iphonesimulator
+			else
+			ifeq "$(TRIPLE_ENV)" "macabi"
+				SDK_NAME := macosx
+			else
+				SDK_NAME := iphoneos
+			endif
+			endif
+		endif
+		ifeq "$(TRIPLE_OS)" "tvos"
+			ifeq "$(TRIPLE_ENV)" "simulator"
+				SDK_NAME := appletvsimulator
+			else
+				SDK_NAME := appletvos
 			endif
 		endif
 		ifeq "$(TRIPLE_OS)" "watchos"
-			CODESIGN := codesign
-			ifeq "$(SDKROOT)" ""
-				# Set SDKROOT if it wasn't set
-				ifneq (,$(findstring arm,$(ARCH)))
-					SDKROOT = $(shell xcrun --sdk watchos --show-sdk-path)
-					ifeq "$(TRIPLE_VERSION)" ""
-						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
-					endif
-					ARCH_CFLAGS :=-mwatchos-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
-				else
-					SDKROOT = $(shell xcrun --sdk watchsimulator --show-sdk-path)
-					ifeq "$(TRIPLE_VERSION)" ""
-						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
-					endif
-					ARCH_CFLAGS :=-mwatchos-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
-				endif
+			ifeq "$(TRIPLE_ENV)" "simulator"
+				SDK_NAME := watchsimulator
+			else
+				SDK_NAME := watchos
 			endif
 		endif
+		ifneq "$(TRIPLE_OS)" "macosx"
+			ifeq "$(TRIPLE_ENV)" ""
+				CODESIGN := codesign
+			endif
+		endif
+
+		ifeq "$(SDKROOT)" ""
+			SDKROOT := $(shell xcrun --sdk $(SDK_NAME) --show-sdk-path)
+		endif
+		ifeq "$(TRIPLE_VERSION)" ""
+			ifeq "$(SDK_NAME)" ""
+                               $(error "SDK_NAME is empty")
+			endif
+			TRIPLE_VERSION := $(shell xcrun --sdk $(SDK_NAME) --show-sdk-version)
+		endif
+		ifeq "$(TRIPLE_ENV)" "simulator"
+			ARCH_CFLAGS := -m$(TRIPLE_OS)-simulator-version-min=$(TRIPLE_VERSION)
+		else
+		ifneq "$(TRIPLE_OS)" "macosx"
+			ARCH_CFLAGS := -m$(TRIPLE_OS)-version-min=$(TRIPLE_VERSION)
+		endif
+		endif
 	endif
+	ARCH_CFLAGS += -target $(TRIPLE)
 endif
 ifeq "$(OS)" "Android"
 	include $(THIS_FILE_DIR)/Android.rules
@@ -295,7 +297,7 @@ ifndef NO_TEST_COMMON_H
   CFLAGS += -include $(THIS_FILE_DIR)/test_common.h
 endif
 
-CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
+CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS)
 
 # If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
 # with codeview by default but all the tests rely on dwarf.
@@ -305,7 +307,7 @@ endif
 
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
+	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS) -isysroot "$(SDKROOT)"
 else
 	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 endif
@@ -335,6 +337,7 @@ ifeq "$(MAKE_GMODULES)" "YES"
 	CXXFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
 endif
 
+CFLAGS += $(CFLAGS_EXTRAS)
 CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS) $(CXXFLAGS_EXTRAS)
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)

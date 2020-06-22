@@ -66,36 +66,36 @@ define i32 @simple_loop_cost(i32 %N) {
 ;
 ; CHECK-T1-THROUGHPUT-LABEL: 'simple_loop_cost'
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %res
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %res
 ;
 ; CHECK-V8M-THROUGHPUT-LABEL: 'simple_loop_cost'
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %res
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %res
 ;
 ; CHECK-V8_1M-THROUGHPUT-LABEL: 'simple_loop_cost'
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %res
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %res
 ;
 entry:
   %zero = icmp eq i32 %N, 0
@@ -198,9 +198,9 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ;
 ; CHECK-T1-THROUGHPUT-LABEL: 'simple_mul_loop'
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
@@ -208,15 +208,15 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %res
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %res
 ;
 ; CHECK-V8M-THROUGHPUT-LABEL: 'simple_mul_loop'
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
@@ -224,15 +224,15 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %res
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %res
 ;
 ; CHECK-V8_1M-THROUGHPUT-LABEL: 'simple_mul_loop'
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
@@ -240,9 +240,9 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %res
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %res
 ;
 entry:
   %zero = icmp eq i32 %N, 0
@@ -365,11 +365,11 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ;
 ; CHECK-T1-THROUGHPUT-LABEL: 'simple_mul_ext_lsr_loop'
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
@@ -378,17 +378,17 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %res
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %res
 ;
 ; CHECK-V8M-THROUGHPUT-LABEL: 'simple_mul_ext_lsr_loop'
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
@@ -397,17 +397,17 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %res
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %res
 ;
 ; CHECK-V8_1M-THROUGHPUT-LABEL: 'simple_mul_ext_lsr_loop'
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
@@ -416,9 +416,9 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %res
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %res
 ;
 entry:
   %zero = icmp eq i32 %N, 0

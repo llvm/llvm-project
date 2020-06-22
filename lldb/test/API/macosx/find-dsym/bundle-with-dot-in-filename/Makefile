@@ -1,13 +1,10 @@
-SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/
-CC ?= clang
+EXE := find-bundle-with-dots-in-fn
 
-ifeq "$(ARCH)" ""
-	ARCH = x86_64
-endif
+all: clean $(EXE)
 
-CFLAGS ?= -g -O0 -arch $(ARCH)
+include Makefile.rules
 
-all: clean
+$(EXE):
 	$(CC) $(CFLAGS) -dynamiclib -o com.apple.sbd $(SRCDIR)/bundle.c
 	mkdir com.apple.sbd.xpc
 	mv com.apple.sbd com.apple.sbd.xpc/
@@ -18,5 +15,5 @@ all: clean
 	tar cf - com.apple.sbd.xpc com.apple.sbd.xpc.dSYM | ( cd hide.app;tar xBpf -)
 	$(CC) $(CFLAGS) -o find-bundle-with-dots-in-fn $(SRCDIR)/main.c
 
-clean:
+clean::
 	rm -rf a.out a.out.dSYM hide.app com.apple.sbd com.apple.sbd.dSYM com.apple.sbd.xpc com.apple.sbd.xpc.dSYM find-bundle-with-dots-in-fn find-bundle-with-dots-in-fn.dSYM

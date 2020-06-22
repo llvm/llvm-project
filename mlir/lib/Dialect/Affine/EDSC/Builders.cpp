@@ -14,78 +14,48 @@
 using namespace mlir;
 using namespace mlir::edsc;
 
-static Optional<Value> emitStaticFor(ArrayRef<Value> lbs, ArrayRef<Value> ubs,
-                                     int64_t step) {
-  if (lbs.size() != 1 || ubs.size() != 1)
-    return Optional<Value>();
+void mlir::edsc::affineLoopNestBuilder(
+    ValueRange lbs, ValueRange ubs, ArrayRef<int64_t> steps,
+    function_ref<void(ValueRange)> bodyBuilderFn) {
+  assert(ScopedContext::getContext() && "EDSC ScopedContext not set up");
 
-  auto *lbDef = lbs.front().getDefiningOp();
-  auto *ubDef = ubs.front().getDefiningOp();
-  if (!lbDef || !ubDef)
-    return Optional<Value>();
+  // Wrap the body builder function into an interface compatible with the main
+  // builder.
+  auto wrappedBuilderFn = [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                              ValueRange ivs) {
+    ScopedContext context(nestedBuilder, nestedLoc);
+    bodyBuilderFn(ivs);
+  };
+  function_ref<void(OpBuilder &, Location, ValueRange)> wrapper;
+  if (bodyBuilderFn)
+    wrapper = wrappedBuilderFn;
 
-  auto lbConst = dyn_cast<ConstantIndexOp>(lbDef);
-  auto ubConst = dyn_cast<ConstantIndexOp>(ubDef);
-  if (!lbConst || !ubConst)
-    return Optional<Value>();
-  return ScopedContext::getBuilderRef()
-      .create<AffineForOp>(ScopedContext::getLocation(), lbConst.getValue(),
-                           ubConst.getValue(), step)
-      .getInductionVar();
+  // Extract the builder, location and construct the loop nest.
+  OpBuilder &builder = ScopedContext::getBuilderRef();
+  Location loc = ScopedContext::getLocation();
+  buildAffineLoopNest(builder, loc, lbs, ubs, steps, wrapper);
 }
 
-LoopBuilder mlir::edsc::makeAffineLoopBuilder(Value *iv, ArrayRef<Value> lbs,
-                                              ArrayRef<Value> ubs,
-                                              int64_t step) {
-  mlir::edsc::LoopBuilder result;
-  if (auto staticForIv = emitStaticFor(lbs, ubs, step))
-    *iv = staticForIv.getValue();
-  else
-    *iv = ScopedContext::getBuilderRef()
-              .create<AffineForOp>(
-                  ScopedContext::getLocation(), lbs,
-                  ScopedContext::getBuilderRef().getMultiDimIdentityMap(
-                      lbs.size()),
-                  ubs,
-                  ScopedContext::getBuilderRef().getMultiDimIdentityMap(
-                      ubs.size()),
-                  step)
-              .getInductionVar();
+void mlir::edsc::affineLoopBuilder(ValueRange lbs, ValueRange ubs, int64_t step,
+                                   function_ref<void(Value)> bodyBuilderFn) {
+  // Fetch the builder and location.
+  assert(ScopedContext::getContext() && "EDSC ScopedContext not set up");
+  OpBuilder &builder = ScopedContext::getBuilderRef();
+  Location loc = ScopedContext::getLocation();
 
-  auto *body = getForInductionVarOwner(*iv).getBody();
-  result.enter(body);
-  return result;
-}
-
-mlir::edsc::AffineLoopNestBuilder::AffineLoopNestBuilder(Value *iv,
-                                                         ArrayRef<Value> lbs,
-                                                         ArrayRef<Value> ubs,
-                                                         int64_t step) {
-  loops.emplace_back(makeAffineLoopBuilder(iv, lbs, ubs, step));
-}
-
-mlir::edsc::AffineLoopNestBuilder::AffineLoopNestBuilder(
-    MutableArrayRef<Value> ivs, ArrayRef<Value> lbs, ArrayRef<Value> ubs,
-    ArrayRef<int64_t> steps) {
-  assert(ivs.size() == lbs.size() && "Mismatch in number of arguments");
-  assert(ivs.size() == ubs.size() && "Mismatch in number of arguments");
-  assert(ivs.size() == steps.size() && "Mismatch in number of arguments");
-  for (auto it : llvm::zip(ivs, lbs, ubs, steps))
-    loops.emplace_back(makeAffineLoopBuilder(&std::get<0>(it), std::get<1>(it),
-                                             std::get<2>(it), std::get<3>(it)));
-}
-
-void mlir::edsc::AffineLoopNestBuilder::operator()(
-    function_ref<void(void)> fun) {
-  if (fun)
-    fun();
-  // Iterate on the calling operator() on all the loops in the nest.
-  // The iteration order is from innermost to outermost because enter/exit needs
-  // to be asymmetric (i.e. enter() occurs on LoopBuilder construction, exit()
-  // occurs on calling operator()). The asymmetry is required for properly
-  // nesting imperfectly nested regions (see LoopBuilder::operator()).
-  for (auto lit = loops.rbegin(), eit = loops.rend(); lit != eit; ++lit)
-    (*lit)();
+  // Create the actual loop and call the body builder, if provided, after
+  // updating the scoped context.
+  builder.create<AffineForOp>(
+      loc, lbs, builder.getMultiDimIdentityMap(lbs.size()), ubs,
+      builder.getMultiDimIdentityMap(ubs.size()), step,
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, Value iv) {
+        if (bodyBuilderFn) {
+          ScopedContext nestedContext(nestedBuilder, nestedLoc);
+          OpBuilder::InsertionGuard guard(nestedBuilder);
+          bodyBuilderFn(iv);
+        }
+        nestedBuilder.create<AffineYieldOp>(nestedLoc);
+      });
 }
 
 static std::pair<AffineExpr, Value>

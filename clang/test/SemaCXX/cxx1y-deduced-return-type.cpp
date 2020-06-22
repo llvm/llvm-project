@@ -100,7 +100,7 @@ auto fac(int n) {
 auto fac_2(int n) { // expected-note {{declared here}}
   if (n > 2)
     return n * fac_2(n-1); // expected-error {{cannot be used before it is defined}}
-  return n;
+  return n; // expected-error {{cannot initialize return object of type 'auto'}}
 }
 
 auto void_ret() {}

@@ -131,22 +131,9 @@ entry:
 ; GCN-LABEL: {{^}}extract_neg_offset_vgpr:
 ; The offset depends on the register that holds the first element of the vector.
 
-; FIXME: The waitcnt for the argument load can go after the loop
-; GCN: s_mov_b64 s{{\[[0-9]+:[0-9]+\]}}, exec
-; GCN: [[LOOPBB:BB[0-9]+_[0-9]+]]:
-; GCN: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v{{[0-9]+}}
-; GCN: s_and_saveexec_b64 vcc, vcc
-
-; MOVREL: s_add_i32 m0, [[READLANE]], 0xfffffe0
-; MOVREL: v_movrels_b32_e32 [[RESULT:v[0-9]+]], v1
-
-; IDXMODE: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00
-; IDXMODE: s_set_gpr_idx_on [[ADD_IDX]], gpr_idx(SRC0)
-; IDXMODE: v_mov_b32_e32 [[RESULT:v[0-9]+]], v1
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN: s_cbranch_execnz
-
+; GCN: v_cmp_eq_u32_e32
+; GCN-COUNT-14: v_cndmask_b32
+; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], 16
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @extract_neg_offset_vgpr(i32 addrspace(1)* %out) {
 entry:
@@ -301,40 +288,9 @@ entry:
 ; GCN-LABEL: {{^}}insert_neg_offset_vgpr:
 ; The offset depends on the register that holds the first element of the vector.
 
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], 1{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT1:v[0-9]+]], 2{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT2:v[0-9]+]], 3{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 4{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 5{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 6{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 7{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 8{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 9{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 10{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 11{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 12{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 13{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 14{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 15{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 16{{$}}
-
-; GCN: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
-; GCN: [[LOOPBB:BB[0-9]+_[0-9]+]]:
-; GCN: v_readfirstlane_b32 [[READLANE:s[0-9]+]]
-; GCN: s_and_saveexec_b64 vcc, vcc
-
-; MOVREL: s_add_i32 m0, [[READLANE]], 0xfffffe00
-; MOVREL: v_movreld_b32_e32 [[VEC_ELT0]], 33
-
-; IDXMODE: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00{{$}}
-; IDXMODE: s_set_gpr_idx_on [[ADD_IDX]], gpr_idx(DST)
-; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, 33
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN: s_cbranch_execnz [[LOOPBB]]
-; GCN: s_mov_b64 exec, [[SAVEEXEC]]
-
-; GCN: buffer_store_dword
+; GCN: v_cmp_eq_u32_e32
+; GCN-COUNT-16: v_cndmask_b32
+; GCN-COUNT-4:  buffer_store_dwordx4
 define amdgpu_kernel void @insert_neg_offset_vgpr(i32 addrspace(1)* %in, <16 x i32> addrspace(1)* %out) {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -346,38 +302,9 @@ entry:
 
 ; GCN-LABEL: {{^}}insert_neg_inline_offset_vgpr:
 
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], 1{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT1:v[0-9]+]], 2{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT2:v[0-9]+]], 3{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 4{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 5{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 6{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 7{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 8{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 9{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 10{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 11{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 12{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 13{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 14{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 15{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 16{{$}}
-; GCN-DAG: v_mov_b32_e32 [[VAL:v[0-9]+]], 0x1f4{{$}}
-
-; GCN: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
-
-; The offset depends on the register that holds the first element of the vector.
-; GCN: v_readfirstlane_b32 [[READLANE:s[0-9]+]]
-
-; MOVREL: s_add_i32 m0, [[READLANE]], -16
-; MOVREL: v_movreld_b32_e32 [[VEC_ELT0]], [[VAL]]
-
-; IDXMODE: s_add_i32 [[ADD_IDX:s[0-9]+]], [[READLANE]], -16
-; IDXMODE: s_set_gpr_idx_on [[ADD_IDX]], gpr_idx(DST)
-; IDXMODE: v_mov_b32_e32 [[VEC_ELT0]], [[VAL]]
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN: s_cbranch_execnz
+; GCN: v_cmp_eq_u32_e32
+; GCN-COUNT-16: v_cndmask_b32
+; GCN-COUNT-4:  buffer_store_dwordx4
 define amdgpu_kernel void @insert_neg_inline_offset_vgpr(i32 addrspace(1)* %in, <16 x i32> addrspace(1)* %out) {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -392,60 +319,13 @@ entry:
 
 ; GCN-LABEL: {{^}}extract_vgpr_offset_multiple_in_block:
 
-; FIXME: Why is vector copied in between?
-
 ; GCN-DAG: {{buffer|flat|global}}_load_dword [[IDX0:v[0-9]+]]
-; GCN-DAG: s_mov_b32 [[S_ELT1:s[0-9]+]], 9
-; GCN-DAG: s_mov_b32 [[S_ELT0:s[0-9]+]], 7
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], [[S_ELT0]]
-; GCN-DAG: v_mov_b32_e32 [[VEC_ELT1:v[0-9]+]], [[S_ELT1]]
+; GCN: v_cmp_eq_u32
+; GCN: v_cndmask_b32_e64 [[RESULT0:v[0-9]+]], 16,
+; GCN: v_cndmask_b32_e64 [[RESULT1:v[0-9]+]], 16,
 
-; GCN: s_mov_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec
-
-; GCN: s_waitcnt vmcnt(0)
-; PREGFX9: v_add_{{i32|u32}}_e32 [[IDX1:v[0-9]+]], vcc, 1, [[IDX0]]
-; GFX9: v_add_{{i32|u32}}_e32 [[IDX1:v[0-9]+]], 1, [[IDX0]]
-
-
-; GCN: [[LOOP0:BB[0-9]+_[0-9]+]]:
-; GCN-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX0]]
-; GCN: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX0]]
-; GCN: s_and_saveexec_b64 vcc, vcc
-
-; MOVREL: s_mov_b32 m0, [[READLANE]]
-; MOVREL: v_movrels_b32_e32 [[MOVREL0:v[0-9]+]], [[VEC_ELT0]]
-
-; IDXMODE: s_set_gpr_idx_on [[READLANE]], gpr_idx(SRC0)
-; IDXMODE: v_mov_b32_e32 [[MOVREL0:v[0-9]+]], [[VEC_ELT0]]
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN-NEXT: s_xor_b64 exec, exec, vcc
-; GCN-NEXT: s_cbranch_execnz [[LOOP0]]
-
-; FIXME: Redundant copy
-; GCN: s_mov_b64 exec, [[MASK]]
-
-; GCN: v_mov_b32_e32 [[VEC_ELT0_2:v[0-9]+]], [[S_ELT0]]
-
-; GCN: s_mov_b64 [[MASK2:s\[[0-9]+:[0-9]+\]]], exec
-
-; GCN: [[LOOP1:BB[0-9]+_[0-9]+]]:
-; GCN-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX1]]
-; GCN: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX1]]
-; GCN: s_and_saveexec_b64 vcc, vcc
-
-; MOVREL: s_mov_b32 m0, [[READLANE]]
-; MOVREL-NEXT: v_movrels_b32_e32 [[MOVREL1:v[0-9]+]], [[VEC_ELT0_2]]
-
-; IDXMODE: s_set_gpr_idx_on [[READLANE]], gpr_idx(SRC0)
-; IDXMODE-NEXT: v_mov_b32_e32 [[MOVREL1:v[0-9]+]], [[VEC_ELT0_2]]
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN-NEXT: s_xor_b64 exec, exec, vcc
-; GCN: s_cbranch_execnz [[LOOP1]]
-
-; GCN: buffer_store_dword [[MOVREL0]]
-; GCN: buffer_store_dword [[MOVREL1]]
+; GCN: buffer_store_dword [[RESULT0]]
+; GCN: buffer_store_dword [[RESULT1]]
 define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %in) #0 {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1

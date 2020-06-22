@@ -24,6 +24,7 @@ add_lld_library(lldMachO2
   Object
   Option
   Support
+  TextAPI
 
   LINK_LIBS
   lldCommon

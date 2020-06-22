@@ -35,7 +35,8 @@ public:
   /// \}
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SymbolVendorWasm);
+  SymbolVendorWasm(const SymbolVendorWasm &) = delete;
+  const SymbolVendorWasm &operator=(const SymbolVendorWasm &) = delete;
 };
 
 } // namespace wasm

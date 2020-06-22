@@ -45,7 +45,9 @@ private:
 
   bool m_first_resume;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepOverRange);
+  ThreadPlanStepOverRange(const ThreadPlanStepOverRange &) = delete;
+  const ThreadPlanStepOverRange &
+  operator=(const ThreadPlanStepOverRange &) = delete;
 };
 
 } // namespace lldb_private

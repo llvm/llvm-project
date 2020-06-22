@@ -15,6 +15,7 @@
 
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Endian.h"
 #include <limits>
 
 namespace llvm {

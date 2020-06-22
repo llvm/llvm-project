@@ -35,6 +35,18 @@ class GISelChangeObserver;
 
 class LegalizerHelper {
 public:
+  /// Expose MIRBuilder so clients can set their own RecordInsertInstruction
+  /// functions
+  MachineIRBuilder &MIRBuilder;
+
+  /// To keep track of changes made by the LegalizerHelper.
+  GISelChangeObserver &Observer;
+
+private:
+  MachineRegisterInfo &MRI;
+  const LegalizerInfo &LI;
+
+public:
   enum LegalizeResult {
     /// Instruction was already legal and no change was made to the
     /// MachineFunction.
@@ -47,6 +59,9 @@ public:
     /// instruction.
     UnableToLegalize,
   };
+
+  /// Expose LegalizerInfo so the clients can re-use.
+  const LegalizerInfo &getLegalizerInfo() const { return LI; }
 
   LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
                   MachineIRBuilder &B);
@@ -90,13 +105,6 @@ public:
   /// involved and ignoring the added elements later.
   LegalizeResult moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                     LLT MoreTy);
-
-  /// Expose MIRBuilder so clients can set their own RecordInsertInstruction
-  /// functions
-  MachineIRBuilder &MIRBuilder;
-
-  /// Expose LegalizerInfo so the clients can re-use.
-  const LegalizerInfo &getLegalizerInfo() const { return LI; }
 
   /// Cast the given value to an LLT::scalar with an equivalent size. Returns
   /// the register to use if an instruction was inserted. Returns the original
@@ -309,12 +317,6 @@ public:
   LegalizeResult lowerBswap(MachineInstr &MI);
   LegalizeResult lowerBitreverse(MachineInstr &MI);
   LegalizeResult lowerReadWriteRegister(MachineInstr &MI);
-
-private:
-  MachineRegisterInfo &MRI;
-  const LegalizerInfo &LI;
-  /// To keep track of changes made by the LegalizerHelper.
-  GISelChangeObserver &Observer;
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given

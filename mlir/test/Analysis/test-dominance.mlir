@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-print-dominance -split-input-file 2>&1 | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -test-print-dominance -split-input-file 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : func_condBranch
 func @func_condBranch(%cond : i1) {

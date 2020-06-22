@@ -82,6 +82,10 @@ STATISTIC(NumFastStores, "Number of stores deleted");
 STATISTIC(NumFastOther, "Number of other instrs removed");
 STATISTIC(NumCompletePartials, "Number of stores dead by later partials");
 STATISTIC(NumModifiedStores, "Number of stores modified");
+STATISTIC(NumNoopStores, "Number of noop stores deleted");
+STATISTIC(NumCFGChecks, "Number of stores modified");
+STATISTIC(NumCFGTries, "Number of stores modified");
+STATISTIC(NumCFGSuccess, "Number of stores modified");
 
 DEBUG_COUNTER(MemorySSACounter, "dse-memoryssa",
               "Controls which MemoryDefs are eliminated.");
@@ -109,6 +113,11 @@ static cl::opt<unsigned> MemorySSADefsPerBlockLimit(
     "dse-memoryssa-defs-per-block-limit", cl::init(5000), cl::Hidden,
     cl::desc("The number of MemoryDefs we consider as candidates to eliminated "
              "other stores per basic block (default = 5000)"));
+
+static cl::opt<unsigned> MemorySSAPathCheckLimit(
+    "dse-memoryssa-path-check-limit", cl::init(50), cl::Hidden,
+    cl::desc("The maximum number of blocks to check when trying to prove that "
+             "all paths to an exit go through a killing block (default = 50)"));
 
 //===----------------------------------------------------------------------===//
 // Helper functions
@@ -145,7 +154,7 @@ deleteDeadInstruction(Instruction *I, BasicBlock::iterator *BBI,
     ++NumFastOther;
 
     // Try to preserve debug information attached to the dead instruction.
-    salvageDebugInfoOrMarkUndef(*DeadInst);
+    salvageDebugInfo(*DeadInst);
     salvageKnowledge(DeadInst);
 
     // This instruction is dead, zap it, in stages.  Start by removing it from
@@ -1141,6 +1150,52 @@ static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
   return false;
 }
 
+static Constant *
+tryToMergePartialOverlappingStores(StoreInst *Earlier, StoreInst *Later,
+                                   int64_t InstWriteOffset,
+                                   int64_t DepWriteOffset, const DataLayout &DL,
+                                   AliasAnalysis *AA, DominatorTree *DT) {
+
+  if (Earlier && isa<ConstantInt>(Earlier->getValueOperand()) &&
+      DL.typeSizeEqualsStoreSize(Earlier->getValueOperand()->getType()) &&
+      Later && isa<ConstantInt>(Later->getValueOperand()) &&
+      DL.typeSizeEqualsStoreSize(Later->getValueOperand()->getType()) &&
+      memoryIsNotModifiedBetween(Earlier, Later, AA, DL, DT)) {
+    // If the store we find is:
+    //   a) partially overwritten by the store to 'Loc'
+    //   b) the later store is fully contained in the earlier one and
+    //   c) they both have a constant value
+    //   d) none of the two stores need padding
+    // Merge the two stores, replacing the earlier store's value with a
+    // merge of both values.
+    // TODO: Deal with other constant types (vectors, etc), and probably
+    // some mem intrinsics (if needed)
+
+    APInt EarlierValue =
+        cast<ConstantInt>(Earlier->getValueOperand())->getValue();
+    APInt LaterValue = cast<ConstantInt>(Later->getValueOperand())->getValue();
+    unsigned LaterBits = LaterValue.getBitWidth();
+    assert(EarlierValue.getBitWidth() > LaterValue.getBitWidth());
+    LaterValue = LaterValue.zext(EarlierValue.getBitWidth());
+
+    // Offset of the smaller store inside the larger store
+    unsigned BitOffsetDiff = (InstWriteOffset - DepWriteOffset) * 8;
+    unsigned LShiftAmount = DL.isBigEndian() ? EarlierValue.getBitWidth() -
+                                                   BitOffsetDiff - LaterBits
+                                             : BitOffsetDiff;
+    APInt Mask = APInt::getBitsSet(EarlierValue.getBitWidth(), LShiftAmount,
+                                   LShiftAmount + LaterBits);
+    // Clear the bits we'll be replacing, then OR with the smaller
+    // store, shifted appropriately.
+    APInt Merged = (EarlierValue & ~Mask) | (LaterValue << LShiftAmount);
+    LLVM_DEBUG(dbgs() << "DSE: Merge Stores:\n  Earlier: " << *Earlier
+                      << "\n  Later: " << *Later
+                      << "\n  Merged Value: " << Merged << '\n');
+    return ConstantInt::get(Earlier->getValueOperand()->getType(), Merged);
+  }
+  return nullptr;
+}
+
 static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
                                 MemoryDependenceResults *MD, DominatorTree *DT,
                                 const TargetLibraryInfo *TLI) {
@@ -1288,51 +1343,11 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
                    OR == OW_PartialEarlierWithFullLater) {
           auto *Earlier = dyn_cast<StoreInst>(DepWrite);
           auto *Later = dyn_cast<StoreInst>(Inst);
-          if (Earlier && isa<ConstantInt>(Earlier->getValueOperand()) &&
-              DL.typeSizeEqualsStoreSize(
-                  Earlier->getValueOperand()->getType()) &&
-              Later && isa<ConstantInt>(Later->getValueOperand()) &&
-              DL.typeSizeEqualsStoreSize(
-                  Later->getValueOperand()->getType()) &&
-              memoryIsNotModifiedBetween(Earlier, Later, AA, DL, DT)) {
-            // If the store we find is:
-            //   a) partially overwritten by the store to 'Loc'
-            //   b) the later store is fully contained in the earlier one and
-            //   c) they both have a constant value
-            //   d) none of the two stores need padding
-            // Merge the two stores, replacing the earlier store's value with a
-            // merge of both values.
-            // TODO: Deal with other constant types (vectors, etc), and probably
-            // some mem intrinsics (if needed)
-
-            APInt EarlierValue =
-                cast<ConstantInt>(Earlier->getValueOperand())->getValue();
-            APInt LaterValue =
-                cast<ConstantInt>(Later->getValueOperand())->getValue();
-            unsigned LaterBits = LaterValue.getBitWidth();
-            assert(EarlierValue.getBitWidth() > LaterValue.getBitWidth());
-            LaterValue = LaterValue.zext(EarlierValue.getBitWidth());
-
-            // Offset of the smaller store inside the larger store
-            unsigned BitOffsetDiff = (InstWriteOffset - DepWriteOffset) * 8;
-            unsigned LShiftAmount =
-                DL.isBigEndian()
-                    ? EarlierValue.getBitWidth() - BitOffsetDiff - LaterBits
-                    : BitOffsetDiff;
-            APInt Mask =
-                APInt::getBitsSet(EarlierValue.getBitWidth(), LShiftAmount,
-                                  LShiftAmount + LaterBits);
-            // Clear the bits we'll be replacing, then OR with the smaller
-            // store, shifted appropriately.
-            APInt Merged =
-                (EarlierValue & ~Mask) | (LaterValue << LShiftAmount);
-            LLVM_DEBUG(dbgs() << "DSE: Merge Stores:\n  Earlier: " << *DepWrite
-                              << "\n  Later: " << *Inst
-                              << "\n  Merged Value: " << Merged << '\n');
-
+          if (Constant *C = tryToMergePartialOverlappingStores(
+                  Earlier, Later, InstWriteOffset, DepWriteOffset, DL, AA,
+                  DT)) {
             auto *SI = new StoreInst(
-                ConstantInt::get(Earlier->getValueOperand()->getType(), Merged),
-                Earlier->getPointerOperand(), false, Earlier->getAlign(),
+                C, Earlier->getPointerOperand(), false, Earlier->getAlign(),
                 Earlier->getOrdering(), Earlier->getSyncScopeID(), DepWrite);
 
             unsigned MDToKeep[] = {LLVMContext::MD_dbg, LLVMContext::MD_tbaa,
@@ -1590,15 +1605,15 @@ struct DSEState {
       if (CB->onlyAccessesInaccessibleMemory())
         return false;
 
-    ModRefInfo MR = AA.getModRefInfo(UseInst, DefLoc);
-    // If necessary, perform additional analysis.
-    if (isModSet(MR) && isa<CallBase>(UseInst))
-      MR = AA.callCapturesBefore(UseInst, DefLoc, &DT);
+    int64_t InstWriteOffset, DepWriteOffset;
+    auto CC = getLocForWriteEx(UseInst);
+    InstOverlapIntervalsTy IOL;
 
-    Optional<MemoryLocation> UseLoc = getLocForWriteEx(UseInst);
-    return isModSet(MR) && isMustSet(MR) &&
-           (UseLoc->Size.hasValue() && DefLoc.Size.hasValue() &&
-            UseLoc->Size.getValue() >= DefLoc.Size.getValue());
+    const DataLayout &DL = F.getParent()->getDataLayout();
+
+    return CC &&
+           isOverwrite(*CC, DefLoc, DL, TLI, DepWriteOffset, InstWriteOffset,
+                       UseInst, IOL, AA, &F) == OW_Complete;
   }
 
   /// Returns true if \p Use may read from \p DefLoc.
@@ -1652,19 +1667,20 @@ struct DSEState {
       if (isa<MemoryPhi>(DomAccess))
         break;
 
-      // Check if we can skip DomDef for DSE. For accesses to objects that are
-      // accessible after the function returns, KillingDef must execute whenever
-      // DomDef executes and use post-dominance to ensure that.
+      // Check if we can skip DomDef for DSE.
       MemoryDef *DomDef = dyn_cast<MemoryDef>(DomAccess);
-      if ((DomDef && canSkipDef(DomDef, DefVisibleToCallerBeforeRet)) ||
-          (DefVisibleToCallerAfterRet &&
-           !PDT.dominates(KillingDef->getBlock(), DomDef->getBlock()))) {
+      if (DomDef && canSkipDef(DomDef, DefVisibleToCallerBeforeRet)) {
         StepAgain = true;
         Current = DomDef->getDefiningAccess();
       }
 
     } while (StepAgain);
 
+    // Accesses to objects accessible after the function returns can only be
+    // eliminated if the access is killed along all paths to the exit. Collect
+    // the blocks with killing (=completely overwriting MemoryDefs) and check if
+    // they cover all paths from DomAccess to any function exit.
+    SmallPtrSet<BasicBlock *, 16> KillingBlocks = {KillingDef->getBlock()};
     LLVM_DEBUG({
       dbgs() << "  Checking for reads of " << *DomAccess;
       if (isa<MemoryDef>(DomAccess))
@@ -1732,9 +1748,93 @@ struct DSEState {
       //   3 = Def(1)   ; <---- Current  (3, 2) = NoAlias, (3,1) = MayAlias,
       //                  stores [0,1]
       if (MemoryDef *UseDef = dyn_cast<MemoryDef>(UseAccess)) {
-        if (!isCompleteOverwrite(DefLoc, UseInst))
+        if (isCompleteOverwrite(DefLoc, UseInst)) {
+          if (DefVisibleToCallerAfterRet && UseAccess != DomAccess) {
+            BasicBlock *MaybeKillingBlock = UseInst->getParent();
+            if (PostOrderNumbers.find(MaybeKillingBlock)->second <
+                PostOrderNumbers.find(DomAccess->getBlock())->second) {
+
+              LLVM_DEBUG(dbgs() << "    ... found killing block "
+                                << MaybeKillingBlock->getName() << "\n");
+              KillingBlocks.insert(MaybeKillingBlock);
+            }
+          }
+        } else
           PushMemUses(UseDef);
       }
+    }
+
+    // For accesses to locations visible after the function returns, make sure
+    // that the location is killed (=overwritten) along all paths from DomAccess
+    // to the exit.
+    if (DefVisibleToCallerAfterRet) {
+      assert(!KillingBlocks.empty() &&
+             "Expected at least a single killing block");
+      // Find the common post-dominator of all killing blocks.
+      BasicBlock *CommonPred = *KillingBlocks.begin();
+      for (auto I = std::next(KillingBlocks.begin()), E = KillingBlocks.end();
+           I != E; I++) {
+        if (!CommonPred)
+          break;
+        CommonPred = PDT.findNearestCommonDominator(CommonPred, *I);
+      }
+
+      // If CommonPred is in the set of killing blocks, just check if it
+      // post-dominates DomAccess.
+      if (KillingBlocks.count(CommonPred)) {
+        if (PDT.dominates(CommonPred, DomAccess->getBlock()))
+          return {DomAccess};
+        return None;
+      }
+
+      // If the common post-dominator does not post-dominate DomAccess, there
+      // is a path from DomAccess to an exit not going through a killing block.
+      if (PDT.dominates(CommonPred, DomAccess->getBlock())) {
+        SetVector<BasicBlock *> WorkList;
+
+        // DomAccess's post-order number provides an upper bound of the blocks
+        // on a path starting at DomAccess.
+        unsigned UpperBound =
+            PostOrderNumbers.find(DomAccess->getBlock())->second;
+
+        // If CommonPred is null, there are multiple exits from the function.
+        // They all have to be added to the worklist.
+        if (CommonPred)
+          WorkList.insert(CommonPred);
+        else
+          for (BasicBlock *R : PDT.getRoots())
+            WorkList.insert(R);
+
+        NumCFGTries++;
+        // Check if all paths starting from an exit node go through one of the
+        // killing blocks before reaching DomAccess.
+        for (unsigned I = 0; I < WorkList.size(); I++) {
+          NumCFGChecks++;
+          BasicBlock *Current = WorkList[I];
+          if (KillingBlocks.count(Current))
+            continue;
+          if (Current == DomAccess->getBlock())
+            return None;
+
+          // DomAccess is reachable from the entry, so we don't have to explore
+          // unreachable blocks further.
+          if (!DT.isReachableFromEntry(Current))
+            continue;
+
+          unsigned CPO = PostOrderNumbers.find(Current)->second;
+          // Current block is not on a path starting at DomAccess.
+          if (CPO > UpperBound)
+            continue;
+          for (BasicBlock *Pred : predecessors(Current))
+            WorkList.insert(Pred);
+
+          if (WorkList.size() >= MemorySSAPathCheckLimit)
+            return None;
+        }
+        NumCFGSuccess++;
+        return {DomAccess};
+      }
+      return None;
     }
 
     // No aliasing MemoryUses of DomAccess found, DomAccess is potentially dead.
@@ -1791,7 +1891,7 @@ struct DSEState {
       return false;
 
     if (SI->getParent() == NI->getParent())
-      return ThrowingBlocks.find(SI->getParent()) != ThrowingBlocks.end();
+      return ThrowingBlocks.count(SI->getParent());
     return !ThrowingBlocks.empty();
   }
 
@@ -1821,6 +1921,21 @@ struct DSEState {
   }
 };
 
+/// \returns true if \p KillingDef stores the result of \p Load to the source of
+/// \p Load.
+static bool storeIsNoop(MemorySSA &MSSA, LoadInst *Load,
+                        MemoryDef *KillingDef) {
+  Instruction *Store = KillingDef->getMemoryInst();
+  // If the load's operand isn't the destination of the store, bail.
+  if (Load->getPointerOperand() != Store->getOperand(1))
+    return false;
+
+  // Get the defining access for the load.
+  auto *LoadAccess = MSSA.getMemoryAccess(Load)->getDefiningAccess();
+  // The store is dead if the defining accesses are the same.
+  return LoadAccess == KillingDef->getDefiningAccess();
+}
+
 bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
                                   MemorySSA &MSSA, DominatorTree &DT,
                                   PostDominatorTree &PDT,
@@ -1835,6 +1950,19 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     if (State.SkipStores.count(KillingDef))
       continue;
     Instruction *SI = KillingDef->getMemoryInst();
+
+    // Check if we're storing a value that we just loaded.
+    if (auto *Load = dyn_cast<LoadInst>(SI->getOperand(0))) {
+      if (storeIsNoop(MSSA, Load, KillingDef)) {
+        LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *SI
+                          << '\n');
+        State.deleteDeadInstruction(SI);
+        NumNoopStores++;
+        MadeChange = true;
+        continue;
+      }
+    }
+
     auto MaybeSILoc = State.getLocForWriteEx(SI);
     if (!MaybeSILoc) {
       LLVM_DEBUG(dbgs() << "Failed to find analyzable write location for "
@@ -1939,6 +2067,28 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       OverwriteResult OR = isOverwrite(SILoc, NILoc, DL, TLI, DepWriteOffset,
                                        InstWriteOffset, NI, IOL, AA, &F);
 
+      if (EnablePartialStoreMerging && OR == OW_PartialEarlierWithFullLater) {
+        auto *Earlier = dyn_cast<StoreInst>(NI);
+        auto *Later = dyn_cast<StoreInst>(SI);
+        if (Constant *Merged = tryToMergePartialOverlappingStores(
+                Earlier, Later, InstWriteOffset, DepWriteOffset, DL, &AA,
+                &DT)) {
+
+          // Update stored value of earlier store to merged constant.
+          Earlier->setOperand(0, Merged);
+          ++NumModifiedStores;
+          MadeChange = true;
+
+          // Remove later store and remove any outstanding overlap intervals for
+          // the updated store.
+          State.deleteDeadInstruction(Later);
+          auto I = State.IOLs.find(Earlier->getParent());
+          if (I != State.IOLs.end())
+            I->second.erase(Earlier);
+          break;
+        }
+      }
+
       ToCheck.insert(NextDef->getDefiningAccess());
       if (OR == OW_Complete) {
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *NI
@@ -2023,7 +2173,7 @@ public:
       PostDominatorTree &PDT =
           getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
 
-      eliminateDeadStoresMemorySSA(F, AA, MSSA, DT, PDT, TLI);
+      Changed = eliminateDeadStoresMemorySSA(F, AA, MSSA, DT, PDT, TLI);
     } else {
       MemoryDependenceResults &MD =
           getAnalysis<MemoryDependenceWrapperPass>().getMemDep();

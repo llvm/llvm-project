@@ -161,7 +161,6 @@ static_library("CodeGen") {
     "RenameIndependentSubregs.cpp",
     "ResetMachineFunctionPass.cpp",
     "SafeStack.cpp",
-    "SafeStackColoring.cpp",
     "SafeStackLayout.cpp",
     "ScalarizeMaskedMemIntrin.cpp",
     "ScheduleDAG.cpp",

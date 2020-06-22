@@ -70,7 +70,22 @@ tools.extend([
     ToolSubst('%cuda_wrapper_library_dir', config.cuda_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%linalg_test_lib_dir', config.linalg_test_lib_dir, unresolved='ignore'),
     ToolSubst('%mlir_runner_utils_dir', config.mlir_runner_utils_dir, unresolved='ignore'),
+    ToolSubst('%rocm_wrapper_library_dir', config.rocm_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%vulkan_wrapper_library_dir', config.vulkan_wrapper_library_dir, unresolved='ignore')
 ])
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
+
+
+# FileCheck -enable-var-scope is enabled by default in MLIR test
+# This option avoids to accidentally reuse variable across -LABEL match,
+# it can be explicitly opted-in by prefixing the variable name with $
+config.environment['FILECHECK_OPTS'] = "-enable-var-scope"
+
+
+# LLVM can be configured with an empty default triple
+# by passing ` -DLLVM_DEFAULT_TARGET_TRIPLE="" `.
+# This is how LLVM filters tests that require the host target
+# to be available for JIT tests.
+if config.target_triple:
+    config.available_features.add('default_triple')

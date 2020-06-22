@@ -1,4 +1,13 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu11 -ast-dump %s | FileCheck -strict-whitespace %s
+// Test without serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu11 -ast-dump %s \
+// RUN: | FileCheck --strict-whitespace %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu11 \
+// RUN: -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck --strict-whitespace %s
 
 void Comma(void) {
   1, 2, 3;

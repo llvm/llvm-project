@@ -1261,8 +1261,10 @@ exit:
   call void @f.nobuiltin() builtin
   ; CHECK: call void @f.nobuiltin() #43
 
+  ; When used in a non-strictfp function the strictfp callsite attribute
+  ; should get translated to nobuiltin.
   call void @f.strictfp() strictfp
-  ; CHECK: call void @f.strictfp() #44
+  ; CHECK: call void @f.strictfp() #9
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1683,7 +1685,6 @@ define i8** @constexpr() {
 ; CHECK: attributes #41 = { speculatable }
 ; CHECK: attributes #42 = { inaccessiblemem_or_argmemonly nounwind willreturn }
 ; CHECK: attributes #43 = { builtin }
-; CHECK: attributes #44 = { strictfp }
 
 ;; Metadata
 

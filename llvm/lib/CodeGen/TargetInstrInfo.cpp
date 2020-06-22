@@ -597,6 +597,10 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
                                 Flags, MemSize, MFI.getObjectAlign(FI));
     NewMI->addMemOperand(MF, MMO);
 
+    // The pass "x86 speculative load hardening" always attaches symbols to
+    // call instructions. We need copy it form old instruction.
+    NewMI->cloneInstrSymbols(MF, MI);
+
     return NewMI;
   }
 
@@ -1037,7 +1041,9 @@ bool TargetInstrInfo::getMemOperandWithOffset(
     const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
     bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
-  if (!getMemOperandsWithOffset(MI, BaseOps, Offset, OffsetIsScalable, TRI) ||
+  unsigned Width;
+  if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
+                                     Width, TRI) ||
       BaseOps.size() != 1)
     return false;
   BaseOp = BaseOps.front();

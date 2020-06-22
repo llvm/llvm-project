@@ -172,7 +172,8 @@ public:
                                                           // dSYMs next to them
   lldb_private::LazyBool m_ios_debug_session;
 
-  DISALLOW_COPY_AND_ASSIGN(PlatformDarwinKernel);
+  PlatformDarwinKernel(const PlatformDarwinKernel &) = delete;
+  const PlatformDarwinKernel &operator=(const PlatformDarwinKernel &) = delete;
 };
 
 #else // __APPLE__

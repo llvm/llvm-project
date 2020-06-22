@@ -6,9 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a partial lowering of Toy operations to a combination of
-// affine loops and standard operations. This lowering expects that all calls
-// have been inlined, and all shapes have been resolved.
+// This file implements full lowering of Toy operations to LLVM MLIR dialect.
+// 'toy.print' is lowered to a loop nest that calls `printf` on each element of
+// the input array. The file also sets up the ToyToLLVMLoweringPass. This pass
+// lowers the combination of Affine + SCF + Standard dialects to the LLVM one:
+//
+//                         Affine --
+//                                  |
+//                                  v
+//                                  Standard --> LLVM (Dialect)
+//                                  ^
+//                                  |
+//     'toy.print' --> Loop (SCF) --
 //
 //===----------------------------------------------------------------------===//
 
@@ -69,11 +78,12 @@ public:
       auto step = rewriter.create<ConstantIndexOp>(loc, 1);
       auto loop =
           rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
-      loop.getBody()->clear();
+      for (Operation &nested : *loop.getBody())
+        rewriter.eraseOp(&nested);
       loopIvs.push_back(loop.getInductionVar());
 
       // Terminate the loop body.
-      rewriter.setInsertionPointToStart(loop.getBody());
+      rewriter.setInsertionPointToEnd(loop.getBody());
 
       // Insert a newline after each of the inner dimensions of the shape.
       if (i != e - 1)
@@ -193,7 +203,7 @@ void ToyToLLVMLoweringPass::runOnOperation() {
   // We want to completely lower to LLVM, so we use a `FullConversion`. This
   // ensures that only legal operations will remain after the conversion.
   auto module = getOperation();
-  if (failed(applyFullConversion(module, target, patterns, &typeConverter)))
+  if (failed(applyFullConversion(module, target, patterns)))
     signalPassFailure();
 }
 

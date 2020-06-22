@@ -14,7 +14,8 @@
 namespace lldb_private {
 
 class HostThreadPosix : public HostNativeThreadBase {
-  DISALLOW_COPY_AND_ASSIGN(HostThreadPosix);
+  HostThreadPosix(const HostThreadPosix &) = delete;
+  const HostThreadPosix &operator=(const HostThreadPosix &) = delete;
 
 public:
   HostThreadPosix();

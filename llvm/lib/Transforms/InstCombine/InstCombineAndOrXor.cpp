@@ -1848,7 +1848,17 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
         return BinaryOperator::Create(BinOp, NewLHS, Y);
       }
     }
-
+    const APInt *ShiftC;
+    if (match(Op0, m_OneUse(m_SExt(m_AShr(m_Value(X), m_APInt(ShiftC)))))) {
+      unsigned Width = I.getType()->getScalarSizeInBits();
+      if (*C == APInt::getLowBitsSet(Width, Width - ShiftC->getZExtValue())) {
+        // We are clearing high bits that were potentially set by sext+ashr:
+        // and (sext (ashr X, ShiftC)), C --> lshr (sext X), ShiftC
+        Value *Sext = Builder.CreateSExt(X, I.getType());
+        Constant *ShAmtC = ConstantInt::get(I.getType(), ShiftC->zext(Width));
+        return BinaryOperator::CreateLShr(Sext, ShAmtC);
+      }
+    }
   }
 
   if (ConstantInt *AndRHS = dyn_cast<ConstantInt>(Op1)) {

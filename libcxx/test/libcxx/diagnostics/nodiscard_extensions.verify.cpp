@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // AppleClang9 doesn't yet support C++17's implicitly synthesized deduction
 // guides from existing ctors, needed by default_searcher() below.

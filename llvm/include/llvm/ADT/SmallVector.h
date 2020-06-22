@@ -39,7 +39,7 @@ namespace llvm {
 ///
 /// The template parameter specifies the type which should be used to hold the
 /// Size and Capacity of the SmallVector, so it can be adjusted.
-/// Using 32 bit size is desirable to shink the size of the SmallVector.
+/// Using 32 bit size is desirable to shrink the size of the SmallVector.
 /// Using 64 bit size is desirable for cases like SmallVector<char>, where a
 /// 32 bit size would limit the vector to ~4GB. SmallVectors are used for
 /// buffering bitcode output - which can exceed 4GB.

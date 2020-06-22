@@ -10,11 +10,13 @@ add_flang_library(FortranEvaluate
   fold.cpp
   fold-character.cpp
   fold-complex.cpp
+  fold-designator.cpp
   fold-integer.cpp
   fold-logical.cpp
   fold-real.cpp
   formatting.cpp
   host.cpp
+  initial-image.cpp
   integer.cpp
   intrinsics.cpp
   intrinsics-library.cpp

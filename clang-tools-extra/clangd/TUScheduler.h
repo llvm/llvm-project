@@ -191,6 +191,10 @@ public:
 
     /// Determines when to keep idle ASTs in memory for future use.
     ASTRetentionPolicy RetentionPolicy;
+
+    /// Whether to run PreamblePeer asynchronously.
+    /// No-op if AsyncThreadsCount is 0.
+    bool AsyncPreambleBuilds = false;
   };
 
   TUScheduler(const GlobalCompilationDatabase &CDB, const Options &Opts,
@@ -301,7 +305,7 @@ public:
 
 private:
   const GlobalCompilationDatabase &CDB;
-  const bool StorePreamblesInMemory;
+  const Options Opts;
   std::unique_ptr<ParsingCallbacks> Callbacks; // not nullptr
   Semaphore Barrier;
   llvm::StringMap<std::unique_ptr<FileData>> Files;
@@ -310,7 +314,6 @@ private:
   // asynchronously.
   llvm::Optional<AsyncTaskRunner> PreambleTasks;
   llvm::Optional<AsyncTaskRunner> WorkerThreads;
-  DebouncePolicy UpdateDebounce;
 };
 
 } // namespace clangd

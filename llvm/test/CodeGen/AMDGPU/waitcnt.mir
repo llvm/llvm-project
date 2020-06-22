@@ -41,6 +41,9 @@
     ret void
   }
 
+  define amdgpu_kernel void @subregs16bit() {
+    ret void
+  }
 ...
 ---
 
@@ -283,4 +286,20 @@ body: |
     BUNDLE implicit $vgpr0, implicit $vgpr1_vgpr2 {
       FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     }
+...
+
+---
+# CHECK-LABEL: name: subregs16bit
+# CHECK: S_WAITCNT 112
+# CHECK-NEXT: V_NOP_e32 
+
+name: subregs16bit
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4
+      $vgpr0 = FLAT_LOAD_USHORT killed $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+      $vgpr1 = FLAT_LOAD_USHORT killed $vgpr2_vgpr3, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+      V_NOP_e32 implicit $exec, implicit $vgpr0_lo16, implicit $vgpr1_lo16
 ...

@@ -257,8 +257,14 @@ DescriptorInquiry::DescriptorInquiry(NamedEntity &&base, Field field, int dim)
 static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &sym) {
   if (auto dyType{DynamicType::From(sym)}) {
     if (const semantics::ParamValue * len{dyType->charLength()}) {
-      if (auto intExpr{len->GetExplicit()}) {
-        return ConvertToType<SubscriptInteger>(*std::move(intExpr));
+      if (len->isExplicit()) {
+        if (auto intExpr{len->GetExplicit()}) {
+          return ConvertToType<SubscriptInteger>(*std::move(intExpr));
+        } else {
+          // There was an error constructing this symbol's type.  It should
+          // have a length expression, but we couldn't retrieve it
+          return std::nullopt;
+        }
       } else {
         return Expr<SubscriptInteger>{
             DescriptorInquiry{NamedEntity{sym}, DescriptorInquiry::Field::Len}};

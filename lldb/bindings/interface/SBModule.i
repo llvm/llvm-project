@@ -344,6 +344,15 @@ public:
     lldb::SBAddress
     GetObjectFileEntryPointAddress() const;
 
+    %feature("docstring", "
+    Returns the number of modules in the module cache. This is an
+    implementation detail exposed for testing and should not be relied upon.
+
+    @return
+        The number of modules in the module cache.") GetNumberAllocatedModules;
+    static uint32_t
+    GetNumberAllocatedModules();
+
     STRING_EXTENSION(SBModule)
 
 #ifdef SWIGPYTHON

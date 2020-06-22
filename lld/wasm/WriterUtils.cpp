@@ -67,12 +67,12 @@ void debugWrite(uint64_t offset, const Twine &msg) {
   LLVM_DEBUG(dbgs() << format("  | %08lld: ", offset) << msg << "\n");
 }
 
-void writeUleb128(raw_ostream &os, uint32_t number, const Twine &msg) {
+void writeUleb128(raw_ostream &os, uint64_t number, const Twine &msg) {
   debugWrite(os.tell(), msg + "[" + utohexstr(number) + "]");
   encodeULEB128(number, os);
 }
 
-void writeSleb128(raw_ostream &os, int32_t number, const Twine &msg) {
+void writeSleb128(raw_ostream &os, int64_t number, const Twine &msg) {
   debugWrite(os.tell(), msg + "[" + utohexstr(number) + "]");
   encodeSLEB128(number, os);
 }
@@ -127,12 +127,12 @@ void writeI32Const(raw_ostream &os, int32_t number, const Twine &msg) {
   writeSleb128(os, number, msg);
 }
 
-void writeI64Const(raw_ostream &os, int32_t number, const Twine &msg) {
+void writeI64Const(raw_ostream &os, int64_t number, const Twine &msg) {
   writeU8(os, WASM_OPCODE_I64_CONST, "i64.const");
   writeSleb128(os, number, msg);
 }
 
-void writeMemArg(raw_ostream &os, uint32_t alignment, uint32_t offset) {
+void writeMemArg(raw_ostream &os, uint32_t alignment, uint64_t offset) {
   writeUleb128(os, alignment, "alignment");
   writeUleb128(os, offset, "offset");
 }

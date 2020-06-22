@@ -41,15 +41,15 @@ b:
 // DWARF4:  DW_AT_ranges [DW_FORM_sec_offset]      (0x00000000
 // DWARF5:  DW_AT_ranges [DW_FORM_sec_offset]      (0x0000000c
 
-// DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2] *
+// DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2]
 // DWARF-NEXT: DW_AT_name [DW_FORM_string]     ("a")
 
-// DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2] *
+// DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2]
 // DWARF-NEXT: DW_AT_name [DW_FORM_string]     ("b")
 
 
 // DWARF: .debug_aranges contents:
-// DWARF-NEXT: Address Range Header: length = 0x00000024, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x04, seg_size = 0x00
+// DWARF-NEXT: Address Range Header: length = 0x00000024, format = DWARF32, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x04, seg_size = 0x00
 // DWARF-NEXT: [0x00000000, 0x00000004)
 // DWARF-NEXT: [0x00000000, 0x00000004)
 
@@ -78,7 +78,7 @@ b:
 // DWARF34-NEXT: 00000000 <End of list>
 
 // DWARF5:      .debug_rnglists contents:
-// DWARF5-NEXT: 0x00000000: range list header: length = 0x00000015, version = 0x0005, addr_size = 0x04, seg_size = 0x00, offset_entry_count = 0x00000000
+// DWARF5-NEXT: 0x00000000: range list header: length = 0x00000015, format = DWARF32, version = 0x0005, addr_size = 0x04, seg_size = 0x00, offset_entry_count = 0x00000000
 // DWARF5-NEXT: ranges:
 // DWARF5-NEXT: 0x0000000c: [DW_RLE_start_length]: 0x00000000, 0x00000004 => [0x00000000, 0x00000004)
 // DWARF5-NEXT: 0x00000012: [DW_RLE_start_length]: 0x00000000, 0x00000004 => [0x00000000, 0x00000004)

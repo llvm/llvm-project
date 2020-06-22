@@ -42,7 +42,7 @@
 // CHECK-DAG: #set{{[0-9]+}} = affine_set<(d0) : (d0 - 1 == 0)>
 #set2 = affine_set<(d0) : (d0 - 1 == 0)>
 
-// CHECK-DAG: [[SET_TRUE:#set[0-9]+]] = affine_set<() : (0 == 0)>
+// CHECK-DAG: [[$SET_TRUE:#set[0-9]+]] = affine_set<() : (0 == 0)>
 
 // CHECK-DAG: #set{{[0-9]+}} = affine_set<(d0)[s0] : (d0 - 2 >= 0, -d0 + 4 >= 0)>
 
@@ -446,7 +446,7 @@ func @verbose_terminators() -> (i1, i17) {
   "std.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = dense<[1, 1, 2]>: vector<3xi32>} : (i1, i17, i1, i17) -> ()
 
 ^bb2(%a : i17):
-  %true = constant 1 : i1
+  %true = constant true
 // CHECK:  return %{{.*}}, %{{.*}} : i1, i17
   "std.return"(%true, %a) : (i1, i17) -> ()
 
@@ -502,10 +502,10 @@ func @constants() -> (i32, i23, i23, i1, i1) {
   // CHECK: %{{.*}} = constant 17 : i23
   %z = constant 17 : i23
 
-  // CHECK: %{{.*}} = constant 1 : i1
-  %t = constant 1 : i1
-  // CHECK: %{{.*}} = constant 0 : i1
-  %f = constant 0 : i1
+  // CHECK: %{{.*}} = constant true
+  %t = constant true
+  // CHECK: %{{.*}} = constant false
+  %f = constant false
 
   // The trick to parse type declarations should not interfere with hex
   // literals.
@@ -826,7 +826,7 @@ func @type_alias() -> !i32_type_alias {
 
 // CHECK-LABEL: func @no_integer_set_constraints(
 func @no_integer_set_constraints() {
-  // CHECK: affine.if [[SET_TRUE]]() {
+  // CHECK: affine.if [[$SET_TRUE]]() {
   affine.if affine_set<() : ()> () {
   }
   return
@@ -1073,28 +1073,26 @@ func @f64_special_values() {
   return
 }
 
-// FIXME: bfloat16 currently uses f64 as a storage format. This test should be
-// changed when that gets fixed.
 // CHECK-LABEL: @bfloat16_special_values
 func @bfloat16_special_values() {
   // bfloat16 signaling NaNs.
-  // CHECK: constant 0x7FF0000000000001 : bf16
-  %0 = constant 0x7FF0000000000001 : bf16
-  // CHECK: constant 0x7FF8000000000000 : bf16
-  %1 = constant 0x7FF8000000000000 : bf16
+  // CHECK: constant 0x7F81 : bf16
+  %0 = constant 0x7F81 : bf16
+  // CHECK: constant 0xFF81 : bf16
+  %1 = constant 0xFF81 : bf16
 
   // bfloat16 quiet NaNs.
-  // CHECK: constant 0x7FF0000001000000 : bf16
-  %2 = constant 0x7FF0000001000000 : bf16
-  // CHECK: constant 0xFFF0000001000000 : bf16
-  %3 = constant 0xFFF0000001000000 : bf16
+  // CHECK: constant 0x7FC0 : bf16
+  %2 = constant 0x7FC0 : bf16
+  // CHECK: constant 0xFFC0 : bf16
+  %3 = constant 0xFFC0 : bf16
 
   // bfloat16 positive infinity.
-  // CHECK: constant 0x7FF0000000000000 : bf16
-  %4 = constant 0x7FF0000000000000 : bf16
+  // CHECK: constant 0x7F80 : bf16
+  %4 = constant 0x7F80 : bf16
   // bfloat16 negative infinity.
-  // CHECK: constant 0xFFF0000000000000 : bf16
-  %5 = constant 0xFFF0000000000000 : bf16
+  // CHECK: constant 0xFF80 : bf16
+  %5 = constant 0xFF80 : bf16
 
   return
 }
@@ -1215,12 +1213,12 @@ func @pretty_names() {
   %x = test.string_attr_pretty_name
   // CHECK: %x = test.string_attr_pretty_name
   // CHECK-NOT: attributes
-  
+
   // This specifies an explicit name, which should override the result.
   %YY = test.string_attr_pretty_name attributes { names = ["y"] }
   // CHECK: %y = test.string_attr_pretty_name
   // CHECK-NOT: attributes
-  
+
   // Conflicts with the 'y' name, so need an explicit attribute.
   %0 = "test.string_attr_pretty_name"() { names = ["y"]} : () -> i32
   // CHECK: %y_0 = test.string_attr_pretty_name attributes {names = ["y"]}
@@ -1245,7 +1243,7 @@ func @pretty_names() {
 }
 
 func @unreachable_dominance_violation_ok() -> i1 {
-  %c = constant 0 : i1       // CHECK: [[VAL:%.*]] = constant 0 : i1
+  %c = constant false       // CHECK: [[VAL:%.*]] = constant false
   return %c : i1    // CHECK:   return [[VAL]] : i1
 ^bb1:         // CHECK: ^bb1:   // no predecessors
   // %1 is not dominated by it's definition, but block is not reachable.

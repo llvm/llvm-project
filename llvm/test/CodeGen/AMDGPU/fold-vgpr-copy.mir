@@ -39,7 +39,7 @@ body:             |
 
 # GCN-LABEL: name: fma_sgpr_use
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF
-# GCN-NEXT: %4:vgpr_32 = nnan ninf nsz arcp contract afn reassoc V_FMA_F32 2, %0.sub0, 0, 1073741824, 0, %0.sub1, 0, 0, implicit $exec
+# GCN-NEXT: %4:vgpr_32 = nnan ninf nsz arcp contract afn reassoc V_FMA_F32 2, %0.sub0, 0, 1073741824, 0, %0.sub1, 0, 0, implicit $mode, implicit $exec
 ---
 name:            fma_sgpr_use
 body:             |
@@ -48,6 +48,6 @@ body:             |
     %1:sgpr_32 = COPY %0.sub0
     %2:sgpr_32 = COPY %0.sub1
     %3:vgpr_32 = COPY %2
-    %4:vgpr_32 = nnan ninf nsz arcp contract afn reassoc V_FMAC_F32_e64 2, %1, 0, 1073741824, 0, %3, 0, 0, implicit $exec
+    %4:vgpr_32 = nnan ninf nsz arcp contract afn reassoc V_FMAC_F32_e64 2, %1, 0, 1073741824, 0, %3, 0, 0, implicit $mode, implicit $exec
     DS_WRITE2_B32_gfx9 undef %5:vgpr_32, killed %4, undef %6:vgpr_32, 0, 1, 0, implicit $exec
 ...

@@ -57,6 +57,7 @@ private:
   bool isPhiFrom32Def(MachineInstr *MovMI);
   bool isMovFrom32Def(MachineInstr *MovMI);
   bool eliminateZExtSeq(void);
+  bool eliminateZExt(void);
 
   std::set<MachineInstr *> PhiInsns;
 
@@ -69,7 +70,12 @@ public:
 
     initialize(MF);
 
-    return eliminateZExtSeq();
+    // First try to eliminate (zext, lshift, rshift) and then
+    // try to eliminate zext.
+    bool ZExtSeqExist, ZExtExist;
+    ZExtSeqExist = eliminateZExtSeq();
+    ZExtExist = eliminateZExt();
+    return ZExtSeqExist || ZExtExist;
   }
 };
 
@@ -234,6 +240,51 @@ bool BPFMIPeephole::eliminateZExtSeq(void) {
   return Eliminated;
 }
 
+bool BPFMIPeephole::eliminateZExt(void) {
+  MachineInstr* ToErase = nullptr;
+  bool Eliminated = false;
+
+  for (MachineBasicBlock &MBB : *MF) {
+    for (MachineInstr &MI : MBB) {
+      // If the previous instruction was marked for elimination, remove it now.
+      if (ToErase) {
+        ToErase->eraseFromParent();
+        ToErase = nullptr;
+      }
+
+      if (MI.getOpcode() != BPF::MOV_32_64)
+        continue;
+
+      // Eliminate MOV_32_64 if possible.
+      //   MOV_32_64 rA, wB
+      //
+      // If wB has been zero extended, replace it with a SUBREG_TO_REG.
+      // This is to workaround BPF programs where pkt->{data, data_end}
+      // is encoded as u32, but actually the verifier populates them
+      // as 64bit pointer. The MOV_32_64 will zero out the top 32 bits.
+      LLVM_DEBUG(dbgs() << "Candidate MOV_32_64 instruction:");
+      LLVM_DEBUG(MI.dump());
+
+      if (!isMovFrom32Def(&MI))
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Removing the MOV_32_64 instruction\n");
+
+      Register dst = MI.getOperand(0).getReg();
+      Register src = MI.getOperand(1).getReg();
+
+      // Build a SUBREG_TO_REG instruction.
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::SUBREG_TO_REG), dst)
+        .addImm(0).addReg(src).addImm(BPF::sub_32);
+
+      ToErase = &MI;
+      Eliminated = true;
+    }
+  }
+
+  return Eliminated;
+}
+
 } // end default namespace
 
 INITIALIZE_PASS(BPFMIPeephole, DEBUG_TYPE,
@@ -301,18 +352,15 @@ bool BPFMIPreEmitPeephole::eliminateRedundantMov(void) {
       //
       //   MOV rA, rA
       //
-      // This is particularly possible to happen when sub-register support
-      // enabled. The special type cast insn MOV_32_64 involves different
-      // register class on src (i32) and dst (i64), RA could generate useless
-      // instruction due to this.
+      // Note that we cannot remove
+      //   MOV_32_64  rA, wA
+      //   MOV_rr_32  wA, wA
+      // as these two instructions having side effects, zeroing out
+      // top 32 bits of rA.
       unsigned Opcode = MI.getOpcode();
-      if (Opcode == BPF::MOV_32_64 ||
-          Opcode == BPF::MOV_rr || Opcode == BPF::MOV_rr_32) {
+      if (Opcode == BPF::MOV_rr) {
         Register dst = MI.getOperand(0).getReg();
         Register src = MI.getOperand(1).getReg();
-
-        if (Opcode == BPF::MOV_32_64)
-          dst = TRI->getSubReg(dst, BPF::sub_32);
 
         if (dst != src)
           continue;

@@ -15,9 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETOBJECTFILE_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETOBJECTFILE_H
 
-#include "AMDGPU.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
-#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 

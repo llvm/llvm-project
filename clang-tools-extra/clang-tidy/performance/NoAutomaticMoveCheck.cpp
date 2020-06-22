@@ -44,12 +44,14 @@ void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
                               pointee(type(equalsBoundNode("SrcT")))))))))));
 
   Finder->addMatcher(
-      returnStmt(
-          hasReturnValue(ignoringElidableConstructorCall(ignoringParenImpCasts(
-              cxxConstructExpr(hasDeclaration(LValueRefCtor),
-                               hasArgument(0, ignoringParenImpCasts(declRefExpr(
-                                                  to(ConstLocalVariable)))))
-                  .bind("ctor_call"))))),
+      traverse(ast_type_traits::TK_AsIs,
+               returnStmt(hasReturnValue(
+                   ignoringElidableConstructorCall(ignoringParenImpCasts(
+                       cxxConstructExpr(
+                           hasDeclaration(LValueRefCtor),
+                           hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                              to(ConstLocalVariable)))))
+                           .bind("ctor_call")))))),
       this);
 }
 

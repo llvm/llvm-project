@@ -1275,6 +1275,15 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
       // this is ambiguous. Typo-correct to type and expression keywords and
       // to types and identifiers, in order to try to recover from errors.
       TentativeParseCCC CCC(Next);
+      // Tentative parsing may not be done in the right evaluation context
+      // for the ultimate expression.  Enter an unevaluated context to prevent
+      // Sema from immediately e.g. treating this lookup as a potential ODR-use.
+      // If we generate an expression annotation token and the parser actually
+      // claims it as an expression, we'll transform the expression to a
+      // potentially-evaluated one then.
+      EnterExpressionEvaluationContext Unevaluated(
+          Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+          Sema::ReuseLambdaContextDecl);
       switch (TryAnnotateName(&CCC)) {
       case ANK_Error:
         return TPResult::Error;
@@ -1631,6 +1640,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
+  case tok::kw___bf16:
   case tok::kw__Float16:
   case tok::kw___float128:
   case tok::kw_void:
@@ -1744,6 +1754,7 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
+  case tok::kw___bf16:
   case tok::kw__Float16:
   case tok::kw___float128:
   case tok::kw_void:

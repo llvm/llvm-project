@@ -9,6 +9,12 @@ beautification by scripts. The fields are: name (N), email (E), web-address
 (S) and (I) IRC handle. Each entry should contain at least the (N), (E) and
 (D) fields.
 
+N: Matt Arsenault
+E: Matthew.Arsenault@amd.com
+E: arsenm2@gmail.com
+I: arsenm
+D: InferAddressSpaces
+
 N: Simon Atanasyan
 E: simon@atanasyan.com
 D: MIPS Backend (lib/Target/Mips/*)
@@ -52,8 +58,8 @@ N: Pete Couperus
 E: petecoup@synopsys.com
 D: ARC backend (lib/Target/ARC/*)
 
-N: Sanjoy Das
-E: sanjoy@playingwithpointers.com
+N: Philip Reames
+E: listmail@philipreames.com
 D: IndVar Simplify, Scalar Evolution
 
 N: Marshall Clow

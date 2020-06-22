@@ -2,7 +2,7 @@
 // RUN: mkdir -p %t/ctudir2
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu \
 // RUN:   -emit-pch -o %t/ctudir2/ctu-other.c.ast %S/Inputs/ctu-other.c
-// RUN: cp %S/Inputs/ctu-other.c.externalDefMap.txt %t/ctudir2/externalDefMap.txt
+// RUN: cp %S/Inputs/ctu-other.c.externalDefMap.ast-dump.txt %t/ctudir2/externalDefMap.txt
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -std=c89 -analyze \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
@@ -50,6 +50,10 @@ void testMacro(void) {
 void testImplicit() {
   int res = identImplicit(6);   // external implicit functions are not inlined
   clang_analyzer_eval(res == 6); // expected-warning{{TRUE}}
+  // Call something with uninitialized from the same function in which the implicit was called.
+  // This is necessary to reproduce a special bug in NoStoreFuncVisitor.
+  int uninitialized;
+  h(uninitialized); // expected-warning{{1st function call argument is an uninitialized value}}
 }
 
 // Tests the import of functions that have a struct parameter

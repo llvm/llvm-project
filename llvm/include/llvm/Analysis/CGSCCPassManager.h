@@ -820,6 +820,12 @@ ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>::run(Module &M,
       LLVM_DEBUG(dbgs() << "Running an SCC pass across the RefSCC: " << *RC
                         << "\n");
 
+      // The top of the worklist may *also* be the same SCC we just ran over
+      // (and invalidated for). Keep track of that last SCC we processed due
+      // to SCC update to avoid redundant processing when an SCC is both just
+      // updated itself and at the top of the worklist.
+      LazyCallGraph::SCC *LastUpdatedC = nullptr;
+
       // Push the initial SCCs in reverse post-order as we'll pop off the
       // back and so see this in post-order.
       for (LazyCallGraph::SCC &C : llvm::reverse(*RC))
@@ -833,6 +839,10 @@ ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>::run(Module &M,
         // scenarios here.
         if (InvalidSCCSet.count(C)) {
           LLVM_DEBUG(dbgs() << "Skipping an invalid SCC...\n");
+          continue;
+        }
+        if (LastUpdatedC == C) {
+          LLVM_DEBUG(dbgs() << "Skipping redundant run on SCC: " << *C << "\n");
           continue;
         }
         if (&C->getOuterRefSCC() != RC) {
@@ -863,11 +873,6 @@ ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>::run(Module &M,
         // invalidate the analyses for any SCCs other than themselves which
         // are mutated. However, that seems to lose the robustness of the
         // pass-manager driven invalidation scheme.
-        //
-        // FIXME: This is redundant in one case -- the top of the worklist may
-        // *also* be the same SCC we just ran over (and invalidated for). In
-        // that case, we'll end up doing a redundant invalidation here as
-        // a consequence.
         CGAM.invalidate(*C, UR.CrossSCCPA);
 
         do {
@@ -877,6 +882,7 @@ ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>::run(Module &M,
           assert(&C->getOuterRefSCC() == RC &&
                  "Processing an SCC in a different RefSCC!");
 
+          LastUpdatedC = UR.UpdatedC;
           UR.UpdatedRC = nullptr;
           UR.UpdatedC = nullptr;
 

@@ -44,7 +44,10 @@ protected:
 
 private:
   llvm::Type &m_return_type;
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanCallFunctionUsingABI);
+  ThreadPlanCallFunctionUsingABI(const ThreadPlanCallFunctionUsingABI &) =
+      delete;
+  const ThreadPlanCallFunctionUsingABI &
+  operator=(const ThreadPlanCallFunctionUsingABI &) = delete;
 };
 
 } // namespace lldb_private

@@ -37,7 +37,8 @@ protected:
 
 private:
   // For Stoppoint only
-  DISALLOW_COPY_AND_ASSIGN(Stoppoint);
+  Stoppoint(const Stoppoint &) = delete;
+  const Stoppoint &operator=(const Stoppoint &) = delete;
 };
 
 } // namespace lldb_private

@@ -104,9 +104,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>fc2476fe550128eebe2a0a8fa4299a59</string>
+   <key>issue_hash_content_of_line_in_context</key><string>d21e9660cc6434ef84a51f39ffcdce86</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>creationViaAlloc</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -225,9 +225,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>31ad4a19f94c8994ebf7e887ed4ab840</string>
+   <key>issue_hash_content_of_line_in_context</key><string>f8ec2601a04113e567aa1d09c9902c91</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>creationViaCFCreate</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -571,9 +571,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>1b654ea7bbef1493beda9e0a667dd859</string>
+   <key>issue_hash_content_of_line_in_context</key><string>dd26a8ad9a7a057feaa636974b43ccb0</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>acquisitionViaMethod</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -770,9 +770,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>3fc42b0b859923347e789ad601d29b2a</string>
+   <key>issue_hash_content_of_line_in_context</key><string>2f2de5d7fe728958585598b619069e5a</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>acquisitionViaProperty</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -967,9 +967,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>0b4d42c9cc01d55bc281c067f1cc1c3d</string>
+   <key>issue_hash_content_of_line_in_context</key><string>1c02b65e83dad1b22270ff5a71de3118</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>acquisitionViaCFFunction</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -1164,9 +1164,9 @@
    <key>description</key><string>Reference-counted object is used after it is released</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Use-after-release</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>baa3d5ecb7824a6997e0734ad148ec55</string>
+   <key>issue_hash_content_of_line_in_context</key><string>03c23f0f82d7f2fd880a22e0d9cf14b9</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>explicitDealloc</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -1361,9 +1361,9 @@
    <key>description</key><string>Reference-counted object is used after it is released</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Use-after-release</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>ce73a05e0a1055b4b451f5015edbd6ec</string>
+   <key>issue_hash_content_of_line_in_context</key><string>6f1b3f0c6c7f79f1af9b313273a01e92</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>implicitDealloc</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -1633,9 +1633,9 @@
    <key>description</key><string>Object autoreleased too many times</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>b8cbd4dae812cd8d8faaf3b48dad2021</string>
+   <key>issue_hash_content_of_line_in_context</key><string>cb5e4205a8f925230a70715914a2e3d2</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>overAutorelease</string>
   <key>issue_hash_function_offset</key><string>4</string>
@@ -1831,9 +1831,9 @@
    <key>description</key><string>Object autoreleased too many times</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>ee96f7e22e32b24d677efa45b2395915</string>
+   <key>issue_hash_content_of_line_in_context</key><string>1edd178e5ad76c79ce9812f519e8f467</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>autoreleaseUnowned</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -1953,9 +1953,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>12887d3520c4c9fd03995feeb69967ec</string>
+   <key>issue_hash_content_of_line_in_context</key><string>3f08690fae9687c29bb23b7a7cb7995b</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>makeCollectableIgnored</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -2076,9 +2076,9 @@
    <key>description</key><string>Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Method should return an owned object</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>d715154641c7b248d401df12c1ce0808</string>
+   <key>issue_hash_content_of_line_in_context</key><string>4b621ab5f8f2ef9240699119f4d874cb</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>CFCopyRuleViolation</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -2197,9 +2197,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;object&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak of returned object</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>58d56f1d5982f5923ab07900852ea30c</string>
+   <key>issue_hash_content_of_line_in_context</key><string>5248d2310322982d02e5f3d564249b4f</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>CFGetRuleViolation</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -2318,9 +2318,9 @@
    <key>description</key><string>Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Method should return an owned object</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>cc20c23c14b2363ca453c24ede3bc38d</string>
+   <key>issue_hash_content_of_line_in_context</key><string>4f23ad2725fb68134cec8b8354cd295c</string>
   <key>issue_context_kind</key><string>Objective-C method</string>
   <key>issue_context</key><string>copyViolation</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -2439,9 +2439,9 @@
    <key>description</key><string>Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Method should return an owned object</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>4eefa164042de89f947573c1df2fce03</string>
+   <key>issue_hash_content_of_line_in_context</key><string>da1dab126ed46b144040160ae8628460</string>
   <key>issue_context_kind</key><string>Objective-C method</string>
   <key>issue_context</key><string>copyViolationIndexedSubscript</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -2560,9 +2560,9 @@
    <key>description</key><string>Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Method should return an owned object</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>e8ad4d8a073872a91d2b0225319cd521</string>
+   <key>issue_hash_content_of_line_in_context</key><string>52877f9471b1ecdaf213b39016b84e52</string>
   <key>issue_context_kind</key><string>Objective-C method</string>
   <key>issue_context</key><string>copyViolationKeyedSubscript</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -2681,9 +2681,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;result&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak of returned object</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>f858bd7c1720b43bd464bbec97a1cb6b</string>
+   <key>issue_hash_content_of_line_in_context</key><string>cf8c65a18ad9982cb9848a266cd9c61b</string>
   <key>issue_context_kind</key><string>Objective-C method</string>
   <key>issue_context</key><string>getViolation</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -2877,9 +2877,9 @@
    <key>description</key><string>Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Method should return an owned object</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>4da16a9c4c9d9587418f276359c5f098</string>
+   <key>issue_hash_content_of_line_in_context</key><string>e7b798151545b45a994592df0d27d250</string>
   <key>issue_context_kind</key><string>Objective-C method</string>
   <key>issue_context</key><string>copyAutorelease</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -2999,9 +2999,9 @@
    <key>description</key><string>Incorrect decrement of the reference count of an object that is not owned at this point by the caller</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Bad release</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>18ba6f4fe59b182bee196c1a976e3aa2</string>
+   <key>issue_hash_content_of_line_in_context</key><string>4e0c810e2b301aca3f636ad7e3d6b0b8</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>testNumericLiteral</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -3120,9 +3120,9 @@
    <key>description</key><string>Incorrect decrement of the reference count of an object that is not owned at this point by the caller</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Bad release</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>ac4375d1ab6887c27055ee00b20a212e</string>
+   <key>issue_hash_content_of_line_in_context</key><string>1d054002016aa4360aaf23a4c4d8fbb7</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>testBoxedInt</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -3241,9 +3241,9 @@
    <key>description</key><string>Incorrect decrement of the reference count of an object that is not owned at this point by the caller</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Bad release</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>cd2f260edad8ce1826b21acc49cba277</string>
+   <key>issue_hash_content_of_line_in_context</key><string>67ca92144b05322ee4569aea88d08595</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>testBoxedString</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -3362,9 +3362,9 @@
    <key>description</key><string>Incorrect decrement of the reference count of an object that is not owned at this point by the caller</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Bad release</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>e60765ef00b3af982aacd5471a2cdb21</string>
+   <key>issue_hash_content_of_line_in_context</key><string>32fcec71872b8f62d8d7b1b05284b0fe</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>testArray</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -3483,9 +3483,9 @@
    <key>description</key><string>Incorrect decrement of the reference count of an object that is not owned at this point by the caller</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Bad release</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>42da4f0388822b235ed56427f2e1ac1b</string>
+   <key>issue_hash_content_of_line_in_context</key><string>d9584825bb1e62066879949e3ade8570</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>testDictionary</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -3841,9 +3841,9 @@
    <key>description</key><string>Potential leak of an object of type &apos;MyObj *&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>b5589615cea2321192e477d2011edf09</string>
+   <key>issue_hash_content_of_line_in_context</key><string>eef2aef4b58abf21fcfa4bbf69e19c02</string>
   <key>issue_context_kind</key><string>Objective-C method</string>
   <key>issue_context</key><string>test</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -4240,9 +4240,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;y&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>b319657460942b0e8deafb79876d5479</string>
+   <key>issue_hash_content_of_line_in_context</key><string>8c27524f691296551f9e52856b824326</string>
   <key>issue_context_kind</key><string>Objective-C method</string>
   <key>issue_context</key><string>test</string>
   <key>issue_hash_function_offset</key><string>8</string>
@@ -4518,9 +4518,9 @@
    <key>description</key><string>Object autoreleased too many times</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>8e06af66dd0b414c095c951ac1f2cc68</string>
+   <key>issue_hash_content_of_line_in_context</key><string>4fc36e73ba317d307dc9cc4b3d62fd0a</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>CFOverAutorelease</string>
   <key>issue_hash_function_offset</key><string>4</string>
@@ -4716,9 +4716,9 @@
    <key>description</key><string>Object autoreleased too many times</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>06eeb988e43f885cb575eba46e7ccf8f</string>
+   <key>issue_hash_content_of_line_in_context</key><string>08e6a3931d34cda45c09dfda76976e17</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>CFAutoreleaseUnowned</string>
   <key>issue_hash_function_offset</key><string>3</string>
@@ -4988,9 +4988,9 @@
    <key>description</key><string>Object autoreleased too many times</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>e1b335bbbaad2a9c427e681a6fac6562</string>
+   <key>issue_hash_content_of_line_in_context</key><string>d9bb23a5435fe15df9d7ffdc27a8a072</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>CFAutoreleaseUnownedMixed</string>
   <key>issue_hash_function_offset</key><string>4</string>

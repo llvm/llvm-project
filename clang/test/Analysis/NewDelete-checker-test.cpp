@@ -1,42 +1,31 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
+// RUN:   -verify=expected,newdelete \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
-// RUN: %clang_analyze_cc1 -DLEAKS -std=c++11 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -DLEAKS -std=c++11 -fblocks %s \
+// RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
+// RUN:   -verify=expected,newdelete \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-config c++-allocator-inlining=true
 //
-// RUN: %clang_analyze_cc1 -DLEAKS -std=c++11 -fblocks -verify %s \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
-// RUN:   -analyzer-config c++-allocator-inlining=true
-//
-// RUN: %clang_analyze_cc1 -DTEST_INLINABLE_ALLOCATORS \
-// RUN:   -std=c++11 -fblocks -verify %s \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=cplusplus.NewDelete
-//
-// RUN: %clang_analyze_cc1 -DLEAKS -DTEST_INLINABLE_ALLOCATORS \
-// RUN:   -std=c++11 -fblocks -verify %s \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
-//
-// RUN: %clang_analyze_cc1 -DTEST_INLINABLE_ALLOCATORS \
-// RUN:   -std=c++11 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
-// RUN:   -analyzer-config c++-allocator-inlining=true
-//
-// RUN: %clang_analyze_cc1 -DLEAKS -DTEST_INLINABLE_ALLOCATORS \
-// RUN:   -std=c++11 -fblocks -verify %s \
-// RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
 // RUN:   -analyzer-config c++-allocator-inlining=true
+//
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN:   -verify=expected,leak \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -52,50 +41,28 @@ int *global;
 //----- Standard non-placement operators
 void testGlobalOpNew() {
   void *p = operator new(0);
-}
-#ifdef LEAKS
-// expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
-#endif
+} // leak-warning{{Potential leak of memory pointed to by 'p'}}
 
 void testGlobalOpNewArray() {
   void *p = operator new[](0);
-}
-#ifdef LEAKS
-// expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
-#endif
+} // leak-warning{{Potential leak of memory pointed to by 'p'}}
 
 void testGlobalNewExpr() {
   int *p = new int;
-}
-#ifdef LEAKS
-// expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
-#endif
+} // leak-warning{{Potential leak of memory pointed to by 'p'}}
 
 void testGlobalNewExprArray() {
   int *p = new int[0];
-}
-#ifdef LEAKS
-// expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
-#endif
+} // leak-warning{{Potential leak of memory pointed to by 'p'}}
 
 //----- Standard nothrow placement operators
 void testGlobalNoThrowPlacementOpNewBeforeOverload() {
   void *p = operator new(0, std::nothrow);
-}
-#ifdef LEAKS
-#ifndef TEST_INLINABLE_ALLOCATORS
-// expected-warning@-3{{Potential leak of memory pointed to by 'p'}}
-#endif
-#endif
+} // leak-warning{{Potential leak of memory pointed to by 'p'}}
 
 void testGlobalNoThrowPlacementExprNewBeforeOverload() {
   int *p = new(std::nothrow) int;
-}
-#ifdef LEAKS
-#ifndef TEST_INLINABLE_ALLOCATORS
-// expected-warning@-3{{Potential leak of memory pointed to by 'p'}}
-#endif
-#endif
+} // leak-warning{{Potential leak of memory pointed to by 'p'}}
 
 //----- Standard pointer placement operators
 void testGlobalPointerPlacementNew() {
@@ -135,13 +102,13 @@ void testNewInvalidationPlacement(PtrWrapper *w) {
 
 void testUseZeroAlloc1() {
   int *p = (int *)operator new(0);
-  *p = 1; // expected-warning {{Use of zero-allocated memory}}
+  *p = 1; // newdelete-warning {{Use of zero-allocated memory}}
   delete p;
 }
 
 int testUseZeroAlloc2() {
   int *p = (int *)operator new[](0);
-  return p[0]; // expected-warning {{Use of zero-allocated memory}}
+  return p[0]; // newdelete-warning {{Use of zero-allocated memory}}
   delete[] p;
 }
 
@@ -149,7 +116,7 @@ void f(int);
 
 void testUseZeroAlloc3() {
   int *p = new int[0];
-  f(*p); // expected-warning {{Use of zero-allocated memory}}
+  f(*p); // newdelete-warning {{Use of zero-allocated memory}}
   delete[] p;
 }
 
@@ -168,70 +135,68 @@ void g(SomeClass &c, ...);
 void testUseFirstArgAfterDelete() {
   int *p = new int;
   delete p;
-  f(p); // expected-warning{{Use of memory after it is freed}}
+  f(p); // newdelete-warning{{Use of memory after it is freed}}
 }
 
 void testUseMiddleArgAfterDelete(int *p) {
   delete p;
-  f(0, p); // expected-warning{{Use of memory after it is freed}}
+  f(0, p); // newdelete-warning{{Use of memory after it is freed}}
 }
 
 void testUseLastArgAfterDelete(int *p) {
   delete p;
-  f(0, 0, p); // expected-warning{{Use of memory after it is freed}}
+  f(0, 0, p); // newdelete-warning{{Use of memory after it is freed}}
 }
 
 void testUseSeveralArgsAfterDelete(int *p) {
   delete p;
-  f(p, p, p); // expected-warning{{Use of memory after it is freed}}
+  f(p, p, p); // newdelete-warning{{Use of memory after it is freed}}
 }
 
 void testUseRefArgAfterDelete(SomeClass &c) {
   delete &c;
-  g(c); // expected-warning{{Use of memory after it is freed}}
+  g(c); // newdelete-warning{{Use of memory after it is freed}}
 }
 
 void testVariadicArgAfterDelete() {
   SomeClass c;
   int *p = new int;
   delete p;
-  g(c, 0, p); // expected-warning{{Use of memory after it is freed}}
+  g(c, 0, p); // newdelete-warning{{Use of memory after it is freed}}
 }
 
 void testUseMethodArgAfterDelete(int *p) {
   SomeClass *c = new SomeClass;
   delete p;
-  c->f(p); // expected-warning{{Use of memory after it is freed}}
+  c->f(p); // newdelete-warning{{Use of memory after it is freed}}
 }
 
 void testUseThisAfterDelete() {
   SomeClass *c = new SomeClass;
   delete c;
-  c->f(0); // expected-warning{{Use of memory after it is freed}}
+  c->f(0); // newdelete-warning{{Use of memory after it is freed}}
 }
 
 void testDoubleDelete() {
   int *p = new int;
   delete p;
-  delete p; // expected-warning{{Attempt to free released memory}}
+  delete p; // newdelete-warning{{Attempt to free released memory}}
 }
 
 void testExprDeleteArg() {
   int i;
-  delete &i; // expected-warning{{Argument to 'delete' is the address of the local variable 'i', which is not memory allocated by 'new'}}
+  delete &i; // newdelete-warning{{Argument to 'delete' is the address of the local variable 'i', which is not memory allocated by 'new'}}
 }
 
 void testExprDeleteArrArg() {
   int i;
-  delete[] &i; // expected-warning{{Argument to 'delete[]' is the address of the local variable 'i', which is not memory allocated by 'new[]'}}
+  delete[] & i; // newdelete-warning{{Argument to 'delete[]' is the address of the local variable 'i', which is not memory allocated by 'new[]'}}
 }
 
 void testAllocDeallocNames() {
   int *p = new(std::nothrow) int[1];
   delete[] (++p);
-#ifndef TEST_INLINABLE_ALLOCATORS
-  // expected-warning@-2{{Argument to 'delete[]' is offset by 4 bytes from the start of memory allocated by 'new[]'}}
-#endif
+  // newdelete-warning@-1{{Argument to 'delete[]' is offset by 4 bytes from the start of memory allocated by 'new[]'}}
 }
 
 //--------------------------------
@@ -408,7 +373,7 @@ public:
 void testDoubleDeleteClassInstance() {
   DerefClass *foo = new DerefClass();
   delete foo;
-  delete foo; // expected-warning {{Attempt to delete released memory}}
+  delete foo; // newdelete-warning {{Attempt to delete released memory}}
 }
 
 class EmptyClass{
@@ -420,7 +385,7 @@ public:
 void testDoubleDeleteEmptyClass() {
   EmptyClass *foo = new EmptyClass();
   delete foo;
-  delete foo;  // expected-warning {{Attempt to delete released memory}}
+  delete foo; // newdelete-warning {{Attempt to delete released memory}}
 }
 
 struct Base {

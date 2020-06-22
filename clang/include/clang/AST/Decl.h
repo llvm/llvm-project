@@ -2125,19 +2125,17 @@ public:
   bool isTrivialForCall() const { return FunctionDeclBits.IsTrivialForCall; }
   void setTrivialForCall(bool IT) { FunctionDeclBits.IsTrivialForCall = IT; }
 
-  /// Whether this function is defaulted per C++0x. Only valid for
-  /// special member functions.
+  /// Whether this function is defaulted. Valid for e.g.
+  /// special member functions, defaulted comparisions (not methods!).
   bool isDefaulted() const { return FunctionDeclBits.IsDefaulted; }
   void setDefaulted(bool D = true) { FunctionDeclBits.IsDefaulted = D; }
 
-  /// Whether this function is explicitly defaulted per C++0x. Only valid
-  /// for special member functions.
+  /// Whether this function is explicitly defaulted.
   bool isExplicitlyDefaulted() const {
     return FunctionDeclBits.IsExplicitlyDefaulted;
   }
 
-  /// State that this function is explicitly defaulted per C++0x. Only valid
-  /// for special member functions.
+  /// State that this function is explicitly defaulted.
   void setExplicitlyDefaulted(bool ED = true) {
     FunctionDeclBits.IsExplicitlyDefaulted = ED;
   }
@@ -2440,6 +2438,14 @@ public:
   /// may be fewer than the number of function parameters, if some of the
   /// parameters have default arguments (in C++).
   unsigned getMinRequiredArguments() const;
+
+  /// Determine whether this function has a single parameter, or multiple
+  /// parameters where all but the first have default arguments.
+  ///
+  /// This notion is used in the definition of copy/move constructors and
+  /// initializer list constructors. Note that, unlike getMinRequiredArguments,
+  /// parameter packs are not treated specially here.
+  bool hasOneParamOrDefaultArgs() const;
 
   /// Find the source location information for how the type of this function
   /// was written. May be absent (for example if the function was declared via
@@ -2920,12 +2926,15 @@ public:
 
   /// Returns the parent of this field declaration, which
   /// is the struct in which this field is defined.
+  ///
+  /// Returns null if this is not a normal class/struct field declaration, e.g.
+  /// ObjCAtDefsFieldDecl, ObjCIvarDecl.
   const RecordDecl *getParent() const {
-    return cast<RecordDecl>(getDeclContext());
+    return dyn_cast<RecordDecl>(getDeclContext());
   }
 
   RecordDecl *getParent() {
-    return cast<RecordDecl>(getDeclContext());
+    return dyn_cast<RecordDecl>(getDeclContext());
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
@@ -4551,7 +4560,7 @@ inline bool IsEnumDeclScoped(EnumDecl *ED) {
 /// The new name looks likes this:
 ///  <name> + OpenMPVariantManglingSeparatorStr + <mangled OpenMP context>
 static constexpr StringRef getOpenMPVariantManglingSeparatorStr() {
-  return ".ompvariant";
+  return "$ompvariant";
 }
 
 } // namespace clang

@@ -28,15 +28,15 @@
 # RELOC-NEXT:   R_PPC_JMP_SLOT h 0x0
 # RELOC-NEXT: }
 
-# SEC: .got PROGBITS 00020368
-# DYN: PPC_GOT 0x20368
+# SEC: .got PROGBITS 00020370
+# DYN: PPC_GOT 0x20370
 
 ## .got2+0x8000-0x10004 = 0x30000+0x8000-0x10004 = 65536*2+32764
 # CHECK-LABEL: <_start>:
 # PIE-NEXT:           bcl 20, 31, 0x10210
 # PIE-NEXT:    10210: mflr 30
 # PIE-NEXT:           addis 30, 30, 3
-# PIE-NEXT:           addi 30, 30, -32412
+# PIE-NEXT:           addi 30, 30, -32404
 ## Two bl 00008000.got2.plt_pic32.f
 # PIE-NEXT:           bl 0x10244
 # PIE-NEXT:           bl 0x10244
@@ -104,7 +104,7 @@
 # CHECK-NEXT:  <00008000.got2.plt_pic32.f>:
 
 ## In Secure PLT ABI, .plt stores function pointers to first instructions of .glink
-# HEX: 0x0004036c 00010294 00010298 0001029c
+# HEX: 0x00040374 00010294 00010298 0001029c
 
 ## These instructions are referenced by .plt entries.
 # CHECK:      [[#%x,GLINK:]] <.glink>:
@@ -113,7 +113,7 @@
 # CHECK-NEXT: b 0x[[#%x,GLINK+12]]
 
 ## PLTresolve
-## Operand of addi: 0x100a8-.glink = 24
+## Operand of addi: 0x102cc-.glink = 24
 # CHECK-NEXT:         addis 11, 11, 0
 # CHECK-NEXT:         mflr 0
 # CHECK-NEXT:         bcl 20, 31, 0x[[#%x,NEXT:]]
@@ -121,14 +121,14 @@
 
 # CHECK-NEXT: mflr 12
 # CHECK-NEXT: mtlr 0
-# CHECK-NEXT: subf 11, 12, 11
+# CHECK-NEXT: sub 11, 11, 12
 
-## Operand of lwz in -pie mode: &.got[1] - 0x100a8 = 0x20088+4 - 0x100a8 = 65536*1-28
+## Operand of lwz in -pie mode: &.got[1] - 0x102bc = 0x20380+4 - 0x102bc = 65536*1+200
 # CHECK-NEXT:  addis 12, 12, 1
-# PIE-NEXT:    lwz 0, 192(12)
+# PIE-NEXT:    lwz 0, 200(12)
 # SHARED-NEXT: lwz 0, 184(12)
 
-# PIE-NEXT:    lwz 12, 196(12)
+# PIE-NEXT:    lwz 12, 204(12)
 # SHARED-NEXT: lwz 12, 188(12)
 # CHECK-NEXT:  mtctr 0
 # CHECK-NEXT:  add 0, 11, 11

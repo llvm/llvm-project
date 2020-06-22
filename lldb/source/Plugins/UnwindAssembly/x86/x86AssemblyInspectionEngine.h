@@ -191,7 +191,9 @@ private:
 
   ::LLVMDisasmContextRef m_disasm_context;
 
-  DISALLOW_COPY_AND_ASSIGN(x86AssemblyInspectionEngine);
+  x86AssemblyInspectionEngine(const x86AssemblyInspectionEngine &) = delete;
+  const x86AssemblyInspectionEngine &
+  operator=(const x86AssemblyInspectionEngine &) = delete;
 };
 
 } // namespace lldb_private

@@ -33,12 +33,15 @@ class GenericTester(TestBase):
         # module cacheing subsystem to be confused with executable name "a.out"
         # used for all the test cases.
         self.exe_name = self.testMethodName
-        self.golden_filename = self.getBuildArtifact("golden-output.txt")
+        golden = "{}-golden-output.txt".format(self.testMethodName)
+        if configuration.is_reproducer():
+            self.golden_filename = self.getReproducerArtifact(golden)
+        else:
+            self.golden_filename = self.getBuildArtifact(golden)
 
     def tearDown(self):
         """Cleanup the test byproducts."""
-        #print("Removing golden-output.txt...")
-        if os.path.exists(self.golden_filename):
+        if os.path.exists(self.golden_filename) and not configuration.is_reproducer():
             os.remove(self.golden_filename)
         TestBase.tearDown(self)
 
@@ -88,7 +91,7 @@ class GenericTester(TestBase):
                 blockCaptured=bc,
                 quotedDisplay=qd)
 
-    def process_launch_o(self, localPath):
+    def process_launch_o(self):
         # process launch command output redirect always goes to host the
         # process is running on
         if lldb.remote_platform:
@@ -101,9 +104,31 @@ class GenericTester(TestBase):
             # copy remote_path to local host
             self.runCmd('platform get-file {remote} "{local}"'.format(
                 remote=remote_path, local=self.golden_filename))
+        elif configuration.is_reproducer_replay():
+            # Don't overwrite the golden file generated at capture time.
+            self.runCmd('process launch')
         else:
             self.runCmd(
                 'process launch -o "{local}"'.format(local=self.golden_filename))
+
+    def get_golden_list(self, blockCaptured=False):
+        with open(self.golden_filename, 'r') as f:
+            go = f.read()
+
+        golden_list = []
+        # Scan the golden output line by line, looking for the pattern:
+        #
+        #     variable = 'value'
+        #
+        for line in go.split(os.linesep):
+            # We'll ignore variables of array types from inside a block.
+            if blockCaptured and '[' in line:
+                continue
+            match = self.pattern.search(line)
+            if match:
+                var, val = match.group(1), match.group(2)
+                golden_list.append((var, val))
+        return golden_list
 
     def generic_type_tester(
             self,
@@ -117,29 +142,11 @@ class GenericTester(TestBase):
 
         # First, capture the golden output emitted by the oracle, i.e., the
         # series of printf statements.
-
-        self.process_launch_o(self.golden_filename)
-
-        with open(self.golden_filename) as f:
-            go = f.read()
+        self.process_launch_o()
 
         # This golden list contains a list of (variable, value) pairs extracted
         # from the golden output.
-        gl = []
-
-        # Scan the golden output line by line, looking for the pattern:
-        #
-        #     variable = 'value'
-        #
-        for line in go.split(os.linesep):
-            # We'll ignore variables of array types from inside a block.
-            if blockCaptured and '[' in line:
-                continue
-            match = self.pattern.search(line)
-            if match:
-                var, val = match.group(1), match.group(2)
-                gl.append((var, val))
-        #print("golden list:", gl)
+        gl = self.get_golden_list(blockCaptured)
 
         # This test uses a #include of "basic_type.cpp" so we need to enable
         # always setting inlined breakpoints.
@@ -213,29 +220,11 @@ class GenericTester(TestBase):
 
         # First, capture the golden output emitted by the oracle, i.e., the
         # series of printf statements.
-
-        self.process_launch_o(self.golden_filename)
-
-        with open(self.golden_filename) as f:
-            go = f.read()
+        self.process_launch_o()
 
         # This golden list contains a list of (variable, value) pairs extracted
         # from the golden output.
-        gl = []
-
-        # Scan the golden output line by line, looking for the pattern:
-        #
-        #     variable = 'value'
-        #
-        for line in go.split(os.linesep):
-            # We'll ignore variables of array types from inside a block.
-            if blockCaptured and '[' in line:
-                continue
-            match = self.pattern.search(line)
-            if match:
-                var, val = match.group(1), match.group(2)
-                gl.append((var, val))
-        #print("golden list:", gl)
+        gl = self.get_golden_list(blockCaptured)
 
         # This test uses a #include of "basic_type.cpp" so we need to enable
         # always setting inlined breakpoints.

@@ -101,12 +101,16 @@ uint32_t ObjFile::calcNewIndex(const WasmRelocation &reloc) const {
 
 // Relocations can contain addend for combined sections. This function takes a
 // relocation and returns updated addend by offset in the output section.
-uint32_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
+uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   switch (reloc.Type) {
   case R_WASM_MEMORY_ADDR_LEB:
+  case R_WASM_MEMORY_ADDR_LEB64:
+  case R_WASM_MEMORY_ADDR_SLEB64:
   case R_WASM_MEMORY_ADDR_SLEB:
   case R_WASM_MEMORY_ADDR_REL_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_MEMORY_ADDR_I64:
   case R_WASM_FUNCTION_OFFSET_I32:
     return reloc.Addend;
   case R_WASM_SECTION_OFFSET_I32:
@@ -119,25 +123,38 @@ uint32_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
 // Calculate the value we expect to find at the relocation location.
 // This is used as a sanity check before applying a relocation to a given
 // location.  It is useful for catching bugs in the compiler and linker.
-uint32_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
+uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
   switch (reloc.Type) {
   case R_WASM_TABLE_INDEX_I32:
-  case R_WASM_TABLE_INDEX_SLEB:
-  case R_WASM_TABLE_INDEX_REL_SLEB: {
+  case R_WASM_TABLE_INDEX_SLEB: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     return tableEntries[sym.Info.ElementIndex];
   }
-  case R_WASM_MEMORY_ADDR_SLEB:
-  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_TABLE_INDEX_REL_SLEB: {
+    const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
+    return tableEntriesRel[sym.Info.ElementIndex];
+  }
   case R_WASM_MEMORY_ADDR_LEB:
-  case R_WASM_MEMORY_ADDR_REL_SLEB: {
+  case R_WASM_MEMORY_ADDR_LEB64:
+  case R_WASM_MEMORY_ADDR_SLEB:
+  case R_WASM_MEMORY_ADDR_SLEB64:
+  case R_WASM_MEMORY_ADDR_REL_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB64:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_MEMORY_ADDR_I64: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     if (sym.isUndefined())
       return 0;
     const WasmSegment &segment =
         wasmObj->dataSegments()[sym.Info.DataRef.Segment];
-    return segment.Data.Offset.Value.Int32 + sym.Info.DataRef.Offset +
-           reloc.Addend;
+    if (segment.Data.Offset.Opcode == WASM_OPCODE_I32_CONST)
+      return segment.Data.Offset.Value.Int32 + sym.Info.DataRef.Offset +
+             reloc.Addend;
+    else if (segment.Data.Offset.Opcode == WASM_OPCODE_I64_CONST)
+      return segment.Data.Offset.Value.Int64 + sym.Info.DataRef.Offset +
+             reloc.Addend;
+    else
+      llvm_unreachable("unknown init expr opcode");
   }
   case R_WASM_FUNCTION_OFFSET_I32: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
@@ -163,7 +180,7 @@ uint32_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
 }
 
 // Translate from the relocation's index into the final linked output value.
-uint32_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
+uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
   const Symbol* sym = nullptr;
   if (reloc.Type != R_WASM_TYPE_INDEX_LEB) {
     sym = symbols[reloc.Index];
@@ -188,10 +205,14 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
     return index;
 
   }
-  case R_WASM_MEMORY_ADDR_SLEB:
-  case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_LEB:
+  case R_WASM_MEMORY_ADDR_LEB64:
+  case R_WASM_MEMORY_ADDR_SLEB:
+  case R_WASM_MEMORY_ADDR_SLEB64:
   case R_WASM_MEMORY_ADDR_REL_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB64:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_MEMORY_ADDR_I64:
     if (isa<UndefinedData>(sym) || sym->isUndefWeak())
       return 0;
     return cast<DefinedData>(sym)->getVirtualAddress() + reloc.Addend;
@@ -208,8 +229,8 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
     return getEventSymbol(reloc.Index)->getEventIndex();
   case R_WASM_FUNCTION_OFFSET_I32: {
     auto *f = cast<DefinedFunction>(sym);
-    return f->function->outputOffset + f->function->getFunctionCodeOffset() +
-           reloc.Addend;
+    return f->function->outputOffset +
+           (f->function->getFunctionCodeOffset() + reloc.Addend);
   }
   case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(reloc.Index)->section->outputOffset + reloc.Addend;
@@ -266,14 +287,19 @@ void ObjFile::parse(bool ignoreComdats) {
   // verifying the existing table index relocations
   uint32_t totalFunctions =
       wasmObj->getNumImportedFunctions() + wasmObj->functions().size();
+  tableEntriesRel.resize(totalFunctions);
   tableEntries.resize(totalFunctions);
   for (const WasmElemSegment &seg : wasmObj->elements()) {
-    if (seg.Offset.Opcode != WASM_OPCODE_I32_CONST)
+    int64_t offset;
+    if (seg.Offset.Opcode == WASM_OPCODE_I32_CONST)
+      offset = seg.Offset.Value.Int32;
+    else if (seg.Offset.Opcode == WASM_OPCODE_I64_CONST)
+      offset = seg.Offset.Value.Int64;
+    else
       fatal(toString(this) + ": invalid table elements");
-    uint32_t offset = seg.Offset.Value.Int32;
-    for (uint32_t index = 0; index < seg.Functions.size(); index++) {
-
-      uint32_t functionIndex = seg.Functions[index];
+    for (size_t index = 0; index < seg.Functions.size(); index++) {
+      auto functionIndex = seg.Functions[index];
+      tableEntriesRel[functionIndex] = index;
       tableEntries[functionIndex] = offset + index;
     }
   }
@@ -406,8 +432,8 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
   }
   case WASM_SYMBOL_TYPE_DATA: {
     InputSegment *seg = segments[sym.Info.DataRef.Segment];
-    uint32_t offset = sym.Info.DataRef.Offset;
-    uint32_t size = sym.Info.DataRef.Size;
+    auto offset = sym.Info.DataRef.Offset;
+    auto size = sym.Info.DataRef.Size;
     if (sym.isBindingLocal())
       return make<DefinedData>(name, flags, this, seg, offset, size);
     if (seg->discarded)

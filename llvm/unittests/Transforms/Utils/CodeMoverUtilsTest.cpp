@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CodeMoverUtils.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -611,5 +612,41 @@ TEST(CodeMoverUtils, IsSafeToMoveTest3) {
         // Can move as the incoming block of %inc for %i (%for.latch) dominated
         // by %cmp.
         EXPECT_TRUE(isSafeToMoveBefore(*IncInst, *CmpInst, DT, PDT, DI));
+      });
+}
+
+TEST(CodeMoverUtils, IsSafeToMoveTest4) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M =
+      parseIR(C, R"(define void @foo(i1 %cond, i32 %op0, i32 %op1) {
+                 entry:
+                   br i1 %cond, label %if.end.first, label %if.then.first
+                 if.then.first:
+                   %add = add i32 %op0, %op1
+                   %user = add i32 %add, 1
+                   br label %if.end.first
+                 if.end.first:
+                   br i1 %cond, label %if.end.second, label %if.then.second
+                 if.then.second:
+                   %sub_op0 = add i32 %op0, 1
+                   %sub = sub i32 %sub_op0, %op1
+                   br label %if.end.second
+                 if.end.second:
+                   ret void
+                 })");
+
+  run(*M, "foo",
+      [&](Function &F, DominatorTree &DT, PostDominatorTree &PDT,
+          DependenceInfo &DI) {
+        Instruction *AddInst = getInstructionByName(F, "add");
+        Instruction *SubInst = getInstructionByName(F, "sub");
+
+        // Cannot move as %user uses %add and %sub doesn't dominates %user.
+        EXPECT_FALSE(isSafeToMoveBefore(*AddInst, *SubInst, DT, PDT, DI));
+
+        // Cannot move as %sub_op0 is an operand of %sub and %add doesn't
+        // dominates %sub_op0.
+        EXPECT_FALSE(isSafeToMoveBefore(*SubInst, *AddInst, DT, PDT, DI));
       });
 }

@@ -9,12 +9,12 @@
 #ifndef LLVM_BINARYFORMAT_MAGIC_H
 #define LLVM_BINARYFORMAT_MAGIC_H
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
-
 #include <system_error>
 
 namespace llvm {
+class StringRef;
+class Twine;
+
 /// file_magic - An "enum class" enumeration of file types based on magic (the
 /// first N bytes of the file).
 struct file_magic {

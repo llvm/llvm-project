@@ -36,7 +36,7 @@ foreach Index = 1-31 in {
   def sub#Index#_hi16 : ComposedSubRegIndex<!cast<SubRegIndex>(sub#Index), hi16>;
 }
 
-foreach Size = {2-5,8,16} in {
+foreach Size = {2-6,8,16} in {
   foreach Index = Indexes<!add(33, !mul(Size, -1))>.slice in {
     def !foldl("", Indexes<Size>.slice, acc, cur,
                !strconcat(acc#!if(!eq(acc,""),"","_"), "sub"#!add(cur, Index))) :
@@ -207,6 +207,9 @@ defm SRC_SHARED_LIMIT : SIRegLoHi16<"src_shared_limit", 236>;
 defm SRC_PRIVATE_BASE : SIRegLoHi16<"src_private_base", 237>;
 defm SRC_PRIVATE_LIMIT : SIRegLoHi16<"src_private_limit", 238>;
 defm SRC_POPS_EXITING_WAVE_ID : SIRegLoHi16<"src_pops_exiting_wave_id", 239>;
+
+// Not addressable
+def MODE : SIReg <"mode", 0>;
 
 def LDS_DIRECT : SIReg <"src_lds_direct", 254> {
   // There is no physical register corresponding to this. This is an

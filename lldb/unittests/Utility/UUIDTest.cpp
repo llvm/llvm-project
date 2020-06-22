@@ -45,7 +45,7 @@ TEST(UUIDTest, Validity) {
   from_str.SetFromStringRef("00000000-0000-0000-0000-000000000000");
   UUID opt_from_str;
   opt_from_str.SetFromOptionalStringRef("00000000-0000-0000-0000-000000000000");
-  
+
   EXPECT_FALSE(empty);
   EXPECT_TRUE(a16);
   EXPECT_TRUE(a20);
@@ -57,25 +57,30 @@ TEST(UUIDTest, Validity) {
 
 TEST(UUIDTest, SetFromStringRef) {
   UUID u;
-  EXPECT_EQ(32u, u.SetFromStringRef("404142434445464748494a4b4c4d4e4f"));
+  EXPECT_TRUE(u.SetFromStringRef("404142434445464748494a4b4c4d4e4f"));
   EXPECT_EQ(UUID::fromData("@ABCDEFGHIJKLMNO", 16), u);
 
-  EXPECT_EQ(36u, u.SetFromStringRef("40-41-42-43-4445464748494a4b4c4d4e4f"));
+  EXPECT_TRUE(u.SetFromStringRef("40-41-42-43-4445464748494a4b4c4d4e4f"));
   EXPECT_EQ(UUID::fromData("@ABCDEFGHIJKLMNO", 16), u);
 
-  EXPECT_EQ(45u, u.SetFromStringRef(
-                     "40-41-42-43-4445464748494a4b4c4d4e4f-50515253", 20));
+  EXPECT_TRUE(
+      u.SetFromStringRef("40-41-42-43-4445464748494a4b4c4d4e4f-50515253"));
   EXPECT_EQ(UUID::fromData("@ABCDEFGHIJKLMNOPQRS", 20), u);
 
-  EXPECT_EQ(0u, u.SetFromStringRef("40-41-42-43-4445464748494a4b4c4d4e4f", 20));
-  EXPECT_EQ(0u, u.SetFromStringRef("40xxxxx"));
-  EXPECT_EQ(0u, u.SetFromStringRef(""));
-  EXPECT_EQ(UUID::fromData("@ABCDEFGHIJKLMNOPQRS", 20), u)
+  EXPECT_TRUE(u.SetFromStringRef("40-41-42-43-4445464748494a4b4c4d4e4f"));
+
+  EXPECT_FALSE(u.SetFromStringRef("40xxxxx"));
+  EXPECT_FALSE(u.SetFromStringRef(""));
+  EXPECT_EQ(UUID::fromData("@ABCDEFGHIJKLMNO", 16), u)
       << "uuid was changed by failed parse calls";
 
-  EXPECT_EQ(
-      32u, u.SetFromStringRef("404142434445464748494a4b4c4d4e4f-50515253", 16));
-  EXPECT_EQ(UUID::fromData("@ABCDEFGHIJKLMNO", 16), u);
+  EXPECT_TRUE(u.SetFromStringRef("404142434445464748494a4b4c4d4e4f-50515253"));
+  EXPECT_EQ(UUID::fromData("@ABCDEFGHIJKLMNOPQRS", 20), u);
+
+  EXPECT_TRUE(u.SetFromStringRef("40414243"));
+  EXPECT_EQ(UUID::fromData("@ABCD", 4), u);
+
+  EXPECT_FALSE(u.SetFromStringRef("4"));
 }
 
 TEST(UUIDTest, StringConverion) {

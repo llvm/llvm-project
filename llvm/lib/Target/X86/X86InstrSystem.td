@@ -23,7 +23,20 @@ def RDTSCP : I<0x01, MRM_F9, (outs), (ins), "rdtscp", []>, TB;
 
 let mayLoad = 1, mayStore = 0, hasSideEffects = 1, isTrap = 1 in {
   def TRAP    : I<0x0B, RawFrm, (outs), (ins), "ud2", [(trap)]>, TB;
-  def UD2B    : I<0xB9, RawFrm, (outs), (ins), "ud2b", []>, TB;
+
+  def UD1Wm   : I<0xB9, MRMSrcMem, (outs), (ins GR16:$src1, i16mem:$src2),
+                  "ud1{w} {$src2, $src1|$src1, $src2}", []>, TB, OpSize16;
+  def UD1Lm   : I<0xB9, MRMSrcMem, (outs), (ins GR32:$src1, i32mem:$src2),
+                  "ud1{l} {$src2, $src1|$src1, $src2}", []>, TB, OpSize32;
+  def UD1Qm   : RI<0xB9, MRMSrcMem, (outs), (ins GR64:$src1, i64mem:$src2),
+                   "ud1{q} {$src2, $src1|$src1, $src2}", []>, TB;
+
+  def UD1Wr   : I<0xB9, MRMSrcReg, (outs), (ins GR16:$src1, GR16:$src2),
+                  "ud1{w} {$src2, $src1|$src1, $src2}", []>, TB, OpSize16;
+  def UD1Lr   : I<0xB9, MRMSrcReg, (outs), (ins GR32:$src1, GR32:$src2),
+                  "ud1{l} {$src2, $src1|$src1, $src2}", []>, TB, OpSize32;
+  def UD1Qr   : RI<0xB9, MRMSrcReg, (outs), (ins GR64:$src1, GR64:$src2),
+                   "ud1{q} {$src2, $src1|$src1, $src2}", []>, TB;
 }
 
 def HLT : I<0xF4, RawFrm, (outs), (ins), "hlt", []>;
@@ -512,12 +525,12 @@ let SchedRW = [WriteSystem] in {
 let SchedRW = [WriteSystem] in {
 let Predicates = [HasXSAVE] in {
 let Defs = [EDX, EAX], Uses = [ECX] in
-  def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, TB;
+  def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, PS;
 
 let Uses = [EDX, EAX, ECX] in
   def XSETBV : I<0x01, MRM_D1, (outs), (ins),
                 "xsetbv",
-                [(int_x86_xsetbv ECX, EDX, EAX)]>, TB;
+                [(int_x86_xsetbv ECX, EDX, EAX)]>, PS;
 
 } // HasXSAVE
 
@@ -542,47 +555,47 @@ def XSAVEOPT64 : RI<0xAE, MRM6m, (outs), (ins opaquemem:$dst),
                     [(int_x86_xsaveopt64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVEOPT, In64BitMode]>;
 def XSAVEC : I<0xC7, MRM4m, (outs), (ins opaquemem:$dst),
                "xsavec\t$dst",
-               [(int_x86_xsavec addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVEC]>;
+               [(int_x86_xsavec addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVEC]>;
 def XSAVEC64 : RI<0xC7, MRM4m, (outs), (ins opaquemem:$dst),
                  "xsavec64\t$dst",
-                 [(int_x86_xsavec64 addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVEC, In64BitMode]>;
+                 [(int_x86_xsavec64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVEC, In64BitMode]>;
 def XSAVES : I<0xC7, MRM5m, (outs), (ins opaquemem:$dst),
                "xsaves\t$dst",
-               [(int_x86_xsaves addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVES]>;
+               [(int_x86_xsaves addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVES]>;
 def XSAVES64 : RI<0xC7, MRM5m, (outs), (ins opaquemem:$dst),
                   "xsaves64\t$dst",
-                  [(int_x86_xsaves64 addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVE, In64BitMode]>;
+                  [(int_x86_xsaves64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVE, In64BitMode]>;
 def XRSTORS : I<0xC7, MRM3m, (outs), (ins opaquemem:$dst),
                 "xrstors\t$dst",
-                [(int_x86_xrstors addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVES]>;
+                [(int_x86_xrstors addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVES]>;
 def XRSTORS64 : RI<0xC7, MRM3m, (outs), (ins opaquemem:$dst),
                    "xrstors64\t$dst",
-                   [(int_x86_xrstors64 addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVES, In64BitMode]>;
+                   [(int_x86_xrstors64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVES, In64BitMode]>;
 } // Uses
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
 // VIA PadLock crypto instructions
 let Defs = [RAX, RDI], Uses = [RDX, RDI], SchedRW = [WriteSystem] in
-  def XSTORE : I<0xa7, MRM_C0, (outs), (ins), "xstore", []>, TB;
+  def XSTORE : I<0xa7, MRM_C0, (outs), (ins), "xstore", []>, TB, REP;
 
 def : InstAlias<"xstorerng", (XSTORE)>;
 
 let SchedRW = [WriteSystem] in {
 let Defs = [RSI, RDI], Uses = [RBX, RDX, RSI, RDI] in {
-  def XCRYPTECB : I<0xa7, MRM_C8, (outs), (ins), "xcryptecb", []>, TB;
-  def XCRYPTCBC : I<0xa7, MRM_D0, (outs), (ins), "xcryptcbc", []>, TB;
-  def XCRYPTCTR : I<0xa7, MRM_D8, (outs), (ins), "xcryptctr", []>, TB;
-  def XCRYPTCFB : I<0xa7, MRM_E0, (outs), (ins), "xcryptcfb", []>, TB;
-  def XCRYPTOFB : I<0xa7, MRM_E8, (outs), (ins), "xcryptofb", []>, TB;
+  def XCRYPTECB : I<0xa7, MRM_C8, (outs), (ins), "xcryptecb", []>, TB, REP;
+  def XCRYPTCBC : I<0xa7, MRM_D0, (outs), (ins), "xcryptcbc", []>, TB, REP;
+  def XCRYPTCTR : I<0xa7, MRM_D8, (outs), (ins), "xcryptctr", []>, TB, REP;
+  def XCRYPTCFB : I<0xa7, MRM_E0, (outs), (ins), "xcryptcfb", []>, TB, REP;
+  def XCRYPTOFB : I<0xa7, MRM_E8, (outs), (ins), "xcryptofb", []>, TB, REP;
 }
 
 let Defs = [RAX, RSI, RDI], Uses = [RAX, RSI, RDI] in {
-  def XSHA1 : I<0xa6, MRM_C8, (outs), (ins), "xsha1", []>, TB;
-  def XSHA256 : I<0xa6, MRM_D0, (outs), (ins), "xsha256", []>, TB;
+  def XSHA1 : I<0xa6, MRM_C8, (outs), (ins), "xsha1", []>, TB, REP;
+  def XSHA256 : I<0xa6, MRM_D0, (outs), (ins), "xsha256", []>, TB, REP;
 }
 let Defs = [RAX, RDX, RSI], Uses = [RAX, RSI] in
-  def MONTMUL : I<0xa6, MRM_C0, (outs), (ins), "montmul", []>, TB;
+  def MONTMUL : I<0xa6, MRM_C0, (outs), (ins), "montmul", []>, TB, REP;
 } // SchedRW
 
 //==-----------------------------------------------------------------------===//
@@ -590,10 +603,10 @@ let Defs = [RAX, RDX, RSI], Uses = [RAX, RSI] in
 let SchedRW = [WriteSystem] in {
 let Defs = [EAX, EDX], Uses = [ECX] in
   def RDPKRUr : I<0x01, MRM_EE, (outs), (ins), "rdpkru",
-                  [(set EAX, (X86rdpkru ECX)), (implicit EDX)]>, TB;
+                  [(set EAX, (X86rdpkru ECX)), (implicit EDX)]>, PS;
 let Uses = [EAX, ECX, EDX] in
   def WRPKRUr : I<0x01, MRM_EF, (outs), (ins), "wrpkru",
-                  [(X86wrpkru EAX, EDX, ECX)]>, TB;
+                  [(X86wrpkru EAX, EDX, ECX)]>, PS;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
@@ -653,15 +666,15 @@ let Predicates = [In64BitMode, HasINVPCID] in {
 //===----------------------------------------------------------------------===//
 // SMAP Instruction
 let Defs = [EFLAGS], SchedRW = [WriteSystem] in {
-  def CLAC : I<0x01, MRM_CA, (outs), (ins), "clac", []>, TB;
-  def STAC : I<0x01, MRM_CB, (outs), (ins), "stac", []>, TB;
+  def CLAC : I<0x01, MRM_CA, (outs), (ins), "clac", []>, PS;
+  def STAC : I<0x01, MRM_CB, (outs), (ins), "stac", []>, PS;
 }
 
 //===----------------------------------------------------------------------===//
 // SMX Instruction
 let SchedRW = [WriteSystem] in {
 let Uses = [RAX, RBX, RCX, RDX], Defs = [RAX, RBX, RCX] in {
-  def GETSEC : I<0x37, RawFrm, (outs), (ins), "getsec", []>, TB;
+  def GETSEC : I<0x37, RawFrm, (outs), (ins), "getsec", []>, PS;
 } // Uses, Defs
 } // SchedRW
 
@@ -729,6 +742,6 @@ def PTWRITE64r : RI<0xAE, MRM4r, (outs), (ins GR64:$dst),
 
 let SchedRW = [WriteSystem] in {
 let Uses = [RAX, RBX, RCX, RDX], Defs = [RAX, RBX, RCX, RDX, EFLAGS] in
-    def PCONFIG : I<0x01, MRM_C5, (outs), (ins), "pconfig", []>, TB,
+    def PCONFIG : I<0x01, MRM_C5, (outs), (ins), "pconfig", []>, PS,
                   Requires<[HasPCONFIG]>;
 } // SchedRW

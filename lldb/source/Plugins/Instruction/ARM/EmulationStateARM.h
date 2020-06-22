@@ -73,7 +73,8 @@ private:
                                              // uint32_t to a data buffer heap
                                              // type.
 
-  DISALLOW_COPY_AND_ASSIGN(EmulationStateARM);
+  EmulationStateARM(const EmulationStateARM &) = delete;
+  const EmulationStateARM &operator=(const EmulationStateARM &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_ARM_EMULATIONSTATEARM_H

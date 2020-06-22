@@ -18,14 +18,16 @@ void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
   // Look for ifs that have an implicit bool* to bool conversion in the
   // condition. Filter negations.
   Finder->addMatcher(
-      ifStmt(hasCondition(findAll(implicitCastExpr(
-                 unless(hasParent(unaryOperator(hasOperatorName("!")))),
-                 hasSourceExpression(
-                     expr(hasType(pointerType(pointee(booleanType()))),
-                          ignoringParenImpCasts(declRefExpr().bind("expr")))),
-                 hasCastKind(CK_PointerToBoolean)))),
-             unless(isInTemplateInstantiation()))
-          .bind("if"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          ifStmt(hasCondition(findAll(implicitCastExpr(
+                     unless(hasParent(unaryOperator(hasOperatorName("!")))),
+                     hasSourceExpression(expr(
+                         hasType(pointerType(pointee(booleanType()))),
+                         ignoringParenImpCasts(declRefExpr().bind("expr")))),
+                     hasCastKind(CK_PointerToBoolean)))),
+                 unless(isInTemplateInstantiation()))
+              .bind("if")),
       this);
 }
 

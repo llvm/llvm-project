@@ -740,8 +740,16 @@ void XCOFFObjectWriter::finalizeSectionInfo() {
       if (Group->empty())
         continue;
 
-      for (auto &Csect : *Group)
-        Section->RelocationCount += Csect.Relocations.size();
+      for (auto &Csect : *Group) {
+        const size_t CsectRelocCount = Csect.Relocations.size();
+        if (CsectRelocCount >= XCOFF::RelocOverflow ||
+            Section->RelocationCount >= XCOFF::RelocOverflow - CsectRelocCount)
+          report_fatal_error(
+              "relocation entries overflowed; overflow section is "
+              "not implemented yet");
+
+        Section->RelocationCount += CsectRelocCount;
+      }
     }
   }
 

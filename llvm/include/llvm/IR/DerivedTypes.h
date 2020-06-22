@@ -443,8 +443,20 @@ public:
 
   /// This static method is the primary way to construct an VectorType.
   static VectorType *get(Type *ElementType, ElementCount EC);
+
+  /// Base class getter that specifically constructs a FixedVectorType. This
+  /// function is deprecated, and will be removed after LLVM 11 ships. Since
+  /// this always returns a FixedVectorType via a base VectorType pointer,
+  /// FixedVectorType::get(Type *, unsigned) is strictly better since no cast is
+  /// required to call getNumElements() on the result.
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline static VectorType *get(Type *ElementType, unsigned NumElements),
+      "The base class version of get with the scalable argument defaulted to "
+      "false is deprecated. Either call VectorType::get(Type *, unsigned, "
+      "bool) and pass false, or call FixedVectorType::get(Type *, unsigned).");
+
   static VectorType *get(Type *ElementType, unsigned NumElements,
-                         bool Scalable = false) {
+                         bool Scalable) {
     return VectorType::get(ElementType, {NumElements, Scalable});
   }
 
@@ -537,7 +549,9 @@ public:
   }
 };
 
-bool Type::isVectorTy() const { return isa<VectorType>(this); }
+inline VectorType *VectorType::get(Type *ElementType, unsigned NumElements) {
+  return VectorType::get(ElementType, NumElements, false);
+}
 
 /// Class to represent fixed width SIMD vectors
 class FixedVectorType : public VectorType {
@@ -550,6 +564,33 @@ public:
 
   static FixedVectorType *get(Type *ElementType, const FixedVectorType *FVTy) {
     return get(ElementType, FVTy->getNumElements());
+  }
+
+  static FixedVectorType *getInteger(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getInteger(VTy));
+  }
+
+  static FixedVectorType *getExtendedElementVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getExtendedElementVectorType(VTy));
+  }
+
+  static FixedVectorType *getTruncatedElementVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(
+        VectorType::getTruncatedElementVectorType(VTy));
+  }
+
+  static FixedVectorType *getSubdividedVectorType(FixedVectorType *VTy,
+                                                  int NumSubdivs) {
+    return cast<FixedVectorType>(
+        VectorType::getSubdividedVectorType(VTy, NumSubdivs));
+  }
+
+  static FixedVectorType *getHalfElementsVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getHalfElementsVectorType(VTy));
+  }
+
+  static FixedVectorType *getDoubleElementsVectorType(FixedVectorType *VTy) {
+    return cast<FixedVectorType>(VectorType::getDoubleElementsVectorType(VTy));
   }
 
   static bool classof(const Type *T) {
@@ -569,6 +610,39 @@ public:
   static ScalableVectorType *get(Type *ElementType,
                                  const ScalableVectorType *SVTy) {
     return get(ElementType, SVTy->getMinNumElements());
+  }
+
+  static ScalableVectorType *getInteger(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(VectorType::getInteger(VTy));
+  }
+
+  static ScalableVectorType *
+  getExtendedElementVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(
+        VectorType::getExtendedElementVectorType(VTy));
+  }
+
+  static ScalableVectorType *
+  getTruncatedElementVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(
+        VectorType::getTruncatedElementVectorType(VTy));
+  }
+
+  static ScalableVectorType *getSubdividedVectorType(ScalableVectorType *VTy,
+                                                     int NumSubdivs) {
+    return cast<ScalableVectorType>(
+        VectorType::getSubdividedVectorType(VTy, NumSubdivs));
+  }
+
+  static ScalableVectorType *
+  getHalfElementsVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(VectorType::getHalfElementsVectorType(VTy));
+  }
+
+  static ScalableVectorType *
+  getDoubleElementsVectorType(ScalableVectorType *VTy) {
+    return cast<ScalableVectorType>(
+        VectorType::getDoubleElementsVectorType(VTy));
   }
 
   /// Get the minimum number of elements in this vector. The actual number of
@@ -643,12 +717,6 @@ Type *Type::getWithNewBitWidth(unsigned NewBitWidth) const {
 
 unsigned Type::getPointerAddressSpace() const {
   return cast<PointerType>(getScalarType())->getAddressSpace();
-}
-
-Type *Type::getScalarType() const {
-  if (isVectorTy())
-    return cast<VectorType>(this)->getElementType();
-  return const_cast<Type *>(this);
 }
 
 } // end namespace llvm

@@ -4,6 +4,13 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 
+namespace dr2346 { // dr2346: 11
+  void test() {
+    const int i2 = 0;
+    extern void h2b(int x = i2 + 0); // ok, not odr-use
+  }
+}
+
 namespace dr2352 { // dr2352: 10
   int **p;
   const int *const *const &f1() { return p; }

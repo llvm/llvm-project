@@ -14,8 +14,8 @@ body: |
     ; GCN-LABEL: name: fptosi_s32_to_s32_vv
     ; GCN: liveins: $vgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_CVT_I32_F32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_I32_F32_e64 0, [[COPY]], 0, 0, implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_CVT_I32_F32_e64_]]
+    ; GCN: %1:vgpr_32 = nofpexcept V_CVT_I32_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN: $vgpr0 = COPY %1
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FPTOSI %0
     $vgpr0 = COPY %1
@@ -34,8 +34,8 @@ body: |
     ; GCN-LABEL: name: fptosi_s32_to_s32_vs
     ; GCN: liveins: $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[V_CVT_I32_F32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_I32_F32_e64 0, [[COPY]], 0, 0, implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_CVT_I32_F32_e64_]]
+    ; GCN: %1:vgpr_32 = nofpexcept V_CVT_I32_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN: $vgpr0 = COPY %1
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_FPTOSI %0
     $vgpr0 = COPY %1
@@ -54,8 +54,8 @@ body: |
     ; GCN-LABEL: name: fptosi_s32_to_s32_fneg_vv
     ; GCN: liveins: $vgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_CVT_I32_F32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_I32_F32_e64 1, [[COPY]], 0, 0, implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_CVT_I32_F32_e64_]]
+    ; GCN: %2:vgpr_32 = nofpexcept V_CVT_I32_F32_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN: $vgpr0 = COPY %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FNEG %0
     %2:vgpr(s32) = G_FPTOSI %1
@@ -75,9 +75,9 @@ body: |
     ; GCN-LABEL: name: fptosi_s16_to_s32_vv
     ; GCN: liveins: $vgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_CVT_F32_F16_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_F16_e32 [[COPY]], implicit $exec
-    ; GCN: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_I32_F32_e32 [[V_CVT_F32_F16_e32_]], implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_CVT_I32_F32_e32_]]
+    ; GCN: %3:vgpr_32 = nofpexcept V_CVT_F32_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GCN: %2:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 %3, implicit $mode, implicit $exec
+    ; GCN: $vgpr0 = COPY %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s32) = G_FPTOSI %1
@@ -97,9 +97,9 @@ body: |
     ; GCN-LABEL: name: fptosi_s16_to_s32_vs
     ; GCN: liveins: $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[V_CVT_F32_F16_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_F16_e32 [[COPY]], implicit $exec
-    ; GCN: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_I32_F32_e32 [[V_CVT_F32_F16_e32_]], implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_CVT_I32_F32_e32_]]
+    ; GCN: %3:vgpr_32 = nofpexcept V_CVT_F32_F16_e32 [[COPY]], implicit $mode, implicit $exec
+    ; GCN: %2:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 %3, implicit $mode, implicit $exec
+    ; GCN: $vgpr0 = COPY %2
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
     %2:vgpr(s32) = G_FPTOSI %1
@@ -121,9 +121,9 @@ body: |
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32768
     ; GCN: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 [[S_MOV_B32_]], [[COPY]], implicit $exec
-    ; GCN: [[V_CVT_F32_F16_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_F16_e32 [[V_XOR_B32_e32_]], implicit $exec
-    ; GCN: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_I32_F32_e32 [[V_CVT_F32_F16_e32_]], implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_CVT_I32_F32_e32_]]
+    ; GCN: %4:vgpr_32 = nofpexcept V_CVT_F32_F16_e32 [[V_XOR_B32_e32_]], implicit $mode, implicit $exec
+    ; GCN: %3:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 %4, implicit $mode, implicit $exec
+    ; GCN: $vgpr0 = COPY %3
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FNEG %1

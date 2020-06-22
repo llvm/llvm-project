@@ -8,8 +8,6 @@
 
 #include "EmulateInstructionARM64.h"
 
-#include <stdlib.h>
-
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/UnwindPlan.h"
@@ -18,9 +16,13 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Stream.h"
 
+#include "llvm/Support/CheckedArithmetic.h"
+
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/ARMUtils.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+
+#include <cstdlib>
 
 #define GPR_OFFSET(idx) ((idx)*8)
 #define GPR_OFFSET_NAME(reg) 0
@@ -83,23 +85,6 @@ static inline uint64_t LSL(uint64_t x, integer shift) {
   if (shift == 0)
     return x;
   return x << shift;
-}
-
-// AddWithCarry()
-// ===============
-static inline uint64_t
-AddWithCarry(uint32_t N, uint64_t x, uint64_t y, bit carry_in,
-             EmulateInstructionARM64::ProcState &proc_state) {
-  uint64_t unsigned_sum = UInt(x) + UInt(y) + UInt(carry_in);
-  int64_t signed_sum = SInt(x) + SInt(y) + UInt(carry_in);
-  uint64_t result = unsigned_sum;
-  if (N < 64)
-    result = Bits64(result, N - 1, 0);
-  proc_state.N = Bit64(result, N - 1);
-  proc_state.Z = IsZero(result);
-  proc_state.C = UInt(result) == unsigned_sum;
-  proc_state.V = SInt(result) == signed_sum;
-  return result;
 }
 
 // ConstrainUnpredictable()
@@ -579,6 +564,24 @@ bool EmulateInstructionARM64::ConditionHolds(const uint32_t cond) {
 
   if (cond & 1)
     result = !result;
+  return result;
+}
+
+uint64_t EmulateInstructionARM64::
+AddWithCarry(uint32_t N, uint64_t x, uint64_t y, bit carry_in,
+             EmulateInstructionARM64::ProcState &proc_state) {
+  uint64_t unsigned_sum = UInt(x) + UInt(y) + UInt(carry_in);
+  llvm::Optional<int64_t> signed_sum = llvm::checkedAdd(SInt(x), SInt(y));
+  bool overflow = !signed_sum;
+  if (!overflow)
+    overflow |= !llvm::checkedAdd(*signed_sum, SInt(carry_in));
+  uint64_t result = unsigned_sum;
+  if (N < 64)
+    result = Bits64(result, N - 1, 0);
+  proc_state.N = Bit64(result, N - 1);
+  proc_state.Z = IsZero(result);
+  proc_state.C = UInt(result) != unsigned_sum;
+  proc_state.V = overflow;
   return result;
 }
 

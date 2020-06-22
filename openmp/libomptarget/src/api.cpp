@@ -168,9 +168,17 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
     rc = SrcDev.data_retrieve(dstAddr, srcAddr, length, nullptr);
   } else {
     DP("copy from device to device\n");
+    DeviceTy &SrcDev = Devices[src_device];
+    DeviceTy &DstDev = Devices[dst_device];
+    // First try to use D2D memcpy which is more efficient. If fails, fall back
+    // to unefficient way.
+    if (SrcDev.isDataExchangable(DstDev)) {
+      rc = SrcDev.data_exchange(srcAddr, DstDev, dstAddr, length, nullptr);
+      if (rc == OFFLOAD_SUCCESS)
+        return OFFLOAD_SUCCESS;
+    }
+
     void *buffer = malloc(length);
-    DeviceTy& SrcDev = Devices[src_device];
-    DeviceTy& DstDev = Devices[dst_device];
     rc = SrcDev.data_retrieve(buffer, srcAddr, length, nullptr);
     if (rc == OFFLOAD_SUCCESS)
       rc = DstDev.data_submit(dstAddr, buffer, length, nullptr);

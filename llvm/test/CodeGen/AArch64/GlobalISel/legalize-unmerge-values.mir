@@ -23,12 +23,11 @@ body: |
     liveins: $w0
     ; CHECK-LABEL: name: test_unmerge_s4
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[C]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s32)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UV]](s8)
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[ZEXT]], [[C]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UV]](s8)
     ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[LSHR]](s32)
     ; CHECK: $x0 = COPY [[ANYEXT]](s64)
     ; CHECK: $x1 = COPY [[ANYEXT1]](s64)

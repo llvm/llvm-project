@@ -109,8 +109,6 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
     return llvm::ConstantInt::get(
         llvmType,
         intAttr.getValue().sextOrTrunc(llvmType->getIntegerBitWidth()));
-  if (auto boolAttr = attr.dyn_cast<BoolAttr>())
-    return llvm::ConstantInt::get(llvmType, boolAttr.getValue());
   if (auto floatAttr = attr.dyn_cast<FloatAttr>())
     return llvm::ConstantFP::get(llvmType, floatAttr.getValue());
   if (auto funcAttr = attr.dyn_cast<FlatSymbolRefAttr>())
@@ -613,7 +611,7 @@ static llvm::SetVector<Block *> topologicalSort(LLVMFuncOp f) {
   // predecessors), add it to the list and traverse its successors in DFS
   // preorder.
   llvm::SetVector<Block *> blocks;
-  for (Block &b : f.getBlocks()) {
+  for (Block &b : f) {
     if (blocks.count(&b) == 0)
       topologicalSortImpl(blocks, &b);
   }
@@ -726,6 +724,18 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
       if (attr.getValue())
         llvmArg.addAttr(llvm::Attribute::AttrKind::NoAlias);
     }
+
+    if (auto attr = func.getArgAttrOfType<IntegerAttr>(argIdx, "llvm.align")) {
+      // NB: Attribute already verified to be int, so check if we can indeed
+      // attach the attribute to this argument, based on its type.
+      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMType>();
+      if (!argTy.getUnderlyingType()->isPointerTy())
+        return func.emitError(
+            "llvm.align attribute attached to LLVM non-pointer argument");
+      llvmArg.addAttrs(
+          llvm::AttrBuilder().addAlignmentAttr(llvm::Align(attr.getInt())));
+    }
+
     valueMapping[mlirArg] = &llvmArg;
     argIdx++;
   }

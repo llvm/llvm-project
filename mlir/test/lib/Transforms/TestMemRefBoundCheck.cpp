@@ -37,8 +37,9 @@ struct TestMemRefBoundCheck
 
 void TestMemRefBoundCheck::runOnFunction() {
   getFunction().walk([](Operation *opInst) {
-    TypeSwitch<Operation *>(opInst).Case<AffineLoadOp, AffineStoreOp>(
-        [](auto op) { boundCheckLoadOrStoreOp(op); });
+    TypeSwitch<Operation *>(opInst)
+        .Case<AffineReadOpInterface, AffineWriteOpInterface>(
+            [](auto op) { boundCheckLoadOrStoreOp(op); });
 
     // TODO(bondhugula): do this for DMA ops as well.
   });

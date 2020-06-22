@@ -12,3 +12,11 @@ void invalid_type_region_access() {
   for (int i = 0; i < 10; ++i) { }
   clang_analyzer_eval(&x != 0); // expected-warning{{TRUE}}
 }                               // expected-warning@-1{{reference cannot be bound to dereferenced null pointer in well-defined C++ code; comparison may be assumed to always evaluate to true}}
+
+using AR = const A &;
+void invalid_type_alias_region_access() {
+  AR x = B();
+  for (int i = 0; i < 10; ++i) {
+  }
+  clang_analyzer_eval(&x != 0); // expected-warning{{TRUE}}
+} // expected-warning@-1{{reference cannot be bound to dereferenced null pointer in well-defined C++ code; comparison may be assumed to always evaluate to true}}

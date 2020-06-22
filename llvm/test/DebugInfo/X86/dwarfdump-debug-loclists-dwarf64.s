@@ -5,6 +5,7 @@
 # CHECK:      .debug_loclists contents:
 # CHECK-NEXT: locations list header:
 # CHECK-SAME: length = 0x0000000000000028,
+# CHECK-SAME: format = DWARF64,
 # CHECK-SAME: version = 0x0005,
 # CHECK-SAME: addr_size = 0x08,
 # CHECK-SAME: seg_size = 0x00,

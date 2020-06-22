@@ -748,20 +748,20 @@ def FCOMPP : I<0xDE, MRM_D9, (outs), (ins), "fcompp", []>;
 
 let Uses = [FPSW, FPCW] in {
 def FXSAVE : I<0xAE, MRM0m, (outs), (ins opaquemem:$dst),
-             "fxsave\t$dst", [(int_x86_fxsave addr:$dst)]>, TB,
+             "fxsave\t$dst", [(int_x86_fxsave addr:$dst)]>, PS,
              Requires<[HasFXSR]>;
 def FXSAVE64 : RI<0xAE, MRM0m, (outs), (ins opaquemem:$dst),
                "fxsave64\t$dst", [(int_x86_fxsave64 addr:$dst)]>,
-               TB, Requires<[HasFXSR, In64BitMode]>;
+               PS, Requires<[HasFXSR, In64BitMode]>;
 } // Uses = [FPSW, FPCW]
 
 let Defs = [FPSW, FPCW] in {
 def FXRSTOR : I<0xAE, MRM1m, (outs), (ins opaquemem:$src),
               "fxrstor\t$src", [(int_x86_fxrstor addr:$src)]>,
-              TB, Requires<[HasFXSR]>;
+              PS, Requires<[HasFXSR]>;
 def FXRSTOR64 : RI<0xAE, MRM1m, (outs), (ins opaquemem:$src),
                 "fxrstor64\t$src", [(int_x86_fxrstor64 addr:$src)]>,
-                TB, Requires<[HasFXSR, In64BitMode]>;
+                PS, Requires<[HasFXSR, In64BitMode]>;
 } // Defs = [FPSW, FPCW]
 } // SchedRW
 

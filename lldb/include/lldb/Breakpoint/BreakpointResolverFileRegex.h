@@ -70,7 +70,9 @@ protected:
                                                     // comp_unit passed in.
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(BreakpointResolverFileRegex);
+  BreakpointResolverFileRegex(const BreakpointResolverFileRegex &) = delete;
+  const BreakpointResolverFileRegex &
+  operator=(const BreakpointResolverFileRegex &) = delete;
 };
 
 } // namespace lldb_private

@@ -28,10 +28,9 @@
 ; VGPR: v_writelane_b32 [[SPILL_VGPR:v[0-9]+]], s[[SAVEEXEC_LO]], [[SAVEEXEC_LO_LANE:[0-9]+]]
 ; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[SAVEEXEC_HI]], [[SAVEEXEC_HI_LANE:[0-9]+]]
 
-; VMEM: v_mov_b32_e32 v[[V_SAVEEXEC_LO:[0-9]+]], s[[SAVEEXEC_LO]]
-; VMEM: buffer_store_dword v[[V_SAVEEXEC_LO]], off, s[0:3], 0 offset:20 ; 4-byte Folded Spill
-; VMEM: v_mov_b32_e32 v[[V_SAVEEXEC_HI:[0-9]+]], s[[SAVEEXEC_HI]]
-; VMEM: buffer_store_dword v[[V_SAVEEXEC_HI]], off, s[0:3], 0 offset:24 ; 4-byte Folded Spill
+; VMEM: v_writelane_b32 v[[V_SAVEEXEC:[0-9]+]], s[[SAVEEXEC_LO]], 0
+; VMEM: v_writelane_b32 v[[V_SAVEEXEC]], s[[SAVEEXEC_HI]], 1
+; VMEM: buffer_store_dword v[[V_SAVEEXEC]], off, s[0:3], 0 offset:20 ; 4-byte Folded Spill
 
 ; GCN: s_mov_b64 exec, s{{\[}}[[ANDEXEC_LO]]:[[ANDEXEC_HI]]{{\]}}
 
@@ -56,13 +55,10 @@
 
 
 
-; VMEM: buffer_load_dword v[[V_RELOAD_SAVEEXEC_LO:[0-9]+]], off, s[0:3], 0 offset:20 ; 4-byte Folded Reload
+; VMEM: buffer_load_dword v[[V_RELOAD_SAVEEXEC:[0-9]+]], off, s[0:3], 0 offset:20 ; 4-byte Folded Reload
 ; VMEM: s_waitcnt vmcnt(0)
-; VMEM: v_readfirstlane_b32 s[[S_RELOAD_SAVEEXEC_LO:[0-9]+]], v[[V_RELOAD_SAVEEXEC_LO]]
-
-; VMEM: buffer_load_dword v[[V_RELOAD_SAVEEXEC_HI:[0-9]+]], off, s[0:3], 0 offset:24 ; 4-byte Folded Reload
-; VMEM: s_waitcnt vmcnt(0)
-; VMEM: v_readfirstlane_b32 s[[S_RELOAD_SAVEEXEC_HI:[0-9]+]], v[[V_RELOAD_SAVEEXEC_HI]]
+; VMEM: v_readlane_b32 s[[S_RELOAD_SAVEEXEC_LO:[0-9]+]], v[[V_RELOAD_SAVEEXEC]], 0
+; VMEM: v_readlane_b32 s[[S_RELOAD_SAVEEXEC_HI:[0-9]+]], v[[V_RELOAD_SAVEEXEC]], 1
 
 ; GCN: s_or_b64 exec, exec, s{{\[}}[[S_RELOAD_SAVEEXEC_LO]]:[[S_RELOAD_SAVEEXEC_HI]]{{\]}}
 
@@ -109,10 +105,9 @@ endif:
 ; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[SAVEEXEC_HI]], [[SAVEEXEC_HI_LANE:[0-9]+]]
 
 
-; VMEM: v_mov_b32_e32 v[[V_SAVEEXEC_LO:[0-9]+]], s[[SAVEEXEC_LO]]
-; VMEM: buffer_store_dword v[[V_SAVEEXEC_LO]], off, s[0:3], 0 offset:24 ; 4-byte Folded Spill
-; VMEM: v_mov_b32_e32 v[[V_SAVEEXEC_HI:[0-9]+]], s[[SAVEEXEC_HI]]
-; VMEM: buffer_store_dword v[[V_SAVEEXEC_HI]], off, s[0:3], 0 offset:28 ; 4-byte Folded Spill
+; VMEM: v_writelane_b32 v[[V_SAVEEXEC:[0-9]+]], s[[SAVEEXEC_LO]], 0
+; VMEM: v_writelane_b32 v[[V_SAVEEXEC]], s[[SAVEEXEC_HI]], 1
+; VMEM: buffer_store_dword v[[V_SAVEEXEC]], off, s[0:3], 0 offset:24 ; 4-byte Folded Spill
 
 ; GCN: s_mov_b64 exec, s{{\[}}[[ANDEXEC_LO]]:[[ANDEXEC_HI]]{{\]}}
 
@@ -132,13 +127,10 @@ endif:
 ; VGPR: v_readlane_b32 s[[S_RELOAD_SAVEEXEC_LO:[0-9]+]], [[SPILL_VGPR]], [[SAVEEXEC_LO_LANE]]
 ; VGPR: v_readlane_b32 s[[S_RELOAD_SAVEEXEC_HI:[0-9]+]], [[SPILL_VGPR]], [[SAVEEXEC_HI_LANE]]
 
-; VMEM: buffer_load_dword v[[V_RELOAD_SAVEEXEC_LO:[0-9]+]], off, s[0:3], 0 offset:24 ; 4-byte Folded Reload
+; VMEM: buffer_load_dword v[[V_RELOAD_SAVEEXEC:[0-9]+]], off, s[0:3], 0 offset:24 ; 4-byte Folded Reload
 ; VMEM: s_waitcnt vmcnt(0)
-; VMEM: v_readfirstlane_b32 s[[S_RELOAD_SAVEEXEC_LO:[0-9]+]], v[[V_RELOAD_SAVEEXEC_LO]]
-
-; VMEM: buffer_load_dword v[[V_RELOAD_SAVEEXEC_HI:[0-9]+]], off, s[0:3], 0 offset:28 ; 4-byte Folded Reload
-; VMEM: s_waitcnt vmcnt(0)
-; VMEM: v_readfirstlane_b32 s[[S_RELOAD_SAVEEXEC_HI:[0-9]+]], v[[V_RELOAD_SAVEEXEC_HI]]
+; VMEM: v_readlane_b32 s[[S_RELOAD_SAVEEXEC_LO:[0-9]+]], v[[V_RELOAD_SAVEEXEC]], 0
+; VMEM: v_readlane_b32 s[[S_RELOAD_SAVEEXEC_HI:[0-9]+]], v[[V_RELOAD_SAVEEXEC]], 1
 
 ; GCN: s_or_b64 exec, exec, s{{\[}}[[S_RELOAD_SAVEEXEC_LO]]:[[S_RELOAD_SAVEEXEC_HI]]{{\]}}
 ; GCN: buffer_load_dword v[[VAL_END:[0-9]+]], off, s[0:3], 0 offset:[[VAL_SUB_OFFSET]] ; 4-byte Folded Reload
@@ -186,10 +178,9 @@ end:
 ; VGPR: v_writelane_b32 [[SPILL_VGPR:v[0-9]+]], s[[SAVEEXEC_LO]], [[SAVEEXEC_LO_LANE:[0-9]+]]
 ; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[SAVEEXEC_HI]], [[SAVEEXEC_HI_LANE:[0-9]+]]
 
-; VMEM: v_mov_b32_e32 v[[V_SAVEEXEC_LO:[0-9]+]], s[[SAVEEXEC_LO]]
-; VMEM: buffer_store_dword v[[V_SAVEEXEC_LO]], off, s[0:3], 0 offset:[[SAVEEXEC_LO_OFFSET:[0-9]+]] ; 4-byte Folded Spill
-; VMEM: v_mov_b32_e32 v[[V_SAVEEXEC_HI:[0-9]+]], s[[SAVEEXEC_HI]]
-; VMEM: buffer_store_dword v[[V_SAVEEXEC_HI]], off, s[0:3], 0 offset:[[SAVEEXEC_HI_OFFSET:[0-9]+]] ; 4-byte Folded Spill
+; VMEM: v_writelane_b32 v[[V_SAVEEXEC:[0-9]+]], s[[SAVEEXEC_LO]], 0
+; VMEM: v_writelane_b32 v[[V_SAVEEXEC]], s[[SAVEEXEC_HI]], 1
+; VMEM: buffer_store_dword v[[V_SAVEEXEC]], off, s[0:3], 0 offset:[[SAVEEXEC_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
 ; GCN: s_mov_b64 exec, [[CMP0]]
 
@@ -202,13 +193,10 @@ end:
 ; VGPR: v_readlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_HI:[0-9]+]], [[SPILL_VGPR]], [[SAVEEXEC_HI_LANE]]
 
 
-; VMEM: buffer_load_dword v[[FLOW_V_RELOAD_SAVEEXEC_LO:[0-9]+]], off, s[0:3], 0 offset:[[SAVEEXEC_LO_OFFSET]]
+; VMEM: buffer_load_dword v[[FLOW_V_RELOAD_SAVEEXEC:[0-9]+]], off, s[0:3], 0 offset:[[SAVEEXEC_OFFSET]]
 ; VMEM: s_waitcnt vmcnt(0)
-; VMEM: v_readfirstlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_LO:[0-9]+]], v[[FLOW_V_RELOAD_SAVEEXEC_LO]]
-
-; VMEM: buffer_load_dword v[[FLOW_V_RELOAD_SAVEEXEC_HI:[0-9]+]], off, s[0:3], 0 offset:[[SAVEEXEC_HI_OFFSET]] ; 4-byte Folded Reload
-; VMEM: s_waitcnt vmcnt(0)
-; VMEM: v_readfirstlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_HI:[0-9]+]], v[[FLOW_V_RELOAD_SAVEEXEC_HI]]
+; VMEM: v_readlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_LO:[0-9]+]], v[[FLOW_V_RELOAD_SAVEEXEC]], 0
+; VMEM: v_readlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_HI:[0-9]+]], v[[FLOW_V_RELOAD_SAVEEXEC]], 1
 
 ; GCN: s_or_saveexec_b64 s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO]]:[[FLOW_S_RELOAD_SAVEEXEC_HI]]{{\]}}, s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO]]:[[FLOW_S_RELOAD_SAVEEXEC_HI]]{{\]}}
 
@@ -221,10 +209,9 @@ end:
 ; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[FLOW_S_RELOAD_SAVEEXEC_HI]], [[FLOW_SAVEEXEC_HI_LANE:[0-9]+]]
 
 
-; VMEM: v_mov_b32_e32 v[[FLOW_V_SAVEEXEC_LO:[0-9]+]], s[[FLOW_S_RELOAD_SAVEEXEC_LO]]
-; VMEM: buffer_store_dword v[[FLOW_V_SAVEEXEC_LO]], off, s[0:3], 0 offset:[[FLOW_SAVEEXEC_LO_OFFSET:[0-9]+]] ; 4-byte Folded Spill
-; VMEM: v_mov_b32_e32 v[[FLOW_V_SAVEEXEC_HI:[0-9]+]], s[[FLOW_S_RELOAD_SAVEEXEC_HI]]
-; VMEM: buffer_store_dword v[[FLOW_V_SAVEEXEC_HI]], off, s[0:3], 0 offset:[[FLOW_SAVEEXEC_HI_OFFSET:[0-9]+]] ; 4-byte Folded Spill
+; VMEM: v_writelane_b32 v[[FLOW_V_SAVEEXEC:[0-9]+]], s[[FLOW_S_RELOAD_SAVEEXEC_LO]], 0
+; VMEM: v_writelane_b32 v[[FLOW_V_SAVEEXEC]], s[[FLOW_S_RELOAD_SAVEEXEC_HI]], 1
+; VMEM: buffer_store_dword v[[FLOW_V_SAVEEXEC]], off, s[0:3], 0 offset:[[FLOW_SAVEEXEC_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
 ; GCN: buffer_store_dword [[FLOW_VAL]], off, s[0:3], 0 offset:[[RESULT_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 ; GCN: s_xor_b64 exec, exec, s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO]]:[[FLOW_S_RELOAD_SAVEEXEC_HI]]{{\]}}
@@ -249,13 +236,10 @@ end:
 ; VGPR: v_readlane_b32 s[[S_RELOAD_SAVEEXEC_HI:[0-9]+]], [[SPILL_VGPR]], [[FLOW_SAVEEXEC_HI_LANE]]
 
 
-; VMEM: buffer_load_dword v[[V_RELOAD_SAVEEXEC_LO:[0-9]+]], off, s[0:3], 0 offset:[[FLOW_SAVEEXEC_LO_OFFSET]] ; 4-byte Folded Reload
+; VMEM: buffer_load_dword v[[V_RELOAD_SAVEEXEC:[0-9]+]], off, s[0:3], 0 offset:[[FLOW_SAVEEXEC_OFFSET]] ; 4-byte Folded Reload
 ; VMEM: s_waitcnt vmcnt(0)
-; VMEM: v_readfirstlane_b32 s[[S_RELOAD_SAVEEXEC_LO:[0-9]+]], v[[V_RELOAD_SAVEEXEC_LO]]
-
-; VMEM: buffer_load_dword v[[V_RELOAD_SAVEEXEC_HI:[0-9]+]], off, s[0:3], 0 offset:[[FLOW_SAVEEXEC_HI_OFFSET]] ; 4-byte Folded Reload
-; VMEM: s_waitcnt vmcnt(0)
-; VMEM: v_readfirstlane_b32 s[[S_RELOAD_SAVEEXEC_HI:[0-9]+]], v[[V_RELOAD_SAVEEXEC_HI]]
+; VMEM: v_readlane_b32 s[[S_RELOAD_SAVEEXEC_LO:[0-9]+]], v[[V_RELOAD_SAVEEXEC]], 0
+; VMEM: v_readlane_b32 s[[S_RELOAD_SAVEEXEC_HI:[0-9]+]], v[[V_RELOAD_SAVEEXEC]], 1
 
 ; GCN: s_or_b64 exec, exec, s{{\[}}[[S_RELOAD_SAVEEXEC_LO]]:[[S_RELOAD_SAVEEXEC_HI]]{{\]}}
 

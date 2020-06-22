@@ -20,9 +20,9 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -30,6 +30,7 @@
 #include <cassert>
 #include <cstdint>
 #include <ctime>
+#include <iterator>
 #include <string>
 #include <utility>
 #include <vector>
@@ -52,12 +53,33 @@ class TargetInfo;
 using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
 
 /// The signature of a module, which is a hash of the AST content.
-struct ASTFileSignature : std::array<uint32_t, 5> {
-  ASTFileSignature(std::array<uint32_t, 5> S = {{0}})
-      : std::array<uint32_t, 5>(std::move(S)) {}
+struct ASTFileSignature : std::array<uint8_t, 20> {
+  using BaseT = std::array<uint8_t, 20>;
 
-  explicit operator bool() const {
-    return *this != std::array<uint32_t, 5>({{0}});
+  static constexpr size_t size = std::tuple_size<BaseT>::value;
+
+  ASTFileSignature(BaseT S = {{0}}) : BaseT(std::move(S)) {}
+
+  explicit operator bool() const { return *this != BaseT({{0}}); }
+
+  static ASTFileSignature create(StringRef Bytes) {
+    return create(Bytes.bytes_begin(), Bytes.bytes_end());
+  }
+
+  static ASTFileSignature createDISentinel() {
+    ASTFileSignature Sentinel;
+    Sentinel.fill(0xFF);
+    return Sentinel;
+  }
+
+  template <typename InputIt>
+  static ASTFileSignature create(InputIt First, InputIt Last) {
+    assert(std::distance(First, Last) == size &&
+           "Wrong amount of bytes to create an ASTFileSignature");
+
+    ASTFileSignature Signature;
+    std::copy(First, Last, Signature.begin());
+    return Signature;
   }
 };
 

@@ -230,7 +230,7 @@ public:
 
   void printStackMap() const override;
 
-  void printHashHistogram() override;
+  void printHashHistograms() override;
 
   void printCGProfile() override;
   void printAddrsig() override;
@@ -324,6 +324,8 @@ public:
 
     return Table.slice(0, Size);
   }
+
+  Optional<DynRegionInfo> getDynSymRegion() const { return DynSymRegion; }
 
   Elf_Sym_Range dynamic_symbols() const {
     if (!DynSymRegion)
@@ -742,7 +744,7 @@ public:
                                              const Elf_Shdr *Sec) = 0;
   virtual void printVersionDependencySection(const ELFFile<ELFT> *Obj,
                                              const Elf_Shdr *Sec) = 0;
-  virtual void printHashHistogram(const ELFFile<ELFT> *Obj) = 0;
+  virtual void printHashHistograms(const ELFFile<ELFT> *Obj) = 0;
   virtual void printCGProfile(const ELFFile<ELFT> *Obj) = 0;
   virtual void printAddrsig(const ELFFile<ELFT> *Obj) = 0;
   virtual void printNotes(const ELFFile<ELFT> *Obj) = 0;
@@ -811,7 +813,7 @@ public:
                                      const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const ELFFile<ELFT> *Obj,
                                      const Elf_Shdr *Sec) override;
-  void printHashHistogram(const ELFFile<ELFT> *Obj) override;
+  void printHashHistograms(const ELFFile<ELFT> *Obj) override;
   void printCGProfile(const ELFFile<ELFT> *Obj) override;
   void printAddrsig(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
@@ -823,6 +825,9 @@ public:
   void printMipsABIFlags(const ELFObjectFile<ELFT> *Obj) override;
 
 private:
+  void printHashHistogram(const Elf_Hash &HashTable);
+  void printGnuHashHistogram(const Elf_GnuHash &GnuHashTable);
+
   struct Field {
     std::string Str;
     unsigned Column;
@@ -932,7 +937,7 @@ public:
                                      const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const ELFFile<ELFT> *Obj,
                                      const Elf_Shdr *Sec) override;
-  void printHashHistogram(const ELFFile<ELFT> *Obj) override;
+  void printHashHistograms(const ELFFile<ELFT> *Obj) override;
   void printCGProfile(const ELFFile<ELFT> *Obj) override;
   void printAddrsig(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
@@ -1079,6 +1084,9 @@ ELFDumper<ELFT>::getRelocationTarget(const Elf_Shdr *SymTab,
         Obj->getSection(Sym, SymTab, ShndxTable);
     if (!SecOrErr)
       return SecOrErr.takeError();
+    // A section symbol describes the section at index 0.
+    if (*SecOrErr == nullptr)
+      return std::make_pair(Sym, "");
 
     Expected<StringRef> NameOrErr = Obj->getSectionName(*SecOrErr);
     if (!NameOrErr)
@@ -1432,6 +1440,8 @@ static const EnumEntry<unsigned> ElfMachineType[] = {
   ENUM_ENT(EM_STXP7X,        "STMicroelectronics STxP7x family"),
   ENUM_ENT(EM_NDS32,         "Andes Technology compact code size embedded RISC processor family"),
   ENUM_ENT(EM_ECOG1,         "Cyan Technology eCOG1 microprocessor"),
+  // FIXME: Following EM_ECOG1X definitions is dead code since EM_ECOG1X has
+  //        an identical number to EM_ECOG1.
   ENUM_ENT(EM_ECOG1X,        "Cyan Technology eCOG1X family"),
   ENUM_ENT(EM_MAXQ30,        "Dallas Semiconductor MAXQ30 Core microcontrollers"),
   ENUM_ENT(EM_XIMO16,        "New Japan Radio (NJR) 16-bit DSP Processor"),
@@ -1466,6 +1476,7 @@ static const EnumEntry<unsigned> ElfMachineType[] = {
   ENUM_ENT(EM_RISCV,         "RISC-V"),
   ENUM_ENT(EM_LANAI,         "EM_LANAI"),
   ENUM_ENT(EM_BPF,           "EM_BPF"),
+  ENUM_ENT(EM_VE,            "NEC SX-Aurora Vector Engine"),
 };
 
 static const EnumEntry<unsigned> ElfSymbolBindings[] = {
@@ -1791,6 +1802,7 @@ static const EnumEntry<unsigned> ElfHeaderAMDGPUFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1030),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_XNACK),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_SRAM_ECC)
 };
@@ -2287,8 +2299,8 @@ template <class ELFT> void ELFDumper<ELFT>::printHashSymbols() {
   ELFDumperStyle->printHashSymbols(ObjF->getELFFile());
 }
 
-template <class ELFT> void ELFDumper<ELFT>::printHashHistogram() {
-  ELFDumperStyle->printHashHistogram(ObjF->getELFFile());
+template <class ELFT> void ELFDumper<ELFT>::printHashHistograms() {
+  ELFDumperStyle->printHashHistograms(ObjF->getELFFile());
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printCGProfile() {
@@ -2344,7 +2356,8 @@ static const EnumEntry<unsigned> ElfDynamicDTFlags1[] = {
   LLVM_READOBJ_DT_FLAG_ENT(DF_1, NORELOC),
   LLVM_READOBJ_DT_FLAG_ENT(DF_1, SYMINTPOSE),
   LLVM_READOBJ_DT_FLAG_ENT(DF_1, GLOBAUDIT),
-  LLVM_READOBJ_DT_FLAG_ENT(DF_1, SINGLETON)
+  LLVM_READOBJ_DT_FLAG_ENT(DF_1, SINGLETON),
+  LLVM_READOBJ_DT_FLAG_ENT(DF_1, PIE),
 };
 
 static const EnumEntry<unsigned> ElfDynamicDTMipsFlags[] = {
@@ -2636,39 +2649,107 @@ template <class ELFT> void ELFDumper<ELFT>::printNeededLibraries() {
 }
 
 template <class ELFT>
-static bool checkHashTable(const ELFFile<ELFT> *Obj,
-                           const typename ELFT::Hash *H, StringRef FileName) {
-  auto WarnAndReturn = [&](uint64_t Off, const Twine &Msg = "") {
-    reportWarning(createError("the hash table at offset 0x" +
-                              Twine::utohexstr(Off) +
-                              " goes past the end of the file (0x" +
-                              Twine::utohexstr(Obj->getBufSize()) + ")" + Msg),
-                  FileName);
-    return false;
+static Error checkHashTable(const ELFFile<ELFT> *Obj,
+                            const typename ELFT::Hash *H,
+                            bool *IsHeaderValid = nullptr) {
+  auto MakeError = [&](uint64_t Off, const Twine &Msg = "") {
+    return createError("the hash table at offset 0x" + Twine::utohexstr(Off) +
+                       " goes past the end of the file (0x" +
+                       Twine::utohexstr(Obj->getBufSize()) + ")" + Msg);
   };
 
   // Each SHT_HASH section starts from two 32-bit fields: nbucket and nchain.
   const unsigned HeaderSize = 2 * sizeof(typename ELFT::Word);
   const uint64_t SecOffset = (const uint8_t *)H - Obj->base();
+
+  if (IsHeaderValid)
+    *IsHeaderValid = Obj->getBufSize() - SecOffset >= HeaderSize;
+
   if (Obj->getBufSize() - SecOffset < HeaderSize)
-    return WarnAndReturn(SecOffset);
+    return MakeError(SecOffset);
 
   if (Obj->getBufSize() - SecOffset - HeaderSize <
       ((uint64_t)H->nbucket + H->nchain) * sizeof(typename ELFT::Word))
-    return WarnAndReturn(SecOffset, ", nbucket = " + Twine(H->nbucket) +
-                                        ", nchain = " + Twine(H->nchain));
-  return true;
+    return MakeError(SecOffset, ", nbucket = " + Twine(H->nbucket) +
+                                    ", nchain = " + Twine(H->nchain));
+  return Error::success();
+}
+
+template <class ELFT>
+static Error checkGNUHashTable(const ELFFile<ELFT> *Obj,
+                               const typename ELFT::GnuHash *GnuHashTable,
+                               bool *IsHeaderValid = nullptr) {
+  const uint8_t *TableData = reinterpret_cast<const uint8_t *>(GnuHashTable);
+  assert(TableData >= Obj->base() &&
+         TableData < Obj->base() + Obj->getBufSize() &&
+         "GnuHashTable must always point to a location inside the file");
+
+  uint64_t TableOffset = TableData - Obj->base();
+  if (IsHeaderValid)
+    *IsHeaderValid = TableOffset + /*Header size:*/ 16 < Obj->getBufSize();
+  if (TableOffset + 16 + (uint64_t)GnuHashTable->nbuckets * 4 +
+          (uint64_t)GnuHashTable->maskwords * sizeof(typename ELFT::Off) >=
+      Obj->getBufSize())
+    return createError("unable to dump the SHT_GNU_HASH "
+                       "section at 0x" +
+                       Twine::utohexstr(TableOffset) +
+                       ": it goes past the end of the file");
+  return Error::success();
 }
 
 template <typename ELFT> void ELFDumper<ELFT>::printHashTable() {
   DictScope D(W, "HashTable");
-  if (!HashTable ||
-      !checkHashTable(ObjF->getELFFile(), HashTable, ObjF->getFileName()))
+  if (!HashTable)
     return;
-  W.printNumber("Num Buckets", HashTable->nbucket);
-  W.printNumber("Num Chains", HashTable->nchain);
+
+  bool IsHeaderValid;
+  Error Err = checkHashTable(ObjF->getELFFile(), HashTable, &IsHeaderValid);
+  if (IsHeaderValid) {
+    W.printNumber("Num Buckets", HashTable->nbucket);
+    W.printNumber("Num Chains", HashTable->nchain);
+  }
+
+  if (Err) {
+    reportUniqueWarning(std::move(Err));
+    return;
+  }
+
   W.printList("Buckets", HashTable->buckets());
   W.printList("Chains", HashTable->chains());
+}
+
+template <class ELFT>
+static Expected<ArrayRef<typename ELFT::Word>>
+getGnuHashTableChains(Optional<DynRegionInfo> DynSymRegion,
+                      const typename ELFT::GnuHash *GnuHashTable) {
+  if (!DynSymRegion)
+    return createError("no dynamic symbol table found");
+
+  ArrayRef<typename ELFT::Sym> DynSymTable =
+      DynSymRegion->getAsArrayRef<typename ELFT::Sym>();
+  size_t NumSyms = DynSymTable.size();
+  if (!NumSyms)
+    return createError("the dynamic symbol table is empty");
+
+  if (GnuHashTable->symndx < NumSyms)
+    return GnuHashTable->values(NumSyms);
+
+  // A normal empty GNU hash table section produced by linker might have
+  // symndx set to the number of dynamic symbols + 1 (for the zero symbol)
+  // and have dummy null values in the Bloom filter and in the buckets
+  // vector (or no values at all). It happens because the value of symndx is not
+  // important for dynamic loaders when the GNU hash table is empty. They just
+  // skip the whole object during symbol lookup. In such cases, the symndx value
+  // is irrelevant and we should not report a warning.
+  ArrayRef<typename ELFT::Word> Buckets = GnuHashTable->buckets();
+  if (!llvm::all_of(Buckets, [](typename ELFT::Word V) { return V == 0; }))
+    return createError("the first hashed symbol index (" +
+                       Twine(GnuHashTable->symndx) +
+                       ") is larger than the number of dynamic symbols (" +
+                       Twine(NumSyms) + ")");
+  // There is no way to represent an array of (dynamic symbols count - symndx)
+  // length.
+  return ArrayRef<typename ELFT::Word>();
 }
 
 template <typename ELFT>
@@ -2676,27 +2757,19 @@ void ELFDumper<ELFT>::printGnuHashTable(const object::ObjectFile *Obj) {
   DictScope D(W, "GnuHashTable");
   if (!GnuHashTable)
     return;
-  W.printNumber("Num Buckets", GnuHashTable->nbuckets);
-  W.printNumber("First Hashed Symbol Index", GnuHashTable->symndx);
-  W.printNumber("Num Mask Words", GnuHashTable->maskwords);
-  W.printNumber("Shift Count", GnuHashTable->shift2);
 
-  MemoryBufferRef File = Obj->getMemoryBufferRef();
-  const char *TableData = reinterpret_cast<const char *>(GnuHashTable);
-  assert(TableData >= File.getBufferStart() &&
-         TableData < File.getBufferEnd() &&
-         "GnuHashTable must always point to a location inside the file");
+  bool IsHeaderValid;
+  Error Err =
+      checkGNUHashTable<ELFT>(ObjF->getELFFile(), GnuHashTable, &IsHeaderValid);
+  if (IsHeaderValid) {
+    W.printNumber("Num Buckets", GnuHashTable->nbuckets);
+    W.printNumber("First Hashed Symbol Index", GnuHashTable->symndx);
+    W.printNumber("Num Mask Words", GnuHashTable->maskwords);
+    W.printNumber("Shift Count", GnuHashTable->shift2);
+  }
 
-  uint64_t TableOffset = TableData - File.getBufferStart();
-  if (TableOffset +
-          /*Header size:*/ 16 + GnuHashTable->nbuckets * 4 +
-          GnuHashTable->maskwords * sizeof(typename ELFT::Off) >=
-      File.getBufferSize()) {
-    reportWarning(createError("unable to dump the SHT_GNU_HASH "
-                              "section at 0x" +
-                              Twine::utohexstr(TableOffset) +
-                              ": it goes past the end of the file"),
-                  ObjF->getFileName());
+  if (Err) {
+    reportUniqueWarning(std::move(Err));
     return;
   }
 
@@ -2706,44 +2779,17 @@ void ELFDumper<ELFT>::printGnuHashTable(const object::ObjectFile *Obj) {
   ArrayRef<Elf_Word> Buckets = GnuHashTable->buckets();
   W.printList("Buckets", Buckets);
 
-  if (!DynSymRegion) {
-    reportWarning(createError("unable to dump 'Values' for the SHT_GNU_HASH "
-                              "section: no dynamic symbol table found"),
-                  ObjF->getFileName());
+  Expected<ArrayRef<Elf_Word>> Chains =
+      getGnuHashTableChains<ELFT>(DynSymRegion, GnuHashTable);
+  if (!Chains) {
+    reportUniqueWarning(
+        createError("unable to dump 'Values' for the SHT_GNU_HASH "
+                    "section: " +
+                    toString(Chains.takeError())));
     return;
   }
 
-  size_t NumSyms = dynamic_symbols().size();
-  if (!NumSyms) {
-    reportWarning(createError("unable to dump 'Values' for the SHT_GNU_HASH "
-                              "section: the dynamic symbol table is empty"),
-                  ObjF->getFileName());
-    return;
-  }
-
-  if (GnuHashTable->symndx >= NumSyms) {
-    // A normal empty GNU hash table section produced by linker might have
-    // symndx set to the number of dynamic symbols + 1 (for the zero symbol)
-    // and have dummy null values in the Bloom filter and in the buckets
-    // vector. It happens because the value of symndx is not important for
-    // dynamic loaders when the GNU hash table is empty. They just skip the
-    // whole object during symbol lookup. In such cases, the symndx value is
-    // irrelevant and we should not report a warning.
-    bool IsEmptyHashTable =
-        llvm::all_of(Buckets, [](Elf_Word V) { return V == 0; });
-
-    if (!IsEmptyHashTable) {
-      reportWarning(
-          createError("the first hashed symbol index (" +
-                      Twine(GnuHashTable->symndx) +
-                      ") is larger than the number of dynamic symbols (" +
-                      Twine(NumSyms) + ")"),
-          ObjF->getFileName());
-      return;
-    }
-  }
-
-  W.printHexList("Values", GnuHashTable->values(NumSyms));
+  W.printHexList("Values", *Chains);
 }
 
 template <typename ELFT> void ELFDumper<ELFT>::printLoadName() {
@@ -3482,7 +3528,7 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Sym *Sym,
   Obj->getRelocationTypeName(R.getType(Obj->isMips64EL()), RelocName);
   Fields[2].Str = RelocName.c_str();
 
-  if (Sym && (!SymbolName.empty() || Sym->getValue() != 0))
+  if (Sym)
     Fields[3].Str = to_string(format_hex_no_prefix(Sym->getValue(), Width));
 
   Fields[4].Str = std::string(SymbolName);
@@ -4006,7 +4052,9 @@ template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
 
   if (const Elf_Hash *SysVHash = this->dumper()->getHashTable()) {
     OS << "\n Symbol table of .hash for image:\n";
-    if (checkHashTable(Obj, SysVHash, this->FileName))
+    if (Error E = checkHashTable<ELFT>(Obj, SysVHash))
+      this->reportUniqueWarning(std::move(E));
+    else
       PrintHashTable(SysVHash);
   }
 
@@ -4273,7 +4321,7 @@ RelSymbol<ELFT> getSymbolForReloc(const ELFFile<ELFT> *Obj, StringRef FileName,
   if (!ErrOrName)
     return WarnAndReturn(Sym, toString(ErrOrName.takeError()));
 
-  return {Sym, maybeDemangle(*ErrOrName)};
+  return {Sym == FirstSym ? nullptr : Sym, maybeDemangle(*ErrOrName)};
 }
 } // namespace
 
@@ -4556,119 +4604,137 @@ void GNUStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
   OS << '\n';
 }
 
-// Hash histogram shows  statistics of how efficient the hash was for the
-// dynamic symbol table. The table shows number of hash buckets for different
-// lengths of chains as absolute number and percentage of the total buckets.
-// Additionally cumulative coverage of symbols for each set of buckets.
 template <class ELFT>
-void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
-  // Print histogram for .hash section
-  if (const Elf_Hash *HashTable = this->dumper()->getHashTable()) {
-    if (!checkHashTable(Obj, HashTable, this->FileName))
-      return;
+void GNUStyle<ELFT>::printHashHistogram(const Elf_Hash &HashTable) {
+  size_t NBucket = HashTable.nbucket;
+  size_t NChain = HashTable.nchain;
+  ArrayRef<Elf_Word> Buckets = HashTable.buckets();
+  ArrayRef<Elf_Word> Chains = HashTable.chains();
+  size_t TotalSyms = 0;
+  // If hash table is correct, we have at least chains with 0 length
+  size_t MaxChain = 1;
+  size_t CumulativeNonZero = 0;
 
-    size_t NBucket = HashTable->nbucket;
-    size_t NChain = HashTable->nchain;
-    ArrayRef<Elf_Word> Buckets = HashTable->buckets();
-    ArrayRef<Elf_Word> Chains = HashTable->chains();
-    size_t TotalSyms = 0;
-    // If hash table is correct, we have at least chains with 0 length
-    size_t MaxChain = 1;
-    size_t CumulativeNonZero = 0;
+  if (NChain == 0 || NBucket == 0)
+    return;
 
-    if (NChain == 0 || NBucket == 0)
-      return;
-
-    std::vector<size_t> ChainLen(NBucket, 0);
-    // Go over all buckets and and note chain lengths of each bucket (total
-    // unique chain lengths).
-    for (size_t B = 0; B < NBucket; B++) {
-      std::vector<bool> Visited(NChain);
-      for (size_t C = Buckets[B]; C < NChain; C = Chains[C]) {
-        if (C == ELF::STN_UNDEF)
-          break;
-        if (Visited[C]) {
-          reportWarning(
-              createError(".hash section is invalid: bucket " + Twine(C) +
-                          ": a cycle was detected in the linked chain"),
-              this->FileName);
-          break;
-        }
-        Visited[C] = true;
-        if (MaxChain <= ++ChainLen[B])
-          MaxChain++;
+  std::vector<size_t> ChainLen(NBucket, 0);
+  // Go over all buckets and and note chain lengths of each bucket (total
+  // unique chain lengths).
+  for (size_t B = 0; B < NBucket; B++) {
+    std::vector<bool> Visited(NChain);
+    for (size_t C = Buckets[B]; C < NChain; C = Chains[C]) {
+      if (C == ELF::STN_UNDEF)
+        break;
+      if (Visited[C]) {
+        reportWarning(createError(".hash section is invalid: bucket " +
+                                  Twine(C) +
+                                  ": a cycle was detected in the linked chain"),
+                      this->FileName);
+        break;
       }
-      TotalSyms += ChainLen[B];
+      Visited[C] = true;
+      if (MaxChain <= ++ChainLen[B])
+        MaxChain++;
     }
-
-    if (!TotalSyms)
-      return;
-
-    std::vector<size_t> Count(MaxChain, 0) ;
-    // Count how long is the chain for each bucket
-    for (size_t B = 0; B < NBucket; B++)
-      ++Count[ChainLen[B]];
-    // Print Number of buckets with each chain lengths and their cumulative
-    // coverage of the symbols
-    OS << "Histogram for bucket list length (total of " << NBucket
-       << " buckets)\n"
-       << " Length  Number     % of total  Coverage\n";
-    for (size_t I = 0; I < MaxChain; I++) {
-      CumulativeNonZero += Count[I] * I;
-      OS << format("%7lu  %-10lu (%5.1f%%)     %5.1f%%\n", I, Count[I],
-                   (Count[I] * 100.0) / NBucket,
-                   (CumulativeNonZero * 100.0) / TotalSyms);
-    }
+    TotalSyms += ChainLen[B];
   }
 
-  // Print histogram for .gnu.hash section
+  if (!TotalSyms)
+    return;
+
+  std::vector<size_t> Count(MaxChain, 0);
+  // Count how long is the chain for each bucket
+  for (size_t B = 0; B < NBucket; B++)
+    ++Count[ChainLen[B]];
+  // Print Number of buckets with each chain lengths and their cumulative
+  // coverage of the symbols
+  OS << "Histogram for bucket list length (total of " << NBucket
+     << " buckets)\n"
+     << " Length  Number     % of total  Coverage\n";
+  for (size_t I = 0; I < MaxChain; I++) {
+    CumulativeNonZero += Count[I] * I;
+    OS << format("%7lu  %-10lu (%5.1f%%)     %5.1f%%\n", I, Count[I],
+                 (Count[I] * 100.0) / NBucket,
+                 (CumulativeNonZero * 100.0) / TotalSyms);
+  }
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printGnuHashHistogram(const Elf_GnuHash &GnuHashTable) {
+  Expected<ArrayRef<Elf_Word>> ChainsOrErr = getGnuHashTableChains<ELFT>(
+      this->dumper()->getDynSymRegion(), &GnuHashTable);
+  if (!ChainsOrErr) {
+    this->reportUniqueWarning(
+        createError("unable to print the GNU hash table histogram: " +
+                    toString(ChainsOrErr.takeError())));
+    return;
+  }
+
+  ArrayRef<Elf_Word> Chains = *ChainsOrErr;
+  size_t Symndx = GnuHashTable.symndx;
+  size_t TotalSyms = 0;
+  size_t MaxChain = 1;
+  size_t CumulativeNonZero = 0;
+
+  size_t NBucket = GnuHashTable.nbuckets;
+  if (Chains.empty() || NBucket == 0)
+    return;
+
+  ArrayRef<Elf_Word> Buckets = GnuHashTable.buckets();
+  std::vector<size_t> ChainLen(NBucket, 0);
+  for (size_t B = 0; B < NBucket; B++) {
+    if (!Buckets[B])
+      continue;
+    size_t Len = 1;
+    for (size_t C = Buckets[B] - Symndx;
+         C < Chains.size() && (Chains[C] & 1) == 0; C++)
+      if (MaxChain < ++Len)
+        MaxChain++;
+    ChainLen[B] = Len;
+    TotalSyms += Len;
+  }
+  MaxChain++;
+
+  if (!TotalSyms)
+    return;
+
+  std::vector<size_t> Count(MaxChain, 0);
+  for (size_t B = 0; B < NBucket; B++)
+    ++Count[ChainLen[B]];
+  // Print Number of buckets with each chain lengths and their cumulative
+  // coverage of the symbols
+  OS << "Histogram for `.gnu.hash' bucket list length (total of " << NBucket
+     << " buckets)\n"
+     << " Length  Number     % of total  Coverage\n";
+  for (size_t I = 0; I < MaxChain; I++) {
+    CumulativeNonZero += Count[I] * I;
+    OS << format("%7lu  %-10lu (%5.1f%%)     %5.1f%%\n", I, Count[I],
+                 (Count[I] * 100.0) / NBucket,
+                 (CumulativeNonZero * 100.0) / TotalSyms);
+  }
+}
+
+// Hash histogram shows statistics of how efficient the hash was for the
+// dynamic symbol table. The table shows the number of hash buckets for
+// different lengths of chains as an absolute number and percentage of the total
+// buckets, and the cumulative coverage of symbols for each set of buckets.
+template <class ELFT>
+void GNUStyle<ELFT>::printHashHistograms(const ELFFile<ELFT> *Obj) {
+  // Print histogram for the .hash section.
+  if (const Elf_Hash *HashTable = this->dumper()->getHashTable()) {
+    if (Error E = checkHashTable<ELFT>(Obj, HashTable))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printHashHistogram(*HashTable);
+  }
+
+  // Print histogram for the .gnu.hash section.
   if (const Elf_GnuHash *GnuHashTable = this->dumper()->getGnuHashTable()) {
-    size_t NBucket = GnuHashTable->nbuckets;
-    ArrayRef<Elf_Word> Buckets = GnuHashTable->buckets();
-    unsigned NumSyms = this->dumper()->dynamic_symbols().size();
-    if (!NumSyms)
-      return;
-    ArrayRef<Elf_Word> Chains = GnuHashTable->values(NumSyms);
-    size_t Symndx = GnuHashTable->symndx;
-    size_t TotalSyms = 0;
-    size_t MaxChain = 1;
-    size_t CumulativeNonZero = 0;
-
-    if (Chains.empty() || NBucket == 0)
-      return;
-
-    std::vector<size_t> ChainLen(NBucket, 0);
-
-    for (size_t B = 0; B < NBucket; B++) {
-      if (!Buckets[B])
-        continue;
-      size_t Len = 1;
-      for (size_t C = Buckets[B] - Symndx;
-           C < Chains.size() && (Chains[C] & 1) == 0; C++)
-        if (MaxChain < ++Len)
-          MaxChain++;
-      ChainLen[B] = Len;
-      TotalSyms += Len;
-    }
-    MaxChain++;
-
-    if (!TotalSyms)
-      return;
-
-    std::vector<size_t> Count(MaxChain, 0) ;
-    for (size_t B = 0; B < NBucket; B++)
-      ++Count[ChainLen[B]];
-    // Print Number of buckets with each chain lengths and their cumulative
-    // coverage of the symbols
-    OS << "Histogram for `.gnu.hash' bucket list length (total of " << NBucket
-       << " buckets)\n"
-       << " Length  Number     % of total  Coverage\n";
-    for (size_t I = 0; I <MaxChain; I++) {
-      CumulativeNonZero += Count[I] * I;
-      OS << format("%7lu  %-10lu (%5.1f%%)     %5.1f%%\n", I, Count[I],
-                   (Count[I] * 100.0) / NBucket,
-                   (CumulativeNonZero * 100.0) / TotalSyms);
-    }
+    if (Error E = checkGNUHashTable<ELFT>(Obj, GnuHashTable))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printGnuHashHistogram(*GnuHashTable);
   }
 }
 
@@ -6413,7 +6479,7 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
 }
 
 template <class ELFT>
-void LLVMStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
+void LLVMStyle<ELFT>::printHashHistograms(const ELFFile<ELFT> *Obj) {
   W.startLine() << "Hash Histogram not implemented!\n";
 }
 

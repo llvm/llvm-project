@@ -9,11 +9,17 @@
 #ifndef LLD_MACHO_INPUT_FILES_H
 #define LLD_MACHO_INPUT_FILES_H
 
+#include "MachOStructs.h"
+
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TextAPI/MachO/InterfaceFile.h"
+#include "llvm/TextAPI/MachO/TextAPIReader.h"
+
+#include <map>
 #include <vector>
 
 namespace lld {
@@ -22,6 +28,11 @@ namespace macho {
 class InputSection;
 class Symbol;
 struct Reloc;
+
+// If .subsections_via_symbols is set, each InputSection will be split along
+// symbol boundaries. The keys of a SubsectionMap represent the offsets of
+// each subsection from the start of the original pre-split InputSection.
+using SubsectionMap = std::map<uint32_t, InputSection *>;
 
 class InputFile {
 public:
@@ -37,15 +48,18 @@ public:
 
   MemoryBufferRef mb;
   std::vector<Symbol *> symbols;
-  std::vector<InputSection *> sections;
+  ArrayRef<llvm::MachO::section_64> sectionHeaders;
+  std::vector<SubsectionMap> subsections;
 
 protected:
   InputFile(Kind kind, MemoryBufferRef mb) : mb(mb), fileKind(kind) {}
 
-  std::vector<InputSection *> parseSections(ArrayRef<llvm::MachO::section_64>);
+  void parseSections(ArrayRef<llvm::MachO::section_64>);
 
-  void parseRelocations(const llvm::MachO::section_64 &,
-                        std::vector<Reloc> &relocs);
+  void parseSymbols(ArrayRef<lld::structs::nlist_64> nList, const char *strtab,
+                    bool subsectionsViaSymbols);
+
+  void parseRelocations(const llvm::MachO::section_64 &, SubsectionMap &);
 
 private:
   const Kind fileKind;
@@ -61,6 +75,9 @@ public:
 // .dylib file
 class DylibFile : public InputFile {
 public:
+  explicit DylibFile(std::shared_ptr<llvm::MachO::InterfaceFile> interface,
+                     DylibFile *umbrella = nullptr);
+
   // Mach-O dylibs can re-export other dylibs as sub-libraries, meaning that the
   // symbols in those sub-libraries will be available under the umbrella
   // library's namespace. Those sub-libraries can also have their own
@@ -69,12 +86,8 @@ public:
   // to the root. On the other hand, if a dylib is being directly loaded
   // (through an -lfoo flag), then `umbrella` should be a nullptr.
   explicit DylibFile(MemoryBufferRef mb, DylibFile *umbrella = nullptr);
-  static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
-  // Do not use this constructor!! This is meant only for createLibSystemMock(),
-  // but it cannot be made private as we call it via make().
-  DylibFile();
-  static DylibFile *createLibSystemMock();
+  static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
   StringRef dylibName;
   uint64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel

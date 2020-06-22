@@ -87,6 +87,8 @@ public:
   static std::string GetCanonicalName(Info info);
   /// Return the best-matching SDK type for a specific triple.
   static XcodeSDK::Type GetSDKTypeForTriple(const llvm::Triple &triple);
+
+  static std::string FindXcodeContentsDirectoryInPath(llvm::StringRef path);
 };
 
 } // namespace lldb_private

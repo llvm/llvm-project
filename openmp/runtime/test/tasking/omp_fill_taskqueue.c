@@ -47,10 +47,14 @@ int main()
           // all tasks, and detect the test failure if it has not been done yet.
           if (failed < 0)
             failed = throttling ? enqueued == NUM_TASKS : enqueued < NUM_TASKS;
+#pragma omp atomic write
           block = 0;
         }
-        while (block)
-          ;
+        int wait = 0;
+        do {
+#pragma omp atomic read
+          wait = block;
+        } while (wait);
       }
     }
     block = 0;

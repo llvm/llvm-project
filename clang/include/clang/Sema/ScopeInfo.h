@@ -174,9 +174,11 @@ public:
   /// First SEH '__try' statement in the current function.
   SourceLocation FirstSEHTryLoc;
 
+private:
   /// Used to determine if errors occurred in this function or block.
   DiagnosticErrorTrap ErrorTrap;
 
+public:
   /// A SwitchStmt, along with a flag indicating if its list of case statements
   /// is incomplete (because we dropped an invalid one while parsing).
   using SwitchInfo = llvm::PointerIntPair<SwitchStmt*, 1, bool>;
@@ -374,6 +376,17 @@ public:
         ErrorTrap(Diag) {}
 
   virtual ~FunctionScopeInfo();
+
+  /// Determine whether an unrecoverable error has occurred within this
+  /// function. Note that this may return false even if the function body is
+  /// invalid, because the errors may be suppressed if they're caused by prior
+  /// invalid declarations.
+  ///
+  /// FIXME: Migrate the caller of this to use containsErrors() instead once
+  /// it's ready.
+  bool hasUnrecoverableErrorOccurred() const {
+    return ErrorTrap.hasUnrecoverableErrorOccurred();
+  }
 
   /// Record that a weak object was accessed.
   ///

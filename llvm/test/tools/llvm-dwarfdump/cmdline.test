@@ -8,8 +8,9 @@ HELP: --help
 HELP: --help-list
 HELP: --version
 HELP: Section-specific Dump Options
-HELP: --debug-info            - Dump the .debug_info section
-HELP: --eh-frame
+HELP: --debug-info[=<offset>]    - Dump the .debug_info section
+HELP: --debug-names              - Dump the .debug_names section
+HELP: --eh-frame                 - Alias for -debug-frame
 HELP: Specific Options
 HELP: --diff
 HELP: --find
@@ -32,3 +33,6 @@ VERSION: {{ version }}
 
 RUN: llvm-dwarfdump -diff -verbose 2>&1 | FileCheck --check-prefix=INCOMPATIBLE %s
 INCOMPATIBLE: error: incompatible arguments: specifying both -diff and -verbose is currently not supported
+
+RUN: not llvm-dwarfdump --debug-names=0x0 2>&1 | FileCheck --check-prefix=FLAG %s
+FLAG: for the --debug-names option: this is a flag and does not take a value.

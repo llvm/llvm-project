@@ -9,7 +9,7 @@
 # CHECK-NEXT:    [0x0000000000000700, 0x0000000000000710): DW_OP_breg5 RDI+0
 
 # CHECK:      .debug_loclists contents:
-# CHECK-NEXT: 0x00000000: locations list header: length = 0x0000002c, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# CHECK-NEXT: 0x00000000: locations list header: length = 0x0000002c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 # CHECK-NEXT: 0x0000000c:
 # CHECK-NEXT:   DW_LLE_offset_pair  (0x0000000000000000, 0x0000000000000010): DW_OP_breg5 RDI+0
 # CHECK-NEXT:   DW_LLE_base_address (0x0000000000000500)

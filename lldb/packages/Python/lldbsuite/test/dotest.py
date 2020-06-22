@@ -49,9 +49,6 @@ from . import test_result
 from lldbsuite.test_event.event_builder import EventBuilder
 from ..support import seven
 
-def get_dotest_invocation():
-    return ' '.join(sys.argv)
-
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
@@ -220,7 +217,6 @@ def parseOptionsAndInitTestdirs():
         parser = dotest_args.create_parser()
         args = parser.parse_args()
     except:
-        print(get_dotest_invocation())
         raise
 
     if args.unset_env_varnames:
@@ -242,10 +238,6 @@ def parseOptionsAndInitTestdirs():
 
     if args.set_inferior_env_vars:
         lldbtest_config.inferior_env = ' '.join(args.set_inferior_env_vars)
-
-    # Only print the args if being verbose.
-    if args.v:
-        print(get_dotest_invocation())
 
     if args.h:
         do_help = True
@@ -275,9 +267,9 @@ def parseOptionsAndInitTestdirs():
                     break
 
     if args.dsymutil:
-        os.environ['DSYMUTIL'] = args.dsymutil
+        configuration.dsymutil = args.dsymutil
     elif platform_system == 'Darwin':
-        os.environ['DSYMUTIL'] = seven.get_command_output(
+        configuration.dsymutil = seven.get_command_output(
             'xcrun -find -toolchain default dsymutil')
 
     if args.filecheck:
@@ -302,19 +294,12 @@ def parseOptionsAndInitTestdirs():
 
     # Set SDKROOT if we are using an Apple SDK
     if platform_system == 'Darwin' and args.apple_sdk:
-        os.environ['SDKROOT'] = seven.get_command_output(
+        configuration.sdkroot = seven.get_command_output(
             'xcrun --sdk "%s" --show-sdk-path 2> /dev/null' %
             (args.apple_sdk))
 
     if args.arch:
         configuration.arch = args.arch
-        if configuration.arch.startswith(
-                'arm') and platform_system == 'Darwin' and not args.apple_sdk:
-            os.environ['SDKROOT'] = seven.get_command_output(
-                'xcrun --sdk iphoneos.internal --show-sdk-path 2> /dev/null')
-            if not os.path.exists(os.environ['SDKROOT']):
-                os.environ['SDKROOT'] = seven.get_command_output(
-                    'xcrun --sdk iphoneos --show-sdk-path 2> /dev/null')
     else:
         configuration.arch = platform_machine
 
@@ -462,8 +447,6 @@ def parseOptionsAndInitTestdirs():
         configuration.clang_module_cache_dir = os.path.join(
             configuration.test_build_dir, 'module-cache-clang')
 
-    os.environ['CLANG_MODULE_CACHE_DIR'] = configuration.clang_module_cache_dir
-
     if args.lldb_libs_dir:
         configuration.lldb_libs_dir = args.lldb_libs_dir
 
@@ -522,10 +505,9 @@ def setupSysPath():
     os.environ["LLDB_TEST_SRC"] = lldbsuite.lldb_test_root
 
     # Set up the root build directory.
-    builddir = configuration.test_build_dir
     if not configuration.test_build_dir:
         raise Exception("test_build_dir is not set")
-    os.environ["LLDB_BUILD"] = os.path.abspath(configuration.test_build_dir)
+    configuration.test_build_dir = os.path.abspath(configuration.test_build_dir)
 
     # Set up the LLDB_SRC environment variable, so that the tests can locate
     # the LLDB source code.
@@ -1044,8 +1026,7 @@ def run_suite():
 
     # Set up the working directory.
     # Note that it's not dotest's job to clean this directory.
-    build_dir = configuration.test_build_dir
-    lldbutil.mkdir_p(build_dir)
+    lldbutil.mkdir_p(configuration.test_build_dir)
 
     target_platform = lldb.selected_platform.GetTriple().split('-')[2]
 
@@ -1085,7 +1066,6 @@ def run_suite():
         "\nSession logs for test failures/errors/unexpected successes"
         " will go into directory '%s'\n" %
         configuration.sdir_name)
-    sys.stderr.write("Command invoked: %s\n" % get_dotest_invocation())
 
     #
     # Invoke the default TextTestRunner to run the test suite
@@ -1096,8 +1076,6 @@ def run_suite():
         print("compiler=%s" % configuration.compiler)
 
     # Iterating over all possible architecture and compiler combinations.
-    os.environ["ARCH"] = configuration.arch
-    os.environ["CC"] = configuration.compiler
     configString = "arch=%s compiler=%s" % (configuration.arch,
                                             configuration.compiler)
 

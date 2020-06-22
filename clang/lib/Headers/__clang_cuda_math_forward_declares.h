@@ -8,8 +8,8 @@
  */
 #ifndef __CLANG__CUDA_MATH_FORWARD_DECLARES_H__
 #define __CLANG__CUDA_MATH_FORWARD_DECLARES_H__
-#ifndef __CUDA__
-#error "This file is for CUDA compilation only."
+#if !defined(__CUDA__) && !__HIP__
+#error "This file is for CUDA/HIP compilation only."
 #endif
 
 // This file forward-declares of some math functions we (or the CUDA headers)

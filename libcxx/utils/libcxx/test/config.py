@@ -7,7 +7,6 @@
 #===----------------------------------------------------------------------===##
 
 import copy
-import locale
 import os
 import platform
 import pkgutil
@@ -23,6 +22,7 @@ from libcxx.test.executor import *
 from libcxx.test.tracing import *
 import libcxx.util
 import libcxx.test.features
+import libcxx.test.params
 
 def loadSiteConfig(lit_config, config, param_name, env_name):
     # We haven't loaded the site specific configuration (the user is
@@ -142,12 +142,19 @@ class Configuration(object):
         self.configure_modules()
         self.configure_substitutions()
         self.configure_features()
+        self.configure_new_params()
         self.configure_new_features()
 
     def configure_new_features(self):
         supportedFeatures = [f for f in libcxx.test.features.features if f.isSupported(self.config)]
         for feature in supportedFeatures:
             feature.enableIn(self.config)
+
+    def configure_new_params(self):
+        for param in libcxx.test.params.parameters:
+            feature = param.getFeature(self.config, self.lit_config.params)
+            if feature:
+                feature.enableIn(self.config)
 
     def print_config_info(self):
         # Print the final compile and link flags.
@@ -182,18 +189,22 @@ class Configuration(object):
             exec_env=self.exec_env)
 
     def configure_executor(self):
-        exec_str = self.get_lit_conf('executor', "None")
-        te = eval(exec_str)
-        if te:
-            self.lit_config.note("Using executor: %r" % exec_str)
-            if self.lit_config.useValgrind:
-                self.lit_config.fatal("The libc++ test suite can't run under Valgrind with a custom executor")
-        else:
-            te = LocalExecutor()
+        if self.get_lit_conf('use_old_format'):
+            exec_str = self.get_lit_conf('executor', "None")
+            te = eval(exec_str)
+            if te:
+                self.lit_config.note("Using executor: %r" % exec_str)
+                if self.lit_config.useValgrind:
+                    self.lit_config.fatal("The libc++ test suite can't run under Valgrind with a custom executor")
+            else:
+                te = LocalExecutor()
 
-        te.target_info = self.target_info
-        self.target_info.executor = te
-        self.executor = te
+            te.target_info = self.target_info
+            self.target_info.executor = te
+            self.executor = te
+        else:
+            self.executor = self.get_lit_conf('executor')
+            self.lit_config.note("Using executor: {}".format(self.executor))
 
     def configure_target_info(self):
         self.target_info = make_target_info(self)
@@ -283,7 +294,6 @@ class Configuration(object):
         if additional_features:
             for f in additional_features.split(','):
                 self.config.available_features.add(f.strip())
-        self.target_info.add_locale_features(self.config.available_features)
 
         # Write an "available feature" that combines the triple when
         # use_system_cxx_lib is enabled. This is so that we can easily write
@@ -307,9 +317,6 @@ class Configuration(object):
             self.config.available_features.add('availability=%s' % name)
             self.config.available_features.add('availability=%s%s' % (name, version))
 
-        # Insert the platform name and version into the available features.
-        self.target_info.add_platform_features(self.config.available_features)
-
         # Simulator testing can take a really long time for some of these tests
         # so add a feature check so we can REQUIRES: long_tests in them
         self.long_tests = self.get_lit_bool('long_tests')
@@ -322,14 +329,7 @@ class Configuration(object):
         if self.long_tests:
             self.config.available_features.add('long_tests')
 
-        if not self.get_lit_bool('enable_filesystem', default=True):
-            self.config.available_features.add('c++filesystem-disabled')
-
-        if self.get_lit_bool('has_libatomic', False):
-            self.config.available_features.add('libatomic')
-
         if self.target_info.is_windows():
-            self.config.available_features.add('windows')
             if self.cxx_stdlib_under_test == 'libc++':
                 # LIBCXX-WINDOWS-FIXME is the feature name used to XFAIL the
                 # initial Windows failures until they can be properly diagnosed
@@ -396,7 +396,6 @@ class Configuration(object):
         self.configure_compile_flags_header_includes()
         self.target_info.add_cxx_compile_flags(self.cxx.compile_flags)
         # Configure feature flags.
-        self.configure_compile_flags_exceptions()
         self.configure_compile_flags_rtti()
         enable_32bit = self.get_lit_bool('enable_32bit', False)
         if enable_32bit:
@@ -483,12 +482,6 @@ class Configuration(object):
         if not os.path.isfile(config_site_header):
             return
         self.cxx.compile_flags += ['-include', config_site_header]
-
-    def configure_compile_flags_exceptions(self):
-        enable_exceptions = self.get_lit_bool('enable_exceptions', True)
-        if not enable_exceptions:
-            self.config.available_features.add('no-exceptions')
-            self.cxx.compile_flags += ['-fno-exceptions']
 
     def configure_compile_flags_rtti(self):
         enable_rtti = self.get_lit_bool('enable_rtti', True)
@@ -636,6 +629,7 @@ class Configuration(object):
         self.cxx.addWarningFlagIfSupported('-Wno-user-defined-literals')
         self.cxx.addWarningFlagIfSupported('-Wno-noexcept-type')
         self.cxx.addWarningFlagIfSupported('-Wno-aligned-allocation-unavailable')
+        self.cxx.addWarningFlagIfSupported('-Wno-atomic-alignment')
         # These warnings should be enabled in order to support the MSVC
         # team using the test suite; They enable the warnings below and
         # expect the test suite to be clean.
@@ -753,19 +747,12 @@ class Configuration(object):
         codesign_ident = self.get_lit_conf('llvm_codesign_identity', '')
         env_vars = ' '.join('%s=%s' % (k, pipes.quote(v)) for (k, v) in self.exec_env.items())
         exec_args = [
+            '--execdir %T',
             '--codesign_identity "{}"'.format(codesign_ident),
-            '--dependencies %{file_dependencies}',
             '--env {}'.format(env_vars)
         ]
-        if isinstance(self.executor, SSHExecutor):
-            exec_args.append('--host {}'.format(self.executor.user_prefix + self.executor.host))
-            executor = os.path.join(self.libcxx_src_root, 'utils', 'ssh.py')
-        else:
-            exec_args.append('--execdir %t.execdir')
-            executor = os.path.join(self.libcxx_src_root, 'utils', 'run.py')
-        sub.append(('%{exec}', '{} {} {} -- '.format(pipes.quote(sys.executable),
-                                                     pipes.quote(executor),
-                                                     ' '.join(exec_args))))
+        if not self.get_lit_conf('use_old_format'):
+            sub.append(('%{exec}', '{} {} -- '.format(self.executor, ' '.join(exec_args))))
         if self.get_lit_conf('libcxx_gdb'):
             sub.append(('%{libcxx_gdb}', self.get_lit_conf('libcxx_gdb')))
 
@@ -861,8 +848,8 @@ class Configuration(object):
                 self.config.available_features.add('dylib-has-no-shared_mutex')
                 self.lit_config.note("shared_mutex is not supported by the deployment target")
             # Throwing bad_optional_access, bad_variant_access and bad_any_cast is
-            # supported starting in macosx10.14.
-            if name == 'macosx' and version in ('10.%s' % v for v in range(9, 14)):
+            # supported starting in macosx10.13.
+            if name == 'macosx' and version in ('10.%s' % v for v in range(9, 13)):
                 self.config.available_features.add('dylib-has-no-bad_optional_access')
                 self.lit_config.note("throwing bad_optional_access is not supported by the deployment target")
 
@@ -871,10 +858,6 @@ class Configuration(object):
 
                 self.config.available_features.add('dylib-has-no-bad_any_cast')
                 self.lit_config.note("throwing bad_any_cast is not supported by the deployment target")
-            # Filesystem is support on Apple platforms starting with macosx10.15.
-            if name == 'macosx' and version in ('10.%s' % v for v in range(9, 15)):
-                self.config.available_features.add('c++filesystem-disabled')
-                self.lit_config.note("the deployment target does not support <filesystem>")
         else:
             self.cxx.compile_flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 

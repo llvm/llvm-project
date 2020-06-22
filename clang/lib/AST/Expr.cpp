@@ -244,6 +244,7 @@ static void AssertResultStorageKind(ConstantExpr::ResultStorageKind Kind) {
   assert((Kind == ConstantExpr::RSK_APValue ||
           Kind == ConstantExpr::RSK_Int64 || Kind == ConstantExpr::RSK_None) &&
          "Invalid StorageKind Value");
+  (void)Kind;
 }
 
 ConstantExpr::ResultStorageKind
@@ -268,17 +269,18 @@ ConstantExpr::getStorageKind(const Type *T, const ASTContext &Context) {
   return ConstantExpr::RSK_APValue;
 }
 
-void ConstantExpr::DefaultInit(ResultStorageKind StorageKind) {
+ConstantExpr::ConstantExpr(Expr *SubExpr, ResultStorageKind StorageKind,
+                           bool IsImmediateInvocation)
+    : FullExpr(ConstantExprClass, SubExpr) {
   ConstantExprBits.ResultKind = StorageKind;
   ConstantExprBits.APValueKind = APValue::None;
+  ConstantExprBits.IsUnsigned = false;
+  ConstantExprBits.BitWidth = 0;
   ConstantExprBits.HasCleanup = false;
+  ConstantExprBits.IsImmediateInvocation = IsImmediateInvocation;
+
   if (StorageKind == ConstantExpr::RSK_APValue)
     ::new (getTrailingObjects<APValue>()) APValue();
-}
-
-ConstantExpr::ConstantExpr(Expr *subexpr, ResultStorageKind StorageKind)
-    : FullExpr(ConstantExprClass, subexpr) {
-  DefaultInit(StorageKind);
 }
 
 ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
@@ -286,14 +288,12 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
                                    bool IsImmediateInvocation) {
   assert(!isa<ConstantExpr>(E));
   AssertResultStorageKind(StorageKind);
+
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
       StorageKind == ConstantExpr::RSK_APValue,
       StorageKind == ConstantExpr::RSK_Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
-  ConstantExpr *Self = new (Mem) ConstantExpr(E, StorageKind);
-  Self->ConstantExprBits.IsImmediateInvocation =
-      IsImmediateInvocation;
-  return Self;
+  return new (Mem) ConstantExpr(E, StorageKind, IsImmediateInvocation);
 }
 
 ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
@@ -304,21 +304,23 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
   return Self;
 }
 
-ConstantExpr::ConstantExpr(ResultStorageKind StorageKind, EmptyShell Empty)
+ConstantExpr::ConstantExpr(EmptyShell Empty, ResultStorageKind StorageKind)
     : FullExpr(ConstantExprClass, Empty) {
-  DefaultInit(StorageKind);
+  ConstantExprBits.ResultKind = StorageKind;
+
+  if (StorageKind == ConstantExpr::RSK_APValue)
+    ::new (getTrailingObjects<APValue>()) APValue();
 }
 
 ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
-                                        ResultStorageKind StorageKind,
-                                        EmptyShell Empty) {
+                                        ResultStorageKind StorageKind) {
   AssertResultStorageKind(StorageKind);
+
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
       StorageKind == ConstantExpr::RSK_APValue,
       StorageKind == ConstantExpr::RSK_Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
-  ConstantExpr *Self = new (Mem) ConstantExpr(StorageKind, Empty);
-  return Self;
+  return new (Mem) ConstantExpr(EmptyShell(), StorageKind);
 }
 
 void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
@@ -1535,7 +1537,10 @@ UnaryExprOrTypeTraitExpr::UnaryExprOrTypeTraitExpr(
     SourceLocation op, SourceLocation rp)
     : Expr(UnaryExprOrTypeTraitExprClass, resultType, VK_RValue, OK_Ordinary),
       OpLoc(op), RParenLoc(rp) {
+  assert(ExprKind <= UETT_Last && "invalid enum value!");
   UnaryExprOrTypeTraitExprBits.Kind = ExprKind;
+  assert(static_cast<unsigned>(ExprKind) == UnaryExprOrTypeTraitExprBits.Kind &&
+         "UnaryExprOrTypeTraitExprBits.Kind overflow!");
   UnaryExprOrTypeTraitExprBits.IsType = false;
   Argument.Ex = E;
   setDependence(computeDependence(this));
@@ -2267,6 +2272,64 @@ Stmt *BlockExpr::getBody() {
 // Generic Expression Routines
 //===----------------------------------------------------------------------===//
 
+bool Expr::isReadIfDiscardedInCPlusPlus11() const {
+  // In C++11, discarded-value expressions of a certain form are special,
+  // according to [expr]p10:
+  //   The lvalue-to-rvalue conversion (4.1) is applied only if the
+  //   expression is an lvalue of volatile-qualified type and it has
+  //   one of the following forms:
+  if (!isGLValue() || !getType().isVolatileQualified())
+    return false;
+
+  const Expr *E = IgnoreParens();
+
+  //   - id-expression (5.1.1),
+  if (isa<DeclRefExpr>(E))
+    return true;
+
+  //   - subscripting (5.2.1),
+  if (isa<ArraySubscriptExpr>(E))
+    return true;
+
+  //   - class member access (5.2.5),
+  if (isa<MemberExpr>(E))
+    return true;
+
+  //   - indirection (5.3.1),
+  if (auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_Deref)
+      return true;
+
+  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
+    //   - pointer-to-member operation (5.5),
+    if (BO->isPtrMemOp())
+      return true;
+
+    //   - comma expression (5.18) where the right operand is one of the above.
+    if (BO->getOpcode() == BO_Comma)
+      return BO->getRHS()->isReadIfDiscardedInCPlusPlus11();
+  }
+
+  //   - conditional expression (5.16) where both the second and the third
+  //     operands are one of the above, or
+  if (auto *CO = dyn_cast<ConditionalOperator>(E))
+    return CO->getTrueExpr()->isReadIfDiscardedInCPlusPlus11() &&
+           CO->getFalseExpr()->isReadIfDiscardedInCPlusPlus11();
+  // The related edge case of "*x ?: *x".
+  if (auto *BCO =
+          dyn_cast<BinaryConditionalOperator>(E)) {
+    if (auto *OVE = dyn_cast<OpaqueValueExpr>(BCO->getTrueExpr()))
+      return OVE->getSourceExpr()->isReadIfDiscardedInCPlusPlus11() &&
+             BCO->getFalseExpr()->isReadIfDiscardedInCPlusPlus11();
+  }
+
+  // Objective-C++ extensions to the rule.
+  if (isa<PseudoObjectExpr>(E) || isa<ObjCIvarRefExpr>(E))
+    return true;
+
+  return false;
+}
+
 /// isUnusedResultAWarning - Return true if this immediate expression should
 /// be warned about if the result is unused.  If so, fill in Loc and Ranges
 /// with location to warn on and the source range[s] to report with the
@@ -2555,20 +2618,31 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   }
   case CXXFunctionalCastExprClass:
   case CStyleCastExprClass: {
-    // Ignore an explicit cast to void unless the operand is a non-trivial
-    // volatile lvalue.
+    // Ignore an explicit cast to void, except in C++98 if the operand is a
+    // volatile glvalue for which we would trigger an implicit read in any
+    // other language mode. (Such an implicit read always happens as part of
+    // the lvalue conversion in C, and happens in C++ for expressions of all
+    // forms where it seems likely the user intended to trigger a volatile
+    // load.)
     const CastExpr *CE = cast<CastExpr>(this);
+    const Expr *SubE = CE->getSubExpr()->IgnoreParens();
     if (CE->getCastKind() == CK_ToVoid) {
-      if (CE->getSubExpr()->isGLValue() &&
-          CE->getSubExpr()->getType().isVolatileQualified()) {
-        const DeclRefExpr *DRE =
-            dyn_cast<DeclRefExpr>(CE->getSubExpr()->IgnoreParens());
-        if (!(DRE && isa<VarDecl>(DRE->getDecl()) &&
-              cast<VarDecl>(DRE->getDecl())->hasLocalStorage()) &&
-            !isa<CallExpr>(CE->getSubExpr()->IgnoreParens())) {
-          return CE->getSubExpr()->isUnusedResultAWarning(WarnE, Loc,
-                                                          R1, R2, Ctx);
-        }
+      if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
+          SubE->isReadIfDiscardedInCPlusPlus11()) {
+        // Suppress the "unused value" warning for idiomatic usage of
+        // '(void)var;' used to suppress "unused variable" warnings.
+        if (auto *DRE = dyn_cast<DeclRefExpr>(SubE))
+          if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+            if (!VD->isExternallyVisible())
+              return false;
+
+        // The lvalue-to-rvalue conversion would have no effect for an array.
+        // It's implausible that the programmer expected this to result in a
+        // volatile array load, so don't warn.
+        if (SubE->getType()->isArrayType())
+          return false;
+
+        return SubE->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
       }
       return false;
     }
@@ -2909,13 +2983,16 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
   Expr *LastE = nullptr;
   while (E != LastE) {
     LastE = E;
-    E = IgnoreExprNodes(E, IgnoreImplicitSingleStep, IgnoreImpCastsSingleStep,
+    E = IgnoreExprNodes(E, IgnoreImplicitSingleStep,
+                        IgnoreImpCastsExtraSingleStep,
                         IgnoreParensOnlySingleStep);
 
     auto SR = E->getSourceRange();
 
     if (auto *C = dyn_cast<CXXConstructExpr>(E)) {
-      if (C->getNumArgs() == 1) {
+      auto NumArgs = C->getNumArgs();
+      if (NumArgs == 1 ||
+          (NumArgs > 1 && isa<CXXDefaultArgExpr>(C->getArg(1)))) {
         Expr *A = C->getArg(0);
         if (A->getSourceRange() == SR || !isa<CXXTemporaryObjectExpr>(C))
           E = A;
@@ -2923,7 +3000,18 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
     }
 
     if (auto *C = dyn_cast<CXXMemberCallExpr>(E)) {
-      Expr *ExprNode = C->getImplicitObjectArgument()->IgnoreParenImpCasts();
+      Expr *ExprNode = C->getImplicitObjectArgument();
+      if (ExprNode->getSourceRange() == SR) {
+        E = ExprNode;
+        continue;
+      }
+      if (auto *PE = dyn_cast<ParenExpr>(ExprNode)) {
+        if (PE->getSourceRange() == C->getSourceRange()) {
+          E = PE;
+          continue;
+        }
+      }
+      ExprNode = ExprNode->IgnoreParenImpCasts();
       if (ExprNode->getSourceRange() == SR)
         E = ExprNode;
     }
@@ -3425,6 +3513,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
 
   case ParenExprClass:
   case ArraySubscriptExprClass:
+  case MatrixSubscriptExprClass:
   case OMPArraySectionExprClass:
   case OMPArrayShapingExprClass:
   case OMPIteratorExprClass:

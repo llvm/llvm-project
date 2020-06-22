@@ -14,19 +14,20 @@ target triple = "wasm32"
 ; Just check the barest skeleton of the structure
 ; CHECK-LABEL: test1:
 ; CHECK: i32.load
-; CHECK: i32.load $[[DEST:.+]]=
+; CHECK: i32.load
 ; CHECK: loop
 ; CHECK: block
 ; CHECK: block
-; CHECK: end_block
 ; CHECK: block
 ; CHECK: block
-; CHECK: br_table $[[DEST]]
+; CHECK: br_table ${{[^,]+}}, 1, 2, 0
 ; CHECK: end_block
 ; CHECK: end_block
-; CHECK: i32.load $[[DEST]]=
+; CHECK: end_block
+; CHECK: end_block
+; CHECK: br
 ; CHECK: end_loop
-
+; CHECK: end_function
 ; CHECK: test1.targets:
 ; CHECK-NEXT: .int32
 ; CHECK-NEXT: .int32

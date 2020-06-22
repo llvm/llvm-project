@@ -19,6 +19,7 @@ DI_4_64_start:
         .long 0xffffffff       # DWARF64 mark
         .quad DI_4_64_end - DI_4_64_version # Length of Unit
 # CHECK-SAME: length = 0x000000000000000f
+# CHECK-SAME: format = DWARF64
 DI_4_64_version:
         .short 4               # DWARF version number
 # CHECK-SAME: version = 0x0004

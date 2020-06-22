@@ -66,18 +66,25 @@ struct SimplifyCFGOptions {
   bool ConvertSwitchToLookupTable;
   bool NeedCanonicalLoop;
   bool SinkCommonInsts;
+  bool SimplifyCondBranch;
+  bool FoldTwoEntryPHINode;
+
   AssumptionCache *AC;
 
   SimplifyCFGOptions(unsigned BonusThreshold = 1,
                      bool ForwardSwitchCond = false,
                      bool SwitchToLookup = false, bool CanonicalLoops = true,
                      bool SinkCommon = false,
-                     AssumptionCache *AssumpCache = nullptr)
+                     AssumptionCache *AssumpCache = nullptr,
+                     bool SimplifyCondBranch = true,
+                     bool FoldTwoEntryPHINode = true)
       : BonusInstThreshold(BonusThreshold),
         ForwardSwitchCondToPhi(ForwardSwitchCond),
         ConvertSwitchToLookupTable(SwitchToLookup),
         NeedCanonicalLoop(CanonicalLoops),
         SinkCommonInsts(SinkCommon),
+        SimplifyCondBranch(SimplifyCondBranch),
+        FoldTwoEntryPHINode(FoldTwoEntryPHINode),
         AC(AssumpCache) {}
 
   // Support 'builder' pattern to set members by name at construction time.
@@ -103,6 +110,15 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &setAssumptionCache(AssumptionCache *Cache) {
     AC = Cache;
+    return *this;
+  }
+  SimplifyCFGOptions &setSimplifyCondBranch(bool B) {
+    SimplifyCondBranch = B;
+    return *this;
+  }
+
+  SimplifyCFGOptions &setFoldTwoEntryPHINode(bool B) {
+    FoldTwoEntryPHINode = B;
     return *this;
   }
 };
@@ -352,17 +368,16 @@ AllocaInst *findAllocaForValue(Value *V,
                                DenseMap<Value *, AllocaInst *> &AllocaForValue);
 
 /// Assuming the instruction \p I is going to be deleted, attempt to salvage
-/// debug users of \p I by writing the effect of \p I in a DIExpression.
-/// Returns true if any debug users were updated.
-bool salvageDebugInfo(Instruction &I);
+/// debug users of \p I by writing the effect of \p I in a DIExpression. If it
+/// cannot be salvaged changes its debug uses to undef.
+void salvageDebugInfo(Instruction &I);
 
-/// Salvage all debug users of the instruction \p I or mark it as undef if it
-/// cannot be salvaged.
-void salvageDebugInfoOrMarkUndef(Instruction &I);
 
 /// Implementation of salvageDebugInfo, applying only to instructions in
-/// \p Insns, rather than all debug users of \p I.
-bool salvageDebugInfoForDbgValues(Instruction &I,
+/// \p Insns, rather than all debug users from findDbgUsers( \p I).
+/// Returns true if any debug users were updated.
+/// Mark undef if salvaging cannot be completed.
+void salvageDebugInfoForDbgValues(Instruction &I,
                                   ArrayRef<DbgVariableIntrinsic *> Insns);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on it, write

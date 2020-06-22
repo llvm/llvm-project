@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_LINUX_MTX_UNLOCK_H
-#define LLVM_LIBC_SRC_THREADS_LINUX_MTX_UNLOCK_H
+#ifndef LLVM_LIBC_SRC_THREADS_MTX_UNLOCK_H
+#define LLVM_LIBC_SRC_THREADS_MTX_UNLOCK_H
 
 #include "include/threads.h"
 
@@ -17,4 +17,4 @@ int mtx_unlock(mtx_t *mutex);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_THREADS_LINUX_MTX_UNLOCK_H
+#endif // LLVM_LIBC_SRC_THREADS_MTX_UNLOCK_H

@@ -1282,8 +1282,7 @@ define <4 x i32> @spltMemVali(i32* nocapture readonly %ptr) {
 ; P8LE-LABEL: spltMemVali:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfiwzx f0, 0, r3
-; P8LE-NEXT:    xxswapd vs0, f0
-; P8LE-NEXT:    xxspltw v2, vs0, 3
+; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
   %0 = load i32, i32* %ptr, align 4
@@ -2801,8 +2800,7 @@ define <4 x i32> @spltMemValui(i32* nocapture readonly %ptr) {
 ; P8LE-LABEL: spltMemValui:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfiwzx f0, 0, r3
-; P8LE-NEXT:    xxswapd vs0, f0
-; P8LE-NEXT:    xxspltw v2, vs0, 3
+; P8LE-NEXT:    xxspltw v2, vs0, 1
 ; P8LE-NEXT:    blr
 entry:
   %0 = load i32, i32* %ptr, align 4
@@ -4573,7 +4571,7 @@ define <2 x i64> @spltMemValConvftoll(float* nocapture readonly %ptr) {
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfs f0, 0(r3)
 ; P9LE-NEXT:    xscvdpsxds f0, f0
-; P9LE-NEXT:    xxspltd v2, f0, 0
+; P9LE-NEXT:    xxspltd v2, vs0, 0
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltMemValConvftoll:
@@ -4587,7 +4585,7 @@ define <2 x i64> @spltMemValConvftoll(float* nocapture readonly %ptr) {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfsx f0, 0, r3
 ; P8LE-NEXT:    xscvdpsxds f0, f0
-; P8LE-NEXT:    xxspltd v2, f0, 0
+; P8LE-NEXT:    xxspltd v2, vs0, 0
 ; P8LE-NEXT:    blr
 entry:
   %0 = load float, float* %ptr, align 4
@@ -5761,7 +5759,7 @@ define <2 x i64> @spltMemValConvftoull(float* nocapture readonly %ptr) {
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfs f0, 0(r3)
 ; P9LE-NEXT:    xscvdpuxds f0, f0
-; P9LE-NEXT:    xxspltd v2, f0, 0
+; P9LE-NEXT:    xxspltd v2, vs0, 0
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltMemValConvftoull:
@@ -5775,7 +5773,7 @@ define <2 x i64> @spltMemValConvftoull(float* nocapture readonly %ptr) {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    lfsx f0, 0, r3
 ; P8LE-NEXT:    xscvdpuxds f0, f0
-; P8LE-NEXT:    xxspltd v2, f0, 0
+; P8LE-NEXT:    xxspltd v2, vs0, 0
 ; P8LE-NEXT:    blr
 entry:
   %0 = load float, float* %ptr, align 4

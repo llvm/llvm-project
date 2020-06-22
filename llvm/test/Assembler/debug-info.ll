@@ -4,10 +4,10 @@
 ; CHECK: !named = !{!0, !0, !1, !2, !3, !4, !5, !6, !7, !8, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39}
 !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42}
 
-; CHECK:      !0 = !DISubrange(count: 3)
+; CHECK:      !0 = !DISubrange(count: 3, lowerBound: 0)
 ; CHECK-NEXT: !1 = !DISubrange(count: 3, lowerBound: 4)
 ; CHECK-NEXT: !2 = !DISubrange(count: 3, lowerBound: -5)
-!0 = !DISubrange(count: 3)
+!0 = !DISubrange(count: 3, lowerBound: 0)
 !1 = !DISubrange(count: 3, lowerBound: 0)
 
 !2 = !DISubrange(count: 3, lowerBound: 4)

@@ -14,16 +14,8 @@ class TestTargetSourceMap(TestBase):
     def test_source_map(self):
         # Set the target soure map to map "./" to the current test directory.
         yaml_path = os.path.join(self.getSourceDir(), "a.yaml")
-        yaml_base, ext = os.path.splitext(yaml_path)
-        obj_path = self.getBuildArtifact(yaml_base)
+        obj_path = self.getBuildArtifact('a.out')
         self.yaml2obj(yaml_path, obj_path)
-
-        def cleanup():
-            if os.path.exists(obj_path):
-                os.unlink(obj_path)
-
-        # Execute the cleanup function during test case tear down.
-        self.addTearDownHook(cleanup)
 
         # Create a target with the object file we just created from YAML
         target = self.dbg.CreateTarget(obj_path)

@@ -2242,9 +2242,8 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   case MIToken::kw_cfi_def_cfa_offset:
     if (parseCFIOffset(Offset))
       return true;
-    // NB: MCCFIInstruction::createDefCfaOffset negates the offset.
-    CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::createDefCfaOffset(nullptr, -Offset));
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, Offset));
     break;
   case MIToken::kw_cfi_adjust_cfa_offset:
     if (parseCFIOffset(Offset))
@@ -2256,9 +2255,8 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
         parseCFIOffset(Offset))
       return true;
-    // NB: MCCFIInstruction::createDefCfa negates the offset.
     CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::createDefCfa(nullptr, Reg, -Offset));
+        MF.addFrameInst(MCCFIInstruction::cfiDefCfa(nullptr, Reg, Offset));
     break;
   case MIToken::kw_cfi_remember_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));

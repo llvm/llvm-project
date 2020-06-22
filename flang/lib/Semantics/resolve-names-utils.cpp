@@ -557,7 +557,7 @@ bool EquivalenceSets::CheckObject(const parser::Name &name) {
   if (symbol.owner().IsDerivedType()) { // C8107
     msg = "Derived type component '%s'"
           " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.IsDummy()) { // C8106
+  } else if (IsDummy(symbol)) { // C8106
     msg = "Dummy argument '%s' is not allowed in an equivalence set"_err_en_US;
   } else if (symbol.IsFuncResult()) { // C8106
     msg = "Function result '%s' is not allow in an equivalence set"_err_en_US;
@@ -595,16 +595,9 @@ bool EquivalenceSets::CheckObject(const parser::Name &name) {
         msg = "Nonsequence derived type object '%s'"
               " is not allowed in an equivalence set"_err_en_US;
       }
-    } else if (symbol.IsObjectArray()) {
-      for (const ShapeSpec &spec : symbol.get<ObjectEntityDetails>().shape()) {
-        auto &lbound{spec.lbound().GetExplicit()};
-        auto &ubound{spec.ubound().GetExplicit()};
-        if ((lbound && !evaluate::ToInt64(*lbound)) ||
-            (ubound && !evaluate::ToInt64(*ubound))) {
-          msg = "Automatic array '%s'"
-                " is not allowed in an equivalence set"_err_en_US;
-        }
-      }
+    } else if (IsAutomaticObject(symbol)) {
+      msg = "Automatic object '%s'"
+            " is not allowed in an equivalence set"_err_en_US;
     }
   }
   if (!msg.text().empty()) {

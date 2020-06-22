@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++2a-or-later %s modernize-use-default-member-init %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-default-member-init %t
 
 struct PositiveBitField
 {

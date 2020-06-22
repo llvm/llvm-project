@@ -269,6 +269,8 @@ static CombinerObjective getCombinerObjective(MachineCombinerPattern P) {
   case MachineCombinerPattern::REASSOC_AX_YB:
   case MachineCombinerPattern::REASSOC_XA_BY:
   case MachineCombinerPattern::REASSOC_XA_YB:
+  case MachineCombinerPattern::REASSOC_XY_AMM_BMM:
+  case MachineCombinerPattern::REASSOC_XMM_AMM_BMM:
     return CombinerObjective::MustReduceDepth;
   default:
     return CombinerObjective::Default;
@@ -406,12 +408,14 @@ bool MachineCombiner::preservesResourceLen(
                     << ResLenBeforeCombine
                     << " and after: " << ResLenAfterCombine << "\n";);
   LLVM_DEBUG(
-      ResLenAfterCombine <= ResLenBeforeCombine
+      ResLenAfterCombine <=
+      ResLenBeforeCombine + TII->getExtendResourceLenLimit()
           ? dbgs() << "\t\t  As result it IMPROVES/PRESERVES Resource Length\n"
           : dbgs() << "\t\t  As result it DOES NOT improve/preserve Resource "
                       "Length\n");
 
-  return ResLenAfterCombine <= ResLenBeforeCombine;
+  return ResLenAfterCombine <=
+         ResLenBeforeCombine + TII->getExtendResourceLenLimit();
 }
 
 /// \returns true when new instruction sequence should be generated

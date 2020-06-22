@@ -35,6 +35,20 @@
 /// are defined to be as large as this maximum sequence of replacement
 /// instructions.
 ///
+/// A note on VPR.P0 (the lane mask):
+/// VPT, VCMP, VPNOT and VCTP won't overwrite VPR.P0 when they update it in a
+/// "VPT Active" context (which includes low-overhead loops and vpt blocks).
+/// They will simply "and" the result of their calculation with the current
+/// value of VPR.P0. You can think of it like this:
+/// \verbatim
+/// if VPT active:    ; Between a DLSTP/LETP, or for predicated instrs
+///   VPR.P0 &= Value
+/// else
+///   VPR.P0 = Value
+/// \endverbatim
+/// When we're inside the low-overhead loop (between DLSTP and LETP), we always
+/// fall in the "VPT active" case, so we can consider that all VPR writes by
+/// one of those instruction is actually a "and".
 //===----------------------------------------------------------------------===//
 
 #include "ARM.h"
@@ -123,27 +137,31 @@ namespace {
     SetVector<MachineInstr*> Predicates;
 
   public:
-    PredicatedMI(MachineInstr *I, SetVector<MachineInstr*> &Preds) :
-      MI(I) { Predicates.insert(Preds.begin(), Preds.end()); }
+    PredicatedMI(MachineInstr *I, SetVector<MachineInstr *> &Preds) : MI(I) {
+      assert(I && "Instruction must not be null!");
+      Predicates.insert(Preds.begin(), Preds.end());
+    }
   };
 
-  // Represent a VPT block, a list of instructions that begins with a VPST and
-  // has a maximum of four proceeding instructions. All instructions within the
-  // block are predicated upon the vpr and we allow instructions to define the
-  // vpr within in the block too.
+  // Represent a VPT block, a list of instructions that begins with a VPT/VPST
+  // and has a maximum of four proceeding instructions. All instructions within
+  // the block are predicated upon the vpr and we allow instructions to define
+  // the vpr within in the block too.
   class VPTBlock {
-    std::unique_ptr<PredicatedMI> VPST;
+    // The predicate then instruction, which is either a VPT, or a VPST
+    // instruction.
+    std::unique_ptr<PredicatedMI> PredicateThen;
     PredicatedMI *Divergent = nullptr;
     SmallVector<PredicatedMI, 4> Insts;
 
   public:
     VPTBlock(MachineInstr *MI, SetVector<MachineInstr*> &Preds) {
-      VPST = std::make_unique<PredicatedMI>(MI, Preds);
+      PredicateThen = std::make_unique<PredicatedMI>(MI, Preds);
     }
 
     void addInst(MachineInstr *MI, SetVector<MachineInstr*> &Preds) {
       LLVM_DEBUG(dbgs() << "ARM Loops: Adding predicated MI: " << *MI);
-      if (!Divergent && !set_difference(Preds, VPST->Predicates).empty()) {
+      if (!Divergent && !set_difference(Preds, PredicateThen->Predicates).empty()) {
         Divergent = &Insts.back();
         LLVM_DEBUG(dbgs() << " - has divergent predicate: " << *Divergent->MI);
       }
@@ -160,18 +178,26 @@ namespace {
     // Is the given instruction part of the predicate set controlling the entry
     // to the block.
     bool IsPredicatedOn(MachineInstr *MI) const {
-      return VPST->Predicates.count(MI);
+      return PredicateThen->Predicates.count(MI);
+    }
+
+    // Returns true if this is a VPT instruction.
+    bool isVPT() const { return !isVPST(); }
+
+    // Returns true if this is a VPST instruction.
+    bool isVPST() const {
+      return PredicateThen->MI->getOpcode() == ARM::MVE_VPST;
     }
 
     // Is the given instruction the only predicate which controls the entry to
     // the block.
     bool IsOnlyPredicatedOn(MachineInstr *MI) const {
-      return IsPredicatedOn(MI) && VPST->Predicates.size() == 1;
+      return IsPredicatedOn(MI) && PredicateThen->Predicates.size() == 1;
     }
 
     unsigned size() const { return Insts.size(); }
     SmallVectorImpl<PredicatedMI> &getInsts() { return Insts; }
-    MachineInstr *getVPST() const { return VPST->MI; }
+    MachineInstr *getPredicateThen() const { return PredicateThen->MI; }
     PredicatedMI *getDivergent() const { return Divergent; }
   };
 
@@ -187,6 +213,7 @@ namespace {
     MachineInstr *Dec = nullptr;
     MachineInstr *End = nullptr;
     MachineInstr *VCTP = nullptr;
+    SmallPtrSet<MachineInstr*, 4> SecondaryVCTPs;
     VPTBlock *CurrentBlock = nullptr;
     SetVector<MachineInstr*> CurrentPredicate;
     SmallVector<VPTBlock, 4> VPTBlocks;
@@ -368,14 +395,23 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   for (auto &Block : VPTBlocks) {
     if (Block.IsPredicatedOn(VCTP))
       continue;
-    if (!Block.HasNonUniformPredicate() || !isVCTP(Block.getDivergent()->MI)) {
+    if (Block.HasNonUniformPredicate() && !isVCTP(Block.getDivergent()->MI)) {
       LLVM_DEBUG(dbgs() << "ARM Loops: Found unsupported diverging predicate: "
-                 << *Block.getDivergent()->MI);
+                        << *Block.getDivergent()->MI);
       return false;
     }
     SmallVectorImpl<PredicatedMI> &Insts = Block.getInsts();
     for (auto &PredMI : Insts) {
-      if (PredMI.Predicates.count(VCTP) || isVCTP(PredMI.MI))
+      // Check the instructions in the block and only allow:
+      //   - VCTPs
+      //   - Instructions predicated on the main VCTP
+      //   - Any VCMP
+      //      - VCMPs just "and" their result with VPR.P0. Whether they are
+      //      located before/after the VCTP is irrelevant - the end result will
+      //      be the same in both cases, so there's no point in requiring them
+      //      to be located after the VCTP!
+      if (PredMI.Predicates.count(VCTP) || isVCTP(PredMI.MI) ||
+          VCMPOpcodeToVPT(PredMI.MI->getOpcode()) != 0)
         continue;
       LLVM_DEBUG(dbgs() << "ARM Loops: Can't convert: " << *PredMI.MI
                  << " - which is predicated on:\n";
@@ -473,6 +509,8 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
     SmallPtrSet<MachineInstr*, 2> ElementChain;
     SmallPtrSet<MachineInstr*, 2> Ignore = { VCTP };
     unsigned ExpectedVectorWidth = getTailPredVectorWidth(VCTP->getOpcode());
+
+    Ignore.insert(SecondaryVCTPs.begin(), SecondaryVCTPs.end());
 
     if (RDA.isSafeToRemove(Def, ElementChain, Ignore)) {
       bool FoundSub = false;
@@ -622,7 +660,7 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
     if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
       continue;
 
-    if (isVCTP(&MI) || MI.getOpcode() == ARM::MVE_VPST)
+    if (isVCTP(&MI) || isVPTOpcode(MI.getOpcode()))
       continue;
 
     // Predicated loads will write zeros to the falsely predicated bytes of the
@@ -768,29 +806,44 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
   if (CannotTailPredicate)
     return false;
 
-  // Only support a single vctp.
-  if (isVCTP(MI) && VCTP)
-    return false;
+  if (isVCTP(MI)) {
+    // If we find another VCTP, check whether it uses the same value as the main VCTP.
+    // If it does, store it in the SecondaryVCTPs set, else refuse it.
+    if (VCTP) {
+      if (!VCTP->getOperand(1).isIdenticalTo(MI->getOperand(1)) ||
+          !RDA.hasSameReachingDef(VCTP, MI, MI->getOperand(1).getReg())) {
+        LLVM_DEBUG(dbgs() << "ARM Loops: Found VCTP with a different reaching "
+                             "definition from the main VCTP");
+        return false;
+      }
+      LLVM_DEBUG(dbgs() << "ARM Loops: Found secondary VCTP: " << *MI);
+      SecondaryVCTPs.insert(MI);
+    } else {
+      LLVM_DEBUG(dbgs() << "ARM Loops: Found 'main' VCTP: " << *MI);
+      VCTP = MI;
+    }
+  } else if (isVPTOpcode(MI->getOpcode())) {
+    if (MI->getOpcode() != ARM::MVE_VPST) {
+      assert(MI->findRegisterDefOperandIdx(ARM::VPR) != -1 &&
+             "VPT does not implicitly define VPR?!");
+      CurrentPredicate.insert(MI);
+    }
 
-  // Start a new vpt block when we discover a vpt.
-  if (MI->getOpcode() == ARM::MVE_VPST) {
     VPTBlocks.emplace_back(MI, CurrentPredicate);
     CurrentBlock = &VPTBlocks.back();
     return true;
-  } else if (isVCTP(MI))
-    VCTP = MI;
-  else if (MI->getOpcode() == ARM::MVE_VPSEL ||
-           MI->getOpcode() == ARM::MVE_VPNOT)
+  } else if (MI->getOpcode() == ARM::MVE_VPSEL ||
+             MI->getOpcode() == ARM::MVE_VPNOT) {
+    // TODO: Allow VPSEL and VPNOT, we currently cannot because:
+    // 1) It will use the VPR as a predicate operand, but doesn't have to be
+    //    instead a VPT block, which means we can assert while building up
+    //    the VPT block because we don't find another VPT or VPST to being a new
+    //    one.
+    // 2) VPSEL still requires a VPR operand even after tail predicating,
+    //    which means we can't remove it unless there is another
+    //    instruction, such as vcmp, that can provide the VPR def.
     return false;
-
-  // TODO: Allow VPSEL and VPNOT, we currently cannot because:
-  // 1) It will use the VPR as a predicate operand, but doesn't have to be
-  //    instead a VPT block, which means we can assert while building up
-  //    the VPT block because we don't find another VPST to being a new
-  //    one.
-  // 2) VPSEL still requires a VPR operand even after tail predicating,
-  //    which means we can't remove it unless there is another
-  //    instruction, such as vcmp, that can provide the VPR def.
+  }
 
   bool IsUse = false;
   bool IsDef = false;
@@ -1170,26 +1223,24 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
   };
 
   // There are a few scenarios which we have to fix up:
-  // 1) A VPT block with is only predicated by the vctp and has no internal vpr
-  //    defs.
-  // 2) A VPT block which is only predicated by the vctp but has an internal
-  //    vpr def.
-  // 3) A VPT block which is predicated upon the vctp as well as another vpr
-  //    def.
-  // 4) A VPT block which is not predicated upon a vctp, but contains it and
-  //    all instructions within the block are predicated upon in.
-
+  // 1. VPT Blocks with non-uniform predicates:
+  //    - a. When the divergent instruction is a vctp
+  //    - b. When the block uses a vpst, and is only predicated on the vctp
+  //    - c. When the block uses a vpt and (optionally) contains one or more
+  //         vctp.
+  // 2. VPT Blocks with uniform predicates:
+  //    - a. The block uses a vpst, and is only predicated on the vctp
   for (auto &Block : LoLoop.getVPTBlocks()) {
     SmallVectorImpl<PredicatedMI> &Insts = Block.getInsts();
     if (Block.HasNonUniformPredicate()) {
       PredicatedMI *Divergent = Block.getDivergent();
       if (isVCTP(Divergent->MI)) {
-        // The vctp will be removed, so the block mask of the VPST/VPT will need
+        // The vctp will be removed, so the block mask of the vp(s)t will need
         // to be recomputed.
-        LoLoop.BlockMasksToRecompute.insert(Block.getVPST());
-      } else if (Block.IsOnlyPredicatedOn(LoLoop.VCTP)) {
-        // The VPT block has a non-uniform predicate but it's entry is guarded
-        // only by a vctp, which means we:
+        LoLoop.BlockMasksToRecompute.insert(Block.getPredicateThen());
+      } else if (Block.isVPST() && Block.IsOnlyPredicatedOn(LoLoop.VCTP)) {
+        // The VPT block has a non-uniform predicate but it uses a vpst and its
+        // entry is guarded only by a vctp, which means we:
         // - Need to remove the original vpst.
         // - Then need to unpredicate any following instructions, until
         //   we come across the divergent vpr def.
@@ -1197,7 +1248,7 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         //   the divergent vpr def.
         // TODO: We could be producing more VPT blocks than necessary and could
         // fold the newly created one into a proceeding one.
-        for (auto I = ++MachineBasicBlock::iterator(Block.getVPST()),
+        for (auto I = ++MachineBasicBlock::iterator(Block.getPredicateThen()),
              E = ++MachineBasicBlock::iterator(Divergent->MI); I != E; ++I)
           RemovePredicate(&*I);
 
@@ -1210,29 +1261,58 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
           ++Size;
           ++I;
         }
-        // Create a VPST with a null mask, we'll recompute it later.
+        // Create a VPST (with a null mask for now, we'll recompute it later).
         MachineInstrBuilder MIB = BuildMI(*InsertAt->getParent(), InsertAt,
                                           InsertAt->getDebugLoc(),
                                           TII->get(ARM::MVE_VPST));
         MIB.addImm(0);
-        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *Block.getVPST());
+        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *Block.getPredicateThen());
         LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
-        LoLoop.ToRemove.insert(Block.getVPST());
+        LoLoop.ToRemove.insert(Block.getPredicateThen());
         LoLoop.BlockMasksToRecompute.insert(MIB.getInstr());
       }
-    } else if (Block.IsOnlyPredicatedOn(LoLoop.VCTP)) {
-      // A vpt block which is only predicated upon vctp and has no internal vpr
-      // defs:
+      // Else, if the block uses a vpt, iterate over the block, removing the
+      // extra VCTPs it may contain.
+      else if (Block.isVPT()) {
+        bool RemovedVCTP = false;
+        for (PredicatedMI &Elt : Block.getInsts()) {
+          MachineInstr *MI = Elt.MI;
+          if (isVCTP(MI)) {
+            LLVM_DEBUG(dbgs() << "ARM Loops: Removing VCTP: " << *MI);
+            LoLoop.ToRemove.insert(MI);
+            RemovedVCTP = true;
+            continue;
+          }
+        }
+        if (RemovedVCTP)
+          LoLoop.BlockMasksToRecompute.insert(Block.getPredicateThen());
+      }
+    } else if (Block.IsOnlyPredicatedOn(LoLoop.VCTP) && Block.isVPST()) {
+      // A vpt block starting with VPST, is only predicated upon vctp and has no
+      // internal vpr defs:
       // - Remove vpst.
       // - Unpredicate the remaining instructions.
-      LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *Block.getVPST());
-      LoLoop.ToRemove.insert(Block.getVPST());
+      LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *Block.getPredicateThen());
+      LoLoop.ToRemove.insert(Block.getPredicateThen());
       for (auto &PredMI : Insts)
         RemovePredicate(PredMI.MI);
     }
   }
-  LLVM_DEBUG(dbgs() << "ARM Loops: Removing VCTP: " << *LoLoop.VCTP);
+  LLVM_DEBUG(dbgs() << "ARM Loops: Removing remaining VCTPs...\n");
+  // Remove the "main" VCTP
   LoLoop.ToRemove.insert(LoLoop.VCTP);
+  LLVM_DEBUG(dbgs() << "    " << *LoLoop.VCTP);
+  // Remove remaining secondary VCTPs
+  for (MachineInstr *VCTP : LoLoop.SecondaryVCTPs) {
+    // All VCTPs that aren't marked for removal yet should be unpredicated ones.
+    // The predicated ones should have already been marked for removal when
+    // visiting the VPT blocks.
+    if (LoLoop.ToRemove.insert(VCTP).second) {
+      assert(getVPTInstrPredicate(*VCTP) == ARMVCC::None &&
+             "Removing Predicated VCTP without updating the block mask!");
+      LLVM_DEBUG(dbgs() << "    " << *VCTP);
+    }
+  }
 }
 
 void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {

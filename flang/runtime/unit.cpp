@@ -129,6 +129,10 @@ bool ExternalFileUnit::Emit(
     return false;
   }
   WriteFrame(frameOffsetInFile_, recordOffsetInFrame_ + furthestAfter, handler);
+  if (positionInRecord > furthestPositionInRecord) {
+    std::memset(Frame() + furthestPositionInRecord, ' ',
+        positionInRecord - furthestPositionInRecord);
+  }
   std::memcpy(Frame() + positionInRecord, data, bytes);
   positionInRecord += bytes;
   furthestPositionInRecord = furthestAfter;
@@ -189,7 +193,7 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
             ' ', *recordLength - furthestPositionInRecord);
       }
     } else {
-      positionInRecord = furthestPositionInRecord + 1;
+      positionInRecord = furthestPositionInRecord;
       ok &= Emit("\n", 1, handler); // TODO: Windows CR+LF
       frameOffsetInFile_ += recordOffsetInFrame_ + furthestPositionInRecord;
       recordOffsetInFrame_ = 0;

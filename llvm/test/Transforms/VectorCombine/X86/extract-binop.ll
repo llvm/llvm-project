@@ -547,3 +547,29 @@ define i32 @ext_ext_partial_add_reduction_and_extra_add_v4i32(<4 x i32> %x, <4 x
   %x2y210 = add i32 %x2, %y210
   ret i32 %x2y210
 }
+
+define i32 @constant_fold_crash(<4 x i32> %x) {
+; CHECK-LABEL: @constant_fold_crash(
+; CHECK-NEXT:    [[A:%.*]] = extractelement <4 x i32> <i32 16, i32 17, i32 18, i32 19>, i32 1
+; CHECK-NEXT:    [[B:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %a = extractelement <4 x i32> <i32 16, i32 17, i32 18, i32 19>, i32 1
+  %b = extractelement <4 x i32> %x, i32 0
+  %c = add i32 %a, %b
+  ret i32 %c
+}
+
+define float @constant_fold_crash_commute(<4 x float> %x) {
+; CHECK-LABEL: @constant_fold_crash_commute(
+; CHECK-NEXT:    [[A:%.*]] = extractelement <4 x float> <float 1.600000e+01, float 1.700000e+01, float 1.800000e+01, float 1.900000e+01>, i32 3
+; CHECK-NEXT:    [[B:%.*]] = extractelement <4 x float> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[C:%.*]] = fadd float [[B]], [[A]]
+; CHECK-NEXT:    ret float [[C]]
+;
+  %a = extractelement <4 x float> <float 16.0, float 17.0, float 18.0, float 19.0>, i32 3
+  %b = extractelement <4 x float> %x, i32 1
+  %c = fadd float %b, %a
+  ret float %c
+}

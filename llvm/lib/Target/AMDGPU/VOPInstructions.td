@@ -8,6 +8,8 @@
 
 // dummies for outer let
 class LetDummies {
+  bit ReadsModeReg;
+  bit mayRaiseFPException;
   bit isCommutable;
   bit isConvertibleToThreeAddress;
   bit isMoveImm;
@@ -35,7 +37,7 @@ class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
   let hasSideEffects = 0;
   let UseNamedOperandTable = 1;
   let VALU = 1;
-  let Uses = [EXEC];
+  let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
 }
 
 class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
@@ -118,7 +120,10 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let ClampLo = P.HasClampLo;
   let ClampHi = P.HasClampHi;
 
-  let Uses = [EXEC];
+  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+
+  let mayRaiseFPException = ReadsModeReg;
+  let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
 
   let AsmVariantName = AMDGPUAsmVariants.VOP3;
   let AsmMatchConverter =
@@ -490,7 +495,11 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
 
   let VALU = 1;
   let SDWA = 1;
-  let Uses = [EXEC];
+
+  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+
+  let mayRaiseFPException = ReadsModeReg;
+  let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
 
   let SubtargetPredicate = HasSDWA;
   let AssemblerPredicate = HasSDWA;
@@ -607,7 +616,11 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   let VALU = 1;
   let DPP = 1;
   let Size = 8;
-  let Uses = [EXEC];
+
+  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+
+  let mayRaiseFPException = ReadsModeReg;
+  let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
   let isConvergent = 1;
 
   string Mnemonic = OpName;

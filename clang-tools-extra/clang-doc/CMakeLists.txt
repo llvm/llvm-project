@@ -15,8 +15,10 @@ add_clang_library(clangDoc
   Representation.cpp
   Serialize.cpp
   YAMLGenerator.cpp
+)
 
-  LINK_LIBS
+clang_target_link_libraries(clangDoc
+  PRIVATE
   clangAnalysis
   clangAST
   clangASTMatchers

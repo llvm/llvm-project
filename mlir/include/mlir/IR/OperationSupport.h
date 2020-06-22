@@ -47,14 +47,6 @@ class Value;
 class ValueRange;
 template <typename ValueRangeT> class ValueTypeRange;
 
-/// This is an adaptor from a list of values to named operands of OpTy.  In a
-/// generic operation context, e.g., in dialect conversions, an ordered array of
-/// `Value`s is treated as operands of `OpTy`.  This adaptor takes a reference
-/// to the array and provides accessors with the same names as `OpTy` for
-/// operands.  This makes possible to create function templates that operate on
-/// either OpTy or OperandAdaptor<OpTy> seamlessly.
-template <typename OpTy> using OperandAdaptor = typename OpTy::OperandAdaptor;
-
 class OwningRewritePatternList;
 
 //===----------------------------------------------------------------------===//
@@ -309,6 +301,9 @@ public:
 
   /// Return the name of the dialect this operation is registered to.
   StringRef getDialect() const;
+
+  /// Return the operation name with dialect name stripped, if it has one.
+  StringRef stripDialect() const;
 
   /// Return the name of this operation.  This always succeeds.
   StringRef getStringRef() const;

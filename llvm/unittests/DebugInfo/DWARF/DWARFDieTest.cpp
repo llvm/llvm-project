@@ -50,7 +50,7 @@ TEST(DWARFDie, getLocations) {
               - Value:           25
   )";
   Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
-      DWARFYAML::EmitDebugSections(StringRef(yamldata), /*ApplyFixups=*/true,
+      DWARFYAML::emitDebugSections(StringRef(yamldata), /*ApplyFixups=*/true,
                                    /*IsLittleEndian=*/true);
   ASSERT_THAT_EXPECTED(Sections, Succeeded());
   std::vector<uint8_t> Loclists{
@@ -107,7 +107,8 @@ TEST(DWARFDie, getLocations) {
 
   EXPECT_THAT_EXPECTED(
       Die.getLocations(DW_AT_call_data_location),
-      FailedWithMessage("unexpected end of data at offset 0x20"));
+      FailedWithMessage(
+          "unexpected end of data at offset 0x20 while reading [0x20, 0x21)"));
 
   EXPECT_THAT_EXPECTED(
       Die.getLocations(DW_AT_call_data_value),

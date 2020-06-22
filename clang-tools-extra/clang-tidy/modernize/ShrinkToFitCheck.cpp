@@ -42,7 +42,8 @@ void ShrinkToFitCheck::registerMatchers(MatchFinder *Finder) {
           on(hasType(hasCanonicalType(hasDeclaration(namedDecl(
               hasAnyName("std::basic_string", "std::deque", "std::vector")))))),
           callee(cxxMethodDecl(hasName("swap"))),
-          has(ignoringParenImpCasts(memberExpr(hasDescendant(CopyCtorCall)))),
+          has(ignoringParenImpCasts(memberExpr(traverse(
+              ast_type_traits::TK_AsIs, hasDescendant(CopyCtorCall))))),
           hasArgument(0, SwapParam.bind("ContainerToShrink")),
           unless(isInTemplateInstantiation()))
           .bind("CopyAndSwapTrick"),

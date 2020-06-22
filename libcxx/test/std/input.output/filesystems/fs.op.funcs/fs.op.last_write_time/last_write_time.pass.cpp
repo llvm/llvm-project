@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <filesystem>
 
@@ -350,27 +349,28 @@ TEST_CASE(signature_test)
 
 TEST_CASE(read_last_write_time_static_env_test)
 {
+    static_test_env static_env;
     using C = file_time_type::clock;
     file_time_type min = file_time_type::min();
     {
-        file_time_type ret = last_write_time(StaticEnv::File);
+        file_time_type ret = last_write_time(static_env.File);
         TEST_CHECK(ret != min);
         TEST_CHECK(ret < C::now());
-        TEST_CHECK(CompareTime(ret, LastWriteTime(StaticEnv::File)));
+        TEST_CHECK(CompareTime(ret, LastWriteTime(static_env.File)));
 
-        file_time_type ret2 = last_write_time(StaticEnv::SymlinkToFile);
+        file_time_type ret2 = last_write_time(static_env.SymlinkToFile);
         TEST_CHECK(CompareTime(ret, ret2));
-        TEST_CHECK(CompareTime(ret2, LastWriteTime(StaticEnv::SymlinkToFile)));
+        TEST_CHECK(CompareTime(ret2, LastWriteTime(static_env.SymlinkToFile)));
     }
     {
-        file_time_type ret = last_write_time(StaticEnv::Dir);
+        file_time_type ret = last_write_time(static_env.Dir);
         TEST_CHECK(ret != min);
         TEST_CHECK(ret < C::now());
-        TEST_CHECK(CompareTime(ret, LastWriteTime(StaticEnv::Dir)));
+        TEST_CHECK(CompareTime(ret, LastWriteTime(static_env.Dir)));
 
-        file_time_type ret2 = last_write_time(StaticEnv::SymlinkToDir);
+        file_time_type ret2 = last_write_time(static_env.SymlinkToDir);
         TEST_CHECK(CompareTime(ret, ret2));
-        TEST_CHECK(CompareTime(ret2, LastWriteTime(StaticEnv::SymlinkToDir)));
+        TEST_CHECK(CompareTime(ret2, LastWriteTime(static_env.SymlinkToDir)));
     }
 }
 
@@ -564,7 +564,8 @@ TEST_CASE(test_write_max_time) {
 
 TEST_CASE(test_value_on_failure)
 {
-    const path p = StaticEnv::DNE;
+    static_test_env static_env;
+    const path p = static_env.DNE;
     std::error_code ec = GetTestEC();
     TEST_CHECK(last_write_time(p, ec) == file_time_type::min());
     TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));

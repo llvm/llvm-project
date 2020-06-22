@@ -1,4 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=unix.Malloc,core,alpha.core.CallAndMessageUnInitRefArg,debug.ExprInspection -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-output=text -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config core.CallAndMessage:ArgPointeeInitializedness=true
 
 void clang_analyzer_warnIfReached();
 

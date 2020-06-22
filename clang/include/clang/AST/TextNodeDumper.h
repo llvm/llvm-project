@@ -231,6 +231,7 @@ public:
   void VisitCaseStmt(const CaseStmt *Node);
   void VisitConstantExpr(const ConstantExpr *Node);
   void VisitCallExpr(const CallExpr *Node);
+  void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node);
   void VisitCastExpr(const CastExpr *Node);
   void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
   void VisitDeclRefExpr(const DeclRefExpr *Node);
@@ -258,6 +259,9 @@ public:
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *Node);
   void VisitCXXNewExpr(const CXXNewExpr *Node);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *Node);
+  void VisitTypeTraitExpr(const TypeTraitExpr *Node);
+  void VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *Node);
+  void VisitExpressionTraitExpr(const ExpressionTraitExpr *Node);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Node);
   void VisitExprWithCleanups(const ExprWithCleanups *Node);
   void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *Node);

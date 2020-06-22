@@ -22,50 +22,30 @@
 namespace mlir {
 namespace edsc {
 
-/// Constructs a new AffineForOp and captures the associated induction
-/// variable. A Value pointer is passed as the first argument and is the
-/// *only* way to capture the loop induction variable.
-LoopBuilder makeAffineLoopBuilder(Value *iv, ArrayRef<Value> lbs,
-                                  ArrayRef<Value> ubs, int64_t step);
+/// Creates a perfect nest of affine "for" loops, given the list of lower
+/// bounds, upper bounds and steps. The three lists are expected to contain the
+/// same number of elements. Uses the OpBuilder and Location stored in
+/// ScopedContext and assumes they are non-null. The optional "bodyBuilderFn"
+/// callback is called to construct the body of the innermost loop and is passed
+/// the list of loop induction variables, in order from outermost to innermost.
+/// The function is expected to use the builder and location stored in
+/// ScopedContext at the moment of the call. The function should not create
+/// the affine terminator op, which will be added regardless of the
+/// "bodyBuilderFn" being present.
+void affineLoopNestBuilder(
+    ValueRange lbs, ValueRange ubs, ArrayRef<int64_t> steps,
+    function_ref<void(ValueRange)> bodyBuilderFn = nullptr);
 
-/// Explicit nested LoopBuilder. Offers a compressed multi-loop builder to avoid
-/// explicitly writing all the loops in a nest. This simple functionality is
-/// also useful to write rank-agnostic custom ops.
-///
-/// Usage:
-///
-/// ```c++
-///    AffineLoopNestBuilder({&i, &j, &k}, {lb, lb, lb}, {ub, ub, ub}, {1, 1,
-///    1})(
-///      [&](){
-///        ...
-///      });
-/// ```
-///
-/// ```c++
-///    AffineLoopNestBuilder({&i}, {lb}, {ub}, {1})([&](){
-///      AffineLoopNestBuilder({&j}, {lb}, {ub}, {1})([&](){
-///        AffineLoopNestBuilder({&k}, {lb}, {ub}, {1})([&](){
-///          ...
-///        }),
-///      }),
-///    });
-/// ```
-class AffineLoopNestBuilder {
-public:
-  /// This entry point accommodates the fact that AffineForOp implicitly uses
-  /// multiple `lbs` and `ubs` with one single `iv` and `step` to encode `max`
-  /// and and `min` constraints respectively.
-  AffineLoopNestBuilder(Value *iv, ArrayRef<Value> lbs, ArrayRef<Value> ubs,
-                        int64_t step);
-  AffineLoopNestBuilder(MutableArrayRef<Value> ivs, ArrayRef<Value> lbs,
-                        ArrayRef<Value> ubs, ArrayRef<int64_t> steps);
-
-  void operator()(function_ref<void(void)> fun = nullptr);
-
-private:
-  SmallVector<LoopBuilder, 4> loops;
-};
+/// Creates a single affine "for" loop, iterating from max(lbs) to min(ubs) with
+/// the given step. Uses the OpBuilder and Location stored in ScopedContext and
+/// assumes they are non-null. The optional "bodyBuilderFn" callback is called
+/// to construct the body of the loop and is passed the induction variable. The
+/// function is expected to use the builder and location stored in ScopedContext
+/// at the moment of the call. The function should not create the affine
+/// terminator op, which will be added regardless of the "bodyBuilderFn" being
+/// present.
+void affineLoopBuilder(ValueRange lbs, ValueRange ubs, int64_t step,
+                       function_ref<void(Value)> bodyBuilderFn = nullptr);
 
 namespace op {
 

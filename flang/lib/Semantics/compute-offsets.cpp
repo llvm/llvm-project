@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+//===-- lib/Semantics/compute-offsets.cpp -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,7 +24,7 @@ namespace Fortran::semantics {
 class ComputeOffsetsHelper {
 public:
   // TODO: configure based on target
-  static constexpr int maxAlignment{8};
+  static constexpr std::size_t maxAlignment{8};
 
   ComputeOffsetsHelper(SemanticsContext &context) : context_{context} {}
   void Compute() { Compute(context_.globalScope()); }
@@ -32,9 +32,9 @@ public:
 private:
   struct SizeAndAlignment {
     SizeAndAlignment() {}
-    SizeAndAlignment(std::size_t size) : size{size}, alignment{size} {}
-    SizeAndAlignment(std::size_t size, std::size_t alignment)
-        : size{size}, alignment{alignment} {}
+    SizeAndAlignment(std::size_t bytes) : size{bytes}, alignment{bytes} {}
+    SizeAndAlignment(std::size_t bytes, std::size_t align)
+        : size{bytes}, alignment{align} {}
     std::size_t size{0};
     std::size_t alignment{0};
   };
@@ -209,10 +209,13 @@ auto ComputeOffsetsHelper::GetElementSize(
   if (!type) {
     return {};
   }
+  // TODO: The size of procedure pointers is not yet known
+  // and is independent of rank (and probably also the number
+  // of length type parameters).
   if (IsDescriptor(symbol) || IsProcedure(symbol)) {
     int lenParams{0};
     if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-      lenParams = derived->NumLengthParameters();
+      lenParams = CountLenParameters(*derived);
     }
     std::size_t size{
         runtime::Descriptor::SizeInBytes(symbol.Rank(), false, lenParams)};
@@ -264,12 +267,16 @@ std::size_t ComputeOffsetsHelper::Align(std::size_t x, std::size_t alignment) {
 
 auto ComputeOffsetsHelper::GetIntrinsicSizeAndAlignment(
     TypeCategory category, int kind) -> SizeAndAlignment {
-  // TODO: does kind==10 need special handling?
-  std::size_t size{kind == 3 ? 2 : static_cast<std::size_t>(kind)};
+  if (category == TypeCategory::Character) {
+    return {static_cast<std::size_t>(kind)};
+  }
+  std::optional<std::size_t> size{
+      evaluate::DynamicType{category, kind}.MeasureSizeInBytes()};
+  CHECK(size.has_value());
   if (category == TypeCategory::Complex) {
-    return {2 * size, size};
+    return {*size, *size >> 1};
   } else {
-    return {size};
+    return {*size};
   }
 }
 

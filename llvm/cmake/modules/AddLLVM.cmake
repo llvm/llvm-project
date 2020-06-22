@@ -240,8 +240,14 @@ function(add_link_opts target_name)
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,-dead_strip")
       elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                     LINK_FLAGS " -Wl,-z -Wl,discard-unused=sections")
+        # Support for ld -z discard-unused=sections was only added in
+        # Solaris 11.4.
+        include(CheckLinkerFlag)
+        check_linker_flag("-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
+        if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
+          set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                       LINK_FLAGS " -Wl,-z,discard-unused=sections")
+        endif()
       elseif(NOT WIN32 AND NOT LLVM_LINKER_IS_GOLD AND
              NOT ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD|AIX")
         # Object files are compiled with -ffunction-data-sections.
@@ -821,6 +827,10 @@ macro(add_llvm_executable name)
 
   if(NOT ARG_NO_INSTALL_RPATH)
     llvm_setup_rpath(${name})
+  elseif (LLVM_LOCAL_RPATH)
+    set_target_properties(${name} PROPERTIES
+                          BUILD_WITH_INSTALL_RPATH On
+                          INSTALL_RPATH "${LLVM_LOCAL_RPATH}")
   endif()
 
   if(DEFINED windows_resource_file)
@@ -2090,34 +2100,27 @@ function(find_first_existing_vc_file path out_var)
   if(NOT EXISTS "${path}")
     return()
   endif()
-  if(EXISTS "${path}/.svn")
-    set(svn_files
-      "${path}/.svn/wc.db"   # SVN 1.7
-      "${path}/.svn/entries" # SVN 1.6
-    )
-    foreach(file IN LISTS svn_files)
-      if(EXISTS "${file}")
-        set(${out_var} "${file}" PARENT_SCOPE)
-        return()
-      endif()
-    endforeach()
-  else()
-    find_package(Git)
-    if(GIT_FOUND)
-      execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --git-dir
-        WORKING_DIRECTORY ${path}
-        RESULT_VARIABLE git_result
-        OUTPUT_VARIABLE git_output
-        ERROR_QUIET)
-      if(git_result EQUAL 0)
-        string(STRIP "${git_output}" git_output)
-        get_filename_component(git_dir ${git_output} ABSOLUTE BASE_DIR ${path})
-        # Some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
-        if (NOT EXISTS "${git_dir}/logs/HEAD")
-          file(WRITE "${git_dir}/logs/HEAD" "")
+  find_package(Git)
+  if(GIT_FOUND)
+    execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --git-dir
+      WORKING_DIRECTORY ${path}
+      RESULT_VARIABLE git_result
+      OUTPUT_VARIABLE git_output
+      ERROR_QUIET)
+    if(git_result EQUAL 0)
+      string(STRIP "${git_output}" git_output)
+      get_filename_component(git_dir ${git_output} ABSOLUTE BASE_DIR ${path})
+      # Some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
+      if (NOT EXISTS "${git_dir}/logs/HEAD")
+        execute_process(COMMAND ${CMAKE_COMMAND} -E touch HEAD
+          WORKING_DIRECTORY "${git_dir}/logs"
+          RESULT_VARIABLE touch_head_result
+          ERROR_QUIET)
+        if (NOT touch_head_result EQUAL 0)
+          return()
         endif()
-        set(${out_var} "${git_dir}/logs/HEAD" PARENT_SCOPE)
       endif()
+      set(${out_var} "${git_dir}/logs/HEAD" PARENT_SCOPE)
     endif()
   endif()
 endfunction()

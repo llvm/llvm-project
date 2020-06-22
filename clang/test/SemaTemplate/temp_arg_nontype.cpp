@@ -506,3 +506,11 @@ namespace complete_array_from_incomplete {
   extern const char *const kStrs[3] = {};
   Derived<T, kStrs> d;
 }
+
+namespace type_of_pack {
+  template<typename ...T> struct A { // expected-warning 0-1{{extension}}
+    template<T *...V> void f() {
+      g(V.f() ...); // expected-error {{base type 'T *' is not a structure or union}}
+    }
+  };
+}

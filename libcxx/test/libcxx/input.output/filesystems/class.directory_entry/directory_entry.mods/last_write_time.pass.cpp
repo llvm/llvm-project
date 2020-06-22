@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 // ADDITIONAL_COMPILE_FLAGS: -I%{libcxx_src_root}/src/filesystem
 
 // <filesystem>

@@ -493,11 +493,11 @@ Sections:
 ## Use an arbitrary address and size.
     Address: 0x1000
     Size:    0x1
-  - Name:  .bss
-    Type:  SHT_NOBITS
-    Flags: [ SHF_WRITE, SHF_ALLOC ]
+  - Name:   .bss
+    Type:   SHT_NOBITS
+    Flags:  [ SHF_WRITE, SHF_ALLOC ]
 ## Use a size that is larger than the file size.
-    Size:  0x00000000FFFFFFFF
+    ShSize: 0x00000000FFFFFFFF
   - Name:  .data.2
     Type:  SHT_PROGBITS
     Flags: [ SHF_WRITE, SHF_ALLOC ]

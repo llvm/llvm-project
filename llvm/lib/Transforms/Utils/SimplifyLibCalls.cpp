@@ -1563,9 +1563,14 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
     return emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10, LibFunc_exp10f,
                                 LibFunc_exp10l, B, Attrs);
 
-  // pow(n, x) -> exp2(log2(n) * x)
-  if (Pow->hasApproxFunc() && Pow->hasNoNaNs() && Pow->hasNoInfs() &&
-      BaseF->isFiniteNonZero() && !BaseF->isNegative()) {
+  // pow(x, y) -> exp2(log2(x) * y)
+  if (Pow->hasApproxFunc() && Pow->hasNoNaNs() && BaseF->isFiniteNonZero() &&
+      !BaseF->isNegative()) {
+    // pow(1, inf) is defined to be 1 but exp2(log2(1) * inf) evaluates to NaN.
+    // Luckily optimizePow has already handled the x == 1 case.
+    assert(!match(Base, m_FPOne()) &&
+           "pow(1.0, y) should have been simplified earlier!");
+
     Value *Log = nullptr;
     if (Ty->isFloatTy())
       Log = ConstantFP::get(Ty, std::log2(BaseF->convertToFloat()));
@@ -2102,7 +2107,7 @@ static void insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
     // x86_64 can't use {float, float} since that would be returned in both
     // xmm0 and xmm1, which isn't what a real struct would do.
     ResTy = T.getArch() == Triple::x86_64
-                ? static_cast<Type *>(VectorType::get(ArgTy, 2))
+                ? static_cast<Type *>(FixedVectorType::get(ArgTy, 2))
                 : static_cast<Type *>(StructType::get(ArgTy, ArgTy));
   } else {
     Name = "__sincospi_stret";
@@ -2925,6 +2930,8 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return replaceUnaryCall(CI, Builder, Intrinsic::floor);
   case LibFunc_round:
     return replaceUnaryCall(CI, Builder, Intrinsic::round);
+  case LibFunc_roundeven:
+    return replaceUnaryCall(CI, Builder, Intrinsic::roundeven);
   case LibFunc_nearbyint:
     return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
   case LibFunc_rint:

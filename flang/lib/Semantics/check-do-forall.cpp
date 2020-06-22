@@ -208,7 +208,7 @@ public:
       const char *reason{"block exit"};
       for (auto &pair : blockScope) {
         const Symbol &entity{*pair.second};
-        if (IsAllocatable(entity) && !entity.attrs().test(Attr::SAVE) &&
+        if (IsAllocatable(entity) && !IsSaved(entity) &&
             MightDeallocatePolymorphic(entity, DeallocateAll)) {
           SayDeallocateOfPolymorph(endBlockStmt.source, entity, reason);
         }
@@ -1034,7 +1034,8 @@ struct CollectActualArgumentsHelper
   CollectActualArgumentsHelper() : Base{*this} {}
   using Base::operator();
   ActualArgumentSet operator()(const evaluate::ActualArgument &arg) const {
-    return ActualArgumentSet{arg};
+    return Combine(ActualArgumentSet{arg},
+        CollectActualArgumentsHelper{}(arg.UnwrapExpr()));
   }
 };
 
@@ -1044,11 +1045,16 @@ template <typename A> ActualArgumentSet CollectActualArguments(const A &x) {
 
 template ActualArgumentSet CollectActualArguments(const SomeExpr &);
 
+void DoForallChecker::Enter(const parser::Expr &parsedExpr) { ++exprDepth_; }
+
 void DoForallChecker::Leave(const parser::Expr &parsedExpr) {
-  if (const SomeExpr * expr{GetExpr(parsedExpr)}) {
-    ActualArgumentSet argSet{CollectActualArguments(*expr)};
-    for (const evaluate::ActualArgumentRef &argRef : argSet) {
-      CheckIfArgIsDoVar(*argRef, parsedExpr.source, context_);
+  CHECK(exprDepth_ > 0);
+  if (--exprDepth_ == 0) { // Only check top level expressions
+    if (const SomeExpr * expr{GetExpr(parsedExpr)}) {
+      ActualArgumentSet argSet{CollectActualArguments(*expr)};
+      for (const evaluate::ActualArgumentRef &argRef : argSet) {
+        CheckIfArgIsDoVar(*argRef, parsedExpr.source, context_);
+      }
     }
   }
 }

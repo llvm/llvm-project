@@ -310,7 +310,8 @@ protected:
       *m_process; ///< The process that this dynamic loader plug-in is tracking.
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(DynamicLoader);
+  DynamicLoader(const DynamicLoader &) = delete;
+  const DynamicLoader &operator=(const DynamicLoader &) = delete;
 };
 
 } // namespace lldb_private

@@ -1385,6 +1385,7 @@ private:
     // Thus, one path from the guard goes to the preheader for FC0 (and thus
     // executes the new fused loop) and the other path goes to the NonLoopBlock
     // for FC1 (where FC1 guard would have gone if FC1 was not executed).
+    FC1NonLoopBlock->replacePhiUsesWith(FC1GuardBlock, FC0GuardBlock);
     FC0.GuardBranch->replaceUsesOfWith(FC0NonLoopBlock, FC1NonLoopBlock);
     FC0.ExitBlock->getTerminator()->replaceUsesOfWith(FC1GuardBlock,
                                                       FC1.Header);

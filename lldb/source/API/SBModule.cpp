@@ -683,6 +683,13 @@ lldb::SBAddress SBModule::GetObjectFileEntryPointAddress() const {
   return LLDB_RECORD_RESULT(sb_addr);
 }
 
+uint32_t SBModule::GetNumberAllocatedModules() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(uint32_t, SBModule,
+                                    GetNumberAllocatedModules);
+
+  return Module::GetNumberAllocatedModules();
+}
+
 namespace lldb_private {
 namespace repro {
 
@@ -757,6 +764,8 @@ void RegisterMethods<SBModule>(Registry &R) {
                              GetObjectFileHeaderAddress, ());
   LLDB_REGISTER_METHOD_CONST(lldb::SBAddress, SBModule,
                              GetObjectFileEntryPointAddress, ());
+  LLDB_REGISTER_STATIC_METHOD(uint32_t, SBModule, GetNumberAllocatedModules,
+                              ());
 }
 
 }

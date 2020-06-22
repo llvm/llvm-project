@@ -948,3 +948,18 @@ bool expr_with_cleanups(A &S) {
 }
 // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional return
 // CHECK-FIXES: S == (A)S;{{$}}
+
+template <bool B>
+void ignoreInstantiations() {
+  if (B) {
+    return;
+  } else {
+    return;
+  }
+}
+
+void instantiate() {
+  // Just make sure the check isn't fooled by template instantiations.
+  ignoreInstantiations<true>();
+  ignoreInstantiations<false>();
+}

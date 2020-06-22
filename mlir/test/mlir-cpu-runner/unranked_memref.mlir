@@ -1,24 +1,20 @@
 // RUN: mlir-opt %s -convert-linalg-to-loops -convert-linalg-to-llvm -convert-std-to-llvm | mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext,%linalg_test_lib_dir/libmlir_test_cblas%shlibext,%linalg_test_lib_dir/libmlir_test_cblas_interface%shlibext | FileCheck %s
 
 // CHECK: rank = 2
-// CHECK: rank = 2
 // CHECK-SAME: sizes = [10, 3]
 // CHECK-SAME: strides = [3, 1]
 // CHECK-COUNT-10: [10, 10, 10]
 //
-// CHECK: rank = 2
 // CHECK: rank = 2
 // CHECK-SAME: sizes = [10, 3]
 // CHECK-SAME: strides = [3, 1]
 // CHECK-COUNT-10: [5, 5, 5]
 //
 // CHECK: rank = 2
-// CHECK: rank = 2
 // CHECK-SAME: sizes = [10, 3]
 // CHECK-SAME: strides = [3, 1]
 // CHECK-COUNT-10: [2, 2, 2]
 //
-// CHECK: rank = 0
 // CHECK: rank = 0
 // 122 is ASCII for 'z'.
 // CHECK: [z]

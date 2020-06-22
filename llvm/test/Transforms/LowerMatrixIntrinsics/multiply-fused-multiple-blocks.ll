@@ -35,7 +35,7 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <6 x double>, align 64
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <6 x double>* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <6 x double>* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP3]], i8* nonnull align 16 dereferenceable(48) [[TMP4]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP3]], i8* nonnull align 8 dereferenceable(48) [[TMP4]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <6 x double>* [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
@@ -52,7 +52,7 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP8:%.*]] = alloca <6 x double>, align 64
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <6 x double>* [[TMP8]] to i8*
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <6 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP9]], i8* nonnull align 16 dereferenceable(48) [[TMP10]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP9]], i8* nonnull align 8 dereferenceable(48) [[TMP10]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS5]]
 ; CHECK:       no_alias3:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <6 x double>* [ [[B]], [[NO_ALIAS]] ], [ [[B]], [[ALIAS_CONT3]] ], [ [[TMP8]], [[COPY4]] ]
@@ -172,7 +172,7 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP38:%.*]] = alloca <6 x double>, align 64
 ; CHECK-NEXT:    [[TMP39:%.*]] = bitcast <6 x double>* [[TMP38]] to i8*
 ; CHECK-NEXT:    [[TMP40:%.*]] = bitcast <6 x double>* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP39]], i8* nonnull align 16 dereferenceable(48) [[TMP40]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP39]], i8* nonnull align 8 dereferenceable(48) [[TMP40]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS96]]
 ; CHECK:       no_alias93:
 ; CHECK-NEXT:    [[TMP41:%.*]] = phi <6 x double>* [ [[A]], [[END]] ], [ [[A]], [[ALIAS_CONT94]] ], [ [[TMP38]], [[COPY95]] ]
@@ -189,7 +189,7 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP44:%.*]] = alloca <6 x double>, align 64
 ; CHECK-NEXT:    [[TMP45:%.*]] = bitcast <6 x double>* [[TMP44]] to i8*
 ; CHECK-NEXT:    [[TMP46:%.*]] = bitcast <6 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP45]], i8* nonnull align 16 dereferenceable(48) [[TMP46]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP45]], i8* nonnull align 8 dereferenceable(48) [[TMP46]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS103]]
 ; CHECK:       no_alias100:
 ; CHECK-NEXT:    [[TMP47:%.*]] = phi <6 x double>* [ [[B]], [[NO_ALIAS96]] ], [ [[B]], [[ALIAS_CONT101]] ], [ [[TMP44]], [[COPY102]] ]
@@ -275,28 +275,28 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <6 x double>, <6 x double>* %A, align 16
-  %b = load <6 x double>, <6 x double>* %B, align 16
+  %a = load <6 x double>, <6 x double>* %A, align 8
+  %b = load <6 x double>, <6 x double>* %B, align 8
   %c = call <9 x double> @llvm.matrix.multiply(<6 x double> %a, <6 x double> %b, i32 3, i32 2, i32 3)
-  store <9 x double> %c, <9 x double>* %C, align 16
+  store <9 x double> %c, <9 x double>* %C, align 8
 
   br i1 %cond, label %true, label %false
 
 true:
   %a.add = fadd <6 x double> %a, %a
-  store <6 x double> %a.add, <6 x double>* %A
+  store <6 x double> %a.add, <6 x double>* %A, align 8
   br label %end
 
 false:
   %b.add = fadd <6 x double> %b, %b
-  store <6 x double> %b.add, <6 x double>* %B
+  store <6 x double> %b.add, <6 x double>* %B, align 8
   br label %end
 
 end:
-  %a.2 = load <6 x double>, <6 x double>* %A, align 16
-  %b.2 = load <6 x double>, <6 x double>* %B, align 16
+  %a.2 = load <6 x double>, <6 x double>* %A, align 8
+  %b.2 = load <6 x double>, <6 x double>* %B, align 8
   %c.2 = call <9 x double> @llvm.matrix.multiply(<6 x double> %a.2, <6 x double> %b.2, i32 3, i32 2, i32 3)
-  store <9 x double> %c.2, <9 x double>* %C, align 16
+  store <9 x double> %c.2, <9 x double>* %C, align 8
   ret void
 }
 

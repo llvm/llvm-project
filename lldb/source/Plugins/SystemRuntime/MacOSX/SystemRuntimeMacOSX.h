@@ -286,7 +286,8 @@ private:
   lldb::addr_t m_dispatch_voucher_offsets_addr;
   struct LibdispatchVoucherOffsets m_libdispatch_voucher_offsets;
 
-  DISALLOW_COPY_AND_ASSIGN(SystemRuntimeMacOSX);
+  SystemRuntimeMacOSX(const SystemRuntimeMacOSX &) = delete;
+  const SystemRuntimeMacOSX &operator=(const SystemRuntimeMacOSX &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYSTEMRUNTIME_MACOSX_SYSTEMRUNTIMEMACOSX_H

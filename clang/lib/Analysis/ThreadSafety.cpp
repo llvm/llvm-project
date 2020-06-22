@@ -905,11 +905,7 @@ public:
   ScopedLockableFactEntry(const CapabilityExpr &CE, SourceLocation Loc)
       : FactEntry(CE, LK_Exclusive, Loc, false) {}
 
-  void addExclusiveLock(const CapabilityExpr &M) {
-    UnderlyingMutexes.emplace_back(M.sexpr(), UCK_Acquired);
-  }
-
-  void addSharedLock(const CapabilityExpr &M) {
+  void addLock(const CapabilityExpr &M) {
     UnderlyingMutexes.emplace_back(M.sexpr(), UCK_Acquired);
   }
 
@@ -999,7 +995,10 @@ private:
       FSet.addLock(FactMan, std::make_unique<LockableFactEntry>(
                                 !Cp, LK_Exclusive, loc));
     } else if (Handler) {
-      Handler->handleUnmatchedUnlock(DiagKind, Cp.toString(), loc);
+      SourceLocation PrevLoc;
+      if (const FactEntry *Neg = FSet.findLock(FactMan, !Cp))
+        PrevLoc = Neg->loc();
+      Handler->handleUnmatchedUnlock(DiagKind, Cp.toString(), loc, PrevLoc);
     }
   }
 };
@@ -1326,7 +1325,10 @@ void ThreadSafetyAnalyzer::removeLock(FactSet &FSet, const CapabilityExpr &Cp,
 
   const FactEntry *LDat = FSet.findLock(FactMan, Cp);
   if (!LDat) {
-    Handler.handleUnmatchedUnlock(DiagKind, Cp.toString(), UnlockLoc);
+    SourceLocation PrevLoc;
+    if (const FactEntry *Neg = FSet.findLock(FactMan, !Cp))
+      PrevLoc = Neg->loc();
+    Handler.handleUnmatchedUnlock(DiagKind, Cp.toString(), UnlockLoc, PrevLoc);
     return;
   }
 
@@ -1801,7 +1803,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
   SourceLocation Loc = Exp->getExprLoc();
   CapExprSet ExclusiveLocksToAdd, SharedLocksToAdd;
   CapExprSet ExclusiveLocksToRemove, SharedLocksToRemove, GenericLocksToRemove;
-  CapExprSet ScopedExclusiveReqs, ScopedSharedReqs;
+  CapExprSet ScopedReqsAndExcludes;
   StringRef CapDiagKind = "mutex";
 
   // Figure out if we're constructing an object of scoped lockable class
@@ -1892,19 +1894,20 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
                              POK_FunctionCall, ClassifyDiagnostic(A),
                              Exp->getExprLoc());
           // use for adopting a lock
-          if (isScopedVar) {
-            Analyzer->getMutexIDs(A->isShared() ? ScopedSharedReqs
-                                                : ScopedExclusiveReqs,
-                                  A, Exp, D, VD);
-          }
+          if (isScopedVar)
+            Analyzer->getMutexIDs(ScopedReqsAndExcludes, A, Exp, D, VD);
         }
         break;
       }
 
       case attr::LocksExcluded: {
         const auto *A = cast<LocksExcludedAttr>(At);
-        for (auto *Arg : A->args())
+        for (auto *Arg : A->args()) {
           warnIfMutexHeld(D, Exp, Arg, ClassifyDiagnostic(A));
+          // use for deferring a lock
+          if (isScopedVar)
+            Analyzer->getMutexIDs(ScopedReqsAndExcludes, A, Exp, D, VD);
+        }
         break;
       }
 
@@ -1944,13 +1947,11 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
 
     auto ScopedEntry = std::make_unique<ScopedLockableFactEntry>(Scp, MLoc);
     for (const auto &M : ExclusiveLocksToAdd)
-      ScopedEntry->addExclusiveLock(M);
-    for (const auto &M : ScopedExclusiveReqs)
-      ScopedEntry->addExclusiveLock(M);
+      ScopedEntry->addLock(M);
     for (const auto &M : SharedLocksToAdd)
-      ScopedEntry->addSharedLock(M);
-    for (const auto &M : ScopedSharedReqs)
-      ScopedEntry->addSharedLock(M);
+      ScopedEntry->addLock(M);
+    for (const auto &M : ScopedReqsAndExcludes)
+      ScopedEntry->addLock(M);
     for (const auto &M : ExclusiveLocksToRemove)
       ScopedEntry->addExclusiveUnlock(M);
     for (const auto &M : SharedLocksToRemove)

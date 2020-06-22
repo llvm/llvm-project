@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <filesystem>
 
@@ -45,6 +44,7 @@ TEST_CASE(signature_test)
 
 TEST_CASE(test_error_reporting)
 {
+    static_test_env static_env;
     auto checkThrow = [](path const& f, const std::error_code& ec)
     {
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -63,8 +63,8 @@ TEST_CASE(test_error_reporting)
     };
     const path cases[] = {
         "",
-        StaticEnv::DNE,
-        StaticEnv::BadSymlink
+        static_env.DNE,
+        static_env.BadSymlink
     };
     for (auto& p : cases) {
         const auto expect = static_cast<std::uintmax_t>(-1);
@@ -80,11 +80,13 @@ TEST_CASE(test_error_reporting)
 
 TEST_CASE(basic_space_test)
 {
+    static_test_env static_env;
+
     // All the test cases should reside on the same filesystem and therefore
     // should have the same expected result. Compute this expected result
     // one and check that it looks semi-sane.
     struct statvfs expect;
-    TEST_REQUIRE(::statvfs(StaticEnv::Dir.c_str(), &expect) != -1);
+    TEST_REQUIRE(::statvfs(static_env.Dir.c_str(), &expect) != -1);
     TEST_CHECK(expect.f_bavail > 0);
     TEST_CHECK(expect.f_bfree > 0);
     TEST_CHECK(expect.f_bsize > 0);
@@ -106,11 +108,11 @@ TEST_CASE(basic_space_test)
     // Currently 5% of capacity
     const std::uintmax_t delta = expect_capacity / 20;
     const path cases[] = {
-        StaticEnv::File,
-        StaticEnv::Dir,
-        StaticEnv::Dir2,
-        StaticEnv::SymlinkToFile,
-        StaticEnv::SymlinkToDir
+        static_env.File,
+        static_env.Dir,
+        static_env.Dir2,
+        static_env.SymlinkToFile,
+        static_env.SymlinkToDir
     };
     for (auto& p : cases) {
         std::error_code ec = GetTestEC();

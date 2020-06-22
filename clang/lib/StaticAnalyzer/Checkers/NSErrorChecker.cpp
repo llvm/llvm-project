@@ -144,14 +144,14 @@ namespace {
 
 class NSErrorDerefBug : public BugType {
 public:
-  NSErrorDerefBug(const CheckerBase *Checker)
+  NSErrorDerefBug(const CheckerNameRef Checker)
       : BugType(Checker, "NSError** null dereference",
                 "Coding conventions (Apple)") {}
 };
 
 class CFErrorDerefBug : public BugType {
 public:
-  CFErrorDerefBug(const CheckerBase *Checker)
+  CFErrorDerefBug(const CheckerNameRef Checker)
       : BugType(Checker, "CFErrorRef* null dereference",
                 "Coding conventions (Apple)") {}
 };
@@ -166,9 +166,9 @@ class NSOrCFErrorDerefChecker
   mutable std::unique_ptr<NSErrorDerefBug> NSBT;
   mutable std::unique_ptr<CFErrorDerefBug> CFBT;
 public:
-  bool ShouldCheckNSError, ShouldCheckCFError;
-  NSOrCFErrorDerefChecker() : NSErrorII(nullptr), CFErrorII(nullptr),
-                              ShouldCheckNSError(0), ShouldCheckCFError(0) { }
+  DefaultBool ShouldCheckNSError, ShouldCheckCFError;
+  CheckerNameRef NSErrorName, CFErrorName;
+  NSOrCFErrorDerefChecker() : NSErrorII(nullptr), CFErrorII(nullptr) {}
 
   void checkLocation(SVal loc, bool isLoad, const Stmt *S,
                      CheckerContext &C) const;
@@ -276,12 +276,12 @@ void NSOrCFErrorDerefChecker::checkEvent(ImplicitNullDerefEvent event) const {
   BugType *bug = nullptr;
   if (isNSError) {
     if (!NSBT)
-      NSBT.reset(new NSErrorDerefBug(this));
+      NSBT.reset(new NSErrorDerefBug(NSErrorName));
     bug = NSBT.get();
   }
   else {
     if (!CFBT)
-      CFBT.reset(new CFErrorDerefBug(this));
+      CFBT.reset(new CFErrorDerefBug(CFErrorName));
     bug = CFBT.get();
   }
   BR.emitReport(
@@ -331,6 +331,7 @@ void ento::registerNSErrorChecker(CheckerManager &mgr) {
   mgr.registerChecker<NSErrorMethodChecker>();
   NSOrCFErrorDerefChecker *checker = mgr.getChecker<NSOrCFErrorDerefChecker>();
   checker->ShouldCheckNSError = true;
+  checker->NSErrorName = mgr.getCurrentCheckerName();
 }
 
 bool ento::shouldRegisterNSErrorChecker(const CheckerManager &mgr) {
@@ -341,6 +342,7 @@ void ento::registerCFErrorChecker(CheckerManager &mgr) {
   mgr.registerChecker<CFErrorFunctionChecker>();
   NSOrCFErrorDerefChecker *checker = mgr.getChecker<NSOrCFErrorDerefChecker>();
   checker->ShouldCheckCFError = true;
+  checker->CFErrorName = mgr.getCurrentCheckerName();
 }
 
 bool ento::shouldRegisterCFErrorChecker(const CheckerManager &mgr) {

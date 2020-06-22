@@ -476,7 +476,7 @@ LoopConvertCheck::RangeDescriptor::RangeDescriptor()
 
 LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), TUInfo(new TUTrackingInfo),
-      MaxCopySize(std::stoull(Options.get("MaxCopySize", "16"))),
+      MaxCopySize(Options.get("MaxCopySize", 16ULL)),
       MinConfidence(Options.get("MinConfidence", getConfidenceMapping(),
                                 Confidence::CL_Reasonable)),
       NamingStyle(Options.get("NamingStyle", getStyleMapping(),
@@ -489,9 +489,12 @@ void LoopConvertCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void LoopConvertCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(makeArrayLoopMatcher(), this);
-  Finder->addMatcher(makeIteratorLoopMatcher(), this);
-  Finder->addMatcher(makePseudoArrayLoopMatcher(), this);
+  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs, makeArrayLoopMatcher()),
+                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs, makeIteratorLoopMatcher()), this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs, makePseudoArrayLoopMatcher()), this);
 }
 
 /// Given the range of a single declaration, such as:
@@ -618,6 +621,7 @@ void LoopConvertCheck::doConversion(
   QualType Type = Context->getAutoDeductType();
   if (!Descriptor.ElemType.isNull() && Descriptor.ElemType->isFundamentalType())
     Type = Descriptor.ElemType.getUnqualifiedType();
+  Type = Type.getDesugaredType(*Context);
 
   // If the new variable name is from the aliased variable, then the reference
   // type for the new variable should only be used if the aliased variable was
@@ -897,6 +901,7 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   // Find out which qualifiers we have to use in the loop range.
+  TraversalKindScope RAII(*Context, ast_type_traits::TK_AsIs);
   const UsageResult &Usages = Finder.getUsages();
   determineRangeDescriptor(Context, Nodes, Loop, FixerKind, ContainerExpr,
                            Usages, Descriptor);

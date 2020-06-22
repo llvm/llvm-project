@@ -206,6 +206,15 @@ func @mixed_load(%mixed : memref<42x?xf32>, %i : index, %j : index) {
 }
 
 // CHECK-LABEL: func @dynamic_load(
+// CHECK-SAME:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG2:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG3:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG4:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG5:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG6:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[I:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
 //  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
@@ -222,6 +231,15 @@ func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
 }
 
 // CHECK-LABEL: func @prefetch
+// CHECK-SAME:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG2:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG3:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG4:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG5:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG6:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[I:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
 // CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
@@ -251,6 +269,15 @@ func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
 }
 
 // CHECK-LABEL: func @dynamic_store
+// CHECK-SAME:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG2:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG3:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG4:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG5:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG6:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[I:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %val : f32) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
 //  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
@@ -267,6 +294,15 @@ func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %val : f
 }
 
 // CHECK-LABEL: func @mixed_store
+// CHECK-SAME:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG2:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG3:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG4:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG5:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG6:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[I:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val : f32) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
 //  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
@@ -355,15 +391,43 @@ func @memref_cast_unranked_to_ranked(%arg : memref<*xf32>) {
 
 // CHECK-LABEL: func @mixed_memref_dim
 func @mixed_memref_dim(%mixed : memref<42x?x?x13x?xf32>) {
-//       CHECK:  llvm.mlir.constant(42 : index) : !llvm.i64
-  %0 = dim %mixed, 0 : memref<42x?x?x13x?xf32>
-//  CHECK-NEXT:  llvm.extractvalue %[[ld:.*]][3, 1] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
-  %1 = dim %mixed, 1 : memref<42x?x?x13x?xf32>
-//  CHECK-NEXT:  llvm.extractvalue %[[ld]][3, 2] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
-  %2 = dim %mixed, 2 : memref<42x?x?x13x?xf32>
-//  CHECK-NEXT:  llvm.mlir.constant(13 : index) : !llvm.i64
-  %3 = dim %mixed, 3 : memref<42x?x?x13x?xf32>
-//  CHECK-NEXT:  llvm.extractvalue %[[ld]][3, 4] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
-  %4 = dim %mixed, 4 : memref<42x?x?x13x?xf32>
+// CHECK: llvm.mlir.constant(42 : index) : !llvm.i64
+  %c0 = constant 0 : index
+  %0 = dim %mixed, %c0 : memref<42x?x?x13x?xf32>
+// CHECK: llvm.extractvalue %[[ld:.*]][3, 1] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
+  %c1 = constant 1 : index
+  %1 = dim %mixed, %c1 : memref<42x?x?x13x?xf32>
+// CHECK: llvm.extractvalue %[[ld]][3, 2] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
+  %c2 = constant 2 : index
+  %2 = dim %mixed, %c2 : memref<42x?x?x13x?xf32>
+// CHECK: llvm.mlir.constant(13 : index) : !llvm.i64
+  %c3 = constant 3 : index
+  %3 = dim %mixed, %c3 : memref<42x?x?x13x?xf32>
+// CHECK: llvm.extractvalue %[[ld]][3, 4] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
+  %c4 = constant 4 : index
+  %4 = dim %mixed, %c4 : memref<42x?x?x13x?xf32>
   return
+}
+
+// CHECK-LABEL: @memref_dim_with_dyn_index
+// CHECK-SAME: %[[ALLOC_PTR:.*]]: !llvm<"float*">, %[[ALIGN_PTR:.*]]: !llvm<"float*">, %[[OFFSET:.*]]: !llvm.i64, %[[SIZE0:.*]]: !llvm.i64, %[[SIZE1:.*]]: !llvm.i64, %[[STRIDE0:.*]]: !llvm.i64, %[[STRIDE1:.*]]: !llvm.i64, %[[IDX:.*]]: !llvm.i64) -> !llvm.i64
+func @memref_dim_with_dyn_index(%arg : memref<3x?xf32>, %idx : index) -> index {
+  // CHECK-NEXT: %[[DESCR0:.*]] = llvm.mlir.undef : [[DESCR_TY:!llvm<"{ float\*, float\*, i64, \[2 x i64\], \[2 x i64\] }">]]
+  // CHECK-NEXT: %[[DESCR1:.*]] = llvm.insertvalue %[[ALLOC_PTR]], %[[DESCR0]][0] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR2:.*]] = llvm.insertvalue %[[ALIGN_PTR]], %[[DESCR1]][1] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR3:.*]] = llvm.insertvalue %[[OFFSET]],    %[[DESCR2]][2] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR4:.*]] = llvm.insertvalue %[[SIZE0]],     %[[DESCR3]][3, 0] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR5:.*]] = llvm.insertvalue %[[STRIDE0]],   %[[DESCR4]][4, 0] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR6:.*]] = llvm.insertvalue %[[SIZE1]],     %[[DESCR5]][3, 1] : [[DESCR_TY]]
+  // CHECK-NEXT: %[[DESCR7:.*]] = llvm.insertvalue %[[STRIDE1]],   %[[DESCR6]][4, 1] : [[DESCR_TY]]
+  // CHECK-DAG: %[[C0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
+  // CHECK-DAG: %[[C1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+  // CHECK-DAG: %[[SIZES:.*]] = llvm.extractvalue %[[DESCR7]][3] : [[DESCR_TY]]
+  // CHECK-DAG: %[[SIZES_PTR:.*]] = llvm.alloca %[[C1]] x !llvm<"[2 x i64]"> : (!llvm.i64) -> !llvm<"[2 x i64]*">
+  // CHECK-DAG: llvm.store %[[SIZES]], %[[SIZES_PTR]] : !llvm<"[2 x i64]*">
+  // CHECK-DAG: %[[RESULT_PTR:.*]] = llvm.getelementptr %[[SIZES_PTR]][%[[C0]], %[[IDX]]] : (!llvm<"[2 x i64]*">, !llvm.i64, !llvm.i64) -> !llvm<"i64*">
+  // CHECK-DAG: %[[RESULT:.*]] = llvm.load %[[RESULT_PTR]] : !llvm<"i64*">
+  // CHECK-DAG: llvm.return %[[RESULT]] : !llvm.i64
+  %result = dim %arg, %idx : memref<3x?xf32>
+  return %result : index
 }

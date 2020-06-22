@@ -58,14 +58,17 @@ void StrCatAppendCheck::registerMatchers(MatchFinder *Finder) {
   // StrCat on the RHS. The first argument of the StrCat call should be the same
   // as the LHS. Ignore calls from template instantiations.
   Finder->addMatcher(
-      cxxOperatorCallExpr(
-          unless(isInTemplateInstantiation()), hasOverloadedOperatorName("="),
-          hasArgument(0, declRefExpr(to(decl().bind("LHS")))),
-          hasArgument(1, IgnoringTemporaries(
-                             callExpr(callee(StrCat), hasArgument(0, AlphaNum),
-                                      unless(HasAnotherReferenceToLhs))
-                                 .bind("Call"))))
-          .bind("Op"),
+      traverse(ast_type_traits::TK_AsIs,
+               cxxOperatorCallExpr(
+                   unless(isInTemplateInstantiation()),
+                   hasOverloadedOperatorName("="),
+                   hasArgument(0, declRefExpr(to(decl().bind("LHS")))),
+                   hasArgument(
+                       1, IgnoringTemporaries(
+                              callExpr(callee(StrCat), hasArgument(0, AlphaNum),
+                                       unless(HasAnotherReferenceToLhs))
+                                  .bind("Call"))))
+                   .bind("Op")),
       this);
 }
 

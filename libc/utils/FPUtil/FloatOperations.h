@@ -40,67 +40,21 @@ static inline typename FloatProperties<T>::BitsType absBits(T x) {
   return valueAsBits(x) & (~FloatProperties<T>::signMask);
 }
 
-// Return the zero adjusted exponent value of x.
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
-int getExponent(T x) {
-  using Properties = FloatProperties<T>;
-  using BitsType = typename Properties::BitsType;
-  BitsType bits = absBits(x);
+template <typename BitsType>
+static inline int getExponentFromBits(BitsType bits) {
+  using FPType = typename FloatType<BitsType>::Type;
+  using Properties = FloatProperties<FPType>;
+  bits &= Properties::exponentMask;
   int e = (bits >> Properties::mantissaWidth); // Shift out the mantissa.
   e -= Properties::exponentOffset;             // Zero adjust.
   return e;
 }
 
-// Return true if x is infinity (positive or negative.)
+// Return the zero adjusted exponent value of x.
 template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
-static inline bool isInf(T x) {
-  using Properties = FloatProperties<T>;
-  using BitsType = typename FloatProperties<T>::BitsType;
-  BitsType bits = valueAsBits(x);
-  return ((bits & BitPatterns<T>::inf) == BitPatterns<T>::inf) &&
-         ((bits & Properties::mantissaMask) == 0);
-}
-
-// Return true if x is a NAN (quiet or signalling.)
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
-static inline bool isNaN(T x) {
-  using Properties = FloatProperties<T>;
-  using BitsType = typename FloatProperties<T>::BitsType;
-  BitsType bits = valueAsBits(x);
-  return ((bits & BitPatterns<T>::inf) == BitPatterns<T>::inf) &&
-         ((bits & Properties::mantissaMask) != 0);
-}
-
-// Return true if x is a quiet NAN.
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
-static inline bool isQuietNaN(T x) {
-  using Properties = FloatProperties<T>;
-  using BitsType = typename FloatProperties<T>::BitsType;
-  BitsType bits = valueAsBits(x);
-  return ((bits & BitPatterns<T>::inf) == BitPatterns<T>::inf) &&
-         ((bits & Properties::quietNaNMask) != 0);
-}
-
-// Return true if x is a quiet NAN with sign bit set.
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
-static inline bool isNegativeQuietNaN(T x) {
-  using Properties = FloatProperties<T>;
-  using BitsType = typename FloatProperties<T>::BitsType;
-  BitsType bits = valueAsBits(x);
-  return ((bits & BitPatterns<T>::negInf) == BitPatterns<T>::negInf) &&
-         ((bits & Properties::quietNaNMask) != 0);
-}
-
-// Return the absolute value of x.
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
-static inline T abs(T x) {
-  return valueFromBits(absBits(x));
+static inline int getExponent(T x) {
+  return getExponentFromBits(valueAsBits(x));
 }
 
 } // namespace fputil

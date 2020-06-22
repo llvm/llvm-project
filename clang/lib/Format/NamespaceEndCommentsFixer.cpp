@@ -205,6 +205,23 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
   const SourceManager &SourceMgr = Env.getSourceManager();
   AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
   tooling::Replacements Fixes;
+
+  // Spin through the lines and ensure we have balanced braces.
+  int Braces = 0;
+  for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
+    FormatToken *Tok = AnnotatedLines[I]->First;
+    while (Tok) {
+      Braces += Tok->is(tok::l_brace) ? 1 : Tok->is(tok::r_brace) ? -1 : 0;
+      Tok = Tok->Next;
+    }
+  }
+  // Don't attempt to comment unbalanced braces or this can
+  // lead to comments being placed on the closing brace which isn't
+  // the matching brace of the namespace. (occurs during incomplete editing).
+  if (Braces != 0) {
+    return {Fixes, 0};
+  }
+
   std::string AllNamespaceNames = "";
   size_t StartLineIndex = SIZE_MAX;
   StringRef NamespaceTokenText;

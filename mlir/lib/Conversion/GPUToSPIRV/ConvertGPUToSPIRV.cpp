@@ -67,6 +67,18 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Pattern lowering subgoup size/id to loading SPIR-V invocation
+/// builtin variables.
+template <typename SourceOp, spirv::BuiltIn builtin>
+class SingleDimLaunchConfigConversion : public SPIRVOpLowering<SourceOp> {
+public:
+  using SPIRVOpLowering<SourceOp>::SPIRVOpLowering;
+
+  LogicalResult
+  matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// This is separate because in Vulkan workgroup size is exposed to shaders via
 /// a constant with WorkgroupSize decoration. So here we cannot generate a
 /// builtin variable; instead the information in the `spv.entry_point_abi`
@@ -128,7 +140,7 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   // latch and the merge block the exit block. The resulting spirv::LoopOp has a
   // single back edge from the continue to header block, and a single exit from
   // header to merge.
-  scf::ForOpOperandAdaptor forOperands(operands);
+  scf::ForOpAdaptor forOperands(operands);
   auto loc = forOp.getLoc();
   auto loopControl = rewriter.getI32IntegerAttr(
       static_cast<uint32_t>(spirv::LoopControl::None));
@@ -152,8 +164,11 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   TypeConverter::SignatureConversion signatureConverter(
       body->getNumArguments());
   signatureConverter.remapInput(0, newIndVar);
-  body = rewriter.applySignatureConversion(&forOp.getLoopBody(),
-                                           signatureConverter);
+  FailureOr<Block *> newBody = rewriter.convertRegionTypes(
+      &forOp.getLoopBody(), typeConverter, &signatureConverter);
+  if (failed(newBody))
+    return failure();
+  body = *newBody;
 
   // Delete the loop terminator.
   rewriter.eraseOp(body->getTerminator());
@@ -199,7 +214,7 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
   // When lowering `scf::IfOp` we explicitly create a selection header block
   // before the control flow diverges and a merge block where control flow
   // subsequently converges.
-  scf::IfOpOperandAdaptor ifOperands(operands);
+  scf::IfOpAdaptor ifOperands(operands);
   auto loc = ifOp.getLoc();
 
   // Create `spv.selection` operation, selection header block and merge block.
@@ -276,6 +291,16 @@ LogicalResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
   return success();
 }
 
+template <typename SourceOp, spirv::BuiltIn builtin>
+LogicalResult
+SingleDimLaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
+    SourceOp op, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  auto spirvBuiltin = spirv::getBuiltinVariableValue(op, builtin, rewriter);
+  rewriter.replaceOp(op, spirvBuiltin);
+  return success();
+}
+
 LogicalResult WorkGroupSizeConversion::matchAndRewrite(
     gpu::BlockDimOp op, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
@@ -334,9 +359,12 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
       continue;
     newFuncOp.setAttr(namedAttr.first, namedAttr.second);
   }
+
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                               newFuncOp.end());
-  rewriter.applySignatureConversion(&newFuncOp.getBody(), signatureConverter);
+  if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), typeConverter,
+                                         &signatureConverter)))
+    return nullptr;
   rewriter.eraseOp(funcOp);
 
   spirv::setABIAttrs(newFuncOp, entryPointInfo, argABIInfo);
@@ -419,7 +447,7 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
   // The spv.module build method adds a block with a terminator. Remove that
   // block. The terminator of the module op in the remaining block will be
   // legalized later.
-  spvModuleRegion.back().erase();
+  rewriter.eraseBlock(&spvModuleRegion.back());
   rewriter.eraseOp(moduleOp);
   return success();
 }
@@ -457,5 +485,11 @@ void mlir::populateGPUToSPIRVPatterns(MLIRContext *context,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::ThreadIdOp,
                              spirv::BuiltIn::LocalInvocationId>,
+      SingleDimLaunchConfigConversion<gpu::SubgroupIdOp,
+                                      spirv::BuiltIn::SubgroupId>,
+      SingleDimLaunchConfigConversion<gpu::NumSubgroupsOp,
+                                      spirv::BuiltIn::NumSubgroups>,
+      SingleDimLaunchConfigConversion<gpu::SubgroupSizeOp,
+                                      spirv::BuiltIn::SubgroupSize>,
       TerminatorOpConversion, WorkGroupSizeConversion>(context, typeConverter);
 }

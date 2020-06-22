@@ -354,89 +354,23 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
   return !is_contained(I->operands(), CI);
 }
 
-/// Return true if the specified value is the same when the return would exit
-/// as it was when the initial iteration of the recursive function was executed.
-///
-/// We currently handle static constants and arguments that are not modified as
-/// part of the recursion.
-static bool isDynamicConstant(Value *V, CallInst *CI, ReturnInst *RI) {
-  if (isa<Constant>(V)) return true; // Static constants are always dyn consts
+static bool canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
+  if (!I->isAssociative() || !I->isCommutative())
+    return false;
 
-  // Check to see if this is an immutable argument, if so, the value
-  // will be available to initialize the accumulator.
-  if (Argument *Arg = dyn_cast<Argument>(V)) {
-    // Figure out which argument number this is...
-    unsigned ArgNo = 0;
-    Function *F = CI->getParent()->getParent();
-    for (Function::arg_iterator AI = F->arg_begin(); &*AI != Arg; ++AI)
-      ++ArgNo;
-
-    // If we are passing this argument into call as the corresponding
-    // argument operand, then the argument is dynamically constant.
-    // Otherwise, we cannot transform this function safely.
-    if (CI->getArgOperand(ArgNo) == Arg)
-      return true;
-  }
-
-  // Switch cases are always constant integers. If the value is being switched
-  // on and the return is only reachable from one of its cases, it's
-  // effectively constant.
-  if (BasicBlock *UniquePred = RI->getParent()->getUniquePredecessor())
-    if (SwitchInst *SI = dyn_cast<SwitchInst>(UniquePred->getTerminator()))
-      if (SI->getCondition() == V)
-        return SI->getDefaultDest() != RI->getParent();
-
-  // Not a constant or immutable argument, we can't safely transform.
-  return false;
-}
-
-/// Check to see if the function containing the specified tail call consistently
-/// returns the same runtime-constant value at all exit points except for
-/// IgnoreRI. If so, return the returned value.
-static Value *getCommonReturnValue(ReturnInst *IgnoreRI, CallInst *CI) {
-  Function *F = CI->getParent()->getParent();
-  Value *ReturnedValue = nullptr;
-
-  for (BasicBlock &BBI : *F) {
-    ReturnInst *RI = dyn_cast<ReturnInst>(BBI.getTerminator());
-    if (RI == nullptr || RI == IgnoreRI) continue;
-
-    // We can only perform this transformation if the value returned is
-    // evaluatable at the start of the initial invocation of the function,
-    // instead of at the end of the evaluation.
-    //
-    Value *RetOp = RI->getOperand(0);
-    if (!isDynamicConstant(RetOp, CI, RI))
-      return nullptr;
-
-    if (ReturnedValue && RetOp != ReturnedValue)
-      return nullptr;     // Cannot transform if differing values are returned.
-    ReturnedValue = RetOp;
-  }
-  return ReturnedValue;
-}
-
-/// If the specified instruction can be transformed using accumulator recursion
-/// elimination, return the constant which is the start of the accumulator
-/// value.  Otherwise return null.
-static Value *canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
-  if (!I->isAssociative() || !I->isCommutative()) return nullptr;
   assert(I->getNumOperands() == 2 &&
          "Associative/commutative operations should have 2 args!");
 
   // Exactly one operand should be the result of the call instruction.
   if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
       (I->getOperand(0) != CI && I->getOperand(1) != CI))
-    return nullptr;
+    return false;
 
   // The only user of this instruction we allow is a single return instruction.
   if (!I->hasOneUse() || !isa<ReturnInst>(I->user_back()))
-    return nullptr;
+    return false;
 
-  // Ok, now we have to check all of the other return instructions in this
-  // function.  If they return non-constants or differing values, then we cannot
-  // transform the function safely.
-  return getCommonReturnValue(cast<ReturnInst>(I->user_back()), CI);
+  return true;
 }
 
 static Instruction *firstNonDbg(BasicBlock::iterator I) {
@@ -460,6 +394,26 @@ class TailRecursionEliminator {
   SmallVector<PHINode *, 8> ArgumentPHIs;
   bool RemovableCallsMustBeMarkedTail = false;
 
+  // PHI node to store our return value.
+  PHINode *RetPN = nullptr;
+
+  // i1 PHI node to track if we have a valid return value stored in RetPN.
+  PHINode *RetKnownPN = nullptr;
+
+  // Vector of select instructions we insereted. These selects use RetKnownPN
+  // to either propagate RetPN or select a new return value.
+  SmallVector<SelectInst *, 8> RetSelects;
+
+  // The below are shared state needed when performing accumulator recursion.
+  // There values should be populated by insertAccumulator the first time we
+  // find an elimination that requires an accumulator.
+
+  // PHI node to store our current accumulated value.
+  PHINode *AccPN = nullptr;
+
+  // The instruction doing the accumulating.
+  Instruction *AccumulatorRecursionInstr = nullptr;
+
   TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
                           AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
                           DomTreeUpdater &DTU)
@@ -470,7 +424,7 @@ class TailRecursionEliminator {
 
   void createTailRecurseLoopHeader(CallInst *CI);
 
-  PHINode *insertAccumulator(Value *AccumulatorRecursionEliminationInitVal);
+  void insertAccumulator(Instruction *AccRecInstr);
 
   bool eliminateCall(CallInst *CI);
 
@@ -577,57 +531,65 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
     PN->addIncoming(&*I, NewEntry);
     ArgumentPHIs.push_back(PN);
   }
+
+  // If the function doen't return void, create the RetPN and RetKnownPN PHI
+  // nodes to track our return value. We initialize RetPN with undef and
+  // RetKnownPN with false since we can't know our return value at function
+  // entry.
+  Type *RetType = F.getReturnType();
+  if (!RetType->isVoidTy()) {
+    Type *BoolType = Type::getInt1Ty(F.getContext());
+    RetPN = PHINode::Create(RetType, 2, "ret.tr", InsertPos);
+    RetKnownPN = PHINode::Create(BoolType, 2, "ret.known.tr", InsertPos);
+
+    RetPN->addIncoming(UndefValue::get(RetType), NewEntry);
+    RetKnownPN->addIncoming(ConstantInt::getFalse(BoolType), NewEntry);
+  }
+
   // The entry block was changed from HeaderBB to NewEntry.
   // The forward DominatorTree needs to be recalculated when the EntryBB is
   // changed. In this corner-case we recalculate the entire tree.
   DTU.recalculate(*NewEntry->getParent());
 }
 
-PHINode *TailRecursionEliminator::insertAccumulator(
-    Value *AccumulatorRecursionEliminationInitVal) {
+void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
+  assert(!AccPN && "Trying to insert multiple accumulators");
+
+  AccumulatorRecursionInstr = AccRecInstr;
+
   // Start by inserting a new PHI node for the accumulator.
   pred_iterator PB = pred_begin(HeaderBB), PE = pred_end(HeaderBB);
-  PHINode *AccPN = PHINode::Create(
-      AccumulatorRecursionEliminationInitVal->getType(),
-      std::distance(PB, PE) + 1, "accumulator.tr", &HeaderBB->front());
+  AccPN = PHINode::Create(F.getReturnType(), std::distance(PB, PE) + 1,
+                          "accumulator.tr", &HeaderBB->front());
 
   // Loop over all of the predecessors of the tail recursion block.  For the
-  // real entry into the function we seed the PHI with the initial value,
-  // computed earlier.  For any other existing branches to this block (due to
-  // other tail recursions eliminated) the accumulator is not modified.
+  // real entry into the function we seed the PHI with the identity constant for
+  // the accumulation operation.  For any other existing branches to this block
+  // (due to other tail recursions eliminated) the accumulator is not modified.
   // Because we haven't added the branch in the current block to HeaderBB yet,
   // it will not show up as a predecessor.
   for (pred_iterator PI = PB; PI != PE; ++PI) {
     BasicBlock *P = *PI;
-    if (P == &F.getEntryBlock())
-      AccPN->addIncoming(AccumulatorRecursionEliminationInitVal, P);
-    else
+    if (P == &F.getEntryBlock()) {
+      Constant *Identity = ConstantExpr::getBinOpIdentity(
+          AccRecInstr->getOpcode(), AccRecInstr->getType());
+      AccPN->addIncoming(Identity, P);
+    } else {
       AccPN->addIncoming(AccPN, P);
+    }
   }
 
-  return AccPN;
+  ++NumAccumAdded;
 }
 
 bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   ReturnInst *Ret = cast<ReturnInst>(CI->getParent()->getTerminator());
 
-  // If we are introducing accumulator recursion to eliminate operations after
-  // the call instruction that are both associative and commutative, the initial
-  // value for the accumulator is placed in this variable.  If this value is set
-  // then we actually perform accumulator recursion elimination instead of
-  // simple tail recursion elimination.  If the operation is an LLVM instruction
-  // (eg: "add") then it is recorded in AccumulatorRecursionInstr.  If not, then
-  // we are handling the case when the return instruction returns a constant C
-  // which is different to the constant returned by other return instructions
-  // (which is recorded in AccumulatorRecursionEliminationInitVal).  This is a
-  // special case of accumulator recursion, the operation being "return C".
-  Value *AccumulatorRecursionEliminationInitVal = nullptr;
-  Instruction *AccumulatorRecursionInstr = nullptr;
-
   // Ok, we found a potential tail call.  We can currently only transform the
   // tail call if all of the instructions between the call and the return are
   // movable to above the call itself, leaving the call next to the return.
   // Check that this is the case now.
+  Instruction *AccRecInstr = nullptr;
   BasicBlock::iterator BBI(CI);
   for (++BBI; &*BBI != Ret; ++BBI) {
     if (canMoveAboveCall(&*BBI, CI, AA))
@@ -636,35 +598,13 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // If we can't move the instruction above the call, it might be because it
     // is an associative and commutative operation that could be transformed
     // using accumulator recursion elimination.  Check to see if this is the
-    // case, and if so, remember the initial accumulator value for later.
-    if ((AccumulatorRecursionEliminationInitVal =
-             canTransformAccumulatorRecursion(&*BBI, CI))) {
-      // Yes, this is accumulator recursion.  Remember which instruction
-      // accumulates.
-      AccumulatorRecursionInstr = &*BBI;
-    } else {
-      return false;   // Otherwise, we cannot eliminate the tail recursion!
-    }
-  }
+    // case, and if so, remember which instruction accumulates for later.
+    if (AccPN || !canTransformAccumulatorRecursion(&*BBI, CI))
+      return false; // We cannot eliminate the tail recursion!
 
-  // We can only transform call/return pairs that either ignore the return value
-  // of the call and return void, ignore the value of the call and return a
-  // constant, return the value returned by the tail call, or that are being
-  // accumulator recursion variable eliminated.
-  if (Ret->getNumOperands() == 1 && Ret->getReturnValue() != CI &&
-      !isa<UndefValue>(Ret->getReturnValue()) &&
-      AccumulatorRecursionEliminationInitVal == nullptr &&
-      !getCommonReturnValue(nullptr, CI)) {
-    // One case remains that we are able to handle: the current return
-    // instruction returns a constant, and all other return instructions
-    // return a different constant.
-    if (!isDynamicConstant(Ret->getReturnValue(), CI, Ret))
-      return false; // Current return instruction does not return a constant.
-    // Check that all other return instructions return a common constant.  If
-    // so, record it in AccumulatorRecursionEliminationInitVal.
-    AccumulatorRecursionEliminationInitVal = getCommonReturnValue(Ret, CI);
-    if (!AccumulatorRecursionEliminationInitVal)
-      return false;
+    // Yes, this is accumulator recursion.  Remember which instruction
+    // accumulates.
+    AccRecInstr = &*BBI;
   }
 
   BasicBlock *BB = Ret->getParent();
@@ -689,37 +629,35 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   for (unsigned i = 0, e = CI->getNumArgOperands(); i != e; ++i)
     ArgumentPHIs[i]->addIncoming(CI->getArgOperand(i), BB);
 
-  // If we are introducing an accumulator variable to eliminate the recursion,
-  // do so now.  Note that we _know_ that no subsequent tail recursion
-  // eliminations will happen on this function because of the way the
-  // accumulator recursion predicate is set up.
-  //
-  if (AccumulatorRecursionEliminationInitVal) {
-    PHINode *AccPN = insertAccumulator(AccumulatorRecursionEliminationInitVal);
+  if (AccRecInstr) {
+    insertAccumulator(AccRecInstr);
 
-    Instruction *AccRecInstr = AccumulatorRecursionInstr;
-    if (AccRecInstr) {
-      // Add an incoming argument for the current block, which is computed by
-      // our associative and commutative accumulator instruction.
-      AccPN->addIncoming(AccRecInstr, BB);
+    // Rewrite the accumulator recursion instruction so that it does not use
+    // the result of the call anymore, instead, use the PHI node we just
+    // inserted.
+    AccRecInstr->setOperand(AccRecInstr->getOperand(0) != CI, AccPN);
+  }
 
-      // Next, rewrite the accumulator recursion instruction so that it does not
-      // use the result of the call anymore, instead, use the PHI node we just
-      // inserted.
-      AccRecInstr->setOperand(AccRecInstr->getOperand(0) != CI, AccPN);
+  // Update our return value tracking
+  if (RetPN) {
+    if (Ret->getReturnValue() == CI || AccRecInstr) {
+      // Defer selecting a return value
+      RetPN->addIncoming(RetPN, BB);
+      RetKnownPN->addIncoming(RetKnownPN, BB);
     } else {
-      // Add an incoming argument for the current block, which is just the
-      // constant returned by the current return instruction.
-      AccPN->addIncoming(Ret->getReturnValue(), BB);
+      // We found a return value we want to use, insert a select instruction to
+      // select it if we don't already know what our return value will be and
+      // store the result in our return value PHI node.
+      SelectInst *SI = SelectInst::Create(
+          RetKnownPN, RetPN, Ret->getReturnValue(), "current.ret.tr", Ret);
+      RetSelects.push_back(SI);
+
+      RetPN->addIncoming(SI, BB);
+      RetKnownPN->addIncoming(ConstantInt::getTrue(RetKnownPN->getType()), BB);
     }
 
-    // Finally, rewrite any return instructions in the program to return the PHI
-    // node instead of the "initval" that they do currently.  This loop will
-    // actually rewrite the return value we are destroying, but that's ok.
-    for (BasicBlock &BBI : F)
-      if (ReturnInst *RI = dyn_cast<ReturnInst>(BBI.getTerminator()))
-        RI->setOperand(0, AccPN);
-    ++NumAccumAdded;
+    if (AccPN)
+      AccPN->addIncoming(AccRecInstr ? AccRecInstr : AccPN, BB);
   }
 
   // Now that all of the PHI nodes are in place, remove the call and
@@ -804,6 +742,63 @@ void TailRecursionEliminator::cleanupAndFinalize() {
       PN->eraseFromParent();
     }
   }
+
+  if (RetPN) {
+    if (RetSelects.empty()) {
+      // If we didn't insert any select instructions, then we know we didn't
+      // store a return value and we can remove the PHI nodes we inserted.
+      RetPN->dropAllReferences();
+      RetPN->eraseFromParent();
+
+      RetKnownPN->dropAllReferences();
+      RetKnownPN->eraseFromParent();
+
+      if (AccPN) {
+        // We need to insert a copy of our accumulator instruction before any
+        // return in the function, and return its result instead.
+        Instruction *AccRecInstr = AccumulatorRecursionInstr;
+        for (BasicBlock &BB : F) {
+          ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());
+          if (!RI)
+            continue;
+
+          Instruction *AccRecInstrNew = AccRecInstr->clone();
+          AccRecInstrNew->setName("accumulator.ret.tr");
+          AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
+                                     RI->getOperand(0));
+          AccRecInstrNew->insertBefore(RI);
+          RI->setOperand(0, AccRecInstrNew);
+        }
+      }
+    } else {
+      // We need to insert a select instruction before any return left in the
+      // function to select our stored return value if we have one.
+      for (BasicBlock &BB : F) {
+        ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());
+        if (!RI)
+          continue;
+
+        SelectInst *SI = SelectInst::Create(
+            RetKnownPN, RetPN, RI->getOperand(0), "current.ret.tr", RI);
+        RetSelects.push_back(SI);
+        RI->setOperand(0, SI);
+      }
+
+      if (AccPN) {
+        // We need to insert a copy of our accumulator instruction before any
+        // of the selects we inserted, and select its result instead.
+        Instruction *AccRecInstr = AccumulatorRecursionInstr;
+        for (SelectInst *SI : RetSelects) {
+          Instruction *AccRecInstrNew = AccRecInstr->clone();
+          AccRecInstrNew->setName("accumulator.ret.tr");
+          AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
+                                     SI->getFalseValue());
+          AccRecInstrNew->insertBefore(SI);
+          SI->setFalseValue(AccRecInstrNew);
+        }
+      }
+    }
+  }
 }
 
 bool TailRecursionEliminator::eliminate(Function &F,
@@ -823,7 +818,7 @@ bool TailRecursionEliminator::eliminate(Function &F,
   // If this function is a varargs function, we won't be able to PHI the args
   // right, so don't even try to convert it...
   if (F.getFunctionType()->isVarArg())
-    return false;
+    return MadeChange;
 
   // If false, we cannot perform TRE on tail calls marked with the 'tail'
   // attribute, because doing so would cause the stack size to increase (real

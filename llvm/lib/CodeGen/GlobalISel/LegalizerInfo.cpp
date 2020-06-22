@@ -524,12 +524,6 @@ bool LegalizerInfo::isLegalOrCustom(const MachineInstr &MI,
   return Action == Legal || Action == Custom;
 }
 
-bool LegalizerInfo::legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                   MachineIRBuilder &MIRBuilder,
-                                   GISelChangeObserver &Observer) const {
-  return false;
-}
-
 LegalizerInfo::SizeAndActionsVec
 LegalizerInfo::increaseToLargerTypesAndDecreaseToLargest(
     const SizeAndActionsVec &v, LegalizeAction IncreaseAction,
@@ -685,12 +679,6 @@ LegalizerInfo::findVectorLegalAction(const InstrAspect &Aspect) const {
   return {NumElementsAndAction.second,
           LLT::vector(NumElementsAndAction.first,
                       IntermediateType.getScalarSizeInBits())};
-}
-
-bool LegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
-                                      MachineIRBuilder &MIRBuilder,
-                                      GISelChangeObserver &Observer) const {
-  return true;
 }
 
 unsigned LegalizerInfo::getExtOpcodeForWideningConstant(LLT SmallTy) const {

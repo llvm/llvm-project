@@ -176,9 +176,11 @@ define float @fma_combine_no_ice() {
 ; CHECK-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
 ; CHECK-NEXT:    lfs 3, .LCPI4_1@toc@l(4)
 ; CHECK-NEXT:    lfs 1, .LCPI4_2@toc@l(3)
+; CHECK-NEXT:    fmr 4, 3
 ; CHECK-NEXT:    xsmaddasp 3, 2, 0
+; CHECK-NEXT:    xsnmaddasp 4, 2, 0
 ; CHECK-NEXT:    xsmaddasp 1, 2, 3
-; CHECK-NEXT:    xsnmsubasp 1, 3, 2
+; CHECK-NEXT:    xsmaddasp 1, 4, 2
 ; CHECK-NEXT:    blr
   %tmp = load float, float* undef, align 4
   %tmp2 = load float, float* undef, align 4

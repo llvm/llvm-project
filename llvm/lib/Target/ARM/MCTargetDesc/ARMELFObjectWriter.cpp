@@ -53,8 +53,8 @@ ARMELFObjectWriter::ARMELFObjectWriter(uint8_t OSABI)
 
 bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
                                                  unsigned Type) const {
-  // FIXME: This is extremely conservative. This really needs to use a
-  // whitelist with a clear explanation for why each realocation needs to
+  // FIXME: This is extremely conservative. This really needs to use an
+  // explicit list with a clear explanation for why each realocation needs to
   // point to the symbol, not to the section.
   switch (Type) {
   default:

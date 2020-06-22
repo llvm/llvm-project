@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/EDSC/FoldedIntrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
@@ -290,6 +291,34 @@ bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
   return true;
 }
 
+static bool isSameSubView(Value a, Value b) {
+  if (a == b)
+    return true;
+  auto sva = a.getDefiningOp<SubViewOp>();
+  auto svb = b.getDefiningOp<SubViewOp>();
+  if (!sva || !svb)
+    return false;
+  if (!isSameSubView(sva.getViewSource(), svb.getViewSource()))
+    return false;
+  if (sva.getType() != svb.getType())
+    return false;
+  if (sva.getRank() != svb.getRank())
+    return false;
+  if (sva.getNumOperands() != svb.getNumOperands())
+    return false;
+  if (sva.static_offsets() != svb.static_offsets())
+    return false;
+  if (sva.static_sizes() != svb.static_sizes())
+    return false;
+  if (sva.static_strides() != svb.static_strides())
+    return false;
+  /// Skip the "viewSource" operand.
+  for (unsigned idx = 1, e = sva.getNumOperands(); idx != e; ++idx)
+    if (sva.getOperand(idx) != svb.getOperand(idx))
+      return false;
+  return true;
+}
+
 static Optional<FusionInfo>
 fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
                   const LinalgDependenceGraph &graph, OperationFolder *folder,
@@ -305,7 +334,7 @@ fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
 
     // Check that the dependence is indeed on the input `consumerIdx` view.
     auto consumedView = dependence.indexingView;
-    if (consumer.getBuffer(consumerIdx) != consumedView)
+    if (!isSameSubView(consumer.getBuffer(consumerIdx), consumedView))
       continue;
 
     // Consumer consumes this view, `isStructurallyFusableProducer` also checks
@@ -407,9 +436,9 @@ static void fuseLinalgOpsGreedily(FuncOp f) {
 
 namespace {
 
-/// Implementation of fusion of generic ops.
+/// Implementation of fusion of generic ops and indexed_generic ops.
 struct FuseGenericOpsOnTensors {
-  static bool isFusible(GenericOp producer, GenericOp consumer,
+  static bool isFusible(LinalgOp producer, LinalgOp consumer,
                         unsigned consumerIdx) {
     // Verify that
     // - the producer has all "parallel" iterator type.
@@ -428,7 +457,7 @@ struct FuseGenericOpsOnTensors {
     return producerResultIndexMap.isPermutation();
   }
 
-  static Operation *fuse(GenericOp producer, GenericOp consumer,
+  static Operation *fuse(LinalgOp producer, LinalgOp consumer,
                          unsigned consumerIdx, PatternRewriter &rewriter,
                          OperationFolder *folder = nullptr) {
     if (!isFusible(producer, consumer, consumerIdx))
@@ -454,7 +483,8 @@ struct FuseGenericOpsOnTensors {
     // indexing_map of the operand at consumerIdx in the consumer.
     SmallVector<Attribute, 4> fusedIndexMaps;
     auto consumerIndexMaps = consumer.indexing_maps();
-    fusedIndexMaps.reserve(fusedOperands.size() + consumer.getNumResults());
+    fusedIndexMaps.reserve(fusedOperands.size() +
+                           consumer.getOperation()->getNumResults());
     fusedIndexMaps.assign(consumerIndexMaps.begin(),
                           std::next(consumerIndexMaps.begin(), consumerIdx));
     // Compute indexing maps for the producer args in the fused operation.
@@ -466,15 +496,56 @@ struct FuseGenericOpsOnTensors {
                           consumerIndexMaps.end());
 
     // Generate the fused op.
-    auto fusedOp = rewriter.create<GenericOp>(
-        rewriter.getUnknownLoc(), consumer.getResultTypes(), fusedOperands,
-        rewriter.getI64IntegerAttr(fusedOperands.size()),
-        rewriter.getI64IntegerAttr(consumer.getNumResults()),
-        rewriter.getArrayAttr(fusedIndexMaps), consumer.iterator_types(),
-        /*doc=*/nullptr,
-        /*library_call=*/nullptr);
-    generateFusedRegion(rewriter, fusedOp.region(), producer.region(),
-                        consumer.region(), consumerIdx);
+    LinalgOp fusedOp;
+    if (isa<GenericOp>(producer.getOperation()) &&
+        isa<GenericOp>(consumer.getOperation())) {
+      fusedOp =
+          rewriter
+              .create<GenericOp>(
+                  rewriter.getUnknownLoc(),
+                  consumer.getOperation()->getResultTypes(), fusedOperands,
+                  rewriter.getI64IntegerAttr(fusedOperands.size()),
+                  rewriter.getI64IntegerAttr(
+                      consumer.getOperation()->getNumResults()),
+                  rewriter.getArrayAttr(fusedIndexMaps),
+                  consumer.iterator_types(),
+                  /*doc=*/nullptr,
+                  /*library_call=*/nullptr)
+              .getOperation();
+    } else {
+      fusedOp =
+          rewriter
+              .create<IndexedGenericOp>(
+                  rewriter.getUnknownLoc(),
+                  consumer.getOperation()->getResultTypes(), fusedOperands,
+                  rewriter.getI64IntegerAttr(fusedOperands.size()),
+                  rewriter.getI64IntegerAttr(
+                      consumer.getOperation()->getNumResults()),
+                  rewriter.getArrayAttr(fusedIndexMaps),
+                  consumer.iterator_types(),
+                  /*doc=*/nullptr,
+                  /*library_call=*/nullptr)
+              .getOperation();
+    }
+
+    // Construct an AffineMap from consumer loops to producer loops.
+    // consumer loop -> tensor index
+    AffineMap consumerResultIndexMap =
+        consumer.getInputIndexingMap(consumerIdx);
+    // producer loop -> tensor index
+    AffineMap producerResultIndexMap = producer.getOutputIndexingMap(0);
+    // tensor index -> producer loop
+    AffineMap invProducerResultIndexMap =
+        inversePermutation(producerResultIndexMap);
+    assert(invProducerResultIndexMap &&
+           "expected producer result indexig map to be invertible");
+    // consumer loop -> producer loop
+    AffineMap consumerToProducerLoopsMap =
+        invProducerResultIndexMap.compose(consumerResultIndexMap);
+
+    generateFusedRegion(rewriter, fusedOp, producer, consumer,
+                        consumerToProducerLoopsMap, consumerIdx,
+                        consumer.getNumLoops());
     return fusedOp;
   }
 
@@ -483,7 +554,7 @@ private:
   /// the `producer` to use in the fused operation given the indexing map of the
   /// result of the producer in the consumer.
   static void computeProducerOperandIndex(
-      GenericOp producer, AffineMap fusedConsumerArgIndexMap,
+      LinalgOp producer, AffineMap fusedConsumerArgIndexMap,
       SmallVectorImpl<Attribute> &fusedOpIndexingMapAttrs) {
     // The indexing map in the consumer op (fusedConsumerArgIndexMap) is a map
     // from consumer loop -> consumer arg tensor index/producer result tensor
@@ -516,29 +587,68 @@ private:
 
   /// Generate the region of the fused operation. The region of the fused op
   /// must be empty.
-  static void generateFusedRegion(PatternRewriter &rewriter,
-                                  Region &fusedRegion, Region &producerRegion,
-                                  Region &consumerRegion,
-                                  unsigned consumerIdx) {
+  static void generateFusedRegion(PatternRewriter &rewriter, Operation *fusedOp,
+                                  LinalgOp producer, LinalgOp consumer,
+                                  AffineMap consumerToProducerLoopsMap,
+                                  unsigned consumerIdx, unsigned nloops) {
     // Build the region of the fused op.
-    Block &producerBlock = producerRegion.front();
-    Block &consumerBlock = consumerRegion.front();
+    Block &producerBlock = producer.getOperation()->getRegion(0).front();
+    Block &consumerBlock = consumer.getOperation()->getRegion(0).front();
     Block *fusedBlock = new Block();
-    fusedRegion.push_back(fusedBlock);
+    fusedOp->getRegion(0).push_back(fusedBlock);
     BlockAndValueMapping mapper;
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(fusedBlock);
+
+    // The block arguments are
+    // [index_0, index_1, ... ,
+    //   consumer_operand_0, ... , consumer_operand_(`consumerIdx`-1),
+    //   producer_operand_0, ... , producer_operand_(n-1)],
+    //   consumer_operand_(`consumerIdx`), .. consumer_operand_(m-1)]
+    // , where n is the number of producer's operand and m is the number
+    // consumer's operand.
+    // If both `numProducerIndices` and `numConsumerIndices` are zero, this is a
+    // generic op. In this case, there are no indices in block arguments.
+    unsigned numProducerIndices =
+        isa<IndexedGenericOp>(producer.getOperation()) ? nloops : 0;
+    unsigned numConsumerIndices =
+        isa<IndexedGenericOp>(consumer.getOperation()) ? nloops : 0;
+    // Firstly, add all the indices to the block arguments.
+    for (unsigned i = 0, e = std::max(numProducerIndices, numConsumerIndices);
+         i < e; ++i)
+      fusedBlock->addArgument(rewriter.getIndexType());
     // Map the arguments for the unmodified args from the consumer.
     for (auto consumerArg : llvm::enumerate(consumerBlock.getArguments())) {
-      if (consumerArg.index() == consumerIdx) {
+      if (consumerArg.index() == consumerIdx + numConsumerIndices) {
         // Map the arguments for the args from the producer.
-        for (auto producerArg : producerBlock.getArguments())
-          mapper.map(producerArg,
-                     fusedBlock->addArgument(producerArg.getType()));
+        for (auto producerArg : llvm::enumerate(producerBlock.getArguments())) {
+          // If producer is an indexed_generic op, map the indices from consumer
+          // loop to producer loop (because the fusedOp is built based on
+          // consumer's perspective).
+          if (producerArg.index() < numProducerIndices) {
+            auto newIndex = rewriter.create<mlir::AffineApplyOp>(
+                producer.getLoc(),
+                consumerToProducerLoopsMap.getSubMap(producerArg.index()),
+                fusedBlock->getArguments().take_front(nloops));
+            mapper.map(producerArg.value(), newIndex);
+          } else {
+            mapper.map(producerArg.value(),
+                       fusedBlock->addArgument(producerArg.value().getType()));
+          }
+        }
         continue;
       }
-      mapper.map(consumerArg.value(),
-                 fusedBlock->addArgument(consumerArg.value().getType()));
+
+      // If consumer is an indexed_generic op, map the indices to the block
+      // arguments directly. Otherwise, add the same type of arugment and map to
+      // it.
+      if (consumerArg.index() < numConsumerIndices) {
+        mapper.map(consumerArg.value(),
+                   fusedBlock->getArgument(consumerArg.index()));
+      } else {
+        mapper.map(consumerArg.value(),
+                   fusedBlock->addArgument(consumerArg.value().getType()));
+      }
     }
 
     // Add operations from producer (except the yield operation) to the fused
@@ -547,8 +657,10 @@ private:
       if (auto yieldOp = dyn_cast<YieldOp>(op)) {
         // Lookup the value the yield operation is mapped to.
         Value yieldVal = yieldOp.getOperand(0);
-        auto clonedVal = mapper.lookup(yieldVal);
-        mapper.map(consumerBlock.getArgument(consumerIdx), clonedVal);
+        if (Value clonedVal = mapper.lookupOrNull(yieldVal))
+          mapper.map(
+              consumerBlock.getArgument(consumerIdx + numConsumerIndices),
+              clonedVal);
         continue;
       }
       rewriter.clone(op, mapper);
@@ -738,6 +850,66 @@ template <typename LinalgOpTy> struct FuseTensorReshapeOpAsConsumer {
     return fusedOp;
   }
 };
+
+/// Implementation of fusion on tensor ops when producer is a splat constant.
+template <typename LinalgOpTy> struct FuseConstantOpAsProducer {
+  static bool isFusible(ConstantOp producer, LinalgOpTy consumer,
+                        unsigned consumerIdx) {
+    return producer.getResult().getType().isa<RankedTensorType>() &&
+           producer.value().template cast<DenseElementsAttr>().isSplat();
+  }
+
+  static Operation *fuse(ConstantOp producer, LinalgOpTy consumer,
+                         unsigned consumerIdx, PatternRewriter &rewriter,
+                         OperationFolder *folder = nullptr) {
+    if (!isFusible(producer, consumer, consumerIdx))
+      return nullptr;
+
+    // The indexing_maps for the operands of the fused operation are same as
+    // those for the operands of the consumer without the indexing map at
+    // consumerIdx
+    SmallVector<AffineMap, 4> fusedIndexMaps =
+        llvm::to_vector<4>(llvm::map_range(
+            consumer.indexing_maps(), [](Attribute attr) -> AffineMap {
+              return attr.cast<AffineMapAttr>().getValue();
+            }));
+    fusedIndexMaps.erase(std::next(fusedIndexMaps.begin(), consumerIdx));
+
+    // The operands list is same as the consumer with the argument for constant
+    // index dropped.
+    SmallVector<Value, 4> fusedOperands(consumer.operand_begin(),
+                                        consumer.operand_end());
+    fusedOperands.erase(std::next(fusedOperands.begin(), consumerIdx));
+
+    // Create a constant scalar value from the splat constant.
+    Value scalarConstant = rewriter.create<ConstantOp>(
+        producer.getLoc(),
+        producer.value().template cast<DenseElementsAttr>().getSplatValue());
+
+    auto fusedOp = rewriter.create<LinalgOpTy>(
+        rewriter.getUnknownLoc(), consumer.getResultTypes(), fusedOperands,
+        rewriter.getI64IntegerAttr(consumer.getNumOperands() - 1),
+        rewriter.getI64IntegerAttr(consumer.getNumResults()),
+        rewriter.getAffineMapArrayAttr(fusedIndexMaps),
+        consumer.iterator_types(),
+        /*doc=*/nullptr,
+        /*library_call=*/nullptr);
+
+    // Map the block argument corresponding to the replaced argument with the
+    // scalar constant.
+    Region &consumerRegion = consumer.region();
+    Block &entryBlock = *consumerRegion.begin();
+    unsigned argIndex =
+        entryBlock.getNumArguments() - consumer.getNumOperands() + consumerIdx;
+    BlockAndValueMapping mapping;
+    mapping.map(entryBlock.getArgument(argIndex), scalarConstant);
+    Region &fusedRegion = fusedOp.region();
+    rewriter.cloneRegionBefore(consumerRegion, fusedRegion, fusedRegion.begin(),
+                               mapping);
+    return fusedOp;
+  }
+};
+
 } // namespace
 
 Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
@@ -750,17 +922,33 @@ Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
   if (!producer || producer->getNumResults() != 1)
     return nullptr;
 
-  // Fuse when consumer is GenericOp.
-  if (GenericOp genericOp = dyn_cast<GenericOp>(consumer)) {
-    if (!genericOp.hasTensorSemantics())
+  // Fuse when consumer is GenericOp or IndexedGenericOp.
+  if (isa<GenericOp>(consumer) || isa<IndexedGenericOp>(consumer)) {
+    auto linalgOpConsumer = cast<LinalgOp>(consumer);
+    if (!linalgOpConsumer.hasTensorSemantics())
       return nullptr;
-    if (auto genericOpProducer = dyn_cast<GenericOp>(producer)) {
-      if (genericOpProducer.hasTensorSemantics())
-        return FuseGenericOpsOnTensors::fuse(genericOpProducer, genericOp,
+    if (isa<GenericOp>(producer) || isa<IndexedGenericOp>(producer)) {
+      auto linalgOpProducer = cast<LinalgOp>(producer);
+      if (linalgOpProducer.hasTensorSemantics())
+        return FuseGenericOpsOnTensors::fuse(linalgOpProducer, linalgOpConsumer,
                                              consumerIdx, rewriter, folder);
     } else if (auto reshapeOpProducer = dyn_cast<TensorReshapeOp>(producer)) {
-      return FuseTensorReshapeOpAsProducer<GenericOp>::fuse(
-          reshapeOpProducer, genericOp, consumerIdx, rewriter, folder);
+      if (auto genericOpConsumer = dyn_cast<GenericOp>(consumer)) {
+        return FuseTensorReshapeOpAsProducer<GenericOp>::fuse(
+            reshapeOpProducer, genericOpConsumer, consumerIdx, rewriter,
+            folder);
+      } else if (auto indexedGenericOpConsumer =
+                     dyn_cast<IndexedGenericOp>(consumer)) {
+        return FuseTensorReshapeOpAsProducer<IndexedGenericOp>::fuse(
+            reshapeOpProducer, indexedGenericOpConsumer, consumerIdx, rewriter,
+            folder);
+      }
+    } else if (auto constantOpProducer = dyn_cast<ConstantOp>(producer)) {
+      if (auto genericOpConsumer = dyn_cast<GenericOp>(consumer)) {
+        return FuseConstantOpAsProducer<GenericOp>::fuse(
+            constantOpProducer, genericOpConsumer, consumerIdx, rewriter,
+            folder);
+      }
     }
     return nullptr;
   }
@@ -771,9 +959,15 @@ Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
       if (genericOpProducer.hasTensorSemantics())
         return FuseTensorReshapeOpAsConsumer<GenericOp>::fuse(
             genericOpProducer, reshapeOp, consumerIdx, rewriter, folder);
+    } else if (auto indexedGenericOpProducer =
+                   dyn_cast<IndexedGenericOp>(producer)) {
+      if (indexedGenericOpProducer.hasTensorSemantics())
+        return FuseTensorReshapeOpAsConsumer<IndexedGenericOp>::fuse(
+            indexedGenericOpProducer, reshapeOp, consumerIdx, rewriter, folder);
     }
     return nullptr;
   }
+
   return nullptr;
 }
 
@@ -820,8 +1014,8 @@ struct LinalgFusionPass : public LinalgFusionBase<LinalgFusionPass> {
 
 void mlir::populateLinalgTensorOpsFusionPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns) {
-  patterns.insert<FuseTensorOps<GenericOp>, FuseTensorOps<TensorReshapeOp>>(
-      context);
+  patterns.insert<FuseTensorOps<GenericOp>, FuseTensorOps<IndexedGenericOp>,
+                  FuseTensorOps<TensorReshapeOp>>(context);
 }
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgFusionPass() {

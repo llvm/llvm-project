@@ -108,42 +108,60 @@ function(add_mlir_library name)
 
   # MLIR libraries uniformly depend on LLVMSupport.  Just specify it once here.
   list(APPEND ARG_LINK_COMPONENTS Support)
+
+  # LINK_COMPONENTS is necessary to allow libLLVM.so to be properly
+  # substituted for individual library dependencies if LLVM_LINK_LLVM_DYLIB
+  # Perhaps this should be in llvm_add_library instead?  However, it fails
+  # on libclang-cpp.so
+  get_property(llvm_component_libs GLOBAL PROPERTY LLVM_COMPONENT_LIBS)
+  foreach(lib ${ARG_LINK_LIBS})
+    if(${lib} IN_LIST llvm_component_libs)
+      message(SEND_ERROR "${name} specifies LINK_LIBS ${lib}, but LINK_LIBS cannot be used for LLVM libraries.  Please use LINK_COMPONENTS instead.")
+    endif()
+  endforeach()
+
   list(APPEND ARG_DEPENDS mlir-generic-headers)
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs} DEPENDS ${ARG_DEPENDS} LINK_COMPONENTS ${ARG_LINK_COMPONENTS} LINK_LIBS ${ARG_LINK_LIBS})
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
-
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-      set(export_to_mlirtargets)
-      if (${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          "mlir-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          NOT LLVM_DISTRIBUTION_COMPONENTS)
-          set(export_to_mlirtargets EXPORT MLIRTargets)
-        set_property(GLOBAL PROPERTY MLIR_HAS_EXPORTS True)
-      endif()
-
-      install(TARGETS ${name}
-        COMPONENT ${name}
-        ${export_to_mlirtargets}
-        LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-        ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-        RUNTIME DESTINATION bin)
-
-      if (NOT LLVM_ENABLE_IDE)
-        add_llvm_install_targets(install-${name}
-                                 DEPENDS ${name}
-                                 COMPONENT ${name})
-      endif()
-      set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
-    endif()
-    set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
+    add_mlir_library_install(${name})
   else()
     # Add empty "phony" target
     add_custom_target(${name})
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "MLIR libraries")
 endfunction(add_mlir_library)
+
+# Adds an MLIR library target for installation.
+# This is usually done as part of add_mlir_library but is broken out for cases
+# where non-standard library builds can be installed.
+function(add_mlir_library_install name)
+  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  set(export_to_mlirtargets)
+  if (${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+      "mlir-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+      NOT LLVM_DISTRIBUTION_COMPONENTS)
+      set(export_to_mlirtargets EXPORT MLIRTargets)
+    set_property(GLOBAL PROPERTY MLIR_HAS_EXPORTS True)
+  endif()
+
+  install(TARGETS ${name}
+    COMPONENT ${name}
+    ${export_to_mlirtargets}
+    LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    RUNTIME DESTINATION bin)
+
+  if (NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-${name}
+                            DEPENDS ${name}
+                            COMPONENT ${name})
+  endif()
+  set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
+  endif()
+  set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
+endfunction()
 
 # Declare the library associated with a dialect.
 function(add_mlir_dialect_library name)

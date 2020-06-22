@@ -480,8 +480,8 @@ define float @fabs_squared_fast(float %x) {
   ret float %mul
 }
 
-define float @fabs_x_fabs(float %x, float %y) {
-; CHECK-LABEL: @fabs_x_fabs(
+define float @fabs_fabs(float %x, float %y) {
+; CHECK-LABEL: @fabs_fabs(
 ; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X_FABS]], [[Y_FABS]]
@@ -489,6 +489,53 @@ define float @fabs_x_fabs(float %x, float %y) {
 ;
   %x.fabs = call float @llvm.fabs.f32(float %x)
   %y.fabs = call float @llvm.fabs.f32(float %y)
+  %mul = fmul float %x.fabs, %y.fabs
+  ret float %mul
+}
+
+define float @fabs_fabs_extra_use1(float %x, float %y) {
+; CHECK-LABEL: @fabs_fabs_extra_use1(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[X_FABS]])
+; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul ninf float [[X_FABS]], [[Y_FABS]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  call void @use_f32(float %x.fabs)
+  %y.fabs = call float @llvm.fabs.f32(float %y)
+  %mul = fmul ninf float %x.fabs, %y.fabs
+  ret float %mul
+}
+
+define float @fabs_fabs_extra_use2(float %x, float %y) {
+; CHECK-LABEL: @fabs_fabs_extra_use2(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[Y_FABS:%.*]] = call fast float @llvm.fabs.f32(float [[Y:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[Y_FABS]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc ninf float [[X_FABS]], [[Y_FABS]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %x.fabs = call fast float @llvm.fabs.f32(float %x)
+  %y.fabs = call fast float @llvm.fabs.f32(float %y)
+  call void @use_f32(float %y.fabs)
+  %mul = fmul reassoc ninf float %x.fabs, %y.fabs
+  ret float %mul
+}
+
+define float @fabs_fabs_extra_use3(float %x, float %y) {
+; CHECK-LABEL: @fabs_fabs_extra_use3(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[X_FABS]])
+; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[Y_FABS]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X_FABS]], [[Y_FABS]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  call void @use_f32(float %x.fabs)
+  %y.fabs = call float @llvm.fabs.f32(float %y)
+  call void @use_f32(float %y.fabs)
   %mul = fmul float %x.fabs, %y.fabs
   ret float %mul
 }
@@ -572,9 +619,9 @@ declare float @llvm.log2.f32(float)
 
 define float @log2half(float %x, float %y) {
 ; CHECK-LABEL: @log2half(
-; CHECK-NEXT:    [[LOG2:%.*]] = call fast float @llvm.log2.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[LOG2]], [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fsub fast float [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.log2.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fsub fast float [[TMP2]], [[X]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %halfy = fmul float %y, 0.5
@@ -585,10 +632,10 @@ define float @log2half(float %x, float %y) {
 
 define float @log2half_commute(float %x1, float %y) {
 ; CHECK-LABEL: @log2half_commute(
-; CHECK-NEXT:    [[LOG2:%.*]] = call fast float @llvm.log2.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[LOG2]], [[X1:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast float [[TMP1]], [[X1]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[TMP2]], 0x3FC24924A0000000
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.log2.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[X1:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast float [[TMP2]], [[X1]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[TMP3]], 0x3FC24924A0000000
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %x = fdiv float %x1, 7.0 ; thwart complexity-based canonicalization

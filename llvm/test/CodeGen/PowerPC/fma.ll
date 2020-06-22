@@ -95,10 +95,25 @@ define double @test_FNMSUB1(double %A, double %B, double %C) {
 	%E = fsub double %C, %D		; <double> [#uses=1]
 	ret double %E
 ; CHECK-LABEL: test_FNMSUB1:
-; CHECK: fnmsub
+; CHECK: fneg
+; CHECK-NEXT: fmadd
 ; CHECK-NEXT: blr
 
 ; CHECK-VSX-LABEL: test_FNMSUB1:
+; CHECK-VSX: xsnegdp
+; CHECK-VSX-NEXT: xsmaddmdp
+}
+
+; need nsz flag to generate fnmsub since it may affect sign of zero
+define double @test_FNMSUB1_NSZ(double %A, double %B, double %C) {
+	%D = fmul nsz double %A, %B		; <double> [#uses=1]
+	%E = fsub nsz double %C, %D		; <double> [#uses=1]
+	ret double %E
+; CHECK-LABEL: test_FNMSUB1_NSZ:
+; CHECK: fnmsub
+; CHECK-NEXT: blr
+
+; CHECK-VSX-LABEL: test_FNMSUB1_NSZ:
 ; CHECK-VSX: xsnmsubmdp
 }
 

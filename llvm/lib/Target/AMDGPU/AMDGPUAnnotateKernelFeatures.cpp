@@ -279,6 +279,7 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
   bool HasApertureRegs = ST.hasApertureRegs();
   SmallPtrSet<const Constant *, 8> ConstantExprVisited;
 
+  bool HaveStackObjects = false;
   bool Changed = false;
   bool NeedQueuePtr = false;
   bool HaveCall = false;
@@ -286,6 +287,11 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
+      if (isa<AllocaInst>(I)) {
+        HaveStackObjects = true;
+        continue;
+      }
+
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         const Function *Callee =
             dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
@@ -352,6 +358,11 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
   // estimating whether there are calls before argument lowering.
   if (!IsFunc && HaveCall) {
     F.addFnAttr("amdgpu-calls");
+    Changed = true;
+  }
+
+  if (HaveStackObjects) {
+    F.addFnAttr("amdgpu-stack-objects");
     Changed = true;
   }
 

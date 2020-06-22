@@ -25,7 +25,7 @@ class BreakpointAPITestCase(TestBase):
 
         # Now create a breakpoint on main.c by name 'AFunction'.
         breakpoint = target.BreakpointCreateByName('AFunction', 'a.out')
-        #print("breakpoint:", breakpoint)
+        self.trace("breakpoint:", breakpoint)
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
@@ -59,7 +59,7 @@ class BreakpointAPITestCase(TestBase):
 
         # Now create a breakpoint on main.c by name 'AFunction'.
         breakpoint = target.BreakpointCreateByName('AFunction', 'a.out')
-        #print("breakpoint:", breakpoint)
+        self.trace("breakpoint:", breakpoint)
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() == 1,
                         VALID_BREAKPOINT)

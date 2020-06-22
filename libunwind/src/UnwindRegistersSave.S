@@ -1030,7 +1030,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #  thread_state pointer is in a0
 #
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
-  // x0 is zero
+  sd    x1, (8 * 0)(a0) // store ra as pc
   sd    x1, (8 * 1)(a0)
   sd    x2, (8 * 2)(a0)
   sd    x3, (8 * 3)(a0)

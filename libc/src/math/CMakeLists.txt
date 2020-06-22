@@ -21,21 +21,6 @@ add_object_library(
 )
 
 add_entrypoint_object(
-  round
-  REDIRECTED
-  SRCS
-    round.cpp
-  HDRS
-    round.h
-)
-
-add_redirector_object(
-  round_redirector
-  SRC
-    round_redirector.cpp
-)
-
-add_entrypoint_object(
   cosf
   SRCS
     cosf.cpp
@@ -79,6 +64,8 @@ add_entrypoint_object(
     fabs.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -87,6 +74,124 @@ add_entrypoint_object(
     fabsf.cpp
   HDRS
     fabsf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fabsl
+  SRCS
+    fabsl.cpp
+  HDRS
+    fabsl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  trunc
+  SRCS
+    trunc.cpp
+  HDRS
+    trunc.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  truncf
+  SRCS
+    truncf.cpp
+  HDRS
+    truncf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  truncl
+  SRCS
+    truncl.cpp
+  HDRS
+    truncl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  ceil
+  SRCS
+    ceil.cpp
+  HDRS
+    ceil.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  ceilf
+  SRCS
+    ceilf.cpp
+  HDRS
+    ceilf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  floor
+  SRCS
+    floor.cpp
+  HDRS
+    floor.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  floorf
+  SRCS
+    floorf.cpp
+  HDRS
+    floorf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  round
+  SRCS
+    round.cpp
+  HDRS
+    round.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  roundf
+  SRCS
+    roundf.cpp
+  HDRS
+    roundf.h
   DEPENDS
     libc.utils.FPUtil.fputil
 )
@@ -123,4 +228,84 @@ add_entrypoint_object(
     .exp_utils
     .math_utils
     libc.include.math
+)
+
+add_entrypoint_object(
+  copysign
+  SRCS
+    copysign.cpp
+  HDRS
+    copysign.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  copysignf
+  SRCS
+    copysignf.cpp
+  HDRS
+    copysignf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  frexp
+  SRCS
+    frexp.cpp
+  HDRS
+    frexp.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  frexpf
+  SRCS
+    frexpf.cpp
+  HDRS
+    frexpf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  logb
+  SRCS
+    logb.cpp
+  HDRS
+    logb.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  logbf
+  SRCS
+    logbf.cpp
+  HDRS
+    logbf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  modf
+  SRCS
+    modf.cpp
+  HDRS
+    modf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  modff
+  SRCS
+    modff.cpp
+  HDRS
+    modff.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
 )

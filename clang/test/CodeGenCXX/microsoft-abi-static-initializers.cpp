@@ -133,7 +133,7 @@ inline S &UnreachableStatic() {
   return s;
 }
 
-// CHECK-LABEL: define linkonce_odr dso_local dereferenceable({{[0-9]+}}) %struct.S* @"?UnreachableStatic@@YAAAUS@@XZ"() {{.*}} comdat
+// CHECK-LABEL: define linkonce_odr dso_local nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.S* @"?UnreachableStatic@@YAAAUS@@XZ"() {{.*}} comdat
 // CHECK: and i32 {{.*}}, 2
 // CHECK: or i32 {{.*}}, 2
 // CHECK: ret
@@ -143,7 +143,7 @@ inline S &getS() {
   return TheS;
 }
 
-// CHECK-LABEL: define linkonce_odr dso_local dereferenceable({{[0-9]+}}) %struct.S* @"?getS@@YAAAUS@@XZ"() {{.*}} comdat
+// CHECK-LABEL: define linkonce_odr dso_local nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.S* @"?getS@@YAAAUS@@XZ"() {{.*}} comdat
 // CHECK: load i32, i32* @"??_B?1??getS@@YAAAUS@@XZ@51"
 // CHECK: and i32 {{.*}}, 1
 // CHECK: icmp eq i32 {{.*}}, 0

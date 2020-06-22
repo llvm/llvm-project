@@ -62,6 +62,7 @@ The following options are describe below:
  - :option:`LocalConstantPointerCase`, :option:`LocalConstantPointerPrefix`, :option:`LocalConstantPointerSuffix`
  - :option:`LocalPointerCase`, :option:`LocalPointerPrefix`, :option:`LocalPointerSuffix`
  - :option:`LocalVariableCase`, :option:`LocalVariablePrefix`, :option:`LocalVariableSuffix`
+ - :option:`MacroDefinitionCase`, :option:`MacroDefinitionPrefix`, :option:`MacroDefinitionSuffix`
  - :option:`MemberCase`, :option:`MemberPrefix`, :option:`MemberSuffix`
  - :option:`MethodCase`, :option:`MethodPrefix`, :option:`MethodSuffix`
  - :option:`NamespaceCase`, :option:`NamespacePrefix`, :option:`NamespaceSuffix`
@@ -1075,6 +1076,44 @@ After:
 .. code-block:: c++
 
     void foo() { int pre_local_constant_post; }
+
+.. option:: MacroDefinitionCase
+
+    When defined, the check will ensure macro definitions conform to the
+    selected casing.
+
+.. option:: MacroDefinitionPrefix
+
+    When defined, the check will ensure macro definitions will add the
+    prefixed with the given value (regardless of casing).
+
+.. option:: MacroDefinitionSuffix
+
+    When defined, the check will ensure macro definitions will add the
+    suffix with the given value (regardless of casing).
+
+For example using values of:
+
+   - MacroDefinitionCase of ``lower_case``
+   - MacroDefinitionPrefix of ``pre_``
+   - MacroDefinitionSuffix of ``_post``
+
+Identifies and/or transforms macro definitions as follows:
+
+Before:
+
+.. code-block:: c
+
+    #define MY_MacroDefinition
+
+After:
+
+.. code-block:: c
+
+    #define pre_my_macro_definition_post
+
+Note: This will not warn on builtin macros or macros defined on the command line
+using the ``-D`` flag.
 
 .. option:: MemberCase
 

@@ -763,7 +763,7 @@ define <3 x i16> @v_fshr_v3i16(<3 x i16> %src0, <3 x i16> %src1, <3 x i16> %src2
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v2, v5, vcc
 ; SI-NEXT:    v_and_b32_e32 v2, v9, v1
-; SI-NEXT:    v_alignbit_b32 v1, v2, v0, 16
+; SI-NEXT:    v_alignbit_b32 v1, v1, v0, 16
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_fshr_v3i16:

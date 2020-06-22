@@ -6,7 +6,7 @@
 define i32 @zext_ifpos(i32 %x) {
 ; CHECK-LABEL: zext_ifpos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nor 3, 3, 3
+; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 31
 ; CHECK-NEXT:    blr
   %c = icmp sgt i32 %x, -1
@@ -48,7 +48,7 @@ define i32 @sel_ifpos_tval_bigger(i32 %x) {
 ; CHECK-NEXT:    li 4, 41
 ; CHECK-NEXT:    cmpwi 3, -1
 ; CHECK-NEXT:    li 3, 42
-; CHECK-NEXT:    isel 3, 3, 4, 1
+; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    blr
   %c = icmp sgt i32 %x, -1
   %r = select i1 %c, i32 42, i32 41
@@ -58,7 +58,7 @@ define i32 @sel_ifpos_tval_bigger(i32 %x) {
 define i32 @sext_ifpos(i32 %x) {
 ; CHECK-LABEL: sext_ifpos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nor 3, 3, 3
+; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    srawi 3, 3, 31
 ; CHECK-NEXT:    blr
   %c = icmp sgt i32 %x, -1
@@ -100,7 +100,7 @@ define i32 @sel_ifpos_fval_bigger(i32 %x) {
 ; CHECK-NEXT:    li 4, 42
 ; CHECK-NEXT:    cmpwi 3, -1
 ; CHECK-NEXT:    li 3, 41
-; CHECK-NEXT:    isel 3, 3, 4, 1
+; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    blr
   %c = icmp sgt i32 %x, -1
   %r = select i1 %c, i32 41, i32 42
@@ -137,7 +137,7 @@ define i32 @sel_ifneg_tval_bigger(i32 %x) {
 ; CHECK-NEXT:    li 4, 41
 ; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    li 3, 42
-; CHECK-NEXT:    isel 3, 3, 4, 0
+; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    blr
   %c = icmp slt i32 %x, 0
   %r = select i1 %c, i32 42, i32 41
@@ -172,7 +172,7 @@ define i32 @sel_ifneg_fval_bigger(i32 %x) {
 ; CHECK-NEXT:    li 4, 42
 ; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    li 3, 41
-; CHECK-NEXT:    isel 3, 3, 4, 0
+; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    blr
   %c = icmp slt i32 %x, 0
   %r = select i1 %c, i32 41, i32 42

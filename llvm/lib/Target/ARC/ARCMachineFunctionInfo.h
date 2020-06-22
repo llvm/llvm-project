@@ -33,10 +33,7 @@ public:
 
   explicit ARCFunctionInfo(MachineFunction &MF)
       : ReturnStackOffsetSet(false), VarArgsFrameIndex(0),
-        ReturnStackOffset(-1U), MaxCallStackReq(0) {
-    // Functions are 4-byte aligned.
-    MF.setAlignment(Align(4));
-  }
+        ReturnStackOffset(-1U), MaxCallStackReq(0) {}
 
   ~ARCFunctionInfo() {}
 

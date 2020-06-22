@@ -71,7 +71,7 @@ The two keywords cannot be specified at the same time.
 
 If neither ``AT(lma)`` nor ``AT>lma_region`` is specified:
 
-- If the previous section is also in the default LMA region, the difference
-  between the LMA and the VMA is computed to be the same as the previous
-  difference.
+- If the previous section is also in the default LMA region, and the two
+  section have the same memory regions, the difference between the LMA and the
+  VMA is computed to be the same as the previous difference.
 - Otherwise, the LMA is set to the VMA.

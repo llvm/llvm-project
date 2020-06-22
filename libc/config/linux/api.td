@@ -2,6 +2,7 @@ include "config/public_api.td"
 
 include "spec/gnu_ext.td"
 include "spec/linux.td"
+include "spec/llvm_libc_ext.td"
 include "spec/posix.td"
 include "spec/stdc.td"
 
@@ -149,19 +150,37 @@ def MathAPI : PublicAPI<"math.h"> {
     FloatT,
   ];
   let Functions = [
+   "copysign",
+   "copysignf",
+   "ceil",
+   "ceilf",
    "cosf",
    "fabs",
    "fabsf",
+   "fabsl",
+   "floor",
+   "floorf",
+   "frexp",
+   "frexpf",
+   "logb",
+   "logbf",
+   "modf",
+   "modff",
    "expf",
    "exp2f",
    "round",
+   "roundf",
    "sincosf",
    "sinf",
+   "trunc",
+   "truncf",
+   "truncl",
   ];
 }
 
 def StringAPI : PublicAPI<"string.h"> {
   let Functions = [
+    "bzero",
     "memcpy",
     "memmove",
     "memcmp",
@@ -301,6 +320,12 @@ def SignalAPI : PublicAPI<"signal.h"> {
   ];
 }
 
+def OnceFlag : TypeDecl<"once_flag"> {
+  let Decl = [{
+    typedef unsigned int once_flag;
+  }];
+}
+
 def MtxT : TypeDecl<"mtx_t"> {
   let Decl = [{
     typedef struct {
@@ -314,8 +339,20 @@ def ThreadStartT : TypeDecl<"thrd_start_t"> {
   let Decl = "typedef int (*thrd_start_t)(void *);";
 }
 
+def CallOnceFuncT : TypeDecl<"__call_once_func_t"> {
+  let Decl = [{
+    typedef void(*__call_once_func_t)(void);
+  }];
+}
+
 def ThreadsAPI : PublicAPI<"threads.h"> {
+  let Macros = [
+    SimpleMacroDef<"ONCE_FLAG_INIT", "0">,
+  ];
+
   let TypeDeclarations = [
+    OnceFlag,
+    CallOnceFuncT,
     MtxT,
     ThreadStartT,
   ];
@@ -332,6 +369,7 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
   ];
 
   let Functions = [
+    "call_once",
     "mtx_init",
     "mtx_lock",
     "mtx_unlock",

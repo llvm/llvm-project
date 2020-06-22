@@ -26,13 +26,20 @@ namespace Fortran::semantics {
 
 class Symbol;
 
-void CheckPointerAssignment(
+bool CheckPointerAssignment(
     evaluate::FoldingContext &, const evaluate::Assignment &);
-void CheckPointerAssignment(
+bool CheckPointerAssignment(evaluate::FoldingContext &, const SomeExpr &lhs,
+    const SomeExpr &rhs, bool isBoundsRemapping = false);
+bool CheckPointerAssignment(
     evaluate::FoldingContext &, const Symbol &lhs, const SomeExpr &rhs);
-void CheckPointerAssignment(evaluate::FoldingContext &,
+bool CheckPointerAssignment(evaluate::FoldingContext &,
     parser::CharBlock source, const std::string &description,
     const evaluate::characteristics::DummyDataObject &, const SomeExpr &rhs);
+
+// Checks whether an expression is a valid static initializer for a
+// particular pointer designator.
+bool CheckInitialTarget(
+    evaluate::FoldingContext &, const SomeExpr &pointer, const SomeExpr &init);
 
 } // namespace Fortran::semantics
 

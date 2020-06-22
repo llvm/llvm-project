@@ -2,7 +2,7 @@
 
 #define NULL ((char *)0)
 
-#if __has_feature(__builtin_memcpy_inline)
+#if __has_builtin(__builtin_memcpy_inline)
 #warning defined as expected
 // expected-warning@-1 {{defined as expected}}
 #endif

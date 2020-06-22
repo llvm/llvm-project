@@ -1139,11 +1139,12 @@ typedef MetadataTest DISubrangeTest;
 TEST_F(DISubrangeTest, get) {
   auto *N = DISubrange::get(Context, 5, 7);
   auto Count = N->getCount();
+  auto Lower = N->getLowerBound();
   EXPECT_EQ(dwarf::DW_TAG_subrange_type, N->getTag());
   ASSERT_TRUE(Count);
   ASSERT_TRUE(Count.is<ConstantInt*>());
   EXPECT_EQ(5, Count.get<ConstantInt*>()->getSExtValue());
-  EXPECT_EQ(7, N->getLowerBound());
+  EXPECT_EQ(7, Lower.get<ConstantInt *>()->getSExtValue());
   EXPECT_EQ(N, DISubrange::get(Context, 5, 7));
   EXPECT_EQ(DISubrange::get(Context, 5, 0), DISubrange::get(Context, 5));
 
@@ -1154,11 +1155,12 @@ TEST_F(DISubrangeTest, get) {
 TEST_F(DISubrangeTest, getEmptyArray) {
   auto *N = DISubrange::get(Context, -1, 0);
   auto Count = N->getCount();
+  auto Lower = N->getLowerBound();
   EXPECT_EQ(dwarf::DW_TAG_subrange_type, N->getTag());
   ASSERT_TRUE(Count);
   ASSERT_TRUE(Count.is<ConstantInt*>());
   EXPECT_EQ(-1, Count.get<ConstantInt*>()->getSExtValue());
-  EXPECT_EQ(0, N->getLowerBound());
+  EXPECT_EQ(0, Lower.get<ConstantInt *>()->getSExtValue());
   EXPECT_EQ(N, DISubrange::get(Context, -1, 0));
 }
 
@@ -1172,13 +1174,144 @@ TEST_F(DISubrangeTest, getVariableCount) {
 
   auto *N = DISubrange::get(Context, VlaExpr, 0);
   auto Count = N->getCount();
+  auto Lower = N->getLowerBound();
   ASSERT_TRUE(Count);
   ASSERT_TRUE(Count.is<DIVariable*>());
   EXPECT_EQ(VlaExpr, Count.get<DIVariable*>());
   ASSERT_TRUE(isa<DIVariable>(N->getRawCountNode()));
-  EXPECT_EQ(0, N->getLowerBound());
+  EXPECT_EQ(0, Lower.get<ConstantInt *>()->getSExtValue());
   EXPECT_EQ("vla_expr", Count.get<DIVariable*>()->getName());
   EXPECT_EQ(N, DISubrange::get(Context, VlaExpr, 0));
+}
+
+TEST_F(DISubrangeTest, fortranAllocatableInt) {
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+  DIType *Type = getDerivedType();
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
+  auto *LI = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), -10));
+  auto *UI = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), 10));
+  auto *SI = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), 4));
+  auto *UIother = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), 20));
+  auto *UVother = DILocalVariable::get(Context, Scope, "ubother", File, 8, Type,
+                                       2, Flags, 8);
+  auto *UEother = DIExpression::get(Context, {5, 6});
+  auto *LIZero = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), 0));
+  auto *UIZero = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), 0));
+
+  auto *N = DISubrange::get(Context, nullptr, LI, UI, SI);
+
+  auto Lower = N->getLowerBound();
+  ASSERT_TRUE(Lower);
+  ASSERT_TRUE(Lower.is<ConstantInt *>());
+  EXPECT_EQ(cast<ConstantInt>(LI->getValue()), Lower.get<ConstantInt *>());
+
+  auto Upper = N->getUpperBound();
+  ASSERT_TRUE(Upper);
+  ASSERT_TRUE(Upper.is<ConstantInt *>());
+  EXPECT_EQ(cast<ConstantInt>(UI->getValue()), Upper.get<ConstantInt *>());
+
+  auto Stride = N->getStride();
+  ASSERT_TRUE(Stride);
+  ASSERT_TRUE(Stride.is<ConstantInt *>());
+  EXPECT_EQ(cast<ConstantInt>(SI->getValue()), Stride.get<ConstantInt *>());
+
+  EXPECT_EQ(N, DISubrange::get(Context, nullptr, LI, UI, SI));
+
+  EXPECT_NE(N, DISubrange::get(Context, nullptr, LI, UIother, SI));
+  EXPECT_NE(N, DISubrange::get(Context, nullptr, LI, UEother, SI));
+  EXPECT_NE(N, DISubrange::get(Context, nullptr, LI, UVother, SI));
+
+  auto *NZeroLower = DISubrange::get(Context, nullptr, LIZero, UI, SI);
+  EXPECT_NE(NZeroLower, DISubrange::get(Context, nullptr, nullptr, UI, SI));
+
+  auto *NZeroUpper = DISubrange::get(Context, nullptr, LI, UIZero, SI);
+  EXPECT_NE(NZeroUpper, DISubrange::get(Context, nullptr, LI, nullptr, SI));
+}
+
+TEST_F(DISubrangeTest, fortranAllocatableVar) {
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+  DIType *Type = getDerivedType();
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
+  auto *LV =
+      DILocalVariable::get(Context, Scope, "lb", File, 8, Type, 2, Flags, 8);
+  auto *UV =
+      DILocalVariable::get(Context, Scope, "ub", File, 8, Type, 2, Flags, 8);
+  auto *SV =
+      DILocalVariable::get(Context, Scope, "st", File, 8, Type, 2, Flags, 8);
+  auto *SVother = DILocalVariable::get(Context, Scope, "stother", File, 8, Type,
+                                       2, Flags, 8);
+  auto *SIother = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), 20));
+  auto *SEother = DIExpression::get(Context, {5, 6});
+
+  auto *N = DISubrange::get(Context, nullptr, LV, UV, SV);
+
+  auto Lower = N->getLowerBound();
+  ASSERT_TRUE(Lower);
+  ASSERT_TRUE(Lower.is<DIVariable *>());
+  EXPECT_EQ(LV, Lower.get<DIVariable *>());
+
+  auto Upper = N->getUpperBound();
+  ASSERT_TRUE(Upper);
+  ASSERT_TRUE(Upper.is<DIVariable *>());
+  EXPECT_EQ(UV, Upper.get<DIVariable *>());
+
+  auto Stride = N->getStride();
+  ASSERT_TRUE(Stride);
+  ASSERT_TRUE(Stride.is<DIVariable *>());
+  EXPECT_EQ(SV, Stride.get<DIVariable *>());
+
+  EXPECT_EQ(N, DISubrange::get(Context, nullptr, LV, UV, SV));
+
+  EXPECT_NE(N, DISubrange::get(Context, nullptr, LV, UV, SVother));
+  EXPECT_NE(N, DISubrange::get(Context, nullptr, LV, UV, SEother));
+  EXPECT_NE(N, DISubrange::get(Context, nullptr, LV, UV, SIother));
+}
+
+TEST_F(DISubrangeTest, fortranAllocatableExpr) {
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+  DIType *Type = getDerivedType();
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
+  auto *LE = DIExpression::get(Context, {1, 2});
+  auto *UE = DIExpression::get(Context, {2, 3});
+  auto *SE = DIExpression::get(Context, {3, 4});
+  auto *LEother = DIExpression::get(Context, {5, 6});
+  auto *LIother = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), 20));
+  auto *LVother = DILocalVariable::get(Context, Scope, "lbother", File, 8, Type,
+                                       2, Flags, 8);
+
+  auto *N = DISubrange::get(Context, nullptr, LE, UE, SE);
+
+  auto Lower = N->getLowerBound();
+  ASSERT_TRUE(Lower);
+  ASSERT_TRUE(Lower.is<DIExpression *>());
+  EXPECT_EQ(LE, Lower.get<DIExpression *>());
+
+  auto Upper = N->getUpperBound();
+  ASSERT_TRUE(Upper);
+  ASSERT_TRUE(Upper.is<DIExpression *>());
+  EXPECT_EQ(UE, Upper.get<DIExpression *>());
+
+  auto Stride = N->getStride();
+  ASSERT_TRUE(Stride);
+  ASSERT_TRUE(Stride.is<DIExpression *>());
+  EXPECT_EQ(SE, Stride.get<DIExpression *>());
+
+  EXPECT_EQ(N, DISubrange::get(Context, nullptr, LE, UE, SE));
+
+  EXPECT_NE(N, DISubrange::get(Context, nullptr, LEother, UE, SE));
+  EXPECT_NE(N, DISubrange::get(Context, nullptr, LIother, UE, SE));
+  EXPECT_NE(N, DISubrange::get(Context, nullptr, LVother, UE, SE));
 }
 
 typedef MetadataTest DIEnumeratorTest;

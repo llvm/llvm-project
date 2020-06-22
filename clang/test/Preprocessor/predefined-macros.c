@@ -173,7 +173,17 @@
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spir-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIR
-// CHECK-SPIR: #define __IMAGE_SUPPORT__ 1
+// CHECK-SPIR-DAG: #define __IMAGE_SUPPORT__ 1
+// CHECK-SPIR-DAG: #define __SPIR__ 1
+// CHECK-SPIR-DAG: #define __SPIR32__ 1
+// CHECK-SPIR-NOT: #define __SPIR64__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spir64-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIR64
+// CHECK-SPIR64-DAG: #define __IMAGE_SUPPORT__ 1
+// CHECK-SPIR64-DAG: #define __SPIR__ 1
+// CHECK-SPIR64-DAG: #define __SPIR64__ 1
+// CHECK-SPIR64-NOT: #define __SPIR32__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP

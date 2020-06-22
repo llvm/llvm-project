@@ -16,7 +16,7 @@
 // void
 // atomic_store_explicit(shared_ptr<T>* p, shared_ptr<T> r, memory_order mo)
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <memory>
 #include <cassert>

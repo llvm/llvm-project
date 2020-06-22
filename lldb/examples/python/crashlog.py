@@ -791,11 +791,11 @@ def save_crashlog(debugger, command, exe_ctx, result, dict):
                     block_range = block.range[frame.addr]
                     if block_range:
                         block_start_addr = block_range[0]
-                        frame_offset = frame_pc - block_start_addr.load_addr
+                        frame_offset = frame_pc - block_start_addr.GetLoadAddress(target)
                     else:
-                        frame_offset = frame_pc - frame.function.addr.load_addr
+                        frame_offset = frame_pc - frame.function.addr.GetLoadAddress(target)
                 elif frame.symbol:
-                    frame_offset = frame_pc - frame.symbol.addr.load_addr
+                    frame_offset = frame_pc - frame.symbol.addr.GetLoadAddress(target)
                 out_file.write(
                     '%-3u %-32s 0x%16.16x %s' %
                     (frame_idx, frame.module.file.basename, frame_pc, frame.name))

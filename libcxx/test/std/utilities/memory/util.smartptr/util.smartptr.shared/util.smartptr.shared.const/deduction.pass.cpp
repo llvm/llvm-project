@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <memory>
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: libcpp-no-deduction-guides
 
 // template<class T> class shared_ptr

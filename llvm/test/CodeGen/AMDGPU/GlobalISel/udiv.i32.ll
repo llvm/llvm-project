@@ -29,7 +29,7 @@ define i32 @v_udiv_i32(i32 %num, i32 %den) {
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v3
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[4:5], v6, v1
 ; GISEL-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, v4, v2, s[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v2, v4, s[4:5]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -102,7 +102,7 @@ define amdgpu_ps i32 @s_udiv_i32(i32 inreg %num, i32 inreg %den) {
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, s0, v1
 ; GISEL-NEXT:    v_cmp_le_u32_e64 s[0:1], s1, v4
 ; GISEL-NEXT:    s_and_b64 s[0:1], s[0:1], vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[0:1]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
 ; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GISEL-NEXT:    ; return to shader part epilog
@@ -199,9 +199,9 @@ define <2 x i32> @v_udiv_v2i32(<2 x i32> %num, <2 x i32> %den) {
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[6:7], v12, v2
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[8:9], v0, v3
 ; GISEL-NEXT:    s_and_b64 s[6:7], s[6:7], vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, v7, v4, s[6:7]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v4, v7, s[6:7]
 ; GISEL-NEXT:    s_and_b64 s[6:7], s[8:9], s[4:5]
-; GISEL-NEXT:    v_cndmask_b32_e64 v1, v10, v5, s[6:7]
+; GISEL-NEXT:    v_cndmask_b32_e64 v1, v5, v10, s[6:7]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v8, v0, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, v11, v1, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -309,7 +309,7 @@ define i32 @v_udiv_i32_pow2k_denom(i32 %num) {
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v3
 ; CHECK-NEXT:    v_cmp_ge_u32_e64 s[4:5], v6, v1
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, v4, v2, s[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, v2, v4, s[4:5]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = udiv i32 %num, 4096
@@ -363,9 +363,9 @@ define <2 x i32> @v_udiv_v2i32_pow2k_denom(<2 x i32> %num) {
 ; CHECK-NEXT:    v_cmp_ge_u32_e64 s[6:7], v11, v2
 ; CHECK-NEXT:    v_cmp_ge_u32_e64 s[8:9], v0, v2
 ; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], vcc
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, v6, v3, s[6:7]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, v3, v6, s[6:7]
 ; CHECK-NEXT:    s_and_b64 s[6:7], s[8:9], s[4:5]
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, v9, v4, s[6:7]
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, v4, v9, s[6:7]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v7, v0, vcc
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, v10, v1, s[4:5]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -399,7 +399,7 @@ define i32 @v_udiv_i32_oddk_denom(i32 %num) {
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
 ; CHECK-NEXT:    v_cmp_le_u32_e64 s[4:5], s6, v5
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, v3, v1, s[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, v1, v3, s[4:5]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = udiv i32 %num, 1235195
@@ -453,9 +453,9 @@ define <2 x i32> @v_udiv_v2i32_oddk_denom(<2 x i32> %num) {
 ; CHECK-NEXT:    v_cmp_le_u32_e64 s[6:7], s8, v11
 ; CHECK-NEXT:    v_cmp_ge_u32_e64 s[8:9], v0, v2
 ; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], vcc
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, v6, v3, s[6:7]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, v3, v6, s[6:7]
 ; CHECK-NEXT:    s_and_b64 s[6:7], s[8:9], s[4:5]
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, v9, v4, s[6:7]
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, v4, v9, s[6:7]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v7, v0, vcc
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, v10, v1, s[4:5]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -489,7 +489,7 @@ define i32 @v_udiv_i32_pow2_shl_denom(i32 %x, i32 %y) {
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v3
 ; CHECK-NEXT:    v_cmp_ge_u32_e64 s[4:5], v6, v1
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, v4, v2, s[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, v2, v4, s[4:5]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shl.y = shl i32 4096, %y
@@ -545,9 +545,9 @@ define <2 x i32> @v_udiv_v2i32_pow2_shl_denom(<2 x i32> %x, <2 x i32> %y) {
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[6:7], v12, v2
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[8:9], v0, v3
 ; GISEL-NEXT:    s_and_b64 s[6:7], s[6:7], vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, v7, v4, s[6:7]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v4, v7, s[6:7]
 ; GISEL-NEXT:    s_and_b64 s[6:7], s[8:9], s[4:5]
-; GISEL-NEXT:    v_cndmask_b32_e64 v1, v10, v5, s[6:7]
+; GISEL-NEXT:    v_cndmask_b32_e64 v1, v5, v10, s[6:7]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v8, v0, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, v11, v1, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -660,7 +660,7 @@ define i32 @v_udiv_i32_24bit(i32 %num, i32 %den) {
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v3
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[4:5], v6, v1
 ; GISEL-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, v4, v2, s[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v2, v4, s[4:5]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v5, v0, vcc
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -761,9 +761,9 @@ define <2 x i32> @v_udiv_v2i32_24bit(<2 x i32> %num, <2 x i32> %den) {
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[6:7], v12, v2
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[8:9], v0, v3
 ; GISEL-NEXT:    s_and_b64 s[6:7], s[6:7], vcc
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, v7, v4, s[6:7]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v4, v7, s[6:7]
 ; GISEL-NEXT:    s_and_b64 s[6:7], s[8:9], s[4:5]
-; GISEL-NEXT:    v_cndmask_b32_e64 v1, v10, v5, s[6:7]
+; GISEL-NEXT:    v_cndmask_b32_e64 v1, v5, v10, s[6:7]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v8, v0, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, v11, v1, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]

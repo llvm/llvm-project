@@ -6,7 +6,7 @@
 // RUN: ld.lld -shared -o %t3 %t1.o --start-lib %t2.o --end-lib
 // RUN: llvm-readobj --symbols %t3 | FileCheck %s
 // RUN: ld.lld -shared -o %t3 --start-lib %t2.o --end-lib %t1.o
-// RUN: llvm-readobj --symbols %t3 | FileCheck %s
+// RUN: llvm-readobj --symbols %t3 | FileCheck /dev/null --implicit-check-not='Name: zed'
 
 // CHECK:      Name: zed
 // CHECK-NEXT: Value:

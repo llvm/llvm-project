@@ -1,4 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.osx.cocoa.DirectIvarAssignmentForAnnotatedFunctions -verify -fblocks %s
+// RUN: %clang_analyze_cc1 -verify -fblocks %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=alpha.osx.cocoa.DirectIvarAssignment \
+// RUN:   -analyzer-config \
+// RUN:     alpha.osx.cocoa.DirectIvarAssignment:AnnotatedFunctions=true
 
 typedef signed char BOOL;
 @protocol NSObject  - (BOOL)isEqual:(id)object; @end
@@ -60,4 +64,4 @@ typedef signed char BOOL;
     _nonSynth = 0; // no-warning
   }
 
-@end
+  @end

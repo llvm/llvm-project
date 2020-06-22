@@ -118,8 +118,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       // to simplify things.
       if (SrcEltTy->isFloatingPointTy()) {
         unsigned FPWidth = SrcEltTy->getPrimitiveSizeInBits();
-        Type *SrcIVTy =
-          VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumSrcElts);
+        auto *SrcIVTy = FixedVectorType::get(
+            IntegerType::get(C->getContext(), FPWidth), NumSrcElts);
         // Ask IR to do the conversion now that #elts line up.
         C = ConstantExpr::getBitCast(C, SrcIVTy);
       }
@@ -175,8 +175,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   if (DstEltTy->isFloatingPointTy()) {
     // Fold to an vector of integers with same size as our FP type.
     unsigned FPWidth = DstEltTy->getPrimitiveSizeInBits();
-    Type *DestIVTy =
-      VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumDstElt);
+    auto *DestIVTy = FixedVectorType::get(
+        IntegerType::get(C->getContext(), FPWidth), NumDstElt);
     // Recursively handle this integer conversion, if possible.
     C = FoldBitCast(C, DestIVTy, DL);
 
@@ -188,8 +188,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   // it to integer first.
   if (SrcEltTy->isFloatingPointTy()) {
     unsigned FPWidth = SrcEltTy->getPrimitiveSizeInBits();
-    Type *SrcIVTy =
-      VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumSrcElt);
+    auto *SrcIVTy = FixedVectorType::get(
+        IntegerType::get(C->getContext(), FPWidth), NumSrcElt);
     // Ask IR to do the conversion now that #elts line up.
     C = ConstantExpr::getBitCast(C, SrcIVTy);
     // If IR wasn't able to fold it, bail out.
@@ -1428,6 +1428,15 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::smul_fix_sat:
   case Intrinsic::bitreverse:
   case Intrinsic::is_constant:
+  case Intrinsic::experimental_vector_reduce_add:
+  case Intrinsic::experimental_vector_reduce_mul:
+  case Intrinsic::experimental_vector_reduce_and:
+  case Intrinsic::experimental_vector_reduce_or:
+  case Intrinsic::experimental_vector_reduce_xor:
+  case Intrinsic::experimental_vector_reduce_smin:
+  case Intrinsic::experimental_vector_reduce_smax:
+  case Intrinsic::experimental_vector_reduce_umin:
+  case Intrinsic::experimental_vector_reduce_umax:
     return true;
 
   // Floating point operations cannot be folded in strictfp functions in
@@ -1450,13 +1459,16 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::fmuladd:
   case Intrinsic::convert_from_fp16:
   case Intrinsic::convert_to_fp16:
-  // The intrinsics below depend on rounding mode in MXCSR.
+  case Intrinsic::amdgcn_cos:
   case Intrinsic::amdgcn_cubeid:
   case Intrinsic::amdgcn_cubema:
   case Intrinsic::amdgcn_cubesc:
   case Intrinsic::amdgcn_cubetc:
   case Intrinsic::amdgcn_fmul_legacy:
   case Intrinsic::amdgcn_fract:
+  case Intrinsic::amdgcn_ldexp:
+  case Intrinsic::amdgcn_sin:
+  // The intrinsics below depend on rounding mode in MXCSR.
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
   case Intrinsic::x86_sse_cvttss2si:
@@ -1492,6 +1504,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::ceil:
   case Intrinsic::floor:
   case Intrinsic::round:
+  case Intrinsic::roundeven:
   case Intrinsic::trunc:
   case Intrinsic::nearbyint:
   case Intrinsic::rint:
@@ -1500,6 +1513,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::experimental_constrained_ceil:
   case Intrinsic::experimental_constrained_floor:
   case Intrinsic::experimental_constrained_round:
+  case Intrinsic::experimental_constrained_roundeven:
   case Intrinsic::experimental_constrained_trunc:
   case Intrinsic::experimental_constrained_nearbyint:
   case Intrinsic::experimental_constrained_rint:
@@ -1644,6 +1658,53 @@ Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double), double V,
   return GetConstantFoldFPValue(V, Ty);
 }
 
+Constant *ConstantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
+  FixedVectorType *VT = dyn_cast<FixedVectorType>(Op->getType());
+  if (!VT)
+    return nullptr;
+  ConstantInt *CI = dyn_cast<ConstantInt>(Op->getAggregateElement(0U));
+  if (!CI)
+    return nullptr;
+  APInt Acc = CI->getValue();
+
+  for (unsigned I = 1; I < VT->getNumElements(); I++) {
+    if (!(CI = dyn_cast<ConstantInt>(Op->getAggregateElement(I))))
+      return nullptr;
+    const APInt &X = CI->getValue();
+    switch (IID) {
+    case Intrinsic::experimental_vector_reduce_add:
+      Acc = Acc + X;
+      break;
+    case Intrinsic::experimental_vector_reduce_mul:
+      Acc = Acc * X;
+      break;
+    case Intrinsic::experimental_vector_reduce_and:
+      Acc = Acc & X;
+      break;
+    case Intrinsic::experimental_vector_reduce_or:
+      Acc = Acc | X;
+      break;
+    case Intrinsic::experimental_vector_reduce_xor:
+      Acc = Acc ^ X;
+      break;
+    case Intrinsic::experimental_vector_reduce_smin:
+      Acc = APIntOps::smin(Acc, X);
+      break;
+    case Intrinsic::experimental_vector_reduce_smax:
+      Acc = APIntOps::smax(Acc, X);
+      break;
+    case Intrinsic::experimental_vector_reduce_umin:
+      Acc = APIntOps::umin(Acc, X);
+      break;
+    case Intrinsic::experimental_vector_reduce_umax:
+      Acc = APIntOps::umax(Acc, X);
+      break;
+    }
+  }
+
+  return ConstantInt::get(Op->getContext(), Acc);
+}
+
 /// Attempt to fold an SSE floating point to integer conversion of a constant
 /// floating point. If roundTowardZero is false, the default IEEE rounding is
 /// used (toward nearest, ties to even). This matches the behavior of the
@@ -1784,6 +1845,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return ConstantFP::get(Ty->getContext(), U);
     }
 
+    if (IntrinsicID == Intrinsic::roundeven) {
+      U.roundToIntegral(APFloat::rmNearestTiesToEven);
+      return ConstantFP::get(Ty->getContext(), U);
+    }
+
     if (IntrinsicID == Intrinsic::ceil) {
       U.roundToIntegral(APFloat::rmTowardPositive);
       return ConstantFP::get(Ty->getContext(), U);
@@ -1897,6 +1963,26 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         return ConstantFoldFP(cos, V, Ty);
       case Intrinsic::sqrt:
         return ConstantFoldFP(sqrt, V, Ty);
+      case Intrinsic::amdgcn_cos:
+      case Intrinsic::amdgcn_sin:
+        if (V < -256.0 || V > 256.0)
+          // The gfx8 and gfx9 architectures handle arguments outside the range
+          // [-256, 256] differently. This should be a rare case so bail out
+          // rather than trying to handle the difference.
+          return nullptr;
+        bool IsCos = IntrinsicID == Intrinsic::amdgcn_cos;
+        double V4 = V * 4.0;
+        if (V4 == floor(V4)) {
+          // Force exact results for quarter-integer inputs.
+          const double SinVals[4] = { 0.0, 1.0, 0.0, -1.0 };
+          V = SinVals[((int)V4 + (IsCos ? 1 : 0)) & 3];
+        } else {
+          if (IsCos)
+            V = cos(V * 2.0 * numbers::pi);
+          else
+            V = sin(V * 2.0 * numbers::pi);
+        }
+        return GetConstantFoldFPValue(V, Ty);
     }
 
     if (!TLI)
@@ -2078,12 +2164,40 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     }
   }
 
+  if (isa<ConstantAggregateZero>(Operands[0])) {
+    switch (IntrinsicID) {
+    default: break;
+    case Intrinsic::experimental_vector_reduce_add:
+    case Intrinsic::experimental_vector_reduce_mul:
+    case Intrinsic::experimental_vector_reduce_and:
+    case Intrinsic::experimental_vector_reduce_or:
+    case Intrinsic::experimental_vector_reduce_xor:
+    case Intrinsic::experimental_vector_reduce_smin:
+    case Intrinsic::experimental_vector_reduce_smax:
+    case Intrinsic::experimental_vector_reduce_umin:
+    case Intrinsic::experimental_vector_reduce_umax:
+      return ConstantInt::get(Ty, 0);
+    }
+  }
+
   // Support ConstantVector in case we have an Undef in the top.
   if (isa<ConstantVector>(Operands[0]) ||
       isa<ConstantDataVector>(Operands[0])) {
     auto *Op = cast<Constant>(Operands[0]);
     switch (IntrinsicID) {
     default: break;
+    case Intrinsic::experimental_vector_reduce_add:
+    case Intrinsic::experimental_vector_reduce_mul:
+    case Intrinsic::experimental_vector_reduce_and:
+    case Intrinsic::experimental_vector_reduce_or:
+    case Intrinsic::experimental_vector_reduce_xor:
+    case Intrinsic::experimental_vector_reduce_smin:
+    case Intrinsic::experimental_vector_reduce_smax:
+    case Intrinsic::experimental_vector_reduce_umin:
+    case Intrinsic::experimental_vector_reduce_umax:
+      if (Constant *C = ConstantFoldVectorReduce(IntrinsicID, Op))
+        return C;
+      break;
     case Intrinsic::x86_sse_cvtss2si:
     case Intrinsic::x86_sse_cvtss2si64:
     case Intrinsic::x86_sse2_cvtsd2si:
@@ -2224,6 +2338,16 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         return ConstantFP::get(Ty->getContext(),
                                APFloat((double)std::pow((double)Op1V,
                                                  (int)Op2C->getZExtValue())));
+
+      if (IntrinsicID == Intrinsic::amdgcn_ldexp) {
+        // FIXME: Should flush denorms depending on FP mode, but that's ignored
+        // everywhere else.
+
+        // scalbn is equivalent to ldexp with float radix 2
+        APFloat Result = scalbn(Op1->getValueAPF(), Op2C->getSExtValue(),
+                                APFloat::rmNearestTiesToEven);
+        return ConstantFP::get(Ty->getContext(), Result);
+      }
     }
     return nullptr;
   }
@@ -2565,24 +2689,26 @@ static Constant *ConstantFoldVectorCall(StringRef Name,
                                         const DataLayout &DL,
                                         const TargetLibraryInfo *TLI,
                                         const CallBase *Call) {
-  SmallVector<Constant *, 4> Result(VTy->getNumElements());
-  SmallVector<Constant *, 4> Lane(Operands.size());
-  Type *Ty = VTy->getElementType();
-
   // Do not iterate on scalable vector. The number of elements is unknown at
   // compile-time.
   if (isa<ScalableVectorType>(VTy))
     return nullptr;
+
+  auto *FVTy = cast<FixedVectorType>(VTy);
+
+  SmallVector<Constant *, 4> Result(FVTy->getNumElements());
+  SmallVector<Constant *, 4> Lane(Operands.size());
+  Type *Ty = FVTy->getElementType();
 
   if (IntrinsicID == Intrinsic::masked_load) {
     auto *SrcPtr = Operands[0];
     auto *Mask = Operands[2];
     auto *Passthru = Operands[3];
 
-    Constant *VecData = ConstantFoldLoadFromConstPtr(SrcPtr, VTy, DL);
+    Constant *VecData = ConstantFoldLoadFromConstPtr(SrcPtr, FVTy, DL);
 
     SmallVector<Constant *, 32> NewElements;
-    for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+    for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
       auto *MaskElt = Mask->getAggregateElement(I);
       if (!MaskElt)
         break;
@@ -2608,12 +2734,12 @@ static Constant *ConstantFoldVectorCall(StringRef Name,
         return nullptr;
       }
     }
-    if (NewElements.size() != VTy->getNumElements())
+    if (NewElements.size() != FVTy->getNumElements())
       return nullptr;
     return ConstantVector::get(NewElements);
   }
 
-  for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+  for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
     // Gather a column of constants.
     for (unsigned J = 0, JE = Operands.size(); J != JE; ++J) {
       // Some intrinsics use a scalar type for certain arguments.

@@ -120,7 +120,7 @@ class LibcxxStringDataFormatterTestCase(TestBase):
         is_alternate_layout = ('arm' in self.getArchitecture()) and self.platformIsDarwin()
         if is_64_bit and not is_alternate_layout:
             self.expect("frame variable garbage1", substrs=['garbage1 = Summary Unavailable'])
-            self.expect("frame variable garbage2", substrs=['garbage2 = Summary Unavailable'])
-            self.expect("frame variable garbage3", substrs=['garbage3 = Summary Unavailable'])
+            self.expect("frame variable garbage2", substrs=[r'garbage2 = "\xfa\xfa\xfa\xfa"'])
+            self.expect("frame variable garbage3", substrs=[r'garbage3 = "\xf0\xf0"'])
             self.expect("frame variable garbage4", substrs=['garbage4 = Summary Unavailable'])
             self.expect("frame variable garbage5", substrs=['garbage5 = Summary Unavailable'])

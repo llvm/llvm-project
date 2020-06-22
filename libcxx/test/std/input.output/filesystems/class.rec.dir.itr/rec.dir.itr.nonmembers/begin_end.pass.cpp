@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <filesystem>
 
@@ -43,9 +42,10 @@ TEST_CASE(test_function_signatures)
 
 TEST_CASE(test_ranged_for_loop)
 {
-    const path testDir = StaticEnv::Dir;
-    std::set<path> dir_contents(std::begin(StaticEnv::RecDirIterationList),
-                                std::end(  StaticEnv::RecDirIterationList));
+    static_test_env static_env;
+    const path testDir = static_env.Dir;
+    std::set<path> dir_contents(static_env.RecDirIterationList.begin(),
+                                static_env.RecDirIterationList.end());
 
     std::error_code ec;
     recursive_directory_iterator it(testDir, ec);

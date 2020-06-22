@@ -85,6 +85,9 @@ public:
   /// directly.
   std::vector<AbstractOperation *> getRegisteredOperations();
 
+  /// Return true if this operation name is registered in this context.
+  bool isOperationRegistered(StringRef name);
+
   // This is effectively private given that only MLIRContext.cpp can see the
   // MLIRContextImpl type.
   MLIRContextImpl &getImpl() { return *impl; }

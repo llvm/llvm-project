@@ -2,8 +2,10 @@
 // RUN: %libomp-compile -DMY_SCHEDULE=dynamic && %libomp-run
 // RUN: %libomp-compile -DMY_SCHEDULE=guided && %libomp-run
 
-// Only works with Intel Compiler since at least version 15.0
-// XFAIL: gcc, clang
+// Only works with Intel Compiler since at least version 15.0 and clang since
+// version 11.
+
+// XFAIL: gcc, clang-3, clang-4, clang-5, clang-6, clang-7, clang-8, clang-9, clang-10
 
 /*
  * Test that large bounds are handled properly and calculations of

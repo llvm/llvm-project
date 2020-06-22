@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --dump-input-on-failure
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s
 
 define i128 @ldp_single_csdb(i128* %p) speculative_load_hardening {
 entry:

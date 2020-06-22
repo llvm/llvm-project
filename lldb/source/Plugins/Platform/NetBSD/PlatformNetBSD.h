@@ -60,7 +60,8 @@ public:
                                   lldb::addr_t offset) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformNetBSD);
+  PlatformNetBSD(const PlatformNetBSD &) = delete;
+  const PlatformNetBSD &operator=(const PlatformNetBSD &) = delete;
 };
 
 } // namespace platform_netbsd

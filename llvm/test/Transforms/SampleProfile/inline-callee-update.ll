@@ -6,7 +6,7 @@
 @z = global i32* ()* null, align 8
 
 ; CHECK: define i32* @sample_loader_inlinee() {{.*}} !prof ![[ENTRY:[0-9]+]]
-define i32* @sample_loader_inlinee() !dbg !3 {
+define i32* @sample_loader_inlinee() #0 !dbg !3 {
 bb:
   %tmp = call i32* @direct_leaf_func(i32* null), !dbg !4
   %cmp = icmp ne i32* %tmp, null
@@ -22,7 +22,7 @@ else:                                             ; preds = %bb
 }
 
 ; CHECK: define i32* @cgscc_inlinee() {{.*}} !prof ![[ENTRY:[0-9]+]]
-define i32* @cgscc_inlinee() !dbg !6 {
+define i32* @cgscc_inlinee() #0 !dbg !6 {
 bb:
   %tmp = call i32* @direct_leaf_func(i32* null), !dbg !7
   %cmp = icmp ne i32* %tmp, null
@@ -37,19 +37,21 @@ else:                                             ; preds = %bb
   ret i32* null
 }
 
-define i32* @test_sample_loader_inline(void ()* %arg) !dbg !9 {
+define i32* @test_sample_loader_inline(void ()* %arg) #0 !dbg !9 {
 bb:
   %tmp = call i32* @sample_loader_inlinee(), !dbg !10
   ret i32* %tmp
 }
 
-define i32* @test_cgscc_inline(void ()* %arg) !dbg !11 {
+define i32* @test_cgscc_inline(void ()* %arg) #0 !dbg !11 {
 bb:
   %tmp = call i32* @cgscc_inlinee(), !dbg !12
   ret i32* %tmp
 }
 
 declare i32* @direct_leaf_func(i32*)
+
+attributes #0 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}

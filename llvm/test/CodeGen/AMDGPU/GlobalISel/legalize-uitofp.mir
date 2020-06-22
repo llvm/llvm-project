@@ -99,8 +99,7 @@ body: |
     ; GFX6: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C]]
     ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C8]], [[SELECT1]]
     ; GFX6: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
-    ; GFX6: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY]](s64)
-    ; GFX6: $vgpr0 = COPY [[UITOFP]](s32)
+    ; GFX6: $vgpr0 = COPY [[ADD]](s32)
     ; GFX8-LABEL: name: test_uitofp_s64_to_s32
     ; GFX8: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -129,8 +128,7 @@ body: |
     ; GFX8: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C]]
     ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C8]], [[SELECT1]]
     ; GFX8: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
-    ; GFX8: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[COPY]](s64)
-    ; GFX8: $vgpr0 = COPY [[UITOFP]](s32)
+    ; GFX8: $vgpr0 = COPY [[ADD]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_UITOFP %0
     $vgpr0 = COPY %1
@@ -443,8 +441,7 @@ body: |
     ; GFX6: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND3]], [[C1]]
     ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C9]], [[SELECT1]]
     ; GFX6: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
-    ; GFX6: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s64)
-    ; GFX6: $vgpr0 = COPY [[UITOFP]](s32)
+    ; GFX6: $vgpr0 = COPY [[ADD]](s32)
     ; GFX8-LABEL: name: test_uitofp_s33_to_s32
     ; GFX8: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX8: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934591
@@ -476,8 +473,7 @@ body: |
     ; GFX8: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND3]], [[C1]]
     ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C9]], [[SELECT1]]
     ; GFX8: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
-    ; GFX8: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s64)
-    ; GFX8: $vgpr0 = COPY [[UITOFP]](s32)
+    ; GFX8: $vgpr0 = COPY [[ADD]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s33) = G_TRUNC %0
     %2:_(s32) = G_UITOFP %1

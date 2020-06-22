@@ -83,6 +83,16 @@ void *AsanDoesNotSupportStaticLinkage();
 void AsanCheckDynamicRTPrereqs();
 void AsanCheckIncompatibleRT();
 
+// Unpoisons platform-specific stacks.
+// Returns true if all stacks have been unpoisoned.
+bool PlatformUnpoisonStacks();
+
+// asan_rtl.cpp
+// Unpoison a region containing a stack.
+// Performs a sanity check and warns if the bounds don't look right.
+// The warning contains the type string to identify the stack type.
+void UnpoisonStack(uptr bottom, uptr top, const char *type);
+
 // asan_thread.cpp
 AsanThread *CreateMainThread();
 

@@ -35,7 +35,8 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
       "::std::unordered_set", "::std::unordered_map",
       "::std::unordered_multiset", "::std::unordered_multimap"));
 
-  const auto Matcher =
+  const auto Matcher = traverse(
+      ast_type_traits::TK_AsIs,
       callExpr(
           callee(functionDecl(Algorithms)),
           hasArgument(
@@ -54,7 +55,7 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
                          hasDeclaration(equalsBoundNode("IneffContObj"))))))))),
           hasArgument(2, expr().bind("AlgParam")),
           unless(isInTemplateInstantiation()))
-          .bind("IneffAlg");
+          .bind("IneffAlg"));
 
   Finder->addMatcher(Matcher, this);
 }

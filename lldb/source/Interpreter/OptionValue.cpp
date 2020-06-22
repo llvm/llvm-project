@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/OptionValue.h"
-
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Utility/StringList.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -505,37 +506,37 @@ lldb::OptionValueSP OptionValue::CreateValueFromCStringForTypeMask(
   lldb::OptionValueSP value_sp;
   switch (type_mask) {
   case 1u << eTypeArch:
-    value_sp.reset(new OptionValueArch());
+    value_sp = std::make_shared<OptionValueArch>();
     break;
   case 1u << eTypeBoolean:
-    value_sp.reset(new OptionValueBoolean(false));
+    value_sp = std::make_shared<OptionValueBoolean>(false);
     break;
   case 1u << eTypeChar:
-    value_sp.reset(new OptionValueChar('\0'));
+    value_sp = std::make_shared<OptionValueChar>('\0');
     break;
   case 1u << eTypeFileSpec:
-    value_sp.reset(new OptionValueFileSpec());
+    value_sp = std::make_shared<OptionValueFileSpec>();
     break;
   case 1u << eTypeFormat:
-    value_sp.reset(new OptionValueFormat(eFormatInvalid));
+    value_sp = std::make_shared<OptionValueFormat>(eFormatInvalid);
     break;
   case 1u << eTypeFormatEntity:
-    value_sp.reset(new OptionValueFormatEntity(nullptr));
+    value_sp = std::make_shared<OptionValueFormatEntity>(nullptr);
     break;
   case 1u << eTypeLanguage:
-    value_sp.reset(new OptionValueLanguage(eLanguageTypeUnknown));
+    value_sp = std::make_shared<OptionValueLanguage>(eLanguageTypeUnknown);
     break;
   case 1u << eTypeSInt64:
-    value_sp.reset(new OptionValueSInt64());
+    value_sp = std::make_shared<OptionValueSInt64>();
     break;
   case 1u << eTypeString:
-    value_sp.reset(new OptionValueString());
+    value_sp = std::make_shared<OptionValueString>();
     break;
   case 1u << eTypeUInt64:
-    value_sp.reset(new OptionValueUInt64());
+    value_sp = std::make_shared<OptionValueUInt64>();
     break;
   case 1u << eTypeUUID:
-    value_sp.reset(new OptionValueUUID());
+    value_sp = std::make_shared<OptionValueUUID>();
     break;
   }
 

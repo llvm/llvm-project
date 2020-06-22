@@ -99,7 +99,6 @@ private:
 
       void Dump(Stream &s);
 
-    public:
       bool m_valid;
       AppleObjCVTables *m_owner;
       lldb::addr_t m_header_addr;

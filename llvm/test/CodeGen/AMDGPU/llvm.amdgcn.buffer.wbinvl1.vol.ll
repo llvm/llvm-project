@@ -5,13 +5,14 @@ declare void @llvm.amdgcn.buffer.wbinvl1.vol() #0
 
 ; GCN-LABEL: {{^}}test_buffer_wbinvl1_vol:
 ; GCN-NEXT: ; %bb.0:
-; CI-NEXT: buffer_wbinvl1_vol ; encoding: [0x00,0x00,0xc0,0xe1,0x00,0x00,0x00,0x00]
-; VI-NEXT: buffer_wbinvl1_vol ; encoding: [0x00,0x00,0xfc,0xe0,0x00,0x00,0x00,0x00]
-; GCN: s_endpgm
-define amdgpu_kernel void @test_buffer_wbinvl1_vol() #0 {
+; CI: buffer_wbinvl1_vol ; encoding: [0x00,0x00,0xc0,0xe1,0x00,0x00,0x00,0x00]
+; VI: buffer_wbinvl1_vol ; encoding: [0x00,0x00,0xfc,0xe0,0x00,0x00,0x00,0x00]
+; GCN: _store_byte
+; GCN-NEXT: s_endpgm
+define amdgpu_kernel void @test_buffer_wbinvl1_vol(i8 addrspace(1)* %ptr) #0 {
   call void @llvm.amdgcn.buffer.wbinvl1.vol()
 ; This used to crash in hazard recognizer
-  store i8 0, i8 addrspace(1)* undef, align 1
+  store i8 0, i8 addrspace(1)* %ptr, align 1
   ret void
 }
 

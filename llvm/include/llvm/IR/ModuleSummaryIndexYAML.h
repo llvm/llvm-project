@@ -223,13 +223,15 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       Elem.SummaryList.push_back(std::make_unique<FunctionSummary>(
           GlobalValueSummary::GVFlags(
               static_cast<GlobalValue::LinkageTypes>(FSum.Linkage),
-              FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal, FSum.CanAutoHide),
+              FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal,
+              FSum.CanAutoHide),
           /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0, Refs,
           ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
           std::move(FSum.TypeTestAssumeVCalls),
           std::move(FSum.TypeCheckedLoadVCalls),
           std::move(FSum.TypeTestAssumeConstVCalls),
-          std::move(FSum.TypeCheckedLoadConstVCalls)));
+          std::move(FSum.TypeCheckedLoadConstVCalls),
+          ArrayRef<FunctionSummary::ParamAccess>{}));
     }
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {

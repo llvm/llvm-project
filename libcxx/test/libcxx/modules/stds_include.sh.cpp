@@ -24,7 +24,6 @@
 // NOTE: The -std=XXX flag is present in %{flags}, so we overwrite it by passing it after %{flags}.
 // FIXME: Remove the `-DINVALIDATE_CACHE_FOO` macros. Their purpose is to workaround a bug in older Clang versions
 //        the same modules caches were reused across standard dialects.
-// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++98 -DINVALIDATE_CACHE_CXX98 %s
 // RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++03 -DINVALIDATE_CACHE_CXX03 %s
 // RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++11 -DINVALIDATE_CACHE_CXX11 %s
 // RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++14 -DINVALIDATE_CACHE_CKK14 %s

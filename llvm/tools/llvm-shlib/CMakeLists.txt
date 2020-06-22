@@ -97,10 +97,10 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND NOT MSVC)
   add_custom_target(libLLVMCExports DEPENDS ${LLVM_EXPORTED_SYMBOL_FILE})
 
   add_llvm_library(LLVM-C SHARED ${SOURCES} INSTALL_WITH_TOOLCHAIN)
-  
+
   target_link_libraries(LLVM-C PUBLIC LLVM)
   add_dependencies(LLVM-C libLLVMCExports)
-  
+
   set_property(TARGET LLVM-C APPEND_STRING PROPERTY
               LINK_FLAGS
               " -compatibility_version 1 -current_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH} -Wl,-reexport_library ${LIB_PATH}")
@@ -132,7 +132,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
     list(APPEND FULL_LIB_NAMES ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/${lib}.lib)
   endforeach()
 
-  # Need to seperate lib names with newlines.
+  # Need to separate lib names with newlines.
   string(REPLACE ";" "\n" FILE_CONTENT "${FULL_LIB_NAMES}")
 
   if(NOT "${CMAKE_CFG_INTDIR}" STREQUAL ".")

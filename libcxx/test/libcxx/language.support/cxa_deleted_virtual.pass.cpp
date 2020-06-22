@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // Test exporting the symbol: "__cxa_deleted_virtual" in macosx
 // But don't expect the symbol to be exported in previous versions.

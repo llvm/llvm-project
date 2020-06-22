@@ -75,28 +75,28 @@ define <16 x float> @makefloat(float %f1, float %f2, float %f3, float %f4, float
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
 ; CHECK-NEXT:    # implicit-def: $ymm2
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm2
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm2
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[2,3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm3[0],xmm1[3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm3[0]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[0]
 ; CHECK-NEXT:    # implicit-def: $ymm3
-; CHECK-NEXT:    vmovaps %xmm1, %xmm3
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm3
-; CHECK-NEXT:    # implicit-def: $zmm24
-; CHECK-NEXT:    vmovaps %zmm3, %zmm24
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm2, %zmm24, %zmm24
-; CHECK-NEXT:    vmovaps %zmm24, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovaps %xmm2, %xmm3
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
+; CHECK-NEXT:    # implicit-def: $zmm2
+; CHECK-NEXT:    vmovaps %ymm1, %ymm2
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0
+; CHECK-NEXT:    vmovaps %zmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %zmm0
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp

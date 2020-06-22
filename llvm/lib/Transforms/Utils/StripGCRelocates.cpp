@@ -48,7 +48,7 @@ bool StripGCRelocates::runOnFunction(Function &F) {
   // i.e. not bound to a single statepoint token.
   for (Instruction &I : instructions(F)) {
     if (auto *GCR = dyn_cast<GCRelocateInst>(&I))
-      if (isStatepoint(GCR->getOperand(0)))
+      if (isa<GCStatepointInst>(GCR->getOperand(0)))
         GCRelocates.push_back(GCR);
   }
   // All gc.relocates are bound to a single statepoint token. The order of

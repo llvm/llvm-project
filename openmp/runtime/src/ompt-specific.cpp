@@ -262,8 +262,6 @@ void __ompt_lw_taskteam_init(ompt_lw_taskteam_t *lwt, kmp_info_t *thr, int gtid,
   lwt->ompt_task_info.frame.enter_frame = ompt_data_none;
   lwt->ompt_task_info.frame.exit_frame = ompt_data_none;
   lwt->ompt_task_info.scheduling_parent = NULL;
-  lwt->ompt_task_info.deps = NULL;
-  lwt->ompt_task_info.ndeps = 0;
   lwt->heap = 0;
   lwt->parent = 0;
 }

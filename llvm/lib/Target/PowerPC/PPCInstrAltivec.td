@@ -1024,12 +1024,7 @@ def : Pat<(fmul v4f32:$vA, v4f32:$vB),
           (VMADDFP $vA, $vB,
              (v4i32 (VSLW (v4i32 (V_SETALLONES)), (v4i32 (V_SETALLONES)))))>; 
 
-// Fused multiply add and multiply sub for packed float.  These are represented
-// separately from the real instructions above, for operations that must have
-// the additional precision, such as Newton-Rhapson (used by divide, sqrt)
-def : Pat<(PPCvmaddfp v4f32:$A, v4f32:$B, v4f32:$C),
-          (VMADDFP $A, $B, $C)>;
-def : Pat<(PPCvnmsubfp v4f32:$A, v4f32:$B, v4f32:$C),
+def : Pat<(PPCfnmsub v4f32:$A, v4f32:$B, v4f32:$C),
           (VNMSUBFP $A, $B, $C)>;
 
 def : Pat<(int_ppc_altivec_vmaddfp v4f32:$A, v4f32:$B, v4f32:$C),
@@ -1361,6 +1356,10 @@ def VSBOX : VXBX_Int_Ty<1480, "vsbox", int_ppc_altivec_crypto_vsbox, v2i64>;
 // The following altivec instructions were introduced in Power ISA 3.0
 def HasP9Altivec : Predicate<"PPCSubTarget->hasP9Altivec()">;
 let Predicates = [HasP9Altivec] in {
+
+// Vector Multiply-Sum
+def VMSUMUDM : VA1a_Int_Ty3<35, "vmsumudm", int_ppc_altivec_vmsumudm,
+                            v1i128, v2i64, v1i128>;
 
 // i8 element comparisons.
 def VCMPNEB   : VCMP   <  7, "vcmpneb $vD, $vA, $vB"  , v16i8>;

@@ -13,10 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCInstLower.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Constants.h"
@@ -28,11 +29,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
-
-// Defines llvm::WebAssembly::getStackOpcode to convert register instructions to
-// stack instructions
-#define GET_INSTRMAP_INFO 1
-#include "WebAssemblyGenInstrInfo.inc"
 
 // This disables the removal of registers when lowering into MC, as required
 // by some current tests.
@@ -318,7 +314,7 @@ static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI) {
   // Remove all uses of stackified registers to bring the instruction format
   // into its final stack form used thruout MC, and transition opcodes to
   // their _S variant.
-  // We do this seperate from the above code that still may need these
+  // We do this separate from the above code that still may need these
   // registers for e.g. call_indirect signatures.
   // See comments in lib/Target/WebAssembly/WebAssemblyInstrFormats.td for
   // details.

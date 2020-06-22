@@ -505,7 +505,8 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
 
 /// Creates a \c CompilerInvocation.
 CompilerInvocation *newInvocation(DiagnosticsEngine *Diagnostics,
-                                  const llvm::opt::ArgStringList &CC1Args);
+                                  const llvm::opt::ArgStringList &CC1Args,
+                                  const char *const BinaryName);
 
 } // namespace tooling
 

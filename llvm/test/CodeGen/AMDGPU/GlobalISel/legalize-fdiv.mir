@@ -212,14 +212,14 @@ body: |
     ; SI: [[INT2:%[0-9]+]]:_(s32), [[INT3:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[COPY]](s32), [[COPY1]](s32), 1
     ; SI: [[INT4:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT]](s32)
     ; SI: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[INT]]
-    ; SI: S_SETREG_IMM32_B32 3, 2305
+    ; SI: S_SETREG_IMM32_B32 3, 2305, implicit-def $mode, implicit $mode
     ; SI: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[INT4]], [[C]]
     ; SI: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[FMA]], [[INT4]], [[INT4]]
     ; SI: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INT2]], [[FMA1]]
     ; SI: [[FMA2:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMUL]], [[INT2]]
     ; SI: [[FMA3:%[0-9]+]]:_(s32) = G_FMA [[FMA2]], [[FMA1]], [[FMUL]]
     ; SI: [[FMA4:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMA3]], [[INT2]]
-    ; SI: S_SETREG_IMM32_B32 0, 2305
+    ; SI: S_SETREG_IMM32_B32 0, 2305, implicit-def $mode, implicit $mode
     ; SI: [[INT5:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s32), [[FMA1]](s32), [[FMA3]](s32), [[INT3]](s1)
     ; SI: [[INT6:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s32), [[COPY1]](s32), [[COPY]](s32)
     ; SI: $vgpr0 = COPY [[INT6]](s32)
@@ -231,14 +231,14 @@ body: |
     ; VI: [[INT2:%[0-9]+]]:_(s32), [[INT3:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[COPY]](s32), [[COPY1]](s32), 1
     ; VI: [[INT4:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT]](s32)
     ; VI: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[INT]]
-    ; VI: S_SETREG_IMM32_B32 3, 2305
+    ; VI: S_SETREG_IMM32_B32 3, 2305, implicit-def $mode, implicit $mode
     ; VI: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[INT4]], [[C]]
     ; VI: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[FMA]], [[INT4]], [[INT4]]
     ; VI: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INT2]], [[FMA1]]
     ; VI: [[FMA2:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMUL]], [[INT2]]
     ; VI: [[FMA3:%[0-9]+]]:_(s32) = G_FMA [[FMA2]], [[FMA1]], [[FMUL]]
     ; VI: [[FMA4:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMA3]], [[INT2]]
-    ; VI: S_SETREG_IMM32_B32 0, 2305
+    ; VI: S_SETREG_IMM32_B32 0, 2305, implicit-def $mode, implicit $mode
     ; VI: [[INT5:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s32), [[FMA1]](s32), [[FMA3]](s32), [[INT3]](s1)
     ; VI: [[INT6:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s32), [[COPY1]](s32), [[COPY]](s32)
     ; VI: $vgpr0 = COPY [[INT6]](s32)
@@ -250,14 +250,14 @@ body: |
     ; GFX9: [[INT2:%[0-9]+]]:_(s32), [[INT3:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[COPY]](s32), [[COPY1]](s32), 1
     ; GFX9: [[INT4:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT]](s32)
     ; GFX9: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[INT]]
-    ; GFX9: S_SETREG_IMM32_B32 3, 2305
+    ; GFX9: S_SETREG_IMM32_B32 3, 2305, implicit-def $mode, implicit $mode
     ; GFX9: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[INT4]], [[C]]
     ; GFX9: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[FMA]], [[INT4]], [[INT4]]
     ; GFX9: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INT2]], [[FMA1]]
     ; GFX9: [[FMA2:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMUL]], [[INT2]]
     ; GFX9: [[FMA3:%[0-9]+]]:_(s32) = G_FMA [[FMA2]], [[FMA1]], [[FMUL]]
     ; GFX9: [[FMA4:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMA3]], [[INT2]]
-    ; GFX9: S_SETREG_IMM32_B32 0, 2305
+    ; GFX9: S_SETREG_IMM32_B32 0, 2305, implicit-def $mode, implicit $mode
     ; GFX9: [[INT5:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s32), [[FMA1]](s32), [[FMA3]](s32), [[INT3]](s1)
     ; GFX9: [[INT6:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s32), [[COPY1]](s32), [[COPY]](s32)
     ; GFX9: $vgpr0 = COPY [[INT6]](s32)
@@ -275,14 +275,14 @@ body: |
     ; GFX10: [[INT2:%[0-9]+]]:_(s32), [[INT3:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[COPY]](s32), [[COPY1]](s32), 1
     ; GFX10: [[INT4:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT]](s32)
     ; GFX10: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[INT]]
-    ; GFX10: S_DENORM_MODE 15
+    ; GFX10: S_DENORM_MODE 15, implicit-def $mode, implicit $mode
     ; GFX10: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[INT4]], [[C]]
     ; GFX10: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[FMA]], [[INT4]], [[INT4]]
     ; GFX10: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INT2]], [[FMA1]]
     ; GFX10: [[FMA2:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMUL]], [[INT2]]
     ; GFX10: [[FMA3:%[0-9]+]]:_(s32) = G_FMA [[FMA2]], [[FMA1]], [[FMUL]]
     ; GFX10: [[FMA4:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMA3]], [[INT2]]
-    ; GFX10: S_DENORM_MODE 12
+    ; GFX10: S_DENORM_MODE 12, implicit-def $mode, implicit $mode
     ; GFX10: [[INT5:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s32), [[FMA1]](s32), [[FMA3]](s32), [[INT3]](s1)
     ; GFX10: [[INT6:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s32), [[COPY1]](s32), [[COPY]](s32)
     ; GFX10: $vgpr0 = COPY [[INT6]](s32)
@@ -464,28 +464,28 @@ body: |
     ; SI: [[INT2:%[0-9]+]]:_(s32), [[INT3:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV]](s32), [[UV2]](s32), 1
     ; SI: [[INT4:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT]](s32)
     ; SI: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[INT]]
-    ; SI: S_SETREG_IMM32_B32 3, 2305
+    ; SI: S_SETREG_IMM32_B32 3, 2305, implicit-def $mode, implicit $mode
     ; SI: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[INT4]], [[C]]
     ; SI: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[FMA]], [[INT4]], [[INT4]]
     ; SI: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INT2]], [[FMA1]]
     ; SI: [[FMA2:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMUL]], [[INT2]]
     ; SI: [[FMA3:%[0-9]+]]:_(s32) = G_FMA [[FMA2]], [[FMA1]], [[FMUL]]
     ; SI: [[FMA4:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMA3]], [[INT2]]
-    ; SI: S_SETREG_IMM32_B32 0, 2305
+    ; SI: S_SETREG_IMM32_B32 0, 2305, implicit-def $mode, implicit $mode
     ; SI: [[INT5:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s32), [[FMA1]](s32), [[FMA3]](s32), [[INT3]](s1)
     ; SI: [[INT6:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s32), [[UV2]](s32), [[UV]](s32)
     ; SI: [[INT7:%[0-9]+]]:_(s32), [[INT8:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s32), [[UV3]](s32), 0
     ; SI: [[INT9:%[0-9]+]]:_(s32), [[INT10:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s32), [[UV3]](s32), 1
     ; SI: [[INT11:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT7]](s32)
     ; SI: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[INT7]]
-    ; SI: S_SETREG_IMM32_B32 3, 2305
+    ; SI: S_SETREG_IMM32_B32 3, 2305, implicit-def $mode, implicit $mode
     ; SI: [[FMA5:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[INT11]], [[C]]
     ; SI: [[FMA6:%[0-9]+]]:_(s32) = G_FMA [[FMA5]], [[INT11]], [[INT11]]
     ; SI: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[INT9]], [[FMA6]]
     ; SI: [[FMA7:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[FMUL1]], [[INT9]]
     ; SI: [[FMA8:%[0-9]+]]:_(s32) = G_FMA [[FMA7]], [[FMA6]], [[FMUL1]]
     ; SI: [[FMA9:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[FMA8]], [[INT9]]
-    ; SI: S_SETREG_IMM32_B32 0, 2305
+    ; SI: S_SETREG_IMM32_B32 0, 2305, implicit-def $mode, implicit $mode
     ; SI: [[INT12:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA9]](s32), [[FMA6]](s32), [[FMA8]](s32), [[INT10]](s1)
     ; SI: [[INT13:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT12]](s32), [[UV3]](s32), [[UV1]](s32)
     ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INT6]](s32), [[INT13]](s32)
@@ -500,28 +500,28 @@ body: |
     ; VI: [[INT2:%[0-9]+]]:_(s32), [[INT3:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV]](s32), [[UV2]](s32), 1
     ; VI: [[INT4:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT]](s32)
     ; VI: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[INT]]
-    ; VI: S_SETREG_IMM32_B32 3, 2305
+    ; VI: S_SETREG_IMM32_B32 3, 2305, implicit-def $mode, implicit $mode
     ; VI: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[INT4]], [[C]]
     ; VI: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[FMA]], [[INT4]], [[INT4]]
     ; VI: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INT2]], [[FMA1]]
     ; VI: [[FMA2:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMUL]], [[INT2]]
     ; VI: [[FMA3:%[0-9]+]]:_(s32) = G_FMA [[FMA2]], [[FMA1]], [[FMUL]]
     ; VI: [[FMA4:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMA3]], [[INT2]]
-    ; VI: S_SETREG_IMM32_B32 0, 2305
+    ; VI: S_SETREG_IMM32_B32 0, 2305, implicit-def $mode, implicit $mode
     ; VI: [[INT5:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s32), [[FMA1]](s32), [[FMA3]](s32), [[INT3]](s1)
     ; VI: [[INT6:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s32), [[UV2]](s32), [[UV]](s32)
     ; VI: [[INT7:%[0-9]+]]:_(s32), [[INT8:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s32), [[UV3]](s32), 0
     ; VI: [[INT9:%[0-9]+]]:_(s32), [[INT10:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s32), [[UV3]](s32), 1
     ; VI: [[INT11:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT7]](s32)
     ; VI: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[INT7]]
-    ; VI: S_SETREG_IMM32_B32 3, 2305
+    ; VI: S_SETREG_IMM32_B32 3, 2305, implicit-def $mode, implicit $mode
     ; VI: [[FMA5:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[INT11]], [[C]]
     ; VI: [[FMA6:%[0-9]+]]:_(s32) = G_FMA [[FMA5]], [[INT11]], [[INT11]]
     ; VI: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[INT9]], [[FMA6]]
     ; VI: [[FMA7:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[FMUL1]], [[INT9]]
     ; VI: [[FMA8:%[0-9]+]]:_(s32) = G_FMA [[FMA7]], [[FMA6]], [[FMUL1]]
     ; VI: [[FMA9:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[FMA8]], [[INT9]]
-    ; VI: S_SETREG_IMM32_B32 0, 2305
+    ; VI: S_SETREG_IMM32_B32 0, 2305, implicit-def $mode, implicit $mode
     ; VI: [[INT12:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA9]](s32), [[FMA6]](s32), [[FMA8]](s32), [[INT10]](s1)
     ; VI: [[INT13:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT12]](s32), [[UV3]](s32), [[UV1]](s32)
     ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INT6]](s32), [[INT13]](s32)
@@ -536,28 +536,28 @@ body: |
     ; GFX9: [[INT2:%[0-9]+]]:_(s32), [[INT3:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV]](s32), [[UV2]](s32), 1
     ; GFX9: [[INT4:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT]](s32)
     ; GFX9: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[INT]]
-    ; GFX9: S_SETREG_IMM32_B32 3, 2305
+    ; GFX9: S_SETREG_IMM32_B32 3, 2305, implicit-def $mode, implicit $mode
     ; GFX9: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[INT4]], [[C]]
     ; GFX9: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[FMA]], [[INT4]], [[INT4]]
     ; GFX9: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INT2]], [[FMA1]]
     ; GFX9: [[FMA2:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMUL]], [[INT2]]
     ; GFX9: [[FMA3:%[0-9]+]]:_(s32) = G_FMA [[FMA2]], [[FMA1]], [[FMUL]]
     ; GFX9: [[FMA4:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMA3]], [[INT2]]
-    ; GFX9: S_SETREG_IMM32_B32 0, 2305
+    ; GFX9: S_SETREG_IMM32_B32 0, 2305, implicit-def $mode, implicit $mode
     ; GFX9: [[INT5:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s32), [[FMA1]](s32), [[FMA3]](s32), [[INT3]](s1)
     ; GFX9: [[INT6:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s32), [[UV2]](s32), [[UV]](s32)
     ; GFX9: [[INT7:%[0-9]+]]:_(s32), [[INT8:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s32), [[UV3]](s32), 0
     ; GFX9: [[INT9:%[0-9]+]]:_(s32), [[INT10:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s32), [[UV3]](s32), 1
     ; GFX9: [[INT11:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT7]](s32)
     ; GFX9: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[INT7]]
-    ; GFX9: S_SETREG_IMM32_B32 3, 2305
+    ; GFX9: S_SETREG_IMM32_B32 3, 2305, implicit-def $mode, implicit $mode
     ; GFX9: [[FMA5:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[INT11]], [[C]]
     ; GFX9: [[FMA6:%[0-9]+]]:_(s32) = G_FMA [[FMA5]], [[INT11]], [[INT11]]
     ; GFX9: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[INT9]], [[FMA6]]
     ; GFX9: [[FMA7:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[FMUL1]], [[INT9]]
     ; GFX9: [[FMA8:%[0-9]+]]:_(s32) = G_FMA [[FMA7]], [[FMA6]], [[FMUL1]]
     ; GFX9: [[FMA9:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[FMA8]], [[INT9]]
-    ; GFX9: S_SETREG_IMM32_B32 0, 2305
+    ; GFX9: S_SETREG_IMM32_B32 0, 2305, implicit-def $mode, implicit $mode
     ; GFX9: [[INT12:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA9]](s32), [[FMA6]](s32), [[FMA8]](s32), [[INT10]](s1)
     ; GFX9: [[INT13:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT12]](s32), [[UV3]](s32), [[UV1]](s32)
     ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INT6]](s32), [[INT13]](s32)
@@ -583,28 +583,28 @@ body: |
     ; GFX10: [[INT2:%[0-9]+]]:_(s32), [[INT3:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV]](s32), [[UV2]](s32), 1
     ; GFX10: [[INT4:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT]](s32)
     ; GFX10: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[INT]]
-    ; GFX10: S_DENORM_MODE 15
+    ; GFX10: S_DENORM_MODE 15, implicit-def $mode, implicit $mode
     ; GFX10: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[INT4]], [[C]]
     ; GFX10: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[FMA]], [[INT4]], [[INT4]]
     ; GFX10: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[INT2]], [[FMA1]]
     ; GFX10: [[FMA2:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMUL]], [[INT2]]
     ; GFX10: [[FMA3:%[0-9]+]]:_(s32) = G_FMA [[FMA2]], [[FMA1]], [[FMUL]]
     ; GFX10: [[FMA4:%[0-9]+]]:_(s32) = G_FMA [[FNEG]], [[FMA3]], [[INT2]]
-    ; GFX10: S_DENORM_MODE 12
+    ; GFX10: S_DENORM_MODE 12, implicit-def $mode, implicit $mode
     ; GFX10: [[INT5:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA4]](s32), [[FMA1]](s32), [[FMA3]](s32), [[INT3]](s1)
     ; GFX10: [[INT6:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s32), [[UV2]](s32), [[UV]](s32)
     ; GFX10: [[INT7:%[0-9]+]]:_(s32), [[INT8:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s32), [[UV3]](s32), 0
     ; GFX10: [[INT9:%[0-9]+]]:_(s32), [[INT10:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[UV1]](s32), [[UV3]](s32), 1
     ; GFX10: [[INT11:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[INT7]](s32)
     ; GFX10: [[FNEG1:%[0-9]+]]:_(s32) = G_FNEG [[INT7]]
-    ; GFX10: S_DENORM_MODE 15
+    ; GFX10: S_DENORM_MODE 15, implicit-def $mode, implicit $mode
     ; GFX10: [[FMA5:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[INT11]], [[C]]
     ; GFX10: [[FMA6:%[0-9]+]]:_(s32) = G_FMA [[FMA5]], [[INT11]], [[INT11]]
     ; GFX10: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[INT9]], [[FMA6]]
     ; GFX10: [[FMA7:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[FMUL1]], [[INT9]]
     ; GFX10: [[FMA8:%[0-9]+]]:_(s32) = G_FMA [[FMA7]], [[FMA6]], [[FMUL1]]
     ; GFX10: [[FMA9:%[0-9]+]]:_(s32) = G_FMA [[FNEG1]], [[FMA8]], [[INT9]]
-    ; GFX10: S_DENORM_MODE 12
+    ; GFX10: S_DENORM_MODE 12, implicit-def $mode, implicit $mode
     ; GFX10: [[INT12:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fmas), [[FMA9]](s32), [[FMA6]](s32), [[FMA8]](s32), [[INT10]](s1)
     ; GFX10: [[INT13:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT12]](s32), [[UV3]](s32), [[UV1]](s32)
     ; GFX10: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INT6]](s32), [[INT13]](s32)

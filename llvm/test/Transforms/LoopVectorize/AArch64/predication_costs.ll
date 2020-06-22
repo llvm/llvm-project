@@ -19,7 +19,7 @@ target triple = "aarch64--linux-gnu"
 ;   (udiv(2) + extractelement(6) + insertelement(3)) / 2 = 5
 ;
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
-; CHECK: Found an estimated cost of 5 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
+; CHECK: Found an estimated cost of 6 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
 ;
 define i32 @predicated_udiv(i32* %a, i32* %b, i1 %c, i64 %n) {
 entry:
@@ -101,7 +101,7 @@ for.end:
 ; CHECK: Scalarizing: %tmp3 = add nsw i32 %tmp2, %x
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
 ; CHECK: Found an estimated cost of 2 for VF 2 For instruction: %tmp3 = add nsw i32 %tmp2, %x
-; CHECK: Found an estimated cost of 4 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
+; CHECK: Found an estimated cost of 5 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
 ;
 define i32 @predicated_udiv_scalarized_operand(i32* %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -198,8 +198,8 @@ for.end:
 ; CHECK:     Scalarizing: %tmp5 = sub i32 %tmp4, %x
 ; CHECK:     Scalarizing and predicating: store i32 %tmp5, i32* %tmp0, align 4
 ; CHECK:     Found an estimated cost of 1 for VF 2 For instruction: %tmp2 = add i32 %tmp1, %x
-; CHECK:     Found an estimated cost of 5 for VF 2 For instruction: %tmp3 = sdiv i32 %tmp1, %tmp2
-; CHECK:     Found an estimated cost of 5 for VF 2 For instruction: %tmp4 = udiv i32 %tmp3, %tmp2
+; CHECK:     Found an estimated cost of 6 for VF 2 For instruction: %tmp3 = sdiv i32 %tmp1, %tmp2
+; CHECK:     Found an estimated cost of 6 for VF 2 For instruction: %tmp4 = udiv i32 %tmp3, %tmp2
 ; CHECK:     Found an estimated cost of 2 for VF 2 For instruction: %tmp5 = sub i32 %tmp4, %x
 ; CHECK:     Found an estimated cost of 2 for VF 2 For instruction: store i32 %tmp5, i32* %tmp0, align 4
 ;

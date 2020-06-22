@@ -53,7 +53,8 @@ public:
 private:
   void LoadAllImagesAtFileAddresses();
 
-  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderStatic);
+  DynamicLoaderStatic(const DynamicLoaderStatic &) = delete;
+  const DynamicLoaderStatic &operator=(const DynamicLoaderStatic &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_STATIC_DYNAMICLOADERSTATIC_H

@@ -993,8 +993,7 @@ static void analyzeStandardArguments(TargetLowering::CallLoweringInfo *CLI,
       for (unsigned j = 0; j != Size; ++j) {
         unsigned Offset = CCInfo.AllocateStack(
             TD->getTypeAllocSize(EVT(LocVT).getTypeForEVT(CCInfo.getContext())),
-            TD->getABITypeAlignment(
-                EVT(LocVT).getTypeForEVT(CCInfo.getContext())));
+            TD->getABITypeAlign(EVT(LocVT).getTypeForEVT(CCInfo.getContext())));
         CCInfo.addLoc(CCValAssign::getMem(ValNo++, LocVT, Offset, LocVT,
                                           CCValAssign::Full));
       }

@@ -79,7 +79,7 @@ public:
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop_others) override;
 
-  bool IsWhitelistedRuntimeValue(ConstString name) override;
+  bool IsAllowedRuntimeValue(ConstString name) override;
 protected:
   // Classes that inherit from CPPLanguageRuntime can see and modify these
   CPPLanguageRuntime(Process *process);
@@ -90,7 +90,8 @@ private:
 
   OperatorStringToCallableInfoMap CallableLookupCache;
 
-  DISALLOW_COPY_AND_ASSIGN(CPPLanguageRuntime);
+  CPPLanguageRuntime(const CPPLanguageRuntime &) = delete;
+  const CPPLanguageRuntime &operator=(const CPPLanguageRuntime &) = delete;
 };
 
 } // namespace lldb_private

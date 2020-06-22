@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj %p/Inputs/call-indirect.ll -o %t2.o
 ; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-indirect.s -o %t2.o
 ; RUN: wasm-ld --export-dynamic -o %t.wasm %t2.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 ; RUN: wasm-ld --export-dynamic -O2 -o %t-opt.wasm %t2.o %t.o
@@ -22,5 +22,5 @@ entry:
 
 ; ERROR: wasm-ld: error: --compress-relocations is incompatible with output debug information. Please pass --strip-debug or --strip-all
 
-; CHECK:    Body:            4100280284888080002100410028028088808000118080808000001A2000118180808000001A0B
-; COMPRESS: Body:            41002802840821004100280280081100001A20001101001A0B
+; CHECK:    Body:            28028088808000118080808000001A28028488808000118180808000001A0B
+; COMPRESS: Body:            280280081100001A280284081101001A0B

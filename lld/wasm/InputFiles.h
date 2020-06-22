@@ -103,9 +103,9 @@ public:
   void dumpInfo() const;
 
   uint32_t calcNewIndex(const WasmRelocation &reloc) const;
-  uint32_t calcNewValue(const WasmRelocation &reloc) const;
-  uint32_t calcNewAddend(const WasmRelocation &reloc) const;
-  uint32_t calcExpectedValue(const WasmRelocation &reloc) const;
+  uint64_t calcNewValue(const WasmRelocation &reloc) const;
+  uint64_t calcNewAddend(const WasmRelocation &reloc) const;
+  uint64_t calcExpectedValue(const WasmRelocation &reloc) const;
   Symbol *getSymbol(const WasmRelocation &reloc) const {
     return symbols[reloc.Index];
   };
@@ -118,6 +118,7 @@ public:
   std::vector<bool> typeIsUsed;
   // Maps function indices to table indices
   std::vector<uint32_t> tableEntries;
+  std::vector<uint32_t> tableEntriesRel;
   std::vector<bool> keptComdats;
   std::vector<InputSegment *> segments;
   std::vector<InputFunction *> functions;

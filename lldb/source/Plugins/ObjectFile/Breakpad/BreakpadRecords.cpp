@@ -205,7 +205,7 @@ llvm::Optional<InfoRecord> InfoRecord::parse(llvm::StringRef Line) {
   // use this as the UUID. Otherwise, we should revert back to the module ID.
   UUID ID;
   if (Line.trim().empty()) {
-    if (Str.empty() || ID.SetFromStringRef(Str, Str.size() / 2) != Str.size())
+    if (Str.empty() || !ID.SetFromStringRef(Str))
       return llvm::None;
   }
   return InfoRecord(std::move(ID));

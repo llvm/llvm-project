@@ -1,0 +1,54 @@
+# REQUIRES: aarch64-registered-target
+# RUN: not --crash llc -o - -march=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+
+---
+name:            test_ptr_mask
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %0:_(p0) = G_IMPLICIT_DEF
+    %1:_(p0) = G_IMPLICIT_DEF
+    %2:_(s64) = G_IMPLICIT_DEF
+
+    ; CHECK:  Bad machine code: Type mismatch in generic instruction
+    ; CHECK: Bad machine code: ptrmask result type must be a pointer
+    %3:_(s64) = G_PTRMASK %0, %2
+
+    ; CHECK:  Bad machine code: Type mismatch in generic instruction
+    %4:_(p0) = G_PTRMASK %2, %2
+
+    ; CHECK: Bad machine code: ptrmask mask type must be an integer
+    %5:_(p0) = G_PTRMASK %0, %0
+
+    %6:_(<2 x p0>) = G_IMPLICIT_DEF
+    %7:_(<2 x s64>) = G_IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: Type mismatch in generic instruction
+    ; CHECK: Bad machine code: ptrmask result type must be a pointer
+    %8:_(<2 x s64>) = G_PTRMASK %6, %7
+
+    ; CHECK:  Bad machine code: Type mismatch in generic instruction
+    %9:_(<2 x p0>) = G_PTRMASK %7, %7
+
+    ; CHECK: Bad machine code: Type mismatch in generic instruction
+    ; CHECK: Bad machine code: ptrmask mask type must be an integer
+    ; CHECK: Bad machine code: operand types must be all-vector or all-scalar
+    %10:_(<2 x p0>) = G_PTRMASK %0, %0
+
+    ; CHECK: Bad machine code: Type mismatch in generic instruction
+    %11:_(p0) = G_PTRMASK %6, %2
+
+    ; CHECK: Bad machine code: operand types must be all-vector or all-scalar
+    %12:_(p0) = G_PTRMASK %0, %7
+
+    ; CHECK: Bad machine code: operand types must be all-vector or all-scalar
+    %13:_(<2 x p0>) = G_PTRMASK %6, %2
+
+    %14:_(<4 x p0>) = G_IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: operand types must preserve number of vector elements
+    %15:_(<4 x p0>) = G_PTRMASK %14, %8
+
+...

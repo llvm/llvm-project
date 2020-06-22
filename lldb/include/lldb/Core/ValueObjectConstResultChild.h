@@ -70,7 +70,9 @@ private:
   friend class ValueObjectConstResult;
   friend class ValueObjectConstResultImpl;
 
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectConstResultChild);
+  ValueObjectConstResultChild(const ValueObjectConstResultChild &) = delete;
+  const ValueObjectConstResultChild &
+  operator=(const ValueObjectConstResultChild &) = delete;
 };
 
 } // namespace lldb_private

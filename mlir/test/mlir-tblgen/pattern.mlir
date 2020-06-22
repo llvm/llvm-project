@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-patterns -mlir-print-debuginfo %s | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt -test-patterns -mlir-print-debuginfo %s | FileCheck %s
 
 // CHECK-LABEL: verifyFusedLocs
 func @verifyFusedLocs(%arg0 : i32) -> i32 {

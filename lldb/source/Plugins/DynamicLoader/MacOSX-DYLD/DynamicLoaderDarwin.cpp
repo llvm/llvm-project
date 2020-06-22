@@ -685,15 +685,8 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
       // Update the module's platform with the DYLD info.
       ArchSpec dyld_spec = image_infos[idx].GetArchitecture();
       if (dyld_spec.GetTriple().getOS() == llvm::Triple::IOS &&
-          dyld_spec.GetTriple().getEnvironment() == llvm::Triple::MacABI) {
+          dyld_spec.GetTriple().getEnvironment() == llvm::Triple::MacABI)
         image_module_sp->MergeArchitecture(dyld_spec);
-        const auto &target_triple = target.GetArchitecture().GetTriple();
-        // If dyld reports the process as being loaded as MACCATALYST,
-        // force-update the target's architecture to MACCATALYST.
-        if (!(target_triple.getOS() == llvm::Triple::IOS &&
-              target_triple.getEnvironment() == llvm::Triple::MacABI))
-          target.SetArchitecture(dyld_spec);
-      }
     }
   }
 

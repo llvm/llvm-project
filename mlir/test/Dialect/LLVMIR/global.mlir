@@ -65,12 +65,12 @@ func @references() {
 
 // -----
 
-// expected-error @+1 {{op requires string attribute 'sym_name'}}
+// expected-error @+1 {{requires string attribute 'sym_name'}}
 "llvm.mlir.global"() ({}) {type = !llvm.i64, constant, value = 42 : i64} : () -> ()
 
 // -----
 
-// expected-error @+1 {{op requires attribute 'type'}}
+// expected-error @+1 {{requires attribute 'type'}}
 "llvm.mlir.global"() ({}) {sym_name = "foo", constant, value = 42 : i64} : () -> ()
 
 // -----

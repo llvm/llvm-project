@@ -65,7 +65,10 @@ template <typename A = Success> inline constexpr auto fail(MessageFixedText t) {
 }
 
 // pure(x) returns a parser that always succeeds, does not advance the
-// parse, and returns a captured value whose type must be copy-constructible.
+// parse, and returns a captured value x whose type must be copy-constructible.
+//
+// pure<A>() is essentially pure(A{}); it returns a default-constructed A{},
+// and works even when A is not copy-constructible.
 template <typename A> class PureParser {
 public:
   using resultType = A;
@@ -79,6 +82,18 @@ private:
 
 template <typename A> inline constexpr auto pure(A x) {
   return PureParser<A>(std::move(x));
+}
+
+template <typename A> class PureDefaultParser {
+public:
+  using resultType = A;
+  constexpr PureDefaultParser(const PureDefaultParser &) = default;
+  constexpr PureDefaultParser() {}
+  std::optional<A> Parse(ParseState &) const { return std::make_optional<A>(); }
+};
+
+template <typename A> inline constexpr auto pure() {
+  return PureDefaultParser<A>();
 }
 
 // If a is a parser, attempt(a) is the same parser, but on failure
@@ -239,10 +254,10 @@ template <typename PA, typename PB> class SequenceParser {
 public:
   using resultType = typename PB::resultType;
   constexpr SequenceParser(const SequenceParser &) = default;
-  constexpr SequenceParser(PA pa, PB pb) : pa_{pa}, pb_{pb} {}
+  constexpr SequenceParser(PA pa, PB pb) : pa_{pa}, pb2_{pb} {}
   std::optional<resultType> Parse(ParseState &state) const {
     if (pa_.Parse(state)) {
-      return pb_.Parse(state);
+      return pb2_.Parse(state);
     } else {
       return std::nullopt;
     }
@@ -250,7 +265,7 @@ public:
 
 private:
   const PA pa_;
-  const PB pb_;
+  const PB pb2_;
 };
 
 template <typename PA, typename PB>
@@ -336,7 +351,7 @@ public:
   using resultType = typename PA::resultType;
   static_assert(std::is_same_v<resultType, typename PB::resultType>);
   constexpr RecoveryParser(const RecoveryParser &) = default;
-  constexpr RecoveryParser(PA pa, PB pb) : pa_{pa}, pb_{pb} {}
+  constexpr RecoveryParser(PA pa, PB pb) : pa_{pa}, pb3_{pb} {}
   std::optional<resultType> Parse(ParseState &state) const {
     bool originallyDeferred{state.deferMessages()};
     ParseState backtrack{state};
@@ -364,7 +379,7 @@ public:
     bool anyTokenMatched{state.anyTokenMatched()};
     state = std::move(backtrack);
     state.set_deferMessages(true);
-    std::optional<resultType> bx{pb_.Parse(state)};
+    std::optional<resultType> bx{pb3_.Parse(state)};
     state.messages() = std::move(messages);
     state.set_deferMessages(originallyDeferred);
     if (anyTokenMatched) {
@@ -383,7 +398,7 @@ public:
 
 private:
   const PA pa_;
-  const PB pb_;
+  const PB pb3_;
 };
 
 template <typename PA, typename PB>
@@ -785,31 +800,18 @@ inline constexpr auto nonemptySeparated(PA p, PB sep) {
 // must discard its result in order to be compatible in type with other
 // parsers in an alternative, e.g. "x >> ok || y >> ok" is type-safe even
 // when x and y have distinct result types.
-//
-// cut is a parser that always fails.  It is useful when a parser must
-// have its type implicitly set; one use is the idiom "defaulted(cut >> x)",
-// which is essentially what "pure(T{})" would be able to do for x's
-// result type T, but without requiring that T have a default constructor
-// or a non-trivial destructor.  The state is preserved.
-template <bool pass> struct FixedParser {
+constexpr struct OkParser {
   using resultType = Success;
-  constexpr FixedParser() {}
+  constexpr OkParser() {}
   static constexpr std::optional<Success> Parse(ParseState &) {
-    if constexpr (pass) {
-      return Success{};
-    } else {
-      return std::nullopt;
-    }
+    return Success{};
   }
-};
-
-constexpr FixedParser<true> ok;
-constexpr FixedParser<false> cut;
+} ok;
 
 // A variant of recovery() above for convenience.
 template <typename PA, typename PB>
 inline constexpr auto localRecovery(MessageFixedText msg, PA pa, PB pb) {
-  return recovery(withMessage(msg, pa), pb >> defaulted(cut >> pa));
+  return recovery(withMessage(msg, pa), pb >> pure<typename PA::resultType>());
 }
 
 // nextCh is a parser that succeeds if the parsing state is not

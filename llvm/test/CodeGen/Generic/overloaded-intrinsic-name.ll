@@ -13,29 +13,29 @@
 
 ; function and integer
 define i32* @test_iAny(i32* %v) gc "statepoint-example" {
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32* %v)
-       %v-new = call i32* @llvm.experimental.gc.relocate.p0i32(token %tok,  i32 7, i32 7)
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32* %v)]
+       %v-new = call i32* @llvm.experimental.gc.relocate.p0i32(token %tok,  i32 0, i32 0)
        ret i32* %v-new
 }
 
 ; float
 define float* @test_fAny(float* %v) gc "statepoint-example" {
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, float* %v)
-       %v-new = call float* @llvm.experimental.gc.relocate.p0f32(token %tok,  i32 7, i32 7)
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(float* %v)]
+       %v-new = call float* @llvm.experimental.gc.relocate.p0f32(token %tok,  i32 0, i32 0)
        ret float* %v-new
 }
 
 ; array of integers
 define [3 x i32]* @test_aAny([3 x i32]* %v) gc "statepoint-example" {
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, [3 x i32]* %v)
-       %v-new = call [3 x i32]* @llvm.experimental.gc.relocate.p0a3i32(token %tok,  i32 7, i32 7)
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"([3 x i32]* %v)]
+       %v-new = call [3 x i32]* @llvm.experimental.gc.relocate.p0a3i32(token %tok,  i32 0, i32 0)
        ret [3 x i32]* %v-new
 }
 
 ; vector of integers
 define <3 x i32>* @test_vAny(<3 x i32>* %v) gc "statepoint-example" {
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, <3 x i32>* %v)
-       %v-new = call <3 x i32>* @llvm.experimental.gc.relocate.p0v3i32(token %tok,  i32 7, i32 7)
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(<3 x i32>* %v)]
+       %v-new = call <3 x i32>* @llvm.experimental.gc.relocate.p0v3i32(token %tok,  i32 0, i32 0)
        ret <3 x i32>* %v-new
 }
 
@@ -43,15 +43,15 @@ define <3 x i32>* @test_vAny(<3 x i32>* %v) gc "statepoint-example" {
 
 ; struct
 define %struct.test* @test_struct(%struct.test* %v) gc "statepoint-example" {
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, %struct.test* %v)
-       %v-new = call %struct.test* @llvm.experimental.gc.relocate.p0s_struct.tests(token %tok,  i32 7, i32 7)
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(%struct.test* %v)]
+       %v-new = call %struct.test* @llvm.experimental.gc.relocate.p0s_struct.tests(token %tok,  i32 0, i32 0)
        ret %struct.test* %v-new
 }
 
 ; literal struct with nested literal struct
 define {i64, i64, {i64} }* @test_literal_struct({i64, i64, {i64}}* %v) gc "statepoint-example" {
-       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, {i64, i64, {i64}} *%v)
-       %v-new = call {i64, i64, {i64}}* @llvm.experimental.gc.relocate.p0sl_i64i64sl_i64ss.test(token %tok,  i32 7, i32 7)
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"({i64, i64, {i64}} *%v)]
+       %v-new = call {i64, i64, {i64}}* @llvm.experimental.gc.relocate.p0sl_i64i64sl_i64ss.test(token %tok,  i32 0, i32 0)
        ret {i64, i64, {i64}}* %v-new
 }
 ; struct with a horrible name, broken when structs were unprefixed
@@ -59,18 +59,18 @@ define {i64, i64, {i64} }* @test_literal_struct({i64, i64, {i64}}* %v) gc "state
 
 define %i32* @test_i32_struct(%i32* %v) gc "statepoint-example" {
 entry:
-      %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, %i32* %v)
-      %v-new = call %i32* @llvm.experimental.gc.relocate.p0s_i32s(token %tok,  i32 7, i32 7)
+      %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(%i32* %v)]
+      %v-new = call %i32* @llvm.experimental.gc.relocate.p0s_i32s(token %tok,  i32 0, i32 0)
       ret %i32* %v-new
 }
 ; completely broken intrinsic naming due to needing remangling. Just use random naming to test
 
 define %i32* @test_broken_names(%i32* %v) gc "statepoint-example" {
 entry:
-      %tok = call fastcc token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.deadbeef(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, %i32* %v)
+      %tok = call fastcc token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.deadbeef(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(%i32* %v)]
 ; Make sure we do not destroy the calling convention when remangling
 ; CHECK: fastcc
-      %v-new = call %i32* @llvm.experimental.gc.relocate.beefdead(token %tok,  i32 7, i32 7)
+      %v-new = call %i32* @llvm.experimental.gc.relocate.beefdead(token %tok,  i32 0, i32 0)
       ret %i32* %v-new
 }
 declare zeroext i1 @return_i1()

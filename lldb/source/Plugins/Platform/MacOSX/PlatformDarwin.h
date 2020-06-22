@@ -89,9 +89,6 @@ public:
   llvm::Expected<lldb_private::StructuredData::DictionarySP>
   FetchExtendedCrashInformation(lldb_private::Process &process) override;
 
-  static lldb_private::FileSpec GetXcodeContentsDirectory();
-  static lldb_private::FileSpec GetXcodeDeveloperDirectory();
-
   /// Return the toolchain directory the current LLDB instance is located in.
   static lldb_private::FileSpec GetCurrentToolchainDirectory();
 
@@ -165,14 +162,14 @@ protected:
 
   static std::string FindComponentInPath(llvm::StringRef path,
                                          llvm::StringRef component);
-  static std::string FindXcodeContentsDirectoryInPath(llvm::StringRef path);
 
   std::string m_developer_directory;
   llvm::StringMap<std::string> m_sdk_path;
   std::mutex m_sdk_path_mutex;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformDarwin);
+  PlatformDarwin(const PlatformDarwin &) = delete;
+  const PlatformDarwin &operator=(const PlatformDarwin &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWIN_H

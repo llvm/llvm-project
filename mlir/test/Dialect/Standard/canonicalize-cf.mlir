@@ -38,8 +38,8 @@ func @br_passthrough(%arg0 : i32, %arg1 : i32) -> (i32, i32) {
 func @cond_br_folding(%cond : i1, %a : i32) {
   // CHECK-NEXT: return
 
-  %false_cond = constant 0 : i1
-  %true_cond = constant 1 : i1
+  %false_cond = constant false
+  %true_cond = constant true
   cond_br %cond, ^bb1, ^bb2(%a : i32)
 
 ^bb1:
@@ -89,8 +89,8 @@ func @cond_br_same_successor_insert_select(
 func @cond_br_and_br_folding(%a : i32) {
   // CHECK-NEXT: return
 
-  %false_cond = constant 0 : i1
-  %true_cond = constant 1 : i1
+  %false_cond = constant false
+  %true_cond = constant true
   cond_br %true_cond, ^bb2, ^bb1(%a : i32)
 
 ^bb1(%x : i32):

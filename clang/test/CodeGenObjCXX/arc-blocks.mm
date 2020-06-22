@@ -45,7 +45,7 @@ namespace test0 {
   // CHECK-NEXT: load
   // CHECK-NEXT: [[T2:%.*]] = bitcast i8* {{.*}} to [[BYREF_A]]*
   // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds [[BYREF_A]], [[BYREF_A]]* [[T2]], i32 0, i32 7
-  // CHECK-NEXT: call void @_ZN5test01AC1ERKS0_([[A]]* [[T1]], [[A]]* dereferenceable({{[0-9]+}}) [[T3]])
+  // CHECK-NEXT: call void @_ZN5test01AC1ERKS0_([[A]]* [[T1]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T3]])
   // CHECK-NEXT: ret void
 
   // CHECK:    define internal void [[DISPOSE_HELPER]](
@@ -86,13 +86,13 @@ namespace test1 {
 
 // CHECK: %[[V11:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_SOURCE]], i32 0, i32 8
 // CHECK: %[[V12:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_DEST]], i32 0, i32 8
-// CHECK: invoke void @_ZN5test12S0C1ERKS0_(%[[STRUCT_TEST1_S0]]* %[[V12]], %[[STRUCT_TEST1_S0]]* dereferenceable(4) %[[V11]])
+// CHECK: invoke void @_ZN5test12S0C1ERKS0_(%[[STRUCT_TEST1_S0]]* %[[V12]], %[[STRUCT_TEST1_S0]]* nonnull align 4 dereferenceable(4) %[[V11]])
 // CHECK: to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
 
 // CHECK: [[INVOKE_CONT]]:
 // CHECK: %[[V13:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_SOURCE]], i32 0, i32 9
 // CHECK: %[[V14:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_DEST]], i32 0, i32 9
-// CHECK: invoke void @_ZN5test12S0C1ERKS0_(%[[STRUCT_TEST1_S0]]* %[[V14]], %[[STRUCT_TEST1_S0]]* dereferenceable(4) %[[V13]])
+// CHECK: invoke void @_ZN5test12S0C1ERKS0_(%[[STRUCT_TEST1_S0]]* %[[V14]], %[[STRUCT_TEST1_S0]]* nonnull align 4 dereferenceable(4) %[[V13]])
 // CHECK: to label %[[INVOKE_CONT4:.*]] unwind label %[[LPAD3:.*]]
 
 // CHECK: [[INVOKE_CONT4]]:

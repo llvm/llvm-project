@@ -145,9 +145,9 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8] in {
       // it does use R2 then it is just a caller saved register. Therefore it is
       // safe to emit only the bl and not the nop for this instruction. The
       // linker will not try to restore R2 after the call.
-      def BL8_NOTOC : IForm_and_DForm_4_zero<18, 0, 1, 24, (outs),
-                                             (ins calltarget:$func),
-                                             "bl $func", IIC_BrB, []>;
+      def BL8_NOTOC : IForm<18, 0, 1, (outs),
+                            (ins calltarget:$func),
+                            "bl $func", IIC_BrB, []>;
     }
   }
   let Uses = [CTR8, RM] in {
@@ -924,6 +924,9 @@ def ISEL8   : AForm_4<31, 15,
 }  // hasSideEffects = 0
 }  // End FXU Operations.
 
+def : InstAlias<"li $rD, $imm", (ADDI8 g8rc:$rD, ZERO8, s16imm64:$imm)>;
+def : InstAlias<"lis $rD, $imm", (ADDIS8 g8rc:$rD, ZERO8, s17imm64:$imm)>;
+
 def : InstAlias<"mr $rA, $rB", (OR8 g8rc:$rA, g8rc:$rB, g8rc:$rB)>;
 def : InstAlias<"mr. $rA, $rB", (OR8_rec g8rc:$rA, g8rc:$rB, g8rc:$rB)>;
 
@@ -941,6 +944,84 @@ def : InstAlias<"rotlwi $rA, $rS, $n", (RLWINM8 g8rc:$rA, g8rc:$rS, u5imm:$n, 0,
 def : InstAlias<"rotlwi. $rA, $rS, $n", (RLWINM8_rec g8rc:$rA, g8rc:$rS, u5imm:$n, 0, 31)>;
 def : InstAlias<"rotlw $rA, $rS, $rB", (RLWNM8 g8rc:$rA, g8rc:$rS, g8rc:$rB, 0, 31)>;
 def : InstAlias<"rotlw. $rA, $rS, $rB", (RLWNM8_rec g8rc:$rA, g8rc:$rS, g8rc:$rB, 0, 31)>;
+def : InstAlias<"clrlwi $rA, $rS, $n", (RLWINM8 g8rc:$rA, g8rc:$rS, 0, u5imm:$n, 31)>;
+def : InstAlias<"clrlwi. $rA, $rS, $n", (RLWINM8_rec g8rc:$rA, g8rc:$rS, 0, u5imm:$n, 31)>;
+
+def : InstAlias<"isellt $rT, $rA, $rB",
+                (ISEL8 g8rc:$rT, g8rc_nox0:$rA, g8rc:$rB, CR0LT)>;
+def : InstAlias<"iselgt $rT, $rA, $rB",
+                (ISEL8 g8rc:$rT, g8rc_nox0:$rA, g8rc:$rB, CR0GT)>;
+def : InstAlias<"iseleq $rT, $rA, $rB",
+                (ISEL8 g8rc:$rT, g8rc_nox0:$rA, g8rc:$rB, CR0EQ)>;
+
+def : InstAlias<"nop", (ORI8 X0, X0, 0)>;
+def : InstAlias<"xnop", (XORI8 X0, X0, 0)>;
+
+def : InstAlias<"cntlzw $rA, $rS", (CNTLZW8 g8rc:$rA, g8rc:$rS)>;
+def : InstAlias<"cntlzw. $rA, $rS", (CNTLZW8_rec g8rc:$rA, g8rc:$rS)>;
+
+def : InstAlias<"mtxer $Rx", (MTSPR8 1, g8rc:$Rx)>;
+def : InstAlias<"mfxer $Rx", (MFSPR8 g8rc:$Rx, 1)>;
+
+def : InstAlias<"mtudscr $Rx", (MTSPR8 3, g8rc:$Rx)>;
+def : InstAlias<"mfudscr $Rx", (MFSPR8 g8rc:$Rx, 3)>;
+
+def : InstAlias<"mfrtcu $Rx", (MFSPR8 g8rc:$Rx, 4)>;
+def : InstAlias<"mfrtcl $Rx", (MFSPR8 g8rc:$Rx, 5)>;
+
+def : InstAlias<"mtlr $Rx", (MTSPR8 8, g8rc:$Rx)>;
+def : InstAlias<"mflr $Rx", (MFSPR8 g8rc:$Rx, 8)>;
+
+def : InstAlias<"mtctr $Rx", (MTSPR8 9, g8rc:$Rx)>;
+def : InstAlias<"mfctr $Rx", (MFSPR8 g8rc:$Rx, 9)>;
+
+def : InstAlias<"mtuamr $Rx", (MTSPR8 13, g8rc:$Rx)>;
+def : InstAlias<"mfuamr $Rx", (MFSPR8 g8rc:$Rx, 13)>;
+
+def : InstAlias<"mtdscr $Rx", (MTSPR8 17, g8rc:$Rx)>;
+def : InstAlias<"mfdscr $Rx", (MFSPR8 g8rc:$Rx, 17)>;
+
+def : InstAlias<"mtdsisr $Rx", (MTSPR8 18, g8rc:$Rx)>;
+def : InstAlias<"mfdsisr $Rx", (MFSPR8 g8rc:$Rx, 18)>;
+
+def : InstAlias<"mtdar $Rx", (MTSPR8 19, g8rc:$Rx)>;
+def : InstAlias<"mfdar $Rx", (MFSPR8 g8rc:$Rx, 19)>;
+
+def : InstAlias<"mtdec $Rx", (MTSPR8 22, g8rc:$Rx)>;
+def : InstAlias<"mfdec $Rx", (MFSPR8 g8rc:$Rx, 22)>;
+
+def : InstAlias<"mtsdr1 $Rx", (MTSPR8 25, g8rc:$Rx)>;
+def : InstAlias<"mfsdr1 $Rx", (MFSPR8 g8rc:$Rx, 25)>;
+
+def : InstAlias<"mtsrr0 $Rx", (MTSPR8 26, g8rc:$Rx)>;
+def : InstAlias<"mfsrr0 $Rx", (MFSPR8 g8rc:$Rx, 26)>;
+
+def : InstAlias<"mtsrr1 $Rx", (MTSPR8 27, g8rc:$Rx)>;
+def : InstAlias<"mfsrr1 $Rx", (MFSPR8 g8rc:$Rx, 27)>;
+
+def : InstAlias<"mtcfar $Rx", (MTSPR8 28, g8rc:$Rx)>;
+def : InstAlias<"mfcfar $Rx", (MFSPR8 g8rc:$Rx, 28)>;
+
+def : InstAlias<"mtamr $Rx", (MTSPR8 29, g8rc:$Rx)>;
+def : InstAlias<"mfamr $Rx", (MFSPR8 g8rc:$Rx, 29)>;
+
+foreach SPRG = 0-3 in {
+  def : InstAlias<"mfsprg $RT, "#SPRG, (MFSPR8 g8rc:$RT, !add(SPRG, 272))>;
+  def : InstAlias<"mfsprg"#SPRG#" $RT", (MFSPR8 g8rc:$RT, !add(SPRG, 272))>;
+  def : InstAlias<"mfsprg "#SPRG#", $RT", (MTSPR8 !add(SPRG, 272), g8rc:$RT)>;
+  def : InstAlias<"mfsprg"#SPRG#" $RT", (MTSPR8 !add(SPRG, 272), g8rc:$RT)>;
+}
+
+def : InstAlias<"mfasr $RT", (MFSPR8 g8rc:$RT, 280)>;
+def : InstAlias<"mtasr $RT", (MTSPR8 280, g8rc:$RT)>;
+
+def : InstAlias<"mttbl $Rx", (MTSPR8 284, g8rc:$Rx)>;
+def : InstAlias<"mttbu $Rx", (MTSPR8 285, g8rc:$Rx)>;
+
+def : InstAlias<"mfpvr $RT", (MFSPR8 g8rc:$RT, 287)>;
+
+def : InstAlias<"mfspefscr $Rx", (MFSPR8 g8rc:$Rx, 512)>;
+def : InstAlias<"mtspefscr $Rx", (MTSPR8 512, g8rc:$Rx)>;
 
 //===----------------------------------------------------------------------===//
 // Load/Store instructions.

@@ -27,14 +27,22 @@
 #include "AggressiveInstCombineInternal.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "aggressive-instcombine"
+
+STATISTIC(
+    NumDAGsReduced,
+    "Number of truncations eliminated by reducing bit width of expression DAG");
+STATISTIC(NumInstrsReduced,
+          "Number of instructions whose bit width was reduced");
 
 /// Given an instruction and a container, it fills all the relevant operands of
 /// that instruction, with respect to the Trunc expression dag optimizaton.
@@ -281,8 +289,10 @@ Type *TruncInstCombine::getBestTruncatedType() {
 /// version of \p Ty, otherwise return \p Ty.
 static Type *getReducedType(Value *V, Type *Ty) {
   assert(Ty && !Ty->isVectorTy() && "Expect Scalar Type");
-  if (auto *VTy = dyn_cast<VectorType>(V->getType()))
-    return VectorType::get(Ty, VTy->getNumElements());
+  if (auto *VTy = dyn_cast<VectorType>(V->getType())) {
+    // FIXME: should this handle scalable vectors?
+    return FixedVectorType::get(Ty, VTy->getNumElements());
+  }
   return Ty;
 }
 
@@ -301,6 +311,7 @@ Value *TruncInstCombine::getReducedOperand(Value *V, Type *SclTy) {
 }
 
 void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
+  NumInstrsReduced += InstInfoMap.size();
   for (auto &Itr : InstInfoMap) { // Forward
     Instruction *I = Itr.first;
     TruncInstCombine::Info &NodeInfo = Itr.second;
@@ -419,6 +430,7 @@ bool TruncInstCombine::run(Function &F) {
                     "dominated by: "
                  << CurrentTruncInst << '\n');
       ReduceExpressionDag(NewDstSclTy);
+      ++NumDAGsReduced;
       MadeIRChange = true;
     }
   }

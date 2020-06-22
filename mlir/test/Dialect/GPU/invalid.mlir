@@ -254,7 +254,7 @@ func @reduce_op_and_body(%arg0 : f32) {
 // -----
 
 func @reduce_invalid_op(%arg0 : f32) {
-  // expected-error@+1 {{gpu.all_reduce' op attribute 'op' failed to satisfy constraint}}
+  // expected-error@+1 {{attribute 'op' failed to satisfy constraint}}
   %res = "gpu.all_reduce"(%arg0) ({}) {op = "foo"} : (f32) -> (f32)
   return
 }
@@ -321,14 +321,14 @@ func @reduce_incorrect_yield(%arg0 : f32) {
 // -----
 
 func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
-  // expected-error@+1 {{'gpu.shuffle' op requires the same type for value operand and result}}
+  // expected-error@+1 {{requires the same type for value operand and result}}
   %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = "xor" } : (f32, i32, i32) -> (i32, i1)
 }
 
 // -----
 
 func @shuffle_unsupported_type(%arg0 : index, %arg1 : i32, %arg2 : i32) {
-  // expected-error@+1 {{'gpu.shuffle' op requires value operand type to be f32 or i32}}
+  // expected-error@+1 {{requires value operand type to be f32 or i32}}
   %shfl, %pred = gpu.shuffle %arg0, %arg1, %arg2 xor : index
 }
 
@@ -421,5 +421,17 @@ module {
       %0 = constant 0 : index
       gpu.return
     }
+  }
+}
+
+// -----
+
+module {
+  gpu.module @gpu_funcs {
+    // expected-error @+1 {{'gpu.func' op expected at least 5 arguments to body region}}
+    "gpu.func"() ( {
+    ^bb0(%arg0: f32, %arg1: memref<?xf32>, %arg2: memref<5xf32, 3>, %arg3: memref<5xf32, 5>):
+      "gpu.return"() : () -> ()
+    } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 3: i64} : () -> ()
   }
 }

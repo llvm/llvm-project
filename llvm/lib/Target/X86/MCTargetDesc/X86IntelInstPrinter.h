@@ -48,14 +48,6 @@ public:
   void printU8Imm(const MCInst *MI, unsigned Op, raw_ostream &O);
   void printSTiRegOperand(const MCInst *MI, unsigned OpNo, raw_ostream &OS);
 
-  void printanymem(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
-    printMemReference(MI, OpNo, O);
-  }
-
-  void printopaquemem(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
-    printMemReference(MI, OpNo, O);
-  }
-
   void printbytemem(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
     O << "byte ptr ";
     printMemReference(MI, OpNo, O);

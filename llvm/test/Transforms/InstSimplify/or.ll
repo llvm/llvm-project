@@ -243,3 +243,51 @@ define <2 x i399> @test8_apint(<2 x i399> %V, <2 x i399> %M) {
   %R = or <2 x i399> %D, %B
   ret <2 x i399> %R
 }
+
+; A | ~(A & B) = -1
+
+define i1 @or_with_not_op_commute1(i1 %a, i1 %b) {
+; CHECK-LABEL: @or_with_not_op_commute1(
+; CHECK-NEXT:    ret i1 true
+;
+  %ab = and i1 %a, %b
+  %not = xor i1 %ab, -1
+  %r = or i1 %a, %not
+  ret i1 %r
+}
+
+; A | ~(B & A) = -1
+
+define i8 @or_with_not_op_commute2(i8 %a, i8 %b) {
+; CHECK-LABEL: @or_with_not_op_commute2(
+; CHECK-NEXT:    ret i8 -1
+;
+  %ab = and i8 %b, %a
+  %not = xor i8 %ab, -1
+  %r = or i8 %a, %not
+  ret i8 %r
+}
+
+; ~(A & B) | A = -1
+
+define <3 x i17> @or_with_not_op_commute3(<3 x i17> %a, <3 x i17> %b) {
+; CHECK-LABEL: @or_with_not_op_commute3(
+; CHECK-NEXT:    ret <3 x i17> <i17 -1, i17 -1, i17 -1>
+;
+  %ab = and <3 x i17> %a, %b
+  %not = xor <3 x i17> %ab, <i17 -1, i17 -1, i17 -1>
+  %r = or <3 x i17> %not, %a
+  ret <3 x i17> %r
+}
+
+; ~(B & A) | A = -1
+
+define <2 x i1> @or_with_not_op_commute4(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @or_with_not_op_commute4(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %ab = and <2 x i1> %b, %a
+  %not = xor <2 x i1> %ab, <i1 -1, i1 undef>
+  %r = or <2 x i1> %not, %a
+  ret <2 x i1> %r
+}

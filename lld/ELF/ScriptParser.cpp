@@ -175,7 +175,6 @@ static ExprValue bitOr(ExprValue a, ExprValue b) {
 }
 
 void ScriptParser::readDynamicList() {
-  config->hasDynamicList = true;
   expect("{");
   std::vector<SymbolVersion> locals;
   std::vector<SymbolVersion> globals;
@@ -1475,7 +1474,7 @@ void ScriptParser::readVersionDeclaration(StringRef verStr) {
     expect(";");
 }
 
-static bool hasWildcard(StringRef s) {
+bool elf::hasWildcard(StringRef s) {
   return s.find_first_of("?*[") != StringRef::npos;
 }
 

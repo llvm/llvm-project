@@ -153,9 +153,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                      MVT::v2f64})
         setOperationAction(Op, T, Custom);
 
-    // There is no i64x2.mul instruction
-    // TODO: Actually, there is now. Implement it.
-    setOperationAction(ISD::MUL, MVT::v2i64, Expand);
+    // There is no i8x16.mul instruction
+    setOperationAction(ISD::MUL, MVT::v16i8, Expand);
 
     // There are no vector select instructions
     for (auto Op : {ISD::VSELECT, ISD::SELECT_CC, ISD::SELECT})
@@ -254,6 +253,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // Trap lowers to wasm unreachable
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
+  setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
 
   // Exception handling intrinsics
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
@@ -840,10 +840,10 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       EVT VT = Arg.getValueType();
       assert(VT != MVT::iPTR && "Legalized args should be concrete");
       Type *Ty = VT.getTypeForEVT(*DAG.getContext());
-      unsigned Align = std::max(Out.Flags.getOrigAlign(),
-                                Layout.getABITypeAlignment(Ty));
-      unsigned Offset = CCInfo.AllocateStack(Layout.getTypeAllocSize(Ty),
-                                             Align);
+      Align Alignment =
+          std::max(Align(Out.Flags.getOrigAlign()), Layout.getABITypeAlign(Ty));
+      unsigned Offset =
+          CCInfo.AllocateStack(Layout.getTypeAllocSize(Ty), Alignment);
       CCInfo.addLoc(CCValAssign::getMem(ArgLocs.size(), VT.getSimpleVT(),
                                         Offset, VT.getSimpleVT(),
                                         CCValAssign::Full));
@@ -1280,11 +1280,8 @@ SDValue WebAssemblyTargetLowering::LowerBR_JT(SDValue Op,
   for (auto MBB : MBBs)
     Ops.push_back(DAG.getBasicBlock(MBB));
 
-  // TODO: For now, we just pick something arbitrary for a default case for now.
-  // We really want to sniff out the guard and put in the real default case (and
-  // delete the guard).
-  Ops.push_back(DAG.getBasicBlock(MBBs[0]));
-
+  // Do not add the default case for now. It will be added in
+  // WebAssemblyFixBrTableDefaults.
   return DAG.getNode(WebAssemblyISD::BR_TABLE, DL, MVT::Other, Ops);
 }
 
@@ -1392,23 +1389,23 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
   MVT VecT = Extract.getOperand(0).getSimpleValueType();
   if (VecT.getVectorElementType().getSizeInBits() > 32)
     return SDValue();
-  MVT ExtractedLaneT = static_cast<VTSDNode *>(Op.getOperand(1).getNode())
-                           ->getVT()
-                           .getSimpleVT();
+  MVT ExtractedLaneT =
+      cast<VTSDNode>(Op.getOperand(1).getNode())->getVT().getSimpleVT();
   MVT ExtractedVecT =
       MVT::getVectorVT(ExtractedLaneT, 128 / ExtractedLaneT.getSizeInBits());
   if (ExtractedVecT == VecT)
     return Op;
 
   // Bitcast vector to appropriate type to ensure ISel pattern coverage
-  const SDValue &Index = Extract.getOperand(1);
-  unsigned IndexVal =
-      static_cast<ConstantSDNode *>(Index.getNode())->getZExtValue();
+  const SDNode *Index = Extract.getOperand(1).getNode();
+  if (!isa<ConstantSDNode>(Index))
+    return SDValue();
+  unsigned IndexVal = cast<ConstantSDNode>(Index)->getZExtValue();
   unsigned Scale =
       ExtractedVecT.getVectorNumElements() / VecT.getVectorNumElements();
   assert(Scale > 1);
   SDValue NewIndex =
-      DAG.getConstant(IndexVal * Scale, DL, Index.getValueType());
+      DAG.getConstant(IndexVal * Scale, DL, Index->getValueType(0));
   SDValue NewExtract = DAG.getNode(
       ISD::EXTRACT_VECTOR_ELT, DL, Extract.getValueType(),
       DAG.getBitcast(ExtractedVecT, Extract.getOperand(0)), NewIndex);
@@ -1715,8 +1712,8 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
   // Hoist vector bitcasts that don't change the number of lanes out of unary
   // shuffles, where they are less likely to get in the way of other combines.
-  // (shuffle (vNxT1 (bitcast (vNxT0 x))),  undef, mask) ->
-  //  (vNxT1 (bitcast (vNxt0 (shuffle x, undef, mask))))
+  // (shuffle (vNxT1 (bitcast (vNxT0 x))), undef, mask) ->
+  //  (vNxT1 (bitcast (vNxT0 (shuffle x, undef, mask))))
   SDValue Bitcast = N->getOperand(0);
   if (Bitcast.getOpcode() != ISD::BITCAST)
     return SDValue();
@@ -1725,7 +1722,8 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SDValue CastOp = Bitcast.getOperand(0);
   MVT SrcType = CastOp.getSimpleValueType();
   MVT DstType = Bitcast.getSimpleValueType();
-  if (SrcType.getVectorNumElements() != DstType.getVectorNumElements())
+  if (!SrcType.is128BitVector() ||
+      SrcType.getVectorNumElements() != DstType.getVectorNumElements())
     return SDValue();
   SDValue NewShuffle = DAG.getVectorShuffle(
       SrcType, SDLoc(N), CastOp, DAG.getUNDEF(SrcType), Shuffle->getMask());

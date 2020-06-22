@@ -16,6 +16,7 @@
 #include "DebugMap.h"
 #include "LinkUtils.h"
 #include "MachOUtils.h"
+#include "Reproducer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -31,6 +32,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileCollector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -92,9 +94,11 @@ struct DsymutilOptions {
   std::string SymbolMap;
   std::string OutputFile;
   std::string Toolchain;
+  std::string ReproducerPath;
   std::vector<std::string> Archs;
   std::vector<std::string> InputFiles;
   unsigned NumThreads;
+  ReproducerMode ReproMode = ReproducerMode::Off;
   dsymutil::LinkOptions LinkOpts;
 };
 
@@ -182,6 +186,12 @@ static Error verifyOptions(const DsymutilOptions &Options) {
         "paper trail warnings are not supported for YAML input.",
         errc::invalid_argument);
 
+  if (!Options.ReproducerPath.empty() &&
+      Options.ReproMode != ReproducerMode::Use)
+    return make_error<StringError>(
+        "cannot combine --gen-reproducer and --use-reproducer.",
+        errc::invalid_argument);
+
   return Error::success();
 }
 
@@ -221,6 +231,14 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.Update = Args.hasArg(OPT_update);
   Options.LinkOpts.Verbose = Args.hasArg(OPT_verbose);
   Options.LinkOpts.Statistics = Args.hasArg(OPT_statistics);
+
+  if (opt::Arg *ReproducerPath = Args.getLastArg(OPT_use_reproducer)) {
+    Options.ReproMode = ReproducerMode::Use;
+    Options.ReproducerPath = ReproducerPath->getValue();
+  }
+
+  if (Args.hasArg(OPT_gen_reproducer))
+    Options.ReproMode = ReproducerMode::Generate;
 
   if (Expected<AccelTableKind> AccelKind = getAccelTableKind(Args)) {
     Options.LinkOpts.TheAccelTableKind = *AccelKind;
@@ -320,7 +338,9 @@ static Error createPlistFile(StringRef Bin, StringRef BundleRoot,
      << "\t\t<key>CFBundleDevelopmentRegion</key>\n"
      << "\t\t<string>English</string>\n"
      << "\t\t<key>CFBundleIdentifier</key>\n"
-     << "\t\t<string>com.apple.xcode.dsym." << BI.IDStr << "</string>\n"
+     << "\t\t<string>com.apple.xcode.dsym.";
+  printHTMLEscaped(BI.IDStr, PL);
+  PL << "</string>\n"
      << "\t\t<key>CFBundleInfoDictionaryVersion</key>\n"
      << "\t\t<string>6.0</string>\n"
      << "\t\t<key>CFBundlePackageType</key>\n"
@@ -498,6 +518,15 @@ int main(int argc, char **argv) {
   InitializeAllTargetMCs();
   InitializeAllTargets();
   InitializeAllAsmPrinters();
+
+  auto Repro =
+      Reproducer::createReproducer(Options.ReproMode, Options.ReproducerPath);
+  if (!Repro) {
+    WithColor::error() << toString(Repro.takeError());
+    return 1;
+  }
+
+  Options.LinkOpts.VFS = (*Repro)->getVFS();
 
   for (const auto &Arch : Options.Archs)
     if (Arch != "*" && Arch != "all" &&

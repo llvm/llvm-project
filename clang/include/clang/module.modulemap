@@ -152,6 +152,12 @@ module Clang_StaticAnalyzer_Frontend {
   module * { export * }
 }
 
+module Clang_Testing {
+  requires cplusplus
+  umbrella "Testing"
+  module * { export * }
+}
+
 module Clang_Tooling {
   requires cplusplus umbrella "Tooling" module * { export * }
   // FIXME: Exclude these headers to avoid pulling all of the AST matchers

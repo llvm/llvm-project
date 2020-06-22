@@ -187,7 +187,7 @@ class SM_Time_Pseudo<string opName, SDPatternOperator node = null_frag> : SM_Pse
 class SM_Inval_Pseudo <string opName, SDPatternOperator node = null_frag> : SM_Pseudo<
   opName, (outs), (ins), "", [(node)]> {
   let hasSideEffects = 1;
-  let mayStore = 1;
+  let mayStore = 0;
   let has_sdst = 0;
   let has_sbase = 0;
   let has_offset = 0;
@@ -319,6 +319,7 @@ defm S_BUFFER_STORE_DWORDX4 : SM_Pseudo_Stores <
 }
 } // End SubtargetPredicate = HasScalarStores
 
+let SubtargetPredicate = HasSMemTimeInst in
 def S_MEMTIME : SM_Time_Pseudo <"s_memtime", int_amdgcn_s_memtime>;
 def S_DCACHE_INV : SM_Inval_Pseudo <"s_dcache_inv", int_amdgcn_s_dcache_inv>;
 
@@ -339,10 +340,11 @@ defm S_ATC_PROBE_BUFFER : SM_Pseudo_Probe <"s_atc_probe_buffer", SReg_128>;
 }
 } // SubtargetPredicate = isGFX8Plus
 
-let SubtargetPredicate = isGFX10Plus in {
+let SubtargetPredicate = isGFX10Plus in
 def S_GL1_INV : SM_Inval_Pseudo<"s_gl1_inv">;
+let SubtargetPredicate = HasGetWaveIdInst in
 def S_GET_WAVEID_IN_WORKGROUP : SM_WaveId_Pseudo <"s_get_waveid_in_workgroup", int_amdgcn_s_get_waveid_in_workgroup>;
-} // End SubtargetPredicate = isGFX10Plus
+
 
 let SubtargetPredicate = HasScalarFlatScratchInsts, Uses = [FLAT_SCR] in {
 defm S_SCRATCH_LOAD_DWORD    : SM_Pseudo_Loads <"s_scratch_load_dword",   SReg_64, SReg_32_XM0_XEXEC>;
@@ -829,7 +831,10 @@ defm : SMRD_Pattern <"S_LOAD_DWORDX4", vt>;
 foreach vt = SReg_256.RegTypes in {
 defm : SMRD_Pattern <"S_LOAD_DWORDX8", vt>;
 }
-defm : SMRD_Pattern <"S_LOAD_DWORDX16", v16i32>;
+
+foreach vt = SReg_512.RegTypes in {
+defm : SMRD_Pattern <"S_LOAD_DWORDX16", vt>;
+}
 
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2i32>;
@@ -844,10 +849,21 @@ defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16f32>;
 } // End let AddedComplexity = 100
 
+let OtherPredicates = [HasSMemTimeInst] in {
 def : GCNPat <
   (i64 (readcyclecounter)),
   (S_MEMTIME)
 >;
+} // let OtherPredicates = [HasSMemTimeInst]
+
+let OtherPredicates = [HasNoSMemTimeInst] in {
+def : GCNPat <
+  (i64 (readcyclecounter)),
+  (REG_SEQUENCE SReg_64,
+    (S_GETREG_B32 getHwRegImm<HWREG.SHADER_CYCLES, 0, -12>.ret), sub0,
+    (S_MOV_B32 (i32 0)), sub1)
+>;
+} // let OtherPredicates = [HasNoSMemTimeInst]
 
 //===----------------------------------------------------------------------===//
 // GFX10.

@@ -54,7 +54,8 @@ protected:
   AddressResolver::MatchType m_match_type;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(AddressResolverName);
+  AddressResolverName(const AddressResolverName &) = delete;
+  const AddressResolverName &operator=(const AddressResolverName &) = delete;
 };
 
 } // namespace lldb_private

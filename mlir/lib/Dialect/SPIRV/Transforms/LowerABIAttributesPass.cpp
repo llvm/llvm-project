@@ -201,12 +201,14 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     }
     signatureConverter.remapInput(argType.index(), replacement);
   }
+  if (failed(rewriter.convertRegionTypes(&funcOp.getBody(), typeConverter,
+                                         &signatureConverter)))
+    return failure();
 
   // Creates a new function with the update signature.
   rewriter.updateRootInPlace(funcOp, [&] {
     funcOp.setType(rewriter.getFunctionType(
         signatureConverter.getConvertedTypes(), llvm::None));
-    rewriter.applySignatureConversion(&funcOp.getBody(), signatureConverter);
   });
   return success();
 }
@@ -237,10 +239,8 @@ void LowerABIAttributesPass::runOnOperation() {
     return op->getDialect()->getNamespace() ==
            spirv::SPIRVDialect::getDialectNamespace();
   });
-  if (failed(
-          applyPartialConversion(module, target, patterns, &typeConverter))) {
+  if (failed(applyPartialConversion(module, target, patterns)))
     return signalPassFailure();
-  }
 
   // Walks over all the FuncOps in spirv::ModuleOp to lower the entry point
   // attributes.

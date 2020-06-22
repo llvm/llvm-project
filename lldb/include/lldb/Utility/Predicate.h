@@ -221,7 +221,8 @@ private:
       m_condition.notify_all();
   }
 
-  DISALLOW_COPY_AND_ASSIGN(Predicate);
+  Predicate(const Predicate &) = delete;
+  const Predicate &operator=(const Predicate &) = delete;
 };
 
 } // namespace lldb_private

@@ -83,6 +83,10 @@ enum NodeType : unsigned {
   // base of the dynamically-allocatable area.
   ADJDYNALLOC,
 
+  // For allocating stack space when using stack clash protector.
+  // Allocation is performed by block, and each block is probed.
+  PROBED_ALLOCA,
+
   // Count number of bits set in operand 0 per byte.
   POPCNT,
 
@@ -428,6 +432,7 @@ public:
                                   EVT VT) const override;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
+  bool hasInlineStackProbe(MachineFunction &MF) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
@@ -555,6 +560,8 @@ public:
   bool supportSwiftError() const override {
     return true;
   }
+
+  unsigned getStackProbeSize(MachineFunction &MF) const;
 
 private:
   const SystemZSubtarget &Subtarget;
@@ -691,6 +698,8 @@ private:
   MachineBasicBlock *emitLoadAndTestCmp0(MachineInstr &MI,
                                          MachineBasicBlock *MBB,
                                          unsigned Opcode) const;
+  MachineBasicBlock *emitProbedAlloca(MachineInstr &MI,
+                                      MachineBasicBlock *MBB) const;
 
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;

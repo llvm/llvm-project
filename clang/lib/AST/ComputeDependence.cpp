@@ -83,6 +83,12 @@ ExprDependence clang::computeDependence(ArraySubscriptExpr *E) {
   return E->getLHS()->getDependence() | E->getRHS()->getDependence();
 }
 
+ExprDependence clang::computeDependence(MatrixSubscriptExpr *E) {
+  return E->getBase()->getDependence() | E->getRowIdx()->getDependence() |
+         (E->getColumnIdx() ? E->getColumnIdx()->getDependence()
+                            : ExprDependence::None);
+}
+
 ExprDependence clang::computeDependence(CompoundLiteralExpr *E) {
   return toExprDependence(E->getTypeSourceInfo()->getType()->getDependence()) |
          turnTypeToValueDependence(E->getInitializer()->getDependence());
@@ -122,15 +128,19 @@ ExprDependence clang::computeDependence(BinaryConditionalOperator *E) {
 }
 
 ExprDependence clang::computeDependence(StmtExpr *E, unsigned TemplateDepth) {
-  // FIXME: why is unexpanded-pack not propagated?
-  auto D = toExprDependence(E->getType()->getDependence()) &
-           ~ExprDependence::UnexpandedPack;
+  auto D = toExprDependence(E->getType()->getDependence());
+  // Propagate dependence of the result.
+  if (const auto *CompoundExprResult =
+          dyn_cast_or_null<ValueStmt>(E->getSubStmt()->getStmtExprResult()))
+    if (const Expr *ResultExpr = CompoundExprResult->getExprStmt())
+      D |= ResultExpr->getDependence();
   // Note: we treat a statement-expression in a dependent context as always
   // being value- and instantiation-dependent. This matches the behavior of
   // lambda-expressions and GCC.
   if (TemplateDepth)
     D |= ExprDependence::ValueInstantiation;
-  return D;
+  // A param pack cannot be expanded over stmtexpr boundaries.
+  return D & ~ExprDependence::UnexpandedPack;
 }
 
 ExprDependence clang::computeDependence(ConvertVectorExpr *E) {

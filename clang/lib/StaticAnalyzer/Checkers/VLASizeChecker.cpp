@@ -126,7 +126,12 @@ ProgramStateRef VLASizeChecker::checkVLA(CheckerContext &C,
       // Size overflow check does not work with symbolic expressions because a
       // overflow situation can not be detected easily.
       uint64_t IndexL = IndexLVal->getZExtValue();
-      assert(IndexL > 0 && "Index length should have been checked for zero.");
+      // FIXME: See https://reviews.llvm.org/D80903 for discussion of
+      // some difference in assume and getKnownValue that leads to
+      // unexpected behavior. Just bail on IndexL == 0 at this point.
+      if (IndexL == 0)
+        return nullptr;
+
       if (KnownSize <= SizeMax / IndexL) {
         KnownSize *= IndexL;
       } else {

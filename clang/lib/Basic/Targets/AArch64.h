@@ -119,6 +119,7 @@ public:
 
   int getEHDataRegisterNumber(unsigned RegNo) const override;
 
+  const char *getBFloat16Mangling() const override { return "u6__bf16"; };
   bool hasInt128Type() const override;
 
   bool hasExtIntType() const override { return true; }

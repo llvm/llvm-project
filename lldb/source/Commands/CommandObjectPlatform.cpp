@@ -133,7 +133,8 @@ public:
   uint32_t m_permissions;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(OptionPermissions);
+  OptionPermissions(const OptionPermissions &) = delete;
+  const OptionPermissions &operator=(const OptionPermissions &) = delete;
 };
 
 // "platform select <platform-name>"
@@ -421,7 +422,6 @@ protected:
     return &m_options;
   }
 
-protected:
   OptionGroupOptions m_options;
   OptionGroupFile m_option_working_dir;
 };
@@ -758,7 +758,9 @@ public:
 
 private:
   // For CommandObjectPlatform only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatformFile);
+  CommandObjectPlatformFile(const CommandObjectPlatformFile &) = delete;
+  const CommandObjectPlatformFile &
+  operator=(const CommandObjectPlatformFile &) = delete;
 };
 
 // "platform get-file remote-file-path host-file-path"
@@ -1020,7 +1022,6 @@ protected:
     return result.Succeeded();
   }
 
-protected:
   ProcessLaunchCommandOptions m_options;
 };
 
@@ -1541,7 +1542,9 @@ public:
 
 private:
   // For CommandObjectPlatform only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatformProcess);
+  CommandObjectPlatformProcess(const CommandObjectPlatformProcess &) = delete;
+  const CommandObjectPlatformProcess &
+  operator=(const CommandObjectPlatformProcess &) = delete;
 };
 
 // "platform shell"

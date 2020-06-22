@@ -3,4 +3,4 @@ HeaderFilterRegex: '.*'
 WarningsAsErrors: 'llvmlibc-*'
 CheckOptions:
   - key:             llvmlibc-restrict-system-libc-headers.Includes
-    value:           '-*, linux/*, asm/unistd.h'
+    value:           '-*, linux/*, asm/*.h, asm-generic/*.h'

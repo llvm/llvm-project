@@ -55,10 +55,10 @@ template("unix_toolchain") {
     tool("solink") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld -shared {{ldflags}} -o $outfile {{libs}} {{inputs}}"
+        command = "$ld -shared {{ldflags}} -o $outfile {{inputs}} {{libs}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -Wl,-z,defs -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{libs}} {{inputs}}"
+        command = "$ld -shared {{ldflags}} -Wl,-z,defs -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{inputs}} {{libs}}"
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
@@ -71,10 +71,10 @@ template("unix_toolchain") {
     tool("solink_module") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{libs}} {{inputs}}"
+        command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{inputs}} {{libs}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{libs}} {{inputs}}"
+        command = "$ld -shared {{ldflags}} -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{inputs}} {{libs}}"
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
@@ -86,9 +86,9 @@ template("unix_toolchain") {
     tool("link") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld {{ldflags}} -o $outfile {{libs}} {{inputs}}"
+        command = "$ld {{ldflags}} -o $outfile {{inputs}} {{libs}}"
       } else {
-        command = "$ld {{ldflags}} -o $outfile {{libs}} -Wl,--start-group {{inputs}} -Wl,--end-group"
+        command = "$ld {{ldflags}} -o $outfile -Wl,--start-group {{inputs}} -Wl,--end-group {{libs}}"
       }
       description = "LINK $outfile"
       outputs = [ outfile ]
@@ -245,7 +245,7 @@ toolchain("win") {
     dllfile = "$outprefix{{output_extension}}"
     libfile = "$outprefix.lib"
     pdbfile = "$outprefix.pdb"
-    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /implib:$libfile /pdb:$pdbfile {{libs}} {{inputs}}"
+    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /implib:$libfile /pdb:$pdbfile {{inputs}} {{libs}} "
     description = "LINK $dllfile"
     link_output = libfile
     depend_output = libfile
@@ -272,7 +272,7 @@ toolchain("win") {
     outprefix = "{{output_dir}}/{{target_output_name}}"
     dllfile = "$outprefix{{output_extension}}"
     pdbfile = "$outprefix.pdb"
-    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /pdb:$pdbfile {{libs}} {{inputs}}"
+    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /pdb:$pdbfile {{inputs}} {{libs}} "
     description = "LINK_MODULE $dllfile"
     outputs = [ dllfile ]
     lib_switch = ""
@@ -286,7 +286,7 @@ toolchain("win") {
     outprefix = "{{output_dir}}/{{target_output_name}}"
     outfile = "$outprefix{{output_extension}}"
     pdbfile = "$outprefix.pdb"
-    command = "$link /nologo {{ldflags}} /out:$outfile /pdb:$pdbfile {{libs}} {{inputs}}"
+    command = "$link /nologo {{ldflags}} /out:$outfile /pdb:$pdbfile {{inputs}} {{libs}}"
     description = "LINK $outfile"
     outputs = [ outfile ]
     lib_switch = ""

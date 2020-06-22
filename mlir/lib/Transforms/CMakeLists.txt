@@ -30,6 +30,7 @@ add_mlir_library(MLIRTransforms
   LINK_LIBS PUBLIC
   MLIRAffineOps
   MLIRAnalysis
+  MLIRLinalgOps
   MLIRLoopLikeInterface
   MLIRSCF
   MLIRPass

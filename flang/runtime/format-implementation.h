@@ -225,14 +225,14 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
   while (true) {
     std::optional<int> repeat;
     bool unlimited{false};
-    CharType ch{Capitalize(GetNextChar(context))};
+    CharType ch{GetNextChar(context)};
     while (ch == ',' || ch == ':') {
       // Skip commas, and don't complain if they're missing; the format
       // validator does that.
       if (stop && ch == ':') {
         return 0;
       }
-      ch = Capitalize(GetNextChar(context));
+      ch = GetNextChar(context);
     }
     if (ch == '-' || ch == '+' || (ch >= '0' && ch <= '9')) {
       repeat = GetIntField(context, ch);
@@ -246,6 +246,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
         return 0;
       }
     }
+    ch = Capitalize(ch);
     if (ch == '(') {
       if (height_ >= maxHeight_) {
         context.SignalError(IostatErrorInFormat,

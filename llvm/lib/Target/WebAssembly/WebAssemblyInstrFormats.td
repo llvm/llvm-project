@@ -14,11 +14,13 @@
 // WebAssembly Instruction Format.
 // We instantiate 2 of these for every actual instruction (register based
 // and stack based), see below.
-class WebAssemblyInst<bits<32> inst, string asmstr, string stack> : StackRel,
-  Instruction {
+class WebAssemblyInst<bits<32> inst, string asmstr, string stack, string is64>
+  : StackRel, Wasm64Rel, Instruction {
   bits<32> Inst = inst; // Instruction encoding.
   string StackBased = stack;
   string BaseName = NAME;
+  string IsWasm64 = is64;
+  string Wasm32Name = !subst("_A64", "_A32", NAME);
   let Namespace   = "WebAssembly";
   let Pattern     = [];
   let AsmString   = asmstr;
@@ -29,8 +31,8 @@ class WebAssemblyInst<bits<32> inst, string asmstr, string stack> : StackRel,
 
 // Normal instructions. Default instantiation of a WebAssemblyInst.
 class NI<dag oops, dag iops, list<dag> pattern, string stack,
-         string asmstr = "", bits<32> inst = -1>
-    : WebAssemblyInst<inst, asmstr, stack> {
+         string asmstr = "", bits<32> inst = -1, string is64 = "false">
+    : WebAssemblyInst<inst, asmstr, stack, is64> {
   dag OutOperandList = oops;
   dag InOperandList  = iops;
   let Pattern        = pattern;
@@ -52,11 +54,11 @@ class NI<dag oops, dag iops, list<dag> pattern, string stack,
 // there is always an equivalent pair of instructions.
 multiclass I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
              list<dag> pattern_r, string asmstr_r = "", string asmstr_s = "",
-             bits<32> inst = -1> {
+             bits<32> inst = -1, string is64 = "false"> {
   let isCodeGenOnly = 1 in
-  def "" : NI<oops_r, iops_r, pattern_r, "false", asmstr_r, inst>;
+  def "" : NI<oops_r, iops_r, pattern_r, "false", asmstr_r, inst, is64>;
   let BaseName = NAME in
-  def _S : NI<oops_s, iops_s, [], "true", asmstr_s, inst>;
+  def _S : NI<oops_s, iops_s, [], "true", asmstr_s, inst, is64>;
 }
 
 // For instructions that have no register ops, so both sets are the same.

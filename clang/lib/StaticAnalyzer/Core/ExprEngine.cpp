@@ -1210,7 +1210,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
   switch (S->getStmtClass()) {
     // C++, OpenMP and ARC stuff we don't support yet.
-    case Expr::ObjCIndirectCopyRestoreExprClass:
     case Stmt::CXXDependentScopeMemberExprClass:
     case Stmt::CXXTryStmtClass:
     case Stmt::CXXTypeidExprClass:
@@ -1513,6 +1512,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.takeNodes(Pred);
       VisitArraySubscriptExpr(cast<ArraySubscriptExpr>(S), Pred, Dst);
       Bldr.addNodes(Dst);
+      break;
+
+    case Stmt::MatrixSubscriptExprClass:
+      llvm_unreachable("Support for MatrixSubscriptExpr is not implemented.");
       break;
 
     case Stmt::GCCAsmStmtClass:
@@ -1863,6 +1866,21 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
                           state->BindExpr(S, Pred->getLocationContext(),
                                                    UnknownVal()));
 
+      Bldr.addNodes(Dst);
+      break;
+    }
+
+    case Expr::ObjCIndirectCopyRestoreExprClass: {
+      // ObjCIndirectCopyRestoreExpr implies passing a temporary for
+      // correctness of lifetime management.  Due to limited analysis
+      // of ARC, this is implemented as direct arg passing.
+      Bldr.takeNodes(Pred);
+      ProgramStateRef state = Pred->getState();
+      const auto *OIE = cast<ObjCIndirectCopyRestoreExpr>(S);
+      const Expr *E = OIE->getSubExpr();
+      SVal V = state->getSVal(E, Pred->getLocationContext());
+      Bldr.generateNode(S, Pred,
+              state->BindExpr(S, Pred->getLocationContext(), V));
       Bldr.addNodes(Dst);
       break;
     }
@@ -3206,3 +3224,5 @@ void *ProgramStateTrait<ReplayWithoutInlining>::GDMIndex() {
   static int index = 0;
   return &index;
 }
+
+void ExprEngine::anchor() { }

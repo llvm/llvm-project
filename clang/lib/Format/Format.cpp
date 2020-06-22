@@ -14,6 +14,7 @@
 
 #include "clang/Format/Format.h"
 #include "AffectedRangeManager.h"
+#include "BreakableToken.h"
 #include "ContinuationIndenter.h"
 #include "FormatInternal.h"
 #include "FormatTokenLexer.h"
@@ -235,6 +236,17 @@ struct ScalarEnumerationTraits<FormatStyle::PPDirectiveIndentStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
+  static void enumeration(IO &IO, FormatStyle::IndentExternBlockStyle &Value) {
+    IO.enumCase(Value, "AfterExternBlock", FormatStyle::IEBS_AfterExternBlock);
+    IO.enumCase(Value, "Indent", FormatStyle::IEBS_Indent);
+    IO.enumCase(Value, "NoIndent", FormatStyle::IEBS_NoIndent);
+    IO.enumCase(Value, "true", FormatStyle::IEBS_Indent);
+    IO.enumCase(Value, "false", FormatStyle::IEBS_NoIndent);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
   static void enumeration(IO &IO, FormatStyle::ReturnTypeBreakingStyle &Value) {
     IO.enumCase(Value, "None", FormatStyle::RTBS_None);
@@ -403,6 +415,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AlignConsecutiveMacros", Style.AlignConsecutiveMacros);
     IO.mapOptional("AlignConsecutiveAssignments",
                    Style.AlignConsecutiveAssignments);
+    IO.mapOptional("AlignConsecutiveBitFields",
+                   Style.AlignConsecutiveBitFields);
     IO.mapOptional("AlignConsecutiveDeclarations",
                    Style.AlignConsecutiveDeclarations);
     IO.mapOptional("AlignEscapedNewlines", Style.AlignEscapedNewlines);
@@ -510,6 +524,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentCaseBlocks", Style.IndentCaseBlocks);
     IO.mapOptional("IndentGotoLabels", Style.IndentGotoLabels);
     IO.mapOptional("IndentPPDirectives", Style.IndentPPDirectives);
+    IO.mapOptional("IndentExternBlock", Style.IndentExternBlock);
     IO.mapOptional("IndentWidth", Style.IndentWidth);
     IO.mapOptional("IndentWrappedFunctionNames",
                    Style.IndentWrappedFunctionNames);
@@ -602,6 +617,7 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("BeforeCatch", Wrapping.BeforeCatch);
     IO.mapOptional("BeforeElse", Wrapping.BeforeElse);
     IO.mapOptional("BeforeLambdaBody", Wrapping.BeforeLambdaBody);
+    IO.mapOptional("BeforeWhile", Wrapping.BeforeWhile);
     IO.mapOptional("IndentBraces", Wrapping.IndentBraces);
     IO.mapOptional("SplitEmptyFunction", Wrapping.SplitEmptyFunction);
     IO.mapOptional("SplitEmptyRecord", Wrapping.SplitEmptyRecord);
@@ -685,12 +701,24 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
   if (Style.BreakBeforeBraces == FormatStyle::BS_Custom)
     return Style;
   FormatStyle Expanded = Style;
-  Expanded.BraceWrapping = {false, false, FormatStyle::BWACS_Never,
-                            false, false, false,
-                            false, false, false,
-                            false, false, false,
-                            false, false, true,
-                            true,  true};
+  Expanded.BraceWrapping = {/*AfterCaseLabel=*/false,
+                            /*AfterClass=*/false,
+                            /*AfterControlStatement=*/FormatStyle::BWACS_Never,
+                            /*AfterEnum=*/false,
+                            /*AfterFunction=*/false,
+                            /*AfterNamespace=*/false,
+                            /*AfterObjCDeclaration=*/false,
+                            /*AfterStruct=*/false,
+                            /*AfterUnion=*/false,
+                            /*AfterExternBlock=*/false,
+                            /*BeforeCatch=*/false,
+                            /*BeforeElse=*/false,
+                            /*BeforeLambdaBody=*/false,
+                            /*BeforeWhile=*/false,
+                            /*IndentBraces=*/false,
+                            /*SplitEmptyFunction=*/true,
+                            /*SplitEmptyRecord=*/true,
+                            /*SplitEmptyNamespace=*/true};
   switch (Style.BreakBeforeBraces) {
   case FormatStyle::BS_Linux:
     Expanded.BraceWrapping.AfterClass = true;
@@ -704,6 +732,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
+    Expanded.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
     Expanded.BraceWrapping.SplitEmptyFunction = true;
     Expanded.BraceWrapping.SplitEmptyRecord = false;
     break;
@@ -723,6 +752,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
+    Expanded.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
     Expanded.BraceWrapping.BeforeCatch = true;
     Expanded.BraceWrapping.BeforeElse = true;
     break;
@@ -736,17 +766,32 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
+    Expanded.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
     Expanded.BraceWrapping.BeforeCatch = true;
     Expanded.BraceWrapping.BeforeElse = true;
     Expanded.BraceWrapping.BeforeLambdaBody = true;
     break;
   case FormatStyle::BS_GNU:
-    Expanded.BraceWrapping = {true,  true, FormatStyle::BWACS_Always,
-                              true,  true, true,
-                              true,  true, true,
-                              true,  true, true,
-                              false, true, true,
-                              true,  true};
+    Expanded.BraceWrapping = {
+        /*AfterCaseLabel=*/true,
+        /*AfterClass=*/true,
+        /*AfterControlStatement=*/FormatStyle::BWACS_Always,
+        /*AfterEnum=*/true,
+        /*AfterFunction=*/true,
+        /*AfterNamespace=*/true,
+        /*AfterObjCDeclaration=*/true,
+        /*AfterStruct=*/true,
+        /*AfterUnion=*/true,
+        /*AfterExternBlock=*/true,
+        /*BeforeCatch=*/true,
+        /*BeforeElse=*/true,
+        /*BeforeLambdaBody=*/false,
+        /*BeforeWhile=*/true,
+        /*IndentBraces=*/true,
+        /*SplitEmptyFunction=*/true,
+        /*SplitEmptyRecord=*/true,
+        /*SplitEmptyNamespace=*/true};
+    Expanded.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
     break;
   case FormatStyle::BS_WebKit:
     Expanded.BraceWrapping.AfterFunction = true;
@@ -766,6 +811,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignOperands = FormatStyle::OAS_Align;
   LLVMStyle.AlignTrailingComments = true;
   LLVMStyle.AlignConsecutiveAssignments = false;
+  LLVMStyle.AlignConsecutiveBitFields = false;
   LLVMStyle.AlignConsecutiveDeclarations = false;
   LLVMStyle.AlignConsecutiveMacros = false;
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
@@ -787,12 +833,25 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
-  LLVMStyle.BraceWrapping = {false, false, FormatStyle::BWACS_Never,
-                             false, false, false,
-                             false, false, false,
-                             false, false, false,
-                             false, false, true,
-                             true,  true};
+  LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
+                             /*AfterClass=*/false,
+                             /*AfterControlStatement=*/FormatStyle::BWACS_Never,
+                             /*AfterEnum=*/false,
+                             /*AfterFunction=*/false,
+                             /*AfterNamespace=*/false,
+                             /*AfterObjCDeclaration=*/false,
+                             /*AfterStruct=*/false,
+                             /*AfterUnion=*/false,
+                             /*AfterExternBlock=*/false,
+                             /*BeforeCatch=*/false,
+                             /*BeforeElse=*/false,
+                             /*BeforeLambdaBody=*/false,
+                             /*BeforeWhile=*/false,
+                             /*IndentBraces=*/false,
+                             /*SplitEmptyFunction=*/true,
+                             /*SplitEmptyRecord=*/true,
+                             /*SplitEmptyNamespace=*/true};
+  LLVMStyle.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
@@ -950,6 +1009,8 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
               "PARSE_TEXT_PROTO",
               "ParseTextOrDie",
               "ParseTextProtoOrDie",
+              "ParseTestProto",
+              "ParsePartialTestProto",
           },
           /*CanonicalDelimiter=*/"",
           /*BasedOnStyle=*/"google",
@@ -1010,6 +1071,12 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     // #imports, etc.)
     GoogleStyle.IncludeStyle.IncludeBlocks =
         tooling::IncludeStyle::IBS_Preserve;
+  } else if (Language == FormatStyle::LK_CSharp) {
+    GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
+    GoogleStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
+    GoogleStyle.BreakStringLiterals = false;
+    GoogleStyle.ColumnLimit = 100;
+    GoogleStyle.NamespaceIndentation = FormatStyle::NI_All;
   }
 
   return GoogleStyle;
@@ -1154,8 +1221,10 @@ FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language) {
   Style.BraceWrapping.AfterObjCDeclaration = true;
   Style.BraceWrapping.AfterStruct = true;
   Style.BraceWrapping.AfterExternBlock = true;
+  Style.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
   Style.BraceWrapping.BeforeCatch = true;
   Style.BraceWrapping.BeforeElse = true;
+  Style.BraceWrapping.BeforeWhile = false;
   Style.PenaltyReturnTypeOnItsOwnLine = 1000;
   Style.AllowShortEnumsOnASingleLine = false;
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;

@@ -246,6 +246,10 @@ MACH-O SPECIFIC OPTIONS
  Add symbols from the dyldinfo, if they are not already in the symbol table.
  This is the default.
 
+.. option:: --add-inlinedinfo
+
+ Add symbols from the inlined libraries, TBD file inputs only.
+
 .. option:: --arch=<arch1[,arch2,...]>
 
  Dump the symbols from the specified architecture(s).

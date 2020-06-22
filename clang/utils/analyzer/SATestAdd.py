@@ -42,75 +42,49 @@ the Repository Directory.
                                           diff -ur CachedSource PatchedSource \
                                               > changes_for_analyzer.patch
 """
-from __future__ import absolute_import, division, print_function
 import SATestBuild
+from ProjectMap import ProjectMap, ProjectInfo
 
 import os
-import csv
 import sys
 
 
-def isExistingProject(PMapFile, projectID):
-    PMapReader = csv.reader(PMapFile)
-    for ProjectInfo in PMapReader:
-        if projectID == ProjectInfo[0]:
-            return True
-    return False
-
-
-def addNewProject(ID, BuildMode):
+def add_new_project(project: ProjectInfo):
     """
     Add a new project for testing: build it and add to the Project Map file.
-    :param ID: is a short string used to identify a project.
+    :param name: is a short string used to identify a project.
     """
 
-    CurDir = os.path.abspath(os.curdir)
-    Dir = SATestBuild.getProjectDir(ID)
-    if not os.path.exists(Dir):
-        print("Error: Project directory is missing: %s" % Dir)
+    test_info = SATestBuild.TestInfo(project,
+                                     is_reference_build=True)
+    tester = SATestBuild.ProjectTester(test_info)
+
+    project_dir = tester.get_project_dir()
+    if not os.path.exists(project_dir):
+        print(f"Error: Project directory is missing: {project_dir}")
         sys.exit(-1)
 
     # Build the project.
-    # TODO: Repair this call.  We give it a wrong amount wrong arguments and it
-    #       is not trivial to construct argparse arguments in here.
-    #       Requires refactoring of the 'testProject' function.
-    SATestBuild.testProject(ID, BuildMode, IsReferenceBuild=True)
+    tester.test()
 
-    # Add the project ID to the project map.
-    ProjectMapPath = os.path.join(CurDir, SATestBuild.ProjectMapFile)
+    # Add the project name to the project map.
+    project_map = ProjectMap(should_exist=False)
 
-    if os.path.exists(ProjectMapPath):
-        FileMode = "r+"
+    if is_existing_project(project_map, project):
+        print(f"Warning: Project with name '{project.name}' already exists.",
+              file=sys.stdout)
+        print("Reference output has been regenerated.", file=sys.stdout)
     else:
-        print("Warning: Creating the Project Map file!!")
-        FileMode = "w+"
-
-    with open(ProjectMapPath, FileMode) as PMapFile:
-        if (isExistingProject(PMapFile, ID)):
-            print('Warning: Project with ID \'', ID,
-                  '\' already exists.', file=sys.stdout)
-            print("Reference output has been regenerated.", file=sys.stdout)
-        else:
-            PMapWriter = csv.writer(PMapFile)
-            PMapWriter.writerow((ID, int(BuildMode)))
-            print("The project map is updated: ", ProjectMapPath)
+        project_map.projects.append(project)
+        project_map.save()
 
 
-# TODO: Add an option not to build.
-# TODO: Set the path to the Repository directory.
-if __name__ == '__main__':
-    if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
-        print('Add a new project for testing to the analyzer'
-              '\nUsage: ', sys.argv[0],
-              'project_ID <mode>\n'
-              'mode: 0 for single file project, '
-              '1 for scan_build, '
-              '2 for single file c++11 project', file=sys.stderr)
-        sys.exit(-1)
+def is_existing_project(project_map: ProjectMap, project: ProjectInfo) -> bool:
+    return any(existing_project.name == project.name
+               for existing_project in project_map.projects)
 
-    BuildMode = 1
-    if (len(sys.argv) >= 3):
-        BuildMode = int(sys.argv[2])
-    assert((BuildMode == 0) | (BuildMode == 1) | (BuildMode == 2))
 
-    addNewProject(sys.argv[1], BuildMode)
+if __name__ == "__main__":
+    print("SATestAdd.py should not be used on its own.")
+    print("Please use 'SATest.py add' instead")
+    sys.exit(1)

@@ -34,21 +34,22 @@ bb:
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; A2V-NOT:    SCRATCH_RSRC
-; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a4
+; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a{{[0-9]+}}
 ; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
 ; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
 ; A2V:        v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
 ; A2V:        ScratchSize: 0
-define amdgpu_kernel void @max_12regs_13a_used(<4 x float> addrspace(1)* %arg, <4 x float> addrspace(1)* %out) #2 {
+define amdgpu_kernel void @max_12regs_13a_used(i32 %cond, <4 x float> addrspace(1)* %arg, <4 x float> addrspace(1)* %out) #2 {
 bb:
   %in.1 = load <4 x float>, <4 x float> addrspace(1)* %arg
   %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 1.0, <4 x float> %in.1, i32 0, i32 0, i32 0)
   %mai.2 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 1.0, <4 x float> %mai.1, i32 0, i32 0, i32 0)
-  br label %use
+  %cmp = icmp eq i32 %cond, 0
+  br i1 %cmp, label %use, label %st
 
 use:
   call void asm sideeffect "", "a,a,a,a,a"(i32 1, i32 2, i32 3, i32 4, i32 5)
-  store <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, <4 x float> addrspace(1)* %out
+  store volatile <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, <4 x float> addrspace(1)* %out
   br label %st
 
 st:

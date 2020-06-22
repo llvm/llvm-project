@@ -22,8 +22,8 @@ Symbols:
 ## sh_info has value 2 what says that non-local symbol `foo` is local.
 ## Check we report this case.
 # RUN: yaml2obj --docnum=2 %s -o %t.o
-# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR2 %s
-# ERR2: broken object: getLocalSymbols returns a non-local symbol
+# RUN: not ld.lld --noinhibit-exec %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR2 %s
+# ERR2: error: {{.*}}.o: non-local symbol (1) found at index < .symtab's sh_info (2)
 
 --- !ELF
 FileHeader:

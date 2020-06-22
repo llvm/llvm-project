@@ -20,7 +20,7 @@ RUN: diff -b %t.4.proftext %S/Inputs/sample-profile.proftext
 # Trip from text --> compbinary --> md5text
 # Compare the two md5 texts
 RUN: llvm-profdata merge --sample --compbinary -output=%t.6.profdata %S/Inputs/sample-profile.proftext
-RUN: llvm-profdata merge --sample --text -output=%t.6.proftext %S/Inputs/sample-profile.proftext
+RUN: llvm-profdata merge --sample --text -output=%t.6.proftext %t.6.profdata
 RUN: llvm-profdata merge --sample --extbinary -use-md5 -output=%t.7.profdata %S/Inputs/sample-profile.proftext
-RUN: llvm-profdata merge --sample --text -output=%t.7.proftext %S/Inputs/sample-profile.proftext
+RUN: llvm-profdata merge --sample --text -output=%t.7.proftext %t.7.profdata
 RUN: diff -b %t.6.proftext %t.7.proftext

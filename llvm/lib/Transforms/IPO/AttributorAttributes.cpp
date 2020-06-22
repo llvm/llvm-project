@@ -54,7 +54,7 @@ STATISTIC(NumAAs, "Number of abstract attributes created");
 //  }
 // If there is a single "increment" side one can use the macro
 // STATS_DECLTRACK with a custom message. If there are multiple increment
-// sides, STATS_DECL and STATS_TRACK can also be used separatly.
+// sides, STATS_DECL and STATS_TRACK can also be used separately.
 //
 #define BUILD_STAT_MSG_IR_ATTR(TYPE, NAME)                                     \
   ("Number of " #TYPE " marked '" #NAME "'")
@@ -3523,17 +3523,6 @@ struct AADereferenceableCallSiteReturned final
 
 // ------------------------ Align Argument Attribute ------------------------
 
-/// \p Ptr is accessed so we can get alignment information if the ABI requires
-/// the element type to be aligned.
-static MaybeAlign getKnownAlignmentFromAccessedPtr(const Value *Ptr,
-                                                   const DataLayout &DL) {
-  MaybeAlign KnownAlignment = Ptr->getPointerAlignment(DL);
-  Type *ElementTy = Ptr->getType()->getPointerElementType();
-  if (ElementTy->isSized())
-    KnownAlignment = max(KnownAlignment, DL.getABITypeAlign(ElementTy));
-  return KnownAlignment;
-}
-
 static unsigned getKnownAlignForUse(Attributor &A,
                                     AbstractAttribute &QueryingAA,
                                     Value &AssociatedValue, const Use *U,
@@ -3569,22 +3558,14 @@ static unsigned getKnownAlignForUse(Attributor &A,
   const DataLayout &DL = A.getDataLayout();
   const Value *UseV = U->get();
   if (auto *SI = dyn_cast<StoreInst>(I)) {
-    if (SI->getPointerOperand() == UseV) {
-      if (unsigned SIAlign = SI->getAlignment())
-        MA = MaybeAlign(SIAlign);
-      else
-        MA = getKnownAlignmentFromAccessedPtr(UseV, DL);
-    }
+    if (SI->getPointerOperand() == UseV)
+      MA = SI->getAlign();
   } else if (auto *LI = dyn_cast<LoadInst>(I)) {
-    if (LI->getPointerOperand() == UseV) {
-      if (unsigned LIAlign = LI->getAlignment())
-        MA = MaybeAlign(LIAlign);
-      else
-        MA = getKnownAlignmentFromAccessedPtr(UseV, DL);
-    }
+    if (LI->getPointerOperand() == UseV)
+      MA = LI->getAlign();
   }
 
-  if (!MA.hasValue() || MA <= 1)
+  if (!MA || *MA <= 1)
     return 0;
 
   unsigned Alignment = MA->value();
@@ -3622,8 +3603,7 @@ struct AAAlignImpl : AAAlign {
     //       their uses and int2ptr is not handled. It is not a correctness
     //       problem though!
     if (!V.getType()->getPointerElementType()->isFunctionTy())
-      takeKnownMaximum(
-          V.getPointerAlignment(A.getDataLayout()).valueOrOne().value());
+      takeKnownMaximum(V.getPointerAlignment(A.getDataLayout()).value());
 
     if (getIRPosition().isFnInterfaceKind() &&
         (!getAnchorScope() ||
@@ -3664,9 +3644,9 @@ struct AAAlignImpl : AAAlign {
 
     ChangeStatus Changed = AAAlign::manifest(A);
 
-    MaybeAlign InheritAlign =
+    Align InheritAlign =
         getAssociatedValue().getPointerAlignment(A.getDataLayout());
-    if (InheritAlign.valueOrOne() >= getAssumedAlign())
+    if (InheritAlign >= getAssumedAlign())
       return LoadStoreChanged;
     return Changed | LoadStoreChanged;
   }
@@ -3717,8 +3697,8 @@ struct AAAlignFloating : AAAlignImpl {
       const auto &AA = A.getAAFor<AAAlign>(*this, IRPosition::value(V));
       if (!Stripped && this == &AA) {
         // Use only IR information if we did not strip anything.
-        const MaybeAlign PA = V.getPointerAlignment(DL);
-        T.takeKnownMaximum(PA ? PA->value() : 0);
+        Align PA = V.getPointerAlignment(DL);
+        T.takeKnownMaximum(PA.value());
         T.indicatePessimisticFixpoint();
       } else {
         // Use abstract attribute information.
@@ -3786,9 +3766,9 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
       if (A.getInfoCache().isInvolvedInMustTailCall(*Arg))
         return ChangeStatus::UNCHANGED;
     ChangeStatus Changed = AAAlignImpl::manifest(A);
-    MaybeAlign InheritAlign =
+    Align InheritAlign =
         getAssociatedValue().getPointerAlignment(A.getDataLayout());
-    if (InheritAlign.valueOrOne() >= getAssumedAlign())
+    if (InheritAlign >= getAssumedAlign())
       Changed = ChangeStatus::UNCHANGED;
     return Changed;
   }
@@ -4455,7 +4435,8 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     AAValueSimplifyImpl::initialize(A);
     if (!getAnchorScope() || getAnchorScope()->isDeclaration())
       indicatePessimisticFixpoint();
-    if (hasAttr({Attribute::InAlloca, Attribute::StructRet, Attribute::Nest},
+    if (hasAttr({Attribute::InAlloca, Attribute::Preallocated,
+                 Attribute::StructRet, Attribute::Nest},
                 /* IgnoreSubsumingPositions */ true))
       indicatePessimisticFixpoint();
 
@@ -5695,7 +5676,7 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
 
     // TODO: From readattrs.ll: "inalloca parameters are always
     //                           considered written"
-    if (hasAttr({Attribute::InAlloca})) {
+    if (hasAttr({Attribute::InAlloca, Attribute::Preallocated})) {
       removeKnownBits(NO_WRITES);
       removeAssumedBits(NO_WRITES);
     }

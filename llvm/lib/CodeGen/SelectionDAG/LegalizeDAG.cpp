@@ -1600,9 +1600,13 @@ void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
   SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
   Chain = SP.getValue(1);
   unsigned Align = cast<ConstantSDNode>(Tmp3)->getZExtValue();
-  unsigned StackAlign =
-      DAG.getSubtarget().getFrameLowering()->getStackAlignment();
-  Tmp1 = DAG.getNode(ISD::SUB, dl, VT, SP, Size);       // Value
+  const TargetFrameLowering *TFL = DAG.getSubtarget().getFrameLowering();
+  unsigned Opc =
+    TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp ?
+    ISD::ADD : ISD::SUB;
+
+  unsigned StackAlign = TFL->getStackAlignment();
+  Tmp1 = DAG.getNode(Opc, dl, VT, SP, Size);       // Value
   if (Align > StackAlign)
     Tmp1 = DAG.getNode(ISD::AND, dl, VT, Tmp1,
                        DAG.getConstant(-(uint64_t)Align, dl, VT));
@@ -2359,32 +2363,34 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
     // Get the stack frame index of a 8 byte buffer.
     SDValue StackSlot = DAG.CreateStackTemporary(MVT::f64);
 
-    // set up Hi and Lo (into buffer) address based on endian
-    SDValue Hi = StackSlot;
-    SDValue Lo = DAG.getMemBasePlusOffset(StackSlot, 4, dl);
-    if (DAG.getDataLayout().isLittleEndian())
-      std::swap(Hi, Lo);
-
+    SDValue Lo = Op0;
     // if signed map to unsigned space
-    SDValue Op0Mapped;
     if (isSigned) {
-      // constant used to invert sign bit (signed to unsigned mapping)
-      SDValue SignBit = DAG.getConstant(0x80000000u, dl, MVT::i32);
-      Op0Mapped = DAG.getNode(ISD::XOR, dl, MVT::i32, Op0, SignBit);
-    } else {
-      Op0Mapped = Op0;
+      // Invert sign bit (signed to unsigned mapping).
+      Lo = DAG.getNode(ISD::XOR, dl, MVT::i32, Lo,
+                       DAG.getConstant(0x80000000u, dl, MVT::i32));
     }
-    // store the lo of the constructed double - based on integer input
-    SDValue Store1 = DAG.getStore(DAG.getEntryNode(), dl, Op0Mapped, Lo,
+    // Initial hi portion of constructed double.
+    SDValue Hi = DAG.getConstant(0x43300000u, dl, MVT::i32);
+
+    // If this a big endian target, swap the lo and high data.
+    if (DAG.getDataLayout().isBigEndian())
+      std::swap(Lo, Hi);
+
+    SDValue MemChain = DAG.getEntryNode();
+
+    // Store the lo of the constructed double.
+    SDValue Store1 = DAG.getStore(MemChain, dl, Lo, StackSlot,
                                   MachinePointerInfo());
-    // initial hi portion of constructed double
-    SDValue InitialHi = DAG.getConstant(0x43300000u, dl, MVT::i32);
-    // store the hi of the constructed double - biased exponent
+    // Store the hi of the constructed double.
+    SDValue HiPtr = DAG.getMemBasePlusOffset(StackSlot, 4, dl);
     SDValue Store2 =
-        DAG.getStore(Store1, dl, InitialHi, Hi, MachinePointerInfo());
+        DAG.getStore(MemChain, dl, Hi, HiPtr, MachinePointerInfo());
+    MemChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
+
     // load the constructed double
     SDValue Load =
-        DAG.getLoad(MVT::f64, dl, Store2, StackSlot, MachinePointerInfo());
+        DAG.getLoad(MVT::f64, dl, MemChain, StackSlot, MachinePointerInfo());
     // FP constant to bias correct the final result
     SDValue Bias = DAG.getConstantFP(isSigned ?
                                      BitsToDouble(0x4330000080000000ULL) :
@@ -4105,6 +4111,14 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::ROUND_F128,
                     RTLIB::ROUND_PPCF128, Results);
     break;
+  case ISD::FROUNDEVEN:
+  case ISD::STRICT_FROUNDEVEN:
+    ExpandFPLibCall(Node, RTLIB::ROUNDEVEN_F32,
+                    RTLIB::ROUNDEVEN_F64,
+                    RTLIB::ROUNDEVEN_F80,
+                    RTLIB::ROUNDEVEN_F128,
+                    RTLIB::ROUNDEVEN_PPCF128, Results);
+    break;
   case ISD::FPOWI:
   case ISD::STRICT_FPOWI: {
     RTLIB::Libcall LC;
@@ -4599,6 +4613,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FRINT:
   case ISD::FNEARBYINT:
   case ISD::FROUND:
+  case ISD::FROUNDEVEN:
   case ISD::FTRUNC:
   case ISD::FNEG:
   case ISD::FSQRT:

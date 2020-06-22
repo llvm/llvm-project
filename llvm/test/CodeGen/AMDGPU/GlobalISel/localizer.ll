@@ -164,7 +164,7 @@ define void @localize_internal_globals(i1 %cond) {
 ; GFX9-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GFX9-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
-; GFX9-NEXT:    s_cbranch_execnz BB2_2
+; GFX9-NEXT:    s_cbranch_execz BB2_2
 ; GFX9-NEXT:  ; %bb.1: ; %bb1
 ; GFX9-NEXT:    s_getpc_b64 s[6:7]
 ; GFX9-NEXT:    s_add_u32 s6, s6, static.gv2@rel32@lo+4

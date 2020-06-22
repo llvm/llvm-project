@@ -106,13 +106,8 @@ and from the command line.
 .. option:: --dump-input <mode>
 
   Dump input to stderr, adding annotations representing currently enabled
-  diagnostics.  Do this either 'always', on 'fail', or 'never'.  Specify 'help'
-  to explain the dump format and quit.
-
-.. option:: --dump-input-on-failure
-
-  When the check fails, dump all of the original input.  This option is
-  deprecated in favor of `--dump-input=fail`.
+  diagnostics.  Do this either 'always', on 'fail' (default), or 'never'.
+  Specify 'help' to explain the dump format and quit.
 
 .. option:: --enable-var-scope
 
@@ -660,8 +655,8 @@ The syntax to define a numeric variable is ``[[#%<fmtspec>,<NUMVAR>:]]`` where:
 
 * ``%<fmtspec>`` is an optional scanf-style matching format specifier to
   indicate what number format to match (e.g. hex number).  Currently accepted
-  format specifiers are ``%u``, ``%x`` and ``%X``.  If absent, the format
-  specifier defaults to ``%u``.
+  format specifiers are ``%u``, ``%d``, ``%x`` and ``%X``.  If absent, the
+  format specifier defaults to ``%u``.
 
 * ``<NUMVAR>`` is the name of the numeric variable to define to the matching
   value.
@@ -675,7 +670,8 @@ For example:
 would match ``mov r5, 0xF0F0`` and set ``REG`` to the value ``5`` and ``IMM``
 to the value ``0xF0F0``.
 
-The syntax of a numeric substitution is ``[[#%<fmtspec>,<expr>]]`` where:
+The syntax of a numeric substitution is
+``[[#%<fmtspec>: <constraint> <expr>]]`` where:
 
 * ``%<fmtspec>`` is the same matching format specifier as for defining numeric
   variables but acting as a printf-style format to indicate how a numeric
@@ -685,15 +681,41 @@ The syntax of a numeric substitution is ``[[#%<fmtspec>,<expr>]]`` where:
   is used.  In case of conflict between matching formats of several numeric
   variables the format specifier is mandatory.
 
+* ``<constraint>`` is the constraint describing how the value to match must
+  relate to the value of the numeric expression. The only currently accepted
+  constraint is ``==`` for an exact match and is the default if
+  ``<constraint>`` is not provided. No matching constraint must be specified
+  when the ``<expr>`` is empty.
+
 * ``<expr>`` is an expression. An expression is in turn recursively defined
   as:
 
   * a numeric operand, or
   * an expression followed by an operator and a numeric operand.
 
-  A numeric operand is a previously defined numeric variable, or an integer
-  literal. The supported operators are ``+`` and ``-``. Spaces are accepted
-  before, after and between any of these elements.
+  A numeric operand is a previously defined numeric variable, an integer
+  literal, or a function. Spaces are accepted before, after and between any of
+  these elements. Numeric operands have 64-bit precision. Overflow and underflow
+  are rejected. There is no support for operator precendence, but parentheses
+  can be used to change the evaluation order.
+
+The supported operators are:
+
+  * ``+`` - Returns the sum of its two operands.
+  * ``-`` - Returns the difference of its two operands.
+
+The syntax of a function call is ``<name>(<arguments>)`` where:
+
+* ``name`` is a predefined string literal. Accepted values are:
+
+  * add - Returns the sum of its two operands.
+  * div - Returns the quotient of its two operands.
+  * max - Returns the largest of its two operands.
+  * min - Returns the smallest of its two operands.
+  * mul - Returns the product of its two operands.
+  * sub - Returns the difference of its two operands.
+
+* ``<arguments>`` is a comma seperated list of expressions.
 
 For example:
 
@@ -734,11 +756,12 @@ does not matter:
 to check that a value is synthesized rather than moved around.
 
 A numeric variable can also be defined to the result of a numeric expression,
-in which case the numeric expression is checked and if verified the variable is
-assigned to the value. The unified syntax for both defining numeric variables
-and checking a numeric expression is thus ``[[#%<fmtspec>,<NUMVAR>: <expr>]]``
-with each element as described previously. One can use this syntax to make a
-testcase more self-describing by using variables instead of values:
+in which case the numeric expression constraint is checked and if verified the
+variable is assigned to the value. The unified syntax for both defining numeric
+variables and checking a numeric expression is thus
+``[[#%<fmtspec>,<NUMVAR>: <constraint> <expr>]]`` with each element as
+described previously. One can use this syntax to make a testcase more
+self-describing by using variables instead of values:
 
 .. code-block:: gas
 

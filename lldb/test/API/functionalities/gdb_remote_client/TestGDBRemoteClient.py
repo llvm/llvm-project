@@ -11,13 +11,14 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         def readRegisters(self):
             return '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
 
+    @skipIfReproducer # Packet log is not populated during replay.
     def test_connect(self):
         """Test connecting to a remote gdb server"""
         target = self.createTarget("a.yaml")
         process = self.connect(target)
         self.assertPacketLogContains(["qProcessInfo", "qfThreadInfo"])
 
-    @skipIfReproducer # Unexpected packet during replay
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_attach_fail(self):
         error_msg = "mock-error-msg"
 
@@ -68,11 +69,12 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
                 None, 0, True, error)
         self.assertEquals("'A' packet returned an error: 71", error.GetCString())
 
+    @skipIfReproducer # Packet log is not populated during replay.
     def test_read_registers_using_g_packets(self):
         """Test reading registers using 'g' packets (default behavior)"""
         self.dbg.HandleCommand(
                 "settings set plugin.process.gdb-remote.use-g-packet-for-reading true")
-        self.addTearDownHook(lambda: 
+        self.addTearDownHook(lambda:
                 self.runCmd("settings set plugin.process.gdb-remote.use-g-packet-for-reading false"))
         self.server.responder = self.gPacketResponder()
         target = self.createTarget("a.yaml")
@@ -85,6 +87,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.assertEquals(
                 0, len([p for p in self.server.responder.packetLog if p.startswith("p")]))
 
+    @skipIfReproducer # Packet log is not populated during replay.
     def test_read_registers_using_p_packets(self):
         """Test reading registers using 'p' packets"""
         self.dbg.HandleCommand(
@@ -97,6 +100,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.assertGreater(
                 len([p for p in self.server.responder.packetLog if p.startswith("p")]), 0)
 
+    @skipIfReproducer # Packet log is not populated during replay.
     def test_write_registers_using_P_packets(self):
         """Test writing registers using 'P' packets (default behavior)"""
         self.server.responder = self.gPacketResponder()
@@ -109,6 +113,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.assertGreater(
                 len([p for p in self.server.responder.packetLog if p.startswith("P")]), 0)
 
+    @skipIfReproducer # Packet log is not populated during replay.
     def test_write_registers_using_G_packets(self):
         """Test writing registers using 'G' packets"""
 

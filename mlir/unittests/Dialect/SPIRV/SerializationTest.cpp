@@ -58,8 +58,8 @@ protected:
   Type getFloatStructType() {
     OpBuilder opBuilder(module.body());
     llvm::SmallVector<Type, 1> elementTypes{opBuilder.getF32Type()};
-    llvm::SmallVector<spirv::StructType::LayoutInfo, 1> layoutInfo{0};
-    auto structType = spirv::StructType::get(elementTypes, layoutInfo);
+    llvm::SmallVector<spirv::StructType::OffsetInfo, 1> offsetInfo{0};
+    auto structType = spirv::StructType::get(elementTypes, offsetInfo);
     return structType;
   }
 

@@ -15,7 +15,7 @@
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
-define i32 @_Z3sumii(i32 %x, i32 %y) !dbg !6 {
+define i32 @_Z3sumii(i32 %x, i32 %y) #0 !dbg !6 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
@@ -27,7 +27,7 @@ entry:
   ret i32 %add, !dbg !8
 }
 
-define i32 @main() !dbg !9 {
+define i32 @main() #0 !dbg !9 {
 entry:
   %retval = alloca i32, align 4
   %s = alloca i32, align 4
@@ -69,6 +69,8 @@ while.end:                                        ; preds = %while.cond
   %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 %tmp4), !dbg !22
   ret i32 0, !dbg !23
 }
+
+attributes #0 = { "use-sample-profile" }
 
 declare i32 @printf(i8*, ...)
 

@@ -344,6 +344,7 @@ class MiniDumpNewTestCase(TestBase):
                                   "linux-x86_64_not_crashed.dmp",
                                   self._linux_x86_64_not_crashed_pid)
 
+    @skipIfReproducer # VFS is a snapshot.
     def do_change_pid_in_minidump(self, core, newcore, offset, oldpid, newpid):
         """ This assumes that the minidump is breakpad generated on Linux -
         meaning that the PID in the file will be an ascii string part of

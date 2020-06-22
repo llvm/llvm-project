@@ -35,9 +35,11 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:  .LBB0_4: @ %vector.ph
+; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB0_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r2], #16
 ; CHECK-NEXT:    vmul.f32 q0, q1, q0
@@ -135,7 +137,10 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
   %2 = getelementptr inbounds float, float* %b, i32 %index
-  %3 = icmp ule <4 x i32> %induction, %broadcast.splat22
+
+  ; %3 = icmp ule <4 x i32> %induction, %broadcast.splat22
+  %3 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+
   %4 = bitcast float* %2 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %4, i32 4, <4 x i1> %3, <4 x float> undef)
   %5 = getelementptr inbounds float, float* %c, i32 %index
@@ -224,12 +229,12 @@ define arm_aapcs_vfpcc float @fast_float_mac(float* nocapture readonly %b, float
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
-; CHECK-NEXT:    lsr.w r3, r12, #2
-; CHECK-NEXT:    sub.w r3, r2, r3, lsl #2
+; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
+; CHECK-NEXT:    adds r3, #4
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpstt
@@ -238,7 +243,6 @@ define arm_aapcs_vfpcc float @fast_float_mac(float* nocapture readonly %b, float
 ; CHECK-NEXT:    vfma.f32 q0, q3, q2
 ; CHECK-NEXT:    le lr, .LBB1_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
-; CHECK-NEXT:    vctp.32 r3
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov.f32 s4, s2
 ; CHECK-NEXT:    vmov.f32 s5, s3
@@ -274,7 +278,10 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
   %0 = getelementptr inbounds float, float* %b, i32 %index
-  %1 = icmp ule <4 x i32> %induction, %broadcast.splat12
+
+;  %1 = icmp ule <4 x i32> %induction, %broadcast.splat12
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
   %3 = getelementptr inbounds float, float* %c, i32 %index
@@ -586,3 +593,4 @@ declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32 imm
 ; Function Attrs: argmemonly nounwind readonly willreturn
 declare <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>*, i32 immarg, <4 x i1>, <4 x half>)
 
+declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)

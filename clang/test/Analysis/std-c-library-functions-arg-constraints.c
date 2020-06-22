@@ -2,7 +2,7 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctionArgs \
+// RUN:   -analyzer-checker=alpha.apiModeling.StdCLibraryFunctionArgs \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \
@@ -12,7 +12,7 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctionArgs \
+// RUN:   -analyzer-checker=alpha.apiModeling.StdCLibraryFunctionArgs \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \
@@ -64,7 +64,7 @@ void test_alnum_symbolic2(int x) {
 
 typedef struct FILE FILE;
 typedef typeof(sizeof(int)) size_t;
-size_t fread(void *restrict, size_t, size_t, FILE *);
+size_t fread(void *restrict, size_t, size_t, FILE *restrict);
 void test_notnull_concrete(FILE *fp) {
   fread(0, sizeof(int), 10, fp); // \
   // report-warning{{Function argument constraint is not satisfied}} \
@@ -121,4 +121,55 @@ void test_arg_constraint_on_variadic_fun() {
   // report-warning{{Function argument constraint is not satisfied}} \
   // bugpath-warning{{Function argument constraint is not satisfied}} \
   // bugpath-note{{Function argument constraint is not satisfied}}
+}
+
+int __buf_size_arg_constraint(const void *, size_t);
+void test_buf_size_concrete() {
+  char buf[3];                       // bugpath-note{{'buf' initialized here}}
+  __buf_size_arg_constraint(buf, 4); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
+}
+void test_buf_size_symbolic(int s) {
+  char buf[3];
+  __buf_size_arg_constraint(buf, s);
+  clang_analyzer_eval(s <= 3); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{'s' is <= 3}}
+}
+void test_buf_size_symbolic_and_offset(int s) {
+  char buf[3];
+  __buf_size_arg_constraint(buf + 1, s);
+  clang_analyzer_eval(s <= 2); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{'s' is <= 2}}
+}
+int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
+void test_buf_size_concrete_with_multiplication() {
+  short buf[3];         // bugpath-note{{'buf' initialized here}}
+  __buf_size_arg_constraint_mul(buf, 4, sizeof(short)); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
+}
+void test_buf_size_symbolic_with_multiplication(size_t s) {
+  short buf[3];
+  __buf_size_arg_constraint_mul(buf, s, sizeof(short));
+  clang_analyzer_eval(s * sizeof(short) <= 6); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}}
+}
+void test_buf_size_symbolic_and_offset_with_multiplication(size_t s) {
+  short buf[3];
+  __buf_size_arg_constraint_mul(buf + 1, s, sizeof(short));
+  clang_analyzer_eval(s * sizeof(short) <= 4); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}}
 }

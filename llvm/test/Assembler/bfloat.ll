@@ -36,3 +36,27 @@ define float @check_bfloat_convert() {
 ; OPT: 0x4191A00000000000
   ret float %tmp
 }
+
+; ASSEM-DISASS-LABEL @snan_bfloat
+define bfloat @snan_bfloat() {
+; ASSEM-DISASS: ret bfloat 0xR7F81
+    ret bfloat 0xR7F81
+}
+
+; ASSEM-DISASS-LABEL @qnan_bfloat
+define bfloat @qnan_bfloat() {
+; ASSEM-DISASS: ret bfloat 0xR7FC0
+    ret bfloat 0xR7FC0
+}
+
+; ASSEM-DISASS-LABEL @pos_inf_bfloat
+define bfloat @pos_inf_bfloat() {
+; ASSEM-DISASS: ret bfloat 0xR7F80
+    ret bfloat 0xR7F80
+}
+
+; ASSEM-DISASS-LABEL @neg_inf_bfloat
+define bfloat @neg_inf_bfloat() {
+; ASSEM-DISASS: ret bfloat 0xRFF80
+    ret bfloat 0xRFF80
+}

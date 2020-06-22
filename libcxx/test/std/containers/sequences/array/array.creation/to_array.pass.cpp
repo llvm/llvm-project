@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <array>
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <typename T, size_t Size>
 // constexpr auto to_array(T (&arr)[Size])
@@ -23,7 +23,8 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-int main(int, char**) {
+constexpr bool tests()
+{
   //  Test deduced type.
   {
     auto arr = std::to_array({1, 2, 3});
@@ -110,13 +111,12 @@ int main(int, char**) {
     assert(arr[0].b == .1);
   }
 
-  // Test constexpr.
-  {
-    constexpr std::array<int, 3> arr = std::to_array({1, 2, 3});
-    static_assert(arr[0] == 1);
-    static_assert(arr[1] == 2);
-    static_assert(arr[2] == 3);
-  }
+  return true;
+}
 
+int main(int, char**)
+{
+  tests();
+  static_assert(tests(), "");
   return 0;
 }

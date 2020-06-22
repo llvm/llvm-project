@@ -760,9 +760,29 @@ func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>,
 func @contraction(%arg0: vector<4x3xi32>,
                   %arg1: vector<3x7xf32>,
                   %arg2: vector<4x7xf32>) -> vector<4x7xf32> {
-  // expected-error@+1 {{'vector.contract' op failed to verify that first operand lhs and result have same element type}}
+  // expected-error@+1 {{'vector.contract' op failed to verify that lhs and rhs have same element type}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
     : vector<4x3xi32>, vector<3x7xf32> into vector<4x7xf32>
+}
+
+// -----
+
+#contraction_accesses = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#contraction_trait = {
+  indexing_maps = #contraction_accesses,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+func @contraction(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<2x3xf32>)
+-> vector<3x2xf32>
+{
+// expected-error@+1 {{invalid accumulator/result vector shape, expected: 'vector<3x2xf32>'}}
+  %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
+    : vector<2x1xf32>, vector<1x3xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
 }
 
 // -----
@@ -1049,7 +1069,7 @@ func @reduce_elt_type_mismatch(%arg0: vector<16xf32>) -> i32 {
 // -----
 
 func @reduce_unsupported_attr(%arg0: vector<16xf32>) -> i32 {
-  // expected-error@+1 {{'vector.reduction' op attribute 'kind' failed to satisfy constraint: string attribute}}
+  // expected-error@+1 {{attribute 'kind' failed to satisfy constraint: string attribute}}
   %0 = vector.reduction 1234, %arg0 : vector<16xf32> into i32
 }
 
@@ -1121,6 +1141,13 @@ func @transpose_index_dup(%arg0: vector<4x4xf32>) {
 func @transpose_dim_size_mismatch(%arg0: vector<11x7x3x2xi32>) {
   // expected-error@+1 {{'vector.transpose' op dimension size mismatch at: 0}}
   %0 = vector.transpose %arg0, [3, 0, 1, 2] : vector<11x7x3x2xi32> to vector<2x3x7x11xi32>
+}
+
+// -----
+
+func @flat_transpose_type_mismatch(%arg0: vector<16xf32>) {
+  // expected-error@+1 {{'vector.flat_transpose' op failed to verify that source operand and result have same element type}}
+  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 } : vector<16xf32> -> vector<16xf64>
 }
 
 // -----

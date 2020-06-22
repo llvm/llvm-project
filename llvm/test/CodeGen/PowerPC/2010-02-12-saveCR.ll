@@ -7,7 +7,7 @@ define void @foo() nounwind {
 entry:
 ; Note that part of what is being checked here is proper register reuse.
 ; CHECK: mfcr [[T1:[0-9]+]]
-; CHECK-DAG: subf 0, 0, 1
+; CHECK-DAG: sub 0, 1, 0
 ; CHECK-DAG: ori [[T2:[0-9]+]], [[T2]], 34492
 ; CHECK-DAG: stwx [[T1]], 1, [[T2]]
 ; CHECK-DAG: addi 3, 1, 28

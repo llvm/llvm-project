@@ -85,6 +85,13 @@ class CommandLineCompletionTestCase(TestBase):
                               ['mips',
                                'arm64'])
 
+    def test_process_plugin_completion(self):
+        subcommands = ['attach -P', 'connect -p', 'launch -p']
+
+        for subcommand in subcommands:
+            self.complete_from_to('process ' + subcommand + ' mac',
+                                  'process ' + subcommand + ' mach-o-core')
+
     def test_process_signal(self):
         # The tab completion for "process signal"  won't work without a running process.
         self.complete_from_to('process signal ',
@@ -363,6 +370,10 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("watchpoint set variable foo --watch ", ["read", "write", "read_write"])
         self.complete_from_to("watchpoint set variable foo --watch w", "watchpoint set variable foo --watch write")
         self.complete_from_to('watchpoint set variable foo -w read_', 'watchpoint set variable foo -w read_write')
+
+    def test_command_script_delete(self):
+        self.runCmd("command script add -h test_desc -f none -s current usercmd1")
+        self.check_completion_with_desc('command script delete ', [['usercmd1', 'test_desc']])
 
     def test_completion_description_commands(self):
         """Test descriptions of top-level command completions"""

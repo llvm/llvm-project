@@ -9749,7 +9749,7 @@ static bool EvaluateArrayNewConstructExpr(EvalInfo &Info, LValue &This,
 
 // Return true iff the given array filler may depend on the element index.
 static bool MaybeElementDependentArrayFiller(const Expr *FillerExpr) {
-  // For now, just whitelist non-class value-initialization and initialization
+  // For now, just allow non-class value-initialization and initialization
   // lists comprised of them.
   if (isa<ImplicitValueInitExpr>(FillerExpr))
     return false;
@@ -9985,8 +9985,6 @@ public:
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
-
-  bool VisitConstantExpr(const ConstantExpr *E);
 
   bool VisitIntegerLiteral(const IntegerLiteral *E) {
     return Success(E->getValue(), E);
@@ -10617,9 +10615,9 @@ static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const LValue &LVal) {
   //   the array at the end was flexible, or if it had 0 or 1 elements. This
   //   broke some common standard library extensions (PR30346), but was
   //   otherwise seemingly fine. It may be useful to reintroduce this behavior
-  //   with some sort of whitelist. OTOH, it seems that GCC is always
+  //   with some sort of list. OTOH, it seems that GCC is always
   //   conservative with the last element in structs (if it's an array), so our
-  //   current behavior is more compatible than a whitelisting approach would
+  //   current behavior is more compatible than an explicit list approach would
   //   be.
   return LVal.InvalidBase &&
          Designator.Entries.size() == Designator.MostDerivedPathLength &&
@@ -10767,13 +10765,6 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
   else
     Size = (EndOffset - LVal.getLValueOffset()).getQuantity();
   return true;
-}
-
-bool IntExprEvaluator::VisitConstantExpr(const ConstantExpr *E) {
-  llvm::SaveAndRestore<bool> InConstantContext(Info.InConstantContext, true);
-  if (E->getResultAPValueKind() != APValue::None)
-    return Success(E->getAPValueResult(), E);
-  return ExprEvaluatorBaseTy::VisitConstantExpr(E);
 }
 
 bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
@@ -14184,6 +14175,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ImaginaryLiteralClass:
   case Expr::StringLiteralClass:
   case Expr::ArraySubscriptExprClass:
+  case Expr::MatrixSubscriptExprClass:
   case Expr::OMPArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:

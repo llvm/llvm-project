@@ -62,7 +62,7 @@ void f3() {
   // CHECK64-NEXT: %call2 = call %class.Test3* @"??0Test3@@QEAA@XZ"(%class.Test3* %var)
   var.Test3::Test3();
 
-  // CHECK32-NEXT: call x86_thiscallcc void @_ZN5Test3C1ERKS_(%class.Test3* %var, %class.Test3* dereferenceable({{[0-9]+}}) %var2)
-  // CHECK64-NEXT: %call3 = call %class.Test3* @"??0Test3@@QEAA@AEBV0@@Z"(%class.Test3* %var, %class.Test3* dereferenceable({{[0-9]+}}) %var2)
+  // CHECK32-NEXT: call x86_thiscallcc void @_ZN5Test3C1ERKS_(%class.Test3* %var, %class.Test3* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %var2)
+  // CHECK64-NEXT: %call3 = call %class.Test3* @"??0Test3@@QEAA@AEBV0@@Z"(%class.Test3* %var, %class.Test3* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %var2)
   var.Test3::Test3(var2);
 }

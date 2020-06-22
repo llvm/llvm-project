@@ -34,32 +34,33 @@ class StringRef;
 
 namespace PPC {
   // -m directive values.
-  enum {
-    DIR_NONE,
-    DIR_32,
-    DIR_440,
-    DIR_601,
-    DIR_602,
-    DIR_603,
-    DIR_7400,
-    DIR_750,
-    DIR_970,
-    DIR_A2,
-    DIR_E500,
-    DIR_E500mc,
-    DIR_E5500,
-    DIR_PWR3,
-    DIR_PWR4,
-    DIR_PWR5,
-    DIR_PWR5X,
-    DIR_PWR6,
-    DIR_PWR6X,
-    DIR_PWR7,
-    DIR_PWR8,
-    DIR_PWR9,
-    DIR_PWR_FUTURE,
-    DIR_64
-  };
+enum {
+  DIR_NONE,
+  DIR_32,
+  DIR_440,
+  DIR_601,
+  DIR_602,
+  DIR_603,
+  DIR_7400,
+  DIR_750,
+  DIR_970,
+  DIR_A2,
+  DIR_E500,
+  DIR_E500mc,
+  DIR_E5500,
+  DIR_PWR3,
+  DIR_PWR4,
+  DIR_PWR5,
+  DIR_PWR5X,
+  DIR_PWR6,
+  DIR_PWR6X,
+  DIR_PWR7,
+  DIR_PWR8,
+  DIR_PWR9,
+  DIR_PWR10,
+  DIR_PWR_FUTURE,
+  DIR_64
+};
 }
 
 class GlobalValue;
@@ -104,6 +105,7 @@ protected:
   bool HasP8Crypto;
   bool HasP9Vector;
   bool HasP9Altivec;
+  bool HasP10Vector;
   bool HasPrefixInstrs;
   bool HasPCRelativeMemops;
   bool HasFCPSGN;
@@ -138,6 +140,7 @@ protected:
   bool HasAddiLoadFusion;
   bool HasAddisLoadFusion;
   bool IsISA3_0;
+  bool IsISA3_1;
   bool UseLongCalls;
   bool SecurePlt;
   bool VectorsUseTwoUnits;
@@ -260,6 +263,7 @@ public:
   bool hasP8Crypto() const { return HasP8Crypto; }
   bool hasP9Vector() const { return HasP9Vector; }
   bool hasP9Altivec() const { return HasP9Altivec; }
+  bool hasP10Vector() const { return HasP10Vector; }
   bool hasPrefixInstrs() const { return HasPrefixInstrs; }
   bool hasPCRelativeMemops() const { return HasPCRelativeMemops; }
   bool hasMFOCRF() const { return HasMFOCRF; }
@@ -308,6 +312,7 @@ public:
   bool hasHTM() const { return HasHTM; }
   bool hasFloat128() const { return HasFloat128; }
   bool isISA3_0() const { return IsISA3_0; }
+  bool isISA3_1() const { return IsISA3_1; }
   bool useLongCalls() const { return UseLongCalls; }
   bool hasFusion() const { return HasFusion; }
   bool hasAddiLoadFusion() const { return HasAddiLoadFusion; }

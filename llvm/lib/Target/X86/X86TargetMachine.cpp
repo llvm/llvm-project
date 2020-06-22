@@ -314,14 +314,6 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 //===----------------------------------------------------------------------===//
-// Command line options for x86
-//===----------------------------------------------------------------------===//
-static cl::opt<bool>
-UseVZeroUpper("x86-use-vzeroupper", cl::Hidden,
-  cl::desc("Minimize AVX to SSE transition penalty"),
-  cl::init(true));
-
-//===----------------------------------------------------------------------===//
 // X86 TTI query.
 //===----------------------------------------------------------------------===//
 
@@ -497,7 +489,10 @@ void X86PassConfig::addMachineSSAOptimization() {
 
 void X86PassConfig::addPostRegAlloc() {
   addPass(createX86FloatingPointStackifierPass());
-  addPass(createX86LoadValueInjectionLoadHardeningPass());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createX86LoadValueInjectionLoadHardeningPass());
+  else
+    addPass(createX86LoadValueInjectionLoadHardeningUnoptimizedPass());
 }
 
 void X86PassConfig::addPreSched2() { addPass(createX86ExpandPseudoPass()); }
@@ -510,15 +505,14 @@ void X86PassConfig::addPreEmitPass() {
 
   addPass(createX86IndirectBranchTrackingPass());
 
-  if (UseVZeroUpper)
-    addPass(createX86IssueVZeroUpperPass());
+  addPass(createX86IssueVZeroUpperPass());
 
   if (getOptLevel() != CodeGenOpt::None) {
     addPass(createX86FixupBWInsts());
     addPass(createX86PadShortFunctions());
     addPass(createX86FixupLEAs());
-    addPass(createX86EvexToVexInsts());
   }
+  addPass(createX86EvexToVexInsts());
   addPass(createX86DiscriminateMemOpsPass());
   addPass(createX86InsertPrefetchPass());
   addPass(createX86InsertX87waitPass());

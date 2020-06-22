@@ -119,6 +119,8 @@ Extensions, deletions, and legacy features supported by default
 * An effectively empty source file (no program unit) is accepted and
   produces an empty relocatable output file.
 * A `RETURN` statement may appear in a main program.
+* DATA statement initialization is allowed for procedure pointers outside
+  structure constructors.
 
 Extensions supported when enabled by options
 --------------------------------------------

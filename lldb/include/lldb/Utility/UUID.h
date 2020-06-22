@@ -63,18 +63,13 @@ public:
 
   std::string GetAsString(llvm::StringRef separator = "-") const;
 
-  size_t SetFromStringRef(llvm::StringRef str, uint32_t num_uuid_bytes = 16);
+  bool SetFromStringRef(llvm::StringRef str);
 
   // Same as SetFromStringRef, but if the resultant UUID is all 0 bytes, set the
   // UUID to invalid.
-  size_t SetFromOptionalStringRef(llvm::StringRef str,
-                                  uint32_t num_uuid_bytes = 16);
+  bool SetFromOptionalStringRef(llvm::StringRef str);
 
-  // Decode as many UUID bytes (up to 16) as possible from the C string "cstr"
-  // This is used for auto completion where a partial UUID might have been
-  // typed in. It
-  /// Decode as many UUID bytes (up to 16) as possible from the C
-  /// string \a cstr.
+  /// Decode as many UUID bytes as possible from the C string \a cstr.
   ///
   /// \param[in] str
   ///     An llvm::StringRef that points at a UUID string value (no leading
@@ -88,8 +83,7 @@ public:
   ///     The original string, with all decoded bytes removed.
   static llvm::StringRef
   DecodeUUIDBytesFromString(llvm::StringRef str,
-                            llvm::SmallVectorImpl<uint8_t> &uuid_bytes,
-                            uint32_t num_uuid_bytes = 16);
+                            llvm::SmallVectorImpl<uint8_t> &uuid_bytes);
 
 private:
   UUID(llvm::ArrayRef<uint8_t> bytes) : m_bytes(bytes.begin(), bytes.end()) {}

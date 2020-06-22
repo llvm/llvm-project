@@ -3,7 +3,7 @@
 
 
 struct IntHolder {
-  const IntHolder& Self() const {
+  __attribute__((noinline)) const IntHolder &Self() const {
     return *this;
   }
   int val = 3;

@@ -35,6 +35,7 @@ all_categories = {
     'stresstest': 'Tests related to stressing lldb limits',
     'flakey': 'Flakey test cases, i.e. tests that do not reliably pass at each execution',
     'darwin-log': 'Darwin log tests',
+    'std-module': 'Tests related to importing the std module',
     'watchpoint': 'Watchpoint-related tests',
     'lldb-vscode': 'Visual Studio Code debug adaptor tests',
     'lldb-server': 'Tests related to lldb-server',

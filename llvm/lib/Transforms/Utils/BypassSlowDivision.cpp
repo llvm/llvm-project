@@ -213,9 +213,8 @@ bool FastDivInsertionTask::isHashLikeValue(Value *V, VisitedSetTy &Visited) {
       return false;
     // Do not visit nodes that have been visited already. We return true because
     // it means that we couldn't find any value that doesn't look hash-like.
-    if (Visited.find(I) != Visited.end())
+    if (!Visited.insert(I).second)
       return true;
-    Visited.insert(I);
     return llvm::all_of(cast<PHINode>(I)->incoming_values(), [&](Value *V) {
       // Ignore undef values as they probably don't affect the division
       // operands.
@@ -264,6 +263,7 @@ QuotRemWithBB FastDivInsertionTask::createSlowBB(BasicBlock *SuccessorBB) {
   DivRemPair.BB = BasicBlock::Create(MainBB->getParent()->getContext(), "",
                                      MainBB->getParent(), SuccessorBB);
   IRBuilder<> Builder(DivRemPair.BB, DivRemPair.BB->begin());
+  Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
   Value *Dividend = SlowDivOrRem->getOperand(0);
   Value *Divisor = SlowDivOrRem->getOperand(1);
@@ -287,6 +287,7 @@ QuotRemWithBB FastDivInsertionTask::createFastBB(BasicBlock *SuccessorBB) {
   DivRemPair.BB = BasicBlock::Create(MainBB->getParent()->getContext(), "",
                                      MainBB->getParent(), SuccessorBB);
   IRBuilder<> Builder(DivRemPair.BB, DivRemPair.BB->begin());
+  Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
   Value *Dividend = SlowDivOrRem->getOperand(0);
   Value *Divisor = SlowDivOrRem->getOperand(1);
@@ -312,6 +313,7 @@ QuotRemPair FastDivInsertionTask::createDivRemPhiNodes(QuotRemWithBB &LHS,
                                                        QuotRemWithBB &RHS,
                                                        BasicBlock *PhiBB) {
   IRBuilder<> Builder(PhiBB, PhiBB->begin());
+  Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
   PHINode *QuoPhi = Builder.CreatePHI(getSlowType(), 2);
   QuoPhi->addIncoming(LHS.Quotient, LHS.BB);
   QuoPhi->addIncoming(RHS.Quotient, RHS.BB);
@@ -328,6 +330,7 @@ QuotRemPair FastDivInsertionTask::createDivRemPhiNodes(QuotRemWithBB &LHS,
 Value *FastDivInsertionTask::insertOperandRuntimeCheck(Value *Op1, Value *Op2) {
   assert((Op1 || Op2) && "Nothing to check");
   IRBuilder<> Builder(MainBB, MainBB->end());
+  Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
   Value *OrV;
   if (Op1 && Op2)
@@ -396,6 +399,9 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
         isa<ConstantInt>(BCI->getOperand(0)))
       return None;
 
+  IRBuilder<> Builder(MainBB, MainBB->end());
+  Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
+
   if (DividendShort && !isSignedOp()) {
     // If the division is unsigned and Dividend is known to be short, then
     // either
@@ -418,7 +424,6 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     Long.Remainder = Dividend;
     QuotRemWithBB Fast = createFastBB(SuccessorBB);
     QuotRemPair Result = createDivRemPhiNodes(Fast, Long, SuccessorBB);
-    IRBuilder<> Builder(MainBB, MainBB->end());
     Value *CmpV = Builder.CreateICmpUGE(Dividend, Divisor);
     Builder.CreateCondBr(CmpV, Fast.BB, SuccessorBB);
     return Result;
@@ -435,7 +440,6 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     QuotRemPair Result = createDivRemPhiNodes(Fast, Slow, SuccessorBB);
     Value *CmpV = insertOperandRuntimeCheck(DividendShort ? nullptr : Dividend,
                                             DivisorShort ? nullptr : Divisor);
-    IRBuilder<> Builder(MainBB, MainBB->end());
     Builder.CreateCondBr(CmpV, Fast.BB, Slow.BB);
     return Result;
   }

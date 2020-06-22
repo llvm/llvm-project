@@ -123,7 +123,7 @@ class AtosSymbolizerProcess : public SymbolizerProcess {
     argv[i++] = path_to_binary;
     argv[i++] = "-p";
     argv[i++] = &pid_str_[0];
-    if (GetMacosVersion() == MACOS_VERSION_MAVERICKS) {
+    if (GetMacosAlignedVersion() == MacosVersion(10, 9)) {
       // On Mavericks atos prints a deprecation warning which we suppress by
       // passing -d. The warning isn't present on other OSX versions, even the
       // newer ones.

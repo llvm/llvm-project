@@ -13,7 +13,7 @@
 ## identifiers is copied.
 
 # CHECK:      .debug_cu_index contents:
-# CHECK-NEXT: version = 2 slots = 2
+# CHECK-NEXT: version = 2, units = 1, slots = 2
 # CHECK:      Index Signature INFO ABBREV
 # CHECK-NOT:  Unknown
 # CHECK:      -----
@@ -21,7 +21,7 @@
 # CHECK-NOT:  [
 
 # CHECK:      .debug_tu_index contents:
-# CHECK-NEXT: version = 2 slots = 2
+# CHECK-NEXT: version = 2, units = 1, slots = 2
 # CHECK:      Index Signature TYPES ABBREV
 # CHECK-NOT:  Unknown
 # CHECK:      -----

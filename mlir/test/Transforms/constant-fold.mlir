@@ -92,6 +92,92 @@ func @simple_addi() -> i32 {
 
 // -----
 
+// CHECK: func @simple_and
+// CHECK-SAME: [[ARG0:%[a-zA-Z0-9]+]]: i1
+// CHECK-SAME: [[ARG1:%[a-zA-Z0-9]+]]: i32)
+func @simple_and(%arg0 : i1, %arg1 : i32) -> (i1, i32) {
+  %c1 = constant 1 : i1
+  %cAllOnes_32 = constant 4294967295 : i32
+
+  // CHECK: [[C31:%.*]] = constant 31 : i32
+  %c31 = constant 31 : i32
+  %1 = and %arg0, %c1 : i1
+  %2 = and %arg1, %cAllOnes_32 : i32
+
+  // CHECK: [[VAL:%.*]] = and [[ARG1]], [[C31]]
+  %3 = and %2, %c31 : i32
+
+  // CHECK: return [[ARG0]], [[VAL]]
+  return %1, %3 : i1, i32
+}
+
+// -----
+
+// CHECK-LABEL: func @and_index
+//  CHECK-SAME:   [[ARG:%[a-zA-Z0-9]+]]
+func @and_index(%arg0 : index) -> (index) {
+  // CHECK: [[C31:%.*]] = constant 31 : index
+  %c31 = constant 31 : index
+  %c_AllOnes = constant -1 : index
+  %1 = and %arg0, %c31 : index
+
+  // CHECK: and [[ARG]], [[C31]]
+  %2 = and %1, %c_AllOnes : index
+  return %2 : index
+}
+
+// -----
+
+// CHECK: func @tensor_and
+// CHECK-SAME: [[ARG0:%[a-zA-Z0-9]+]]: tensor<2xi32>
+func @tensor_and(%arg0 : tensor<2xi32>) -> tensor<2xi32> {
+  %cAllOnes_32 = constant dense<4294967295> : tensor<2xi32>
+
+  // CHECK: [[C31:%.*]] = constant dense<31> : tensor<2xi32>
+  %c31 = constant dense<31> : tensor<2xi32>
+
+  // CHECK: [[CMIXED:%.*]] = constant dense<[31, -1]> : tensor<2xi32>
+  %c_mixed = constant dense<[31, 4294967295]> : tensor<2xi32>
+
+  %0 = and %arg0, %cAllOnes_32 : tensor<2xi32>
+
+  // CHECK: [[T1:%.*]] = and [[ARG0]], [[C31]]
+  %1 = and %0, %c31 : tensor<2xi32>
+
+  // CHECK: [[T2:%.*]] = and [[T1]], [[CMIXED]]
+  %2 = and %1, %c_mixed : tensor<2xi32>
+
+  // CHECK: return [[T2]]
+  return %2 : tensor<2xi32>
+}
+
+// -----
+
+// CHECK: func @vector_and
+// CHECK-SAME: [[ARG0:%[a-zA-Z0-9]+]]: vector<2xi32>
+func @vector_and(%arg0 : vector<2xi32>) -> vector<2xi32> {
+  %cAllOnes_32 = constant dense<4294967295> : vector<2xi32>
+
+  // CHECK: [[C31:%.*]] = constant dense<31> : vector<2xi32>
+  %c31 = constant dense<31> : vector<2xi32>
+
+  // CHECK: [[CMIXED:%.*]] = constant dense<[31, -1]> : vector<2xi32>
+  %c_mixed = constant dense<[31, 4294967295]> : vector<2xi32>
+
+  %0 = and %arg0, %cAllOnes_32 : vector<2xi32>
+
+  // CHECK: [[T1:%.*]] = and [[ARG0]], [[C31]]
+  %1 = and %0, %c31 : vector<2xi32>
+
+  // CHECK: [[T2:%.*]] = and [[T1]], [[CMIXED]]
+  %2 = and %1, %c_mixed : vector<2xi32>
+
+  // CHECK: return [[T2]]
+  return %2 : vector<2xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @addi_splat_vector
 func @addi_splat_vector() -> vector<8xi32> {
   %0 = constant dense<1> : vector<8xi32>
@@ -134,16 +220,19 @@ func @subf_splat_vector() -> vector<4xf32> {
 
 // -----
 
-// CHECK-LABEL: func @simple_subi
-func @simple_subi() -> i32 {
+//      CHECK: func @simple_subi
+// CHECK-SAME:   [[ARG0:%[a-zA-Z0-9]+]]
+func @simple_subi(%arg0 : i32) -> (i32, i32) {
   %0 = constant 4 : i32
   %1 = constant 1 : i32
+  %2 = constant 0 : i32
 
   // CHECK-NEXT:[[C3:%.+]] = constant 3 : i32
-  %2 = subi %0, %1 : i32
+  %3 = subi %0, %1 : i32
+  %4 = subi %arg0, %2 : i32
 
-  // CHECK-NEXT: return [[C3]]
-  return %2 : i32
+  // CHECK-NEXT: return [[C3]], [[ARG0]]
+  return %3, %4 : i32, i32
 }
 
 // -----
@@ -382,7 +471,8 @@ func @muli_splat_vector() -> vector<4xi32> {
 func @dim(%x : tensor<8x4xf32>) -> index {
 
   // CHECK:[[C4:%.+]] = constant 4 : index
-  %0 = dim %x, 1 : tensor<8x4xf32>
+  %c1 = constant 1 : index
+  %0 = dim %x, %c1 : tensor<8x4xf32>
 
   // CHECK-NEXT: return [[C4]]
   return %0 : index
@@ -394,8 +484,8 @@ func @dim(%x : tensor<8x4xf32>) -> index {
 func @cmpi() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
   %c42 = constant 42 : i32
   %cm1 = constant -1 : i32
-  // CHECK-DAG: [[F:%.+]] = constant 0 : i1
-  // CHECK-DAG: [[T:%.+]] = constant 1 : i1
+  // CHECK-DAG: [[F:%.+]] = constant false
+  // CHECK-DAG: [[T:%.+]] = constant true
   // CHECK-NEXT: return [[F]],
   %0 = cmpi "eq", %c42, %cm1 : i32
   // CHECK-SAME: [[T]],
@@ -425,8 +515,8 @@ func @cmpi() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
 func @cmpf_normal_numbers() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
   %c42 = constant 42. : f32
   %cm1 = constant -1. : f32
-  // CHECK-DAG: [[F:%.+]] = constant 0 : i1
-  // CHECK-DAG: [[T:%.+]] = constant 1 : i1
+  // CHECK-DAG: [[F:%.+]] = constant false
+  // CHECK-DAG: [[T:%.+]] = constant true
   // CHECK-NEXT: return [[F]],
   %0 = cmpf "false", %c42, %cm1 : f32
   // CHECK-SAME: [[F]],
@@ -468,8 +558,8 @@ func @cmpf_normal_numbers() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, 
 func @cmpf_nan() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
   %c42 = constant 42. : f32
   %cqnan = constant 0xFFFFFFFF : f32
-  // CHECK-DAG: [[F:%.+]] = constant 0 : i1
-  // CHECK-DAG: [[T:%.+]] = constant 1 : i1
+  // CHECK-DAG: [[F:%.+]] = constant false
+  // CHECK-DAG: [[T:%.+]] = constant true
   // CHECK-NEXT: return [[F]],
   %0 = cmpf "false", %c42, %cqnan : f32
   // CHECK-SAME: [[F]]
@@ -511,8 +601,8 @@ func @cmpf_nan() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1,
 func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
   %c42 = constant 42. : f32
   %cpinf = constant 0x7F800000 : f32
-  // CHECK-DAG: [[F:%.+]] = constant 0 : i1
-  // CHECK-DAG: [[T:%.+]] = constant 1 : i1
+  // CHECK-DAG: [[F:%.+]] = constant false
+  // CHECK-DAG: [[T:%.+]] = constant true
   // CHECK-NEXT: return [[F]],
   %0 = cmpf "false", %c42, %cpinf: f32
   // CHECK-SAME: [[F]]

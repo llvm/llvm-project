@@ -3,7 +3,7 @@
 void __attribute__((fastcall)) foo1(int &y);
 void bar1(int &y) {
   // CHECK-LABEL: define void @_Z4bar1Ri
-  // CHECK: call x86_fastcallcc void @_Z4foo1Ri(i32* inreg dereferenceable({{[0-9]+}}) %
+  // CHECK: call x86_fastcallcc void @_Z4foo1Ri(i32* inreg nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %
   foo1(y);
 }
 

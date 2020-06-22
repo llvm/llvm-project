@@ -193,14 +193,16 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
                             "ljmp{l}\t$seg, $off", []>,
                             OpSize32, Sched<[WriteJump]>;
   }
-  def FARJMP64   : RI<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
-                      "ljmp{q}\t{*}$dst", []>, Sched<[WriteJump]>, Requires<[In64BitMode]>;
+  let mayLoad = 1 in {
+    def FARJMP64m  : RI<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
+                        "ljmp{q}\t{*}$dst", []>, Sched<[WriteJump]>, Requires<[In64BitMode]>;
 
-  let AsmVariantName = "att" in
-  def FARJMP16m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
-                     "ljmp{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
-  def FARJMP32m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
-                     "{l}jmp{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
+    let AsmVariantName = "att" in
+    def FARJMP16m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
+                       "ljmp{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
+    def FARJMP32m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
+                       "{l}jmp{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
+  }
 }
 
 // Loop instructions
@@ -275,10 +277,12 @@ let isCall = 1 in
                                OpSize32, Sched<[WriteJump]>;
     }
 
-    def FARCALL16m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
-                        "lcall{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
-    def FARCALL32m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
-                        "{l}call{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
+    let mayLoad = 1 in {
+      def FARCALL16m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
+                          "lcall{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
+      def FARCALL32m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
+                          "{l}call{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
+    }
   }
 
 
@@ -351,7 +355,8 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
                        Requires<[In64BitMode,FavorMemIndirectCall]>, NOTRACK;
   }
 
-  def FARCALL64   : RI<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
+  let mayLoad = 1 in
+  def FARCALL64m  : RI<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
                        "lcall{q}\t{*}$dst", []>;
 }
 

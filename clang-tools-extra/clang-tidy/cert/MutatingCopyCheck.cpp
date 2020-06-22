@@ -29,12 +29,13 @@ void MutatingCopyCheck::registerMatchers(MatchFinder *Finder) {
       allOf(unless(hasDescendant(expr(unless(MemberExprOrSourceObject)))),
             MemberExprOrSourceObject);
 
-  const auto IsSourceMutatingAssignment =
+  const auto IsSourceMutatingAssignment = traverse(
+      ast_type_traits::TK_AsIs,
       expr(anyOf(binaryOperator(isAssignmentOperator(), hasLHS(IsPartOfSource))
                      .bind(MutatingOperatorName),
                  cxxOperatorCallExpr(isAssignmentOperator(),
                                      hasArgument(0, IsPartOfSource))
-                     .bind(MutatingOperatorName)));
+                     .bind(MutatingOperatorName))));
 
   const auto MemberExprOrSelf = anyOf(memberExpr(), cxxThisExpr());
 

@@ -22,7 +22,7 @@
 ;  4       return foo();
 ;  5     }
 
-; CHECK: remark: /tmp/s.c:4:10: foo inlined into bar with (cost={{[0-9\-]+}}, threshold={{[0-9]+}}) (hotness: 30)
+; CHECK: remark: /tmp/s.c:4:10: foo inlined into bar with (cost={{[0-9\-]+}}, threshold={{[0-9]+}}) at callsite bar:1 (hotness: 30)
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            inline
@@ -42,6 +42,10 @@
 ; YAML-NEXT:   - String: ', threshold='
 ; YAML-NEXT:   - Threshold: '{{[0-9]+}}'
 ; YAML-NEXT:   - String: ')'
+; YAML-NEXT:   - String:          ' at callsite '
+; YAML-NEXT:   - String:          bar
+; YAML-NEXT:   - String:          ':'
+; YAML-NEXT:   - Line:            '1'
 ; YAML-NEXT: ...
 
 ; ModuleID = '/tmp/s.c'

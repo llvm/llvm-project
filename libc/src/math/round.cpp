@@ -1,4 +1,4 @@
-//===-- Implementation of round -------------------------------------------===//
+//===-- Implementation of round function ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/round.h"
-
 #include "src/__support/common.h"
+#include "utils/FPUtil/NearestIntegerOperations.h"
 
 namespace __llvm_libc {
 
-double __round_redirector(double x);
-
-double LLVM_LIBC_ENTRYPOINT(round)(double x) {
-  return __round_redirector(x);
-}
+double LLVM_LIBC_ENTRYPOINT(round)(double x) { return fputil::round(x); }
 
 } // namespace __llvm_libc

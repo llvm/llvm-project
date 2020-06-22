@@ -505,7 +505,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   const TargetRegisterClass *RC = TII->getOpRegClass(*MI, OpNo);
   unsigned Size = TRI->getRegSizeInBits(*RC);
-  Result.second = Result.first + (Size / 32);
+  Result.second = Result.first + ((Size + 16) / 32);
 
   return Result;
 }
@@ -1632,13 +1632,15 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     // TODO: Could insert earlier and schedule more liberally with operations
     // that only use caller preserved registers.
     MachineBasicBlock &EntryBB = MF.front();
+    MachineBasicBlock::iterator I = EntryBB.begin();
+    for (MachineBasicBlock::iterator E = EntryBB.end();
+         I != E && (I->isPHI() || I->isMetaInstruction()); ++I)
+      ;
+    BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(0);
     if (ST->hasVscnt())
-      BuildMI(EntryBB, EntryBB.getFirstNonPHI(), DebugLoc(),
-              TII->get(AMDGPU::S_WAITCNT_VSCNT))
-      .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
-      .addImm(0);
-    BuildMI(EntryBB, EntryBB.getFirstNonPHI(), DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
-      .addImm(0);
+      BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_VSCNT))
+          .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
+          .addImm(0);
 
     Modified = true;
   }

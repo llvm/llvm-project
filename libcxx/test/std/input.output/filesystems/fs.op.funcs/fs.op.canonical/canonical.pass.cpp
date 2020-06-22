@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <filesystem>
 
@@ -24,15 +23,6 @@
 
 using namespace fs;
 
-struct CWDGuard {
-  path OldCWD;
-  CWDGuard() : OldCWD(fs::current_path()) { }
-  ~CWDGuard() { fs::current_path(OldCWD); }
-
-  CWDGuard(CWDGuard const&) = delete;
-  CWDGuard& operator=(CWDGuard const&) = delete;
-};
-
 TEST_SUITE(filesystem_canonical_path_test_suite)
 
 TEST_CASE(signature_test)
@@ -47,29 +37,32 @@ TEST_CASE(signature_test)
 // Each scope tests one of the cases.
 TEST_CASE(test_canonical)
 {
+    static_test_env static_env;
     CWDGuard guard;
     // has_root_name() && has_root_directory()
-    const path Root = StaticEnv::Root;
+    const path Root = static_env.Root;
     const path RootName = Root.filename();
-    const path DirName = StaticEnv::Dir.filename();
-    const path SymlinkName = StaticEnv::SymlinkToFile.filename();
+    const path DirName = static_env.Dir.filename();
+    const path SymlinkName = static_env.SymlinkToFile.filename();
     struct TestCase {
         path p;
         path expect;
         path base;
-        TestCase(path p1, path e, path b = StaticEnv::Root)
+        TestCase(path p1, path e, path b)
             : p(p1), expect(e), base(b) {}
     };
     const TestCase testCases[] = {
-        { ".", Root, Root},
-        { DirName / ".." / "." / DirName, StaticEnv::Dir, Root},
-        { StaticEnv::Dir2 / "..",    StaticEnv::Dir },
-        { StaticEnv::Dir3 / "../..", StaticEnv::Dir },
-        { StaticEnv::Dir / ".",      StaticEnv::Dir },
-        { Root / "." / DirName / ".." / DirName, StaticEnv::Dir},
-        { path("..") / "." / RootName / DirName / ".." / DirName, StaticEnv::Dir, Root},
-        { StaticEnv::SymlinkToFile,  StaticEnv::File },
-        { SymlinkName, StaticEnv::File, StaticEnv::Root}
+        { ".", Root, Root },
+        { DirName / ".." / "." / DirName, static_env.Dir, Root },
+        { static_env.Dir2 / "..",    static_env.Dir, Root },
+        { static_env.Dir3 / "../..", static_env.Dir, Root },
+        { static_env.Dir / ".",      static_env.Dir, Root },
+        { Root / "." / DirName / ".." / DirName, static_env.Dir, Root },
+        { path("..") / "." / RootName / DirName / ".." / DirName,
+          static_env.Dir,
+          Root },
+        { static_env.SymlinkToFile,  static_env.File, Root },
+        { SymlinkName, static_env.File, Root}
     };
     for (auto& TC : testCases) {
         std::error_code ec = GetTestEC();
@@ -85,21 +78,23 @@ TEST_CASE(test_canonical)
 
 TEST_CASE(test_dne_path)
 {
+    static_test_env static_env;
     std::error_code ec = GetTestEC();
     {
-        const path ret = canonical(StaticEnv::DNE, ec);
+        const path ret = canonical(static_env.DNE, ec);
         TEST_CHECK(ec != GetTestEC());
         TEST_REQUIRE(ec);
         TEST_CHECK(ret == path{});
     }
     {
-        TEST_CHECK_THROW(filesystem_error, canonical(StaticEnv::DNE));
+        TEST_CHECK_THROW(filesystem_error, canonical(static_env.DNE));
     }
 }
 
 TEST_CASE(test_exception_contains_paths)
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
+    static_test_env static_env;
     CWDGuard guard;
     const path p = "blabla/dne";
     try {
@@ -110,13 +105,13 @@ TEST_CASE(test_exception_contains_paths)
         // libc++ provides the current path as the second path in the exception
         LIBCPP_ONLY(TEST_CHECK(err.path2() == current_path()));
     }
-    fs::current_path(StaticEnv::Dir);
+    fs::current_path(static_env.Dir);
     try {
         canonical(p);
         TEST_REQUIRE(false);
     } catch (filesystem_error const& err) {
         TEST_CHECK(err.path1() == p);
-        LIBCPP_ONLY(TEST_CHECK(err.path2() == StaticEnv::Dir));
+        LIBCPP_ONLY(TEST_CHECK(err.path2() == static_env.Dir));
     }
 #endif
 }

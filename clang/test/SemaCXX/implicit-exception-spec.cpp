@@ -54,10 +54,12 @@ namespace ExceptionSpecification {
 }
 
 namespace DefaultArgument {
+  // FIXME: We should detect and diagnose the cyclic dependence of
+  // noexcept(Default()) on itself here.
   struct Default {
     struct T {
-      T(int = ExceptionIf<noexcept(Default())::f()); // expected-error {{call to implicitly-deleted default constructor}} expected-error {{expected '>'}} expected-note {{to match this '<'}}
-    } t; // expected-note {{has no default constructor}}
+      T(int = ExceptionIf<noexcept(Default())>::f());
+    } t;
   };
 }
 

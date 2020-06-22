@@ -635,6 +635,12 @@ void MachineLICMBase::HoistPostRA(MachineInstr *MI, unsigned Def) {
   MachineBasicBlock *MBB = MI->getParent();
   Preheader->splice(Preheader->getFirstTerminator(), MBB, MI);
 
+  // Since we are moving the instruction out of its basic block, we do not
+  // retain its debug location. Doing so would degrade the debugging
+  // experience and adversely affect the accuracy of profiling information.
+  assert(!MI->isDebugInstr() && "Should not hoist debug inst");
+  MI->setDebugLoc(DebugLoc());
+
   // Add register to livein list to all the BBs in the current loop since a
   // loop invariant must be kept live throughout the whole loop. This is
   // important to ensure later passes do not scavenge the def register.
@@ -829,7 +835,15 @@ void MachineLICMBase::SinkIntoLoop() {
     }
     if (!CanSink || !B || B == Preheader)
       continue;
+
+    LLVM_DEBUG(dbgs() << "Sinking to " << printMBBReference(*B) << " from "
+                      << printMBBReference(*I->getParent()) << ": " << *I);
     B->splice(B->getFirstNonPHI(), Preheader, I);
+
+    // The instruction is is moved from its basic block, so do not retain the
+    // debug information.
+    assert(!I->isDebugInstr() && "Should not sink debug inst");
+    I->setDebugLoc(DebugLoc());
   }
 }
 
@@ -1524,6 +1538,7 @@ bool MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader) {
     // Since we are moving the instruction out of its basic block, we do not
     // retain its debug location. Doing so would degrade the debugging
     // experience and adversely affect the accuracy of profiling information.
+    assert(!MI->isDebugInstr() && "Should not hoist debug inst");
     MI->setDebugLoc(DebugLoc());
 
     // Update register pressure for BBs from header to this block.

@@ -41,10 +41,12 @@ StatementMatcher makeCastSequenceMatcher() {
       unless(hasImplicitDestinationType(qualType(substTemplateTypeParmType()))),
       unless(hasSourceExpression(hasType(sugaredNullptrType()))));
 
-  return castExpr(anyOf(ImplicitCastToNull,
-                        explicitCastExpr(hasDescendant(ImplicitCastToNull))),
-                  unless(hasAncestor(explicitCastExpr())))
-      .bind(CastSequence);
+  return traverse(
+      ast_type_traits::TK_AsIs,
+      castExpr(anyOf(ImplicitCastToNull,
+                     explicitCastExpr(hasDescendant(ImplicitCastToNull))),
+               unless(hasAncestor(explicitCastExpr())))
+          .bind(CastSequence));
 }
 
 bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,

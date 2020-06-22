@@ -16,7 +16,7 @@ from lit.llvm.subst import FindTool
 # Configuration file for the 'lit' test runner.
 
 # name: The name of this test suite.
-config.name = 'STANDALONE_OPT'
+config.name = 'STANDALONE'
 
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
@@ -54,7 +54,8 @@ llvm_config.with_environment('PATH', config.llvm_tools_dir, append_path=True)
 
 tool_dirs = [config.standalone_tools_dir, config.llvm_tools_dir]
 tools = [
-    'standalone-opt'
+    'standalone-opt',
+    'standalone-translate'
 ]
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)

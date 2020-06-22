@@ -376,7 +376,8 @@ protected:
   Block *GetSiblingForChild(const Block *child_block) const;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Block);
+  Block(const Block &) = delete;
+  const Block &operator=(const Block &) = delete;
 };
 
 } // namespace lldb_private

@@ -34,45 +34,27 @@ using namespace ento;
 
 void SymExpr::anchor() {}
 
-LLVM_DUMP_METHOD void SymExpr::dump() const {
-  dumpToStream(llvm::errs());
+LLVM_DUMP_METHOD void SymExpr::dump() const { dumpToStream(llvm::errs()); }
+
+void BinarySymExpr::dumpToStreamImpl(raw_ostream &OS, const SymExpr *Sym) {
+  OS << '(';
+  Sym->dumpToStream(OS);
+  OS << ')';
 }
 
-void SymIntExpr::dumpToStream(raw_ostream &os) const {
-  os << '(';
-  getLHS()->dumpToStream(os);
-  os << ") "
-     << BinaryOperator::getOpcodeStr(getOpcode()) << ' ';
-  if (getRHS().isUnsigned())
-    os << getRHS().getZExtValue();
+void BinarySymExpr::dumpToStreamImpl(raw_ostream &OS,
+                                     const llvm::APSInt &Value) {
+  if (Value.isUnsigned())
+    OS << Value.getZExtValue();
   else
-    os << getRHS().getSExtValue();
-  if (getRHS().isUnsigned())
-    os << 'U';
+    OS << Value.getSExtValue();
+  if (Value.isUnsigned())
+    OS << 'U';
 }
 
-void IntSymExpr::dumpToStream(raw_ostream &os) const {
-  if (getLHS().isUnsigned())
-    os << getLHS().getZExtValue();
-  else
-    os << getLHS().getSExtValue();
-  if (getLHS().isUnsigned())
-    os << 'U';
-  os << ' '
-     << BinaryOperator::getOpcodeStr(getOpcode())
-     << " (";
-  getRHS()->dumpToStream(os);
-  os << ')';
-}
-
-void SymSymExpr::dumpToStream(raw_ostream &os) const {
-  os << '(';
-  getLHS()->dumpToStream(os);
-  os << ") "
-     << BinaryOperator::getOpcodeStr(getOpcode())
-     << " (";
-  getRHS()->dumpToStream(os);
-  os << ')';
+void BinarySymExpr::dumpToStreamImpl(raw_ostream &OS,
+                                     BinaryOperator::Opcode Op) {
+  OS << ' ' << BinaryOperator::getOpcodeStr(Op) << ' ';
 }
 
 void SymbolCast::dumpToStream(raw_ostream &os) const {

@@ -25,7 +25,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 
-#define DEBUG_TYPE "ve"
+#define DEBUG_TYPE "ve-instr-info"
 
 using namespace llvm;
 
@@ -41,29 +41,53 @@ VEInstrInfo::VEInstrInfo(VESubtarget &ST)
 static bool IsIntegerCC(unsigned CC) { return (CC < VECC::CC_AF); }
 
 static VECC::CondCode GetOppositeBranchCondition(VECC::CondCode CC) {
-  switch(CC) {
-  case VECC::CC_IG:     return VECC::CC_ILE;
-  case VECC::CC_IL:     return VECC::CC_IGE;
-  case VECC::CC_INE:    return VECC::CC_IEQ;
-  case VECC::CC_IEQ:    return VECC::CC_INE;
-  case VECC::CC_IGE:    return VECC::CC_IL;
-  case VECC::CC_ILE:    return VECC::CC_IG;
-  case VECC::CC_AF:     return VECC::CC_AT;
-  case VECC::CC_G:      return VECC::CC_LENAN;
-  case VECC::CC_L:      return VECC::CC_GENAN;
-  case VECC::CC_NE:     return VECC::CC_EQNAN;
-  case VECC::CC_EQ:     return VECC::CC_NENAN;
-  case VECC::CC_GE:     return VECC::CC_LNAN;
-  case VECC::CC_LE:     return VECC::CC_GNAN;
-  case VECC::CC_NUM:    return VECC::CC_NAN;
-  case VECC::CC_NAN:    return VECC::CC_NUM;
-  case VECC::CC_GNAN:   return VECC::CC_LE;
-  case VECC::CC_LNAN:   return VECC::CC_GE;
-  case VECC::CC_NENAN:  return VECC::CC_EQ;
-  case VECC::CC_EQNAN:  return VECC::CC_NE;
-  case VECC::CC_GENAN:  return VECC::CC_L;
-  case VECC::CC_LENAN:  return VECC::CC_G;
-  case VECC::CC_AT:     return VECC::CC_AF;
+  switch (CC) {
+  case VECC::CC_IG:
+    return VECC::CC_ILE;
+  case VECC::CC_IL:
+    return VECC::CC_IGE;
+  case VECC::CC_INE:
+    return VECC::CC_IEQ;
+  case VECC::CC_IEQ:
+    return VECC::CC_INE;
+  case VECC::CC_IGE:
+    return VECC::CC_IL;
+  case VECC::CC_ILE:
+    return VECC::CC_IG;
+  case VECC::CC_AF:
+    return VECC::CC_AT;
+  case VECC::CC_G:
+    return VECC::CC_LENAN;
+  case VECC::CC_L:
+    return VECC::CC_GENAN;
+  case VECC::CC_NE:
+    return VECC::CC_EQNAN;
+  case VECC::CC_EQ:
+    return VECC::CC_NENAN;
+  case VECC::CC_GE:
+    return VECC::CC_LNAN;
+  case VECC::CC_LE:
+    return VECC::CC_GNAN;
+  case VECC::CC_NUM:
+    return VECC::CC_NAN;
+  case VECC::CC_NAN:
+    return VECC::CC_NUM;
+  case VECC::CC_GNAN:
+    return VECC::CC_LE;
+  case VECC::CC_LNAN:
+    return VECC::CC_GE;
+  case VECC::CC_NENAN:
+    return VECC::CC_EQ;
+  case VECC::CC_EQNAN:
+    return VECC::CC_NE;
+  case VECC::CC_GENAN:
+    return VECC::CC_L;
+  case VECC::CC_LENAN:
+    return VECC::CC_G;
+  case VECC::CC_AT:
+    return VECC::CC_AF;
+  case VECC::UNKNOWN:
+    return VECC::UNKNOWN;
   }
   llvm_unreachable("Invalid cond code");
 }
@@ -457,6 +481,9 @@ bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.eraseFromParent(); // The pseudo instruction is gone now.
     return true;
   }
+  case VE::GETSTACKTOP: {
+    return expandGetStackTopPseudo(MI);
+  }
   }
   return false;
 }
@@ -464,8 +491,8 @@ bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
-  const VEInstrInfo &TII =
-      *static_cast<const VEInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const VESubtarget &STI = MF.getSubtarget<VESubtarget>();
+  const VEInstrInfo &TII = *STI.getInstrInfo();
   DebugLoc dl = MBB.findDebugLoc(MI);
 
   // Create following instructions and multiple basic blocks.
@@ -523,15 +550,15 @@ bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
       .addImm(0)
       .addImm(0)
       .addImm(0x13b);
-  BuildMI(BB, dl, TII.get(VE::SHMri))
+  BuildMI(BB, dl, TII.get(VE::SHMLri))
       .addReg(VE::SX61)
       .addImm(0)
       .addReg(VE::SX63);
-  BuildMI(BB, dl, TII.get(VE::SHMri))
+  BuildMI(BB, dl, TII.get(VE::SHMLri))
       .addReg(VE::SX61)
       .addImm(8)
       .addReg(VE::SX8);
-  BuildMI(BB, dl, TII.get(VE::SHMri))
+  BuildMI(BB, dl, TII.get(VE::SHMLri))
       .addReg(VE::SX61)
       .addImm(16)
       .addReg(VE::SX11);
@@ -540,6 +567,38 @@ bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
   BuildMI(BB, dl, TII.get(VE::ORri), VE::SX0)
       .addReg(VE::SX62)
       .addImm(0);
+
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
+  return true;
+}
+
+bool VEInstrInfo::expandGetStackTopPseudo(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineFunction &MF = *MBB->getParent();
+  const VESubtarget &STI = MF.getSubtarget<VESubtarget>();
+  const VEInstrInfo &TII = *STI.getInstrInfo();
+  DebugLoc DL = MBB->findDebugLoc(MI);
+
+  // Create following instruction
+  //
+  //   dst = %sp + target specific frame + the size of parameter area
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const VEFrameLowering &TFL = *STI.getFrameLowering();
+
+  // The VE ABI requires a reserved 176 bytes area at the top
+  // of stack as described in VESubtarget.cpp.  So, we adjust it here.
+  unsigned NumBytes = STI.getAdjustedFrameSize(0);
+
+  // Also adds the size of parameter area.
+  if (MFI.adjustsStack() && TFL.hasReservedCallFrame(MF))
+    NumBytes += MFI.getMaxCallFrameSize();
+
+  BuildMI(*MBB, MI, DL, TII.get(VE::LEArii))
+      .addDef(MI.getOperand(0).getReg())
+      .addReg(VE::SX11)
+      .addImm(0)
+      .addImm(NumBytes);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return true;

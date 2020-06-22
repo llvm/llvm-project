@@ -50,15 +50,15 @@ MCSymbol *PPCFunctionInfo::getTOCOffsetSymbol() const {
                                            Twine(MF.getFunctionNumber()));
 }
 
-bool PPCFunctionInfo::isLiveInSExt(unsigned VReg) const {
-  for (const std::pair<unsigned, ISD::ArgFlagsTy> &LiveIn : LiveInAttrs)
+bool PPCFunctionInfo::isLiveInSExt(Register VReg) const {
+  for (const std::pair<Register, ISD::ArgFlagsTy> &LiveIn : LiveInAttrs)
     if (LiveIn.first == VReg)
       return LiveIn.second.isSExt();
   return false;
 }
 
-bool PPCFunctionInfo::isLiveInZExt(unsigned VReg) const {
-  for (const std::pair<unsigned, ISD::ArgFlagsTy> &LiveIn : LiveInAttrs)
+bool PPCFunctionInfo::isLiveInZExt(Register VReg) const {
+  for (const std::pair<Register, ISD::ArgFlagsTy> &LiveIn : LiveInAttrs)
     if (LiveIn.first == VReg)
       return LiveIn.second.isZExt();
   return false;

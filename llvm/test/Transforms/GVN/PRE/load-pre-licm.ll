@@ -192,7 +192,7 @@ header:
   br label %header
 }
 
-define i32 @test6b(i1 %cnd, i32* dereferenceable(8) %p) {
+define i32 @test6b(i1 %cnd, i32* dereferenceable(8) align 4 %p) {
 entry: 
 ; CHECK-LABEL: @test6b
 ; CHECK: load i32, i32* %p

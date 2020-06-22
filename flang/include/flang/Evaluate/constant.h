@@ -32,9 +32,9 @@ using SymbolRef = common::Reference<const Symbol>;
 // Wraps a constant value in a class templated by its resolved type.
 // This Constant<> template class should be instantiated only for
 // concrete intrinsic types and SomeDerived.  There is no instance
-// Constant<Expr<SomeType>> since there is no way to constrain each
+// Constant<SomeType> since there is no way to constrain each
 // element of its array to hold the same type.  To represent a generic
-// constants, use a generic expression like Expr<SomeInteger> &
+// constant, use a generic expression like Expr<SomeInteger> or
 // Expr<SomeType>) to wrap the appropriate instantiation of Constant<>.
 
 template <typename> class Constant;
@@ -50,7 +50,7 @@ std::size_t TotalElementCount(const ConstantSubscripts &);
 
 // Validate dimension re-ordering like ORDER in RESHAPE.
 // On success, return a vector that can be used as dimOrder in
-// ConstantBound::IncrementSubscripts.
+// ConstantBound::IncrementSubscripts().
 std::optional<std::vector<int>> ValidateDimensionOrder(
     int rank, const std::vector<int> &order);
 
@@ -71,8 +71,8 @@ public:
   // If no optional dimension order argument is passed, increments a vector of
   // subscripts in Fortran array order (first dimension varying most quickly).
   // Otherwise, increments the vector of subscripts according to the given
-  // dimension order (dimension dimOrder[0] varying most quickly. Dimensions
-  // indexing is zero based here.) Returns false when last element was visited.
+  // dimension order (dimension dimOrder[0] varying most quickly; dimension
+  // indexing is zero based here). Returns false when last element was visited.
   bool IncrementSubscripts(
       ConstantSubscripts &, const std::vector<int> *dimOrder = nullptr) const;
 
@@ -158,7 +158,8 @@ public:
   CLASS_BOILERPLATE(Constant)
   explicit Constant(const Scalar<Result> &);
   explicit Constant(Scalar<Result> &&);
-  Constant(ConstantSubscript, std::vector<Element> &&, ConstantSubscripts &&);
+  Constant(
+      ConstantSubscript length, std::vector<Element> &&, ConstantSubscripts &&);
   ~Constant();
 
   bool operator==(const Constant &that) const {
@@ -191,8 +192,6 @@ public:
 private:
   Scalar<Result> values_; // one contiguous string
   ConstantSubscript length_;
-  ConstantSubscripts shape_;
-  ConstantSubscripts lbounds_;
 };
 
 class StructureConstructor;

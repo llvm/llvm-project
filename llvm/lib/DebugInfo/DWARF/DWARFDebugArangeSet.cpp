@@ -160,6 +160,7 @@ void DWARFDebugArangeSet::dump(raw_ostream &OS) const {
   int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(HeaderData.Format);
   OS << "Address Range Header: "
      << format("length = 0x%0*" PRIx64 ", ", OffsetDumpWidth, HeaderData.Length)
+     << "format = " << dwarf::FormatString(HeaderData.Format) << ", "
      << format("version = 0x%4.4x, ", HeaderData.Version)
      << format("cu_offset = 0x%0*" PRIx64 ", ", OffsetDumpWidth,
                HeaderData.CuOffset)

@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
-; RUN: llc -filetype=obj %p/Inputs/call-ret32.ll -o %t.call.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-ret32.s -o %t.call.o
 ; RUN: llc -filetype=obj %s -o %t.main.o
 
 ; RUN: wasm-ld --export=call_ret32 --export=ret32 -o %t.wasm %t.main.o %t.ret32.o %t.call.o 2>&1 | FileCheck %s -check-prefix=WARN
@@ -76,7 +76,7 @@ declare i32 @ret32(i32, i64, i32) local_unnamed_addr
 ; RELOC-NEXT:       - Index:           3
 ; RELOC-NEXT:         Kind:            FUNCTION
 ; RELOC-NEXT:         Name:            call_ret32
-; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:         Flags:           [ ]
 ; RELOC-NEXT:         Function:        3
 ; RELOC-NEXT:       - Index:           4
 ; RELOC-NEXT:         Kind:            DATA

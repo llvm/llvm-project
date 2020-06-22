@@ -48,6 +48,24 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}double5_extelt:
+; GCN-NOT: buffer_
+; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
+; GCN-DAG: v_cmp_eq_u32_e64 [[C2:[^,]+]], [[IDX]], 2
+; GCN-DAG: v_cmp_eq_u32_e64 [[C3:[^,]+]], [[IDX]], 3
+; GCN-DAG: v_cmp_eq_u32_e64 [[C4:[^,]+]], [[IDX]], 4
+; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C1]]
+; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C2]]
+; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C3]]
+; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C4]]
+; GCN: store_dwordx2 v[{{[0-9:]+}}]
+define amdgpu_kernel void @double5_extelt(double addrspace(1)* %out, i32 %sel) {
+entry:
+  %ext = extractelement <5 x double> <double 0.01, double 1.01, double 2.01, double 4.01, double 5.01>, i32 %sel
+  store double %ext, double addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}half4_extelt:
 ; GCN-NOT: buffer_
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0x40003c00
@@ -383,4 +401,32 @@ entry:
   %zext = zext i1 %ext to i32
   store i32 %zext, i32 addrspace(1)* %out
   ret void
+}
+
+; GCN-LABEL: {{^}}float32_extelt_vec:
+; GCN-NOT: buffer_
+; GCN-DAG: v_cmp_eq_u32_e{{32|64}} [[CC1:[^,]+]], 1, v0
+; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], 1.0, 2.0, [[CC1]]
+; GCN-DAG: v_mov_b32_e32 [[LASTVAL:v[0-9]+]], 0x42000000
+; GCN-DAG: v_cmp_ne_u32_e32 [[LASTCC:[^,]+]], 31, v0
+; GCN-DAG: v_cndmask_b32_e{{32|64}} v0, [[LASTVAL]], v{{[0-9]+}}, [[LASTCC]]
+define float @float32_extelt_vec(i32 %sel) {
+entry:
+  %ext = extractelement <32 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0, float 17.0, float 18.0, float 19.0, float 20.0, float 21.0, float 22.0, float 23.0, float 24.0, float 25.0, float 26.0, float 27.0, float 28.0, float 29.0, float 30.0, float 31.0, float 32.0>, i32 %sel
+  ret float %ext
+}
+
+; GCN-LABEL: {{^}}double16_extelt_vec:
+; GCN-NOT: buffer_
+; GCN-DAG: v_mov_b32_e32 [[V1HI:v[0-9]+]], 0x3ff19999
+; GCN-DAG: v_mov_b32_e32 [[V1LO:v[0-9]+]], 0x9999999a
+; GCN-DAG: v_mov_b32_e32 [[V2HI:v[0-9]+]], 0x4000cccc
+; GCN-DAG: v_mov_b32_e32 [[V2LO:v[0-9]+]], 0xcccccccd
+; GCN-DAG: v_cmp_eq_u32_e{{32|64}} [[CC1:[^,]+]], 1, v0
+; GCN-DAG: v_cndmask_b32_e{{32|64}} [[R1HI:v[0-9]+]], [[V1HI]], [[V2HI]], [[CC1]]
+; GCN-DAG: v_cndmask_b32_e{{32|64}} [[R1LO:v[0-9]+]], [[V1LO]], [[V2LO]], [[CC1]]
+define double @double16_extelt_vec(i32 %sel) {
+entry:
+  %ext = extractelement <16 x double> <double 1.1, double 2.1, double 3.1, double 4.1, double 5.1, double 6.1, double 7.1, double 8.1, double 9.1, double 10.1, double 11.1, double 12.1, double 13.1, double 14.1, double 15.1, double 16.1>, i32 %sel
+  ret double %ext
 }

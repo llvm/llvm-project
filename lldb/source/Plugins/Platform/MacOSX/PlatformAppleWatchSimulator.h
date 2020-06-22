@@ -9,9 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLEWATCHSIMULATOR_H
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLEWATCHSIMULATOR_H
 
-#include "PlatformDarwin.h"
+#include "PlatformAppleSimulator.h"
 
-class PlatformAppleWatchSimulator : public PlatformDarwin {
+class PlatformAppleWatchSimulator : public PlatformAppleSimulator {
 public:
   // Class Functions
   static lldb::PlatformSP CreateInstance(bool force,
@@ -77,10 +77,12 @@ protected:
   std::string m_sdk_directory;
   std::string m_build_update;
 
-  const char *GetSDKDirectoryAsCString();
+  llvm::StringRef GetSDKDirectoryAsCString();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformAppleWatchSimulator);
+  PlatformAppleWatchSimulator(const PlatformAppleWatchSimulator &) = delete;
+  const PlatformAppleWatchSimulator &
+  operator=(const PlatformAppleWatchSimulator &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLEWATCHSIMULATOR_H

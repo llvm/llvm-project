@@ -22,10 +22,10 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    %0:vgpr_32 = V_MUL_F32_e32 0, undef %1:vgpr_32, implicit $exec
-    %2:vgpr_32 = V_CVT_U32_F32_e32 killed %0, implicit $exec
-    %3:vgpr_32 = V_CVT_F32_I32_e32 killed %2, implicit $exec
-    %4:vgpr_32 = V_CVT_U32_F32_e32 killed %3, implicit $exec
+    %0:vgpr_32 = nofpexcept V_MUL_F32_e32 0, undef %1:vgpr_32, implicit $mode, implicit $exec
+    %2:vgpr_32 = nofpexcept V_CVT_U32_F32_e32 killed %0, implicit $mode, implicit $exec
+    %3:vgpr_32 = nofpexcept V_CVT_F32_I32_e32 killed %2, implicit $mode, implicit $exec
+    %4:vgpr_32 = nofpexcept V_CVT_U32_F32_e32 killed %3, implicit $mode, implicit $exec
     %5:vgpr_32 = V_LSHRREV_B32_e32 4, killed %4, implicit $exec
     S_CBRANCH_SCC0 %bb.2, implicit undef $scc
 
@@ -126,7 +126,7 @@ body:             |
     %27.sub6:sgpr_256 = COPY %26
     %27.sub7:sgpr_256 = COPY killed %26
     %28:vgpr_32 = IMAGE_LOAD_V1_V4 killed %25, killed %27, 2, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, addrspace 4)
-    %29:vgpr_32 = V_ADD_F32_e32 0, killed %28, implicit $exec
+    %29:vgpr_32 = nofpexcept V_ADD_F32_e32 0, killed %28, implicit $mode, implicit $exec
     $m0 = S_MOV_B32 -1
     DS_WRITE_B32 undef %30:vgpr_32, killed %29, 0, 0, implicit $m0, implicit $exec :: (store 4 into `i32 addrspace(3)* undef`, addrspace 3)
     S_ENDPGM 0

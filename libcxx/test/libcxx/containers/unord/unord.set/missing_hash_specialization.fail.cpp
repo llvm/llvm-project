@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: diagnose-if-support
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // Libc++ only provides a defined primary template for std::hash in C++14 and
 // newer.

@@ -900,14 +900,14 @@ void UnwrappedLineParser::parsePPUnknown() {
   addUnwrappedLine();
 }
 
-// Here we blacklist certain tokens that are not usually the first token in an
+// Here we exclude certain tokens that are not usually the first token in an
 // unwrapped line. This is used in attempt to distinguish macro calls without
 // trailing semicolons from other constructs split to several lines.
-static bool tokenCanStartNewLine(const clang::Token &Tok) {
+static bool tokenCanStartNewLine(const FormatToken &Tok) {
   // Semicolon can be a null-statement, l_square can be a start of a macro or
   // a C++11 attribute, but this doesn't seem to be common.
   return Tok.isNot(tok::semi) && Tok.isNot(tok::l_brace) &&
-         Tok.isNot(tok::l_square) &&
+         Tok.isNot(TT_AttributeSquare) &&
          // Tokens that can only be used as binary operators and a part of
          // overloaded operator names.
          Tok.isNot(tok::period) && Tok.isNot(tok::periodstar) &&
@@ -1113,11 +1113,16 @@ void UnwrappedLineParser::parseStructuralElement() {
     if (FormatTok->Tok.is(tok::string_literal)) {
       nextToken();
       if (FormatTok->Tok.is(tok::l_brace)) {
-        if (Style.BraceWrapping.AfterExternBlock) {
-          addUnwrappedLine();
-          parseBlock(/*MustBeDeclaration=*/true);
+        if (!Style.IndentExternBlock) {
+          if (Style.BraceWrapping.AfterExternBlock) {
+            addUnwrappedLine();
+          }
+          parseBlock(/*MustBeDeclaration=*/true,
+                     /*AddLevel=*/Style.BraceWrapping.AfterExternBlock);
         } else {
-          parseBlock(/*MustBeDeclaration=*/true, /*AddLevel=*/false);
+          parseBlock(/*MustBeDeclaration=*/true,
+                     /*AddLevel=*/Style.IndentExternBlock ==
+                         FormatStyle::IEBS_Indent);
         }
         addUnwrappedLine();
         return;
@@ -1441,7 +1446,7 @@ void UnwrappedLineParser::parseStructuralElement() {
                 : CommentsBeforeNextToken.front()->NewlinesBefore > 0;
 
         if (FollowedByNewline && (Text.size() >= 5 || FunctionLike) &&
-            tokenCanStartNewLine(FormatTok->Tok) && Text == Text.upper()) {
+            tokenCanStartNewLine(*FormatTok) && Text == Text.upper()) {
           addUnwrappedLine();
           return;
         }
@@ -1454,8 +1459,14 @@ void UnwrappedLineParser::parseStructuralElement() {
       // followed by a curly.
       if (FormatTok->is(TT_JsFatArrow)) {
         nextToken();
-        if (FormatTok->is(tok::l_brace))
+        if (FormatTok->is(tok::l_brace)) {
+          // C# may break after => if the next character is a newline.
+          if (Style.isCSharp() && Style.BraceWrapping.AfterFunction == true) {
+            // calling `addUnwrappedLine()` here causes odd parsing errors.
+            FormatTok->MustBreakBefore = true;
+          }
           parseChildBlock();
+        }
         break;
       }
 
@@ -1531,7 +1542,7 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
   // Try to parse the property accessor:
   // https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/properties
   Tokens->setPosition(StoredPosition);
-  if (Style.BraceWrapping.AfterFunction == true)
+  if (!IsTrivialPropertyAccessor && Style.BraceWrapping.AfterFunction == true)
     addUnwrappedLine();
   nextToken();
   do {
@@ -1956,6 +1967,9 @@ void UnwrappedLineParser::parseIfThenElse() {
     nextToken();
   if (FormatTok->Tok.is(tok::l_paren))
     parseParens();
+  // handle [[likely]] / [[unlikely]]
+  if (FormatTok->is(tok::l_square) && tryToParseSimpleAttribute())
+    parseSquare();
   bool NeedsUnwrappedLine = false;
   if (FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
@@ -1972,6 +1986,9 @@ void UnwrappedLineParser::parseIfThenElse() {
   }
   if (FormatTok->Tok.is(tok::kw_else)) {
     nextToken();
+    // handle [[likely]] / [[unlikely]]
+    if (FormatTok->Tok.is(tok::l_square) && tryToParseSimpleAttribute())
+      parseSquare();
     if (FormatTok->Tok.is(tok::l_brace)) {
       CompoundStatementIndenter Indenter(this, Style, Line->Level);
       parseBlock(/*MustBeDeclaration=*/false);
@@ -2169,7 +2186,7 @@ void UnwrappedLineParser::parseDoWhile() {
   if (FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock(/*MustBeDeclaration=*/false);
-    if (Style.BraceWrapping.IndentBraces)
+    if (Style.BraceWrapping.BeforeWhile)
       addUnwrappedLine();
   } else {
     addUnwrappedLine();
@@ -2332,6 +2349,51 @@ bool UnwrappedLineParser::parseEnum() {
   // "} n, m;" will end up in one unwrapped line.
 }
 
+namespace {
+// A class used to set and restore the Token position when peeking
+// ahead in the token source.
+class ScopedTokenPosition {
+  unsigned StoredPosition;
+  FormatTokenSource *Tokens;
+
+public:
+  ScopedTokenPosition(FormatTokenSource *Tokens) : Tokens(Tokens) {
+    assert(Tokens && "Tokens expected to not be null");
+    StoredPosition = Tokens->getPosition();
+  }
+
+  ~ScopedTokenPosition() { Tokens->setPosition(StoredPosition); }
+};
+} // namespace
+
+// Look to see if we have [[ by looking ahead, if
+// its not then rewind to the original position.
+bool UnwrappedLineParser::tryToParseSimpleAttribute() {
+  ScopedTokenPosition AutoPosition(Tokens);
+  FormatToken *Tok = Tokens->getNextToken();
+  // We already read the first [ check for the second.
+  if (Tok && !Tok->is(tok::l_square)) {
+    return false;
+  }
+  // Double check that the attribute is just something
+  // fairly simple.
+  while (Tok) {
+    if (Tok->is(tok::r_square)) {
+      break;
+    }
+    Tok = Tokens->getNextToken();
+  }
+  Tok = Tokens->getNextToken();
+  if (Tok && !Tok->is(tok::r_square)) {
+    return false;
+  }
+  Tok = Tokens->getNextToken();
+  if (Tok && Tok->is(tok::semi)) {
+    return false;
+  }
+  return true;
+}
+
 void UnwrappedLineParser::parseJavaEnumBody() {
   // Determine whether the enum is simple, i.e. does not have a semicolon or
   // constants with class bodies. Simple enums can be formatted like braced
@@ -2404,7 +2466,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   // An [[attribute]] can be before the identifier.
   while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::hashhash,
                             tok::kw___attribute, tok::kw___declspec,
-                            tok::kw_alignas, TT_AttributeSquare) ||
+                            tok::kw_alignas, tok::l_square, tok::r_square) ||
          ((Style.Language == FormatStyle::LK_Java ||
            Style.Language == FormatStyle::LK_JavaScript) &&
           FormatTok->isOneOf(tok::period, tok::comma))) {

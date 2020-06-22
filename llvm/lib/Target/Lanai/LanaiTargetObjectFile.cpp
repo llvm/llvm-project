@@ -116,13 +116,13 @@ bool LanaiTargetObjectFile::isConstantInSmallSection(const DataLayout &DL,
   return isInSmallSection(DL.getTypeAllocSize(CN->getType()));
 }
 
-MCSection *LanaiTargetObjectFile::getSectionForConstant(const DataLayout &DL,
-                                                        SectionKind Kind,
-                                                        const Constant *C,
-                                                        unsigned &Align) const {
+MCSection *LanaiTargetObjectFile::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C,
+    Align &Alignment) const {
   if (isConstantInSmallSection(DL, C))
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.
-  return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C, Align);
+  return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
+                                                            Alignment);
 }

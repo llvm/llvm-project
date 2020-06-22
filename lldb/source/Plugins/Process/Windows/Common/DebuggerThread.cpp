@@ -30,7 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #ifndef STATUS_WX86_BREAKPOINT
-#define STATUS_WX86_BREAKPOINT 0x4000001FL // For WOW64 
+#define STATUS_WX86_BREAKPOINT 0x4000001FL // For WOW64
 #endif
 
 using namespace lldb;
@@ -70,11 +70,11 @@ Status DebuggerThread::DebugLaunch(const ProcessLaunchInfo &launch_info) {
   Status result;
   DebugLaunchContext *context = new DebugLaunchContext(this, launch_info);
 
-  llvm::Expected<HostThread> slave_thread = ThreadLauncher::LaunchThread(
-      "lldb.plugin.process-windows.slave[?]", DebuggerThreadLaunchRoutine,
-      context);
-  if (!slave_thread) {
-    result = Status(slave_thread.takeError());
+  llvm::Expected<HostThread> secondary_thread =
+      ThreadLauncher::LaunchThread("lldb.plugin.process-windows.secondary[?]",
+                                   DebuggerThreadLaunchRoutine, context);
+  if (!secondary_thread) {
+    result = Status(secondary_thread.takeError());
     LLDB_LOG(log, "couldn't launch debugger thread. {0}", result);
   }
 
@@ -89,11 +89,11 @@ Status DebuggerThread::DebugAttach(lldb::pid_t pid,
   Status result;
   DebugAttachContext *context = new DebugAttachContext(this, pid, attach_info);
 
-  llvm::Expected<HostThread> slave_thread = ThreadLauncher::LaunchThread(
-      "lldb.plugin.process-windows.slave[?]", DebuggerThreadAttachRoutine,
-      context);
-  if (!slave_thread) {
-    result = Status(slave_thread.takeError());
+  llvm::Expected<HostThread> secondary_thread =
+      ThreadLauncher::LaunchThread("lldb.plugin.process-windows.secondary[?]",
+                                   DebuggerThreadAttachRoutine, context);
+  if (!secondary_thread) {
+    result = Status(secondary_thread.takeError());
     LLDB_LOG(log, "couldn't attach to process '{0}'. {1}", pid, result);
   }
 
@@ -411,7 +411,7 @@ DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
 
   std::string thread_name;
   llvm::raw_string_ostream name_stream(thread_name);
-  name_stream << "lldb.plugin.process-windows.slave[" << process_id << "]";
+  name_stream << "lldb.plugin.process-windows.secondary[" << process_id << "]";
   name_stream.flush();
   llvm::set_thread_name(thread_name);
 

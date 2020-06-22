@@ -499,7 +499,8 @@ protected:
 
 private:
   // For EmulateInstruction only
-  DISALLOW_COPY_AND_ASSIGN(EmulateInstruction);
+  EmulateInstruction(const EmulateInstruction &) = delete;
+  const EmulateInstruction &operator=(const EmulateInstruction &) = delete;
 };
 
 } // namespace lldb_private

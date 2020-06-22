@@ -78,7 +78,8 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
       return wasm::R_WASM_TABLE_INDEX_REL_SLEB;
     case MCSymbolRefExpr::VK_WASM_MBREL:
       assert(SymA.isData());
-      return wasm::R_WASM_MEMORY_ADDR_REL_SLEB;
+      return is64Bit() ? wasm::R_WASM_MEMORY_ADDR_REL_SLEB64
+                       : wasm::R_WASM_MEMORY_ADDR_REL_SLEB;
     case MCSymbolRefExpr::VK_WASM_TYPEINDEX:
       return wasm::R_WASM_TYPE_INDEX_LEB;
     default:
@@ -91,7 +92,8 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
       return wasm::R_WASM_TABLE_INDEX_SLEB;
     return wasm::R_WASM_MEMORY_ADDR_SLEB;
   case WebAssembly::fixup_sleb128_i64:
-    llvm_unreachable("fixup_sleb128_i64 not implemented yet");
+    assert(SymA.isData());
+    return wasm::R_WASM_MEMORY_ADDR_SLEB64;
   case WebAssembly::fixup_uleb128_i32:
     if (SymA.isGlobal())
       return wasm::R_WASM_GLOBAL_INDEX_LEB;
@@ -100,6 +102,9 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
     if (SymA.isEvent())
       return wasm::R_WASM_EVENT_INDEX_LEB;
     return wasm::R_WASM_MEMORY_ADDR_LEB;
+  case WebAssembly::fixup_uleb128_i64:
+    assert(SymA.isData());
+    return wasm::R_WASM_MEMORY_ADDR_LEB64;
   case FK_Data_4:
     if (SymA.isFunction())
       return wasm::R_WASM_TABLE_INDEX_I32;
@@ -113,6 +118,9 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
         return wasm::R_WASM_SECTION_OFFSET_I32;
     }
     return wasm::R_WASM_MEMORY_ADDR_I32;
+  case FK_Data_8:
+    assert(SymA.isData());
+    return wasm::R_WASM_MEMORY_ADDR_I64;
   default:
     llvm_unreachable("unimplemented fixup kind");
   }

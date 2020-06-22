@@ -21,7 +21,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/Types.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
@@ -235,6 +234,9 @@ private:
   /// \return true if the translation succeeded.
   bool translateSimpleIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                 MachineIRBuilder &MIRBuilder);
+
+  bool translateConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI,
+                                       MachineIRBuilder &MIRBuilder);
 
   bool translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                MachineIRBuilder &MIRBuilder);
@@ -579,15 +581,6 @@ private:
   /// Get the frame index that represents \p Val.
   /// If such VReg does not exist, it is created.
   int getOrCreateFrameIndex(const AllocaInst &AI);
-
-  /// Get the alignment of the given memory operation instruction. This will
-  /// either be the explicitly specified value or the ABI-required alignment for
-  /// the type being accessed (according to the Module's DataLayout).
-  LLVM_ATTRIBUTE_DEPRECATED(
-      inline unsigned getMemOpAlignment(const Instruction &I),
-      "Use getMemOpAlign instead") {
-    return getMemOpAlign(I).value();
-  }
 
   /// Get the alignment of the given memory operation instruction. This will
   /// either be the explicitly specified value or the ABI-required alignment for

@@ -41,7 +41,7 @@ define float @f3(float %a, float %b, float %f) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: ltebr
 ; CHECK-NEXT: ber %r14
-  %abs = call float @llvm.fabs.f32(float %f)
+  %abs = call float @llvm.fabs.f32(float %f) #0
   %neg = fneg float %abs
   %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %neg, float 0.0,
@@ -57,7 +57,7 @@ define double @f4(double %a, double %b, double %f) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: ltdbr
 ; CHECK-NEXT: ber %r14
-  %abs = call double @llvm.fabs.f64(double %f)
+  %abs = call double @llvm.fabs.f64(double %f) #0
   %neg = fneg double %abs
   %cond = call i1 @llvm.experimental.constrained.fcmp.f64(
                                                double %neg, double 0.0,
@@ -73,7 +73,7 @@ define float @f5(float %a, float %b, float %f) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: ltebr
 ; CHECK-NEXT: ber %r14
-  %abs = call float @llvm.fabs.f32(float %f)
+  %abs = call float @llvm.fabs.f32(float %f) #0
   %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
                                                float %abs, float 0.0,
                                                metadata !"oeq",
@@ -87,7 +87,7 @@ define double @f6(double %a, double %b, double %f) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: ltdbr
 ; CHECK-NEXT: ber %r14
-  %abs = call double @llvm.fabs.f64(double %f)
+  %abs = call double @llvm.fabs.f64(double %f) #0
   %cond = call i1 @llvm.experimental.constrained.fcmp.f64(
                                                double %abs, double 0.0,
                                                metadata !"oeq",

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/MC/SubtargetFeature.h"
 #include <cstddef>
 #include <cstring>
 
@@ -19,7 +20,6 @@ namespace object {
 
 static const uint8_t FunctionSym = 0x20;
 static const uint8_t SymTypeMask = 0x07;
-static const uint16_t RelocOverflow = 65535;
 static const uint16_t NoRelMask = 0x0001;
 
 // Checks that [Ptr, Ptr + Size) bytes fall inside the memory buffer
@@ -28,8 +28,8 @@ template <typename T>
 static Expected<const T *> getObject(MemoryBufferRef M, const void *Ptr,
                                      const uint64_t Size = sizeof(T)) {
   uintptr_t Addr = uintptr_t(Ptr);
-  if (std::error_code EC = Binary::checkOffset(M, Addr, Size))
-    return errorCodeToError(EC);
+  if (Error E = Binary::checkOffset(M, Addr, Size))
+    return std::move(E);
   return reinterpret_cast<const T *>(Addr);
 }
 
@@ -631,7 +631,7 @@ Expected<uint32_t> XCOFFObjectFile::getLogicalNumberOfRelocationEntries(
 
   uint16_t SectionIndex = &Sec - sectionHeaderTable32() + 1;
 
-  if (Sec.NumberOfRelocations < RelocOverflow)
+  if (Sec.NumberOfRelocations < XCOFF::RelocOverflow)
     return Sec.NumberOfRelocations;
   for (const auto &Sec : sections32()) {
     if (Sec.Flags == XCOFF::STYP_OVRFLO &&
@@ -667,9 +667,11 @@ Expected<XCOFFStringTable>
 XCOFFObjectFile::parseStringTable(const XCOFFObjectFile *Obj, uint64_t Offset) {
   // If there is a string table, then the buffer must contain at least 4 bytes
   // for the string table's size. Not having a string table is not an error.
-  if (auto EC = Binary::checkOffset(
-          Obj->Data, reinterpret_cast<uintptr_t>(Obj->base() + Offset), 4))
+  if (Error E = Binary::checkOffset(
+          Obj->Data, reinterpret_cast<uintptr_t>(Obj->base() + Offset), 4)) {
+    consumeError(std::move(E));
     return XCOFFStringTable{0, nullptr};
+  }
 
   // Read the size out of the buffer.
   uint32_t Size = support::endian::read32be(Obj->base() + Offset);

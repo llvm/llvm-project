@@ -509,6 +509,11 @@ SourceMgrDiagnosticHandler::getBufferForFile(StringRef filename) {
 /// Get a memory buffer for the given file, or the main file of the source
 /// manager if one doesn't exist. This always returns non-null.
 llvm::SMLoc SourceMgrDiagnosticHandler::convertLocToSMLoc(FileLineColLoc loc) {
+  // The column and line may be zero to represent unknown column and/or unknown
+  /// line/column information.
+  if (loc.getLine() == 0 || loc.getColumn() == 0)
+    return llvm::SMLoc();
+
   unsigned bufferId = impl->getSourceMgrBufferIDForFile(mgr, loc.getFilename());
   if (!bufferId)
     return llvm::SMLoc();

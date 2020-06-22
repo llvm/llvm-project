@@ -11,34 +11,31 @@
 define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 signext %i_stride_pix1, i8* nocapture readonly %pix2) {
 ; CHECK-LABEL: test_pre_inc_disable_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lfd f0, 0(r5)
+; CHECK-NEXT:    lxsd v5, 0(r5)
 ; CHECK-NEXT:    addis r5, r2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    addi r5, r5, .LCPI0_0@toc@l
 ; CHECK-NEXT:    lxvx v2, 0, r5
 ; CHECK-NEXT:    addis r5, r2, .LCPI0_1@toc@ha
 ; CHECK-NEXT:    addi r5, r5, .LCPI0_1@toc@l
 ; CHECK-NEXT:    lxvx v4, 0, r5
-; CHECK-NEXT:    xxswapd v5, f0
-; CHECK-NEXT:    xxlxor v3, v3, v3
 ; CHECK-NEXT:    li r5, 4
+; CHECK-NEXT:    xxlxor v3, v3, v3
 ; CHECK-NEXT:    vperm v0, v3, v5, v2
 ; CHECK-NEXT:    mtctr r5
 ; CHECK-NEXT:    li r5, 0
-; CHECK-NEXT:    vperm v1, v5, v3, v4
+; CHECK-NEXT:    vperm v1, v3, v5, v4
 ; CHECK-NEXT:    li r6, 0
 ; CHECK-NEXT:    xvnegsp v5, v0
 ; CHECK-NEXT:    xvnegsp v0, v1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %for.cond1.preheader
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lfd f0, 0(r3)
-; CHECK-NEXT:    xxswapd v1, f0
-; CHECK-NEXT:    lfdx f0, r3, r4
-; CHECK-NEXT:    vperm v6, v1, v3, v4
+; CHECK-NEXT:    lxsd v1, 0(r3)
+; CHECK-NEXT:    vperm v6, v3, v1, v4
 ; CHECK-NEXT:    vperm v1, v3, v1, v2
 ; CHECK-NEXT:    xvnegsp v1, v1
-; CHECK-NEXT:    add r7, r3, r4
 ; CHECK-NEXT:    xvnegsp v6, v6
+; CHECK-NEXT:    add r7, r3, r4
 ; CHECK-NEXT:    vabsduw v1, v1, v5
 ; CHECK-NEXT:    vabsduw v6, v6, v0
 ; CHECK-NEXT:    vadduwm v1, v6, v1
@@ -46,15 +43,14 @@ define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 sig
 ; CHECK-NEXT:    vadduwm v1, v1, v6
 ; CHECK-NEXT:    xxspltw v6, v1, 2
 ; CHECK-NEXT:    vadduwm v1, v1, v6
-; CHECK-NEXT:    xxswapd v6, f0
+; CHECK-NEXT:    lxsdx v6, r3, r4
 ; CHECK-NEXT:    vextuwrx r3, r5, v1
-; CHECK-NEXT:    vperm v7, v6, v3, v4
+; CHECK-NEXT:    vperm v7, v3, v6, v4
 ; CHECK-NEXT:    vperm v6, v3, v6, v2
-; CHECK-NEXT:    add r6, r3, r6
-; CHECK-NEXT:    add r3, r7, r4
 ; CHECK-NEXT:    xvnegsp v6, v6
 ; CHECK-NEXT:    xvnegsp v1, v7
 ; CHECK-NEXT:    vabsduw v6, v6, v5
+; CHECK-NEXT:    add r6, r3, r6
 ; CHECK-NEXT:    vabsduw v1, v1, v0
 ; CHECK-NEXT:    vadduwm v1, v1, v6
 ; CHECK-NEXT:    xxswapd v6, v1
@@ -62,6 +58,7 @@ define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 sig
 ; CHECK-NEXT:    xxspltw v6, v1, 2
 ; CHECK-NEXT:    vadduwm v1, v1, v6
 ; CHECK-NEXT:    vextuwrx r8, r5, v1
+; CHECK-NEXT:    add r3, r7, r4
 ; CHECK-NEXT:    add r6, r8, r6
 ; CHECK-NEXT:    bdnz .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
@@ -181,29 +178,27 @@ for.cond.cleanup:                                 ; preds = %for.cond1.preheader
 define signext i32 @test_pre_inc_disable_2(i8* nocapture readonly %pix1, i8* nocapture readonly %pix2) {
 ; CHECK-LABEL: test_pre_inc_disable_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lfd f0, 0(r3)
+; CHECK-NEXT:    lxsd v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI1_0@toc@l
 ; CHECK-NEXT:    lxvx v4, 0, r3
 ; CHECK-NEXT:    addis r3, r2, .LCPI1_1@toc@ha
-; CHECK-NEXT:    xxswapd v2, f0
-; CHECK-NEXT:    lfd f0, 0(r4)
 ; CHECK-NEXT:    addi r3, r3, .LCPI1_1@toc@l
-; CHECK-NEXT:    xxlxor v3, v3, v3
 ; CHECK-NEXT:    lxvx v0, 0, r3
-; CHECK-NEXT:    xxswapd v1, f0
-; CHECK-NEXT:    vperm v5, v2, v3, v4
+; CHECK-NEXT:    lxsd v1, 0(r4)
+; CHECK-NEXT:    xxlxor v3, v3, v3
+; CHECK-NEXT:    vperm v5, v3, v2, v4
 ; CHECK-NEXT:    vperm v2, v3, v2, v0
 ; CHECK-NEXT:    vperm v0, v3, v1, v0
-; CHECK-NEXT:    vperm v3, v1, v3, v4
+; CHECK-NEXT:    vperm v3, v3, v1, v4
 ; CHECK-NEXT:    vabsduw v2, v2, v0
 ; CHECK-NEXT:    vabsduw v3, v5, v3
 ; CHECK-NEXT:    vadduwm v2, v3, v2
 ; CHECK-NEXT:    xxswapd v3, v2
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    xxspltw v3, v2, 2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    vextuwrx r3, r3, v2
 ; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
@@ -286,16 +281,14 @@ define void @test32(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
 ; CHECK-LABEL: test32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    add r5, r3, r4
-; CHECK-NEXT:    lfiwzx f0, r3, r4
+; CHECK-NEXT:    lxsiwzx v2, r3, r4
 ; CHECK-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI2_0@toc@l
 ; CHECK-NEXT:    lxvx v4, 0, r3
 ; CHECK-NEXT:    li r3, 4
-; CHECK-NEXT:    xxswapd v2, f0
-; CHECK-NEXT:    lfiwzx f0, r5, r3
+; CHECK-NEXT:    lxsiwzx v5, r5, r3
 ; CHECK-NEXT:    xxlxor v3, v3, v3
 ; CHECK-NEXT:    vperm v2, v2, v3, v4
-; CHECK-NEXT:    xxswapd v5, f0
 ; CHECK-NEXT:    vperm v3, v5, v3, v4
 ; CHECK-NEXT:    vspltisw v4, 8
 ; CHECK-NEXT:    vnegw v3, v3
@@ -361,16 +354,15 @@ define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signe
 ; CHECK-NEXT:    lxsihzx v2, r6, r7
 ; CHECK-NEXT:    lxsihzx v4, r3, r4
 ; CHECK-NEXT:    li r6, 0
-; CHECK-NEXT:    mtfprd f0, r6
+; CHECK-NEXT:    mtvsrd v3, r6
 ; CHECK-NEXT:    vsplth v4, v4, 3
-; CHECK-NEXT:    xxswapd v3, vs0
 ; CHECK-NEXT:    vsplth v2, v2, 3
 ; CHECK-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-NEXT:    vmrglh v2, v3, v2
-; CHECK-NEXT:    vmrglh v3, v3, v4
-; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    vmrglw v3, v3, v4
+; CHECK-NEXT:    vmrghh v4, v3, v4
+; CHECK-NEXT:    vmrghh v2, v3, v2
+; CHECK-NEXT:    vsplth v3, v3, 3
+; CHECK-NEXT:    vmrglw v3, v4, v3
 ; CHECK-NEXT:    lxvx v4, 0, r3
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    vperm v2, v2, v3, v4
@@ -446,18 +438,17 @@ define void @test8(i8* nocapture readonly %sums, i32 signext %delta, i32 signext
 ; CHECK-NEXT:    add r6, r3, r4
 ; CHECK-NEXT:    lxsibzx v2, r3, r4
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    mtvsrd v3, r3
 ; CHECK-NEXT:    li r3, 8
 ; CHECK-NEXT:    lxsibzx v5, r6, r3
-; CHECK-NEXT:    xxswapd v3, vs0
-; CHECK-NEXT:    vspltb v4, v3, 15
-; CHECK-NEXT:    vspltb v2, v2, 7
-; CHECK-NEXT:    vmrglb v2, v3, v2
 ; CHECK-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI4_0@toc@l
+; CHECK-NEXT:    vspltb v2, v2, 7
+; CHECK-NEXT:    vmrghb v2, v3, v2
+; CHECK-NEXT:    vspltb v4, v3, 7
 ; CHECK-NEXT:    vspltb v5, v5, 7
 ; CHECK-NEXT:    vmrglh v2, v2, v4
-; CHECK-NEXT:    vmrglb v3, v3, v5
+; CHECK-NEXT:    vmrghb v3, v3, v5
 ; CHECK-NEXT:    vmrglw v2, v2, v4
 ; CHECK-NEXT:    vmrglh v3, v3, v4
 ; CHECK-NEXT:    vmrglw v3, v4, v3

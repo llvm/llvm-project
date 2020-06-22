@@ -15,31 +15,16 @@ namespace doc {
 
 llvm::Expected<std::unique_ptr<Generator>>
 findGeneratorByName(llvm::StringRef Format) {
-  for (auto I = GeneratorRegistry::begin(), E = GeneratorRegistry::end();
-       I != E; ++I) {
-    if (I->getName() != Format)
+  for (const auto &Generator : GeneratorRegistry::entries()) {
+    if (Generator.getName() != Format)
       continue;
-    return I->instantiate();
+    return Generator.instantiate();
   }
   return createStringError(llvm::inconvertibleErrorCode(),
                            "can't find generator: " + Format);
 }
 
 // Enum conversion
-
-std::string getAccess(AccessSpecifier AS) {
-  switch (AS) {
-  case AccessSpecifier::AS_public:
-    return "public";
-  case AccessSpecifier::AS_protected:
-    return "protected";
-  case AccessSpecifier::AS_private:
-    return "private";
-  case AccessSpecifier::AS_none:
-    return {};
-  }
-  llvm_unreachable("Unknown AccessSpecifier");
-}
 
 std::string getTagType(TagTypeKind AS) {
   switch (AS) {

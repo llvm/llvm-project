@@ -92,6 +92,7 @@ public:
     OB_gc_transition = 2, // "gc-transition"
     OB_cfguardtarget = 3, // "cfguardtarget"
     OB_preallocated = 4,  // "preallocated"
+    OB_gc_live = 5,       // "gc-live"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.

@@ -150,6 +150,12 @@
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-power8-vector -mpower8-vector -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-P8VECTOR %s
 // CHECK-P8VECTOR: "-target-feature" "+power8-vector"
 
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-power10-vector -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOP10VECTOR %s
+// CHECK-NOP10VECTOR: "-target-feature" "-power10-vector"
+
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-power10-vector -mpower10-vector -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-P10VECTOR %s
+// CHECK-P10VECTOR: "-target-feature" "+power10-vector"
+
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-crbits -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOCRBITS %s
 // CHECK-NOCRBITS: "-target-feature" "-crbits"
 

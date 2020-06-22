@@ -112,6 +112,8 @@ class Checker<string name = ""> {
   list<CmdLineOption> CheckerOptions;
   // This field is optional.
   list<Checker>       Dependencies;
+  // This field is optional.
+  list<Checker>       WeakDependencies;
   bits<2>             Documentation;
   Package             ParentPackage;
   bit                 Hidden = 0;
@@ -122,8 +124,13 @@ class CheckerOptions<list<CmdLineOption> opts> {
   list<CmdLineOption> CheckerOptions = opts;
 }
 
-/// Describes dependencies in between checkers. For example, InnerPointerChecker
-/// relies on information MallocBase gathers.
+/// Describes (strong) dependencies in between checkers. This is important for
+/// modeling checkers, for example, MallocBase depends on the proper modeling of
+/// string operations, so it depends on CStringBase. A checker may only be
+/// enabled if none of its dependencies (transitively) is disabled. Dependencies
+/// are always registered before the dependent checker, and its checker
+/// callbacks are also evaluated sooner.
+/// One may only depend on a purely modeling checker (that emits no diagnostis).
 /// Example:
 ///   def InnerPointerChecker : Checker<"InnerPointer">,
 ///     HelpText<"Check for inner pointers of C++ containers used after "
@@ -131,6 +138,24 @@ class CheckerOptions<list<CmdLineOption> opts> {
 ///     Dependencies<[MallocBase]>;
 class Dependencies<list<Checker> Deps = []> {
   list<Checker> Dependencies = Deps;
+}
+
+/// Describes preferred registration and evaluation order in between checkers.
+/// Unlike strong dependencies, this expresses dependencies in between
+/// diagnostics, and *not* modeling. In the case of an unsatisfied (disabled)
+/// weak dependency, the dependent checker might still be registered. If the
+/// weak dependency is satisfied, it'll be registered, and its checker
+/// callbacks will be evaluated before the dependent checker. This can be used
+/// to ensure that a more specific warning would be displayed in place of a
+/// generic one, should multiple checkers detect the same bug. For example,
+/// non-null parameter bugs are detected by NonNullParamChecker due to the
+/// nonnull attribute, and StdLibraryFunctionsChecker as it models standard
+/// functions, and the former is the more specific one. While freeing a
+/// dangling pointer is a bug, if it is also a double free, we would like to
+/// recognize it as such first and foremost. This works best for fatal error
+/// node generation, otherwise both warnings may be present and in any order.
+class WeakDependencies<list<Checker> Deps = []> {
+  list<Checker> WeakDependencies = Deps;
 }
 
 /// Marks a checker or a package hidden. Hidden entries are meant for developers

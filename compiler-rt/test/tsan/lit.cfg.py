@@ -28,6 +28,7 @@ if config.host_os == 'Darwin':
   # suppresses some races the tests are supposed to find. Let's run without this
   # setting, but turn it back on for Darwin tests (see Darwin/lit.local.cfg.py).
   default_tsan_opts += ':ignore_noninstrumented_modules=0'
+  default_tsan_opts += ':ignore_interceptors_accesses=0'
 
 # Platform-specific default TSAN_OPTIONS for lit tests.
 if default_tsan_opts:

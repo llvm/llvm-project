@@ -54,7 +54,7 @@ TEST_F(ScriptInterpreterTest, ExecuteOneLine) {
   ASSERT_TRUE(debugger_sp);
 
   ScriptInterpreterLua script_interpreter(*debugger_sp);
-  CommandReturnObject result;
+  CommandReturnObject result(/*colors*/ false);
   EXPECT_TRUE(script_interpreter.ExecuteOneLine("foo = 1", &result));
   EXPECT_FALSE(script_interpreter.ExecuteOneLine("nil = foo", &result));
   EXPECT_TRUE(result.GetErrorData().startswith(

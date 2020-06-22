@@ -420,23 +420,12 @@ define void @bitcast_8i32_store(i8* %p, <8 x i32> %a0) {
 ; AVX12-NEXT:    vzeroupper
 ; AVX12-NEXT:    retq
 ;
-; AVX512F-LABEL: bitcast_8i32_store:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpgtd %ymm0, %ymm1, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, (%rdi)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: bitcast_8i32_store:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpcmpgtd %ymm0, %ymm1, %k0
-; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, (%rdi)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: bitcast_8i32_store:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovmskps %ymm0, %eax
+; AVX512-NEXT:    movb %al, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %a1 = icmp slt <8 x i32> %a0, zeroinitializer
   %a2 = bitcast <8 x i1> %a1 to i8
   store i8 %a2, i8* %p

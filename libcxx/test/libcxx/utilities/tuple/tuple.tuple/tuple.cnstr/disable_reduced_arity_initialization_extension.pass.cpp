@@ -13,7 +13,7 @@
 // template <class... UTypes>
 //   explicit tuple(UTypes&&... u);
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <tuple>
 #include <cassert>
@@ -89,16 +89,16 @@ int main(int, char**)
         Tup t(E(0), E(1));
         static_assert(std::is_constructible<Tup, E, E>::value, "");
         static_assert(!test_convertible<Tup, E, E>(), "");
-        assert(std::get<0>(t) == 0);
-        assert(std::get<1>(t) == 1);
-        assert(std::get<2>(t) == MoveOnly());
+        assert(std::get<0>(t) == E(0));
+        assert(std::get<1>(t) == E(1));
+        assert(std::get<2>(t) == E());
 
         Tup t2(E(0));
         static_assert(std::is_constructible<Tup, E>::value, "");
         static_assert(!test_convertible<Tup, E>(), "");
-        assert(std::get<0>(t) == 0);
-        assert(std::get<1>(t) == E());
-        assert(std::get<2>(t) == E());
+        assert(std::get<0>(t2) == E(0));
+        assert(std::get<1>(t2) == E());
+        assert(std::get<2>(t2) == E());
     }
     // Check that SFINAE is properly applied with the default reduced arity
     // constructor extensions.

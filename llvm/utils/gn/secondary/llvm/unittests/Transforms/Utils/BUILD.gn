@@ -21,6 +21,7 @@ unittest("UtilsTests") {
     "LoopRotationUtilsTest.cpp",
     "LoopUtilsTest.cpp",
     "SSAUpdaterBulkTest.cpp",
+    "ScalarEvolutionExpanderTest.cpp",
     "SizeOptsTest.cpp",
     "UnrollLoopTest.cpp",
     "VFABIUtils.cpp",

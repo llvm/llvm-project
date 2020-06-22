@@ -1,5 +1,20 @@
-// RUN: %clang_cc1 -std=c++11 -ast-dump -triple aarch64-linux-gnu %s | FileCheck %s --strict-whitespace
-// RUN: %clang_cc1 -std=c++11 -ast-dump -triple aarch64-linux-gnu -fnative-half-type %s | FileCheck %s --check-prefix=CHECK-NATIVE --strict-whitespace
+// Tests without serialization:
+// RUN: %clang_cc1 -std=c++11 -ast-dump -triple aarch64-linux-gnu %s \
+// RUN: | FileCheck %s --strict-whitespace
+//
+// RUN: %clang_cc1 -std=c++11 -ast-dump -triple aarch64-linux-gnu -fnative-half-type %s \
+// RUN: | FileCheck %s --check-prefix=CHECK-NATIVE --strict-whitespace
+//
+// Tests with serialization:
+// RUN: %clang_cc1 -std=c++11 -triple aarch64-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -std=c++11 -triple aarch64-linux-gnu -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s --strict-whitespace
+//
+// RUN: %clang_cc1 -std=c++11 -triple aarch64-linux-gnu -fnative-half-type -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -std=c++11 -triple aarch64-linux-gnu -fnative-half-type -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s --check-prefix=CHECK-NATIVE --strict-whitespace
 
 /*  Various contexts where type _Float16 can appear. */
 

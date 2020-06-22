@@ -11,6 +11,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TypeLoc.h"
@@ -594,10 +595,7 @@ public:
       for (auto *D : DS->decls())
         Builder.noticeDeclWithoutSemicolon(D);
     } else if (auto *E = llvm::dyn_cast_or_null<Expr>(S)) {
-      // Do not recurse into subexpressions.
-      // We do not have syntax trees for expressions yet, so we only want to see
-      // the first top-level expression.
-      return WalkUpFromExpr(E->IgnoreImplicit());
+      return RecursiveASTVisitor::TraverseStmt(E->IgnoreImplicit());
     }
     return RecursiveASTVisitor::TraverseStmt(S);
   }
@@ -608,6 +606,107 @@ public:
     Builder.foldNode(Builder.getExprRange(E),
                      new (allocator()) syntax::UnknownExpression, E);
     return true;
+  }
+
+  syntax::NestedNameSpecifier *
+  BuildNestedNameSpecifier(NestedNameSpecifierLoc QualifierLoc) {
+    if (!QualifierLoc)
+      return nullptr;
+    for (auto it = QualifierLoc; it; it = it.getPrefix()) {
+      auto *NS = new (allocator()) syntax::NameSpecifier;
+      Builder.foldNode(Builder.getRange(it.getLocalSourceRange()), NS, nullptr);
+      Builder.markChild(NS, syntax::NodeRole::NestedNameSpecifier_specifier);
+    }
+    auto *NNS = new (allocator()) syntax::NestedNameSpecifier;
+    Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()), NNS,
+                     nullptr);
+    return NNS;
+  }
+
+  bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
+    if (auto *NNS = BuildNestedNameSpecifier(S->getQualifierLoc()))
+      Builder.markChild(NNS, syntax::NodeRole::IdExpression_qualifier);
+
+    auto *unqualifiedId = new (allocator()) syntax::UnqualifiedId;
+    // Get `UnqualifiedId` from `DeclRefExpr`.
+    // FIXME: Extract this logic so that it can be used by `MemberExpr`,
+    // and other semantic constructs, now it is tied to `DeclRefExpr`.
+    if (!S->hasExplicitTemplateArgs()) {
+      Builder.foldNode(Builder.getRange(S->getNameInfo().getSourceRange()),
+                       unqualifiedId, nullptr);
+    } else {
+      auto templateIdSourceRange =
+          SourceRange(S->getNameInfo().getBeginLoc(), S->getRAngleLoc());
+      Builder.foldNode(Builder.getRange(templateIdSourceRange), unqualifiedId,
+                       nullptr);
+    }
+    Builder.markChild(unqualifiedId, syntax::NodeRole::IdExpression_id);
+
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::IdExpression, S);
+    return true;
+  }
+
+  bool WalkUpFromIntegerLiteral(IntegerLiteral *S) {
+    Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::IntegerLiteralExpression, S);
+    return true;
+  }
+
+  bool WalkUpFromCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *S) {
+    Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::CxxNullPtrExpression, S);
+    return true;
+  }
+
+  bool WalkUpFromUnaryOperator(UnaryOperator *S) {
+    Builder.markChildToken(S->getOperatorLoc(),
+                           syntax::NodeRole::OperatorExpression_operatorToken);
+    Builder.markExprChild(S->getSubExpr(),
+                          syntax::NodeRole::UnaryOperatorExpression_operand);
+
+    if (S->isPostfix())
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::PostfixUnaryOperatorExpression,
+                       S);
+    else
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::PrefixUnaryOperatorExpression,
+                       S);
+
+    return true;
+  }
+
+  bool WalkUpFromBinaryOperator(BinaryOperator *S) {
+    Builder.markExprChild(
+        S->getLHS(), syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
+    Builder.markChildToken(S->getOperatorLoc(),
+                           syntax::NodeRole::OperatorExpression_operatorToken);
+    Builder.markExprChild(
+        S->getRHS(), syntax::NodeRole::BinaryOperatorExpression_rightHandSide);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::BinaryOperatorExpression, S);
+    return true;
+  }
+
+  bool WalkUpFromCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
+    if (S->isInfixBinaryOp()) {
+      Builder.markExprChild(
+          S->getArg(0),
+          syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
+      Builder.markChildToken(
+          S->getOperatorLoc(),
+          syntax::NodeRole::OperatorExpression_operatorToken);
+      Builder.markExprChild(
+          S->getArg(1),
+          syntax::NodeRole::BinaryOperatorExpression_rightHandSide);
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::BinaryOperatorExpression, S);
+      return true;
+    }
+    return RecursiveASTVisitor::WalkUpFromCXXOperatorCallExpr(S);
   }
 
   bool WalkUpFromNamespaceDecl(NamespaceDecl *S) {
@@ -919,7 +1018,7 @@ private:
     const auto *Arrow = Return.begin() - 1;
     assert(Arrow->kind() == tok::arrow);
     auto Tokens = llvm::makeArrayRef(Arrow, Return.end());
-    Builder.markChildToken(Arrow, syntax::NodeRole::TrailingReturnType_arrow);
+    Builder.markChildToken(Arrow, syntax::NodeRole::ArrowToken);
     if (ReturnDeclarator)
       Builder.markChild(ReturnDeclarator,
                         syntax::NodeRole::TrailingReturnType_declarator);
@@ -934,9 +1033,7 @@ private:
       syntax::SimpleDeclaration *InnerDeclaration, Decl *From) {
     assert(!ExternKW || ExternKW->kind() == tok::kw_extern);
     assert(TemplateKW && TemplateKW->kind() == tok::kw_template);
-    Builder.markChildToken(
-        ExternKW,
-        syntax::NodeRole::ExplicitTemplateInstantiation_externKeyword);
+    Builder.markChildToken(ExternKW, syntax::NodeRole::ExternKeyword);
     Builder.markChildToken(TemplateKW, syntax::NodeRole::IntroducerKeyword);
     Builder.markChild(
         InnerDeclaration,
@@ -996,17 +1093,18 @@ void syntax::TreeBuilder::markStmtChild(Stmt *Child, NodeRole Role) {
   if (!Child)
     return;
 
-  syntax::Tree *ChildNode = Mapping.find(Child);
-  assert(ChildNode != nullptr);
-
-  // This is an expression in a statement position, consume the trailing
-  // semicolon and form an 'ExpressionStatement' node.
-  if (isa<Expr>(Child)) {
-    setRole(ChildNode, NodeRole::ExpressionStatement_expression);
+  syntax::Tree *ChildNode;
+  if (Expr *ChildExpr = dyn_cast<Expr>(Child)) {
+    // This is an expression in a statement position, consume the trailing
+    // semicolon and form an 'ExpressionStatement' node.
+    markExprChild(ChildExpr, NodeRole::ExpressionStatement_expression);
     ChildNode = new (allocator()) syntax::ExpressionStatement;
     // (!) 'getStmtRange()' ensures this covers a trailing semicolon.
     Pending.foldChildren(Arena, getStmtRange(Child), ChildNode);
+  } else {
+    ChildNode = Mapping.find(Child);
   }
+  assert(ChildNode != nullptr);
   setRole(ChildNode, Role);
 }
 

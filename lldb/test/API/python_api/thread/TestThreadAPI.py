@@ -37,6 +37,7 @@ class ThreadAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         self.run_to_address(self.exe_name)
 
+    @skipIfAsan # The output looks different under ASAN.
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["linux"], archs=['arm'], bugnumber="llvm.org/pr45892")
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr20476')
@@ -99,7 +100,7 @@ class ThreadAPITestCase(TestBase):
         self.runCmd("process status")
 
         proc_of_thread = thread.GetProcess()
-        #print("proc_of_thread:", proc_of_thread)
+        self.trace("proc_of_thread:", proc_of_thread)
         self.assertTrue(proc_of_thread.GetProcessID()
                         == process.GetProcessID())
 

@@ -15,7 +15,7 @@
 
 // This tests a conforming extension
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <forward_list>
 #include <cassert>

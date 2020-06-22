@@ -167,9 +167,9 @@
         // MOV alias should not accept any fiddling
         mov x2, xsp, #123
         mov wsp, w27, #0xfff, lsl #12
-// CHECK-ERROR: error: expected compatible register or logical immediate
+// CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         mov x2, xsp, #123
-// CHECK-ERROR-NEXT:                 ^
+// CHECK-ERROR-NEXT:                      ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         mov wsp, w27, #0xfff, lsl #12
 // CHECK-ERROR-NEXT:                       ^

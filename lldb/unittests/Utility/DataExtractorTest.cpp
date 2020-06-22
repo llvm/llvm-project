@@ -261,3 +261,41 @@ TEST(DataExtractorTest, GetMaxU64_unchecked) {
   EXPECT_EQ(0x0102030405060708U, BE.GetMaxU64_unchecked(&offset, 8));
   EXPECT_EQ(8U, offset);
 }
+
+TEST(DataExtractorTest, GetSLEB128_bit63) {
+  uint8_t buffer[] = {0xff, 0x80, 0xff, 0x80, 0xff, 0x80, 0xff, 0x80, 0x7f};
+
+  DataExtractor LE(buffer, sizeof(buffer), lldb::eByteOrderLittle,
+                   sizeof(void *));
+  DataExtractor BE(buffer, sizeof(buffer), lldb::eByteOrderBig, sizeof(void *));
+
+  lldb::offset_t offset;
+
+  int64_t expected =
+      0b1111111100000001111111000000011111110000000111111100000001111111;
+  offset = 0;
+  EXPECT_EQ(expected, LE.GetSLEB128(&offset));
+  EXPECT_EQ(9U, offset);
+  offset = 0;
+  EXPECT_EQ(expected, BE.GetSLEB128(&offset));
+  EXPECT_EQ(9U, offset);
+}
+
+TEST(DataExtractorTest, GetULEB128_bit63) {
+  uint8_t buffer[] = {0xff, 0x80, 0xff, 0x80, 0xff, 0x80, 0xff, 0x80, 0x7f};
+
+  DataExtractor LE(buffer, sizeof(buffer), lldb::eByteOrderLittle,
+                   sizeof(void *));
+  DataExtractor BE(buffer, sizeof(buffer), lldb::eByteOrderBig, sizeof(void *));
+
+  lldb::offset_t offset;
+
+  uint64_t expected =
+      0b0111111100000001111111000000011111110000000111111100000001111111;
+  offset = 0;
+  EXPECT_EQ(expected, LE.GetULEB128(&offset));
+  EXPECT_EQ(9U, offset);
+  offset = 0;
+  EXPECT_EQ(expected, BE.GetULEB128(&offset));
+  EXPECT_EQ(9U, offset);
+}

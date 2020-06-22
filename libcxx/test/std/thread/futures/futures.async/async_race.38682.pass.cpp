@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // There's currently no release of OS X whose dylib contains the patch for
 // PR38682. Since the fix for future<void> is in the dylib, this test may fail.

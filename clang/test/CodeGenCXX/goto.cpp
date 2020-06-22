@@ -23,7 +23,7 @@ namespace test0 {
     // CHECK:      store i1 true, i1* [[CLEANUPACTIVE]]
     // CHECK:      [[NEWCAST:%.*]] = bitcast i8* [[NEW]] to [[V]]*
     // CHECK-NEXT: invoke void @_ZN5test01AC1Ev([[A]]* [[TMP]])
-    // CHECK:      invoke void @_ZN5test01VC1ERKNS_1AE([[V]]* [[NEWCAST]], [[A]]* dereferenceable({{[0-9]+}}) [[TMP]])
+    // CHECK:      invoke void @_ZN5test01VC1ERKNS_1AE([[V]]* [[NEWCAST]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TMP]])
     // CHECK:      store i1 false, i1* [[CLEANUPACTIVE]]
 
     // CHECK98-NEXT: invoke void @_ZN5test01AD1Ev([[A]]* [[TMP]])

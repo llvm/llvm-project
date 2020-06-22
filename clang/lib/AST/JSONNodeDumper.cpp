@@ -1,5 +1,6 @@
 #include "clang/AST/JSONNodeDumper.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringSwitch.h"
 
@@ -73,6 +74,7 @@ void JSONNodeDumper::Visit(const Type *T) {
 
   JOS.attribute("kind", (llvm::Twine(T->getTypeClassName()) + "Type").str());
   JOS.attribute("type", createQualType(QualType(T, 0), /*Desugar*/ false));
+  attributeOnlyIfTrue("containsErrors", T->containsErrors());
   attributeOnlyIfTrue("isDependent", T->isDependentType());
   attributeOnlyIfTrue("isInstantiationDependent",
                       T->isInstantiationDependentType());
@@ -110,7 +112,7 @@ void JSONNodeDumper::Visit(const Decl *D) {
     JOS.attribute("isReferenced", true);
 
   if (const auto *ND = dyn_cast<NamedDecl>(D))
-    attributeOnlyIfTrue("isHidden", ND->isHidden());
+    attributeOnlyIfTrue("isHidden", !ND->isUnconditionallyVisible());
 
   if (D->getLexicalDeclContext() != D->getDeclContext()) {
     // Because of multiple inheritance, a DeclContext pointer does not produce
@@ -385,6 +387,7 @@ static llvm::json::Object
 createCopyAssignmentDefinitionData(const CXXRecordDecl *RD) {
   llvm::json::Object Ret;
 
+  FIELD2("simple", hasSimpleCopyAssignment);
   FIELD2("trivial", hasTrivialCopyAssignment);
   FIELD2("nonTrivial", hasNonTrivialCopyAssignment);
   FIELD2("hasConstParam", hasCopyAssignmentWithConstParam);
@@ -465,13 +468,10 @@ JSONNodeDumper::createCXXRecordDefinitionData(const CXXRecordDecl *RD) {
 #undef FIELD2
 
 std::string JSONNodeDumper::createAccessSpecifier(AccessSpecifier AS) {
-  switch (AS) {
-  case AS_none: return "none";
-  case AS_private: return "private";
-  case AS_protected: return "protected";
-  case AS_public: return "public";
-  }
-  llvm_unreachable("Unknown access specifier");
+  const auto AccessSpelling = getAccessSpelling(AS);
+  if (AccessSpelling.empty())
+    return "none";
+  return AccessSpelling.str();
 }
 
 llvm::json::Object
@@ -1236,14 +1236,7 @@ void JSONNodeDumper::VisitCallExpr(const CallExpr *CE) {
 
 void JSONNodeDumper::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *TTE) {
-  switch (TTE->getKind()) {
-  case UETT_SizeOf: JOS.attribute("name", "sizeof"); break;
-  case UETT_AlignOf: JOS.attribute("name", "alignof"); break;
-  case UETT_VecStep:  JOS.attribute("name", "vec_step"); break;
-  case UETT_PreferredAlignOf:  JOS.attribute("name", "__alignof"); break;
-  case UETT_OpenMPRequiredSimdAlign:
-    JOS.attribute("name", "__builtin_omp_required_simd_align"); break;
-  }
+  JOS.attribute("name", getTraitSpelling(TTE->getKind()));
   if (TTE->isArgumentType())
     JOS.attribute("argType", createQualType(TTE->getArgumentType()));
 }

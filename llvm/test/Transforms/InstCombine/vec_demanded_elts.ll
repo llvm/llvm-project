@@ -4,18 +4,18 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define i32 @test2(float %f) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul float [[F:%.*]], [[F]]
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast float [[TMP5]] to i32
-; CHECK-NEXT:    ret i32 [[TMP21]]
+; CHECK-NEXT:    [[T5:%.*]] = fmul float [[F:%.*]], [[F]]
+; CHECK-NEXT:    [[T21:%.*]] = bitcast float [[T5]] to i32
+; CHECK-NEXT:    ret i32 [[T21]]
 ;
-  %tmp5 = fmul float %f, %f
-  %tmp9 = insertelement <4 x float> undef, float %tmp5, i32 0
-  %tmp10 = insertelement <4 x float> %tmp9, float 0.000000e+00, i32 1
-  %tmp11 = insertelement <4 x float> %tmp10, float 0.000000e+00, i32 2
-  %tmp12 = insertelement <4 x float> %tmp11, float 0.000000e+00, i32 3
-  %tmp19 = bitcast <4 x float> %tmp12 to <4 x i32>
-  %tmp21 = extractelement <4 x i32> %tmp19, i32 0
-  ret i32 %tmp21
+  %t5 = fmul float %f, %f
+  %t9 = insertelement <4 x float> undef, float %t5, i32 0
+  %t10 = insertelement <4 x float> %t9, float 0.000000e+00, i32 1
+  %t11 = insertelement <4 x float> %t10, float 0.000000e+00, i32 2
+  %t12 = insertelement <4 x float> %t11, float 0.000000e+00, i32 3
+  %t19 = bitcast <4 x float> %t12 to <4 x i32>
+  %t21 = extractelement <4 x i32> %t19, i32 0
+  ret i32 %t21
 }
 
 define void @get_image() nounwind {
@@ -29,11 +29,11 @@ define void @get_image() nounwind {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %0 = call i32 @fgetc(i8* null) nounwind               ; <i32> [#uses=1]
-  %1 = trunc i32 %0 to i8         ; <i8> [#uses=1]
-  %tmp2 = insertelement <100 x i8> zeroinitializer, i8 %1, i32 1          ; <<100 x i8>> [#uses=1]
-  %tmp1 = extractelement <100 x i8> %tmp2, i32 0          ; <i8> [#uses=1]
-  %2 = icmp eq i8 %tmp1, 80               ; <i1> [#uses=1]
+  %0 = call i32 @fgetc(i8* null) nounwind
+  %1 = trunc i32 %0 to i8
+  %t2 = insertelement <100 x i8> zeroinitializer, i8 %1, i32 1
+  %t1 = extractelement <100 x i8> %t2, i32 0
+  %2 = icmp eq i8 %t1, 80
   br i1 %2, label %bb2, label %bb3
 
 bb2:            ; preds = %entry
@@ -51,8 +51,8 @@ define void @vac(<4 x float>* nocapture %a) nounwind {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tmp1 = load <4 x float>, <4 x float>* %a		; <<4 x float>> [#uses=1]
-  %vecins = insertelement <4 x float> %tmp1, float 0.000000e+00, i32 0	; <<4 x float>> [#uses=1]
+  %t1 = load <4 x float>, <4 x float>* %a		; <<4 x float>> [#uses=1]
+  %vecins = insertelement <4 x float> %t1, float 0.000000e+00, i32 0	; <<4 x float>> [#uses=1]
   %vecins4 = insertelement <4 x float> %vecins, float 0.000000e+00, i32 1; <<4 x float>> [#uses=1]
   %vecins6 = insertelement <4 x float> %vecins4, float 0.000000e+00, i32 2; <<4 x float>> [#uses=1]
   %vecins8 = insertelement <4 x float> %vecins6, float 0.000000e+00, i32 3; <<4 x float>> [#uses=1]
@@ -79,12 +79,12 @@ define <2 x float> @test_fptrunc(double %f) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
-  %tmp9 = insertelement <4 x double> undef, double %f, i32 0
-  %tmp10 = insertelement <4 x double> %tmp9, double 0.000000e+00, i32 1
-  %tmp11 = insertelement <4 x double> %tmp10, double 0.000000e+00, i32 2
-  %tmp12 = insertelement <4 x double> %tmp11, double 0.000000e+00, i32 3
-  %tmp5 = fptrunc <4 x double> %tmp12 to <4 x float>
-  %ret = shufflevector <4 x float> %tmp5, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  %t9 = insertelement <4 x double> undef, double %f, i32 0
+  %t10 = insertelement <4 x double> %t9, double 0.000000e+00, i32 1
+  %t11 = insertelement <4 x double> %t10, double 0.000000e+00, i32 2
+  %t12 = insertelement <4 x double> %t11, double 0.000000e+00, i32 3
+  %t5 = fptrunc <4 x double> %t12 to <4 x float>
+  %ret = shufflevector <4 x float> %t5, <4 x float> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x float> %ret
 }
 
@@ -94,12 +94,12 @@ define <2 x double> @test_fpext(float %f) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
 ; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;
-  %tmp9 = insertelement <4 x float> undef, float %f, i32 0
-  %tmp10 = insertelement <4 x float> %tmp9, float 0.000000e+00, i32 1
-  %tmp11 = insertelement <4 x float> %tmp10, float 0.000000e+00, i32 2
-  %tmp12 = insertelement <4 x float> %tmp11, float 0.000000e+00, i32 3
-  %tmp5 = fpext <4 x float> %tmp12 to <4 x double>
-  %ret = shufflevector <4 x double> %tmp5, <4 x double> undef, <2 x i32> <i32 0, i32 1>
+  %t9 = insertelement <4 x float> undef, float %f, i32 0
+  %t10 = insertelement <4 x float> %t9, float 0.000000e+00, i32 1
+  %t11 = insertelement <4 x float> %t10, float 0.000000e+00, i32 2
+  %t12 = insertelement <4 x float> %t11, float 0.000000e+00, i32 3
+  %t5 = fpext <4 x float> %t12 to <4 x double>
+  %ret = shufflevector <4 x double> %t5, <4 x double> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x double> %ret
 }
 
@@ -663,12 +663,86 @@ define i32* @PR41624(<2 x { i32, i32 }*> %a) {
 define i32* @zero_sized_type_extract(<4 x i64> %arg, i64 %arg1) {
 ; CHECK-LABEL: @zero_sized_type_extract(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds [0 x i32], <4 x [0 x i32]*> <[0 x i32]* @global, [0 x i32]* undef, [0 x i32]* undef, [0 x i32]* undef>, <4 x i64> <i64 0, i64 undef, i64 undef, i64 undef>, <4 x i64> [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32*> [[TMP]], i64 0
-; CHECK-NEXT:    ret i32* [[TMP2]]
+; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds [0 x i32], <4 x [0 x i32]*> <[0 x i32]* @global, [0 x i32]* undef, [0 x i32]* undef, [0 x i32]* undef>, <4 x i64> <i64 0, i64 undef, i64 undef, i64 undef>, <4 x i64> [[ARG:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = extractelement <4 x i32*> [[T]], i64 0
+; CHECK-NEXT:    ret i32* [[T2]]
 ;
 bb:
-  %tmp = getelementptr inbounds [0 x i32], <4 x [0 x i32]*> <[0 x i32]* @global, [0 x i32]* @global, [0 x i32]* @global, [0 x i32]* @global>, <4 x i64> zeroinitializer, <4 x i64> %arg
-  %tmp2 = extractelement <4 x i32*> %tmp, i64 0
-  ret i32* %tmp2
+  %t = getelementptr inbounds [0 x i32], <4 x [0 x i32]*> <[0 x i32]* @global, [0 x i32]* @global, [0 x i32]* @global, [0 x i32]* @global>, <4 x i64> zeroinitializer, <4 x i64> %arg
+  %t2 = extractelement <4 x i32*> %t, i64 0
+  ret i32* %t2
+}
+
+; The non-zero elements of the result are always 'y', so the splat is unnecessary.
+
+define <4 x i8> @select_cond_with_eq_true_false_elts(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
+; CHECK-LABEL: @select_cond_with_eq_true_false_elts(
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[SEL]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %tval = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  %splat = shufflevector <4 x i1> %cmp, <4 x i1> undef, <4 x i32> zeroinitializer
+  %r = select <4 x i1> %splat, <4 x i8> %tval, <4 x i8> %y
+  ret <4 x i8> %r
+}
+
+; First element of the result is always x[0], so first element of select condition is unnecessary.
+
+define <4 x i8> @select_cond_with_eq_true_false_elts2(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
+; CHECK-LABEL: @select_cond_with_eq_true_false_elts2(
+; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i1> [[CMP:%.*]], <4 x i1> undef, <4 x i32> <i32 undef, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND]], <4 x i8> [[Y:%.*]], <4 x i8> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[SEL]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %tval = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  %cond = shufflevector <4 x i1> %cmp, <4 x i1> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %r = select <4 x i1> %cond, <4 x i8> %tval, <4 x i8> %x
+  ret <4 x i8> %r
+}
+
+; Second element of the result is always x[3], so second element of select condition is unnecessary.
+; Fourth element of the result is always undef, so fourth element of select condition is unnecessary.
+
+define <4 x float> @select_cond_with_eq_true_false_elts3(<4 x float> %x, <4 x float> %y, <4 x i1> %cmp) {
+; CHECK-LABEL: @select_cond_with_eq_true_false_elts3(
+; CHECK-NEXT:    [[TVAL:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x i32> <i32 1, i32 3, i32 5, i32 undef>
+; CHECK-NEXT:    [[FVAL:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[X]], <4 x i32> <i32 0, i32 7, i32 6, i32 undef>
+; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i1> [[CMP:%.*]], <4 x i1> undef, <4 x i32> <i32 undef, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[COND]], <4 x float> [[TVAL]], <4 x float> [[FVAL]]
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %tval = shufflevector <4 x float> %x, <4 x float> %y, <4 x i32> <i32 1, i32 3, i32 5, i32 undef>
+  %fval = shufflevector <4 x float> %y, <4 x float> %x, <4 x i32> <i32 0, i32 7, i32 6, i32 undef>
+  %cond = shufflevector <4 x i1> %cmp, <4 x i1> undef, <4 x i32> <i32 undef, i32 1, i32 2, i32 3>
+  %r = select <4 x i1> %cond, <4 x float> %tval, <4 x float> %fval
+  ret <4 x float> %r
+}
+
+define <4 x i8> @select_cond_with_undef_true_false_elts(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
+; CHECK-LABEL: @select_cond_with_undef_true_false_elts(
+; CHECK-NEXT:    [[TVAL:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> undef, <4 x i32> <i32 undef, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i1> [[CMP:%.*]], <4 x i1> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[COND]], <4 x i8> [[TVAL]], <4 x i8> [[X:%.*]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %tval = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 undef, i32 5, i32 6, i32 7>
+  %cond = shufflevector <4 x i1> %cmp, <4 x i1> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %r = select <4 x i1> %cond, <4 x i8> %tval, <4 x i8> %x
+  ret <4 x i8> %r
+}
+
+; The insert can be safely eliminated because the shuffle blocks poison from cmp[0].
+
+define <4 x i8> @select_cond_(<4 x i8> %x, <4 x i8> %min, <4 x i1> %cmp, i1 %poison_blocker) {
+; CHECK-LABEL: @select_cond_(
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i8> [[MIN:%.*]], <4 x i8> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[SEL]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %ins = insertelement <4 x i1> %cmp, i1 %poison_blocker, i32 0
+  %vecins = shufflevector <4 x i8> %x, <4 x i8> %min, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  %r = select <4 x i1> %ins, <4 x i8> %vecins, <4 x i8> %x
+  ret <4 x i8> %r
 }

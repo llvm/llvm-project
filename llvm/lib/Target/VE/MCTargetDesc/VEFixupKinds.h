@@ -14,8 +14,11 @@
 namespace llvm {
 namespace VE {
 enum Fixups {
+  /// fixup_ve_reflong - 32-bit fixup corresponding to foo
+  fixup_ve_reflong = FirstTargetFixupKind,
+
   /// fixup_ve_hi32 - 32-bit fixup corresponding to foo@hi
-  fixup_ve_hi32 = FirstTargetFixupKind,
+  fixup_ve_hi32,
 
   /// fixup_ve_lo32 - 32-bit fixup corresponding to foo@lo
   fixup_ve_lo32,

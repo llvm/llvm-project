@@ -85,7 +85,8 @@ private:
 
   void CalculateReturnValue();
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepOut);
+  ThreadPlanStepOut(const ThreadPlanStepOut &) = delete;
+  const ThreadPlanStepOut &operator=(const ThreadPlanStepOut &) = delete;
 };
 
 } // namespace lldb_private

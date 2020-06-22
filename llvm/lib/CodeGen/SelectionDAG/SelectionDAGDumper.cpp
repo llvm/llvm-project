@@ -211,6 +211,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FNEARBYINT:          return "strict_fnearbyint";
   case ISD::FROUND:                     return "fround";
   case ISD::STRICT_FROUND:              return "strict_fround";
+  case ISD::FROUNDEVEN:                 return "froundeven";
+  case ISD::STRICT_FROUNDEVEN:          return "strict_froundeven";
   case ISD::FEXP:                       return "fexp";
   case ISD::STRICT_FEXP:                return "strict_fexp";
   case ISD::FEXP2:                      return "fexp2";
@@ -393,6 +395,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::GC_TRANSITION_END:          return "gc_transition.end";
   case ISD::GET_DYNAMIC_AREA_OFFSET:    return "get.dynamic.area.offset";
   case ISD::FREEZE:                     return "freeze";
+  case ISD::PREALLOCATED_SETUP:
+    return "call_setup";
+  case ISD::PREALLOCATED_ARG:
+    return "call_alloc";
 
   // Bit manipulation
   case ISD::ABS:                        return "abs";

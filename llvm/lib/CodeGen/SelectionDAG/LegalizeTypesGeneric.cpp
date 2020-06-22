@@ -83,6 +83,8 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
       Lo = DAG.getNode(ISD::BITCAST, dl, NOutVT, Lo);
       Hi = DAG.getNode(ISD::BITCAST, dl, NOutVT, Hi);
       return;
+    case TargetLowering::TypeScalarizeScalableVector:
+      report_fatal_error("Scalarization of scalable vectors is not supported.");
     case TargetLowering::TypeWidenVector: {
       assert(!(InVT.getVectorNumElements() & 1) && "Unsupported BITCAST");
       InOp = GetWidenedVector(InOp);
@@ -154,9 +156,13 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
 
   // Create the stack frame object.  Make sure it is aligned for both
   // the source and expanded destination types.
-  Align Alignment = DAG.getDataLayout().getPrefTypeAlign(
-      NOutVT.getTypeForEVT(*DAG.getContext()));
-  SDValue StackPtr = DAG.CreateStackTemporary(InVT, Alignment.value());
+
+  // In cases where the vector is illegal it will be broken down into parts
+  // and stored in parts - we should use the alignment for the smallest part.
+  Align InAlign = DAG.getReducedAlign(InVT, /*UseABI=*/false);
+  Align NOutAlign = DAG.getReducedAlign(NOutVT, /*UseABI=*/false);
+  Align Align = std::max(InAlign, NOutAlign);
+  SDValue StackPtr = DAG.CreateStackTemporary(InVT.getStoreSize(), Align);
   int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
@@ -165,7 +171,7 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue Store = DAG.getStore(DAG.getEntryNode(), dl, InOp, StackPtr, PtrInfo);
 
   // Load the first half from the stack slot.
-  Lo = DAG.getLoad(NOutVT, dl, Store, StackPtr, PtrInfo, Alignment);
+  Lo = DAG.getLoad(NOutVT, dl, Store, StackPtr, PtrInfo, NOutAlign);
 
   // Increment the pointer to the other half.
   unsigned IncrementSize = NOutVT.getSizeInBits() / 8;
@@ -173,7 +179,7 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
 
   // Load the second half from the stack slot.
   Hi = DAG.getLoad(NOutVT, dl, Store, StackPtr,
-                   PtrInfo.getWithOffset(IncrementSize), Alignment);
+                   PtrInfo.getWithOffset(IncrementSize), NOutAlign);
 
   // Handle endianness of the load.
   if (TLI.hasBigEndianPartOrdering(OutVT, DAG.getDataLayout()))

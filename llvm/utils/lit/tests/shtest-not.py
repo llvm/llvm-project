@@ -110,6 +110,6 @@
 # CHECK: Error: 'not --crash' cannot call 'rm'
 # CHECK: error: command failed with exit status: {{.*}}
 
-# CHECK: Expected Passes : 1
-# CHECK: Unexpected Failures: 12
+# CHECK: Passed:  1
+# CHECK: Failed: 12
 # CHECK-NOT: {{.}}

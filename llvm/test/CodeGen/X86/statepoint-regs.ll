@@ -18,7 +18,7 @@ define void @test1(i32 %a) gc "statepoint-example" {
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 entry:
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 1, i32 %a)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a)]
   ret void
 }
 
@@ -45,8 +45,8 @@ define void @test2(i32 %a, i32 %b) gc "statepoint-example" {
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
 entry:
-  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 2, i32 %a, i32 %b)
-  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 2, i32 %b, i32 %a)
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b)]
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %b, i32 %a)]
   ret void
 }
 
@@ -67,7 +67,7 @@ define void @test3(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
 entry:
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 9, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i)]
   ret void
 }
 
@@ -91,7 +91,7 @@ define void @test4(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
 entry:
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 26, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)]
   ret void
 }
 
@@ -115,10 +115,10 @@ define  i32 addrspace(1)* @test5(i32 %a, i32 addrspace(1)* %p) gc "statepoint-ex
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 entry:
-  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 1, i32 %a, i32 addrspace(1)* %p, i32 addrspace(1)* %p)
-  %p2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token,  i32 9, i32 9)
-  %token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 1, i32 %a, i32 addrspace(1)* %p2, i32 addrspace(1)* %p2)
-  %p3 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token2,  i32 9, i32 9)
+  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %p, i32 addrspace(1)* %p) ["deopt"(i32 %a)]
+  %p2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token,  i32 8, i32 8)
+  %token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %p2, i32 addrspace(1)* %p2) ["deopt"(i32 %a)]
+  %p3 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token2,  i32 8, i32 8)
   ret i32 addrspace(1)* %p3
 }
 
@@ -137,8 +137,8 @@ define void @test6(i32 %a) gc "statepoint-example" {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 entry:
-  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @baz, i32 0, i32 0, i32 0, i32 1, i32 %a)
-  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 1, i32 %a)
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @baz, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a)]
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a)]
   ret void
 }
 
@@ -250,7 +250,7 @@ entry:
   %x64 = zext i32 %x to i64
   %y64 = zext i32 %y to i64
   %z64 = zext i32 %z to i64
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 26, i64 %a64, i64 %b64, i64 %c64, i64 %d64, i64 %e64, i64 %f64, i64 %g64, i64 %h64, i64 %i64, i64 %j64, i64 %k64, i64 %l64, i64 %m64, i64 %n64, i64 %o64, i64 %p64, i64 %q64, i64 %r64, i64 %s64, i64 %t64, i64 %u64, i64 %v64, i64 %w64, i64 %x64, i64 %y64, i64 %z64)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i64 %a64, i64 %b64, i64 %c64, i64 %d64, i64 %e64, i64 %f64, i64 %g64, i64 %h64, i64 %i64, i64 %j64, i64 %k64, i64 %l64, i64 %m64, i64 %n64, i64 %o64, i64 %p64, i64 %q64, i64 %r64, i64 %s64, i64 %t64, i64 %u64, i64 %v64, i64 %w64, i64 %x64, i64 %y64, i64 %z64)]
   ret void
 }
 
@@ -354,7 +354,7 @@ entry:
   %x64 = zext i32 %x to i64
   %y64 = zext i32 %y to i64
   %z64 = zext i32 %z to i64
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 26, i8 %a8, i8 %b8, i8 %c8, i8 %d8, i16 %e16, i16 %f16, i16 %g16, i16 %h16, i64 %i64, i64 %j64, i64 %k64, i64 %l64, i64 %m64, i64 %n64, i64 %o64, i64 %p64, i64 %q64, i64 %r64, i64 %s64, i64 %t64, i64 %u64, i64 %v64, i64 %w64, i64 %x64, i64 %y64, i64 %z64)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i8 %a8, i8 %b8, i8 %c8, i8 %d8, i16 %e16, i16 %f16, i16 %g16, i16 %h16, i64 %i64, i64 %j64, i64 %k64, i64 %l64, i64 %m64, i64 %n64, i64 %o64, i64 %p64, i64 %q64, i64 %r64, i64 %s64, i64 %t64, i64 %u64, i64 %v64, i64 %w64, i64 %x64, i64 %y64, i64 %z64)]
   ret void
 }
 
@@ -377,7 +377,7 @@ define void @test9(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    retq
 
 entry:
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 26, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)]
   ret void
 }
 
@@ -429,8 +429,8 @@ define void @test10(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 
 ; CHECK-NEXT:    retq
 
 entry:
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 26, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)
-  %statepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 26, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)]
+  %statepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)]
   ret void
 }
 
@@ -591,7 +591,7 @@ entry:
   %x64 = zext i32 %x to i64
   %y64 = zext i32 %y to i64
   %z64 = zext i32 %z to i64
-  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i64 0, i64 26, i64 %a64, i64 %b64, i64 %c64, i64 %d64, i64 %e64, i64 %f64, i64 %g64, i64 %h64, i64 %i64, i64 %j64, i64 %k64, i64 %l64, i64 %m64, i64 %n64, i64 %o64, i64 %p64, i64 %q64, i64 %r64, i64 %s64, i64 %t64, i64 %u64, i64 %v64, i64 %w64, i64 %x64, i64 %y64, i64 %z64)
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i64 0, i64 0) ["deopt" (i64 %a64, i64 %b64, i64 %c64, i64 %d64, i64 %e64, i64 %f64, i64 %g64, i64 %h64, i64 %i64, i64 %j64, i64 %k64, i64 %l64, i64 %m64, i64 %n64, i64 %o64, i64 %p64, i64 %q64, i64 %r64, i64 %s64, i64 %t64, i64 %u64, i64 %v64, i64 %w64, i64 %x64, i64 %y64, i64 %z64)]
   %addab = add i64 %a64, %b64
   %addc = add i64 %addab, %c64
   %addd = add i64 %addc, %d64
@@ -633,7 +633,7 @@ define void @addr_func() gc "statepoint-example" {
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 entry:
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i64 0, i64 3, void ()* @bar, void ()* @bar, void ()* @bar)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i64 0, i64 0) ["deopt" (void ()* @bar, void ()* @bar, void ()* @bar)]
   ret void
 }
 
@@ -651,7 +651,7 @@ define void @addr_global() gc "statepoint-example" {
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 entry:
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i64 0, i64 3, i32* @G, i32* @G, i32* @G)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i64 0, i64 0) ["deopt" (i32* @G, i32* @G, i32* @G)]
   ret void
 }
 
@@ -668,9 +668,172 @@ define void @addr_alloca(i32 %v) gc "statepoint-example" {
 entry:
   %a = alloca i32
   store i32 %v, i32* %a
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i64 0, i64 3, i32* %a, i32* %a, i32* %a)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i64 0, i64 0) ["deopt" (i32* %a, i32* %a, i32* %a)]
   ret void
 }
+
+define i32 addrspace(1)*  @test_fpconst_deopt(i32 addrspace(1)* %in) gc "statepoint-example" {
+; CHECK-LABEL: test_fpconst_deopt:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rdi, (%rsp)
+; CHECK-NEXT:    nopl 8(%rax,%rax)
+; CHECK-NEXT:  Ltmp18:
+; CHECK-NEXT:    movq (%rsp), %rax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+    %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2, i32 5, void ()* nonnull @bar, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %in) ["deopt" (
+    float 0x40421A1CA0000000, float 0x40459A1CA0000000, float 0x40401A1CA0000000, float 0x40479A1CA0000000, float 0x403C343940000000,
+    float 0x403E343940000000, float 0x40469A1CA0000000, float 0x40489A1CA0000000, float 0x404A9A1CA0000000, float 0x40499A1CA0000000,
+    float 0xC05FCD2F20000000, float 0xC05C0D2F20000000, float 0xC060269780000000, float 0xC05B8D2F20000000, float 0xC060669780000000,
+    float 0xC05B0D2F20000000, float 0xC060A69780000000, float 0xC05A8D2F20000000, float 0xC060E69780000000, float 0x40439A1CA0000000)]
+    %out = call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %statepoint_token, i32 7, i32 7)
+    ret i32 addrspace(1)* %out
+}
+
+; CHECK-LABEL: __LLVM_StackMaps:
+; CHECK: .long   Ltmp18-_test_fpconst_deopt
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	25
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	0
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	0
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	20
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1108398309
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1110233317
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1107349733
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1111281893
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1105306058
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1106354634
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1110757605
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1111806181
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1112854757
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1112330469
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	0
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	2
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	3
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	4
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	5
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	6
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	7
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	8
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1109184741
 
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)

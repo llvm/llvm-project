@@ -24,7 +24,7 @@ entry:
 ; CHECK-NO-ISEL: bc 12, 20, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NO-ISEL-NEXT: blr
 ; CHECK-NO-ISEL-NEXT: [[TRUE]]
-; CHECK-NO-ISEL-NEXT: addi 3, 0, 0
+; CHECK-NO-ISEL-NEXT: li 3, 0
 ; CHECK-NO-ISEL-NEXT: blr
 ; CHECK: blr
 }
@@ -134,7 +134,7 @@ entry:
 
 ; CHECK-LABEL: @test7
 ; CHECK: andi. {{[0-9]+}}, 3, 1
-; CHECK: isel 3, 4, 5, 1
+; CHECK: iselgt 3, 4, 5
 ; CHECK: blr
 }
 
@@ -148,7 +148,7 @@ entry:
 ; CHECK-DAG: cmpwi 3, 5
 ; CHECK-DAG: li [[REG1:[0-9]+]], 8
 ; CHECK-DAG: li [[REG2:[0-9]+]], 7
-; CHECK: isel 3, [[REG2]], [[REG1]],
+; CHECK: iseleq 3, [[REG2]], [[REG1]]
 ; CHECK-NOT: rldicl
 ; CHECK: blr
 }

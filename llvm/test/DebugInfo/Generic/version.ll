@@ -2,7 +2,7 @@
 ; RUN: llvm-dwarfdump %t | FileCheck %s
 
 ; Make sure we are generating DWARF version 3 when module flag says so.
-; CHECK: Compile Unit: length = {{.*}} version = 0x0003
+; CHECK: Compile Unit: length = {{.*}}, version = 0x0003
 
 define i32 @main() #0 !dbg !4 {
 entry:

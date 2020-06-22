@@ -37,6 +37,8 @@ public:
 
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
+  void Print(const char *str);
+
   void RedirectToFile(const char *path, bool append);
 
   void RedirectToFile(lldb::SBFile file);
@@ -99,7 +101,8 @@ protected:
   lldb_private::Stream &ref();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SBStream);
+  SBStream(const SBStream &) = delete;
+  const SBStream &operator=(const SBStream &) = delete;
   std::unique_ptr<lldb_private::Stream> m_opaque_up;
   bool m_is_file;
 };

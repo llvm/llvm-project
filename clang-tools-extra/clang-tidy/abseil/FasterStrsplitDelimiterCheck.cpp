@@ -78,20 +78,23 @@ void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
 
   // Find uses of absl::StrSplit(..., "x") and absl::StrSplit(...,
   // absl::ByAnyChar("x")) to transform them into absl::StrSplit(..., 'x').
-  Finder->addMatcher(callExpr(callee(functionDecl(hasName("::absl::StrSplit"))),
-                              hasArgument(1, anyOf(ByAnyCharArg, SingleChar)),
-                              unless(isInTemplateInstantiation()))
-                         .bind("StrSplit"),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               callExpr(callee(functionDecl(hasName("::absl::StrSplit"))),
+                        hasArgument(1, anyOf(ByAnyCharArg, SingleChar)),
+                        unless(isInTemplateInstantiation()))
+                   .bind("StrSplit")),
+      this);
 
   // Find uses of absl::MaxSplits("x", N) and
   // absl::MaxSplits(absl::ByAnyChar("x"), N) to transform them into
   // absl::MaxSplits('x', N).
   Finder->addMatcher(
-      callExpr(
-          callee(functionDecl(hasName("::absl::MaxSplits"))),
-          hasArgument(0, anyOf(ByAnyCharArg, ignoringParenCasts(SingleChar))),
-          unless(isInTemplateInstantiation())),
+      traverse(ast_type_traits::TK_AsIs,
+               callExpr(callee(functionDecl(hasName("::absl::MaxSplits"))),
+                        hasArgument(0, anyOf(ByAnyCharArg,
+                                             ignoringParenCasts(SingleChar))),
+                        unless(isInTemplateInstantiation()))),
       this);
 }
 

@@ -108,6 +108,11 @@ static uint32_t getIntInlineImmEncoding(IntTy Imm) {
   return 0;
 }
 
+static uint32_t getLit16IntEncoding(uint16_t Val, const MCSubtargetInfo &STI) {
+  uint16_t IntImm = getIntInlineImmEncoding(static_cast<int16_t>(Val));
+  return IntImm == 0 ? 255 : IntImm;
+}
+
 static uint32_t getLit16Encoding(uint16_t Val, const MCSubtargetInfo &STI) {
   uint16_t IntImm = getIntInlineImmEncoding(static_cast<int16_t>(Val));
   if (IntImm != 0)
@@ -252,23 +257,27 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     return getLit64Encoding(static_cast<uint64_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
-  case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-  case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
+    return getLit16IntEncoding(static_cast<uint16_t>(Imm), STI);
+  case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     // FIXME Is this correct? What do inline immediates do on SI for f16 src
     // which does not have f16 support?
     return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
-
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
-  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16: {
     if (!isUInt<16>(Imm) && STI.getFeatureBits()[AMDGPU::FeatureVOP3Literal])
       return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
+    if (OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16)
+      return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
     LLVM_FALLTHROUGH;
+  }
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
+    return getLit16IntEncoding(static_cast<uint16_t>(Imm), STI);
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16: {
     uint16_t Lo16 = static_cast<uint16_t>(Imm);
     uint32_t Encoding = getLit16Encoding(Lo16, STI);

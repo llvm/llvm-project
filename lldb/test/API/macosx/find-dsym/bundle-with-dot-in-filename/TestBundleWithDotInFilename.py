@@ -17,12 +17,6 @@ class BundleWithDotInFilenameTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfRemote
-    @skipUnlessDarwin
-    # This test is explicitly a dSYM test, it doesn't need to run for any other config, but
-    # the following doesn't work, fixme.
-    # @skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is looking explicitly for a dSYM")
-
     def setUp(self):
         TestBase.setUp(self)
         self.source = 'main.c'
@@ -34,6 +28,10 @@ class BundleWithDotInFilenameTestCase(TestBase):
         # Call super's tearDown().
         TestBase.tearDown(self)
 
+    @skipIfRemote
+    @skipUnlessDarwin
+    # This test is explicitly a dSYM test, it doesn't need to run for any other config.
+    @skipIf(debug_info=no_match(["dsym"]))
     def test_attach_and_check_dsyms(self):
         """Test attach to binary, see if the bundle dSYM is found"""
         exe = self.getBuildArtifact(exe_name)

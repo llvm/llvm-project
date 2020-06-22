@@ -82,6 +82,11 @@ class CommandParser:
 
 
 class InlineTest(TestBase):
+    # Overrides
+
+    def getBuildDirBasename(self):
+        return self.__class__.__name__ + "." + self.testMethodName
+
     # Internal implementation
 
     def BuildMakefile(self):
@@ -120,7 +125,7 @@ class InlineTest(TestBase):
 
     def _test(self):
         self.BuildMakefile()
-        self.build()
+        self.build(dictionary=self._build_dict)
         self.do_test()
 
     def execute_user_command(self, __command):
@@ -190,24 +195,26 @@ def ApplyDecoratorsToFunction(func, decorators):
     return tmp
 
 
-def MakeInlineTest(__file, __globals, decorators=None):
+def MakeInlineTest(__file, __globals, decorators=None, name=None,
+        build_dict=None):
     # Adjust the filename if it ends in .pyc.  We want filenames to
     # reflect the source python file, not the compiled variant.
     if __file is not None and __file.endswith(".pyc"):
         # Strip the trailing "c"
         __file = __file[0:-1]
 
-    # Derive the test name from the current file name
-    file_basename = os.path.basename(__file)
-
-    test_name, _ = os.path.splitext(file_basename)
+    if name is None:
+        # Derive the test name from the current file name
+        file_basename = os.path.basename(__file)
+        name, _ = os.path.splitext(file_basename)
 
     test_func = ApplyDecoratorsToFunction(InlineTest._test, decorators)
     # Build the test case
-    test_class = type(test_name, (InlineTest,), dict(test=test_func, name=test_name))
+    test_class = type(name, (InlineTest,), dict(test=test_func,
+        name=name, _build_dict=build_dict))
 
     # Add the test case to the globals, and hide InlineTest
-    __globals.update({test_name: test_class})
+    __globals.update({name: test_class})
 
     # Keep track of the original test filename so we report it
     # correctly in test results.

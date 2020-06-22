@@ -169,15 +169,18 @@ Reproducers are tested in the following ways:
    directory. These tests serve as integration and regression tests for the
    reproducers infrastructure, as well as doing some sanity checking for basic
    debugger functionality.
- - The shell tests can be run against a reproducer replay. The
-   ``check-lldb-repro`` target will run the shell test suite twice. First it
-   runs the test suite and captures a reproducer for every lldb invocation and
-   saves it to a known location based off lldb's arguments and  working
-   directory. Then it runs the test suite again, this time replaying the
-   reproducers. Certain tests do not fit this paradigm (for example test that
-   check the output of the binary being debugged) and are skipped by marking
-   them as unsupported by adding ``UNSUPPORTED: lldb-repro`` to the top of the
-   test.
+ - The API and shell tests can be run against a replayed reproducer. The
+   ``check-lldb-reproducers`` target will run the API and shell test suite
+   twice: first running the test normally while capturing a reproducer and then
+   a second time using the replayed session as the test input. For the shell
+   tests this use a little shim (``lldb-repro``) that uses the arguments and
+   current working directory to transparently generate or replay a reproducer.
+   For the API tests an extra argument with the reproducer path is passed to
+   ``dotest.py`` which initializes the debugger in the appropriate mode.
+   Certain tests do not fit this paradigm (for example test that check the
+   output of the binary being debugged) and are skipped by marking them as
+   unsupported by adding ``UNSUPPORTED: lldb-repro`` to the top of the shell
+   test or adding the ``skipIfReproducer`` decorator for the API tests.
 
 Additional testing is possible:
 

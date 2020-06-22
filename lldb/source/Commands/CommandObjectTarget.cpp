@@ -200,7 +200,9 @@ public:
   LoadDependentFiles m_load_dependent_files;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(OptionGroupDependents);
+  OptionGroupDependents(const OptionGroupDependents &) = delete;
+  const OptionGroupDependents &
+  operator=(const OptionGroupDependents &) = delete;
 };
 
 #pragma mark CommandObjectTargetCreate
@@ -3997,7 +3999,9 @@ public:
 
 private:
   // For CommandObjectTargetModules only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectTargetModules);
+  CommandObjectTargetModules(const CommandObjectTargetModules &) = delete;
+  const CommandObjectTargetModules &
+  operator=(const CommandObjectTargetModules &) = delete;
 };
 
 class CommandObjectTargetSymbolsAdd : public CommandObjectParsed {
@@ -4395,7 +4399,9 @@ public:
 
 private:
   // For CommandObjectTargetModules only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectTargetSymbols);
+  CommandObjectTargetSymbols(const CommandObjectTargetSymbols &) = delete;
+  const CommandObjectTargetSymbols &
+  operator=(const CommandObjectTargetSymbols &) = delete;
 };
 
 #pragma mark CommandObjectTargetStopHookAdd

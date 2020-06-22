@@ -153,7 +153,7 @@ public:
 
   /// Identify whether a name is a runtime value that should not be hidden by
   /// from the user interface.
-  virtual bool IsWhitelistedRuntimeValue(ConstString name) { return false; }
+  virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
 
   virtual llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) {
     return llvm::None;
@@ -185,7 +185,8 @@ protected:
   Process *m_process;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(LanguageRuntime);
+  LanguageRuntime(const LanguageRuntime &) = delete;
+  const LanguageRuntime &operator=(const LanguageRuntime &) = delete;
 };
 
 } // namespace lldb_private

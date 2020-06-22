@@ -91,7 +91,7 @@ function(add_gen_header target_name)
             ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
 
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${in_file} ${fq_data_files} ${td_includes} 
+    DEPENDS ${in_file} ${fq_data_files} ${td_includes}
             ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td libc-hdrgen
   )
 

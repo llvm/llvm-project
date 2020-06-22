@@ -19,19 +19,19 @@ public:
   RISCVTargetStreamer(MCStreamer &S);
   void finish() override;
 
-  virtual void emitDirectiveOptionPush() = 0;
-  virtual void emitDirectiveOptionPop() = 0;
-  virtual void emitDirectiveOptionPIC() = 0;
-  virtual void emitDirectiveOptionNoPIC() = 0;
-  virtual void emitDirectiveOptionRVC() = 0;
-  virtual void emitDirectiveOptionNoRVC() = 0;
-  virtual void emitDirectiveOptionRelax() = 0;
-  virtual void emitDirectiveOptionNoRelax() = 0;
-  virtual void emitAttribute(unsigned Attribute, unsigned Value) = 0;
-  virtual void finishAttributeSection() = 0;
-  virtual void emitTextAttribute(unsigned Attribute, StringRef String) = 0;
+  virtual void emitDirectiveOptionPush();
+  virtual void emitDirectiveOptionPop();
+  virtual void emitDirectiveOptionPIC();
+  virtual void emitDirectiveOptionNoPIC();
+  virtual void emitDirectiveOptionRVC();
+  virtual void emitDirectiveOptionNoRVC();
+  virtual void emitDirectiveOptionRelax();
+  virtual void emitDirectiveOptionNoRelax();
+  virtual void emitAttribute(unsigned Attribute, unsigned Value);
+  virtual void finishAttributeSection();
+  virtual void emitTextAttribute(unsigned Attribute, StringRef String);
   virtual void emitIntTextAttribute(unsigned Attribute, unsigned IntValue,
-                                    StringRef StringValue) = 0;
+                                    StringRef StringValue);
 
   void emitTargetAttributes(const MCSubtargetInfo &STI);
 };

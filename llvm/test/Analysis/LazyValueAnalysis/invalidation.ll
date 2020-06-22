@@ -12,18 +12,6 @@
 ; CHECK-INVALIDATE: Invalidating analysis: LazyValueAnalysis
 ; CHECK-INVALIDATE: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE: Running analysis: LazyValueAnalysis
-;
-; Check DomTree specifically.
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
-; RUN:     -passes='require<domtree>,require<lazy-value-info>,invalidate<domtree>,require<lazy-value-info>' \
-; RUN:     | FileCheck %s --check-prefix=CHECK-DT-INVALIDATE
-; CHECK-DT-INVALIDATE: Running pass: RequireAnalysisPass
-; CHECK-DT-INVALIDATE: Running analysis: LazyValueAnalysis
-; CHECK-DT-INVALIDATE: Running pass: InvalidateAnalysisPass
-; CHECK-DT-INVALIDATE: Invalidating analysis: DominatorTreeAnalysis
-; CHECK-DT-INVALIDATE: Invalidating analysis: LazyValueAnalysis
-; CHECK-AC-INVALIDATE: Running pass: RequireAnalysisPass
-; CHECK-DT-INVALIDATE: Running analysis: LazyValueAnalysis
 
 target triple = "x86_64-unknown-linux-gnu"
 

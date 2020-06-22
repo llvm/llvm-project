@@ -180,7 +180,7 @@ void test_ctor_with_different_value_type() {
     // Though the types are different, initialization can be done with `memcpy`.
     int32_t array[1] = { -1 };
     std::vector<uint32_t> v(array, array + 1);
-    assert(v[0] == 4294967295);
+    assert(v[0] == 4294967295U);
   }
 }
 

@@ -472,7 +472,7 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     // In wasm we currently treat 'throw()' in the same way as 'noexcept'. In
     // case of throw with types, we ignore it and print a warning for now.
     // TODO Correctly handle exception specification in wasm
-    if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly) {
+    if (CGM.getLangOpts().WasmExceptions) {
       if (EST == EST_DynamicNone)
         EHStack.pushTerminate();
       else
@@ -560,7 +560,7 @@ void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
     // In wasm we currently treat 'throw()' in the same way as 'noexcept'. In
     // case of throw with types, we ignore it and print a warning for now.
     // TODO Correctly handle exception specification in wasm
-    if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly) {
+    if (CGM.getLangOpts().WasmExceptions) {
       if (EST == EST_DynamicNone)
         EHStack.popTerminate();
       return;

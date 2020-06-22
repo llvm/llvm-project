@@ -1,22 +1,35 @@
-; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips -relocation-model=static -O3 -filetype=obj -o - %s | \
-; RUN:     llvm-readelf -r | FileCheck %s --check-prefixes=CHECK-READELF,CHECK-READELF-STATIC
-; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips -relocation-model=pic -O3 -filetype=obj -o - %s | \
-; RUN:     llvm-readelf -r | FileCheck %s --check-prefixes=CHECK-READELF,CHECK-READELF-PIC
-; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips -relocation-model=static -O3 -filetype=obj -o - %s | \
-; RUN:     llvm-objdump -s -j .gcc_except_table - | FileCheck %s --check-prefix=CHECK-EXCEPT-TABLE-STATIC
-; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips -relocation-model=pic -O3 -filetype=obj -o - %s | \
-; RUN:     llvm-objdump -s -j .gcc_except_table - | FileCheck %s --check-prefix=CHECK-EXCEPT-TABLE-PIC
+; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips \
+; RUN:     -relocation-model=static -O3 -filetype=obj -o - %s | \
+; RUN:     llvm-readelf -r | FileCheck %s --check-prefixes=STATIC
+; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips \
+; RUN:     -relocation-model=pic -O3 -filetype=obj -o - %s | \
+; RUN:     llvm-readelf -r | FileCheck %s --check-prefixes=PIC
+; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips \
+; RUN:     -relocation-model=static -O3 -filetype=obj -o - %s | \
+; RUN:     llvm-objdump -s -j .gcc_except_table - | FileCheck %s --check-prefix=EXCEPT-TABLE-STATIC
+; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips \
+; RUN:     -relocation-model=pic -O3 -filetype=obj -o - %s | \
+; RUN:     llvm-objdump -s -j .gcc_except_table - | FileCheck %s --check-prefix=EXCEPT-TABLE-PIC
 
-; CHECK-READELF: .rel.eh_frame
+; STATIC-LABEL: Relocation section '.rel.eh_frame'
+; STATIC-DAG: R_MIPS_32 00000000 DW.ref.__gxx_personality_v0
+; STATIC-DAG: R_MIPS_32 00000000 .text
+; STATIC-DAG: R_MIPS_32 00000000 .gcc_except_table
+
+; PIC-LABEL: Relocation section '.rel.eh_frame'
+; PIC-DAG: R_MIPS_32   00000000 DW.ref.__gxx_personality_v0
+; PIC-DAG: R_MIPS_PC32
+; PIC-DAG: R_MIPS_32   00000000 .gcc_except_table
+
 ; CHECK-READELF: DW.ref.__gxx_personality_v0
 ; CHECK-READELF-STATIC-NEXT: R_MIPS_32 00000000 .text
 ; CHECK-READELF-PIC-NEXT: R_MIPS_PC32
 ; CHECK-READELF-NEXT: .gcc_except_table
 
-; CHECK-EXCEPT-TABLE-STATIC: 0000 ff9b1501 0c011500 00150e23 01231e00  ...........#.#..
-; CHECK-EXCEPT-TABLE-STATIC: 0010 00010000 00000000
-; CHECK-EXCEPT-TABLE-PIC:    0000 ff9b1501 0c012d00 002d133f 013f2a00 ......-..-.?.?*.
-; CHECK-EXCEPT-TABLE-PIC:    0010 00010000 00000000                    ........
+; EXCEPT-TABLE-STATIC: 0000 ff9b1501 0c011500 00150e23 01231e00  ...........#.#..
+; EXCEPT-TABLE-STATIC: 0010 00010000 00000000
+; EXCEPT-TABLE-PIC:    0000 ff9b1501 0c012d00 002d133f 013f2a00 ......-..-.?.?*.
+; EXCEPT-TABLE-PIC:    0010 00010000 00000000                    ........
 
 @_ZTIi = external constant i8*
 

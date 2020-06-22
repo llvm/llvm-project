@@ -19,9 +19,14 @@ class MiniDumpUUIDTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def verify_module(self, module, verify_path, verify_uuid):
-        uuid = module.GetUUIDString()
-        self.assertEqual(verify_path, module.GetFileSpec().fullpath)
-        self.assertEqual(verify_uuid, uuid)
+        # Compare the filename and the directory separately. We are avoiding
+        # SBFileSpec.fullpath because it causes a slash/backslash confusion
+        # on Windows.
+        self.assertEqual(
+            os.path.basename(verify_path), module.GetFileSpec().basename)
+        self.assertEqual(
+            os.path.dirname(verify_path), module.GetFileSpec().dirname or "")
+        self.assertEqual(verify_uuid, module.GetUUIDString())
 
     def get_minidump_modules(self, yaml_file):
         minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
@@ -130,7 +135,6 @@ class MiniDumpUUIDTestCase(TestBase):
         self.verify_module(modules[1], "/file/does/not/exist/b",
                            '11223344-1122-3344-1122-334411223344-11223344')
 
-    @expectedFailureAll(oslist=["windows"])
     def test_partial_uuid_match(self):
         """
             Breakpad has been known to create minidump files using CvRecord in each
@@ -185,3 +189,86 @@ class MiniDumpUUIDTestCase(TestBase):
                 self.getSourcePath("relative_module_name.yaml"))
         self.assertEqual(1, len(modules))
         self.verify_module(modules[0], name, None)
+
+    def test_add_module_build_id_16(self):
+        """
+            Test that adding module with 16 byte UUID returns the existing
+            module or fails.
+        """
+        modules = self.get_minidump_modules("linux-arm-uuids-elf-build-id-16.yaml")
+        self.assertEqual(2, len(modules))
+
+        # Add the existing modules.
+        self.assertEqual(modules[0], self.target.AddModule(
+            "/some/local/a", "", "01020304-0506-0708-090A-0B0C0D0E0F10"))
+        self.assertEqual(modules[1], self.target.AddModule(
+            "/some/local/b", "", "0A141E28-323C-4650-5A64-6E78828C96A0"))
+
+        # Adding modules with non-existing UUID should fail.
+        self.assertFalse(
+            self.target.AddModule(
+                "a", "", "12345678-1234-1234-1234-123456789ABC").IsValid())
+        self.assertFalse(
+            self.target.AddModule(
+                "a", "", "01020304-0506-0708-090A-0B0C0D0E0F10-12345678").IsValid())
+
+    def test_add_module_build_id_20(self):
+        """
+            Test that adding module with 20 byte UUID returns the existing
+            module or fails.
+        """
+        modules = self.get_minidump_modules("linux-arm-uuids-elf-build-id-20.yaml")
+
+        # Add the existing modules.
+        self.assertEqual(modules[0], self.target.AddModule(
+            "/some/local/a", "", "01020304-0506-0708-090A-0B0C0D0E0F10-11121314"))
+        self.assertEqual(modules[1], self.target.AddModule(
+            "/some/local/b", "", "0A141E28-323C-4650-5A64-6E78828C96A0-AAB4BEC8"))
+
+        # Adding modules with non-existing UUID should fail.
+        self.assertFalse(
+            self.target.AddModule(
+                "a", "", "01020304-0506-0708-090A-0B0C0D0E0F10").IsValid())
+        self.assertFalse(
+            self.target.AddModule(
+                "a", "", "01020304-0506-0708-090A-0B0C0D0E0F10-12345678").IsValid())
+
+    def test_add_module_build_id_4(self):
+        """
+            Test that adding module with 4 byte UUID returns the existing
+            module or fails.
+        """
+        modules = self.get_minidump_modules("linux-arm-uuids-elf-build-id-4.yaml")
+
+        # Add the existing modules.
+        self.assertEqual(modules[0], self.target.AddModule(
+            "/some/local/a.so", "", "01020304"))
+        self.assertEqual(modules[1], self.target.AddModule(
+            "/some/local/b.so", "", "0A141E28"))
+
+        # Adding modules with non-existing UUID should fail.
+        self.assertFalse(
+            self.target.AddModule(
+                "a", "", "01020304-0506-0708-090A-0B0C0D0E0F10").IsValid())
+        self.assertFalse(self.target.AddModule("a", "", "01020305").IsValid())
+
+    @skipIfReproducer # Modules are not orphaned and it finds the module with the same UUID from test_partial_uuid_match.
+    def test_remove_placeholder_add_real_module(self):
+        """
+            Test that removing a placeholder module and adding back the real
+            module succeeds.
+        """
+        so_path = self.getBuildArtifact("libuuidmatch.so")
+        self.yaml2obj("libuuidmatch.yaml", so_path)
+        modules = self.get_minidump_modules("linux-arm-uuids-match.yaml")
+
+        uuid = "7295E17C-6668-9E05-CBB5-DEE5003865D5-5267C116";
+        self.assertEqual(1, len(modules))
+        self.verify_module(modules[0], "/target/path/libuuidmatch.so",uuid)
+
+        self.target.RemoveModule(modules[0])
+        new_module = self.target.AddModule(so_path, "", uuid)
+
+        self.verify_module(new_module, so_path, uuid)
+        self.assertEqual(new_module, self.target.modules[0])
+        self.assertEqual(1, len(self.target.modules))

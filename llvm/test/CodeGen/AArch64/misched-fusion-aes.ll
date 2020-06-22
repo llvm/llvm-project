@@ -79,7 +79,7 @@ define void @aesea(<16 x i8>* %a0, <16 x i8>* %b0, <16 x i8>* %c0, <16 x i8> %d,
 
 ; CHECK-LABEL: aesea:
 ; CHECK: aese [[VA:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesmc [[VA]], [[VA]]
+; CHECK: aesmc [[VA]], [[VA]]
 ; CHECK: aese [[VB:v[0-7].16b]], {{v[0-7].16b}}
 ; CHECK-NEXT: aesmc [[VB]], [[VB]]
 ; CHECK: aese [[VC:v[0-7].16b]], {{v[0-7].16b}}
@@ -163,7 +163,7 @@ define void @aesda(<16 x i8>* %a0, <16 x i8>* %b0, <16 x i8>* %c0, <16 x i8> %d,
 
 ; CHECK-LABEL: aesda:
 ; CHECK: aesd [[VA:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesimc [[VA]], [[VA]]
+; CHECK: aesimc [[VA]], [[VA]]
 ; CHECK: aesd [[VB:v[0-7].16b]], {{v[0-7].16b}}
 ; CHECK-NEXT: aesimc [[VB]], [[VB]]
 ; CHECK: aesd [[VC:v[0-7].16b]], {{v[0-7].16b}}

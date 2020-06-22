@@ -5,6 +5,7 @@
 # CHECK:      .debug_rnglists contents:
 # CHECK-NEXT: 0x00000000: range list header:
 # CHECK-SAME:   length = 0x000000000000001a,
+# CHECK-SAME:   format = DWARF64,
 # CHECK-SAME:   version = 0x0005,
 # CHECK-SAME:   addr_size = 0x08,
 # CHECK-SAME:   seg_size = 0x00,

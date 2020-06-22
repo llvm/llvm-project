@@ -226,6 +226,13 @@ public:
     add(getRelativeOffset(type, target));
   }
 
+  /// Same as addRelativeOffset(), but instead relative to an element in this
+  /// aggregate, identified by its index.
+  void addRelativeOffsetToPosition(llvm::IntegerType *type,
+                                   llvm::Constant *target, size_t position) {
+    add(getRelativeOffsetToPosition(type, target, position));
+  }
+
   /// Add a relative offset to the target address, plus a small
   /// constant offset.  This is primarily useful when the relative
   /// offset is known to be a multiple of (say) four and therefore
@@ -298,9 +305,17 @@ public:
   /// position to be filled.  This is computed with an indexed
   /// getelementptr rather than by computing offsets.
   ///
-  /// The returned pointer will have type T*, where T is the given
-  /// position.
+  /// The returned pointer will have type T*, where T is the given type. This
+  /// type can differ from the type of the actual element.
   llvm::Constant *getAddrOfCurrentPosition(llvm::Type *type);
+
+  /// Produce an address which points to a position in the aggregate being
+  /// constructed. This is computed with an indexed getelementptr rather than by
+  /// computing offsets.
+  ///
+  /// The returned pointer will have type T*, where T is the given type. This
+  /// type can differ from the type of the actual element.
+  llvm::Constant *getAddrOfPosition(llvm::Type *type, size_t position);
 
   llvm::ArrayRef<llvm::Constant*> getGEPIndicesToCurrentPosition(
                            llvm::SmallVectorImpl<llvm::Constant*> &indices) {
@@ -318,6 +333,10 @@ private:
 
   llvm::Constant *getRelativeOffset(llvm::IntegerType *offsetType,
                                     llvm::Constant *target);
+
+  llvm::Constant *getRelativeOffsetToPosition(llvm::IntegerType *offsetType,
+                                              llvm::Constant *target,
+                                              size_t position);
 
   CharUnits getOffsetFromGlobalTo(size_t index) const;
 };

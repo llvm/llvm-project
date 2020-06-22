@@ -64,6 +64,16 @@ Changes to the LLVM IR
   provided by the attribute is interfaced via the API provided by the
   ``VFDatabase`` class.
 
+* `dereferenceable` attributes and metadata on pointers no longer imply
+  anything about the alignment of the pointer in question. Previously, some
+  optimizations would make assumptions based on the type of the pointer. This
+  behavior was undocumented. To preserve optimizations, frontends may need to
+  be updated to generate appropriate `align` attributes and metadata.
+
+* The DIModule metadata is extended to contain file and line number
+  information. This information is used to represent Fortran modules debug
+  info at IR level.
+
 Changes to building LLVM
 ------------------------
 
@@ -80,6 +90,12 @@ During this release ...
   for Arm M-profile targets.
 
 * Implemented C-language intrinsics ``<arm_cde.h>`` for the CDE instruction set.
+
+* Clang now defaults to ``-fomit-frame-pointer`` when targeting non-Android
+  Linux for arm and thumb when optimizations are enabled. Users that were
+  previously not specifying a value and relying on the implicit compiler
+  default may wish to specify ``-fno-omit-frame-pointer`` to get the old
+  behavior. This improves compatibility with GCC.
 
 Changes to the MIPS Target
 --------------------------
@@ -128,8 +144,14 @@ Changes to the AVR Target
 Changes to the WebAssembly Target
 ---------------------------------
 
-During this release ...
+* Programs which don't have a "main" function, called "reactors" are now
+  properly supported, with a new `-mexec-model=reactor` flag. Programs which
+  previously used `-Wl,--no-entry` to avoid having a main function should
+  switch to this new flag, so that static initialization is properly
+  performed.
 
+* `__attribute__((visibility("protected")))` now evokes a warning, as
+  WebAssembly does not support "protected" visibility.
 
 Changes to the OCaml bindings
 -----------------------------

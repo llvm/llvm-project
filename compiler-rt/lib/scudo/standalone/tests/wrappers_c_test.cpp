@@ -372,6 +372,7 @@ TEST(ScudoWrappersCTest, Fork) {
 
 static pthread_mutex_t Mutex;
 static pthread_cond_t Conditional = PTHREAD_COND_INITIALIZER;
+static bool Ready;
 
 static void *enableMalloc(void *Unused) {
   // Initialize the allocator for this thread.
@@ -382,6 +383,7 @@ static void *enableMalloc(void *Unused) {
 
   // Signal the main thread we are ready.
   pthread_mutex_lock(&Mutex);
+  Ready = true;
   pthread_cond_signal(&Conditional);
   pthread_mutex_unlock(&Mutex);
 
@@ -398,7 +400,8 @@ TEST(ScudoWrappersCTest, DisableForkEnable) {
 
   // Wait for the thread to be warmed up.
   pthread_mutex_lock(&Mutex);
-  pthread_cond_wait(&Conditional, &Mutex);
+  while (!Ready)
+    pthread_cond_wait(&Conditional, &Mutex);
   pthread_mutex_unlock(&Mutex);
 
   // Disable the allocator and fork. fork should succeed after malloc_enable.

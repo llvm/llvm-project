@@ -150,13 +150,50 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
   // it in this generic function.
   if (DestBB->isEHPad()) return nullptr;
 
-  // Don't split the non-fallthrough edge from a callbr.
-  if (isa<CallBrInst>(TI) && SuccNum > 0)
-    return nullptr;
-
   if (Options.IgnoreUnreachableDests &&
       isa<UnreachableInst>(DestBB->getFirstNonPHIOrDbgOrLifetime()))
     return nullptr;
+
+  auto *LI = Options.LI;
+  SmallVector<BasicBlock *, 4> LoopPreds;
+  // Check if extra modifications will be required to preserve loop-simplify
+  // form after splitting. If it would require splitting blocks with IndirectBr
+  // terminators, bail out if preserving loop-simplify form is requested.
+  if (LI) {
+    if (Loop *TIL = LI->getLoopFor(TIBB)) {
+
+      // The only that we can break LoopSimplify form by splitting a critical
+      // edge is if after the split there exists some edge from TIL to DestBB
+      // *and* the only edge into DestBB from outside of TIL is that of
+      // NewBB. If the first isn't true, then LoopSimplify still holds, NewBB
+      // is the new exit block and it has no non-loop predecessors. If the
+      // second isn't true, then DestBB was not in LoopSimplify form prior to
+      // the split as it had a non-loop predecessor. In both of these cases,
+      // the predecessor must be directly in TIL, not in a subloop, or again
+      // LoopSimplify doesn't hold.
+      for (pred_iterator I = pred_begin(DestBB), E = pred_end(DestBB); I != E;
+           ++I) {
+        BasicBlock *P = *I;
+        if (P == TIBB)
+          continue; // The new block is known.
+        if (LI->getLoopFor(P) != TIL) {
+          // No need to re-simplify, it wasn't to start with.
+          LoopPreds.clear();
+          break;
+        }
+        LoopPreds.push_back(P);
+      }
+      // Loop-simplify form can be preserved, if we can split all in-loop
+      // predecessors.
+      if (any_of(LoopPreds, [](BasicBlock *Pred) {
+            return isa<IndirectBrInst>(Pred->getTerminator());
+          })) {
+        if (Options.PreserveLoopSimplify)
+          return nullptr;
+        LoopPreds.clear();
+      }
+    }
+  }
 
   // Create a new basic block, linking it into the CFG.
   BasicBlock *NewBB = BasicBlock::Create(TI->getContext(),
@@ -165,13 +202,13 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
   BranchInst *NewBI = BranchInst::Create(DestBB, NewBB);
   NewBI->setDebugLoc(TI->getDebugLoc());
 
-  // Branch to the new block, breaking the edge.
-  TI->setSuccessor(SuccNum, NewBB);
-
   // Insert the block into the function... right after the block TI lives in.
   Function &F = *TIBB->getParent();
   Function::iterator FBBI = TIBB->getIterator();
   F.getBasicBlockList().insert(++FBBI, NewBB);
+
+  // Branch to the new block, breaking the edge.
+  TI->setSuccessor(SuccNum, NewBB);
 
   // If there are any PHI nodes in DestBB, we need to update them so that they
   // merge incoming values from NewBB instead of from TIBB.
@@ -212,7 +249,6 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
   // If we have nothing to update, just return.
   auto *DT = Options.DT;
   auto *PDT = Options.PDT;
-  auto *LI = Options.LI;
   auto *MSSAU = Options.MSSAU;
   if (MSSAU)
     MSSAU->wireOldPredecessorsToNewImmediatePredecessor(
@@ -281,28 +317,6 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
           createPHIsForSplitLoopExit(TIBB, NewBB, DestBB);
         }
 
-        // The only that we can break LoopSimplify form by splitting a critical
-        // edge is if after the split there exists some edge from TIL to DestBB
-        // *and* the only edge into DestBB from outside of TIL is that of
-        // NewBB. If the first isn't true, then LoopSimplify still holds, NewBB
-        // is the new exit block and it has no non-loop predecessors. If the
-        // second isn't true, then DestBB was not in LoopSimplify form prior to
-        // the split as it had a non-loop predecessor. In both of these cases,
-        // the predecessor must be directly in TIL, not in a subloop, or again
-        // LoopSimplify doesn't hold.
-        SmallVector<BasicBlock *, 4> LoopPreds;
-        for (pred_iterator I = pred_begin(DestBB), E = pred_end(DestBB); I != E;
-             ++I) {
-          BasicBlock *P = *I;
-          if (P == NewBB)
-            continue; // The new block is known.
-          if (LI->getLoopFor(P) != TIL) {
-            // No need to re-simplify, it wasn't to start with.
-            LoopPreds.clear();
-            break;
-          }
-          LoopPreds.push_back(P);
-        }
         if (!LoopPreds.empty()) {
           assert(!DestBB->isEHPad() && "We don't split edges to EH pads!");
           BasicBlock *NewExitBB = SplitBlockPredecessors(
@@ -401,9 +415,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     BasicBlock *BodyBlock = Target->splitBasicBlock(FirstNonPHI, ".split");
     if (ShouldUpdateAnalysis) {
       // Copy the BFI/BPI from Target to BodyBlock.
-      for (unsigned I = 0, E = BodyBlock->getTerminator()->getNumSuccessors();
-           I < E; ++I)
-        BPI->setEdgeProbability(BodyBlock, I, EdgeProbabilities[I]);
+      BPI->setEdgeProbability(BodyBlock, EdgeProbabilities);
       BFI->setBlockFreq(BodyBlock, BFI->getBlockFreq(Target).getFrequency());
     }
     // It's possible Target was its own successor through an indirectbr.

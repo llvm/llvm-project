@@ -22,10 +22,11 @@
 namespace mlir {
 class AffineForOp;
 class FuncOp;
+class LoopLikeOpInterface;
+struct MemRefRegion;
 class OpBuilder;
 class Value;
 class ValueRange;
-struct MemRefRegion;
 
 namespace scf {
 class ForOp;
@@ -293,6 +294,9 @@ AffineForOp createCanonicalizedAffineForOp(OpBuilder b, Location loc,
 LogicalResult
 separateFullTiles(MutableArrayRef<AffineForOp> nest,
                   SmallVectorImpl<AffineForOp> *fullTileNest = nullptr);
+
+/// Move loop invariant code out of `looplike`.
+LogicalResult moveLoopInvariantCode(LoopLikeOpInterface looplike);
 
 } // end namespace mlir
 

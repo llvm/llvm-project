@@ -21,6 +21,7 @@ define half @test_v1f16(<1 x half> %a) nounwind {
 ; CHECK-NEXT:    vmov s2, r0
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bl __aeabi_f2h
 ; CHECK-NEXT:    pop {r11, lr}
 ; CHECK-NEXT:    mov pc, lr
 ; CHECK-NEXT:    .p2align 2

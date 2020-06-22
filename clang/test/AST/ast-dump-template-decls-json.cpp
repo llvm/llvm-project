@@ -1351,6 +1351,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "hasConstParam": true,
 // CHECK-NEXT:        "implicitHasConstParam": true,
 // CHECK-NEXT:        "needsImplicit": true,
+// CHECK-NEXT:        "simple": true,
 // CHECK-NEXT:        "trivial": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "copyCtor": {
@@ -1461,6 +1462,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "hasConstParam": true,
 // CHECK-NEXT:      "implicitHasConstParam": true,
 // CHECK-NEXT:      "needsImplicit": true,
+// CHECK-NEXT:      "simple": true,
 // CHECK-NEXT:      "trivial": true
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "copyCtor": {
@@ -1643,6 +1645,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "hasConstParam": true,
 // CHECK-NEXT:        "implicitHasConstParam": true,
 // CHECK-NEXT:        "needsImplicit": true,
+// CHECK-NEXT:        "simple": true,
 // CHECK-NEXT:        "trivial": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "copyCtor": {
@@ -1747,6 +1750,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "hasConstParam": true,
 // CHECK-NEXT:      "implicitHasConstParam": true,
 // CHECK-NEXT:      "needsImplicit": true,
+// CHECK-NEXT:      "simple": true,
 // CHECK-NEXT:      "trivial": true
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "copyCtor": {
@@ -1939,6 +1943,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "hasConstParam": true,
 // CHECK-NEXT:        "implicitHasConstParam": true,
 // CHECK-NEXT:        "needsImplicit": true,
+// CHECK-NEXT:        "simple": true,
 // CHECK-NEXT:        "trivial": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "copyCtor": {
@@ -2093,6 +2098,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "hasConstParam": true,
 // CHECK-NEXT:        "implicitHasConstParam": true,
 // CHECK-NEXT:        "needsImplicit": true,
+// CHECK-NEXT:        "simple": true,
 // CHECK-NEXT:        "trivial": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "copyCtor": {
@@ -2247,6 +2253,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "hasConstParam": true,
 // CHECK-NEXT:        "implicitHasConstParam": true,
 // CHECK-NEXT:        "needsImplicit": true,
+// CHECK-NEXT:        "simple": true,
 // CHECK-NEXT:        "trivial": true
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "copyCtor": {

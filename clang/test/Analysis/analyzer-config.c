@@ -1,13 +1,14 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.ConfigDumper > %t 2>&1
 // RUN: FileCheck --input-file=%t %s --match-full-lines
 
-// CHECK: [config]
+// CHECK:      [config]
 // CHECK-NEXT: add-pop-up-notes = true
 // CHECK-NEXT: aggressive-binary-operation-simplification = false
 // CHECK-NEXT: alpha.clone.CloneChecker:IgnoredFilesPattern = ""
 // CHECK-NEXT: alpha.clone.CloneChecker:MinimumCloneComplexity = 50
 // CHECK-NEXT: alpha.clone.CloneChecker:ReportNormalClones = true
 // CHECK-NEXT: alpha.cplusplus.STLAlgorithmModeling:AggressiveStdFindModeling = false
+// CHECK-NEXT: alpha.osx.cocoa.DirectIvarAssignment:AnnotatedFunctions = false
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtExec = 0x04
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtRead = 0x01
 // CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
@@ -29,11 +30,20 @@
 // CHECK-NEXT: cfg-rich-constructors = true
 // CHECK-NEXT: cfg-scopes = false
 // CHECK-NEXT: cfg-temporary-dtors = true
+// CHECK-NEXT: core.CallAndMessage:ArgInitializedness = true
+// CHECK-NEXT: core.CallAndMessage:ArgPointeeInitializedness = false
+// CHECK-NEXT: core.CallAndMessage:CXXDeallocationArg = true
+// CHECK-NEXT: core.CallAndMessage:CXXThisMethodCall = true
+// CHECK-NEXT: core.CallAndMessage:FunctionPointer = true
+// CHECK-NEXT: core.CallAndMessage:NilReceiver = true
+// CHECK-NEXT: core.CallAndMessage:ParameterCount = true
+// CHECK-NEXT: core.CallAndMessage:UndefReceiver = true
 // CHECK-NEXT: cplusplus.Move:WarnOn = KnownsAndLocals
 // CHECK-NEXT: crosscheck-with-z3 = false
 // CHECK-NEXT: ctu-dir = ""
 // CHECK-NEXT: ctu-import-threshold = 100
 // CHECK-NEXT: ctu-index-name = externalDefMap.txt
+// CHECK-NEXT: ctu-invocation-list = invocations.yaml
 // CHECK-NEXT: deadcode.DeadStores:ShowFixIts = false
 // CHECK-NEXT: deadcode.DeadStores:WarnForDeadNestedAssignments = true
 // CHECK-NEXT: debug.AnalysisOrder:* = false
@@ -90,7 +100,6 @@
 // CHECK-NEXT: optin.osx.cocoa.localizability.NonLocalizedStringChecker:AggressiveReport = false
 // CHECK-NEXT: optin.performance.Padding:AllowedPad = 24
 // CHECK-NEXT: osx.NumberObjectConversion:Pedantic = false
-// CHECK-NEXT: osx.cocoa.RetainCount:CheckOSObject = true
 // CHECK-NEXT: osx.cocoa.RetainCount:TrackNSCFStartParam = false
 // CHECK-NEXT: prune-paths = true
 // CHECK-NEXT: region-store-small-struct-limit = 2
@@ -106,5 +115,3 @@
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
-// CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 104

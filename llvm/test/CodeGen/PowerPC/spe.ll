@@ -272,7 +272,7 @@ define i1 @test_fcmpuno(float %a, float %b) {
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB13_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp uno float %a, %b
@@ -291,7 +291,7 @@ define i1 @test_fcmpord(float %a, float %b) {
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB14_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ord float %a, %b
@@ -312,7 +312,7 @@ define i1 @test_fcmpueq(float %a, float %b) {
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB15_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ueq float %a, %b
@@ -333,7 +333,7 @@ define i1 @test_fcmpne(float %a, float %b) {
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB16_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp one float %a, %b
@@ -418,7 +418,7 @@ define i1 @test_fcmpult(float %a, float %b) {
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB19_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ult float %a, %b
@@ -691,7 +691,7 @@ define i1 @test_dcmpuno(double %a, double %b) {
 ; CHECK-NEXT:    ori 3, 7, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB35_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp uno double %a, %b
@@ -712,7 +712,7 @@ define i1 @test_dcmpord(double %a, double %b) {
 ; CHECK-NEXT:    ori 3, 7, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB36_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ord double %a, %b
@@ -952,7 +952,7 @@ define i1 @test_dcmpne(double %a, double %b) {
 ; CHECK-NEXT:    ori 3, 7, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB43_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp one double %a, %b
@@ -1083,7 +1083,7 @@ define i1 @test_dcmpge(double %a, double %b) {
 ; CHECK-NEXT:    ori 3, 7, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB47_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp oge double %a, %b
@@ -1297,6 +1297,8 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; CHECK-NEXT:    evlddx 31, 1, 5 # 8-byte Folded Reload
 ; CHECK-NEXT:    li 5, 256
 ; CHECK-NEXT:    evlddx 30, 1, 5 # 8-byte Folded Reload
+; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $s3
+; CHECK-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; CHECK-NEXT:    evldd 29, 248(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    evldd 28, 240(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    evldd 27, 232(1) # 8-byte Folded Reload
@@ -1313,8 +1315,6 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; CHECK-NEXT:    evldd 16, 144(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    evldd 15, 136(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    evldd 14, 128(1) # 8-byte Folded Reload
-; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; CHECK-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; CHECK-NEXT:    lwz 31, 348(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 30, 344(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 29, 340(1) # 4-byte Folded Reload
@@ -1392,8 +1392,8 @@ define dso_local float @test_fma(i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:    # implicit-def: $r5
 ; CHECK-NEXT:  .LBB57_4: # %for.cond.cleanup
 ; CHECK-NEXT:    evldd 30, 16(1) # 8-byte Folded Reload
-; CHECK-NEXT:    evldd 29, 8(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mr 3, 5
+; CHECK-NEXT:    evldd 29, 8(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 29, 36(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 0, 52(1)

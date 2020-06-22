@@ -85,7 +85,7 @@ TEST(LowLevelTypeTest, Vector) {
 
       // Test Type->LLT conversion.
       Type *IRSTy = IntegerType::get(C, S);
-      Type *IRTy = VectorType::get(IRSTy, Elts);
+      Type *IRTy = FixedVectorType::get(IRSTy, Elts);
       EXPECT_EQ(VTy, getLLTForType(*IRTy, DL));
     }
   }
@@ -222,8 +222,8 @@ TEST(LowLevelTypeTest, Pointer) {
       // Test Type->LLT conversion.
       Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
       EXPECT_EQ(Ty, getLLTForType(*IRTy, DL));
-      Type *IRVTy =
-        VectorType::get(PointerType::get(IntegerType::get(C, 8), AS), NumElts);
+      Type *IRVTy = FixedVectorType::get(
+          PointerType::get(IntegerType::get(C, 8), AS), NumElts);
       EXPECT_EQ(VTy, getLLTForType(*IRVTy, DL));
     }
   }

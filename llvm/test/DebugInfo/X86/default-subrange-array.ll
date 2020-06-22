@@ -24,7 +24,7 @@ source_filename = "test/DebugInfo/X86/default-subrange-array.ll"
 ; CHECK-NEXT:         DW_AT_type
 ; CHECK:            DW_TAG_subrange_type
 ; CHECK-NEXT:         DW_AT_type
-; DWARF4-NEXT:        DW_AT_lower_bound [DW_FORM_data1] (0x00)
+; DWARF4-NEXT:        DW_AT_lower_bound [DW_FORM_sdata] (0)
 ; CHECK-NEXT:         DW_AT_count [DW_FORM_data1]       (0x2a)
 ; DWARF5-NOT:         DW_AT_lower_bound
 

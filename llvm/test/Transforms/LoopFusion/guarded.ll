@@ -232,3 +232,62 @@ for.second.exit:
 for.end:
   ret void
 }
+
+; Test that the incoming block of `%j.lcssa` is updated correctly
+; from for.second.guard to for.first.guard, and the two loops for.first and
+; for.second are fused.
+
+; CHECK: i64 @updatephi_guardnonloopblock
+; CHECK-LABEL: for.first.guard:
+; CHECK-NEXT: %cmp.guard = icmp slt i64 0, %N
+; CHECK: br i1 %cmp.guard, label %for.first.preheader, label %for.end
+; CHECK-LABEL: for.first.preheader:
+; CHECK-NEXT:  br label %for.first
+; CHECK-LABEL: for.first:
+; CHECK:   br i1 %cmp.j, label %for.first, label %for.second.exit
+; CHECK-LABEL: for.second.exit:
+; CHECK-NEXT:   br label %for.end
+; CHECK-LABEL: for.end:
+; CHECK-NEXT:   %j.lcssa = phi i64 [ 0, %for.first.guard ], [ %j.02, %for.second.exit ]
+; CHECK-NEXT:   ret i64 %j.lcssa
+
+define i64 @updatephi_guardnonloopblock(i32* noalias %A, i32* noalias %B, i64 %N, i32 %x) {
+for.first.guard:
+  %cmp.guard = icmp slt i64 0, %N
+  br i1 %cmp.guard, label %for.first.preheader, label %for.second.guard
+
+for.first.preheader:
+  br label %for.first
+
+for.first:
+  %i.04 = phi i64 [ %inc, %for.first ], [ 0, %for.first.preheader ]
+  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %i.04
+  store i32 0, i32* %arrayidx, align 4
+  %inc = add nsw i64 %i.04, 1
+  %cmp = icmp slt i64 %inc, %N
+  br i1 %cmp, label %for.first, label %for.first.exit
+
+for.first.exit:
+  br label %for.second.guard
+
+for.second.guard:
+  br i1 %cmp.guard, label %for.second.preheader, label %for.end
+
+for.second.preheader:
+  br label %for.second
+
+for.second:
+  %j.02 = phi i64 [ %inc6, %for.second ], [ 0, %for.second.preheader ]
+  %arrayidx4 = getelementptr inbounds i32, i32* %B, i64 %j.02
+  store i32 0, i32* %arrayidx4, align 4
+  %inc6 = add nsw i64 %j.02, 1
+  %cmp.j = icmp slt i64 %inc6, %N
+  br i1 %cmp.j, label %for.second, label %for.second.exit
+
+for.second.exit:
+  br label %for.end
+
+for.end:
+  %j.lcssa = phi i64 [ 0, %for.second.guard ], [ %j.02, %for.second.exit ]
+  ret i64 %j.lcssa
+}

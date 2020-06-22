@@ -42,7 +42,8 @@ class Std_Op<string mnemonic, list<OpTrait> traits = []> :
 // Base class for standard cast operations. Requires single operand and result,
 // but does not constrain them to specific types.
 class CastOp<string mnemonic, list<OpTrait> traits = []> :
-    Std_Op<mnemonic, !listconcat(traits, [NoSideEffect])> {
+    Std_Op<mnemonic,
+           !listconcat(traits, [NoSideEffect, SameOperandsAndResultShape])> {
 
   let results = (outs AnyType);
 
@@ -1372,51 +1373,47 @@ def DeallocOp : Std_Op<"dealloc", [MemoryEffects<[MemFree]>]> {
 def DimOp : Std_Op<"dim", [NoSideEffect]> {
   let summary = "dimension index operation";
   let description = [{
-    Syntax:
+    The `dim` operation takes a memref/tensor and a dimension operand of type
+    `index`.
+    It returns the size of the requested dimension of the given memref/tensor.
+    If the dimension index is out of bounds the behavior is undefined.
 
-    ```
-    operation ::= ssa-id `=` `std.dim` ssa-id `,` integer-literal `:` type
-    ```
-
-    The `dim` operation takes a memref or tensor operand and a dimension index,
-    and returns an [`index`](../LangRef.md#index-type) that is the size of that
-    dimension.
-
-    The `dim` operation is represented with a single integer attribute named
-    `index`, and the type specifies the type of the memref or tensor operand.
+    The specified memref or tensor type is that of the first operand.
 
     Example:
 
     ```mlir
     // Always returns 4, can be constant folded:
-    %x = dim %A, 0 : tensor<4 x ? x f32>
+    %c0 = constant 0 : index
+    %x = = dim %A, %c0 : tensor<4 x ? x f32>
 
     // Returns the dynamic dimension of %A.
-    %y = dim %A, 1 : tensor<4 x ? x f32>
+    %c1 = constant 1 : index
+    %y = dim %A, %c1 : tensor<4 x ? x f32>
 
     // Equivalent generic form:
-    %x = "std.dim"(%A) {index = 0 : i64} : (tensor<4 x ? x f32>) -> index
-    %y = "std.dim"(%A) {index = 1 : i64} : (tensor<4 x ? x f32>) -> index
+    %x = "std.dim"(%A, %c0) : (tensor<4 x ? x f32>, index) -> index
+    %y = "std.dim"(%A, %c1) : (tensor<4 x ? x f32>, index) -> index
     ```
   }];
 
   let arguments = (ins AnyTypeOf<[AnyMemRef, AnyTensor],
                                  "any tensor or memref type">:$memrefOrTensor,
-                       APIntAttr:$index);
-  let results = (outs Index);
+                       Index:$index);
+  let results = (outs Index:$result);
 
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value memrefOrTensor,"
-    "unsigned index", [{
-      auto indexType = builder.getIndexType();
-      auto indexAttr = builder.getIntegerAttr(indexType, index);
-      build(builder, result, indexType, memrefOrTensor, indexAttr);
-    }]>];
+  let assemblyFormat = [{
+    attr-dict $memrefOrTensor `,` $index `:` type($memrefOrTensor)
+  }];
+
+  let builders = [
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+              "Value memrefOrTensor, int64_t index">
+  ];
 
   let extraClassDeclaration = [{
-    unsigned getIndex() {
-      return getAttrOfType<IntegerAttr>("index").getValue().getZExtValue();
-    }
+    /// Helper function to get the index as a simple integer if it is constant.
+    Optional<int64_t> getConstantIndex();
   }];
 
   let hasFolder = 1;
@@ -1522,6 +1519,39 @@ def ExtractElementOp : Std_Op<"extract_element",
   let assemblyFormat = [{
     $aggregate `[` $indices `]` attr-dict `:` type($aggregate)
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// TensorFromElementsOp
+//===----------------------------------------------------------------------===//
+
+def TensorFromElementsOp : Std_Op<"tensor_from_elements",
+    [NoSideEffect, SameOperandsAndResultElementType]> {
+  string summary = "tensor from elements operation.";
+  string description = [{
+    Create a 1D tensor from a range of same-type arguments.
+
+    Example:
+
+    ```mlir
+    tensor_from_elements(i_1, ..., i_N) :  tensor<Nxindex>
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$elements);
+  let results = (outs AnyTensor:$result);
+
+  let skipDefaultBuilders = 1;
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, ValueRange elements", [{
+      assert(!elements.empty() && "expected at least one element");
+      result.addOperands(elements);
+      result.addTypes(
+          RankedTensorType::get({static_cast<int64_t>(elements.size())},
+                                *elements.getTypes().begin()));
+    }]>];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2684,6 +2714,21 @@ def SubViewOp : Std_Op<"subview", [
     /// Range entry contains either the dynamic value or a ConstantIndexOp
     /// constructed with `b` at location `loc`.
     SmallVector<Range, 8> getOrCreateRanges(OpBuilder &b, Location loc);
+
+    /// Return the offsets as Values. Each Value is either the dynamic
+    /// value specified in the op or a ConstantIndexOp constructed
+    /// with `b` at location `loc`
+    SmallVector<Value, 4> getOrCreateOffsets(OpBuilder &b, Location loc);
+
+    /// Return the sizes as Values. Each Value is either the dynamic
+    /// value specified in the op or a ConstantIndexOp constructed
+    /// with `b` at location `loc`
+    SmallVector<Value, 4> getOrCreateSizes(OpBuilder &b, Location loc);
+
+    /// Return the strides as Values. Each Value is either the dynamic
+    /// value specified in the op or a ConstantIndexOp constructed with
+    /// `b` at location `loc`
+    SmallVector<Value, 4> getOrCreateStrides(OpBuilder &b, Location loc);
 
     /// A subview result type can be fully inferred from the source type and the
     /// static representation of offsets, sizes and strides. Special sentinels

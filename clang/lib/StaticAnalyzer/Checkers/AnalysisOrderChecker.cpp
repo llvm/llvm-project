@@ -165,7 +165,7 @@ public:
       llvm::errs() << "EndAnalysis\n";
   }
 
-  void checkNewAllocator(const CXXNewExpr *CNE, SVal Target,
+  void checkNewAllocator(const CXXAllocatorCall &Call,
                          CheckerContext &C) const {
     if (isCallbackEnabled(C, "NewAllocator"))
       llvm::errs() << "NewAllocator\n";

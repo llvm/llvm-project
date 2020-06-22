@@ -967,7 +967,7 @@ void request_completions(const llvm::json::Object &request) {
     text.c_str(),
     actual_column,
     0, -1, matches, descriptions);
-  size_t count = std::min((uint32_t)50, matches.GetSize());
+  size_t count = std::min((uint32_t)100, matches.GetSize());
   targets.reserve(count);
   for (size_t i = 0; i < count; i++) {
     std::string match = matches.GetStringAtIndex(i);

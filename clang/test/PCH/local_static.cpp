@@ -8,6 +8,10 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9.0 -include-pch %t.pch -emit-llvm -o %t.pch.ll %s
 // RUN: FileCheck --input-file %t.pch.ll %s
 
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9.0 -x c++-header -emit-pch -fpch-instantiate-templates -o %t.pch %S/local_static.h
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9.0 -include-pch %t.pch -emit-llvm -o %t.pch.ll %s
+// RUN: FileCheck --input-file %t.pch.ll %s
+
 void test(Bar &b) {
   b.f<int>();
   static int s;

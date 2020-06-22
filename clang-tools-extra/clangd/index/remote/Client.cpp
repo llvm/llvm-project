@@ -46,8 +46,7 @@ class IndexClient : public clangd::SymbolIndex {
       }
       auto Sym = fromProtobuf(Reply.stream_result(), &Strings);
       if (!Sym)
-        elog("Received invalid {0}: {1}", ReplyT::descriptor()->name(),
-             Reply.stream_result().yaml_serialization());
+        elog("Received invalid {0}", ReplyT::descriptor()->name());
       Callback(*Sym);
     }
     SPAN_ATTACH(Tracer, "status", Reader->Finish().ok());

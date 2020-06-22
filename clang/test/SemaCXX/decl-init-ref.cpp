@@ -40,8 +40,8 @@ namespace PR16502 {
 namespace IncompleteTest {
   struct String;
   // expected-error@+1 {{reference to incomplete type 'const IncompleteTest::String' could not bind to an lvalue of type 'const char [1]'}}
-  void takeString(const String& = "") {} // expected-note {{passing argument to parameter here}} expected-note {{candidate function}}
+  void takeString(const String& = "") {} // expected-note {{passing argument to parameter here}}
   void test() {
-        takeString(); // expected-error {{no matching function for call}}
+        takeString();
   }
 }

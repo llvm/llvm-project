@@ -1056,9 +1056,9 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
     //   |         +-- Old SP (before allocframe)
     //   +-- New FP (after allocframe)
     //
-    // MCCFIInstruction::createDefCfa subtracts the offset from the register.
+    // MCCFIInstruction::cfiDefCfa adds the offset from the register.
     // MCCFIInstruction::createOffset takes the offset without sign change.
-    auto DefCfa = MCCFIInstruction::createDefCfa(FrameLabel, DwFPReg, -8);
+    auto DefCfa = MCCFIInstruction::cfiDefCfa(FrameLabel, DwFPReg, 8);
     BuildMI(MBB, At, DL, CFID)
         .addCFIIndex(MF.addFrameInst(DefCfa));
     // R31 (return addr) = CFA - 4

@@ -6,7 +6,7 @@
 # RUN:   FileCheck %s
 
 # CHECK:      .debug_cu_index contents:
-# CHECK-NEXT: version = 2 slots = 2
+# CHECK-NEXT: version = 2, units = 1, slots = 2
 # CHECK-EMPTY:
 # CHECK-NEXT: Index Signature          INFO                     ABBREV                   LINE                     LOC                      STR_OFFSETS              MACINFO                  MACRO
 # CHECK-NEXT: ----- ------------------ ------------------------ ------------------------ ------------------------ ------------------------ ------------------------ ------------------------ ------------------------

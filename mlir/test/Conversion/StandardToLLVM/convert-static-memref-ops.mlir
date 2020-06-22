@@ -316,8 +316,19 @@ func @zero_d_store(%arg0: memref<f32>, %arg1: f32) {
 // -----
 
 // CHECK-LABEL: func @static_store
+// CHECK-SAME:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG2:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG3:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG4:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG5:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG6:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[I:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 // BAREPTR-LABEL: func @static_store
 // BAREPTR-SAME: %[[A:.*]]: !llvm<"float*">
+// BAREPTR-SAME:         %[[I:[a-zA-Z0-9]*]]: !llvm.i64
+// BAREPTR-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @static_store(%static : memref<10x42xf32>, %i : index, %j : index, %val : f32) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
 //  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
@@ -351,19 +362,24 @@ func @static_store(%static : memref<10x42xf32>, %i : index, %j : index, %val : f
 func @static_memref_dim(%static : memref<42x32x15x13x27xf32>) {
 // CHECK:        llvm.mlir.constant(42 : index) : !llvm.i64
 // BAREPTR:      llvm.insertvalue %{{.*}}, %{{.*}}[4, 4] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
-// BAREPTR-NEXT: llvm.mlir.constant(42 : index) : !llvm.i64
-  %0 = dim %static, 0 : memref<42x32x15x13x27xf32>
-// CHECK-NEXT:  llvm.mlir.constant(32 : index) : !llvm.i64
-// BAREPTR-NEXT:  llvm.mlir.constant(32 : index) : !llvm.i64
-  %1 = dim %static, 1 : memref<42x32x15x13x27xf32>
-// CHECK-NEXT:  llvm.mlir.constant(15 : index) : !llvm.i64
-// BAREPTR-NEXT:  llvm.mlir.constant(15 : index) : !llvm.i64
-  %2 = dim %static, 2 : memref<42x32x15x13x27xf32>
-// CHECK-NEXT:  llvm.mlir.constant(13 : index) : !llvm.i64
-// BAREPTR-NEXT:  llvm.mlir.constant(13 : index) : !llvm.i64
-  %3 = dim %static, 3 : memref<42x32x15x13x27xf32>
-// CHECK-NEXT:  llvm.mlir.constant(27 : index) : !llvm.i64
-// BAREPTR-NEXT:  llvm.mlir.constant(27 : index) : !llvm.i64
-  %4 = dim %static, 4 : memref<42x32x15x13x27xf32>
+// BAREPTR: llvm.mlir.constant(42 : index) : !llvm.i64
+  %c0 = constant 0 : index
+  %0 = dim %static, %c0 : memref<42x32x15x13x27xf32>
+// CHECK:  llvm.mlir.constant(32 : index) : !llvm.i64
+// BAREPTR:  llvm.mlir.constant(32 : index) : !llvm.i64
+  %c1 = constant 1 : index
+  %1 = dim %static, %c1 : memref<42x32x15x13x27xf32>
+// CHECK:  llvm.mlir.constant(15 : index) : !llvm.i64
+// BAREPTR:  llvm.mlir.constant(15 : index) : !llvm.i64
+  %c2 = constant 2 : index
+  %2 = dim %static, %c2 : memref<42x32x15x13x27xf32>
+// CHECK:  llvm.mlir.constant(13 : index) : !llvm.i64
+// BAREPTR:  llvm.mlir.constant(13 : index) : !llvm.i64
+  %c3 = constant 3 : index
+  %3 = dim %static, %c3 : memref<42x32x15x13x27xf32>
+// CHECK:  llvm.mlir.constant(27 : index) : !llvm.i64
+// BAREPTR:  llvm.mlir.constant(27 : index) : !llvm.i64
+  %c4 = constant 4 : index
+  %4 = dim %static, %c4 : memref<42x32x15x13x27xf32>
   return
 }

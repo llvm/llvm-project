@@ -14,28 +14,36 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* noca
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GCN-NEXT:    s_mov_b32 m0, -1
+; GCN-NEXT:    s_mov_b64 s[2:3], -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
 ; GCN-NEXT:    ds_read_b64 v[0:1], v0
-; GCN-NEXT:    s_mov_b32 s0, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, 0
-; GCN-NEXT:  BB0_1: ; %bb5
+; GCN-NEXT:    s_and_b64 s[0:1], exec, -1
+; GCN-NEXT:    s_branch BB0_2
+; GCN-NEXT:  BB0_1: ; %bb10
+; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; GCN-NEXT:    s_mov_b64 s[4:5], 0
+; GCN-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
+; GCN-NEXT:    s_cbranch_vccz BB0_4
+; GCN-NEXT:  BB0_2: ; %bb5
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_cmp_lg_u32 s0, 1
-; GCN-NEXT:    s_cbranch_scc0 BB0_3
-; GCN-NEXT:  ; %bb.2: ; %bb10
-; GCN-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; GCN-NEXT:    ; implicit-def: $sgpr0
+; GCN-NEXT:    s_mov_b64 vcc, s[0:1]
 ; GCN-NEXT:    s_cbranch_vccnz BB0_1
-; GCN-NEXT:    s_branch BB0_5
-; GCN-NEXT:  BB0_3: ; %bb8
+; GCN-NEXT:  ; %bb.3: ; in Loop: Header=BB0_2 Depth=1
+; GCN-NEXT:    s_mov_b64 s[4:5], -1
+; GCN-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
+; GCN-NEXT:    s_cbranch_vccnz BB0_2
+; GCN-NEXT:  BB0_4: ; %loop.exit.guard
+; GCN-NEXT:    s_and_b64 vcc, exec, s[4:5]
+; GCN-NEXT:    s_cbranch_vccz BB0_7
+; GCN-NEXT:  ; %bb.5: ; %bb8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_read_b32 v0, v0
 ; GCN-NEXT:    s_and_b64 vcc, exec, 0
-; GCN-NEXT:  BB0_4: ; %bb9
+; GCN-NEXT:  BB0_6: ; %bb9
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_cbranch_vccz BB0_4
-; GCN-NEXT:  BB0_5: ; %DummyReturnBlock
+; GCN-NEXT:    s_cbranch_vccz BB0_6
+; GCN-NEXT:  BB0_7: ; %DummyReturnBlock
 ; GCN-NEXT:    s_endpgm
 ; IR-LABEL: @reduced_nested_loop_conditions(
 ; IR-NEXT:  bb:
@@ -84,7 +92,6 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* noca
 ; IR:       bb23:
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP6]])
 ; IR-NEXT:    ret void
-;
 bb:
   %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %my.tmp1 = getelementptr inbounds i64, i64 addrspace(3)* %arg, i32 %my.tmp
@@ -268,7 +275,6 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP7]])
 ; IR-NEXT:    store volatile i32 0, i32 addrspace(1)* undef
 ; IR-NEXT:    ret void
-;
 bb:
   %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %my.tmp1 = zext i32 %my.tmp to i64
