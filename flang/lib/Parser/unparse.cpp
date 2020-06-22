@@ -2359,24 +2359,10 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpFlushMemoryClause &x) {
-    switch (x.v) {
-    case OmpFlushMemoryClause::FlushMemoryOrder::AcqRel:
-      Word("ACQ_REL ");
-      break;
-    case OmpFlushMemoryClause::FlushMemoryOrder::Release:
-      Word("RELEASE ");
-      break;
-    case OmpFlushMemoryClause::FlushMemoryOrder::Acquire:
-      Word("ACQUIRE ");
-      break;
-    }
-  }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP FLUSH ");
-    Walk(std::get<std::optional<OmpFlushMemoryClause>>(x.t));
-    Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    Word("!$OMP FLUSH");
+    Walk("(", std::get<std::optional<OmpObjectList>>(x.t), ")");
     Put("\n");
     EndOpenMP();
   }
