@@ -678,8 +678,7 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
     StrTable = DynamicStringTable;
     Syms = dynamic_symbols();
     SymtabName = DynSymtabName;
-    if (DynSymRegion)
-      Entries = DynSymRegion->Size / DynSymRegion->EntSize;
+    Entries = Syms.size();
   } else {
     if (!DotSymtabSec)
       return;
