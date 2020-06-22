@@ -595,3 +595,63 @@ define float @fabs_same_op_extra_use(float %x) {
   %r = fdiv ninf reassoc float %a, %a
   ret float %r
 }
+
+define float @fabs_fabs(float %x, float %y) {
+; CHECK-LABEL: @fabs_fabs(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X_FABS]], [[Y_FABS]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %y.fabs = call float @llvm.fabs.f32(float %y)
+  %r = fdiv float %x.fabs, %y.fabs
+  ret float %r
+}
+
+define float @fabs_fabs_extra_use1(float %x, float %y) {
+; CHECK-LABEL: @fabs_fabs_extra_use1(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[X_FABS]])
+; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv ninf float [[X_FABS]], [[Y_FABS]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  call void @use_f32(float %x.fabs)
+  %y.fabs = call float @llvm.fabs.f32(float %y)
+  %r = fdiv ninf float %x.fabs, %y.fabs
+  ret float %r
+}
+
+define float @fabs_fabs_extra_use2(float %x, float %y) {
+; CHECK-LABEL: @fabs_fabs_extra_use2(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[Y_FABS:%.*]] = call fast float @llvm.fabs.f32(float [[Y:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[Y_FABS]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf float [[X_FABS]], [[Y_FABS]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x.fabs = call fast float @llvm.fabs.f32(float %x)
+  %y.fabs = call fast float @llvm.fabs.f32(float %y)
+  call void @use_f32(float %y.fabs)
+  %r = fdiv reassoc ninf float %x.fabs, %y.fabs
+  ret float %r
+}
+
+define float @fabs_fabs_extra_use3(float %x, float %y) {
+; CHECK-LABEL: @fabs_fabs_extra_use3(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[X_FABS]])
+; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[Y_FABS]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X_FABS]], [[Y_FABS]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  call void @use_f32(float %x.fabs)
+  %y.fabs = call float @llvm.fabs.f32(float %y)
+  call void @use_f32(float %y.fabs)
+  %r = fdiv float %x.fabs, %y.fabs
+  ret float %r
+}
