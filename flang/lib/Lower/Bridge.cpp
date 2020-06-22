@@ -1435,9 +1435,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::DataStmt &) {
-    // FIXME: The front-end doesn't provide the right information yet.
-    mlir::emitError(toLocation(), "DATA statement is not handled.");
-    exit(1);
+    // do nothing. The front-end converts to data initializations.
   }
 
   void genFIR(const Fortran::parser::NamelistStmt &) { TODO(); }
