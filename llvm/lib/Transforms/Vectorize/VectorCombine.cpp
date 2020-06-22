@@ -196,7 +196,7 @@ static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
   // to the new element index. Example for OldIndex == 2 and NewIndex == 0:
   // ShufMask = { 2, undef, undef, undef }
   auto *VecTy = cast<FixedVectorType>(Vec->getType());
-  SmallVector<int, 32> ShufMask(VecTy->getNumElements(), -1);
+  SmallVector<int, 32> ShufMask(VecTy->getNumElements(), UndefMaskElem);
   ShufMask[NewIndex] = OldIndex;
   Value *Undef = UndefValue::get(VecTy);
   return Builder.CreateShuffleVector(Vec, Undef, ShufMask, "shift");
