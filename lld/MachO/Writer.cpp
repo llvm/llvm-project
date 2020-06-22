@@ -134,25 +134,23 @@ public:
         seg->lastSection()->addr + seg->lastSection()->getSize() - c->vmaddr;
     c->nsects = seg->numNonHiddenSections();
 
-    for (auto &p : seg->getSections()) {
-      StringRef s = p.first;
-      OutputSection *section = p.second;
-      c->filesize += section->getFileSize();
+    for (OutputSection *osec : seg->getSections()) {
+      c->filesize += osec->getFileSize();
 
-      if (section->isHidden())
+      if (osec->isHidden())
         continue;
 
       auto *sectHdr = reinterpret_cast<section_64 *>(buf);
       buf += sizeof(section_64);
 
-      memcpy(sectHdr->sectname, s.data(), s.size());
+      memcpy(sectHdr->sectname, osec->name.data(), osec->name.size());
       memcpy(sectHdr->segname, name.data(), name.size());
 
-      sectHdr->addr = section->addr;
-      sectHdr->offset = section->fileOff;
-      sectHdr->align = Log2_32(section->align);
-      sectHdr->flags = section->flags;
-      sectHdr->size = section->getSize();
+      sectHdr->addr = osec->addr;
+      sectHdr->offset = osec->fileOff;
+      sectHdr->align = Log2_32(osec->align);
+      sectHdr->flags = osec->flags;
+      sectHdr->size = osec->getSize();
     }
   }
 
@@ -336,28 +334,59 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
   return sectionPriorities;
 }
 
+static int segmentOrder(OutputSegment *seg) {
+  return StringSwitch<int>(seg->name)
+      .Case(segment_names::pageZero, -2)
+      .Case(segment_names::text, -1)
+      // Make sure __LINKEDIT is the last segment (i.e. all its hidden
+      // sections must be ordered after other sections).
+      .Case(segment_names::linkEdit, std::numeric_limits<int>::max())
+      .Default(0);
+}
+
+static int sectionOrder(OutputSection *osec) {
+  StringRef segname = osec->parent->name;
+  // Sections are uniquely identified by their segment + section name.
+  if (segname == segment_names::text) {
+    if (osec->name == section_names::header)
+      return -1;
+  } else if (segname == segment_names::linkEdit) {
+    return StringSwitch<int>(osec->name)
+        .Case(section_names::binding, -4)
+        .Case(section_names::export_, -3)
+        .Case(section_names::symbolTable, -2)
+        .Case(section_names::stringTable, -1)
+        .Default(0);
+  }
+  return 0;
+}
+
+template <typename T, typename F>
+static std::function<bool(T, T)> compareByOrder(F ord) {
+  return [=](T a, T b) { return ord(a) < ord(b); };
+}
+
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
 static void sortSegmentsAndSections() {
-  auto comparator = OutputSegmentComparator();
-  llvm::stable_sort(outputSegments, comparator);
+  llvm::stable_sort(outputSegments,
+                    compareByOrder<OutputSegment *>(segmentOrder));
 
   DenseMap<const InputSection *, size_t> isecPriorities =
       buildInputSectionPriorities();
 
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
-    seg->sortOutputSections(&comparator);
-    for (auto &p : seg->getSections()) {
-      OutputSection *section = p.second;
+    seg->sortOutputSections(compareByOrder<OutputSection *>(sectionOrder));
+    for (auto *osec : seg->getSections()) {
       // Now that the output sections are sorted, assign the final
       // output section indices.
-      if (!section->isHidden())
-        section->index = ++sectionIndex;
+      if (!osec->isHidden())
+        osec->index = ++sectionIndex;
 
       if (!isecPriorities.empty()) {
-        if (auto *merged = dyn_cast<MergedOutputSection>(section)) {
+        if (auto *merged = dyn_cast<MergedOutputSection>(osec)) {
           llvm::stable_sort(merged->inputs,
                             [&](InputSection *a, InputSection *b) {
                               return isecPriorities[a] > isecPriorities[b];
@@ -387,22 +416,33 @@ void Writer::createOutputSections() {
     llvm_unreachable("unhandled output file type");
   }
 
-  // Then merge input sections into output sections/segments.
+  // Then merge input sections into output sections.
+  MapVector<std::pair<StringRef, StringRef>, MergedOutputSection *>
+      mergedOutputSections;
   for (InputSection *isec : inputSections) {
-    getOrCreateOutputSegment(isec->segname)
-        ->getOrCreateOutputSection(isec->name)
-        ->mergeInput(isec);
+    MergedOutputSection *&osec =
+        mergedOutputSections[{isec->segname, isec->name}];
+    if (osec == nullptr)
+      osec = make<MergedOutputSection>(isec->name);
+    osec->mergeInput(isec);
   }
 
-  // Remove unneeded segments and sections.
-  // TODO: Avoid creating unneeded segments in the first place
-  for (auto it = outputSegments.begin(); it != outputSegments.end();) {
-    OutputSegment *seg = *it;
-    seg->removeUnneededSections();
-    if (!seg->isNeeded())
-      it = outputSegments.erase(it);
-    else
-      ++it;
+  for (const auto &it : mergedOutputSections) {
+    StringRef segname = it.first.first;
+    MergedOutputSection *osec = it.second;
+    getOrCreateOutputSegment(segname)->addOutputSection(osec);
+  }
+
+  for (SyntheticSection *ssec : syntheticSections) {
+    auto it = mergedOutputSections.find({ssec->segname, ssec->name});
+    if (it == mergedOutputSections.end()) {
+      if (ssec->isNeeded())
+        getOrCreateOutputSegment(ssec->segname)->addOutputSection(ssec);
+    } else {
+      error("section from " + it->second->firstSection()->file->getName() +
+            " conflicts with synthetic section " + ssec->segname + "," +
+            ssec->name);
+    }
   }
 }
 
@@ -411,16 +451,15 @@ void Writer::assignAddresses(OutputSegment *seg) {
   fileOff = alignTo(fileOff, PageSize);
   seg->fileOff = fileOff;
 
-  for (auto &p : seg->getSections()) {
-    OutputSection *section = p.second;
-    addr = alignTo(addr, section->align);
-    fileOff = alignTo(fileOff, section->align);
-    section->addr = addr;
-    section->fileOff = isZeroFill(section->flags) ? 0 : fileOff;
-    section->finalize();
+  for (auto *osec : seg->getSections()) {
+    addr = alignTo(addr, osec->align);
+    fileOff = alignTo(fileOff, osec->align);
+    osec->addr = addr;
+    osec->fileOff = isZeroFill(osec->flags) ? 0 : fileOff;
+    osec->finalize();
 
-    addr += section->getSize();
-    fileOff += section->getFileSize();
+    addr += osec->getSize();
+    fileOff += osec->getFileSize();
   }
 }
 
@@ -438,12 +477,9 @@ void Writer::openFile() {
 
 void Writer::writeSections() {
   uint8_t *buf = buffer->getBufferStart();
-  for (OutputSegment *seg : outputSegments) {
-    for (auto &p : seg->getSections()) {
-      OutputSection *section = p.second;
-      section->writeTo(buf + section->fileOff);
-    }
-  }
+  for (OutputSegment *seg : outputSegments)
+    for (OutputSection *osec : seg->getSections())
+      osec->writeTo(buf + osec->fileOff);
 }
 
 void Writer::run() {

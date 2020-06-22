@@ -23,14 +23,14 @@ namespace macho {
 
 namespace section_names {
 
-constexpr const char *pageZero = "__pagezero";
-constexpr const char *header = "__mach_header";
-constexpr const char *binding = "__binding";
-constexpr const char *lazyBinding = "__lazy_binding";
-constexpr const char *export_ = "__export";
-constexpr const char *symbolTable = "__symbol_table";
-constexpr const char *stringTable = "__string_table";
-constexpr const char *got = "__got";
+constexpr const char pageZero[] = "__pagezero";
+constexpr const char header[] = "__mach_header";
+constexpr const char binding[] = "__binding";
+constexpr const char lazyBinding[] = "__lazy_binding";
+constexpr const char export_[] = "__export";
+constexpr const char symbolTable[] = "__symbol_table";
+constexpr const char stringTable[] = "__string_table";
+constexpr const char got[] = "__got";
 
 } // namespace section_names
 
@@ -45,6 +45,8 @@ public:
   static bool classof(const OutputSection *sec) {
     return sec->kind() == SyntheticKind;
   }
+
+  const StringRef segname;
 };
 
 // The header of the Mach-O file, which must have a file offset of zero.
@@ -262,6 +264,7 @@ struct InStruct {
 };
 
 extern InStruct in;
+extern std::vector<SyntheticSection *> syntheticSections;
 
 } // namespace macho
 } // namespace lld
