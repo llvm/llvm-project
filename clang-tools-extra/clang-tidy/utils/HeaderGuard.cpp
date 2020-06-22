@@ -266,6 +266,10 @@ private:
 };
 } // namespace
 
+void HeaderGuardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
+}
+
 void HeaderGuardCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {
@@ -285,7 +289,6 @@ bool HeaderGuardCheck::shouldSuggestToAddHeaderGuard(StringRef FileName) {
 std::string HeaderGuardCheck::formatEndIf(StringRef HeaderGuard) {
   return "endif // " + HeaderGuard.str();
 }
-
 } // namespace utils
 } // namespace tidy
 } // namespace clang

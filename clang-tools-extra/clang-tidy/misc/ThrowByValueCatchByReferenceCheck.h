@@ -45,6 +45,7 @@ private:
   bool isFunctionOrCatchVar(const DeclRefExpr *declRefExpr);
   const bool CheckAnonymousTemporaries;
   const bool WarnOnLargeObject;
+  const uint64_t MaxSizeOptions; // The raw value read from the options.
   uint64_t MaxSize; // No `const` because we have to set it in two steps.
 };
 
