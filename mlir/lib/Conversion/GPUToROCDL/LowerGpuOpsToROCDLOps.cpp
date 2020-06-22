@@ -41,13 +41,22 @@ namespace {
 //
 // This pass only handles device code and is not meant to be run on GPU host
 // code.
-class LowerGpuOpsToROCDLOpsPass
+struct LowerGpuOpsToROCDLOpsPass
     : public ConvertGpuOpsToROCDLOpsBase<LowerGpuOpsToROCDLOpsPass> {
-public:
+  LowerGpuOpsToROCDLOpsPass() = default;
+  LowerGpuOpsToROCDLOpsPass(unsigned indexBitwidth) {
+    this->indexBitwidth = indexBitwidth;
+  }
+
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 
-    LLVMTypeConverter converter(m.getContext());
+    /// Customize the bitwidth used for the device side index computations.
+    LowerToLLVMOptions options = {/*useBarePtrCallConv =*/false,
+                                  /*emitCWrappers = */ true,
+                                  /*indexBitwidth =*/indexBitwidth,
+                                  /*useAlignedAlloc =*/false};
+    LLVMTypeConverter converter(m.getContext(), options);
 
     OwningRewritePatternList patterns;
 
@@ -106,6 +115,6 @@ void mlir::populateGpuToROCDLConversionPatterns(
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-mlir::createLowerGpuOpsToROCDLOpsPass() {
-  return std::make_unique<LowerGpuOpsToROCDLOpsPass>();
+mlir::createLowerGpuOpsToROCDLOpsPass(unsigned indexBitwidth) {
+  return std::make_unique<LowerGpuOpsToROCDLOpsPass>(indexBitwidth);
 }
