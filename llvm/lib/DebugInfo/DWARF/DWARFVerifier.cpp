@@ -133,7 +133,7 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
 
   ValidLength = DebugInfoData.isValidOffset(OffsetStart + Length + 3);
   ValidVersion = DWARFContext::isSupportedVersion(Version);
-  ValidAddrSize = AddrSize == 4 || AddrSize == 8;
+  ValidAddrSize = DWARFContext::isAddressSizeSupported(AddrSize);
   if (!ValidLength || !ValidVersion || !ValidAddrSize || !ValidAbbrevOffset ||
       !ValidType) {
     Success = false;
