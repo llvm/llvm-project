@@ -49,7 +49,7 @@ template <typename T>
 struct task {
   struct promise_type {
     auto initial_suspend() { return suspend_never{}; }
-    auto final_suspend() { return suspend_never{}; }
+    auto final_suspend() noexcept { return suspend_never{}; }
     auto get_return_object() { return task{}; }
     static void unhandled_exception() {}
     void return_value(T&& value) {}

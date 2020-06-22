@@ -8,7 +8,7 @@ struct coro1 {
   struct promise_type {
     coro1 get_return_object();
     coro::suspend_never initial_suspend();
-    coro::suspend_never final_suspend();
+    coro::suspend_never final_suspend() noexcept;
     void return_void();
   };
 };
@@ -39,7 +39,7 @@ struct coro2 {
   struct promise_type {
     coro2 get_return_object();
     coro::suspend_never initial_suspend();
-    coro::suspend_never final_suspend();
+    coro::suspend_never final_suspend() noexcept;
     void return_value(int);
   };
 };
