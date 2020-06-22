@@ -15,6 +15,7 @@ class MSP430Reg<bits<4> num, string n, list<string> alt = []> : Register<n> {
   let Namespace = "MSP430";
   let HWEncoding{3-0} = num;
   let AltNames = alt;
+  let DwarfNumbers = [num];
 }
 
 class MSP430RegWithSubregs<bits<4> num, string n, list<Register> subregs,
@@ -24,6 +25,7 @@ class MSP430RegWithSubregs<bits<4> num, string n, list<Register> subregs,
   let Namespace = "MSP430";
   let HWEncoding{3-0} = num;
   let AltNames = alt;
+  let DwarfNumbers = [num];
 }
 
 //===----------------------------------------------------------------------===//
