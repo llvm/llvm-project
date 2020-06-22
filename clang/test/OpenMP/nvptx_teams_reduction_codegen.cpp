@@ -1,9 +1,12 @@
 // Test target codegen - host bc file has to be created first.
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix SEQ
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -fopenmp-cuda-parallel-target-regions | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix  PAR
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
-// RUN: %clang_cc1 -verify -fopenmp -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -fopenmp-cuda-teams-reduction-recs-num=2048 -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix SEQ
+// RUN: %clang_cc1 -verify -fopenmp -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -fopenmp-cuda-teams-reduction-recs-num=2048 -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix SEQ
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -fopenmp-cuda-parallel-target-regions | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix PAR
+// RUN: %clang_cc1 -verify -fopenmp -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -fopenmp-cuda-teams-reduction-recs-num=2048 -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -fopenmp-cuda-parallel-target-regions | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix PAR
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -12,21 +15,21 @@
 // CHECK-DAG: [[TEAM2_REDUCE_TY:%.+]] = type { [{{1024|2048}} x i8], [{{1024|2048}} x float] }
 // CHECK-DAG: [[TEAM3_REDUCE_TY:%.+]] = type { [{{1024|2048}} x i32], [{{1024|2048}} x i16] }
 // CHECK-DAG: [[TEAMS_REDUCE_UNION_TY:%.+]] = type { [[TEAM1_REDUCE_TY]] }
-// CHECK-DAG: [[MAP_TY:%.+]] = type { [128 x i8] }
+// SEQ-DAG: [[MAP_TY:%.+]] = type { [128 x i8] }
 
-// CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
-// CHECK-DAG: [[KERNEL_SHARED1:@.+]] = internal unnamed_addr constant i16 1
-// CHECK-DAG: [[KERNEL_SHARED2:@.+]] = internal unnamed_addr constant i16 1
-// CHECK-DAG: [[KERNEL_SIZE1:@.+]] = internal unnamed_addr constant i{{64|32}} {{16|8}}
-// CHECK-DAG: [[KERNEL_SIZE2:@.+]] = internal unnamed_addr constant i{{64|32}} 16
+// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// SEQ-DAG: [[KERNEL_SHARED1:@.+]] = internal unnamed_addr constant i16 1
+// SEQ-DAG: [[KERNEL_SHARED2:@.+]] = internal unnamed_addr constant i16 1
+// SEQ-DAG: [[KERNEL_SIZE1:@.+]] = internal unnamed_addr constant i{{64|32}} {{16|8}}
+// SEQ-DAG: [[KERNEL_SIZE2:@.+]] = internal unnamed_addr constant i{{64|32}} 16
 
 // Check for the data transfer medium in shared memory to transfer the reduction list to the first warp.
 // CHECK-DAG: [[TRANSFER_STORAGE:@.+]] = common addrspace([[SHARED_ADDRSPACE:[0-9]+]]) global [32 x i32]
 
 // Check that the execution mode of 2 target regions is set to Non-SPMD and the 3rd is in SPMD.
-// CHECK-DAG: {{@__omp_offloading_.+l41}}_exec_mode = weak constant i8 1
-// CHECK-DAG: {{@__omp_offloading_.+l47}}_exec_mode = weak constant i8 1
-// CHECK-DAG: {{@__omp_offloading_.+l54}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l44}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l50}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l57}}_exec_mode = weak constant i8 0
 
 // CHECK-DAG: [[TEAMS_RED_BUFFER:@.+]] = internal global [[TEAMS_REDUCE_UNION_TY]] zeroinitializer
 
@@ -70,9 +73,9 @@ int bar(int n){
   return a;
 }
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l41}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l44}}_worker()
 
-  // CHECK: define {{.*}}void [[T1:@__omp_offloading_.+template.+l41]](
+  // CHECK: define {{.*}}void [[T1:@__omp_offloading_.+template.+l44]](
   //
   // CHECK: {{call|invoke}} void [[T1]]_worker()
   //
@@ -337,9 +340,9 @@ int bar(int n){
   // CHECK: call void [[REDUCTION_FUNC]](i8* [[RL_BC]], i8* [[LOCAL_RL_BC]])
   // CHECK: ret void
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l47}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l50}}_worker()
 
-  // CHECK: define {{.*}}void [[T2:@__omp_offloading_.+template.+l47]](
+  // CHECK: define {{.*}}void [[T2:@__omp_offloading_.+template.+l50]](
   //
   // CHECK: {{call|invoke}} void [[T2]]_worker()
 
@@ -704,13 +707,13 @@ int bar(int n){
   // CHECK: call void [[REDUCTION_FUNC]](i8* [[RL_BC]], i8* [[LOCAL_RL_BC]])
   // CHECK: ret void
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l54}}(
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l57}}(
   //
   // CHECK: call void @__kmpc_spmd_kernel_init(
   // CHECK: call void @__kmpc_data_sharing_init_stack_spmd()
   // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
 
-  // CHECK-NOT: call void @__kmpc_get_team_static_memory
+  // CHECK-NOT: call void @{{__kmpc_get_team_static_memory|__kmpc_data_sharing_push_stack}}
   // CHECK: store i32 0,
   // CHECK: store i32 0,
   // CHECK: store i32 0, i32* [[A_ADDR:%.+]], align

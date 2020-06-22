@@ -231,6 +231,7 @@ LANGOPT(OpenMPCUDANumSMs  , 32, 0, "Number of SMs for CUDA devices.")
 LANGOPT(OpenMPCUDABlocksPerSM  , 32, 0, "Number of blocks per SM for CUDA devices.")
 LANGOPT(OpenMPCUDAReductionBufNum , 32, 1024, "Number of the reduction records in the intermediate reduction buffer used for the teams reductions.")
 LANGOPT(OpenMPOptimisticCollapse  , 1, 0, "Use at most 32 bits to represent the collapsed loop nest counter.")
+LANGOPT(OpenMPCUDATargetParallel, 1, 0, "Support parallel execution of target region on Cuda-based devices.")
 LANGOPT(RenderScript      , 1, 0, "RenderScript")
 
 LANGOPT(CUDAIsDevice      , 1, 0, "compiling for CUDA device")
