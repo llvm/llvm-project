@@ -1986,9 +1986,16 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
   NewCall->setDebugLoc(II->getDebugLoc());
   NewCall->copyMetadata(*II);
 
-  // If the invoke had profile metadata, drop it.
-  if (NewCall->hasMetadata(LLVMContext::MD_prof))
-    NewCall->setMetadata(LLVMContext::MD_prof, nullptr);
+  // If the invoke had profile metadata, try converting them for CallInst.
+  uint64_t TotalWeight;
+  if (NewCall->extractProfTotalWeight(TotalWeight)) {
+    // Set the total weight if it fits into i32, otherwise reset.
+    MDBuilder MDB(NewCall->getContext());
+    auto NewWeights = uint32_t(TotalWeight) != TotalWeight
+                          ? nullptr
+                          : MDB.createBranchWeights({uint32_t(TotalWeight)});
+    NewCall->setMetadata(LLVMContext::MD_prof, NewWeights);
+  }
 
   return NewCall;
 }
