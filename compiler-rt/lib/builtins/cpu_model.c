@@ -125,7 +125,8 @@ enum ProcessorFeatures {
   FEATURE_AVX512VNNI,
   FEATURE_AVX512BITALG,
   FEATURE_AVX512BF16,
-  FEATURE_AVX512VP2INTERSECT
+  FEATURE_AVX512VP2INTERSECT,
+  CPU_FEATURE_MAX
 };
 
 // The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
@@ -493,8 +494,6 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                                  unsigned *Features) {
-  Features[0] = 0;
-  Features[1] = 0;
   unsigned EAX, EBX;
 
 #define setFeature(F)                                                          \
@@ -653,7 +652,7 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   unsigned MaxLeaf = 5;
   unsigned Vendor;
   unsigned Model, Family;
-  unsigned Features[2];
+  unsigned Features[(CPU_FEATURE_MAX + 31) / 32] = {0};
 
   // This function needs to run just once.
   if (__cpu_model.__cpu_vendor)
@@ -670,6 +669,8 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
 
   // Find available features.
   getAvailableFeatures(ECX, EDX, MaxLeaf, &Features[0]);
+
+  assert((sizeof(Features)/sizeof(Features[0])) == 2);
   __cpu_model.__cpu_features[0] = Features[0];
   __cpu_features2 = Features[1];
 
