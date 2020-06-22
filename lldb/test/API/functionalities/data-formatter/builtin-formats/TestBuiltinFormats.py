@@ -22,6 +22,7 @@ class TestCase(TestBase):
         return result.GetOutput()
 
     @no_debug_info_test
+    @skipIfWindows
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
