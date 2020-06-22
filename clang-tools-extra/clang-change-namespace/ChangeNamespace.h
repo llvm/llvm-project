@@ -49,7 +49,7 @@ public:
   // files matching `FilePattern`.
   ChangeNamespaceTool(
       llvm::StringRef OldNs, llvm::StringRef NewNs, llvm::StringRef FilePattern,
-      llvm::ArrayRef<std::string> WhiteListedSymbolPatterns,
+      llvm::ArrayRef<std::string> AllowedSymbolPatterns,
       std::map<std::string, tooling::Replacements> *FileToReplacements,
       llvm::StringRef FallbackStyle = "LLVM");
 
@@ -166,7 +166,7 @@ private:
   llvm::SmallPtrSet<const clang::DeclRefExpr*, 16> ProcessedFuncRefs;
   // Patterns of symbol names whose references are not expected to be updated
   // when changing namespaces around them.
-  std::vector<llvm::Regex> WhiteListedSymbolRegexes;
+  std::vector<llvm::Regex> AllowedSymbolRegexes;
 };
 
 } // namespace change_namespace
