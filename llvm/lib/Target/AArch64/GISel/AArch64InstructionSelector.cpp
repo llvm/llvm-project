@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/Debug.h"
@@ -2577,15 +2578,21 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
 
   case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_SEXT_INREG:
   case TargetOpcode::G_SEXT: {
     unsigned Opcode = I.getOpcode();
-    const bool IsSigned = Opcode == TargetOpcode::G_SEXT;
+    const bool IsSigned = Opcode != TargetOpcode::G_ZEXT;
     const Register DefReg = I.getOperand(0).getReg();
-    const Register SrcReg = I.getOperand(1).getReg();
+    Register SrcReg = I.getOperand(1).getReg();
     const LLT DstTy = MRI.getType(DefReg);
     const LLT SrcTy = MRI.getType(SrcReg);
     unsigned DstSize = DstTy.getSizeInBits();
     unsigned SrcSize = SrcTy.getSizeInBits();
+
+    // SEXT_INREG has the same src reg size as dst, the size of the value to be
+    // extended is encoded in the imm.
+    if (Opcode == TargetOpcode::G_SEXT_INREG)
+      SrcSize = I.getOperand(2).getImm();
 
     if (DstTy.isVector())
       return false; // Should be handled by imported patterns.
@@ -2646,21 +2653,24 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     if (DstSize == 64) {
-      // FIXME: Can we avoid manually doing this?
-      if (!RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass, MRI)) {
-        LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(Opcode)
-                          << " operand\n");
-        return false;
+      if (Opcode != TargetOpcode::G_SEXT_INREG) {
+        // FIXME: Can we avoid manually doing this?
+        if (!RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass,
+                                          MRI)) {
+          LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(Opcode)
+                            << " operand\n");
+          return false;
+        }
+        SrcReg = MIB.buildInstr(AArch64::SUBREG_TO_REG,
+                                {&AArch64::GPR64RegClass}, {})
+                     .addImm(0)
+                     .addUse(SrcReg)
+                     .addImm(AArch64::sub_32)
+                     .getReg(0);
       }
 
-      auto SubregToReg =
-          MIB.buildInstr(AArch64::SUBREG_TO_REG, {&AArch64::GPR64RegClass}, {})
-              .addImm(0)
-              .addUse(SrcReg)
-              .addImm(AArch64::sub_32);
-
       ExtI = MIB.buildInstr(IsSigned ? AArch64::SBFMXri : AArch64::UBFMXri,
-                             {DefReg}, {SubregToReg})
+                             {DefReg}, {SrcReg})
                   .addImm(0)
                   .addImm(SrcSize - 1);
     } else if (DstSize <= 32) {
@@ -5301,7 +5311,11 @@ AArch64_AM::ShiftExtendType AArch64InstructionSelector::getExtendTypeForInst(
 
   // Handle explicit extend instructions first.
   if (Opc == TargetOpcode::G_SEXT || Opc == TargetOpcode::G_SEXT_INREG) {
-    unsigned Size = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    unsigned Size;
+    if (Opc == TargetOpcode::G_SEXT)
+      Size = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    else
+      Size = MI.getOperand(2).getImm();
     assert(Size != 64 && "Extend from 64 bits?");
     switch (Size) {
     case 8:
