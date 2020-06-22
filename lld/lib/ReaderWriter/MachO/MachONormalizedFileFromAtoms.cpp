@@ -990,7 +990,7 @@ llvm::Error Util::getSymbolTableRegion(const DefinedAtom* atom,
     inGlobalsRegion = false;
     return llvm::Error::success();
   case Atom::scopeLinkageUnit:
-    if ((_ctx.exportMode() == MachOLinkingContext::ExportMode::whiteList) &&
+    if ((_ctx.exportMode() == MachOLinkingContext::ExportMode::exported) &&
         _ctx.exportSymbolNamed(atom->name())) {
       return llvm::make_error<GenericError>(
                           Twine("cannot export hidden symbol ") + atom->name());
