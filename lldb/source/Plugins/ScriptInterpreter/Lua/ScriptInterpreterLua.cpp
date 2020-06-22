@@ -70,19 +70,16 @@ void ScriptInterpreterLua::ExecuteInterpreterLoop() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
 
-  Debugger &debugger = m_debugger;
-
   // At the moment, the only time the debugger does not have an input file
   // handle is when this is called directly from lua, in which case it is
   // both dangerous and unnecessary (not to mention confusing) to try to embed
   // a running interpreter loop inside the already running lua interpreter
   // loop, so we won't do it.
-
-  if (!debugger.GetInputFile().IsValid())
+  if (!m_debugger.GetInputFile().IsValid())
     return;
 
-  IOHandlerSP io_handler_sp(new IOHandlerLuaInterpreter(debugger, *this));
-  debugger.RunIOHandlerAsync(io_handler_sp);
+  IOHandlerSP io_handler_sp(new IOHandlerLuaInterpreter(m_debugger, *this));
+  m_debugger.RunIOHandlerAsync(io_handler_sp);
 }
 
 bool ScriptInterpreterLua::LoadScriptingModule(
