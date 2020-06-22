@@ -3866,7 +3866,7 @@ def CheckTrailingSemicolon(filename, clean_lines, linenum, error):
 
   # Block bodies should not be followed by a semicolon.  Due to C++11
   # brace initialization, there are more places where semicolons are
-  # required than not, so we use a allowed list approach to check these
+  # required than not, so we use an allowed list approach to check these
   # rather than an exclusion list.  These are the places where "};" should
   # be replaced by just "}":
   # 1. Some flavor of block following closing parenthesis:
