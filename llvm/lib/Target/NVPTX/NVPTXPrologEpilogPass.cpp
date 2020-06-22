@@ -74,7 +74,7 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
           MI.getOperand(0).setIsDebug();
           auto *DIExpr = DIExpression::prepend(
               MI.getDebugExpression(), DIExpression::ApplyOffset, Offset);
-          MI.getOperand(3).setMetadata(DIExpr);
+          MI.getDebugExpressionOp().setMetadata(DIExpr);
           continue;
         }
 
