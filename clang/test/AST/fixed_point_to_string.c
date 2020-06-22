@@ -1,5 +1,17 @@
+// Tests without serialization:
 // RUN: %clang_cc1 -ast-dump -ffixed-point %s | FileCheck %s
 // RUN: %clang_cc1 -ast-dump -ffixed-point -fpadding-on-unsigned-fixed-point %s | FileCheck %s
+//
+// Tests with serialization:
+// RUN: %clang_cc1 -ffixed-point -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c -ffixed-point -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s
+//
+// RUN: %clang_cc1 -ffixed-point -fpadding-on-unsigned-fixed-point -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c -ffixed-point -fpadding-on-unsigned-fixed-point -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s
 
 /**
  * Check the same values are printed in the AST regardless of if unsigned types
