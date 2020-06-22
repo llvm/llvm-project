@@ -852,6 +852,14 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
                                          Depth);
 }
 
+SDValue TargetLowering::SimplifyMultipleUseDemandedVectorElts(
+    SDValue Op, const APInt &DemandedElts, SelectionDAG &DAG,
+    unsigned Depth) const {
+  APInt DemandedBits = APInt::getAllOnesValue(Op.getScalarValueSizeInBits());
+  return SimplifyMultipleUseDemandedBits(Op, DemandedBits, DemandedElts, DAG,
+                                         Depth);
+}
+
 /// Look at Op. At this point, we know that only the OriginalDemandedBits of the
 /// result of Op are ever used downstream. If we can use this information to
 /// simplify Op, create a new simplified DAG node and return true, returning the
@@ -2323,14 +2331,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   // Helper for demanding the specified elements and all the bits of both binary
   // operands.
   auto SimplifyDemandedVectorEltsBinOp = [&](SDValue Op0, SDValue Op1) {
-    unsigned NumBits0 = Op0.getScalarValueSizeInBits();
-    unsigned NumBits1 = Op1.getScalarValueSizeInBits();
-    APInt DemandedBits0 = APInt::getAllOnesValue(NumBits0);
-    APInt DemandedBits1 = APInt::getAllOnesValue(NumBits1);
-    SDValue NewOp0 = SimplifyMultipleUseDemandedBits(
-        Op0, DemandedBits0, DemandedElts, TLO.DAG, Depth + 1);
-    SDValue NewOp1 = SimplifyMultipleUseDemandedBits(
-        Op1, DemandedBits1, DemandedElts, TLO.DAG, Depth + 1);
+    SDValue NewOp0 = SimplifyMultipleUseDemandedVectorElts(Op0, DemandedElts,
+                                                           TLO.DAG, Depth + 1);
+    SDValue NewOp1 = SimplifyMultipleUseDemandedVectorElts(Op1, DemandedElts,
+                                                           TLO.DAG, Depth + 1);
     if (NewOp0 || NewOp1) {
       SDValue NewOp = TLO.DAG.getNode(
           Opcode, SDLoc(Op), VT, NewOp0 ? NewOp0 : Op0, NewOp1 ? NewOp1 : Op1);
@@ -2511,11 +2515,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // Attempt to avoid multi-use ops if we don't need anything from them.
     if (!DemandedSrcElts.isAllOnesValue() ||
         !DemandedSubElts.isAllOnesValue()) {
-      APInt DemandedBits = APInt::getAllOnesValue(VT.getScalarSizeInBits());
-      SDValue NewSrc = SimplifyMultipleUseDemandedBits(
-          Src, DemandedBits, DemandedSrcElts, TLO.DAG, Depth + 1);
-      SDValue NewSub = SimplifyMultipleUseDemandedBits(
-          Sub, DemandedBits, DemandedSubElts, TLO.DAG, Depth + 1);
+      SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
+          Src, DemandedSrcElts, TLO.DAG, Depth + 1);
+      SDValue NewSub = SimplifyMultipleUseDemandedVectorElts(
+          Sub, DemandedSubElts, TLO.DAG, Depth + 1);
       if (NewSrc || NewSub) {
         NewSrc = NewSrc ? NewSrc : Src;
         NewSub = NewSub ? NewSub : Sub;
@@ -2542,9 +2545,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
     if (!DemandedElts.isAllOnesValue()) {
-      APInt DemandedBits = APInt::getAllOnesValue(VT.getScalarSizeInBits());
-      SDValue NewSrc = SimplifyMultipleUseDemandedBits(
-          Src, DemandedBits, DemandedSrcElts, TLO.DAG, Depth + 1);
+      SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
+          Src, DemandedSrcElts, TLO.DAG, Depth + 1);
       if (NewSrc) {
         SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
                                         Op.getOperand(1));
