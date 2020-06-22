@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 %s -emit-pch -o %t
 // RUN: %clang_cc1 %s -include-pch %t -verify -fsyntax-only -Wuninitialized
 
+// RUN: %clang_cc1 %s -emit-pch -fpch-instantiate-templates -o %t
+// RUN: %clang_cc1 %s -include-pch %t -verify -fsyntax-only -Wuninitialized
+
 #ifndef HEADER
 #define HEADER
 
@@ -27,8 +30,8 @@ struct TS2 {
     void m() {
       T a;
       T b = a; // expected-warning {{variable 'a' is uninitialized}} \
-                  expected-note@41 {{in instantiation of member function}} \
-                  expected-note@28 {{initialize the variable 'a' to silence}}
+                  expected-note@44 {{in instantiation of member function}} \
+                  expected-note@31 {{initialize the variable 'a' to silence}}
     }
 };
 

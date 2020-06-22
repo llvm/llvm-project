@@ -1016,6 +1016,11 @@ void Sema::ActOnEndOfTranslationUnit() {
                                  LateParsedInstantiations.begin(),
                                  LateParsedInstantiations.end());
     LateParsedInstantiations.clear();
+
+    if (LangOpts.PCHInstantiateTemplates) {
+      llvm::TimeTraceScope TimeScope("PerformPendingInstantiations");
+      PerformPendingInstantiations();
+    }
   }
 
   DiagnoseUnterminatedPragmaPack();
