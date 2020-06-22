@@ -1088,155 +1088,154 @@ ChangeStatus Attributor::manifestAttributes() {
 
 ChangeStatus Attributor::cleanupIR() {
   // Delete stuff at the end to avoid invalid references and a nice order.
-    LLVM_DEBUG(dbgs() << "\n[Attributor] Delete at least "
-                      << ToBeDeletedFunctions.size() << " functions and "
-                      << ToBeDeletedBlocks.size() << " blocks and "
-                      << ToBeDeletedInsts.size() << " instructions and "
-                      << ToBeChangedUses.size() << " uses\n");
+  LLVM_DEBUG(dbgs() << "\n[Attributor] Delete at least "
+                    << ToBeDeletedFunctions.size() << " functions and "
+                    << ToBeDeletedBlocks.size() << " blocks and "
+                    << ToBeDeletedInsts.size() << " instructions and "
+                    << ToBeChangedUses.size() << " uses\n");
 
-    SmallVector<WeakTrackingVH, 32> DeadInsts;
-    SmallVector<Instruction *, 32> TerminatorsToFold;
+  SmallVector<WeakTrackingVH, 32> DeadInsts;
+  SmallVector<Instruction *, 32> TerminatorsToFold;
 
-    for (auto &It : ToBeChangedUses) {
-      Use *U = It.first;
-      Value *NewV = It.second;
-      Value *OldV = U->get();
+  for (auto &It : ToBeChangedUses) {
+    Use *U = It.first;
+    Value *NewV = It.second;
+    Value *OldV = U->get();
 
-      // Do not replace uses in returns if the value is a must-tail call we will
-      // not delete.
-      if (isa<ReturnInst>(U->getUser()))
-        if (auto *CI = dyn_cast<CallInst>(OldV->stripPointerCasts()))
-          if (CI->isMustTailCall() && !ToBeDeletedInsts.count(CI))
-            continue;
-
-      LLVM_DEBUG(dbgs() << "Use " << *NewV << " in " << *U->getUser()
-                        << " instead of " << *OldV << "\n");
-      U->set(NewV);
-      // Do not modify call instructions outside the SCC.
-      if (auto *CB = dyn_cast<CallBase>(OldV))
-        if (!Functions.count(CB->getCaller()))
+    // Do not replace uses in returns if the value is a must-tail call we will
+    // not delete.
+    if (isa<ReturnInst>(U->getUser()))
+      if (auto *CI = dyn_cast<CallInst>(OldV->stripPointerCasts()))
+        if (CI->isMustTailCall() && !ToBeDeletedInsts.count(CI))
           continue;
-      if (Instruction *I = dyn_cast<Instruction>(OldV)) {
-        CGModifiedFunctions.insert(I->getFunction());
-        if (!isa<PHINode>(I) && !ToBeDeletedInsts.count(I) &&
-            isInstructionTriviallyDead(I))
-          DeadInsts.push_back(I);
-      }
-      if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
-        Instruction *UserI = cast<Instruction>(U->getUser());
-        if (isa<UndefValue>(NewV)) {
-          ToBeChangedToUnreachableInsts.insert(UserI);
-        } else {
-          TerminatorsToFold.push_back(UserI);
-        }
-      }
-    }
-    for (auto &V : InvokeWithDeadSuccessor)
-      if (InvokeInst *II = dyn_cast_or_null<InvokeInst>(V)) {
-        bool UnwindBBIsDead = II->hasFnAttr(Attribute::NoUnwind);
-        bool NormalBBIsDead = II->hasFnAttr(Attribute::NoReturn);
-        bool Invoke2CallAllowed =
-            !AAIsDead::mayCatchAsynchronousExceptions(*II->getFunction());
-        assert((UnwindBBIsDead || NormalBBIsDead) &&
-               "Invoke does not have dead successors!");
-        BasicBlock *BB = II->getParent();
-        BasicBlock *NormalDestBB = II->getNormalDest();
-        if (UnwindBBIsDead) {
-          Instruction *NormalNextIP = &NormalDestBB->front();
-          if (Invoke2CallAllowed) {
-            changeToCall(II);
-            NormalNextIP = BB->getTerminator();
-          }
-          if (NormalBBIsDead)
-            ToBeChangedToUnreachableInsts.insert(NormalNextIP);
-        } else {
-          assert(NormalBBIsDead && "Broken invariant!");
-          if (!NormalDestBB->getUniquePredecessor())
-            NormalDestBB = SplitBlockPredecessors(NormalDestBB, {BB}, ".dead");
-          ToBeChangedToUnreachableInsts.insert(&NormalDestBB->front());
-        }
-      }
-    for (Instruction *I : TerminatorsToFold) {
+
+    LLVM_DEBUG(dbgs() << "Use " << *NewV << " in " << *U->getUser()
+                      << " instead of " << *OldV << "\n");
+    U->set(NewV);
+    // Do not modify call instructions outside the SCC.
+    if (auto *CB = dyn_cast<CallBase>(OldV))
+      if (!Functions.count(CB->getCaller()))
+        continue;
+    if (Instruction *I = dyn_cast<Instruction>(OldV)) {
       CGModifiedFunctions.insert(I->getFunction());
-      ConstantFoldTerminator(I->getParent());
+      if (!isa<PHINode>(I) && !ToBeDeletedInsts.count(I) &&
+          isInstructionTriviallyDead(I))
+        DeadInsts.push_back(I);
     }
-    for (auto &V : ToBeChangedToUnreachableInsts)
-      if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
-        CGModifiedFunctions.insert(I->getFunction());
-        changeToUnreachable(I, /* UseLLVMTrap */ false);
-      }
-
-    for (auto &V : ToBeDeletedInsts) {
-      if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
-        I->dropDroppableUses();
-        CGModifiedFunctions.insert(I->getFunction());
-        if (!I->getType()->isVoidTy())
-          I->replaceAllUsesWith(UndefValue::get(I->getType()));
-        if (!isa<PHINode>(I) && isInstructionTriviallyDead(I))
-          DeadInsts.push_back(I);
-        else
-          I->eraseFromParent();
+    if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
+      Instruction *UserI = cast<Instruction>(U->getUser());
+      if (isa<UndefValue>(NewV)) {
+        ToBeChangedToUnreachableInsts.insert(UserI);
+      } else {
+        TerminatorsToFold.push_back(UserI);
       }
     }
-
-    RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
-
-    if (unsigned NumDeadBlocks = ToBeDeletedBlocks.size()) {
-      SmallVector<BasicBlock *, 8> ToBeDeletedBBs;
-      ToBeDeletedBBs.reserve(NumDeadBlocks);
-      for (BasicBlock *BB : ToBeDeletedBlocks) {
-        CGModifiedFunctions.insert(BB->getParent());
-        ToBeDeletedBBs.push_back(BB);
-      }
-      // Actually we do not delete the blocks but squash them into a single
-      // unreachable but untangling branches that jump here is something we need
-      // to do in a more generic way.
-      DetatchDeadBlocks(ToBeDeletedBBs, nullptr);
-    }
-
-    // Identify dead internal functions and delete them. This happens outside
-    // the other fixpoint analysis as we might treat potentially dead functions
-    // as live to lower the number of iterations. If they happen to be dead, the
-    // below fixpoint loop will identify and eliminate them.
-    SmallVector<Function *, 8> InternalFns;
-    for (Function *F : Functions)
-      if (F->hasLocalLinkage())
-        InternalFns.push_back(F);
-
-    bool FoundDeadFn = true;
-    while (FoundDeadFn) {
-      FoundDeadFn = false;
-      for (unsigned u = 0, e = InternalFns.size(); u < e; ++u) {
-        Function *F = InternalFns[u];
-        if (!F)
-          continue;
-
-        bool AllCallSitesKnown;
-        if (!checkForAllCallSites(
-                [this](AbstractCallSite ACS) {
-                  return ToBeDeletedFunctions.count(
-                      ACS.getInstruction()->getFunction());
-                },
-                *F, true, nullptr, AllCallSitesKnown))
-          continue;
-
-        ToBeDeletedFunctions.insert(F);
-        InternalFns[u] = nullptr;
-        FoundDeadFn = true;
+  }
+  for (auto &V : InvokeWithDeadSuccessor)
+    if (InvokeInst *II = dyn_cast_or_null<InvokeInst>(V)) {
+      bool UnwindBBIsDead = II->hasFnAttr(Attribute::NoUnwind);
+      bool NormalBBIsDead = II->hasFnAttr(Attribute::NoReturn);
+      bool Invoke2CallAllowed =
+          !AAIsDead::mayCatchAsynchronousExceptions(*II->getFunction());
+      assert((UnwindBBIsDead || NormalBBIsDead) &&
+             "Invoke does not have dead successors!");
+      BasicBlock *BB = II->getParent();
+      BasicBlock *NormalDestBB = II->getNormalDest();
+      if (UnwindBBIsDead) {
+        Instruction *NormalNextIP = &NormalDestBB->front();
+        if (Invoke2CallAllowed) {
+          changeToCall(II);
+          NormalNextIP = BB->getTerminator();
+        }
+        if (NormalBBIsDead)
+          ToBeChangedToUnreachableInsts.insert(NormalNextIP);
+      } else {
+        assert(NormalBBIsDead && "Broken invariant!");
+        if (!NormalDestBB->getUniquePredecessor())
+          NormalDestBB = SplitBlockPredecessors(NormalDestBB, {BB}, ".dead");
+        ToBeChangedToUnreachableInsts.insert(&NormalDestBB->front());
       }
     }
+  for (Instruction *I : TerminatorsToFold) {
+    CGModifiedFunctions.insert(I->getFunction());
+    ConstantFoldTerminator(I->getParent());
+  }
+  for (auto &V : ToBeChangedToUnreachableInsts)
+    if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
+      CGModifiedFunctions.insert(I->getFunction());
+      changeToUnreachable(I, /* UseLLVMTrap */ false);
+    }
+
+  for (auto &V : ToBeDeletedInsts) {
+    if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
+      I->dropDroppableUses();
+      CGModifiedFunctions.insert(I->getFunction());
+      if (!I->getType()->isVoidTy())
+        I->replaceAllUsesWith(UndefValue::get(I->getType()));
+      if (!isa<PHINode>(I) && isInstructionTriviallyDead(I))
+        DeadInsts.push_back(I);
+      else
+        I->eraseFromParent();
+    }
+  }
+
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
+
+  if (unsigned NumDeadBlocks = ToBeDeletedBlocks.size()) {
+    SmallVector<BasicBlock *, 8> ToBeDeletedBBs;
+    ToBeDeletedBBs.reserve(NumDeadBlocks);
+    for (BasicBlock *BB : ToBeDeletedBlocks) {
+      CGModifiedFunctions.insert(BB->getParent());
+      ToBeDeletedBBs.push_back(BB);
+    }
+    // Actually we do not delete the blocks but squash them into a single
+    // unreachable but untangling branches that jump here is something we need
+    // to do in a more generic way.
+    DetatchDeadBlocks(ToBeDeletedBBs, nullptr);
+  }
+
+  // Identify dead internal functions and delete them. This happens outside
+  // the other fixpoint analysis as we might treat potentially dead functions
+  // as live to lower the number of iterations. If they happen to be dead, the
+  // below fixpoint loop will identify and eliminate them.
+  SmallVector<Function *, 8> InternalFns;
+  for (Function *F : Functions)
+    if (F->hasLocalLinkage())
+      InternalFns.push_back(F);
+
+  bool FoundDeadFn = true;
+  while (FoundDeadFn) {
+    FoundDeadFn = false;
+    for (unsigned u = 0, e = InternalFns.size(); u < e; ++u) {
+      Function *F = InternalFns[u];
+      if (!F)
+        continue;
+
+      bool AllCallSitesKnown;
+      if (!checkForAllCallSites(
+              [this](AbstractCallSite ACS) {
+                return ToBeDeletedFunctions.count(
+                    ACS.getInstruction()->getFunction());
+              },
+              *F, true, nullptr, AllCallSitesKnown))
+        continue;
+
+      ToBeDeletedFunctions.insert(F);
+      InternalFns[u] = nullptr;
+      FoundDeadFn = true;
+    }
+  }
 
   // Rewrite the functions as requested during manifest.
-    ChangeStatus ManifestChange =
-        rewriteFunctionSignatures(CGModifiedFunctions);
+  ChangeStatus ManifestChange = rewriteFunctionSignatures(CGModifiedFunctions);
 
-    for (Function *Fn : CGModifiedFunctions)
-      CGUpdater.reanalyzeFunction(*Fn);
+  for (Function *Fn : CGModifiedFunctions)
+    CGUpdater.reanalyzeFunction(*Fn);
 
-    for (Function *Fn : ToBeDeletedFunctions)
-      CGUpdater.removeFunction(*Fn);
+  for (Function *Fn : ToBeDeletedFunctions)
+    CGUpdater.removeFunction(*Fn);
 
-    NumFnDeleted += ToBeDeletedFunctions.size();
+  NumFnDeleted += ToBeDeletedFunctions.size();
 
 #ifdef EXPENSIVE_CHECKS
   for (Function *F : Functions) {
