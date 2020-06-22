@@ -4644,7 +4644,7 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
   bool ErrorFound = false;
   unsigned NamedModifiersNumber = 0;
   llvm::IndexedMap<const OMPIfClause *, Kind2Unsigned> FoundNameModifiers;
-  FoundNameModifiers.resize(llvm::omp::Directive_enumSize + 1);
+  FoundNameModifiers.resize(unsigned(OMPD_unknown) + 1);
   SmallVector<SourceLocation, 4> NameModifierLoc;
   for (const OMPClause *C : Clauses) {
     if (const auto *IC = dyn_cast_or_null<OMPIfClause>(C)) {

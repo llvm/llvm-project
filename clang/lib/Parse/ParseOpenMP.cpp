@@ -33,7 +33,7 @@ using namespace llvm::omp;
 
 namespace {
 enum OpenMPDirectiveKindEx {
-  OMPD_cancellation = llvm::omp::Directive_enumSize + 1,
+  OMPD_cancellation = unsigned(OMPD_unknown) + 1,
   OMPD_data,
   OMPD_declare,
   OMPD_end,
@@ -1718,8 +1718,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       SmallVector<OMPClause *, 1> Clauses;
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
         SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
-                    llvm::omp::Clause_enumSize + 1>
-            FirstClauses(llvm::omp::Clause_enumSize + 1);
+                    unsigned(OMPC_unknown) + 1>
+          FirstClauses(unsigned(OMPC_unknown) + 1);
         while (Tok.isNot(tok::annot_pragma_openmp_end)) {
           OpenMPClauseKind CKind =
               Tok.isAnnotation() ? OMPC_unknown
@@ -1754,8 +1754,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     SourceLocation StartLoc = ConsumeToken();
     SmallVector<OMPClause *, 5> Clauses;
     SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
-                llvm::omp::Clause_enumSize + 1>
-        FirstClauses(llvm::omp::Clause_enumSize + 1);
+                unsigned(OMPC_unknown) + 1>
+    FirstClauses(unsigned(OMPC_unknown) + 1);
     if (Tok.is(tok::annot_pragma_openmp_end)) {
       Diag(Tok, diag::err_omp_expected_clause)
           << getOpenMPDirectiveName(OMPD_requires);
@@ -2073,8 +2073,8 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   SmallVector<OMPClause *, 5> Clauses;
   SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
-              llvm::omp::Clause_enumSize + 1>
-      FirstClauses(llvm::omp::Clause_enumSize + 1);
+              unsigned(OMPC_unknown) + 1>
+  FirstClauses(unsigned(OMPC_unknown) + 1);
   unsigned ScopeFlags = Scope::FnScope | Scope::DeclScope |
                         Scope::CompoundStmtScope | Scope::OpenMPDirectiveScope;
   SourceLocation Loc = ConsumeAnnotationToken(), EndLoc;
@@ -2119,8 +2119,8 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
       SmallVector<OMPClause *, 1> Clauses;
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
         SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>,
-                    llvm::omp::Clause_enumSize + 1>
-            FirstClauses(llvm::omp::Clause_enumSize + 1);
+                    unsigned(OMPC_unknown) + 1>
+            FirstClauses(unsigned(OMPC_unknown) + 1);
         while (Tok.isNot(tok::annot_pragma_openmp_end)) {
           OpenMPClauseKind CKind =
               Tok.isAnnotation() ? OMPC_unknown
