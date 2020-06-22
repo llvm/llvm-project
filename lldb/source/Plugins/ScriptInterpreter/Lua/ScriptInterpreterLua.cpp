@@ -39,6 +39,11 @@ public:
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
+    if (llvm::StringRef(data).rtrim() == "quit") {
+      io_handler.SetIsDone(true);
+      return;
+    }
+
     if (llvm::Error error = m_script_interpreter.GetLua().Run(data)) {
       *GetOutputStreamFileSP() << llvm::toString(std::move(error));
     }
