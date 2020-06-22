@@ -18,8 +18,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Check that __sanitizer_cov call has !dgb pointing to the beginning
 ; of appropriate basic blocks.
 ; CHECK-LABEL:_Z3fooPi
-; CHECK: call void @__sanitizer_cov{{.*}}(i32*{{.*}}), !dbg [[A:!.*]]
-; CHECK: call void @__sanitizer_cov{{.*}}(i32*{{.*}}), !dbg [[B:!.*]]
+; CHECK: call void @__sanitizer_cov{{.*}}(i32*{{.*}}) #{{.*}}, !dbg [[A:!.*]]
+; CHECK: call void @__sanitizer_cov{{.*}}(i32*{{.*}}) #{{.*}}, !dbg [[B:!.*]]
 ; CHECK: ret void
 ; CHECK: [[A]] = !DILocation(line: 1, scope: !{{.*}})
 ; CHECK: [[B]] = !DILocation(line: 3, column: 5, scope: !{{.*}})
