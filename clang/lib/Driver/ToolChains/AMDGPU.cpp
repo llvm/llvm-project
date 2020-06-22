@@ -223,8 +223,6 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     llvm::sys::path::append(P, "cuda_wrappers");
     CC1Args.push_back("-internal-isystem");
     CC1Args.push_back(DriverArgs.MakeArgString(P));
-    CC1Args.push_back("-include");
-    CC1Args.push_back("__clang_hip_runtime_wrapper.h");
   }
 
   if (DriverArgs.hasArg(options::OPT_nogpuinc))
@@ -237,6 +235,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
   CC1Args.push_back("-internal-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
+  CC1Args.push_back("-include");
+  CC1Args.push_back("__clang_hip_runtime_wrapper.h");
 }
 
 void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
