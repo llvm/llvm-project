@@ -64,16 +64,16 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
 
     // Save FP into the appropriate stack slot...
     BuildMI(MBB, MBBI, DL, TII.get(MSP430::PUSH16r))
-      .addReg(MSP430::R4, RegState::Kill);
+      .addReg(MSP430::FP, RegState::Kill);
 
     // Update FP with the new base value...
-    BuildMI(MBB, MBBI, DL, TII.get(MSP430::MOV16rr), MSP430::R4)
+    BuildMI(MBB, MBBI, DL, TII.get(MSP430::MOV16rr), MSP430::FP)
       .addReg(MSP430::SP);
 
     // Mark the FramePtr as live-in in every block except the entry.
     for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
          I != E; ++I)
-      I->addLiveIn(MSP430::R4);
+      I->addLiveIn(MSP430::FP);
 
   } else
     NumBytes = StackSize - MSP430FI->getCalleeSavedFrameSize();
@@ -132,7 +132,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
     NumBytes = FrameSize - CSSize;
 
     // pop FP.
-    BuildMI(MBB, MBBI, DL, TII.get(MSP430::POP16r), MSP430::R4);
+    BuildMI(MBB, MBBI, DL, TII.get(MSP430::POP16r), MSP430::FP);
   } else
     NumBytes = StackSize - CSSize;
 
@@ -154,7 +154,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (MFI.hasVarSizedObjects()) {
     BuildMI(MBB, MBBI, DL,
-            TII.get(MSP430::MOV16rr), MSP430::SP).addReg(MSP430::R4);
+            TII.get(MSP430::MOV16rr), MSP430::SP).addReg(MSP430::FP);
     if (CSSize) {
       MachineInstr *MI =
         BuildMI(MBB, MBBI, DL,
