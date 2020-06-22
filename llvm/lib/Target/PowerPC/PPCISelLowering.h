@@ -436,6 +436,11 @@ namespace llvm {
     /// PLD.
     MAT_PCREL_ADDR,
 
+    /// TLS_DYNAMIC_MAT_PCREL_ADDR = Materialize a PC Relative address for
+    /// TLS global address when using dynamic access models. This can be done
+    /// through an add like PADDI.
+    TLS_DYNAMIC_MAT_PCREL_ADDR,
+
     // Constrained conversion from floating point to int
     STRICT_FCTIDZ = ISD::FIRST_TARGET_STRICTFP_OPCODE,
     STRICT_FCTIWZ,

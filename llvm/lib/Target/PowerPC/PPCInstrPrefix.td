@@ -811,6 +811,9 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   // If the PPCmatpcreladdr node is not caught by any other pattern it should be
   // caught here and turned into a paddi instruction to materialize the address.
   def : Pat<(PPCmatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
+  // PPCtlsdynamatpcreladdr node is used for TLS dynamic models to materialize
+  // tls global address with paddi instruction.
+  def : Pat<(PPCtlsdynamatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
 }
 
 let Predicates = [PrefixInstrs] in {
