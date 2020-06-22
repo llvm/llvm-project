@@ -58,6 +58,8 @@ TEST_F(HighlighterTest, HighlighterSelectionPath) {
   EXPECT_EQ(getName("a/dir.CC"), "clang");
   EXPECT_EQ(getName("/a/dir.hpp"), "clang");
   EXPECT_EQ(getName("header.h"), "clang");
+  EXPECT_EQ(getName("foo.m"), "clang");
+  EXPECT_EQ(getName("foo.mm"), "clang");
 
   EXPECT_EQ(getName(""), "none");
   EXPECT_EQ(getName("/dev/null"), "none");
