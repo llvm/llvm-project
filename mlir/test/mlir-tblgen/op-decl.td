@@ -1,4 +1,5 @@
 // RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck  %s
+// RUN: mlir-tblgen -gen-op-decls -op-regex="test.a_op" -I %S/../../include %s | FileCheck  %s --check-prefix=REDUCE
 
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -195,3 +196,5 @@ def _BOp : NS_Op<"_op_with_leading_underscore_and_no_namespace", []>;
 // CHECK-LABEL: _BOp declarations
 // CHECK: class _BOp : public Op<_BOp
 
+// REDUCE-LABEL: NS::AOp declarations
+// REDUCE-NOT: NS::BOp declarations
