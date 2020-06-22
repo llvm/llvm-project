@@ -83,9 +83,7 @@ struct Status {
     return ((Mask & S.Mask) == S.Mask) && ((Mode & S.Mask) == S.Mode);
   }
 
-  bool isCombinable(Status &S) {
-    return !(Mask & S.Mask) || isCompatible(S);
-  }
+  bool isCombinable(Status &S) { return !(Mask & S.Mask) || isCompatible(S); }
 };
 
 class BlockData {
@@ -110,7 +108,7 @@ public:
   // which is used in Phase 3 if we need to insert a mode change.
   MachineInstr *FirstInsertionPoint;
 
-  BlockData() : FirstInsertionPoint(nullptr) {};
+  BlockData() : FirstInsertionPoint(nullptr){};
 };
 
 namespace {
@@ -325,7 +323,7 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
 // exit value is propagated.
 void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
                                         const SIInstrInfo *TII) {
-//  BlockData *BI = BlockInfo[MBB.getNumber()];
+  //  BlockData *BI = BlockInfo[MBB.getNumber()];
   unsigned ThisBlock = MBB.getNumber();
   if (MBB.pred_empty()) {
     // There are no predecessors, so use the default starting status.
@@ -339,10 +337,12 @@ void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
 
     for (P = std::next(P); P != E; P = std::next(P)) {
       MachineBasicBlock *Pred = *P;
-      BlockInfo[ThisBlock]->Pred = BlockInfo[ThisBlock]->Pred.intersect(BlockInfo[Pred->getNumber()]->Exit);
+      BlockInfo[ThisBlock]->Pred = BlockInfo[ThisBlock]->Pred.intersect(
+          BlockInfo[Pred->getNumber()]->Exit);
     }
   }
-  Status TmpStatus = BlockInfo[ThisBlock]->Pred.merge(BlockInfo[ThisBlock]->Change);
+  Status TmpStatus =
+      BlockInfo[ThisBlock]->Pred.merge(BlockInfo[ThisBlock]->Change);
   if (BlockInfo[ThisBlock]->Exit != TmpStatus) {
     BlockInfo[ThisBlock]->Exit = TmpStatus;
     // Add the successors to the work list so we can propagate the changed exit
@@ -361,10 +361,11 @@ void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
 // not we insert an appropriate setreg instruction to modify the Mode register.
 void SIModeRegister::processBlockPhase3(MachineBasicBlock &MBB,
                                         const SIInstrInfo *TII) {
-//  BlockData *BI = BlockInfo[MBB.getNumber()];
+  //  BlockData *BI = BlockInfo[MBB.getNumber()];
   unsigned ThisBlock = MBB.getNumber();
   if (!BlockInfo[ThisBlock]->Pred.isCompatible(BlockInfo[ThisBlock]->Require)) {
-    Status Delta = BlockInfo[ThisBlock]->Pred.delta(BlockInfo[ThisBlock]->Require);
+    Status Delta =
+        BlockInfo[ThisBlock]->Pred.delta(BlockInfo[ThisBlock]->Require);
     if (BlockInfo[ThisBlock]->FirstInsertionPoint)
       insertSetreg(MBB, BlockInfo[ThisBlock]->FirstInsertionPoint, TII, Delta);
     else
