@@ -603,6 +603,8 @@ def ast_dump_all : Flag<["-"], "ast-dump-all">,
 def ast_dump_all_EQ : Joined<["-"], "ast-dump-all=">,
   HelpText<"Build ASTs and then debug dump them in the specified format, "
            "forcing deserialization. Supported formats include: default, json">;
+def ast_dump_decl_types : Flag<["-"], "ast-dump-decl-types">,
+  HelpText<"Include declaration types in AST dumps">;
 def templight_dump : Flag<["-"], "templight-dump">,
   HelpText<"Dump templight information to stdout">;
 def ast_dump_lookups : Flag<["-"], "ast-dump-lookups">,
