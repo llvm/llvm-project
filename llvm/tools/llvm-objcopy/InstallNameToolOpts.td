@@ -18,5 +18,8 @@ def h : Flag<["-"], "h">, Alias<help>;
 def add_rpath : Option<["-", "--"], "add_rpath", KIND_SEPARATE>,
                 HelpText<"Add new rpath">;
 
+def delete_rpath: Option<["-", "--"], "delete_rpath", KIND_SEPARATE>,
+                  HelpText<"Delete specified rpath">;
+
 def version : Flag<["--"], "version">,
               HelpText<"Print the version and exit.">;

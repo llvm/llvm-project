@@ -32,6 +32,42 @@ void SymbolTable::removeSymbols(
       std::end(Symbols));
 }
 
+void Object::updateLoadCommandIndexes() {
+  // Update indices of special load commands
+  for (size_t Index = 0, Size = LoadCommands.size(); Index < Size; ++Index) {
+    LoadCommand &LC = LoadCommands[Index];
+    switch (LC.MachOLoadCommand.load_command_data.cmd) {
+    case MachO::LC_SYMTAB:
+      SymTabCommandIndex = Index;
+      break;
+    case MachO::LC_DYSYMTAB:
+      DySymTabCommandIndex = Index;
+      break;
+    case MachO::LC_DYLD_INFO:
+    case MachO::LC_DYLD_INFO_ONLY:
+      DyLdInfoCommandIndex = Index;
+      break;
+    case MachO::LC_DATA_IN_CODE:
+      DataInCodeCommandIndex = Index;
+      break;
+    case MachO::LC_FUNCTION_STARTS:
+      FunctionStartsCommandIndex = Index;
+      break;
+    }
+  }
+}
+
+Error Object::removeLoadCommands(
+    function_ref<bool(const LoadCommand &)> ToRemove) {
+  auto It = std::stable_partition(
+      LoadCommands.begin(), LoadCommands.end(),
+      [&](const LoadCommand &LC) { return !ToRemove(LC); });
+  LoadCommands.erase(It, LoadCommands.end());
+
+  updateLoadCommandIndexes();
+  return Error::success();
+}
+
 Error Object::removeSections(
     function_ref<bool(const std::unique_ptr<Section> &)> ToRemove) {
   DenseMap<uint32_t, const Section *> OldIndexToSection;

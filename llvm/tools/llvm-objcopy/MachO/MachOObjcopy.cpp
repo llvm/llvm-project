@@ -10,6 +10,7 @@
 #include "../CopyConfig.h"
 #include "MachOReader.h"
 #include "MachOWriter.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 
@@ -19,6 +20,39 @@ namespace macho {
 
 using namespace object;
 using SectionPred = std::function<bool(const std::unique_ptr<Section> &Sec)>;
+using LoadCommandPred = std::function<bool(const LoadCommand &LC)>;
+
+static Error removeLoadCommands(const CopyConfig &Config, Object &Obj) {
+  DenseSet<StringRef> RPathsToRemove(Config.RPathsToRemove.begin(),
+                                     Config.RPathsToRemove.end());
+
+  LoadCommandPred RemovePred = [&RPathsToRemove](const LoadCommand &LC) {
+    if (LC.MachOLoadCommand.load_command_data.cmd == MachO::LC_RPATH) {
+      StringRef RPath =
+          StringRef(reinterpret_cast<const char *>(LC.Payload.data()),
+                    LC.Payload.size())
+              .rtrim('\0');
+      if (RPathsToRemove.count(RPath)) {
+        RPathsToRemove.erase(RPath);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (Error E = Obj.removeLoadCommands(RemovePred))
+    return E;
+
+  // Emit an error if the Mach-O binary does not contain an rpath path name
+  // specified in -delete_rpath.
+  for (StringRef RPath : Config.RPathsToRemove) {
+    if (RPathsToRemove.count(RPath))
+      return createStringError(errc::invalid_argument,
+                               "no LC_RPATH load command with path: %s",
+                               RPath.str().c_str());
+  }
+  return Error::success();
+}
 
 static Error removeSections(const CopyConfig &Config, Object &Obj) {
   SectionPred RemovePred = [](const std::unique_ptr<Section> &) {
@@ -219,6 +253,9 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     if (Error E = addSection(SecName, File, Obj))
       return E;
   }
+
+  if (Error E = removeLoadCommands(Config, Obj))
+    return E;
 
   for (StringRef RPath : Config.RPathToAdd) {
     for (LoadCommand &LC : Obj.LoadCommands) {
