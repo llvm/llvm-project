@@ -363,6 +363,10 @@ bool Linux::HasNativeLLVMSupport() const { return true; }
 
 Tool *Linux::buildLinker() const { return new tools::gnutools::Linker(*this); }
 
+Tool *Linux::buildStaticLibTool() const {
+  return new tools::gnutools::StaticLibTool(*this);
+}
+
 Tool *Linux::buildAssembler() const {
   return new tools::gnutools::Assembler(*this);
 }

@@ -72,6 +72,20 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
+class LLVM_LIBRARY_VISIBILITY StaticLibTool : public GnuTool {
+public:
+  StaticLibTool(const ToolChain &TC)
+      : GnuTool("GNU::StaticLibTool", "static-lib-linker", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+  bool isLinkJob() const override { return true; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
 } // end namespace gnutools
 
 /// gcc - Generic GCC tool implementations.
