@@ -201,7 +201,8 @@ static ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
 
   // extelt X, C --> extelt (shuffle X), NewIndex
   IRBuilder<> Builder(ExtElt);
-  Value *Shuf = Builder.CreateShuffleVector(X, UndefValue::get(VecTy), Mask);
+  Value *Shuf =
+      Builder.CreateShuffleVector(X, UndefValue::get(VecTy), Mask, "shift");
   return cast<ExtractElementInst>(Builder.CreateExtractElement(Shuf, NewIndex));
 }
 
@@ -223,6 +224,7 @@ static void foldExtExtCmp(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
   Value *VecCmp = Builder.CreateCmp(Pred, V0, V1);
   Value *NewExt = Builder.CreateExtractElement(VecCmp, Ext0->getIndexOperand());
   I.replaceAllUsesWith(NewExt);
+  NewExt->takeName(&I);
 }
 
 /// Try to reduce extract element costs by converting scalar binops to vector
@@ -249,6 +251,7 @@ static void foldExtExtBinop(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
 
   Value *NewExt = Builder.CreateExtractElement(VecBO, Ext0->getIndexOperand());
   I.replaceAllUsesWith(NewExt);
+  NewExt->takeName(&I);
 }
 
 /// Match an instruction with extracted vector operands.
