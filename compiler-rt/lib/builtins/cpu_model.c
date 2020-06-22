@@ -655,14 +655,12 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   if (__cpu_model.__cpu_vendor)
     return 0;
 
-  if (!isCpuIdSupported())
-    return -1;
-
-  // Assume cpuid insn present. Run in level 0 to get vendor id.
-  if (getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX) || MaxLeaf < 1) {
+  if (!isCpuIdSupported() ||
+      getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX) || MaxLeaf < 1) {
     __cpu_model.__cpu_vendor = VENDOR_OTHER;
     return -1;
   }
+
   getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
   detectX86FamilyModel(EAX, &Family, &Model);
 
