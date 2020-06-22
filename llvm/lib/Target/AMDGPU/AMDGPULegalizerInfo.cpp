@@ -2003,10 +2003,12 @@ bool AMDGPULegalizerInfo::legalizeSinCos(
   return true;
 }
 
-bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(
-  Register DstReg, LLT PtrTy,
-  MachineIRBuilder &B, const GlobalValue *GV,
-  unsigned Offset, unsigned GAFlags) const {
+bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
+                                                  MachineIRBuilder &B,
+                                                  const GlobalValue *GV,
+                                                  int64_t Offset,
+                                                  unsigned GAFlags) const {
+  assert(isInt<32>(Offset + 4) && "32-bit offset is expected!");
   // In order to support pc-relative addressing, SI_PC_ADD_REL_OFFSET is lowered
   // to the following code sequence:
   //
