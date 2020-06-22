@@ -643,13 +643,13 @@ DWARF:
           Values:
             - Value: 0x1234
 
-## i) Test that yaml2obj reports a fatal error when 'debug_info' has values in its
+## i) Test that yaml2obj reports an error when 'debug_info' has values in its
 ## entries but 'debug_abbrev' doesn't have enough attributes for them.
 
-# RUN: not --crash yaml2obj --docnum=10 %s -o %t10.o 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=FATAL
+# RUN: not yaml2obj --docnum=10 %s -o %t10.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=ERROR
 
-# FATAL: LLVM ERROR: abbrev code must be less than or equal to the number of entries in abbreviation table
+# ERROR: yaml2obj: error: abbrev code must be less than or equal to the number of entries in abbreviation table
 
 --- !ELF
 FileHeader:
