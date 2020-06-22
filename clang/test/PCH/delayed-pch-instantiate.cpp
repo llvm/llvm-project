@@ -2,10 +2,10 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -DBODY %s -o - | FileCheck %s
 
 // Test with pch.
-// RUN: %clang_cc1 -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -include-pch %t -DBODY %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -emit-pch -fpch-instantiate-templates -o %t %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-pch -fpch-instantiate-templates -o %t %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -include-pch %t -DBODY %s -o - | FileCheck %s
 
 // expected-no-diagnostics
