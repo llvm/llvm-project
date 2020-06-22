@@ -168,14 +168,14 @@ namespace {
     DenseSet<LVIValueHandle, DenseMapInfo<Value *>> ValueHandles;
 
     const BlockCacheEntry *getBlockEntry(BasicBlock *BB) const {
-      auto It = BlockCache.find(BB);
+      auto It = BlockCache.find_as(BB);
       if (It == BlockCache.end())
         return nullptr;
       return It->second.get();
     }
 
     BlockCacheEntry *getOrCreateBlockEntry(BasicBlock *BB) {
-      auto It = BlockCache.find(BB);
+      auto It = BlockCache.find_as(BB);
       if (It == BlockCache.end())
         It = BlockCache.insert({ BB, std::make_unique<BlockCacheEntry>() })
                        .first;
@@ -209,7 +209,7 @@ namespace {
       if (Entry->OverDefined.count(V))
         return ValueLatticeElement::getOverdefined();
 
-      auto LatticeIt = Entry->LatticeElements.find(V);
+      auto LatticeIt = Entry->LatticeElements.find_as(V);
       if (LatticeIt == Entry->LatticeElements.end())
         return None;
 
@@ -290,7 +290,7 @@ void LazyValueInfoCache::threadEdgeImpl(BasicBlock *OldSucc,
     if (ToUpdate == NewSucc) continue;
 
     // If a value was marked overdefined in OldSucc, and is here too...
-    auto OI = BlockCache.find(ToUpdate);
+    auto OI = BlockCache.find_as(ToUpdate);
     if (OI == BlockCache.end() || OI->second->OverDefined.empty())
       continue;
     auto &ValueSet = OI->second->OverDefined;
