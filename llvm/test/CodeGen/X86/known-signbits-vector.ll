@@ -389,7 +389,6 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ; X86-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,0,8,0]
 ; X86-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; X86-NEXT:    vpmovsxdq %xmm1, %xmm1
 ; X86-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; X86-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; X86-NEXT:    vpxor %xmm0, %xmm1, %xmm0
@@ -407,7 +406,6 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,8]
 ; X64-AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpmovsxdq %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; X64-AVX1-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; X64-AVX1-NEXT:    vpxor %xmm0, %xmm1, %xmm0
@@ -420,7 +418,6 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,8]
 ; X64-AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpmovsxdq %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; X64-AVX2-NEXT:    vpxor %xmm0, %xmm1, %xmm0
