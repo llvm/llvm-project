@@ -109,6 +109,11 @@ static cl::opt<bool> AlignLoads("hexagon-align-loads",
   cl::Hidden, cl::init(false),
   cl::desc("Rewrite unaligned loads as a pair of aligned loads"));
 
+static cl::opt<bool>
+    DisableArgsMinAlignment("hexagon-disable-args-min-alignment", cl::Hidden,
+                            cl::init(false),
+                            cl::desc("Disable minimum alignment of 1 for "
+                                     "arguments passed by value on stack"));
 
 namespace {
 
@@ -401,6 +406,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (Subtarget.useHVXOps())
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_HVX);
+  else if (DisableArgsMinAlignment)
+    CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon);
 
@@ -762,6 +769,8 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
   if (Subtarget.useHVXOps())
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_HVX);
+  else if (DisableArgsMinAlignment)
+    CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon);
 
