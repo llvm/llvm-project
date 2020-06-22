@@ -66,7 +66,7 @@ void ARCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 bool ARCAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Functions are 4-byte aligned.
   MF.ensureAlignment(Align(4));
-  AsmPrinter::runOnMachineFunction(MF);
+  return AsmPrinter::runOnMachineFunction(MF);
 }
 
 // Force static initialization.
