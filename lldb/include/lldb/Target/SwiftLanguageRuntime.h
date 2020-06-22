@@ -333,7 +333,7 @@ public:
   static bool IsSwiftClassName(const char *name);
   /// Determines wether \c variable is the "self" object.
   static bool IsSelf(Variable &variable);
-  bool IsWhitelistedRuntimeValue(ConstString name) override;
+  bool IsAllowedRuntimeValue(ConstString name) override;
 
   lldb::SyntheticChildrenSP
   GetBridgedSyntheticChildProvider(ValueObject &valobj);
