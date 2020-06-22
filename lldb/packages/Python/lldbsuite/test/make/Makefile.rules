@@ -715,7 +715,7 @@ VPATHDYLIBSOURCES=$(patsubst %,$(VPATH)/%,$(DYLIB_SWIFT_SOURCES))
 ifeq "$(OS)" "Darwin"
 $(EXE): $(MODULENAME).swiftmodule $(OBJECTS)
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) -toolchain-stdlib-rpath $(LD_EXTRAS) \
+	$(SWIFTC) $(LD_EXTRAS) \
 	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
 	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
@@ -820,7 +820,6 @@ ifeq "$(USESWIFTDRIVER)" "1"
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Darwin"
 DYLIB_SWIFT_FLAGS=  \
-	 -toolchain-stdlib-rpath \
 	 -Xlinker -dylib \
 	 -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
 	 -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@) \
@@ -831,11 +830,11 @@ endif
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
 ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
-	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) -toolchain-stdlib-rpath \
+	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) \
             -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ \
             $(patsubst %.swiftmodule.o,,$^)
 else
-	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) -toolchain-stdlib-rpath \
+	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) \
             -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $^
 endif
 ifneq "$(CODESIGN)" ""

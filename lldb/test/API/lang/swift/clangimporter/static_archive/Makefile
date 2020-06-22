@@ -13,8 +13,7 @@ include Makefile.rules
 a.out: main.o
 	$(SWIFTC) $(SWIFTFLAGS) $< -lFoo -lBar -L$(shell pwd) -o $@ \
 	    -Xlinker -add_ast_path -Xlinker $(shell pwd)/Foo.swiftmodule \
-	    -Xlinker -add_ast_path -Xlinker $(shell pwd)/Bar.swiftmodule \
-	    -toolchain-stdlib-rpath
+	    -Xlinker -add_ast_path -Xlinker $(shell pwd)/Bar.swiftmodule
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
