@@ -429,3 +429,64 @@ Sections:
         Value: 0x123
       - Tag:   DT_NULL
         Value: 0
+
+## Check we report a warning when the DT_STRSZ value is broken so that the dynamic string
+## table goes past the end of the file. Document we stop dumping symbols and report an error.
+
+# RUN: yaml2obj %s --docnum=13 -o %t14
+# RUN: not llvm-readobj --dyn-symbols %t14 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t14 --check-prefix=DYNSTR-INVALID-LLVM
+# RUN: not llvm-readelf --dyn-symbols %t14 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t14 --check-prefix=DYNSTR-INVALID-GNU
+
+# DYNSTR-INVALID-LLVM: warning: '[[FILE]]': the dynamic string table at 0x78 goes past the end of the file (0x2a8) with DT_STRSZ = 0xffffffff
+# DYNSTR-INVALID-LLVM:      DynamicSymbols [
+# DYNSTR-INVALID-LLVM-NEXT:   Symbol {
+# DYNSTR-INVALID-LLVM-NEXT:     Name:  (0)
+# DYNSTR-INVALID-LLVM-NEXT:     Value: 0x0
+# DYNSTR-INVALID-LLVM-NEXT:     Size: 0
+# DYNSTR-INVALID-LLVM-NEXT:     Binding: Local (0x0)
+# DYNSTR-INVALID-LLVM-NEXT:     Type: None (0x0)
+# DYNSTR-INVALID-LLVM-NEXT:     Other: 0
+# DYNSTR-INVALID-LLVM-NEXT:     Section: Undefined (0x0)
+# DYNSTR-INVALID-LLVM-NEXT:   }
+# DYNSTR-INVALID-LLVM-NEXT: error: '[[FILE]]': st_name (0xffffff00) is past the end of the string table of size 0x6
+
+# DYNSTR-INVALID-GNU: warning: '[[FILE]]': the dynamic string table at 0x78 goes past the end of the file (0x2a8) with DT_STRSZ = 0xffffffff
+# DYNSTR-INVALID-GNU:      Symbol table '.dynsym' contains 3 entries:
+# DYNSTR-INVALID-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+# DYNSTR-INVALID-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# DYNSTR-INVALID-GNU-NEXT: error: '[[FILE]]': st_name (0xffffff00) is past the end of the string table of size 0x6
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Flags:   [ SHF_ALLOC ]
+    Content: '007465737400' ## '\0', 'test', '\0'
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Link:  .dynstr
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x0
+      - Tag:   DT_STRSZ
+        Value: 0xffffffff
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols:
+  - StName:  0xffffff00
+## An arbitrary valid symbol to document we report an error before dumping it.
+  - StName:  0x1
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R ]
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
