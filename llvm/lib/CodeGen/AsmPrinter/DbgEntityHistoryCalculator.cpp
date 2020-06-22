@@ -47,7 +47,8 @@ static Register isDescribedByReg(const MachineInstr &MI) {
     return 0;
   // If location of variable is described using a register (directly or
   // indirectly), this register is always a first operand.
-  return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : Register();
+  return MI.getDebugOperand(0).isReg() ? MI.getDebugOperand(0).getReg()
+                                       : Register();
 }
 
 bool DbgValueHistoryMap::startDbgValue(InlinedEntity Var,

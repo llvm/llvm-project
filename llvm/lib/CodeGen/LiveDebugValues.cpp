@@ -174,7 +174,8 @@ static Register isDbgValueDescribedByReg(const MachineInstr &MI) {
   assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
   // If location of variable is described using a register (directly
   // or indirectly), this register is always a first operand.
-  return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : Register();
+  return MI.getDebugOperand(0).isReg() ? MI.getDebugOperand(0).getReg()
+                                       : Register();
 }
 
 /// If \p Op is a stack or frame register return true, otherwise return false.
@@ -334,15 +335,15 @@ private:
       if (int RegNo = isDbgValueDescribedByReg(MI)) {
         Kind = RegisterKind;
         Loc.RegNo = RegNo;
-      } else if (MI.getOperand(0).isImm()) {
+      } else if (MI.getDebugOperand(0).isImm()) {
         Kind = ImmediateKind;
-        Loc.Immediate = MI.getOperand(0).getImm();
-      } else if (MI.getOperand(0).isFPImm()) {
+        Loc.Immediate = MI.getDebugOperand(0).getImm();
+      } else if (MI.getDebugOperand(0).isFPImm()) {
         Kind = ImmediateKind;
-        Loc.FPImm = MI.getOperand(0).getFPImm();
-      } else if (MI.getOperand(0).isCImm()) {
+        Loc.FPImm = MI.getDebugOperand(0).getFPImm();
+      } else if (MI.getDebugOperand(0).isCImm()) {
         Kind = ImmediateKind;
-        Loc.CImm = MI.getOperand(0).getCImm();
+        Loc.CImm = MI.getDebugOperand(0).getCImm();
       }
 
       // We create the debug entry values from the factory functions rather than
@@ -430,8 +431,8 @@ private:
         // expression. The register location of such DBG_VALUE is always the one
         // from the entry DBG_VALUE, it does not matter if the entry value was
         // copied in to another register due to some optimizations.
-        return BuildMI(MF, DbgLoc, IID, Indirect, MI.getOperand(0).getReg(),
-                       Var, Expr);
+        return BuildMI(MF, DbgLoc, IID, Indirect,
+                       MI.getDebugOperand(0).getReg(), Var, Expr);
       case RegisterKind:
         // Register locations are like the source DBG_VALUE, but with the
         // register number from this VarLoc.
@@ -447,7 +448,7 @@ private:
         return BuildMI(MF, DbgLoc, IID, true, Base, Var, SpillExpr);
       }
       case ImmediateKind: {
-        MachineOperand MO = MI.getOperand(0);
+        MachineOperand MO = MI.getDebugOperand(0);
         return BuildMI(MF, DbgLoc, IID, Indirect, MO, Var, DIExpr);
       }
       case EntryValueBackupKind:
@@ -1020,7 +1021,7 @@ bool LiveDebugValues::removeEntryValue(const MachineInstr &MI,
   // the entry value any more. In addition, if the debug expression from the
   // DBG_VALUE is not empty, we can assume the parameter's value has changed
   // indicating that we should stop tracking its entry value as well.
-  if (!MI.getOperand(0).isReg() ||
+  if (!MI.getDebugOperand(0).isReg() ||
       MI.getDebugExpression()->getNumElements() != 0)
     return true;
 
@@ -1028,7 +1029,7 @@ bool LiveDebugValues::removeEntryValue(const MachineInstr &MI,
   // it means the parameter's value has not changed and we should be able to use
   // its entry value.
   bool TrySalvageEntryValue = false;
-  Register Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getDebugOperand(0).getReg();
   auto I = std::next(MI.getReverseIterator());
   const MachineOperand *SrcRegOp, *DestRegOp;
   if (I != MI.getParent()->rend()) {
@@ -1050,7 +1051,7 @@ bool LiveDebugValues::removeEntryValue(const MachineInstr &MI,
     for (uint64_t ID : OpenRanges.getEntryValueBackupVarLocs()) {
       const VarLoc &VL = VarLocIDs[LocIndex::fromRawInteger(ID)];
       if (VL.getEntryValueCopyBackupReg() == Reg &&
-          VL.MI.getOperand(0).getReg() == SrcRegOp->getReg())
+          VL.MI.getDebugOperand(0).getReg() == SrcRegOp->getReg())
         return false;
     }
   }
@@ -1088,8 +1089,8 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
     }
   }
 
-  if (isDbgValueDescribedByReg(MI) || MI.getOperand(0).isImm() ||
-      MI.getOperand(0).isFPImm() || MI.getOperand(0).isCImm()) {
+  if (isDbgValueDescribedByReg(MI) || MI.getDebugOperand(0).isImm() ||
+      MI.getDebugOperand(0).isFPImm() || MI.getDebugOperand(0).isCImm()) {
     // Use normal VarLoc constructor for registers and immediates.
     VarLoc VL(MI, LS);
     // End all previous ranges of VL.Var.
@@ -1102,7 +1103,8 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
     llvm_unreachable("DBG_VALUE with mem operand encountered after regalloc?");
   } else {
     // This must be an undefined location. If it has an open range, erase it.
-    assert(MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == 0 &&
+    assert(MI.getDebugOperand(0).isReg() &&
+           MI.getDebugOperand(0).getReg() == 0 &&
            "Unexpected non-undef DBG_VALUE encountered");
     VarLoc VL(MI, LS);
     OpenRanges.erase(VL);
@@ -1738,14 +1740,14 @@ bool LiveDebugValues::isEntryValueCandidate(
   // Only consider parameters that are described using registers. Parameters
   // that are passed on the stack are not yet supported, so ignore debug
   // values that are described by the frame or stack pointer.
-  if (!isRegOtherThanSPAndFP(MI.getOperand(0), MI, TRI))
+  if (!isRegOtherThanSPAndFP(MI.getDebugOperand(0), MI, TRI))
     return false;
 
   // If a parameter's value has been propagated from the caller, then the
   // parameter's DBG_VALUE may be described using a register defined by some
   // instruction in the entry block, in which case we shouldn't create an
   // entry value.
-  if (DefinedRegs.count(MI.getOperand(0).getReg()))
+  if (DefinedRegs.count(MI.getDebugOperand(0).getReg()))
     return false;
 
   // TODO: Add support for parameters that have a pre-existing debug expressions

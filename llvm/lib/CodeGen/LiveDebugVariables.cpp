@@ -608,8 +608,8 @@ UserValue *LDVImpl::lookupVirtReg(unsigned VirtReg) {
 bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   // DBG_VALUE loc, offset, variable
   if (MI.getNumOperands() != 4 ||
-      !(MI.getOperand(1).isReg() || MI.getOperand(1).isImm()) ||
-      !MI.getOperand(2).isMetadata()) {
+      !(MI.getDebugOffset().isReg() || MI.getDebugOffset().isImm()) ||
+      !MI.getDebugVariableOp().isMetadata()) {
     LLVM_DEBUG(dbgs() << "Can't handle " << MI);
     return false;
   }
@@ -622,9 +622,9 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   // (and if the machine verifier is improved to catch this), then these checks
   // could be removed or replaced by asserts.
   bool Discard = false;
-  if (MI.getOperand(0).isReg() &&
-      Register::isVirtualRegister(MI.getOperand(0).getReg())) {
-    const Register Reg = MI.getOperand(0).getReg();
+  if (MI.getDebugOperand(0).isReg() &&
+      Register::isVirtualRegister(MI.getDebugOperand(0).getReg())) {
+    const Register Reg = MI.getDebugOperand(0).getReg();
     if (!LIS->hasInterval(Reg)) {
       // The DBG_VALUE is described by a virtual register that does not have a
       // live interval. Discard the DBG_VALUE.
@@ -648,14 +648,15 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   }
 
   // Get or create the UserValue for (variable,offset) here.
-  bool IsIndirect = MI.getOperand(1).isImm();
+  bool IsIndirect = MI.isDebugOffsetImm();
   if (IsIndirect)
-    assert(MI.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
+    assert(MI.getDebugOffset().getImm() == 0 &&
+           "DBG_VALUE with nonzero offset");
   const DILocalVariable *Var = MI.getDebugVariable();
   const DIExpression *Expr = MI.getDebugExpression();
   UserValue *UV = getUserValue(Var, Expr->getFragmentInfo(), MI.getDebugLoc());
   if (!Discard)
-    UV->addDef(Idx, MI.getOperand(0), IsIndirect, *Expr);
+    UV->addDef(Idx, MI.getDebugOperand(0), IsIndirect, *Expr);
   else {
     MachineOperand MO = MachineOperand::CreateReg(0U, false);
     MO.setIsDebug();
