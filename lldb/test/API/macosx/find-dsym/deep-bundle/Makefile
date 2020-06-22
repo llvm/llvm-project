@@ -1,13 +1,9 @@
-SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/
-CC ?= clang
+EXE := deep-bundle
+all: clean $(EXE)
 
-ifeq "$(ARCH)" ""
-	ARCH = x86_64
-endif
+include Makefile.rules
 
-CFLAGS ?= -g -O0 -arch $(ARCH)
-
-all: clean
+$(EXE):
 	$(CC) $(CFLAGS) -install_name $(shell pwd)/MyFramework.framework/Versions/A/MyFramework -dynamiclib -o MyFramework $(SRCDIR)/myframework.c
 	mkdir -p MyFramework.framework/Versions/A/Headers
 	mkdir -p MyFramework.framework/Versions/A/Resources
@@ -24,6 +20,5 @@ all: clean
 	tar cf - MyFramework.framework MyFramework.framework.dSYM | ( cd hide.app;tar xBpf -)
 	$(CC) $(CFLAGS) -o deep-bundle $(SRCDIR)/main.c -F. -framework MyFramework
 
-
-clean:
+clean::
 	rm -rf a.out a.out.dSYM deep-bundle deep-bundle.dSYM MyFramework.framework MyFramework.framework.dSYM MyFramework MyFramework.dSYM hide.app

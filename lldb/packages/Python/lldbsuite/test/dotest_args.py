@@ -45,7 +45,7 @@ def create_parser():
         dest='swiftcompiler',
         help='The path to a valid Swift compiler')
     if sys.platform == 'darwin':
-        group.add_argument('--apple-sdk', metavar='apple_sdk', dest='apple_sdk', default="macosx", help=textwrap.dedent(
+        group.add_argument('--apple-sdk', metavar='apple_sdk', dest='apple_sdk', default="", help=textwrap.dedent(
             '''Specify the name of the Apple SDK (macosx, macosx.internal, iphoneos, iphoneos.internal, or path to SDK) and use the appropriate tools from that SDK's toolchain.'''))
     # FIXME? This won't work for different extra flags according to each arch.
     group.add_argument(
