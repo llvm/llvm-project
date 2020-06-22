@@ -10,6 +10,7 @@
 
 #include "DWARFVisitor.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -48,13 +49,19 @@ template <typename T> void DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
     onStartCompileUnit(Unit);
     if (Unit.Entries.empty())
       continue;
-    auto FirstAbbrevCode = Unit.Entries[0].AbbrCode;
 
     for (auto &Entry : Unit.Entries) {
       onStartDIE(Unit, Entry);
-      if (Entry.AbbrCode == 0u)
+      uint32_t AbbrCode = Entry.AbbrCode;
+      if (AbbrCode == 0 || Entry.Values.empty())
         continue;
-      auto &Abbrev = DebugInfo.AbbrevDecls[Entry.AbbrCode - FirstAbbrevCode];
+
+      if (AbbrCode > DebugInfo.AbbrevDecls.size())
+        // TODO: Handle and test this error.
+        report_fatal_error(
+            "abbrev code must be less than or equal to the number of "
+            "entries in abbreviation table");
+      const DWARFYAML::Abbrev &Abbrev = DebugInfo.AbbrevDecls[AbbrCode - 1];
       auto FormVal = Entry.Values.begin();
       auto AbbrForm = Abbrev.Attributes.begin();
       for (;
