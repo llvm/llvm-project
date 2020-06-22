@@ -582,7 +582,7 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 
 static void
 getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                const unsigned *Features,
+                                const unsigned (&Features)[3],
                                 unsigned *Type, unsigned *Subtype) {
   auto testFeature = [&](unsigned F) {
     return (Features[F / 32] & (1U << (F % 32))) != 0;
@@ -910,7 +910,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 }
 
 static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                          const unsigned *Features,
+                                          const unsigned (&Features)[3],
                                           unsigned *Type, unsigned *Subtype) {
   auto testFeature = [&](unsigned F) {
     return (Features[F / 32] & (1U << (F % 32))) != 0;
@@ -1012,7 +1012,10 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 }
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
-                                 unsigned *Features) {
+                                 unsigned (&Features)[3]) {
+  Features[0] = 0;
+  Features[1] = 0;
+  Features[2] = 0;
   unsigned EAX, EBX;
 
   auto setFeature = [&](unsigned F) {
@@ -1154,7 +1157,7 @@ StringRef sys::getHostCPUName() {
   getX86CpuIDAndInfo(0x1, &EAX, &EBX, &ECX, &EDX);
 
   unsigned Family = 0, Model = 0;
-  unsigned Features[(X86::CPU_FEATURE_MAX + 31) / 32] = {0};
+  unsigned Features[3] = {0, 0, 0};
   detectX86FamilyModel(EAX, &Family, &Model);
   getAvailableFeatures(ECX, EDX, MaxLeaf, Features);
 
