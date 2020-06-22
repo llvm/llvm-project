@@ -485,3 +485,23 @@ entry:
   %v = call i8 @LoadMinInt64(i8* %x2)
   ret void
 }
+
+define void @DeadBlock(i64* %p) {
+; CHECK-LABEL: @DeadBlock dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: p[]: empty-set{{$}}
+; CHECK-NEXT: allocas uses:
+; CHECK: x[1]: empty-set{{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i8, align 4
+  br label %end
+
+dead:
+  store i8 5, i8* %x
+  store i64 -5, i64* %p
+  br label %end
+
+end:
+  ret void
+}
