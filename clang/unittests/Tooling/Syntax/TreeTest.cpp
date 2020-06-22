@@ -69,6 +69,10 @@ struct TestClangConfig {
            Language == Lang_CXX20;
   }
 
+  bool hasBoolType() const {
+    return Language == Lang_C89 || Language == Lang_C99;
+  }
+
   bool supportsCXXDynamicExceptionSpecification() const {
     return Language == Lang_CXX03 || Language == Lang_CXX11 ||
            Language == Lang_CXX14;
@@ -1228,6 +1232,40 @@ void test() {
 )txt"));
 }
 
+TEST_P(SyntaxTreeTest, BoolLiteral) {
+  if (GetParam().hasBoolType()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  true;
+  false;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-BoolLiteralExpression
+    | | `-true
+    | `-;
+    |-ExpressionStatement
+    | |-BoolLiteralExpression
+    | | `-false
+    | `-;
+    `-}
+)txt"));
+}
+
 TEST_P(SyntaxTreeTest, IntegerLiteral) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
@@ -1691,18 +1729,18 @@ void test(int a) {
     |-{
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-BoolLiteralExpression
     | | | `-true
     | | |-||
-    | | `-UnknownExpression
+    | | `-BoolLiteralExpression
     | |   `-false
     | `-;
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-BoolLiteralExpression
     | | | `-true
     | | |-or
-    | | `-UnknownExpression
+    | | `-BoolLiteralExpression
     | |   `-false
     | `-;
     |-ExpressionStatement
@@ -2556,7 +2594,7 @@ static_assert(true);
 |-StaticAssertDeclaration
 | |-static_assert
 | |-(
-| |-UnknownExpression
+| |-BoolLiteralExpression
 | | `-true
 | |-,
 | |-UnknownExpression
@@ -2566,7 +2604,7 @@ static_assert(true);
 `-StaticAssertDeclaration
   |-static_assert
   |-(
-  |-UnknownExpression
+  |-BoolLiteralExpression
   | `-true
   |-)
   `-;
@@ -3186,7 +3224,7 @@ int b() noexcept(true);
   |   |-)
   |   |-noexcept
   |   |-(
-  |   |-UnknownExpression
+  |   |-BoolLiteralExpression
   |   | `-true
   |   `-)
   `-;

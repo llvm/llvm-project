@@ -22,6 +22,8 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "CxxNullPtrExpression";
   case NodeKind::IntegerLiteralExpression:
     return OS << "IntegerLiteralExpression";
+  case NodeKind::BoolLiteralExpression:
+    return OS << "BoolLiteralExpression";
   case NodeKind::PrefixUnaryOperatorExpression:
     return OS << "PrefixUnaryOperatorExpression";
   case NodeKind::PostfixUnaryOperatorExpression:
@@ -196,6 +198,11 @@ syntax::UnqualifiedId *syntax::IdExpression::unqualifiedId() {
 }
 
 syntax::Leaf *syntax::IntegerLiteralExpression::literalToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Leaf *syntax::BoolLiteralExpression::literalToken() {
   return llvm::cast_or_null<syntax::Leaf>(
       findChild(syntax::NodeRole::LiteralToken));
 }
