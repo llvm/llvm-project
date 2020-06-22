@@ -476,8 +476,8 @@ define void @Overflow() {
 ; CHECK-LABEL: @Overflow dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
-; LOCAL: x[1]: empty-set, @LoadMinInt64(arg0, [-9223372036854775808,-9223372036854775807)){{$}}
-; GLOBAL: x[1]: full-set, @LoadMinInt64(arg0, [-9223372036854775808,-9223372036854775807)){{$}}
+; LOCAL-NEXT: x[1]: empty-set, @LoadMinInt64(arg0, [-9223372036854775808,-9223372036854775807)){{$}}
+; GLOBAL-NEXT: x[1]: full-set, @LoadMinInt64(arg0, [-9223372036854775808,-9223372036854775807)){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i8, align 4
@@ -491,7 +491,7 @@ define void @DeadBlock(i64* %p) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: empty-set{{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK: x[1]: empty-set{{$}}
+; CHECK-NEXT: x[1]: empty-set{{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i8, align 4
@@ -505,3 +505,82 @@ dead:
 end:
   ret void
 }
+
+define void @LifeNotStarted() {
+; CHECK-LABEL: @LifeNotStarted dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK: x[1]: full-set{{$}}
+; CHECK: y[1]: full-set{{$}}
+; CHECK: z[1]: full-set{{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i8, align 4
+  %y = alloca i8, align 4
+  %z = alloca i8, align 4
+
+  store i8 5, i8* %x
+  %n = load i8, i8* %y
+  call void @llvm.memset.p0i8.i32(i8* nonnull %z, i8 0, i32 1, i1 false)
+
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %y)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %z)
+
+  ret void
+}
+
+define void @LifeOK() {
+; CHECK-LABEL: @LifeOK dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK: x[1]: [0,1){{$}}
+; CHECK: y[1]: [0,1){{$}}
+; CHECK: z[1]: [0,1){{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i8, align 4
+  %y = alloca i8, align 4
+  %z = alloca i8, align 4
+
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %y)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %z)
+
+  store i8 5, i8* %x
+  %n = load i8, i8* %y
+  call void @llvm.memset.p0i8.i32(i8* nonnull %z, i8 0, i32 1, i1 false)
+
+  ret void
+}
+
+define void @LifeEnded() {
+; CHECK-LABEL: @LifeEnded dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK: x[1]: full-set{{$}}
+; CHECK: y[1]: full-set{{$}}
+; CHECK: z[1]: full-set{{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i8, align 4
+  %y = alloca i8, align 4
+  %z = alloca i8, align 4
+
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %y)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %z)
+
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %x)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %y)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %z)
+
+  store i8 5, i8* %x
+  %n = load i8, i8* %y
+  call void @llvm.memset.p0i8.i32(i8* nonnull %z, i8 0, i32 1, i1 false)
+
+  ret void
+}
+
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
