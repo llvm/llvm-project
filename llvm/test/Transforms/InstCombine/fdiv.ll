@@ -575,8 +575,7 @@ define float @fdiv_fneg1_extra_use(float %x, float %y) {
 
 define float @fabs_same_op(float %x) {
 ; CHECK-LABEL: @fabs_same_op(
-; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fdiv float [[A]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = call float @llvm.fabs.f32(float %x)
@@ -588,7 +587,7 @@ define float @fabs_same_op_extra_use(float %x) {
 ; CHECK-LABEL: @fabs_same_op_extra_use(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    call void @use_f32(float [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf float [[A]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf float [[X]], [[X]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = call float @llvm.fabs.f32(float %x)
