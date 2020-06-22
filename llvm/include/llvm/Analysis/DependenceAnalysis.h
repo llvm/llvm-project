@@ -40,12 +40,13 @@
 #define LLVM_ANALYSIS_DEPENDENCEANALYSIS_H
 
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
-template <typename T> class ArrayRef;
+  class AAResults;
+  template <typename T> class ArrayRef;
   class Loop;
   class LoopInfo;
   class ScalarEvolution;
@@ -270,7 +271,7 @@ template <typename T> class ArrayRef;
   ///
   class DependenceInfo {
   public:
-    DependenceInfo(Function *F, AliasAnalysis *AA, ScalarEvolution *SE,
+    DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE,
                    LoopInfo *LI)
         : AA(AA), SE(SE), LI(LI), F(F) {}
 
@@ -333,7 +334,7 @@ template <typename T> class ArrayRef;
     Function *getFunction() const { return F; }
 
   private:
-    AliasAnalysis *AA;
+    AAResults *AA;
     ScalarEvolution *SE;
     LoopInfo *LI;
     Function *F;

@@ -55,6 +55,7 @@ class DynamicTypePropagation:
                     check::PostStmt<CXXNewExpr>,
                     check::PreObjCMessage,
                     check::PostObjCMessage > {
+
   const ObjCObjectType *getObjectTypeForAllocAndNew(const ObjCMessageExpr *MsgE,
                                                     CheckerContext &C) const;
 
@@ -69,8 +70,8 @@ class DynamicTypePropagation:
   mutable std::unique_ptr<BugType> ObjCGenericsBugType;
   void initBugType() const {
     if (!ObjCGenericsBugType)
-      ObjCGenericsBugType.reset(
-          new BugType(this, "Generics", categories::CoreFoundationObjectiveC));
+      ObjCGenericsBugType.reset(new BugType(
+          GenericCheckName, "Generics", categories::CoreFoundationObjectiveC));
   }
 
   class GenericsBugVisitor : public BugReporterVisitor {
@@ -108,6 +109,7 @@ public:
 
   /// This value is set to true, when the Generics checker is turned on.
   DefaultBool CheckGenerics;
+  CheckerNameRef GenericCheckName;
 };
 
 bool isObjCClassType(QualType Type) {
@@ -1101,6 +1103,7 @@ PathDiagnosticPieceRef DynamicTypePropagation::GenericsBugVisitor::VisitNode(
 void ento::registerObjCGenericsChecker(CheckerManager &mgr) {
   DynamicTypePropagation *checker = mgr.getChecker<DynamicTypePropagation>();
   checker->CheckGenerics = true;
+  checker->GenericCheckName = mgr.getCurrentCheckerName();
 }
 
 bool ento::shouldRegisterObjCGenericsChecker(const CheckerManager &mgr) {

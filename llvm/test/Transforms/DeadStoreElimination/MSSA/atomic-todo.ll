@@ -11,16 +11,6 @@ target triple = "x86_64-apple-macosx10.7.0"
 @x = common global i32 0, align 4
 @y = common global i32 0, align 4
 
-; DSE no-op unordered atomic store (allowed)
-define void @test6() {
-; CHECK-LABEL: test6
-; CHECK-NOT: store
-; CHECK: ret void
-  %x = load atomic i32, i32* @x unordered, align 4
-  store atomic i32 %x, i32* @x unordered, align 4
-  ret void
-}
-
 ; DSE across monotonic load (allowed as long as the eliminated store isUnordered)
 define i32 @test9() {
 ; CHECK-LABEL: test9

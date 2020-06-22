@@ -104,6 +104,12 @@ IntegerAttr Builder::getI64IntegerAttr(int64_t value) {
   return IntegerAttr::get(getIntegerType(64), APInt(64, value));
 }
 
+DenseIntElementsAttr Builder::getBoolVectorAttr(ArrayRef<bool> values) {
+  return DenseIntElementsAttr::get(
+      VectorType::get(static_cast<int64_t>(values.size()), getI1Type()),
+      values);
+}
+
 DenseIntElementsAttr Builder::getI32VectorAttr(ArrayRef<int32_t> values) {
   return DenseIntElementsAttr::get(
       VectorType::get(static_cast<int64_t>(values.size()), getIntegerType(32)),
@@ -127,6 +133,13 @@ DenseIntElementsAttr Builder::getI64TensorAttr(ArrayRef<int64_t> values) {
   return DenseIntElementsAttr::get(
       RankedTensorType::get(static_cast<int64_t>(values.size()),
                             getIntegerType(64)),
+      values);
+}
+
+DenseIntElementsAttr Builder::getIndexTensorAttr(ArrayRef<int64_t> values) {
+  return DenseIntElementsAttr::get(
+      RankedTensorType::get(static_cast<int64_t>(values.size()),
+                            getIndexType()),
       values);
 }
 
@@ -262,12 +275,8 @@ Attribute Builder::getZeroAttr(Type type) {
   case StandardTypes::F32:
   case StandardTypes::F64:
     return getFloatAttr(type, 0.0);
-  case StandardTypes::Integer: {
-    auto width = type.cast<IntegerType>().getWidth();
-    if (width == 1)
-      return getBoolAttr(false);
-    return getIntegerAttr(type, APInt(width, 0));
-  }
+  case StandardTypes::Integer:
+    return getIntegerAttr(type, APInt(type.cast<IntegerType>().getWidth(), 0));
   case StandardTypes::Vector:
   case StandardTypes::RankedTensor: {
     auto vtType = type.cast<ShapedType>();

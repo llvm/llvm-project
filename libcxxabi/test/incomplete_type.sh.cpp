@@ -19,7 +19,6 @@
 // in the system libc++abi installation on OS X. (DYLD_LIBRARY_PATH is ignored
 // for shell tests because of Apple security features).
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{cxx} %{flags} %{compile_flags} -Wno-unreachable-code -c %s -o %t.one.o
 // RUN: %{cxx} %{flags} %{compile_flags} -Wno-unreachable-code -c %s -o %t.two.o -DTU_ONE
 // RUN: %{cxx} %{flags} %t.one.o %t.two.o %{link_libcxxabi} %{link_flags} -o %t.exe

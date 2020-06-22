@@ -978,20 +978,20 @@ let TargetPrefix = "nvvm" in {
 // Atomics not available as llvm intrinsics.
   def int_nvvm_atomic_load_inc_32 : Intrinsic<[llvm_i32_ty],
           [LLVMAnyPointerType<llvm_i32_ty>, llvm_i32_ty],
-                                      [IntrArgMemOnly, NoCapture<0>]>;
+                                      [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
   def int_nvvm_atomic_load_dec_32 : Intrinsic<[llvm_i32_ty],
           [LLVMAnyPointerType<llvm_i32_ty>, llvm_i32_ty],
-                                      [IntrArgMemOnly, NoCapture<0>]>;
+                                      [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 
   class SCOPED_ATOMIC2_impl<LLVMType elty>
         : Intrinsic<[elty],
           [LLVMAnyPointerType<LLVMMatchType<0>>, LLVMMatchType<0>],
-          [IntrArgMemOnly, NoCapture<0>]>;
+          [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
   class SCOPED_ATOMIC3_impl<LLVMType elty>
         : Intrinsic<[elty],
           [LLVMAnyPointerType<LLVMMatchType<0>>, LLVMMatchType<0>,
            LLVMMatchType<0>],
-          [IntrArgMemOnly, NoCapture<0>]>;
+          [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 
   multiclass PTXAtomicWithScope2<LLVMType elty> {
     def _cta : SCOPED_ATOMIC2_impl<elty>;
@@ -1063,30 +1063,30 @@ let TargetPrefix = "nvvm" in {
 // pointer's alignment.
 def int_nvvm_ldu_global_i : Intrinsic<[llvm_anyint_ty],
   [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, NoCapture<0>],
+  [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.i">;
 def int_nvvm_ldu_global_f : Intrinsic<[llvm_anyfloat_ty],
   [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, NoCapture<0>],
+  [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.f">;
 def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty],
   [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, NoCapture<0>],
+  [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.p">;
 
 // Generated within nvvm. Use for ldg on sm_35 or later.  Second arg is the
 // pointer's alignment.
 def int_nvvm_ldg_global_i : Intrinsic<[llvm_anyint_ty],
   [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, NoCapture<0>],
+  [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldg.global.i">;
 def int_nvvm_ldg_global_f : Intrinsic<[llvm_anyfloat_ty],
   [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, NoCapture<0>],
+  [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldg.global.f">;
 def int_nvvm_ldg_global_p : Intrinsic<[llvm_anyptr_ty],
   [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, NoCapture<0>],
+  [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldg.global.p">;
 
 // Use for generic pointers
@@ -1143,7 +1143,7 @@ def int_nvvm_move_float : Intrinsic<[llvm_float_ty], [llvm_float_ty],
 def int_nvvm_move_double : Intrinsic<[llvm_double_ty], [llvm_double_ty],
   [IntrNoMem], "llvm.nvvm.move.double">;
 def int_nvvm_move_ptr : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
-  [IntrNoMem, NoCapture<0>], "llvm.nvvm.move.ptr">;
+  [IntrNoMem, NoCapture<ArgIndex<0>>], "llvm.nvvm.move.ptr">;
 
 
 // For getting the handle from a texture or surface variable
@@ -4110,7 +4110,7 @@ def int_nvvm_match_all_sync_i64p :
 class NVVM_WMMA_LD<WMMA_REGS Frag, string Layout, int WithStride>
   : Intrinsic<Frag.regs,
               !if(WithStride, [llvm_anyptr_ty, llvm_i32_ty], [llvm_anyptr_ty]),
-              [IntrReadMem, IntrArgMemOnly, ReadOnly<0>, NoCapture<0>],
+              [IntrReadMem, IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
               WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.intr>;
 
 // WMMA.STORE.D
@@ -4120,7 +4120,7 @@ class NVVM_WMMA_ST<WMMA_REGS Frag, string Layout, int WithStride>
                 [llvm_anyptr_ty],
                 Frag.regs,
                 !if(WithStride, [llvm_i32_ty], [])),
-              [IntrWriteMem, IntrArgMemOnly, WriteOnly<0>, NoCapture<0>],
+              [IntrWriteMem, IntrArgMemOnly, WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
               WMMA_NAME_LDST<"store", Frag, Layout, WithStride>.intr>;
 
 // Create all load/store variants

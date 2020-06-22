@@ -11,7 +11,7 @@
 // to the appropriate warning-generating attribute when _LIBCPP_ENABLE_NODISCARD
 // is explicitly provided.
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // GCC 7 is the first version to introduce [[nodiscard]]
 // UNSUPPORTED: gcc-5, gcc-6

@@ -438,7 +438,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
 
   Type *const Ty = I.getType();
   const unsigned TyBitWidth = DL->getTypeSizeInBits(Ty);
-  Type *const VecTy = VectorType::get(B.getInt32Ty(), 2);
+  auto *const VecTy = FixedVectorType::get(B.getInt32Ty(), 2);
 
   // This is the value in the atomic operation we need to combine in order to
   // reduce the number of atomic operations.

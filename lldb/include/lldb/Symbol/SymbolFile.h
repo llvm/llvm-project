@@ -317,7 +317,8 @@ protected:
   bool m_calculated_abilities;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SymbolFile);
+  SymbolFile(const SymbolFile &) = delete;
+  const SymbolFile &operator=(const SymbolFile &) = delete;
 };
 
 } // namespace lldb_private

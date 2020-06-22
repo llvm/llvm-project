@@ -1,0 +1,5 @@
+module glibc [system] [no_undeclared_includes] {
+  // glibc relies on the builtin stddef.h, so it has no stddef.h of its own.
+  header "stdio.h"
+  export *
+}

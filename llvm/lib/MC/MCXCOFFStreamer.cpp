@@ -48,10 +48,28 @@ bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
     Symbol->setStorageClass(XCOFF::C_WEAKEXT);
     Symbol->setExternal(true);
     break;
+  case llvm::MCSA_Hidden:
+    Symbol->setVisibilityType(XCOFF::SYM_V_HIDDEN);
+    break;
+  case llvm::MCSA_Protected:
+    Symbol->setVisibilityType(XCOFF::SYM_V_PROTECTED);
+    break;
   default:
     report_fatal_error("Not implemented yet.");
   }
   return true;
+}
+
+void MCXCOFFStreamer::emitXCOFFSymbolLinkageWithVisibility(
+    MCSymbol *Symbol, MCSymbolAttr Linkage, MCSymbolAttr Visibility) {
+
+  emitSymbolAttribute(Symbol, Linkage);
+
+  // When the caller passes `MCSA_Invalid` for the visibility, do not emit one.
+  if (Visibility == MCSA_Invalid)
+    return;
+
+  emitSymbolAttribute(Symbol, Visibility);
 }
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,

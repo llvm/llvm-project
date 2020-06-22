@@ -21,8 +21,9 @@
 #include "NoInternalDependenciesCheck.h"
 #include "NoNamespaceCheck.h"
 #include "RedundantStrcatCallsCheck.h"
-#include "StringFindStartswithCheck.h"
 #include "StrCatAppendCheck.h"
+#include "StringFindStartswithCheck.h"
+#include "StringFindStrContainsCheck.h"
 #include "TimeComparisonCheck.h"
 #include "TimeSubtractionCheck.h"
 #include "UpgradeDurationConversionsCheck.h"
@@ -61,6 +62,8 @@ public:
         "abseil-str-cat-append");
     CheckFactories.registerCheck<StringFindStartswithCheck>(
         "abseil-string-find-startswith");
+    CheckFactories.registerCheck<StringFindStrContainsCheck>(
+        "abseil-string-find-str-contains");
     CheckFactories.registerCheck<TimeComparisonCheck>(
         "abseil-time-comparison");
     CheckFactories.registerCheck<TimeSubtractionCheck>(

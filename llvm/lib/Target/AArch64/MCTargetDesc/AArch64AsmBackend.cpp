@@ -243,11 +243,22 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
         static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
     if (AArch64MCExpr::getSymbolLoc(RefKind) != AArch64MCExpr::VK_ABS &&
         AArch64MCExpr::getSymbolLoc(RefKind) != AArch64MCExpr::VK_SABS) {
-      // VK_GOTTPREL, VK_TPREL, VK_DTPREL are movw fixups, but they can't
-      // ever be resolved in the assembler.
-      Ctx.reportError(Fixup.getLoc(),
-                      "relocation for a thread-local variable points to an "
-                      "absolute symbol");
+      if (!RefKind) {
+        // The fixup is an expression
+        if (SignedValue > 0xFFFF || SignedValue < -0xFFFF)
+          Ctx.reportError(Fixup.getLoc(),
+                          "fixup value out of range [-0xFFFF, 0xFFFF]");
+
+        // Invert the negative immediate because it will feed into a MOVN.
+        if (SignedValue < 0)
+          SignedValue = ~SignedValue;
+        Value = static_cast<uint64_t>(SignedValue);
+      } else
+        // VK_GOTTPREL, VK_TPREL, VK_DTPREL are movw fixups, but they can't
+        // ever be resolved in the assembler.
+        Ctx.reportError(Fixup.getLoc(),
+                        "relocation for a thread-local variable points to an "
+                        "absolute symbol");
       return Value;
     }
 
@@ -440,8 +451,9 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   // FIXME: getFixupKindInfo() and getFixupKindNumBytes() could be fixed to
   // handle this more cleanly. This may affect the output of -show-mc-encoding.
   AArch64MCExpr::VariantKind RefKind =
-    static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
-  if (AArch64MCExpr::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS) {
+      static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
+  if (AArch64MCExpr::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS ||
+      (!RefKind && Fixup.getTargetKind() == AArch64::fixup_aarch64_movw)) {
     // If the immediate is negative, generate MOVN else MOVZ.
     // (Bit 30 = 0) ==> MOVN, (Bit 30 = 1) ==> MOVZ.
     if (SignedValue < 0)

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: sanitizer-new-delete
 
 // Aligned allocation was not provided before macosx10.14 and as a result we

@@ -61,7 +61,9 @@ private:
   friend class ValueObjectConstResult;
   friend class ValueObjectConstResultImpl;
 
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectConstResultCast);
+  ValueObjectConstResultCast(const ValueObjectConstResultCast &) = delete;
+  const ValueObjectConstResultCast &
+  operator=(const ValueObjectConstResultCast &) = delete;
 };
 
 } // namespace lldb_private

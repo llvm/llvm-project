@@ -134,7 +134,7 @@ TEST(DenseSplatTest, F64Splat) {
 
 TEST(DenseSplatTest, FloatAttrSplat) {
   MLIRContext context;
-  FloatType floatTy = FloatType::getBF16(&context);
+  FloatType floatTy = FloatType::getF32(&context);
   Attribute value = FloatAttr::get(floatTy, 10.0);
 
   testSplat(floatTy, value);
@@ -143,8 +143,7 @@ TEST(DenseSplatTest, FloatAttrSplat) {
 TEST(DenseSplatTest, BF16Splat) {
   MLIRContext context;
   FloatType floatTy = FloatType::getBF16(&context);
-  // Note: We currently use double to represent bfloat16.
-  double value = 10.0;
+  Attribute value = FloatAttr::get(floatTy, 10.0);
 
   testSplat(floatTy, value);
 }

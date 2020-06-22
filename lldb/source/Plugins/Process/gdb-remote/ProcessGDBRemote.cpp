@@ -649,8 +649,8 @@ Status ProcessGDBRemote::DoConnectRemote(Stream *strm,
   if (error.Fail())
     return error;
 
-  if (repro::Loader *loader = repro::Reproducer::Instance().GetLoader())
-    error = ConnectToReplayServer(loader);
+  if (repro::Reproducer::Instance().IsReplaying())
+    error = ConnectToReplayServer();
   else
     error = ConnectToDebugserver(remote_url);
 
@@ -830,22 +830,23 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
         // since 'O' packets can really slow down debugging if the inferior
         // does a lot of output.
         if ((!stdin_file_spec || !stdout_file_spec || !stderr_file_spec) &&
-            pty.OpenFirstAvailableMaster(O_RDWR | O_NOCTTY, nullptr, 0)) {
-          FileSpec slave_name{pty.GetSlaveName(nullptr, 0)};
+            pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY, nullptr, 0)) {
+          FileSpec secondary_name{pty.GetSecondaryName(nullptr, 0)};
 
           if (!stdin_file_spec)
-            stdin_file_spec = slave_name;
+            stdin_file_spec = secondary_name;
 
           if (!stdout_file_spec)
-            stdout_file_spec = slave_name;
+            stdout_file_spec = secondary_name;
 
           if (!stderr_file_spec)
-            stderr_file_spec = slave_name;
+            stderr_file_spec = secondary_name;
         }
         LLDB_LOGF(
             log,
             "ProcessGDBRemote::%s adjusted STDIO paths for local platform "
-            "(IsHost() is true) using slave: stdin=%s, stdout=%s, stderr=%s",
+            "(IsHost() is true) using secondary: stdin=%s, stdout=%s, "
+            "stderr=%s",
             __FUNCTION__,
             stdin_file_spec ? stdin_file_spec.GetCString() : "<null>",
             stdout_file_spec ? stdout_file_spec.GetCString() : "<null>",
@@ -930,8 +931,8 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
         SetPrivateState(SetThreadStopInfo(response));
 
         if (!disable_stdio) {
-          if (pty.GetMasterFileDescriptor() != PseudoTerminal::invalid_fd)
-            SetSTDIOFileDescriptor(pty.ReleaseMasterFileDescriptor());
+          if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd)
+            SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
         }
       }
     } else {
@@ -3355,30 +3356,10 @@ Status ProcessGDBRemote::DoSignal(int signo) {
   return error;
 }
 
-Status ProcessGDBRemote::ConnectToReplayServer(repro::Loader *loader) {
-  if (!loader)
-    return Status("No loader provided.");
-
-  static std::unique_ptr<repro::MultiLoader<repro::GDBRemoteProvider>>
-      multi_loader = repro::MultiLoader<repro::GDBRemoteProvider>::Create(
-          repro::Reproducer::Instance().GetLoader());
-
-  if (!multi_loader)
-    return Status("No gdb remote provider found.");
-
-  llvm::Optional<std::string> history_file = multi_loader->GetNextFile();
-  if (!history_file)
-    return Status("No gdb remote packet log found.");
-
-  // Load replay history.
-  if (auto error =
-          m_gdb_replay_server.LoadReplayHistory(FileSpec(*history_file)))
-    return Status("Unable to load replay history");
-
-  // Make a local connection.
-  if (auto error = GDBRemoteCommunication::ConnectLocally(m_gdb_comm,
-                                                          m_gdb_replay_server))
-    return Status("Unable to connect to replay server");
+Status ProcessGDBRemote::ConnectToReplayServer() {
+  Status status = m_gdb_replay_server.Connect(m_gdb_comm);
+  if (status.Fail())
+    return status;
 
   // Enable replay mode.
   m_replay_mode = true;
@@ -3403,8 +3384,8 @@ ProcessGDBRemote::EstablishConnectionIfNeeded(const ProcessInfo &process_info) {
   if (platform_sp && !platform_sp->IsHost())
     return Status("Lost debug server connection");
 
-  if (repro::Loader *loader = repro::Reproducer::Instance().GetLoader())
-    return ConnectToReplayServer(loader);
+  if (repro::Reproducer::Instance().IsReplaying())
+    return ConnectToReplayServer();
 
   auto error = LaunchAndConnectToDebugserver(process_info);
   if (error.Fail()) {

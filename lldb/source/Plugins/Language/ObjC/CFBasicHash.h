@@ -60,7 +60,6 @@ private:
 
   size_t GetPointerCount() const;
 
-private:
   uint32_t m_ptr_size = UINT32_MAX;
   lldb::ByteOrder m_byte_order = lldb::eByteOrderInvalid;
   Address m_address = LLDB_INVALID_ADDRESS;

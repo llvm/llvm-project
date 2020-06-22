@@ -131,9 +131,9 @@ TEST(ConstantsTest, PointerCast) {
   Type *Int8PtrTy = Type::getInt8PtrTy(C);
   Type *Int32PtrTy = Type::getInt32PtrTy(C);
   Type *Int64Ty = Type::getInt64Ty(C);
-  VectorType *Int8PtrVecTy = VectorType::get(Int8PtrTy, 4);
-  VectorType *Int32PtrVecTy = VectorType::get(Int32PtrTy, 4);
-  VectorType *Int64VecTy = VectorType::get(Int64Ty, 4);
+  VectorType *Int8PtrVecTy = FixedVectorType::get(Int8PtrTy, 4);
+  VectorType *Int32PtrVecTy = FixedVectorType::get(Int32PtrTy, 4);
+  VectorType *Int64VecTy = FixedVectorType::get(Int64Ty, 4);
 
   // ptrtoint i8* to i64
   EXPECT_EQ(Constant::getNullValue(Int64Ty),
@@ -210,7 +210,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
   Constant *P3 = ConstantExpr::getTrunc(P0, Int1Ty);
   Constant *P4 = ConstantExpr::getPtrToInt(Global2, Int32Ty);
   Constant *P5 = ConstantExpr::getUIToFP(P4, FloatTy);
-  Constant *P6 = ConstantExpr::getBitCast(P4, VectorType::get(Int16Ty, 2));
+  Constant *P6 = ConstantExpr::getBitCast(P4, FixedVectorType::get(Int16Ty, 2));
 
   Constant *One = ConstantInt::get(Int32Ty, 1);
   Constant *Two = ConstantInt::get(Int64Ty, 2);

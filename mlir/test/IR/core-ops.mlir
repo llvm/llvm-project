@@ -8,80 +8,82 @@
 
 // CHECK: #map1 = affine_map<()[s0] -> (s0 + 1)>
 
-// CHECK-DAG: #[[BASE_MAP0:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>
-// CHECK-DAG: #[[BASE_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>
+// CHECK-DAG: #[[$BASE_MAP0:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>
+// CHECK-DAG: #[[$BASE_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>
 
-// CHECK-DAG: #[[BASE_MAP1:map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0)>
-// CHECK-DAG: #[[SUBVIEW_MAP1:map[0-9]+]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+// CHECK-DAG: #[[$BASE_MAP1:map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0)>
+// CHECK-DAG: #[[$SUBVIEW_MAP1:map[0-9]+]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
-// CHECK-DAG: #[[BASE_MAP2:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 22 + d1)>
-// CHECK-DAG: #[[SUBVIEW_MAP2:map[0-9]+]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
-// CHECK-DAG: #[[SUBVIEW_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2 + 8)>
-// CHECK-DAG: #[[SUBVIEW_MAP4:map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
-// CHECK-DAG: #[[SUBVIEW_MAP5:map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 * 8 + s0 + d1 * 2)>
+// CHECK-DAG: #[[$BASE_MAP2:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 22 + d1)>
+// CHECK-DAG: #[[$SUBVIEW_MAP2:map[0-9]+]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+// CHECK-DAG: #[[$SUBVIEW_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2 + 8)>
+// CHECK-DAG: #[[$SUBVIEW_MAP4:map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+// CHECK-DAG: #[[$SUBVIEW_MAP5:map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 * 8 + s0 + d1 * 2)>
 
-// CHECK-LABEL: func @func_with_ops(%arg0: f32) {
+// CHECK-LABEL: func @func_with_ops
+// CHECK-SAME: %[[ARG:.*]]: f32
 func @func_with_ops(f32) {
 ^bb0(%a : f32):
-  // CHECK: %0 = "getTensor"() : () -> tensor<4x4x?xf32>
+  // CHECK: %[[T:.*]] = "getTensor"() : () -> tensor<4x4x?xf32>
   %t = "getTensor"() : () -> tensor<4x4x?xf32>
 
-  // CHECK: %1 = dim %0, 2 : tensor<4x4x?xf32>
-  %t2 = "std.dim"(%t){index = 2} : (tensor<4x4x?xf32>) -> index
+  // CHECK: %[[C2:.*]] = constant 2 : index
+  // CHECK-NEXT: %{{.*}} = dim %[[T]], %[[C2]] : tensor<4x4x?xf32>
+  %c2 = constant 2 : index
+  %t2 = "std.dim"(%t, %c2) : (tensor<4x4x?xf32>, index) -> index
 
-  // CHECK: %2 = addf %arg0, %arg0 : f32
+  // CHECK: %{{.*}} = addf %[[ARG]], %[[ARG]] : f32
   %x = "std.addf"(%a, %a) : (f32,f32) -> (f32)
 
-  // CHECK:   return
+  // CHECK: return
   return
 }
 
 // CHECK-LABEL: func @standard_instrs(%arg0: tensor<4x4x?xf32>, %arg1: f32, %arg2: i32, %arg3: index, %arg4: i64, %arg5: f16) {
 func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
 ^bb42(%t: tensor<4x4x?xf32>, %f: f32, %i: i32, %idx : index, %j: i64, %half: f16):
-  // CHECK: %0 = dim %arg0, 2 : tensor<4x4x?xf32>
-  %a = "std.dim"(%t){index = 2} : (tensor<4x4x?xf32>) -> index
+  // CHECK: %[[C2:.*]] = constant 2 : index
+  // CHECK: %[[A2:.*]] = dim %arg0, %[[C2]] : tensor<4x4x?xf32>
+  %c2 = constant 2 : index
+  %a2 = dim %t, %c2 : tensor<4x4x?xf32>
 
-  // CHECK: %1 = dim %arg0, 2 : tensor<4x4x?xf32>
-  %a2 = dim %t, 2 : tensor<4x4x?xf32>
-
-  // CHECK: %2 = addf %arg1, %arg1 : f32
+  // CHECK: %[[F2:.*]] = addf %arg1, %arg1 : f32
   %f2 = "std.addf"(%f, %f) : (f32,f32) -> f32
 
-  // CHECK: %3 = addf %2, %2 : f32
+  // CHECK: %[[F3:.*]] = addf %[[F2]], %[[F2]] : f32
   %f3 = addf %f2, %f2 : f32
 
-  // CHECK: %4 = addi %arg2, %arg2 : i32
+  // CHECK: %[[I2:.*]] = addi %arg2, %arg2 : i32
   %i2 = "std.addi"(%i, %i) : (i32,i32) -> i32
 
-  // CHECK: %5 = addi %4, %4 : i32
+  // CHECK: %[[I3:.*]] = addi %[[I2]], %[[I2]] : i32
   %i3 = addi %i2, %i2 : i32
 
-  // CHECK: %{{[0-9]+}} = addi %arg3, %arg3 : index
+  // CHECK: %[[IDX1:.*]] = addi %arg3, %arg3 : index
   %idx1 = addi %idx, %idx : index
 
-  // CHECK: %{{[0-9]+}} = addi %arg3, %{{[0-9]+}} : index
+  // CHECK: %[[IDX2:.*]] = addi %arg3, %[[IDX1]] : index
   %idx2 = "std.addi"(%idx, %idx1) : (index, index) -> index
 
-  // CHECK: %8 = subf %arg1, %arg1 : f32
+  // CHECK: %[[F4:.*]] = subf %arg1, %arg1 : f32
   %f4 = "std.subf"(%f, %f) : (f32,f32) -> f32
 
-  // CHECK: %9 = subf %8, %8 : f32
+  // CHECK: %[[F5:.*]] = subf %[[F4]], %[[F4]] : f32
   %f5 = subf %f4, %f4 : f32
 
-  // CHECK: %10 = subi %arg2, %arg2 : i32
+  // CHECK: %[[I4:.*]] = subi %arg2, %arg2 : i32
   %i4 = "std.subi"(%i, %i) : (i32,i32) -> i32
 
-  // CHECK: %11 = subi %10, %10 : i32
+  // CHECK: %[[I5:.*]] = subi %[[I4]], %[[I4]] : i32
   %i5 = subi %i4, %i4 : i32
 
-  // CHECK: %12 = mulf %2, %2 : f32
+  // CHECK: %[[F6:.*]] = mulf %[[F2]], %[[F2]] : f32
   %f6 = mulf %f2, %f2 : f32
 
-  // CHECK: %13 = muli %4, %4 : i32
+  // CHECK: %[[I6:.*]] = muli %[[I2]], %[[I2]] : i32
   %i6 = muli %i2, %i2 : i32
 
-  // CHECK: %[[C0:.*]] = create_complex %[[F2:.*]], %[[F2]] : complex<f32>
+  // CHECK: %[[C0:.*]] = create_complex %[[F2]], %[[F2]] : complex<f32>
   %c0 = "std.create_complex"(%f2, %f2) : (f32, f32) -> complex<f32>
 
   // CHECK: %[[C1:.*]] = create_complex %[[F2]], %[[F2]] : complex<f32>
@@ -465,7 +467,7 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = shift_left %arg2, %arg2 : i32
   %124 = "std.shift_left"(%i, %i) : (i32, i32) -> i32
 
-  // CHECK:%{{[0-9]+}} = shift_left %4, %4 : i32
+  // CHECK:%{{[0-9]+}} = shift_left %[[I2]], %[[I2]] : i32
   %125 = shift_left %i2, %i2 : i32
 
   // CHECK: %{{[0-9]+}} = shift_left %arg3, %arg3 : index
@@ -480,7 +482,7 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = shift_right_signed %arg2, %arg2 : i32
   %129 = "std.shift_right_signed"(%i, %i) : (i32, i32) -> i32
 
-  // CHECK:%{{[0-9]+}} = shift_right_signed %4, %4 : i32
+  // CHECK:%{{[0-9]+}} = shift_right_signed %[[I2]], %[[I2]] : i32
   %130 = shift_right_signed %i2, %i2 : i32
 
   // CHECK: %{{[0-9]+}} = shift_right_signed %arg3, %arg3 : index
@@ -495,7 +497,7 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = shift_right_unsigned %arg2, %arg2 : i32
   %134 = "std.shift_right_unsigned"(%i, %i) : (i32, i32) -> i32
 
-  // CHECK:%{{[0-9]+}} = shift_right_unsigned %4, %4 : i32
+  // CHECK:%{{[0-9]+}} = shift_right_unsigned %[[I2]], %[[I2]] : i32
   %135 = shift_right_unsigned %i2, %i2 : i32
 
   // CHECK: %{{[0-9]+}} = shift_right_unsigned %arg3, %arg3 : index
@@ -644,6 +646,24 @@ func @extract_element(%arg0: tensor<*xi32>, %arg1 : tensor<4x4xf32>) -> i32 {
   return %0 : i32
 }
 
+// CHECK-LABEL: func @tensor_from_elements() {
+func @tensor_from_elements() {
+  %c0 = "std.constant"() {value = 0: index} : () -> index
+  // CHECK: %0 = tensor_from_elements(%c0) : tensor<1xindex>
+  %0 = tensor_from_elements(%c0) : tensor<1xindex>
+
+  %c1 = "std.constant"() {value = 1: index} : () -> index
+  // CHECK: %1 = tensor_from_elements(%c0, %c1) : tensor<2xindex>
+  %1 = tensor_from_elements(%c0, %c1) : tensor<2xindex>
+
+  %c0_f32 = "std.constant"() {value = 0.0: f32} : () -> f32
+  // CHECK: [[C0_F32:%.*]] = constant
+  // CHECK: %2 = tensor_from_elements([[C0_F32]]) : tensor<1xf32>
+  %2 = tensor_from_elements(%c0_f32) : tensor<1xf32>
+
+  return
+}
+
 // CHECK-LABEL: func @tensor_cast(%arg0
 func @tensor_cast(%arg0: tensor<*xf32>, %arg1 : tensor<4x4xf32>, %arg2: tensor<?x?xf32>) {
   // CHECK: %0 = tensor_cast %arg0 : tensor<*xf32> to tensor<?x?xf32>
@@ -669,10 +689,10 @@ func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64
   // CHECK: %1 = memref_cast %arg1 : memref<?xf32> to memref<4xf32>
   %1 = memref_cast %arg1 : memref<?xf32> to memref<4xf32>
 
-  // CHECK: {{%.*}} = memref_cast %arg2 : memref<64x16x4xf32, #[[BASE_MAP0]]> to memref<64x16x4xf32, #[[BASE_MAP3]]>
+  // CHECK: {{%.*}} = memref_cast %arg2 : memref<64x16x4xf32, #[[$BASE_MAP0]]> to memref<64x16x4xf32, #[[$BASE_MAP3]]>
   %2 = memref_cast %arg2 : memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]> to memref<64x16x4xf32, offset: ?, strides: [?, ?, ?]>
 
-  // CHECK: {{%.*}} = memref_cast {{%.*}} : memref<64x16x4xf32, #[[BASE_MAP3]]> to memref<64x16x4xf32, #[[BASE_MAP0]]>
+  // CHECK: {{%.*}} = memref_cast {{%.*}} : memref<64x16x4xf32, #[[$BASE_MAP3]]> to memref<64x16x4xf32, #[[$BASE_MAP0]]>
   %3 = memref_cast %2 : memref<64x16x4xf32, offset: ?, strides: [?, ?, ?]> to memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]>
 
   // CHECK: memref_cast %{{.*}} : memref<4xf32> to memref<*xf32>
@@ -708,31 +728,31 @@ func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
   %0 = alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>
   // CHECK: subview %0[%c0, %c0, %c0] [%arg0, %arg1, %arg2] [%c1, %c1, %c1] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[BASE_MAP0]]>
-  // CHECK-SAME: to memref<?x?x?xf32, #[[BASE_MAP3]]>
+  // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]>
+  // CHECK-SAME: to memref<?x?x?xf32, #[[$BASE_MAP3]]>
   %1 = subview %0[%c0, %c0, %c0][%arg0, %arg1, %arg2][%c1, %c1, %c1]
     : memref<8x16x4xf32, offset:0, strides: [64, 4, 1]> to
       memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
 
   %2 = alloc()[%arg2] : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
   // CHECK: subview %2[%c1] [%arg0] [%c1] :
-  // CHECK-SAME: memref<64xf32, #[[BASE_MAP1]]>
-  // CHECK-SAME: to memref<?xf32, #[[SUBVIEW_MAP1]]>
+  // CHECK-SAME: memref<64xf32, #[[$BASE_MAP1]]>
+  // CHECK-SAME: to memref<?xf32, #[[$SUBVIEW_MAP1]]>
   %3 = subview %2[%c1][%arg0][%c1]
     : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to
       memref<?xf32, affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>>
 
   %4 = alloc() : memref<64x22xf32, affine_map<(d0, d1) -> (d0 * 22 + d1)>>
   // CHECK: subview %4[%c0, %c1] [%arg0, %arg1] [%c1, %c0] :
-  // CHECK-SAME: memref<64x22xf32, #[[BASE_MAP2]]>
-  // CHECK-SAME: to memref<?x?xf32, #[[SUBVIEW_MAP2]]>
+  // CHECK-SAME: memref<64x22xf32, #[[$BASE_MAP2]]>
+  // CHECK-SAME: to memref<?x?xf32, #[[$SUBVIEW_MAP2]]>
   %5 = subview %4[%c0, %c1][%arg0, %arg1][%c1, %c0]
     : memref<64x22xf32, offset:0, strides: [22, 1]> to
       memref<?x?xf32, offset:?, strides: [?, ?]>
 
   // CHECK: subview %0[0, 2, 0] [4, 4, 4] [1, 1, 1] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[BASE_MAP0]]>
-  // CHECK-SAME: to memref<4x4x4xf32, #[[SUBVIEW_MAP3]]>
+  // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]>
+  // CHECK-SAME: to memref<4x4x4xf32, #[[$SUBVIEW_MAP3]]>
   %6 = subview %0[0, 2, 0][4, 4, 4][1, 1, 1]
     : memref<8x16x4xf32, offset:0, strides: [64, 4, 1]> to
       memref<4x4x4xf32, offset:8, strides: [64, 4, 1]>
@@ -740,30 +760,33 @@ func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %7 = alloc(%arg1, %arg2) : memref<?x?xf32>
   // CHECK: subview {{%.*}}[0, 0] [4, 4] [1, 1] :
   // CHECK-SAME: memref<?x?xf32>
-  // CHECK-SAME: to memref<4x4xf32, #[[SUBVIEW_MAP4]]>
+  // CHECK-SAME: to memref<4x4xf32, #[[$SUBVIEW_MAP4]]>
   %8 = subview %7[0, 0][4, 4][1, 1]
     : memref<?x?xf32> to memref<4x4xf32, offset: ?, strides:[?, 1]>
 
   %9 = alloc() : memref<16x4xf32>
   // CHECK: subview {{%.*}}[{{%.*}}, {{%.*}}] [4, 4] [{{%.*}}, {{%.*}}] :
   // CHECK-SAME: memref<16x4xf32>
-  // CHECK-SAME: to memref<4x4xf32, #[[SUBVIEW_MAP2]]
+  // CHECK-SAME: to memref<4x4xf32, #[[$SUBVIEW_MAP2]]
   %10 = subview %9[%arg1, %arg1][4, 4][%arg2, %arg2]
     : memref<16x4xf32> to memref<4x4xf32, offset: ?, strides:[?, ?]>
 
   // CHECK: subview {{%.*}}[{{%.*}}, {{%.*}}] [4, 4] [2, 2] :
   // CHECK-SAME: memref<16x4xf32>
-  // CHECK-SAME: to memref<4x4xf32, #[[SUBVIEW_MAP5]]
+  // CHECK-SAME: to memref<4x4xf32, #[[$SUBVIEW_MAP5]]
   %11 = subview %9[%arg1, %arg2][4, 4][2, 2]
     : memref<16x4xf32> to memref<4x4xf32, offset: ?, strides:[8, 2]>
 
   return
 }
 
-// CHECK-LABEL: func @test_dimop(%arg0
+// CHECK-LABEL: func @test_dimop
+// CHECK-SAME: %[[ARG:.*]]: tensor<4x4x?xf32>
 func @test_dimop(%arg0: tensor<4x4x?xf32>) {
-  // CHECK: %0 = dim %arg0, 2 : tensor<4x4x?xf32>
-  %0 = dim %arg0, 2 : tensor<4x4x?xf32>
+  // CHECK: %[[C2:.*]] = constant 2 : index
+  // CHECK: %{{.*}} = dim %[[ARG]], %[[C2]] : tensor<4x4x?xf32>
+  %c2 = constant 2 : index
+  %0 = dim %arg0, %c2 : tensor<4x4x?xf32>
   // use dim as an index to ensure type correctness
   %1 = affine.apply affine_map<(d0) -> (d0)>(%0)
   return

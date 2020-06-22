@@ -104,9 +104,11 @@ findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
   // for those accesses Sema::PerformObjectMemberConversion always inserts an
   // UncheckedDerivedToBase ImplicitCastExpr between the this expr and the
   // object expression
-  auto FoundExprs =
-      match(findAll(memberExpr(hasObjectExpression(cxxThisExpr())).bind("ME")),
-            *Initializer->getInit(), Context);
+  auto FoundExprs = match(
+      traverse(
+          TK_AsIs,
+          findAll(memberExpr(hasObjectExpression(cxxThisExpr())).bind("ME"))),
+      *Initializer->getInit(), Context);
   for (BoundNodes &BN : FoundExprs)
     if (auto *MemExpr = BN.getNodeAs<MemberExpr>("ME"))
       if (auto *FD = dyn_cast<FieldDecl>(MemExpr->getMemberDecl()))

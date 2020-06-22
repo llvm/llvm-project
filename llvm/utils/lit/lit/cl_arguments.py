@@ -157,6 +157,9 @@ def parse_args():
     debug_group.add_argument("--show-tests",
             help="Show all discovered tests and exit",
             action="store_true")
+    debug_group.add_argument("--show-used-features",
+            help="Show all features used in the test suite (in XFAIL, UNSUPPORTED and REQUIRES) and exit",
+            action="store_true")
 
     # LIT is special: environment variables override command line arguments.
     env_args = shlex.split(os.environ.get("LIT_OPTS", ""))
@@ -183,6 +186,12 @@ def parse_args():
         opts.shard = (opts.runShard, opts.numShards)
     else:
         opts.shard = None
+
+    opts.show_results = set()
+    if opts.show_unsupported:
+        opts.show_results.add(lit.Test.UNSUPPORTED)
+    if opts.show_xfail:
+        opts.show_results.add(lit.Test.XFAIL)
 
     opts.reports = filter(None, [opts.output, opts.xunit_xml_output])
 

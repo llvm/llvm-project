@@ -43,9 +43,6 @@ public:
 
   const char *GetRegisterName(unsigned reg);
 
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
-
 protected:
   struct RegInfo {
     uint32_t num_registers;
@@ -67,8 +64,6 @@ protected:
   bool IsGPR(unsigned reg);
 
   bool IsFPR(unsigned reg);
-
-  lldb::ByteOrder GetByteOrder();
 
   virtual bool ReadGPR() = 0;
   virtual bool ReadFPR() = 0;

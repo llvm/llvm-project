@@ -200,6 +200,7 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
      "c++17": int(201703),
    },
    "headers": ["new"],
+   "unimplemented": True,
    },
   {"name": "__cpp_lib_launder",
    "values": {
@@ -408,6 +409,7 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
   {"name": "__cpp_lib_array_constexpr",
    "values": {
      "c++17": int(201603),
+     "c++2a": int(201811),
    },
    "headers": ["iterator", "array"],
    },
@@ -596,6 +598,14 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
      "c++2a": int(202002),
    },
    "headers": ["span"],
+   },
+  {"name": "__cpp_lib_math_constants",
+   "values": {
+     "c++2a": int(201907),
+   },
+   "headers": ["numbers"],
+   "depends": "defined(__cpp_concepts) && __cpp_concepts >= 201811L",
+   "internal_depends": "defined(__cpp_concepts) && __cpp_concepts >= 201811L",
    },
 ]], key=lambda tc: tc["name"])
 

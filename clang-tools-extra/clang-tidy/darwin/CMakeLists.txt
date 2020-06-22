@@ -9,11 +9,15 @@ add_clang_library(clangTidyDarwinModule
   DispatchOnceNonstaticCheck.cpp
 
   LINK_LIBS
+  clangTidy
+  clangTidyUtils
+  )
+
+clang_target_link_libraries(clangTidyDarwinModule
+  PRIVATE
   clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
-  clangTidy
-  clangTidyUtils
   )

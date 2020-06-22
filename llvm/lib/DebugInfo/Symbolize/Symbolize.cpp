@@ -515,8 +515,8 @@ LLVMSymbolizer::createModuleInfo(const ObjectFile *Obj,
   auto InsertResult = Modules.insert(
       std::make_pair(std::string(ModuleName), std::move(SymMod)));
   assert(InsertResult.second);
-  if (std::error_code EC = InfoOrErr.getError())
-    return errorCodeToError(EC);
+  if (!InfoOrErr)
+    return InfoOrErr.takeError();
   return InsertResult.first->second.get();
 }
 
@@ -624,7 +624,7 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
     // Only do MSVC C++ demangling on symbols starting with '?'.
     int status = 0;
     char *DemangledName = microsoftDemangle(
-        Name.c_str(), nullptr, nullptr, &status,
+        Name.c_str(), nullptr, nullptr, nullptr, &status,
         MSDemangleFlags(MSDF_NoAccessSpecifier | MSDF_NoCallingConvention |
                         MSDF_NoMemberType | MSDF_NoReturnType));
     if (status != 0)

@@ -1154,17 +1154,22 @@ bool Debugger::EnableLog(llvm::StringRef channel,
     if (pos != m_log_streams.end())
       log_stream_sp = pos->second.lock();
     if (!log_stream_sp) {
-      llvm::sys::fs::OpenFlags flags = llvm::sys::fs::OF_Text;
+      File::OpenOptions flags =
+          File::eOpenOptionWrite | File::eOpenOptionCanCreate;
       if (log_options & LLDB_LOG_OPTION_APPEND)
-        flags |= llvm::sys::fs::OF_Append;
-      int FD;
-      if (std::error_code ec = llvm::sys::fs::openFileForWrite(
-              log_file, FD, llvm::sys::fs::CD_CreateAlways, flags)) {
-        error_stream << "Unable to open log file: " << ec.message();
+        flags |= File::eOpenOptionAppend;
+      else
+        flags |= File::eOpenOptionTruncate;
+      auto file = FileSystem::Instance().Open(
+          FileSpec(log_file), flags, lldb::eFilePermissionsFileDefault, false);
+      if (!file) {
+        // FIXME: This gets garbled when called from the log command.
+        error_stream << "Unable to open log file: " << log_file;
         return false;
       }
-      log_stream_sp =
-          std::make_shared<llvm::raw_fd_ostream>(FD, should_close, unbuffered);
+
+      log_stream_sp = std::make_shared<llvm::raw_fd_ostream>(
+          (*file)->GetDescriptor(), should_close, unbuffered);
       m_log_streams[log_file] = log_stream_sp;
     }
   }

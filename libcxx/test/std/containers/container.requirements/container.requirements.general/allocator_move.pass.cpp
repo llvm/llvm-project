@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // C++2a[container.requirements.general]p8
 //   Move constructors obtain an allocator by move construction from the allocator

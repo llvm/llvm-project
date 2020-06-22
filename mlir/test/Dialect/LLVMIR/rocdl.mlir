@@ -144,3 +144,26 @@ func @rocdl.xdlops(%arg0 : !llvm.float, %arg1 : !llvm.float,
 
   llvm.return %r0 : !llvm<"<32 x float>">
 }
+
+llvm.func @rocdl.mubuf(%rsrc : !llvm<"<4 x i32>">, %vindex : !llvm.i32,
+                       %offset : !llvm.i32, %glc : !llvm.i1,
+                       %slc : !llvm.i1, %vdata1 : !llvm<"<1 x float>">,
+                       %vdata2 : !llvm<"<2 x float>">, %vdata4 : !llvm<"<4 x float>">) {
+  // CHECK-LABEL: rocdl.mubuf
+  // CHECK: %{{.*}} = rocdl.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : !llvm<"<1 x float>">
+  %r1 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<1 x float>">
+  // CHECK: %{{.*}} = rocdl.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : !llvm<"<2 x float>">
+  %r2 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<2 x float>">
+  // CHECK: %{{.*}} = rocdl.buffer.load %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : !llvm<"<4 x float>">
+  %r4 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<4 x float>">
+
+  // CHECK: rocdl.buffer.store %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : !llvm<"<1 x float>">
+  rocdl.buffer.store %vdata1, %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<1 x float>">
+  // CHECK: rocdl.buffer.store %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : !llvm<"<2 x float>">
+  rocdl.buffer.store %vdata2, %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<2 x float>">
+  // CHECK: rocdl.buffer.store %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : !llvm<"<4 x float>">
+  rocdl.buffer.store %vdata4, %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<4 x float>">
+
+  llvm.return
+}
+

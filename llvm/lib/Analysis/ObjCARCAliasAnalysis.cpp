@@ -24,6 +24,7 @@
 
 #include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
+#include "llvm/Analysis/Passes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Value.h"

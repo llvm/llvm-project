@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass si-fix-sgpr-copies -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-fix-sgpr-copies -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: smrd_vgpr_offset_imm
 # GCN: V_READFIRSTLANE_B32

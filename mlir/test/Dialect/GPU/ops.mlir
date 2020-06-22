@@ -44,6 +44,10 @@ module attributes {gpu.container_module} {
       %gDimY = "gpu.grid_dim"() {dimension = "y"} : () -> (index)
       %gDimZ = "gpu.grid_dim"() {dimension = "z"} : () -> (index)
 
+      %sgId = gpu.subgroup_id : index
+      %numSg = gpu.num_subgroups : index
+      %SgSi = gpu.subgroup_size : index
+
       %one = constant 1.0 : f32
       %sum = "gpu.all_reduce"(%one) ({}) {op = "add"} : (f32) -> (f32)
 
@@ -132,4 +136,11 @@ module attributes {gpu.container_module} {
     }
   }
 
+  gpu.module @explicit_attributions {
+    // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32, {{.*}}: memref<?xf32>) workgroup({{.*}}: memref<5xf32, 3>) private({{.*}}: memref<5xf32, 5>)
+    "gpu.func"() ( {
+    ^bb0(%arg0: f32, %arg1: memref<?xf32>, %arg2: memref<5xf32, 3>, %arg3: memref<5xf32, 5>):
+      "gpu.return"() : () -> ()
+    } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 1: i64} : () -> ()
+  }
 }

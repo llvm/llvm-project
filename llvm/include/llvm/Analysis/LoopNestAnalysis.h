@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_LOOPNESTANALYSIS_H
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/Analysis/LoopInfo.h"
 
 namespace llvm {
 

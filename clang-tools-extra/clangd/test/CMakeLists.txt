@@ -21,7 +21,7 @@ if(CLANGD_BUILD_XPC)
   list(APPEND CLANGD_TEST_DEPS ClangdXpcUnitTests)
 endif()
 
-foreach(dep FileCheck count not)
+foreach(dep FileCheck count not llvm-config)
   if(TARGET ${dep})
     list(APPEND CLANGD_TEST_DEPS ${dep})
   endif()

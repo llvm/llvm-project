@@ -126,7 +126,7 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
 bool SpecialCaseList::parse(const MemoryBuffer *MB,
                             StringMap<size_t> &SectionsMap,
                             std::string &Error) {
-  // Iterate through each line in the blacklist file.
+  // Iterate through each line in the exclusion list file.
   SmallVector<StringRef, 16> Lines;
   MB->getBuffer().split(Lines, '\n');
 

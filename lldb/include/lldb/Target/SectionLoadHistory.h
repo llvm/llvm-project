@@ -75,7 +75,8 @@ protected:
   mutable std::recursive_mutex m_mutex;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SectionLoadHistory);
+  SectionLoadHistory(const SectionLoadHistory &) = delete;
+  const SectionLoadHistory &operator=(const SectionLoadHistory &) = delete;
 };
 
 } // namespace lldb_private

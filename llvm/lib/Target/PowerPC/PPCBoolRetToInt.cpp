@@ -220,7 +220,7 @@ class PPCBoolRetToInt : public FunctionPass {
     auto Defs = findAllDefs(U);
 
     // If the values are all Constants or Arguments, don't bother
-    if (llvm::none_of(Defs, isa<Instruction, Value *>))
+    if (llvm::none_of(Defs, [](Value *V) { return isa<Instruction>(V); }))
       return false;
 
     // Presently, we only know how to handle PHINode, Constant, Arguments and

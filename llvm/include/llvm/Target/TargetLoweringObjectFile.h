@@ -87,9 +87,8 @@ public:
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
-                                           SectionKind Kind,
-                                           const Constant *C,
-                                           unsigned &Align) const;
+                                           SectionKind Kind, const Constant *C,
+                                           Align &Alignment) const;
 
   virtual MCSection *
   getSectionForMachineBasicBlock(const Function &F,
@@ -243,6 +242,13 @@ public:
   /// this hook to return a specialized symbol.
   virtual MCSymbol *getTargetSymbol(const GlobalValue *GV,
                                     const TargetMachine &TM) const {
+    return nullptr;
+  }
+
+  /// If supported, return the function entry point symbol.
+  /// Otherwise, returns nulltpr.
+  virtual MCSymbol *getFunctionEntryPointSymbol(const Function *F,
+                                                const TargetMachine &TM) const {
     return nullptr;
   }
 

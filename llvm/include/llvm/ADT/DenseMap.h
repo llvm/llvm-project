@@ -725,7 +725,7 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   unsigned NumBuckets;
 
 public:
-  /// Create a DenseMap wth an optional \p InitialReserve that guarantee that
+  /// Create a DenseMap with an optional \p InitialReserve that guarantee that
   /// this number of elements can be inserted in the map without grow()
   explicit DenseMap(unsigned InitialReserve = 0) { init(InitialReserve); }
 

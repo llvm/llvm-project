@@ -16,8 +16,7 @@ int main() {
   MATCH(sizeof(std::int32_t), source->ElementBytes());
   TEST(source->IsAllocatable());
   TEST(!source->IsPointer());
-  TEST(source->Allocate(ones, sourceExtent, sizeof(std::int32_t)) ==
-      CFI_SUCCESS);
+  TEST(source->Allocate(ones, sourceExtent) == CFI_SUCCESS);
   TEST(source->IsAllocated());
   MATCH(2, source->GetDimension(0).Extent());
   MATCH(3, source->GetDimension(1).Extent());

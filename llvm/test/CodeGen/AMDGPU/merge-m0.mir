@@ -291,7 +291,7 @@ body:             |
   bb.0:
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
-    S_SETREG_IMM32_B32 0, 1
+    S_SETREG_IMM32_B32 0, 1, implicit-def $mode, implicit $mode
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
 ...

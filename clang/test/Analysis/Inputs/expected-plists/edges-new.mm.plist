@@ -2119,9 +2119,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;value&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>b2b15a95787e594ff79f02c600e9d357</string>
+   <key>issue_hash_content_of_line_in_context</key><string>29a10ca4af622b6146ca082e49d919d6</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>rdar8331641</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -11612,9 +11612,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;foo&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>ef342aeb2f2719117ddd4ef1b72f5ba7</string>
+   <key>issue_hash_content_of_line_in_context</key><string>f533db5cbb9c20d171f9f92105789dc4</string>
   <key>issue_context_kind</key><string>Objective-C method</string>
   <key>issue_context</key><string>test2</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -21954,9 +21954,9 @@
    <key>description</key><string>Potential leak of an object stored into &apos;foo&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
+   <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>f81f51dd154d0a11cab412a1cd1cd095</string>
+   <key>issue_hash_content_of_line_in_context</key><string>5616a7601faa1a8c2ac56fa1b595b172</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>longLines</string>
   <key>issue_hash_function_offset</key><string>1</string>

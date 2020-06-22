@@ -30,7 +30,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  const std::vector<std::string> WhiteListTypes;
+  const std::vector<std::string> IncludedTypes;
 };
 
 } // namespace runtime

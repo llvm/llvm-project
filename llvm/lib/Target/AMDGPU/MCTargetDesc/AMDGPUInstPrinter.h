@@ -105,8 +105,12 @@ private:
                    raw_ostream &O);
   void printVINTRPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                       raw_ostream &O);
+  void printImmediateInt16(uint32_t Imm, const MCSubtargetInfo &STI,
+                           raw_ostream &O);
   void printImmediate16(uint32_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O);
+  void printImmediateIntV216(uint32_t Imm, const MCSubtargetInfo &STI,
+                             raw_ostream &O);
   void printImmediateV216(uint32_t Imm, const MCSubtargetInfo &STI,
                           raw_ostream &O);
   void printImmediate32(uint32_t Imm, const MCSubtargetInfo &STI,

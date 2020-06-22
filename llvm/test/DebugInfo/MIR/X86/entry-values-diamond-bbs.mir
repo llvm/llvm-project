@@ -23,9 +23,9 @@
 # CHECK-NEXT: $ebx = MOV32ri 2
 # CHECK-NEXT: DBG_VALUE $esi, $noreg, ![[ARG_B]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 # CHECK: bb.3.if.end
-# CHECK-NEXT: DBG_VALUE $edx, $noreg, ![[ARG_Q]], !DIExpression()
-# CHECK-NEXT: DBG_VALUE $ebp, $noreg, ![[ARG_C]], !DIExpression()
-# CHECK-NEXT: DBG_VALUE $esi, $noreg, ![[ARG_B]], !DIExpression(DW_OP_LLVM_entry_value, 1)
+# CHECK-DAG: DBG_VALUE $edx, $noreg, ![[ARG_Q]], !DIExpression()
+# CHECK-DAG: DBG_VALUE $ebp, $noreg, ![[ARG_C]], !DIExpression()
+# CHECK-DAG: DBG_VALUE $esi, $noreg, ![[ARG_B]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 --- |
   ; ModuleID = 'test.c'
   source_filename = "test.c"

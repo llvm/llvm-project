@@ -201,7 +201,8 @@ FileShardedIndex::getShard(llvm::StringRef Uri) const {
     RelB.insert(*Rel);
   }
   IF.Relations = std::move(RelB).build();
-  return IF;
+  // Explicit move here is needed by some compilers.
+  return std::move(IF);
 }
 
 SlabTuple indexMainDecls(ParsedAST &AST) {

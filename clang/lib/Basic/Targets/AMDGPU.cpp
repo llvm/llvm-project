@@ -17,6 +17,7 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DataLayout.h"
 
 using namespace clang;
@@ -169,6 +170,22 @@ bool AMDGPUTargetInfo::initFeatureMap(
   // XXX - What does the member GPU mean if device name string passed here?
   if (isAMDGCN(getTriple())) {
     switch (llvm::AMDGPU::parseArchAMDGCN(CPU)) {
+    case GK_GFX1030:
+      Features["ci-insts"] = true;
+      Features["dot1-insts"] = true;
+      Features["dot2-insts"] = true;
+      Features["dot5-insts"] = true;
+      Features["dot6-insts"] = true;
+      Features["dl-insts"] = true;
+      Features["flat-address-space"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["gfx8-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx10-insts"] = true;
+      Features["gfx10-3-insts"] = true;
+      Features["s-memrealtime"] = true;
+      break;
     case GK_GFX1012:
     case GK_GFX1011:
       Features["dot1-insts"] = true;
@@ -286,6 +303,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   resetDataLayout(isAMDGCN(getTriple()) ? DataLayoutStringAMDGCN
                                         : DataLayoutStringR600);
   assert(DataLayout->getAllocaAddrSpace() == Private);
+  GridValues = llvm::omp::AMDGPUGpuGridValues;
 
   setAddressSpaceMap(Triple.getOS() == llvm::Triple::Mesa3D ||
                      !isAMDGCN(Triple));

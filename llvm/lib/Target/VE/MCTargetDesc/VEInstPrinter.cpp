@@ -38,6 +38,9 @@ using namespace VE;
 void VEInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   // Generic registers have identical register name among register classes.
   unsigned AltIdx = VE::AsmName;
+  // Misc registers have each own name, so no use alt-names.
+  if (MRI.getRegClass(VE::MISCRegClassID).contains(RegNo))
+    AltIdx = VE::NoRegAltName;
   OS << '%' << getRegisterName(RegNo, AltIdx);
 }
 
@@ -147,9 +150,9 @@ void VEInstPrinter::printMemASOperandASX(const MCInst *MI, int OpNum,
   }
 }
 
-void VEInstPrinter::printMemASOperand(const MCInst *MI, int OpNum,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O, const char *Modifier) {
+void VEInstPrinter::printMemASOperandRRM(const MCInst *MI, int OpNum,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O, const char *Modifier) {
   // If this is an ADD operand, emit it like normal operands.
   if (Modifier && !strcmp(Modifier, "arith")) {
     printOperand(MI, OpNum, STI, O);
@@ -158,12 +161,46 @@ void VEInstPrinter::printMemASOperand(const MCInst *MI, int OpNum,
     return;
   }
 
-  const MCOperand &MO = MI->getOperand(OpNum + 1);
-  if (!MO.isImm() || MO.getImm() != 0) {
+  if (MI->getOperand(OpNum + 1).isImm() &&
+      MI->getOperand(OpNum + 1).getImm() == 0) {
+    // don't print "+0"
+  } else {
+    printOperand(MI, OpNum + 1, STI, O);
+  }
+  if (MI->getOperand(OpNum).isImm() && MI->getOperand(OpNum).getImm() == 0) {
+    if (MI->getOperand(OpNum + 1).isImm() &&
+        MI->getOperand(OpNum + 1).getImm() == 0) {
+      O << "0";
+    } else {
+      // don't print "(0)"
+    }
+  } else {
+    O << "(";
+    printOperand(MI, OpNum, STI, O);
+    O << ")";
+  }
+}
+
+void VEInstPrinter::printMemASOperandHM(const MCInst *MI, int OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O, const char *Modifier) {
+  // If this is an ADD operand, emit it like normal operands.
+  if (Modifier && !strcmp(Modifier, "arith")) {
+    printOperand(MI, OpNum, STI, O);
+    O << ", ";
+    printOperand(MI, OpNum + 1, STI, O);
+    return;
+  }
+
+  if (MI->getOperand(OpNum + 1).isImm() &&
+      MI->getOperand(OpNum + 1).getImm() == 0) {
+    // don't print "+0"
+  } else {
     printOperand(MI, OpNum + 1, STI, O);
   }
   O << "(";
-  printOperand(MI, OpNum, STI, O);
+  if (MI->getOperand(OpNum).isReg())
+    printOperand(MI, OpNum, STI, O);
   O << ")";
 }
 

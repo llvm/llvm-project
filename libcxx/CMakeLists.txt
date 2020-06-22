@@ -109,6 +109,8 @@ option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ lib
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 option(LIBCXX_ENABLE_PARALLEL_ALGORITHMS "Enable the parallel algorithms library. This requires the PSTL to be available." OFF)
 option(LIBCXX_TEST_GDB_PRETTY_PRINTERS "Test gdb pretty printers." OFF)
+set(LIBCXX_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/lit.site.cfg.in" CACHE STRING
+    "The Lit testing configuration to use when running the tests")
 
 # Benchmark options -----------------------------------------------------------
 option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ON)
@@ -154,14 +156,13 @@ option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itan
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
 
 
-set(LIBCXX_HAS_MERGED_TYPEINFO_NAMES_DEFAULT  "" CACHE STRING
-  "Whether typeinfo names are expected to be unique. Defining this option overrides the default configuration in the library.")
-set(MERGED_TYPEINFO_VALUES ";ON;OFF")
-set_property(CACHE LIBCXX_HAS_MERGED_TYPEINFO_NAMES_DEFAULT PROPERTY STRINGS ${MERGED_TYPEINFO_DEFAULTS})
-list(FIND MERGED_TYPEINFO_VALUES "${LIBCXX_HAS_MERGED_TYPEINFO_NAMES_DEFAULT}" IS_VALID_DEFAULT)
+set(LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION "" CACHE STRING "The implementation of typeinfo comparison to use.")
+set(TYPEINFO_COMPARISON_VALUES ";1;2")
+set_property(CACHE LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION PROPERTY STRINGS ${TYPEINFO_COMPARISON_VALUES})
+list(FIND TYPEINFO_COMPARISON_VALUES "${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" IS_VALID_DEFAULT)
 if (${IS_VALID_DEFAULT} EQUAL -1)
-  message(FATAL_ERROR "Value '${LIBCXX_HAS_MERGED_TYPEINFO_NAMES_DEFAULT}' is not a valid value for
-          LIBCXX_HAS_MERGED_TYPEINFO_NAMES_DEFAULT")
+  message(FATAL_ERROR "Value '${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}' is not a valid value for
+          LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION")
 endif()
 
 option(LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT "Enable per TU ABI insulation by default. To be used by vendors." OFF)
@@ -763,7 +764,7 @@ function(cxx_link_system_libraries target)
     target_link_libraries(${target} PRIVATE gcc_s)
   endif()
 
-  if (LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
+  if (LIBCXX_HAS_ATOMIC_LIB)
     target_link_libraries(${target} PRIVATE atomic)
   endif()
 
@@ -840,8 +841,8 @@ config_define_if_not(LIBCXX_ENABLE_STDOUT _LIBCPP_HAS_NO_STDOUT)
 config_define_if_not(LIBCXX_ENABLE_THREADS _LIBCPP_HAS_NO_THREADS)
 config_define_if_not(LIBCXX_ENABLE_MONOTONIC_CLOCK _LIBCPP_HAS_NO_MONOTONIC_CLOCK)
 config_define_if_not(LIBCXX_ENABLE_THREAD_UNSAFE_C_FUNCTIONS _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS)
-if (NOT LIBCXX_HAS_MERGED_TYPEINFO_NAMES_DEFAULT STREQUAL "")
-  config_define("${LIBCXX_HAS_MERGED_TYPEINFO_NAMES_DEFAULT}" _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT)
+if (NOT LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION STREQUAL "")
+  config_define("${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION)
 endif()
 
 config_define_if(LIBCXX_HAS_PTHREAD_API _LIBCPP_HAS_THREAD_API_PTHREAD)

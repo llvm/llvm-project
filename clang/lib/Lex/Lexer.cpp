@@ -1862,7 +1862,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
         char Next = getCharAndSizeNoWarn(CurPtr + Consumed, NextSize,
                                          getLangOpts());
         if (!isIdentifierBody(Next)) {
-          // End of suffix. Check whether this is on the whitelist.
+          // End of suffix. Check whether this is on the allowed list.
           const StringRef CompleteSuffix(Buffer, Chars);
           IsUDSuffix = StringLiteralParser::isValidUDSuffix(getLangOpts(),
                                                             CompleteSuffix);

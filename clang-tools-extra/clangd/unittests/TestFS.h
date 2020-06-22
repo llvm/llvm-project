@@ -14,7 +14,10 @@
 #include "ClangdServer.h"
 #include "GlobalCompilationDatabase.h"
 #include "support/Path.h"
+#include "support/ThreadsafeFS.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -28,14 +31,16 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
             llvm::StringMap<time_t> const &Timestamps = {});
 
 // A VFS provider that returns TestFSes containing a provided set of files.
-class MockFSProvider : public FileSystemProvider {
+class MockFS : public ThreadsafeFS {
 public:
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
-    return buildTestFS(Files);
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  view(llvm::NoneType) const override {
+    return buildTestFS(Files, Timestamps);
   }
 
   // If relative paths are used, they are resolved with testPath().
   llvm::StringMap<std::string> Files;
+  llvm::StringMap<time_t> Timestamps;
 };
 
 // A Compilation database that returns a fixed set of compile flags.

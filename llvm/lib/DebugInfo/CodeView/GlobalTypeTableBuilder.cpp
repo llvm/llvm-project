@@ -84,6 +84,13 @@ void GlobalTypeTableBuilder::reset() {
   SeenRecords.clear();
 }
 
+static inline ArrayRef<uint8_t> stabilize(BumpPtrAllocator &Alloc,
+                                          ArrayRef<uint8_t> Data) {
+  uint8_t *Stable = Alloc.Allocate<uint8_t>(Data.size());
+  memcpy(Stable, Data.data(), Data.size());
+  return makeArrayRef(Stable, Data.size());
+}
+
 TypeIndex GlobalTypeTableBuilder::insertRecordBytes(ArrayRef<uint8_t> Record) {
   GloballyHashedType GHT =
       GloballyHashedType::hashType(Record, SeenHashes, SeenHashes);
@@ -103,4 +110,31 @@ GlobalTypeTableBuilder::insertRecord(ContinuationRecordBuilder &Builder) {
   for (auto C : Fragments)
     TI = insertRecordBytes(C.RecordData);
   return TI;
+}
+
+bool GlobalTypeTableBuilder::replaceType(TypeIndex &Index, CVType Data,
+                                         bool Stabilize) {
+  assert(Index.toArrayIndex() < SeenRecords.size() &&
+         "This function cannot be used to insert records!");
+
+  ArrayRef<uint8_t> Record = Data.data();
+  assert(Record.size() < UINT32_MAX && "Record too big");
+  assert(Record.size() % 4 == 0 &&
+         "The type record size is not a multiple of 4 bytes which will cause "
+         "misalignment in the output TPI stream!");
+
+  GloballyHashedType Hash =
+      GloballyHashedType::hashType(Record, SeenHashes, SeenHashes);
+  auto Result = HashedRecords.try_emplace(Hash, Index.toArrayIndex());
+  if (!Result.second) {
+    Index = Result.first->second;
+    return false; // The record is already there, at a different location
+  }
+
+  if (Stabilize)
+    Record = stabilize(RecordStorage, Record);
+
+  SeenRecords[Index.toArrayIndex()] = Record;
+  SeenHashes[Index.toArrayIndex()] = Hash;
+  return true;
 }

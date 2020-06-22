@@ -1755,12 +1755,12 @@ define i8 @test_v16i8(<16 x i8> %a0) {
 ; AVX2-NEXT:    vpunpckhbw {{.*#+}} xmm1 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[2],zero,xmm0[2],zero,xmm0[4],zero,xmm0[6],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
+; AVX2-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
@@ -1969,19 +1969,13 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX2-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm3, %xmm0, %xmm1
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm3, %xmm0, %xmm1
-; AVX2-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm1
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -2057,19 +2051,13 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; AVX512DQ-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX512DQ-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
 ; AVX512DQ-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vpand %xmm3, %xmm0, %xmm1
-; AVX512DQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQ-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; AVX512DQ-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512DQ-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
 ; AVX512DQ-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vpand %xmm3, %xmm0, %xmm1
-; AVX512DQ-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512DQ-NEXT:    vpsrlq $32, %xmm0, %xmm1
 ; AVX512DQ-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQ-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512DQ-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vmovd %xmm0, %eax
@@ -2089,19 +2077,13 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; AVX512DQVL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX512DQVL-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
 ; AVX512DQVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX512DQVL-NEXT:    vpand %xmm3, %xmm0, %xmm1
-; AVX512DQVL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQVL-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX512DQVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; AVX512DQVL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512DQVL-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
 ; AVX512DQVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX512DQVL-NEXT:    vpand %xmm3, %xmm0, %xmm1
-; AVX512DQVL-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX512DQVL-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX512DQVL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512DQVL-NEXT:    vpsrlq $32, %xmm0, %xmm1
 ; AVX512DQVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX512DQVL-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
+; AVX512DQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQVL-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512DQVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vmovd %xmm0, %eax
@@ -2253,19 +2235,13 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpmullw %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpmullw %xmm0, %xmm2, %xmm0
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpackuswb %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
 ; AVX2-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpackuswb %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpsrld $16, %xmm2, %xmm2
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
+; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm2
 ; AVX2-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -2294,19 +2270,13 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX512BW-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpand %xmm3, %xmm0, %xmm1
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
 ; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpand %xmm3, %xmm0, %xmm1
-; AVX512BW-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512BW-NEXT:    vpsrlq $32, %xmm0, %xmm1
 ; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
@@ -2336,13 +2306,9 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; AVX512BWVL-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; AVX512BWVL-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
 ; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vpmovwb %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; AVX512BWVL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512BWVL-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
 ; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vpmovwb %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX512BWVL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512BWVL-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[4],zero,xmm0[6],zero,zero,zero,zero,zero,xmm0[12],zero,xmm0[14],zero,zero,zero,zero,zero
 ; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpmovwb %ymm0, %xmm0
 ; AVX512BWVL-NEXT:    vpsrlw $8, %xmm0, %xmm1
@@ -2636,19 +2602,13 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm3
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm3, %xmm1
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm1
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm1
-; AVX2-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm1
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -2680,19 +2640,13 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX512BW-NEXT:    vpmullw %xmm0, %xmm1, %xmm0
 ; AVX512BW-NEXT:    vpmullw %xmm0, %xmm2, %xmm0
-; AVX512BW-NEXT:    vpand %xmm3, %xmm0, %xmm1
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
 ; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpand %xmm3, %xmm0, %xmm1
-; AVX512BW-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512BW-NEXT:    vpsrlq $32, %xmm0, %xmm1
 ; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
@@ -2725,13 +2679,9 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX512BWVL-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; AVX512BWVL-NEXT:    vpmullw %xmm0, %xmm1, %xmm0
 ; AVX512BWVL-NEXT:    vpmullw %xmm0, %xmm2, %xmm0
-; AVX512BWVL-NEXT:    vpmovwb %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; AVX512BWVL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512BWVL-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero,xmm0[8],zero,xmm0[10],zero,xmm0[12],zero,xmm0[14],zero
 ; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vpmovwb %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX512BWVL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512BWVL-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[4],zero,xmm0[6],zero,zero,zero,zero,zero,xmm0[12],zero,xmm0[14],zero,zero,zero,zero,zero
 ; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpmovwb %ymm0, %xmm0
 ; AVX512BWVL-NEXT:    vpsrlw $8, %xmm0, %xmm1

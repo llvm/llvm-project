@@ -35,8 +35,7 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 
-using llvm::dbgs;
-
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
 //===----------------------------------------------------------------------===//
@@ -44,14 +43,10 @@ using llvm::dbgs;
 const StringLiteral mlir::linalg::LinalgTransforms::kLinalgTransformMarker =
     "__internal_linalg_transform__";
 
-mlir::linalg::LinalgMarker::LinalgMarker(ArrayRef<StringRef> matchDisjunction,
-                                         llvm::Optional<StringRef> replacement)
+mlir::linalg::LinalgMarker::LinalgMarker(ArrayRef<Identifier> matchDisjunction,
+                                         Optional<Identifier> replacement)
     : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
       replacement(replacement) {}
-
-mlir::linalg::LinalgMarker::LinalgMarker(ArrayRef<StringRef> matchDisjunction,
-                                         StringRef replacement)
-    : LinalgMarker(matchDisjunction, llvm::Optional<StringRef>{replacement}) {}
 
 LogicalResult
 mlir::linalg::LinalgMarker::checkAndNotify(PatternRewriter &rewriter,
@@ -64,15 +59,10 @@ mlir::linalg::LinalgMarker::checkAndNotify(PatternRewriter &rewriter,
     if (matchDisjunction.empty())
       return success();
 
-    // 2. Has no marker and matchDisjuntion matches the no-moarker case.
-    for (auto marker : matchDisjunction)
-      if (marker.empty())
-        return success();
-
-    // 3. Has no marker but was expecting a marker.
+    // 2. Has no marker but was expecting a marker.
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
       diag << " does not have any marker from list: ";
-      llvm::interleaveComma(matchDisjunction, diag);
+      interleaveComma(matchDisjunction, diag);
     });
   }
 
@@ -84,7 +74,7 @@ mlir::linalg::LinalgMarker::checkAndNotify(PatternRewriter &rewriter,
   // 5. Fail to match.
   return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
     diag << " does not have any marker from list: ";
-    llvm::interleaveComma(matchDisjunction, diag);
+    interleaveComma(matchDisjunction, diag);
   });
 }
 
@@ -96,6 +86,21 @@ void mlir::linalg::LinalgMarker::replaceLinalgMarker(PatternRewriter &rewriter,
   else
     op->removeAttr(Identifier::get(LinalgTransforms::kLinalgTransformMarker,
                                    rewriter.getContext()));
+}
+
+LinalgTilingOptions &
+mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
+  SmallVector<int64_t, 4> tileSizes(ts.begin(), ts.end());
+  tileSizeComputationFunction = [tileSizes](OpBuilder &b, Operation *op) {
+    OpBuilder::InsertionGuard guard(b);
+    b.setInsertionPointToStart(
+        &op->getParentOfType<FuncOp>().getBody().front());
+    return llvm::to_vector<4>(map_range(tileSizes, [&](int64_t s) {
+      Value v = b.create<ConstantIndexOp>(op->getLoc(), s);
+      return v;
+    }));
+  };
+  return *this;
 }
 
 /// Linalg base tiling pattern.
@@ -112,14 +117,8 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewrite(
     return failure();
   if (failed(marker.checkAndNotify(rewriter, linalgOp)))
     return failure();
-  Optional<TiledLinalgOp> res;
-  if (options.loopType == LinalgTilingLoopType::Loops)
-    res = tileLinalgOp(rewriter, linalgOp, options.tileSizes,
-                       options.interchangeVector);
-  else if (options.loopType == LinalgTilingLoopType::ParallelLoops)
-    res = tileLinalgOpToParallelLoops(rewriter, linalgOp, options.tileSizes,
-                                      options.interchangeVector);
-  // TODO: Impl tiling to affine loops when it makes sense.
+
+  Optional<TiledLinalgOp> res = tileLinalgOp(rewriter, linalgOp, options);
 
   if (!res)
     return failure();
@@ -171,12 +170,19 @@ LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
     return failure();
   if (failed(promoteSubviewsPrecondition(op, options)))
     return failure();
-  rewriter.updateRootInPlace(op, [&]() {
-    auto promotedOp = promoteSubViews(rewriter, op, options);
-    (void)promotedOp;
-    assert(promotedOp && "Unexpected pattern failure");
-    marker.replaceLinalgMarker(rewriter, op);
-  });
+
+  // TODO: We cannot use root update here. This pattern is creating other ops,
+  // so if the promotion fails, those need to be cleaned up, which doesnt seem
+  // to be happening here. So to fail properly, we should be cloning the op and
+  // deleting the previous op. This needs more investigation.
+  rewriter.startRootUpdate(op);
+  Optional<LinalgOp> promotedOp = promoteSubViews(rewriter, op, options);
+  if (!promotedOp) {
+    rewriter.cancelRootUpdate(op);
+    return op->emitError("subview promotion failed");
+  }
+  rewriter.finalizeRootUpdate(op);
+  marker.replaceLinalgMarker(rewriter, op);
   return success();
 }
 
@@ -202,19 +208,29 @@ LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
 LogicalResult mlir::linalg::applyStagedPatterns(
     Operation *op, ArrayRef<OwningRewritePatternList> stage1Patterns,
     const OwningRewritePatternList &stage2Patterns,
-    llvm::function_ref<LogicalResult(Operation *)> stage3Lambda) {
+    function_ref<LogicalResult(Operation *)> stage3Lambda) {
+  unsigned iteration = 0;
+  (void)iteration;
   for (const auto &patterns : stage1Patterns) {
-    if (!applyPatternsAndFoldGreedily(op, patterns)) {
-      llvm::dbgs() << "Underlying first stage rewrite did not converge";
+    LLVM_DEBUG(DBGS() << "Before 1st stage, iter: " << ++iteration << "\n"
+                      << *op);
+    if (failed(applyPatternsAndFoldGreedily(op, patterns))) {
+      LLVM_DEBUG(DBGS() << "Underlying first stage rewrite did not converge");
       return failure();
     }
-    if (!applyPatternsAndFoldGreedily(op, stage2Patterns)) {
-      llvm::dbgs() << "Underlying second stage rewrite did not converge";
+    LLVM_DEBUG(DBGS() << "After 1st stage, iter: " << ++iteration << "\n"
+                      << *op);
+    if (failed(applyPatternsAndFoldGreedily(op, stage2Patterns))) {
+      LLVM_DEBUG(DBGS() << "Underlying 2nd stage rewrite did not converge");
       return failure();
     }
+    LLVM_DEBUG(DBGS() << "After 2nd stage, iter : " << iteration << "\n"
+                      << *op);
     if (stage3Lambda) {
       if (failed(stage3Lambda(op)))
         return failure();
+      LLVM_DEBUG(DBGS() << "After 3rd stage, iter : " << iteration << "\n"
+                        << *op);
     }
   }
   return success();

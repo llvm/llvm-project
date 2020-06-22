@@ -7,8 +7,8 @@
 // RUN: llvm-objdump -d -s --no-show-raw-insn %t.exe | FileCheck %s
 
 // CHECK:      Contents of section .got.plt:
-// CHECK-NEXT: 32a8 40220000 00000000 00000000 11120000
-// CHECK-NEXT: 32b8 31120000
+// CHECK-NEXT: 32b0 40220000 00000000 00000000 11120000
+// CHECK-NEXT: 32c0 31120000
 
 // CHECK:      Disassembly of section .plt:
 // CHECK-EMPTY:

@@ -108,3 +108,33 @@ void f() {
   (void)sizeof(*x); // Ok
 }
 }
+
+static volatile char var1 = 'a';
+volatile char var2 = 'a';
+static volatile char arr1[] = "hello";
+volatile char arr2[] = "hello";
+void volatile_array() {
+  static volatile char var3 = 'a';
+  volatile char var4 = 'a';
+  static volatile char arr3[] = "hello";
+  volatile char arr4[] = "hello";
+
+  // These all result in volatile loads in C and C++11. In C++98, they don't,
+  // but we suppress the warning in the case where '(void)var;' might be
+  // idiomatically suppressing an 'unused variable' warning.
+  (void)var1;
+  (void)var2;
+#if __cplusplus < 201103L
+  // expected-warning@-2 {{expression result unused; assign into a variable to force a volatile load}}
+#endif
+  (void)var3;
+  (void)var4;
+
+  // None of these result in volatile loads in any language mode, and it's not
+  // really reasonable to assume that they would, since volatile array loads
+  // don't really exist anywhere.
+  (void)arr1;
+  (void)arr2;
+  (void)arr3;
+  (void)arr4;
+}

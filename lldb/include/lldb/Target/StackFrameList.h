@@ -155,7 +155,8 @@ protected:
   const bool m_show_inlined_frames;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(StackFrameList);
+  StackFrameList(const StackFrameList &) = delete;
+  const StackFrameList &operator=(const StackFrameList &) = delete;
 };
 
 } // namespace lldb_private

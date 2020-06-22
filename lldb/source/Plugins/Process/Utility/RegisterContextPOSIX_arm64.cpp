@@ -180,6 +180,10 @@ size_t RegisterContextPOSIX_arm64::GetRegisterSetCount() {
   return sets;
 }
 
+bool RegisterContextPOSIX_arm64::IsRegisterSetAvailable(size_t set_index) {
+  return set_index < k_num_register_sets;
+}
+
 const lldb_private::RegisterSet *
 RegisterContextPOSIX_arm64::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set)) {
@@ -198,37 +202,4 @@ RegisterContextPOSIX_arm64::GetRegisterSet(size_t set) {
 const char *RegisterContextPOSIX_arm64::GetRegisterName(unsigned reg) {
   assert(reg < m_reg_info.num_registers && "Invalid register offset.");
   return GetRegisterInfo()[reg].name;
-}
-
-lldb::ByteOrder RegisterContextPOSIX_arm64::GetByteOrder() {
-  // Get the target process whose privileged thread was used for the register
-  // read.
-  lldb::ByteOrder byte_order = lldb::eByteOrderInvalid;
-  lldb_private::Process *process = CalculateProcess().get();
-
-  if (process)
-    byte_order = process->GetByteOrder();
-  return byte_order;
-}
-
-bool RegisterContextPOSIX_arm64::IsRegisterSetAvailable(size_t set_index) {
-  return set_index < k_num_register_sets;
-}
-
-// Used when parsing DWARF and EH frame information and any other object file
-// sections that contain register numbers in them.
-uint32_t RegisterContextPOSIX_arm64::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t num) {
-  const uint32_t num_regs = GetRegisterCount();
-
-  assert(kind < lldb::kNumRegisterKinds);
-  for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
-    const lldb_private::RegisterInfo *reg_info =
-        GetRegisterInfoAtIndex(reg_idx);
-
-    if (reg_info->kinds[kind] == num)
-      return reg_idx;
-  }
-
-  return LLDB_INVALID_REGNUM;
 }

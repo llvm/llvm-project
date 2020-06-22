@@ -42,6 +42,7 @@ void VEMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 bool VEMCExpr::printVariantKind(raw_ostream &OS, VariantKind Kind) {
   switch (Kind) {
   case VK_VE_None:
+  case VK_VE_REFLONG:
     return false;
 
   case VK_VE_HI32:
@@ -58,7 +59,8 @@ bool VEMCExpr::printVariantKind(raw_ostream &OS, VariantKind Kind) {
   case VK_VE_TLS_GD_LO32:
   case VK_VE_TPOFF_HI32:
   case VK_VE_TPOFF_LO32:
-    return false; // OS << "@<text>(";  break;
+    // Use suffix for these variant kinds
+    return false;
   }
   return true;
 }
@@ -66,6 +68,7 @@ bool VEMCExpr::printVariantKind(raw_ostream &OS, VariantKind Kind) {
 void VEMCExpr::printVariantKindSuffix(raw_ostream &OS, VariantKind Kind) {
   switch (Kind) {
   case VK_VE_None:
+  case VK_VE_REFLONG:
     break;
   case VK_VE_HI32:
     OS << "@hi";
@@ -94,14 +97,14 @@ void VEMCExpr::printVariantKindSuffix(raw_ostream &OS, VariantKind Kind) {
   case VK_VE_PLT_HI32:
     OS << "@plt_hi";
     break;
+  case VK_VE_PLT_LO32:
+    OS << "@plt_lo";
+    break;
   case VK_VE_TLS_GD_HI32:
     OS << "@tls_gd_hi";
     break;
   case VK_VE_TLS_GD_LO32:
     OS << "@tls_gd_lo";
-    break;
-  case VK_VE_PLT_LO32:
-    OS << "@plt_lo";
     break;
   case VK_VE_TPOFF_HI32:
     OS << "@tpoff_hi";
@@ -135,6 +138,8 @@ VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::VariantKind Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("Unhandled VEMCExpr::VariantKind");
+  case VK_VE_REFLONG:
+    return VE::fixup_ve_reflong;
   case VK_VE_HI32:
     return VE::fixup_ve_hi32;
   case VK_VE_LO32:
@@ -159,6 +164,10 @@ VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::VariantKind Kind) {
     return VE::fixup_ve_tls_gd_hi32;
   case VK_VE_TLS_GD_LO32:
     return VE::fixup_ve_tls_gd_lo32;
+  case VK_VE_TPOFF_HI32:
+    return VE::fixup_ve_tpoff_hi32;
+  case VK_VE_TPOFF_LO32:
+    return VE::fixup_ve_tpoff_lo32;
   }
 }
 
@@ -185,6 +194,8 @@ static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
   }
 
   case MCExpr::SymbolRef: {
+    // We're known to be under a TLS fixup, so any symbol should be
+    // modified. There should be only one.
     const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
     cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
     break;
@@ -201,5 +212,14 @@ void VEMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
 }
 
 void VEMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
+  switch (getKind()) {
+  default:
+    return;
+  case VK_VE_TLS_GD_HI32:
+  case VK_VE_TLS_GD_LO32:
+  case VK_VE_TPOFF_HI32:
+  case VK_VE_TPOFF_LO32:
+    break;
+  }
   fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
 }

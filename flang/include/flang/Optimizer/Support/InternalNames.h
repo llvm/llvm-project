@@ -65,6 +65,7 @@ struct NameUniquer {
 
   /// Unique a (global) constant name
   std::string doConstant(llvm::ArrayRef<llvm::StringRef> modules,
+                         llvm::Optional<llvm::StringRef> host,
                          llvm::StringRef name);
 
   /// Unique a dispatch table name

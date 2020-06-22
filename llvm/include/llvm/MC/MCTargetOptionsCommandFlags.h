@@ -15,10 +15,11 @@
 #define LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/MC/MCTargetOptions.h"
-#include "llvm/Support/CommandLine.h"
+#include <string>
 
 namespace llvm {
+
+class MCTargetOptions;
 
 namespace mc {
 
@@ -28,6 +29,8 @@ Optional<bool> getExplicitRelaxAll();
 bool getIncrementalLinkerCompatible();
 
 int getDwarfVersion();
+
+bool getDwarf64();
 
 bool getShowMCInst();
 

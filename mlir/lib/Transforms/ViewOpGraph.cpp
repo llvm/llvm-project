@@ -130,7 +130,7 @@ struct PrintOpPass : public PrintOpBase<PrintOpPass> {
       for (Region &region : op.getRegions()) {
         for (auto indexed_block : llvm::enumerate(region)) {
           // Suffix block number if there are more than 1 block.
-          auto blockName = region.getBlocks().size() == 1
+          auto blockName = llvm::hasSingleElement(region)
                                ? ""
                                : ("__" + llvm::utostr(indexed_block.index()));
           llvm::WriteGraph(os, &indexed_block.value(), short_names,

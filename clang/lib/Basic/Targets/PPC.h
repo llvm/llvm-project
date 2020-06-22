@@ -43,12 +43,12 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
     ArchDefinePwr7 = 1 << 11,
     ArchDefinePwr8 = 1 << 12,
     ArchDefinePwr9 = 1 << 13,
-    ArchDefineFuture = 1 << 14,
-    ArchDefineA2 = 1 << 15,
-    ArchDefineA2q = 1 << 16,
-    ArchDefineE500 = 1 << 17
+    ArchDefinePwr10 = 1 << 14,
+    ArchDefineFuture = 1 << 15,
+    ArchDefineA2 = 1 << 16,
+    ArchDefineA2q = 1 << 17,
+    ArchDefineE500 = 1 << 18
   } ArchDefineTypes;
-
 
   ArchDefineTypes ArchDefs = ArchDefineNone;
   static const Builtin::Info BuiltinInfo[];
@@ -69,6 +69,8 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasExtDiv = false;
   bool HasP9Vector = false;
   bool HasSPE = false;
+  bool HasP10Vector = false;
+  bool HasPCRelativeMemops = false;
 
 protected:
   std::string ABI;
@@ -119,20 +121,20 @@ public:
               .Case("a2q", ArchDefineName | ArchDefineA2 | ArchDefineA2q)
               .Cases("power3", "pwr3", ArchDefinePpcgr)
               .Cases("power4", "pwr4",
-                    ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+                     ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("power5", "pwr5",
-                    ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                        ArchDefinePpcsq)
+                     ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                         ArchDefinePpcsq)
               .Cases("power5x", "pwr5x",
-                    ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
-                        ArchDefinePpcgr | ArchDefinePpcsq)
+                     ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
+                         ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("power6", "pwr6",
-                    ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
-                        ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+                     ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
+                         ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("power6x", "pwr6x",
-                    ArchDefinePwr6x | ArchDefinePwr6 | ArchDefinePwr5x |
-                        ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                        ArchDefinePpcsq)
+                     ArchDefinePwr6x | ArchDefinePwr6 | ArchDefinePwr5x |
+                         ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                         ArchDefinePpcsq)
               .Cases("power7", "pwr7",
                      ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
                          ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
@@ -146,11 +148,16 @@ public:
                      ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
                          ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
                          ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+              .Cases("power10", "pwr10",
+                     ArchDefinePwr10 | ArchDefinePwr9 | ArchDefinePwr8 |
+                         ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
+                         ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                         ArchDefinePpcsq)
               .Case("future",
-                    ArchDefineFuture | ArchDefinePwr9 | ArchDefinePwr8 |
-                        ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
-                        ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                        ArchDefinePpcsq)
+                    ArchDefineFuture | ArchDefinePwr10 | ArchDefinePwr9 |
+                        ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
+                        ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
+                        ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("8548", "e500", ArchDefineE500)
               .Default(ArchDefineNone);
     }
@@ -171,6 +178,7 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override;
 
+  void addP10SpecificFeatures(llvm::StringMap<bool> &Features) const;
   void addFutureSpecificFeatures(llvm::StringMap<bool> &Features) const;
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
@@ -276,11 +284,12 @@ public:
       break;
     case 'Q': // Memory operand that is an offset from a register (it is
               // usually better to use `m' or `es' in asm statements)
+      Info.setAllowsRegister();
+      LLVM_FALLTHROUGH;
     case 'Z': // Memory operand that is an indexed or indirect from a
               // register (it is usually better to use `m' or `es' in
               // asm statements)
       Info.setAllowsMemory();
-      Info.setAllowsRegister();
       break;
     case 'R': // AIX TOC entry
     case 'a': // Address operand that is an indexed or indirect from a

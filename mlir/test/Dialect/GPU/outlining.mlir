@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -gpu-kernel-outlining -split-input-file -verify-diagnostics %s | FileCheck %s -dump-input-on-failure
+// RUN: mlir-opt -allow-unregistered-dialect -gpu-kernel-outlining -split-input-file -verify-diagnostics %s | FileCheck %s
 
 // CHECK: module attributes {gpu.container_module}
 
@@ -92,8 +92,9 @@ func @extra_constants(%arg0 : memref<?xf32>) {
   // CHECK: %[[CST:.*]] = constant 8 : index
   %cst = constant 8 : index
   %cst2 = constant 2 : index
-  %cst3 = dim %arg0, 0 : memref<?xf32>
-  // CHECK: "gpu.launch_func"(%[[CST]], %[[CST]], %[[CST]], %[[CST]], %[[CST]], %[[CST]], %{{.*}}) {kernel = @extra_constants_kernel::@extra_constants_kernel} : (index, index, index, index, index, index, memref<?xf32>) -> ()
+  %c0 = constant 0 : index
+  %cst3 = dim %arg0, %c0 : memref<?xf32>
+  // CHECK: "gpu.launch_func"(%[[CST]], %[[CST]], %[[CST]], %[[CST]], %[[CST]], %[[CST]], %{{.*}}, %{{.*}}) {kernel = @extra_constants_kernel::@extra_constants_kernel} : (index, index, index, index, index, index, memref<?xf32>, index) -> ()
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %cst, %grid_y = %cst,
                                        %grid_z = %cst)
              threads(%tx, %ty, %tz) in (%block_x = %cst, %block_y = %cst,
@@ -104,7 +105,7 @@ func @extra_constants(%arg0 : memref<?xf32>) {
   return
 }
 
-// CHECK-LABEL: func @extra_constants_kernel(%{{.*}}: memref<?xf32>)
+// CHECK-LABEL: func @extra_constants_kernel(%{{.*}}: memref<?xf32>, %{{.*}}: index)
 // CHECK: constant
 // CHECK: constant
 
@@ -122,7 +123,7 @@ func @multiple_uses(%arg0 : memref<?xf32>) {
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1,
                                        %grid_z = %c1)
              threads(%tx, %ty, %tz) in (%block_x = %c1, %block_y = %c1,
-	                                %block_z = %c1) {
+                                        %block_z = %c1) {
     "use1"(%c2, %c2) : (index, index) -> ()
     "use2"(%c2) : (index) -> ()
     gpu.terminator

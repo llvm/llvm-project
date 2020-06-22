@@ -225,14 +225,14 @@ public:
 
 class StartSection : public SyntheticSection {
 public:
-  StartSection(uint32_t numSegments)
-      : SyntheticSection(llvm::wasm::WASM_SEC_START), numSegments(numSegments) {
-  }
+  StartSection(bool hasInitializedSegments)
+      : SyntheticSection(llvm::wasm::WASM_SEC_START),
+        hasInitializedSegments(hasInitializedSegments) {}
   bool isNeeded() const override;
   void writeBody() override;
 
 protected:
-  uint32_t numSegments;
+  bool hasInitializedSegments;
 };
 
 class ElemSection : public SyntheticSection {

@@ -162,7 +162,8 @@ protected:
 private:
   lldb::ProcessWP m_process_wp;
 
-  DISALLOW_COPY_AND_ASSIGN(StructuredDataPlugin);
+  StructuredDataPlugin(const StructuredDataPlugin &) = delete;
+  const StructuredDataPlugin &operator=(const StructuredDataPlugin &) = delete;
 };
 }
 

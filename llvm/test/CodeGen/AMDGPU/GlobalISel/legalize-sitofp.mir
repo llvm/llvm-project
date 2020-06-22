@@ -132,12 +132,10 @@ body: |
     ; GFX6: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C1]]
     ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C9]], [[SELECT1]]
     ; GFX6: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
-    ; GFX6: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[XOR]](s64)
-    ; GFX6: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[UITOFP]]
+    ; GFX6: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[ADD]]
     ; GFX6: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[ASHR]](s64), [[C2]]
-    ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[FNEG]], [[UITOFP]]
-    ; GFX6: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s64)
-    ; GFX6: $vgpr0 = COPY [[SITOFP]](s32)
+    ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[FNEG]], [[ADD]]
+    ; GFX6: $vgpr0 = COPY [[SELECT3]](s32)
     ; GFX8-LABEL: name: test_sitofp_s64_to_s32
     ; GFX8: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 63
@@ -174,12 +172,10 @@ body: |
     ; GFX8: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C1]]
     ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C9]], [[SELECT1]]
     ; GFX8: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
-    ; GFX8: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[XOR]](s64)
-    ; GFX8: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[UITOFP]]
+    ; GFX8: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[ADD]]
     ; GFX8: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[ASHR]](s64), [[C2]]
-    ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[FNEG]], [[UITOFP]]
-    ; GFX8: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s64)
-    ; GFX8: $vgpr0 = COPY [[SITOFP]](s32)
+    ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[FNEG]], [[ADD]]
+    ; GFX8: $vgpr0 = COPY [[SELECT3]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SITOFP %0
     $vgpr0 = COPY %1
@@ -488,12 +484,10 @@ body: |
     ; GFX6: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C1]]
     ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C9]], [[SELECT1]]
     ; GFX6: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
-    ; GFX6: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[XOR]](s64)
-    ; GFX6: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[UITOFP]]
+    ; GFX6: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[ADD]]
     ; GFX6: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[ASHR]](s64), [[C2]]
-    ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[FNEG]], [[UITOFP]]
-    ; GFX6: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[SEXT_INREG]](s64)
-    ; GFX6: $vgpr0 = COPY [[SITOFP]](s32)
+    ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[FNEG]], [[ADD]]
+    ; GFX6: $vgpr0 = COPY [[SELECT3]](s32)
     ; GFX8-LABEL: name: test_sitofp_s33_to_s32
     ; GFX8: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
@@ -532,12 +526,10 @@ body: |
     ; GFX8: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C1]]
     ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C9]], [[SELECT1]]
     ; GFX8: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
-    ; GFX8: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[XOR]](s64)
-    ; GFX8: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[UITOFP]]
+    ; GFX8: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[ADD]]
     ; GFX8: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[ASHR]](s64), [[C2]]
-    ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[FNEG]], [[UITOFP]]
-    ; GFX8: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[SEXT_INREG]](s64)
-    ; GFX8: $vgpr0 = COPY [[SITOFP]](s32)
+    ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[FNEG]], [[ADD]]
+    ; GFX8: $vgpr0 = COPY [[SELECT3]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s33) = G_TRUNC %0
     %2:_(s32) = G_SITOFP %1

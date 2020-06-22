@@ -47,7 +47,9 @@ private:
   bool m_auto_continue;
   bool m_reenabled_breakpoint_site;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepOverBreakpoint);
+  ThreadPlanStepOverBreakpoint(const ThreadPlanStepOverBreakpoint &) = delete;
+  const ThreadPlanStepOverBreakpoint &
+  operator=(const ThreadPlanStepOverBreakpoint &) = delete;
 };
 
 } // namespace lldb_private

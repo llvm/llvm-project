@@ -13,6 +13,8 @@ declare float  @llvm.trunc.f32(float)
 declare double @llvm.trunc.f64(double)
 declare float  @llvm.round.f32(float)
 declare double @llvm.round.f64(double)
+declare float  @llvm.roundeven.f32(float)
+declare double @llvm.roundeven.f64(double)
 declare float  @llvm.copysign.f32(float, float)
 declare double @llvm.copysign.f64(double, double)
 
@@ -29,6 +31,8 @@ define i32 @main() {
   %trunc64 = call double @llvm.trunc.f64(double 0.000000e+00)
   %round32 = call float @llvm.round.f32(float 0.000000e+00)
   %round64 = call double @llvm.round.f64(double 0.000000e+00)
+  %roundeven32 = call float @llvm.roundeven.f32(float 0.000000e+00)
+  %roundeven64 = call double @llvm.roundeven.f64(double 0.000000e+00)
   %copysign32 = call float @llvm.copysign.f32(float 0.000000e+00, float 0.000000e+00)
   %copysign64 = call double @llvm.copysign.f64(double 0.000000e+00, double 0.000000e+00)
   ret i32 0

@@ -23,4 +23,4 @@ class TestCase(TestBase):
         # be prepared to run in the target but it should at least not crash LLDB.
         self.expect('expr --lang objc -- [NSString stringWithFormat:@"%d", 1];',
                     error=True,
-                    substrs=["error: The expression could not be prepared to run in the target"])
+                    substrs=["Rewriting an Objective-C constant string requires CFStringCreateWithBytes"])

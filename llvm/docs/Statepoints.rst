@@ -434,6 +434,8 @@ removed by the backend during dead machine instruction elimination.
 Intrinsics
 ===========
 
+.. _gc_statepoint:
+
 'llvm.experimental.gc.statepoint' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -530,7 +532,9 @@ collector object which potentially needs to be updated by the garbage
 collector.  Note that the argument list must explicitly contain a base
 pointer for every derived pointer listed.  The order of arguments is
 unimportant.  Unlike the other variable length parameter sets, this
-list is not length prefixed.
+list is not length prefixed.  Use of the 'gc parameters' list is
+deprecated and will eventually be replaced entirely with the
+:ref:`gc-live <ob_gc_live>` operand bundle.
 
 Semantics:
 """"""""""
@@ -611,21 +615,25 @@ safepoint sequence of which this ``gc.relocation`` is a part.
 Despite the typing of this as a generic token, *only* the value defined 
 by a ``gc.statepoint`` is legal here.
 
-The second argument is an index into the statepoints list of arguments
-which specifies the allocation for the pointer being relocated.
-This index must land within the 'gc parameter' section of the
-statepoint's argument list.  The associated value must be within the
-object with which the pointer being relocated is associated. The optimizer
-is free to change *which* interior derived pointer is reported, provided that
-it does not replace an actual base pointer with another interior derived 
-pointer.  Collectors are allowed to rely on the base pointer operand 
-remaining an actual base pointer if so constructed.
+The second and third arguments are both indices into operands of their
+corresponding statepoint.  If the statepoint has a :ref:`gc-live <ob_gc_live>`
+operand bundle, then both arguments are indices into the operand bundle's
+operands. If there is no "gc-live" bundle, then the index is into the
+statepoint's list of arguments.  This index must land within the 'gc
+parameter' section of the statepoint's argument list.  Use of the "gc-live"
+form is recommended.
 
-The third argument is an index into the statepoint's list of arguments
-which specify the (potentially) derived pointer being relocated.  It
-is legal for this index to be the same as the second argument
-if-and-only-if a base pointer is being relocated. This index must land
-within the 'gc parameter' section of the statepoint's argument list.
+The second argument is an index which specifies the allocation for the pointer
+being relocated. The associated value must be within the object with which the
+pointer being relocated is associated. The optimizer is free to change *which*
+interior derived pointer is reported, provided that it does not replace an
+actual base pointer with another interior derived pointer. Collectors are
+allowed to rely on the base pointer operand remaining an actual base pointer if
+so constructed.
+
+The third argument is an index which specify the (potentially) derived pointer
+being relocated.  It is legal for this index to be the same as the second
+argument if-and-only-if a base pointer is being relocated.
 
 Semantics:
 """"""""""
@@ -764,7 +772,7 @@ relocation sequence, including all required ``gc.relocates``.
 
 Note that by default, this pass only runs for the "statepoint-example" or 
 "core-clr" gc strategies.  You will need to add your custom strategy to this 
-whitelist or use one of the predefined ones. 
+list or use one of the predefined ones. 
 
 As an example, given this code:
 

@@ -262,17 +262,11 @@ define <2 x double> @load_f64_v2f64(double* %p, i32 %y) nounwind {
 define <32 x i8> @arg_i8_v32i8(i8 %x, i32 %y) nounwind {
 ; SSE-LABEL: arg_i8_v32i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE-NEXT:    andl $31, %esi
-; SSE-NEXT:    movb %dil, (%rsp,%rsi)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movb %dil, -40(%rsp,%rsi)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: arg_i8_v32i8:
@@ -295,17 +289,11 @@ define <32 x i8> @arg_i8_v32i8(i8 %x, i32 %y) nounwind {
 define <16 x i16> @arg_i16_v16i16(i16 %x, i32 %y) nounwind {
 ; SSE-LABEL: arg_i16_v16i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE-NEXT:    andl $15, %esi
-; SSE-NEXT:    movw %di, (%rsp,%rsi,2)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movw %di, -40(%rsp,%rsi,2)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: arg_i16_v16i16:
@@ -328,17 +316,11 @@ define <16 x i16> @arg_i16_v16i16(i16 %x, i32 %y) nounwind {
 define <8 x i32> @arg_i32_v8i32(i32 %x, i32 %y) nounwind {
 ; SSE-LABEL: arg_i32_v8i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE-NEXT:    andl $7, %esi
-; SSE-NEXT:    movl %edi, (%rsp,%rsi,4)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movl %edi, -40(%rsp,%rsi,4)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: arg_i32_v8i32:
@@ -360,17 +342,11 @@ define <8 x i32> @arg_i32_v8i32(i32 %x, i32 %y) nounwind {
 define <4 x i64> @arg_i64_v4i64(i64 %x, i32 %y) nounwind {
 ; SSE-LABEL: arg_i64_v4i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE-NEXT:    andl $3, %esi
-; SSE-NEXT:    movq %rdi, (%rsp,%rsi,8)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movq %rdi, -40(%rsp,%rsi,8)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: arg_i64_v4i64:
@@ -392,17 +368,11 @@ define <4 x i64> @arg_i64_v4i64(i64 %x, i32 %y) nounwind {
 define <8 x float> @arg_f32_v8f32(float %x, i32 %y) nounwind {
 ; SSE-LABEL: arg_f32_v8f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    andl $7, %edi
-; SSE-NEXT:    movss %xmm0, (%rsp,%rdi,4)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movss %xmm0, -40(%rsp,%rdi,4)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: arg_f32_v8f32:
@@ -422,17 +392,11 @@ define <8 x float> @arg_f32_v8f32(float %x, i32 %y) nounwind {
 define <4 x double> @arg_f64_v4f64(double %x, i32 %y) nounwind {
 ; SSE-LABEL: arg_f64_v4f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    andl $3, %edi
-; SSE-NEXT:    movsd %xmm0, (%rsp,%rdi,8)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movsd %xmm0, -40(%rsp,%rdi,8)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: arg_f64_v4f64:
@@ -452,18 +416,12 @@ define <4 x double> @arg_f64_v4f64(double %x, i32 %y) nounwind {
 define <32 x i8> @load_i8_v32i8(i8* %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i8_v32i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE-NEXT:    movb (%rdi), %al
 ; SSE-NEXT:    andl $31, %esi
-; SSE-NEXT:    movb %al, (%rsp,%rsi)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movb %al, -40(%rsp,%rsi)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: load_i8_v32i8:
@@ -487,18 +445,12 @@ define <32 x i8> @load_i8_v32i8(i8* %p, i32 %y) nounwind {
 define <16 x i16> @load_i16_v16i16(i16* %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i16_v16i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE-NEXT:    movzwl (%rdi), %eax
 ; SSE-NEXT:    andl $15, %esi
-; SSE-NEXT:    movw %ax, (%rsp,%rsi,2)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movw %ax, -40(%rsp,%rsi,2)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: load_i16_v16i16:
@@ -522,18 +474,12 @@ define <16 x i16> @load_i16_v16i16(i16* %p, i32 %y) nounwind {
 define <8 x i32> @load_i32_v8i32(i32* %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i32_v8i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE-NEXT:    movl (%rdi), %eax
 ; SSE-NEXT:    andl $7, %esi
-; SSE-NEXT:    movl %eax, (%rsp,%rsi,4)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movl %eax, -40(%rsp,%rsi,4)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_i32_v8i32:
@@ -548,18 +494,12 @@ define <8 x i32> @load_i32_v8i32(i32* %p, i32 %y) nounwind {
 define <4 x i64> @load_i64_v4i64(i64* %p, i32 %y) nounwind {
 ; SSE-LABEL: load_i64_v4i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE-NEXT:    movq (%rdi), %rax
 ; SSE-NEXT:    andl $3, %esi
-; SSE-NEXT:    movq %rax, (%rsp,%rsi,8)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movq %rax, -40(%rsp,%rsi,8)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_i64_v4i64:
@@ -574,18 +514,12 @@ define <4 x i64> @load_i64_v4i64(i64* %p, i32 %y) nounwind {
 define <8 x float> @load_f32_v8f32(float* %p, i32 %y) nounwind {
 ; SSE-LABEL: load_f32_v8f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    andl $7, %esi
-; SSE-NEXT:    movss %xmm0, (%rsp,%rsi,4)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movss %xmm0, -40(%rsp,%rsi,4)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_f32_v8f32:
@@ -600,18 +534,12 @@ define <8 x float> @load_f32_v8f32(float* %p, i32 %y) nounwind {
 define <4 x double> @load_f64_v4f64(double* %p, i32 %y) nounwind {
 ; SSE-LABEL: load_f64_v4f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    movq %rsp, %rbp
-; SSE-NEXT:    andq $-32, %rsp
-; SSE-NEXT:    subq $64, %rsp
 ; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    andl $3, %esi
-; SSE-NEXT:    movsd %xmm0, (%rsp,%rsi,8)
-; SSE-NEXT:    movaps (%rsp), %xmm0
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    movq %rbp, %rsp
-; SSE-NEXT:    popq %rbp
+; SSE-NEXT:    movsd %xmm0, -40(%rsp,%rsi,8)
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_f64_v4f64:

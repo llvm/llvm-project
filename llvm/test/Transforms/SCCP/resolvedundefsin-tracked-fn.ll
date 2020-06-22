@@ -386,10 +386,7 @@ define void @test3() {
 ; CHECK-NEXT:    store i32 [[MUL]], i32* @pcount, align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end24:
-; CHECK-NEXT:    [[CMP25474:%.*]] = icmp sgt i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[CMP25474]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;

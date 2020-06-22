@@ -97,6 +97,74 @@ class TestHasCompileFlag(SetupConfigs):
         self.assertTrue(dsl.hasCompileFlag(self.config, '-O1 -Dhello'))
 
 
+class TestSourceBuilds(SetupConfigs):
+    """
+    Tests for libcxx.test.dsl.sourceBuilds
+    """
+    def test_valid_program_builds(self):
+        source = """int main(int, char**) { }"""
+        self.assertTrue(dsl.sourceBuilds(self.config, source))
+
+    def test_compilation_error_fails(self):
+        source = """in main(int, char**) { }"""
+        self.assertFalse(dsl.sourceBuilds(self.config, source))
+
+    def test_link_error_fails(self):
+        source = """extern void this_isnt_defined_anywhere();
+                    int main(int, char**) { this_isnt_defined_anywhere(); }"""
+        self.assertFalse(dsl.sourceBuilds(self.config, source))
+
+class TestProgramOutput(SetupConfigs):
+    """
+    Tests for libcxx.test.dsl.programOutput
+    """
+    def test_valid_program_returns_output(self):
+        source = """
+        #include <cstdio>
+        int main(int, char**) { std::printf("FOOBAR"); }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), "FOOBAR")
+
+    def test_valid_program_returns_output_newline_handling(self):
+        source = """
+        #include <cstdio>
+        int main(int, char**) { std::printf("FOOBAR\\n"); }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), "FOOBAR\n")
+
+    def test_valid_program_returns_no_output(self):
+        source = """
+        int main(int, char**) { }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), "")
+
+    def test_invalid_program_returns_None_1(self):
+        # The program compiles, but exits with an error
+        source = """
+        int main(int, char**) { return 1; }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), None)
+
+    def test_invalid_program_returns_None_2(self):
+        # The program doesn't compile
+        source = """
+        int main(int, char**) { this doesnt compile }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), None)
+
+    def test_pass_arguments_to_program(self):
+        source = """
+        #include <cassert>
+        #include <string>
+        int main(int argc, char** argv) {
+            assert(argc == 3);
+            assert(argv[1] == std::string("first-argument"));
+            assert(argv[2] == std::string("second-argument"));
+        }
+        """
+        args = ["first-argument", "second-argument"]
+        self.assertEqual(dsl.programOutput(self.config, source, args=args), "")
+
 class TestHasLocale(SetupConfigs):
     """
     Tests for libcxx.test.dsl.hasLocale
@@ -176,6 +244,16 @@ class TestFeature(SetupConfigs):
         feature.enableIn(self.config)
         self.assertIn('name', self.config.available_features)
 
+    def test_name_is_not_a_string_1(self):
+        feature = dsl.Feature(name=None)
+        assert feature.isSupported(self.config)
+        self.assertRaises(ValueError, lambda: feature.enableIn(self.config))
+
+    def test_name_is_not_a_string_2(self):
+        feature = dsl.Feature(name=lambda cfg: None)
+        assert feature.isSupported(self.config)
+        self.assertRaises(ValueError, lambda: feature.enableIn(self.config))
+
     def test_adding_compile_flag(self):
         feature = dsl.Feature(name='name', compileFlag='-foo')
         origLinkFlags = copy.deepcopy(self.getSubstitution('%{link_flags}'))
@@ -245,11 +323,11 @@ class TestParameter(SetupConfigs):
         param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', feature=lambda _: None)
         self.assertEqual(param.name, 'std')
 
-    def test_no_value_provided_on_command_line_and_no_default_value(self):
+    def test_no_value_provided_and_no_default_value(self):
         param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', feature=lambda _: None)
         self.assertRaises(ValueError, lambda: param.getFeature(self.config, self.litConfig.params))
 
-    def test_no_value_provided_on_command_line_and_default_value(self):
+    def test_no_value_provided_and_default_value(self):
         param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', default='c++03',
                               feature=lambda std: dsl.Feature(name=std))
         param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
@@ -263,12 +341,32 @@ class TestParameter(SetupConfigs):
         self.assertIn('c++03', self.config.available_features)
 
     def test_value_provided_on_command_line_and_default_value(self):
+        """The value provided on the command line should override the default value"""
         self.litConfig.params['std'] = 'c++11'
         param = dsl.Parameter(name='std', choices=['c++03', 'c++11'], type=str, default='c++03', help='',
                               feature=lambda std: dsl.Feature(name=std))
         param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
         self.assertIn('c++11', self.config.available_features)
         self.assertNotIn('c++03', self.config.available_features)
+
+    def test_value_provided_in_config_and_default_value(self):
+        """The value provided in the config should override the default value"""
+        self.config.std ='c++11'
+        param = dsl.Parameter(name='std', choices=['c++03', 'c++11'], type=str, default='c++03', help='',
+                              feature=lambda std: dsl.Feature(name=std))
+        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+        self.assertIn('c++11', self.config.available_features)
+        self.assertNotIn('c++03', self.config.available_features)
+
+    def test_value_provided_in_config_and_on_command_line(self):
+        """The value on the command line should override the one in the config"""
+        self.config.std = 'c++11'
+        self.litConfig.params['std'] = 'c++03'
+        param = dsl.Parameter(name='std', choices=['c++03', 'c++11'], type=str, help='',
+                              feature=lambda std: dsl.Feature(name=std))
+        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+        self.assertIn('c++03', self.config.available_features)
+        self.assertNotIn('c++11', self.config.available_features)
 
     def test_feature_is_None(self):
         self.litConfig.params['std'] = 'c++03'

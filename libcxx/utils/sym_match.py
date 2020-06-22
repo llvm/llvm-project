@@ -19,7 +19,7 @@ def main():
     parser = ArgumentParser(
         description='Extract a list of symbols from a shared library.')
     parser.add_argument(
-        '--blacklist', dest='blacklist',
+        '--exclusions', dest='exclusions',
         type=str, action='store', default=None)
     parser.add_argument(
         'symbol_list', metavar='symbol_list', type=str,
@@ -29,11 +29,11 @@ def main():
         help='The file containing the new symbol list or a library')
     args = parser.parse_args()
 
-    if not args.regexes and args.blacklist is None:
-        sys.stderr.write('Either a regex or a blacklist must be specified.\n')
+    if not args.regexes and args.exclusions is None:
+        sys.stderr.write('Either a regex or a exclusions must be specified.\n')
         sys.exit(1)
-    if args.blacklist:
-        search_list = util.read_blacklist(args.blacklist)
+    if args.exclusions:
+        search_list = util.read_exclusions(args.exclusions)
     else:
         search_list = args.regexes
 

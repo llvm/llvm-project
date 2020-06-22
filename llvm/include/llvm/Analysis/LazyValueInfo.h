@@ -33,18 +33,17 @@ class LazyValueInfo {
   AssumptionCache *AC = nullptr;
   const DataLayout *DL = nullptr;
   class TargetLibraryInfo *TLI = nullptr;
-  DominatorTree *DT = nullptr;
   void *PImpl = nullptr;
   LazyValueInfo(const LazyValueInfo&) = delete;
   void operator=(const LazyValueInfo&) = delete;
 public:
   ~LazyValueInfo();
   LazyValueInfo() {}
-  LazyValueInfo(AssumptionCache *AC_, const DataLayout *DL_, TargetLibraryInfo *TLI_,
-                DominatorTree *DT_)
-      : AC(AC_), DL(DL_), TLI(TLI_), DT(DT_) {}
+  LazyValueInfo(AssumptionCache *AC_, const DataLayout *DL_,
+                TargetLibraryInfo *TLI_)
+      : AC(AC_), DL(DL_), TLI(TLI_) {}
   LazyValueInfo(LazyValueInfo &&Arg)
-      : AC(Arg.AC), DL(Arg.DL), TLI(Arg.TLI), DT(Arg.DT), PImpl(Arg.PImpl) {
+      : AC(Arg.AC), DL(Arg.DL), TLI(Arg.TLI), PImpl(Arg.PImpl) {
     Arg.PImpl = nullptr;
   }
   LazyValueInfo &operator=(LazyValueInfo &&Arg) {
@@ -52,7 +51,6 @@ public:
     AC = Arg.AC;
     DL = Arg.DL;
     TLI = Arg.TLI;
-    DT = Arg.DT;
     PImpl = Arg.PImpl;
     Arg.PImpl = nullptr;
     return *this;
@@ -110,16 +108,8 @@ public:
 
   /// Print the \LazyValueInfo Analysis.
   /// We pass in the DTree that is required for identifying which basic blocks
-  /// we can solve/print for, in the LVIPrinter. The DT is optional
-  /// in LVI, so we need to pass it here as an argument.
+  /// we can solve/print for, in the LVIPrinter.
   void printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS);
-
-  /// Disables use of the DominatorTree within LVI.
-  void disableDT();
-
-  /// Enables use of the DominatorTree within LVI. Does nothing if the class
-  /// instance was initialized without a DT pointer.
-  void enableDT();
 
   // For old PM pass. Delete once LazyValueInfoWrapperPass is gone.
   void releaseMemory();

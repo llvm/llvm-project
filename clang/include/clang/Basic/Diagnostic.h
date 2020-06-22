@@ -1010,6 +1010,11 @@ protected:
 /// RAII class that determines when any errors have occurred
 /// between the time the instance was created and the time it was
 /// queried.
+///
+/// Note that you almost certainly do not want to use this. It's usually
+/// meaningless to ask whether a particular scope triggered an error message,
+/// because error messages outside that scope can mark things invalid (or cause
+/// us to reach an error limit), which can suppress errors within that scope.
 class DiagnosticErrorTrap {
   DiagnosticsEngine &Diag;
   unsigned NumErrors;

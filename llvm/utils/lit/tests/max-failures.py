@@ -10,15 +10,15 @@
 #
 
 # CHECK-NOT: reached maximum number of test failures
-# CHECK-NOT: Skipped Tests
-# CHECK: Unexpected Failures: 3
+# CHECK-NOT: Skipped
+# CHECK: Failed: 3
 
 # CHECK: reached maximum number of test failures, skipping remaining tests
-# CHECK: Skipped Tests      : 2
-# CHECK: Unexpected Failures: 1
+# CHECK: Skipped: 2
+# CHECK: Failed : 1
 
 # CHECK: reached maximum number of test failures, skipping remaining tests
-# CHECK: Skipped Tests      : 1
-# CHECK: Unexpected Failures: 2
+# CHECK: Skipped: 1
+# CHECK: Failed : 2
 
 # CHECK: error: argument --max-failures: requires positive integer, but found '0'

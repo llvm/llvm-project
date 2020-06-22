@@ -78,7 +78,7 @@ static lto::Config createConfig() {
   // Check if basic block sections must be used.
   // Allowed values for --lto-basicblock-sections are "all", "labels",
   // "<file name specifying basic block ids>", or none.  This is the equivalent
-  // of -fbasicblock-sections= flag in clang.
+  // of -fbasic-block-sections= flag in clang.
   if (!config->ltoBasicBlockSections.empty()) {
     if (config->ltoBasicBlockSections == "all") {
       c.Options.BBSections = BasicBlockSection::All;
@@ -99,7 +99,8 @@ static lto::Config createConfig() {
     }
   }
 
-  c.Options.UniqueBBSectionNames = config->ltoUniqueBBSectionNames;
+  c.Options.UniqueBasicBlockSectionNames =
+      config->ltoUniqueBasicBlockSectionNames;
 
   if (auto relocModel = getRelocModelFromCMModel())
     c.RelocModel = *relocModel;
@@ -138,6 +139,9 @@ static lto::Config createConfig() {
 
   c.HasWholeProgramVisibility = config->ltoWholeProgramVisibility;
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
+
+  for (const llvm::StringRef &name : config->thinLTOModulesToCompile)
+    c.ThinLTOModulesToCompile.emplace_back(name);
 
   c.TimeTraceEnabled = config->timeTraceEnabled;
   c.TimeTraceGranularity = config->timeTraceGranularity;
@@ -254,7 +258,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // distributed build system that depends on that behavior.
 static void thinLTOCreateEmptyIndexFiles() {
   for (LazyObjFile *f : lazyObjFiles) {
-    if (!isBitcode(f->mb))
+    if (f->fetched || !isBitcode(f->mb))
       continue;
     std::string path = replaceThinLTOSuffix(getThinLTOOutputFile(f->getName()));
     std::unique_ptr<raw_fd_ostream> os = openFile(path + ".thinlto.bc");
@@ -295,12 +299,14 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
         },
         cache));
 
-  // Emit empty index files for non-indexed files
-  for (StringRef s : thinIndices) {
-    std::string path = getThinLTOOutputFile(s);
-    openFile(path + ".thinlto.bc");
-    if (config->thinLTOEmitImportsFiles)
-      openFile(path + ".imports");
+  // Emit empty index files for non-indexed files but not in single-module mode.
+  if (config->thinLTOModulesToCompile.empty()) {
+    for (StringRef s : thinIndices) {
+      std::string path = getThinLTOOutputFile(s);
+      openFile(path + ".thinlto.bc");
+      if (config->thinLTOEmitImportsFiles)
+        openFile(path + ".imports");
+    }
   }
 
   if (config->thinLTOIndexOnly) {

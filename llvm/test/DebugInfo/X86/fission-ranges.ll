@@ -81,7 +81,7 @@
 ; V5RNGLISTS-NOT:  DW_TAG
 ; V5RNGLISTS:      DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
 ; V5RNGLISTS:      .debug_rnglists contents:
-; V5RNGLISTS-NEXT: 0x00000000: range list header: length = 0x00000019, version = 0x0005,
+; V5RNGLISTS-NEXT: 0x00000000: range list header: length = 0x00000019, format = DWARF32, version = 0x0005,
 ; V5RNGLISTS-SAME: addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000001
 ; V5RNGLISTS-NEXT: offsets: [
 ; V5RNGLISTS-NEXT: => 0x00000010

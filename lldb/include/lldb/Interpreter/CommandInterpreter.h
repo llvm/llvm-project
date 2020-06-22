@@ -494,6 +494,10 @@ public:
   bool GetEchoCommentCommands() const;
   void SetEchoCommentCommands(bool enable);
 
+  const CommandObject::CommandMap &GetUserCommands() const {
+    return m_user_dict;
+  }
+
   /// Specify if the command interpreter should allow that the user can
   /// specify a custom exit code when calling 'quit'.
   void AllowExitCodeOnQuit(bool allow);

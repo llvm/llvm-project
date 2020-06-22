@@ -34,7 +34,8 @@ public:
     std::atomic<uint64_t> m_count;
     std::atomic<Category *> m_next;
 
-    DISALLOW_COPY_AND_ASSIGN(Category);
+    Category(const Category &) = delete;
+    const Category &operator=(const Category &) = delete;
   };
 
   /// Default constructor.
@@ -66,7 +67,8 @@ protected:
   static std::atomic<unsigned> g_display_depth;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Timer);
+  Timer(const Timer &) = delete;
+  const Timer &operator=(const Timer &) = delete;
 };
 
 } // namespace lldb_private

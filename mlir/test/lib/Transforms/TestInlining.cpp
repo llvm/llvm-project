@@ -14,6 +14,7 @@
 
 #include "TestDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Function.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/InliningUtils.h"

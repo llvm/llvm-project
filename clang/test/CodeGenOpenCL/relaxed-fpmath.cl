@@ -8,12 +8,12 @@
 float spscalardiv(float a, float b) {
   // CHECK: @spscalardiv(
 
-  // NORMAL: fdiv contract float
+  // NORMAL: fdiv float
   // FAST: fdiv fast float
-  // FINITE: fdiv nnan ninf contract float
-  // UNSAFE: fdiv nnan nsz contract float
-  // MAD: fdiv contract float
-  // NOSIGNED: fdiv nsz contract float
+  // FINITE: fdiv nnan ninf float
+  // UNSAFE: fdiv reassoc nsz arcp afn float
+  // MAD: fdiv float
+  // NOSIGNED: fdiv nsz float
   return a / b;
 }
 // CHECK: attributes
@@ -38,7 +38,7 @@ float spscalardiv(float a, float b) {
 
 // UNSAFE: "less-precise-fpmad"="true"
 // UNSAFE: "no-infs-fp-math"="false"
-// UNSAFE: "no-nans-fp-math"="true"
+// UNSAFE: "no-nans-fp-math"="false"
 // UNSAFE: "no-signed-zeros-fp-math"="true"
 // UNSAFE: "unsafe-fp-math"="true"
 

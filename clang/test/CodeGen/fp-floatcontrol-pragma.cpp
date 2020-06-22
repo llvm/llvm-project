@@ -160,7 +160,7 @@ float exc_off(double x, float zero) {
 // CHECK-NS: define {{.*}}exc_off{{.*}}
   {} try {
     x = 1.0 / zero; /* division by zero, the result unused */
-//CHECK-NS: fdiv contract double
+//CHECK-NS: fdiv double
   } catch (...) {}
   return zero;
 }

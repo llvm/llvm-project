@@ -75,7 +75,7 @@
 # RUN: not llvm-ar p %t/missing.a 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=MISSING-ARCHIVE -DARCHIVE=%t/missing.a
 
-# MISSING-ARCHIVE: error: error loading '[[ARCHIVE]]': {{[nN]}}o such file or directory
+# MISSING-ARCHIVE: error: unable to load '[[ARCHIVE]]': {{[nN]}}o such file or directory
 
 ## Member does not exist:
 # RUN: not llvm-ar p %t/archive.a %t-missing.txt 2>&1 \

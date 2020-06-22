@@ -12,7 +12,6 @@
 
 // istream cout;
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{build}
 // RUN: %{exec} %t.exe > %t.out
 // RUN: grep -e 'Hello World!' %t.out

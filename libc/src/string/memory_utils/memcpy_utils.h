@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MEMORY_UTILS_MEMCPY_UTILS_H
-#define LLVM_LIBC_SRC_MEMORY_UTILS_MEMCPY_UTILS_H
+#ifndef LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_UTILS_H
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_UTILS_H
 
 #include "src/string/memory_utils/utils.h"
 #include <stddef.h> // size_t
@@ -32,7 +32,7 @@ extern "C" void LLVM_LIBC_MEMCPY_MONITOR(char *__restrict,
 
 // Copies `kBlockSize` bytes from `src` to `dst`.
 template <size_t kBlockSize>
-static void Copy(char *__restrict dst, const char *__restrict src) {
+static void CopyBlock(char *__restrict dst, const char *__restrict src) {
 #if defined(LLVM_LIBC_MEMCPY_MONITOR)
   LLVM_LIBC_MEMCPY_MONITOR(dst, src, kBlockSize);
 #elif defined(USE_BUILTIN_MEMCPY_INLINE)
@@ -52,7 +52,7 @@ template <size_t kBlockSize>
 static void CopyLastBlock(char *__restrict dst, const char *__restrict src,
                           size_t count) {
   const size_t offset = count - kBlockSize;
-  Copy<kBlockSize>(dst + offset, src + offset);
+  CopyBlock<kBlockSize>(dst + offset, src + offset);
 }
 
 // Copies `kBlockSize` bytes twice with an overlap between the two.
@@ -64,9 +64,9 @@ static void CopyLastBlock(char *__restrict dst, const char *__restrict src,
 //
 // Precondition: `count >= kBlockSize && count <= kBlockSize`.
 template <size_t kBlockSize>
-static void CopyOverlap(char *__restrict dst, const char *__restrict src,
-                        size_t count) {
-  Copy<kBlockSize>(dst, src);
+static void CopyBlockOverlap(char *__restrict dst, const char *__restrict src,
+                             size_t count) {
+  CopyBlock<kBlockSize>(dst, src);
   CopyLastBlock<kBlockSize>(dst, src, count);
 }
 
@@ -85,18 +85,18 @@ static void CopyOverlap(char *__restrict dst, const char *__restrict src,
 // Precondition: `count > 2 * kBlockSize` for efficiency.
 //               `count >= kBlockSize` for correctness.
 template <size_t kBlockSize>
-static void CopyAligned(char *__restrict dst, const char *__restrict src,
-                        size_t count) {
-  Copy<kBlockSize>(dst, src); // Copy first block
+static void CopyAlignedBlocks(char *__restrict dst, const char *__restrict src,
+                              size_t count) {
+  CopyBlock<kBlockSize>(dst, src); // Copy first block
 
   // Copy aligned blocks
   size_t offset = kBlockSize - offset_from_last_aligned<kBlockSize>(dst);
   for (; offset + kBlockSize < count; offset += kBlockSize)
-    Copy<kBlockSize>(dst + offset, src + offset);
+    CopyBlock<kBlockSize>(dst + offset, src + offset);
 
   CopyLastBlock<kBlockSize>(dst, src, count); // Copy last block
 }
 
 } // namespace __llvm_libc
 
-#endif //  LLVM_LIBC_SRC_MEMORY_UTILS_MEMCPY_UTILS_H
+#endif //  LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_UTILS_H

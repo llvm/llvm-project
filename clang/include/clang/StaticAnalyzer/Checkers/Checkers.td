@@ -102,6 +102,8 @@ def LLVMAlpha : Package<"llvm">, ParentPackage<Alpha>;
 // any diagnostics. These checkers are always turned on; this package is
 // intended for API modeling that is not controlled by the target triple.
 def APIModeling : Package<"apiModeling">, Hidden;
+def APIModelingAlpha : Package<"apiModeling">, ParentPackage<Alpha>, Hidden;
+
 def GoogleAPIModeling : Package<"google">, ParentPackage<APIModeling>, Hidden;
 def LLVMAPIModeling : Package<"llvm">, ParentPackage<APIModeling>, Hidden;
 
@@ -114,20 +116,79 @@ def NonDeterminismAlpha : Package<"nondeterminism">, ParentPackage<Alpha>;
 def Fuchsia : Package<"fuchsia">;
 def FuchsiaAlpha : Package<"fuchsia">, ParentPackage<Alpha>;
 
+def WebKit : Package<"webkit">;
+def WebKitAlpha : Package<"webkit">, ParentPackage<Alpha>;
+
 //===----------------------------------------------------------------------===//
 // Core Checkers.
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = Core in {
 
-def DereferenceChecker : Checker<"NullDereference">,
-  HelpText<"Check for dereferences of null pointers">,
+def CallAndMessageModeling : Checker<"CallAndMessageModeling">,
+  HelpText<"Responsible for essential modeling and assumptions after a "
+           "function/method call. For instance, if we can't reason about the "
+           "nullability of the implicit this parameter after a method call, "
+           "this checker conservatively assumes it to be non-null">,
   Documentation<HasDocumentation>;
 
 def CallAndMessageChecker : Checker<"CallAndMessage">,
   HelpText<"Check for logical errors for function calls and Objective-C "
            "message expressions (e.g., uninitialized arguments, null function "
            "pointers)">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "FunctionPointer",
+                  "Check whether a called function pointer is null or "
+                  "undefined",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "ParameterCount",
+                  "Check whether a function was called with the appropriate "
+                  "number of arguments",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "CXXThisMethodCall",
+                  "Check whether the implicit this parameter is null or "
+                  "undefined upon a method call",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "CXXDeallocationArg",
+                  "Check whether the argument of operator delete is undefined",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "ArgInitializedness",
+                  "Check whether any of the pass-by-value parameters is "
+                  "undefined",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "ArgPointeeInitializedness",
+                  "Check whether the pointee of a pass-by-reference or "
+                  "pass-by-pointer is undefined",
+                  "false",
+                  InAlpha>,
+    CmdLineOption<Boolean,
+                  "NilReceiver",
+                  "Check whether the reciever in the message expression is nil",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "UndefReceiver",
+                  "Check whether the reciever in the message expression is "
+                  "undefined",
+                  "true",
+                  Released>,
+  ]>,
+  Documentation<HasDocumentation>,
+  Dependencies<[CallAndMessageModeling]>;
+
+def DereferenceChecker : Checker<"NullDereference">,
+  HelpText<"Check for dereferences of null pointers">,
   Documentation<HasDocumentation>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
@@ -209,13 +270,6 @@ def SizeofPointerChecker : Checker<"SizeofPtr">,
   HelpText<"Warn about unintended use of sizeof() on pointer expressions">,
   Documentation<HasAlphaDocumentation>;
 
-def CallAndMessageUnInitRefArg : Checker<"CallAndMessageUnInitRefArg">,
-  HelpText<"Check for logical errors for function calls and Objective-C "
-           "message expressions (e.g., uninitialized arguments, null function "
-           "pointers, and pointer to undefined variables)">,
-  Dependencies<[CallAndMessageChecker]>,
-  Documentation<HasAlphaDocumentation>;
-
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
   HelpText<"Check for division by variable that is later compared against 0. "
            "Either the comparison is useless or there is division by zero.">,
@@ -293,7 +347,7 @@ let ParentPackage = APIModeling in {
 
 def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
   HelpText<"Improve modeling of the C standard library functions">,
-  Dependencies<[NonNullParamChecker, CallAndMessageChecker]>,
+  Dependencies<[CallAndMessageModeling]>,
   CheckerOptions<[
     CmdLineOption<Boolean,
                   "DisplayLoadedSummaries",
@@ -304,19 +358,24 @@ def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
   ]>,
   Documentation<NotDocumented>;
 
-def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
-  HelpText<"Check constraints of arguments of C standard library functions, "
-           "such as whether the parameter of isalpha is in the range [0, 255] "
-           "or is EOF.">,
-  Dependencies<[StdCLibraryFunctionsChecker]>,
-  Documentation<NotDocumented>;
-
 def TrustNonnullChecker : Checker<"TrustNonnull">,
   HelpText<"Trust that returns from framework methods annotated with _Nonnull "
            "are not null">,
   Documentation<NotDocumented>;
 
 } // end "apiModeling"
+
+let ParentPackage = APIModelingAlpha in {
+
+def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
+  HelpText<"Check constraints of arguments of C standard library functions, "
+           "such as whether the parameter of isalpha is in the range [0, 255] "
+           "or is EOF.">,
+  Dependencies<[StdCLibraryFunctionsChecker]>,
+  WeakDependencies<[NonNullParamChecker]>,
+  Documentation<NotDocumented>;
+
+} // end "alpha.apiModeling"
 
 //===----------------------------------------------------------------------===//
 // Evaluate "builtin" functions.
@@ -498,13 +557,13 @@ def NewDeleteChecker : Checker<"NewDelete">,
 
 def NewDeleteLeaksChecker : Checker<"NewDeleteLeaks">,
   HelpText<"Check for memory leaks. Traces memory managed by new/delete.">,
-  Dependencies<[NewDeleteChecker]>,
+  Dependencies<[DynamicMemoryModeling]>,
   Documentation<HasDocumentation>;
 
 def PlacementNewChecker : Checker<"PlacementNew">,
   HelpText<"Check if default placement new is provided with pointers to "
            "sufficient storage capacity">,
-  Dependencies<[NewDeleteChecker]>,
+  Dependencies<[DynamicMemoryModeling]>,
   Documentation<HasDocumentation>;
 
 def CXXSelfAssignmentChecker : Checker<"SelfAssignment">,
@@ -1037,15 +1096,6 @@ def RetainCountChecker : Checker<"RetainCount">,
   HelpText<"Check for leaks and improper reference count management">,
   CheckerOptions<[
     CmdLineOption<Boolean,
-                  "CheckOSObject",
-                  "Find violations of retain-release rules applied to XNU "
-                  "OSObject instances. By default, the checker only checks "
-                  "retain-release rules for Objective-C NSObject instances "
-                  "and CoreFoundation objects.",
-                  "true",
-                  InAlpha,
-                  Hide>,
-    CmdLineOption<Boolean,
                   "TrackNSCFStartParam",
                   "Check not only that the code follows retain-release rules "
                   "with respect to objects it allocates or borrows from "
@@ -1118,13 +1168,15 @@ def MissingInvalidationMethod : Checker<"MissingInvalidationMethod">,
 
 def DirectIvarAssignment : Checker<"DirectIvarAssignment">,
   HelpText<"Check for direct assignments to instance variables">,
-  Documentation<HasAlphaDocumentation>;
-
-def DirectIvarAssignmentForAnnotatedFunctions :
-  Checker<"DirectIvarAssignmentForAnnotatedFunctions">,
-  HelpText<"Check for direct assignments to instance variables in the methods "
-           "annotated with objc_no_direct_instance_variable_assignment">,
-  Dependencies<[DirectIvarAssignment]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "AnnotatedFunctions",
+                  "Check for direct assignments to instance variables in the "
+                  "methods annotated with "
+                  "objc_no_direct_instance_variable_assignment",
+                  "false",
+                  InAlpha>
+  ]>,
   Documentation<HasAlphaDocumentation>;
 
 } // end "alpha.osx.cocoa"
@@ -1563,3 +1615,26 @@ def FuchsiaLockChecker : Checker<"Lock">,
 
 } // end fuchsia
 
+//===----------------------------------------------------------------------===//
+// WebKit checkers.
+//===----------------------------------------------------------------------===//
+
+let ParentPackage = WebKit in {
+
+def RefCntblBaseVirtualDtorChecker : Checker<"RefCntblBaseVirtualDtor">,
+  HelpText<"Check for any ref-countable base class having virtual destructor.">,
+  Documentation<HasDocumentation>;
+
+def NoUncountedMemberChecker : Checker<"NoUncountedMemberChecker">,
+  HelpText<"Check for no uncounted member variables.">,
+  Documentation<HasDocumentation>;
+
+} // end webkit
+
+let ParentPackage = WebKitAlpha in {
+
+def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
+  HelpText<"Check uncounted call arguments.">,
+  Documentation<HasDocumentation>;
+
+} // end alpha.webkit

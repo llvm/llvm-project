@@ -218,7 +218,8 @@ protected:
   BackEndType m_format_map;
   std::string m_name;
 
-  DISALLOW_COPY_AND_ASSIGN(FormattersContainer);
+  FormattersContainer(const FormattersContainer &) = delete;
+  const FormattersContainer &operator=(const FormattersContainer &) = delete;
 
   void Add_Impl(MapKeyType type, const MapValueType &entry,
                 RegularExpression *dummy) {

@@ -2,17 +2,8 @@
 // REQUIRES: librt_has_mulxc3
 // UNSUPPORTED: powerpc64
 // REQUIRES: x86-target-arch
-//===-- mulxc3_test.c - Test __mulxc3 -------------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __mulxc3 for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
+// UNSUPPORTED: mips
+// REQUIRES: c99-complex
 
 #if !_ARCH_PPC
 
@@ -21,8 +12,6 @@
 #include <complex.h>
 #include <stdio.h>
 
-// UNSUPPORTED: mips
-// REQUIRES: c99-complex
 
 // Returns: the product of a + ib and c + id
 

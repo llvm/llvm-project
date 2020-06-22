@@ -30,6 +30,9 @@ enum : uint32_t {
   GCOV_ARC_FALLTHROUGH = 1 << 2,
 
   GCOV_TAG_FUNCTION = 0x01000000,
+  GCOV_TAG_BLOCKS = 0x01410000,
+  GCOV_TAG_ARCS = 0x01430000,
+  GCOV_TAG_LINES = 0x01450000,
   GCOV_TAG_COUNTER_ARCS = 0x01a10000,
   // GCOV_TAG_OBJECT_SUMMARY superseded GCOV_TAG_PROGRAM_SUMMARY in GCC 9.
   GCOV_TAG_OBJECT_SUMMARY = 0xa1000000,
@@ -46,21 +49,94 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
   if (!buf.readGCOVVersion(Version))
     return false;
 
-  if (!buf.readInt(Checksum))
-    return false;
-  if (Version >= GCOV::V900 && !buf.readString(cwd))
-    return false;
-  uint32_t hasUnexecutedBlocks;
-  if (Version >= GCOV::V800 && !buf.readInt(hasUnexecutedBlocks))
-    return false;
-  while (true) {
-    if (!buf.readFunctionTag())
-      break;
-    auto GFun = std::make_unique<GCOVFunction>(*this);
-    if (!GFun->readGCNO(buf, Version))
+  Checksum = buf.getWord();
+  if (Version >= GCOV::V900)
+    cwd = buf.getString();
+  if (Version >= GCOV::V800)
+    buf.getWord(); // hasUnexecutedBlocks
+
+  uint32_t tag, length;
+  GCOVFunction *fn;
+  while ((tag = buf.getWord())) {
+    if (!buf.readInt(length))
       return false;
-    IdentToFunction[GFun->ident] = GFun.get();
-    Functions.push_back(std::move(GFun));
+    if (tag == GCOV_TAG_FUNCTION) {
+      Functions.push_back(std::make_unique<GCOVFunction>(*this));
+      fn = Functions.back().get();
+      fn->ident = buf.getWord();
+      fn->linenoChecksum = buf.getWord();
+      if (Version >= GCOV::V407)
+        fn->cfgChecksum = buf.getWord();
+      buf.readString(fn->Name);
+      StringRef filename;
+      if (Version < GCOV::V800) {
+        filename = buf.getString();
+        fn->startLine = buf.getWord();
+      } else {
+        fn->artificial = buf.getWord();
+        filename = buf.getString();
+        fn->startLine = buf.getWord();
+        fn->startColumn = buf.getWord();
+        fn->endLine = buf.getWord();
+        if (Version >= GCOV::V900)
+          fn->endColumn = buf.getWord();
+      }
+      auto r = filenameToIdx.try_emplace(filename, filenameToIdx.size());
+      if (r.second)
+        filenames.emplace_back(filename);
+      fn->srcIdx = r.first->second;
+      IdentToFunction[fn->ident] = fn;
+    } else if (tag == GCOV_TAG_BLOCKS && fn) {
+      if (Version < GCOV::V800) {
+        for (uint32_t i = 0; i != length; ++i) {
+          buf.getWord(); // Ignored block flags
+          fn->Blocks.push_back(std::make_unique<GCOVBlock>(*fn, i));
+        }
+      } else {
+        uint32_t num = buf.getWord();
+        for (uint32_t i = 0; i != num; ++i)
+          fn->Blocks.push_back(std::make_unique<GCOVBlock>(*fn, i));
+      }
+    } else if (tag == GCOV_TAG_ARCS && fn) {
+      uint32_t srcNo = buf.getWord();
+      if (srcNo >= fn->Blocks.size()) {
+        errs() << "unexpected block number: " << srcNo << " (in "
+               << fn->Blocks.size() << ")\n";
+        return false;
+      }
+      GCOVBlock *src = fn->Blocks[srcNo].get();
+      for (uint32_t i = 0, e = (length - 1) / 2; i != e; ++i) {
+        uint32_t dstNo = buf.getWord(), flags = buf.getWord();
+        GCOVBlock *dst = fn->Blocks[dstNo].get();
+        auto arc =
+            std::make_unique<GCOVArc>(*src, *dst, flags & GCOV_ARC_FALLTHROUGH);
+        src->addDstEdge(arc.get());
+        dst->addSrcEdge(arc.get());
+        if (flags & GCOV_ARC_ON_TREE)
+          fn->treeArcs.push_back(std::move(arc));
+        else
+          fn->arcs.push_back(std::move(arc));
+      }
+    } else if (tag == GCOV_TAG_LINES && fn) {
+      uint32_t srcNo = buf.getWord();
+      if (srcNo >= fn->Blocks.size()) {
+        errs() << "unexpected block number: " << srcNo << " (in "
+               << fn->Blocks.size() << ")\n";
+        return false;
+      }
+      GCOVBlock &Block = *fn->Blocks[srcNo];
+      for (;;) {
+        uint32_t line = buf.getWord();
+        if (line)
+          Block.addLine(line);
+        else {
+          StringRef filename = buf.getString();
+          if (filename.empty())
+            break;
+          // TODO Unhandled
+        }
+      }
+    }
   }
 
   GCNOInitialized = true;
@@ -92,32 +168,37 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
   uint32_t dummy, tag, length;
   uint32_t ident;
   GCOVFunction *fn = nullptr;
-  while (buf.readInt(tag) && tag) {
+  while ((tag = buf.getWord())) {
     if (!buf.readInt(length))
       return false;
-    uint32_t cursor = buf.getCursor();
+    uint32_t pos = buf.cursor.tell();
     if (tag == GCOV_TAG_OBJECT_SUMMARY) {
       buf.readInt(RunCount);
       buf.readInt(dummy);
+      // clang<11 uses a fake 4.2 format which sets length to 9.
+      if (length == 9)
+        buf.readInt(RunCount);
     } else if (tag == GCOV_TAG_PROGRAM_SUMMARY) {
-      buf.readInt(dummy);
-      buf.readInt(dummy);
-      buf.readInt(RunCount);
+      // clang<11 uses a fake 4.2 format which sets length to 0.
+      if (length > 0) {
+        buf.readInt(dummy);
+        buf.readInt(dummy);
+        buf.readInt(RunCount);
+      }
       ++ProgramCount;
     } else if (tag == GCOV_TAG_FUNCTION) {
       if (length == 0) // Placeholder
         continue;
-      // length>3 is to be compatible with some clang --coverage generated
-      // tests. As of GCC 10, GCOV_TAG_FUNCTION_LENGTH has never been larger
+      // As of GCC 10, GCOV_TAG_FUNCTION_LENGTH has never been larger than 3.
+      // However, clang<11 uses a fake 4.2 format which may set length larger
       // than 3.
-      if (length < 3 || !buf.readInt(ident))
+      if (length < 2 || !buf.readInt(ident))
         return false;
       auto It = IdentToFunction.find(ident);
-      uint32_t linenoChecksum, cfgChecksum;
+      uint32_t linenoChecksum, cfgChecksum = 0;
       buf.readInt(linenoChecksum);
-      buf.readInt(cfgChecksum);
-      if (Version < GCOV::V407)
-        cfgChecksum = 0;
+      if (Version >= GCOV::V407)
+        buf.readInt(cfgChecksum);
       if (It != IdentToFunction.end()) {
         fn = It->second;
         if (linenoChecksum != fn->linenoChecksum ||
@@ -146,15 +227,18 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
           arc->dst.Counter += arc->Count;
       }
     }
-    buf.setCursor(cursor + 4 * length);
+    pos += 4 * length;
+    if (pos < buf.cursor.tell())
+      return false;
+    buf.de.skip(buf.cursor, pos - buf.cursor.tell());
   }
 
   return true;
 }
 
 void GCOVFile::print(raw_ostream &OS) const {
-  for (const auto &FPtr : Functions)
-    FPtr->print(OS);
+  for (const GCOVFunction &f : *this)
+    f.print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -164,154 +248,22 @@ LLVM_DUMP_METHOD void GCOVFile::dump() const { print(dbgs()); }
 
 /// collectLineCounts - Collect line counts. This must be used after
 /// reading .gcno and .gcda files.
-void GCOVFile::collectLineCounts(FileInfo &FI) {
-  for (const auto &FPtr : Functions)
-    FPtr->collectLineCounts(FI);
-  FI.setRunCount(RunCount);
-  FI.setProgramCount(ProgramCount);
+void GCOVFile::collectLineCounts(FileInfo &fi) {
+  assert(fi.sources.empty());
+  for (StringRef filename : filenames)
+    fi.sources.emplace_back(filename);
+  for (GCOVFunction &f : *this) {
+    f.collectLineCounts(fi);
+    fi.sources[f.srcIdx].functions.push_back(&f);
+  }
+  fi.setRunCount(RunCount);
+  fi.setProgramCount(ProgramCount);
 }
 
 //===----------------------------------------------------------------------===//
 // GCOVFunction implementation.
 
-/// readGCNO - Read a function from the GCNO buffer. Return false if an error
-/// occurs.
-bool GCOVFunction::readGCNO(GCOVBuffer &buf, GCOV::GCOVVersion Version) {
-  uint32_t Dummy;
-  if (!buf.readInt(Dummy))
-    return false; // Function header length
-  if (!buf.readInt(ident))
-    return false;
-  if (!buf.readInt(linenoChecksum))
-    return false;
-  if (Version >= GCOV::V407 && !buf.readInt(cfgChecksum))
-    return false;
-  if (!buf.readString(Name))
-    return false;
-  if (Version < GCOV::V800) {
-    if (!buf.readString(Filename))
-      return false;
-    if (!buf.readInt(startLine))
-      return false;
-  } else {
-    if (!buf.readInt(Dummy))
-      return false;
-    artificial = Dummy;
-    if (!buf.readString(Filename))
-      return false;
-    if (!buf.readInt(startLine))
-      return false;
-    if (!buf.readInt(startColumn))
-      return false;
-    if (!buf.readInt(endLine))
-      return false;
-    if (Version >= GCOV::V900 && !buf.readInt(endColumn))
-      return false;
-  }
-
-  // read blocks.
-  if (!buf.readBlockTag()) {
-    errs() << "Block tag not found.\n";
-    return false;
-  }
-  if (Version >= GCOV::V800 && !buf.readInt(Dummy))
-    return false;
-  uint32_t BlockCount;
-  if (!buf.readInt(BlockCount))
-    return false;
-  for (uint32_t i = 0, e = BlockCount; i != e; ++i) {
-    if (Version < GCOV::V800 && !buf.readInt(Dummy))
-      return false; // Block flags;
-    Blocks.push_back(std::make_unique<GCOVBlock>(*this, i));
-  }
-
-  // read edges.
-  while (buf.readEdgeTag()) {
-    uint32_t EdgeCount;
-    if (!buf.readInt(EdgeCount))
-      return false;
-    EdgeCount = (EdgeCount - 1) / 2;
-    uint32_t BlockNo;
-    if (!buf.readInt(BlockNo))
-      return false;
-    if (BlockNo >= BlockCount) {
-      errs() << "Unexpected block number: " << BlockNo << " (in " << Name
-             << ").\n";
-      return false;
-    }
-    GCOVBlock *src = Blocks[BlockNo].get();
-    for (uint32_t i = 0, e = EdgeCount; i != e; ++i) {
-      uint32_t dstNo, flags;
-      if (!buf.readInt(dstNo))
-        return false;
-      if (!buf.readInt(flags))
-        return false;
-      GCOVBlock *dst = Blocks[dstNo].get();
-      auto arc =
-          std::make_unique<GCOVArc>(*src, *dst, flags & GCOV_ARC_FALLTHROUGH);
-      src->addDstEdge(arc.get());
-      dst->addSrcEdge(arc.get());
-      if (flags & GCOV_ARC_ON_TREE)
-        treeArcs.push_back(std::move(arc));
-      else
-        arcs.push_back(std::move(arc));
-    }
-  }
-
-  // read line table.
-  while (buf.readLineTag()) {
-    uint32_t LineTableLength;
-    // Read the length of this line table.
-    if (!buf.readInt(LineTableLength))
-      return false;
-    uint32_t EndPos = buf.getCursor() + LineTableLength * 4;
-    uint32_t BlockNo;
-    // Read the block number this table is associated with.
-    if (!buf.readInt(BlockNo))
-      return false;
-    if (BlockNo >= BlockCount) {
-      errs() << "Unexpected block number: " << BlockNo << " (in " << Name
-             << ").\n";
-      return false;
-    }
-    GCOVBlock &Block = *Blocks[BlockNo];
-    // Read the word that pads the beginning of the line table. This may be a
-    // flag of some sort, but seems to always be zero.
-    if (!buf.readInt(Dummy))
-      return false;
-
-    // Line information starts here and continues up until the last word.
-    if (buf.getCursor() != (EndPos - sizeof(uint32_t))) {
-      StringRef F;
-      // Read the source file name.
-      if (!buf.readString(F))
-        return false;
-      if (Filename != F) {
-        // FIXME
-        errs() << "Multiple sources for a single basic block: " << Filename
-               << " != " << F << " (in " << Name << ").\n";
-      }
-      // Read lines up to, but not including, the null terminator.
-      while (buf.getCursor() < (EndPos - 2 * sizeof(uint32_t))) {
-        uint32_t Line;
-        if (!buf.readInt(Line))
-          return false;
-        // Line 0 means this instruction was injected by the compiler. Skip it.
-        if (!Line)
-          continue;
-        Block.addLine(Line);
-      }
-      // Read the null terminator.
-      if (!buf.readInt(Dummy))
-        return false;
-    }
-    // The last word is either a flag or padding, it isn't clear which. Skip
-    // over it.
-    if (!buf.readInt(Dummy))
-      return false;
-  }
-  return true;
-}
+StringRef GCOVFunction::getFilename() const { return file.filenames[srcIdx]; }
 
 /// getEntryCount - Get the number of times the function was called by
 /// retrieving the entry block's count.
@@ -326,7 +278,7 @@ uint64_t GCOVFunction::getExitCount() const {
 }
 
 void GCOVFunction::print(raw_ostream &OS) const {
-  OS << "===== " << Name << " (" << ident << ") @ " << Filename << ":"
+  OS << "===== " << Name << " (" << ident << ") @ " << getFilename() << ":"
      << startLine << "\n";
   for (const auto &Block : Blocks)
     Block->print(OS);
@@ -347,7 +299,7 @@ void GCOVFunction::collectLineCounts(FileInfo &FI) {
 
   for (const auto &Block : Blocks)
     Block->collectLineCounts(FI);
-  FI.addFunctionLine(Filename, startLine, this);
+  FI.addFunctionLine(getFilename(), startLine, this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -568,6 +520,7 @@ class LineConsumer {
   StringRef Remaining;
 
 public:
+  LineConsumer() = default;
   LineConsumer(StringRef Filename) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
         MemoryBuffer::getFileOrSTDIN(Filename);
@@ -664,19 +617,18 @@ FileInfo::openCoveragePath(StringRef CoveragePath) {
 
 /// print -  Print source files with collected line count information.
 void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
-                     StringRef GCNOFile, StringRef GCDAFile,
-                     GCOV::GCOVVersion Version) {
+                     StringRef GCNOFile, StringRef GCDAFile, GCOVFile &file) {
   SmallVector<StringRef, 4> Filenames;
   for (const auto &LI : LineInfo)
     Filenames.push_back(LI.first());
   llvm::sort(Filenames);
 
   for (StringRef Filename : Filenames) {
-    auto AllLines = LineConsumer(Filename);
-
+    auto AllLines =
+        Options.Intermediate ? LineConsumer() : LineConsumer(Filename);
     std::string CoveragePath = getCoveragePath(Filename, MainFilename);
     std::unique_ptr<raw_ostream> CovStream;
-    if (Options.NoOutput)
+    if (Options.NoOutput || Options.Intermediate)
       CovStream = std::make_unique<raw_null_ostream>();
     else if (!Options.UseStdout)
       CovStream = openCoveragePath(CoveragePath);
@@ -687,7 +639,7 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
     CovOS << "        -:    0:Graph:" << GCNOFile << "\n";
     CovOS << "        -:    0:Data:" << GCDAFile << "\n";
     CovOS << "        -:    0:Runs:" << RunCount << "\n";
-    if (Version < GCOV::V900)
+    if (file.getVersion() < GCOV::V900)
       CovOS << "        -:    0:Programs:" << ProgramCount << "\n";
 
     const LineData &Line = LineInfo[Filename];
@@ -775,7 +727,54 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
         }
       }
     }
-    FileCoverages.push_back(std::make_pair(CoveragePath, FileCoverage));
+    SourceInfo &source = sources[file.filenameToIdx.find(Filename)->second];
+    source.name = CoveragePath;
+    source.coverage = FileCoverage;
+  }
+
+  if (Options.Intermediate && !Options.NoOutput) {
+    // gcov 7.* unexpectedly create multiple .gcov files, which was fixed in 8.0
+    // (PR GCC/82702). We create just one file.
+    std::string outputPath(sys::path::filename(MainFilename));
+    std::error_code ec;
+    raw_fd_ostream os(outputPath + ".gcov", ec, sys::fs::OF_Text);
+    if (ec) {
+      errs() << ec.message() << "\n";
+      return;
+    }
+
+    for (const SourceInfo &source : sources) {
+      os << "file:" << source.filename << '\n';
+      for (const GCOVFunction *f : source.functions)
+        os << "function:" << f->startLine << ',' << f->getEntryCount() << ','
+           << f->Name << '\n';
+      const LineData &line = LineInfo[source.filename];
+      for (uint32_t lineNum = 0; lineNum != line.LastLine; ++lineNum) {
+        BlockLines::const_iterator BlocksIt = line.Blocks.find(lineNum);
+        if (BlocksIt == line.Blocks.end())
+          continue;
+        const BlockVector &blocks = BlocksIt->second;
+        // GCC 8 (r254259) added third third field for Ada:
+        // lcount:<line>,<count>,<has_unexecuted_blocks>
+        // We don't need the third field.
+        os << "lcount:" << (lineNum + 1) << ','
+           << GCOVBlock::getLineCount(blocks) << '\n';
+
+        if (!Options.BranchInfo)
+          continue;
+        for (const GCOVBlock *block : blocks) {
+          if (block->getLastLine() != lineNum + 1 ||
+              block->getNumDstEdges() < 2)
+            continue;
+          for (const GCOVArc *arc : block->dsts()) {
+            const char *type = block->getCount()
+                                   ? arc->Count ? "taken" : "nottaken"
+                                   : "notexec";
+            os << "branch:" << (lineNum + 1) << ',' << type << '\n';
+          }
+        }
+      }
+    }
   }
 
   if (!Options.UseStdout) {
@@ -884,13 +883,12 @@ void FileInfo::printFuncCoverage(raw_ostream &OS) const {
 
 // printFileCoverage - Print per-file coverage info.
 void FileInfo::printFileCoverage(raw_ostream &OS) const {
-  for (const auto &FC : FileCoverages) {
-    const std::string &Filename = FC.first;
-    const GCOVCoverage &Coverage = FC.second;
+  for (const SourceInfo &source : sources) {
+    const GCOVCoverage &Coverage = source.coverage;
     OS << "File '" << Coverage.Name << "'\n";
     printCoverage(OS, Coverage);
-    if (!Options.NoOutput)
-      OS << Coverage.Name << ":creating '" << Filename << "'\n";
+    if (!Options.NoOutput && !Options.Intermediate)
+      OS << "Creating '" << source.name << "'\n";
     OS << "\n";
   }
 }

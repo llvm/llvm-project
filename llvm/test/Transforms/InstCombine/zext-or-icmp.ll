@@ -40,8 +40,8 @@ block2:
   ret i32 %conv2
 
 ; CHECK-LABEL: dont_widen_undef(
-; CHECK:         %m.011 = phi i32 [ 33, %entry ], [ 0, %block1 ]
-; CHECK-NEXT:    %cmp.i = icmp ugt i32 %m.011, 1
+; CHECK:         %cmp.i = phi i1 [ false, %block1 ], [ true, %entry ]
+; CHECK-NEXT:    %m.011 = phi i32 [ 0, %block1 ], [ 33, %entry ]
 ; CHECK-NEXT:    %m.1.op = lshr i32 1, %m.011
 ; CHECK-NEXT:    %sext.mask = and i32 %m.1.op, 65535
 ; CHECK-NEXT:    %cmp115 = icmp ne i32 %sext.mask, 0

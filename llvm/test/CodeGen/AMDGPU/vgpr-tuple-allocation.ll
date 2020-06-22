@@ -136,10 +136,10 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX10-NEXT: s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
 ; GFX10-NEXT: s_addc_u32 s5, s5, extern_func@gotpcrel32@hi+4
 ; GFX10-NEXT: v_mov_b32_e32 v40, v16
-; GFX10-NEXT: v_mov_b32_e32 v41, v15
-; GFX10-NEXT: image_gather4_c_b_cl v[0:3], v[12:19], s[36:43], s[44:47] dmask:0x1
-; GFX10-NEXT: v_mov_b32_e32 v42, v14
 ; GFX10-NEXT: s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GFX10-NEXT: image_gather4_c_b_cl v[0:3], v[12:19], s[36:43], s[44:47] dmask:0x1
+; GFX10-NEXT: v_mov_b32_e32 v41, v15
+; GFX10-NEXT: v_mov_b32_e32 v42, v14
 ; GFX10-NEXT: v_mov_b32_e32 v43, v13
 ; GFX10-NEXT: v_mov_b32_e32 v44, v12
 ; GFX10-NEXT: ; implicit-def: $vcc_hi

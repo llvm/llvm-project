@@ -1456,7 +1456,8 @@ bool SystemZDAGToDAGISel::storeLoadCanUseBlockBinary(SDNode *N,
   auto *StoreA = cast<StoreSDNode>(N);
   auto *LoadA = cast<LoadSDNode>(StoreA->getValue().getOperand(1 - I));
   auto *LoadB = cast<LoadSDNode>(StoreA->getValue().getOperand(I));
-  return !LoadA->isVolatile() && canUseBlockOperation(StoreA, LoadB);
+  return !LoadA->isVolatile() && LoadA->getMemoryVT() == LoadB->getMemoryVT() &&
+         canUseBlockOperation(StoreA, LoadB);
 }
 
 void SystemZDAGToDAGISel::Select(SDNode *Node) {

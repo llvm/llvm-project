@@ -65,8 +65,8 @@ func @indexed_generic_matrix(%operand: memref<50x100xf32>, %result: memref<50x10
   return
 }
 // TILE-10n25-LABEL: func @indexed_generic_matrix
-// TILE-10n25: %[[C25:.*]] = constant 25 : index
-// TILE-10n25: %[[C10:.*]] = constant 10 : index
+// TILE-10n25-DAG: %[[C25:.*]] = constant 25 : index
+// TILE-10n25-DAG: %[[C10:.*]] = constant 10 : index
 // TILE-10n25: scf.for %[[K:.*]] = {{.*}} step %[[C10]]
 // TILE-10n25:   scf.for %[[L:.*]] = {{.*}} step %[[C25]]
 // TILE-10n25:     linalg.indexed_generic

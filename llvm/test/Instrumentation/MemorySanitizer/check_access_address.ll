@@ -45,7 +45,7 @@ entry:
 ; CHECK: icmp
 ; CHECK: br i1
 ; CHECK: {{^[0-9]+}}:
-; CHECK: call void @__msan_warning_noreturn
+; CHECK: call void @__msan_warning_with_origin_noreturn
 ; CHECK: {{^[0-9]+}}:
 ; CHECK: xor
 ; CHECK: store

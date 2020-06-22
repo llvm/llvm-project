@@ -19,6 +19,8 @@ tablegen(LLVM AMDGPUGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AMDGPUPreLegalizerCombinerHelper")
 tablegen(LLVM AMDGPUGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AMDGPUPostLegalizerCombinerHelper")
+tablegen(LLVM AMDGPUGenRegBankGICombiner.inc -gen-global-isel-combiner
+              -combiners="AMDGPURegBankCombinerHelper")
 
 set(LLVM_TARGET_DEFINITIONS R600.td)
 tablegen(LLVM R600GenAsmWriter.inc -gen-asm-writer)
@@ -67,6 +69,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUPreLegalizerCombiner.cpp
   AMDGPUPromoteAlloca.cpp
   AMDGPUPropagateAttributes.cpp
+  AMDGPURegBankCombiner.cpp
   AMDGPURegisterBankInfo.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPUSubtarget.cpp

@@ -1872,6 +1872,30 @@ unsigned SystemZ::reverseCCMask(unsigned CCMask) {
           (CCMask & SystemZ::CCMASK_CMP_UO));
 }
 
+MachineBasicBlock *SystemZ::emitBlockAfter(MachineBasicBlock *MBB) {
+  MachineFunction &MF = *MBB->getParent();
+  MachineBasicBlock *NewMBB = MF.CreateMachineBasicBlock(MBB->getBasicBlock());
+  MF.insert(std::next(MachineFunction::iterator(MBB)), NewMBB);
+  return NewMBB;
+}
+
+MachineBasicBlock *SystemZ::splitBlockAfter(MachineBasicBlock::iterator MI,
+                                            MachineBasicBlock *MBB) {
+  MachineBasicBlock *NewMBB = emitBlockAfter(MBB);
+  NewMBB->splice(NewMBB->begin(), MBB,
+                 std::next(MachineBasicBlock::iterator(MI)), MBB->end());
+  NewMBB->transferSuccessorsAndUpdatePHIs(MBB);
+  return NewMBB;
+}
+
+MachineBasicBlock *SystemZ::splitBlockBefore(MachineBasicBlock::iterator MI,
+                                             MachineBasicBlock *MBB) {
+  MachineBasicBlock *NewMBB = emitBlockAfter(MBB);
+  NewMBB->splice(NewMBB->begin(), MBB, MI, MBB->end());
+  NewMBB->transferSuccessorsAndUpdatePHIs(MBB);
+  return NewMBB;
+}
+
 unsigned SystemZInstrInfo::getLoadAndTrap(unsigned Opcode) const {
   if (!STI.hasLoadAndTrap())
     return 0;

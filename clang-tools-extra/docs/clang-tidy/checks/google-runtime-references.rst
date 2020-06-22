@@ -12,6 +12,6 @@ https://google.github.io/styleguide/cppguide.html#Reference_Arguments
 Options
 -------
 
-.. option:: WhiteListTypes
+.. option:: IncludedTypes
 
-   A semicolon-separated list of names of whitelist types. Default is empty.
+   A semicolon-separated list of names of types to explicitly include. Default is empty.

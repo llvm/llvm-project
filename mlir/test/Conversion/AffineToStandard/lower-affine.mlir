@@ -329,7 +329,7 @@ func @if_for() {
 // CHECK-NEXT:     %[[f:.*]] = cmpi "slt", %{{.*}}, %[[e]] : index
 // CHECK-NEXT:     %[[g:.*]] = select %[[f]], %{{.*}}, %[[e]] : index
 // CHECK-NEXT:     %[[c1_0:.*]] = constant 1 : index
-// CHECK-NEXT:     for %{{.*}} = %[[v3]] to %[[v6]] step %[[c1_0]] {
+// CHECK-NEXT:     for %{{.*}} = %[[d]] to %[[g]] step %[[c1_0]] {
 // CHECK-NEXT:       call @body2(%{{.*}}, %{{.*}}) : (index, index) -> ()
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
@@ -364,7 +364,7 @@ func @loop_min_max(%N : index) {
 // CHECK-NEXT:   %[[c0123456:.+]] = cmpi "slt", %[[r012345]], %{{.*}} : index
 // CHECK-NEXT:   %[[r0123456:.+]] = select %[[c0123456]], %[[r012345]], %{{.*}} : index
 // CHECK-NEXT:   %[[c1:.*]] = constant 1 : index
-// CHECK-NEXT:   for %{{.*}} = %[[c0]] to %[[v11]] step %[[c1]] {
+// CHECK-NEXT:   for %{{.*}} = %[[c0]] to %[[r0123456]] step %[[c1]] {
 // CHECK-NEXT:     call @body(%{{.*}}) : (index) -> ()
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return

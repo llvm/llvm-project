@@ -3,75 +3,78 @@
 """
 Update reference results for static analyzer.
 """
-from __future__ import absolute_import, division, print_function
-
 import SATestBuild
+from ProjectMap import ProjectInfo, ProjectMap
+
+import os
+import shutil
+import sys
 
 from subprocess import check_call
-import os
-import sys
 
 Verbose = 0
 
 
-def runCmd(Command, **kwargs):
-    if Verbose:
-        print("Executing %s" % Command)
-    check_call(Command, shell=True, **kwargs)
+def update_reference_results(project: ProjectInfo):
+    test_info = SATestBuild.TestInfo(project)
+    tester = SATestBuild.ProjectTester(test_info)
+    project_dir = tester.get_project_dir()
 
+    tester.is_reference_build = True
+    ref_results_path = os.path.join(project_dir, tester.get_output_dir())
 
-def updateReferenceResults(ProjName, ProjBuildMode):
-    ProjDir = SATestBuild.getProjectDir(ProjName)
+    tester.is_reference_build = False
+    created_results_path = os.path.join(project_dir, tester.get_output_dir())
 
-    RefResultsPath = os.path.join(
-        ProjDir,
-        SATestBuild.getSBOutputDirName(IsReferenceBuild=True))
-    CreatedResultsPath = os.path.join(
-        ProjDir,
-        SATestBuild.getSBOutputDirName(IsReferenceBuild=False))
-
-    if not os.path.exists(CreatedResultsPath):
-        print("New results not found, was SATestBuild.py "
-              "previously run?", file=sys.stderr)
+    if not os.path.exists(created_results_path):
+        print("New results not found, was SATestBuild.py previously run?",
+              file=sys.stderr)
         sys.exit(1)
 
-    BuildLogPath = SATestBuild.getBuildLogPath(RefResultsPath)
-    Dirname = os.path.dirname(os.path.abspath(BuildLogPath))
-    runCmd("mkdir -p '%s'" % Dirname)
-    with open(BuildLogPath, "w+") as PBuildLogFile:
+    build_log_path = SATestBuild.get_build_log_path(ref_results_path)
+    build_log_dir = os.path.dirname(os.path.abspath(build_log_path))
+
+    os.makedirs(build_log_dir)
+
+    with open(build_log_path, "w+") as build_log_file:
+        def run_cmd(command: str):
+            if Verbose:
+                print(f"Executing {command}")
+            check_call(command, shell=True, stdout=build_log_file)
+
         # Remove reference results: in git, and then again for a good measure
         # with rm, as git might not remove things fully if there are empty
         # directories involved.
-        runCmd('git rm -r -q "%s"' % (RefResultsPath,), stdout=PBuildLogFile)
-        runCmd('rm -rf "%s"' % (RefResultsPath,), stdout=PBuildLogFile)
+        run_cmd(f"git rm -r -q '{ref_results_path}'")
+        shutil.rmtree(ref_results_path)
 
         # Replace reference results with a freshly computed once.
-        runCmd('cp -r "%s" "%s"' % (CreatedResultsPath, RefResultsPath,),
-               stdout=PBuildLogFile)
+        shutil.copytree(created_results_path, ref_results_path, symlinks=True)
 
         # Run cleanup script.
-        SATestBuild.runCleanupScript(ProjDir, PBuildLogFile)
+        SATestBuild.run_cleanup_script(project_dir, build_log_file)
 
-        SATestBuild.normalizeReferenceResults(
-            ProjDir, RefResultsPath, ProjBuildMode)
+        SATestBuild.normalize_reference_results(
+            project_dir, ref_results_path, project.mode)
 
         # Clean up the generated difference results.
-        SATestBuild.cleanupReferenceResults(RefResultsPath)
+        SATestBuild.cleanup_reference_results(ref_results_path)
 
-        runCmd('git add "%s"' % (RefResultsPath,), stdout=PBuildLogFile)
+        run_cmd(f"git add '{ref_results_path}'")
 
 
+# TODO: use argparse
 def main(argv):
-    if len(argv) == 2 and argv[1] in ('-h', '--help'):
+    if len(argv) == 2 and argv[1] in ("-h", "--help"):
         print("Update static analyzer reference results based "
               "\non the previous run of SATestBuild.py.\n"
               "\nN.B.: Assumes that SATestBuild.py was just run",
               file=sys.stderr)
         sys.exit(1)
 
-    with SATestBuild.projectFileHandler() as f:
-        for (ProjName, ProjBuildMode) in SATestBuild.iterateOverProjects(f):
-            updateReferenceResults(ProjName, int(ProjBuildMode))
+    project_map = ProjectMap()
+    for project in project_map.projects:
+        update_reference_results(project)
 
 
 if __name__ == '__main__':

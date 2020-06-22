@@ -61,10 +61,8 @@ void GPUToSPIRVPass::runOnOperation() {
   populateGPUToSPIRVPatterns(context, typeConverter, patterns);
   populateStandardToSPIRVPatterns(context, typeConverter, patterns);
 
-  if (failed(applyFullConversion(kernelModules, *target, patterns,
-                                 &typeConverter))) {
+  if (failed(applyFullConversion(kernelModules, *target, patterns)))
     return signalPassFailure();
-  }
 }
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertGPUToSPIRVPass() {

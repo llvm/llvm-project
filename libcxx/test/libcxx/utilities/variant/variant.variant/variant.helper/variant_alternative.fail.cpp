@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <variant>
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 
 // template <size_t I, class T> struct variant_alternative; // undefined

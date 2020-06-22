@@ -148,7 +148,8 @@ protected:
   std::unique_ptr<llvm::MCRegisterInfo> m_mc_register_info_up;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ABI);
+  ABI(const ABI &) = delete;
+  const ABI &operator=(const ABI &) = delete;
 };
 
 class RegInfoBasedABI : public ABI {

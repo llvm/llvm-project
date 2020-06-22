@@ -11,12 +11,12 @@
 # RUN: llvm-readelf -S %t.64 | FileCheck --check-prefix=SEC64 %s
 # RUN: not ld.lld -shared %t.64.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 
-## __global_pointer$ = .sdata+0x800 = 0x39b8
-# SEC32: [ 7] .sdata PROGBITS {{0*}}000031b8
-# SYM32: {{0*}}000039b8 0 NOTYPE GLOBAL DEFAULT 7 __global_pointer$
+## __global_pointer$ = .sdata+0x800 = 0x39c0
+# SEC32: [ 7] .sdata PROGBITS {{0*}}000031c0
+# SYM32: {{0*}}000039c0 0 NOTYPE GLOBAL DEFAULT 7 __global_pointer$
 
-# SEC64: [ 7] .sdata PROGBITS {{0*}}000032d0
-# SYM64: {{0*}}00003ad0 0 NOTYPE GLOBAL DEFAULT 7 __global_pointer$
+# SEC64: [ 7] .sdata PROGBITS {{0*}}000032e0
+# SYM64: {{0*}}00003ae0 0 NOTYPE GLOBAL DEFAULT 7 __global_pointer$
 
 ## __global_pointer$ - 0x1000 = 4096*3-2048
 # DIS:      1000: auipc gp, 3

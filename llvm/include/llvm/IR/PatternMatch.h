@@ -333,6 +333,10 @@ template <typename Predicate> struct cstfp_pred_ty : public Predicate {
         if (const auto *CF = dyn_cast_or_null<ConstantFP>(C->getSplatValue()))
           return this->isValue(CF->getValueAPF());
 
+        // Number of elements of a scalable vector unknown at compile time
+        if (isa<ScalableVectorType>(V->getType()))
+          return false;
+
         // Non-splat vector constant: check each element for a match.
         unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
         assert(NumElts != 0 && "Constant vector with no elements?");
@@ -1343,7 +1347,7 @@ inline OneOps_match<OpTy, Instruction::Freeze> m_Freeze(const OpTy &Op) {
 /// Matches InsertElementInst.
 template <typename Val_t, typename Elt_t, typename Idx_t>
 inline ThreeOps_match<Val_t, Elt_t, Idx_t, Instruction::InsertElement>
-m_InsertElement(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx) {
+m_InsertElt(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx) {
   return ThreeOps_match<Val_t, Elt_t, Idx_t, Instruction::InsertElement>(
       Val, Elt, Idx);
 }
@@ -1351,7 +1355,7 @@ m_InsertElement(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx) {
 /// Matches ExtractElementInst.
 template <typename Val_t, typename Idx_t>
 inline TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>
-m_ExtractElement(const Val_t &Val, const Idx_t &Idx) {
+m_ExtractElt(const Val_t &Val, const Idx_t &Idx) {
   return TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>(Val, Idx);
 }
 
@@ -1410,13 +1414,13 @@ struct m_SplatOrUndefMask {
 /// Matches ShuffleVectorInst independently of mask value.
 template <typename V1_t, typename V2_t>
 inline TwoOps_match<V1_t, V2_t, Instruction::ShuffleVector>
-m_ShuffleVector(const V1_t &v1, const V2_t &v2) {
+m_Shuffle(const V1_t &v1, const V2_t &v2) {
   return TwoOps_match<V1_t, V2_t, Instruction::ShuffleVector>(v1, v2);
 }
 
 template <typename V1_t, typename V2_t, typename Mask_t>
 inline Shuffle_match<V1_t, V2_t, Mask_t>
-m_ShuffleVector(const V1_t &v1, const V2_t &v2, const Mask_t &mask) {
+m_Shuffle(const V1_t &v1, const V2_t &v2, const Mask_t &mask) {
   return Shuffle_match<V1_t, V2_t, Mask_t>(v1, v2, mask);
 }
 
@@ -1920,6 +1924,12 @@ struct m_Intrinsic_Ty<T0, T1, T2, T3, T4> {
                                Argument_match<T4>>;
 };
 
+template <typename T0, typename T1, typename T2, typename T3, typename T4, typename T5>
+struct m_Intrinsic_Ty<T0, T1, T2, T3, T4, T5> {
+  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2, T3, T4>::Ty,
+                               Argument_match<T5>>;
+};
+
 /// Match intrinsic calls like this:
 /// m_Intrinsic<Intrinsic::fabs>(m_Value(X))
 template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
@@ -1957,6 +1967,15 @@ m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3,
             const T4 &Op4) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2, Op3),
                       m_Argument<4>(Op4));
+}
+
+template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
+          typename T3, typename T4, typename T5>
+inline typename m_Intrinsic_Ty<T0, T1, T2, T3, T4, T5>::Ty
+m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3,
+            const T4 &Op4, const T5 &Op5) {
+  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2, Op3, Op4),
+                      m_Argument<5>(Op5));
 }
 
 // Helper intrinsic matching specializations.

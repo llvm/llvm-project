@@ -110,16 +110,8 @@ public:
                                  bool UseMaskForCond = false,
                                  bool UseMaskForGaps = false);
 
-  int getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                            ArrayRef<Value *> Args, FastMathFlags FMF,
-                            unsigned VF = 1,
-                            TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-                            const Instruction *I = nullptr);
-  int getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy, ArrayRef<Type *> Tys,
-                            FastMathFlags FMF,
-                            unsigned ScalarizationCostPassed = UINT_MAX,
-                            TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-                            const Instruction *I = nullptr);
+  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                            TTI::TargetCostKind CostKind);
   /// @}
 };
 

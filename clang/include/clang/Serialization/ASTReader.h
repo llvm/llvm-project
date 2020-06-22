@@ -1890,7 +1890,8 @@ public:
   /// ReadBlockAbbrevs - Enter a subblock of the specified BlockID with the
   /// specified cursor.  Read the abbreviations that are at the top of the block
   /// and then leave the cursor pointing into the block.
-  static bool ReadBlockAbbrevs(llvm::BitstreamCursor &Cursor, unsigned BlockID);
+  static bool ReadBlockAbbrevs(llvm::BitstreamCursor &Cursor, unsigned BlockID,
+                               uint64_t *StartOfBlockOffset = nullptr);
 
   /// Finds all the visible declarations with a given name.
   /// The current implementation of this method just loads the entire

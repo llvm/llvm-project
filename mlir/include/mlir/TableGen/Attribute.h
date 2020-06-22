@@ -230,6 +230,9 @@ public:
   std::vector<StructFieldAttr> getAllFields() const;
 };
 
+// Name of infer type op interface.
+extern const char *inferTypeOpInterface;
+
 } // end namespace tblgen
 } // end namespace mlir
 

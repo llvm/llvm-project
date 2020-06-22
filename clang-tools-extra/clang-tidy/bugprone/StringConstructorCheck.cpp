@@ -100,10 +100,11 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
   // Check the literal string constructor with char pointer.
   // [i.e. string (const char* s);]
   Finder->addMatcher(
+    traverse(TK_AsIs,
       cxxConstructExpr(hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
                        hasArgument(0, expr().bind("from-ptr")),
                        hasArgument(1, unless(hasType(isInteger()))))
-          .bind("constructor"),
+          .bind("constructor")),
       this);
 }
 

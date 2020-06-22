@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DependenceGraphBuilder.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/EnumeratedArray.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
@@ -434,9 +435,8 @@ template <class G> void AbstractDependenceGraphBuilder<G>::simplify() {
     NodeType &Src = *Worklist.pop_back_val();
     // As nodes get merged, we need to skip any node that has been removed from
     // the candidate set (see below).
-    if (CandidateSourceNodes.find(&Src) == CandidateSourceNodes.end())
+    if (!CandidateSourceNodes.erase(&Src))
       continue;
-    CandidateSourceNodes.erase(&Src);
 
     assert(Src.getEdges().size() == 1 &&
            "Expected a single edge from the candidate src node.");
@@ -469,10 +469,9 @@ template <class G> void AbstractDependenceGraphBuilder<G>::simplify() {
     // We also need to remove the old target (b), from the worklist. We first
     // remove it from the candidate set here, and skip any item from the
     // worklist that is not in the set.
-    if (CandidateSourceNodes.find(&Tgt) != CandidateSourceNodes.end()) {
+    if (CandidateSourceNodes.erase(&Tgt)) {
       Worklist.push_back(&Src);
       CandidateSourceNodes.insert(&Src);
-      CandidateSourceNodes.erase(&Tgt);
       LLVM_DEBUG(dbgs() << "Putting " << &Src << " back in the worklist.\n");
     }
   }

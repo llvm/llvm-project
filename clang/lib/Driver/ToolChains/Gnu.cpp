@@ -449,10 +449,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-export-dynamic");
 
     if (!Args.hasArg(options::OPT_shared) && !IsStaticPIE) {
-      const std::string Loader =
-          D.DyldPrefix + ToolChain.getDynamicLinker(Args);
       CmdArgs.push_back("-dynamic-linker");
-      CmdArgs.push_back(Args.MakeArgString(Loader));
+      CmdArgs.push_back(Args.MakeArgString(Twine(D.DyldPrefix) +
+                                           ToolChain.getDynamicLinker(Args)));
     }
   }
 
@@ -2579,7 +2578,7 @@ bool Generic_GCC::GCCInstallationDetector::ScanGentooGccConfig(
 Generic_GCC::Generic_GCC(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), GCCInstallation(D),
-      CudaInstallation(D, Triple, Args) {
+      CudaInstallation(D, Triple, Args), RocmInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
   if (getDriver().getInstalledDir() != getDriver().Dir)
     getProgramPaths().push_back(getDriver().Dir);
@@ -2847,7 +2846,6 @@ static std::string DetectLibcxxIncludePath(llvm::vfs::FileSystem &vfs,
 void
 Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
-  const std::string& SysRoot = getDriver().SysRoot;
   auto AddIncludePath = [&](std::string Path) {
     std::string IncludePath = DetectLibcxxIncludePath(getVFS(), Path);
     if (IncludePath.empty() || !getVFS().exists(IncludePath))
@@ -2863,6 +2861,7 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   // If this is a development, non-installed, clang, libcxx will
   // not be found at ../include/c++ but it likely to be found at
   // one of the following two locations:
+  std::string SysRoot = computeSysRoot();
   if (AddIncludePath(SysRoot + "/usr/local/include/c++"))
     return;
   if (AddIncludePath(SysRoot + "/usr/include/c++"))

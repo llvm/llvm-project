@@ -590,13 +590,13 @@ TEST(RenameTest, Renameable) {
          void fo^o() {})cpp",
        "used outside main file", !HeaderFile, nullptr /*no index*/},
 
-      {R"cpp(// disallow rename on blacklisted symbols (e.g. std symbols)
+      {R"cpp(// disallow rename on excluded symbols (e.g. std symbols)
          namespace std {
          class str^ing {};
          }
        )cpp",
        "not a supported kind", !HeaderFile, Index},
-      {R"cpp(// disallow rename on blacklisted symbols (e.g. std symbols)
+      {R"cpp(// disallow rename on excluded symbols (e.g. std symbols)
          namespace std {
          inline namespace __u {
          class str^ing {};
@@ -688,7 +688,7 @@ TEST(RenameTest, MainFileReferencesOnly) {
             expectedResult(Code, NewName));
 }
 
-TEST(RenameTest, ProtobufSymbolIsBlacklisted) {
+TEST(RenameTest, ProtobufSymbolIsExcluded) {
   Annotations Code("Prot^obuf buf;");
   auto TU = TestTU::withCode(Code.code());
   TU.HeaderCode =
@@ -1027,7 +1027,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
     std::string FooHPath = testPath("foo.h");
     std::string FooCCPath = testPath("foo.cc");
 
-    MockFSProvider FS;
+    MockFS FS;
     FS.Files[FooHPath] = std::string(FooH.code());
     FS.Files[FooCCPath] = std::string(FooCC.code());
 

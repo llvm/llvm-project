@@ -8,6 +8,7 @@ from gdbclientutils import *
 class TestRestartBug(GDBRemoteTestBase):
 
     @expectedFailureAll(bugnumber="llvm.org/pr24530")
+    @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def test(self):
         """
         Test auto-continue behavior when a process is interrupted to deliver

@@ -14,7 +14,7 @@ class CmdPythonTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfReproducer # Unexpected packet during replay
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test(self):
         self.build()
         self.pycmd_tests()

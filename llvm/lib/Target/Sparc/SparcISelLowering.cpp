@@ -63,9 +63,8 @@ static bool CC_Sparc_Assign_Split_64(unsigned &ValNo, MVT &ValVT,
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
   } else {
     // Assign whole thing in stack.
-    State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT,
-                                           State.AllocateStack(8,4),
-                                           LocVT, LocInfo));
+    State.addLoc(CCValAssign::getCustomMem(
+        ValNo, ValVT, State.AllocateStack(8, Align(4)), LocVT, LocInfo));
     return true;
   }
 
@@ -73,9 +72,8 @@ static bool CC_Sparc_Assign_Split_64(unsigned &ValNo, MVT &ValVT,
   if (unsigned Reg = State.AllocateReg(RegList))
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
   else
-    State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT,
-                                           State.AllocateStack(4,4),
-                                           LocVT, LocInfo));
+    State.addLoc(CCValAssign::getCustomMem(
+        ValNo, ValVT, State.AllocateStack(4, Align(4)), LocVT, LocInfo));
   return true;
 }
 
@@ -112,7 +110,7 @@ static bool CC_Sparc64_Full(unsigned &ValNo, MVT &ValVT,
 
   // Stack space is allocated for all arguments starting from [%fp+BIAS+128].
   unsigned size      = (LocVT == MVT::f128) ? 16 : 8;
-  unsigned alignment = (LocVT == MVT::f128) ? 16 : 8;
+  Align alignment = (LocVT == MVT::f128) ? Align(16) : Align(8);
   unsigned Offset = State.AllocateStack(size, alignment);
   unsigned Reg = 0;
 
@@ -152,7 +150,7 @@ static bool CC_Sparc64_Half(unsigned &ValNo, MVT &ValVT,
                             MVT &LocVT, CCValAssign::LocInfo &LocInfo,
                             ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   assert(LocVT.getSizeInBits() == 32 && "Can't handle non-32 bits locations");
-  unsigned Offset = State.AllocateStack(4, 4);
+  unsigned Offset = State.AllocateStack(4, Align(4));
 
   if (LocVT == MVT::f32 && Offset < 16*8) {
     // Promote floats to %f0-%f31.
@@ -1467,6 +1465,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
   // Turn FP extload into load/fpextend
   for (MVT VT : MVT::fp_valuetypes()) {
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f64, Expand);
   }
@@ -1476,6 +1475,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
 
   // Turn FP truncstore into trunc + store.
+  setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::f16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::f128, MVT::f32, Expand);
   setTruncStoreAction(MVT::f128, MVT::f64, Expand);
@@ -1516,6 +1517,12 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UINT_TO_FP, MVT::i32, Custom);
   setOperationAction(ISD::FP_TO_UINT, MVT::i64, Custom);
   setOperationAction(ISD::UINT_TO_FP, MVT::i64, Custom);
+
+  // Lower f16 conversion operations into library calls
+  setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
+  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
 
   setOperationAction(ISD::BITCAST, MVT::f32, Expand);
   setOperationAction(ISD::BITCAST, MVT::i32, Expand);

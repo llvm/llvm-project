@@ -402,7 +402,7 @@ genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members,
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_UL));
   auto &ULBody = Out.back();
   for (const auto &M : Members) {
-    std::string Access = getAccess(M.Access);
+    std::string Access = getAccessSpelling(M.Access).str();
     if (Access != "")
       Access = Access + " ";
     auto LIBody = std::make_unique<TagNode>(HTMLTag::TAG_LI);
@@ -679,7 +679,7 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_P));
   auto &FunctionHeader = Out.back();
 
-  std::string Access = getAccess(I.Access);
+  std::string Access = getAccessSpelling(I.Access).str();
   if (Access != "")
     FunctionHeader->Children.emplace_back(
         std::make_unique<TextNode>(Access + " "));

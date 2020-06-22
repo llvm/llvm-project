@@ -439,6 +439,7 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
           [&](const semantics::HostAssocDetails &assoc) {
             return (*this)(assoc.symbol());
           },
+          [](const semantics::TypeParamDetails &) { return Scalar(); },
           [](const auto &) { return Result{}; },
       },
       symbol.details());
@@ -652,5 +653,23 @@ bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
     }
   }
   return true;
+}
+
+bool IncrementSubscripts(
+    ConstantSubscripts &indices, const ConstantSubscripts &extents) {
+  std::size_t rank(indices.size());
+  CHECK(rank <= extents.size());
+  for (std::size_t j{0}; j < rank; ++j) {
+    if (extents[j] < 1) {
+      return false;
+    }
+  }
+  for (std::size_t j{0}; j < rank; ++j) {
+    if (indices[j]++ < extents[j]) {
+      return true;
+    }
+    indices[j] = 1;
+  }
+  return false;
 }
 } // namespace Fortran::evaluate

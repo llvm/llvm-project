@@ -320,7 +320,7 @@ define i1 @trunc_v8i32_v8i1(<8 x i32>) {
 ;
 ; AVX2-LABEL: trunc_v8i32_v8i1:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
@@ -600,7 +600,7 @@ define i1 @trunc_v8i64_v8i1(<8 x i64>) {
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
@@ -1788,7 +1788,6 @@ define i1 @icmp_v32i16_v32i1(<32 x i16>) {
 ; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    movl %eax, %ecx
 ; AVX1-NEXT:    shrl $8, %ecx
@@ -1880,7 +1879,6 @@ define i1 @icmp_v64i8_v64i1(<64 x i8>) {
 ; SSE-NEXT:    pxor %xmm3, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm1
 ; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    psllw $7, %xmm1
 ; SSE-NEXT:    pmovmskb %xmm1, %eax
 ; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    shrl $8, %ecx
@@ -1900,7 +1898,6 @@ define i1 @icmp_v64i8_v64i1(<64 x i8>) {
 ; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpxor %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    movl %eax, %ecx
 ; AVX1-NEXT:    shrl $8, %ecx

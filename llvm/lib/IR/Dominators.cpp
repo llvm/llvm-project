@@ -316,6 +316,14 @@ bool DominatorTree::isReachableFromEntry(const Use &U) const {
   return isReachableFromEntry(I->getParent());
 }
 
+// Edge BBE1 dominates edge BBE2 if they match or BBE1 dominates start of BBE2.
+bool DominatorTree::dominates(const BasicBlockEdge &BBE1,
+                              const BasicBlockEdge &BBE2) const {
+  if (BBE1.getStart() == BBE2.getStart() && BBE1.getEnd() == BBE2.getEnd())
+    return true;
+  return dominates(BBE1, BBE2.getStart());
+}
+
 //===----------------------------------------------------------------------===//
 //  DominatorTreeAnalysis and related pass implementations
 //===----------------------------------------------------------------------===//

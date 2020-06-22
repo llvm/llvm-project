@@ -282,6 +282,31 @@ void clang::EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n"
         "#endif // GET_CHECKER_DEPENDENCIES\n";
 
+  // Emit weak dependencies.
+  //
+  // CHECKER_DEPENDENCY(FULLNAME, DEPENDENCY)
+  //   - FULLNAME: The full name of the checker that is supposed to be
+  //     registered first.
+  //   - DEPENDENCY: The full name of the checker FULLNAME weak depends on.
+  OS << "\n"
+        "#ifdef GET_CHECKER_WEAK_DEPENDENCIES\n";
+  for (const Record *Checker : checkers) {
+    if (Checker->isValueUnset("WeakDependencies"))
+      continue;
+
+    for (const Record *Dependency :
+         Checker->getValueAsListOfDefs("WeakDependencies")) {
+      OS << "CHECKER_WEAK_DEPENDENCY(";
+      OS << '\"';
+      OS.write_escaped(getCheckerFullName(Checker)) << "\", ";
+      OS << '\"';
+      OS.write_escaped(getCheckerFullName(Dependency)) << '\"';
+      OS << ")\n";
+    }
+  }
+  OS << "\n"
+        "#endif // GET_CHECKER_WEAK_DEPENDENCIES\n";
+
   // Emit a package option.
   //
   // CHECKER_OPTION(OPTIONTYPE, CHECKERNAME, OPTIONNAME, DESCRIPTION, DEFAULT)

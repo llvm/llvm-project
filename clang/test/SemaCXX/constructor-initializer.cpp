@@ -250,7 +250,7 @@ namespace test3 {
     B(const String& s, int e=0) // expected-error {{unknown type name}} 
       : A(e), m_String(s) , m_ErrorStr(__null) {} // expected-error {{no matching constructor}} expected-error {{does not name}}
     B(const B& e)
-      : A(e), m_String(e.m_String), m_ErrorStr(__null) { // expected-error {{does not name}} \
+      : A(e), m_String(e.m_String), m_ErrorStr(__null) { // expected-error 2{{does not name}} \
       // expected-error {{no member named 'm_String' in 'test3::B'}}
     }
   };

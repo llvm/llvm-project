@@ -272,14 +272,14 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   PI.CompileCommand.Filename = FooCpp;
   PI.CompileCommand.CommandLine = {"clang", "-xc++", FooCpp};
 
-  llvm::StringMap<std::string> Files;
-  Files[FooCpp] = "";
-  Files[FooH] = R"cpp(
+  MockFS FS;
+  FS.Files[FooCpp] = "";
+  FS.Files[FooH] = R"cpp(
     namespace ns_in_header {
       int func_in_header();
     }
   )cpp";
-  PI.FS = buildTestFS(std::move(Files));
+  PI.TFS = &FS;
 
   PI.Contents = R"cpp(
     #include "foo.h"

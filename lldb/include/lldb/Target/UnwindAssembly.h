@@ -45,7 +45,8 @@ protected:
 
 private:
   UnwindAssembly() = delete;
-  DISALLOW_COPY_AND_ASSIGN(UnwindAssembly);
+  UnwindAssembly(const UnwindAssembly &) = delete;
+  const UnwindAssembly &operator=(const UnwindAssembly &) = delete;
 };
 
 } // namespace lldb_private

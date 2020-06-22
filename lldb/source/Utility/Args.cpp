@@ -44,7 +44,7 @@ static llvm::StringRef ParseDoubleQuotes(llvm::StringRef quoted,
       break;
     }
 
-    // If the character after the backslash is not a whitelisted escapable
+    // If the character after the backslash is not an allowed escapable
     // character, we leave the character sequence untouched.
     if (strchr(k_escapable_characters, quoted.front()) == nullptr)
       result += '\\';
@@ -111,7 +111,7 @@ ParseSingleArgument(llvm::StringRef command) {
         break;
       }
 
-      // If the character after the backslash is not a whitelisted escapable
+      // If the character after the backslash is not an allowed escapable
       // character, we leave the character sequence untouched.
       if (strchr(" \t\\'\"`", command.front()) == nullptr)
         arg += '\\';
@@ -546,7 +546,7 @@ void Args::ExpandEscapedCharacters(const char *src, std::string &dst) {
   dst.clear();
   if (src) {
     for (const char *p = src; *p != '\0'; ++p) {
-      if (isprint(*p))
+      if (llvm::isPrint(*p))
         dst.append(1, *p);
       else {
         switch (*p) {

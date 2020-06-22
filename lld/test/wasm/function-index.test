@@ -1,5 +1,5 @@
-# RUN: llc -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
-# RUN: llc -filetype=obj %p/Inputs/ret64.ll -o %t.ret64.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret64.s -o %t.ret64.o
 # RUN: wasm-ld -r -o %t.wasm %t.ret32.o %t.ret64.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 

@@ -127,6 +127,8 @@ SmallString<128> getStatsFileName(const llvm::opt::ArgList &Args,
 void addMultilibFlag(bool Enabled, const char *const Flag,
                      Multilib::flags_list &Flags);
 
+void addX86AlignBranchArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs, bool IsLTO);
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

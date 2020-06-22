@@ -296,6 +296,18 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Bytes.size() >= 8) {
       const uint64_t QW = eatBytes<uint64_t>(Bytes);
 
+      if (STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding]) {
+        Res = tryDecodeInst(DecoderTableGFX10_B64, MI, QW, Address);
+        if (Res) {
+          if (AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dpp8)
+              == -1)
+            break;
+          if (convertDPP8Inst(MI) == MCDisassembler::Success)
+            break;
+          MI = MCInst(); // clear
+        }
+      }
+
       Res = tryDecodeInst(DecoderTableDPP864, MI, QW, Address);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
@@ -345,6 +357,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableGFX932, MI, DW, Address);
     if (Res) break;
 
+    if (STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding]) {
+      Res = tryDecodeInst(DecoderTableGFX10_B32, MI, DW, Address);
+      if (Res) break;
+    }
+
     Res = tryDecodeInst(DecoderTableGFX1032, MI, DW, Address);
     if (Res) break;
 
@@ -361,13 +378,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address);
   } while (false);
-
-  if (Res && (MaxInstBytesNum - Bytes.size()) == 12 && (!HasLiteral ||
-        !(MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3))) {
-    MaxInstBytesNum = 8;
-    Bytes = Bytes_.slice(0, MaxInstBytesNum);
-    eatBytes<uint64_t>(Bytes);
-  }
 
   if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
               MI.getOpcode() == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||

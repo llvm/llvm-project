@@ -169,7 +169,9 @@ protected:
   bool m_process_image_addr_is_all_images_infos;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderMacOSXDYLD);
+  DynamicLoaderMacOSXDYLD(const DynamicLoaderMacOSXDYLD &) = delete;
+  const DynamicLoaderMacOSXDYLD &
+  operator=(const DynamicLoaderMacOSXDYLD &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOSXDYLD_H

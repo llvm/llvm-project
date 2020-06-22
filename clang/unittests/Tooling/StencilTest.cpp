@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Transformer/Stencil.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/FixIt.h"
 #include "clang/Tooling/Tooling.h"
@@ -60,7 +61,8 @@ static llvm::Optional<TestMatch> matchStmt(StringRef StatementCode,
     return llvm::None;
   }
   ASTContext &Context = AstUnit->getASTContext();
-  auto Matches = ast_matchers::match(wrapMatcher(Matcher), Context);
+  auto Matches = ast_matchers::match(
+      traverse(ast_type_traits::TK_AsIs, wrapMatcher(Matcher)), Context);
   // We expect a single, exact match for the statement.
   if (Matches.size() != 1) {
     ADD_FAILURE() << "Wrong number of matches: " << Matches.size();
@@ -333,9 +335,10 @@ TEST_F(StencilTest, AccessOpExplicitThis) {
       int foo() { return this->x; }
     };
   )cc";
-  auto StmtMatch =
-      matchStmt(Snippet, returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
-                             hasObjectExpression(expr().bind("obj")))))));
+  auto StmtMatch = matchStmt(
+      Snippet, traverse(ast_type_traits::TK_AsIs,
+                        returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
+                            hasObjectExpression(expr().bind("obj"))))))));
   ASSERT_TRUE(StmtMatch);
   const Stencil Stencil = access("obj", "field");
   EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result),
@@ -369,6 +372,48 @@ TEST_F(StencilTest, RunOp) {
                                                               : "Unbound");
   };
   testExpr(Id, "3;", run(SimpleFn), "Bound");
+}
+
+TEST_F(StencilTest, CatOfMacroRangeSucceeds) {
+  StringRef Snippet = R"cpp(
+#define MACRO 3.77
+  double foo(double d);
+  foo(MACRO);)cpp";
+
+  auto StmtMatch =
+      matchStmt(Snippet, callExpr(callee(functionDecl(hasName("foo"))),
+                                  argumentCountIs(1),
+                                  hasArgument(0, expr().bind("arg"))));
+  ASSERT_TRUE(StmtMatch);
+  Stencil S = cat(node("arg"));
+  EXPECT_THAT_EXPECTED(S->eval(StmtMatch->Result), HasValue("MACRO"));
+}
+
+TEST_F(StencilTest, CatOfMacroArgRangeSucceeds) {
+  StringRef Snippet = R"cpp(
+#define MACRO(a, b) a + b
+  MACRO(2, 3);)cpp";
+
+  auto StmtMatch =
+      matchStmt(Snippet, binaryOperator(hasRHS(expr().bind("rhs"))));
+  ASSERT_TRUE(StmtMatch);
+  Stencil S = cat(node("rhs"));
+  EXPECT_THAT_EXPECTED(S->eval(StmtMatch->Result), HasValue("3"));
+}
+
+TEST_F(StencilTest, CatOfMacroArgSubRangeSucceeds) {
+  StringRef Snippet = R"cpp(
+#define MACRO(a, b) a + b
+  int foo(int);
+  MACRO(2, foo(3));)cpp";
+
+  auto StmtMatch = matchStmt(
+      Snippet, binaryOperator(hasRHS(callExpr(
+                   callee(functionDecl(hasName("foo"))), argumentCountIs(1),
+                   hasArgument(0, expr().bind("arg"))))));
+  ASSERT_TRUE(StmtMatch);
+  Stencil S = cat(node("arg"));
+  EXPECT_THAT_EXPECTED(S->eval(StmtMatch->Result), HasValue("3"));
 }
 
 TEST_F(StencilTest, CatOfInvalidRangeFails) {

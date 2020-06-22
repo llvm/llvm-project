@@ -85,7 +85,6 @@ define i64 @f2ul(float %a) {
 ; CHECK-LABEL: f2ul:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea.sl %s1, 1593835520
-; CHECK-NEXT:    or %s1, 0, %s1
 ; CHECK-NEXT:    fcmp.s %s2, %s0, %s1
 ; CHECK-NEXT:    fsub.s %s1, %s0, %s1
 ; CHECK-NEXT:    cvt.d.s %s1, %s1

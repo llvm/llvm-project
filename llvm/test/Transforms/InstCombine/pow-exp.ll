@@ -400,8 +400,9 @@ define double @pow_ok_base_no_nnan(double %e) {
 
 define double @pow_ok_base_no_ninf(double %e) {
 ; CHECK-LABEL: @pow_ok_base_no_ninf(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan afn double @pow(double 0x3FE6666666666666, double [[E:%.*]])
-; CHECK-NEXT:    ret double [[CALL]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan afn double [[E:%.*]], 0xBFE0776{{.*}}
+; CHECK-NEXT:    [[EXP2:%.*]] = call nnan afn double @exp2(double [[MUL]])
+; CHECK-NEXT:    ret double [[EXP2]]
 ;
   %call = tail call afn nnan double @pow(double 0x3FE6666666666666, double %e)
   ret double %call

@@ -284,3 +284,12 @@ func @non_composed_bound_operand(%arg0: memref<1024xf32>) {
   }
   return
 }
+
+// CHECK-LABEL: func @zero_d_memref
+func @zero_d_memref() {
+  %Z = alloc() : memref<f32>
+  affine.for %i = 0 to 100 {
+    affine.load %Z[] : memref<f32>
+  }
+  return
+}

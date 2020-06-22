@@ -9,7 +9,7 @@
 float fun_default FUN(1)
 //CHECK-LABEL: define {{.*}} @_Z11fun_defaultf{{.*}}
 #if DEFAULT
-//CHECK-DDEFAULT: call contract float @llvm.fmuladd{{.*}}
+//CHECK-DDEFAULT: call float @llvm.fmuladd{{.*}}
 #endif
 #if EBSTRICT
 // Note that backend wants constrained intrinsics used
@@ -37,7 +37,7 @@ float fun_default FUN(1)
 //CHECK-DEBSTRICT: llvm.experimental.constrained.fmuladd{{.*}}tonearest{{.*}}strict
 #endif
 #if NOHONOR
-//CHECK-NOHONOR: nnan ninf contract float {{.*}}llvm.experimental.constrained.fmuladd{{.*}}tonearest{{.*}}strict
+//CHECK-NOHONOR: nnan ninf float {{.*}}llvm.experimental.constrained.fmuladd{{.*}}tonearest{{.*}}strict
 #endif
 #if FAST
 //Not possible to enable float_control(except) in FAST mode.
@@ -49,13 +49,13 @@ float fun_default FUN(1)
         float exc_pop FUN(5)
 //CHECK-LABEL: define {{.*}} @_Z7exc_popf{{.*}}
 #if DEFAULT
-//CHECK-DDEFAULT: call contract float @llvm.fmuladd{{.*}}
+//CHECK-DDEFAULT: call float @llvm.fmuladd{{.*}}
 #endif
 #if EBSTRICT
 //CHECK-DEBSTRICT: llvm.experimental.constrained.fmuladd{{.*}}tonearest{{.*}}strict
 #endif
 #if NOHONOR
-//CHECK-NOHONOR: call nnan ninf contract float @llvm.fmuladd{{.*}}
+//CHECK-NOHONOR: call nnan ninf float @llvm.fmuladd{{.*}}
 #endif
 #if FAST
 //CHECK-FAST: fmul fast float
@@ -66,13 +66,13 @@ float fun_default FUN(1)
             float exc_off FUN(5)
 //CHECK-LABEL: define {{.*}} @_Z7exc_offf{{.*}}
 #if DEFAULT
-//CHECK-DDEFAULT: call contract float @llvm.fmuladd{{.*}}
+//CHECK-DDEFAULT: call float @llvm.fmuladd{{.*}}
 #endif
 #if EBSTRICT
-//CHECK-DEBSTRICT: call contract float @llvm.fmuladd{{.*}}
+//CHECK-DEBSTRICT: call float @llvm.fmuladd{{.*}}
 #endif
 #if NOHONOR
-//CHECK-NOHONOR: call nnan ninf contract float @llvm.fmuladd{{.*}}
+//CHECK-NOHONOR: call nnan ninf float @llvm.fmuladd{{.*}}
 #endif
 #if FAST
 //CHECK-FAST: fmul fast float
@@ -83,30 +83,30 @@ float fun_default FUN(1)
                 float precise_on FUN(3)
 //CHECK-LABEL: define {{.*}} @_Z10precise_onf{{.*}}
 #if DEFAULT
-//CHECK-DDEFAULT: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-DDEFAULT: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if EBSTRICT
-//CHECK-DEBSTRICT: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-DEBSTRICT: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if NOHONOR
 // If precise is pushed then all fast-math should be off!
-//CHECK-NOHONOR: call contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-NOHONOR: call float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if FAST
-//CHECK-FAST: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-FAST: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 
 #pragma float_control(pop)
                     float precise_pop FUN(3)
 //CHECK-LABEL: define {{.*}} @_Z11precise_popf{{.*}}
 #if DEFAULT
-//CHECK-DDEFAULT: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-DDEFAULT: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if EBSTRICT
-//CHECK-DEBSTRICT: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-DEBSTRICT: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if NOHONOR
-//CHECK-NOHONOR: call nnan ninf contract float @llvm.fmuladd{{.*}}
+//CHECK-NOHONOR: call nnan ninf float @llvm.fmuladd{{.*}}
 #endif
 #if FAST
 //CHECK-FAST: fmul fast float
@@ -143,14 +143,14 @@ float fun_default FUN(1)
 //CHECK-DDEFAULT: llvm.fmuladd{{.*}}
 #endif
 #if EBSTRICT
-//CHECK-DEBSTRICT: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-DEBSTRICT: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if NOHONOR
 // fast math should be off, and contract should be on
-//CHECK-NOHONOR: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-NOHONOR: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if FAST
-//CHECK-FAST: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-FAST: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 
 #pragma float_control(push)
@@ -160,13 +160,13 @@ float fun_default FUN(1)
 //CHECK-DDEFAULT: llvm.fmuladd{{.*}}
 #endif
 #if EBSTRICT
-//CHECK-DEBSTRICT: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-DEBSTRICT: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if NOHONOR
-//CHECK-NOHONOR: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-NOHONOR: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if FAST
-//CHECK-FAST: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-FAST: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 
 #pragma float_control(precise, off)
@@ -197,13 +197,13 @@ float fun_default FUN(1)
 //CHECK-DDEFAULT: llvm.fmuladd{{.*}}
 #endif
 #if EBSTRICT
-//CHECK-DEBSTRICT: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-DEBSTRICT: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if NOHONOR
-//CHECK-NOHONOR: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-NOHONOR: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 #if FAST
-//CHECK-FAST: contract float {{.*}}llvm.fmuladd{{.*}}
+//CHECK-FAST: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 
 #ifndef FAST
@@ -217,14 +217,14 @@ class ON {
   float z = 2 + y() * 7;
 //CHECK-LABEL: define {{.*}} void @_ZN2ONC2Ev{{.*}}
 #if DEFAULT
-//CHECK-DDEFAULT: call contract float {{.*}}llvm.fmuladd
+//CHECK-DDEFAULT: call float {{.*}}llvm.fmuladd
 #endif
 #if EBSTRICT
 //Currently, same as default [command line options not considered]
-//CHECK-DEBSTRICT: call contract float {{.*}}llvm.fmuladd
+//CHECK-DEBSTRICT: call float {{.*}}llvm.fmuladd
 #endif
 #if NOHONOR
-//CHECK-NOHONOR: call nnan ninf contract float @llvm.fmuladd{{.*}}
+//CHECK-NOHONOR: call nnan ninf float @llvm.fmuladd{{.*}}
 #endif
 #if FAST
 //CHECK-FAST: fmul fast float
@@ -237,13 +237,13 @@ class OFF {
   float w = 2 + y() * 7;
 //CHECK-LABEL: define {{.*}} void @_ZN3OFFC2Ev{{.*}}
 #if DEFAULT
-//CHECK-DDEFAULT: call contract float {{.*}}llvm.fmuladd
+//CHECK-DDEFAULT: call float {{.*}}llvm.fmuladd
 #endif
 #if EBSTRICT
-//CHECK-DEBSTRICT: call contract float {{.*}}llvm.fmuladd
+//CHECK-DEBSTRICT: call float {{.*}}llvm.fmuladd
 #endif
 #if NOHONOR
-//CHECK-NOHONOR: call nnan ninf contract float @llvm.fmuladd{{.*}}
+//CHECK-NOHONOR: call nnan ninf float @llvm.fmuladd{{.*}}
 #endif
 #if FAST
 //CHECK-FAST: fmul fast float

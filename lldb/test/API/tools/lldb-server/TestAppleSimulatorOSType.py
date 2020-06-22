@@ -18,6 +18,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         sim_devices = json.loads(sim_devices_str)['devices']
         # Find an available simulator for the requested platform
         deviceUDID = None
+        deviceRuntime = None
         for simulator in sim_devices:
             if isinstance(simulator,dict):
                 runtime = simulator['name']
@@ -32,9 +33,11 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
                     continue
                 if 'isAvailable' in device and device['isAvailable'] != True:
                     continue
+                if deviceRuntime and runtime < deviceRuntime:
+                    continue
                 deviceUDID = device['udid']
-                break
-            if deviceUDID != None:
+                deviceRuntime = runtime
+                # Stop searching in this runtime
                 break
 
         # Launch the process using simctl

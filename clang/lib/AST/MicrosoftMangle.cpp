@@ -947,12 +947,12 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
 
           mangleSourceName(Name);
 
-          // If the context of a closure type is an initializer for a class
-          // member (static or nonstatic), it is encoded in a qualified name.
+          // If the context is a variable or a class member and not a parameter,
+          // it is encoded in a qualified name.
           if (LambdaManglingNumber && LambdaContextDecl) {
             if ((isa<VarDecl>(LambdaContextDecl) ||
                  isa<FieldDecl>(LambdaContextDecl)) &&
-                LambdaContextDecl->getDeclContext()->isRecord()) {
+                !isa<ParmVarDecl>(LambdaContextDecl)) {
               mangleUnqualifiedName(cast<NamedDecl>(LambdaContextDecl));
             }
           }
@@ -2114,6 +2114,7 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   case BuiltinType::SatUShortFract:
   case BuiltinType::SatUFract:
   case BuiltinType::SatULongFract:
+  case BuiltinType::BFloat16:
   case BuiltinType::Float128: {
     DiagnosticsEngine &Diags = Context.getDiags();
     unsigned DiagID = Diags.getCustomDiagID(

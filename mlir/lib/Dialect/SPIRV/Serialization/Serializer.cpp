@@ -227,9 +227,9 @@ private:
   }
 
   /// Process member decoration
-  LogicalResult processMemberDecoration(uint32_t structID, uint32_t memberIndex,
-                                        spirv::Decoration decorationType,
-                                        ArrayRef<uint32_t> values = {});
+  LogicalResult processMemberDecoration(
+      uint32_t structID,
+      const spirv::StructType::MemberDecorationInfo &memberDecorationInfo);
 
   //===--------------------------------------------------------------------===//
   // Types
@@ -672,8 +672,9 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
   }
   SmallVector<uint32_t, 1> args;
   switch (decoration.getValue()) {
-  case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
+  case spirv::Decoration::DescriptorSet:
+  case spirv::Decoration::Location:
     if (auto intAttr = attr.second.dyn_cast<IntegerAttr>()) {
       args.push_back(intAttr.getValue().getZExtValue());
       break;
@@ -690,6 +691,13 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
              << attrName << " attribute " << strAttr.getValue();
     }
     return emitError(loc, "expected string attribute for ") << attrName;
+  case spirv::Decoration::Flat:
+  case spirv::Decoration::NoPerspective:
+    if (auto unitAttr = attr.second.dyn_cast<UnitAttr>()) {
+      // For unit attributes, the args list has no values so we do nothing
+      break;
+    }
+    return emitError(loc, "expected unit attribute for ") << attrName;
   default:
     return emitError(loc, "unhandled decoration ") << decorationName;
   }
@@ -728,14 +736,14 @@ LogicalResult Serializer::processTypeDecoration<spirv::RuntimeArrayType>(
   return success();
 }
 
-LogicalResult
-Serializer::processMemberDecoration(uint32_t structID, uint32_t memberIndex,
-                                    spirv::Decoration decorationType,
-                                    ArrayRef<uint32_t> values) {
+LogicalResult Serializer::processMemberDecoration(
+    uint32_t structID,
+    const spirv::StructType::MemberDecorationInfo &memberDecoration) {
   SmallVector<uint32_t, 4> args(
-      {structID, memberIndex, static_cast<uint32_t>(decorationType)});
-  if (!values.empty()) {
-    args.append(values.begin(), values.end());
+      {structID, memberDecoration.memberIndex,
+       static_cast<uint32_t>(memberDecoration.decoration)});
+  if (memberDecoration.hasValue) {
+    args.push_back(memberDecoration.decorationValue);
   }
   return encodeInstructionInto(decorations, spirv::Opcode::OpMemberDecorate,
                                args);
@@ -1062,7 +1070,7 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
   }
 
   if (auto structType = type.dyn_cast<spirv::StructType>()) {
-    bool hasLayout = structType.hasLayout();
+    bool hasOffset = structType.hasOffset();
     for (auto elementIndex :
          llvm::seq<uint32_t>(0, structType.getNumElements())) {
       uint32_t elementTypeID = 0;
@@ -1071,11 +1079,12 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
         return failure();
       }
       operands.push_back(elementTypeID);
-      if (hasLayout) {
+      if (hasOffset) {
         // Decorate each struct member with an offset
-        if (failed(processMemberDecoration(
-                resultID, elementIndex, spirv::Decoration::Offset,
-                static_cast<uint32_t>(structType.getOffset(elementIndex))))) {
+        spirv::StructType::MemberDecorationInfo offsetDecoration{
+            elementIndex, /*hasValue=*/1, spirv::Decoration::Offset,
+            static_cast<uint32_t>(structType.getMemberOffset(elementIndex))};
+        if (failed(processMemberDecoration(resultID, offsetDecoration))) {
           return emitError(loc, "cannot decorate ")
                  << elementIndex << "-th member of " << structType
                  << " with its offset";
@@ -1085,14 +1094,45 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
     SmallVector<spirv::StructType::MemberDecorationInfo, 4> memberDecorations;
     structType.getMemberDecorations(memberDecorations);
     for (auto &memberDecoration : memberDecorations) {
-      if (failed(processMemberDecoration(resultID, memberDecoration.first,
-                                         memberDecoration.second))) {
+      if (failed(processMemberDecoration(resultID, memberDecoration))) {
         return emitError(loc, "cannot decorate ")
-               << memberDecoration.first << "-th member of " << structType
-               << " with " << stringifyDecoration(memberDecoration.second);
+               << static_cast<uint32_t>(memberDecoration.memberIndex)
+               << "-th member of " << structType << " with "
+               << stringifyDecoration(memberDecoration.decoration);
       }
     }
     typeEnum = spirv::Opcode::OpTypeStruct;
+    return success();
+  }
+
+  if (auto cooperativeMatrixType =
+          type.dyn_cast<spirv::CooperativeMatrixNVType>()) {
+    uint32_t elementTypeID = 0;
+    if (failed(processType(loc, cooperativeMatrixType.getElementType(),
+                           elementTypeID))) {
+      return failure();
+    }
+    typeEnum = spirv::Opcode::OpTypeCooperativeMatrixNV;
+    auto getConstantOp = [&](uint32_t id) {
+      auto attr = IntegerAttr::get(IntegerType::get(32, type.getContext()), id);
+      return prepareConstantInt(loc, attr);
+    };
+    operands.push_back(elementTypeID);
+    operands.push_back(
+        getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getScope())));
+    operands.push_back(getConstantOp(cooperativeMatrixType.getRows()));
+    operands.push_back(getConstantOp(cooperativeMatrixType.getColumns()));
+    return success();
+  }
+
+  if (auto matrixType = type.dyn_cast<spirv::MatrixType>()) {
+    uint32_t elementTypeID = 0;
+    if (failed(processType(loc, matrixType.getElementType(), elementTypeID))) {
+      return failure();
+    }
+    typeEnum = spirv::Opcode::OpTypeMatrix;
+    operands.push_back(elementTypeID);
+    operands.push_back(matrixType.getNumElements());
     return success();
   }
 
@@ -1238,11 +1278,11 @@ uint32_t Serializer::prepareConstantScalar(Location loc, Attribute valueAttr,
   if (auto floatAttr = valueAttr.dyn_cast<FloatAttr>()) {
     return prepareConstantFp(loc, floatAttr, isSpec);
   }
-  if (auto intAttr = valueAttr.dyn_cast<IntegerAttr>()) {
-    return prepareConstantInt(loc, intAttr, isSpec);
-  }
   if (auto boolAttr = valueAttr.dyn_cast<BoolAttr>()) {
     return prepareConstantBool(loc, boolAttr, isSpec);
+  }
+  if (auto intAttr = valueAttr.dyn_cast<IntegerAttr>()) {
+    return prepareConstantInt(loc, intAttr, isSpec);
   }
 
   return 0;

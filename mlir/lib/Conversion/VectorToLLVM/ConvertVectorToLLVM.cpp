@@ -124,6 +124,89 @@ static SmallVector<int64_t, 4> getI64SubArray(ArrayAttr arrayAttr,
   return res;
 }
 
+template <typename TransferOp>
+LogicalResult getVectorTransferAlignment(LLVMTypeConverter &typeConverter,
+                                         TransferOp xferOp, unsigned &align) {
+  Type elementTy =
+      typeConverter.convertType(xferOp.getMemRefType().getElementType());
+  if (!elementTy)
+    return failure();
+
+  auto dataLayout = typeConverter.getDialect()->getLLVMModule().getDataLayout();
+  align = dataLayout.getPrefTypeAlignment(
+      elementTy.cast<LLVM::LLVMType>().getUnderlyingType());
+  return success();
+}
+
+static LogicalResult
+replaceTransferOpWithLoadOrStore(ConversionPatternRewriter &rewriter,
+                                 LLVMTypeConverter &typeConverter, Location loc,
+                                 TransferReadOp xferOp,
+                                 ArrayRef<Value> operands, Value dataPtr) {
+  rewriter.replaceOpWithNewOp<LLVM::LoadOp>(xferOp, dataPtr);
+  return success();
+}
+
+static LogicalResult
+replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
+                            LLVMTypeConverter &typeConverter, Location loc,
+                            TransferReadOp xferOp, ArrayRef<Value> operands,
+                            Value dataPtr, Value mask) {
+  auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
+  VectorType fillType = xferOp.getVectorType();
+  Value fill = rewriter.create<SplatOp>(loc, fillType, xferOp.padding());
+  fill = rewriter.create<LLVM::DialectCastOp>(loc, toLLVMTy(fillType), fill);
+
+  Type vecTy = typeConverter.convertType(xferOp.getVectorType());
+  if (!vecTy)
+    return failure();
+
+  unsigned align;
+  if (failed(getVectorTransferAlignment(typeConverter, xferOp, align)))
+    return failure();
+
+  rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
+      xferOp, vecTy, dataPtr, mask, ValueRange{fill},
+      rewriter.getI32IntegerAttr(align));
+  return success();
+}
+
+static LogicalResult
+replaceTransferOpWithLoadOrStore(ConversionPatternRewriter &rewriter,
+                                 LLVMTypeConverter &typeConverter, Location loc,
+                                 TransferWriteOp xferOp,
+                                 ArrayRef<Value> operands, Value dataPtr) {
+  auto adaptor = TransferWriteOpAdaptor(operands);
+  rewriter.replaceOpWithNewOp<LLVM::StoreOp>(xferOp, adaptor.vector(), dataPtr);
+  return success();
+}
+
+static LogicalResult
+replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
+                            LLVMTypeConverter &typeConverter, Location loc,
+                            TransferWriteOp xferOp, ArrayRef<Value> operands,
+                            Value dataPtr, Value mask) {
+  unsigned align;
+  if (failed(getVectorTransferAlignment(typeConverter, xferOp, align)))
+    return failure();
+
+  auto adaptor = TransferWriteOpAdaptor(operands);
+  rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
+      xferOp, adaptor.vector(), dataPtr, mask,
+      rewriter.getI32IntegerAttr(align));
+  return success();
+}
+
+static TransferReadOpAdaptor getTransferOpAdapter(TransferReadOp xferOp,
+                                                  ArrayRef<Value> operands) {
+  return TransferReadOpAdaptor(operands);
+}
+
+static TransferWriteOpAdaptor getTransferOpAdapter(TransferWriteOp xferOp,
+                                                   ArrayRef<Value> operands) {
+  return TransferWriteOpAdaptor(operands);
+}
+
 namespace {
 
 /// Conversion pattern for a vector.matrix_multiply.
@@ -139,11 +222,32 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto matmulOp = cast<vector::MatmulOp>(op);
-    auto adaptor = vector::MatmulOpOperandAdaptor(operands);
+    auto adaptor = vector::MatmulOpAdaptor(operands);
     rewriter.replaceOpWithNewOp<LLVM::MatrixMultiplyOp>(
         op, typeConverter.convertType(matmulOp.res().getType()), adaptor.lhs(),
         adaptor.rhs(), matmulOp.lhs_rows(), matmulOp.lhs_columns(),
         matmulOp.rhs_columns());
+    return success();
+  }
+};
+
+/// Conversion pattern for a vector.flat_transpose.
+/// This is lowered directly to the proper llvm.intr.matrix.transpose.
+class VectorFlatTransposeOpConversion : public ConvertToLLVMPattern {
+public:
+  explicit VectorFlatTransposeOpConversion(MLIRContext *context,
+                                           LLVMTypeConverter &typeConverter)
+      : ConvertToLLVMPattern(vector::FlatTransposeOp::getOperationName(),
+                             context, typeConverter) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto transOp = cast<vector::FlatTransposeOp>(op);
+    auto adaptor = vector::FlatTransposeOpAdaptor(operands);
+    rewriter.replaceOpWithNewOp<LLVM::MatrixTransposeOp>(
+        transOp, typeConverter.convertType(transOp.res().getType()),
+        adaptor.matrix(), transOp.rows(), transOp.columns());
     return success();
   }
 };
@@ -233,7 +337,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
-    auto adaptor = vector::ShuffleOpOperandAdaptor(operands);
+    auto adaptor = vector::ShuffleOpAdaptor(operands);
     auto shuffleOp = cast<vector::ShuffleOp>(op);
     auto v1Type = shuffleOp.getV1VectorType();
     auto v2Type = shuffleOp.getV2VectorType();
@@ -290,7 +394,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto adaptor = vector::ExtractElementOpOperandAdaptor(operands);
+    auto adaptor = vector::ExtractElementOpAdaptor(operands);
     auto extractEltOp = cast<vector::ExtractElementOp>(op);
     auto vectorType = extractEltOp.getVectorType();
     auto llvmType = typeConverter.convertType(vectorType.getElementType());
@@ -316,7 +420,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
-    auto adaptor = vector::ExtractOpOperandAdaptor(operands);
+    auto adaptor = vector::ExtractOpAdaptor(operands);
     auto extractOp = cast<vector::ExtractOp>(op);
     auto vectorType = extractOp.getVectorType();
     auto resultType = extractOp.getResult().getType();
@@ -384,7 +488,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto adaptor = vector::FMAOpOperandAdaptor(operands);
+    auto adaptor = vector::FMAOpAdaptor(operands);
     vector::FMAOp fmaOp = cast<vector::FMAOp>(op);
     VectorType vType = fmaOp.getVectorType();
     if (vType.getRank() != 1)
@@ -405,7 +509,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto adaptor = vector::InsertElementOpOperandAdaptor(operands);
+    auto adaptor = vector::InsertElementOpAdaptor(operands);
     auto insertEltOp = cast<vector::InsertElementOp>(op);
     auto vectorType = insertEltOp.getDestVectorType();
     auto llvmType = typeConverter.convertType(vectorType);
@@ -431,7 +535,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
-    auto adaptor = vector::InsertOpOperandAdaptor(operands);
+    auto adaptor = vector::InsertOpAdaptor(operands);
     auto insertOp = cast<vector::InsertOp>(op);
     auto sourceType = insertOp.getSourceType();
     auto destVectorType = insertOp.getDestVectorType();
@@ -746,108 +850,6 @@ public:
   }
 };
 
-LogicalResult getLLVMTypeAndAlignment(LLVMTypeConverter &typeConverter,
-                                      Type type, LLVM::LLVMType &llvmType,
-                                      unsigned &align) {
-  auto convertedType = typeConverter.convertType(type);
-  if (!convertedType)
-    return failure();
-
-  llvmType = convertedType.template cast<LLVM::LLVMType>();
-  auto dataLayout = typeConverter.getDialect()->getLLVMModule().getDataLayout();
-  align = dataLayout.getPrefTypeAlignment(llvmType.getUnderlyingType());
-  return success();
-}
-
-LogicalResult
-replaceTransferOpWithLoadOrStore(ConversionPatternRewriter &rewriter,
-                                 LLVMTypeConverter &typeConverter, Location loc,
-                                 TransferReadOp xferOp,
-                                 ArrayRef<Value> operands, Value dataPtr) {
-  LLVM::LLVMType vecTy;
-  unsigned align;
-  if (failed(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
-                                     vecTy, align)))
-    return failure();
-  rewriter.replaceOpWithNewOp<LLVM::LoadOp>(xferOp, dataPtr);
-  return success();
-}
-
-LogicalResult replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
-                                          LLVMTypeConverter &typeConverter,
-                                          Location loc, TransferReadOp xferOp,
-                                          ArrayRef<Value> operands,
-                                          Value dataPtr, Value mask) {
-  auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
-  VectorType fillType = xferOp.getVectorType();
-  Value fill = rewriter.create<SplatOp>(loc, fillType, xferOp.padding());
-  fill = rewriter.create<LLVM::DialectCastOp>(loc, toLLVMTy(fillType), fill);
-
-  LLVM::LLVMType vecTy;
-  unsigned align;
-  if (failed(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
-                                     vecTy, align)))
-    return failure();
-
-  rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
-      xferOp, vecTy, dataPtr, mask, ValueRange{fill},
-      rewriter.getI32IntegerAttr(align));
-  return success();
-}
-
-LogicalResult
-replaceTransferOpWithLoadOrStore(ConversionPatternRewriter &rewriter,
-                                 LLVMTypeConverter &typeConverter, Location loc,
-                                 TransferWriteOp xferOp,
-                                 ArrayRef<Value> operands, Value dataPtr) {
-  auto adaptor = TransferWriteOpOperandAdaptor(operands);
-  LLVM::LLVMType vecTy;
-  unsigned align;
-  if (failed(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
-                                     vecTy, align)))
-    return failure();
-  rewriter.replaceOpWithNewOp<LLVM::StoreOp>(xferOp, adaptor.vector(), dataPtr);
-  return success();
-}
-
-LogicalResult replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
-                                          LLVMTypeConverter &typeConverter,
-                                          Location loc, TransferWriteOp xferOp,
-                                          ArrayRef<Value> operands,
-                                          Value dataPtr, Value mask) {
-  auto adaptor = TransferWriteOpOperandAdaptor(operands);
-  LLVM::LLVMType vecTy;
-  unsigned align;
-  if (failed(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
-                                     vecTy, align)))
-    return failure();
-
-  rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
-      xferOp, adaptor.vector(), dataPtr, mask,
-      rewriter.getI32IntegerAttr(align));
-  return success();
-}
-
-static TransferReadOpOperandAdaptor
-getTransferOpAdapter(TransferReadOp xferOp, ArrayRef<Value> operands) {
-  return TransferReadOpOperandAdaptor(operands);
-}
-
-static TransferWriteOpOperandAdaptor
-getTransferOpAdapter(TransferWriteOp xferOp, ArrayRef<Value> operands) {
-  return TransferWriteOpOperandAdaptor(operands);
-}
-
-bool isMinorIdentity(AffineMap map, unsigned rank) {
-  if (map.getNumResults() < rank)
-    return false;
-  unsigned startDim = map.getNumDims() - rank;
-  for (unsigned i = 0; i < rank; ++i)
-    if (map.getResult(i) != getAffineDimExpr(startDim + i, map.getContext()))
-      return false;
-  return true;
-}
-
 /// Conversion pattern that converts a 1-D vector transfer read/write op in a
 /// sequence of:
 /// 1. Bitcast or addrspacecast to vector form.
@@ -871,8 +873,10 @@ public:
     if (xferOp.getVectorType().getRank() > 1 ||
         llvm::size(xferOp.indices()) == 0)
       return failure();
-    if (!isMinorIdentity(xferOp.permutation_map(),
-                         xferOp.getVectorType().getRank()))
+    if (xferOp.permutation_map() !=
+        AffineMap::getMinorIdentityMap(xferOp.permutation_map().getNumInputs(),
+                                       xferOp.getVectorType().getRank(),
+                                       op->getContext()))
       return failure();
 
     auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
@@ -963,7 +967,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto printOp = cast<vector::PrintOp>(op);
-    auto adaptor = vector::PrintOpOperandAdaptor(operands);
+    auto adaptor = vector::PrintOpAdaptor(operands);
     Type printType = printOp.getPrintType();
 
     if (typeConverter.convertType(printType) == nullptr)
@@ -974,9 +978,7 @@ public:
     Type eltType = vectorType ? vectorType.getElementType() : printType;
     int64_t rank = vectorType ? vectorType.getRank() : 0;
     Operation *printer;
-    if (eltType.isSignlessInteger(1))
-      printer = getPrintI1(op);
-    else if (eltType.isSignlessInteger(32))
+    if (eltType.isSignlessInteger(1) || eltType.isSignlessInteger(32))
       printer = getPrintI32(op);
     else if (eltType.isSignlessInteger(64))
       printer = getPrintI64(op);
@@ -1000,6 +1002,17 @@ private:
                  int64_t rank) const {
     Location loc = op->getLoc();
     if (rank == 0) {
+      if (value.getType() ==
+          LLVM::LLVMType::getInt1Ty(typeConverter.getDialect())) {
+        // Convert i1 (bool) to i32 so we can use the print_i32 method.
+        // This avoids the need for a print_i1 method with an unclear ABI.
+        auto i32Type = LLVM::LLVMType::getInt32Ty(typeConverter.getDialect());
+        auto trueVal = rewriter.create<ConstantOp>(
+            loc, i32Type, rewriter.getI32IntegerAttr(1));
+        auto falseVal = rewriter.create<ConstantOp>(
+            loc, i32Type, rewriter.getI32IntegerAttr(0));
+        value = rewriter.create<SelectOp>(loc, value, trueVal, falseVal);
+      }
       emitCall(rewriter, loc, printer, value);
       return;
     }
@@ -1043,11 +1056,6 @@ private:
   }
 
   // Helpers for method names.
-  Operation *getPrintI1(Operation *op) const {
-    LLVM::LLVMDialect *dialect = typeConverter.getDialect();
-    return getPrint(op, dialect, "print_i1",
-                    LLVM::LLVMType::getInt1Ty(dialect));
-  }
   Operation *getPrintI32(Operation *op) const {
     LLVM::LLVMDialect *dialect = typeConverter.getDialect();
     return getPrint(op, dialect, "print_i32",
@@ -1157,6 +1165,7 @@ void mlir::populateVectorToLLVMMatrixConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
   MLIRContext *ctx = converter.getDialect()->getContext();
   patterns.insert<VectorMatmulOpConversion>(ctx, converter);
+  patterns.insert<VectorFlatTransposeOpConversion>(ctx, converter);
 }
 
 namespace {
@@ -1186,10 +1195,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
   populateStdToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addDynamicallyLegalOp<FuncOp>(
-      [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
-  if (failed(applyPartialConversion(getOperation(), target, patterns,
-                                    &converter))) {
+  if (failed(applyPartialConversion(getOperation(), target, patterns))) {
     signalPassFailure();
   }
 }

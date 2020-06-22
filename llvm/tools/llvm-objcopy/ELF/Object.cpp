@@ -65,6 +65,7 @@ void SectionBase::finalize() {}
 void SectionBase::markSymbols() {}
 void SectionBase::replaceSectionReferences(
     const DenseMap<SectionBase *, SectionBase *> &) {}
+void SectionBase::onRemove() {}
 
 template <class ELFT> void ELFWriter<ELFT>::writeShdr(const SectionBase &Sec) {
   uint8_t *B = Buf.getBufferStart() + Sec.HeaderOffset;
@@ -111,7 +112,9 @@ void ELFSectionSizer<ELFT>::visit(RelocationSection &Sec) {
 template <class ELFT>
 void ELFSectionSizer<ELFT>::visit(GnuDebugLinkSection &Sec) {}
 
-template <class ELFT> void ELFSectionSizer<ELFT>::visit(GroupSection &Sec) {}
+template <class ELFT> void ELFSectionSizer<ELFT>::visit(GroupSection &Sec) {
+  Sec.Size = sizeof(Elf_Word) + Sec.GroupMembers.size() * sizeof(Elf_Word);
+}
 
 template <class ELFT>
 void ELFSectionSizer<ELFT>::visit(SectionIndexSection &Sec) {}
@@ -967,6 +970,12 @@ void GroupSection::finalize() {
   this->Link = SymTab->Index;
 }
 
+Error GroupSection::removeSectionReferences(
+    bool AllowBrokenLinks, function_ref<bool(const SectionBase *)> ToRemove) {
+  llvm::erase_if(GroupMembers, ToRemove);
+  return Error::success();
+}
+
 Error GroupSection::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
   if (ToRemove(*Sym))
     return createStringError(llvm::errc::invalid_argument,
@@ -986,6 +995,13 @@ void GroupSection::replaceSectionReferences(
   for (SectionBase *&Sec : GroupMembers)
     if (SectionBase *To = FromTo.lookup(Sec))
       Sec = To;
+}
+
+void GroupSection::onRemove() {
+  // As the header section of the group is removed, drop the Group flag in its
+  // former members.
+  for (SectionBase *Sec : GroupMembers)
+    Sec->Flags &= ~SHF_GROUP;
 }
 
 void Section::initialize(SectionTableRef SecTable) {
@@ -1838,6 +1854,7 @@ Error Object::removeSections(bool AllowBrokenLinks,
   for (auto &RemoveSec : make_range(Iter, std::end(Sections))) {
     for (auto &Segment : Segments)
       Segment->removeSection(RemoveSec.get());
+    RemoveSec->onRemove();
     RemoveSections.insert(RemoveSec.get());
   }
 

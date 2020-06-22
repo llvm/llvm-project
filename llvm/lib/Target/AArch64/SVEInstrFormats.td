@@ -7663,7 +7663,7 @@ class sve_mem_ldor_si<bits<2> sz, string asm, RegisterOperand VecList>
 }
 
 multiclass sve_mem_ldor_si<bits<2> sz, string asm, RegisterOperand listty,
-                           ZPRRegOp zprty> {
+                           ZPRRegOp zprty, ValueType Ty, ValueType PredTy, SDNode Ld1ro> {
   def NAME : sve_mem_ldor_si<sz, asm, listty>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
                   (!cast<Instruction>(NAME) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
@@ -7671,6 +7671,11 @@ multiclass sve_mem_ldor_si<bits<2> sz, string asm, RegisterOperand listty,
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $imm4]",
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s32:$imm4), 0>;
+
+  // Base addressing mode
+  def : Pat<(Ty (Ld1ro (PredTy PPR3bAny:$gp), GPR64sp:$base)),
+            (!cast<Instruction>(NAME) PPR3bAny:$gp, GPR64sp:$base, (i64 0))>;
+
 }
 
 class sve_mem_ldor_ss<bits<2> sz, string asm, RegisterOperand VecList,
@@ -7694,11 +7699,15 @@ class sve_mem_ldor_ss<bits<2> sz, string asm, RegisterOperand VecList,
 }
 
 multiclass sve_mem_ldor_ss<bits<2> sz, string asm, RegisterOperand listty,
-                           ZPRRegOp zprty, RegisterOperand gprty> {
+                           ZPRRegOp zprty, RegisterOperand gprty, ValueType Ty,
+                           ValueType PredTy, SDNode Ld1ro, ComplexPattern AddrCP> {
   def NAME : sve_mem_ldor_ss<sz, asm, listty, gprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Rm]",
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
+
+    def : Pat<(Ty (Ld1ro (PredTy PPR3bAny:$gp), (AddrCP GPR64sp:$base, gprty:$offset))),
+              (!cast<Instruction>(NAME) PPR3bAny:$gp, GPR64sp:$base, gprty:$offset)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7722,6 +7731,18 @@ class sve_int_perm_bin_perm_128_zz<bits<2> opc, bit P, string asm>
   let Inst{4-0}   = Zd;
 }
 
+multiclass sve_int_perm_bin_perm_128_zz<bits<2> opc, bit P, string asm, SDPatternOperator op> {
+  def NAME : sve_int_perm_bin_perm_128_zz<opc, P, asm>;
+
+  def : SVE_2_Op_Pat<nxv16i8,  op, nxv16i8,  nxv16i8,  !cast<Instruction>(NAME)>;
+  def : SVE_2_Op_Pat<nxv8i16,  op, nxv8i16,  nxv8i16,  !cast<Instruction>(NAME)>;
+  def : SVE_2_Op_Pat<nxv8f16,  op, nxv8f16,  nxv8f16,  !cast<Instruction>(NAME)>;
+  def : SVE_2_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
+  def : SVE_2_Op_Pat<nxv4i32,  op, nxv4i32,  nxv4i32,  !cast<Instruction>(NAME)>;
+  def : SVE_2_Op_Pat<nxv4f32,  op, nxv4f32,  nxv4f32,  !cast<Instruction>(NAME)>;
+  def : SVE_2_Op_Pat<nxv2i64,  op, nxv2i64,  nxv2i64,  !cast<Instruction>(NAME)>;
+  def : SVE_2_Op_Pat<nxv2f64,  op, nxv2f64,  nxv2f64,  !cast<Instruction>(NAME)>;
+}
 
 /// Addressing modes
 def am_sve_indexed_s4 :ComplexPattern<i64, 2, "SelectAddrModeIndexedSVE<-8,7>", [], [SDNPWantRoot]>;

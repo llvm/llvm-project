@@ -36,7 +36,7 @@ CGBlockInfo::CGBlockInfo(const BlockDecl *block, StringRef name)
   : Name(name), CXXThisIndex(0), CanBeGlobal(false), NeedsCopyDispose(false),
     HasCXXObject(false), UsesStret(false), HasCapturedVariableLayout(false),
     CapturesNonExternalType(false), LocalAddress(Address::invalid()),
-    StructureType(nullptr), Block(block), DominatingIP(nullptr) {
+    StructureType(nullptr), Block(block) {
 
   // Skip asm prefix, if any.  'name' is usually taken directly from
   // the mangled name of the enclosing function.
@@ -775,151 +775,23 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     llvm::StructType::get(CGM.getLLVMContext(), elementTypes, true);
 }
 
-/// Enter the scope of a block.  This should be run at the entrance to
-/// a full-expression so that the block's cleanups are pushed at the
-/// right place in the stack.
-static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
-  assert(CGF.HaveInsertPoint());
-
-  // Allocate the block info and place it at the head of the list.
-  CGBlockInfo &blockInfo =
-    *new CGBlockInfo(block, CGF.CurFn->getName());
-  blockInfo.NextBlockInfo = CGF.FirstBlockInfo;
-  CGF.FirstBlockInfo = &blockInfo;
-
-  // Compute information about the layout, etc., of this block,
-  // pushing cleanups as necessary.
-  computeBlockInfo(CGF.CGM, &CGF, blockInfo);
-
-  // Nothing else to do if it can be global.
-  if (blockInfo.CanBeGlobal) return;
-
-  // Make the allocation for the block.
-  blockInfo.LocalAddress = CGF.CreateTempAlloca(blockInfo.StructureType,
-                                                blockInfo.BlockAlign, "block");
-
-  // If there are cleanups to emit, enter them (but inactive).
-  if (!blockInfo.NeedsCopyDispose) return;
-
-  // Walk through the captures (in order) and find the ones not
-  // captured by constant.
-  for (const auto &CI : block->captures()) {
-    // Ignore __block captures; there's nothing special in the
-    // on-stack block that we need to do for them.
-    if (CI.isByRef()) continue;
-
-    // Ignore variables that are constant-captured.
-    const VarDecl *variable = CI.getVariable();
-    CGBlockInfo::Capture &capture = blockInfo.getCapture(variable);
-    if (capture.isConstant()) continue;
-
-    // Ignore objects that aren't destructed.
-    QualType VT = getCaptureFieldType(CGF, CI);
-    QualType::DestructionKind dtorKind = VT.isDestructedType();
-    if (dtorKind == QualType::DK_none) continue;
-
-    CodeGenFunction::Destroyer *destroyer;
-
-    // Block captures count as local values and have imprecise semantics.
-    // They also can't be arrays, so need to worry about that.
-    //
-    // For const-qualified captures, emit clang.arc.use to ensure the captured
-    // object doesn't get released while we are still depending on its validity
-    // within the block.
-    if (VT.isConstQualified() &&
-        VT.getObjCLifetime() == Qualifiers::OCL_Strong &&
-        CGF.CGM.getCodeGenOpts().OptimizationLevel != 0) {
-      assert(CGF.CGM.getLangOpts().ObjCAutoRefCount &&
-             "expected ObjC ARC to be enabled");
-      destroyer = CodeGenFunction::emitARCIntrinsicUse;
-    } else if (dtorKind == QualType::DK_objc_strong_lifetime) {
-      destroyer = CodeGenFunction::destroyARCStrongImprecise;
-    } else {
-      destroyer = CGF.getDestroyer(dtorKind);
-    }
-
-    // GEP down to the address.
-    Address addr =
-        CGF.Builder.CreateStructGEP(blockInfo.LocalAddress, capture.getIndex());
-
-    // We can use that GEP as the dominating IP.
-    if (!blockInfo.DominatingIP)
-      blockInfo.DominatingIP = cast<llvm::Instruction>(addr.getPointer());
-
-    CleanupKind cleanupKind = InactiveNormalCleanup;
-    bool useArrayEHCleanup = CGF.needsEHCleanup(dtorKind);
-    if (useArrayEHCleanup)
-      cleanupKind = InactiveNormalAndEHCleanup;
-
-    CGF.pushDestroy(cleanupKind, addr, VT,
-                    destroyer, useArrayEHCleanup);
-
-    // Remember where that cleanup was.
-    capture.setCleanup(CGF.EHStack.stable_begin());
-  }
-}
-
-/// Enter a full-expression with a non-trivial number of objects to
-/// clean up.
-void CodeGenFunction::enterNonTrivialFullExpression(const FullExpr *E) {
-  if (const auto EWC = dyn_cast<ExprWithCleanups>(E)) {
-    assert(EWC->getNumObjects() != 0);
-    for (const ExprWithCleanups::CleanupObject &C : EWC->getObjects())
-      if (auto *BD = C.dyn_cast<BlockDecl *>())
-        enterBlockScope(*this, BD);
-  }
-}
-
-/// Find the layout for the given block in a linked list and remove it.
-static CGBlockInfo *findAndRemoveBlockInfo(CGBlockInfo **head,
-                                           const BlockDecl *block) {
-  while (true) {
-    assert(head && *head);
-    CGBlockInfo *cur = *head;
-
-    // If this is the block we're looking for, splice it out of the list.
-    if (cur->getBlockDecl() == block) {
-      *head = cur->NextBlockInfo;
-      return cur;
-    }
-
-    head = &cur->NextBlockInfo;
-  }
-}
-
-/// Destroy a chain of block layouts.
-void CodeGenFunction::destroyBlockInfos(CGBlockInfo *head) {
-  assert(head && "destroying an empty chain");
-  do {
-    CGBlockInfo *cur = head;
-    head = cur->NextBlockInfo;
-    delete cur;
-  } while (head != nullptr);
-}
-
 /// Emit a block literal expression in the current function.
 llvm::Value *CodeGenFunction::EmitBlockLiteral(const BlockExpr *blockExpr) {
   // If the block has no captures, we won't have a pre-computed
   // layout for it.
-  if (!blockExpr->getBlockDecl()->hasCaptures()) {
+  if (!blockExpr->getBlockDecl()->hasCaptures())
     // The block literal is emitted as a global variable, and the block invoke
     // function has to be extracted from its initializer.
-    if (llvm::Constant *Block = CGM.getAddrOfGlobalBlockIfEmitted(blockExpr)) {
+    if (llvm::Constant *Block = CGM.getAddrOfGlobalBlockIfEmitted(blockExpr))
       return Block;
-    }
-    CGBlockInfo blockInfo(blockExpr->getBlockDecl(), CurFn->getName());
-    computeBlockInfo(CGM, this, blockInfo);
-    blockInfo.BlockExpression = blockExpr;
-    return EmitBlockLiteral(blockInfo);
-  }
 
-  // Find the block info for this block and take ownership of it.
-  std::unique_ptr<CGBlockInfo> blockInfo;
-  blockInfo.reset(findAndRemoveBlockInfo(&FirstBlockInfo,
-                                         blockExpr->getBlockDecl()));
-
-  blockInfo->BlockExpression = blockExpr;
-  return EmitBlockLiteral(*blockInfo);
+  CGBlockInfo blockInfo(blockExpr->getBlockDecl(), CurFn->getName());
+  computeBlockInfo(CGM, this, blockInfo);
+  blockInfo.BlockExpression = blockExpr;
+  if (!blockInfo.CanBeGlobal)
+    blockInfo.LocalAddress = CreateTempAlloca(blockInfo.StructureType,
+                                              blockInfo.BlockAlign, "block");
+  return EmitBlockLiteral(blockInfo);
 }
 
 llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
@@ -1161,12 +1033,64 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
                      /*captured by init*/ false);
     }
 
-    // Activate the cleanup if layout pushed one.
-    if (!CI.isByRef()) {
-      EHScopeStack::stable_iterator cleanup = capture.getCleanup();
-      if (cleanup.isValid())
-        ActivateCleanupBlock(cleanup, blockInfo.DominatingIP);
+    // Push a cleanup for the capture if necessary.
+    if (!blockInfo.NeedsCopyDispose)
+      continue;
+
+    // Ignore __block captures; there's nothing special in the on-stack block
+    // that we need to do for them.
+    if (CI.isByRef())
+      continue;
+
+    // Ignore objects that aren't destructed.
+    QualType::DestructionKind dtorKind = type.isDestructedType();
+    if (dtorKind == QualType::DK_none)
+      continue;
+
+    CodeGenFunction::Destroyer *destroyer;
+
+    // Block captures count as local values and have imprecise semantics.
+    // They also can't be arrays, so need to worry about that.
+    //
+    // For const-qualified captures, emit clang.arc.use to ensure the captured
+    // object doesn't get released while we are still depending on its validity
+    // within the block.
+    if (type.isConstQualified() &&
+        type.getObjCLifetime() == Qualifiers::OCL_Strong &&
+        CGM.getCodeGenOpts().OptimizationLevel != 0) {
+      assert(CGM.getLangOpts().ObjCAutoRefCount &&
+             "expected ObjC ARC to be enabled");
+      destroyer = emitARCIntrinsicUse;
+    } else if (dtorKind == QualType::DK_objc_strong_lifetime) {
+      destroyer = destroyARCStrongImprecise;
+    } else {
+      destroyer = getDestroyer(dtorKind);
     }
+
+    CleanupKind cleanupKind = NormalCleanup;
+    bool useArrayEHCleanup = needsEHCleanup(dtorKind);
+    if (useArrayEHCleanup)
+      cleanupKind = NormalAndEHCleanup;
+
+    // Extend the lifetime of the capture to the end of the scope enclosing the
+    // block expression except when the block decl is in the list of RetExpr's
+    // cleanup objects, in which case its lifetime ends after the full
+    // expression.
+    auto IsBlockDeclInRetExpr = [&]() {
+      auto *EWC = llvm::dyn_cast_or_null<ExprWithCleanups>(RetExpr);
+      if (EWC)
+        for (auto &C : EWC->getObjects())
+          if (auto *BD = C.dyn_cast<BlockDecl *>())
+            if (BD == blockDecl)
+              return true;
+      return false;
+    };
+
+    if (IsBlockDeclInRetExpr())
+      pushDestroy(cleanupKind, blockField, type, destroyer, useArrayEHCleanup);
+    else
+      pushLifetimeExtendedDestroy(cleanupKind, blockField, type, destroyer,
+                                  useArrayEHCleanup);
   }
 
   // Cast to the converted block-pointer type, which happens (somewhat

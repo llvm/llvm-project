@@ -6,7 +6,7 @@
 # RUN:   FileCheck %s
 
 # CHECK:      .debug_tu_index contents:
-# CHECK-NEXT: version = 5 slots = 2
+# CHECK-NEXT: version = 5, units = 1, slots = 2
 # CHECK-EMPTY:
 # CHECK-NEXT: Index Signature          INFO                     ABBREV                   LINE                     STR_OFFSETS
 # CHECK-NEXT: ----- ------------------ ------------------------ ------------------------ ------------------------ ------------------------

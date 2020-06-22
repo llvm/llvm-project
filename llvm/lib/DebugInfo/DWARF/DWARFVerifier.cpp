@@ -763,7 +763,7 @@ void DWARFVerifier::verifyDebugLineRows() {
                 << "] row[" << RowIndex
                 << "] decreases in address from previous row:\n";
 
-        DWARFDebugLine::Row::dumpTableHeader(OS);
+        DWARFDebugLine::Row::dumpTableHeader(OS, 0);
         if (RowIndex > 0)
           LineTable->Rows[RowIndex - 1].dump(OS);
         Row.dump(OS);
@@ -781,7 +781,7 @@ void DWARFVerifier::verifyDebugLineRows() {
                 << " (valid values are [" << (isDWARF5 ? "0," : "1,")
                 << LineTable->Prologue.FileNames.size()
                 << (isDWARF5 ? ")" : "]") << "):\n";
-        DWARFDebugLine::Row::dumpTableHeader(OS);
+        DWARFDebugLine::Row::dumpTableHeader(OS, 0);
         Row.dump(OS);
         OS << '\n';
       }
@@ -1336,9 +1336,7 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   // "The name index must contain an entry for each debugging information entry
   // that defines a named subprogram, label, variable, type, or namespace,
   // subject to ..."
-  // Instead whitelisting all TAGs representing a "type" or a "subprogram", to
-  // make sure we catch any missing items, we instead blacklist all TAGs that we
-  // know shouldn't be indexed.
+  // Explicitly exclude all TAGs that we know shouldn't be indexed.
   switch (Die.getTag()) {
   // Compile units and modules have names but shouldn't be indexed.
   case DW_TAG_compile_unit:

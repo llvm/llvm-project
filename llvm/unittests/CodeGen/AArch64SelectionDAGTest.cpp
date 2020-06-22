@@ -17,9 +17,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
-
-namespace {
+namespace llvm {
 
 class AArch64SelectionDAGTest : public testing::Test {
 protected:
@@ -41,8 +39,8 @@ protected:
       return;
 
     TargetOptions Options;
-    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
-        T->createTargetMachine("AArch64", "", "", Options, None, None,
+    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+        T->createTargetMachine("AArch64", "", "+sve", Options, None, None,
                                CodeGenOpt::Aggressive)));
     if (!TM)
       return;
@@ -69,6 +67,14 @@ protected:
     DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
+  TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
+    return DAG->getTargetLoweringInfo().getTypeAction(Context, VT);
+  }
+
+  EVT getTypeToTransformTo(EVT VT) {
+    return DAG->getTargetLoweringInfo().getTypeToTransformTo(Context, VT);
+  }
+
   LLVMContext Context;
   std::unique_ptr<LLVMTargetMachine> TM;
   std::unique_ptr<Module> M;
@@ -90,6 +96,25 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_ZERO_EXTEND_VECTOR_INREG) {
   auto DemandedElts = APInt(2, 3);
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
   EXPECT_TRUE(Known.isZero());
+}
+
+TEST_F(AArch64SelectionDAGTest, computeKnownBitsSVE_ZERO_EXTEND_VECTOR_INREG) {
+  if (!TM)
+    return;
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int16VT = EVT::getIntegerVT(Context, 16);
+  auto InVecVT = EVT::getVectorVT(Context, Int8VT, 4, true);
+  auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2, true);
+  auto InVec = DAG->getConstant(0, Loc, InVecVT);
+  auto Op = DAG->getNode(ISD::ZERO_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
+  auto DemandedElts = APInt(2, 3);
+  KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
+
+  // We don't know anything for SVE at the moment.
+  EXPECT_EQ(Known.Zero, APInt(16, 0u));
+  EXPECT_EQ(Known.One, APInt(16, 0u));
+  EXPECT_FALSE(Known.isZero());
 }
 
 TEST_F(AArch64SelectionDAGTest, computeKnownBits_EXTRACT_SUBVECTOR) {
@@ -119,6 +144,20 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SIGN_EXTEND_VECTOR_INREG) {
   auto Op = DAG->getNode(ISD::SIGN_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
   auto DemandedElts = APInt(2, 3);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 15u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_SIGN_EXTEND_VECTOR_INREG) {
+  if (!TM)
+    return;
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int16VT = EVT::getIntegerVT(Context, 16);
+  auto InVecVT = EVT::getVectorVT(Context, Int8VT, 4, /*IsScalable=*/true);
+  auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2, /*IsScalable=*/true);
+  auto InVec = DAG->getConstant(1, Loc, InVecVT);
+  auto Op = DAG->getNode(ISD::SIGN_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
+  auto DemandedElts = APInt(2, 3);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 1u);
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_EXTRACT_SUBVECTOR) {
@@ -155,6 +194,61 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
   EXPECT_EQ(TL.SimplifyDemandedVectorElts(Op, DemandedElts, KnownUndef,
                                           KnownZero, TLO),
             false);
+}
+
+TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsNEON) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto InVecVT = EVT::getVectorVT(Context, Int8VT, 16);
+  SDValue UnknownOp = DAG->getRegister(0, InVecVT);
+  SDValue Mask1S = DAG->getConstant(0x8A, Loc, Int8VT);
+  SDValue Mask1V = DAG->getSplatBuildVector(InVecVT, Loc, Mask1S);
+  SDValue N0 = DAG->getNode(ISD::AND, Loc, InVecVT, Mask1V, UnknownOp);
+
+  SDValue Mask2S = DAG->getConstant(0x55, Loc, Int8VT);
+  SDValue Mask2V = DAG->getSplatBuildVector(InVecVT, Loc, Mask2S);
+
+  SDValue Op = DAG->getNode(ISD::AND, Loc, InVecVT, N0, Mask2V);
+  // N0 = ?000?0?0
+  // Mask2V = 01010101
+  //  =>
+  // Known.Zero = 00100000 (0xAA)
+  KnownBits Known;
+  APInt DemandedBits = APInt(8, 0xFF);
+  TargetLowering::TargetLoweringOpt TLO(*DAG, false, false);
+  EXPECT_TRUE(TL.SimplifyDemandedBits(Op, DemandedBits, Known, TLO));
+  EXPECT_EQ(Known.Zero, APInt(8, 0xAA));
+}
+
+TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsSVE) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto InVecVT = EVT::getVectorVT(Context, Int8VT, 16, /*IsScalable=*/true);
+  SDValue UnknownOp = DAG->getRegister(0, InVecVT);
+  SDValue Mask1S = DAG->getConstant(0x8A, Loc, Int8VT);
+  SDValue Mask1V = DAG->getSplatVector(InVecVT, Loc, Mask1S);
+  SDValue N0 = DAG->getNode(ISD::AND, Loc, InVecVT, Mask1V, UnknownOp);
+
+  SDValue Mask2S = DAG->getConstant(0x55, Loc, Int8VT);
+  SDValue Mask2V = DAG->getSplatVector(InVecVT, Loc, Mask2S);
+
+  SDValue Op = DAG->getNode(ISD::AND, Loc, InVecVT, N0, Mask2V);
+
+  KnownBits Known;
+  APInt DemandedBits = APInt(8, 0xFF);
+  TargetLowering::TargetLoweringOpt TLO(*DAG, false, false);
+  EXPECT_FALSE(TL.SimplifyDemandedBits(Op, DemandedBits, Known, TLO));
+  EXPECT_EQ(Known.Zero, APInt(8, 0));
 }
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
@@ -377,4 +471,59 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_ADD_of_SPLAT_VECTO
   EXPECT_EQ(SplatIdx, 0);
 }
 
-} // end anonymous namespace
+TEST_F(AArch64SelectionDAGTest, getTypeConversion_SplitScalableMVT) {
+  if (!TM)
+    return;
+
+  MVT VT = MVT::nxv4i64;
+  EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypeSplitVector);
+  ASSERT_TRUE(getTypeToTransformTo(VT).isScalableVector());
+}
+
+TEST_F(AArch64SelectionDAGTest, getTypeConversion_PromoteScalableMVT) {
+  if (!TM)
+    return;
+
+  MVT VT = MVT::nxv2i32;
+  EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypePromoteInteger);
+  ASSERT_TRUE(getTypeToTransformTo(VT).isScalableVector());
+}
+
+TEST_F(AArch64SelectionDAGTest, getTypeConversion_NoScalarizeMVT_nxv1f32) {
+  if (!TM)
+    return;
+
+  MVT VT = MVT::nxv1f32;
+  EXPECT_NE(getTypeAction(VT), TargetLoweringBase::TypeScalarizeVector);
+  ASSERT_TRUE(getTypeToTransformTo(VT).isScalableVector());
+}
+
+TEST_F(AArch64SelectionDAGTest, getTypeConversion_SplitScalableEVT) {
+  if (!TM)
+    return;
+
+  EVT VT = EVT::getVectorVT(Context, MVT::i64, 256, true);
+  EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypeSplitVector);
+  EXPECT_EQ(getTypeToTransformTo(VT), VT.getHalfNumVectorElementsVT(Context));
+}
+
+TEST_F(AArch64SelectionDAGTest, getTypeConversion_WidenScalableEVT) {
+  if (!TM)
+    return;
+
+  EVT FromVT = EVT::getVectorVT(Context, MVT::i64, 6, true);
+  EVT ToVT = EVT::getVectorVT(Context, MVT::i64, 8, true);
+
+  EXPECT_EQ(getTypeAction(FromVT), TargetLoweringBase::TypeWidenVector);
+  EXPECT_EQ(getTypeToTransformTo(FromVT), ToVT);
+}
+
+TEST_F(AArch64SelectionDAGTest, getTypeConversion_NoScalarizeEVT_nxv1f128) {
+  if (!TM)
+    return;
+
+  EVT FromVT = EVT::getVectorVT(Context, MVT::f128, 1, true);
+  EXPECT_DEATH(getTypeAction(FromVT), "Cannot legalize this vector");
+}
+
+} // end namespace llvm

@@ -797,6 +797,11 @@ void Linux::AddCudaIncludeArgs(const ArgList &DriverArgs,
   CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
+void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
+                              ArgStringList &CC1Args) const {
+  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
+}
+
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
                                 ArgStringList &CC1Args) const {
   if (GCCInstallation.isValid()) {
@@ -835,6 +840,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
                          getTriple().getArch() == llvm::Triple::thumb ||
                          getTriple().getArch() == llvm::Triple::armeb ||
                          getTriple().getArch() == llvm::Triple::thumbeb;
+  const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
@@ -847,7 +853,8 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   Res |= SanitizerKind::SafeStack;
   if (IsX86_64 || IsMIPS64 || IsAArch64)
     Res |= SanitizerKind::DataFlow;
-  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch || IsPowerPC64)
+  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch || IsPowerPC64 ||
+      IsSystemZ)
     Res |= SanitizerKind::Leak;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64)
     Res |= SanitizerKind::Thread;
@@ -867,13 +874,9 @@ SanitizerMask Linux::getSupportedSanitizers() const {
 
 void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs) const {
-  bool Profile = needsProfileRT(Args);
-  if (!Profile && !needsGCovInstrumentation(Args))
-    return;
-
   // Add linker option -u__llvm_profile_runtime to cause runtime
   // initialization module to be linked in.
-  if (Profile)
+  if (needsProfileRT(Args))
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
   ToolChain::addProfileRTLibs(Args, CmdArgs);

@@ -31,6 +31,7 @@
 
 namespace llvm {
 
+class AssemblyAnnotationWriter;
 class CallInst;
 class Function;
 class LandingPadInst;
@@ -276,6 +277,12 @@ public:
                    static_cast<const BasicBlock *>(this)->getUniqueSuccessor());
   }
 
+  /// Print the basic block to an output stream with an optional
+  /// AssemblyAnnotationWriter.
+  void print(raw_ostream &OS, AssemblyAnnotationWriter *AAW = nullptr,
+             bool ShouldPreserveUseListOrder = false,
+             bool IsForDebug = false) const;
+
   //===--------------------------------------------------------------------===//
   /// Instruction iterator methods
   ///
@@ -370,12 +377,12 @@ public:
   /// except operator delete.
   void dropAllReferences();
 
-  /// Notify the BasicBlock that the predecessor \p Pred is no longer able to
-  /// reach it.
+  /// Update PHI nodes in this BasicBlock before removal of predecessor \p Pred.
+  /// Note that this function does not actually remove the predecessor.
   ///
-  /// This is actually not used to update the Predecessor list, but is actually
-  /// used to update the PHI nodes that reside in the block.  Note that this
-  /// should be called while the predecessor still refers to this block.
+  /// If \p KeepOneInputPHIs is true then don't remove PHIs that are left with
+  /// zero or one incoming values, and don't simplify PHIs with all incoming
+  /// values the same.
   void removePredecessor(BasicBlock *Pred, bool KeepOneInputPHIs = false);
 
   bool canSplitPredecessors() const;

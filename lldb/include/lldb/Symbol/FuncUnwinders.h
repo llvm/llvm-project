@@ -149,7 +149,8 @@ private:
 
   Address m_first_non_prologue_insn;
 
-  DISALLOW_COPY_AND_ASSIGN(FuncUnwinders);
+  FuncUnwinders(const FuncUnwinders &) = delete;
+  const FuncUnwinders &operator=(const FuncUnwinders &) = delete;
 
 }; // class FuncUnwinders
 

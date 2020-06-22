@@ -24,7 +24,8 @@ public:
 
 private:
   // For CommandObjectLog only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectLog);
+  CommandObjectLog(const CommandObjectLog &) = delete;
+  const CommandObjectLog &operator=(const CommandObjectLog &) = delete;
 };
 
 } // namespace lldb_private

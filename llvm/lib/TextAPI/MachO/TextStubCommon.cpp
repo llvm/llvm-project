@@ -12,6 +12,7 @@
 
 #include "TextStubCommon.h"
 #include "TextAPIContext.h"
+#include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm::MachO;
 
@@ -128,7 +129,7 @@ QuotingType ScalarTraits<PlatformSet>::mustQuote(StringRef) {
 
 void ScalarBitSetTraits<ArchitectureSet>::bitset(IO &IO,
                                                  ArchitectureSet &Archs) {
-#define ARCHINFO(arch, type, subtype)                                          \
+#define ARCHINFO(arch, type, subtype, numbits)                                 \
   IO.bitSetCase(Archs, #arch, 1U << static_cast<int>(AK_##arch));
 #include "llvm/TextAPI/MachO/Architecture.def"
 #undef ARCHINFO

@@ -32,16 +32,16 @@ class ModuleSanitizerCoveragePass
 public:
   explicit ModuleSanitizerCoveragePass(
       SanitizerCoverageOptions Options = SanitizerCoverageOptions(),
-      const std::vector<std::string> &WhitelistFiles =
+      const std::vector<std::string> &AllowlistFiles =
           std::vector<std::string>(),
-      const std::vector<std::string> &BlacklistFiles =
+      const std::vector<std::string> &BlocklistFiles =
           std::vector<std::string>())
       : Options(Options) {
-    if (WhitelistFiles.size() > 0)
-      Whitelist = SpecialCaseList::createOrDie(WhitelistFiles,
+    if (AllowlistFiles.size() > 0)
+      Allowlist = SpecialCaseList::createOrDie(AllowlistFiles,
                                                *vfs::getRealFileSystem());
-    if (BlacklistFiles.size() > 0)
-      Blacklist = SpecialCaseList::createOrDie(BlacklistFiles,
+    if (BlocklistFiles.size() > 0)
+      Blocklist = SpecialCaseList::createOrDie(BlocklistFiles,
                                                *vfs::getRealFileSystem());
   }
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
@@ -49,15 +49,15 @@ public:
 private:
   SanitizerCoverageOptions Options;
 
-  std::unique_ptr<SpecialCaseList> Whitelist;
-  std::unique_ptr<SpecialCaseList> Blacklist;
+  std::unique_ptr<SpecialCaseList> Allowlist;
+  std::unique_ptr<SpecialCaseList> Blocklist;
 };
 
 // Insert SanitizerCoverage instrumentation.
 ModulePass *createModuleSanitizerCoverageLegacyPassPass(
     const SanitizerCoverageOptions &Options = SanitizerCoverageOptions(),
-    const std::vector<std::string> &WhitelistFiles = std::vector<std::string>(),
-    const std::vector<std::string> &BlacklistFiles =
+    const std::vector<std::string> &AllowlistFiles = std::vector<std::string>(),
+    const std::vector<std::string> &BlocklistFiles =
         std::vector<std::string>());
 
 } // namespace llvm

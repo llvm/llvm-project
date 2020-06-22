@@ -288,3 +288,5 @@ tblgen::StructAttr::getAllFields() const {
 
   return attributes;
 }
+
+const char *mlir::tblgen::inferTypeOpInterface = "InferTypeOpInterface";

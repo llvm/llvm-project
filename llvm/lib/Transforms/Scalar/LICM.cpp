@@ -504,7 +504,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         if (sink(I, LI, DT, CurLoop, SafetyInfo, MSSAU, ORE)) {
           if (!FreeInLoop) {
             ++II;
-            salvageDebugInfoOrMarkUndef(I);
+            salvageDebugInfo(I);
             eraseInstruction(I, *SafetyInfo, CurAST, MSSAU);
           }
           Changed = true;

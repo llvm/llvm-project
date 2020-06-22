@@ -374,6 +374,12 @@ int SystemZTTIImpl::getArithmeticInstrCost(
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
 
+  // TODO: Handle more cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                         Op2Info, Opd1PropInfo,
+                                         Opd2PropInfo, Args, CxtI);
+
   // TODO: return a good value for BB-VECTORIZER that includes the
   // immediate loads, which we do not want to count for the loop
   // vectorizer, since they are hopefully hoisted out of the loop. This
@@ -663,7 +669,7 @@ static Type *getCmpOpsType(const Instruction *I, unsigned VF = 1) {
     // Return the potentially vectorized type based on 'I' and 'VF'.  'I' may
     // be either scalar or already vectorized with a same or lesser VF.
     Type *ElTy = OpTy->getScalarType();
-    return VectorType::get(ElTy, VF);
+    return FixedVectorType::get(ElTy, VF);
   }
 
   return nullptr;
@@ -691,6 +697,12 @@ getBoolVecToIntConversionCost(unsigned Opcode, Type *Dst,
 int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                      TTI::TargetCostKind CostKind,
                                      const Instruction *I) {
+  // FIXME: Can the logic below also be used for these cost kinds?
+  if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency) {
+    int BaseCost = BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
+    return BaseCost == 0 ? BaseCost : 1;
+  }
+
   unsigned DstScalarBits = Dst->getScalarSizeInBits();
   unsigned SrcScalarBits = Src->getScalarSizeInBits();
 
@@ -831,6 +843,9 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                        Type *CondTy,
                                        TTI::TargetCostKind CostKind,
                                        const Instruction *I) {
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind);
+
   if (!ValTy->isVectorTy()) {
     switch (Opcode) {
     case Instruction::ICmp: {
@@ -1023,6 +1038,10 @@ int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                     const Instruction *I) {
   assert(!Src->isVoidTy() && "Invalid type");
 
+  // TODO: Handle other cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return 1;
+
   if (!Src->isVectorTy() && Opcode == Instruction::Load && I != nullptr) {
     // Store the load or its truncated or extended value in FoldedValue.
     const Instruction *FoldedValue = nullptr;
@@ -1151,26 +1170,10 @@ static int getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy) {
   return -1;
 }
 
-int SystemZTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                          ArrayRef<Value *> Args,
-                                          FastMathFlags FMF, unsigned VF,
-                                          TTI::TargetCostKind CostKind,
-                                          const Instruction *I) {
-  int Cost = getVectorIntrinsicInstrCost(ID, RetTy);
+int SystemZTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                          TTI::TargetCostKind CostKind) {
+  int Cost = getVectorIntrinsicInstrCost(ICA.getID(), ICA.getReturnType());
   if (Cost != -1)
     return Cost;
-  return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, CostKind, I);
-}
-
-int SystemZTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                          ArrayRef<Type *> Tys,
-                                          FastMathFlags FMF,
-                                          unsigned ScalarizationCostPassed,
-                                          TTI::TargetCostKind CostKind,
-                                          const Instruction *I) {
-  int Cost = getVectorIntrinsicInstrCost(ID, RetTy);
-  if (Cost != -1)
-    return Cost;
-  return BaseT::getIntrinsicInstrCost(ID, RetTy, Tys, FMF,
-                                      ScalarizationCostPassed, CostKind, I);
+  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }

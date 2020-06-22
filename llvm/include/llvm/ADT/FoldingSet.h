@@ -494,7 +494,7 @@ class FoldingSet : public FoldingSetImpl<FoldingSet<T>, T> {
   using Super = FoldingSetImpl<FoldingSet, T>;
   using Node = typename Super::Node;
 
-  /// GetNodeProfile - Each instantiatation of the FoldingSet needs to provide a
+  /// GetNodeProfile - Each instantiation of the FoldingSet needs to provide a
   /// way to convert nodes into a unique specifier.
   static void GetNodeProfile(const FoldingSetBase *, Node *N,
                              FoldingSetNodeID &ID) {

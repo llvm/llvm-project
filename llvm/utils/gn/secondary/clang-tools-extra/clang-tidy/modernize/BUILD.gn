@@ -28,6 +28,7 @@ static_library("modernize") {
     "RawStringLiteralCheck.cpp",
     "RedundantVoidArgCheck.cpp",
     "ReplaceAutoPtrCheck.cpp",
+    "ReplaceDisallowCopyAndAssignMacroCheck.cpp",
     "ReplaceRandomShuffleCheck.cpp",
     "ReturnBracedInitListCheck.cpp",
     "ShrinkToFitCheck.cpp",

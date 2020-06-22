@@ -245,6 +245,7 @@ else() # if this is included from LLVM's CMake
                                         -DCMAKE_ASM_COMPILER_TARGET=${TARGET_TRIPLE}
                                         -DCMAKE_C_COMPILER_WORKS=ON
                                         -DCMAKE_ASM_COMPILER_WORKS=ON
+                                        ${BUILTINS_CMAKE_ARGS}
                              PASSTHROUGH_PREFIXES COMPILER_RT
                              USE_TOOLCHAIN
                              ${EXTRA_ARGS})
@@ -395,6 +396,7 @@ else() # if this is included from LLVM's CMake
                                         -DCMAKE_C_COMPILER_WORKS=ON
                                         -DCMAKE_CXX_COMPILER_WORKS=ON
                                         -DCMAKE_ASM_COMPILER_WORKS=ON
+                                        ${RUNTIMES_CMAKE_ARGS}
                              PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                   ${ARG_PREFIXES}
                              EXTRA_TARGETS ${extra_targets}
@@ -462,14 +464,16 @@ else() # if this is included from LLVM's CMake
         list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
       endif()
     endforeach()
-    foreach(variableName ${variableNames})
-      string(FIND "${variableName}" "RUNTIMES_${name}_" out)
-      if("${out}" EQUAL 0)
-        string(REPLACE "RUNTIMES_${name}_" "" new_name ${variableName})
-        string(REPLACE ";" "|" new_value "${${variableName}}")
-        list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
-      endif()
-    endforeach()
+    if(NOT "${name}" STREQUAL "${target}")
+      foreach(variableName ${variableNames})
+        string(FIND "${variableName}" "RUNTIMES_${name}_" out)
+        if("${out}" EQUAL 0)
+          string(REPLACE "RUNTIMES_${name}_" "" new_name ${variableName})
+          string(REPLACE ";" "|" new_value "${${variableName}}")
+          list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
+        endif()
+      endforeach()
+    endif()
 
     if(NOT RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES AND NOT RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES)
       string(REPLACE ";" "|" LLVM_ENABLE_RUNTIMES_PASSTHROUGH "${LLVM_ENABLE_RUNTIMES}")

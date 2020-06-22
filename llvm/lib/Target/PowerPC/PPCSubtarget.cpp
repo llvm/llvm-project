@@ -78,6 +78,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasP8Crypto = false;
   HasP9Vector = false;
   HasP9Altivec = false;
+  HasP10Vector = false;
   HasPrefixInstrs = false;
   HasPCRelativeMemops = false;
   HasFCPSGN = false;
@@ -115,6 +116,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasAddiLoadFusion = false;
   HasAddisLoadFusion = false;
   IsISA3_0 = false;
+  IsISA3_1 = false;
   UseLongCalls = false;
   SecurePlt = false;
   VectorsUseTwoUnits = false;

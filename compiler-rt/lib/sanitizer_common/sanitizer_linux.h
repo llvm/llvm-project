@@ -65,8 +65,8 @@ void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
   || defined(__arm__)
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                     int *parent_tidptr, void *newtls, int *child_tidptr);
-int internal_uname(struct utsname *buf);
 #endif
+int internal_uname(struct utsname *buf);
 #elif SANITIZER_FREEBSD
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
 #elif SANITIZER_NETBSD

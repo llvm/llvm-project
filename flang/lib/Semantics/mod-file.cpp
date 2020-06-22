@@ -322,7 +322,11 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     if (n++ > 0) {
       os << ',';
     }
-    os << dummy->name();
+    if (dummy) {
+      os << dummy->name();
+    } else {
+      os << "*";
+    }
   }
   os << ')';
   PutAttrs(os, bindAttrs, details.bindName(), " "s, ""s);
@@ -389,7 +393,7 @@ void ModFileWriter::PutGeneric(const Symbol &symbol) {
 void ModFileWriter::PutUse(const Symbol &symbol) {
   auto &details{symbol.get<UseDetails>()};
   auto &use{details.symbol()};
-  uses_ << "use " << details.module().name();
+  uses_ << "use " << GetUsedModule(details).name();
   PutGenericName(uses_ << ",only:", symbol);
   // Can have intrinsic op with different local-name and use-name
   // (e.g. `operator(<)` and `operator(.lt.)`) but rename is not allowed
@@ -825,7 +829,9 @@ void SubprogramSymbolCollector::Collect() {
   const auto &details{symbol_.get<SubprogramDetails>()};
   isInterface_ = details.isInterface();
   for (const Symbol *dummyArg : details.dummyArgs()) {
-    DoSymbol(DEREF(dummyArg));
+    if (dummyArg) {
+      DoSymbol(*dummyArg);
+    }
   }
   if (details.isFunction()) {
     DoSymbol(details.result());

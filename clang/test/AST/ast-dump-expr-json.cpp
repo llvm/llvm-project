@@ -3735,6 +3735,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:            "hasConstParam": true,
 // CHECK-NEXT:            "implicitHasConstParam": true,
 // CHECK-NEXT:            "needsImplicit": true,
+// CHECK-NEXT:            "simple": true,
 // CHECK-NEXT:            "trivial": true
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "copyCtor": {
@@ -5041,7 +5042,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "Ts..."
+// CHECK-NEXT:             "qualType": "Ts"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
 // CHECK-NEXT:            "referencedDecl": {
@@ -6621,7 +6622,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "Ts..."
+// CHECK-NEXT:             "qualType": "Ts"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
 // CHECK-NEXT:            "referencedDecl": {
@@ -7602,7 +7603,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "Ts..."
+// CHECK-NEXT:           "qualType": "Ts"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
 // CHECK-NEXT:          "referencedDecl": {
@@ -7655,7 +7656,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "Ts..."
+// CHECK-NEXT:           "qualType": "Ts"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
 // CHECK-NEXT:          "referencedDecl": {
@@ -7706,7 +7707,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "Ts..."
+// CHECK-NEXT:           "qualType": "Ts"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
 // CHECK-NEXT:          "referencedDecl": {

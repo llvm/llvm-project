@@ -57,7 +57,7 @@ class Origin {
 
   u32 raw_id() const { return raw_id_; }
   bool isHeapOrigin() const {
-    // 1xxx xxxx xxxx xxxx
+    // 0xxx xxxx xxxx xxxx
     return raw_id_ >> kHeapShift == 0;
   }
   bool isStackOrigin() const {

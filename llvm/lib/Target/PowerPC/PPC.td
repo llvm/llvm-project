@@ -51,6 +51,7 @@ def DirectivePwr6x
 def DirectivePwr7: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR7", "">;
 def DirectivePwr8: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR8", "">;
 def DirectivePwr9: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR9", "">;
+def DirectivePwr10: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR10", "">;
 def DirectivePwrFuture
     : SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR_FUTURE", "">;
 
@@ -205,6 +206,9 @@ def DeprecatedDST    : SubtargetFeature<"", "DeprecatedDST", "true",
 def FeatureISA3_0 : SubtargetFeature<"isa-v30-instructions", "IsISA3_0",
                                      "true",
                                      "Enable instructions added in ISA 3.0.">;
+def FeatureISA3_1 : SubtargetFeature<"isa-v31-instructions", "IsISA3_1",
+                                     "true",
+                                     "Enable instructions added in ISA 3.1.">;
 def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9Altivec", "true",
                                         "Enable POWER9 Altivec instructions",
                                         [FeatureISA3_0, FeatureP8Altivec]>;
@@ -212,6 +216,10 @@ def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9Vector", "true",
                                         "Enable POWER9 vector instructions",
                                         [FeatureISA3_0, FeatureP8Vector,
                                          FeatureP9Altivec]>;
+def FeatureP10Vector  : SubtargetFeature<"power10-vector", "HasP10Vector",
+                                         "true",
+                                         "Enable POWER10 vector instructions",
+                                         [FeatureISA3_1, FeatureP9Vector]>;
 // A separate feature for this even though it is equivalent to P9Vector
 // because this is a feature of the implementation rather than the architecture
 // and may go away with future CPU's.
@@ -328,14 +336,25 @@ def ProcessorFeatures {
   list<SubtargetFeature> P9Features =
     !listconcat(P9InheritableFeatures, P9SpecificFeatures);
 
+  // Power10
+  // For P10 CPU we assume that all of the existing features from Power9
+  // still exist with the exception of those we know are Power9 specific.
+  list<SubtargetFeature> P10AdditionalFeatures =
+    [DirectivePwr10, FeatureISA3_1, FeaturePrefixInstrs,
+     FeaturePCRelativeMemops, FeatureP10Vector];
+  list<SubtargetFeature> P10SpecificFeatures = [];
+  list<SubtargetFeature> P10InheritableFeatures =
+    !listconcat(P9InheritableFeatures, P10AdditionalFeatures);
+  list<SubtargetFeature> P10Features =
+    !listconcat(P10InheritableFeatures, P10SpecificFeatures);
+
   // Future
-  // For future CPU we assume that all of the existing features from Power 9
-  // still exist with the exception of those we know are Power 9 specific.
+  // For future CPU we assume that all of the existing features from Power10
+  // still exist with the exception of those we know are Power10 specific.
   list<SubtargetFeature> FutureAdditionalFeatures = [];
-  list<SubtargetFeature> FutureSpecificFeatures =
-    [FeaturePrefixInstrs, FeaturePCRelativeMemops];
+  list<SubtargetFeature> FutureSpecificFeatures = [];
   list<SubtargetFeature> FutureInheritableFeatures =
-    !listconcat(P9InheritableFeatures, FutureAdditionalFeatures);
+    !listconcat(P10InheritableFeatures, FutureAdditionalFeatures);
   list<SubtargetFeature> FutureFeatures =
     !listconcat(FutureInheritableFeatures, FutureSpecificFeatures);
 }
@@ -540,6 +559,8 @@ def : ProcessorModel<"pwr6x", G5Model,
 def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.P7Features>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.P8Features>;
 def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.P9Features>;
+// No scheduler model yet.
+def : ProcessorModel<"pwr10", NoSchedModel, ProcessorFeatures.P10Features>;
 // No scheduler model for future CPU.
 def : ProcessorModel<"future", NoSchedModel,
                   ProcessorFeatures.FutureFeatures>;

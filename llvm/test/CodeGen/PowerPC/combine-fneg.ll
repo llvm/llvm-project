@@ -13,17 +13,17 @@ define <4 x double> @fneg_fdiv_splat(double %a0, <4 x double> %a1) {
 ; CHECK-NEXT:    xvredp 2, 0
 ; CHECK-NEXT:    xxswapd 1, 1
 ; CHECK-NEXT:    xxlor 3, 1, 1
-; CHECK-NEXT:    xvmaddadp 3, 0, 2
-; CHECK-NEXT:    xvnmsubadp 2, 2, 3
-; CHECK-NEXT:    xvmaddadp 1, 0, 2
-; CHECK-NEXT:    xvmsubadp 2, 2, 1
+; CHECK-NEXT:    xvnmsubadp 3, 0, 2
+; CHECK-NEXT:    xvmaddadp 2, 2, 3
+; CHECK-NEXT:    xvnmsubadp 1, 0, 2
+; CHECK-NEXT:    xvnmaddadp 2, 2, 1
 ; CHECK-NEXT:    xvmuldp 34, 34, 2
 ; CHECK-NEXT:    xvmuldp 35, 35, 2
 ; CHECK-NEXT:    blr
 entry:
   %splat.splatinsert = insertelement <4 x double> undef, double %a0, i32 0
   %splat.splat = shufflevector <4 x double> %splat.splatinsert, <4 x double> undef, <4 x i32> zeroinitializer
-  %div = fdiv reassoc nsz arcp <4 x double> %a1, %splat.splat
+  %div = fdiv reassoc nsz arcp ninf <4 x double> %a1, %splat.splat
   %sub = fsub reassoc nsz <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, %div
   ret <4 x double> %sub
 }

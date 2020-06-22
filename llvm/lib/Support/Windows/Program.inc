@@ -10,14 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
+#include <psapi.h>
 #include <cstdio>
 #include <fcntl.h>
 #include <io.h>
@@ -390,7 +391,8 @@ std::string sys::flattenWindowsCommandLine(ArrayRef<StringRef> Args) {
 }
 
 ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
-                      bool WaitUntilChildTerminates, std::string *ErrMsg) {
+                      bool WaitUntilChildTerminates, std::string *ErrMsg,
+                      Optional<ProcessStatistics> *ProcStat) {
   assert(PI.Pid && "invalid pid to wait on, process not started?");
   assert((PI.Process && PI.Process != INVALID_HANDLE_VALUE) &&
          "invalid process handle to wait on, process not started?");
@@ -401,6 +403,8 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
     milliSecondsToWait = SecondsToWait * 1000;
 
   ProcessInfo WaitResult = PI;
+  if (ProcStat)
+    ProcStat->reset();
   DWORD WaitStatus = WaitForSingleObject(PI.Process, milliSecondsToWait);
   if (WaitStatus == WAIT_TIMEOUT) {
     if (SecondsToWait) {
@@ -418,6 +422,22 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
     } else {
       // Non-blocking wait.
       return ProcessInfo();
+    }
+  }
+
+  // Get process execution statistics.
+  if (ProcStat) {
+    FILETIME CreationTime, ExitTime, KernelTime, UserTime;
+    PROCESS_MEMORY_COUNTERS MemInfo;
+    if (GetProcessTimes(PI.Process, &CreationTime, &ExitTime, &KernelTime,
+                        &UserTime) &&
+        GetProcessMemoryInfo(PI.Process, &MemInfo, sizeof(MemInfo))) {
+      auto UserT = std::chrono::duration_cast<std::chrono::microseconds>(
+          toDuration(UserTime));
+      auto KernelT = std::chrono::duration_cast<std::chrono::microseconds>(
+          toDuration(KernelTime));
+      uint64_t PeakMemory = MemInfo.PeakPagefileUsage / 1024;
+      *ProcStat = ProcessStatistics{UserT + KernelT, UserT, PeakMemory};
     }
   }
 

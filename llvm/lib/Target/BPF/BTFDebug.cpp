@@ -605,6 +605,38 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
                               bool CheckPointer, bool SeenPointer) {
   if (!Ty || DIToIdMap.find(Ty) != DIToIdMap.end()) {
     TypeId = DIToIdMap[Ty];
+
+    // To handle the case like the following:
+    //    struct t;
+    //    typedef struct t _t;
+    //    struct s1 { _t *c; };
+    //    int test1(struct s1 *arg) { ... }
+    //
+    //    struct t { int a; int b; };
+    //    struct s2 { _t c; }
+    //    int test2(struct s2 *arg) { ... }
+    //
+    // During traversing test1() argument, "_t" is recorded
+    // in DIToIdMap and a forward declaration fixup is created
+    // for "struct t" to avoid pointee type traversal.
+    //
+    // During traversing test2() argument, even if we see "_t" is
+    // already defined, we should keep moving to eventually
+    // bring in types for "struct t". Otherwise, the "struct s2"
+    // definition won't be correct.
+    if (Ty && (!CheckPointer || !SeenPointer)) {
+      if (const auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+        unsigned Tag = DTy->getTag();
+        if (Tag == dwarf::DW_TAG_typedef || Tag == dwarf::DW_TAG_const_type ||
+            Tag == dwarf::DW_TAG_volatile_type ||
+            Tag == dwarf::DW_TAG_restrict_type) {
+          uint32_t TmpTypeId;
+          visitTypeEntry(DTy->getBaseType(), TmpTypeId, CheckPointer,
+                         SeenPointer);
+        }
+      }
+    }
+
     return;
   }
 

@@ -56,7 +56,9 @@ private:
       m_result_var_sp; // If we are left to manage the materialization,
                        // then stuff the result expression variable here.
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanCallUserExpression);
+  ThreadPlanCallUserExpression(const ThreadPlanCallUserExpression &) = delete;
+  const ThreadPlanCallUserExpression &
+  operator=(const ThreadPlanCallUserExpression &) = delete;
 };
 
 } // namespace lldb_private

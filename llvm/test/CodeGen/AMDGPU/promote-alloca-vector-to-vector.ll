@@ -189,5 +189,23 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}ptr_alloca_bitcast:
+; OPT-LABEL: define i64 @ptr_alloca_bitcast
+
+; GCN-NOT: buffer_
+; GCN: v_mov_b32_e32 v1, 0
+
+; OPT: %private_iptr = alloca <2 x i32>, align 8, addrspace(5)
+; OPT: %cast = bitcast <2 x i32> addrspace(5)* %private_iptr to i64 addrspace(5)*
+; OPT: %tmp1 = load i64, i64 addrspace(5)* %cast, align 8
+
+define i64 @ptr_alloca_bitcast() {
+entry:
+  %private_iptr = alloca <2 x i32>, align 8, addrspace(5)
+  %cast = bitcast <2 x i32> addrspace(5)* %private_iptr to i64 addrspace(5)*
+  %tmp1 = load i64, i64 addrspace(5)* %cast, align 8
+  ret i64 %tmp1
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.workitem.id.y()

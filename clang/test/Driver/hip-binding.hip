@@ -2,6 +2,24 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
+// RUN: %clang -ccc-print-bindings -target x86_64-linux-gnu \
+// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
+// RUN:   -c 2>&1 | FileCheck -check-prefix=NRDCS %s
+// NRDCS: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[IN:.*hip-binding.hip]]"], output: "[[OBJ1:.*o]]"
+// NRDCS: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[OBJ1]]"], output: "[[IMG1:.*]]"
+// NRDCS: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[IN:.*hip-binding.hip]]"], output: "[[OBJ2:.*o]]"
+// NRDCS: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[OBJ2]]"], output: "[[IMG2:.*]]"
+// NRDCS: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[IMG1]]", "[[IMG2]]"], output: "[[FATBIN:.*]]"
+// NRDCS: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[IN]]", "[[FATBIN]]"], output: "{{.*}}"
+
+// RUN: %clang -ccc-print-bindings -target x86_64-linux-gnu \
+// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
+// RUN:   -c -fgpu-rdc 2>&1 | FileCheck -check-prefix=RDCS %s
+// RDCS: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[IN:.*hip-binding.hip]]"], output: "[[BC1:.*bc]]"
+// RDCS: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[IN:.*hip-binding.hip]]"], output: "[[BC2:.*bc]]"
+// RDCS: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[IN]]"], output: "[[HOSTOBJ:.*o]]"
+// RDCS: # "x86_64-unknown-linux-gnu" - "offload bundler", inputs: ["[[BC1]]", "[[BC2]]", "[[HOSTOBJ]]"], output: "{{.*}}"
+
 // RUN: touch %t.o
 // RUN: %clang --hip-link -ccc-print-bindings -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 -fgpu-rdc %t.o\

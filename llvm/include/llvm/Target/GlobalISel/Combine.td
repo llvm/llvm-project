@@ -27,6 +27,11 @@ class GICombineGroup<list<GICombine> rules> : GICombine {
   let Rules = rules;
 }
 
+class GICombinerHelperArg<string type, string name> {
+  string Type = type;
+  string Name = name;
+}
+
 // Declares a combiner helper class
 class GICombinerHelper<string classname, list<GICombine> rules>
     : GICombineGroup<rules> {
@@ -35,6 +40,12 @@ class GICombinerHelper<string classname, list<GICombine> rules>
   // The name of a run-time compiler option that will be generated to disable
   // specific rules within this combiner.
   string DisableRuleOption = ?;
+  // The state class to inherit from (if any). The generated helper will inherit
+  // from this class and will forward arguments to its constructors.
+  string StateClass = "";
+  // Any additional arguments that should be appended to the tryCombine*().
+  list<GICombinerHelperArg> AdditionalArguments =
+      [GICombinerHelperArg<"CombinerHelper &", "Helper">];
 }
 class GICombineRule<dag defs, dag match, dag apply> : GICombine {
   /// Defines the external interface of the match rule. This includes:
@@ -224,12 +235,29 @@ def binop_right_to_zero: GICombineRule<
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
 >;
 
+// Erase stores of undef values.
+def erase_undef_store : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_STORE):$root,
+    [{ return Helper.matchUndefStore(*${root}); }]),
+  (apply [{ return Helper.eraseInst(*${root}); }])
+>;
+
+def simplify_add_to_sub_matchinfo: GIDefMatchData<"std::tuple<Register, Register>">;
+def simplify_add_to_sub: GICombineRule <
+  (defs root:$root, simplify_add_to_sub_matchinfo:$info),
+  (match (wip_match_opcode G_ADD):$root,
+    [{ return Helper.matchSimplifyAddToSub(*${root}, ${info}); }]),
+  (apply [{ return Helper.applySimplifyAddToSub(*${root}, ${info});}])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
-                                     propagate_undef_shuffle_mask]>;
+                                     propagate_undef_shuffle_mask,
+                                     erase_undef_store]>;
 
 def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,
@@ -238,4 +266,4 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl]>;
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     combines_for_extload, combine_indexed_load_store, undef_combines,
-    identity_combines]>;
+    identity_combines, simplify_add_to_sub]>;

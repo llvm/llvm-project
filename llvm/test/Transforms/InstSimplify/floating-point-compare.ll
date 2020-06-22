@@ -203,6 +203,15 @@ define i1 @orderedLessZeroTree(float,float,float,float) {
   ret i1 %uge
 }
 
+define i1 @orderedLessZero_fdiv(float %x) {
+; CHECK-LABEL: @orderedLessZero_fdiv(
+; CHECK-NEXT:    ret i1 true
+;
+  %d = fdiv float %x, %x
+  %uge = fcmp uge float %d, 0.0
+  ret i1 %uge
+}
+
 define i1 @orderedLessZeroExpExt(float) {
 ; CHECK-LABEL: @orderedLessZeroExpExt(
 ; CHECK-NEXT:    ret i1 true

@@ -168,6 +168,10 @@ public:
   /// and modification time to identify this particular file.
   ASTFileSignature Signature;
 
+  /// The signature of the AST block of the module file, this can be used to
+  /// unique module files based on AST contents.
+  ASTFileSignature ASTBlockHash;
+
   /// Whether this module has been directly imported by the
   /// user.
   bool DirectlyImported = false;
@@ -184,6 +188,9 @@ public:
 
   /// The global bit offset (or base) of this module
   uint64_t GlobalBitOffset = 0;
+
+  /// The bit offset of the AST block of this module.
+  uint64_t ASTBlockStartOffset = 0;
 
   /// The serialized bitstream data for this file.
   StringRef Data;
@@ -241,6 +248,9 @@ public:
 
   /// Cursor used to read source location entries.
   llvm::BitstreamCursor SLocEntryCursor;
+
+  /// The bit offset to the start of the SOURCE_MANAGER_BLOCK.
+  uint64_t SourceManagerBlockStartOffset = 0;
 
   /// The number of source location entries in this AST file.
   unsigned LocalNumSLocEntries = 0;
@@ -409,10 +419,13 @@ public:
 
   // === Declarations ===
 
-  /// DeclsCursor - This is a cursor to the start of the DECLS_BLOCK block. It
-  /// has read all the abbreviations at the start of the block and is ready to
-  /// jump around with these in context.
+  /// DeclsCursor - This is a cursor to the start of the DECLTYPES_BLOCK block.
+  /// It has read all the abbreviations at the start of the block and is ready
+  /// to jump around with these in context.
   llvm::BitstreamCursor DeclsCursor;
+
+  /// The offset to the start of the DECLTYPES_BLOCK block.
+  uint64_t DeclsBlockStartOffset = 0;
 
   /// The number of declarations in this AST file.
   unsigned LocalNumDecls = 0;

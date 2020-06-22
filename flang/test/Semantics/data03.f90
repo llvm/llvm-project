@@ -62,12 +62,18 @@ module m
       !C880
       !ERROR: Data implied do structure component must be subscripted
       DATA(nums % one, i = 1, 5) / 5 * 1 /
+      !C879
+      !ERROR: Data implied do object must be a variable
+      DATA(newNums % numbers(i), i = 1, 5) / 5 * 1 /
+      !C879
+      !ERROR: Data implied do object must be a variable
+      DATA(newNumsArray(i) % one, i = 1, 5) / 5 * 1 /
       !C880
       !OK: Correct use
-      DATA(largeArray(j) % nums % one, j = 1, 10) / 10 * 1 /
+      DATA(largeArray(j) % nums % one, j = 1, 5) / 5 * 1 /
       !C880
       !OK: Correct use
-      DATA(largeNumber % numsArray(j) % one, j = 1, 10) / 10 * 1 /
+      DATA(largeNumber % numsArray(j) % one, j = 1, 5) / 5 * 1 /
       !C881
       !ERROR: Data object must have constant subscripts
       DATA(b(x), i = 1, 5) / 5 * 1 /

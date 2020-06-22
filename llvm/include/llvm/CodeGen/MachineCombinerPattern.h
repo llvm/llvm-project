@@ -25,6 +25,10 @@ enum class MachineCombinerPattern {
   REASSOC_XA_BY,
   REASSOC_XA_YB,
 
+  // These are patterns matched by the PowerPC to reassociate FMA chains.
+  REASSOC_XY_AMM_BMM,
+  REASSOC_XMM_AMM_BMM,
+
   // These are multiply-add patterns matched by the AArch64 machine combiner.
   MULADDW_OP1,
   MULADDW_OP2,

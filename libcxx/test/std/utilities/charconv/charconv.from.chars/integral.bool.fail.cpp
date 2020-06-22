@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 // UNSUPPORTED: !libc++ && c++11
 // UNSUPPORTED: !libc++ && c++14
 // <charconv>

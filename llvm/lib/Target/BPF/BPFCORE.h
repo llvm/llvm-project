@@ -9,6 +9,8 @@
 #ifndef LLVM_LIB_TARGET_BPF_BPFCORE_H
 #define LLVM_LIB_TARGET_BPF_BPFCORE_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 
 class BPFCoreSharedInfo {
@@ -34,9 +36,9 @@ public:
   };
 
   /// The attribute attached to globals representing a field access
-  static const std::string AmaAttr;
+  static constexpr StringRef AmaAttr = "btf_ama";
   /// The attribute attached to globals representing a type id
-  static const std::string TypeIdAttr;
+  static constexpr StringRef TypeIdAttr = "btf_type_id";
 };
 
 } // namespace llvm

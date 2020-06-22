@@ -14,6 +14,7 @@
 #define AFFINE_OPS
 
 include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
+include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -178,11 +179,15 @@ def AffineForOp : Affine_Op<"for",
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "int64_t lowerBound, int64_t upperBound, int64_t step = 1">,
+              "int64_t lowerBound, int64_t upperBound, int64_t step = 1, "
+              "function_ref<void(OpBuilder &, Location, Value)> bodyBuilder "
+              "    = nullptr">,
     OpBuilder<"OpBuilder &builder, OperationState &result, "
               "ValueRange lbOperands, AffineMap lbMap, "
               "ValueRange ubOperands, AffineMap ubMap, "
-              "int64_t step = 1">
+              "int64_t step = 1, "
+              "function_ref<void(OpBuilder &, Location, Value)> bodyBuilder "
+              "    = nullptr">
   ];
 
   let extraClassDeclaration = [{
@@ -375,7 +380,8 @@ def AffineIfOp : Affine_Op<"if",
 }
 
 class AffineLoadOpBase<string mnemonic, list<OpTrait> traits = []> :
-    Affine_Op<mnemonic, traits> {
+    Affine_Op<mnemonic, !listconcat(traits,
+        [DeclareOpInterfaceMethods<AffineReadOpInterface>])> {
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$memref,
       Variadic<Index>:$indices);
@@ -384,34 +390,18 @@ class AffineLoadOpBase<string mnemonic, list<OpTrait> traits = []> :
     /// Returns the operand index of the memref.
     unsigned getMemRefOperandIndex() { return 0; }
 
-    /// Get memref operand.
-    Value getMemRef() { return getOperand(getMemRefOperandIndex()); }
     void setMemRef(Value value) { setOperand(getMemRefOperandIndex(), value); }
-    MemRefType getMemRefType() {
-      return getMemRef().getType().cast<MemRefType>();
-    }
-
-    /// Get affine map operands.
-    operand_range getMapOperands() { return llvm::drop_begin(getOperands(), 1); }
 
     /// Returns the affine map used to index the memref for this operation.
-    AffineMap getAffineMap() { return getAffineMapAttr().getValue(); }
     AffineMapAttr getAffineMapAttr() {
       return getAttr(getMapAttrName()).cast<AffineMapAttr>();
-    }
-
-    /// Returns the AffineMapAttr associated with 'memref'.
-    NamedAttribute getAffineMapAttrForMemRef(Value memref) {
-      assert(memref == getMemRef());
-      return {Identifier::get(getMapAttrName(), getContext()),
-              getAffineMapAttr()};
     }
 
     static StringRef getMapAttrName() { return "map"; }
   }];
 }
 
-def AffineLoadOp : AffineLoadOpBase<"load", []> {
+def AffineLoadOp : AffineLoadOpBase<"load"> {
   let summary = "affine load operation";
   let description = [{
     The "affine.load" op reads an element from a memref, where the index
@@ -471,6 +461,14 @@ class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
     static StringRef getMapAttrName() { return "map"; }
     AffineMap getAffineMap() { return map(); }
     ValueRange getMapOperands() { return operands(); }
+    ValueRange getDimOperands() {
+      return OperandRange{operands().begin(),
+                        operands().begin() + map().getNumDims()};
+    }
+    ValueRange getSymbolOperands() {
+      return OperandRange{operands().begin() + map().getNumDims(),
+                        operands().end()};
+    }
   }];
   let verifier = [{ return ::verifyAffineMinMaxOp(*this); }];
   let printer = [{ return ::printAffineMinMaxOp(p, *this); }];
@@ -676,8 +674,8 @@ def AffinePrefetchOp : Affine_Op<"prefetch"> {
 }
 
 class AffineStoreOpBase<string mnemonic, list<OpTrait> traits = []> :
-    Affine_Op<mnemonic, traits> {
-
+    Affine_Op<mnemonic, !listconcat(traits,
+        [DeclareOpInterfaceMethods<AffineWriteOpInterface>])> {
   code extraClassDeclarationBase = [{
     /// Get value to be stored by store operation.
     Value getValueToStore() { return getOperand(0); }
@@ -685,19 +683,9 @@ class AffineStoreOpBase<string mnemonic, list<OpTrait> traits = []> :
     /// Returns the operand index of the memref.
     unsigned getMemRefOperandIndex() { return 1; }
 
-    /// Get memref operand.
-    Value getMemRef() { return getOperand(getMemRefOperandIndex()); }
     void setMemRef(Value value) { setOperand(getMemRefOperandIndex(), value); }
 
-    MemRefType getMemRefType() {
-      return getMemRef().getType().cast<MemRefType>();
-    }
-
-    /// Get affine map operands.
-    operand_range getMapOperands() { return llvm::drop_begin(getOperands(), 2); }
-
     /// Returns the affine map used to index the memref for this operation.
-    AffineMap getAffineMap() { return getAffineMapAttr().getValue(); }
     AffineMapAttr getAffineMapAttr() {
       return getAttr(getMapAttrName()).cast<AffineMapAttr>();
     }
@@ -713,7 +701,7 @@ class AffineStoreOpBase<string mnemonic, list<OpTrait> traits = []> :
   }];
 }
 
-def AffineStoreOp : AffineStoreOpBase<"store", []> {
+def AffineStoreOp : AffineStoreOpBase<"store"> {
   let summary = "affine store operation";
   let description = [{
     The "affine.store" op writes an element to a memref, where the index
@@ -779,7 +767,7 @@ def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator]> {
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
-def AffineVectorLoadOp : AffineLoadOpBase<"vector_load", []> {
+def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
   let summary = "affine vector load operation";
   let description = [{
     The "affine.vector_load" is the vector counterpart of
@@ -828,7 +816,7 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load", []> {
   }];
 }
 
-def AffineVectorStoreOp : AffineStoreOpBase<"vector_store", []> {
+def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
   let summary = "affine vector store operation";
   let description = [{
     The "affine.vector_store" is the vector counterpart of

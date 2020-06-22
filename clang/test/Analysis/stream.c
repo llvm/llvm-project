@@ -193,3 +193,50 @@ void check_freopen_3() {
     fclose(f1);
   }
 }
+
+extern FILE *GlobalF;
+extern void takeFile(FILE *);
+
+void check_escape1() {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  fwrite("1", 1, 1, F); // may fail
+  GlobalF = F;
+  fwrite("1", 1, 1, F); // no warning
+}
+
+void check_escape2() {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  fwrite("1", 1, 1, F); // may fail
+  takeFile(F);
+  fwrite("1", 1, 1, F); // no warning
+}
+
+void check_escape3() {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  takeFile(F);
+  F = freopen(0, "w", F);
+  if (!F)
+    return;
+  fwrite("1", 1, 1, F); // may fail
+  fwrite("1", 1, 1, F); // no warning
+}
+
+void check_escape4() {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  fwrite("1", 1, 1, F); // may fail
+
+  // no escape at (non-StreamChecker-handled) system call
+  // FIXME: all such calls should be handled by the checker
+  fprintf(F, "0");
+
+  fwrite("1", 1, 1, F); // expected-warning {{might be 'indeterminate'}}
+  fclose(F);
+}

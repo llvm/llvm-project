@@ -129,7 +129,7 @@ ChildrenGetterTy<NodeTy, IsPostDom>::get(const NodeRef &N) {
 
 template <class NodeTy, bool IsPostDom>
 void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
-    SmallVectorImpl<NodeTy *> &PHIBlocks) {
+    SmallVectorImpl<NodeTy *> &IDFBlocks) {
   // Use a priority queue keyed on dominator tree level so that inserted nodes
   // are handled from the bottom of the dominator tree upwards. We also augment
   // the level with a DFS number to ensure that the blocks are ordered in a
@@ -144,14 +144,15 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
 
   DT.updateDFSNumbers();
 
-  for (NodeTy *BB : *DefBlocks) {
-    if (DomTreeNodeBase<NodeTy> *Node = DT.getNode(BB))
-      PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
-  }
-
   SmallVector<DomTreeNodeBase<NodeTy> *, 32> Worklist;
   SmallPtrSet<DomTreeNodeBase<NodeTy> *, 32> VisitedPQ;
   SmallPtrSet<DomTreeNodeBase<NodeTy> *, 32> VisitedWorklist;
+
+  for (NodeTy *BB : *DefBlocks)
+    if (DomTreeNodeBase<NodeTy> *Node = DT.getNode(BB)) {
+      PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
+      VisitedWorklist.insert(Node);
+    }
 
   while (!PQ.empty()) {
     DomTreeNodePair RootPair = PQ.top();
@@ -164,9 +165,8 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
     // most Root's level are added to the iterated dominance frontier of the
     // definition set.
 
-    Worklist.clear();
+    assert(Worklist.empty());
     Worklist.push_back(Root);
-    VisitedWorklist.insert(Root);
 
     while (!Worklist.empty()) {
       DomTreeNodeBase<NodeTy> *Node = Worklist.pop_back_val();
@@ -187,7 +187,7 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
         if (useLiveIn && !LiveInBlocks->count(SuccBB))
           return;
 
-        PHIBlocks.emplace_back(SuccBB);
+        IDFBlocks.emplace_back(SuccBB);
         if (!DefBlocks->count(SuccBB))
           PQ.push(std::make_pair(
               SuccNode, std::make_pair(SuccLevel, SuccNode->getDFSNumIn())));

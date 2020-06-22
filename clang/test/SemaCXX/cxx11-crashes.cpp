@@ -71,6 +71,7 @@ namespace b6981007 {
       // We used to attempt to evaluate the initializer of this variable,
       // and crash because it has an undeduced type.
       const int &n(x);
+      constexpr int k = sizeof(x);
     }
   }
 }

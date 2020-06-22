@@ -15,6 +15,7 @@ add_header_library(
   HDRS
     utils.h
     memcpy_utils.h
+    memset_utils.h
   DEPENDS
     .cacheline_size
 )

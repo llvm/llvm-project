@@ -69,6 +69,7 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::fAny:     return "MVT::fAny";
   case MVT::vAny:     return "MVT::vAny";
   case MVT::f16:      return "MVT::f16";
+  case MVT::bf16:     return "MVT::bf16";
   case MVT::f32:      return "MVT::f32";
   case MVT::f64:      return "MVT::f64";
   case MVT::f80:      return "MVT::f80";
@@ -132,6 +133,12 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v8f16:    return "MVT::v8f16";
   case MVT::v16f16:   return "MVT::v16f16";
   case MVT::v32f16:   return "MVT::v32f16";
+  case MVT::v2bf16:   return "MVT::v2bf16";
+  case MVT::v3bf16:   return "MVT::v3bf16";
+  case MVT::v4bf16:   return "MVT::v4bf16";
+  case MVT::v8bf16:   return "MVT::v8bf16";
+  case MVT::v16bf16:  return "MVT::v16bf16";
+  case MVT::v32bf16:  return "MVT::v32bf16";
   case MVT::v1f32:    return "MVT::v1f32";
   case MVT::v2f32:    return "MVT::v2f32";
   case MVT::v3f32:    return "MVT::v3f32";
@@ -182,6 +189,9 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::nxv2f16:  return "MVT::nxv2f16";
   case MVT::nxv4f16:  return "MVT::nxv4f16";
   case MVT::nxv8f16:  return "MVT::nxv8f16";
+  case MVT::nxv2bf16:  return "MVT::nxv2bf16";
+  case MVT::nxv4bf16:  return "MVT::nxv4bf16";
+  case MVT::nxv8bf16:  return "MVT::nxv8bf16";
   case MVT::nxv1f32:  return "MVT::nxv1f32";
   case MVT::nxv2f32:  return "MVT::nxv2f32";
   case MVT::nxv4f32:  return "MVT::nxv4f32";
@@ -785,25 +795,29 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
       hasSideEffects = true;
     else if (Property->isSubClassOf("NoCapture")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, NoCapture));
+      ArgumentAttributes.emplace_back(ArgNo, NoCapture, 0);
     } else if (Property->isSubClassOf("NoAlias")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, NoAlias));
+      ArgumentAttributes.emplace_back(ArgNo, NoAlias, 0);
     } else if (Property->isSubClassOf("Returned")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, Returned));
+      ArgumentAttributes.emplace_back(ArgNo, Returned, 0);
     } else if (Property->isSubClassOf("ReadOnly")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, ReadOnly));
+      ArgumentAttributes.emplace_back(ArgNo, ReadOnly, 0);
     } else if (Property->isSubClassOf("WriteOnly")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, WriteOnly));
+      ArgumentAttributes.emplace_back(ArgNo, WriteOnly, 0);
     } else if (Property->isSubClassOf("ReadNone")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, ReadNone));
+      ArgumentAttributes.emplace_back(ArgNo, ReadNone, 0);
     } else if (Property->isSubClassOf("ImmArg")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, ImmArg));
+      ArgumentAttributes.emplace_back(ArgNo, ImmArg, 0);
+    } else if (Property->isSubClassOf("Align")) {
+      unsigned ArgNo = Property->getValueAsInt("ArgNo");
+      uint64_t Align = Property->getValueAsInt("Align");
+      ArgumentAttributes.emplace_back(ArgNo, Alignment, Align);
     } else
       llvm_unreachable("Unknown property!");
   }
@@ -823,7 +837,8 @@ bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
 }
 
 bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
-  std::pair<unsigned, ArgAttribute> Val = {ParamIdx, ImmArg};
+  // Convert argument index to attribute index starting from `FirstArgIndex`.
+  ArgAttribute Val{ParamIdx + 1, ImmArg, 0};
   return std::binary_search(ArgumentAttributes.begin(),
                             ArgumentAttributes.end(), Val);
 }

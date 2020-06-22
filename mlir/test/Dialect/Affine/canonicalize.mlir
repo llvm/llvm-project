@@ -1,46 +1,46 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='func(canonicalize)' | FileCheck %s
 
 // Affine maps for test case: compose_affine_maps_1dto2d_no_symbols
-// CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 - 1)>
-// CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
+// CHECK-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 - 1)>
+// CHECK-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
 
 // Affine maps for test case: compose_affine_maps_1dto2d_with_symbols
-// CHECK-DAG: [[MAP4:#map[0-9]+]] = affine_map<(d0) -> (d0 - 4)>
-// CHECK-DAG: [[MAP4b:#map[0-9]+]] = affine_map<(d0) -> (d0 - 7)>
-// CHECK-DAG: [[MAP7:#map[0-9]+]] = affine_map<(d0) -> (d0 * 2 - 3)>
-// CHECK-DAG: [[MAP7a:#map[0-9]+]] = affine_map<(d0) -> (d0 * 2 + 1)>
+// CHECK-DAG: [[$MAP4:#map[0-9]+]] = affine_map<(d0) -> (d0 - 4)>
+// CHECK-DAG: [[$MAP4b:#map[0-9]+]] = affine_map<(d0) -> (d0 - 7)>
+// CHECK-DAG: [[$MAP7:#map[0-9]+]] = affine_map<(d0) -> (d0 * 2 - 3)>
+// CHECK-DAG: [[$MAP7a:#map[0-9]+]] = affine_map<(d0) -> (d0 * 2 + 1)>
 
 // Affine map for test case: compose_affine_maps_d2_tile
-// CHECK-DAG: [[MAP8:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 + (d0 ceildiv 4) * 4 - (d1 floordiv 4) * 4)>
-// CHECK-DAG: [[MAP8a:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 + (d0 ceildiv 8) * 8 - (d1 floordiv 8) * 8)>
+// CHECK-DAG: [[$MAP8:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 + (d0 ceildiv 4) * 4 - (d1 floordiv 4) * 4)>
+// CHECK-DAG: [[$MAP8a:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 + (d0 ceildiv 8) * 8 - (d1 floordiv 8) * 8)>
 
 // Affine maps for test case: compose_affine_maps_dependent_loads
-// CHECK-DAG: [[MAP9:#map[0-9]+]] = affine_map<(d0) -> (d0 + 3)>
-// CHECK-DAG: [[MAP10:#map[0-9]+]] = affine_map<(d0) -> (d0 * 3)>
-// CHECK-DAG: [[MAP11:#map[0-9]+]] = affine_map<(d0) -> ((d0 + 3) ceildiv 3)>
-// CHECK-DAG: [[MAP12:#map[0-9]+]] = affine_map<(d0) -> (d0 * 7 - 49)>
+// CHECK-DAG: [[$MAP9:#map[0-9]+]] = affine_map<(d0) -> (d0 + 3)>
+// CHECK-DAG: [[$MAP10:#map[0-9]+]] = affine_map<(d0) -> (d0 * 3)>
+// CHECK-DAG: [[$MAP11:#map[0-9]+]] = affine_map<(d0) -> ((d0 + 3) ceildiv 3)>
+// CHECK-DAG: [[$MAP12:#map[0-9]+]] = affine_map<(d0) -> (d0 * 7 - 49)>
 
 // Affine maps for test case: compose_affine_maps_diamond_dependency
-// CHECK-DAG: [[MAP13A:#map[0-9]+]] = affine_map<(d0) -> ((d0 + 6) ceildiv 8)>
-// CHECK-DAG: [[MAP13B:#map[0-9]+]] = affine_map<(d0) -> ((d0 * 4 - 4) floordiv 3)>
+// CHECK-DAG: [[$MAP13A:#map[0-9]+]] = affine_map<(d0) -> ((d0 + 6) ceildiv 8)>
+// CHECK-DAG: [[$MAP13B:#map[0-9]+]] = affine_map<(d0) -> ((d0 * 4 - 4) floordiv 3)>
 
 // Affine maps for test case: partial_fold_map
-// CHECK-DAG: [[MAP15:#map[0-9]+]] = affine_map<()[s0] -> (s0 - 42)>
+// CHECK-DAG: [[$MAP15:#map[0-9]+]] = affine_map<()[s0] -> (s0 - 42)>
 
 // Affine maps for test cases: symbolic_composition_*
-// CHECK-DAG: [[map_symbolic_composition_a:#map[0-9]+]] = affine_map<()[s0] -> (s0 * 512)>
-// CHECK-DAG: [[map_symbolic_composition_b:#map[0-9]+]] = affine_map<()[s0] -> (s0 * 4)>
-// CHECK-DAG: [[map_symbolic_composition_c:#map[0-9]+]] = affine_map<()[s0, s1] -> (s0 * 3 + s1)>
-// CHECK-DAG: [[map_symbolic_composition_d:#map[0-9]+]] = affine_map<()[s0, s1] -> (s1 * 3 + s0)>
+// CHECK-DAG: [[$MAP_symbolic_composition_a:#map[0-9]+]] = affine_map<()[s0] -> (s0 * 512)>
+// CHECK-DAG: [[$MAP_symbolic_composition_b:#map[0-9]+]] = affine_map<()[s0] -> (s0 * 4)>
+// CHECK-DAG: [[$MAP_symbolic_composition_c:#map[0-9]+]] = affine_map<()[s0, s1] -> (s0 * 3 + s1)>
+// CHECK-DAG: [[$MAP_symbolic_composition_d:#map[0-9]+]] = affine_map<()[s0, s1] -> (s1 * 3 + s0)>
 
 // Affine maps for test cases: map_mix_dims_and_symbols_*
-// CHECK-DAG: [[map_mix_dims_and_symbols_b:#map[0-9]+]] = affine_map<()[s0, s1] -> (s1 + s0 * 42 + 6)>
-// CHECK-DAG: [[map_mix_dims_and_symbols_c:#map[0-9]+]] = affine_map<()[s0, s1] -> (s1 * 4 + s0 * 168 - 4)>
-// CHECK-DAG: [[map_mix_dims_and_symbols_d:#map[0-9]+]] = affine_map<()[s0, s1] -> ((s1 + s0 * 42 + 6) ceildiv 8)>
-// CHECK-DAG: [[map_mix_dims_and_symbols_e:#map[0-9]+]] = affine_map<()[s0, s1] -> ((s1 * 4 + s0 * 168 - 4) floordiv 3)>
+// CHECK-DAG: [[$MAP_mix_dims_and_symbols_b:#map[0-9]+]] = affine_map<()[s0, s1] -> (s1 + s0 * 42 + 6)>
+// CHECK-DAG: [[$MAP_mix_dims_and_symbols_c:#map[0-9]+]] = affine_map<()[s0, s1] -> (s1 * 4 + s0 * 168 - 4)>
+// CHECK-DAG: [[$MAP_mix_dims_and_symbols_d:#map[0-9]+]] = affine_map<()[s0, s1] -> ((s1 + s0 * 42 + 6) ceildiv 8)>
+// CHECK-DAG: [[$MAP_mix_dims_and_symbols_e:#map[0-9]+]] = affine_map<()[s0, s1] -> ((s1 * 4 + s0 * 168 - 4) floordiv 3)>
 
-// Affine maps for test case: symbolic_semi_affine
-// CHECK-DAG: [[symbolic_semi_affine:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 floordiv (s0 + 1))>
+// Affine maps for test case: $symbolic_semi_affine
+// CHECK-DAG: [[$symbolic_semi_affine:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 floordiv (s0 + 1))>
 
 // CHECK-LABEL: func @compose_affine_maps_1dto2d_no_symbols() {
 func @compose_affine_maps_1dto2d_no_symbols() {
@@ -53,7 +53,7 @@ func @compose_affine_maps_1dto2d_no_symbols() {
     %x1_0 = affine.apply affine_map<(d0, d1) -> (d0)> (%x0, %x0)
     %x1_1 = affine.apply affine_map<(d0, d1) -> (d1)> (%x0, %x0)
 
-    // CHECK: [[I0A:%[0-9]+]] = affine.apply [[MAP0]](%{{.*}})
+    // CHECK: [[I0A:%[0-9]+]] = affine.apply [[$MAP0]](%{{.*}})
     // CHECK-NEXT: [[V0:%[0-9]+]] = load %0{{\[}}[[I0A]], [[I0A]]{{\]}}
     %v0 = load %0[%x1_0, %x1_1] : memref<4x4xf32>
 
@@ -62,7 +62,7 @@ func @compose_affine_maps_1dto2d_no_symbols() {
     %y1_0 = affine.apply affine_map<(d0, d1) -> (d0)> (%y0, %y0)
     %y1_1 = affine.apply affine_map<(d0, d1) -> (d1)> (%y0, %y0)
 
-    // CHECK-NEXT: [[I1A:%[0-9]+]] = affine.apply [[MAP1]](%{{.*}})
+    // CHECK-NEXT: [[I1A:%[0-9]+]] = affine.apply [[$MAP1]](%{{.*}})
     // CHECK-NEXT: store [[V0]], %0{{\[}}[[I1A]], [[I1A]]{{\]}}
     store %v0, %0[%y1_0, %y1_1] : memref<4x4xf32>
 
@@ -91,20 +91,20 @@ func @compose_affine_maps_1dto2d_with_symbols() {
     %c4 = constant 4 : index
     %x0 = affine.apply affine_map<(d0)[s0] -> (d0 - s0)> (%i0)[%c4]
 
-    // CHECK: [[I0:%[0-9]+]] = affine.apply [[MAP4]](%{{.*}})
+    // CHECK: [[I0:%[0-9]+]] = affine.apply [[$MAP4]](%{{.*}})
     // CHECK-NEXT: [[V0:%[0-9]+]] = load %{{[0-9]+}}{{\[}}[[I0]], [[I0]]{{\]}}
     %v0 = load %0[%x0, %x0] : memref<4x4xf32>
 
     // Test load[%x0, %x1] with symbol %c4 captured by '%x0' map.
     %x1 = affine.apply affine_map<(d0) -> (d0 + 1)> (%i0)
     %y1 = affine.apply affine_map<(d0, d1) -> (d0+d1)> (%x0, %x1)
-    // CHECK-NEXT: [[I1:%[0-9]+]] = affine.apply [[MAP7]](%{{.*}})
+    // CHECK-NEXT: [[I1:%[0-9]+]] = affine.apply [[$MAP7]](%{{.*}})
     // CHECK-NEXT: store [[V0]], %{{[0-9]+}}{{\[}}[[I1]], [[I1]]{{\]}}
     store %v0, %0[%y1, %y1] : memref<4x4xf32>
 
     // Test store[%x1, %x0] with symbol %c4 captured by '%x0' map.
     %y2 = affine.apply affine_map<(d0, d1) -> (d0 + d1)> (%x1, %x0)
-    // CHECK-NEXT: [[I2:%[0-9]+]] = affine.apply [[MAP7]](%{{.*}})
+    // CHECK-NEXT: [[I2:%[0-9]+]] = affine.apply [[$MAP7]](%{{.*}})
     // CHECK-NEXT: store [[V0]], %{{[0-9]+}}{{\[}}[[I2]], [[I2]]{{\]}}
     store %v0, %0[%y2, %y2] : memref<4x4xf32>
 
@@ -112,7 +112,7 @@ func @compose_affine_maps_1dto2d_with_symbols() {
     %c5 = constant 5 : index
     %x2 = affine.apply affine_map<(d0)[s0] -> (d0 + s0)> (%i0)[%c5]
     %y3 = affine.apply affine_map<(d0, d1) -> (d0 + d1)> (%x2, %x0)
-    // CHECK: [[I3:%[0-9]+]] = affine.apply [[MAP7a]](%{{.*}})
+    // CHECK: [[I3:%[0-9]+]] = affine.apply [[$MAP7a]](%{{.*}})
     // CHECK-NEXT: store [[V0]], %{{[0-9]+}}{{\[}}[[I3]], [[I3]]{{\]}}
     store %v0, %0[%y3, %y3] : memref<4x4xf32>
   }
@@ -140,8 +140,8 @@ func @compose_affine_maps_2d_tile() {
             ((d0 * s0) + d2)> (%x0, %x1, %x2, %x3)[%c4, %c8]
           %x41 = affine.apply affine_map<(d0, d1, d2, d3)[s0, s1] ->
             ((d1 * s1) + d3)> (%x0, %x1, %x2, %x3)[%c4, %c8]
-          // CHECK: [[I0:%[0-9]+]] = affine.apply [[MAP8]](%{{.*}}, %{{.*}})
-          // CHECK: [[I1:%[0-9]+]] = affine.apply [[MAP8a]](%{{.*}}, %{{.*}})
+          // CHECK: [[I0:%[0-9]+]] = affine.apply [[$MAP8]](%{{.*}}, %{{.*}})
+          // CHECK: [[I1:%[0-9]+]] = affine.apply [[$MAP8a]](%{{.*}}, %{{.*}})
           // CHECK-NEXT: [[L0:%[0-9]+]] = load %{{[0-9]+}}{{\[}}[[I0]], [[I1]]{{\]}}
           %v0 = load %0[%x40, %x41] : memref<16x32xf32>
 
@@ -172,9 +172,9 @@ func @compose_affine_maps_dependent_loads() {
         %x02 = affine.apply affine_map<(d0, d1, d2)[s0, s1] -> (d2 * s0)>
             (%i0, %i1, %i2)[%c3, %c7]
 
-        // CHECK: [[I0:%[0-9]+]] = affine.apply [[MAP9]](%{{.*}})
-        // CHECK: [[I1:%[0-9]+]] = affine.apply [[MAP4b]](%{{.*}})
-        // CHECK: [[I2:%[0-9]+]] = affine.apply [[MAP10]](%{{.*}})
+        // CHECK: [[I0:%[0-9]+]] = affine.apply [[$MAP9]](%{{.*}})
+        // CHECK: [[I1:%[0-9]+]] = affine.apply [[$MAP4b]](%{{.*}})
+        // CHECK: [[I2:%[0-9]+]] = affine.apply [[$MAP10]](%{{.*}})
         // CHECK-NEXT: [[V0:%[0-9]+]] = load %{{[0-9]+}}{{\[}}[[I0]], [[I1]]{{\]}}
         %v0 = load %0[%x00, %x01] : memref<16x32xf32>
 
@@ -191,8 +191,8 @@ func @compose_affine_maps_dependent_loads() {
         %x11 = affine.apply affine_map<(d0, d1)[s0, s1] -> (d1 ceildiv s0)>
            (%x01, %x00)[%c3, %c7]
 
-        // CHECK-NEXT: [[I2A:%[0-9]+]] = affine.apply [[MAP12]](%{{.*}})
-        // CHECK-NEXT: [[I2B:%[0-9]+]] = affine.apply [[MAP11]](%{{.*}})
+        // CHECK-NEXT: [[I2A:%[0-9]+]] = affine.apply [[$MAP12]](%{{.*}})
+        // CHECK-NEXT: [[I2B:%[0-9]+]] = affine.apply [[$MAP11]](%{{.*}})
         // CHECK-NEXT: store [[V0]], %{{[0-9]+}}{{\[}}[[I2A]], [[I2B]]{{\]}}
         store %v0, %0[%x10, %x11] : memref<16x32xf32>
       }
@@ -209,8 +209,8 @@ func @compose_affine_maps_diamond_dependency(%arg0: f32, %arg1: memref<4x4xf32>)
     %c = affine.apply affine_map<(d0) -> (d0 * 4)> (%a)
     %d0 = affine.apply affine_map<(d0, d1) -> (d0 ceildiv 8)> (%b, %c)
     %d1 = affine.apply affine_map<(d0, d1) -> (d1 floordiv 3)> (%b, %c)
-    // CHECK: [[I0:%[0-9]+]] = affine.apply [[MAP13A]](%{{.*}})
-    // CHECK: [[I1:%[0-9]+]] = affine.apply [[MAP13B]](%{{.*}})
+    // CHECK: [[I0:%[0-9]+]] = affine.apply [[$MAP13A]](%{{.*}})
+    // CHECK: [[I1:%[0-9]+]] = affine.apply [[$MAP13B]](%{{.*}})
     // CHECK-NEXT: store %arg0, %arg1{{\[}}[[I0]], [[I1]]{{\]}}
     store %arg0, %arg1[%d0, %d1] : memref<4x4xf32>
   }
@@ -260,7 +260,7 @@ func @partial_fold_map(%arg1: index, %arg2: index) -> index {
   // TODO: Constant fold one index into affine.apply
   %c42 = constant 42 : index
   %2 = affine.apply affine_map<(d0, d1) -> (d0 - d1)> (%arg1, %c42)
-  // CHECK: [[X:%[0-9]+]] = affine.apply [[MAP15]]()[%{{.*}}]
+  // CHECK: [[X:%[0-9]+]] = affine.apply [[$MAP15]]()[%{{.*}}]
   return %2 : index
 }
 
@@ -269,7 +269,7 @@ func @symbolic_composition_a(%arg0: index, %arg1: index) -> index {
   %0 = affine.apply affine_map<(d0) -> (d0 * 4)>(%arg0)
   %1 = affine.apply affine_map<()[s0, s1] -> (8 * s0)>()[%0, %arg0]
   %2 = affine.apply affine_map<()[s0, s1] -> (16 * s1)>()[%arg1, %1]
-  // CHECK: %{{.*}} = affine.apply [[map_symbolic_composition_a]]()[%{{.*}}]
+  // CHECK: %{{.*}} = affine.apply [[$MAP_symbolic_composition_a]]()[%{{.*}}]
   return %2 : index
 }
 
@@ -277,7 +277,7 @@ func @symbolic_composition_a(%arg0: index, %arg1: index) -> index {
 func @symbolic_composition_b(%arg0: index, %arg1: index, %arg2: index, %arg3: index) -> index {
   %0 = affine.apply affine_map<(d0) -> (d0)>(%arg0)
   %1 = affine.apply affine_map<()[s0, s1, s2, s3] -> (s0 + s1 + s2 + s3)>()[%0, %0, %0, %0]
-  // CHECK: %{{.*}} = affine.apply [[map_symbolic_composition_b]]()[%{{.*}}]
+  // CHECK: %{{.*}} = affine.apply [[$MAP_symbolic_composition_b]]()[%{{.*}}]
   return %1 : index
 }
 
@@ -286,7 +286,7 @@ func @symbolic_composition_c(%arg0: index, %arg1: index, %arg2: index, %arg3: in
   %0 = affine.apply affine_map<(d0) -> (d0)>(%arg0)
   %1 = affine.apply affine_map<(d0) -> (d0)>(%arg1)
   %2 = affine.apply affine_map<()[s0, s1, s2, s3] -> (s0 + s1 + s2 + s3)>()[%0, %0, %0, %1]
-  // CHECK: %{{.*}} = affine.apply [[map_symbolic_composition_c]]()[%{{.*}}, %{{.*}}]
+  // CHECK: %{{.*}} = affine.apply [[$MAP_symbolic_composition_c]]()[%{{.*}}, %{{.*}}]
   return %2 : index
 }
 
@@ -295,7 +295,7 @@ func @symbolic_composition_d(%arg0: index, %arg1: index, %arg2: index, %arg3: in
   %0 = affine.apply affine_map<(d0) -> (d0)>(%arg0)
   %1 = affine.apply affine_map<()[s0] -> (s0)>()[%arg1]
   %2 = affine.apply affine_map<()[s0, s1, s2, s3] -> (s0 + s1 + s2 + s3)>()[%0, %0, %0, %1]
-  // CHECK: %{{.*}} = affine.apply [[map_symbolic_composition_d]]()[%{{.*}}, %{{.*}}]
+  // CHECK: %{{.*}} = affine.apply [[$MAP_symbolic_composition_d]]()[%{{.*}}, %{{.*}}]
   return %2 : index
 }
 
@@ -304,7 +304,7 @@ func @symbolic_composition_d(%arg0: index, %arg1: index, %arg2: index, %arg3: in
 func @mix_dims_and_symbols_b(%arg0: index, %arg1: index) -> index {
   %a = affine.apply affine_map<(d0)[s0] -> (d0 - 1 + 42 * s0)> (%arg0)[%arg1]
   %b = affine.apply affine_map<(d0) -> (d0 + 7)> (%a)
-  // CHECK: {{.*}} = affine.apply [[map_mix_dims_and_symbols_b]]()[%{{.*}}, %{{.*}}]
+  // CHECK: {{.*}} = affine.apply [[$MAP_mix_dims_and_symbols_b]]()[%{{.*}}, %{{.*}}]
 
   return %b : index
 }
@@ -314,7 +314,7 @@ func @mix_dims_and_symbols_c(%arg0: index, %arg1: index) -> index {
   %a = affine.apply affine_map<(d0)[s0] -> (d0 - 1 + 42 * s0)> (%arg0)[%arg1]
   %b = affine.apply affine_map<(d0) -> (d0 + 7)> (%a)
   %c = affine.apply affine_map<(d0) -> (d0 * 4)> (%a)
-  // CHECK: {{.*}} = affine.apply [[map_mix_dims_and_symbols_c]]()[%{{.*}}, %{{.*}}]
+  // CHECK: {{.*}} = affine.apply [[$MAP_mix_dims_and_symbols_c]]()[%{{.*}}, %{{.*}}]
   return %c : index
 }
 
@@ -324,7 +324,7 @@ func @mix_dims_and_symbols_d(%arg0: index, %arg1: index) -> index {
   %b = affine.apply affine_map<(d0) -> (d0 + 7)> (%a)
   %c = affine.apply affine_map<(d0) -> (d0 * 4)> (%a)
   %d = affine.apply affine_map<()[s0] -> (s0 ceildiv 8)> ()[%b]
-  // CHECK: {{.*}} = affine.apply [[map_mix_dims_and_symbols_d]]()[%{{.*}}, %{{.*}}]
+  // CHECK: {{.*}} = affine.apply [[$MAP_mix_dims_and_symbols_d]]()[%{{.*}}, %{{.*}}]
   return %d : index
 }
 
@@ -335,7 +335,7 @@ func @mix_dims_and_symbols_e(%arg0: index, %arg1: index) -> index {
   %c = affine.apply affine_map<(d0) -> (d0 * 4)> (%a)
   %d = affine.apply affine_map<()[s0] -> (s0 ceildiv 8)> ()[%b]
   %e = affine.apply affine_map<(d0) -> (d0 floordiv 3)> (%c)
-  // CHECK: {{.*}} = affine.apply [[map_mix_dims_and_symbols_e]]()[%{{.*}}, %{{.*}}]
+  // CHECK: {{.*}} = affine.apply [[$MAP_mix_dims_and_symbols_e]]()[%{{.*}}, %{{.*}}]
   return %e : index
 }
 
@@ -359,8 +359,8 @@ func @mix_dims_and_symbols_g(%M: index, %N: index) -> (index, index, index) {
   %res2 = affine.apply affine_map<()[s0, s1] -> (s1)>()[%N, %K]
   %res3 = affine.apply affine_map<()[s0, s1] -> (1024)>()[%N, %K]
   // CHECK-DAG: {{.*}} = constant 1024 : index
-  // CHECK-DAG: {{.*}} = affine.apply [[map_symbolic_composition_b]]()[%{{.*}}]
-  // CHECK-DAG: {{.*}} = affine.apply [[map_symbolic_composition_b]]()[%{{.*}}]
+  // CHECK-DAG: {{.*}} = affine.apply [[$MAP_symbolic_composition_b]]()[%{{.*}}]
+  // CHECK-DAG: {{.*}} = affine.apply [[$MAP_symbolic_composition_b]]()[%{{.*}}]
   return %res1, %res2, %res3 : index, index, index
 }
 
@@ -370,7 +370,7 @@ func @symbolic_semi_affine(%M: index, %N: index, %A: memref<?xf32>) {
   affine.for %i0 = 1 to 100 {
     %1 = affine.apply affine_map<()[s0] -> (s0 + 1)> ()[%M]
     %2 = affine.apply affine_map<(d0)[s0] -> (d0 floordiv s0)> (%i0)[%1]
-    // CHECK-DAG: {{.*}} = affine.apply [[symbolic_semi_affine]](%{{.*}})[%{{.*}}]
+    // CHECK-DAG: {{.*}} = affine.apply [[$symbolic_semi_affine]](%{{.*}})[%{{.*}}]
     store %f1, %A[%2] : memref<?xf32>
   }
   return
@@ -378,8 +378,8 @@ func @symbolic_semi_affine(%M: index, %N: index, %A: memref<?xf32>) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = affine_map<()[s0] -> (0, s0)>
-// CHECK: [[MAP1:#map[0-9]+]] = affine_map<()[s0] -> (100, s0)>
+// CHECK: [[$MAP0:#map[0-9]+]] = affine_map<()[s0] -> (0, s0)>
+// CHECK: [[$MAP1:#map[0-9]+]] = affine_map<()[s0] -> (100, s0)>
 
 // CHECK-LABEL:  func @constant_fold_bounds(%arg0: index) {
 func @constant_fold_bounds(%N : index) {
@@ -403,7 +403,7 @@ func @constant_fold_bounds(%N : index) {
   }
 
   // None of the bounds can be folded.
-  // CHECK: affine.for %{{.*}} = max [[MAP0]]()[%{{.*}}] to min [[MAP1]]()[%{{.*}}] {
+  // CHECK: affine.for %{{.*}} = max [[$MAP0]]()[%{{.*}}] to min [[$MAP1]]()[%{{.*}}] {
   affine.for %k = max affine_map<()[s0] -> (0, s0)> ()[%l] to min affine_map<()[s0] -> (100, s0)> ()[%N] {
     "foo"(%k, %c3) : (index, index) -> ()
   }
@@ -423,7 +423,7 @@ func @fold_empty_loop() {
 
 // -----
 
-// CHECK-DAG: [[SET:#set[0-9]+]] = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + 1022 >= 0, d1 >= 0, -d1 + s0 - 2 >= 0)>
+// CHECK-DAG: [[$SET:#set[0-9]+]] = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + 1022 >= 0, d1 >= 0, -d1 + s0 - 2 >= 0)>
 
 // CHECK-LABEL: func @canonicalize_affine_if
 // CHECK-SAME: [[M:%.*]]: index,
@@ -433,7 +433,7 @@ func @canonicalize_affine_if(%M : index, %N : index) {
   // Drop unused operand %M, propagate %c1022, and promote %N to symbolic.
   affine.for %i = 0 to 1024 {
     affine.for %j = 0 to %N {
-      // CHECK: affine.if [[SET]](%{{.*}}, %{{.*}}){{\[}}[[N]]{{\]}}
+      // CHECK: affine.if [[$SET]](%{{.*}}, %{{.*}}){{\[}}[[N]]{{\]}}
       affine.if affine_set<(d0, d1, d2, d3)[s0] : (d1 >= 0, d0 - d1 >= 0, d2 >= 0, d3 - d2 - 2 >= 0)> (%c1022, %i, %j, %N)[%M] {
         "foo"() : () -> ()
       }
@@ -445,8 +445,8 @@ func @canonicalize_affine_if(%M : index, %N : index) {
 
 // -----
 
-// CHECK-DAG: [[LBMAP:#map[0-9]+]] = affine_map<()[s0] -> (0, s0)>
-// CHECK-DAG: [[UBMAP:#map[0-9]+]] = affine_map<()[s0] -> (1024, s0 * 2)>
+// CHECK-DAG: [[$LBMAP:#map[0-9]+]] = affine_map<()[s0] -> (0, s0)>
+// CHECK-DAG: [[$UBMAP:#map[0-9]+]] = affine_map<()[s0] -> (1024, s0 * 2)>
 
 // CHECK-LABEL: func @canonicalize_bounds
 // CHECK-SAME: [[M:%.*]]: index,
@@ -456,7 +456,7 @@ func @canonicalize_bounds(%M : index, %N : index) {
   %c1024 = constant 1024 : index
   // Drop unused operand %N, drop duplicate operand %M, propagate %c1024, and
   // promote %M to a symbolic one.
-  // CHECK: affine.for %{{.*}} = 0 to min [[UBMAP]](){{\[}}[[M]]{{\]}}
+  // CHECK: affine.for %{{.*}} = 0 to min [[$UBMAP]](){{\[}}[[M]]{{\]}}
   affine.for %i = 0 to min affine_map<(d0, d1, d2, d3) -> (d0, d1 + d2)> (%c1024, %M, %M, %N) {
     "foo"() : () -> ()
   }
@@ -466,7 +466,7 @@ func @canonicalize_bounds(%M : index, %N : index) {
     "foo"() : () -> ()
   }
   // Lower bound canonicalize.
-  // CHECK: affine.for %{{.*}} = max [[LBMAP]](){{\[}}[[N]]{{\]}} to [[M]]
+  // CHECK: affine.for %{{.*}} = max [[$LBMAP]](){{\[}}[[N]]{{\]}} to [[M]]
   affine.for %i = max affine_map<(d0, d1) -> (d0, d1)> (%c0, %N) to %M {
     "foo"() : () -> ()
   }
@@ -553,13 +553,13 @@ func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
-// CHECK: #[[map:.*]] = affine_map<(d0, d1) -> (d0, d1 - 2)>
+// CHECK: #[[$MAP:.*]] = affine_map<(d0, d1) -> (d0, d1 - 2)>
 
 func @affine_min(%arg0: index) {
   affine.for %i = 0 to %arg0 {
     affine.for %j = 0 to %arg0 {
       %c2 = constant 2 : index
-      // CHECK: affine.min #[[map]]
+      // CHECK: affine.min #[[$MAP]]
       %0 = affine.min affine_map<(d0,d1,d2)->(d0, d1 - d2)>(%i, %j, %c2)
       "consumer"(%0) : (index) -> ()
     }
@@ -578,7 +578,7 @@ func @affine_min(%arg0: index) {
 #map1 = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
 #map2 = affine_map<(d0)[s0] -> (1024, -d0 + s0)>
 
-// CHECK: #[[MAP:.*]] = affine_map<()[s0, s1] -> (1024, s1 * -1024 + s0)>
+// CHECK: #[[$MAP:.*]] = affine_map<()[s0, s1] -> (1024, s1 * -1024 + s0)>
 
 // CHECK: func @rep(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index)
 func @rep(%arg0 : index, %arg1 : index) -> index {
@@ -588,7 +588,7 @@ func @rep(%arg0 : index, %arg1 : index) -> index {
   // CHECK-NOT: affine.apply
   %0 = affine.apply #map1(%arg0)[%c1024, %c0]
 
-  // CHECK: affine.min #[[MAP]]()[%[[ARG1]], %[[ARG0]]]
+  // CHECK: affine.min #[[$MAP]]()[%[[ARG1]], %[[ARG0]]]
   %1 = affine.min #map2(%0)[%arg1]
   return %1 : index
 }

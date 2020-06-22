@@ -14,7 +14,7 @@ define void @broadcast() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v15 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v17 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v7 = shufflevector <2 x i8> undef, <2 x i8>undef, <2 x i32> zeroinitializer
   %v8 = shufflevector <4 x i8> undef, <4 x i8>undef, <4 x i32> zeroinitializer

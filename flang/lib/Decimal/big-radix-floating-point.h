@@ -179,7 +179,13 @@ private:
       if (remove >= digits_) {
         digits_ = 0;
       } else if (remove > 0) {
+#if defined __GNUC__ && __GNUC__ < 8
+        // (&& j + remove < maxDigits) was added to avoid GCC < 8 build failure
+        // on -Werror=array-bounds. This can be removed if -Werror is disable.
+        for (int j{0}; j + remove < digits_ && (j + remove < maxDigits); ++j) {
+#else
         for (int j{0}; j + remove < digits_; ++j) {
+#endif
           digit_[j] = digit_[j + remove];
         }
         digits_ -= remove;

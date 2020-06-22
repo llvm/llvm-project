@@ -17,9 +17,11 @@ add_llvm_unittest(AnalysisTests
   CaptureTrackingTest.cpp
   CFGTest.cpp
   CGSCCPassManagerTest.cpp
+  DDGTest.cpp
   DivergenceAnalysisTest.cpp
   DomTreeUpdaterTest.cpp
   GlobalsModRefTest.cpp
+  InlineFeaturesAnalysisTest.cpp
   IVDescriptorsTest.cpp
   LazyCallGraphTest.cpp
   LoadsTest.cpp

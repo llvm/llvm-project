@@ -1,4 +1,5 @@
-; RUN: opt < %s -stack-tagging -S -o - | FileCheck %s
+; RUN: opt < %s -stack-tagging -S -o - | FileCheck %s --check-prefixes=CHECK,SSI
+; RUN: opt < %s -stack-tagging -stack-tagging-use-stack-safety=0 -S -o - | FileCheck %s --check-prefixes=CHECK,NOSSI
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -7,6 +8,11 @@ declare void @use8(i8*)
 declare void @use32(i32*)
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+
+define dso_local void @noUse32(i32*) sanitize_memtag {
+entry:
+  ret void
+}
 
 define void @OneVar() sanitize_memtag {
 entry:
@@ -33,7 +39,7 @@ entry:
   %x1 = alloca i32, align 4
   %x2 = alloca i8, align 4
   %x3 = alloca i32, i32 11, align 4
-  %x4 = alloca i32, align 4, !stack-safe !0
+  %x4 = alloca i32, align 4
   call void @use32(i32* %x1)
   call void @use8(i8* %x2)
   call void @use32(i32* %x3)
@@ -50,9 +56,12 @@ entry:
 ; CHECK:  alloca { [11 x i32], [4 x i8] }, align 16
 ; CHECK:  call { [11 x i32], [4 x i8] }* @llvm.aarch64.tagp.{{.*}}({ [11 x i32], [4 x i8] }* {{.*}}, i64 2)
 ; CHECK:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 48)
-; CHECK:  alloca i32, align 4
-; CHECK-NOT: @llvm.aarch64.tagp
-; CHECK-NOT: @llvm.aarch64.settag
+; SSI:    alloca i32, align 4
+; NOSSI:  alloca { i32, [12 x i8] }, align 16
+; NOSSI: @llvm.aarch64.tagp.
+; NOSSI: call void @llvm.aarch64.settag(i8* {{.*}}, i64 16)
+; SSI-NOT: @llvm.aarch64.tagp
+; SSI-NOT: @llvm.aarch64.settag
 
 ; CHECK:  call void @use32(
 ; CHECK:  call void @use8(
@@ -61,6 +70,7 @@ entry:
 ; CHECK:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 16)
 ; CHECK:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 16)
 ; CHECK:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 48)
+; NOSSI:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 16)
 ; CHECK-NEXT:  ret void
 
 
@@ -161,12 +171,15 @@ entry:
 another_bb:
   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %cz)
   store i32 7, i32* %z
+  call void @noUse32(i32* %z)
   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %cz)
   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %cz)
   store i32 7, i32* %z
   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %cz)
   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %cxcy)
   store i32 8, i32* %xy
+  call void @noUse32(i32* %x)
+  call void @noUse32(i32* %y)
   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %cxcy)
   ret void
 }
@@ -179,15 +192,18 @@ another_bb:
 ; CHECK: alloca { i32, [12 x i8] }, align 16
 ; CHECK: call { i32, [12 x i8] }* @llvm.aarch64.tagp
 ; CHECK: call void @llvm.aarch64.settag(
-; CHECK: alloca { i32, [12 x i8] }, align 16
-; CHECK: call { i32, [12 x i8] }* @llvm.aarch64.tagp
-; CHECK: call void @llvm.aarch64.settag(
+; SSI: alloca i32, align 4
+; NOSSI: alloca { i32, [12 x i8] }, align 16
+; NOSSI: call { i32, [12 x i8] }* @llvm.aarch64.tagp
+; NOSSI: call void @llvm.aarch64.settag(
+; CHECK: store i32
+; CHECK: call void @noUse32(i32*
 ; CHECK: store i32
 ; CHECK: store i32
-; CHECK: store i32
+; CHECK: call void @noUse32(i32*
 ; CHECK: call void @llvm.aarch64.settag(
 ; CHECK: call void @llvm.aarch64.settag(
-; CHECK: call void @llvm.aarch64.settag(
+; NOSSI: call void @llvm.aarch64.settag(
 ; CHECK: ret void
 
 !0 = !{}

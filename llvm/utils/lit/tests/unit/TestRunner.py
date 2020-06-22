@@ -72,13 +72,16 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         assert False and "parser not found"
 
     @staticmethod
-    def parse_test(parser_list):
+    def parse_test(parser_list, allow_result=False):
         script = parseIntegratedTestScript(
             TestIntegratedTestKeywordParser.inputTestCase,
             additional_parsers=parser_list, require_script=False)
-        assert not isinstance(script, lit.Test.Result)
-        assert isinstance(script, list)
-        assert len(script) == 0
+        if isinstance(script, lit.Test.Result):
+            assert allow_result
+        else:
+            assert isinstance(script, list)
+            assert len(script) == 0
+        return script
 
     def test_tags(self):
         parsers = self.make_parsers()
@@ -124,15 +127,34 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         self.assertEqual(type(value[1]), int)
         self.assertEqual(value[1], 6)
 
+    def test_bad_parser_type(self):
+        parsers = self.make_parsers() + ["BAD_PARSER_TYPE"]
+        script = self.parse_test(parsers, allow_result=True)
+        self.assertTrue(isinstance(script, lit.Test.Result))
+        self.assertEqual(script.code, lit.Test.UNRESOLVED)
+        self.assertEqual('Additional parser must be an instance of '
+                         'IntegratedTestKeywordParser',
+                         script.output)
+
+    def test_duplicate_keyword(self):
+        parsers = self.make_parsers() + \
+            [IntegratedTestKeywordParser("KEY:", ParserKind.BOOLEAN_EXPR),
+             IntegratedTestKeywordParser("KEY:", ParserKind.BOOLEAN_EXPR)]
+        script = self.parse_test(parsers, allow_result=True)
+        self.assertTrue(isinstance(script, lit.Test.Result))
+        self.assertEqual(script.code, lit.Test.UNRESOLVED)
+        self.assertEqual("Parser for keyword 'KEY:' already exists",
+                         script.output)
+
     def test_boolean_unterminated(self):
         parsers = self.make_parsers() + \
             [IntegratedTestKeywordParser("MY_BOOL_UNTERMINATED:", ParserKind.BOOLEAN_EXPR)]
-        try:
-            self.parse_test(parsers)
-            self.fail('expected exception')
-        except ValueError as e:
-            self.assertIn("Test has unterminated MY_BOOL_UNTERMINATED: lines", str(e))
-
+        script = self.parse_test(parsers, allow_result=True)
+        self.assertTrue(isinstance(script, lit.Test.Result))
+        self.assertEqual(script.code, lit.Test.UNRESOLVED)
+        self.assertEqual("Test has unterminated 'MY_BOOL_UNTERMINATED:' lines "
+                         "(with '\\')",
+                         script.output)
 
     def test_custom(self):
         parsers = self.make_parsers()

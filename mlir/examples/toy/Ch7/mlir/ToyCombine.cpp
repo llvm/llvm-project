@@ -47,7 +47,7 @@ OpFoldResult StructAccessOp::fold(ArrayRef<Attribute> operands) {
 }
 
 /// This is an example of a c++ rewrite pattern for the TransposeOp. It
-/// optimizes the following scenario: transpose(transpose(x)) -> transpose(x)
+/// optimizes the following scenario: transpose(transpose(x)) -> x
 struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
   /// We register this pattern to match every toy.transpose in the IR.
   /// The "benefit" is used by the framework to order the patterns and process

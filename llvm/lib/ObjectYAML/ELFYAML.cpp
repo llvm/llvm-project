@@ -221,6 +221,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
   ECase(EM_RISCV);
   ECase(EM_LANAI);
   ECase(EM_BPF);
+  ECase(EM_VE);
 #undef ECase
   IO.enumFallback<Hex16>(Value);
 }
@@ -428,6 +429,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1010, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1011, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1012, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1030, EF_AMDGPU_MACH);
     BCase(EF_AMDGPU_XNACK);
     BCase(EF_AMDGPU_SRAM_ECC);
     break;
@@ -662,6 +664,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
   case ELF::EM_BPF:
 #include "llvm/BinaryFormat/ELFRelocs/BPF.def"
     break;
+  case ELF::EM_VE:
+#include "llvm/BinaryFormat/ELFRelocs/VE.def"
+    break;
   case ELF::EM_PPC64:
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
     break;
@@ -826,6 +831,28 @@ void ScalarBitSetTraits<ELFYAML::MIPS_AFL_FLAGS1>::bitset(
 #define BCase(X) IO.bitSetCase(Value, #X, Mips::AFL_FLAGS1_##X)
   BCase(ODDSPREG);
 #undef BCase
+}
+
+void MappingTraits<ELFYAML::SectionHeader>::mapping(
+    IO &IO, ELFYAML::SectionHeader &SHdr) {
+  IO.mapRequired("Name", SHdr.Name);
+}
+
+void MappingTraits<ELFYAML::SectionHeaderTable>::mapping(
+    IO &IO, ELFYAML::SectionHeaderTable &SectionHeader) {
+  IO.mapOptional("Sections", SectionHeader.Sections);
+  IO.mapOptional("Excluded", SectionHeader.Excluded);
+  IO.mapOptional("NoHeaders", SectionHeader.NoHeaders, false);
+}
+
+StringRef MappingTraits<ELFYAML::SectionHeaderTable>::validate(
+    IO &IO, ELFYAML::SectionHeaderTable &SecHdrTable) {
+  if (SecHdrTable.NoHeaders && (SecHdrTable.Sections || SecHdrTable.Excluded))
+    return "NoHeaders can't be used together with Sections/Excluded";
+  if (!SecHdrTable.NoHeaders && !SecHdrTable.Sections && !SecHdrTable.Excluded)
+    return "SectionHeaderTable can't be empty. Use 'NoHeaders' key to drop the "
+           "section header table";
+  return StringRef();
 }
 
 void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
@@ -1174,6 +1201,7 @@ static void sectionMapping(IO &IO, ELFYAML::AddrsigSection &Section) {
 static void fillMapping(IO &IO, ELFYAML::Fill &Fill) {
   IO.mapOptional("Name", Fill.Name, StringRef());
   IO.mapOptional("Pattern", Fill.Pattern);
+  IO.mapOptional("Offset", Fill.Offset);
   IO.mapRequired("Size", Fill.Size);
 }
 
@@ -1633,10 +1661,18 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   IO.setContext(&Object);
   IO.mapTag("!ELF", true);
   IO.mapRequired("FileHeader", Object.Header);
+  IO.mapOptional("SectionHeaderTable", Object.SectionHeaders);
   IO.mapOptional("ProgramHeaders", Object.ProgramHeaders);
   IO.mapOptional("Sections", Object.Chunks);
   IO.mapOptional("Symbols", Object.Symbols);
   IO.mapOptional("DynamicSymbols", Object.DynamicSymbols);
+  IO.mapOptional("DWARF", Object.DWARF);
+  if (Object.DWARF) {
+    Object.DWARF->IsLittleEndian =
+        Object.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
+    Object.DWARF->Is64bit =
+        Object.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64);
+  }
   IO.setContext(nullptr);
 }
 

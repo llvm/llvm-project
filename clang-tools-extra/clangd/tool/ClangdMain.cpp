@@ -17,10 +17,12 @@
 #include "refactor/Rename.h"
 #include "support/Path.h"
 #include "support/Shutdown.h"
+#include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -274,17 +276,21 @@ list<std::string> TweakList{
 opt<bool> CrossFileRename{
     "cross-file-rename",
     cat(Features),
-    desc("Enable cross-file rename feature. Note that this feature is "
-         "experimental and may lead to broken code or incomplete rename "
-         "results"),
-    init(false),
-    Hidden,
+    desc("Enable cross-file rename feature."),
+    init(true),
 };
 
 opt<bool> RecoveryAST{
     "recovery-ast",
     cat(Features),
-    desc("Preserve expressions in AST for broken code (C++ only). Note that "
+    desc("Preserve expressions in AST for broken code (C++ only)."),
+    init(ClangdServer::Options().BuildRecoveryAST),
+};
+
+opt<bool> RecoveryASTType{
+    "recovery-ast-type",
+    cat(Features),
+    desc("Preserve the type for recovery AST. Note that "
          "this feature is experimental and may lead to crashes"),
     init(false),
     Hidden,
@@ -410,6 +416,15 @@ opt<bool> PrettyPrint{
     cat(Protocol),
     desc("Pretty-print JSON output"),
     init(false),
+};
+
+opt<bool> AsyncPreamble{
+    "async-preamble",
+    cat(Misc),
+    desc("Reuse even stale preambles, and rebuild them in the background. This "
+         "improves latency at the cost of accuracy."),
+    init(ClangdServer::Options().AsyncPreambleBuilds),
+    Hidden,
 };
 
 /// Supports a test URI scheme with relaxed constraints for lit tests.
@@ -571,6 +586,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // Use buffered stream to stderr (we still flush each log message). Unbuffered
   // stream can cause significant (non-deterministic) latency for the logger.
   llvm::errs().SetBuffered();
+  // Don't flush stdout when logging, this would be both slow and racy!
+  llvm::errs().tie(nullptr);
   StreamLogger Logger(llvm::errs(), LogLevel);
   LoggingSession LoggingSession(Logger);
   // Write some initial logs before we start doing any real work.
@@ -641,6 +658,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.StaticIndex = StaticIdx.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.BuildRecoveryAST = RecoveryAST;
+  Opts.PreserveRecoveryASTType = RecoveryASTType;
 
   clangd::CodeCompleteOptions CCOpts;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
@@ -658,7 +676,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   CCOpts.AllScopes = AllScopesCompletion;
   CCOpts.RunParser = CodeCompletionParse;
 
-  RealFileSystemProvider FSProvider;
+  RealThreadsafeFS TFS;
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.
   llvm::sys::ChangeStdinToBinary();
@@ -701,7 +719,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     ClangTidyOptProvider = std::make_unique<tidy::FileOptionsProvider>(
         tidy::ClangTidyGlobalOptions(),
         /* Default */ EmptyDefaults,
-        /* Override */ OverrideClangTidyOptions, FSProvider.getFileSystem());
+        /* Override */ OverrideClangTidyOptions, TFS.view(/*CWD=*/llvm::None));
     Opts.GetClangTidyOptions = [&](llvm::vfs::FileSystem &,
                                    llvm::StringRef File) {
       // This function must be thread-safe and tidy option providers are not.
@@ -749,8 +767,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // Shall we allow to customize the file limit?
   RenameOpts.AllowCrossFile = CrossFileRename;
 
+  Opts.AsyncPreambleBuilds = AsyncPreamble;
+
   ClangdLSPServer LSPServer(
-      *TransportLayer, FSProvider, CCOpts, RenameOpts, CompileCommandsDirPath,
+      *TransportLayer, TFS, CCOpts, RenameOpts, CompileCommandsDirPath,
       /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs,
       OffsetEncodingFromFlag, Opts);
   llvm::set_thread_name("clangd.main");

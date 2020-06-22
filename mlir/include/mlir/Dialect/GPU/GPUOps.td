@@ -86,6 +86,55 @@ def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
   }];
 }
 
+def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [NoSideEffect]>,
+    Arguments<(ins)>, Results<(outs Index:$result)> {
+  let description = [{
+    Returns the subgroup id, i.e. the index of the current subgroup within the
+    workgroup.
+
+    Example:
+
+    ```mlir
+    %sgId = gpu.subgroup_id : index
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict `:` type($result)";
+  let verifier = [{ return success(); }];
+}
+
+def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [NoSideEffect]>,
+    Arguments<(ins)>, Results<(outs Index:$result)> {
+  let description = [{
+    Returns the number of subgroups within a workgroup.
+
+    Example:
+
+    ```mlir
+    %numSg = gpu.num_subgroups : index
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict `:` type($result)";
+  let verifier = [{ return success(); }];
+}
+
+def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [NoSideEffect]>,
+    Arguments<(ins)>, Results<(outs Index:$result)> {
+  let description = [{
+    Returns the number of threads within a subgroup.
+
+    Example:
+
+    ```mlir
+    %sgSz = gpu.subgroup_size : index
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict `:` type($result)";
+  let verifier = [{ return success(); }];
+}
+
 def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
                                     AutomaticAllocationScope, FunctionLike,
                                     IsolatedFromAbove, Symbol]> {
@@ -161,10 +210,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
   ];
 
   let extraClassDeclaration = [{
-    /// Adds a workgroup attribution of the MemRef type with the given shape and
-    /// element type.
-    Value addWorkgroupAttribution(ArrayRef<int64_t> shape, Type elementType);
-
     /// Returns `true` if the GPU function defined by this Op is a kernel, i.e.
     /// it is intended to be launched from host.
     bool isKernel() {
@@ -198,24 +243,30 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
       return {begin, end};
     }
 
-    // Adds a new block argument that corresponds to buffers located in
-    // workgroup memory.
-    BlockArgument addWorkgroupAttribution(Type type) {
-      auto attrName = getNumWorkgroupAttributionsAttrName();
-      auto attr = getAttrOfType<IntegerAttr>(attrName);
-      setAttr(attrName, IntegerAttr::get(attr.getType(), attr.getValue() + 1));
-      return getBody().front().insertArgument(
-          getType().getNumInputs() + attr.getInt(), type);
-    }
+    /// Adds a new block argument that corresponds to buffers located in
+    /// workgroup memory.
+    BlockArgument addWorkgroupAttribution(Type type);
 
+    /// Returns the number of buffers located in the private memory.
+    unsigned getNumPrivateAttributions() {
+      return getBody().front().getNumArguments() - getType().getNumInputs() -
+          getNumWorkgroupAttributions();
+    }
+ 
     /// Returns a list of block arguments that correspond to buffers located in
     /// the private memory.
     ArrayRef<BlockArgument> getPrivateAttributions() {
+      // Buffers on the private memory always come after buffers on the workgroup
+      // memory.
       auto begin =
           std::next(getBody().front().args_begin(),
                     getType().getNumInputs() + getNumWorkgroupAttributions());
       return {begin, getBody().front().args_end()};
     }
+
+    /// Adds a new block argument that corresponds to buffers located in
+    /// private memory.
+    BlockArgument addPrivateAttribution(Type type);
 
     /// Returns the name of the attribute containing the number of buffers
     /// located in the workgroup memory.

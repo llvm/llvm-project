@@ -25,11 +25,11 @@ entry:
   %metadata1 = alloca i32 addrspace(1)*, i32 2, align 8
   store i32 addrspace(1)* null, i32 addrspace(1)** %metadata1
   %ptr_derived = getelementptr i32, i32 addrspace(1)* %ptr_base, i32 %arg
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 2, i32 addrspace(1)* %ptr_base, i32 addrspace(1)* null, i32 addrspace(1)* %ptr_base, i32 addrspace(1)* %ptr_derived, i32 addrspace(1)* null)
+  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %ptr_base, i32 addrspace(1)* %ptr_derived, i32 addrspace(1)* null) ["deopt" (i32 addrspace(1)* %ptr_base, i32 addrspace(1)* null)]
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
-  %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 9, i32 9)
-  %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 9, i32 10)
-  %c = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 11, i32 11)
+  %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 7, i32 7)
+  %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 7, i32 8)
+  %c = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 9, i32 9)
 ; 
   ret i1 %call1
 }
@@ -53,11 +53,11 @@ define i1 @test_derived_arg(i32 addrspace(1)* %ptr_base,
 entry:
   %metadata1 = alloca i32 addrspace(1)*, i32 2, align 8
   store i32 addrspace(1)* null, i32 addrspace(1)** %metadata1
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 2, i32 addrspace(1)* %ptr_base, i32 addrspace(1)* null, i32 addrspace(1)* %ptr_base, i32 addrspace(1)* %ptr_derived, i32 addrspace(1)* null)
+  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %ptr_base, i32 addrspace(1)* %ptr_derived, i32 addrspace(1)* null) ["deopt" (i32 addrspace(1)* %ptr_base, i32 addrspace(1)* null)]
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
-  %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 9, i32 9)
-  %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 9, i32 10)
-  %c = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 11, i32 11)
+  %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 7, i32 7)
+  %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 7, i32 8)
+  %c = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 9, i32 9)
 ; 
   ret i1 %call1
 }
@@ -116,7 +116,7 @@ entry:
   br label %bb
 
 bb:                                               ; preds = %entry
-  %statepoint_token = call token (i64, i32, void (%struct*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp0s_structsf(i64 0, i32 0, void (%struct*)* @use, i32 1, i32 0, %struct* %x, i32 0, i32 1, %struct* %x)
+  %statepoint_token = call token (i64, i32, void (%struct*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp0s_structsf(i64 0, i32 0, void (%struct*)* @use, i32 1, i32 0, %struct* %x, i32 0, i32 0) ["deopt" (%struct* %x)]
   ret void
 }
 

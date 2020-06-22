@@ -9,47 +9,49 @@ declare <2 x double> @llvm.experimental.constrained.maxnum.v2f64(<2 x double>, <
 declare <4 x float> @llvm.experimental.constrained.minnum.v4f32(<4 x float>, <4 x float>, metadata)
 declare <2 x double> @llvm.experimental.constrained.minnum.v2f64(<2 x double>, <2 x double>, metadata)
 
-define <4 x float> @fmaxnum_v4f32(<4 x float> %vf0, <4 x float> %vf1) {
+define <4 x float> @fmaxnum_v4f32(<4 x float> %vf0, <4 x float> %vf1) #0 {
 ; CHECK-LABEL: fmaxnum_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmaxsp v2, v2, v3
 ; CHECK-NEXT:    blr
   %res = call <4 x float> @llvm.experimental.constrained.maxnum.v4f32(
                         <4 x float> %vf0, <4 x float> %vf1,
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
 
-define <2 x double> @fmaxnum_v2f64(<2 x double> %vf0, <2 x double> %vf1) {
+define <2 x double> @fmaxnum_v2f64(<2 x double> %vf0, <2 x double> %vf1) #0 {
 ; CHECK-LABEL: fmaxnum_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmaxdp v2, v2, v3
 ; CHECK-NEXT:    blr
   %res = call <2 x double> @llvm.experimental.constrained.maxnum.v2f64(
                         <2 x double> %vf0, <2 x double> %vf1,
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %res
 }
 
 
-define <4 x float> @fminnum_v4f32(<4 x float> %vf0, <4 x float> %vf1) {
+define <4 x float> @fminnum_v4f32(<4 x float> %vf0, <4 x float> %vf1) #0 {
 ; CHECK-LABEL: fminnum_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvminsp v2, v2, v3
 ; CHECK-NEXT:    blr
   %res = call <4 x float> @llvm.experimental.constrained.minnum.v4f32(
                         <4 x float> %vf0, <4 x float> %vf1,
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
 
-define <2 x double> @fminnum_v2f64(<2 x double> %vf0, <2 x double> %vf1) {
+define <2 x double> @fminnum_v2f64(<2 x double> %vf0, <2 x double> %vf1) #0 {
 ; CHECK-LABEL: fminnum_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmindp v2, v2, v3
 ; CHECK-NEXT:    blr
   %res = call <2 x double> @llvm.experimental.constrained.minnum.v2f64(
                         <2 x double> %vf0, <2 x double> %vf1,
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %res
 }
+
+attributes #0 = { strictfp }

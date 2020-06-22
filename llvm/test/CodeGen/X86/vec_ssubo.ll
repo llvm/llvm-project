@@ -1088,12 +1088,13 @@ define <4 x i32> @ssubo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    pslld $31, %xmm1
-; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    movmskps %xmm1, %eax
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    pxor %xmm0, %xmm1
 ; SSE-NEXT:    movb %al, (%rdi)
+; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: ssubo_v4i1:
@@ -1104,8 +1105,8 @@ define <4 x i32> @ssubo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpslld $31, %xmm0, %xmm1
-; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovmskps %xmm1, %eax
@@ -1120,8 +1121,8 @@ define <4 x i32> @ssubo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpslld $31, %xmm0, %xmm1
-; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm2
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovmskps %xmm1, %eax

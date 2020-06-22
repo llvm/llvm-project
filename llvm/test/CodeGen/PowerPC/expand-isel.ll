@@ -163,7 +163,7 @@ entry:
 ; CHECK-NEXT:  [[SUCCESSOR]]
 ; CHECK-NEXT: add r4, r4, r6
 ; CHECK-NEXT: add r3, r3, r4
-; CHECK-NEXT: subf r3, r5, r3
+; CHECK-NEXT: sub r3, r3, r5
 ; CHECK-NEXT: extsw r3, r3
 ; CHECK-NEXT: blr
 }

@@ -56,6 +56,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 
 using namespace clang;
 using namespace clang::ento;
@@ -63,10 +64,8 @@ using namespace clang::ento;
 namespace {
 class StdLibraryFunctionsChecker
     : public Checker<check::PreCall, check::PostCall, eval::Call> {
-  /// Below is a series of typedefs necessary to define function specs.
-  /// We avoid nesting types here because each additional qualifier
-  /// would need to be repeated in every function spec.
-  struct Summary;
+
+  class Summary;
 
   /// Specify how much the analyzer engine should entrust modeling this function
   /// to us. If he doesn't, he performs additional invalidations.
@@ -108,14 +107,32 @@ class StdLibraryFunctionsChecker
     /// Apply the effects of the constraint on the given program state. If null
     /// is returned then the constraint is not feasible.
     virtual ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
-                                  const Summary &Summary) const = 0;
+                                  const Summary &Summary,
+                                  CheckerContext &C) const = 0;
     virtual ValueConstraintPtr negate() const {
       llvm_unreachable("Not implemented");
     };
+
+    // Check whether the constraint is malformed or not. It is malformed if the
+    // specified argument has a mismatch with the given FunctionDecl (e.g. the
+    // arg number is out-of-range of the function's argument list).
+    bool checkValidity(const FunctionDecl *FD) const {
+      const bool ValidArg = ArgN == Ret || ArgN < FD->getNumParams();
+      assert(ValidArg && "Arg out of range!");
+      if (!ValidArg)
+        return false;
+      // Subclasses may further refine the validation.
+      return checkSpecificValidity(FD);
+    }
     ArgNo getArgNo() const { return ArgN; }
 
   protected:
     ArgNo ArgN; // Argument to which we apply the constraint.
+
+    /// Do polymorphic sanity check on the constraint.
+    virtual bool checkSpecificValidity(const FunctionDecl *FD) const {
+      return true;
+    }
   };
 
   /// Given a range, should the argument stay inside or outside this range?
@@ -143,7 +160,8 @@ class StdLibraryFunctionsChecker
                                        const Summary &Summary) const;
   public:
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
-                          const Summary &Summary) const override {
+                          const Summary &Summary,
+                          CheckerContext &C) const override {
       switch (Kind) {
       case OutOfRange:
         return applyAsOutOfRange(State, Call, Summary);
@@ -165,6 +183,14 @@ class StdLibraryFunctionsChecker
       }
       return std::make_shared<RangeConstraint>(Tmp);
     }
+
+    bool checkSpecificValidity(const FunctionDecl *FD) const override {
+      const bool ValidArg =
+          getArgType(FD, ArgN)->isIntegralType(FD->getASTContext());
+      assert(ValidArg &&
+             "This constraint should be applied on an integral type");
+      return ValidArg;
+    }
   };
 
   class ComparisonConstraint : public ValueConstraint {
@@ -178,7 +204,8 @@ class StdLibraryFunctionsChecker
     ArgNo getOtherArgNo() const { return OtherArgN; }
     BinaryOperator::Opcode getOpcode() const { return Opcode; }
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
-                          const Summary &Summary) const override;
+                          const Summary &Summary,
+                          CheckerContext &C) const override;
   };
 
   class NotNullConstraint : public ValueConstraint {
@@ -188,7 +215,8 @@ class StdLibraryFunctionsChecker
 
   public:
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
-                          const Summary &Summary) const override {
+                          const Summary &Summary,
+                          CheckerContext &C) const override {
       SVal V = getArgSVal(Call, getArgNo());
       if (V.isUndef())
         return State;
@@ -205,17 +233,127 @@ class StdLibraryFunctionsChecker
       Tmp.CannotBeNull = !this->CannotBeNull;
       return std::make_shared<NotNullConstraint>(Tmp);
     }
+
+    bool checkSpecificValidity(const FunctionDecl *FD) const override {
+      const bool ValidArg = getArgType(FD, ArgN)->isPointerType();
+      assert(ValidArg &&
+             "This constraint should be applied only on a pointer type");
+      return ValidArg;
+    }
+  };
+
+  // Represents a buffer argument with an additional size argument.
+  // E.g. the first two arguments here:
+  //   ctime_s(char *buffer, rsize_t bufsz, const time_t *time);
+  // Another example:
+  //   size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+  //   // Here, ptr is the buffer, and its minimum size is `size * nmemb`.
+  class BufferSizeConstraint : public ValueConstraint {
+    // The argument which holds the size of the buffer.
+    ArgNo SizeArgN;
+    // The argument which is a multiplier to size. This is set in case of
+    // `fread` like functions where the size is computed as a multiplication of
+    // two arguments.
+    llvm::Optional<ArgNo> SizeMultiplierArgN;
+    // The operator we use in apply. This is negated in negate().
+    BinaryOperator::Opcode Op = BO_LE;
+
+  public:
+    BufferSizeConstraint(ArgNo Buffer, ArgNo BufSize)
+        : ValueConstraint(Buffer), SizeArgN(BufSize) {}
+
+    BufferSizeConstraint(ArgNo Buffer, ArgNo BufSize, ArgNo BufSizeMultiplier)
+        : ValueConstraint(Buffer), SizeArgN(BufSize),
+          SizeMultiplierArgN(BufSizeMultiplier) {}
+
+    ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
+                          const Summary &Summary,
+                          CheckerContext &C) const override {
+      SValBuilder &SvalBuilder = C.getSValBuilder();
+      // The buffer argument.
+      SVal BufV = getArgSVal(Call, getArgNo());
+      // The size argument.
+      SVal SizeV = getArgSVal(Call, SizeArgN);
+      // Multiply with another argument if given.
+      if (SizeMultiplierArgN) {
+        SVal SizeMulV = getArgSVal(Call, *SizeMultiplierArgN);
+        SizeV = SvalBuilder.evalBinOp(State, BO_Mul, SizeV, SizeMulV,
+                                      Summary.getArgType(SizeArgN));
+      }
+      // The dynamic size of the buffer argument, got from the analyzer engine.
+      SVal BufDynSize = getDynamicSizeWithOffset(State, BufV);
+
+      SVal Feasible = SvalBuilder.evalBinOp(State, Op, SizeV, BufDynSize,
+                                            SvalBuilder.getContext().BoolTy);
+      if (auto F = Feasible.getAs<DefinedOrUnknownSVal>())
+        return State->assume(*F, true);
+
+      // We can get here only if the size argument or the dynamic size is
+      // undefined. But the dynamic size should never be undefined, only
+      // unknown. So, here, the size of the argument is undefined, i.e. we
+      // cannot apply the constraint. Actually, other checkers like
+      // CallAndMessage should catch this situation earlier, because we call a
+      // function with an uninitialized argument.
+      llvm_unreachable("Size argument or the dynamic size is Undefined");
+    }
+
+    ValueConstraintPtr negate() const override {
+      BufferSizeConstraint Tmp(*this);
+      Tmp.Op = BinaryOperator::negateComparisonOp(Op);
+      return std::make_shared<BufferSizeConstraint>(Tmp);
+    }
   };
 
   /// The complete list of constraints that defines a single branch.
   typedef std::vector<ValueConstraintPtr> ConstraintSet;
 
   using ArgTypes = std::vector<QualType>;
+
+  // A placeholder type, we use it whenever we do not care about the concrete
+  // type in a Signature.
+  const QualType Irrelevant{};
+  bool static isIrrelevant(QualType T) { return T.isNull(); }
+
+  // The signature of a function we want to describe with a summary. This is a
+  // concessive signature, meaning there may be irrelevant types in the
+  // signature which we do not check against a function with concrete types.
+  struct Signature {
+    const ArgTypes ArgTys;
+    const QualType RetTy;
+    Signature(ArgTypes ArgTys, QualType RetTy) : ArgTys(ArgTys), RetTy(RetTy) {
+      assertRetTypeSuitableForSignature(RetTy);
+      for (size_t I = 0, E = ArgTys.size(); I != E; ++I) {
+        QualType ArgTy = ArgTys[I];
+        assertArgTypeSuitableForSignature(ArgTy);
+      }
+    }
+    bool matches(const FunctionDecl *FD) const;
+
+  private:
+    static void assertArgTypeSuitableForSignature(QualType T) {
+      assert((T.isNull() || !T->isVoidType()) &&
+             "We should have no void types in the spec");
+      assert((T.isNull() || T.isCanonical()) &&
+             "We should only have canonical types in the spec");
+    }
+    static void assertRetTypeSuitableForSignature(QualType T) {
+      assert((T.isNull() || T.isCanonical()) &&
+             "We should only have canonical types in the spec");
+    }
+  };
+
+  static QualType getArgType(const FunctionDecl *FD, ArgNo ArgN) {
+    assert(FD && "Function must be set");
+    QualType T = (ArgN == Ret)
+                     ? FD->getReturnType().getCanonicalType()
+                     : FD->getParamDecl(ArgN)->getType().getCanonicalType();
+    return T;
+  }
+
   using Cases = std::vector<ConstraintSet>;
 
-  /// Includes information about
-  ///   * function prototype (which is necessary to
-  ///     ensure we're modeling the right function and casting values properly),
+  /// A summary includes information about
+  ///   * function prototype (signature)
   ///   * approach to invalidation,
   ///   * a list of branches - a list of list of ranges -
   ///     A branch represents a path in the exploded graph of a function (which
@@ -232,15 +370,28 @@ class StdLibraryFunctionsChecker
   ///   * a list of argument constraints, that must be true on every branch.
   ///     If these constraints are not satisfied that means a fatal error
   ///     usually resulting in undefined behaviour.
-  struct Summary {
-    const ArgTypes ArgTys;
-    const QualType RetTy;
+  ///
+  /// Application of a summary:
+  ///   The signature and argument constraints together contain information
+  ///   about which functions are handled by the summary. The signature can use
+  ///   "wildcards", i.e. Irrelevant types. Irrelevant type of a parameter in
+  ///   a signature means that type is not compared to the type of the parameter
+  ///   in the found FunctionDecl. Argument constraints may specify additional
+  ///   rules for the given parameter's type, those rules are checked once the
+  ///   signature is matched.
+  class Summary {
+    const Signature Sign;
     const InvalidationKind InvalidationKd;
     Cases CaseConstraints;
     ConstraintSet ArgConstraints;
 
+    // The function to which the summary applies. This is set after lookup and
+    // match to the signature.
+    const FunctionDecl *FD = nullptr;
+
+  public:
     Summary(ArgTypes ArgTys, QualType RetTy, InvalidationKind InvalidationKd)
-        : ArgTys(ArgTys), RetTy(RetTy), InvalidationKd(InvalidationKd) {}
+        : Sign(ArgTys, RetTy), InvalidationKd(InvalidationKd) {}
 
     Summary &Case(ConstraintSet&& CS) {
       CaseConstraints.push_back(std::move(CS));
@@ -251,24 +402,38 @@ class StdLibraryFunctionsChecker
       return *this;
     }
 
-  private:
-    static void assertTypeSuitableForSummary(QualType T) {
-      assert(!T->isVoidType() &&
-             "We should have had no significant void types in the spec");
-      assert(T.isCanonical() &&
-             "We should only have canonical types in the spec");
-    }
+    InvalidationKind getInvalidationKd() const { return InvalidationKd; }
+    const Cases &getCaseConstraints() const { return CaseConstraints; }
+    const ConstraintSet &getArgConstraints() const { return ArgConstraints; }
 
-  public:
     QualType getArgType(ArgNo ArgN) const {
-      QualType T = (ArgN == Ret) ? RetTy : ArgTys[ArgN];
-      assertTypeSuitableForSummary(T);
-      return T;
+      return StdLibraryFunctionsChecker::getArgType(FD, ArgN);
     }
 
-    /// Try our best to figure out if the summary's signature matches
-    /// *the* library function to which this specification applies.
-    bool matchesSignature(const FunctionDecl *FD) const;
+    // Returns true if the summary should be applied to the given function.
+    // And if yes then store the function declaration.
+    bool matchesAndSet(const FunctionDecl *FD) {
+      bool Result = Sign.matches(FD) && validateByConstraints(FD);
+      if (Result) {
+        assert(!this->FD && "FD must not be set more than once");
+        this->FD = FD;
+      }
+      return Result;
+    }
+
+  private:
+    // Once we know the exact type of the function then do sanity check on all
+    // the given constraints.
+    bool validateByConstraints(const FunctionDecl *FD) const {
+      for (const ConstraintSet &Case : CaseConstraints)
+        for (const ValueConstraintPtr &Constraint : Case)
+          if (!Constraint->checkValidity(FD))
+            return false;
+      for (const ValueConstraintPtr &Constraint : ArgConstraints)
+        if (!Constraint->checkValidity(FD))
+          return false;
+      return true;
+    }
   };
 
   // The map of all functions supported by the checker. It is initialized
@@ -278,11 +443,6 @@ class StdLibraryFunctionsChecker
 
   mutable std::unique_ptr<BugType> BT_InvalidArg;
 
-  // Auxiliary functions to support ArgNo within all structures
-  // in a unified manner.
-  static QualType getArgType(const Summary &Summary, ArgNo ArgN) {
-    return Summary.getArgType(ArgN);
-  }
   static SVal getArgSVal(const CallEvent &Call, ArgNo ArgN) {
     return ArgN == Ret ? Call.getReturnValue() : Call.getArgSVal(ArgN);
   }
@@ -339,7 +499,7 @@ ProgramStateRef StdLibraryFunctionsChecker::RangeConstraint::applyAsOutOfRange(
   SValBuilder &SVB = Mgr.getSValBuilder();
   BasicValueFactory &BVF = SVB.getBasicValueFactory();
   ConstraintManager &CM = Mgr.getConstraintManager();
-  QualType T = getArgType(Summary, getArgNo());
+  QualType T = Summary.getArgType(getArgNo());
   SVal V = getArgSVal(Call, getArgNo());
 
   if (auto N = V.getAs<NonLoc>()) {
@@ -366,7 +526,7 @@ ProgramStateRef StdLibraryFunctionsChecker::RangeConstraint::applyAsWithinRange(
   SValBuilder &SVB = Mgr.getSValBuilder();
   BasicValueFactory &BVF = SVB.getBasicValueFactory();
   ConstraintManager &CM = Mgr.getConstraintManager();
-  QualType T = getArgType(Summary, getArgNo());
+  QualType T = Summary.getArgType(getArgNo());
   SVal V = getArgSVal(Call, getArgNo());
 
   // "WithinRange R" is treated as "outside [T_MIN, T_MAX] \ R".
@@ -416,19 +576,19 @@ ProgramStateRef StdLibraryFunctionsChecker::RangeConstraint::applyAsWithinRange(
 }
 
 ProgramStateRef StdLibraryFunctionsChecker::ComparisonConstraint::apply(
-    ProgramStateRef State, const CallEvent &Call,
-    const Summary &Summary) const {
+    ProgramStateRef State, const CallEvent &Call, const Summary &Summary,
+    CheckerContext &C) const {
 
   ProgramStateManager &Mgr = State->getStateManager();
   SValBuilder &SVB = Mgr.getSValBuilder();
   QualType CondT = SVB.getConditionType();
-  QualType T = getArgType(Summary, getArgNo());
+  QualType T = Summary.getArgType(getArgNo());
   SVal V = getArgSVal(Call, getArgNo());
 
   BinaryOperator::Opcode Op = getOpcode();
   ArgNo OtherArg = getOtherArgNo();
   SVal OtherV = getArgSVal(Call, OtherArg);
-  QualType OtherT = getArgType(Summary, OtherArg);
+  QualType OtherT = Summary.getArgType(OtherArg);
   // Note: we avoid integral promotion for comparison.
   OtherV = SVB.evalCast(OtherV, T, OtherT);
   if (auto CompV = SVB.evalBinOp(State, Op, V, OtherV, CondT)
@@ -447,9 +607,10 @@ void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
   ProgramStateRef State = C.getState();
 
   ProgramStateRef NewState = State;
-  for (const ValueConstraintPtr& VC : Summary.ArgConstraints) {
-    ProgramStateRef SuccessSt = VC->apply(NewState, Call, Summary);
-    ProgramStateRef FailureSt = VC->negate()->apply(NewState, Call, Summary);
+  for (const ValueConstraintPtr &Constraint : Summary.getArgConstraints()) {
+    ProgramStateRef SuccessSt = Constraint->apply(NewState, Call, Summary, C);
+    ProgramStateRef FailureSt =
+        Constraint->negate()->apply(NewState, Call, Summary, C);
     // The argument constraint is not satisfied.
     if (FailureSt && !SuccessSt) {
       if (ExplodedNode *N = C.generateErrorNode(NewState))
@@ -479,10 +640,10 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
   ProgramStateRef State = C.getState();
 
   // Apply case/branch specifications.
-  for (const auto &VRS : Summary.CaseConstraints) {
+  for (const ConstraintSet &Case : Summary.getCaseConstraints()) {
     ProgramStateRef NewState = State;
-    for (const auto &VR: VRS) {
-      NewState = VR->apply(NewState, Call, Summary);
+    for (const ValueConstraintPtr &Constraint : Case) {
+      NewState = Constraint->apply(NewState, Call, Summary, C);
       if (!NewState)
         break;
     }
@@ -499,7 +660,7 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
     return false;
 
   const Summary &Summary = *FoundSummary;
-  switch (Summary.InvalidationKd) {
+  switch (Summary.getInvalidationKd()) {
   case EvalCallAsPure: {
     ProgramStateRef State = C.getState();
     const LocationContext *LC = C.getLocationContext();
@@ -518,27 +679,23 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
   llvm_unreachable("Unknown invalidation kind!");
 }
 
-bool StdLibraryFunctionsChecker::Summary::matchesSignature(
+bool StdLibraryFunctionsChecker::Signature::matches(
     const FunctionDecl *FD) const {
   // Check number of arguments:
   if (FD->param_size() != ArgTys.size())
     return false;
 
-  // Check return type if relevant:
-  if (!RetTy.isNull() && RetTy != FD->getReturnType().getCanonicalType())
-    return false;
+  // Check return type.
+  if (!isIrrelevant(RetTy))
+    if (RetTy != FD->getReturnType().getCanonicalType())
+      return false;
 
-  // Check argument types when relevant:
+  // Check argument types.
   for (size_t I = 0, E = ArgTys.size(); I != E; ++I) {
-    QualType FormalT = ArgTys[I];
-    // Null type marks irrelevant arguments.
-    if (FormalT.isNull())
+    QualType ArgTy = ArgTys[I];
+    if (isIrrelevant(ArgTy))
       continue;
-
-    assertTypeSuitableForSummary(FormalT);
-
-    QualType ActualT = FD->getParamDecl(I)->getType().getCanonicalType();
-    if (ActualT != FormalT)
+    if (ArgTy != FD->getParamDecl(I)->getType().getCanonicalType())
       return false;
   }
 
@@ -568,19 +725,24 @@ StdLibraryFunctionsChecker::findFunctionSummary(const CallEvent &Call,
   return findFunctionSummary(FD, C);
 }
 
-llvm::Optional<const FunctionDecl *>
-lookupGlobalCFunction(StringRef Name, const ASTContext &ACtx) {
+llvm::Optional<QualType> lookupType(StringRef Name, const ASTContext &ACtx) {
   IdentifierInfo &II = ACtx.Idents.get(Name);
   auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
   if (LookupRes.size() == 0)
     return None;
 
-  assert(LookupRes.size() == 1 && "In C, identifiers should be unique");
-  Decl *D = LookupRes.front()->getCanonicalDecl();
-  auto *FD = dyn_cast<FunctionDecl>(D);
-  if (!FD)
-    return None;
-  return FD->getCanonicalDecl();
+  // Prioritze typedef declarations.
+  // This is needed in case of C struct typedefs. E.g.:
+  //   typedef struct FILE FILE;
+  // In this case, we have a RecordDecl 'struct FILE' with the name 'FILE' and
+  // we have a TypedefDecl with the name 'FILE'.
+  for (Decl *D : LookupRes) {
+    if (auto *TD = dyn_cast<TypedefNameDecl>(D))
+      return ACtx.getTypeDeclType(TD).getCanonicalType();
+  }
+  assert(LookupRes.size() == 1 && "Type identifier should be unique");
+  auto *D = cast<TypeDecl>(LookupRes.front());
+  return ACtx.getTypeDeclType(D).getCanonicalType();
 }
 
 void StdLibraryFunctionsChecker::initFunctionSummaries(
@@ -599,21 +761,22 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   // of function summary for common cases (eg. ssize_t could be int or long
   // or long long, so three summary variants would be enough).
   // Of course, function variants are also useful for C++ overloads.
-  const QualType
-      Irrelevant{}; // A placeholder, whenever we do not care about the type.
   const QualType IntTy = ACtx.IntTy;
   const QualType LongTy = ACtx.LongTy;
   const QualType LongLongTy = ACtx.LongLongTy;
   const QualType SizeTy = ACtx.getSizeType();
   const QualType VoidPtrTy = ACtx.VoidPtrTy; // void *
   const QualType VoidPtrRestrictTy =
-      ACtx.getRestrictType(VoidPtrTy); // void *restrict
+      ACtx.getLangOpts().C99 ? ACtx.getRestrictType(VoidPtrTy) // void *restrict
+                             : VoidPtrTy;
   const QualType ConstVoidPtrTy =
       ACtx.getPointerType(ACtx.VoidTy.withConst()); // const void *
   const QualType ConstCharPtrTy =
       ACtx.getPointerType(ACtx.CharTy.withConst()); // const char *
   const QualType ConstVoidPtrRestrictTy =
-      ACtx.getRestrictType(ConstVoidPtrTy); // const void *restrict
+      ACtx.getLangOpts().C99
+          ? ACtx.getRestrictType(ConstVoidPtrTy) // const void *restrict
+          : ConstVoidPtrTy;
 
   const RangeInt IntMax = BVF.getMaxValue(IntTy).getLimitedValue();
   const RangeInt LongMax = BVF.getMaxValue(LongTy).getLimitedValue();
@@ -650,14 +813,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // Add a summary to a FunctionDecl found by lookup. The lookup is performed
     // by the given Name, and in the global scope. The summary will be attached
     // to the found FunctionDecl only if the signatures match.
-    void operator()(StringRef Name, const Summary &S) {
+    void operator()(StringRef Name, Summary S) {
       IdentifierInfo &II = ACtx.Idents.get(Name);
       auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
       if (LookupRes.size() == 0)
         return;
       for (Decl *D : LookupRes) {
         if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-          if (S.matchesSignature(FD)) {
+          if (S.matchesAndSet(FD)) {
             auto Res = Map.insert({FD->getCanonicalDecl(), S});
             assert(Res.second && "Function already has a summary set!");
             (void)Res;
@@ -709,6 +872,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                               IntRangeVector Ranges) {
     return std::make_shared<RangeConstraint>(ArgN, Kind, Ranges);
   };
+  auto BufferSize = [](auto... Args) {
+    return std::make_shared<BufferSizeConstraint>(Args...);
+  };
   struct {
     auto operator()(RangeKind Kind, IntRangeVector Ranges) {
       return std::make_shared<RangeConstraint>(Ret, Kind, Ranges);
@@ -728,10 +894,20 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     return std::make_shared<NotNullConstraint>(ArgN);
   };
 
+  Optional<QualType> FileTy = lookupType("FILE", ACtx);
+  Optional<QualType> FilePtrTy, FilePtrRestrictTy;
+  if (FileTy) {
+    // FILE *
+    FilePtrTy = ACtx.getPointerType(*FileTy);
+    // FILE *restrict
+    FilePtrRestrictTy =
+        ACtx.getLangOpts().C99 ? ACtx.getRestrictType(*FilePtrTy) : *FilePtrTy;
+  }
+
   using RetType = QualType;
   // Templates for summaries that are reused by many functions.
   auto Getc = [&]() {
-    return Summary(ArgTypes{Irrelevant}, RetType{IntTy}, NoEvalCall)
+    return Summary(ArgTypes{*FilePtrTy}, RetType{IntTy}, NoEvalCall)
         .Case({ReturnValueCondition(WithinRange,
                                     {{EOFv, EOFv}, {0, UCharRangeMax}})});
   };
@@ -742,17 +918,18 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                ReturnValueCondition(WithinRange, Range(-1, Max))});
   };
   auto Fread = [&]() {
-    return Summary(ArgTypes{VoidPtrRestrictTy, Irrelevant, SizeTy, Irrelevant},
-                   RetType{SizeTy}, NoEvalCall)
+    return Summary(
+               ArgTypes{VoidPtrRestrictTy, SizeTy, SizeTy, *FilePtrRestrictTy},
+               RetType{SizeTy}, NoEvalCall)
         .Case({
             ReturnValueCondition(LessThanOrEq, ArgNo(2)),
         })
         .ArgConstraint(NotNull(ArgNo(0)));
   };
   auto Fwrite = [&]() {
-    return Summary(
-               ArgTypes{ConstVoidPtrRestrictTy, Irrelevant, SizeTy, Irrelevant},
-               RetType{SizeTy}, NoEvalCall)
+    return Summary(ArgTypes{ConstVoidPtrRestrictTy, SizeTy, SizeTy,
+                            *FilePtrRestrictTy},
+                   RetType{SizeTy}, NoEvalCall)
         .Case({
             ReturnValueCondition(LessThanOrEq, ArgNo(2)),
         })
@@ -899,23 +1076,33 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                  ReturnValueCondition(WithinRange, SingleValue(0))}));
 
   // The getc() family of functions that returns either a char or an EOF.
-  addToFunctionSummaryMap("getc", Getc());
-  addToFunctionSummaryMap("fgetc", Getc());
+  if (FilePtrTy) {
+    addToFunctionSummaryMap("getc", Getc());
+    addToFunctionSummaryMap("fgetc", Getc());
+  }
   addToFunctionSummaryMap(
       "getchar", Summary(ArgTypes{}, RetType{IntTy}, NoEvalCall)
                      .Case({ReturnValueCondition(
                          WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}})}));
 
   // read()-like functions that never return more than buffer size.
+  if (FilePtrRestrictTy) {
+    addToFunctionSummaryMap("fread", Fread());
+    addToFunctionSummaryMap("fwrite", Fwrite());
+  }
+
   // We are not sure how ssize_t is defined on every platform, so we
   // provide three variants that should cover common cases.
+  // FIXME these are actually defined by POSIX and not by the C standard, we
+  // should handle them together with the rest of the POSIX functions.
   addToFunctionSummaryMap("read", {Read(IntTy, IntMax), Read(LongTy, LongMax),
                                    Read(LongLongTy, LongLongMax)});
   addToFunctionSummaryMap("write", {Read(IntTy, IntMax), Read(LongTy, LongMax),
                                     Read(LongLongTy, LongLongMax)});
-  addToFunctionSummaryMap("fread", Fread());
-  addToFunctionSummaryMap("fwrite", Fwrite());
+
   // getline()-like functions either fail or read at least the delimiter.
+  // FIXME these are actually defined by POSIX and not by the C standard, we
+  // should handle them together with the rest of the POSIX functions.
   addToFunctionSummaryMap("getline",
                           {Getline(IntTy, IntMax), Getline(LongTy, LongMax),
                            Getline(LongLongTy, LongLongMax)});
@@ -944,6 +1131,18 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                     RetType{IntTy}, EvalCallAsPure)
                                 .ArgConstraint(NotNull(ArgNo(0)))
                                 .ArgConstraint(NotNull(ArgNo(1))));
+    addToFunctionSummaryMap(
+        "__buf_size_arg_constraint",
+        Summary(ArgTypes{ConstVoidPtrTy, SizeTy}, RetType{IntTy},
+                EvalCallAsPure)
+            .ArgConstraint(
+                BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1))));
+    addToFunctionSummaryMap(
+        "__buf_size_arg_constraint_mul",
+        Summary(ArgTypes{ConstVoidPtrTy, SizeTy, SizeTy}, RetType{IntTy},
+                EvalCallAsPure)
+            .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1),
+                                      /*BufSizeMultiplier=*/ArgNo(2))));
   }
 }
 

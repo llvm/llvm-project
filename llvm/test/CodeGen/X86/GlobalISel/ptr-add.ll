@@ -25,7 +25,7 @@ define i32* @test_gep_i8(i32 *%arr, i8 %ind) {
 define i32* @test_gep_i8_const(i32 *%arr) {
 ; X64_GISEL-LABEL: test_gep_i8_const:
 ; X64_GISEL:       # %bb.0:
-; X64_GISEL-NEXT:    movq $80, %rax
+; X64_GISEL-NEXT:    movl $80, %eax
 ; X64_GISEL-NEXT:    addq %rdi, %rax
 ; X64_GISEL-NEXT:    retq
 ;
@@ -60,7 +60,7 @@ define i32* @test_gep_i16(i32 *%arr, i16 %ind) {
 define i32* @test_gep_i16_const(i32 *%arr) {
 ; X64_GISEL-LABEL: test_gep_i16_const:
 ; X64_GISEL:       # %bb.0:
-; X64_GISEL-NEXT:    movq $80, %rax
+; X64_GISEL-NEXT:    movl $80, %eax
 ; X64_GISEL-NEXT:    addq %rdi, %rax
 ; X64_GISEL-NEXT:    retq
 ;
@@ -92,7 +92,7 @@ define i32* @test_gep_i32(i32 *%arr, i32 %ind) {
 define i32* @test_gep_i32_const(i32 *%arr) {
 ; X64_GISEL-LABEL: test_gep_i32_const:
 ; X64_GISEL:       # %bb.0:
-; X64_GISEL-NEXT:    movq $20, %rax
+; X64_GISEL-NEXT:    movl $20, %eax
 ; X64_GISEL-NEXT:    addq %rdi, %rax
 ; X64_GISEL-NEXT:    retq
 ;
@@ -122,7 +122,7 @@ define i32* @test_gep_i64(i32 *%arr, i64 %ind) {
 define i32* @test_gep_i64_const(i32 *%arr) {
 ; X64_GISEL-LABEL: test_gep_i64_const:
 ; X64_GISEL:       # %bb.0:
-; X64_GISEL-NEXT:    movq $20, %rax
+; X64_GISEL-NEXT:    movl $20, %eax
 ; X64_GISEL-NEXT:    addq %rdi, %rax
 ; X64_GISEL-NEXT:    retq
 ;

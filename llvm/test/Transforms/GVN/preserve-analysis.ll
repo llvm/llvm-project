@@ -12,7 +12,7 @@
 ; CHECK: Global Value Numbering
 ; CHECK-NOT: Dominator Tree Construction
 ; CHECK-NOT: Natural Loop Information
-; CHECK-NOT: Canonicalize natural loops
+; CHECK: Canonicalize natural loops
 
 ; NEW-PM-DAG: Running analysis: LoopAnalysis on test
 ; NEW-PM-DAG: Running analysis: DominatorTreeAnalysis on test

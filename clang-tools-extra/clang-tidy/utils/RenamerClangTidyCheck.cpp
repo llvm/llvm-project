@@ -73,6 +73,14 @@ public:
   /// MacroDefined calls checkMacro for macros in the main file
   void MacroDefined(const Token &MacroNameTok,
                     const MacroDirective *MD) override {
+    if (MD->getMacroInfo()->isBuiltinMacro())
+      return;
+    if (PP->getSourceManager().isWrittenInBuiltinFile(
+            MacroNameTok.getLocation()))
+      return;
+    if (PP->getSourceManager().isWrittenInCommandLineFile(
+            MacroNameTok.getLocation()))
+      return;
     Check->checkMacro(PP->getSourceManager(), MacroNameTok, MD->getMacroInfo());
   }
 
@@ -160,7 +168,7 @@ void RenamerClangTidyCheck::addUsage(
 
 void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl, SourceRange Range,
                                      SourceManager *SourceMgr) {
-
+  Decl = cast<NamedDecl>(Decl->getCanonicalDecl());
   return addUsage(RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(),
                                                        Decl->getNameAsString()),
                   Range, SourceMgr);
@@ -187,10 +195,6 @@ public:
   NameLookup() : NameLookup(nullptr) {}
 
   bool hasMultipleResolutions() const { return Data.getInt(); }
-  bool hasDecl() const {
-    assert(!hasMultipleResolutions() && "Found multiple decls");
-    return Data.getPointer() != nullptr;
-  }
   const NamedDecl *getDecl() const {
     assert(!hasMultipleResolutions() && "Found multiple decls");
     return Data.getPointer();
@@ -371,6 +375,12 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (!Decl->getIdentifier() || Decl->getName().empty() || Decl->isImplicit())
       return;
+
+    const auto *Canonical = cast<NamedDecl>(Decl->getCanonicalDecl());
+    if (Canonical != Decl) {
+      addUsage(Canonical, Decl->getLocation());
+      return;
+    }
 
     // Fix type aliases in value declarations.
     if (const auto *Value = Result.Nodes.getNodeAs<ValueDecl>("decl")) {

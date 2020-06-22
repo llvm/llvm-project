@@ -179,7 +179,7 @@ static cl::opt<bool> ClEventCallbacks(
 static StringRef GetGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
   Type *GType = G.getValueType();
-  // For now we support blacklisting struct types only.
+  // For now we support excluding struct types only.
   if (StructType *SGType = dyn_cast<StructType>(GType)) {
     if (!SGType->isLiteral())
       return SGType->getName();
@@ -811,16 +811,25 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   if (ABIList.isIn(M, "skip"))
     return false;
 
+  const unsigned InitialGlobalSize = M.global_size();
+  const unsigned InitialModuleSize = M.size();
+
+  bool Changed = false;
+
   if (!GetArgTLSPtr) {
     Type *ArgTLSTy = ArrayType::get(ShadowTy, 64);
     ArgTLS = Mod->getOrInsertGlobal("__dfsan_arg_tls", ArgTLSTy);
-    if (GlobalVariable *G = dyn_cast<GlobalVariable>(ArgTLS))
+    if (GlobalVariable *G = dyn_cast<GlobalVariable>(ArgTLS)) {
+      Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
       G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
+    }
   }
   if (!GetRetvalTLSPtr) {
     RetvalTLS = Mod->getOrInsertGlobal("__dfsan_retval_tls", ShadowTy);
-    if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS))
+    if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS)) {
+      Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
       G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
+    }
   }
 
   ExternalShadowMask =
@@ -1044,7 +1053,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     }
   }
 
-  return false;
+  return Changed || !FnsToInstrument.empty() ||
+         M.global_size() != InitialGlobalSize || M.size() != InitialModuleSize;
 }
 
 Value *DFSanFunction::getArgTLSPtr() {
@@ -1409,7 +1419,7 @@ void DFSanFunction::storeShadow(Value *Addr, uint64_t Size, Align Alignment,
   const unsigned ShadowVecSize = 128 / DFS.ShadowWidthBits;
   uint64_t Offset = 0;
   if (Size >= ShadowVecSize) {
-    VectorType *ShadowVecTy = VectorType::get(DFS.ShadowTy, ShadowVecSize);
+    auto *ShadowVecTy = FixedVectorType::get(DFS.ShadowTy, ShadowVecSize);
     Value *ShadowVec = UndefValue::get(ShadowVecTy);
     for (unsigned i = 0; i != ShadowVecSize; ++i) {
       ShadowVec = IRB.CreateInsertElement(

@@ -254,7 +254,7 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
 
   // Initial state of the frame pointer is SP.
   unsigned Reg = MRI.getDwarfRegNum(AArch64::SP, true);
-  MCCFIInstruction Inst = MCCFIInstruction::createDefCfa(nullptr, Reg, 0);
+  MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, Reg, 0);
   MAI->addInitialFrameState(Inst);
 
   return MAI;

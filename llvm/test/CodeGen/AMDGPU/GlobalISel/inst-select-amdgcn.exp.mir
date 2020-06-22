@@ -29,3 +29,4 @@ body: |
     ; CHECK: EXP_DONE 1, %0, %0, [[UNDEF3]], [[UNDEF2]], 0, 1, 15, implicit $exec
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr), 1, 15, %5:vgpr(<2 x s16>), %5:vgpr(<2 x s16>), -1, 0
 
+...

@@ -53,13 +53,12 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
 
-  Occupancy = ST.computeOccupancy(MF, getLDSSize());
+  Occupancy = ST.computeOccupancy(F, getLDSSize());
   CallingConv::ID CC = F.getCallingConv();
-  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
   // FIXME: Should have analysis or something rather than attribute to detect
   // calls.
-  const bool HasCalls = FrameInfo.hasCalls() || F.hasFnAttribute("amdgpu-calls");
+  const bool HasCalls = F.hasFnAttribute("amdgpu-calls");
 
   // Enable all kernel inputs if we have the fixed ABI. Don't bother if we don't
   // have any calls.
@@ -125,8 +124,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
       WorkItemIDZ = true;
   }
 
-  bool HasStackObjects = FrameInfo.hasStackObjects();
-
+  bool HasStackObjects = F.hasFnAttribute("amdgpu-stack-objects");
   if (isEntryFunction()) {
     // X, XY, and XYZ are the only supported combinations, so make sure Y is
     // enabled if Z is.
@@ -170,20 +168,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     KernargSegmentPtr = true;
 
   if (ST.hasFlatAddressSpace() && isEntryFunction() && isAmdHsaOrMesa) {
-    auto hasNonSpillStackObjects = [&]() {
-      // Avoid expensive checking if there's no stack objects.
-      if (!HasStackObjects)
-        return false;
-      for (auto OI = FrameInfo.getObjectIndexBegin(),
-                OE = FrameInfo.getObjectIndexEnd(); OI != OE; ++OI)
-        if (!FrameInfo.isSpillSlotObjectIndex(OI))
-          return true;
-      // All stack objects are spill slots.
-      return false;
-    };
     // TODO: This could be refined a lot. The attribute is a poor way of
-    // detecting calls that may require it before argument lowering.
-    if (HasCalls || hasNonSpillStackObjects())
+    // detecting calls or stack objects that may require it before argument
+    // lowering.
+    if (HasCalls || HasStackObjects)
       FlatScratchInit = true;
   }
 
@@ -299,16 +287,19 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
   unsigned Size = FrameInfo.getObjectSize(FI);
-  assert(Size >= 4 && Size <= 64 && "invalid sgpr spill size");
-  assert(TRI->spillSGPRToVGPR() && "not spilling SGPRs to VGPRs");
+  unsigned NumLanes = Size / 4;
 
-  int NumLanes = Size / 4;
+  if (NumLanes > WaveSize)
+    return false;
+
+  assert(Size >= 4 && "invalid sgpr spill size");
+  assert(TRI->spillSGPRToVGPR() && "not spilling SGPRs to VGPRs");
 
   const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
 
   // Make sure to handle the case where a wide SGPR spill may span between two
   // VGPRs.
-  for (int I = 0; I < NumLanes; ++I, ++NumVGPRSpillLanes) {
+  for (unsigned I = 0; I < NumLanes; ++I, ++NumVGPRSpillLanes) {
     Register LaneVGPR;
     unsigned VGPRIndex = (NumVGPRSpillLanes % WaveSize);
 

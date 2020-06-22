@@ -928,9 +928,9 @@ TEST_F(PatternMatchTest, VectorOps) {
   //
   //   SP1 = VectorSplat(2, i8 2)
   //   SP2 = VectorSplat(2, i8 %Val)
-  Type *VecTy = VectorType::get(IRB.getInt8Ty(), 2);
+  Type *VecTy = FixedVectorType::get(IRB.getInt8Ty(), 2);
   Type *i32 = IRB.getInt32Ty();
-  Type *i32VecTy = VectorType::get(i32, 2);
+  Type *i32VecTy = FixedVectorType::get(i32, 2);
 
   Value *Val = IRB.CreateAdd(IRB.getInt8(0), IRB.getInt8(1));
   Value *Val2 = IRB.CreateAdd(Val, IRB.getInt8(3));
@@ -962,39 +962,38 @@ TEST_F(PatternMatchTest, VectorOps) {
   Value *A = nullptr, *B = nullptr, *C = nullptr;
 
   // Test matching insertelement
-  EXPECT_TRUE(match(VI1, m_InsertElement(m_Value(), m_Value(), m_Value())));
+  EXPECT_TRUE(match(VI1, m_InsertElt(m_Value(), m_Value(), m_Value())));
   EXPECT_TRUE(
-      match(VI1, m_InsertElement(m_Undef(), m_ConstantInt(), m_ConstantInt())));
+      match(VI1, m_InsertElt(m_Undef(), m_ConstantInt(), m_ConstantInt())));
   EXPECT_TRUE(
-      match(VI1, m_InsertElement(m_Undef(), m_ConstantInt(), m_Zero())));
+      match(VI1, m_InsertElt(m_Undef(), m_ConstantInt(), m_Zero())));
   EXPECT_TRUE(
-      match(VI1, m_InsertElement(m_Undef(), m_SpecificInt(1), m_Zero())));
-  EXPECT_TRUE(match(VI2, m_InsertElement(m_Value(), m_Value(), m_Value())));
+      match(VI1, m_InsertElt(m_Undef(), m_SpecificInt(1), m_Zero())));
+  EXPECT_TRUE(match(VI2, m_InsertElt(m_Value(), m_Value(), m_Value())));
   EXPECT_FALSE(
-      match(VI2, m_InsertElement(m_Value(), m_Value(), m_ConstantInt())));
+      match(VI2, m_InsertElt(m_Value(), m_Value(), m_ConstantInt())));
   EXPECT_FALSE(
-      match(VI2, m_InsertElement(m_Value(), m_ConstantInt(), m_Value())));
-  EXPECT_FALSE(match(VI2, m_InsertElement(m_Constant(), m_Value(), m_Value())));
-  EXPECT_TRUE(match(VI3, m_InsertElement(m_Value(A), m_Value(B), m_Value(C))));
+      match(VI2, m_InsertElt(m_Value(), m_ConstantInt(), m_Value())));
+  EXPECT_FALSE(match(VI2, m_InsertElt(m_Constant(), m_Value(), m_Value())));
+  EXPECT_TRUE(match(VI3, m_InsertElt(m_Value(A), m_Value(B), m_Value(C))));
   EXPECT_TRUE(A == VI1);
   EXPECT_TRUE(B == Val2);
   EXPECT_TRUE(isa<ConstantInt>(C));
   A = B = C = nullptr; // reset
 
   // Test matching extractelement
-  EXPECT_TRUE(match(EX1, m_ExtractElement(m_Value(A), m_Value(B))));
+  EXPECT_TRUE(match(EX1, m_ExtractElt(m_Value(A), m_Value(B))));
   EXPECT_TRUE(A == VI4);
   EXPECT_TRUE(B == Val);
   A = B = C = nullptr; // reset
-  EXPECT_FALSE(match(EX1, m_ExtractElement(m_Value(), m_ConstantInt())));
-  EXPECT_TRUE(match(EX2, m_ExtractElement(m_Value(), m_ConstantInt())));
-  EXPECT_TRUE(match(EX3, m_ExtractElement(m_Constant(), m_ConstantInt())));
+  EXPECT_FALSE(match(EX1, m_ExtractElt(m_Value(), m_ConstantInt())));
+  EXPECT_TRUE(match(EX2, m_ExtractElt(m_Value(), m_ConstantInt())));
+  EXPECT_TRUE(match(EX3, m_ExtractElt(m_Constant(), m_ConstantInt())));
 
   // Test matching shufflevector
   ArrayRef<int> Mask;
-  EXPECT_TRUE(match(SI1, m_ShuffleVector(m_Value(), m_Undef(), m_ZeroMask())));
-  EXPECT_TRUE(
-      match(SI2, m_ShuffleVector(m_Value(A), m_Value(B), m_Mask(Mask))));
+  EXPECT_TRUE(match(SI1, m_Shuffle(m_Value(), m_Undef(), m_ZeroMask())));
+  EXPECT_TRUE(match(SI2, m_Shuffle(m_Value(A), m_Value(B), m_Mask(Mask))));
   EXPECT_TRUE(A == VI3);
   EXPECT_TRUE(B == VI4);
   A = B = C = nullptr; // reset
@@ -1002,27 +1001,27 @@ TEST_F(PatternMatchTest, VectorOps) {
   // Test matching the vector splat pattern
   EXPECT_TRUE(match(
       SI1,
-      m_ShuffleVector(m_InsertElement(m_Undef(), m_SpecificInt(1), m_Zero()),
-                      m_Undef(), m_ZeroMask())));
+      m_Shuffle(m_InsertElt(m_Undef(), m_SpecificInt(1), m_Zero()),
+                m_Undef(), m_ZeroMask())));
   EXPECT_FALSE(match(
-      SI3, m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_Zero()),
-                           m_Undef(), m_ZeroMask())));
+      SI3, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_Zero()),
+                     m_Undef(), m_ZeroMask())));
   EXPECT_FALSE(match(
-      SI4, m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_Zero()),
-                           m_Undef(), m_ZeroMask())));
+      SI4, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_Zero()),
+                     m_Undef(), m_ZeroMask())));
   EXPECT_TRUE(match(
       SP1,
-      m_ShuffleVector(m_InsertElement(m_Undef(), m_SpecificInt(2), m_Zero()),
-                      m_Undef(), m_ZeroMask())));
+      m_Shuffle(m_InsertElt(m_Undef(), m_SpecificInt(2), m_Zero()),
+                m_Undef(), m_ZeroMask())));
   EXPECT_TRUE(match(
-      SP2, m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(A), m_Zero()),
-                           m_Undef(), m_ZeroMask())));
+      SP2, m_Shuffle(m_InsertElt(m_Undef(), m_Value(A), m_Zero()),
+                     m_Undef(), m_ZeroMask())));
   EXPECT_TRUE(A == Val);
 }
 
 TEST_F(PatternMatchTest, VectorUndefInt) {
   Type *ScalarTy = IRB.getInt8Ty();
-  Type *VectorTy = VectorType::get(ScalarTy, 4);
+  Type *VectorTy = FixedVectorType::get(ScalarTy, 4);
   Constant *ScalarUndef = UndefValue::get(ScalarTy);
   Constant *VectorUndef = UndefValue::get(VectorTy);
   Constant *ScalarZero = Constant::getNullValue(ScalarTy);
@@ -1087,7 +1086,7 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
 
 TEST_F(PatternMatchTest, VectorUndefFloat) {
   Type *ScalarTy = IRB.getFloatTy();
-  Type *VectorTy = VectorType::get(ScalarTy, 4);
+  Type *VectorTy = FixedVectorType::get(ScalarTy, 4);
   Constant *ScalarUndef = UndefValue::get(ScalarTy);
   Constant *VectorUndef = UndefValue::get(VectorTy);
   Constant *ScalarZero = Constant::getNullValue(ScalarTy);

@@ -18,6 +18,7 @@
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "GlobalCompilationDatabase.h"
 #include "index/Index.h"
+#include "support/ThreadsafeFS.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -39,12 +40,13 @@ struct ParseOptions {
   tidy::ClangTidyOptions ClangTidyOpts;
   bool SuggestMissingIncludes = false;
   bool BuildRecoveryAST = false;
+  bool PreserveRecoveryASTType = false;
 };
 
 /// Information required to run clang, e.g. to parse AST or do code completion.
 struct ParseInputs {
   tooling::CompileCommand CompileCommand;
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
+  const ThreadsafeFS *TFS;
   std::string Contents;
   // Version identifier for Contents, provided by the client and opaque to us.
   std::string Version = "null";
@@ -53,7 +55,7 @@ struct ParseInputs {
   bool ForceRebuild = false;
   // Used to recover from diagnostics (e.g. find missing includes for symbol).
   const SymbolIndex *Index = nullptr;
-  ParseOptions Opts;
+  ParseOptions Opts = ParseOptions();
 };
 
 /// Builds compiler invocation that could be used to build AST or preamble.

@@ -216,7 +216,7 @@ void raw_ostream::flush_nonempty() {
   assert(OutBufCur > OutBufStart && "Invalid call to flush_nonempty.");
   size_t Length = OutBufCur - OutBufStart;
   OutBufCur = OutBufStart;
-  write_impl(OutBufStart, Length);
+  flush_tied_then_write(OutBufStart, Length);
 }
 
 raw_ostream &raw_ostream::write(unsigned char C) {
@@ -224,7 +224,7 @@ raw_ostream &raw_ostream::write(unsigned char C) {
   if (LLVM_UNLIKELY(OutBufCur >= OutBufEnd)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
       if (BufferMode == BufferKind::Unbuffered) {
-        write_impl(reinterpret_cast<char*>(&C), 1);
+        flush_tied_then_write(reinterpret_cast<char *>(&C), 1);
         return *this;
       }
       // Set up a buffer and start over.
@@ -244,7 +244,7 @@ raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
   if (LLVM_UNLIKELY(size_t(OutBufEnd - OutBufCur) < Size)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
       if (BufferMode == BufferKind::Unbuffered) {
-        write_impl(Ptr, Size);
+        flush_tied_then_write(Ptr, Size);
         return *this;
       }
       // Set up a buffer and start over.
@@ -260,7 +260,7 @@ raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
     if (LLVM_UNLIKELY(OutBufCur == OutBufStart)) {
       assert(NumBytes != 0 && "undefined behavior");
       size_t BytesToWrite = Size - (Size % NumBytes);
-      write_impl(Ptr, BytesToWrite);
+      flush_tied_then_write(Ptr, BytesToWrite);
       size_t BytesRemaining = Size - BytesToWrite;
       if (BytesRemaining > size_t(OutBufEnd - OutBufCur)) {
         // Too much left over to copy into our buffer.
@@ -299,6 +299,12 @@ void raw_ostream::copy_to_buffer(const char *Ptr, size_t Size) {
   }
 
   OutBufCur += Size;
+}
+
+void raw_ostream::flush_tied_then_write(const char *Ptr, size_t Size) {
+  if (TiedStream)
+    TiedStream->flush();
+  write_impl(Ptr, Size);
 }
 
 // Formatted output.
@@ -499,6 +505,53 @@ raw_ostream &raw_ostream::write_zeros(unsigned NumZeros) {
   return write_padding<'\0'>(*this, NumZeros);
 }
 
+bool raw_ostream::prepare_colors() {
+  // Colors were explicitly disabled.
+  if (!ColorEnabled)
+    return false;
+
+  // Colors require changing the terminal but this stream is not going to a
+  // terminal.
+  if (sys::Process::ColorNeedsFlush() && !is_displayed())
+    return false;
+
+  if (sys::Process::ColorNeedsFlush())
+    flush();
+
+  return true;
+}
+
+raw_ostream &raw_ostream::changeColor(enum Colors colors, bool bold, bool bg) {
+  if (!prepare_colors())
+    return *this;
+
+  const char *colorcode =
+      (colors == SAVEDCOLOR)
+          ? sys::Process::OutputBold(bg)
+          : sys::Process::OutputColor(static_cast<char>(colors), bold, bg);
+  if (colorcode)
+    write(colorcode, strlen(colorcode));
+  return *this;
+}
+
+raw_ostream &raw_ostream::resetColor() {
+  if (!prepare_colors())
+    return *this;
+
+  if (const char *colorcode = sys::Process::ResetColor())
+    write(colorcode, strlen(colorcode));
+  return *this;
+}
+
+raw_ostream &raw_ostream::reverseColor() {
+  if (!prepare_colors())
+    return *this;
+
+  if (const char *colorcode = sys::Process::OutputReverse())
+    write(colorcode, strlen(colorcode));
+  return *this;
+}
+
 void raw_ostream::anchor() {}
 
 //===----------------------------------------------------------------------===//
@@ -573,6 +626,8 @@ raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered)
     ShouldClose = false;
     return;
   }
+
+  enable_colors(true);
 
   // Do not attempt to close stdout or stderr. We used to try to maintain the
   // property that tools that support writing file to stdout should not also
@@ -798,58 +853,6 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
 #endif
 }
 
-raw_ostream &raw_fd_ostream::changeColor(enum Colors colors, bool bold,
-                                         bool bg) {
-  if (!ColorEnabled)
-    return *this;
-
-  if (sys::Process::ColorNeedsFlush())
-    flush();
-  const char *colorcode =
-      (colors == SAVEDCOLOR)
-          ? sys::Process::OutputBold(bg)
-          : sys::Process::OutputColor(static_cast<char>(colors), bold, bg);
-  if (colorcode) {
-    size_t len = strlen(colorcode);
-    write(colorcode, len);
-    // don't account colors towards output characters
-    pos -= len;
-  }
-  return *this;
-}
-
-raw_ostream &raw_fd_ostream::resetColor() {
-  if (!ColorEnabled)
-    return *this;
-
-  if (sys::Process::ColorNeedsFlush())
-    flush();
-  const char *colorcode = sys::Process::ResetColor();
-  if (colorcode) {
-    size_t len = strlen(colorcode);
-    write(colorcode, len);
-    // don't account colors towards output characters
-    pos -= len;
-  }
-  return *this;
-}
-
-raw_ostream &raw_fd_ostream::reverseColor() {
-  if (!ColorEnabled)
-    return *this;
-
-  if (sys::Process::ColorNeedsFlush())
-    flush();
-  const char *colorcode = sys::Process::OutputReverse();
-  if (colorcode) {
-    size_t len = strlen(colorcode);
-    write(colorcode, len);
-    // don't account colors towards output characters
-    pos -= len;
-  }
-  return *this;
-}
-
 bool raw_fd_ostream::is_displayed() const {
   return sys::Process::FileDescriptorIsDisplayed(FD);
 }
@@ -864,9 +867,7 @@ void raw_fd_ostream::anchor() {}
 //  outs(), errs(), nulls()
 //===----------------------------------------------------------------------===//
 
-/// outs() - This returns a reference to a raw_ostream for standard output.
-/// Use it like: outs() << "foo" << "bar";
-raw_ostream &llvm::outs() {
+raw_fd_ostream &llvm::outs() {
   // Set buffer settings to model stdout behavior.
   std::error_code EC;
   static raw_fd_ostream S("-", EC, sys::fs::OF_None);
@@ -874,10 +875,8 @@ raw_ostream &llvm::outs() {
   return S;
 }
 
-/// errs() - This returns a reference to a raw_ostream for standard error.
-/// Use it like: errs() << "foo" << "bar";
-raw_ostream &llvm::errs() {
-  // Set standard error to be unbuffered by default.
+raw_fd_ostream &llvm::errs() {
+  // Set standard error to be unbuffered and tied to outs() by default.
   static raw_fd_ostream S(STDERR_FILENO, false, true);
   return S;
 }

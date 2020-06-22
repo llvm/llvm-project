@@ -48,6 +48,13 @@ func @remap_input_1_to_N_remaining_use(%arg0: f32) {
   "work"(%arg0) : (f32) -> ()
 }
 
+// CHECK-LABEL: func @remap_materialize_1_to_1(%{{.*}}: i43)
+func @remap_materialize_1_to_1(%arg0: i42) {
+  // CHECK: %[[V:.*]] = "test.cast"(%arg0) : (i43) -> i42
+  // CHECK: "test.return"(%[[V]])
+  "test.return"(%arg0) : (i42) -> ()
+}
+
 // CHECK-LABEL: func @remap_input_to_self
 func @remap_input_to_self(%arg0: index) {
   // CHECK-NOT: test.cast
@@ -146,15 +153,11 @@ func @remove_foldable_op(%arg0 : i32) -> (i32) {
 
 // CHECK-LABEL: @create_block
 func @create_block() {
-  // expected-remark@+1 {{op 'test.container' is not legalizable}}
-  "test.container"() ({
-    // Check that we created a block with arguments.
-    // CHECK-NOT: test.create_block
-    // CHECK: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
-    // CHECK: test.finish
-    "test.create_block"() : () -> ()
-    "test.finish"() : () -> ()
-  }) : () -> ()
+  // Check that we created a block with arguments.
+  // CHECK-NOT: test.create_block
+  // CHECK: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
+  "test.create_block"() : () -> ()
+
   // expected-remark@+1 {{op 'std.return' is not legalizable}}
   return
 }
@@ -205,15 +208,12 @@ func @fail_to_convert_region() {
 
 // CHECK-LABEL: @create_illegal_block
 func @create_illegal_block() {
-  // expected-remark@+1 {{op 'test.container' is not legalizable}}
-  "test.container"() ({
-    // Check that we can undo block creation, i.e. that the block was removed.
-    // CHECK: test.create_illegal_block
-    // CHECK-NOT: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
-    // expected-remark@+1 {{op 'test.create_illegal_block' is not legalizable}}
-    "test.create_illegal_block"() : () -> ()
-    "test.finish"() : () -> ()
-  }) : () -> ()
+  // Check that we can undo block creation, i.e. that the block was removed.
+  // CHECK: test.create_illegal_block
+  // CHECK-NOT: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
+  // expected-remark@+1 {{op 'test.create_illegal_block' is not legalizable}}
+  "test.create_illegal_block"() : () -> ()
+
   // expected-remark@+1 {{op 'std.return' is not legalizable}}
   return
 }
@@ -230,6 +230,42 @@ func @undo_block_arg_replace() {
 
     "test.return"(%arg0) : (i32) -> ()
   }) : () -> ()
+  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  return
+}
+
+// -----
+
+// The op in this function is rewritten to itself (and thus remains illegal) by
+// a pattern that removes its second block after adding an operation into it.
+// Check that we can undo block removal succesfully.
+// CHECK-LABEL: @undo_block_erase
+func @undo_block_erase() {
+  // CHECK: test.undo_block_erase
+  "test.undo_block_erase"() ({
+    // expected-remark@-1 {{not legalizable}}
+    // CHECK: "unregistered.return"()[^[[BB:.*]]]
+    "unregistered.return"()[^bb1] : () -> ()
+    // expected-remark@-1 {{not legalizable}}
+  // CHECK: ^[[BB]]
+  ^bb1:
+    // CHECK: unregistered.return
+    "unregistered.return"() : () -> ()
+    // expected-remark@-1 {{not legalizable}}
+  }) : () -> ()
+}
+
+// -----
+
+// The op in this function is attempted to be rewritten to another illegal op
+// with an attached region containing an invalid terminator. The terminator is
+// created before the parent op. The deletion should not crash when deleting
+// created ops in the inverse order, i.e. deleting the parent op and then the
+// child op.
+// CHECK-LABEL: @undo_child_created_before_parent
+func @undo_child_created_before_parent() {
+  // expected-remark@+1 {{is not legalizable}}
+  "test.illegal_op_with_region_anchor"() : () -> ()
   // expected-remark@+1 {{op 'std.return' is not legalizable}}
   return
 }

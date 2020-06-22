@@ -1097,15 +1097,16 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
 /// B to be a memcpy from X to Z (or potentially a memmove, depending on
 /// circumstances). This allows later passes to remove the first memcpy
 /// altogether.
-bool MemCpyOptPass::processMemCpy(MemCpyInst *M) {
+bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   // We can only optimize non-volatile memcpy's.
   if (M->isVolatile()) return false;
 
   // If the source and destination of the memcpy are the same, then zap it.
   if (M->getSource() == M->getDest()) {
+    ++BBI;
     MD->removeInstruction(M);
     M->eraseFromParent();
-    return false;
+    return true;
   }
 
   // If copying from a constant, try to turn the memcpy into a memset.
@@ -1251,9 +1252,10 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   // source of the memcpy to the alignment we need.  If we fail, we bail out.
   AssumptionCache &AC = LookupAssumptionCache();
   DominatorTree &DT = LookupDomTree();
-  if (MDep->getSourceAlign() < ByValAlign &&
+  MaybeAlign MemDepAlign = MDep->getSourceAlign();
+  if ((!MemDepAlign || *MemDepAlign < *ByValAlign) &&
       getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL, &CB, &AC,
-                                 &DT) < ByValAlign)
+                                 &DT) < *ByValAlign)
     return false;
 
   // The address space of the memcpy source must match the byval argument
@@ -1321,7 +1323,7 @@ bool MemCpyOptPass::iterateOnFunction(Function &F) {
       else if (MemSetInst *M = dyn_cast<MemSetInst>(I))
         RepeatInstruction = processMemSet(M, BI);
       else if (MemCpyInst *M = dyn_cast<MemCpyInst>(I))
-        RepeatInstruction = processMemCpy(M);
+        RepeatInstruction = processMemCpy(M, BI);
       else if (MemMoveInst *M = dyn_cast<MemMoveInst>(I))
         RepeatInstruction = processMemMove(M);
       else if (auto *CB = dyn_cast<CallBase>(I)) {

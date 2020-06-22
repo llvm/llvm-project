@@ -122,9 +122,11 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
   for (; MBBI != MBB.end() && MBBI->isMetaInstruction(); ++MBBI)
     ;
 
-  // PACI[AB]SP are implicitly BTI JC, so no BTI instruction needed there.
-  if (MBBI != MBB.end() && (MBBI->getOpcode() == AArch64::PACIASP ||
-                            MBBI->getOpcode() == AArch64::PACIBSP))
+  // SCTLR_EL1.BT[01] is set to 0 by default which means
+  // PACI[AB]SP are implicitly BTI C so no BTI C instruction is needed there.
+  if (MBBI != MBB.end() && HintNum == 34 &&
+      (MBBI->getOpcode() == AArch64::PACIASP ||
+       MBBI->getOpcode() == AArch64::PACIBSP))
     return;
 
   BuildMI(MBB, MBB.begin(), MBB.findDebugLoc(MBB.begin()),

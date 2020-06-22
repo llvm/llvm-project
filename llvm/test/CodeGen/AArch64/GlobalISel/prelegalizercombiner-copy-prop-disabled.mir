@@ -3,6 +3,14 @@
 # RUN:                                                                | FileCheck --check-prefix=ENABLED %s
 # RUN: llc -run-pass=aarch64-prelegalizer-combiner -global-isel -verify-machineinstrs %s -o - \
 # RUN:     --aarch64prelegalizercombinerhelper-disable-rule=copy_prop | FileCheck --check-prefix=DISABLED %s
+# RUN: llc -run-pass=aarch64-prelegalizer-combiner -global-isel -verify-machineinstrs %s -o - \
+# RUN:     --aarch64prelegalizercombinerhelper-disable-rule="*" | FileCheck --check-prefix=DISABLED %s
+# RUN: llc -run-pass=aarch64-prelegalizer-combiner -global-isel -verify-machineinstrs %s -o - \
+# RUN:     --aarch64prelegalizercombinerhelper-disable-rule="*,!copy_prop" \
+# RUN:    | FileCheck --check-prefix=ENABLED %s
+# RUN: llc -run-pass=aarch64-prelegalizer-combiner -global-isel -verify-machineinstrs %s -o - \
+# RUN:     --aarch64prelegalizercombinerhelper-only-enable-rule="copy_prop" \
+# RUN:    | FileCheck --check-prefix=ENABLED %s
 
 # REQUIRES: asserts
 

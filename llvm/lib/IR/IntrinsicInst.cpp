@@ -289,15 +289,10 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
     const auto &DL = ParMod->getDataLayout();
 
     // Compare vscale patterns
-    uint64_t ParamFactor;
-    if (EC.Min > 1 &&
-        match(VLParam, m_c_BinOp(m_ConstantInt(ParamFactor), m_VScale(DL)))) {
-      return ParamFactor >= EC.Min;
-    }
-    if (match(VLParam, m_VScale(DL))) {
-      return ParamFactor;
-    }
-    return false;
+    uint64_t VScaleFactor;
+    if (match(VLParam, m_c_Mul(m_ConstantInt(VScaleFactor), m_VScale(DL))))
+      return VScaleFactor >= EC.Min;
+    return (EC.Min == 1) && match(VLParam, m_VScale(DL));
   }
 
   // standard SIMD operation

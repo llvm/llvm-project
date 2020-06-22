@@ -516,7 +516,7 @@ define <4 x i32> @trunc_ssat_v4i64_v4i32(<4 x i64> %a0) {
 ; AVX2-FAST-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [18446744071562067968,18446744071562067968,18446744071562067968,18446744071562067968]
 ; AVX2-FAST-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm2
 ; AVX2-FAST-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    vmovapd {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovapd {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -1294,7 +1294,7 @@ define void @trunc_ssat_v2i64_v2i16_store(<2 x i64> %a0, <2 x i16> *%p1) {
 ; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} xmm1 = [18446744073709518848,18446744073709518848]
 ; AVX2-FAST-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; AVX2-FAST-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,8,9,8,9,10,11,8,9,10,11,12,13,14,15]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,8,9,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX2-FAST-NEXT:    retq
 ;

@@ -123,6 +123,7 @@ endif()
 
 if(PYTHON_RPATH)
   set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${PYTHON_RPATH}")
+  set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${PYTHON_RPATH}")
 endif()
 
 if (MSVC)

@@ -1858,9 +1858,34 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
   if (auto *CE = N->getCount().dyn_cast<ConstantInt*>())
     Printer.printInt("count", CE->getSExtValue(), /* ShouldSkipZero */ false);
   else
-    Printer.printMetadata("count", N->getCount().dyn_cast<DIVariable*>(),
-                          /*ShouldSkipNull */ false);
-  Printer.printInt("lowerBound", N->getLowerBound());
+    Printer.printMetadata("count", N->getCount().dyn_cast<DIVariable *>(),
+                          /*ShouldSkipNull */ true);
+
+  // A lowerBound of constant 0 should not be skipped, since it is different
+  // from an unspecified lower bound (= nullptr).
+  auto *LBound = N->getRawLowerBound();
+  if (auto *LE = dyn_cast_or_null<ConstantAsMetadata>(LBound)) {
+    auto *LV = cast<ConstantInt>(LE->getValue());
+    Printer.printInt("lowerBound", LV->getSExtValue(),
+                     /* ShouldSkipZero */ false);
+  } else
+    Printer.printMetadata("lowerBound", LBound, /*ShouldSkipNull */ true);
+
+  auto *UBound = N->getRawUpperBound();
+  if (auto *UE = dyn_cast_or_null<ConstantAsMetadata>(UBound)) {
+    auto *UV = cast<ConstantInt>(UE->getValue());
+    Printer.printInt("upperBound", UV->getSExtValue(),
+                     /* ShouldSkipZero */ false);
+  } else
+    Printer.printMetadata("upperBound", UBound, /*ShouldSkipNull */ true);
+
+  auto *Stride = N->getRawStride();
+  if (auto *SE = dyn_cast_or_null<ConstantAsMetadata>(Stride)) {
+    auto *SV = cast<ConstantInt>(SE->getValue());
+    Printer.printInt("stride", SV->getSExtValue(), /* ShouldSkipZero */ false);
+  } else
+    Printer.printMetadata("stride", Stride, /*ShouldSkipNull */ true);
+
   Out << ")";
 }
 
@@ -2797,8 +2822,13 @@ void AssemblyWriter::printModuleSummaryIndex() {
   }
 
   // Don't emit flags when it's not really needed (value is zero by default).
-  if (TheIndex->getFlags())
+  if (TheIndex->getFlags()) {
     Out << "^" << NumSlots << " = flags: " << TheIndex->getFlags() << "\n";
+    ++NumSlots;
+  }
+
+  Out << "^" << NumSlots << " = blockcount: " << TheIndex->getBlockCount()
+      << "\n";
 }
 
 static const char *
@@ -3053,6 +3083,36 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
 
   if (const auto *TIdInfo = FS->getTypeIdInfo())
     printTypeIdInfo(*TIdInfo);
+
+  auto PrintRange = [&](const ConstantRange &Range) {
+    Out << "[" << Range.getLower() << ", " << Range.getSignedMax() << "]";
+  };
+
+  if (!FS->paramAccesses().empty()) {
+    Out << ", params: (";
+    FieldSeparator IFS;
+    for (auto &PS : FS->paramAccesses()) {
+      Out << IFS;
+      Out << "(param: " << PS.ParamNo;
+      Out << ", offset: ";
+      PrintRange(PS.Use);
+      if (!PS.Calls.empty()) {
+        Out << ", calls: (";
+        FieldSeparator IFS;
+        for (auto &Call : PS.Calls) {
+          Out << IFS;
+          Out << "(callee: ^" << Machine.getGUIDSlot(Call.Callee);
+          Out << ", param: " << Call.ParamNo;
+          Out << ", offset: ";
+          PrintRange(Call.Offsets);
+          Out << ")";
+        }
+        Out << ")";
+      }
+      Out << ")";
+    }
+    Out << ")";
+  }
 }
 
 void AssemblyWriter::printTypeIdInfo(
@@ -4298,6 +4358,17 @@ void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                    IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printFunction(this);
+}
+
+void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
+                     bool ShouldPreserveUseListOrder,
+                     bool IsForDebug) const {
+  SlotTracker SlotTable(this->getModule());
+  formatted_raw_ostream OS(ROS);
+  AssemblyWriter W(OS, SlotTable, this->getModule(), AAW,
+                   IsForDebug,
+                   ShouldPreserveUseListOrder);
+  W.printBasicBlock(this);
 }
 
 void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,

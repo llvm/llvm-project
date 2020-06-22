@@ -103,7 +103,9 @@ protected:
   virtual std::string GetPlatformName () = 0;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformRemoteDarwinDevice);
+  PlatformRemoteDarwinDevice(const PlatformRemoteDarwinDevice &) = delete;
+  const PlatformRemoteDarwinDevice &
+  operator=(const PlatformRemoteDarwinDevice &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEDARWINDEVICE_H

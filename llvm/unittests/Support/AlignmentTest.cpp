@@ -135,7 +135,6 @@ TEST(AlignmentTest, AlignToWithSkew) {
 TEST(AlignmentTest, Log2) {
   for (uint64_t Value : getValidAlignments()) {
     EXPECT_EQ(Log2(Align(Value)), Log2_64(Value));
-    EXPECT_EQ(Log2(MaybeAlign(Value)), Log2_64(Value));
   }
 }
 
@@ -203,8 +202,6 @@ TEST(AlignmentTest, isAligned_isAddrAligned) {
   };
   for (const auto &T : kTests) {
     MaybeAlign A(T.alignment);
-    // Test MaybeAlign
-    EXPECT_EQ(isAligned(A, T.offset), T.isAligned);
     // Test Align
     if (A) {
       EXPECT_EQ(isAligned(A.getValue(), T.offset), T.isAligned);
@@ -266,21 +263,9 @@ TEST(AlignmentTest, AlignComparisons) {
     const MaybeAlign MB(ValidAlignments[I]);
     EXPECT_EQ(MA, MA);
     EXPECT_NE(MA, MB);
-    EXPECT_LT(MA, MB);
-    EXPECT_GT(MB, MA);
-    EXPECT_LE(MA, MB);
-    EXPECT_GE(MB, MA);
-    EXPECT_LE(MA, MA);
-    EXPECT_GE(MA, MA);
 
     EXPECT_EQ(MA, MA ? (*MA).value() : 0);
     EXPECT_NE(MA, MB ? (*MB).value() : 0);
-    EXPECT_LT(MA, MB ? (*MB).value() : 0);
-    EXPECT_GT(MB, MA ? (*MA).value() : 0);
-    EXPECT_LE(MA, MB ? (*MB).value() : 0);
-    EXPECT_GE(MB, MA ? (*MA).value() : 0);
-    EXPECT_LE(MA, MA ? (*MA).value() : 0);
-    EXPECT_GE(MA, MA ? (*MA).value() : 0);
 
     EXPECT_EQ(std::max(A, B), B);
     EXPECT_EQ(std::min(A, B), A);
@@ -306,8 +291,6 @@ TEST(AlignmentTest, Max) {
 
   // Uses std::max.
   EXPECT_EQ(max(Align(2), Align(4)), Align(4));
-  EXPECT_EQ(max(MaybeAlign(2), MaybeAlign(4)), MaybeAlign(4));
-  EXPECT_EQ(max(MaybeAlign(), MaybeAlign()), MaybeAlign());
 }
 
 TEST(AlignmentTest, AssumeAligned) {
@@ -327,10 +310,6 @@ std::vector<uint64_t> getValidAlignmentsForDeathTest() {
 }
 
 std::vector<uint64_t> getNonPowerOfTwo() { return {3, 10, 15}; }
-
-TEST(AlignmentDeathTest, Log2) {
-  EXPECT_DEATH(Log2(MaybeAlign(0)), ".* should be defined");
-}
 
 TEST(AlignmentDeathTest, CantConvertUnsetMaybe) {
   EXPECT_DEATH((MaybeAlign(0).getValue()), ".*");
@@ -369,21 +348,6 @@ TEST(AlignmentDeathTest, CompareMaybeAlignToZero) {
     // MaybeAlign is allowed to be == or != 0
     (void)(MaybeAlign(Value) == 0);
     (void)(MaybeAlign(Value) != 0);
-    EXPECT_DEATH((void)(MaybeAlign(Value) >= 0), ".* should be defined");
-    EXPECT_DEATH((void)(MaybeAlign(Value) <= 0), ".* should be defined");
-    EXPECT_DEATH((void)(MaybeAlign(Value) > 0), ".* should be defined");
-    EXPECT_DEATH((void)(MaybeAlign(Value) < 0), ".* should be defined");
-  }
-}
-
-TEST(AlignmentDeathTest, CompareAlignToUndefMaybeAlign) {
-  for (uint64_t Value : getValidAlignmentsForDeathTest()) {
-    EXPECT_DEATH((void)(Align(Value) == MaybeAlign(0)), ".* should be defined");
-    EXPECT_DEATH((void)(Align(Value) != MaybeAlign(0)), ".* should be defined");
-    EXPECT_DEATH((void)(Align(Value) >= MaybeAlign(0)), ".* should be defined");
-    EXPECT_DEATH((void)(Align(Value) <= MaybeAlign(0)), ".* should be defined");
-    EXPECT_DEATH((void)(Align(Value) > MaybeAlign(0)), ".* should be defined");
-    EXPECT_DEATH((void)(Align(Value) < MaybeAlign(0)), ".* should be defined");
   }
 }
 

@@ -270,7 +270,8 @@ protected:
 
 private:
   Kind m_kind;
-  DISALLOW_COPY_AND_ASSIGN(TypeSummaryImpl);
+  TypeSummaryImpl(const TypeSummaryImpl &) = delete;
+  const TypeSummaryImpl &operator=(const TypeSummaryImpl &) = delete;
 };
 
 // simple string-based summaries, using ${var to show data
@@ -297,7 +298,8 @@ struct StringSummaryFormat : public TypeSummaryImpl {
   }
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(StringSummaryFormat);
+  StringSummaryFormat(const StringSummaryFormat &) = delete;
+  const StringSummaryFormat &operator=(const StringSummaryFormat &) = delete;
 };
 
 // summaries implemented via a C++ function
@@ -341,7 +343,9 @@ struct CXXFunctionSummaryFormat : public TypeSummaryImpl {
   typedef std::shared_ptr<CXXFunctionSummaryFormat> SharedPointer;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(CXXFunctionSummaryFormat);
+  CXXFunctionSummaryFormat(const CXXFunctionSummaryFormat &) = delete;
+  const CXXFunctionSummaryFormat &
+  operator=(const CXXFunctionSummaryFormat &) = delete;
 };
 
 // Python-based summaries, running script code to show data
@@ -387,7 +391,8 @@ struct ScriptSummaryFormat : public TypeSummaryImpl {
   typedef std::shared_ptr<ScriptSummaryFormat> SharedPointer;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ScriptSummaryFormat);
+  ScriptSummaryFormat(const ScriptSummaryFormat &) = delete;
+  const ScriptSummaryFormat &operator=(const ScriptSummaryFormat &) = delete;
 };
 } // namespace lldb_private
 

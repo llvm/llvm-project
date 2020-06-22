@@ -841,7 +841,7 @@ int GDBRemoteCommunicationClient::SendEnvironmentPacket(
     bool send_hex_encoding = false;
     for (const char *p = name_equal_value; *p != '\0' && !send_hex_encoding;
          ++p) {
-      if (isprint(*p)) {
+      if (llvm::isPrint(*p)) {
         switch (*p) {
         case '$':
         case '#':
@@ -3623,7 +3623,7 @@ bool GDBRemoteCommunicationClient::GetModuleInfo(
       StringExtractor extractor(value);
       std::string uuid;
       extractor.GetHexByteString(uuid);
-      module_spec.GetUUID().SetFromStringRef(uuid, uuid.size() / 2);
+      module_spec.GetUUID().SetFromStringRef(uuid);
     } else if (name == "triple") {
       StringExtractor extractor(value);
       std::string triple;
@@ -3659,8 +3659,7 @@ ParseModuleSpec(StructuredData::Dictionary *dict) {
 
   if (!dict->GetValueForKeyAsString("uuid", string))
     return llvm::None;
-  if (result.GetUUID().SetFromStringRef(string, string.size() / 2) !=
-      string.size())
+  if (!result.GetUUID().SetFromStringRef(string))
     return llvm::None;
 
   if (!dict->GetValueForKeyAsInteger("file_offset", integer))

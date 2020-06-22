@@ -187,14 +187,14 @@ entry:
 ; CHECK-NOT: modsw
 ; CHECK: slwi
 ; CHECK-NOT: modsw
-; CHECK: subf
+; CHECK: sub
 ; CHECK-NOT: modsw
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: modulo_const32_sw
 ; CHECK-PWR8: srawi
 ; CHECK-PWR8: addze
 ; CHECK-PWR8: slwi
-; CHECK-PWR8: subf
+; CHECK-PWR8: sub
 ; CHECK-PWR8: blr
 }
 
@@ -205,13 +205,13 @@ entry:
   ret i32 %rem
 ; CHECK-LABEL: modulo_const3_sw
 ; CHECK-NOT: modsw
-; CHECK: mull
+; CHECK: mulh
 ; CHECK-NOT: modsw
 ; CHECK: sub
 ; CHECK-NOT: modsw
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: modulo_const3_sw
-; CHECK-PWR8: mull
+; CHECK-PWR8: mulh
 ; CHECK-PWR8: sub
 ; CHECK-PWR8: blr
 }

@@ -1,4 +1,4 @@
-RUN: llc -filetype=obj -o %t.o %p/Inputs/ret32.ll
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.o
 
 RUN: echo "%/t.o -o %/t.wasm -e ret32" > %t.rsp
 RUN: wasm-ld @%t.rsp --initial-memory=655360

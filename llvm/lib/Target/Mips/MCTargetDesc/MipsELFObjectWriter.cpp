@@ -234,14 +234,15 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   case Mips::fixup_Mips_32:
   case FK_Data_4:
     return IsPCRel ? ELF::R_MIPS_PC32 : ELF::R_MIPS_32;
+  case Mips::fixup_Mips_64:
+  case FK_Data_8:
+    return IsPCRel
+               ? setRTypes(ELF::R_MIPS_PC32, ELF::R_MIPS_64, ELF::R_MIPS_NONE)
+               : (unsigned)ELF::R_MIPS_64;
   }
 
   if (IsPCRel) {
     switch (Kind) {
-    case FK_Data_8:
-      Ctx.reportError(Fixup.getLoc(),
-                      "MIPS does not support 64-bit PC-relative relocations");
-      return ELF::R_MIPS_NONE;
     case Mips::fixup_Mips_Branch_PCRel:
     case Mips::fixup_Mips_PC16:
       return ELF::R_MIPS_PC16;
@@ -277,9 +278,6 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   switch (Kind) {
-  case Mips::fixup_Mips_64:
-  case FK_Data_8:
-    return ELF::R_MIPS_64;
   case FK_DTPRel_4:
     return ELF::R_MIPS_TLS_DTPREL32;
   case FK_DTPRel_8:

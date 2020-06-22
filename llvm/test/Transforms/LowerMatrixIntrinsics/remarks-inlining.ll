@@ -51,7 +51,7 @@ target triple = "aarch64-apple-ios"
 ; CHECK-NEXT:  load(addr %A)
 
 ; CHECK-LABEL: remark: load.h:41:43: Lowered with 0 stores, 10 loads, 0 compute ops
-; CHECK-NEXT:  columnwise.load.3x5.double(addr %B, 5)
+; CHECK-NEXT:  column.major.load.3x5.double(addr %B, 5)
 
 ; CHECK-LABEL: remark: load.h:41:11: Lowered with 0 stores, 1 loads, 0 compute ops
 ; CHECK-NEXT: load(addr %D)
@@ -60,13 +60,13 @@ target triple = "aarch64-apple-ios"
 ; CHECK-NEXT:  load(addr %A)
 
 ; CHECK-LABEL: remark: assign.h:32:43: Lowered with 0 stores, 10 loads, 0 compute ops
-; CHECK-NEXT:  columnwise.load.3x5.double(addr %B, 5)
+; CHECK-NEXT:  column.major.load.3x5.double(addr %B, 5)
 
 ; CHECK-LABEL: remark: toplevel.c:410:0: Lowered with 10 stores, 20 loads, 10 compute ops
 ; CHECK-NEXT:  store(
 ; CHECK-NEXT:   fadd(
 ; CHECK-NEXT:    load(addr %A),
-; CHECK-NEXT:    columnwise.load.3x5.double(addr %B, 5)),
+; CHECK-NEXT:    column.major.load.3x5.double(addr %B, 5)),
 ; CHECK-NEXT:   addr %C)
 
 ; CHECK-LABEL: remark: toplevel.c:510:0: Lowered with 1 stores, 1 loads, 8 compute ops
@@ -95,7 +95,7 @@ target triple = "aarch64-apple-ios"
 define void @toplevel(<15 x double>* %A, <15 x double>* %B, <15 x double>* %C, <2 x float>* %D) !dbg !16 {
 entry:
   %a = load <15 x double>, <15 x double> *%A, align 16, !dbg !3791
-  %b = call <15 x double> @llvm.matrix.columnwise.load(<15 x double>* %B, i32 5, i32 3, i32 5), !dbg !3793
+  %b = call <15 x double> @llvm.matrix.column.major.load(<15 x double>* %B, i64 5, i1 false, i32 3, i32 5), !dbg !3793
   %c  = fadd <15 x double> %a, %b, !dbg !100
   store <15 x double> %c, <15 x double> *%C, align 16, !dbg !102
 
@@ -106,7 +106,7 @@ entry:
   ret void
 }
 
-declare <15 x double> @llvm.matrix.columnwise.load(<15 x double>*, i32, i32, i32)
+declare <15 x double> @llvm.matrix.column.major.load(<15 x double>*, i64, i1, i32, i32)
 declare <2 x float> @llvm.matrix.transpose(<2 x float>, i32, i32)
 
 !llvm.dbg.cu = !{!0}

@@ -11,7 +11,7 @@
 // nullptr_t
 //  is_null_pointer
 
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++03, c++11
 
 #include <type_traits>
 #include <cstddef>        // for std::nullptr_t

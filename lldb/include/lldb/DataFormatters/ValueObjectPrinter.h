@@ -57,7 +57,7 @@ protected:
 
   const char *GetDescriptionForDisplay();
 
-  const char *GetRootNameForDisplay(const char *if_fail = nullptr);
+  const char *GetRootNameForDisplay();
 
   bool ShouldPrintValueObject();
 
@@ -141,7 +141,8 @@ private:
 
   friend struct StringSummaryFormat;
 
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectPrinter);
+  ValueObjectPrinter(const ValueObjectPrinter &) = delete;
+  const ValueObjectPrinter &operator=(const ValueObjectPrinter &) = delete;
 };
 
 } // namespace lldb_private

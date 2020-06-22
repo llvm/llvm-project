@@ -11,7 +11,7 @@
 // binder2nd
 
 // UNSUPPORTED: clang-4.0
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS
 
 #include <functional>

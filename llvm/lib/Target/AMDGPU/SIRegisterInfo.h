@@ -33,6 +33,13 @@ private:
   bool isWave32;
   BitVector RegPressureIgnoredUnits;
 
+  /// Sub reg indexes for getRegSplitParts.
+  /// First index represents subreg size from 1 to 16 DWORDs.
+  /// The inner vector is sorted by bit offset.
+  /// Provided a register can be fully split with given subregs,
+  /// all elements of the inner vector combined give a full lane mask.
+  static std::array<std::vector<int16_t>, 16> RegSplitParts;
+
   void reserveRegisterTuples(BitVector &, MCRegister Reg) const;
 
 public:
@@ -95,6 +102,11 @@ public:
 
   const TargetRegisterClass *getPointerRegClass(
     const MachineFunction &MF, unsigned Kind = 0) const override;
+
+  void buildSGPRSpillLoadStore(MachineBasicBlock::iterator MI, int Index,
+                               int Offset, unsigned EltSize, Register VGPR,
+                               int64_t VGPRLanes, RegScavenger *RS,
+                               bool IsLoad) const;
 
   /// If \p OnlyToVGPR is true, this will only succeed if this
   bool spillSGPR(MachineBasicBlock::iterator MI,
@@ -210,6 +222,8 @@ public:
     return isVGPR(MRI, Reg) || isAGPR(MRI, Reg);
   }
 
+  bool isConstantPhysReg(MCRegister PhysReg) const override;
+
   bool isDivergentRegClass(const TargetRegisterClass *RC) const override {
     return !isSGPRClass(RC);
   }
@@ -298,6 +312,18 @@ public:
   // For a given 16 bit \p Reg \returns a 32 bit register holding it.
   // \returns \p Reg otherwise.
   MCPhysReg get32BitRegister(MCPhysReg Reg) const;
+
+  /// Return all SGPR128 which satisfy the waves per execution unit requirement
+  /// of the subtarget.
+  ArrayRef<MCPhysReg> getAllSGPR128(const MachineFunction &MF) const;
+
+  /// Return all SGPR32 which satisfy the waves per execution unit requirement
+  /// of the subtarget.
+  ArrayRef<MCPhysReg> getAllSGPR32(const MachineFunction &MF) const;
+
+  /// Return all VGPR32 which satisfy the waves per execution unit requirement
+  /// of the subtarget.
+  ArrayRef<MCPhysReg> getAllVGPR32(const MachineFunction &MF) const;
 
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,

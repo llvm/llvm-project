@@ -17,7 +17,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-LABEL: @test
 ; Checks that the call instruction is promoted to direct call and has
 ; profile count annotated on the direct call.
-define void @test(void ()*) !dbg !7 {
+define void @test(void ()*) #0 !dbg !7 {
   %2 = alloca void ()*
   store void ()* %0, void ()** %2
   %3 = load void ()*, void ()** %2
@@ -27,6 +27,8 @@ define void @test(void ()*) !dbg !7 {
 }
 
 declare void @bar() local_unnamed_addr
+
+attributes #0 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

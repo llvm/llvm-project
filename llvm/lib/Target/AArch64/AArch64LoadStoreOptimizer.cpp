@@ -1287,7 +1287,23 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
     LLVM_DEBUG(dbgs() << "  Operand not killed at " << FirstMI << "\n");
     return false;
   }
-  auto canRenameMOP = [](const MachineOperand &MOP) {
+  auto canRenameMOP = [TRI](const MachineOperand &MOP) {
+    if (MOP.isReg()) {
+      auto *RegClass = TRI->getMinimalPhysRegClass(MOP.getReg());
+      // Renaming registers with multiple disjunct sub-registers (e.g. the
+      // result of a LD3) means that all sub-registers are renamed, potentially
+      // impacting other instructions we did not check. Bail out.
+      // Note that this relies on the structure of the AArch64 register file. In
+      // particular, a subregister cannot be written without overwriting the
+      // whole register.
+      if (RegClass->HasDisjunctSubRegs) {
+        LLVM_DEBUG(
+            dbgs()
+            << "  Cannot rename operands with multiple disjunct subregisters ("
+            << MOP << ")\n");
+        return false;
+      }
+    }
     return MOP.isImplicit() ||
            (MOP.isRenamable() && !MOP.isEarlyClobber() && !MOP.isTied());
   };

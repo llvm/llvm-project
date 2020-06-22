@@ -62,3 +62,8 @@ def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
    uchar_to_float, cvt_f32_ubyteN]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
 }
+
+def AMDGPURegBankCombinerHelper : GICombinerHelper<
+  "AMDGPUGenRegBankCombinerHelper", []> {
+  let DisableRuleOption = "amdgpuregbankcombiner-disable-rule";
+}

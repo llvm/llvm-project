@@ -160,11 +160,9 @@ const StackFrameContext *VarRegion::getStackFrame() const {
 }
 
 ObjCIvarRegion::ObjCIvarRegion(const ObjCIvarDecl *ivd, const SubRegion *sReg)
-    : DeclRegion(ivd, sReg, ObjCIvarRegionKind) {}
+    : DeclRegion(sReg, ObjCIvarRegionKind), IVD(ivd) {}
 
-const ObjCIvarDecl *ObjCIvarRegion::getDecl() const {
-  return cast<ObjCIvarDecl>(D);
-}
+const ObjCIvarDecl *ObjCIvarRegion::getDecl() const { return IVD; }
 
 QualType ObjCIvarRegion::getValueType() const {
   return getDecl()->getType();
@@ -176,6 +174,33 @@ QualType CXXBaseObjectRegion::getValueType() const {
 
 QualType CXXDerivedObjectRegion::getValueType() const {
   return QualType(getDecl()->getTypeForDecl(), 0);
+}
+
+QualType ParamVarRegion::getValueType() const {
+  assert(getDecl() &&
+         "`ParamVarRegion` support functions without `Decl` not implemented"
+         " yet.");
+  return getDecl()->getType();
+}
+
+const ParmVarDecl *ParamVarRegion::getDecl() const {
+  const Decl *D = getStackFrame()->getDecl();
+
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    assert(Index < FD->param_size());
+    return FD->parameters()[Index];
+  } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
+    assert(Index < BD->param_size());
+    return BD->parameters()[Index];
+  } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+    assert(Index < MD->param_size());
+    return MD->parameters()[Index];
+  } else if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
+    assert(Index < CD->param_size());
+    return CD->parameters()[Index];
+  } else {
+    llvm_unreachable("Unexpected Decl kind!");
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -249,25 +274,44 @@ void CXXThisRegion::Profile(llvm::FoldingSetNodeID &ID) const {
   CXXThisRegion::ProfileRegion(ID, ThisPointerTy, superRegion);
 }
 
+void FieldRegion::Profile(llvm::FoldingSetNodeID &ID) const {
+  ProfileRegion(ID, getDecl(), superRegion);
+}
+
 void ObjCIvarRegion::ProfileRegion(llvm::FoldingSetNodeID& ID,
                                    const ObjCIvarDecl *ivd,
                                    const MemRegion* superRegion) {
-  DeclRegion::ProfileRegion(ID, ivd, superRegion, ObjCIvarRegionKind);
-}
-
-void DeclRegion::ProfileRegion(llvm::FoldingSetNodeID& ID, const Decl *D,
-                               const MemRegion* superRegion, Kind k) {
-  ID.AddInteger(static_cast<unsigned>(k));
-  ID.AddPointer(D);
+  ID.AddInteger(static_cast<unsigned>(ObjCIvarRegionKind));
+  ID.AddPointer(ivd);
   ID.AddPointer(superRegion);
 }
 
-void DeclRegion::Profile(llvm::FoldingSetNodeID& ID) const {
-  DeclRegion::ProfileRegion(ID, D, superRegion, getKind());
+void ObjCIvarRegion::Profile(llvm::FoldingSetNodeID &ID) const {
+  ProfileRegion(ID, getDecl(), superRegion);
 }
 
-void VarRegion::Profile(llvm::FoldingSetNodeID &ID) const {
-  VarRegion::ProfileRegion(ID, getDecl(), superRegion);
+void NonParamVarRegion::ProfileRegion(llvm::FoldingSetNodeID &ID,
+                                      const VarDecl *VD,
+                                      const MemRegion *superRegion) {
+  ID.AddInteger(static_cast<unsigned>(NonParamVarRegionKind));
+  ID.AddPointer(VD);
+  ID.AddPointer(superRegion);
+}
+
+void NonParamVarRegion::Profile(llvm::FoldingSetNodeID &ID) const {
+  ProfileRegion(ID, getDecl(), superRegion);
+}
+
+void ParamVarRegion::ProfileRegion(llvm::FoldingSetNodeID &ID, const Expr *OE,
+                                   unsigned Idx, const MemRegion *SReg) {
+  ID.AddInteger(static_cast<unsigned>(ParamVarRegionKind));
+  ID.AddPointer(OE);
+  ID.AddInteger(Idx);
+  ID.AddPointer(SReg);
+}
+
+void ParamVarRegion::Profile(llvm::FoldingSetNodeID &ID) const {
+  ProfileRegion(ID, getOriginExpr(), getIndex(), superRegion);
 }
 
 void SymbolicRegion::ProfileRegion(llvm::FoldingSetNodeID& ID, SymbolRef sym,
@@ -479,12 +523,11 @@ void SymbolicRegion::dumpToStream(raw_ostream &os) const {
   os << "SymRegion{" << sym << '}';
 }
 
-void VarRegion::dumpToStream(raw_ostream &os) const {
-  const auto *VD = cast<VarDecl>(D);
+void NonParamVarRegion::dumpToStream(raw_ostream &os) const {
   if (const IdentifierInfo *ID = VD->getIdentifier())
     os << ID->getName();
   else
-    os << "VarRegion{D" << VD->getID() << '}';
+    os << "NonParamVarRegion{D" << VD->getID() << '}';
 }
 
 LLVM_DUMP_METHOD void RegionRawOffset::dump() const {
@@ -531,6 +574,18 @@ void StackLocalsSpaceRegion::dumpToStream(raw_ostream &os) const {
   os << "StackLocalsSpaceRegion";
 }
 
+void ParamVarRegion::dumpToStream(raw_ostream &os) const {
+  const ParmVarDecl *PVD = getDecl();
+  assert(PVD &&
+         "`ParamVarRegion` support functions without `Decl` not implemented"
+         " yet.");
+  if (const IdentifierInfo *ID = PVD->getIdentifier()) {
+    os << ID->getName();
+  } else {
+    os << "ParamVarRegion{P" << PVD->getID() << '}';
+  }
+}
+
 bool MemRegion::canPrintPretty() const {
   return canPrintPrettyAsExpr();
 }
@@ -550,11 +605,18 @@ void MemRegion::printPrettyAsExpr(raw_ostream &) const {
   llvm_unreachable("This region cannot be printed pretty.");
 }
 
-bool VarRegion::canPrintPrettyAsExpr() const {
-  return true;
+bool NonParamVarRegion::canPrintPrettyAsExpr() const { return true; }
+
+void NonParamVarRegion::printPrettyAsExpr(raw_ostream &os) const {
+  os << getDecl()->getName();
 }
 
-void VarRegion::printPrettyAsExpr(raw_ostream &os) const {
+bool ParamVarRegion::canPrintPrettyAsExpr() const { return true; }
+
+void ParamVarRegion::printPrettyAsExpr(raw_ostream &os) const {
+  assert(getDecl() &&
+         "`ParamVarRegion` support functions without `Decl` not implemented"
+         " yet.");
   os << getDecl()->getName();
 }
 
@@ -693,7 +755,8 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
   case MemRegion::CXXTempObjectRegionKind:
   case MemRegion::CXXThisRegionKind:
   case MemRegion::ObjCIvarRegionKind:
-  case MemRegion::VarRegionKind:
+  case MemRegion::NonParamVarRegionKind:
+  case MemRegion::ParamVarRegionKind:
   case MemRegion::ElementRegionKind:
   case MemRegion::ObjCStringRegionKind: {
     QualType Ty = cast<TypedValueRegion>(SR)->getDesugaredValueType(Ctx);
@@ -847,9 +910,11 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
       for (BlockDataRegion::referenced_vars_iterator
            I = BR->referenced_vars_begin(),
            E = BR->referenced_vars_end(); I != E; ++I) {
-        const VarRegion *VR = I.getOriginalRegion();
-        if (VR->getDecl() == VD)
-          return cast<VarRegion>(I.getCapturedRegion());
+        const TypedValueRegion *OrigR = I.getOriginalRegion();
+        if (const auto *VR = dyn_cast<VarRegion>(OrigR)) {
+          if (VR->getDecl() == VD)
+            return cast<VarRegion>(I.getCapturedRegion());
+        }
       }
     }
 
@@ -858,8 +923,30 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
   return (const StackFrameContext *)nullptr;
 }
 
-const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
+const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const LocationContext *LC) {
+  const auto *PVD = dyn_cast<ParmVarDecl>(D);
+  if (PVD) {
+    unsigned Index = PVD->getFunctionScopeIndex();
+    const StackFrameContext *SFC = LC->getStackFrame();
+    const Stmt *CallSite = SFC->getCallSite();
+    if (CallSite) {
+      const Decl *D = SFC->getDecl();
+      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+        if (Index < FD->param_size() && FD->parameters()[Index] == PVD)
+          return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
+                                              getStackArgumentsRegion(SFC));
+      } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
+        if (Index < BD->param_size() && BD->parameters()[Index] == PVD)
+          return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
+                                              getStackArgumentsRegion(SFC));
+      } else {
+        return getSubRegion<ParamVarRegion>(cast<Expr>(CallSite), Index,
+                                            getStackArgumentsRegion(SFC));
+      }
+    }
+  }
+
   D = D->getCanonicalDecl();
   const MemRegion *sReg = nullptr;
 
@@ -942,13 +1029,23 @@ const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
     }
   }
 
-  return getSubRegion<VarRegion>(D, sReg);
+  return getSubRegion<NonParamVarRegion>(D, sReg);
 }
 
-const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
-                                                const MemRegion *superR) {
+const NonParamVarRegion *
+MemRegionManager::getNonParamVarRegion(const VarDecl *D,
+                                       const MemRegion *superR) {
   D = D->getCanonicalDecl();
-  return getSubRegion<VarRegion>(D, superR);
+  return getSubRegion<NonParamVarRegion>(D, superR);
+}
+
+const ParamVarRegion *
+MemRegionManager::getParamVarRegion(const Expr *OriginExpr, unsigned Index,
+                                    const LocationContext *LC) {
+  const StackFrameContext *SFC = LC->getStackFrame();
+  assert(SFC);
+  return getSubRegion<ParamVarRegion>(OriginExpr, Index,
+                                      getStackArgumentsRegion(SFC));
 }
 
 const BlockDataRegion *
@@ -1341,7 +1438,8 @@ static RegionOffset calculateOffset(const MemRegion *R) {
     case MemRegion::CXXThisRegionKind:
     case MemRegion::StringRegionKind:
     case MemRegion::ObjCStringRegionKind:
-    case MemRegion::VarRegionKind:
+    case MemRegion::NonParamVarRegionKind:
+    case MemRegion::ParamVarRegionKind:
     case MemRegion::CXXTempObjectRegionKind:
       // Usual base regions.
       goto Finish;
@@ -1497,7 +1595,7 @@ BlockDataRegion::getCaptureRegions(const VarDecl *VD) {
   const VarRegion *OriginalVR = nullptr;
 
   if (!VD->hasAttr<BlocksAttr>() && VD->hasLocalStorage()) {
-    VR = MemMgr.getVarRegion(VD, this);
+    VR = MemMgr.getNonParamVarRegion(VD, this);
     OriginalVR = MemMgr.getVarRegion(VD, LC);
   }
   else {
@@ -1506,7 +1604,7 @@ BlockDataRegion::getCaptureRegions(const VarDecl *VD) {
       OriginalVR = VR;
     }
     else {
-      VR = MemMgr.getVarRegion(VD, MemMgr.getUnknownRegion());
+      VR = MemMgr.getNonParamVarRegion(VD, MemMgr.getUnknownRegion());
       OriginalVR = MemMgr.getVarRegion(VD, LC);
     }
   }

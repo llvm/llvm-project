@@ -64,6 +64,11 @@ private:
   /// for a \see write_impl() call to handle the data which has been put into
   /// this buffer.
   char *OutBufStart, *OutBufEnd, *OutBufCur;
+  bool ColorEnabled = false;
+
+  /// Optional stream this stream is tied to. If this stream is written to, the
+  /// tied-to stream will be flushed first.
+  raw_ostream *TiedStream = nullptr;
 
   enum class BufferKind {
     Unbuffered = 0,
@@ -270,21 +275,15 @@ public:
   /// @param Bold bold/brighter text, default false
   /// @param BG if true change the background, default: change foreground
   /// @returns itself so it can be used within << invocations
-  virtual raw_ostream &changeColor(enum Colors Color,
-                                   bool Bold = false,
-                                   bool BG = false) {
-    (void)Color;
-    (void)Bold;
-    (void)BG;
-    return *this;
-  }
+  virtual raw_ostream &changeColor(enum Colors Color, bool Bold = false,
+                                   bool BG = false);
 
   /// Resets the colors to terminal defaults. Call this when you are done
   /// outputting colored text, or before program exit.
-  virtual raw_ostream &resetColor() { return *this; }
+  virtual raw_ostream &resetColor();
 
   /// Reverses the foreground and background colors.
-  virtual raw_ostream &reverseColor() { return *this; }
+  virtual raw_ostream &reverseColor();
 
   /// This function determines if this stream is connected to a "tty" or
   /// "console" window. That is, the output would be displayed to the user
@@ -292,11 +291,16 @@ public:
   virtual bool is_displayed() const { return false; }
 
   /// This function determines if this stream is displayed and supports colors.
+  /// The result is unaffected by calls to enable_color().
   virtual bool has_colors() const { return is_displayed(); }
 
-  // Enable or disable colors. Once disable_colors() is called,
-  // changeColor() has no effect until enable_colors() is called.
-  virtual void enable_colors(bool /*enable*/) {}
+  // Enable or disable colors. Once enable_colors(false) is called,
+  // changeColor() has no effect until enable_colors(true) is called.
+  virtual void enable_colors(bool enable) { ColorEnabled = enable; }
+
+  /// Tie this stream to the specified stream. Replaces any existing tied-to
+  /// stream. Specifying a nullptr unties the stream.
+  void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
 
   //===--------------------------------------------------------------------===//
   // Subclass Interface
@@ -352,6 +356,13 @@ private:
   /// unused bytes in the buffer.
   void copy_to_buffer(const char *Ptr, size_t Size);
 
+  /// Compute whether colors should be used and do the necessary work such as
+  /// flushing. The result is affected by calls to enable_color().
+  bool prepare_colors();
+
+  /// Flush the tied-to stream (if present) and then write the required data.
+  void flush_tied_then_write(const char *Ptr, size_t Size);
+
   virtual void anchor();
 };
 
@@ -398,7 +409,6 @@ class raw_fd_ostream : public raw_pwrite_stream {
   int FD;
   bool ShouldClose;
   bool SupportsSeeking = false;
-  bool ColorEnabled = true;
 
 #ifdef _WIN32
   /// True if this fd refers to a Windows console device. Mintty and other
@@ -464,17 +474,9 @@ public:
   /// to the offset specified from the beginning of the file.
   uint64_t seek(uint64_t off);
 
-  raw_ostream &changeColor(enum Colors colors, bool bold=false,
-                           bool bg=false) override;
-  raw_ostream &resetColor() override;
-
-  raw_ostream &reverseColor() override;
-
   bool is_displayed() const override;
 
   bool has_colors() const override;
-
-  void enable_colors(bool enable) override { ColorEnabled = enable; }
 
   std::error_code error() const { return EC; }
 
@@ -496,13 +498,16 @@ public:
   void clear_error() { EC = std::error_code(); }
 };
 
-/// This returns a reference to a raw_ostream for standard output. Use it like:
-/// outs() << "foo" << "bar";
-raw_ostream &outs();
+/// This returns a reference to a raw_fd_ostream for standard output. Use it
+/// like: outs() << "foo" << "bar";
+raw_fd_ostream &outs();
 
-/// This returns a reference to a raw_ostream for standard error. Use it like:
-/// errs() << "foo" << "bar";
-raw_ostream &errs();
+/// This returns a reference to a raw_ostream for standard error.
+/// Use it like: errs() << "foo" << "bar";
+/// By default, the stream is tied to stdout to ensure stdout is flushed before
+/// stderr is written, to ensure the error messages are written in their
+/// expected place.
+raw_fd_ostream &errs();
 
 /// This returns a reference to a raw_ostream which simply discards output.
 raw_ostream &nulls();

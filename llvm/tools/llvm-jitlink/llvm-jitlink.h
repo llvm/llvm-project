@@ -69,7 +69,11 @@ private:
   Session(Triple TT, Error &Err);
 };
 
-Error registerMachOStubsAndGOT(Session &S, jitlink::LinkGraph &G);
+/// Record symbols, GOT entries, stubs, and sections for ELF file.
+Error registerELFGraphInfo(Session &S, jitlink::LinkGraph &G);
+
+/// Record symbols, GOT entries, stubs, and sections for MachO file.
+Error registerMachOGraphInfo(Session &S, jitlink::LinkGraph &G);
 
 } // end namespace llvm
 

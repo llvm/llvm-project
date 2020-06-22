@@ -3,7 +3,7 @@ debugserver used to block replying to the 'D' packet
 till it had joined the profiling thread.  If the profiling interval
 was too long, that would mean it would take longer than the packet
 timeout to reply, and the detach would time out.  Make sure that doesn't
-happen. 
+happen.
 """
 
 
@@ -23,6 +23,7 @@ class TestDetachVrsProfile(TestBase):
 
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
+    @skipIfReproducer
     def test_profile_and_detach(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()
@@ -55,14 +56,14 @@ class TestDetachVrsProfile(TestBase):
 
         # We don't want to hit our breakpoint anymore.
         bkpt.SetEnabled(False)
-        
+
         # Record our process pid so we can kill it since we are going to detach...
         self.pid = process.GetProcessID()
         def cleanup():
             self.dbg.SetAsync(False)
             os.kill(self.pid, signal.SIGKILL)
         self.addTearDownHook(cleanup)
-        
+
         process.Continue()
 
         event = lldb.SBEvent()
@@ -70,7 +71,7 @@ class TestDetachVrsProfile(TestBase):
         self.assertTrue(success, "Got an event which should be running.")
         event_state = process.GetStateFromEvent(event)
         self.assertEqual(event_state, lldb.eStateRunning, "Got the running event")
-        
+
         # Now detach:
         error = process.Detach()
         self.assertTrue(error.Success(), "Detached successfully")

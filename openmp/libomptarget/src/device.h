@@ -157,6 +157,9 @@ struct DeviceTy {
     return *this;
   }
 
+  // Return true if data can be copied to DstDevice directly
+  bool isDataExchangable(const DeviceTy& DstDevice);
+
   uint64_t getMapEntryRefCnt(void *HstPtrBegin);
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
   void *getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
@@ -176,10 +179,15 @@ struct DeviceTy {
 
   // Data transfer. When AsyncInfoPtr is nullptr, the transfer will be
   // synchronous.
+  // Copy data from host to device
   int32_t data_submit(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                       __tgt_async_info *AsyncInfoPtr);
+  // Copy data from device back to host
   int32_t data_retrieve(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                         __tgt_async_info *AsyncInfoPtr);
+  // Copy data from current device to destination device directly
+  int32_t data_exchange(void *SrcPtr, DeviceTy DstDev, void *DstPtr,
+                        int64_t Size, __tgt_async_info *AsyncInfoPtr);
 
   int32_t run_region(void *TgtEntryPtr, void **TgtVarsPtr,
                      ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,

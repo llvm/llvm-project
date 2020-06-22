@@ -246,6 +246,20 @@ entry:
 ; CHECK: calll _addrof_i32
 ; CHECK: retl
 
+define void @avoid_preallocated(i32* preallocated(i32) %x) {
+entry:
+  %x.p.p = alloca i32*
+  store i32* %x, i32** %x.p.p
+  call void @addrof_i32(i32* %x)
+  ret void
+}
+
+; CHECK-LABEL: _avoid_preallocated:
+; CHECK: leal {{[0-9]+}}(%esp), %[[reg:[^ ]*]]
+; CHECK: pushl %[[reg]]
+; CHECK: calll _addrof_i32
+; CHECK: retl
+
 ; Don't elide the copy when the alloca is escaped with a store.
 define void @escape_with_store(i32 %x) {
   %x1 = alloca i32

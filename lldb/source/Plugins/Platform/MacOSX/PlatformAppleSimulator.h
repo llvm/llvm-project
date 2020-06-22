@@ -25,7 +25,8 @@ public:
   static void Terminate();
 
   // Class Methods
-  PlatformAppleSimulator();
+  PlatformAppleSimulator(
+      CoreSimulatorSupport::DeviceType::ProductFamilyID kind);
 
   virtual ~PlatformAppleSimulator();
 
@@ -47,6 +48,7 @@ protected:
   std::mutex m_core_sim_path_mutex;
   llvm::Optional<lldb_private::FileSpec> m_core_simulator_framework_path;
   llvm::Optional<CoreSimulatorSupport::Device> m_device;
+  CoreSimulatorSupport::DeviceType::ProductFamilyID m_kind;
 
   lldb_private::FileSpec GetCoreSimulatorPath();
 
@@ -57,7 +59,9 @@ protected:
 #endif
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformAppleSimulator);
+  PlatformAppleSimulator(const PlatformAppleSimulator &) = delete;
+  const PlatformAppleSimulator &
+  operator=(const PlatformAppleSimulator &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLESIMULATOR_H

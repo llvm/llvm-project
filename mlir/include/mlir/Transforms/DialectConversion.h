@@ -34,12 +34,10 @@ class Value;
 // Type Conversion
 //===----------------------------------------------------------------------===//
 
-/// Base class for type conversion interface. Specific converters must
-/// derive this class and implement the pure virtual functions.
+/// Type conversion class. Specific conversions and materializations can be
+/// registered using addConversion and addMaterialization, respectively.
 class TypeConverter {
 public:
-  virtual ~TypeConverter() = default;
-
   /// This class provides all of the information necessary to convert a type
   /// signature.
   class SignatureConversion {
@@ -74,16 +72,16 @@ public:
     /// used if the new types are not intended to remap an existing input.
     void addInputs(ArrayRef<Type> types);
 
-    /// Remap an input of the original signature with a range of types in the
-    /// new signature.
-    void remapInput(unsigned origInputNo, unsigned newInputNo,
-                    unsigned newInputCount = 1);
-
     /// Remap an input of the original signature to another `replacement`
     /// value. This drops the original argument.
     void remapInput(unsigned origInputNo, Value replacement);
 
   private:
+    /// Remap an input of the original signature with a range of types in the
+    /// new signature.
+    void remapInput(unsigned origInputNo, unsigned newInputNo,
+                    unsigned newInputCount = 1);
+
     /// The remapping information for each of the original arguments.
     SmallVector<Optional<InputMapping>, 4> remappedInputs;
 
@@ -113,6 +111,25 @@ public:
     registerConversion(wrapCallback<T>(std::forward<FnT>(callback)));
   }
 
+  /// Register a materialization function, which must be convertible to the
+  /// following form:
+  ///   `Optional<Value>(PatternRewriter &, T, ValueRange, Location)`,
+  /// where `T` is any subclass of `Type`. This function is responsible for
+  /// creating an operation, using the PatternRewriter and Location provided,
+  /// that "casts" a range of values into a single value of the given type `T`.
+  /// It must return a Value of the converted type on success, an `llvm::None`
+  /// if it failed but other materialization can be attempted, and `nullptr` on
+  /// unrecoverable failure. It will only be called for (sub)types of `T`.
+  /// Materialization functions must be provided when a type conversion
+  /// results in more than one type, or if a type conversion may persist after
+  /// the conversion has finished.
+  template <typename FnT,
+            typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
+  void addMaterialization(FnT &&callback) {
+    registerMaterialization(
+        wrapMaterialization<T>(std::forward<FnT>(callback)));
+  }
+
   /// Convert the given type. This function should return failure if no valid
   /// conversion exists, success otherwise. If the new set of types is empty,
   /// the type is removed and any usages of the existing value are expected to
@@ -132,34 +149,42 @@ public:
   /// Return true if the given type is legal for this type converter, i.e. the
   /// type converts to itself.
   bool isLegal(Type type);
+  /// Return true if all of the given types are legal for this type converter.
+  template <typename RangeT>
+  std::enable_if_t<!std::is_convertible<RangeT, Type>::value &&
+                       !std::is_convertible<RangeT, Operation *>::value,
+                   bool>
+  isLegal(RangeT &&range) {
+    return llvm::all_of(range, [this](Type type) { return isLegal(type); });
+  }
+  /// Return true if the given operation has legal operand and result types.
+  bool isLegal(Operation *op);
+
+  /// Return true if the types of block arguments within the region are legal.
+  bool isLegal(Region *region);
 
   /// Return true if the inputs and outputs of the given function type are
   /// legal.
-  bool isSignatureLegal(FunctionType funcType);
+  bool isSignatureLegal(FunctionType ty);
 
-  /// This hook allows for converting a specific argument of a signature. It
+  /// This method allows for converting a specific argument of a signature. It
   /// takes as inputs the original argument input number, type.
-  /// On success, this function should populate 'result' with any new mappings.
-  virtual LogicalResult convertSignatureArg(unsigned inputNo, Type type,
-                                            SignatureConversion &result);
+  /// On success, it populates 'result' with any new mappings.
+  LogicalResult convertSignatureArg(unsigned inputNo, Type type,
+                                    SignatureConversion &result);
+  LogicalResult convertSignatureArgs(TypeRange types,
+                                     SignatureConversion &result,
+                                     unsigned origInputOffset = 0);
 
   /// This function converts the type signature of the given block, by invoking
   /// 'convertSignatureArg' for each argument. This function should return a
   /// valid conversion for the signature on success, None otherwise.
   Optional<SignatureConversion> convertBlockSignature(Block *block);
 
-  /// This hook allows for materializing a conversion from a set of types into
-  /// one result type by generating a cast operation of some kind. The generated
-  /// operation should produce one result, of 'resultType', with the provided
-  /// 'inputs' as operands. This hook must be overridden when a type conversion
-  /// results in more than one type, or if a type conversion may persist after
-  /// the conversion has finished.
-  virtual Operation *materializeConversion(PatternRewriter &rewriter,
-                                           Type resultType,
-                                           ArrayRef<Value> inputs,
-                                           Location loc) {
-    llvm_unreachable("expected 'materializeConversion' to be overridden");
-  }
+  /// Materialize a conversion from a set of types into one result type by
+  /// generating a cast operation of some kind.
+  Value materializeConversion(PatternRewriter &rewriter, Location loc,
+                              Type resultType, ValueRange inputs);
 
 private:
   /// The signature of the callback used to convert a type. If the new set of
@@ -167,6 +192,9 @@ private:
   /// are expected to be removed during conversion.
   using ConversionCallbackFn =
       std::function<Optional<LogicalResult>(Type, SmallVectorImpl<Type> &)>;
+
+  using MaterializationCallbackFn = std::function<Optional<Value>(
+      PatternRewriter &, Type, ValueRange, Location)>;
 
   /// Generate a wrapper for the given callback. This allows for accepting
   /// different callback forms, that all compose into a single version.
@@ -202,32 +230,56 @@ private:
   /// Register a type conversion.
   void registerConversion(ConversionCallbackFn callback) {
     conversions.emplace_back(std::move(callback));
+    cachedDirectConversions.clear();
+    cachedMultiConversions.clear();
+  }
+
+  /// Generate a wrapper for the given materialization callback. The callback
+  /// may take any subclass of `Type` and the wrapper will check for the target
+  /// type to be of the expected class before calling the callback.
+  template <typename T, typename FnT>
+  MaterializationCallbackFn wrapMaterialization(FnT &&callback) {
+    return [callback = std::forward<FnT>(callback)](
+               PatternRewriter &rewriter, Type resultType, ValueRange inputs,
+               Location loc) -> Optional<Value> {
+      if (T derivedType = resultType.dyn_cast<T>())
+        return callback(rewriter, derivedType, inputs, loc);
+      return llvm::None;
+    };
+  }
+
+  /// Register a materialization.
+  void registerMaterialization(MaterializationCallbackFn &&callback) {
+    materializations.emplace_back(std::move(callback));
   }
 
   /// The set of registered conversion functions.
   SmallVector<ConversionCallbackFn, 4> conversions;
+
+  /// The list of registered materialization functions.
+  SmallVector<MaterializationCallbackFn, 2> materializations;
+
+  /// A set of cached conversions to avoid recomputing in the common case.
+  /// Direct 1-1 conversions are the most common, so this cache stores the
+  /// successful 1-1 conversions as well as all failed conversions.
+  DenseMap<Type, Type> cachedDirectConversions;
+  /// This cache stores the successful 1->N conversions, where N != 1.
+  DenseMap<Type, SmallVector<Type, 2>> cachedMultiConversions;
 };
 
 //===----------------------------------------------------------------------===//
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
 
-/// Base class for the conversion patterns that require type changes. Specific
-/// conversions must derive this class and implement least one `rewrite` method.
-/// NOTE: These conversion patterns can only be used with the 'apply*' methods
-/// below.
+/// Base class for the conversion patterns. This pattern class enables type
+/// conversions, and other uses specific to the conversion framework. As such,
+/// patterns of this type can only be used with the 'apply*' methods below.
 class ConversionPattern : public RewritePattern {
 public:
-  /// Construct an ConversionPattern.  `rootName` must correspond to the
-  /// canonical name of the first operation matched by the pattern.
-  ConversionPattern(StringRef rootName, PatternBenefit benefit,
-                    MLIRContext *ctx)
-      : RewritePattern(rootName, benefit, ctx) {}
-
   /// Hook for derived classes to implement rewriting. `op` is the (first)
-  /// operation matched by the pattern, `operands` is a list of rewritten values
-  /// that are passed to this operation, `rewriter` can be used to emit the new
-  /// operations. This function should not fail. If some specific cases of
+  /// operation matched by the pattern, `operands` is a list of the rewritten
+  /// operand values that are passed to `op`, `rewriter` can be used to emit the
+  /// new operations. This function should not fail. If some specific cases of
   /// the operation are not supported, these cases should not be matched.
   virtual void rewrite(Operation *op, ArrayRef<Value> operands,
                        ConversionPatternRewriter &rewriter) const {
@@ -248,6 +300,33 @@ public:
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final;
 
+  /// Return the type converter held by this pattern, or nullptr if the pattern
+  /// does not require type conversion.
+  TypeConverter *getTypeConverter() const { return typeConverter; }
+
+protected:
+  /// See `RewritePattern::RewritePattern` for information on the other
+  /// available constructors.
+  using RewritePattern::RewritePattern;
+  /// Construct a conversion pattern that matches an operation with the given
+  /// root name. This constructor allows for providing a type converter to use
+  /// within the pattern.
+  ConversionPattern(StringRef rootName, PatternBenefit benefit,
+                    TypeConverter &typeConverter, MLIRContext *ctx)
+      : RewritePattern(rootName, benefit, ctx), typeConverter(&typeConverter) {}
+  /// Construct a conversion pattern that matches any operation type. This
+  /// constructor allows for providing a type converter to use within the
+  /// pattern. `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
+  /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
+  /// always be supplied here.
+  ConversionPattern(PatternBenefit benefit, TypeConverter &typeConverter,
+                    MatchAnyOpTypeTag tag)
+      : RewritePattern(benefit, tag), typeConverter(&typeConverter) {}
+
+protected:
+  /// An optional type converter for use by this pattern.
+  TypeConverter *typeConverter;
+
 private:
   using RewritePattern::rewrite;
 };
@@ -259,6 +338,10 @@ template <typename SourceOp>
 struct OpConversionPattern : public ConversionPattern {
   OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}
+  OpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
+                      PatternBenefit benefit = 1)
+      : ConversionPattern(SourceOp::getOperationName(), benefit, typeConverter,
+                          context) {}
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
@@ -314,7 +397,7 @@ struct ConversionPatternRewriterImpl;
 /// hooks.
 class ConversionPatternRewriter final : public PatternRewriter {
 public:
-  ConversionPatternRewriter(MLIRContext *ctx, TypeConverter *converter);
+  ConversionPatternRewriter(MLIRContext *ctx);
   ~ConversionPatternRewriter() override;
 
   /// Apply a signature conversion to the entry block of the given region. This
@@ -323,6 +406,15 @@ public:
   Block *
   applySignatureConversion(Region *region,
                            TypeConverter::SignatureConversion &conversion);
+
+  /// Convert the types of block arguments within the given region. This
+  /// replaces each block with a new block containing the updated signature. The
+  /// entry block may have a special conversion if `entryConversion` is
+  /// provided. On success, the new entry block to the region is returned for
+  /// convenience. Otherwise, failure is returned.
+  FailureOr<Block *> convertRegionTypes(
+      Region *region, TypeConverter &converter,
+      TypeConverter::SignatureConversion *entryConversion = nullptr);
 
   /// Replace all the uses of the block argument `from` with value `to`.
   void replaceUsesOfBlockArgument(BlockArgument from, Value to);
@@ -551,6 +643,12 @@ public:
     if (callback)
       setLegalityCallback(dialectNames, *callback);
   }
+  template <typename... Args>
+  void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback) {
+    SmallVector<StringRef, 2> dialectNames({Args::getDialectNamespace()...});
+    setDialectAction(dialectNames, LegalizationAction::Dynamic);
+    setLegalityCallback(dialectNames, callback);
+  }
 
   /// Register unknown operations as dynamically legal. For operations(and
   /// dialects) that do not have a set legalization action, treat them as
@@ -662,36 +760,30 @@ private:
 /// Apply a partial conversion on the given operations and all nested
 /// operations. This method converts as many operations to the target as
 /// possible, ignoring operations that failed to legalize. This method only
-/// returns failure if there ops explicitly marked as illegal. If `converter` is
-/// provided, the signatures of blocks and regions are also converted.
-/// If an `unconvertedOps` set is provided, all operations that are found not
-/// to be legalizable to the given `target` are placed within that set. (Note
-/// that if there is an op explicitly marked as illegal, the conversion
-/// terminates and the `unconvertedOps` set will not necessarily be complete.)
+/// returns failure if there ops explicitly marked as illegal. If an
+/// `unconvertedOps` set is provided, all operations that are found not to be
+/// legalizable to the given `target` are placed within that set. (Note that if
+/// there is an op explicitly marked as illegal, the conversion terminates and
+/// the `unconvertedOps` set will not necessarily be complete.)
 LLVM_NODISCARD LogicalResult
 applyPartialConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
                        const OwningRewritePatternList &patterns,
-                       TypeConverter *converter = nullptr,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 LLVM_NODISCARD LogicalResult
 applyPartialConversion(Operation *op, ConversionTarget &target,
                        const OwningRewritePatternList &patterns,
-                       TypeConverter *converter = nullptr,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 
 /// Apply a complete conversion on the given operations, and all nested
 /// operations. This method returns failure if the conversion of any operation
 /// fails, or if there are unreachable blocks in any of the regions nested
-/// within 'ops'. If 'converter' is provided, the signatures of blocks and
-/// regions are also converted.
+/// within 'ops'.
 LLVM_NODISCARD LogicalResult
 applyFullConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                    const OwningRewritePatternList &patterns,
-                    TypeConverter *converter = nullptr);
+                    const OwningRewritePatternList &patterns);
 LLVM_NODISCARD LogicalResult
 applyFullConversion(Operation *op, ConversionTarget &target,
-                    const OwningRewritePatternList &patterns,
-                    TypeConverter *converter = nullptr);
+                    const OwningRewritePatternList &patterns);
 
 /// Apply an analysis conversion on the given operations, and all nested
 /// operations. This method analyzes which operations would be successfully
@@ -700,17 +792,15 @@ applyFullConversion(Operation *op, ConversionTarget &target,
 /// provided 'convertedOps' set; note that no actual rewrites are applied to the
 /// operations on success and only pre-existing operations are added to the set.
 /// This method only returns failure if there are unreachable blocks in any of
-/// the regions nested within 'ops', or if a type conversion failed. If
-/// 'converter' is provided, the signatures of blocks and regions are also
-/// considered for conversion.
-LLVM_NODISCARD LogicalResult applyAnalysisConversion(
-    ArrayRef<Operation *> ops, ConversionTarget &target,
-    const OwningRewritePatternList &patterns,
-    DenseSet<Operation *> &convertedOps, TypeConverter *converter = nullptr);
-LLVM_NODISCARD LogicalResult applyAnalysisConversion(
-    Operation *op, ConversionTarget &target,
-    const OwningRewritePatternList &patterns,
-    DenseSet<Operation *> &convertedOps, TypeConverter *converter = nullptr);
+/// the regions nested within 'ops'.
+LLVM_NODISCARD LogicalResult
+applyAnalysisConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
+                        const OwningRewritePatternList &patterns,
+                        DenseSet<Operation *> &convertedOps);
+LLVM_NODISCARD LogicalResult
+applyAnalysisConversion(Operation *op, ConversionTarget &target,
+                        const OwningRewritePatternList &patterns,
+                        DenseSet<Operation *> &convertedOps);
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_DIALECTCONVERSION_H_

@@ -8,9 +8,9 @@
 #pragma omp declare target
 int use_macro() {
   double a(0);
-// CHECK-NOT:  call
+// CHECK-NOT:  call {{.*}}
 // CHECK:  call double @llvm.fabs.f64(double
-// CHECK-NOT:  call
+// CHECK-NOT:  call {{.*}}
 // CHECK:      ret i32 %conv
   return (std::fpclassify(a) != FP_ZERO);
 }

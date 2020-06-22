@@ -537,7 +537,7 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
   return Mapping;
 }
 
-static size_t RedzoneSizeForScale(int MappingScale) {
+static uint64_t getRedzoneSizeForScale(int MappingScale) {
   // Redzone used for stack and globals is at least 32 bytes.
   // For scales 6 and 7, the redzone has to be 64 and 128 bytes respectively.
   return std::max(32U, 1U << MappingScale);
@@ -589,11 +589,10 @@ struct AddressSanitizer {
   AddressSanitizer(Module &M, const GlobalsMetadata *GlobalsMD,
                    bool CompileKernel = false, bool Recover = false,
                    bool UseAfterScope = false)
-      : UseAfterScope(UseAfterScope || ClUseAfterScope), GlobalsMD(*GlobalsMD) {
-    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
-    this->CompileKernel =
-        ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan : CompileKernel;
-
+      : CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
+                                                            : CompileKernel),
+        Recover(ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover),
+        UseAfterScope(UseAfterScope || ClUseAfterScope), GlobalsMD(*GlobalsMD) {
     C = &(M.getContext());
     LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -644,7 +643,7 @@ struct AddressSanitizer {
   bool suppressInstrumentationSiteForDebug(int &Instrumented);
   bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI);
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
-  void maybeInsertDynamicShadowAtFunctionEntry(Function &F);
+  bool maybeInsertDynamicShadowAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
 
 private:
@@ -742,7 +741,11 @@ public:
   ModuleAddressSanitizer(Module &M, const GlobalsMetadata *GlobalsMD,
                          bool CompileKernel = false, bool Recover = false,
                          bool UseGlobalsGC = true, bool UseOdrIndicator = false)
-      : GlobalsMD(*GlobalsMD), UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
+      : GlobalsMD(*GlobalsMD),
+        CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
+                                                            : CompileKernel),
+        Recover(ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover),
+        UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC && !this->CompileKernel),
         // Enable aliases as they should have no downside with ODR indicators.
         UsePrivateAlias(UseOdrIndicator || ClUsePrivateAlias),
         UseOdrIndicator(UseOdrIndicator || ClUseOdrIndicator),
@@ -753,11 +756,7 @@ public:
         // argument is designed as workaround. Therefore, disable both
         // ClWithComdat and ClUseGlobalsGC unless the frontend says it's ok to
         // do globals-gc.
-        UseCtorComdat(UseGlobalsGC && ClWithComdat) {
-    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
-    this->CompileKernel =
-        ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan : CompileKernel;
-
+        UseCtorComdat(UseGlobalsGC && ClWithComdat && !this->CompileKernel) {
     C = &(M.getContext());
     int LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -792,14 +791,16 @@ private:
                                   StringRef InternalSuffix);
   Instruction *CreateAsanModuleDtor(Module &M);
 
-  bool ShouldInstrumentGlobal(GlobalVariable *G);
+  bool canInstrumentAliasedGlobal(const GlobalAlias &GA) const;
+  bool shouldInstrumentGlobal(GlobalVariable *G) const;
   bool ShouldUseMachOGlobalsSection() const;
   StringRef getGlobalMetadataSection() const;
   void poisonOneInitializer(Function &GlobalInit, GlobalValue *ModuleName);
   void createInitializerPoisonCalls(Module &M, GlobalValue *ModuleName);
-  size_t MinRedzoneSizeForGlobal() const {
-    return RedzoneSizeForScale(Mapping.Scale);
+  uint64_t getMinRedzoneSizeForGlobal() const {
+    return getRedzoneSizeForScale(Mapping.Scale);
   }
+  uint64_t getRedzoneSizeForGlobal(uint64_t SizeInBytes) const;
   int GetAsanVersion(const Module &M) const;
 
   const GlobalsMetadata &GlobalsMD;
@@ -1149,9 +1150,9 @@ GlobalsMetadata::GlobalsMetadata(Module &M) {
       E.Name = Name->getString();
     ConstantInt *IsDynInit = mdconst::extract<ConstantInt>(MDN->getOperand(3));
     E.IsDynInit |= IsDynInit->isOne();
-    ConstantInt *IsBlacklisted =
+    ConstantInt *IsExcluded =
         mdconst::extract<ConstantInt>(MDN->getOperand(4));
-    E.IsBlacklisted |= IsBlacklisted->isOne();
+    E.IsExcluded |= IsExcluded->isOne();
   }
 }
 
@@ -1791,13 +1792,29 @@ void ModuleAddressSanitizer::createInitializerPoisonCalls(
   }
 }
 
-bool ModuleAddressSanitizer::ShouldInstrumentGlobal(GlobalVariable *G) {
+bool ModuleAddressSanitizer::canInstrumentAliasedGlobal(
+    const GlobalAlias &GA) const {
+  // In case this function should be expanded to include rules that do not just
+  // apply when CompileKernel is true, either guard all existing rules with an
+  // 'if (CompileKernel) { ... }' or be absolutely sure that all these rules
+  // should also apply to user space.
+  assert(CompileKernel && "Only expecting to be called when compiling kernel");
+
+  // When compiling the kernel, globals that are aliased by symbols prefixed
+  // by "__" are special and cannot be padded with a redzone.
+  if (GA.getName().startswith("__"))
+    return false;
+
+  return true;
+}
+
+bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
   Type *Ty = G->getValueType();
   LLVM_DEBUG(dbgs() << "GLOBAL: " << *G << "\n");
 
   // FIXME: Metadata should be attched directly to the global directly instead
   // of being added to llvm.asan.globals.
-  if (GlobalsMD.get(G).IsBlacklisted) return false;
+  if (GlobalsMD.get(G).IsExcluded) return false;
   if (!Ty->isSized()) return false;
   if (!G->hasInitializer()) return false;
   // Only instrument globals of default address spaces
@@ -1808,7 +1825,7 @@ bool ModuleAddressSanitizer::ShouldInstrumentGlobal(GlobalVariable *G) {
   //   - Need to poison all copies, not just the main thread's one.
   if (G->isThreadLocal()) return false;
   // For now, just ignore this Global if the alignment is large.
-  if (G->getAlignment() > MinRedzoneSizeForGlobal()) return false;
+  if (G->getAlignment() > getMinRedzoneSizeForGlobal()) return false;
 
   // For non-COFF targets, only instrument globals known to be defined by this
   // TU.
@@ -1838,6 +1855,12 @@ bool ModuleAddressSanitizer::ShouldInstrumentGlobal(GlobalVariable *G) {
   }
 
   if (G->hasSection()) {
+    // The kernel uses explicit sections for mostly special global variables
+    // that we should not instrument. E.g. the kernel may rely on their layout
+    // without redzones, or remove them at link time ("discard.*"), etc.
+    if (CompileKernel)
+      return false;
+
     StringRef Section = G->getSection();
 
     // Globals from llvm.metadata aren't emitted, do not instrument them.
@@ -1902,6 +1925,13 @@ bool ModuleAddressSanitizer::ShouldInstrumentGlobal(GlobalVariable *G) {
         return false;
       }
     }
+  }
+
+  if (CompileKernel) {
+    // Globals that prefixed by "__" are special and cannot be padded with a
+    // redzone.
+    if (G->getName().startswith("__"))
+      return false;
   }
 
   return true;
@@ -2036,11 +2066,15 @@ void ModuleAddressSanitizer::InstrumentGlobalsCOFF(
   assert(ExtendedGlobals.size() == MetadataInitializers.size());
   auto &DL = M.getDataLayout();
 
+  SmallVector<GlobalValue *, 16> MetadataGlobals(ExtendedGlobals.size());
   for (size_t i = 0; i < ExtendedGlobals.size(); i++) {
     Constant *Initializer = MetadataInitializers[i];
     GlobalVariable *G = ExtendedGlobals[i];
     GlobalVariable *Metadata =
         CreateMetadataGlobal(M, Initializer, G->getName());
+    MDNode *MD = MDNode::get(M.getContext(), ValueAsMetadata::get(G));
+    Metadata->setMetadata(LLVMContext::MD_associated, MD);
+    MetadataGlobals[i] = Metadata;
 
     // The MSVC linker always inserts padding when linking incrementally. We
     // cope with that by aligning each struct to its size, which must be a power
@@ -2052,6 +2086,11 @@ void ModuleAddressSanitizer::InstrumentGlobalsCOFF(
 
     SetComdatForGlobalMetadata(G, Metadata, "");
   }
+
+  // Update llvm.compiler.used, adding the new metadata globals. This is
+  // needed so that during LTO these variables stay alive.
+  if (!MetadataGlobals.empty())
+    appendToCompilerUsed(M, MetadataGlobals);
 }
 
 void ModuleAddressSanitizer::InstrumentGlobalsELF(
@@ -2072,10 +2111,23 @@ void ModuleAddressSanitizer::InstrumentGlobalsELF(
     SetComdatForGlobalMetadata(G, Metadata, UniqueModuleId);
   }
 
+  // This should never be called when there are no globals, by the logic that
+  // computes the UniqueModuleId string, which is "" when there are no globals.
+  // It's important that this path is only used when there are actually some
+  // globals, because that means that there will certainly be a live
+  // `asan_globals` input section at link time and thus `__start_asan_globals`
+  // and `__stop_asan_globals` symbols will definitely be defined at link time.
+  // This means there's no need for the references to them to be weak, which
+  // enables better code generation because ExternalWeakLinkage implies
+  // isInterposable() and thus requires GOT indirection for PIC.  Since these
+  // are known-defined hidden/dso_local symbols, direct PIC accesses without
+  // dynamic relocation are always sufficient.
+  assert(!MetadataGlobals.empty());
+  assert(!UniqueModuleId.empty());
+
   // Update llvm.compiler.used, adding the new metadata globals. This is
   // needed so that during LTO these variables stay alive.
-  if (!MetadataGlobals.empty())
-    appendToCompilerUsed(M, MetadataGlobals);
+  appendToCompilerUsed(M, MetadataGlobals);
 
   // RegisteredFlag serves two purposes. First, we can pass it to dladdr()
   // to look up the loaded image that contains it. Second, we can store in it
@@ -2088,15 +2140,18 @@ void ModuleAddressSanitizer::InstrumentGlobalsELF(
       ConstantInt::get(IntptrTy, 0), kAsanGlobalsRegisteredFlagName);
   RegisteredFlag->setVisibility(GlobalVariable::HiddenVisibility);
 
-  // Create start and stop symbols.
-  GlobalVariable *StartELFMetadata = new GlobalVariable(
-      M, IntptrTy, false, GlobalVariable::ExternalWeakLinkage, nullptr,
-      "__start_" + getGlobalMetadataSection());
-  StartELFMetadata->setVisibility(GlobalVariable::HiddenVisibility);
-  GlobalVariable *StopELFMetadata = new GlobalVariable(
-      M, IntptrTy, false, GlobalVariable::ExternalWeakLinkage, nullptr,
-      "__stop_" + getGlobalMetadataSection());
-  StopELFMetadata->setVisibility(GlobalVariable::HiddenVisibility);
+  // Create start and stop symbols.  These are known to be defined by
+  // the linker, see comment above.
+  auto MakeStartStopGV = [&](const char *Prefix) {
+    GlobalVariable *StartStop =
+        new GlobalVariable(M, IntptrTy, false, GlobalVariable::ExternalLinkage,
+                           nullptr, Prefix + getGlobalMetadataSection());
+    StartStop->setVisibility(GlobalVariable::HiddenVisibility);
+    assert(StartStop->isImplicitDSOLocal());
+    return StartStop;
+  };
+  GlobalVariable *StartELFMetadata = MakeStartStopGV("__start_");
+  GlobalVariable *StopELFMetadata = MakeStartStopGV("__stop_");
 
   // Create a call to register the globals with the runtime.
   IRB.CreateCall(AsanRegisterElfGlobals,
@@ -2208,10 +2263,22 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
                                                bool *CtorComdat) {
   *CtorComdat = false;
 
-  SmallVector<GlobalVariable *, 16> GlobalsToChange;
+  // Build set of globals that are aliased by some GA, where
+  // canInstrumentAliasedGlobal(GA) returns false.
+  SmallPtrSet<const GlobalVariable *, 16> AliasedGlobalExclusions;
+  if (CompileKernel) {
+    for (auto &GA : M.aliases()) {
+      if (const auto *GV = dyn_cast<GlobalVariable>(GA.getAliasee())) {
+        if (!canInstrumentAliasedGlobal(GA))
+          AliasedGlobalExclusions.insert(GV);
+      }
+    }
+  }
 
+  SmallVector<GlobalVariable *, 16> GlobalsToChange;
   for (auto &G : M.globals()) {
-    if (ShouldInstrumentGlobal(&G)) GlobalsToChange.push_back(&G);
+    if (!AliasedGlobalExclusions.count(&G) && shouldInstrumentGlobal(&G))
+      GlobalsToChange.push_back(&G);
   }
 
   size_t n = GlobalsToChange.size();
@@ -2246,7 +2313,6 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
       M, M.getModuleIdentifier(), /*AllowMerging*/ false, kAsanGenPrefix);
 
   for (size_t i = 0; i < n; i++) {
-    static const uint64_t kMaxGlobalRedzone = 1 << 18;
     GlobalVariable *G = GlobalsToChange[i];
 
     // FIXME: Metadata should be attched directly to the global directly instead
@@ -2260,16 +2326,8 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
         /*AllowMerging*/ true, kAsanGenPrefix);
 
     Type *Ty = G->getValueType();
-    uint64_t SizeInBytes = DL.getTypeAllocSize(Ty);
-    uint64_t MinRZ = MinRedzoneSizeForGlobal();
-    // MinRZ <= RZ <= kMaxGlobalRedzone
-    // and trying to make RZ to be ~ 1/4 of SizeInBytes.
-    uint64_t RZ = std::max(
-        MinRZ, std::min(kMaxGlobalRedzone, (SizeInBytes / MinRZ / 4) * MinRZ));
-    uint64_t RightRedzoneSize = RZ;
-    // Round up to MinRZ
-    if (SizeInBytes % MinRZ) RightRedzoneSize += MinRZ - (SizeInBytes % MinRZ);
-    assert(((RightRedzoneSize + SizeInBytes) % MinRZ) == 0);
+    const uint64_t SizeInBytes = DL.getTypeAllocSize(Ty);
+    const uint64_t RightRedzoneSize = getRedzoneSizeForGlobal(SizeInBytes);
     Type *RightRedZoneTy = ArrayType::get(IRB.getInt8Ty(), RightRedzoneSize);
 
     StructType *NewTy = StructType::get(Ty, RightRedZoneTy);
@@ -2285,7 +2343,7 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
                            "", G, G->getThreadLocalMode());
     NewGlobal->copyAttributesFrom(G);
     NewGlobal->setComdat(G->getComdat());
-    NewGlobal->setAlignment(MaybeAlign(MinRZ));
+    NewGlobal->setAlignment(MaybeAlign(getMinRedzoneSizeForGlobal()));
     // Don't fold globals with redzones. ODR violation detector and redzone
     // poisoning implicitly creates a dependence on the global's address, so it
     // is no longer valid for it to be marked unnamed_addr.
@@ -2407,6 +2465,23 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
   return true;
 }
 
+uint64_t
+ModuleAddressSanitizer::getRedzoneSizeForGlobal(uint64_t SizeInBytes) const {
+  constexpr uint64_t kMaxRZ = 1 << 18;
+  const uint64_t MinRZ = getMinRedzoneSizeForGlobal();
+
+  // Calculate RZ, where MinRZ <= RZ <= MaxRZ, and RZ ~ 1/4 * SizeInBytes.
+  uint64_t RZ =
+      std::max(MinRZ, std::min(kMaxRZ, (SizeInBytes / MinRZ / 4) * MinRZ));
+
+  // Round up to multiple of MinRZ.
+  if (SizeInBytes % MinRZ)
+    RZ += MinRZ - (SizeInBytes % MinRZ);
+  assert((RZ + SizeInBytes) % MinRZ == 0);
+
+  return RZ;
+}
+
 int ModuleAddressSanitizer::GetAsanVersion(const Module &M) const {
   int LongSize = M.getDataLayout().getPointerSizeInBits();
   bool isAndroid = Triple(M.getTargetTriple()).isAndroid();
@@ -2420,20 +2495,23 @@ int ModuleAddressSanitizer::GetAsanVersion(const Module &M) const {
 bool ModuleAddressSanitizer::instrumentModule(Module &M) {
   initializeCallbacks(M);
 
-  if (CompileKernel)
-    return false;
-
   // Create a module constructor. A destructor is created lazily because not all
   // platforms, and not all modules need it.
-  std::string AsanVersion = std::to_string(GetAsanVersion(M));
-  std::string VersionCheckName =
-      ClInsertVersionCheck ? (kAsanVersionCheckNamePrefix + AsanVersion) : "";
-  std::tie(AsanCtorFunction, std::ignore) = createSanitizerCtorAndInitFunctions(
-      M, kAsanModuleCtorName, kAsanInitName, /*InitArgTypes=*/{},
-      /*InitArgs=*/{}, VersionCheckName);
+  if (CompileKernel) {
+    // The kernel always builds with its own runtime, and therefore does not
+    // need the init and version check calls.
+    AsanCtorFunction = createSanitizerCtor(M, kAsanModuleCtorName);
+  } else {
+    std::string AsanVersion = std::to_string(GetAsanVersion(M));
+    std::string VersionCheckName =
+        ClInsertVersionCheck ? (kAsanVersionCheckNamePrefix + AsanVersion) : "";
+    std::tie(AsanCtorFunction, std::ignore) =
+        createSanitizerCtorAndInitFunctions(M, kAsanModuleCtorName,
+                                            kAsanInitName, /*InitArgTypes=*/{},
+                                            /*InitArgs=*/{}, VersionCheckName);
+  }
 
   bool CtorComdat = true;
-  // TODO(glider): temporarily disabled globals instrumentation for KASan.
   if (ClGlobals) {
     IRBuilder<> IRB(AsanCtorFunction->getEntryBlock().getTerminator());
     InstrumentGlobals(IRB, M, &CtorComdat);
@@ -2547,10 +2625,10 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
   return false;
 }
 
-void AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
+bool AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
   // Generate code only when dynamic addressing is needed.
   if (Mapping.Offset != kDynamicShadowSentinel)
-    return;
+    return false;
 
   IRBuilder<> IRB(&F.front().front());
   if (Mapping.InGlobal) {
@@ -2572,6 +2650,7 @@ void AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
         kAsanShadowMemoryDynamicAddress, IntptrTy);
     LocalDynamicShadow = IRB.CreateLoad(IntptrTy, GlobalDynamicAddress);
   }
+  return true;
 }
 
 void AddressSanitizer::markEscapedLocalAllocas(Function &F) {
@@ -2633,7 +2712,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
   FunctionStateRAII CleanupObj(this);
 
-  maybeInsertDynamicShadowAtFunctionEntry(F);
+  FunctionModified |= maybeInsertDynamicShadowAtFunctionEntry(F);
 
   // We can't instrument allocas used with llvm.localescape. Only static allocas
   // can be passed to that intrinsic.

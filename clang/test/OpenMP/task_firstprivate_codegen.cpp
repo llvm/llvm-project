@@ -56,6 +56,7 @@ T tmain() {
 
 int main() {
   static int sivar;
+  float local = 0;
 #ifdef LAMBDA
   // LAMBDA: [[G:@.+]] = global double
   // LAMBDA: [[SIVAR:@.+]] = internal global i{{[0-9]+}} 0,
@@ -73,9 +74,12 @@ int main() {
 // LAMBDA: [[SIVAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIVAR]],
 // LAMBDA: store i{{[0-9]+}} [[SIVAR_VAL]], i{{[0-9]+}}* [[SIVAR_PRIVATE_ADDR]]
 
+// LAMBDA: [[LOCAL_PRIVATE_ADDR:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[PRIVATES]], i{{.+}} 0, i{{.+}} 2
+// LAMBDA: store float %{{.+}}, float* [[LOCAL_PRIVATE_ADDR]]
+
 // LAMBDA: call i32 @__kmpc_omp_task(%{{.+}}* @{{.+}}, i32 %{{.+}}, i8* [[RES]])
 // LAMBDA: ret
-#pragma omp task firstprivate(g, sivar)
+#pragma omp task firstprivate(g, sivar, local)
   {
     // LAMBDA: define {{.+}} void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG_PTR:%.+]])
     // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
@@ -115,9 +119,13 @@ int main() {
   // BLOCKS: [[SIVAR_PRIVATE_ADDR:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[PRIVATES]], i{{.+}} 0, i{{.+}} 1
   // BLOCKS: [[SIVAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIVAR]],
   // BLOCKS: store i{{[0-9]+}} [[SIVAR_VAL]], i{{[0-9]+}}* [[SIVAR_PRIVATE_ADDR]],
+
+  // BLOCKS: [[LOCAL_PRIVATE_ADDR:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[PRIVATES]], i{{.+}} 0, i{{.+}} 2
+  // BLOCKS: store float %{{.+}}, float* [[LOCAL_PRIVATE_ADDR]]
+
   // BLOCKS: call i32 @__kmpc_omp_task(%{{.+}}* @{{.+}}, i32 %{{.+}}, i8* [[RES]])
   // BLOCKS: ret
-#pragma omp task firstprivate(g, sivar)
+#pragma omp task firstprivate(g, sivar, local)
   {
     // BLOCKS: define {{.+}} void {{@.+}}(i8*
     // BLOCKS-NOT: [[G]]{{[[^:word:]]}}

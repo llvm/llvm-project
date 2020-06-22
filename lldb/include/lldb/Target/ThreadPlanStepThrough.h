@@ -53,7 +53,9 @@ private:
   StackID m_return_stack_id;
   bool m_stop_others;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepThrough);
+  ThreadPlanStepThrough(const ThreadPlanStepThrough &) = delete;
+  const ThreadPlanStepThrough &
+  operator=(const ThreadPlanStepThrough &) = delete;
 };
 
 } // namespace lldb_private

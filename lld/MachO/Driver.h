@@ -19,6 +19,7 @@ class MachOOptTable : public llvm::opt::OptTable {
 public:
   MachOOptTable();
   llvm::opt::InputArgList parse(ArrayRef<const char *> argv);
+  void printHelp(const char *argv0, bool showHidden) const;
 };
 
 // Create enum with OPT_xxx values for each option in Options.td

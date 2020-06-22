@@ -16,7 +16,7 @@ Subroutine test_coarray
     ! CHECK: AssignmentStmt
     x = x[4, 1]
   end team
-  ! CHECK: <<EndChangeTeamConstruct>>
+  ! CHECK: <<End ChangeTeamConstruct>>
   ! CHECK: FormTeamStmt
   form team(1, t)
 
@@ -28,14 +28,14 @@ Subroutine test_coarray
     ! CHECK: EventWaitStmt
     event wait (done)
   end if
-  ! CHECK: <<EndIfConstruct>>
+  ! CHECK: <<End IfConstruct>>
 
   ! CHECK: <<CriticalConstruct>>
   critical
     ! CHECK: AssignmentStmt
     counter[1] = counter[1] + 1
   end critical
-  ! CHECK: <<EndCriticalConstruct>>
+  ! CHECK: <<End CriticalConstruct>>
 
   ! CHECK: LockStmt
   lock(alock)
@@ -59,12 +59,12 @@ Subroutine test_coarray
     ! CHECK: SyncImagesStmt
     sync images(1)
   end if
-  ! CHECK: <<EndIfConstruct>>
+  ! CHECK: <<End IfConstruct>>
 
   ! CHECK: <<IfConstruct>>
   if (y<0.) then
     ! CHECK: FailImageStmt
    fail image
   end if
-  ! CHECK: <<EndIfConstruct>>
+  ! CHECK: <<End IfConstruct>>
 end

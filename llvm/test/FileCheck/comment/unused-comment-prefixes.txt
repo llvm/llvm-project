@@ -5,12 +5,12 @@ RUN: echo 'CHECK: foo' > %t.chk
 
 # Check the case of default comment prefixes.
 RUN: %ProtectFileCheckOutput \
-RUN: FileCheck -vv %t.chk < %t.in 2>&1 | FileCheck %s
+RUN: FileCheck -dump-input=never -vv %t.chk < %t.in 2>&1 | FileCheck %s
 
 # Specifying non-default comment prefixes doesn't mean you have to use them.
 # For example, they might be applied to an entire test suite via
 # FILECHECK_OPTS or via a wrapper command or substitution.
 RUN: %ProtectFileCheckOutput \
-RUN: FileCheck -vv -comment-prefixes=FOO %t.chk < %t.in 2>&1 | FileCheck %s
+RUN: FileCheck -dump-input=never -vv -comment-prefixes=FOO %t.chk < %t.in 2>&1 | FileCheck %s
 
 CHECK: .chk:1:8: remark: CHECK: expected string found in input

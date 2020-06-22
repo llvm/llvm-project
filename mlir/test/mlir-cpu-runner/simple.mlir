@@ -1,5 +1,7 @@
 // RUN: mlir-cpu-runner %s | FileCheck %s
 // RUN: mlir-cpu-runner %s -e foo | FileCheck -check-prefix=NOMAIN %s
+// RUN: mlir-cpu-runner %s --entry-point-result=i32 -e int32_main | FileCheck -check-prefix=INT32MAIN %s
+// RUN: mlir-cpu-runner %s --entry-point-result=i64 -e int64_main | FileCheck -check-prefix=INT64MAIN %s
 // RUN: mlir-cpu-runner %s -O3 | FileCheck %s
 
 // RUN: cp %s %t
@@ -51,3 +53,17 @@ llvm.func @foo() -> !llvm.float {
   llvm.return %5 : !llvm.float
 }
 // NOMAIN: 1.234000e+03
+
+// Check that i32 return type works
+llvm.func @int32_main() -> !llvm.i32 {
+  %0 = llvm.mlir.constant(42 : i32) : !llvm.i32
+  llvm.return %0 : !llvm.i32
+}
+// INT32MAIN: 42
+
+// Check that i64 return type works
+llvm.func @int64_main() -> !llvm.i64 {
+  %0 = llvm.mlir.constant(42 : i64) : !llvm.i64
+  llvm.return %0 : !llvm.i64
+}
+// INT64MAIN: 42

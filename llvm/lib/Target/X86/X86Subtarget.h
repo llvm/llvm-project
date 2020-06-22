@@ -841,7 +841,7 @@ public:
     return PICStyle == PICStyles::Style::StubPIC;
   }
 
-  bool isPositionIndependent() const { return TM.isPositionIndependent(); }
+  bool isPositionIndependent() const;
 
   bool isCallingConvWin64(CallingConv::ID CC) const {
     switch (CC) {

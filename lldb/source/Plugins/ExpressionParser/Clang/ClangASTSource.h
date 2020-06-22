@@ -333,7 +333,6 @@ public:
   ///     global lookup for performance reasons.
   bool IgnoreName(const ConstString name, bool ignore_all_dollar_names);
 
-public:
   /// Copies a single Decl into the parser's AST context.
   ///
   /// \param[in] src_decl

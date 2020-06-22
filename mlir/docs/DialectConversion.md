@@ -161,7 +161,7 @@ a set of legal ones.
 As an example, say you define a target that supports one operation: `foo.add`.
 When providing the following patterns: [`bar.add` -> `baz.add`, `baz.add` ->
 `foo.add`], the framework will automatically detect that it can legalize
-`baz.add` -> `foo.add` even though a direct conversion does not exist. This
+`bar.add` -> `foo.add` even though a direct conversion does not exist. This
 means that you don’t have to define a direct legalization pattern for `bar.add`
 -> `foo.add`.
 
@@ -217,16 +217,20 @@ class TypeConverter {
   template <typename ConversionFnT>
   void addConversion(ConversionFnT &&callback);
 
-  /// This hook allows for materializing a conversion from a set of types into
-  /// one result type by generating a cast operation of some kind. The generated
-  /// operation should produce one result, of 'resultType', with the provided
-  /// 'inputs' as operands. This hook must be overridden when a type conversion
+  /// Register a materialization function, which must be convertibe to the
+  /// following form
+  ///   `Optional<Value>(PatternRewriter &, T, ValueRange, Location)`,
+  /// where `T` is any subclass of `Type`. This function is responsible for
+  /// creating an operation, using the PatternRewriter and Location provided,
+  /// that "casts" a range of values into a single value of the given type `T`.
+  /// It must return a Value of the converted type on success, an `llvm::None`
+  /// if it failed but other materialization can be attempted, and `nullptr` on
+  /// unrecoverable failure. It will only be called for (sub)types of `T`.
+  /// Materialization functions must be provided when a type conversion
   /// results in more than one type, or if a type conversion may persist after
   /// the conversion has finished.
-  virtual Operation *materializeConversion(PatternRewriter &rewriter,
-                                           Type resultType,
-                                           ArrayRef<Value> inputs,
-                                           Location loc);
+  template <typename FnT>
+  void addMaterialization(FnT &&callback);
 };
 ```
 
@@ -258,14 +262,21 @@ patterns used in dialect conversion.
 
 ### Region Signature Conversion
 
-From the perspective of type conversion, the entry block to a region is often
-special. The types of the entry block arguments are often tied semantically to
-details on the operation, e.g. FuncOp, AffineForOp, etc. Given this, the
-conversion of the types for this block must be done explicitly via a conversion
-pattern. To convert the signature of a region entry block, a custom hook on the
-ConversionPatternRewriter must be invoked `applySignatureConversion`. A
-signature conversion, `TypeConverter::SignatureConversion`, can be built
-programmatically:
+From the perspective of type conversion, the types of block arguments are a bit
+special. Throughout the conversion process, blocks may move between regions of
+different operations. Given this, the conversion of the types for blocks must be
+done explicitly via a conversion pattern. To convert the types of block
+arguments within a Region, a custom hook on the `ConversionPatternRewriter` must
+be invoked; `convertRegionTypes`. This hook uses a provided type converter to
+apply type conversions to all blocks within the region, and all blocks that move
+into that region. This hook also takes an optional
+`TypeConverter::SignatureConversion` parameter that applies a custom conversion
+to the entry block of the region. The types of the entry block arguments are
+often tied semantically to details on the operation, e.g. FuncOp, AffineForOp,
+etc. To convert the signature of just the region entry block, and not any other
+blocks within the region, the `applySignatureConversion` hook may be used
+instead. A signature conversion, `TypeConverter::SignatureConversion`, can be
+built programmatically:
 
 ```c++
 class SignatureConversion {
@@ -289,5 +300,6 @@ public:
 };
 ```
 
-The `TypeConverter` provides several default utilities for signature conversion:
-`convertSignatureArg`/`convertBlockSignature`.
+The `TypeConverter` provides several default utilities for signature conversion
+and legality checking:
+`convertSignatureArgs`/`convertBlockSignature`/`isLegal(Region *|Type)`.

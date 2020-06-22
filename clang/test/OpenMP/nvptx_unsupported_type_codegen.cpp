@@ -71,11 +71,3 @@ void baz1() {
 }
 #pragma omp end declare target
 
-BIGTYPE foo(BIGTYPE f) {
-#pragma omp target map(f)
-  f = 1;
-  return f;
-}
-
-// CHECK: define weak void @__omp_offloading_{{.+}}foo{{.+}}_l75([[BIGTYPE:.+]]*
-// CHECK: store [[BIGTYPE]] {{0xL00000000000000003FFF000000000000|0xM3FF00000000000000000000000000000}}, [[BIGTYPE]]* %

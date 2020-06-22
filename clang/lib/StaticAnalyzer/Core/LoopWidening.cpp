@@ -67,8 +67,10 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
   }
 
   // References should not be invalidated.
-  auto Matches = match(findAll(stmt(hasDescendant(varDecl(hasType(referenceType())).bind(MatchRef)))),
-                       *LCtx->getDecl()->getBody(), ASTCtx);
+  auto Matches = match(
+      findAll(stmt(hasDescendant(
+          varDecl(hasType(hasCanonicalType(referenceType()))).bind(MatchRef)))),
+      *LCtx->getDecl()->getBody(), ASTCtx);
   for (BoundNodes Match : Matches) {
     const VarDecl *VD = Match.getNodeAs<VarDecl>(MatchRef);
     assert(VD);

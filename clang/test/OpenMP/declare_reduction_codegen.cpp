@@ -88,7 +88,7 @@ SSS<int> d;
 // CHECK-NEXT: }
 
 // CHECK: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
-// CHECK: call void @_ZN3SSSIiE6ssssssERi(i32* dereferenceable{{.*}})
+// CHECK: call void @_ZN3SSSIiE6ssssssERi(i32* nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // CHECK-NEXT: ret void
 // CHECK-NEXT: }
 

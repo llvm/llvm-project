@@ -325,7 +325,7 @@ define <4 x i32> @test_srem_even_allones_eq(<4 x i32> %X) nounwind {
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-SSE41-NEXT:    pmuldq {{.*}}(%rip), %xmm1
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = <2454267027,u,0,u>
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,0,0,0]
 ; CHECK-SSE41-NEXT:    pmuldq %xmm0, %xmm2
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
@@ -452,7 +452,7 @@ define <4 x i32> @test_srem_even_allones_ne(<4 x i32> %X) nounwind {
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-SSE41-NEXT:    pmuldq {{.*}}(%rip), %xmm1
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = <2454267027,u,0,u>
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,0,0,0]
 ; CHECK-SSE41-NEXT:    pmuldq %xmm0, %xmm2
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
@@ -1314,7 +1314,7 @@ define <4 x i32> @test_srem_even_one(<4 x i32> %X) nounwind {
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-SSE41-NEXT:    pmuldq {{.*}}(%rip), %xmm1
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = <2454267027,u,0,u>
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,0,0,0]
 ; CHECK-SSE41-NEXT:    pmuldq %xmm0, %xmm2
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]

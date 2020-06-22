@@ -175,6 +175,8 @@ public:
 
   virtual void mangleLambdaSig(const CXXRecordDecl *Lambda, raw_ostream &) = 0;
 
+  virtual void mangleDynamicStermFinalizer(const VarDecl *D, raw_ostream &) = 0;
+
   bool isUniqueNameMangler() { return IsUniqueNameMangler; }
 
   static bool classof(const MangleContext *C) {

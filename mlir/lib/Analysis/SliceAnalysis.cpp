@@ -41,20 +41,24 @@ static void getForwardSliceImpl(Operation *op,
   }
 
   if (auto forOp = dyn_cast<AffineForOp>(op)) {
-    for (auto *ownerInst : forOp.getInductionVar().getUsers())
-      if (forwardSlice->count(ownerInst) == 0)
-        getForwardSliceImpl(ownerInst, forwardSlice, filter);
+    for (auto *ownerOp : forOp.getInductionVar().getUsers())
+      if (forwardSlice->count(ownerOp) == 0)
+        getForwardSliceImpl(ownerOp, forwardSlice, filter);
   } else if (auto forOp = dyn_cast<scf::ForOp>(op)) {
-    for (auto *ownerInst : forOp.getInductionVar().getUsers())
-      if (forwardSlice->count(ownerInst) == 0)
-        getForwardSliceImpl(ownerInst, forwardSlice, filter);
+    for (auto *ownerOp : forOp.getInductionVar().getUsers())
+      if (forwardSlice->count(ownerOp) == 0)
+        getForwardSliceImpl(ownerOp, forwardSlice, filter);
+    for (auto result : forOp.getResults())
+      for (auto *ownerOp : result.getUsers())
+        if (forwardSlice->count(ownerOp) == 0)
+          getForwardSliceImpl(ownerOp, forwardSlice, filter);
   } else {
     assert(op->getNumRegions() == 0 && "unexpected generic op with regions");
     assert(op->getNumResults() <= 1 && "unexpected multiple results");
     if (op->getNumResults() > 0) {
-      for (auto *ownerInst : op->getResult(0).getUsers())
-        if (forwardSlice->count(ownerInst) == 0)
-          getForwardSliceImpl(ownerInst, forwardSlice, filter);
+      for (auto *ownerOp : op->getResult(0).getUsers())
+        if (forwardSlice->count(ownerOp) == 0)
+          getForwardSliceImpl(ownerOp, forwardSlice, filter);
     }
   }
 
@@ -139,15 +143,15 @@ SetVector<Operation *> mlir::getSlice(Operation *op,
   SetVector<Operation *> backwardSlice;
   SetVector<Operation *> forwardSlice;
   while (currentIndex != slice.size()) {
-    auto *currentInst = (slice)[currentIndex];
-    // Compute and insert the backwardSlice starting from currentInst.
+    auto *currentOp = (slice)[currentIndex];
+    // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    getBackwardSlice(currentInst, &backwardSlice, backwardFilter);
+    getBackwardSlice(currentOp, &backwardSlice, backwardFilter);
     slice.insert(backwardSlice.begin(), backwardSlice.end());
 
-    // Compute and insert the forwardSlice starting from currentInst.
+    // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
-    getForwardSlice(currentInst, &forwardSlice, forwardFilter);
+    getForwardSlice(currentOp, &forwardSlice, forwardFilter);
     slice.insert(forwardSlice.begin(), forwardSlice.end());
     ++currentIndex;
   }

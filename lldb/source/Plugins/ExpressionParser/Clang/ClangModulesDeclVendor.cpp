@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <mutex>
-
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -37,6 +35,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/StreamString.h"
+
+#include <memory>
+#include <mutex>
 
 using namespace lldb_private;
 
@@ -130,8 +131,9 @@ StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
   m_log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
 
   clang::DiagnosticOptions *m_options = new clang::DiagnosticOptions();
-  m_os.reset(new llvm::raw_string_ostream(m_output));
-  m_diag_printer.reset(new clang::TextDiagnosticPrinter(*m_os, m_options));
+  m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
+  m_diag_printer =
+      std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(

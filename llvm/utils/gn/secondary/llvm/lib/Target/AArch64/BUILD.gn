@@ -24,18 +24,27 @@ tablegen("AArch64GenGlobalISel") {
   td_file = "AArch64.td"
 }
 
-tablegen("AArch64GenGICombiner") {
+tablegen("AArch64GenMCPseudoLowering") {
+  visibility = [ ":LLVMAArch64CodeGen" ]
+  args = [ "-gen-pseudo-lowering" ]
+  td_file = "AArch64.td"
+}
+
+tablegen("AArch64GenPostLegalizeGICombiner") {
+  visibility = [ ":LLVMAArch64CodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=AArch64PostLegalizerCombinerHelper",
+  ]
+  td_file = "AArch64.td"
+}
+
+tablegen("AArch64GenPreLegalizeGICombiner") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [
     "-gen-global-isel-combiner",
     "-combiners=AArch64PreLegalizerCombinerHelper",
   ]
-  td_file = "AArch64.td"
-}
-
-tablegen("AArch64GenMCPseudoLowering") {
-  visibility = [ ":LLVMAArch64CodeGen" ]
-  args = [ "-gen-pseudo-lowering" ]
   td_file = "AArch64.td"
 }
 
@@ -50,9 +59,10 @@ static_library("LLVMAArch64CodeGen") {
     ":AArch64GenCallingConv",
     ":AArch64GenDAGISel",
     ":AArch64GenFastISel",
-    ":AArch64GenGICombiner",
     ":AArch64GenGlobalISel",
     ":AArch64GenMCPseudoLowering",
+    ":AArch64GenPostLegalizeGICombiner",
+    ":AArch64GenPreLegalizeGICombiner",
     ":AArch64GenRegisterBank",
 
     # See https://reviews.llvm.org/D69130
@@ -80,7 +90,6 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64AdvSIMDScalarPass.cpp",
     "AArch64AsmPrinter.cpp",
     "AArch64BranchTargets.cpp",
-    "AArch64CallLowering.cpp",
     "AArch64CallingConvention.cpp",
     "AArch64CleanupLocalDynamicTLSPass.cpp",
     "AArch64CollectLOH.cpp",
@@ -97,19 +106,16 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64ISelDAGToDAG.cpp",
     "AArch64ISelLowering.cpp",
     "AArch64InstrInfo.cpp",
-    "AArch64InstructionSelector.cpp",
-    "AArch64LegalizerInfo.cpp",
     "AArch64LoadStoreOptimizer.cpp",
     "AArch64MCInstLower.cpp",
     "AArch64MachineFunctionInfo.cpp",
     "AArch64MacroFusion.cpp",
     "AArch64PBQPRegAlloc.cpp",
-    "AArch64PreLegalizerCombiner.cpp",
     "AArch64PromoteConstant.cpp",
     "AArch64RedundantCopyElimination.cpp",
-    "AArch64RegisterBankInfo.cpp",
     "AArch64RegisterInfo.cpp",
     "AArch64SIMDInstrOpt.cpp",
+    "AArch64SLSHardening.cpp",
     "AArch64SelectionDAGInfo.cpp",
     "AArch64SpeculationHardening.cpp",
     "AArch64StackTagging.cpp",
@@ -119,6 +125,12 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64TargetMachine.cpp",
     "AArch64TargetObjectFile.cpp",
     "AArch64TargetTransformInfo.cpp",
+    "GISel/AArch64CallLowering.cpp",
+    "GISel/AArch64InstructionSelector.cpp",
+    "GISel/AArch64LegalizerInfo.cpp",
+    "GISel/AArch64PostLegalizerCombiner.cpp",
+    "GISel/AArch64PreLegalizerCombiner.cpp",
+    "GISel/AArch64RegisterBankInfo.cpp",
     "SVEIntrinsicOpts.cpp",
   ]
 }

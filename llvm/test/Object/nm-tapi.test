@@ -1,0 +1,58 @@
+RUN: llvm-nm %p/Inputs/tapi-v1.tbd 2>&1\
+RUN:          | FileCheck %s -check-prefix V1
+
+RUN: llvm-nm %p/Inputs/tapi-v2.tbd \
+RUN:          | FileCheck %s -check-prefix V2
+
+RUN: llvm-nm --add-inlinedinfo --arch=x86_64 %p/Inputs/tapi-v3.tbd \
+RUN:          | FileCheck %s -check-prefix V3
+
+RUN: llvm-nm %p/Inputs/tapi-v4.tbd \
+RUN:          | FileCheck %s -check-prefix V4
+
+V1: /u/l/libfoo.dylib (for architecture armv7):
+V1-NEXT: 00000000 S _sym
+V1: /u/l/libfoo.dylib (for architecture armv7s):
+V1-NEXT: 00000000 S _sym
+
+V2: /u/l/libfoo.dylib (for architecture armv7):
+V2-NEXT: 00000000 S _sym1
+V2-NEXT: 00000000 S _sym2
+V2-NEXT: 00000000 S _sym3
+V2: /u/l/libfoo.dylib (for architecture armv7s):
+V2-NEXT: 00000000 S _sym1
+V2-NEXT: 00000000 S _sym2
+V2-NEXT: 00000000 S _sym3
+V2: /u/l/libfoo.dylib (for architecture arm64):
+V2-NEXT:          U _sym
+V2-NEXT: 0000000000000000 S _sym1
+V2-NEXT: 0000000000000000 S _sym2
+V2-NEXT: 0000000000000000 S _sym3
+
+V3: /usr/lib/libfoo.dylib (for architecture x86_64):
+V3-NEXT: 0000000000000000 S _OBJC_CLASS_$_NSBlockPredicate
+V3-NEXT: 0000000000000000 S _OBJC_CLASS_$_NSString
+V3-NEXT: 0000000000000000 S _OBJC_EHTYPE_$_NSString
+V3-NEXT: 0000000000000000 S _OBJC_IVAR_$_NSBlockPredicate._block
+V3-NEXT: 0000000000000000 S _OBJC_METACLASS_$_NSBlockPredicate
+V3-NEXT: 0000000000000000 S _OBJC_METACLASS_$_NSString
+V3-NEXT: 0000000000000000 S _sym1
+V3-NEXT: 0000000000000000 S _sym2
+V3: /usr/lib/liba.dylib (for architecture x86_64):
+V3-NEXT: 0000000000000000 S _OBJC_CLASS_$_NSBlockPredicate
+V3-NEXT: 0000000000000000 S _OBJC_CLASS_$_NSString
+V3-NEXT: 0000000000000000 S _OBJC_EHTYPE_$_NSString
+V3-NEXT: 0000000000000000 S _OBJC_IVAR_$_NSBlockPredicate._block
+V3-NEXT: 0000000000000000 S _OBJC_METACLASS_$_NSBlockPredicate
+V3-NEXT: 0000000000000000 S _OBJC_METACLASS_$_NSString
+V3-NEXT: 0000000000000000 S _sym1
+V3-NEXT: 0000000000000000 S _sym2
+
+V4: /u/l/libFoo.dylib (for architecture i386):
+V4-NEXT: 00000000 S _sym1
+V4-NEXT: 00000000 W _sym2
+V4-NEXT: 00000000 S _sym3
+V4-NEXT: 00000000 S _sym4
+V4: /u/l/libFoo.dylib (for architecture x86_64):
+V4-NEXT: 0000000000000000 S _sym3
+V4-NEXT: 0000000000000000 S _sym4

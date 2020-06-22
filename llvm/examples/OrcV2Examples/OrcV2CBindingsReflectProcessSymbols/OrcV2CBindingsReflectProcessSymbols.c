@@ -27,14 +27,14 @@ int32_t add(int32_t X, int32_t Y) { return X + Y; }
 
 int32_t mul(int32_t X, int32_t Y) { return X * Y; }
 
-int whitelistedSymbols(LLVMOrcSymbolStringPoolEntryRef Sym, void *Ctx) {
-  assert(Ctx && "Cannot call whitelistedSymbols with a null context");
+int allowedSymbols(LLVMOrcSymbolStringPoolEntryRef Sym, void *Ctx) {
+  assert(Ctx && "Cannot call allowedSymbols with a null context");
 
-  LLVMOrcSymbolStringPoolEntryRef *Whitelist =
+  LLVMOrcSymbolStringPoolEntryRef *AllowList =
       (LLVMOrcSymbolStringPoolEntryRef *)Ctx;
 
-  // If Sym appears in the whitelist then return true.
-  LLVMOrcSymbolStringPoolEntryRef *P = Whitelist;
+  // If Sym appears in the allowed list then return true.
+  LLVMOrcSymbolStringPoolEntryRef *P = AllowList;
   while (*P) {
     if (Sym == *P)
       return 1;
@@ -134,11 +134,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Build a filter to allow JIT'd code to only access whitelisted symbols.
+  // Build a filter to allow JIT'd code to only access allowed symbols.
   // This filter is optional: If a null value is suppled for the Filter
   // argument to LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess then
   // all process symbols will be reflected.
-  LLVMOrcSymbolStringPoolEntryRef Whitelist[] = {
+  LLVMOrcSymbolStringPoolEntryRef AllowList[] = {
       LLVMOrcLLJITMangleAndIntern(J, "mul"),
       LLVMOrcLLJITMangleAndIntern(J, "add"), 0};
 
@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
     LLVMErrorRef Err;
     if ((Err = LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
              &ProcessSymbolsGenerator, LLVMOrcLLJITGetGlobalPrefix(J),
-             whitelistedSymbols, Whitelist))) {
+             allowedSymbols, AllowList))) {
       MainResult = handleError(Err);
       goto jit_cleanup;
     }
@@ -192,9 +192,9 @@ int main(int argc, char *argv[]) {
 
 jit_cleanup:
   // Release all symbol string pool entries that we have allocated. In this
-  // example that's just our whitelist entries.
+  // example that's just our allowed entries.
   {
-    LLVMOrcSymbolStringPoolEntryRef *P = Whitelist;
+    LLVMOrcSymbolStringPoolEntryRef *P = AllowList;
     while (*P)
       LLVMOrcReleaseSymbolStringPoolEntry(*P++);
   }

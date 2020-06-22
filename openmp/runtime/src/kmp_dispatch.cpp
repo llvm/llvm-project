@@ -372,10 +372,10 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         // before spending time on this).
         // For now use dynamically allocated per-thread lock,
         // free memory in __kmp_dispatch_next when status==0.
-        KMP_DEBUG_ASSERT(th->th.th_dispatch->th_steal_lock == NULL);
-        th->th.th_dispatch->th_steal_lock =
+        KMP_DEBUG_ASSERT(pr->u.p.th_steal_lock == NULL);
+        pr->u.p.th_steal_lock =
             (kmp_lock_t *)__kmp_allocate(sizeof(kmp_lock_t));
-        __kmp_init_lock(th->th.th_dispatch->th_steal_lock);
+        __kmp_init_lock(pr->u.p.th_steal_lock);
       }
       break;
     } else {
@@ -968,7 +968,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
   // all parm3 will be the same, it still exists a bad case like using 0 and 1
   // rather than program life-time increment. So the dedicated variable is
   // required. The 'static_steal_counter' is used.
-  if (schedule == kmp_sch_static_steal) {
+  if (pr->schedule == kmp_sch_static_steal) {
     // Other threads will inspect this variable when searching for a victim.
     // This is a flag showing that other threads may steal from this thread
     // since then.
@@ -1195,7 +1195,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
     if (traits_t<T>::type_size > 4) {
       // use lock for 8-byte and CAS for 4-byte induction
       // variable. TODO (optional): check and use 16-byte CAS
-      kmp_lock_t *lck = th->th.th_dispatch->th_steal_lock;
+      kmp_lock_t *lck = pr->u.p.th_steal_lock;
       KMP_DEBUG_ASSERT(lck != NULL);
       if (pr->u.p.count < (UT)pr->u.p.ub) {
         __kmp_acquire_lock(lck, gtid);
@@ -1210,37 +1210,38 @@ int __kmp_dispatch_next_algorithm(int gtid,
         kmp_info_t **other_threads = team->t.t_threads;
         int while_limit = pr->u.p.parm3;
         int while_index = 0;
+        T id = pr->u.p.static_steal_counter; // loop id
+        int idx = (th->th.th_dispatch->th_disp_index - 1) %
+                  __kmp_dispatch_num_buffers; // current loop index
+        // note: victim thread can potentially execute another loop
         // TODO: algorithm of searching for a victim
         // should be cleaned up and measured
         while ((!status) && (while_limit != ++while_index)) {
+          dispatch_private_info_template<T> *victim;
           T remaining;
           T victimIdx = pr->u.p.parm4;
           T oldVictimIdx = victimIdx ? victimIdx - 1 : nproc - 1;
-          dispatch_private_info_template<T> *victim =
-              reinterpret_cast<dispatch_private_info_template<T> *>(
-                  other_threads[victimIdx]
-                      ->th.th_dispatch->th_dispatch_pr_current);
-          while ((victim == NULL || victim == pr ||
-                  (*(volatile T *)&victim->u.p.static_steal_counter !=
-                   *(volatile T *)&pr->u.p.static_steal_counter)) &&
+          victim = reinterpret_cast<dispatch_private_info_template<T> *>(
+              &other_threads[victimIdx]->th.th_dispatch->th_disp_buffer[idx]);
+          KMP_DEBUG_ASSERT(victim);
+          while ((victim == pr || id != victim->u.p.static_steal_counter) &&
                  oldVictimIdx != victimIdx) {
             victimIdx = (victimIdx + 1) % nproc;
             victim = reinterpret_cast<dispatch_private_info_template<T> *>(
-                other_threads[victimIdx]
-                    ->th.th_dispatch->th_dispatch_pr_current);
+                &other_threads[victimIdx]->th.th_dispatch->th_disp_buffer[idx]);
+            KMP_DEBUG_ASSERT(victim);
           }
-          if (!victim || (*(volatile T *)&victim->u.p.static_steal_counter !=
-                          *(volatile T *)&pr->u.p.static_steal_counter)) {
+          if (victim == pr || id != victim->u.p.static_steal_counter) {
             continue; // try once more (nproc attempts in total)
             // no victim is ready yet to participate in stealing
-            // because all victims are still in kmp_init_dispatch
+            // because no victim passed kmp_init_dispatch yet
           }
           if (victim->u.p.count + 2 > (UT)victim->u.p.ub) {
             pr->u.p.parm4 = (victimIdx + 1) % nproc; // shift start tid
             continue; // not enough chunks to steal, goto next victim
           }
 
-          lck = other_threads[victimIdx]->th.th_dispatch->th_steal_lock;
+          lck = victim->u.p.th_steal_lock;
           KMP_ASSERT(lck != NULL);
           __kmp_acquire_lock(lck, gtid);
           limit = victim->u.p.ub; // keep initial ub
@@ -1268,10 +1269,10 @@ int __kmp_dispatch_next_algorithm(int gtid,
           status = 1;
           while_index = 0;
           // now update own count and ub with stolen range but init chunk
-          __kmp_acquire_lock(th->th.th_dispatch->th_steal_lock, gtid);
+          __kmp_acquire_lock(pr->u.p.th_steal_lock, gtid);
           pr->u.p.count = init + 1;
           pr->u.p.ub = limit;
-          __kmp_release_lock(th->th.th_dispatch->th_steal_lock, gtid);
+          __kmp_release_lock(pr->u.p.th_steal_lock, gtid);
         } // while (search for victim)
       } // if (try to find victim and steal)
     } else {
@@ -1308,32 +1309,32 @@ int __kmp_dispatch_next_algorithm(int gtid,
         kmp_info_t **other_threads = team->t.t_threads;
         int while_limit = pr->u.p.parm3;
         int while_index = 0;
-
+        T id = pr->u.p.static_steal_counter; // loop id
+        int idx = (th->th.th_dispatch->th_disp_index - 1) %
+                  __kmp_dispatch_num_buffers; // current loop index
+        // note: victim thread can potentially execute another loop
         // TODO: algorithm of searching for a victim
         // should be cleaned up and measured
         while ((!status) && (while_limit != ++while_index)) {
+          dispatch_private_info_template<T> *victim;
           union_i4 vold, vnew;
           kmp_int32 remaining;
           T victimIdx = pr->u.p.parm4;
           T oldVictimIdx = victimIdx ? victimIdx - 1 : nproc - 1;
-          dispatch_private_info_template<T> *victim =
-              reinterpret_cast<dispatch_private_info_template<T> *>(
-                  other_threads[victimIdx]
-                      ->th.th_dispatch->th_dispatch_pr_current);
-          while ((victim == NULL || victim == pr ||
-                  (*(volatile T *)&victim->u.p.static_steal_counter !=
-                   *(volatile T *)&pr->u.p.static_steal_counter)) &&
+          victim = reinterpret_cast<dispatch_private_info_template<T> *>(
+              &other_threads[victimIdx]->th.th_dispatch->th_disp_buffer[idx]);
+          KMP_DEBUG_ASSERT(victim);
+          while ((victim == pr || id != victim->u.p.static_steal_counter) &&
                  oldVictimIdx != victimIdx) {
             victimIdx = (victimIdx + 1) % nproc;
             victim = reinterpret_cast<dispatch_private_info_template<T> *>(
-                other_threads[victimIdx]
-                    ->th.th_dispatch->th_dispatch_pr_current);
+                &other_threads[victimIdx]->th.th_dispatch->th_disp_buffer[idx]);
+            KMP_DEBUG_ASSERT(victim);
           }
-          if (!victim || (*(volatile T *)&victim->u.p.static_steal_counter !=
-                          *(volatile T *)&pr->u.p.static_steal_counter)) {
+          if (victim == pr || id != victim->u.p.static_steal_counter) {
             continue; // try once more (nproc attempts in total)
             // no victim is ready yet to participate in stealing
-            // because all victims are still in kmp_init_dispatch
+            // because no victim passed kmp_init_dispatch yet
           }
           pr->u.p.parm4 = victimIdx; // new victim found
           while (1) { // CAS loop if victim has enough chunks to steal
@@ -2068,14 +2069,19 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
         if (pr->schedule == kmp_sch_static_steal &&
             traits_t<T>::type_size > 4) {
           int i;
+          int idx = (th->th.th_dispatch->th_disp_index - 1) %
+                    __kmp_dispatch_num_buffers; // current loop index
           kmp_info_t **other_threads = team->t.t_threads;
           // loop complete, safe to destroy locks used for stealing
           for (i = 0; i < th->th.th_team_nproc; ++i) {
-            kmp_lock_t *lck = other_threads[i]->th.th_dispatch->th_steal_lock;
+            dispatch_private_info_template<T> *buf =
+                reinterpret_cast<dispatch_private_info_template<T> *>(
+                    &other_threads[i]->th.th_dispatch->th_disp_buffer[idx]);
+            kmp_lock_t *lck = buf->u.p.th_steal_lock;
             KMP_ASSERT(lck != NULL);
             __kmp_destroy_lock(lck);
             __kmp_free(lck);
-            other_threads[i]->th.th_dispatch->th_steal_lock = NULL;
+            buf->u.p.th_steal_lock = NULL;
           }
         }
 #endif

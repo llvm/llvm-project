@@ -39,6 +39,8 @@ public:
 
   virtual const RegisterSet *GetRegisterSet(size_t reg_set) = 0;
 
+  virtual lldb::ByteOrder GetByteOrder();
+
   virtual bool ReadRegister(const RegisterInfo *reg_info,
                             RegisterValue &reg_value) = 0;
 
@@ -105,7 +107,7 @@ public:
   ///     The equivalent register number in the eRegisterKindLLDB
   ///     numbering scheme, if possible, else LLDB_INVALID_REGNUM.
   virtual uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                                       uint32_t num) = 0;
+                                                       uint32_t num);
 
   // Subclasses can override these functions if desired
   virtual uint32_t NumSupportedHardwareBreakpoints();
@@ -201,7 +203,8 @@ protected:
   uint32_t m_stop_id; // The stop ID that any data in this context is valid for
 private:
   // For RegisterContext only
-  DISALLOW_COPY_AND_ASSIGN(RegisterContext);
+  RegisterContext(const RegisterContext &) = delete;
+  const RegisterContext &operator=(const RegisterContext &) = delete;
 };
 
 } // namespace lldb_private

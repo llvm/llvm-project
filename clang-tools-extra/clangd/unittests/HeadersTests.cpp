@@ -16,6 +16,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "gmock/gmock.h"
@@ -44,20 +45,19 @@ private:
   std::unique_ptr<CompilerInstance> setupClang() {
     auto Cmd = CDB.getCompileCommand(MainFile);
     assert(static_cast<bool>(Cmd));
-    auto VFS = FS.getFileSystem();
-    VFS->setCurrentWorkingDirectory(Cmd->Directory);
 
     ParseInputs PI;
     PI.CompileCommand = *Cmd;
-    PI.FS = VFS;
+    PI.TFS = &FS;
     auto CI = buildCompilerInvocation(PI, IgnoreDiags);
     EXPECT_TRUE(static_cast<bool>(CI));
     // The diagnostic options must be set before creating a CompilerInstance.
     CI->getDiagnosticOpts().IgnoreWarnings = true;
+    auto VFS = PI.TFS->view(Cmd->Directory);
     auto Clang = prepareCompilerInstance(
         std::move(CI), /*Preamble=*/nullptr,
-        llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile), VFS,
-        IgnoreDiags);
+        llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile),
+        std::move(VFS), IgnoreDiags);
 
     EXPECT_FALSE(Clang->getFrontendOpts().Inputs.empty());
     return Clang;
@@ -120,7 +120,7 @@ protected:
     return Edit;
   }
 
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   std::string MainFile = testPath("main.cpp");
   std::string Subdir = testPath("sub");
@@ -306,7 +306,7 @@ TEST(Headers, NoHeaderSearchInfo) {
 }
 
 TEST_F(HeadersTest, PresumedLocations) {
-  std::string HeaderFile = "implicit_include.h";
+  std::string HeaderFile = "__preamble_patch__.h";
 
   // Line map inclusion back to main file.
   std::string HeaderContents =
@@ -317,7 +317,7 @@ TEST_F(HeadersTest, PresumedLocations) {
   FS.Files[HeaderFile] = HeaderContents;
 
   // Including through non-builtin file has no effects.
-  FS.Files[MainFile] = "#include \"implicit_include.h\"\n\n";
+  FS.Files[MainFile] = "#include \"__preamble_patch__.h\"\n\n";
   EXPECT_THAT(collectIncludes().MainFileIncludes,
               Not(Contains(Written("<a.h>"))));
 

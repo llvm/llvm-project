@@ -1,0 +1,4 @@
+
+// REQUIRES: my-require-feature-2 || my-require-feature-3
+// UNSUPPORTED: my-unsupported-feature-2, my-unsupported-feature-3
+// XFAIL: my-xfail-feature-2, my-xfail-feature-3

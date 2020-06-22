@@ -110,14 +110,6 @@ different flags are separated by spaces, e.g.:
 
 <tbody>
 <tr>
-<td class="org-left">print&#95;ompt&#95;counters</td>
-<td class="org-right">0</td>
-<td class="org-left">Print the number of triggered OMPT events at the end of the execution.</td>
-</tr>
-</tbody>
-
-<tbody>
-<tr>
 <td class="org-left">print&#95;max&#95;rss</td>
 <td class="org-right">0</td>
 <td class="org-left">Print the RSS memory peak at the end of the execution.</td>

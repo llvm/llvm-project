@@ -17,21 +17,25 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 
+class CallBase;
 class LoadInst;
 class StoreInst;
 class MemTransferInst;
 class MemIntrinsic;
+class AtomicCmpXchgInst;
 class AtomicMemTransferInst;
 class AtomicMemIntrinsic;
+class AtomicRMWInst;
 class AnyMemTransferInst;
 class AnyMemIntrinsic;
 class TargetLibraryInfo;
+class VAArgInst;
 
 // Represents the size of a MemoryLocation. Logically, it's an
 // Optional<uint63_t> that also carries a bit to represent whether the integer
@@ -217,22 +221,7 @@ public:
   static MemoryLocation get(const Instruction *Inst) {
     return *MemoryLocation::getOrNone(Inst);
   }
-  static Optional<MemoryLocation> getOrNone(const Instruction *Inst) {
-    switch (Inst->getOpcode()) {
-    case Instruction::Load:
-      return get(cast<LoadInst>(Inst));
-    case Instruction::Store:
-      return get(cast<StoreInst>(Inst));
-    case Instruction::VAArg:
-      return get(cast<VAArgInst>(Inst));
-    case Instruction::AtomicCmpXchg:
-      return get(cast<AtomicCmpXchgInst>(Inst));
-    case Instruction::AtomicRMW:
-      return get(cast<AtomicRMWInst>(Inst));
-    default:
-      return None;
-    }
-  }
+  static Optional<MemoryLocation> getOrNone(const Instruction *Inst);
 
   /// Return a location representing the source of a memory transfer.
   static MemoryLocation getForSource(const MemTransferInst *MTI);

@@ -81,10 +81,13 @@ struct SampleProfTest : ::testing::Test {
   // Metadata. \p AddPartialField is to choose whether the Metadata
   // contains the IsPartialProfile field which is optional.
   void verifyProfileSummary(ProfileSummary &Summary, Module &M,
-                            const bool AddPartialField) {
+                            const bool AddPartialField,
+                            const bool AddPartialProfileRatioField) {
     LLVMContext &Context = M.getContext();
     const bool IsPartialProfile = Summary.isPartialProfile();
-    auto VerifySummary = [IsPartialProfile](ProfileSummary &Summary) mutable {
+    const double PartialProfileRatio = Summary.getPartialProfileRatio();
+    auto VerifySummary = [IsPartialProfile, PartialProfileRatio](
+                             ProfileSummary &Summary) mutable {
       ASSERT_EQ(ProfileSummary::PSK_Sample, Summary.getKind());
       ASSERT_EQ(137392u, Summary.getTotalCount());
       ASSERT_EQ(8u, Summary.getNumCounts());
@@ -92,6 +95,7 @@ struct SampleProfTest : ::testing::Test {
       ASSERT_EQ(1437u, Summary.getMaxFunctionCount());
       ASSERT_EQ(60351u, Summary.getMaxCount());
       ASSERT_EQ(IsPartialProfile, Summary.isPartialProfile());
+      ASSERT_EQ(PartialProfileRatio, Summary.getPartialProfileRatio());
 
       uint32_t Cutoff = 800000;
       auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
@@ -113,7 +117,8 @@ struct SampleProfTest : ::testing::Test {
     VerifySummary(Summary);
 
     // Test that conversion of summary to and from Metadata works.
-    Metadata *MD = Summary.getMD(Context, AddPartialField);
+    Metadata *MD =
+        Summary.getMD(Context, AddPartialField, AddPartialProfileRatioField);
     ASSERT_TRUE(MD);
     ProfileSummary *PS = ProfileSummary::getFromMD(MD);
     ASSERT_TRUE(PS);
@@ -271,13 +276,16 @@ struct SampleProfTest : ::testing::Test {
 
     ProfileSummary &Summary = Reader->getSummary();
     Summary.setPartialProfile(true);
-    verifyProfileSummary(Summary, M, true);
+    verifyProfileSummary(Summary, M, true, false);
 
     Summary.setPartialProfile(false);
-    verifyProfileSummary(Summary, M, true);
+    verifyProfileSummary(Summary, M, true, false);
 
-    Summary.setPartialProfile(false);
-    verifyProfileSummary(Summary, M, false);
+    verifyProfileSummary(Summary, M, false, false);
+
+    Summary.setPartialProfile(true);
+    Summary.setPartialProfileRatio(0.5);
+    verifyProfileSummary(Summary, M, true, true);
   }
 
   void addFunctionSamples(StringMap<FunctionSamples> *Smap, const char *Fname,

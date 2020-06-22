@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-print-callgraph -split-input-file 2>&1 | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -test-print-callgraph -split-input-file 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : "simple"
 module attributes {test.name = "simple"} {

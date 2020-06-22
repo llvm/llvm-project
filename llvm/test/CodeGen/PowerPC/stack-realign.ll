@@ -82,7 +82,7 @@ entry:
 ; CHECK-32-DAG: stw [[LR]], 4(1)
 ; CHECK-32-DAG: subfic 0, [[REG]], -64
 ; CHECK-32: stwux 1, 1, 0
-; CHECK-32: subf 0, 0, 1
+; CHECK-32: sub 0, 1, 0
 ; CHECK-32: addic 0, 0, -4
 ; CHECK-32: stwx 31, 0, 0
 ; CHECK-32: addic 0, 0, -4
@@ -95,7 +95,7 @@ entry:
 ; CHECK-32-PIC-DAG: stw [[LR]], 4(1)
 ; CHECK-32-PIC-DAG: subfic 0, [[REG]], -64
 ; CHECK-32-PIC:     stwux 1, 1, 0
-; CHECK-32-PIC:     subf 0, 0, 1
+; CHECK-32-PIC:     sub 0, 1, 0
 ; CHECK-32-PIC:     addic 0, 0, -4
 ; CHECK-32-PIC:     stwx 31, 0, 0
 ; CHECK-32-PIC:     addic 0, 0, -4
@@ -143,9 +143,9 @@ entry:
 ; CHECK-32-DAG: mflr [[LR:[0-9]+]]
 ; CHECK-32-DAG: ori [[REG2:[0-9]+]], [[REG1]], 51904
 ; CHECK-32-DAG: stw [[LR]], 4(1)
-; CHECK-32-DAG: subfc 0, [[REG3]], [[REG2]]
+; CHECK-32-DAG: subc 0, [[REG2]], [[REG3]]
 ; CHECK-32:     stwux 1, 1, 0
-; CHECK-32:     subf 0, 0, 1
+; CHECK-32:     sub 0, 1, 0
 ; CHECK-32:     addic 0, 0, -4
 ; CHECK-32:     stwx 31, 0, 0
 ; CHECK-32:     addic 0, 0, -4
@@ -161,9 +161,9 @@ entry:
 ; CHECK-32-PIC-DAG: mflr {{[0-9]+}}
 ; CHECK-32-PIC-DAG: ori [[REG2:[0-9]+]], [[REG1]], 51904
 ; CHECK-32-PIC-DAG: stw 0, 4(1)
-; CHECK-32-PIC-DAG: subfc 0, [[REG3]], [[REG2]]
+; CHECK-32-PIC-DAG: subc 0, [[REG2]], [[REG3]]
 ; CHECK-32-PIC:     stwux 1, 1, 0
-; CHECK-32-PIC:     subf 0, 0, 1
+; CHECK-32-PIC:     sub 0, 1, 0
 ; CHECK-32-PIC:     addic 0, 0, -4
 ; CHECK-32-PIC:     stwx 31, 0, 0
 ; CHECK-32-PIC:     addic 0, 0, -8

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <regex>
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // Make sure that we correctly match inverted character classes.
 

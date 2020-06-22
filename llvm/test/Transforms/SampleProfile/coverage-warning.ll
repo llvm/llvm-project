@@ -1,6 +1,6 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/coverage-warning.prof -sample-profile-check-record-coverage=90 -sample-profile-check-sample-coverage=100 -o /dev/null 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/coverage-warning.prof -sample-profile-check-record-coverage=90 -sample-profile-check-sample-coverage=100 -o /dev/null 2>&1 | FileCheck %s
-define i32 @foo(i32 %i) !dbg !4 {
+define i32 @foo(i32 %i) #0 !dbg !4 {
 ; The profile has samples for line locations that are no longer present.
 ; Coverage does not reach 90%, so we should get this warning:
 ;
@@ -26,6 +26,8 @@ return:                                           ; preds = %if.end, %if.then
   %1 = load i32, i32* %retval, align 4, !dbg !13
   ret i32 %1, !dbg !13
 }
+
+attributes #0 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7}

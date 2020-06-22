@@ -16,7 +16,7 @@ define void @_ZN1m1nEv(%struct.m.2.5.8.11* %this) local_unnamed_addr nounwind al
 ; CHECK-NEXT:    lwz r5, 36(r30)
 ; CHECK-NEXT:    rldicl r4, r4, 60, 4
 ; CHECK-NEXT:    rlwinm r3, r4, 31, 0, 0
-; CHECK-NEXT:    rlwinm r4, r5, 0, 31, 31
+; CHECK-NEXT:    clrlwi r4, r5, 31
 ; CHECK-NEXT:    or r4, r4, r3
 ; CHECK-NEXT:    bl _ZN1llsE1d
 ; CHECK-NEXT:    nop

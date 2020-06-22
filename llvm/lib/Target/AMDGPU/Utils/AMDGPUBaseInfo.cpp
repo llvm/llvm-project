@@ -108,6 +108,7 @@ namespace AMDGPU {
 #define GET_MIMGInfoTable_IMPL
 #define GET_MIMGLZMappingTable_IMPL
 #define GET_MIMGMIPMappingTable_IMPL
+#define GET_MIMGG16MappingTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -310,7 +311,7 @@ unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
   // FIXME: Need to take scratch memory into account.
   if (!isGFX10(*STI))
     return 10;
-  return 20;
+  return hasGFX10_3Insts(*STI) ? 16 : 20;
 }
 
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
@@ -440,12 +441,21 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
+
+  if (hasGFX10_3Insts(*STI))
+    return IsWave32 ? 16 : 8;
+
   return IsWave32 ? 8 : 4;
 }
 
 unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
                                 Optional<bool> EnableWavefrontSize32) {
-  return getVGPRAllocGranule(STI, EnableWavefrontSize32);
+
+  bool IsWave32 = EnableWavefrontSize32 ?
+      *EnableWavefrontSize32 :
+      STI->getFeatureBits().test(FeatureWavefrontSize32);
+
+  return IsWave32 ? 8 : 4;
 }
 
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
@@ -731,13 +741,16 @@ static unsigned getLastSymbolicHwreg(const MCSubtargetInfo &STI) {
     return ID_SYMBOLIC_FIRST_GFX9_;
   else if (isGFX9(STI))
     return ID_SYMBOLIC_FIRST_GFX10_;
+  else if (isGFX10(STI) && !isGFX10_BEncoding(STI))
+    return ID_SYMBOLIC_FIRST_GFX1030_;
   else
     return ID_SYMBOLIC_LAST_;
 }
 
 bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI) {
-  return ID_SYMBOLIC_FIRST_ <= Id && Id < getLastSymbolicHwreg(STI) &&
-         IdSymbolic[Id];
+  return
+    ID_SYMBOLIC_FIRST_ <= Id && Id < getLastSymbolicHwreg(STI) &&
+    IdSymbolic[Id] && (Id != ID_XNACK_MASK || !AMDGPU::isGFX10_BEncoding(STI));
 }
 
 bool isValidHwreg(int64_t Id) {
@@ -943,6 +956,10 @@ bool hasGFX10A16(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10A16];
 }
 
+bool hasG16(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureG16];
+}
+
 bool hasPackedD16(const MCSubtargetInfo &STI) {
   return !STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem];
 }
@@ -969,6 +986,14 @@ bool isGFX10(const MCSubtargetInfo &STI) {
 
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding];
+}
+
+bool isGFX10_BEncoding(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding];
+}
+
+bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_3Insts];
 }
 
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
@@ -1170,7 +1195,7 @@ unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
 }
 
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {
-  if (Literal >= -16 && Literal <= 64)
+  if (isInlinableIntLiteral(Literal))
     return true;
 
   uint64_t Val = static_cast<uint64_t>(Literal);
@@ -1187,7 +1212,7 @@ bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {
 }
 
 bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi) {
-  if (Literal >= -16 && Literal <= 64)
+  if (isInlinableIntLiteral(Literal))
     return true;
 
   // The actual type of the operand does not seem to matter as long
@@ -1216,7 +1241,7 @@ bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi) {
   if (!HasInv2Pi)
     return false;
 
-  if (Literal >= -16 && Literal <= 64)
+  if (isInlinableIntLiteral(Literal))
     return true;
 
   uint16_t Val = static_cast<uint16_t>(Literal);
@@ -1244,6 +1269,17 @@ bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi) {
   int16_t Lo16 = static_cast<int16_t>(Literal);
   int16_t Hi16 = static_cast<int16_t>(Literal >> 16);
   return Lo16 == Hi16 && isInlinableLiteral16(Lo16, HasInv2Pi);
+}
+
+bool isInlinableIntLiteralV216(int32_t Literal) {
+  int16_t Lo16 = static_cast<int16_t>(Literal);
+  if (isInt<16>(Literal) || isUInt<16>(Literal))
+    return isInlinableIntLiteral(Lo16);
+
+  int16_t Hi16 = static_cast<int16_t>(Literal >> 16);
+  if (!(Literal & 0xffff))
+    return isInlinableIntLiteral(Hi16);
+  return Lo16 == Hi16 && isInlinableIntLiteral(Lo16);
 }
 
 bool isArgPassedInSGPR(const Argument *A) {

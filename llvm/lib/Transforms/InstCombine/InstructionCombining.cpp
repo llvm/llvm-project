@@ -922,8 +922,31 @@ Instruction *InstCombiner::FoldOpIntoSelect(Instruction &Op, SelectInst *SI) {
   if (auto *CI = dyn_cast<CmpInst>(SI->getCondition())) {
     if (CI->hasOneUse()) {
       Value *Op0 = CI->getOperand(0), *Op1 = CI->getOperand(1);
-      if ((SI->getOperand(1) == Op0 && SI->getOperand(2) == Op1) ||
-          (SI->getOperand(2) == Op0 && SI->getOperand(1) == Op1))
+
+      // FIXME: This is a hack to avoid infinite looping with min/max patterns.
+      //        We have to ensure that vector constants that only differ with
+      //        undef elements are treated as equivalent.
+      auto areLooselyEqual = [](Value *A, Value *B) {
+        if (A == B)
+          return true;
+
+        // Test for vector constants.
+        Constant *ConstA, *ConstB;
+        if (!match(A, m_Constant(ConstA)) || !match(B, m_Constant(ConstB)))
+          return false;
+
+        // TODO: Deal with FP constants?
+        if (!A->getType()->isIntOrIntVectorTy() || A->getType() != B->getType())
+          return false;
+
+        // Compare for equality including undefs as equal.
+        auto *Cmp = ConstantExpr::getCompare(ICmpInst::ICMP_EQ, ConstA, ConstB);
+        const APInt *C;
+        return match(Cmp, m_APIntAllowUndef(C)) && C->isOneValue();
+      };
+
+      if ((areLooselyEqual(TV, Op0) && areLooselyEqual(FV, Op1)) ||
+          (areLooselyEqual(FV, Op0) && areLooselyEqual(TV, Op1)))
         return nullptr;
     }
   }
@@ -1061,14 +1084,11 @@ Instruction *InstCombiner::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     Constant *C = cast<Constant>(I.getOperand(1));
     for (unsigned i = 0; i != NumPHIValues; ++i) {
       Value *InV = nullptr;
-      if (Constant *InC = dyn_cast<Constant>(PN->getIncomingValue(i)))
+      if (auto *InC = dyn_cast<Constant>(PN->getIncomingValue(i)))
         InV = ConstantExpr::getCompare(CI->getPredicate(), InC, C);
-      else if (isa<ICmpInst>(CI))
-        InV = Builder.CreateICmp(CI->getPredicate(), PN->getIncomingValue(i),
-                                 C, "phitmp");
       else
-        InV = Builder.CreateFCmp(CI->getPredicate(), PN->getIncomingValue(i),
-                                 C, "phitmp");
+        InV = Builder.CreateCmp(CI->getPredicate(), PN->getIncomingValue(i),
+                                C, "phitmp");
       NewPN->addIncoming(InV, PN->getIncomingBlock(i));
     }
   } else if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
@@ -1445,9 +1465,8 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // of the results.
   Value *L0, *L1, *R0, *R1;
   ArrayRef<int> Mask;
-  if (match(LHS, m_ShuffleVector(m_Value(L0), m_Value(L1), m_Mask(Mask))) &&
-      match(RHS,
-            m_ShuffleVector(m_Value(R0), m_Value(R1), m_SpecificMask(Mask))) &&
+  if (match(LHS, m_Shuffle(m_Value(L0), m_Value(L1), m_Mask(Mask))) &&
+      match(RHS, m_Shuffle(m_Value(R0), m_Value(R1), m_SpecificMask(Mask))) &&
       LHS->hasOneUse() && RHS->hasOneUse() &&
       cast<ShuffleVectorInst>(LHS)->isConcat() &&
       cast<ShuffleVectorInst>(RHS)->isConcat()) {
@@ -1481,9 +1500,8 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // If both arguments of the binary operation are shuffles that use the same
   // mask and shuffle within a single vector, move the shuffle after the binop.
   Value *V1, *V2;
-  if (match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Mask(Mask))) &&
-      match(RHS,
-            m_ShuffleVector(m_Value(V2), m_Undef(), m_SpecificMask(Mask))) &&
+  if (match(LHS, m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))) &&
+      match(RHS, m_Shuffle(m_Value(V2), m_Undef(), m_SpecificMask(Mask))) &&
       V1->getType() == V2->getType() &&
       (LHS->hasOneUse() || RHS->hasOneUse() || LHS == RHS)) {
     // Op(shuffle(V1, Mask), shuffle(V2, Mask)) -> shuffle(Op(V1, V2), Mask)
@@ -1493,9 +1511,9 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // If both arguments of a commutative binop are select-shuffles that use the
   // same mask with commuted operands, the shuffles are unnecessary.
   if (Inst.isCommutative() &&
-      match(LHS, m_ShuffleVector(m_Value(V1), m_Value(V2), m_Mask(Mask))) &&
-      match(RHS, m_ShuffleVector(m_Specific(V2), m_Specific(V1),
-                                 m_SpecificMask(Mask)))) {
+      match(LHS, m_Shuffle(m_Value(V1), m_Value(V2), m_Mask(Mask))) &&
+      match(RHS,
+            m_Shuffle(m_Specific(V2), m_Specific(V1), m_SpecificMask(Mask)))) {
     auto *LShuf = cast<ShuffleVectorInst>(LHS);
     auto *RShuf = cast<ShuffleVectorInst>(RHS);
     // TODO: Allow shuffles that contain undefs in the mask?
@@ -1523,9 +1541,9 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // transforms.
   unsigned NumElts = cast<FixedVectorType>(Inst.getType())->getNumElements();
   Constant *C;
-  if (match(&Inst, m_c_BinOp(m_OneUse(m_ShuffleVector(m_Value(V1), m_Undef(),
-                                                      m_Mask(Mask))),
-                             m_Constant(C))) &&
+  if (match(&Inst,
+            m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))),
+                      m_Constant(C))) &&
       cast<FixedVectorType>(V1->getType())->getNumElements() <= NumElts) {
     assert(Inst.getType()->getScalarType() == V1->getType()->getScalarType() &&
            "Shuffle should not change scalar type");
@@ -1605,8 +1623,8 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
     ArrayRef<int> MaskC;
     int SplatIndex;
     BinaryOperator *BO;
-    if (!match(LHS, m_OneUse(m_ShuffleVector(m_Value(X), m_Undef(),
-                                             m_Mask(MaskC)))) ||
+    if (!match(LHS,
+               m_OneUse(m_Shuffle(m_Value(X), m_Undef(), m_Mask(MaskC)))) ||
         !match(MaskC, m_SplatOrUndefMask(SplatIndex)) ||
         X->getType() != Inst.getType() || !match(RHS, m_OneUse(m_BinOp(BO))) ||
         BO->getOpcode() != Opcode)
@@ -2672,9 +2690,16 @@ Instruction *InstCombiner::visitFree(CallInst &FI) {
   // if (foo) free(foo);
   // into
   // free(foo);
-  if (MinimizeSize)
-    if (Instruction *I = tryToMoveFreeBeforeNullTest(FI, DL))
-      return I;
+  //
+  // Note that we can only do this for 'free' and not for any flavor of
+  // 'operator delete'; there is no 'operator delete' symbol for which we are
+  // permitted to invent a call, even if we're passing in a null pointer.
+  if (MinimizeSize) {
+    LibFunc Func;
+    if (TLI.getLibFunc(FI, Func) && TLI.has(Func) && Func == LibFunc_free)
+      if (Instruction *I = tryToMoveFreeBeforeNullTest(FI, DL))
+        return I;
+  }
 
   return nullptr;
 }
@@ -2709,6 +2734,10 @@ Instruction *InstCombiner::visitReturnInst(ReturnInst &RI) {
 }
 
 Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
+  // Nothing to do about unconditional branches.
+  if (BI.isUnconditional())
+    return nullptr;
+
   // Change br (not X), label True, label False to: br X, label False, True
   Value *X = nullptr;
   if (match(&BI, m_Br(m_Not(m_Value(X)), m_BasicBlock(), m_BasicBlock())) &&
@@ -2720,7 +2749,7 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
 
   // If the condition is irrelevant, remove the use so that other
   // transforms on the condition become more effective.
-  if (BI.isConditional() && !isa<ConstantInt>(BI.getCondition()) &&
+  if (!isa<ConstantInt>(BI.getCondition()) &&
       BI.getSuccessor(0) == BI.getSuccessor(1))
     return replaceOperand(
         BI, 0, ConstantInt::getFalse(BI.getCondition()->getType()));
@@ -3302,6 +3331,11 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   // We can only sink load instructions if there is nothing between the load and
   // the end of block that could change the value.
   if (I->mayReadFromMemory()) {
+    // We don't want to do any sophisticated alias analysis, so we only check
+    // the instructions after I in I's parent block if we try to sink to its
+    // successor block.
+    if (DestBlock->getUniquePredecessor() != I->getParent())
+      return false;
     for (BasicBlock::iterator Scan = I->getIterator(),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
@@ -3328,46 +3362,42 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   // here, but that computation has been sunk.
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
   findDbgUsers(DbgUsers, I);
-  for (auto *DII : reverse(DbgUsers)) {
-    if (DII->getParent() == SrcBlock) {
-      if (isa<DbgDeclareInst>(DII)) {
-        // A dbg.declare instruction should not be cloned, since there can only be
-        // one per variable fragment. It should be left in the original place since
-        // sunk instruction is not an alloca(otherwise we could not be here).
-        // But we need to update arguments of dbg.declare instruction, so that it
-        // would not point into sunk instruction.
-        if (!isa<CastInst>(I))
-          continue; // dbg.declare points at something it shouldn't
 
-        DII->setOperand(
-            0, MetadataAsValue::get(I->getContext(),
-                                    ValueAsMetadata::get(I->getOperand(0))));
-        continue;
-      }
+  // Update the arguments of a dbg.declare instruction, so that it
+  // does not point into a sunk instruction.
+  auto updateDbgDeclare = [&I](DbgVariableIntrinsic *DII) {
+    if (!isa<DbgDeclareInst>(DII))
+      return false;
 
-      // dbg.value is in the same basic block as the sunk inst, see if we can
-      // salvage it. Clone a new copy of the instruction: on success we need
-      // both salvaged and unsalvaged copies.
-      SmallVector<DbgVariableIntrinsic *, 1> TmpUser{
-          cast<DbgVariableIntrinsic>(DII->clone())};
+    if (isa<CastInst>(I))
+      DII->setOperand(
+          0, MetadataAsValue::get(I->getContext(),
+                                  ValueAsMetadata::get(I->getOperand(0))));
+    return true;
+  };
 
-      if (!salvageDebugInfoForDbgValues(*I, TmpUser)) {
-        // We are unable to salvage: sink the cloned dbg.value, and mark the
-        // original as undef, terminating any earlier variable location.
-        LLVM_DEBUG(dbgs() << "SINK: " << *DII << '\n');
-        TmpUser[0]->insertBefore(&*InsertPos);
-        Value *Undef = UndefValue::get(I->getType());
-        DII->setOperand(0, MetadataAsValue::get(DII->getContext(),
-                                                ValueAsMetadata::get(Undef)));
-      } else {
-        // We successfully salvaged: place the salvaged dbg.value in the
-        // original location, and move the unmodified dbg.value to sink with
-        // the sunk inst.
-        TmpUser[0]->insertBefore(DII);
-        DII->moveBefore(&*InsertPos);
-      }
+  SmallVector<DbgVariableIntrinsic *, 2> DIIClones;
+  for (auto User : DbgUsers) {
+    // A dbg.declare instruction should not be cloned, since there can only be
+    // one per variable fragment. It should be left in the original place
+    // because the sunk instruction is not an alloca (otherwise we could not be
+    // here).
+    if (User->getParent() != SrcBlock || updateDbgDeclare(User))
+      continue;
+
+    DIIClones.emplace_back(cast<DbgVariableIntrinsic>(User->clone()));
+    LLVM_DEBUG(dbgs() << "CLONE: " << *DIIClones.back() << '\n');
+  }
+
+  // Perform salvaging without the clones, then sink the clones.
+  if (!DIIClones.empty()) {
+    salvageDebugInfoForDbgValues(*I, DbgUsers);
+    for (auto &DIIClone : DIIClones) {
+      DIIClone->insertBefore(&*InsertPos);
+      LLVM_DEBUG(dbgs() << "SINK: " << *DIIClone << '\n');
     }
   }
+
   return true;
 }
 
@@ -3419,7 +3449,8 @@ bool InstCombiner::run() {
       }
     }
 
-    // See if we can trivially sink this instruction to a successor basic block.
+    // See if we can trivially sink this instruction to its user if we can
+    // prove that the successor is not executed more frequently than our block.
     if (EnableCodeSinking)
       if (Use *SingleUse = I->getSingleUndroppableUse()) {
         BasicBlock *BB = I->getParent();
@@ -3435,7 +3466,20 @@ bool InstCombiner::run() {
         if (UserParent != BB) {
           // See if the user is one of our successors that has only one
           // predecessor, so that we don't have to split the critical edge.
-          if (UserParent->getUniquePredecessor() == BB) {
+          bool ShouldSink = UserParent->getUniquePredecessor() == BB;
+          // Another option where we can sink is a block that ends with a
+          // terminator that does not pass control to other block (such as
+          // return or unreachable). In this case:
+          //   - I dominates the User (by SSA form);
+          //   - the User will be executed at most once.
+          // So sinking I down to User is always profitable or neutral.
+          if (!ShouldSink) {
+            auto *Term = UserParent->getTerminator();
+            ShouldSink = isa<ReturnInst>(Term) || isa<UnreachableInst>(Term);
+          }
+          if (ShouldSink) {
+            assert(DT.dominates(BB, UserParent) &&
+                   "Dominance relation broken?");
             // Okay, the CFG is simple enough, try to sink this instruction.
             if (TryToSinkInstruction(I, UserParent)) {
               LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
@@ -3626,7 +3670,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     if (isInstructionTriviallyDead(Inst, TLI)) {
       ++NumDeadInst;
       LLVM_DEBUG(dbgs() << "IC: DCE: " << *Inst << '\n');
-      salvageDebugInfoOrMarkUndef(*Inst);
+      salvageDebugInfo(*Inst);
       Inst->eraseFromParent();
       MadeIRChange = true;
       continue;

@@ -137,7 +137,7 @@ int bar() { return 1 + foo() + bar() + baz1() + baz2(); }
 int maini1() {
   int a;
   static long aa = 32 + bbb + ccc + fff + ggg;
-// CHECK-DAG: define weak void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+1]](i32* dereferenceable{{.*}}, i64 {{.*}}, i64 {{.*}})
+// CHECK-DAG: define weak void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+1]](i32* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %{{.*}}, i64 {{.*}}, i64 {{.*}})
 #pragma omp target map(tofrom \
                        : a, b)
   {

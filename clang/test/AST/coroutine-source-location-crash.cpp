@@ -1,5 +1,14 @@
+// Test without serialization:
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++14 -fcoroutines-ts \
 // RUN:    -fsyntax-only -ast-dump | FileCheck %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -std=c++14 -fcoroutines-ts -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin9 -std=c++14 -fcoroutines-ts -include-pch %t \
+// RUN: -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s
+
 #include "Inputs/std-coroutine.h"
 
 using namespace std::experimental;

@@ -129,7 +129,7 @@ public:
 
     void clear();
     void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
-    Error parse(const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
+    Error parse(DWARFDataExtractor Data, uint64_t *OffsetPtr,
                 function_ref<void(Error)> RecoverableErrorHandler,
                 const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
   };
@@ -143,7 +143,7 @@ public:
     void reset(bool DefaultIsStmt);
     void dump(raw_ostream &OS) const;
 
-    static void dumpTableHeader(raw_ostream &OS);
+    static void dumpTableHeader(raw_ostream &OS, unsigned Indent);
 
     static bool orderByAddress(const Row &LHS, const Row &RHS) {
       return std::tie(LHS.Address.SectionIndex, LHS.Address.Address) <
@@ -276,7 +276,7 @@ public:
     Error parse(DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
                 const DWARFContext &Ctx, const DWARFUnit *U,
                 function_ref<void(Error)> RecoverableErrorHandler,
-                raw_ostream *OS = nullptr);
+                raw_ostream *OS = nullptr, bool Verbose = false);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
@@ -325,9 +325,11 @@ public:
     /// parsing of the table will be reported through this handler.
     /// \param OS - if not null, the parser will print information about the
     /// table as it parses it.
+    /// \param Verbose - if true, the parser will print verbose information when
+    /// printing to the output.
     LineTable parseNext(function_ref<void(Error)> RecoverableErrorHandler,
                         function_ref<void(Error)> UnrecoverableErrorHandler,
-                        raw_ostream *OS = nullptr);
+                        raw_ostream *OS = nullptr, bool Verbose = false);
 
     /// Skip the current line table and go to the following line table (if
     /// present) immediately.

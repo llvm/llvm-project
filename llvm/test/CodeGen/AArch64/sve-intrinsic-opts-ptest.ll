@@ -1,4 +1,7 @@
-; RUN: opt -S -sve-intrinsic-opts -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck --check-prefix OPT %s
+; RUN: opt -S -sve-intrinsic-opts -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck --check-prefix OPT %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 define i1 @ptest_any1(<vscale x 2 x i1> %a) {
 ; OPT-LABEL: ptest_any1

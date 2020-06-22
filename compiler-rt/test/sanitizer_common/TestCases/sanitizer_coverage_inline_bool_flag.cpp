@@ -5,7 +5,6 @@
 //
 // RUN: %clangxx -O0 %s -fsanitize-coverage=inline-bool-flag,pc-table -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
-// XFAIL: tsan
 
 #include <assert.h>
 #include <stdint.h>

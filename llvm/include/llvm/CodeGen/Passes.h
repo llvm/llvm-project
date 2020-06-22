@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_PASSES_H
 #define LLVM_CODEGEN_PASSES_H
 
+#include "llvm/Support/CodeGen.h"
 #include <functional>
 #include <string>
 
@@ -44,7 +45,7 @@ namespace llvm {
   FunctionPass *createUnreachableBlockEliminationPass();
 
   /// createBBSectionsPrepare Pass - This pass assigns sections to machine basic
-  /// blocks and is enabled with -fbasicblock-sections.
+  /// blocks and is enabled with -fbasic-block-sections.
   /// Buf is a memory buffer that contains the list of functions and basic
   /// block ids to selectively enable basic block sections.
   MachineFunctionPass *createBBSectionsPreparePass(const MemoryBuffer *Buf);
@@ -340,7 +341,7 @@ namespace llvm {
 
   /// createDwarfEHPass - This pass mulches exception handling code into a form
   /// adapted to code generation.  Required if using dwarf exception handling.
-  FunctionPass *createDwarfEHPass();
+  FunctionPass *createDwarfEHPass(CodeGenOpt::Level OptLevel);
 
   /// createWinEHPass - Prepares personality functions used by MSVC on Windows,
   /// in addition to the Itanium LSDA based personalities.

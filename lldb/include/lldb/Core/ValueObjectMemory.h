@@ -72,7 +72,8 @@ private:
                     ValueObjectManager &manager, llvm::StringRef name,
                     const Address &address, const CompilerType &ast_type);
   // For ValueObject only
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectMemory);
+  ValueObjectMemory(const ValueObjectMemory &) = delete;
+  const ValueObjectMemory &operator=(const ValueObjectMemory &) = delete;
 };
 
 } // namespace lldb_private

@@ -315,6 +315,31 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   return true;
 }
 
+bool llvm::MergeBlockSuccessorsIntoGivenBlocks(
+    SmallPtrSetImpl<BasicBlock *> &MergeBlocks, Loop *L, DomTreeUpdater *DTU,
+    LoopInfo *LI) {
+  assert(!MergeBlocks.empty() && "MergeBlocks should not be empty");
+
+  bool BlocksHaveBeenMerged = false;
+  while (!MergeBlocks.empty()) {
+    BasicBlock *BB = *MergeBlocks.begin();
+    BasicBlock *Dest = BB->getSingleSuccessor();
+    if (Dest && (!L || L->contains(Dest))) {
+      BasicBlock *Fold = Dest->getUniquePredecessor();
+      (void)Fold;
+      if (MergeBlockIntoPredecessor(Dest, DTU, LI)) {
+        assert(Fold == BB &&
+               "Expecting BB to be unique predecessor of the Dest block");
+        MergeBlocks.erase(Dest);
+        BlocksHaveBeenMerged = true;
+      } else
+        MergeBlocks.erase(BB);
+    } else
+      MergeBlocks.erase(BB);
+  }
+  return BlocksHaveBeenMerged;
+}
+
 /// Remove redundant instructions within sequences of consecutive dbg.value
 /// instructions. This is done using a backward scan to keep the last dbg.value
 /// describing a specific variable/fragment.

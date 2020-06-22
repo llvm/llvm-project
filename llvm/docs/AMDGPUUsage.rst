@@ -263,6 +263,15 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                               .. TODO::
                                                                                  Add product
                                                                                  names.
+     ``gfx1030``                 ``amdgcn``   dGPU  - xnack                   *TBA*
+                                                      [off]
+                                                    - wavefrontsize64
+                                                      [off]
+                                                    - cumode
+                                                      [off]
+                                                                              .. TODO
+                                                                                 Add product
+                                                                                 names.
      =========== =============== ============ ===== ================= ======= ======================
 
 .. _amdgpu-target-features:
@@ -356,8 +365,8 @@ supported for the ``amdgcn`` target.
      Region                            2               N/A         GDS              32      *not implemented for AMDHSA*
      Local                             3               group       LDS              32      0xFFFFFFFF
      Constant                          4               constant    *same as global* 64      0x0000000000000000
-     Private                           5               private     scratch          32      0x00000000
-     Constant 32-bit                   6               *TODO*
+     Private                           5               private     scratch          32      0xFFFFFFFF
+     Constant 32-bit                   6               *TODO*                               0x00000000
      Buffer Fat Pointer (experimental) 7               *TODO*
      ================================= =============== =========== ================ ======= ============================
 
@@ -806,6 +815,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1010`` 0x033      ``gfx1010``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1011`` 0x034      ``gfx1011``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1012`` 0x035      ``gfx1012``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1030`` 0x036      ``gfx1030``
      ================================= ========== =============================
 
 Sections
@@ -1094,6 +1104,60 @@ the ``mesa3d`` OS, which does not support ``R_AMDGPU_ABS64``.
 
 There is no current OS loader support for 32-bit programs and so
 ``R_AMDGPU_ABS32`` is not used.
+
+.. _amdgpu-loaded-code-object-path-uniform-resource-identifier:
+
+Loaded Code Object Path Uniform Resource Identifier (URI)
+---------------------------------------------------------
+
+The AMD GPU code object loader represents the path of the ELF shared object from
+which the code object was loaded as a textual Unifom Resource Identifier (URI).
+Note that the code object is the in memory loaded relocated form of the ELF
+shared object.  Multiple code objects may be loaded at different memory
+addresses in the same process from the same ELF shared object.
+
+The loaded code object path URI syntax is defined by the following BNF syntax:
+
+.. code::
+
+  code_object_uri ::== file_uri | memory_uri
+  file_uri        ::== "file://" file_path [ range_specifier ]
+  memory_uri      ::== "memory://" process_id range_specifier
+  range_specifier ::== [ "#" | "?" ] "offset=" number "&" "size=" number
+  file_path       ::== URI_ENCODED_OS_FILE_PATH
+  process_id      ::== DECIMAL_NUMBER
+  number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
+
+**number**
+  Is a C integral literal where hexadecimal values are prefixed by "0x" or "0X",
+  and octal values by "0".
+
+**file_path**
+  Is the file's path specified as a URI encoded UTF-8 string. In URI encoding,
+  every character that is not in the regular expression ``[a-zA-Z0-9/_.~-]`` is
+  encoded as two uppercase hexidecimal digits proceeded by "%".  Directories in
+  the path are separated by "/".
+
+**offset**
+  Is a 0-based byte offset to the start of the code object.  For a file URI, it
+  is from the start of the file specified by the ``file_path``, and if omitted
+  defaults to 0. For a memory URI, it is the memory address and is required.
+
+**size**
+  Is the number of bytes in the code object.  For a file URI, if omitted it
+  defaults to the size of the file.  It is required for a memory URI.
+
+**process_id**
+  Is the identity of the process owning the memory.  For Linux it is the C
+  unsigned integral decimal literal for the process ID (PID).
+
+For example:
+
+.. code::
+
+  file:///dir1/dir2/file1
+  file:///dir3/dir4/file2#offset=0x2000&size=3000
+  memory://1234#offset=0x20000&size=3000
 
 .. _amdgpu-dwarf-debug-information:
 
@@ -3797,7 +3861,7 @@ The setting of registers is done by GPU CP/ADC/SPI hardware as follows:
 4. The VGPRs are set by SPI which only supports specifying either (X), (X, Y)
    or (X, Y, Z).
 
-Flat Scratch register pair are adjacent SGRRs so they can be moved as a 64-bit
+Flat Scratch register pair are adjacent SGPRs so they can be moved as a 64-bit
 value to the hardware required SGPRn-3 and SGPRn-4 respectively.
 
 The global segment can be accessed either using buffer instructions (GFX6 which
@@ -6522,6 +6586,7 @@ On exit from a function:
       VGPR216-223
       VGPR232-239
       VGPR248-255
+
         *Except the argument registers, the VGPR cloberred and the preserved
         registers are intermixed at regular intervals in order to
         get a better occupancy.*
@@ -6673,12 +6738,12 @@ after the source language arguments in the following order:
 
 The input and result arguments are assigned in order in the following manner:
 
-..note::
+.. note::
 
   There are likely some errors and omissions in the following description that
   need correction.
 
-  ..TODO::
+  .. TODO::
 
     Check the clang source code to decipher how function arguments and return
     results are handled. Also see the AMDGPU specific values used.
@@ -6726,7 +6791,7 @@ describes how the AMDGPU implements function calls:
 4.  No CFI is currently generated. See
     :ref:`amdgpu-dwarf-call-frame-information`.
 
-    ..note::
+    .. note::
 
       CFI will be generated that defines the CFA as the unswizzled address
       relative to the wave scratch base in the unswizzled private address space
@@ -6751,7 +6816,7 @@ describes how the AMDGPU implements function calls:
     from SP. Then SP is incremented to account for the known frame size before
     the call and decremented after the call.
 
-    ..note::
+    .. note::
 
       The CFI will reflect the changed calculation needed to compute the CFA
       from SP.
@@ -6760,7 +6825,7 @@ describes how the AMDGPU implements function calls:
     emergency spill slot. Buffer instructions are used for stack accesses and
     not the ``flat_scratch`` instruction.
 
-    ..TODO::
+    .. TODO::
 
       Explain when the emergency spill slot is used.
 

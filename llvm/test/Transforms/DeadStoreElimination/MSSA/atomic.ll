@@ -42,6 +42,16 @@ define void @test5() {
   ret void
 }
 
+; DSE no-op unordered atomic store (allowed)
+define void @test6() {
+; CHECK-LABEL: test6
+; CHECK-NOT: store
+; CHECK: ret void
+  %x = load atomic i32, i32* @x unordered, align 4
+  store atomic i32 %x, i32* @x unordered, align 4
+  ret void
+}
+
 ; DSE seq_cst store (be conservative; DSE doesn't have infrastructure
 ; to reason about atomic operations).
 define void @test7() {
@@ -97,4 +107,38 @@ define i32 @test15() {
   %x = load atomic i32, i32* @y acquire, align 4
   store i32 1, i32* @x
   ret i32 %x
+}
+
+; **** Noop load->store tests **************************************************
+
+; We can optimize unordered atomic loads or stores.
+define void @test_load_atomic(i32* %Q) {
+; CHECK-LABEL: @test_load_atomic(
+; CHECK-NEXT:    ret void
+;
+  %a = load atomic i32, i32* %Q unordered, align 4
+  store atomic i32 %a, i32* %Q unordered, align 4
+  ret void
+}
+
+; We can optimize unordered atomic loads or stores.
+define void @test_store_atomic(i32* %Q) {
+; CHECK-LABEL: @test_store_atomic(
+; CHECK-NEXT:    ret void
+;
+  %a = load i32, i32* %Q
+  store atomic i32 %a, i32* %Q unordered, align 4
+  ret void
+}
+
+; We can NOT optimize release atomic loads or stores.
+define void @test_store_atomic_release(i32* %Q) {
+; CHECK-LABEL: @test_store_atomic_release(
+; CHECK-NEXT:    load
+; CHECK-NEXT:    store atomic
+; CHECK-NEXT:    ret void
+;
+  %a = load i32, i32* %Q
+  store atomic i32 %a, i32* %Q release, align 4
+  ret void
 }

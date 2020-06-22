@@ -8,7 +8,7 @@
 
 // <functional>
 // pointer_to_binary_function
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 #define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
 

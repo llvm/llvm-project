@@ -21,9 +21,6 @@ namespace fixit {
 /// Creates fix to make ``VarDecl`` a reference by adding ``&``.
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context);
 
-/// Creates fix to make ``VarDecl`` const qualified.
-FixItHint changeVarDeclToConst(const VarDecl &Var);
-
 /// This enum defines where the qualifier shall be preferably added.
 enum class QualifierPolicy {
   Left,  // Add the qualifier always to the left side, if that is possible.

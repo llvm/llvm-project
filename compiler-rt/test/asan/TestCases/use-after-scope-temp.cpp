@@ -8,7 +8,7 @@ struct IntHolder {
 
 const IntHolder *saved;
 
-void save(const IntHolder &holder) {
+__attribute__((noinline)) void save(const IntHolder &holder) {
   saved = &holder;
 }
 

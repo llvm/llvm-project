@@ -15,6 +15,7 @@
 
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToROCDL/VectorToROCDL.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
@@ -55,6 +56,7 @@ public:
     patterns.clear();
 
     populateVectorToLLVMConversionPatterns(converter, patterns);
+    populateVectorToROCDLConversionPatterns(converter, patterns);
     populateStdToLLVMConversionPatterns(converter, patterns);
     populateGpuToROCDLConversionPatterns(converter, patterns);
     LLVMConversionTarget target(getContext());
@@ -65,7 +67,7 @@ public:
     target.addLegalDialect<ROCDL::ROCDLDialect>();
     // TODO(whchung): Remove once we support replacing non-root ops.
     target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
-    if (failed(applyPartialConversion(m, target, patterns, &converter)))
+    if (failed(applyPartialConversion(m, target, patterns)))
       signalPassFailure();
   }
 };

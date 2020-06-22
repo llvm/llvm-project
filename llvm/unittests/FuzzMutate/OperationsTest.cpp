@@ -337,7 +337,7 @@ TEST(OperationsTest, ExtractAndInsertValue) {
   Type *OpaqueTy = StructType::create(Ctx, "OpaqueStruct");
   Type *ZeroSizedArrayTy = ArrayType::get(Int64Ty, 0);
   Type *ArrayTy = ArrayType::get(Int64Ty, 4);
-  Type *VectorTy = VectorType::get(Int32Ty, 2);
+  Type *VectorTy = FixedVectorType::get(Int32Ty, 2);
 
   auto EVOp = fuzzerop::extractValueDescriptor(1);
   auto IVOp = fuzzerop::insertValueDescriptor(1);

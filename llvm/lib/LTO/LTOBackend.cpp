@@ -16,6 +16,7 @@
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -363,7 +364,8 @@ static void EmitBitcodeSection(Module &M, const Config &Conf) {
 }
 
 void codegen(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
-             unsigned Task, Module &Mod) {
+             unsigned Task, Module &Mod,
+             const ModuleSummaryIndex &CombinedIndex) {
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
 
@@ -392,6 +394,8 @@ void codegen(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
 
   auto Stream = AddStream(Task);
   legacy::PassManager CodeGenPasses;
+  CodeGenPasses.add(
+      createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
   if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
                               DwoOut ? &DwoOut->os() : nullptr,
                               Conf.CGFileType))
@@ -404,7 +408,8 @@ void codegen(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
 
 void splitCodeGen(const Config &C, TargetMachine *TM, AddStreamFn AddStream,
                   unsigned ParallelCodeGenParallelismLevel,
-                  std::unique_ptr<Module> Mod) {
+                  std::unique_ptr<Module> Mod,
+                  const ModuleSummaryIndex &CombinedIndex) {
   ThreadPool CodegenThreadPool(
       heavyweight_hardware_concurrency(ParallelCodeGenParallelismLevel));
   unsigned ThreadCount = 0;
@@ -437,7 +442,8 @@ void splitCodeGen(const Config &C, TargetMachine *TM, AddStreamFn AddStream,
               std::unique_ptr<TargetMachine> TM =
                   createTargetMachine(C, T, *MPartInCtx);
 
-              codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx);
+              codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx,
+                      CombinedIndex);
             },
             // Pass BC using std::move to ensure that it get moved rather than
             // copied into the thread's context.
@@ -493,10 +499,10 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
   }
 
   if (ParallelCodeGenParallelismLevel == 1) {
-    codegen(C, TM.get(), AddStream, 0, *Mod);
+    codegen(C, TM.get(), AddStream, 0, *Mod, CombinedIndex);
   } else {
     splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel,
-                 std::move(Mod));
+                 std::move(Mod), CombinedIndex);
   }
   return Error::success();
 }
@@ -541,8 +547,12 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     return DiagFileOrErr.takeError();
   auto DiagnosticOutputFile = std::move(*DiagFileOrErr);
 
+  // Set the partial sample profile ratio in the profile summary module flag of
+  // the module, if applicable.
+  Mod.setPartialSampleProfileRatio(CombinedIndex);
+
   if (Conf.CodeGenOnly) {
-    codegen(Conf, TM.get(), AddStream, Task, Mod);
+    codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
 
@@ -593,6 +603,6 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
            /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
-  codegen(Conf, TM.get(), AddStream, Task, Mod);
+  codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
   return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 }

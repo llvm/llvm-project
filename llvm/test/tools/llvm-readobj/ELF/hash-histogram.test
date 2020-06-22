@@ -207,3 +207,223 @@ ProgramHeaders:
     Sections:
       - Section: .hash
       - Section: .dynamic
+
+## Check we dump a histogram for the .gnu.hash table even when the .hash table is skipped.
+
+## Case A: the .hash table has no data to build histogram and it is skipped.
+##         (NBUCKET == 0x2 is a no-op: it does not change the number of buckets described by the "Bucket" key).
+# RUN: yaml2obj --docnum=5 -DNBUCKET=0x2 %s -o %t5.o
+# RUN: llvm-readelf --elf-hash-histogram %t5.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=GNU-HASH --implicit-check-not="Histogram"
+
+## Case B: the .hash table has a broken nbucket field. We report a warning
+##         and skip dumping of the .hash table.
+# RUN: yaml2obj --docnum=5 -DNBUCKET=0xffffffff %s -o %t6.o
+# RUN: llvm-readelf --elf-hash-histogram %t6.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6.o --check-prefixes=WARN,GNU-HASH
+
+# WARN:     warning: '[[FILE]]': the hash table at offset 0x78 goes past the end of the file (0x358), nbucket = 4294967295, nchain = 2
+# GNU-HASH: Histogram for `.gnu.hash' bucket list length (total of 3 buckets)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .hash
+    Type:    SHT_HASH
+    Flags:   [ SHF_ALLOC ]
+    Bucket:  [ 0 ]
+    NBucket: [[NBUCKET]]
+    Chain:   [ 0, 0 ]
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x1
+      Shift2: 0x0
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ 0x00000001, 0x00000004, 0x00000000 ]
+    HashValues:  [ 0x0B887388 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x0
+      - Tag:   DT_GNU_HASH
+## sizeof(.hash) == 0x14.
+        Value: 0x14
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols:
+  - Name: foo
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Sections:
+      - Section: .hash
+      - Section: .gnu.hash
+      - Section: .dynamic
+
+## Check we report a proper warning when the GNU hash table goes past the end of the file.
+
+## Case A: the 'nbuckets' field is set so that the GNU hash table goes past the end of the file.
+##         The value of 1 for the NBUCKETS is no-op.
+# RUN: yaml2obj --docnum=6 -D MASKWORDS=0x80000000 -D NBUCKETS=1 %s -o %t7
+# RUN: llvm-readelf --elf-hash-histogram %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=ERR5 --implicit-check-not="Histogram"
+
+# ERR5: warning: '[[FILE]]': unable to dump the SHT_GNU_HASH section at 0x78: it goes past the end of the file
+
+## Case B: the 'maskwords' field is set so that the GNU hash table goes past the end of the file.
+##         The value of 1 for the MASKWORDS is no-op.
+# RUN: yaml2obj --docnum=6 -D MASKWORDS=1 -D NBUCKETS=0x80000000 %s -o %t8
+# RUN: llvm-readelf --elf-hash-histogram %t8 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=ERR5 --implicit-check-not="Histogram"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x0
+      Shift2: 0x0
+## The number of words in the Bloom filter.
+      MaskWords: [[MASKWORDS]]
+## The number of hash buckets.
+      NBuckets:  [[NBUCKETS]]
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ 0x0 ]
+    HashValues:  [ 0x0 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Link:  .dynstr
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type: PT_LOAD
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
+
+## Linkers might produce an empty no-op SHT_GNU_HASH section when
+## there are no dynamic symbols or when all dynamic symbols are undefined.
+## Such sections normally have a single zero entry in the bloom
+## filter, a single zero entry in the hash bucket and no values.
+##
+## The index of the first symbol in the dynamic symbol table
+## included in the hash table can be set to the number of dynamic symbols,
+## which is one larger than the index of the last dynamic symbol.
+## For empty tables however, this value is unimportant and can be ignored.
+
+## Check the case when a 'symndx' index of the first symbol in the dynamic symbol
+## table is larger than the number of dynamic symbols.
+
+## Case A: when the buckets array is not empty and has a non-zero value we report a warning.
+# RUN: yaml2obj --docnum=7 -DVAL=0x1 %s -o %t9
+# RUN: llvm-readelf --elf-hash-histogram %t9 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t9 --check-prefix=ERR6
+
+# ERR6: warning: '[[FILE]]': unable to print the GNU hash table histogram: the first hashed symbol index (16) is larger than the number of dynamic symbols (1)
+
+## Case B: we do not report a warning when the buckets array contains only zero values.
+# RUN: yaml2obj --docnum=7 -DVAL=0x0 %s -o %t10
+# RUN: llvm-readelf --elf-hash-histogram %t10 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --implicit-check-not="Histogram"
+
+## Case C: we do not report a warning when the buckets array is empty.
+# RUN: yaml2obj --docnum=7 -DVAL="" %s -o %t11
+# RUN: llvm-readelf --elf-hash-histogram %t11 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --implicit-check-not="Histogram"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x10
+      Shift2: 0x0
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ [[VAL]] ]
+    HashValues:  [ 0x0 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Link:  .dynstr
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type: PT_LOAD
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
+
+## Check we report warnings when the dynamic symbol table is absent or empty.
+
+## The code locates the dynamic symbol table by the section type. Use SHT_PROGBITS to hide it.
+# RUN: yaml2obj --docnum=8 -DTYPE=SHT_PROGBITS %s -o %t12
+# RUN: llvm-readelf --elf-hash-histogram %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --check-prefix=ERR7
+
+# ERR7: warning: '[[FILE]]': unable to print the GNU hash table histogram: no dynamic symbol table found
+
+# RUN: yaml2obj --docnum=8 -DTYPE=SHT_DYNSYM %s -o %t13
+# RUN: llvm-readelf --elf-hash-histogram %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --check-prefix=ERR8
+
+# ERR8: warning: '[[FILE]]': unable to print the GNU hash table histogram: the dynamic symbol table is empty
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x0
+      Shift2: 0x0
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ 0x0 ]
+    HashValues:  [ 0x0 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name: .dynsym
+    Type: [[TYPE]]
+    Size: 0
+ProgramHeaders:
+  - Type: PT_LOAD
+    Sections:
+      - Section: .gnu.hash

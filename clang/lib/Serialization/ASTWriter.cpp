@@ -10,14 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/OpenMPClause.h"
-#include "clang/Serialization/ASTRecordWriter.h"
 #include "ASTCommon.h"
 #include "ASTReaderInternals.h"
 #include "MultiOnDiskHashTable.h"
-#include "clang/AST/AbstractTypeWriter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTUnresolvedSet.h"
+#include "clang/AST/AbstractTypeWriter.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -31,6 +29,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -65,7 +64,9 @@
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Weak.h"
+#include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ASTRecordWriter.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/ModuleFileExtension.h"
@@ -961,6 +962,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   BLOCK(UNHASHED_CONTROL_BLOCK);
   RECORD(SIGNATURE);
+  RECORD(AST_BLOCK_HASH);
   RECORD(DIAGNOSTIC_OPTIONS);
   RECORD(DIAG_PRAGMA_MAPPINGS);
 
@@ -1026,22 +1028,23 @@ adjustFilenameForRelocatableAST(const char *Filename, StringRef BaseDir) {
   return Filename + Pos;
 }
 
-ASTFileSignature ASTWriter::createSignature(StringRef Bytes) {
-  // Calculate the hash till start of UNHASHED_CONTROL_BLOCK.
+std::pair<ASTFileSignature, ASTFileSignature>
+ASTWriter::createSignature(StringRef AllBytes, StringRef ASTBlockBytes) {
   llvm::SHA1 Hasher;
-  Hasher.update(ArrayRef<uint8_t>(Bytes.bytes_begin(), Bytes.size()));
+  Hasher.update(ASTBlockBytes);
   auto Hash = Hasher.result();
+  ASTFileSignature ASTBlockHash = ASTFileSignature::create(Hash);
 
-  // Convert to an array [5*i32].
-  ASTFileSignature Signature;
-  auto LShift = [&](unsigned char Val, unsigned Shift) {
-    return (uint32_t)Val << Shift;
-  };
-  for (int I = 0; I != 5; ++I)
-    Signature[I] = LShift(Hash[I * 4 + 0], 24) | LShift(Hash[I * 4 + 1], 16) |
-                   LShift(Hash[I * 4 + 2], 8) | LShift(Hash[I * 4 + 3], 0);
+  // Add the remaining bytes (i.e. bytes before the unhashed control block that
+  // are not part of the AST block).
+  Hasher.update(
+      AllBytes.take_front(ASTBlockBytes.bytes_end() - AllBytes.bytes_begin()));
+  Hasher.update(
+      AllBytes.take_back(AllBytes.bytes_end() - ASTBlockBytes.bytes_end()));
+  Hash = Hasher.result();
+  ASTFileSignature Signature = ASTFileSignature::create(Hash);
 
-  return Signature;
+  return std::make_pair(ASTBlockHash, Signature);
 }
 
 ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
@@ -1058,7 +1061,16 @@ ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   ASTFileSignature Signature;
   if (WritingModule &&
       PP.getHeaderSearchInfo().getHeaderSearchOpts().ModulesHashContent) {
-    Signature = createSignature(StringRef(Buffer.begin(), StartOfUnhashedControl));
+    ASTFileSignature ASTBlockHash;
+    auto ASTBlockStartByte = ASTBlockRange.first >> 3;
+    auto ASTBlockByteLength = (ASTBlockRange.second >> 3) - ASTBlockStartByte;
+    std::tie(ASTBlockHash, Signature) = createSignature(
+        StringRef(Buffer.begin(), StartOfUnhashedControl),
+        StringRef(Buffer.begin() + ASTBlockStartByte, ASTBlockByteLength));
+
+    Record.append(ASTBlockHash.begin(), ASTBlockHash.end());
+    Stream.EmitRecord(AST_BLOCK_HASH, Record);
+    Record.clear();
     Record.append(Signature.begin(), Signature.end());
     Stream.EmitRecord(SIGNATURE, Record);
     Record.clear();
@@ -1910,6 +1922,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
 
   // Enter the source manager block.
   Stream.EnterSubblock(SOURCE_MANAGER_BLOCK_ID, 4);
+  const uint64_t SourceManagerBlockOffset = Stream.GetCurrentBitNo();
 
   // Abbreviations for the various kinds of source-location entries.
   unsigned SLocFileAbbrv = CreateSLocFileAbbrev(Stream);
@@ -2050,7 +2063,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
     RecordData::value_type Record[] = {
         SOURCE_LOCATION_OFFSETS, SLocEntryOffsets.size(),
         SourceMgr.getNextLocalOffset() - 1 /* skip dummy */,
-        SLocEntryOffsetsBase};
+        SLocEntryOffsetsBase - SourceManagerBlockOffset};
     Stream.EmitRecordWithBlob(SLocOffsetsAbbrev, Record,
                               bytes(SLocEntryOffsets));
   }
@@ -2329,7 +2342,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
   {
     RecordData::value_type Record[] = {MACRO_OFFSET, MacroOffsets.size(),
                                        FirstMacroID - NUM_PREDEF_MACRO_IDS,
-                                       MacroOffsetsBase};
+                                       MacroOffsetsBase - ASTBlockStartOffset};
     Stream.EmitRecordWithBlob(MacroOffsetAbbrev, Record, bytes(MacroOffsets));
   }
 }
@@ -2843,7 +2856,7 @@ void ASTWriter::WriteType(QualType T) {
   assert(Idx.getIndex() >= FirstTypeID && "Re-writing a type from a prior AST");
 
   // Emit the type's representation.
-  uint64_t Offset = ASTTypeWriter(*this).write(T);
+  uint64_t Offset = ASTTypeWriter(*this).write(T) - DeclTypesBlockStartOffset;
 
   // Record the offset for this type.
   unsigned Index = Idx.getIndex() - FirstTypeID;
@@ -4553,7 +4566,10 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   WriteControlBlock(PP, Context, isysroot, OutputFile);
 
   // Write the remaining AST contents.
+  Stream.FlushToWord();
+  ASTBlockRange.first = Stream.GetCurrentBitNo();
   Stream.EnterSubblock(AST_BLOCK_ID, 5);
+  ASTBlockStartOffset = Stream.GetCurrentBitNo();
 
   // This is so that older clang versions, before the introduction
   // of the control block, can read and reject the newer PCH format.
@@ -4684,9 +4700,9 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     //   c++-base-specifiers-id:i32
     //   type-id:i32)
     //
-    // module-kind is the ModuleKind enum value. If it is MK_PrebuiltModule or
-    // MK_ExplicitModule, then the module-name is the module name. Otherwise,
-    // it is the module file name.
+    // module-kind is the ModuleKind enum value. If it is MK_PrebuiltModule,
+    // MK_ExplicitModule or MK_ImplicitModule, then the module-name is the
+    // module name. Otherwise, it is the module file name.
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(MODULE_OFFSET_MAP));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
@@ -4699,10 +4715,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
         endian::Writer LE(Out, little);
         LE.write<uint8_t>(static_cast<uint8_t>(M.Kind));
-        StringRef Name =
-          M.Kind == MK_PrebuiltModule || M.Kind == MK_ExplicitModule
-          ? M.ModuleName
-          : M.FileName;
+        StringRef Name = M.isModule() ? M.ModuleName : M.FileName;
         LE.write<uint16_t>(Name.size());
         Out.write(Name.data(), Name.size());
 
@@ -4746,6 +4759,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // Keep writing types, declarations, and declaration update records
   // until we've emitted all of them.
   Stream.EnterSubblock(DECLTYPES_BLOCK_ID, /*bits for abbreviations*/5);
+  DeclTypesBlockStartOffset = Stream.GetCurrentBitNo();
   WriteTypeAbbrevs();
   WriteDeclAbbrevs();
   do {
@@ -4914,6 +4928,8 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
       NumStatements, NumMacros, NumLexicalDeclContexts, NumVisibleDeclContexts};
   Stream.EmitRecord(STATISTICS, Record);
   Stream.ExitBlock();
+  Stream.FlushToWord();
+  ASTBlockRange.second = Stream.GetCurrentBitNo();
 
   // Write the module file extension blocks.
   for (const auto &ExtWriter : ModuleFileExtensionWriters)
@@ -6041,7 +6057,7 @@ void ASTWriter::DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
 void ASTWriter::RedefinedHiddenDefinition(const NamedDecl *D, Module *M) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
   assert(!WritingAST && "Already writing the AST!");
-  assert(D->isHidden() && "expected a hidden declaration");
+  assert(!D->isUnconditionallyVisible() && "expected a hidden declaration");
   DeclUpdates[D].push_back(DeclUpdate(UPD_DECL_EXPORTED, M));
 }
 
@@ -6305,11 +6321,11 @@ void OMPClauseWriter::VisitOMPSharedClause(OMPSharedClause *C) {
 
 void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
   Record.push_back(C->varlist_size());
+  Record.writeEnum(C->getModifier());
   VisitOMPClauseWithPostUpdate(C);
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getModifierLoc());
   Record.AddSourceLocation(C->getColonLoc());
-  Record.writeEnum(C->getModifier());
   Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
   Record.AddDeclarationNameInfo(C->getNameInfo());
   for (auto *VE : C->varlists())
@@ -6322,6 +6338,14 @@ void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
     Record.AddStmt(E);
   for (auto *E : C->reduction_ops())
     Record.AddStmt(E);
+  if (C->getModifier() == clang::OMPC_REDUCTION_inscan) {
+    for (auto *E : C->copy_ops())
+      Record.AddStmt(E);
+    for (auto *E : C->copy_array_temps())
+      Record.AddStmt(E);
+    for (auto *E : C->copy_array_elems())
+      Record.AddStmt(E);
+  }
 }
 
 void OMPClauseWriter::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
@@ -6613,6 +6637,26 @@ void OMPClauseWriter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *C) {
     Record.AddStmt(VE);
   for (auto *VE : C->inits())
     Record.AddStmt(VE);
+  for (auto *D : C->all_decls())
+    Record.AddDeclRef(D);
+  for (auto N : C->all_num_lists())
+    Record.push_back(N);
+  for (auto N : C->all_lists_sizes())
+    Record.push_back(N);
+  for (auto &M : C->all_components()) {
+    Record.AddStmt(M.getAssociatedExpression());
+    Record.AddDeclRef(M.getAssociatedDeclaration());
+  }
+}
+
+void OMPClauseWriter::VisitOMPUseDeviceAddrClause(OMPUseDeviceAddrClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.push_back(C->getUniqueDeclarationsNum());
+  Record.push_back(C->getTotalComponentListNum());
+  Record.push_back(C->getTotalComponentsNum());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *E : C->varlists())
+    Record.AddStmt(E);
   for (auto *D : C->all_decls())
     Record.AddDeclRef(D);
   for (auto N : C->all_num_lists())

@@ -27,16 +27,16 @@ CHECK: 0x0000[[BAOFF:.*]]
 
 CHECK: .debug_info.dwo contents:
 CHECK: [[COFF:0x[0-9a-f]*]]:
-CHECK-LABEL: Compile Unit: length = {{.*}} version = 0x0004 abbr_offset =
-CHECK:         0x[[CAOFF]] addr_size = 0x08 (next unit at [[AOFF:.*]])
+CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004, abbr_offset =
+CHECK:         0x[[CAOFF]], addr_size = 0x08 (next unit at [[AOFF:.*]])
 CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOC:.*]])
 CHECK: [[AOFF]]:
-CHECK-LABEL: Compile Unit: length = {{.*}} version = 0x0004 abbr_offset =
-CHECK:         0x[[AAOFF]] addr_size = 0x08 (next unit at [[BOFF:.*]])
+CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004, abbr_offset =
+CHECK:         0x[[AAOFF]], addr_size = 0x08 (next unit at [[BOFF:.*]])
 CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOA:.*]])
 CHECK: [[BOFF]]:
-CHECK-LABEL: Compile Unit: length = {{.*}} version = 0x0004 abbr_offset =
-CHECK:         0x[[BAOFF]] addr_size = 0x08 (next unit at [[XOFF:.*]])
+CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004, abbr_offset =
+CHECK:         0x[[BAOFF]], addr_size = 0x08 (next unit at [[XOFF:.*]])
 CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOB:.*]])
 
 CHECK-LABEL: .debug_cu_index

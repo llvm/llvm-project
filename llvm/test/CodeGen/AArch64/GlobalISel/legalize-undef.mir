@@ -22,10 +22,8 @@ body: |
 
     ; CHECK-LABEL: name: test_implicit_def_s3
     ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 61
-    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[DEF]], [[C]](s64)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
-    ; CHECK: $x0 = COPY [[ASHR]](s64)
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[DEF]], 3
+    ; CHECK: $x0 = COPY [[SEXT_INREG]](s64)
     %0:_(s3) = G_IMPLICIT_DEF
     %1:_(s64) = G_SEXT %0
     $x0 = COPY %1(s64)

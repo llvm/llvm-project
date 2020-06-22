@@ -16,7 +16,7 @@
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "refactor/Rename.h"
-#include "support/FSProvider.h"
+#include "support/ThreadsafeFS.h"
 #include <cstdio>
 #include <sstream>
 
@@ -31,7 +31,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   auto Transport = newJSONTransport(In, llvm::nulls(),
                                     /*InMirror=*/nullptr, /*Pretty=*/false,
                                     /*Style=*/JSONStreamStyle::Delimited);
-  RealFileSystemProvider FS;
+  RealThreadsafeFS FS;
   CodeCompleteOptions CCOpts;
   CCOpts.EnableSnippets = false;
   ClangdServer::Options Opts;

@@ -26,7 +26,7 @@
 #define DEBUG_TYPE "bpf-preserve-di-type"
 
 namespace llvm {
-const std::string BPFCoreSharedInfo::TypeIdAttr = "btf_type_id";
+constexpr StringRef BPFCoreSharedInfo::TypeIdAttr;
 } // namespace llvm
 
 using namespace llvm;

@@ -13,6 +13,7 @@
 #include "test/src/math/sdcomp26094.h"
 #include "utils/CPP/Array.h"
 #include "utils/FPUtil/BitPatterns.h"
+#include "utils/FPUtil/ClassificationFunctions.h"
 #include "utils/FPUtil/FloatOperations.h"
 #include "utils/FPUtil/FloatProperties.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
@@ -68,8 +69,8 @@ TEST(CosfTest, SpecialNumbers) {
   EXPECT_EQ(llvmlibc_errno, EDOM);
 
   llvmlibc_errno = 0;
-  EXPECT_TRUE(isNegativeQuietNaN(
-      __llvm_libc::cosf(valueFromBits(BitPatterns::negInf))));
+  EXPECT_TRUE(
+      isQuietNaN(__llvm_libc::cosf(valueFromBits(BitPatterns::negInf))));
   EXPECT_EQ(llvmlibc_errno, EDOM);
 }
 
@@ -80,7 +81,7 @@ TEST(CosfTest, InFloatRange) {
     float x = valueFromBits(v);
     if (isnan(x) || isinf(x))
       continue;
-    ASSERT_MPFR_MATCH(mpfr::OP_Cos, x, __llvm_libc::cosf(x), tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cosf(x), tolerance);
   }
 }
 
@@ -88,12 +89,12 @@ TEST(CosfTest, InFloatRange) {
 TEST(CosfTest, SmallValues) {
   float x = valueFromBits(0x17800000U);
   float result = __llvm_libc::cosf(x);
-  EXPECT_MPFR_MATCH(mpfr::OP_Cos, x, result, tolerance);
+  EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, result, tolerance);
   EXPECT_EQ(BitPatterns::one, valueAsBits(result));
 
   x = valueFromBits(0x0040000U);
   result = __llvm_libc::cosf(x);
-  EXPECT_MPFR_MATCH(mpfr::OP_Cos, x, result, tolerance);
+  EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, result, tolerance);
   EXPECT_EQ(BitPatterns::one, valueAsBits(result));
 }
 
@@ -102,6 +103,6 @@ TEST(CosfTest, SmallValues) {
 TEST(CosfTest, SDCOMP_26094) {
   for (uint32_t v : sdcomp26094Values) {
     float x = valueFromBits(v);
-    ASSERT_MPFR_MATCH(mpfr::OP_Cos, x, __llvm_libc::cosf(x), tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cosf(x), tolerance);
   }
 }

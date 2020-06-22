@@ -81,6 +81,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfoList &Inputs, const ArgList &Args,
                                const char *LinkingOutput) const {
   const AIX &ToolChain = static_cast<const AIX &>(getToolChain());
+  const Driver &D = ToolChain.getDriver();
   ArgStringList CmdArgs;
 
   const bool IsArch32Bit = ToolChain.getTriple().isArch32Bit();
@@ -128,6 +129,12 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString(ToolChain.GetFilePath(getCrt0Basename())));
   }
+
+  // Collect all static constructor and destructor functions in CXX mode. This
+  // has to come before AddLinkerInputs as the implied option needs to precede
+  // any other '-bcdtors' settings or '-bnocdtors' that '-Wl' might forward.
+  if (D.CCCIsCXX())
+    CmdArgs.push_back("-bcdtors:all:0:s");
 
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);

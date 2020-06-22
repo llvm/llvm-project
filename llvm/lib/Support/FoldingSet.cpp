@@ -86,6 +86,10 @@ void FoldingSetNodeID::AddInteger(unsigned long long I) {
 
 void FoldingSetNodeID::AddString(StringRef String) {
   unsigned Size =  String.size();
+
+  unsigned NumInserts = 1 + divideCeil(Size, 4);
+  Bits.reserve(Bits.size() + NumInserts);
+
   Bits.push_back(Size);
   if (!Size) return;
 

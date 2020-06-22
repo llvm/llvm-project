@@ -507,7 +507,7 @@ follow_2:
 ; dereferenceable can be loaded from speculatively without a risk of trapping.
 ; Since it is OK to speculate, PRE is allowed.
 
-define i32 @test15(i32* noalias nocapture readonly dereferenceable(8) %x, i32* noalias nocapture %r, i32 %a) {
+define i32 @test15(i32* noalias nocapture readonly dereferenceable(8) align 4 %x, i32* noalias nocapture %r, i32 %a) {
 
 ; CHECK-LABEL: @test15
 ; CHECK: entry:
@@ -548,7 +548,7 @@ if.end:
 ; dereferenceable can be loaded from speculatively without a risk of trapping.
 ; Since it is OK to speculate, PRE is allowed.
 
-define i32 @test16(i32* noalias nocapture readonly dereferenceable(8) %x, i32* noalias nocapture %r, i32 %a) {
+define i32 @test16(i32* noalias nocapture readonly dereferenceable(8) align 4 %x, i32* noalias nocapture %r, i32 %a) {
 
 ; CHECK-LABEL: @test16(
 ; CHECK: entry:

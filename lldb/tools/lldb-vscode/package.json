@@ -2,7 +2,8 @@
 	"name": "lldb-vscode",
 	"displayName": "LLDB native Debug stub",
 	"version": "0.1.0",
-	"publisher": "llvm.org",
+	"publisher": "llvm",
+	"repository": "llvm.org",
 	"description": "Debug adapter for LLDB which uses a C++ tool to interface directly with LLDB.",
 	"author": {
 		"name": "Greg Clayton",
@@ -16,7 +17,6 @@
 		"vscode": "^1.18.0",
 		"node": "^7.9.0"
 	},
-	"icon": "images/lldb.png",
 	"categories": [
 		"Debuggers"
 	],
@@ -29,7 +29,7 @@
 		"vscode": "1.1.10",
 		"vscode-debugadapter-testsupport": "1.25.0",
 		"tslint": "5.8.0",
-		"vsce": "1.35.0"
+		"vsce": "^1.36.3"
 	},
 	"contributes": {
 		"debuggers": [
@@ -70,7 +70,10 @@
 								"description": "Path to the program to debug."
 							},
 							"args": {
-								"type": [ "array", "string" ],
+								"type": [
+									"array",
+									"string"
+								],
 								"description": "Program arguments.",
 								"default": []
 							},
@@ -131,29 +134,29 @@
 								"description": "Name of the execution platform to override value derived from the program file."
 							},
 							"initCommands": {
-									"type": "array",
-									"description": "Initialization commands executed upon debugger startup.",
-									"default": []
+								"type": "array",
+								"description": "Initialization commands executed upon debugger startup.",
+								"default": []
 							},
 							"preRunCommands": {
-									"type": "array",
-									"description": "Commands executed just before the program is launched.",
-									"default": []
+								"type": "array",
+								"description": "Commands executed just before the program is launched.",
+								"default": []
 							},
 							"launchCommands": {
-									"type": "array",
-									"description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail.",
-									"default": []
+								"type": "array",
+								"description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail.",
+								"default": []
 							},
 							"stopCommands": {
-									"type": "array",
-									"description": "Commands executed each time the program stops.",
-									"default": []
+								"type": "array",
+								"description": "Commands executed each time the program stops.",
+								"default": []
 							},
 							"exitCommands": {
-									"type": "array",
-									"description": "Commands executed at the end of debugging session.",
-									"default": []
+								"type": "array",
+								"description": "Commands executed at the end of debugging session.",
+								"default": []
 							}
 						}
 					},
@@ -161,12 +164,12 @@
 						"properties": {
 							"program": {
 								"type": "string",
-									"description": "Path to the program to attach to."
+								"description": "Path to the program to attach to."
 							},
 							"pid": {
 								"type": [
-										"number",
-										"string"
+									"number",
+									"string"
 								],
 								"description": "System process ID to attach to."
 							},

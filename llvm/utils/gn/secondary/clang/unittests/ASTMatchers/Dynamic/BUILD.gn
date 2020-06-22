@@ -8,6 +8,7 @@ unittest("DynamicASTMatchersTests") {
     "//clang/lib/ASTMatchers/Dynamic",
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
+    "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
   ]

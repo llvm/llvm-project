@@ -128,7 +128,8 @@ Sections:
 
 # RUN: not yaml2obj --docnum=6 %s -o %t6 2>&1 | FileCheck %s --check-prefix=CASE4
 
-# CASE4: error: unknown section referenced: '.foo' by YAML section ''
+# CASE4:      error: unknown section referenced: '.foo' by YAML section '(index 0)'
+# CASE4-NEXT: error: unknown section referenced: '.bar' by YAML section '(index 1)'
 
 --- !ELF
 FileHeader:
@@ -139,6 +140,8 @@ FileHeader:
 Sections:
   - Type: SHT_NULL
     Link: .foo
+  - Type: SHT_NULL
+    Link: .bar
 
 ## Check that null section fields are set to zero, if they are unspecified.
 

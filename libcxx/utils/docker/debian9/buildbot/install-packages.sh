@@ -19,6 +19,7 @@ apt-get update && \
       g++-multilib \
       libc6-dev \
       libtool \
+      locales-all \
       binutils-dev \
       binutils-gold \
       software-properties-common \

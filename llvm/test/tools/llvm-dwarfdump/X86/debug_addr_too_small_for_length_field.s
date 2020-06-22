@@ -4,7 +4,7 @@
 
 # CHECK: .debug_addr contents:
 # CHECK-NOT: {{.}}
-# ERR: parsing address table at offset 0x0: unexpected end of data at offset 0x0
+# ERR: parsing address table at offset 0x0: unexpected end of data at offset 0x2 while reading [0x0, 0x4)
 # ERR-NOT: {{.}}
 
 # too small section to contain length field

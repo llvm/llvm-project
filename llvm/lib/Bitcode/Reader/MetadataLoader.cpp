@@ -1258,14 +1258,24 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // Operand 'count' is interpreted as:
     // - Signed integer (version 0)
     // - Metadata node  (version 1)
+    // Operand 'lowerBound' is interpreted as:
+    // - Signed integer (version 0 and 1)
+    // - Metadata node  (version 2)
+    // Operands 'upperBound' and 'stride' are interpreted as:
+    // - Metadata node  (version 2)
     switch (Record[0] >> 1) {
     case 0:
       Val = GET_OR_DISTINCT(DISubrange,
-                            (Context, Record[1], unrotateSign(Record.back())));
+                            (Context, Record[1], unrotateSign(Record[2])));
       break;
     case 1:
       Val = GET_OR_DISTINCT(DISubrange, (Context, getMDOrNull(Record[1]),
-                                         unrotateSign(Record.back())));
+                                         unrotateSign(Record[2])));
+      break;
+    case 2:
+      Val = GET_OR_DISTINCT(
+          DISubrange, (Context, getMDOrNull(Record[1]), getMDOrNull(Record[2]),
+                       getMDOrNull(Record[3]), getMDOrNull(Record[4])));
       break;
     default:
       return error("Invalid record: Unsupported version of DISubrange");

@@ -249,6 +249,8 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-lldmap:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_reproduce))
     add("-reproduce:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
+    add("-lldltocache:" + StringRef(a->getValue()));
 
   if (auto *a = args.getLastArg(OPT_o))
     add("-out:" + StringRef(a->getValue()));

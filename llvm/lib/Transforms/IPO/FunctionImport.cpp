@@ -1232,6 +1232,12 @@ Expected<bool> FunctionImporter::importFunctions(
     // have loaded all the required metadata!
     UpgradeDebugInfo(*SrcModule);
 
+    // Set the partial sample profile ratio in the profile summary module flag
+    // of the imported source module, if applicable, so that the profile summary
+    // module flag will match with that of the destination module when it's
+    // imported.
+    SrcModule->setPartialSampleProfileRatio(Index);
+
     // Link in the specified functions.
     if (renameModuleForThinLTO(*SrcModule, Index, ClearDSOLocalOnDeclarations,
                                &GlobalsToImport))

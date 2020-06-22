@@ -109,34 +109,28 @@ define void @store_i64_from_vector256(<16 x i16> %x, <16 x i16> %y, i64* %i) {
 define void @PR23476(<5 x i64> %in, i64* %out, i32 %index) nounwind {
 ; X64-LABEL: PR23476:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    movq %rsp, %rbp
-; X64-NEXT:    andq $-64, %rsp
-; X64-NEXT:    subq $128, %rsp
 ; X64-NEXT:    movq %rsi, %xmm0
 ; X64-NEXT:    movq %rdi, %xmm1
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-NEXT:    movq %rcx, %xmm0
 ; X64-NEXT:    movq %rdx, %xmm2
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; X64-NEXT:    movl 16(%rbp), %eax
+; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    andl $7, %eax
 ; X64-NEXT:    movq %r8, %xmm0
-; X64-NEXT:    movdqa %xmm0, {{[0-9]+}}(%rsp)
-; X64-NEXT:    movdqa %xmm2, {{[0-9]+}}(%rsp)
-; X64-NEXT:    movdqa %xmm1, (%rsp)
-; X64-NEXT:    movq (%rsp,%rax,8), %rax
+; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movdqa %xmm2, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movq -72(%rsp,%rax,8), %rax
 ; X64-NEXT:    movq %rax, (%r9)
-; X64-NEXT:    movq %rbp, %rsp
-; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: PR23476:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    andl $-64, %esp
-; X32-NEXT:    subl $128, %esp
+; X32-NEXT:    andl $-16, %esp
+; X32-NEXT:    subl $80, %esp
 ; X32-NEXT:    movl 52(%ebp), %eax
 ; X32-NEXT:    andl $7, %eax
 ; X32-NEXT:    movl 48(%ebp), %ecx
@@ -156,8 +150,8 @@ define void @PR23476(<5 x i64> %in, i64* %out, i32 %index) nounwind {
 ; X32AVX:       # %bb.0:
 ; X32AVX-NEXT:    pushl %ebp
 ; X32AVX-NEXT:    movl %esp, %ebp
-; X32AVX-NEXT:    andl $-64, %esp
-; X32AVX-NEXT:    subl $128, %esp
+; X32AVX-NEXT:    andl $-32, %esp
+; X32AVX-NEXT:    subl $96, %esp
 ; X32AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32AVX-NEXT:    movl 52(%ebp), %eax
 ; X32AVX-NEXT:    andl $7, %eax

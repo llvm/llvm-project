@@ -122,6 +122,7 @@ class TargetAPITestCase(TestBase):
         self.assertEqual(data_section.name, data_section2.name)
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # SBTarget::ReadMemory is not instrumented.
     def test_read_memory(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
@@ -214,16 +215,18 @@ class TargetAPITestCase(TestBase):
         self.expect(my_global_var.GetValue(), exe=False,
                     startstr="'X'")
 
-        # While we are at it, let's also exercise the similar
-        # SBModule.FindGlobalVariables() API.
-        for m in target.module_iter():
-            if os.path.normpath(m.GetFileSpec().GetDirectory()) == self.getBuildDir() and m.GetFileSpec().GetFilename() == exe_name:
-                value_list = m.FindGlobalVariables(
-                    target, 'my_global_var_of_char_type', 3)
-                self.assertTrue(value_list.GetSize() == 1)
-                self.assertTrue(
-                    value_list.GetValueAtIndex(0).GetValue() == "'X'")
-                break
+
+        if not configuration.is_reproducer():
+            # While we are at it, let's also exercise the similar
+            # SBModule.FindGlobalVariables() API.
+            for m in target.module_iter():
+                if os.path.normpath(m.GetFileSpec().GetDirectory()) == self.getBuildDir() and m.GetFileSpec().GetFilename() == exe_name:
+                    value_list = m.FindGlobalVariables(
+                        target, 'my_global_var_of_char_type', 3)
+                    self.assertTrue(value_list.GetSize() == 1)
+                    self.assertTrue(
+                        value_list.GetValueAtIndex(0).GetValue() == "'X'")
+                    break
 
     def find_compile_units(self, exe):
         """Exercise SBTarget.FindCompileUnits() API."""
@@ -285,6 +288,7 @@ class TargetAPITestCase(TestBase):
     @not_remote_testsuite_ready
     @add_test_categories(['pyapi'])
     @no_debug_info_test
+    @skipIfReproducer # Inferior doesn't run during replay.
     def test_launch_new_process_and_redirect_stdout(self):
         """Exercise SBTaget.Launch() API with redirected stdout."""
         self.build()
@@ -355,8 +359,8 @@ class TargetAPITestCase(TestBase):
         # Now create the two breakpoints inside function 'a'.
         breakpoint1 = target.BreakpointCreateByLocation('main.c', self.line1)
         breakpoint2 = target.BreakpointCreateByLocation('main.c', self.line2)
-        #print("breakpoint1:", breakpoint1)
-        #print("breakpoint2:", breakpoint2)
+        self.trace("breakpoint1:", breakpoint1)
+        self.trace("breakpoint2:", breakpoint2)
         self.assertTrue(breakpoint1 and
                         breakpoint1.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
@@ -398,8 +402,8 @@ class TargetAPITestCase(TestBase):
 
         address2 = lineEntry.GetStartAddress()
 
-        #print("address1:", address1)
-        #print("address2:", address2)
+        self.trace("address1:", address1)
+        self.trace("address2:", address2)
 
         # Now call SBTarget.ResolveSymbolContextForAddress() with the addresses
         # from our line entry.
@@ -409,15 +413,15 @@ class TargetAPITestCase(TestBase):
             address2, lldb.eSymbolContextEverything)
 
         self.assertTrue(context1 and context2)
-        #print("context1:", context1)
-        #print("context2:", context2)
+        self.trace("context1:", context1)
+        self.trace("context2:", context2)
 
         # Verify that the context point to the same function 'a'.
         symbol1 = context1.GetSymbol()
         symbol2 = context2.GetSymbol()
         self.assertTrue(symbol1 and symbol2)
-        #print("symbol1:", symbol1)
-        #print("symbol2:", symbol2)
+        self.trace("symbol1:", symbol1)
+        self.trace("symbol2:", symbol2)
 
         from lldbsuite.test.lldbutil import get_description
         desc1 = get_description(symbol1)

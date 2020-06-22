@@ -33,12 +33,6 @@
 
 #include <cstdint>
 
-template <int N>
-void dropFront(int64_t arr[N], int64_t *res) {
-  for (unsigned i = 1; i < N; ++i)
-    *(res + i - 1) = arr[i];
-}
-
 //===----------------------------------------------------------------------===//
 // Codegen-compatible structures for Vector type.
 //===----------------------------------------------------------------------===//
@@ -112,6 +106,12 @@ using Vector3D = Vector<T, D1, D2, D3>;
 template <int D1, int D2, int D3, int D4, typename T>
 using Vector4D = Vector<T, D1, D2, D3, D4>;
 
+template <int N>
+void dropFront(int64_t arr[N], int64_t *res) {
+  for (unsigned i = 1; i < N; ++i)
+    *(res + i - 1) = arr[i];
+}
+
 //===----------------------------------------------------------------------===//
 // Codegen-compatible structures for StridedMemRef type.
 //===----------------------------------------------------------------------===//
@@ -165,9 +165,41 @@ struct UnrankedMemRefType {
 };
 
 //===----------------------------------------------------------------------===//
+// DynamicMemRefType type.
+//===----------------------------------------------------------------------===//
+// A reference to one of the StridedMemRef types.
+template <typename T>
+class DynamicMemRefType {
+public:
+  explicit DynamicMemRefType(const StridedMemRefType<T, 0> &mem_ref)
+      : rank(0), basePtr(mem_ref.basePtr), data(mem_ref.data),
+        offset(mem_ref.offset), sizes(nullptr), strides(nullptr) {}
+  template <int N>
+  explicit DynamicMemRefType(const StridedMemRefType<T, N> &mem_ref)
+      : rank(N), basePtr(mem_ref.basePtr), data(mem_ref.data),
+        offset(mem_ref.offset), sizes(mem_ref.sizes), strides(mem_ref.strides) {
+  }
+  explicit DynamicMemRefType(const UnrankedMemRefType<T> &mem_ref)
+      : rank(mem_ref.rank) {
+    auto *desc = static_cast<StridedMemRefType<T, 1> *>(mem_ref.descriptor);
+    basePtr = desc->basePtr;
+    data = desc->data;
+    offset = desc->offset;
+    sizes = rank == 0 ? nullptr : desc->sizes;
+    strides = sizes + rank;
+  }
+
+  int64_t rank;
+  T *basePtr;
+  T *data;
+  int64_t offset;
+  const int64_t *sizes;
+  const int64_t *strides;
+};
+
+//===----------------------------------------------------------------------===//
 // Small runtime support "lib" for vector.print lowering during codegen.
 //===----------------------------------------------------------------------===//
-extern "C" MLIR_CRUNNERUTILS_EXPORT void print_i1(bool b);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_i32(int32_t i);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_i64(int64_t l);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_f32(float f);
@@ -178,3 +210,4 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void print_comma();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_newline();
 
 #endif // EXECUTIONENGINE_CRUNNERUTILS_H_
+

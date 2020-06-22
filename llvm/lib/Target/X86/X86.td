@@ -789,15 +789,13 @@ def ProcessorFeatures {
     !listconcat(GLPInheritableFeatures, GLPSpecificFeatures);
 
   // Tremont
-  list<SubtargetFeature> TRMAdditionalFeatures = [FeatureCLDEMOTE,
-                                                  FeatureGFNI,
-                                                  FeatureMOVDIRI,
-                                                  FeatureMOVDIR64B,
-                                                  FeatureWAITPKG];
+  list<SubtargetFeature> TRMAdditionalFeatures = [FeatureCLWB,
+                                                  FeatureGFNI];
   list<SubtargetFeature> TRMSpecificFeatures = [FeatureUseGLMDivSqrtCosts];
+  list<SubtargetFeature> TRMInheritableFeatures =
+    !listconcat(GLPInheritableFeatures, TRMAdditionalFeatures);
   list<SubtargetFeature> TRMFeatures =
-    !listconcat(GLPInheritableFeatures, TRMAdditionalFeatures,
-                TRMSpecificFeatures);
+    !listconcat(TRMInheritableFeatures, TRMSpecificFeatures);
 
   // Knights Landing
   list<SubtargetFeature> KNLFeatures = [FeatureX87,

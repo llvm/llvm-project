@@ -137,7 +137,7 @@ public:
   AffineMap replaceDimsAndSymbols(ArrayRef<AffineExpr> dimReplacements,
                                   ArrayRef<AffineExpr> symReplacements,
                                   unsigned numResultDims,
-                                  unsigned numResultSyms);
+                                  unsigned numResultSyms) const;
 
   /// Folds the results of the application of an affine map on the provided
   /// operands to a constant if possible.

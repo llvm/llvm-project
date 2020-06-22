@@ -216,10 +216,22 @@ uint64_t MachOLayoutBuilder::layoutRelocations(uint64_t Offset) {
 }
 
 Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
+  // If we are building the layout of an executable or dynamic library
+  // which does not have any segments other than __LINKEDIT,
+  // the Offset can be equal to zero by this time. It happens because of the
+  // convention that in such cases the file offsets specified by LC_SEGMENT
+  // start with zero (unlike the case of a relocatable object file).
+  const uint64_t HeaderSize =
+      Is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
+  assert((!(O.Header.FileType == MachO::HeaderFileType::MH_OBJECT) ||
+          Offset >= HeaderSize + O.Header.SizeOfCmds) &&
+         "Incorrect tail offset");
+  Offset = std::max(Offset, HeaderSize + O.Header.SizeOfCmds);
+
   // The order of LINKEDIT elements is as follows:
   // rebase info, binding info, weak binding info, lazy binding info, export
   // trie, data-in-code, symbol table, indirect symbol table, symbol table
-  // strings.
+  // strings, code signature.
   uint64_t NListSize = Is64Bit ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
   uint64_t StartOfLinkEdit = Offset;
   uint64_t StartOfRebaseInfo = StartOfLinkEdit;
@@ -238,8 +250,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   uint64_t StartOfSymbolStrings =
       StartOfIndirectSymbols +
       sizeof(uint32_t) * O.IndirectSymTable.Symbols.size();
+  uint64_t StartOfCodeSignature =
+      StartOfSymbolStrings + StrTableBuilder.getSize();
   uint64_t LinkEditSize =
-      (StartOfSymbolStrings + StrTableBuilder.getSize()) - StartOfLinkEdit;
+      (StartOfCodeSignature + O.CodeSignature.Data.size()) - StartOfLinkEdit;
 
   // Now we have determined the layout of the contents of the __LINKEDIT
   // segment. Update its load command.
@@ -265,6 +279,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     auto &MLC = LC.MachOLoadCommand;
     auto cmd = MLC.load_command_data.cmd;
     switch (cmd) {
+    case MachO::LC_CODE_SIGNATURE:
+      MLC.linkedit_data_command_data.dataoff = StartOfCodeSignature;
+      MLC.linkedit_data_command_data.datasize = O.CodeSignature.Data.size();
+      break;
     case MachO::LC_SYMTAB:
       MLC.symtab_command_data.symoff = StartOfSymbols;
       MLC.symtab_command_data.nsyms = O.SymTable.Symbols.size();

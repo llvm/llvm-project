@@ -8,8 +8,6 @@
 // RUN: llvm-readobj -r %t.exe | FileCheck %s
 
 // CHECK:      Section (5) .relr.dyn {
-// CHECK-NEXT:   0x301E0 R_ARM_RELATIVE - 0x0
-// CHECK-NEXT:   0x301E4 R_ARM_RELATIVE - 0x0
 // CHECK-NEXT:   0x301E8 R_ARM_RELATIVE - 0x0
 // CHECK-NEXT:   0x301EC R_ARM_RELATIVE - 0x0
 // CHECK-NEXT:   0x301F0 R_ARM_RELATIVE - 0x0
@@ -42,6 +40,8 @@
 // CHECK-NEXT:   0x3025C R_ARM_RELATIVE - 0x0
 // CHECK-NEXT:   0x30260 R_ARM_RELATIVE - 0x0
 // CHECK-NEXT:   0x30264 R_ARM_RELATIVE - 0x0
+// CHECK-NEXT:   0x30268 R_ARM_RELATIVE - 0x0
+// CHECK-NEXT:   0x3026C R_ARM_RELATIVE - 0x0
 // CHECK-NEXT: }
 
 // RUN: llvm-readobj -S --dynamic-table %t.exe | FileCheck --check-prefix=HEADER %s

@@ -23,6 +23,7 @@
 ; BACKEND1-DAG: <COMBINED {{.*}} op1=0
 ; BACKEND1-DAG: <COMBINED {{.*}} op1=1
 ; BACKEND1-DAG: <COMBINED_ALIAS {{.*}} op1=1
+; BACKEND1-NEXT: <BLOCK_COUNT op0=3/>
 ; BACKEND1-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 
 ; The backend index for Input/distributed_indexes.ll contains summaries from
@@ -38,6 +39,7 @@
 ; BACKEND2-NEXT: <COMBINED
 ; BACKEND2-NEXT: <COMBINED
 ; BACKEND2-NEXT: <COMBINED_ALIAS
+; BACKEND2-NEXT: <BLOCK_COUNT op0=3/>
 ; BACKEND2-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 
 ; Make sure that when the alias is imported as a copy of the aliasee, but the

@@ -19,6 +19,7 @@ struct S {
 
 void clang_analyzer_explain(int);
 void clang_analyzer_explain(void *);
+void clang_analyzer_explain(const int *);
 void clang_analyzer_explain(S);
 
 size_t clang_analyzer_getExtent(void *);
@@ -97,6 +98,33 @@ public:
 } // end of anonymous namespace
 
 void test_6() {
-  clang_analyzer_explain(conjure_S()); // expected-warning-re{{{{^lazily frozen compound value of temporary object constructed at statement 'conjure_S\(\)'$}}}}
+  clang_analyzer_explain(conjure_S()); // expected-warning-re{{{{^lazily frozen compound value of 1st parameter of function 'clang_analyzer_explain\(\)'$}}}}
   clang_analyzer_explain(conjure_S().z); // expected-warning-re{{{{^value derived from \(symbol of type 'int' conjured at statement 'conjure_S\(\)'\) for field 'z' of temporary object constructed at statement 'conjure_S\(\)'$}}}}
+}
+
+class C_top_level {
+public:
+  C_top_level(int param) {
+    clang_analyzer_explain(&param); // expected-warning-re{{{{^pointer to parameter 'param'$}}}}
+  }
+};
+
+class C_non_top_level {
+public:
+  C_non_top_level(int param) {
+    clang_analyzer_explain(&param); // expected-warning-re{{{{^pointer to parameter 'param'$}}}}
+  }
+};
+
+void test_7(int n) {
+  C_non_top_level c(n);
+
+  auto lambda_top_level = [n](int param) {
+    clang_analyzer_explain(&param); // expected-warning-re{{{{^pointer to parameter 'param'$}}}}
+  };
+  auto lambda_non_top_level = [n](int param) {
+    clang_analyzer_explain(&param); // expected-warning-re{{{{^pointer to parameter 'param'$}}}}
+  };
+
+  lambda_non_top_level(n);
 }

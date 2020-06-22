@@ -128,7 +128,7 @@ end
 subroutine s11(n)
   integer :: n
   real :: x(n), y
-  !ERROR: Automatic array 'x' is not allowed in an equivalence set
+  !ERROR: Automatic object 'x' is not allowed in an equivalence set
   equivalence(x(1), y)
 end
 

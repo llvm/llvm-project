@@ -32,7 +32,7 @@ struct CGRect {
 @synthesize frame;
 
 // CHECK: define internal void @"\01-[I setPosition:]"
-// CHECK: call dereferenceable({{[0-9]+}}) %class.S* @_ZN1SaSERKS_
+// CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %class.S* @_ZN1SaSERKS_
 // CHECK-NEXT: ret void
 
 // Don't attach debug locations to the prologue instructions. These were
@@ -60,7 +60,7 @@ struct CGRect {
 @end
 
 // CHECK-LABEL: define i32 @main
-// CHECK: call void @_ZN1SC1ERKS_(%class.S* [[AGGTMP:%[a-zA-Z0-9\.]+]], %class.S* dereferenceable({{[0-9]+}}) {{%[a-zA-Z0-9\.]+}})
+// CHECK: call void @_ZN1SC1ERKS_(%class.S* [[AGGTMP:%[a-zA-Z0-9\.]+]], %class.S* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) {{%[a-zA-Z0-9\.]+}})
 // CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %class.S*)*)(i8* {{%[a-zA-Z0-9\.]+}}, i8* {{%[a-zA-Z0-9\.]+}}, %class.S* [[AGGTMP]])
 // CHECK-NEXT: ret i32 0
 int main() {
@@ -73,7 +73,7 @@ int main() {
 // rdar://8379892
 // CHECK-LABEL: define void @_Z1fP1A
 // CHECK: call void @_ZN1XC1Ev(%struct.X* [[LVTEMP:%[a-zA-Z0-9\.]+]])
-// CHECK: call void @_ZN1XC1ERKS_(%struct.X* [[AGGTMP:%[a-zA-Z0-9\.]+]], %struct.X* dereferenceable({{[0-9]+}}) [[LVTEMP]])
+// CHECK: call void @_ZN1XC1ERKS_(%struct.X* [[AGGTMP:%[a-zA-Z0-9\.]+]], %struct.X* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[LVTEMP]])
 // CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %struct.X*)*)({{.*}} %struct.X* [[AGGTMP]])
 struct X {
   X();

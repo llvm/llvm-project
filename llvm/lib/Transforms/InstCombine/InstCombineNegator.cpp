@@ -14,6 +14,7 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -27,7 +28,6 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -44,6 +44,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -69,6 +70,8 @@ STATISTIC(NegatorTimesDepthLimitReached,
 STATISTIC(
     NegatorNumValuesVisited,
     "Negator: Total number of values visited during attempts to sink negation");
+STATISTIC(NegatorNumNegationsFoundInCache,
+          "Negator: How many negations did we retrieve/reuse from cache");
 STATISTIC(NegatorMaxTotalValuesVisited,
           "Negator: Maximal number of values ever visited while attempting to "
           "sink negation");
@@ -111,14 +114,7 @@ Negator::~Negator() {
 
 // FIXME: can this be reworked into a worklist-based algorithm while preserving
 // the depth-first, early bailout traversal?
-LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
-  NegatorMaxDepthVisited.updateMax(Depth);
-  ++NegatorNumValuesVisited;
-
-#if LLVM_ENABLE_STATS
-  ++NumValuesVisitedInThisNegator;
-#endif
-
+LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   // -(undef) -> undef.
   if (match(V, m_Undef()))
     return V;
@@ -243,10 +239,11 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
   switch (I->getOpcode()) {
   case Instruction::PHI: {
     // `phi` is negatible if all the incoming values are negatible.
-    PHINode *PHI = cast<PHINode>(I);
+    auto *PHI = cast<PHINode>(I);
     SmallVector<Value *, 4> NegatedIncomingValues(PHI->getNumOperands());
     for (auto I : zip(PHI->incoming_values(), NegatedIncomingValues)) {
-      if (!(std::get<1>(I) = visit(std::get<0>(I), Depth + 1))) // Early return.
+      if (!(std::get<1>(I) =
+                negate(std::get<0>(I), Depth + 1))) // Early return.
         return nullptr;
     }
     // All incoming values are indeed negatible. Create negated PHI node.
@@ -273,10 +270,10 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
       }
     }
     // `select` is negatible if both hands of `select` are negatible.
-    Value *NegOp1 = visit(I->getOperand(1), Depth + 1);
+    Value *NegOp1 = negate(I->getOperand(1), Depth + 1);
     if (!NegOp1) // Early return.
       return nullptr;
-    Value *NegOp2 = visit(I->getOperand(2), Depth + 1);
+    Value *NegOp2 = negate(I->getOperand(2), Depth + 1);
     if (!NegOp2)
       return nullptr;
     // Do preserve the metadata!
@@ -285,26 +282,48 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
   }
   case Instruction::ShuffleVector: {
     // `shufflevector` is negatible if both operands are negatible.
-    ShuffleVectorInst *Shuf = cast<ShuffleVectorInst>(I);
-    Value *NegOp0 = visit(I->getOperand(0), Depth + 1);
+    auto *Shuf = cast<ShuffleVectorInst>(I);
+    Value *NegOp0 = negate(I->getOperand(0), Depth + 1);
     if (!NegOp0) // Early return.
       return nullptr;
-    Value *NegOp1 = visit(I->getOperand(1), Depth + 1);
+    Value *NegOp1 = negate(I->getOperand(1), Depth + 1);
     if (!NegOp1)
       return nullptr;
     return Builder.CreateShuffleVector(NegOp0, NegOp1, Shuf->getShuffleMask(),
                                        I->getName() + ".neg");
   }
+  case Instruction::ExtractElement: {
+    // `extractelement` is negatible if source operand is negatible.
+    auto *EEI = cast<ExtractElementInst>(I);
+    Value *NegVector = negate(EEI->getVectorOperand(), Depth + 1);
+    if (!NegVector) // Early return.
+      return nullptr;
+    return Builder.CreateExtractElement(NegVector, EEI->getIndexOperand(),
+                                        I->getName() + ".neg");
+  }
+  case Instruction::InsertElement: {
+    // `insertelement` is negatible if both the source vector and
+    // element-to-be-inserted are negatible.
+    auto *IEI = cast<InsertElementInst>(I);
+    Value *NegVector = negate(IEI->getOperand(0), Depth + 1);
+    if (!NegVector) // Early return.
+      return nullptr;
+    Value *NegNewElt = negate(IEI->getOperand(1), Depth + 1);
+    if (!NegNewElt) // Early return.
+      return nullptr;
+    return Builder.CreateInsertElement(NegVector, NegNewElt, IEI->getOperand(2),
+                                       I->getName() + ".neg");
+  }
   case Instruction::Trunc: {
     // `trunc` is negatible if its operand is negatible.
-    Value *NegOp = visit(I->getOperand(0), Depth + 1);
+    Value *NegOp = negate(I->getOperand(0), Depth + 1);
     if (!NegOp) // Early return.
       return nullptr;
     return Builder.CreateTrunc(NegOp, I->getType(), I->getName() + ".neg");
   }
   case Instruction::Shl: {
     // `shl` is negatible if the first operand is negatible.
-    Value *NegOp0 = visit(I->getOperand(0), Depth + 1);
+    Value *NegOp0 = negate(I->getOperand(0), Depth + 1);
     if (!NegOp0) // Early return.
       return nullptr;
     return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg");
@@ -321,10 +340,10 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
     LLVM_FALLTHROUGH;
   case Instruction::Add: {
     // `add` is negatible if both of its operands are negatible.
-    Value *NegOp0 = visit(I->getOperand(0), Depth + 1);
+    Value *NegOp0 = negate(I->getOperand(0), Depth + 1);
     if (!NegOp0) // Early return.
       return nullptr;
-    Value *NegOp1 = visit(I->getOperand(1), Depth + 1);
+    Value *NegOp1 = negate(I->getOperand(1), Depth + 1);
     if (!NegOp1)
       return nullptr;
     return Builder.CreateAdd(NegOp0, NegOp1, I->getName() + ".neg");
@@ -343,10 +362,10 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
     Value *NegatedOp, *OtherOp;
     // First try the second operand, in case it's a constant it will be best to
     // just invert it instead of sinking the `neg` deeper.
-    if (Value *NegOp1 = visit(I->getOperand(1), Depth + 1)) {
+    if (Value *NegOp1 = negate(I->getOperand(1), Depth + 1)) {
       NegatedOp = NegOp1;
       OtherOp = I->getOperand(0);
-    } else if (Value *NegOp0 = visit(I->getOperand(0), Depth + 1)) {
+    } else if (Value *NegOp0 = negate(I->getOperand(0), Depth + 1)) {
       NegatedOp = NegOp0;
       OtherOp = I->getOperand(1);
     } else
@@ -361,8 +380,45 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
   llvm_unreachable("Can't get here. We always return from switch.");
 }
 
+LLVM_NODISCARD Value *Negator::negate(Value *V, unsigned Depth) {
+  NegatorMaxDepthVisited.updateMax(Depth);
+  ++NegatorNumValuesVisited;
+
+#if LLVM_ENABLE_STATS
+  ++NumValuesVisitedInThisNegator;
+#endif
+
+#ifndef NDEBUG
+  // We can't ever have a Value with such an address.
+  Value *Placeholder = reinterpret_cast<Value *>(static_cast<uintptr_t>(-1));
+#endif
+
+  // Did we already try to negate this value?
+  auto NegationsCacheIterator = NegationsCache.find(V);
+  if (NegationsCacheIterator != NegationsCache.end()) {
+    ++NegatorNumNegationsFoundInCache;
+    Value *NegatedV = NegationsCacheIterator->second;
+    assert(NegatedV != Placeholder && "Encountered a cycle during negation.");
+    return NegatedV;
+  }
+
+#ifndef NDEBUG
+  // We did not find a cached result for negation of V. While there,
+  // let's temporairly cache a placeholder value, with the idea that if later
+  // during negation we fetch it from cache, we'll know we're in a cycle.
+  NegationsCache[V] = Placeholder;
+#endif
+
+  // No luck. Try negating it for real.
+  Value *NegatedV = visitImpl(V, Depth);
+  // And cache the (real) result for the future.
+  NegationsCache[V] = NegatedV;
+
+  return NegatedV;
+}
+
 LLVM_NODISCARD Optional<Negator::Result> Negator::run(Value *Root) {
-  Value *Negated = visit(Root, /*Depth=*/0);
+  Value *Negated = negate(Root, /*Depth=*/0);
   if (!Negated) {
     // We must cleanup newly-inserted instructions, to avoid any potential
     // endless combine looping.

@@ -2,9 +2,9 @@ volatile int x;
 
 void __attribute__((noinline)) tail_call_sink() {
   x++; //% self.filecheck("bt", "main.cpp", "-check-prefix=TAIL-CALL-SINK")
-  // TAIL-CALL-SINK: frame #0: 0x{{[0-9a-f]+}} a.out`tail_call_sink() at main.cpp:[[@LINE-1]]:4 [opt]
-  // TAIL-CALL-SINK-NEXT: func3{{.*}} [opt] [artificial]
-  // TAIL-CALL-SINK-NEXT: main{{.*}} [opt]
+  // TAIL-CALL-SINK: frame #0: 0x{{[0-9a-f]+}} a.out`tail_call_sink() at main.cpp:[[@LINE-1]]:4
+  // TAIL-CALL-SINK-NEXT: func3{{.*}} [artificial]
+  // TAIL-CALL-SINK-NEXT: main{{.*}}
 
   // TODO: The backtrace should include inlinable_function_which_tail_calls.
 }
@@ -19,10 +19,10 @@ void __attribute__((noinline)) func3() {
 
 void __attribute__((always_inline)) inline_sink() {
   x++; //% self.filecheck("bt", "main.cpp", "-check-prefix=INLINE-SINK")
-  // INLINE-SINK: frame #0: 0x{{[0-9a-f]+}} a.out`func2() [inlined] inline_sink() at main.cpp:[[@LINE-1]]:4 [opt]
-  // INLINE-SINK-NEXT: func2{{.*}} [opt]
-  // INLINE-SINK-NEXT: func1{{.*}} [opt] [artificial]
-  // INLINE-SINK-NEXT: main{{.*}} [opt]
+  // INLINE-SINK: frame #0: 0x{{[0-9a-f]+}} a.out`func2() [inlined] inline_sink() at main.cpp:[[@LINE-1]]:4
+  // INLINE-SINK-NEXT: func2{{.*}}
+  // INLINE-SINK-NEXT: func1{{.*}} [artificial]
+  // INLINE-SINK-NEXT: main{{.*}}
 }
 
 void __attribute__((noinline)) func2() { inline_sink(); /* inlined */ }

@@ -17,13 +17,13 @@
 let SchedRW = [WriteSystem], Predicates = [HasSGX] in {
 // ENCLS - Execute an Enclave System Function of Specified Leaf Number
 def ENCLS : I<0x01, MRM_CF, (outs), (ins),
-             "encls", []>, TB;
+             "encls", []>, PS;
 
 // ENCLU - Execute an Enclave User Function of Specified Leaf Number
 def ENCLU : I<0x01, MRM_D7, (outs), (ins),
-             "enclu", []>, TB;
+             "enclu", []>, PS;
 
 // ENCLV - Execute an Enclave VMM Function of Specified Leaf Number
 def ENCLV : I<0x01, MRM_C0, (outs), (ins),
-             "enclv", []>, TB;
+             "enclv", []>, PS;
 } // SchedRW

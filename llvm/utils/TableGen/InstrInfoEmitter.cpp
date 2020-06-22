@@ -822,7 +822,7 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
 
   OS << "namespace llvm {\n\n";
 
-  CodeGenTarget Target(Records);
+  const CodeGenTarget &Target = CDP.getTargetInfo();
 
   // We must emit the PHI opcode first...
   StringRef Namespace = Target.getInstNamespace();

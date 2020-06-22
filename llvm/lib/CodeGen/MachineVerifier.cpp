@@ -573,16 +573,6 @@ void MachineVerifier::visitMachineFunctionBefore() {
     verifyStackFrame();
 }
 
-// Does iterator point to a and b as the first two elements?
-static bool matchPair(MachineBasicBlock::const_succ_iterator i,
-                      const MachineBasicBlock *a, const MachineBasicBlock *b) {
-  if (*i == a)
-    return *++i == b;
-  if (*i == b)
-    return *++i == a;
-  return false;
-}
-
 void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
@@ -607,20 +597,6 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   for (const auto *succ : MBB->successors()) {
     if (succ->isEHPad())
       LandingPadSuccs.insert(succ);
-    if (!FunctionBlocks.count(succ))
-      report("MBB has successor that isn't part of the function.", MBB);
-    if (!MBBInfoMap[succ].Preds.count(MBB)) {
-      report("Inconsistent CFG", MBB);
-      errs() << "MBB is not in the predecessor list of the successor "
-             << printMBBReference(*succ) << ".\n";
-    }
-  }
-
-  // Count the number of INLINEASM_BR indirect target successors.
-  SmallPtrSet<const MachineBasicBlock*, 4> IndirectTargetSuccs;
-  for (const auto *succ : MBB->successors()) {
-    if (MBB->isInlineAsmBrIndirectTarget(succ))
-      IndirectTargetSuccs.insert(succ);
     if (!FunctionBlocks.count(succ))
       report("MBB has successor that isn't part of the function.", MBB);
     if (!MBBInfoMap[succ].Preds.count(MBB)) {
@@ -660,26 +636,6 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     // check whether its answers match up with reality.
     if (!TBB && !FBB) {
       // Block falls through to its successor.
-      MachineFunction::const_iterator MBBI = std::next(MBB->getIterator());
-      if (MBBI == MF->end()) {
-        // It's possible that the block legitimately ends with a noreturn
-        // call or an unreachable, in which case it won't actually fall
-        // out the bottom of the function.
-      } else if (MBB->succ_size() == LandingPadSuccs.size() ||
-                 MBB->succ_size() == IndirectTargetSuccs.size()) {
-        // It's possible that the block legitimately ends with a noreturn
-        // call or an unreachable, in which case it won't actually fall
-        // out of the block.
-      } else if ((LandingPadSuccs.size() &&
-                  MBB->succ_size() != 1 + LandingPadSuccs.size()) ||
-                 (IndirectTargetSuccs.size() &&
-                  MBB->succ_size() != 1 + IndirectTargetSuccs.size())) {
-        report("MBB exits via unconditional fall-through but doesn't have "
-               "exactly one CFG successor!", MBB);
-      } else if (!MBB->isSuccessor(&*MBBI)) {
-        report("MBB exits via unconditional fall-through but its successor "
-               "differs from its CFG successor!", MBB);
-      }
       if (!MBB->empty() && MBB->back().isBarrier() &&
           !TII->isPredicated(MBB->back())) {
         report("MBB exits via unconditional fall-through but ends with a "
@@ -691,20 +647,6 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       }
     } else if (TBB && !FBB && Cond.empty()) {
       // Block unconditionally branches somewhere.
-      // If the block has exactly one successor, that happens to be a
-      // landingpad, accept it as valid control flow.
-      if (MBB->succ_size() != 1+LandingPadSuccs.size() &&
-          (MBB->succ_size() != 1 || LandingPadSuccs.size() != 1 ||
-           *MBB->succ_begin() != *LandingPadSuccs.begin()) &&
-          MBB->succ_size() != 1 + IndirectTargetSuccs.size() &&
-          (MBB->succ_size() != 1 || IndirectTargetSuccs.size() != 1 ||
-           *MBB->succ_begin() != *IndirectTargetSuccs.begin())) {
-        report("MBB exits via unconditional branch but doesn't have "
-               "exactly one CFG successor!", MBB);
-      } else if (!MBB->isSuccessor(TBB)) {
-        report("MBB exits via unconditional branch but the CFG "
-               "successor doesn't match the actual successor!", MBB);
-      }
       if (MBB->empty()) {
         report("MBB exits via unconditional branch but doesn't contain "
                "any instructions!", MBB);
@@ -717,24 +659,6 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       }
     } else if (TBB && !FBB && !Cond.empty()) {
       // Block conditionally branches somewhere, otherwise falls through.
-      MachineFunction::const_iterator MBBI = std::next(MBB->getIterator());
-      if (MBBI == MF->end()) {
-        report("MBB conditionally falls through out of function!", MBB);
-      } else if (MBB->succ_size() == 1) {
-        // A conditional branch with only one successor is weird, but allowed.
-        if (&*MBBI != TBB)
-          report("MBB exits via conditional branch/fall-through but only has "
-                 "one CFG successor!", MBB);
-        else if (TBB != *MBB->succ_begin())
-          report("MBB exits via conditional branch/fall-through but the CFG "
-                 "successor don't match the actual successor!", MBB);
-      } else if (MBB->succ_size() != 2) {
-        report("MBB exits via conditional branch/fall-through but doesn't have "
-               "exactly two CFG successors!", MBB);
-      } else if (!matchPair(MBB->succ_begin(), TBB, &*MBBI)) {
-        report("MBB exits via conditional branch/fall-through but the CFG "
-               "successors don't match the actual successors!", MBB);
-      }
       if (MBB->empty()) {
         report("MBB exits via conditional branch/fall-through but doesn't "
                "contain any instructions!", MBB);
@@ -748,21 +672,6 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     } else if (TBB && FBB) {
       // Block conditionally branches somewhere, otherwise branches
       // somewhere else.
-      if (MBB->succ_size() == 1) {
-        // A conditional branch with only one successor is weird, but allowed.
-        if (FBB != TBB)
-          report("MBB exits via conditional branch/branch through but only has "
-                 "one CFG successor!", MBB);
-        else if (TBB != *MBB->succ_begin())
-          report("MBB exits via conditional branch/branch through but the CFG "
-                 "successor don't match the actual successor!", MBB);
-      } else if (MBB->succ_size() != 2) {
-        report("MBB exits via conditional branch/branch but doesn't have "
-               "exactly two CFG successors!", MBB);
-      } else if (!matchPair(MBB->succ_begin(), TBB, FBB)) {
-        report("MBB exits via conditional branch/branch but the CFG "
-               "successors don't match the actual successors!", MBB);
-      }
       if (MBB->empty()) {
         report("MBB exits via conditional branch/branch but doesn't "
                "contain any instructions!", MBB);
@@ -779,6 +688,53 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       }
     } else {
       report("analyzeBranch returned invalid data!", MBB);
+    }
+
+    // Now check that the successors match up with the answers reported by
+    // analyzeBranch.
+    if (TBB && !MBB->isSuccessor(TBB))
+      report("MBB exits via jump or conditional branch, but its target isn't a "
+             "CFG successor!",
+             MBB);
+    if (FBB && !MBB->isSuccessor(FBB))
+      report("MBB exits via conditional branch, but its target isn't a CFG "
+             "successor!",
+             MBB);
+
+    // There might be a fallthrough to the next block if there's either no
+    // unconditional true branch, or if there's a condition, and one of the
+    // branches is missing.
+    bool Fallthrough = !TBB || (!Cond.empty() && !FBB);
+
+    // A conditional fallthrough must be an actual CFG successor, not
+    // unreachable. (Conversely, an unconditional fallthrough might not really
+    // be a successor, because the block might end in unreachable.)
+    if (!Cond.empty() && !FBB) {
+      MachineFunction::const_iterator MBBI = std::next(MBB->getIterator());
+      if (MBBI == MF->end()) {
+        report("MBB conditionally falls through out of function!", MBB);
+      } else if (!MBB->isSuccessor(&*MBBI))
+        report("MBB exits via conditional branch/fall-through but the CFG "
+               "successors don't match the actual successors!",
+               MBB);
+    }
+
+    // Verify that there aren't any extra un-accounted-for successors.
+    for (const MachineBasicBlock *SuccMBB : MBB->successors()) {
+      // If this successor is one of the branch targets, it's okay.
+      if (SuccMBB == TBB || SuccMBB == FBB)
+        continue;
+      // If we might have a fallthrough, and the successor is the fallthrough
+      // block, that's also ok.
+      if (Fallthrough && SuccMBB == MBB->getNextNode())
+        continue;
+      // Also accept successors which are for exception-handling or might be
+      // inlineasm_br targets.
+      if (SuccMBB->isEHPad() || MBB->isInlineAsmBrIndirectTarget(SuccMBB))
+        continue;
+      report("MBB has unexpected successors which are not branch targets, "
+             "fallthrough, EHPads, or inlineasm_br targets.",
+             MBB);
     }
   }
 
@@ -907,6 +863,23 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   const MCInstrDesc &MCID = MI->getDesc();
   unsigned NumOps = MI->getNumOperands();
 
+  // Branches must reference a basic block if they are not indirect
+  if (MI->isBranch() && !MI->isIndirectBranch()) {
+    bool HasMBB = false;
+    for (const MachineOperand &Op : MI->operands()) {
+      if (Op.isMBB()) {
+        HasMBB = true;
+        break;
+      }
+    }
+
+    if (!HasMBB) {
+      report("Branch instruction is missing a basic block operand or "
+             "isIndirectBranch property",
+             MI);
+    }
+  }
+
   // Check types.
   SmallVector<LLT, 4> Types;
   for (unsigned I = 0, E = std::min(MCID.getNumOperands(), NumOps);
@@ -959,9 +932,6 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT: {
-    if (MI->getNumOperands() < MCID.getNumOperands())
-      break;
-
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     if (DstTy.isVector())
       report("Instruction cannot use a vector result type", MI);
@@ -1100,6 +1070,22 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("gep offset operand must not be a pointer", MI);
 
     // TODO: Is the offset allowed to be a scalar with a vector?
+    break;
+  }
+  case TargetOpcode::G_PTRMASK: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT MaskTy = MRI->getType(MI->getOperand(2).getReg());
+    if (!DstTy.isValid() || !SrcTy.isValid() || !MaskTy.isValid())
+      break;
+
+    if (!DstTy.getScalarType().isPointer())
+      report("ptrmask result type must be a pointer", MI);
+
+    if (!MaskTy.getScalarType().isScalar())
+      report("ptrmask mask type must be an integer", MI);
+
+    verifyVectorElementMatch(DstTy, MaskTy, MI);
     break;
   }
   case TargetOpcode::G_SEXT:
@@ -1472,6 +1458,13 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   if (MI->isInlineAsm())
     verifyInlineAsm(MI);
 
+  // A fully-formed DBG_VALUE must have a location. Ignore partially formed
+  // DBG_VALUEs: these are convenient to use in tests, but should never get
+  // generated.
+  if (MI->isDebugValue() && MI->getNumOperands() == 4)
+    if (!MI->getDebugLoc())
+      report("Missing DebugLoc for debug instruction", MI);
+
   // Check the MachineMemOperands for basic consistency.
   for (MachineMemOperand *Op : MI->memoperands()) {
     if (Op->isLoad() && !MI->mayLoad())
@@ -1654,10 +1647,17 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       }
     }
 
-    // Verify two-address constraints after leaving SSA form.
+    // Verify two-address constraints after the twoaddressinstruction pass.
+    // Both twoaddressinstruction pass and phi-node-elimination pass call
+    // MRI->leaveSSA() to set MF as NoSSA, we should do the verification after
+    // twoaddressinstruction pass not after phi-node-elimination pass. So we
+    // shouldn't use the NoSSA as the condition, we should based on
+    // TiedOpsRewritten property to verify two-address constraints, this
+    // property will be set in twoaddressinstruction pass.
     unsigned DefIdx;
-    if (!MRI->isSSA() && MO->isUse() &&
-        MI->isRegTiedToDefOperand(MONum, &DefIdx) &&
+    if (MF->getProperties().hasProperty(
+            MachineFunctionProperties::Property::TiedOpsRewritten) &&
+        MO->isUse() && MI->isRegTiedToDefOperand(MONum, &DefIdx) &&
         Reg != MI->getOperand(DefIdx).getReg())
       report("Two-address instruction operands must be identical", MO, MONum);
 

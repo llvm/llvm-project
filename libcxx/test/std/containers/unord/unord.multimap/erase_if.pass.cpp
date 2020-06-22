@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <unordered_map>
 
@@ -14,6 +14,7 @@
 //   erase_if(unordered_multimap<Key, T, Hash, Pred, Allocator>& c, Predicate pred);
 
 #include <unordered_map>
+#include <algorithm>
 
 #include "test_macros.h"
 #include "test_allocator.h"

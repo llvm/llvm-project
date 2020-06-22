@@ -11,10 +11,14 @@
 // Error reporting.
 //===----------------------------------------------------------------------===//
 
+#include "hwasan_report.h"
+
+#include <dlfcn.h>
+
 #include "hwasan.h"
 #include "hwasan_allocator.h"
+#include "hwasan_globals.h"
 #include "hwasan_mapping.h"
-#include "hwasan_report.h"
 #include "hwasan_thread.h"
 #include "hwasan_thread_list.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
@@ -243,6 +247,42 @@ static bool TagsEqual(tag_t tag, tag_t *tag_ptr) {
   return tag == inline_tag;
 }
 
+// HWASan globals store the size of the global in the descriptor. In cases where
+// we don't have a binary with symbols, we can't grab the size of the global
+// from the debug info - but we might be able to retrieve it from the
+// descriptor. Returns zero if the lookup failed.
+static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
+  // Find the ELF object that this global resides in.
+  Dl_info info;
+  dladdr(reinterpret_cast<void *>(ptr), &info);
+  auto *ehdr = reinterpret_cast<const ElfW(Ehdr) *>(info.dli_fbase);
+  auto *phdr_begin = reinterpret_cast<const ElfW(Phdr) *>(
+      reinterpret_cast<const u8 *>(ehdr) + ehdr->e_phoff);
+
+  // Get the load bias. This is normally the same as the dli_fbase address on
+  // position-independent code, but can be different on non-PIE executables,
+  // binaries using LLD's partitioning feature, or binaries compiled with a
+  // linker script.
+  ElfW(Addr) load_bias = 0;
+  for (const auto &phdr :
+       ArrayRef<const ElfW(Phdr)>(phdr_begin, phdr_begin + ehdr->e_phnum)) {
+    if (phdr.p_type != PT_LOAD || phdr.p_offset != 0)
+      continue;
+    load_bias = reinterpret_cast<ElfW(Addr)>(ehdr) - phdr.p_vaddr;
+    break;
+  }
+
+  // Walk all globals in this ELF object, looking for the one we're interested
+  // in. Once we find it, we can stop iterating and return the size of the
+  // global we're interested in.
+  for (const hwasan_global &global :
+       HwasanGlobalsFor(load_bias, phdr_begin, ehdr->e_phnum))
+    if (global.addr() <= ptr && ptr < global.addr() + global.size())
+      return global.size();
+
+  return 0;
+}
+
 void PrintAddressDescription(
     uptr tagged_addr, uptr access_size,
     StackAllocationsRingBuffer *current_stack_allocations) {
@@ -319,9 +359,19 @@ void PrintAddressDescription(
               candidate == left ? "right" : "left", info.size, info.name,
               info.start, info.start + info.size, module_name);
         } else {
-          Printf("%p is located to the %s of a global variable in (%s+0x%x)\n",
-                 untagged_addr, candidate == left ? "right" : "left",
-                 module_name, module_address);
+          uptr size = GetGlobalSizeFromDescriptor(mem);
+          if (size == 0)
+            // We couldn't find the size of the global from the descriptors.
+            Printf(
+                "%p is located to the %s of a global variable in (%s+0x%x)\n",
+                untagged_addr, candidate == left ? "right" : "left",
+                module_name, module_address);
+          else
+            Printf(
+                "%p is located to the %s of a %zd-byte global variable in "
+                "(%s+0x%x)\n",
+                untagged_addr, candidate == left ? "right" : "left", size,
+                module_name, module_address);
         }
         num_descriptions_printed++;
       }

@@ -93,7 +93,6 @@ extern std::vector<OutputSegment *> outputSegments;
 
 OutputSegment *getOutputSegment(StringRef name);
 OutputSegment *getOrCreateOutputSegment(StringRef name);
-void sortOutputSegmentsAndSections();
 
 } // namespace macho
 } // namespace lld

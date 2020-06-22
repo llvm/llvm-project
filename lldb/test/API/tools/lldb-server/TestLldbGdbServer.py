@@ -10,9 +10,6 @@ gdb remote packet functional areas.  For now it contains
 the initial set of tests implemented.
 """
 
-from __future__ import division, print_function
-
-
 import unittest2
 import gdbremote_testcase
 import lldbgdbserverutils
@@ -1442,7 +1439,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Write flipped bit pattern of existing value to each register.
         (successful_writes, failed_writes) = self.flip_all_bits_in_each_register_value(
             gpr_reg_infos, endian)
-        # print("successful writes: {}, failed writes: {}".format(successful_writes, failed_writes))
+        self.trace("successful writes: {}, failed writes: {}".format(successful_writes, failed_writes))
         self.assertTrue(successful_writes > 0)
 
     # Note: as of this moment, a hefty number of the GPR writes are failing with E32 (everything except rax-rdx, rdi, rsi, rbp).

@@ -6,11 +6,11 @@ target triple = "powerpc64le-unknown-linux-gnu"
 
 define void @test(i64 %arg.ssa, i64 %arg.nb) local_unnamed_addr {
 ; Ensure that loop rotation doesn't duplicate the call to
-; llvm.ppc.is.decremented.ctr.nonzero
+; llvm.loop.decrement
 ; CHECK-LABEL: test
-; CHECK: call i1 @llvm.ppc.is.decremented.ctr.nonzero
-; CHECK-NOT: call i1 @llvm.ppc.is.decremented.ctr.nonzero
-; CHECK: declare i1 @llvm.ppc.is.decremented.ctr.nonzero
+; CHECK: call i1 @llvm.loop.decrement
+; CHECK-NOT: call i1 @llvm.loop.decrement
+; CHECK: declare i1 @llvm.loop.decrement
 entry:
   switch i32 undef, label %BB_8 [
     i32 -2, label %BB_9
@@ -31,7 +31,7 @@ BB_2:                                          ; preds = %BB_1
 BB_3:                                          ; preds = %BB_1
   %1 = add i64 %arg.ssa, %bcount.1.us
   %2 = add i64 %1, 1
-  %3 = call i1 @llvm.ppc.is.decremented.ctr.nonzero()
+  %3 = call i1 @llvm.loop.decrement.i32(i32 1)
   br i1 %3, label %BB_4, label %BB_7
 
 BB_4:                                          ; preds = %BB_3
@@ -62,14 +62,14 @@ BB_11:                                         ; preds = %BB_11, %BB_10
   br i1 undef, label %BB_11, label %BB_12
 
 BB_12:                                         ; preds = %BB_11
-  call void @llvm.ppc.mtctr.i64(i64 %arg.nb)
+  call void @llvm.set.loop.iterations.i64(i64 %arg.nb)
   br label %BB_1
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.ppc.mtctr.i64(i64) #0
+declare void @llvm.set.loop.iterations.i64(i64) #0
 
 ; Function Attrs: nounwind
-declare i1 @llvm.ppc.is.decremented.ctr.nonzero() #0
+declare i1 @llvm.loop.decrement.i32(i32) #0
 
 attributes #0 = { nounwind }

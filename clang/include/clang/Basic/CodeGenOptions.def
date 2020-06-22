@@ -45,6 +45,9 @@ CODEGENOPT(CXXCtorDtorAliases, 1, 0) ///< Emit complete ctors/dtors as linker
                                      ///< aliases to base ctors when possible.
 CODEGENOPT(DataSections      , 1, 0) ///< Set when -fdata-sections is enabled.
 CODEGENOPT(UniqueSectionNames, 1, 1) ///< Set for -funique-section-names.
+CODEGENOPT(UniqueBasicBlockSectionNames, 1, 1) ///< Set for -funique-basic-block-section-names,
+                                               ///< Produce unique section names with
+                                               ///< basic block sections.
 ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None) /// frame-pointer: all,non-leaf,none
 
 CODEGENOPT(DisableFree       , 1, 0) ///< Don't free memory.
@@ -107,6 +110,9 @@ CODEGENOPT(XRayAlwaysEmitTypedEvents , 1, 0)
 ///< Set when -fxray-ignore-loops is enabled.
 CODEGENOPT(XRayIgnoreLoops , 1, 0)
 
+///< Set with -fno-xray-function-index to omit the index section.
+CODEGENOPT(XRayOmitFunctionIndex , 1, 0)
+
 
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.
@@ -150,13 +156,7 @@ CODEGENOPT(NoInlineLineTables, 1, 0) ///< Whether debug info should contain
                                      ///< inline line tables.
 CODEGENOPT(StackClashProtector, 1, 0) ///< Set when -fstack-clash-protection is enabled.
 CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enabled.
-CODEGENOPT(NoInfsFPMath      , 1, 0) ///< Assume FP arguments, results not +-Inf.
-CODEGENOPT(NoSignedZeros     , 1, 0) ///< Allow ignoring the signedness of FP zero
 CODEGENOPT(NullPointerIsValid , 1, 0) ///< Assume Null pointer deference is defined.
-CODEGENOPT(Reassociate       , 1, 0) ///< Allow reassociation of FP math ops
-CODEGENOPT(ReciprocalMath    , 1, 0) ///< Allow FP divisions to be reassociated.
-CODEGENOPT(NoTrappingMath    , 1, 0) ///< Set when -fno-trapping-math is enabled.
-CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
 CODEGENOPT(CorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Internal Linkage symbols get unique names.
 
@@ -248,7 +248,6 @@ VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500) ///< Minimum time granularity (i
 CODEGENOPT(UnrollLoops       , 1, 0) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0) ///< Set when -fno-jump-tables is enabled.
-CODEGENOPT(UnsafeFPMath      , 1, 0) ///< Allow unsafe floating point optzns.
 CODEGENOPT(UnwindTables      , 1, 0) ///< Emit unwind tables.
 CODEGENOPT(VectorizeLoop     , 1, 0) ///< Run loop vectorizer.
 CODEGENOPT(VectorizeSLP      , 1, 0) ///< Run SLP vectorizer.

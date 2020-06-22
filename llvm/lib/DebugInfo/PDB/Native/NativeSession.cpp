@@ -43,7 +43,6 @@
 using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::pdb;
-using namespace llvm::codeview;
 
 static DbiStream *getDbiStreamPtr(PDBFile &File) {
   Expected<DbiStream &> DbiS = File.getPDBDbiStream();
@@ -133,8 +132,8 @@ static Expected<std::string> getPdbPathFromExe(StringRef ExePath) {
 
   StringRef PdbPath;
   const llvm::codeview::DebugInfo *PdbInfo = nullptr;
-  if (auto EC = ObjFile->getDebugPDBInfo(PdbInfo, PdbPath))
-    return make_error<RawError>(EC);
+  if (Error E = ObjFile->getDebugPDBInfo(PdbInfo, PdbPath))
+    return std::move(E);
 
   return std::string(PdbPath);
 }
@@ -181,6 +180,12 @@ NativeSession::searchForPdb(const PdbSearchOptions &Opts) {
 
   if (auto File = loadPdbFile(PdbPath, Allocator))
     return std::string(PdbPath);
+  else
+    consumeError(File.takeError());
+
+  // Check path that was in the executable.
+  if (auto File = loadPdbFile(PathFromExe, Allocator))
+    return std::string(PathFromExe);
   else
     return File.takeError();
 
@@ -262,18 +267,19 @@ NativeSession::findLineNumbers(const PDBSymbolCompiland &Compiland,
 std::unique_ptr<IPDBEnumLineNumbers>
 NativeSession::findLineNumbersByAddress(uint64_t Address,
                                         uint32_t Length) const {
-  return nullptr;
+  return Cache.findLineNumbersByVA(Address, Length);
 }
 
 std::unique_ptr<IPDBEnumLineNumbers>
 NativeSession::findLineNumbersByRVA(uint32_t RVA, uint32_t Length) const {
-  return nullptr;
+  return findLineNumbersByAddress(getLoadAddress() + RVA, Length);
 }
 
 std::unique_ptr<IPDBEnumLineNumbers>
 NativeSession::findLineNumbersBySectOffset(uint32_t Section, uint32_t Offset,
                                            uint32_t Length) const {
-  return nullptr;
+  uint64_t VA = getVAFromSectOffset(Section, Offset);
+  return findLineNumbersByAddress(VA, Length);
 }
 
 std::unique_ptr<IPDBEnumSourceFiles>
@@ -313,7 +319,7 @@ std::unique_ptr<IPDBEnumSourceFiles> NativeSession::getSourceFilesForCompiland(
 
 std::unique_ptr<IPDBSourceFile>
 NativeSession::getSourceFileById(uint32_t FileId) const {
-  return nullptr;
+  return Cache.getSourceFileById(FileId);
 }
 
 std::unique_ptr<IPDBEnumDataStreams> NativeSession::getDebugStreams() const {

@@ -293,7 +293,6 @@ protected:
 private:
   bool CreateBinary();
 
-private:
   dos_header_t m_dos_header;
   coff_header_t m_coff_header;
   coff_opt_header_t m_coff_header_opt;

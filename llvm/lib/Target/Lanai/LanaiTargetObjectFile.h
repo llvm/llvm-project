@@ -37,7 +37,7 @@ public:
 
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   unsigned &Align) const override;
+                                   Align &Alignment) const override;
 };
 } // end namespace llvm
 

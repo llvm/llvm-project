@@ -3,7 +3,7 @@
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
 
-def int_mytarget_sleep : Intrinsic<[], [llvm_i32_ty], [ImmArg<0>]>;
+def int_mytarget_sleep : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 def G_TGT_CAT : MyTargetGenericInstruction {
   let OutOperandList = (outs type0:$dst);

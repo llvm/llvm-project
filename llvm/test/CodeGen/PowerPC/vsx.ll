@@ -1404,9 +1404,9 @@ define <2 x float> @test44(<2 x i64> %a) {
 ; CHECK-LE-NEXT:    xscvuxdsp f0, f0
 ; CHECK-LE-NEXT:    xscvdpspn vs1, f1
 ; CHECK-LE-NEXT:    xscvdpspn vs0, f0
-; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 1
-; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 1
-; CHECK-LE-NEXT:    vmrglw v2, v3, v2
+; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 3
+; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-LE-NEXT:    vmrghw v2, v3, v2
 ; CHECK-LE-NEXT:    blr
   %v = uitofp <2 x i64> %a to <2 x float>
   ret <2 x float> %v
@@ -1486,9 +1486,9 @@ define <2 x float> @test45(<2 x i64> %a) {
 ; CHECK-LE-NEXT:    xscvsxdsp f0, f0
 ; CHECK-LE-NEXT:    xscvdpspn vs1, f1
 ; CHECK-LE-NEXT:    xscvdpspn vs0, f0
-; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 1
-; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 1
-; CHECK-LE-NEXT:    vmrglw v2, v3, v2
+; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 3
+; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-LE-NEXT:    vmrghw v2, v3, v2
 ; CHECK-LE-NEXT:    blr
   %v = sitofp <2 x i64> %a to <2 x float>
   ret <2 x float> %v
@@ -1548,8 +1548,8 @@ define <2 x i64> @test46(<2 x float> %a) {
 ; CHECK-FISL-NEXT:    ld r3, -24(r1)
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs1, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs1, vs1
+; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test46:
@@ -1616,8 +1616,8 @@ define <2 x i64> @test47(<2 x float> %a) {
 ; CHECK-FISL-NEXT:    ld r3, -24(r1)
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs1, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs1, vs1
+; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test47:
@@ -1859,13 +1859,13 @@ define <2 x i64> @test60(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-NEXT:    stxvd2x v3, 0, r3
 ; CHECK-FISL-NEXT:    addi r3, r1, -48
 ; CHECK-FISL-NEXT:    stxvd2x v2, 0, r3
-; CHECK-FISL-NEXT:    lwz r4, -20(r1)
-; CHECK-FISL-NEXT:    ld r3, -40(r1)
-; CHECK-FISL-NEXT:    sld r3, r3, r4
+; CHECK-FISL-NEXT:    lwz r3, -20(r1)
+; CHECK-FISL-NEXT:    ld r4, -40(r1)
+; CHECK-FISL-NEXT:    sld r3, r4, r3
 ; CHECK-FISL-NEXT:    std r3, -8(r1)
-; CHECK-FISL-NEXT:    lwz r4, -28(r1)
-; CHECK-FISL-NEXT:    ld r3, -48(r1)
-; CHECK-FISL-NEXT:    sld r3, r3, r4
+; CHECK-FISL-NEXT:    lwz r3, -28(r1)
+; CHECK-FISL-NEXT:    ld r4, -48(r1)
+; CHECK-FISL-NEXT:    sld r3, r4, r3
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
 ; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
@@ -1925,13 +1925,13 @@ define <2 x i64> @test61(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-NEXT:    stxvd2x v3, 0, r3
 ; CHECK-FISL-NEXT:    addi r3, r1, -48
 ; CHECK-FISL-NEXT:    stxvd2x v2, 0, r3
-; CHECK-FISL-NEXT:    lwz r4, -20(r1)
-; CHECK-FISL-NEXT:    ld r3, -40(r1)
-; CHECK-FISL-NEXT:    srd r3, r3, r4
+; CHECK-FISL-NEXT:    lwz r3, -20(r1)
+; CHECK-FISL-NEXT:    ld r4, -40(r1)
+; CHECK-FISL-NEXT:    srd r3, r4, r3
 ; CHECK-FISL-NEXT:    std r3, -8(r1)
-; CHECK-FISL-NEXT:    lwz r4, -28(r1)
-; CHECK-FISL-NEXT:    ld r3, -48(r1)
-; CHECK-FISL-NEXT:    srd r3, r3, r4
+; CHECK-FISL-NEXT:    lwz r3, -28(r1)
+; CHECK-FISL-NEXT:    ld r4, -48(r1)
+; CHECK-FISL-NEXT:    srd r3, r4, r3
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
 ; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
@@ -1991,13 +1991,13 @@ define <2 x i64> @test62(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-NEXT:    stxvd2x v3, 0, r3
 ; CHECK-FISL-NEXT:    addi r3, r1, -48
 ; CHECK-FISL-NEXT:    stxvd2x v2, 0, r3
-; CHECK-FISL-NEXT:    lwz r4, -20(r1)
-; CHECK-FISL-NEXT:    ld r3, -40(r1)
-; CHECK-FISL-NEXT:    srad r3, r3, r4
+; CHECK-FISL-NEXT:    lwz r3, -20(r1)
+; CHECK-FISL-NEXT:    ld r4, -40(r1)
+; CHECK-FISL-NEXT:    srad r3, r4, r3
 ; CHECK-FISL-NEXT:    std r3, -8(r1)
-; CHECK-FISL-NEXT:    lwz r4, -28(r1)
-; CHECK-FISL-NEXT:    ld r3, -48(r1)
-; CHECK-FISL-NEXT:    srad r3, r3, r4
+; CHECK-FISL-NEXT:    lwz r3, -28(r1)
+; CHECK-FISL-NEXT:    ld r4, -48(r1)
+; CHECK-FISL-NEXT:    srad r3, r4, r3
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
 ; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
@@ -2146,11 +2146,11 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    cmpld r4, r3
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, -1
-; CHECK-NEXT:    isel r5, r4, r3, lt
+; CHECK-NEXT:    isellt r5, r4, r3
 ; CHECK-NEXT:    std r5, -8(r1)
 ; CHECK-NEXT:    ld r5, -32(r1)
 ; CHECK-NEXT:    cmpld r6, r5
-; CHECK-NEXT:    isel r3, r4, r3, lt
+; CHECK-NEXT:    isellt r3, r4, r3
 ; CHECK-NEXT:    std r3, -16(r1)
 ; CHECK-NEXT:    addi r3, r1, -16
 ; CHECK-NEXT:    lxvd2x v2, 0, r3
@@ -2168,11 +2168,11 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-REG-NEXT:    cmpld r4, r3
 ; CHECK-REG-NEXT:    li r3, 0
 ; CHECK-REG-NEXT:    li r4, -1
-; CHECK-REG-NEXT:    isel r5, r4, r3, lt
+; CHECK-REG-NEXT:    isellt r5, r4, r3
 ; CHECK-REG-NEXT:    std r5, -8(r1)
 ; CHECK-REG-NEXT:    ld r5, -32(r1)
 ; CHECK-REG-NEXT:    cmpld r6, r5
-; CHECK-REG-NEXT:    isel r3, r4, r3, lt
+; CHECK-REG-NEXT:    isellt r3, r4, r3
 ; CHECK-REG-NEXT:    std r3, -16(r1)
 ; CHECK-REG-NEXT:    addi r3, r1, -16
 ; CHECK-REG-NEXT:    lxvd2x v2, 0, r3
@@ -2189,12 +2189,12 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-NEXT:    cmpld r4, r3
 ; CHECK-FISL-NEXT:    li r3, 0
 ; CHECK-FISL-NEXT:    li r4, -1
-; CHECK-FISL-NEXT:    isel r5, r4, r3, lt
+; CHECK-FISL-NEXT:    isellt r5, r4, r3
 ; CHECK-FISL-NEXT:    std r5, -8(r1)
 ; CHECK-FISL-NEXT:    ld r5, -32(r1)
 ; CHECK-FISL-NEXT:    ld r6, -48(r1)
 ; CHECK-FISL-NEXT:    cmpld r6, r5
-; CHECK-FISL-NEXT:    isel r3, r4, r3, lt
+; CHECK-FISL-NEXT:    isellt r3, r4, r3
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
 ; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
@@ -2426,23 +2426,22 @@ define <2 x i32> @test80(i32 %v) {
 ; CHECK-FISL:       # %bb.0:
 ; CHECK-FISL-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; CHECK-FISL-NEXT:    stw r3, -16(r1)
-; CHECK-FISL-NEXT:    addi r4, r1, -16
-; CHECK-FISL-NEXT:    lxvw4x vs0, 0, r4
+; CHECK-FISL-NEXT:    addi r3, r1, -16
+; CHECK-FISL-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-FISL-NEXT:    xxspltw v2, vs0, 0
-; CHECK-FISL-NEXT:    addis r4, r2, .LCPI65_0@toc@ha
-; CHECK-FISL-NEXT:    addi r4, r4, .LCPI65_0@toc@l
-; CHECK-FISL-NEXT:    lxvw4x v3, 0, r4
+; CHECK-FISL-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
+; CHECK-FISL-NEXT:    addi r3, r3, .LCPI65_0@toc@l
+; CHECK-FISL-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-FISL-NEXT:    vadduwm v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test80:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    mtfprd f0, r3
+; CHECK-LE-NEXT:    mtfprwz f0, r3
 ; CHECK-LE-NEXT:    addis r4, r2, .LCPI65_0@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r4, .LCPI65_0@toc@l
-; CHECK-LE-NEXT:    xxswapd vs0, vs0
+; CHECK-LE-NEXT:    xxspltw v2, vs0, 1
 ; CHECK-LE-NEXT:    lvx v3, 0, r3
-; CHECK-LE-NEXT:    xxspltw v2, vs0, 3
 ; CHECK-LE-NEXT:    vadduwm v2, v2, v3
 ; CHECK-LE-NEXT:    blr
   %b1 = insertelement <2 x i32> undef, i32 %v, i32 0

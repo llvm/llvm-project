@@ -134,6 +134,7 @@ private:
   bool tryToParseLambdaIntroducer();
   bool tryToParsePropertyAccessor();
   void tryToParseJSFunction();
+  bool tryToParseSimpleAttribute();
   void addUnwrappedLine();
   bool eof() const;
   // LevelDifference is the difference of levels after and before the current

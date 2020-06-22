@@ -48,8 +48,8 @@ define internal { i32, i128, i64 } @implicit_sret_impl() unnamed_addr nounwind {
 ; CHECK-NEXT:    sd $zero, 8($4)
 ; CHECK-NEXT:    daddiu $3, $zero, 30
 ; CHECK-NEXT:    sd $3, 24($4)
-; CHECK-NEXT:    addiu $5, $zero, 10
-; CHECK-NEXT:    sw $5, 0($4)
+; CHECK-NEXT:    addiu $3, $zero, 10
+; CHECK-NEXT:    sw $3, 0($4)
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    nop
   ret { i32, i128, i64 } { i32 10, i128 20, i64 30 }
@@ -70,10 +70,12 @@ define internal void @test2() unnamed_addr nounwind {
 ; CHECK-NEXT:    lw $3, 4($sp)
 ; CHECK-NEXT:    # implicit-def: $a0_64
 ; CHECK-NEXT:    move $4, $3
-; CHECK-NEXT:    # implicit-def: $a1_64
-; CHECK-NEXT:    move $5, $2
-; CHECK-NEXT:    # implicit-def: $a2_64
-; CHECK-NEXT:    move $6, $1
+; CHECK-NEXT:    # implicit-def: $v1_64
+; CHECK-NEXT:    move $3, $2
+; CHECK-NEXT:    # implicit-def: $v0_64
+; CHECK-NEXT:    move $2, $1
+; CHECK-NEXT:    move $5, $3
+; CHECK-NEXT:    move $6, $2
 ; CHECK-NEXT:    jal use_sret2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload

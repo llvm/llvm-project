@@ -52,11 +52,11 @@ gpu.module @kernel {
 
 gpu.module @kernel {
   // Workgroup buffers are allocated as globals.
-  // NVVM: llvm.mlir.global internal @[[buffer:.*]]()
+  // NVVM: llvm.mlir.global internal @[[$buffer:.*]]()
   // NVVM-SAME:  addr_space = 3
   // NVVM-SAME:  !llvm<"[4 x float]">
 
-  // ROCDL: llvm.mlir.global internal @[[buffer:.*]]()
+  // ROCDL: llvm.mlir.global internal @[[$buffer:.*]]()
   // ROCDL-SAME:  addr_space = 3
   // ROCDL-SAME:  !llvm<"[4 x float]">
 
@@ -68,12 +68,12 @@ gpu.module @kernel {
   gpu.func @workgroup(%arg0: f32) workgroup(%arg1: memref<4xf32, 3>) {
     // Get the address of the first element in the global array.
     // NVVM: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-    // NVVM: %[[addr:.*]] = llvm.mlir.addressof @[[buffer]] : !llvm<"[4 x float] addrspace(3)*">
+    // NVVM: %[[addr:.*]] = llvm.mlir.addressof @[[$buffer]] : !llvm<"[4 x float] addrspace(3)*">
     // NVVM: %[[raw:.*]] = llvm.getelementptr %[[addr]][%[[c0]], %[[c0]]]
     // NVVM-SAME: !llvm<"float addrspace(3)*">
 
     // ROCDL: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-    // ROCDL: %[[addr:.*]] = llvm.mlir.addressof @[[buffer]] : !llvm<"[4 x float] addrspace(3)*">
+    // ROCDL: %[[addr:.*]] = llvm.mlir.addressof @[[$buffer]] : !llvm<"[4 x float] addrspace(3)*">
     // ROCDL: %[[raw:.*]] = llvm.getelementptr %[[addr]][%[[c0]], %[[c0]]]
     // ROCDL-SAME: !llvm<"float addrspace(3)*">
 
@@ -118,11 +118,11 @@ gpu.module @kernel {
 
 gpu.module @kernel {
   // Check that the total size was computed correctly.
-  // NVVM: llvm.mlir.global internal @[[buffer:.*]]()
+  // NVVM: llvm.mlir.global internal @[[$buffer:.*]]()
   // NVVM-SAME:  addr_space = 3
   // NVVM-SAME:  !llvm<"[48 x float]">
 
-  // ROCDL: llvm.mlir.global internal @[[buffer:.*]]()
+  // ROCDL: llvm.mlir.global internal @[[$buffer:.*]]()
   // ROCDL-SAME:  addr_space = 3
   // ROCDL-SAME:  !llvm<"[48 x float]">
 
@@ -131,12 +131,12 @@ gpu.module @kernel {
   gpu.func @workgroup3d(%arg0: f32) workgroup(%arg1: memref<4x2x6xf32, 3>) {
     // Get the address of the first element in the global array.
     // NVVM: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-    // NVVM: %[[addr:.*]] = llvm.mlir.addressof @[[buffer]] : !llvm<"[48 x float] addrspace(3)*">
+    // NVVM: %[[addr:.*]] = llvm.mlir.addressof @[[$buffer]] : !llvm<"[48 x float] addrspace(3)*">
     // NVVM: %[[raw:.*]] = llvm.getelementptr %[[addr]][%[[c0]], %[[c0]]]
     // NVVM-SAME: !llvm<"float addrspace(3)*">
 
     // ROCDL: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-    // ROCDL: %[[addr:.*]] = llvm.mlir.addressof @[[buffer]] : !llvm<"[48 x float] addrspace(3)*">
+    // ROCDL: %[[addr:.*]] = llvm.mlir.addressof @[[$buffer]] : !llvm<"[48 x float] addrspace(3)*">
     // ROCDL: %[[raw:.*]] = llvm.getelementptr %[[addr]][%[[c0]], %[[c0]]]
     // ROCDL-SAME: !llvm<"float addrspace(3)*">
 
@@ -187,14 +187,14 @@ gpu.module @kernel {
 
 gpu.module @kernel {
   // Check that several buffers are defined.
-  // NVVM: llvm.mlir.global internal @[[buffer1:.*]]()
+  // NVVM: llvm.mlir.global internal @[[$buffer1:.*]]()
   // NVVM-SAME:  !llvm<"[1 x float]">
-  // NVVM: llvm.mlir.global internal @[[buffer2:.*]]()
+  // NVVM: llvm.mlir.global internal @[[$buffer2:.*]]()
   // NVVM-SAME:  !llvm<"[2 x float]">
 
-  // ROCDL: llvm.mlir.global internal @[[buffer1:.*]]()
+  // ROCDL: llvm.mlir.global internal @[[$buffer1:.*]]()
   // ROCDL-SAME:  !llvm<"[1 x float]">
-  // ROCDL: llvm.mlir.global internal @[[buffer2:.*]]()
+  // ROCDL: llvm.mlir.global internal @[[$buffer2:.*]]()
   // ROCDL-SAME:  !llvm<"[2 x float]">
 
   // NVVM-LABEL: llvm.func @multiple
@@ -204,11 +204,11 @@ gpu.module @kernel {
       private(%arg3: memref<3xf32, 5>, %arg4: memref<4xf32, 5>) {
 
     // Workgroup buffers.
-    // NVVM: llvm.mlir.addressof @[[buffer1]]
-    // NVVM: llvm.mlir.addressof @[[buffer2]]
+    // NVVM: llvm.mlir.addressof @[[$buffer1]]
+    // NVVM: llvm.mlir.addressof @[[$buffer2]]
 
-    // ROCDL: llvm.mlir.addressof @[[buffer1]]
-    // ROCDL: llvm.mlir.addressof @[[buffer2]]
+    // ROCDL: llvm.mlir.addressof @[[$buffer1]]
+    // ROCDL: llvm.mlir.addressof @[[$buffer2]]
 
     // Private buffers.
     // NVVM: %[[c3:.*]] = llvm.mlir.constant(3 : i64)

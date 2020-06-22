@@ -98,6 +98,8 @@ public:
 
   unsigned getRegisterBitWidth(bool Vector) const {
     if (Vector) {
+      if (ST->hasSVE())
+        return std::max(ST->getMinSVEVectorSizeInBits(), 128u);
       if (ST->hasNEON())
         return 128;
       return 0;

@@ -103,5 +103,33 @@
 // RUN: %clang -### -target powerpc64 -S -O1 %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NONE %s
 
+// For AAarch32 (A32, T32) linux targets, default omit frame pointer when
+// optimizations are enabled.
+// RUN: %clang -### -target arm-linux-gnueabihf- -marm -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### -target arm-linux-gnueabihf- -mthumb -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### -target arm-linux-gnueabihf- -marm -mbig-endian -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### -target arm-linux-gnueabihf- -mthumb -mbig-endian -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### -target arm-linux-gnueabihf- -marm -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### -target arm-linux-gnueabihf- -mthumb -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### -target arm-linux-gnueabihf- -marm -mbig-endian -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// RUN: %clang -### -target arm-linux-gnueabihf- -mthumb -mbig-endian -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+// For Android, keep the framepointers always.
+// RUN: %clang -### -target armv7a-linux-androideabi- -marm -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### -target armv7a-linux-androideabi- -mthumb -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### -target armv7a-linux-androideabi- -marm -mbig-endian -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### -target armv7a-linux-androideabi- -mthumb -mbig-endian -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+
 void f0() {}
 void f1() { f0(); }

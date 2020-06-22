@@ -53,9 +53,14 @@ public:
 
   void setRepresentedCsect(MCSectionXCOFF *C);
 
+  void setVisibilityType(XCOFF::VisibilityType SVT) { VisibilityType = SVT; };
+
+  XCOFF::VisibilityType getVisibilityType() const { return VisibilityType; }
+
 private:
   Optional<XCOFF::StorageClass> StorageClass;
   MCSectionXCOFF *RepresentedCsect = nullptr;
+  XCOFF::VisibilityType VisibilityType = XCOFF::SYM_V_UNSPECIFIED;
 };
 
 } // end namespace llvm

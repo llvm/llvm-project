@@ -49,7 +49,7 @@ if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
 lldb_repro_mode = lit_config.params.get('lldb-run-with-repro', None)
 if lldb_repro_mode:
   config.available_features.add('lldb-repro')
-  lit_config.note("Running Shell test with lldb-repro in {} mode.".format(lldb_repro_mode))
+  lit_config.note("Running Shell tests in {} mode.".format(lldb_repro_mode))
   toolchain.use_lldb_repro_substitutions(config, lldb_repro_mode)
 
 llvm_config.use_default_substitutions()

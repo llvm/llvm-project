@@ -1154,7 +1154,7 @@
 2008-02-14  Jason Molenda  (jmolenda@apple.com)
 
 	* MachProcess.cpp: (MachProcess::SBForkChildForPTraceDebugging):
-	Set mode bits on slave side of pty.
+	Set mode bits on secondary side of pty.
 
 2008-02-12  Greg Clayton  <gclayton@apple.com>
 

@@ -27,7 +27,7 @@ entry:
   %call = tail call i32 @helper(i32 %conv)
   ret i32 %call
 }
-; CHECK: r{{[0-9]+}} >>= 32
+; CHECK: r{{[0-9]+}} = w{{[0-9]+}}
 ; CHECK-NOT: r{{[0-9]+}} >>= 32
 ; CHECK: if r{{[0-9]+}} == r{{[0-9]+}} goto
 

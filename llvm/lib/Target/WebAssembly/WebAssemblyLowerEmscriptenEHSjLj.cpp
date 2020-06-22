@@ -221,10 +221,10 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-lower-em-ehsjlj"
 
 static cl::list<std::string>
-    EHWhitelist("emscripten-cxx-exceptions-whitelist",
+    EHAllowlist("emscripten-cxx-exceptions-allowed",
                 cl::desc("The list of function names in which Emscripten-style "
                          "exception handling is enabled (see emscripten "
-                         "EMSCRIPTEN_CATCHING_WHITELIST options)"),
+                         "EMSCRIPTEN_CATCHING_ALLOWED options)"),
                 cl::CommaSeparated);
 
 namespace {
@@ -248,8 +248,8 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   DenseMap<int, Function *> FindMatchingCatches;
   // Map of <function signature string, invoke_ wrappers>
   StringMap<Function *> InvokeWrappers;
-  // Set of whitelisted function names for exception handling
-  std::set<std::string> EHWhitelistSet;
+  // Set of allowed function names for exception handling
+  std::set<std::string> EHAllowlistSet;
 
   StringRef getPassName() const override {
     return "WebAssembly Lower Emscripten Exceptions";
@@ -265,7 +265,7 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
                       Value *&LongjmpResult, BasicBlock *&EndBB);
   Function *getInvokeWrapper(CallBase *CI);
 
-  bool areAllExceptionsAllowed() const { return EHWhitelistSet.empty(); }
+  bool areAllExceptionsAllowed() const { return EHAllowlistSet.empty(); }
   bool canLongjmp(Module &M, const Value *Callee) const;
   bool isEmAsmCall(Module &M, const Value *Callee) const;
 
@@ -276,7 +276,7 @@ public:
 
   WebAssemblyLowerEmscriptenEHSjLj(bool EnableEH = true, bool EnableSjLj = true)
       : ModulePass(ID), EnableEH(EnableEH), EnableSjLj(EnableSjLj) {
-    EHWhitelistSet.insert(EHWhitelist.begin(), EHWhitelist.end());
+    EHAllowlistSet.insert(EHAllowlist.begin(), EHAllowlist.end());
   }
   bool runOnModule(Module &M) override;
 
@@ -746,7 +746,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
   SmallVector<Instruction *, 64> ToErase;
   SmallPtrSet<LandingPadInst *, 32> LandingPads;
   bool AllowExceptions = areAllExceptionsAllowed() ||
-                         EHWhitelistSet.count(std::string(F.getName()));
+                         EHAllowlistSet.count(std::string(F.getName()));
 
   for (BasicBlock &BB : F) {
     auto *II = dyn_cast<InvokeInst>(BB.getTerminator());

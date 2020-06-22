@@ -10,11 +10,15 @@
 #define DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
 
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/IR/Identifier.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 namespace mlir {
 namespace linalg {
+
+struct LinalgTilingOptions;
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as function calls.
@@ -34,10 +38,6 @@ struct TiledLinalgOp {
 /// An empty vector is interpreted as the identity permutation and the
 /// transformation returns early.
 ///
-/// When non-null, the optional pointer `folder` is used to call into the
-/// `createAndFold` builder method. If `folder` is null, the regular `create`
-/// method is called.
-///
 /// Returns a struct containing the tiled loops in the specified order
 /// and the cloned op if successful, llvm::None otherwise.
 ///
@@ -46,26 +46,7 @@ struct TiledLinalgOp {
 /// integers, in the range 0..`tileSizes.size()` without duplications
 /// (i.e. `[1,1,2]` is an invalid permutation).
 Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
-                                     ArrayRef<Value> tileSizes,
-                                     ArrayRef<unsigned> interchangeVector = {},
-                                     OperationFolder *folder = nullptr);
-Optional<TiledLinalgOp>
-tileLinalgOpToParallelLoops(OpBuilder &b, LinalgOp op,
-                            ArrayRef<Value> tileSizes,
-                            ArrayRef<unsigned> interchangeVector = {},
-                            OperationFolder *folder = nullptr);
-
-/// Performs standalone tiling of a single LinalgOp by constant `tileSizes`.
-/// See `tileLinalgOp(... ArrayRef<Value> tileSizes,)` for more details
-Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
-                                     ArrayRef<int64_t> tileSizes,
-                                     ArrayRef<unsigned> interchangeVector = {},
-                                     OperationFolder *folder = nullptr);
-Optional<TiledLinalgOp>
-tileLinalgOpToParallelLoops(OpBuilder &b, LinalgOp op,
-                            ArrayRef<int64_t> tileSizes,
-                            ArrayRef<unsigned> interchangeVector = {},
-                            OperationFolder *folder = nullptr);
+                                     const LinalgTilingOptions &options);
 
 /// Interchanges the `iterator_types` and `iterator_maps` dimensions of `op`.
 /// This is an in-place transformation controlled by `interchangeVector`.
@@ -78,18 +59,27 @@ tileLinalgOpToParallelLoops(OpBuilder &b, LinalgOp op,
 /// (i.e. `[1,1,2]` is an invalid permutation).
 LinalgOp interchange(LinalgOp op, ArrayRef<unsigned> interchangeVector);
 
-/// Promotes the `subViews` into a new buffer allocated at the insertion point
-/// `b`. Promotion occurs in 3 steps:
-///   1. Create a new buffer for a full tile (i.e. not clipped at the boundary).
-///   2. Take a full view on the buffer and `linalg.fill` it with zeros (use
-///      float zero for now).
-///   3. Take a partial slice of the full view in step 2. and copy into it.
-/// Infers statically sized buffers from subViews unless `dynamicBuffers` is
-/// true.
-///
-/// Returns a list of PromotionInfo which hold the promoted buffer and the
-/// full and partial views indexing into the buffer.
-// TODO: revisit dynamicBuffers option.
+/// Callback function type used to perform the allocation for the promoted
+/// `subView`. In `boundingSubViewsize` a best attempt is made to find the
+/// smallest constant value for the size of the buffer needed for each
+/// dimension. If that is not possible, contains the dynamic size of the
+/// subview. The call back should return the buffer to use.
+using AllocBufferCallbackFn = std::function<Optional<Value>(
+    OpBuilder &b, SubViewOp subView, ArrayRef<Value> boundingSubViewSize,
+    OperationFolder *folder)>;
+
+/// Callback function type used to deallocate the buffers used to hold the
+/// promoted subview.
+using DeallocBufferCallbackFn =
+    std::function<LogicalResult(OpBuilder &b, Value buffer)>;
+
+/// Callback function type used to insert copy from original subview to subview
+/// of the promoted region for the read operands/subview of promoted region to
+/// original subview for the results. The copy has to happen from `src` to
+/// `dst`.
+using CopyCallbackFn =
+    std::function<LogicalResult(OpBuilder &b, Value src, Value dst)>;
+
 struct LinalgPromotionOptions {
   /// Indices of subViews to promote. If `None`, try to promote all operands.
   Optional<DenseSet<unsigned>> operandsToPromote = None;
@@ -116,8 +106,8 @@ struct LinalgPromotionOptions {
   /// If true all operands unspecified by `useFullTileBuffers` will use the full
   /// view, otherwise the partial view.
   bool useFullTileBuffersDefault = false;
-  LinalgPromotionOptions &useFullTileBuffersByDefault() {
-    useFullTileBuffersDefault = true;
+  LinalgPromotionOptions &setUseFullTileBuffersByDefault(bool use) {
+    useFullTileBuffersDefault = use;
     return *this;
   }
   /// Allow the use of dynamicaly-sized buffers.
@@ -132,28 +122,59 @@ struct LinalgPromotionOptions {
     alignment = align;
     return *this;
   }
+  /// Callback function to do the allocation of the promoted buffer. If None,
+  /// then the default allocation scheme of allocating a memref<?xi8> buffer
+  /// followed by a view operation is used.
+  Optional<AllocBufferCallbackFn> allocationFn = None;
+  Optional<DeallocBufferCallbackFn> deallocationFn = None;
+  LinalgPromotionOptions &
+  setAllocationDeallocationFns(AllocBufferCallbackFn const &allocFn,
+                               DeallocBufferCallbackFn const &deallocFn) {
+    allocationFn = allocFn;
+    deallocationFn = deallocFn;
+    return *this;
+  }
+
+  /// Callback function to do the copy of data to and from the promoted
+  /// subview. If None then a linalg.copy is used.
+  Optional<CopyCallbackFn> copyInFn = None;
+  Optional<CopyCallbackFn> copyOutFn = None;
+  LinalgPromotionOptions &setCopyInOutFns(CopyCallbackFn const &copyIn,
+                                          CopyCallbackFn const &copyOut) {
+    copyInFn = copyIn;
+    copyOutFn = copyOut;
+    return *this;
+  }
 };
-LinalgOp promoteSubViews(OpBuilder &b, LinalgOp op,
-                         LinalgPromotionOptions options,
-                         OperationFolder *folder = nullptr);
+
+/// Promotes the `subViews` into a new buffer allocated at the insertion point
+/// `b`. Promotion occurs in 3 steps:
+///   1. Create a new buffer for a full tile (i.e. not clipped at the boundary).
+///   2. Take a full view on the buffer.
+///   3. Take a partial slice of the full view in step 2. and copy into it.
+/// Infers statically sized buffers from subViews unless `dynamicBuffers` is
+/// true.
+///
+/// Returns the modified linalg op (the modification happens in place) as well
+/// as all the copy ops created.
+Optional<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
+                                   LinalgPromotionOptions options,
+                                   OperationFolder *folder = nullptr);
 
 /// Emit a suitable vector form for a Linalg op with fully static shape.
 void vectorizeLinalgOp(OpBuilder &builder, Operation *op);
 
 /// Emits a loop nest of `LoopTy` with the proper body for `op`.
-template <typename LoopTy, typename ConcreteOp>
+template <typename LoopTy>
 Optional<LinalgLoops> linalgLowerOpToLoops(OpBuilder &builder, Operation *op);
 
 /// Emits a loop nest of `scf.for` with the proper body for `op`.
-template <typename ConcreteOp>
 LogicalResult linalgOpToLoops(OpBuilder &builder, Operation *op);
 
 /// Emits a loop nest of `scf.parallel` with the proper body for `op`.
-template <typename ConcreteOp>
 LogicalResult linalgOpToParallelLoops(OpBuilder &builder, Operation *op);
 
 /// Emits a loop nest of `affine.for` with the proper body for `op`.
-template <typename ConcreteOp>
 LogicalResult linalgOpToAffineLoops(OpBuilder &builder, Operation *op);
 
 //===----------------------------------------------------------------------===//
@@ -183,15 +204,16 @@ struct LinalgTransforms {
 
 /// Helper class to control common attribute matching and setting behavior.
 struct LinalgMarker {
-  LinalgMarker(ArrayRef<StringRef> matchDisjunction = {},
-               Optional<StringRef> replacement = None);
-  LinalgMarker(ArrayRef<StringRef> matchDisjunction, StringRef replacement);
+  explicit LinalgMarker(ArrayRef<Identifier> matchDisjunction = {},
+                        Optional<Identifier> replacement = None);
+  LinalgMarker(LinalgMarker &&) = default;
+  LinalgMarker(const LinalgMarker &) = default;
   LogicalResult checkAndNotify(PatternRewriter &rewriter, Operation *op) const;
   void replaceLinalgMarker(PatternRewriter &rewriter, Operation *op) const;
 
 private:
-  SmallVector<StringRef, 4> matchDisjunction;
-  Optional<StringRef> replacement;
+  SmallVector<Identifier, 4> matchDisjunction;
+  Optional<Identifier> replacement;
 };
 
 ///
@@ -203,15 +225,34 @@ private:
 enum class LinalgTilingLoopType {
   Loops = 0,
   AffineLoops = 1,
-  ParallelLoops = 2
+  ParallelLoops = 2,
 };
+using TileSizeComputationFunction =
+    std::function<SmallVector<Value, 4>(OpBuilder &, Operation *)>;
 struct LinalgTilingOptions {
-  /// The tile sizes by which to tile.
-  SmallVector<int64_t, 4> tileSizes{};
-  LinalgTilingOptions &setTileSizes(ArrayRef<int64_t> ts) {
-    tileSizes.assign(ts.begin(), ts.end());
+  /// Computation function that returns the tile sizes for each operation.
+  /// Delayed construction of constant tile sizes should occur to interoperate
+  /// with folding.
+  TileSizeComputationFunction tileSizeComputationFunction = nullptr;
+  LinalgTilingOptions &
+  setTileSizeComputationFunction(TileSizeComputationFunction &fun) {
+    tileSizeComputationFunction = fun;
     return *this;
   }
+  /// Set the `tileSizeComputationFunction` to return the values `ts`. The
+  /// values must not fold away when tiling. Otherwise, use a more robust
+  /// `tileSizeComputationFunction`.
+  LinalgTilingOptions &setTileSizes(ValueRange ts) {
+    tileSizeComputationFunction = [&](OpBuilder &, Operation *) {
+      return SmallVector<Value, 4>(ts.begin(), ts.end());
+    };
+    return *this;
+  }
+  /// Convenience function to set the `tileSizeComputationFunction` to a
+  /// function that computes tile sizes at the point they are needed. Allows
+  /// proper interaction with folding.
+  LinalgTilingOptions &setTileSizes(ArrayRef<int64_t> ts);
+
   /// The interchange vector to reorder the tiled loops.
   SmallVector<unsigned, 4> interchangeVector{};
   LinalgTilingOptions &setInterchange(ArrayRef<unsigned> interchange) {
@@ -225,6 +266,12 @@ struct LinalgTilingOptions {
     return *this;
   }
 };
+
+/// Canonicalization patterns relevant to apply after tiling patterns. These are
+/// applied automatically by the tiling pass but need to be applied manually
+/// when tiling is called programmatically.
+OwningRewritePatternList
+getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
 
 struct LinalgBaseTilingPattern : public RewritePattern {
   LinalgBaseTilingPattern(StringRef opName, MLIRContext *context,
@@ -350,8 +397,7 @@ enum class LinalgLoweringType {
   AffineLoops = 2,
   ParallelLoops = 3
 };
-template <typename OpTy>
-struct LinalgLoweringPattern : public RewritePattern {
+template <typename OpTy> struct LinalgLoweringPattern : public RewritePattern {
   LinalgLoweringPattern(MLIRContext *context, LinalgLoweringType loweringType,
                         LinalgMarker marker = LinalgMarker(),
                         PatternBenefit benefit = 1)
@@ -370,12 +416,12 @@ struct LinalgLoweringPattern : public RewritePattern {
       // TODO: Move lowering to library calls here.
       return failure();
     } else if (loweringType == LinalgLoweringType::Loops) {
-      if (failed(linalgOpToLoops<OpTy>(rewriter, op)))
+      if (failed(linalgOpToLoops(rewriter, op)))
         return failure();
     } else if (loweringType == LinalgLoweringType::AffineLoops) {
-      if (failed(linalgOpToAffineLoops<OpTy>(rewriter, op)))
+      if (failed(linalgOpToAffineLoops(rewriter, op)))
         return failure();
-    } else if (failed(linalgOpToParallelLoops<OpTy>(rewriter, op))) {
+    } else if (failed(linalgOpToParallelLoops(rewriter, op))) {
       return failure();
     }
     rewriter.eraseOp(op);
@@ -388,6 +434,67 @@ private:
   /// Controls whether the pattern lowers to library calls, scf.for, affine.for
   /// or scf.parallel.
   LinalgLoweringType loweringType;
+};
+
+//===----------------------------------------------------------------------===//
+// Op-specific patterns.
+//===----------------------------------------------------------------------===//
+/// Match and rewrite for the pattern:
+/// ```
+///    %alloc = ...
+///    [optional] %view = std.view %alloc ...
+///    %subView = subview %allocOrView ...
+///    [optional] linalg.fill(%allocOrView, %cst) ...
+///    ...
+///    linalg.copy(%in, %subView) ...
+///    vector.transfer_read %allocOrView[...], %cst ...
+/// ```
+/// into
+/// ```
+///    [unchanged] %alloc = ...
+///    [unchanged] [optional] %view = std.view %alloc ...
+///    [unchanged] [unchanged] %subView = subview %allocOrView ...
+///    ...
+///    vector.transfer_read %in[...], %cst ...
+/// ```
+/// Where there is no interleaved use between linalg.copy and transfer_read as
+/// well as no interleaved use between linalg.fill and linalg.copy (if
+/// linalg.fill is specified).
+/// This is a custom rewrite to forward partial reads (with optional fills) to
+/// vector.transfer_read.
+struct LinalgCopyVTRForwardingPattern
+    : public OpRewritePattern<vector::TransferReadOp> {
+  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransferReadOp xferOp,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Match and rewrite for the pattern:
+/// ```
+///    %alloc = ...
+///    [optional] %view = std.view %alloc ...
+///    %subView = subview %allocOrView...
+///    ...
+///    vector.transfer_write %..., %allocOrView[...]
+///    linalg.copy(%subView, %out)
+/// ```
+/// into
+/// ```
+///    [unchanged] %alloc = ...
+///    [unchanged] [optional] %view = std.view %alloc ...
+///    [unchanged] %subView = subview %allocOrView...
+///    ...
+///    vector.transfer_write %..., %out[...]
+/// ```
+/// Where there is no interleaved use between transfer_write and linalg.copy.
+/// This is a custom rewrite to forward partial writes to vector.transfer_write.
+struct LinalgCopyVTWForwardingPattern
+    : public OpRewritePattern<vector::TransferWriteOp> {
+  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransferWriteOp xferOp,
+                                PatternRewriter &rewriter) const override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -406,7 +513,7 @@ private:
 LogicalResult applyStagedPatterns(
     Operation *op, ArrayRef<OwningRewritePatternList> stage1Patterns,
     const OwningRewritePatternList &stage2Patterns,
-    llvm::function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
+    function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
 } // namespace linalg
 } // namespace mlir
 

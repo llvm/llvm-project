@@ -26,7 +26,7 @@
 ; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib
 ; RUN: rm -f %t2.o.thinlto.bc %t4
 ; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t1.o %t3.o --start-lib %t2.o --end-lib -o %t4
-; RUN: ls %t2.o.thinlto.bc
+; RUN: llvm-dis < %t2.o.thinlto.bc | grep -q '\^0 = module:'
 ; RUN: not test -e %t4
 
 ; Test that LLD generates an empty index even for lazy object file that is not added to link.
@@ -71,6 +71,7 @@
 ; BACKEND2-NEXT: <FLAGS
 ; BACKEND2-NEXT: <VALUE_GUID op0=1 op1=-5300342847281564238
 ; BACKEND2-NEXT: <COMBINED
+; BACKEND2-NEXT: <BLOCK_COUNT op0=2/>
 ; BACKEND2-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

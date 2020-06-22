@@ -32,7 +32,8 @@ public:
   static bool GetOSBuildString(std::string &s);
   static bool GetOSKernelDescription(std::string &s);
   static FileSpec GetProgramFileSpec();
-  static std::string FindXcodeContentsDirectoryInPath(llvm::StringRef path);
+  static FileSpec GetXcodeContentsDirectory();
+  static FileSpec GetXcodeDeveloperDirectory();
 
   /// Query xcrun to find an Xcode SDK directory.
   static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk);

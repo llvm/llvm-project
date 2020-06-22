@@ -3,6 +3,7 @@
 
 # CHECK:      .eh_frame contents:
 # CHECK:        00000018 00000010 0000001c FDE cie=00000000 pc=00000000...00000000
+# CHECK-NEXT:     Format:       DWARF32
 # CHECK-NEXT:     DW_CFA_GNU_args_size: +16
 # CHECK-NEXT:     DW_CFA_nop:
 

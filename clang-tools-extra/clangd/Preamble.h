@@ -31,6 +31,7 @@
 #include "support/Path.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -91,12 +92,14 @@ bool isPreambleCompatible(const PreambleData &Preamble,
                           const CompilerInvocation &CI);
 
 /// Stores information required to parse a TU using a (possibly stale) Baseline
-/// preamble. Updates compiler invocation to approximately reflect additions to
-/// the preamble section of Modified contents, e.g. new include directives.
+/// preamble. Later on this information can be injected into the main file by
+/// updating compiler invocation with \c apply. This injected section
+/// approximately reflects additions to the preamble in Modified contents, e.g.
+/// new include directives.
 class PreamblePatch {
 public:
-  // With an empty patch, the preamble is used verbatim.
-  PreamblePatch() = default;
+  /// \p Preamble is used verbatim.
+  static PreamblePatch unmodified(const PreambleData &Preamble);
   /// Builds a patch that contains new PP directives introduced to the preamble
   /// section of \p Modified compared to \p Baseline.
   /// FIXME: This only handles include directives, we should at least handle
@@ -109,10 +112,34 @@ public:
   /// \p CI that contains new directives calculated in create.
   void apply(CompilerInvocation &CI) const;
 
+  /// Returns #include directives from the \c Modified preamble that were
+  /// resolved using the \c Baseline preamble. This covers the new locations of
+  /// inclusions that were moved around, but not inclusions of new files. Those
+  /// will be recorded when parsing the main file: the includes in the injected
+  /// section will be resolved back to their spelled positions in the main file
+  /// using the presumed-location mechanism.
+  std::vector<Inclusion> preambleIncludes() const;
+
+  /// Returns preamble bounds for the Modified.
+  PreambleBounds modifiedBounds() const { return ModifiedBounds; }
+
+  /// Returns textual patch contents.
+  llvm::StringRef text() const { return PatchContents; }
+
 private:
+  PreamblePatch() = default;
   std::string PatchContents;
   std::string PatchFileName;
+  /// Includes that are present in both \p Baseline and \p Modified. Used for
+  /// patching includes of baseline preamble.
+  std::vector<Inclusion> PreambleIncludes;
+  PreambleBounds ModifiedBounds = {0, false};
 };
+
+/// Translates locations inside preamble patch to their main-file equivalent
+/// using presumed locations. Returns \p Loc if it isn't inside preamble patch.
+SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
+                                              const SourceManager &SM);
 
 } // namespace clangd
 } // namespace clang

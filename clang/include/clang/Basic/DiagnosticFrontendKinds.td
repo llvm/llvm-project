@@ -110,6 +110,9 @@ def warn_fe_concepts_ts_flag : Warning<
   "-fconcepts-ts is deprecated - use '-std=c++20' for Concepts support">,
   InGroup<Deprecated>;
 
+def err_fe_unable_to_load_basic_block_sections_file : Error<
+    "unable to load basic block sections function list: '%0'">;
+
 def warn_fe_serialized_diag_merge_failure : Warning<
     "unable to merge a subprocess's serialized diagnostics">,
     InGroup<SerializedDiagnostics>;

@@ -129,17 +129,19 @@ TEST(StmtPrinter, TestFloatingPointLiteral) {
 }
 
 TEST(StmtPrinter, TestCXXConversionDeclImplicit) {
-  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX98,
-    "struct A {"
-      "operator void *();"
-      "A operator&(A);"
-    "};"
-    "void bar(void *);"
-    "void foo(A a, A b) {"
-    "  bar(a & b);"
-    "}",
-    cxxMemberCallExpr(anything()).bind("id"),
-    "a & b"));
+  ASSERT_TRUE(
+      PrintedStmtCXXMatches(StdVer::CXX98,
+                            "struct A {"
+                            "operator void *();"
+                            "A operator&(A);"
+                            "};"
+                            "void bar(void *);"
+                            "void foo(A a, A b) {"
+                            "  bar(a & b);"
+                            "}",
+                            traverse(ast_type_traits::TK_AsIs,
+                                     cxxMemberCallExpr(anything()).bind("id")),
+                            "a & b"));
 }
 
 TEST(StmtPrinter, TestCXXConversionDeclExplicit) {

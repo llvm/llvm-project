@@ -45,7 +45,8 @@ protected:
   FDType m_fd_type;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(IOObject);
+  IOObject(const IOObject &) = delete;
+  const IOObject &operator=(const IOObject &) = delete;
 };
 } // namespace lldb_private
 

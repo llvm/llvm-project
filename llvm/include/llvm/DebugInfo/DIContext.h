@@ -156,7 +156,7 @@ struct DILineInfoSpecifier {
 
 /// This is just a helper to programmatically construct DIDumpType.
 enum DIDumpTypeCounter {
-#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
+#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   DIDT_ID_##ENUM_NAME,
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
@@ -169,7 +169,7 @@ static_assert(DIDT_ID_Count <= 32, "section types overflow storage");
 enum DIDumpType : unsigned {
   DIDT_Null,
   DIDT_All             = ~0U,
-#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
+#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   DIDT_##ENUM_NAME = 1U << DIDT_ID_##ENUM_NAME,
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION

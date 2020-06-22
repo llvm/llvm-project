@@ -248,7 +248,7 @@ void VectorizerTestPass::runOnFunction() {
 
   // Only support single block functions at this point.
   FuncOp f = getFunction();
-  if (f.getBlocks().size() != 1)
+  if (!llvm::hasSingleElement(f))
     return;
 
   std::string str;

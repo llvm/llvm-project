@@ -47,10 +47,10 @@ These objects and functions are (or return) the fundamental parsers:
 * `ok` is a trivial parser that always succeeds without advancing.
 * `pure(x)` returns a trivial parser that always succeeds without advancing,
   returning some value `x`.
+* `pure<T>()` is `pure(T{})` but does not require that T be copy-constructible.
 * `fail<T>(msg)` denotes a trivial parser that always fails, emitting the
   given message as a side effect.  The template parameter is the type of
   the value that the parser never returns.
-* `cut` is a trivial parser that always fails silently.
 * `nextCh` consumes the next character and returns its location,
   and fails at EOF.
 * `"xyz"_ch` succeeds if the next character consumed matches any of those
@@ -100,8 +100,10 @@ They are `constexpr`, so they should be viewed as type-safe macros.
 * `recovery(p, q)` is equivalent to `p || q`, except that error messages
   generated from the first parser are retained, and a flag is set in
   the ParseState to remember that error recovery was necessary.
-* `localRecovery(msg, p, q)` is equivalent to `recovery(withMessage(msg, p), defaulted(cut >> p) >> q)`.  It is useful for targeted error recovery situations
-  within statements.
+* `localRecovery(msg, p, q)` is equivalent to
+  `recovery(withMessage(msg, p), q >> pure<A>())` where `A` is the
+  result type of 'p'.
+  It is useful for targeted error recovery situations within statements.
 
 Note that
 ```

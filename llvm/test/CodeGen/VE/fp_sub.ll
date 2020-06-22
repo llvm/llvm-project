@@ -22,7 +22,6 @@ define float @func4(float %a) {
 ; CHECK-LABEL: func4:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea.sl %s1, -1063256064
-; CHECK-NEXT:    or %s1, 0, %s1
 ; CHECK-NEXT:    fadd.s %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = fadd float %a, -5.000000e+00
@@ -43,7 +42,6 @@ define float @func7(float %a) {
 ; CHECK-LABEL: func7:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea.sl %s1, -8388609
-; CHECK-NEXT:    or %s1, 0, %s1
 ; CHECK-NEXT:    fadd.s %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = fadd float %a, 0xC7EFFFFFE0000000

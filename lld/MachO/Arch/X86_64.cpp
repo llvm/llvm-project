@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InputFiles.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -24,50 +25,130 @@ namespace {
 struct X86_64 : TargetInfo {
   X86_64();
 
-  uint64_t getImplicitAddend(const uint8_t *loc, uint8_t type) const override;
-  void relocateOne(uint8_t *loc, uint8_t type, uint64_t val) const override;
+  uint64_t getImplicitAddend(MemoryBufferRef, const section_64 &,
+                             const relocation_info &) const override;
+  void relocateOne(uint8_t *loc, const Reloc &, uint64_t val) const override;
 
   void writeStub(uint8_t *buf, const DylibSymbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
                             uint64_t entryAddr) const override;
 
-  void prepareDylibSymbolRelocation(DylibSymbol &, uint8_t type) override;
-  uint64_t getDylibSymbolVA(const DylibSymbol &, uint8_t type) const override;
+  void prepareSymbolRelocation(lld::macho::Symbol &, uint8_t type) override;
+  uint64_t getSymbolVA(const lld::macho::Symbol &, uint8_t type) const override;
 };
 
 } // namespace
 
-uint64_t X86_64::getImplicitAddend(const uint8_t *loc, uint8_t type) const {
-  switch (type) {
+static std::string getErrorLocation(MemoryBufferRef mb, const section_64 &sec,
+                                    const relocation_info &rel) {
+  return ("invalid relocation at offset " + std::to_string(rel.r_address) +
+          " of " + sec.segname + "," + sec.sectname + " in " +
+          mb.getBufferIdentifier())
+      .str();
+}
+
+static void validateLength(MemoryBufferRef mb, const section_64 &sec,
+                           const relocation_info &rel,
+                           const std::vector<uint8_t> &validLengths) {
+  if (std::find(validLengths.begin(), validLengths.end(), rel.r_length) !=
+      validLengths.end())
+    return;
+
+  std::string msg = getErrorLocation(mb, sec, rel) + ": relocations of type " +
+                    std::to_string(rel.r_type) + " must have r_length of ";
+  bool first = true;
+  for (uint8_t length : validLengths) {
+    if (!first)
+      msg += " or ";
+    first = false;
+    msg += std::to_string(length);
+  }
+  fatal(msg);
+}
+
+uint64_t X86_64::getImplicitAddend(MemoryBufferRef mb, const section_64 &sec,
+                                   const relocation_info &rel) const {
+  auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  const uint8_t *loc = buf + sec.offset + rel.r_address;
+  switch (rel.r_type) {
   case X86_64_RELOC_BRANCH:
+    // XXX: ld64 also supports r_length = 0 here but I'm not sure when such a
+    // relocation will actually be generated.
+    validateLength(mb, sec, rel, {2});
+    break;
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_SIGNED_1:
   case X86_64_RELOC_SIGNED_2:
   case X86_64_RELOC_SIGNED_4:
   case X86_64_RELOC_GOT_LOAD:
-    return read32le(loc);
+  case X86_64_RELOC_GOT:
+    if (!rel.r_pcrel)
+      fatal(getErrorLocation(mb, sec, rel) + ": relocations of type " +
+            std::to_string(rel.r_type) + " must be pcrel");
+    validateLength(mb, sec, rel, {2});
+    break;
+  case X86_64_RELOC_UNSIGNED:
+    if (rel.r_pcrel)
+      fatal(getErrorLocation(mb, sec, rel) + ": relocations of type " +
+            std::to_string(rel.r_type) + " must not be pcrel");
+    validateLength(mb, sec, rel, {2, 3});
+    break;
   default:
-    error("TODO: Unhandled relocation type " + std::to_string(type));
+    error("TODO: Unhandled relocation type " + std::to_string(rel.r_type));
     return 0;
+  }
+
+  switch (rel.r_length) {
+  case 0:
+    return *loc;
+  case 1:
+    return read16le(loc);
+  case 2:
+    return read32le(loc);
+  case 3:
+    return read64le(loc);
+  default:
+    llvm_unreachable("invalid r_length");
   }
 }
 
-void X86_64::relocateOne(uint8_t *loc, uint8_t type, uint64_t val) const {
-  switch (type) {
+void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t val) const {
+  switch (r.type) {
   case X86_64_RELOC_BRANCH:
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_SIGNED_1:
   case X86_64_RELOC_SIGNED_2:
   case X86_64_RELOC_SIGNED_4:
   case X86_64_RELOC_GOT_LOAD:
+  case X86_64_RELOC_GOT:
     // These types are only used for pc-relative relocations, so offset by 4
-    // since the RIP has advanced by 4 at this point.
-    write32le(loc, val - 4);
+    // since the RIP has advanced by 4 at this point. This is only valid when
+    // r_length = 2, which is enforced by validateLength().
+    val -= 4;
+    break;
+  case X86_64_RELOC_UNSIGNED:
     break;
   default:
     llvm_unreachable(
         "getImplicitAddend should have flagged all unhandled relocation types");
+  }
+
+  switch (r.length) {
+  case 0:
+    *loc = val;
+    break;
+  case 1:
+    write16le(loc, val);
+    break;
+  case 2:
+    write32le(loc, val);
+    break;
+  case 3:
+    write64le(loc, val);
+    break;
+  default:
+    llvm_unreachable("invalid r_length");
   }
 }
 
@@ -127,31 +208,54 @@ void X86_64::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
                    in.stubHelper->addr);
 }
 
-void X86_64::prepareDylibSymbolRelocation(DylibSymbol &sym, uint8_t type) {
+void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym, uint8_t type) {
   switch (type) {
   case X86_64_RELOC_GOT_LOAD:
+    // TODO: implement mov -> lea relaxation for non-dynamic symbols
+  case X86_64_RELOC_GOT:
     in.got->addEntry(sym);
     break;
-  case X86_64_RELOC_BRANCH:
-    in.stubs->addEntry(sym);
+  case X86_64_RELOC_BRANCH: {
+    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
+      in.stubs->addEntry(*dysym);
     break;
-  case X86_64_RELOC_GOT:
-    fatal("TODO: Unhandled dylib symbol relocation X86_64_RELOC_GOT");
+  }
+  case X86_64_RELOC_UNSIGNED:
+  case X86_64_RELOC_SIGNED:
+  case X86_64_RELOC_SIGNED_1:
+  case X86_64_RELOC_SIGNED_2:
+  case X86_64_RELOC_SIGNED_4:
+    break;
+  case X86_64_RELOC_SUBTRACTOR:
+  case X86_64_RELOC_TLV:
+    fatal("TODO: handle relocation type " + std::to_string(type));
+    break;
   default:
-    llvm_unreachable("Unexpected dylib relocation type");
+    llvm_unreachable("unexpected relocation type");
   }
 }
 
-uint64_t X86_64::getDylibSymbolVA(const DylibSymbol &sym, uint8_t type) const {
+uint64_t X86_64::getSymbolVA(const lld::macho::Symbol &sym,
+                             uint8_t type) const {
   switch (type) {
   case X86_64_RELOC_GOT_LOAD:
+  case X86_64_RELOC_GOT:
     return in.got->addr + sym.gotIndex * WordSize;
   case X86_64_RELOC_BRANCH:
-    return in.stubs->addr + sym.stubsIndex * sizeof(stub);
-  case X86_64_RELOC_GOT:
-    fatal("TODO: Unhandled dylib symbol relocation X86_64_RELOC_GOT");
+    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
+      return in.stubs->addr + dysym->stubsIndex * sizeof(stub);
+    return sym.getVA();
+  case X86_64_RELOC_UNSIGNED:
+  case X86_64_RELOC_SIGNED:
+  case X86_64_RELOC_SIGNED_1:
+  case X86_64_RELOC_SIGNED_2:
+  case X86_64_RELOC_SIGNED_4:
+    return sym.getVA();
+  case X86_64_RELOC_SUBTRACTOR:
+  case X86_64_RELOC_TLV:
+    fatal("TODO: handle relocation type " + std::to_string(type));
   default:
-    llvm_unreachable("Unexpected dylib relocation type");
+    llvm_unreachable("Unexpected relocation type");
   }
 }
 

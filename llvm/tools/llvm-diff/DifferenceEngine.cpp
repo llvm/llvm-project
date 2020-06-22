@@ -577,7 +577,7 @@ void FunctionDifferenceEngine::runBlockDiff(BasicBlock::iterator LStart,
   DiffLogBuilder Diff(Engine.getConsumer());
 
   // Drop trailing matches.
-  while (Path.back() == DC_match)
+  while (Path.size() && Path.back() == DC_match)
     Path.pop_back();
 
   // Skip leading matches.

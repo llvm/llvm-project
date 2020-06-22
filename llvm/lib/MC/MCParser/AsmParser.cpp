@@ -267,7 +267,7 @@ private:
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI);
   bool parseCurlyBlockScope(SmallVectorImpl<AsmRewrite>& AsmStrRewrites);
-  bool parseCppHashLineFilenameComment(SMLoc L);
+  bool parseCppHashLineFilenameComment(SMLoc L, bool SaveLocInfo = true);
 
   void checkForBadMacro(SMLoc DirectiveLoc, StringRef Name, StringRef Body,
                         ArrayRef<MCAsmMacroParameter> Parameters);
@@ -1699,7 +1699,9 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   StringRef IDVal;
   int64_t LocalLabelVal = -1;
   if (Lexer.is(AsmToken::HashDirective))
-    return parseCppHashLineFilenameComment(IDLoc);
+    return parseCppHashLineFilenameComment(IDLoc,
+                                           !isInsideMacroInstantiation());
+
   // Allow an integer followed by a ':' as a directional local label.
   if (Lexer.is(AsmToken::Integer)) {
     LocalLabelVal = getTok().getIntVal();
@@ -2294,7 +2296,7 @@ AsmParser::parseCurlyBlockScope(SmallVectorImpl<AsmRewrite> &AsmStrRewrites) {
 
 /// parseCppHashLineFilenameComment as this:
 ///   ::= # number "filename"
-bool AsmParser::parseCppHashLineFilenameComment(SMLoc L) {
+bool AsmParser::parseCppHashLineFilenameComment(SMLoc L, bool SaveLocInfo) {
   Lex(); // Eat the hash token.
   // Lexer only ever emits HashDirective if it fully formed if it's
   // done the checking already so this is an internal error.
@@ -2306,6 +2308,9 @@ bool AsmParser::parseCppHashLineFilenameComment(SMLoc L) {
          "Lexing Cpp line comment: Expected String");
   StringRef Filename = getTok().getString();
   Lex();
+
+  if (!SaveLocInfo)
+    return false;
 
   // Get rid of the enclosing quotes.
   Filename = Filename.substr(1, Filename.size() - 2);
@@ -4454,7 +4459,8 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
     if (getLexer().is(AsmToken::Eof))
       return Error(DirectiveLoc, "no matching '.endmacro' in definition");
 
-    // Otherwise, check whether we have reach the .endmacro.
+    // Otherwise, check whether we have reach the .endmacro or the start of a
+    // preprocessor line marker.
     if (getLexer().is(AsmToken::Identifier)) {
       if (getTok().getIdentifier() == ".endm" ||
           getTok().getIdentifier() == ".endmacro") {
@@ -4474,6 +4480,8 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
         // macro is expanded so just ignore them for now.
         ++MacroDepth;
       }
+    } else if (Lexer.is(AsmToken::HashDirective)) {
+      (void)parseCppHashLineFilenameComment(getLexer().getLoc());
     }
 
     // Otherwise, scan til the end of the statement.

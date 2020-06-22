@@ -15,6 +15,7 @@
 
 #include "Protocol.h"
 #include "support/Context.h"
+#include "support/ThreadsafeFS.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -167,7 +168,7 @@ llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
 /// though the latter may have been overridden in main()!
 format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
                                           llvm::StringRef Content,
-                                          llvm::vfs::FileSystem *FS);
+                                          const ThreadsafeFS &TFS);
 
 /// Cleanup and format the given replacements.
 llvm::Expected<tooling::Replacements>
@@ -292,6 +293,10 @@ EligibleRegion getEligiblePoints(llvm::StringRef Code,
 struct DefinedMacro {
   llvm::StringRef Name;
   const MacroInfo *Info;
+  /// Location of the identifier that names the macro.
+  /// Unlike Info->Location, this translates preamble-patch locations to
+  /// main-file locations.
+  SourceLocation NameLoc;
 };
 /// Gets the macro referenced by \p SpelledTok. It must be a spelled token
 /// aligned to the beginning of an identifier.

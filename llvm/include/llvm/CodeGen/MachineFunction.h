@@ -144,6 +144,8 @@ public:
   //  operands, this also means that all generic virtual registers have been
   //  constrained to virtual registers (assigned to register classes) and that
   //  all sizes attached to them have been eliminated.
+  // TiedOpsRewritten: The twoaddressinstruction pass will set this flag, it
+  //  means that tied-def have been rewritten to meet the RegConstraint.
   enum class Property : unsigned {
     IsSSA,
     NoPHIs,
@@ -153,7 +155,8 @@ public:
     Legalized,
     RegBankSelected,
     Selected,
-    LastProperty = Selected,
+    TiedOpsRewritten,
+    LastProperty = TiedOpsRewritten,
   };
 
   bool hasProperty(Property P) const {
@@ -397,9 +400,9 @@ public:
   /// For now we support only cases when argument is transferred through one
   /// register.
   struct ArgRegPair {
-    unsigned Reg;
+    Register Reg;
     uint16_t ArgNo;
-    ArgRegPair(unsigned R, unsigned Arg) : Reg(R), ArgNo(Arg) {
+    ArgRegPair(Register R, unsigned Arg) : Reg(R), ArgNo(Arg) {
       assert(Arg < (1 << 16) && "Arg out of range");
     }
   };
@@ -690,7 +693,7 @@ public:
 
   /// addLiveIn - Add the specified physical register as a live-in value and
   /// create a corresponding virtual register for it.
-  unsigned addLiveIn(unsigned PReg, const TargetRegisterClass *RC);
+  Register addLiveIn(MCRegister PReg, const TargetRegisterClass *RC);
 
   //===--------------------------------------------------------------------===//
   // BasicBlock accessor functions.

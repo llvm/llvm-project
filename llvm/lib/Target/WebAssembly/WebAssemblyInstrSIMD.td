@@ -40,30 +40,46 @@ def LaneIdx#SIZE : ImmLeaf<i32, "return 0 <= Imm && Imm < "#SIZE#";">;
 //===----------------------------------------------------------------------===//
 
 // Load: v128.load
-let mayLoad = 1, UseNamedOperandTable = 1 in
-defm LOAD_V128 :
+let mayLoad = 1, UseNamedOperandTable = 1 in {
+defm LOAD_V128_A32 :
   SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
          (outs), (ins P2Align:$p2align, offset32_op:$off), [],
          "v128.load\t$dst, ${off}(${addr})$p2align",
          "v128.load\t$off$p2align", 0>;
+defm LOAD_V128_A64 :
+  SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
+         (outs), (ins P2Align:$p2align, offset64_op:$off), [],
+         "v128.load\t$dst, ${off}(${addr})$p2align",
+         "v128.load\t$off$p2align", 0>;
+}
 
 // Def load and store patterns from WebAssemblyInstrMemory.td for vector types
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
-def : LoadPatNoOffset<vec_t, load, LOAD_V128>;
-def : LoadPatImmOff<vec_t, load, regPlusImm, LOAD_V128>;
-def : LoadPatImmOff<vec_t, load, or_is_add, LOAD_V128>;
-def : LoadPatOffsetOnly<vec_t, load, LOAD_V128>;
-def : LoadPatGlobalAddrOffOnly<vec_t, load, LOAD_V128>;
+defm : LoadPatNoOffset<vec_t, load, "LOAD_V128">;
+defm : LoadPatImmOff<vec_t, load, regPlusImm, "LOAD_V128">;
+defm : LoadPatImmOff<vec_t, load, or_is_add, "LOAD_V128">;
+defm : LoadPatOffsetOnly<vec_t, load, "LOAD_V128">;
+defm : LoadPatGlobalAddrOffOnly<vec_t, load, "LOAD_V128">;
 }
 
 // vNxM.load_splat
 multiclass SIMDLoadSplat<string vec, bits<32> simdop> {
-  let mayLoad = 1, UseNamedOperandTable = 1 in
-  defm LOAD_SPLAT_#vec :
-    SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-           (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+  let mayLoad = 1, UseNamedOperandTable = 1 in {
+  defm LOAD_SPLAT_#vec#_A32 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
+           (outs),
+           (ins P2Align:$p2align, offset32_op:$off), [],
            vec#".load_splat\t$dst, ${off}(${addr})$p2align",
            vec#".load_splat\t$off$p2align", simdop>;
+  defm LOAD_SPLAT_#vec#_A64 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
+           (outs),
+           (ins P2Align:$p2align, offset64_op:$off), [],
+           vec#".load_splat\t$dst, ${off}(${addr})$p2align",
+           vec#".load_splat\t$off$p2align", simdop>;
+  }
 }
 
 defm "" : SIMDLoadSplat<"v8x16", 7>;
@@ -78,36 +94,50 @@ def load_splat : PatFrag<(ops node:$addr), (wasm_load_splat node:$addr)>;
 
 foreach args = [["v16i8", "v8x16"], ["v8i16", "v16x8"], ["v4i32", "v32x4"],
                 ["v2i64", "v64x2"], ["v4f32", "v32x4"], ["v2f64", "v64x2"]] in {
-def : LoadPatNoOffset<!cast<ValueType>(args[0]),
-                      load_splat,
-                      !cast<NI>("LOAD_SPLAT_"#args[1])>;
-def : LoadPatImmOff<!cast<ValueType>(args[0]),
-                    load_splat,
-                    regPlusImm,
-                    !cast<NI>("LOAD_SPLAT_"#args[1])>;
-def : LoadPatImmOff<!cast<ValueType>(args[0]),
-                    load_splat,
-                    or_is_add,
-                    !cast<NI>("LOAD_SPLAT_"#args[1])>;
-def : LoadPatOffsetOnly<!cast<ValueType>(args[0]),
-                        load_splat,
-                        !cast<NI>("LOAD_SPLAT_"#args[1])>;
-def : LoadPatGlobalAddrOffOnly<!cast<ValueType>(args[0]),
-                               load_splat,
-                               !cast<NI>("LOAD_SPLAT_"#args[1])>;
+defm : LoadPatNoOffset<!cast<ValueType>(args[0]),
+                       load_splat,
+                       "LOAD_SPLAT_"#args[1]>;
+defm : LoadPatImmOff<!cast<ValueType>(args[0]),
+                     load_splat,
+                     regPlusImm,
+                     "LOAD_SPLAT_"#args[1]>;
+defm : LoadPatImmOff<!cast<ValueType>(args[0]),
+                     load_splat,
+                     or_is_add,
+                     "LOAD_SPLAT_"#args[1]>;
+defm : LoadPatOffsetOnly<!cast<ValueType>(args[0]),
+                         load_splat,
+                         "LOAD_SPLAT_"#args[1]>;
+defm : LoadPatGlobalAddrOffOnly<!cast<ValueType>(args[0]),
+                                load_splat,
+                                "LOAD_SPLAT_"#args[1]>;
 }
 
 // Load and extend
 multiclass SIMDLoadExtend<ValueType vec_t, string name, bits<32> simdop> {
   let mayLoad = 1, UseNamedOperandTable = 1 in {
-  defm LOAD_EXTEND_S_#vec_t :
-    SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
+  defm LOAD_EXTEND_S_#vec_t#_A32 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
            name#"_s\t$dst, ${off}(${addr})$p2align",
            name#"_s\t$off$p2align", simdop>;
-  defm LOAD_EXTEND_U_#vec_t :
-    SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
+  defm LOAD_EXTEND_U_#vec_t#_A32 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+           name#"_u\t$dst, ${off}(${addr})$p2align",
+           name#"_u\t$off$p2align", !add(simdop, 1)>;
+  defm LOAD_EXTEND_S_#vec_t#_A64 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
+           (outs), (ins P2Align:$p2align, offset64_op:$off), [],
+           name#"_s\t$dst, ${off}(${addr})$p2align",
+           name#"_s\t$off$p2align", simdop>;
+  defm LOAD_EXTEND_U_#vec_t#_A64 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
+           (outs), (ins P2Align:$p2align, offset64_op:$off), [],
            name#"_u\t$dst, ${off}(${addr})$p2align",
            name#"_u\t$off$p2align", !add(simdop, 1)>;
   }
@@ -121,34 +151,39 @@ foreach types = [[v8i16, i8], [v4i32, i16], [v2i64, i32]] in
 foreach exts = [["sextloadv", "_S"],
                 ["zextloadv", "_U"],
                 ["extloadv", "_U"]] in {
-def : LoadPatNoOffset<types[0], !cast<PatFrag>(exts[0]#types[1]),
-                      !cast<NI>("LOAD_EXTEND"#exts[1]#"_"#types[0])>;
-def : LoadPatImmOff<types[0], !cast<PatFrag>(exts[0]#types[1]), regPlusImm,
-                    !cast<NI>("LOAD_EXTEND"#exts[1]#"_"#types[0])>;
-def : LoadPatImmOff<types[0], !cast<PatFrag>(exts[0]#types[1]), or_is_add,
-                    !cast<NI>("LOAD_EXTEND"#exts[1]#"_"#types[0])>;
-def : LoadPatOffsetOnly<types[0], !cast<PatFrag>(exts[0]#types[1]),
-                        !cast<NI>("LOAD_EXTEND"#exts[1]#"_"#types[0])>;
-def : LoadPatGlobalAddrOffOnly<types[0], !cast<PatFrag>(exts[0]#types[1]),
-                               !cast<NI>("LOAD_EXTEND"#exts[1]#"_"#types[0])>;
+defm : LoadPatNoOffset<types[0], !cast<PatFrag>(exts[0]#types[1]),
+                       "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
+defm : LoadPatImmOff<types[0], !cast<PatFrag>(exts[0]#types[1]), regPlusImm,
+                     "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
+defm : LoadPatImmOff<types[0], !cast<PatFrag>(exts[0]#types[1]), or_is_add,
+                     "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
+defm : LoadPatOffsetOnly<types[0], !cast<PatFrag>(exts[0]#types[1]),
+                         "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
+defm : LoadPatGlobalAddrOffOnly<types[0], !cast<PatFrag>(exts[0]#types[1]),
+                                "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
 }
 
 
 // Store: v128.store
-let mayStore = 1, UseNamedOperandTable = 1 in
-defm STORE_V128 :
+let mayStore = 1, UseNamedOperandTable = 1 in {
+defm STORE_V128_A32 :
   SIMD_I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr, V128:$vec),
          (outs), (ins P2Align:$p2align, offset32_op:$off), [],
          "v128.store\t${off}(${addr})$p2align, $vec",
          "v128.store\t$off$p2align", 11>;
-
+defm STORE_V128_A64 :
+  SIMD_I<(outs), (ins P2Align:$p2align, offset64_op:$off, I64:$addr, V128:$vec),
+         (outs), (ins P2Align:$p2align, offset64_op:$off), [],
+         "v128.store\t${off}(${addr})$p2align, $vec",
+         "v128.store\t$off$p2align", 11>;
+}
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
 // Def load and store patterns from WebAssemblyInstrMemory.td for vector types
-def : StorePatNoOffset<vec_t, store, STORE_V128>;
-def : StorePatImmOff<vec_t, store, regPlusImm, STORE_V128>;
-def : StorePatImmOff<vec_t, store, or_is_add, STORE_V128>;
-def : StorePatOffsetOnly<vec_t, store, STORE_V128>;
-def : StorePatGlobalAddrOffOnly<vec_t, store, STORE_V128>;
+defm : StorePatNoOffset<vec_t, store, "STORE_V128">;
+defm : StorePatImmOff<vec_t, store, regPlusImm, "STORE_V128">;
+defm : StorePatImmOff<vec_t, store, or_is_add, "STORE_V128">;
+defm : StorePatOffsetOnly<vec_t, store, "STORE_V128">;
+defm : StorePatGlobalAddrOffOnly<vec_t, store, "STORE_V128">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -673,6 +708,12 @@ def : Pat<(v2i64 (shifts[0] (v2i64 V128:$vec), I32:$x)),
 // Integer binary arithmetic
 //===----------------------------------------------------------------------===//
 
+multiclass SIMDBinaryIntNoI8x16<SDNode node, string name, bits<32> baseInst> {
+  defm "" : SIMDBinary<v8i16, "i16x8", node, name, !add(baseInst, 32)>;
+  defm "" : SIMDBinary<v4i32, "i32x4", node, name, !add(baseInst, 64)>;
+  defm "" : SIMDBinary<v2i64, "i64x2", node, name, !add(baseInst, 96)>;
+}
+
 multiclass SIMDBinaryIntSmall<SDNode node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<v16i8, "i8x16", node, name, baseInst>;
   defm "" : SIMDBinary<v8i16, "i16x8", node, name, !add(baseInst, 32)>;
@@ -704,7 +745,7 @@ defm SUB_SAT_U :
 
 // Integer multiplication: mul
 let isCommutable = 1 in
-defm MUL : SIMDBinaryIntNoI64x2<mul, "mul", 117>;
+defm MUL : SIMDBinaryIntNoI8x16<mul, "mul", 117>;
 
 // Integer min_s / min_u / max_s / max_u
 let isCommutable = 1 in {
@@ -758,6 +799,16 @@ defm NEG : SIMDUnaryFP<fneg, "neg", 225>;
 
 // Square root: sqrt
 defm SQRT : SIMDUnaryFP<fsqrt, "sqrt", 227>;
+
+// Rounding: ceil, floor, trunc, nearest
+defm CEIL : SIMDUnary<v4f32, "f32x4", int_wasm_ceil, "ceil", 216>;
+defm FLOOR : SIMDUnary<v4f32, "f32x4", int_wasm_floor, "floor", 217>;
+defm TRUNC: SIMDUnary<v4f32, "f32x4", int_wasm_trunc, "trunc", 218>;
+defm NEAREST: SIMDUnary<v4f32, "f32x4", int_wasm_nearest, "nearest", 219>;
+defm CEIL : SIMDUnary<v2f64, "f64x2", int_wasm_ceil, "ceil", 220>;
+defm FLOOR : SIMDUnary<v2f64, "f64x2", int_wasm_floor, "floor", 221>;
+defm TRUNC: SIMDUnary<v2f64, "f64x2", int_wasm_trunc, "trunc", 222>;
+defm NEAREST: SIMDUnary<v2f64, "f64x2", int_wasm_nearest, "nearest", 223>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic

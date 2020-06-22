@@ -1670,6 +1670,18 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     CurOp += X86::AddrNumOperands;
     break;
 
+  case X86II::MRM0X:
+  case X86II::MRM1X:
+  case X86II::MRM2X:
+  case X86II::MRM3X:
+  case X86II::MRM4X:
+  case X86II::MRM5X:
+  case X86II::MRM6X:
+  case X86II::MRM7X:
+    emitByte(BaseOpcode, OS);
+    emitByte(0xC0 + ((Form - X86II::MRM0X) << 3), OS);
+    break;
+
   case X86II::MRM_C0:
   case X86II::MRM_C1:
   case X86II::MRM_C2:

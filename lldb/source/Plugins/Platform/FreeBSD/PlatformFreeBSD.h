@@ -62,7 +62,8 @@ public:
                                   lldb::addr_t offset) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformFreeBSD);
+  PlatformFreeBSD(const PlatformFreeBSD &) = delete;
+  const PlatformFreeBSD &operator=(const PlatformFreeBSD &) = delete;
 };
 
 } // namespace platform_freebsd

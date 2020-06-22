@@ -298,8 +298,8 @@ def S_MOV_FED_B32 : SOP1_32 <"s_mov_fed_b32">;
 
 let SubtargetPredicate = HasVGPRIndexMode in {
 def S_SET_GPR_IDX_IDX : SOP1_0_32<"s_set_gpr_idx_idx"> {
-  let Uses = [M0];
-  let Defs = [M0];
+  let Uses = [M0, MODE];
+  let Defs = [M0, MODE];
 }
 }
 
@@ -793,7 +793,11 @@ def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "$sdst, $simm16"
 >;
 
+let hasSideEffects = 1 in {
+
 let mayLoad = 1 in {
+// s_getreg_b32 should use hasSideEffects = 1 for tablegen to allow
+// its use in the readcyclecounter selection.
 def S_GETREG_B32 : SOPK_Pseudo <
   "s_getreg_b32",
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
@@ -801,14 +805,20 @@ def S_GETREG_B32 : SOPK_Pseudo <
 >;
 }
 
-let hasSideEffects = 1 in {
+let mayLoad = 0, mayStore =0 in {
 
 def S_SETREG_B32 : SOPK_Pseudo <
   "s_setreg_b32",
   (outs), (ins SReg_32:$sdst, hwreg:$simm16),
   "$simm16, $sdst",
-  [(AMDGPUsetreg i32:$sdst, (i16 timm:$simm16))]
->;
+  [(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst)]> {
+
+  // Use custom inserter to optimize some cases to
+  // S_DENORM_MODE/S_ROUND_MODE.
+  let usesCustomInserter = 1;
+  let Defs = [MODE];
+  let Uses = [MODE];
+}
 
 // FIXME: Not on SI?
 //def S_GETREG_REGRD_B32 : SOPK_32 <sopk<0x14, 0x13>, "s_getreg_regrd_b32">;
@@ -819,8 +829,11 @@ def S_SETREG_IMM32_B32 : SOPK_Pseudo <
   "$simm16, $imm"> {
   let Size = 8; // Unlike every other SOPK instruction.
   let has_sdst = 0;
+  let Defs = [MODE];
+  let Uses = [MODE];
 }
 
+}
 } // End hasSideEffects = 1
 
 class SOPK_WAITCNT<string opName, list<dag> pat=[]> :
@@ -953,12 +966,16 @@ def S_CMP_LG_U64 : SOPC_CMP_64 <0x13, "s_cmp_lg_u64", COND_NE>;
 } // End SubtargetPredicate = isGFX8Plus
 
 let SubtargetPredicate = HasVGPRIndexMode in {
+// Setting the GPR index mode is really writing the fields in the mode
+// register. We don't want to add mode register uses to every
+// instruction, and it's too complicated to deal with anyway. This is
+// modeled just as a side effect.
 def S_SET_GPR_IDX_ON : SOPC <0x11,
   (outs),
   (ins SSrc_b32:$src0, GPRIdxMode:$src1),
   "s_set_gpr_idx_on $src0,$src1"> {
-  let Defs = [M0]; // No scc def
-  let Uses = [M0]; // Other bits of m0 unmodified.
+  let Defs = [M0, MODE]; // No scc def
+  let Uses = [M0, MODE]; // Other bits of mode, m0 unmodified.
   let hasSideEffects = 1; // Sets mode.gpr_idx_en
   let FixedSize = 1;
 }
@@ -1132,7 +1149,7 @@ def S_WAKEUP : SOPP <0x00000003, (ins), "s_wakeup"> {
   let mayStore = 1;
 }
 
-let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
+let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
 def S_WAITCNT : SOPP <0x0000000c, (ins WAIT_FLAG:$simm16), "s_waitcnt $simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
 def S_SETHALT : SOPP <0x0000000d, (ins i16imm:$simm16), "s_sethalt $simm16">;
@@ -1145,8 +1162,8 @@ def S_SETKILL : SOPP <0x0000000b, (ins i16imm:$simm16), "s_setkill $simm16">;
 def S_SLEEP : SOPP <0x0000000e, (ins i32imm:$simm16),
   "s_sleep $simm16", [(int_amdgcn_s_sleep timm:$simm16)]> {
   let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 def S_SETPRIO : SOPP <0x0000000f, (ins i16imm:$simm16), "s_setprio $simm16">;
@@ -1171,14 +1188,14 @@ def S_ICACHE_INV : SOPP <0x00000013, (ins), "s_icache_inv"> {
 def S_INCPERFLEVEL : SOPP <0x00000014, (ins i32imm:$simm16), "s_incperflevel $simm16",
   [(int_amdgcn_s_incperflevel timm:$simm16)]> {
   let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 def S_DECPERFLEVEL : SOPP <0x00000015, (ins i32imm:$simm16), "s_decperflevel $simm16",
   [(int_amdgcn_s_decperflevel timm:$simm16)]> {
   let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 def S_TTRACEDATA : SOPP <0x00000016, (ins), "s_ttracedata"> {
   let simm16 = 0;
@@ -1187,6 +1204,8 @@ def S_TTRACEDATA : SOPP <0x00000016, (ins), "s_ttracedata"> {
 let SubtargetPredicate = HasVGPRIndexMode in {
 def S_SET_GPR_IDX_OFF : SOPP<0x1c, (ins), "s_set_gpr_idx_off"> {
   let simm16 = 0;
+  let Defs = [MODE];
+  let Uses = [MODE];
 }
 }
 } // End hasSideEffects
@@ -1194,7 +1213,8 @@ def S_SET_GPR_IDX_OFF : SOPP<0x1c, (ins), "s_set_gpr_idx_off"> {
 let SubtargetPredicate = HasVGPRIndexMode in {
 def S_SET_GPR_IDX_MODE : SOPP<0x1d, (ins GPRIdxMode:$simm16),
   "s_set_gpr_idx_mode$simm16"> {
-  let Defs = [M0];
+  let Defs = [M0, MODE];
+  let Uses = [MODE];
 }
 }
 
@@ -1209,13 +1229,15 @@ let SubtargetPredicate = isGFX10Plus in {
     }
   def S_WAITCNT_DEPCTR :
     SOPP <0x023, (ins s16imm:$simm16), "s_waitcnt_depctr $simm16">;
-  def S_ROUND_MODE :
-    SOPP<0x024, (ins s16imm:$simm16), "s_round_mode $simm16">;
-  def S_DENORM_MODE :
-    SOPP<0x025, (ins i32imm:$simm16), "s_denorm_mode $simm16",
-    [(SIdenorm_mode (i32 timm:$simm16))]> {
-      let hasSideEffects = 1;
-    }
+
+  let hasSideEffects = 0, Uses = [MODE], Defs = [MODE] in {
+    def S_ROUND_MODE :
+      SOPP<0x024, (ins s16imm:$simm16), "s_round_mode $simm16">;
+    def S_DENORM_MODE :
+      SOPP<0x025, (ins i32imm:$simm16), "s_denorm_mode $simm16",
+      [(SIdenorm_mode (i32 timm:$simm16))]>;
+  }
+
   def S_TTRACEDATA_IMM :
     SOPP<0x028, (ins s16imm:$simm16), "s_ttracedata_imm $simm16">;
 } // End SubtargetPredicate = isGFX10Plus

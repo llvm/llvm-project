@@ -14,8 +14,6 @@
 #define LLVM_ANALYSIS_DOTGRAPHTRAITSPASS_H
 
 #include "llvm/Analysis/CFGPrinter.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/FileSystem.h"
 
 namespace llvm {
 

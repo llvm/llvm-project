@@ -43,14 +43,11 @@ TEST(VectorTypesTest, FixedLength) {
   EXPECT_EQ(V16Int8Ty->getNumElements(), 16U);
   EXPECT_EQ(V16Int8Ty->getElementType()->getScalarSizeInBits(), 8U);
 
-  auto *V8Int32Ty = dyn_cast<FixedVectorType>(VectorType::get(Int32Ty, 8));
+  auto *V8Int32Ty =
+      dyn_cast<FixedVectorType>(VectorType::get(Int32Ty, 8, false));
   ASSERT_NE(nullptr, V8Int32Ty);
   EXPECT_EQ(V8Int32Ty->getNumElements(), 8U);
   EXPECT_EQ(V8Int32Ty->getElementType()->getScalarSizeInBits(), 32U);
-
-  auto *V8Int32TyExplicitFalse =
-      dyn_cast<FixedVectorType>(VectorType::get(Int32Ty, 8, false));
-  EXPECT_VTY_EQ(V8Int32Ty, V8Int32TyExplicitFalse);
 
   auto *V8Int8Ty =
       dyn_cast<FixedVectorType>(VectorType::get(Int8Ty, V8Int32Ty));

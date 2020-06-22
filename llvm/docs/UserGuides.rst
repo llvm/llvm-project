@@ -35,6 +35,7 @@ intermediate LLVM representation.
    HowToBuildWithPGO
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
+   HowToUpdateDebugInfo
    LinkTimeOptimization
    LoopTerminology
    MarkdownQuickstartTemplate
@@ -95,7 +96,10 @@ LLVM Builds and Distributions
 
 :doc:`Support Library <SupportLibrary>`
    This document describes the LLVM Support Library (``lib/Support``) and
-   how to keep LLVM source code portable
+   how to keep LLVM source code portable.
+
+:doc:`AdvancedBuilds`
+   This document describes more advanced build configurations.
 
 Optimizations
 -------------

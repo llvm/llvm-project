@@ -27,6 +27,7 @@ constexpr size_t FileNamePadSize = 6;
 constexpr size_t NameSize = 8;
 constexpr size_t SymbolTableEntrySize = 18;
 constexpr size_t RelocationSerializationSize32 = 10;
+constexpr uint16_t RelocOverflow = 65535;
 
 enum ReservedSectionNum : int16_t { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
 
@@ -175,6 +176,17 @@ enum SymbolType : uint8_t {
   XTY_LD = 2, ///< Label definition.
               ///< Defines an entry point to an initialized csect.
   XTY_CM = 3  ///< Common csect definition. For uninitialized storage.
+};
+
+/// Values for visibility as they would appear when encoded in the high 4 bits
+/// of the 16-bit unsigned n_type field of symbol table entries. Valid for
+/// 32-bit XCOFF only when the vstamp in the auxiliary header is greater than 1.
+enum VisibilityType : uint16_t {
+  SYM_V_UNSPECIFIED = 0x0000,
+  SYM_V_INTERNAL = 0x1000,
+  SYM_V_HIDDEN = 0x2000,
+  SYM_V_PROTECTED = 0x3000,
+  SYM_V_EXPORTED = 0x4000
 };
 
 // Relocation types, defined in `/usr/include/reloc.h`.

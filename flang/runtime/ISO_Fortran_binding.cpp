@@ -17,7 +17,8 @@ namespace Fortran::ISO {
 extern "C" {
 
 static inline constexpr bool IsCharacterType(CFI_type_t ty) {
-  return ty == CFI_type_char;
+  return ty == CFI_type_char || ty == CFI_type_char16_t ||
+      ty == CFI_type_char32_t;
 }
 static inline constexpr bool IsAssumedSize(const CFI_cdesc_t *dv) {
   return dv->rank > 0 && dv->dim[dv->rank - 1].extent == -1;
@@ -200,6 +201,12 @@ static constexpr std::size_t MinElemLen(CFI_type_t type) {
     break;
   case CFI_type_cptr:
     minElemLen = sizeof(void *);
+    break;
+  case CFI_type_char16_t:
+    minElemLen = sizeof(char16_t);
+    break;
+  case CFI_type_char32_t:
+    minElemLen = sizeof(char32_t);
     break;
   }
   return minElemLen;

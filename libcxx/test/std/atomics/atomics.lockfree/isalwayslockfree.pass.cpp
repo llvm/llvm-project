@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads, c++98, c++03, c++11, c++14
+// UNSUPPORTED: libcpp-has-no-threads, c++03, c++11, c++14
 
 // <atomic>
 

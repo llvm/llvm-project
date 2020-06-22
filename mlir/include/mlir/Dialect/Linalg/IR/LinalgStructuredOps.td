@@ -197,64 +197,6 @@ def DotOp : LinalgStructured_Op<"dot", [NInputs<2>, NOutputs<1>]> {
   let hasFolder = 1;
 }
 
-def MatvecOp : LinalgStructured_Op<"matvec", [NInputs<2>, NOutputs<1>]> {
-
-  let arguments = (ins AnyStridedMemRefOfRank<2>,
-                       AnyStridedMemRefOfRank<1>,
-                       AnyStridedMemRefOfRank<1>);
-
-  let extraClassDeclaration = libraryCallName # [{
-    llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
-      return SmallVector<StringRef, 8>{
-        getParallelIteratorTypeName(), getReductionIteratorTypeName()};
-    }
-
-    // A(i, r_j) * B(r_j) -> C(i)
-    llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
-      MLIRContext *context = getContext();
-      AffineExpr i, r_j;
-      bindDims(context, i, r_j);
-      return SmallVector<AffineMap, 8>{
-        AffineMap::get(2, 0, {i, r_j}, context), 
-        AffineMap::get(2, 0, {r_j}, context),
-        AffineMap::get(2, 0, {i}, context)
-      };
-    }
-  }];
-
-  let hasFolder = 1;
-}
-
-def MatmulOp : LinalgStructured_Op<"matmul", [NInputs<2>, NOutputs<1>]> {
-
-  let arguments = (ins AnyStridedMemRefOfRank<2>,
-                       AnyStridedMemRefOfRank<2>,
-                       AnyStridedMemRefOfRank<2>);
-
-  let extraClassDeclaration = libraryCallName # [{
-    llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
-      return SmallVector<StringRef, 8>{
-        getParallelIteratorTypeName(),
-        getParallelIteratorTypeName(),
-        getReductionIteratorTypeName()};
-    }
-
-    //   A(i, r_k) * B(r_k, j) -> C(i, j)
-    llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
-      MLIRContext *context = getContext();
-      AffineExpr i, j, r_k;
-      bindDims(context, i, j, r_k);
-      return SmallVector<AffineMap, 8>{
-        AffineMap::get(3, 0, {i, r_k}, context),
-        AffineMap::get(3, 0, {r_k, j},context),
-        AffineMap::get(3, 0, {i, j}, context)
-      };
-    }
-  }];
-
-  let hasFolder = 1;
-}
-
 /// A base class for pooling operation such as conv. The arguments must contain
 /// optional arguments `strides`, `dilations` and `padding` with following type:
 ///   OptionalAttr<I64ArrayAttr>:$strides
@@ -314,6 +256,12 @@ class PoolingBase_Op<string mnemonic, list<OpTrait> props>
       if (!padding().hasValue()) return 0;
       return padding().getValue().getValue<int64_t>({i, 0});
     }
+
+    int64_t getHighPad(unsigned i) {
+      assert(i < getNumWindowLoops());
+      if (!padding().hasValue()) return 0;
+      return padding().getValue().getValue<int64_t>({i, 1});
+    }
   }];
 }
 
@@ -356,6 +304,11 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
     unsigned getNumInputFeatureDimensions() { return 1; }
 
     unsigned getNumOutputFeatureDimensions() { return 1; }
+
+    unsigned getNumSpatialDimensions() {
+      return getOutputShapedType(0).getRank() - getNumBatchDimensions() -
+             getNumOutputFeatureDimensions();
+    }
 
     llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
       // Outer parallel loops are always the number of output dimensions; i.e.
@@ -554,6 +507,7 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
         "No such thing as reference indexing maps for a generic op.");
      }
   }];
+
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseGenericOp(parser, result); }];
 }
@@ -668,6 +622,14 @@ def GenericOp : GenericOpBase<"generic"> {
     tensor SSA values are expected to be useful and will be added in the near
     future.
   }];
+
+  let builders = [
+    OpBuilder<
+      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes, "
+      "ValueRange args, int64_t inputCount, int64_t outputCount, "
+      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
+      "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">
+  ];
 
   let verifier = [{ return ::verify(*this); }];
 
@@ -794,6 +756,16 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
     tensor SSA values are expected to be useful and will be added in the near
     future.
   }];
+
+  let builders = [
+    OpBuilder<
+      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes, "
+      "ValueRange args, int64_t inputCount, int64_t outputCount, "
+      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
+      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> "
+      "= nullptr">
+  ];
+
 
   let verifier = [{ return ::verify(*this); }];
 

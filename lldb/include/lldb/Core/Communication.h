@@ -359,7 +359,8 @@ protected:
   size_t GetCachedBytes(void *dst, size_t dst_len);
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Communication);
+  Communication(const Communication &) = delete;
+  const Communication &operator=(const Communication &) = delete;
 };
 
 } // namespace lldb_private

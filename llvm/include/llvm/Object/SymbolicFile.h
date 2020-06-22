@@ -18,7 +18,6 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cinttypes>

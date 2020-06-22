@@ -67,11 +67,11 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  bool
-  getMemOperandsWithOffset(const MachineInstr &LdSt,
-                           SmallVectorImpl<const MachineOperand *> &BaseOps,
-                           int64_t &Offset, bool &OffsetIsScalable,
-                           const TargetRegisterInfo *TRI) const override;
+  bool getMemOperandsWithOffsetWidth(
+      const MachineInstr &LdSt,
+      SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
+      bool &OffsetIsScalable, unsigned &Width,
+      const TargetRegisterInfo *TRI) const override;
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,

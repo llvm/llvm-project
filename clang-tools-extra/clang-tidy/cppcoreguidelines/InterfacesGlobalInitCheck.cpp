@@ -27,11 +27,12 @@ void InterfacesGlobalInitCheck::registerMatchers(MatchFinder *Finder) {
   const auto ReferencesUndefinedGlobalVar = declRefExpr(hasDeclaration(
       varDecl(GlobalVarDecl, unless(isDefinition())).bind("referencee")));
 
-  Finder->addMatcher(
-      varDecl(GlobalVarDecl, isDefinition(),
-              hasInitializer(expr(hasDescendant(ReferencesUndefinedGlobalVar))))
-          .bind("var"),
-      this);
+  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs,
+                              varDecl(GlobalVarDecl, isDefinition(),
+                                      hasInitializer(expr(hasDescendant(
+                                          ReferencesUndefinedGlobalVar))))
+                                  .bind("var")),
+                     this);
 }
 
 void InterfacesGlobalInitCheck::check(const MatchFinder::MatchResult &Result) {

@@ -2883,11 +2883,11 @@ ObjCInterfaceDecl::filtered_category_iterator<Filter>::operator++() {
 }
 
 inline bool ObjCInterfaceDecl::isVisibleCategory(ObjCCategoryDecl *Cat) {
-  return !Cat->isHidden();
+  return Cat->isUnconditionallyVisible();
 }
 
 inline bool ObjCInterfaceDecl::isVisibleExtension(ObjCCategoryDecl *Cat) {
-  return Cat->IsClassExtension() && !Cat->isHidden();
+  return Cat->IsClassExtension() && Cat->isUnconditionallyVisible();
 }
 
 inline bool ObjCInterfaceDecl::isKnownExtension(ObjCCategoryDecl *Cat) {

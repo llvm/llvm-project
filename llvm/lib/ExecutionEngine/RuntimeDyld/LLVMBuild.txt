@@ -18,4 +18,4 @@
 type = Library
 name = RuntimeDyld
 parent = ExecutionEngine
-required_libraries = MC Object Support
+required_libraries = Core MC Object Support

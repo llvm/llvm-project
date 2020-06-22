@@ -101,9 +101,9 @@ llvm::Optional<std::string>
 clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     clang::UnaryExprOrTypeTrait>::getBestGuess(const VariantValue &Value) {
   static constexpr llvm::StringRef Allowed[] = {
-      "UETT_SizeOf",           "UETT_AlignOf",
-      "UETT_VecStep",          "UETT_OpenMPRequiredSimdAlign",
-      "UETT_PreferredAlignOf",
+#define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) "UETT_" #Name,
+#define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) "UETT_" #Name,
+#include "clang/Basic/TokenKinds.def"
   };
   if (Value.isString())
     return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),

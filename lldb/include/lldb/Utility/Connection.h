@@ -175,7 +175,8 @@ public:
 
 private:
   // For Connection only
-  DISALLOW_COPY_AND_ASSIGN(Connection);
+  Connection(const Connection &) = delete;
+  const Connection &operator=(const Connection &) = delete;
 };
 
 } // namespace lldb_private

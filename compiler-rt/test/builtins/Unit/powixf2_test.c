@@ -2,17 +2,6 @@
 // REQUIRES: librt_has_powixf2
 // UNSUPPORTED: powerpc64
 // REQUIRES: x86-target-arch
-//===-- powixf2_test.cpp - Test __powixf2 ---------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __powixf2 for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
 
 #if !_ARCH_PPC
 

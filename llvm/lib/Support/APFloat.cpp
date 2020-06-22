@@ -3278,11 +3278,11 @@ APInt IEEEFloat::convertBFloatAPFloatToAPInt() const {
     myexponent = 0;
     mysignificand = 0;
   } else if (category == fcInfinity) {
-    myexponent = 0x1f;
+    myexponent = 0xff;
     mysignificand = 0;
   } else {
     assert(category == fcNaN && "Unknown category!");
-    myexponent = 0x1f;
+    myexponent = 0xff;
     mysignificand = (uint32_t)*significandParts();
   }
 

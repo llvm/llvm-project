@@ -68,13 +68,6 @@
 #include <unistd.h>
 #include <vector>
 
-/// \def DISALLOW_COPY_AND_ASSIGN(TypeName)
-///     Macro definition for easily disallowing copy constructor and
-///     assignment operators in C++ classes.
-#define DISALLOW_COPY_AND_ASSIGN(TypeName)                                     \
-  TypeName(const TypeName &);                                                  \
-  const TypeName &operator=(const TypeName &)
-
 extern "C" {
 int accept$NOCANCEL(int, struct sockaddr *__restrict, socklen_t *__restrict);
 int close$NOCANCEL(int);
@@ -135,7 +128,8 @@ protected:
   char *m_str;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(String);
+  String(const String &) = delete;
+  const String &operator=(const String &) = delete;
 };
 
 // Type definitions

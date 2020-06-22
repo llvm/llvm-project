@@ -2725,7 +2725,7 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  // Verify that this is one of the 5 whitelisted options.
+  // Verify that this is one of the 5 explicitly listed options.
   IdentifierInfo *II = Tok.getIdentifierInfo();
   PragmaMSCommentKind Kind =
     llvm::StringSwitch<PragmaMSCommentKind>(II->getName())
@@ -2766,7 +2766,7 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
   // FIXME: If the kind is "compiler" warn if the string is present (it is
   // ignored).
   // The MSDN docs say that "lib" and "linker" require a string and have a short
-  // whitelist of linker options they support, but in practice MSVC doesn't
+  // list of linker options they support, but in practice MSVC doesn't
   // issue a diagnostic.  Therefore neither does clang.
 
   if (Tok.isNot(tok::r_paren)) {
@@ -3099,7 +3099,7 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
     Token LoopHintTok;
     LoopHintTok.startToken();
     LoopHintTok.setKind(tok::annot_pragma_loop_hint);
-    LoopHintTok.setLocation(PragmaName.getLocation());
+    LoopHintTok.setLocation(Introducer.Loc);
     LoopHintTok.setAnnotationEndLoc(PragmaName.getLocation());
     LoopHintTok.setAnnotationValue(static_cast<void *>(Info));
     TokenList.push_back(LoopHintTok);
@@ -3186,7 +3186,7 @@ void PragmaUnrollHintHandler::HandlePragma(Preprocessor &PP,
   auto TokenArray = std::make_unique<Token[]>(1);
   TokenArray[0].startToken();
   TokenArray[0].setKind(tok::annot_pragma_loop_hint);
-  TokenArray[0].setLocation(PragmaName.getLocation());
+  TokenArray[0].setLocation(Introducer.Loc);
   TokenArray[0].setAnnotationEndLoc(PragmaName.getLocation());
   TokenArray[0].setAnnotationValue(static_cast<void *>(Info));
   PP.EnterTokenStream(std::move(TokenArray), 1,

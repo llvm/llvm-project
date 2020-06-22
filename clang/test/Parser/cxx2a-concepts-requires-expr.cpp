@@ -43,6 +43,7 @@ bool r14 = requires (int (*f)(int)) { requires true; };
 
 bool r15 = requires (10) { requires true; };
 // expected-error@-1 {{expected parameter declarator}}
+// expected-error@-2 {{expected ')'}} expected-note@-2 {{to match}}
 
 bool r16 = requires (auto x) { requires true; };
 // expected-error@-1 {{'auto' not allowed in requires expression parameter}}

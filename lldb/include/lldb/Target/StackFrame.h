@@ -525,7 +525,8 @@ private:
   StreamString m_disassembly;
   std::recursive_mutex m_mutex;
 
-  DISALLOW_COPY_AND_ASSIGN(StackFrame);
+  StackFrame(const StackFrame &) = delete;
+  const StackFrame &operator=(const StackFrame &) = delete;
 };
 
 } // namespace lldb_private

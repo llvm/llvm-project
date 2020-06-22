@@ -31,12 +31,25 @@ endif()
 # TODO: we should use a config.h file like LLVM does
 add_definitions(-DMLIR_CUDA_CONVERSIONS_ENABLED=${MLIR_CUDA_CONVERSIONS_ENABLED})
 
+# Build the ROCm conversions and run according tests if the AMDGPU backend
+# is available
+if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(MLIR_ROCM_CONVERSIONS_ENABLED 1)
+else()
+  set(MLIR_ROCM_CONVERSIONS_ENABLED 0)
+endif()
+add_definitions(-DMLIR_ROCM_CONVERSIONS_ENABLED=${MLIR_ROCM_CONVERSIONS_ENABLED})
+
 set(MLIR_CUDA_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir CUDA runner")
+set(MLIR_ROCM_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir ROCm runner")
 set(MLIR_VULKAN_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir Vulkan runner")
 
 option(MLIR_INCLUDE_TESTS
        "Generate build targets for the MLIR unit tests."
        ${LLVM_INCLUDE_TESTS})
+
+option(MLIR_INCLUDE_INTEGRATION_TESTS
+       "Generate build targets for the MLIR integration tests.")
 
 include_directories( "include")
 include_directories( ${MLIR_INCLUDE_DIR})
@@ -52,6 +65,10 @@ if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
   add_subdirectory(unittests)
   add_subdirectory(test)
+endif()
+if (MLIR_INCLUDE_INTEGRATION_TESTS)
+  add_definitions(-DMLIR_INCLUDE_INTEGRATION_TESTS)
+  add_subdirectory(integration_test)
 endif()
 # Tools needs to come late to ensure that MLIR_ALL_LIBS is populated.
 # Generally things after this point may depend on MLIR_ALL_LIBS or libMLIR.so.

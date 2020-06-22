@@ -13,7 +13,7 @@ define double @fsub1(double %a, double %b, double %c, double %d)  {
 entry:
   %mul = fmul reassoc double %b, %a
   %mul1 = fmul reassoc double %d, %c
-  %sub = fsub reassoc double %mul, %mul1
+  %sub = fsub reassoc nsz double %mul, %mul1
   %mul3 = fmul reassoc double %mul, %sub
   ret double %mul3
 }
@@ -113,7 +113,7 @@ define double @fma_multi_uses1(double %a, double %b, double %c, double %d, doubl
   store double %ab, double* %p1 ; extra use of %ab
   store double %ab, double* %p2 ; another extra use of %ab
   store double %cd, double* %p3 ; extra use of %cd
-  %r = fsub reassoc double %ab, %cd
+  %r = fsub reassoc nsz double %ab, %cd
   ret double %r
 }
 
@@ -156,8 +156,8 @@ define double @fma_multi_uses3(double %a, double %b, double %c, double %d, doubl
   store double %ab, double* %p1 ; extra use of %ab
   store double %ab, double* %p2 ; another extra use of %ab
   store double %fg, double* %p3 ; extra use of %fg
-  %q = fsub reassoc double %fg, %cd ; The uses of %cd reduce to 1 after %r is folded. 2 uses of %fg, fold %cd, remove def of %cd
-  %r = fsub reassoc double %ab, %cd ; Fold %r before %q. 3 uses of %ab, 2 uses of %cd, fold %cd
+  %q = fsub reassoc nsz double %fg, %cd ; The uses of %cd reduce to 1 after %r is folded. 2 uses of %fg, fold %cd, remove def of %cd
+  %r = fsub reassoc nsz double %ab, %cd ; Fold %r before %q. 3 uses of %ab, 2 uses of %cd, fold %cd
   %add = fadd reassoc double %r, %q
   ret double %add
 }

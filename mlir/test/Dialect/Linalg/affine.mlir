@@ -3,11 +3,11 @@
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
 // RUN: mlir-opt %s -convert-linalg-to-affine-loops -convert-linalg-to-llvm -o=/dev/null 2>&1
 
-// CHECK-DAG: #[[strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
+// CHECK-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 
-// CHECK-DAG: #[[stride2Dilation1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
+// CHECK-DAG: #[[$stride2Dilation1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
 
-// CHECK-DAG: #[[clampMinMap:.*]] = affine_map<(d0) -> (d0, 0)>
+// CHECK-DAG: #[[$clampMinMap:.*]] = affine_map<(d0) -> (d0, 0)>
 
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = constant 0 : index
@@ -15,7 +15,7 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %A = view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
   %B = view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
   %C = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
-  linalg.matmul(%A, %B, %C) : memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+  linalg.matmul %A, %B, %C : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>)
   return
 }
 
@@ -42,18 +42,21 @@ func @conv_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1:
 }
 
 // CHECK-LABEL: func @conv_view3(
-//  CHECK: %{{.*}}: memref<?x?x?xf32, #[[strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[strided3D]]>) {
-//       CHECK:   %[[Z0:.*]] = dim %arg0, 0 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[Q:.*]] = dim %arg0, 1 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[K:.*]] = dim %arg0, 2 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[B:.*]] = dim %arg1, 0 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[X0:.*]] = dim %arg2, 1 : memref<?x?x?xf32, #[[strided3D]]>
+//  CHECK: %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>) {
+//       CHECK:   %[[Z0:.*]] = dim %arg0, %c0 : memref<?x?x?xf32, #[[$strided3D]]>
+//       CHECK:   %[[Q:.*]] = dim %arg0, %c1 : memref<?x?x?xf32, #[[$strided3D]]>
+//       CHECK:   %[[K:.*]] = dim %arg0, %c2 : memref<?x?x?xf32, #[[$strided3D]]>
+//       CHECK:   %[[B:.*]] = dim %arg1, %c0 : memref<?x?x?xf32, #[[$strided3D]]>
+//       CHECK:   %[[X0:.*]] = dim %arg2, %c1 : memref<?x?x?xf32, #[[$strided3D]]>
 //       CHECK:   affine.for %{{.*}} = 0 to %[[B]] {
 //       CHECK:     affine.for %{{.*}} = 0 to %[[X0]] {
 //       CHECK:       affine.for %{{.*}} = 0 to %[[K]] {
 //       CHECK:         affine.for %{{.*}} = 0 to %[[Q]] {
 //       CHECK:           affine.for %{{.*}} = 0 to %[[Z0]] {
-//       CHECK:            %[[SUM:.*]] = affine.apply #[[stride2Dilation1]](%{{.*}}, %{{.*}})
+//       CHECK:            %[[SUM:.*]] = affine.apply #[[$stride2Dilation1]](%{{.*}}, %{{.*}})
+//       No padding needed here; only affine loads.
+//       CHECK-NEXT:       affine.load
+//       CHECK-NEXT:       affine.load
 
 func @conv_padding(%arg0: memref<?x?x?x?xf32>,
                    %arg1: memref<?x?x?x?xf32>,
@@ -67,13 +70,13 @@ func @conv_padding(%arg0: memref<?x?x?x?xf32>,
 // CHECK-LABEL: func @conv_padding
 //       CHECK: %{{.*}}: memref<?x?x?x?xf32>, %{{.*}}: memref<?x?x?x?xf32>, %{{.*}}: memref<?x?x?x?xf32>) {
 //       CHECK:   %[[ZERO:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[Z0:.*]] = dim %arg0, 0 : memref<?x?x?x?xf32>
-//       CHECK:   %[[Z1:.*]] = dim %arg0, 1 : memref<?x?x?x?xf32>
-//       CHECK:   %[[Q:.*]] =  dim %arg0, 2 : memref<?x?x?x?xf32>
-//       CHECK:   %[[K:.*]] =  dim %arg0, 3 : memref<?x?x?x?xf32>
-//       CHECK:   %[[B:.*]] =  dim %arg1, 0 : memref<?x?x?x?xf32>
-//       CHECK:   %[[X0:.*]] = dim %arg2, 1 : memref<?x?x?x?xf32>
-//       CHECK:   %[[X1:.*]] = dim %arg2, 2 : memref<?x?x?x?xf32>
+//       CHECK:   %[[Z0:.*]] = dim %arg0, %c0 : memref<?x?x?x?xf32>
+//       CHECK:   %[[Z1:.*]] = dim %arg0, %c1 : memref<?x?x?x?xf32>
+//       CHECK:   %[[Q:.*]] =  dim %arg0, %c2 : memref<?x?x?x?xf32>
+//       CHECK:   %[[K:.*]] =  dim %arg0, %c3 : memref<?x?x?x?xf32>
+//       CHECK:   %[[B:.*]] =  dim %arg1, %c0 : memref<?x?x?x?xf32>
+//       CHECK:   %[[X0:.*]] = dim %arg2, %c1 : memref<?x?x?x?xf32>
+//       CHECK:   %[[X1:.*]] = dim %arg2, %c2 : memref<?x?x?x?xf32>
 //       CHECK:   affine.for %{{.*}} = 0 to %[[B]] {
 //       CHECK:     affine.for %{{.*}} = 0 to %[[X0]] {
 //       CHECK:       affine.for %{{.*}} = 0 to %[[X1]] {
@@ -83,10 +86,10 @@ func @conv_padding(%arg0: memref<?x?x?x?xf32>,
 //       CHECK:               affine.for %{{.*}} = 0 to %[[Z1]] {
 //       CHECK:                 %[[SUM0:.*]] = affine.apply #{{.*}}(%{{.*}}, %{{.*}})
 //       CHECK:                 %[[SUM1:.*]] = affine.apply #{{.*}}(%{{.*}}, %{{.*}})
-//       CHECK:                 %[[IDX:.*]] = affine.max #[[clampMinMap]](%[[SUM0]])
-//       CHECK:                 %[[IDY:.*]] = affine.max #[[clampMinMap]](%[[SUM1]])
-// Padded conv involves an affine.max in the memory access which is not
-// allowed by affine.load. Override to always use an std.load.
+//       CHECK:                 %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[SUM0]])
+//       CHECK:                 %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[SUM1]])
+// Padded conv involves an affine.max in the memory access and this is not
+// allowed by affine.load. Use std.load in such cases.
 //       CHECK:                 %{{.*}} = load %{{.*}}[%{{.*}}, %[[IDX]], %[[IDY]], %{{.*}}] : memref<?x?x?x?xf32>
 //       CHECK:                 %{{.*}} = select %{{.*}}, %{{.*}}, %{{.*}} : f32
 //       CHECK:                 %{{.*}} = affine.load %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?x?xf32>
@@ -106,10 +109,10 @@ func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memre
 //  CHECK-SAME: %[[mA:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
 //  CHECK-SAME: %[[mB:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
 //  CHECK-SAME: %[[mC:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
-//       CHECK: %[[B:.*]] = dim %[[mA]], 0 : memref<?x?x?xf32>
-//       CHECK: %[[M:.*]] = dim %[[mA]], 1 : memref<?x?x?xf32>
-//       CHECK: %[[K:.*]] = dim %[[mA]], 2 : memref<?x?x?xf32>
-//       CHECK: %[[N:.*]] = dim %[[mB]], 2 : memref<?x?x?xf32>
+//       CHECK: %[[B:.*]] = dim %[[mA]], %c0 : memref<?x?x?xf32>
+//       CHECK: %[[M:.*]] = dim %[[mA]], %c1 : memref<?x?x?xf32>
+//       CHECK: %[[K:.*]] = dim %[[mA]], %c2 : memref<?x?x?xf32>
+//       CHECK: %[[N:.*]] = dim %[[mB]], %c2 : memref<?x?x?xf32>
 //       CHECK: affine.for %[[b:.*]] = 0 to %[[B]] {
 //       CHECK:   affine.for %[[m:.*]] = 0 to %[[M]] {
 //       CHECK:     affine.for %[[n:.*]] = 0 to %[[N]] {

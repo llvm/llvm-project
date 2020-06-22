@@ -18,6 +18,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -377,11 +378,21 @@ void AMDGPUInstPrinter::printVINTRPDst(const MCInst *MI, unsigned OpNo,
   printOperand(MI, OpNo, STI, O);
 }
 
+void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  int16_t SImm = static_cast<int16_t>(Imm);
+  if (isInlinableIntLiteral(SImm))
+    O << SImm;
+  else
+    O << formatHex(static_cast<uint64_t>(Imm));
+}
+
 void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
   int16_t SImm = static_cast<int16_t>(Imm);
-  if (SImm >= -16 && SImm <= 64) {
+  if (isInlinableIntLiteral(SImm)) {
     O << SImm;
     return;
   }
@@ -549,7 +560,8 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (Op.isReg()) {
     printRegOperand(Op.getReg(), O, MRI);
   } else if (Op.isImm()) {
-    switch (Desc.OpInfo[OpNo].OperandType) {
+    const uint8_t OpTy = Desc.OpInfo[OpNo].OperandType;
+    switch (OpTy) {
     case AMDGPU::OPERAND_REG_IMM_INT32:
     case AMDGPU::OPERAND_REG_IMM_FP32:
     case AMDGPU::OPERAND_REG_INLINE_C_INT32:
@@ -566,10 +578,12 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       printImmediate64(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-    case AMDGPU::OPERAND_REG_INLINE_C_FP16:
     case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     case AMDGPU::OPERAND_REG_IMM_INT16:
+      printImmediateInt16(Op.getImm(), STI, O);
+      break;
+    case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+    case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
       printImmediate16(Op.getImm(), STI, O);
       break;
@@ -580,11 +594,19 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
         printImmediate32(Op.getImm(), STI, O);
         break;
       }
+
+      //  Deal with 16-bit FP inline immediates not working.
+      if (OpTy == AMDGPU::OPERAND_REG_IMM_V2FP16) {
+        printImmediate16(static_cast<uint16_t>(Op.getImm()), STI, O);
+        break;
+      }
       LLVM_FALLTHROUGH;
-    case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
+      printImmediateInt16(static_cast<uint16_t>(Op.getImm()), STI, O);
+      break;
+    case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+    case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
       printImmediateV216(Op.getImm(), STI, O);
       break;
     case MCOI::OPERAND_UNKNOWN:

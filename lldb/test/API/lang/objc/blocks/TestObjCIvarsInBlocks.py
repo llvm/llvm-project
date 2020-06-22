@@ -125,7 +125,7 @@ class TestObjCIvarsInBlocks(TestBase):
             expr, "Successfully got a local variable in a block in a class method.")
 
         ret_value_signed = expr.GetValueAsSigned(error)
-        # print('ret_value_signed = %i' % (ret_value_signed))
+        self.trace('ret_value_signed = %i' % (ret_value_signed))
         self.assertTrue(
             ret_value_signed == 5,
             "The local variable in the block was what we expected.")

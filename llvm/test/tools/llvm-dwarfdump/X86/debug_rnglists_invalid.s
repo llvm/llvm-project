@@ -2,7 +2,7 @@
 # RUN: not llvm-dwarfdump --debug-rnglists - 2>&1 | FileCheck %s --check-prefix=SHORT
 # SHORT-NOT: error:
 # SHORT-NOT: range list header
-# SHORT: error: parsing .debug_rnglists table at offset 0x0: unexpected end of data at offset 0x0
+# SHORT: error: parsing .debug_rnglists table at offset 0x0: unexpected end of data at offset 0x3
 # SHORT-NOT: range list header
 # SHORT-NOT: error:
 
@@ -11,14 +11,14 @@
 # RUN: FileCheck %s --input-file %t.err
 
 # GOOD: .debug_rnglists contents:
-# GOOD-NEXT: range list header: length = 0x0000001e, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000001
+# GOOD-NEXT: range list header: length = 0x0000001e, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000001
 # GOOD-NEXT: offsets: [
 # GOOD-NEXT:    0x00000004
 # GOOD-NEXT: ]
 # GOOD-NEXT: ranges:
 # GOOD-NEXT: [0x0000000000000010, 0x0000000000000020)
 # GOOD-NEXT: <End of list>
-# GOOD-NEXT: range list header: length = 0x0000001a, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# GOOD-NEXT: range list header: length = 0x0000001a, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 # GOOD-NEXT: ranges:
 # GOOD-NEXT: [0x0000000000000030, 0x0000000000000040)
 # GOOD-NEXT: <End of list>

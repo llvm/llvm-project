@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -o %t.o < %s
-# RUN: llc --relocation-model=pic -filetype=obj %p/Inputs/ret32.ll -o %t.ret32.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
 # RUN: wasm-ld -pie --export-all --no-gc-sections --no-entry --emit-relocs -o %t.wasm %t.o %t.ret32.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 

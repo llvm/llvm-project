@@ -156,7 +156,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     DeclContext = GV->getScope();
     // Add name and type.
     addString(*VariableDIE, dwarf::DW_AT_name, GV->getDisplayName());
-    addType(*VariableDIE, GTy);
+    if (GTy)
+      addType(*VariableDIE, GTy);
 
     // Add scoping info.
     if (!GV->isLocalToUnit())
@@ -768,9 +769,18 @@ static SmallVector<const DIVariable *, 2> dependencies(DbgVariable *Var) {
     Result.push_back(DLVar);
   for (auto *El : Array->getElements()) {
     if (auto *Subrange = dyn_cast<DISubrange>(El)) {
-      auto Count = Subrange->getCount();
-      if (auto *Dependency = Count.dyn_cast<DIVariable *>())
-        Result.push_back(Dependency);
+      if (auto Count = Subrange->getCount())
+        if (auto *Dependency = Count.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
+      if (auto LB = Subrange->getLowerBound())
+        if (auto *Dependency = LB.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
+      if (auto UB = Subrange->getUpperBound())
+        if (auto *Dependency = UB.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
+      if (auto ST = Subrange->getStride())
+        if (auto *Dependency = ST.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
     }
   }
   return Result;
@@ -1285,15 +1295,12 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   const DIExpression *DIExpr = DV.getSingleExpression();
   DwarfExpr.addFragmentOffset(DIExpr);
-  if (Location.isIndirect())
-    DwarfExpr.setMemoryLocationKind();
+  DwarfExpr.setLocation(Location, DIExpr);
 
   DIExpressionCursor Cursor(DIExpr);
 
-  if (DIExpr->isEntryValue()) {
-    DwarfExpr.setEntryValueFlag();
+  if (DIExpr->isEntryValue())
     DwarfExpr.beginEntryValueExpression(Cursor);
-  }
 
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
   if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))

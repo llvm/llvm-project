@@ -79,8 +79,6 @@ AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
 
         getFilePaths().push_back(LibcRoot + std::string("/lib/") +
                                  std::string(*FamilyName));
-        getFilePaths().push_back(LibcRoot + std::string("/lib/") +
-                                 std::string(*FamilyName));
         getFilePaths().push_back(GCCRoot + std::string("/") +
                                  std::string(*FamilyName));
 

@@ -17,7 +17,9 @@
 #include "Annotations.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
+#include "Headers.h"
 #include "ParsedAST.h"
+#include "Preamble.h"
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -28,6 +30,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Token.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock-matchers.h"
@@ -80,6 +83,13 @@ MATCHER_P(WithTemplateArgs, ArgName, "") {
 
 MATCHER_P(RangeIs, R, "") {
   return arg.beginOffset() == R.Begin && arg.endOffset() == R.End;
+}
+
+MATCHER(EqInc, "") {
+  Inclusion Actual = testing::get<0>(arg);
+  Inclusion Expected = testing::get<1>(arg);
+  return std::tie(Actual.HashLine, Actual.Written) ==
+         std::tie(Expected.HashLine, Expected.Written);
 }
 
 TEST(ParsedASTTest, TopLevelDecls) {
@@ -239,9 +249,11 @@ TEST(ParsedASTTest, NoCrashOnTokensWithTidyCheck) {
 }
 
 TEST(ParsedASTTest, CanBuildInvocationWithUnknownArgs) {
+  MockFS FS;
+  FS.Files = {{testPath("foo.cpp"), "void test() {}"}};
   // Unknown flags should not prevent a build of compiler invocation.
   ParseInputs Inputs;
-  Inputs.FS = buildTestFS({{testPath("foo.cpp"), "void test() {}"}});
+  Inputs.TFS = &FS;
   Inputs.CompileCommand.CommandLine = {"clang", "-fsome-unknown-flag",
                                        testPath("foo.cpp")};
   IgnoreDiagnostics IgnoreDiags;
@@ -317,6 +329,8 @@ TEST(ParsedASTTest, CollectsMainFileMacroExpansions) {
   EXPECT_THAT(MacroExpansionPositions,
               testing::UnorderedElementsAreArray(TestCase.points()));
 }
+
+MATCHER_P(WithFileName, Inc, "") { return arg.FileName == Inc; }
 
 TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
   struct Inclusion {
@@ -429,6 +443,178 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
         Code.substr(FileRange.Begin - 1, FileRange.End - FileRange.Begin + 2));
     EXPECT_EQ(SkippedFiles[I].kind(), tok::header_name);
   }
+
+  TU.AdditionalFiles["a.h"] = "";
+  TU.AdditionalFiles["b.h"] = "";
+  TU.AdditionalFiles["c.h"] = "";
+  // Make sure replay logic works with patched preambles.
+  llvm::StringLiteral Baseline = R"cpp(
+    #include "a.h"
+    #include "c.h")cpp";
+  MockFS FS;
+  TU.Code = Baseline.str();
+  auto Inputs = TU.inputs(FS);
+  auto BaselinePreamble = TU.preamble();
+  ASSERT_TRUE(BaselinePreamble);
+
+  // First make sure we don't crash on various modifications to the preamble.
+  llvm::StringLiteral Cases[] = {
+      // clang-format off
+      // New include in middle.
+      R"cpp(
+        #include "a.h"
+        #include "b.h"
+        #include "c.h")cpp",
+      // New include at top.
+      R"cpp(
+        #include "b.h"
+        #include "a.h"
+        #include "c.h")cpp",
+      // New include at bottom.
+      R"cpp(
+        #include "a.h"
+        #include "c.h"
+        #include "b.h")cpp",
+      // Same size with a missing include.
+      R"cpp(
+        #include "a.h"
+        #include "b.h")cpp",
+      // Smaller with no new includes.
+      R"cpp(
+        #include "a.h")cpp",
+      // Smaller with a new includes.
+      R"cpp(
+        #include "b.h")cpp",
+      // clang-format on
+  };
+  for (llvm::StringLiteral Case : Cases) {
+    TU.Code = Case.str();
+
+    IgnoreDiagnostics Diags;
+    auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
+    auto PatchedAST = ParsedAST::build(testPath(TU.Filename), TU.inputs(FS),
+                                       std::move(CI), {}, BaselinePreamble);
+    ASSERT_TRUE(PatchedAST);
+    EXPECT_TRUE(PatchedAST->getDiagnostics().empty());
+  }
+
+  // Then ensure correctness by making sure includes were seen only once.
+  // Note that we first see the includes from the patch, as preamble includes
+  // are replayed after exiting the built-in file.
+  Includes.clear();
+  TU.Code = R"cpp(
+    #include "a.h"
+    #include "b.h")cpp";
+  IgnoreDiagnostics Diags;
+  auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
+  auto PatchedAST = ParsedAST::build(testPath(TU.Filename), TU.inputs(FS),
+                                     std::move(CI), {}, BaselinePreamble);
+  ASSERT_TRUE(PatchedAST);
+  EXPECT_TRUE(PatchedAST->getDiagnostics().empty());
+  EXPECT_THAT(Includes,
+              ElementsAre(WithFileName(testPath("__preamble_patch__.h")),
+                          WithFileName("b.h"), WithFileName("a.h")));
+}
+
+TEST(ParsedASTTest, PatchesAdditionalIncludes) {
+  llvm::StringLiteral ModifiedContents = R"cpp(
+    #include "baz.h"
+    #include "foo.h"
+    #include "sub/aux.h"
+    void bar() {
+      foo();
+      baz();
+      aux();
+    })cpp";
+  // Build expected ast with symbols coming from headers.
+  TestTU TU;
+  TU.Filename = "foo.cpp";
+  TU.AdditionalFiles["foo.h"] = "void foo();";
+  TU.AdditionalFiles["sub/baz.h"] = "void baz();";
+  TU.AdditionalFiles["sub/aux.h"] = "void aux();";
+  TU.ExtraArgs = {"-I" + testPath("sub")};
+  TU.Code = ModifiedContents.str();
+  auto ExpectedAST = TU.build();
+
+  // Build preamble with no includes.
+  TU.Code = "";
+  StoreDiags Diags;
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  auto EmptyPreamble =
+      buildPreamble(testPath("foo.cpp"), *CI, Inputs, true, nullptr);
+  ASSERT_TRUE(EmptyPreamble);
+  EXPECT_THAT(EmptyPreamble->Includes.MainFileIncludes, testing::IsEmpty());
+
+  // Now build an AST using empty preamble and ensure patched includes worked.
+  TU.Code = ModifiedContents.str();
+  Inputs = TU.inputs(FS);
+  auto PatchedAST = ParsedAST::build(testPath("foo.cpp"), Inputs, std::move(CI),
+                                     {}, EmptyPreamble);
+  ASSERT_TRUE(PatchedAST);
+  ASSERT_TRUE(PatchedAST->getDiagnostics().empty());
+
+  // Ensure source location information is correct, including resolved paths.
+  EXPECT_THAT(PatchedAST->getIncludeStructure().MainFileIncludes,
+              testing::Pointwise(
+                  EqInc(), ExpectedAST.getIncludeStructure().MainFileIncludes));
+  auto StringMapToVector = [](const llvm::StringMap<unsigned> SM) {
+    std::vector<std::pair<std::string, unsigned>> Res;
+    for (const auto &E : SM)
+      Res.push_back({E.first().str(), E.second});
+    llvm::sort(Res);
+    return Res;
+  };
+  // Ensure file proximity signals are correct.
+  EXPECT_EQ(StringMapToVector(PatchedAST->getIncludeStructure().includeDepth(
+                testPath("foo.cpp"))),
+            StringMapToVector(ExpectedAST.getIncludeStructure().includeDepth(
+                testPath("foo.cpp"))));
+}
+
+TEST(ParsedASTTest, PatchesDeletedIncludes) {
+  TestTU TU;
+  TU.Filename = "foo.cpp";
+  TU.Code = "";
+  auto ExpectedAST = TU.build();
+
+  // Build preamble with no includes.
+  TU.Code = R"cpp(#include <foo.h>)cpp";
+  StoreDiags Diags;
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  auto BaselinePreamble =
+      buildPreamble(testPath("foo.cpp"), *CI, Inputs, true, nullptr);
+  ASSERT_TRUE(BaselinePreamble);
+  EXPECT_THAT(BaselinePreamble->Includes.MainFileIncludes,
+              ElementsAre(testing::Field(&Inclusion::Written, "<foo.h>")));
+
+  // Now build an AST using additional includes and check that locations are
+  // correctly parsed.
+  TU.Code = "";
+  Inputs = TU.inputs(FS);
+  auto PatchedAST = ParsedAST::build(testPath("foo.cpp"), Inputs, std::move(CI),
+                                     {}, BaselinePreamble);
+  ASSERT_TRUE(PatchedAST);
+
+  // Ensure source location information is correct.
+  EXPECT_THAT(PatchedAST->getIncludeStructure().MainFileIncludes,
+              testing::Pointwise(
+                  EqInc(), ExpectedAST.getIncludeStructure().MainFileIncludes));
+  auto StringMapToVector = [](const llvm::StringMap<unsigned> SM) {
+    std::vector<std::pair<std::string, unsigned>> Res;
+    for (const auto &E : SM)
+      Res.push_back({E.first().str(), E.second});
+    llvm::sort(Res);
+    return Res;
+  };
+  // Ensure file proximity signals are correct.
+  EXPECT_EQ(StringMapToVector(PatchedAST->getIncludeStructure().includeDepth(
+                testPath("foo.cpp"))),
+            StringMapToVector(ExpectedAST.getIncludeStructure().includeDepth(
+                testPath("foo.cpp"))));
 }
 
 } // namespace

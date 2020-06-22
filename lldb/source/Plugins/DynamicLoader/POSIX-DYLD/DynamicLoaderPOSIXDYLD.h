@@ -159,7 +159,9 @@ protected:
   bool AlwaysRelyOnEHUnwindInfo(lldb_private::SymbolContext &sym_ctx) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderPOSIXDYLD);
+  DynamicLoaderPOSIXDYLD(const DynamicLoaderPOSIXDYLD &) = delete;
+  const DynamicLoaderPOSIXDYLD &
+  operator=(const DynamicLoaderPOSIXDYLD &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_POSIX_DYLD_DYNAMICLOADERPOSIXDYLD_H

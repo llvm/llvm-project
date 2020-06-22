@@ -20,6 +20,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 
@@ -65,10 +66,6 @@ public:
     return SI.getNumCases();
   }
 
-  int getExtCost(const Instruction *I, const Value *Src) {
-    return TTI::TCC_Basic;
-  }
-
   unsigned getInliningThresholdMultiplier() { return 1; }
 
   int getInlinerVectorBonusPercent() { return 150; }
@@ -90,9 +87,11 @@ public:
     return false;
   }
 
-  bool rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
-                                        Value *NewV) const {
-    return false;
+  bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
+
+  Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
+                                          Value *NewV) const {
+    return nullptr;
   }
 
   bool isLoweredToCall(const Function *F) {
@@ -141,6 +140,10 @@ public:
                                    AssumptionCache &AC, TargetLibraryInfo *TLI,
                                    DominatorTree *DT,
                                    const LoopAccessInfo *LAI) const {
+    return false;
+  }
+
+  bool emitGetActiveLaneMask() const {
     return false;
   }
 
@@ -374,6 +377,20 @@ public:
                                   TTI::OperandValueProperties Opd2PropInfo,
                                   ArrayRef<const Value *> Args,
                                   const Instruction *CxtI = nullptr) {
+    // FIXME: A number of transformation tests seem to require these values
+    // which seems a little odd for how arbitary there are.
+    switch (Opcode) {
+    default:
+      break;
+    case Instruction::FDiv:
+    case Instruction::FRem:
+    case Instruction::SDiv:
+    case Instruction::SRem:
+    case Instruction::UDiv:
+    case Instruction::URem:
+      // FIXME: Unlikely to be true for CodeSize.
+      return TTI::TCC_Expensive;
+    }
     return 1;
   }
 
@@ -423,7 +440,13 @@ public:
   }
 
   unsigned getCFInstrCost(unsigned Opcode,
-                          TTI::TargetCostKind CostKind) { return 1; }
+                          TTI::TargetCostKind CostKind) {
+    // A phi would be free, unless we're costing the throughput because it
+    // will require a register.
+    if (Opcode == Instruction::PHI && CostKind != TTI::TCK_RecipThroughput)
+      return 0;
+    return 1;
+  }
 
   unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                               TTI::TargetCostKind CostKind,
@@ -464,17 +487,41 @@ public:
     return 1;
   }
 
-  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                 ArrayRef<Type *> Tys, FastMathFlags FMF,
-                                 unsigned ScalarizationCostPassed,
-                                 TTI::TargetCostKind CostKind,
-                                 const Instruction *I) {
-    return 1;
-  }
-  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                 ArrayRef<Value *> Args, FastMathFlags FMF,
-                                 unsigned VF, TTI::TargetCostKind CostKind,
-                                 const Instruction *I) {
+  unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                 TTI::TargetCostKind CostKind) {
+    switch (ICA.getID()) {
+    default:
+      break;
+    case Intrinsic::annotation:
+    case Intrinsic::assume:
+    case Intrinsic::sideeffect:
+    case Intrinsic::dbg_declare:
+    case Intrinsic::dbg_value:
+    case Intrinsic::dbg_label:
+    case Intrinsic::invariant_start:
+    case Intrinsic::invariant_end:
+    case Intrinsic::launder_invariant_group:
+    case Intrinsic::strip_invariant_group:
+    case Intrinsic::is_constant:
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+    case Intrinsic::objectsize:
+    case Intrinsic::ptr_annotation:
+    case Intrinsic::var_annotation:
+    case Intrinsic::experimental_gc_result:
+    case Intrinsic::experimental_gc_relocate:
+    case Intrinsic::coro_alloc:
+    case Intrinsic::coro_begin:
+    case Intrinsic::coro_free:
+    case Intrinsic::coro_end:
+    case Intrinsic::coro_frame:
+    case Intrinsic::coro_size:
+    case Intrinsic::coro_suspend:
+    case Intrinsic::coro_param:
+    case Intrinsic::coro_subfn_addr:
+      // These intrinsics don't actually represent code after lowering.
+      return 0;
+    }
     return 1;
   }
 
@@ -752,68 +799,17 @@ public:
     return TTI::TCC_Basic;
   }
 
-  unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<Type *> ParamTys, const User *U,
-                            TTI::TargetCostKind TCK_SizeAndLatency) {
-    switch (IID) {
-    default:
-      // Intrinsics rarely (if ever) have normal argument setup constraints.
-      // Model them as having a basic instruction cost.
-      return TTI::TCC_Basic;
-
-    // TODO: other libc intrinsics.
-    case Intrinsic::memcpy:
-      return static_cast<T *>(this)->getMemcpyCost(dyn_cast<Instruction>(U));
-
-    case Intrinsic::annotation:
-    case Intrinsic::assume:
-    case Intrinsic::sideeffect:
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_value:
-    case Intrinsic::dbg_label:
-    case Intrinsic::invariant_start:
-    case Intrinsic::invariant_end:
-    case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
-    case Intrinsic::is_constant:
-    case Intrinsic::lifetime_start:
-    case Intrinsic::lifetime_end:
-    case Intrinsic::objectsize:
-    case Intrinsic::ptr_annotation:
-    case Intrinsic::var_annotation:
-    case Intrinsic::experimental_gc_result:
-    case Intrinsic::experimental_gc_relocate:
-    case Intrinsic::coro_alloc:
-    case Intrinsic::coro_begin:
-    case Intrinsic::coro_free:
-    case Intrinsic::coro_end:
-    case Intrinsic::coro_frame:
-    case Intrinsic::coro_size:
-    case Intrinsic::coro_suspend:
-    case Intrinsic::coro_param:
-    case Intrinsic::coro_subfn_addr:
-      // These intrinsics don't actually represent code after lowering.
-      return TTI::TCC_Free;
-    }
-  }
-
-  unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<const Value *> Arguments, const User *U,
-                            TTI::TargetCostKind CostKind) {
-    // Delegate to the generic intrinsic handling code. This mostly provides an
-    // opportunity for targets to (for example) special case the cost of
-    // certain intrinsics based on constants used as arguments.
-    SmallVector<Type *, 8> ParamTys;
-    ParamTys.reserve(Arguments.size());
-    for (unsigned Idx = 0, Size = Arguments.size(); Idx != Size; ++Idx)
-      ParamTys.push_back(Arguments[Idx]->getType());
-    return static_cast<T *>(this)->getIntrinsicCost(IID, RetTy, ParamTys, U,
-                                                    CostKind);
-  }
-
-  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands,
-                       TTI::TargetCostKind CostKind) {
+  int getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                  TTI::TargetCostKind CostKind) {
     auto *TargetTTI = static_cast<T *>(this);
+
+    // FIXME: We shouldn't have to special-case intrinsics here.
+    if (CostKind == TTI::TCK_RecipThroughput) {
+      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
+        IntrinsicCostAttributes CostAttrs(*II);
+        return TargetTTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+      }
+    }
 
     // FIXME: Unlikely to be true for anything but CodeSize.
     if (const auto *CB = dyn_cast<CallBase>(U)) {
@@ -821,9 +817,8 @@ public:
       if (F) {
         FunctionType *FTy = F->getFunctionType();
         if (Intrinsic::ID IID = F->getIntrinsicID()) {
-          SmallVector<Type *, 8> ParamTys(FTy->param_begin(), FTy->param_end());
-          return TargetTTI->getIntrinsicCost(IID, FTy->getReturnType(),
-                                             ParamTys, U, CostKind);
+          IntrinsicCostAttributes Attrs(IID, *CB);
+          return TargetTTI->getIntrinsicInstrCost(Attrs, CostKind);
         }
 
         if (!TargetTTI->isLoweredToCall(F))
@@ -842,7 +837,10 @@ public:
     switch (Opcode) {
     default:
       break;
+    case Instruction::Br:
+    case Instruction::Ret:
     case Instruction::PHI:
+      return TargetTTI->getCFInstrCost(Opcode, CostKind);
     case Instruction::ExtractValue:
     case Instruction::Freeze:
       return TTI::TCC_Free;
@@ -856,28 +854,157 @@ public:
                                    GEP->getPointerOperand(),
                                    Operands.drop_front());
     }
-    case Instruction::FDiv:
-    case Instruction::FRem:
-    case Instruction::SDiv:
-    case Instruction::SRem:
+    case Instruction::Add:
+    case Instruction::FAdd:
+    case Instruction::Sub:
+    case Instruction::FSub:
+    case Instruction::Mul:
+    case Instruction::FMul:
     case Instruction::UDiv:
+    case Instruction::SDiv:
+    case Instruction::FDiv:
     case Instruction::URem:
-      // FIXME: Unlikely to be true for CodeSize.
-      return TTI::TCC_Expensive;
+    case Instruction::SRem:
+    case Instruction::FRem:
+    case Instruction::Shl:
+    case Instruction::LShr:
+    case Instruction::AShr:
+    case Instruction::And:
+    case Instruction::Or:
+    case Instruction::Xor:
+    case Instruction::FNeg: {
+      TTI::OperandValueProperties Op1VP = TTI::OP_None;
+      TTI::OperandValueProperties Op2VP = TTI::OP_None;
+      TTI::OperandValueKind Op1VK =
+        TTI::getOperandInfo(U->getOperand(0), Op1VP);
+      TTI::OperandValueKind Op2VK = Opcode != Instruction::FNeg ?
+        TTI::getOperandInfo(U->getOperand(1), Op2VP) : TTI::OK_AnyValue;
+      SmallVector<const Value *, 2> Operands(U->operand_values());
+      return TargetTTI->getArithmeticInstrCost(Opcode, Ty, CostKind,
+                                               Op1VK, Op2VK,
+                                               Op1VP, Op2VP, Operands, I);
+    }
     case Instruction::IntToPtr:
     case Instruction::PtrToInt:
+    case Instruction::SIToFP:
+    case Instruction::UIToFP:
+    case Instruction::FPToUI:
+    case Instruction::FPToSI:
     case Instruction::Trunc:
+    case Instruction::FPTrunc:
     case Instruction::BitCast:
-      if (TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) ==
-          TTI::TCC_Free)
-        return TTI::TCC_Free;
-      break;
     case Instruction::FPExt:
     case Instruction::SExt:
     case Instruction::ZExt:
-      if (I && TargetTTI->getExtCost(I, Operands.back()) == TTI::TCC_Free)
-        return TTI::TCC_Free;
-      break;
+    case Instruction::AddrSpaceCast:
+      return TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I);
+    case Instruction::Store: {
+      auto *SI = cast<StoreInst>(U);
+      Type *ValTy = U->getOperand(0)->getType();
+      return TargetTTI->getMemoryOpCost(Opcode, ValTy, SI->getAlign(),
+                                        SI->getPointerAddressSpace(),
+                                        CostKind, I);
+    }
+    case Instruction::Load: {
+      auto *LI = cast<LoadInst>(U);
+      return TargetTTI->getMemoryOpCost(Opcode, U->getType(), LI->getAlign(),
+                                        LI->getPointerAddressSpace(),
+                                        CostKind, I);
+    }
+    case Instruction::Select: {
+      Type *CondTy = U->getOperand(0)->getType();
+      return TargetTTI->getCmpSelInstrCost(Opcode, U->getType(), CondTy,
+                                           CostKind, I);
+    }
+    case Instruction::ICmp:
+    case Instruction::FCmp: {
+      Type *ValTy = U->getOperand(0)->getType();
+      return TargetTTI->getCmpSelInstrCost(Opcode, ValTy, U->getType(),
+                                           CostKind, I);
+    }
+    case Instruction::InsertElement: {
+      auto *IE = cast<InsertElementInst>(U);
+      auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
+      unsigned Idx = CI ? CI->getZExtValue() : -1;
+      return TargetTTI->getVectorInstrCost(Opcode, Ty, Idx);
+    }
+    case Instruction::ShuffleVector: {
+      auto *Shuffle = cast<ShuffleVectorInst>(U);
+      auto *VecTy = cast<VectorType>(U->getType());
+      auto *VecSrcTy = cast<VectorType>(U->getOperand(0)->getType());
+
+      // TODO: Identify and add costs for insert subvector, etc.
+      int SubIndex;
+      if (Shuffle->isExtractSubvectorMask(SubIndex))
+        return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecSrcTy,
+                                         SubIndex, VecTy);
+      else if (Shuffle->changesLength())
+        return CostKind == TTI::TCK_RecipThroughput ? -1 : 1;
+      else if (Shuffle->isIdentity())
+        return 0;
+      else if (Shuffle->isReverse())
+        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy, 0, nullptr);
+      else if (Shuffle->isSelect())
+        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy, 0, nullptr);
+      else if (Shuffle->isTranspose())
+        return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy, 0, nullptr);
+      else if (Shuffle->isZeroEltSplat())
+        return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy, 0, nullptr);
+      else if (Shuffle->isSingleSource())
+        return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy, 0,
+                                         nullptr);
+
+      return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy, 0,
+                                       nullptr);
+    }
+    case Instruction::ExtractElement: {
+      unsigned Idx = -1;
+      auto *EEI = cast<ExtractElementInst>(U);
+      auto *CI = dyn_cast<ConstantInt>(EEI->getOperand(1));
+      if (CI)
+        Idx = CI->getZExtValue();
+
+      // Try to match a reduction sequence (series of shufflevector and
+      // vector  adds followed by a extractelement).
+      unsigned ReduxOpCode;
+      VectorType *ReduxType;
+
+      switch (TTI::matchVectorSplittingReduction(EEI, ReduxOpCode,
+                                                 ReduxType)) {
+      case TTI::RK_Arithmetic:
+        return TargetTTI->getArithmeticReductionCost(ReduxOpCode, ReduxType,
+                                          /*IsPairwiseForm=*/false,
+                                          CostKind);
+      case TTI::RK_MinMax:
+        return TargetTTI->getMinMaxReductionCost(
+            ReduxType, cast<VectorType>(CmpInst::makeCmpResultType(ReduxType)),
+            /*IsPairwiseForm=*/false, /*IsUnsigned=*/false, CostKind);
+      case TTI::RK_UnsignedMinMax:
+        return TargetTTI->getMinMaxReductionCost(
+            ReduxType, cast<VectorType>(CmpInst::makeCmpResultType(ReduxType)),
+            /*IsPairwiseForm=*/false, /*IsUnsigned=*/true, CostKind);
+      case TTI::RK_None:
+        break;
+      }
+
+      switch (TTI::matchPairwiseReduction(EEI, ReduxOpCode, ReduxType)) {
+      case TTI::RK_Arithmetic:
+        return TargetTTI->getArithmeticReductionCost(ReduxOpCode, ReduxType,
+                                          /*IsPairwiseForm=*/true, CostKind);
+      case TTI::RK_MinMax:
+        return TargetTTI->getMinMaxReductionCost(
+            ReduxType, cast<VectorType>(CmpInst::makeCmpResultType(ReduxType)),
+            /*IsPairwiseForm=*/true, /*IsUnsigned=*/false, CostKind);
+      case TTI::RK_UnsignedMinMax:
+        return TargetTTI->getMinMaxReductionCost(
+            ReduxType, cast<VectorType>(CmpInst::makeCmpResultType(ReduxType)),
+            /*IsPairwiseForm=*/true, /*IsUnsigned=*/true, CostKind);
+      case TTI::RK_None:
+        break;
+      }
+      return TargetTTI->getVectorInstrCost(Opcode, U->getOperand(0)->getType(),
+                                           Idx);
+    }
     }
     // By default, just classify everything as 'basic'.
     return TTI::TCC_Basic;

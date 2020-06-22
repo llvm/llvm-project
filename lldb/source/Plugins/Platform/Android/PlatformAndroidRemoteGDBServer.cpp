@@ -188,7 +188,7 @@ Status PlatformAndroidRemoteGDBServer::MakeConnectURL(
     if (error.Success()) {
       m_port_forwards[pid] = local_port;
       std::ostringstream url_str;
-      url_str << "connect://localhost:" << local_port;
+      url_str << "connect://127.0.0.1:" << local_port;
       connect_url = url_str.str();
       break;
     }

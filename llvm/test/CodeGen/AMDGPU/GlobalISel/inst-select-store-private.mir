@@ -205,11 +205,8 @@ body: |
   bb.0:
 
     ; GFX6-LABEL: name: function_store_private_s32_to_1_fi_offset_4095
-    ; GFX6: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    ; GFX6: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
-    ; GFX6: %2:vgpr_32, dead %4:sreg_64_xexec = V_ADD_I32_e64 [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], 0, implicit $exec
-    ; GFX6: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX6: BUFFER_STORE_BYTE_OFFEN [[V_MOV_B32_e32_2]], %2, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 1, addrspace 5)
+    ; GFX6: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX6: BUFFER_STORE_BYTE_OFFEN [[V_MOV_B32_e32_]], %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4095, 0, 0, 0, 0, 0, implicit $exec :: (store 1, addrspace 5)
     ; GFX9-LABEL: name: function_store_private_s32_to_1_fi_offset_4095
     ; GFX9: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GFX9: BUFFER_STORE_BYTE_OFFEN [[V_MOV_B32_e32_]], %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4095, 0, 0, 0, 0, 0, implicit $exec :: (store 1, addrspace 5)
@@ -477,11 +474,8 @@ body: |
 
     ; GFX6-LABEL: name: kernel_store_private_s32_to_1_fi_offset_4095
     ; GFX6: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GFX6: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    ; GFX6: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
-    ; GFX6: %2:vgpr_32, dead %4:sreg_64_xexec = V_ADD_I32_e64 [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], 0, implicit $exec
-    ; GFX6: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX6: BUFFER_STORE_BYTE_OFFEN [[V_MOV_B32_e32_2]], %2, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 1, addrspace 5)
+    ; GFX6: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX6: BUFFER_STORE_BYTE_OFFEN [[V_MOV_B32_e32_]], %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4095, 0, 0, 0, 0, 0, implicit $exec :: (store 1, addrspace 5)
     ; GFX9-LABEL: name: kernel_store_private_s32_to_1_fi_offset_4095
     ; GFX9: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     ; GFX9: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec

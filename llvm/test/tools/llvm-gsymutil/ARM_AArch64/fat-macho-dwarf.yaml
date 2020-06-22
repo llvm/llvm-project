@@ -378,8 +378,7 @@ Slices:
             - Attribute:       DW_AT_type
               Form:            DW_FORM_ref_addr
       debug_aranges:
-        - Length:
-            TotalLength:     28
+        - Length:          28
           Version:         2
           CuOffset:        0
           AddrSize:        4
@@ -476,8 +475,7 @@ Slices:
             - AbbrCode:        0x00000000
               Values:          []
       debug_line:
-        - Length:
-            TotalLength:     55
+        - Length:          55
           Version:         4
           PrologueLength:  32
           MinInstLength:   1
@@ -859,8 +857,7 @@ Slices:
             - Attribute:       DW_AT_type
               Form:            DW_FORM_ref_addr
       debug_aranges:
-        - Length:
-            TotalLength:     44
+        - Length:          44
           Version:         2
           CuOffset:        0
           AddrSize:        8
@@ -956,8 +953,7 @@ Slices:
             - AbbrCode:        0x00000000
               Values:          []
       debug_line:
-        - Length:
-            TotalLength:     59
+        - Length:          59
           Version:         4
           PrologueLength:  32
           MinInstLength:   1

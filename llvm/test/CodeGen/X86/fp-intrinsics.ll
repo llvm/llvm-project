@@ -1762,13 +1762,14 @@ entry:
   ret i64 %result
 }
 
-define i64 @f26(float %x) {
+define i64 @f26(float %x) #0 {
 ; X87-LABEL: f26:
 ; X87:       # %bb.0: # %entry
 ; X87-NEXT:    subl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    wait
 ; X87-NEXT:    calll llrintf
 ; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4

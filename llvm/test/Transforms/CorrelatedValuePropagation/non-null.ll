@@ -61,7 +61,7 @@ bb:
 
 define void @test3() {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[PTR:%.*]] = alloca i8
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
@@ -77,7 +77,7 @@ bb:
 
 define void @test3_no_null_opt() #0 {
 ; CHECK-LABEL: @test3_no_null_opt(
-; CHECK-NEXT:    [[PTR:%.*]] = alloca i8
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
@@ -275,7 +275,7 @@ define void @test11(i8* %arg1, i8** %arg2) {
 ; CHECK:       non_null:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       null:
-; CHECK-NEXT:    [[ANOTHER_ARG:%.*]] = alloca i8
+; CHECK-NEXT:    [[ANOTHER_ARG:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[MERGED_ARG:%.*]] = phi i8* [ [[ANOTHER_ARG]], [[NULL]] ], [ [[ARG1]], [[NON_NULL]] ]
@@ -331,6 +331,17 @@ merge:
   %merged_arg = phi i8* [%another_arg, %null], [%arg1, %non_null]
   call void @test12_helper(i8* %merged_arg)
   ret void
+}
+
+define i1 @test_store_same_block(i8* %arg) {
+; CHECK-LABEL: @test_store_same_block(
+; CHECK-NEXT:    store i8 0, i8* [[ARG:%.*]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[ARG]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  store i8 0, i8* %arg
+  %cmp = icmp ne i8* %arg, null
+  ret i1 %cmp
 }
 
 attributes #0 = { null_pointer_is_valid }

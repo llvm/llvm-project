@@ -20,7 +20,7 @@
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
 ; Function Attrs: nounwind uwtable
-define i32 @_Z3sumii(i32 %x, i32 %y) !dbg !4 {
+define i32 @_Z3sumii(i32 %x, i32 %y) #0 !dbg !4 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
@@ -33,7 +33,7 @@ entry:
 }
 
 ; Function Attrs: uwtable
-define i32 @main() !dbg !7 {
+define i32 @main() #0 !dbg !7 {
 entry:
   %retval = alloca i32, align 4
   %s = alloca i32, align 4
@@ -84,6 +84,8 @@ while.end:                                        ; preds = %while.cond
 }
 
 declare i32 @printf(i8*, ...) #2
+
+attributes #0 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}

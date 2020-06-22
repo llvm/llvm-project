@@ -280,7 +280,7 @@ int main() {
 // CHECK: call {{.*}} [[S_FLOAT_TY_DESTR:@.+]]([[S_FLOAT_TY]]*
 // CHECK: ret
 //
-// CHECK: define internal void [[MAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, float* dereferenceable(4) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}}, float* dereferenceable(4) %{{.+}}, [2 x i32]* dereferenceable(8) %vec, [4 x [[S_FLOAT_TY]]]* dereferenceable(16) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, float* nonnull align 4 dereferenceable(4) %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}}, float* nonnull align 4 dereferenceable(4) %{{.+}}, [2 x i32]* nonnull align 4 dereferenceable(8) %vec, [4 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(16) %{{.+}})
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca float,
 // CHECK: [[VAR_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
 // CHECK: [[VAR1_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
@@ -351,7 +351,7 @@ int main() {
 // CHECK: store float [[UP]], float* [[T_VAR_REF]],
 
 // var = var.operator &(var_reduction);
-// CHECK: [[UP:%.+]] = call dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* [[VAR_REF]], [[S_FLOAT_TY]]* dereferenceable(4) [[VAR_PRIV]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* [[VAR_REF]], [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_FLOAT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -405,7 +405,7 @@ int main() {
 
 // var = var.operator &(var_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[UP:%.+]] = call dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* [[VAR_REF]], [[S_FLOAT_TY]]* dereferenceable(4) [[VAR_PRIV]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* [[VAR_REF]], [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_FLOAT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -509,7 +509,7 @@ int main() {
 // CHECK: store float [[UP]], float* [[T_VAR_LHS]],
 
 // var_lhs = var_lhs.operator &(var_rhs);
-// CHECK: [[UP:%.+]] = call dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* [[VAR_LHS]], [[S_FLOAT_TY]]* dereferenceable(4) [[VAR_RHS]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @{{.+}}([[S_FLOAT_TY]]* [[VAR_LHS]], [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_RHS]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR_LHS]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_FLOAT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -539,7 +539,7 @@ int main() {
 // CHECK: store float [[UP]], float* [[T_VAR1_LHS]],
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK1]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i64 %{{.+}}, i64 %{{.+}}, i32* {{.+}} %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [10 x [4 x [[S_FLOAT_TY]]]]* dereferenceable(160) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK1]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i64 %{{.+}}, i64 %{{.+}}, i32* {{.+}} %{{.+}}, [2 x i32]* nonnull align 4 dereferenceable(8) %{{.+}}, [10 x [4 x [[S_FLOAT_TY]]]]* nonnull align 4 dereferenceable(160) %{{.+}})
 
 // Reduction list for runtime.
 // CHECK: [[RED_LIST:%.+]] = alloca [4 x i8*],
@@ -629,7 +629,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_LB]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: [[AND:%.+]] = call dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
@@ -659,7 +659,7 @@ int main() {
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[AND:%.+]] = call dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: call void @__kmpc_end_critical(
@@ -732,7 +732,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_LB]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: [[AND:%.+]] = call dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
@@ -740,7 +740,7 @@ int main() {
 
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i64 %{{.+}}, i64 %{{.+}}, i32* {{.+}} %{{.+}}, [10 x [4 x [[S_FLOAT_TY]]]]* dereferenceable(160) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i64 %{{.+}}, i64 %{{.+}}, i32* {{.+}} %{{.+}}, [10 x [4 x [[S_FLOAT_TY]]]]* nonnull align 4 dereferenceable(160) %{{.+}})
 
 // CHECK: [[ARRS_PRIV:%.+]] = alloca [10 x [4 x [[S_FLOAT_TY]]]],
 
@@ -823,7 +823,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[LHS_BEGIN]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: [[AND:%.+]] = call dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
@@ -853,7 +853,7 @@ int main() {
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[AND:%.+]] = call dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: call void @__kmpc_end_critical(
@@ -922,7 +922,7 @@ int main() {
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[ARRS_LB]], [[END]]
 // CHECK: br i1 [[ISEMPTY]],
 // CHECK: phi [[S_FLOAT_TY]]*
-// CHECK: [[AND:%.+]] = call dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: [[AND:%.+]] = call nonnull align 4 dereferenceable(4) [[S_FLOAT_TY]]* @_ZN1SIfEanERKS0_([[S_FLOAT_TY]]* %{{.+}}, [[S_FLOAT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: [[BITCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[AND]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 [[BITCAST]], i64 4, i1 false)
 // CHECK: [[DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* %{{.+}}, [[END]]
@@ -958,7 +958,7 @@ int main() {
 
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK4]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK4]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** nonnull align 8 dereferenceable(8) %{{.+}})
 
 // CHECK: [[VAR2_ORIG_ADDR:%.+]] = alloca [[S_FLOAT_TY]]***,
 
@@ -986,7 +986,7 @@ int main() {
 // CHECK: store [[S_FLOAT_TY]]* [[PSEUDO_VAR2_PRIV]], [[S_FLOAT_TY]]** [[REF]]
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK5]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK5]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** nonnull align 8 dereferenceable(8) %{{.+}})
 
 // CHECK: [[VAR2_ORIG_ADDR:%.+]] = alloca [[S_FLOAT_TY]]***,
 // CHECK: [[VAR2_PRIV:%.+]] = alloca [1 x [6 x [[S_FLOAT_TY]]]],
@@ -1015,7 +1015,7 @@ int main() {
 // CHECK: store [[S_FLOAT_TY]]* [[VAR2_PRIV]], [[S_FLOAT_TY]]** [[REF]]
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK6]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK6]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** nonnull align 8 dereferenceable(8) %{{.+}})
 
 // CHECK: [[VAR2_ORIG_ADDR:%.+]] = alloca [[S_FLOAT_TY]]***,
 // CHECK: [[VAR2_PRIV:%.+]] = alloca [1 x [6 x [[S_FLOAT_TY]]]],
@@ -1044,7 +1044,7 @@ int main() {
 // CHECK: store [[S_FLOAT_TY]]* [[VAR2_PRIV]], [[S_FLOAT_TY]]** [[REF]]
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK7]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK7]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** nonnull align 8 dereferenceable(8) %{{.+}})
 
 // CHECK: [[VAR2_ORIG_ADDR:%.+]] = alloca [[S_FLOAT_TY]]***,
 // CHECK: [[VAR2_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
@@ -1072,7 +1072,7 @@ int main() {
 // CHECK: store [[S_FLOAT_TY]]* [[PSEUDO_VAR2_PRIV]], [[S_FLOAT_TY]]** [[REF]]
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK8]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [5 x [[S_FLOAT_TY]]]* dereferenceable(20) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK8]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [5 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(20) %{{.+}})
 
 // CHECK: [[VVAR2_ORIG_ADDR:%.+]] = alloca [5 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VVAR2_PRIV:%.+]] = alloca [5 x [[S_FLOAT_TY]]],
@@ -1093,7 +1093,7 @@ int main() {
 // CHECK: [[VVAR2_PRIV:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[VVAR2_PRIV_PTR]], i64 [[OFFSET]]
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK9]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(16) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK9]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(16) %{{.+}})
 
 // CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR3_PRIV:%.+]] = alloca [2 x [[S_FLOAT_TY]]],
@@ -1126,7 +1126,7 @@ int main() {
 
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK10]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(16) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK10]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(16) %{{.+}})
 
 // CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR3_PRIV:%.+]] = alloca [2 x [[S_FLOAT_TY]]],
@@ -1159,7 +1159,7 @@ int main() {
 
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK11]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(16) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK11]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(16) %{{.+}})
 
 // CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
 
@@ -1192,7 +1192,7 @@ int main() {
 
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK12]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(16) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK12]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* nonnull align 4 dereferenceable(16) %{{.+}})
 
 // CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR3_PRIV:%.+]] = alloca [4 x [[S_FLOAT_TY]]],
@@ -1225,7 +1225,7 @@ int main() {
 // CHECK: call {{.*}} [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
 // CHECK: ret
 //
-// CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* dereferenceable(4) %{{.+}}, [[S_INT_TY]]* dereferenceable(4) %{{.+}}, [[S_INT_TY]]* dereferenceable(4) %{{.+}}, i32* dereferenceable(4) %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [2 x [[S_INT_TY]]]* dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, [[S_INT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}}, [[S_INT_TY]]* nonnull align 4 dereferenceable(4) %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, [2 x i32]* nonnull align 4 dereferenceable(8) %{{.+}}, [2 x [[S_INT_TY]]]* nonnull align 4 dereferenceable(8) %{{.+}})
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
@@ -1300,7 +1300,7 @@ int main() {
 // CHECK: store i{{[0-9]+}} [[UP]], i{{[0-9]+}}* [[T_VAR_REF]],
 
 // var = var.operator &(var_reduction);
-// CHECK: [[UP:%.+]] = call dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* [[VAR_REF]], [[S_INT_TY]]* dereferenceable(4) [[VAR_PRIV]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* [[VAR_REF]], [[S_INT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_INT_TY]]* [[VAR_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_INT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -1342,7 +1342,7 @@ int main() {
 
 // var = var.operator &(var_reduction);
 // CHECK: call void @__kmpc_critical(
-// CHECK: [[UP:%.+]] = call dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* [[VAR_REF]], [[S_INT_TY]]* dereferenceable(4) [[VAR_PRIV]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* [[VAR_REF]], [[S_INT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_PRIV]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_INT_TY]]* [[VAR_REF]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_INT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -1427,7 +1427,7 @@ int main() {
 // CHECK: store i{{[0-9]+}} [[UP]], i{{[0-9]+}}* [[T_VAR_LHS]],
 
 // var_lhs = var_lhs.operator &(var_rhs);
-// CHECK: [[UP:%.+]] = call dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* [[VAR_LHS]], [[S_INT_TY]]* dereferenceable(4) [[VAR_RHS]])
+// CHECK: [[UP:%.+]] = call nonnull align 4 dereferenceable(4) [[S_INT_TY]]* @{{.+}}([[S_INT_TY]]* [[VAR_LHS]], [[S_INT_TY]]* nonnull align 4 dereferenceable(4) [[VAR_RHS]])
 // CHECK: [[BC1:%.+]] = bitcast [[S_INT_TY]]* [[VAR_LHS]] to i8*
 // CHECK: [[BC2:%.+]] = bitcast [[S_INT_TY]]* [[UP]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC1]], i8* align 4 [[BC2]], i64 4, i1 false)
@@ -1457,7 +1457,7 @@ int main() {
 // CHECK: store i{{[0-9]+}} [[UP]], i{{[0-9]+}}* [[T_VAR1_LHS]],
 // CHECK: ret void
 
-// CHECK: define internal void [[TMAIN_MICROTASK2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [42 x [[S_INT_TY]]]* dereferenceable(168) %{{.*}}, [2 x i32]* dereferenceable(8) %{{.*}}, i32* dereferenceable(4) %{{.*}}, [2 x [[S_INT_TY]]]* dereferenceable(8) %{{.*}}, [[S_INT_TY]]* dereferenceable(4) %{{.*}})
+// CHECK: define internal void [[TMAIN_MICROTASK2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [42 x [[S_INT_TY]]]* nonnull align 4 dereferenceable(168) %{{.*}}, [2 x i32]* nonnull align 4 dereferenceable(8) %{{.*}}, i32* nonnull align 4 dereferenceable(4) %{{.*}}, [2 x [[S_INT_TY]]]* nonnull align 4 dereferenceable(8) %{{.*}}, [[S_INT_TY]]* nonnull align 4 dereferenceable(4) %{{.*}})
 
 // CHECK: [[ARR_ORIG_ADDR:%.+]] = alloca [42 x [[S_INT_TY]]]*,
 // CHECK: [[ARR_PRIV:%.+]] = alloca [40 x [[S_INT_TY]]],

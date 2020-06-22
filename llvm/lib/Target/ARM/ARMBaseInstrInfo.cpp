@@ -5560,8 +5560,54 @@ bool llvm::HasLowerConstantMaterializationCost(unsigned Val1, unsigned Val2,
 /// | Frame overhead in Bytes |      0 |   0 |
 /// | Stack fixup required    |     No |  No |
 /// +-------------------------+--------+-----+
+///
+/// \p MachineOutlinerNoLRSave implies that the function should be called using
+/// a BL instruction, but doesn't require LR to be saved and restored. This
+/// happens when LR is known to be dead.
+///
+/// That is,
+///
+/// I1                                OUTLINED_FUNCTION:
+/// I2 --> BL OUTLINED_FUNCTION       I1
+/// I3                                I2
+///                                   I3
+///                                   BX LR
+///
+/// +-------------------------+--------+-----+
+/// |                         | Thumb2 | ARM |
+/// +-------------------------+--------+-----+
+/// | Call overhead in Bytes  |      4 |   4 |
+/// | Frame overhead in Bytes |      4 |   4 |
+/// | Stack fixup required    |     No |  No |
+/// +-------------------------+--------+-----+
+///
+/// \p MachineOutlinerRegSave implies that the function should be called with a
+/// save and restore of LR to an available register. This allows us to avoid
+/// stack fixups. Note that this outlining variant is compatible with the
+/// NoLRSave case.
+///
+/// That is,
+///
+/// I1     Save LR                    OUTLINED_FUNCTION:
+/// I2 --> BL OUTLINED_FUNCTION       I1
+/// I3     Restore LR                 I2
+///                                   I3
+///                                   BX LR
+///
+/// +-------------------------+--------+-----+
+/// |                         | Thumb2 | ARM |
+/// +-------------------------+--------+-----+
+/// | Call overhead in Bytes  |      8 |  12 |
+/// | Frame overhead in Bytes |      2 |   4 |
+/// | Stack fixup required    |     No |  No |
+/// +-------------------------+--------+-----+
 
-enum MachineOutlinerClass { MachineOutlinerTailCall, MachineOutlinerThunk };
+enum MachineOutlinerClass {
+  MachineOutlinerTailCall,
+  MachineOutlinerThunk,
+  MachineOutlinerNoLRSave,
+  MachineOutlinerRegSave
+};
 
 enum MachineOutlinerMBBFlags {
   LRUnavailableSomewhere = 0x2,
@@ -5574,13 +5620,43 @@ struct OutlinerCosts {
   const int FrameTailCall;
   const int CallThunk;
   const int FrameThunk;
+  const int CallNoLRSave;
+  const int FrameNoLRSave;
+  const int CallRegSave;
+  const int FrameRegSave;
 
   OutlinerCosts(const ARMSubtarget &target)
       : CallTailCall(target.isThumb() ? 4 : 4),
         FrameTailCall(target.isThumb() ? 0 : 0),
         CallThunk(target.isThumb() ? 4 : 4),
-        FrameThunk(target.isThumb() ? 0 : 0) {}
+        FrameThunk(target.isThumb() ? 0 : 0),
+        CallNoLRSave(target.isThumb() ? 4 : 4),
+        FrameNoLRSave(target.isThumb() ? 4 : 4),
+        CallRegSave(target.isThumb() ? 8 : 12),
+        FrameRegSave(target.isThumb() ? 2 : 4) {}
 };
+
+unsigned
+ARMBaseInstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
+  assert(C.LRUWasSet && "LRU wasn't set?");
+  MachineFunction *MF = C.getMF();
+  const ARMBaseRegisterInfo *ARI = static_cast<const ARMBaseRegisterInfo *>(
+      MF->getSubtarget().getRegisterInfo());
+
+  BitVector regsReserved = ARI->getReservedRegs(*MF);
+  // Check if there is an available register across the sequence that we can
+  // use.
+  for (unsigned Reg : ARM::rGPRRegClass) {
+    if (!(Reg < regsReserved.size() && regsReserved.test(Reg)) &&
+        Reg != ARM::LR &&  // LR is not reserved, but don't use it.
+        Reg != ARM::R12 && // R12 is not guaranteed to be preserved.
+        C.LRU.available(Reg) && C.UsedInSequence.available(Reg))
+      return Reg;
+  }
+
+  // No suitable register. Return 0.
+  return 0u;
+}
 
 outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
@@ -5649,7 +5725,7 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
           C.setCallInfo(CallID, NumBytesForCall);
       };
 
-  auto Costs = std::make_unique<OutlinerCosts>(Subtarget);
+  OutlinerCosts Costs(Subtarget);
   unsigned FrameID = 0;
   unsigned NumBytesToCreateFrame = 0;
 
@@ -5657,16 +5733,46 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
   // tail call all of the candidates.
   if (RepeatedSequenceLocs[0].back()->isTerminator()) {
     FrameID = MachineOutlinerTailCall;
-    NumBytesToCreateFrame = Costs->FrameTailCall;
-    SetCandidateCallInfo(MachineOutlinerTailCall, Costs->CallTailCall);
+    NumBytesToCreateFrame = Costs.FrameTailCall;
+    SetCandidateCallInfo(MachineOutlinerTailCall, Costs.CallTailCall);
   } else if (LastInstrOpcode == ARM::BL || LastInstrOpcode == ARM::BLX ||
              LastInstrOpcode == ARM::tBL || LastInstrOpcode == ARM::tBLXr ||
              LastInstrOpcode == ARM::tBLXi) {
     FrameID = MachineOutlinerThunk;
-    NumBytesToCreateFrame = Costs->FrameThunk;
-    SetCandidateCallInfo(MachineOutlinerThunk, Costs->CallThunk);
-  } else
-    return outliner::OutlinedFunction();
+    NumBytesToCreateFrame = Costs.FrameThunk;
+    SetCandidateCallInfo(MachineOutlinerThunk, Costs.CallThunk);
+  } else {
+    // We need to decide how to emit calls + frames. We can always emit the same
+    // frame if we don't need to save to the stack.
+    unsigned NumBytesNoStackCalls = 0;
+    std::vector<outliner::Candidate> CandidatesWithoutStackFixups;
+
+    for (outliner::Candidate &C : RepeatedSequenceLocs) {
+      C.initLRU(TRI);
+
+      // Is LR available? If so, we don't need a save.
+      if (C.LRU.available(ARM::LR)) {
+        FrameID = MachineOutlinerNoLRSave;
+        NumBytesNoStackCalls += Costs.CallNoLRSave;
+        C.setCallInfo(MachineOutlinerNoLRSave, Costs.CallNoLRSave);
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+
+      // Is an unused register available? If so, we won't modify the stack, so
+      // we can outline with the same frame type as those that don't save LR.
+      else if (findRegisterToSaveLRTo(C)) {
+        FrameID = MachineOutlinerRegSave;
+        NumBytesNoStackCalls += Costs.CallRegSave;
+        C.setCallInfo(MachineOutlinerRegSave, Costs.CallRegSave);
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+    }
+
+    if (!CandidatesWithoutStackFixups.empty()) {
+      RepeatedSequenceLocs = CandidatesWithoutStackFixups;
+    } else
+      return outliner::OutlinedFunction();
+  }
 
   return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
                                     NumBytesToCreateFrame, FrameID);
@@ -5806,8 +5912,8 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
   if (MI.isCall()) {
     // If we don't know anything about the callee, assume it depends on the
     // stack layout of the caller. In that case, it's only legal to outline
-    // as a tail-call.  Whitelist the call instructions we know about so we
-    // don't get unexpected results with call pseudo-instructions.
+    // as a tail-call. Explicitly list the call instructions we know about so
+    // we don't get unexpected results with call pseudo-instructions.
     auto UnknownCallOutlineType = outliner::InstrType::Illegal;
     if (Opc == ARM::BL || Opc == ARM::tBL || Opc == ARM::BLX ||
         Opc == ARM::tBLXr || Opc == ARM::tBLXi)
@@ -5819,6 +5925,25 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
   // Since calls are handled, don't touch LR or PC
   if (MI.modifiesRegister(ARM::LR, TRI) || MI.modifiesRegister(ARM::PC, TRI))
     return outliner::InstrType::Illegal;
+
+  // Does this use the stack?
+  if (MI.modifiesRegister(ARM::SP, TRI) || MI.readsRegister(ARM::SP, TRI)) {
+    // True if there is no chance that any outlined candidate from this range
+    // could require stack fixups. That is, both
+    // * LR is available in the range (No save/restore around call)
+    // * The range doesn't include calls (No save/restore in outlined frame)
+    // are true.
+    // FIXME: This is very restrictive; the flags check the whole block,
+    // not just the bit we will try to outline.
+    bool MightNeedStackFixUp =
+        (Flags & (MachineOutlinerMBBFlags::LRUnavailableSomewhere |
+                  MachineOutlinerMBBFlags::HasCalls));
+
+    if (!MightNeedStackFixUp)
+      return outliner::InstrType::Legal;
+
+    return outliner::InstrType::Illegal;
+  }
 
   // Be conservative with IT blocks.
   if (MI.readsRegister(ARM::ITSTATE, TRI) ||
@@ -5835,6 +5960,10 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
 void ARMBaseInstrInfo::buildOutlinedFrame(
     MachineBasicBlock &MBB, MachineFunction &MF,
     const outliner::OutlinedFunction &OF) const {
+  // Nothing is needed for tail-calls.
+  if (OF.FrameConstructionID == MachineOutlinerTailCall)
+    return;
+
   // For thunk outlining, rewrite the last instruction from a call to a
   // tail-call.
   if (OF.FrameConstructionID == MachineOutlinerThunk) {
@@ -5851,7 +5980,13 @@ void ARMBaseInstrInfo::buildOutlinedFrame(
     if (isThumb && !Call->getOperand(FuncOp).isReg())
       MIB.add(predOps(ARMCC::AL));
     Call->eraseFromParent();
+    return;
   }
+
+  // Here we have to insert the return ourselves.  Get the correct opcode from
+  // current feature set.
+  BuildMI(MBB, MBB.end(), DebugLoc(), get(Subtarget.getReturnOpcode()))
+      .add(predOps(ARMCC::AL));
 }
 
 MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
@@ -5883,6 +6018,20 @@ MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
     CallMIB.add(predOps(ARMCC::AL));
   CallMIB.addGlobalAddress(M.getNamedValue(MF.getName()));
 
+  // Can we save to a register?
+  if (C.CallConstructionID == MachineOutlinerRegSave) {
+    unsigned Reg = findRegisterToSaveLRTo(C);
+    assert(Reg != 0 && "No callee-saved register available?");
+
+    // Save and restore LR from that register.
+    if (!MBB.isLiveIn(ARM::LR))
+      MBB.addLiveIn(ARM::LR);
+    copyPhysReg(MBB, It, DebugLoc(), Reg, ARM::LR, true);
+    CallPt = MBB.insert(It, CallMIB);
+    copyPhysReg(MBB, It, DebugLoc(), ARM::LR, Reg, true);
+    It--;
+    return CallPt;
+  }
   // Insert the call.
   It = MBB.insert(It, CallMIB);
   return It;

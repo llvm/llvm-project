@@ -75,6 +75,13 @@ New module
 
 New checks
 ^^^^^^^^^^
+
+- New :doc:`abseil-string-find-str-contains
+  <clang-tidy/checks/abseil-string-find-str-contains>` check.
+
+  Finds ``s.find(...) == string::npos`` comparisons (for various string-like types)
+  and suggests replacing with ``absl::StrContains()``.
+
 - New :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines-avoid-non-const-global-variables>` check.
   Finds non-const global variables as described in check I.2 of C++ Core
@@ -129,6 +136,12 @@ New checks
   Finds includes of system libc headers not provided by the compiler within
   llvm-libc implementations.
 
+- New :doc:`modernize-replace-disallow-copy-and-assign-macro
+  <clang-tidy/checks/modernize-replace-disallow-copy-and-assign-macro>` check.
+
+  Finds macro expansions of ``DISALLOW_COPY_AND_ASSIGN`` and replaces them with
+  a deleted copy constructor and a deleted assignment operator.
+
 - New :doc:`objc-dealloc-in-category
   <clang-tidy/checks/objc-dealloc-in-category>` check.
 
@@ -144,6 +157,12 @@ New checks
 
   Finds calls to ``NSInvocation`` methods under ARC that don't have proper
   argument object lifetimes.
+
+- New :doc:`readability-use-anyofallof
+  <clang-tidy/checks/readability-use-anyofallof>` check.
+
+  Finds range-based for loops that can be replaced by a call to ``std::any_of``
+  or ``std::all_of``.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

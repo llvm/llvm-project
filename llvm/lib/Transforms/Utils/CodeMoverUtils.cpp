@@ -317,25 +317,20 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
   if (!isControlFlowEquivalent(I, InsertPoint, DT, PDT))
     return reportInvalidCandidate(I, NotControlFlowEquivalent);
 
-  OrderedInstructions OI(&DT);
-  DT.updateDFSNumbers();
-  const bool MoveForward = OI.dfsBefore(&I, &InsertPoint);
-  if (MoveForward) {
-    // When I is being moved forward, we need to make sure the InsertPoint
-    // dominates every users. Or else, a user may be using an undefined I.
+  if (!DT.dominates(&InsertPoint, &I))
     for (const Use &U : I.uses())
       if (auto *UserInst = dyn_cast<Instruction>(U.getUser()))
         if (UserInst != &InsertPoint && !DT.dominates(&InsertPoint, U))
           return false;
-  } else {
-    // When I is being moved backward, we need to make sure all its opernads
-    // dominates the InsertPoint. Or else, an operand may be undefined for I.
+  if (!DT.dominates(&I, &InsertPoint))
     for (const Value *Op : I.operands())
       if (auto *OpInst = dyn_cast<Instruction>(Op))
-        if (&InsertPoint == OpInst || !OI.dominates(OpInst, &InsertPoint))
+        if (&InsertPoint == OpInst || !DT.dominates(OpInst, &InsertPoint))
           return false;
-  }
 
+  OrderedInstructions OI(&DT);
+  DT.updateDFSNumbers();
+  const bool MoveForward = OI.domTreeLevelBefore(&I, &InsertPoint);
   Instruction &StartInst = (MoveForward ? I : InsertPoint);
   Instruction &EndInst = (MoveForward ? InsertPoint : I);
   SmallPtrSet<Instruction *, 10> InstsToCheck;

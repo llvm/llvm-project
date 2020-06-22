@@ -12,7 +12,7 @@
 // <iterator>
 // template <class C> constexpr auto empty(const C& c) -> decltype(c.empty());
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <vector>
 #include <iterator>

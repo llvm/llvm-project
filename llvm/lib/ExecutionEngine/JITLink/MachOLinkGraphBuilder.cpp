@@ -79,6 +79,11 @@ bool MachOLinkGraphBuilder::isAltEntry(const NormalizedSymbol &NSym) {
   return NSym.Desc & MachO::N_ALT_ENTRY;
 }
 
+bool MachOLinkGraphBuilder::isDebugSection(const NormalizedSection &NSec) {
+  return (NSec.Flags & MachO::S_ATTR_DEBUG &&
+          strcmp(NSec.SegName, "__DWARF") == 0);
+}
+
 unsigned
 MachOLinkGraphBuilder::getPointerSize(const object::MachOObjectFile &Obj) {
   return Obj.is64Bit() ? 8 : 4;
@@ -118,6 +123,11 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
       const MachO::section_64 &Sec64 =
           Obj.getSection64(SecRef.getRawDataRefImpl());
 
+      memcpy(&NSec.SectName, &Sec64.sectname, 16);
+      NSec.SectName[16] = '\0';
+      memcpy(&NSec.SegName, Sec64.segname, 16);
+      NSec.SegName[16] = '\0';
+
       NSec.Address = Sec64.addr;
       NSec.Size = Sec64.size;
       NSec.Alignment = 1ULL << Sec64.align;
@@ -125,6 +135,12 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
       DataOffset = Sec64.offset;
     } else {
       const MachO::section &Sec32 = Obj.getSection(SecRef.getRawDataRefImpl());
+
+      memcpy(&NSec.SectName, &Sec32.sectname, 16);
+      NSec.SectName[16] = '\0';
+      memcpy(&NSec.SegName, Sec32.segname, 16);
+      NSec.SegName[16] = '\0';
+
       NSec.Address = Sec32.addr;
       NSec.Size = Sec32.size;
       NSec.Alignment = 1ULL << Sec32.align;
@@ -164,7 +180,14 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
       Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
                                                        sys::Memory::MF_WRITE);
 
-    NSec.GraphSection = &G->createSection(*Name, Prot);
+    if (!isDebugSection(NSec))
+      NSec.GraphSection = &G->createSection(*Name, Prot);
+    else
+      LLVM_DEBUG({
+        dbgs() << "    " << *Name
+               << " is a debug section: No graph section will be created.\n";
+      });
+
     IndexToSection.insert(std::make_pair(SecIndex, std::move(NSec)));
   }
 
@@ -191,12 +214,12 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
     auto &Next = *Sections[I + 1];
     if (Next.Address < Cur.Address + Cur.Size)
       return make_error<JITLinkError>(
-          "Address range for section " + Cur.GraphSection->getName() +
-          formatv(" [ {0:x16} -- {1:x16} ] ", Cur.Address,
-                  Cur.Address + Cur.Size) +
-          "overlaps " +
-          formatv(" [ {0:x16} -- {1:x16} ] ", Next.Address,
-                  Next.Address + Next.Size));
+          "Address range for section " +
+          formatv("\"{0}/{1}\" [ {2:x16} -- {3:x16} ] ", Cur.SegName,
+                  Cur.SectName, Cur.Address, Cur.Address + Cur.Size) +
+          "overlaps section \"" + Next.SegName + "/" + Next.SectName + "\"" +
+          formatv("\"{0}/{1}\" [ {2:x16} -- {3:x16} ] ", Next.SegName,
+                  Next.SectName, Next.Address, Next.Address + Next.Size));
   }
 
   return Error::success();
@@ -262,16 +285,23 @@ Error MachOLinkGraphBuilder::createNormalizedSymbols() {
     });
 
     // If this symbol has a section, sanity check that the addresses line up.
-    NormalizedSection *NSec = nullptr;
     if (Sect != 0) {
-      if (auto NSecOrErr = findSectionByIndex(Sect - 1))
-        NSec = &*NSecOrErr;
-      else
-        return NSecOrErr.takeError();
+      auto NSec = findSectionByIndex(Sect - 1);
+      if (!NSec)
+        return NSec.takeError();
 
       if (Value < NSec->Address || Value > NSec->Address + NSec->Size)
         return make_error<JITLinkError>("Symbol address does not fall within "
                                         "section");
+
+      if (!NSec->GraphSection) {
+        LLVM_DEBUG({
+          dbgs() << "  Skipping: Symbol is in section " << NSec->SegName << "/"
+                 << NSec->SectName
+                 << " which has no associated graph section.\n";
+        });
+        continue;
+      }
     }
 
     IndexToSymbol[SymbolIndex] =
@@ -363,6 +393,14 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
   for (auto &KV : IndexToSection) {
     auto SecIndex = KV.first;
     auto &NSec = KV.second;
+
+    if (!NSec.GraphSection) {
+      LLVM_DEBUG({
+        dbgs() << "  " << NSec.SegName << "/" << NSec.SectName
+               << " has no graph section. Skipping.\n";
+      });
+      continue;
+    }
 
     // Skip sections with custom parsers.
     if (CustomSectionParserFunctions.count(NSec.GraphSection->getName())) {
@@ -525,6 +563,10 @@ Error MachOLinkGraphBuilder::graphifySectionsWithCustomParsers() {
   // Graphify special sections.
   for (auto &KV : IndexToSection) {
     auto &NSec = KV.second;
+
+    // Skip non-graph sections.
+    if (!NSec.GraphSection)
+      continue;
 
     auto HI = CustomSectionParserFunctions.find(NSec.GraphSection->getName());
     if (HI != CustomSectionParserFunctions.end()) {

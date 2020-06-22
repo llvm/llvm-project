@@ -62,6 +62,7 @@ public:
   llvm::Type *getUnderlyingType() const;
 
   /// Utilities to identify types.
+  bool isBFloatTy() { return getUnderlyingType()->isBFloatTy(); }
   bool isHalfTy() { return getUnderlyingType()->isHalfTy(); }
   bool isFloatTy() { return getUnderlyingType()->isFloatTy(); }
   bool isDoubleTy() { return getUnderlyingType()->isDoubleTy(); }
@@ -99,6 +100,7 @@ public:
   /// Utilities used to generate floating point types.
   static LLVMType getDoubleTy(LLVMDialect *dialect);
   static LLVMType getFloatTy(LLVMDialect *dialect);
+  static LLVMType getBFloatTy(LLVMDialect *dialect);
   static LLVMType getHalfTy(LLVMDialect *dialect);
   static LLVMType getFP128Ty(LLVMDialect *dialect);
   static LLVMType getX86_FP80Ty(LLVMDialect *dialect);

@@ -328,9 +328,6 @@ main:
     # CHECK: i8x16.sub_saturate_u # encoding: [0xfd,0x73]
     i8x16.sub_saturate_u
 
-    # CHECK: i8x16.mul # encoding: [0xfd,0x75]
-    i8x16.mul
-
     # CHECK: i8x16.min_s # encoding: [0xfd,0x76]
     i8x16.min_s
 
@@ -507,6 +504,33 @@ main:
 
     # CHECK: i64x2.sub # encoding: [0xfd,0xd1,0x01]
     i64x2.sub
+
+    # CHECK: i64x2.mul # encoding: [0xfd,0xd5,0x01]
+    i64x2.mul
+
+    # CHECK: f32x4.ceil # encoding: [0xfd,0xd8,0x01]
+    f32x4.ceil
+
+    # CHECK: f32x4.floor # encoding: [0xfd,0xd9,0x01]
+    f32x4.floor
+
+    # CHECK: f32x4.trunc # encoding: [0xfd,0xda,0x01]
+    f32x4.trunc
+
+    # CHECK: f32x4.nearest # encoding: [0xfd,0xdb,0x01]
+    f32x4.nearest
+
+    # CHECK: f64x2.ceil # encoding: [0xfd,0xdc,0x01]
+    f64x2.ceil
+
+    # CHECK: f64x2.floor # encoding: [0xfd,0xdd,0x01]
+    f64x2.floor
+
+    # CHECK: f64x2.trunc # encoding: [0xfd,0xde,0x01]
+    f64x2.trunc
+
+    # CHECK: f64x2.nearest # encoding: [0xfd,0xdf,0x01]
+    f64x2.nearest
 
     # CHECK: f32x4.abs # encoding: [0xfd,0xe0,0x01]
     f32x4.abs

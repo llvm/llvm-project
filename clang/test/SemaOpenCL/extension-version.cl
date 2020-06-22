@@ -333,3 +333,87 @@
 #endif
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : enable
 
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_subgroup_extended_types
+#error "Missing cl_khr_subgroup_extended_types"
+#endif
+#else
+#ifdef cl_khr_subgroup_extended_types
+#error "Incorrect cl_khr_subgroup_extended_types define"
+#endif
+// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_extended_types' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_khr_subgroup_extended_types : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_subgroup_non_uniform_vote
+#error "Missing cl_khr_subgroup_non_uniform_vote"
+#endif
+#else
+#ifdef cl_khr_subgroup_non_uniform_vote
+#error "Incorrect cl_khr_subgroup_non_uniform_vote define"
+#endif
+// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_non_uniform_vote' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_khr_subgroup_non_uniform_vote : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_subgroup_ballot
+#error "Missing cl_khr_subgroup_ballot"
+#endif
+#else
+#ifdef cl_khr_subgroup_ballot
+#error "Incorrect cl_khr_subgroup_ballot define"
+#endif
+// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_ballot' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_khr_subgroup_ballot : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_subgroup_non_uniform_arithmetic
+#error "Missing cl_khr_subgroup_non_uniform_arithmetic"
+#endif
+#else
+#ifdef cl_khr_subgroup_non_uniform_arithmetic
+#error "Incorrect cl_khr_subgroup_non_uniform_arithmetic define"
+#endif
+// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_non_uniform_arithmetic' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_khr_subgroup_non_uniform_arithmetic : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_subgroup_shuffle
+#error "Missing cl_khr_subgroup_shuffle"
+#endif
+#else
+#ifdef cl_khr_subgroup_shuffle
+#error "Incorrect cl_khr_subgroup_shuffle define"
+#endif
+// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_shuffle' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_khr_subgroup_shuffle : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_subgroup_shuffle_relative
+#error "Missing cl_khr_subgroup_shuffle_relative"
+#endif
+#else
+#ifdef cl_khr_subgroup_shuffle_relative
+#error "Incorrect cl_khr_subgroup_shuffle_relative define"
+#endif
+// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_shuffle_relative' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_khr_subgroup_shuffle_relative : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_subgroup_clustered_reduce
+#error "Missing cl_khr_subgroup_clustered_reduce"
+#endif
+#else
+#ifdef cl_khr_subgroup_clustered_reduce
+#error "Incorrect cl_khr_subgroup_clustered_reduce define"
+#endif
+// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroup_clustered_reduce' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_khr_subgroup_clustered_reduce : enable
+

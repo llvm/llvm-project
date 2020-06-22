@@ -198,3 +198,7 @@ if os.path.exists('/etc/gentoo-release'):
 
 if config.enable_shared:
     config.available_features.add("enable_shared")
+
+# Add a vendor-specific feature.
+if config.clang_vendor_uti:
+    config.available_features.add('clang-vendor=' + config.clang_vendor_uti)

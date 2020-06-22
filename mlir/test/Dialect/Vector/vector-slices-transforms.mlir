@@ -36,7 +36,7 @@ func @insert_slices(%arg0: vector<2x2xf32>,
 //       CHECK: %[[X1:.*]] = vector.extract_strided_slice %arg0 {offsets = [0, 2], sizes = [2, 1], strides = [1, 1]}
 //       CHECK: %[[X2:.*]] = vector.extract_strided_slice %arg0 {offsets = [2, 0], sizes = [1, 2], strides = [1, 1]}
 //       CHECK: %[[X3:.*]] = vector.extract_strided_slice %arg0 {offsets = [2, 2], sizes = [1, 1], strides = [1, 1]}
-//       CHECK: %[[X4:.*]] = vector.insert_strided_slice %[[X0]], %[[C0]] {offsets = [0, 0], strides = [1, 1]}
+//       CHECK: %[[X4:.*]] = vector.insert_strided_slice %[[X0]], %[[C]] {offsets = [0, 0], strides = [1, 1]}
 //       CHECK: %[[X5:.*]] = vector.insert_strided_slice %[[X1]], %[[X4]] {offsets = [0, 2], strides = [1, 1]}
 //       CHECK: %[[X6:.*]] = vector.insert_strided_slice %[[X2]], %[[X5]] {offsets = [2, 0], strides = [1, 1]}
 //       CHECK: %[[X7:.*]] = vector.insert_strided_slice %[[X3]], %[[X6]] {offsets = [2, 2], strides = [1, 1]}

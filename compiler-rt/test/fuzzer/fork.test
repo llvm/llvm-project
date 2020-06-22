@@ -18,4 +18,4 @@ RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 2>&1 | FileCheck 
 
 MAX_TOTAL_TIME: INFO: fuzzed for {{.*}} seconds, wrapping up soon
 MAX_TOTAL_TIME: INFO: exiting: {{.*}} time:
-RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 -ignore_crashes=1 -max_total_time=10 2>&1 | FileCheck %s --dump-input-on-failure --check-prefix=MAX_TOTAL_TIME
+RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 -ignore_crashes=1 -max_total_time=10 2>&1 | FileCheck %s  --check-prefix=MAX_TOTAL_TIME

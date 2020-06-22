@@ -22,12 +22,12 @@ namespace runtime {
 NonConstReferences::NonConstReferences(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WhiteListTypes(
-          utils::options::parseStringList(Options.get("WhiteListTypes", ""))) {}
+      IncludedTypes(
+          utils::options::parseStringList(Options.get("IncludedTypes", ""))) {}
 
 void NonConstReferences::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "WhiteListTypes",
-                utils::options::serializeStringList(WhiteListTypes));
+  Options.store(Opts, "IncludedTypes",
+                utils::options::serializeStringList(IncludedTypes));
 }
 
 void NonConstReferences::registerMatchers(MatchFinder *Finder) {
@@ -67,12 +67,12 @@ void NonConstReferences::check(const MatchFinder::MatchResult &Result) {
 
   auto ReferencedType = *Result.Nodes.getNodeAs<QualType>("referenced_type");
 
-  if (std::find_if(WhiteListTypes.begin(), WhiteListTypes.end(),
-                   [&](llvm::StringRef WhiteListType) {
+  if (std::find_if(IncludedTypes.begin(), IncludedTypes.end(),
+                   [&](llvm::StringRef ExplicitType) {
                      return ReferencedType.getCanonicalType().getAsString(
                                 Result.Context->getPrintingPolicy()) ==
-                            WhiteListType;
-                   }) != WhiteListTypes.end())
+                            ExplicitType;
+                   }) != IncludedTypes.end())
     return;
 
   // Don't warn on function references, they shouldn't be constant.

@@ -268,6 +268,8 @@ void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
 
 void AsanOnDeadlySignal(int, void *siginfo, void *context) { UNIMPLEMENTED(); }
 
+bool PlatformUnpoisonStacks() { return false; }
+
 #if SANITIZER_WINDOWS64
 // Exception handler for dealing with shadow memory.
 static LONG CALLBACK

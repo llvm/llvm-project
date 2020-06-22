@@ -142,7 +142,7 @@ for us:
       TheModule = std::make_unique<Module>("my cool jit", TheContext);
 
       // Create a new pass manager attached to it.
-      TheFPM = std::make_unique<FunctionPassManager>(TheModule.get());
+      TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
 
       // Do simple "peephole" optimizations and bit-twiddling optzns.
       TheFPM->add(createInstructionCombiningPass());
@@ -275,7 +275,7 @@ We also need to setup the data layout for the JIT:
       TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
 
       // Create a new pass manager attached to it.
-      TheFPM = std::make_unique<FunctionPassManager>(TheModule.get());
+      TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
       ...
 
 The KaleidoscopeJIT class is a simple JIT built specifically for these

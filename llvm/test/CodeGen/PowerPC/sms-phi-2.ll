@@ -13,21 +13,21 @@ define void @phi2(i32, i32, i8*) local_unnamed_addr {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    divw 9, 8, 4
 ; CHECK-NEXT:    mullw 7, 8, 4
-; CHECK-NEXT:    subf 3, 7, 3
+; CHECK-NEXT:    sub 3, 3, 7
 ; CHECK-NEXT:    cmplwi 3, 10
-; CHECK-NEXT:    isel 7, 6, 5, 0
+; CHECK-NEXT:    isellt 7, 6, 5
 ; CHECK-NEXT:    add 3, 7, 3
 ; CHECK-NEXT:    stbu 3, -1(7)
 ; CHECK-NEXT:    mr 3, 8
 ; CHECK-NEXT:    bdz .LBB0_3
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_2: #
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    mr 3, 9
 ; CHECK-NEXT:    mullw 9, 9, 4
 ; CHECK-NEXT:    divw 10, 3, 4
-; CHECK-NEXT:    subf 8, 9, 8
+; CHECK-NEXT:    sub 8, 8, 9
 ; CHECK-NEXT:    cmplwi 8, 10
-; CHECK-NEXT:    isel 9, 6, 5, 0
+; CHECK-NEXT:    isellt 9, 6, 5
 ; CHECK-NEXT:    add 8, 9, 8
 ; CHECK-NEXT:    mr 9, 10
 ; CHECK-NEXT:    stbu 8, -1(7)
@@ -40,9 +40,9 @@ define void @phi2(i32, i32, i8*) local_unnamed_addr {
 ; CHECK-NEXT:    # implicit-def: $x7
 ; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    mullw 4, 8, 4
-; CHECK-NEXT:    subf 3, 4, 3
+; CHECK-NEXT:    sub 3, 3, 4
 ; CHECK-NEXT:    cmplwi 3, 10
-; CHECK-NEXT:    isel 4, 6, 5, 0
+; CHECK-NEXT:    isellt 4, 6, 5
 ; CHECK-NEXT:    add 3, 4, 3
 ; CHECK-NEXT:    stbu 3, -1(7)
 ; CHECK-NEXT:    blr

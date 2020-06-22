@@ -16,6 +16,7 @@
 #include "AggressiveInstCombineInternal.h"
 #include "llvm-c/Initialization.h"
 #include "llvm-c/Transforms/AggressiveInstCombine.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -28,10 +29,16 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/Local.h"
+
 using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
+
+STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
+STATISTIC(NumGuardedRotates,
+          "Number of guarded rotates transformed into funnel shifts");
+STATISTIC(NumPopCountRecognized, "Number of popcount idioms recognized");
 
 namespace {
 /// Contains expression pattern combiner logic.
@@ -148,6 +155,7 @@ static bool foldGuardedRotateToFunnelShift(Instruction &I) {
   IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
   Function *F = Intrinsic::getDeclaration(Phi.getModule(), IID, Phi.getType());
   Phi.replaceAllUsesWith(Builder.CreateCall(F, {RotSrc, RotSrc, RotAmt}));
+  ++NumGuardedRotates;
   return true;
 }
 
@@ -248,6 +256,7 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
                                : Builder.CreateIsNotNull(And);
   Value *Zext = Builder.CreateZExt(Cmp, I.getType());
   I.replaceAllUsesWith(Zext);
+  ++NumAnyOrAllBitsSet;
   return true;
 }
 
@@ -308,6 +317,7 @@ static bool tryToRecognizePopCount(Instruction &I) {
           Function *Func = Intrinsic::getDeclaration(
               I.getModule(), Intrinsic::ctpop, I.getType());
           I.replaceAllUsesWith(Builder.CreateCall(Func, {Root}));
+          ++NumPopCountRecognized;
           return true;
         }
       }

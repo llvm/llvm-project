@@ -102,22 +102,14 @@ define void @struct2_caller() {
 ; CHECK-NEXT:    [[S:%.*]] = call { i64, i64 } @struct2()
 ; CHECK-NEXT:    [[V1:%.*]] = extractvalue { i64, i64 } [[S]], 0
 ; CHECK-NEXT:    [[V2:%.*]] = extractvalue { i64, i64 } [[S]], 1
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[V1]], 10
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i64 [[V1]], 100
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ne i64 [[V2]], 0
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ult i64 [[V2]], 301
-; CHECK-NEXT:    call void @use(i1 [[T_4]])
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i64 [[V1]], 10
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ult i64 [[V1]], 19
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
-; CHECK-NEXT:    [[F_3:%.*]] = icmp eq i64 [[V2]], 50
-; CHECK-NEXT:    call void @use(i1 [[F_3]])
-; CHECK-NEXT:    [[F_4:%.*]] = icmp ugt i64 [[V2]], 301
-; CHECK-NEXT:    call void @use(i1 [[F_4]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i64 [[V1]], 25
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i64 [[V1]], 25

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -25,8 +26,8 @@ import tempfile
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', type=str, required=True)
+    parser.add_argument('--execdir', type=str, required=True)
     parser.add_argument('--codesign_identity', type=str, required=False, default=None)
-    parser.add_argument('--dependencies', type=str, nargs='*', required=False, default=[])
     parser.add_argument('--env', type=str, nargs='*', required=False, default=dict())
     (args, remaining) = parser.parse_known_args(sys.argv[1:])
 
@@ -40,6 +41,7 @@ def main():
     scp = lambda src, dst: ['scp', '-q', '-oBatchMode=yes', src, '{}:{}'.format(args.host, dst)]
 
     # Create a temporary directory where the test will be run.
+    # That is effectively the value of %T on the remote host.
     tmp = subprocess.check_output(ssh('mktemp -d /tmp/libcxx.XXXXXXXXXX'), universal_newlines=True).strip()
 
     # HACK:
@@ -58,16 +60,12 @@ def main():
             for exe in filter(isTestExe, commandLine):
                 subprocess.check_call(['xcrun', 'codesign', '-f', '-s', args.codesign_identity, exe], env={})
 
-        # Ensure the test dependencies exist, tar them up and copy the tarball
-        # over to the remote host.
+        # tar up the execution directory (which contains everything that's needed
+        # to run the test), and copy the tarball over to the remote host.
         try:
             tmpTar = tempfile.NamedTemporaryFile(suffix='.tar', delete=False)
             with tarfile.open(fileobj=tmpTar, mode='w') as tarball:
-                for dep in args.dependencies:
-                    if not os.path.exists(dep):
-                        sys.stderr.write('Missing file or directory "{}" marked as a dependency of a test'.format(dep))
-                        return 1
-                    tarball.add(dep, arcname=os.path.basename(dep))
+                tarball.add(args.execdir, arcname=os.path.basename(args.execdir))
 
             # Make sure we close the file before we scp it, because accessing
             # the temporary file while still open doesn't work on Windows.
@@ -82,7 +80,7 @@ def main():
 
         # Untar the dependencies in the temporary directory and remove the tarball.
         remoteCommands = [
-            'tar -xf {} -C {}'.format(remoteTarball, tmp),
+            'tar -xf {} -C {} --strip-components 1'.format(remoteTarball, tmp),
             'rm {}'.format(remoteTarball)
         ]
 
@@ -95,8 +93,7 @@ def main():
         # Execute the command through SSH in the temporary directory, with the
         # correct environment. We tweak the command line to run it on the remote
         # host by transforming the path of test-executables to their path in the
-        # temporary directory, where we know they have been copied when we handled
-        # test dependencies above.
+        # temporary directory on the remote host.
         commandLine = (pathOnRemote(x) if isTestExe(x) else x for x in commandLine)
         remoteCommands.append('cd {}'.format(tmp))
         if args.env:

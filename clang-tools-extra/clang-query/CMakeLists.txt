@@ -7,8 +7,10 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangQuery
   Query.cpp
   QueryParser.cpp
+  )
 
-  LINK_LIBS
+clang_target_link_libraries(clangQuery
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic

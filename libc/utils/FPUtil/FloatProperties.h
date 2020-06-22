@@ -21,9 +21,12 @@ template <> struct FloatProperties<float> {
   static_assert(sizeof(BitsType) == sizeof(float),
                 "Unexpected size of 'float' type.");
 
+  static constexpr uint32_t bitWidth = sizeof(BitsType) << 3;
+
   static constexpr uint32_t mantissaWidth = 23;
   static constexpr BitsType mantissaMask = 0x007fffffU;
   static constexpr BitsType signMask = 0x80000000U;
+  static constexpr BitsType exponentMask = ~(signMask | mantissaMask);
   static constexpr uint32_t exponentOffset = 127;
 
   // If a number x is a NAN, then it is a quiet NAN if:
@@ -37,9 +40,12 @@ template <> struct FloatProperties<double> {
   static_assert(sizeof(BitsType) == sizeof(double),
                 "Unexpected size of 'double' type.");
 
+  static constexpr uint32_t bitWidth = sizeof(BitsType) << 3;
+
   static constexpr uint32_t mantissaWidth = 52;
   static constexpr BitsType mantissaMask = 0x000fffffffffffffU;
   static constexpr BitsType signMask = 0x8000000000000000ULL;
+  static constexpr BitsType exponentMask = ~(signMask | mantissaMask);
   static constexpr uint32_t exponentOffset = 1023;
 
   // If a number x is a NAN, then it is a quiet NAN if:

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
-#include "utils/FPUtil/FloatOperations.h"
+#include "utils/FPUtil/BasicOperations.h"
 
 namespace __llvm_libc {
 

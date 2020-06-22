@@ -127,7 +127,7 @@ template <unsigned NumBits> struct WaymarkingTraits {
     MARK_MASK = (STOP_MASK - 1),
     TAG_MASK = (MARK_MASK | STOP_MASK),
 
-    // The number of pre-calculated tags (for fast fill).
+    // The number of pre-computed tags (for fast fill).
     NUM_STATIC_TAGS = 32
   };
 
@@ -169,7 +169,7 @@ private:
     // in Values.
     static const unsigned Remain = Count;
 
-    // The array of ordered pre-calculated Tags.
+    // The array of ordered pre-computed Tags.
     static const uint8_t Values[sizeof...(Vals)];
   };
 
@@ -241,7 +241,7 @@ void fillWaymarks(TIter Begin, TIter End, size_t Offset = 0) {
         return;
     }
   } else {
-    // The given offset is larger than the number of pre-calculated tags, so we
+    // The given offset is larger than the number of pre-computed tags, so we
     // must do it the hard way.
     // Calculate the next remaining Count, as if we have filled the tags up to
     // the given offset.

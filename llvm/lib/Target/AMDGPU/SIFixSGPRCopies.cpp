@@ -835,8 +835,22 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
     }
     else if (Def->isCopy() &&
       TRI->isVectorRegister(*MRI, Def->getOperand(1).getReg())) {
-      hasVGPRInput = true;
-      break;
+      Register SrcReg = Def->getOperand(1).getReg();
+      MachineInstr *SrcDef = MRI->getVRegDef(SrcReg);
+      unsigned SMovOp;
+      int64_t Imm;
+      if (!isSafeToFoldImmIntoCopy(Def, SrcDef, TII, SMovOp, Imm)) {
+        hasVGPRInput = true;
+        break;
+      } else {
+        // Formally, if we did not do this right away
+        // it would be done on the next iteration of the
+        // runOnMachineFunction main loop. But why not if we can?
+        MachineFunction *MF = MI.getParent()->getParent();
+        Def->getOperand(1).ChangeToImmediate(Imm);
+        Def->addImplicitDefUseOperands(*MF);
+        Def->setDesc(TII->get(SMovOp));
+      }
     }
   }
 

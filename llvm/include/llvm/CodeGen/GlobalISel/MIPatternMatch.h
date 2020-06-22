@@ -12,8 +12,6 @@
 #ifndef LLVM_GMIR_PATTERNMATCH_H
 #define LLVM_GMIR_PATTERNMATCH_H
 
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/InstrTypes.h"

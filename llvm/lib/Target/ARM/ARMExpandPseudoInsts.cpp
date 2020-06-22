@@ -960,9 +960,9 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
 // S0-S31 + FPSCR + 8 more bytes (VPR + pad, or just pad)
 static const int CMSE_FP_SAVE_SIZE = 136;
 
-void determineGPRegsToClear(const MachineInstr &MI,
-                            const std::initializer_list<unsigned> &Regs,
-                            SmallVectorImpl<unsigned> &ClearRegs) {
+static void determineGPRegsToClear(const MachineInstr &MI,
+                                   const std::initializer_list<unsigned> &Regs,
+                                   SmallVectorImpl<unsigned> &ClearRegs) {
   SmallVector<unsigned, 4> OpRegs;
   for (const MachineOperand &Op : MI.operands()) {
     if (!Op.isReg() || !Op.isUse())

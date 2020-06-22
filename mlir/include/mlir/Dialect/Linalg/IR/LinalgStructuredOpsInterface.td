@@ -123,6 +123,10 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       "Return the range over inputs (irrespective of type) and output buffers.",
       "Operation::operand_range", "getInputsAndOutputBuffers"
     >,
+    InterfaceMethod<
+      "Return the shaped types for all the inputs and outputs",
+      "SmallVector<ShapedType, 4>", "getInputOutputShapedTypes"
+    >,
 
     //===------------------------------------------------------------------===//
     // Other interface methods.
@@ -152,6 +156,10 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     InterfaceMethod<
       "Return the indexing maps attribute within the current operation.",
       "ArrayAttr", "indexing_maps"
+    >,
+    InterfaceMethod<
+      "Return the indexing maps within the current operation.",
+      "SmallVector<AffineMap, 4>", "getIndexingMaps"
     >,
     InterfaceMethod<"Return the input or output indexing map at index `i`.",
       "AffineMap", "getIndexingMap", (ins "unsigned":$i)

@@ -2078,6 +2078,7 @@ void ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
     // Double-register operations:
   case MVT::v8i8:  OpcodeIndex = 0; break;
   case MVT::v4f16:
+  case MVT::v4bf16:
   case MVT::v4i16: OpcodeIndex = 1; break;
   case MVT::v2f32:
   case MVT::v2i32: OpcodeIndex = 2; break;
@@ -2085,6 +2086,7 @@ void ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
     // Quad-register operations:
   case MVT::v16i8: OpcodeIndex = 0; break;
   case MVT::v8f16:
+  case MVT::v8bf16:
   case MVT::v8i16: OpcodeIndex = 1; break;
   case MVT::v4f32:
   case MVT::v4i32: OpcodeIndex = 2; break;
@@ -2221,6 +2223,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
     // Double-register operations:
   case MVT::v8i8:  OpcodeIndex = 0; break;
   case MVT::v4f16:
+  case MVT::v4bf16:
   case MVT::v4i16: OpcodeIndex = 1; break;
   case MVT::v2f32:
   case MVT::v2i32: OpcodeIndex = 2; break;
@@ -2228,6 +2231,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
     // Quad-register operations:
   case MVT::v16i8: OpcodeIndex = 0; break;
   case MVT::v8f16:
+  case MVT::v8bf16:
   case MVT::v8i16: OpcodeIndex = 1; break;
   case MVT::v4f32:
   case MVT::v4i32: OpcodeIndex = 2; break;
@@ -2389,11 +2393,13 @@ void ARMDAGToDAGISel::SelectVLDSTLane(SDNode *N, bool IsLoad, bool isUpdating,
     // Double-register operations:
   case MVT::v8i8:  OpcodeIndex = 0; break;
   case MVT::v4f16:
+  case MVT::v4bf16:
   case MVT::v4i16: OpcodeIndex = 1; break;
   case MVT::v2f32:
   case MVT::v2i32: OpcodeIndex = 2; break;
     // Quad-register operations:
   case MVT::v8f16:
+  case MVT::v8bf16:
   case MVT::v8i16: OpcodeIndex = 0; break;
   case MVT::v4f32:
   case MVT::v4i32: OpcodeIndex = 1; break;
@@ -2923,6 +2929,8 @@ void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
   case MVT::v8i16:
   case MVT::v4f16:
   case MVT::v8f16:
+  case MVT::v4bf16:
+  case MVT::v8bf16:
                   OpcodeIndex = 1; break;
   case MVT::v2f32:
   case MVT::v2i32:

@@ -252,3 +252,18 @@ define noalias i8* @strdup_notconstant_str(i8 * %str) {
   %call = tail call noalias i8* @strdup(i8* %str)
   ret i8* %call
 }
+
+; OSS-Fuzz #23214
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=23214
+define noalias i8* @ossfuzz_23214() {
+; CHECK-LABEL: @ossfuzz_23214(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(512) i8* @aligned_alloc(i64 -9223372036854775808, i64 512)
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+bb:
+  %and = and i64 -1, -9223372036854775808
+  %call = tail call noalias i8* @aligned_alloc(i64 %and, i64 512)
+  ret i8* %call
+}
+

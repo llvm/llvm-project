@@ -21,7 +21,7 @@ define void @multiply(<16 x double> * %A, <16 x double> * %B, <16 x double>* %C)
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <16 x double>, align 128
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x double>* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x double>* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 128 dereferenceable(128) [[TMP3]], i8* nonnull align 16 dereferenceable(128) [[TMP4]], i64 128, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 128 dereferenceable(128) [[TMP3]], i8* nonnull align 8 dereferenceable(128) [[TMP4]], i64 128, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <16 x double>* [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
@@ -38,7 +38,7 @@ define void @multiply(<16 x double> * %A, <16 x double> * %B, <16 x double>* %C)
 ; CHECK-NEXT:    [[TMP8:%.*]] = alloca <16 x double>, align 128
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <16 x double>* [[TMP8]] to i8*
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <16 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 128 dereferenceable(128) [[TMP9]], i8* nonnull align 16 dereferenceable(128) [[TMP10]], i64 128, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 128 dereferenceable(128) [[TMP9]], i8* nonnull align 8 dereferenceable(128) [[TMP10]], i64 128, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS5]]
 
 ; CHECK:       no_alias3:
@@ -261,12 +261,12 @@ define void @multiply(<16 x double> * %A, <16 x double> * %B, <16 x double>* %C)
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <16 x double>, <16 x double>* %A, align 16
-  %b = load <16 x double>, <16 x double>* %B, align 16
+  %a = load <16 x double>, <16 x double>* %A, align 8
+  %b = load <16 x double>, <16 x double>* %B, align 8
 
   %c = call <16 x double> @llvm.matrix.multiply(<16 x double> %a, <16 x double> %b, i32 4, i32 4, i32 4)
 
-  store <16 x double> %c, <16 x double>* %C, align 16
+  store <16 x double> %c, <16 x double>* %C, align 8
   ret void
 }
 

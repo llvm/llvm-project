@@ -28,8 +28,10 @@ Sections:
 
 # RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=ERR
 
-# ERR: error: unknown section referenced: '.unknown1' by YAML section '.foo'
-# ERR: error: unknown section referenced: '.unknown2' by YAML section '.bar'
+# ERR:      error: unknown section referenced: '.unknown1' by YAML section '.foo'
+# ERR-NEXT: error: unknown section referenced: '.unknown2' by YAML section '(index 2)'
+# ERR-NEXT: error: unknown section referenced: '.unknown3' by YAML section '.bar'
+# ERR-NEXT: error: unknown section referenced: '.unknown4' by YAML section '(index 4)'
 
 --- !ELF
 FileHeader:
@@ -41,9 +43,13 @@ Sections:
   - Name: .foo
     Type: SHT_PROGBITS
     Link: .unknown1
+  - Type: SHT_PROGBITS
+    Link: .unknown2
   - Name: .bar
     Type: SHT_PROGBITS
-    Link: .unknown2
+    Link: .unknown3
+  - Type: SHT_PROGBITS
+    Link: .unknown4
 
 ## Check we link SHT_GROUP to a symbol table by default if it exists.
 ## Also, check we can set an arbitrary value for sh_link.

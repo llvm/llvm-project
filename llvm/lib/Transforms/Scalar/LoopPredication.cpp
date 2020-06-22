@@ -184,7 +184,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -199,6 +198,7 @@
 #include "llvm/Transforms/Utils/GuardUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 #define DEBUG_TYPE "loop-predication"
 
@@ -268,7 +268,7 @@ class LoopPredication {
   /// Return an insertion point suitable for inserting a safe to speculate
   /// instruction whose only user will be 'User' which has operands 'Ops'.  A
   /// trivial result would be the at the User itself, but we try to return a
-  /// loop invariant location if possible.  
+  /// loop invariant location if possible.
   Instruction *findInsertPt(Instruction *User, ArrayRef<Value*> Ops);
   /// Same as above, *except* that this uses the SCEV definition of invariant
   /// which is that an expression *can be made* invariant via SCEVExpander.
@@ -278,7 +278,7 @@ class LoopPredication {
 
   /// Return true if the value is known to produce a single fixed value across
   /// all iterations on which it executes.  Note that this does not imply
-  /// speculation safety.  That must be established seperately.  
+  /// speculation safety.  That must be established separately.
   bool isLoopInvariantValue(const SCEV* S);
 
   Value *expandCheck(SCEVExpander &Expander, Instruction *Guard,
@@ -398,7 +398,7 @@ LoopPredication::parseLoopICmp(ICmpInst *ICI) {
 }
 
 Value *LoopPredication::expandCheck(SCEVExpander &Expander,
-                                    Instruction *Guard, 
+                                    Instruction *Guard,
                                     ICmpInst::Predicate Pred, const SCEV *LHS,
                                     const SCEV *RHS) {
   Type *Ty = LHS->getType();
@@ -522,7 +522,7 @@ Instruction *LoopPredication::findInsertPt(Instruction *Use,
   return Preheader->getTerminator();
 }
 
-bool LoopPredication::isLoopInvariantValue(const SCEV* S) { 
+bool LoopPredication::isLoopInvariantValue(const SCEV* S) {
   // Handling expressions which produce invariant results, but *haven't* yet
   // been removed from the loop serves two important purposes.
   // 1) Most importantly, it resolves a pass ordering cycle which would
@@ -535,12 +535,12 @@ bool LoopPredication::isLoopInvariantValue(const SCEV* S) {
   // much more obviously in the IR.  Otherwise, the cost modeling for other
   // transforms would end up needing to duplicate all of this logic to model a
   // check which becomes predictable based on a modeled peel or unswitch.
-  // 
+  //
   // The cost of doing so in the worst case is an extra fill from the stack  in
   // the loop to materialize the loop invariant test value instead of checking
   // against the original IV which is presumable in a register inside the loop.
   // Such cases are presumably rare, and hint at missing oppurtunities for
-  // other passes. 
+  // other passes.
 
   if (SE->isLoopInvariant(S, L))
     // Note: This the SCEV variant, so the original Value* may be within the
@@ -548,7 +548,7 @@ bool LoopPredication::isLoopInvariantValue(const SCEV* S) {
     return true;
 
   // Handle a particular important case which SCEV doesn't yet know about which
-  // shows up in range checks on arrays with immutable lengths.  
+  // shows up in range checks on arrays with immutable lengths.
   // TODO: This should be sunk inside SCEV.
   if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S))
     if (const auto *LI = dyn_cast<LoadInst>(U->getValue()))
@@ -575,7 +575,7 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
   const SCEV *LatchLimit = LatchCheck.Limit;
   // Subtlety: We need all the values to be *invariant* across all iterations,
   // but we only need to check expansion safety for those which *aren't*
-  // already guaranteed to dominate the guard.  
+  // already guaranteed to dominate the guard.
   if (!isLoopInvariantValue(GuardStart) ||
       !isLoopInvariantValue(GuardLimit) ||
       !isLoopInvariantValue(LatchStart) ||
@@ -599,7 +599,7 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
   LLVM_DEBUG(dbgs() << "LHS: " << *LatchLimit << "\n");
   LLVM_DEBUG(dbgs() << "RHS: " << *RHS << "\n");
   LLVM_DEBUG(dbgs() << "Pred: " << LimitCheckPred << "\n");
- 
+
   auto *LimitCheck =
       expandCheck(Expander, Guard, LimitCheckPred, LatchLimit, RHS);
   auto *FirstIterationCheck = expandCheck(Expander, Guard, RangeCheck.Pred,
@@ -618,7 +618,7 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
   const SCEV *LatchLimit = LatchCheck.Limit;
   // Subtlety: We need all the values to be *invariant* across all iterations,
   // but we only need to check expansion safety for those which *aren't*
-  // already guaranteed to dominate the guard.  
+  // already guaranteed to dominate the guard.
   if (!isLoopInvariantValue(GuardStart) ||
       !isLoopInvariantValue(GuardLimit) ||
       !isLoopInvariantValue(LatchStart) ||
@@ -659,7 +659,7 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
 static void normalizePredicate(ScalarEvolution *SE, Loop *L,
                                LoopICmp& RC) {
   // LFTR canonicalizes checks to the ICMP_NE/EQ form; normalize back to the
-  // ULT/UGE form for ease of handling by our caller. 
+  // ULT/UGE form for ease of handling by our caller.
   if (ICmpInst::isEquality(RC.Pred) &&
       RC.IV->getStepRecurrence(*SE)->isOne() &&
       SE->isKnownPredicate(ICmpInst::ICMP_ULE, RC.IV->getStart(), RC.Limit))
@@ -1044,7 +1044,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // inserting a branch on the value which can be either poison or undef.  In
   // this case, the branch can legally go either way; we just need to avoid
   // introducing UB.  This is achieved through the use of the freeze
-  // instruction.  
+  // instruction.
 
   SmallVector<BasicBlock *, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
@@ -1072,7 +1072,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // analyzeable after dropping widenability.
   {
     bool Invalidate = false;
-    
+
     for (auto *ExitingBB : ExitingBlocks) {
       if (LI->getLoopFor(ExitingBB) != L)
         continue;

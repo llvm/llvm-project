@@ -56,6 +56,11 @@ function(add_loader_object name)
   )
 endfunction()
 
+if(NOT (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_MACHINE}))
+  message(STATUS "Skipping loader for target machine ${LIBC_TARGET_MACHINE}")
+  return()
+endif()
+
 add_subdirectory(${LIBC_TARGET_MACHINE})
 
 add_loader_object(

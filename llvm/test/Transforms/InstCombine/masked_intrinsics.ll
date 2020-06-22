@@ -83,7 +83,7 @@ define <2 x double> @load_generic(<2 x double>* %ptr, double %pt,
   ret <2 x double> %res
 }
 
-define <2 x double> @load_speculative(<2 x double>* dereferenceable(16) %ptr,
+define <2 x double> @load_speculative(<2 x double>* dereferenceable(16) align 4 %ptr,
 ; CHECK-LABEL: @load_speculative(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> undef, <2 x i32> zeroinitializer

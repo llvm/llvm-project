@@ -4,8 +4,8 @@ include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
 
 let TargetPrefix = "mytarget" in {
-def int_mytarget_sleep0 : Intrinsic<[], [llvm_i32_ty], [ImmArg<0>]>;
-def int_mytarget_sleep1 : Intrinsic<[], [llvm_i32_ty], [ImmArg<0>]>;
+def int_mytarget_sleep0 : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
+def int_mytarget_sleep1 : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 }
 
 // GISEL: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS,

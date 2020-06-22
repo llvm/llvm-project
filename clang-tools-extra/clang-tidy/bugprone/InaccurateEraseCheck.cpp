@@ -32,13 +32,15 @@ void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
   const auto DeclInStd = type(hasUnqualifiedDesugaredType(
       tagType(hasDeclaration(decl(isInStdNamespace())))));
   Finder->addMatcher(
-      cxxMemberCallExpr(
-          on(anyOf(hasType(DeclInStd), hasType(pointsTo(DeclInStd)))),
-          callee(cxxMethodDecl(hasName("erase"))), argumentCountIs(1),
-          hasArgument(0, has(ignoringImplicit(
-                             anyOf(EndCall, has(ignoringImplicit(EndCall)))))),
-          unless(isInTemplateInstantiation()))
-          .bind("erase"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          cxxMemberCallExpr(
+              on(anyOf(hasType(DeclInStd), hasType(pointsTo(DeclInStd)))),
+              callee(cxxMethodDecl(hasName("erase"))), argumentCountIs(1),
+              hasArgument(0, has(ignoringImplicit(anyOf(
+                                 EndCall, has(ignoringImplicit(EndCall)))))),
+              unless(isInTemplateInstantiation()))
+              .bind("erase")),
       this);
 }
 

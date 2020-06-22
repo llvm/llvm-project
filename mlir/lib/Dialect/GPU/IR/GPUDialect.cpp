@@ -218,25 +218,25 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
 }
 
 KernelDim3 LaunchOp::getBlockIds() {
-  assert(!body().getBlocks().empty() && "FuncOp body must not be empty.");
-  auto args = body().getBlocks().front().getArguments();
+  assert(!body().empty() && "LaunchOp body must not be empty.");
+  auto args = body().front().getArguments();
   return KernelDim3{args[0], args[1], args[2]};
 }
 
 KernelDim3 LaunchOp::getThreadIds() {
-  assert(!body().getBlocks().empty() && "FuncOp body must not be empty.");
-  auto args = body().getBlocks().front().getArguments();
+  assert(!body().empty() && "LaunchOp body must not be empty.");
+  auto args = body().front().getArguments();
   return KernelDim3{args[3], args[4], args[5]};
 }
 
 KernelDim3 LaunchOp::getGridSize() {
-  assert(!body().getBlocks().empty() && "FuncOp body must not be empty.");
-  auto args = body().getBlocks().front().getArguments();
+  assert(!body().empty() && "LaunchOp body must not be empty.");
+  auto args = body().front().getArguments();
   return KernelDim3{args[6], args[7], args[8]};
 }
 
 KernelDim3 LaunchOp::getBlockSize() {
-  assert(!body().getBlocks().empty() && "FuncOp body must not be empty.");
+  assert(!body().empty() && "LaunchOp body must not be empty.");
   auto args = body().getBlocks().front().getArguments();
   return KernelDim3{args[9], args[10], args[11]};
 }
@@ -457,22 +457,22 @@ static LogicalResult verify(LaunchFuncOp op) {
 // GPUFuncOp
 //===----------------------------------------------------------------------===//
 
-/// Adds a workgroup attribution to "op" of the MemRef type with the given shape
-/// and element type.
-Value GPUFuncOp::addWorkgroupAttribution(ArrayRef<int64_t> shape,
-                                         Type elementType) {
-  unsigned pos = getNumFuncArguments() + getNumWorkgroupAttributions();
-  Block &bodyBlock = body().front();
-  Value attribution = bodyBlock.insertArgument(
-      std::next(bodyBlock.args_begin(), pos),
-      MemRefType::get(shape, elementType, /*affineMapComposition=*/{},
-                      GPUDialect::getWorkgroupAddressSpace()));
-  auto numWorkgroupBuffersAttr =
-      getAttrOfType<IntegerAttr>(getNumWorkgroupAttributionsAttrName());
-  setAttr(getNumWorkgroupAttributionsAttrName(),
-          IntegerAttr::get(numWorkgroupBuffersAttr.getType(),
-                           numWorkgroupBuffersAttr.getValue() + 1));
-  return attribution;
+/// Adds a new block argument that corresponds to buffers located in
+/// workgroup memory.
+BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type) {
+  auto attrName = getNumWorkgroupAttributionsAttrName();
+  auto attr = getAttrOfType<IntegerAttr>(attrName);
+  setAttr(attrName, IntegerAttr::get(attr.getType(), attr.getValue() + 1));
+  return getBody().front().insertArgument(
+      getType().getNumInputs() + attr.getInt(), type);
+}
+
+/// Adds a new block argument that corresponds to buffers located in
+/// private memory.
+BlockArgument GPUFuncOp::addPrivateAttribution(Type type) {
+  // Buffers on the private memory always come after buffers on the workgroup
+  // memory.
+  return getBody().front().addArgument(type);
 }
 
 void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
@@ -779,7 +779,7 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
                 /*printBlockTerminators=*/false);
 }
 
-// Namespace avoids ambiguous ReturnOpOperandAdaptor.
+// Namespace avoids ambiguous ReturnOpAdaptor.
 namespace mlir {
 namespace gpu {
 #define GET_OP_CLASSES

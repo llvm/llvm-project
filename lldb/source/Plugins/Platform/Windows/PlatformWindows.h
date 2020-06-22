@@ -67,7 +67,8 @@ public:
   ConstString GetFullNameForDylib(ConstString basename) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformWindows);
+  PlatformWindows(const PlatformWindows &) = delete;
+  const PlatformWindows &operator=(const PlatformWindows &) = delete;
 };
 
 } // namespace lldb_private

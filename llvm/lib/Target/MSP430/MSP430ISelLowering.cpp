@@ -514,7 +514,7 @@ static void AnalyzeArguments(CCState &State,
 
     // Handle byval arguments
     if (ArgFlags.isByVal()) {
-      State.HandleByVal(ValNo++, ArgVT, LocVT, LocInfo, 2, 2, ArgFlags);
+      State.HandleByVal(ValNo++, ArgVT, LocVT, LocInfo, 2, Align(2), ArgFlags);
       continue;
     }
 

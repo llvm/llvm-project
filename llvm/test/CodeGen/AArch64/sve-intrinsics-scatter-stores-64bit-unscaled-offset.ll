@@ -1,4 +1,7 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ;
 ; ST1B, ST1W, ST1H, ST1D: base + 64-bit unscaled offset

@@ -17,41 +17,33 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; LE-NEXT:    mfvsrwz 3, 34
 ; LE-NEXT:    xxsldwi 1, 34, 34, 1
 ; LE-NEXT:    mfvsrwz 4, 35
-; LE-NEXT:    xxsldwi 4, 34, 34, 3
-; LE-NEXT:    mtfprd 2, 3
+; LE-NEXT:    xxsldwi 2, 34, 34, 3
+; LE-NEXT:    mtvsrd 36, 3
 ; LE-NEXT:    mffprwz 3, 0
 ; LE-NEXT:    xxswapd 0, 35
-; LE-NEXT:    mtfprd 3, 4
-; LE-NEXT:    xxsldwi 5, 35, 35, 1
+; LE-NEXT:    mtvsrd 37, 4
 ; LE-NEXT:    mffprwz 4, 1
-; LE-NEXT:    xxsldwi 7, 35, 35, 3
-; LE-NEXT:    mtfprd 1, 3
-; LE-NEXT:    xxswapd 33, 3
-; LE-NEXT:    mffprwz 3, 4
-; LE-NEXT:    mtfprd 4, 4
-; LE-NEXT:    xxswapd 34, 1
+; LE-NEXT:    xxsldwi 1, 35, 35, 1
+; LE-NEXT:    mtvsrd 34, 3
+; LE-NEXT:    mffprwz 3, 2
+; LE-NEXT:    mtvsrd 32, 4
 ; LE-NEXT:    mffprwz 4, 0
-; LE-NEXT:    mtfprd 0, 3
-; LE-NEXT:    xxswapd 35, 4
-; LE-NEXT:    mffprwz 3, 5
-; LE-NEXT:    mtfprd 6, 4
-; LE-NEXT:    xxswapd 36, 0
-; LE-NEXT:    mtfprd 1, 3
-; LE-NEXT:    mffprwz 3, 7
-; LE-NEXT:    xxswapd 37, 6
-; LE-NEXT:    vmrglh 2, 3, 2
-; LE-NEXT:    xxswapd 35, 2
-; LE-NEXT:    mtfprd 2, 3
-; LE-NEXT:    xxswapd 32, 1
+; LE-NEXT:    xxsldwi 0, 35, 35, 3
+; LE-NEXT:    mtvsrd 33, 3
+; LE-NEXT:    mffprwz 3, 1
+; LE-NEXT:    mtvsrd 38, 4
+; LE-NEXT:    mtvsrd 35, 3
+; LE-NEXT:    mffprwz 3, 0
+; LE-NEXT:    vmrghh 2, 0, 2
+; LE-NEXT:    mtvsrd 32, 3
 ; LE-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
+; LE-NEXT:    vmrghh 4, 1, 4
 ; LE-NEXT:    addi 3, 3, .LCPI0_1@toc@l
-; LE-NEXT:    xxswapd 38, 2
-; LE-NEXT:    vmrglh 3, 4, 3
-; LE-NEXT:    vmrglh 4, 0, 5
-; LE-NEXT:    vmrglh 5, 6, 1
-; LE-NEXT:    vmrglw 2, 3, 2
-; LE-NEXT:    vmrglw 3, 5, 4
+; LE-NEXT:    vmrghh 3, 3, 6
+; LE-NEXT:    vmrghh 5, 0, 5
+; LE-NEXT:    vmrglw 2, 4, 2
 ; LE-NEXT:    vspltish 4, 15
+; LE-NEXT:    vmrglw 3, 5, 3
 ; LE-NEXT:    xxmrgld 34, 35, 34
 ; LE-NEXT:    lvx 3, 0, 3
 ; LE-NEXT:    xxlor 34, 34, 35

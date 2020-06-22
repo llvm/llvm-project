@@ -19,7 +19,7 @@
 // XFAIL: macosx10.10
 // XFAIL: macosx10.9
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 // UNSUPPORTED: libcxxabi-no-threads
 
 #include <cassert>

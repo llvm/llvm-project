@@ -890,12 +890,9 @@ class C {
 public:
   ~C() {
     glob = 1;
-    // FIXME: Why is destructor not inlined in C++17
     clang_analyzer_checkInlined(true);
 #ifdef TEMPORARY_DTORS
-#if __cplusplus < 201703L
-    // expected-warning@-3{{TRUE}}
-#endif
+    // expected-warning@-2{{TRUE}}
 #endif
   }
 };
@@ -914,16 +911,11 @@ void test(int coin) {
   // temporaries returned from functions, so we took the wrong branch.
   coin && is(get()); // no-crash
   if (coin) {
-    // FIXME: Why is destructor not inlined in C++17
     clang_analyzer_eval(glob);
 #ifdef TEMPORARY_DTORS
-#if __cplusplus < 201703L
-    // expected-warning@-3{{TRUE}}
+    // expected-warning@-2{{TRUE}}
 #else
-    // expected-warning@-5{{UNKNOWN}}
-#endif
-#else
-    // expected-warning@-8{{UNKNOWN}}
+    // expected-warning@-4{{UNKNOWN}}
 #endif
   } else {
     // The destructor is not called on this branch.

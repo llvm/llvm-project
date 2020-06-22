@@ -80,7 +80,8 @@ protected:
 
 private:
   // For VariableList only
-  DISALLOW_COPY_AND_ASSIGN(VariableList);
+  VariableList(const VariableList &) = delete;
+  const VariableList &operator=(const VariableList &) = delete;
 };
 
 } // namespace lldb_private

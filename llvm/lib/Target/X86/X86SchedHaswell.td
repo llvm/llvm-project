@@ -392,8 +392,10 @@ defm : X86WriteRes<WriteVecStoreX,       [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNT,      [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNTY,     [HWPort237,HWPort4], 1, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteVecMaskedStoreY, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMove,         [HWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [HWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [HWPort015], 1, [1], 1>;
@@ -997,7 +999,7 @@ def HWWriteResGroup14 : SchedWriteRes<[HWPort6,HWPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup14], (instrs FARJMP64)>;
+def: InstRW<[HWWriteResGroup14], (instrs FARJMP64m)>;
 def: InstRW<[HWWriteResGroup14], (instregex "JMP(16|32|64)m")>;
 
 def HWWriteResGroup16 : SchedWriteRes<[HWPort23,HWPort15]> {
@@ -1206,7 +1208,7 @@ def HWWriteResGroup48 : SchedWriteRes<[HWPort4,HWPort6,HWPort23,HWPort237,HWPort
   let ResourceCycles = [1,1,1,1,1];
 }
 def: InstRW<[HWWriteResGroup48], (instregex "CALL(16|32|64)m")>;
-def: InstRW<[HWWriteResGroup48], (instrs FARCALL64)>;
+def: InstRW<[HWWriteResGroup48], (instrs FARCALL64m)>;
 
 def HWWriteResGroup50 : SchedWriteRes<[HWPort1]> {
   let Latency = 3;

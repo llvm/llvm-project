@@ -211,8 +211,8 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   // A helper that returns a vector type from the given type. The number of
   // elements in type Ty determine the vector width.
   auto toVectorTy = [&](Type *ArgTy) {
-    return VectorType::get(ArgTy->getScalarType(),
-                           cast<VectorType>(DstTy)->getNumElements());
+    return FixedVectorType::get(ArgTy->getScalarType(),
+                                cast<VectorType>(DstTy)->getNumElements());
   };
 
   // Exit early if DstTy is not a vector type whose elements are at least
@@ -254,7 +254,7 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
 
   // Legalize the source type and ensure it can be used in a widening
   // operation.
-  Type *SrcTy = toVectorTy(Extend->getSrcTy());
+  auto *SrcTy = toVectorTy(Extend->getSrcTy());
   auto SrcTyL = TLI->getTypeLegalizationCost(DL, SrcTy);
   unsigned SrcElTySize = SrcTyL.second.getScalarSizeInBits();
   if (!SrcTyL.second.isVector() || SrcElTySize != SrcTy->getScalarSizeInBits())
@@ -295,11 +295,18 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     }
   }
 
+  // TODO: Allow non-throughput costs that aren't binary.
+  auto AdjustCost = [&CostKind](int Cost) {
+    if (CostKind != TTI::TCK_RecipThroughput)
+      return Cost == 0 ? 0 : 1;
+    return Cost;
+  };
+
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
 
   if (!SrcTy.isSimple() || !DstTy.isSimple())
-    return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
+    return AdjustCost(BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I));
 
   static const TypeConversionCostTblEntry
   ConversionTbl[] = {
@@ -401,9 +408,9 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
                                                  DstTy.getSimpleVT(),
                                                  SrcTy.getSimpleVT()))
-    return Entry->Cost;
+    return AdjustCost(Entry->Cost);
 
-  return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
+  return AdjustCost(BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I));
 }
 
 int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
@@ -493,6 +500,12 @@ int AArch64TTIImpl::getArithmeticInstrCost(
     TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
+  // TODO: Handle more cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
+                                         Opd2Info, Opd1PropInfo,
+                                         Opd2PropInfo, Args, CxtI);
+
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
@@ -613,6 +626,9 @@ int AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                        Type *CondTy,
                                        TTI::TargetCostKind CostKind,
                                        const Instruction *I) {
+  // TODO: Handle other cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // We don't lower some vector selects well that are wider than the register
@@ -664,6 +680,15 @@ int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                     MaybeAlign Alignment, unsigned AddressSpace,
                                     TTI::TargetCostKind CostKind,
                                     const Instruction *I) {
+  // TODO: Handle other cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return 1;
+
+  // Type legalization can't handle structs
+  if (TLI->getValueType(DL, Ty,  true) == MVT::Other)
+    return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
+                                  CostKind);
+
   auto LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
@@ -714,7 +739,8 @@ int AArch64TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   if (!UseMaskForCond && !UseMaskForGaps &&
       Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     unsigned NumElts = VecVTy->getNumElements();
-    auto *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
+    auto *SubVecTy =
+        FixedVectorType::get(VecTy->getScalarType(), NumElts / Factor);
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be

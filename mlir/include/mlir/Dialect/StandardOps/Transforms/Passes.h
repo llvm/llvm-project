@@ -20,12 +20,17 @@
 namespace mlir {
 
 class Pass;
+class MLIRContext;
+class OwningRewritePatternList;
 
 /// Creates an instance of the ExpandAtomic pass.
 std::unique_ptr<Pass> createExpandAtomicPass();
 
 /// Creates an instance of the TanhLowering pass.
 std::unique_ptr<Pass> createTanhLoweringPass();
+
+void populateExpandTanhPattern(OwningRewritePatternList &patterns,
+                               MLIRContext *ctx);
 
 } // end namespace mlir
 

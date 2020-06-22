@@ -341,6 +341,7 @@ namespace llvm {
     bool ParseModuleReference(StringRef &ModulePath);
     bool ParseGVReference(ValueInfo &VI, unsigned &GVId);
     bool ParseSummaryIndexFlags();
+    bool ParseBlockCount();
     bool ParseGVEntry(unsigned ID);
     bool ParseFunctionSummary(std::string Name, GlobalValue::GUID, unsigned ID);
     bool ParseVariableSummary(std::string Name, GlobalValue::GUID, unsigned ID);
@@ -364,6 +365,12 @@ namespace llvm {
     bool ParseVFuncId(FunctionSummary::VFuncId &VFuncId,
                       IdToIndexMapType &IdToIndexMap, unsigned Index);
     bool ParseOptionalVTableFuncs(VTableFuncList &VTableFuncs);
+    bool ParseOptionalParamAccesses(
+        std::vector<FunctionSummary::ParamAccess> &Params);
+    bool ParseParamNo(uint64_t &ParamNo);
+    bool ParseParamAccess(FunctionSummary::ParamAccess &Param);
+    bool ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call);
+    bool ParseParamAccessOffset(ConstantRange &range);
     bool ParseOptionalRefs(std::vector<ValueInfo> &Refs);
     bool ParseTypeIdEntry(unsigned ID);
     bool ParseTypeIdSummary(TypeIdSummary &TIS);

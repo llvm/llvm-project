@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='func(canonicalize)' | FileCheck %s --dump-input=fail
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='func(canonicalize)' | FileCheck %s
 
 // Test case: Simple case of deleting a dead pure op.
 

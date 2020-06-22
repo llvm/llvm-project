@@ -235,9 +235,9 @@ bb13:
 ; GFX1064: s_or_b64 [[MASK0:s\[[0-9:]+\]]], [[MASK0]], vcc
 ; GFX1032: s_andn2_b32 [[MASK1:s[0-9]+]], [[MASK1]], exec_lo
 ; GFX1064: s_andn2_b64 [[MASK1:s\[[0-9:]+\]]], [[MASK1]], exec
-; GCN:     global_store_dword
 ; GFX1032: s_and_b32 [[MASK0]], [[MASK0]], exec_lo
 ; GFX1064: s_and_b64 [[MASK0]], [[MASK0]], exec
+; GCN:     global_store_dword
 ; GFX1032: s_or_b32 [[MASK1]], [[MASK1]], [[MASK0]]
 ; GFX1064: s_or_b64 [[MASK1]], [[MASK1]], [[MASK0]]
 ; GCN:   BB{{.*}}: ; %Flow

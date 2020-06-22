@@ -413,6 +413,7 @@ public:
 
   /// Is this a compiler builtin header?
   static bool isBuiltinHeader(StringRef FileName);
+  bool isBuiltinHeader(const FileEntry *File);
 
   /// Add a module map callback.
   void addModuleMapCallbacks(std::unique_ptr<ModuleMapCallbacks> Callback) {

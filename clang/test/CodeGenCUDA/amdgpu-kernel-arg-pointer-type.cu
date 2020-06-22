@@ -18,8 +18,8 @@ __global__ void kernel1(int *x) {
   x[0]++;
 }
 
-// CHECK: define amdgpu_kernel void  @_Z7kernel2Ri(i32 addrspace(1)* dereferenceable(4) %x.coerce)
-// HOST: define void @_Z22__device_stub__kernel2Ri(i32* dereferenceable(4) %x)
+// CHECK: define amdgpu_kernel void  @_Z7kernel2Ri(i32 addrspace(1)* nonnull align 4 dereferenceable(4) %x.coerce)
+// HOST: define void @_Z22__device_stub__kernel2Ri(i32* nonnull align 4 dereferenceable(4) %x)
 __global__ void kernel2(int &x) {
   x++;
 }

@@ -6,16 +6,16 @@ define amdgpu_kernel void @test_sink_as999_small_max_mubuf_offset(i32 addrspace(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, i32 addrspace(999)* [[OUT:%.*]], i32 1024
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, i8 addrspace(999)* [[IN:%.*]], i64 4095
-; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8 addrspace(999)* [[IN_GEP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8 addrspace(999)* [[IN_GEP]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    br label [[ENDIF]]
 ; CHECK:       endif:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[TMP2]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    store i32 [[X]], i32 addrspace(999)* [[OUT_GEP]]
+; CHECK-NEXT:    store i32 [[X]], i32 addrspace(999)* [[OUT_GEP]], align 4
 ; CHECK-NEXT:    br label [[DONE:%.*]]
 ; CHECK:       done:
 ; CHECK-NEXT:    ret void

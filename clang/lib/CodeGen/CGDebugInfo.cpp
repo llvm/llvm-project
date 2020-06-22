@@ -236,6 +236,10 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   if (CGM.getCodeGenOpts().EmitCodeView) {
     PP.MSVCFormatting = true;
     PP.SplitTemplateClosers = true;
+  } else {
+    // For DWARF, printing rules are underspecified.
+    // SplitTemplateClosers yields better interop with GCC and GDB (PR46052).
+    PP.SplitTemplateClosers = true;
   }
 
   // Apply -fdebug-prefix-map.
@@ -768,6 +772,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Float:
   case BuiltinType::LongDouble:
   case BuiltinType::Float16:
+  case BuiltinType::BFloat16:
   case BuiltinType::Float128:
   case BuiltinType::Double:
     // FIXME: For targets where long double and __float128 have the same size,
@@ -2141,16 +2146,17 @@ llvm::DIType *CGDebugInfo::getOrCreateStandaloneType(QualType D,
   return T;
 }
 
-void CGDebugInfo::addHeapAllocSiteMetadata(llvm::Instruction *CI,
-                                           QualType D,
+void CGDebugInfo::addHeapAllocSiteMetadata(llvm::CallBase *CI,
+                                           QualType AllocatedTy,
                                            SourceLocation Loc) {
+  if (CGM.getCodeGenOpts().getDebugInfo() <=
+      codegenoptions::DebugLineTablesOnly)
+    return;
   llvm::MDNode *node;
-  if (D.getTypePtr()->isVoidPointerType()) {
+  if (AllocatedTy->isVoidType())
     node = llvm::MDNode::get(CGM.getLLVMContext(), None);
-  } else {
-    QualType PointeeTy = D.getTypePtr()->getPointeeType();
-    node = getOrCreateType(PointeeTy, getOrCreateFile(Loc));
-  }
+  else
+    node = getOrCreateType(AllocatedTy, getOrCreateFile(Loc));
 
   CI->setMetadata("heapallocsite", node);
 }
@@ -2529,10 +2535,14 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
     // PCH files don't have a signature field in the control block,
     // but LLVM detects skeleton CUs by looking for a non-zero DWO id.
     // We use the lower 64 bits for debug info.
-    uint64_t Signature =
-        Mod.getSignature()
-            ? (uint64_t)Mod.getSignature()[1] << 32 | Mod.getSignature()[0]
-            : ~1ULL;
+
+    uint64_t Signature = 0;
+    if (const auto &ModSig = Mod.getSignature()) {
+      for (unsigned I = 0; I != sizeof(Signature); ++I)
+        Signature |= (uint64_t)ModSig[I] << (I * 8);
+    } else {
+      Signature = ~1ULL;
+    }
     llvm::DIBuilder DIB(CGM.getModule());
     SmallString<0> PCM;
     if (!llvm::sys::path::is_absolute(Mod.getASTFile()))
@@ -2732,9 +2742,17 @@ llvm::DIType *CGDebugInfo::CreateType(const VectorType *Ty,
   QualType QTy(Ty, 0);
   auto SizeExpr = SizeExprCache.find(QTy);
   if (SizeExpr != SizeExprCache.end())
-    Subscript = DBuilder.getOrCreateSubrange(0, SizeExpr->getSecond());
-  else
-    Subscript = DBuilder.getOrCreateSubrange(0, Count ? Count : -1);
+    Subscript = DBuilder.getOrCreateSubrange(
+        SizeExpr->getSecond() /*count*/, nullptr /*lowerBound*/,
+        nullptr /*upperBound*/, nullptr /*stride*/);
+  else {
+    auto *CountNode =
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+            llvm::Type::getInt64Ty(CGM.getLLVMContext()), Count ? Count : -1));
+    Subscript = DBuilder.getOrCreateSubrange(
+        CountNode /*count*/, nullptr /*lowerBound*/, nullptr /*upperBound*/,
+        nullptr /*stride*/);
+  }
   llvm::DINodeArray SubscriptArray = DBuilder.getOrCreateArray(Subscript);
 
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
@@ -2754,8 +2772,18 @@ llvm::DIType *CGDebugInfo::CreateType(const ConstantMatrixType *Ty,
 
   // Create ranges for both dimensions.
   llvm::SmallVector<llvm::Metadata *, 2> Subscripts;
-  Subscripts.push_back(DBuilder.getOrCreateSubrange(0, Ty->getNumColumns()));
-  Subscripts.push_back(DBuilder.getOrCreateSubrange(0, Ty->getNumRows()));
+  auto *ColumnCountNode =
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+          llvm::Type::getInt64Ty(CGM.getLLVMContext()), Ty->getNumColumns()));
+  auto *RowCountNode =
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+          llvm::Type::getInt64Ty(CGM.getLLVMContext()), Ty->getNumRows()));
+  Subscripts.push_back(DBuilder.getOrCreateSubrange(
+      ColumnCountNode /*count*/, nullptr /*lowerBound*/, nullptr /*upperBound*/,
+      nullptr /*stride*/));
+  Subscripts.push_back(DBuilder.getOrCreateSubrange(
+      RowCountNode /*count*/, nullptr /*lowerBound*/, nullptr /*upperBound*/,
+      nullptr /*stride*/));
   llvm::DINodeArray SubscriptArray = DBuilder.getOrCreateArray(Subscripts);
   return DBuilder.createArrayType(Size, Align, ElementTy, SubscriptArray);
 }
@@ -2810,10 +2838,17 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
 
     auto SizeNode = SizeExprCache.find(EltTy);
     if (SizeNode != SizeExprCache.end())
-      Subscripts.push_back(
-          DBuilder.getOrCreateSubrange(0, SizeNode->getSecond()));
-    else
-      Subscripts.push_back(DBuilder.getOrCreateSubrange(0, Count));
+      Subscripts.push_back(DBuilder.getOrCreateSubrange(
+          SizeNode->getSecond() /*count*/, nullptr /*lowerBound*/,
+          nullptr /*upperBound*/, nullptr /*stride*/));
+    else {
+      auto *CountNode =
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+              llvm::Type::getInt64Ty(CGM.getLLVMContext()), Count));
+      Subscripts.push_back(DBuilder.getOrCreateSubrange(
+          CountNode /*count*/, nullptr /*lowerBound*/, nullptr /*upperBound*/,
+          nullptr /*stride*/));
+    }
     EltTy = Ty->getElementType();
   }
 
@@ -3871,7 +3906,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   if (IsDeclForCallSite)
     Fn->setSubprogram(SP);
 
-  DBuilder.retainType(SP);
+  DBuilder.finalizeSubprogram(SP);
 }
 
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
@@ -3885,12 +3920,12 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   if (Func->getSubprogram())
     return;
 
-  // Do not emit a declaration subprogram for a builtin or if call site info
-  // isn't required. Also, elide declarations for functions with reserved names,
-  // as call site-related features aren't interesting in this case (& also, the
-  // compiler may emit calls to these functions without debug locations, which
-  // makes the verifier complain).
-  if (CalleeDecl->getBuiltinID() != 0 ||
+  // Do not emit a declaration subprogram for a builtin, a function with nodebug
+  // attribute, or if call site info isn't required. Also, elide declarations
+  // for functions with reserved names, as call site-related features aren't
+  // interesting in this case (& also, the compiler may emit calls to these
+  // functions without debug locations, which makes the verifier complain).
+  if (CalleeDecl->getBuiltinID() != 0 || CalleeDecl->hasAttr<NoDebugAttr>() ||
       getCallSiteRelatedAttrs() == llvm::DINode::FlagZero)
     return;
   if (const auto *Id = CalleeDecl->getIdentifier())

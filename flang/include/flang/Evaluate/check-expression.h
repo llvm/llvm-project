@@ -33,11 +33,18 @@ template <typename A> bool IsConstantExpr(const A &);
 extern template bool IsConstantExpr(const Expr<SomeType> &);
 extern template bool IsConstantExpr(const Expr<SomeInteger> &);
 extern template bool IsConstantExpr(const Expr<SubscriptInteger> &);
+extern template bool IsConstantExpr(const StructureConstructor &);
 
 // Checks whether an expression is an object designator with
 // constant addressing and no vector-valued subscript.
+// If a non-null ContextualMessages pointer is passed, an error message
+// will be generated if and only if the result of the function is false.
 bool IsInitialDataTarget(
     const Expr<SomeType> &, parser::ContextualMessages * = nullptr);
+
+bool IsInitialProcedureTarget(const Symbol &);
+bool IsInitialProcedureTarget(const ProcedureDesignator &);
+bool IsInitialProcedureTarget(const Expr<SomeType> &);
 
 // Check whether an expression is a specification expression
 // (10.1.11(2), C1010).  Constant expressions are always valid

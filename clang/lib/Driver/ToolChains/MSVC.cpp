@@ -739,7 +739,8 @@ std::unique_ptr<Command> visualstudio::Compiler::GetCommand(
 
 MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
-    : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args) {
+    : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
+      RocmInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
   if (getDriver().getInstalledDir() != getDriver().Dir)
     getProgramPaths().push_back(getDriver().Dir);
@@ -795,6 +796,11 @@ bool MSVCToolChain::isPICDefaultForced() const {
 void MSVCToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
   CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
+}
+
+void MSVCToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
+                                      ArgStringList &CC1Args) const {
+  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 void MSVCToolChain::printVerboseInfo(raw_ostream &OS) const {

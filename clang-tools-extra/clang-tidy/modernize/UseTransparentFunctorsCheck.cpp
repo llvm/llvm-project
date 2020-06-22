@@ -22,7 +22,7 @@ UseTransparentFunctorsCheck::UseTransparentFunctorsCheck(
 
 void UseTransparentFunctorsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "SafeMode", SafeMode ? 1 : 0);
+  Options.store(Opts, "SafeMode", SafeMode);
 }
 
 void UseTransparentFunctorsCheck::registerMatchers(MatchFinder *Finder) {

@@ -38,6 +38,9 @@ config.build_examples = @LLVM_BUILD_EXAMPLES@
 config.run_cuda_tests = @MLIR_CUDA_CONVERSIONS_ENABLED@
 config.cuda_wrapper_library_dir = "@MLIR_CUDA_WRAPPER_LIBRARY_DIR@"
 config.enable_cuda_runner = @MLIR_CUDA_RUNNER_ENABLED@
+config.run_rocm_tests = @MLIR_ROCM_CONVERSIONS_ENABLED@
+config.rocm_wrapper_library_dir = "@MLIR_ROCM_WRAPPER_LIBRARY_DIR@"
+config.enable_rocm_runner = @MLIR_ROCM_RUNNER_ENABLED@
 config.vulkan_wrapper_library_dir = "@MLIR_VULKAN_WRAPPER_LIBRARY_DIR@"
 config.enable_vulkan_runner = @MLIR_VULKAN_RUNNER_ENABLED@
 

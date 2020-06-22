@@ -89,7 +89,7 @@ public:
   Symbol *symbol() { return symbol_; }
   const Symbol *symbol() const { return symbol_; }
 
-  const Symbol *GetSymbol() const;
+  inline const Symbol *GetSymbol() const;
   const Scope *GetDerivedTypeParent() const;
   const Scope &GetDerivedTypeBase() const;
   std::optional<SourceName> GetName() const;
@@ -207,6 +207,9 @@ public:
   DerivedTypeSpec *derivedTypeSpec() { return derivedTypeSpec_; }
   void set_derivedTypeSpec(DerivedTypeSpec &spec) { derivedTypeSpec_ = &spec; }
 
+  bool hasSAVE() const { return hasSAVE_; }
+  void set_hasSAVE(bool yes = true) { hasSAVE_ = yes; }
+
   // The range of the source of this and nested scopes.
   const parser::CharBlock &sourceRange() const { return sourceRange_; }
   void AddSourceRange(const parser::CharBlock &);
@@ -243,6 +246,7 @@ private:
   std::optional<ImportKind> importKind_;
   std::set<SourceName> importNames_;
   DerivedTypeSpec *derivedTypeSpec_{nullptr}; // dTS->scope() == this
+  bool hasSAVE_{false}; // scope has a bare SAVE statement
   // When additional data members are added to Scope, remember to
   // copy them, if appropriate, in InstantiateDerivedType().
 
@@ -255,5 +259,13 @@ private:
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Scope &);
 };
+
+// Inline so that it can be called from Evaluate without a link-time dependency.
+
+inline const Symbol *Scope::GetSymbol() const {
+  return symbol_ ? symbol_
+                 : derivedTypeSpec_ ? &derivedTypeSpec_->typeSymbol() : nullptr;
+}
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_SCOPE_H_

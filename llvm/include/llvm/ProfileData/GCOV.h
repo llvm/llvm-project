@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -41,15 +42,15 @@ class FileInfo;
 
 namespace GCOV {
 
-enum GCOVVersion { V402, V407, V408, V800, V900 };
+enum GCOVVersion { V304, V407, V408, V800, V900 };
 
 /// A struct for passing gcov options between functions.
 struct Options {
-  Options(bool A, bool B, bool C, bool F, bool P, bool U, bool L, bool N,
-          bool T, bool X)
+  Options(bool A, bool B, bool C, bool F, bool P, bool U, bool I, bool L,
+          bool N, bool T, bool X)
       : AllBlocks(A), BranchInfo(B), BranchCount(C), FuncCoverage(F),
-        PreservePaths(P), UncondBranch(U), LongFileNames(L), NoOutput(N),
-        UseStdout(T), HashFilenames(X) {}
+        PreservePaths(P), UncondBranch(U), Intermediate(I), LongFileNames(L),
+        NoOutput(N), UseStdout(T), HashFilenames(X) {}
 
   bool AllBlocks;
   bool BranchInfo;
@@ -57,6 +58,7 @@ struct Options {
   bool FuncCoverage;
   bool PreservePaths;
   bool UncondBranch;
+  bool Intermediate;
   bool LongFileNames;
   bool NoOutput;
   bool UseStdout;
@@ -70,117 +72,86 @@ struct Options {
 class GCOVBuffer {
 public:
   GCOVBuffer(MemoryBuffer *B) : Buffer(B) {}
+  ~GCOVBuffer() { consumeError(cursor.takeError()); }
 
   /// readGCNOFormat - Check GCNO signature is valid at the beginning of buffer.
   bool readGCNOFormat() {
-    StringRef File = Buffer->getBuffer().slice(0, 4);
-    if (File != "oncg") {
-      errs() << "Unexpected file type: " << File << ".\n";
+    StringRef buf = Buffer->getBuffer();
+    StringRef magic = buf.substr(0, 4);
+    if (magic == "gcno") {
+      de = DataExtractor(buf.substr(4), false, 0);
+    } else if (magic == "oncg") {
+      de = DataExtractor(buf.substr(4), true, 0);
+    } else {
+      errs() << "unexpected magic: " << magic << "\n";
       return false;
     }
-    Cursor = 4;
     return true;
   }
 
   /// readGCDAFormat - Check GCDA signature is valid at the beginning of buffer.
   bool readGCDAFormat() {
-    StringRef File = Buffer->getBuffer().slice(0, 4);
-    if (File != "adcg") {
-      errs() << "Unexpected file type: " << File << ".\n";
+    StringRef buf = Buffer->getBuffer();
+    StringRef magic = buf.substr(0, 4);
+    if (magic == "gcda") {
+      de = DataExtractor(buf.substr(4), false, 0);
+    } else if (magic == "adcg") {
+      de = DataExtractor(buf.substr(4), true, 0);
+    } else {
       return false;
     }
-    Cursor = 4;
     return true;
   }
 
   /// readGCOVVersion - Read GCOV version.
   bool readGCOVVersion(GCOV::GCOVVersion &Version) {
-    StringRef Str = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    Cursor += 4;
-    int Major =
-        Str[3] >= 'A' ? (Str[3] - 'A') * 10 + Str[2] - '0' : Str[3] - '0';
-    int Minor = Str[1] - '0';
-    if (Major >= 9) {
+    std::string str(de.getBytes(cursor, 4));
+    if (str.size() != 4)
+      return false;
+    if (de.isLittleEndian())
+      std::reverse(str.begin(), str.end());
+    int ver = str[0] >= 'A'
+                  ? (str[0] - 'A') * 100 + (str[1] - '0') * 10 + str[2] - '0'
+                  : (str[0] - '0') * 10 + str[2] - '0';
+    if (ver >= 90) {
       // PR gcov-profile/84846, r269678
       Version = GCOV::V900;
       return true;
-    } else if (Major >= 8) {
+    } else if (ver >= 80) {
       // PR gcov-profile/48463
       Version = GCOV::V800;
       return true;
-    } else if (Major > 4 || (Major == 4 && Minor >= 8)) {
+    } else if (ver >= 48) {
       // r189778: the exit block moved from the last to the second.
       Version = GCOV::V408;
       return true;
-    } else if (Major == 4 && Minor >= 7) {
+    } else if (ver >= 47) {
       // r173147: split checksum into cfg checksum and line checksum.
       Version = GCOV::V407;
       return true;
-    } else {
-      Version = GCOV::V402;
+    } else if (ver >= 34) {
+      Version = GCOV::V304;
       return true;
     }
-    Cursor -= 4;
-    errs() << "unexpected version: " << Str << "\n";
+    errs() << "unexpected version: " << str << "\n";
     return false;
   }
 
-  /// readFunctionTag - If cursor points to a function tag then increment the
-  /// cursor and return true otherwise return false.
-  bool readFunctionTag() {
-    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\0' ||
-        Tag[3] != '\1') {
-      return false;
-    }
-    Cursor += 4;
-    return true;
-  }
-
-  /// readBlockTag - If cursor points to a block tag then increment the
-  /// cursor and return true otherwise return false.
-  bool readBlockTag() {
-    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\x41' ||
-        Tag[3] != '\x01') {
-      return false;
-    }
-    Cursor += 4;
-    return true;
-  }
-
-  /// readEdgeTag - If cursor points to an edge tag then increment the
-  /// cursor and return true otherwise return false.
-  bool readEdgeTag() {
-    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\x43' ||
-        Tag[3] != '\x01') {
-      return false;
-    }
-    Cursor += 4;
-    return true;
-  }
-
-  /// readLineTag - If cursor points to a line tag then increment the
-  /// cursor and return true otherwise return false.
-  bool readLineTag() {
-    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\x45' ||
-        Tag[3] != '\x01') {
-      return false;
-    }
-    Cursor += 4;
-    return true;
+  uint32_t getWord() { return de.getU32(cursor); }
+  StringRef getString() {
+    uint32_t len;
+    if (!readInt(len) || len == 0)
+      return {};
+    return de.getBytes(cursor, len * 4).split('\0').first;
   }
 
   bool readInt(uint32_t &Val) {
-    if (Buffer->getBuffer().size() < Cursor + 4) {
-      errs() << "Unexpected end of memory buffer: " << Cursor + 4 << ".\n";
+    if (cursor.tell() + 4 > de.size()) {
+      Val = 0;
+      errs() << "unexpected end of memory buffer: " << cursor.tell() << "\n";
       return false;
     }
-    StringRef Str = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    Cursor += 4;
-    Val = *(const uint32_t *)(Str.data());
+    Val = de.getU32(cursor);
     return true;
   }
 
@@ -193,26 +164,18 @@ public:
   }
 
   bool readString(StringRef &Str) {
-    uint32_t Len;
-    if (!readInt(Len) || Len == 0)
+    uint32_t len;
+    if (!readInt(len) || len == 0)
       return false;
-    Len *= 4;
-    if (Buffer->getBuffer().size() < Cursor + Len) {
-      errs() << "Unexpected end of memory buffer: " << Cursor + Len << ".\n";
-      return false;
-    }
-    Str = Buffer->getBuffer().slice(Cursor, Cursor + Len).split('\0').first;
-    Cursor += Len;
-    return true;
+    Str = de.getBytes(cursor, len * 4).split('\0').first;
+    return bool(cursor);
   }
 
-  uint64_t getCursor() const { return Cursor; }
-  void advanceCursor(uint32_t n) { Cursor += n * 4; }
-  void setCursor(uint64_t c) { Cursor = c; }
+  DataExtractor de{ArrayRef<uint8_t>{}, false, 0};
+  DataExtractor::Cursor cursor{0};
 
 private:
   MemoryBuffer *Buffer;
-  uint64_t Cursor = 0;
 };
 
 /// GCOVFile - Collects coverage information for one pair of coverage file
@@ -229,6 +192,9 @@ public:
   void dump() const;
   void collectLineCounts(FileInfo &FI);
 
+  std::vector<std::string> filenames;
+  StringMap<unsigned> filenameToIdx;
+
 private:
   bool GCNOInitialized = false;
   GCOV::GCOVVersion Version;
@@ -238,6 +204,11 @@ private:
   std::map<uint32_t, GCOVFunction *> IdentToFunction;
   uint32_t RunCount = 0;
   uint32_t ProgramCount = 0;
+
+  using iterator = pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<GCOVFunction>>::const_iterator>;
+  iterator begin() const { return iterator(Functions.begin()); }
+  iterator end() const { return iterator(Functions.end()); }
 };
 
 struct GCOVArc {
@@ -257,11 +228,10 @@ public:
   using BlockIterator = pointee_iterator<
       SmallVectorImpl<std::unique_ptr<GCOVBlock>>::const_iterator>;
 
-  GCOVFunction(GCOVFile &P) {}
+  GCOVFunction(GCOVFile &file) : file(file) {}
 
-  bool readGCNO(GCOVBuffer &Buffer, GCOV::GCOVVersion Version);
   StringRef getName() const { return Name; }
-  StringRef getFilename() const { return Filename; }
+  StringRef getFilename() const;
   size_t getNumBlocks() const { return Blocks.size(); }
   uint64_t getEntryCount() const;
   uint64_t getExitCount() const;
@@ -276,6 +246,7 @@ public:
   void dump() const;
   void collectLineCounts(FileInfo &FI);
 
+  GCOVFile &file;
   uint32_t ident = 0;
   uint32_t linenoChecksum;
   uint32_t cfgChecksum = 0;
@@ -285,7 +256,7 @@ public:
   uint32_t endColumn = 0;
   uint8_t artificial = 0;
   StringRef Name;
-  StringRef Filename;
+  unsigned srcIdx;
   SmallVector<std::unique_ptr<GCOVBlock>, 0> Blocks;
   SmallVector<std::unique_ptr<GCOVArc>, 0> arcs, treeArcs;
 };
@@ -350,6 +321,28 @@ public:
   SmallVector<uint32_t, 16> Lines;
 };
 
+struct GCOVCoverage {
+  GCOVCoverage() = default;
+  GCOVCoverage(StringRef Name) : Name(Name) {}
+
+  StringRef Name;
+
+  uint32_t LogicalLines = 0;
+  uint32_t LinesExec = 0;
+
+  uint32_t Branches = 0;
+  uint32_t BranchesExec = 0;
+  uint32_t BranchesTaken = 0;
+};
+
+struct SourceInfo {
+  StringRef filename;
+  std::string name;
+  std::vector<GCOVFunction *> functions;
+  GCOVCoverage coverage;
+  SourceInfo(StringRef filename) : filename(filename) {}
+};
+
 class FileInfo {
 protected:
   // It is unlikely--but possible--for multiple functions to be on the same
@@ -370,20 +363,8 @@ protected:
     uint32_t LastLine = 0;
   };
 
-  struct GCOVCoverage {
-    GCOVCoverage(StringRef Name) : Name(Name) {}
-
-    StringRef Name;
-
-    uint32_t LogicalLines = 0;
-    uint32_t LinesExec = 0;
-
-    uint32_t Branches = 0;
-    uint32_t BranchesExec = 0;
-    uint32_t BranchesTaken = 0;
-  };
-
 public:
+  friend class GCOVFile;
   FileInfo(const GCOV::Options &Options) : Options(Options) {}
 
   void addBlockLine(StringRef Filename, uint32_t Line, const GCOVBlock *Block) {
@@ -402,7 +383,7 @@ public:
   void setRunCount(uint32_t Runs) { RunCount = Runs; }
   void setProgramCount(uint32_t Programs) { ProgramCount = Programs; }
   void print(raw_ostream &OS, StringRef MainFilename, StringRef GCNOFile,
-             StringRef GCDAFile, GCOV::GCOVVersion Version);
+             StringRef GCDAFile, GCOVFile &file);
 
 protected:
   std::string getCoveragePath(StringRef Filename, StringRef MainFilename);
@@ -424,11 +405,10 @@ protected:
   uint32_t RunCount = 0;
   uint32_t ProgramCount = 0;
 
-  using FileCoverageList = SmallVector<std::pair<std::string, GCOVCoverage>, 4>;
   using FuncCoverageMap = MapVector<const GCOVFunction *, GCOVCoverage>;
 
-  FileCoverageList FileCoverages;
   FuncCoverageMap FuncCoverages;
+  std::vector<SourceInfo> sources;
 };
 
 } // end namespace llvm

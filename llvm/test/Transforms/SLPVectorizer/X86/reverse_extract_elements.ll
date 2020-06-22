@@ -5,11 +5,7 @@ define float @dotf(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @dotf(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul fast <4 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP0]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP0]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
@@ -37,11 +33,7 @@ define double @dotd(<4 x double>* byval nocapture readonly align 32, <4 x double
 ; CHECK-NEXT:    [[X:%.*]] = load <4 x double>, <4 x double>* [[TMP0:%.*]], align 32
 ; CHECK-NEXT:    [[Y:%.*]] = load <4 x double>, <4 x double>* [[TMP1:%.*]], align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x double> [[X]], [[Y]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x double> [[TMP2]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x double> [[BIN_RDX]], <4 x double> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x double> [[BIN_RDX]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.experimental.vector.reduce.v2.fadd.f64.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
 ; CHECK-NEXT:    ret double [[TMP3]]
 ;
 entry:
@@ -71,11 +63,7 @@ define float @dotfq(<4 x float>* nocapture readonly %x, <4 x float>* nocapture r
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* [[X:%.*]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[Y:%.*]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP2]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
 entry:
@@ -105,11 +93,7 @@ define double @dotdq(<4 x double>* nocapture readonly %x, <4 x double>* nocaptur
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, <4 x double>* [[X:%.*]], align 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* [[Y:%.*]], align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x double> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x double> [[TMP2]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x double> [[BIN_RDX]], <4 x double> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x double> [[BIN_RDX]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.experimental.vector.reduce.v2.fadd.f64.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
 ; CHECK-NEXT:    ret double [[TMP3]]
 ;
 entry:

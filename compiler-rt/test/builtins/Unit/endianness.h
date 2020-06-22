@@ -1,17 +1,3 @@
-/* ===-- endianness.h - configuration header for libgcc replacement --------===
- *
- * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
- * See https://llvm.org/LICENSE.txt for license information.
- * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
- *
- * ===----------------------------------------------------------------------===
- *
- * This file is a configuration header for libgcc replacement.
- * This file is not part of the interface of this library.
- *
- * ===----------------------------------------------------------------------===
- */
-
 #ifndef ENDIANNESS_H
 #define ENDIANNESS_H
 

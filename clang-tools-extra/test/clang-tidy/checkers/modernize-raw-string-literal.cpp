@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s modernize-raw-string-literal %t -- -config="{CheckOptions: [{key: modernize-raw-string-literal.ReplaceShorterLiterals, value: 1}]}"
-// FIXME: Fix the checker to work in C++2a mode.
+// FIXME: Fix the checker to work in C++20 mode.
 
 char const *const BackSlash("goink\\frob");
 // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: escaped string literal can be written as a raw string literal [modernize-raw-string-literal]

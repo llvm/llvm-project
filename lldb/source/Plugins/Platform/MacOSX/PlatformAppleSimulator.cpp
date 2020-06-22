@@ -15,6 +15,7 @@
 #include <mutex>
 #include <thread>
 #include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Status.h"
@@ -34,9 +35,9 @@ void PlatformAppleSimulator::Initialize() { PlatformDarwin::Initialize(); }
 void PlatformAppleSimulator::Terminate() { PlatformDarwin::Terminate(); }
 
 /// Default Constructor
-PlatformAppleSimulator::PlatformAppleSimulator()
-    : PlatformDarwin(true), m_core_sim_path_mutex(),
-      m_core_simulator_framework_path(), m_device() {}
+PlatformAppleSimulator::PlatformAppleSimulator(
+    CoreSimulatorSupport::DeviceType::ProductFamilyID kind)
+    : PlatformDarwin(true), m_kind(kind) {}
 
 /// Destructor.
 ///
@@ -77,7 +78,7 @@ void PlatformAppleSimulator::GetStatus(Stream &strm) {
   // simulator
   PlatformAppleSimulator::LoadCoreSimulator();
 
-  std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
+  std::string developer_dir = HostInfo::GetXcodeDeveloperDirectory().GetPath();
   CoreSimulatorSupport::DeviceSet devices =
       CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
           developer_dir.c_str());
@@ -124,7 +125,7 @@ Status PlatformAppleSimulator::ConnectRemote(Args &args) {
     const char *arg_cstr = args.GetArgumentAtIndex(0);
     if (arg_cstr) {
       std::string arg_str(arg_cstr);
-      std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
+      std::string developer_dir = HostInfo::GetXcodeDeveloperDirectory().GetPath();
       CoreSimulatorSupport::DeviceSet devices =
           CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
               developer_dir.c_str());
@@ -193,10 +194,10 @@ lldb::ProcessSP PlatformAppleSimulator::DebugProcess(
         process_sp->SetShouldDetach(false);
 
         // If we didn't have any file actions, the pseudo terminal might have
-        // been used where the slave side was given as the file to open for
-        // stdin/out/err after we have already opened the master so we can
+        // been used where the secondary side was given as the file to open for
+        // stdin/out/err after we have already opened the primary so we can
         // read/write stdin/out/err.
-        int pty_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
+        int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
         if (pty_fd != PseudoTerminal::invalid_fd) {
           process_sp->SetSTDIOFileDescriptor(pty_fd);
         }
@@ -214,17 +215,11 @@ FileSpec PlatformAppleSimulator::GetCoreSimulatorPath() {
 #if defined(__APPLE__)
   std::lock_guard<std::mutex> guard(m_core_sim_path_mutex);
   if (!m_core_simulator_framework_path.hasValue()) {
-    if (FileSpec fspec = GetXcodeDeveloperDirectory()) {
-      std::string developer_dir = fspec.GetPath();
-      StreamString cs_path;
-      cs_path.Printf(
-          "%s/Library/PrivateFrameworks/CoreSimulator.framework/CoreSimulator",
-          developer_dir.c_str());
-      m_core_simulator_framework_path = FileSpec(cs_path.GetData());
-      FileSystem::Instance().Resolve(*m_core_simulator_framework_path);
-    }
+    m_core_simulator_framework_path =
+        FileSpec("/Library/Developer/PrivateFrameworks/CoreSimulator.framework/"
+                 "CoreSimulator");
+    FileSystem::Instance().Resolve(*m_core_simulator_framework_path);
   }
-
   return m_core_simulator_framework_path.getValue();
 #else
   return FileSpec();
@@ -245,9 +240,8 @@ void PlatformAppleSimulator::LoadCoreSimulator() {
 #if defined(__APPLE__)
 CoreSimulatorSupport::Device PlatformAppleSimulator::GetSimulatorDevice() {
   if (!m_device.hasValue()) {
-    const CoreSimulatorSupport::DeviceType::ProductFamilyID dev_id =
-        CoreSimulatorSupport::DeviceType::ProductFamilyID::iPhone;
-    std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
+    const CoreSimulatorSupport::DeviceType::ProductFamilyID dev_id = m_kind;
+    std::string developer_dir = HostInfo::GetXcodeDeveloperDirectory().GetPath();
     m_device = CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
                    developer_dir.c_str())
                    .GetFanciest(dev_id);

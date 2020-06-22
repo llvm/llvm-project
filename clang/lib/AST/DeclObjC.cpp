@@ -94,7 +94,7 @@ ObjCContainerDecl::getMethod(Selector Sel, bool isInstance,
   // methods there.
   if (const auto *Proto = dyn_cast<ObjCProtocolDecl>(this)) {
     if (const ObjCProtocolDecl *Def = Proto->getDefinition())
-      if (Def->isHidden() && !AllowHidden)
+      if (!Def->isUnconditionallyVisible() && !AllowHidden)
         return nullptr;
   }
 
@@ -181,7 +181,7 @@ ObjCPropertyDecl::findPropertyDecl(const DeclContext *DC,
   // property.
   if (const auto *Proto = dyn_cast<ObjCProtocolDecl>(DC)) {
     if (const ObjCProtocolDecl *Def = Proto->getDefinition())
-      if (Def->isHidden())
+      if (!Def->isUnconditionallyVisible())
         return nullptr;
   }
 
@@ -239,7 +239,7 @@ ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(
   // Don't find properties within hidden protocol definitions.
   if (const auto *Proto = dyn_cast<ObjCProtocolDecl>(this)) {
     if (const ObjCProtocolDecl *Def = Proto->getDefinition())
-      if (Def->isHidden())
+      if (!Def->isUnconditionallyVisible())
         return nullptr;
   }
 
@@ -1919,7 +1919,7 @@ ObjCMethodDecl *ObjCProtocolDecl::lookupMethod(Selector Sel,
   // If there is no definition or the definition is hidden, we don't find
   // anything.
   const ObjCProtocolDecl *Def = getDefinition();
-  if (!Def || Def->isHidden())
+  if (!Def || !Def->isUnconditionallyVisible())
     return nullptr;
 
   if ((MethodDecl = getMethod(Sel, isInstance)))

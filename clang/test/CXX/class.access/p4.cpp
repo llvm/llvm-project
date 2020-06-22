@@ -220,14 +220,14 @@ namespace test3 {
   };
 
   class Derived3 :
-    Base<0>, // expected-note 2{{deleted because base class 'Base<0>' has an inaccessible destructor}}
+    Base<0>, // expected-note {{deleted because base class 'Base<0>' has an inaccessible destructor}}
     virtual Base<1>,
     Base2,
     virtual Base3
   {};
-  Derived3 d3; // expected-error {{implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+  Derived3 d3; // expected-error {{implicitly-deleted default constructor}}
 #elif __cplusplus >= 201103L && defined(_MSC_VER)
-  template <unsigned N> class Base { ~Base(); }; // expected-note 9{{declared private here}}
+  template <unsigned N> class Base { ~Base(); }; // expected-note 6{{declared private here}}
   // expected-error@+1 {{inherited virtual base class 'Base<2>' has private destructor}}
   class Base2 : virtual Base<2> { ~Base2(); }; // expected-note 1{{declared private here}}
   // expected-error@+1 {{inherited virtual base class 'Base<3>' has private destructor}}
@@ -249,15 +249,13 @@ namespace test3 {
     ~Derived2() {}
   };
 
-  class Derived3 : // expected-error 3{{has private destructor}}
+  class Derived3 :
     Base<0>, // expected-note {{deleted because base class 'Base<0>' has an inaccessible destructor}}
-             // expected-note@-1 {{destructor of 'Derived3' is implicitly deleted}}
     virtual Base<1>,
     Base2,
     virtual Base3
   {};
-  Derived3 d3; // expected-error {{implicitly-deleted default constructor}} expected-error {{use a deleted function}}
-               // expected-note@-1 {{implicit destructor for}}
+  Derived3 d3; // expected-error {{implicitly-deleted default constructor}}
 #else
 #error "missing case of MSVC cross C++ versions"
 #endif

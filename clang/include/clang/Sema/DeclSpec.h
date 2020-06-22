@@ -281,6 +281,7 @@ public:
   static const TST TST_int128 = clang::TST_int128;
   static const TST TST_extint = clang::TST_extint;
   static const TST TST_half = clang::TST_half;
+  static const TST TST_BFloat16 = clang::TST_BFloat16;
   static const TST TST_float = clang::TST_float;
   static const TST TST_double = clang::TST_double;
   static const TST TST_float16 = clang::TST_Float16;

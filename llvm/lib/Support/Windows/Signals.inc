@@ -584,7 +584,7 @@ void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
   LeaveCriticalSection(&CriticalSection);
 }
 
-static void Cleanup() {
+static void Cleanup(bool ExecuteSignalHandlers) {
   if (CleanupExecuted)
     return;
 
@@ -600,7 +600,10 @@ static void Cleanup() {
       llvm::sys::fs::remove(FilesToRemove->back());
       FilesToRemove->pop_back();
     }
-  llvm::sys::RunSignalHandlers();
+
+  if (ExecuteSignalHandlers)
+    llvm::sys::RunSignalHandlers();
+
   LeaveCriticalSection(&CriticalSection);
 }
 
@@ -610,7 +613,7 @@ void llvm::sys::RunInterruptHandlers() {
   // error handler). We must ensure that the critical section is properly
   // initialized.
   InitializeThreading();
-  Cleanup();
+  Cleanup(true);
 }
 
 /// Find the Windows Registry Key for a given location.
@@ -803,7 +806,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
-  Cleanup();
+  Cleanup(true);
 
   // We'll automatically write a Minidump file here to help diagnose
   // the nasty sorts of crashes that aren't 100% reproducible from a set of
@@ -834,7 +837,10 @@ static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
 static BOOL WINAPI LLVMConsoleCtrlHandler(DWORD dwCtrlType) {
   // We are running in our very own thread, courtesy of Windows.
   EnterCriticalSection(&CriticalSection);
-  Cleanup();
+  // This function is only ever called when a CTRL-C or similar control signal
+  // is fired. Killing a process in this way is normal, so don't trigger the
+  // signal handlers.
+  Cleanup(false);
 
   // If an interrupt function has been set, go and run one it; otherwise,
   // the process dies.

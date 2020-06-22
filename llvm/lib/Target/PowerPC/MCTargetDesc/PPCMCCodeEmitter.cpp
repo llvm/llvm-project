@@ -113,7 +113,7 @@ PPCMCCodeEmitter::getImm34Encoding(const MCInst &MI, unsigned OpNo,
     return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the immediate field.
-  Fixups.push_back(MCFixup::create(IsLittleEndian? 0 : 1, MO.getExpr(),
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
                                    (MCFixupKind)PPC::fixup_ppc_pcrel34));
   return 0;
 }
@@ -217,9 +217,10 @@ PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
            "VariantKind must be VK_PCREL or VK_PPC_GOT_PCREL");
     // Generate the fixup for the relocation.
     Fixups.push_back(
-        MCFixup::create(IsLittleEndian ? 0 : 1, Expr,
+        MCFixup::create(0, Expr,
                         static_cast<MCFixupKind>(PPC::fixup_ppc_pcrel34)));
-    // There is no offset to return so just return 0.
+    // Put zero in the location of the immediate. The linker will fill in the
+    // correct value based on the relocation.
     return 0;
   }
   case MCExpr::Binary: {
@@ -241,7 +242,8 @@ PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
 
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(LHS);
     (void)SRE;
-    const MCConstantExpr *CE = cast<MCConstantExpr>(RHS);
+    assert(isInt<34>(cast<MCConstantExpr>(RHS)->getValue()) &&
+           "Value must fit in 34 bits.");
 
     // Currently these are the only valid PCRelative Relocations.
     assert((SRE->getKind() == MCSymbolRefExpr::VK_PCREL ||
@@ -249,11 +251,11 @@ PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
            "VariantKind must be VK_PCREL or VK_PPC_GOT_PCREL");
     // Generate the fixup for the relocation.
     Fixups.push_back(
-        MCFixup::create(IsLittleEndian ? 0 : 1, Expr,
+        MCFixup::create(0, Expr,
                         static_cast<MCFixupKind>(PPC::fixup_ppc_pcrel34)));
-    assert(isInt<34>(CE->getValue()) && "Value must fit in 34 bits.");
-    // Return the offset that should be added to the relocation by the linker.
-    return (CE->getValue() & 0x3FFFFFFFFUL) | RegBits;
+    // Put zero in the location of the immediate. The linker will fill in the
+    // correct value based on the relocation.
+    return 0;
     }
   }
 }

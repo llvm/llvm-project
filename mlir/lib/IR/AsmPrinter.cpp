@@ -1318,11 +1318,6 @@ void ModulePrinter::printAttribute(Attribute attr,
   case StandardAttributes::Unit:
     os << "unit";
     break;
-  case StandardAttributes::Bool:
-    os << (attr.cast<BoolAttr>().getValue() ? "true" : "false");
-
-    // BoolAttr always elides the type.
-    return;
   case StandardAttributes::Dictionary:
     os << '{';
     interleaveComma(attr.cast<DictionaryAttr>().getValue(),
@@ -1331,6 +1326,13 @@ void ModulePrinter::printAttribute(Attribute attr,
     break;
   case StandardAttributes::Integer: {
     auto intAttr = attr.cast<IntegerAttr>();
+    if (attrType.isSignlessInteger(1)) {
+      os << (intAttr.getValue().getBoolValue() ? "true" : "false");
+
+      // Boolean integer attributes always elides the type.
+      return;
+    }
+
     // Only print attributes as unsigned if they are explicitly unsigned or are
     // signless 1-bit values.  Indexes, signed values, and multi-bit signless
     // values print as signed.
@@ -1545,24 +1547,30 @@ void ModulePrinter::printDenseIntOrFPElementsAttr(DenseIntOrFPElementsAttr attr,
   }
 
   if (ComplexType complexTy = elementType.dyn_cast<ComplexType>()) {
-    auto printComplexValue = [&](auto complexValues, auto printFn,
-                                 raw_ostream &os, auto &&... params) {
+    Type complexElementType = complexTy.getElementType();
+    // Note: The if and else below had a common lambda function which invoked
+    // printDenseElementsAttrImpl. This lambda was hitting a bug in gcc 9.1,9.2
+    // and hence was replaced.
+    if (complexElementType.isa<IntegerType>()) {
+      bool isSigned = !complexElementType.isUnsignedInteger();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-        auto complexValue = *(complexValues.begin() + index);
+        auto complexValue = *(attr.getComplexIntValues().begin() + index);
         os << "(";
-        printFn(complexValue.real(), os, params...);
+        printDenseIntElement(complexValue.real(), os, isSigned);
         os << ",";
-        printFn(complexValue.imag(), os, params...);
+        printDenseIntElement(complexValue.imag(), os, isSigned);
         os << ")";
       });
-    };
-
-    Type complexElementType = complexTy.getElementType();
-    if (complexElementType.isa<IntegerType>())
-      printComplexValue(attr.getComplexIntValues(), printDenseIntElement, os,
-                        /*isSigned=*/!complexElementType.isUnsignedInteger());
-    else
-      printComplexValue(attr.getComplexFloatValues(), printFloatValue, os);
+    } else {
+      printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
+        auto complexValue = *(attr.getComplexFloatValues().begin() + index);
+        os << "(";
+        printFloatValue(complexValue.real(), os);
+        os << ",";
+        printFloatValue(complexValue.imag(), os);
+        os << ")";
+      });
+    }
   } else if (elementType.isIntOrIndex()) {
     bool isSigned = !elementType.isUnsignedInteger();
     auto intValues = attr.getIntValues();

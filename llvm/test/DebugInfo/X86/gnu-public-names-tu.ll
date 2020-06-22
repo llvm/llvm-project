@@ -17,13 +17,13 @@
 
 
 ; CHECK-LABEL: .debug_gnu_pubnames contents:
-; CHECK-NEXT: length = {{.*}} version = 0x0002 unit_offset = 0x00000000 unit_size = {{.*}}
+; CHECK-NEXT: length = {{.*}}, version = 0x0002, unit_offset = 0x00000000, unit_size = {{.*}}
 ; CHECK-NEXT: Offset     Linkage  Kind     Name
 ; CHECK-NEXT: [[CU]]     EXTERNAL TYPE     "ns"
 ; CHECK-NEXT: {{.*}}     EXTERNAL VARIABLE "b"
 
 ; CHECK-LABEL: debug_gnu_pubtypes contents:
-; CHECK-NEXT: length = {{.*}} version = 0x0002 unit_offset = 0x00000000 unit_size = {{.*}}
+; CHECK-NEXT: length = {{.*}}, version = 0x0002, unit_offset = 0x00000000, unit_size = {{.*}}
 ; CHECK-NEXT: Offset     Linkage  Kind     Name
 ; CHECK-NEXT: [[BAR]]    EXTERNAL TYPE     "bar"
 ; CHECK-NEXT: [[CU]]     EXTERNAL TYPE     "ns::foo"

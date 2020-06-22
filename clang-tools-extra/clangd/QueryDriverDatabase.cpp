@@ -27,7 +27,7 @@
 // First argument of the command line received from underlying compilation
 // database is used as compiler driver path. Due to this arbitrary binary
 // execution, this mechanism is not used by default and only executes binaries
-// in the paths that are explicitly whitelisted by the user.
+// in the paths that are explicitly included by the user.
 
 #include "GlobalCompilationDatabase.h"
 #include "support/Logger.h"
@@ -88,13 +88,13 @@ std::vector<std::string> parseDriverOutput(llvm::StringRef Output) {
 std::vector<std::string>
 extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
                       llvm::ArrayRef<std::string> CommandLine,
-                      llvm::Regex &QueryDriverRegex) {
+                      const llvm::Regex &QueryDriverRegex) {
   trace::Span Tracer("Extract system includes");
   SPAN_ATTACH(Tracer, "driver", Driver);
   SPAN_ATTACH(Tracer, "lang", Lang);
 
   if (!QueryDriverRegex.match(Driver)) {
-    vlog("System include extraction: not whitelisted driver {0}", Driver);
+    vlog("System include extraction: not allowed driver {0}", Driver);
     return {};
   }
 
@@ -143,7 +143,7 @@ extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
           });
       if (Found == std::end(ArgsToPreserve))
         continue;
-      Arg.consume_front(*Found);
+      Arg = Arg.drop_front(Found->size());
       if (Arg.empty() && I + 1 < E) {
         Args.push_back(CommandLine[I]);
         Args.push_back(CommandLine[++I]);
@@ -267,19 +267,12 @@ public:
 
     llvm::SmallString<128> Driver(Cmd->CommandLine.front());
     llvm::sys::fs::make_absolute(Cmd->Directory, Driver);
-    auto Key = std::make_pair(Driver.str().str(), Lang.str());
 
-    std::vector<std::string> SystemIncludes;
-    {
-      std::lock_guard<std::mutex> Lock(Mu);
-
-      auto It = DriverToIncludesCache.find(Key);
-      if (It != DriverToIncludesCache.end())
-        SystemIncludes = It->second;
-      else
-        DriverToIncludesCache[Key] = SystemIncludes = extractSystemIncludes(
-            Key.first, Key.second, Cmd->CommandLine, QueryDriverRegex);
-    }
+    std::vector<std::string> SystemIncludes =
+        QueriedDrivers.get(/*Key=*/(Driver + ":" + Lang).str(), [&] {
+          return extractSystemIncludes(Driver, Lang, Cmd->CommandLine,
+                                       QueryDriverRegex);
+        });
 
     return addSystemIncludes(*Cmd, SystemIncludes);
   }
@@ -289,12 +282,9 @@ public:
   }
 
 private:
-  mutable std::mutex Mu;
-  // Caches includes extracted from a driver.
-  mutable std::map<std::pair<std::string, std::string>,
-                   std::vector<std::string>>
-      DriverToIncludesCache;
-  mutable llvm::Regex QueryDriverRegex;
+  // Caches includes extracted from a driver. Key is driver:lang.
+  Memoize<llvm::StringMap<std::vector<std::string>>> QueriedDrivers;
+  llvm::Regex QueryDriverRegex;
 
   std::unique_ptr<GlobalCompilationDatabase> Base;
   CommandChanged::Subscription BaseChanged;

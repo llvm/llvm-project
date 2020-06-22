@@ -11,6 +11,7 @@
 
 #include "InputSection.h"
 #include "Target.h"
+#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "llvm/Object/Archive.h"
 
@@ -43,6 +44,10 @@ public:
   StringRef getName() const { return {name.data, name.size}; }
 
   uint64_t getVA() const;
+
+  uint64_t getFileOffset() const;
+
+  uint32_t gotIndex = UINT32_MAX;
 
 protected:
   Symbol(Kind k, StringRefZ name) : symbolKind(k), name(name) {}
@@ -77,7 +82,6 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DylibKind; }
 
   DylibFile *file;
-  uint32_t gotIndex = UINT32_MAX;
   uint32_t stubsIndex = UINT32_MAX;
   uint32_t lazyBindOffset = UINT32_MAX;
 };
@@ -100,6 +104,12 @@ inline uint64_t Symbol::getVA() const {
   if (auto *d = dyn_cast<Defined>(this))
     return d->isec->getVA() + d->value;
   return 0;
+}
+
+inline uint64_t Symbol::getFileOffset() const {
+  if (auto *d = dyn_cast<Defined>(this))
+    return d->isec->getFileOffset() + d->value;
+  llvm_unreachable("attempt to get an offset from an undefined symbol");
 }
 
 union SymbolUnion {

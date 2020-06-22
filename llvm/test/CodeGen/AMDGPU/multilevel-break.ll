@@ -46,52 +46,47 @@ define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
 ;
 ; GCN-LABEL: multi_else_break:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    s_mov_b64 s[2:3], 0
+; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_branch BB0_2
-; GCN-NEXT:  BB0_1: ; %Flow2
+; GCN-NEXT:  BB0_1: ; %loop.exit.guard
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GCN-NEXT:    s_and_b64 s[0:1], exec, s[8:9]
-; GCN-NEXT:    s_or_b64 s[2:3], s[0:1], s[2:3]
-; GCN-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GCN-NEXT:    s_and_b64 s[2:3], exec, s[2:3]
+; GCN-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; GCN-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GCN-NEXT:    s_cbranch_execz BB0_6
 ; GCN-NEXT:  BB0_2: ; %LOOP.outer
 ; GCN-NEXT:    ; =>This Loop Header: Depth=1
 ; GCN-NEXT:    ; Child Loop BB0_4 Depth 2
 ; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
-; GCN-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; GCN-NEXT:    ; implicit-def: $sgpr2_sgpr3
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    s_branch BB0_4
 ; GCN-NEXT:  BB0_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
-; GCN-NEXT:    s_or_b64 exec, exec, s[10:11]
-; GCN-NEXT:    s_and_b64 s[0:1], exec, s[6:7]
-; GCN-NEXT:    s_or_b64 s[4:5], s[0:1], s[4:5]
+; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GCN-NEXT:    s_and_b64 s[8:9], exec, s[6:7]
+; GCN-NEXT:    s_or_b64 s[4:5], s[8:9], s[4:5]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz BB0_1
 ; GCN-NEXT:  BB0_4: ; %LOOP
 ; GCN-NEXT:    ; Parent Loop BB0_2 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
-; GCN-NEXT:    v_mov_b32_e32 v2, v1
-; GCN-NEXT:    v_add_i32_e32 v1, vcc, 1, v2
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, v2, v4
-; GCN-NEXT:    s_or_b64 s[8:9], s[8:9], exec
+; GCN-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-NEXT:    v_add_i32_e32 v0, vcc, 1, v1
+; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, v1, v4
+; GCN-NEXT:    s_or_b64 s[2:3], s[2:3], exec
 ; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], exec
-; GCN-NEXT:    s_and_saveexec_b64 s[10:11], vcc
+; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GCN-NEXT:    s_cbranch_execz BB0_3
 ; GCN-NEXT:  ; %bb.5: ; %ENDIF
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v1
-; GCN-NEXT:    v_cmp_ne_u32_e64 s[0:1], v5, v1
-; GCN-NEXT:    s_andn2_b64 s[8:9], s[8:9], exec
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, v5, v0
+; GCN-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
 ; GCN-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
-; GCN-NEXT:    s_and_b64 s[12:13], vcc, exec
-; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; GCN-NEXT:    s_or_b64 s[8:9], s[8:9], s[12:13]
-; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v0, v1
+; GCN-NEXT:    s_and_b64 s[10:11], vcc, exec
+; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], s[10:11]
 ; GCN-NEXT:    s_branch BB0_3
 ; GCN-NEXT:  BB0_6: ; %IF
 ; GCN-NEXT:    s_endpgm
@@ -204,7 +199,10 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v1
+; GCN-NEXT:    s_mov_b64 s[6:7], -1
 ; GCN-NEXT:    s_and_b64 vcc, exec, vcc
+; GCN-NEXT:    ; implicit-def: $sgpr8_sgpr9
+; GCN-NEXT:    s_mov_b64 s[10:11], -1
 ; GCN-NEXT:    s_cbranch_vccnz BB1_6
 ; GCN-NEXT:  ; %bb.3: ; %LeafBlock1
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
@@ -223,15 +221,11 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:  BB1_5: ; %Flow3
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_mov_b64 s[10:11], 0
+; GCN-NEXT:  BB1_6: ; %Flow
+; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[10:11]
 ; GCN-NEXT:    s_cbranch_vccz BB1_1
-; GCN-NEXT:    s_branch BB1_7
-; GCN-NEXT:  BB1_6: ; in Loop: Header=BB1_2 Depth=1
-; GCN-NEXT:    s_mov_b64 s[8:9], 0
-; GCN-NEXT:    s_mov_b64 s[6:7], -1
-; GCN-NEXT:    s_and_b64 vcc, exec, -1
-; GCN-NEXT:    s_cbranch_execz BB1_1
-; GCN-NEXT:  BB1_7: ; %LeafBlock
+; GCN-NEXT:  ; %bb.7: ; %LeafBlock
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GCN-NEXT:    s_and_b64 vcc, exec, vcc
@@ -247,9 +241,10 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_and_b64 s[10:11], vcc, exec
 ; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], s[10:11]
 ; GCN-NEXT:    s_branch BB1_1
-; GCN-NEXT:  BB1_9: ; %Flow6
+; GCN-NEXT:  BB1_9: ; %loop.exit.guard
 ; GCN-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GCN-NEXT:    s_and_saveexec_b64 s[0:1], s[4:5]
+; GCN-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GCN-NEXT:    s_endpgm
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()

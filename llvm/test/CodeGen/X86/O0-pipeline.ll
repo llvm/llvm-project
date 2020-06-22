@@ -10,18 +10,14 @@
 ; CHECK-NEXT: Target Pass Configuration
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
-; CHECK-NEXT: Type-Based Alias Analysis
-; CHECK-NEXT: Scoped NoAlias Alias Analysis
-; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Create Garbage Collector Module Metadata
+; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT: Machine Branch Probability Analysis
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Expand Atomic instructions
-; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
 ; CHECK-NEXT:       Shadow Stack GC Lowering
@@ -33,15 +29,10 @@
 ; CHECK-NEXT:       Expand indirectbr instructions
 ; CHECK-NEXT:     Rewrite Symbols
 ; CHECK-NEXT:     FunctionPass Manager
-; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
-; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       Lazy Branch Probability Analysis
-; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       X86 DAG->DAG Instruction Selection
 ; CHECK-NEXT:       X86 PIC Global Base Reg Initialization
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
@@ -55,10 +46,7 @@
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Bundle Machine CFG Edges
 ; CHECK-NEXT:       X86 FP Stackifier
-; CHECK-NEXT:       MachineDominator Tree Construction
-; CHECK-NEXT:       Machine Natural Loop Construction
-; CHECK-NEXT:       Machine Dominance Frontier Construction
-; CHECK-NEXT:       X86 Load Value Injection (LVI) Load Hardening
+; CHECK-NEXT:       X86 Load Value Injection (LVI) Load Hardening (Unoptimized)
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
@@ -71,6 +59,7 @@
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       X86 Indirect Branch Tracking
 ; CHECK-NEXT:       X86 vzeroupper inserter
+; CHECK-NEXT:       Compressing EVEX instrs to VEX encoding when possibl
 ; CHECK-NEXT:       X86 Discriminate Memory Operands
 ; CHECK-NEXT:       X86 Insert Cache Prefetches
 ; CHECK-NEXT:       X86 insert wait instruction

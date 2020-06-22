@@ -1595,6 +1595,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "exact ";
   if (getFlag(MachineInstr::NoFPExcept))
     OS << "nofpexcept ";
+  if (getFlag(MachineInstr::NoMerge))
+    OS << "nomerge ";
 
   // Print the opcode name.
   if (TII)

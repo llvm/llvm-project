@@ -38,3 +38,45 @@ entry:
 ; CHECK: vabsduw 2, 2, 3
 ; CHECK: blr
 }
+
+define <16 x i8> @test_vabsdub(<16 x i8> %0, <16 x i8> %1) {
+entry:
+  %2 = zext <16 x i8> %0 to <16 x i32>
+  %3 = zext <16 x i8> %1 to <16 x i32>
+  %4 = sub nsw <16 x i32> %2, %3
+  %5 = icmp slt <16 x i32> %4, zeroinitializer
+  %6 = sub nsw <16 x i32> zeroinitializer, %4
+  %7 = select <16 x i1> %5, <16 x i32> %6, <16 x i32> %4
+  %8 = trunc <16 x i32> %7 to <16 x i8>
+  ret <16 x i8> %8
+; CHECK-LABEL: @test_vabsdub
+; CHECK: vabsdub 2, 2, 3
+; CHECK: blr
+}
+
+define <8 x i16> @test_vabsduh(<8 x i16> %0, <8 x i16> %1) {
+entry:
+  %2 = zext <8 x i16> %0 to <8 x i32>
+  %3 = zext <8 x i16> %1 to <8 x i32>
+  %4 = sub nsw <8 x i32> %2, %3
+  %5 = icmp slt <8 x i32> %4, zeroinitializer
+  %6 = sub nsw <8 x i32> zeroinitializer, %4
+  %7 = select <8 x i1> %5, <8 x i32> %6, <8 x i32> %4
+  %8 = trunc <8 x i32> %7 to <8 x i16>
+  ret <8 x i16> %8
+; CHECK-LABEL: @test_vabsduh
+; CHECK: vabsduh 2, 2, 3
+; CHECK: blr
+}
+
+define <4 x i32> @test_vabsduw(<4 x i32> %0, <4 x i32> %1) {
+entry:
+  %2 = sub nsw <4 x i32> %0, %1
+  %3 = icmp slt <4 x i32> %2, zeroinitializer
+  %4 = sub nsw <4 x i32> zeroinitializer, %2
+  %5 = select <4 x i1> %3, <4 x i32> %4, <4 x i32> %2
+  ret <4 x i32> %5
+; CHECK-LABEL: @test_vabsduw
+; CHECK: vabsduw 2, 2, 3
+; CHECK: blr
+}

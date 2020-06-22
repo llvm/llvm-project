@@ -2,7 +2,7 @@
 // RUN:  -config='{CheckOptions: [ \
 // RUN:    {key: portability-simd-intrinsics.Suggest, value: 1} \
 // RUN:  ]}' -- -target ppc64le -maltivec
-// FIXME: Fix the checker to work in C++2a mode.
+// FIXME: Fix the checker to work in C++20 mode.
 
 vector int vec_add(vector int, vector int);
 

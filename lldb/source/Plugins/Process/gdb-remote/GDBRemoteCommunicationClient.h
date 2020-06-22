@@ -621,7 +621,9 @@ protected:
   LazyBool GetThreadPacketSupported(lldb::tid_t tid, llvm::StringRef packetStr);
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunicationClient);
+  GDBRemoteCommunicationClient(const GDBRemoteCommunicationClient &) = delete;
+  const GDBRemoteCommunicationClient &
+  operator=(const GDBRemoteCommunicationClient &) = delete;
 };
 
 } // namespace process_gdb_remote

@@ -970,11 +970,15 @@ public:
   bool isMOVZMovAlias() const {
     if (!isImm()) return false;
 
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-    uint64_t Value = CE->getValue();
+    const MCExpr *E = getImm();
+    if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(E)) {
+      uint64_t Value = CE->getValue();
 
-    return AArch64_AM::isMOVZMovAlias(Value, Shift, RegWidth);
+      return AArch64_AM::isMOVZMovAlias(Value, Shift, RegWidth);
+    }
+    // Only supports the case of Shift being 0 if an expression is used as an
+    // operand
+    return !Shift && E;
   }
 
   template<int RegWidth, int Shift>
@@ -1774,9 +1778,13 @@ public:
   void addMOVZMovAliasOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
 
-    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
-    uint64_t Value = CE->getValue();
-    Inst.addOperand(MCOperand::createImm((Value >> Shift) & 0xffff));
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (CE) {
+      uint64_t Value = CE->getValue();
+      Inst.addOperand(MCOperand::createImm((Value >> Shift) & 0xffff));
+    } else {
+      addExpr(Inst, getImm());
+    }
   }
 
   template<int Shift>
@@ -2413,9 +2421,9 @@ AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  Parser.Lex(); // Eat identifier token.
   Operands.push_back(AArch64Operand::CreatePrefetch(
       *PRFM, Tok.getString(), S, getContext()));
+  Parser.Lex(); // Eat identifier token.
   return MatchOperand_Success;
 }
 
@@ -2436,9 +2444,9 @@ AArch64AsmParser::tryParsePSBHint(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  Parser.Lex(); // Eat identifier token.
   Operands.push_back(AArch64Operand::CreatePSBHint(
       PSB->Encoding, Tok.getString(), S, getContext()));
+  Parser.Lex(); // Eat identifier token.
   return MatchOperand_Success;
 }
 
@@ -2459,9 +2467,9 @@ AArch64AsmParser::tryParseBTIHint(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  Parser.Lex(); // Eat identifier token.
   Operands.push_back(AArch64Operand::CreateBTIHint(
       BTI->Encoding, Tok.getString(), S, getContext()));
+  Parser.Lex(); // Eat identifier token.
   return MatchOperand_Success;
 }
 

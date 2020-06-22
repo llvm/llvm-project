@@ -92,7 +92,7 @@ void test_ds(){
 
 /// outlined function for the second parallel region ///
 
-// CK1: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.+}}, i32* dereferenceable{{.+}})
+// CK1: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align {{[0-9]+}} dereferenceable{{.+}}, i32* nonnull align {{[0-9]+}} dereferenceable{{.+}})
 // CK1-NOT: call i8* @__kmpc_data_sharing_push_stack(
 // CK1: [[C_ADDR:%.+]] = alloca i32,
 // CK1: store i32* [[C_ADDR]], i32** %

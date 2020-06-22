@@ -82,6 +82,9 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
 
     @property
     def _location(self):
+        #TODO: Find a better way of determining path, line and column info
+        # that doesn't require reading break points. This method requires
+        # all lines to have a break point on them.
         bp = self._debugger.BreakpointLastHit
         return {
             'path': getattr(bp, 'File', None),
@@ -108,11 +111,23 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         for bp in self._debugger.Breakpoints:
             bp.Delete()
 
-    def add_breakpoint(self, file_, line):
+    def _add_breakpoint(self, file_, line):
         self._debugger.Breakpoints.Add('', file_, line)
 
+    def _add_conditional_breakpoint(self, file_, line, condition):
+        column = 1
+        self._debugger.Breakpoints.Add('', file_, line, column, condition)
+
+    def _delete_conditional_breakpoint(self, file_, line, condition):
+        for bp in self._debugger.Breakpoints:
+            for bound_bp in bp.Children:
+                if (bound_bp.File == file_ and bound_bp.FileLine == line and
+                    bound_bp.Condition == condition):
+                    bp.Delete()
+                    break
+
     def launch(self):
-        self.step()
+        self._fn_go()
 
     def step(self):
         self._fn_step()
@@ -131,7 +146,7 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
             raise Error('attempted to access stack frame {} out of {}'
                 .format(idx, len(stack_frames)))
 
-    def get_step_info(self, watches, step_index):
+    def _get_step_info(self, watches, step_index):
         thread = self._debugger.CurrentThread
         stackframes = thread.StackFrames
 

@@ -162,16 +162,44 @@ ParseLLVMLineTable(lldb_private::DWARFContext &context,
   llvm::Expected<const llvm::DWARFDebugLine::LineTable *> line_table =
       line.getOrParseLineTable(
           data, line_offset, ctx, nullptr, [&](llvm::Error e) {
-            LLDB_LOG_ERROR(log, std::move(e),
-                           "SymbolFileDWARF::ParseLineTable failed to parse");
+            LLDB_LOG_ERROR(
+                log, std::move(e),
+                "SymbolFileDWARF::ParseLineTable failed to parse: {0}");
           });
 
   if (!line_table) {
     LLDB_LOG_ERROR(log, line_table.takeError(),
-                   "SymbolFileDWARF::ParseLineTable failed to parse");
+                   "SymbolFileDWARF::ParseLineTable failed to parse: {0}");
     return nullptr;
   }
   return *line_table;
+}
+
+static bool ParseLLVMLineTablePrologue(lldb_private::DWARFContext &context,
+                                       llvm::DWARFDebugLine::Prologue &prologue,
+                                       dw_offset_t line_offset,
+                                       dw_offset_t unit_offset) {
+  Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
+  bool success = true;
+  llvm::DWARFDataExtractor data = context.getOrLoadLineData().GetAsLLVM();
+  llvm::DWARFContext &ctx = context.GetAsLLVM();
+  uint64_t offset = line_offset;
+  llvm::Error error = prologue.parse(
+      data, &offset,
+      [&](llvm::Error e) {
+        success = false;
+        LLDB_LOG_ERROR(log, std::move(e),
+                       "SymbolFileDWARF::ParseSupportFiles failed to parse "
+                       "line table prologue: {0}");
+      },
+      ctx, nullptr);
+  if (error) {
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "SymbolFileDWARF::ParseSupportFiles failed to parse line "
+                   "table prologue: {0}");
+    return false;
+  }
+  return success;
 }
 
 static llvm::Optional<std::string>
@@ -854,8 +882,24 @@ bool SymbolFileDWARF::ForEachExternalModule(
 
 bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
                                         FileSpecList &support_files) {
-  if (!comp_unit.GetLineTable())
-    ParseLineTable(comp_unit);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
+  if (!dwarf_cu)
+    return false;
+
+  dw_offset_t offset = dwarf_cu->GetLineTableOffset();
+  if (offset == DW_INVALID_OFFSET)
+    return false;
+
+  llvm::DWARFDebugLine::Prologue prologue;
+  if (!ParseLLVMLineTablePrologue(m_context, prologue, offset,
+                                  dwarf_cu->GetOffset()))
+    return false;
+
+  comp_unit.SetSupportFiles(ParseSupportFilesFromPrologue(
+      comp_unit.GetModule(), prologue, dwarf_cu->GetPathStyle(),
+      dwarf_cu->GetCompilationDirectory().GetCString()));
+
   return true;
 }
 
@@ -978,18 +1022,13 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   if (!dwarf_cu)
     return false;
 
-  const DWARFBaseDIE dwarf_cu_die = dwarf_cu->GetUnitDIEOnly();
-  if (!dwarf_cu_die)
-    return false;
-
-  const dw_offset_t cu_line_offset = dwarf_cu_die.GetAttributeValueAsUnsigned(
-      DW_AT_stmt_list, DW_INVALID_OFFSET);
-  if (cu_line_offset == DW_INVALID_OFFSET)
+  dw_offset_t offset = dwarf_cu->GetLineTableOffset();
+  if (offset == DW_INVALID_OFFSET)
     return false;
 
   llvm::DWARFDebugLine line;
-  const llvm::DWARFDebugLine::LineTable *line_table = ParseLLVMLineTable(
-      m_context, line, cu_line_offset, dwarf_cu->GetOffset());
+  const llvm::DWARFDebugLine::LineTable *line_table =
+      ParseLLVMLineTable(m_context, line, offset, dwarf_cu->GetOffset());
 
   if (!line_table)
     return false;
@@ -1023,10 +1062,6 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   } else {
     comp_unit.SetLineTable(line_table_up.release());
   }
-
-  comp_unit.SetSupportFiles(ParseSupportFilesFromPrologue(
-      comp_unit.GetModule(), line_table->Prologue, dwarf_cu->GetPathStyle(),
-      dwarf_cu->GetCompilationDirectory().GetCString()));
 
   return true;
 }
@@ -2387,7 +2422,7 @@ void SymbolFileDWARF::FindTypes(
     UpdateExternalModuleListIfNeeded();
 
     for (const auto &pair : m_external_type_modules)
-      if (ModuleSP external_module_sp = pair.second) 
+      if (ModuleSP external_module_sp = pair.second)
         if (SymbolFile *sym_file = external_module_sp->GetSymbolFile())
           sym_file->FindTypes(name, parent_decl_ctx, max_matches,
                               searched_symbol_files, types);
@@ -3601,7 +3636,8 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
   CallSiteParameterArray parameters;
   for (DWARFDIE child = call_site_die.GetFirstChild(); child.IsValid();
        child = child.GetSibling()) {
-    if (child.Tag() != DW_TAG_call_site_parameter)
+    if (child.Tag() != DW_TAG_call_site_parameter &&
+        child.Tag() != DW_TAG_GNU_call_site_parameter)
       continue;
 
     llvm::Optional<DWARFExpression> LocationInCallee;
@@ -3631,7 +3667,7 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
       dw_attr_t attr = attributes.AttributeAtIndex(i);
       if (attr == DW_AT_location)
         LocationInCallee = parse_simple_location(i);
-      if (attr == DW_AT_call_value)
+      if (attr == DW_AT_call_value || attr == DW_AT_GNU_call_site_value)
         LocationInCaller = parse_simple_location(i);
     }
 
@@ -3648,8 +3684,9 @@ std::vector<std::unique_ptr<lldb_private::CallEdge>>
 SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   // Check if the function has a supported call site-related attribute.
   // TODO: In the future it may be worthwhile to support call_all_source_calls.
-  uint64_t has_call_edges =
-      function_die.GetAttributeValueAsUnsigned(DW_AT_call_all_calls, 0);
+  bool has_call_edges =
+      function_die.GetAttributeValueAsUnsigned(DW_AT_call_all_calls, 0) ||
+      function_die.GetAttributeValueAsUnsigned(DW_AT_GNU_all_call_sites, 0);
   if (!has_call_edges)
     return {};
 
@@ -3665,16 +3702,22 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   std::vector<std::unique_ptr<CallEdge>> call_edges;
   for (DWARFDIE child = function_die.GetFirstChild(); child.IsValid();
        child = child.GetSibling()) {
-    if (child.Tag() != DW_TAG_call_site)
+    if (child.Tag() != DW_TAG_call_site && child.Tag() != DW_TAG_GNU_call_site)
       continue;
 
     llvm::Optional<DWARFDIE> call_origin;
     llvm::Optional<DWARFExpression> call_target;
     addr_t return_pc = LLDB_INVALID_ADDRESS;
     addr_t call_inst_pc = LLDB_INVALID_ADDRESS;
+    addr_t low_pc = LLDB_INVALID_ADDRESS;
+    bool tail_call = false;
 
+    // Second DW_AT_low_pc may come from DW_TAG_subprogram referenced by
+    // DW_TAG_GNU_call_site's DW_AT_abstract_origin overwriting our 'low_pc'.
+    // So do not inherit attributes from DW_AT_abstract_origin.
     DWARFAttributes attributes;
-    const size_t num_attributes = child.GetAttributes(attributes);
+    const size_t num_attributes =
+        child.GetAttributes(attributes, DWARFDIE::Recurse::no);
     for (size_t i = 0; i < num_attributes; ++i) {
       DWARFFormValue form_value;
       if (!attributes.ExtractFormValueAtIndex(i, form_value)) {
@@ -3684,8 +3727,11 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
 
       dw_attr_t attr = attributes.AttributeAtIndex(i);
 
+      if (attr == DW_AT_call_tail_call || attr == DW_AT_GNU_tail_call)
+        tail_call = form_value.Boolean();
+
       // Extract DW_AT_call_origin (the call target's DIE).
-      if (attr == DW_AT_call_origin) {
+      if (attr == DW_AT_call_origin || attr == DW_AT_abstract_origin) {
         call_origin = form_value.Reference();
         if (!call_origin->IsValid()) {
           LLDB_LOG(log, "CollectCallEdges: Invalid call origin in {0}",
@@ -3693,6 +3739,9 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
           break;
         }
       }
+
+      if (attr == DW_AT_low_pc)
+        low_pc = form_value.Address();
 
       // Extract DW_AT_call_return_pc (the PC the call returns to) if it's
       // available. It should only ever be unavailable for tail call edges, in
@@ -3708,7 +3757,7 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
 
       // Extract DW_AT_call_target (the location of the address of the indirect
       // call).
-      if (attr == DW_AT_call_target) {
+      if (attr == DW_AT_call_target || attr == DW_AT_GNU_call_site_target) {
         if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
           LLDB_LOG(log,
                    "CollectCallEdges: AT_call_target does not have block form");
@@ -3728,11 +3777,25 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
       continue;
     }
 
+    addr_t caller_address;
+    CallEdge::AddrType caller_address_type;
+    if (return_pc != LLDB_INVALID_ADDRESS) {
+      caller_address = return_pc;
+      caller_address_type = CallEdge::AddrType::AfterCall;
+    } else if (low_pc != LLDB_INVALID_ADDRESS) {
+      caller_address = low_pc;
+      caller_address_type = CallEdge::AddrType::AfterCall;
+    } else if (call_inst_pc != LLDB_INVALID_ADDRESS) {
+      caller_address = call_inst_pc;
+      caller_address_type = CallEdge::AddrType::Call;
+    } else {
+      LLDB_LOG(log, "CollectCallEdges: No caller address");
+      continue;
+    }
     // Adjust any PC forms. It needs to be fixed up if the main executable
     // contains a debug map (i.e. pointers to object files), because we need a
     // file address relative to the executable's text section.
-    return_pc = FixupAddress(return_pc);
-    call_inst_pc = FixupAddress(call_inst_pc);
+    caller_address = FixupAddress(caller_address);
 
     // Extract call site parameters.
     CallSiteParameterArray parameters =
@@ -3744,9 +3807,9 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
                "CollectCallEdges: Found call origin: {0} (retn-PC: {1:x}) "
                "(call-PC: {2:x})",
                call_origin->GetPubname(), return_pc, call_inst_pc);
-      edge = std::make_unique<DirectCallEdge>(call_origin->GetMangledName(),
-                                              return_pc, call_inst_pc,
-                                              std::move(parameters));
+      edge = std::make_unique<DirectCallEdge>(
+          call_origin->GetMangledName(), caller_address_type, caller_address,
+          tail_call, std::move(parameters));
     } else {
       if (log) {
         StreamString call_target_desc;
@@ -3756,7 +3819,8 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
                  call_target_desc.GetString());
       }
       edge = std::make_unique<IndirectCallEdge>(
-          *call_target, return_pc, call_inst_pc, std::move(parameters));
+          *call_target, caller_address_type, caller_address, tail_call,
+          std::move(parameters));
     }
 
     if (log && parameters.size()) {

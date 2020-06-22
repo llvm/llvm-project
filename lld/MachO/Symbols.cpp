@@ -8,8 +8,6 @@
 
 #include "Symbols.h"
 #include "InputFiles.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Strings.h"
 
 using namespace llvm;
 using namespace lld;

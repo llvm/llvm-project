@@ -164,6 +164,11 @@ static bool isPossiblyEscaped(const VarDecl *VD, ExplodedNode *N) {
   if (VD->hasGlobalStorage())
     return true;
 
+  const bool isParm = isa<ParmVarDecl>(VD);
+  // Reference parameters are assumed as escaped variables.
+  if (isParm && VD->getType()->isReferenceType())
+    return true;
+
   while (!N->pred_empty()) {
     // FIXME: getStmtForDiagnostics() does nasty things in order to provide
     // a valid statement for body farms, do we need this behavior here?
@@ -193,6 +198,11 @@ static bool isPossiblyEscaped(const VarDecl *VD, ExplodedNode *N) {
 
     N = N->getFirstPred();
   }
+
+  // Parameter declaration will not be found.
+  if (isParm)
+    return false;
+
   llvm_unreachable("Reached root without finding the declaration of VD");
 }
 

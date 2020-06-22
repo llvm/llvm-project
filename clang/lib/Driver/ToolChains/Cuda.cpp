@@ -78,6 +78,7 @@ CudaInstallationDetector::CudaInstallationDetector(
 
   // In decreasing order so we prefer newer versions to older versions.
   std::initializer_list<const char *> Versions = {"8.0", "7.5", "7.0"};
+  auto &FS = D.getVFS();
 
   if (Args.hasArg(clang::driver::options::OPT_cuda_path_EQ)) {
     Candidates.emplace_back(
@@ -114,7 +115,7 @@ CudaInstallationDetector::CudaInstallationDetector(
     for (const char *Ver : Versions)
       Candidates.emplace_back(D.SysRoot + "/usr/local/cuda-" + Ver);
 
-    Distro Dist(D.getVFS(), llvm::Triple(llvm::sys::getProcessTriple()));
+    Distro Dist(FS, llvm::Triple(llvm::sys::getProcessTriple()));
     if (Dist.IsDebian() || Dist.IsUbuntu())
       // Special case for Debian to have nvidia-cuda-toolkit work
       // out of the box. More info on http://bugs.debian.org/882505
@@ -125,14 +126,13 @@ CudaInstallationDetector::CudaInstallationDetector(
 
   for (const auto &Candidate : Candidates) {
     InstallPath = Candidate.Path;
-    if (InstallPath.empty() || !D.getVFS().exists(InstallPath))
+    if (InstallPath.empty() || !FS.exists(InstallPath))
       continue;
 
     BinPath = InstallPath + "/bin";
     IncludePath = InstallPath + "/include";
     LibDevicePath = InstallPath + "/nvvm/libdevice";
 
-    auto &FS = D.getVFS();
     if (!(FS.exists(IncludePath) && FS.exists(BinPath)))
       continue;
     bool CheckLibDevice = (!NoCudaLib || Candidate.StrictChecking);
@@ -177,7 +177,8 @@ CudaInstallationDetector::CudaInstallationDetector(
       }
     } else {
       std::error_code EC;
-      for (llvm::sys::fs::directory_iterator LI(LibDevicePath, EC), LE;
+      for (llvm::vfs::directory_iterator LI = FS.dir_begin(LibDevicePath, EC),
+                                         LE;
            !EC && LI != LE; LI = LI.increment(EC)) {
         StringRef FilePath = LI->path();
         StringRef FileName = llvm::sys::path::filename(FilePath);
@@ -241,7 +242,7 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
     CC1Args.push_back(DriverArgs.MakeArgString(P));
   }
 
-  if (DriverArgs.hasArg(options::OPT_nocudainc))
+  if (DriverArgs.hasArg(options::OPT_nogpuinc))
     return;
 
   if (!isValid()) {
@@ -765,7 +766,7 @@ void CudaToolChain::adjustDebugInfoKind(
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
   // Check our CUDA version if we're going to include the CUDA headers.
-  if (!DriverArgs.hasArg(options::OPT_nocudainc) &&
+  if (!DriverArgs.hasArg(options::OPT_nogpuinc) &&
       !DriverArgs.hasArg(options::OPT_no_cuda_version_check)) {
     StringRef Arch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
     assert(!Arch.empty() && "Must have an explicit GPU arch.");

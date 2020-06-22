@@ -86,6 +86,7 @@ public:
 
   OpMethod(StringRef retType, StringRef name, StringRef params,
            Property property, bool declOnly);
+  virtual ~OpMethod() = default;
 
   OpMethodBody &body();
 
@@ -96,18 +97,38 @@ public:
   bool isPrivate() const;
 
   // Writes the method as a declaration to the given `os`.
-  void writeDeclTo(raw_ostream &os) const;
+  virtual void writeDeclTo(raw_ostream &os) const;
   // Writes the method as a definition to the given `os`. `namePrefix` is the
   // prefix to be prepended to the method name (typically namespaces for
   // qualifying the method definition).
-  void writeDefTo(raw_ostream &os, StringRef namePrefix) const;
+  virtual void writeDefTo(raw_ostream &os, StringRef namePrefix) const;
 
-private:
+protected:
   Property properties;
   // Whether this method only contains a declaration.
   bool isDeclOnly;
   OpMethodSignature methodSignature;
   OpMethodBody methodBody;
+};
+
+// Class for holding an op's constructor method for C++ code emission.
+class OpConstructor : public OpMethod {
+public:
+  OpConstructor(StringRef retType, StringRef name, StringRef params,
+                Property property, bool declOnly)
+      : OpMethod(retType, name, params, property, declOnly){};
+
+  // Add member initializer to constructor initializing `name` with `value`.
+  void addMemberInitializer(StringRef name, StringRef value);
+
+  // Writes the method as a definition to the given `os`. `namePrefix` is the
+  // prefix to be prepended to the method name (typically namespaces for
+  // qualifying the method definition).
+  void writeDefTo(raw_ostream &os, StringRef namePrefix) const override;
+
+private:
+  // Member initializers.
+  std::string memberInitializers;
 };
 
 // A class used to emit C++ classes from Tablegen.  Contains a list of public
@@ -121,7 +142,7 @@ public:
                       OpMethod::Property = OpMethod::MP_None,
                       bool declOnly = false);
 
-  OpMethod &newConstructor(StringRef params = "", bool declOnly = false);
+  OpConstructor &newConstructor(StringRef params = "", bool declOnly = false);
 
   // Creates a new field in this class.
   void newField(StringRef type, StringRef name, StringRef defaultValue = "");
@@ -136,6 +157,7 @@ public:
 
 protected:
   std::string className;
+  SmallVector<OpConstructor, 2> constructors;
   SmallVector<OpMethod, 8> methods;
   SmallVector<std::string, 4> fields;
 };
@@ -144,10 +166,6 @@ protected:
 class OpClass : public Class {
 public:
   explicit OpClass(StringRef name, StringRef extraClassDeclaration = "");
-
-  // Sets whether this OpClass should generate the using directive for its
-  // associate operand adaptor class.
-  void setHasOperandAdaptorClass(bool has);
 
   // Adds an op trait.
   void addTrait(Twine trait);
@@ -160,7 +178,6 @@ private:
   StringRef extraClassDeclaration;
   SmallVector<std::string, 4> traitsVec;
   StringSet<> traitsSet;
-  bool hasOperandAdaptor;
 };
 
 } // namespace tblgen

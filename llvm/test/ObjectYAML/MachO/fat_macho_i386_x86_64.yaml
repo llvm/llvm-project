@@ -1,4 +1,9 @@
-# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+## This file contains test cases for generating Fat Mach-O binaries.
+
+## a) Test that yaml2obj emits Fat Mach-O binary and obj2yaml converts it
+## back to YAML file.
+
+# RUN: yaml2obj --docnum=1 %s | obj2yaml | FileCheck %s
 
 --- !fat-mach-o
 FatHeader:       
@@ -72,3 +77,39 @@ Slices:
 #CHECK:       flags:           0x00218085
 #CHECK:       reserved:        0x00000000
 #CHECK: ...
+
+## b) Test that yaml2obj emits an error message if the number of 'FatArchs' is less than
+## the number of 'Slices'.
+
+# RUN: not yaml2obj --docnum=2 %s -o %t2.fat-macho 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# ERROR: yaml2obj: error: cannot write 'Slices' if not described in 'FatArches'
+
+--- !fat-mach-o
+FatHeader:
+  magic:     0xCAFEBABE
+  nfat_arch: 2
+FatArchs:
+  ## 2 FatArchs are expected.
+  - cputype:    0x00000007
+    cpusubtype: 0x00000003
+    offset:     0x0000000000001000
+    size:       0
+    align:      0
+Slices:
+  - FileHeader:
+      magic:      0xFEEDFACE
+      cputype:    0x00000007
+      cpusubtype: 0x00000003
+      filetype:   0x00000002
+      ncmds:      0
+      sizeofcmds: 0
+      flags:      0x00000000
+  - FileHeader:
+      magic:      0xFEEDFACE
+      cputype:    0x00000007
+      cpusubtype: 0x00000003
+      filetype:   0x00000002
+      ncmds:      0
+      sizeofcmds: 0
+      flags:      0x00000000

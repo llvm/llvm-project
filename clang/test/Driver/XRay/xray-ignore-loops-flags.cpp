@@ -3,8 +3,7 @@
 // invocation.
 //
 // RUN: %clang -fxray-instrument -fxray-ignore-loops -target x86_64-linux- -### \
-// RUN:     -x c++ -std=c++11 -emit-llvm -c -o - %s 2>&1 \
-// RUN:     | FileCheck %s
+// RUN:   -x c++ -emit-llvm -c -o - %s 2>&1 | FileCheck %s
 // CHECK:  -fxray-ignore-loops
 //
 // REQUIRES: x86_64 || x86_64h

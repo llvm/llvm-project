@@ -102,8 +102,8 @@ public:
   // Namespace maps
   //
 
-  typedef std::vector<std::pair<lldb::ModuleSP, CompilerDeclContext>>
-      NamespaceMap;
+  typedef std::pair<lldb::ModuleSP, CompilerDeclContext> NamespaceMapItem;
+  typedef std::vector<NamespaceMapItem> NamespaceMap;
   typedef std::shared_ptr<NamespaceMap> NamespaceMapSP;
 
   void RegisterNamespaceMap(const clang::NamespaceDecl *decl,
@@ -144,7 +144,6 @@ public:
   void ForgetDestination(clang::ASTContext *dst_ctx);
   void ForgetSource(clang::ASTContext *dst_ctx, clang::ASTContext *src_ctx);
 
-public:
   struct DeclOrigin {
     DeclOrigin() : ctx(nullptr), decl(nullptr) {}
 
@@ -315,7 +314,6 @@ public:
     return delegate_iter->second;
   }
 
-public:
   DeclOrigin GetDeclOrigin(const clang::Decl *decl);
 
   clang::FileManager m_file_manager;

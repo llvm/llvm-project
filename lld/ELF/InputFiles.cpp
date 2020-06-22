@@ -1049,50 +1049,67 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
   this->symbols.resize(eSyms.size());
 
-  // Our symbol table may have already been partially initialized
+  // Fill in InputFile::symbols. Some entries have been initialized
   // because of LazyObjFile.
-  for (size_t i = 0, end = eSyms.size(); i != end; ++i)
-    if (!this->symbols[i] && eSyms[i].getBinding() != STB_LOCAL)
-      this->symbols[i] =
-          symtab->insert(CHECK(eSyms[i].getName(this->stringTable), this));
-
-  // Fill this->Symbols. A symbol is either local or global.
   for (size_t i = 0, end = eSyms.size(); i != end; ++i) {
+    if (this->symbols[i])
+      continue;
     const Elf_Sym &eSym = eSyms[i];
-
-    // Read symbol attributes.
     uint32_t secIdx = getSectionIndex(eSym);
     if (secIdx >= this->sections.size())
       fatal(toString(this) + ": invalid section index: " + Twine(secIdx));
+    if (eSym.getBinding() != STB_LOCAL) {
+      if (i < firstGlobal)
+        error(toString(this) + ": non-local symbol (" + Twine(i) +
+              ") found at index < .symtab's sh_info (" + Twine(firstGlobal) +
+              ")");
+      this->symbols[i] =
+          symtab->insert(CHECK(eSyms[i].getName(this->stringTable), this));
+      continue;
+    }
+
+    // Handle local symbols. Local symbols are not added to the symbol
+    // table because they are not visible from other object files. We
+    // allocate symbol instances and add their pointers to symbols.
+    if (i >= firstGlobal)
+      errorOrWarn(toString(this) + ": STB_LOCAL symbol (" + Twine(i) +
+                  ") found at index >= .symtab's sh_info (" +
+                  Twine(firstGlobal) + ")");
 
     InputSectionBase *sec = this->sections[secIdx];
+    uint8_t type = eSym.getType();
+    if (type == STT_FILE)
+      sourceFile = CHECK(eSym.getName(this->stringTable), this);
+    if (this->stringTable.size() <= eSym.st_name)
+      fatal(toString(this) + ": invalid symbol name offset");
+    StringRefZ name = this->stringTable.data() + eSym.st_name;
+
+    if (eSym.st_shndx == SHN_UNDEF)
+      this->symbols[i] =
+          make<Undefined>(this, name, STB_LOCAL, eSym.st_other, type);
+    else if (sec == &InputSection::discarded)
+      this->symbols[i] =
+          make<Undefined>(this, name, STB_LOCAL, eSym.st_other, type,
+                          /*discardedSecIdx=*/secIdx);
+    else
+      this->symbols[i] = make<Defined>(this, name, STB_LOCAL, eSym.st_other,
+                                       type, eSym.st_value, eSym.st_size, sec);
+  }
+
+  // Symbol resolution of non-local symbols.
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
+    const Elf_Sym &eSym = eSyms[i];
     uint8_t binding = eSym.getBinding();
+    if (binding == STB_LOCAL)
+      continue; // Errored above.
+
+    uint32_t secIdx = getSectionIndex(eSym);
+    InputSectionBase *sec = this->sections[secIdx];
     uint8_t stOther = eSym.st_other;
     uint8_t type = eSym.getType();
     uint64_t value = eSym.st_value;
     uint64_t size = eSym.st_size;
     StringRefZ name = this->stringTable.data() + eSym.st_name;
-
-    // Handle local symbols. Local symbols are not added to the symbol
-    // table because they are not visible from other object files. We
-    // allocate symbol instances and add their pointers to Symbols.
-    if (binding == STB_LOCAL) {
-      if (eSym.getType() == STT_FILE)
-        sourceFile = CHECK(eSym.getName(this->stringTable), this);
-
-      if (this->stringTable.size() <= eSym.st_name)
-        fatal(toString(this) + ": invalid symbol name offset");
-
-      if (eSym.st_shndx == SHN_UNDEF)
-        this->symbols[i] = make<Undefined>(this, name, binding, stOther, type);
-      else if (sec == &InputSection::discarded)
-        this->symbols[i] = make<Undefined>(this, name, binding, stOther, type,
-                                           /*DiscardedSecIdx=*/secIdx);
-      else
-        this->symbols[i] =
-            make<Defined>(this, name, binding, stOther, type, value, size, sec);
-      continue;
-    }
 
     // Handle global undefined symbols.
     if (eSym.st_shndx == SHN_UNDEF) {
@@ -1117,8 +1134,20 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     // COMDAT member sections, and if a comdat group is discarded, some
     // defined symbol in a .eh_frame becomes dangling symbols.
     if (sec == &InputSection::discarded) {
-      this->symbols[i]->resolve(
-          Undefined{this, name, binding, stOther, type, secIdx});
+      Undefined und{this, name, binding, stOther, type, secIdx};
+      Symbol *sym = this->symbols[i];
+      // !ArchiveFile::parsed or LazyObjFile::fetched means that the file
+      // containing this object has not finished processing, i.e. this symbol is
+      // a result of a lazy symbol fetch. We should demote the lazy symbol to an
+      // Undefined so that any relocations outside of the group to it will
+      // trigger a discarded section error.
+      if ((sym->symbolKind == Symbol::LazyArchiveKind &&
+           !cast<ArchiveFile>(sym->file)->parsed) ||
+          (sym->symbolKind == Symbol::LazyObjectKind &&
+           cast<LazyObjFile>(sym->file)->fetched))
+        sym->replace(und);
+      else
+        sym->resolve(und);
       continue;
     }
 
@@ -1141,6 +1170,10 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&file)
 void ArchiveFile::parse() {
   for (const Archive::Symbol &sym : file->symbols())
     symtab->addSymbol(LazyArchive{*this, sym});
+
+  // Inform a future invocation of ObjFile<ELFT>::initializeSymbols() that this
+  // archive has been processed.
+  parsed = true;
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -1211,6 +1244,40 @@ static std::vector<const void *> parseVerdefs(const uint8_t *base,
   return verdefs;
 }
 
+// Parse SHT_GNU_verneed to properly set the name of a versioned undefined
+// symbol. We detect fatal issues which would cause vulnerabilities, but do not
+// implement sophisticated error checking like in llvm-readobj because the value
+// of such diagnostics is low.
+template <typename ELFT>
+std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
+                                               const typename ELFT::Shdr *sec) {
+  if (!sec)
+    return {};
+  std::vector<uint32_t> verneeds;
+  ArrayRef<uint8_t> data = CHECK(obj.getSectionContents(sec), this);
+  const uint8_t *verneedBuf = data.begin();
+  for (unsigned i = 0; i != sec->sh_info; ++i) {
+    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end())
+      fatal(toString(this) + " has an invalid Verneed");
+    auto *vn = reinterpret_cast<const typename ELFT::Verneed *>(verneedBuf);
+    const uint8_t *vernauxBuf = verneedBuf + vn->vn_aux;
+    for (unsigned j = 0; j != vn->vn_cnt; ++j) {
+      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end())
+        fatal(toString(this) + " has an invalid Vernaux");
+      auto *aux = reinterpret_cast<const typename ELFT::Vernaux *>(vernauxBuf);
+      if (aux->vna_name >= this->stringTable.size())
+        fatal(toString(this) + " has a Vernaux with an invalid vna_name");
+      uint16_t version = aux->vna_other & VERSYM_VERSION;
+      if (version >= verneeds.size())
+        verneeds.resize(version + 1);
+      verneeds[version] = aux->vna_name;
+      vernauxBuf += aux->vna_next;
+    }
+    verneedBuf += vn->vn_next;
+  }
+  return verneeds;
+}
+
 // We do not usually care about alignments of data in shared object
 // files because the loader takes care of it. However, if we promote a
 // DSO symbol to point to .bss due to copy relocation, we need to keep
@@ -1254,6 +1321,7 @@ template <class ELFT> void SharedFile::parse() {
 
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
+  const Elf_Shdr *verneedSec = nullptr;
 
   // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
   for (const Elf_Shdr &sec : sections) {
@@ -1269,6 +1337,9 @@ template <class ELFT> void SharedFile::parse() {
       break;
     case SHT_GNU_verdef:
       verdefSec = &sec;
+      break;
+    case SHT_GNU_verneed:
+      verneedSec = &sec;
       break;
     }
   }
@@ -1309,12 +1380,13 @@ template <class ELFT> void SharedFile::parse() {
   sharedFiles.push_back(this);
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
+  std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
   // VER_NDX_GLOBAL.
   size_t size = numELFSyms - firstGlobal;
-  std::vector<uint32_t> versyms(size, VER_NDX_GLOBAL);
+  std::vector<uint16_t> versyms(size, VER_NDX_GLOBAL);
   if (versymSec) {
     ArrayRef<Elf_Versym> versym =
         CHECK(obj.template getSectionContentsAsArray<Elf_Versym>(versymSec),
@@ -1345,7 +1417,22 @@ template <class ELFT> void SharedFile::parse() {
       continue;
     }
 
+    uint16_t idx = versyms[i] & ~VERSYM_HIDDEN;
     if (sym.isUndefined()) {
+      // For unversioned undefined symbols, VER_NDX_GLOBAL makes more sense but
+      // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
+      if (idx != VER_NDX_LOCAL && idx != VER_NDX_GLOBAL) {
+        if (idx >= verneeds.size()) {
+          error("corrupt input file: version need index " + Twine(idx) +
+                " for symbol " + name + " is out of bounds\n>>> defined in " +
+                toString(this));
+          continue;
+        }
+        StringRef verName = this->stringTable.data() + verneeds[idx];
+        versionedNameBuffer.clear();
+        name =
+            saver.save((name + "@" + verName).toStringRef(versionedNameBuffer));
+      }
       Symbol *s = symtab->addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
       s->exportDynamic = true;
@@ -1355,7 +1442,6 @@ template <class ELFT> void SharedFile::parse() {
     // MIPS BFD linker puts _gp_disp symbol into DSO files and incorrectly
     // assigns VER_NDX_LOCAL to this section global symbol. Here is a
     // workaround for this bug.
-    uint32_t idx = versyms[i] & ~VERSYM_HIDDEN;
     if (config->emachine == EM_MIPS && idx == VER_NDX_LOCAL &&
         name == "_gp_disp")
       continue;
@@ -1562,13 +1648,12 @@ InputFile *elf::createObjectFile(MemoryBufferRef mb, StringRef archiveName,
 }
 
 void LazyObjFile::fetch() {
-  if (mb.getBuffer().empty())
+  if (fetched)
     return;
+  fetched = true;
 
   InputFile *file = createObjectFile(mb, archiveName, offsetInArchive);
   file->groupId = groupId;
-
-  mb = {};
 
   // Copy symbol vector so that the new InputFile doesn't have to
   // insert the same defined symbols to the symbol table again.

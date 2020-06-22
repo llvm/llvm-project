@@ -508,6 +508,11 @@ static void emitAttributeSerialization(const Attribute &attr,
        << formatv("  {0}.push_back(static_cast<uint32_t>("
                   "attr.cast<IntegerAttr>().getValue().getZExtValue()));\n",
                   operandList);
+  } else if (attr.isEnumAttr() || attr.getAttrDefName() == "TypeAttr") {
+    os << tabs
+       << formatv("  {0}.push_back(static_cast<uint32_t>("
+                  "getTypeID(attr.cast<TypeAttr>().getValue())));\n",
+                  operandList);
   } else {
     PrintFatalError(
         loc,
@@ -707,7 +712,7 @@ static void emitSerializationFunction(const Record *attrClass,
 static void initDispatchSerializationFn(StringRef opVar, raw_ostream &os) {
   os << formatv(
       "LogicalResult Serializer::dispatchToAutogenSerialization(Operation "
-      "*{0}) {{\n ",
+      "*{0}) {{\n",
       opVar);
 }
 
@@ -721,18 +726,15 @@ static void emitSerializationDispatch(const Operator &op, StringRef tabs,
   os << tabs
      << formatv("  return processOp(cast<{0}>({1}));\n",
                 op.getQualCppClassName(), opVar);
-  os << tabs << "} else";
+  os << tabs << "}\n";
 }
 
 /// Generates the epilogue for the function that dispatches the serialization of
 /// the operation.
 static void finalizeDispatchSerializationFn(StringRef opVar, raw_ostream &os) {
-  os << " {\n";
   os << formatv(
-      "    return {0}->emitError(\"unhandled operation serialization\");\n",
+      "  return {0}->emitError(\"unhandled operation serialization\");\n",
       opVar);
-  os << "  }\n";
-  os << "  return success();\n";
   os << "}\n\n";
 }
 
@@ -768,6 +770,11 @@ static void emitAttributeDeserialization(const Attribute &attr,
     os << tabs
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "opBuilder.getI32IntegerAttr({2}[{3}++])));\n",
+                  attrList, attrName, words, wordIndex);
+  } else if (attr.isEnumAttr() || attr.getAttrDefName() == "TypeAttr") {
+    os << tabs
+       << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
+                  "TypeAttr::get(getType({2}[{3}++]))));\n",
                   attrList, attrName, words, wordIndex);
   } else {
     PrintFatalError(

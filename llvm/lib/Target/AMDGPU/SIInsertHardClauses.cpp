@@ -146,10 +146,11 @@ public:
 
         int64_t Dummy1;
         bool Dummy2;
+        unsigned Dummy3;
         SmallVector<const MachineOperand *, 4> BaseOps;
         if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
-          if (!SII->getMemOperandsWithOffset(MI, BaseOps, Dummy1, Dummy2,
-                                             TRI)) {
+          if (!SII->getMemOperandsWithOffsetWidth(MI, BaseOps, Dummy1, Dummy2,
+                                                  Dummy3, TRI)) {
             // We failed to get the base operands, so we'll never clause this
             // instruction with any other, so pretend it's illegal.
             Type = HARDCLAUSE_ILLEGAL;
@@ -164,7 +165,7 @@ public:
               // scheduler it limits the size of the cluster to avoid increasing
               // register pressure too much, but this pass runs after register
               // allocation so there is no need for that kind of limit.
-              !SII->shouldClusterMemOps(CI.BaseOps, BaseOps, 2)))) {
+              !SII->shouldClusterMemOps(CI.BaseOps, BaseOps, 2, 2)))) {
           // Finish the current clause.
           Changed |= emitClause(CI, SII);
           CI = ClauseInfo();

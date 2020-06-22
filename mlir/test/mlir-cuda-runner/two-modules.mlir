@@ -5,7 +5,8 @@ func @main() {
   %arg = alloc() : memref<13xi32>
   %dst = memref_cast %arg : memref<13xi32> to memref<?xi32>
   %one = constant 1 : index
-  %sx = dim %dst, 0 : memref<?xi32>
+  %c0 = constant 0 : index
+  %sx = dim %dst, %c0 : memref<?xi32>
   %cast_dst = memref_cast %dst : memref<?xi32> to memref<*xi32>
   call @mcuMemHostRegisterInt32(%cast_dst) : (memref<*xi32>) -> ()
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %one, %grid_y = %one, %grid_z = %one)

@@ -113,7 +113,8 @@ public:
     lldb::ThreadSP m_thread_sp;
     StackID m_stack_id;
 
-    DISALLOW_COPY_AND_ASSIGN(ThreadEventData);
+    ThreadEventData(const ThreadEventData &) = delete;
+    const ThreadEventData &operator=(const ThreadEventData &) = delete;
   };
 
   struct ThreadStateCheckpoint {
@@ -1211,7 +1212,7 @@ protected:
     m_temporary_resume_state = new_state;
   }
 
-  void FunctionOptimizationWarning(lldb_private::StackFrame *frame);
+  void FrameSelectedCallback(lldb_private::StackFrame *frame);
 
   // Classes that inherit from Process can see and modify these
   lldb::ProcessWP m_process_wp;    ///< The process that owns this thread.
@@ -1257,10 +1258,10 @@ private:
                                 // for this thread?
   StructuredData::ObjectSP m_extended_info; // The extended info for this thread
 
-private:
   void BroadcastSelectedFrameChange(StackID &new_frame_id);
 
-  DISALLOW_COPY_AND_ASSIGN(Thread);
+  Thread(const Thread &) = delete;
+  const Thread &operator=(const Thread &) = delete;
 };
 
 } // namespace lldb_private

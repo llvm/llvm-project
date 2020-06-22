@@ -365,13 +365,11 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
   if (!config->shared)
     return false;
 
-  // If the dynamic list is present, it specifies preemptable symbols in a DSO.
-  if (config->hasDynamicList)
+  // If -Bsymbolic or --dynamic-list is specified, or -Bsymbolic-functions is
+  // specified and the symbol is STT_FUNC, the symbol is preemptible iff it is
+  // in the dynamic list.
+  if (config->symbolic || (config->bsymbolicFunctions && sym.isFunc()))
     return sym.inDynamicList;
-
-  // -Bsymbolic means that definitions are not preempted.
-  if (config->bsymbolic || (config->bsymbolicFunctions && sym.isFunc()))
-    return false;
   return true;
 }
 
@@ -726,5 +724,6 @@ void Symbol::resolveShared(const SharedSymbol &other) {
     uint8_t bind = binding;
     replace(other);
     binding = bind;
-  }
+  } else if (traced)
+    printTraceSymbol(&other);
 }

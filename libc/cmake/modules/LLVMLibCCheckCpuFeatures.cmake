@@ -4,9 +4,8 @@
 
 if(${LIBC_TARGET_MACHINE} MATCHES "x86|x86_64")
   set(ALL_CPU_FEATURES SSE SSE2 AVX AVX2 AVX512F)
+  list(SORT ALL_CPU_FEATURES)
 endif()
-
-list(SORT ALL_CPU_FEATURES)
 
 # Function to check whether the host supports the provided set of features.
 # Usage:
@@ -126,4 +125,11 @@ function(_check_defined_cpu_feature output_var)
 endfunction()
 
 # Populates the HOST_CPU_FEATURES list.
-_check_defined_cpu_feature(HOST_CPU_FEATURES MARCH native)
+# Use -march=native only when the compiler supports it.
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+if(COMPILER_SUPPORTS_MARCH_NATIVE)
+  _check_defined_cpu_feature(HOST_CPU_FEATURES MARCH native)
+else()
+  _check_defined_cpu_feature(HOST_CPU_FEATURES)
+endif()

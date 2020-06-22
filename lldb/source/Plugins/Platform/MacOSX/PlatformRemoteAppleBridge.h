@@ -58,7 +58,9 @@ protected:
   std::string GetPlatformName () override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformRemoteAppleBridge);
+  PlatformRemoteAppleBridge(const PlatformRemoteAppleBridge &) = delete;
+  const PlatformRemoteAppleBridge &
+  operator=(const PlatformRemoteAppleBridge &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEBRIDGE_H

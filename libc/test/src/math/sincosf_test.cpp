@@ -13,6 +13,7 @@
 #include "test/src/math/sdcomp26094.h"
 #include "utils/CPP/Array.h"
 #include "utils/FPUtil/BitPatterns.h"
+#include "utils/FPUtil/ClassificationFunctions.h"
 #include "utils/FPUtil/FloatOperations.h"
 #include "utils/FPUtil/FloatProperties.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
@@ -95,8 +96,8 @@ TEST(SinCosfTest, InFloatRange) {
 
     float sin, cos;
     __llvm_libc::sincosf(x, &sin, &cos);
-    ASSERT_MPFR_MATCH(mpfr::OP_Cos, x, cos, tolerance);
-    ASSERT_MPFR_MATCH(mpfr::OP_Sin, x, sin, tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, cos, tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Sin, x, sin, tolerance);
   }
 }
 
@@ -106,16 +107,16 @@ TEST(SinCosfTest, SmallValues) {
   float x = valueFromBits(bits);
   float result_cos, result_sin;
   __llvm_libc::sincosf(x, &result_sin, &result_cos);
-  EXPECT_MPFR_MATCH(mpfr::OP_Cos, x, result_cos, tolerance);
-  EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, result_sin, tolerance);
+  EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, result_cos, tolerance);
+  EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, result_sin, tolerance);
   EXPECT_EQ(BitPatterns::one, valueAsBits(result_cos));
   EXPECT_EQ(bits, valueAsBits(result_sin));
 
   bits = 0x00400000;
   x = valueFromBits(bits);
   __llvm_libc::sincosf(x, &result_sin, &result_cos);
-  EXPECT_MPFR_MATCH(mpfr::OP_Cos, x, result_cos, tolerance);
-  EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, result_sin, tolerance);
+  EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, result_cos, tolerance);
+  EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, result_sin, tolerance);
   EXPECT_EQ(BitPatterns::one, valueAsBits(result_cos));
   EXPECT_EQ(bits, valueAsBits(result_sin));
 }
@@ -127,7 +128,7 @@ TEST(SinCosfTest, SDCOMP_26094) {
     float x = valueFromBits(v);
     float sin, cos;
     __llvm_libc::sincosf(x, &sin, &cos);
-    EXPECT_MPFR_MATCH(mpfr::OP_Cos, x, cos, tolerance);
-    EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, sin, tolerance);
+    EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, cos, tolerance);
+    EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, sin, tolerance);
   }
 }

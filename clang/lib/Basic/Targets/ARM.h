@@ -137,6 +137,8 @@ public:
 
   bool hasFeature(StringRef Feature) const override;
 
+  bool hasBFloat16Type() const override;
+
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
@@ -184,6 +186,8 @@ public:
   bool hasSjLjLowering() const override;
 
   bool hasExtIntType() const override { return true; }
+  
+  const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {

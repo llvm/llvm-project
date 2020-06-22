@@ -109,33 +109,6 @@ static constexpr std::pair<StringRef, IdentifierNamingCheck::CaseType>
         {"Camel_Snake_Case", IdentifierNamingCheck::CT_CamelSnakeCase},
         {"camel_Snake_Back", IdentifierNamingCheck::CT_CamelSnakeBack}};
 
-namespace {
-/// Callback supplies macros to IdentifierNamingCheck::checkMacro
-class IdentifierNamingCheckPPCallbacks : public PPCallbacks {
-public:
-  IdentifierNamingCheckPPCallbacks(Preprocessor *PP,
-                                   IdentifierNamingCheck *Check)
-      : PP(PP), Check(Check) {}
-
-  /// MacroDefined calls checkMacro for macros in the main file
-  void MacroDefined(const Token &MacroNameTok,
-                    const MacroDirective *MD) override {
-    Check->checkMacro(PP->getSourceManager(), MacroNameTok, MD->getMacroInfo());
-  }
-
-  /// MacroExpands calls expandMacro for macros in the main file
-  void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
-                    SourceRange /*Range*/,
-                    const MacroArgs * /*Args*/) override {
-    Check->expandMacro(MacroNameTok, MD.getMacroInfo());
-  }
-
-private:
-  Preprocessor *PP;
-  IdentifierNamingCheck *Check;
-};
-} // namespace
-
 IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : RenamerClangTidyCheck(Name, Context),

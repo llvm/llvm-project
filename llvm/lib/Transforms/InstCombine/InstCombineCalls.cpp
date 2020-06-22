@@ -839,7 +839,7 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
       Index /= 8;
 
       Type *IntTy8 = Type::getInt8Ty(II.getContext());
-      VectorType *ShufTy = VectorType::get(IntTy8, 16);
+      auto *ShufTy = FixedVectorType::get(IntTy8, 16);
 
       SmallVector<int, 16> ShuffleMask;
       for (int i = 0; i != (int)Length; ++i)
@@ -916,7 +916,7 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
     Index /= 8;
 
     Type *IntTy8 = Type::getInt8Ty(II.getContext());
-    VectorType *ShufTy = VectorType::get(IntTy8, 16);
+    auto *ShufTy = FixedVectorType::get(IntTy8, 16);
 
     SmallVector<int, 16> ShuffleMask;
     for (int i = 0; i != (int)Index; ++i)
@@ -2422,6 +2422,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::ceil:
   case Intrinsic::floor:
   case Intrinsic::round:
+  case Intrinsic::roundeven:
   case Intrinsic::nearbyint:
   case Intrinsic::rint:
   case Intrinsic::trunc: {
@@ -2848,8 +2849,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         // We don't need a select if we know the mask bit is a 1.
         if (!C || !C->getValue()[0]) {
           // Cast the mask to an i1 vector and then extract the lowest element.
-          auto *MaskTy = VectorType::get(Builder.getInt1Ty(),
-                             cast<IntegerType>(Mask->getType())->getBitWidth());
+          auto *MaskTy = FixedVectorType::get(
+              Builder.getInt1Ty(),
+              cast<IntegerType>(Mask->getType())->getBitWidth());
           Mask = Builder.CreateBitCast(Mask, MaskTy);
           Mask = Builder.CreateExtractElement(Mask, (uint64_t)0);
           // Extract the lowest element from the passthru operand.
@@ -3500,18 +3502,25 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     Value *Src = II->getArgOperand(0);
 
     // TODO: Move to ConstantFolding/InstSimplify?
-    if (isa<UndefValue>(Src))
-      return replaceInstUsesWith(CI, Src);
+    if (isa<UndefValue>(Src)) {
+      Type *Ty = II->getType();
+      auto *QNaN = ConstantFP::get(Ty, APFloat::getQNaN(Ty->getFltSemantics()));
+      return replaceInstUsesWith(CI, QNaN);
+    }
+
+    if (II->isStrictFP())
+      break;
 
     if (const ConstantFP *C = dyn_cast<ConstantFP>(Src)) {
       const APFloat &ArgVal = C->getValueAPF();
       APFloat Val(ArgVal.getSemantics(), 1);
-      APFloat::opStatus Status = Val.divide(ArgVal,
-                                            APFloat::rmNearestTiesToEven);
-      // Only do this if it was exact and therefore not dependent on the
-      // rounding mode.
-      if (Status == APFloat::opOK)
-        return replaceInstUsesWith(CI, ConstantFP::get(II->getContext(), Val));
+      Val.divide(ArgVal, APFloat::rmNearestTiesToEven);
+
+      // This is more precise than the instruction may give.
+      //
+      // TODO: The instruction always flushes denormal results (except for f16),
+      // should this also?
+      return replaceInstUsesWith(CI, ConstantFP::get(II->getContext(), Val));
     }
 
     break;
@@ -3520,8 +3529,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     Value *Src = II->getArgOperand(0);
 
     // TODO: Move to ConstantFolding/InstSimplify?
-    if (isa<UndefValue>(Src))
-      return replaceInstUsesWith(CI, Src);
+    if (isa<UndefValue>(Src)) {
+      Type *Ty = II->getType();
+      auto *QNaN = ConstantFP::get(Ty, APFloat::getQNaN(Ty->getFltSemantics()));
+      return replaceInstUsesWith(CI, QNaN);
+    }
+
     break;
   }
   case Intrinsic::amdgcn_frexp_mant:
@@ -4067,6 +4080,53 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::amdgcn_ldexp: {
+    // FIXME: This doesn't introduce new instructions and belongs in
+    // InstructionSimplify.
+    Type *Ty = II->getType();
+    Value *Op0 = II->getArgOperand(0);
+    Value *Op1 = II->getArgOperand(1);
+
+    // Folding undef to qnan is safe regardless of the FP mode.
+    if (isa<UndefValue>(Op0)) {
+      auto *QNaN = ConstantFP::get(Ty, APFloat::getQNaN(Ty->getFltSemantics()));
+      return replaceInstUsesWith(*II, QNaN);
+    }
+
+    const APFloat *C = nullptr;
+    match(Op0, m_APFloat(C));
+
+    // FIXME: Should flush denorms depending on FP mode, but that's ignored
+    // everywhere else.
+    //
+    // These cases should be safe, even with strictfp.
+    // ldexp(0.0, x) -> 0.0
+    // ldexp(-0.0, x) -> -0.0
+    // ldexp(inf, x) -> inf
+    // ldexp(-inf, x) -> -inf
+    if (C && (C->isZero() || C->isInfinity()))
+      return replaceInstUsesWith(*II, Op0);
+
+    // With strictfp, be more careful about possibly needing to flush denormals
+    // or not, and snan behavior depends on ieee_mode.
+    if (II->isStrictFP())
+      break;
+
+    if (C && C->isNaN()) {
+      // FIXME: We just need to make the nan quiet here, but that's unavailable
+      // on APFloat, only IEEEfloat
+      auto *Quieted = ConstantFP::get(
+        Ty, scalbn(*C, 0, APFloat::rmNearestTiesToEven));
+      return replaceInstUsesWith(*II, Quieted);
+    }
+
+    // ldexp(x, 0) -> x
+    // ldexp(x, undef) -> x
+    if (isa<UndefValue>(Op1) || match(Op1, m_ZeroInt()))
+      return replaceInstUsesWith(*II, Op0);
+
+    break;
+  }
   case Intrinsic::hexagon_V6_vandvrt:
   case Intrinsic::hexagon_V6_vandvrt_128B: {
     // Simplify Q -> V -> Q conversion.
@@ -4328,7 +4388,8 @@ static bool isSafeToEliminateVarargsCast(const CallBase &Call,
   // TODO: This is probably something which should be expanded to all
   // intrinsics since the entire point of intrinsics is that
   // they are understandable by the optimizer.
-  if (isStatepoint(&Call) || isGCRelocate(&Call) || isGCResult(&Call))
+  if (isa<GCStatepointInst>(Call) || isa<GCRelocateInst>(Call) ||
+      isa<GCResultInst>(Call))
     return false;
 
   // The size of ByVal or InAlloca arguments is derived from the type, so we
@@ -4468,7 +4529,7 @@ static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
                       Attribute::getWithDereferenceableOrNullBytes(
                           Call.getContext(), Op1C->getZExtValue()));
     // Add alignment attribute if alignment is a power of two constant.
-    if (Op0C) {
+    if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment)) {
       uint64_t AlignmentVal = Op0C->getZExtValue();
       if (llvm::isPowerOf2_64(AlignmentVal))
         Call.addAttribute(AttributeList::ReturnIndex,
@@ -4737,6 +4798,7 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
   //
   //  Similarly, avoid folding away bitcasts of byval calls.
   if (Callee->getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
+      Callee->getAttributes().hasAttrSomewhere(Attribute::Preallocated) ||
       Callee->getAttributes().hasAttrSomewhere(Attribute::ByVal))
     return false;
 
@@ -4893,11 +4955,8 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
   NewCall->setCallingConv(Call.getCallingConv());
   NewCall->setAttributes(NewCallerPAL);
 
-  // Preserve the weight metadata for the new call instruction. The metadata
-  // is used by SamplePGO to check callsite's hotness.
-  uint64_t W;
-  if (Caller->extractProfTotalWeight(W))
-    NewCall->setProfWeight(W);
+  // Preserve prof metadata if any.
+  NewCall->copyMetadata(*Caller, {LLVMContext::MD_prof});
 
   // Insert a cast of the return type as necessary.
   Instruction *NC = NewCall;

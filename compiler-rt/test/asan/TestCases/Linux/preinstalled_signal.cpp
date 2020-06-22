@@ -1,16 +1,16 @@
 // RUN: %clangxx -std=c++11 %s -o %t
-// RUN: env LD_PRELOAD=%shared_libasan %env_asan_opts=handle_segv=1 not %run %t 2>&1 | FileCheck %s
-// RUN: env LD_PRELOAD=%shared_libasan %env_asan_opts=handle_segv=2 not %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=handle_segv=1 LD_PRELOAD=%shared_libasan not %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=handle_segv=2 LD_PRELOAD=%shared_libasan not %run %t 2>&1 | FileCheck %s
 
 // RUN: %clangxx -std=c++11 -DTEST_INSTALL_SIG_HANDLER %s -o %t
-// RUN: env LD_PRELOAD=%shared_libasan %env_asan_opts=handle_segv=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-HANDLER
-// RUN: env LD_PRELOAD=%shared_libasan %env_asan_opts=handle_segv=1 not %run %t 2>&1 | FileCheck %s
-// RUN: env LD_PRELOAD=%shared_libasan %env_asan_opts=handle_segv=2 not %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=handle_segv=0 LD_PRELOAD=%shared_libasan not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-HANDLER
+// RUN: %env_asan_opts=handle_segv=1 LD_PRELOAD=%shared_libasan not %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=handle_segv=2 LD_PRELOAD=%shared_libasan not %run %t 2>&1 | FileCheck %s
 
 // RUN: %clangxx -std=c++11 -DTEST_INSTALL_SIG_ACTION %s -o %t
-// RUN: env LD_PRELOAD=%shared_libasan %env_asan_opts=handle_segv=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-ACTION
-// RUN: env LD_PRELOAD=%shared_libasan %env_asan_opts=handle_segv=1 not %run %t 2>&1 | FileCheck %s
-// RUN: env LD_PRELOAD=%shared_libasan %env_asan_opts=handle_segv=2 not %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=handle_segv=0 LD_PRELOAD=%shared_libasan not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-ACTION
+// RUN: %env_asan_opts=handle_segv=1 LD_PRELOAD=%shared_libasan not %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=handle_segv=2 LD_PRELOAD=%shared_libasan not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: asan-dynamic-runtime
 

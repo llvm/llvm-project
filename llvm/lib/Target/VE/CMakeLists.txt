@@ -2,7 +2,10 @@ set(LLVM_TARGET_DEFINITIONS VE.td)
 
 tablegen(LLVM VEGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM VEGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM VEGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM VEGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM VEGenAsmWriter.inc -gen-asm-writer)
+tablegen(LLVM VEGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM VEGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM VEGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM VEGenCallingConv.inc -gen-callingconv)
@@ -21,5 +24,7 @@ add_llvm_target(VECodeGen
   VETargetMachine.cpp
   )
 
+add_subdirectory(AsmParser)
+add_subdirectory(Disassembler)
 add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)

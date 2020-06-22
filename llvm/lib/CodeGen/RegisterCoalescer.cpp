@@ -1445,6 +1445,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
       SlotIndex CurrIdx = LIS->getInstructionIndex(NewMI);
       LaneBitmask DstMask = TRI->getSubRegIndexLaneMask(NewIdx);
       bool UpdatedSubRanges = false;
+      SlotIndex DefIndex =
+          CurrIdx.getRegSlot(NewMI.getOperand(0).isEarlyClobber());
+      VNInfo::Allocator &Alloc = LIS->getVNInfoAllocator();
       for (LiveInterval::SubRange &SR : DstInt.subranges()) {
         if ((SR.LaneMask & DstMask).none()) {
           LLVM_DEBUG(dbgs()
@@ -1455,6 +1458,14 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
             SR.removeValNo(RmValNo);
             UpdatedSubRanges = true;
           }
+        } else {
+          // We know that this lane is defined by this instruction,
+          // but at this point it may be empty because it is not used by
+          // anything. This happens when updateRegDefUses adds the missing
+          // lanes. Assign that lane a dead def so that the interferences
+          // are properly modeled.
+          if (SR.empty())
+            SR.createDeadDef(DefIndex, Alloc);
         }
       }
       if (UpdatedSubRanges)

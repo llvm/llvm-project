@@ -73,8 +73,6 @@ protected:
 
   bool IsFPR(unsigned reg);
 
-  lldb::ByteOrder GetByteOrder();
-
   virtual bool ReadGPR() = 0;
   virtual bool ReadFPR() = 0;
   virtual bool WriteGPR() = 0;

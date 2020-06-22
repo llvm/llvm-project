@@ -11,46 +11,34 @@
 define void @test_liwzx1(<1 x float>* %A, <1 x float>* %B, <1 x float>* %C) {
 ; P9LE-LABEL: test_liwzx1:
 ; P9LE:       # %bb.0:
-; P9LE-NEXT:    lfiwzx f0, 0, r3
-; P9LE-NEXT:    lfiwzx f1, 0, r4
-; P9LE-NEXT:    xxswapd vs0, f0
-; P9LE-NEXT:    xxswapd vs1, f1
-; P9LE-NEXT:    xvaddsp vs0, vs0, vs1
-; P9LE-NEXT:    xxsldwi vs0, vs0, vs0, 2
-; P9LE-NEXT:    stfiwx f0, 0, r5
+; P9LE-NEXT:    lfs f0, 0(r3)
+; P9LE-NEXT:    lfs f1, 0(r4)
+; P9LE-NEXT:    xsaddsp f0, f0, f1
+; P9LE-NEXT:    stfs f0, 0(r5)
 ; P9LE-NEXT:    blr
 ;
 ; P9BE-LABEL: test_liwzx1:
 ; P9BE:       # %bb.0:
-; P9BE-NEXT:    lfiwzx f0, 0, r3
-; P9BE-NEXT:    lfiwzx f1, 0, r4
-; P9BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P9BE-NEXT:    xxsldwi vs1, f1, f1, 1
-; P9BE-NEXT:    xvaddsp vs0, vs0, vs1
-; P9BE-NEXT:    xxsldwi vs0, vs0, vs0, 3
-; P9BE-NEXT:    stfiwx f0, 0, r5
+; P9BE-NEXT:    lfs f0, 0(r3)
+; P9BE-NEXT:    lfs f1, 0(r4)
+; P9BE-NEXT:    xsaddsp f0, f0, f1
+; P9BE-NEXT:    stfs f0, 0(r5)
 ; P9BE-NEXT:    blr
 ;
 ; P8LE-LABEL: test_liwzx1:
 ; P8LE:       # %bb.0:
-; P8LE-NEXT:    lfiwzx f0, 0, r3
-; P8LE-NEXT:    lfiwzx f1, 0, r4
-; P8LE-NEXT:    xxswapd vs0, f0
-; P8LE-NEXT:    xxswapd vs1, f1
-; P8LE-NEXT:    xvaddsp vs0, vs0, vs1
-; P8LE-NEXT:    xxsldwi vs0, vs0, vs0, 2
-; P8LE-NEXT:    stfiwx f0, 0, r5
+; P8LE-NEXT:    lfsx f0, 0, r3
+; P8LE-NEXT:    lfsx f1, 0, r4
+; P8LE-NEXT:    xsaddsp f0, f0, f1
+; P8LE-NEXT:    stfsx f0, 0, r5
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: test_liwzx1:
 ; P8BE:       # %bb.0:
-; P8BE-NEXT:    lfiwzx f0, 0, r3
-; P8BE-NEXT:    lfiwzx f1, 0, r4
-; P8BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P8BE-NEXT:    xxsldwi vs1, f1, f1, 1
-; P8BE-NEXT:    xvaddsp vs0, vs0, vs1
-; P8BE-NEXT:    xxsldwi vs0, vs0, vs0, 3
-; P8BE-NEXT:    stfiwx f0, 0, r5
+; P8BE-NEXT:    lfsx f0, 0, r3
+; P8BE-NEXT:    lfsx f1, 0, r4
+; P8BE-NEXT:    xsaddsp f0, f0, f1
+; P8BE-NEXT:    stfsx f0, 0, r5
 ; P8BE-NEXT:    blr
 
 
@@ -65,50 +53,38 @@ define void @test_liwzx1(<1 x float>* %A, <1 x float>* %B, <1 x float>* %C) {
 define <1 x float>* @test_liwzx2(<1 x float>* %A, <1 x float>* %B, <1 x float>* %C) {
 ; P9LE-LABEL: test_liwzx2:
 ; P9LE:       # %bb.0:
-; P9LE-NEXT:    lfiwzx f0, 0, r3
-; P9LE-NEXT:    lfiwzx f1, 0, r4
-; P9LE-NEXT:    xxswapd vs0, f0
-; P9LE-NEXT:    xxswapd vs1, f1
-; P9LE-NEXT:    xvsubsp vs0, vs0, vs1
-; P9LE-NEXT:    xxsldwi vs0, vs0, vs0, 2
+; P9LE-NEXT:    lfs f0, 0(r3)
 ; P9LE-NEXT:    mr r3, r5
-; P9LE-NEXT:    stfiwx f0, 0, r5
+; P9LE-NEXT:    lfs f1, 0(r4)
+; P9LE-NEXT:    xssubsp f0, f0, f1
+; P9LE-NEXT:    stfs f0, 0(r5)
 ; P9LE-NEXT:    blr
 ;
 ; P9BE-LABEL: test_liwzx2:
 ; P9BE:       # %bb.0:
-; P9BE-NEXT:    lfiwzx f0, 0, r3
-; P9BE-NEXT:    lfiwzx f1, 0, r4
-; P9BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P9BE-NEXT:    xxsldwi vs1, f1, f1, 1
-; P9BE-NEXT:    xvsubsp vs0, vs0, vs1
-; P9BE-NEXT:    xxsldwi vs0, vs0, vs0, 3
+; P9BE-NEXT:    lfs f0, 0(r3)
 ; P9BE-NEXT:    mr r3, r5
-; P9BE-NEXT:    stfiwx f0, 0, r5
+; P9BE-NEXT:    lfs f1, 0(r4)
+; P9BE-NEXT:    xssubsp f0, f0, f1
+; P9BE-NEXT:    stfs f0, 0(r5)
 ; P9BE-NEXT:    blr
 ;
 ; P8LE-LABEL: test_liwzx2:
 ; P8LE:       # %bb.0:
-; P8LE-NEXT:    lfiwzx f0, 0, r3
-; P8LE-NEXT:    lfiwzx f1, 0, r4
+; P8LE-NEXT:    lfsx f0, 0, r3
+; P8LE-NEXT:    lfsx f1, 0, r4
 ; P8LE-NEXT:    mr r3, r5
-; P8LE-NEXT:    xxswapd vs0, f0
-; P8LE-NEXT:    xxswapd vs1, f1
-; P8LE-NEXT:    xvsubsp vs0, vs0, vs1
-; P8LE-NEXT:    xxsldwi vs0, vs0, vs0, 2
-; P8LE-NEXT:    stfiwx f0, 0, r5
+; P8LE-NEXT:    xssubsp f0, f0, f1
+; P8LE-NEXT:    stfsx f0, 0, r5
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: test_liwzx2:
 ; P8BE:       # %bb.0:
-; P8BE-NEXT:    lfiwzx f0, 0, r3
-; P8BE-NEXT:    lfiwzx f1, 0, r4
+; P8BE-NEXT:    lfsx f0, 0, r3
+; P8BE-NEXT:    lfsx f1, 0, r4
 ; P8BE-NEXT:    mr r3, r5
-; P8BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P8BE-NEXT:    xxsldwi vs1, f1, f1, 1
-; P8BE-NEXT:    xvsubsp vs0, vs0, vs1
-; P8BE-NEXT:    xxsldwi vs0, vs0, vs0, 3
-; P8BE-NEXT:    stfiwx f0, 0, r5
+; P8BE-NEXT:    xssubsp f0, f0, f1
+; P8BE-NEXT:    stfsx f0, 0, r5
 ; P8BE-NEXT:    blr
 
 

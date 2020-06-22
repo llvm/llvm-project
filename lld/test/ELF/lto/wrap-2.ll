@@ -27,10 +27,6 @@
 ; BIND-NEXT: Value:
 ; BIND-NEXT: Size:
 ; BIND-NEXT: Binding: Local
-; BIND:      Name: __real_bar
-; BIND-NEXT: Value:
-; BIND-NEXT: Size:
-; BIND-NEXT: Binding: Local
 ; BIND:      Name: __wrap_bar
 ; BIND-NEXT: Value:
 ; BIND-NEXT: Size:

@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRLinalgUtils
   MLIRAffineOps
   MLIREDSC
   MLIRIR
+  MLIRLinalgEDSC
   MLIRLinalgOps
   MLIRSCF
   MLIRPass

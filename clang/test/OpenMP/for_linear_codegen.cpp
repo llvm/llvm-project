@@ -373,7 +373,7 @@ int main() {
 // CHECK: call void [[S_FLOAT_TY_DESTR:@.+]]([[S_FLOAT_TY]]*
 // CHECK: ret
 
-// CHECK: define internal void [[MAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, float** dereferenceable(8) %{{.+}}, i64* dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, i64* nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: [[PVAR_START:%.+]] = alloca float*,
@@ -471,7 +471,7 @@ int main() {
 // CHECK: br label
 // CHECK: ret void
 
-// CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32** dereferenceable(8) %{{.+}}, i32* dereferenceable(4) %{{.+}})
+// CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32** nonnull align 8 dereferenceable(8) %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}})
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: [[PVAR_START:%.+]] = alloca i32*,

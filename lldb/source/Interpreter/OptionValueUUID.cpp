@@ -38,7 +38,7 @@ Status OptionValueUUID::SetValueFromString(llvm::StringRef value,
 
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
-    if (m_uuid.SetFromStringRef(value) == 0)
+    if (!m_uuid.SetFromStringRef(value))
       error.SetErrorStringWithFormat("invalid uuid string value '%s'",
                                      value.str().c_str());
     else {

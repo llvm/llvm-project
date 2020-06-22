@@ -19,7 +19,7 @@ let TargetPrefix = "arm" in {  // All intrinsics start with "llvm.arm.".
 // A space-consuming intrinsic primarily for testing ARMConstantIslands. The
 // first argument is the number of bytes this "instruction" takes up, the second
 // and return value are essentially chains, used to force ordering during ISel.
-def int_arm_space : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [ImmArg<0>]>;
+def int_arm_space : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 // 16-bit multiplications
 def int_arm_smulbb : GCCBuiltin<"__builtin_arm_smulbb">,
@@ -262,59 +262,59 @@ def int_arm_vcvtru    : Intrinsic<[llvm_float_ty], [llvm_anyfloat_ty],
 // Coprocessor
 
 def int_arm_ldc : GCCBuiltin<"__builtin_arm_ldc">,
-   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<0>, ImmArg<1>]>;
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 def int_arm_ldcl : GCCBuiltin<"__builtin_arm_ldcl">,
-   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<0>, ImmArg<1>]>;
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 def int_arm_ldc2 : GCCBuiltin<"__builtin_arm_ldc2">,
-   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<0>, ImmArg<1>]>;
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 def int_arm_ldc2l : GCCBuiltin<"__builtin_arm_ldc2l">,
-   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<0>, ImmArg<1>]>;
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
 def int_arm_stc : GCCBuiltin<"__builtin_arm_stc">,
-   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<0>, ImmArg<1>]>;
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 def int_arm_stcl : GCCBuiltin<"__builtin_arm_stcl">,
-   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<0>, ImmArg<1>]>;
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 def int_arm_stc2 : GCCBuiltin<"__builtin_arm_stc2">,
-   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<0>, ImmArg<1>]>;
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 def int_arm_stc2l : GCCBuiltin<"__builtin_arm_stc2l">,
-   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<0>, ImmArg<1>]>;
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
 // Move to coprocessor
 def int_arm_mcr : GCCBuiltin<"__builtin_arm_mcr">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                  llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, ImmArg<1>, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
+                  llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 def int_arm_mcr2 : GCCBuiltin<"__builtin_arm_mcr2">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                  llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, ImmArg<1>, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
+                  llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 // Move from coprocessor
 def int_arm_mrc : GCCBuiltin<"__builtin_arm_mrc">,
                   MSBuiltin<"_MoveFromCoprocessor">,
    Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                             llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, ImmArg<1>, ImmArg<2>, ImmArg<3>, ImmArg<4>]>;
+                             llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 def int_arm_mrc2 : GCCBuiltin<"__builtin_arm_mrc2">,
                    MSBuiltin<"_MoveFromCoprocessor2">,
    Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                             llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, ImmArg<1>, ImmArg<2>, ImmArg<3>, ImmArg<4>]>;
+                             llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
 // Coprocessor data processing
 def int_arm_cdp : GCCBuiltin<"__builtin_arm_cdp">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                  llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, ImmArg<1>, ImmArg<2>, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
+                  llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 def int_arm_cdp2 : GCCBuiltin<"__builtin_arm_cdp2">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                  llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, ImmArg<1>, ImmArg<2>, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
+                  llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 // Move from two registers to coprocessor
 def int_arm_mcrr : Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                                  llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, ImmArg<1>, ImmArg<4>]>;
+                                  llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<4>>]>;
 def int_arm_mcrr2 : Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                                   llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, ImmArg<1>, ImmArg<4>]>;
+                                   llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<4>>]>;
 
 def int_arm_mrrc : Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty,
-                              llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, ImmArg<1>, ImmArg<2>]>;
+                              llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 def int_arm_mrrc2 : Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty,
-                               llvm_i32_ty, llvm_i32_ty], [ImmArg<0>, ImmArg<1>, ImmArg<2>]>;
+                               llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 //===----------------------------------------------------------------------===//
 // CRC32
@@ -695,16 +695,16 @@ def int_arm_neon_vst4 : Intrinsic<[],
 def int_arm_neon_vst1x2 : Intrinsic<[],
                                     [llvm_anyptr_ty, llvm_anyvector_ty,
                                      LLVMMatchType<1>],
-                                    [IntrArgMemOnly, NoCapture<0>]>;
+                                    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 def int_arm_neon_vst1x3 : Intrinsic<[],
                                     [llvm_anyptr_ty, llvm_anyvector_ty,
                                      LLVMMatchType<1>, LLVMMatchType<1>],
-                                    [IntrArgMemOnly, NoCapture<0>]>;
+                                    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 def int_arm_neon_vst1x4 : Intrinsic<[],
                                     [llvm_anyptr_ty, llvm_anyvector_ty,
                                      LLVMMatchType<1>, LLVMMatchType<1>,
                                      LLVMMatchType<1>],
-                                    [IntrArgMemOnly, NoCapture<0>]>;
+                                    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 
 // Vector store N-element structure from one lane.
 // Source operands are: the address, the N vectors, the lane number, and
@@ -1297,22 +1297,22 @@ multiclass CDEGPRIntrinsics<list<LLVMType> args> {
   def "" : Intrinsic<
     [llvm_i32_ty],
     !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
-    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+    [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<!add(!size(args), 1)>>]>;
   def a : Intrinsic<
     [llvm_i32_ty],
     !listconcat([llvm_i32_ty /* coproc */, llvm_i32_ty /* acc */], args,
                 [llvm_i32_ty /* imm */]),
-    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+    [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<!add(!size(args), 2)>>]>;
 
   def d: Intrinsic<
     [llvm_i32_ty /* lo */, llvm_i32_ty /* hi */],
     !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
-    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+    [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<!add(!size(args), 1)>>]>;
   def da: Intrinsic<
     [llvm_i32_ty /* lo */, llvm_i32_ty /* hi */],
     !listconcat([llvm_i32_ty /* coproc */, llvm_i32_ty /* acc_lo */,
                  llvm_i32_ty /* acc_hi */], args, [llvm_i32_ty /* imm */]),
-    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 3)>]>;
+    [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<!add(!size(args), 3)>>]>;
 }
 
 defm int_arm_cde_cx1: CDEGPRIntrinsics<[]>;
@@ -1323,12 +1323,12 @@ multiclass CDEVCXIntrinsics<list<LLVMType> args> {
   def "" : Intrinsic<
     [llvm_anyfloat_ty],
     !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
-    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+    [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<!add(!size(args), 1)>>]>;
   def a : Intrinsic<
     [llvm_anyfloat_ty],
     !listconcat([llvm_i32_ty /* coproc */,  LLVMMatchType<0> /* acc */],
                 args, [llvm_i32_ty /* imm */]),
-    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+    [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<!add(!size(args), 2)>>]>;
 }
 
 defm int_arm_cde_vcx1 : CDEVCXIntrinsics<[]>;
@@ -1339,23 +1339,23 @@ multiclass CDEVCXVecIntrinsics<list<LLVMType> args> {
   def "" : Intrinsic<
     [llvm_v16i8_ty],
     !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
-    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+    [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<!add(!size(args), 1)>>]>;
   def a : Intrinsic<
     [llvm_v16i8_ty],
     !listconcat([llvm_i32_ty /* coproc */, llvm_v16i8_ty /* acc */],
                 args, [llvm_i32_ty /* imm */]),
-    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+    [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<!add(!size(args), 2)>>]>;
 
   def _predicated : Intrinsic<
     [llvm_anyvector_ty],
     !listconcat([llvm_i32_ty /* coproc */, LLVMMatchType<0> /* inactive */],
                 args, [llvm_i32_ty /* imm */, llvm_anyvector_ty /* mask */]),
-    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+    [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<!add(!size(args), 2)>>]>;
   def a_predicated : Intrinsic<
     [llvm_anyvector_ty],
     !listconcat([llvm_i32_ty /* coproc */, LLVMMatchType<0> /* acc */],
                 args, [llvm_i32_ty /* imm */, llvm_anyvector_ty /* mask */]),
-    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+    [IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<!add(!size(args), 2)>>]>;
 }
 
 defm int_arm_cde_vcx1q : CDEVCXVecIntrinsics<[]>;

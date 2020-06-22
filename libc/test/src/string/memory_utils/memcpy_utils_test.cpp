@@ -83,37 +83,37 @@ TEST(MemcpyUtilsTest, CopyTrivial) {
   auto &trace = GetTrace();
 
   trace.Clear();
-  Copy<1>(I(0), I(0));
+  CopyBlock<1>(I(0), I(0));
   EXPECT_STREQ(trace.Write(), "1");
   EXPECT_STREQ(trace.Read(), "1");
 
   trace.Clear();
-  Copy<2>(I(0), I(0));
+  CopyBlock<2>(I(0), I(0));
   EXPECT_STREQ(trace.Write(), "11");
   EXPECT_STREQ(trace.Read(), "11");
 
   trace.Clear();
-  Copy<4>(I(0), I(0));
+  CopyBlock<4>(I(0), I(0));
   EXPECT_STREQ(trace.Write(), "1111");
   EXPECT_STREQ(trace.Read(), "1111");
 
   trace.Clear();
-  Copy<8>(I(0), I(0));
+  CopyBlock<8>(I(0), I(0));
   EXPECT_STREQ(trace.Write(), "11111111");
   EXPECT_STREQ(trace.Read(), "11111111");
 
   trace.Clear();
-  Copy<16>(I(0), I(0));
+  CopyBlock<16>(I(0), I(0));
   EXPECT_STREQ(trace.Write(), "1111111111111111");
   EXPECT_STREQ(trace.Read(), "1111111111111111");
 
   trace.Clear();
-  Copy<32>(I(0), I(0));
+  CopyBlock<32>(I(0), I(0));
   EXPECT_STREQ(trace.Write(), "11111111111111111111111111111111");
   EXPECT_STREQ(trace.Read(), "11111111111111111111111111111111");
 
   trace.Clear();
-  Copy<64>(I(0), I(0));
+  CopyBlock<64>(I(0), I(0));
   EXPECT_STREQ(
       trace.Write(),
       "1111111111111111111111111111111111111111111111111111111111111111");
@@ -126,41 +126,41 @@ TEST(MemcpyUtilsTest, CopyOffset) {
   auto &trace = GetTrace();
 
   trace.Clear();
-  Copy<1>(I(3), I(1));
+  CopyBlock<1>(I(3), I(1));
   EXPECT_STREQ(trace.Write(), "0001");
   EXPECT_STREQ(trace.Read(), "01");
 
   trace.Clear();
-  Copy<1>(I(2), I(1));
+  CopyBlock<1>(I(2), I(1));
   EXPECT_STREQ(trace.Write(), "001");
   EXPECT_STREQ(trace.Read(), "01");
 }
 
-TEST(MemcpyUtilsTest, CopyOverlap) {
+TEST(MemcpyUtilsTest, CopyBlockOverlap) {
   auto &trace = GetTrace();
 
   trace.Clear();
-  CopyOverlap<2>(I(0), I(0), 2);
+  CopyBlockOverlap<2>(I(0), I(0), 2);
   EXPECT_STREQ(trace.Write(), "22");
   EXPECT_STREQ(trace.Read(), "22");
 
   trace.Clear();
-  CopyOverlap<2>(I(0), I(0), 3);
+  CopyBlockOverlap<2>(I(0), I(0), 3);
   EXPECT_STREQ(trace.Write(), "121");
   EXPECT_STREQ(trace.Read(), "121");
 
   trace.Clear();
-  CopyOverlap<2>(I(0), I(0), 4);
+  CopyBlockOverlap<2>(I(0), I(0), 4);
   EXPECT_STREQ(trace.Write(), "1111");
   EXPECT_STREQ(trace.Read(), "1111");
 
   trace.Clear();
-  CopyOverlap<4>(I(2), I(1), 7);
+  CopyBlockOverlap<4>(I(2), I(1), 7);
   EXPECT_STREQ(trace.Write(), "001112111");
   EXPECT_STREQ(trace.Read(), "01112111");
 }
 
-TEST(MemcpyUtilsTest, CopyAligned) {
+TEST(MemcpyUtilsTest, CopyAlignedBlocks) {
   auto &trace = GetTrace();
   // Destination is aligned already.
   //   "1111000000000"
@@ -169,7 +169,7 @@ TEST(MemcpyUtilsTest, CopyAligned) {
   // + "0000000001111"
   // = "1111111112221"
   trace.Clear();
-  CopyAligned<4>(I(0), I(0), 13);
+  CopyAlignedBlocks<4>(I(0), I(0), 13);
   EXPECT_STREQ(trace.Write(), "1111111112221");
   EXPECT_STREQ(trace.Read(), "1111111112221");
 
@@ -180,7 +180,7 @@ TEST(MemcpyUtilsTest, CopyAligned) {
   // + "00000000001111"
   // = "01112111112211"
   trace.Clear();
-  CopyAligned<4>(I(1), I(0), 13);
+  CopyAlignedBlocks<4>(I(1), I(0), 13);
   EXPECT_STREQ(trace.Write(), "01112111112211");
   EXPECT_STREQ(trace.Read(), "1112111112211");
 }
@@ -191,7 +191,7 @@ TEST(MemcpyUtilsTest, MaxReloads) {
     for (size_t count = 64; count < 768; ++count) {
       trace.Clear();
       // We should never reload more than twice when copying from count = 2x32.
-      CopyAligned<32>(I(alignment), I(0), count);
+      CopyAlignedBlocks<32>(I(alignment), I(0), count);
       const char *const written = trace.Write();
       // First bytes are untouched.
       for (size_t i = 0; i < alignment; ++i)

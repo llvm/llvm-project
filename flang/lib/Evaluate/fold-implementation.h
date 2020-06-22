@@ -150,11 +150,9 @@ std::optional<Expr<T>> Folder<T>::GetNamedConstantValue(const Symbol &symbol0) {
               if (symbol.Rank() > 0) {
                 if (constant->Rank() == 0) {
                   // scalar expansion
-                  if (auto symShape{GetShape(context_, symbol)}) {
-                    if (auto extents{AsConstantExtents(context_, *symShape)}) {
-                      *constant = constant->Reshape(std::move(*extents));
-                      CHECK(constant->Rank() == symbol.Rank());
-                    }
+                  if (auto extents{GetConstantExtents(context_, symbol)}) {
+                    *constant = constant->Reshape(std::move(*extents));
+                    CHECK(constant->Rank() == symbol.Rank());
                   }
                 }
                 if (constant->Rank() == symbol.Rank()) {
@@ -656,13 +654,15 @@ template <typename T>
 Expr<T> FoldMINorMAX(
     FoldingContext &context, FunctionRef<T> &&funcRef, Ordering order) {
   std::vector<Constant<T> *> constantArgs;
+  // Call Folding on all arguments, even if some are not constant,
+  // to make operand promotion explicit.
   for (auto &arg : funcRef.arguments()) {
     if (auto *cst{Folder<T>{context}.Folding(arg)}) {
       constantArgs.push_back(cst);
-    } else {
-      return Expr<T>(std::move(funcRef));
     }
   }
+  if (constantArgs.size() != funcRef.arguments().size())
+    return Expr<T>(std::move(funcRef));
   CHECK(constantArgs.size() > 0);
   Expr<T> result{std::move(*constantArgs[0])};
   for (std::size_t i{1}; i < constantArgs.size(); ++i) {
@@ -670,6 +670,52 @@ Expr<T> FoldMINorMAX(
     result = FoldOperation(context, std::move(extremum));
   }
   return result;
+}
+
+// For AMAX0, AMIN0, AMAX1, AMIN1, DMAX1, DMIN1, MAX0, MIN0, MAX1, and MIN1
+// a special care has to be taken to insert the conversion on the result
+// of the MIN/MAX. This is made slightly more complex by the extension
+// supported by f18 that arguments may have different kinds. This implies
+// that the created MIN/MAX result type cannot be deduced from the standard but
+// has to be deduced from the arguments.
+// e.g. AMAX0(int8, int4) is rewritten to REAL(MAX(int8, INT(int4, 8)))).
+template <typename T>
+Expr<T> RewriteSpecificMINorMAX(
+    FoldingContext &context, FunctionRef<T> &&funcRef) {
+  ActualArguments &args{funcRef.arguments()};
+  auto &intrinsic{DEREF(std::get_if<SpecificIntrinsic>(&funcRef.proc().u))};
+  // Rewrite MAX1(args) to INT(MAX(args)) and fold. Same logic for MIN1.
+  // Find result type for max/min based on the arguments.
+  DynamicType resultType{args[0].value().GetType().value()};
+  auto *resultTypeArg{&args[0]};
+  for (auto j{args.size() - 1}; j > 0; --j) {
+    DynamicType type{args[j].value().GetType().value()};
+    if (type.category() == resultType.category()) {
+      if (type.kind() > resultType.kind()) {
+        resultTypeArg = &args[j];
+        resultType = type;
+      }
+    } else if (resultType.category() == TypeCategory::Integer) {
+      // Handle mixed real/integer arguments: all the previous arguments were
+      // integers and this one is real. The type of the MAX/MIN result will
+      // be the one of the real argument.
+      resultTypeArg = &args[j];
+      resultType = type;
+    }
+  }
+  intrinsic.name =
+      intrinsic.name.find("max") != std::string::npos ? "max"s : "min"s;
+  intrinsic.characteristics.value().functionResult.value().SetType(resultType);
+  auto insertConversion{[&](const auto &x) -> Expr<T> {
+    using TR = ResultType<decltype(x)>;
+    FunctionRef<TR> maxRef{std::move(funcRef.proc()), std::move(args)};
+    return Fold(context, ConvertToType<T>(AsCategoryExpr(std::move(maxRef))));
+  }};
+  if (auto *sx{UnwrapExpr<Expr<SomeReal>>(*resultTypeArg)}) {
+    return std::visit(insertConversion, sx->u);
+  }
+  auto &sx{DEREF(UnwrapExpr<Expr<SomeInteger>>(*resultTypeArg))};
+  return std::visit(insertConversion, sx.u);
 }
 
 template <typename T>
@@ -1026,22 +1072,6 @@ auto ApplyElementwise(
           [](Expr<OPERAND> &&operand) {
             return Expr<RESULT>{DERIVED{std::move(operand)}};
           }});
-}
-
-// Predicate: is a scalar expression suitable for naive scalar expansion
-// in the flattening of an array expression?
-// TODO: capture such scalar expansions in temporaries, flatten everything
-struct UnexpandabilityFindingVisitor
-    : public AnyTraverse<UnexpandabilityFindingVisitor> {
-  using Base = AnyTraverse<UnexpandabilityFindingVisitor>;
-  using Base::operator();
-  UnexpandabilityFindingVisitor() : Base{*this} {}
-  template <typename T> bool operator()(const FunctionRef<T> &) { return true; }
-  bool operator()(const CoarrayRef &) { return true; }
-};
-
-template <typename T> bool IsExpandableScalar(const Expr<T> &expr) {
-  return !UnexpandabilityFindingVisitor{}(expr);
 }
 
 template <typename DERIVED, typename RESULT, typename LEFT, typename RIGHT>

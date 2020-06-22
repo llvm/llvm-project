@@ -155,7 +155,8 @@ public:
   /// \param [out] Res - The resulting invocation.
   static bool CreateFromArgs(CompilerInvocation &Res,
                              ArrayRef<const char *> CommandLineArgs,
-                             DiagnosticsEngine &Diags);
+                             DiagnosticsEngine &Diags,
+                             const char *Argv0 = nullptr);
 
   /// Get the directory where the compiler headers
   /// reside, relative to the compiler binary (found by the passed in

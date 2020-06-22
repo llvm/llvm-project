@@ -4,6 +4,7 @@
 // RUN: %clang -v -target i686-pc-windows-gnu -lucrt -### %s 2>&1 | FileCheck -check-prefix=CHECK_UCRT %s
 
 // CHECK_DEFAULT: "-lmingwex" "-lmsvcrt" "-ladvapi32"
+// CHECK_DEFAULT-SAME: "-lmsvcrt" "-lkernel32" "{{.*}}crtend.o"
 // CHECK_MSVCR120: "-lmsvcr120"
 // CHECK_MSVCR120-SAME: "-lmingwex" "-ladvapi32"
 // CHECK_UCRTBASE: "-lucrtbase"

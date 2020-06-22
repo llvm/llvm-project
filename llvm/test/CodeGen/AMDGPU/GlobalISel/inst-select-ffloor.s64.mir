@@ -14,8 +14,8 @@ body: |
     ; CHECK-LABEL: name: ffloor_s64_vv
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[V_FLOOR_F64_e64_:%[0-9]+]]:vreg_64 = V_FLOOR_F64_e64 0, [[COPY]], 0, 0, implicit $exec
-    ; CHECK: $vgpr0_vgpr1 = COPY [[V_FLOOR_F64_e64_]]
+    ; CHECK: %1:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK: $vgpr0_vgpr1 = COPY %1
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FFLOOR %0
     $vgpr0_vgpr1 = COPY %1
@@ -50,8 +50,8 @@ body: |
     ; CHECK-LABEL: name: ffloor_fneg_s64_vv
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[V_FLOOR_F64_e64_:%[0-9]+]]:vreg_64 = V_FLOOR_F64_e64 1, [[COPY]], 0, 0, implicit $exec
-    ; CHECK: $vgpr0_vgpr1 = COPY [[V_FLOOR_F64_e64_]]
+    ; CHECK: %2:vreg_64 = nofpexcept V_FLOOR_F64_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK: $vgpr0_vgpr1 = COPY %2
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FNEG %0
     %2:vgpr(s64) = G_FFLOOR %1

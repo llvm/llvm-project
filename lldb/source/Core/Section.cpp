@@ -337,7 +337,7 @@ void Section::DumpName(llvm::raw_ostream &s) const {
     if (name && name[0])
       s << name << '.';
   }
-  s << m_name.GetStringRef();
+  s << m_name;
 }
 
 bool Section::IsDescendant(const Section *section) {

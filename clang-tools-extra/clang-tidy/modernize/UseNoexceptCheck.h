@@ -41,7 +41,7 @@ public:
 
 private:
   const std::string NoexceptMacro;
-  bool UseNoexceptFalse;
+  const bool UseNoexceptFalse;
 };
 
 } // namespace modernize

@@ -257,7 +257,7 @@ private:
 template <typename Visitor, bool DefaultValue,
     typename Base = Traverse<Visitor, bool>>
 struct AllTraverse : public Base {
-  AllTraverse(Visitor &v) : Base{v} {}
+  explicit AllTraverse(Visitor &v) : Base{v} {}
   using Base::operator();
   static bool Default() { return DefaultValue; }
   static bool Combine(bool x, bool y) { return x && y; }
@@ -268,10 +268,11 @@ struct AllTraverse : public Base {
 // and std::optional<>.
 template <typename Visitor, typename Result = bool,
     typename Base = Traverse<Visitor, Result>>
-struct AnyTraverse : public Base {
-  AnyTraverse(Visitor &v) : Base{v} {}
+class AnyTraverse : public Base {
+public:
+  explicit AnyTraverse(Visitor &v) : Base{v} {}
   using Base::operator();
-  static Result Default() { return {}; }
+  Result Default() const { return default_; }
   static Result Combine(Result &&x, Result &&y) {
     if (x) {
       return std::move(x);
@@ -279,12 +280,15 @@ struct AnyTraverse : public Base {
       return std::move(y);
     }
   }
+
+private:
+  Result default_{};
 };
 
 template <typename Visitor, typename Set,
     typename Base = Traverse<Visitor, Set>>
 struct SetTraverse : public Base {
-  SetTraverse(Visitor &v) : Base{v} {}
+  explicit SetTraverse(Visitor &v) : Base{v} {}
   using Base::operator();
   static Set Default() { return {}; }
   static Set Combine(Set &&x, Set &&y) {

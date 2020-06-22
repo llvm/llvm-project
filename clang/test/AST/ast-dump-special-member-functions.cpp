@@ -1,4 +1,12 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++17 -ast-dump %s | FileCheck -strict-whitespace %s
+// Test without serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++17 -ast-dump %s \
+// RUN: | FileCheck -strict-whitespace %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++17 -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -triple x86_64-unknown-unknown -std=c++17 -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck -strict-whitespace %s
 
 // FIXME: exists
 
@@ -283,10 +291,14 @@ struct DoesNotNeedImplicitCopyAssignment {
   DoesNotNeedImplicitCopyAssignment& operator=(const DoesNotNeedImplicitCopyAssignment&) {}
 };
 
+struct DeclaresCopyAssignment {
+  DeclaresCopyAssignment &operator=(const DeclaresCopyAssignment&) &;
+};
+
 struct CopyAssignmentNeedsOverloadResolution {
   // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:1> line:[[@LINE-1]]:8 struct CopyAssignmentNeedsOverloadResolution definition
   // CHECK: CopyAssignment {{.*}}needs_overload_resolution{{.*}}
-  mutable int i;
+  DeclaresCopyAssignment i;
 };
 
 struct CopyAssignmentDoesNotNeedOverloadResolution {

@@ -125,7 +125,8 @@ private:
   lldb::ModuleSP m_core_module_sp;
   lldb_private::FileSpec m_core_file;
   std::string m_dyld_plugin_name;
-  DISALLOW_COPY_AND_ASSIGN(ProcessElfCore);
+  ProcessElfCore(const ProcessElfCore &) = delete;
+  const ProcessElfCore &operator=(const ProcessElfCore &) = delete;
 
   // True if m_thread_contexts contains valid entries
   bool m_thread_data_valid = false;

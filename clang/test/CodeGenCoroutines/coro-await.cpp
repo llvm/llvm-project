@@ -198,7 +198,7 @@ extern "C" void TestAggr() {
   UseAggr(co_await AggrAwaiter{});
   Whatever();
   // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret align 4 %[[AwaitResume:.+]],
-  // CHECK: call void @UseAggr(%struct.Aggr* dereferenceable(12) %[[AwaitResume]])
+  // CHECK: call void @UseAggr(%struct.Aggr* nonnull align 4 dereferenceable(12) %[[AwaitResume]])
   // CHECK: call void @_ZN4AggrD1Ev(%struct.Aggr* %[[AwaitResume]])
   // CHECK: call void @Whatever()
 
@@ -315,15 +315,15 @@ void AwaitReturnsLValue(double) {
   // CHECK: %[[ZVAR:.+]] = alloca %struct.RefTag*,
   // CHECK-NEXT: %[[TMP2:.+]] = alloca %struct.AwaitResumeReturnsLValue,
 
-  // CHECK: %[[RES1:.+]] = call dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[AVAR]])
+  // CHECK: %[[RES1:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[AVAR]])
   // CHECK-NEXT: store %struct.RefTag* %[[RES1]], %struct.RefTag** %[[XVAR]],
   RefTag& x = co_await a;
 
-  // CHECK: %[[RES2:.+]] = call dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP1]])
+  // CHECK: %[[RES2:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP1]])
   // CHECK-NEXT: store %struct.RefTag* %[[RES2]], %struct.RefTag** %[[YVAR]],
 
   RefTag& y = co_await AwaitResumeReturnsLValue{};
-  // CHECK: %[[RES3:.+]] = call dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP2]])
+  // CHECK: %[[RES3:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP2]])
   // CHECK-NEXT: store %struct.RefTag* %[[RES3]], %struct.RefTag** %[[ZVAR]],
   RefTag& z = co_yield 42;
 }

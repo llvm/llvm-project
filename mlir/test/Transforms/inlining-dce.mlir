@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -inline | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -inline -split-input-file | FileCheck %s
 
 // This file tests the callgraph dead code elimination performed by the inliner.
 
@@ -51,3 +51,23 @@ func @live_function_d() attributes {sym_visibility = "private"} {
 }
 
 "live.user"() {use = @live_function_d} : () -> ()
+
+// -----
+
+// This test checks that the inliner can properly handle the deletion of
+// functions in different SCCs that are referenced by calls materialized during
+// canonicalization.
+// CHECK: func @live_function_e
+func @live_function_e() {
+  call @dead_function_e() : () -> ()
+  return
+}
+// CHECK-NOT: func @dead_function_e
+func @dead_function_e() -> () attributes {sym_visibility = "private"} {
+  "test.fold_to_call_op"() {callee=@dead_function_f} : () -> ()
+  return
+}
+// CHECK-NOT: func @dead_function_f
+func @dead_function_f() attributes {sym_visibility = "private"} {
+  return
+}

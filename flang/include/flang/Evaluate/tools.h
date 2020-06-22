@@ -700,6 +700,42 @@ struct TypeKindVisitor {
   VALUE value;
 };
 
+// TypedWrapper() wraps a object in an explicitly typed representation
+// (e.g., Designator<> or FunctionRef<>) that has been instantiated on
+// a dynamically chosen Fortran type.
+template <TypeCategory CATEGORY, template <typename> typename WRAPPER,
+    typename WRAPPED>
+common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> WrapperHelper(
+    int kind, WRAPPED &&x) {
+  return common::SearchTypes(
+      TypeKindVisitor<CATEGORY, WRAPPER, WRAPPED>{kind, std::move(x)});
+}
+
+template <template <typename> typename WRAPPER, typename WRAPPED>
+common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> TypedWrapper(
+    const DynamicType &dyType, WRAPPED &&x) {
+  switch (dyType.category()) {
+    SWITCH_COVERS_ALL_CASES
+  case TypeCategory::Integer:
+    return WrapperHelper<TypeCategory::Integer, WRAPPER, WRAPPED>(
+        dyType.kind(), std::move(x));
+  case TypeCategory::Real:
+    return WrapperHelper<TypeCategory::Real, WRAPPER, WRAPPED>(
+        dyType.kind(), std::move(x));
+  case TypeCategory::Complex:
+    return WrapperHelper<TypeCategory::Complex, WRAPPER, WRAPPED>(
+        dyType.kind(), std::move(x));
+  case TypeCategory::Character:
+    return WrapperHelper<TypeCategory::Character, WRAPPER, WRAPPED>(
+        dyType.kind(), std::move(x));
+  case TypeCategory::Logical:
+    return WrapperHelper<TypeCategory::Logical, WRAPPER, WRAPPED>(
+        dyType.kind(), std::move(x));
+  case TypeCategory::Derived:
+    return AsGenericExpr(Expr<SomeDerived>{WRAPPER<SomeDerived>{std::move(x)}});
+  }
+}
+
 // GetLastSymbol() returns the rightmost symbol in an object or procedure
 // designator (which has perhaps been wrapped in an Expr<>), or a null pointer
 // when none is found.
@@ -839,5 +875,47 @@ std::optional<std::string> FindImpureCall(
 std::optional<std::string> FindImpureCall(
     const IntrinsicProcTable &, const ProcedureRef &);
 
+// Predicate: is a scalar expression suitable for naive scalar expansion
+// in the flattening of an array expression?
+// TODO: capture such scalar expansions in temporaries, flatten everything
+struct UnexpandabilityFindingVisitor
+    : public AnyTraverse<UnexpandabilityFindingVisitor> {
+  using Base = AnyTraverse<UnexpandabilityFindingVisitor>;
+  using Base::operator();
+  UnexpandabilityFindingVisitor() : Base{*this} {}
+  template <typename T> bool operator()(const FunctionRef<T> &) { return true; }
+  bool operator()(const CoarrayRef &) { return true; }
+};
+
+template <typename T> bool IsExpandableScalar(const Expr<T> &expr) {
+  return !UnexpandabilityFindingVisitor{}(expr);
+}
+
 } // namespace Fortran::evaluate
+
+namespace Fortran::semantics {
+
+class Scope;
+
+// These functions are used in Evaluate so they are defined here rather than in
+// Semantics to avoid a link-time dependency on Semantics.
+
+bool IsVariableName(const Symbol &);
+bool IsPureProcedure(const Symbol &);
+bool IsPureProcedure(const Scope &);
+bool IsFunction(const Symbol &);
+bool IsProcedure(const Symbol &);
+bool IsProcedurePointer(const Symbol &);
+bool IsSaved(const Symbol &); // saved implicitly or explicitly
+bool IsDummy(const Symbol &);
+
+// Follow use, host, and construct assocations to a variable, if any.
+const Symbol *GetAssociationRoot(const Symbol &);
+const Symbol *FindCommonBlockContaining(const Symbol &);
+int CountLenParameters(const DerivedTypeSpec &);
+int CountNonConstantLenParameters(const DerivedTypeSpec &);
+const Symbol &GetUsedModule(const UseDetails &);
+
+} // namespace Fortran::semantics
+
 #endif // FORTRAN_EVALUATE_TOOLS_H_

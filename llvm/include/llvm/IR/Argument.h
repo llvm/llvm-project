@@ -110,6 +110,9 @@ public:
   /// Return true if this argument has the inalloca attribute.
   bool hasInAllocaAttr() const;
 
+  /// Return true if this argument has the preallocated attribute.
+  bool hasPreallocatedAttr() const;
+
   /// Return true if this argument has the zext attribute.
   bool hasZExtAttr() const;
 

@@ -42,6 +42,10 @@ OPTIONS
  Produce a flat dSYM file. A ``.dwarf`` extension will be appended to the
  executable name unless the output file is specified using the ``-o`` option.
 
+.. option:: --gen-reproducer
+
+ Generate a reproducer consisting of the input object files.
+
 .. option:: --help, -h
 
  Print this help output.
@@ -130,6 +134,10 @@ OPTIONS
  Update an existing dSYM file to contain the latest accelerator tables and
  other DWARF optimizations. This option will rebuild the '.apple_names' and
  '.apple_types' hashed accelerator tables.
+
+.. option:: --use-reproducer <path>
+
+ Use the object files from the given reproducer path.
 
 .. option:: --verbose
 

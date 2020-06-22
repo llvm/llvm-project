@@ -328,6 +328,14 @@ func @convert_f_to_u_vector(%arg0 : vector<3xf32>) -> vector<3xi32> {
 
 // -----
 
+func @convert_f_to_u_coopmatrix(%arg0 : !spv.coopmatrix<8x16xf32, Subgroup>) {
+  // CHECK: {{%.*}} = spv.ConvertFToU {{%.*}} : !spv.coopmatrix<8x16xf32, Subgroup> to !spv.coopmatrix<8x16xi32, Subgroup>
+  %0 = spv.ConvertFToU %arg0 : !spv.coopmatrix<8x16xf32, Subgroup> to !spv.coopmatrix<8x16xi32, Subgroup>
+  spv.Return
+}
+
+// -----
+
 func @convert_f_to_u_scalar_invalid(%arg0 : f16) -> i32 {
   // expected-error @+1 {{expected the same bit widths for operand type and result type, but provided 'f16' and 'i32'}}
   %0 = spv.ConvertFToU %arg0 : f16 to i32
@@ -376,6 +384,14 @@ func @f_convert_vector(%arg0 : vector<3xf32>) -> vector<3xf64> {
   // CHECK: {{%.*}} = spv.FConvert {{%.*}} : vector<3xf32> to vector<3xf64>
   %0 = spv.FConvert %arg0 : vector<3xf32> to vector<3xf64>
   spv.ReturnValue %0 : vector<3xf64>
+}
+
+// -----
+
+func @f_convert_coop_matrix(%arg0 : !spv.coopmatrix<8x16xf32, Subgroup>) {
+  // CHECK: {{%.*}} = spv.FConvert {{%.*}} : !spv.coopmatrix<8x16xf32, Subgroup> to !spv.coopmatrix<8x16xf64, Subgroup>
+  %0 = spv.FConvert %arg0 : !spv.coopmatrix<8x16xf32, Subgroup> to !spv.coopmatrix<8x16xf64, Subgroup>
+  spv.Return
 }
 
 // -----

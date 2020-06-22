@@ -102,8 +102,9 @@ TEST(DataExtractorTest, Strings) {
   EXPECT_EQ(11U, C.tell());
   EXPECT_EQ(nullptr, DE.getCStr(C));
   EXPECT_EQ(11U, C.tell());
-  EXPECT_THAT_ERROR(C.takeError(),
-                    FailedWithMessage("unexpected end of data at offset 0xb"));
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("no null terminated string at offset 0xb"));
 }
 
 TEST(DataExtractorTest, LEB128) {
@@ -137,11 +138,25 @@ TEST(DataExtractorTest, LEB128_error) {
 
   DataExtractor::Cursor C(0);
   EXPECT_EQ(0U, DE.getULEB128(C));
-  EXPECT_THAT_ERROR(C.takeError(), Failed());
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000000: "
+                        "malformed uleb128, extends past end"));
 
   C = DataExtractor::Cursor(0);
   EXPECT_EQ(0U, DE.getSLEB128(C));
-  EXPECT_THAT_ERROR(C.takeError(), Failed());
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000000: "
+                        "malformed sleb128, extends past end"));
+
+  // Show non-zero offsets are reported appropriately.
+  C = DataExtractor::Cursor(1);
+  EXPECT_EQ(0U, DE.getULEB128(C));
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed uleb128, extends past end"));
 }
 
 TEST(DataExtractorTest, Cursor_tell) {
@@ -256,6 +271,12 @@ TEST(DataExtractorTest, getU8_vector) {
   DE.getU8(C, S, 2);
   EXPECT_THAT_ERROR(C.takeError(), Succeeded());
   EXPECT_EQ("AB", toStringRef(S));
+
+  C = DataExtractor::Cursor(0x47);
+  DE.getU8(C, S, 2);
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("offset 0x47 is beyond the end of data at 0x2"));
 }
 
 TEST(DataExtractorTest, getU24) {

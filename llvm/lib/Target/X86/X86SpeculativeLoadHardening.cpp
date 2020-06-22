@@ -53,6 +53,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -872,10 +873,10 @@ void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
 
       case X86::FARCALL16m:
       case X86::FARCALL32m:
-      case X86::FARCALL64:
+      case X86::FARCALL64m:
       case X86::FARJMP16m:
       case X86::FARJMP32m:
-      case X86::FARJMP64:
+      case X86::FARJMP64m:
         // We cannot mitigate far jumps or calls, but we also don't expect them
         // to be vulnerable to Spectre v1.2 style attacks.
         continue;
@@ -998,7 +999,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
 
     case X86::FARJMP16m:
     case X86::FARJMP32m:
-    case X86::FARJMP64:
+    case X86::FARJMP64m:
       // We cannot mitigate far jumps or calls, but we also don't expect them
       // to be vulnerable to Spectre v1.2 or v2 (self trained) style attacks.
       continue;
@@ -2220,10 +2221,10 @@ void X86SpeculativeLoadHardeningPass::hardenIndirectCallOrJumpInstr(
   switch (MI.getOpcode()) {
   case X86::FARCALL16m:
   case X86::FARCALL32m:
-  case X86::FARCALL64:
+  case X86::FARCALL64m:
   case X86::FARJMP16m:
   case X86::FARJMP32m:
-  case X86::FARJMP64:
+  case X86::FARJMP64m:
     // We don't need to harden either far calls or far jumps as they are
     // safe from Spectre.
     return;

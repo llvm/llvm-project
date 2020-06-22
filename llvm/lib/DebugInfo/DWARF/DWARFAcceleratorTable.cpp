@@ -365,6 +365,7 @@ AppleAcceleratorTable::equal_range(StringRef Key) const {
 void DWARFDebugNames::Header::dump(ScopedPrinter &W) const {
   DictScope HeaderScope(W, "Header");
   W.printHex("Length", UnitLength);
+  W.printString("Format", dwarf::FormatString(Format));
   W.printNumber("Version", Version);
   W.printNumber("CU count", CompUnitCount);
   W.printNumber("Local TU count", LocalTypeUnitCount);

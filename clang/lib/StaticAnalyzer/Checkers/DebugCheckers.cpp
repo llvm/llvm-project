@@ -281,8 +281,6 @@ public:
       llvm::errs() << Keys[I]->getKey() << " = "
                    << (Keys[I]->second.empty() ? "\"\"" : Keys[I]->second)
                    << '\n';
-
-    llvm::errs() << "[stats]\n" << "num-entries = " << Keys.size() << '\n';
   }
 };
 }

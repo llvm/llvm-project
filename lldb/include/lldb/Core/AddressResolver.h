@@ -55,7 +55,8 @@ protected:
   std::vector<AddressRange> m_address_ranges;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(AddressResolver);
+  AddressResolver(const AddressResolver &) = delete;
+  const AddressResolver &operator=(const AddressResolver &) = delete;
 };
 
 } // namespace lldb_private

@@ -1011,6 +1011,8 @@ public:
   }
 
   llvm::Constant *VisitConstantExpr(ConstantExpr *CE, QualType T) {
+    if (llvm::Constant *Result = Emitter.tryEmitConstantExpr(CE))
+      return Result;
     return Visit(CE->getSubExpr(), T);
   }
 
@@ -1356,6 +1358,20 @@ ConstantEmitter::tryEmitAbstract(const APValue &value, QualType destType) {
   auto state = pushAbstract();
   auto C = tryEmitPrivate(value, destType);
   return validateAndPopAbstract(C, state);
+}
+
+llvm::Constant *ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *CE) {
+  if (!CE->hasAPValueResult())
+    return nullptr;
+  const Expr *Inner = CE->getSubExpr()->IgnoreImplicit();
+  QualType RetType;
+  if (auto *Call = dyn_cast<CallExpr>(Inner))
+    RetType = Call->getCallReturnType(CGF->getContext());
+  else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Inner))
+    RetType = Ctor->getType();
+  llvm::Constant *Res =
+      emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(), RetType);
+  return Res;
 }
 
 llvm::Constant *
@@ -1903,6 +1919,8 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *E) {
+  if (llvm::Constant *Result = Emitter.tryEmitConstantExpr(E))
+    return Result;
   return Visit(E->getSubExpr());
 }
 

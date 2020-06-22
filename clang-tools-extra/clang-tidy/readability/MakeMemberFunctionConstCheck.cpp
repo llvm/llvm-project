@@ -210,21 +210,23 @@ AST_MATCHER(CXXMethodDecl, usesThisAsConst) {
 
 void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      cxxMethodDecl(
-          isDefinition(), isUserProvided(),
-          unless(anyOf(
-              isExpansionInSystemHeader(), isVirtual(), isConst(), isStatic(),
-              hasTrivialBody(), cxxConstructorDecl(), cxxDestructorDecl(),
-              isTemplate(), isDependentContext(),
-              ofClass(anyOf(
-                  isLambda(),
-                  hasAnyDependentBases()) // Method might become virtual
-                                          // depending on template base class.
-                      ),
-              isInsideMacroDefinition(),
-              hasCanonicalDecl(isInsideMacroDefinition()))),
-          usesThisAsConst())
-          .bind("x"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          cxxMethodDecl(
+              isDefinition(), isUserProvided(),
+              unless(anyOf(
+                  isExpansionInSystemHeader(), isVirtual(), isConst(),
+                  isStatic(), hasTrivialBody(), cxxConstructorDecl(),
+                  cxxDestructorDecl(), isTemplate(), isDependentContext(),
+                  ofClass(anyOf(isLambda(),
+                                hasAnyDependentBases()) // Method might become
+                                                        // virtual depending on
+                                                        // template base class.
+                          ),
+                  isInsideMacroDefinition(),
+                  hasCanonicalDecl(isInsideMacroDefinition()))),
+              usesThisAsConst())
+              .bind("x")),
       this);
 }
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_LINUX_THRD_CREATE_H
-#define LLVM_LIBC_SRC_THREADS_LINUX_THRD_CREATE_H
+#ifndef LLVM_LIBC_SRC_THREADS_THRD_CREATE_H
+#define LLVM_LIBC_SRC_THREADS_THRD_CREATE_H
 
 #include "include/threads.h"
 
@@ -17,4 +17,4 @@ int thrd_create(thrd_t *thread, thrd_start_t func, void *arg);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_THREADS_LINUX_THRD_CREATE_H
+#endif // LLVM_LIBC_SRC_THREADS_THRD_CREATE_H

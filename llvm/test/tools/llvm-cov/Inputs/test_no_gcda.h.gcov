@@ -3,6 +3,7 @@
         -:    0:Data:-
         -:    0:Runs:0
         -:    0:Programs:0
-    #####:    1:struct A {
-        -:    2:  virtual void B();
-        -:    3:};
+        -:    1:#include <stdint.h>
+    #####:    2:struct A {
+        -:    3:  virtual void B();
+        -:    4:};

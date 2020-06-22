@@ -74,7 +74,7 @@ struct S8 {
 #pragma omp target update from(*(this->S->i+this->S->s6[0].pp)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(*(a+this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(*(*(this->ptr)+a+this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from(*(this+this)) // expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}} expected-error {{invalid operands to binary expression ('S8 *' and 'S8 *')}}
+#pragma omp target update from(*(this+this)) // expected-error {{invalid operands to binary expression ('S8 *' and 'S8 *')}}
   }
 };
 
@@ -198,8 +198,8 @@ int main(int argc, char **argv) {
 #pragma omp target update from(**(-(*offset)+BB+*m)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(**(*(*(&offset))+BB-*m)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(*(x+*(y+*(**BB+BBB)+s7.i))) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from(*(m+(m))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update from(*(1+y+y)) // expected-error {{indirection requires pointer operand ('int' invalid)}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update from(*(m+(m))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}}
+#pragma omp target update from(*(1+y+y)) // expected-error {{indirection requires pointer operand ('int' invalid)}}
 #pragma omp target data map(to: s7.i)
   {
 #pragma omp target update from(s7.x)

@@ -60,6 +60,12 @@ size_t SBStream::GetSize() {
   return static_cast<StreamString *>(m_opaque_up.get())->GetSize();
 }
 
+void SBStream::Print(const char *str) {
+  LLDB_RECORD_METHOD(void, SBStream, Print, (const char *), str);
+
+  Printf("%s", str);
+}
+
 void SBStream::Printf(const char *format, ...) {
   if (!format)
     return;
@@ -204,6 +210,7 @@ void RegisterMethods<SBStream>(Registry &R) {
   LLDB_REGISTER_METHOD(void, SBStream, RedirectToFileHandle, (FILE *, bool));
   LLDB_REGISTER_METHOD(void, SBStream, RedirectToFileDescriptor, (int, bool));
   LLDB_REGISTER_METHOD(void, SBStream, Clear, ());
+  LLDB_REGISTER_METHOD(void, SBStream, Print, (const char *));
 }
 
 }

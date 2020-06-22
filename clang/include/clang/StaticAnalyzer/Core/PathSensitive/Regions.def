@@ -73,9 +73,13 @@ ABSTRACT_REGION(SubRegion, MemRegion)
       ABSTRACT_REGION(DeclRegion, TypedValueRegion)
         REGION(FieldRegion, DeclRegion)
         REGION(ObjCIvarRegion, DeclRegion)
-        REGION(VarRegion, DeclRegion)
-        REGION_RANGE(DECL_REGIONS, FieldRegionKind,
-                                   VarRegionKind)
+        ABSTRACT_REGION(VarRegion, DeclRegion)
+          REGION(NonParamVarRegion, VarRegion)
+          REGION(ParamVarRegion, VarRegion)
+        REGION_RANGE(VAR_REGIONS, NonParamVarRegionKind,
+                                  ParamVarRegionKind)
+      REGION_RANGE(DECL_REGIONS, FieldRegionKind,
+                                 ParamVarRegionKind)
       REGION(ElementRegion, TypedValueRegion)
       REGION(ObjCStringRegion, TypedValueRegion)
       REGION(StringRegion, TypedValueRegion)

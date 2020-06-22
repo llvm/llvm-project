@@ -13,7 +13,6 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/DataFormatters/Mock.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Host/Time.h"
@@ -28,7 +27,6 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/bit.h"
-#include "llvm/Support/CheckedArithmetic.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 
@@ -787,34 +785,6 @@ static double decodeTaggedTimeInterval(uint64_t encodedTimeInterval) {
   return llvm::bit_cast<double>(decodedBits);
 }
 
-bool lldb_private::formatters::NSDate::FormatDateValue(double date_value,
-                                                       Stream &stream) {
-  if (date_value == -63114076800) {
-    stream.Printf("0001-12-30 00:00:00 +0000");
-    return true;
-  }
-
-  if (date_value > std::numeric_limits<time_t>::max() ||
-      date_value < std::numeric_limits<time_t>::min())
-    return false;
-
-  time_t epoch = GetOSXEpoch();
-  if (auto osx_epoch = llvm::checkedAdd(epoch, (time_t)date_value))
-    epoch = *osx_epoch;
-  else
-    return false;
-  tm *tm_date = gmtime(&epoch);
-  if (!tm_date)
-    return false;
-  std::string buffer(1024, 0);
-  if (strftime(&buffer[0], 1023, "%Z", tm_date) == 0)
-    return false;
-  stream.Printf("%04d-%02d-%02d %02d:%02d:%02d %s", tm_date->tm_year + 1900,
-                tm_date->tm_mon + 1, tm_date->tm_mday, tm_date->tm_hour,
-                tm_date->tm_min, tm_date->tm_sec, buffer.c_str());
-  return true;
-}
-
 bool lldb_private::formatters::NSDateSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ProcessSP process_sp = valobj.GetProcessSP();
@@ -858,16 +828,6 @@ bool lldb_private::formatters::NSDateSummaryProvider(
     if (descriptor->GetTaggedPointerInfo(&info_bits, &value_bits)) {
       date_value_bits = ((value_bits << 8) | (info_bits << 4));
       memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
-
-      // Accomodate the __NSTaggedDate format introduced in Foundation 1600.
-      if (class_name == g___NSTaggedDate) {
-        auto *apple_runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(
-            ObjCLanguageRuntime::Get(*process_sp));
-        if (!apple_runtime)
-          return false;
-        if (apple_runtime->GetFoundationVersion() >= 1600)
-          date_value = decodeTaggedTimeInterval(value_bits << 4);
-      }
     } else {
       llvm::Triple triple(
           process_sp->GetTarget().GetArchitecture().GetTriple());
@@ -890,7 +850,34 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   } else
     return false;
 
-  return NSDate::FormatDateValue(date_value, stream);
+  if (date_value == -63114076800) {
+    stream.Printf("0001-12-30 00:00:00 +0000");
+    return true;
+  }
+
+  // Accomodate for the __NSTaggedDate format introduced in Foundation 1600.
+  if (class_name == g___NSTaggedDate) {
+    auto *runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(
+        ObjCLanguageRuntime::Get(*process_sp));
+    if (runtime && runtime->GetFoundationVersion() >= 1600)
+      date_value = decodeTaggedTimeInterval(value_bits << 4);
+  }
+
+  // this snippet of code assumes that time_t == seconds since Jan-1-1970 this
+  // is generally true and POSIXly happy, but might break if a library vendor
+  // decides to get creative
+  time_t epoch = GetOSXEpoch();
+  epoch = epoch + (time_t)date_value;
+  tm *tm_date = gmtime(&epoch);
+  if (!tm_date)
+    return false;
+  std::string buffer(1024, 0);
+  if (strftime(&buffer[0], 1023, "%Z", tm_date) == 0)
+    return false;
+  stream.Printf("%04d-%02d-%02d %02d:%02d:%02d %s", tm_date->tm_year + 1900,
+                tm_date->tm_mon + 1, tm_date->tm_mday, tm_date->tm_hour,
+                tm_date->tm_min, tm_date->tm_sec, buffer.c_str());
+  return true;
 }
 
 bool lldb_private::formatters::ObjCClassSummaryProvider(

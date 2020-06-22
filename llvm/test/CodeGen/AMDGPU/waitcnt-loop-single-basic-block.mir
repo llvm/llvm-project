@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -march=amdgcn -run-pass=si-insert-waitcnts -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-insert-waitcnts -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 # Check that the waitcnt propogates info in the case of a single basic block loop
 

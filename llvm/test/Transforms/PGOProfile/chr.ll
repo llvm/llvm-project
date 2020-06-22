@@ -796,10 +796,6 @@ define i32 @test_chr_7_1(i32* %i, i32* %j, i32 %sum0) !prof !14 {
 ; CHECK-LABEL: @test_chr_7_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I0:%.*]] = load i32, i32* [[I:%.*]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = and i32 [[I0]], 2
-; CHECK-NEXT:    [[V4:%.*]] = icmp eq i32 [[V3]], 0
-; CHECK-NEXT:    [[V8:%.*]] = add i32 [[SUM0:%.*]], 43
-; CHECK-NEXT:    [[SUM2:%.*]] = select i1 [[V4]], i32 [[SUM0]], i32 [[V8]], !prof !16
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[J0:%.*]] = load i32, i32* [[J:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[J0]], 12
@@ -824,6 +820,10 @@ define i32 @test_chr_7_1(i32* %i, i32* %j, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
+; CHECK-NEXT:    [[V3:%.*]] = and i32 [[I0]], 2
+; CHECK-NEXT:    [[V4:%.*]] = icmp eq i32 [[V3]], 0
+; CHECK-NEXT:    [[V8:%.*]] = add i32 [[SUM0:%.*]], 43
+; CHECK-NEXT:    [[SUM2:%.*]] = select i1 [[V4]], i32 [[SUM0]], i32 [[V8]], !prof !16
 ; CHECK-NEXT:    ret i32 [[SUM2]]
 ;
 entry:
@@ -1381,8 +1381,6 @@ define i32 @test_chr_15(i32* %i, i32* %j, i32 %sum0, i1 %pred, i32 %z) !prof !14
 ; CHECK-NEXT:    [[V4:%.*]] = icmp eq i32 [[V6]], [[J0]]
 ; CHECK-NEXT:    [[V8:%.*]] = add i32 [[SUM0:%.*]], 43
 ; CHECK-NEXT:    [[SUM2:%.*]] = select i1 [[V4]], i32 [[SUM0]], i32 [[V8]], !prof !16
-; CHECK-NEXT:    [[V5:%.*]] = icmp eq i32 [[I0]], [[SUM2]]
-; CHECK-NEXT:    [[SUM3:%.*]] = select i1 [[V5]], i32 [[SUM2]], i32 [[V8]], !prof !16
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[V9:%.*]] = and i32 [[I0]], 4
 ; CHECK-NEXT:    [[V10:%.*]] = icmp eq i32 [[V9]], 0
@@ -1391,6 +1389,8 @@ define i32 @test_chr_15(i32* %i, i32* %j, i32 %sum0, i1 %pred, i32 %z) !prof !14
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
+; CHECK-NEXT:    [[V5:%.*]] = icmp eq i32 [[I0]], [[SUM2]]
+; CHECK-NEXT:    [[SUM3:%.*]] = select i1 [[V5]], i32 [[SUM2]], i32 [[V8]], !prof !16
 ; CHECK-NEXT:    [[V11:%.*]] = add i32 [[I0]], [[SUM3]]
 ; CHECK-NEXT:    ret i32 [[V11]]
 ;
@@ -2004,6 +2004,14 @@ bb10:
 ; Test a case with a really long use-def chains. This test checks that it's not
 ; really slow and doesn't appear to be hanging.
 define i64 @test_chr_22(i1 %i, i64* %j, i64 %v0) !prof !14 {
+; CHECK-LABEL: @test_chr_22(
+; CHECK-NEXT:  bb0:
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i64 [[V0:%.*]], 1
+; CHECK-NEXT:    [[V2:%.*]] = add i64 [[REASS_ADD]], 3
+; CHECK-NEXT:    [[V299:%.*]] = mul i64 [[V2]], 7860086430977039991
+; CHECK-NEXT:    store i64 [[V299]], i64* [[J:%.*]], align 4
+; CHECK-NEXT:    ret i64 99
+;
 bb0:
   %v1 = add i64 %v0, 3
   %v2 = add i64 %v1, %v0
@@ -2317,6 +2325,12 @@ bb0:
 ; test_chr_22 in that it has nested control structures (multiple scopes) and
 ; covers additional code.
 define i64 @test_chr_23(i64 %v0) !prof !14 {
+; CHECK-LABEL: @test_chr_23(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[V0:%.*]], 50
+; CHECK-NEXT:    [[V10:%.*]] = icmp ne i64 [[TMP0]], -50
+; CHECK-NEXT:    ret i64 99
+;
 entry:
   %v1 = add i64 %v0, 3
   %v2 = add i64 %v1, %v1
@@ -2465,6 +2479,25 @@ end:
 
 ; Test to not crash upon a 0:0 branch_weight metadata.
 define void @test_chr_24(i32* %i) !prof !14 {
+; CHECK-LABEL: @test_chr_24(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[BB1:%.*]], label [[BB0:%.*]], !prof !21
+; CHECK:       bb0:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[BB3:%.*]], label [[BB2:%.*]], !prof !21
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = load i32, i32* %i
   %1 = and i32 %0, 1

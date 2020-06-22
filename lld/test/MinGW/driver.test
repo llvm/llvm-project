@@ -241,3 +241,6 @@ ENABLE_RUNTIME_PSEUDO_RELOC: -runtime-pseudo-reloc{{ }}
 RUN: ld.lld -### -m i386pep foo.o --disable-runtime-pseudo-reloc | FileCheck -check-prefix DISABLE_RUNTIME_PSEUDO_RELOC %s
 RUN: ld.lld -### -m i386pep foo.o -disable-runtime-pseudo-reloc | FileCheck -check-prefix DISABLE_RUNTIME_PSEUDO_RELOC %s
 DISABLE_RUNTIME_PSEUDO_RELOC: -runtime-pseudo-reloc:no
+
+RUN: ld.lld -### foo.o -m i386pe --thinlto-cache-dir=_foo | FileCheck -check-prefix=THINLTO_CACHEDIR %s
+THINLTO_CACHEDIR: -lldltocache:_foo

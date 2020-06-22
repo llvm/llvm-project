@@ -14,7 +14,7 @@ entry:
   ret i8* %0
 }
 
-; CHECK-NOT: call void @__msan_warning_noreturn
+; CHECK-NOT: call void @__msan_warning_with_origin_noreturn
 
 declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 

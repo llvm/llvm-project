@@ -46,8 +46,8 @@ body: |
     ; GFX9: S_WAITCNT 0
     ; GFX9: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; GFX9: $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
+    $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
 ...
 
 # Image load vs image sample. Waitcnt required because they are not guaranteed
@@ -65,6 +65,6 @@ body: |
     ; GFX9: $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; GFX9: S_WAITCNT 3952
     ; GFX9: $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 8, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec
-    $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 8, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec
+    $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
+    $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 8, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load 16)
 ...

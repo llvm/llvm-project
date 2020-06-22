@@ -37,7 +37,7 @@ class InlinedFrameAPITestCase(TestBase):
 
         # Now create a breakpoint on main.c by the name of 'inner_inline'.
         breakpoint = target.BreakpointCreateByName('inner_inline', 'a.out')
-        #print("breakpoint:", breakpoint)
+        self.trace("breakpoint:", breakpoint)
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() > 1,
                         VALID_BREAKPOINT)

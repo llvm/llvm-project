@@ -67,7 +67,25 @@ class RM<bits<8>opVal, dag outs, dag ins, string asmstr, list<dag> pattern = []>
 
 //-----------------------------------------------------------------------------
 // Section 5.2 RRM Type
+//
+// RRM type is identical to RM, but the effective address is generated
+// by sz + imm32.  The sy field is used by other purposes.
 //-----------------------------------------------------------------------------
+
+class RRM<bits<8>opVal, dag outs, dag ins, string asmstr,
+          list<dag> pattern = []>
+   : RM<opVal, outs, ins, asmstr, pattern>;
+
+// RRMHM type is to load/store host memory
+// It is similar to RRM and not use sy.
+class RRMHM<bits<8>opVal, dag outs, dag ins, string asmstr,
+            list<dag> pattern = []>
+   : RRM<opVal, outs, ins, asmstr, pattern> {
+  bits<2> ry = 0;
+  let cy = 0;
+  let sy{6-2} = 0;
+  let sy{1-0} = ry;
+}
 
 //-----------------------------------------------------------------------------
 // Section 5.3 CF Type
@@ -131,6 +149,28 @@ class RR<bits<8>opVal, dag outs, dag ins, string asmstr, list<dag> pattern = []>
   let Inst{6} = cw2;
   let Inst{5-4} = 0;
   let Inst{3-0} = cfw;
+}
+
+// RRFENCE type is special RR type for a FENCE instruction.
+class RRFENCE<bits<8>opVal, dag outs, dag ins, string asmstr,
+              list<dag> pattern = []>
+   : InstVE<outs, ins, asmstr, pattern> {
+  bits<1> avo = 0;
+  bits<1> lf = 0;
+  bits<1> sf = 0;
+  bits<1> c2 = 0;
+  bits<1> c1 = 0;
+  bits<1> c0 = 0;
+  let op = opVal;
+  let Inst{55} = avo;
+  let Inst{54-50} = 0;
+  let Inst{49} = lf;
+  let Inst{48} = sf;
+  let Inst{47-43} = 0;
+  let Inst{42} = c2;
+  let Inst{41} = c1;
+  let Inst{40} = c0;
+  let Inst{39-0} = 0;
 }
 
 //-----------------------------------------------------------------------------

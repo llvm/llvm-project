@@ -54,7 +54,7 @@ define float @fceil32(float %f) #0 {
 ; AVX-X64-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
   %res = call float @llvm.experimental.constrained.ceil.f32(
-                        float %f, metadata !"fpexcept.strict")
+                        float %f, metadata !"fpexcept.strict") #0
   ret float %res
 }
 
@@ -107,7 +107,7 @@ define double @fceilf64(double %f) #0 {
 ; AVX-X64-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
   %res = call double @llvm.experimental.constrained.ceil.f64(
-                        double %f, metadata !"fpexcept.strict")
+                        double %f, metadata !"fpexcept.strict") #0
   ret double %res
 }
 
@@ -148,7 +148,7 @@ define float @ffloor32(float %f) #0 {
 ; AVX-X64-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
   %res = call float @llvm.experimental.constrained.floor.f32(
-                        float %f, metadata !"fpexcept.strict")
+                        float %f, metadata !"fpexcept.strict") #0
   ret float %res
 }
 
@@ -201,7 +201,7 @@ define double @ffloorf64(double %f) #0 {
 ; AVX-X64-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
   %res = call double @llvm.experimental.constrained.floor.f64(
-                        double %f, metadata !"fpexcept.strict")
+                        double %f, metadata !"fpexcept.strict") #0
   ret double %res
 }
 
@@ -242,7 +242,7 @@ define float @ftrunc32(float %f) #0 {
 ; AVX-X64-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
   %res = call float @llvm.experimental.constrained.trunc.f32(
-                        float %f, metadata !"fpexcept.strict")
+                        float %f, metadata !"fpexcept.strict") #0
   ret float %res
 }
 
@@ -295,7 +295,7 @@ define double @ftruncf64(double %f) #0 {
 ; AVX-X64-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
   %res = call double @llvm.experimental.constrained.trunc.f64(
-                        double %f, metadata !"fpexcept.strict")
+                        double %f, metadata !"fpexcept.strict") #0
   ret double %res
 }
 
@@ -337,7 +337,7 @@ define float @frint32(float %f) #0 {
 ; AVX-X64-NEXT:    retq
   %res = call float @llvm.experimental.constrained.rint.f32(
                         float %f,
-                        metadata !"round.dynamic", metadata !"fpexcept.strict")
+                        metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %res
 }
 
@@ -391,7 +391,7 @@ define double @frintf64(double %f) #0 {
 ; AVX-X64-NEXT:    retq
   %res = call double @llvm.experimental.constrained.rint.f64(
                         double %f,
-                        metadata !"round.dynamic", metadata !"fpexcept.strict")
+                        metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret double %res
 }
 
@@ -433,7 +433,7 @@ define float @fnearbyint32(float %f) #0 {
 ; AVX-X64-NEXT:    retq
   %res = call float @llvm.experimental.constrained.nearbyint.f32(
                         float %f,
-                        metadata !"round.dynamic", metadata !"fpexcept.strict")
+                        metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %res
 }
 
@@ -487,7 +487,7 @@ define double @fnearbyintf64(double %f) #0 {
 ; AVX-X64-NEXT:    retq
   %res = call double @llvm.experimental.constrained.nearbyint.f64(
                         double %f,
-                        metadata !"round.dynamic", metadata !"fpexcept.strict")
+                        metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret double %res
 }
 

@@ -25,6 +25,7 @@
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
@@ -66,7 +67,8 @@ private:
 protected:
   bool Has16BitInsts;
   bool HasMadMixInsts;
-  bool FPExceptions;
+  bool HasMadMacF32Insts;
+  bool HasDsSrc2Insts;
   bool HasSDWA;
   bool HasVOP3PInsts;
   bool HasMulI24;
@@ -77,7 +79,7 @@ protected:
   bool HasTrigReducedRange;
   unsigned MaxWavesPerEU;
   int LocalMemorySize;
-  unsigned WavefrontSize;
+  char WavefrontSizeLog2;
 
 public:
   AMDGPUSubtarget(const Triple &TT);
@@ -140,6 +142,10 @@ public:
     return isAmdHsaOS() || isMesaKernel(F);
   }
 
+  bool isGCN() const {
+    return TargetTriple.getArch() == Triple::amdgcn;
+  }
+
   bool has16BitInsts() const {
     return Has16BitInsts;
   }
@@ -148,8 +154,12 @@ public:
     return HasMadMixInsts;
   }
 
-  bool hasFPExceptions() const {
-    return FPExceptions;
+  bool hasMadMacF32Insts() const {
+    return HasMadMacF32Insts || !isGCN();
+  }
+
+  bool hasDsSrc2Insts() const {
+    return HasDsSrc2Insts;
   }
 
   bool hasSDWA() const {
@@ -185,7 +195,11 @@ public:
   }
 
   unsigned getWavefrontSize() const {
-    return WavefrontSize;
+    return 1 << WavefrontSizeLog2;
+  }
+
+  unsigned getWavefrontSizeLog2() const {
+    return WavefrontSizeLog2;
   }
 
   int getLocalMemorySize() const {
@@ -241,8 +255,8 @@ public:
   /// \returns Corresponsing DWARF register number mapping flavour for the
   /// \p WavefrontSize.
   AMDGPUDwarfFlavour getAMDGPUDwarfFlavour() const {
-    return WavefrontSize == 32 ? AMDGPUDwarfFlavour::Wave32
-                               : AMDGPUDwarfFlavour::Wave64;
+    return getWavefrontSize() == 32 ? AMDGPUDwarfFlavour::Wave32
+                                    : AMDGPUDwarfFlavour::Wave64;
   }
 
   virtual ~AMDGPUSubtarget() {}
@@ -277,6 +291,7 @@ public:
 private:
   /// GlobalISel related APIs.
   std::unique_ptr<AMDGPUCallLowering> CallLoweringInfo;
+  std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
@@ -324,6 +339,7 @@ protected:
   bool GFX8Insts;
   bool GFX9Insts;
   bool GFX10Insts;
+  bool GFX10_3Insts;
   bool GFX7GFX8GFX9Insts;
   bool SGPRInitBug;
   bool HasSMemRealTime;
@@ -342,7 +358,9 @@ protected:
   bool HasDPP8;
   bool HasR128A16;
   bool HasGFX10A16;
+  bool HasG16;
   bool HasNSAEncoding;
+  bool GFX10_BEncoding;
   bool HasDLInsts;
   bool HasDot1Insts;
   bool HasDot2Insts;
@@ -357,6 +375,8 @@ protected:
   bool DoesNotSupportSRAMECC;
   bool HasNoSdstCMPX;
   bool HasVscnt;
+  bool HasGetWaveIdInst;
+  bool HasSMemTimeInst;
   bool HasRegisterBanking;
   bool HasVOP3Literal;
   bool HasNoDataDepHazard;
@@ -426,6 +446,10 @@ public:
     return CallLoweringInfo.get();
   }
 
+  const InlineAsmLowering *getInlineAsmLowering() const override {
+    return InlineAsmLoweringInfo.get();
+  }
+
   InstructionSelector *getInstructionSelector() const override {
     return InstSelector.get();
   }
@@ -451,10 +475,6 @@ public:
 
   Generation getGeneration() const {
     return (Generation)Gen;
-  }
-
-  unsigned getWavefrontSizeLog2() const {
-    return Log2_32(WavefrontSize);
   }
 
   /// Return the number of high bits known to be zero fror a frame index.
@@ -719,6 +739,14 @@ public:
     return ScalarFlatScratchInsts;
   }
 
+  bool hasGlobalAddTidInsts() const {
+    return GFX10_BEncoding;
+  }
+
+  bool hasAtomicCSub() const {
+    return GFX10_BEncoding;
+  }
+
   bool hasMultiDwordFlatScratchAddressing() const {
     return getGeneration() >= GFX9;
   }
@@ -852,6 +880,14 @@ public:
     return HasVscnt;
   }
 
+  bool hasGetWaveIdInst() const {
+    return HasGetWaveIdInst;
+  }
+
+  bool hasSMemTimeInst() const {
+    return HasSMemTimeInst;
+  }
+
   bool hasRegisterBanking() const {
     return HasRegisterBanking;
   }
@@ -958,12 +994,24 @@ public:
     return HasGFX10A16;
   }
 
+  bool hasA16() const { return hasR128A16() || hasGFX10A16(); }
+
+  bool hasG16() const { return HasG16; }
+
   bool hasOffset3fBug() const {
     return HasOffset3fBug;
   }
 
   bool hasNSAEncoding() const {
     return HasNSAEncoding;
+  }
+
+  bool hasGFX10_BEncoding() const {
+    return GFX10_BEncoding;
+  }
+
+  bool hasGFX10_3Insts() const {
+    return GFX10_3Insts;
   }
 
   bool hasMadF16() const;
@@ -1052,7 +1100,7 @@ public:
   /// registers if provided.
   /// Note, occupancy can be affected by the scratch allocation as well, but
   /// we do not have enough information to compute it.
-  unsigned computeOccupancy(const MachineFunction &MF, unsigned LDSSize = 0,
+  unsigned computeOccupancy(const Function &F, unsigned LDSSize = 0,
                             unsigned NumSGPRs = 0, unsigned NumVGPRs = 0) const;
 
   /// \returns true if the flat_scratch register should be initialized with the
@@ -1159,7 +1207,7 @@ public:
       const override;
 
   bool isWave32() const {
-    return WavefrontSize == 32;
+    return getWavefrontSize() == 32;
   }
 
   const TargetRegisterClass *getBoolRC() const {
