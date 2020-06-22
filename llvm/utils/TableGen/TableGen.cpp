@@ -54,7 +54,6 @@ enum ActionType {
   GenRegisterBank,
   GenExegesis,
   GenAutomata,
-  GenDirectivesEnums,
 };
 
 namespace llvm {
@@ -129,9 +128,7 @@ cl::opt<ActionType> Action(
                    "Generate registers bank descriptions"),
         clEnumValN(GenExegesis, "gen-exegesis",
                    "Generate llvm-exegesis tables"),
-        clEnumValN(GenAutomata, "gen-automata", "Generate generic automata"),
-        clEnumValN(GenDirectivesEnums, "gen-directive-decls",
-                   "Generate directive related declaration code")));
+        clEnumValN(GenAutomata, "gen-automata", "Generate generic automata")));
 
 cl::OptionCategory PrintEnumsCat("Options for -print-enums");
 cl::opt<std::string> Class("class", cl::desc("Print Enum list for this class"),
@@ -255,9 +252,6 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenAutomata:
     EmitAutomata(Records, OS);
-    break;
-  case GenDirectivesEnums:
-    EmitDirectivesEnums(Records, OS);
     break;
   }
 
