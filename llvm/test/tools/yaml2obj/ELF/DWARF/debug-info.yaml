@@ -419,9 +419,9 @@ Sections:
 ## d) Test that yaml2obj emits an error message when both the "Size" and the
 ## "debug_info" entry are specified at the same time.
 
-# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS-CONTENT
 
-# ERROR: yaml2obj: error: cannot specify section '.debug_info' contents in the 'DWARF' entry and the 'Content' or 'Size' in the 'Sections' entry at the same time
+# AMBIGUOUS-CONTENT: yaml2obj: error: cannot specify section '.debug_info' contents in the 'DWARF' entry and the 'Content' or 'Size' in the 'Sections' entry at the same time
 
 --- !ELF
 FileHeader:
@@ -451,7 +451,7 @@ DWARF:
 ## e) Test that yaml2obj emits an error message when both the "Content" and the
 ## "debug_info" entry are specified at the same time.
 
-# RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+# RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS-CONTENT
 
 --- !ELF
 FileHeader:
@@ -575,3 +575,97 @@ DWARF:
       AbbrOffset: 0x1234
       AddrSize:   4
       Entries:    []
+
+## h) Test that yaml2obj emits values in the DIE according to the abbreviation whose
+## index is equal to the value in 'AbbrevCode'.
+
+# RUN: yaml2obj --docnum=9 %s -o %t9.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t9.o | \
+# RUN:   FileCheck %s --check-prefix=FORM --match-full-lines
+
+#       FORM: Hex dump of section '.debug_info':
+#  FORM-NEXT: 0x00000000 34120000 05000204 34120000 02341221 4.......4....4.!
+##                       ^-------                            unit_length (4-byte)
+##                                                  ^-       abbreviation code (ULEB128)
+##                                                    ^---   Form: DW_FORM_data2 (2-byte)
+##                                                        ^- Form: DW_FORM_data4 (4-byte)
+#  FORM-NEXT: 0x00000010 43658701 21436587 341200            Ce..!Ce.4..
+##                       ------
+##                             ^-                            abbreviation code (ULEB128)
+##                                ^-------                   Form: DW_FORM_data4 (4-byte)
+##                                         ^---              Form: DW_FORM_data2 (2-byte)
+##                                             ^-            abbreviation code (ULEB128)
+# FORM-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Tag:        DW_TAG_compile_unit
+      Children:   DW_CHILDREN_yes
+      Attributes:
+        - Attribute: DW_AT_low_pc
+          Form:      DW_FORM_data4
+        - Attribute: DW_AT_high_pc
+          Form:      DW_FORM_data2
+    - Tag:        DW_TAG_subprogram
+      Children:   DW_CHILDREN_no
+      Attributes:
+        - Attribute: DW_AT_low_pc
+          Form:      DW_FORM_data2
+        - Attribute: DW_AT_high_pc
+          Form:      DW_FORM_data4
+  debug_info:
+    - Length:
+        TotalLength: 0x1234
+      Version:    5
+      UnitType:   DW_UT_type
+      AbbrOffset: 0x1234
+      AddrSize:   4
+      Entries:
+        ## Test that yaml2obj emits values when the abbrev code is specified.
+        - AbbrCode: 2
+          Values:
+            - Value: 0x1234
+            - Value: 0x87654321
+        ## Test that yaml2obj emits values when the abbrev code is specified to
+        ## be lower than the first abbrev.
+        - AbbrCode: 1
+          Values:
+            - Value: 0x87654321
+            - Value: 0x1234
+        ## Test that yaml2obj ignores the contents of entries with abbrev code 0.
+        - AbbrCode: 0
+          Values:
+            - Value: 0x1234
+
+## i) Test that yaml2obj reports a fatal error when 'debug_info' has values in its
+## entries but 'debug_abbrev' doesn't have enough attributes for them.
+
+# RUN: not --crash yaml2obj --docnum=10 %s -o %t10.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=FATAL
+
+# FATAL: LLVM ERROR: abbrev code must be less than or equal to the number of entries in abbreviation table
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_info:
+    - Length:
+        TotalLength: 0x1234
+      Version:    5
+      UnitType:   DW_UT_type
+      AbbrOffset: 0x1234
+      AddrSize:   4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x1234
