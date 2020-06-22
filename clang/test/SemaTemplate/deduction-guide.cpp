@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -std=c++2a -verify -ast-dump -ast-dump-decl-types -ast-dump-filter "deduction guide" %s | FileCheck %s
+// expected-no-diagnostics
 
 template<auto ...> struct X {};
 
-template<typename T, typename ...Ts> struct A { // expected-note 2{{candidate}}
-  template<Ts ...Ns, T *...Ps> A(X<Ps...>, Ts (*...qs)[Ns]); // expected-note {{candidate}}
+template<typename T, typename ...Ts> struct A {
+  template<Ts ...Ns, T *...Ps> A(X<Ps...>, Ts (*...qs)[Ns]);
 };
 int arr1[3], arr2[3];
 short arr3[4];
-// FIXME: The CTAD deduction here succeeds, but the initialization deduction spuriously fails.
-A a(X<&arr1, &arr2>{}, &arr1, &arr2, &arr3); // FIXME: expected-error {{no matching constructor}}
+A a(X<&arr1, &arr2>{}, &arr1, &arr2, &arr3);
 using AT = decltype(a);
 using AT = A<int[3], int, int, short>;
 
