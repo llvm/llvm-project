@@ -859,6 +859,14 @@ MipsInstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
     }
     Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset, Offset);
     return ParamLoadedValue(MachineOperand::CreateReg(SrcReg, false), Expr);
+  } else if (auto DestSrc = isCopyInstr(MI)) {
+    const MachineFunction *MF = MI.getMF();
+    const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+    Register DestReg = DestSrc->Destination->getReg();
+    // TODO: Handle cases where the Reg is sub- or super-register of the
+    // DestReg.
+    if (TRI->isSuperRegister(Reg, DestReg) || TRI->isSubRegister(Reg, DestReg))
+      return None;
   }
 
   return TargetInstrInfo::describeLoadedValue(MI, Reg);
