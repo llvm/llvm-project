@@ -612,10 +612,12 @@ entry:
 }
 
 ; Some tests where volatile may block removing a store.
+
+; Here we can remove the first non-volatile store. We cannot remove the
+; volatile store.
 define void @test44_volatile(i32* %P) {
 ; CHECK-LABEL: @test44_volatile(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    store volatile i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
