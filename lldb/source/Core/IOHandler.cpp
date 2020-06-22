@@ -291,7 +291,8 @@ void IOHandlerEditline::Deactivate() {
 
 void IOHandlerEditline::TerminalSizeChanged() {
 #if LLDB_ENABLE_LIBEDIT
-  m_editline_up->TerminalSizeChanged();
+  if (m_editline_up)
+    m_editline_up->TerminalSizeChanged();
 #endif
 }
 
