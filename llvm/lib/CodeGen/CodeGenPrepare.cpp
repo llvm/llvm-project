@@ -246,7 +246,7 @@ static cl::opt<bool>
                               "CodeGenPrepare."));
 
 static cl::opt<bool> OptimizePhiTypes(
-    "cgp-optimize-phi-types", cl::Hidden, cl::init(false),
+    "cgp-optimize-phi-types", cl::Hidden, cl::init(true),
     cl::desc("Enable converting phi types in CodeGenPrepare"));
 
 namespace {
