@@ -31,7 +31,7 @@ def read_syms_from_file(filename):
     return read_syms_from_list(data.splitlines())
 
 
-def read_blacklist(filename):
+def read_exclusions(filename):
     with open(filename, 'r') as f:
         data = f.read()
     lines = [l.strip() for l in data.splitlines() if l.strip()]
