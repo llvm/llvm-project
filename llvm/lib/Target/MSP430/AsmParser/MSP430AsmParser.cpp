@@ -562,7 +562,7 @@ static unsigned convertGR16ToGR8(unsigned Reg) {
   case MSP430::SP:  return MSP430::SPB;
   case MSP430::SR:  return MSP430::SRB;
   case MSP430::CG:  return MSP430::CGB;
-  case MSP430::R4:  return MSP430::R4B;
+  case MSP430::FP:  return MSP430::FPB;
   case MSP430::R5:  return MSP430::R5B;
   case MSP430::R6:  return MSP430::R6B;
   case MSP430::R7:  return MSP430::R7B;

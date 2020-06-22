@@ -64,14 +64,8 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    // Make r0 - r3 be recognized by llc (f.e., in clobber list)
-    static const TargetInfo::GCCRegAlias GCCRegAliases[] = {
-        {{"r0"}, "pc"},
-        {{"r1"}, "sp"},
-        {{"r2"}, "sr"},
-        {{"r3"}, "cg"},
-    };
-    return GCCRegAliases;
+    // No aliases.
+    return None;
   }
 
   bool validateAsmConstraint(const char *&Name,
