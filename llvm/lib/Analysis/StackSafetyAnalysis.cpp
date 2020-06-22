@@ -11,9 +11,11 @@
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/StackLifetime.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
@@ -205,7 +207,8 @@ class StackSafetyLocalAnalysis {
   ConstantRange getMemIntrinsicAccessRange(const MemIntrinsic *MI, const Use &U,
                                            Value *Base);
 
-  bool analyzeAllUses(Value *Ptr, UseInfo<GlobalValue> &AS);
+  bool analyzeAllUses(Value *Ptr, UseInfo<GlobalValue> &AS,
+                      const StackLifetime &SL);
 
 public:
   StackSafetyLocalAnalysis(Function &F, ScalarEvolution &SE)
@@ -289,7 +292,8 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
 /// The function analyzes all local uses of Ptr (alloca or argument) and
 /// calculates local access range and all function calls where it was used.
 bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
-                                              UseInfo<GlobalValue> &US) {
+                                              UseInfo<GlobalValue> &US,
+                                              const StackLifetime &SL) {
   SmallPtrSet<const Value *, 16> Visited;
   SmallVector<const Value *, 8> WorkList;
   WorkList.push_back(Ptr);
@@ -298,7 +302,10 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
   while (!WorkList.empty()) {
     const Value *V = WorkList.pop_back_val();
     for (const Use &UI : V->uses()) {
-      const auto *I = cast<const Instruction>(UI.getUser());
+      const auto *I = cast<Instruction>(UI.getUser());
+      if (!SL.isReachable(I))
+        continue;
+
       assert(V == UI.get());
 
       switch (I->getOpcode()) {
@@ -384,11 +391,16 @@ FunctionInfo<GlobalValue> StackSafetyLocalAnalysis::run() {
 
   LLVM_DEBUG(dbgs() << "[StackSafety] " << F.getName() << "\n");
 
-  for (auto &I : instructions(F)) {
-    if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-      auto &UI = Info.Allocas.emplace(AI, PointerSize).first->second;
-      analyzeAllUses(AI, UI);
-    }
+  SmallVector<AllocaInst *, 64> Allocas;
+  for (auto &I : instructions(F))
+    if (auto *AI = dyn_cast<AllocaInst>(&I))
+      Allocas.push_back(AI);
+  StackLifetime SL(F, Allocas, StackLifetime::LivenessType::Must);
+  SL.run();
+
+  for (auto *AI : Allocas) {
+    auto &UI = Info.Allocas.emplace(AI, PointerSize).first->second;
+    analyzeAllUses(AI, UI, SL);
   }
 
   for (Argument &A : make_range(F.arg_begin(), F.arg_end())) {
@@ -396,7 +408,7 @@ FunctionInfo<GlobalValue> StackSafetyLocalAnalysis::run() {
     // processing.
     if (A.getType()->isPointerTy() && !A.hasByValAttr()) {
       auto &UI = Info.Params.emplace(A.getArgNo(), PointerSize).first->second;
-      analyzeAllUses(&A, UI);
+      analyzeAllUses(&A, UI, SL);
     }
   }
 
