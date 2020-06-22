@@ -168,7 +168,11 @@ static bool PerformStatementSemantics(
   ComputeOffsets(context);
   CheckDeclarations(context);
   StatementSemanticsPass1{context}.Walk(program);
-  StatementSemanticsPass2{context}.Walk(program);
+  StatementSemanticsPass2 pass2{context};
+  pass2.Walk(program);
+  if (!context.AnyFatalError()) {
+    pass2.CompileDataInitializationsIntoInitializers();
+  }
   return !context.AnyFatalError();
 }
 

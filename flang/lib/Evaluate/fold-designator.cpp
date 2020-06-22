@@ -14,15 +14,18 @@ namespace Fortran::evaluate {
 DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(OffsetSymbol)
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
-    const Symbol &symbol, ConstantSubscript which) const {
+    const Symbol &symbol, ConstantSubscript which) {
   if (semantics::IsPointer(symbol) || semantics::IsAllocatable(symbol)) {
     // A pointer may appear as a DATA statement object if it is the
     // rightmost symbol in a designator and has no subscripts.
     // An allocatable may appear if its initializer is NULL().
-    if (which == 0) {
+    if (which > 0) {
+      isEmpty_ = true;
+    } else {
       return OffsetSymbol{symbol, symbol.size()};
     }
-  } else if (symbol.has<semantics::ObjectEntityDetails>()) {
+  } else if (symbol.has<semantics::ObjectEntityDetails>() &&
+      !IsNamedConstant(symbol)) {
     if (auto type{DynamicType::From(symbol)}) {
       if (auto bytes{type->MeasureSizeInBytes()}) {
         if (auto extents{GetConstantExtents(context_, symbol)}) {
@@ -38,7 +41,9 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
             which = quotient;
             stride *= extent;
           }
-          if (which == 0) {
+          if (which > 0) {
+            isEmpty_ = true;
+          } else {
             return std::move(result);
           }
         }
@@ -49,7 +54,7 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
 }
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
-    const ArrayRef &x, ConstantSubscript which) const {
+    const ArrayRef &x, ConstantSubscript which) {
   const Symbol &array{x.base().GetLastSymbol()};
   if (auto type{DynamicType::From(array)}) {
     if (auto bytes{type->MeasureSizeInBytes()}) {
@@ -88,11 +93,12 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
                               auto remainder{which - value->size() * quotient};
                               ConstantSubscript at{
                                   value->values().at(remainder).ToInt64()};
-                              if (at >= lower && at <= upper) {
-                                result->Augment((at - lower) * stride);
-                                which = quotient;
-                                return true;
+                              if (at < lower || at > upper) {
+                                isOutOfRange_ = true;
                               }
+                              result->Augment((at - lower) * stride);
+                              which = quotient;
+                              return true;
                             }
                           }
                           return false;
@@ -124,7 +130,9 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
             ++dim;
             stride *= extent;
           }
-          if (which == 0) {
+          if (which > 0) {
+            isEmpty_ = true;
+          } else {
             return result;
           }
         }
@@ -135,7 +143,7 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
 }
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
-    const Component &component, ConstantSubscript which) const {
+    const Component &component, ConstantSubscript which) {
   const Symbol &comp{component.GetLastSymbol()};
   const DataRef &base{component.base()};
   std::optional<OffsetSymbol> result, baseResult;
@@ -156,7 +164,7 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
 }
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
-    const ComplexPart &z, ConstantSubscript which) const {
+    const ComplexPart &z, ConstantSubscript which) {
   if (auto result{FoldDesignator(z.complex(), which)}) {
     result->set_size(result->size() >> 1);
     if (z.part() == ComplexPart::Part::IM) {
@@ -169,28 +177,30 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
 }
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
-    const DataRef &dataRef, ConstantSubscript which) const {
+    const DataRef &dataRef, ConstantSubscript which) {
   return std::visit(
       [&](const auto &x) { return FoldDesignator(x, which); }, dataRef.u);
 }
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
-    const NamedEntity &entity, ConstantSubscript which) const {
+    const NamedEntity &entity, ConstantSubscript which) {
   return entity.IsSymbol() ? FoldDesignator(entity.GetLastSymbol(), which)
                            : FoldDesignator(entity.GetComponent(), which);
 }
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
-    const CoarrayRef &, ConstantSubscript) const {
+    const CoarrayRef &, ConstantSubscript) {
   return std::nullopt;
 }
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
-    const ProcedureDesignator &proc, ConstantSubscript which) const {
+    const ProcedureDesignator &proc, ConstantSubscript which) {
   if (const Symbol * symbol{proc.GetSymbol()}) {
     if (const Component * component{proc.GetComponent()}) {
       return FoldDesignator(*component, which);
-    } else if (which == 0) {
+    } else if (which > 0) {
+      isEmpty_ = true;
+    } else {
       return FoldDesignator(*symbol, 0);
     }
   }
@@ -217,7 +227,7 @@ static std::optional<ArrayRef> OffsetToArrayRef(FoldingContext &context,
   auto element{offset / *elementBytes};
   std::vector<Subscript> subscripts;
   auto at{element};
-  for (int dim{0}; dim < rank; ++dim) {
+  for (int dim{0}; dim + 1 < rank; ++dim) {
     auto extent{(*extents)[dim]};
     if (extent <= 0) {
       return std::nullopt;
@@ -227,11 +237,10 @@ static std::optional<ArrayRef> OffsetToArrayRef(FoldingContext &context,
     subscripts.emplace_back(ExtentExpr{(*lower)[dim] + remainder});
     at = quotient;
   }
-  if (at == 0) {
-    offset -= element * *elementBytes;
-    return ArrayRef{std::move(entity), std::move(subscripts)};
-  }
-  return std::nullopt;
+  // This final subscript might be out of range for use in error reporting.
+  subscripts.emplace_back(ExtentExpr{(*lower)[rank - 1] + at});
+  offset -= element * *elementBytes;
+  return ArrayRef{std::move(entity), std::move(subscripts)};
 }
 
 // Maps an offset back to a component, when unambiguous.
@@ -255,6 +264,7 @@ static const Symbol *OffsetToUniqueComponent(
 }
 
 // Converts an offset into subscripts &/or component references.  Recursive.
+// Any remaining offset is left in place in the "offset" reference argument.
 static std::optional<DataRef> OffsetToDataRef(FoldingContext &context,
     NamedEntity &&entity, ConstantSubscript &offset, std::size_t size) {
   const Symbol &symbol{entity.GetLastSymbol()};

@@ -707,7 +707,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::NamedConstant &n) {
   if (MaybeExpr value{Analyze(n.v)}) {
     Expr<SomeType> folded{Fold(std::move(*value))};
     if (IsConstantExpr(folded)) {
-      return {folded};
+      return folded;
     }
     Say(n.v.source, "must be a constant"_err_en_US); // C718
   }
@@ -725,7 +725,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::InitialDataTarget &x) {
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtValue &x) {
   if (const auto &repeat{
           std::get<std::optional<parser::DataStmtRepeat>>(x.t)}) {
-    x.repetitions = 0;
+    x.repetitions = -1;
     if (MaybeExpr expr{Analyze(repeat->u)}) {
       Expr<SomeType> folded{Fold(std::move(*expr))};
       if (auto value{ToInt64(folded)}) {
