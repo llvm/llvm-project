@@ -30,10 +30,8 @@ namespace lld {
 namespace macho {
 
 SyntheticSection::SyntheticSection(const char *segname, const char *name)
-    : OutputSection(SyntheticKind, name) {
-  // Synthetic sections always know which segment they belong to so hook
-  // them up when they're made
-  getOrCreateOutputSegment(segname)->addOutputSection(this);
+    : OutputSection(SyntheticKind, name), segname(segname) {
+  syntheticSections.push_back(this);
 }
 
 // dyld3's MachOLoaded::getSlide() assumes that the __TEXT segment starts
@@ -349,6 +347,7 @@ void StringTableSection::writeTo(uint8_t *buf) const {
 }
 
 InStruct in;
+std::vector<SyntheticSection *> syntheticSections;
 
 } // namespace macho
 } // namespace lld

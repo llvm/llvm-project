@@ -11,50 +11,35 @@
 
 #include "OutputSection.h"
 #include "lld/Common/LLVM.h"
-#include "llvm/ADT/MapVector.h"
 
 namespace lld {
 namespace macho {
 
 namespace segment_names {
 
-constexpr const char *pageZero = "__PAGEZERO";
-constexpr const char *text = "__TEXT";
-constexpr const char *data = "__DATA";
-constexpr const char *linkEdit = "__LINKEDIT";
-constexpr const char *dataConst = "__DATA_CONST";
+constexpr const char pageZero[] = "__PAGEZERO";
+constexpr const char text[] = "__TEXT";
+constexpr const char data[] = "__DATA";
+constexpr const char linkEdit[] = "__LINKEDIT";
+constexpr const char dataConst[] = "__DATA_CONST";
 
 } // namespace segment_names
 
 class OutputSection;
-class OutputSegmentComparator;
 class InputSection;
 
 class OutputSegment {
 public:
-  using SectionMap = typename llvm::MapVector<StringRef, OutputSection *>;
-  using SectionMapEntry = typename std::pair<StringRef, OutputSection *>;
+  const OutputSection *firstSection() const { return sections.front(); }
+  const OutputSection *lastSection() const { return sections.back(); }
 
-  const OutputSection *firstSection() const { return sections.front().second; }
-  const OutputSection *lastSection() const { return sections.back().second; }
-
-  bool isNeeded() const {
-    if (name == segment_names::linkEdit)
-      return true;
-    for (const SectionMapEntry &i : sections) {
-      OutputSection *os = i.second;
-      if (os->isNeeded())
-        return true;
-    }
-    return false;
+  void addOutputSection(OutputSection *os);
+  void sortOutputSections(
+      llvm::function_ref<bool(OutputSection *, OutputSection *)> comparator) {
+    llvm::stable_sort(sections, comparator);
   }
 
-  OutputSection *getOrCreateOutputSection(StringRef name);
-  void addOutputSection(OutputSection *os);
-  void sortOutputSections(OutputSegmentComparator *comparator);
-  void removeUnneededSections();
-
-  const SectionMap &getSections() const { return sections; }
+  const std::vector<OutputSection *> &getSections() const { return sections; }
   size_t numNonHiddenSections() const;
 
   uint64_t fileOff = 0;
@@ -64,34 +49,11 @@ public:
   uint8_t index;
 
 private:
-  SectionMap sections;
-};
-
-class OutputSegmentComparator {
-public:
-  OutputSegmentComparator();
-
-  OutputSectionComparator *sectionComparator(const OutputSegment *os) {
-    auto it = orderMap.find(os->name);
-    if (it == orderMap.end()) {
-      return defaultPositionComparator;
-    }
-    return &it->second;
-  }
-
-  bool operator()(const OutputSegment *a, const OutputSegment *b) {
-    return *sectionComparator(a) < *sectionComparator(b);
-  }
-
-private:
-  const StringRef defaultPosition = StringRef();
-  llvm::DenseMap<StringRef, OutputSectionComparator> orderMap;
-  OutputSectionComparator *defaultPositionComparator;
+  std::vector<OutputSection *> sections;
 };
 
 extern std::vector<OutputSegment *> outputSegments;
 
-OutputSegment *getOutputSegment(StringRef name);
 OutputSegment *getOrCreateOutputSegment(StringRef name);
 
 } // namespace macho
