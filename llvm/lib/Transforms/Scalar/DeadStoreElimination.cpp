@@ -1900,22 +1900,21 @@ struct DSEState {
   //  * A memory instruction that may throw and \p SI accesses a non-stack
   //  object.
   //  * Atomic stores stronger that monotonic.
-  bool isDSEBarrier(Instruction *SI, const Value *SILocUnd,
-                    Instruction *NI) const {
+  bool isDSEBarrier(const Value *SILocUnd, Instruction *NI) const {
     // If NI may throw it acts as a barrier, unless we are to an alloca/alloca
     // like object that does not escape.
     if (NI->mayThrow() && !InvisibleToCallerBeforeRet.count(SILocUnd))
       return true;
 
+    // If NI is an atomic load/store stronger than monotonic, do not try to
+    // eliminate/reorder it.
     if (NI->isAtomic()) {
-      if (auto *NSI = dyn_cast<StoreInst>(NI)) {
-        if (isStrongerThanMonotonic(NSI->getOrdering()))
-          return true;
-      } else
-        llvm_unreachable(
-            "Other instructions should be modeled/skipped in MemorySSA");
+      if (auto *LI = dyn_cast<LoadInst>(NI))
+        return isStrongerThanMonotonic(LI->getOrdering());
+      if (auto *SI = dyn_cast<StoreInst>(NI))
+        return isStrongerThanMonotonic(SI->getOrdering());
+      llvm_unreachable("other instructions should be skipped in MemorySSA");
     }
-
     return false;
   }
 };
@@ -2029,6 +2028,22 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       Instruction *NI = NextDef->getMemoryInst();
       LLVM_DEBUG(dbgs() << " (" << *NI << ")\n");
 
+      // Before we try to remove anything, check for any extra throwing
+      // instructions that block us from DSEing
+      if (State.mayThrowBetween(SI, NI, SILocUnd)) {
+        LLVM_DEBUG(dbgs() << "  ... skip, may throw!\n");
+        break;
+      }
+
+      // Check for anything that looks like it will be a barrier to further
+      // removal
+      if (State.isDSEBarrier(SILocUnd, NI)) {
+        LLVM_DEBUG(dbgs() << "  ... skip, barrier\n");
+        continue;
+      }
+
+      ToCheck.insert(NextDef->getDefiningAccess());
+
       if (!hasAnalyzableMemoryWrite(NI, TLI)) {
         LLVM_DEBUG(dbgs() << "  ... skip, cannot analyze def\n");
         continue;
@@ -2037,20 +2052,6 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       if (!isRemovable(NI)) {
         LLVM_DEBUG(dbgs() << "  ... skip, cannot remove def\n");
         continue;
-      }
-
-      // Check for anything that looks like it will be a barrier to further
-      // removal
-      if (State.isDSEBarrier(SI, SILocUnd, NI)) {
-        LLVM_DEBUG(dbgs() << "  ... skip, barrier\n");
-        continue;
-      }
-
-      // Before we try to remove anything, check for any extra throwing
-      // instructions that block us from DSEing
-      if (State.mayThrowBetween(SI, NI, SILocUnd)) {
-        LLVM_DEBUG(dbgs() << "  ... skip, may throw!\n");
-        break;
       }
 
       if (!DebugCounter::shouldExecute(MemorySSACounter))
@@ -2088,7 +2089,6 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
         }
       }
 
-      ToCheck.insert(NextDef->getDefiningAccess());
       if (OR == OW_Complete) {
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *NI
                           << "\n  KILLER: " << *SI << '\n');
