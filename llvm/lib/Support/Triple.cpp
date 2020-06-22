@@ -15,6 +15,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/VersionTuple.h"
 #include <cassert>
 #include <cstring>
 using namespace llvm;
@@ -1086,17 +1087,23 @@ bool Triple::getMacOSXVersion(unsigned &Major, unsigned &Minor,
     // Darwin version numbers are skewed from OS X versions.
     if (Major < 4)
       return false;
-    Micro = 0;
-    Minor = Major - 4;
-    Major = 10;
+    if (Major <= 19) {
+      Micro = 0;
+      Minor = Major - 4;
+      Major = 10;
+    } else {
+      Micro = 0;
+      Minor = 0;
+      // darwin20+ corresponds to macOS 11+.
+      Major = 11 + Major - 20;
+    }
     break;
   case MacOSX:
     // Default to 10.4.
     if (Major == 0) {
       Major = 10;
       Minor = 4;
-    }
-    if (Major != 10)
+    } else if (Major < 10)
       return false;
     break;
   case IOS:
@@ -1600,6 +1607,23 @@ std::string Triple::merge(const Triple &Other) const {
   return Other.str();
 }
 
+bool Triple::isMacOSXVersionLT(unsigned Major, unsigned Minor,
+                               unsigned Micro) const {
+  assert(isMacOSX() && "Not an OS X triple!");
+
+  // If this is OS X, expect a sane version number.
+  if (getOS() == Triple::MacOSX)
+    return isOSVersionLT(Major, Minor, Micro);
+
+  // Otherwise, compare to the "Darwin" number.
+  if (Major == 10) {
+    return isOSVersionLT(Minor + 4, Micro, 0);
+  } else {
+    assert(Major >= 11 && "Unexpected major version");
+    return isOSVersionLT(Major - 11 + 20, Minor, Micro);
+  }
+}
+
 StringRef Triple::getARMCPUForArch(StringRef MArch) const {
   if (MArch.empty())
     MArch = getArchName();
@@ -1661,4 +1685,17 @@ StringRef Triple::getARMCPUForArch(StringRef MArch) const {
   }
 
   llvm_unreachable("invalid arch name");
+}
+
+VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
+                                              const VersionTuple &Version) {
+  switch (OSKind) {
+  case MacOSX:
+    // macOS 10.16 is canonicalized to macOS 11.
+    if (Version == VersionTuple(10, 16))
+      return VersionTuple(11, 0);
+    LLVM_FALLTHROUGH;
+  default:
+    return Version;
+  }
 }
