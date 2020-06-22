@@ -278,6 +278,174 @@ namespace PR20819 {
   }
 }
 
+namespace overloaded_operators {
+  struct E {
+    E &operator=(E &);
+    E operator()(E);
+    E operator()(E, E);
+    E operator[](E);
+  } e;
+  // Binary operators with unsequenced operands.
+  E operator+(E,E);
+  E operator-(E,E);
+  E operator*(E,E);
+  E operator/(E,E);
+  E operator%(E,E);
+  E operator^(E,E);
+  E operator&(E,E);
+  E operator|(E,E);
+
+  E operator<(E,E);
+  E operator>(E,E);
+  E operator==(E,E);
+  E operator!=(E,E);
+  E operator>=(E,E);
+  E operator<=(E,E);
+
+  // Binary operators where the RHS is sequenced before the LHS in C++17.
+  E operator+=(E,E);
+  E operator-=(E,E);
+  E operator*=(E,E);
+  E operator/=(E,E);
+  E operator%=(E,E);
+  E operator^=(E,E);
+  E operator&=(E,E);
+  E operator|=(E,E);
+  E operator<<=(E,E);
+  E operator>>=(E,E);
+
+  // Binary operators where the LHS is sequenced before the RHS in C++17.
+  E operator<<(E,E);
+  E operator>>(E,E);
+  E operator&&(E,E);
+  E operator||(E,E);
+  E operator,(E,E);
+  E operator->*(E,E);
+
+  void test() {
+    int i = 0;
+    // Binary operators with unsequenced operands.
+    ((void)i++,e) + ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) - ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) * ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) / ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) % ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) ^ ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) & ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) | ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+
+    ((void)i++,e) < ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) > ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) == ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) != ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) <= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) >= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+
+    // Binary operators where the RHS is sequenced before the LHS in C++17.
+    ((void)i++,e) = ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) += ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) -= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) *= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) /= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) %= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) ^= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) &= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) |= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) <<= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) >>= ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+
+    operator+=(((void)i++,e), ((void)i++,e));
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+
+    // Binary operators where the LHS is sequenced before the RHS in C++17.
+    ((void)i++,e) << ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) >> ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) || ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) && ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e) , ((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    ((void)i++,e)->*((void)i++,e);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+
+    operator<<(((void)i++,e), ((void)i++,e));
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+
+    ((void)i++,e)[((void)i++,e)];
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+
+    ((void)i++,e)(((void)i++,e));
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    e(((void)i++,e), ((void)i++,e));
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+
+    ((void)i++,e).operator()(((void)i++,e));
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+
+  }
+}
+
+namespace PR35340 {
+  struct S {};
+  S &operator<<(S &, int);
+
+  void test() {
+    S s;
+    int i = 0;
+    s << i++ << i++;
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+
+    operator<<(operator<<(s, i++), i++);
+    // cxx11-warning@-1 {{multiple unsequenced modifications to 'i'}}
+    // cxx17-warning@-2 {{multiple unsequenced modifications to 'i'}}
+  }
+}
+
 namespace members {
 
 struct S1 {
@@ -612,7 +780,6 @@ int Foo<X>::Run() {
 
   if (static_cast<E>((num = bar.get()) < 5) && static_cast<E>(num < 10)) { }
   // cxx11-warning@-1 {{unsequenced modification and access to 'num'}}
-  // cxx17-warning@-2 {{unsequenced modification and access to 'num'}}
 
   foo(num++, num++);
   // cxx11-warning@-1 {{multiple unsequenced modifications to 'num'}}
@@ -630,13 +797,11 @@ int Run2() {
   T t = static_cast<T>(0);
   return (t = static_cast<T>(1)) && t;
   // cxx11-warning@-1 {{unsequenced modification and access to 't'}}
-  // cxx17-warning@-2 {{unsequenced modification and access to 't'}}
 }
 
 int y = Run2<bool>();
 int z = Run2<E>();
 // cxx11-note@-1{{in instantiation of function template specialization 'templates::Run2<templates::E>' requested here}}
-// cxx17-note@-2{{in instantiation of function template specialization 'templates::Run2<templates::E>' requested here}}
 
 template <typename T> int var = sizeof(T);
 void test_var() {
