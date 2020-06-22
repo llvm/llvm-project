@@ -625,10 +625,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // Add HIP offloading linker script args if required.
-  AddHIPLinkerScript(getToolChain(), C, Output, Inputs, Args, CmdArgs, JA,
-                     *this);
-
   Args.AddAllArgs(CmdArgs, options::OPT_T);
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
