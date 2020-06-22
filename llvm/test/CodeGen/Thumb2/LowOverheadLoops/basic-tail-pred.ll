@@ -49,7 +49,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp7 = bitcast i8* %tmp6 to <16 x i8>*
   tail call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %mul, <16 x i8>* %tmp7, i32 4, <16 x i1> %active.lane.mask)
   %index.next = add i32 %index, 16
-  %tmp15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp14, i32 1)
+  %tmp15 = call i32 @llvm.loop.decrement.reg.i32(i32 %tmp14, i32 1)
   %tmp16 = icmp ne i32 %tmp15, 0
   br i1 %tmp16, label %vector.body, label %for.cond.cleanup
 
@@ -106,7 +106,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp7 = bitcast i16* %tmp6 to <8 x i16>*
   tail call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %mul, <8 x i16>* %tmp7, i32 4, <8 x i1> %active.lane.mask)
   %index.next = add i32 %index, 8
-  %tmp15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp14, i32 1)
+  %tmp15 = call i32 @llvm.loop.decrement.reg.i32(i32 %tmp14, i32 1)
   %tmp16 = icmp ne i32 %tmp15, 0
   br i1 %tmp16, label %vector.body, label %for.cond.cleanup
 
@@ -160,7 +160,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp7 = bitcast i32* %tmp6 to <4 x i32>*
   tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %mul, <4 x i32>* %tmp7, i32 4, <4 x i1> %active.lane.mask)
   %index.next = add i32 %index, 4
-  %tmp15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp14, i32 1)
+  %tmp15 = call i32 @llvm.loop.decrement.reg.i32(i32 %tmp14, i32 1)
   %tmp16 = icmp ne i32 %tmp15, 0
   br i1 %tmp16, label %vector.body, label %for.cond.cleanup
 
@@ -221,7 +221,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp7 = bitcast i32* %tmp6 to <4 x i32>*
   tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %combine, <4 x i32>* %tmp7, i32 4, <4 x i1> %active.lane.mask)
   %index.next = add i32 %index, 4
-  %tmp15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp14, i32 1)
+  %tmp15 = call i32 @llvm.loop.decrement.reg.i32(i32 %tmp14, i32 1)
   %tmp16 = icmp ne i32 %tmp15, 0
   br i1 %tmp16, label %vector.body, label %for.cond.cleanup
 
@@ -277,7 +277,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp7 = bitcast i32* %tmp6 to <4 x i32>*
   tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %tmp5, <4 x i32>* %tmp7, i32 4, <4 x i1> %active.lane.mask)
   %index.next = add i32 %index, 4
-  %tmp15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp14, i32 1)
+  %tmp15 = call i32 @llvm.loop.decrement.reg.i32(i32 %tmp14, i32 1)
   %tmp16 = icmp ne i32 %tmp15, 0
   br i1 %tmp16, label %vector.body, label %for.cond.cleanup
 
@@ -336,11 +336,97 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp7 = bitcast i32* %tmp6 to <4 x i32>*
   tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %tmp5, <4 x i32>* %tmp7, i32 4, <4 x i1> %wrong)
   %index.next = add i32 %index, 4
-  %tmp15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp14, i32 1)
+  %tmp15 = call i32 @llvm.loop.decrement.reg.i32(i32 %tmp14, i32 1)
   %tmp16 = icmp ne i32 %tmp15, 0
   br i1 %tmp16, label %vector.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
+  ret void
+}
+
+; TODO: Multiple intrinsics not yet supported.
+; This is currently rejected, because if the vector body is unrolled, the step
+; is not what we expect:
+;
+;   Step value 16 doesn't match vector width 4
+;
+; CHECK-LABEL: interleave4
+; CHECK: vector.body:
+; CHECK:  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+; CHECK:  %active.lane.mask{{.*}} = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %v7, i32 %trip.count.minus.1)
+; CHECK:  %active.lane.mask{{.*}} = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %v8, i32 %trip.count.minus.1)
+; CHECK:  %active.lane.mask{{.*}} = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %v9, i32 %trip.count.minus.1)
+;
+define dso_local void @interleave4(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32 %N) local_unnamed_addr #0 {
+entry:
+  %cmp8 = icmp sgt i32 %N, 0
+  %v0 = add i32 %N, 15
+  %v1 = lshr i32 %v0, 4
+  %v2 = shl nuw i32 %v1, 4
+  %v3 = add i32 %v2, -16
+  %v4 = lshr i32 %v3, 4
+  %v5 = add nuw nsw i32 %v4, 1
+  br i1 %cmp8, label %vector.ph, label %for.cond.cleanup
+
+
+vector.ph:
+  %trip.count.minus.1 = add i32 %N, -1
+  %scevgep = getelementptr i32, i32* %A, i32 8
+  %scevgep30 = getelementptr i32, i32* %C, i32 8
+  %scevgep37 = getelementptr i32, i32* %B, i32 8
+  call void @llvm.set.loop.iterations.i32(i32 %v5)
+  br label %vector.body
+
+vector.body:
+  %lsr.iv38 = phi i32* [ %scevgep39, %vector.body ], [ %scevgep37, %vector.ph ]
+  %lsr.iv31 = phi i32* [ %scevgep32, %vector.body ], [ %scevgep30, %vector.ph ]
+  %lsr.iv = phi i32* [ %scevgep25, %vector.body ], [ %scevgep, %vector.ph ]
+  %index = phi i32 [ 0, %vector.ph ], [ %v14, %vector.body ]
+  %v6 = phi i32 [ %v5, %vector.ph ], [ %v15, %vector.body ]
+  %lsr.iv3840 = bitcast i32* %lsr.iv38 to <4 x i32>*
+  %lsr.iv3133 = bitcast i32* %lsr.iv31 to <4 x i32>*
+  %lsr.iv26 = bitcast i32* %lsr.iv to <4 x i32>*
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %v7 = add i32 %index, 4
+  %active.lane.mask15 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %v7, i32 %trip.count.minus.1)
+  %v8 = add i32 %v7, 4
+  %active.lane.mask16 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %v8, i32 %trip.count.minus.1)
+  %v9 = add i32 %v8, 4
+  %active.lane.mask17 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %v9, i32 %trip.count.minus.1)
+  %scevgep42 = getelementptr <4 x i32>, <4 x i32>* %lsr.iv3840, i32 -2
+  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %scevgep42, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
+  %scevgep43 = getelementptr <4 x i32>, <4 x i32>* %lsr.iv3840, i32 -1
+  %wide.masked.load18 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* nonnull %scevgep43, i32 4, <4 x i1> %active.lane.mask15, <4 x i32> undef)
+  %wide.masked.load19 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* nonnull %lsr.iv3840, i32 4, <4 x i1> %active.lane.mask16, <4 x i32> undef)
+  %scevgep41 = getelementptr <4 x i32>, <4 x i32>* %lsr.iv3840, i32 1
+  %wide.masked.load20 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* nonnull %scevgep41, i32 4, <4 x i1> %active.lane.mask17, <4 x i32> undef)
+  %scevgep34 = getelementptr <4 x i32>, <4 x i32>* %lsr.iv3133, i32 -2
+  %wide.masked.load21 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %scevgep34, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
+  %scevgep35 = getelementptr <4 x i32>, <4 x i32>* %lsr.iv3133, i32 -1
+  %wide.masked.load22 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* nonnull %scevgep35, i32 4, <4 x i1> %active.lane.mask15, <4 x i32> undef)
+  %wide.masked.load23 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* nonnull %lsr.iv3133, i32 4, <4 x i1> %active.lane.mask16, <4 x i32> undef)
+  %scevgep36 = getelementptr <4 x i32>, <4 x i32>* %lsr.iv3133, i32 1
+  %wide.masked.load24 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* nonnull %scevgep36, i32 4, <4 x i1> %active.lane.mask17, <4 x i32> undef)
+  %v10 = add nsw <4 x i32> %wide.masked.load21, %wide.masked.load
+  %v11 = add nsw <4 x i32> %wide.masked.load22, %wide.masked.load18
+  %v12 = add nsw <4 x i32> %wide.masked.load23, %wide.masked.load19
+  %v13 = add nsw <4 x i32> %wide.masked.load24, %wide.masked.load20
+  %scevgep27 = getelementptr <4 x i32>, <4 x i32>* %lsr.iv26, i32 -2
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %v10, <4 x i32>* %scevgep27, i32 4, <4 x i1> %active.lane.mask)
+  %scevgep28 = getelementptr <4 x i32>, <4 x i32>* %lsr.iv26, i32 -1
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %v11, <4 x i32>* %scevgep28, i32 4, <4 x i1> %active.lane.mask15)
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %v12, <4 x i32>* %lsr.iv26, i32 4, <4 x i1> %active.lane.mask16)
+  %scevgep29 = getelementptr <4 x i32>, <4 x i32>* %lsr.iv26, i32 1
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %v13, <4 x i32>* %scevgep29, i32 4, <4 x i1> %active.lane.mask17)
+  %scevgep25 = getelementptr i32, i32* %lsr.iv, i32 16
+  %scevgep32 = getelementptr i32, i32* %lsr.iv31, i32 16
+  %scevgep39 = getelementptr i32, i32* %lsr.iv38, i32 16
+  %v14 = add i32 %v9, 4
+  %v15 = call i32 @llvm.loop.decrement.reg.i32(i32 %v6, i32 1)
+  %v16 = icmp ne i32 %v15, 0
+  br i1 %v16, label %vector.body, label %for.cond.cleanup
+
+for.cond.cleanup:
   ret void
 }
 
@@ -353,7 +439,7 @@ declare void @llvm.masked.store.v2i64.p0v2i64(<2 x i64>, <2 x i64>*, i32 immarg,
 declare <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>*, i32 immarg, <2 x i1>, <2 x i64>)
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
 declare void @llvm.set.loop.iterations.i32(i32)
-declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
+declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
 declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32)
