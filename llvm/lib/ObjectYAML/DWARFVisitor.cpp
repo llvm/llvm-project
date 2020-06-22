@@ -10,7 +10,8 @@
 
 #include "DWARFVisitor.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 
 using namespace llvm;
 
@@ -44,7 +45,7 @@ static unsigned getRefSize(const DWARFYAML::Unit &Unit) {
   return getOffsetSize(Unit);
 }
 
-template <typename T> void DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
+template <typename T> Error DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
   for (auto &Unit : DebugInfo.CompileUnits) {
     onStartCompileUnit(Unit);
     if (Unit.Entries.empty())
@@ -57,8 +58,8 @@ template <typename T> void DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
         continue;
 
       if (AbbrCode > DebugInfo.AbbrevDecls.size())
-        // TODO: Handle and test this error.
-        report_fatal_error(
+        return createStringError(
+            errc::invalid_argument,
             "abbrev code must be less than or equal to the number of "
             "entries in abbreviation table");
       const DWARFYAML::Abbrev &Abbrev = DebugInfo.AbbrevDecls[AbbrCode - 1];
@@ -179,6 +180,8 @@ template <typename T> void DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
     }
     onEndCompileUnit(Unit);
   }
+
+  return Error::success();
 }
 
 // Explicitly instantiate the two template expansions.
