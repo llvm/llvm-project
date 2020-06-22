@@ -837,6 +837,10 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
 def int_expect : Intrinsic<[llvm_anyint_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrWillReturn]>;
 
+def int_expect_with_probability : Intrinsic<[llvm_anyint_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>, llvm_double_ty],
+  [IntrNoMem, IntrWillReturn]>;
+
 //===-------------------- Bit Manipulation Intrinsics ---------------------===//
 //
 
