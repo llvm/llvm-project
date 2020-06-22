@@ -1003,7 +1003,7 @@ bool IsSaved(const Symbol &original) {
     } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
                block && block->attrs().test(Attr::SAVE)) {
       return true;
-    } else if (IsDummy(symbol)) {
+    } else if (IsDummy(symbol) || IsFunctionResult(symbol)) {
       return false;
     } else {
       for (; !scope->IsGlobal(); scope = &scope->parent()) {
