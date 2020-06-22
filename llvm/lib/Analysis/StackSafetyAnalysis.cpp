@@ -297,6 +297,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
   SmallPtrSet<const Value *, 16> Visited;
   SmallVector<const Value *, 8> WorkList;
   WorkList.push_back(Ptr);
+  const AllocaInst *AI = dyn_cast<AllocaInst>(Ptr);
 
   // A DFS search through all uses of the alloca in bitcasts/PHI/GEPs/etc.
   while (!WorkList.empty()) {
@@ -310,6 +311,10 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
 
       switch (I->getOpcode()) {
       case Instruction::Load: {
+        if (AI && !SL.isAliveAfter(AI, I)) {
+          US.updateRange(UnknownRange);
+          return false;
+        }
         US.updateRange(
             getAccessRange(UI, Ptr, DL.getTypeStoreSize(I->getType())));
         break;
@@ -321,6 +326,10 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
       case Instruction::Store: {
         if (V == I->getOperand(0)) {
           // Stored the pointer - conservatively assume it may be unsafe.
+          US.updateRange(UnknownRange);
+          return false;
+        }
+        if (AI && !SL.isAliveAfter(AI, I)) {
           US.updateRange(UnknownRange);
           return false;
         }
@@ -340,6 +349,11 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
       case Instruction::Invoke: {
         if (I->isLifetimeStartOrEnd())
           break;
+
+        if (AI && !SL.isAliveAfter(AI, I)) {
+          US.updateRange(UnknownRange);
+          return false;
+        }
 
         if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
           US.updateRange(getMemIntrinsicAccessRange(MI, UI, Ptr));
