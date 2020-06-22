@@ -12,6 +12,9 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 
+// FixItHint - Hint to check documentation script to mark this check as
+// providing a FixIt.
+
 namespace clang {
 namespace tidy {
 namespace llvm_libc {
