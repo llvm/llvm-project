@@ -545,6 +545,23 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       if (!call.arguments().empty()) {
         return (*this)(call.arguments()[0]);
       }
+    } else if (intrinsic->name == "matmul") {
+      if (call.arguments().size() == 2) {
+        if (auto ashape{(*this)(call.arguments()[0])}) {
+          if (auto bshape{(*this)(call.arguments()[1])}) {
+            if (ashape->size() == 1 && bshape->size() == 2) {
+              bshape->erase(bshape->begin());
+              return std::move(*bshape); // matmul(vector, matrix)
+            } else if (ashape->size() == 2 && bshape->size() == 1) {
+              ashape->pop_back();
+              return std::move(*ashape); // matmul(matrix, vector)
+            } else if (ashape->size() == 2 && bshape->size() == 2) {
+              (*ashape)[1] = std::move((*bshape)[1]);
+              return std::move(*ashape); // matmul(matrix, matrix)
+            }
+          }
+        }
+      }
     } else if (intrinsic->name == "reshape") {
       if (call.arguments().size() >= 2 && call.arguments().at(1)) {
         // SHAPE(RESHAPE(array,shape)) -> shape
