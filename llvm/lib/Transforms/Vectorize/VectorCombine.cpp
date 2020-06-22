@@ -65,8 +65,6 @@ private:
                              unsigned Opcode,
                              ExtractElementInst *&ConvertToShuffle,
                              unsigned PreferredExtractIndex);
-  ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
-                                       unsigned NewIndex);
   void foldExtExtCmp(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
                      Instruction &I);
   void foldExtExtBinop(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
@@ -190,12 +188,27 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   return OldCost < NewCost;
 }
 
+/// Create a shuffle that translates (shifts) 1 element from the input vector
+/// to a new element location.
+static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
+                                 unsigned NewIndex, IRBuilder<> &Builder) {
+  // The shuffle mask is undefined except for 1 lane that is being translated
+  // to the new element index. Example for OldIndex == 2 and NewIndex == 0:
+  // ShufMask = { 2, undef, undef, undef }
+  auto *VecTy = cast<FixedVectorType>(Vec->getType());
+  SmallVector<int, 32> ShufMask(VecTy->getNumElements(), -1);
+  ShufMask[NewIndex] = OldIndex;
+  Value *Undef = UndefValue::get(VecTy);
+  return Builder.CreateShuffleVector(Vec, Undef, ShufMask, "shift");
+}
+
 /// Given an extract element instruction with constant index operand, shuffle
 /// the source vector (shift the scalar element) to a NewIndex for extraction.
 /// Return null if the input can be constant folded, so that we are not creating
 /// unnecessary instructions.
-ExtractElementInst *VectorCombine::translateExtract(ExtractElementInst *ExtElt,
-                                                    unsigned NewIndex) {
+static ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
+                                            unsigned NewIndex,
+                                            IRBuilder<> &Builder) {
   // If the extract can be constant-folded, this code is unsimplified. Defer
   // to other passes to handle that.
   Value *X = ExtElt->getVectorOperand();
@@ -204,16 +217,8 @@ ExtractElementInst *VectorCombine::translateExtract(ExtractElementInst *ExtElt,
   if (isa<Constant>(X))
     return nullptr;
 
-  // The shuffle mask is undefined except for 1 lane that is being translated
-  // to the cheap extraction lane. Example:
-  // ShufMask = { 2, undef, undef, undef }
-  auto *VecTy = cast<FixedVectorType>(X->getType());
-  SmallVector<int, 32> Mask(VecTy->getNumElements(), -1);
-  Mask[NewIndex] = cast<ConstantInt>(C)->getZExtValue();
-
-  // extelt X, C --> extelt (shuffle X), NewIndex
-  Value *Shuf =
-      Builder.CreateShuffleVector(X, UndefValue::get(VecTy), Mask, "shift");
+  Value *Shuf = createShiftShuffle(X, cast<ConstantInt>(C)->getZExtValue(),
+                                   NewIndex, Builder);
   return cast<ExtractElementInst>(Builder.CreateExtractElement(Shuf, NewIndex));
 }
 
@@ -301,7 +306,7 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
   if (ExtractToChange) {
     unsigned CheapExtractIdx = ExtractToChange == Ext0 ? C1 : C0;
     ExtractElementInst *NewExtract =
-        translateExtract(ExtractToChange, CheapExtractIdx);
+        translateExtract(ExtractToChange, CheapExtractIdx, Builder);
     if (!NewExtract)
       return false;
     if (ExtractToChange == Ext0)
