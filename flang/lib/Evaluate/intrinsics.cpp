@@ -496,28 +496,28 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"logical", {{"l", AnyLogical}, DefaultingKIND}, KINDLogical},
     {"log_gamma", {{"x", SameReal}}, SameReal},
     {"matmul",
-        {{"array_a", AnyLogical, Rank::vector},
-            {"array_b", AnyLogical, Rank::matrix}},
+        {{"matrix_a", AnyLogical, Rank::vector},
+            {"matrix_b", AnyLogical, Rank::matrix}},
         ResultLogical, Rank::vector, IntrinsicClass::transformationalFunction},
     {"matmul",
-        {{"array_a", AnyLogical, Rank::matrix},
-            {"array_b", AnyLogical, Rank::vector}},
+        {{"matrix_a", AnyLogical, Rank::matrix},
+            {"matrix_b", AnyLogical, Rank::vector}},
         ResultLogical, Rank::vector, IntrinsicClass::transformationalFunction},
     {"matmul",
-        {{"array_a", AnyLogical, Rank::matrix},
-            {"array_b", AnyLogical, Rank::matrix}},
+        {{"matrix_a", AnyLogical, Rank::matrix},
+            {"matrix_b", AnyLogical, Rank::matrix}},
         ResultLogical, Rank::matrix, IntrinsicClass::transformationalFunction},
     {"matmul",
-        {{"array_a", AnyNumeric, Rank::vector},
-            {"array_b", AnyNumeric, Rank::matrix}},
+        {{"matrix_a", AnyNumeric, Rank::vector},
+            {"matrix_b", AnyNumeric, Rank::matrix}},
         ResultNumeric, Rank::vector, IntrinsicClass::transformationalFunction},
     {"matmul",
-        {{"array_a", AnyNumeric, Rank::matrix},
-            {"array_b", AnyNumeric, Rank::vector}},
+        {{"matrix_a", AnyNumeric, Rank::matrix},
+            {"matrix_b", AnyNumeric, Rank::vector}},
         ResultNumeric, Rank::vector, IntrinsicClass::transformationalFunction},
     {"matmul",
-        {{"array_a", AnyNumeric, Rank::matrix},
-            {"array_b", AnyNumeric, Rank::matrix}},
+        {{"matrix_a", AnyNumeric, Rank::matrix},
+            {"matrix_b", AnyNumeric, Rank::matrix}},
         ResultNumeric, Rank::matrix, IntrinsicClass::transformationalFunction},
     {"maskl", {{"i", AnyInt}, DefaultingKIND}, KINDInt},
     {"maskr", {{"i", AnyInt}, DefaultingKIND}, KINDInt},
@@ -1904,7 +1904,6 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   }
 
   if (call.isSubroutineCall) {
-    parser::Messages buffer;
     auto subrRange{subroutines_.equal_range(call.name)};
     for (auto iter{subrRange.first}; iter != subrRange.second; ++iter) {
       if (auto specificCall{
