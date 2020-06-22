@@ -87,7 +87,7 @@ protected:
 public:
   DarwinTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
-    // By default, no TLS, and we whitelist permitted architecture/OS
+    // By default, no TLS, and we list permitted architecture/OS
     // combinations.
     this->TLSSupported = false;
 
