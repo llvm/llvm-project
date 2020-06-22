@@ -610,3 +610,54 @@ entry:
   store atomic i8 3, i8* %P2 unordered, align 4
   ret void
 }
+
+; Some tests where volatile may block removing a store.
+define void @test44_volatile(i32* %P) {
+; CHECK-LABEL: @test44_volatile(
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 1, i32* %P, align 4
+  store volatile i32 2, i32* %P, align 4
+  store i32 3, i32* %P, align 4
+  ret void
+}
+
+define void @test45_volatile(i32* %P) {
+; CHECK-LABEL: @test45_volatile(
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 1, i32* %P, align 4
+  store volatile i32 2, i32* %P, align 4
+  store volatile i32 3, i32* %P, align 4
+  ret void
+}
+
+define void @test46_volatile(i32* %P) {
+; CHECK-LABEL: @test46_volatile(
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store volatile i32 2, i32* %P, align 4
+  store i32 1, i32* %P, align 4
+  store volatile i32 3, i32* %P, align 4
+  ret void
+}
+
+define void @test47_volatile(i32* %P) {
+; CHECK-LABEL: @test47_volatile(
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store volatile i32 2, i32* %P, align 4
+  store volatile i32 3, i32* %P, align 4
+  ret void
+}
