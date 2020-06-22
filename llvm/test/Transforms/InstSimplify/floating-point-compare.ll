@@ -205,9 +205,7 @@ define i1 @orderedLessZeroTree(float,float,float,float) {
 
 define i1 @orderedLessZero_fdiv(float %x) {
 ; CHECK-LABEL: @orderedLessZero_fdiv(
-; CHECK-NEXT:    [[D:%.*]] = fdiv float [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[UGE:%.*]] = fcmp uge float [[D]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[UGE]]
+; CHECK-NEXT:    ret i1 true
 ;
   %d = fdiv float %x, %x
   %uge = fcmp uge float %d, 0.0
