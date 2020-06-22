@@ -744,7 +744,7 @@ static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getUniqueNonLatchExitBlocks(ExitBlocks);
   if (any_of(ExitBlocks, [](const BasicBlock *EB) {
-        return !EB->getPostdominatingDeoptimizeCall();
+        return !EB->getTerminatingDeoptimizeCall();
       }))
     return nullptr;
 
