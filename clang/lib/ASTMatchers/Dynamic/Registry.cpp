@@ -151,6 +151,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(characterLiteral);
   REGISTER_MATCHER(chooseExpr);
   REGISTER_MATCHER(classTemplateDecl);
+  REGISTER_MATCHER(classTemplatePartialSpecializationDecl);
   REGISTER_MATCHER(classTemplateSpecializationDecl);
   REGISTER_MATCHER(complexType);
   REGISTER_MATCHER(compoundLiteralExpr);
@@ -219,7 +220,6 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(floatLiteral);
   REGISTER_MATCHER(forEach);
   REGISTER_MATCHER(forEachArgumentWithParam);
-  REGISTER_MATCHER(isAtPosition);
   REGISTER_MATCHER(forEachConstructorInitializer);
   REGISTER_MATCHER(forEachDescendant);
   REGISTER_MATCHER(forEachOverridden);
@@ -353,6 +353,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isArray);
   REGISTER_MATCHER(isArrow);
   REGISTER_MATCHER(isAssignmentOperator);
+  REGISTER_MATCHER(isAtPosition);
   REGISTER_MATCHER(isBaseInitializer);
   REGISTER_MATCHER(isBitField);
   REGISTER_MATCHER(isCatchAll);
@@ -370,7 +371,9 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isDefinition);
   REGISTER_MATCHER(isDelegatingConstructor);
   REGISTER_MATCHER(isDeleted);
+  REGISTER_MATCHER(isEnum);
   REGISTER_MATCHER(isExceptionVariable);
+  REGISTER_MATCHER(isExpandedFromMacro);
   REGISTER_MATCHER(isExpansionInFileMatching);
   REGISTER_MATCHER(isExpansionInMainFile);
   REGISTER_MATCHER(isExpansionInSystemHeader);

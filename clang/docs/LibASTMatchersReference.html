@@ -1226,6 +1226,11 @@ Example matches std::string()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('fixedPointLiteral0')"><a name="fixedPointLiteral0Anchor">fixedPointLiteral</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FixedPointLiteral.html">FixedPointLiteral</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="fixedPointLiteral0"><pre>Matches fixed point literals
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('floatLiteral0')"><a name="floatLiteral0Anchor">floatLiteral</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="floatLiteral0"><pre>Matches float literals of all sizes / encodings, e.g.
 1.0, 1.0f, 1.0L and 1e10.
@@ -4016,6 +4021,23 @@ is equivalent to parmVarDecl(hasDefaultArgument()).
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt;</td><td class="name" onclick="toggle('isAtPosition0')"><a name="isAtPosition0Anchor">isAtPosition</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="isAtPosition0"><pre>Matches the ParmVarDecl nodes that are at the N'th position in the parameter
+list. The parameter list could be that of either a block, function, or
+objc-method.
+
+
+Given
+
+void f(int a, int b, int c) {
+}
+
+``parmVarDecl(isAtPosition(0))`` matches ``int a``.
+
+``parmVarDecl(isAtPosition(1))`` matches ``int b``.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('asString0')"><a name="asString0Anchor">asString</a></td><td>std::string Name</td></tr>
 <tr><td colspan="4" class="doc" id="asString0"><pre>Matches if the matched type is represented by the given string.
 
@@ -4753,23 +4775,6 @@ cxxRecordDecl(hasName("::X"), isTemplateInstantiation())
   does not match, as X&lt;A&gt; is an explicit template specialization.
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;clang::ParmVarDecl&gt;</td><td class="name" onclick="toggle('isAtPosition0')"><a name="isAtPosition0Anchor">isAtPosition</a></td><td>unsigned N</td></tr>
-<tr><td colspan="4" class="doc" id="isAtPosition0"><pre>Matches the ParmVarDecl nodes that are at the N'th position in the parameter
-list. The parameter list could be that of either a block, function, or
-objc-method.
-
-
-Given
-
-void f(int a, int b, int c) {
-}
-
-``parmVarDecl(isAtPosition(0))`` matches ``int a``.
-
-``parmVarDecl(isAtPosition(1))`` matches ``int b``.
 </pre></td></tr>
 
 <!--END_NARROWING_MATCHERS -->
@@ -5632,13 +5637,14 @@ cxxNewExpr(hasPlacementArg(1, integerLiteral(equals(16))))
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyBase0')"><a name="hasAnyBase0Anchor">hasAnyBase</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXBaseSpecifier.html">CXXBaseSpecifier</a>&gt; BaseSpecMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyBase0"><pre>Matches C++ classes that have a direct or indirect base matching BaseSpecMatcher.
 
-Example matches DirectlyDerived, IndirectlyDerived (BaseSpecMatcher ==
-hasType(cxxRecordDecl(hasName("SpecialBase")))) class Foo;
+Example:
+matcher hasAnyBase(hasType(cxxRecordDecl(hasName("SpecialBase")))))
+  class Foo;
   class Bar : Foo {};
   class Baz : Bar {};
   class SpecialBase;
-  class DirectlyDerived : SpecialBase {};  // directly derived
-  class IndirectlyDerived : DirectlyDerived {};  // indirectly derived
+  class Proxy : SpecialBase {};  // matches Proxy
+  class IndirectlyDerived : Proxy {};  //matches IndirectlyDerived
 
 FIXME: Refactor this and isDerivedFrom to reuse implementation.
 </pre></td></tr>
