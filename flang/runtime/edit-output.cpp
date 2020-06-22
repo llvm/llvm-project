@@ -205,7 +205,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   while (true) {
     decimal::ConversionToDecimalResult converted{
         Convert(significantDigits, edit, flags)};
-    if (converted.length > 0 && !IsDecimalNumber(converted.str)) { // Inf, NaN
+    if (IsInfOrNaN(converted)) {
       return EmitPrefix(edit, converted.length, editWidth) &&
           io_.Emit(converted.str, converted.length) && EmitSuffix(edit);
     }
@@ -260,8 +260,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
 template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
   int fracDigits{edit.digits.value_or(0)}; // 'd' field
-  int extraDigits{0};
-  int editWidth{edit.width.value_or(0)}; // 'w' field
+  const int editWidth{edit.width.value_or(0)}; // 'w' field
   int flags{0};
   if (editWidth == 0) { // "the processor selects the field width"
     if (!edit.digits.has_value()) { // F0
@@ -271,27 +270,31 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
   }
   // Multiple conversions may be needed to get the right number of
   // effective rounded fractional digits.
+  int extraDigits{0};
   while (true) {
     decimal::ConversionToDecimalResult converted{
         Convert(extraDigits + fracDigits, edit, flags)};
-    if (converted.length > 0 && !IsDecimalNumber(converted.str)) { // Inf, NaN
+    if (IsInfOrNaN(converted)) {
       return EmitPrefix(edit, converted.length, editWidth) &&
           io_.Emit(converted.str, converted.length) && EmitSuffix(edit);
     }
     int scale{IsZero() ? -1 : edit.modes.scale};
     int expo{converted.decimalExponent - scale};
-    if (expo > extraDigits) {
+    if (expo > extraDigits && extraDigits >= 0) {
       extraDigits = expo;
-      if (flags & decimal::Minimize) {
+      if (!edit.digits.has_value()) { // F0
         fracDigits = sizeof buffer_ - extraDigits - 2; // sign & NUL
       }
-      continue; // try again
+      continue;
+    } else if (expo < extraDigits && extraDigits > -fracDigits) {
+      extraDigits = std::max(expo, -fracDigits);
+      continue;
     }
     int signLength{*converted.str == '-' || *converted.str == '+' ? 1 : 0};
     int convertedDigits{static_cast<int>(converted.length) - signLength};
     int digitsBeforePoint{std::max(0, std::min(expo, convertedDigits))};
     int zeroesBeforePoint{std::max(0, expo - digitsBeforePoint)};
-    int zeroesAfterPoint{std::max(0, -expo)};
+    int zeroesAfterPoint{std::min(fracDigits, std::max(0, -expo))};
     int digitsAfterPoint{convertedDigits - digitsBeforePoint};
     int trailingZeroes{flags & decimal::Minimize
             ? 0
@@ -299,7 +302,7 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
     if (digitsBeforePoint + zeroesBeforePoint + zeroesAfterPoint +
             digitsAfterPoint + trailingZeroes ==
         0) {
-      ++zeroesBeforePoint; // "." -> "0."
+      zeroesBeforePoint = 1; // "." -> "0."
     }
     int totalLength{signLength + digitsBeforePoint + zeroesBeforePoint +
         1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes};
@@ -332,7 +335,7 @@ DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
     return edit; // Gw.0 -> Ew.0 for w > 0
   }
   decimal::ConversionToDecimalResult converted{Convert(1, edit)};
-  if (!IsDecimalNumber(converted.str)) { // Inf, NaN
+  if (IsInfOrNaN(converted)) {
     return edit;
   }
   int expo{IsZero() ? 1 : converted.decimalExponent}; // 's'
@@ -361,7 +364,7 @@ template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditListDirectedOutput(
     const DataEdit &edit) {
   decimal::ConversionToDecimalResult converted{Convert(1, edit)};
-  if (!IsDecimalNumber(converted.str)) { // Inf, NaN
+  if (IsInfOrNaN(converted)) {
     return EditEorDOutput(edit);
   }
   int expo{converted.decimalExponent};
