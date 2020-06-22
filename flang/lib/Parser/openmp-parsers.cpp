@@ -298,9 +298,19 @@ TYPE_PARSER(sourced(construct<OpenMPCancellationPointConstruct>(
 TYPE_PARSER(sourced(construct<OpenMPCancelConstruct>(verbatim("CANCEL"_tok),
     Parser<OmpCancelType>{}, maybe("IF" >> parenthesized(scalarLogicalExpr)))))
 
-// 2.13.7 Flush construct
-TYPE_PARSER(sourced(construct<OpenMPFlushConstruct>(
-    verbatim("FLUSH"_tok), maybe(parenthesized(Parser<OmpObjectList>{})))))
+// 2.18.8 Flush construct
+//        flush -> FLUSH [memory-order-clause] [(variable-name-list)]
+//        memory-order-clause -> acq_rel
+//                               release
+//                               acquire
+TYPE_PARSER(sourced(construct<OmpFlushMemoryClause>(
+    "ACQ_REL" >> pure(OmpFlushMemoryClause::FlushMemoryOrder::AcqRel) ||
+    "RELEASE" >> pure(OmpFlushMemoryClause::FlushMemoryOrder::Release) ||
+    "ACQUIRE" >> pure(OmpFlushMemoryClause::FlushMemoryOrder::Acquire))))
+
+TYPE_PARSER(sourced(construct<OpenMPFlushConstruct>(verbatim("FLUSH"_tok),
+    maybe(Parser<OmpFlushMemoryClause>{}),
+    maybe(parenthesized(Parser<OmpObjectList>{})))))
 
 // Simple Standalone Directives
 TYPE_PARSER(sourced(construct<OmpSimpleStandaloneDirective>(first(
