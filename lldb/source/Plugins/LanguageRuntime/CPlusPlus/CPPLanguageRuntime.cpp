@@ -43,7 +43,7 @@ CPPLanguageRuntime::~CPPLanguageRuntime() {}
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {}
 
-bool CPPLanguageRuntime::IsWhitelistedRuntimeValue(ConstString name) {
+bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
   return name == g_this;
 }
 
