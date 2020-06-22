@@ -24,5 +24,5 @@ void test() {
 
 // This test is passed if exploded_graph_rewriter handles dot file without errors.
 // CHECK: digraph "ExplodedGraph"
-// CHECK: clang\\test\\Analysis\\exploded-graph-rewriter\\l_name_starts_with_l.cpp";
+// CHECK: shape=record,label=<<table border="0">
 // CHECK: char text[] = "string\\literal";
