@@ -399,6 +399,11 @@ BUILTIN(__builtin_vsx_xvcpsgnsp, "V4fV4fV4f", "")
 BUILTIN(__builtin_vsx_xvabssp, "V4fV4f", "")
 BUILTIN(__builtin_vsx_xvabsdp, "V2dV2d", "")
 
+BUILTIN(__builtin_vsx_xxgenpcvbm, "V16UcV16Uci", "")
+BUILTIN(__builtin_vsx_xxgenpcvhm, "V8UsV8Usi", "")
+BUILTIN(__builtin_vsx_xxgenpcvwm, "V4UiV4Uii", "")
+BUILTIN(__builtin_vsx_xxgenpcvdm, "V2ULLiV2ULLii", "")
+
 // vector Insert/Extract exponent/significand builtins
 BUILTIN(__builtin_vsx_xviexpdp, "V2dV2ULLiV2ULLi", "")
 BUILTIN(__builtin_vsx_xviexpsp, "V4fV4UiV4Ui", "")
