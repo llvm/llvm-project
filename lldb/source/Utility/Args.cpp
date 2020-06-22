@@ -546,7 +546,7 @@ void Args::ExpandEscapedCharacters(const char *src, std::string &dst) {
   dst.clear();
   if (src) {
     for (const char *p = src; *p != '\0'; ++p) {
-      if (isprint(*p))
+      if (llvm::isPrint(*p))
         dst.append(1, *p);
       else {
         switch (*p) {
