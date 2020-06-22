@@ -1,0 +1,550 @@
+## Test that yaml2obj emits .debug_info section.
+
+## a) Generate the .debug_info section from the "DWARF" entry.
+
+## Generate and verify a DWARF32 little endian .debug_info (DWARFv5) section.
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB %s -o %t1.le.o
+# RUN: llvm-readobj --sections --section-data %t1.le.o | \
+# RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9A -DSIZE=171 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-LE-CONTENT
+
+#                    SHDR: Index: [[INDEX]]
+#               SHDR-NEXT: Name: .debug_info ([[NAME]])
+#               SHDR-NEXT: Type: SHT_PROGBITS (0x1)
+#               SHDR-NEXT: Flags [ (0x0)
+#               SHDR-NEXT: ]
+#               SHDR-NEXT: Address: 0x0
+#               SHDR-NEXT: Offset: [[OFFSET]]
+#               SHDR-NEXT: Size: [[SIZE]]
+#               SHDR-NEXT: Link: 0
+#               SHDR-NEXT: Info: 0
+#               SHDR-NEXT: AddressAlignment: [[ADDRALIGN]]
+#               SHDR-NEXT: EntrySize: 0
+# DWARF32-LE-CONTENT-NEXT: SectionData (
+# DWARF32-LE-CONTENT-NEXT:   0000: 34120000 05000204 34120000 01785634
+##                                 ^-------                            unit_length (4-byte)
+##                                          ^---                       version (2-byte)
+##                                              ^-                     unit_type (1-byte) DW_UT_type
+##                                                ^-                   address_size (1-byte)
+##                                                   ^-------          debug_abbrev_offset (4-byte)
+##                                                            ^-       abbreviation code (LEB128) 0x01
+##                                                              ^----- Form: DW_FORM_addr (4-byte)
+# DWARF32-LE-CONTENT-NEXT:   0010: 12020012 34020000 00123434 12785634
+##                                 --
+##                                   ^---                              Form: DW_FORM_block2 size (2-byte)
+##                                       ^- ^-                         Form: DW_FORM_block2 body (2-byte)
+##                                            ^--------                Form: DW_FORM_block4 size (4-byte)
+##                                                     ^-^-            Form: DW_FORM_block4 body (2-byte)
+##                                                         ^----       Form: DW_FORM_data2 (2-byte)
+##                                                              ^----- Form: DW_FORM_data4 (4-byte)
+# DWARF32-LE-CONTENT-NEXT:   0020: 12F0DEBC 9A785634 12616263 64000212
+##                                 --
+##                                   ^-----------------                Form: DW_FORM_data8 (8-byte)
+##                                                     ^----------     Form: DW_FORM_string "abcd\0"
+##                                                                ^-   Form: DW_FORM_block size (ULEB128)
+##                                                                  ^- Form: DW_FORM_block body (2-byte)
+# DWARF32-LE-CONTENT-NEXT:   0030: 34021234 1201B424 78563412 B4247856
+##                                 ^-                                  Form: DW_FORM_block body
+##                                   ^-                                Form: DW_FORM_block1 size (1-byte)
+##                                     ^-^-                            Form: DW_FORM_block1 body (2-byte)
+##                                          ^-                         Form: DW_FORM_data1 (1-byte)
+##                                            ^-                       Form: DW_FORM_flag (1-byte)
+##                                              ^---                   Form: DW_FORM_sdata (SLEB128) 0x1234
+##                                                   ^-------          Form: DW_FORM_strp (4-byte)
+##                                                            ^---     Form: DW_FORM_udata (ULEB128) 0x1234
+##                                                                ^--- Form: DW_FORM_ref_addr (4-byte)
+# DWARF32-LE-CONTENT-NEXT:   0040: 34121234 12785634 12F0DEBC 9A785634
+##                                 ----
+##                                     ^-                              Form: DW_FORM_ref1 (1-byte)
+##                                       ^----                         Form: DW_FORM_ref2 (2-byte)
+##                                            ^--------                Form: DW_FORM_ref4 (4-byte)
+##                                                     ^-------------- Form: DW_FORM_ref8 (8-byte)
+# DWARF32-LE-CONTENT-NEXT:   0050: 12B42408 65666768 00341200 00021234
+##                                 --
+##                                   ^---                              Form: DW_FORM_ref_udata (ULEB128) 0x1234
+##                                       ^-                            Form: DW_FORM_indirect (ULEB128) DW_FORM_string
+##                                          ^----------                "efgh\0"
+##                                                     ^--------       Form: DW_FORM_sec_offset (4-byte)
+##                                                              ^-     Form: DW_FORM_exprloc size (ULEB128) 0x02
+##                                                                ^-^- Form: DW_FORM_exprloc body (2-byte)
+# DWARF32-LE-CONTENT-NEXT:   0060: 78563412 78563412 78563412 F0DEBC9A
+##                                 ^-------                            Form: DW_FORM_ref_sup4 (4-byte)
+##                                          ^-------                   Form: DW_FORM_strp_sup (4-byte)
+##                                                   ^-------          Form: DW_FORM_line_strp (4-byte)
+##                                                            ^------- Form: DW_FORM_ref_sig8 (8-byte)
+# DWARF32-LE-CONTENT-NEXT:   0070: 78563412 F0DEBC9A 78563412 12341278
+##                                 --------
+##                                          ^----------------          Form: DW_FORM_ref_sup8 (8-byte)
+##                                                            ^-       Form: DW_FORM_strx1 (1-byte)
+##                                                              ^---   Form: DW_FORM_strx2 (2-byte)
+##                                                                  ^- Form: DW_FORM_strx4 (4-byte)
+# DWARF32-LE-CONTENT-NEXT:   0080: 56341212 34127856 34123412 00000500
+##                                 ------
+##                                       ^-                            Form: DW_FORM_addrx1 (1-byte)
+##                                          ^---                       From: DW_FORM_addrx2 (2-byte)
+##                                              ^--------              Form: DW_FORM_addrx4 (4-byte)
+##                                                       ^--------     unit_length (4-byte)
+##                                                                ^--- version (2-byte)
+# DWARF32-LE-CONTENT-NEXT:   0090: 01043412 00000078 56000004 00785600
+##                                 ^-                                  unit_type (1-byte) DW_UT_compile
+##                                   ^-                                address_size (4-byte)
+##                                     ^--------                       debug_abbrev_offset (4-byte)
+##                                              ^--------              unit_length (4-byte)
+##                                                       ^---          version (2-byte)
+##                                                            ^-       abbreviation code (ULEB128)
+##                                                              ^----- debug_abbrev_offset (4-byte)
+# DWARF32-LE-CONTENT-NEXT:   00A0: 00040178 56341202 001234
+##                                 --
+##                                   ^-                                  address_size (1-byte)
+##                                     ^-                                abbreviation code (ULEB128) 0x01
+##                                       ^--------                       Form: DW_FORM_addr (4-byte)
+##                                                ^----                  Form: DW_FORM_block2 size (2-byte)
+##                                                     ^-^-              Form: DW_FORM_block2 body (2-byte)
+# DWARF32-LE-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    [[ENDIAN]]
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Code:     1
+      Tag:      DW_TAG_compile_unit
+      Children: DW_CHILDREN_no
+      Attributes:
+        - Attribute: 0x01
+          Form:      DW_FORM_addr           ## 0x01
+        - Attribute: 0x01
+          Form:      DW_FORM_block2         ## 0x03
+        - Attribute: 0x01
+          Form:      DW_FORM_block4         ## 0x04
+        - Attribute: 0x01
+          Form:      DW_FORM_data2          ## 0x05
+        - Attribute: 0x01
+          Form:      DW_FORM_data4          ## 0x06
+        - Attribute: 0x01
+          Form:      DW_FORM_data8          ## 0x07
+        - Attribute: 0x01
+          Form:      DW_FORM_string         ## 0x08
+        - Attribute: 0x01
+          Form:      DW_FORM_block          ## 0x09
+        - Attribute: 0x01
+          Form:      DW_FORM_block1         ## 0x0a
+        - Attribute: 0x01
+          Form:      DW_FORM_data1          ## 0x0b
+        - Attribute: 0x01
+          Form:      DW_FORM_flag           ## 0x0c
+        - Attribute: 0x01
+          Form:      DW_FORM_sdata          ## 0x0d
+        - Attribute: 0x01
+          Form:      DW_FORM_strp           ## 0x0e
+        - Attribute: 0x01
+          Form:      DW_FORM_udata          ## 0x0f
+        - Attribute: 0x01
+          Form:      DW_FORM_ref_addr       ## 0x10
+        - Attribute: 0x01
+          Form:      DW_FORM_ref1           ## 0x11
+        - Attribute: 0x01
+          Form:      DW_FORM_ref2           ## 0x12
+        - Attribute: 0x01
+          Form:      DW_FORM_ref4           ## 0x13
+        - Attribute: 0x01
+          Form:      DW_FORM_ref8           ## 0x14
+        - Attribute: 0x01
+          Form:      DW_FORM_ref_udata      ## 0x15
+        - Attribute: 0x01
+          Form:      DW_FORM_indirect       ## 0x16
+        - Attribute: 0x01
+          Form:      DW_FORM_sec_offset     ## 0x17
+        - Attribute: 0x01
+          Form:      DW_FORM_exprloc        ## 0x18
+        - Attribute: 0x01
+          Form:      DW_FORM_strx           ## 0x1a
+        - Attribute: 0x01
+          Form:      DW_FORM_addrx          ## 0x1b
+        - Attribute: 0x01
+          Form:      DW_FORM_ref_sup4       ## 0x1c
+        - Attribute: 0x01
+          Form:      DW_FORM_strp_sup       ## 0x1d
+        - Attribute: 0x01
+          Form:      DW_FORM_data16         ## 0x1e
+        - Attribute: 0x01
+          Form:      DW_FORM_line_strp      ## 0x1f
+        - Attribute: 0x01
+          Form:      DW_FORM_ref_sig8       ## 0x20
+        - Attribute: 0x01
+          Form:      DW_FORM_implicit_const ## 0x21
+          Value:     0x01
+        - Attribute: 0x01
+          Form:      DW_FORM_loclistx       ## 0x22
+        - Attribute: 0x01
+          Form:      DW_FORM_rnglistx       ## 0x23
+        - Attribute: 0x01
+          Form:      DW_FORM_ref_sup8       ## 0x24
+        - Attribute: 0x01
+          Form:      DW_FORM_strx1          ## 0x25
+        - Attribute: 0x01
+          Form:      DW_FORM_strx2          ## 0x26
+        - Attribute: 0x01
+          Form:      DW_FORM_strx3          ## 0x27
+        - Attribute: 0x01
+          Form:      DW_FORM_strx4          ## 0x28
+        - Attribute: 0x01
+          Form:      DW_FORM_addrx1         ## 0x29
+        - Attribute: 0x01
+          Form:      DW_FORM_addrx2         ## 0x2a
+        - Attribute: 0x01
+          Form:      DW_FORM_addrx3         ## 0x2b
+        - Attribute: 0x01
+          Form:      DW_FORM_addrx4         ## 0x2c
+  debug_info:
+    - Length:
+        TotalLength: 0x1234
+      Version:    5
+      UnitType:   DW_UT_type
+      AbbrOffset: 0x1234
+      AddrSize:   4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x12345678         ## DW_FORM_addr
+            - BlockData:                ## DW_FORM_block2
+                - 0x12
+                - 0x34
+            - BlockData:                ## DW_FORM_block4
+                - 0x12
+                - 0x34
+            - Value: 0x1234             ## DW_FORM_data2
+            - Value: 0x12345678         ## DW_FORM_data4
+            - Value: 0x123456789abcdef0 ## DW_FORM_data8
+            - CStr:  abcd               ## DW_FORM_string
+            - BlockData:                ## DW_FORM_block
+                - 0x12
+                - 0x34
+            - BlockData:                ## DW_FORM_block1
+                - 0x12
+                - 0x34
+            - Value: 0x12               ## DW_FORM_data1
+            - Value: 0x01               ## DW_FORM_flag
+            - Value: 0x1234             ## DW_FORM_sdata
+            - Value: 0x12345678         ## DW_FORM_strp
+            - Value: 0x1234             ## DW_FORM_udata
+            - Value: 0x12345678         ## DW_FORM_ref_addr
+            - Value: 0x12               ## DW_FORM_ref1
+            - Value: 0x1234             ## DW_FORM_ref2
+            - Value: 0x12345678         ## DW_FORM_ref4
+            - Value: 0x123456789abcdef0 ## DW_FORM_ref8
+            - Value: 0x1234             ## DW_FORM_ref_udata
+            - Value: 0x08               ## DW_FORM_indirect. The following value's form is 0x08, which is DW_FORM_string.
+            - CStr:  efgh
+            - Value: 0x1234             ## DW_FORM_sec_offset
+            - BlockData:                ## DW_FORM_exprloc
+                - 0x12
+                - 0x34
+            - Value: 0x1234             ## DW_FORM_strx (unimplemented)
+            - Value: 0x1234             ## DW_FORM_addrx (unimplemented)
+            - Value: 0x12345678         ## DW_FORM_ref_sup4
+            - Value: 0x12345678         ## DW_FORM_strp_sup
+            - Value: 0x1234             ## DW_FORM_data16 (unimplemented)
+            - Value: 0x12345678         ## DW_FORM_line_strp
+            - Value: 0x123456789abcdef0 ## DW_FORM_ref_sig8
+            - Value: 0x1234             ## DW_FORM_implicit_const (unimplemented)
+            - Value: 0x1234             ## DW_FORM_loclistx (unimplemented)
+            - Value: 0x1234             ## DW_FORM_rnglistx (unimplemented)
+            - Value: 0x123456789abcdef0 ## DW_FORM_ref_sup8
+            - Value: 0x12               ## DW_FORM_strx1
+            - Value: 0x1234             ## DW_FORM_strx2
+            - Value: 0x123456           ## DW_FORM_strx3 (unimplemented)
+            - Value: 0x12345678         ## DW_FORM_strx4
+            - Value: 0x12               ## DW_FORM_addrx1
+            - Value: 0x1234             ## DW_FORM_addrx2
+            - Value: 0x123456           ## DW_FORM_addrx3 (unimplemented)
+            - Value: 0x12345678         ## DW_FORM_addrx4
+    - Length:
+        TotalLength: 0x1234
+      Version:    5
+      ## Test another unit type.
+      UnitType:   DW_UT_compile
+      AbbrOffset: 0x1234
+      AddrSize:   4
+      Entries:
+        - AbbrCode: 0
+          Values:   []
+    - Length:
+        TotalLength: 0x5678
+      ## Test DWARFv4
+      Version:    4
+      AbbrOffset: 0x5678
+      AddrSize:   4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x12345678 ## DW_FORM_addr
+            - BlockData:        ## DW_FORM_block2
+                - 0x12
+                - 0x34
+
+## Generate and verify a DWARF32 big endian .debug_info (DWARFv4) section.
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB %s -o %t1.be.o
+# RUN: llvm-readobj --sections --section-data %t1.be.o | \
+# RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9A -DSIZE=171 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-BE-CONTENT
+
+# DWARF32-BE-CONTENT-NEXT: SectionData (
+# DWARF32-BE-CONTENT-NEXT:   0000: 00001234 00050204 00001234 01123456
+##                                 ^-------                            unit_length (4-byte)
+##                                          ^---                       version (2-byte)
+##                                              ^-                     unit_type (1-byte) DW_UT_type
+##                                                ^-                   address_size (1-byte)
+##                                                   ^-------          debug_abbrev_offset (4-byte)
+##                                                            ^-       abbreviation code (LEB128) 0x01
+##                                                              ^----- Form: DW_FORM_addr (4-byte)
+# DWARF32-BE-CONTENT-NEXT:   0010: 78000212 34000000 02123412 34123456
+##                                 --
+##                                   ^---                              Form: DW_FORM_block2 size (2-byte)
+##                                       ^- ^-                         Form: DW_FORM_block2 body (2-byte)
+##                                            ^--------                Form: DW_FORM_block4 size (4-byte)
+##                                                     ^-^-            Form: DW_FORM_block4 body (2-byte)
+##                                                         ^----       Form: DW_FORM_data2 (2-byte)
+##                                                              ^----- Form: DW_FORM_data4 (4-byte)
+# DWARF32-BE-CONTENT-NEXT:   0020: 78123456 789ABCDE F0616263 64000212
+##                                 --
+##                                   ^-----------------                Form: DW_FORM_data8 (8-byte)
+##                                                     ^----------     Form: DW_FORM_string "abcd\0"
+##                                                                ^-   Form: DW_FORM_block size (ULEB128)
+##                                                                  ^- Form: DW_FORM_block body (2-byte)
+# DWARF32-BE-CONTENT-NEXT:   0030: 34021234 1201B424 12345678 B4241234
+##                                 ^-                                  Form: DW_FORM_block body
+##                                   ^-                                Form: DW_FORM_block1 size (1-byte)
+##                                     ^-^-                            Form: DW_FORM_block1 body (2-byte)
+##                                          ^-                         Form: DW_FORM_data1 (1-byte)
+##                                            ^-                       Form: DW_FORM_flag (1-byte)
+##                                              ^---                   Form: DW_FORM_sdata (SLEB128) 0x1234
+##                                                   ^-------          Form: DW_FORM_strp (4-byte)
+##                                                            ^---     Form: DW_FORM_udata (ULEB128) 0x1234
+##                                                                ^--- Form: DW_FORM_ref_addr (4-byte)
+# DWARF32-BE-CONTENT-NEXT:   0040: 56781212 34123456 78123456 789ABCDE
+##                                 ----
+##                                     ^-                              Form: DW_FORM_ref1 (1-byte)
+##                                       ^----                         Form: DW_FORM_ref2 (2-byte)
+##                                            ^--------                Form: DW_FORM_ref4 (4-byte)
+##                                                     ^-------------- Form: DW_FORM_ref8 (8-byte)
+# DWARF32-BE-CONTENT-NEXT:   0050: F0B42408 65666768 00000012 34021234
+##                                 --
+##                                   ^---                              Form: DW_FORM_ref_udata (ULEB128) 0x1234
+##                                       ^-                            Form: DW_FORM_indirect (ULEB128) DW_FORM_string
+##                                          ^----------                "efgh\0"
+##                                                     ^--------       Form: DW_FORM_sec_offset (4-byte)
+##                                                              ^-     Form: DW_FORM_exprloc size (ULEB128) 0x02
+##                                                                ^-^- Form: DW_FORM_exprloc body (2-byte)
+# DWARF32-BE-CONTENT-NEXT:   0060: 12345678 12345678 12345678 12345678
+##                                 ^-------                            Form: DW_FORM_ref_sup4 (4-byte)
+##                                          ^-------                   Form: DW_FORM_strp_sup (4-byte)
+##                                                   ^-------          Form: DW_FORM_line_strp (4-byte)
+##                                                            ^------- Form: DW_FORM_ref_sig8 (8-byte)
+# DWARF32-BE-CONTENT-NEXT:   0070: 9ABCDEF0 12345678 9ABCDEF0 12123412
+##                                 --------
+##                                          ^----------------          Form: DW_FORM_ref_sup8 (8-byte)
+##                                                            ^-       Form: DW_FORM_strx1 (1-byte)
+##                                                              ^---   Form: DW_FORM_strx2 (2-byte)
+##                                                                  ^- Form: DW_FORM_strx4 (4-byte)
+# DWARF32-BE-CONTENT-NEXT:   0080: 34567812 12341234 56780000 12340005
+##                                 ------
+##                                       ^-                            Form: DW_FORM_addrx1 (1-byte)
+##                                          ^---                       From: DW_FORM_addrx2 (2-byte)
+##                                              ^--------              Form: DW_FORM_addrx4 (4-byte)
+##                                                       ^--------     unit_length (4-byte)
+##                                                                ^--- version (2-byte)
+# DWARF32-BE-CONTENT-NEXT:   0090: 01040000 12340000 00567800 04000056
+##                                 ^-                                  unit_type (1-byte) DW_UT_compile
+##                                   ^-                                address_size (4-byte)
+##                                     ^--------                       debug_abbrev_offset (4-byte)
+##                                              ^--------              unit_length (4-byte)
+##                                                       ^---          version (2-byte)
+##                                                            ^-       abbreviation code (ULEB128)
+##                                                              ^----- debug_abbrev_offset (4-byte)
+# DWARF32-BE-CONTENT-NEXT:   00A0: 78040112 34567800 021234
+##                                 --
+##                                   ^-                                  address_size (1-byte)
+##                                     ^-                                abbreviation code (ULEB128) 0x01
+##                                       ^--------                       Form: DW_FORM_addr (4-byte)
+##                                                ^----                  Form: DW_FORM_block2 size (2-byte)
+##                                                     ^-^-              Form: DW_FORM_block2 body (2-byte)
+# DWARF32-BE-CONTENT-NEXT: )
+
+## b) Generate the .debug_info section from raw section content.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: llvm-readobj --sections --section-data %t2.o | \
+# RUN:   FileCheck -DINDEX=1 -DNAME=1 -DOFFSET=0x40 -DSIZE=3 -DADDRALIGN=0 %s --check-prefixes=SHDR,ARBITRARY-CONTENT
+
+# ARBITRARY-CONTENT-NEXT: SectionData (
+# ARBITRARY-CONTENT-NEXT:   0000: 112233
+# ARBITRARY-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .debug_info
+    Type:    SHT_PROGBITS
+    Content: "112233"
+
+## c) Generate the .debug_info section when the "Size" is specified.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: llvm-readobj --sections --section-data %t3.o | \
+# RUN:   FileCheck -DINDEX=1 -DNAME=1 -DOFFSET=0x40 -DSIZE=16 -DADDRALIGN=0 %s --check-prefixes=SHDR,SIZE
+
+# SIZE-NEXT: SectionData (
+# SIZE-NEXT:   0000: 00000000 00000000 00000000 00000000
+# SIZE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .debug_info
+    Type: SHT_PROGBITS
+    Size: 0x10
+
+## d) Test that yaml2obj emits an error message when both the "Size" and the
+## "debug_info" entry are specified at the same time.
+
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# ERROR: yaml2obj: error: cannot specify section '.debug_info' contents in the 'DWARF' entry and the 'Content' or 'Size' in the 'Sections' entry at the same time
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .debug_info
+    Type: SHT_PROGBITS
+    Size: 0x10
+DWARF:
+  debug_abbrev:
+    - Code:       1
+      Tag:        DW_TAG_compile_unit
+      Children:   DW_CHILDREN_no
+      Attributes: []
+  debug_info:
+    - Length:
+        TotalLength: 0x1234
+      Version:    5
+      UnitType:   DW_UT_type
+      AbbrOffset: 0x1234
+      AddrSize:   4
+      Entries:    []
+
+## e) Test that yaml2obj emits an error message when both the "Content" and the
+## "debug_info" entry are specified at the same time.
+
+# RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .debug_info
+    Type: SHT_PROGBITS
+    Content: "00"
+DWARF:
+  debug_abbrev:
+    - Code:       1
+      Tag:        DW_TAG_compile_unit
+      Children:   DW_CHILDREN_no
+      Attributes: []
+  debug_info:
+    - Length:
+        TotalLength: 0x1234
+      Version:    5
+      UnitType:   DW_UT_type
+      AbbrOffset: 0x1234
+      AddrSize:   4
+      Entries:    []
+
+## f) Test that all the properties can be overridden by the section header when
+## the "debug_info" entry doesn't exist.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6.o
+# RUN: llvm-readelf --sections %t6.o | FileCheck %s --check-prefix=OVERRIDDEN
+
+#      OVERRIDDEN: [Nr] Name        Type   Address          Off    Size   ES Flg Lk Inf Al
+#      OVERRIDDEN: [ 1] .debug_info STRTAB 0000000000002020 000050 00000d 01   A  2   1  2
+# OVERRIDDEN-NEXT: [ 2] .sec        STRTAB 0000000000000000 00005d 000000 00      0   0  0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .debug_info
+    Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
+    Flags:        [SHF_ALLOC] ## 0 by default.
+    Link:         .sec        ## 0 by default.
+    EntSize:      1           ## 0 by default.
+    Info:         1           ## 0 by default.
+    AddressAlign: 2           ## 0 by default.
+    Address:      0x2020      ## 0x00 by default.
+    Offset:       0x50        ## 0x40 for the first section.
+    Size:         0x0d        ## Set the "Size" so that we can reuse the check tag "OVERRIDDEN".
+  - Name:         .sec        ## Linked by .debug_info.
+    Type:         SHT_STRTAB
+
+## g) Test that all the properties can be overridden by the section header when
+## the "debug_info" entry exists.
+
+# RUN: yaml2obj --docnum=7 %s -o %t7.o
+# RUN: llvm-readelf --sections %t7.o | FileCheck %s --check-prefix=OVERRIDDEN
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .debug_info
+    Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
+    Flags:        [SHF_ALLOC] ## 0 by default.
+    Link:         .sec        ## 0 by default.
+    EntSize:      1           ## 0 by default.
+    Info:         1           ## 0 by default.
+    AddressAlign: 2           ## 0 by default.
+    Address:      0x2020      ## 0x00 by default.
+    Offset:       0x50        ## 0x40 for the first section.
+  - Name:         .sec        ## Linked by .debug_info.
+    Type:         SHT_STRTAB
+DWARF:
+  debug_abbrev:
+    - Code:       1
+      Tag:        DW_TAG_compile_unit
+      Children:   DW_CHILDREN_no
+      Attributes: []
+  debug_info:
+    - Length:
+        TotalLength: 0x1234
+      Version:    5
+      UnitType:   DW_UT_type
+      AbbrOffset: 0x1234
+      AddrSize:   4
+      Entries:
+        - AbbrCode: 0
+          Values:   []
