@@ -48,6 +48,7 @@ struct ClangTidyError : tooling::Diagnostic {
                  bool IsWarningAsError);
 
   bool IsWarningAsError;
+  std::vector<std::string> EnabledDiagnosticAliases;
 };
 
 /// Contains displayed and ignored diagnostic counters for a ClangTidy
@@ -246,6 +247,7 @@ public:
 private:
   void finalizeLastError();
   void removeIncompatibleErrors();
+  void removeDuplicatedDiagnosticsOfAliasCheckers();
 
   /// Returns the \c HeaderFilter constructed for the options set in the
   /// context.
