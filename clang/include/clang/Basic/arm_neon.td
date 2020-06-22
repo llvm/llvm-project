@@ -190,28 +190,20 @@ def OP_SCALAR_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1,
 def OP_SCALAR_QRDMLSH_LN : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1,
                               (call "vget_lane", $p2, $p3)))>;
 
-multiclass ScalarGetSetLaneOpsF16<string scalarTy,
-                                  string vectorTy4, string vectorTy8> {
-  def _GET_LN  : Op<(bitcast scalarTy,
-                        (call "vget_lane",
-                            (bitcast "int16x4_t", $p0), $p1))>;
-  def _GET_LNQ : Op<(bitcast scalarTy,
-                        (call "vget_lane",
-                            (bitcast "int16x8_t", $p0), $p1))>;
-  def _SET_LN  : Op<(bitcast vectorTy4,
-                        (call "vset_lane",
-                            (bitcast "int16_t", $p0),
-                            (bitcast "int16x4_t", $p1), $p2))>;
-  def _SET_LNQ : Op<(bitcast vectorTy8,
-                        (call "vset_lane",
-                            (bitcast "int16_t", $p0),
-                            (bitcast "int16x8_t", $p1), $p2))>;
-}
-
-defm OP_SCALAR_HALF: ScalarGetSetLaneOpsF16<"float16_t",
-                                            "float16x4_t", "float16x8_t">;
-defm OP_SCALAR_BF16: ScalarGetSetLaneOpsF16<"bfloat16_t",
-                                            "bfloat16x4_t", "bfloat16x8_t">;
+def OP_SCALAR_HALF_GET_LN : Op<(bitcast "float16_t",
+                                   (call "vget_lane",
+                                         (bitcast "int16x4_t", $p0), $p1))>;
+def OP_SCALAR_HALF_GET_LNQ : Op<(bitcast "float16_t",
+                                    (call "vget_lane",
+                                          (bitcast "int16x8_t", $p0), $p1))>;
+def OP_SCALAR_HALF_SET_LN : Op<(bitcast "float16x4_t",
+                                   (call "vset_lane",
+                                         (bitcast "int16_t", $p0),
+                                         (bitcast "int16x4_t", $p1), $p2))>;
+def OP_SCALAR_HALF_SET_LNQ : Op<(bitcast "float16x8_t",
+                                    (call "vset_lane",
+                                          (bitcast "int16_t", $p0),
+                                          (bitcast "int16x8_t", $p1), $p2))>;
 
 def OP_DOT_LN
     : Op<(call "vdot", $p0, $p1,
@@ -1918,10 +1910,12 @@ let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
   def VGET_HIGH_BF : NoTestOpInst<"vget_high", ".Q", "b", OP_HI>;
   def VGET_LOW_BF  : NoTestOpInst<"vget_low", ".Q", "b", OP_LO>;
 
-  def VGET_LANE_BF : IOpInst<"vget_lane", "1.I", "b", OP_SCALAR_BF16_GET_LN>;
-  def VSET_LANE_BF : IOpInst<"vset_lane", ".1.I", "b", OP_SCALAR_BF16_SET_LN>;
-  def VGET_LANEQ_BF : IOpInst<"vget_lane", "1.I", "Qb", OP_SCALAR_BF16_GET_LNQ>;
-  def VSET_LANEQ_BF : IOpInst<"vset_lane", ".1.I", "Qb", OP_SCALAR_BF16_SET_LNQ>;
+  def VGET_LANE_BF : IInst<"vget_lane", "1.I", "bQb">;
+  def VSET_LANE_BF : IInst<"vset_lane", ".1.I", "bQb">;
+  def SCALAR_VDUP_LANE_BF : IInst<"vdup_lane", "1.I", "Sb">;
+  def SCALAR_VDUP_LANEQ_BF : IInst<"vdup_laneq", "1QI", "Sb"> {
+    let isLaneQ = 1;
+  }
 
   def VLD1_BF : WInst<"vld1", ".(c*!)", "bQb">;
   def VLD2_BF : WInst<"vld2", "2(c*!)", "bQb">;
@@ -1955,18 +1949,6 @@ let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
   def VLD3_DUP_BF : WInst<"vld3_dup", "3(c*!)", "bQb">;
   def VLD4_DUP_BF : WInst<"vld4_dup", "4(c*!)", "bQb">;
 
-}
-
-let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC) && !defined(__aarch64__)" in {
-  def SCALAR_VDUP_LANE_BF_A32 : IOpInst<"vduph_lane", "1.I", "b", OP_SCALAR_BF16_GET_LN>;
-  def SCALAR_VDUP_LANEQ_BF_A32 : IOpInst<"vduph_laneq", "1.I", "Hb", OP_SCALAR_BF16_GET_LNQ>;
-}
-
-let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC) && defined(__aarch64__)" in {
-  def SCALAR_VDUP_LANE_BF_A64 : IInst<"vdup_lane", "1.I", "Sb">;
-  def SCALAR_VDUP_LANEQ_BF_A64 : IInst<"vdup_laneq", "1QI", "Sb"> {
-    let isLaneQ = 1;
-  }
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_BF16) && !defined(__aarch64__)" in {
