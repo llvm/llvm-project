@@ -516,4 +516,12 @@ let Predicates = [IsISA3_1] in {
    def PEXTD : XForm_6<31, 188, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
                        "pextd $rA, $rS, $rB", IIC_IntGeneral,
                        [(set i64:$rA, (int_ppc_pextd i64:$rS, i64:$rB))]>;
+   def VCLRLB : VXForm_1<397, (outs vrrc:$vD), (ins vrrc:$vA, gprc:$rB),
+                         "vclrlb $vD, $vA, $rB", IIC_VecGeneral,
+                         [(set v16i8:$vD,
+                               (int_ppc_altivec_vclrlb v16i8:$vA, i32:$rB))]>;
+   def VCLRRB : VXForm_1<461, (outs vrrc:$vD), (ins vrrc:$vA, gprc:$rB),
+                         "vclrrb $vD, $vA, $rB", IIC_VecGeneral,
+                         [(set v16i8:$vD,
+                               (int_ppc_altivec_vclrrb v16i8:$vA, i32:$rB))]>;
 }

@@ -302,6 +302,10 @@ BUILTIN(__builtin_altivec_vrldnm, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vpextd, "V2ULLiV2ULLiV2ULLi", "")
 
+// P10 Vector Clear Bytes built-ins.
+BUILTIN(__builtin_altivec_vclrlb, "V16cV16cUi", "")
+BUILTIN(__builtin_altivec_vclrrb, "V16cV16cUi", "")
+
 // VSX built-ins.
 
 BUILTIN(__builtin_vsx_lxvd2x, "V2divC*", "")
