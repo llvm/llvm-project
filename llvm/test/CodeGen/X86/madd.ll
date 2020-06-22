@@ -2607,10 +2607,10 @@ define <4 x i32> @pmaddwd_bad_indices(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa (%rsi), %xmm1
-; AVX-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[2,3,4,5,10,11,12,13,12,13,10,11,12,13,14,15]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,6,7,8,9,14,15,8,9,14,15,12,13,14,15]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm3 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[2,3,6,7,10,11,14,15,14,15,10,11,12,13,14,15]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[2,3,4,5,10,11,12,13,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,6,7,8,9,14,15,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm3 = xmm1[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u]
 ; AVX-NEXT:    vpmovsxwd %xmm2, %xmm2
 ; AVX-NEXT:    vpmovsxwd %xmm3, %xmm3
 ; AVX-NEXT:    vpmulld %xmm3, %xmm2, %xmm2

@@ -370,7 +370,7 @@ define <8 x i16> @var_funnnel_v8i16(<8 x i16> %x, <8 x i16> %amt) nounwind {
 ; AVX2-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX2-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
