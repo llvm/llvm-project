@@ -142,7 +142,7 @@ struct std::experimental::coroutine_traits<void, promise_matching_constructor, i
     promise_type() = delete;
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     void unhandled_exception() {}
   };
@@ -166,7 +166,7 @@ template <typename... Args> struct std::experimental::coroutine_traits<method, A
     promise_type(some_class&, float);
     method get_return_object();
     suspend_always initial_suspend();
-    suspend_always final_suspend();
+    suspend_always final_suspend() noexcept;
     void return_void();
     void unhandled_exception();
   };
