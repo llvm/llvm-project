@@ -267,10 +267,10 @@ constexpr bool empty(const T &RangeOrContainer) {
   return adl_begin(RangeOrContainer) == adl_end(RangeOrContainer);
 }
 
-/// Returns true of the given range only contains a single element.
-template <typename ContainerTy> bool hasSingleElement(ContainerTy &&c) {
-  auto it = std::begin(c), e = std::end(c);
-  return it != e && std::next(it) == e;
+/// Returns true if the given container only contains a single element.
+template <typename ContainerTy> bool hasSingleElement(ContainerTy &&C) {
+  auto B = std::begin(C), E = std::end(C);
+  return B != E && std::next(B) == E;
 }
 
 /// Return a range covering \p RangeOrContainer with the first N elements
@@ -1919,12 +1919,15 @@ bool hasNItems(
       return false; // Too few.
     N -= ShouldBeCounted(*Begin);
   }
-  return Begin == End;
+  for (; Begin != End; ++Begin)
+    if (ShouldBeCounted(*Begin))
+      return false; // Too many.
+  return true;
 }
 
 /// Return true if the sequence [Begin, End) has N or more items. Runs in O(N)
 /// time. Not meant for use with random-access iterators.
-/// Can optionally take a predicate to filter lazily some items.
+/// Can optionally take a predicate to lazily filter some items.
 template<typename IterTy,
          typename Pred = bool (*)(const decltype(*std::declval<IterTy>()) &)>
 bool hasNItemsOrMore(
@@ -1942,6 +1945,36 @@ bool hasNItemsOrMore(
     N -= ShouldBeCounted(*Begin);
   }
   return true;
+}
+
+/// Returns true if the sequence [Begin, End) has N or less items. Can
+/// optionally take a predicate to lazily filter some items.
+template <typename IterTy,
+          typename Pred = bool (*)(const decltype(*std::declval<IterTy>()) &)>
+bool hasNItemsOrLess(
+    IterTy &&Begin, IterTy &&End, unsigned N,
+    Pred &&ShouldBeCounted = [](const decltype(*std::declval<IterTy>()) &) {
+      return true;
+    }) {
+  assert(N != std::numeric_limits<unsigned>::max());
+  return !hasNItemsOrMore(Begin, End, N + 1, ShouldBeCounted);
+}
+
+/// Returns true if the given container has exactly N items
+template <typename ContainerTy> bool hasNItems(ContainerTy &&C, unsigned N) {
+  return hasNItems(std::begin(C), std::end(C), N);
+}
+
+/// Returns true if the given container has N or more items
+template <typename ContainerTy>
+bool hasNItemsOrMore(ContainerTy &&C, unsigned N) {
+  return hasNItemsOrMore(std::begin(C), std::end(C), N);
+}
+
+/// Returns true if the given container has N or less items
+template <typename ContainerTy>
+bool hasNItemsOrLess(ContainerTy &&C, unsigned N) {
+  return hasNItemsOrLess(std::begin(C), std::end(C), N);
 }
 
 /// Returns a raw pointer that represents the same address as the argument.
