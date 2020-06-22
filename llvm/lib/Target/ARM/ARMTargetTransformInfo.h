@@ -47,13 +47,13 @@ class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
   const ARMSubtarget *ST;
   const ARMTargetLowering *TLI;
 
-  // Currently the following features are excluded from InlineFeatureWhitelist.
+  // Currently the following features are excluded from InlineFeaturesAllowed.
   // ModeThumb, FeatureNoARM, ModeSoftFloat, FeatureFP64, FeatureD32
   // Depending on whether they are set or unset, different
   // instructions/registers are available. For example, inlining a callee with
   // -thumb-mode in a caller with +thumb-mode, may cause the assembler to
   // fail if the callee uses ARM only instructions, e.g. in inline asm.
-  const FeatureBitset InlineFeatureWhitelist = {
+  const FeatureBitset InlineFeaturesAllowed = {
       ARM::FeatureVFP2, ARM::FeatureVFP3, ARM::FeatureNEON, ARM::FeatureThumb2,
       ARM::FeatureFP16, ARM::FeatureVFP4, ARM::FeatureFPARMv8,
       ARM::FeatureFullFP16, ARM::FeatureFP16FML, ARM::FeatureHWDivThumb,
