@@ -900,7 +900,7 @@ void UnwrappedLineParser::parsePPUnknown() {
   addUnwrappedLine();
 }
 
-// Here we blacklist certain tokens that are not usually the first token in an
+// Here we exclude certain tokens that are not usually the first token in an
 // unwrapped line. This is used in attempt to distinguish macro calls without
 // trailing semicolons from other constructs split to several lines.
 static bool tokenCanStartNewLine(const FormatToken &Tok) {
