@@ -59,7 +59,8 @@ std::tuple<uint32_t, uint32_t> getBranchWeight(Intrinsic::ID IntrinsicID,
                                                CallInst *CI, int BranchCount) {
   if (IntrinsicID == Intrinsic::expect) {
     // __builtin_expect
-    return {LikelyBranchWeight, UnlikelyBranchWeight};
+    return std::make_tuple(LikelyBranchWeight.getValue(),
+                           UnlikelyBranchWeight.getValue());
   } else {
     // __builtin_expect_with_probability
     assert(CI->getNumOperands() >= 3 &&
@@ -71,7 +72,7 @@ std::tuple<uint32_t, uint32_t> getBranchWeight(Intrinsic::ID IntrinsicID,
     double FalseProb = (1.0 - TrueProb) / (BranchCount - 1);
     uint32_t LikelyBW = ceil((TrueProb * (double)(INT32_MAX - 1)) + 1.0);
     uint32_t UnlikelyBW = ceil((FalseProb * (double)(INT32_MAX - 1)) + 1.0);
-    return {LikelyBW, UnlikelyBW};
+    return std::make_tuple(LikelyBW, UnlikelyBW);
   }
 }
 
