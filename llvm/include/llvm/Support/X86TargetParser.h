@@ -56,7 +56,7 @@ enum ProcessorFeatures {
 #define X86_FEATURE(ENUM) \
   ENUM,
 #include "llvm/Support/X86TargetParser.def"
-  CPU_FEATURE_MAX
+
 };
 
 enum CPUKind {
