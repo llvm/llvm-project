@@ -1633,6 +1633,14 @@ static bool isValidShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
     if (dimA != dimB)
       break;
     ++i;
+
+    // Handle the case when trailing dimensions are of size 1.
+    // Include them into the contiguous sequence.
+    auto isOne = [](int64_t v) { return v == 1; };
+    if (i < rankA && llvm::all_of(a.slice(i), isOne))
+      i = rankA;
+    if (j < rankB && llvm::all_of(b.slice(j), isOne))
+      j = rankB;
   }
 
   return i == rankA && j == rankB;
