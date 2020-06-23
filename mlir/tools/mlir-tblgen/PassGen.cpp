@@ -53,7 +53,7 @@ public:
   }
 
   /// A clone method to create a copy of this pass.
-  std::unique_ptr<Pass> clonePass() const override {{
+  std::unique_ptr<::mlir::Pass> clonePass() const override {{
     return std::make_unique<DerivedT>(*static_cast<const DerivedT *>(this));
   }
 
@@ -122,7 +122,7 @@ static void emitRegistration(ArrayRef<Pass> passes, raw_ostream &os) {
     os << llvm::formatv("#ifdef GEN_PASS_REGISTRATION_{0}\n",
                         pass.getDef()->getName());
     os << llvm::formatv("::mlir::registerPass(\"{0}\", \"{1}\", []() -> "
-                        "std::unique_ptr<Pass> {{ return {2}; });\n",
+                        "std::unique_ptr<::mlir::Pass> {{ return {2}; });\n",
                         pass.getArgument(), pass.getSummary(),
                         pass.getConstructor());
     os << llvm::formatv("#endif // GEN_PASS_REGISTRATION_{0}\n",
