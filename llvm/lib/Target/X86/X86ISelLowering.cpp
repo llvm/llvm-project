@@ -20270,7 +20270,7 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
          "Unexpected PACK opcode");
   assert(DstVT.isVector() && "VT not a vector?");
 
-  // Requires SSE2 but AVX512 has fast vector truncate.
+  // Requires SSE2 for PACKSS (SSE41 PACKUSDW is handled below).
   if (!Subtarget.hasSSE2())
     return SDValue();
 
