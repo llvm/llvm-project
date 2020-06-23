@@ -110,6 +110,12 @@ static DecodeStatus decodeCallTarget(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeFRd(MCInst &Inst, unsigned Insn,
                               uint64_t Address, const void *Decoder);
 
+static DecodeStatus decodeFFMULRdRr(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder);
+
+static DecodeStatus decodeFMUL2RdRr(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder);
+
 #include "AVRGenDisassemblerTables.inc"
 
 static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn,
@@ -157,6 +163,28 @@ static DecodeStatus decodeFRd(MCInst &Inst, unsigned Insn,
                               uint64_t Address, const void *Decoder) {
   unsigned d = fieldFromInstruction(Insn, 4, 5);
   if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeFFMULRdRr(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder) {
+  unsigned d = fieldFromInstruction(Insn, 4, 3) + 16;
+  unsigned r = fieldFromInstruction(Insn, 0, 3) + 16;
+  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  if (DecodeGPR8RegisterClass(Inst, r, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeFMUL2RdRr(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder) {
+  unsigned rd = fieldFromInstruction(Insn, 4, 4) + 16;
+  unsigned rr = fieldFromInstruction(Insn, 0, 4) + 16;
+  if (DecodeGPR8RegisterClass(Inst, rd, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  if (DecodeGPR8RegisterClass(Inst, rr, Address, Decoder) == MCDisassembler::Fail)
     return MCDisassembler::Fail;
   return MCDisassembler::Success;
 }
