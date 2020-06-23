@@ -2038,6 +2038,7 @@ struct ConvertConstructorToDeductionGuideTransform {
       // a list of substituted template arguments as we go.
       for (NamedDecl *Param : *InnerParams) {
         MultiLevelTemplateArgumentList Args;
+        Args.setKind(TemplateSubstitutionKind::Rewrite);
         Args.addOuterTemplateArguments(SubstArgs);
         Args.addOuterRetainedLevel();
         NamedDecl *NewParam = transformTemplateParameter(Param, Args);
@@ -2057,6 +2058,7 @@ struct ConvertConstructorToDeductionGuideTransform {
     // substitute references to the old parameters into references to the
     // new ones.
     MultiLevelTemplateArgumentList Args;
+    Args.setKind(TemplateSubstitutionKind::Rewrite);
     if (FTD) {
       Args.addOuterTemplateArguments(SubstArgs);
       Args.addOuterRetainedLevel();
