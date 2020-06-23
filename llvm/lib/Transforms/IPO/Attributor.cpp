@@ -23,6 +23,7 @@
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 
