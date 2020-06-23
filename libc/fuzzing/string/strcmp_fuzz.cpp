@@ -10,6 +10,7 @@
 ///
 //===----------------------------------------------------------------------===//
 #include "src/string/strcmp.h"
+#include <stddef.h>
 #include <stdint.h>
 
 extern "C" int LLVMFuzzerTestTwoInputs(const uint8_t *data1, size_t size1,
