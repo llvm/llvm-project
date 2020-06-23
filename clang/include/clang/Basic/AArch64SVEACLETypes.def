@@ -66,7 +66,7 @@ SVE_VECTOR_TYPE("__SVFloat16_t", "__SVFloat16_t", SveFloat16, SveFloat16Ty, 8, 1
 SVE_VECTOR_TYPE("__SVFloat32_t", "__SVFloat32_t", SveFloat32, SveFloat32Ty, 4, 32, true, true, false)
 SVE_VECTOR_TYPE("__SVFloat64_t", "__SVFloat64_t", SveFloat64, SveFloat64Ty, 2, 64, true, true, false)
 
-SVE_VECTOR_TYPE("__SVBFloat16_t", "__SVBFloat16_t", SveBFloat16, SveBFloat16Ty, 8, 16, false, false, true)
+SVE_VECTOR_TYPE("__SVBFloat16_t", "__SVBFloat16_t", SveBFloat16, SveBFloat16Ty, 8, 16, true, false, true)
 
 //
 // x2
@@ -85,6 +85,7 @@ SVE_VECTOR_TYPE("__clang_svfloat16x2_t", "svfloat16x2_t", SveFloat16x2, SveFloat
 SVE_VECTOR_TYPE("__clang_svfloat32x2_t", "svfloat32x2_t", SveFloat32x2, SveFloat32x2Ty, 8, 32, true, true, false)
 SVE_VECTOR_TYPE("__clang_svfloat64x2_t", "svfloat64x2_t", SveFloat64x2, SveFloat64x2Ty, 4, 64, true, true, false)
 
+SVE_VECTOR_TYPE("__clang_svbfloat16x2_t", "svbfloat16x2_t", SveBFloat16x2, SveBFloat16x2Ty, 16, 16, true, false, true)
 //
 // x3
 //
@@ -102,6 +103,7 @@ SVE_VECTOR_TYPE("__clang_svfloat16x3_t", "svfloat16x3_t", SveFloat16x3, SveFloat
 SVE_VECTOR_TYPE("__clang_svfloat32x3_t", "svfloat32x3_t", SveFloat32x3, SveFloat32x3Ty, 12, 32, true, true, false)
 SVE_VECTOR_TYPE("__clang_svfloat64x3_t", "svfloat64x3_t", SveFloat64x3, SveFloat64x3Ty, 6, 64, true, true, false)
 
+SVE_VECTOR_TYPE("__clang_svbfloat16x3_t", "svbfloat16x3_t", SveBFloat16x3, SveBFloat16x3Ty, 24, 16, true, false, true)
 //
 // x4
 //
@@ -118,6 +120,8 @@ SVE_VECTOR_TYPE("__clang_svuint64x4_t", "svuint64x4_t", SveUint64x4, SveUint64x4
 SVE_VECTOR_TYPE("__clang_svfloat16x4_t", "svfloat16x4_t", SveFloat16x4, SveFloat16x4Ty, 32, 16, true, true, false)
 SVE_VECTOR_TYPE("__clang_svfloat32x4_t", "svfloat32x4_t", SveFloat32x4, SveFloat32x4Ty, 16, 32, true, true, false)
 SVE_VECTOR_TYPE("__clang_svfloat64x4_t", "svfloat64x4_t", SveFloat64x4, SveFloat64x4Ty, 8, 64, true, true, false)
+
+SVE_VECTOR_TYPE("__clang_svbfloat16x4_t", "svbfloat16x4_t", SveBFloat16x4, SveBFloat16x4Ty, 32, 16, true, false, true)
 
 SVE_PREDICATE_TYPE("__SVBool_t", "__SVBool_t", SveBool, SveBoolTy, 16)
 
