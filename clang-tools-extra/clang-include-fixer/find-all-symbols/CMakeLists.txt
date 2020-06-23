@@ -12,6 +12,9 @@ add_clang_library(findAllSymbols
   PragmaCommentHandler.cpp
   STLPostfixHeaderMap.cpp
   SymbolInfo.cpp
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(findAllSymbols

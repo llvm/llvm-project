@@ -7,6 +7,9 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangQuery
   Query.cpp
   QueryParser.cpp
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangQuery

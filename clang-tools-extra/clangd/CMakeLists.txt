@@ -100,6 +100,9 @@ add_clang_library(clangDaemon
   clangTidy
   ${LLVM_PTHREAD_LIB}
   ${ALL_CLANG_TIDY_CHECKS}
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangDaemon

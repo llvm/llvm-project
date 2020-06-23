@@ -32,6 +32,9 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
   clangTidyModernizeModule
   clangTidyReadabilityModule
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyCppCoreGuidelinesModule
