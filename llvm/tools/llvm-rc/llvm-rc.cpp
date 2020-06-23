@@ -187,7 +187,16 @@ int main(int Argc, const char **Argv) {
     ExitOnErr(NullResource().visit(Visitor.get()));
 
     // Set the default language; choose en-US arbitrarily.
-    ExitOnErr(LanguageResource(0x09, 0x01).visit(Visitor.get()));
+    unsigned PrimaryLangId = 0x09, SubLangId = 0x01;
+    if (InputArgs.hasArg(OPT_LANG_ID)) {
+      unsigned LangId;
+      if (InputArgs.getLastArgValue(OPT_LANG_ID).getAsInteger(16, LangId))
+        fatalError("Invalid language id: " +
+                   InputArgs.getLastArgValue(OPT_LANG_ID));
+      PrimaryLangId = LangId & 0x3ff;
+      SubLangId = LangId >> 10;
+    }
+    ExitOnErr(LanguageResource(PrimaryLangId, SubLangId).visit(Visitor.get()));
   }
 
   rc::RCParser Parser{std::move(Tokens)};
