@@ -30,4 +30,7 @@ add_clang_library(clangSerialization
   clangBasic
   clangLex
   clangSema
+
+  DEPENDS
+  omp_gen
   )
