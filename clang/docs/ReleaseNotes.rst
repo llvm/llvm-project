@@ -104,6 +104,10 @@ New Compiler Flags
   simplify access to the many single purpose floating point options. The default
   setting is ``precise``.
 
+- The default module cache has moved from /tmp to a per-user cache directory.
+  By default, this is ~/.cache but on some platforms or installations, this
+  might be elsewhere. The -fmodules-cache-path=... flag continues to work.
+
 Deprecated Compiler Flags
 -------------------------
 
