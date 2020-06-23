@@ -120,8 +120,9 @@ public:
                            TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
   unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
             Type *SubTp);
-  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy, Value *Ptr,
-                                  bool VariableMask, unsigned Alignment,
+  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                  const Value *Ptr, bool VariableMask,
+                                  unsigned Alignment,
                                   TTI::TargetCostKind CostKind,
                                   const Instruction *I);
   unsigned getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
