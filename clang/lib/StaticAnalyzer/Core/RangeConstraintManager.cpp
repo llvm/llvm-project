@@ -89,7 +89,7 @@ public:
   }
 
   TriStateKind getCmpOpState(BinaryOperatorKind CurrentOP,
-                         BinaryOperatorKind QueriedOP) const {
+                             BinaryOperatorKind QueriedOP) const {
     return CmpOpTable[getIndexFromOp(CurrentOP)][getIndexFromOp(QueriedOP)];
   }
 
@@ -364,6 +364,18 @@ RangeSet RangeSet::Negate(BasicValueFactory &BV, Factory &F) const {
   return newRanges;
 }
 
+RangeSet RangeSet::Delete(BasicValueFactory &BV, Factory &F,
+                          const llvm::APSInt &Point) const {
+  llvm::APSInt Upper = Point;
+  llvm::APSInt Lower = Point;
+
+  ++Upper;
+  --Lower;
+
+  // Notice that the lower bound is greater than the upper bound.
+  return Intersect(BV, F, Upper, Lower);
+}
+
 void RangeSet::print(raw_ostream &os) const {
   bool isFirst = true;
   os << "{ ";
@@ -380,6 +392,107 @@ void RangeSet::print(raw_ostream &os) const {
 }
 
 namespace {
+
+//===----------------------------------------------------------------------===//
+//                            Intersection functions
+//===----------------------------------------------------------------------===//
+
+template <class SecondTy, class... RestTy>
+LLVM_NODISCARD inline RangeSet intersect(BasicValueFactory &BV,
+                                         RangeSet::Factory &F, RangeSet Head,
+                                         SecondTy Second, RestTy... Tail);
+
+template <class... RangeTy> struct IntersectionTraits;
+
+template <class... TailTy> struct IntersectionTraits<RangeSet, TailTy...> {
+  // Found RangeSet, no need to check any further
+  using Type = RangeSet;
+};
+
+template <> struct IntersectionTraits<> {
+  // We ran out of types, and we didn't find any RangeSet, so the result should
+  // be optional.
+  using Type = Optional<RangeSet>;
+};
+
+template <class OptionalOrPointer, class... TailTy>
+struct IntersectionTraits<OptionalOrPointer, TailTy...> {
+  // If current type is Optional or a raw pointer, we should keep looking.
+  using Type = typename IntersectionTraits<TailTy...>::Type;
+};
+
+template <class EndTy>
+LLVM_NODISCARD inline EndTy intersect(BasicValueFactory &BV,
+                                      RangeSet::Factory &F, EndTy End) {
+  // If the list contains only RangeSet or Optional<RangeSet>, simply return
+  // that range set.
+  return End;
+}
+
+LLVM_NODISCARD LLVM_ATTRIBUTE_UNUSED inline Optional<RangeSet>
+intersect(BasicValueFactory &BV, RangeSet::Factory &F, const RangeSet *End) {
+  // This is an extraneous conversion from a raw pointer into Optional<RangeSet>
+  if (End) {
+    return *End;
+  }
+  return llvm::None;
+}
+
+template <class... RestTy>
+LLVM_NODISCARD inline RangeSet intersect(BasicValueFactory &BV,
+                                         RangeSet::Factory &F, RangeSet Head,
+                                         RangeSet Second, RestTy... Tail) {
+  // Here we call either the <RangeSet,RangeSet,...> or <RangeSet,...> version
+  // of the function and can be sure that the result is RangeSet.
+  return intersect(BV, F, Head.Intersect(BV, F, Second), Tail...);
+}
+
+template <class SecondTy, class... RestTy>
+LLVM_NODISCARD inline RangeSet intersect(BasicValueFactory &BV,
+                                         RangeSet::Factory &F, RangeSet Head,
+                                         SecondTy Second, RestTy... Tail) {
+  if (Second) {
+    // Here we call the <RangeSet,RangeSet,...> version of the function...
+    return intersect(BV, F, Head, *Second, Tail...);
+  }
+  // ...and here it is either <RangeSet,RangeSet,...> or <RangeSet,...>, which
+  // means that the result is definitely RangeSet.
+  return intersect(BV, F, Head, Tail...);
+}
+
+/// Main generic intersect function.
+/// It intersects all of the given range sets.  If some of the given arguments
+/// don't hold a range set (nullptr or llvm::None), the function will skip them.
+///
+/// Available representations for the arguments are:
+///   * RangeSet
+///   * Optional<RangeSet>
+///   * RangeSet *
+/// Pointer to a RangeSet is automatically assumed to be nullable and will get
+/// checked as well as the optional version.  If this behaviour is undesired,
+/// please dereference the pointer in the call.
+///
+/// Return type depends on the arguments' types.  If we can be sure in compile
+/// time that there will be a range set as a result, the returning type is
+/// simply RangeSet, in other cases we have to back off to Optional<RangeSet>.
+///
+/// Please, prefer optional range sets to raw pointers.  If the last argument is
+/// a raw pointer and all previous arguments are None, it will cost one
+/// additional check to convert RangeSet * into Optional<RangeSet>.
+template <class HeadTy, class SecondTy, class... RestTy>
+LLVM_NODISCARD inline
+    typename IntersectionTraits<HeadTy, SecondTy, RestTy...>::Type
+    intersect(BasicValueFactory &BV, RangeSet::Factory &F, HeadTy Head,
+              SecondTy Second, RestTy... Tail) {
+  if (Head) {
+    return intersect(BV, F, *Head, Second, Tail...);
+  }
+  return intersect(BV, F, Second, Tail...);
+}
+
+//===----------------------------------------------------------------------===//
+//                           Symbolic reasoning logic
+//===----------------------------------------------------------------------===//
 
 /// A little component aggregating all of the reasoning we have about
 /// the ranges of symbolic expressions.
@@ -442,33 +555,22 @@ private:
   }
 
   RangeSet infer(SymbolRef Sym) {
-    const RangeSet *AssociatedRange = State->get<ConstraintRange>(Sym);
-
-    // If Sym is a difference of symbols A - B, then maybe we have range set
-    // stored for B - A.
-    const RangeSet *RangeAssociatedWithNegatedSym =
-        getRangeForMinusSymbol(State, Sym);
-
-    // If we have range set stored for both A - B and B - A then calculate the
-    // effective range set by intersecting the range set for A - B and the
-    // negated range set of B - A.
-    if (AssociatedRange && RangeAssociatedWithNegatedSym)
-      return AssociatedRange->Intersect(
-          ValueFactory, RangeFactory,
-          RangeAssociatedWithNegatedSym->Negate(ValueFactory, RangeFactory));
-
-    if (AssociatedRange)
-      return *AssociatedRange;
-
-    if (RangeAssociatedWithNegatedSym)
-      return RangeAssociatedWithNegatedSym->Negate(ValueFactory, RangeFactory);
+    if (Optional<RangeSet> ConstraintBasedRange = intersect(
+            ValueFactory, RangeFactory, State->get<ConstraintRange>(Sym),
+            // If Sym is a difference of symbols A - B, then maybe we have range
+            // set stored for B - A.
+            //
+            // If we have range set stored for both A - B and B - A then
+            // calculate the effective range set by intersecting the range set
+            // for A - B and the negated range set of B - A.
+            getRangeForNegatedSub(Sym)))
+      return *ConstraintBasedRange;
 
     // If Sym is a comparison expression (except <=>),
     // find any other comparisons with the same operands.
     // See function description.
-    const RangeSet CmpRangeSet = getRangeForComparisonSymbol(State, Sym);
-    if (!CmpRangeSet.isEmpty())
-      return CmpRangeSet;
+    if (Optional<RangeSet> CmpRangeSet = getRangeForComparisonSymbol(Sym))
+      return *CmpRangeSet;
 
     return Visit(Sym);
   }
@@ -621,8 +723,7 @@ private:
   /// Return a range set subtracting zero from \p Domain.
   RangeSet assumeNonZero(RangeSet Domain, QualType T) {
     APSIntType IntType = ValueFactory.getAPSIntType(T);
-    return Domain.Intersect(ValueFactory, RangeFactory,
-                            ++IntType.getZeroValue(), --IntType.getZeroValue());
+    return Domain.Delete(ValueFactory, RangeFactory, IntType.getZeroValue());
   }
 
   // FIXME: Once SValBuilder supports unary minus, we should use SValBuilder to
@@ -630,23 +731,27 @@ private:
   //        symbol manually. This will allow us to support finding ranges of not
   //        only negated SymSymExpr-type expressions, but also of other, simpler
   //        expressions which we currently do not know how to negate.
-  const RangeSet *getRangeForMinusSymbol(ProgramStateRef State, SymbolRef Sym) {
+  Optional<RangeSet> getRangeForNegatedSub(SymbolRef Sym) {
     if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(Sym)) {
       if (SSE->getOpcode() == BO_Sub) {
         QualType T = Sym->getType();
+
+        // Do not negate unsigned ranges
+        if (!T->isUnsignedIntegerOrEnumerationType() &&
+            !T->isSignedIntegerOrEnumerationType())
+          return llvm::None;
+
         SymbolManager &SymMgr = State->getSymbolManager();
-        SymbolRef negSym =
+        SymbolRef NegatedSym =
             SymMgr.getSymSymExpr(SSE->getRHS(), BO_Sub, SSE->getLHS(), T);
 
-        if (const RangeSet *negV = State->get<ConstraintRange>(negSym)) {
-          // Unsigned range set cannot be negated, unless it is [0, 0].
-          if (T->isUnsignedIntegerOrEnumerationType() ||
-              T->isSignedIntegerOrEnumerationType())
-            return negV;
+        if (const RangeSet *NegatedRange =
+                State->get<ConstraintRange>(NegatedSym)) {
+          return NegatedRange->Negate(ValueFactory, RangeFactory);
         }
       }
     }
-    return nullptr;
+    return llvm::None;
   }
 
   // Returns ranges only for binary comparison operators (except <=>)
@@ -659,18 +764,16 @@ private:
   // It covers all possible combinations (see CmpOpTable description).
   // Note that `x` and `y` can also stand for subexpressions,
   // not only for actual symbols.
-  RangeSet getRangeForComparisonSymbol(ProgramStateRef State, SymbolRef Sym) {
-    const RangeSet EmptyRangeSet = RangeFactory.getEmptySet();
-
-    auto SSE = dyn_cast<SymSymExpr>(Sym);
+  Optional<RangeSet> getRangeForComparisonSymbol(SymbolRef Sym) {
+    const auto *SSE = dyn_cast<SymSymExpr>(Sym);
     if (!SSE)
-      return EmptyRangeSet;
+      return llvm::None;
 
     BinaryOperatorKind CurrentOP = SSE->getOpcode();
 
     // We currently do not support <=> (C++20).
     if (!BinaryOperator::isComparisonOp(CurrentOP) || (CurrentOP == BO_Cmp))
-      return EmptyRangeSet;
+      return llvm::None;
 
     static const OperatorRelationsTable CmpOpTable{};
 
@@ -679,10 +782,6 @@ private:
     QualType T = SSE->getType();
 
     SymbolManager &SymMgr = State->getSymbolManager();
-    const llvm::APSInt &Zero = ValueFactory.getValue(0, T);
-    const llvm::APSInt &One = ValueFactory.getValue(1, T);
-    const RangeSet TrueRangeSet(RangeFactory, One, One);
-    const RangeSet FalseRangeSet(RangeFactory, Zero, Zero);
 
     int UnknownStates = 0;
 
@@ -732,17 +831,31 @@ private:
           continue;
       }
 
-      return (BranchState == OperatorRelationsTable::True) ? TrueRangeSet
-                                                           : FalseRangeSet;
+      return (BranchState == OperatorRelationsTable::True) ? getTrueRange(T)
+                                                           : getFalseRange(T);
     }
 
-    return EmptyRangeSet;
+    return llvm::None;
+  }
+
+  RangeSet getTrueRange(QualType T) {
+    RangeSet TypeRange = infer(T);
+    return assumeNonZero(TypeRange, T);
+  }
+
+  RangeSet getFalseRange(QualType T) {
+    const llvm::APSInt &Zero = ValueFactory.getValue(0, T);
+    return RangeSet(RangeFactory, Zero);
   }
 
   BasicValueFactory &ValueFactory;
   RangeSet::Factory &RangeFactory;
   ProgramStateRef State;
 };
+
+//===----------------------------------------------------------------------===//
+//               Range-based reasoning about symbolic operations
+//===----------------------------------------------------------------------===//
 
 template <>
 RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Or>(Range LHS, Range RHS,
@@ -904,6 +1017,10 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
   return {RangeFactory, ValueFactory.getValue(Min), ValueFactory.getValue(Max)};
 }
 
+//===----------------------------------------------------------------------===//
+//                  Constraint manager implementation details
+//===----------------------------------------------------------------------===//
+
 class RangeConstraintManager : public RangedConstraintManager {
 public:
   RangeConstraintManager(ExprEngine *EE, SValBuilder &SVB)
@@ -997,6 +1114,10 @@ ento::CreateRangeConstraintManager(ProgramStateManager &StMgr,
   return std::make_unique<RangeConstraintManager>(Eng, StMgr.getSValBuilder());
 }
 
+//===----------------------------------------------------------------------===//
+//                    RangeConstraintManager implementation
+//===----------------------------------------------------------------------===//
+
 bool RangeConstraintManager::canReasonAbout(SVal X) const {
   Optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
   if (SymVal && SymVal->isExpression()) {
@@ -1073,6 +1194,10 @@ const llvm::APSInt *RangeConstraintManager::getSymVal(ProgramStateRef St,
   return T ? T->getConcreteValue() : nullptr;
 }
 
+//===----------------------------------------------------------------------===//
+//                Remove dead symbols from existing constraints
+//===----------------------------------------------------------------------===//
+
 /// Scan all symbols referenced by the constraints. If the symbol is not alive
 /// as marked in LSymbols, mark it as dead in DSymbols.
 ProgramStateRef
@@ -1119,14 +1244,9 @@ RangeConstraintManager::assumeSymNE(ProgramStateRef St, SymbolRef Sym,
   if (AdjustmentType.testInRange(Int, true) != APSIntType::RTR_Within)
     return St;
 
-  llvm::APSInt Lower = AdjustmentType.convert(Int) - Adjustment;
-  llvm::APSInt Upper = Lower;
-  --Lower;
-  ++Upper;
+  llvm::APSInt Point = AdjustmentType.convert(Int) - Adjustment;
 
-  // [Int-Adjustment+1, Int-Adjustment-1]
-  // Notice that the lower bound is greater than the upper bound.
-  RangeSet New = getRange(St, Sym).Intersect(getBasicVals(), F, Upper, Lower);
+  RangeSet New = getRange(St, Sym).Delete(getBasicVals(), F, Point);
   return New.isEmpty() ? nullptr : St->set<ConstraintRange>(Sym, New);
 }
 
