@@ -2535,3 +2535,38 @@ func @multi_outgoing_edges(%in0 : memref<32xf32>,
 // CHECK:        mulf
 // CHECK-NOT:  affine.for
 // CHECK:        divf
+
+// -----
+
+// Test fusion when dynamically shaped memrefs are used with constant trip count loops.
+
+// CHECK-LABEL: func @calc
+func @calc(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %len: index) {
+  %c1 = constant 1 : index
+  %1 = alloc(%len) : memref<?xf32>
+  affine.for %arg4 = 1 to 10 {
+    %7 = affine.load %arg0[%arg4] : memref<?xf32>
+    %8 = affine.load %arg1[%arg4] : memref<?xf32>
+    %9 = addf %7, %8 : f32
+    affine.store %9, %1[%arg4] : memref<?xf32>
+  }
+  affine.for %arg4 = 1 to 10 {
+    %7 = affine.load %1[%arg4] : memref<?xf32>
+    %8 = affine.load %arg1[%arg4] : memref<?xf32>
+    %9 = mulf %7, %8 : f32
+    affine.store %9, %arg2[%arg4] : memref<?xf32>
+  }
+  return
+}
+// CHECK:       alloc() : memref<1xf32>
+// CHECK:       affine.for %arg{{.*}} = 1 to 10 {
+// CHECK-NEXT:    affine.load %arg{{.*}}
+// CHECK-NEXT:    affine.load %arg{{.*}}
+// CHECK-NEXT:    addf
+// CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+// CHECK-NEXT:    affine.load %{{.*}}[0] : memref<1xf32>
+// CHECK-NEXT:    affine.load %arg{{.*}}[%arg{{.*}}] : memref<?xf32>
+// CHECK-NEXT:    mulf
+// CHECK-NEXT:    affine.store %{{.*}}, %arg{{.*}}[%arg{{.*}}] : memref<?xf32>
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
