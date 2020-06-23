@@ -287,7 +287,7 @@ FileOptionsProvider::FileOptionsProvider(
     const ClangTidyOptions &OverrideOptions,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
     : FileOptionsBaseProvider(GlobalOptions, DefaultOptions, OverrideOptions,
-                              VFS){};
+                              VFS){}
 
 FileOptionsProvider::FileOptionsProvider(
     const ClangTidyGlobalOptions &GlobalOptions,
