@@ -25,7 +25,7 @@ struct MyFuture {
   struct promise_type {
     typedef coro::coroutine_handle<promise_type> HandleT;
     coro::suspend_never initial_suspend() { return sn; }
-    coro::suspend_always final_suspend() { return sa; }
+    coro::suspend_always final_suspend() noexcept { return sa; }
     coro::suspend_never yield_value(int) { return sn; }
     MyFuture get_return_object() {
       MyFuture f(HandleT::from_promise(*this));

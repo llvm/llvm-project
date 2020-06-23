@@ -23,7 +23,7 @@ struct coro_t {
       return {};
     }
     suspend_never initial_suspend() { return {}; }
-    suspend_never final_suspend() { return {}; }
+    suspend_never final_suspend() noexcept { return {}; }
     void return_void() {}
     static void unhandled_exception() {}
   };
