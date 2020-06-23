@@ -8,15 +8,15 @@
 # CHECK: V_WRITELANE
 # CHECK: $sgpr12 = S_MOV_B32 $exec_lo
 # CHECK: $exec_lo = S_MOV_B32 1
-# CHECK: BUFFER_STORE_DWORD_OFFSET {{(killed )?}}$vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 4
+# CHECK: BUFFER_STORE_DWORD_OFFSET killed $vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 4
 # CHECK: $exec_lo = S_MOV_B32 killed $sgpr12
 
 # S32 without kill
 # CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
+# CHECK: $sgpr12 = S_MOV_B32 $exec_lo
 # CHECK: $exec_lo = S_MOV_B32 1
-# CHECK: BUFFER_STORE_DWORD_OFFSET {{(killed )?}}$vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 4
-# CHECK: $exec_lo = V_READLANE
+# CHECK: BUFFER_STORE_DWORD_OFFSET $vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 4
+# CHECK: $sgpr12 = V_READLANE
 
 # S64 with kill
 # CHECK: V_WRITELANE
@@ -25,20 +25,22 @@
 # GCN64: $sgpr12_sgpr13 = S_MOV_B64 $exec
 # GCN32: $exec_lo = S_MOV_B32 3
 # GCN64: $exec = S_MOV_B64 3
-# CHECK: BUFFER_STORE_DWORD_OFFSET {{(killed )?}}$vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 8
+# CHECK: BUFFER_STORE_DWORD_OFFSET killed $vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 8
 # GCN32: $exec_lo = S_MOV_B32 killed $sgpr12
 # GCN64: $exec = S_MOV_B64 killed $sgpr12_sgpr13
 
 # S64 without kill
 # CHECK: V_WRITELANE
 # CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# GCN64: V_WRITELANE
+# GCN32: $sgpr12 = S_MOV_B32 $exec_lo
+# GCN64: $sgpr12_sgpr13 = S_MOV_B64 $exec
 # GCN32: $exec_lo = S_MOV_B32 3
 # GCN64: $exec = S_MOV_B64 3
-# CHECK: BUFFER_STORE_DWORD_OFFSET {{(killed )?}}$vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 8
-# CHECK: $exec_lo = V_READLANE
-# GCN64: $exec_hi = V_READLANE
+# CHECK: BUFFER_STORE_DWORD_OFFSET $vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 8
+# GCN32: $exec_lo = S_MOV_B32 $sgpr12
+# GCN64: $exec = S_MOV_B64 $sgpr12_sgpr13
+# GCN64: $sgpr13 = V_READLANE
+# CHECK: $sgpr12 = V_READLANE
 
 # S96
 # CHECK: V_WRITELANE
@@ -48,7 +50,7 @@
 # GCN64: $sgpr12_sgpr13 = S_MOV_B64 $exec
 # GCN32: $exec_lo = S_MOV_B32 7
 # GCN64: $exec = S_MOV_B64 7
-# CHECK: BUFFER_STORE_DWORD_OFFSET {{(killed )?}}$vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 16
+# CHECK: BUFFER_STORE_DWORD_OFFSET killed $vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 16
 # GCN32: $exec_lo = S_MOV_B32 killed $sgpr12
 # GCN64: $exec = S_MOV_B64 killed $sgpr12_sgpr13
 
@@ -61,7 +63,7 @@
 # GCN64: $sgpr12_sgpr13 = S_MOV_B64 $exec
 # GCN32: $exec_lo = S_MOV_B32 15
 # GCN64: $exec = S_MOV_B64 15
-# CHECK: BUFFER_STORE_DWORD_OFFSET {{(killed )?}}$vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 28
+# CHECK: BUFFER_STORE_DWORD_OFFSET killed $vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 28
 # GCN32: $exec_lo = S_MOV_B32 killed $sgpr12
 # GCN64: $exec = S_MOV_B64 killed $sgpr12_sgpr13
 
@@ -138,33 +140,28 @@
 # CHECK: V_WRITELANE
 # CHECK: V_WRITELANE
 # CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
+# CHECK: V_WRITELANE
 # GCN32: $sgpr64 = S_MOV_B32 $exec_lo
-# GCN32: $exec_lo = S_MOV_B32 65535
-# GCN32: BUFFER_STORE_DWORD_OFFSET {{(killed )?}}$vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 160
-# GCN32: $exec_lo = S_MOV_B32 killed $sgpr64
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# CHECK: V_WRITELANE
-# GCN32: $sgpr80 = S_MOV_B32 $exec_lo
 # GCN64: $sgpr64_sgpr65 = S_MOV_B64 $exec
-# GCN32: $exec_lo = S_MOV_B32 65535
+# GCN32: $exec_lo = S_MOV_B32 4294967295
 # GCN64: $exec = S_MOV_B64 4294967295
-# GCN32: BUFFER_STORE_DWORD_OFFSET {{(killed )?}}$vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 164
-# GCN64: BUFFER_STORE_DWORD_OFFSET {{(killed )?}}$vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 160
-# GCN32: $exec_lo = S_MOV_B32 killed $sgpr80
+# CHECK: BUFFER_STORE_DWORD_OFFSET {{(killed )?}}$vgpr{{[0-9]+}}, ${{(sgpr[0-9_]+)*}}, $sgpr33, 160
+# GCN32: $exec_lo = S_MOV_B32 killed $sgpr64
 # GCN64: $exec = S_MOV_B64 killed $sgpr64_sgpr65
 
 --- |
@@ -350,7 +347,7 @@ body:             |
 # S1024
 # GCN32: $sgpr64 = S_MOV_B32 $exec_lo
 # GCN64: $sgpr64_sgpr65 = S_MOV_B64 $exec
-# GCN32: $exec_lo = S_MOV_B32 65535
+# GCN32: $exec_lo = S_MOV_B32 4294967295
 # GCN64: $exec = S_MOV_B64 4294967295
 # CHECK: BUFFER_LOAD_DWORD_OFFSET ${{(sgpr[0-9_]+)*}}, $sgpr33, 160
 # GCN32: $exec_lo = S_MOV_B32 killed $sgpr64
@@ -371,10 +368,6 @@ body:             |
 # CHECK: $sgpr77 = V_READLANE
 # CHECK: $sgpr78 = V_READLANE
 # CHECK: $sgpr79 = V_READLANE
-# GCN32: $sgpr80 = S_MOV_B32 $exec_lo
-# GCN32: $exec_lo = S_MOV_B32 65535
-# GCN32: BUFFER_LOAD_DWORD_OFFSET ${{(sgpr[0-9_]+)*}}, $sgpr33, 164
-# GCN32: $exec_lo = S_MOV_B32 killed $sgpr80
 # CHECK: $sgpr80 = V_READLANE
 # CHECK: $sgpr81 = V_READLANE
 # CHECK: $sgpr82 = V_READLANE
