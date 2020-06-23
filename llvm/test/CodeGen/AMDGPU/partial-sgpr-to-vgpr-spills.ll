@@ -664,7 +664,6 @@ ret:
 ; The first 64 SGPR spills can go to a VGPR, but there isn't a second
 ; so some spills must be to memory. The last 16 element spill runs out
 ; of lanes at the 15th element.
-
 define amdgpu_kernel void @no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 %in) #1 {
 ; GCN-LABEL: no_vgprs_last_sgpr_spill:
 ; GCN:       ; %bb.0:
@@ -756,38 +755,26 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 
 ; GCN-NEXT:    v_writelane_b32 v31, s14, 47
 ; GCN-NEXT:    v_writelane_b32 v31, s15, 48
 ; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0
-; GCN-NEXT:    v_mov_b32_e32 v0, s16
+; GCN-NEXT:    v_writelane_b32 v0, s16, 0
+; GCN-NEXT:    v_writelane_b32 v0, s17, 1
+; GCN-NEXT:    v_writelane_b32 v0, s18, 2
+; GCN-NEXT:    v_writelane_b32 v0, s19, 3
+; GCN-NEXT:    v_writelane_b32 v0, s20, 4
+; GCN-NEXT:    v_writelane_b32 v0, s21, 5
+; GCN-NEXT:    v_writelane_b32 v0, s22, 6
+; GCN-NEXT:    v_writelane_b32 v0, s23, 7
+; GCN-NEXT:    v_writelane_b32 v0, s24, 8
+; GCN-NEXT:    v_writelane_b32 v0, s25, 9
+; GCN-NEXT:    v_writelane_b32 v0, s26, 10
+; GCN-NEXT:    v_writelane_b32 v0, s27, 11
+; GCN-NEXT:    v_writelane_b32 v0, s28, 12
+; GCN-NEXT:    v_writelane_b32 v0, s29, 13
+; GCN-NEXT:    v_writelane_b32 v0, s30, 14
+; GCN-NEXT:    v_writelane_b32 v0, s31, 15
+; GCN-NEXT:    s_mov_b64 s[16:17], exec
+; GCN-NEXT:    s_mov_b64 exec, 0xffff
 ; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:4 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s17
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:8 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s18
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:12 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s19
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:16 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s20
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:20 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s21
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:24 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s22
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:28 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s23
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:32 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s24
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:36 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s25
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:40 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s26
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:44 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s27
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:48 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s28
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:52 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s29
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:56 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s30
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:60 ; 4-byte Folded Spill
-; GCN-NEXT:    v_mov_b32_e32 v0, s31
-; GCN-NEXT:    buffer_store_dword v0, off, s[56:59], 0 offset:64 ; 4-byte Folded Spill
+; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    v_writelane_b32 v31, s34, 49
 ; GCN-NEXT:    v_writelane_b32 v31, s35, 50
 ; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0
@@ -850,54 +837,27 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[0:15]
 ; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_mov_b64 s[0:1], exec
+; GCN-NEXT:    s_mov_b64 exec, 0xffff
 ; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:8 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s1, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:12 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s2, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:16 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:20 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s4, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:24 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s5, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:28 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s6, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:32 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s7, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:36 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s8, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:40 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s9, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:44 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s10, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:48 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s11, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:52 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s12, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:56 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s13, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:60 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s14, v0
-; GCN-NEXT:    buffer_load_dword v0, off, s[56:59], 0 offset:64 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s15, v0
+; GCN-NEXT:    v_readlane_b32 s0, v0, 0
+; GCN-NEXT:    v_readlane_b32 s1, v0, 1
+; GCN-NEXT:    v_readlane_b32 s2, v0, 2
+; GCN-NEXT:    v_readlane_b32 s3, v0, 3
+; GCN-NEXT:    v_readlane_b32 s4, v0, 4
+; GCN-NEXT:    v_readlane_b32 s5, v0, 5
+; GCN-NEXT:    v_readlane_b32 s6, v0, 6
+; GCN-NEXT:    v_readlane_b32 s7, v0, 7
+; GCN-NEXT:    v_readlane_b32 s8, v0, 8
+; GCN-NEXT:    v_readlane_b32 s9, v0, 9
+; GCN-NEXT:    v_readlane_b32 s10, v0, 10
+; GCN-NEXT:    v_readlane_b32 s11, v0, 11
+; GCN-NEXT:    v_readlane_b32 s12, v0, 12
+; GCN-NEXT:    v_readlane_b32 s13, v0, 13
+; GCN-NEXT:    v_readlane_b32 s14, v0, 14
+; GCN-NEXT:    v_readlane_b32 s15, v0, 15
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[0:15]
 ; GCN-NEXT:    ;;#ASMEND
