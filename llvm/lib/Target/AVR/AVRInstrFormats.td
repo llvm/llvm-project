@@ -272,6 +272,8 @@ class FMUL2RdRr<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{8} = f;
   let Inst{7-4} = rd{3-0};
   let Inst{3-0} = rr{3-0};
+
+  let DecoderMethod = "decodeFMUL2RdRr";
 }
 
 // Special encoding for the FMUL family of instructions.
@@ -295,6 +297,8 @@ class FFMULRdRr<bits<2> f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{6-4} = rd;
   let Inst{3} = f{0};
   let Inst{2-0} = rr;
+
+  let DecoderMethod = "decodeFFMULRdRr";
 }
 
 
