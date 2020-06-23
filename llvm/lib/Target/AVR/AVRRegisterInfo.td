@@ -103,6 +103,17 @@ CoveredBySubRegs = 1 in
   def R5R4   : AVRReg<4,  "r5:r4",   [R4, R5]>,   DwarfRegNum<[4]>;
   def R3R2   : AVRReg<2,  "r3:r2",   [R2, R3]>,   DwarfRegNum<[2]>;
   def R1R0   : AVRReg<0,  "r1:r0",   [R0, R1]>,   DwarfRegNum<[0]>;
+
+  // Pseudo registers for unaligned i16
+  def R26R25 : AVRReg<25, "r26:r25", [R25, R26]>, DwarfRegNum<[25]>;
+  def R24R23 : AVRReg<23, "r24:r23", [R23, R24]>, DwarfRegNum<[23]>;
+  def R22R21 : AVRReg<21, "r22:r21", [R21, R22]>, DwarfRegNum<[21]>;
+  def R20R19 : AVRReg<19, "r20:r19", [R19, R20]>, DwarfRegNum<[19]>;
+  def R18R17 : AVRReg<17, "r18:r17", [R17, R18]>, DwarfRegNum<[17]>;
+  def R16R15 : AVRReg<15, "r16:r15", [R15, R16]>, DwarfRegNum<[15]>;
+  def R14R13 : AVRReg<13, "r14:r13", [R13, R14]>, DwarfRegNum<[13]>;
+  def R12R11 : AVRReg<11, "r12:r11", [R11, R12]>, DwarfRegNum<[11]>;
+  def R10R9  : AVRReg<9,  "r10:r9",  [R9,  R10]>, DwarfRegNum<[9]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -146,6 +157,22 @@ def LD8lo : RegisterClass<"AVR", [i8], 8,
 
 // Main 16-bit pair register class.
 def DREGS : RegisterClass<"AVR", [i16], 8,
+  (
+    // Return value and arguments.
+    add R25R24, R19R18, R21R20, R23R22,
+    // Scratch registers.
+    R31R30, R27R26,
+    // Callee saved registers.
+    R29R28, R17R16, R15R14, R13R12, R11R10,
+    R9R8, R7R6, R5R4, R3R2, R1R0,
+    // Pseudo regs for unaligned 16-bits
+    R26R25, R24R23, R22R21,
+    R20R19, R18R17, R16R15,
+    R14R13, R12R11, R10R9
+  )>;
+
+// 16-bit pair register class for movw
+def DREGSMOVW : RegisterClass<"AVR", [i16], 8,
   (
     // Return value and arguments.
     add R25R24, R19R18, R21R20, R23R22,
