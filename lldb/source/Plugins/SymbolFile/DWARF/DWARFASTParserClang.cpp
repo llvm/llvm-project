@@ -2061,26 +2061,19 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
           CompilerType base_class_type =
               m_ast.GetType(type_source_info->getType());
           if (!base_class_type.GetCompleteType()) {
-            auto module = dwarf->GetObjectFile()->GetModule();
-            module->ReportError(":: Class '%s' has a base class '%s' which "
-                                "does not have a complete definition.",
-                                die.GetName(),
-                                base_class_type.GetTypeName().GetCString());
-            if (die.GetCU()->GetProducer() == eProducerClang)
-              module->ReportError(":: Try compiling the source file with "
-                                  "-fstandalone-debug.");
-
-            // We have no choice other than to pretend that the base class
-            // is complete. If we don't do this, clang will crash when we
-            // call setBases() inside of
-            // "clang_type.TransferBaseClasses()" below. Since we
-            // provide layout assistance, all ivars in this class and other
-            // classes will be fine, this is the best we can do short of
-            // crashing.
+            // We mark the class as complete to allow the TransferBaseClasses
+            // call to succeed. But we make a note of the fact that this class
+            // is not _really_ complete so we can later search for a definition
+            // in a different module.
             if (TypeSystemClang::StartTagDeclarationDefinition(
                     base_class_type)) {
               TypeSystemClang::CompleteTagDeclarationDefinition(
                   base_class_type);
+              const auto *td = TypeSystemClang::GetQualType(
+                                   base_class_type.GetOpaqueQualType())
+                                   .getTypePtr()
+                                   ->getAsTagDecl();
+              m_ast.GetMetadata(td)->SetIsForcefullyCompleted();
             }
           }
         }
