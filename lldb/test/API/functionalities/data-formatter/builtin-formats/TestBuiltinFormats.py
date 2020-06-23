@@ -92,13 +92,15 @@ class TestCase(TestBase):
         # FIXME: Passing a 'const char *' will ignore any given format,
         self.assertIn('= " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("character array", "cstring"))
         self.assertIn('= " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("c-string", "cstring"))
+        self.assertIn(' = " \\e\\a\\b\\f\\n\\r\\t\\vaA09" " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n',
+                      self.getFormatted("c-string", "(char *)cstring"))
         self.assertIn('=\n', self.getFormatted("c-string", "(__UINT64_TYPE__)0"))
 
         # Build a uint128_t that contains a series of characters in each byte.
         # First 8 byte of the uint128_t.
         cstring_chars1 = " \a\b\f\n\r\t\v"
         # Last 8 byte of the uint128_t.
-        cstring_chars2 = "AZaz09\0\0"
+        cstring_chars2 = "AZaz09\033\0"
 
         # Build a uint128_t value with the hex encoded characters.
         string_expr = "((__uint128_t)0x"
@@ -110,12 +112,24 @@ class TestCase(TestBase):
         string_expr += "ull"
 
         # Try to print that uint128_t with the different char formatters.
-        self.assertIn('= \\0\\090zaZA\\v\\t\\r\\n\\f\\b\\a \n', self.getFormatted("character array", string_expr))
-        self.assertIn('= \\0\\090zaZA\\v\\t\\r\\n\\f\\b\\a \n', self.getFormatted("character", string_expr))
+        self.assertIn('= \\0\\e90zaZA\\v\\t\\r\\n\\f\\b\\a \n', self.getFormatted("character array", string_expr))
+        self.assertIn('= \\0\\e90zaZA\\v\\t\\r\\n\\f\\b\\a \n', self.getFormatted("character", string_expr))
         self.assertIn('= ..90zaZA....... \n', self.getFormatted("printable character", string_expr))
-        self.assertIn('= 0x2007080c0a0d090b415a617a30390000\n', self.getFormatted("OSType", string_expr))
         # FIXME: This should probably print the characters in the uint128_t.
-        self.assertIn('= 0x2007080c0a0d090b415a617a30390000\n', self.getFormatted("unicode8", string_expr))
+        self.assertIn('= 0x2007080c0a0d090b415a617a30391b00\n', self.getFormatted("unicode8", string_expr))
+
+        # OSType
+        ostype_expr = "(__UINT64_TYPE__)0x"
+        for c in cstring_chars1:
+             ostype_expr += format(ord(c), "x").zfill(2)
+        self.assertIn("= ' \\a\\b\\f\\n\\r\\t\\v'\n", self.getFormatted("OSType", ostype_expr))
+
+        ostype_expr = "(__UINT64_TYPE__)0x"
+        for c in cstring_chars2:
+             ostype_expr += format(ord(c), "x").zfill(2)
+        self.assertIn("= 'AZaz09\\e\\0'\n", self.getFormatted("OSType", ostype_expr))
+
+        self.assertIn('= 0x2007080c0a0d090b415a617a30391b00\n', self.getFormatted("OSType", string_expr))
 
         # bytes
         self.assertIn('= " \\U0000001b\\a\\b\\f\\n\\r\\t\\vaA09"\n', self.getFormatted("bytes", "cstring"))
