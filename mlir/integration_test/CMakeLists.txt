@@ -21,6 +21,10 @@ add_lit_testsuite(check-mlir-integration "Running the MLIR integration tests"
   )
 set_target_properties(check-mlir-integration PROPERTIES FOLDER "integration_test")
 
+# Let target "check-mlir" imply the target "check-mlir-integration" as well,
+# provided that MLIR_INCLUDE_INTEGRATION_TESTS=ON during the initial setup.
+add_dependencies(check-mlir check-mlir-integration)
+
 add_lit_testsuites(MLIR_INTEGRATION ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_INTEGRATION_TEST_DEPENDS}
   )
