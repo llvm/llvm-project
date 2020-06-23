@@ -244,6 +244,7 @@ FullComment
   verifyWithDynNode(TA,
                     R"cpp(
 TemplateArgument
+`-BuiltinType
 )cpp");
 
   Func = getFunctionNode(AST.get(), "parmvardecl_attr");
