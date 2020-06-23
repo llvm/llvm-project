@@ -614,6 +614,17 @@ static void checkNoThrow(Sema &S, const Stmt *E,
     // In the case of dtor, the call to dtor is implicit and hence we should
     // pass nullptr to canCalleeThrow.
     if (Sema::canCalleeThrow(S, IsDtor ? nullptr : cast<Expr>(E), D)) {
+      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+        // co_await promise.final_suspend() could end up calling
+        // __builtin_coro_resume for symmetric transfer if await_suspend()
+        // returns a handle. In that case, even __builtin_coro_resume is not
+        // declared as noexcept and may throw, it does not throw _into_ the
+        // coroutine that just suspended, but rather throws back out from
+        // whoever called coroutine_handle::resume(), hence we claim that
+        // logically it does not throw.
+        if (FD->getBuiltinID() == Builtin::BI__builtin_coro_resume)
+          return;
+      }
       if (ThrowingDecls.empty()) {
         // First time seeing an error, emit the error message.
         S.Diag(cast<FunctionDecl>(S.CurContext)->getLocation(),
