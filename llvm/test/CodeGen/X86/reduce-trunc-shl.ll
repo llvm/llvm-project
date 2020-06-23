@@ -38,7 +38,7 @@ define <8 x i16> @trunc_shl_15_v8i16_v8i32(<8 x i32> %a) {
 ;
 ; AVX2-LABEL: trunc_shl_15_v8i16_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper

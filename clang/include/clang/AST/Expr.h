@@ -988,11 +988,14 @@ class ConstantExpr final
     : public FullExpr,
       private llvm::TrailingObjects<ConstantExpr, APValue, uint64_t> {
   static_assert(std::is_same<uint64_t, llvm::APInt::WordType>::value,
-                "this class assumes llvm::APInt::WordType is uint64_t for "
-                "trail-allocated storage");
+                "ConstantExpr assumes that llvm::APInt::WordType is uint64_t "
+                "for tail-allocated storage");
+  friend TrailingObjects;
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
 
 public:
-  /// Describes the kind of result that can be trail-allocated.
+  /// Describes the kind of result that can be tail-allocated.
   enum ResultStorageKind { RSK_None, RSK_Int64, RSK_APValue };
 
 private:
@@ -1003,7 +1006,6 @@ private:
     return ConstantExprBits.ResultKind == ConstantExpr::RSK_Int64;
   }
 
-  void DefaultInit(ResultStorageKind StorageKind);
   uint64_t &Int64Result() {
     assert(ConstantExprBits.ResultKind == ConstantExpr::RSK_Int64 &&
            "invalid accessor");
@@ -1021,21 +1023,18 @@ private:
     return const_cast<ConstantExpr *>(this)->APValueResult();
   }
 
-  ConstantExpr(Expr *subexpr, ResultStorageKind StorageKind);
-  ConstantExpr(ResultStorageKind StorageKind, EmptyShell Empty);
+  ConstantExpr(Expr *SubExpr, ResultStorageKind StorageKind,
+               bool IsImmediateInvocation);
+  ConstantExpr(EmptyShell Empty, ResultStorageKind StorageKind);
 
 public:
-  friend TrailingObjects;
-  friend class ASTStmtReader;
-  friend class ASTStmtWriter;
   static ConstantExpr *Create(const ASTContext &Context, Expr *E,
                               const APValue &Result);
   static ConstantExpr *Create(const ASTContext &Context, Expr *E,
                               ResultStorageKind Storage = RSK_None,
                               bool IsImmediateInvocation = false);
   static ConstantExpr *CreateEmpty(const ASTContext &Context,
-                                   ResultStorageKind StorageKind,
-                                   EmptyShell Empty);
+                                   ResultStorageKind StorageKind);
 
   static ResultStorageKind getStorageKind(const APValue &Value);
   static ResultStorageKind getStorageKind(const Type *T,

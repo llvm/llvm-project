@@ -2360,7 +2360,7 @@ static bool CheckMethodOverrideReturn(Sema &S,
                      : diag::warn_conflicting_ret_types;
 
   // Mismatches between ObjC pointers go into a different warning
-  // category, and sometimes they're even completely whitelisted.
+  // category, and sometimes they're even completely explicitly allowed.
   if (const ObjCObjectPointerType *ImplPtrTy =
           MethodImpl->getReturnType()->getAs<ObjCObjectPointerType>()) {
     if (const ObjCObjectPointerType *IfacePtrTy =
@@ -2444,7 +2444,7 @@ static bool CheckMethodOverrideParam(Sema &S,
                      : diag::warn_conflicting_param_types;
 
   // Mismatches between ObjC pointers go into a different warning
-  // category, and sometimes they're even completely whitelisted.
+  // category, and sometimes they're even completely explicitly allowed..
   if (const ObjCObjectPointerType *ImplPtrTy =
         ImplTy->getAs<ObjCObjectPointerType>()) {
     if (const ObjCObjectPointerType *IfacePtrTy =

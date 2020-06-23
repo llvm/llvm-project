@@ -20,6 +20,10 @@ UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
+void UseUsingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+}
+
 void UseUsingCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(typedefDecl(unless(isInstantiated())).bind("typedef"),
                      this);
@@ -111,7 +115,6 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   std::string Replacement = Using + Name + " = " + Type;
   Diag << FixItHint::CreateReplacement(ReplaceRange, Replacement);
 }
-
 } // namespace modernize
 } // namespace tidy
 } // namespace clang

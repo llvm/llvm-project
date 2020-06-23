@@ -998,30 +998,30 @@ define i1 @allones_v16i8_and1(<16 x i8> %arg) {
 }
 
 define i1 @allzeros_v16i8_not(<16 x i8> %a0) {
-; SSE-LABEL: allzeros_v16i8_not:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE-NEXT:    pmovmskb %xmm1, %eax
-; SSE-NEXT:    cmpw $-1, %ax
-; SSE-NEXT:    setne %al
-; SSE-NEXT:    retq
+; SSE2-LABEL: allzeros_v16i8_not:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
+; SSE2-NEXT:    cmpw $-1, %ax
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: allzeros_v16i8_not:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    ptest %xmm0, %xmm0
+; SSE41-NEXT:    setne %al
+; SSE41-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: allzeros_v16i8_not:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1OR2-NEXT:    cmpw $-1, %ax
+; AVX1OR2-NEXT:    vptest %xmm0, %xmm0
 ; AVX1OR2-NEXT:    setne %al
 ; AVX1OR2-NEXT:    retq
 ;
 ; KNL-LABEL: allzeros_v16i8_not:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vpmovmskb %xmm0, %eax
-; KNL-NEXT:    cmpw $-1, %ax
+; KNL-NEXT:    vptest %xmm0, %xmm0
 ; KNL-NEXT:    setne %al
 ; KNL-NEXT:    retq
 ;
@@ -1051,19 +1051,13 @@ define i1 @allzeros_v2i64_not(<2 x i64> %a0) {
 ;
 ; SSE41-LABEL: allzeros_v2i64_not:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    pcmpeqq %xmm0, %xmm1
-; SSE41-NEXT:    movmskpd %xmm1, %eax
-; SSE41-NEXT:    cmpb $3, %al
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: allzeros_v2i64_not:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmovmskpd %xmm0, %eax
-; AVX1OR2-NEXT:    cmpb $3, %al
+; AVX1OR2-NEXT:    vptest %xmm0, %xmm0
 ; AVX1OR2-NEXT:    setne %al
 ; AVX1OR2-NEXT:    retq
 ;
@@ -1119,10 +1113,7 @@ define i1 @allzeros_v8i32_not(<8 x i32> %a0) {
 ;
 ; AVX2-LABEL: allzeros_v8i32_not:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vmovmskps %ymm0, %eax
-; AVX2-NEXT:    cmpb $-1, %al
+; AVX2-NEXT:    vptest %ymm0, %ymm0
 ; AVX2-NEXT:    setne %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

@@ -81,7 +81,7 @@ struct SymbolBox {
   mlir::Value getAddr() const {
     return std::visit(common::visitors{
                           [](const None &) { return mlir::Value{}; },
-                          [](const auto &x) { return x.addr; },
+                          [](const auto &x) { return x.getAddr(); },
                       },
                       box);
   }
@@ -90,8 +90,8 @@ struct SymbolBox {
   llvm::Optional<mlir::Value> getCharLen() const {
     using T = llvm::Optional<mlir::Value>;
     return std::visit(common::visitors{
-                          [](const Char &x) { return T{x.len}; },
-                          [](const CharFullDim &x) { return T{x.len}; },
+                          [](const Char &x) { return T{x.getLen()}; },
+                          [](const CharFullDim &x) { return T{x.getLen()}; },
                           [](const auto &) { return T{}; },
                       },
                       box);
@@ -109,23 +109,24 @@ struct SymbolBox {
 
   /// Does the boxed value have a rank greater than zero?
   bool hasRank() const {
-    return std::visit(common::visitors{
-                          [](const Intrinsic &) { return false; },
-                          [](const Char &) { return false; },
-                          [](const None &) { return false; },
-                          [](const auto &x) { return x.extents.size() > 0; },
-                      },
-                      box);
+    return std::visit(
+        common::visitors{
+            [](const Intrinsic &) { return false; },
+            [](const Char &) { return false; },
+            [](const None &) { return false; },
+            [](const auto &x) { return x.getExtents().size() > 0; },
+        },
+        box);
   }
 
   /// Does the boxed value have trivial lower bounds (== 1)?
   bool hasSimpleLBounds() const {
     if (auto *arr = std::get_if<FullDim>(&box))
-      return arr->lbounds.empty();
+      return arr->getLBounds().empty();
     if (auto *arr = std::get_if<CharFullDim>(&box))
-      return arr->lbounds.empty();
+      return arr->getLBounds().empty();
     if (auto *arr = std::get_if<Derived>(&box))
-      return (arr->extents.size() > 0) && arr->lbounds.empty();
+      return (arr->getExtents().size() > 0) && arr->getLBounds().empty();
     return false;
   }
 
@@ -141,9 +142,9 @@ struct SymbolBox {
   mlir::Value getLBound(unsigned dim) const {
     return std::visit(
         common::visitors{
-            [&](const FullDim &box) { return box.lbounds[dim]; },
-            [&](const CharFullDim &box) { return box.lbounds[dim]; },
-            [&](const Derived &box) { return box.lbounds[dim]; },
+            [&](const FullDim &box) { return box.getLBounds()[dim]; },
+            [&](const CharFullDim &box) { return box.getLBounds()[dim]; },
+            [&](const Derived &box) { return box.getLBounds()[dim]; },
             [](const auto &) { return mlir::Value{}; }},
         box);
   }

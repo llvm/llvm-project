@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <iomanip>
-#include <iostream>
 #include <limits.h>
 
 #include "lldb/Host/ConnectionFileDescriptor.h"

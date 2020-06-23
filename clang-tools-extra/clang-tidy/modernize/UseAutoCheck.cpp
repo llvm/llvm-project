@@ -321,7 +321,7 @@ UseAutoCheck::UseAutoCheck(StringRef Name, ClangTidyContext *Context)
 
 void UseAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MinTypeNameLength", MinTypeNameLength);
-  Options.store(Opts, "RemoveStars", RemoveStars ? 1 : 0);
+  Options.store(Opts, "RemoveStars", RemoveStars);
 }
 
 void UseAutoCheck::registerMatchers(MatchFinder *Finder) {

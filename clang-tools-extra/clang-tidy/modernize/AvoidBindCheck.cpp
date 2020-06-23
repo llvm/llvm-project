@@ -578,6 +578,10 @@ AvoidBindCheck::AvoidBindCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       PermissiveParameterList(Options.get("PermissiveParameterList", false)) {}
 
+void AvoidBindCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "PermissiveParameterList", PermissiveParameterList);
+}
+
 void AvoidBindCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(

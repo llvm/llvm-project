@@ -476,7 +476,7 @@ LoopConvertCheck::RangeDescriptor::RangeDescriptor()
 
 LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), TUInfo(new TUTrackingInfo),
-      MaxCopySize(std::stoull(Options.get("MaxCopySize", "16"))),
+      MaxCopySize(Options.get("MaxCopySize", 16ULL)),
       MinConfidence(Options.get("MinConfidence", getConfidenceMapping(),
                                 Confidence::CL_Reasonable)),
       NamingStyle(Options.get("NamingStyle", getStyleMapping(),

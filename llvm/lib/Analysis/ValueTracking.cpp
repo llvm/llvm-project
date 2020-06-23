@@ -3340,14 +3340,15 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
   case Instruction::UIToFP:
     return true;
   case Instruction::FMul:
-    // x*x is always non-negative or a NaN.
+  case Instruction::FDiv:
+    // X * X is always non-negative or a NaN.
+    // X / X is always exactly 1.0 or a NaN.
     if (I->getOperand(0) == I->getOperand(1) &&
         (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()))
       return true;
 
     LLVM_FALLTHROUGH;
   case Instruction::FAdd:
-  case Instruction::FDiv:
   case Instruction::FRem:
     return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
                                            Depth + 1) &&
@@ -4150,11 +4151,14 @@ Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
       if (GA->isInterposable())
         return V;
       V = GA->getAliasee();
-    } else if (isa<AllocaInst>(V)) {
-      // An alloca can't be further simplified.
-      return V;
     } else {
-      if (auto *Call = dyn_cast<CallBase>(V)) {
+      if (auto *PHI = dyn_cast<PHINode>(V)) {
+        // Look through single-arg phi nodes created by LCSSA.
+        if (PHI->getNumIncomingValues() == 1) {
+          V = PHI->getIncomingValue(0);
+          continue;
+        }
+      } else if (auto *Call = dyn_cast<CallBase>(V)) {
         // CaptureTracking can know about special capturing properties of some
         // intrinsics like launder.invariant.group, that can't be expressed with
         // the attributes, but have properties like returning aliasing pointer.
@@ -4169,14 +4173,6 @@ Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
           continue;
         }
       }
-
-      // See if InstructionSimplify knows any relevant tricks.
-      if (Instruction *I = dyn_cast<Instruction>(V))
-        // TODO: Acquire a DominatorTree and AssumptionCache and use them.
-        if (Value *Simplified = SimplifyInstruction(I, {DL, I})) {
-          V = Simplified;
-          continue;
-        }
 
       return V;
     }

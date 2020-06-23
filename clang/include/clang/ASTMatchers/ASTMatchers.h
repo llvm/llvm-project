@@ -4323,7 +4323,7 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
 /// ``parmVarDecl(isAtPosition(0))`` matches ``int a``.
 ///
 /// ``parmVarDecl(isAtPosition(1))`` matches ``int b``.
-AST_MATCHER_P(clang::ParmVarDecl, isAtPosition, unsigned, N) {
+AST_MATCHER_P(ParmVarDecl, isAtPosition, unsigned, N) {
   const clang::DeclContext *Context = Node.getParentFunctionOrMethod();
 
   if (const auto *Decl = dyn_cast_or_null<FunctionDecl>(Context))

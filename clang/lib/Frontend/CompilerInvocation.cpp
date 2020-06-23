@@ -1170,10 +1170,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SanitizeCoveragePCTable = Args.hasArg(OPT_fsanitize_coverage_pc_table);
   Opts.SanitizeCoverageStackDepth =
       Args.hasArg(OPT_fsanitize_coverage_stack_depth);
-  Opts.SanitizeCoverageWhitelistFiles =
-      Args.getAllArgValues(OPT_fsanitize_coverage_whitelist);
-  Opts.SanitizeCoverageBlacklistFiles =
-      Args.getAllArgValues(OPT_fsanitize_coverage_blacklist);
+  Opts.SanitizeCoverageAllowlistFiles =
+      Args.getAllArgValues(OPT_fsanitize_coverage_allowlist);
+  Opts.SanitizeCoverageBlocklistFiles =
+      Args.getAllArgValues(OPT_fsanitize_coverage_blocklist);
   Opts.SanitizeMemoryTrackOrigins =
       getLastArgIntValue(Args, OPT_fsanitize_memory_track_origins_EQ, 0, Diags);
   Opts.SanitizeMemoryUseAfterDtor =
@@ -3370,6 +3370,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.CompleteMemberPointers = Args.hasArg(OPT_fcomplete_member_pointers);
   Opts.BuildingPCHWithObjectFile = Args.hasArg(OPT_building_pch_with_obj);
+  Opts.PCHInstantiateTemplates = Args.hasArg(OPT_fpch_instantiate_templates);
 
   Opts.MatrixTypes = Args.hasArg(OPT_fenable_matrix);
 

@@ -773,6 +773,21 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return Op0;
     break;
   }
+  case ISD::ANY_EXTEND_VECTOR_INREG:
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ZERO_EXTEND_VECTOR_INREG: {
+    // If we only want the lowest element and none of extended bits, then we can
+    // return the bitcasted source vector.
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    EVT DstVT = Op.getValueType();
+    if (DemandedElts == 1 && DstVT.getSizeInBits() == SrcVT.getSizeInBits() &&
+        DAG.getDataLayout().isLittleEndian() &&
+        DemandedBits.getActiveBits() <= SrcVT.getScalarSizeInBits()) {
+      return DAG.getBitcast(DstVT, Src);
+    }
+    break;
+  }
   case ISD::INSERT_VECTOR_ELT: {
     // If we don't demand the inserted element, return the base vector.
     SDValue Vec = Op.getOperand(0);

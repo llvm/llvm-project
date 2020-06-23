@@ -34,6 +34,7 @@ public:
                                HeaderFileExtensions,
                                utils::defaultFileExtensionDelimiters());
   }
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
 

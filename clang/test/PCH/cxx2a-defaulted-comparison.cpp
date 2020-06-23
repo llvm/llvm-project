@@ -2,6 +2,9 @@
 //
 // RUN: %clang_cc1 -std=c++2a -emit-pch %s -o %t.pch
 // RUN: %clang_cc1 -std=c++2a -include-pch %t.pch %s -verify
+//
+// RUN: %clang_cc1 -std=c++2a -emit-pch -fpch-instantiate-templates %s -o %t.pch
+// RUN: %clang_cc1 -std=c++2a -include-pch %t.pch %s -verify
 
 // expected-no-diagnostics
 

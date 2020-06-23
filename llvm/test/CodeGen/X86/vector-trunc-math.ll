@@ -40,7 +40,7 @@ define <4 x i32> @trunc_add_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-FAST-LABEL: trunc_add_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -106,7 +106,7 @@ define <8 x i16> @trunc_add_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -120,7 +120,7 @@ define <8 x i16> @trunc_add_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -165,7 +165,7 @@ define <8 x i16> @trunc_add_v8i32_v8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-LABEL: trunc_add_v8i32_v8i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -466,7 +466,7 @@ define <8 x i16> @trunc_add_v8i32_v8i16_sext_8i8(<16 x i8> %a0, <8 x i32> %a1) {
 ; AVX2-LABEL: trunc_add_v8i32_v8i16_sext_8i8:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovsxbw %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
@@ -516,7 +516,7 @@ define <4 x i32> @trunc_add_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ;
 ; AVX2-FAST-LABEL: trunc_add_const_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -570,7 +570,7 @@ define <8 x i16> @trunc_add_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -582,7 +582,7 @@ define <8 x i16> @trunc_add_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -623,7 +623,7 @@ define <8 x i16> @trunc_add_const_v8i32_v8i16(<8 x i32> %a0) nounwind {
 ;
 ; AVX2-LABEL: trunc_add_const_v8i32_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
@@ -884,7 +884,7 @@ define <4 x i32> @trunc_sub_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-FAST-LABEL: trunc_sub_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -950,7 +950,7 @@ define <8 x i16> @trunc_sub_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -964,7 +964,7 @@ define <8 x i16> @trunc_sub_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -1009,7 +1009,7 @@ define <8 x i16> @trunc_sub_v8i32_v8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-LABEL: trunc_sub_v8i32_v8i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -1328,7 +1328,7 @@ define <4 x i32> @trunc_sub_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ;
 ; AVX2-FAST-LABEL: trunc_sub_const_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    vpsubd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -1382,7 +1382,7 @@ define <8 x i16> @trunc_sub_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -1394,7 +1394,7 @@ define <8 x i16> @trunc_sub_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -1435,7 +1435,7 @@ define <8 x i16> @trunc_sub_const_v8i32_v8i16(<8 x i32> %a0) nounwind {
 ;
 ; AVX2-LABEL: trunc_sub_const_v8i32_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
@@ -1924,7 +1924,7 @@ define <8 x i16> @trunc_mul_v8i32_v8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-LABEL: trunc_mul_v8i32_v8i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -2285,7 +2285,7 @@ define <8 x i16> @trunc_mul_v8i32_v8i16_zext_8i8(<16 x i8> %a0, <8 x i32> %a1) {
 ; AVX2-LABEL: trunc_mul_v8i32_v8i16_zext_8i8:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
 ; AVX2-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
@@ -2336,7 +2336,7 @@ define <4 x i32> @trunc_mul_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ;
 ; AVX2-FAST-LABEL: trunc_mul_const_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -2390,7 +2390,7 @@ define <8 x i16> @trunc_mul_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -2402,7 +2402,7 @@ define <8 x i16> @trunc_mul_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -2443,7 +2443,7 @@ define <8 x i16> @trunc_mul_const_v8i32_v8i16(<8 x i32> %a0) nounwind {
 ;
 ; AVX2-LABEL: trunc_mul_const_v8i32_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
@@ -2792,7 +2792,7 @@ define <4 x i32> @trunc_and_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-FAST-LABEL: trunc_and_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -2852,7 +2852,7 @@ define <8 x i16> @trunc_and_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -2866,7 +2866,7 @@ define <8 x i16> @trunc_and_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -2909,7 +2909,7 @@ define <8 x i16> @trunc_and_v8i32_v8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-LABEL: trunc_and_v8i32_v8i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -3189,7 +3189,7 @@ define <4 x i32> @trunc_and_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ;
 ; AVX2-FAST-LABEL: trunc_and_const_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -3243,7 +3243,7 @@ define <8 x i16> @trunc_and_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -3255,7 +3255,7 @@ define <8 x i16> @trunc_and_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -3296,7 +3296,7 @@ define <8 x i16> @trunc_and_const_v8i32_v8i16(<8 x i32> %a0) nounwind {
 ;
 ; AVX2-LABEL: trunc_and_const_v8i32_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
@@ -3555,7 +3555,7 @@ define <4 x i32> @trunc_xor_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-FAST-LABEL: trunc_xor_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vxorps %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -3615,7 +3615,7 @@ define <8 x i16> @trunc_xor_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -3629,7 +3629,7 @@ define <8 x i16> @trunc_xor_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -3672,7 +3672,7 @@ define <8 x i16> @trunc_xor_v8i32_v8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-LABEL: trunc_xor_v8i32_v8i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -3952,7 +3952,7 @@ define <4 x i32> @trunc_xor_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ;
 ; AVX2-FAST-LABEL: trunc_xor_const_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    vxorps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -4006,7 +4006,7 @@ define <8 x i16> @trunc_xor_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -4018,7 +4018,7 @@ define <8 x i16> @trunc_xor_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -4059,7 +4059,7 @@ define <8 x i16> @trunc_xor_const_v8i32_v8i16(<8 x i32> %a0) nounwind {
 ;
 ; AVX2-LABEL: trunc_xor_const_v8i32_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
@@ -4318,7 +4318,7 @@ define <4 x i32> @trunc_or_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-FAST-LABEL: trunc_or_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -4378,7 +4378,7 @@ define <8 x i16> @trunc_or_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -4392,7 +4392,7 @@ define <8 x i16> @trunc_or_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -4435,7 +4435,7 @@ define <8 x i16> @trunc_or_v8i32_v8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-LABEL: trunc_or_v8i32_v8i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -4715,7 +4715,7 @@ define <4 x i32> @trunc_or_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ;
 ; AVX2-FAST-LABEL: trunc_or_const_v4i64_v4i32:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    vorps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -4769,7 +4769,7 @@ define <8 x i16> @trunc_or_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -4781,7 +4781,7 @@ define <8 x i16> @trunc_or_const_v8i64_v8i16(<8 x i64> %a0) nounwind {
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -4822,7 +4822,7 @@ define <8 x i16> @trunc_or_const_v8i32_v8i16(<8 x i32> %a0) nounwind {
 ;
 ; AVX2-LABEL: trunc_or_const_v8i32_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper

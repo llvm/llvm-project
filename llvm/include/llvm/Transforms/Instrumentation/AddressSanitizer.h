@@ -39,7 +39,7 @@ public:
     LocationMetadata SourceLoc;
     StringRef Name;
     bool IsDynInit = false;
-    bool IsBlacklisted = false;
+    bool IsExcluded = false;
 
     Entry() = default;
   };

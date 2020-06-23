@@ -1,6 +1,21 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump -ast-dump-filter Test %s | FileCheck -strict-whitespace %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump %s | FileCheck -check-prefix CHECK-TU -strict-whitespace %s
-// RUN: %clang_cc1 -fmodules -fmodules-local-submodule-visibility -fmodule-name=X -triple x86_64-unknown-unknown -fmodule-map-file=%S/Inputs/module.modulemap -ast-dump -ast-dump-filter Test %s -DMODULES | FileCheck -check-prefix CHECK -check-prefix CHECK-MODULES -strict-whitespace %s
+// Test without serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump -ast-dump-filter Test %s \
+// RUN: | FileCheck --strict-whitespace %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c -triple x86_64-unknown-unknown -include-pch %t \
+// RUN: -ast-dump-all -ast-dump-filter Test /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck --strict-whitespace %s
+//
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump %s \
+// RUN: | FileCheck -check-prefix CHECK-TU --strict-whitespace %s
+//
+// RUN: %clang_cc1 -fmodules -fmodules-local-submodule-visibility -fmodule-name=X \
+// RUN: -triple x86_64-unknown-unknown -fmodule-map-file=%S/Inputs/module.modulemap \
+// RUN: -ast-dump -ast-dump-filter Test %s -DMODULES \
+// RUN: | FileCheck -check-prefix CHECK -check-prefix CHECK-MODULES --strict-whitespace %s
 
 int TestLocation;
 // CHECK: VarDecl 0x{{[^ ]*}} <{{.*}}:[[@LINE-1]]:1, col:5> col:5 TestLocation

@@ -30,8 +30,7 @@ static constexpr llvm::StringLiteral LoopIncrementName =
 TooSmallLoopVariableCheck::TooSmallLoopVariableCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      MagnitudeBitsUpperLimit(Options.get<unsigned>(
-          "MagnitudeBitsUpperLimit", 16)) {}
+      MagnitudeBitsUpperLimit(Options.get("MagnitudeBitsUpperLimit", 16U)) {}
 
 void TooSmallLoopVariableCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

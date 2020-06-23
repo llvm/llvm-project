@@ -19,9 +19,10 @@
 // COMMON-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CLANG-SAME: "-internal-isystem" "{{.*}}clang/{{.*}}/include/cuda_wrappers"
 // NOCLANG-NOT: "{{.*}}clang/{{.*}}/include/cuda_wrappers"
-// CLANG-SAME: "-include" "__clang_hip_runtime_wrapper.h"
 // HIP-SAME: "-internal-isystem" "{{.*}}Inputs/rocm/include"
 // NOHIP-NOT: "{{.*}}Inputs/rocm/include"
+// HIP-SAME: "-include" "__clang_hip_runtime_wrapper.h"
+// NOHIP-NOT: "-include" "__clang_hip_runtime_wrapper.h"
 // skip check of standard C++ include path
 // CLANG-SAME: "-internal-isystem" "{{.*}}clang/{{.*}}/include"
 // NOCLANG-NOT: "{{.*}}clang/{{.*}}/include"
@@ -29,9 +30,10 @@
 // COMMON-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CLANG-SAME: "-internal-isystem" "{{.*}}clang/{{.*}}/include/cuda_wrappers"
 // NOCLANG-NOT: "{{.*}}clang/{{.*}}/include/cuda_wrappers"
-// CLANG-SAME: "-include" "__clang_hip_runtime_wrapper.h"
 // HIP-SAME: "-internal-isystem" "{{.*}}Inputs/rocm/include"
 // NOHIP-NOT: "{{.*}}Inputs/rocm/include"
+// HIP-SAME: "-include" "__clang_hip_runtime_wrapper.h"
+// NOHIP-NOT: "-include" "__clang_hip_runtime_wrapper.h"
 // skip check of standard C++ include path
 // CLANG-SAME: "-internal-isystem" "{{.*}}clang/{{.*}}/include"
 // NOCLANG-NOT: "{{.*}}clang/{{.*}}/include"

@@ -4387,7 +4387,7 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &attrs,
     BalancedDelimiterTracker T(*this, tok::l_square);
     T.consumeOpen();
 
-    // Skip most ms attributes except for a whitelist.
+    // Skip most ms attributes except for a specific list.
     while (true) {
       SkipUntil(tok::r_square, tok::identifier, StopAtSemi | StopBeforeMatch);
       if (Tok.isNot(tok::identifier)) // ']', but also eof

@@ -17,6 +17,11 @@
 // RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -include-pch %t -verify %s
 // RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fdelayed-template-parsing -fexceptions -include-pch %t %s -emit-llvm -o - -DNO_ERRORS | FileCheck %s
 
+// Test with pch and template instantiation in the pch.
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -fpch-instantiate-templates -x c++-header -emit-pch -o %t %S/cxx-templates.h
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include-pch %t -verify %s
+// RUN: %clang_cc1 -std=c++17 -triple %itanium_abi_triple -fcxx-exceptions -fexceptions -include-pch %t %s -emit-llvm -o - -DNO_ERRORS | FileCheck %s
+
 // CHECK: define weak_odr {{.*}}void @_ZN2S4IiE1mEv
 // CHECK: define linkonce_odr {{.*}}void @_ZN2S3IiE1mEv
 

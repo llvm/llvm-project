@@ -1051,7 +1051,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   BasicBlock *ActualFnStart;
 
   // The following flags disable parts of MSan instrumentation based on
-  // blacklist contents and command-line options.
+  // exclusion list contents and command-line options.
   bool InsertChecks;
   bool PropagateShadow;
   bool PoisonStack;

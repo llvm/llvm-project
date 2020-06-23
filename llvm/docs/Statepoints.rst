@@ -772,7 +772,7 @@ relocation sequence, including all required ``gc.relocates``.
 
 Note that by default, this pass only runs for the "statepoint-example" or 
 "core-clr" gc strategies.  You will need to add your custom strategy to this 
-whitelist or use one of the predefined ones. 
+list or use one of the predefined ones. 
 
 As an example, given this code:
 

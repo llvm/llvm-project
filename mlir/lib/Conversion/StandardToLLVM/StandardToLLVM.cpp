@@ -51,11 +51,6 @@ static LLVM::LLVMType unwrap(Type type) {
   return wrappedLLVMType;
 }
 
-/// Initialize customization to default callbacks.
-LLVMTypeConverterCustomization::LLVMTypeConverterCustomization()
-    : funcArgConverter(structFuncArgTypeConverter),
-      indexBitwidth(kDeriveIndexBitwidthFromDataLayout) {}
-
 /// Callback to convert function argument types. It converts a MemRef function
 /// argument to a list of non-aggregate types containing descriptor
 /// information, and an UnrankedmemRef function argument to a list containing
@@ -122,20 +117,19 @@ LogicalResult mlir::barePtrFuncArgTypeConverter(LLVMTypeConverter &converter,
   return success();
 }
 
-/// Create an LLVMTypeConverter using default LLVMTypeConverterCustomization.
+/// Create an LLVMTypeConverter using default LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx)
-    : LLVMTypeConverter(ctx, LLVMTypeConverterCustomization()) {}
+    : LLVMTypeConverter(ctx, LowerToLLVMOptions()) {}
 
-/// Create an LLVMTypeConverter using 'custom' customizations.
-LLVMTypeConverter::LLVMTypeConverter(
-    MLIRContext *ctx, const LLVMTypeConverterCustomization &customs)
+/// Create an LLVMTypeConverter using custom LowerToLLVMOptions.
+LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
+                                     const LowerToLLVMOptions &options_)
     : llvmDialect(ctx->getRegisteredDialect<LLVM::LLVMDialect>()),
-      customizations(customs) {
+      options(options_) {
   assert(llvmDialect && "LLVM IR dialect is not registered");
   module = &llvmDialect->getLLVMModule();
-  if (customizations.indexBitwidth == kDeriveIndexBitwidthFromDataLayout)
-    customizations.indexBitwidth =
-        module->getDataLayout().getPointerSizeInBits();
+  if (options.indexBitwidth == kDeriveIndexBitwidthFromDataLayout)
+    options.indexBitwidth = module->getDataLayout().getPointerSizeInBits();
 
   // Register conversions for the standard types.
   addConversion([&](ComplexType type) { return convertComplexType(type); });
@@ -262,11 +256,15 @@ SmallVector<Type, 2> LLVMTypeConverter::convertUnrankedMemRefSignature() {
 LLVM::LLVMType LLVMTypeConverter::convertFunctionSignature(
     FunctionType type, bool isVariadic,
     LLVMTypeConverter::SignatureConversion &result) {
+  // Select the argument converter depending on the calling convetion.
+  auto funcArgConverter = options.useBarePtrCallConv
+                              ? barePtrFuncArgTypeConverter
+                              : structFuncArgTypeConverter;
   // Convert argument types one by one and check for errors.
   for (auto &en : llvm::enumerate(type.getInputs())) {
     Type type = en.value();
     SmallVector<Type, 8> converted;
-    if (failed(customizations.funcArgConverter(*this, type, converted)))
+    if (failed(funcArgConverter(*this, type, converted)))
       return {};
     result.addInputs(en.index(), converted);
   }
@@ -397,9 +395,10 @@ Type LLVMTypeConverter::convertVectorType(VectorType type) {
 ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
                                            MLIRContext *context,
                                            LLVMTypeConverter &typeConverter_,
+                                           const LowerToLLVMOptions &options_,
                                            PatternBenefit benefit)
     : ConversionPattern(rootOpName, benefit, typeConverter_, context),
-      typeConverter(typeConverter_) {}
+      typeConverter(typeConverter_), options(options_) {}
 
 /*============================================================================*/
 /* StructBuilder implementation                                               */
@@ -1051,8 +1050,10 @@ protected:
 /// information.
 static constexpr StringRef kEmitIfaceAttrName = "llvm.emit_c_interface";
 struct FuncOpConversion : public FuncOpConversionBase {
-  FuncOpConversion(LLVMTypeConverter &converter, bool emitCWrappers)
-      : FuncOpConversionBase(converter), emitWrappers(emitCWrappers) {}
+  FuncOpConversion(LLVMTypeConverter &converter,
+                   const LowerToLLVMOptions &options)
+      : FuncOpConversionBase(converter, options) {}
+  using ConvertOpToLLVMPattern<FuncOp>::options;
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -1063,7 +1064,7 @@ struct FuncOpConversion : public FuncOpConversionBase {
     if (!newFuncOp)
       return failure();
 
-    if (emitWrappers || funcOp.getAttrOfType<UnitAttr>(kEmitIfaceAttrName)) {
+    if (options.emitCWrappers || funcOp.getAttrOfType<UnitAttr>(kEmitIfaceAttrName)) {
       if (newFuncOp.isExternal())
         wrapExternalFunction(rewriter, op->getLoc(), typeConverter, funcOp,
                              newFuncOp);
@@ -1075,11 +1076,6 @@ struct FuncOpConversion : public FuncOpConversionBase {
     rewriter.eraseOp(op);
     return success();
   }
-
-private:
-  /// If true, also create the adaptor functions having signatures compatible
-  /// with those produced by clang.
-  const bool emitWrappers;
 };
 
 /// FuncOp legalization pattern that converts MemRef arguments to bare pointers
@@ -1506,11 +1502,11 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
   using ConvertOpToLLVMPattern<AllocLikeOp>::getIndexType;
   using ConvertOpToLLVMPattern<AllocLikeOp>::typeConverter;
   using ConvertOpToLLVMPattern<AllocLikeOp>::getVoidPtrType;
+  using ConvertOpToLLVMPattern<AllocLikeOp>::options;
 
   explicit AllocLikeOpLowering(LLVMTypeConverter &converter,
-                               bool useAlignedAlloc = false)
-      : ConvertOpToLLVMPattern<AllocLikeOp>(converter),
-        useAlignedAlloc(useAlignedAlloc) {}
+                               const LowerToLLVMOptions &options)
+      : ConvertOpToLLVMPattern<AllocLikeOp>(converter, options) {}
 
   LogicalResult match(Operation *op) const override {
     MemRefType memRefType = cast<AllocLikeOp>(op).getType();
@@ -1677,7 +1673,7 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
   /// allocation size to be a multiple of alignment,
   Optional<int64_t> getAllocationAlignment(AllocOp allocOp) const {
     // No alignment can be used for the 'malloc' call itself.
-    if (!useAlignedAlloc)
+    if (!options.useAlignedAlloc)
       return None;
 
     if (allocOp.alignment())
@@ -1849,16 +1845,14 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
   }
 
 protected:
-  /// Use aligned_alloc instead of malloc for all heap allocations.
-  bool useAlignedAlloc;
   /// The minimum alignment to use with aligned_alloc (has to be a power of 2).
   uint64_t kMinAlignedAllocAlignment = 16UL;
 };
 
 struct AllocOpLowering : public AllocLikeOpLowering<AllocOp> {
   explicit AllocOpLowering(LLVMTypeConverter &converter,
-                           bool useAlignedAlloc = false)
-      : AllocLikeOpLowering<AllocOp>(converter, useAlignedAlloc) {}
+                           const LowerToLLVMOptions &options)
+      : AllocLikeOpLowering<AllocOp>(converter, options) {}
 };
 
 using AllocaOpLowering = AllocLikeOpLowering<AllocaOp>;
@@ -1939,8 +1933,9 @@ struct CallIndirectOpLowering : public CallOpInterfaceLowering<CallIndirectOp> {
 struct DeallocOpLowering : public ConvertOpToLLVMPattern<DeallocOp> {
   using ConvertOpToLLVMPattern<DeallocOp>::ConvertOpToLLVMPattern;
 
-  explicit DeallocOpLowering(LLVMTypeConverter &converter)
-      : ConvertOpToLLVMPattern<DeallocOp>(converter) {}
+  explicit DeallocOpLowering(LLVMTypeConverter &converter,
+                             const LowerToLLVMOptions &options)
+      : ConvertOpToLLVMPattern<DeallocOp>(converter, options) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -2960,7 +2955,8 @@ private:
 
 /// Collect a set of patterns to convert from the Standard dialect to LLVM.
 void mlir::populateStdToLLVMNonMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    const LowerToLLVMOptions &options) {
   // FIXME: this should be tablegen'ed
   // clang-format off
   patterns.insert<
@@ -3023,13 +3019,13 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       UnsignedRemIOpLowering,
       UnsignedShiftRightOpLowering,
       XOrOpLowering,
-      ZeroExtendIOpLowering>(converter);
+      ZeroExtendIOpLowering>(converter, options);
   // clang-format on
 }
 
 void mlir::populateStdToLLVMMemoryConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    bool useAlignedAlloc) {
+    const LowerToLLVMOptions &options) {
   // clang-format off
   patterns.insert<
       AssumeAlignmentOpLowering,
@@ -3039,41 +3035,26 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
       MemRefCastOpLowering,
       StoreOpLowering,
       SubViewOpLowering,
-      ViewOpLowering>(converter);
-  patterns.insert<
-      AllocOpLowering
-      >(converter, useAlignedAlloc);
+      ViewOpLowering,
+      AllocOpLowering>(converter, options);
   // clang-format on
 }
 
-void mlir::populateStdToLLVMDefaultFuncOpConversionPattern(
+void mlir::populateStdToLLVMFuncOpConversionPattern(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    bool emitCWrappers) {
-  patterns.insert<FuncOpConversion>(converter, emitCWrappers);
+    const LowerToLLVMOptions &options) {
+  if (options.useBarePtrCallConv)
+    patterns.insert<BarePtrFuncOpConversion>(converter, options);
+  else
+    patterns.insert<FuncOpConversion>(converter, options);
 }
 
 void mlir::populateStdToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    bool emitCWrappers, bool useAlignedAlloc) {
-  populateStdToLLVMDefaultFuncOpConversionPattern(converter, patterns,
-                                                  emitCWrappers);
-  populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
-  populateStdToLLVMMemoryConversionPatterns(converter, patterns,
-                                            useAlignedAlloc);
-}
-
-static void populateStdToLLVMBarePtrFuncOpConversionPattern(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
-  patterns.insert<BarePtrFuncOpConversion>(converter);
-}
-
-void mlir::populateStdToLLVMBarePtrConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    bool useAlignedAlloc) {
-  populateStdToLLVMBarePtrFuncOpConversionPattern(converter, patterns);
-  populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
-  populateStdToLLVMMemoryConversionPatterns(converter, patterns,
-                                            useAlignedAlloc);
+    const LowerToLLVMOptions &options) {
+  populateStdToLLVMFuncOpConversionPattern(converter, patterns, options);
+  populateStdToLLVMNonMemoryConversionPatterns(converter, patterns, options);
+  populateStdToLLVMMemoryConversionPatterns(converter, patterns, options);
 }
 
 // Create an LLVM IR structure type if there is more than one result.
@@ -3163,19 +3144,12 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
 
     ModuleOp m = getOperation();
 
-    LLVMTypeConverterCustomization customs;
-    customs.funcArgConverter = useBarePtrCallConv ? barePtrFuncArgTypeConverter
-                                                  : structFuncArgTypeConverter;
-    customs.indexBitwidth = indexBitwidth;
-    LLVMTypeConverter typeConverter(&getContext(), customs);
+    LowerToLLVMOptions options = {useBarePtrCallConv, emitCWrappers,
+                                  indexBitwidth, useAlignedAlloc};
+    LLVMTypeConverter typeConverter(&getContext(), options);
 
     OwningRewritePatternList patterns;
-    if (useBarePtrCallConv)
-      populateStdToLLVMBarePtrConversionPatterns(typeConverter, patterns,
-                                                 useAlignedAlloc);
-    else
-      populateStdToLLVMConversionPatterns(typeConverter, patterns,
-                                          emitCWrappers, useAlignedAlloc);
+    populateStdToLLVMConversionPatterns(typeConverter, patterns, options);
 
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(m, target, patterns)))

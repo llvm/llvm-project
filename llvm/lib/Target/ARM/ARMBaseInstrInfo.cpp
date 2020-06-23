@@ -5912,8 +5912,8 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
   if (MI.isCall()) {
     // If we don't know anything about the callee, assume it depends on the
     // stack layout of the caller. In that case, it's only legal to outline
-    // as a tail-call.  Whitelist the call instructions we know about so we
-    // don't get unexpected results with call pseudo-instructions.
+    // as a tail-call. Explicitly list the call instructions we know about so
+    // we don't get unexpected results with call pseudo-instructions.
     auto UnknownCallOutlineType = outliner::InstrType::Illegal;
     if (Opc == ARM::BL || Opc == ARM::tBL || Opc == ARM::BLX ||
         Opc == ARM::tBLXr || Opc == ARM::tBLXi)
