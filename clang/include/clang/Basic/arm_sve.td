@@ -494,8 +494,8 @@ def SVLD4_VNUM : SInst<"svld4_vnum[_{2}]", "4Pcl", "csilUcUsUiUlhfd", MergeNone,
 let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64)" in {
   def SVLD1RO : SInst<"svld1ro[_{2}]", "dPc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld1ro">;
 }
-let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64) && defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)" in {
-  def SVLD1RO_BF : SInst<"svld1ro[_{2}]", "dPc", "b", MergeNone, "aarch64_sve_ld1ro">;
+let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64) && defined(__ARM_FEATURE_SVE_BF16)" in {
+  def SVLD1RO_BF16 : SInst<"svld1ro[_{2}]", "dPc", "b", MergeNone, "aarch64_sve_ld1ro">;
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
