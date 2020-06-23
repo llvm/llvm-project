@@ -30,6 +30,9 @@ public:
                           ">>> ", "..> ", true, debugger.GetUseColor(), 0,
                           *this, nullptr),
         m_script_interpreter(script_interpreter) {
+    llvm::cantFail(m_script_interpreter.GetLua().ChangeIO(
+        debugger.GetOutputFile().GetStream(),
+        debugger.GetErrorFile().GetStream()));
     llvm::cantFail(m_script_interpreter.EnterSession(debugger.GetID()));
   }
 
