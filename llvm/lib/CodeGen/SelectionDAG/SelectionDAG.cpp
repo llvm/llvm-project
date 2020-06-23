@@ -3166,6 +3166,15 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known.One  &= (~Known.Zero);
     break;
   }
+  case ISD::AssertAlign: {
+    unsigned LogOfAlign = Log2(cast<AssertAlignSDNode>(Op)->getAlign());
+    assert(LogOfAlign != 0);
+    // If a node is guaranteed to be aligned, set low zero bits accordingly as
+    // well as clearing one bits.
+    Known.Zero.setLowBits(LogOfAlign);
+    Known.One.clearLowBits(LogOfAlign);
+    break;
+  }
   case ISD::FGETSIGN:
     // All bits are zero except the low bit.
     Known.Zero.setBitsFrom(1);
@@ -5184,6 +5193,34 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
       return getConstantFP(APFloat::getNaN(EVTToAPFloatSemantics(VT)), DL, VT);
   }
   return SDValue();
+}
+
+SDValue SelectionDAG::getAssertAlign(const SDLoc &DL, SDValue Val, Align A) {
+  assert(Val.getValueType().isInteger() && "Invalid AssertAlign!");
+
+  // There's no need to assert on a byte-aligned pointer. All pointers are at
+  // least byte aligned.
+  if (A == Align(1))
+    return Val;
+
+  FoldingSetNodeID ID;
+  AddNodeIDNode(ID, ISD::AssertAlign, getVTList(Val.getValueType()), {Val});
+  ID.AddInteger(A.value());
+
+  void *IP = nullptr;
+  if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
+    return SDValue(E, 0);
+
+  auto *N = newSDNode<AssertAlignSDNode>(DL.getIROrder(), DL.getDebugLoc(),
+                                         Val.getValueType(), A);
+  createOperands(N, {Val});
+
+  CSEMap.InsertNode(N, IP);
+  InsertNode(N);
+
+  SDValue V(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  return V;
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
