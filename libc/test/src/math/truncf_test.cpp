@@ -53,7 +53,7 @@ TEST(TruncfTest, SpecialNumbers) {
                                       valueFromBits(BitPatterns::negZero))));
 }
 
-TEST(TruncTest, RoundedNumbers) {
+TEST(TruncfTest, RoundedNumbers) {
   EXPECT_EQ(valueAsBits(1.0f), valueAsBits(__llvm_libc::truncf(1.0f)));
   EXPECT_EQ(valueAsBits(-1.0f), valueAsBits(__llvm_libc::truncf(-1.0f)));
   EXPECT_EQ(valueAsBits(10.0f), valueAsBits(__llvm_libc::truncf(10.0f)));
@@ -63,7 +63,7 @@ TEST(TruncTest, RoundedNumbers) {
             valueAsBits(__llvm_libc::truncf(-12345.0f)));
 }
 
-TEST(truncfTest, InFloatRange) {
+TEST(TruncfTest, InFloatRange) {
   using BitsType = Properties::BitsType;
   constexpr BitsType count = 1000000;
   constexpr BitsType step = UINT32_MAX / count;
