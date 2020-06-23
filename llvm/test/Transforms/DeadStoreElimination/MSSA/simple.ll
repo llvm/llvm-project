@@ -213,6 +213,15 @@ bb:
 
 }
 
+define void @test21() {
+; CHECK-LABEL: @test21(
+; CHECK-NEXT:    ret void
+;
+  %m = call i8* @calloc(i32 9, i32 7)
+  store i8 0, i8* %m
+  ret void
+}
+
 ; PR13547
 declare noalias i8* @strdup(i8* nocapture) nounwind
 define noalias i8* @test23() nounwind uwtable ssp {

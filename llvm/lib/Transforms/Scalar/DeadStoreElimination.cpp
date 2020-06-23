@@ -1922,22 +1922,38 @@ struct DSEState {
     }
     return false;
   }
-};
 
-/// \returns true if \p KillingDef stores the result of \p Load to the source of
-/// \p Load.
-static bool storeIsNoop(MemorySSA &MSSA, LoadInst *Load,
-                        MemoryDef *KillingDef) {
-  Instruction *Store = KillingDef->getMemoryInst();
-  // If the load's operand isn't the destination of the store, bail.
-  if (Load->getPointerOperand() != Store->getOperand(1))
+  /// \returns true if \p Def is a no-op store, either because it
+  /// directly stores back a loaded value or stores zero to a calloced object.
+  bool storeIsNoop(MemoryDef *Def, MemoryLocation DefLoc, const Value *DefUO) {
+    StoreInst *Store = dyn_cast<StoreInst>(Def->getMemoryInst());
+    if (!Store)
+      return false;
+
+    if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
+      if (LoadI->getPointerOperand() == Store->getOperand(1)) {
+        auto *LoadAccess = MSSA.getMemoryAccess(LoadI)->getDefiningAccess();
+        // If both accesses share the same defining access, no instructions
+        // between them can modify the memory location.
+        return LoadAccess == Def->getDefiningAccess();
+      }
+    }
+
+    Constant *StoredConstant = dyn_cast<Constant>(Store->getOperand(0));
+    if (StoredConstant && StoredConstant->isNullValue()) {
+      auto *DefUOInst = dyn_cast<Instruction>(DefUO);
+      if (DefUOInst && isCallocLikeFn(DefUOInst, &TLI)) {
+        auto *UnderlyingDef = cast<MemoryDef>(MSSA.getMemoryAccess(DefUOInst));
+        // If UnderlyingDef is the clobbering access of Def, no instructions
+        // between them can modify the memory location.
+        auto *ClobberDef =
+            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def);
+        return UnderlyingDef == ClobberDef;
+      }
+    }
     return false;
-
-  // Get the defining access for the load.
-  auto *LoadAccess = MSSA.getMemoryAccess(Load)->getDefiningAccess();
-  // The store is dead if the defining accesses are the same.
-  return LoadAccess == KillingDef->getDefiningAccess();
-}
+  }
+};
 
 bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
                                   MemorySSA &MSSA, DominatorTree &DT,
@@ -1954,18 +1970,6 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       continue;
     Instruction *SI = KillingDef->getMemoryInst();
 
-    // Check if we're storing a value that we just loaded.
-    if (auto *Load = dyn_cast<LoadInst>(SI->getOperand(0))) {
-      if (storeIsNoop(MSSA, Load, KillingDef)) {
-        LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *SI
-                          << '\n');
-        State.deleteDeadInstruction(SI);
-        NumNoopStores++;
-        MadeChange = true;
-        continue;
-      }
-    }
-
     auto MaybeSILoc = State.getLocForWriteEx(SI);
     if (!MaybeSILoc) {
       LLVM_DEBUG(dbgs() << "Failed to find analyzable write location for "
@@ -1975,6 +1979,16 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     MemoryLocation SILoc = *MaybeSILoc;
     assert(SILoc.Ptr && "SILoc should not be null");
     const Value *SILocUnd = GetUnderlyingObject(SILoc.Ptr, DL);
+
+    // Check if the store is a no-op.
+    if (State.storeIsNoop(KillingDef, SILoc, SILocUnd)) {
+      LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *SI << '\n');
+      State.deleteDeadInstruction(SI);
+      NumNoopStores++;
+      MadeChange = true;
+      continue;
+    }
+
     Instruction *DefObj =
         const_cast<Instruction *>(dyn_cast<Instruction>(SILocUnd));
     bool DefVisibleToCallerBeforeRet =
