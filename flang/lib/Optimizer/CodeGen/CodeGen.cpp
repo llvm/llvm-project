@@ -2544,7 +2544,12 @@ struct FIRToLLVMLoweringPass
         SubfOpConversion, UnboxCharOpConversion, UnboxOpConversion,
         UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
         XArrayCoorOpConversion, XEmboxOpConversion>(context, typeConverter);
-    mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
+    // Workaround D80285: beware, optional LowerToLLVMOptions argument of
+    // populateStdToLLVMConversionPatterns is broken. It ends up creating a
+    // reference over a temp that has the lifetime of the call. Do not use
+    // it.
+    mlir::LowerToLLVMOptions options;
+    mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern, options);
     mlir::ConversionTarget target{*context};
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
 
