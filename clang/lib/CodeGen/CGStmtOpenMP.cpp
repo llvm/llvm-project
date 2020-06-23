@@ -3627,13 +3627,12 @@ void CodeGenFunction::EmitOMPParallelForSimdDirective(
   // directives: 'parallel' with 'for' directive.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
-    CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(), emitForLoopBounds,
-                               emitDispatchForLoopBounds);
+    (void)emitWorksharingDirective(CGF, S, /*HasCancel=*/false);
   };
   {
     auto LPCRegion =
         CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
-    emitCommonOMPParallelDirective(*this, S, OMPD_simd, CodeGen,
+    emitCommonOMPParallelDirective(*this, S, OMPD_for_simd, CodeGen,
                                    emitEmptyBoundParameters);
   }
   // Check for outer lastprivate conditional update.
