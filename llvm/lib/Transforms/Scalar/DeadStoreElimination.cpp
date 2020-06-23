@@ -1563,8 +1563,13 @@ struct DSEState {
     // Treat byval or inalloca arguments the same as Allocas, stores to them are
     // dead at the end of the function.
     for (Argument &AI : F.args())
-      if (AI.hasPassPointeeByValueAttr())
-        State.InvisibleToCallerBeforeRet.insert(&AI);
+      if (AI.hasPassPointeeByValueAttr()) {
+        // For byval, the caller doesn't know the address of the allocation.
+        if (AI.hasByValAttr())
+          State.InvisibleToCallerBeforeRet.insert(&AI);
+        State.InvisibleToCallerAfterRet.insert(&AI);
+      }
+
     return State;
   }
 
