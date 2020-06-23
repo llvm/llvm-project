@@ -1443,6 +1443,21 @@ struct TruncatedExtendedOpcodeFixture
   void SetUp() {
     std::tie(BodyLength, OpcodeLength, Opcode, Operands, ExpectedOutput,
              ExpectedErr) = GetParam();
+    // Swap the byte order of the operands on big endian hosts, so that the raw
+    // bytes are always in the same order. ValLen.Value is a uint64_t, so make
+    // sure to shift the value back to the actually used bits for the
+    // appropriate type.
+    if (sys::IsBigEndianHost)
+      for (LineTable::ValueAndLength &ValLen : Operands)
+        if (ValLen.Length != LineTable::SLEB &&
+            ValLen.Length != LineTable::ULEB &&
+            ValLen.Length != LineTable::Byte) {
+          sys::swapByteOrder(ValLen.Value);
+          if (ValLen.Length == LineTable::Long)
+              ValLen.Value >>= 32;
+          if (ValLen.Length == LineTable::Half)
+              ValLen.Value >>= 48;
+        }
   }
 
   uint64_t OpcodeLength;
