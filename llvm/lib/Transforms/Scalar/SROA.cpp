@@ -1703,8 +1703,15 @@ static bool canConvertValue(const DataLayout &DL, Type *OldTy, Type *NewTy) {
   NewTy = NewTy->getScalarType();
   if (NewTy->isPointerTy() || OldTy->isPointerTy()) {
     if (NewTy->isPointerTy() && OldTy->isPointerTy()) {
-      return cast<PointerType>(NewTy)->getPointerAddressSpace() ==
-        cast<PointerType>(OldTy)->getPointerAddressSpace();
+      unsigned OldAS = OldTy->getPointerAddressSpace();
+      unsigned NewAS = NewTy->getPointerAddressSpace();
+      // Convert pointers if they are pointers from the same address space or
+      // different integral (not non-integral) address spaces with the same
+      // pointer size.
+      return OldAS == NewAS ||
+             (!DL.isNonIntegralAddressSpace(OldAS) &&
+              !DL.isNonIntegralAddressSpace(NewAS) &&
+              DL.getPointerSize(OldAS) == DL.getPointerSize(NewAS));
     }
 
     // We can convert integers to integral pointers, but not to non-integral
@@ -1770,6 +1777,22 @@ static Value *convertValue(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
                                NewTy);
 
     return IRB.CreatePtrToInt(V, NewTy);
+  }
+
+  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
+    unsigned OldAS = OldTy->getPointerAddressSpace();
+    unsigned NewAS = NewTy->getPointerAddressSpace();
+    // To convert pointers with different address spaces (they are already
+    // checked convertible, i.e. they have the same pointer size), so far we
+    // cannot use `bitcast` (which has restrict on the same address space) or
+    // `addrspacecast` (which is not always no-op casting). Instead, use a pair
+    // of no-op `ptrtoint`/`inttoptr` casts through an integer with the same bit
+    // size.
+    if (OldAS != NewAS) {
+      assert(DL.getPointerSize(OldAS) == DL.getPointerSize(NewAS));
+      return IRB.CreateIntToPtr(IRB.CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
+                                NewTy);
+    }
   }
 
   return IRB.CreateBitCast(V, NewTy);
