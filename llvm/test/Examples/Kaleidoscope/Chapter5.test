@@ -1,5 +1,5 @@
 # RUN: Kaleidoscope-Ch5 < %s 2>&1 | FileCheck %s
-# REQUIRES: default_target
+# REQUIRES: default_triple
 
 # Test 'if' expression.
 def foo(x) if x < 10 then 0 else 1;
