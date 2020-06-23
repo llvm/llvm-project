@@ -1088,10 +1088,20 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVUint16_t svuint16_t;\n";
   OS << "typedef __SVUint32_t svuint32_t;\n";
   OS << "typedef __SVUint64_t svuint64_t;\n";
-  OS << "typedef __SVFloat16_t svfloat16_t;\n";
-  OS << "typedef __SVBFloat16_t svbfloat16_t;\n\n";
+  OS << "typedef __SVFloat16_t svfloat16_t;\n\n";
 
-  OS << "#ifdef __ARM_FEATURE_BF16_SCALAR_ARITHMETIC\n";
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16) && "
+        "!defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
+  OS << "#error \"__ARM_FEATURE_BF16_SCALAR_ARITHMETIC must be defined when "
+        "__ARM_FEATURE_SVE_BF16 is defined\"\n";
+  OS << "#endif\n\n";
+
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
+  OS << "typedef __SVBFloat16_t svbfloat16_t;\n";
+  OS << "#endif\n\n";
+
+  OS << "#if defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
+  OS << "#include <arm_bf16.h>\n";
   OS << "typedef __bf16 bfloat16_t;\n";
   OS << "#endif\n\n";
 
