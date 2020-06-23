@@ -28,6 +28,9 @@ add_clang_library(clangTidyCERTModule
   clangTidyPerformanceModule
   clangTidyReadabilityModule
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyCERTModule

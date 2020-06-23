@@ -6,6 +6,9 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangMove
   Move.cpp
   HelperDeclRefGraph.cpp
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangMove
