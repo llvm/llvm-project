@@ -27,6 +27,7 @@
 #define LLVM_SUPPORT_LOWLEVELTYPEIMPL_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MachineValueType.h"
 #include <cassert>
 
