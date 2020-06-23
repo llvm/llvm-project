@@ -791,6 +791,8 @@ def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0]>,
 def LLVM_SinOp : LLVM_UnaryIntrinsicOp<"sin">;
 def LLVM_SqrtOp : LLVM_UnaryIntrinsicOp<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrinsicOp<"pow">;
+def LLVM_BitReverseOp : LLVM_UnaryIntrinsicOp<"bitreverse">;
+def LLVM_CtPopOp : LLVM_UnaryIntrinsicOp<"ctpop">;
 
 //
 // Vector Reductions.

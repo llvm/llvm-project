@@ -117,6 +117,24 @@ llvm.func @pow_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<8 x f
   llvm.return
 }
 
+// CHECK-LABEL: @bitreverse_test
+llvm.func @bitreverse_test(%arg0: !llvm.i32, %arg1: !llvm<"<8 x i32>">) {
+  // CHECK: call i32 @llvm.bitreverse.i32
+  "llvm.intr.bitreverse"(%arg0) : (!llvm.i32) -> !llvm.i32
+  // CHECK: call <8 x i32> @llvm.bitreverse.v8i32
+  "llvm.intr.bitreverse"(%arg1) : (!llvm<"<8 x i32>">) -> !llvm<"<8 x i32>">
+  llvm.return
+}
+
+// CHECK-LABEL: @ctpop_test
+llvm.func @ctpop_test(%arg0: !llvm.i32, %arg1: !llvm<"<8 x i32>">) {
+  // CHECK: call i32 @llvm.ctpop.i32
+  "llvm.intr.ctpop"(%arg0) : (!llvm.i32) -> !llvm.i32
+  // CHECK: call <8 x i32> @llvm.ctpop.v8i32
+  "llvm.intr.ctpop"(%arg1) : (!llvm<"<8 x i32>">) -> !llvm<"<8 x i32>">
+  llvm.return
+}
+
 // CHECK-LABEL: @vector_reductions
 llvm.func @vector_reductions(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">, %arg2: !llvm<"<8 x i32>">) {
   // CHECK: call i32 @llvm.experimental.vector.reduce.add.v8i32
