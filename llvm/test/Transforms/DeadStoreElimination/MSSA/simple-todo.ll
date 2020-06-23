@@ -55,7 +55,6 @@ define void @test11() {
 
 
 declare noalias i8* @malloc(i32)
-declare noalias i8* @calloc(i32, i32)
 
 define void @test14(i32* %Q) {
 ; CHECK-LABEL: @test14(
@@ -73,15 +72,6 @@ define void @test20() {
 ; CHECK-NEXT:    ret void
 ;
   %m = call i8* @malloc(i32 24)
-  store i8 0, i8* %m
-  ret void
-}
-
-define void @test21() {
-; CHECK-LABEL: @test21(
-; CHECK-NEXT:    ret void
-;
-  %m = call i8* @calloc(i32 9, i32 7)
   store i8 0, i8* %m
   ret void
 }
