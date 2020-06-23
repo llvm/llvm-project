@@ -38,6 +38,7 @@ public:
 
   llvm::Error Run(llvm::StringRef buffer);
   llvm::Error LoadModule(llvm::StringRef filename);
+  llvm::Error ChangeIO(FILE *out, FILE *err);
 
 private:
   lua_State *m_lua_state;
