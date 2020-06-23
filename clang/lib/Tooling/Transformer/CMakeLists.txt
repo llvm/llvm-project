@@ -19,4 +19,7 @@ add_clang_library(clangTransformer
   clangLex
   clangToolingCore
   clangToolingRefactoring
+
+  DEPENDS
+  omp_gen
   )

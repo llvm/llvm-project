@@ -9,4 +9,5 @@ add_llvm_component_library(LLVMFrontendOpenMP
 
   DEPENDS
   intrinsics_gen
+  omp_gen
   )

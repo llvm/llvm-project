@@ -14,4 +14,7 @@ add_clang_library(clangASTMatchers
   clangAST
   clangBasic
   clangLex
+
+  DEPENDS
+  omp_gen
   )
