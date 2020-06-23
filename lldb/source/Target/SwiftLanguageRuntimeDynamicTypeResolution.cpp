@@ -1749,7 +1749,7 @@ SwiftLanguageRuntimeImpl::GetBitAlignment(CompilerType type) {
   return {};
 }
 
-bool SwiftLanguageRuntime::IsWhitelistedRuntimeValue(ConstString name) {
+bool SwiftLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
   return name.GetStringRef() == "self";
 }
 
