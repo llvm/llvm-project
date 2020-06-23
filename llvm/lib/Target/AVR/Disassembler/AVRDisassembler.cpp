@@ -110,6 +110,9 @@ static DecodeStatus decodeCallTarget(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeFRd(MCInst &Inst, unsigned Insn,
                               uint64_t Address, const void *Decoder);
 
+static DecodeStatus decodeFLPMX(MCInst &Inst, unsigned Insn,
+                                uint64_t Address, const void *Decoder);
+
 static DecodeStatus decodeFFMULRdRr(MCInst &Inst, unsigned Insn,
                                     uint64_t Address, const void *Decoder);
 
@@ -164,6 +167,14 @@ static DecodeStatus decodeFRd(MCInst &Inst, unsigned Insn,
   unsigned d = fieldFromInstruction(Insn, 4, 5);
   if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) == MCDisassembler::Fail)
     return MCDisassembler::Fail;
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeFLPMX(MCInst &Inst, unsigned Insn,
+                                uint64_t Address, const void *Decoder) {
+  if (decodeFRd(Inst, Insn, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createReg(AVR::R31R30));
   return MCDisassembler::Success;
 }
 
