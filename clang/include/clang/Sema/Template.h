@@ -121,6 +121,10 @@ enum class TemplateSubstitutionKind : char {
       return TemplateArgumentLists.size();
     }
 
+    unsigned getNumRetainedOuterLevels() const {
+      return NumRetainedOuterLevels;
+    }
+
     /// Determine how many of the \p OldDepth outermost template parameter
     /// lists would be removed by substituting these arguments.
     unsigned getNewDepth(unsigned OldDepth) const {
@@ -184,6 +188,9 @@ enum class TemplateSubstitutionKind : char {
     /// template parameters that we instantiate.
     void addOuterRetainedLevel() {
       ++NumRetainedOuterLevels;
+    }
+    void addOuterRetainedLevels(unsigned Num) {
+      NumRetainedOuterLevels += Num;
     }
 
     /// Retrieve the innermost template argument list.
