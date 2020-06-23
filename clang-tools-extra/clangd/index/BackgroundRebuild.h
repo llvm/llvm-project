@@ -49,9 +49,7 @@ class BackgroundIndexRebuilder {
 public:
   BackgroundIndexRebuilder(SwapIndex *Target, FileSymbols *Source,
                            unsigned Threads)
-      : TUsBeforeFirstBuild(llvm::heavyweight_hardware_concurrency(Threads)
-                                .compute_thread_count()),
-        Target(Target), Source(Source) {}
+      : TUsBeforeFirstBuild(Threads), Target(Target), Source(Source) {}
 
   // Called to indicate a TU has been indexed.
   // May rebuild, if enough TUs have been indexed.
@@ -72,7 +70,7 @@ public:
   // Ensures we won't start any more rebuilds.
   void shutdown();
 
-  // Thresholds for rebuilding as TUs get indexed.
+  // Thresholds for rebuilding as TUs get indexed. Exposed for testing.
   const unsigned TUsBeforeFirstBuild; // Typically one per worker thread.
   const unsigned TUsBeforeRebuild = 100;
 
