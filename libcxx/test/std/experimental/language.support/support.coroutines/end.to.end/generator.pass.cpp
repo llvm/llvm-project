@@ -29,7 +29,7 @@ struct minig {
       return {};
     }
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     minig get_return_object() { return minig{this}; };
     void return_void() {}
     void unhandled_exception() {}

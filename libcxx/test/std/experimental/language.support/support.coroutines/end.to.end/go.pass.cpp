@@ -46,7 +46,7 @@ struct goroutine
     suspend_never initial_suspend() {
       return {};
     }
-    suspend_never final_suspend() {
+    suspend_never final_suspend() noexcept {
       return {};
     }
     void return_void() {}
