@@ -411,6 +411,24 @@ static GnuStackKind getZGnuStack(opt::InputArgList &args) {
   return GnuStackKind::NoExec;
 }
 
+static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
+  for (auto *arg : args.filtered_reverse(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "start-stop-visibility") {
+      if (kv.second == "default")
+        return STV_DEFAULT;
+      else if (kv.second == "internal")
+        return STV_INTERNAL;
+      else if (kv.second == "hidden")
+        return STV_HIDDEN;
+      else if (kv.second == "protected")
+        return STV_PROTECTED;
+      error("unknown -z start-stop-visibility= value: " + StringRef(kv.second));
+    }
+  }
+  return STV_PROTECTED;
+}
+
 static bool isKnownZFlag(StringRef s) {
   return s == "combreloc" || s == "copyreloc" || s == "defs" ||
          s == "execstack" || s == "force-bti" || s == "force-ibt" ||
@@ -426,7 +444,8 @@ static bool isKnownZFlag(StringRef s) {
          s == "rela" || s == "relro" || s == "retpolineplt" ||
          s == "rodynamic" || s == "shstk" || s == "text" || s == "undefs" ||
          s == "wxneeded" || s.startswith("common-page-size=") ||
-         s.startswith("max-page-size=") || s.startswith("stack-size=");
+         s.startswith("max-page-size=") || s.startswith("stack-size=") ||
+         s.startswith("start-stop-visibility=");
 }
 
 // Report an error for an unknown -z option.
@@ -1046,6 +1065,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zSeparate = getZSeparate(args);
   config->zShstk = hasZOption(args, "shstk");
   config->zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
+  config->zStartStopVisibility = getZStartStopVisibility(args);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
 
