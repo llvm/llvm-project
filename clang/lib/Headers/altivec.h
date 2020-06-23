@@ -16777,6 +16777,20 @@ vec_pext(vector unsigned long long __a, vector unsigned long long __b) {
   return __builtin_altivec_vpextd(__a, __b);
 }
 
+/* vec_genpcvm */
+
+#ifdef __VSX__
+#define vec_genpcvm(__a, __imm)                                                \
+  _Generic((__a), vector unsigned char                                         \
+           : __builtin_vsx_xxgenpcvbm((__a), (int)(__imm)),                    \
+             vector unsigned short                                             \
+           : __builtin_vsx_xxgenpcvhm((__a), (int)(__imm)),                    \
+             vector unsigned int                                               \
+           : __builtin_vsx_xxgenpcvwm((__a), (int)(__imm)),                    \
+             vector unsigned long long                                         \
+           : __builtin_vsx_xxgenpcvdm((__a), (int)(__imm)))
+#endif /* __VSX__ */
+
 /* vec_clrl */
 
 static __inline__ vector signed char __ATTRS_o_ai
