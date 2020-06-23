@@ -278,3 +278,68 @@ for.end:
   %cond = select i1 %cmp3, i32 1, i32 0
   ret i32 %cond
 }
+
+; PR43745 - https://bugs.llvm.org/show_bug.cgi?id=43745
+
+define i1 @cmp_lt_gt(double %a, double %b, double %c) {
+; CHECK-LABEL: @cmp_lt_gt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[A:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[FNEG]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[B]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[C]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> undef, double [[MUL]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[TMP8]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
+; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[TMP9]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP4]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[LOR_LHS_FALSE:%.*]]
+; CHECK:       lor.lhs.false:
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x i1> [[TMP10]], <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP10]], [[SHIFT]]
+; CHECK-NEXT:    [[NOT_OR_COND1:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
+; CHECK-NEXT:    ret i1 [[NOT_OR_COND1]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %fneg = fneg double %b
+  %add = fadd double %fneg, %c
+  %mul = fmul double 2.0, %a
+  %div = fdiv double %add, %mul
+  %fneg1 = fneg double %b
+  %sub = fsub double %fneg1, %c
+  %mul2 = fmul double 2.0, %a
+  %div3 = fdiv double %sub, %mul2
+  %cmp = fcmp olt double %div, 0x3EB0C6F7A0B5ED8D
+  br i1 %cmp, label %land.lhs.true, label %lor.lhs.false
+
+land.lhs.true:
+  %cmp4 = fcmp olt double %div3, 0x3EB0C6F7A0B5ED8D
+  br i1 %cmp4, label %if.then, label %lor.lhs.false
+
+lor.lhs.false:
+  %cmp5 = fcmp ogt double %div, 1.0
+  br i1 %cmp5, label %land.lhs.true6, label %if.end
+
+land.lhs.true6:
+  %cmp7 = fcmp ogt double %div3, 1.0
+  br i1 %cmp7, label %if.then, label %if.end
+
+if.then:
+  br label %cleanup
+
+if.end:
+  br label %cleanup
+
+cleanup:
+  %retval.0 = phi i1 [ false, %if.then ], [ true, %if.end ]
+  ret i1 %retval.0
+}
