@@ -5,6 +5,10 @@ declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float, <4 x flo
 declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float, <8 x float>)
 declare void @use_f32(float)
 
+declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32>)
+declare void @use_i32(i32)
+
 define float @diff_of_sums_v4f32(float %a0, <4 x float> %v0, float %a1, <4 x float> %v1) {
 ; CHECK-LABEL: @diff_of_sums_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz <4 x float> [[V0:%.*]], [[V1:%.*]]
@@ -80,4 +84,60 @@ define float @diff_of_sums_type_mismatch(float %a0, <4 x float> %v0, float %a1, 
   %r1 = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float %a1, <8 x float> %v1)
   %r = fsub fast float %r0, %r1
   ret float %r
+}
+
+define i32 @diff_of_sums_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
+; CHECK-LABEL: @diff_of_sums_v4i32(
+; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[V1:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = sub i32 [[R0]], [[R1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r0 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %v0)
+  %r1 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %v1)
+  %r = sub i32 %r0, %r1
+  ret i32 %r
+}
+
+define i32 @diff_of_sums_v4i32_extra_use1(<4 x i32> %v0, <4 x i32> %v1) {
+; CHECK-LABEL: @diff_of_sums_v4i32_extra_use1(
+; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    call void @use_i32(i32 [[R0]])
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[V1:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = sub i32 [[R0]], [[R1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r0 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %v0)
+  call void @use_i32(i32 %r0)
+  %r1 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %v1)
+  %r = sub i32 %r0, %r1
+  ret i32 %r
+}
+
+define i32 @diff_of_sums_v4i32_extra_use2(<4 x i32> %v0, <4 x i32> %v1) {
+; CHECK-LABEL: @diff_of_sums_v4i32_extra_use2(
+; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[V1:%.*]])
+; CHECK-NEXT:    call void @use_i32(i32 [[R1]])
+; CHECK-NEXT:    [[R:%.*]] = sub i32 [[R0]], [[R1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r0 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %v0)
+  %r1 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %v1)
+  call void @use_i32(i32 %r1)
+  %r = sub i32 %r0, %r1
+  ret i32 %r
+}
+
+define i32 @diff_of_sums_type_mismatch2(<8 x i32> %v0, <4 x i32> %v1) {
+; CHECK-LABEL: @diff_of_sums_type_mismatch2(
+; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[V0:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[V1:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = sub i32 [[R0]], [[R1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r0 = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> %v0)
+  %r1 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %v1)
+  %r = sub i32 %r0, %r1
+  ret i32 %r
 }
