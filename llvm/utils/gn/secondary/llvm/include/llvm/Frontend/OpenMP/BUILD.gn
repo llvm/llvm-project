@@ -1,0 +1,18 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("OMP") {
+  visibility = [ ":public_tablegen" ]
+  args = [ "-gen-directive-decls" ]
+  output_name = "OMP.h.inc"
+}
+
+# Groups all tablegen() calls that create .inc files that are included in
+# Frontent/OpenMP's public headers (just one so far).
+# //llvm/lib/Frontend/OpenMP has this as a public_dep, so targets depending on
+# //llvm/lib/Frontend/OpenMP don't need to depend on this.
+group("public_tablegen") {
+  public_deps = [
+    # Frontend/OpenMP's public headers include OMP.h.inc.
+    ":OMP",
+  ]
+}

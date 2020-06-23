@@ -5,6 +5,7 @@ static_library("OpenMP") {
     "//llvm/lib/Support",
     "//llvm/lib/Transforms/Utils",
   ]
+  public_deps = [ "//llvm/include/llvm/Frontend/OpenMP:public_tablegen" ]
   sources = [
     "OMPConstants.cpp",
     "OMPContext.cpp",
