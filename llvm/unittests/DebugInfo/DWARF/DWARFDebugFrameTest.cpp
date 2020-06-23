@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -117,6 +118,156 @@ TEST(DWARFDebugFrame, DumpEH64FDE) {
   expectDumpResult(TestFDE, /*IsEH=*/true,
                    "1111abcdabcd 00002222abcdabcd 0033abcd FDE "
                    "cie=1111ab9a000c pc=4444abcdabcd...5555bcdebcde");
+}
+
+// Here we test how truncated Call Frame Instructions are parsed.
+TEST(DWARFDebugFrame, ParseTruncatedCFITest) {
+  auto ParseCFI = [](dwarf::CIE &C, ArrayRef<uint8_t> Instructions,
+                     Optional<uint64_t> Size = None) {
+    DWARFDataExtractor Data(Instructions, /*IsLittleEndian=*/true,
+                            /*AddressSize=*/8);
+    uint64_t Offset = 0;
+    const uint64_t EndOffset = Size ? *Size : (uint64_t)Instructions.size();
+    return C.cfis().parse(Data, &Offset, EndOffset);
+  };
+
+  dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
+                                 /*Offset=*/0x0,
+                                 /*Length=*/0xff);
+
+  // Having an empty instructions list is fine.
+  EXPECT_THAT_ERROR(ParseCFI(TestCIE, {}), Succeeded());
+
+  // Unable to read an opcode, because the instructions list is empty, but we
+  // say to the parser that it is not.
+  EXPECT_THAT_ERROR(
+      ParseCFI(TestCIE, {}, /*Size=*/1),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x0 while reading [0x0, 0x1)"));
+
+  // Unable to read a truncated DW_CFA_offset instruction.
+  EXPECT_THAT_ERROR(
+      ParseCFI(TestCIE, {dwarf::DW_CFA_offset}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed uleb128, extends past end"));
+
+  // Unable to read a truncated DW_CFA_set_loc instruction.
+  EXPECT_THAT_ERROR(
+      ParseCFI(TestCIE, {dwarf::DW_CFA_set_loc}),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x1 while reading [0x1, 0x9)"));
+
+  // Unable to read a truncated DW_CFA_advance_loc1 instruction.
+  EXPECT_THAT_ERROR(
+      ParseCFI(TestCIE, {dwarf::DW_CFA_advance_loc1}),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x1 while reading [0x1, 0x2)"));
+
+  // Unable to read a truncated DW_CFA_advance_loc2 instruction.
+  EXPECT_THAT_ERROR(
+      ParseCFI(TestCIE, {dwarf::DW_CFA_advance_loc2}),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x1 while reading [0x1, 0x3)"));
+
+  // Unable to read a truncated DW_CFA_advance_loc4 instruction.
+  EXPECT_THAT_ERROR(
+      ParseCFI(TestCIE, {dwarf::DW_CFA_advance_loc4}),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x1 while reading [0x1, 0x5)"));
+
+  // A test for an instruction with a single ULEB128 operand.
+  auto CheckOp_ULEB128 = [&](uint8_t Inst) {
+    EXPECT_THAT_ERROR(
+        ParseCFI(TestCIE, Inst),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                          "malformed uleb128, extends past end"));
+  };
+
+  for (uint8_t Inst :
+       {dwarf::DW_CFA_restore_extended, dwarf::DW_CFA_undefined,
+        dwarf::DW_CFA_same_value, dwarf::DW_CFA_def_cfa_register,
+        dwarf::DW_CFA_def_cfa_offset, dwarf::DW_CFA_GNU_args_size})
+    CheckOp_ULEB128(Inst);
+
+  // Unable to read a truncated DW_CFA_def_cfa_offset_sf instruction.
+  EXPECT_THAT_ERROR(
+      ParseCFI(TestCIE, {dwarf::DW_CFA_def_cfa_offset_sf}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed sleb128, extends past end"));
+
+  // A test for an instruction with two ULEB128 operands.
+  auto CheckOp_ULEB128_ULEB128 = [&](uint8_t Inst) {
+    EXPECT_THAT_ERROR(
+        ParseCFI(TestCIE, Inst),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                          "malformed uleb128, extends past end"));
+
+    EXPECT_THAT_ERROR(
+        ParseCFI(TestCIE, {Inst, /*Op1=*/0}),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000002: "
+                          "malformed uleb128, extends past end"));
+  };
+
+  for (uint8_t Inst : {dwarf::DW_CFA_offset_extended, dwarf::DW_CFA_register,
+                       dwarf::DW_CFA_def_cfa, dwarf::DW_CFA_val_offset})
+    CheckOp_ULEB128_ULEB128(Inst);
+
+  // A test for an instruction with two operands: ULEB128, SLEB128.
+  auto CheckOp_ULEB128_SLEB128 = [&](uint8_t Inst) {
+    EXPECT_THAT_ERROR(
+        ParseCFI(TestCIE, Inst),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                          "malformed uleb128, extends past end"));
+
+    EXPECT_THAT_ERROR(
+        ParseCFI(TestCIE, {Inst, /*Op1=*/0}),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000002: "
+                          "malformed sleb128, extends past end"));
+  };
+
+  for (uint8_t Inst : {dwarf::DW_CFA_offset_extended_sf,
+                       dwarf::DW_CFA_def_cfa_sf, dwarf::DW_CFA_val_offset_sf})
+    CheckOp_ULEB128_SLEB128(Inst);
+
+  // Unable to read a truncated DW_CFA_def_cfa_expression instruction.
+  EXPECT_THAT_ERROR(
+      ParseCFI(TestCIE, {dwarf::DW_CFA_def_cfa_expression}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed uleb128, extends past end"));
+  EXPECT_THAT_ERROR(
+      ParseCFI(TestCIE, {dwarf::DW_CFA_def_cfa_expression,
+                         /*expression length=*/0x1}),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x2 while reading [0x2, 0x3)"));
+  // The DW_CFA_def_cfa_expression can contain a zero length expression.
+  EXPECT_THAT_ERROR(ParseCFI(TestCIE, {dwarf::DW_CFA_def_cfa_expression,
+                                       /*ExprLen=*/0}),
+                    Succeeded());
+
+  // A test for an instruction with three operands: ULEB128, expression length
+  // (ULEB128) and expression bytes.
+  auto CheckOp_ULEB128_Expr = [&](uint8_t Inst) {
+    EXPECT_THAT_ERROR(
+        ParseCFI(TestCIE, {Inst}),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                          "malformed uleb128, extends past end"));
+    EXPECT_THAT_ERROR(
+        ParseCFI(TestCIE, {Inst, /*Op1=*/0}),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000002: "
+                          "malformed uleb128, extends past end"));
+    // A zero length expression is fine
+    EXPECT_THAT_ERROR(ParseCFI(TestCIE, {Inst,
+                                         /*Op1=*/0, /*ExprLen=*/0}),
+                      Succeeded());
+    EXPECT_THAT_ERROR(
+        ParseCFI(TestCIE, {Inst,
+                           /*Op1=*/0, /*ExprLen=*/1}),
+        FailedWithMessage(
+            "unexpected end of data at offset 0x3 while reading [0x3, 0x4)"));
+  };
+
+  for (uint8_t Inst : {dwarf::DW_CFA_expression, dwarf::DW_CFA_val_expression})
+    CheckOp_ULEB128_Expr(Inst);
 }
 
 } // end anonymous namespace
