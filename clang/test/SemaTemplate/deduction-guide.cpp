@@ -66,7 +66,7 @@ using BT = B<char, 'x'>;
 // CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 T
 // CHECK: |-NonTypeTemplateParmDecl {{.*}} 'T' depth 0 index 1 V
 // CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 2 U
-// CHECK: |-NonTypeTemplateParmDecl {{.*}} 'type-parameter-0-2':'type-parameter-0-2' depth 0 index 3 W
+// CHECK: |-NonTypeTemplateParmDecl {{.*}} 'type-parameter-0-2' depth 0 index 3 W
 // CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (X<W, V>) -> B<T, V>'
 // CHECK: | `-ParmVarDecl {{.*}} 'X<W, V>'
 // CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (X<nullptr, 'x'>) -> B<char, 'x'>'
@@ -79,6 +79,44 @@ using BT = B<char, 'x'>;
 // CHECK: |-InjectedClassNameType {{.*}} 'B<T, V>' dependent
 // CHECK: `-TemplateSpecializationType {{.*}} 'X<W, V>' dependent X
 // CHECK:   |-TemplateArgument expr
-// CHECK:   | `-DeclRefExpr {{.*}} 'type-parameter-0-2':'type-parameter-0-2' NonTypeTemplateParm {{.*}} 'W' 'type-parameter-0-2':'type-parameter-0-2'
+// CHECK:   | `-DeclRefExpr {{.*}} 'type-parameter-0-2' NonTypeTemplateParm {{.*}} 'W' 'type-parameter-0-2'
 // CHECK:   `-TemplateArgument expr
 // CHECK:     `-DeclRefExpr {{.*}} 'T' NonTypeTemplateParm {{.*}} 'V' 'T'
+
+template<template<typename X, X> typename> struct Y {};
+template<typename A> struct C {
+  template<template<typename X, X> typename T, typename U, U V = 0> C(A, Y<T>, U);
+};
+C c(1, Y<B>{}, 2);
+using CT = decltype(c);
+using CT = C<int>;
+
+// CHECK: Dumping <deduction guide for C>:
+// CHECK: FunctionTemplateDecl
+// CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 A
+// CHECK: |-TemplateTemplateParmDecl {{.*}} depth 0 index 1 T
+// CHECK: | |-TemplateTypeParmDecl {{.*}} typename depth 1 index 0 X
+// CHECK: | `-NonTypeTemplateParmDecl {{.*}} 'X' depth 1 index 1
+// CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 2 U
+// CHECK: |-NonTypeTemplateParmDecl {{.*}} 'type-parameter-0-2' depth 0 index 3 V
+// CHECK: | `-TemplateArgument expr
+// CHECK: | `-IntegerLiteral {{.*}} 'int' 0
+// CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (A, Y<>, type-parameter-0-2) -> C<A>'
+// CHECK: | |-ParmVarDecl {{.*}} 'A'
+// CHECK: | |-ParmVarDecl {{.*}} 'Y<>'
+// CHECK: | `-ParmVarDecl {{.*}} 'type-parameter-0-2'
+// CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (int, Y<B>, int) -> C<int>'
+// CHECK:  |-TemplateArgument type 'int'
+// CHECK:  |-TemplateArgument template B
+// CHECK:  |-TemplateArgument type 'int'
+// CHECK:  |-TemplateArgument integral 0
+// CHECK:  |-ParmVarDecl {{.*}} 'int':'int'
+// CHECK:  |-ParmVarDecl {{.*}} 'Y<B>':'Y<B>'
+// CHECK:  `-ParmVarDecl {{.*}} 'int':'int'
+// CHECK: FunctionProtoType {{.*}} 'auto (A, Y<>, type-parameter-0-2) -> C<A>' dependent trailing_return cdecl
+// CHECK: |-InjectedClassNameType {{.*}} 'C<A>' dependent
+// CHECK: |-TemplateTypeParmType {{.*}} 'A' dependent depth 0 index 0
+// CHECK: | `-TemplateTypeParm {{.*}} 'A'
+// CHECK: |-TemplateSpecializationType {{.*}} 'Y<>' dependent Y
+// CHECK: | `-TemplateArgument template 
+// CHECK: `-TemplateTypeParmType {{.*}} 'type-parameter-0-2' dependent depth 0 index 2
