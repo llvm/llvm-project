@@ -1586,7 +1586,7 @@ def AnyRegion : Region<CPred<"true">, "any region">;
 
 // A region with the given number of blocks.
 class SizedRegion<int numBlocks> : Region<
-  CPred<"$_self.getBlocks().size() == " # numBlocks>,
+  CPred<"llvm::hasNItems($_self, " # numBlocks # ")">,
   "region with " # numBlocks # " blocks">;
 
 // A variadic region constraint. It expands to zero or more of the base region.
