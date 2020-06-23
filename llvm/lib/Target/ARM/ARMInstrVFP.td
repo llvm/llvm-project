@@ -287,7 +287,6 @@ def : MnemonicAlias<"vstm", "vstmia">;
 //===----------------------------------------------------------------------===//
 //  Lazy load / store multiple Instructions
 //
-let mayLoad = 1 in
 def VLLDM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
                   NoItinerary, "vlldm${p}\t$Rn", "", []>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
@@ -298,9 +297,9 @@ def VLLDM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
     let Inst{15-12} = 0;
     let Inst{7-0}   = 0;
     let mayLoad     = 1;
+    let Defs = [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, VPR, FPSCR, FPSCR_NZCV];
 }
 
-let mayStore = 1 in
 def VLSTM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
                   NoItinerary, "vlstm${p}\t$Rn", "", []>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
