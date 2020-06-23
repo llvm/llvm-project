@@ -165,6 +165,95 @@ define <vscale x 2 x i64> @smin_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
   ret <vscale x 2 x i64> %min
 }
 
+define <vscale x 32 x i8> @smin_split_i8(<vscale x 32 x i8> %a, <vscale x 32 x i8> %b, <vscale x 32 x i8> %c) {
+; CHECK-LABEL: smin_split_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    smin z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    smin z1.b, p0/m, z1.b, z3.b
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <vscale x 32 x i8> %a, %b
+  %min = select <vscale x 32 x i1> %cmp, <vscale x 32 x i8> %a, <vscale x 32 x i8> %b
+  ret <vscale x 32 x i8> %min
+}
+
+define <vscale x 32 x i16> @smin_split_i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %b, <vscale x 32 x i16> %c) {
+; CHECK-LABEL: smin_split_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    smin z0.h, p0/m, z0.h, z4.h
+; CHECK-NEXT:    smin z1.h, p0/m, z1.h, z5.h
+; CHECK-NEXT:    smin z2.h, p0/m, z2.h, z6.h
+; CHECK-NEXT:    smin z3.h, p0/m, z3.h, z7.h
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <vscale x 32 x i16> %a, %b
+  %min = select <vscale x 32 x i1> %cmp, <vscale x 32 x i16> %a, <vscale x 32 x i16> %b
+  ret <vscale x 32 x i16> %min
+}
+
+define <vscale x 8 x i32> @smin_split_i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b, <vscale x 8 x i32> %c) {
+; CHECK-LABEL: smin_split_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    smin z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <vscale x 8 x i32> %a, %b
+  %min = select <vscale x 8 x i1> %cmp, <vscale x 8 x i32> %a, <vscale x 8 x i32> %b
+  ret <vscale x 8 x i32> %min
+}
+
+define <vscale x 4 x i64> @smin_split_i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %b, <vscale x 4 x i64> %c) {
+; CHECK-LABEL: smin_split_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    smin z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    smin z1.d, p0/m, z1.d, z3.d
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <vscale x 4 x i64> %a, %b
+  %min = select <vscale x 4 x i1> %cmp, <vscale x 4 x i64> %a, <vscale x 4 x i64> %b
+  ret <vscale x 4 x i64> %min
+}
+
+define <vscale x 8 x i8> @smin_promote_i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b, <vscale x 8 x i8> %c) {
+; CHECK-LABEL: smin_promote_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
+; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
+; CHECK-NEXT:    smin z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <vscale x 8 x i8> %a, %b
+  %min = select <vscale x 8 x i1> %cmp, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b
+  ret <vscale x 8 x i8> %min
+}
+
+define <vscale x 4 x i16> @smin_promote_i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c) {
+; CHECK-LABEL: smin_promote_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
+; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
+; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <vscale x 4 x i16> %a, %b
+  %min = select <vscale x 4 x i1> %cmp, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b
+  ret <vscale x 4 x i16> %min
+}
+
+define <vscale x 2 x i32> @smin_promote_i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c) {
+; CHECK-LABEL: smin_promote_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    sxtw z1.d, p0/m, z1.d
+; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
+; CHECK-NEXT:    smin z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <vscale x 2 x i32> %a, %b
+  %min = select <vscale x 2 x i1> %cmp, <vscale x 2 x i32> %a, <vscale x 2 x i32> %b
+  ret <vscale x 2 x i32> %min
+}
+
 ;
 ; UMIN
 ;
@@ -213,6 +302,31 @@ define <vscale x 2 x i64> @umin_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
   ret <vscale x 2 x i64> %min
 }
 
+define <vscale x 4 x i64> @umin_split_i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %b, <vscale x 4 x i64> %c) {
+; CHECK-LABEL: umin_split_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    umin z1.d, p0/m, z1.d, z3.d
+; CHECK-NEXT:    ret
+  %cmp = icmp ult <vscale x 4 x i64> %a, %b
+  %min = select <vscale x 4 x i1> %cmp, <vscale x 4 x i64> %a, <vscale x 4 x i64> %b
+  ret <vscale x 4 x i64> %min
+}
+
+define <vscale x 8 x i8> @umin_promote_i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b, <vscale x 8 x i8> %c) {
+; CHECK-LABEL: umin_promote_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %cmp = icmp ult <vscale x 8 x i8> %a, %b
+  %min = select <vscale x 8 x i1> %cmp, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b
+  ret <vscale x 8 x i8> %min
+}
+
 ;
 ; SMAX
 ;
@@ -224,8 +338,8 @@ define <vscale x 16 x i8> @smax_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b,
 ; CHECK-NEXT:    smax z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt <vscale x 16 x i8> %a, %b
-  %min = select <vscale x 16 x i1> %cmp, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b
-  ret <vscale x 16 x i8> %min
+  %max = select <vscale x 16 x i1> %cmp, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b
+  ret <vscale x 16 x i8> %max
 }
 
 define <vscale x 8 x i16> @smax_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
@@ -235,8 +349,8 @@ define <vscale x 8 x i16> @smax_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b
 ; CHECK-NEXT:    smax z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt <vscale x 8 x i16> %a, %b
-  %min = select <vscale x 8 x i1> %cmp, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b
-  ret <vscale x 8 x i16> %min
+  %max = select <vscale x 8 x i1> %cmp, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b
+  ret <vscale x 8 x i16> %max
 }
 
 define <vscale x 4 x i32> @smax_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
@@ -246,8 +360,8 @@ define <vscale x 4 x i32> @smax_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt <vscale x 4 x i32> %a, %b
-  %min = select <vscale x 4 x i1> %cmp, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b
-  ret <vscale x 4 x i32> %min
+  %max = select <vscale x 4 x i1> %cmp, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b
+  ret <vscale x 4 x i32> %max
 }
 
 define <vscale x 2 x i64> @smax_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
@@ -257,8 +371,33 @@ define <vscale x 2 x i64> @smax_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
 ; CHECK-NEXT:    smax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt <vscale x 2 x i64> %a, %b
-  %min = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b
-  ret <vscale x 2 x i64> %min
+  %max = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b
+  ret <vscale x 2 x i64> %max
+}
+
+define <vscale x 8 x i32> @smax_split_i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b, <vscale x 8 x i32> %c) {
+; CHECK-LABEL: smax_split_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    smax z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt <vscale x 8 x i32> %a, %b
+  %max = select <vscale x 8 x i1> %cmp, <vscale x 8 x i32> %a, <vscale x 8 x i32> %b
+  ret <vscale x 8 x i32> %max
+}
+
+define <vscale x 4 x i16> @smax_promote_i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c) {
+; CHECK-LABEL: smax_promote_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
+; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
+; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt <vscale x 4 x i16> %a, %b
+  %max = select <vscale x 4 x i1> %cmp, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b
+  ret <vscale x 4 x i16> %max
 }
 
 ;
@@ -272,8 +411,8 @@ define <vscale x 16 x i8> @umax_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b,
 ; CHECK-NEXT:    umax z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt <vscale x 16 x i8> %a, %b
-  %min = select <vscale x 16 x i1> %cmp, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b
-  ret <vscale x 16 x i8> %min
+  %max = select <vscale x 16 x i1> %cmp, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b
+  ret <vscale x 16 x i8> %max
 }
 
 define <vscale x 8 x i16> @umax_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
@@ -283,8 +422,8 @@ define <vscale x 8 x i16> @umax_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b
 ; CHECK-NEXT:    umax z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt <vscale x 8 x i16> %a, %b
-  %min = select <vscale x 8 x i1> %cmp, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b
-  ret <vscale x 8 x i16> %min
+  %max = select <vscale x 8 x i1> %cmp, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b
+  ret <vscale x 8 x i16> %max
 }
 
 define <vscale x 4 x i32> @umax_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
@@ -294,8 +433,8 @@ define <vscale x 4 x i32> @umax_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt <vscale x 4 x i32> %a, %b
-  %min = select <vscale x 4 x i1> %cmp, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b
-  ret <vscale x 4 x i32> %min
+  %max = select <vscale x 4 x i1> %cmp, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b
+  ret <vscale x 4 x i32> %max
 }
 
 define <vscale x 2 x i64> @umax_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
@@ -305,8 +444,33 @@ define <vscale x 2 x i64> @umax_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
 ; CHECK-NEXT:    umax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt <vscale x 2 x i64> %a, %b
-  %min = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b
-  ret <vscale x 2 x i64> %min
+  %max = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b
+  ret <vscale x 2 x i64> %max
+}
+
+define <vscale x 16 x i16> @umax_split_i16(<vscale x 16 x i16> %a, <vscale x 16 x i16> %b, <vscale x 16 x i16> %c) {
+; CHECK-LABEL: umax_split_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    umax z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    umax z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt <vscale x 16 x i16> %a, %b
+  %max = select <vscale x 16 x i1> %cmp, <vscale x 16 x i16> %a, <vscale x 16 x i16> %b
+  ret <vscale x 16 x i16> %max
+}
+
+define <vscale x 2 x i32> @umax_promote_i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c) {
+; CHECK-LABEL: umax_promote_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
+; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-NEXT:    umax z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt <vscale x 2 x i32> %a, %b
+  %max = select <vscale x 2 x i1> %cmp, <vscale x 2 x i32> %a, <vscale x 2 x i32> %b
+  ret <vscale x 2 x i32> %max
 }
 
 ;
@@ -507,4 +671,32 @@ define <vscale x 8 x i32> @lsr_split_i32(<vscale x 8 x i32> %a, <vscale x 8 x i3
 ; CHECK-NEXT:    ret
   %shr = lshr <vscale x 8 x i32> %a, %b
   ret <vscale x 8 x i32> %shr
+}
+
+;
+; CMP
+;
+
+define <vscale x 32 x i1> @cmp_split_32(<vscale x 32 x i8> %a, <vscale x 32 x i8> %b) {
+; CHECK-LABEL: cmp_split_32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    cmpgt p0.b, p1/z, z2.b, z0.b
+; CHECK-NEXT:    cmpgt p1.b, p1/z, z3.b, z1.b
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <vscale x 32 x i8> %a, %b
+  ret <vscale x 32 x i1> %cmp
+}
+
+define <vscale x 64 x i1> @cmp_split_64(<vscale x 64 x i8> %a, <vscale x 64 x i8> %b) {
+; CHECK-LABEL: cmp_split_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p3.b
+; CHECK-NEXT:    cmpgt p0.b, p3/z, z0.b, z4.b
+; CHECK-NEXT:    cmpgt p1.b, p3/z, z1.b, z5.b
+; CHECK-NEXT:    cmpgt p2.b, p3/z, z2.b, z6.b
+; CHECK-NEXT:    cmpgt p3.b, p3/z, z3.b, z7.b
+; CHECK-NEXT:    ret
+  %cmp = icmp sgt <vscale x 64 x i8> %a, %b
+  ret <vscale x 64 x i1> %cmp
 }
