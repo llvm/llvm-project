@@ -9099,15 +9099,20 @@ def : NEONInstAlias<"vmov${p}.f32 $Vd, $imm",
 // ARMv8.6a BFloat16 instructions.
 let Predicates = [HasBF16, HasNEON] in {
 class BF16VDOT<bits<5> op27_23, bits<2> op21_20, bit op6,
-               dag oops, dag iops>
+               dag oops, dag iops, list<dag> pattern>
    : N3Vnp<op27_23, op21_20, 0b1101, op6, 0, oops, iops,
-           N3RegFrm, IIC_VDOTPROD, "", "", []> {
+           N3RegFrm, IIC_VDOTPROD, "", "", pattern>
+{
     let DecoderNamespace = "VFPV8";
 }
 
 class BF16VDOTS<bit Q, RegisterClass RegTy, string opc, ValueType AccumTy, ValueType InputTy>
    : BF16VDOT<0b11000, 0b00,  Q, (outs RegTy:$dst),
-              (ins RegTy:$Vd, RegTy:$Vn, RegTy:$Vm)> {
+              (ins RegTy:$Vd, RegTy:$Vn, RegTy:$Vm),
+            [(set (AccumTy RegTy:$dst),
+                  (int_arm_neon_bfdot (AccumTy RegTy:$Vd),
+                                      (InputTy RegTy:$Vn),
+                                      (InputTy RegTy:$Vm)))]> {
   let Constraints = "$dst = $Vd";
   let AsmString = !strconcat(opc, ".bf16", "\t$Vd, $Vn, $Vm");
     let DecoderNamespace = "VFPV8";
@@ -9118,7 +9123,7 @@ multiclass BF16VDOTI<bit Q, RegisterClass RegTy, string opc, ValueType AccumTy,
 
   def "" : BF16VDOT<0b11100, 0b00, Q, (outs RegTy:$dst),
                     (ins RegTy:$Vd, RegTy:$Vn,
-                    DPR_VFP2:$Vm, VectorIndex32:$lane)> {
+                    DPR_VFP2:$Vm, VectorIndex32:$lane), []> {
     bit lane;
     let Inst{5} = lane;
     let Constraints = "$dst = $Vd";
@@ -9126,6 +9131,13 @@ multiclass BF16VDOTI<bit Q, RegisterClass RegTy, string opc, ValueType AccumTy,
     let DecoderNamespace = "VFPV8";
   }
 
+  def : Pat<
+    (AccumTy (int_arm_neon_bfdot (AccumTy RegTy:$Vd),
+                                 (InputTy RegTy:$Vn),
+                                 (InputTy (bitconvert (AccumTy
+                                          (ARMvduplane (AccumTy RegTy:$Vm),
+                                                        VectorIndex32:$lane)))))),
+    (!cast<Instruction>(NAME) RegTy:$Vd, RegTy:$Vn, RHS, VectorIndex32:$lane)>;
 }
 
 def BF16VDOTS_VDOTD : BF16VDOTS<0, DPR, "vdot", v2f32, v8i8>;
@@ -9138,7 +9150,10 @@ class BF16MM<bit Q, RegisterClass RegTy,
              string opc>
    : N3Vnp<0b11000, 0b00, 0b1100, Q, 0,
            (outs RegTy:$dst), (ins RegTy:$Vd, RegTy:$Vn, RegTy:$Vm),
-           N3RegFrm, IIC_VDOTPROD, "", "", []> {
+           N3RegFrm, IIC_VDOTPROD, "", "",
+                [(set (v4f32 QPR:$dst), (int_arm_neon_bfmmla (v4f32 QPR:$Vd),
+                                                (v16i8 QPR:$Vn),
+                                                (v16i8 QPR:$Vm)))]> {
    let Constraints = "$dst = $Vd";
    let AsmString = !strconcat(opc, ".bf16", "\t$Vd, $Vn, $Vm");
    let DecoderNamespace = "VFPV8";
@@ -9146,19 +9161,22 @@ class BF16MM<bit Q, RegisterClass RegTy,
 
 def VMMLA : BF16MM<1, QPR, "vmmla">;
 
-class VBF16MALQ<bit T, string suffix>
+class VBF16MALQ<bit T, string suffix, SDPatternOperator OpNode>
   : N3VCP8<0b00, 0b11, T, 1,
            (outs QPR:$dst), (ins QPR:$Vd, QPR:$Vn, QPR:$Vm),
            NoItinerary, "vfma" # suffix, "bf16", "$Vd, $Vn, $Vm", "",
-              []> { // TODO: Add intrinsics
+                [(set (v4f32 QPR:$dst),
+                      (OpNode (v4f32 QPR:$Vd),
+                              (v16i8 QPR:$Vn),
+                              (v16i8 QPR:$Vm)))]> {
   let Constraints = "$dst = $Vd";
   let DecoderNamespace = "VFPV8";
 }
 
-def VBF16MALTQ: VBF16MALQ<1, "t">;
-def VBF16MALBQ: VBF16MALQ<0, "b">;
+def VBF16MALTQ: VBF16MALQ<1, "t", int_arm_neon_bfmlalt>;
+def VBF16MALBQ: VBF16MALQ<0, "b", int_arm_neon_bfmlalb>;
 
-multiclass VBF16MALQI<bit T, string suffix> {
+multiclass VBF16MALQI<bit T, string suffix, SDPatternOperator OpNode> {
   def "" : N3VLaneCP8<0, 0b11, T, 1, (outs QPR:$dst),
               (ins QPR:$Vd, QPR:$Vn, DPR_8:$Vm, VectorIndex16:$idx),
                IIC_VMACD, "vfma" # suffix, "bf16", "$Vd, $Vn, $Vm$idx", "", []> {
@@ -9169,10 +9187,20 @@ multiclass VBF16MALQI<bit T, string suffix> {
   let DecoderNamespace = "VFPV8";
   }
 
+  def : Pat<
+    (v4f32 (OpNode (v4f32 QPR:$Vd),
+                   (v16i8 QPR:$Vn),
+                   (v16i8 (bitconvert (v8bf16 (ARMvduplane (v8bf16 QPR:$Vm),
+                                                           VectorIndex16:$lane)))))),
+    (!cast<Instruction>(NAME) QPR:$Vd,
+                              QPR:$Vn,
+                              (EXTRACT_SUBREG QPR:$Vm,
+                                (DSubReg_i16_reg VectorIndex16:$lane)),
+                              (SubReg_i16_lane VectorIndex16:$lane))>;
 }
 
-defm VBF16MALTQI: VBF16MALQI<1, "t">;
-defm VBF16MALBQI: VBF16MALQI<0, "b">;
+defm VBF16MALTQI: VBF16MALQI<1, "t", int_arm_neon_bfmlalt>;
+defm VBF16MALBQI: VBF16MALQI<0, "b", int_arm_neon_bfmlalb>;
 
 def BF16_VCVT :  N2V<0b11, 0b11, 0b01, 0b10, 0b01100, 1, 0,
                     (outs DPR:$Vd), (ins QPR:$Vm),
