@@ -58,6 +58,7 @@ enum NodeType {
   /// of the extension
   AssertSext,
   AssertZext,
+  AssertAlign,
 
   /// Various leaf nodes.
   BasicBlock,
