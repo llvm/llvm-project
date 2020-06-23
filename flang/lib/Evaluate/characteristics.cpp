@@ -563,8 +563,9 @@ bool Procedure::CanOverride(
 }
 
 std::optional<Procedure> Procedure::Characterize(
-    const semantics::Symbol &symbol, const IntrinsicProcTable &intrinsics) {
+    const semantics::Symbol &original, const IntrinsicProcTable &intrinsics) {
   Procedure result;
+  const auto &symbol{ResolveAssociations(original)};
   CopyAttrs<Procedure, Procedure::Attr>(symbol, result,
       {
           {semantics::Attr::PURE, Procedure::Attr::Pure},

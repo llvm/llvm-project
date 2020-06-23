@@ -40,12 +40,9 @@ class Vector_Op<string mnemonic, list<OpTrait> traits = []> :
 // with operators other than the current set: {*, +}.
 def Vector_ContractionOp :
   Vector_Op<"contract", [NoSideEffect,
-     PredOpTrait<"first operand lhs and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>,
-     PredOpTrait<"second operand rhs and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 1>>,
+     PredOpTrait<"lhs and rhs have same element type", TCopVTEtIsSameAs<0, 1>>,
      PredOpTrait<"third operand acc and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 1>>]>,
+                 TCresVTEtIsSameAsOpBase<0, 2>>]>,
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyType:$acc,
                Variadic<VectorOf<[I1]>>:$masks,
                AffineMapArrayAttr:$indexing_maps, ArrayAttr:$iterator_types)>,
@@ -140,6 +137,11 @@ def Vector_ContractionOp :
 
     %5 = vector.contract #contraction_trait %0, %1, %2, %lhs_mask, %rhs_mask
        : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x8x5xf32>
+
+    // Vector contraction with mixed typed. lhs/rhs have different element
+    // types than accumulator/result.
+    %6 = vector.contract #contraction_trait %0, %1, %2
+      : vector<10xf16>, vector<10xf16> into f32
     ```
   }];
   let builders = [OpBuilder<

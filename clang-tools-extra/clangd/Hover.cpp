@@ -580,7 +580,7 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
 
 bool isLiteral(const Expr *E) {
   // Unfortunately there's no common base Literal classes inherits from
-  // (apart from Expr), therefore this is a nasty blacklist.
+  // (apart from Expr), therefore these exclusions.
   return llvm::isa<CharacterLiteral>(E) || llvm::isa<CompoundLiteralExpr>(E) ||
          llvm::isa<CXXBoolLiteralExpr>(E) ||
          llvm::isa<CXXNullPtrLiteralExpr>(E) ||

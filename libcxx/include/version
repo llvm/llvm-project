@@ -238,7 +238,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #   define __cpp_lib_is_constant_evaluated              201811L
 # endif
 # define __cpp_lib_list_remove_return_type              201806L
-# define __cpp_lib_math_constants                       201907L
+# if defined(__cpp_concepts) && __cpp_concepts >= 201811L
+#   define __cpp_lib_math_constants                     201907L
+# endif
 // # define __cpp_lib_ranges                               201811L
 # define __cpp_lib_span                                 202002L
 // # define __cpp_lib_three_way_comparison                 201711L

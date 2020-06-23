@@ -23,8 +23,9 @@ subroutine s3
     import, none
     !ERROR: No explicit type declared for 'i'
     real :: a(16) = [(i, i=1, 16)]
+    real :: b(16)
     !ERROR: No explicit type declared for 'j'
-    data(a(j), j=1, 16) / 16 * 0.0 /
+    data(b(j), j=1, 16) / 16 * 0.0 /
   end block
 end
 
@@ -32,10 +33,7 @@ subroutine s4
   real :: i, j
   !ERROR: Must have INTEGER type, but is REAL(4)
   real :: a(16) = [(i, i=1, 16)]
-  data(
-    !ERROR: Must have INTEGER type, but is REAL(4)
-    a(j), &
-    !ERROR: Must have INTEGER type, but is REAL(4)
-    j=1, 16 &
-  ) / 16 * 0.0 /
+  real :: b(16)
+  !ERROR: Must have INTEGER type, but is REAL(4)
+  data(b(j), j=1, 16) / 16 * 0.0 /
 end

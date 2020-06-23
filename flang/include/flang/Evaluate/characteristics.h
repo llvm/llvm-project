@@ -278,7 +278,7 @@ struct Procedure {
       const ProcedureRef &, const IntrinsicProcTable &);
 
   // At most one of these will return true.
-  // For "EXTERNAL P" with no calls to P, both will be false.
+  // For "EXTERNAL P" with no type for or calls to P, both will be false.
   bool IsFunction() const { return functionResult.has_value(); }
   bool IsSubroutine() const { return attrs.test(Attr::Subroutine); }
 

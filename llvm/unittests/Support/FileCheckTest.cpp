@@ -78,183 +78,191 @@ static void expectDiagnosticError(StringRef ExpectedMsg, Error Err) {
   expectError<ErrorDiagnostic>(ExpectedMsg, std::move(Err));
 }
 
-struct ExpressionFormatParameterisedFixture
-    : public ::testing::TestWithParam<
-          std::tuple<ExpressionFormat::Kind, bool, bool>> {
-  void SetUp() { std::tie(Kind, AllowHex, AllowUpperHex) = GetParam(); }
+constexpr uint64_t MaxUint64 = std::numeric_limits<uint64_t>::max();
+constexpr int64_t MaxInt64 = std::numeric_limits<int64_t>::max();
+constexpr int64_t MinInt64 = std::numeric_limits<int64_t>::min();
+constexpr uint64_t AbsoluteMinInt64 =
+    static_cast<uint64_t>(-(MinInt64 + 1)) + 1;
+constexpr uint64_t AbsoluteMaxInt64 = static_cast<uint64_t>(MaxInt64);
 
-  ExpressionFormat::Kind Kind;
+struct ExpressionFormatParameterisedFixture
+    : public ::testing::TestWithParam<ExpressionFormat::Kind> {
+  bool Signed;
   bool AllowHex;
   bool AllowUpperHex;
-};
+  ExpressionFormat Format;
+  Regex WildcardRegex;
 
-const uint64_t MaxUint64 = std::numeric_limits<uint64_t>::max();
+  StringRef TenStr;
+  StringRef FifteenStr;
+  std::string MaxUint64Str;
+  std::string MaxInt64Str;
+  std::string MinInt64Str;
+  StringRef FirstInvalidCharDigits;
+  StringRef AcceptedHexOnlyDigits;
+  StringRef RefusedHexOnlyDigits;
 
-TEST_P(ExpressionFormatParameterisedFixture, Format) {
   SourceMgr SM;
-  ExpressionFormat Format(Kind);
-  bool Signed = Kind == ExpressionFormat::Kind::Signed;
 
-  Expected<StringRef> WildcardPattern = Format.getWildcardRegex();
-  ASSERT_THAT_EXPECTED(WildcardPattern, Succeeded());
-  Regex WildcardRegex((Twine("^") + *WildcardPattern).str());
-  ASSERT_TRUE(WildcardRegex.isValid());
-  // Does not match empty string.
-  EXPECT_FALSE(WildcardRegex.match(""));
-  // Matches all decimal digits and matches several of them.
-  SmallVector<StringRef, 4> Matches;
-  StringRef DecimalDigits = "0123456789";
-  ASSERT_TRUE(WildcardRegex.match(DecimalDigits, &Matches));
-  EXPECT_EQ(Matches[0], DecimalDigits);
-  // Matches negative digits.
-  StringRef MinusFortyTwo = "-42";
-  bool MatchSuccess = WildcardRegex.match(MinusFortyTwo, &Matches);
-  if (Signed) {
-    ASSERT_TRUE(MatchSuccess);
-    EXPECT_EQ(Matches[0], MinusFortyTwo);
-  } else
-    EXPECT_FALSE(MatchSuccess);
-  // Check non digits or digits with wrong casing are not matched.
-  if (AllowHex) {
-    StringRef HexOnlyDigits[] = {"abcdef", "ABCDEF"};
-    StringRef AcceptedHexOnlyDigits =
-        AllowUpperHex ? HexOnlyDigits[1] : HexOnlyDigits[0];
-    StringRef RefusedHexOnlyDigits =
-        AllowUpperHex ? HexOnlyDigits[0] : HexOnlyDigits[1];
-    ASSERT_TRUE(WildcardRegex.match(AcceptedHexOnlyDigits, &Matches));
-    EXPECT_EQ(Matches[0], AcceptedHexOnlyDigits);
-    EXPECT_FALSE(WildcardRegex.match(RefusedHexOnlyDigits));
+  void SetUp() {
+    ExpressionFormat::Kind Kind = GetParam();
+    AllowHex = Kind == ExpressionFormat::Kind::HexLower ||
+               Kind == ExpressionFormat::Kind::HexUpper;
+    AllowUpperHex = Kind == ExpressionFormat::Kind::HexUpper;
+    Signed = Kind == ExpressionFormat::Kind::Signed;
+    Format = ExpressionFormat(Kind);
 
-    EXPECT_FALSE(WildcardRegex.match("g"));
-    EXPECT_FALSE(WildcardRegex.match("G"));
-  } else {
-    EXPECT_FALSE(WildcardRegex.match("a"));
-    EXPECT_FALSE(WildcardRegex.match("A"));
+    if (!AllowHex) {
+      MaxUint64Str = std::to_string(MaxUint64);
+      MaxInt64Str = std::to_string(MaxInt64);
+      MinInt64Str = std::to_string(MinInt64);
+      TenStr = "10";
+      FifteenStr = "15";
+      FirstInvalidCharDigits = "aA";
+      AcceptedHexOnlyDigits = RefusedHexOnlyDigits = "N/A";
+      return;
+    }
+
+    MaxUint64Str = AllowUpperHex ? "FFFFFFFFFFFFFFFF" : "ffffffffffffffff";
+    MaxInt64Str = AllowUpperHex ? "7FFFFFFFFFFFFFFF" : "7fffffffffffffff";
+    TenStr = AllowUpperHex ? "A" : "a";
+    FifteenStr = AllowUpperHex ? "F" : "f";
+    AcceptedHexOnlyDigits = AllowUpperHex ? "ABCDEF" : "abcdef";
+    RefusedHexOnlyDigits = AllowUpperHex ? "abcdef" : "ABCDEF";
+    MinInt64Str = "N/A";
+    FirstInvalidCharDigits = "gG";
   }
 
-  Expected<std::string> MatchingString =
-      Format.getMatchingString(ExpressionValue(0u));
-  ASSERT_THAT_EXPECTED(MatchingString, Succeeded());
-  EXPECT_EQ(*MatchingString, "0");
-  MatchingString = Format.getMatchingString(ExpressionValue(9u));
-  ASSERT_THAT_EXPECTED(MatchingString, Succeeded());
-  EXPECT_EQ(*MatchingString, "9");
-  MatchingString = Format.getMatchingString(ExpressionValue(-5));
-  if (Signed) {
-    ASSERT_THAT_EXPECTED(MatchingString, Succeeded());
-    EXPECT_EQ(*MatchingString, "-5");
-  } else {
+  void checkWildcardRegexMatch(StringRef Input) {
+    SmallVector<StringRef, 4> Matches;
+    ASSERT_TRUE(WildcardRegex.match(Input, &Matches))
+        << "Wildcard regex does not match " << Input;
+    EXPECT_EQ(Matches[0], Input);
+  }
+
+  void checkWildcardRegexMatchFailure(StringRef Input) {
+    EXPECT_FALSE(WildcardRegex.match(Input));
+  }
+
+  template <class T> void checkMatchingString(T Val, StringRef ExpectedStr) {
+    Expected<std::string> MatchingString =
+        Format.getMatchingString(ExpressionValue(Val));
+    ASSERT_THAT_EXPECTED(MatchingString, Succeeded())
+        << "No matching string for " << Val;
+    EXPECT_EQ(*MatchingString, ExpectedStr);
+  }
+
+  template <class T> void checkMatchingStringFailure(T Val) {
+    Expected<std::string> MatchingString =
+        Format.getMatchingString(ExpressionValue(Val));
     // Error message tested in ExpressionValue unit tests.
     EXPECT_THAT_EXPECTED(MatchingString, Failed());
   }
-  Expected<std::string> MaxUint64MatchingString =
-      Format.getMatchingString(ExpressionValue(MaxUint64));
-  Expected<std::string> TenMatchingString =
-      Format.getMatchingString(ExpressionValue(10u));
-  ASSERT_THAT_EXPECTED(TenMatchingString, Succeeded());
-  Expected<std::string> FifteenMatchingString =
-      Format.getMatchingString(ExpressionValue(15u));
-  ASSERT_THAT_EXPECTED(FifteenMatchingString, Succeeded());
-  StringRef ExpectedTenMatchingString, ExpectedFifteenMatchingString;
-  std::string MaxUint64Str;
-  if (AllowHex) {
-    if (AllowUpperHex) {
-      MaxUint64Str = "FFFFFFFFFFFFFFFF";
-      ExpectedTenMatchingString = "A";
-      ExpectedFifteenMatchingString = "F";
-    } else {
-      MaxUint64Str = "ffffffffffffffff";
-      ExpectedTenMatchingString = "a";
-      ExpectedFifteenMatchingString = "f";
-    }
-  } else {
-    MaxUint64Str = std::to_string(MaxUint64);
-    ExpectedTenMatchingString = "10";
-    ExpectedFifteenMatchingString = "15";
-  }
-  if (Signed) {
-    // Error message tested in ExpressionValue unit tests.
-    EXPECT_THAT_EXPECTED(MaxUint64MatchingString, Failed());
-  } else {
-    ASSERT_THAT_EXPECTED(MaxUint64MatchingString, Succeeded());
-    EXPECT_EQ(*MaxUint64MatchingString, MaxUint64Str);
-  }
-  EXPECT_EQ(*TenMatchingString, ExpectedTenMatchingString);
-  EXPECT_EQ(*FifteenMatchingString, ExpectedFifteenMatchingString);
 
-  StringRef BufferizedValidValueStr = bufferize(SM, "0");
-  Expected<ExpressionValue> Val =
-      Format.valueFromStringRepr(BufferizedValidValueStr, SM);
-  ASSERT_THAT_EXPECTED(Val, Succeeded());
-  EXPECT_EQ(cantFail(Val->getSignedValue()), 0);
-  BufferizedValidValueStr = bufferize(SM, "9");
-  Val = Format.valueFromStringRepr(BufferizedValidValueStr, SM);
-  ASSERT_THAT_EXPECTED(Val, Succeeded());
-  EXPECT_EQ(cantFail(Val->getSignedValue()), 9);
-  StringRef BufferizedMinusFiveStr = bufferize(SM, "-5");
-  Val = Format.valueFromStringRepr(BufferizedMinusFiveStr, SM);
-  StringRef OverflowErrorStr = "unable to represent numeric value";
-  if (Signed) {
-    ASSERT_THAT_EXPECTED(Val, Succeeded());
-    EXPECT_EQ(cantFail(Val->getSignedValue()), -5);
-  } else
-    expectDiagnosticError(OverflowErrorStr, Val.takeError());
-  StringRef BufferizedMaxUint64Str, BufferizedTenStr, BufferizedInvalidTenStr,
-      BufferizedFifteenStr;
-  StringRef TenStr, FifteenStr, InvalidTenStr;
-  if (AllowHex) {
-    if (AllowUpperHex) {
-      TenStr = "A";
-      FifteenStr = "F";
-      InvalidTenStr = "a";
-    } else {
-      TenStr = "a";
-      FifteenStr = "f";
-      InvalidTenStr = "A";
-    }
-  } else {
-    TenStr = "10";
-    FifteenStr = "15";
-    InvalidTenStr = "A";
+  Expected<ExpressionValue> getValueFromStringReprFailure(StringRef Str) {
+    StringRef BufferizedStr = bufferize(SM, Str);
+    return Format.valueFromStringRepr(BufferizedStr, SM);
   }
-  BufferizedMaxUint64Str = bufferize(SM, MaxUint64Str);
-  Val = Format.valueFromStringRepr(BufferizedMaxUint64Str, SM);
+
+  template <class T>
+  void checkValueFromStringRepr(StringRef Str, T ExpectedVal) {
+    Expected<ExpressionValue> ResultValue = getValueFromStringReprFailure(Str);
+    ASSERT_THAT_EXPECTED(ResultValue, Succeeded())
+        << "Failed to get value from " << Str;
+    ASSERT_EQ(ResultValue->isNegative(), ExpectedVal < 0)
+        << "Value for " << Str << " is not " << ExpectedVal;
+    if (ResultValue->isNegative())
+      EXPECT_EQ(cantFail(ResultValue->getSignedValue()),
+                static_cast<int64_t>(ExpectedVal));
+    else
+      EXPECT_EQ(cantFail(ResultValue->getUnsignedValue()),
+                static_cast<uint64_t>(ExpectedVal));
+  }
+
+  void checkValueFromStringReprFailure(StringRef Str) {
+    StringRef OverflowErrorStr = "unable to represent numeric value";
+    Expected<ExpressionValue> ResultValue = getValueFromStringReprFailure(Str);
+    expectDiagnosticError(OverflowErrorStr, ResultValue.takeError());
+  }
+};
+
+TEST_P(ExpressionFormatParameterisedFixture, FormatGetWildcardRegex) {
+  // Wildcard regex is valid.
+  Expected<StringRef> WildcardPattern = Format.getWildcardRegex();
+  ASSERT_THAT_EXPECTED(WildcardPattern, Succeeded());
+  WildcardRegex = Regex((Twine("^") + *WildcardPattern).str());
+  ASSERT_TRUE(WildcardRegex.isValid());
+
+  // Does not match empty string.
+  checkWildcardRegexMatchFailure("");
+
+  // Matches all decimal digits and matches several of them.
+  checkWildcardRegexMatch("0123456789");
+
+  // Matches negative digits.
   if (Signed)
-    expectDiagnosticError(OverflowErrorStr, Val.takeError());
-  else {
-    ASSERT_THAT_EXPECTED(Val, Succeeded());
-    EXPECT_EQ(cantFail(Val->getUnsignedValue()), MaxUint64);
+    checkWildcardRegexMatch("-42");
+  else
+    checkWildcardRegexMatchFailure("-42");
+
+  // Check non digits or digits with wrong casing are not matched.
+  if (AllowHex) {
+    checkWildcardRegexMatch(AcceptedHexOnlyDigits);
+    checkWildcardRegexMatchFailure(RefusedHexOnlyDigits);
   }
-  BufferizedTenStr = bufferize(SM, TenStr);
-  Val = Format.valueFromStringRepr(BufferizedTenStr, SM);
-  ASSERT_THAT_EXPECTED(Val, Succeeded());
-  EXPECT_EQ(cantFail(Val->getSignedValue()), 10);
-  BufferizedFifteenStr = bufferize(SM, FifteenStr);
-  Val = Format.valueFromStringRepr(BufferizedFifteenStr, SM);
-  ASSERT_THAT_EXPECTED(Val, Succeeded());
-  EXPECT_EQ(cantFail(Val->getSignedValue()), 15);
+  checkWildcardRegexMatchFailure(FirstInvalidCharDigits);
+}
+
+TEST_P(ExpressionFormatParameterisedFixture, FormatGetMatchingString) {
+  checkMatchingString(0, "0");
+  checkMatchingString(9, "9");
+
+  if (Signed) {
+    checkMatchingString(-5, "-5");
+    checkMatchingStringFailure(MaxUint64);
+    checkMatchingString(MaxInt64, MaxInt64Str);
+    checkMatchingString(MinInt64, MinInt64Str);
+  } else {
+    checkMatchingStringFailure(-5);
+    checkMatchingString(MaxUint64, MaxUint64Str);
+    checkMatchingString(MaxInt64, MaxInt64Str);
+    checkMatchingStringFailure(MinInt64);
+  }
+
+  checkMatchingString(10, TenStr);
+  checkMatchingString(15, FifteenStr);
+}
+
+TEST_P(ExpressionFormatParameterisedFixture, FormatValueFromStringRepr) {
+  checkValueFromStringRepr("0", 0);
+  checkValueFromStringRepr("9", 9);
+
+  if (Signed) {
+    checkValueFromStringRepr("-5", -5);
+    checkValueFromStringReprFailure(MaxUint64Str);
+  } else {
+    checkValueFromStringReprFailure("-5");
+    checkValueFromStringRepr(MaxUint64Str, MaxUint64);
+  }
+
+  checkValueFromStringRepr(TenStr, 10);
+  checkValueFromStringRepr(FifteenStr, 15);
+
   // Wrong casing is not tested because valueFromStringRepr() relies on
   // StringRef's getAsInteger() which does not allow to restrict casing.
-  BufferizedInvalidTenStr = bufferize(SM, InvalidTenStr);
-  expectDiagnosticError(
-      OverflowErrorStr,
-      Format.valueFromStringRepr(bufferize(SM, "G"), SM).takeError());
+  checkValueFromStringReprFailure("G");
+}
 
-  // Check boolean operator.
+TEST_P(ExpressionFormatParameterisedFixture, FormatBoolOperator) {
   EXPECT_TRUE(bool(Format));
 }
 
-INSTANTIATE_TEST_CASE_P(
-    AllowedExplicitExpressionFormat, ExpressionFormatParameterisedFixture,
-    ::testing::Values(
-        std::make_tuple(ExpressionFormat::Kind::Unsigned, /*AllowHex=*/false,
-                        /*AllowUpperHex=*/false),
-        std::make_tuple(ExpressionFormat::Kind::Signed, /*AllowHex=*/false,
-                        /*AllowUpperHex=*/false),
-        std::make_tuple(ExpressionFormat::Kind::HexLower, /*AllowHex=*/true,
-                        /*AllowUpperHex=*/false),
-        std::make_tuple(ExpressionFormat::Kind::HexUpper, /*AllowHex=*/true,
-                        /*AllowUpperHex=*/true)), );
+INSTANTIATE_TEST_CASE_P(AllowedExplicitExpressionFormat,
+                        ExpressionFormatParameterisedFixture,
+                        ::testing::Values(ExpressionFormat::Kind::Unsigned,
+                                          ExpressionFormat::Kind::Signed,
+                                          ExpressionFormat::Kind::HexLower,
+                                          ExpressionFormat::Kind::HexUpper), );
 
 TEST_F(FileCheckTest, NoFormatProperties) {
   ExpressionFormat NoFormat(ExpressionFormat::Kind::NoFormat);
@@ -331,11 +339,6 @@ static void expectOperationValueResult(binop_eval_t Operation, T1 LeftValue,
       "overflow error",
       doValueOperation(Operation, LeftValue, RightValue).takeError());
 }
-
-const int64_t MinInt64 = std::numeric_limits<int64_t>::min();
-const int64_t MaxInt64 = std::numeric_limits<int64_t>::max();
-const uint64_t AbsoluteMinInt64 = static_cast<uint64_t>(-(MinInt64 + 1)) + 1;
-const uint64_t AbsoluteMaxInt64 = static_cast<uint64_t>(MaxInt64);
 
 TEST_F(FileCheckTest, ExpressionValueGetUnsigned) {
   // Test positive value.

@@ -675,8 +675,8 @@ static bool isInjectedClass(const NamedDecl &D) {
   return false;
 }
 
-// Some member calls are blacklisted because they're so rarely useful.
-static bool isBlacklistedMember(const NamedDecl &D) {
+// Some member calls are excluded because they're so rarely useful.
+static bool isExcludedMember(const NamedDecl &D) {
   // Destructor completion is rarely useful, and works inconsistently.
   // (s.^ completes ~string, but s.~st^ is an error).
   if (D.getKind() == Decl::CXXDestructor)
@@ -759,7 +759,7 @@ struct CompletionRecorder : public CodeCompleteConsumer {
         continue;
       if (Result.Declaration &&
           !Context.getBaseType().isNull() // is this a member-access context?
-          && isBlacklistedMember(*Result.Declaration))
+          && isExcludedMember(*Result.Declaration))
         continue;
       // Skip injected class name when no class scope is not explicitly set.
       // E.g. show injected A::A in `using A::A^` but not in "A^".

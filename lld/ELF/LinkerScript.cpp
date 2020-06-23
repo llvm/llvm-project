@@ -851,7 +851,8 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
   if (!(sec->flags & SHF_ALLOC))
     dot = 0;
 
-  bool prevLMARegionIsDefault = ctx->lmaRegion == nullptr;
+  const bool sameMemRegion = ctx->memRegion == sec->memRegion;
+  const bool prevLMARegionIsDefault = ctx->lmaRegion == nullptr;
   ctx->memRegion = sec->memRegion;
   ctx->lmaRegion = sec->lmaRegion;
   if (ctx->memRegion)
@@ -872,14 +873,15 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
 
   // ctx->lmaOffset is LMA minus VMA. If LMA is explicitly specified via AT() or
   // AT>, recompute ctx->lmaOffset; otherwise, if both previous/current LMA
-  // region is the default, reuse previous lmaOffset; otherwise, reset lmaOffset
-  // to 0. This emulates heuristics described in
+  // region is the default, and the two sections are in the same memory region,
+  // reuse previous lmaOffset; otherwise, reset lmaOffset to 0. This emulates
+  // heuristics described in
   // https://sourceware.org/binutils/docs/ld/Output-Section-LMA.html
   if (sec->lmaExpr)
     ctx->lmaOffset = sec->lmaExpr().getValue() - dot;
   else if (MemoryRegion *mr = sec->lmaRegion)
     ctx->lmaOffset = alignTo(mr->curPos, sec->alignment) - dot;
-  else if (!prevLMARegionIsDefault)
+  else if (!sameMemRegion || !prevLMARegionIsDefault)
     ctx->lmaOffset = 0;
 
   // Propagate ctx->lmaOffset to the first "non-header" section.

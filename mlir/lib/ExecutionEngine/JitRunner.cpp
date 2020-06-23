@@ -167,7 +167,7 @@ static Error compileAndExecuteVoidFunction(
     Options &options, ModuleOp module, StringRef entryPoint,
     std::function<llvm::Error(llvm::Module *)> transformer) {
   auto mainFunction = module.lookupSymbol<LLVM::LLVMFuncOp>(entryPoint);
-  if (!mainFunction || mainFunction.getBlocks().empty())
+  if (!mainFunction || mainFunction.empty())
     return make_string_error("entry point not found");
   void *empty = nullptr;
   return compileAndExecute(options, module, entryPoint, transformer, &empty);

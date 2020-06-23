@@ -1400,7 +1400,8 @@ using TypedExpr = std::unique_ptr<evaluate::GenericExprWrapper,
 // R845 data-stmt-constant ->
 //        scalar-constant | scalar-constant-subobject |
 //        signed-int-literal-constant | signed-real-literal-constant |
-//        null-init | initial-data-target | structure-constructor
+//        null-init | initial-data-target |
+//        constant-structure-constructor    <- added "constant-"
 struct DataStmtConstant {
   UNION_CLASS_BOILERPLATE(DataStmtConstant);
   CharBlock source;
@@ -1424,6 +1425,7 @@ struct DataStmtRepeat {
 // R843 data-stmt-value -> [data-stmt-repeat *] data-stmt-constant
 struct DataStmtValue {
   TUPLE_CLASS_BOILERPLATE(DataStmtValue);
+  mutable std::int64_t repetitions{1}; // replaced during semantics
   std::tuple<std::optional<DataStmtRepeat>, DataStmtConstant> t;
 };
 

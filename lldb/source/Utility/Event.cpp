@@ -125,7 +125,7 @@ ConstString EventDataBytes::GetFlavor() const {
 
 void EventDataBytes::Dump(Stream *s) const {
   size_t num_printable_chars =
-      std::count_if(m_bytes.begin(), m_bytes.end(), isprint);
+      std::count_if(m_bytes.begin(), m_bytes.end(), llvm::isPrint);
   if (num_printable_chars == m_bytes.size())
     s->Format("\"{0}\"", m_bytes);
   else

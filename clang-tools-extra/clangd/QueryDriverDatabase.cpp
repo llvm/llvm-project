@@ -27,7 +27,7 @@
 // First argument of the command line received from underlying compilation
 // database is used as compiler driver path. Due to this arbitrary binary
 // execution, this mechanism is not used by default and only executes binaries
-// in the paths that are explicitly whitelisted by the user.
+// in the paths that are explicitly included by the user.
 
 #include "GlobalCompilationDatabase.h"
 #include "support/Logger.h"
@@ -94,7 +94,7 @@ extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
   SPAN_ATTACH(Tracer, "lang", Lang);
 
   if (!QueryDriverRegex.match(Driver)) {
-    vlog("System include extraction: not whitelisted driver {0}", Driver);
+    vlog("System include extraction: not allowed driver {0}", Driver);
     return {};
   }
 
@@ -143,7 +143,7 @@ extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
           });
       if (Found == std::end(ArgsToPreserve))
         continue;
-      Arg.consume_front(*Found);
+      Arg = Arg.drop_front(Found->size());
       if (Arg.empty() && I + 1 < E) {
         Args.push_back(CommandLine[I]);
         Args.push_back(CommandLine[++I]);

@@ -43,7 +43,7 @@ typedef std::vector<OptionArgElement> OptionElementVector;
 static inline bool isprint8(int ch) {
   if (ch & 0xffffff00u)
     return false;
-  return isprint(ch);
+  return llvm::isPrint(ch);
 }
 
 /// \class Options Options.h "lldb/Interpreter/Options.h"

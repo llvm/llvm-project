@@ -1,5 +1,4 @@
-//===-- PlatformiOSSimulatorCoreSimulatorSupport.cpp ---------------*- C++
-//-*-===//
+//===-- PlatformiOSSimulatorCoreSimulatorSupport.cpp ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,10 +50,12 @@ using namespace lldb_private;
 - (NSUInteger)state;
 - (BOOL)shutdownWithError:(NSError **)error;
 - (NSUUID *)UDID;
-- (pid_t)spawnWithPath:(NSString *)path
-               options:(NSDictionary *)options
-    terminationHandler:(void (^)(int status))terminationHandler
-                 error:(NSError **)error;
+- (BOOL)spawnWithPath:(NSString *)path
+               options:(nullable NSDictionary<NSString *, id> *)options
+      terminationQueue:(nullable dispatch_queue_t)terminationQueue
+    terminationHandler:(nullable void (^)(int status))terminationHandler
+                   pid:(pid_t *_Nullable)pid
+                 error:(NSError *__autoreleasing _Nullable *_Nullable)error;
 @end
 
 CoreSimulatorSupport::Process::Process(lldb::pid_t p) : m_pid(p), m_error() {}
@@ -468,8 +469,11 @@ CoreSimulatorSupport::Device::Spawn(ProcessLaunchInfo &launch_info) {
                   provided, path will be argv[0] */
 #define kSimDeviceSpawnWaitForDebugger                                         \
   @"wait_for_debugger" /* An NSNumber (bool) */
+#define kSimDeviceSpawnStandalone @"standalone"
 
   NSMutableDictionary *options = [[NSMutableDictionary alloc] init];
+
+  options[kSimDeviceSpawnStandalone] = @(YES);
 
   if (launch_info.GetFlags().Test(lldb::eLaunchFlagDebug))
     [options setObject:@YES forKey:kSimDeviceSpawnWaitForDebugger];
@@ -527,16 +531,19 @@ CoreSimulatorSupport::Device::Spawn(ProcessLaunchInfo &launch_info) {
 
   NSError *nserror;
 
-  pid_t pid = [m_dev
+  pid_t pid;
+  BOOL success = [m_dev
            spawnWithPath:[NSString stringWithUTF8String:launch_info
                                                             .GetExecutableFile()
                                                             .GetPath()
                                                             .c_str()]
                  options:options
+        terminationQueue:nil
       terminationHandler:nil
+                     pid:&pid
                    error:&nserror];
 
-  if (pid < 0) {
+  if (!success) {
     const char *nserror_string = [[nserror description] UTF8String];
     error.SetErrorString(nserror_string ? nserror_string : "unable to launch");
   }

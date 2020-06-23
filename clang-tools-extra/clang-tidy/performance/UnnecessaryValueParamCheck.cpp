@@ -205,11 +205,10 @@ void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Var,
   auto EndLoc = Lexer::getLocForEndOfToken(CopyArgument.getLocation(), 0, SM,
                                            Context.getLangOpts());
   Diag << FixItHint::CreateInsertion(CopyArgument.getBeginLoc(), "std::move(")
-       << FixItHint::CreateInsertion(EndLoc, ")");
-  if (auto IncludeFixit = Inserter->CreateIncludeInsertion(
-          SM.getFileID(CopyArgument.getBeginLoc()), "utility",
-          /*IsAngled=*/true))
-    Diag << *IncludeFixit;
+       << FixItHint::CreateInsertion(EndLoc, ")")
+       << Inserter->CreateIncludeInsertion(
+              SM.getFileID(CopyArgument.getBeginLoc()), "utility",
+              /*IsAngled=*/true);
 }
 
 } // namespace performance

@@ -65,7 +65,7 @@ static bool canBeHoisted(Operation *op,
   // Recurse into the regions for this op and check whether the contained ops
   // can be hoisted.
   for (auto &region : op->getRegions()) {
-    for (auto &block : region.getBlocks()) {
+    for (auto &block : region) {
       for (auto &innerOp : block.without_terminator())
         if (!canBeHoisted(&innerOp, definedOutside))
           return false;

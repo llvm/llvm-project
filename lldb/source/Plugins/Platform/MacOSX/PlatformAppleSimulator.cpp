@@ -35,9 +35,9 @@ void PlatformAppleSimulator::Initialize() { PlatformDarwin::Initialize(); }
 void PlatformAppleSimulator::Terminate() { PlatformDarwin::Terminate(); }
 
 /// Default Constructor
-PlatformAppleSimulator::PlatformAppleSimulator()
-    : PlatformDarwin(true), m_core_sim_path_mutex(),
-      m_core_simulator_framework_path(), m_device() {}
+PlatformAppleSimulator::PlatformAppleSimulator(
+    CoreSimulatorSupport::DeviceType::ProductFamilyID kind)
+    : PlatformDarwin(true), m_kind(kind) {}
 
 /// Destructor.
 ///
@@ -215,18 +215,11 @@ FileSpec PlatformAppleSimulator::GetCoreSimulatorPath() {
 #if defined(__APPLE__)
   std::lock_guard<std::mutex> guard(m_core_sim_path_mutex);
   if (!m_core_simulator_framework_path.hasValue()) {
-    if (FileSpec fspec = HostInfo::GetXcodeDeveloperDirectory()) {
-      std::string developer_dir = fspec.GetPath();
-      StreamString cs_path;
-      cs_path.Printf(
-          "%s/Library/PrivateFrameworks/CoreSimulator.framework/CoreSimulator",
-          developer_dir.c_str());
-      m_core_simulator_framework_path = FileSpec(cs_path.GetData());
-      FileSystem::Instance().Resolve(*m_core_simulator_framework_path);
-    } else
-      m_core_simulator_framework_path = FileSpec();
+    m_core_simulator_framework_path =
+        FileSpec("/Library/Developer/PrivateFrameworks/CoreSimulator.framework/"
+                 "CoreSimulator");
+    FileSystem::Instance().Resolve(*m_core_simulator_framework_path);
   }
-
   return m_core_simulator_framework_path.getValue();
 #else
   return FileSpec();
@@ -247,8 +240,7 @@ void PlatformAppleSimulator::LoadCoreSimulator() {
 #if defined(__APPLE__)
 CoreSimulatorSupport::Device PlatformAppleSimulator::GetSimulatorDevice() {
   if (!m_device.hasValue()) {
-    const CoreSimulatorSupport::DeviceType::ProductFamilyID dev_id =
-        CoreSimulatorSupport::DeviceType::ProductFamilyID::iPhone;
+    const CoreSimulatorSupport::DeviceType::ProductFamilyID dev_id = m_kind;
     std::string developer_dir = HostInfo::GetXcodeDeveloperDirectory().GetPath();
     m_device = CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
                    developer_dir.c_str())

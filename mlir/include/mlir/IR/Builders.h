@@ -120,6 +120,7 @@ public:
   IntegerAttr getUI32IntegerAttr(uint32_t value);
 
   /// Vector-typed DenseIntElementsAttr getters. `values` must not be empty.
+  DenseIntElementsAttr getBoolVectorAttr(ArrayRef<bool> values);
   DenseIntElementsAttr getI32VectorAttr(ArrayRef<int32_t> values);
   DenseIntElementsAttr getI64VectorAttr(ArrayRef<int64_t> values);
 
