@@ -221,7 +221,7 @@ lldb::ValueObjectSP lldb_private::formatters::swift::
   if (IsEmpty())
     return nullptr;
   auto child = m_some->GetChildAtIndex(idx, true);
-  if (m_some->IsSyntheticChildrenGenerated())
+  if (child && m_some->IsSyntheticChildrenGenerated())
     child->SetSyntheticChildrenGenerated(true);
   return child;
 }
