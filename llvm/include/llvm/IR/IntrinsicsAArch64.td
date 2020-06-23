@@ -471,6 +471,16 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_bfmlalt : AdvSIMD_FML_Intrinsic;
 
 
+  // v8.6-A Bfloat Intrinsics
+  def int_aarch64_neon_bfcvt
+    : Intrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem]>;
+  def int_aarch64_neon_bfcvtn
+    : Intrinsic<[llvm_v8bf16_ty], [llvm_v4f32_ty], [IntrNoMem]>;
+  def int_aarch64_neon_bfcvtn2
+    : Intrinsic<[llvm_v8bf16_ty],
+                [llvm_v8bf16_ty, llvm_v4f32_ty],
+                [IntrNoMem]>;
+
   // v8.2-A FP16 Fused Multiply-Add Long
   def int_aarch64_neon_fmlal : AdvSIMD_FP16FML_Intrinsic;
   def int_aarch64_neon_fmlsl : AdvSIMD_FP16FML_Intrinsic;

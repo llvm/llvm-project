@@ -4735,6 +4735,7 @@ struct ARMVectorIntrinsicInfo {
       TypeModifier }
 
 static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
+  NEONMAP1(__a32_vcvt_bf16_v, arm_neon_vcvtfp2bf, 0),
   NEONMAP0(splat_lane_v),
   NEONMAP0(splat_laneq_v),
   NEONMAP0(splatq_lane_v),
@@ -4813,6 +4814,7 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vcvtaq_u16_v, arm_neon_vcvtau, 0),
   NEONMAP1(vcvtaq_u32_v, arm_neon_vcvtau, 0),
   NEONMAP1(vcvtaq_u64_v, arm_neon_vcvtau, 0),
+  NEONMAP1(vcvth_bf16_f32, arm_neon_vcvtbfp2bf, 0),
   NEONMAP1(vcvtm_s16_v, arm_neon_vcvtms, 0),
   NEONMAP1(vcvtm_s32_v, arm_neon_vcvtms, 0),
   NEONMAP1(vcvtm_s64_v, arm_neon_vcvtms, 0),
@@ -5029,6 +5031,7 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
 };
 
 static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
+  NEONMAP1(__a64_vcvtq_low_bf16_v, aarch64_neon_bfcvtn, 0),
   NEONMAP0(splat_lane_v),
   NEONMAP0(splat_laneq_v),
   NEONMAP0(splatq_lane_v),
@@ -5088,6 +5091,7 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vcvt_n_u64_v, aarch64_neon_vcvtfp2fxu, 0),
   NEONMAP0(vcvtq_f16_v),
   NEONMAP0(vcvtq_f32_v),
+  NEONMAP1(vcvtq_high_bf16_v, aarch64_neon_bfcvtn2, 0),
   NEONMAP2(vcvtq_n_f16_v, aarch64_neon_vcvtfxu2fp, aarch64_neon_vcvtfxs2fp, 0),
   NEONMAP2(vcvtq_n_f32_v, aarch64_neon_vcvtfxu2fp, aarch64_neon_vcvtfxs2fp, 0),
   NEONMAP2(vcvtq_n_f64_v, aarch64_neon_vcvtfxu2fp, aarch64_neon_vcvtfxs2fp, 0),
@@ -5243,6 +5247,7 @@ static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vcvtd_n_f64_u64, aarch64_neon_vcvtfxu2fp, AddRetType | Add1ArgType),
   NEONMAP1(vcvtd_n_s64_f64, aarch64_neon_vcvtfp2fxs, AddRetType | Add1ArgType),
   NEONMAP1(vcvtd_n_u64_f64, aarch64_neon_vcvtfp2fxu, AddRetType | Add1ArgType),
+  NEONMAP1(vcvth_bf16_f32, aarch64_neon_bfcvt, 0),
   NEONMAP1(vcvtmd_s64_f64, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
   NEONMAP1(vcvtmd_u64_f64, aarch64_neon_fcvtmu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtms_s32_f32, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
@@ -6241,6 +6246,11 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     llvm::Type *Tys[2] = { Ty, InputTy };
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmlalt");
   }
+  case NEON::BI__builtin_neon___a32_vcvt_bf16_v: {
+    llvm::Type *Tys[1] = { Ty };
+    Function *F = CGM.getIntrinsic(Int, Tys);
+    return EmitNeonCall(F, Ops, "vcvtfp2bf");
+  }
 
   }
 
@@ -6449,6 +6459,7 @@ static bool HasExtraNeonArgument(unsigned BuiltinID) {
   case NEON::BI__builtin_neon_vsha1cq_u32:
   case NEON::BI__builtin_neon_vsha1pq_u32:
   case NEON::BI__builtin_neon_vsha1mq_u32:
+  case NEON::BI__builtin_neon_vcvth_bf16_f32:
   case clang::ARM::BI_MoveToCoprocessor:
   case clang::ARM::BI_MoveToCoprocessor2:
     return false;
@@ -6931,6 +6942,11 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vsha1mq_u32:
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::arm_neon_sha1m), Ops,
                         "vsha1h");
+
+  case NEON::BI__builtin_neon_vcvth_bf16_f32: {
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::arm_neon_vcvtbfp2bf), Ops,
+                        "vcvtbfp2bf");
+  }
 
   // The ARM _MoveToCoprocessor builtins put the input register value as
   // the first argument, but the LLVM intrinsic expects it as the third one.
