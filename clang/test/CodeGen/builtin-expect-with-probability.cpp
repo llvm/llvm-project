@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -o - %s -O1 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -fexperimental-new-pass-manager %s -O1 | FileCheck %s
 extern int global;
 
 struct S {
@@ -15,8 +16,8 @@ int expect_taken(int x) {
 	return x;
 }
 
-void f() {
-  expect_taken<S>(global);
+int f() {
+  return expect_taken<S>(global);
 }
 
 int expect_taken2(int x) {
