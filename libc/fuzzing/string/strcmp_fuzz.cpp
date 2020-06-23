@@ -10,7 +10,6 @@
 ///
 //===----------------------------------------------------------------------===//
 #include "src/string/strcmp.h"
-#include <algorithm>
 #include <stdint.h>
 
 extern "C" int LLVMFuzzerTestTwoInputs(const uint8_t *data1, size_t size1,
@@ -25,15 +24,17 @@ extern "C" int LLVMFuzzerTestTwoInputs(const uint8_t *data1, size_t size1,
   const char *s1 = reinterpret_cast<const char *>(data1);
   const char *s2 = reinterpret_cast<const char *>(data2);
 
-  const size_t minimum_size = std::min(size1, size2);
+  const size_t minimum_size = size1 < size2 ? size1 : size2;
 
   // Iterate through until either the minimum size is hit,
   // a character is the null terminator, or the first set
   // of differed bytes between s1 and s2 are found.
   // No bytes following a null byte should be compared.
   size_t i;
-  for (i = 0; i < minimum_size && s1[i] && s1[i] == s2[i]; ++i)
-    ;
+  for (i = 0; i < minimum_size; ++i) {
+    if (!s1[i] || s1[i] != s2[i])
+      break;
+  }
 
   int expected_result = s1[i] - s2[i];
   int actual_result = __llvm_libc::strcmp(s1, s2);
