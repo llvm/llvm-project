@@ -75,7 +75,7 @@ llvm::Error Lua::ChangeIO(FILE *out, FILE *err) {
                                                llvm::inconvertibleErrorCode());
   }
 
-  lua_getfield(m_lua_state, -1, "stdout");
+  lua_getfield(m_lua_state, -1, "stderr");
   if (luaL_Stream *s = static_cast<luaL_Stream *>(
           luaL_testudata(m_lua_state, -1, LUA_FILEHANDLE))) {
     s->f = out;
