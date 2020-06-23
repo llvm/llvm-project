@@ -34,7 +34,7 @@ An example `bash` session to build Comgr on Linux using GNUMakefiles is:
     $ cd "$DEVICE_LIBS/build"
     $ cmake \
         -DCMAKE_BUILD_TYPE=Release \
-        -DLLVM_DIR="$LLVM_PROJECT/build" \
+        -DCMAKE_PREFIX_PATH="$LLVM_PROJECT/build" \
         ..
     $ make
     $ mkdir -p "$COMGR/build"
@@ -61,7 +61,7 @@ The equivalent on Windows in `cmd.exe` using Visual Studio project files is:
     > mkdir "%DEVICE_LIBS%\build"
     > cd "%DEVICE_LIBS%\build"
     > cmake ^
-        -DLLVM_DIR="%LLVM_PROJECT%\build" ^
+        -DCMAKE_PREFIX_PATH="%LLVM_PROJECT%\build" ^
         ..
     > msbuild /p:Configuration=Release ALL_BUILD.vcxproj
     > mkdir "%COMGR%\build"
