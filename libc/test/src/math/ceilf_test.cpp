@@ -52,7 +52,7 @@ TEST(CeilfTest, SpecialNumbers) {
                                       valueFromBits(BitPatterns::negZero))));
 }
 
-TEST(ceilfTest, RoundedNumbers) {
+TEST(CeilfTest, RoundedNumbers) {
   EXPECT_EQ(valueAsBits(1.0f), valueAsBits(__llvm_libc::ceilf(1.0f)));
   EXPECT_EQ(valueAsBits(-1.0f), valueAsBits(__llvm_libc::ceilf(-1.0f)));
   EXPECT_EQ(valueAsBits(10.0f), valueAsBits(__llvm_libc::ceilf(10.0f)));
@@ -61,7 +61,7 @@ TEST(ceilfTest, RoundedNumbers) {
   EXPECT_EQ(valueAsBits(-12345.0f), valueAsBits(__llvm_libc::ceilf(-12345.0f)));
 }
 
-TEST(ceilfTest, InFloatRange) {
+TEST(CeilfTest, InFloatRange) {
   using BitsType = Properties::BitsType;
   constexpr BitsType count = 1000000;
   constexpr BitsType step = UINT32_MAX / count;

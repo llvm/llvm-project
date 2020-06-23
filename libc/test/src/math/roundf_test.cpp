@@ -62,7 +62,7 @@ TEST(RoundfTest, RoundedNumbers) {
             valueAsBits(__llvm_libc::roundf(-12345.0f)));
 }
 
-TEST(RoundTest, CloseToZeroNumbers) {
+TEST(RoundfTest, CloseToZeroNumbers) {
   EXPECT_EQ(valueAsBits(1.0f), valueAsBits(__llvm_libc::roundf(0.5f)));
   EXPECT_EQ(valueAsBits(-1.0f), valueAsBits(__llvm_libc::roundf(-0.5f)));
   EXPECT_EQ(valueAsBits(0.0f), valueAsBits(__llvm_libc::roundf(0.115f)));

@@ -1,5 +1,4 @@
-//===-- Unittests for modfff
-//-----------------------------------------------===//
+//===-- Unittests for modff -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -89,7 +88,7 @@ TEST(ModffTest, Integers) {
   EXPECT_EQ(valueAsBits(integral), valueAsBits(-12345.0f));
 }
 
-TEST(ModfTest, Fractions) {
+TEST(ModffTest, Fractions) {
   float integral;
 
   EXPECT_EQ(valueAsBits(0.5f),
