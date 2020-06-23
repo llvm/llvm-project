@@ -23,6 +23,9 @@ add_clang_library(clangTidyMiscModule
   LINK_LIBS
   clangTidy
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyMiscModule

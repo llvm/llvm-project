@@ -12,6 +12,9 @@ add_clang_library(clangIncludeFixer
 
   LINK_LIBS
   findAllSymbols
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangIncludeFixer
