@@ -556,6 +556,7 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t a,
   case R_AARCH64_PREL64:
   case R_AARCH64_ADR_PREL_LO21:
   case R_AARCH64_LD_PREL_LO19:
+  case R_AARCH64_PLT32:
     return p + a;
   }
   llvm_unreachable("AArch64 pc-relative relocation expected\n");
