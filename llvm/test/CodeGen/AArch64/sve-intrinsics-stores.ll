@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve,+bf16 < %s 2>%t | FileCheck %s
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
 ; WARN-NOT: warning
@@ -41,6 +41,17 @@ define void @st2h_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale 
                                           <vscale x 8 x half> %v1,
                                           <vscale x 8 x i1> %pred,
                                           half* %addr)
+  ret void
+}
+
+define void @st2h_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x i1> %pred, bfloat* %addr) {
+; CHECK-LABEL: st2h_bf16:
+; CHECK: st2h { z0.h, z1.h }, p0, [x0]
+; CHECK-NEXT: ret
+  call void @llvm.aarch64.sve.st2.nxv8bf16(<vscale x 8 x bfloat> %v0,
+                                          <vscale x 8 x bfloat> %v1,
+                                          <vscale x 8 x i1> %pred,
+                                          bfloat* %addr)
   ret void
 }
 
@@ -137,6 +148,18 @@ define void @st3h_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale 
                                           <vscale x 8 x half> %v2,
                                           <vscale x 8 x i1> %pred,
                                           half* %addr)
+  ret void
+}
+
+define void @st3h_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x i1> %pred, bfloat* %addr) {
+; CHECK-LABEL: st3h_bf16:
+; CHECK: st3h { z0.h, z1.h, z2.h }, p0, [x0]
+; CHECK-NEXT: ret
+  call void @llvm.aarch64.sve.st3.nxv8bf16(<vscale x 8 x bfloat> %v0,
+                                          <vscale x 8 x bfloat> %v1,
+                                          <vscale x 8 x bfloat> %v2,
+                                          <vscale x 8 x i1> %pred,
+                                          bfloat* %addr)
   ret void
 }
 
@@ -240,6 +263,19 @@ define void @st4h_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale 
                                           <vscale x 8 x half> %v3,
                                           <vscale x 8 x i1> %pred,
                                           half* %addr)
+  ret void
+}
+
+define void @st4h_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x i1> %pred, bfloat* %addr) {
+; CHECK-LABEL: st4h_bf16:
+; CHECK: st4h { z0.h, z1.h, z2.h, z3.h }, p0, [x0]
+; CHECK-NEXT: ret
+  call void @llvm.aarch64.sve.st4.nxv8bf16(<vscale x 8 x bfloat> %v0,
+                                          <vscale x 8 x bfloat> %v1,
+                                          <vscale x 8 x bfloat> %v2,
+                                          <vscale x 8 x bfloat> %v3,
+                                          <vscale x 8 x i1> %pred,
+                                          bfloat* %addr)
   ret void
 }
 
@@ -395,6 +431,7 @@ declare void @llvm.aarch64.sve.st2.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16
 declare void @llvm.aarch64.sve.st2.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, i32*)
 declare void @llvm.aarch64.sve.st2.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i1>, i64*)
 declare void @llvm.aarch64.sve.st2.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x i1>, half*)
+declare void @llvm.aarch64.sve.st2.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x i1>, bfloat*)
 declare void @llvm.aarch64.sve.st2.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x i1>, float*)
 declare void @llvm.aarch64.sve.st2.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x i1>, double*)
 
@@ -403,6 +440,7 @@ declare void @llvm.aarch64.sve.st3.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16
 declare void @llvm.aarch64.sve.st3.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, i32*)
 declare void @llvm.aarch64.sve.st3.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i1>, i64*)
 declare void @llvm.aarch64.sve.st3.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x i1>, half*)
+declare void @llvm.aarch64.sve.st3.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x i1>, bfloat*)
 declare void @llvm.aarch64.sve.st3.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x i1>, float*)
 declare void @llvm.aarch64.sve.st3.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x i1>, double*)
 
@@ -411,6 +449,7 @@ declare void @llvm.aarch64.sve.st4.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16
 declare void @llvm.aarch64.sve.st4.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, i32*)
 declare void @llvm.aarch64.sve.st4.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i1>, i64*)
 declare void @llvm.aarch64.sve.st4.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x i1>, half*)
+declare void @llvm.aarch64.sve.st4.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x i1>, bfloat*)
 declare void @llvm.aarch64.sve.st4.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x i1>, float*)
 declare void @llvm.aarch64.sve.st4.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x i1>, double*)
 
