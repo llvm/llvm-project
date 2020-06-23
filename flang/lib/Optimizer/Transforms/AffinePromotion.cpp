@@ -39,7 +39,6 @@ public:
   AffineLoopAnalysis(fir::LoopOp op, AffineFunctionAnalysis &afa)
       : legality(analyzeLoop(op, afa)) {}
   bool canPromoteToAffine() { return legality; }
-  Optional<int64_t> step;
   friend AffineFunctionAnalysis;
 
 private:
@@ -51,28 +50,8 @@ private:
   bool analyzeLoop(fir::LoopOp loopOperation,
                    AffineFunctionAnalysis &functionAnalysis) {
     LLVM_DEBUG(llvm::dbgs() << "AffinLoopAnalysis: \n"; loopOperation.dump(););
-    return analyzeStep(loopOperation.step()) &&
-           analyzeMemoryAccess(loopOperation) &&
+    return analyzeMemoryAccess(loopOperation) &&
            analyzeBody(loopOperation, functionAnalysis);
-  }
-  bool analyzeStep(const mlir::Value stepValue) {
-    if (auto stepDefinition = stepValue.getDefiningOp<ConstantOp>()) {
-      if (auto stepAttr = stepDefinition.getValue().dyn_cast<IntegerAttr>()) {
-        step = stepAttr.getInt();
-        return true;
-      } else {
-        LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: cannot promote loop, "
-                                   "step not integer\n";
-                   stepAttr.print(llvm::dbgs()););
-        return false;
-      }
-    }
-    LLVM_DEBUG(
-        llvm::dbgs()
-            << "AffineLoopAnalysis: cannot promote loop, step not constant\n";
-        if (stepValue.getDefiningOp()) stepValue.getDefiningOp()->print(
-            llvm::dbgs()););
-    return false;
   }
   bool analyzeArrayReference(mlir::Value);
   bool analyzeMemoryAccess(fir::LoopOp loopOperation) {
@@ -152,18 +131,24 @@ bool AffineLoopAnalysis::analyzeBody(fir::LoopOp loopOperation,
 mlir::AffineMap createArrayIndexAffineMap(unsigned dimensions,
                                           MLIRContext *context) {
   auto index = mlir::getAffineConstantExpr(0, context);
-  auto extent = mlir::getAffineConstantExpr(1, context);
+  auto accuExtent = mlir::getAffineConstantExpr(1, context);
   for (unsigned i = 0; i < dimensions; ++i) {
     mlir::AffineExpr idx = mlir::getAffineDimExpr(i, context),
                      lowerBound = mlir::getAffineSymbolExpr(i * 3, context),
-                     upperBound = mlir::getAffineSymbolExpr(i * 3 + 1, context),
+                     currentExtent =
+                         mlir::getAffineSymbolExpr(i * 3 + 1, context),
                      stride = mlir::getAffineSymbolExpr(i * 3 + 2, context),
-                     currentPart = (idx - lowerBound) * extent;
+                     currentPart = (idx * stride - lowerBound) * accuExtent;
     index = currentPart + index;
-    extent =
-        (upperBound - lowerBound + 1) * stride * extent; // TODO negative stride
+    accuExtent = accuExtent * currentExtent;
   }
   return mlir::AffineMap::get(dimensions, dimensions * 3, index);
+}
+Optional<int64_t> constantIntegerLike(const mlir::Value value) {
+  if (auto definition = value.getDefiningOp<ConstantOp>())
+    if (auto stepAttr = definition.getValue().dyn_cast<IntegerAttr>())
+      return stepAttr.getInt();
+  return {};
 }
 
 /// Convert `fir.loop` to `affine.for`
@@ -179,28 +164,19 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: rewriting loop:\n";
                loop.dump(););
     auto loopAnalysis = functionAnalysis.getChildLoopAnalysis(loop);
-    if (loopAnalysis.step.getValue() <= 0) {
-      LLVM_DEBUG(llvm::dbgs()
-                     << "AffineLoopAnalysis: cannot promote loop for now, "
-                        "step not postive\n";);
-      return failure();
-    }
     auto &loopOps = loop.getBody()->getOperations();
-
-    auto affineFor = rewriter.create<mlir::AffineForOp>(
-        loop.getLoc(), ValueRange(loop.lowerBound()),
-        mlir::AffineMap::get(0, 1,
-                             mlir::getAffineSymbolExpr(0, loop.getContext())),
-        ValueRange(loop.upperBound()),
-        mlir::AffineMap::get(
-            0, 1, 1 + mlir::getAffineSymbolExpr(0, loop.getContext())),
-        loopAnalysis.step.getValue());
-
+    auto loopAndIndex = createAffineFor(loop, rewriter);
+    auto affineFor = loopAndIndex.first;
+    auto inductionVar = loopAndIndex.second;
     rewriter.startRootUpdate(affineFor.getOperation());
-    affineFor.getBody()->getOperations().splice(affineFor.getBody()->begin(),
+    affineFor.getBody()->getOperations().splice(--affineFor.getBody()->end(),
                                                 loopOps, loopOps.begin(),
                                                 --loopOps.end());
     rewriter.finalizeRootUpdate(affineFor.getOperation());
+
+    rewriter.startRootUpdate(loop.getOperation());
+    loop.getInductionVar().replaceAllUsesWith(inductionVar);
+    rewriter.finalizeRootUpdate(loop.getOperation());
 
     for (auto &bodyOp : affineFor.getBody()->getOperations()) {
       if (isa<fir::LoadOp>(bodyOp)) {
@@ -215,10 +191,6 @@ public:
       }
     }
 
-    rewriter.startRootUpdate(loop.getOperation());
-    loop.getInductionVar().replaceAllUsesWith(affineFor.getInductionVar());
-    rewriter.finalizeRootUpdate(loop.getOperation());
-
     rewriter.replaceOp(loop, affineFor.getOperation()->getResults());
 
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: loop rewriten to:\n";
@@ -227,6 +199,54 @@ public:
   }
 
 private:
+  std::pair<mlir::AffineForOp, mlir::Value>
+  createAffineFor(fir::LoopOp op, mlir::PatternRewriter &rewriter) const {
+    if (auto constantStep = constantIntegerLike(op.step()))
+      if (constantStep.getValue() > 0)
+        return positiveConstantStep(op, constantStep.getValue(), rewriter);
+    return genericBounds(op, rewriter);
+  }
+  std::pair<mlir::AffineForOp, mlir::Value>
+  positiveConstantStep(fir::LoopOp op, int64_t step,
+                       mlir::PatternRewriter &rewriter) const {
+    auto affineFor = rewriter.create<mlir::AffineForOp>(
+        op.getLoc(), ValueRange(op.lowerBound()),
+        mlir::AffineMap::get(0, 1,
+                             mlir::getAffineSymbolExpr(0, op.getContext())),
+        ValueRange(op.upperBound()),
+        mlir::AffineMap::get(0, 1,
+                             1 + mlir::getAffineSymbolExpr(0, op.getContext())),
+        step);
+    return std::make_pair(affineFor, affineFor.getInductionVar());
+  }
+  std::pair<mlir::AffineForOp, mlir::Value>
+  genericBounds(fir::LoopOp op, mlir::PatternRewriter &rewriter) const {
+    auto lowerBound = mlir::getAffineSymbolExpr(0, op.getContext());
+    auto upperBound = mlir::getAffineSymbolExpr(1, op.getContext());
+    auto step = mlir::getAffineSymbolExpr(2, op.getContext());
+    mlir::AffineMap upperBoundMap =
+        mlir::AffineMap::get(0, 3, (upperBound - lowerBound + step).floorDiv(step));
+    auto genericUpperBound = rewriter.create<mlir::AffineApplyOp>(
+        op.getLoc(), upperBoundMap,
+        ValueRange({op.lowerBound(), op.upperBound(), op.step()}));
+    auto actualIndexMap = mlir::AffineMap::get(
+        1, 2,
+        (lowerBound + mlir::getAffineDimExpr(0, op.getContext())) *
+            mlir::getAffineSymbolExpr(1, op.getContext()));
+
+    auto affineFor = rewriter.create<mlir::AffineForOp>(
+        op.getLoc(), ValueRange(),
+        AffineMap::getConstantMap(0, op.getContext()),
+        genericUpperBound.getResult(),
+        mlir::AffineMap::get(0, 1,
+                             1 + mlir::getAffineSymbolExpr(0, op.getContext())),
+        1);
+    rewriter.setInsertionPointToStart(affineFor.getBody());
+    auto actualIndex = rewriter.create<mlir::AffineApplyOp>(
+        op.getLoc(), actualIndexMap,
+        ValueRange({affineFor.getInductionVar(), op.lowerBound(), op.step()}));
+    return std::make_pair(affineFor, actualIndex.getResult());
+  }
   mlir::Type coordinateArrayElement(fir::ArrayCoorOp op) const {
     if (auto refType = op.ref().getType().dyn_cast_or_null<ReferenceType>()) {
       if (auto seqType = refType.getEleTy().dyn_cast_or_null<SequenceType>()) {
