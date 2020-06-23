@@ -2608,6 +2608,14 @@ TEST(NullPointerConstants, Basic) {
   EXPECT_TRUE(matches("char *cp = (char *)0;", expr(nullPointerConstant())));
   EXPECT_TRUE(matches("int *ip = 0;", expr(nullPointerConstant())));
   EXPECT_TRUE(matches("int i = 0;", expr(nullPointerConstant())));
+  const char kTest[] = R"(
+    template <typename T>
+    struct MyTemplate {
+      MyTemplate() : field_(__null) {}
+      T* field_;
+    };
+  )";
+  EXPECT_TRUE(matches(kTest, expr(nullPointerConstant())));
 }
 
 TEST(HasExternalFormalLinkage, Basic) {

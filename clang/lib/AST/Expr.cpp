@@ -3812,6 +3812,11 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
       return Source->isNullPointerConstant(Ctx, NPC);
   }
 
+  // If the expression has no type information, it cannot be a null pointer
+  // constant.
+  if (getType().isNull())
+    return NPCK_NotNull;
+
   // C++11 nullptr_t is always a null pointer constant.
   if (getType()->isNullPtrType())
     return NPCK_CXX11_nullptr;
