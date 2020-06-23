@@ -89,6 +89,7 @@ struct VSCode {
   lldb::tid_t focus_tid;
   bool sent_terminated_event;
   bool stop_at_entry;
+  bool is_attach;
   // Keep track of the last stop thread index IDs as threads won't go away
   // unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
