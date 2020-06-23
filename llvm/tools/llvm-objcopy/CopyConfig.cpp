@@ -826,6 +826,19 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
   for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_add_rpath))
     Config.RPathToAdd.push_back(Arg->getValue());
 
+  for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_delete_rpath)) {
+    StringRef RPath = Arg->getValue();
+
+    // Cannot add and delete the same rpath at the same time.
+    if (is_contained(Config.RPathToAdd, RPath))
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both -add_rpath %s and -delete_rpath %s",
+          RPath.str().c_str(), RPath.str().c_str());
+
+    Config.RPathsToRemove.insert(RPath);
+  }
+
   SmallVector<StringRef, 2> Positional;
   for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_UNKNOWN))
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
