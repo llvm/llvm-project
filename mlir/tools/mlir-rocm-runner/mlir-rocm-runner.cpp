@@ -227,7 +227,7 @@ static void configTargetChip() {
   llvm::ErrorOr<std::string> rocmAgentEnumerator = llvm::sys::findProgramByName(
       kRocmAgentEnumerator, {__ROCM_PATH__ "/bin"});
   std::error_code ec;
-  if (ec = rocmAgentEnumerator.getError()) {
+  if ((ec = rocmAgentEnumerator.getError())) {
     WithColor::warning(errs(), kRunnerProgram)
         << kRocmAgentEnumerator << " couldn't be located under "
         << __ROCM_PATH__ << ", set target as " << kDefaultTargetChip << "\n";
