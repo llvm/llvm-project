@@ -50,10 +50,8 @@ atmi_status_t Runtime::CreateKernel(atmi_kernel_t *atmi_kernel,
       ATMIErrorCheck(Adding GPU kernel implementation, status);
       DEBUG_PRINT("GPU kernel %s added [%u]\n", impl, impl_id);
     } else if (devtype == ATMI_DEVTYPE_CPU) {
-      atmi_generic_fp impl = va_arg(arguments, atmi_generic_fp);
-      status = atmi_kernel_add_cpu_impl(*atmi_kernel, impl, impl_id);
-      ATMIErrorCheck(Adding CPU kernel implementation, status);
-      DEBUG_PRINT("CPU kernel %p added [%u]\n", impl, impl_id);
+      fprintf(stderr, "Unsupported device type: %d\n", devtype);
+      return ATMI_STATUS_ERROR;
     } else {
       fprintf(stderr, "Unsupported device type: %d\n", devtype);
       return ATMI_STATUS_ERROR;
@@ -104,34 +102,6 @@ atmi_status_t Runtime::AddGPUKernelImpl(atmi_kernel_t atmi_kernel,
 
   kernel->id_map()[ID] = kernel->impls().size();
 
-  kernel->impls().push_back(kernel_impl);
-  // rest of kernel impl fields will be populated at first kernel launch
-  return ATMI_STATUS_SUCCESS;
-}
-
-atmi_status_t Runtime::AddCPUKernelImpl(atmi_kernel_t atmi_kernel,
-                                        atmi_generic_fp impl,
-                                        const unsigned int ID) {
-  if (!atl_is_atmi_initialized()) return ATMI_STATUS_ERROR;
-  static int counter = 0;
-  uint64_t k_id = atmi_kernel.handle;
-  std::string fn_name("_x86_");
-  fn_name += std::to_string(counter);
-  fn_name += std::string("_");
-  fn_name += std::to_string(k_id);
-  counter++;
-
-  Kernel *kernel = KernelImplMap[k_id];
-  if (kernel->id_map().find(ID) != kernel->id_map().end()) {
-    fprintf(stderr, "Kernel ID %d already found\n", ID);
-    return ATMI_STATUS_ERROR;
-  }
-
-  KernelImpl *kernel_impl = new CPUKernelImpl(ID, fn_name, X86, impl, *kernel);
-  // KernelImpl* kernel_impl = kernel->createCPUKernelImpl(ID, kernel_name,
-  // kernel_type);
-
-  kernel->id_map()[ID] = kernel->impls().size();
   kernel->impls().push_back(kernel_impl);
   // rest of kernel impl fields will be populated at first kernel launch
   return ATMI_STATUS_SUCCESS;
@@ -210,30 +180,6 @@ GPUKernelImpl::GPUKernelImpl(unsigned int id, const std::string &name,
   pthread_mutex_init(&mutex_, NULL);
 }
 
-CPUKernelImpl::CPUKernelImpl(unsigned int id, const std::string &name,
-                             atmi_platform_type_t platform_type,
-                             atmi_generic_fp function, const Kernel &kernel)
-    : KernelImpl(id, name, platform_type, kernel, ATMI_DEVTYPE_CPU),
-      function_(function) {
-  /* create kernarg memory */
-  uint32_t kernarg_size = 0;
-  // extract arg offsets out and pass as arg to KernelImpl constructor or
-  // builder fn?
-  for (int i = 0; i < kernel.num_args(); i++) {
-    arg_offsets_.push_back(kernarg_size);
-    kernarg_size += kernel.arg_sizes()[i];
-  }
-  kernarg_segment_size_ = kernarg_size;
-  kernarg_region_ = NULL;
-  if (kernarg_size)
-    kernarg_region_ = malloc(kernarg_segment_size_ * MAX_NUM_KERNELS);
-  for (int i = 0; i < MAX_NUM_KERNELS; i++) {
-    free_kernarg_segments_.push(i);
-  }
-
-  pthread_mutex_init(&mutex_, NULL);
-}
-
 KernelImpl::~KernelImpl() {
   // wait for all task instances of all kernel_impl of this kernel
   for (auto &task : launched_tasks_) {
@@ -251,12 +197,6 @@ GPUKernelImpl::~GPUKernelImpl() {
   kernel_objects_.clear();
   group_segment_sizes_.clear();
   private_segment_sizes_.clear();
-  unlock(&mutex_);
-}
-
-CPUKernelImpl::~CPUKernelImpl() {
-  lock(&mutex_);
-  free(kernarg_region_);
   unlock(&mutex_);
 }
 

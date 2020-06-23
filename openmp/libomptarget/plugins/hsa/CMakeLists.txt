@@ -77,7 +77,6 @@ include_directories(
 add_library(omptarget.rtl.hsa SHARED
       impl/atmi.cpp
       impl/atmi_interop_hsa.cpp
-      impl/cputask.cpp
       impl/data.cpp
       impl/kernel.cpp
       impl/machine.cpp

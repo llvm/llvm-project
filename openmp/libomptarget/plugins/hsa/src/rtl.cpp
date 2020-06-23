@@ -284,7 +284,7 @@ public:
       print_kernel_trace = 0;
 
     DP("Start initializing HSA-ATMI\n");
-    atmi_status_t err = atmi_init(ATMI_DEVTYPE_GPU);
+    atmi_status_t err = atmi_init();
     if (err != ATMI_STATUS_SUCCESS) {
       DP("Error when initializing HSA-ATMI\n");
       return;

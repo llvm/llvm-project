@@ -92,7 +92,6 @@ typedef struct hsa_signal_s { uint64_t handle; } hsa_signal_t;
 /*  All global values go in this global structure */
 typedef struct atl_context_s {
   bool struct_initialized;
-  bool g_cpu_initialized;
   bool g_hsa_initialized;
   bool g_gpu_initialized;
   bool g_tasks_initialized;
@@ -134,24 +133,7 @@ typedef struct atl_kernel_enqueue_args_s {
   // ___________________________________________________________________________
 } atl_kernel_enqueue_args_t;
 
-typedef struct thread_agent_s {
-  int id;
-  hsa_signal_t worker_sig;
-  hsa_queue_t *queue;
-  pthread_t thread;
-  core::RealTimer timer;
-} thread_agent_t;
-
 enum { PROCESS_PKT = 0, FINISH, IDLE };
-
-thread_agent_t *get_cpu_q_agent(int cpu_id, int id);
-void cpu_agent_init(int cpu_id, const size_t num_queues);
-void agent_fini();
-void signal_worker_id(int cpu_id, int tid, int signal);
-hsa_queue_t *get_cpu_queue(int cpu_id, int id);
-void signal_worker(hsa_queue_t *queue, int signal);
-void *agent_worker(void *agent_args);
-int process_packet(hsa_queue_t *queue, int id);
 
 // ---------------------- Kernel Start -------------
 typedef struct atl_kernel_info_s {
@@ -203,8 +185,6 @@ extern std::queue<hsa_signal_t> FreeSignalPool;
 extern std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
 
 namespace core {
-atmi_status_t atl_init_context();
-atmi_status_t atl_init_cpu_context();
 atmi_status_t atl_init_gpu_context();
 
 hsa_status_t init_hsa();
@@ -254,16 +234,6 @@ void init_dag_scheduler();
 bool handle_signal(hsa_signal_value_t value, void *arg);
 bool handle_group_signal(hsa_signal_value_t value, void *arg);
 
-void enqueue_barrier_tasks(std::vector<TaskImpl *> tasks);
-hsa_signal_t enqueue_barrier_async(TaskImpl *task, hsa_queue_t *queue,
-                                   const int dep_task_count,
-                                   TaskImpl **dep_task_list, int barrier_flag,
-                                   bool need_completion);
-void enqueue_barrier(TaskImpl *task, hsa_queue_t *queue,
-                     const int dep_task_count, TaskImpl **dep_task_list,
-                     int wait_flag, int barrier_flag, atmi_devtype_t devtype,
-                     bool need_completion = false);
-
 void packet_store_release(uint32_t *packet, uint16_t header, uint16_t rest);
 uint16_t create_header(
     hsa_packet_type_t type, int barrier,
@@ -280,7 +250,6 @@ void unlock(pthread_mutex_t *m);
 TaskImpl *get_new_task();
 void allow_access_to_all_gpu_agents(void *ptr);
 }  // namespace core
-hsa_signal_t *get_worker_sig(hsa_queue_t *queue);
 
 const char *get_error_string(hsa_status_t err);
 const char *get_atmi_error_string(atmi_status_t err);

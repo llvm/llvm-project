@@ -37,7 +37,6 @@ class Environment {
 
   void GetEnvAll();
 
-  int getDepSyncType() const { return dep_sync_type_; }
   int getMaxSignals() const { return max_signals_; }
   int getMaxQueueSize() const { return max_queue_size_; }
   int getMaxKernelTypes() const { return max_kernel_types_; }
@@ -58,7 +57,6 @@ class Environment {
     return ret;
   }
 
-  int dep_sync_type_;
   int max_signals_;
   int max_queue_size_;
   int max_kernel_types_;
@@ -76,7 +74,7 @@ class Runtime {
   }
 
   // init/finalize
-  virtual atmi_status_t Initialize(atmi_devtype_t);
+  virtual atmi_status_t Initialize();
   virtual atmi_status_t Finalize();
   // machine info
   atmi_machine_t *GetMachineInfo();
@@ -84,20 +82,14 @@ class Runtime {
   atmi_status_t RegisterModuleFromMemory(void **, size_t *,
                                          atmi_platform_type_t *, const int,
                                          atmi_place_t);
-  atmi_status_t RegisterModule(const char **, atmi_platform_type_t *, const int,
-                               atmi_place_t);
   atmi_status_t RegisterModuleFromMemory(void **, size_t *,
                                          atmi_platform_type_t *, const int);
-  atmi_status_t RegisterModule(const char **, atmi_platform_type_t *,
-                               const int);
   // kernels
   virtual atmi_status_t CreateKernel(atmi_kernel_t *, const int, const size_t *,
                                      const int, va_list);
   virtual atmi_status_t ReleaseKernel(atmi_kernel_t);
   atmi_status_t CreateEmptyKernel(atmi_kernel_t *, const int, const size_t *);
   atmi_status_t AddGPUKernelImpl(atmi_kernel_t, const char *,
-                                 const unsigned int);
-  atmi_status_t AddCPUKernelImpl(atmi_kernel_t, atmi_generic_fp,
                                  const unsigned int);
   // sync
   atmi_status_t TaskWait(atmi_task_handle_t);
@@ -109,13 +101,11 @@ class Runtime {
   atmi_status_t TaskGroupRelease(atmi_taskgroup_handle_t);
   // data
   atmi_status_t Memcpy(void *, const void *, size_t);
-  atmi_task_handle_t MemcpyAsync(atmi_cparm_t *, void *, const void *, size_t);
   atmi_status_t Memfree(void *);
   atmi_status_t Malloc(void **, size_t, atmi_mem_place_t);
 
   // environment variables
   const Environment &getEnvironment() const { return env_; }
-  int getDepSyncType() const { return env_.getDepSyncType(); }
   int getMaxSignals() const { return env_.getMaxSignals(); }
   int getMaxQueueSize() const { return env_.getMaxQueueSize(); }
   int getMaxKernelTypes() const { return env_.getMaxKernelTypes(); }

@@ -154,26 +154,6 @@ class ComputeTaskImpl : public TaskImpl {
   unsigned long groupDim_[3];
 };  // class ComputeTaskImpl
 
-class DataTaskImpl : public TaskImpl {
- public:
-  DataTaskImpl(atmi_cparm_t *lparm, void *dest, const void *src,
-               const size_t size);
-  ~DataTaskImpl() {}
-
-  atl_task_type_t type() const override { return ATL_DATA_MOVEMENT; };
-
- private:
-  atmi_status_t dispatch() override;
-  void acquireAqlPacket() override;
-
- public:
-  // The runtime maintains information about the location of the ptr,
-  // so the runtime also moves data in the right direction (host to device
-  // or the other way around).
-  void *data_src_ptr_;
-  void *data_dest_ptr_;
-  size_t data_size_;
-};  // class DataTaskImpl
 
 }  // namespace core
 #endif  // SRC_RUNTIME_INCLUDE_TASK_H_

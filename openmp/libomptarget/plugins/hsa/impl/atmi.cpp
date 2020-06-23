@@ -7,8 +7,8 @@
 /*
  * Initialize/Finalize
  */
-atmi_status_t atmi_init(atmi_devtype_t devtype) {
-  return core::Runtime::getInstance().Initialize(devtype);
+atmi_status_t atmi_init() {
+  return core::Runtime::getInstance().Initialize();
 }
 
 atmi_status_t atmi_finalize() {
@@ -32,27 +32,12 @@ atmi_status_t atmi_module_register_from_memory_to_place(
       modules, module_sizes, types, num_modules, place);
 }
 
-atmi_status_t atmi_module_register_to_place(const char **filenames,
-                                            atmi_platform_type_t *types,
-                                            const int num_modules,
-                                            atmi_place_t place) {
-  return core::Runtime::getInstance().RegisterModule(filenames, types,
-                                                     num_modules, place);
-}
-
 atmi_status_t atmi_module_register_from_memory(void **modules,
                                                size_t *module_sizes,
                                                atmi_platform_type_t *types,
                                                const int num_modules) {
   return core::Runtime::getInstance().RegisterModuleFromMemory(
       modules, module_sizes, types, num_modules);
-}
-
-atmi_status_t atmi_module_register(const char **filenames,
-                                   atmi_platform_type_t *types,
-                                   const int num_modules) {
-  return core::Runtime::getInstance().RegisterModule(filenames, types,
-                                                     num_modules);
 }
 
 /*
@@ -85,12 +70,6 @@ atmi_status_t atmi_kernel_add_gpu_impl(atmi_kernel_t atmi_kernel,
   return core::Runtime::getInstance().AddGPUKernelImpl(atmi_kernel, impl, ID);
 }
 
-atmi_status_t atmi_kernel_add_cpu_impl(atmi_kernel_t atmi_kernel,
-                                       atmi_generic_fp impl,
-                                       const unsigned int ID) {
-  return core::Runtime::getInstance().AddCPUKernelImpl(atmi_kernel, impl, ID);
-}
-
 /*
  * Synchronize
  */
@@ -114,11 +93,6 @@ atmi_task_handle_t atmi_task_launch(
  */
 atmi_status_t atmi_memcpy(void *dest, const void *src, size_t size) {
   return core::Runtime::getInstance().Memcpy(dest, src, size);
-}
-
-atmi_task_handle_t atmi_memcpy_async(atmi_cparm_t *lparm, void *dest,
-                                     const void *src, size_t size) {
-  return core::Runtime::getInstance().MemcpyAsync(lparm, dest, src, size);
 }
 
 atmi_status_t atmi_free(void *ptr) {

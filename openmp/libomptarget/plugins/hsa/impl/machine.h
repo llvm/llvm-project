@@ -50,19 +50,8 @@ class ATLCPUProcessor : public ATLProcessor {
  public:
   explicit ATLCPUProcessor(hsa_agent_t agent)
       : ATLProcessor(agent, ATMI_DEVTYPE_CPU) {
-    thread_agents_.clear();
   }
   void createQueues(const int count);
-
-  thread_agent_t *getThreadAgentAt(const int index);
-  const std::vector<thread_agent_t *> &thread_agents() const {
-    return thread_agents_;
-  }
-  // misc helper functions needed by ATMI DP
-  hsa_signal_t *get_worker_sig(hsa_queue_t *q);
-
- private:
-  std::vector<thread_agent_t *> thread_agents_;
 };
 
 class ATLGPUProcessor : public ATLProcessor {

@@ -87,23 +87,6 @@ class GPUKernelImpl : public KernelImpl {
  private:
 };
 
-class CPUKernelImpl : public KernelImpl {
- public:
-  // constructor/destructor
-  CPUKernelImpl(unsigned int id, const std::string& name,
-                atmi_platform_type_t platform_type, atmi_generic_fp function,
-                const Kernel& kernel);
-  ~CPUKernelImpl();
-
-  // accessors
-  atmi_generic_fp function() const { return function_; }
-
- private:
-  // this is a generic function pointer that can be executed
-  // by a CPU thread.
-  atmi_generic_fp function_;
-};
-
 class Kernel {
  public:
   // constructor/destructor
@@ -113,9 +96,6 @@ class Kernel {
   // create GPU and CPU kernel implementation objects
   /* KernelImpl* createGPUKernelImpl(uint64_t id, const std::string& name,
                                   atmi_platform_type_t platform_type);
-  KernelImpl* createCPUKernelImpl(uint64_t id, const std::string& name,
-                                  atmi_platform_type_t platform_type,
-                                  atmi_generic_fp fn);
   */
   // accessors
   uint64_t id() const { return id_; }

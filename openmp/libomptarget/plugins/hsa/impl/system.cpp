@@ -232,8 +232,7 @@ std::map<std::string, std::string> KernelNameMap;
 std::vector<std::map<std::string, atl_kernel_info_t> > KernelInfoTable;
 std::vector<std::map<std::string, atl_symbol_info_t> > SymbolInfoTable;
 
-static atl_dep_sync_t g_dep_sync_type =
-    (atl_dep_sync_t)core::Runtime::getInstance().getDepSyncType();
+static atl_dep_sync_t g_dep_sync_type = ATL_SYNC_CALLBACK;
 
 RealTimer SignalAddTimer("Signal Time");
 RealTimer HandleSignalTimer("Handle Signal Time");
@@ -306,15 +305,12 @@ void allow_access_to_all_gpu_agents(void *ptr) {
   ErrorCheck(Allow agents ptr access, err);
 }
 
-atmi_status_t Runtime::Initialize(atmi_devtype_t devtype) {
+atmi_status_t Runtime::Initialize() {
+  atmi_devtype_t devtype = ATMI_DEVTYPE_GPU;
   if (atl_is_atmi_initialized()) return ATMI_STATUS_SUCCESS;
 
   if (devtype == ATMI_DEVTYPE_ALL || devtype & ATMI_DEVTYPE_GPU) {
     ATMIErrorCheck(GPU context init, atl_init_gpu_context());
-  }
-
-  if (devtype == ATMI_DEVTYPE_ALL || devtype & ATMI_DEVTYPE_CPU) {
-    ATMIErrorCheck(CPU context init, atl_init_cpu_context());
   }
 
   // create default taskgroup obj
@@ -333,10 +329,6 @@ atmi_status_t Runtime::Finalize() {
   for (uint32_t i = 0; i < g_executables.size(); i++) {
     err = hsa_executable_destroy(g_executables[i]);
     ErrorCheck(Destroying executable, err);
-  }
-  if (atlc.g_cpu_initialized == true) {
-    agent_fini();
-    atlc.g_cpu_initialized = false;
   }
 
   // Finalize queues
@@ -390,17 +382,9 @@ atmi_status_t Runtime::Finalize() {
 void atmi_init_context_structs() {
   atlc_p = &atlc;
   atlc.struct_initialized = true; /* This only gets called one time */
-  atlc.g_cpu_initialized = false;
   atlc.g_hsa_initialized = false;
   atlc.g_gpu_initialized = false;
   atlc.g_tasks_initialized = false;
-}
-
-atmi_status_t atl_init_context() {
-  atl_init_gpu_context();
-  atl_init_cpu_context();
-
-  return ATMI_STATUS_SUCCESS;
 }
 
 // Implement memory_pool iteration function
@@ -805,37 +789,6 @@ atmi_status_t atl_init_gpu_context() {
     init_tasks();
     atlc.g_gpu_initialized = true;
     return ATMI_STATUS_SUCCESS;
-}
-
-atmi_status_t atl_init_cpu_context() {
-  if (atlc.struct_initialized == false) atmi_init_context_structs();
-
-  if (atlc.g_cpu_initialized != false) return ATMI_STATUS_SUCCESS;
-
-  hsa_status_t err;
-  err = init_hsa();
-  if (err != HSA_STATUS_SUCCESS) return ATMI_STATUS_ERROR;
-
-  /* Get a CPU agent, create a pthread to handle packets*/
-  /* Iterate over the agents and pick the cpu agent */
-  int cpu_count = g_atl_machine.processorCount<ATLCPUProcessor>();
-  for (int cpu = 0; cpu < cpu_count; cpu++) {
-    atmi_place_t place = ATMI_PLACE_CPU(0, cpu);
-    ATLCPUProcessor &proc = get_processor<ATLCPUProcessor>(place);
-    // FIXME: We are creating as many CPU queues as there are cores
-    // But, this will share CPU worker threads with main host thread
-    // and the HSA callback thread. Is there any real benefit from
-    // restricting the number of queues to num_cus - 2?
-    int num_cpu_queues = core::Runtime::getInstance().getNumCPUQueues();
-    if (num_cpu_queues == -1) {
-      num_cpu_queues = (proc.num_cus() > 8) ? 8 : proc.num_cus();
-    }
-    cpu_agent_init(cpu, num_cpu_queues);
-  }
-
-  init_tasks();
-  atlc.g_cpu_initialized = true;
-  return ATMI_STATUS_SUCCESS;
 }
 
 void *atl_read_binary_from_file(const char *module, size_t *module_size) {
@@ -1414,56 +1367,5 @@ atmi_status_t Runtime::RegisterModuleFromMemory(void **modules,
   }
 
   return (some_success) ? ATMI_STATUS_SUCCESS : ATMI_STATUS_ERROR;
-}
-
-atmi_status_t Runtime::RegisterModule(const char **filenames,
-                                      atmi_platform_type_t *types,
-                                      const int num_modules) {
-  std::vector<void *> modules;
-  std::vector<size_t> module_sizes;
-  for (int i = 0; i < num_modules; i++) {
-    size_t module_size;
-    void *module_bytes = atl_read_binary_from_file(filenames[i], &module_size);
-    if (!module_bytes) return ATMI_STATUS_ERROR;
-    modules.push_back(module_bytes);
-    module_sizes.push_back(module_size);
-  }
-
-  atmi_status_t status = core::Runtime::getInstance().RegisterModuleFromMemory(
-      &modules[0], &module_sizes[0], types, num_modules);
-
-  // memory space got by
-  // void *raw_code_object = malloc(size);
-  for (int i = 0; i < num_modules; i++) {
-    free(modules[i]);
-  }
-
-  return status;
-}
-
-atmi_status_t Runtime::RegisterModule(const char **filenames,
-                                      atmi_platform_type_t *types,
-                                      const int num_modules,
-                                      atmi_place_t place) {
-  std::vector<void *> modules;
-  std::vector<size_t> module_sizes;
-  for (int i = 0; i < num_modules; i++) {
-    size_t module_size;
-    void *module_bytes = atl_read_binary_from_file(filenames[i], &module_size);
-    if (!module_bytes) return ATMI_STATUS_ERROR;
-    modules.push_back(module_bytes);
-    module_sizes.push_back(module_size);
-  }
-
-  atmi_status_t status = core::Runtime::getInstance().RegisterModuleFromMemory(
-      &modules[0], &module_sizes[0], types, num_modules, place);
-
-  // memory space got by
-  // void *raw_code_object = malloc(size);
-  for (int i = 0; i < num_modules; i++) {
-    free(modules[i]);
-  }
-
-  return status;
 }
 }  // namespace core

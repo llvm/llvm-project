@@ -147,10 +147,7 @@ namespace core {
 void Environment::GetEnvAll() {
   std::string var = GetEnv("ATMI_HELP");
   if (!var.empty()) {
-    std::cout << "ATMI_DEPENDENCY_SYNC_TYPE : ATMI_SYNC_CALLBACK "
-                 "ATMI_SYNC_BARRIER_PKT"
-              << std::endl
-              << "ATMI_MAX_HSA_SIGNALS : positive integer" << std::endl
+    std::cout << "ATMI_MAX_HSA_SIGNALS : positive integer" << std::endl
               << "ATMI_MAX_HSA_QUEUE_SIZE : positive integer" << std::endl
               << "ATMI_MAX_KERNEL_TYPES : positive integer" << std::endl
               << "ATMI_DEVICE_GPU_WORKERS : positive integer" << std::endl
@@ -158,15 +155,6 @@ void Environment::GetEnvAll() {
               << "ATMI_DEBUG : 1 for printing out trace/debug info" << std::endl
               << "ATMI_PROFILE : 1 for printing out timer info" << std::endl;
     exit(0);
-  }
-
-  var = GetEnv("ATMI_DEPENDENCY_SYNC_TYPE");
-  // default dependency type: callback; switch the if-else checks to change the
-  // defaults
-  if (var.empty() || var == "ATMI_SYNC_CALLBACK") {
-    dep_sync_type_ = ATL_SYNC_CALLBACK;
-  } else if (var == "ATMI_SYNC_BARRIER_PKT") {
-    dep_sync_type_ = ATL_SYNC_BARRIER_PKT;
   }
 
   var = GetEnv("ATMI_MAX_HSA_SIGNALS");

@@ -186,66 +186,7 @@ void ATLGPUProcessor::createQueues(const int count) {
   free(num_cus);
 }
 
-thread_agent_t *ATLCPUProcessor::getThreadAgentAt(const int index) {
-  if (index < 0 || index >= thread_agents_.size())
-    DEBUG_PRINT("CPU Agent index out of bounds!\n");
-  return thread_agents_[index];
-}
-
-hsa_signal_t *ATLCPUProcessor::get_worker_sig(hsa_queue_t *q) {
-  hsa_signal_t *ret = NULL;
-  for (auto agent : thread_agents_) {
-    if (agent->queue == q) {
-      ret = &(agent->worker_sig);
-      break;
-    }
-  }
-  return ret;
-}
-
-void *agent_worker(void *agent_args);
-
-void ATLCPUProcessor::createQueues(const int count) {
-  hsa_status_t err;
-  for (int qid = 0; qid < count; qid++) {
-    thread_agent_t *agent = new thread_agent_t;
-    agent->id = qid;
-    // signal between the host thread and the CPU tasking queue thread
-    err = hsa_signal_create(IDLE, 0, NULL, &(agent->worker_sig));
-        ErrorCheck(Creating a HSA signal for agent dispatch worker threads,
-            err);
-
-        hsa_signal_t db_signal;
-        err = hsa_signal_create(1, 0, NULL, &db_signal);
-        ErrorCheck(Creating a HSA signal for agent dispatch db signal, err);
-
-        hsa_queue_t *this_Q;
-        const int capacity = core::Runtime::getInstance().getMaxQueueSize();
-        hsa_amd_memory_pool_t cpu_pool = get_memory_pool(*this, 0);
-        // FIXME: How to convert hsa_amd_memory_pool_t to hsa_region_t?
-        // Using fine grained system memory REGION for now
-        err = hsa_soft_queue_create(
-            atl_cpu_kernarg_region, capacity, HSA_QUEUE_TYPE_SINGLE,
-            HSA_QUEUE_FEATURE_AGENT_DISPATCH, db_signal, &this_Q);
-        ErrorCheck(Creating an agent queue, err);
-        queues_.push_back(this_Q);
-        agent->queue = this_Q;
-
-        hsa_queue_t *q = this_Q;
-        // err = hsa_ext_set_profiling( q, 1);
-        // check(Enabling CPU profiling support, err);
-        // profiling does not work for CPU queues
-        /* FIXME: Looks like a HSA bug. The doorbell signal that we pass to the
-         * soft queue creation API never seems to be set. Workaround is to
-         * manually set it again like below.
-         */
-        q->doorbell_signal = db_signal;
-        thread_agents_.push_back(agent);
-        int last_index = thread_agents_.size() - 1;
-        pthread_create(&(agent->thread), NULL, agent_worker,
-                       reinterpret_cast<void *>(agent));
-  }
-}
+void ATLCPUProcessor::createQueues(const int) {}
 
 void ATLProcessor::destroyQueues() {
   for (auto queue : queues_) {
