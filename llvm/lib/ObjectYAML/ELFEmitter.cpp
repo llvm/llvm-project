@@ -943,6 +943,8 @@ Expected<uint64_t> emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
     Err = DWARFYAML::emitDebugAbbrev(*OS, DWARF);
   else if (Name == ".debug_info")
     Err = DWARFYAML::emitDebugInfo(*OS, DWARF);
+  else if (Name == ".debug_pubnames")
+    Err = DWARFYAML::emitPubSection(*OS, *DWARF.PubNames, DWARF.IsLittleEndian);
   else
     llvm_unreachable("unexpected emitDWARF() call");
 
