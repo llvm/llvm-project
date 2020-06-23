@@ -252,6 +252,34 @@ def OP_BFMLALT_LN
     : Op<(call "vbfmlalt", $p0, $p1,
           (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
 
+def OP_VCVT_F32_BF16
+    : Op<(bitcast "R",
+          (call "vshll_n", (bitcast "int16x4_t", $p0),
+                           (literal "int32_t", "16")))>;
+def OP_VCVT_F32_BF16_LO
+    : Op<(call "vcvt_f32_bf16", (call "vget_low", $p0))>;
+def OP_VCVT_F32_BF16_HI
+    : Op<(call "vcvt_f32_bf16", (call "vget_high", $p0))>;
+
+def OP_VCVT_BF16_F32_LO_A64
+    : Op<(call "__a64_vcvtq_low_bf16", $p0)>;
+def OP_VCVT_BF16_F32_A64
+    : Op<(call "vget_low", (call "__a64_vcvtq_low_bf16", $p0))>;
+
+def OP_VCVT_BF16_F32_A32
+    : Op<(call "__a32_vcvt_bf16", $p0)>;
+
+def OP_VCVT_BF16_F32_LO_A32
+    : Op<(call "vcombine", (cast "bfloat16x4_t", (literal "uint64_t", "0ULL")),
+                           (call "__a32_vcvt_bf16", $p0))>;
+def OP_VCVT_BF16_F32_HI_A32
+    : Op<(call "vcombine", (call "__a32_vcvt_bf16", $p1),
+                           (call "vget_low", $p0))>;
+
+def OP_CVT_F32_BF16
+    : Op<(bitcast "R", (op "<<", (bitcast "int32_t", $p0),
+                                 (literal "int32_t", "16")))>;
+
 //===----------------------------------------------------------------------===//
 // Auxiliary Instructions
 //===----------------------------------------------------------------------===//
@@ -1949,6 +1977,31 @@ let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
   def VLD3_DUP_BF : WInst<"vld3_dup", "3(c*!)", "bQb">;
   def VLD4_DUP_BF : WInst<"vld4_dup", "4(c*!)", "bQb">;
 
+  def VCVT_F32_BF16 : SOpInst<"vcvt_f32_bf16", "(F>)(Bq!)",  "Qb", OP_VCVT_F32_BF16>;
+  def VCVT_LOW_F32_BF16 : SOpInst<"vcvt_low_f32", "(F>)(BQ!)",  "Qb", OP_VCVT_F32_BF16_LO>;
+  def VCVT_HIGH_F32_BF16 : SOpInst<"vcvt_high_f32", "(F>)(BQ!)", "Qb", OP_VCVT_F32_BF16_HI>;
+
+  def SCALAR_CVT_BF16_F32 : SInst<"vcvth_bf16", "(1B)1", "f">;
+  def SCALAR_CVT_F32_BF16 : SOpInst<"vcvtah_f32", "(1F>)(1!)", "b", OP_CVT_F32_BF16>;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC) && !defined(__aarch64__)" in {
+  def VCVT_BF16_F32_A32_INTERNAL : WInst<"__a32_vcvt_bf16", "BQ", "f">;
+  def VCVT_BF16_F32_A32 : SOpInst<"vcvt_bf16", "BQ", "f", OP_VCVT_BF16_F32_A32>;
+  def VCVT_LOW_BF16_F32_A32 : SOpInst<"vcvt_low_bf16",  "BQ", "Qf", OP_VCVT_BF16_F32_LO_A32>;
+  def VCVT_HIGH_BF16_F32_A32 : SOpInst<"vcvt_high_bf16", "BBQ", "Qf", OP_VCVT_BF16_F32_HI_A32>;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC) && defined(__aarch64__)" in {
+  def VCVT_LOW_BF16_F32_A64_INTERNAL : WInst<"__a64_vcvtq_low_bf16", "BQ", "Hf">;
+  def VCVT_LOW_BF16_F32_A64 : SOpInst<"vcvt_low_bf16", "BQ", "Qf", OP_VCVT_BF16_F32_LO_A64>;
+  def VCVT_HIGH_BF16_F32_A64 : SInst<"vcvt_high_bf16", "BBQ", "Qf">;
+  def VCVT_BF16_F32 : SOpInst<"vcvt_bf16",    "BQ", "f", OP_VCVT_BF16_F32_A64>;
+
+  def COPY_LANE_BF16 : IOpInst<"vcopy_lane", "..I.I", "b", OP_COPY_LN>;
+  def COPYQ_LANE_BF16 : IOpInst<"vcopy_lane", "..IqI", "Qb", OP_COPY_LN>;
+  def COPY_LANEQ_BF16 : IOpInst<"vcopy_laneq", "..IQI", "b", OP_COPY_LN>;
+  def COPYQ_LANEQ_BF16 : IOpInst<"vcopy_laneq", "..I.I", "Qb", OP_COPY_LN>;
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_BF16) && !defined(__aarch64__)" in {
