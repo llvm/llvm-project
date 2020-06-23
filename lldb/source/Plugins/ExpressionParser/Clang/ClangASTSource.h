@@ -372,6 +372,8 @@ protected:
   void FillNamespaceMap(NameSearchContext &context, lldb::ModuleSP module_sp,
                         const CompilerDeclContext &namespace_decl);
 
+  clang::TagDecl *FindCompleteType(const clang::TagDecl *decl);
+
   friend struct NameSearchContext;
 
   bool m_import_in_progress;
