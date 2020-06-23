@@ -88,16 +88,17 @@ define float @diff_of_sums_type_mismatch(float %a0, <4 x float> %v0, float %a1, 
 
 define i32 @diff_of_sums_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: @diff_of_sums_v4i32(
-; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[V0:%.*]])
-; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[V1:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[R0]], [[R1]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %r0 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %v0)
   %r1 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %v1)
   %r = sub i32 %r0, %r1
   ret i32 %r
 }
+
+; negative test - extra uses could create extra instructions
 
 define i32 @diff_of_sums_v4i32_extra_use1(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: @diff_of_sums_v4i32_extra_use1(
@@ -114,6 +115,8 @@ define i32 @diff_of_sums_v4i32_extra_use1(<4 x i32> %v0, <4 x i32> %v1) {
   ret i32 %r
 }
 
+; negative test - extra uses could create extra instructions
+
 define i32 @diff_of_sums_v4i32_extra_use2(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: @diff_of_sums_v4i32_extra_use2(
 ; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[V0:%.*]])
@@ -128,6 +131,8 @@ define i32 @diff_of_sums_v4i32_extra_use2(<4 x i32> %v0, <4 x i32> %v1) {
   %r = sub i32 %r0, %r1
   ret i32 %r
 }
+
+; negative test - can't reassociate different vector types
 
 define i32 @diff_of_sums_type_mismatch2(<8 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: @diff_of_sums_type_mismatch2(
