@@ -764,6 +764,8 @@ class VectorType;
     SDValue LowerDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed) const;
     void ExpandDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed,
                            SmallVectorImpl<SDValue> &Results) const;
+    SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
+                          const ARMSubtarget *Subtarget) const;
     SDValue LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG, bool Signed,
                                    SDValue &Chain) const;
     SDValue LowerREM(SDNode *N, SelectionDAG &DAG) const;
@@ -786,6 +788,11 @@ class VectorType;
 
     bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                     EVT VT) const override;
+
+    SDValue MoveToHPR(const SDLoc &dl, SelectionDAG &DAG, MVT LocVT, MVT ValVT,
+                      SDValue Val) const;
+    SDValue MoveFromHPR(const SDLoc &dl, SelectionDAG &DAG, MVT LocVT,
+                        MVT ValVT, SDValue Val) const;
 
     SDValue ReconstructShuffle(SDValue Op, SelectionDAG &DAG) const;
 
