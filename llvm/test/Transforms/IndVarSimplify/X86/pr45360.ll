@@ -26,7 +26,6 @@ define dso_local i32 @main() {
 ; CHECK:       bb19:
 ; CHECK-NEXT:    [[I8_LCSSA9:%.*]] = phi i32 [ [[D_PROMOTED8]], [[BB:%.*]] ], [ [[I8:%.*]], [[BB27:%.*]] ]
 ; CHECK-NEXT:    [[I8]] = and i32 [[I8_LCSSA9]], [[I6]]
-; CHECK-NEXT:    [[TMP0:%.*]] = urem i32 [[I24]], [[I8]]
 ; CHECK-NEXT:    [[I21:%.*]] = icmp eq i32 [[I8]], 0
 ; CHECK-NEXT:    br i1 [[I21]], label [[BB27_THREAD:%.*]], label [[BB27]]
 ; CHECK:       bb27.thread:
@@ -35,8 +34,9 @@ define dso_local i32 @main() {
 ; CHECK-NEXT:    store i32 0, i32* @c, align 4
 ; CHECK-NEXT:    br label [[BB32:%.*]]
 ; CHECK:       bb27:
-; CHECK-NEXT:    store i32 [[TMP0]], i32* @e, align 4
-; CHECK-NEXT:    [[I30:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    [[I26:%.*]] = urem i32 [[I24]], [[I8]]
+; CHECK-NEXT:    store i32 [[I26]], i32* @e, align 4
+; CHECK-NEXT:    [[I30:%.*]] = icmp eq i32 [[I26]], 0
 ; CHECK-NEXT:    br i1 [[I30]], label [[BB32_LOOPEXIT:%.*]], label [[BB19]]
 ; CHECK:       bb32.loopexit:
 ; CHECK-NEXT:    store i32 -1, i32* @f, align 4
