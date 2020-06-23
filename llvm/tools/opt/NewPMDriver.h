@@ -20,6 +20,8 @@
 #ifndef LLVM_TOOLS_OPT_NEWPMDRIVER_H
 #define LLVM_TOOLS_OPT_NEWPMDRIVER_H
 
+#include "llvm/ADT/ArrayRef.h"
+
 namespace llvm {
 class StringRef;
 class Module;
@@ -59,7 +61,8 @@ enum CSPGOKind { NoCSPGO, CSInstrGen, CSInstrUse };
 bool runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                      ToolOutputFile *Out, ToolOutputFile *ThinLinkOut,
                      ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-                     opt_tool::OutputKind OK, opt_tool::VerifierKind VK,
+                     ArrayRef<StringRef> PassInfos, opt_tool::OutputKind OK,
+                     opt_tool::VerifierKind VK,
                      bool ShouldPreserveAssemblyUseListOrder,
                      bool ShouldPreserveBitcodeUseListOrder,
                      bool EmitSummaryIndex, bool EmitModuleHash,
