@@ -202,9 +202,8 @@ static bool mergeNoteRecords(llvm::msgpack::DocNode &From,
 template <class ELFT>
 static bool processNote(const Elf_Note<ELFT> &Note, DataMeta *MetaP,
                         llvm::msgpack::DocNode &Root) {
-  auto DescString =
-      StringRef(reinterpret_cast<const char *>(Note.getDesc().data()),
-                Note.getDesc().size());
+  auto DescString = Note.getDescAsStringRef();
+
   if (Note.getName() == "AMD" &&
       Note.getType() == ELF::NT_AMD_AMDGPU_HSA_METADATA) {
 
