@@ -39,7 +39,7 @@ std::unique_ptr<ASTConsumer> CreateASTPrinter(std::unique_ptr<raw_ostream> OS,
 std::unique_ptr<ASTConsumer>
 CreateASTDumper(std::unique_ptr<raw_ostream> OS, StringRef FilterString,
                 bool DumpDecls, bool Deserialize, bool DumpLookups,
-                ASTDumpOutputFormat Format);
+                bool DumpDeclTypes, ASTDumpOutputFormat Format);
 
 // AST Decl node lister: prints qualified names of all filterable AST Decl
 // nodes.
