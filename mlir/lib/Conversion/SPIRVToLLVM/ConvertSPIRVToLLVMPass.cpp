@@ -35,6 +35,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
 
   OwningRewritePatternList patterns;
   populateSPIRVToLLVMConversionPatterns(context, converter, patterns);
+  populateSPIRVToLLVMFunctionConversionPatterns(context, converter, patterns);
 
   // Currently pulls in Std to LLVM conversion patterns
   // that help with testing. This allows to convert
