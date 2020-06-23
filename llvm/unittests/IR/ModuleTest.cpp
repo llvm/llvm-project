@@ -12,6 +12,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
 #include <random>
