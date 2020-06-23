@@ -1715,6 +1715,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     case OPT_ast_dump:
     case OPT_ast_dump_all:
     case OPT_ast_dump_lookups:
+    case OPT_ast_dump_decl_types:
       Opts.ProgramAction = frontend::ASTDump; break;
     case OPT_ast_print:
       Opts.ProgramAction = frontend::ASTPrint; break;
@@ -1872,6 +1873,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.ASTDumpAll = Args.hasArg(OPT_ast_dump_all, OPT_ast_dump_all_EQ);
   Opts.ASTDumpFilter = std::string(Args.getLastArgValue(OPT_ast_dump_filter));
   Opts.ASTDumpLookups = Args.hasArg(OPT_ast_dump_lookups);
+  Opts.ASTDumpDeclTypes = Args.hasArg(OPT_ast_dump_decl_types);
   Opts.UseGlobalModuleIndex = !Args.hasArg(OPT_fno_modules_global_index);
   Opts.GenerateGlobalModuleIndex = Opts.UseGlobalModuleIndex;
   Opts.ModuleMapFiles = Args.getAllArgValues(OPT_fmodule_map_file);

@@ -735,6 +735,11 @@ int main(int argc, char **argv) {
     M->addModuleFlag(Module::Error, "EnableSplitLTOUnit", SplitLTOUnit);
 
   if (PassPipeline.getNumOccurrences() > 0) {
+    if (PassList.size()) {
+      errs()
+          << "Cannot specify passes via both -foo-pass and --passes=foo-pass";
+      return 1;
+    }
     OutputKind OK = OK_NoOutput;
     if (!NoOutput)
       OK = OutputAssembly

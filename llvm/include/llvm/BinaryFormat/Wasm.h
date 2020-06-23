@@ -232,6 +232,7 @@ enum : unsigned {
   WASM_TYPE_V128 = 0x7B,
   WASM_TYPE_FUNCREF = 0x70,
   WASM_TYPE_EXNREF = 0x68,
+  WASM_TYPE_EXTERNREF = 0x6F,
   WASM_TYPE_FUNC = 0x60,
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
 };
@@ -258,6 +259,7 @@ enum : unsigned {
   WASM_OPCODE_F32_CONST = 0x43,
   WASM_OPCODE_F64_CONST = 0x44,
   WASM_OPCODE_I32_ADD = 0x6a,
+  WASM_OPCODE_REF_NULL = 0xd0,
 };
 
 // Opcodes used in synthetic functions.
@@ -355,6 +357,7 @@ enum class ValType {
   F64 = WASM_TYPE_F64,
   V128 = WASM_TYPE_V128,
   EXNREF = WASM_TYPE_EXNREF,
+  EXTERNREF = WASM_TYPE_EXTERNREF,
 };
 
 struct WasmSignature {

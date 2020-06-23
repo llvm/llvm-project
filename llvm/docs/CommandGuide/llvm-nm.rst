@@ -219,7 +219,7 @@ OPTIONS
 
 .. option:: --special-syms
 
- Ignored. For GNU compatibility only.
+ Do not filter special symbols from the output.
 
 .. option:: --undefined-only, -u
 

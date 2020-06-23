@@ -135,6 +135,11 @@ using namespace SwitchCG;
 /// some float libcalls (6, 8 or 12 bits).
 static unsigned LimitFloatPrecision;
 
+static cl::opt<bool>
+    InsertAssertAlign("insert-assert-align", cl::init(true),
+                      cl::desc("Insert the experimental `assertalign` node."),
+                      cl::ReallyHidden);
+
 static cl::opt<unsigned, true>
     LimitFPPrecision("limit-float-precision",
                      cl::desc("Generate low-precision inline sequences "
@@ -4746,6 +4751,15 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       Result = DAG.getNode(ISD::BITCAST, getCurSDLoc(), VT, Result);
     } else
       Result = lowerRangeToAssertZExt(DAG, I, Result);
+
+    MaybeAlign Alignment = I.getRetAlign();
+    if (!Alignment)
+      Alignment = F->getAttributes().getRetAlignment();
+    // Insert `assertalign` node if there's an alignment.
+    if (InsertAssertAlign && Alignment) {
+      Result =
+          DAG.getAssertAlign(getCurSDLoc(), Result, Alignment.valueOrOne());
+    }
 
     setValue(&I, Result);
   }

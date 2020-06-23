@@ -396,6 +396,9 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       BaseOps.push_back(getNamedOperand(LdSt, AMDGPU::OpName::vaddr));
     }
     Offset = 0;
+    // Get appropriate operand, and compute width accordingly.
+    DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
+    Width = getOpSize(LdSt, DataOpIdx);
     return true;
   }
 

@@ -2664,6 +2664,155 @@ static bool handleFloatFloatBinOp(EvalInfo &Info, const Expr *E,
   return true;
 }
 
+static bool handleLogicalOpForVector(const APInt &LHSValue,
+                                     BinaryOperatorKind Opcode,
+                                     const APInt &RHSValue, APInt &Result) {
+  bool LHS = (LHSValue != 0);
+  bool RHS = (RHSValue != 0);
+
+  if (Opcode == BO_LAnd)
+    Result = LHS && RHS;
+  else
+    Result = LHS || RHS;
+  return true;
+}
+static bool handleLogicalOpForVector(const APFloat &LHSValue,
+                                     BinaryOperatorKind Opcode,
+                                     const APFloat &RHSValue, APInt &Result) {
+  bool LHS = !LHSValue.isZero();
+  bool RHS = !RHSValue.isZero();
+
+  if (Opcode == BO_LAnd)
+    Result = LHS && RHS;
+  else
+    Result = LHS || RHS;
+  return true;
+}
+
+static bool handleLogicalOpForVector(const APValue &LHSValue,
+                                     BinaryOperatorKind Opcode,
+                                     const APValue &RHSValue, APInt &Result) {
+  // The result is always an int type, however operands match the first.
+  if (LHSValue.getKind() == APValue::Int)
+    return handleLogicalOpForVector(LHSValue.getInt(), Opcode,
+                                    RHSValue.getInt(), Result);
+  assert(LHSValue.getKind() == APValue::Float && "Should be no other options");
+  return handleLogicalOpForVector(LHSValue.getFloat(), Opcode,
+                                  RHSValue.getFloat(), Result);
+}
+
+template <typename APTy>
+static bool
+handleCompareOpForVectorHelper(const APTy &LHSValue, BinaryOperatorKind Opcode,
+                               const APTy &RHSValue, APInt &Result) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("unsupported binary operator");
+  case BO_EQ:
+    Result = (LHSValue == RHSValue);
+    break;
+  case BO_NE:
+    Result = (LHSValue != RHSValue);
+    break;
+  case BO_LT:
+    Result = (LHSValue < RHSValue);
+    break;
+  case BO_GT:
+    Result = (LHSValue > RHSValue);
+    break;
+  case BO_LE:
+    Result = (LHSValue <= RHSValue);
+    break;
+  case BO_GE:
+    Result = (LHSValue >= RHSValue);
+    break;
+  }
+
+  return true;
+}
+
+static bool handleCompareOpForVector(const APValue &LHSValue,
+                                     BinaryOperatorKind Opcode,
+                                     const APValue &RHSValue, APInt &Result) {
+  // The result is always an int type, however operands match the first.
+  if (LHSValue.getKind() == APValue::Int)
+    return handleCompareOpForVectorHelper(LHSValue.getInt(), Opcode,
+                                          RHSValue.getInt(), Result);
+  assert(LHSValue.getKind() == APValue::Float && "Should be no other options");
+  return handleCompareOpForVectorHelper(LHSValue.getFloat(), Opcode,
+                                        RHSValue.getFloat(), Result);
+}
+
+// Perform binary operations for vector types, in place on the LHS.
+static bool handleVectorVectorBinOp(EvalInfo &Info, const Expr *E,
+                                    BinaryOperatorKind Opcode,
+                                    APValue &LHSValue,
+                                    const APValue &RHSValue) {
+  assert(Opcode != BO_PtrMemD && Opcode != BO_PtrMemI &&
+         "Operation not supported on vector types");
+
+  const auto *VT = E->getType()->castAs<VectorType>();
+  unsigned NumElements = VT->getNumElements();
+  QualType EltTy = VT->getElementType();
+
+  // In the cases (typically C as I've observed) where we aren't evaluating
+  // constexpr but are checking for cases where the LHS isn't yet evaluatable,
+  // just give up.
+  if (!LHSValue.isVector()) {
+    assert(LHSValue.isLValue() &&
+           "A vector result that isn't a vector OR uncalculated LValue");
+    Info.FFDiag(E);
+    return false;
+  }
+
+  assert(LHSValue.getVectorLength() == NumElements &&
+         RHSValue.getVectorLength() == NumElements && "Different vector sizes");
+
+  SmallVector<APValue, 4> ResultElements;
+
+  for (unsigned EltNum = 0; EltNum < NumElements; ++EltNum) {
+    APValue LHSElt = LHSValue.getVectorElt(EltNum);
+    APValue RHSElt = RHSValue.getVectorElt(EltNum);
+
+    if (EltTy->isIntegerType()) {
+      APSInt EltResult{Info.Ctx.getIntWidth(EltTy),
+                       EltTy->isUnsignedIntegerType()};
+      bool Success = true;
+
+      if (BinaryOperator::isLogicalOp(Opcode))
+        Success = handleLogicalOpForVector(LHSElt, Opcode, RHSElt, EltResult);
+      else if (BinaryOperator::isComparisonOp(Opcode))
+        Success = handleCompareOpForVector(LHSElt, Opcode, RHSElt, EltResult);
+      else
+        Success = handleIntIntBinOp(Info, E, LHSElt.getInt(), Opcode,
+                                    RHSElt.getInt(), EltResult);
+
+      if (!Success) {
+        Info.FFDiag(E);
+        return false;
+      }
+      ResultElements.emplace_back(EltResult);
+
+    } else if (EltTy->isFloatingType()) {
+      assert(LHSElt.getKind() == APValue::Float &&
+             RHSElt.getKind() == APValue::Float &&
+             "Mismatched LHS/RHS/Result Type");
+      APFloat LHSFloat = LHSElt.getFloat();
+
+      if (!handleFloatFloatBinOp(Info, E, LHSFloat, Opcode,
+                                 RHSElt.getFloat())) {
+        Info.FFDiag(E);
+        return false;
+      }
+
+      ResultElements.emplace_back(LHSFloat);
+    }
+  }
+
+  LHSValue = APValue(ResultElements.data(), ResultElements.size());
+  return true;
+}
+
 /// Cast an lvalue referring to a base subobject to a derived class, by
 /// truncating the lvalue's path to the given length.
 static bool CastToDerivedClass(EvalInfo &Info, const Expr *E, LValue &Result,
@@ -3910,12 +4059,26 @@ struct CompoundAssignSubobjectHandler {
       return false;
     case APValue::LValue:
       return foundPointer(Subobj, SubobjType);
+    case APValue::Vector:
+      return foundVector(Subobj, SubobjType);
     default:
       // FIXME: can this happen?
       Info.FFDiag(E);
       return false;
     }
   }
+
+  bool foundVector(APValue &Value, QualType SubobjType) {
+    if (!checkConst(SubobjType))
+      return false;
+
+    if (!SubobjType->isVectorType()) {
+      Info.FFDiag(E);
+      return false;
+    }
+    return handleVectorVectorBinOp(Info, E, Opcode, Value, RHS);
+  }
+
   bool found(APSInt &Value, QualType SubobjType) {
     if (!checkConst(SubobjType))
       return false;
@@ -9516,10 +9679,9 @@ namespace {
     bool VisitCastExpr(const CastExpr* E);
     bool VisitInitListExpr(const InitListExpr *E);
     bool VisitUnaryImag(const UnaryOperator *E);
-    // FIXME: Missing: unary -, unary ~, binary add/sub/mul/div,
-    //                 binary comparisons, binary and/or/xor,
-    //                 conditional operator (for GNU conditional select),
-    //                 shufflevector, ExtVectorElementExpr
+    bool VisitBinaryOperator(const BinaryOperator *E);
+    // FIXME: Missing: unary -, unary ~, conditional operator (for GNU
+    //                 conditional select), shufflevector, ExtVectorElementExpr
   };
 } // end anonymous namespace
 
@@ -9665,6 +9827,41 @@ VectorExprEvaluator::ZeroInitialization(const Expr *E) {
 bool VectorExprEvaluator::VisitUnaryImag(const UnaryOperator *E) {
   VisitIgnoredValue(E->getSubExpr());
   return ZeroInitialization(E);
+}
+
+bool VectorExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
+  BinaryOperatorKind Op = E->getOpcode();
+  assert(Op != BO_PtrMemD && Op != BO_PtrMemI && Op != BO_Cmp &&
+         "Operation not supported on vector types");
+
+  if (Op == BO_Comma)
+    return ExprEvaluatorBaseTy::VisitBinaryOperator(E);
+
+  Expr *LHS = E->getLHS();
+  Expr *RHS = E->getRHS();
+
+  assert(LHS->getType()->isVectorType() && RHS->getType()->isVectorType() &&
+         "Must both be vector types");
+  // Checking JUST the types are the same would be fine, except shifts don't
+  // need to have their types be the same (since you always shift by an int).
+  assert(LHS->getType()->getAs<VectorType>()->getNumElements() ==
+             E->getType()->getAs<VectorType>()->getNumElements() &&
+         RHS->getType()->getAs<VectorType>()->getNumElements() ==
+             E->getType()->getAs<VectorType>()->getNumElements() &&
+         "All operands must be the same size.");
+
+  APValue LHSValue;
+  APValue RHSValue;
+  bool LHSOK = Evaluate(LHSValue, Info, LHS);
+  if (!LHSOK && !Info.noteFailure())
+    return false;
+  if (!Evaluate(RHSValue, Info, RHS) || !LHSOK)
+    return false;
+
+  if (!handleVectorVectorBinOp(Info, E, Op, LHSValue, RHSValue))
+    return false;
+
+  return Success(LHSValue, E);
 }
 
 //===----------------------------------------------------------------------===//

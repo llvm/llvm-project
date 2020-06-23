@@ -10523,7 +10523,13 @@ def err_await_suspend_invalid_return_type : Error<
 def note_await_ready_no_bool_conversion : Note<
   "return type of 'await_ready' is required to be contextually convertible to 'bool'"
 >;
-}
+def err_coroutine_promise_final_suspend_requires_nothrow : Error<
+  "the expression 'co_await __promise.final_suspend()' is required to be non-throwing"
+>;
+def note_coroutine_function_declare_noexcept : Note<
+  "must be declared with 'noexcept'"
+>;
+} // end of coroutines issue category
 
 let CategoryName = "Documentation Issue" in {
 def warn_not_a_doxygen_trailing_member_comment : Warning<
@@ -10839,4 +10845,12 @@ def err_ext_int_bad_size : Error<"%select{signed|unsigned}0 _ExtInt must "
                                  "have a bit size of at least %select{2|1}0">;
 def err_ext_int_max_size : Error<"%select{signed|unsigned}0 _ExtInt of bit "
                                  "sizes greater than %1 not supported">;
+
+// errors of expect.with.probability
+def err_probability_not_constant_float : Error<
+   "probability argument to __builtin_expect_with_probability must be constant "
+   "floating-point expression">;
+def err_probability_out_of_range : Error<
+   "probability argument to __builtin_expect_with_probability is outside the "
+   "range [0.0, 1.0]">;
 } // end of sema component.

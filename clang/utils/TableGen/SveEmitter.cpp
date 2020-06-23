@@ -92,8 +92,8 @@ public:
   bool isChar() const { return ElementBitwidth == 8; }
   bool isVoid() const { return Void & !Pointer; }
   bool isDefault() const { return DefaultType; }
-  bool isFloat() const { return Float; }
-  bool isBFloat() const { return BFloat; }
+  bool isFloat() const { return Float && !BFloat; }
+  bool isBFloat() const { return BFloat && !Float; }
   bool isFloatingPoint() const { return Float || BFloat; }
   bool isInteger() const { return !isFloatingPoint() && !Predicate; }
   bool isScalarPredicate() const {
@@ -491,6 +491,7 @@ void SVEType::applyTypespec() {
       break;
     case 'b':
       BFloat = true;
+      Float = false;
       ElementBitwidth = 16;
       break;
     default:
@@ -538,6 +539,7 @@ void SVEType::applyModifier(char Mod) {
   case 'b':
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth /= 4;
     break;
   case 'o':
@@ -567,18 +569,21 @@ void SVEType::applyModifier(char Mod) {
   case '@':
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth /= 4;
     NumVectors = 0;
     break;
   case 'K':
     Signed = true;
     Float = false;
+    BFloat = false;
     Bitwidth = ElementBitwidth;
     NumVectors = 0;
     break;
   case 'L':
     Signed = false;
     Float = false;
+    BFloat = false;
     Bitwidth = ElementBitwidth;
     NumVectors = 0;
     break;
@@ -586,15 +591,18 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = false;
     Float = false;
+    BFloat = false;
     break;
   case 'x':
     Predicate = false;
     Signed = true;
     Float = false;
+    BFloat = false;
     break;
   case 'i':
     Predicate = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     Signed = false;
@@ -603,6 +611,7 @@ void SVEType::applyModifier(char Mod) {
   case 'I':
     Predicate = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     Signed = true;
@@ -612,6 +621,7 @@ void SVEType::applyModifier(char Mod) {
   case 'J':
     Predicate = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     Signed = true;
@@ -622,6 +632,7 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = true;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     break;
@@ -629,6 +640,7 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = true;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
@@ -636,6 +648,7 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     break;
@@ -643,6 +656,7 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
@@ -661,16 +675,19 @@ void SVEType::applyModifier(char Mod) {
   case 'g':
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = 64;
     break;
   case 't':
     Signed = true;
     Float = false;
+    BFloat = false;
     ElementBitwidth = 32;
     break;
   case 'z':
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = 32;
     break;
   case 'O':
@@ -681,6 +698,7 @@ void SVEType::applyModifier(char Mod) {
   case 'M':
     Predicate = false;
     Float = true;
+    BFloat = false;
     ElementBitwidth = 32;
     break;
   case 'N':
@@ -1085,10 +1103,20 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVUint16_t svuint16_t;\n";
   OS << "typedef __SVUint32_t svuint32_t;\n";
   OS << "typedef __SVUint64_t svuint64_t;\n";
-  OS << "typedef __SVFloat16_t svfloat16_t;\n";
-  OS << "typedef __SVBFloat16_t svbfloat16_t;\n\n";
+  OS << "typedef __SVFloat16_t svfloat16_t;\n\n";
 
-  OS << "#ifdef __ARM_FEATURE_BF16_SCALAR_ARITHMETIC\n";
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16) && "
+        "!defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
+  OS << "#error \"__ARM_FEATURE_BF16_SCALAR_ARITHMETIC must be defined when "
+        "__ARM_FEATURE_SVE_BF16 is defined\"\n";
+  OS << "#endif\n\n";
+
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
+  OS << "typedef __SVBFloat16_t svbfloat16_t;\n";
+  OS << "#endif\n\n";
+
+  OS << "#if defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
+  OS << "#include <arm_bf16.h>\n";
   OS << "typedef __bf16 bfloat16_t;\n";
   OS << "#endif\n\n";
 
@@ -1128,6 +1156,12 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __clang_svfloat32x4_t svfloat32x4_t;\n";
   OS << "typedef __clang_svfloat64x4_t svfloat64x4_t;\n";
   OS << "typedef __SVBool_t  svbool_t;\n\n";
+
+  OS << "#ifdef __ARM_FEATURE_SVE_BF16\n";
+  OS << "typedef __clang_svbfloat16x2_t svbfloat16x2_t;\n";
+  OS << "typedef __clang_svbfloat16x3_t svbfloat16x3_t;\n";
+  OS << "typedef __clang_svbfloat16x4_t svbfloat16x4_t;\n";
+  OS << "#endif\n";
 
   OS << "typedef enum\n";
   OS << "{\n";

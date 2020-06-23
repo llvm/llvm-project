@@ -4619,7 +4619,7 @@ to the ``add`` instruction using the ``!dbg`` identifier:
     %indvar.next = add i64 %indvar, 1, !dbg !21
 
 Metadata can also be attached to a function or a global variable. Here metadata
-``!22`` is attached to the ``f1`` and ``f2 functions, and the globals ``g1``
+``!22`` is attached to the ``f1`` and ``f2`` functions, and the globals ``g1``
 and ``g2`` using the ``!dbg`` identifier:
 
 .. code-block:: llvm
@@ -19057,6 +19057,40 @@ Arguments:
 
 The ``llvm.expect`` intrinsic takes two arguments. The first argument is
 a value. The second argument is an expected value.
+
+Semantics:
+""""""""""
+
+This intrinsic is lowered to the ``val``.
+
+'``llvm.expect.with.probability``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This intrinsic is similar to ``llvm.expect``. This is an overloaded intrinsic.
+You can use ``llvm.expect.with.probability`` on any integer bit width.
+
+::
+
+      declare i1 @llvm.expect.with.probability.i1(i1 <val>, i1 <expected_val>, double <prob>)
+      declare i32 @llvm.expect.with.probability.i32(i32 <val>, i32 <expected_val>, double <prob>)
+      declare i64 @llvm.expect.with.probability.i64(i64 <val>, i64 <expected_val>, double <prob>)
+
+Overview:
+"""""""""
+
+The ``llvm.expect.with.probability`` intrinsic provides information about
+expected value of ``val`` with probability(or confidence) ``prob``, which can
+be used by optimizers.
+
+Arguments:
+""""""""""
+
+The ``llvm.expect.with.probability`` intrinsic takes three arguments. The first
+argument is a value. The second argument is an expected value. The third
+argument is a probability.
 
 Semantics:
 """"""""""

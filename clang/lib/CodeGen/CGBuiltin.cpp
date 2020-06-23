@@ -2194,6 +2194,33 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         Builder.CreateCall(FnExpect, {ArgValue, ExpectedValue}, "expval");
     return RValue::get(Result);
   }
+  case Builtin::BI__builtin_expect_with_probability: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+
+    Value *ExpectedValue = EmitScalarExpr(E->getArg(1));
+    llvm::APFloat Probability(0.0);
+    const Expr *ProbArg = E->getArg(2);
+    bool EvalSucceed = ProbArg->EvaluateAsFloat(Probability, CGM.getContext());
+    assert(EvalSucceed && "probability should be able to evaluate as float");
+    (void)EvalSucceed;
+    bool LoseInfo = false;
+    Probability.convert(llvm::APFloat::IEEEdouble(),
+                        llvm::RoundingMode::Dynamic, &LoseInfo);
+    llvm::Type *Ty = ConvertType(ProbArg->getType());
+    Constant *Confidence = ConstantFP::get(Ty, Probability);
+    // Don't generate llvm.expect.with.probability on -O0 as the backend
+    // won't use it for anything.
+    // Note, we still IRGen ExpectedValue because it could have side-effects.
+    if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+      return RValue::get(ArgValue);
+
+    Function *FnExpect =
+        CGM.getIntrinsic(Intrinsic::expect_with_probability, ArgType);
+    Value *Result = Builder.CreateCall(
+        FnExpect, {ArgValue, ExpectedValue, Confidence}, "expval");
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_assume_aligned: {
     const Expr *Ptr = E->getArg(0);
     Value *PtrValue = EmitScalarExpr(Ptr);
@@ -4721,6 +4748,11 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vaeseq_v, arm_neon_aese, 0),
   NEONMAP1(vaesimcq_v, arm_neon_aesimc, 0),
   NEONMAP1(vaesmcq_v, arm_neon_aesmc, 0),
+  NEONMAP1(vbfdot_v, arm_neon_bfdot, 0),
+  NEONMAP1(vbfdotq_v, arm_neon_bfdot, 0),
+  NEONMAP1(vbfmlalbq_v, arm_neon_bfmlalb, 0),
+  NEONMAP1(vbfmlaltq_v, arm_neon_bfmlalt, 0),
+  NEONMAP1(vbfmmlaq_v, arm_neon_bfmmla, 0),
   NEONMAP1(vbsl_v, arm_neon_vbsl, AddRetType),
   NEONMAP1(vbslq_v, arm_neon_vbsl, AddRetType),
   NEONMAP1(vcadd_rot270_v, arm_neon_vcadd_rot270, Add1ArgType),
@@ -6389,21 +6421,27 @@ static bool HasExtraNeonArgument(unsigned BuiltinID) {
   default: break;
   case NEON::BI__builtin_neon_vget_lane_i8:
   case NEON::BI__builtin_neon_vget_lane_i16:
+  case NEON::BI__builtin_neon_vget_lane_bf16:
   case NEON::BI__builtin_neon_vget_lane_i32:
   case NEON::BI__builtin_neon_vget_lane_i64:
   case NEON::BI__builtin_neon_vget_lane_f32:
   case NEON::BI__builtin_neon_vgetq_lane_i8:
   case NEON::BI__builtin_neon_vgetq_lane_i16:
+  case NEON::BI__builtin_neon_vgetq_lane_bf16:
   case NEON::BI__builtin_neon_vgetq_lane_i32:
   case NEON::BI__builtin_neon_vgetq_lane_i64:
   case NEON::BI__builtin_neon_vgetq_lane_f32:
+  case NEON::BI__builtin_neon_vduph_lane_bf16:
+  case NEON::BI__builtin_neon_vduph_laneq_bf16:
   case NEON::BI__builtin_neon_vset_lane_i8:
   case NEON::BI__builtin_neon_vset_lane_i16:
+  case NEON::BI__builtin_neon_vset_lane_bf16:
   case NEON::BI__builtin_neon_vset_lane_i32:
   case NEON::BI__builtin_neon_vset_lane_i64:
   case NEON::BI__builtin_neon_vset_lane_f32:
   case NEON::BI__builtin_neon_vsetq_lane_i8:
   case NEON::BI__builtin_neon_vsetq_lane_i16:
+  case NEON::BI__builtin_neon_vsetq_lane_bf16:
   case NEON::BI__builtin_neon_vsetq_lane_i32:
   case NEON::BI__builtin_neon_vsetq_lane_i64:
   case NEON::BI__builtin_neon_vsetq_lane_f32:
@@ -6849,12 +6887,16 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vget_lane_i16:
   case NEON::BI__builtin_neon_vget_lane_i32:
   case NEON::BI__builtin_neon_vget_lane_i64:
+  case NEON::BI__builtin_neon_vget_lane_bf16:
   case NEON::BI__builtin_neon_vget_lane_f32:
   case NEON::BI__builtin_neon_vgetq_lane_i8:
   case NEON::BI__builtin_neon_vgetq_lane_i16:
   case NEON::BI__builtin_neon_vgetq_lane_i32:
   case NEON::BI__builtin_neon_vgetq_lane_i64:
+  case NEON::BI__builtin_neon_vgetq_lane_bf16:
   case NEON::BI__builtin_neon_vgetq_lane_f32:
+  case NEON::BI__builtin_neon_vduph_lane_bf16:
+  case NEON::BI__builtin_neon_vduph_laneq_bf16:
     return Builder.CreateExtractElement(Ops[0], Ops[1], "vget_lane");
 
   case NEON::BI__builtin_neon_vrndns_f32: {
@@ -6867,11 +6909,13 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vset_lane_i16:
   case NEON::BI__builtin_neon_vset_lane_i32:
   case NEON::BI__builtin_neon_vset_lane_i64:
+  case NEON::BI__builtin_neon_vset_lane_bf16:
   case NEON::BI__builtin_neon_vset_lane_f32:
   case NEON::BI__builtin_neon_vsetq_lane_i8:
   case NEON::BI__builtin_neon_vsetq_lane_i16:
   case NEON::BI__builtin_neon_vsetq_lane_i32:
   case NEON::BI__builtin_neon_vsetq_lane_i64:
+  case NEON::BI__builtin_neon_vsetq_lane_bf16:
   case NEON::BI__builtin_neon_vsetq_lane_f32:
     return Builder.CreateInsertElement(Ops[1], Ops[0], Ops[2], "vset_lane");
 
@@ -9282,11 +9326,13 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vset_lane_i16:
   case NEON::BI__builtin_neon_vset_lane_i32:
   case NEON::BI__builtin_neon_vset_lane_i64:
+  case NEON::BI__builtin_neon_vset_lane_bf16:
   case NEON::BI__builtin_neon_vset_lane_f32:
   case NEON::BI__builtin_neon_vsetq_lane_i8:
   case NEON::BI__builtin_neon_vsetq_lane_i16:
   case NEON::BI__builtin_neon_vsetq_lane_i32:
   case NEON::BI__builtin_neon_vsetq_lane_i64:
+  case NEON::BI__builtin_neon_vsetq_lane_bf16:
   case NEON::BI__builtin_neon_vsetq_lane_f32:
     Ops.push_back(EmitScalarExpr(E->getArg(2)));
     return Builder.CreateInsertElement(Ops[1], Ops[0], Ops[2], "vset_lane");
@@ -9565,11 +9611,13 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                           : Intrinsic::aarch64_neon_sqsub;
     return EmitNeonCall(CGM.getIntrinsic(AccInt, Int64Ty), Ops, "vqdmlXl");
   }
+  case NEON::BI__builtin_neon_vget_lane_bf16:
   case NEON::BI__builtin_neon_vduph_lane_bf16:
   case NEON::BI__builtin_neon_vduph_lane_f16: {
     return Builder.CreateExtractElement(Ops[0], EmitScalarExpr(E->getArg(1)),
                                         "vget_lane");
   }
+  case NEON::BI__builtin_neon_vgetq_lane_bf16:
   case NEON::BI__builtin_neon_vduph_laneq_bf16:
   case NEON::BI__builtin_neon_vduph_laneq_f16: {
     return Builder.CreateExtractElement(Ops[0], EmitScalarExpr(E->getArg(1)),
@@ -11619,7 +11667,7 @@ CodeGenFunction::GetX86CpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   for (const StringRef &FeatureStr : FeatureStrs) {
     unsigned Feature =
         StringSwitch<unsigned>(FeatureStr)
-#define X86_FEATURE_COMPAT(VAL, ENUM, STR) .Case(STR, VAL)
+#define X86_FEATURE_COMPAT(ENUM, STR) .Case(STR, llvm::X86::ENUM)
 #include "llvm/Support/X86TargetParser.def"
         ;
     FeaturesMask |= (1ULL << Feature);

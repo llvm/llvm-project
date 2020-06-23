@@ -267,9 +267,7 @@ public:
 
 Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
   DumpVisitor Visitor(DI, OS);
-  Visitor.traverseDebugInfo();
-
-  return Error::success();
+  return Visitor.traverseDebugInfo();
 }
 
 static void emitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
@@ -483,7 +481,8 @@ DWARFYAML::emitDebugSections(StringRef YAMLString, bool ApplyFixups,
 
   if (ApplyFixups) {
     DIEFixupVisitor DIFixer(DI);
-    DIFixer.traverseDebugInfo();
+    if (Error Err = DIFixer.traverseDebugInfo())
+      return std::move(Err);
   }
 
   StringMap<std::unique_ptr<MemoryBuffer>> DebugSections;

@@ -190,5 +190,11 @@
 // CHECK-NEXT:     ]
 // CHECK:        }
 
+/// The section name can be quoted.
+.section "@#$-{","n"
+// CHECK:        Section {
+// CHECK-NEXT:     Number:
+// CHECK-NEXT:     Name: @#$-{
 
+// CHECK-NOT:    Section {
 // CHECK:      ]

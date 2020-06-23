@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=aarch64-none-linux-gnu -filetype=obj %s | llvm-nm - | FileCheck %s
+// RUN: llvm-mc -triple=aarch64-none-linux-gnu -filetype=obj %s | llvm-nm --special-syms - | FileCheck %s
 
     .text
 // $x at 0x0000

@@ -7460,6 +7460,11 @@ class sve_bfloat_dot<string asm>
   let Inst{20-16} = Zm;
 }
 
+multiclass sve_bfloat_dot<string asm, SDPatternOperator op> {
+  def NAME : sve_bfloat_dot<asm>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16 ,!cast<Instruction>(NAME)>;
+}
+
 class sve_bfloat_dot_indexed<string asm>
 : sve_bfloat_dot_base<0b01, asm, "\t$Zda, $Zn, $Zm$iop",
   (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexS:$iop)> {
@@ -7467,6 +7472,11 @@ class sve_bfloat_dot_indexed<string asm>
   bits<3> Zm;
   let Inst{20-19} = iop;
   let Inst{18-16} = Zm;
+}
+
+multiclass sve_bfloat_dot_indexed<string asm, SDPatternOperator op> {
+  def NAME : sve_bfloat_dot_indexed<asm>;
+  def : SVE_4_Op_Imm_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16, i64, VectorIndexS_timm, !cast<Instruction>(NAME)>;
 }
 
 class sve_bfloat_matmul<string asm>
@@ -7486,11 +7496,21 @@ class sve_bfloat_matmul<string asm>
   let ElementSize = ElementSizeH;
 }
 
+multiclass sve_bfloat_matmul<string asm, SDPatternOperator op> {
+  def NAME : sve_bfloat_matmul<asm>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16 ,!cast<Instruction>(NAME)>;
+}
+
 class sve_bfloat_matmul_longvecl<bit BT, string asm>
 : sve_bfloat_matmul<asm> {
   let Inst{23}    = 0b1;
   let Inst{14-13} = 0b00;
   let Inst{10}    = BT;
+}
+
+multiclass sve_bfloat_matmul_longvecl<bit BT, string asm, SDPatternOperator op> {
+  def NAME : sve_bfloat_matmul_longvecl<BT, asm>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16 ,!cast<Instruction>(NAME)>;
 }
 
 class sve_bfloat_matmul_longvecl_idx<bit BT, string asm>
@@ -7503,6 +7523,11 @@ class sve_bfloat_matmul_longvecl_idx<bit BT, string asm>
   let Inst{18-16} = Zm;
   let Inst{11}    = iop{0};
   let Inst{10}    = BT;
+}
+
+multiclass sve_bfloat_matmul_longvecl_idx<bit BT, string asm, SDPatternOperator op> {
+  def NAME : sve_bfloat_matmul_longvecl_idx<BT, asm>;
+  def : SVE_4_Op_Imm_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16, i64, VectorIndexH_timm, !cast<Instruction>(NAME)>;
 }
 
 class sve_bfloat_convert<bit N, string asm>
@@ -7522,6 +7547,11 @@ class sve_bfloat_convert<bit N, string asm>
   let DestructiveInstType = DestructiveOther;
   let hasSideEffects = 1;
   let ElementSize = ElementSizeS;
+}
+
+multiclass sve_bfloat_convert<bit N, string asm, SDPatternOperator op> {
+  def NAME : sve_bfloat_convert<N, asm>;
+  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8i1, nxv4f32, !cast<Instruction>(NAME)>;
 }
 
 //===----------------------------------------------------------------------===//

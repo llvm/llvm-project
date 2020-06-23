@@ -271,7 +271,7 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   // Special handling of dbg_value instructions.
   if (MI->isDebugValue()) {
     MI->getOperand(FIOperandNum).ChangeToRegister(BasePtr, /*isDef*/ false);
-    MI->getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+    MI->getDebugOffset().ChangeToImmediate(Offset);
     return;
   }
 

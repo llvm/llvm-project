@@ -20,7 +20,7 @@ template <typename Ty> struct generator {
       return {};
     }
     std::experimental::suspend_always initial_suspend() { return {}; }
-    std::experimental::suspend_always final_suspend() { return {}; }
+    std::experimental::suspend_always final_suspend() noexcept { return {}; }
     generator get_return_object() { return generator{this}; };
     void return_void() {}
     void unhandled_exception() {}

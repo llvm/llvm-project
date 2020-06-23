@@ -36,8 +36,9 @@ const uint8_t DWARF_CFI_PRIMARY_OPERAND_MASK = 0x3f;
 
 Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
                         uint64_t EndOffset) {
-  while (*Offset < EndOffset) {
-    uint8_t Opcode = Data.getRelocatedValue(1, Offset);
+  DataExtractor::Cursor C(*Offset);
+  while (C && C.tell() < EndOffset) {
+    uint8_t Opcode = Data.getRelocatedValue(C, 1);
     // Some instructions have a primary opcode encoded in the top bits.
     uint8_t Primary = Opcode & DWARF_CFI_PRIMARY_OPCODE_MASK;
 
@@ -55,7 +56,7 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
         addInstruction(Primary, Op1);
         break;
       case DW_CFA_offset:
-        addInstruction(Primary, Op1, Data.getULEB128(Offset));
+        addInstruction(Primary, Op1, Data.getULEB128(C));
         break;
       }
     } else {
@@ -74,19 +75,19 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
         break;
       case DW_CFA_set_loc:
         // Operands: Address
-        addInstruction(Opcode, Data.getRelocatedAddress(Offset));
+        addInstruction(Opcode, Data.getRelocatedAddress(C));
         break;
       case DW_CFA_advance_loc1:
         // Operands: 1-byte delta
-        addInstruction(Opcode, Data.getRelocatedValue(1, Offset));
+        addInstruction(Opcode, Data.getRelocatedValue(C, 1));
         break;
       case DW_CFA_advance_loc2:
         // Operands: 2-byte delta
-        addInstruction(Opcode, Data.getRelocatedValue(2, Offset));
+        addInstruction(Opcode, Data.getRelocatedValue(C, 2));
         break;
       case DW_CFA_advance_loc4:
         // Operands: 4-byte delta
-        addInstruction(Opcode, Data.getRelocatedValue(4, Offset));
+        addInstruction(Opcode, Data.getRelocatedValue(C, 4));
         break;
       case DW_CFA_restore_extended:
       case DW_CFA_undefined:
@@ -95,11 +96,11 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
       case DW_CFA_def_cfa_offset:
       case DW_CFA_GNU_args_size:
         // Operands: ULEB128
-        addInstruction(Opcode, Data.getULEB128(Offset));
+        addInstruction(Opcode, Data.getULEB128(C));
         break;
       case DW_CFA_def_cfa_offset_sf:
         // Operands: SLEB128
-        addInstruction(Opcode, Data.getSLEB128(Offset));
+        addInstruction(Opcode, Data.getSLEB128(C));
         break;
       case DW_CFA_offset_extended:
       case DW_CFA_register:
@@ -109,56 +110,57 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
         // Note: We can not embed getULEB128 directly into function
         // argument list. getULEB128 changes Offset and order of evaluation
         // for arguments is unspecified.
-        auto op1 = Data.getULEB128(Offset);
-        auto op2 = Data.getULEB128(Offset);
+        uint64_t op1 = Data.getULEB128(C);
+        uint64_t op2 = Data.getULEB128(C);
         addInstruction(Opcode, op1, op2);
         break;
-        }
-        case DW_CFA_offset_extended_sf:
-        case DW_CFA_def_cfa_sf:
-        case DW_CFA_val_offset_sf: {
-          // Operands: ULEB128, SLEB128
-          // Note: see comment for the previous case
-          auto op1 = Data.getULEB128(Offset);
-          auto op2 = (uint64_t)Data.getSLEB128(Offset);
-          addInstruction(Opcode, op1, op2);
-          break;
-        }
-        case DW_CFA_def_cfa_expression: {
-          uint32_t ExprLength = Data.getULEB128(Offset);
-          addInstruction(Opcode, 0);
-          DataExtractor Extractor(
-              Data.getData().slice(*Offset, *Offset + ExprLength),
-              Data.isLittleEndian(), Data.getAddressSize());
-          // Note. We do not pass the DWARF format to DWARFExpression, because
-          // DW_OP_call_ref, the only operation which depends on the format, is
-          // prohibited in call frame instructions, see sec. 6.4.2 in DWARFv5.
-          Instructions.back().Expression =
-              DWARFExpression(Extractor, Data.getAddressSize());
-          *Offset += ExprLength;
-          break;
-        }
-        case DW_CFA_expression:
-        case DW_CFA_val_expression: {
-          auto RegNum = Data.getULEB128(Offset);
-          auto BlockLength = Data.getULEB128(Offset);
-          addInstruction(Opcode, RegNum, 0);
-          DataExtractor Extractor(
-              Data.getData().slice(*Offset, *Offset + BlockLength),
-              Data.isLittleEndian(), Data.getAddressSize());
-          // Note. We do not pass the DWARF format to DWARFExpression, because
-          // DW_OP_call_ref, the only operation which depends on the format, is
-          // prohibited in call frame instructions, see sec. 6.4.2 in DWARFv5.
-          Instructions.back().Expression =
-              DWARFExpression(Extractor, Data.getAddressSize());
-          *Offset += BlockLength;
-          break;
-        }
+      }
+      case DW_CFA_offset_extended_sf:
+      case DW_CFA_def_cfa_sf:
+      case DW_CFA_val_offset_sf: {
+        // Operands: ULEB128, SLEB128
+        // Note: see comment for the previous case
+        uint64_t op1 = Data.getULEB128(C);
+        uint64_t op2 = (uint64_t)Data.getSLEB128(C);
+        addInstruction(Opcode, op1, op2);
+        break;
+      }
+      case DW_CFA_def_cfa_expression: {
+        uint64_t ExprLength = Data.getULEB128(C);
+        addInstruction(Opcode, 0);
+        StringRef Expression = Data.getBytes(C, ExprLength);
+
+        DataExtractor Extractor(Expression, Data.isLittleEndian(),
+                                Data.getAddressSize());
+        // Note. We do not pass the DWARF format to DWARFExpression, because
+        // DW_OP_call_ref, the only operation which depends on the format, is
+        // prohibited in call frame instructions, see sec. 6.4.2 in DWARFv5.
+        Instructions.back().Expression =
+            DWARFExpression(Extractor, Data.getAddressSize());
+        break;
+      }
+      case DW_CFA_expression:
+      case DW_CFA_val_expression: {
+        uint64_t RegNum = Data.getULEB128(C);
+        addInstruction(Opcode, RegNum, 0);
+
+        uint64_t BlockLength = Data.getULEB128(C);
+        StringRef Expression = Data.getBytes(C, BlockLength);
+        DataExtractor Extractor(Expression, Data.isLittleEndian(),
+                                Data.getAddressSize());
+        // Note. We do not pass the DWARF format to DWARFExpression, because
+        // DW_OP_call_ref, the only operation which depends on the format, is
+        // prohibited in call frame instructions, see sec. 6.4.2 in DWARFv5.
+        Instructions.back().Expression =
+            DWARFExpression(Extractor, Data.getAddressSize());
+        break;
+      }
       }
     }
   }
 
-  return Error::success();
+  *Offset = C.tell();
+  return C.takeError();
 }
 
 namespace {

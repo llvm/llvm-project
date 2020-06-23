@@ -191,6 +191,10 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   // LI8.
   bool simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
                     unsigned OpNoForForwarding, MachineInstr **KilledDef) const;
+  // If the inst is imm-form and its register operand is produced by a ADDI, put
+  // the imm into the inst directly and remove the ADDI if possible.
+  bool transformToNewImmFormFedByAdd(MachineInstr &MI, MachineInstr &DefMI,
+                                     unsigned OpNoForForwarding) const;
   // If the inst is x-form and has imm-form and one of its operand is produced
   // by a LI, put the imm into the inst directly and remove the LI if possible.
   bool transformToImmFormFedByLI(MachineInstr &MI, const ImmInstrInfo &III,
@@ -221,7 +225,8 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   bool isImmElgibleForForwarding(const MachineOperand &ImmMO,
                                  const MachineInstr &DefMI,
                                  const ImmInstrInfo &III,
-                                 int64_t &Imm) const;
+                                 int64_t &Imm,
+                                 int64_t BaseImm = 0) const;
   bool isRegElgibleForForwarding(const MachineOperand &RegMO,
                                  const MachineInstr &DefMI,
                                  const MachineInstr &MI, bool KillDefMI,

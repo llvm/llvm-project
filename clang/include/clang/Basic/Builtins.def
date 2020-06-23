@@ -566,6 +566,7 @@ BUILTIN(__builtin___vprintf_chk, "iicC*a", "FP:1:")
 
 BUILTIN(__builtin_unpredictable, "LiLi"   , "nc")
 BUILTIN(__builtin_expect, "LiLiLi"   , "nc")
+BUILTIN(__builtin_expect_with_probability, "LiLiLid", "nc")
 BUILTIN(__builtin_prefetch, "vvC*.", "nc")
 BUILTIN(__builtin_readcyclecounter, "ULLi", "n")
 BUILTIN(__builtin_trap, "v", "nr")

@@ -1239,15 +1239,15 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm FSQRT_ZPmZ  : sve_fp_2op_p_zd_HSD<0b01101, "fsqrt",  int_aarch64_sve_fsqrt>;
 
   let Predicates = [HasBF16, HasSVE] in {
-    def BFDOT_ZZZ    : sve_bfloat_dot<"bfdot">;
-    def BFDOT_ZZI    : sve_bfloat_dot_indexed<"bfdot">;
-    def BFMMLA_ZZZ  : sve_bfloat_matmul<"bfmmla">;
-    def BFMMLA_B_ZZZ  : sve_bfloat_matmul_longvecl<0b0, "bfmlalb">;
-    def BFMMLA_T_ZZZ  : sve_bfloat_matmul_longvecl<0b1, "bfmlalt">;
-    def BFMMLA_B_ZZI  : sve_bfloat_matmul_longvecl_idx<0b0, "bfmlalb">;
-    def BFMMLA_T_ZZI  : sve_bfloat_matmul_longvecl_idx<0b1, "bfmlalt">;
-    def BFCVT_ZPmZ   : sve_bfloat_convert<0b1, "bfcvt">;
-    def BFCVTNT_ZPmZ : sve_bfloat_convert<0b0, "bfcvtnt">;
+    defm BFDOT_ZZZ    : sve_bfloat_dot<"bfdot", int_aarch64_sve_bfdot>;
+    defm BFDOT_ZZI    : sve_bfloat_dot_indexed<"bfdot", int_aarch64_sve_bfdot_lane>;
+    defm BFMMLA_ZZZ   : sve_bfloat_matmul<"bfmmla", int_aarch64_sve_bfmmla>;
+    defm BFMMLA_B_ZZZ : sve_bfloat_matmul_longvecl<0b0, "bfmlalb", int_aarch64_sve_bfmlalb>;
+    defm BFMMLA_T_ZZZ : sve_bfloat_matmul_longvecl<0b1, "bfmlalt", int_aarch64_sve_bfmlalt>;
+    defm BFMMLA_B_ZZI : sve_bfloat_matmul_longvecl_idx<0b0, "bfmlalb", int_aarch64_sve_bfmlalb_lane>;
+    defm BFMMLA_T_ZZI : sve_bfloat_matmul_longvecl_idx<0b1, "bfmlalt", int_aarch64_sve_bfmlalt_lane>;
+    defm BFCVT_ZPmZ   : sve_bfloat_convert<0b1, "bfcvt",   int_aarch64_sve_fcvt_bf16f32>;
+    defm BFCVTNT_ZPmZ : sve_bfloat_convert<0b0, "bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32>;
   }
 
   // InstAliases

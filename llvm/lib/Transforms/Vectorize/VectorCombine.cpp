@@ -51,12 +51,13 @@ class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
                 const DominatorTree &DT)
-      : F(F), TTI(TTI), DT(DT) {}
+      : F(F), Builder(F.getContext()), TTI(TTI), DT(DT) {}
 
   bool run();
 
 private:
   Function &F;
+  IRBuilder<> Builder;
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
 
@@ -64,10 +65,19 @@ private:
                              unsigned Opcode,
                              ExtractElementInst *&ConvertToShuffle,
                              unsigned PreferredExtractIndex);
+  void foldExtExtCmp(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
+                     Instruction &I);
+  void foldExtExtBinop(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
+                       Instruction &I);
   bool foldExtractExtract(Instruction &I);
   bool foldBitcastShuf(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
 };
+
+static void replaceValue(Value &Old, Value &New) {
+  Old.replaceAllUsesWith(&New);
+  New.takeName(&Old);
+}
 
 /// Compare the relative costs of 2 extracts followed by scalar operation vs.
 /// vector operation(s) followed by extract. Return true if the existing
@@ -178,39 +188,45 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   return OldCost < NewCost;
 }
 
+/// Create a shuffle that translates (shifts) 1 element from the input vector
+/// to a new element location.
+static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
+                                 unsigned NewIndex, IRBuilder<> &Builder) {
+  // The shuffle mask is undefined except for 1 lane that is being translated
+  // to the new element index. Example for OldIndex == 2 and NewIndex == 0:
+  // ShufMask = { 2, undef, undef, undef }
+  auto *VecTy = cast<FixedVectorType>(Vec->getType());
+  SmallVector<int, 32> ShufMask(VecTy->getNumElements(), UndefMaskElem);
+  ShufMask[NewIndex] = OldIndex;
+  Value *Undef = UndefValue::get(VecTy);
+  return Builder.CreateShuffleVector(Vec, Undef, ShufMask, "shift");
+}
+
 /// Given an extract element instruction with constant index operand, shuffle
 /// the source vector (shift the scalar element) to a NewIndex for extraction.
 /// Return null if the input can be constant folded, so that we are not creating
 /// unnecessary instructions.
 static ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
-                                            unsigned NewIndex) {
+                                            unsigned NewIndex,
+                                            IRBuilder<> &Builder) {
   // If the extract can be constant-folded, this code is unsimplified. Defer
   // to other passes to handle that.
   Value *X = ExtElt->getVectorOperand();
   Value *C = ExtElt->getIndexOperand();
+  assert(isa<ConstantInt>(C) && "Expected a constant index operand");
   if (isa<Constant>(X))
     return nullptr;
 
-  // The shuffle mask is undefined except for 1 lane that is being translated
-  // to the cheap extraction lane. Example:
-  // ShufMask = { 2, undef, undef, undef }
-  auto *VecTy = cast<FixedVectorType>(X->getType());
-  SmallVector<int, 32> Mask(VecTy->getNumElements(), -1);
-  assert(isa<ConstantInt>(C) && "Expected a constant index operand");
-  Mask[NewIndex] = cast<ConstantInt>(C)->getZExtValue();
-
-  // extelt X, C --> extelt (shuffle X), NewIndex
-  IRBuilder<> Builder(ExtElt);
-  Value *Shuf =
-      Builder.CreateShuffleVector(X, UndefValue::get(VecTy), Mask, "shift");
+  Value *Shuf = createShiftShuffle(X, cast<ConstantInt>(C)->getZExtValue(),
+                                   NewIndex, Builder);
   return cast<ExtractElementInst>(Builder.CreateExtractElement(Shuf, NewIndex));
 }
 
 /// Try to reduce extract element costs by converting scalar compares to vector
 /// compares followed by extract.
 /// cmp (ext0 V0, C), (ext1 V1, C)
-static void foldExtExtCmp(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
-                          Instruction &I) {
+void VectorCombine::foldExtExtCmp(ExtractElementInst *Ext0,
+                                  ExtractElementInst *Ext1, Instruction &I) {
   assert(isa<CmpInst>(&I) && "Expected a compare");
   assert(cast<ConstantInt>(Ext0->getIndexOperand())->getZExtValue() ==
              cast<ConstantInt>(Ext1->getIndexOperand())->getZExtValue() &&
@@ -218,20 +234,18 @@ static void foldExtExtCmp(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
 
   // cmp Pred (extelt V0, C), (extelt V1, C) --> extelt (cmp Pred V0, V1), C
   ++NumVecCmp;
-  IRBuilder<> Builder(&I);
   CmpInst::Predicate Pred = cast<CmpInst>(&I)->getPredicate();
   Value *V0 = Ext0->getVectorOperand(), *V1 = Ext1->getVectorOperand();
   Value *VecCmp = Builder.CreateCmp(Pred, V0, V1);
   Value *NewExt = Builder.CreateExtractElement(VecCmp, Ext0->getIndexOperand());
-  I.replaceAllUsesWith(NewExt);
-  NewExt->takeName(&I);
+  replaceValue(I, *NewExt);
 }
 
 /// Try to reduce extract element costs by converting scalar binops to vector
 /// binops followed by extract.
 /// bo (ext0 V0, C), (ext1 V1, C)
-static void foldExtExtBinop(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
-                            Instruction &I) {
+void VectorCombine::foldExtExtBinop(ExtractElementInst *Ext0,
+                                    ExtractElementInst *Ext1, Instruction &I) {
   assert(isa<BinaryOperator>(&I) && "Expected a binary operator");
   assert(cast<ConstantInt>(Ext0->getIndexOperand())->getZExtValue() ==
              cast<ConstantInt>(Ext1->getIndexOperand())->getZExtValue() &&
@@ -239,7 +253,6 @@ static void foldExtExtBinop(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
 
   // bo (extelt V0, C), (extelt V1, C) --> extelt (bo V0, V1), C
   ++NumVecBO;
-  IRBuilder<> Builder(&I);
   Value *V0 = Ext0->getVectorOperand(), *V1 = Ext1->getVectorOperand();
   Value *VecBO =
       Builder.CreateBinOp(cast<BinaryOperator>(&I)->getOpcode(), V0, V1);
@@ -250,8 +263,7 @@ static void foldExtExtBinop(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
     VecBOInst->copyIRFlags(&I);
 
   Value *NewExt = Builder.CreateExtractElement(VecBO, Ext0->getIndexOperand());
-  I.replaceAllUsesWith(NewExt);
-  NewExt->takeName(&I);
+  replaceValue(I, *NewExt);
 }
 
 /// Match an instruction with extracted vector operands.
@@ -294,7 +306,7 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
   if (ExtractToChange) {
     unsigned CheapExtractIdx = ExtractToChange == Ext0 ? C1 : C0;
     ExtractElementInst *NewExtract =
-        translateExtract(ExtractToChange, CheapExtractIdx);
+        translateExtract(ExtractToChange, CheapExtractIdx, Builder);
     if (!NewExtract)
       return false;
     if (ExtractToChange == Ext0)
@@ -353,11 +365,10 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
   }
   // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
   ++NumShufOfBitcast;
-  IRBuilder<> Builder(&I);
   Value *CastV = Builder.CreateBitCast(V, DestTy);
   Value *Shuf =
       Builder.CreateShuffleVector(CastV, UndefValue::get(DestTy), NewMask);
-  I.replaceAllUsesWith(Shuf);
+  replaceValue(I, *Shuf);
   return true;
 }
 
@@ -454,7 +465,6 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
     ++NumScalarBO;
 
   // For constant cases, extract the scalar element, this should constant fold.
-  IRBuilder<> Builder(&I);
   if (IsConst0)
     V0 = ConstantExpr::getExtractElement(VecC0, Builder.getInt64(Index));
   if (IsConst1)
@@ -475,8 +485,7 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   Constant *NewVecC = IsCmp ? ConstantExpr::getCompare(Pred, VecC0, VecC1)
                             : ConstantExpr::get(Opcode, VecC0, VecC1);
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, Index);
-  I.replaceAllUsesWith(Insert);
-  Insert->takeName(&I);
+  replaceValue(I, *Insert);
   return true;
 }
 
@@ -498,6 +507,7 @@ bool VectorCombine::run() {
     for (Instruction &I : BB) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
+      Builder.SetInsertPoint(&I);
       MadeChange |= foldExtractExtract(I);
       MadeChange |= foldBitcastShuf(I);
       MadeChange |= scalarizeBinopOrCmp(I);

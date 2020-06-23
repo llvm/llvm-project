@@ -178,7 +178,7 @@ template <class C> C func1t(C arg) {
 //CHECK-NEXT: | |       `-FloatingLiteral {{.*}} '_Float16' 2.000000e+00
 //CHECK-NEXT: | `-FunctionDecl {{.*}} used func1t '_Float16 (_Float16)'
 //CHECK-NEXT: |   |-TemplateArgument type '_Float16'
-//CHECK-NEXT: |   |-ParmVarDecl {{.*}} used arg '_Float16':'_Float16'
+//CHECK:      |   |-ParmVarDecl {{.*}} used arg '_Float16':'_Float16'
 //CHECK-NEXT: |   `-CompoundStmt
 //CHECK-NEXT: |     `-ReturnStmt
 //CHECK-NEXT: |       `-BinaryOperator {{.*}} '_Float16' '*'

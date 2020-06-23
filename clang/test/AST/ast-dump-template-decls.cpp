@@ -79,8 +79,8 @@ struct S {};
 template <typename Ty>
 // CHECK: ClassTemplatePartialSpecializationDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+4]]:20> col:8 struct S definition
 // CHECK: TemplateArgument type 'type-parameter-0-0'
-// CHECK-NEXT: TemplateArgument type 'int'
-// CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <line:[[@LINE-4]]:11, col:20> col:20 referenced typename depth 0 index 0 Ty
+// CHECK: TemplateArgument type 'int'
+// CHECK: TemplateTypeParmDecl 0x{{[^ ]*}} <line:[[@LINE-4]]:11, col:20> col:20 referenced typename depth 0 index 0 Ty
 struct S<Ty, int> {};
 
 template <auto>

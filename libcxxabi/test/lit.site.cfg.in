@@ -29,5 +29,7 @@ config.cxx_ext_threads          = @LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY@
 config.pstl_src_root            = "@ParallelSTL_SOURCE_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None
 config.pstl_obj_root            = "@ParallelSTL_BINARY_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None
 
+config.llvm_codesign_identity   = "@LLVM_CODESIGNING_IDENTITY@"
+
 # Let the main config do the real work.
 lit_config.load_config(config, "@LIBCXXABI_SOURCE_DIR@/test/lit.cfg")
