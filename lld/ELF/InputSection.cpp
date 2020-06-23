@@ -852,6 +852,9 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
 template <class ELFT, class RelTy>
 void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const unsigned bits = sizeof(typename ELFT::uint) * 8;
+  const bool isDebug = isDebugSection(*this);
+  const bool isDebugLocOrRanges =
+      isDebug && (name == ".debug_loc" || name == ".debug_ranges");
 
   for (const RelTy &rel : rels) {
     RelType type = rel.getType(config->isMips64EL);
@@ -902,11 +905,38 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       continue;
     }
 
-    if (sym.isTls() && !Out::tlsPhdr)
+    if (sym.isTls() && !Out::tlsPhdr) {
       target->relocateNoSym(bufLoc, type, 0);
-    else
-      target->relocateNoSym(bufLoc, type,
-                            SignExtend64<bits>(sym.getVA(addend)));
+      continue;
+    }
+
+    if (isDebug && type == target->symbolicRel) {
+      // Resolve relocations in .debug_* referencing (discarded symbols or ICF
+      // folded section symbols) to a tombstone value. Resolving to addend is
+      // unsatisfactory because the result address range may collide with a
+      // valid range of low address, or leave multiple CUs claiming ownership of
+      // the same range of code, which may confuse consumers.
+      //
+      // To address the problems, we use -1 as a tombstone value for most
+      // .debug_* sections. We have to ignore the addend because we don't want
+      // to resolve an address attribute (which may have a non-zero addend) to
+      // -1+addend (wrap around to a low address).
+      //
+      // If the referenced symbol is discarded (made Undefined), or the
+      // section defining the referenced symbol is garbage collected,
+      // sym.getOutputSection() is nullptr. `ds->section->repl != ds->section`
+      // catches the ICF folded case.
+      //
+      // For pre-DWARF-v5 .debug_loc and .debug_ranges, -1 is a reserved value
+      // (base address selection entry), so -2 is used.
+      auto *ds = dyn_cast<Defined>(&sym);
+      if (!sym.getOutputSection() || (ds && ds->section->repl != ds->section)) {
+        target->relocateNoSym(bufLoc, type,
+                              isDebugLocOrRanges ? UINT64_MAX - 1 : UINT64_MAX);
+        continue;
+      }
+    }
+    target->relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
   }
 }
 
