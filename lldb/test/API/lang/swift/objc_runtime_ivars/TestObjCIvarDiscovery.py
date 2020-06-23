@@ -26,8 +26,6 @@ class TestObjCIVarDiscovery(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(bugnumber="rdar://60396797",
-                        setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @skipIf(debug_info=no_match("dsym"))
     def test_nodbg(self):
@@ -35,8 +33,6 @@ class TestObjCIVarDiscovery(TestBase):
         shutil.rmtree(self.getBuildArtifact("aTestFramework.framework/Versions/A/aTestFramework.dSYM"))
         self.do_test(False)
 
-    @expectedFailureAll(bugnumber="rdar://60396797",
-                        setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @skipIf(debug_info=no_match("dsym"))
     def test_dbg(self):

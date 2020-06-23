@@ -1681,7 +1681,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     //
     // This step is skipped for modules that don't have any Swift
     // debug info. (We assume that a module without a .swift_ast
-    // section has not debuggable Swift code). This skips looking
+    // section has no debuggable Swift code). This skips looking
     // through all the shared cache dylibs when they don't have debug
     // info.
     if (found_swift_modules) {
@@ -2888,9 +2888,6 @@ private:
 class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
   SwiftASTContext &m_swift_ast_ctx;
   using ModuleAndName = std::pair<const char *, const char *>;
-  /// Caches successful lookups for the scratch context.
-  llvm::DenseMap<ModuleAndName, llvm::SmallVector<clang::QualType, 1>>
-      m_decl_cache;
   std::string m_description;
 
   /// Used to filter out types with mismatching kinds.
@@ -3100,11 +3097,12 @@ public:
         auto *swift_ast_ctx = static_cast<SwiftASTContext *>(&*ts);
         auto *dwarf_imp = static_cast<SwiftDWARFImporterDelegate *>(
             swift_ast_ctx->GetDWARFImporterDelegate());
-        if (!dwarf_imp)
+        if (!dwarf_imp || dwarf_imp == this)
           continue;
-        auto it = dwarf_imp->m_decl_cache.find(
-            {module_cs.GetCString(), name_cs.GetCString()});
-        if (it == dwarf_imp->m_decl_cache.end())
+
+        llvm::SmallVector<clang::Decl *, 2> module_results;
+        dwarf_imp->lookupValue(name, kind, inModule, module_results);
+        if (!module_results.size())
           continue;
 
         auto *from_clang_importer = swift_ast_ctx->GetClangImporter();
@@ -3112,15 +3110,19 @@ public:
           continue;
         auto &from_ctx = from_clang_importer->getClangASTContext();
         auto &to_ctx = clang_importer->getClangASTContext();
-        for (clang::QualType qual_type : it->second)
+        for (clang::Decl *decl : module_results) {
+          clang::QualType qual_type;
+          if (auto *interface = llvm::dyn_cast<clang::ObjCInterfaceDecl>(decl))
+            qual_type = {interface->getTypeForDecl(), 0};
+          if (auto *type = llvm::dyn_cast<clang::TypeDecl>(decl))
+            qual_type = {type->getTypeForDecl(), 0};
           importType(qual_type, from_ctx, to_ctx, kind, results);
+        }
+        // Cut the search short after we found the first result.
+        if (results.size())
+          break;
       }
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "%d types found in cache.", results.size());
-
-      // TODO: Otherwise, the correct thing to do is to invoke
-      //       search() on all modules. In practice, however, this is
-      //       prohibitively expensive, so we need to do something
-      //       more targeted.
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "%d types collected.", results.size());
       return;
     }
 
@@ -3147,11 +3149,6 @@ public:
 
       clang::QualType qual_type = ClangUtil::GetQualType(compiler_type);
       importType(qual_type, from_ctx, to_ctx, kind, results);
-
-      // If this is a module context, cache the result for the scratch context.
-      if (m_swift_ast_ctx.GetModule())
-        m_decl_cache[{module_cs.GetCString(), name_cs.GetCString()}].push_back(
-            qual_type);
 
       return true;
     });

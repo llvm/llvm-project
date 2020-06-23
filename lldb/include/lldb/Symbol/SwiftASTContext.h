@@ -1317,7 +1317,7 @@ protected:
   bool m_initialized_clang_importer_options = false;
   bool m_reported_fatal_error = false;
 
-  // Whether this is a scratch or a module AST context.
+  /// Whether this is a scratch or a module AST context.
   bool m_is_scratch_context = false;
 
   Status m_fatal_errors;

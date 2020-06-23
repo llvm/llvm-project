@@ -49,7 +49,7 @@ class TestSwiftDWARFImporter_Swift(lldbtest.TestBase):
                 self.assertTrue('from debug info' in line, line)
                 response += 1
             elif found == 2 and response == 1 and 'SwiftDWARFImporterDelegate' in line:
-                self.assertTrue('found in cache' in line, line)
+                self.assertTrue('types collected' in line, line)
                 response += 1
-        self.assertEqual(found, 2)
-        self.assertEqual(response, 2)
+        self.assertEqual(found, 3)
+        self.assertEqual(response, 1)
