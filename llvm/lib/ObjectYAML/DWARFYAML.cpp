@@ -40,6 +40,8 @@ SetVector<StringRef> DWARFYAML::Data::getUsedSectionNames() const {
     SecNames.insert("debug_info");
   if (PubNames)
     SecNames.insert("debug_pubnames");
+  if (PubTypes)
+    SecNames.insert("debug_pubtypes");
   return SecNames;
 }
 
