@@ -119,9 +119,12 @@ private:
       return "Intrinsic::" + getIntrinsic(I).EnumName;
     else if (Field.IsInstruction)
       return I->getAsString();
-    else if (Field.Enum)
-      return std::string(
-          Field.Enum->EntryMap[cast<DefInit>(I)->getDef()]->first);
+    else if (Field.Enum) {
+      auto *Entry = Field.Enum->EntryMap[cast<DefInit>(I)->getDef()];
+      if (!Entry)
+        PrintFatalError(Twine("Entry for field '") + Field.Name + "' is null");
+      return std::string(Entry->first);
+    }
     PrintFatalError(Twine("invalid field type for field '") + Field.Name +
                     "', expected: string, bits, bit or code");
   }
@@ -596,6 +599,9 @@ void SearchableTableEmitter::collectEnumEntries(
 
 void SearchableTableEmitter::collectTableEntries(
     GenericTable &Table, const std::vector<Record *> &Items) {
+  if (Items.empty())
+    PrintWarning(Twine("Table '") + Table.Name + "' has no items");
+
   for (auto EntryRec : Items) {
     for (auto &Field : Table.Fields) {
       auto TI = dyn_cast<TypedInit>(EntryRec->getValueInit(Field.Name));
@@ -624,6 +630,10 @@ void SearchableTableEmitter::collectTableEntries(
   Record *IntrinsicClass = Records.getClass("Intrinsic");
   Record *InstructionClass = Records.getClass("Instruction");
   for (auto &Field : Table.Fields) {
+    if (!Field.RecType)
+      PrintFatalError(Twine("Cannot determine type of field '") + Field.Name +
+                      "' in table '" + Table.Name + "'. Maybe it is not used?");
+
     if (auto RecordTy = dyn_cast<RecordRecTy>(Field.RecType)) {
       if (IntrinsicClass && RecordTy->isSubClassOf(IntrinsicClass))
         Field.IsIntrinsic = true;
