@@ -6281,6 +6281,17 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
                "       : bbbbbbbbbbbbbbbbbbbbbbb ? 2222222222222222\n"
                "                                 : 3333333333333333;",
                Style);
+
+  Style.AlignOperands = FormatStyle::OAS_DontAlign;
+  Style.BreakBeforeTernaryOperators = false;
+  // FIXME: Aligning the question marks is weird given DontAlign.
+  // Consider disabling this alignment in this case. Also check whether this
+  // will render the adjustment from https://reviews.llvm.org/D82199
+  // unnecessary.
+  verifyFormat("int x = aaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaa :\n"
+               "    bbbb                ? cccccccccccccccccc :\n"
+               "                          ddddd;\n",
+               Style);
 }
 
 TEST_F(FormatTest, BreaksConditionalExpressionsAfterOperator) {
