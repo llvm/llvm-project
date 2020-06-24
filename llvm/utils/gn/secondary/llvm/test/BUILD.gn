@@ -83,6 +83,7 @@ write_lit_config("lit_site_cfg") {
     "OCAMLFIND=OCAMLFIND-NOTFOUND",
     "OCAMLFLAGS=",
     "LLVM_BUILD_EXAMPLES=0",
+    "LLVM_HAVE_TF_AOT=0",
   ]
 
   if (host_cpu == "x64") {
