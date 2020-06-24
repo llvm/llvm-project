@@ -15,8 +15,6 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/SmallVector.h"
 
-using Fortran::lower::operator""_rt_ident;
-
 #define MakeRuntimeEntry(X) mkKey(RTNAME(X))
 
 template <typename RuntimeEntry>
