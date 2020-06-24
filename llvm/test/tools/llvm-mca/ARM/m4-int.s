@@ -562,8 +562,8 @@ yield
 # CHECK-NEXT:  1      2     1.00                  U     ldrbt	r0, [r1, #1]
 # CHECK-NEXT:  1      2     1.00    *                   ldrd	r0, r2, [r1]
 # CHECK-NEXT:  1      2     1.00    *                   ldrd	r0, r2, [r1, #-4]
-# CHECK-NEXT:  1      2     1.00    *             U     ldrd	r0, r2, [r1], #4
-# CHECK-NEXT:  1      2     1.00    *             U     ldrd	r0, r2, [r1, #4]!
+# CHECK-NEXT:  1      2     1.00    *                   ldrd	r0, r2, [r1], #4
+# CHECK-NEXT:  1      2     1.00    *                   ldrd	r0, r2, [r1, #4]!
 # CHECK-NEXT:  1      2     1.00    *                   ldrd	r0, r2, next
 # CHECK-NEXT:  1      2     1.00    *      *      U     ldrex	r0, [r1]
 # CHECK-NEXT:  1      2     1.00    *      *      U     ldrex	r0, [r1, #4]
@@ -700,7 +700,7 @@ yield
 # CHECK-NEXT:  1      1     1.00                        sbcs.w	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00                        sbc.w	r0, r1, r2, lsl #1
 # CHECK-NEXT:  1      1     1.00                        sbcs.w	r0, r1, r2, lsl #1
-# CHECK-NEXT:  1      1     1.00                  U     sbfx	r0, r1, #1, #2
+# CHECK-NEXT:  1      1     1.00                        sbfx	r0, r1, #1, #2
 # CHECK-NEXT:  1      2     1.00                        sdiv	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00    *                   sel	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00    *      *      U     sev
@@ -778,8 +778,8 @@ yield
 # CHECK-NEXT:  1      1     1.00           *            strb.w	r0, [r1, r2, lsl #1]
 # CHECK-NEXT:  1      1     1.00                  U     strbt	r0, [r1, #1]
 # CHECK-NEXT:  1      1     1.00           *            strd	r0, r1, [r2, #4]
-# CHECK-NEXT:  1      1     1.00           *      U     strd	r0, r1, [r2], #4
-# CHECK-NEXT:  1      1     1.00           *      U     strd	r0, r1, [r2, #4]!
+# CHECK-NEXT:  1      1     1.00           *            strd	r0, r1, [r2], #4
+# CHECK-NEXT:  1      1     1.00           *            strd	r0, r1, [r2, #4]!
 # CHECK-NEXT:  1      1     1.00    *      *      U     strex	r0, r1, [r2]
 # CHECK-NEXT:  1      1     1.00    *      *      U     strex	r0, r1, [r2, #4]
 # CHECK-NEXT:  1      1     1.00    *      *      U     strexb	r0, r1, [r2]
@@ -839,7 +839,7 @@ yield
 # CHECK-NEXT:  1      1     1.00    *      *      U     uadd16	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00    *      *      U     uadd8	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00    *      *      U     uasx	r0, r1, r2
-# CHECK-NEXT:  1      1     1.00                  U     ubfx	r0, r1, #1, #2
+# CHECK-NEXT:  1      1     1.00                        ubfx	r0, r1, #1, #2
 # CHECK-NEXT:  1      2     1.00                        udiv	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00                        uhadd16	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00                        uhadd8	r0, r1, r2
