@@ -102,4 +102,9 @@ class TestSwiftOptionalType(TestBase):
             uoptString_Some,
             use_dynamic=False,
             num_children=1)
+        uoptString_Some.GetChildAtIndex(99)
 
+        # Querying a non-existing child should not crash.
+        synth_valobj = self.frame().FindVariable("optString_Some")
+        synth_valobj.SetSyntheticChildrenGenerated(True);
+        self.assertEqual(synth_valobj.GetChildAtIndex(1).GetSummary(), None)
