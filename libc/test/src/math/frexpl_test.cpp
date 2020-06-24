@@ -12,8 +12,6 @@
 #include "utils/FPUtil/FPBits.h"
 #include "utils/UnitTest/Test.h"
 
-#include <iostream>
-
 using FPBits = __llvm_libc::fputil::FPBits<long double>;
 
 TEST(FrexplTest, SpecialNumbers) {
