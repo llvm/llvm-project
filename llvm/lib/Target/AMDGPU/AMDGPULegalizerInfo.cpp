@@ -2537,7 +2537,7 @@ void AMDGPULegalizerInfo::legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
                                                   Register DstReg,
                                                   Register Num,
                                                   Register Den,
-                                                  bool IsRem) const {
+                                                  bool IsDiv) const {
   const LLT S1 = LLT::scalar(1);
   const LLT S32 = LLT::scalar(32);
 
@@ -2604,7 +2604,9 @@ void AMDGPULegalizerInfo::legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
   auto Div = B.buildSelect(S32, Tmp1, Quotient_A_One, Quotient);
 
   // Div = (Remainder_GE_Zero ? Div : Quotient_S_One)
-  if (IsRem) {
+  if (IsDiv) {
+    B.buildSelect(DstReg, Remainder_GE_Zero, Div, Quotient_S_One);
+  } else {
     Div = B.buildSelect(S32, Remainder_GE_Zero, Div, Quotient_S_One);
 
     // Calculate Rem result:
@@ -2618,19 +2620,17 @@ void AMDGPULegalizerInfo::legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
 
     // Rem = (Remainder_GE_Zero ? Rem : Remainder_A_Den)
     B.buildSelect(DstReg, Remainder_GE_Zero, Rem, Remainder_A_Den);
-  } else {
-    B.buildSelect(DstReg, Remainder_GE_Zero, Div, Quotient_S_One);
   }
 }
 
 bool AMDGPULegalizerInfo::legalizeUDIV_UREM32(MachineInstr &MI,
                                               MachineRegisterInfo &MRI,
                                               MachineIRBuilder &B) const {
-  const bool IsRem = MI.getOpcode() == AMDGPU::G_UREM;
+  const bool IsDiv = MI.getOpcode() == AMDGPU::G_UDIV;
   Register DstReg = MI.getOperand(0).getReg();
   Register Num = MI.getOperand(1).getReg();
   Register Den = MI.getOperand(2).getReg();
-  legalizeUDIV_UREM32Impl(B, DstReg, Num, Den, IsRem);
+  legalizeUDIV_UREM32Impl(B, DstReg, Num, Den, IsDiv);
   MI.eraseFromParent();
   return true;
 }
@@ -2811,7 +2811,7 @@ bool AMDGPULegalizerInfo::legalizeSDIV_SREM32(MachineInstr &MI,
                                               MachineIRBuilder &B) const {
   const LLT S32 = LLT::scalar(32);
 
-  const bool IsRem = MI.getOpcode() == AMDGPU::G_SREM;
+  const bool IsDiv = MI.getOpcode() == AMDGPU::G_SDIV;
   Register DstReg = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
@@ -2827,16 +2827,16 @@ bool AMDGPULegalizerInfo::legalizeSDIV_SREM32(MachineInstr &MI,
   RHS = B.buildXor(S32, RHS, RHSign).getReg(0);
 
   Register UDivRem = MRI.createGenericVirtualRegister(S32);
-  legalizeUDIV_UREM32Impl(B, UDivRem, LHS, RHS, IsRem);
+  legalizeUDIV_UREM32Impl(B, UDivRem, LHS, RHS, IsDiv);
 
-  if (IsRem) {
-    auto RSign = LHSign; // Remainder sign is the same as LHS
-    UDivRem = B.buildXor(S32, UDivRem, RSign).getReg(0);
-    B.buildSub(DstReg, UDivRem, RSign);
-  } else {
+  if (IsDiv) {
     auto DSign = B.buildXor(S32, LHSign, RHSign);
     UDivRem = B.buildXor(S32, UDivRem, DSign).getReg(0);
     B.buildSub(DstReg, UDivRem, DSign);
+  } else {
+    auto RSign = LHSign; // Remainder sign is the same as LHS
+    UDivRem = B.buildXor(S32, UDivRem, RSign).getReg(0);
+    B.buildSub(DstReg, UDivRem, RSign);
   }
 
   MI.eraseFromParent();
