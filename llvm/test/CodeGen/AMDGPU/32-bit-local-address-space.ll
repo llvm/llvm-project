@@ -57,8 +57,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}null_32bit_lds_ptr:
-; SI: s_cmp_lg_u32
-; SI: s_cselect_b64 vcc, 1, 0
+; SI: v_cmp_ne_u32
+; SI-NOT: v_cmp_ne_u32
 ; SI: v_cndmask_b32
 define amdgpu_kernel void @null_32bit_lds_ptr(i32 addrspace(1)* %out, i32 addrspace(3)* %lds) nounwind {
   %cmp = icmp ne i32 addrspace(3)* %lds, null

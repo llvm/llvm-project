@@ -37,9 +37,8 @@ define amdgpu_kernel void @s_arg_zext_i1_to_i64(i64 addrspace(1)* %out, i1 zeroe
 
 ; GCN-LABEL: {{^}}s_cmp_zext_i1_to_i64:
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, 0
-; GCN-DAG: s_cmp_eq_u32
-; GCN:     s_cselect_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], 1, 0
-; GCN:     v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, [[MASK]]
+; GCN-DAG: v_cmp_eq_u32
+; GCN:     v_cndmask_b32
 define amdgpu_kernel void @s_cmp_zext_i1_to_i64(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   %cmp = icmp eq i32 %a, %b
   %ext = zext i1 %cmp to i64
@@ -55,11 +54,10 @@ define amdgpu_kernel void @s_cmp_zext_i1_to_i64(i64 addrspace(1)* %out, i32 %a, 
 ; GCN: s_mov_b32 [[MASK:s[0-9]+]], 0xffff{{$}}
 ; GCN-DAG: s_and_b32 [[MASK_A:s[0-9]+]], [[A]], [[MASK]]
 ; GCN-DAG: s_and_b32 [[MASK_B:s[0-9]+]], [[B]], [[MASK]]
+; GCN: v_mov_b32_e32 [[V_B:v[0-9]+]], [[B]]
+; GCN: v_cmp_eq_u32_e32 vcc, [[MASK_A]], [[V_B]]
 
-; GCN: s_cmp_eq_u32 s{{[0-9]+}}, [[B]]
-; GCN: s_cselect_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], 1, 0
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[MASK]]
-
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
 ; GCN: buffer_store_short [[RESULT]]
 define amdgpu_kernel void @s_cmp_zext_i1_to_i16(i16 addrspace(1)* %out, [8 x i32], i16 zeroext %a, [8 x i32], i16 zeroext %b) #0 {
   %tmp0 = icmp eq i16 %a, %b

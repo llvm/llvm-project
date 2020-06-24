@@ -166,8 +166,7 @@ define amdgpu_kernel void @add_select_posk_posk_f32(i32 %c) #0 {
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 ; GCN: buffer_load_dword [[Y:v[0-9]+]]
 
-; GCN-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cselect_b64 [[VCC:.*]], 1, 0
+; GCN-DAG: v_cmp_ne_u32_e64 [[VCC:.*]], s{{[0-9]+}}, 0
 ; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], -1.0, |[[X]]|, [[VCC]]
 ; GCN: v_add_f32_e32 v{{[0-9]+}}, [[SELECT]], [[Y]]
 define amdgpu_kernel void @add_select_negk_fabs_f32(i32 %c) #0 {
@@ -186,8 +185,7 @@ define amdgpu_kernel void @add_select_negk_fabs_f32(i32 %c) #0 {
 ; GCN-DAG: buffer_load_dword [[Y:v[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0xc4800000
 
-; GCN-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cselect_b64 [[VCC:.*]], 1, 0
+; GCN-DAG: v_cmp_ne_u32_e64 [[VCC:.*]], s{{[0-9]+}}, 0
 ; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], [[K]], |[[X]]|, [[VCC]]
 ; GCN: v_add_f32_e32 v{{[0-9]+}}, [[SELECT]], [[Y]]
 define amdgpu_kernel void @add_select_negliteralk_fabs_f32(i32 %c) #0 {
@@ -222,8 +220,8 @@ define amdgpu_kernel void @add_select_fabs_posk_f32(i32 %c) #0 {
 ; GCN-LABEL: {{^}}add_select_posk_fabs_f32:
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 ; GCN: buffer_load_dword [[Y:v[0-9]+]]
-; GCN-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cselect_b64 vcc, 1, 0
+
+; GCN: v_cmp_ne_u32_e64 vcc, s{{[0-9]+}}, 0
 ; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 1.0, [[X]], vcc
 ; GCN: v_add_f32_e64 v{{[0-9]+}}, |[[SELECT]]|, [[Y]]
 define amdgpu_kernel void @add_select_posk_fabs_f32(i32 %c) #0 {
@@ -409,8 +407,7 @@ define amdgpu_kernel void @add_select_fneg_neginv2pi_f32(i32 %c) #0 {
 ; GCN-LABEL: {{^}}add_select_negk_negk_f32:
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 
-; GCN: s_cmp_eq_u32
-; GCN: s_cselect_b64
+; GCN: v_cmp_eq_u32_e64
 ; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], -1.0, -2.0, s
 ; GCN: v_add_f32_e32 v{{[0-9]+}}, [[SELECT]], [[X]]
 define amdgpu_kernel void @add_select_negk_negk_f32(i32 %c) #0 {
@@ -427,8 +424,7 @@ define amdgpu_kernel void @add_select_negk_negk_f32(i32 %c) #0 {
 ; GCN-DAG: v_mov_b32_e32 [[K1:v[0-9]+]], 0xc5800000
 ; GCN-DAG: buffer_load_dword [[X:v[0-9]+]]
 
-; GCN: s_cmp_eq_u32
-; GCN: s_cselect_b64
+; GCN: v_cmp_eq_u32_e64
 ; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[K1]], [[K0]], vcc
 ; GCN: v_add_f32_e32 v{{[0-9]+}}, [[SELECT]], [[X]]
 define amdgpu_kernel void @add_select_negliteralk_negliteralk_f32(i32 %c) #0 {
@@ -459,8 +455,7 @@ define amdgpu_kernel void @add_select_fneg_negk_negk_f32(i32 %c) #0 {
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 ; GCN: buffer_load_dword [[Y:v[0-9]+]]
 
-; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cselect_b64 vcc, 1, 0
+; GCN: v_cmp_ne_u32_e64 vcc, s{{[0-9]+}}, 0
 ; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 1.0, [[X]], vcc
 ; GCN: v_sub_f32_e32 v{{[0-9]+}}, [[Y]], [[SELECT]]
 define amdgpu_kernel void @add_select_negk_fneg_f32(i32 %c) #0 {
@@ -495,8 +490,7 @@ define amdgpu_kernel void @add_select_fneg_posk_f32(i32 %c) #0 {
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 ; GCN: buffer_load_dword [[Y:v[0-9]+]]
 
-; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cselect_b64 vcc, 1, 0
+; GCN: v_cmp_ne_u32_e64 vcc, s{{[0-9]+}}, 0
 ; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], -1.0, [[X]], vcc
 ; GCN: v_sub_f32_e32 v{{[0-9]+}}, [[Y]], [[SELECT]]
 define amdgpu_kernel void @add_select_posk_fneg_f32(i32 %c) #0 {
@@ -638,8 +632,7 @@ define amdgpu_kernel void @add_select_negfabs_neg_f32(i32 %c) #0 {
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 ; GCN: buffer_load_dword [[Y:v[0-9]+]]
 
-; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0
-; GCN: s_cselect_b64 [[VCC:.*]], 1, 0
+; GCN-DAG: v_cmp_eq_u32_e64 [[VCC:.*]], s{{[0-9]+}}, 0
 ; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], -4.0, |[[X]]|, [[VCC]]
 ; GCN: v_mul_f32_e64 v{{[0-9]+}}, -[[SELECT]], [[Y]]
 define amdgpu_kernel void @mul_select_negfabs_posk_f32(i32 %c) #0 {
@@ -658,8 +651,7 @@ define amdgpu_kernel void @mul_select_negfabs_posk_f32(i32 %c) #0 {
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 ; GCN: buffer_load_dword [[Y:v[0-9]+]]
 
-; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cselect_b64 [[VCC:.*]], 1, 0
+; GCN-DAG: v_cmp_ne_u32_e64 [[VCC:.*]], s{{[0-9]+}}, 0
 ; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], -4.0, |[[X]]|, [[VCC]]
 ; GCN: v_mul_f32_e64 v{{[0-9]+}}, -[[SELECT]], [[Y]]
 define amdgpu_kernel void @mul_select_posk_negfabs_f32(i32 %c) #0 {
@@ -696,8 +688,7 @@ define amdgpu_kernel void @mul_select_negfabs_negk_f32(i32 %c) #0 {
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 ; GCN: buffer_load_dword [[Y:v[0-9]+]]
 
-; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cselect_b64 vcc, 1, 0
+; GCN: v_cmp_ne_u32_e64 vcc
 ; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 4.0, [[X]], vcc
 ; GCN: v_mul_f32_e64 v{{[0-9]+}}, -|[[SELECT]]|, [[Y]]
 define amdgpu_kernel void @mul_select_negk_negfabs_f32(i32 %c) #0 {

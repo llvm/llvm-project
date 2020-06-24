@@ -75,8 +75,7 @@ define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f64(<4 x double> addrspace(1)
 ; uses an SGPR (implicit vcc).
 
 ; GCN-LABEL: {{^}}uint_to_fp_i1_to_f64:
-; GCN-DAG: s_cmp_eq_u32
-; GCN-DAG: s_cselect_b64 vcc
+; GCN-DAG: v_cmp_eq_u32_e64 vcc
 ; GCN-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, v{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[ZERO]]:[[SEL]]{{\]}}
