@@ -1,4 +1,12 @@
-// RUN: %clang_cc1 -std=c++2a -triple x86_64-linux-gnu -fcxx-exceptions -ast-dump %s | FileCheck -strict-whitespace %s
+// Test without serialization:
+// RUN: %clang_cc1 -std=c++2a -triple x86_64-linux-gnu -fcxx-exceptions -ast-dump %s \
+// RUN: | FileCheck -strict-whitespace %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -std=c++2a -triple x86_64-linux-gnu -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -std=c++2a -triple x86_64-linux-gnu -fcxx-exceptions -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck -strict-whitespace %s
 
 namespace n {
 void function() {}

@@ -16,6 +16,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "gmock/gmock.h"
@@ -47,13 +48,12 @@ private:
 
     ParseInputs PI;
     PI.CompileCommand = *Cmd;
-    PI.FSProvider = &FS;
+    PI.TFS = &FS;
     auto CI = buildCompilerInvocation(PI, IgnoreDiags);
     EXPECT_TRUE(static_cast<bool>(CI));
     // The diagnostic options must be set before creating a CompilerInstance.
     CI->getDiagnosticOpts().IgnoreWarnings = true;
-    auto VFS = FS.getFileSystem();
-    VFS->setCurrentWorkingDirectory(Cmd->Directory);
+    auto VFS = PI.TFS->view(Cmd->Directory);
     auto Clang = prepareCompilerInstance(
         std::move(CI), /*Preamble=*/nullptr,
         llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile),
@@ -120,7 +120,7 @@ protected:
     return Edit;
   }
 
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   std::string MainFile = testPath("main.cpp");
   std::string Subdir = testPath("sub");

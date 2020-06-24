@@ -18,7 +18,7 @@
 #include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
-#include <Psapi.h>
+#include <psapi.h>
 #include <cstdio>
 #include <fcntl.h>
 #include <io.h>

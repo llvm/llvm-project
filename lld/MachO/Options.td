@@ -599,7 +599,7 @@ def fatal_warnings : Flag<["-"], "fatal_warnings">,
      Flags<[HelpHidden]>,
      Group<grp_rare>;
 def no_eh_labels : Flag<["-"], "no_eh_labels">,
-     HelpText<"In -r mode, suppress .eh lables in the __eh_frame section">,
+     HelpText<"In -r mode, suppress .eh labels in the __eh_frame section">,
      Flags<[HelpHidden]>,
      Group<grp_rare>;
 def warn_compact_unwind : Flag<["-"], "warn_compact_unwind">,

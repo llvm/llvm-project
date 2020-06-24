@@ -599,6 +599,14 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
    "headers": ["span"],
    },
+  {"name": "__cpp_lib_math_constants",
+   "values": {
+     "c++2a": int(201907),
+   },
+   "headers": ["numbers"],
+   "depends": "defined(__cpp_concepts) && __cpp_concepts >= 201811L",
+   "internal_depends": "defined(__cpp_concepts) && __cpp_concepts >= 201811L",
+   },
 ]], key=lambda tc: tc["name"])
 
 def get_std_dialects():

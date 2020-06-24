@@ -79,12 +79,9 @@ struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
     createThunkFunction(MMI, R11LVIThunkName);
   }
   void populateThunk(MachineFunction &MF) {
-    // Grab the entry MBB and erase any other blocks. O0 codegen appears to
-    // generate two bbs for the entry block.
+    assert (MF.size() == 1);
     MachineBasicBlock *Entry = &MF.front();
     Entry->clear();
-    while (MF.size() > 1)
-      MF.erase(std::next(MF.begin()));
 
     // This code mitigates LVI by replacing each indirect call/jump with a
     // direct call/jump to a thunk that looks like:
@@ -209,12 +206,9 @@ void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
   }
 
   const TargetInstrInfo *TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
-  // Grab the entry MBB and erase any other blocks. O0 codegen appears to
-  // generate two bbs for the entry block.
+  assert (MF.size() == 1);
   MachineBasicBlock *Entry = &MF.front();
   Entry->clear();
-  while (MF.size() > 1)
-    MF.erase(std::next(MF.begin()));
 
   MachineBasicBlock *CaptureSpec =
       MF.CreateMachineBasicBlock(Entry->getBasicBlock());

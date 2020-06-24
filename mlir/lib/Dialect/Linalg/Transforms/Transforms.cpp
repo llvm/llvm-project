@@ -214,13 +214,13 @@ LogicalResult mlir::linalg::applyStagedPatterns(
   for (const auto &patterns : stage1Patterns) {
     LLVM_DEBUG(DBGS() << "Before 1st stage, iter: " << ++iteration << "\n"
                       << *op);
-    if (!applyPatternsAndFoldGreedily(op, patterns)) {
+    if (failed(applyPatternsAndFoldGreedily(op, patterns))) {
       LLVM_DEBUG(DBGS() << "Underlying first stage rewrite did not converge");
       return failure();
     }
     LLVM_DEBUG(DBGS() << "After 1st stage, iter: " << ++iteration << "\n"
                       << *op);
-    if (!applyPatternsAndFoldGreedily(op, stage2Patterns)) {
+    if (failed(applyPatternsAndFoldGreedily(op, stage2Patterns))) {
       LLVM_DEBUG(DBGS() << "Underlying 2nd stage rewrite did not converge");
       return failure();
     }

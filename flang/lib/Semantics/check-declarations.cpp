@@ -283,6 +283,11 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A dummy argument may not have the SAVE attribute"_err_en_US);
     }
+  } else if (IsFunctionResult(symbol)) {
+    if (IsSaved(symbol)) {
+      messages_.Say(
+          "A function result may not have the SAVE attribute"_err_en_US);
+    }
   }
   if (symbol.owner().IsDerivedType() &&
       (symbol.attrs().test(Attr::CONTIGUOUS) &&
@@ -458,20 +463,26 @@ void CheckHelper::CheckObjectEntity(
     }
   }
   if (symbol.owner().kind() != Scope::Kind::DerivedType &&
+      IsInitialized(symbol, true /*ignore DATA, already caught*/)) { // C808
+    if (IsAutomatic(symbol)) {
+      messages_.Say("An automatic variable must not be initialized"_err_en_US);
+    } else if (IsDummy(symbol)) {
+      messages_.Say("A dummy argument must not be initialized"_err_en_US);
+    } else if (IsFunctionResult(symbol)) {
+      messages_.Say("A function result must not be initialized"_err_en_US);
+    } else if (IsInBlankCommon(symbol)) {
+      messages_.Say(
+          "A variable in blank COMMON should not be initialized"_en_US);
+    }
+  }
+  if (symbol.owner().kind() == Scope::Kind::BlockData &&
       IsInitialized(symbol)) {
-    if (details.commonBlock()) {
-      if (details.commonBlock()->name().empty()) {
-        messages_.Say(
-            "A variable in blank COMMON should not be initialized"_en_US);
-      }
-    } else if (symbol.owner().kind() == Scope::Kind::BlockData) {
-      if (IsAllocatable(symbol)) {
-        messages_.Say(
-            "An ALLOCATABLE variable may not appear in a BLOCK DATA subprogram"_err_en_US);
-      } else {
-        messages_.Say(
-            "An initialized variable in BLOCK DATA must be in a COMMON block"_err_en_US);
-      }
+    if (IsAllocatable(symbol)) {
+      messages_.Say(
+          "An ALLOCATABLE variable may not appear in a BLOCK DATA subprogram"_err_en_US);
+    } else if (!FindCommonBlockContaining(symbol)) {
+      messages_.Say(
+          "An initialized variable in BLOCK DATA must be in a COMMON block"_err_en_US);
     }
   }
   if (const DeclTypeSpec * type{details.type()}) { // C708
@@ -596,6 +607,10 @@ void CheckHelper::CheckProcEntity(
             symbol.name()); // C1517
       }
     }
+  } else if (symbol.attrs().test(Attr::SAVE)) {
+    messages_.Say(
+        "Procedure '%s' with SAVE attribute must also have POINTER attribute"_err_en_US,
+        symbol.name());
   }
 }
 

@@ -52,6 +52,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
+#include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -1844,6 +1845,26 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
     } else {
       return make_error<StringError>(
           formatv("invalid GVN pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<StackLifetime::LivenessType>
+parseStackLifetimeOptions(StringRef Params) {
+  StackLifetime::LivenessType Result = StackLifetime::LivenessType::May;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "may") {
+      Result = StackLifetime::LivenessType::May;
+    } else if (ParamName == "must") {
+      Result = StackLifetime::LivenessType::Must;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid StackLifetime parameter '{0}' ", ParamName).str(),
           inconvertibleErrorCode());
     }
   }

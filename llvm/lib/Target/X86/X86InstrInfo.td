@@ -3166,6 +3166,9 @@ def : MnemonicAlias<"smovl", "movsl", "att">;
 def : MnemonicAlias<"smovq", "movsq", "att">;
 
 def : MnemonicAlias<"ud2a",  "ud2",  "att">;
+def : MnemonicAlias<"ud2bw", "ud1w", "att">;
+def : MnemonicAlias<"ud2bl", "ud1l", "att">;
+def : MnemonicAlias<"ud2bq", "ud1q", "att">;
 def : MnemonicAlias<"verrw", "verr", "att">;
 
 // MS recognizes 'xacquire'/'xrelease' as 'acquire'/'release'

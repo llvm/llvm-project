@@ -161,6 +161,22 @@ class 8LS_DForm_R_SI34_XT6_RA5<bits<5> opcode, dag OOL, dag IOL, string asmstr,
   let Inst{48-63} = D_RA{15-0}; // d1
 }
 
+// X-Form: [PO T IMM VRB XO TX]
+class XForm_XT6_IMM5_VB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                         string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<6> XT;
+  bits<5> VRB;
+  bits<5> IMM;
+
+  let Pattern = pattern;
+  let Inst{6-10} = XT{4-0};
+  let Inst{11-15} = IMM;
+  let Inst{16-20} = VRB;
+  let Inst{21-30} = xo;
+  let Inst{31} = XT{5};
+}
+
 multiclass MLS_DForm_R_SI34_RTA5_MEM_p<bits<6> opcode, dag OOL, dag IOL,
                                        dag PCRel_IOL, string asmstr,
                                        InstrItinClass itin> {
@@ -191,6 +207,7 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_p<bits<5> opcode, dag OOL, dag IOL,
 }
 
 def PrefixInstrs : Predicate<"PPCSubTarget->hasPrefixInstrs()">;
+def IsISA3_1 : Predicate<"PPCSubTarget->isISA3_1()">;
 
 let Predicates = [PrefixInstrs] in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
@@ -500,3 +517,51 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   def : Pat<(PPCmatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
 }
 
+let Predicates = [IsISA3_1] in {
+   def VPDEPD : VXForm_1<1485, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vpdepd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD,
+                         (int_ppc_altivec_vpdepd v2i64:$vA, v2i64:$vB))]>;
+   def VPEXTD : VXForm_1<1421, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vpextd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD,
+                         (int_ppc_altivec_vpextd v2i64:$vA, v2i64:$vB))]>;
+   def PDEPD : XForm_6<31, 156, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
+                       "pdepd $rA, $rS, $rB", IIC_IntGeneral,
+                       [(set i64:$rA, (int_ppc_pdepd i64:$rS, i64:$rB))]>;
+   def PEXTD : XForm_6<31, 188, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
+                       "pextd $rA, $rS, $rB", IIC_IntGeneral,
+                       [(set i64:$rA, (int_ppc_pextd i64:$rS, i64:$rB))]>;
+   def XXGENPCVBM :
+     XForm_XT6_IMM5_VB5<60, 916, (outs vsrc:$XT), (ins vrrc:$VRB, s5imm:$IMM),
+                        "xxgenpcvbm $XT, $VRB, $IMM", IIC_VecGeneral, []>;
+   def XXGENPCVHM :
+     XForm_XT6_IMM5_VB5<60, 917, (outs vsrc:$XT), (ins vrrc:$VRB, s5imm:$IMM),
+                        "xxgenpcvhm $XT, $VRB, $IMM", IIC_VecGeneral, []>;
+   def XXGENPCVWM :
+     XForm_XT6_IMM5_VB5<60, 948, (outs vsrc:$XT), (ins vrrc:$VRB, s5imm:$IMM),
+                        "xxgenpcvwm $XT, $VRB, $IMM", IIC_VecGeneral, []>;
+   def XXGENPCVDM :
+     XForm_XT6_IMM5_VB5<60, 949, (outs vsrc:$XT), (ins vrrc:$VRB, s5imm:$IMM),
+                        "xxgenpcvdm $XT, $VRB, $IMM", IIC_VecGeneral, []>;
+   def VCLRLB : VXForm_1<397, (outs vrrc:$vD), (ins vrrc:$vA, gprc:$rB),
+                         "vclrlb $vD, $vA, $rB", IIC_VecGeneral,
+                         [(set v16i8:$vD,
+                               (int_ppc_altivec_vclrlb v16i8:$vA, i32:$rB))]>;
+   def VCLRRB : VXForm_1<461, (outs vrrc:$vD), (ins vrrc:$vA, gprc:$rB),
+                         "vclrrb $vD, $vA, $rB", IIC_VecGeneral,
+                         [(set v16i8:$vD,
+                               (int_ppc_altivec_vclrrb v16i8:$vA, i32:$rB))]>;
+}
+
+//---------------------------- Anonymous Patterns ----------------------------//
+let Predicates = [IsISA3_1] in {
+  def : Pat<(v16i8 (int_ppc_vsx_xxgenpcvbm v16i8:$VRB, imm:$IMM)),
+            (v16i8 (COPY_TO_REGCLASS (XXGENPCVBM $VRB, imm:$IMM), VRRC))>;
+  def : Pat<(v8i16 (int_ppc_vsx_xxgenpcvhm v8i16:$VRB, imm:$IMM)),
+            (v8i16 (COPY_TO_REGCLASS (XXGENPCVHM $VRB, imm:$IMM), VRRC))>;
+  def : Pat<(v4i32 (int_ppc_vsx_xxgenpcvwm v4i32:$VRB, imm:$IMM)),
+            (v4i32 (COPY_TO_REGCLASS (XXGENPCVWM $VRB, imm:$IMM), VRRC))>;
+  def : Pat<(v2i64 (int_ppc_vsx_xxgenpcvdm v2i64:$VRB, imm:$IMM)),
+            (v2i64 (COPY_TO_REGCLASS (XXGENPCVDM $VRB, imm:$IMM), VRRC))>;
+}

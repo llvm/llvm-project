@@ -86,9 +86,11 @@ struct VSCode {
   std::vector<std::string> pre_run_commands;
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
+  std::vector<std::string> terminate_commands;
   lldb::tid_t focus_tid;
   bool sent_terminated_event;
   bool stop_at_entry;
+  bool is_attach;
   // Keep track of the last stop thread index IDs as threads won't go away
   // unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
@@ -132,6 +134,7 @@ struct VSCode {
   void RunPreRunCommands();
   void RunStopCommands();
   void RunExitCommands();
+  void RunTerminateCommands();
 
   /// Create a new SBTarget object from the given request arguments.
   /// \param[in] arguments

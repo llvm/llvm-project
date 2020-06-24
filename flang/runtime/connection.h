@@ -40,7 +40,7 @@ struct ConnectionState : public ConnectionAttributes {
   // Positions in a record file (sequential or direct, not stream)
   std::int64_t currentRecordNumber{1}; // 1 is first
   std::int64_t positionInRecord{0}; // offset in current record
-  std::int64_t furthestPositionInRecord{0}; // max(positionInRecord)
+  std::int64_t furthestPositionInRecord{0}; // max(position+bytes)
   bool nonAdvancing{false}; // ADVANCE='NO'
 
   // Set at end of non-advancing I/O data transfer

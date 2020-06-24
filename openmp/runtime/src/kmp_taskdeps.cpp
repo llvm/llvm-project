@@ -540,47 +540,40 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       ompt_enabled.ompt_callback_dependences) {
     kmp_int32 i;
 
-    new_taskdata->ompt_task_info.ndeps = ndeps + ndeps_noalias;
-    new_taskdata->ompt_task_info.deps =
-        (ompt_dependence_t *)KMP_OMPT_DEPS_ALLOC(
-            thread, (ndeps + ndeps_noalias) * sizeof(ompt_dependence_t));
+    int ompt_ndeps = ndeps + ndeps_noalias;
+    ompt_dependence_t *ompt_deps = (ompt_dependence_t *)KMP_OMPT_DEPS_ALLOC(
+        thread, (ndeps + ndeps_noalias) * sizeof(ompt_dependence_t));
 
-    KMP_ASSERT(new_taskdata->ompt_task_info.deps != NULL);
+    KMP_ASSERT(ompt_deps != NULL);
 
     for (i = 0; i < ndeps; i++) {
-      new_taskdata->ompt_task_info.deps[i].variable.ptr =
-          (void *)dep_list[i].base_addr;
+      ompt_deps[i].variable.ptr = (void *)dep_list[i].base_addr;
       if (dep_list[i].flags.in && dep_list[i].flags.out)
-        new_taskdata->ompt_task_info.deps[i].dependence_type =
-            ompt_dependence_type_inout;
+        ompt_deps[i].dependence_type = ompt_dependence_type_inout;
       else if (dep_list[i].flags.out)
-        new_taskdata->ompt_task_info.deps[i].dependence_type =
-            ompt_dependence_type_out;
+        ompt_deps[i].dependence_type = ompt_dependence_type_out;
       else if (dep_list[i].flags.in)
-        new_taskdata->ompt_task_info.deps[i].dependence_type =
-            ompt_dependence_type_in;
+        ompt_deps[i].dependence_type = ompt_dependence_type_in;
+      else if (dep_list[i].flags.mtx)
+        ompt_deps[i].dependence_type = ompt_dependence_type_mutexinoutset;
     }
     for (i = 0; i < ndeps_noalias; i++) {
-      new_taskdata->ompt_task_info.deps[ndeps + i].variable.ptr =
-          (void *)noalias_dep_list[i].base_addr;
+      ompt_deps[ndeps + i].variable.ptr = (void *)noalias_dep_list[i].base_addr;
       if (noalias_dep_list[i].flags.in && noalias_dep_list[i].flags.out)
-        new_taskdata->ompt_task_info.deps[ndeps + i].dependence_type =
-            ompt_dependence_type_inout;
+        ompt_deps[ndeps + i].dependence_type = ompt_dependence_type_inout;
       else if (noalias_dep_list[i].flags.out)
-        new_taskdata->ompt_task_info.deps[ndeps + i].dependence_type =
-            ompt_dependence_type_out;
+        ompt_deps[ndeps + i].dependence_type = ompt_dependence_type_out;
       else if (noalias_dep_list[i].flags.in)
-        new_taskdata->ompt_task_info.deps[ndeps + i].dependence_type =
-            ompt_dependence_type_in;
+        ompt_deps[ndeps + i].dependence_type = ompt_dependence_type_in;
+      else if (noalias_dep_list[i].flags.mtx)
+        ompt_deps[ndeps + i].dependence_type =
+            ompt_dependence_type_mutexinoutset;
     }
     ompt_callbacks.ompt_callback(ompt_callback_dependences)(
-        &(new_taskdata->ompt_task_info.task_data),
-        new_taskdata->ompt_task_info.deps, new_taskdata->ompt_task_info.ndeps);
+        &(new_taskdata->ompt_task_info.task_data), ompt_deps, ompt_ndeps);
     /* We can now free the allocated memory for the dependencies */
-    /* For OMPD we might want to delay the free until task_end */
-    KMP_OMPT_DEPS_FREE(thread, new_taskdata->ompt_task_info.deps);
-    new_taskdata->ompt_task_info.deps = NULL;
-    new_taskdata->ompt_task_info.ndeps = 0;
+    /* For OMPD we might want to delay the free until end of this function */
+    KMP_OMPT_DEPS_FREE(thread, ompt_deps);
   }
 #endif /* OMPT_OPTIONAL */
 #endif /* OMPT_SUPPORT */

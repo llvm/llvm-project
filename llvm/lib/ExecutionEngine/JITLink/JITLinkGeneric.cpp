@@ -267,11 +267,12 @@ Error JITLinkerBase::allocateSegments(const SegmentLayoutMap &Layout) {
     return AllocOrErr.takeError();
 
   LLVM_DEBUG({
-    dbgs() << "JIT linker got working memory:\n";
+    dbgs() << "JIT linker got memory (working -> target):\n";
     for (auto &KV : Layout) {
       auto Prot = static_cast<sys::Memory::ProtectionFlags>(KV.first);
       dbgs() << "  " << Prot << ": "
-             << (const void *)Alloc->getWorkingMemory(Prot).data() << "\n";
+             << (const void *)Alloc->getWorkingMemory(Prot).data() << " -> "
+             << formatv("{0:x16}", Alloc->getTargetMemory(Prot)) << "\n";
     }
   });
 

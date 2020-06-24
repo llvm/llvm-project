@@ -131,12 +131,6 @@ public:
 
   const llvm::opt::ArgStringList &getArguments() const { return Arguments; }
 
-  /// Print a command argument, and optionally quote it.
-  static void printArg(llvm::raw_ostream &OS, StringRef Arg, bool Quote);
-
-  /// Set whether to print the input filenames when executing.
-  void setPrintInputFilenames(bool P) { PrintInputFilenames = P; }
-
   const llvm::SmallVector<const Action *, 4> &getDependentActions() const {
     return DependentActions;
   }

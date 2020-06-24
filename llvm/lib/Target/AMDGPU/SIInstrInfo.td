@@ -2492,7 +2492,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX80)],
                    [!cast<string>(SIEncodingFamily.GFX9)],
                    [!cast<string>(SIEncodingFamily.GFX10)],
-                   [!cast<string>(SIEncodingFamily.SDWA10)]];
+                   [!cast<string>(SIEncodingFamily.SDWA10)],
+                   [!cast<string>(SIEncodingFamily.GFX10_B)]];
 }
 
 // Get equivalent SOPK instruction.

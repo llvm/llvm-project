@@ -131,8 +131,11 @@ public:
   bool CheckIntrinsicSize(TypeCategory, std::int64_t size);
 
   // Manage a set of active implied DO loops.
-  bool AddImpliedDo(parser::CharBlock, int);
+  bool AddImpliedDo(parser::CharBlock, int kind);
   void RemoveImpliedDo(parser::CharBlock);
+
+  // When the argument is the name of an active implied DO index, returns
+  // its INTEGER kind type parameter.
   std::optional<int> IsImpliedDo(parser::CharBlock) const;
 
   Expr<SubscriptInteger> AnalyzeKindSelector(common::TypeCategory category,
@@ -141,7 +144,7 @@ public:
   MaybeExpr Analyze(const parser::Expr &);
   MaybeExpr Analyze(const parser::Variable &);
   MaybeExpr Analyze(const parser::Designator &);
-  MaybeExpr Analyze(const parser::DataStmtConstant &);
+  MaybeExpr Analyze(const parser::DataStmtValue &);
 
   template <typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
     return Analyze(x.value());
@@ -241,6 +244,7 @@ private:
   MaybeExpr Analyze(const parser::BOZLiteralConstant &);
   MaybeExpr Analyze(const parser::NamedConstant &);
   MaybeExpr Analyze(const parser::NullInit &);
+  MaybeExpr Analyze(const parser::DataStmtConstant &);
   MaybeExpr Analyze(const parser::Substring &);
   MaybeExpr Analyze(const parser::ArrayElement &);
   MaybeExpr Analyze(const parser::CoindexedNamedObject &);
@@ -420,17 +424,19 @@ public:
   bool Walk(const parser::Program &);
 
   bool Pre(const parser::Expr &x) {
-    AnalyzeExpr(context_, x);
+    exprAnalyzer_.Analyze(x);
     return false;
   }
   bool Pre(const parser::Variable &x) {
-    AnalyzeExpr(context_, x);
+    exprAnalyzer_.Analyze(x);
     return false;
   }
-  bool Pre(const parser::DataStmtConstant &x) {
-    AnalyzeExpr(context_, x);
+  bool Pre(const parser::DataStmtValue &x) {
+    exprAnalyzer_.Analyze(x);
     return false;
   }
+  bool Pre(const parser::DataImpliedDo &);
+
   bool Pre(const parser::CallStmt &x) {
     AnalyzeCallStmt(context_, x);
     return false;
@@ -445,28 +451,29 @@ public:
   }
 
   template <typename A> bool Pre(const parser::Scalar<A> &x) {
-    AnalyzeExpr(context_, x);
+    exprAnalyzer_.Analyze(x);
     return false;
   }
   template <typename A> bool Pre(const parser::Constant<A> &x) {
-    AnalyzeExpr(context_, x);
+    exprAnalyzer_.Analyze(x);
     return false;
   }
   template <typename A> bool Pre(const parser::Integer<A> &x) {
-    AnalyzeExpr(context_, x);
+    exprAnalyzer_.Analyze(x);
     return false;
   }
   template <typename A> bool Pre(const parser::Logical<A> &x) {
-    AnalyzeExpr(context_, x);
+    exprAnalyzer_.Analyze(x);
     return false;
   }
   template <typename A> bool Pre(const parser::DefaultChar<A> &x) {
-    AnalyzeExpr(context_, x);
+    exprAnalyzer_.Analyze(x);
     return false;
   }
 
 private:
   SemanticsContext &context_;
+  evaluate::ExpressionAnalyzer exprAnalyzer_{context_};
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_EXPRESSION_H_

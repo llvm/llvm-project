@@ -222,6 +222,10 @@ public:
     return false;
   }
 
+  bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
+    return getTLI()->isNoopAddrSpaceCast(FromAS, ToAS);
+  }
+
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const {
     return nullptr;

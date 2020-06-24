@@ -78,12 +78,6 @@ bool SDLSearch(Compilation &C, const Driver &D, const Tool &T,
                StringRef ArchName, StringRef GpuArch, bool isBitCodeSDL,
                bool postClangLink);
 
-void AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
-                        const InputInfo &Output, const InputInfoList &Inputs,
-                        const llvm::opt::ArgList &Args,
-                        llvm::opt::ArgStringList &CmdArgs, const JobAction &JA,
-                        const Tool &T);
-
 const char *SplitDebugName(const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
 

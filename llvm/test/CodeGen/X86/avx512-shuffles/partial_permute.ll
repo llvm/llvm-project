@@ -1663,7 +1663,7 @@ define <4 x i32> @test_masked_16xi32_to_4xi32_perm_mem_mask1(<16 x i32>* %vp, <4
 ; CHECK-LABEL: test_masked_16xi32_to_4xi32_perm_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa 32(%rdi), %ymm2
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = [15,5,3,2,15,5,7,6]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = <15,5,3,2,u,u,u,u>
 ; CHECK-NEXT:    vpermi2d (%rdi), %ymm2, %ymm3
 ; CHECK-NEXT:    vptestnmd %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vmovdqa32 %xmm3, %xmm0 {%k1}
@@ -1680,7 +1680,7 @@ define <4 x i32> @test_masked_z_16xi32_to_4xi32_perm_mem_mask1(<16 x i32>* %vp, 
 ; CHECK-LABEL: test_masked_z_16xi32_to_4xi32_perm_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa 32(%rdi), %ymm2
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [15,5,3,2,15,5,7,6]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = <15,5,3,2,u,u,u,u>
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vpermi2d (%rdi), %ymm2, %ymm1 {%k1} {z}
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
@@ -3390,7 +3390,7 @@ define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mem_mask1(<16 x float>*
 ; CHECK-LABEL: test_masked_16xfloat_to_4xfloat_perm_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps 32(%rdi), %ymm2
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm3 = [0,10,6,15,4,14,6,15]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm3 = <0,10,6,15,u,u,u,u>
 ; CHECK-NEXT:    vpermi2ps (%rdi), %ymm2, %ymm3
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
@@ -3408,7 +3408,7 @@ define <4 x float> @test_masked_z_16xfloat_to_4xfloat_perm_mem_mask1(<16 x float
 ; CHECK-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps 32(%rdi), %ymm2
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,10,6,15,4,14,6,15]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = <0,10,6,15,u,u,u,u>
 ; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %xmm3, %xmm0, %k1
 ; CHECK-NEXT:    vpermi2ps (%rdi), %ymm2, %ymm1 {%k1} {z}
@@ -3426,7 +3426,7 @@ define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mem_mask2(<16 x float>*
 ; CHECK-LABEL: test_masked_16xfloat_to_4xfloat_perm_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps 32(%rdi), %ymm2
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm3 = [4,14,4,14,4,14,6,7]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm3 = <4,14,4,14,u,u,u,u>
 ; CHECK-NEXT:    vpermi2ps (%rdi), %ymm2, %ymm3
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
@@ -3444,7 +3444,7 @@ define <4 x float> @test_masked_z_16xfloat_to_4xfloat_perm_mem_mask2(<16 x float
 ; CHECK-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps 32(%rdi), %ymm2
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [4,14,4,14,4,14,6,7]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = <4,14,4,14,u,u,u,u>
 ; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %xmm3, %xmm0, %k1
 ; CHECK-NEXT:    vpermi2ps (%rdi), %ymm2, %ymm1 {%k1} {z}

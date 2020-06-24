@@ -2240,7 +2240,7 @@ that will have been done by one of the ``@llvm.call.preallocated.*`` intrinsics.
       ; initialize %b
       call void @bar(i32 42, %foo* preallocated(%foo) %b) ["preallocated"(token %t)]
 
-.. _ob_gc_live
+.. _ob_gc_live:
 
 GC Live Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -4619,7 +4619,7 @@ to the ``add`` instruction using the ``!dbg`` identifier:
     %indvar.next = add i64 %indvar, 1, !dbg !21
 
 Metadata can also be attached to a function or a global variable. Here metadata
-``!22`` is attached to the ``f1`` and ``f2 functions, and the globals ``g1``
+``!22`` is attached to the ``f1`` and ``f2`` functions, and the globals ``g1``
 and ``g2`` using the ``!dbg`` identifier:
 
 .. code-block:: llvm
@@ -6806,7 +6806,7 @@ of ``hotness`` (which can take the values ``Unknown``, ``Cold``, ``None``,
 branch frequency relative to the entry frequency, scaled down by 2^8)
 may be specified. The defaults are ``Unknown`` and ``0``, respectively.
 
-.. _stacksafety_summary:
+.. _params_summary:
 
 Params
 ^^^^^^
@@ -15131,7 +15131,17 @@ matches the element-type of the vector input.
 If the intrinsic call has the 'reassoc' or 'fast' flags set, then the
 reduction will not preserve the associativity of an equivalent scalarized
 counterpart. Otherwise the reduction will be *ordered*, thus implying that
-the operation respects the associativity of a scalarized reduction.
+the operation respects the associativity of a scalarized reduction. That is, the
+reduction begins with the start value and performs an fadd operation with consecutively
+increasing vector element indices. See the following pseudocode:
+
+::
+
+    float ordered_fadd(start_value, input_vector)
+      result = start_value
+      for i = 0 to length(input_vector)
+        result = result + input_vector[i]
+      return result
 
 
 Arguments:
@@ -15192,7 +15202,17 @@ matches the element-type of the vector input.
 If the intrinsic call has the 'reassoc' or 'fast' flags set, then the
 reduction will not preserve the associativity of an equivalent scalarized
 counterpart. Otherwise the reduction will be *ordered*, thus implying that
-the operation respects the associativity of a scalarized reduction.
+the operation respects the associativity of a scalarized reduction. That is, the
+reduction begins with the start value and performs an fmul operation with consecutively
+increasing vector element indices. See the following pseudocode:
+
+::
+
+    float ordered_fmul(start_value, input_vector)
+      result = start_value
+      for i = 0 to length(input_vector)
+        result = result * input_vector[i]
+      return result
 
 
 Arguments:
@@ -15466,56 +15486,74 @@ must have <Inner> * <OuterColumns> elements and the returned vector must have
 <OuterRows> * <OuterColumns> elements.
 
 
-'``llvm.matrix.columnwise.load.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.matrix.column.major.load.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
 ::
 
-      declare vectorty @llvm.matrix.columnwise.load.*(ptrty %Ptr, i32 %Stride, i32 <Rows>, i32 <Cols>)
+      declare vectorty @llvm.matrix.column.major.load.*(
+          ptrty %Ptr, i64 %Stride, i1 <IsVolatile>, i32 <Rows>, i32 <Cols>)
 
 Overview:
 """""""""
 
-The '``llvm.matrix.columnwise.load.*``' intrinsic loads a matrix with <Rows>
+The '``llvm.matrix.column.major.load.*``' intrinsic loads a matrix with <Rows>
 rows and <Cols> columns, using a stride of %Stride between columns. For two
 consecutive columns A and B, %Stride refers to the distance (the number of
 elements) between the start of column A and the start of column B. The result
 matrix is returned embedded in the result vector. This allows for convenient
-loading of sub matrixes.
+loading of sub matrixes.  If <IsVolatile> is true, the intrinsic is considered
+a :ref:`volatile memory access <volatile>`.
+
+If the %Ptr argument is known to be aligned to some boundary, this can be
+specified as an attribute on the argument.
 
 Arguments:
 """"""""""
 
-The <Rows> and <Cols> arguments must be constant integers. The returned vector
-must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
+The <IsVolatile>, <Rows> and <Cols> arguments must be constant integers. The
+returned vector must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
 
-'``llvm.matrix.columnwise.store.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The :ref:`align <attr_align>` parameter attribute can be provided
+for the %Ptr arguments.
+
+
+'``llvm.matrix.column.major.store.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
 ::
 
-      declare void @llvm.matrix.columnwise.store.*(vectorty %In, ptrty %Ptr, i32 %Stride, i32 <Rows>, i32 <Cols>)
+      declare void @llvm.matrix.column.major.store.*(
+          vectorty %In, ptrty %Ptr, i64 %Stride, i1 <IsVolatile>, i32 <Rows>, i32 <Cols>)
 
 Overview:
 """""""""
 
-The '``llvm.matrix.columnwise.store.*``' intrinsic stores the matrix with
+The '``llvm.matrix.column.major.store.*``' intrinsic stores the matrix with
 <Rows> rows and <Cols> columns embedded in %In, using a stride of %Stride
 between columns. For two consecutive columns A and B, %Stride refers to the
 distance (the number of elements) between the start of column A and the start
-of column B.
+of column B. If <IsVolatile> is true, the intrinsic is considered a
+:ref:`volatile memory access <volatile>`.
+
+If the %Ptr argument is known to be aligned to some boundary, this can be
+specified as an attribute on the argument.
 
 Arguments:
 """"""""""
 
-The <Rows> and <Cols> arguments must be constant integers. The vector argument
-%In must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
+The <IsVolatile>, <Rows>, <Cols> arguments must be constant integers. The
+vector argument %In must have <Rows> * <Cols> elements. %Stride must be >= <Rows>.
+
+The :ref:`align <attr_align>` parameter attribute can be provided
+for the %Ptr arguments.
+
 
 Half Precision Floating-Point Intrinsics
 ----------------------------------------
@@ -19019,6 +19057,40 @@ Arguments:
 
 The ``llvm.expect`` intrinsic takes two arguments. The first argument is
 a value. The second argument is an expected value.
+
+Semantics:
+""""""""""
+
+This intrinsic is lowered to the ``val``.
+
+'``llvm.expect.with.probability``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This intrinsic is similar to ``llvm.expect``. This is an overloaded intrinsic.
+You can use ``llvm.expect.with.probability`` on any integer bit width.
+
+::
+
+      declare i1 @llvm.expect.with.probability.i1(i1 <val>, i1 <expected_val>, double <prob>)
+      declare i32 @llvm.expect.with.probability.i32(i32 <val>, i32 <expected_val>, double <prob>)
+      declare i64 @llvm.expect.with.probability.i64(i64 <val>, i64 <expected_val>, double <prob>)
+
+Overview:
+"""""""""
+
+The ``llvm.expect.with.probability`` intrinsic provides information about
+expected value of ``val`` with probability(or confidence) ``prob``, which can
+be used by optimizers.
+
+Arguments:
+""""""""""
+
+The ``llvm.expect.with.probability`` intrinsic takes three arguments. The first
+argument is a value. The second argument is an expected value. The third
+argument is a probability.
 
 Semantics:
 """"""""""

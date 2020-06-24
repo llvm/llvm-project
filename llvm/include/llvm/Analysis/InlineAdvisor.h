@@ -203,6 +203,11 @@ public:
   Result run(Module &M, ModuleAnalysisManager &MAM) { return Result(M, MAM); }
 };
 
+#ifdef LLVM_HAVE_TF_AOT
+std::unique_ptr<InlineAdvisor>
+getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM);
+#endif
+
 // Default (manual policy) decision making helper APIs. Shared with the legacy
 // pass manager inliner.
 
@@ -217,7 +222,12 @@ shouldInline(CallBase &CB, function_ref<InlineCost(CallBase &CB)> GetInlineCost,
 /// Emit ORE message.
 void emitInlinedInto(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
                      const BasicBlock *Block, const Function &Callee,
-                     const Function &Caller, const InlineCost &IC);
+                     const Function &Caller, const InlineCost &IC,
+                     bool ForProfileContext = false,
+                     const char *PassName = nullptr);
+
+/// Add location info to ORE message.
+void addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc);
 
 /// Set the inline-remark attribute.
 void setInlineRemark(CallBase &CB, StringRef Message);

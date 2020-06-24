@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
@@ -55,6 +56,8 @@ class StackLifetime {
   };
 
 public:
+  class LifetimeAnnotationWriter;
+
   /// This class represents a set of interesting instructions where an alloca is
   /// live.
   class LiveRange {
@@ -71,20 +74,28 @@ public:
     }
 
     void join(const LiveRange &Other) { Bits |= Other.Bits; }
+
+    bool test(unsigned Idx) const { return Bits.test(Idx); }
+  };
+
+  // Controls what is "alive" if control flow may reach the instruction
+  // with a different liveness of the alloca.
+  enum class LivenessType {
+    May,  // May be alive on some path.
+    Must, // Must be alive on every path.
   };
 
 private:
   const Function &F;
+  LivenessType Type;
 
   /// Maps active slots (per bit) for each basic block.
   using LivenessMap = DenseMap<const BasicBlock *, BlockLifetimeInfo>;
   LivenessMap BlockLiveness;
 
-  /// Number of interesting instructions.
-  int NumInst = -1;
-
-  /// Numeric ids for interesting instructions.
-  DenseMap<const IntrinsicInst *, unsigned> InstructionNumbering;
+  /// Interesting instructions. Instructions of the same block are adjustent
+  /// preserve in-block order.
+  SmallVector<const IntrinsicInst *, 64> Instructions;
 
   /// A range [Start, End) of instruction ids for each basic block.
   /// Instructions inside each BB have monotonic and consecutive ids.
@@ -119,22 +130,38 @@ private:
   void calculateLiveIntervals();
 
 public:
-  StackLifetime(const Function &F, ArrayRef<const AllocaInst *> Allocas);
+  StackLifetime(const Function &F, ArrayRef<const AllocaInst *> Allocas,
+                LivenessType Type);
 
   void run();
-  std::vector<const IntrinsicInst *> getMarkers() const;
+
+  iterator_range<
+      filter_iterator<ArrayRef<const IntrinsicInst *>::const_iterator,
+                      std::function<bool(const IntrinsicInst *)>>>
+  getMarkers() const {
+    std::function<bool(const IntrinsicInst *)> NotNull(
+        [](const IntrinsicInst *I) -> bool { return I; });
+    return make_filter_range(Instructions, NotNull);
+  }
 
   /// Returns a set of "interesting" instructions where the given alloca is
   /// live. Not all instructions in a function are interesting: we pick a set
   /// that is large enough for LiveRange::Overlaps to be correct.
   const LiveRange &getLiveRange(const AllocaInst *AI) const;
 
+  /// Returns true if instruction is reachable from entry.
+  bool isReachable(const Instruction *I) const;
+
+  /// Returns true if the alloca is alive after the instruction.
+  bool isAliveAfter(const AllocaInst *AI, const Instruction *I) const;
+
   /// Returns a live range that represents an alloca that is live throughout the
   /// entire function.
   LiveRange getFullLiveRange() const {
-    assert(NumInst >= 0);
-    return LiveRange(NumInst, true);
+    return LiveRange(Instructions.size(), true);
   }
+
+  void print(raw_ostream &O);
 };
 
 static inline raw_ostream &operator<<(raw_ostream &OS, const BitVector &V) {
@@ -157,6 +184,18 @@ inline raw_ostream &operator<<(raw_ostream &OS,
                                const StackLifetime::LiveRange &R) {
   return OS << R.Bits;
 }
+
+/// Printer pass for testing.
+class StackLifetimePrinterPass
+    : public PassInfoMixin<StackLifetimePrinterPass> {
+  StackLifetime::LivenessType Type;
+  raw_ostream &OS;
+
+public:
+  StackLifetimePrinterPass(raw_ostream &OS, StackLifetime::LivenessType Type)
+      : Type(Type), OS(OS) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
 } // end namespace llvm
 

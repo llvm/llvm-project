@@ -141,6 +141,7 @@ private:
   mutable std::unique_ptr<Tool> Flang;
   mutable std::unique_ptr<Tool> Assemble;
   mutable std::unique_ptr<Tool> Link;
+  mutable std::unique_ptr<Tool> StaticLibTool;
   mutable std::unique_ptr<Tool> IfsMerge;
   mutable std::unique_ptr<Tool> OffloadBundler;
   mutable std::unique_ptr<Tool> OffloadWrapper;
@@ -150,6 +151,7 @@ private:
   //   Tool *getFlangFrontend() const;
   Tool *getAssemble() const;
   Tool *getLink() const;
+  Tool *getStaticLibTool() const;
   Tool *getIfsMerge() const;
   Tool *getClangAs() const;
   Tool *getOffloadBundler() const;
@@ -177,6 +179,7 @@ protected:
 
   virtual Tool *buildAssembler() const;
   virtual Tool *buildLinker() const;
+  virtual Tool *buildStaticLibTool() const;
   virtual Tool *getTool(Action::ActionClass AC) const;
 
   /// \name Utilities for implementing subclasses.
@@ -328,6 +331,9 @@ public:
   /// Returns the linker path, respecting the -fuse-ld= argument to determine
   /// the linker suffix or name.
   std::string GetLinkerPath() const;
+
+  /// Returns the linker path for emitting a static library.
+  std::string GetStaticLibToolPath() const;
 
   /// Dispatch to the specific toolchain for verbose printing.
   ///

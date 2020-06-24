@@ -36,14 +36,18 @@ SetVector<StringRef> DWARFYAML::Data::getUsedSectionNames() const {
     SecNames.insert("debug_addr");
   if (!AbbrevDecls.empty())
     SecNames.insert("debug_abbrev");
+  if (!CompileUnits.empty())
+    SecNames.insert("debug_info");
+  if (PubNames)
+    SecNames.insert("debug_pubnames");
+  if (PubTypes)
+    SecNames.insert("debug_pubtypes");
   return SecNames;
 }
 
 namespace yaml {
 
 void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
-  auto oldContext = IO.getContext();
-  IO.setContext(&DWARF);
   IO.mapOptional("debug_str", DWARF.DebugStrings);
   IO.mapOptional("debug_abbrev", DWARF.AbbrevDecls);
   if (!DWARF.ARanges.empty() || !IO.outputting())
@@ -57,7 +61,6 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   IO.mapOptional("debug_info", DWARF.CompileUnits);
   IO.mapOptional("debug_line", DWARF.DebugLines);
   IO.mapOptional("debug_addr", DWARF.DebugAddr);
-  IO.setContext(&oldContext);
 }
 
 void MappingTraits<DWARFYAML::Abbrev>::mapping(IO &IO,

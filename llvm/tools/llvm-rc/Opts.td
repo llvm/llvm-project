@@ -12,7 +12,7 @@ def DEFINE : Separate<[ "/", "-" ], "D">,
 def UNDEF : Separate<[ "/", "-" ], "U">,
             HelpText<"Undefine a symbol for the C preprocessor.">;
 
-def LANG_ID : Separate<[ "/", "-" ], "L">,
+def LANG_ID : JoinedOrSeparate<[ "/", "-" ], "L">,
               HelpText<"Set the default language identifier.">;
 def LANG_NAME : Separate<[ "/", "-" ], "LN">,
                 HelpText<"Set the default language name.">;

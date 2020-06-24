@@ -1062,7 +1062,8 @@ std::string Intrinsic::mangleName(std::string Name, ClassKind LocalCK) const {
   std::string S = Name;
 
   if (Name == "vcvt_f16_f32" || Name == "vcvt_f32_f16" ||
-      Name == "vcvt_f32_f64" || Name == "vcvt_f64_f32")
+      Name == "vcvt_f32_f64" || Name == "vcvt_f64_f32" ||
+      Name == "vcvt_f32_bf16")
     return Name;
 
   if (!typeCode.empty()) {
@@ -2311,9 +2312,14 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#ifndef __ARM_NEON_H\n";
   OS << "#define __ARM_NEON_H\n\n";
 
+  OS << "#ifndef __ARM_FP\n";
+  OS << "#error \"NEON intrinsics not available with the soft-float ABI. "
+        "Please use -mfloat-abi=softfp or -mfloat-abi=hard\"\n";
+  OS << "#else\n\n";
+
   OS << "#if !defined(__ARM_NEON)\n";
   OS << "#error \"NEON support not enabled\"\n";
-  OS << "#endif\n\n";
+  OS << "#else\n\n";
 
   OS << "#include <stdint.h>\n\n";
 
@@ -2403,6 +2409,8 @@ void NeonEmitter::run(raw_ostream &OS) {
 
   OS << "\n";
   OS << "#undef __ai\n\n";
+  OS << "#endif /* if !defined(__ARM_NEON) */\n";
+  OS << "#endif /* ifndef __ARM_FP */\n";
   OS << "#endif /* __ARM_NEON_H */\n";
 }
 

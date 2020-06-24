@@ -1,4 +1,11 @@
+// Test without serialization:
 // RUN: %clang_cc1 -fsyntax-only %s -ast-dump -std=c++17 | FileCheck %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -std=c++17 -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -std=c++17 -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s
 
 namespace PR46111 {
 template <typename>

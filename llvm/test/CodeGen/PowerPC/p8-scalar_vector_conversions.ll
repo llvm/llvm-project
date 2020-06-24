@@ -21,8 +21,8 @@ entry:
 ; CHECK: sldi r3, r3, 56
 ; CHECK: mtvsrd v2, r3
 ; CHECK-LE-LABEL: buildc
-; CHECK-LE: mtfprd f0, r3
-; CHECK-LE: xxswapd v2, vs0
+; CHECK-LE: mtvsrd v2, r3
+; CHECK-LE: vspltb v2, v2, 7
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -35,8 +35,8 @@ entry:
 ; CHECK: sldi r3, r3, 48
 ; CHECK: mtvsrd v2, r3
 ; CHECK-LE-LABEL: builds
-; CHECK-LE: mtfprd f0, r3
-; CHECK-LE: xxswapd v2, vs0
+; CHECK-LE: mtvsrd v2, r3
+; CHECK-LE: vsplth v2, v2, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone

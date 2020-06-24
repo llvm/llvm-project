@@ -9581,7 +9581,7 @@ void ASTReader::diagnoseOdrViolations() {
 
   // Used with err_module_odr_violation_mismatch_decl and
   // note_module_odr_violation_mismatch_decl
-  // This list should be the same Decl's as in ODRHash::isWhiteListedDecl
+  // This list should be the same Decl's as in ODRHash::isDeclToBeProcessed
   enum ODRMismatchDecl {
     EndOfClass,
     PublicSpecifer,
@@ -9924,7 +9924,7 @@ void ASTReader::diagnoseOdrViolations() {
                                                  RecordDecl *Record,
                                                  const DeclContext *DC) {
     for (auto *D : Record->decls()) {
-      if (!ODRHash::isWhitelistedDecl(D, DC))
+      if (!ODRHash::isDeclToBeProcessed(D, DC))
         continue;
       Hashes.emplace_back(D, ComputeSubDeclODRHash(D));
     }
@@ -11410,7 +11410,7 @@ void ASTReader::diagnoseOdrViolations() {
       for (auto *D : Enum->decls()) {
         // Due to decl merging, the first EnumDecl is the parent of
         // Decls in both records.
-        if (!ODRHash::isWhitelistedDecl(D, FirstEnum))
+        if (!ODRHash::isDeclToBeProcessed(D, FirstEnum))
           continue;
         assert(isa<EnumConstantDecl>(D) && "Unexpected Decl kind");
         Hashes.emplace_back(cast<EnumConstantDecl>(D),

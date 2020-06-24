@@ -73,7 +73,7 @@ void bar(int x) {
   // THRESHOLD-NOT: hotness
   // NO_PGO: '-fdiagnostics-show-hotness' requires profile-guided optimization information
   // NO_PGO: '-fdiagnostics-hotness-threshold=' requires profile-guided optimization information
-  // expected-remark@+1 {{foo inlined into bar with (cost=always): always inline attribute (hotness:}}
+  // expected-remark@+1 {{foo inlined into bar with (cost=always): always inline attribute at callsite bar:8 (hotness:}}
   sum += foo(x, x - 2);
 }
 

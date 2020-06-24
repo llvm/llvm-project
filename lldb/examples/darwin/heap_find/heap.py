@@ -226,7 +226,7 @@ def get_member_types_for_offset(value_type, offset, member_list):
 def append_regex_callback(option, opt, value, parser):
     try:
         ivar_regex = re.compile(value)
-        parser.values.ivar_regex_blacklist.append(ivar_regex)
+        parser.values.ivar_regex_exclusions.append(ivar_regex)
     except:
         print('error: an exception was thrown when compiling the ivar regular expression for "%s"' % value)
 
@@ -287,7 +287,7 @@ def add_common_options(parser):
         type='string',
         action='callback',
         callback=append_regex_callback,
-        dest='ivar_regex_blacklist',
+        dest='ivar_regex_exclusions',
         default=[],
         help='specify one or more regular expressions used to backlist any matches that are in ivars')
     parser.add_option(
@@ -773,8 +773,8 @@ def display_match_results(
                                                 member_path += '.'
                                             member_path += member_name
                                     if member_path:
-                                        if options.ivar_regex_blacklist:
-                                            for ivar_regex in options.ivar_regex_blacklist:
+                                        if options.ivar_regex_exclusions:
+                                            for ivar_regex in options.ivar_regex_exclusions:
                                                 if ivar_regex.match(
                                                         member_path):
                                                     print_entry = False

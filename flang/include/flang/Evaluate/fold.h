@@ -10,7 +10,7 @@
 #define FORTRAN_EVALUATE_FOLD_H_
 
 // Implements expression tree rewriting, particularly constant expression
-// evaluation.
+// and designator reference evaluation.
 
 #include "common.h"
 #include "constant.h"

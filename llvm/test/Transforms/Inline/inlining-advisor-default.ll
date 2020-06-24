@@ -1,6 +1,6 @@
 ; Check that, in the absence of dependencies, we emit an error message when
 ; trying to use ML-driven inlining.
-;
+; REQUIRES: !have_tf_aot
 ; RUN: not opt -passes=scc-oz-module-inliner -enable-ml-inliner=development -S < %s 2>&1 | FileCheck %s
 ; RUN: not opt -passes=scc-oz-module-inliner -enable-ml-inliner=release -S < %s 2>&1 | FileCheck %s
 

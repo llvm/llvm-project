@@ -136,6 +136,37 @@ define i32 @test8() {
 
 }
 
+; Test for byval handling.
+%struct.x = type { i32, i32, i32, i32 }
+define void @test9(%struct.x* byval  %a) nounwind  {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:    ret void
+;
+  %tmp2 = getelementptr %struct.x, %struct.x* %a, i32 0, i32 0
+  store i32 1, i32* %tmp2, align 4
+  ret void
+}
+
+; Test for inalloca handling.
+define void @test9_2(%struct.x* inalloca  %a) nounwind  {
+; CHECK-LABEL: @test9_2(
+; CHECK-NEXT:    ret void
+;
+  %tmp2 = getelementptr %struct.x, %struct.x* %a, i32 0, i32 0
+  store i32 1, i32* %tmp2, align 4
+  ret void
+}
+
+; Test for preallocated handling.
+define void @test9_3(%struct.x* preallocated(%struct.x)  %a) nounwind  {
+; CHECK-LABEL: @test9_3(
+; CHECK-NEXT:    ret void
+;
+  %tmp2 = getelementptr %struct.x, %struct.x* %a, i32 0, i32 0
+  store i32 1, i32* %tmp2, align 4
+  ret void
+}
+
 ; va_arg has fuzzy dependence, the store shouldn't be zapped.
 define double @test10(i8* %X) {
 ; CHECK-LABEL: @test10(
@@ -194,6 +225,17 @@ define i32 addrspace(1)* @test13_addrspacecast() {
 declare noalias i8* @malloc(i32)
 declare noalias i8* @calloc(i32, i32)
 
+define void @test14(i32* %Q) {
+; CHECK-LABEL: @test14(
+; CHECK-NEXT:    ret void
+;
+  %P = alloca i32
+  %DEAD = load i32, i32* %Q
+  store i32 %DEAD, i32* %P
+  ret void
+
+}
+
 ; The store here is not dead because the byval call reads it.
 declare void @test19f({i32}* byval align 4 %P)
 
@@ -211,6 +253,35 @@ bb:
   call void @test19f({i32}* byval align 4 %arg5)
   ret void
 
+}
+
+define void @test20() {
+; CHECK-LABEL: @test20(
+; CHECK-NEXT:    ret void
+;
+  %m = call i8* @malloc(i32 24)
+  store i8 0, i8* %m
+  ret void
+}
+
+define void @test21() {
+; CHECK-LABEL: @test21(
+; CHECK-NEXT:    ret void
+;
+  %m = call i8* @calloc(i32 9, i32 7)
+  store i8 0, i8* %m
+  ret void
+}
+
+define void @test22(i1 %i, i32 %k, i32 %m) nounwind {
+; CHECK-LABEL: @test22(
+; CHECK-NEXT:    ret void
+;
+  %k.addr = alloca i32
+  %m.addr = alloca i32
+  %k.addr.m.addr = select i1 %i, i32* %k.addr, i32* %m.addr
+  store i32 0, i32* %k.addr.m.addr, align 4
+  ret void
 }
 
 ; PR13547
@@ -608,5 +679,58 @@ entry:
   %P2 = bitcast i32* %P to i8*
   store atomic i32 2, i32* %Q unordered, align 4
   store atomic i8 3, i8* %P2 unordered, align 4
+  ret void
+}
+
+; Some tests where volatile may block removing a store.
+
+; Here we can remove the first non-volatile store. We cannot remove the
+; volatile store.
+define void @test44_volatile(i32* %P) {
+; CHECK-LABEL: @test44_volatile(
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 1, i32* %P, align 4
+  store volatile i32 2, i32* %P, align 4
+  store i32 3, i32* %P, align 4
+  ret void
+}
+
+define void @test45_volatile(i32* %P) {
+; CHECK-LABEL: @test45_volatile(
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 1, i32* %P, align 4
+  store volatile i32 2, i32* %P, align 4
+  store volatile i32 3, i32* %P, align 4
+  ret void
+}
+
+define void @test46_volatile(i32* %P) {
+; CHECK-LABEL: @test46_volatile(
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store volatile i32 2, i32* %P, align 4
+  store i32 1, i32* %P, align 4
+  store volatile i32 3, i32* %P, align 4
+  ret void
+}
+
+define void @test47_volatile(i32* %P) {
+; CHECK-LABEL: @test47_volatile(
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store volatile i32 2, i32* %P, align 4
+  store volatile i32 3, i32* %P, align 4
   ret void
 }

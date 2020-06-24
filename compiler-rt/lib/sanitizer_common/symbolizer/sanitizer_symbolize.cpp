@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdio.h>
+
 #include <string>
 
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
@@ -32,17 +33,25 @@ extern "C" {
 typedef uint64_t u64;
 
 bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
-                                char *Buffer, int MaxLength) {
+                                char *Buffer, int MaxLength,
+                                bool SymbolizeInlineFrames) {
   std::string Result;
   {
     llvm::raw_string_ostream OS(Result);
     llvm::symbolize::DIPrinter Printer(OS);
     // TODO: it is neccessary to set proper SectionIndex here.
     // object::SectionedAddress::UndefSection works for only absolute addresses.
-    auto ResOrErr = getDefaultSymbolizer()->symbolizeInlinedCode(
-        ModuleName,
-        {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-    Printer << (ResOrErr ? ResOrErr.get() : llvm::DIInliningInfo());
+    if (SymbolizeInlineFrames) {
+      auto ResOrErr = getDefaultSymbolizer()->symbolizeInlinedCode(
+          ModuleName,
+          {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
+      Printer << (ResOrErr ? ResOrErr.get() : llvm::DIInliningInfo());
+    } else {
+      auto ResOrErr = getDefaultSymbolizer()->symbolizeCode(
+          ModuleName,
+          {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
+      Printer << (ResOrErr ? ResOrErr.get() : llvm::DILineInfo());
+    }
   }
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
                                         Result.c_str()) < MaxLength;

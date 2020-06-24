@@ -2943,6 +2943,14 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
       bool StaticChunkedOne = RT.isStaticChunked(ScheduleKind.Schedule,
           /* Chunked */ Chunk != nullptr) && HasChunkSizeOne &&
           isOpenMPLoopBoundSharingDirective(S.getDirectiveKind());
+      bool IsMonotonic =
+          Ordered ||
+          ((ScheduleKind.Schedule == OMPC_SCHEDULE_static ||
+            ScheduleKind.Schedule == OMPC_SCHEDULE_unknown) &&
+           !(ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ||
+             ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic)) ||
+          ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_monotonic ||
+          ScheduleKind.M2 == OMPC_SCHEDULE_MODIFIER_monotonic;
       if ((RT.isStaticNonchunked(ScheduleKind.Schedule,
                                  /* Chunked */ Chunk != nullptr) ||
            StaticChunkedOne) &&
@@ -2951,9 +2959,9 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
             getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
         emitCommonSimdLoop(
             *this, S,
-            [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+            [&S, IsMonotonic](CodeGenFunction &CGF, PrePostActionTy &) {
               if (isOpenMPSimdDirective(S.getDirectiveKind())) {
-                CGF.EmitOMPSimdInit(S, /*IsMonotonic=*/true);
+                CGF.EmitOMPSimdInit(S, IsMonotonic);
               } else if (const auto *C = S.getSingleClause<OMPOrderClause>()) {
                 if (C->getKind() == OMPC_ORDER_concurrent)
                   CGF.LoopStack.setParallel(/*Enable=*/true);
@@ -3010,11 +3018,6 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
         };
         OMPCancelStack.emitExit(*this, S.getDirectiveKind(), CodeGen);
       } else {
-        const bool IsMonotonic =
-            Ordered || ScheduleKind.Schedule == OMPC_SCHEDULE_static ||
-            ScheduleKind.Schedule == OMPC_SCHEDULE_unknown ||
-            ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_monotonic ||
-            ScheduleKind.M2 == OMPC_SCHEDULE_MODIFIER_monotonic;
         // Emit the outer loop, which requests its work chunk [LB..UB] from
         // runtime and runs the inner loop to process it.
         const OMPLoopArguments LoopArguments(
@@ -3263,41 +3266,53 @@ static void emitScanBasedDirective(
   SecondGen(CGF);
 }
 
+static bool emitWorksharingDirective(CodeGenFunction &CGF,
+                                     const OMPLoopDirective &S,
+                                     bool HasCancel) {
+  bool HasLastprivates;
+  if (llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
+                   [](const OMPReductionClause *C) {
+                     return C->getModifier() == OMPC_REDUCTION_inscan;
+                   })) {
+    const auto &&NumIteratorsGen = [&S](CodeGenFunction &CGF) {
+      CodeGenFunction::OMPLocalDeclMapRAII Scope(CGF);
+      OMPLoopScope LoopScope(CGF, S);
+      return CGF.EmitScalarExpr(S.getNumIterations());
+    };
+    const auto &&FirstGen = [&S, HasCancel](CodeGenFunction &CGF) {
+      CodeGenFunction::OMPCancelStackRAII CancelRegion(
+          CGF, S.getDirectiveKind(), HasCancel);
+      (void)CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
+                                       emitForLoopBounds,
+                                       emitDispatchForLoopBounds);
+      // Emit an implicit barrier at the end.
+      CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(),
+                                                 OMPD_for);
+    };
+    const auto &&SecondGen = [&S, HasCancel,
+                              &HasLastprivates](CodeGenFunction &CGF) {
+      CodeGenFunction::OMPCancelStackRAII CancelRegion(
+          CGF, S.getDirectiveKind(), HasCancel);
+      HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
+                                                   emitForLoopBounds,
+                                                   emitDispatchForLoopBounds);
+    };
+    emitScanBasedDirective(CGF, S, NumIteratorsGen, FirstGen, SecondGen);
+  } else {
+    CodeGenFunction::OMPCancelStackRAII CancelRegion(CGF, S.getDirectiveKind(),
+                                                     HasCancel);
+    HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
+                                                 emitForLoopBounds,
+                                                 emitDispatchForLoopBounds);
+  }
+  return HasLastprivates;
+}
+
 void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
   bool HasLastprivates = false;
   auto &&CodeGen = [&S, &HasLastprivates](CodeGenFunction &CGF,
                                           PrePostActionTy &) {
-    if (llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
-                     [](const OMPReductionClause *C) {
-                       return C->getModifier() == OMPC_REDUCTION_inscan;
-                     })) {
-      const auto &&NumIteratorsGen = [&S](CodeGenFunction &CGF) {
-        OMPLocalDeclMapRAII Scope(CGF);
-        OMPLoopScope LoopScope(CGF, S);
-        return CGF.EmitScalarExpr(S.getNumIterations());
-      };
-      const auto &&FirstGen = [&S](CodeGenFunction &CGF) {
-        OMPCancelStackRAII CancelRegion(CGF, OMPD_for, S.hasCancel());
-        (void)CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                         emitForLoopBounds,
-                                         emitDispatchForLoopBounds);
-        // Emit an implicit barrier at the end.
-        CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(),
-                                                   OMPD_for);
-      };
-      const auto &&SecondGen = [&S, &HasLastprivates](CodeGenFunction &CGF) {
-        OMPCancelStackRAII CancelRegion(CGF, OMPD_for, S.hasCancel());
-        HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                                     emitForLoopBounds,
-                                                     emitDispatchForLoopBounds);
-      };
-      emitScanBasedDirective(CGF, S, NumIteratorsGen, FirstGen, SecondGen);
-    } else {
-      OMPCancelStackRAII CancelRegion(CGF, OMPD_for, S.hasCancel());
-      HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                                   emitForLoopBounds,
-                                                   emitDispatchForLoopBounds);
-    }
+    HasLastprivates = emitWorksharingDirective(CGF, S, S.hasCancel());
   };
   {
     auto LPCRegion =
@@ -3318,34 +3333,7 @@ void CodeGenFunction::EmitOMPForSimdDirective(const OMPForSimdDirective &S) {
   bool HasLastprivates = false;
   auto &&CodeGen = [&S, &HasLastprivates](CodeGenFunction &CGF,
                                           PrePostActionTy &) {
-    if (llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
-                     [](const OMPReductionClause *C) {
-                       return C->getModifier() == OMPC_REDUCTION_inscan;
-                     })) {
-      const auto &&NumIteratorsGen = [&S](CodeGenFunction &CGF) {
-        OMPLocalDeclMapRAII Scope(CGF);
-        OMPLoopScope LoopScope(CGF, S);
-        return CGF.EmitScalarExpr(S.getNumIterations());
-      };
-      const auto &&FirstGen = [&S](CodeGenFunction &CGF) {
-        (void)CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                         emitForLoopBounds,
-                                         emitDispatchForLoopBounds);
-        // Emit an implicit barrier at the end.
-        CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(),
-                                                   OMPD_for);
-      };
-      const auto &&SecondGen = [&S, &HasLastprivates](CodeGenFunction &CGF) {
-        HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                                     emitForLoopBounds,
-                                                     emitDispatchForLoopBounds);
-      };
-      emitScanBasedDirective(CGF, S, NumIteratorsGen, FirstGen, SecondGen);
-    } else {
-      HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                                   emitForLoopBounds,
-                                                   emitDispatchForLoopBounds);
-    }
+    HasLastprivates = emitWorksharingDirective(CGF, S, /*HasCancel=*/false);
   };
   {
     auto LPCRegion =
@@ -3681,9 +3669,7 @@ void CodeGenFunction::EmitOMPParallelForDirective(
   // directives: 'parallel' with 'for' directive.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
-    OMPCancelStackRAII CancelRegion(CGF, OMPD_parallel_for, S.hasCancel());
-    CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(), emitForLoopBounds,
-                               emitDispatchForLoopBounds);
+    (void)emitWorksharingDirective(CGF, S, S.hasCancel());
   };
   {
     auto LPCRegion =
@@ -3701,13 +3687,12 @@ void CodeGenFunction::EmitOMPParallelForSimdDirective(
   // directives: 'parallel' with 'for' directive.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
-    CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(), emitForLoopBounds,
-                               emitDispatchForLoopBounds);
+    (void)emitWorksharingDirective(CGF, S, /*HasCancel=*/false);
   };
   {
     auto LPCRegion =
         CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
-    emitCommonOMPParallelDirective(*this, S, OMPD_simd, CodeGen,
+    emitCommonOMPParallelDirective(*this, S, OMPD_for_simd, CodeGen,
                                    emitEmptyBoundParameters);
   }
   // Check for outer lastprivate conditional update.

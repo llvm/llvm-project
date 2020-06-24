@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -pedantic -std=c++1z -emit-pch %s -o %t
 // RUN: %clang_cc1 -pedantic -std=c++1z -include-pch %t -verify %s
 
+// RUN: %clang_cc1 -pedantic -std=c++1z -emit-pch -fpch-instantiate-templates %s -o %t
+// RUN: %clang_cc1 -pedantic -std=c++1z -include-pch %t -verify %s
+
 #ifndef HEADER
 #define HEADER
 
@@ -25,10 +28,10 @@ void test() {
   a.g();
   a.g(0);
   a.g(0, 0);
-  // expected-error@13 {{no match}}
-  // expected-note@16 {{candidate}}
-  // expected-note@17 {{candidate}}
-  // expected-note@18 {{candidate}}
+  // expected-error@16 {{no match}}
+  // expected-note@19 {{candidate}}
+  // expected-note@20 {{candidate}}
+  // expected-note@21 {{candidate}}
   a.g(0, 0, 0); // expected-note {{instantiation of}}
 }
 

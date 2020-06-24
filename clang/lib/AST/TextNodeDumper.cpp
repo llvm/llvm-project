@@ -202,6 +202,11 @@ void TextNodeDumper::Visit(const Type *T) {
   if (SingleStepDesugar != QualType(T, 0))
     OS << " sugar";
 
+  if (T->containsErrors()) {
+    ColorScope Color(OS, ShowColors, ErrorsColor);
+    OS << " contains-errors";
+  }
+
   if (T->isDependentType())
     OS << " dependent";
   else if (T->isInstantiationDependentType())

@@ -210,6 +210,9 @@ namespace sys {
       /// stored.
   );
 
+  /// Print a command argument, and optionally quote it.
+  void printArg(llvm::raw_ostream &OS, StringRef Arg, bool Quote);
+
 #if defined(_WIN32)
   /// Given a list of command line arguments, quote and escape them as necessary
   /// to build a single flat command line appropriate for calling CreateProcess

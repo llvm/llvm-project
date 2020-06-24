@@ -516,6 +516,10 @@ public:
     return PredictableSelectIsExpensive;
   }
 
+  virtual bool fallBackToDAGISel(const Instruction &Inst) const {
+    return false;
+  }
+
   /// If a branch or a select condition is skewed in one direction by more than
   /// this factor, it is very likely to be predicted correctly.
   virtual BranchProbability getPredictableBranchThreshold() const;
@@ -2364,6 +2368,14 @@ public:
     return nullptr;
   }
 
+  /// Given a set in interconnected phis of type 'From' that are loaded/stored
+  /// or bitcast to type 'To', return true if the set should be converted to
+  /// 'To'.
+  virtual bool shouldConvertPhiType(Type *From, Type *To) const {
+    return (From->isIntegerTy() || From->isFloatingPointTy()) &&
+           (To->isIntegerTy() || To->isFloatingPointTy());
+  }
+
   /// Returns true if the opcode is a commutative binary operation.
   virtual bool isCommutativeBinOp(unsigned Opcode) const {
     // FIXME: This should get its info from the td file.
@@ -3303,6 +3315,13 @@ public:
                                           SelectionDAG &DAG,
                                           unsigned Depth = 0) const;
 
+  /// Helper wrapper around SimplifyMultipleUseDemandedBits, demanding all
+  /// bits from only some vector elements.
+  SDValue SimplifyMultipleUseDemandedVectorElts(SDValue Op,
+                                                const APInt &DemandedElts,
+                                                SelectionDAG &DAG,
+                                                unsigned Depth = 0) const;
+
   /// Look at Vector Op. At this point, we know that only the DemandedElts
   /// elements of the result of Op are ever used downstream.  If we can use
   /// this information to simplify Op, create a new simplified DAG node and
@@ -3599,6 +3618,24 @@ public:
   // Lowering methods - These methods must be implemented by targets so that
   // the SelectionDAGBuilder code knows how to lower these.
   //
+
+  /// Target-specific splitting of values into parts that fit a register
+  /// storing a legal type
+  virtual bool splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL,
+                                           SDValue Val, SDValue *Parts,
+                                           unsigned NumParts, MVT PartVT,
+                                           Optional<CallingConv::ID> CC) const {
+    return false;
+  }
+
+  /// Target-specific combining of register parts into its original value
+  virtual SDValue
+  joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
+                             const SDValue *Parts, unsigned NumParts,
+                             MVT PartVT, EVT ValueVT,
+                             Optional<CallingConv::ID> CC) const {
+    return SDValue();
+  }
 
   /// This hook must be implemented to lower the incoming (formal) arguments,
   /// described by the Ins array, into the specified DAG. The implementation
@@ -4383,6 +4420,10 @@ public:
   /// Expand a VECREDUCE_* into an explicit calculation. If Count is specified,
   /// only the first Count elements of the vector are used.
   SDValue expandVecReduce(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand an SREM or UREM using SDIV/UDIV or SDIVREM/UDIVREM, if legal.
+  /// Returns true if the expansion was successful.
+  bool expandREM(SDNode *Node, SDValue &Result, SelectionDAG &DAG) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

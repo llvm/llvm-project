@@ -1808,6 +1808,36 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     TheCall->setType(Context.IntTy);
     break;
   }
+  case Builtin::BI__builtin_expect_with_probability: {
+    // We first want to ensure we are called with 3 arguments
+    if (checkArgCount(*this, TheCall, 3))
+      return ExprError();
+    // then check probability is constant float in range [0.0, 1.0]
+    const Expr *ProbArg = TheCall->getArg(2);
+    SmallVector<PartialDiagnosticAt, 8> Notes;
+    Expr::EvalResult Eval;
+    Eval.Diag = &Notes;
+    if ((!ProbArg->EvaluateAsConstantExpr(Eval, Expr::EvaluateForCodeGen,
+                                          Context)) ||
+        !Eval.Val.isFloat()) {
+      Diag(ProbArg->getBeginLoc(), diag::err_probability_not_constant_float)
+          << ProbArg->getSourceRange();
+      for (const PartialDiagnosticAt &PDiag : Notes)
+        Diag(PDiag.first, PDiag.second);
+      return ExprError();
+    }
+    llvm::APFloat Probability = Eval.Val.getFloat();
+    bool LoseInfo = false;
+    Probability.convert(llvm::APFloat::IEEEdouble(),
+                        llvm::RoundingMode::Dynamic, &LoseInfo);
+    if (!(Probability >= llvm::APFloat(0.0) &&
+          Probability <= llvm::APFloat(1.0))) {
+      Diag(ProbArg->getBeginLoc(), diag::err_probability_out_of_range)
+          << ProbArg->getSourceRange();
+      return ExprError();
+    }
+    break;
+  }
   case Builtin::BI__builtin_preserve_access_index:
     if (SemaBuiltinPreserveAI(*this, TheCall))
       return ExprError();
@@ -1927,6 +1957,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_matrix_transpose:
     return SemaBuiltinMatrixTranspose(TheCall, TheCallResult);
+
+  case Builtin::BI__builtin_matrix_column_major_load:
+    return SemaBuiltinMatrixColumnMajorLoad(TheCall, TheCallResult);
+
+  case Builtin::BI__builtin_matrix_column_major_store:
+    return SemaBuiltinMatrixColumnMajorStore(TheCall, TheCallResult);
   }
 
   // Since the target specific builtins for each arch overlap, only check those
@@ -2126,6 +2162,18 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                 return V == 0 || V == 90 || V == 180 || V == 270;
               },
               diag::err_rotation_argument_to_cmla))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck0_1:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck0_2:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 2))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck0_3:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 3))
         HasError = true;
       break;
     }
@@ -13013,6 +13061,130 @@ public:
     });
   }
 
+  void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *CXXOCE) {
+    // C++17 [over.match.oper]p2:
+    //   [...] the operator notation is first transformed to the equivalent
+    //   function-call notation as summarized in Table 12 (where @ denotes one
+    //   of the operators covered in the specified subclause). However, the
+    //   operands are sequenced in the order prescribed for the built-in
+    //   operator (Clause 8).
+    //
+    // From the above only overloaded binary operators and overloaded call
+    // operators have sequencing rules in C++17 that we need to handle
+    // separately.
+    if (!SemaRef.getLangOpts().CPlusPlus17 ||
+        (CXXOCE->getNumArgs() != 2 && CXXOCE->getOperator() != OO_Call))
+      return VisitCallExpr(CXXOCE);
+
+    enum {
+      NoSequencing,
+      LHSBeforeRHS,
+      RHSBeforeLHS,
+      LHSBeforeRest
+    } SequencingKind;
+    switch (CXXOCE->getOperator()) {
+    case OO_Equal:
+    case OO_PlusEqual:
+    case OO_MinusEqual:
+    case OO_StarEqual:
+    case OO_SlashEqual:
+    case OO_PercentEqual:
+    case OO_CaretEqual:
+    case OO_AmpEqual:
+    case OO_PipeEqual:
+    case OO_LessLessEqual:
+    case OO_GreaterGreaterEqual:
+      SequencingKind = RHSBeforeLHS;
+      break;
+
+    case OO_LessLess:
+    case OO_GreaterGreater:
+    case OO_AmpAmp:
+    case OO_PipePipe:
+    case OO_Comma:
+    case OO_ArrowStar:
+    case OO_Subscript:
+      SequencingKind = LHSBeforeRHS;
+      break;
+
+    case OO_Call:
+      SequencingKind = LHSBeforeRest;
+      break;
+
+    default:
+      SequencingKind = NoSequencing;
+      break;
+    }
+
+    if (SequencingKind == NoSequencing)
+      return VisitCallExpr(CXXOCE);
+
+    // This is a call, so all subexpressions are sequenced before the result.
+    SequencedSubexpression Sequenced(*this);
+
+    SemaRef.runWithSufficientStackSpace(CXXOCE->getExprLoc(), [&] {
+      assert(SemaRef.getLangOpts().CPlusPlus17 &&
+             "Should only get there with C++17 and above!");
+      assert((CXXOCE->getNumArgs() == 2 || CXXOCE->getOperator() == OO_Call) &&
+             "Should only get there with an overloaded binary operator"
+             " or an overloaded call operator!");
+
+      if (SequencingKind == LHSBeforeRest) {
+        assert(CXXOCE->getOperator() == OO_Call &&
+               "We should only have an overloaded call operator here!");
+
+        // This is very similar to VisitCallExpr, except that we only have the
+        // C++17 case. The postfix-expression is the first argument of the
+        // CXXOperatorCallExpr. The expressions in the expression-list, if any,
+        // are in the following arguments.
+        //
+        // Note that we intentionally do not visit the callee expression since
+        // it is just a decayed reference to a function.
+        SequenceTree::Seq PostfixExprRegion = Tree.allocate(Region);
+        SequenceTree::Seq ArgsRegion = Tree.allocate(Region);
+        SequenceTree::Seq OldRegion = Region;
+
+        assert(CXXOCE->getNumArgs() >= 1 &&
+               "An overloaded call operator must have at least one argument"
+               " for the postfix-expression!");
+        const Expr *PostfixExpr = CXXOCE->getArgs()[0];
+        llvm::ArrayRef<const Expr *> Args(CXXOCE->getArgs() + 1,
+                                          CXXOCE->getNumArgs() - 1);
+
+        // Visit the postfix-expression first.
+        {
+          Region = PostfixExprRegion;
+          SequencedSubexpression Sequenced(*this);
+          Visit(PostfixExpr);
+        }
+
+        // Then visit the argument expressions.
+        Region = ArgsRegion;
+        for (const Expr *Arg : Args)
+          Visit(Arg);
+
+        Region = OldRegion;
+        Tree.merge(PostfixExprRegion);
+        Tree.merge(ArgsRegion);
+      } else {
+        assert(CXXOCE->getNumArgs() == 2 &&
+               "Should only have two arguments here!");
+        assert((SequencingKind == LHSBeforeRHS ||
+                SequencingKind == RHSBeforeLHS) &&
+               "Unexpected sequencing kind!");
+
+        // We do not visit the callee expression since it is just a decayed
+        // reference to a function.
+        const Expr *E1 = CXXOCE->getArg(0);
+        const Expr *E2 = CXXOCE->getArg(1);
+        if (SequencingKind == RHSBeforeLHS)
+          std::swap(E1, E2);
+
+        return VisitSequencedExpressions(E1, E2);
+      }
+    });
+  }
+
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     // This is a call, so all subexpressions are sequenced before the result.
     SequencedSubexpression Sequenced(*this);
@@ -13448,9 +13620,9 @@ void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
   if (!SrcPtr) return;
   QualType SrcPointee = SrcPtr->getPointeeType();
 
-  // Whitelist casts from cv void*.  We already implicitly
-  // whitelisted casts to cv void*, since they have alignment 1.
-  // Also whitelist casts involving incomplete types, which implicitly
+  // Explicitly allow casts from cv void*.  We already implicitly
+  // allowed casts to cv void*, since they have alignment 1.
+  // Also allow casts involving incomplete types, which implicitly
   // includes 'void'.
   if (SrcPointee->isIncompleteType()) return;
 
@@ -13936,7 +14108,7 @@ static bool isSetterLikeSelector(Selector sel) {
   if (str.startswith("set"))
     str = str.substr(3);
   else if (str.startswith("add")) {
-    // Specially whitelist 'addOperationWithBlock:'.
+    // Specially allow 'addOperationWithBlock:'.
     if (sel.getNumArgs() == 1 && str.startswith("addOperationWithBlock"))
       return false;
     str = str.substr(3);
@@ -15077,7 +15249,7 @@ ExprResult Sema::SemaBuiltinMatrixTranspose(CallExpr *TheCall,
 
   auto *MType = Matrix->getType()->getAs<ConstantMatrixType>();
   if (!MType) {
-    Diag(Matrix->getBeginLoc(), diag::err_builtin_matrix_arg) << 0;
+    Diag(Matrix->getBeginLoc(), diag::err_builtin_matrix_arg);
     return ExprError();
   }
 
@@ -15091,5 +15263,230 @@ ExprResult Sema::SemaBuiltinMatrixTranspose(CallExpr *TheCall,
 
   // Update call argument to use the possibly converted matrix argument.
   TheCall->setArg(0, Matrix);
+  return CallResult;
+}
+
+// Get and verify the matrix dimensions.
+static llvm::Optional<unsigned>
+getAndVerifyMatrixDimension(Expr *Expr, StringRef Name, Sema &S) {
+  llvm::APSInt Value(64);
+  SourceLocation ErrorPos;
+  if (!Expr->isIntegerConstantExpr(Value, S.Context, &ErrorPos)) {
+    S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_scalar_unsigned_arg)
+        << Name;
+    return {};
+  }
+  uint64_t Dim = Value.getZExtValue();
+  if (!ConstantMatrixType::isDimensionValid(Dim)) {
+    S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_invalid_dimension)
+        << Name << ConstantMatrixType::getMaxElementsPerDimension();
+    return {};
+  }
+  return Dim;
+}
+
+ExprResult Sema::SemaBuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
+                                                  ExprResult CallResult) {
+  if (!getLangOpts().MatrixTypes) {
+    Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_disabled);
+    return ExprError();
+  }
+
+  if (checkArgCount(*this, TheCall, 4))
+    return ExprError();
+
+  Expr *PtrExpr = TheCall->getArg(0);
+  Expr *RowsExpr = TheCall->getArg(1);
+  Expr *ColumnsExpr = TheCall->getArg(2);
+  Expr *StrideExpr = TheCall->getArg(3);
+
+  bool ArgError = false;
+
+  // Check pointer argument.
+  {
+    ExprResult PtrConv = DefaultFunctionArrayLvalueConversion(PtrExpr);
+    if (PtrConv.isInvalid())
+      return PtrConv;
+    PtrExpr = PtrConv.get();
+    TheCall->setArg(0, PtrExpr);
+    if (PtrExpr->isTypeDependent()) {
+      TheCall->setType(Context.DependentTy);
+      return TheCall;
+    }
+  }
+
+  auto *PtrTy = PtrExpr->getType()->getAs<PointerType>();
+  QualType ElementTy;
+  if (!PtrTy) {
+    Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_pointer_arg)
+        << "first";
+    ArgError = true;
+  } else {
+    ElementTy = PtrTy->getPointeeType().getUnqualifiedType();
+
+    if (!ConstantMatrixType::isValidElementType(ElementTy)) {
+      Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_pointer_arg)
+          << "first";
+      ArgError = true;
+    }
+  }
+
+  // Apply default Lvalue conversions and convert the expression to size_t.
+  auto ApplyArgumentConversions = [this](Expr *E) {
+    ExprResult Conv = DefaultLvalueConversion(E);
+    if (Conv.isInvalid())
+      return Conv;
+
+    return tryConvertExprToType(Conv.get(), Context.getSizeType());
+  };
+
+  // Apply conversion to row and column expressions.
+  ExprResult RowsConv = ApplyArgumentConversions(RowsExpr);
+  if (!RowsConv.isInvalid()) {
+    RowsExpr = RowsConv.get();
+    TheCall->setArg(1, RowsExpr);
+  } else
+    RowsExpr = nullptr;
+
+  ExprResult ColumnsConv = ApplyArgumentConversions(ColumnsExpr);
+  if (!ColumnsConv.isInvalid()) {
+    ColumnsExpr = ColumnsConv.get();
+    TheCall->setArg(2, ColumnsExpr);
+  } else
+    ColumnsExpr = nullptr;
+
+  // If any any part of the result matrix type is still pending, just use
+  // Context.DependentTy, until all parts are resolved.
+  if ((RowsExpr && RowsExpr->isTypeDependent()) ||
+      (ColumnsExpr && ColumnsExpr->isTypeDependent())) {
+    TheCall->setType(Context.DependentTy);
+    return CallResult;
+  }
+
+  // Check row and column dimenions.
+  llvm::Optional<unsigned> MaybeRows;
+  if (RowsExpr)
+    MaybeRows = getAndVerifyMatrixDimension(RowsExpr, "row", *this);
+
+  llvm::Optional<unsigned> MaybeColumns;
+  if (ColumnsExpr)
+    MaybeColumns = getAndVerifyMatrixDimension(ColumnsExpr, "column", *this);
+
+  // Check stride argument.
+  ExprResult StrideConv = ApplyArgumentConversions(StrideExpr);
+  if (StrideConv.isInvalid())
+    return ExprError();
+  StrideExpr = StrideConv.get();
+  TheCall->setArg(3, StrideExpr);
+
+  llvm::APSInt Value(64);
+  if (MaybeRows && StrideExpr->isIntegerConstantExpr(Value, Context)) {
+    uint64_t Stride = Value.getZExtValue();
+    if (Stride < *MaybeRows) {
+      Diag(StrideExpr->getBeginLoc(),
+           diag::err_builtin_matrix_stride_too_small);
+      ArgError = true;
+    }
+  }
+
+  if (ArgError || !MaybeRows || !MaybeColumns)
+    return ExprError();
+
+  TheCall->setType(
+      Context.getConstantMatrixType(ElementTy, *MaybeRows, *MaybeColumns));
+  return CallResult;
+}
+
+ExprResult Sema::SemaBuiltinMatrixColumnMajorStore(CallExpr *TheCall,
+                                                   ExprResult CallResult) {
+  if (checkArgCount(*this, TheCall, 3))
+    return ExprError();
+
+  Expr *MatrixExpr = TheCall->getArg(0);
+  Expr *PtrExpr = TheCall->getArg(1);
+  Expr *StrideExpr = TheCall->getArg(2);
+
+  bool ArgError = false;
+
+  {
+    ExprResult MatrixConv = DefaultLvalueConversion(MatrixExpr);
+    if (MatrixConv.isInvalid())
+      return MatrixConv;
+    MatrixExpr = MatrixConv.get();
+    TheCall->setArg(0, MatrixExpr);
+  }
+  if (MatrixExpr->isTypeDependent()) {
+    TheCall->setType(Context.DependentTy);
+    return TheCall;
+  }
+
+  auto *MatrixTy = MatrixExpr->getType()->getAs<ConstantMatrixType>();
+  if (!MatrixTy) {
+    Diag(MatrixExpr->getBeginLoc(), diag::err_builtin_matrix_arg) << 0;
+    ArgError = true;
+  }
+
+  {
+    ExprResult PtrConv = DefaultFunctionArrayLvalueConversion(PtrExpr);
+    if (PtrConv.isInvalid())
+      return PtrConv;
+    PtrExpr = PtrConv.get();
+    TheCall->setArg(1, PtrExpr);
+    if (PtrExpr->isTypeDependent()) {
+      TheCall->setType(Context.DependentTy);
+      return TheCall;
+    }
+  }
+
+  // Check pointer argument.
+  auto *PtrTy = PtrExpr->getType()->getAs<PointerType>();
+  if (!PtrTy) {
+    Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_pointer_arg)
+        << "second";
+    ArgError = true;
+  } else {
+    QualType ElementTy = PtrTy->getPointeeType();
+    if (ElementTy.isConstQualified()) {
+      Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_store_to_const);
+      ArgError = true;
+    }
+    ElementTy = ElementTy.getUnqualifiedType().getCanonicalType();
+    if (MatrixTy &&
+        !Context.hasSameType(ElementTy, MatrixTy->getElementType())) {
+      Diag(PtrExpr->getBeginLoc(),
+           diag::err_builtin_matrix_pointer_arg_mismatch)
+          << ElementTy << MatrixTy->getElementType();
+      ArgError = true;
+    }
+  }
+
+  // Apply default Lvalue conversions and convert the stride expression to
+  // size_t.
+  {
+    ExprResult StrideConv = DefaultLvalueConversion(StrideExpr);
+    if (StrideConv.isInvalid())
+      return StrideConv;
+
+    StrideConv = tryConvertExprToType(StrideConv.get(), Context.getSizeType());
+    if (StrideConv.isInvalid())
+      return StrideConv;
+    StrideExpr = StrideConv.get();
+    TheCall->setArg(2, StrideExpr);
+  }
+
+  // Check stride argument.
+  llvm::APSInt Value(64);
+  if (MatrixTy && StrideExpr->isIntegerConstantExpr(Value, Context)) {
+    uint64_t Stride = Value.getZExtValue();
+    if (Stride < MatrixTy->getNumRows()) {
+      Diag(StrideExpr->getBeginLoc(),
+           diag::err_builtin_matrix_stride_too_small);
+      ArgError = true;
+    }
+  }
+
+  if (ArgError)
+    return ExprError();
+
   return CallResult;
 }

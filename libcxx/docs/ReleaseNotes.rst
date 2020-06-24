@@ -38,6 +38,8 @@ What's New in Libc++ 11.0.0?
 New Features
 ------------
 
+- ``<numbers>``
+
 API Changes
 -----------
 - ...

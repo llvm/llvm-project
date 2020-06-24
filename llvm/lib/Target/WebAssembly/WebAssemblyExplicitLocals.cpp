@@ -266,7 +266,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Opc), NewReg)
               .addImm(LocalId);
           MI.getOperand(2).setReg(NewReg);
-          MFI.stackifyVReg(NewReg);
+          MFI.stackifyVReg(MRI, NewReg);
         }
 
         // Replace the TEE with a LOCAL_TEE.
@@ -316,7 +316,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
           // yet.
           Def.setReg(NewReg);
           Def.setIsDead(false);
-          MFI.stackifyVReg(NewReg);
+          MFI.stackifyVReg(MRI, NewReg);
           Changed = true;
         }
       }
@@ -368,7 +368,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
             BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc), NewReg)
                 .addImm(LocalId);
         MO.setReg(NewReg);
-        MFI.stackifyVReg(NewReg);
+        MFI.stackifyVReg(MRI, NewReg);
         Changed = true;
       }
 

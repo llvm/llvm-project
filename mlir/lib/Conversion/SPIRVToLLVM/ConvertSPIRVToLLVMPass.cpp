@@ -35,6 +35,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
 
   OwningRewritePatternList patterns;
   populateSPIRVToLLVMConversionPatterns(context, converter, patterns);
+  populateSPIRVToLLVMFunctionConversionPatterns(context, converter, patterns);
 
   // Currently pulls in Std to LLVM conversion patterns
   // that help with testing. This allows to convert
@@ -44,8 +45,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addIllegalDialect<spirv::SPIRVDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
-
-  if (failed(applyPartialConversion(module, target, patterns, &converter)))
+  if (failed(applyPartialConversion(module, target, patterns)))
     signalPassFailure();
 }
 

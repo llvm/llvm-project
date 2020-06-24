@@ -1100,7 +1100,7 @@ public:
   /// registers if provided.
   /// Note, occupancy can be affected by the scratch allocation as well, but
   /// we do not have enough information to compute it.
-  unsigned computeOccupancy(const MachineFunction &MF, unsigned LDSSize = 0,
+  unsigned computeOccupancy(const Function &F, unsigned LDSSize = 0,
                             unsigned NumSGPRs = 0, unsigned NumVGPRs = 0) const;
 
   /// \returns true if the flat_scratch register should be initialized with the

@@ -66,7 +66,7 @@ define double @test_constant_fold_rcp_f64_43() nounwind {
 
 define float @test_constant_fold_rcp_f32_43_strictfp() nounwind strictfp {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #7
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) [[STRICTFP:#[0-9]+]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) strictfp nounwind readnone
@@ -2800,4 +2800,5 @@ define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(i32 addrspace(1)
   ret void
 }
 
+; CHECK: attributes [[STRICTFP]] = { nounwind readnone strictfp }
 ; CHECK: attributes [[CONVERGENT]] = { convergent }

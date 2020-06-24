@@ -17,7 +17,11 @@ namespace N1
 {
   struct A { int a; A() : a(0) {} };
   #pragma omp declare reduction(+: A : bar(omp_out, omp_in))
-};
+  #pragma omp declare reduction(-: struct A : bar(omp_out, omp_in))
+}
+// CHECK: namespace N1 {
+// CHECK: #pragma omp declare reduction (+ : N1::A : bar(omp_out, omp_in))
+// CHECK: #pragma omp declare reduction (- : struct A : bar(omp_out, omp_in))
 
 #pragma omp declare reduction(+ : int, char : omp_out *= omp_in)
 // CHECK: #pragma omp declare reduction (+ : int : omp_out *= omp_in){{$}}

@@ -5410,8 +5410,6 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
                                   InstCombiner::BuilderTy &Builder) {
   const CmpInst::Predicate Pred = Cmp.getPredicate();
   Value *LHS = Cmp.getOperand(0), *RHS = Cmp.getOperand(1);
-  bool IsFP = isa<FCmpInst>(Cmp);
-
   Value *V1, *V2;
   ArrayRef<int> M;
   if (!match(LHS, m_Shuffle(m_Value(V1), m_Undef(), m_Mask(M))))
@@ -5423,8 +5421,7 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
   Type *V1Ty = V1->getType();
   if (match(RHS, m_Shuffle(m_Value(V2), m_Undef(), m_SpecificMask(M))) &&
       V1Ty == V2->getType() && (LHS->hasOneUse() || RHS->hasOneUse())) {
-    Value *NewCmp = IsFP ? Builder.CreateFCmp(Pred, V1, V2)
-                         : Builder.CreateICmp(Pred, V1, V2);
+    Value *NewCmp = Builder.CreateCmp(Pred, V1, V2);
     return new ShuffleVectorInst(NewCmp, UndefValue::get(NewCmp->getType()), M);
   }
 
@@ -5445,8 +5442,7 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
     C = ConstantVector::getSplat(cast<VectorType>(V1Ty)->getElementCount(),
                                  ScalarC);
     SmallVector<int, 8> NewM(M.size(), MaskSplatIndex);
-    Value *NewCmp = IsFP ? Builder.CreateFCmp(Pred, V1, C)
-                         : Builder.CreateICmp(Pred, V1, C);
+    Value *NewCmp = Builder.CreateCmp(Pred, V1, C);
     return new ShuffleVectorInst(NewCmp, UndefValue::get(NewCmp->getType()),
                                  NewM);
   }

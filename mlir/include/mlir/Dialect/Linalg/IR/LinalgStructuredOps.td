@@ -197,34 +197,6 @@ def DotOp : LinalgStructured_Op<"dot", [NInputs<2>, NOutputs<1>]> {
   let hasFolder = 1;
 }
 
-def MatvecOp : LinalgStructured_Op<"matvec", [NInputs<2>, NOutputs<1>]> {
-
-  let arguments = (ins AnyStridedMemRefOfRank<2>,
-                       AnyStridedMemRefOfRank<1>,
-                       AnyStridedMemRefOfRank<1>);
-
-  let extraClassDeclaration = libraryCallName # [{
-    llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
-      return SmallVector<StringRef, 8>{
-        getParallelIteratorTypeName(), getReductionIteratorTypeName()};
-    }
-
-    // A(i, r_j) * B(r_j) -> C(i)
-    llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
-      MLIRContext *context = getContext();
-      AffineExpr i, r_j;
-      bindDims(context, i, r_j);
-      return SmallVector<AffineMap, 8>{
-        AffineMap::get(2, 0, {i, r_j}, context),
-        AffineMap::get(2, 0, {r_j}, context),
-        AffineMap::get(2, 0, {i}, context)
-      };
-    }
-  }];
-
-  let hasFolder = 1;
-}
-
 /// A base class for pooling operation such as conv. The arguments must contain
 /// optional arguments `strides`, `dilations` and `padding` with following type:
 ///   OptionalAttr<I64ArrayAttr>:$strides
@@ -536,20 +508,6 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
      }
   }];
 
-  let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "ArrayRef<Type> resultTypes, ValueRange args, "
-              "int64_t inputCount, int64_t outputCount, "
-              "ArrayRef<AffineMap> indexingMaps, "
-              "ArrayRef<StringRef> iteratorTypes", [{
-        return build(builder, result, resultTypes, args,
-                     builder.getI64IntegerAttr(inputCount),
-                     builder.getI64IntegerAttr(outputCount),
-                     builder.getAffineMapArrayAttr(indexingMaps),
-                     builder.getStrArrayAttr(iteratorTypes),
-                     /*doc=*/nullptr, /*library_call=*/nullptr);
-  }]>];
-
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseGenericOp(parser, result); }];
 }
@@ -604,10 +562,10 @@ def GenericOp : GenericOpBase<"generic"> {
     And can be reused in multiple places as:
       ```mlir
       linalg.generic #matmul_trait %A, %B, %C [other-attributes] {
-        (%a: f32, %b: f32, %c: f32) :
+        ^bb0(%a: f32, %b: f32, %c: f32) :
           %d = mulf %a, %b: f32
           %e = addf %c, %d: f32
-          linalg_yield %e : f32
+          linalg.yield %e : f32
       } : memref<?x?xf32, stride_specification>,
           memref<?x?xf32, stride_specification>,
           memref<?x?xf32, stride_specification>
@@ -664,6 +622,14 @@ def GenericOp : GenericOpBase<"generic"> {
     tensor SSA values are expected to be useful and will be added in the near
     future.
   }];
+
+  let builders = [
+    OpBuilder<
+      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes, "
+      "ValueRange args, int64_t inputCount, int64_t outputCount, "
+      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
+      "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">
+  ];
 
   let verifier = [{ return ::verify(*this); }];
 
@@ -790,6 +756,16 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
     tensor SSA values are expected to be useful and will be added in the near
     future.
   }];
+
+  let builders = [
+    OpBuilder<
+      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes, "
+      "ValueRange args, int64_t inputCount, int64_t outputCount, "
+      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
+      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> "
+      "= nullptr">
+  ];
+
 
   let verifier = [{ return ::verify(*this); }];
 

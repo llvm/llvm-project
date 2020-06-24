@@ -152,19 +152,24 @@ def MathAPI : PublicAPI<"math.h"> {
   let Functions = [
    "copysign",
    "copysignf",
+   "copysignl",
    "ceil",
    "ceilf",
    "cosf",
    "fabs",
    "fabsf",
+   "fabsl",
    "floor",
    "floorf",
    "frexp",
    "frexpf",
+   "frexpl",
    "logb",
    "logbf",
+   "logbl",
    "modf",
    "modff",
+   "modfl",
    "expf",
    "exp2f",
    "round",
@@ -173,6 +178,7 @@ def MathAPI : PublicAPI<"math.h"> {
    "sinf",
    "trunc",
    "truncf",
+   "truncl",
   ];
 }
 

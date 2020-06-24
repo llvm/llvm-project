@@ -295,14 +295,11 @@ bool DivergenceAnalysis::propagateJoinDivergence(const BasicBlock &JoinBlock,
   // push non-divergent phi nodes in JoinBlock to the worklist
   pushPHINodes(JoinBlock);
 
-  // JoinBlock is a divergent loop exit
-  if (BranchLoop && !BranchLoop->contains(&JoinBlock)) {
-    return true;
-  }
-
   // disjoint-paths divergent at JoinBlock
   markBlockJoinDivergent(JoinBlock);
-  return false;
+
+  // JoinBlock is a divergent loop exit
+  return BranchLoop && !BranchLoop->contains(&JoinBlock);
 }
 
 void DivergenceAnalysis::propagateBranchDivergence(const Instruction &Term) {

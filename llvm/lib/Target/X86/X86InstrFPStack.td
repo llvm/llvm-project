@@ -375,7 +375,8 @@ def TST_F  : FPI<0xD9, MRM_E4, (outs), (ins), "ftst">;
 
 // Versions of FP instructions that take a single memory operand.  Added for the
 //   disassembler; remove as they are included with patterns elsewhere.
-let SchedRW = [WriteFComLd], Uses = [FPCW], mayRaiseFPException = 1 in {
+let SchedRW = [WriteFComLd], Uses = [FPCW], mayRaiseFPException = 1,
+    mayLoad = 1 in {
 def FCOM32m  : FPI<0xD8, MRM2m, (outs), (ins f32mem:$src), "fcom{s}\t$src">;
 def FCOMP32m : FPI<0xD8, MRM3m, (outs), (ins f32mem:$src), "fcomp{s}\t$src">;
 
@@ -390,21 +391,22 @@ def FICOMP32m: FPI<0xDA, MRM3m, (outs), (ins i32mem:$src), "ficomp{l}\t$src">;
 } // SchedRW
 
 let SchedRW = [WriteMicrocoded] in {
-let Defs = [FPSW, FPCW] in {
+let Defs = [FPSW, FPCW], mayLoad = 1 in {
 def FLDENVm  : FPI<0xD9, MRM4m, (outs), (ins f32mem:$src), "fldenv\t$src">;
 def FRSTORm  : FPI<0xDD, MRM4m, (outs), (ins f32mem:$dst), "frstor\t$dst">;
 }
 
-let Defs = [FPSW, FPCW], Uses = [FPSW, FPCW] in {
+let Defs = [FPSW, FPCW], Uses = [FPSW, FPCW], mayStore = 1 in {
 def FSTENVm  : FPI<0xD9, MRM6m, (outs), (ins f32mem:$dst), "fnstenv\t$dst">;
 def FSAVEm   : FPI<0xDD, MRM6m, (outs), (ins f32mem:$dst), "fnsave\t$dst">;
 }
 
-let Uses = [FPSW] in
+let Uses = [FPSW], mayStore = 1 in
 def FNSTSWm  : FPI<0xDD, MRM7m, (outs), (ins i16mem:$dst), "fnstsw\t$dst">;
 
+let mayLoad = 1 in
 def FBLDm    : FPI<0xDF, MRM4m, (outs), (ins f80mem:$src), "fbld\t$src">;
-let Uses = [FPCW] ,mayRaiseFPException = 1 in
+let Uses = [FPCW] ,mayRaiseFPException = 1, mayStore = 1 in
 def FBSTPm   : FPI<0xDF, MRM6m, (outs), (ins f80mem:$dst), "fbstp\t$dst">;
 } // SchedRW
 

@@ -1132,7 +1132,7 @@ static bool isIgnorableInst(const Instruction *I) {
     case Intrinsic::annotation:
     case Intrinsic::ptr_annotation:
     case Intrinsic::var_annotation:
-    // TODO: the following intrinsics may also be whitelisted:
+    // TODO: the following intrinsics may also be allowed:
     //   lifetime_start, lifetime_end, invariant_start, invariant_end
       return true;
   }

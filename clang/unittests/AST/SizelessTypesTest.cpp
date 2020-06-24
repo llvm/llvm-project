@@ -42,6 +42,8 @@ TEST_F(SizelessTypeTester, TestSizelessBuiltin) {
   ASSERT_TRUE(Ctx.SveFloat32Ty->isSizelessBuiltinType());
   ASSERT_TRUE(Ctx.SveFloat64Ty->isSizelessBuiltinType());
 
+  ASSERT_TRUE(Ctx.SveBFloat16Ty->isSizelessBuiltinType());
+
   ASSERT_TRUE(Ctx.SveBoolTy->isSizelessBuiltinType());
 
   ASSERT_FALSE(Ctx.VoidTy->isSizelessBuiltinType());
@@ -69,6 +71,8 @@ TEST_F(SizelessTypeTester, TestSizeless) {
   ASSERT_TRUE(Ctx.SveFloat16Ty->isSizelessType());
   ASSERT_TRUE(Ctx.SveFloat32Ty->isSizelessType());
   ASSERT_TRUE(Ctx.SveFloat64Ty->isSizelessType());
+
+  ASSERT_TRUE(Ctx.SveBFloat16Ty->isSizelessType());
 
   ASSERT_TRUE(Ctx.SveBoolTy->isSizelessType());
 

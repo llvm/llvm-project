@@ -26,6 +26,9 @@ template <typename d> class e {
   static const auto g = alignof(f);
 };
 
+constexpr static int calc_val() { return 1 + 2; }
+const auto the_value = calc_val() + sizeof(char);
+
 // RUN: c-index-test -evaluate-cursor-at=%s:4:7 \
 // RUN:    -evaluate-cursor-at=%s:8:7 \
 // RUN:    -evaluate-cursor-at=%s:8:11 -std=c++11 %s | FileCheck %s
@@ -53,3 +56,12 @@ template <typename d> class e {
 // RUN:    -evaluate-cursor-at=%s:26:21 \
 // RUN:    -std=c++11 %s | FileCheck -check-prefix=CHECK-DOES-NOT-CRASH %s
 // CHECK-DOES-NOT-CRASH: Not Evaluatable
+
+// RUN: c-index-test -evaluate-cursor-at=%s:30:1 \
+// RUN:    -evaluate-cursor-at=%s:30:32 \
+// RUN:    -evaluate-cursor-at=%s:30:35 \
+// RUN:    -evaluate-cursor-at=%s:30:37 -std=c++11 %s | FileCheck %s -check-prefix=CHECK-EXPR
+// CHECK-EXPR: unsigned, Value: 4
+// CHECK-EXPR: Value: 3
+// CHECK-EXPR: unsigned, Value: 4
+// CHECK-EXPR: unsigned, Value: 1

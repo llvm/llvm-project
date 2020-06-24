@@ -57,7 +57,6 @@ static inline int getExponent(T x) {
   return getExponentFromBits(valueAsBits(x));
 }
 
-
 } // namespace fputil
 } // namespace __llvm_libc
 

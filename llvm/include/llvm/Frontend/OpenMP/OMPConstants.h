@@ -15,6 +15,7 @@
 #define LLVM_OPENMP_CONSTANTS_H
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 namespace llvm {
 class Type;
@@ -28,24 +29,23 @@ class FunctionType;
 namespace omp {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-/// IDs for all OpenMP directives.
-enum class Directive {
-#define OMP_DIRECTIVE(Enum, ...) Enum,
+/// IDs for all Internal Control Variables (ICVs).
+enum class InternalControlVar {
+#define ICV_DATA_ENV(Enum, ...) Enum,
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 };
 
-/// IDs for all OpenMP clauses.
-enum class Clause {
-#define OMP_CLAUSE(Enum, ...) Enum,
+#define ICV_DATA_ENV(Enum, ...)                                                \
+  constexpr auto Enum = omp::InternalControlVar::Enum;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+
+enum class ICVInitValue {
+#define ICV_DATA_ENV(Enum, Name, EnvVar, Init) Init,
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 };
 
-/// Make the enum values available in the llvm::omp namespace. This allows us to
-/// write something like OMPD_parallel if we have a `using namespace omp`. At
-/// the same time we do not loose the strong type guarantees of the enum class,
-/// that is we cannot pass an unsigned as Directive without an explicit cast.
-#define OMP_DIRECTIVE(Enum, ...) constexpr auto Enum = omp::Directive::Enum;
-#define OMP_CLAUSE(Enum, ...) constexpr auto Enum = omp::Clause::Enum;
+#define ICV_DATA_ENV(Enum, Name, EnvVar, Init)                                 \
+  constexpr auto Init = omp::ICVInitValue::Init;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
 /// IDs for all omp runtime library (RTL) functions.

@@ -15,7 +15,6 @@
 #define LLVM_ANALYSIS_PROFILE_SUMMARY_INFO_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/Pass.h"
@@ -25,7 +24,9 @@ namespace llvm {
 class BasicBlock;
 class BlockFrequencyInfo;
 class CallBase;
+class Function;
 class ProfileSummary;
+
 /// Analysis providing profile information.
 ///
 /// This is an immutable analysis pass that provides ability to query global

@@ -30,13 +30,13 @@ define <8 x double> @strided_load_4x4(<8 x double> %in, <8 x double>* %Ptr) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <8 x double>* [[PTR:%.*]] to double*
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP20]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP20]], i32 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP20]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST2:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[VEC_CAST2]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[TMP20]], i32 4
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[TMP20]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP3]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP12]], <2 x double>* [[VEC_CAST4]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, double* [[TMP20]], i32 6
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, double* [[TMP20]], i64 6
 ; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[VEC_GEP5]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP16]], <2 x double>* [[VEC_CAST6]], align 8
 ; CHECK-NEXT:    call void @foo(<8 x double> [[TMP19]])

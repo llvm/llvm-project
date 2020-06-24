@@ -119,6 +119,11 @@ namespace clang {
   };
   }
 
+  /// VE builtins
+  namespace VE {
+  enum { LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1, LastTSBuiltin };
+  }
+
   /// Flags to identify the types for overloaded Neon builtins.
   ///
   /// These must be kept in sync with the flags in utils/TableGen/NeonEmitter.h.
@@ -247,6 +252,9 @@ namespace clang {
     bool isGatherPrefetch() const { return Flags & IsGatherPrefetch; }
     bool isReverseUSDOT() const { return Flags & ReverseUSDOT; }
     bool isUndef() const { return Flags & IsUndef; }
+    bool isTupleCreate() const { return Flags & IsTupleCreate; }
+    bool isTupleGet() const { return Flags & IsTupleGet; }
+    bool isTupleSet() const { return Flags & IsTupleSet; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }

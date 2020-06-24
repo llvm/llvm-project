@@ -763,9 +763,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   for (InputFile *file : objectFiles) {
     ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
     for (Symbol *b : f->getLocalSymbols()) {
-      if (!b->isLocal())
-        fatal(toString(f) +
-              ": broken object: getLocalSymbols returns a non-local symbol");
+      assert(b->isLocal() && "should have been caught in initializeSymbols()");
       auto *dr = dyn_cast<Defined>(b);
 
       // No reason to keep local undefined symbol in symtab.
@@ -2231,8 +2229,10 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *sec) {
   StringRef s = sec->name;
   if (!isValidCIdentifier(s))
     return;
-  addOptionalRegular(saver.save("__start_" + s), sec, 0, STV_PROTECTED);
-  addOptionalRegular(saver.save("__stop_" + s), sec, -1, STV_PROTECTED);
+  addOptionalRegular(saver.save("__start_" + s), sec, 0,
+                     config->zStartStopVisibility);
+  addOptionalRegular(saver.save("__stop_" + s), sec, -1,
+                     config->zStartStopVisibility);
 }
 
 static bool needsPtLoad(OutputSection *sec) {

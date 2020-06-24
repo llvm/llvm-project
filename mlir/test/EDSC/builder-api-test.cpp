@@ -182,12 +182,12 @@ TEST_FUNC(builder_block_append) {
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
 
-  BlockHandle b1, functionBlock(&f.front());
-  BlockBuilder(&b1, {}, {})([&] { std_constant_index(0); });
-  BlockBuilder(b1, Append())([&] { std_constant_index(1); });
-  BlockBuilder(b1, Append())([&] { std_ret(); });
-  // Get back to entry block and add a branch into b1
-  BlockBuilder(functionBlock, Append())([&] { std_br(b1, {}); });
+  Block *b =
+      buildInNewBlock(TypeRange(), [&](ValueRange) { std_constant_index(0); });
+  appendToBlock(b, [&](ValueRange) { std_constant_index(1); });
+  appendToBlock(b, [&](ValueRange) { std_ret(); });
+  // Get back to entry block and add a branch into "b".
+  appendToBlock(&f.front(), [&](ValueRange) { std_br(b, {}); });
 
   // clang-format off
   // CHECK-LABEL: @builder_blocks
@@ -211,75 +211,22 @@ TEST_FUNC(builder_blocks) {
   Value c1(std_constant_int(42, 32)), c2(std_constant_int(1234, 32));
   ReturnOp ret = std_ret();
 
-  Value r;
-  Value args12[2];
-  Value &arg1 = args12[0], &arg2 = args12[1];
-  Value args34[2];
-  Value &arg3 = args34[0], &arg4 = args34[1];
-  BlockHandle b1, b2, functionBlock(&f.front());
-  BlockBuilder(&b1, {c1.getType(), c1.getType()}, args12)(
-      // b2 has not yet been constructed, need to come back later.
-      // This is a byproduct of non-structured control-flow.
-  );
-  BlockBuilder(&b2, {c1.getType(), c1.getType()}, args34)([&] {
-    std_br(b1, {arg3, arg4});
-  });
+  Block *b1 = createBlock({c1.getType(), c1.getType()});
+  Block *b2 = buildInNewBlock({c1.getType(), c1.getType()},
+                              [&](ValueRange args) { std_br(b1, args); });
   // The insertion point within the toplevel function is now past b2, we will
   // need to get back the entry block.
-  // This is what happens with unstructured control-flow..
-  BlockBuilder(b1, Append())([&] {
-    r = arg1 + arg2;
-    std_br(b2, {arg1, r});
+  // This is what happens with unstructured control-flow.
+  appendToBlock(b1, [&](ValueRange args) {
+    Value r = args[0] + args[1];
+    std_br(b2, {args[0], r});
   });
-  // Get back to entry block and add a branch into b1
-  BlockBuilder(functionBlock, Append())([&] { std_br(b1, {c1, c2}); });
+  // Get back to entry block and add a branch into b1.
+  appendToBlock(&f.front(), [&](ValueRange) { std_br(b1, {c1, c2}); });
   ret.erase();
 
   // clang-format off
   // CHECK-LABEL: @builder_blocks
-  // CHECK:        %{{.*}} = constant 42 : i32
-  // CHECK-NEXT:   %{{.*}} = constant 1234 : i32
-  // CHECK-NEXT:   br ^bb1(%{{.*}}, %{{.*}} : i32, i32)
-  // CHECK-NEXT: ^bb1(%{{.*}}: i32, %{{.*}}: i32):   // 2 preds: ^bb0, ^bb2
-  // CHECK-NEXT:   %{{.*}} = addi %{{.*}}, %{{.*}} : i32
-  // CHECK-NEXT:   br ^bb2(%{{.*}}, %{{.*}} : i32, i32)
-  // CHECK-NEXT: ^bb2(%{{.*}}: i32, %{{.*}}: i32):   // pred: ^bb1
-  // CHECK-NEXT:   br ^bb1(%{{.*}}, %{{.*}} : i32, i32)
-  // CHECK-NEXT: }
-  // clang-format on
-  f.print(llvm::outs());
-  f.erase();
-}
-
-TEST_FUNC(builder_blocks_eager) {
-  using namespace edsc::op;
-  auto f = makeFunction("builder_blocks_eager");
-
-  OpBuilder builder(f.getBody());
-  ScopedContext scope(builder, f.getLoc());
-  Value c1(std_constant_int(42, 32)), c2(std_constant_int(1234, 32));
-  Value res;
-  Value args1And2[2], args3And4[2];
-  Value &arg1 = args1And2[0], &arg2 = args1And2[1], &arg3 = args3And4[0],
-        &arg4 = args3And4[1];
-
-  // clang-format off
-  BlockHandle b1, b2;
-  { // Toplevel function scope.
-    // Build a new block for b1 eagerly.
-    std_br(&b1, {c1.getType(), c1.getType()}, args1And2, {c1, c2});
-    // Construct a new block b2 explicitly with a branch into b1.
-    BlockBuilder(&b2, {c1.getType(), c1.getType()}, args3And4)([&]{
-        std_br(b1, {arg3, arg4});
-    });
-    /// And come back to append into b1 once b2 exists.
-    BlockBuilder(b1, Append())([&]{
-        res = arg1 + arg2;
-        std_br(b2, {arg1, res});
-    });
-  }
-
-  // CHECK-LABEL: @builder_blocks_eager
   // CHECK:        %{{.*}} = constant 42 : i32
   // CHECK-NEXT:   %{{.*}} = constant 1234 : i32
   // CHECK-NEXT:   br ^bb1(%{{.*}}, %{{.*}} : i32, i32)
@@ -300,62 +247,21 @@ TEST_FUNC(builder_cond_branch) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  Value funcArg(f.getArgument(0));
   Value c32(std_constant_int(32, 32)), c64(std_constant_int(64, 64)),
       c42(std_constant_int(42, 32));
   ReturnOp ret = std_ret();
 
-  Value arg1;
-  Value args23[2];
-  BlockHandle b1, b2, functionBlock(&f.front());
-  BlockBuilder(&b1, c32.getType(), arg1)([&] { std_ret(); });
-  BlockBuilder(&b2, {c64.getType(), c32.getType()}, args23)([&] { std_ret(); });
-  // Get back to entry block and add a conditional branch
-  BlockBuilder(functionBlock, Append())([&] {
-    std_cond_br(funcArg, b1, {c32}, b2, {c64, c42});
+  Block *b1 = buildInNewBlock(c32.getType(), [&](ValueRange) { std_ret(); });
+  Block *b2 = buildInNewBlock({c64.getType(), c32.getType()},
+                              [&](ValueRange) { std_ret(); });
+  // Get back to entry block and add a conditional branch.
+  appendToBlock(&f.front(), [&](ValueRange args) {
+    std_cond_br(args[0], b1, {c32}, b2, {c64, c42});
   });
   ret.erase();
 
   // clang-format off
   // CHECK-LABEL: @builder_cond_branch
-  // CHECK:   %{{.*}} = constant 32 : i32
-  // CHECK-NEXT:   %{{.*}} = constant 64 : i64
-  // CHECK-NEXT:   %{{.*}} = constant 42 : i32
-  // CHECK-NEXT:   cond_br %{{.*}}, ^bb1(%{{.*}} : i32), ^bb2(%{{.*}}, %{{.*}} : i64, i32)
-  // CHECK-NEXT: ^bb1(%{{.*}}: i32):   // pred: ^bb0
-  // CHECK-NEXT:   return
-  // CHECK-NEXT: ^bb2(%{{.*}}: i64, %{{.*}}: i32):  // pred: ^bb0
-  // CHECK-NEXT:   return
-  // clang-format on
-  f.print(llvm::outs());
-  f.erase();
-}
-
-TEST_FUNC(builder_cond_branch_eager) {
-  using namespace edsc::op;
-  auto f = makeFunction("builder_cond_branch_eager", {},
-                        {IntegerType::get(1, &globalContext())});
-
-  OpBuilder builder(f.getBody());
-  ScopedContext scope(builder, f.getLoc());
-  Value arg0(f.getArgument(0));
-  Value c32(std_constant_int(32, 32)), c64(std_constant_int(64, 64)),
-      c42(std_constant_int(42, 32));
-
-  // clang-format off
-  BlockHandle b1, b2;
-  Value arg1[1], args2And3[2];
-  std_cond_br(arg0,
-              &b1, c32.getType(), arg1, c32,
-              &b2, {c64.getType(), c32.getType()}, args2And3, {c64, c42});
-  BlockBuilder(b1, Append())([]{
-      std_ret();
-  });
-  BlockBuilder(b2, Append())([]{
-      std_ret();
-  });
-
-  // CHECK-LABEL: @builder_cond_branch_eager
   // CHECK:   %{{.*}} = constant 32 : i32
   // CHECK-NEXT:   %{{.*}} = constant 64 : i64
   // CHECK-NEXT:   %{{.*}} = constant 42 : i32
@@ -433,13 +339,10 @@ TEST_FUNC(insertion_in_block) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  BlockHandle b1;
-  // clang-format off
   std_constant_int(0, 32);
-  (BlockBuilder(&b1))([]{
-    std_constant_int(1, 32);
-  });
+  buildInNewBlock({}, [&](ValueRange) { std_constant_int(1, 32); });
   std_constant_int(2, 32);
+  // clang-format off
   // CHECK-LABEL: @insertion_in_block
   // CHECK: {{.*}} = constant 0 : i32
   // CHECK: {{.*}} = constant 2 : i32
@@ -1057,7 +960,7 @@ TEST_FUNC(memref_vector_matmul_test) {
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
   Value A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
-  auto contractionBuilder = [](ArrayRef<BlockArgument> args) {
+  auto contractionBuilder = [](ValueRange args) {
     assert(args.size() == 3 && "expected 3 block arguments");
     (linalg_yield(vector_contraction_matmul(args[0], args[1], args[2])));
   };

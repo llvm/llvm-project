@@ -28,6 +28,19 @@ const Name &GetLastName(const FunctionReference &);
 const Name &GetLastName(const Variable &);
 const Name &GetLastName(const AllocateObject &);
 
+// GetFirstName() isolates and returns a reference to the leftmost Name
+// in a variable.
+const Name &GetFirstName(const Name &);
+const Name &GetFirstName(const StructureComponent &);
+const Name &GetFirstName(const DataRef &);
+const Name &GetFirstName(const Substring &);
+const Name &GetFirstName(const Designator &);
+const Name &GetFirstName(const ProcComponentRef &);
+const Name &GetFirstName(const ProcedureDesignator &);
+const Name &GetFirstName(const Call &);
+const Name &GetFirstName(const FunctionReference &);
+const Name &GetFirstName(const Variable &);
+
 // When a parse tree node is an instance of a specific type wrapped in
 // layers of packaging, return a pointer to that object.
 // Implemented with mutually recursive template functions that are

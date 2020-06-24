@@ -2051,7 +2051,7 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
   if (Policy.TerseOutput)
     OS << "{}";
   else
-    PrintRawCompoundStmt(Node->getBody());
+    PrintRawCompoundStmt(Node->getCompoundStmtBody());
 }
 
 void StmtPrinter::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *Node) {

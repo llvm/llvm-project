@@ -193,6 +193,7 @@ def brtarget_13 : Operand<OtherVT>
 def call_target : Operand<iPTR>
 {
     let EncoderMethod = "encodeCallTarget";
+    let DecoderMethod = "decodeCallTarget";
 }
 
 // A 16-bit address (which can lead to an R_AVR_16 relocation).
@@ -2047,8 +2048,6 @@ def : Pat<(add i16:$src1, imm:$src2),
           (SUBIWRdK i16:$src1, (imm16_neg_XFORM imm:$src2))>;
 def : Pat<(addc i16:$src1, imm:$src2),
           (SUBIWRdK i16:$src1, (imm16_neg_XFORM imm:$src2))>;
-def : Pat<(adde i16:$src1, imm:$src2),
-          (SBCIWRdK i16:$src1, (imm16_neg_XFORM imm:$src2))>;
 
 def : Pat<(add i8:$src1, imm:$src2),
           (SUBIRdK i8:$src1, (imm8_neg_XFORM imm:$src2))>;

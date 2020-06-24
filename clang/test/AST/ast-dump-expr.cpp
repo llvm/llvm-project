@@ -1,4 +1,13 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -std=gnu++17 -ast-dump %s | FileCheck -strict-whitespace %s
+// Test without serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -std=gnu++17 -ast-dump %s \
+// RUN: | FileCheck --strict-whitespace %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -std=gnu++17 -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -std=gnu++17 \
+// RUN: -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck --strict-whitespace %s
 
 namespace std {
 using size_t = decltype(sizeof(0));
@@ -327,7 +336,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:4> col:4 implicit 'Ts...'
   // CHECK-NEXT: ParenListExpr 0x{{[^ ]*}} <col:4> 'NULL TYPE'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts...' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:9, col:10>
 
   [=]{};
@@ -440,7 +449,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:4> col:4 implicit 'Ts...'
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:10> col:10 implicit 'int':'int'
   // CHECK-NEXT: ParenListExpr 0x{{[^ ]*}} <col:4> 'NULL TYPE'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts...' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:14> 'int' 12
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:17, col:18>
 
@@ -514,17 +523,17 @@ void PrimaryExpressions(Ts... a) {
 
   (a + ...);
   // CHECK: CXXFoldExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> '<dependent type>'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts...' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
   // CHECK-NEXT: <<<NULL>>>
 
   (... + a);
   // CHECK: CXXFoldExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> '<dependent type>'
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'Ts...' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'Ts' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
 
   (a + ... + b);
   // CHECK: CXXFoldExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:15> '<dependent type>'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts...' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int' lvalue Var 0x{{[^ ]*}} 'b' 'int'
 }
 

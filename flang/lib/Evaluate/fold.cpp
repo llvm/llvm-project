@@ -55,13 +55,60 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
       ss.u);
 }
 
+// TODO: Put this in a more central location if it would be useful elsewhere
+class ScalarConstantExpander {
+public:
+  explicit ScalarConstantExpander(ConstantSubscripts &extents)
+      : extents_{extents} {}
+
+  template <typename A> A Expand(A &&x) const {
+    return std::move(x); // default case
+  }
+  template <typename T> Constant<T> Expand(Constant<T> &&x) {
+    return x.Reshape(std::move(extents_));
+  }
+  template <typename T> Expr<T> Expand(Expr<T> &&x) {
+    return std::visit([&](auto &&x) { return Expr<T>{Expand(std::move(x))}; },
+        std::move(x.u));
+  }
+
+private:
+  ConstantSubscripts &extents_;
+};
+
 Expr<SomeDerived> FoldOperation(
     FoldingContext &context, StructureConstructor &&structure) {
-  StructureConstructor result{structure.derivedTypeSpec()};
+  StructureConstructor ctor{structure.derivedTypeSpec()};
+  bool constantExtents{true};
   for (auto &&[symbol, value] : std::move(structure)) {
-    result.Add(symbol, Fold(context, std::move(value.value())));
+    auto expr{Fold(context, std::move(value.value()))};
+    if (!IsProcedurePointer(symbol)) {
+      if (auto valueShape{GetConstantExtents(context, expr)}) {
+        if (!IsPointer(symbol)) {
+          if (auto componentShape{GetConstantExtents(context, symbol)}) {
+            if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0) {
+              expr = ScalarConstantExpander{*componentShape}.Expand(
+                  std::move(expr));
+              constantExtents = constantExtents && expr.Rank() > 0;
+            } else {
+              constantExtents =
+                  constantExtents && *valueShape == *componentShape;
+            }
+          } else {
+            constantExtents = false;
+          }
+        }
+      } else {
+        constantExtents = false;
+      }
+    }
+    ctor.Add(symbol, Fold(context, std::move(expr)));
   }
-  return Expr<SomeDerived>{Constant<SomeDerived>{std::move(result)}};
+  if (constantExtents && IsConstantExpr(ctor)) {
+    return Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}};
+  } else {
+    return Expr<SomeDerived>{std::move(ctor)};
+  }
 }
 
 Component FoldOperation(FoldingContext &context, Component &&component) {

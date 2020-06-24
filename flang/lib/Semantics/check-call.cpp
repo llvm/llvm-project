@@ -607,7 +607,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 // ok
               } else {
                 messages.Say(
-                    "Actual argument is not a variable or typed expression"_err_en_US);
+                    "Actual argument '%s' associated with %s is not a variable or typed expression"_err_en_US,
+                    expr->AsFortran(), dummyName);
               }
             } else {
               const Symbol &assumed{DEREF(arg.GetAssumedTypeDummy())};

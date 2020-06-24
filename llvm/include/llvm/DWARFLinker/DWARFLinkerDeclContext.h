@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
 namespace llvm {

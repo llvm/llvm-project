@@ -838,7 +838,8 @@ Thunk::Thunk(Symbol &d, int64_t a) : destination(d), addend(a), offset(0) {}
 Thunk::~Thunk() = default;
 
 static Thunk *addThunkAArch64(RelType type, Symbol &s, int64_t a) {
-  if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26)
+  if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
+      type != R_AARCH64_PLT32)
     fatal("unrecognized relocation type");
   if (config->picThunk)
     return make<AArch64ADRPThunk>(s, a);

@@ -70,10 +70,10 @@ module m
       DATA(newNumsArray(i) % one, i = 1, 5) / 5 * 1 /
       !C880
       !OK: Correct use
-      DATA(largeArray(j) % nums % one, j = 1, 10) / 10 * 1 /
+      DATA(largeArray(j) % nums % one, j = 1, 5) / 5 * 1 /
       !C880
       !OK: Correct use
-      DATA(largeNumber % numsArray(j) % one, j = 1, 10) / 10 * 1 /
+      DATA(largeNumber % numsArray(j) % one, j = 1, 5) / 5 * 1 /
       !C881
       !ERROR: Data object must have constant subscripts
       DATA(b(x), i = 1, 5) / 5 * 1 /

@@ -58,6 +58,7 @@ version is based on. This implies that there is a *single*
 or indireclty. For example in:
 
 .. code-block:: llvm
+
   b = MemoryDef(a)
   c = MemoryDef(b)
   d = MemoryDef(c)

@@ -13,7 +13,7 @@ struct awaitable {
 struct promise_void {
   void get_return_object();
   suspend_always initial_suspend();
-  suspend_always final_suspend();
+  suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
 };
@@ -21,7 +21,7 @@ struct promise_void {
 struct promise_void_return_value {
   void get_return_object();
   suspend_always initial_suspend();
-  suspend_always final_suspend();
+  suspend_always final_suspend() noexcept;
   void unhandled_exception();
   void return_value(int);
 };
@@ -30,7 +30,7 @@ struct VoidTagNoReturn {
   struct promise_type {
     VoidTagNoReturn get_return_object();
     suspend_always initial_suspend();
-    suspend_always final_suspend();
+    suspend_always final_suspend() noexcept;
     void unhandled_exception();
   };
 };
@@ -39,7 +39,7 @@ struct VoidTagReturnValue {
   struct promise_type {
     VoidTagReturnValue get_return_object();
     suspend_always initial_suspend();
-    suspend_always final_suspend();
+    suspend_always final_suspend() noexcept;
     void unhandled_exception();
     void return_value(int);
   };
@@ -49,7 +49,7 @@ struct VoidTagReturnVoid {
   struct promise_type {
     VoidTagReturnVoid get_return_object();
     suspend_always initial_suspend();
-    suspend_always final_suspend();
+    suspend_always final_suspend() noexcept;
     void unhandled_exception();
     void return_void();
   };
@@ -58,7 +58,7 @@ struct VoidTagReturnVoid {
 struct promise_float {
   float get_return_object();
   suspend_always initial_suspend();
-  suspend_always final_suspend();
+  suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
 };
@@ -66,7 +66,7 @@ struct promise_float {
 struct promise_int {
   int get_return_object();
   suspend_always initial_suspend();
-  suspend_always final_suspend();
+  suspend_always final_suspend() noexcept;
   void return_value(int);
   void unhandled_exception();
 };

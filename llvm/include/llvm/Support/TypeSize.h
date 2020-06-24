@@ -229,6 +229,10 @@ public:
   TypeSize operator/(int64_t RHS) const {
     return { MinSize / RHS, IsScalable };
   }
+
+  TypeSize NextPowerOf2() const {
+    return TypeSize(llvm::NextPowerOf2(MinSize), IsScalable);
+  }
 };
 
 /// Returns a TypeSize with a known minimum size that is the next integer

@@ -368,28 +368,29 @@ set(LLVM_ENABLE_ZLIB "ON" CACHE STRING "Use zlib for compression/decompression i
 
 set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
 
-find_package(Z3 4.7.1)
-
-if (LLVM_Z3_INSTALL_DIR)
-  if (NOT Z3_FOUND)
-    message(FATAL_ERROR "Z3 >= 4.7.1 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
-  endif()
-endif()
-
-set(LLVM_ENABLE_Z3_SOLVER_DEFAULT "${Z3_FOUND}")
-
 option(LLVM_ENABLE_Z3_SOLVER
   "Enable Support for the Z3 constraint solver in LLVM."
   ${LLVM_ENABLE_Z3_SOLVER_DEFAULT}
 )
 
 if (LLVM_ENABLE_Z3_SOLVER)
+  find_package(Z3 4.7.1)
+  
+  if (LLVM_Z3_INSTALL_DIR)
+    if (NOT Z3_FOUND)
+      message(FATAL_ERROR "Z3 >= 4.7.1 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
+    endif()
+  endif()
+  
   if (NOT Z3_FOUND)
     message(FATAL_ERROR "LLVM_ENABLE_Z3_SOLVER cannot be enabled when Z3 is not available.")
   endif()
 
   set(LLVM_WITH_Z3 1)
 endif()
+
+set(LLVM_ENABLE_Z3_SOLVER_DEFAULT "${Z3_FOUND}")
+
 
 if( LLVM_TARGETS_TO_BUILD STREQUAL "all" )
   set( LLVM_TARGETS_TO_BUILD ${LLVM_ALL_TARGETS} )
@@ -959,6 +960,25 @@ if( MINGW AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
   # People report that -O3 is unreliable on MinGW. The traditional
   # build also uses -O2 for that reason:
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELEASE "-O3" "-O2")
+endif()
+
+# For up-to-date instructions for installing the Tensorflow dependency, refer to
+# the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh
+# Specifically, assuming python3 is installed:
+# python3 -m pip install --upgrade pip && python3 -m pip install --user tf_nightly==2.3.0.dev20200528
+# Then set TENSORFLOW_AOT_PATH to the package install - usually it's ~/.local/lib/python3.7/site-packages/tensorflow
+#
+set(TENSORFLOW_AOT_PATH "" CACHE PATH "Path to TensorFlow pip install dir")
+
+if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
+  set(LLVM_HAVE_TF_AOT "ON" CACHE BOOL "Tensorflow AOT available")
+  set(TENSORFLOW_AOT_COMPILER 
+    "${TENSORFLOW_AOT_PATH}/../../../../bin/saved_model_cli" 
+      CACHE PATH "Path to the Tensorflow AOT compiler")
+  add_definitions("-DLLVM_HAVE_TF_AOT")
+  include_directories(${TENSORFLOW_AOT_PATH}/include)
+  add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
+    ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
 endif()
 
 # Put this before tblgen. Else we have a circular dependence.

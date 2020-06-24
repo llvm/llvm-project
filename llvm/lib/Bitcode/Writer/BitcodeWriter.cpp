@@ -961,7 +961,7 @@ void ModuleBitcodeWriter::writeTypeTable() {
       // VECTOR [numelts, eltty] or
       //        [numelts, eltty, scalable]
       Code = bitc::TYPE_CODE_VECTOR;
-      TypeVals.push_back(VT->getNumElements());
+      TypeVals.push_back(VT->getElementCount().Min);
       TypeVals.push_back(VE.getTypeID(VT->getElementType()));
       if (isa<ScalableVectorType>(VT))
         TypeVals.push_back(true);
@@ -1179,7 +1179,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   std::map<std::string, unsigned> GCMap;
   unsigned MaxAlignment = 0;
   unsigned MaxGlobalType = 0;
-  for (const GlobalValue &GV : M.globals()) {
+  for (const GlobalVariable &GV : M.globals()) {
     MaxAlignment = std::max(MaxAlignment, GV.getAlignment());
     MaxGlobalType = std::max(MaxGlobalType, VE.getTypeID(GV.getValueType()));
     if (GV.hasSection()) {

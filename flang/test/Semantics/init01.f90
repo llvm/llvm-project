@@ -16,9 +16,9 @@ subroutine test(j)
   real, pointer :: p3 => x3
 !ERROR: An initial data target may not be a reference to an object 'x4' that lacks the SAVE attribute
   real, pointer :: p4 => x4
-!ERROR: Pointer 'p5' cannot be initialized with a reference to a designator with non-constant subscripts
+!ERROR: An initial data target must be a designator with constant subscripts
   real, pointer :: p5 => x5(j)
-!ERROR: Pointer 'p6' of rank 0 cannot be initialized with a target of different rank (1)
+!ERROR: Pointer has rank 0 but target has rank 1
   real, pointer :: p6 => x5
 
 !TODO: type incompatibility, non-deferred type parameter values, contiguity

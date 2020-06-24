@@ -2281,6 +2281,13 @@ public:
     return CreateFCmpHelper(P, LHS, RHS, Name, FPMathTag, false);
   }
 
+  Value *CreateCmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
+                   const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+    return CmpInst::isFPPredicate(Pred)
+               ? CreateFCmp(Pred, LHS, RHS, Name, FPMathTag)
+               : CreateICmp(Pred, LHS, RHS, Name);
+  }
+
   // Create a signaling floating-point comparison (i.e. one that raises an FP
   // exception whenever an input is any NaN, signaling or quiet).
   // Note that this differs from CreateFCmp only if IsFPConstrained is true.

@@ -277,3 +277,14 @@ define <4 x float> @vec_select_use2(<4 x float> %x, <4 x float> %y, float %a) {
   %r = select <4 x i1> %cond, <4 x float> %x, <4 x float> %y
   ret <4 x float> %r
 }
+
+define <4 x i1> @vector_of_pointers(i32* %t1) {
+; CHECK-LABEL: @vector_of_pointers(
+; CHECK-NEXT:    [[T6_SCALAR:%.*]] = icmp ne i32* [[T1:%.*]], null
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x i1> undef, i1 [[T6_SCALAR]], i64 0
+; CHECK-NEXT:    ret <4 x i1> [[T6]]
+;
+  %t5 = insertelement <4 x i32*> undef, i32* %t1, i32 0
+  %t6 = icmp ne <4 x i32*> %t5, zeroinitializer
+  ret <4 x i1> %t6
+}

@@ -98,6 +98,8 @@ public:
 
   unsigned getRegisterBitWidth(bool Vector) const {
     if (Vector) {
+      if (ST->hasSVE())
+        return std::max(ST->getMinSVEVectorSizeInBits(), 128u);
       if (ST->hasNEON())
         return 128;
       return 0;
@@ -159,7 +161,8 @@ public:
       return false;
 
     Type *Ty = cast<VectorType>(DataType)->getElementType();
-    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
+    if (Ty->isBFloatTy() || Ty->isHalfTy() ||
+        Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
 
     if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||

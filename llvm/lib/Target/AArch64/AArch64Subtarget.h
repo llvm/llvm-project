@@ -534,6 +534,12 @@ public:
   }
 
   void mirFileLoaded(MachineFunction &MF) const override;
+
+  // Return the known range for the bit length of SVE data registers. A value
+  // of 0 means nothing is known about that particular limit beyong what's
+  // implied by the architecture.
+  unsigned getMaxSVEVectorSizeInBits() const;
+  unsigned getMinSVEVectorSizeInBits() const;
 };
 } // End llvm namespace
 

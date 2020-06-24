@@ -34,6 +34,16 @@ add_entrypoint_object(
     libc.include.string
 )
 
+add_entrypoint_object(
+  strcmp
+  SRCS
+    strcmp.cpp
+  HDRS
+    strcmp.h
+  DEPENDS
+    libc.include.string
+)
+
 # Helper to define a function with multiple implementations
 # - Computes flags to satisfy required/rejected features and arch,
 # - Declares an entry point,

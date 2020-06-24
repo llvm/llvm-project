@@ -244,6 +244,7 @@ FullComment
   verifyWithDynNode(TA,
                     R"cpp(
 TemplateArgument
+`-BuiltinType
 )cpp");
 
   Func = getFunctionNode(AST.get(), "parmvardecl_attr");
@@ -430,6 +431,7 @@ VarDecl 'c1'
 StaticAssertDecl
 |-ImplicitCastExpr
 | `-SubstNonTypeTemplateParmExpr
+|   |-NonTypeTemplateParmDecl 'alignment'
 |   `-IntegerLiteral
 `-StringLiteral
 )cpp");

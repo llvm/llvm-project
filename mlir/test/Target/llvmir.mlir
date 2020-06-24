@@ -927,6 +927,11 @@ llvm.func @llvm_noalias(%arg0: !llvm<"float*"> {llvm.noalias = true}) {
   llvm.return
 }
 
+// CHECK-LABEL: define void @llvm_align(float* align 4 {{%*.}})
+llvm.func @llvm_align(%arg0: !llvm<"float*"> {llvm.align = 4}) {
+  llvm.return
+}
+
 // CHECK-LABEL: @llvm_varargs(...)
 llvm.func @llvm_varargs(...)
 

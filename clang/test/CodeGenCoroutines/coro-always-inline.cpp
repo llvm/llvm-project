@@ -14,22 +14,22 @@ namespace experimental {
 struct handle {};
 
 struct awaitable {
-  bool await_ready() { return true; }
+  bool await_ready() noexcept { return true; }
   // CHECK-NOT: await_suspend
-  inline void __attribute__((__always_inline__)) await_suspend(handle) {}
-  bool await_resume() { return true; }
+  inline void __attribute__((__always_inline__)) await_suspend(handle) noexcept {}
+  bool await_resume() noexcept { return true; }
 };
 
 template <typename T>
 struct coroutine_handle {
-  static handle from_address(void *address) { return {}; }
+  static handle from_address(void *address) noexcept { return {}; }
 };
 
 template <typename T = void>
 struct coroutine_traits {
   struct promise_type {
     awaitable initial_suspend() { return {}; }
-    awaitable final_suspend() { return {}; }
+    awaitable final_suspend() noexcept { return {}; }
     void return_void() {}
     T get_return_object() { return T(); }
     void unhandled_exception() {}

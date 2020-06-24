@@ -18,6 +18,7 @@
 
 namespace mlir {
 
+class FunctionPass;
 class MLIRContext;
 class OwningRewritePatternList;
 class Pass;
@@ -30,6 +31,17 @@ std::unique_ptr<Pass> createShapeToShapeLowering();
 /// Collects a set of patterns to rewrite ops within the Shape dialect.
 void populateShapeRewritePatterns(MLIRContext *context,
                                   OwningRewritePatternList &patterns);
+
+// Collects a set of patterns to replace all constraints with passing witnesses.
+// This is intended to then allow all ShapeConstraint related ops and data to
+// have no effects and allow them to be freely removed such as through
+// canonicalization and dead code elimination.
+//
+// After this pass, no cstr_ operations exist.
+void populateRemoveShapeConstraintsPatterns(OwningRewritePatternList &patterns,
+                                            MLIRContext *ctx);
+std::unique_ptr<FunctionPass> createRemoveShapeConstraintsPass();
+
 } // end namespace mlir
 
 #endif // MLIR_DIALECT_SHAPE_TRANSFORMS_PASSES_H_

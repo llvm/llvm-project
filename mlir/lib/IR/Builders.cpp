@@ -104,6 +104,12 @@ IntegerAttr Builder::getI64IntegerAttr(int64_t value) {
   return IntegerAttr::get(getIntegerType(64), APInt(64, value));
 }
 
+DenseIntElementsAttr Builder::getBoolVectorAttr(ArrayRef<bool> values) {
+  return DenseIntElementsAttr::get(
+      VectorType::get(static_cast<int64_t>(values.size()), getI1Type()),
+      values);
+}
+
 DenseIntElementsAttr Builder::getI32VectorAttr(ArrayRef<int32_t> values) {
   return DenseIntElementsAttr::get(
       VectorType::get(static_cast<int64_t>(values.size()), getIntegerType(32)),

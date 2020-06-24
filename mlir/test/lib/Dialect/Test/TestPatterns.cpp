@@ -32,6 +32,16 @@ static void handleNoResultOp(PatternRewriter &rewriter,
                                     op.operand());
 }
 
+// Test that natives calls are only called once during rewrites.
+// OpM_Test will return Pi, increased by 1 for each subsequent calls.
+// This let us check the number of times OpM_Test was called by inspecting
+// the returned value in the MLIR output.
+static int64_t opMIncreasingValue = 314159265;
+static Attribute OpMTest(PatternRewriter &rewriter, Value val) {
+  int64_t i = opMIncreasingValue++;
+  return rewriter.getIntegerAttr(rewriter.getIntegerType(32), i);
+}
+
 namespace {
 #include "TestPatterns.inc"
 } // end anonymous namespace
@@ -304,8 +314,7 @@ struct TestUndoBlockErase : public ConversionPattern {
 /// This patterns erases a region operation that has had a type conversion.
 struct TestDropOpSignatureConversion : public ConversionPattern {
   TestDropOpSignatureConversion(MLIRContext *ctx, TypeConverter &converter)
-      : ConversionPattern("test.drop_region_op", 1, ctx), converter(converter) {
-  }
+      : ConversionPattern("test.drop_region_op", 1, converter, ctx) {}
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -313,19 +322,17 @@ struct TestDropOpSignatureConversion : public ConversionPattern {
     Block *entry = &region.front();
 
     // Convert the original entry arguments.
+    TypeConverter &converter = *getTypeConverter();
     TypeConverter::SignatureConversion result(entry->getNumArguments());
-    if (failed(
-            converter.convertSignatureArgs(entry->getArgumentTypes(), result)))
+    if (failed(converter.convertSignatureArgs(entry->getArgumentTypes(),
+                                              result)) ||
+        failed(rewriter.convertRegionTypes(&region, converter, &result)))
       return failure();
 
     // Convert the region signature and just drop the operation.
-    rewriter.applySignatureConversion(&region, result);
     rewriter.eraseOp(op);
     return success();
   }
-
-  /// The type converter to use when rewriting the signature.
-  TypeConverter &converter;
 };
 /// This pattern simply updates the operands of the given operation.
 struct TestPassthroughInvalidOp : public ConversionPattern {
@@ -568,8 +575,10 @@ struct TestLegalizePatternDriver
       return llvm::none_of(op.getOperandTypes(),
                            [](Type type) { return type.isF32(); });
     });
-    target.addDynamicallyLegalOp<FuncOp>(
-        [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
+    target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+      return converter.isSignatureLegal(op.getType()) &&
+             converter.isLegal(&op.getBody());
+    });
 
     // Expect the type_producer/type_consumer operations to only operate on f64.
     target.addDynamicallyLegalOp<TestTypeProducerOp>(
@@ -591,7 +600,7 @@ struct TestLegalizePatternDriver
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
       DenseSet<Operation *> unlegalizedOps;
-      (void)applyPartialConversion(getOperation(), target, patterns, &converter,
+      (void)applyPartialConversion(getOperation(), target, patterns,
                                    &unlegalizedOps);
       // Emit remarks for each legalizable operation.
       for (auto *op : unlegalizedOps)
@@ -606,7 +615,7 @@ struct TestLegalizePatternDriver
         return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
       });
 
-      (void)applyFullConversion(getOperation(), target, patterns, &converter);
+      (void)applyFullConversion(getOperation(), target, patterns);
       return;
     }
 
@@ -616,7 +625,7 @@ struct TestLegalizePatternDriver
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target, patterns,
-                                       legalizedOps, &converter)))
+                                       legalizedOps)))
       return signalPassFailure();
 
     // Emit remarks for each legalizable operation.
@@ -701,18 +710,50 @@ struct TestRemappedValue
 };
 } // end anonymous namespace
 
+//===----------------------------------------------------------------------===//
+// Test patterns without a specific root operation kind
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// This pattern matches and removes any operation in the test dialect.
+struct RemoveTestDialectOps : public RewritePattern {
+  RemoveTestDialectOps() : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (!isa<TestDialect>(op->getDialect()))
+      return failure();
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct TestUnknownRootOpDriver
+    : public mlir::PassWrapper<TestUnknownRootOpDriver, FunctionPass> {
+  void runOnFunction() override {
+    mlir::OwningRewritePatternList patterns;
+    patterns.insert<RemoveTestDialectOps>();
+
+    mlir::ConversionTarget target(getContext());
+    target.addIllegalDialect<TestDialect>();
+    if (failed(applyPartialConversion(getFunction(), target, patterns)))
+      signalPassFailure();
+  }
+};
+} // end anonymous namespace
+
 namespace mlir {
 void registerPatternsTestPass() {
-  mlir::PassRegistration<TestReturnTypeDriver>("test-return-type",
-                                               "Run return type functions");
+  PassRegistration<TestReturnTypeDriver>("test-return-type",
+                                         "Run return type functions");
 
-  mlir::PassRegistration<TestDerivedAttributeDriver>(
-      "test-derived-attr", "Run test derived attributes");
+  PassRegistration<TestDerivedAttributeDriver>("test-derived-attr",
+                                               "Run test derived attributes");
 
-  mlir::PassRegistration<TestPatternDriver>("test-patterns",
-                                            "Run test dialect patterns");
+  PassRegistration<TestPatternDriver>("test-patterns",
+                                      "Run test dialect patterns");
 
-  mlir::PassRegistration<TestLegalizePatternDriver>(
+  PassRegistration<TestLegalizePatternDriver>(
       "test-legalize-patterns", "Run test dialect legalization patterns", [] {
         return std::make_unique<TestLegalizePatternDriver>(
             legalizerConversionMode);
@@ -720,6 +761,10 @@ void registerPatternsTestPass() {
 
   PassRegistration<TestRemappedValue>(
       "test-remapped-value",
+      "Test public remapped value mechanism in ConversionPatternRewriter");
+
+  PassRegistration<TestUnknownRootOpDriver>(
+      "test-legalize-unknown-root-patterns",
       "Test public remapped value mechanism in ConversionPatternRewriter");
 }
 } // namespace mlir

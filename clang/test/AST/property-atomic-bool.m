@@ -1,4 +1,12 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 -ast-dump "%s" | FileCheck %s
+// Test without serialization:
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 -ast-dump "%s" \
+// RUN: | FileCheck %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 -x objective-c -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck %s
 
 // CHECK: TypedefDecl {{.*}} referenced AtomicBool '_Atomic(_Bool)'
 // CHECK:  AtomicType {{.*}} '_Atomic(_Bool)'

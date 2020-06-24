@@ -283,7 +283,7 @@ define <8 x float> @expand15(<4 x float> %a) {
 ; SKX-LABEL: expand15:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; SKX-NEXT:    vmovaps {{.*#+}} ymm1 = <0,1,0,1,1,3,u,u>
+; SKX-NEXT:    vmovaps {{.*#+}} ymm1 = <u,u,0,u,1,u,u,u>
 ; SKX-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; SKX-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; SKX-NEXT:    ret{{[l|q]}}

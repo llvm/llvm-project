@@ -31,6 +31,8 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/Debug.h"
@@ -125,6 +127,8 @@ private:
                                const RegisterBank &RB,
                                MachineIRBuilder &MIRBuilder) const;
   bool selectInsertElt(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool tryOptConstantBuildVec(MachineInstr &MI, LLT DstTy,
+                              MachineRegisterInfo &MRI) const;
   bool selectBuildVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -2577,15 +2581,21 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
 
   case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_SEXT_INREG:
   case TargetOpcode::G_SEXT: {
     unsigned Opcode = I.getOpcode();
-    const bool IsSigned = Opcode == TargetOpcode::G_SEXT;
+    const bool IsSigned = Opcode != TargetOpcode::G_ZEXT;
     const Register DefReg = I.getOperand(0).getReg();
-    const Register SrcReg = I.getOperand(1).getReg();
+    Register SrcReg = I.getOperand(1).getReg();
     const LLT DstTy = MRI.getType(DefReg);
     const LLT SrcTy = MRI.getType(SrcReg);
     unsigned DstSize = DstTy.getSizeInBits();
     unsigned SrcSize = SrcTy.getSizeInBits();
+
+    // SEXT_INREG has the same src reg size as dst, the size of the value to be
+    // extended is encoded in the imm.
+    if (Opcode == TargetOpcode::G_SEXT_INREG)
+      SrcSize = I.getOperand(2).getImm();
 
     if (DstTy.isVector())
       return false; // Should be handled by imported patterns.
@@ -2646,21 +2656,24 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     if (DstSize == 64) {
-      // FIXME: Can we avoid manually doing this?
-      if (!RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass, MRI)) {
-        LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(Opcode)
-                          << " operand\n");
-        return false;
+      if (Opcode != TargetOpcode::G_SEXT_INREG) {
+        // FIXME: Can we avoid manually doing this?
+        if (!RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass,
+                                          MRI)) {
+          LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(Opcode)
+                            << " operand\n");
+          return false;
+        }
+        SrcReg = MIB.buildInstr(AArch64::SUBREG_TO_REG,
+                                {&AArch64::GPR64RegClass}, {})
+                     .addImm(0)
+                     .addUse(SrcReg)
+                     .addImm(AArch64::sub_32)
+                     .getReg(0);
       }
 
-      auto SubregToReg =
-          MIB.buildInstr(AArch64::SUBREG_TO_REG, {&AArch64::GPR64RegClass}, {})
-              .addImm(0)
-              .addUse(SrcReg)
-              .addImm(AArch64::sub_32);
-
       ExtI = MIB.buildInstr(IsSigned ? AArch64::SBFMXri : AArch64::UBFMXri,
-                             {DefReg}, {SubregToReg})
+                             {DefReg}, {SrcReg})
                   .addImm(0)
                   .addImm(SrcSize - 1);
     } else if (DstSize <= 32) {
@@ -4476,6 +4489,44 @@ bool AArch64InstructionSelector::selectInsertElt(
   return true;
 }
 
+bool AArch64InstructionSelector::tryOptConstantBuildVec(
+    MachineInstr &I, LLT DstTy, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  assert(DstTy.getSizeInBits() <= 128 && "Unexpected build_vec type!");
+  if (DstTy.getSizeInBits() < 32)
+    return false;
+  // Check if we're building a constant vector, in which case we want to
+  // generate a constant pool load instead of a vector insert sequence.
+  SmallVector<Constant *, 16> Csts;
+  for (unsigned Idx = 1; Idx < I.getNumOperands(); ++Idx) {
+    // Try to find G_CONSTANT or G_FCONSTANT
+    auto *OpMI =
+        getOpcodeDef(TargetOpcode::G_CONSTANT, I.getOperand(Idx).getReg(), MRI);
+    if (OpMI)
+      Csts.emplace_back(
+          const_cast<ConstantInt *>(OpMI->getOperand(1).getCImm()));
+    else if ((OpMI = getOpcodeDef(TargetOpcode::G_FCONSTANT,
+                                  I.getOperand(Idx).getReg(), MRI)))
+      Csts.emplace_back(
+          const_cast<ConstantFP *>(OpMI->getOperand(1).getFPImm()));
+    else
+      return false;
+  }
+  Constant *CV = ConstantVector::get(Csts);
+  MachineIRBuilder MIB(I);
+  auto *CPLoad = emitLoadFromConstantPool(CV, MIB);
+  if (!CPLoad) {
+    LLVM_DEBUG(dbgs() << "Could not generate cp load for build_vector");
+    return false;
+  }
+  MIB.buildCopy(I.getOperand(0), CPLoad->getOperand(0));
+  RBI.constrainGenericRegister(I.getOperand(0).getReg(),
+                               *MRI.getRegClass(CPLoad->getOperand(0).getReg()),
+                               MRI);
+  I.eraseFromParent();
+  return true;
+}
+
 bool AArch64InstructionSelector::selectBuildVector(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
@@ -4484,6 +4535,9 @@ bool AArch64InstructionSelector::selectBuildVector(
   const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
   const LLT EltTy = MRI.getType(I.getOperand(1).getReg());
   unsigned EltSize = EltTy.getSizeInBits();
+
+  if (tryOptConstantBuildVec(I, DstTy, MRI))
+    return true;
   if (EltSize < 16 || EltSize > 64)
     return false; // Don't support all element types yet.
   const RegisterBank &RB = *RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI);
@@ -5151,13 +5205,8 @@ AArch64InstructionSelector::tryFoldAddLowIntoImm(MachineInstr &RootDef,
   if (GV->isThreadLocal())
     return None;
 
-  unsigned Alignment = GV->getAlignment();
-  Type *Ty = GV->getValueType();
   auto &MF = *RootDef.getParent()->getParent();
-  if (Alignment == 0 && Ty->isSized())
-    Alignment = MF.getDataLayout().getABITypeAlignment(Ty);
-
-  if (Alignment < Size)
+  if (GV->getPointerAlignment(MF.getDataLayout()) < Size)
     return None;
 
   unsigned OpFlags = STI.ClassifyGlobalReference(GV, MF.getTarget());
@@ -5301,7 +5350,11 @@ AArch64_AM::ShiftExtendType AArch64InstructionSelector::getExtendTypeForInst(
 
   // Handle explicit extend instructions first.
   if (Opc == TargetOpcode::G_SEXT || Opc == TargetOpcode::G_SEXT_INREG) {
-    unsigned Size = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    unsigned Size;
+    if (Opc == TargetOpcode::G_SEXT)
+      Size = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    else
+      Size = MI.getOperand(2).getImm();
     assert(Size != 64 && "Extend from 64 bits?");
     switch (Size) {
     case 8:

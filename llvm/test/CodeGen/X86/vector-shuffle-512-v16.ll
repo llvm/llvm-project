@@ -260,6 +260,27 @@ define <16 x float> @shuffle_v16f32_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08
   ret <16 x float> %c
 }
 
+; PR46249
+define <16 x i32> @shuffle_v16i32_0b_0a_09_08_0f_0e_0d_0c_03_02_01_00_07_06_05_04(<16 x i32> %a) {
+; ALL-LABEL: shuffle_v16i32_0b_0a_09_08_0f_0e_0d_0c_03_02_01_00_07_06_05_04:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; ALL-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[4,5,6,7,0,1,2,3]
+; ALL-NEXT:    retq
+  %1 = shufflevector <16 x i32> %a, <16 x i32> undef, <16 x i32> <i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  ret <16 x i32> %1
+}
+
+define <16 x float> @shuffle_v16f32_0b_0a_09_08_0f_0e_0d_0c_03_02_01_00_07_06_05_04(<16 x float> %a) {
+; ALL-LABEL: shuffle_v16f32_0b_0a_09_08_0f_0e_0d_0c_03_02_01_00_07_06_05_04:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[4,5,6,7,0,1,2,3]
+; ALL-NEXT:    retq
+  %1 = shufflevector <16 x float> %a, <16 x float> undef, <16 x i32> <i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  ret <16 x float> %1
+}
+
 define <16 x float> @shuffle_v16f32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18(<16 x float> %a, <16 x float>* %b)  {
 ; ALL-LABEL: shuffle_v16f32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18:
 ; ALL:       # %bb.0:

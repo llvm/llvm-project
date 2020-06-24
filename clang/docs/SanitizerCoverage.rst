@@ -317,24 +317,24 @@ Partially disabling instrumentation
 
 It is sometimes useful to tell SanitizerCoverage to instrument only a subset of the
 functions in your target.
-With ``-fsanitize-coverage-whitelist=whitelist.txt``
-and ``-fsanitize-coverage-blacklist=blacklist.txt``,
-you can specify such a subset through the combination of a whitelist and a blacklist.
+With ``-fsanitize-coverage-allowlist=allowlist.txt``
+and ``-fsanitize-coverage-blocklist=blocklist.txt``,
+you can specify such a subset through the combination of a allowlist and a blocklist.
 
 SanitizerCoverage will only instrument functions that satisfy two conditions.
-First, the function should belong to a source file with a path that is both whitelisted
-and not blacklisted.
-Second, the function should have a mangled name that is both whitelisted and not blacklisted.
+First, the function should belong to a source file with a path that is both allowlisted
+and not blocklisted.
+Second, the function should have a mangled name that is both allowlisted and not blocklisted.
 
-The whitelist and blacklist format is similar to that of the sanitizer blacklist format.
-The default whitelist will match every source file and every function.
-The default blacklist will match no source file and no function.
+The allowlist and blocklist format is similar to that of the sanitizer blocklist format.
+The default allowlist will match every source file and every function.
+The default blocklist will match no source file and no function.
 
-A common use case is to have the whitelist list folders or source files for which you want
-instrumentation and allow all function names, while the blacklist will opt out some specific
-files or functions that the whitelist loosely allowed.
+A common use case is to have the allowlist list folders or source files for which you want
+instrumentation and allow all function names, while the blocklist will opt out some specific
+files or functions that the allowlist loosely allowed.
 
-Here is an example whitelist:
+Here is an example allowlist:
 
 .. code-block:: none
 
@@ -345,13 +345,13 @@ Here is an example whitelist:
   # Enable instrumentation for all functions in those files
   fun:*
 
-And an example blacklist:
+And an example blocklist:
 
 .. code-block:: none
 
-  # Disable instrumentation for a specific source file that the whitelist allowed
+  # Disable instrumentation for a specific source file that the allowlist allowed
   src:bar/b.cpp
-  # Disable instrumentation for a specific function that the whitelist allowed
+  # Disable instrumentation for a specific function that the allowlist allowed
   fun:*myFunc*
 
 The use of ``*`` wildcards above is required because function names are matched after mangling.
@@ -359,7 +359,7 @@ Without the wildcards, one would have to write the whole mangled name.
 
 Be careful that the paths of source files are matched exactly as they are provided on the clang
 command line.
-For example, the whitelist above would include file ``bar/b.cpp`` if the path was provided
+For example, the allowlist above would include file ``bar/b.cpp`` if the path was provided
 exactly like this, but would it would fail to include it with other ways to refer to the same
 file such as ``./bar/b.cpp``, or ``bar\b.cpp`` on Windows.
 So, please make sure to always double check that your lists are correctly applied.
@@ -432,7 +432,7 @@ Sancov matches these files using module names and binaries file names.
       -symbolize                - Symbolizes the report.
 
     Options
-      -blacklist=<string>         - Blacklist file (sanitizer blacklist format).
+      -blocklist=<string>         - Blocklist file (sanitizer blocklist format).
       -demangle                   - Print demangled function name.
       -strip_path_prefix=<string> - Strip this prefix from file paths in reports
 

@@ -64,6 +64,23 @@ struct TypeDependenceScope {
 };
 using TypeDependence = TypeDependenceScope::TypeDependence;
 
+struct TemplateArgumentDependenceScope {
+  enum TemplateArgumentDependence : uint8_t {
+    UnexpandedPack = 1,
+    Instantiation = 2,
+    Dependent = 4,
+
+    Error = 8,
+
+    DependentInstantiation = Dependent | Instantiation,
+    None = 0,
+    All = 15,
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Error)
+  };
+};
+using TemplateArgumentDependence =
+    TemplateArgumentDependenceScope ::TemplateArgumentDependence;
+
 #define LLVM_COMMON_DEPENDENCE(NAME)                                           \
   struct NAME##Scope {                                                         \
     enum NAME : uint8_t {                                                      \
@@ -82,7 +99,6 @@ using TypeDependence = TypeDependenceScope::TypeDependence;
 
 LLVM_COMMON_DEPENDENCE(NestedNameSpecifierDependence)
 LLVM_COMMON_DEPENDENCE(TemplateNameDependence)
-LLVM_COMMON_DEPENDENCE(TemplateArgumentDependence)
 #undef LLVM_COMMON_DEPENDENCE
 
 // A combined space of all dependence concepts for all node types.
@@ -118,10 +134,10 @@ public:
 
   Dependence(TypeDependence D)
       : V(translate(D, TypeDependence::UnexpandedPack, UnexpandedPack) |
-             translate(D, TypeDependence::Instantiation, Instantiation) |
-             translate(D, TypeDependence::Dependent, Dependent) |
-             translate(D, TypeDependence::VariablyModified, VariablyModified)) {
-  }
+          translate(D, TypeDependence::Instantiation, Instantiation) |
+          translate(D, TypeDependence::Dependent, Dependent) |
+          translate(D, TypeDependence::Error, Error) |
+          translate(D, TypeDependence::VariablyModified, VariablyModified)) {}
 
   Dependence(ExprDependence D)
       : V(translate(D, ExprDependence::UnexpandedPack, UnexpandedPack) |
@@ -137,8 +153,9 @@ public:
 
   Dependence(TemplateArgumentDependence D)
       : V(translate(D, TADependence::UnexpandedPack, UnexpandedPack) |
-             translate(D, TADependence::Instantiation, Instantiation) |
-             translate(D, TADependence::Dependent, Dependent)) {}
+          translate(D, TADependence::Instantiation, Instantiation) |
+          translate(D, TADependence::Dependent, Dependent) |
+          translate(D, TADependence::Error, Error)) {}
 
   Dependence(TemplateNameDependence D)
       : V(translate(D, TNDependence::UnexpandedPack, UnexpandedPack) |
@@ -170,7 +187,8 @@ public:
   TemplateArgumentDependence templateArgument() const {
     return translate(V, UnexpandedPack, TADependence::UnexpandedPack) |
            translate(V, Instantiation, TADependence::Instantiation) |
-           translate(V, Dependent, TADependence::Dependent);
+           translate(V, Dependent, TADependence::Dependent) |
+           translate(V, Error, TADependence::Error);
   }
 
   TemplateNameDependence templateName() const {

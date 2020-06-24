@@ -443,7 +443,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UREM, VT, Expand);
     setOperationAction(ISD::SMUL_LOHI, VT, Expand);
     setOperationAction(ISD::UMUL_LOHI, VT, Expand);
-    setOperationAction(ISD::SDIVREM, VT, Custom);
+    setOperationAction(ISD::SDIVREM, VT, Expand);
     setOperationAction(ISD::UDIVREM, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::VSELECT, VT, Expand);
@@ -1321,7 +1321,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
 
     // TODO: We could emit code to handle the initialization somewhere.
     if (!hasDefinedInitializer(GV)) {
-      unsigned Offset = MFI->allocateLDSGlobal(DL, *GV);
+      unsigned Offset = MFI->allocateLDSGlobal(DL, *cast<GlobalVariable>(GV));
       return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
     }
   }
@@ -4589,11 +4589,10 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   }
   case AMDGPUISD::LDS: {
     auto GA = cast<GlobalAddressSDNode>(Op.getOperand(0).getNode());
-    unsigned Align = GA->getGlobal()->getAlignment();
+    Align Alignment = GA->getGlobal()->getPointerAlignment(DAG.getDataLayout());
 
     Known.Zero.setHighBits(16);
-    if (Align)
-      Known.Zero.setLowBits(Log2_32(Align));
+    Known.Zero.setLowBits(Log2(Alignment));
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {

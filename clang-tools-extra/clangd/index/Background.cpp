@@ -22,10 +22,10 @@
 #include "index/Serialization.h"
 #include "index/SymbolCollector.h"
 #include "support/Context.h"
-#include "support/FSProvider.h"
 #include "support/Logger.h"
 #include "support/Path.h"
 #include "support/Threading.h"
+#include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -90,11 +90,11 @@ bool shardIsStale(const LoadedShard &LS, llvm::vfs::FileSystem *FS) {
 } // namespace
 
 BackgroundIndex::BackgroundIndex(
-    Context BackgroundContext, const FileSystemProvider &FSProvider,
+    Context BackgroundContext, const ThreadsafeFS &TFS,
     const GlobalCompilationDatabase &CDB,
     BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize,
     std::function<void(BackgroundQueue::Stats)> OnProgress)
-    : SwapIndex(std::make_unique<MemIndex>()), FSProvider(FSProvider), CDB(CDB),
+    : SwapIndex(std::make_unique<MemIndex>()), TFS(TFS), CDB(CDB),
       BackgroundContext(std::move(BackgroundContext)),
       Rebuilder(this, &IndexedSymbols, ThreadPoolSize),
       IndexStorageFactory(std::move(IndexStorageFactory)),
@@ -244,8 +244,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   SPAN_ATTACH(Tracer, "file", Cmd.Filename);
   auto AbsolutePath = getAbsolutePath(Cmd);
 
-  auto FS = FSProvider.getFileSystem();
-  FS->setCurrentWorkingDirectory(Cmd.Directory);
+  auto FS = TFS.view(Cmd.Directory);
   auto Buf = FS->getBufferForFile(AbsolutePath);
   if (!Buf)
     return llvm::errorCodeToError(Buf.getError());
@@ -260,7 +259,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
 
   vlog("Indexing {0} (digest:={1})", Cmd.Filename, llvm::toHex(Hash));
   ParseInputs Inputs;
-  Inputs.FSProvider = &FSProvider;
+  Inputs.TFS = &TFS;
   Inputs.CompileCommand = std::move(Cmd);
   IgnoreDiagnostics IgnoreDiags;
   auto CI = buildCompilerInvocation(Inputs, IgnoreDiags);
@@ -382,7 +381,7 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
   Rebuilder.loadedShard(LoadedShards);
   Rebuilder.doneLoading();
 
-  auto FS = FSProvider.getFileSystem();
+  auto FS = TFS.view(/*CWD=*/llvm::None);
   llvm::DenseSet<PathRef> TUsToIndex;
   // We'll accept data from stale shards, but ensure the files get reindexed
   // soon.

@@ -244,7 +244,7 @@
 # VERBOSE-NEXT:  DW_LNE_set_address (0x00000000feedfeed)
 # VERBOSE-NEXT:  DW_LNS_copy
 # NONFATAL-NEXT: 0x00000000feedfeed
-# VERBOSE-NEXT:  DW_LNE_set_address (0x0000000000000000)
+# VERBOSE-NEXT:  DW_LNE_set_address (<parsing error> 00 f0 01 f0 f0 00 01)
 # MORE-ERR-NEXT: warning: unexpected end of data at offset 0x3ed while reading [0x3e6, 0x3ee)
 # MORE-ERR-NEXT: warning: last sequence in debug line table at offset 0x0000039d is not terminated
 

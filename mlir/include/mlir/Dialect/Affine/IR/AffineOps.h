@@ -381,6 +381,21 @@ AffineForOp getForInductionVarOwner(Value val);
 void extractForInductionVars(ArrayRef<AffineForOp> forInsts,
                              SmallVectorImpl<Value> *ivs);
 
+/// Builds a perfect nest of affine "for" loops, i.e. each loop except the
+/// innermost only contains another loop and a terminator. The loops iterate
+/// from "lbs" to "ubs" with "steps". The body of the innermost loop is
+/// populated by calling "bodyBuilderFn" and providing it with an OpBuilder, a
+/// Location and a list of loop induction variables.
+void buildAffineLoopNest(OpBuilder &builder, Location loc,
+                         ArrayRef<int64_t> lbs, ArrayRef<int64_t> ubs,
+                         ArrayRef<int64_t> steps,
+                         function_ref<void(OpBuilder &, Location, ValueRange)>
+                             bodyBuilderFn = nullptr);
+void buildAffineLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
+                         ValueRange ubs, ArrayRef<int64_t> steps,
+                         function_ref<void(OpBuilder &, Location, ValueRange)>
+                             bodyBuilderFn = nullptr);
+
 /// AffineBound represents a lower or upper bound in the for operation.
 /// This class does not own the underlying operands. Instead, it refers
 /// to the operands stored in the AffineForOp. Its life span should not exceed

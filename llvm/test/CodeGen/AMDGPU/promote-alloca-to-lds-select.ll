@@ -61,21 +61,18 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointe
   ret void
 }
 
+; FIXME: Can be promoted, but we'd have to recursively show that the select
+; operands all point to the same alloca.
+
 ; CHECK-LABEL: @lds_promoted_alloca_select_input_select(
-; CHECK: getelementptr inbounds [256 x [16 x i32]], [256 x [16 x i32]] addrspace(3)* @lds_promoted_alloca_select_input_select.alloca, i32 0, i32 %{{[0-9]+}}
-; CHECK: %ptr0 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(3)* %{{[0-9]+}}, i32 0, i32 %a
-; CHECK: %ptr1 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(3)* %{{[0-9]+}}, i32 0, i32 %b
-; CHECK: %ptr2 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(3)* %{{[0-9]+}}, i32 0, i32 %c
-; CHECK: %select0 = select i1 undef, i32 addrspace(3)* %ptr0, i32 addrspace(3)* %ptr1
-; CHECK: %select1 = select i1 undef, i32 addrspace(3)* %select0, i32 addrspace(3)* %ptr2
-; CHECK: store i32 0, i32 addrspace(3)* %select1, align 4
-define amdgpu_kernel void @lds_promoted_alloca_select_input_select(i32 %a, i32 %b, i32 %c) #0 {
+; CHECK: alloca
+define amdgpu_kernel void @lds_promoted_alloca_select_input_select(i32 %a, i32 %b, i32 %c, i1 %c1, i1 %c2) #0 {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %ptr0 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 %a
   %ptr1 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 %b
   %ptr2 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 %c
-  %select0 = select i1 undef, i32 addrspace(5)* %ptr0, i32 addrspace(5)* %ptr1
-  %select1 = select i1 undef, i32 addrspace(5)* %select0, i32 addrspace(5)* %ptr2
+  %select0 = select i1 %c1, i32 addrspace(5)* %ptr0, i32 addrspace(5)* %ptr1
+  %select1 = select i1 %c2, i32 addrspace(5)* %select0, i32 addrspace(5)* %ptr2
   store i32 0, i32 addrspace(5)* %select1, align 4
   ret void
 }

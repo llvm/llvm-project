@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
 )
 
 add_clang_library(clangTransformer
+  Parsing.cpp
   RangeSelector.cpp
   RewriteRule.cpp
   SourceCode.cpp
@@ -18,4 +19,7 @@ add_clang_library(clangTransformer
   clangLex
   clangToolingCore
   clangToolingRefactoring
+
+  DEPENDS
+  omp_gen
   )

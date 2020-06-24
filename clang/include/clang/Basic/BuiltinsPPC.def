@@ -298,6 +298,14 @@ BUILTIN(__builtin_altivec_vrldmi, "V2ULLiV2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vrlwnm, "V4UiV4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vrldnm, "V2ULLiV2ULLiV2ULLi", "")
 
+// P10 Vector Parallel Bits built-ins.
+BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")
+BUILTIN(__builtin_altivec_vpextd, "V2ULLiV2ULLiV2ULLi", "")
+
+// P10 Vector Clear Bytes built-ins.
+BUILTIN(__builtin_altivec_vclrlb, "V16cV16cUi", "")
+BUILTIN(__builtin_altivec_vclrrb, "V16cV16cUi", "")
+
 // VSX built-ins.
 
 BUILTIN(__builtin_vsx_lxvd2x, "V2divC*", "")
@@ -391,6 +399,11 @@ BUILTIN(__builtin_vsx_xvcpsgnsp, "V4fV4fV4f", "")
 BUILTIN(__builtin_vsx_xvabssp, "V4fV4f", "")
 BUILTIN(__builtin_vsx_xvabsdp, "V2dV2d", "")
 
+BUILTIN(__builtin_vsx_xxgenpcvbm, "V16UcV16Uci", "")
+BUILTIN(__builtin_vsx_xxgenpcvhm, "V8UsV8Usi", "")
+BUILTIN(__builtin_vsx_xxgenpcvwm, "V4UiV4Uii", "")
+BUILTIN(__builtin_vsx_xxgenpcvdm, "V2ULLiV2ULLii", "")
+
 // vector Insert/Extract exponent/significand builtins
 BUILTIN(__builtin_vsx_xviexpdp, "V2dV2ULLiV2ULLi", "")
 BUILTIN(__builtin_vsx_xviexpsp, "V4fV4UiV4Ui", "")
@@ -470,6 +483,8 @@ BUILTIN(__builtin_divweu, "UiUiUi", "")
 BUILTIN(__builtin_divde, "SLLiSLLiSLLi", "")
 BUILTIN(__builtin_divdeu, "ULLiULLiULLi", "")
 BUILTIN(__builtin_bpermd, "SLLiSLLiSLLi", "")
+BUILTIN(__builtin_pdepd, "ULLiULLiULLi", "")
+BUILTIN(__builtin_pextd, "ULLiULLiULLi", "")
 
 // Vector int128 (un)pack
 BUILTIN(__builtin_unpack_vector_int128, "ULLiV1LLLii", "")

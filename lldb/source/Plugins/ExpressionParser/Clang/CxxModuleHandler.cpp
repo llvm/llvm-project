@@ -186,7 +186,7 @@ llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
   if (!td->getDeclContext()->isStdNamespace())
     return {};
 
-  // We have a whitelist of supported template names.
+  // We have a list of supported template names.
   if (m_supported_templates.find(td->getName()) == m_supported_templates.end())
     return {};
 

@@ -378,7 +378,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
 
-  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+    .legalFor({s32, s64})
+    .lower();
 
   // FP conversions
   getActionDefinitionsBuilder(G_FPTRUNC).legalFor(
@@ -624,10 +626,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   verify(*ST.getInstrInfo());
 }
 
-bool AArch64LegalizerInfo::legalizeCustom(MachineInstr &MI,
-                                          MachineRegisterInfo &MRI,
-                                          MachineIRBuilder &MIRBuilder,
-                                          GISelChangeObserver &Observer) const {
+bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
+                                          MachineInstr &MI) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  GISelChangeObserver &Observer = Helper.Observer;
   switch (MI.getOpcode()) {
   default:
     // No idea what to do.
@@ -681,8 +684,8 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(MachineInstr &MI,
 }
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(
-    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-    GISelChangeObserver &Observer) const {
+  LegalizerHelper &Helper, MachineInstr &MI) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   switch (MI.getIntrinsicID()) {
   case Intrinsic::memcpy:
   case Intrinsic::memset:

@@ -6,23 +6,98 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// This pass implements a data flow analysis that propagates debug location
-/// information by inserting additional DBG_VALUE insts into the machine
-/// instruction stream. Before running, each DBG_VALUE inst corresponds to a
-/// source assignment of a variable. Afterwards, a DBG_VALUE inst specifies a
-/// variable location for the current basic block (see SourceLevelDebugging.rst).
+/// \file LiveDebugValues.cpp
 ///
-/// This is a separate pass from DbgValueHistoryCalculator to facilitate
-/// testing and improve modularity.
+/// LiveDebugValues is an optimistic "available expressions" dataflow
+/// algorithm. The set of expressions is the set of machine locations
+/// (registers, spill slots, constants) that a variable fragment might be
+/// located, qualified by a DIExpression and indirect-ness flag, while each
+/// variable is identified by a DebugVariable object. The availability of an
+/// expression begins when a DBG_VALUE instruction specifies the location of a
+/// DebugVariable, and continues until that location is clobbered or
+/// re-specified by a different DBG_VALUE for the same DebugVariable.
 ///
-/// Each variable location is represented by a VarLoc object that identifies the
-/// source variable, its current machine-location, and the DBG_VALUE inst that
-/// specifies the location. Each VarLoc is indexed in the (function-scope)
-/// VarLocMap, giving each VarLoc a unique index. Rather than operate directly
-/// on machine locations, the dataflow analysis in this pass identifies
-/// locations by their index in the VarLocMap, meaning all the variable
-/// locations in a block can be described by a sparse vector of VarLocMap
-/// indexes.
+/// The cannonical "available expressions" problem doesn't have expression
+/// clobbering, instead when a variable is re-assigned, any expressions using
+/// that variable get invalidated. LiveDebugValues can map onto "available
+/// expressions" by having every register represented by a variable, which is
+/// used in an expression that becomes available at a DBG_VALUE instruction.
+/// When the register is clobbered, its variable is effectively reassigned, and
+/// expressions computed from it become unavailable. A similar construct is
+/// needed when a DebugVariable has its location re-specified, to invalidate
+/// all other locations for that DebugVariable.
+///
+/// Using the dataflow analysis to compute the available expressions, we create
+/// a DBG_VALUE at the beginning of each block where the expression is
+/// live-in. This propagates variable locations into every basic block where
+/// the location can be determined, rather than only having DBG_VALUEs in blocks
+/// where locations are specified due to an assignment or some optimization.
+/// Movements of values between registers and spill slots are annotated with
+/// DBG_VALUEs too to track variable values bewteen locations. All this allows
+/// DbgEntityHistoryCalculator to focus on only the locations within individual
+/// blocks, facilitating testing and improving modularity.
+///
+/// We follow an optimisic dataflow approach, with this lattice:
+///
+/// \verbatim
+///                    ┬ "Unknown"
+///                          |
+///                          v
+///                         True
+///                          |
+///                          v
+///                      ⊥ False
+/// \endverbatim With "True" signifying that the expression is available (and
+/// thus a DebugVariable's location is the corresponding register), while
+/// "False" signifies that the expression is unavailable. "Unknown"s never
+/// survive to the end of the analysis (see below).
+///
+/// Formally, all DebugVariable locations that are live-out of a block are
+/// initialized to \top.  A blocks live-in values take the meet of the lattice
+/// value for every predecessors live-outs, except for the entry block, where
+/// all live-ins are \bot. The usual dataflow propagation occurs: the transfer
+/// function for a block assigns an expression for a DebugVariable to be "True"
+/// if a DBG_VALUE in the block specifies it; "False" if the location is
+/// clobbered; or the live-in value if it is unaffected by the block. We
+/// visit each block in reverse post order until a fixedpoint is reached. The
+/// solution produced is maximal.
+///
+/// Intuitively, we start by assuming that every expression / variable location
+/// is at least "True", and then propagate "False" from the entry block and any
+/// clobbers until there are no more changes to make. This gives us an accurate
+/// solution because all incorrect locations will have a "False" propagated into
+/// them. It also gives us a solution that copes well with loops by assuming
+/// that variable locations are live-through every loop, and then removing those
+/// that are not through dataflow.
+///
+/// Within LiveDebugValues: each variable location is represented by a
+/// VarLoc object that identifies the source variable, its current
+/// machine-location, and the DBG_VALUE inst that specifies the location. Each
+/// VarLoc is indexed in the (function-scope) \p VarLocMap, giving each VarLoc a
+/// unique index. Rather than operate directly on machine locations, the
+/// dataflow analysis in this pass identifies locations by their index in the
+/// VarLocMap, meaning all the variable locations in a block can be described
+/// by a sparse vector of VarLocMap indicies.
+///
+/// All the storage for the dataflow analysis is local to the ExtendRanges
+/// method and passed down to helper methods. "OutLocs" and "InLocs" record the
+/// in and out lattice values for each block. "OpenRanges" maintains a list of
+/// variable locations and, with the "process" method, evaluates the transfer
+/// function of each block. "flushPendingLocs" installs DBG_VALUEs for each
+/// live-in location at the start of blocks, while "Transfers" records
+/// transfers of values between machine-locations.
+///
+/// We avoid explicitly representing the "Unknown" (\top) lattice value in the
+/// implementation. Instead, unvisited blocks implicitly have all lattice
+/// values set as "Unknown". After being visited, there will be path back to
+/// the entry block where the lattice value is "False", and as the transfer
+/// function cannot make new "Unknown" locations, there are no scenarios where
+/// a block can have an "Unknown" location after being visited. Similarly, we
+/// don't enumerate all possible variable locations before exploring the
+/// function: when a new location is discovered, all blocks previously explored
+/// were implicitly "False" but unrecorded, and become explicitly "False" when
+/// a new VarLoc is created with its bit not set in predecessor InLocs or
+/// OutLocs.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -99,7 +174,8 @@ static Register isDbgValueDescribedByReg(const MachineInstr &MI) {
   assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
   // If location of variable is described using a register (directly
   // or indirectly), this register is always a first operand.
-  return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : Register();
+  return MI.getDebugOperand(0).isReg() ? MI.getDebugOperand(0).getReg()
+                                       : Register();
 }
 
 /// If \p Op is a stack or frame register return true, otherwise return false.
@@ -259,15 +335,15 @@ private:
       if (int RegNo = isDbgValueDescribedByReg(MI)) {
         Kind = RegisterKind;
         Loc.RegNo = RegNo;
-      } else if (MI.getOperand(0).isImm()) {
+      } else if (MI.getDebugOperand(0).isImm()) {
         Kind = ImmediateKind;
-        Loc.Immediate = MI.getOperand(0).getImm();
-      } else if (MI.getOperand(0).isFPImm()) {
+        Loc.Immediate = MI.getDebugOperand(0).getImm();
+      } else if (MI.getDebugOperand(0).isFPImm()) {
         Kind = ImmediateKind;
-        Loc.FPImm = MI.getOperand(0).getFPImm();
-      } else if (MI.getOperand(0).isCImm()) {
+        Loc.FPImm = MI.getDebugOperand(0).getFPImm();
+      } else if (MI.getDebugOperand(0).isCImm()) {
         Kind = ImmediateKind;
-        Loc.CImm = MI.getOperand(0).getCImm();
+        Loc.CImm = MI.getDebugOperand(0).getCImm();
       }
 
       // We create the debug entry values from the factory functions rather than
@@ -355,8 +431,8 @@ private:
         // expression. The register location of such DBG_VALUE is always the one
         // from the entry DBG_VALUE, it does not matter if the entry value was
         // copied in to another register due to some optimizations.
-        return BuildMI(MF, DbgLoc, IID, Indirect, MI.getOperand(0).getReg(),
-                       Var, Expr);
+        return BuildMI(MF, DbgLoc, IID, Indirect,
+                       MI.getDebugOperand(0).getReg(), Var, Expr);
       case RegisterKind:
         // Register locations are like the source DBG_VALUE, but with the
         // register number from this VarLoc.
@@ -372,7 +448,7 @@ private:
         return BuildMI(MF, DbgLoc, IID, true, Base, Var, SpillExpr);
       }
       case ImmediateKind: {
-        MachineOperand MO = MI.getOperand(0);
+        MachineOperand MO = MI.getDebugOperand(0);
         return BuildMI(MF, DbgLoc, IID, Indirect, MO, Var, DIExpr);
       }
       case EntryValueBackupKind:
@@ -945,7 +1021,7 @@ bool LiveDebugValues::removeEntryValue(const MachineInstr &MI,
   // the entry value any more. In addition, if the debug expression from the
   // DBG_VALUE is not empty, we can assume the parameter's value has changed
   // indicating that we should stop tracking its entry value as well.
-  if (!MI.getOperand(0).isReg() ||
+  if (!MI.getDebugOperand(0).isReg() ||
       MI.getDebugExpression()->getNumElements() != 0)
     return true;
 
@@ -953,7 +1029,7 @@ bool LiveDebugValues::removeEntryValue(const MachineInstr &MI,
   // it means the parameter's value has not changed and we should be able to use
   // its entry value.
   bool TrySalvageEntryValue = false;
-  Register Reg = MI.getOperand(0).getReg();
+  Register Reg = MI.getDebugOperand(0).getReg();
   auto I = std::next(MI.getReverseIterator());
   const MachineOperand *SrcRegOp, *DestRegOp;
   if (I != MI.getParent()->rend()) {
@@ -975,7 +1051,7 @@ bool LiveDebugValues::removeEntryValue(const MachineInstr &MI,
     for (uint64_t ID : OpenRanges.getEntryValueBackupVarLocs()) {
       const VarLoc &VL = VarLocIDs[LocIndex::fromRawInteger(ID)];
       if (VL.getEntryValueCopyBackupReg() == Reg &&
-          VL.MI.getOperand(0).getReg() == SrcRegOp->getReg())
+          VL.MI.getDebugOperand(0).getReg() == SrcRegOp->getReg())
         return false;
     }
   }
@@ -1013,8 +1089,8 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
     }
   }
 
-  if (isDbgValueDescribedByReg(MI) || MI.getOperand(0).isImm() ||
-      MI.getOperand(0).isFPImm() || MI.getOperand(0).isCImm()) {
+  if (isDbgValueDescribedByReg(MI) || MI.getDebugOperand(0).isImm() ||
+      MI.getDebugOperand(0).isFPImm() || MI.getDebugOperand(0).isCImm()) {
     // Use normal VarLoc constructor for registers and immediates.
     VarLoc VL(MI, LS);
     // End all previous ranges of VL.Var.
@@ -1027,7 +1103,8 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
     llvm_unreachable("DBG_VALUE with mem operand encountered after regalloc?");
   } else {
     // This must be an undefined location. If it has an open range, erase it.
-    assert(MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == 0 &&
+    assert(MI.getDebugOperand(0).isReg() &&
+           MI.getDebugOperand(0).getReg() == 0 &&
            "Unexpected non-undef DBG_VALUE encountered");
     VarLoc VL(MI, LS);
     OpenRanges.erase(VL);
@@ -1663,14 +1740,14 @@ bool LiveDebugValues::isEntryValueCandidate(
   // Only consider parameters that are described using registers. Parameters
   // that are passed on the stack are not yet supported, so ignore debug
   // values that are described by the frame or stack pointer.
-  if (!isRegOtherThanSPAndFP(MI.getOperand(0), MI, TRI))
+  if (!isRegOtherThanSPAndFP(MI.getDebugOperand(0), MI, TRI))
     return false;
 
   // If a parameter's value has been propagated from the caller, then the
   // parameter's DBG_VALUE may be described using a register defined by some
   // instruction in the entry block, in which case we shouldn't create an
   // entry value.
-  if (DefinedRegs.count(MI.getOperand(0).getReg()))
+  if (DefinedRegs.count(MI.getDebugOperand(0).getReg()))
     return false;
 
   // TODO: Add support for parameters that have a pre-existing debug expressions

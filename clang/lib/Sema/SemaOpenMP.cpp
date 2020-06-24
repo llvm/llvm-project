@@ -4644,7 +4644,7 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
   bool ErrorFound = false;
   unsigned NamedModifiersNumber = 0;
   llvm::IndexedMap<const OMPIfClause *, Kind2Unsigned> FoundNameModifiers;
-  FoundNameModifiers.resize(unsigned(OMPD_unknown) + 1);
+  FoundNameModifiers.resize(llvm::omp::Directive_enumSize + 1);
   SmallVector<SourceLocation, 4> NameModifierLoc;
   for (const OMPClause *C : Clauses) {
     if (const auto *IC = dyn_cast_or_null<OMPIfClause>(C)) {
@@ -13174,7 +13174,9 @@ OMPClause *Sema::ActOnOpenMPScheduleClause(
   // OpenMP, 2.7.1, Loop Construct, Restrictions
   // The nonmonotonic modifier can only be specified with schedule(dynamic) or
   // schedule(guided).
-  if ((M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ||
+  // OpenMP 5.0 does not have this restriction.
+  if (LangOpts.OpenMP < 50 &&
+      (M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ||
        M2 == OMPC_SCHEDULE_MODIFIER_nonmonotonic) &&
       Kind != OMPC_SCHEDULE_dynamic && Kind != OMPC_SCHEDULE_guided) {
     Diag(M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ? M1Loc : M2Loc,

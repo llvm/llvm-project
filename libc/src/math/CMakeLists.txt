@@ -64,6 +64,8 @@ add_entrypoint_object(
     fabs.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -74,6 +76,20 @@ add_entrypoint_object(
     fabsf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fabsl
+  SRCS
+    fabsl.cpp
+  HDRS
+    fabsl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -84,6 +100,8 @@ add_entrypoint_object(
     trunc.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -94,6 +112,20 @@ add_entrypoint_object(
     truncf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  truncl
+  SRCS
+    truncl.cpp
+  HDRS
+    truncl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -104,6 +136,8 @@ add_entrypoint_object(
     ceil.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -114,6 +148,8 @@ add_entrypoint_object(
     ceilf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -124,6 +160,8 @@ add_entrypoint_object(
     floor.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -134,6 +172,8 @@ add_entrypoint_object(
     floorf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -198,6 +238,8 @@ add_entrypoint_object(
     copysign.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -208,6 +250,20 @@ add_entrypoint_object(
     copysignf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  copysignl
+  SRCS
+    copysignl.cpp
+  HDRS
+    copysignl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -218,6 +274,8 @@ add_entrypoint_object(
     frexp.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -228,6 +286,20 @@ add_entrypoint_object(
     frexpf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  frexpl
+  SRCS
+    frexpl.cpp
+  HDRS
+    frexpl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -238,6 +310,8 @@ add_entrypoint_object(
     logb.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -248,6 +322,20 @@ add_entrypoint_object(
     logbf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  logbl
+  SRCS
+    logbl.cpp
+  HDRS
+    logbl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -258,6 +346,8 @@ add_entrypoint_object(
     modf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -268,4 +358,18 @@ add_entrypoint_object(
     modff.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  modfl
+  SRCS
+    modfl.cpp
+  HDRS
+    modfl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )

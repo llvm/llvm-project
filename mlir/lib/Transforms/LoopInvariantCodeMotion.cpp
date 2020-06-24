@@ -65,7 +65,7 @@ static bool canBeHoisted(Operation *op,
   // Recurse into the regions for this op and check whether the contained ops
   // can be hoisted.
   for (auto &region : op->getRegions()) {
-    for (auto &block : region.getBlocks()) {
+    for (auto &block : region) {
       for (auto &innerOp : block.without_terminator())
         if (!canBeHoisted(&innerOp, definedOutside))
           return false;
@@ -73,6 +73,7 @@ static bool canBeHoisted(Operation *op,
   }
   return true;
 }
+
 
 LogicalResult mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
   auto &loopBody = looplike.getLoopBody();
@@ -104,7 +105,7 @@ LogicalResult mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
   // For all instructions that we found to be invariant, move outside of the
   // loop.
   auto result = looplike.moveOutOfLoop(opsToMove);
-  LLVM_DEBUG(looplike.print(llvm::dbgs() << "Modified loop\n"));
+  LLVM_DEBUG(looplike.print(llvm::dbgs() << "\n\nModified loop:\n"));
   return result;
 }
 
@@ -113,7 +114,7 @@ void LoopInvariantCodeMotion::runOnOperation() {
   // way, we first LICM from the inner loop, and place the ops in
   // the outer loop, which in turn can be further LICM'ed.
   getOperation()->walk([&](LoopLikeOpInterface loopLike) {
-    LLVM_DEBUG(loopLike.print(llvm::dbgs() << "\nOriginal loop\n"));
+    LLVM_DEBUG(loopLike.print(llvm::dbgs() << "\nOriginal loop:\n"));
     if (failed(moveLoopInvariantCode(loopLike)))
       signalPassFailure();
   });

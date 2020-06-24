@@ -63,10 +63,11 @@ unsigned WebAssemblyTTIImpl::getArithmeticInstrCost(
       // approxmation.
       if (Opd2Info != TTI::OK_UniformValue &&
           Opd2Info != TTI::OK_UniformConstantValue)
-        Cost = VTy->getNumElements() *
-               (TargetTransformInfo::TCC_Basic +
-                getArithmeticInstrCost(Opcode, VTy->getElementType(), CostKind) +
-                TargetTransformInfo::TCC_Basic);
+        Cost =
+            cast<FixedVectorType>(VTy)->getNumElements() *
+            (TargetTransformInfo::TCC_Basic +
+             getArithmeticInstrCost(Opcode, VTy->getElementType(), CostKind) +
+             TargetTransformInfo::TCC_Basic);
       break;
     }
   }

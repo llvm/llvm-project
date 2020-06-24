@@ -9,7 +9,7 @@ across many different operations. `Traits` may be used to specify special
 properties and constraints of the operation, including whether the operation has
 side effects or whether its output has the same type as the input. Some examples
 of traits are `Commutative`, `SingleResult`, `Terminator`, etc. See the more
-[comprehensive list](#traits) below for more examples of what is possible.
+[comprehensive list](#trait-list) below for more examples of what is possible.
 
 ## Defining a Trait
 

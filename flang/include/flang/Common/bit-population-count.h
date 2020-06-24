@@ -14,11 +14,14 @@
 // in its argument.  POPPAR is a parity function that returns true
 // when POPCNT is odd.
 
-#include <cinttypes>
+#include <climits>
+#include <type_traits>
 
 namespace Fortran::common {
 
-inline constexpr int BitPopulationCount(std::uint64_t x) {
+template <typename INT,
+    std::enable_if_t<(sizeof(INT) > 4 && sizeof(INT) <= 8), int> = 0>
+inline constexpr int BitPopulationCount(INT x) {
   // In each of the 32 2-bit fields, count the bits that were present.
   // This leaves a value [0..2] in each of these 2-bit fields.
   x = (x & 0x5555555555555555) + ((x >> 1) & 0x5555555555555555);
@@ -34,7 +37,9 @@ inline constexpr int BitPopulationCount(std::uint64_t x) {
   return (x & 0x7f) + (x >> 32);
 }
 
-inline constexpr int BitPopulationCount(std::uint32_t x) {
+template <typename INT,
+    std::enable_if_t<(sizeof(INT) > 2 && sizeof(INT) <= 4), int> = 0>
+inline constexpr int BitPopulationCount(INT x) {
   // In each of the 16 2-bit fields, count the bits that were present.
   // This leaves a value [0..2] in each of these 2-bit fields.
   x = (x & 0x55555555) + ((x >> 1) & 0x55555555);
@@ -48,7 +53,8 @@ inline constexpr int BitPopulationCount(std::uint32_t x) {
   return (x & 0x3f) + (x >> 16);
 }
 
-inline constexpr int BitPopulationCount(std::uint16_t x) {
+template <typename INT, std::enable_if_t<sizeof(INT) == 2, int> = 0>
+inline constexpr int BitPopulationCount(INT x) {
   // In each of the 8 2-bit fields, count the bits that were present.
   // This leaves a value [0..2] in each of these 2-bit fields.
   x = (x & 0x5555) + ((x >> 1) & 0x5555);
@@ -60,7 +66,8 @@ inline constexpr int BitPopulationCount(std::uint16_t x) {
   return (x & 0x1f) + (x >> 8);
 }
 
-inline constexpr int BitPopulationCount(std::uint8_t x) {
+template <typename INT, std::enable_if_t<sizeof(INT) == 1, int> = 0>
+inline constexpr int BitPopulationCount(INT x) {
   // In each of the 4 2-bit fields, count the bits that were present.
   // This leaves a value [0..2] in each of these 2-bit fields.
   x = (x & 0x55) + ((x >> 1) & 0x55);
@@ -70,17 +77,19 @@ inline constexpr int BitPopulationCount(std::uint8_t x) {
   return (x & 0xf) + (x >> 4);
 }
 
-template <typename UINT> inline constexpr bool Parity(UINT x) {
+template <typename INT> inline constexpr bool Parity(INT x) {
   return BitPopulationCount(x) & 1;
 }
 
 // "Parity is for farmers." -- Seymour R. Cray
 
-template <typename UINT> inline constexpr int TrailingZeroBitCount(UINT x) {
+template <typename INT> inline constexpr int TrailingZeroBitCount(INT x) {
   if ((x & 1) != 0) {
     return 0; // fast path for odd values
+  } else if (x == 0) {
+    return CHAR_BIT * sizeof x;
   } else {
-    return BitPopulationCount(static_cast<UINT>(x ^ (x - 1))) - !!x;
+    return BitPopulationCount(static_cast<INT>(x ^ (x - 1))) - 1;
   }
 }
 } // namespace Fortran::common

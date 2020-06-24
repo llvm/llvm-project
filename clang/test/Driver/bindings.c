@@ -23,3 +23,7 @@
 // CHECK14: "clang", inputs: ["{{.*}}bindings.c"], output: "{{.*}}.s"
 // CHECK14: "darwin::Assembler", inputs: ["{{.*}}.s"], output: "{{.*}}.o"
 // CHECK14: "darwin::Linker", inputs: ["{{.*}}.o"], output: "a.out"
+
+// GNU StaticLibTool binding
+// RUN: %clang -target x86_64-linux-gnu -ccc-print-bindings --emit-static-lib %s 2>&1 | FileCheck %s --check-prefix=CHECK15
+// CHECK15: "x86_64-unknown-linux-gnu" - "GNU::StaticLibTool", inputs: ["{{.*}}.o"], output: "a.out"

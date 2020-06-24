@@ -76,18 +76,18 @@ class DbgEng(DebuggerBase):
             x.RemoveFlags(breakpoint.BreakpointFlags.DEBUG_BREAKPOINT_ENABLED)
             self.client.Control.RemoveBreakpoint(x)
 
-    def add_breakpoint(self, file_, line):
+    def _add_breakpoint(self, file_, line):
         # Breakpoint setting/deleting is not supported by dbgeng at this moment
         # but is something that should be considered in the future.
         # TODO: this method is called in the DefaultController but has no effect.
         pass
 
-    def add_conditional_breakpoint(self, file_, line, condition):
+    def _add_conditional_breakpoint(self, file_, line, condition):
         # breakpoint setting/deleting is not supported by dbgeng at this moment
         # but is something that should be considered in the future.
         raise NotImplementedError('add_conditional_breakpoint is not yet implemented by dbgeng')
 
-    def delete_conditional_breakpoint(self, file_, line, condition):
+    def _delete_conditional_breakpoint(self, file_, line, condition):
         # breakpoint setting/deleting is not supported by dbgeng at this moment
         # but is something that should be considered in the future.
         raise NotImplementedError('delete_conditional_breakpoint is not yet implemented by dbgeng')
@@ -106,7 +106,7 @@ class DbgEng(DebuggerBase):
         # We never go -- we always single step.
         pass
 
-    def get_step_info(self, watches, step_index):
+    def _get_step_info(self, watches, step_index):
         frames = self.step_info
         state_frames = []
 

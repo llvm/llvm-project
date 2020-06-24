@@ -82,6 +82,8 @@ enum ProcessorSubtypes {
   INTEL_COREI7_ICELAKE_SERVER,
   AMDFAM17H_ZNVER2,
   INTEL_COREI7_CASCADELAKE,
+  INTEL_COREI7_TIGERLAKE,
+  INTEL_COREI7_COOPERLAKE,
   CPU_SUBTYPE_MAX
 };
 
@@ -123,7 +125,8 @@ enum ProcessorFeatures {
   FEATURE_AVX512VNNI,
   FEATURE_AVX512BITALG,
   FEATURE_AVX512BF16,
-  FEATURE_AVX512VP2INTERSECT
+  FEATURE_AVX512VP2INTERSECT,
+  CPU_FEATURE_MAX
 };
 
 // The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
@@ -353,7 +356,9 @@ static void getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Skylake Xeon:
     case 0x55:
       *Type = INTEL_COREI7;
-      if (testFeature(FEATURE_AVX512VNNI))
+      if (testFeature(FEATURE_AVX512BF16))
+        *Subtype = INTEL_COREI7_COOPERLAKE; // "cooperlake"
+      else if (testFeature(FEATURE_AVX512VNNI))
         *Subtype = INTEL_COREI7_CASCADELAKE; // "cascadelake"
       else
         *Subtype = INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
@@ -489,8 +494,6 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                                  unsigned *Features) {
-  Features[0] = 0;
-  Features[1] = 0;
   unsigned EAX, EBX;
 
 #define setFeature(F)                                                          \
@@ -649,25 +652,25 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   unsigned MaxLeaf = 5;
   unsigned Vendor;
   unsigned Model, Family;
-  unsigned Features[2];
+  unsigned Features[(CPU_FEATURE_MAX + 31) / 32] = {0};
 
   // This function needs to run just once.
   if (__cpu_model.__cpu_vendor)
     return 0;
 
-  if (!isCpuIdSupported())
-    return -1;
-
-  // Assume cpuid insn present. Run in level 0 to get vendor id.
-  if (getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX) || MaxLeaf < 1) {
+  if (!isCpuIdSupported() ||
+      getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX) || MaxLeaf < 1) {
     __cpu_model.__cpu_vendor = VENDOR_OTHER;
     return -1;
   }
+
   getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
   detectX86FamilyModel(EAX, &Family, &Model);
 
   // Find available features.
   getAvailableFeatures(ECX, EDX, MaxLeaf, &Features[0]);
+
+  assert((sizeof(Features)/sizeof(Features[0])) == 2);
   __cpu_model.__cpu_features[0] = Features[0];
   __cpu_features2 = Features[1];
 

@@ -3049,6 +3049,13 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   llvm_unreachable("Invalid builtin type.");
 }
 
+QualType QualType::getNonPackExpansionType() const {
+  // We never wrap type sugar around a PackExpansionType.
+  if (auto *PET = dyn_cast<PackExpansionType>(getTypePtr()))
+    return PET->getPattern();
+  return *this;
+}
+
 QualType QualType::getNonLValueExprType(const ASTContext &Context) const {
   if (const auto *RefType = getTypePtr()->getAs<ReferenceType>())
     return RefType->getPointeeType();
@@ -3584,7 +3591,7 @@ TemplateSpecializationType::TemplateSpecializationType(
 
   auto *TemplateArgs = reinterpret_cast<TemplateArgument *>(this + 1);
   for (const TemplateArgument &Arg : Args) {
-    // Update instantiation-dependent and variably-modified bits.
+    // Update instantiation-dependent, variably-modified, and error bits.
     // If the canonical type exists and is non-dependent, the template
     // specialization type can be non-dependent even if one of the type
     // arguments is. Given:

@@ -6408,7 +6408,7 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
 
     // If we don't know anything about the callee, assume it depends on the
     // stack layout of the caller. In that case, it's only legal to outline
-    // as a tail-call.  Whitelist the call instructions we know about so we
+    // as a tail-call. Explicitly list the call instructions we know about so we
     // don't get unexpected results with call pseudo-instructions.
     auto UnknownCallOutlineType = outliner::InstrType::Illegal;
     if (MI.getOpcode() == AArch64::BLR ||

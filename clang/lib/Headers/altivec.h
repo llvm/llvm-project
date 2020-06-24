@@ -16761,6 +16761,77 @@ static vector signed short __ATTRS_o_ai vec_nabs(vector signed short __a) {
 static vector signed char __ATTRS_o_ai vec_nabs(vector signed char __a) {
   return __builtin_altivec_vminsb(__a, -__a);
 }
+
+#ifdef __POWER10_VECTOR__
+/* vec_pdep */
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_pdep(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vpdepd(__a, __b);
+}
+
+/* vec_pext */
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_pext(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vpextd(__a, __b);
+}
+
+/* vec_genpcvm */
+
+#ifdef __VSX__
+#define vec_genpcvm(__a, __imm)                                                \
+  _Generic((__a), vector unsigned char                                         \
+           : __builtin_vsx_xxgenpcvbm((__a), (int)(__imm)),                    \
+             vector unsigned short                                             \
+           : __builtin_vsx_xxgenpcvhm((__a), (int)(__imm)),                    \
+             vector unsigned int                                               \
+           : __builtin_vsx_xxgenpcvwm((__a), (int)(__imm)),                    \
+             vector unsigned long long                                         \
+           : __builtin_vsx_xxgenpcvdm((__a), (int)(__imm)))
+#endif /* __VSX__ */
+
+/* vec_clrl */
+
+static __inline__ vector signed char __ATTRS_o_ai
+vec_clrl(vector signed char __a, unsigned int __n) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vclrrb(__a, __n);
+#else
+  return __builtin_altivec_vclrlb( __a, __n);
+#endif
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_clrl(vector unsigned char __a, unsigned int __n) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vclrrb((vector signed char)__a, __n);
+#else
+  return __builtin_altivec_vclrlb((vector signed char)__a, __n);
+#endif
+}
+
+/* vec_clrr */
+
+static __inline__ vector signed char __ATTRS_o_ai
+vec_clrr(vector signed char __a, unsigned int __n) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vclrlb(__a, __n);
+#else
+  return __builtin_altivec_vclrrb( __a, __n);
+#endif
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_clrr(vector unsigned char __a, unsigned int __n) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vclrlb((vector signed char)__a, __n);
+#else
+  return __builtin_altivec_vclrrb((vector signed char)__a, __n);
+#endif
+}
+#endif /* __POWER10_VECTOR__ */
+
 #undef __ATTRS_o_ai
 
 #endif /* __ALTIVEC_H */

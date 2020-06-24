@@ -604,7 +604,7 @@ bool MachOLinkingContext::validateImpl() {
   }
 
   // If -exported_symbols_list used, all exported symbols must be defined.
-  if (_exportMode == ExportMode::whiteList) {
+  if (_exportMode == ExportMode::exported) {
     for (const auto &symbol : _exportedSymbols)
       addInitialUndefinedSymbol(symbol.getKey());
   }
@@ -618,7 +618,7 @@ bool MachOLinkingContext::validateImpl() {
     if (needsStubsPass())
       addDeadStripRoot(binderSymbolName());
     // If using -exported_symbols_list, make all exported symbols live.
-    if (_exportMode == ExportMode::whiteList) {
+    if (_exportMode == ExportMode::exported) {
       setGlobalsAreDeadStripRoots(false);
       for (const auto &symbol : _exportedSymbols)
         addDeadStripRoot(symbol.getKey());
@@ -852,9 +852,9 @@ bool MachOLinkingContext::exportSymbolNamed(StringRef sym) const {
   case ExportMode::globals:
     llvm_unreachable("exportSymbolNamed() should not be called in this mode");
     break;
-  case ExportMode::whiteList:
+  case ExportMode::exported:
     return _exportedSymbols.count(sym);
-  case ExportMode::blackList:
+  case ExportMode::unexported:
     return !_exportedSymbols.count(sym);
   }
   llvm_unreachable("_exportMode unknown enum value");

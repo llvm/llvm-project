@@ -7,7 +7,7 @@ using std::experimental::suspend_never;
 struct promise_void {
   void get_return_object();
   suspend_always initial_suspend();
-  suspend_always final_suspend();
+  suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
 };

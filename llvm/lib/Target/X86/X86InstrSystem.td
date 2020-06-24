@@ -23,7 +23,20 @@ def RDTSCP : I<0x01, MRM_F9, (outs), (ins), "rdtscp", []>, TB;
 
 let mayLoad = 1, mayStore = 0, hasSideEffects = 1, isTrap = 1 in {
   def TRAP    : I<0x0B, RawFrm, (outs), (ins), "ud2", [(trap)]>, TB;
-  def UD2B    : I<0xB9, RawFrm, (outs), (ins), "ud2b", []>, TB;
+
+  def UD1Wm   : I<0xB9, MRMSrcMem, (outs), (ins GR16:$src1, i16mem:$src2),
+                  "ud1{w} {$src2, $src1|$src1, $src2}", []>, TB, OpSize16;
+  def UD1Lm   : I<0xB9, MRMSrcMem, (outs), (ins GR32:$src1, i32mem:$src2),
+                  "ud1{l} {$src2, $src1|$src1, $src2}", []>, TB, OpSize32;
+  def UD1Qm   : RI<0xB9, MRMSrcMem, (outs), (ins GR64:$src1, i64mem:$src2),
+                   "ud1{q} {$src2, $src1|$src1, $src2}", []>, TB;
+
+  def UD1Wr   : I<0xB9, MRMSrcReg, (outs), (ins GR16:$src1, GR16:$src2),
+                  "ud1{w} {$src2, $src1|$src1, $src2}", []>, TB, OpSize16;
+  def UD1Lr   : I<0xB9, MRMSrcReg, (outs), (ins GR32:$src1, GR32:$src2),
+                  "ud1{l} {$src2, $src1|$src1, $src2}", []>, TB, OpSize32;
+  def UD1Qr   : RI<0xB9, MRMSrcReg, (outs), (ins GR64:$src1, GR64:$src2),
+                   "ud1{q} {$src2, $src1|$src1, $src2}", []>, TB;
 }
 
 def HLT : I<0xF4, RawFrm, (outs), (ins), "hlt", []>;

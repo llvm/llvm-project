@@ -175,7 +175,7 @@ func @contraction_to_scalar(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32
 // CHECK-LABEL: @contraction
 func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
                   %arg2 : vector<8x15x5xf32>, %arg3 : vector<8x8x15x5xf32>,
-                  %arg4 : index) {
+                  %arg4 : vector<7x8x16x15xf16>, %arg5 : vector<8x16x7x5xf16>) {
   // Test contraction with batch and contracting dims.
   // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction"]} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
   %0 = vector.contract #contraction_trait0 %arg0, %arg1, %arg2
@@ -193,6 +193,10 @@ func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
   %2 = vector.contract #contraction_trait1 %arg0, %arg1, %arg3, %lhs_mask,
                                            %rhs_mask
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
+  // Test contraction with mixed type.
+  // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf16>, vector<8x16x7x5xf16> into vector<8x8x15x5xf32>
+  %3 = vector.contract #contraction_trait1 %arg4, %arg5, %arg3
+      : vector<7x8x16x15xf16>, vector<8x16x7x5xf16> into vector<8x8x15x5xf32>
   return
 }
 
@@ -262,8 +266,10 @@ func @reshape(%arg0 : vector<3x2x4xf32>) -> (vector<2x3x4xf32>) {
 
 // CHECK-LABEL: @shape_cast
 func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
-                 %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>)
-  -> (vector<15x2xf32>, tuple<vector<20x2xf32>, vector<12x2xf32>>) {
+                 %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>,
+                 %arg2 : vector<8x1xf32>,
+                 %arg3 : vector<16x1x1xf32>)
+  -> (vector<15x2xf32>, tuple<vector<20x2xf32>, vector<12x2xf32>>, vector<8xf32>, vector<16xf32>, vector<16x1xf32>) {
 
   // CHECK: vector.shape_cast %{{.*}} : vector<5x1x3x2xf32> to vector<15x2xf32>
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xf32>
@@ -272,7 +278,16 @@ func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
   %1 = vector.shape_cast %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
                                  tuple<vector<20x2xf32>, vector<12x2xf32>>
 
-  return %0, %1 : vector<15x2xf32>, tuple<vector<20x2xf32>, vector<12x2xf32>>
+  // CHECK-NEXT: vector.shape_cast %{{.*}} : vector<8x1xf32> to vector<8xf32>
+  %2 = vector.shape_cast %arg2 : vector<8x1xf32> to vector<8xf32>
+
+  // CHECK-NEXT: vector.shape_cast %{{.*}} : vector<16x1x1xf32> to vector<16xf32>
+  %3 = vector.shape_cast %arg3 : vector<16x1x1xf32> to vector<16xf32>
+
+  // CHECK-NEXT: vector.shape_cast %{{.*}} : vector<16x1x1xf32> to vector<16x1xf32>
+  %4 = vector.shape_cast %arg3 : vector<16x1x1xf32> to vector<16x1xf32>
+
+  return %0, %1, %2, %3, %4 : vector<15x2xf32>, tuple<vector<20x2xf32>, vector<12x2xf32>>, vector<8xf32>, vector<16xf32>, vector<16x1xf32>
 }
 
 // CHECK-LABEL: @vector_fma

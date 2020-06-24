@@ -230,6 +230,7 @@ __OMP_IMPLICIT_CLAUSE_NO_CLASS(unknown, "unknown")
 #define __OMP_TYPE(VarName) OMP_TYPE(VarName, Type::get##VarName##Ty(Ctx))
 
 __OMP_TYPE(Void)
+__OMP_TYPE(Int1)
 __OMP_TYPE(Int8)
 __OMP_TYPE(Int32)
 __OMP_TYPE(Int64)
@@ -307,6 +308,51 @@ __OMP_FUNCTION_TYPE(TaskRoutineEntry, false, Int32, Int32,
 
 #undef __OMP_FUNCTION_TYPE
 #undef OMP_FUNCTION_TYPE
+
+///}
+
+/// Internal Control Variables information
+///
+///{
+
+#ifndef ICV_DATA_ENV
+#define ICV_DATA_ENV(Enum, Name, EnvVarName, Init)
+#endif
+
+#define __ICV_DATA_ENV(Name, EnvVarName, Init)                                 \
+  ICV_DATA_ENV(ICV_##Name, #Name, #EnvVarName, Init)
+
+__ICV_DATA_ENV(nthreads, OMP_NUM_THREADS, IMPLEMENTATION_DEFINED)
+__ICV_DATA_ENV(active_levels, NONE, ZERO)
+__ICV_DATA_ENV(cancel, OMP_CANCELLATION, FALSE)
+__ICV_DATA_ENV(__last, last, LAST)
+
+#undef __ICV_DATA_ENV
+#undef ICV_DATA_ENV
+
+#ifndef ICV_RT_SET
+#define ICV_RT_SET(Name, RTL)
+#endif
+
+#define __ICV_RT_SET(Name, RTL) ICV_RT_SET(ICV_##Name, OMPRTL_##RTL)
+
+__ICV_RT_SET(nthreads, omp_set_num_threads)
+
+#undef __ICV_RT_SET
+#undef ICV_RT_SET
+
+#ifndef ICV_RT_GET
+#define ICV_RT_GET(Name, RTL)
+#endif
+
+#define __ICV_RT_GET(Name, RTL) ICV_RT_GET(ICV_##Name, OMPRTL_##RTL)
+
+__ICV_RT_GET(nthreads, omp_get_max_threads)
+__ICV_RT_GET(active_levels, omp_get_active_level)
+__ICV_RT_GET(cancel, omp_get_cancellation)
+
+#undef __ICV_RT_GET
+#undef ICV_RT_GET
 
 ///}
 

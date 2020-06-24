@@ -57,13 +57,13 @@ bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
   const FeatureBitset &CalleeBits =
       TM.getSubtargetImpl(*Callee)->getFeatureBits();
 
-  // To inline a callee, all features not in the whitelist must match exactly.
-  bool MatchExact = (CallerBits & ~InlineFeatureWhitelist) ==
-                    (CalleeBits & ~InlineFeatureWhitelist);
-  // For features in the whitelist, the callee's features must be a subset of
+  // To inline a callee, all features not in the allowed list must match exactly.
+  bool MatchExact = (CallerBits & ~InlineFeaturesAllowed) ==
+                    (CalleeBits & ~InlineFeaturesAllowed);
+  // For features in the allowed list, the callee's features must be a subset of
   // the callers'.
-  bool MatchSubset = ((CallerBits & CalleeBits) & InlineFeatureWhitelist) ==
-                     (CalleeBits & InlineFeatureWhitelist);
+  bool MatchSubset = ((CallerBits & CalleeBits) & InlineFeaturesAllowed) ==
+                     (CalleeBits & InlineFeaturesAllowed);
   return MatchExact && MatchSubset;
 }
 

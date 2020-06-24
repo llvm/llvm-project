@@ -152,7 +152,7 @@ define <4 x i32*> @vector_idx_vector() {
 %struct = type { double, float }
 define <4 x float*> @vector_idx_mix_scalar_vector() {
 ; CHECK-LABEL: @vector_idx_mix_scalar_vector(
-; CHECK-NEXT:    ret <4 x float*> getelementptr (%struct, <4 x %struct*> zeroinitializer, <4 x i64> zeroinitializer, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+; CHECK-NEXT:    ret <4 x float*> getelementptr (%struct, <4 x %struct*> zeroinitializer, <4 x i64> zeroinitializer, i32 1)
 ;
   %gep = getelementptr %struct, <4 x %struct*> zeroinitializer, i32 0, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x float*> %gep
@@ -166,6 +166,14 @@ define <vscale x 4 x i32*> @scalable_idx_scalar() {
 ;
   %gep = getelementptr i32, <vscale x 4 x i32*> zeroinitializer, i64 1
   ret <vscale x 4 x i32*> %gep
+}
+
+define <vscale x 4 x float*> @scalable_vector_idx_mix_scalar_vector() {
+; CHECK-LABEL: @scalable_vector_idx_mix_scalar_vector(
+; CHECK-NEXT:    ret <vscale x 4 x float*> getelementptr (%struct, <vscale x 4 x %struct*> zeroinitializer, <vscale x 4 x i64> zeroinitializer, i32 1)
+;
+  %gep = getelementptr %struct, <vscale x 4 x %struct*> zeroinitializer, i32 0, i32 1
+  ret <vscale x 4 x float*> %gep
 }
 
 ; Check ConstantExpr::getGetElementPtr() using ElementCount for size queries - end.

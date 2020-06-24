@@ -495,7 +495,7 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterBase(
     IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder, int64_t Increment) {
   using namespace PatternMatch;
   Value *Input = I->getArgOperand(0);
-  auto *Ty = cast<VectorType>(Input->getType());
+  auto *Ty = cast<FixedVectorType>(Input->getType());
   // Only QR variants allow truncating
   if (!(Ty->getNumElements() == 4 && Ty->getScalarSizeInBits() == 32)) {
     // Can't build an intrinsic for this
@@ -519,7 +519,7 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterBaseWB(
     IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder, int64_t Increment) {
   using namespace PatternMatch;
   Value *Input = I->getArgOperand(0);
-  auto *Ty = cast<VectorType>(Input->getType());
+  auto *Ty = cast<FixedVectorType>(Input->getType());
   LLVM_DEBUG(
       dbgs()
       << "masked scatters: storing to a vector of pointers with writeback\n");

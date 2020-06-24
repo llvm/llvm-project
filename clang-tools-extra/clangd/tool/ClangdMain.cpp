@@ -17,10 +17,12 @@
 #include "refactor/Rename.h"
 #include "support/Path.h"
 #include "support/Shutdown.h"
+#include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -674,7 +676,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   CCOpts.AllScopes = AllScopesCompletion;
   CCOpts.RunParser = CodeCompletionParse;
 
-  RealFileSystemProvider FSProvider;
+  RealThreadsafeFS TFS;
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.
   llvm::sys::ChangeStdinToBinary();
@@ -717,7 +719,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     ClangTidyOptProvider = std::make_unique<tidy::FileOptionsProvider>(
         tidy::ClangTidyGlobalOptions(),
         /* Default */ EmptyDefaults,
-        /* Override */ OverrideClangTidyOptions, FSProvider.getFileSystem());
+        /* Override */ OverrideClangTidyOptions, TFS.view(/*CWD=*/llvm::None));
     Opts.GetClangTidyOptions = [&](llvm::vfs::FileSystem &,
                                    llvm::StringRef File) {
       // This function must be thread-safe and tidy option providers are not.
@@ -768,7 +770,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.AsyncPreambleBuilds = AsyncPreamble;
 
   ClangdLSPServer LSPServer(
-      *TransportLayer, FSProvider, CCOpts, RenameOpts, CompileCommandsDirPath,
+      *TransportLayer, TFS, CCOpts, RenameOpts, CompileCommandsDirPath,
       /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs,
       OffsetEncodingFromFlag, Opts);
   llvm::set_thread_name("clangd.main");

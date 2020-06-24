@@ -368,7 +368,7 @@ function(get_compiler_rt_target arch variable)
     # Use exact spelling when building only for the target specified to CMake.
     set(target "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
   elseif(ANDROID AND ${arch} STREQUAL "i386")
-    set(target "i686${COMPILER_RT_OS_SUFFIX}${triple_suffix}")
+    set(target "i686${triple_suffix}")
   else()
     set(target "${arch}${triple_suffix}")
   endif()

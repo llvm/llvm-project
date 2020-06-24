@@ -45,6 +45,8 @@ const char *Action::getClassName(ActionClass AC) {
     return "clang-offload-unbundler";
   case OffloadWrapperJobClass:
     return "clang-offload-wrapper";
+  case StaticLibJobClass:
+    return "static-lib-linker";
   }
 
   llvm_unreachable("invalid class");
@@ -428,3 +430,8 @@ void OffloadWrapperJobAction::anchor() {}
 OffloadWrapperJobAction::OffloadWrapperJobAction(ActionList &Inputs,
                                                  types::ID Type)
   : JobAction(OffloadWrapperJobClass, Inputs, Type) {}
+
+void StaticLibJobAction::anchor() {}
+
+StaticLibJobAction::StaticLibJobAction(ActionList &Inputs, types::ID Type)
+    : JobAction(StaticLibJobClass, Inputs, Type) {}

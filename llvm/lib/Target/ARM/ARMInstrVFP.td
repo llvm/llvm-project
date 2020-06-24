@@ -158,10 +158,23 @@ def VLDRS : ASI5<0b1101, 0b01, (outs SPR:$Sd), (ins addrmode5:$addr),
 let isUnpredicable = 1 in
 def VLDRH : AHI5<0b1101, 0b01, (outs HPR:$Sd), (ins addrmode5fp16:$addr),
                  IIC_fpLoad16, "vldr", ".16\t$Sd, $addr",
-                 [(set HPR:$Sd, (alignedload16 addrmode5fp16:$addr))]>,
+                 [(set HPR:$Sd, (f16 (alignedload16 addrmode5fp16:$addr)))]>,
             Requires<[HasFPRegs16]>;
 
 } // End of 'let canFoldAsLoad = 1, isReMaterializable = 1 in'
+
+def : Pat<(bf16 (alignedload16 addrmode5fp16:$addr)),
+          (VLDRH addrmode5fp16:$addr)> {
+  let Predicates = [HasFPRegs16];
+}
+def : Pat<(bf16 (alignedload16 addrmode3:$addr)),
+          (COPY_TO_REGCLASS (LDRH addrmode3:$addr), HPR)> {
+  let Predicates = [HasNoFPRegs16, IsARM];
+}
+def : Pat<(bf16 (alignedload16 t2addrmode_imm12:$addr)),
+          (COPY_TO_REGCLASS (t2LDRHi12 t2addrmode_imm12:$addr), HPR)> {
+  let Predicates = [HasNoFPRegs16, IsThumb];
+}
 
 def VSTRD : ADI5<0b1101, 0b00, (outs), (ins DPR:$Dd, addrmode5:$addr),
                  IIC_fpStore64, "vstr", "\t$Dd, $addr",
@@ -180,8 +193,21 @@ def VSTRS : ASI5<0b1101, 0b00, (outs), (ins SPR:$Sd, addrmode5:$addr),
 let isUnpredicable = 1 in
 def VSTRH : AHI5<0b1101, 0b00, (outs), (ins HPR:$Sd, addrmode5fp16:$addr),
                  IIC_fpStore16, "vstr", ".16\t$Sd, $addr",
-                 [(alignedstore16 HPR:$Sd, addrmode5fp16:$addr)]>,
+                 [(alignedstore16 (f16 HPR:$Sd), addrmode5fp16:$addr)]>,
             Requires<[HasFPRegs16]>;
+
+def : Pat<(alignedstore16 (bf16 HPR:$Sd), addrmode5fp16:$addr),
+          (VSTRH (bf16 HPR:$Sd), addrmode5fp16:$addr)> {
+  let Predicates = [HasFPRegs16];
+}
+def : Pat<(alignedstore16 (bf16 HPR:$Sd), addrmode3:$addr),
+          (STRH (COPY_TO_REGCLASS $Sd, GPR), addrmode3:$addr)> {
+  let Predicates = [HasNoFPRegs16, IsARM];
+}
+def : Pat<(alignedstore16 (bf16 HPR:$Sd), t2addrmode_imm12:$addr),
+          (t2STRHi12 (COPY_TO_REGCLASS $Sd, GPR), t2addrmode_imm12:$addr)> {
+  let Predicates = [HasNoFPRegs16, IsThumb];
+}
 
 //===----------------------------------------------------------------------===//
 //  Load / store multiple Instructions.
@@ -277,7 +303,6 @@ def : MnemonicAlias<"vstm", "vstmia">;
 //===----------------------------------------------------------------------===//
 //  Lazy load / store multiple Instructions
 //
-let mayLoad = 1 in
 def VLLDM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
                   NoItinerary, "vlldm${p}\t$Rn", "", []>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
@@ -288,9 +313,9 @@ def VLLDM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
     let Inst{15-12} = 0;
     let Inst{7-0}   = 0;
     let mayLoad     = 1;
+    let Defs = [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, VPR, FPSCR, FPSCR_NZCV];
 }
 
-let mayStore = 1 in
 def VLSTM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
                   NoItinerary, "vlstm${p}\t$Rn", "", []>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
@@ -1250,7 +1275,7 @@ def VMOVSRR : AVConv5I<0b11000100, 0b1010,
 def VMOVRH : AVConv2I<0b11100001, 0b1001,
                       (outs rGPR:$Rt), (ins HPR:$Sn),
                       IIC_fpMOVSI, "vmov", ".f16\t$Rt, $Sn",
-                      [(set rGPR:$Rt, (arm_vmovrh HPR:$Sn))]>,
+                      []>,
              Requires<[HasFPRegs16]>,
              Sched<[WriteFPMOV]> {
   // Instruction operands.
@@ -1272,7 +1297,7 @@ def VMOVRH : AVConv2I<0b11100001, 0b1001,
 def VMOVHR : AVConv4I<0b11100000, 0b1001,
                       (outs HPR:$Sn), (ins rGPR:$Rt),
                       IIC_fpMOVIS, "vmov", ".f16\t$Sn, $Rt",
-                      [(set HPR:$Sn, (arm_vmovhr rGPR:$Rt))]>,
+                      []>,
              Requires<[HasFPRegs16]>,
              Sched<[WriteFPMOV]> {
   // Instruction operands.
@@ -1289,6 +1314,11 @@ def VMOVHR : AVConv4I<0b11100000, 0b1001,
 
   let isUnpredicable = 1;
 }
+
+def : FPRegs16Pat<(arm_vmovrh (f16 HPR:$Sn)), (VMOVRH (f16 HPR:$Sn))>;
+def : FPRegs16Pat<(arm_vmovrh (bf16 HPR:$Sn)), (VMOVRH (bf16 HPR:$Sn))>;
+def : FPRegs16Pat<(f16 (arm_vmovhr rGPR:$Rt)), (VMOVHR rGPR:$Rt)>;
+def : FPRegs16Pat<(bf16 (arm_vmovhr rGPR:$Rt)), (VMOVHR rGPR:$Rt)>;
 
 // FMRDH: SPR -> GPR
 // FMRDL: SPR -> GPR

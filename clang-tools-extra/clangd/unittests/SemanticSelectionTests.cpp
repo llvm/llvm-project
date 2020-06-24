@@ -149,7 +149,7 @@ TEST(SemanticSelection, All) {
 }
 
 TEST(SemanticSelection, RunViaClangdServer) {
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 

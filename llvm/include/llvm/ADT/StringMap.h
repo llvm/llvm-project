@@ -248,6 +248,26 @@ public:
     return count(MapEntry.getKey());
   }
 
+  /// equal - check whether both of the containers are equal.
+  bool operator==(const StringMap &RHS) const {
+    if (size() != RHS.size())
+      return false;
+
+    for (const auto &KeyValue : *this) {
+      auto FindInRHS = RHS.find(KeyValue.getKey());
+
+      if (FindInRHS == RHS.end())
+        return false;
+
+      if (!(KeyValue.getValue() == FindInRHS->getValue()))
+        return false;
+    }
+
+    return true;
+  }
+
+  bool operator!=(const StringMap &RHS) const { return !(*this == RHS); }
+
   /// insert - Insert the specified key/value pair into the map.  If the key
   /// already exists in the map, return false and ignore the request, otherwise
   /// insert it and return true.

@@ -135,6 +135,11 @@ using namespace SwitchCG;
 /// some float libcalls (6, 8 or 12 bits).
 static unsigned LimitFloatPrecision;
 
+static cl::opt<bool>
+    InsertAssertAlign("insert-assert-align", cl::init(true),
+                      cl::desc("Insert the experimental `assertalign` node."),
+                      cl::ReallyHidden);
+
 static cl::opt<unsigned, true>
     LimitFPPrecision("limit-float-precision",
                      cl::desc("Generate low-precision inline sequences "
@@ -205,12 +210,17 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL,
                                 MVT PartVT, EVT ValueVT, const Value *V,
                                 Optional<CallingConv::ID> CC = None,
                                 Optional<ISD::NodeType> AssertOp = None) {
+  // Let the target assemble the parts if it wants to
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (SDValue Val = TLI.joinRegisterPartsIntoValue(DAG, DL, Parts, NumParts,
+                                                   PartVT, ValueVT, CC))
+    return Val;
+
   if (ValueVT.isVector())
     return getCopyFromPartsVector(DAG, DL, Parts, NumParts, PartVT, ValueVT, V,
                                   CC);
 
   assert(NumParts > 0 && "No parts to assemble!");
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue Val = Parts[0];
 
   if (NumParts > 1) {
@@ -512,6 +522,11 @@ static void getCopyToParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
                            const Value *V,
                            Optional<CallingConv::ID> CallConv = None,
                            ISD::NodeType ExtendKind = ISD::ANY_EXTEND) {
+  // Let the target split the parts if it wants to
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.splitValueIntoRegisterParts(DAG, DL, Val, Parts, NumParts, PartVT,
+                                      CallConv))
+    return;
   EVT ValueVT = Val.getValueType();
 
   // Handle the vector case separately.
@@ -4736,6 +4751,15 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       Result = DAG.getNode(ISD::BITCAST, getCurSDLoc(), VT, Result);
     } else
       Result = lowerRangeToAssertZExt(DAG, I, Result);
+
+    MaybeAlign Alignment = I.getRetAlign();
+    if (!Alignment)
+      Alignment = F->getAttributes().getRetAlignment();
+    // Insert `assertalign` node if there's an alignment.
+    if (InsertAssertAlign && Alignment) {
+      Result =
+          DAG.getAssertAlign(getCurSDLoc(), Result, Alignment.valueOrOne());
+    }
 
     setValue(&I, Result);
   }

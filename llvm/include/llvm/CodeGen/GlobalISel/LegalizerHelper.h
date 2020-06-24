@@ -39,11 +39,12 @@ public:
   /// functions
   MachineIRBuilder &MIRBuilder;
 
+  /// To keep track of changes made by the LegalizerHelper.
+  GISelChangeObserver &Observer;
+
 private:
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
-  /// To keep track of changes made by the LegalizerHelper.
-  GISelChangeObserver &Observer;
 
 public:
   enum LegalizeResult {

@@ -28,6 +28,7 @@
 #include "mlir/IR/Module.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -1311,7 +1312,8 @@ public:
 ///   %4 = vector.insert %l, %z[0]
 ///   ..
 ///   %x = vector.insert %l, %..[a-1]
-/// which will be folded at LLVM IR level.
+/// until a one-dimensional vector is reached. All these operations
+/// will be folded at LLVM IR level.
 class ConstantMaskOpLowering : public OpRewritePattern<vector::ConstantMaskOp> {
 public:
   using OpRewritePattern<vector::ConstantMaskOp>::OpRewritePattern;
@@ -1325,20 +1327,24 @@ public:
     int64_t rank = dimSizes.size();
     int64_t trueDim = dimSizes[0].cast<IntegerAttr>().getInt();
 
-    Value trueVal;
     if (rank == 1) {
-      trueVal = rewriter.create<ConstantOp>(
-          loc, eltType, rewriter.getIntegerAttr(eltType, 1));
-    } else {
-      VectorType lowType =
-          VectorType::get(dstType.getShape().drop_front(), eltType);
-      SmallVector<int64_t, 4> newDimSizes;
-      for (int64_t r = 1; r < rank; r++)
-        newDimSizes.push_back(dimSizes[r].cast<IntegerAttr>().getInt());
-      trueVal = rewriter.create<vector::ConstantMaskOp>(
-          loc, lowType, rewriter.getI64ArrayAttr(newDimSizes));
+      // Express constant 1-D case in explicit vector form:
+      //   [T,..,T,F,..,F].
+      SmallVector<bool, 4> values(dstType.getDimSize(0));
+      for (int64_t d = 0; d < trueDim; d++)
+        values[d] = true;
+      rewriter.replaceOpWithNewOp<ConstantOp>(
+          op, dstType, rewriter.getBoolVectorAttr(values));
+      return success();
     }
 
+    VectorType lowType =
+        VectorType::get(dstType.getShape().drop_front(), eltType);
+    SmallVector<int64_t, 4> newDimSizes;
+    for (int64_t r = 1; r < rank; r++)
+      newDimSizes.push_back(dimSizes[r].cast<IntegerAttr>().getInt());
+    Value trueVal = rewriter.create<vector::ConstantMaskOp>(
+        loc, lowType, rewriter.getI64ArrayAttr(newDimSizes));
     Value result = rewriter.create<ConstantOp>(loc, dstType,
                                                rewriter.getZeroAttr(dstType));
     for (int64_t d = 0; d < trueDim; d++) {
@@ -1360,8 +1366,7 @@ public:
 ///   %1 = select %0, %l, %zeroes    |
 ///   %r = vector.insert %1, %pr [i] | d-times
 ///   %x = ....
-/// When rank == 1, the selection operator is not needed,
-/// and we can assign the true/false value right away.
+/// until a one-dimensional vector is reached.
 class CreateMaskOpLowering : public OpRewritePattern<vector::CreateMaskOp> {
 public:
   using OpRewritePattern<vector::CreateMaskOp>::OpRewritePattern;
@@ -1371,30 +1376,41 @@ public:
     auto loc = op.getLoc();
     auto dstType = op.getResult().getType().cast<VectorType>();
     auto eltType = dstType.getElementType();
+    int64_t dim = dstType.getDimSize(0);
     int64_t rank = dstType.getRank();
     Value idx = op.getOperand(0);
 
-    Value trueVal;
-    Value falseVal;
-    if (rank > 1) {
-      VectorType lowType =
-          VectorType::get(dstType.getShape().drop_front(), eltType);
-      trueVal = rewriter.create<vector::CreateMaskOp>(
-          loc, lowType, op.getOperands().drop_front());
-      falseVal = rewriter.create<ConstantOp>(loc, lowType,
-                                             rewriter.getZeroAttr(lowType));
+    if (rank == 1) {
+      // Express dynamic 1-D case in explicit vector form:
+      //   mask = [0,1,..,n-1] < [a,a,..,a]
+      SmallVector<int64_t, 4> values(dim);
+      for (int64_t d = 0; d < dim; d++)
+        values[d] = d;
+      Value indices =
+          rewriter.create<ConstantOp>(loc, rewriter.getI64VectorAttr(values));
+      Value bound =
+          rewriter.create<IndexCastOp>(loc, rewriter.getI64Type(), idx);
+      Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::slt, indices,
+                                          bounds);
+      return success();
     }
 
+    VectorType lowType =
+        VectorType::get(dstType.getShape().drop_front(), eltType);
+    Value trueVal = rewriter.create<vector::CreateMaskOp>(
+        loc, lowType, op.getOperands().drop_front());
+    Value falseVal = rewriter.create<ConstantOp>(loc, lowType,
+                                                 rewriter.getZeroAttr(lowType));
     Value result = rewriter.create<ConstantOp>(loc, dstType,
                                                rewriter.getZeroAttr(dstType));
-    for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; d++) {
+    for (int64_t d = 0; d < dim; d++) {
       Value bnd = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(d));
       Value val = rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, bnd, idx);
-      if (rank > 1)
-        val = rewriter.create<SelectOp>(loc, val, trueVal, falseVal);
+      Value sel = rewriter.create<SelectOp>(loc, val, trueVal, falseVal);
       auto pos = rewriter.getI64ArrayAttr(d);
       result =
-          rewriter.create<vector::InsertOp>(loc, dstType, val, result, pos);
+          rewriter.create<vector::InsertOp>(loc, dstType, sel, result, pos);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -1727,6 +1743,11 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
 
   // TODO(ajcbik): implement masks.
   if (llvm::size(op.masks()) != 0)
+    return failure();
+  // TODO(thomasraoux): support mixed mode contract lowering.
+  if (op.getLhsType().getElementType() !=
+          getElementTypeOrSelf(op.getAccType()) ||
+      op.getRhsType().getElementType() != getElementTypeOrSelf(op.getAccType()))
     return failure();
 
   // TODO(ntv, ajcbik): implement benefits, cost models.

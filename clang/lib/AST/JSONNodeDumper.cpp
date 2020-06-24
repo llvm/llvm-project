@@ -74,6 +74,7 @@ void JSONNodeDumper::Visit(const Type *T) {
 
   JOS.attribute("kind", (llvm::Twine(T->getTypeClassName()) + "Type").str());
   JOS.attribute("type", createQualType(QualType(T, 0), /*Desugar*/ false));
+  attributeOnlyIfTrue("containsErrors", T->containsErrors());
   attributeOnlyIfTrue("isDependent", T->isDependentType());
   attributeOnlyIfTrue("isInstantiationDependent",
                       T->isInstantiationDependentType());

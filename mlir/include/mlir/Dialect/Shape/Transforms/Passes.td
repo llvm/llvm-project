@@ -11,6 +11,11 @@
 
 include "mlir/Pass/PassBase.td"
 
+def RemoveShapeConstraints : FunctionPass<"remove-shape-constraints"> {
+  let summary = "Replace all cstr_ ops with a true witness";
+  let constructor = "mlir::createRemoveShapeConstraintsPass()";
+}
+
 def ShapeToShapeLowering : FunctionPass<"shape-to-shape-lowering"> {
   let summary = "Legalize Shape dialect to be convertible to Standard";
   let constructor = "mlir::createShapeToShapeLowering()";

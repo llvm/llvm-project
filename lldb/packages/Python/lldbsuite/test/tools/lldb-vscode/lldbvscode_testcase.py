@@ -179,6 +179,9 @@ class VSCodeTestCaseBase(TestBase):
     def get_console(self, timeout=0.0):
         return self.vscode.get_output('console', timeout=timeout)
 
+    def collect_console(self, duration):
+        return self.vscode.collect_output('console', duration=duration)
+
     def get_local_as_int(self, name, threadId=None):
         value = self.vscode.get_local_variable_value(name, threadId=threadId)
         if value.startswith('0x'):
@@ -239,14 +242,16 @@ class VSCodeTestCaseBase(TestBase):
 
     def attach(self, program=None, pid=None, waitFor=None, trace=None,
                initCommands=None, preRunCommands=None, stopCommands=None,
-               exitCommands=None, attachCommands=None, coreFile=None):
+               exitCommands=None, attachCommands=None, coreFile=None,
+               disconnectAutomatically=True, terminateCommands=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and attach to the process.
         '''
         # Make sure we disconnect and terminate the VSCode debug adaptor even
         # if we throw an exception during the test case.
         def cleanup():
-            self.vscode.request_disconnect(terminateDebuggee=True)
+            if disconnectAutomatically:
+                self.vscode.request_disconnect(terminateDebuggee=True)
             self.vscode.terminate()
 
         # Execute the cleanup function during test case tear down.
@@ -257,7 +262,8 @@ class VSCodeTestCaseBase(TestBase):
             program=program, pid=pid, waitFor=waitFor, trace=trace,
             initCommands=initCommands, preRunCommands=preRunCommands,
             stopCommands=stopCommands, exitCommands=exitCommands,
-            attachCommands=attachCommands, coreFile=coreFile)
+            attachCommands=attachCommands, terminateCommands=terminateCommands,
+            coreFile=coreFile)
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'attach failed (%s)' % (response['message']))
@@ -266,15 +272,17 @@ class VSCodeTestCaseBase(TestBase):
                stopOnEntry=False, disableASLR=True,
                disableSTDIO=False, shellExpandArguments=False,
                trace=False, initCommands=None, preRunCommands=None,
-               stopCommands=None, exitCommands=None,sourcePath=None,
-               debuggerRoot=None, launchCommands=None, sourceMap=None):
+               stopCommands=None, exitCommands=None, terminateCommands=None,
+               sourcePath=None, debuggerRoot=None, launchCommands=None,
+               sourceMap=None, disconnectAutomatically=True):
         '''Sending launch request to vscode
         '''
 
         # Make sure we disconnect and terminate the VSCode debug adapter,
         # if we throw an exception during the test case
         def cleanup():
-            self.vscode.request_disconnect(terminateDebuggee=True)
+            if disconnectAutomatically:
+                self.vscode.request_disconnect(terminateDebuggee=True)
             self.vscode.terminate()
 
         # Execute the cleanup function during test case tear down.
@@ -296,6 +304,7 @@ class VSCodeTestCaseBase(TestBase):
             preRunCommands=preRunCommands,
             stopCommands=stopCommands,
             exitCommands=exitCommands,
+            terminateCommands=terminateCommands,
             sourcePath=sourcePath,
             debuggerRoot=debuggerRoot,
             launchCommands=launchCommands,
@@ -309,7 +318,8 @@ class VSCodeTestCaseBase(TestBase):
                          disableSTDIO=False, shellExpandArguments=False,
                          trace=False, initCommands=None, preRunCommands=None,
                          stopCommands=None, exitCommands=None,
-                         sourcePath=None, debuggerRoot=None):
+                         terminateCommands=None, sourcePath=None,
+                         debuggerRoot=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and launch the process.
         '''
@@ -319,4 +329,4 @@ class VSCodeTestCaseBase(TestBase):
         self.launch(program, args, cwd, env, stopOnEntry, disableASLR,
                     disableSTDIO, shellExpandArguments, trace,
                     initCommands, preRunCommands, stopCommands, exitCommands,
-                    sourcePath, debuggerRoot)
+                    terminateCommands, sourcePath, debuggerRoot)

@@ -160,6 +160,7 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void UseEmplaceCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreImplicitConstructors", IgnoreImplicitConstructors);
   Options.store(Opts, "ContainersWithPushBack",
                 utils::options::serializeStringList(ContainersWithPushBack));
   Options.store(Opts, "SmartPointers",

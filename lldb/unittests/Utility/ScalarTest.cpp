@@ -313,3 +313,15 @@ TEST(ScalarTest, Scalar_512) {
   EXPECT_EQ(S.GetType(), Scalar::e_sint512);
   EXPECT_EQ(S.GetByteSize(), 64U);
 }
+
+TEST(ScalarTest, TruncOrExtendTo) {
+  Scalar S(0xffff);
+  S.TruncOrExtendTo(12, true);
+  EXPECT_EQ(S.ULong(), 0xfffu);
+  S.TruncOrExtendTo(20, true);
+  EXPECT_EQ(S.ULong(), 0xfffffu);
+  S.TruncOrExtendTo(24, false);
+  EXPECT_EQ(S.ULong(), 0x0fffffu);
+  S.TruncOrExtendTo(16, false);
+  EXPECT_EQ(S.ULong(), 0xffffu);
+}

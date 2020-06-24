@@ -36,8 +36,7 @@ define internal i32 @inalloca(i32* inalloca %p) {
 }
 
 define internal i32 @preallocated(i32* preallocated(i32) %p) {
-; TODO: handle preallocated:
-; CHECK-NOT-LABEL: define internal fastcc i32 @preallocated(i32* %p)
+; CHECK-LABEL: define internal fastcc i32 @preallocated(i32* %p)
   %rv = load i32, i32* %p
   ret i32 %rv
 }
@@ -50,21 +49,21 @@ define void @call_things() {
   call i32 @j(i32* %m)
   %args = alloca inalloca i32
   call i32 @inalloca(i32* inalloca %args)
-  ; TODO: handle preallocated
-  ;%c = call token @llvm.call.preallocated.setup(i32 1)
-  ;%N = call i8* @llvm.call.preallocated.arg(token %c, i32 0) preallocated(i32)
-  ;%n = bitcast i8* %N to i32*
-   ;call i32 @preallocated(i32* preallocated(i32) %n) ["preallocated"(token %c)]
+  %c = call token @llvm.call.preallocated.setup(i32 1)
+  %N = call i8* @llvm.call.preallocated.arg(token %c, i32 0) preallocated(i32)
+  %n = bitcast i8* %N to i32*
+  call i32 @preallocated(i32* preallocated(i32) %n) ["preallocated"(token %c)]
   ret void
 }
-
-@llvm.used = appending global [1 x i8*] [
-   i8* bitcast (i32(i32*)* @j to i8*)
-], section "llvm.metadata"
-
 ; CHECK-LABEL: define void @call_things()
 ; CHECK: call fastcc i32 @f
 ; CHECK: call fastcc i32 @g
 ; CHECK: call coldcc i32 @h
 ; CHECK: call i32 @j
 ; CHECK: call fastcc i32 @inalloca(i32* %args)
+; CHECK-NOT: llvm.call.preallocated
+; CHECK: call fastcc i32 @preallocated(i32* %n)
+
+@llvm.used = appending global [1 x i8*] [
+   i8* bitcast (i32(i32*)* @j to i8*)
+], section "llvm.metadata"
