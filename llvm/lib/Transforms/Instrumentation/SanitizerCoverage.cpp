@@ -250,7 +250,6 @@ private:
   FunctionCallee SanCovTraceGepFunction;
   FunctionCallee SanCovTraceSwitchFunction;
   GlobalVariable *SanCovLowestStack;
-  InlineAsm *EmptyAsm;
   Type *IntptrTy, *IntptrPtrTy, *Int64Ty, *Int64PtrTy, *Int32Ty, *Int32PtrTy,
       *Int16Ty, *Int8Ty, *Int8PtrTy, *Int1Ty, *Int1PtrTy;
   Module *CurModule;
@@ -484,11 +483,6 @@ bool ModuleSanitizerCoverage::instrumentModule(
       GlobalValue::ThreadLocalMode::InitialExecTLSModel);
   if (Options.StackDepth && !SanCovLowestStack->isDeclaration())
     SanCovLowestStack->setInitializer(Constant::getAllOnesValue(IntptrTy));
-
-  // We insert an empty inline asm after cov callbacks to avoid callback merge.
-  EmptyAsm = InlineAsm::get(FunctionType::get(IRB.getVoidTy(), false),
-                            StringRef(""), StringRef(""),
-                            /*hasSideEffects=*/true);
 
   SanCovTracePC = M.getOrInsertFunction(SanCovTracePCName, VoidTy);
   SanCovTracePCGuard =
@@ -921,16 +915,15 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   IRBuilder<> IRB(&*IP);
   IRB.SetCurrentDebugLocation(EntryLoc);
   if (Options.TracePC) {
-    IRB.CreateCall(SanCovTracePC); // gets the PC using GET_CALLER_PC.
-    IRB.CreateCall(EmptyAsm, {}); // Avoids callback merge.
+    IRB.CreateCall(SanCovTracePC)
+        ->setCannotMerge(); // gets the PC using GET_CALLER_PC.
   }
   if (Options.TracePCGuard) {
     auto GuardPtr = IRB.CreateIntToPtr(
         IRB.CreateAdd(IRB.CreatePointerCast(FunctionGuardArray, IntptrTy),
                       ConstantInt::get(IntptrTy, Idx * 4)),
         Int32PtrTy);
-    IRB.CreateCall(SanCovTracePCGuard, GuardPtr);
-    IRB.CreateCall(EmptyAsm, {}); // Avoids callback merge.
+    IRB.CreateCall(SanCovTracePCGuard, GuardPtr)->setCannotMerge();
   }
   if (Options.Inline8bitCounters) {
     auto CounterPtr = IRB.CreateGEP(

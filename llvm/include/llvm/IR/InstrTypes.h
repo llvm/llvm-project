@@ -1723,6 +1723,9 @@ public:
 
   /// Determine if the call cannot be tail merged.
   bool cannotMerge() const { return hasFnAttr(Attribute::NoMerge); }
+  void setCannotMerge() {
+    addAttribute(AttributeList::FunctionIndex, Attribute::NoMerge);
+  }
 
   /// Determine if the invoke is convergent
   bool isConvergent() const { return hasFnAttr(Attribute::Convergent); }
