@@ -1239,8 +1239,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
             // Without a datalayout we have to assume the worst case: that the
             // function pointer isn't aligned at all.
             GVAlign = llvm::None;
-          } else {
-            GVAlign = MaybeAlign(GV->getAlignment());
+          } else if (isa<GlobalVariable>(GV)) {
+            GVAlign = cast<GlobalVariable>(GV)->getAlign();
           }
 
           if (GVAlign && *GVAlign > 1) {

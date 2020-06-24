@@ -1143,8 +1143,11 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // can be enabled for those subtargets.
     unsigned OpNum = (MI->getOpcode() == PPC::STD) ? 2 : 1;
     const MachineOperand &MO = MI->getOperand(OpNum);
-    if (MO.isGlobal() && MO.getGlobal()->getAlignment() < 4)
-      llvm_unreachable("Global must be word-aligned for LD, STD, LWA!");
+    if (MO.isGlobal()) {
+      const DataLayout &DL = MO.getGlobal()->getParent()->getDataLayout();
+      if (MO.getGlobal()->getPointerAlignment(DL) < 4)
+        llvm_unreachable("Global must be word-aligned for LD, STD, LWA!");
+    }
     // Now process the instruction normally.
     break;
   }
