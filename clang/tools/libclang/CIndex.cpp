@@ -4056,10 +4056,14 @@ static const Expr *evaluateCompoundStmtExpr(const CompoundStmt *CS) {
 }
 
 CXEvalResult clang_Cursor_Evaluate(CXCursor C) {
-  if (const Expr *E =
-          clang_getCursorKind(C) == CXCursor_CompoundStmt
-              ? evaluateCompoundStmtExpr(cast<CompoundStmt>(getCursorStmt(C)))
-              : evaluateDeclExpr(getCursorDecl(C)))
+  const Expr *E = nullptr;
+  if (clang_getCursorKind(C) == CXCursor_CompoundStmt)
+    E = evaluateCompoundStmtExpr(cast<CompoundStmt>(getCursorStmt(C)));
+  else if (clang_isDeclaration(C.kind))
+    E = evaluateDeclExpr(getCursorDecl(C));
+  else if (clang_isExpression(C.kind))
+    E = getCursorExpr(C);
+  if (E)
     return const_cast<CXEvalResult>(
         reinterpret_cast<const void *>(evaluateExpr(const_cast<Expr *>(E), C)));
   return nullptr;
