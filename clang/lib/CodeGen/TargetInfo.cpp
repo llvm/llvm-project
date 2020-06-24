@@ -10549,6 +10549,56 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// VE ABI Implementation.
+//
+namespace {
+class VEABIInfo : public DefaultABIInfo {
+public:
+  VEABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+
+private:
+  ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType RetTy) const;
+  void computeInfo(CGFunctionInfo &FI) const override;
+};
+} // end anonymous namespace
+
+ABIArgInfo VEABIInfo::classifyReturnType(QualType Ty) const {
+  if (Ty->isAnyComplexType()) {
+    return ABIArgInfo::getDirect();
+  }
+  return DefaultABIInfo::classifyReturnType(Ty);
+}
+
+ABIArgInfo VEABIInfo::classifyArgumentType(QualType Ty) const {
+  if (Ty->isAnyComplexType()) {
+    return ABIArgInfo::getDirect();
+  }
+  return DefaultABIInfo::classifyArgumentType(Ty);
+}
+
+void VEABIInfo::computeInfo(CGFunctionInfo &FI) const {
+
+  FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+  for (auto &Arg : FI.arguments())
+    Arg.info = classifyArgumentType(Arg.type);
+}
+
+namespace {
+class VETargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  VETargetCodeGenInfo(CodeGenTypes &CGT)
+      : TargetCodeGenInfo(std::make_unique<VEABIInfo>(CGT)) {}
+  // VE ABI requires the arguments of variadic and prototype-less functions
+  // are passed in both registers and memory.
+  bool isNoProtoCallVariadic(const CallArgList &args,
+                             const FunctionNoProtoType *fnType) const override {
+    return true;
+  }
+};
+} // end anonymous namespace
+
+//===----------------------------------------------------------------------===//
 // Driver code
 //===----------------------------------------------------------------------===//
 
@@ -10750,6 +10800,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   case llvm::Triple::spir:
   case llvm::Triple::spir64:
     return SetCGInfo(new SPIRTargetCodeGenInfo(Types));
+  case llvm::Triple::ve:
+    return SetCGInfo(new VETargetCodeGenInfo(Types));
   }
 }
 
