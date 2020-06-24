@@ -1388,12 +1388,11 @@ public:
     case Intrinsic::sideeffect:
       return 0;
     case Intrinsic::masked_store:
-      return ConcreteTTI->getMaskedMemoryOpCost(Instruction::Store, Tys[0],
-                                                DL.getABITypeAlignment(Tys[0]),
+      return ConcreteTTI->getMaskedMemoryOpCost(Instruction::Store, Tys[0], 0,
                                                 0, CostKind);
     case Intrinsic::masked_load:
-      return ConcreteTTI->getMaskedMemoryOpCost(
-          Instruction::Load, RetTy, DL.getABITypeAlignment(RetTy), 0, CostKind);
+      return ConcreteTTI->getMaskedMemoryOpCost(Instruction::Load, RetTy, 0, 0,
+                                                CostKind);
     case Intrinsic::experimental_vector_reduce_add:
       return ConcreteTTI->getArithmeticReductionCost(Instruction::Add, VecOpTy,
                                                      /*IsPairwiseForm=*/false,
