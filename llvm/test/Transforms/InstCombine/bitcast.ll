@@ -561,3 +561,9 @@ define void @constant_fold_vector_to_half() {
   store volatile half bitcast (<4 x i4> <i4 0, i4 0, i4 0, i4 4> to half), half* undef
   ret void
 }
+
+; Ensure that we do not crash when looking at such a weird bitcast.
+define i8* @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptrvec) {
+  %ptr = bitcast <1 x i8*> %ptrvec to i8*
+  ret i8* %ptr
+}
