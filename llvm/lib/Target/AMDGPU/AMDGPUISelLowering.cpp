@@ -443,7 +443,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UREM, VT, Expand);
     setOperationAction(ISD::SMUL_LOHI, VT, Expand);
     setOperationAction(ISD::UMUL_LOHI, VT, Expand);
-    setOperationAction(ISD::SDIVREM, VT, Custom);
+    setOperationAction(ISD::SDIVREM, VT, Expand);
     setOperationAction(ISD::UDIVREM, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::VSELECT, VT, Expand);
