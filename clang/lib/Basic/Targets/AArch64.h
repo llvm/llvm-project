@@ -37,6 +37,11 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasMTE;
   bool HasTME;
   bool HasMatMul;
+  bool HasSVE2;
+  bool HasSVE2AES;
+  bool HasSVE2SHA3;
+  bool HasSVE2SM4;
+  bool HasSVE2BitPerm;
 
   llvm::AArch64::ArchKind ArchKind;
 
