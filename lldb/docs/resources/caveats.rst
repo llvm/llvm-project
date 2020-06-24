@@ -10,7 +10,7 @@ Python
 ------
 
 LLDB has a powerful scripting interface which is accessible through Python.
-Python is available either from withing LLDB through a (interactive) script
+Python is available either from within LLDB through a (interactive) script
 interpreter, or as a Python module which you can import from the Python
 interpreter.
 
