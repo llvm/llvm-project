@@ -4069,27 +4069,35 @@ template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
       PrintHashTable(SysVHash);
   }
 
-  // Try printing .gnu.hash
-  if (auto GnuHash = this->dumper()->getGnuHashTable()) {
-    OS << "\n Symbol table of .gnu.hash for image:\n";
-    if (ELFT::Is64Bits)
-      OS << "  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name";
-    else
-      OS << "  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name";
-    OS << "\n";
-    auto Buckets = GnuHash->buckets();
-    for (uint32_t Buc = 0; Buc < GnuHash->nbuckets; Buc++) {
-      if (Buckets[Buc] == ELF::STN_UNDEF)
-        continue;
-      uint32_t Index = Buckets[Buc];
-      uint32_t GnuHashable = Index - GnuHash->symndx;
-      // Print whole chain
-      while (true) {
-        printHashedSymbol(Obj, &DynSyms[0], Index++, StringTable, Buc);
-        // Chain ends at symbol with stopper bit
-        if ((GnuHash->values(DynSyms.size())[GnuHashable++] & 1) == 1)
-          break;
-      }
+  // Try printing the .gnu.hash table.
+  const Elf_GnuHash *GnuHash = this->dumper()->getGnuHashTable();
+  if (!GnuHash)
+    return;
+
+  OS << "\n Symbol table of .gnu.hash for image:\n";
+  if (ELFT::Is64Bits)
+    OS << "  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name";
+  else
+    OS << "  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name";
+  OS << "\n";
+
+  if (Error E = checkGNUHashTable<ELFT>(Obj, GnuHash)) {
+    this->reportUniqueWarning(std::move(E));
+    return;
+  }
+
+  auto Buckets = GnuHash->buckets();
+  for (uint32_t Buc = 0; Buc < GnuHash->nbuckets; Buc++) {
+    if (Buckets[Buc] == ELF::STN_UNDEF)
+      continue;
+    uint32_t Index = Buckets[Buc];
+    uint32_t GnuHashable = Index - GnuHash->symndx;
+    // Print whole chain
+    while (true) {
+      printHashedSymbol(Obj, &DynSyms[0], Index++, StringTable, Buc);
+      // Chain ends at symbol with stopper bit
+      if ((GnuHash->values(DynSyms.size())[GnuHashable++] & 1) == 1)
+        break;
     }
   }
 }
