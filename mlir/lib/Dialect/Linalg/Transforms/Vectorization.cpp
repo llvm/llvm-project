@@ -76,7 +76,7 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
   for (Type outputTensorType : linalgOp.getOutputTensorTypes())
     if (!outputTensorType.cast<ShapedType>().hasStaticShape())
       return failure();
-  if (isa<linalg::MatmulOp>(op) || isa<linalg::FillOp>(op))
+  if (isa<linalg::MatmulOp, linalg::FillOp>(op))
     return success();
 
   auto genericOp = dyn_cast<linalg::GenericOp>(op);

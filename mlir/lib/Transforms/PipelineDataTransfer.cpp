@@ -48,7 +48,7 @@ std::unique_ptr<OperationPass<FuncOp>> mlir::createPipelineDataTransferPass() {
 // Temporary utility: will be replaced when DmaStart/DmaFinish abstract op's are
 // added.  TODO(b/117228571)
 static unsigned getTagMemRefPos(Operation &dmaOp) {
-  assert(isa<AffineDmaStartOp>(dmaOp) || isa<AffineDmaWaitOp>(dmaOp));
+  assert((isa<AffineDmaStartOp, AffineDmaWaitOp>(dmaOp)));
   if (auto dmaStartOp = dyn_cast<AffineDmaStartOp>(dmaOp)) {
     return dmaStartOp.getTagMemRefOperandIndex();
   }

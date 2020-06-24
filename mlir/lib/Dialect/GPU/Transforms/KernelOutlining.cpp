@@ -54,7 +54,7 @@ static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
 }
 
 static bool isSinkingBeneficiary(Operation *op) {
-  return isa<ConstantOp>(op) || isa<DimOp>(op);
+  return isa<ConstantOp, DimOp>(op);
 }
 
 LogicalResult mlir::sinkOperationsIntoLaunchOp(gpu::LaunchOp launchOp) {
