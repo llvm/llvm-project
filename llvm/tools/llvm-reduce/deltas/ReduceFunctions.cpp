@@ -15,6 +15,7 @@
 #include "ReduceFunctions.h"
 #include "Delta.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/IR/Instructions.h"
 #include <set>
 
 using namespace llvm;
