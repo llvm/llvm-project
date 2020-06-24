@@ -376,6 +376,20 @@ static uint32_t readFromHalf16(const uint8_t *loc) {
   return read32(config->isLE ? loc : loc - 2);
 }
 
+// The prefixed instruction is always a 4 byte prefix followed by a 4 byte
+// instruction. Therefore, the prefix is always in lower memory than the
+// instruction (regardless of endianness).
+// As a result, we need to shift the pieces around on little endian machines.
+static void writePrefixedInstruction(uint8_t *loc, uint64_t insn) {
+  insn = config->isLE ? insn << 32 | insn >> 32 : insn;
+  write64(loc, insn);
+}
+
+static uint64_t readPrefixedInstruction(const uint8_t *loc) {
+  uint64_t fullInstr = read64(loc);
+  return config->isLE ? (fullInstr << 32 | fullInstr >> 32) : fullInstr;
+}
+
 PPC64::PPC64() {
   copyRel = R_PPC64_COPY;
   gotRel = R_PPC64_GLOB_DAT;
@@ -670,6 +684,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_REL16_HI:
   case R_PPC64_REL32:
   case R_PPC64_REL64:
+  case R_PPC64_PCREL34:
     return R_PC;
   case R_PPC64_GOT_TLSGD16:
   case R_PPC64_GOT_TLSGD16_HA:
@@ -986,6 +1001,17 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC64_DTPREL64:
     write64(loc, val - dynamicThreadPointerOffset);
     break;
+  case R_PPC64_PCREL34: {
+    const uint64_t si0Mask = 0x00000003ffff0000;
+    const uint64_t si1Mask = 0x000000000000ffff;
+    const uint64_t fullMask = 0x0003ffff0000ffff;
+    checkInt(loc, val, 34, rel);
+
+    uint64_t instr = readPrefixedInstruction(loc) & ~fullMask;
+    writePrefixedInstruction(loc, instr | ((val & si0Mask) << 16) |
+                             (val & si1Mask));
+    break;
+  }
   default:
     llvm_unreachable("unknown relocation");
   }

@@ -2141,9 +2141,14 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
-  // Conservatively strip all metadata on the instruction.
-  for (auto &I : *ThenBB)
+  // Conservatively strip all metadata on the instruction. Drop the debug loc
+  // to avoid making it appear as if the condition is a constant, which would
+  // be misleading while debugging.
+  for (auto &I : *ThenBB) {
+    if (!SpeculatedStoreValue || &I != SpeculatedStore)
+      I.setDebugLoc(DebugLoc());
     I.dropUnknownNonDebugMetadata();
+  }
 
   // Hoist the instructions.
   BB->getInstList().splice(BI->getIterator(), ThenBB->getInstList(),

@@ -913,11 +913,11 @@ define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%
 ; CHECK-NEXT:    vmov.16 q1[3], r1
 ; CHECK-NEXT:  .LBB18_9: @ %else8
 ; CHECK-NEXT:    vmrs r2, p0
-; CHECK-NEXT:    vmovx.f16 s0, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s3, s0
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s5
 ; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmovx.f16 s0, s5
+; CHECK-NEXT:    vmovx.f16 s8, s4
+; CHECK-NEXT:    vcvtb.f32.f16 s3, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s5
 ; CHECK-NEXT:    vcvtb.f32.f16 s1, s8
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s4
 ; CHECK-NEXT:    and r3, r2, #1
@@ -1041,11 +1041,11 @@ define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 
 ; CHECK-NEXT:    vmov.16 q1[3], r1
 ; CHECK-NEXT:  .LBB19_9: @ %else8
 ; CHECK-NEXT:    vmrs r2, p0
-; CHECK-NEXT:    vmovx.f16 s0, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s3, s0
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s5
 ; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmovx.f16 s0, s5
+; CHECK-NEXT:    vmovx.f16 s8, s4
+; CHECK-NEXT:    vcvtb.f32.f16 s3, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s5
 ; CHECK-NEXT:    vcvtb.f32.f16 s1, s8
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s4
 ; CHECK-NEXT:    and r3, r2, #1

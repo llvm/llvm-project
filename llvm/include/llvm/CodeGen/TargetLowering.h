@@ -4421,6 +4421,10 @@ public:
   /// only the first Count elements of the vector are used.
   SDValue expandVecReduce(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expand an SREM or UREM using SDIV/UDIV or SDIVREM/UDIVREM, if legal.
+  /// Returns true if the expansion was successful.
+  bool expandREM(SDNode *Node, SDValue &Result, SelectionDAG &DAG) const;
+
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks
   //

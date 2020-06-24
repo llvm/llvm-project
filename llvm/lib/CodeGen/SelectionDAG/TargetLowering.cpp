@@ -7823,3 +7823,26 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
     Res = DAG.getNode(ISD::ANY_EXTEND, dl, Node->getValueType(0), Res);
   return Res;
 }
+
+bool TargetLowering::expandREM(SDNode *Node, SDValue &Result,
+                               SelectionDAG &DAG) const {
+  EVT VT = Node->getValueType(0);
+  SDLoc dl(Node);
+  bool isSigned = Node->getOpcode() == ISD::SREM;
+  unsigned DivOpc = isSigned ? ISD::SDIV : ISD::UDIV;
+  unsigned DivRemOpc = isSigned ? ISD::SDIVREM : ISD::UDIVREM;
+  SDValue Dividend = Node->getOperand(0);
+  SDValue Divisor = Node->getOperand(1);
+  if (isOperationLegalOrCustom(DivRemOpc, VT)) {
+    SDVTList VTs = DAG.getVTList(VT, VT);
+    Result = DAG.getNode(DivRemOpc, dl, VTs, Dividend, Divisor).getValue(1);
+    return true;
+  } else if (isOperationLegalOrCustom(DivOpc, VT)) {
+    // X % Y -> X-X/Y*Y
+    SDValue Divide = DAG.getNode(DivOpc, dl, VT, Dividend, Divisor);
+    SDValue Mul = DAG.getNode(ISD::MUL, dl, VT, Divide, Divisor);
+    Result = DAG.getNode(ISD::SUB, dl, VT, Dividend, Mul);
+    return true;
+  }
+  return false;
+}

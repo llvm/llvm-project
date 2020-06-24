@@ -1672,8 +1672,16 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
   llvm::Triple::OSType OSTy = llvm::Triple::UnknownOS;
 
   StringRef MachOArchName = Toolchain.getMachOArchName(Args);
-  if (MachOArchName == "armv7" || MachOArchName == "armv7s" ||
-      MachOArchName == "arm64")
+  if (MachOArchName == "arm64") {
+#if __arm64__
+    // A clang running on an Apple Silicon mac defaults
+    // to building for mac when building for arm64 rather than
+    // defaulting to iOS.
+    OSTy = llvm::Triple::MacOSX;
+#else
+    OSTy = llvm::Triple::IOS;
+#endif
+  } else if (MachOArchName == "armv7" || MachOArchName == "armv7s")
     OSTy = llvm::Triple::IOS;
   else if (MachOArchName == "armv7k" || MachOArchName == "arm64_32")
     OSTy = llvm::Triple::WatchOS;
@@ -1822,7 +1830,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   if (Platform == MacOS) {
     if (!Driver::GetReleaseVersion(OSTarget->getOSVersion(), Major, Minor,
                                    Micro, HadExtra) ||
-        HadExtra || Major != 10 || Minor >= 100 || Micro >= 100)
+        HadExtra || Major < 10 || Major >= 100 || Minor >= 100 || Micro >= 100)
       getDriver().Diag(diag::err_drv_invalid_version_number)
           << OSTarget->getAsString(Args, Opts);
   } else if (Platform == IPhoneOS) {

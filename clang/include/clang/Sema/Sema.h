@@ -2866,8 +2866,6 @@ public:
                      Decl *EnumDecl, ArrayRef<Decl *> Elements, Scope *S,
                      const ParsedAttributesView &Attr);
 
-  DeclContext *getContainingDC(DeclContext *DC);
-
   /// Set the current declaration context until it gets popped.
   void PushDeclContext(Scope *S, DeclContext *DC);
   void PopDeclContext();
@@ -2876,6 +2874,11 @@ public:
   /// of a declarator's nested name specifier.
   void EnterDeclaratorContext(Scope *S, DeclContext *DC);
   void ExitDeclaratorContext(Scope *S);
+
+  /// Enter a template parameter scope, after it's been associated with a particular
+  /// DeclContext. Causes lookup within the scope to chain through enclosing contexts
+  /// in the correct order.
+  void EnterTemplatedContext(Scope *S, DeclContext *DC);
 
   /// Push the parameters of D, which must be a function, into scope.
   void ActOnReenterFunctionContext(Scope* S, Decl* D);
@@ -6789,7 +6792,8 @@ public:
   void ActOnFinishCXXNonNestedClass();
 
   void ActOnReenterCXXMethodParameter(Scope *S, ParmVarDecl *Param);
-  unsigned ActOnReenterTemplateScope(Scope *S, Decl *Template);
+  unsigned ActOnReenterTemplateScope(Decl *Template,
+                                     llvm::function_ref<Scope *()> EnterScope);
   void ActOnStartDelayedMemberDeclarations(Scope *S, Decl *Record);
   void ActOnStartDelayedCXXMethodDeclaration(Scope *S, Decl *Method);
   void ActOnDelayedCXXMethodParameter(Scope *S, Decl *Param);

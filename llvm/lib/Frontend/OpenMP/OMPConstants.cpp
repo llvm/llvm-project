@@ -56,8 +56,8 @@ StringRef llvm::omp::getOpenMPClauseName(Clause C) {
 
 bool llvm::omp::isAllowedClauseForDirective(Directive D, Clause C,
                                             unsigned Version) {
-  assert(unsigned(D) <= unsigned(OMPD_unknown));
-  assert(unsigned(C) <= unsigned(OMPC_unknown));
+  assert(unsigned(D) <= llvm::omp::Directive_enumSize);
+  assert(unsigned(C) <= llvm::omp::Clause_enumSize);
 #define OMP_DIRECTIVE_CLAUSE(Dir, MinVersion, MaxVersion, Cl)                  \
   if (D == Dir && C == Cl && MinVersion <= Version && MaxVersion >= Version)   \
     return true;

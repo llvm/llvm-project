@@ -133,11 +133,7 @@ private:
 
   bool hasExtIntType() const override { return true; }
 
-  bool hasProtectedVisibility() const override {
-    // TODO: For now, continue to advertise "protected" support for
-    // Emscripten targets.
-    return getTriple().isOSEmscripten();
-  }
+  bool hasProtectedVisibility() const override { return false; }
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo

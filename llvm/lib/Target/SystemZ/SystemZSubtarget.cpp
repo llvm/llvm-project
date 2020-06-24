@@ -74,9 +74,12 @@ bool SystemZSubtarget::enableSubRegLiveness() const {
 
 bool SystemZSubtarget::isPC32DBLSymbol(const GlobalValue *GV,
                                        CodeModel::Model CM) const {
-  // PC32DBL accesses require the low bit to be clear.  Note that a zero
-  // value selects the default alignment and is therefore OK.
-  if (GV->getAlignment() == 1)
+  // PC32DBL accesses require the low bit to be clear.
+  //
+  // FIXME: Explicitly check for functions: the datalayout is currently
+  // missing information about function pointers.
+  const DataLayout &DL = GV->getParent()->getDataLayout();
+  if (GV->getPointerAlignment(DL) == 1 && !GV->getValueType()->isFunctionTy())
     return false;
 
   // For the small model, all locally-binding symbols are in range.

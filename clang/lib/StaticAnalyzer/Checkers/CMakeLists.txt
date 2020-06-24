@@ -134,4 +134,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   clangBasic
   clangLex
   clangStaticAnalyzerCore
+
+  DEPENDS
+  omp_gen
   )

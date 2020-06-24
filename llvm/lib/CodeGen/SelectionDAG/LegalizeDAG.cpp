@@ -3343,26 +3343,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   }
   case ISD::UREM:
-  case ISD::SREM: {
-    EVT VT = Node->getValueType(0);
-    bool isSigned = Node->getOpcode() == ISD::SREM;
-    unsigned DivOpc = isSigned ? ISD::SDIV : ISD::UDIV;
-    unsigned DivRemOpc = isSigned ? ISD::SDIVREM : ISD::UDIVREM;
-    Tmp2 = Node->getOperand(0);
-    Tmp3 = Node->getOperand(1);
-    if (TLI.isOperationLegalOrCustom(DivRemOpc, VT)) {
-      SDVTList VTs = DAG.getVTList(VT, VT);
-      Tmp1 = DAG.getNode(DivRemOpc, dl, VTs, Tmp2, Tmp3).getValue(1);
+  case ISD::SREM:
+    if (TLI.expandREM(Node, Tmp1, DAG))
       Results.push_back(Tmp1);
-    } else if (TLI.isOperationLegalOrCustom(DivOpc, VT)) {
-      // X % Y -> X-X/Y*Y
-      Tmp1 = DAG.getNode(DivOpc, dl, VT, Tmp2, Tmp3);
-      Tmp1 = DAG.getNode(ISD::MUL, dl, VT, Tmp1, Tmp3);
-      Tmp1 = DAG.getNode(ISD::SUB, dl, VT, Tmp2, Tmp1);
-      Results.push_back(Tmp1);
-    }
     break;
-  }
   case ISD::UDIV:
   case ISD::SDIV: {
     bool isSigned = Node->getOpcode() == ISD::SDIV;

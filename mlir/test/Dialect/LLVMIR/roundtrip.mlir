@@ -103,6 +103,12 @@ func @ops(%arg0 : !llvm.i32, %arg1 : !llvm.float) {
 // CHECK: "llvm.intr.pow"(%arg1, %arg1) : (!llvm.float, !llvm.float) -> !llvm.float
   %31 = "llvm.intr.pow"(%arg1, %arg1) : (!llvm.float, !llvm.float) -> !llvm.float
 
+// CHECK: "llvm.intr.bitreverse"(%{{.*}}) : (!llvm.i32) -> !llvm.i32
+  %32 = "llvm.intr.bitreverse"(%arg0) : (!llvm.i32) -> !llvm.i32
+
+// CHECK: "llvm.intr.ctpop"(%{{.*}}) : (!llvm.i32) -> !llvm.i32
+  %33 = "llvm.intr.ctpop"(%arg0) : (!llvm.i32) -> !llvm.i32
+
 // CHECK:  llvm.return
   llvm.return
 }

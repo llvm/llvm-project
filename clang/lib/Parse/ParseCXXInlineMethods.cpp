@@ -133,9 +133,6 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
 
   LexedMethod* LM = new LexedMethod(this, FnD);
   getCurrentClass().LateParsedDeclarations.push_back(LM);
-  LM->TemplateScope = getCurScope()->isTemplateParamScope() ||
-      (FnD && isa<FunctionTemplateDecl>(FnD) &&
-       cast<FunctionTemplateDecl>(FnD)->isAbbreviated());
   CachedTokens &Toks = LM->Toks;
 
   tok::TokenKind kind = Tok.getKind();
@@ -225,6 +222,7 @@ Parser::LateParsedDeclaration::~LateParsedDeclaration() {}
 void Parser::LateParsedDeclaration::ParseLexedMethodDeclarations() {}
 void Parser::LateParsedDeclaration::ParseLexedMemberInitializers() {}
 void Parser::LateParsedDeclaration::ParseLexedMethodDefs() {}
+void Parser::LateParsedDeclaration::ParseLexedAttributes() {}
 void Parser::LateParsedDeclaration::ParseLexedPragmas() {}
 
 Parser::LateParsedClass::LateParsedClass(Parser *P, ParsingClass *C)
@@ -246,6 +244,10 @@ void Parser::LateParsedClass::ParseLexedMethodDefs() {
   Self->ParseLexedMethodDefs(*Class);
 }
 
+void Parser::LateParsedClass::ParseLexedAttributes() {
+  Self->ParseLexedAttributes(*Class);
+}
+
 void Parser::LateParsedClass::ParseLexedPragmas() {
   Self->ParseLexedPragmas(*Class);
 }
@@ -262,57 +264,79 @@ void Parser::LateParsedMemberInitializer::ParseLexedMemberInitializers() {
   Self->ParseLexedMemberInitializer(*this);
 }
 
+void Parser::LateParsedAttribute::ParseLexedAttributes() {
+  Self->ParseLexedAttribute(*this, true, false);
+}
+
 void Parser::LateParsedPragma::ParseLexedPragmas() {
   Self->ParseLexedPragma(*this);
 }
+
+/// Utility to re-enter a possibly-templated scope while parsing its
+/// late-parsed components.
+struct Parser::ReenterTemplateScopeRAII {
+  Parser &P;
+  MultiParseScope Scopes;
+  TemplateParameterDepthRAII CurTemplateDepthTracker;
+
+  ReenterTemplateScopeRAII(Parser &P, Decl *MaybeTemplated, bool Enter = true)
+      : P(P), Scopes(P), CurTemplateDepthTracker(P.TemplateParameterDepth) {
+    if (Enter) {
+      CurTemplateDepthTracker.addDepth(
+          P.ReenterTemplateScopes(Scopes, MaybeTemplated));
+    }
+  }
+};
+
+/// Utility to re-enter a class scope while parsing its late-parsed components.
+struct Parser::ReenterClassScopeRAII : ReenterTemplateScopeRAII {
+  ParsingClass &Class;
+
+  ReenterClassScopeRAII(Parser &P, ParsingClass &Class)
+      : ReenterTemplateScopeRAII(P, Class.TagOrTemplate,
+                                 /*Enter=*/!Class.TopLevelClass),
+        Class(Class) {
+    // If this is the top-level class, we're still within its scope.
+    if (Class.TopLevelClass)
+      return;
+
+    // Re-enter the class scope itself.
+    Scopes.Enter(Scope::ClassScope|Scope::DeclScope);
+    P.Actions.ActOnStartDelayedMemberDeclarations(P.getCurScope(),
+                                                  Class.TagOrTemplate);
+  }
+  ~ReenterClassScopeRAII() {
+    if (Class.TopLevelClass)
+      return;
+
+    P.Actions.ActOnFinishDelayedMemberDeclarations(P.getCurScope(),
+                                                   Class.TagOrTemplate);
+  }
+};
 
 /// ParseLexedMethodDeclarations - We finished parsing the member
 /// specification of a top (non-nested) C++ class. Now go over the
 /// stack of method declarations with some parts for which parsing was
 /// delayed (such as default arguments) and parse them.
 void Parser::ParseLexedMethodDeclarations(ParsingClass &Class) {
-  bool HasTemplateScope = !Class.TopLevelClass && Class.TemplateScope;
-  ParseScope ClassTemplateScope(this, Scope::TemplateParamScope,
-                                HasTemplateScope);
-  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-  if (HasTemplateScope) {
-    Actions.ActOnReenterTemplateScope(getCurScope(), Class.TagOrTemplate);
-    ++CurTemplateDepthTracker;
-  }
+  ReenterClassScopeRAII InClassScope(*this, Class);
 
-  // The current scope is still active if we're the top-level class.
-  // Otherwise we'll need to push and enter a new scope.
-  bool HasClassScope = !Class.TopLevelClass;
-  ParseScope ClassScope(this, Scope::ClassScope|Scope::DeclScope,
-                        HasClassScope);
-  if (HasClassScope)
-    Actions.ActOnStartDelayedMemberDeclarations(getCurScope(),
-                                                Class.TagOrTemplate);
-
-  for (size_t i = 0; i < Class.LateParsedDeclarations.size(); ++i) {
-    Class.LateParsedDeclarations[i]->ParseLexedMethodDeclarations();
-  }
-
-  if (HasClassScope)
-    Actions.ActOnFinishDelayedMemberDeclarations(getCurScope(),
-                                                 Class.TagOrTemplate);
+  for (LateParsedDeclaration *LateD : Class.LateParsedDeclarations)
+    LateD->ParseLexedMethodDeclarations();
 }
 
 void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
   // If this is a member template, introduce the template parameter scope.
-  ParseScope TemplateScope(this, Scope::TemplateParamScope, LM.TemplateScope);
-  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-  if (LM.TemplateScope) {
-    Actions.ActOnReenterTemplateScope(getCurScope(), LM.Method);
-    ++CurTemplateDepthTracker;
-  }
+  ReenterTemplateScopeRAII InFunctionTemplateScope(*this, LM.Method);
+
   // Start the delayed C++ method declaration
   Actions.ActOnStartDelayedCXXMethodDeclaration(getCurScope(), LM.Method);
 
   // Introduce the parameters into scope and parse their default
   // arguments.
-  ParseScope PrototypeScope(this, Scope::FunctionPrototypeScope |
-                            Scope::FunctionDeclarationScope | Scope::DeclScope);
+  InFunctionTemplateScope.Scopes.Enter(Scope::FunctionPrototypeScope |
+                                       Scope::FunctionDeclarationScope |
+                                       Scope::DeclScope);
   for (unsigned I = 0, N = LM.DefaultArgs.size(); I != N; ++I) {
     auto Param = cast<ParmVarDecl>(LM.DefaultArgs[I].Param);
     // Introduce the parameter into scope.
@@ -466,7 +490,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     LM.ExceptionSpecTokens = nullptr;
   }
 
-  PrototypeScope.Exit();
+  InFunctionTemplateScope.Scopes.Exit();
 
   // Finish the delayed C++ method declaration.
   Actions.ActOnFinishDelayedCXXMethodDeclaration(getCurScope(), LM.Method);
@@ -476,30 +500,15 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 /// (non-nested) C++ class. Now go over the stack of lexed methods that were
 /// collected during its parsing and parse them all.
 void Parser::ParseLexedMethodDefs(ParsingClass &Class) {
-  bool HasTemplateScope = !Class.TopLevelClass && Class.TemplateScope;
-  ParseScope ClassTemplateScope(this, Scope::TemplateParamScope, HasTemplateScope);
-  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-  if (HasTemplateScope) {
-    Actions.ActOnReenterTemplateScope(getCurScope(), Class.TagOrTemplate);
-    ++CurTemplateDepthTracker;
-  }
-  bool HasClassScope = !Class.TopLevelClass;
-  ParseScope ClassScope(this, Scope::ClassScope|Scope::DeclScope,
-                        HasClassScope);
+  ReenterClassScopeRAII InClassScope(*this, Class);
 
-  for (size_t i = 0; i < Class.LateParsedDeclarations.size(); ++i) {
-    Class.LateParsedDeclarations[i]->ParseLexedMethodDefs();
-  }
+  for (LateParsedDeclaration *D : Class.LateParsedDeclarations)
+    D->ParseLexedMethodDefs();
 }
 
 void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   // If this is a member template, introduce the template parameter scope.
-  ParseScope TemplateScope(this, Scope::TemplateParamScope, LM.TemplateScope);
-  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-  if (LM.TemplateScope) {
-    Actions.ActOnReenterTemplateScope(getCurScope(), LM.D);
-    ++CurTemplateDepthTracker;
-  }
+  ReenterTemplateScopeRAII InFunctionTemplateScope(*this, LM.D);
 
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -580,23 +589,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 /// of a top (non-nested) C++ class. Now go over the stack of lexed data member
 /// initializers that were collected during its parsing and parse them all.
 void Parser::ParseLexedMemberInitializers(ParsingClass &Class) {
-  bool HasTemplateScope = !Class.TopLevelClass && Class.TemplateScope;
-  ParseScope ClassTemplateScope(this, Scope::TemplateParamScope,
-                                HasTemplateScope);
-  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-  if (HasTemplateScope) {
-    Actions.ActOnReenterTemplateScope(getCurScope(), Class.TagOrTemplate);
-    ++CurTemplateDepthTracker;
-  }
-  // Set or update the scope flags.
-  bool AlreadyHasClassScope = Class.TopLevelClass;
-  unsigned ScopeFlags = Scope::ClassScope|Scope::DeclScope;
-  ParseScope ClassScope(this, ScopeFlags, !AlreadyHasClassScope);
-  ParseScopeFlags ClassScopeFlags(this, ScopeFlags, AlreadyHasClassScope);
-
-  if (!AlreadyHasClassScope)
-    Actions.ActOnStartDelayedMemberDeclarations(getCurScope(),
-                                                Class.TagOrTemplate);
+  ReenterClassScopeRAII InClassScope(*this, Class);
 
   if (!Class.LateParsedDeclarations.empty()) {
     // C++11 [expr.prim.general]p4:
@@ -604,17 +597,13 @@ void Parser::ParseLexedMemberInitializers(ParsingClass &Class) {
     //  (9.2) of a class X, the expression this is a prvalue of type "pointer
     //  to X" within the optional brace-or-equal-initializer. It shall not
     //  appear elsewhere in the member-declarator.
+    // FIXME: This should be done in ParseLexedMemberInitializer, not here.
     Sema::CXXThisScopeRAII ThisScope(Actions, Class.TagOrTemplate,
                                      Qualifiers());
 
-    for (size_t i = 0; i < Class.LateParsedDeclarations.size(); ++i) {
-      Class.LateParsedDeclarations[i]->ParseLexedMemberInitializers();
-    }
+    for (LateParsedDeclaration *D : Class.LateParsedDeclarations)
+      D->ParseLexedMemberInitializers();
   }
-
-  if (!AlreadyHasClassScope)
-    Actions.ActOnFinishDelayedMemberDeclarations(getCurScope(),
-                                                 Class.TagOrTemplate);
 
   Actions.ActOnFinishDelayedMemberInitializers(Class.TagOrTemplate);
 }
@@ -662,21 +651,115 @@ void Parser::ParseLexedMemberInitializer(LateParsedMemberInitializer &MI) {
     ConsumeAnyToken();
 }
 
-void Parser::ParseLexedPragmas(ParsingClass &Class) {
-  bool HasTemplateScope = !Class.TopLevelClass && Class.TemplateScope;
-  ParseScope ClassTemplateScope(this, Scope::TemplateParamScope,
-                                HasTemplateScope);
-  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-  if (HasTemplateScope) {
-    Actions.ActOnReenterTemplateScope(getCurScope(), Class.TagOrTemplate);
-    ++CurTemplateDepthTracker;
-  }
-  bool HasClassScope = !Class.TopLevelClass;
-  ParseScope ClassScope(this, Scope::ClassScope | Scope::DeclScope,
-                        HasClassScope);
+/// Wrapper class which calls ParseLexedAttribute, after setting up the
+/// scope appropriately.
+void Parser::ParseLexedAttributes(ParsingClass &Class) {
+  ReenterClassScopeRAII InClassScope(*this, Class);
 
-  for (LateParsedDeclaration *LPD : Class.LateParsedDeclarations)
-    LPD->ParseLexedPragmas();
+  for (LateParsedDeclaration *LateD : Class.LateParsedDeclarations)
+    LateD->ParseLexedAttributes();
+}
+
+/// Parse all attributes in LAs, and attach them to Decl D.
+void Parser::ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
+                                     bool EnterScope, bool OnDefinition) {
+  assert(LAs.parseSoon() &&
+         "Attribute list should be marked for immediate parsing.");
+  for (unsigned i = 0, ni = LAs.size(); i < ni; ++i) {
+    if (D)
+      LAs[i]->addDecl(D);
+    ParseLexedAttribute(*LAs[i], EnterScope, OnDefinition);
+    delete LAs[i];
+  }
+  LAs.clear();
+}
+
+/// Finish parsing an attribute for which parsing was delayed.
+/// This will be called at the end of parsing a class declaration
+/// for each LateParsedAttribute. We consume the saved tokens and
+/// create an attribute with the arguments filled in. We add this
+/// to the Attribute list for the decl.
+void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
+                                 bool EnterScope, bool OnDefinition) {
+  // Create a fake EOF so that attribute parsing won't go off the end of the
+  // attribute.
+  Token AttrEnd;
+  AttrEnd.startToken();
+  AttrEnd.setKind(tok::eof);
+  AttrEnd.setLocation(Tok.getLocation());
+  AttrEnd.setEofData(LA.Toks.data());
+  LA.Toks.push_back(AttrEnd);
+
+  // Append the current token at the end of the new token stream so that it
+  // doesn't get lost.
+  LA.Toks.push_back(Tok);
+  PP.EnterTokenStream(LA.Toks, true, /*IsReinject=*/true);
+  // Consume the previously pushed token.
+  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
+
+  ParsedAttributes Attrs(AttrFactory);
+  SourceLocation endLoc;
+
+  if (LA.Decls.size() > 0) {
+    Decl *D = LA.Decls[0];
+    NamedDecl *ND  = dyn_cast<NamedDecl>(D);
+    RecordDecl *RD = dyn_cast_or_null<RecordDecl>(D->getDeclContext());
+
+    // Allow 'this' within late-parsed attributes.
+    Sema::CXXThisScopeRAII ThisScope(Actions, RD, Qualifiers(),
+                                     ND && ND->isCXXInstanceMember());
+
+    if (LA.Decls.size() == 1) {
+      // If the Decl is templatized, add template parameters to scope.
+      ReenterTemplateScopeRAII InDeclScope(*this, D, EnterScope);
+
+      // If the Decl is on a function, add function parameters to the scope.
+      bool HasFunScope = EnterScope && D->isFunctionOrFunctionTemplate();
+      if (HasFunScope) {
+        InDeclScope.Scopes.Enter(Scope::FnScope | Scope::DeclScope |
+                                 Scope::CompoundStmtScope);
+        Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
+      }
+
+      ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, &endLoc,
+                            nullptr, SourceLocation(), ParsedAttr::AS_GNU,
+                            nullptr);
+
+      if (HasFunScope)
+        Actions.ActOnExitFunctionContext();
+    } else {
+      // If there are multiple decls, then the decl cannot be within the
+      // function scope.
+      ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, &endLoc,
+                            nullptr, SourceLocation(), ParsedAttr::AS_GNU,
+                            nullptr);
+    }
+  } else {
+    Diag(Tok, diag::warn_attribute_no_decl) << LA.AttrName.getName();
+  }
+
+  if (OnDefinition && !Attrs.empty() && !Attrs.begin()->isCXX11Attribute() &&
+      Attrs.begin()->isKnownToGCC())
+    Diag(Tok, diag::warn_attribute_on_function_definition)
+      << &LA.AttrName;
+
+  for (unsigned i = 0, ni = LA.Decls.size(); i < ni; ++i)
+    Actions.ActOnFinishDelayedAttribute(getCurScope(), LA.Decls[i], Attrs);
+
+  // Due to a parsing error, we either went over the cached tokens or
+  // there are still cached tokens left, so we skip the leftover tokens.
+  while (Tok.isNot(tok::eof))
+    ConsumeAnyToken();
+
+  if (Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData())
+    ConsumeAnyToken();
+}
+
+void Parser::ParseLexedPragmas(ParsingClass &Class) {
+  ReenterClassScopeRAII InClassScope(*this, Class);
+
+  for (LateParsedDeclaration *D : Class.LateParsedDeclarations)
+    D->ParseLexedPragmas();
 }
 
 void Parser::ParseLexedPragma(LateParsedPragma &LP) {

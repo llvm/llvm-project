@@ -49,6 +49,7 @@ def VoidPtr : PtrType<VoidType>;
 def ConstVoidPtr : ConstType<VoidPtr>;
 def SizeTType : NamedType<"size_t">;
 def FloatPtr : PtrType<FloatType>;
+def LongDoublePtr : PtrType<LongDoubleType>;
 
 // _Noreturn is really not a type, but it is convenient to treat it as a type.
 def NoReturn : NamedType<"_Noreturn void">;

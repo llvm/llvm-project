@@ -71,6 +71,10 @@ static codegen::RegisterCodeGenFlags CFG;
 static cl::list<const PassInfo*, bool, PassNameParser>
 PassList(cl::desc("Optimizations available:"));
 
+static cl::opt<bool>
+    EnableNewPassManager("enable-new-pm",
+                         cl::desc("Enable the new pass manager"));
+
 // This flag specifies a textual description of the optimization pass pipeline
 // to run over the module. This flag switches opt to use the new pass manager
 // infrastructure, completely disabling all of the flags specific to the old
@@ -734,11 +738,15 @@ int main(int argc, char **argv) {
   if (OutputThinLTOBC)
     M->addModuleFlag(Module::Error, "EnableSplitLTOUnit", SplitLTOUnit);
 
-  if (PassPipeline.getNumOccurrences() > 0) {
-    if (PassList.size()) {
+  if (EnableNewPassManager || PassPipeline.getNumOccurrences() > 0) {
+    if (PassPipeline.getNumOccurrences() > 0 && PassList.size() > 0) {
       errs()
           << "Cannot specify passes via both -foo-pass and --passes=foo-pass";
       return 1;
+    }
+    SmallVector<StringRef, 4> Passes;
+    for (const auto &P : PassList) {
+      Passes.push_back(P->getPassArgument());
     }
     OutputKind OK = OK_NoOutput;
     if (!NoOutput)
@@ -756,7 +764,7 @@ int main(int argc, char **argv) {
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
     return runPassPipeline(argv[0], *M, TM.get(), Out.get(), ThinLinkOut.get(),
-                           RemarksFile.get(), PassPipeline, OK, VK,
+                           RemarksFile.get(), PassPipeline, Passes, OK, VK,
                            PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
                            EmitModuleHash, EnableDebugify, Coroutines)

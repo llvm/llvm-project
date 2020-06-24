@@ -37,6 +37,12 @@ void populateSPIRVToLLVMConversionPatterns(MLIRContext *context,
                                            LLVMTypeConverter &typeConverter,
                                            OwningRewritePatternList &patterns);
 
+/// Populates the given list with patterns for function conversion from SPIR-V
+/// to LLVM.
+void populateSPIRVToLLVMFunctionConversionPatterns(
+    MLIRContext *context, LLVMTypeConverter &typeConverter,
+    OwningRewritePatternList &patterns);
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_SPIRVTOLLVM_CONVERTSPIRVTOLLVM_H

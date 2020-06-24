@@ -12,6 +12,7 @@
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/SystemZ.h"
+#include "Arch/VE.h"
 #include "Arch/X86.h"
 #include "HIP.h"
 #include "Hexagon.h"
@@ -504,8 +505,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
+  // Enable -frtlib-add-rpath by default for the case of VE.
+  const bool IsVE = TC.getTriple().isVE();
+  bool DefaultValue = IsVE;
   if (!Args.hasFlag(options::OPT_frtlib_add_rpath,
-                    options::OPT_fno_rtlib_add_rpath, false))
+                    options::OPT_fno_rtlib_add_rpath, DefaultValue))
     return;
 
   std::string CandidateRPath = TC.getArchSpecificLibPath();

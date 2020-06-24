@@ -157,7 +157,7 @@ static gcp_map_type &getGCMap(void *&P) {
 
 /// getGVAlignment - Return the alignment to use for the specified global
 /// value.  This rounds up to the preferred alignment if possible and legal.
-Align AsmPrinter::getGVAlignment(const GlobalValue *GV, const DataLayout &DL,
+Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
                                  Align InAlign) {
   Align Alignment;
   if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))

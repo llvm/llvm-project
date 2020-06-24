@@ -62,6 +62,9 @@ add_clang_library(clangTidyBugproneModule
   clangTidy
   clangTidyCppCoreGuidelinesModule
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyBugproneModule

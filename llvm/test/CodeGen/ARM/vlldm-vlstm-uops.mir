@@ -62,7 +62,7 @@ body:             |
     $sp = tSUBspi $sp, 34, 14, $noreg
     VLSTM $sp, 14, $noreg
     tBLXNSr 14, $noreg, killed $r4, csr_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp
-    VLLDM $sp, 14, $noreg
+    VLLDM $sp, 14, $noreg, implicit-def $q0, implicit-def $q1, implicit-def $q2, implicit-def $q3, implicit-def $q4, implicit-def $q5, implicit-def $q6, implicit-def $q7, implicit-def $vpr, implicit-def $fpscr, implicit-def $fpscr_nzcv
     $sp = tADDspi $sp, 34, 14, $noreg
     $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r4, def $r5, def $r6, def $r7, def $r8, def $r9, def $r10, def $r11
     $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $pc

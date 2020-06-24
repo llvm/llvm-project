@@ -199,6 +199,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UADDSAT, VT, Legal);
       setOperationAction(ISD::SSUBSAT, VT, Legal);
       setOperationAction(ISD::USUBSAT, VT, Legal);
+      setOperationAction(ISD::UREM, VT, Expand);
+      setOperationAction(ISD::SREM, VT, Expand);
+      setOperationAction(ISD::SDIVREM, VT, Expand);
+      setOperationAction(ISD::UDIVREM, VT, Expand);
     }
 
     for (auto VT :

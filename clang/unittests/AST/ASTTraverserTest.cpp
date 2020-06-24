@@ -431,6 +431,7 @@ VarDecl 'c1'
 StaticAssertDecl
 |-ImplicitCastExpr
 | `-SubstNonTypeTemplateParmExpr
+|   |-NonTypeTemplateParmDecl 'alignment'
 |   `-IntegerLiteral
 `-StringLiteral
 )cpp");
