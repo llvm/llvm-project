@@ -161,7 +161,8 @@ public:
       return false;
 
     Type *Ty = cast<VectorType>(DataType)->getElementType();
-    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
+    if (Ty->isBFloatTy() || Ty->isHalfTy() ||
+        Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
 
     if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||

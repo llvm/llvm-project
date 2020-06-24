@@ -271,6 +271,11 @@ def SVLD1UH : MInst<"svld1uh_{d}", "dPX", "ilUiUl",          [IsLoad, IsZExtRetu
 def SVLD1SW : MInst<"svld1sw_{d}", "dPU", "lUl",             [IsLoad],               MemEltTyInt32,   "aarch64_sve_ld1">;
 def SVLD1UW : MInst<"svld1uw_{d}", "dPY", "lUl",             [IsLoad, IsZExtReturn], MemEltTyInt32,   "aarch64_sve_ld1">;
 
+let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
+  def SVLD1_BF      : MInst<"svld1[_{2}]",      "dPc",  "b", [IsLoad], MemEltTyDefault, "aarch64_sve_ld1">;
+  def SVLD1_VNUM_BF : MInst<"svld1_vnum[_{2}]", "dPcl", "b", [IsLoad], MemEltTyDefault, "aarch64_sve_ld1">;
+}
+
 // Load one vector (scalar base, VL displacement)
 def SVLD1_VNUM   : MInst<"svld1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfd", [IsLoad],               MemEltTyDefault, "aarch64_sve_ld1">;
 def SVLD1SB_VNUM : MInst<"svld1sb_vnum_{d}", "dPSl", "silUsUiUl",       [IsLoad],               MemEltTyInt8,    "aarch64_sve_ld1">;
@@ -376,6 +381,11 @@ def SVLDFF1UH_VNUM : MInst<"svldff1uh_vnum_{d}", "dPXl", "ilUiUl",          [IsL
 def SVLDFF1SW_VNUM : MInst<"svldff1sw_vnum_{d}", "dPUl", "lUl",             [IsLoad],               MemEltTyInt32,   "aarch64_sve_ldff1">;
 def SVLDFF1UW_VNUM : MInst<"svldff1uw_vnum_{d}", "dPYl", "lUl",             [IsLoad, IsZExtReturn], MemEltTyInt32,   "aarch64_sve_ldff1">;
 
+let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
+  def SVLDFF1_BF      : MInst<"svldff1[_{2}]",      "dPc",  "b", [IsLoad], MemEltTyDefault, "aarch64_sve_ldff1">;
+  def SVLDFF1_VNUM_BF : MInst<"svldff1_vnum[_{2}]", "dPcl", "b", [IsLoad], MemEltTyDefault, "aarch64_sve_ldff1">;
+}
+
 // First-faulting load one vector (vector base)
 def SVLDFF1_GATHER_BASES_U   : MInst<"svldff1_gather[_{2}base]_{d}",   "dPu", "ilUiUlfd", [IsGatherLoad],               MemEltTyDefault, "aarch64_sve_ldff1_gather_scalar_offset">;
 def SVLDFF1SB_GATHER_BASES_U : MInst<"svldff1sb_gather[_{2}base]_{d}", "dPu", "ilUiUl",   [IsGatherLoad],               MemEltTyInt8,    "aarch64_sve_ldff1_gather_scalar_offset">;
@@ -471,14 +481,28 @@ def SVLDNF1UH_VNUM : MInst<"svldnf1uh_vnum_{d}", "dPXl", "ilUiUl",          [IsL
 def SVLDNF1SW_VNUM : MInst<"svldnf1sw_vnum_{d}", "dPUl", "lUl",             [IsLoad],               MemEltTyInt32,   "aarch64_sve_ldnf1">;
 def SVLDNF1UW_VNUM : MInst<"svldnf1uw_vnum_{d}", "dPYl", "lUl",             [IsLoad, IsZExtReturn], MemEltTyInt32,   "aarch64_sve_ldnf1">;
 
+let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
+  def SVLDNF1_BF      : MInst<"svldnf1[_{2}]",      "dPc",  "b", [IsLoad], MemEltTyDefault, "aarch64_sve_ldnf1">;
+  def SVLDNF1_VNUM_BF : MInst<"svldnf1_vnum[_{2}]", "dPcl", "b", [IsLoad], MemEltTyDefault, "aarch64_sve_ldnf1">;
+}
+
 // Load one vector, unextended load, non-temporal (scalar base)
 def SVLDNT1 : MInst<"svldnt1[_{2}]", "dPc", "csilUcUsUiUlhfd", [IsLoad], MemEltTyDefault, "aarch64_sve_ldnt1">;
 
 // Load one vector, unextended load, non-temporal (scalar base, VL displacement)
 def SVLDNT1_VNUM : MInst<"svldnt1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfd", [IsLoad], MemEltTyDefault, "aarch64_sve_ldnt1">;
 
+let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
+  def SVLDNT1_BF      : MInst<"svldnt1[_{2}]",      "dPc",  "b", [IsLoad], MemEltTyDefault, "aarch64_sve_ldnt1">;
+  def SVLDNT1_VNUM_BF : MInst<"svldnt1_vnum[_{2}]", "dPcl", "b", [IsLoad], MemEltTyDefault, "aarch64_sve_ldnt1">;
+}
+
 // Load one quadword and replicate (scalar base)
 def SVLD1RQ : SInst<"svld1rq[_{2}]", "dPc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld1rq">;
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
+  def SVLD1RQ_BF : SInst<"svld1rq[_{2}]", "dPc",  "b", MergeNone, "aarch64_sve_ld1rq">;
+}
 
 multiclass StructLoad<string name, string proto, string i> {
   def : SInst<name, proto, "csilUcUsUiUlhfd", MergeNone, i, [IsStructLoad]>;
