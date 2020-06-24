@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/Debug.h"
@@ -126,6 +127,8 @@ private:
                                const RegisterBank &RB,
                                MachineIRBuilder &MIRBuilder) const;
   bool selectInsertElt(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool tryOptConstantBuildVec(MachineInstr &MI, LLT DstTy,
+                              MachineRegisterInfo &MRI) const;
   bool selectBuildVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -4486,6 +4489,44 @@ bool AArch64InstructionSelector::selectInsertElt(
   return true;
 }
 
+bool AArch64InstructionSelector::tryOptConstantBuildVec(
+    MachineInstr &I, LLT DstTy, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  assert(DstTy.getSizeInBits() <= 128 && "Unexpected build_vec type!");
+  if (DstTy.getSizeInBits() < 32)
+    return false;
+  // Check if we're building a constant vector, in which case we want to
+  // generate a constant pool load instead of a vector insert sequence.
+  SmallVector<Constant *, 16> Csts;
+  for (unsigned Idx = 1; Idx < I.getNumOperands(); ++Idx) {
+    // Try to find G_CONSTANT or G_FCONSTANT
+    auto *OpMI =
+        getOpcodeDef(TargetOpcode::G_CONSTANT, I.getOperand(Idx).getReg(), MRI);
+    if (OpMI)
+      Csts.emplace_back(
+          const_cast<ConstantInt *>(OpMI->getOperand(1).getCImm()));
+    else if ((OpMI = getOpcodeDef(TargetOpcode::G_FCONSTANT,
+                                  I.getOperand(Idx).getReg(), MRI)))
+      Csts.emplace_back(
+          const_cast<ConstantFP *>(OpMI->getOperand(1).getFPImm()));
+    else
+      return false;
+  }
+  Constant *CV = ConstantVector::get(Csts);
+  MachineIRBuilder MIB(I);
+  auto *CPLoad = emitLoadFromConstantPool(CV, MIB);
+  if (!CPLoad) {
+    LLVM_DEBUG(dbgs() << "Could not generate cp load for build_vector");
+    return false;
+  }
+  MIB.buildCopy(I.getOperand(0), CPLoad->getOperand(0));
+  RBI.constrainGenericRegister(I.getOperand(0).getReg(),
+                               *MRI.getRegClass(CPLoad->getOperand(0).getReg()),
+                               MRI);
+  I.eraseFromParent();
+  return true;
+}
+
 bool AArch64InstructionSelector::selectBuildVector(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
@@ -4494,6 +4535,9 @@ bool AArch64InstructionSelector::selectBuildVector(
   const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
   const LLT EltTy = MRI.getType(I.getOperand(1).getReg());
   unsigned EltSize = EltTy.getSizeInBits();
+
+  if (tryOptConstantBuildVec(I, DstTy, MRI))
+    return true;
   if (EltSize < 16 || EltSize > 64)
     return false; // Don't support all element types yet.
   const RegisterBank &RB = *RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI);
