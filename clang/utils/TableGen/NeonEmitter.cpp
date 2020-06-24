@@ -2312,9 +2312,14 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#ifndef __ARM_NEON_H\n";
   OS << "#define __ARM_NEON_H\n\n";
 
+  OS << "#ifndef __ARM_FP\n";
+  OS << "#error \"NEON intrinsics not available with the soft-float ABI. "
+        "Please use -mfloat-abi=softfp or -mfloat-abi=hard\"\n";
+  OS << "#else\n\n";
+
   OS << "#if !defined(__ARM_NEON)\n";
   OS << "#error \"NEON support not enabled\"\n";
-  OS << "#endif\n\n";
+  OS << "#else\n\n";
 
   OS << "#include <stdint.h>\n\n";
 
@@ -2404,6 +2409,8 @@ void NeonEmitter::run(raw_ostream &OS) {
 
   OS << "\n";
   OS << "#undef __ai\n\n";
+  OS << "#endif /* if !defined(__ARM_NEON) */\n";
+  OS << "#endif /* ifndef __ARM_FP */\n";
   OS << "#endif /* __ARM_NEON_H */\n";
 }
 
