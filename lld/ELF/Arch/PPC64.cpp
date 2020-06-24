@@ -671,6 +671,8 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TOC16_HI:
   case R_PPC64_TOC16_LO:
     return R_GOTREL;
+  case R_PPC64_GOT_PCREL34:
+    return R_GOT_PC;
   case R_PPC64_TOC16_HA:
   case R_PPC64_TOC16_LO_DS:
     return config->tocOptimize ? R_PPC64_RELAX_TOC : R_GOTREL;
@@ -1002,6 +1004,17 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write64(loc, val - dynamicThreadPointerOffset);
     break;
   case R_PPC64_PCREL34: {
+    const uint64_t si0Mask = 0x00000003ffff0000;
+    const uint64_t si1Mask = 0x000000000000ffff;
+    const uint64_t fullMask = 0x0003ffff0000ffff;
+    checkInt(loc, val, 34, rel);
+
+    uint64_t instr = readPrefixedInstruction(loc) & ~fullMask;
+    writePrefixedInstruction(loc, instr | ((val & si0Mask) << 16) |
+                             (val & si1Mask));
+    break;
+  }
+  case R_PPC64_GOT_PCREL34: {
     const uint64_t si0Mask = 0x00000003ffff0000;
     const uint64_t si1Mask = 0x000000000000ffff;
     const uint64_t fullMask = 0x0003ffff0000ffff;
