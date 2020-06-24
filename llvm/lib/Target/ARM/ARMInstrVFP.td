@@ -158,15 +158,23 @@ def VLDRS : ASI5<0b1101, 0b01, (outs SPR:$Sd), (ins addrmode5:$addr),
 let isUnpredicable = 1 in
 def VLDRH : AHI5<0b1101, 0b01, (outs HPR:$Sd), (ins addrmode5fp16:$addr),
                  IIC_fpLoad16, "vldr", ".16\t$Sd, $addr",
-                 []>,
+                 [(set HPR:$Sd, (f16 (alignedload16 addrmode5fp16:$addr)))]>,
             Requires<[HasFPRegs16]>;
 
 } // End of 'let canFoldAsLoad = 1, isReMaterializable = 1 in'
 
-def : FPRegs16Pat<(f16 (alignedload16 addrmode5fp16:$addr)),
-                  (VLDRH addrmode5fp16:$addr)>;
-def : FPRegs16Pat<(bf16 (alignedload16 addrmode5fp16:$addr)),
-                  (VLDRH addrmode5fp16:$addr)>;
+def : Pat<(bf16 (alignedload16 addrmode5fp16:$addr)),
+          (VLDRH addrmode5fp16:$addr)> {
+  let Predicates = [HasFPRegs16];
+}
+def : Pat<(bf16 (alignedload16 addrmode3:$addr)),
+          (COPY_TO_REGCLASS (LDRH addrmode3:$addr), HPR)> {
+  let Predicates = [HasNoFPRegs16, IsARM];
+}
+def : Pat<(bf16 (alignedload16 t2addrmode_imm12:$addr)),
+          (COPY_TO_REGCLASS (t2LDRHi12 t2addrmode_imm12:$addr), HPR)> {
+  let Predicates = [HasNoFPRegs16, IsThumb];
+}
 
 def VSTRD : ADI5<0b1101, 0b00, (outs), (ins DPR:$Dd, addrmode5:$addr),
                  IIC_fpStore64, "vstr", "\t$Dd, $addr",
@@ -185,13 +193,21 @@ def VSTRS : ASI5<0b1101, 0b00, (outs), (ins SPR:$Sd, addrmode5:$addr),
 let isUnpredicable = 1 in
 def VSTRH : AHI5<0b1101, 0b00, (outs), (ins HPR:$Sd, addrmode5fp16:$addr),
                  IIC_fpStore16, "vstr", ".16\t$Sd, $addr",
-                 []>,
+                 [(alignedstore16 (f16 HPR:$Sd), addrmode5fp16:$addr)]>,
             Requires<[HasFPRegs16]>;
 
-def : FPRegs16Pat<(alignedstore16 (f16 HPR:$Sd), addrmode5fp16:$addr),
-                  (VSTRH (f16 HPR:$Sd), addrmode5fp16:$addr)>;
-def : FPRegs16Pat<(alignedstore16 (bf16 HPR:$Sd), addrmode5fp16:$addr),
-                  (VSTRH (bf16 HPR:$Sd), addrmode5fp16:$addr)>;
+def : Pat<(alignedstore16 (bf16 HPR:$Sd), addrmode5fp16:$addr),
+          (VSTRH (bf16 HPR:$Sd), addrmode5fp16:$addr)> {
+  let Predicates = [HasFPRegs16];
+}
+def : Pat<(alignedstore16 (bf16 HPR:$Sd), addrmode3:$addr),
+          (STRH (COPY_TO_REGCLASS $Sd, GPR), addrmode3:$addr)> {
+  let Predicates = [HasNoFPRegs16, IsARM];
+}
+def : Pat<(alignedstore16 (bf16 HPR:$Sd), t2addrmode_imm12:$addr),
+          (t2STRHi12 (COPY_TO_REGCLASS $Sd, GPR), t2addrmode_imm12:$addr)> {
+  let Predicates = [HasNoFPRegs16, IsThumb];
+}
 
 //===----------------------------------------------------------------------===//
 //  Load / store multiple Instructions.
