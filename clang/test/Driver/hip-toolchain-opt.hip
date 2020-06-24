@@ -72,6 +72,16 @@
 
 // ALL-NOT: "{{.*}}llc"
 
+// ALL: "{{.*}}lld{{.*}}" {{.*}} "-plugin-opt=mcpu=gfx900"
+// DEFAULT-NOT: "-plugin-opt=O{{.*}}"
+// O0-SAME: "-plugin-opt=O0"
+// O1-SAME: "-plugin-opt=O1"
+// O2-SAME: "-plugin-opt=O2"
+// O3-SAME: "-plugin-opt=O3"
+// Os-SAME: "-plugin-opt=O2"
+// Oz-SAME: "-plugin-opt=O2"
+// Og-SAME: "-plugin-opt=O1"
+
 // ALL: "{{.*}}clang{{.*}}" "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // DEFAULT-NOT: "-O{{.}}"
 // O0-SAME: "-O0"
