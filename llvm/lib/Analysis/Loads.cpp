@@ -352,7 +352,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load,
                                       BasicBlock *ScanBB,
                                       BasicBlock::iterator &ScanFrom,
                                       unsigned MaxInstsToScan,
-                                      AliasAnalysis *AA, bool *IsLoad,
+                                      AAResults *AA, bool *IsLoad,
                                       unsigned *NumScanedInst) {
   // Don't CSE load that is volatile or anything stronger than unordered.
   if (!Load->isUnordered())
@@ -389,7 +389,7 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
                                        bool AtLeastAtomic, BasicBlock *ScanBB,
                                        BasicBlock::iterator &ScanFrom,
                                        unsigned MaxInstsToScan,
-                                       AliasAnalysis *AA, bool *IsLoadCSE,
+                                       AAResults *AA, bool *IsLoadCSE,
                                        unsigned *NumScanedInst) {
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
