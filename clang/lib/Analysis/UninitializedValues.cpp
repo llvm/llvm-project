@@ -405,6 +405,15 @@ static bool isPointerToConst(const QualType &QT) {
   return QT->isAnyPointerType() && QT->getPointeeType().isConstQualified();
 }
 
+static bool hasTrivialBody(CallExpr *CE) {
+  if (FunctionDecl *FD = CE->getDirectCallee()) {
+    if (FunctionTemplateDecl *FTD = FD->getPrimaryTemplate())
+      return FTD->getTemplatedDecl()->hasTrivialBody();
+    return FD->hasTrivialBody();
+  }
+  return false;
+}
+
 void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
   // Classify arguments to std::move as used.
   if (CE->isCallToStdMove()) {
@@ -413,7 +422,7 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
       classify(CE->getArg(0), Use);
     return;
   }
-
+  bool isTrivialBody = hasTrivialBody(CE);
   // If a value is passed by const pointer to a function,
   // we should not assume that it is initialized by the call, and we
   // conservatively do not assume that it is used.
@@ -423,7 +432,7 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
        I != E; ++I) {
     if ((*I)->isGLValue()) {
       if ((*I)->getType().isConstQualified())
-        classify((*I), ConstRefUse);
+        classify((*I), isTrivialBody ? Ignore : ConstRefUse);
     } else if (isPointerToConst((*I)->getType())) {
       const Expr *Ex = stripCasts(DC->getParentASTContext(), *I);
       const auto *UO = dyn_cast<UnaryOperator>(Ex);
