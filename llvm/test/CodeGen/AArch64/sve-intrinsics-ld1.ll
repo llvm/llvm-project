@@ -87,6 +87,14 @@ define <vscale x 8 x half> @ld1h_f16(<vscale x 8 x i1> %pred, half* %addr) {
   ret <vscale x 8 x half> %res
 }
 
+define <vscale x 8 x bfloat> @ld1h_bf16(<vscale x 8 x i1> %pred, bfloat* %addr) {
+; CHECK-LABEL: ld1h_bf16:
+; CHECK: ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT: ret
+  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1.nxv8bf16(<vscale x 8 x i1> %pred, bfloat* %addr)
+  ret <vscale x 8 x bfloat> %res
+}
+
 define <vscale x 4 x i32> @ld1h_s(<vscale x 4 x i1> %pred, i16* %addr) {
 ; CHECK-LABEL: ld1h_s:
 ; CHECK: ld1h { z0.s }, p0/z, [x0]
@@ -188,6 +196,7 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1>, i8*
 declare <vscale x 8 x i8> @llvm.aarch64.sve.ld1.nxv8i8(<vscale x 8 x i1>, i8*)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1>, i16*)
 declare <vscale x 8 x half> @llvm.aarch64.sve.ld1.nxv8f16(<vscale x 8 x i1>, half*)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1.nxv8bf16(<vscale x 8 x i1>, bfloat*)
 
 declare <vscale x 4 x i8> @llvm.aarch64.sve.ld1.nxv4i8(<vscale x 4 x i1>, i8*)
 declare <vscale x 4 x i16> @llvm.aarch64.sve.ld1.nxv4i16(<vscale x 4 x i1>, i16*)
