@@ -63,6 +63,25 @@ static bool getMCRDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
       return true;
     }
   }
+  if (STI.getFeatureBits()[llvm::ARM::HasV7Ops] &&
+      ((MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 10) ||
+       (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 11))) {
+    Info = "since v7, cp10 and cp11 are reserved for advanced SIMD or floating "
+           "point instructions";
+    return true;
+  }
+  return false;
+}
+
+static bool getMRCDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
+                                  std::string &Info) {
+  if (STI.getFeatureBits()[llvm::ARM::HasV7Ops] &&
+      ((MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 10) ||
+       (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 11))) {
+    Info = "since v7, cp10 and cp11 are reserved for advanced SIMD or floating "
+           "point instructions";
+    return true;
+  }
   return false;
 }
 
