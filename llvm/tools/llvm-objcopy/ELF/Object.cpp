@@ -608,6 +608,7 @@ static bool isValidReservedSectionIndex(uint16_t Index, uint16_t Machine) {
   if (Machine == EM_HEXAGON) {
     switch (Index) {
     case SHN_HEXAGON_SCOMMON:
+    case SHN_HEXAGON_SCOMMON_1:
     case SHN_HEXAGON_SCOMMON_2:
     case SHN_HEXAGON_SCOMMON_4:
     case SHN_HEXAGON_SCOMMON_8:
