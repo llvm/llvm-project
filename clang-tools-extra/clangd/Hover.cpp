@@ -341,7 +341,10 @@ llvm::Optional<std::string> printExprValue(const Expr *E,
       T->isFunctionReferenceType())
     return llvm::None;
   // Attempt to evaluate. If expr is dependent, evaluation crashes!
-  if (E->isValueDependent() || !E->EvaluateAsRValue(Constant, Ctx))
+  if (E->isValueDependent() || !E->EvaluateAsRValue(Constant, Ctx) ||
+      // Disable printing for record-types, as they are usually confusing and
+      // might make clang crash while printing the expressions.
+      Constant.Val.isStruct() || Constant.Val.isUnion())
     return llvm::None;
 
   // Show enums symbolically, not numerically like APValue::printPretty().
@@ -353,7 +356,7 @@ llvm::Optional<std::string> printExprValue(const Expr *E,
       if (ECD->getInitVal() == Val)
         return llvm::formatv("{0} ({1})", ECD->getNameAsString(), Val).str();
   }
-  return Constant.Val.getAsString(Ctx, E->getType());
+  return Constant.Val.getAsString(Ctx, T);
 }
 
 llvm::Optional<std::string> printExprValue(const SelectionTree::Node *N,
