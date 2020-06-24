@@ -129,7 +129,6 @@ static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
                                                     unsigned TableIndex,
                                                     const ArgList &Args,
                                                     DiagnosticsEngine &Diags) {
-  assert(TableIndex >= 0);
   assert(TableIndex < SimpleEnumValueTablesSize);
   const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
 
@@ -149,7 +148,6 @@ static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
 
 static const char *denormalizeSimpleEnum(CompilerInvocation::StringAllocator SA,
                                          unsigned TableIndex, unsigned Value) {
-  assert(TableIndex >= 0);
   assert(TableIndex < SimpleEnumValueTablesSize);
   const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
   for (int I = 0, E = Table.Size; I != E; ++I)
@@ -3932,7 +3930,7 @@ void CompilerInvocation::generateCC1CommandLine(
                                      ALIAS, ALIASARGS, FLAGS, PARAM, HELPTEXT, \
                                      METAVAR, VALUES, SPELLING, ALWAYS_EMIT,   \
                                      KEYPATH, DEFAULT_VALUE, IS_POSITIVE)      \
-  if (FLAGS & options::CC1Option &&                                            \
+  if ((FLAGS) & options::CC1Option &&                                            \
       (ALWAYS_EMIT || this->KEYPATH != DEFAULT_VALUE))                         \
     Args.push_back(SPELLING);
 
@@ -3940,7 +3938,7 @@ void CompilerInvocation::generateCC1CommandLine(
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,  \
     NORMALIZER_RET_TY, NORMALIZER, DENORMALIZER, TABLE_INDEX)                  \
-  if ((FLAGS & options::CC1Option) &&                                          \
+  if (((FLAGS) & options::CC1Option) &&                                          \
       (ALWAYS_EMIT || this->KEYPATH != DEFAULT_VALUE)) {                       \
     if (Option::KIND##Class == Option::SeparateClass) {                        \
       Args.push_back(SPELLING);                                                \
