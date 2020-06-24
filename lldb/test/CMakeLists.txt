@@ -129,7 +129,7 @@ endif()
 # BEGIN Swift Mods
 if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
   add_lldb_test_dependency(
-    swift
+    swift-frontend
     repl_swift)
 endif()
 # END Swift Mods
