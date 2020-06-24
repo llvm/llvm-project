@@ -219,6 +219,9 @@ else:
 if not config.build_shared_libs and not config.link_llvm_dylib:
     config.available_features.add('static-libs')
 
+if config.have_tf_aot:
+    config.available_features.add("have_tf_aot")
+
 def have_cxx_shared_library():
     readobj_exe = lit.util.which('llvm-readobj', config.llvm_tools_dir)
     if not readobj_exe:
