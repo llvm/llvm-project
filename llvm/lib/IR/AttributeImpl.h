@@ -193,11 +193,11 @@ class AttributeBitSet {
 
 public:
   bool hasAttribute(Attribute::AttrKind Kind) const {
-    return AvailableAttrs[Kind / 8] & ((uint64_t)1) << (Kind % 8);
+    return AvailableAttrs[Kind / 8] & (1 << (Kind % 8));
   }
 
   void addAttribute(Attribute::AttrKind Kind) {
-    AvailableAttrs[Kind / 8] |= 1ULL << (Kind % 8);
+    AvailableAttrs[Kind / 8] |= 1 << (Kind % 8);
   }
 };
 
