@@ -5161,13 +5161,8 @@ AArch64InstructionSelector::tryFoldAddLowIntoImm(MachineInstr &RootDef,
   if (GV->isThreadLocal())
     return None;
 
-  unsigned Alignment = GV->getAlignment();
-  Type *Ty = GV->getValueType();
   auto &MF = *RootDef.getParent()->getParent();
-  if (Alignment == 0 && Ty->isSized())
-    Alignment = MF.getDataLayout().getABITypeAlignment(Ty);
-
-  if (Alignment < Size)
+  if (GV->getPointerAlignment(MF.getDataLayout()) < Size)
     return None;
 
   unsigned OpFlags = STI.ClassifyGlobalReference(GV, MF.getTarget());

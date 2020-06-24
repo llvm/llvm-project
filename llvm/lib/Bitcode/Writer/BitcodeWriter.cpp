@@ -1179,7 +1179,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   std::map<std::string, unsigned> GCMap;
   unsigned MaxAlignment = 0;
   unsigned MaxGlobalType = 0;
-  for (const GlobalValue &GV : M.globals()) {
+  for (const GlobalVariable &GV : M.globals()) {
     MaxAlignment = std::max(MaxAlignment, GV.getAlignment());
     MaxGlobalType = std::max(MaxGlobalType, VE.getTypeID(GV.getValueType()));
     if (GV.hasSection()) {

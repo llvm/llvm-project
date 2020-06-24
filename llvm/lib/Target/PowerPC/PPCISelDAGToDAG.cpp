@@ -6659,7 +6659,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     int MaxDisplacement = 7;
     if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
       const GlobalValue *GV = GA->getGlobal();
-      MaxDisplacement = std::min((int) GV->getAlignment() - 1, MaxDisplacement);
+      Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
+      MaxDisplacement = std::min((int)Alignment.value() - 1, MaxDisplacement);
     }
 
     bool UpdateHBase = false;
@@ -6725,10 +6726,10 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
         SDLoc dl(GA);
         const GlobalValue *GV = GA->getGlobal();
+        Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
         // We can't perform this optimization for data whose alignment
         // is insufficient for the instruction encoding.
-        if (GV->getAlignment() < 4 &&
-            (RequiresMod4Offset || (Offset % 4) != 0)) {
+        if (Alignment < 4 && (RequiresMod4Offset || (Offset % 4) != 0)) {
           LLVM_DEBUG(dbgs() << "Rejected this candidate for alignment.\n\n");
           continue;
         }
