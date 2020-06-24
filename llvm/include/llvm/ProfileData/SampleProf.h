@@ -502,14 +502,11 @@ public:
   /// inlined in it.
   uint64_t getMaxCountInside() const {
     uint64_t MaxCount = 0;
-    for (const auto &L : getBodySamples()) {
+    for (const auto &L : getBodySamples())
       MaxCount = std::max(MaxCount, L.second.getSamples());
-    }
-    for (const auto &C : getCallsiteSamples()) {
-      for (const auto &F : C.second) {
+    for (const auto &C : getCallsiteSamples())
+      for (const FunctionSamplesMap::value_type &F : C.second)
         MaxCount = std::max(MaxCount, F.second.getMaxCountInside());
-      }
-    }
     return MaxCount;
   }
 
