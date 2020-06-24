@@ -35,3 +35,17 @@ add_loader_test(
   DEPENDS
     libc.loader.linux.crt1
 )
+
+add_loader_test(
+  loader_tls_test
+  SRC
+    tls_test.cpp
+  DEPENDS
+    libc.config.linux.app_h
+    libc.include.errno
+    libc.include.sys_mman
+    libc.loader.linux.crt1
+    libc.src.assert.__assert_fail
+    libc.src.errno.__errno_location
+    libc.src.sys.mman.mmap
+)
