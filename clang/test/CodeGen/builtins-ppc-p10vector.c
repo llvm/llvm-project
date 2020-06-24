@@ -79,3 +79,15 @@ vector unsigned char test_vec_clrr_uc(void) {
   // CHECK-LE-NEXT: ret <16 x i8>
   return vec_clrr(vuca, uia);
 }
+
+vector unsigned long long test_vclzdm(void) {
+  // CHECK: @llvm.ppc.altivec.vclzdm(<2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_cntlzm(vulla, vullb);
+}
+
+vector unsigned long long test_vctzdm(void) {
+  // CHECK: @llvm.ppc.altivec.vctzdm(<2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_cnttzm(vulla, vullb);
+}
