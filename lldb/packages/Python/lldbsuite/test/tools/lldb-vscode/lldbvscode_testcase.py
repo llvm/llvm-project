@@ -239,14 +239,15 @@ class VSCodeTestCaseBase(TestBase):
 
     def attach(self, program=None, pid=None, waitFor=None, trace=None,
                initCommands=None, preRunCommands=None, stopCommands=None,
-               exitCommands=None, attachCommands=None, coreFile=None):
+               exitCommands=None, attachCommands=None, coreFile=None, disconnectAutomatically=True):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and attach to the process.
         '''
         # Make sure we disconnect and terminate the VSCode debug adaptor even
         # if we throw an exception during the test case.
         def cleanup():
-            self.vscode.request_disconnect(terminateDebuggee=True)
+            if disconnectAutomatically:
+                self.vscode.request_disconnect(terminateDebuggee=True)
             self.vscode.terminate()
 
         # Execute the cleanup function during test case tear down.

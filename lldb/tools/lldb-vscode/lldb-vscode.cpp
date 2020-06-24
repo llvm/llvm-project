@@ -514,6 +514,7 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
 //   }]
 // }
 void request_attach(const llvm::json::Object &request) {
+  g_vsc.is_attach = true;
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
@@ -769,7 +770,9 @@ void request_disconnect(const llvm::json::Object &request) {
   FillResponse(request, response);
   auto arguments = request.getObject("arguments");
 
-  bool terminateDebuggee = GetBoolean(arguments, "terminateDebuggee", false);
+  bool defaultTerminateDebuggee = g_vsc.is_attach ? false : true;
+  bool terminateDebuggee =
+      GetBoolean(arguments, "terminateDebuggee", defaultTerminateDebuggee);
   lldb::SBProcess process = g_vsc.target.GetProcess();
   auto state = process.GetState();
 
@@ -788,10 +791,9 @@ void request_disconnect(const llvm::json::Object &request) {
   case lldb::eStateStopped:
   case lldb::eStateRunning:
     g_vsc.debugger.SetAsync(false);
-    if (terminateDebuggee)
-      process.Kill();
-    else
-      process.Detach();
+    lldb::SBError error = terminateDebuggee ? process.Kill() : process.Detach();
+    if (!error.Success())
+      response.try_emplace("error", error.GetCString());
     g_vsc.debugger.SetAsync(true);
     break;
   }
@@ -1357,6 +1359,7 @@ void request_initialize(const llvm::json::Object &request) {
 //   }]
 // }
 void request_launch(const llvm::json::Object &request) {
+  g_vsc.is_attach = false;
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
