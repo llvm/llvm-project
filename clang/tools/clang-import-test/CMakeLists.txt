@@ -7,7 +7,7 @@ if(NOT CLANG_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)
 endif()
 
-add_clang_tool(clang-import-test
+add_clang_executable(clang-import-test
   clang-import-test.cpp
   DEPENDS
   ${tablegen_deps}
