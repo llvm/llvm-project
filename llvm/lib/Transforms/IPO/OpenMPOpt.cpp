@@ -38,6 +38,9 @@ static cl::opt<bool> DisableOpenMPOptimizations(
     cl::desc("Disable OpenMP specific optimizations."), cl::Hidden,
     cl::init(false));
 
+static cl::opt<bool> PrintICVValues("openmp-print-icv-values", cl::init(false),
+                                    cl::Hidden);
+
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
 STATISTIC(NumOpenMPParallelRegionsDeleted,
@@ -63,9 +66,37 @@ struct OMPInformationCache : public InformationCache {
         OMPBuilder(M) {
     initializeTypes(M);
     initializeRuntimeFunctions();
+    initializeInternalControlVars();
 
     OMPBuilder.initialize();
   }
+
+  /// Generic information that describes an internal control variable.
+  struct InternalControlVarInfo {
+    /// The kind, as described by InternalControlVar enum.
+    InternalControlVar Kind;
+
+    /// The name of the ICV.
+    StringRef Name;
+
+    /// Environment variable associated with this ICV.
+    StringRef EnvVarName;
+
+    /// Initial value kind.
+    ICVInitValue InitKind;
+
+    /// Initial value.
+    ConstantInt *InitValue;
+
+    /// Setter RTL function associated with this ICV.
+    RuntimeFunction Setter;
+
+    /// Getter RTL function associated with this ICV.
+    RuntimeFunction Getter;
+
+    /// RTL Function corresponding to the override clause of this ICV
+    RuntimeFunction Clause;
+  };
 
   /// Generic information that describes a runtime function
   struct RuntimeFunctionInfo {
@@ -164,6 +195,49 @@ struct OMPInformationCache : public InformationCache {
   EnumeratedArray<RuntimeFunctionInfo, RuntimeFunction,
                   RuntimeFunction::OMPRTL___last>
       RFIs;
+
+  /// Map from ICV kind to the ICV description.
+  EnumeratedArray<InternalControlVarInfo, InternalControlVar,
+                  InternalControlVar::ICV___last>
+      ICVs;
+
+  /// Helper to initialize all internal control variable information for those
+  /// defined in OMPKinds.def.
+  void initializeInternalControlVars() {
+#define ICV_RT_SET(_Name, RTL)                                                 \
+  {                                                                            \
+    auto &ICV = ICVs[_Name];                                                   \
+    ICV.Setter = RTL;                                                          \
+  }
+#define ICV_RT_GET(Name, RTL)                                                  \
+  {                                                                            \
+    auto &ICV = ICVs[Name];                                                    \
+    ICV.Getter = RTL;                                                          \
+  }
+#define ICV_DATA_ENV(Enum, _Name, _EnvVarName, Init)                           \
+  {                                                                            \
+    auto &ICV = ICVs[Enum];                                                    \
+    ICV.Name = _Name;                                                          \
+    ICV.Kind = Enum;                                                           \
+    ICV.InitKind = Init;                                                       \
+    ICV.EnvVarName = _EnvVarName;                                              \
+    switch (ICV.InitKind) {                                                    \
+    case IMPLEMENTATION_DEFINED:                                               \
+      ICV.InitValue = nullptr;                                                 \
+      break;                                                                   \
+    case ZERO:                                                                 \
+      ICV.InitValue =                                                          \
+          ConstantInt::get(Type::getInt32Ty(Int32->getContext()), 0);          \
+      break;                                                                   \
+    case FALSE:                                                                \
+      ICV.InitValue = ConstantInt::getFalse(Int1->getContext());               \
+      break;                                                                   \
+    case LAST:                                                                 \
+      break;                                                                   \
+    }                                                                          \
+  }
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  }
 
   /// Returns true if the function declaration \p F matches the runtime
   /// function types, that is, return type \p RTFRetType, and argument types
@@ -269,6 +343,27 @@ struct OpenMPOpt {
     LLVM_DEBUG(dbgs() << TAG << "Run on SCC with " << SCC.size()
                       << " functions in a slice with "
                       << OMPInfoCache.ModuleSlice.size() << " functions\n");
+
+    /// Print initial ICV values for testing.
+    /// FIXME: This should be done from the Attributor once it is added.
+    if (PrintICVValues) {
+      InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel};
+
+      for (Function *F : OMPInfoCache.ModuleSlice) {
+        for (auto ICV : ICVs) {
+          auto ICVInfo = OMPInfoCache.ICVs[ICV];
+          auto Remark = [&](OptimizationRemark OR) {
+            return OR << "OpenMP ICV " << ore::NV("OpenMPICV", ICVInfo.Name)
+                      << " Value: "
+                      << (ICVInfo.InitValue
+                              ? ICVInfo.InitValue->getValue().toString(10, true)
+                              : "IMPLEMENTATION_DEFINED");
+          };
+
+          emitRemarkOnFunction(F, "OpenMPICVTracker", Remark);
+        }
+      }
+    }
 
     Changed |= deduplicateRuntimeCalls();
     Changed |= deleteParallelRegions();
@@ -602,6 +697,18 @@ private:
 
     ORE.emit(
         [&]() { return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, Inst)); });
+  }
+
+  /// Emit a remark on a function. Since only OptimizationRemark is supporting
+  /// this, it can't be made generic.
+  void emitRemarkOnFunction(
+      Function *F, StringRef RemarkName,
+      function_ref<OptimizationRemark(OptimizationRemark &&)> &&RemarkCB) {
+    auto &ORE = OREGetter(F);
+
+    ORE.emit([&]() {
+      return RemarkCB(OptimizationRemark(DEBUG_TYPE, RemarkName, F));
+    });
   }
 
   /// The underyling module.
