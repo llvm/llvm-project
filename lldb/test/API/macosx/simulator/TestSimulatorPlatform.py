@@ -6,6 +6,7 @@ import json
 import unittest2
 
 
+@skipIfDarwin # rdar://problem/64552748
 class TestSimulatorPlatformLaunching(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -39,7 +40,6 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @apple_simulator_test('watch')
-    @skipIfDarwin # rdar://problem/64552748
     def test_watchos(self):
         """Test running a 32-bit watchOS simulator binary"""
         self.run_with(arch='i386',
