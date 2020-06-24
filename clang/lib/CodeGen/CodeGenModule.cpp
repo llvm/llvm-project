@@ -3656,26 +3656,29 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
 }
 
 llvm::Constant *
-CodeGenModule::GetAddrOfGlobal(GlobalDecl GD,
-                               ForDefinition_t IsForDefinition) {
+CodeGenModule::GetAddrOfGlobal(GlobalDecl GD, ForDefinition_t IsForDefinition) {
   const Decl *D = GD.getDecl();
+
   if (isa<CXXConstructorDecl>(D) || isa<CXXDestructorDecl>(D))
     return getAddrOfCXXStructor(GD, /*FnInfo=*/nullptr, /*FnType=*/nullptr,
                                 /*DontDefer=*/false, IsForDefinition);
-  else if (isa<CXXMethodDecl>(D)) {
-    auto FInfo = &getTypes().arrangeCXXMethodDeclaration(
-        cast<CXXMethodDecl>(D));
+
+  if (isa<CXXMethodDecl>(D)) {
+    auto FInfo =
+        &getTypes().arrangeCXXMethodDeclaration(cast<CXXMethodDecl>(D));
     auto Ty = getTypes().GetFunctionType(*FInfo);
     return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/false,
                              IsForDefinition);
-  } else if (isa<FunctionDecl>(D)) {
+  }
+
+  if (isa<FunctionDecl>(D)) {
     const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
     llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
     return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/false,
                              IsForDefinition);
-  } else
-    return GetAddrOfGlobalVar(cast<VarDecl>(D), /*Ty=*/nullptr,
-                              IsForDefinition);
+  }
+
+  return GetAddrOfGlobalVar(cast<VarDecl>(D), /*Ty=*/nullptr, IsForDefinition);
 }
 
 llvm::GlobalVariable *CodeGenModule::CreateOrReplaceCXXRuntimeVariable(
