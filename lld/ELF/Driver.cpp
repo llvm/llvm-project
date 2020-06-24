@@ -1717,8 +1717,11 @@ template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
   for (InputFile *file : lto->compile()) {
     auto *obj = cast<ObjFile<ELFT>>(file);
     obj->parse(/*ignoreComdats=*/true);
-    for (Symbol *sym : obj->getGlobalSymbols())
-      sym->parseSymbolVersion();
+
+    // Parse '@' in symbol names for non-relocatable output.
+    if (!config->relocatable)
+      for (Symbol *sym : obj->getGlobalSymbols())
+        sym->parseSymbolVersion();
     objectFiles.push_back(file);
   }
 }
