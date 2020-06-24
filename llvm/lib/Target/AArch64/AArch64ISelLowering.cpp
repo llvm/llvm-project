@@ -177,12 +177,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv2f16, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv4f16, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv8f16, &AArch64::ZPRRegClass);
-    addRegisterClass(MVT::nxv2bf16, &AArch64::ZPRRegClass);
-    addRegisterClass(MVT::nxv4bf16, &AArch64::ZPRRegClass);
-    addRegisterClass(MVT::nxv8bf16, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv2f32, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv4f32, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv2f64, &AArch64::ZPRRegClass);
+
+    if (Subtarget->hasBF16()) {
+      addRegisterClass(MVT::nxv2bf16, &AArch64::ZPRRegClass);
+      addRegisterClass(MVT::nxv4bf16, &AArch64::ZPRRegClass);
+      addRegisterClass(MVT::nxv8bf16, &AArch64::ZPRRegClass);
+    }
 
     if (useSVEForFixedLengthVectors()) {
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
