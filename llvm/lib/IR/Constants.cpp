@@ -2175,15 +2175,20 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   std::vector<Constant*> ArgVec;
   ArgVec.reserve(1 + Idxs.size());
   ArgVec.push_back(C);
-  for (unsigned i = 0, e = Idxs.size(); i != e; ++i) {
+  auto GTI = gep_type_begin(Ty, Idxs), GTE = gep_type_end(Ty, Idxs);
+  for (; GTI != GTE; ++GTI) {
+    auto *Idx = cast<Constant>(GTI.getOperand());
     assert(
-        (!isa<VectorType>(Idxs[i]->getType()) ||
-         cast<VectorType>(Idxs[i]->getType())->getElementCount() == EltCount) &&
+        (!isa<VectorType>(Idx->getType()) ||
+         cast<VectorType>(Idx->getType())->getElementCount() == EltCount) &&
         "getelementptr index type missmatch");
 
-    Constant *Idx = cast<Constant>(Idxs[i]);
-    if (EltCount.Min != 0 && !Idxs[i]->getType()->isVectorTy())
+    if (GTI.isStruct() && Idx->getType()->isVectorTy()) {
+      Idx = Idx->getSplatValue();
+    } else if (GTI.isSequential() && EltCount.Min != 0 &&
+               !Idx->getType()->isVectorTy()) {
       Idx = ConstantVector::getSplat(EltCount, Idx);
+    }
     ArgVec.push_back(Idx);
   }
 
