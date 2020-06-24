@@ -8,6 +8,7 @@ group("lib") {
       "//compiler-rt/lib/asan",
       "//compiler-rt/lib/builtins",
       "//compiler-rt/lib/tsan",
+      "//compiler-rt/lib/ubsan_minimal",
     ]
   }
 }
