@@ -159,7 +159,10 @@ entry:
 ;;;==========================================================================;;;
 
 ; GCN-LABEL: {{^}}i64_eq:
-; GCN: v_cmp_eq_u64
+; SI: v_cmp_eq_u64
+; VI: s_cmp_eq_u64
+; VI: s_cselect_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], 1, 0
+; VI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, -1, [[MASK]]
 define amdgpu_kernel void @i64_eq(i32 addrspace(1)* %out, i64 %a, i64 %b) #0 {
 entry:
   %tmp0 = icmp eq i64 %a, %b
@@ -169,7 +172,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}i64_ne:
-; GCN: v_cmp_ne_u64
+; SI: v_cmp_ne_u64
+; VI: s_cmp_lg_u64
 define amdgpu_kernel void @i64_ne(i32 addrspace(1)* %out, i64 %a, i64 %b) #0 {
 entry:
   %tmp0 = icmp ne i64 %a, %b

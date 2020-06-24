@@ -180,7 +180,8 @@ define amdgpu_kernel void @s_select_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32
 
 ; GCN-LABEL: {{^}}v_select_v4i32:
 ; GCN: buffer_load_dwordx4
-; GCN: v_cmp_lt_u32_e64 vcc, s{{[0-9]+}}, 32
+; GCN: s_cmp_lt_u32 s{{[0-9]+}}, 32
+; GCN: s_cselect_b64 vcc, 1, 0
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
@@ -218,8 +219,8 @@ define amdgpu_kernel void @select_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> 
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[AHI]]
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[BHI]]
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[ALO]]
-; GCN-DAG: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
-
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
+; GCN-DAG: s_cselect_b64 vcc, 1, 0
 ; GCN-DAG: v_cndmask_b32_e32
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[BLO]]
 ; GCN-DAG: v_cndmask_b32_e32
@@ -232,7 +233,8 @@ define amdgpu_kernel void @s_select_v2f32(<2 x float> addrspace(1)* %out, <2 x f
 }
 
 ; GCN-LABEL: {{^}}s_select_v3f32:
-; GCN: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
+; GCN-DAG: s_cselect_b64 vcc, 1, 0
 
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
@@ -249,7 +251,8 @@ define amdgpu_kernel void @s_select_v3f32(<3 x float> addrspace(1)* %out, <3 x f
 ; GCN-LABEL: {{^}}s_select_v4f32:
 ; GCN: s_load_dwordx4
 ; GCN: s_load_dwordx4
-; GCN: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
+; GCN-DAG: s_cselect_b64 vcc, 1, 0
 
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32
@@ -266,7 +269,9 @@ define amdgpu_kernel void @s_select_v4f32(<4 x float> addrspace(1)* %out, <4 x f
 
 ; GCN-LABEL: {{^}}v_select_v4f32:
 ; GCN: buffer_load_dwordx4
-; GCN: v_cmp_lt_u32_e64 vcc, s{{[0-9]+}}, 32
+
+; GCN-DAG: s_cmp_lt_u32 s{{[0-9]+}}, 32
+; GCN-DAG: s_cselect_b64 vcc, 1, 0
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
@@ -282,7 +287,8 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}s_select_v5f32:
-; GCN: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
+; GCN-DAG: s_cselect_b64 vcc, 1, 0
 
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32

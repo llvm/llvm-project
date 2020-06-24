@@ -571,15 +571,7 @@ def atomic_store_local_64_m0 : PatFrag <
 def si_setcc_uniform : PatFrag <
   (ops node:$lhs, node:$rhs, node:$cond),
   (setcc node:$lhs, node:$rhs, node:$cond), [{
-  for (SDNode *Use : N->uses()) {
-    if (Use->isMachineOpcode() || Use->getOpcode() != ISD::CopyToReg)
-      return false;
-
-    unsigned Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
-    if (Reg != AMDGPU::SCC)
-      return false;
-  }
-  return true;
+  return !N->isDivergent();
 }]>;
 
 //===----------------------------------------------------------------------===//
