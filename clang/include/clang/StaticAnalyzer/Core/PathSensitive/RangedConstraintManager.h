@@ -136,14 +136,8 @@ public:
   }
 };
 
-class ConstraintRange {};
-using ConstraintRangeTy = llvm::ImmutableMap<SymbolRef, RangeSet>;
-
-template <>
-struct ProgramStateTrait<ConstraintRange>
-    : public ProgramStatePartialTrait<ConstraintRangeTy> {
-  static void *GDMIndex();
-};
+using ConstraintMap = llvm::ImmutableMap<SymbolRef, RangeSet>;
+ConstraintMap getConstraintMap(ProgramStateRef State);
 
 class RangedConstraintManager : public SimpleConstraintManager {
 public:
@@ -221,5 +215,7 @@ private:
 
 } // namespace ento
 } // namespace clang
+
+REGISTER_FACTORY_WITH_PROGRAMSTATE(ConstraintMap)
 
 #endif
