@@ -321,9 +321,10 @@ class Addr2LinePool : public SymbolizerTool {
 
 #if SANITIZER_SUPPORTS_WEAK_HOOKS
 extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-bool __sanitizer_symbolize_code(const char *ModuleName, u64 ModuleOffset,
-                                char *Buffer, int MaxLength);
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
+__sanitizer_symbolize_code(const char *ModuleName, u64 ModuleOffset,
+                           char *Buffer, int MaxLength,
+                           bool SymbolizeInlineFrames);
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 bool __sanitizer_symbolize_data(const char *ModuleName, u64 ModuleOffset,
                                 char *Buffer, int MaxLength);
@@ -346,7 +347,8 @@ class InternalSymbolizer : public SymbolizerTool {
 
   bool SymbolizePC(uptr addr, SymbolizedStack *stack) override {
     bool result = __sanitizer_symbolize_code(
-        stack->info.module, stack->info.module_offset, buffer_, kBufferSize);
+        stack->info.module, stack->info.module_offset, buffer_, kBufferSize,
+        common_flags()->symbolize_inline_frames);
     if (result) ParseSymbolizePCOutput(buffer_, stack);
     return result;
   }
