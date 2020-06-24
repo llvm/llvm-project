@@ -10,7 +10,8 @@
 ; CI-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
 ; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10{{$}}
 ; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
-; CI-DAG: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
+; CI-DAG: s_cmp_lg_u32 [[PTR]], -1
+; CI-DAG: s_cselect_b64 vcc, 1, 0
 ; CI-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
 ; CI-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; CI-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
@@ -22,7 +23,8 @@
 ; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[SSRC_SHARED_BASE]]
 
 ; GFX9-XXX: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_shared_base
-; GFX9: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
+; GFX9: s_cmp_lg_u32 [[PTR]], -1
+; GFX9: s_cselect_b64 vcc, 1, 0
 ; GFX9: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
 ; GFX9-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; GFX9-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
@@ -76,7 +78,8 @@ define void @use_group_to_flat_addrspacecast_func(i32 addrspace(3)* %ptr) #0 {
 ; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
 
 ; CI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; CI-DAG: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
+; CI-DAG: s_cmp_lg_u32 [[PTR]], -1
+; CI-DAG: s_cselect_b64 vcc, 1, 0
 ; CI-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
 ; CI-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; CI-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
@@ -89,7 +92,8 @@ define void @use_group_to_flat_addrspacecast_func(i32 addrspace(3)* %ptr) #0 {
 ; GFX9-XXX: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_private_base
 
 ; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; GFX9: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
+; GFX9: s_cmp_lg_u32 [[PTR]], -1
+; GFX9: s_cselect_b64 vcc, 1, 0
 ; GFX9: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
 ; GFX9: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; GFX9-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
@@ -148,7 +152,8 @@ define amdgpu_kernel void @use_constant_to_global_addrspacecast(i32 addrspace(4)
 ; HSA: enable_sgpr_queue_ptr = 0
 
 ; HSA: s_load_dwordx2 s{{\[}}[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]{{\]}}
-; HSA-DAG: v_cmp_ne_u64_e64 vcc, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0{{$}}
+; CI-DAG: v_cmp_ne_u64_e64 vcc, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0{{$}}
+; GFX9-DAG: s_cmp_lg_u64 s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], s[[PTR_LO]]
 ; HSA-DAG: v_cndmask_b32_e32 [[CASTPTR:v[0-9]+]], -1, v[[VPTR_LO]]
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 0{{$}}
@@ -165,7 +170,8 @@ define amdgpu_kernel void @use_flat_to_group_addrspacecast(i32* %ptr) #0 {
 ; HSA: enable_sgpr_queue_ptr = 0
 
 ; HSA: s_load_dwordx2 s{{\[}}[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]{{\]}}
-; HSA-DAG: v_cmp_ne_u64_e64 vcc, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0{{$}}
+; CI-DAG: v_cmp_ne_u64_e64 vcc, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0{{$}}
+; GFX9-DAG: s_cmp_lg_u64 s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], s[[PTR_LO]]
 ; HSA-DAG: v_cndmask_b32_e32 [[CASTPTR:v[0-9]+]], -1, v[[VPTR_LO]]
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 0{{$}}

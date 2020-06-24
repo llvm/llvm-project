@@ -260,7 +260,7 @@ define amdgpu_ps void @test_non_inline_imm_sgpr(float inreg %a) #0 {
 }
 
 ; GCN-LABEL: {{^}}test_scc_liveness:
-; GCN: v_cmp
+; GCN: s_cmp
 ; GCN: s_and_b64 exec
 ; GCN: s_cmp
 ; GCN: s_cbranch_scc

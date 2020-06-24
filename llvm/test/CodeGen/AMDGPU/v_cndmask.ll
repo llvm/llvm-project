@@ -8,7 +8,8 @@ declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 
 ; GCN-LABEL: {{^}}v_cnd_nan_nosgpr:
-; GCN: v_cmp_eq_u32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0
+; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0
+; GCN: s_cselect_b64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], 1, 0
 ; GCN: v_cndmask_b32_e{{32|64}} v{{[0-9]}}, -1, v{{[0-9]+}}, [[COND]]
 ; GCN-DAG: v{{[0-9]}}
 ; All nan values are converted to 0xffffffff
@@ -30,9 +31,11 @@ define amdgpu_kernel void @v_cnd_nan_nosgpr(float addrspace(1)* %out, i32 %c, fl
 ; However on GFX10 constant bus is limited to 2 scalar operands, not one.
 
 ; GCN-LABEL: {{^}}v_cnd_nan:
-; SIVI:  v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0
+; SIVI:  s_cmp_eq_u32 s{{[0-9]+}}, 0
+; SIVI:  s_cselect_b64 vcc, 1, 0
 ; SIVI:  v_cndmask_b32_e32 v{{[0-9]+}}, -1, v{{[0-9]+}}, vcc
-; GFX10: v_cmp_eq_u32_e64 [[CC:s\[[0-9:]+\]]], s{{[0-9]+}}, 0
+; GFX10: s_cmp_eq_u32 s{{[0-9]+}}, 0
+; GFX10: s_cselect_b64 [[CC:s\[[0-9]+:[0-9]+\]]], 1, 0
 ; GFX10: v_cndmask_b32_e64 v{{[0-9]+}}, -1, s{{[0-9]+}}, [[CC]]
 ; GCN-DAG: v{{[0-9]}}
 ; All nan values are converted to 0xffffffff
