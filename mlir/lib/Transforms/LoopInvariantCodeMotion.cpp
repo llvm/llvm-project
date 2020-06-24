@@ -32,13 +32,15 @@ struct LoopInvariantCodeMotion
     : public LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
   void runOnOperation() override;
 };
+} // end anonymous namespace
 
 // Checks whether the given op can be hoisted by checking that
 // - the op and any of its contained operations do not depend on SSA values
 //   defined inside of the loop (by means of calling definedOutside).
 // - the op has no side-effects. If sideEffecting is Never, sideeffects of this
 //   op and its nested ops are ignored.
-bool canBeHoisted(Operation *op, function_ref<bool(Value)> definedOutside) {
+static bool canBeHoisted(Operation *op,
+                         function_ref<bool(Value)> definedOutside) {
   // Check that dependencies are defined outside of loop.
   if (!llvm::all_of(op->getOperands(), definedOutside))
     return false;
@@ -72,7 +74,6 @@ bool canBeHoisted(Operation *op, function_ref<bool(Value)> definedOutside) {
   return true;
 }
 
-} // end anonymous namespace
 
 LogicalResult mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
   auto &loopBody = looplike.getLoopBody();
