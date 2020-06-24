@@ -1263,6 +1263,23 @@ EOF
 		      UNAME_PROCESSOR="x86_64"
 		  fi
 		fi ;;
+		arm)
+		eval $set_cc_for_build
+		if [ "$CC_FOR_BUILD" != 'no_compiler_found' ]; then
+			if (echo '#ifdef __LP64__'; echo IS_64BIT_ARCH; echo '#endif') | \
+				(CCOPTS= $CC_FOR_BUILD -E - 2>/dev/null) | \
+				grep IS_64BIT_ARCH >/dev/null
+			then
+				if (echo '#ifdef __PTRAUTH_INTRINSICS__'; echo HAS_AUTH; echo '#endif') | \
+					(CCOPTS= $CC_FOR_BUILD -E - 2>/dev/null) | \
+					grep HAS_AUTH >/dev/null
+				then
+					UNAME_PROCESSOR="arm64e"
+				else
+					UNAME_PROCESSOR="arm64"
+				fi
+			fi
+		fi ;;
 	    unknown) UNAME_PROCESSOR=powerpc ;;
 	esac
 	echo ${UNAME_PROCESSOR}-apple-darwin${UNAME_RELEASE}
