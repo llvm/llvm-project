@@ -97,7 +97,7 @@ operator=(const SBVariablesOptions &options) {
       SBVariablesOptions, operator=,(const lldb::SBVariablesOptions &),
       options);
 
-  m_opaque_up.reset(new VariablesOptionsImpl(options.ref()));
+  m_opaque_up = std::make_unique<VariablesOptionsImpl>(options.ref());
   return LLDB_RECORD_RESULT(*this);
 }
 

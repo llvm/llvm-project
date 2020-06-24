@@ -89,7 +89,7 @@ SBAddress::operator bool() const {
 void SBAddress::Clear() {
   LLDB_RECORD_METHOD_NO_ARGS(void, SBAddress, Clear);
 
-  m_opaque_up.reset(new Address());
+  m_opaque_up = std::make_unique<Address>();
 }
 
 void SBAddress::SetAddress(lldb::SBSection section, lldb::addr_t offset) {
@@ -105,7 +105,7 @@ void SBAddress::SetAddress(const Address *lldb_object_ptr) {
   if (lldb_object_ptr)
     ref() = *lldb_object_ptr;
   else
-    m_opaque_up.reset(new Address());
+    m_opaque_up = std::make_unique<Address>();
 }
 
 lldb::addr_t SBAddress::GetFileAddress() const {
@@ -187,7 +187,7 @@ const Address *SBAddress::operator->() const { return m_opaque_up.get(); }
 
 Address &SBAddress::ref() {
   if (m_opaque_up == nullptr)
-    m_opaque_up.reset(new Address());
+    m_opaque_up = std::make_unique<Address>();
   return *m_opaque_up;
 }
 
