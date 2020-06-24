@@ -118,10 +118,10 @@ public:
 
   Dependence(TypeDependence D)
       : V(translate(D, TypeDependence::UnexpandedPack, UnexpandedPack) |
-             translate(D, TypeDependence::Instantiation, Instantiation) |
-             translate(D, TypeDependence::Dependent, Dependent) |
-             translate(D, TypeDependence::VariablyModified, VariablyModified)) {
-  }
+          translate(D, TypeDependence::Instantiation, Instantiation) |
+          translate(D, TypeDependence::Dependent, Dependent) |
+          translate(D, TypeDependence::Error, Error) |
+          translate(D, TypeDependence::VariablyModified, VariablyModified)) {}
 
   Dependence(ExprDependence D)
       : V(translate(D, ExprDependence::UnexpandedPack, UnexpandedPack) |
