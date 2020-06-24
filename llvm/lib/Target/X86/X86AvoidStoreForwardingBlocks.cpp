@@ -551,11 +551,8 @@ void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
         if (StoreMI.getParent() == MI.getParent() &&
             isPotentialBlockedMemCpyPair(MI.getOpcode(), StoreMI.getOpcode()) &&
             isRelevantAddressingMode(&MI) &&
-            isRelevantAddressingMode(&StoreMI)) {
-          assert(MI.hasOneMemOperand() &&
-                 "Expected one memory operand for load instruction");
-          assert(StoreMI.hasOneMemOperand() &&
-                 "Expected one memory operand for store instruction");
+            isRelevantAddressingMode(&StoreMI) &&
+            MI.hasOneMemOperand() && StoreMI.hasOneMemOperand()) {
           if (!alias(**MI.memoperands_begin(), **StoreMI.memoperands_begin()))
             BlockedLoadsStoresPairs.push_back(std::make_pair(&MI, &StoreMI));
         }
@@ -695,10 +692,9 @@ bool X86AvoidSFBPass::runOnMachineFunction(MachineFunction &MF) {
     for (auto *PBInst : PotentialBlockers) {
       if (!isPotentialBlockingStoreInst(PBInst->getOpcode(),
                                         LoadInst->getOpcode()) ||
-          !isRelevantAddressingMode(PBInst))
+          !isRelevantAddressingMode(PBInst) || !PBInst->hasOneMemOperand())
         continue;
       int64_t PBstDispImm = getDispOperand(PBInst).getImm();
-      assert(PBInst->hasOneMemOperand() && "Expected One Memory Operand");
       unsigned PBstSize = (*PBInst->memoperands_begin())->getSize();
       // This check doesn't cover all cases, but it will suffice for now.
       // TODO: take branch probability into consideration, if the blocking
