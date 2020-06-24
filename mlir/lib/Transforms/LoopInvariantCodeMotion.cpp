@@ -32,15 +32,13 @@ struct LoopInvariantCodeMotion
     : public LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
   void runOnOperation() override;
 };
-} // end anonymous namespace
 
 // Checks whether the given op can be hoisted by checking that
 // - the op and any of its contained operations do not depend on SSA values
 //   defined inside of the loop (by means of calling definedOutside).
 // - the op has no side-effects. If sideEffecting is Never, sideeffects of this
 //   op and its nested ops are ignored.
-static bool canBeHoisted(Operation *op,
-                         function_ref<bool(Value)> definedOutside) {
+bool canBeHoisted(Operation *op, function_ref<bool(Value)> definedOutside) {
   // Check that dependencies are defined outside of loop.
   if (!llvm::all_of(op->getOperands(), definedOutside))
     return false;
@@ -74,6 +72,8 @@ static bool canBeHoisted(Operation *op,
   return true;
 }
 
+} // end anonymous namespace
+
 LogicalResult mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
   auto &loopBody = looplike.getLoopBody();
 
@@ -104,7 +104,7 @@ LogicalResult mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
   // For all instructions that we found to be invariant, move outside of the
   // loop.
   auto result = looplike.moveOutOfLoop(opsToMove);
-  LLVM_DEBUG(looplike.print(llvm::dbgs() << "Modified loop\n"));
+  LLVM_DEBUG(looplike.print(llvm::dbgs() << "\n\nModified loop:\n"));
   return result;
 }
 
@@ -113,7 +113,7 @@ void LoopInvariantCodeMotion::runOnOperation() {
   // way, we first LICM from the inner loop, and place the ops in
   // the outer loop, which in turn can be further LICM'ed.
   getOperation()->walk([&](LoopLikeOpInterface loopLike) {
-    LLVM_DEBUG(loopLike.print(llvm::dbgs() << "\nOriginal loop\n"));
+    LLVM_DEBUG(loopLike.print(llvm::dbgs() << "\nOriginal loop:\n"));
     if (failed(moveLoopInvariantCode(loopLike)))
       signalPassFailure();
   });
