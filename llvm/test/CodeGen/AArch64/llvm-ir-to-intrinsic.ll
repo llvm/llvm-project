@@ -60,6 +60,36 @@ define <vscale x 4 x i64> @sdiv_split_i64(<vscale x 4 x i64> %a, <vscale x 4 x i
 }
 
 ;
+; SREM
+;
+
+define <vscale x 4 x i32> @srem_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: srem_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    sdiv z2.s, p0/m, z2.s, z1.s
+; CHECK-NEXT:    mul z2.s, p0/m, z2.s, z1.s
+; CHECK-NEXT:    sub z0.s, z0.s, z2.s
+; CHECK-NEXT:    ret
+  %div = srem <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i32> %div
+}
+
+define <vscale x 2 x i64> @srem_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: srem_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    sdiv z2.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    mul z2.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    sub z0.d, z0.d, z2.d
+; CHECK-NEXT:    ret
+  %div = srem <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i64> %div
+}
+
+;
 ; UDIV
 ;
 
@@ -115,6 +145,37 @@ define <vscale x 4 x i64> @udiv_split_i64(<vscale x 4 x i64> %a, <vscale x 4 x i
 ; CHECK-NEXT:    ret
   %div = udiv <vscale x 4 x i64> %a, %b
   ret <vscale x 4 x i64> %div
+}
+
+
+;
+; UREM
+;
+
+define <vscale x 4 x i32> @urem_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: urem_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    udiv z2.s, p0/m, z2.s, z1.s
+; CHECK-NEXT:    mul z2.s, p0/m, z2.s, z1.s
+; CHECK-NEXT:    sub z0.s, z0.s, z2.s
+; CHECK-NEXT:    ret
+  %div = urem <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i32> %div
+}
+
+define <vscale x 2 x i64> @urem_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: urem_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    udiv z2.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    mul z2.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    sub z0.d, z0.d, z2.d
+; CHECK-NEXT:    ret
+  %div = urem <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i64> %div
 }
 
 ;
