@@ -191,7 +191,7 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
         Register Tmp = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
         BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::EQZ_I32), Tmp)
             .addReg(Cond);
-        MFI.stackifyVReg(Tmp);
+        MFI.stackifyVReg(MRI, Tmp);
         Cond = Tmp;
         Inverted = true;
       }
