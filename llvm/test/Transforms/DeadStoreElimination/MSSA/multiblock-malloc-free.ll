@@ -246,7 +246,6 @@ define void @test27() {
 ; CHECK-NEXT:    br i1 true, label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[M:%.*]] = call noalias i8* @malloc(i64 10)
-; CHECK-NEXT:    store i8 1, i8* [[M]]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[R:%.*]] = phi i8* [ null, [[BB1:%.*]] ], [ [[M]], [[BB2]] ]

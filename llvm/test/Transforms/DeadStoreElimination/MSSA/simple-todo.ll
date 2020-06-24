@@ -10,37 +10,6 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) n
 declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32) nounwind
 declare void @llvm.init.trampoline(i8*, i8*, i8*)
 
-; Test for byval handling.
-%struct.x = type { i32, i32, i32, i32 }
-define void @test9(%struct.x* byval  %a) nounwind  {
-; CHECK-LABEL: @test9(
-; CHECK-NEXT:    ret void
-;
-  %tmp2 = getelementptr %struct.x, %struct.x* %a, i32 0, i32 0
-  store i32 1, i32* %tmp2, align 4
-  ret void
-}
-
-; Test for inalloca handling.
-define void @test9_2(%struct.x* inalloca  %a) nounwind  {
-; CHECK-LABEL: @test9_2(
-; CHECK-NEXT:    ret void
-;
-  %tmp2 = getelementptr %struct.x, %struct.x* %a, i32 0, i32 0
-  store i32 1, i32* %tmp2, align 4
-  ret void
-}
-
-; Test for preallocated handling.
-define void @test9_3(%struct.x* preallocated(%struct.x)  %a) nounwind  {
-; CHECK-LABEL: @test9_3(
-; CHECK-NEXT:    ret void
-;
-  %tmp2 = getelementptr %struct.x, %struct.x* %a, i32 0, i32 0
-  store i32 1, i32* %tmp2, align 4
-  ret void
-}
-
 ; DSE should delete the dead trampoline.
 declare void @test11f()
 define void @test11() {
@@ -55,37 +24,6 @@ define void @test11() {
 
 
 declare noalias i8* @malloc(i32)
-
-define void @test14(i32* %Q) {
-; CHECK-LABEL: @test14(
-; CHECK-NEXT:    ret void
-;
-  %P = alloca i32
-  %DEAD = load i32, i32* %Q
-  store i32 %DEAD, i32* %P
-  ret void
-
-}
-
-define void @test20() {
-; CHECK-LABEL: @test20(
-; CHECK-NEXT:    ret void
-;
-  %m = call i8* @malloc(i32 24)
-  store i8 0, i8* %m
-  ret void
-}
-
-define void @test22(i1 %i, i32 %k, i32 %m) nounwind {
-; CHECK-LABEL: @test22(
-; CHECK-NEXT:    ret void
-;
-  %k.addr = alloca i32
-  %m.addr = alloca i32
-  %k.addr.m.addr = select i1 %i, i32* %k.addr, i32* %m.addr
-  store i32 0, i32* %k.addr.m.addr, align 4
-  ret void
-}
 
 declare void @unknown_func()
 
