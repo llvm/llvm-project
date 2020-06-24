@@ -1150,14 +1150,20 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
         S.Diag(TSSLoc, diag::err_invalid_vector_bool_decl_spec)
           << getSpecifierName((TSS)TypeSpecSign);
       }
-
-      // Only char/int are valid with vector bool. (PIM 2.1)
+      // Only char/int are valid with vector bool prior to Power10.
+      // Power10 adds instructions that produce vector bool data
+      // for quadwords as well so allow vector bool __int128.
       if (((TypeSpecType != TST_unspecified) && (TypeSpecType != TST_char) &&
-           (TypeSpecType != TST_int)) || TypeAltiVecPixel) {
+           (TypeSpecType != TST_int) && (TypeSpecType != TST_int128)) ||
+          TypeAltiVecPixel) {
         S.Diag(TSTLoc, diag::err_invalid_vector_bool_decl_spec)
           << (TypeAltiVecPixel ? "__pixel" :
                                  getSpecifierName((TST)TypeSpecType, Policy));
       }
+      // vector bool __int128 requires Power10.
+      if ((TypeSpecType == TST_int128) &&
+          (!S.Context.getTargetInfo().hasFeature("power10-vector")))
+        S.Diag(TSTLoc, diag::err_invalid_vector_bool_int128_decl_spec);
 
       // Only 'short' and 'long long' are valid with vector bool. (PIM 2.1)
       if ((TypeSpecWidth != TSW_unspecified) && (TypeSpecWidth != TSW_short) &&
@@ -1174,7 +1180,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
 
       // Elements of vector bool are interpreted as unsigned. (PIM 2.1)
       if ((TypeSpecType == TST_char) || (TypeSpecType == TST_int) ||
-          (TypeSpecWidth != TSW_unspecified))
+          (TypeSpecType == TST_int128) || (TypeSpecWidth != TSW_unspecified))
         TypeSpecSign = TSS_unsigned;
     } else if (TypeSpecType == TST_double) {
       // vector long double and vector long long double are never allowed.
