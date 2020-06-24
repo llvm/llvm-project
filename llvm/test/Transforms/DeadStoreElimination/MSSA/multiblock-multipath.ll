@@ -589,14 +589,11 @@ define void @alloca_5(i1 %c) {
 ; CHECK-LABEL: @alloca_5(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_BLAM_4:%.*]], align 8
-; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_BLAM_4]], %struct.blam.4* [[TMP]], i64 0, i32 0, i32 1
-; CHECK-NEXT:    [[TMP37:%.*]] = bitcast i64** [[TMP36]] to i8*
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT_BLAM_4]], %struct.blam.4* [[TMP]], i64 0, i32 0, i32 3
 ; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i64* [[TMP38]] to i64*
 ; CHECK-NEXT:    store i64 0, i64* [[TMP39]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB46:%.*]], label [[BB47:%.*]]
 ; CHECK:       bb46:
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(20) [[TMP37]], i8 0, i64 26, i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb47:
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_BLAM_4]], %struct.blam.4* [[TMP]], i64 0, i32 0, i32 2

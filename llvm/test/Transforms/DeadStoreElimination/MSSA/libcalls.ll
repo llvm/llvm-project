@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: opt -S -basicaa -dse -enable-dse-memoryssa < %s | FileCheck %s
 
 declare i8* @strcpy(i8* %dest, i8* %src) nounwind
