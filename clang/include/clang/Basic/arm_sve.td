@@ -1281,6 +1281,10 @@ def SVCNTD : SInst<"svcntd", "n", "", MergeNone, "aarch64_sve_cntd", [IsAppendSV
 def SVCNTP : SInst<"svcntp_{d}",  "nPP", "PcPsPiPl",        MergeNone, "aarch64_sve_cntp">;
 def SVLEN  : SInst<"svlen[_{d}]", "nd",  "csilUcUsUiUlhfd", MergeNone>;
 
+let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
+def SVLEN_BF16 : SInst<"svlen[_{d}]", "nd", "b", MergeNone>;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Saturating scalar arithmetic
 
