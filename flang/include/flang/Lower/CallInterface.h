@@ -35,6 +35,7 @@ class Symbol;
 
 namespace Fortran::evaluate {
 class ProcedureRef;
+struct ProcedureDesignator;
 class ActualArgument;
 namespace characteristics {
 struct Procedure;
@@ -161,10 +162,6 @@ public:
   std::optional<PassedEntity> getPassedResult() const { return passedResult; }
   /// Returns the mlir function type
   mlir::FunctionType genFunctionType() const;
-
-private:
-  /// CRTP handle.
-  T &side() { return *static_cast<T *>(this); }
   /// buildImplicitInterface and buildExplicitInterface are the entry point
   /// of the first pass that define the interface and is required to get
   /// the mlir::FuncOp.
@@ -172,6 +169,10 @@ private:
   buildImplicitInterface(const Fortran::evaluate::characteristics::Procedure &);
   void
   buildExplicitInterface(const Fortran::evaluate::characteristics::Procedure &);
+
+private:
+  /// CRTP handle.
+  T &side() { return *static_cast<T *>(this); }
   /// Second pass entry point, once the mlir::FuncOp is created
   void mapBackInputToPassedEntity(const FirPlaceHolder &, FirValue);
 
@@ -273,6 +274,11 @@ public:
 private:
   Fortran::lower::pft::FunctionLikeUnit &funit;
 };
+
+/// Translate a procedure characteristics to an mlir::FunctionType signature.
+mlir::FunctionType
+translateSignature(const Fortran::evaluate::ProcedureDesignator &,
+                   Fortran::lower::AbstractConverter &);
 
 } // namespace Fortran::lower
 

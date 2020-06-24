@@ -282,8 +282,23 @@ getResultEntity(Fortran::lower::pft::FunctionLikeUnit &funit) {
   return details.result();
 }
 
+/// Bypass helpers to manipulate entities since they are not any symbol/actual
+/// argument to associate. See SignatureBuilder below.
+using FakeEntity = bool;
+using FakeEntities = llvm::SmallVector<FakeEntity, 2>;
+static FakeEntities
+getEntityContainer(const Fortran::evaluate::characteristics::Procedure &proc) {
+  FakeEntities enities(proc.dummyArguments.size());
+  return enities;
+}
+static const FakeEntity &getDataObjectEntity(const FakeEntity &e) { return e; }
+static FakeEntity
+getResultEntity(const Fortran::evaluate::characteristics::Procedure &proc) {
+  return false;
+}
+
 /// This is the actual part that defines the FIR interface based on the
-/// charcteristic. It directly mutates the CallInterface members.
+/// characteristic. It directly mutates the CallInterface members.
 template <typename T>
 class Fortran::lower::CallInterfaceImpl {
   using CallInterface = Fortran::lower::CallInterface<T>;
@@ -360,7 +375,7 @@ private:
     auto boxCharTy = fir::BoxCharType::get(&mlirContext, type.kind());
     addFirInput(charRefTy, resultPosition, Property::CharAddress);
     addFirInput(lenTy, resultPosition, Property::CharLength);
-    /// For now, still also return it by boxchar
+    /// For now, also return it by boxchar
     addFirOutput(boxCharTy, resultPosition, Property::BoxChar);
   }
 
@@ -486,3 +501,89 @@ Fortran::lower::CallInterface<T>::getResultType() const {
 
 template class Fortran::lower::CallInterface<Fortran::lower::CalleeInterface>;
 template class Fortran::lower::CallInterface<Fortran::lower::CallerInterface>;
+
+//===----------------------------------------------------------------------===//
+// Function Type Translation
+//===----------------------------------------------------------------------===//
+
+/// Build signature from characteristics when there is no Fortran entity to
+/// associate with the arguments (i.e, this is not a call site or a procedure
+/// declaration. This is needed when dealing with function pointers/dummy
+/// arguments.
+
+class SignatureBuilder;
+template <>
+struct Fortran::lower::PassedEntityTypes<SignatureBuilder> {
+  using FortranEntity = FakeEntity;
+  using FirValue = int;
+};
+
+/// SignatureBuilder is a CRTP implementation of CallInterface intended to
+/// help translating characteristics::Procedure to mlir::FunctionType using
+/// the CallInterface translation.
+class SignatureBuilder
+    : public Fortran::lower::CallInterface<SignatureBuilder> {
+public:
+  SignatureBuilder(const Fortran::evaluate::characteristics::Procedure &p,
+                   Fortran::lower::AbstractConverter &c, bool forceImplicit)
+      : CallInterface{c}, proc{p} {
+    if (forceImplicit || proc.CanBeCalledViaImplicitInterface())
+      buildImplicitInterface(proc);
+    else
+      buildExplicitInterface(proc);
+  }
+  /// Does the procedure characteristics being translated have alternate
+  /// returns ?
+  bool hasAlternateReturns() const {
+    for (const auto &dummy : proc.dummyArguments)
+      if (std::holds_alternative<
+              Fortran::evaluate::characteristics::AlternateReturn>(dummy.u))
+        return true;
+    return false;
+  };
+
+  /// This is only here to fulfill CRTP dependencies and should not be called.
+  std::string getMangledName() const {
+    llvm_unreachable("trying to get name from SignatureBuilder");
+  }
+
+  /// This is only here to fulfill CRTP dependencies and should not be called.
+  mlir::Location getCalleeLocation() const {
+    llvm_unreachable("trying to get callee location from SignatureBuilder");
+  }
+  Fortran::evaluate::characteristics::Procedure characterize() const {
+    return proc;
+  }
+  /// SignatureBuilder cannot be used on main program.
+  bool isMainProgram() const { return false; }
+
+  /// Return the characteristics::Procedure that is being translated to
+  /// mlir::FunctionType.
+  const Fortran::evaluate::characteristics::Procedure &
+  getCallDescription() const {
+    return proc;
+  }
+
+  /// This is not the description of an indirect call.
+  bool isIndirectCall() const { return false; }
+
+  /// Return the translated signature.
+  mlir::FunctionType getFunctionType() const { return genFunctionType(); }
+
+private:
+  const Fortran::evaluate::characteristics::Procedure &proc;
+};
+
+mlir::FunctionType Fortran::lower::translateSignature(
+    const Fortran::evaluate::ProcedureDesignator &proc,
+    Fortran::lower::AbstractConverter &converter) {
+  auto characteristics =
+      Fortran::evaluate::characteristics::Procedure::Characterize(
+          proc, converter.getFoldingContext().intrinsics());
+  // Most unrestricted intrinsic characteristic has the Elemental attribute
+  // which triggers CanBeCalledViaImplicitInterface to return false. However,
+  // using implicit interface rules is just fine here.
+  bool forceImplicit = proc.GetSpecificIntrinsic();
+  return SignatureBuilder{characteristics.value(), converter, forceImplicit}
+      .getFunctionType();
+}
