@@ -36,6 +36,7 @@ define void @test2() {
 
 define void @test3() {
 ; CHECK-LABEL: @test3(
+; CHECK-NEXT:    [[B:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i8
@@ -85,6 +86,7 @@ define void @test5() {
 
 define void @test6() {
 ; CHECK-LABEL: @test6(
+; CHECK-NEXT:    [[B:%.*]] = alloca i16, i16 1024, align 2
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i16, i16 1024, align 2
