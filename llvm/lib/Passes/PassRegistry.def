@@ -342,6 +342,7 @@ LOOP_PASS("print<loopnest>", LoopNestPrinterPass(dbgs()))
 LOOP_PASS("print<loop-cache-cost>", LoopCachePrinterPass(dbgs()))
 LOOP_PASS("loop-predication", LoopPredicationPass())
 LOOP_PASS("guard-widening", GuardWideningPass())
+LOOP_PASS("simple-loop-unswitch", SimpleLoopUnswitchPass())
 #undef LOOP_PASS
 
 #ifndef LOOP_PASS_WITH_PARAMS
