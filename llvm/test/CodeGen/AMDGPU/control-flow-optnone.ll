@@ -10,8 +10,7 @@
 ; GCN: s_branch
 
 ; GCN-DAG: v_cmp_lt_i32
-; GCN-DAG: s_cmp_gt_i32
-; GCN-DAG: s_cselect_b64
+; GCN-DAG: v_cmp_gt_i32
 ; GCN: s_and_b64
 ; GCN: s_mov_b64 exec
 

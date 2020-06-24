@@ -35,10 +35,7 @@ bb4:
 }
 
 ; GCN-LABEL: {{^}}negated_cond_dominated_blocks:
-
-
-; GCN: s_cmp_lg_u32
-; GCN: s_cselect_b64 [[CC1:[^,]+]], 1, 0
+; GCN:   v_cmp_ne_u32_e64 [[CC1:[^,]+]],
 ; GCN:   s_branch [[BB1:BB[0-9]+_[0-9]+]]
 ; GCN: [[BB0:BB[0-9]+_[0-9]+]]
 ; GCN-NOT: v_cndmask_b32

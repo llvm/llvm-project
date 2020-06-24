@@ -251,9 +251,7 @@ ENDIF:                                            ; preds = %IF, %main_body
 ; GCN: s_load_dwordx2 s{{\[}}[[COND0:[0-9]+]]:[[COND1:[0-9]+]]{{\]}}
 ; GCN: s_cmp_lt_i32 s[[COND0]], 1
 ; GCN: s_cbranch_scc1 [[EXIT:[A-Za-z0-9_]+]]
-; GCN: s_cmp_gt_i32 s[[COND1]], 0{{$}}
-; GCN: s_cselect_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], 1, 0
-; GCN: s_and_b64 vcc, exec, [[MASK]]
+; GCN: v_cmp_gt_i32_e64 {{[^,]*}}, s[[COND1]], 0{{$}}
 ; GCN: s_cbranch_vccz [[BODY:[A-Za-z0-9_]+]]
 ; GCN: {{^}}[[EXIT]]:
 ; GCN: s_endpgm
