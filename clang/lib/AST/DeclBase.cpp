@@ -251,7 +251,7 @@ const TemplateParameterList *Decl::getDescribedTemplateParams() const {
 }
 
 bool Decl::isTemplated() const {
-  // A declaration is dependent if it is a template or a template pattern, or
+  // A declaration is templated if it is a template or a template pattern, or
   // is within (lexcially for a friend, semantically otherwise) a dependent
   // context.
   // FIXME: Should local extern declarations be treated like friends?
