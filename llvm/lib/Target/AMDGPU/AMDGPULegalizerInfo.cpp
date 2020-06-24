@@ -2279,6 +2279,25 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
         return true; // Leave in place;
       }
 
+      if (AS == AMDGPUAS::LOCAL_ADDRESS && GV->hasExternalLinkage()) {
+        Type *Ty = GV->getValueType();
+        // HIP uses an unsized array `extern __shared__ T s[]` or similar
+        // zero-sized type in other languages to declare the dynamic shared
+        // memory which size is not known at the compile time. They will be
+        // allocated by the runtime and placed directly after the static
+        // allocated ones. They all share the same offset.
+        if (B.getDataLayout().getTypeAllocSize(Ty).isZero()) {
+          // Adjust alignment for that dynamic shared memory array.
+          MFI->setDynLDSAlign(B.getDataLayout(), *cast<GlobalVariable>(GV));
+          LLT S32 = LLT::scalar(32);
+          auto Sz =
+              B.buildIntrinsic(Intrinsic::amdgcn_groupstaticsize, {S32}, false);
+          B.buildIntToPtr(DstReg, Sz);
+          MI.eraseFromParent();
+          return true;
+        }
+      }
+
       B.buildConstant(
           DstReg,
           MFI->allocateLDSGlobal(B.getDataLayout(), *cast<GlobalVariable>(GV)));
