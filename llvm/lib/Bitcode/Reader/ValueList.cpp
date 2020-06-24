@@ -220,6 +220,6 @@ void BitcodeReaderValueList::resolveConstantForwardRefs() {
 
     // Update all ValueHandles, they should be the only users at this point.
     Placeholder->replaceAllUsesWith(RealVal);
-    Placeholder->deleteValue();
+    delete cast<ConstantPlaceHolder>(Placeholder);
   }
 }
