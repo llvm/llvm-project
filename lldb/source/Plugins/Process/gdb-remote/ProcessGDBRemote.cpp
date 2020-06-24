@@ -17,6 +17,7 @@
 #include <unistd.h>
 #endif
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 #include <sys/types.h>
 #include <time.h>
 
@@ -3431,6 +3432,23 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     debugserver_launch_info.SetMonitorProcessCallback(
         std::bind(MonitorDebugserverProcess, this_wp, _1, _2, _3, _4), false);
     debugserver_launch_info.SetUserID(process_info.GetUserID());
+
+#if defined(__APPLE__)
+    // On macOS 11, we need to support x86_64 applications translated to
+    // arm64. We check whether a binary is translated and spawn the correct
+    // debugserver accordingly.
+    int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID,
+                  static_cast<int>(process_info.GetProcessID()) };
+    struct kinfo_proc processInfo;
+    size_t bufsize = sizeof(processInfo);
+    if (sysctl(mib, (unsigned)(sizeof(mib)/sizeof(int)), &processInfo,
+               &bufsize, NULL, 0) == 0 && bufsize > 0) {
+      if (processInfo.kp_proc.p_flag & P_TRANSLATED) {
+        FileSpec rosetta_debugserver("/Library/Apple/usr/libexec/oah/debugserver");
+        debugserver_launch_info.SetExecutableFile(rosetta_debugserver, false);
+      }
+    }
+#endif
 
     int communication_fd = -1;
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
