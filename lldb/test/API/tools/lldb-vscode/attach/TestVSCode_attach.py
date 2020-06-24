@@ -117,6 +117,7 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
     @skipIfDarwin
     @skipIfNetBSD # Hangs on NetBSD as well
+    @skipIf(archs="aarch64") # Example of a flaky run http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/builds/5527/steps/test/logs/stdio
     def test_commands(self):
         '''
             Tests the "initCommands", "preRunCommands", "stopCommands",
@@ -195,7 +196,9 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
         self.verify_commands('terminateCommands', output, terminateCommands)
 
     @skipIfWindows
+    @skipIfDarwin
     @skipIfNetBSD # Hangs on NetBSD as well
+    @skipIf(archs="aarch64") # Example of a flaky run http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/builds/5517/steps/test/logs/stdio
     def test_terminate_commands(self):
         '''
             Tests that the "terminateCommands", that can be passed during
