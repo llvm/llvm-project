@@ -457,6 +457,12 @@ let Predicates = [HasSVE] in {
   defm SEL_ZPZZ    : sve_int_sel_vvv<"sel", vselect>;
 
   defm SPLICE_ZPZ : sve_int_perm_splice<"splice", int_aarch64_sve_splice>;
+
+  let Predicates = [HasSVE, HasBF16] in {
+    def : SVE_3_Op_Pat<nxv8bf16, vselect, nxv8i1, nxv8bf16, nxv8bf16, SEL_ZPZZ_H>;
+    def : SVE_3_Op_Pat<nxv8bf16, int_aarch64_sve_splice, nxv8i1, nxv8bf16, nxv8bf16, SPLICE_ZPZ_H>;
+  }
+
   defm COMPACT_ZPZ : sve_int_perm_compact<"compact", int_aarch64_sve_compact>;
   defm INSR_ZR : sve_int_perm_insrs<"insr", AArch64insr>;
   defm INSR_ZV : sve_int_perm_insrv<"insr", AArch64insr>;
@@ -469,6 +475,10 @@ let Predicates = [HasSVE] in {
 
   defm REV_PP : sve_int_perm_reverse_p<"rev", AArch64rev>;
   defm REV_ZZ : sve_int_perm_reverse_z<"rev", AArch64rev>;
+
+  let Predicates = [HasSVE, HasBF16] in {
+    def : SVE_1_Op_Pat<nxv8bf16, AArch64rev, nxv8bf16, REV_ZZ_H>;
+  }
 
   defm SUNPKLO_ZZ : sve_int_perm_unpk<0b00, "sunpklo", AArch64sunpklo>;
   defm SUNPKHI_ZZ : sve_int_perm_unpk<0b01, "sunpkhi", AArch64sunpkhi>;
@@ -1007,6 +1017,15 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm UZP2_ZZZ : sve_int_perm_bin_perm_zz<0b011, "uzp2", AArch64uzp2>;
   defm TRN1_ZZZ : sve_int_perm_bin_perm_zz<0b100, "trn1", AArch64trn1>;
   defm TRN2_ZZZ : sve_int_perm_bin_perm_zz<0b101, "trn2", AArch64trn2>;
+
+  let Predicates = [HasSVE, HasBF16] in {
+    def : SVE_2_Op_Pat<nxv8bf16, AArch64zip1, nxv8bf16, nxv8bf16, ZIP1_ZZZ_H>;
+    def : SVE_2_Op_Pat<nxv8bf16, AArch64zip2, nxv8bf16, nxv8bf16, ZIP2_ZZZ_H>;
+    def : SVE_2_Op_Pat<nxv8bf16, AArch64uzp1, nxv8bf16, nxv8bf16, UZP1_ZZZ_H>;
+    def : SVE_2_Op_Pat<nxv8bf16, AArch64uzp2, nxv8bf16, nxv8bf16, UZP2_ZZZ_H>;
+    def : SVE_2_Op_Pat<nxv8bf16, AArch64trn1, nxv8bf16, nxv8bf16, TRN1_ZZZ_H>;
+    def : SVE_2_Op_Pat<nxv8bf16, AArch64trn2, nxv8bf16, nxv8bf16, TRN2_ZZZ_H>;
+  }
 
   defm ZIP1_PPP : sve_int_perm_bin_perm_pp<0b000, "zip1", AArch64zip1>;
   defm ZIP2_PPP : sve_int_perm_bin_perm_pp<0b001, "zip2", AArch64zip2>;
@@ -1983,6 +2002,15 @@ let Predicates = [HasSVE, HasMatMulFP64] in {
   defm UZP2_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b01, 1, "uzp2", int_aarch64_sve_uzp2q>;
   defm TRN1_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b11, 0, "trn1", int_aarch64_sve_trn1q>;
   defm TRN2_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b11, 1, "trn2", int_aarch64_sve_trn2q>;
+}
+
+let Predicates = [HasSVE, HasMatMulFP64, HasBF16] in {
+  def : SVE_2_Op_Pat<nxv8bf16, int_aarch64_sve_zip1q, nxv8bf16, nxv8bf16, ZIP1_ZZZ_Q>;
+  def : SVE_2_Op_Pat<nxv8bf16, int_aarch64_sve_zip2q, nxv8bf16, nxv8bf16, ZIP2_ZZZ_Q>;
+  def : SVE_2_Op_Pat<nxv8bf16, int_aarch64_sve_uzp1q, nxv8bf16, nxv8bf16, UZP1_ZZZ_Q>;
+  def : SVE_2_Op_Pat<nxv8bf16, int_aarch64_sve_uzp2q, nxv8bf16, nxv8bf16, UZP2_ZZZ_Q>;
+  def : SVE_2_Op_Pat<nxv8bf16, int_aarch64_sve_trn1q, nxv8bf16, nxv8bf16, TRN1_ZZZ_Q>;
+  def : SVE_2_Op_Pat<nxv8bf16, int_aarch64_sve_trn2q, nxv8bf16, nxv8bf16, TRN2_ZZZ_Q>;
 }
 
 let Predicates = [HasSVE2] in {
