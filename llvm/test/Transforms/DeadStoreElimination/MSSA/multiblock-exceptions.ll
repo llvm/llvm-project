@@ -29,7 +29,6 @@ define void @test12(i32* %p) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[C1:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i32 40, i32* [[SV]]
 ; CHECK-NEXT:    ret void
 ;
 block1:
