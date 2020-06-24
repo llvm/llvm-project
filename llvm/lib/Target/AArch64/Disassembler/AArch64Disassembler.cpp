@@ -146,6 +146,9 @@ static DecodeStatus DecodeExclusiveLdStInstruction(MCInst &Inst, uint32_t insn,
 static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
                                               uint64_t Address,
                                               const void *Decoder);
+static DecodeStatus DecodeAuthLoadInstruction(MCInst &Inst, uint32_t insn,
+                                              uint64_t Address,
+                                              const void *Decoder);
 static DecodeStatus DecodeAddSubERegInstruction(MCInst &Inst, uint32_t insn,
                                                 uint64_t Address,
                                                 const void *Decoder);
@@ -1497,6 +1500,39 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   // that "stp xzr, xzr, [sp], #4" is fine because xzr and sp are different.
   if (NeedsDisjointWritebackTransfer && Rn != 31 && (Rt == Rn || Rt2 == Rn))
     return SoftFail;
+
+  return Success;
+}
+
+static DecodeStatus DecodeAuthLoadInstruction(MCInst &Inst, uint32_t insn,
+                                              uint64_t Addr,
+                                              const void *Decoder) {
+  unsigned Rt = fieldFromInstruction(insn, 0, 5);
+  unsigned Rn = fieldFromInstruction(insn, 5, 5);
+  uint64_t offset = fieldFromInstruction(insn, 22, 1) << 9 |
+                    fieldFromInstruction(insn, 12, 9);
+  unsigned writeback = fieldFromInstruction(insn, 11, 1);
+
+  switch (Inst.getOpcode()) {
+  default:
+    return Fail;
+  case AArch64::LDRAAwriteback:
+  case AArch64::LDRABwriteback:
+    DecodeGPR64spRegisterClass(Inst, Rn /* writeback register */, Addr,
+                               Decoder);
+    break;
+  case AArch64::LDRAAindexed:
+  case AArch64::LDRABindexed:
+    break;
+  }
+
+  DecodeGPR64RegisterClass(Inst, Rt, Addr, Decoder);
+  DecodeGPR64spRegisterClass(Inst, Rn, Addr, Decoder);
+  DecodeSImm<10>(Inst, offset, Addr, Decoder);
+
+  if (writeback && Rt == Rn && Rn != 31) {
+    return SoftFail;
+  }
 
   return Success;
 }
