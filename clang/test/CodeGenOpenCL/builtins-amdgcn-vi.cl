@@ -22,6 +22,13 @@ void test_rcp_f16(global half* out, half a)
   *out = __builtin_amdgcn_rcph(a);
 }
 
+// CHECK-LABEL: @test_sqrt_f16
+// CHECK: call half @llvm.amdgcn.sqrt.f16
+void test_sqrt_f16(global half* out, half a)
+{
+  *out = __builtin_amdgcn_sqrth(a);
+}
+
 // CHECK-LABEL: @test_rsq_f16
 // CHECK: call half @llvm.amdgcn.rsq.f16
 void test_rsq_f16(global half* out, half a)

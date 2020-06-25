@@ -14702,6 +14702,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_rcpf:
   case AMDGPU::BI__builtin_amdgcn_rcph:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rcp);
+  case AMDGPU::BI__builtin_amdgcn_sqrt:
+  case AMDGPU::BI__builtin_amdgcn_sqrtf:
+  case AMDGPU::BI__builtin_amdgcn_sqrth:
+    return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_sqrt);
   case AMDGPU::BI__builtin_amdgcn_rsq:
   case AMDGPU::BI__builtin_amdgcn_rsqf:
   case AMDGPU::BI__builtin_amdgcn_rsqh:
