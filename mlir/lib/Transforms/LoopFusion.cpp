@@ -911,22 +911,14 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   }
   auto newMemRefType = MemRefType::get(newShape, oldMemRefType.getElementType(),
                                        {}, newMemSpace);
-  // Gather alloc operands for the dynamic dimensions of the memref.
-  SmallVector<Value, 4> allocOperands;
-  unsigned dynamicDimCount = 0;
-  for (auto dimSize : oldMemRefType.getShape()) {
-    if (dimSize == -1)
-      allocOperands.push_back(
-          top.create<DimOp>(forOp.getLoc(), oldMemRef, dynamicDimCount++));
-  }
 
-  // Create new private memref for fused loop 'forOp'.
+  // Create new private memref for fused loop 'forOp'. 'newShape' is always
+  // a constant shape.
   // TODO(andydavis) Create/move alloc ops for private memrefs closer to their
   // consumer loop nests to reduce their live range. Currently they are added
   // at the beginning of the function, because loop nests can be reordered
   // during the fusion pass.
-  Value newMemRef =
-      top.create<AllocOp>(forOp.getLoc(), newMemRefType, allocOperands);
+  Value newMemRef = top.create<AllocOp>(forOp.getLoc(), newMemRefType);
 
   // Build an AffineMap to remap access functions based on lower bound offsets.
   SmallVector<AffineExpr, 4> remapExprs;
