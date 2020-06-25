@@ -402,6 +402,12 @@ public:
 
   InlineResult analyze();
 
+  Optional<Constant*> getSimplifiedValue(Instruction *I) {
+    if (SimplifiedValues.find(I) != SimplifiedValues.end())
+      return SimplifiedValues[I];
+    return None;
+  }
+
   // Keep a bunch of stats about the cost savings found so we can print them
   // out when debugging.
   unsigned NumConstantArgs = 0;
@@ -769,6 +775,11 @@ void InlineCostAnnotationWriter::emitInstructionAnnot(const Instruction *I,
     OS << "cost delta = " << Record->getCostDelta();
     if (Record->hasThresholdChanged())
       OS << ", threshold delta = " << Record->getThresholdDelta();
+  }
+  auto C = ICCA->getSimplifiedValue(const_cast<Instruction *>(I));
+  if (C) {
+    OS << ", simplified to ";
+    C.getValue()->print(OS, true);
   }
   OS << "\n";
 }
