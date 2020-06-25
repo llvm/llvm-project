@@ -20,7 +20,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/IR/Dominators.h"
@@ -35,6 +34,7 @@
 
 namespace llvm {
 
+class AAResults;
 class AssumptionCache;
 class BasicBlock;
 class BranchInst;
@@ -123,7 +123,7 @@ public:
   }
 
   DominatorTree &getDominatorTree() const { return *DT; }
-  AliasAnalysis *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
+  AAResults *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
   MemoryDependenceResults &getMemDep() const { return *MD; }
 
   bool isPREEnabled() const;
@@ -155,7 +155,7 @@ public:
         DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>;
     PhiTranslateMap PhiTranslateTable;
 
-    AliasAnalysis *AA = nullptr;
+    AAResults *AA = nullptr;
     MemoryDependenceResults *MD = nullptr;
     DominatorTree *DT = nullptr;
 
@@ -191,8 +191,8 @@ public:
     void add(Value *V, uint32_t num);
     void clear();
     void erase(Value *v);
-    void setAliasAnalysis(AliasAnalysis *A) { AA = A; }
-    AliasAnalysis *getAliasAnalysis() const { return AA; }
+    void setAliasAnalysis(AAResults *A) { AA = A; }
+    AAResults *getAliasAnalysis() const { return AA; }
     void setMemDep(MemoryDependenceResults *M) { MD = M; }
     void setDomTree(DominatorTree *D) { DT = D; }
     uint32_t getNextUnusedValueNumber() { return nextValueNumber; }
