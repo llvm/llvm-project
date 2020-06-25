@@ -670,7 +670,7 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
       size_t e = CFI.getValues().size() - 1;
       for (size_t i = 0; i < e; ++i)
         OS << format("0x%02x", uint8_t(CFI.getValues()[i])) << ", ";
-      OS << format("0x%02x", uint8_t(CFI.getValues()[e])) << ", ";
+      OS << format("0x%02x", uint8_t(CFI.getValues()[e]));
     }
     break;
   }
