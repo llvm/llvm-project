@@ -298,11 +298,8 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @load_shuffleext_8(<8 x half>* %src) {
 ; CHECK-LABEL: load_shuffleext_8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vcvtb.f32.f16 s3, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s1, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s4
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vcvtb.f32.f16 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <8 x half>, <8 x half>* %src, align 4

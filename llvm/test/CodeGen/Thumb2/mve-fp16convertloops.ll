@@ -556,8 +556,6 @@ define void @both_8_I(half* nocapture readonly %x, half* noalias nocapture %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    adr r2, .LCPI9_0
 ; CHECK-NEXT:    mov.w lr, #128
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
@@ -565,26 +563,15 @@ define void @both_8_I(half* nocapture readonly %x, half* noalias nocapture %y) {
 ; CHECK-NEXT:  .LBB9_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q1, [r0], #16
-; CHECK-NEXT:    vmovx.f16 s8, s7
-; CHECK-NEXT:    vmovx.f16 s14, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s11, s8
-; CHECK-NEXT:    vmovx.f16 s13, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s10, s14
-; CHECK-NEXT:    vmovx.f16 s12, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s9, s13
-; CHECK-NEXT:    vcvtb.f32.f16 s19, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s18, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s17, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s16, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s12
-; CHECK-NEXT:    vmul.f32 q1, q4, q0
+; CHECK-NEXT:    vcvtb.f32.f16 q2, q1
+; CHECK-NEXT:    vcvtt.f32.f16 q1, q1
 ; CHECK-NEXT:    vmul.f32 q2, q2, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
-; CHECK-NEXT:    vcvtt.f16.f32 q1, q2
-; CHECK-NEXT:    vstrb.8 q1, [r1], #16
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
+; CHECK-NEXT:    vcvtb.f16.f32 q2, q2
+; CHECK-NEXT:    vcvtt.f16.f32 q2, q1
+; CHECK-NEXT:    vstrb.8 q2, [r1], #16
 ; CHECK-NEXT:    le lr, .LBB9_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
-; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
@@ -625,8 +612,6 @@ define void @both_16_I(half* nocapture readonly %x, half* noalias nocapture %y) 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    adr r2, .LCPI10_0
 ; CHECK-NEXT:    mov.w lr, #128
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
@@ -634,44 +619,23 @@ define void @both_16_I(half* nocapture readonly %x, half* noalias nocapture %y) 
 ; CHECK-NEXT:  .LBB10_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q1, [r0]
-; CHECK-NEXT:    vmovx.f16 s8, s7
-; CHECK-NEXT:    vmovx.f16 s14, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s11, s8
-; CHECK-NEXT:    vmovx.f16 s13, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s10, s14
-; CHECK-NEXT:    vmovx.f16 s12, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s9, s13
-; CHECK-NEXT:    vcvtb.f32.f16 s19, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s18, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s17, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s16, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s12
-; CHECK-NEXT:    vmul.f32 q1, q4, q0
+; CHECK-NEXT:    vcvtb.f32.f16 q2, q1
+; CHECK-NEXT:    vcvtt.f32.f16 q1, q1
 ; CHECK-NEXT:    vmul.f32 q2, q2, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
-; CHECK-NEXT:    vcvtt.f16.f32 q1, q2
-; CHECK-NEXT:    vstrh.16 q1, [r1]
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
+; CHECK-NEXT:    vcvtb.f16.f32 q2, q2
+; CHECK-NEXT:    vcvtt.f16.f32 q2, q1
 ; CHECK-NEXT:    vldrh.u16 q1, [r0, #16]!
-; CHECK-NEXT:    vmovx.f16 s12, s7
-; CHECK-NEXT:    vmovx.f16 s14, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s19, s12
-; CHECK-NEXT:    vmovx.f16 s8, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s18, s14
-; CHECK-NEXT:    vmovx.f16 s10, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s17, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s16, s10
-; CHECK-NEXT:    vcvtb.f32.f16 s11, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s10, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s9, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s4
-; CHECK-NEXT:    vmul.f32 q1, q4, q0
+; CHECK-NEXT:    vstrh.16 q2, [r1]
+; CHECK-NEXT:    vcvtb.f32.f16 q2, q1
+; CHECK-NEXT:    vcvtt.f32.f16 q1, q1
 ; CHECK-NEXT:    vmul.f32 q2, q2, q0
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vcvtb.f16.f32 q2, q2
 ; CHECK-NEXT:    vcvtt.f16.f32 q2, q1
 ; CHECK-NEXT:    vstrb.8 q2, [r1, #16]!
 ; CHECK-NEXT:    le lr, .LBB10_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
-; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
