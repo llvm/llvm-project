@@ -80,4 +80,4 @@ Optional<StringRef> ExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
   }
   return ExceptStr;
 }
-}
+} // namespace llvm
