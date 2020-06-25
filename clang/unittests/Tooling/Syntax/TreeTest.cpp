@@ -1399,6 +1399,109 @@ void test() {
 )txt"));
 }
 
+TEST_P(SyntaxTreeTest, StringLiteral) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  "a\n\0\x20";
+  L"αβ";
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-"a\n\0\x20"
+    | `-;
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-L"αβ"
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, StringLiteralUtf) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  u8"a\x1f\x05";
+  u"C++抽象構文木";
+  U"📖🌲\n";
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-u8"a\x1f\x05"
+    | `-;
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-u"C++抽象構文木"
+    | `-;
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-U"📖🌲\n"
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, StringLiteralRaw) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  R"SyntaxTree(
+  Hello "Syntax" \"
+  )SyntaxTree";
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-R"SyntaxTree(
+  Hello "Syntax" \"
+  )SyntaxTree"
+    | `-;
+    `-}
+)txt"));
+}
+
 TEST_P(SyntaxTreeTest, IntegerLiteral) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
@@ -2730,7 +2833,7 @@ static_assert(true);
 | |-BoolLiteralExpression
 | | `-true
 | |-,
-| |-UnknownExpression
+| |-StringLiteralExpression
 | | `-"message"
 | |-)
 | `-;
