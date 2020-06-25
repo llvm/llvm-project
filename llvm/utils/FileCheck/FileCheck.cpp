@@ -110,7 +110,6 @@ static cl::opt<bool> VerboseVerbose(
 // The order of DumpInputValue members affects their precedence, as documented
 // for -dump-input below.
 enum DumpInputValue {
-  DumpInputDefault,
   DumpInputNever,
   DumpInputFail,
   DumpInputAlways,
@@ -551,7 +550,7 @@ int main(int argc, char **argv) {
                               "FILECHECK_OPTS");
   DumpInputValue DumpInput =
       DumpInputs.empty()
-          ? DumpInputDefault
+          ? DumpInputFail
           : *std::max_element(DumpInputs.begin(), DumpInputs.end());
   if (DumpInput == DumpInputHelp) {
     DumpInputAnnotationHelp(outs());
@@ -667,9 +666,6 @@ int main(int argc, char **argv) {
   SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(
                             InputFileText, InputFile.getBufferIdentifier()),
                         SMLoc());
-
-  if (DumpInput == DumpInputDefault)
-    DumpInput = DumpInputFail;
 
   std::vector<FileCheckDiag> Diags;
   int ExitCode = FC.checkInput(SM, InputFileText,
