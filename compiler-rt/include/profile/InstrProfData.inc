@@ -157,8 +157,6 @@ VALUE_PROF_FUNC_PARAM(void *, Data, Type::getInt8PtrTy(Ctx)) INSTR_PROF_COMMA
 #ifndef VALUE_RANGE_PROF
 VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 #else /* VALUE_RANGE_PROF */
-/* FIXME: This is to be removed after switching to the new memop value
- * profiling. */
 VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx)) \
                       INSTR_PROF_COMMA
 VALUE_PROF_FUNC_PARAM(uint64_t, PreciseRangeStart, Type::getInt64Ty(Ctx)) \
@@ -755,14 +753,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALUE_PROF_FUNC __llvm_profile_instrument_target
 #define INSTR_PROF_VALUE_PROF_FUNC_STR \
         INSTR_PROF_QUOTE(INSTR_PROF_VALUE_PROF_FUNC)
-/* FIXME: This is to be removed after switching to the new memop value
- * profiling. */
 #define INSTR_PROF_VALUE_RANGE_PROF_FUNC __llvm_profile_instrument_range
 #define INSTR_PROF_VALUE_RANGE_PROF_FUNC_STR \
         INSTR_PROF_QUOTE(INSTR_PROF_VALUE_RANGE_PROF_FUNC)
-#define INSTR_PROF_VALUE_PROF_MEMOP_FUNC __llvm_profile_instrument_memop
-#define INSTR_PROF_VALUE_PROF_MEMOP_FUNC_STR                                   \
-  INSTR_PROF_QUOTE(INSTR_PROF_VALUE_PROF_MEMOP_FUNC)
 
 /* InstrProfile per-function control data alignment.  */
 #define INSTR_PROF_DATA_ALIGNMENT 8
@@ -790,78 +783,3 @@ typedef struct InstrProfValueData {
 #endif
 
 #undef COVMAP_V2_OR_V3
-
-#ifdef INSTR_PROF_VALUE_PROF_MEMOP_API
-
-#ifdef __cplusplus
-#define INSTR_PROF_INLINE inline
-#else
-#define INSTR_PROF_INLINE
-#endif
-
-/* The value range buckets (22 buckets) for the memop size value profiling looks
- * like:
- *
- *   [0, 0]
- *   [1, 1]
- *   [2, 2]
- *   [3, 3]
- *   [4, 4]
- *   [5, 5]
- *   [6, 6]
- *   [7, 7]
- *   [8, 8]
- *   [9, 15]
- *   [16, 16]
- *   [17, 31]
- *   [32, 32]
- *   [33, 63]
- *   [64, 64]
- *   [65, 127]
- *   [128, 128]
- *   [129, 255]
- *   [256, 256]
- *   [257, 511]
- *   [512, 512]
- *   [513, UINT64_MAX]
- *
- * Each range has a 'representative value' which is the lower end value of the
- * range and used to store in the runtime profile data records and the VP
- * metadata. For example, it's 2 for [2, 2] and 64 for [65, 127].
- */
-
-/* Map an (observed) memop size value to the representative value of its range.
- * For example, 5 -> 5, 22 -> 17, 99 -> 65, 256 -> 256, 1001 -> 513. */
-INSTR_PROF_VISIBILITY INSTR_PROF_INLINE uint64_t
-InstrProfGetRangeRepValue(uint64_t Value) {
-  if (Value <= 8)
-    // The first ranges are individually tracked. Use the value as is.
-    return Value;
-  else if (Value >= 513)
-    // The last range is mapped to its lowest value.
-    return 513;
-  else if (__builtin_popcountll(Value) == 1)
-    // If it's a power of two, use it as is.
-    return Value;
-  else
-    // Otherwise, take to the previous power of two + 1.
-    return (1 << (64 - __builtin_clzll(Value) - 1)) + 1;
-}
-
-/* Return true if the range that an (observed) memop size value belongs to has
- * only a single value in the range.  For example, 0 -> true, 8 -> true, 10 ->
- * false, 64 -> true, 100 -> false, 513 -> false. */
-INSTR_PROF_VISIBILITY INSTR_PROF_INLINE unsigned
-InstrProfIsSingleValRange(uint64_t Value) {
-  if (Value <= 8)
-    // The first ranges are individually tracked.
-    return 1;
-  else if (__builtin_popcountll(Value) == 1)
-    // If it's a power of two, there's only one value.
-    return 1;
-  else
-    // Otherwise, there's more than one value in the range.
-    return 0;
-}
-
-#endif /* INSTR_PROF_VALUE_PROF_MEMOP_API */
