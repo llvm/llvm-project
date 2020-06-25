@@ -654,6 +654,13 @@ public:
     return true;
   }
 
+  bool WalkUpFromCXXBoolLiteralExpr(CXXBoolLiteralExpr *S) {
+    Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::BoolLiteralExpression, S);
+    return true;
+  }
+
   bool WalkUpFromCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *S) {
     Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
     Builder.foldNode(Builder.getExprRange(S),
