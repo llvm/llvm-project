@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp4 -fopenmp -fopenmp-version=45 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp -fopenmp-version=50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp4 -fopenmp-simd -fopenmp-version=45 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 
 #pragma omp requires dynamic_allocators
 typedef void **omp_allocator_handle_t;
@@ -133,8 +135,9 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for simd firstprivate(h) // expected-error {{threadprivate or thread local variable cannot be firstprivate}}
   for (i = 0; i < argc; ++i) foo();
 
-#pragma omp target teams distribute parallel for simd private(i), firstprivate(i) // expected-error {{private variable cannot be firstprivate}} expected-note 2 {{defined as private}}
-  for (i = 0; i < argc; ++i) foo(); // expected-error {{loop iteration variable in the associated loop of 'omp target teams distribute parallel for simd' directive may not be private, predetermined as linear}}
+#pragma omp target teams distribute parallel for simd private(i), firstprivate(i) // expected-error {{private variable cannot be firstprivate}}  expected-note {{defined as private}} omp4-note {{defined as private}}
+  for (i = 0; i < argc; ++i) // omp4-error {{loop iteration variable in the associated loop of 'omp target teams distribute parallel for simd' directive may not be private, predetermined as linear}}
+    foo();
 
 #pragma omp target teams distribute parallel for simd firstprivate(i)
   for (j = 0; j < argc; ++j) foo();
