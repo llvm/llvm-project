@@ -7,12 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/ScriptInterpreter.h"
-
-#include <memory>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Pipe.h"
@@ -21,6 +15,13 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
+#if defined(_WIN32)
+#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
+#endif
+#include <memory>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string>
 
 using namespace lldb;
 using namespace lldb_private;
