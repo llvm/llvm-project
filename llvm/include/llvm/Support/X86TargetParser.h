@@ -61,8 +61,66 @@ enum ProcessorFeatures {
 
 enum CPUKind {
   CK_None,
-#define PROC(ENUM, STRING, IS64BIT) CK_##ENUM,
-#include "llvm/Support/X86TargetParser.def"
+  CK_i386,
+  CK_i486,
+  CK_WinChipC6,
+  CK_WinChip2,
+  CK_C3,
+  CK_i586,
+  CK_Pentium,
+  CK_PentiumMMX,
+  CK_PentiumPro,
+  CK_i686,
+  CK_Pentium2,
+  CK_Pentium3,
+  CK_PentiumM,
+  CK_C3_2,
+  CK_Yonah,
+  CK_Pentium4,
+  CK_Prescott,
+  CK_Nocona,
+  CK_Core2,
+  CK_Penryn,
+  CK_Bonnell,
+  CK_Silvermont,
+  CK_Goldmont,
+  CK_GoldmontPlus,
+  CK_Tremont,
+  CK_Nehalem,
+  CK_Westmere,
+  CK_SandyBridge,
+  CK_IvyBridge,
+  CK_Haswell,
+  CK_Broadwell,
+  CK_SkylakeClient,
+  CK_SkylakeServer,
+  CK_Cascadelake,
+  CK_Cooperlake,
+  CK_Cannonlake,
+  CK_IcelakeClient,
+  CK_IcelakeServer,
+  CK_Tigerlake,
+  CK_KNL,
+  CK_KNM,
+  CK_Lakemont,
+  CK_K6,
+  CK_K6_2,
+  CK_K6_3,
+  CK_Athlon,
+  CK_AthlonXP,
+  CK_K8,
+  CK_K8SSE3,
+  CK_AMDFAM10,
+  CK_BTVER1,
+  CK_BTVER2,
+  CK_BDVER1,
+  CK_BDVER2,
+  CK_BDVER3,
+  CK_BDVER4,
+  CK_ZNVER1,
+  CK_ZNVER2,
+  CK_x86_64,
+  CK_Geode,
 };
 
 /// Parse \p CPU string into a CPUKind. Will only accept 64-bit capable CPUs if
@@ -73,6 +131,8 @@ CPUKind parseArchX86(StringRef CPU, bool Only64Bit = false);
 /// only contain 64-bit capable CPUs.
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values,
                           bool ArchIs32Bit);
+
+ProcessorFeatures getKeyFeature(CPUKind Kind);
 
 } // namespace X86
 } // namespace llvm
