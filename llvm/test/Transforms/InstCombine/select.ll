@@ -2000,7 +2000,6 @@ merge:
   ret i32 %s
 }
 
-; TODO: Replace with phi[x, z].
 define i32 @select_phi_same_condition(i1 %cond, i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_phi_same_condition(
 ; CHECK-NEXT:  entry:
@@ -2010,8 +2009,7 @@ define i32 @select_phi_same_condition(i1 %cond, i32 %x, i32 %y, i32 %z) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_TRUE]] ], [ [[Z:%.*]], [[IF_FALSE]] ]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[X:%.*]], i32 [[PHI]]
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[Z:%.*]], [[IF_FALSE]] ], [ [[X:%.*]], [[IF_TRUE]] ]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
 entry:
