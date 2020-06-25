@@ -570,7 +570,7 @@ class ProjectTester:
 
     def _download_from_git(self, directory: str, build_log_file: IO):
         cached_source = os.path.join(directory, CACHED_SOURCE_DIR_NAME)
-        check_call(f"git clone {self.project.origin} {cached_source}",
+        check_call(f"git clone --recursive {self.project.origin} {cached_source}",
                    cwd=directory, stderr=build_log_file,
                    stdout=build_log_file, shell=True)
         check_call(f"git checkout --quiet {self.project.commit}",
