@@ -210,6 +210,7 @@ class VectorType;
 
       // MVE float <> half converts
       VCVTN,        // MVE vcvt f32 -> f16, truncating into either the bottom or top lanes
+      VCVTL,        // MVE vcvt f16 -> f32, extending from either the bottom or top lanes
 
       // Vector multiply long:
       VMULLs,       // ...signed

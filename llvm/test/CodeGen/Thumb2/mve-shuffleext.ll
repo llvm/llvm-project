@@ -196,11 +196,7 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fpext_0246(<8 x half> %src) {
 ; CHECK-LABEL: fpext_0246:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvtb.f32.f16 s7, s3
-; CHECK-NEXT:    vcvtb.f32.f16 s6, s2
-; CHECK-NEXT:    vcvtb.f32.f16 s5, s1
-; CHECK-NEXT:    vcvtb.f32.f16 s4, s0
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vcvtb.f32.f16 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <8 x half> %src, <8 x half> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -211,14 +207,7 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fpext_1357(<8 x half> %src) {
 ; CHECK-LABEL: fpext_1357:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmovx.f16 s8, s3
-; CHECK-NEXT:    vmovx.f16 s4, s1
-; CHECK-NEXT:    vmovx.f16 s6, s0
-; CHECK-NEXT:    vmovx.f16 s10, s2
-; CHECK-NEXT:    vcvtb.f32.f16 s3, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s10
-; CHECK-NEXT:    vcvtb.f32.f16 s1, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s6
+; CHECK-NEXT:    vcvtt.f32.f16 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <8 x half> %src, <8 x half> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -229,16 +218,8 @@ entry:
 define arm_aapcs_vfpcc <8 x float> @fpext_02468101214(<16 x half> %src) {
 ; CHECK-LABEL: fpext_02468101214:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvtb.f32.f16 s11, s3
-; CHECK-NEXT:    vcvtb.f32.f16 s10, s2
-; CHECK-NEXT:    vcvtb.f32.f16 s9, s1
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s15, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s6
-; CHECK-NEXT:    vmov q0, q2
-; CHECK-NEXT:    vcvtb.f32.f16 s13, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s4
-; CHECK-NEXT:    vmov q1, q3
+; CHECK-NEXT:    vcvtb.f32.f16 q0, q0
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <16 x half> %src, <16 x half> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -249,22 +230,8 @@ entry:
 define arm_aapcs_vfpcc <8 x float> @fpext_13579111315(<16 x half> %src) {
 ; CHECK-LABEL: fpext_13579111315:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmovx.f16 s14, s6
-; CHECK-NEXT:    vmovx.f16 s8, s5
-; CHECK-NEXT:    vmovx.f16 s5, s3
-; CHECK-NEXT:    vmovx.f16 s10, s4
-; CHECK-NEXT:    vmovx.f16 s12, s7
-; CHECK-NEXT:    vmovx.f16 s4, s1
-; CHECK-NEXT:    vmovx.f16 s6, s0
-; CHECK-NEXT:    vmovx.f16 s7, s2
-; CHECK-NEXT:    vcvtb.f32.f16 s3, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s1, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s7, s12
-; CHECK-NEXT:    vcvtb.f32.f16 s6, s14
-; CHECK-NEXT:    vcvtb.f32.f16 s5, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s4, s10
+; CHECK-NEXT:    vcvtt.f32.f16 q0, q0
+; CHECK-NEXT:    vcvtt.f32.f16 q1, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <16 x half> %src, <16 x half> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
