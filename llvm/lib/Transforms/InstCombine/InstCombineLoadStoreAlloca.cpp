@@ -14,8 +14,8 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -24,6 +24,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -40,7 +41,7 @@ STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 /// the alloca, and if the source pointer is a pointer to a constant global, we
 /// can optimize this.
 static bool
-isOnlyCopiedFromConstantMemory(AliasAnalysis *AA,
+isOnlyCopiedFromConstantMemory(AAResults *AA,
                                Value *V, MemTransferInst *&TheCopy,
                                SmallVectorImpl<Instruction *> &ToDelete) {
   // We track lifetime intrinsics as we encounter them.  If we decide to go
@@ -144,7 +145,7 @@ isOnlyCopiedFromConstantMemory(AliasAnalysis *AA,
 /// modified by a copy from a constant global.  If we can prove this, we can
 /// replace any uses of the alloca with uses of the global directly.
 static MemTransferInst *
-isOnlyCopiedFromConstantMemory(AliasAnalysis *AA,
+isOnlyCopiedFromConstantMemory(AAResults *AA,
                                AllocaInst *AI,
                                SmallVectorImpl<Instruction *> &ToDelete) {
   MemTransferInst *TheCopy = nullptr;
