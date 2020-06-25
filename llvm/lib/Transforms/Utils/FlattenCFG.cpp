@@ -540,6 +540,6 @@ bool FlattenCFGOpt::run(BasicBlock *BB) {
 /// FlattenCFG - This function is used to flatten a CFG.  For
 /// example, it uses parallel-and and parallel-or mode to collapse
 /// if-conditions and merge if-regions with identical statements.
-bool llvm::FlattenCFG(BasicBlock *BB, AliasAnalysis *AA) {
+bool llvm::FlattenCFG(BasicBlock *BB, AAResults *AA) {
   return FlattenCFGOpt(AA).run(BB);
 }
