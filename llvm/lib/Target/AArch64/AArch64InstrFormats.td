@@ -1654,6 +1654,8 @@ class BaseAuthLoad<bit M, bit W, dag oops, dag iops, string asm,
   let Inst{10} = 1;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rt;
+
+  let DecoderMethod = "DecodeAuthLoadInstruction";
 }
 
 multiclass AuthLoad<bit M, string asm, Operand opr> {
