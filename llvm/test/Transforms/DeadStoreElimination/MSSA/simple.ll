@@ -700,7 +700,6 @@ define void @test44_volatile(i32* %P) {
 
 define void @test45_volatile(i32* %P) {
 ; CHECK-LABEL: @test45_volatile(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    store volatile i32 2, i32* [[P]], align 4
 ; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
@@ -714,7 +713,6 @@ define void @test45_volatile(i32* %P) {
 define void @test46_volatile(i32* %P) {
 ; CHECK-LABEL: @test46_volatile(
 ; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
