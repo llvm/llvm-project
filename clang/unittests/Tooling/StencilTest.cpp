@@ -180,12 +180,12 @@ TEST_F(StencilTest, SelectionOp) {
 
 TEST_F(StencilTest, IfBoundOpBound) {
   StringRef Id = "id";
-  testExpr(Id, "3;", ifBound(Id, text("5"), text("7")), "5");
+  testExpr(Id, "3;", ifBound(Id, cat("5"), cat("7")), "5");
 }
 
 TEST_F(StencilTest, IfBoundOpUnbound) {
   StringRef Id = "id";
-  testExpr(Id, "3;", ifBound("other", text("5"), text("7")), "7");
+  testExpr(Id, "3;", ifBound("other", cat("5"), cat("7")), "7");
 }
 
 TEST_F(StencilTest, ExpressionOpNoParens) {
@@ -293,7 +293,7 @@ TEST_F(StencilTest, AccessOpValueExplicitText) {
     x;
   )cc";
   StringRef Id = "id";
-  testExpr(Id, Snippet, access(Id, text("field")), "x.field");
+  testExpr(Id, Snippet, access(Id, cat("field")), "x.field");
 }
 
 TEST_F(StencilTest, AccessOpValueAddress) {
@@ -479,7 +479,7 @@ TEST(StencilToStringTest, AccessOpText) {
 }
 
 TEST(StencilToStringTest, AccessOpSelector) {
-  auto S = access("Id", selection(name("otherId")));
+  auto S = access("Id", cat(name("otherId")));
   StringRef Expected = R"repr(access("Id", selection(...)))repr";
   EXPECT_EQ(S->toString(), Expected);
 }
@@ -491,7 +491,7 @@ TEST(StencilToStringTest, AccessOpStencil) {
 }
 
 TEST(StencilToStringTest, IfBoundOp) {
-  auto S = ifBound("Id", text("trueText"), access("exprId", "memberData"));
+  auto S = ifBound("Id", cat("trueText"), access("exprId", "memberData"));
   StringRef Expected =
       R"repr(ifBound("Id", "trueText", access("exprId", "memberData")))repr";
   EXPECT_EQ(S->toString(), Expected);
@@ -505,7 +505,7 @@ TEST(StencilToStringTest, RunOp) {
 
 TEST(StencilToStringTest, Sequence) {
   auto S = cat("foo", access("x", "m()"), "bar",
-               ifBound("x", text("t"), access("e", "f")));
+               ifBound("x", cat("t"), access("e", "f")));
   StringRef Expected = R"repr(seq("foo", access("x", "m()"), "bar", )repr"
                        R"repr(ifBound("x", "t", access("e", "f"))))repr";
   EXPECT_EQ(S->toString(), Expected);
@@ -524,8 +524,8 @@ TEST(StencilToStringTest, SequenceSingle) {
 }
 
 TEST(StencilToStringTest, SequenceFromVector) {
-  auto S = catVector({text("foo"), access("x", "m()"), text("bar"),
-                      ifBound("x", text("t"), access("e", "f"))});
+  auto S = catVector({cat("foo"), access("x", "m()"), cat("bar"),
+                      ifBound("x", cat("t"), access("e", "f"))});
   StringRef Expected = R"repr(seq("foo", access("x", "m()"), "bar", )repr"
                        R"repr(ifBound("x", "t", access("e", "f"))))repr";
   EXPECT_EQ(S->toString(), Expected);
