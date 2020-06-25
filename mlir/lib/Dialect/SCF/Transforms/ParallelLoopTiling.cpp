@@ -16,8 +16,6 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Transforms/RegionUtils.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -30,8 +28,8 @@ using namespace mlir::scf;
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
 ///                                             step (%arg4*tileSize[0],
 ///                                                   %arg5*tileSize[1])
-///     scf.parallel (%j0, %j1) = (0, 0) to (min(tileSize[0], %arg2-%i0)
-///                                           min(tileSize[1], %arg3-%i1))
+///     scf.parallel (%j0, %j1) = (0, 0) to (min(%arg4*tileSize[0], %arg2-%i0)
+///                                           min(%arg5*tileSize[1], %arg3-%i1))
 ///                                        step (%arg4, %arg5)
 ///
 /// where the uses of %i0 and %i1 in the loop body are replaced by
@@ -76,12 +74,36 @@ void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
   // Create the inner loop with adjusted bounds.
   SmallVector<Value, 2> newBounds;
   newBounds.reserve(op.upperBound().size());
-  for (auto bounds : llvm::zip(tileSizeConstants, outerLoop.upperBound(),
-                               outerLoop.getInductionVars())) {
-    newBounds.push_back(b.create<AffineMinOp>(
-        op.getLoc(), b.getIndexType(), minMap,
-        ValueRange{std::get<0>(bounds), std::get<1>(bounds),
-                   std::get<2>(bounds)}));
+  for (auto dim : llvm::zip(outerLoop.lowerBound(), outerLoop.upperBound(),
+                            outerLoop.step(), outerLoop.getInductionVars(),
+                            op.step(), tileSizeConstants)) {
+    Value lowerBound, upperBound, newStep, iv, step, tileSizeConstant;
+    std::tie(lowerBound, upperBound, newStep, iv, step, tileSizeConstant) = dim;
+    // Collect the statically known loop bounds
+    auto lowerBoundConstant =
+        dyn_cast_or_null<ConstantIndexOp>(lowerBound.getDefiningOp());
+    auto upperBoundConstant =
+        dyn_cast_or_null<ConstantIndexOp>(upperBound.getDefiningOp());
+    auto stepConstant = dyn_cast_or_null<ConstantIndexOp>(step.getDefiningOp());
+    auto tileSize =
+        cast<ConstantIndexOp>(tileSizeConstant.getDefiningOp()).getValue();
+    // If the loop bounds and the loop step are constant and if the number of
+    // loop iterations is an integer multiple of the tile size, we use a static
+    // bound for the inner loop.
+    if (lowerBoundConstant && upperBoundConstant && stepConstant) {
+      auto numIterations = llvm::divideCeil(upperBoundConstant.getValue() -
+                                                lowerBoundConstant.getValue(),
+                                            stepConstant.getValue());
+      if (numIterations % tileSize == 0) {
+        newBounds.push_back(newStep);
+        continue;
+      }
+    }
+    // Otherwise, we dynamically compute the bound for
+    // each iteration of the outer loop.
+    newBounds.push_back(
+        b.create<AffineMinOp>(op.getLoc(), b.getIndexType(), minMap,
+                              ValueRange{newStep, upperBound, iv}));
   }
   auto innerLoop = b.create<ParallelOp>(
       op.getLoc(), SmallVector<Value, 2>(newBounds.size(), zero), newBounds,
@@ -104,8 +126,8 @@ void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
   op.erase();
 }
 
-/// Get a list of most nested parallel loops. Assumes that ParallelOps are only
-/// directly nested.
+/// Get a list of most nested parallel loops. Assumes that ParallelOps are
+/// only directly nested.
 static bool getInnermostNestedLoops(Block *block,
                                     SmallVectorImpl<ParallelOp> &loops) {
   bool hasInnerLoop = false;
@@ -131,7 +153,9 @@ struct ParallelLoopTiling
       getInnermostNestedLoops(&block, mostNestedParallelOps);
     }
     for (ParallelOp pLoop : mostNestedParallelOps) {
-      tileParallelLoop(pLoop, tileSizes);
+      // FIXME: Add reduction support.
+      if (pLoop.getNumReductions() == 0)
+        tileParallelLoop(pLoop, tileSizes);
     }
   }
 };
