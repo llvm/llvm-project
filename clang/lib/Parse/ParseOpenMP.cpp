@@ -194,8 +194,9 @@ static OpenMPDirectiveKindExWrapper parseOpenMPDirectiveKind(Parser &P) {
       DKind = F[I][2];
     }
   }
-  return DKind < OMPD_unknown ? static_cast<OpenMPDirectiveKind>(DKind)
-                              : OMPD_unknown;
+  return unsigned(DKind) < llvm::omp::Directive_enumSize
+             ? static_cast<OpenMPDirectiveKind>(DKind)
+             : OMPD_unknown;
 }
 
 static DeclarationName parseOpenMPReductionId(Parser &P) {
