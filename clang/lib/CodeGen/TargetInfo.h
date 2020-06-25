@@ -57,10 +57,11 @@ public:
   virtual void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                                    CodeGen::CodeGenModule &M) const {}
 
-  /// emitTargetMD - Provides a convenient hook to handle extra
-  /// target-specific metadata for the given global.
-  virtual void emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
-                            CodeGen::CodeGenModule &M) const {}
+  /// emitTargetMetadata - Provides a convenient hook to handle extra
+  /// target-specific metadata for the given globals.
+  virtual void emitTargetMetadata(
+      CodeGen::CodeGenModule &CGM,
+      const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames) const {}
 
   /// Determines the size of struct _Unwind_Exception on this platform,
   /// in 8-bit units.  The Itanium ABI defines this as:
