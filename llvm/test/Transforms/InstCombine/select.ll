@@ -2131,3 +2131,112 @@ lpad:
   filter [0 x i1] zeroinitializer
   unreachable
 }
+
+define i32 @select_phi_same_condition_switch(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_phi_same_condition_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
+; CHECK-NEXT:    i32 1, label [[MERGE:%.*]]
+; CHECK-NEXT:    i32 2, label [[MERGE]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[Y:%.*]], [[IF_FALSE]] ], [ [[X]], [[IF_TRUE]] ], [ [[X]], [[IF_TRUE]] ]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  switch i32 %x, label %exit [
+  i32 1, label %merge
+  i32 2, label %merge
+  ]
+
+exit:
+  ret i32 0
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [0, %if.true], [0, %if.true], [%y, %if.false]
+  %s = select i1 %cond, i32 %x, i32 %phi
+  ret i32 %s
+}
+
+define i32 @transit_different_values_through_phi(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @transit_different_values_through_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF_TRUE_1:%.*]], label [[IF_TRUE_2:%.*]]
+; CHECK:       if.true.1:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.true.2:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ 3, [[IF_FALSE]] ], [ 2, [[IF_TRUE_2]] ], [ 1, [[IF_TRUE_1]] ]
+; CHECK-NEXT:    ret i32 [[S]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br i1 %cond2, label %if.true.1, label %if.true.2
+
+if.true.1:
+  br label %merge
+
+if.true.2:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %p = phi i32 [ 1, %if.true.1 ], [ 2, %if.true.2 ], [ 4, %if.false ]
+  %s = select i1 %cond, i32 %p, i32 3
+  ret i32 %s
+
+exit:
+  ret i32 0
+}
+
+define i32 @select_phi_degenerate(i1 %cond, i1 %cond2) {
+; CHECK-LABEL: @select_phi_degenerate(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[SELECT:%.*]] = phi i32 [ [[IV_INC:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV_INC]] = add i32 [[SELECT]], 1
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[LOOP]], label [[EXIT2:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i32 [[IV_INC]]
+;
+entry:
+  br i1 %cond, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
+  %select = select i1 %cond, i32 %iv, i32 -1
+  %iv.inc = add i32 %select, 1
+  br i1 %cond2, label %loop, label %exit2
+
+exit:
+  ret i32 0
+
+exit2:
+  ret i32 %iv.inc
+}
