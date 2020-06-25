@@ -47,6 +47,7 @@ enum class NodeKind : uint16_t {
   IntegerLiteralExpression,
   BoolLiteralExpression,
   CharacterLiteralExpression,
+  StringLiteralExpression,
   IdExpression,
 
   // Statements.
@@ -283,6 +284,16 @@ public:
   BoolLiteralExpression() : Expression(NodeKind::BoolLiteralExpression) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::BoolLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// Expression for string-literals. C++ [lex.string]
+class StringLiteralExpression final : public Expression {
+public:
+  StringLiteralExpression() : Expression(NodeKind::StringLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::StringLiteralExpression;
   }
   syntax::Leaf *literalToken();
 };
