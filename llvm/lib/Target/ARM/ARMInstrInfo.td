@@ -5479,7 +5479,8 @@ def : ARMInstAlias<"mcr${p} $cop, $opc1, $Rt, $CRn, $CRm",
 def MRC : MovRCopro<"mrc", 1 /* from coprocessor to ARM core register */,
                     (outs GPRwithAPSR:$Rt),
                     (ins p_imm:$cop, imm0_7:$opc1, c_imm:$CRn, c_imm:$CRm,
-                         imm0_7:$opc2), []>;
+                         imm0_7:$opc2), []>,
+                    ComplexDeprecationPredicate<"MRC">;
 def : ARMInstAlias<"mrc${p} $cop, $opc1, $Rt, $CRn, $CRm",
                    (MRC GPRwithAPSR:$Rt, p_imm:$cop, imm0_7:$opc1, c_imm:$CRn,
                         c_imm:$CRm, 0, pred:$p)>;
