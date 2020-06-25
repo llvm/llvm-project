@@ -112,7 +112,7 @@ class IntrinsicCostAttributes {
   Type *RetTy = nullptr;
   Intrinsic::ID IID;
   SmallVector<Type *, 4> ParamTys;
-  SmallVector<Value *, 4> Arguments;
+  SmallVector<const Value *, 4> Arguments;
   FastMathFlags FMF;
   unsigned VF = 1;
   // If ScalarizationCost is UINT_MAX, the cost of scalarizing the
@@ -146,7 +146,7 @@ public:
                           ArrayRef<Type *> Tys);
 
   IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                          ArrayRef<Value *> Args);
+                          ArrayRef<const Value *> Args);
 
   Intrinsic::ID getID() const { return IID; }
   const IntrinsicInst *getInst() const { return II; }
@@ -154,7 +154,7 @@ public:
   unsigned getVectorFactor() const { return VF; }
   FastMathFlags getFlags() const { return FMF; }
   unsigned getScalarizationCost() const { return ScalarizationCost; }
-  const SmallVectorImpl<Value *> &getArgs() const { return Arguments; }
+  const SmallVectorImpl<const Value *> &getArgs() const { return Arguments; }
   const SmallVectorImpl<Type *> &getArgTypes() const { return ParamTys; }
 
   bool isTypeBasedOnly() const {
@@ -951,7 +951,7 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF) const;
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
-  static OperandValueKind getOperandInfo(Value *V,
+  static OperandValueKind getOperandInfo(const Value *V,
                                          OperandValueProperties &OpProps);
 
   /// This is an approximation of reciprocal throughput of a math/logic op.
@@ -1037,9 +1037,10 @@ public:
   /// \p I - the optional original context instruction, if one exists, e.g. the
   ///        load/store to transform or the call to the gather/scatter intrinsic
   int getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, Value *Ptr, bool VariableMask,
-    unsigned Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-    const Instruction *I = nullptr) const;
+      unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+      unsigned Alignment,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      const Instruction *I = nullptr) const;
 
   /// \return The cost of the interleaved memory operation.
   /// \p Opcode is the memory operation code
@@ -1429,10 +1430,11 @@ public:
                                     unsigned Alignment,
                                     unsigned AddressSpace,
                                     TTI::TargetCostKind CostKind) = 0;
-  virtual int getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, Value *Ptr, bool VariableMask,
-    unsigned Alignment, TTI::TargetCostKind CostKind,
-    const Instruction *I = nullptr) = 0;
+  virtual int getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                     const Value *Ptr, bool VariableMask,
+                                     unsigned Alignment,
+                                     TTI::TargetCostKind CostKind,
+                                     const Instruction *I = nullptr) = 0;
 
   virtual int
   getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
@@ -1848,10 +1850,10 @@ public:
     return Impl.getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                       CostKind);
   }
-  int getGatherScatterOpCost(
-      unsigned Opcode, Type *DataTy, Value *Ptr, bool VariableMask,
-      unsigned Alignment, TTI::TargetCostKind CostKind,
-      const Instruction *I = nullptr) override {
+  int getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
+                             bool VariableMask, unsigned Alignment,
+                             TTI::TargetCostKind CostKind,
+                             const Instruction *I = nullptr) override {
     return Impl.getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                        Alignment, CostKind, I);
   }
