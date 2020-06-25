@@ -276,6 +276,9 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
 #elif defined(TARGET_OS_WATCHOS) && TARGET_OS_WATCHOS == 1
         arch_32.GetTriple().setOS(llvm::Triple::WatchOS);
         arch_64.GetTriple().setOS(llvm::Triple::WatchOS);
+#elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
+        arch_32.GetTriple().setOS(llvm::Triple::MacOSX);
+        arch_64.GetTriple().setOS(llvm::Triple::MacOSX);
 #else
         arch_32.GetTriple().setOS(llvm::Triple::IOS);
         arch_64.GetTriple().setOS(llvm::Triple::IOS);
