@@ -2661,3 +2661,11 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
 void PassBuilder::setEnableHotColdSplitting(bool Enabled) {
   SplitColdCode = Enabled;
 }
+
+bool PassBuilder::isAAPassName(StringRef PassName) {
+#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
+  if (PassName == NAME)                                                        \
+    return true;
+#include "PassRegistry.def"
+  return false;
+}
