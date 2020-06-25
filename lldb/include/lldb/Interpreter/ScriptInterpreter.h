@@ -9,16 +9,16 @@
 #ifndef LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 #define LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 
-#include "lldb/lldb-private.h"
-
 #include "lldb/Breakpoint/BreakpointOptions.h"
+#include "lldb/Core/Communication.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
+#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
-
-#include "lldb/Host/PseudoTerminal.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -32,6 +32,37 @@ private:
   ScriptInterpreterLocker(const ScriptInterpreterLocker &) = delete;
   const ScriptInterpreterLocker &
   operator=(const ScriptInterpreterLocker &) = delete;
+};
+
+class ScriptInterpreterIORedirect {
+public:
+  /// Create an IO redirect with /dev/null as input, output and error file.
+  static llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>> Create();
+
+  /// Create an IO redirect that redirects the output to the command return
+  /// object if set or to the debugger otherwise.
+  static llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>>
+  Create(Debugger &debugger, CommandReturnObject *result);
+
+  ~ScriptInterpreterIORedirect();
+
+  lldb::FileSP GetInputFile() const { return m_input_file_sp; }
+  lldb::FileSP GetOutputFile() const { return m_output_file_sp->GetFileSP(); }
+  lldb::FileSP GetErrorFile() const { return m_error_file_sp->GetFileSP(); }
+
+  /// Flush our output and error file handles.
+  void Flush();
+
+private:
+  ScriptInterpreterIORedirect(std::unique_ptr<File> input,
+                              std::unique_ptr<File> output);
+  ScriptInterpreterIORedirect(Debugger &debugger, CommandReturnObject *result);
+
+  lldb::FileSP m_input_file_sp;
+  lldb::StreamFileSP m_output_file_sp;
+  lldb::StreamFileSP m_error_file_sp;
+  Communication m_communication;
+  bool m_disconnect;
 };
 
 class ScriptInterpreter : public PluginInterface {
