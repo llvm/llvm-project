@@ -492,3 +492,14 @@ func @dont_canonicalize_rank(%arg : tensor<*xf32>) -> !shape.size {
 %rank = shape.rank %shape
 return %rank : !shape.size
 }
+
+// Canonicalize redundant conversion from `index` to `size` and back.
+// CHECK-LABEL: @index_to_size_to_index
+// CHECK-SAME: (%[[IDX:.*]]: index) -> index
+func @index_to_size_to_index(%index : index) -> index {
+  // CHECK: return %[[IDX]] : index
+  %size = shape.index_to_size %index
+  %result = shape.size_to_index %size
+  return %result : index
+}
+
