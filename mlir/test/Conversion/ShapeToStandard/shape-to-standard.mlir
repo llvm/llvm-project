@@ -86,7 +86,6 @@ func @size_const() -> !shape.size {
 }
 // CHECK: %[[C1:.*]] = constant 1 : index
 // CHECK: return %[[C1]] : index
-
 // -----
 
 // Lower `shape_of` for statically shaped tensor.
@@ -114,4 +113,17 @@ func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
   // CHECK-DAG: %[[SHAPE:.*]] = tensor_from_elements(%[[C1]], %[[C5]], %[[DYN_DIM]]) : tensor<3xindex>
   %shape = shape.shape_of %arg : tensor<1x5x?xf32>
   return
+}
+
+// -----
+
+// Convert `rank` to `dim` of the first dimension.
+// CHECK-LABEL: @rank
+// CHECK-SAME: (%[[SHAPE:.*]]: tensor<?xindex>) -> index
+func @rank(%shape : !shape.shape) -> !shape.size {
+  // CHECK-DAG: %[[C0:.*]] = constant 0 : index
+  // CHECK-DAG: %[[RESULT:.*]] = dim %[[SHAPE]], %[[C0]]
+  // CHECK-DAG: return %[[RESULT]] : index
+  %rank = shape.rank %shape
+  return %rank : !shape.size
 }
