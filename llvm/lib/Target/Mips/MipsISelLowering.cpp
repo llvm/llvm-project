@@ -2908,8 +2908,8 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
   // argument which is not f32 or f64.
   bool AllocateFloatsInIntReg = State.isVarArg() || ValNo > 1 ||
                                 State.getFirstUnallocated(F32Regs) != ValNo;
-  unsigned OrigAlign = ArgFlags.getOrigAlign();
-  bool isI64 = (ValVT == MVT::i32 && OrigAlign == 8);
+  Align OrigAlign = ArgFlags.getNonZeroOrigAlign();
+  bool isI64 = (ValVT == MVT::i32 && OrigAlign == Align(8));
   bool isVectorFloat = MipsState->WasOriginalArgVectorFloat(ValNo);
 
   // The MIPS vector ABI for floats passes them in a pair of registers
@@ -2963,8 +2963,7 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
     llvm_unreachable("Cannot handle this ValVT.");
 
   if (!Reg) {
-    unsigned Offset =
-        State.AllocateStack(ValVT.getStoreSize(), Align(OrigAlign));
+    unsigned Offset = State.AllocateStack(ValVT.getStoreSize(), OrigAlign);
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
   } else
     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
