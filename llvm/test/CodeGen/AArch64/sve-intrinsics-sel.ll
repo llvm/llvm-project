@@ -57,6 +57,16 @@ define <vscale x 2 x i64> @sel_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a,
   ret <vscale x 2 x i64> %out
 }
 
+define <vscale x 8 x bfloat> @sel_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; CHECK-LABEL: sel_bf16:
+; CHECK: sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.sel.nxv8bf16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x bfloat> %a,
+                                                                   <vscale x 8 x bfloat> %b)
+  ret <vscale x 8 x bfloat> %out
+}
+
 define <vscale x 8 x half> @sel_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: sel_f16:
 ; CHECK: sel z0.h, p0, z0.h, z1.h
@@ -92,6 +102,7 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.sel.nxv16i8(<vscale x 16 x i1>, <vs
 declare <vscale x 8 x i16> @llvm.aarch64.sve.sel.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.sel.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.sel.nxv8bf16(<vscale x 8 x i1>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
 declare <vscale x 8 x half> @llvm.aarch64.sve.sel.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.sel.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)

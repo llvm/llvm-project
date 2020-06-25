@@ -5934,6 +5934,7 @@ typedef void *CXEvalResult;
  * If cursor is a statement declaration tries to evaluate the
  * statement and if its variable, tries to evaluate its initializer,
  * into its corresponding type.
+ * If it's an expression, tries to evaluate the expression.
  */
 CINDEX_LINKAGE CXEvalResult clang_Cursor_Evaluate(CXCursor C);
 

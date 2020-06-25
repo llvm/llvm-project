@@ -7726,6 +7726,8 @@ CodeGenFunction::getSVEPredType(SVETypeFlags TypeFlags) {
   case SVETypeFlags::EltTyInt64:
     return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 2);
 
+  case SVETypeFlags::EltTyBFloat16:
+    return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 8);
   case SVETypeFlags::EltTyFloat16:
     return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 8);
   case SVETypeFlags::EltTyFloat32:
@@ -8434,6 +8436,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svpfalse_b:
     return ConstantInt::getFalse(Ty);
 
+  case SVE::BI__builtin_sve_svlen_bf16:
   case SVE::BI__builtin_sve_svlen_f16:
   case SVE::BI__builtin_sve_svlen_f32:
   case SVE::BI__builtin_sve_svlen_f64:

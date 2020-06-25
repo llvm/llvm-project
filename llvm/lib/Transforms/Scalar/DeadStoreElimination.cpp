@@ -1535,7 +1535,7 @@ struct DSEState {
 
         auto *MD = dyn_cast_or_null<MemoryDef>(MA);
         if (MD && State.MemDefs.size() < MemorySSADefsPerBlockLimit &&
-            hasAnalyzableMemoryWrite(&I, TLI) && isRemovable(&I))
+            State.getLocForWriteEx(&I) && isRemovable(&I))
           State.MemDefs.push_back(MD);
 
         // Track whether alloca and alloca-like objects are visible in the
@@ -1621,7 +1621,54 @@ struct DSEState {
                        UseInst, IOL, AA, &F) == OW_Complete;
   }
 
-  /// Returns true if \p Use may read from \p DefLoc.
+  /// Returns true if \p Def is not read before returning from the function.
+  bool isWriteAtEndOfFunction(MemoryDef *Def) {
+    LLVM_DEBUG(dbgs() << "  Check if def " << *Def << " ("
+                      << *Def->getMemoryInst()
+                      << ") is at the end the function \n");
+
+    auto MaybeLoc = getLocForWriteEx(Def->getMemoryInst());
+    if (!MaybeLoc) {
+      LLVM_DEBUG(dbgs() << "  ... could not get location for write.\n");
+      return false;
+    }
+
+    SmallVector<MemoryAccess *, 4> WorkList;
+    SmallPtrSet<MemoryAccess *, 8> Visited;
+    auto PushMemUses = [&WorkList, &Visited](MemoryAccess *Acc) {
+      if (!Visited.insert(Acc).second)
+        return;
+      for (Use &U : Acc->uses())
+        WorkList.push_back(cast<MemoryAccess>(U.getUser()));
+    };
+    PushMemUses(Def);
+    for (unsigned I = 0; I < WorkList.size(); I++) {
+      if (WorkList.size() >= MemorySSAScanLimit) {
+        LLVM_DEBUG(dbgs() << "  ... hit exploration limit.\n");
+        return false;
+      }
+
+      MemoryAccess *UseAccess = WorkList[I];
+      if (isa<MemoryPhi>(UseAccess)) {
+        PushMemUses(UseAccess);
+        continue;
+      }
+
+      // TODO: Checking for aliasing is expensive. Consider reducing the amount
+      // of times this is called and/or caching it.
+      Instruction *UseInst = cast<MemoryUseOrDef>(UseAccess)->getMemoryInst();
+      if (isReadClobber(*MaybeLoc, UseInst)) {
+        LLVM_DEBUG(dbgs() << "  ... hit read clobber " << *UseInst << ".\n");
+        return false;
+      }
+
+      if (MemoryDef *UseDef = dyn_cast<MemoryDef>(UseAccess))
+        PushMemUses(UseDef);
+    }
+    return true;
+  }
+
+  // Returns true if \p Use may read from \p DefLoc.
   bool isReadClobber(MemoryLocation DefLoc, Instruction *UseInst) const {
     if (!UseInst->mayReadFromMemory())
       return false;
@@ -1923,6 +1970,47 @@ struct DSEState {
     return false;
   }
 
+  /// Eliminate writes to objects that are not visible in the caller and are not
+  /// accessed before returning from the function.
+  bool eliminateDeadWritesAtEndOfFunction() {
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    bool MadeChange = false;
+    LLVM_DEBUG(
+        dbgs()
+        << "Trying to eliminate MemoryDefs at the end of the function\n");
+    for (int I = MemDefs.size() - 1; I >= 0; I--) {
+      MemoryDef *Def = MemDefs[I];
+      if (SkipStores.find(Def) != SkipStores.end())
+        continue;
+
+      // TODO: Consider doing the underlying object check first, if it is
+      // beneficial compile-time wise.
+      if (isWriteAtEndOfFunction(Def)) {
+        Instruction *DefI = Def->getMemoryInst();
+        // See through pointer-to-pointer bitcasts
+        SmallVector<const Value *, 4> Pointers;
+        GetUnderlyingObjects(getLocForWriteEx(DefI)->Ptr, Pointers, DL);
+
+        LLVM_DEBUG(dbgs() << "   ... MemoryDef is not accessed until the end "
+                             "of the function\n");
+        bool CanKill = true;
+        for (const Value *Pointer : Pointers) {
+          if (!InvisibleToCallerAfterRet.count(Pointer)) {
+            CanKill = false;
+            break;
+          }
+        }
+
+        if (CanKill) {
+          deleteDeadInstruction(DefI);
+          ++NumFastStores;
+          MadeChange = true;
+        }
+      }
+    }
+    return MadeChange;
+  }
+
   /// \returns true if \p Def is a no-op store, either because it
   /// directly stores back a loaded value or stores zero to a calloced object.
   bool storeIsNoop(MemoryDef *Def, MemoryLocation DefLoc, const Value *DefUO) {
@@ -2122,6 +2210,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     for (auto &KV : State.IOLs)
       MadeChange |= removePartiallyOverlappedStores(&AA, DL, KV.second);
 
+  MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
   return MadeChange;
 }
 } // end anonymous namespace

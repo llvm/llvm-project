@@ -48,6 +48,7 @@ config.have_opt_viewer_modules = @LLVM_HAVE_OPT_VIEWER_MODULES@
 config.libcxx_used = @LLVM_LIBCXX_USED@
 config.has_plugins = @LLVM_ENABLE_PLUGINS@
 config.linked_bye_extension = @LLVM_BYE_LINK_INTO_TOOLS@
+config.have_tf_aot = ("@LLVM_HAVE_TF_AOT@" == "ON")
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

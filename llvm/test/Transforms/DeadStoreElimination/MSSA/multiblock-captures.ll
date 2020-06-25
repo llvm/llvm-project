@@ -207,15 +207,12 @@ exit:
   call void @capture(i8* %m)
   ret i8* %m
 }
-; TODO: Remove store in exit.
 ; Stores to stack objects can be eliminated if they are not captured inside the function.
 define void @test_alloca_nocapture_1() {
 ; CHECK-LABEL: @test_alloca_nocapture_1(
-; CHECK-NEXT:    [[M:%.*]] = alloca i8
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8
@@ -228,7 +225,6 @@ exit:
   ret void
 }
 
-; TODO: Remove store in exit.
 ; Cannot remove first store i8 0, i8* %m, as the call to @capture captures the object.
 define void @test_alloca_capture_1() {
 ; CHECK-LABEL: @test_alloca_capture_1(
@@ -237,7 +233,6 @@ define void @test_alloca_capture_1() {
 ; CHECK-NEXT:    call void @capture(i8* [[M]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store i8 1, i8* [[M]]
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8
@@ -250,7 +245,6 @@ exit:
   ret void
 }
 
-; TODO: Remove store at exit.
 ; We can remove the last store to %m, even though it escapes because the alloca
 ; becomes invalid after the function returns.
 define void @test_alloca_capture_2(%S1* %E) {
@@ -260,7 +254,6 @@ define void @test_alloca_capture_2(%S1* %E) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[F_PTR:%.*]] = getelementptr [[S1:%.*]], %S1* [[E:%.*]], i32 0, i32 0
 ; CHECK-NEXT:    store i8* [[M]], i8** [[F_PTR]]
-; CHECK-NEXT:    store i8 1, i8* [[M]]
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca i8

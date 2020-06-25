@@ -242,6 +242,7 @@ FUNCTION_PASS("print<stack-safety-local>", StackSafetyPrinterPass(dbgs()))
 FUNCTION_PASS("reassociate", ReassociatePass())
 FUNCTION_PASS("scalarizer", ScalarizerPass())
 FUNCTION_PASS("sccp", SCCPPass())
+FUNCTION_PASS("simplifycfg", SimplifyCFGPass())
 FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
@@ -341,6 +342,7 @@ LOOP_PASS("print<loopnest>", LoopNestPrinterPass(dbgs()))
 LOOP_PASS("print<loop-cache-cost>", LoopCachePrinterPass(dbgs()))
 LOOP_PASS("loop-predication", LoopPredicationPass())
 LOOP_PASS("guard-widening", GuardWideningPass())
+LOOP_PASS("simple-loop-unswitch", SimpleLoopUnswitchPass())
 #undef LOOP_PASS
 
 #ifndef LOOP_PASS_WITH_PARAMS

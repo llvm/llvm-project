@@ -87,6 +87,14 @@ define <vscale x 8 x half> @masked_load_nxv8f16(<vscale x 8 x half> *%a, <vscale
   ret <vscale x 8 x half> %load
 }
 
+define <vscale x 8 x bfloat> @masked_load_nxv8bf16(<vscale x 8 x bfloat> *%a, <vscale x 8 x i1> %mask) nounwind {
+; CHECK-LABEL: masked_load_nxv8bf16:
+; CHECK-NEXT: ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT: ret
+  %load = call <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16(<vscale x 8 x bfloat> *%a, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> undef)
+  ret <vscale x 8 x bfloat> %load
+}
+
 ;
 ; Masked Stores
 ;
@@ -182,6 +190,7 @@ declare <vscale x 2 x half> @llvm.masked.load.nxv2f16(<vscale x 2 x half>*, i32,
 declare <vscale x 4 x float> @llvm.masked.load.nxv4f32(<vscale x 4 x float>*, i32, <vscale x 4 x i1>, <vscale x 4 x float>)
 declare <vscale x 4 x half> @llvm.masked.load.nxv4f16(<vscale x 4 x half>*, i32, <vscale x 4 x i1>, <vscale x 4 x half>)
 declare <vscale x 8 x half> @llvm.masked.load.nxv8f16(<vscale x 8 x half>*, i32, <vscale x 8 x i1>, <vscale x 8 x half>)
+declare <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16(<vscale x 8 x bfloat>*, i32, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
 
 declare void @llvm.masked.store.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>*, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.store.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>*, i32, <vscale x 4 x i1>)
