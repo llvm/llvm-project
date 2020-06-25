@@ -847,6 +847,7 @@ def ProcessorFeatures {
                                                          FeatureFXSR,
                                                          FeatureNOPL,
                                                          FeatureCMPXCHG16B,
+                                                         FeaturePRFCHW,
                                                          FeatureLZCNT,
                                                          FeaturePOPCNT,
                                                          FeatureSlowSHLD,
