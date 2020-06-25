@@ -145,7 +145,7 @@ NestedPattern For(FilterFunctionType filter, ArrayRef<NestedPattern> nested) {
 }
 
 bool isLoadOrStore(Operation &op) {
-  return isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op);
+  return isa<AffineLoadOp, AffineStoreOp>(op);
 }
 
 } // end namespace matcher

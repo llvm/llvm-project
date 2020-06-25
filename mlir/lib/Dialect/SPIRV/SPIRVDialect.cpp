@@ -45,8 +45,7 @@ using namespace mlir::spirv;
 static inline bool containsReturn(Region &region) {
   return llvm::any_of(region, [](Block &block) {
     Operation *terminator = block.getTerminator();
-    return isa<spirv::ReturnOp>(terminator) ||
-           isa<spirv::ReturnValueOp>(terminator);
+    return isa<spirv::ReturnOp, spirv::ReturnValueOp>(terminator);
   });
 }
 
@@ -62,8 +61,7 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
     // Return true here when inlining into spv.func, spv.selection, and
     // spv.loop operations.
     auto *op = dest->getParentOp();
-    return isa<spirv::FuncOp>(op) || isa<spirv::SelectionOp>(op) ||
-           isa<spirv::LoopOp>(op);
+    return isa<spirv::FuncOp, spirv::SelectionOp, spirv::LoopOp>(op);
   }
 
   /// Returns true if the given operation 'op', that is registered to this
@@ -72,7 +70,7 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *op, Region *dest,
                        BlockAndValueMapping &) const final {
     // TODO(antiagainst): Enable inlining structured control flows with return.
-    if ((isa<spirv::SelectionOp>(op) || isa<spirv::LoopOp>(op)) &&
+    if ((isa<spirv::SelectionOp, spirv::LoopOp>(op)) &&
         containsReturn(op->getRegion(0)))
       return false;
     // TODO(antiagainst): we need to filter OpKill here to avoid inlining it to

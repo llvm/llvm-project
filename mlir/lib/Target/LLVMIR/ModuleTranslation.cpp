@@ -129,7 +129,7 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
     // another sequence type. The recursion terminates because each step removes
     // one outer sequential type.
     bool elementTypeSequential =
-        isa<llvm::ArrayType>(elementType) || isa<llvm::VectorType>(elementType);
+        isa<llvm::ArrayType, llvm::VectorType>(elementType);
     llvm::Constant *child = getLLVMConstant(
         elementType,
         elementTypeSequential ? splatAttr : splatAttr.getSplatValue(), loc);
