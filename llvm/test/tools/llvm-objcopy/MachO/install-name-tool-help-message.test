@@ -1,10 +1,10 @@
-# RUN: llvm-install-name-tool -h | FileCheck --check-prefix=INSTALL-NAME-TOOL-USAGE %s
-# RUN: llvm-install-name-tool --help | FileCheck --check-prefix=INSTALL-NAME-TOOL-USAGE %s
-# RUN: not llvm-install-name-tool 2>&1 | FileCheck --check-prefix=INSTALL-NAME-TOOL-USAGE %s
+# RUN: llvm-install-name-tool -h | FileCheck --check-prefix=INSTALL-NAME-TOOL-USAGE %s --match-full-lines
+# RUN: llvm-install-name-tool --help | FileCheck --check-prefix=INSTALL-NAME-TOOL-USAGE %s --match-full-lines
+# RUN: not llvm-install-name-tool 2>&1 | FileCheck --check-prefix=INSTALL-NAME-TOOL-USAGE %s --match-full-lines
 # RUN: not llvm-install-name-tool -abcabc 2>&1 | FileCheck --check-prefix=UNKNOWN-ARG %s
 # RUN: not llvm-install-name-tool --abcabc 2>&1 | FileCheck --check-prefix=UNKNOWN-ARG %s
 
-# INSTALL-NAME-TOOL-USAGE: USAGE: llvm-install-name-tool
-# INSTALL-NAME-TOOL-USAGE: @FILE
+# INSTALL-NAME-TOOL-USAGE: USAGE: llvm-install-name-tool [options] input
+# INSTALL-NAME-TOOL-USAGE: Pass @FILE as argument to read options from FILE.
 
 # UNKNOWN-ARG: unknown argument '{{-+}}abcabc'
