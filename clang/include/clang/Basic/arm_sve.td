@@ -928,6 +928,10 @@ defm SVCLS : SInstCLS<"svcls", "csil",            "aarch64_sve_cls">;
 defm SVCLZ : SInstCLS<"svclz", "csilUcUsUiUl",    "aarch64_sve_clz">;
 defm SVCNT : SInstCLS<"svcnt", "csilUcUsUiUlhfd", "aarch64_sve_cnt">;
 
+let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
+  defm SVCNT_BF16 : SInstCLS<"svcnt", "b", "aarch64_sve_cnt">;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Conversion
 
@@ -1177,6 +1181,11 @@ def SVREV        : SInst<"svrev[_{d}]",       "dd",   "csilUcUsUiUlhfd", MergeNo
 def SVSEL        : SInst<"svsel[_{d}]",       "dPdd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_sel">;
 def SVSPLICE     : SInst<"svsplice[_{d}]",    "dPdd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_splice">;
 def SVTBL        : SInst<"svtbl[_{d}]",       "ddu",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tbl">;
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
+  def SVTBL_BF16 : SInst<"svtbl[_{d}]",       "ddu",  "b",               MergeNone, "aarch64_sve_tbl">;
+}
+
 def SVTRN1       : SInst<"svtrn1[_{d}]",      "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_trn1">;
 def SVTRN2       : SInst<"svtrn2[_{d}]",      "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_trn2">;
 def SVUNPKHI_S   : SInst<"svunpkhi[_{d}]",    "dh",   "sil",             MergeNone, "aarch64_sve_sunpkhi">;
@@ -1972,6 +1981,11 @@ def SVWHILEWR_H_BF16 : SInst<"svwhilewr[_{1}]", "Pcc", "b", MergeNone, "aarch64_
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 def SVTBL2 : SInst<"svtbl2[_{d}]", "d2u",  "csilUcUsUiUlhfd", MergeNone>;
 def SVTBX  : SInst<"svtbx[_{d}]",  "dddu", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tbx">;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2) && defined(__ARM_FEATURE_SVE_BF16)" in {
+def SVTBL2_BF16 : SInst<"svtbl2[_{d}]", "d2u",  "b", MergeNone>;
+def SVTBX_BF16  : SInst<"svtbx[_{d}]",  "dddu", "b", MergeNone, "aarch64_sve_tbx">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
