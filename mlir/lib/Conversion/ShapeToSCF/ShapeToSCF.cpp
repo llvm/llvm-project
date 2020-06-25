@@ -70,6 +70,58 @@ ReduceOpConverter::matchAndRewrite(ReduceOp reduceOp,
 }
 
 namespace {
+/// Converts `shape_of` to for loop for unranked tensors.
+class ShapeOfOpConverter : public OpConversionPattern<ShapeOfOp> {
+public:
+  using OpConversionPattern<ShapeOfOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ShapeOfOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+} // namespace
+
+LogicalResult
+ShapeOfOpConverter::matchAndRewrite(ShapeOfOp op, ArrayRef<Value> operands,
+                                    ConversionPatternRewriter &rewriter) const {
+  ShapeOfOp::Adaptor transformed(operands);
+  auto tensorVal = transformed.arg();
+  auto tensorTy = tensorVal.getType();
+
+  // For ranked tensors `shape_of` lowers to `std` and the pattern can be
+  // found in the corresponding pass.
+  if (tensorTy.isa<RankedTensorType>())
+    return failure();
+
+  // Allocate stack memory.
+  auto loc = op.getLoc();
+  auto rankVal = rewriter.create<RankOp>(loc, tensorVal);
+  auto i64Ty = rewriter.getI64Type();
+  auto memTy = MemRefType::get({ShapedType::kDynamicSize}, i64Ty);
+  auto memVal = rewriter.create<AllocaOp>(loc, memTy, ValueRange({rankVal}));
+
+  // Copy shape extents to stack-allocated memory.
+  auto zeroVal = rewriter.create<ConstantIndexOp>(loc, 0);
+  auto oneVal = rewriter.create<ConstantIndexOp>(loc, 1);
+  rewriter.create<scf::ForOp>(
+      loc, zeroVal, rankVal, oneVal, ValueRange(),
+      [&](OpBuilder &b, Location loc, Value iVal, ValueRange args) {
+        auto dimVal = b.create<DimOp>(loc, tensorVal, iVal);
+        auto dimIntVal = b.create<IndexCastOp>(loc, dimVal, i64Ty);
+        b.create<StoreOp>(loc, dimIntVal, memVal, ValueRange({iVal}));
+        b.create<scf::YieldOp>(loc);
+      });
+
+  // Load extents to tensor value.
+  auto shapeIntVal = rewriter.create<TensorLoadOp>(loc, memVal);
+  auto indexTy = rewriter.getIndexType();
+  auto shapeTy = RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
+  rewriter.replaceOpWithNewOp<IndexCastOp>(op.getOperation(), shapeIntVal,
+                                           shapeTy);
+  return success();
+}
+
+namespace {
 struct ConvertShapeToSCFPass
     : public ConvertShapeToSCFBase<ConvertShapeToSCFPass> {
   void runOnFunction() override;
@@ -79,19 +131,23 @@ struct ConvertShapeToSCFPass
 void ConvertShapeToSCFPass::runOnFunction() {
   MLIRContext &ctx = getContext();
 
+  // Populate conversion patterns.
   OwningRewritePatternList patterns;
   populateShapeToSCFConversionPatterns(patterns, &ctx);
 
+  // Setup target legality.
   ConversionTarget target(getContext());
   target.addLegalDialect<ShapeDialect, scf::SCFDialect, StandardOpsDialect>();
-  target.addIllegalOp<ReduceOp>();
-  if (failed(mlir::applyPartialConversion(getFunction(), target, patterns)))
+  target.addIllegalOp<ReduceOp, ShapeOfOp>();
+
+  // Apply conversion.
+  if (failed(applyPartialConversion(getFunction(), target, patterns)))
     signalPassFailure();
 }
 
 void mlir::populateShapeToSCFConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
-  patterns.insert<ReduceOpConverter>(ctx);
+  patterns.insert<ReduceOpConverter, ShapeOfOpConverter>(ctx);
 }
 
 std::unique_ptr<FunctionPass> mlir::createConvertShapeToSCFPass() {
