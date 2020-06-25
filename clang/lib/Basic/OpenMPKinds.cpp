@@ -580,7 +580,7 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
-  assert(DKind <= OMPD_unknown);
+  assert(unsigned(DKind) < llvm::omp::Directive_enumSize);
   switch (DKind) {
   case OMPD_parallel:
   case OMPD_parallel_for:
