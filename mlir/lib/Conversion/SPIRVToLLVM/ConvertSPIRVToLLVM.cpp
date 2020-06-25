@@ -278,6 +278,43 @@ public:
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// ModuleOp conversion
+//===----------------------------------------------------------------------===//
+
+class ModuleConversionPattern : public SPIRVToLLVMConversion<spirv::ModuleOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::ModuleOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::ModuleOp spvModuleOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto newModuleOp = rewriter.create<ModuleOp>(spvModuleOp.getLoc());
+    rewriter.inlineRegionBefore(spvModuleOp.body(), newModuleOp.getBody());
+
+    // Remove the terminator block that was automatically added by builder
+    rewriter.eraseBlock(&newModuleOp.getBodyRegion().back());
+    rewriter.eraseOp(spvModuleOp);
+    return success();
+  }
+};
+
+class ModuleEndConversionPattern
+    : public SPIRVToLLVMConversion<spirv::ModuleEndOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::ModuleEndOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::ModuleEndOp moduleEndOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    rewriter.replaceOpWithNewOp<ModuleTerminatorOp>(moduleEndOp);
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -360,4 +397,11 @@ void mlir::populateSPIRVToLLVMFunctionConversionPatterns(
     MLIRContext *context, LLVMTypeConverter &typeConverter,
     OwningRewritePatternList &patterns) {
   patterns.insert<FuncConversionPattern>(context, typeConverter);
+}
+
+void mlir::populateSPIRVToLLVMModuleConversionPatterns(
+    MLIRContext *context, LLVMTypeConverter &typeConverter,
+    OwningRewritePatternList &patterns) {
+  patterns.insert<ModuleConversionPattern, ModuleEndConversionPattern>(
+      context, typeConverter);
 }
