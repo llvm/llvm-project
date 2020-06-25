@@ -3671,12 +3671,17 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
       return false;
 
     Register Reg = getRegForValue(I->getOperand(0));
-    if (Reg == 0)
+    if (!Reg)
       return false;
 
-    // No instruction is needed for conversion. Reuse the register used by
-    // the fist operand.
-    updateValueMap(I, Reg);
+    // Emit a reg-reg copy so we don't propagate cached known bits information
+    // with the wrong VT if we fall out of fast isel after selecting this.
+    const TargetRegisterClass *DstClass = TLI.getRegClassFor(DstVT);
+    Register ResultReg = createResultReg(DstClass);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::COPY), ResultReg).addReg(Reg);
+
+    updateValueMap(I, ResultReg);
     return true;
   }
   }
