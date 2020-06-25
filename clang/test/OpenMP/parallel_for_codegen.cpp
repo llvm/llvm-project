@@ -1,6 +1,12 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=OMP50,CHECK
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=OMP45,CHECK
+
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=OMP50,CHECK
+
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=OMP45,CHECK
+
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -O1 -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=CLEANUP
 
@@ -194,7 +200,8 @@ void dynamic1(float *a, float *b, float *c, float *d) {
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
 // CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
-// CHECK: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 35, i64 0, i64 16908287, i64 1, i64 1)
+// OMP45: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 35, i64 0, i64 16908287, i64 1, i64 1)
+// OMP50: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 1073741859, i64 0, i64 16908287, i64 1, i64 1)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32* [[OMP_ISLAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
@@ -237,7 +244,8 @@ void guided7(float *a, float *b, float *c, float *d) {
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
 // CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
-// CHECK: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 36, i64 0, i64 16908287, i64 1, i64 7)
+// OMP45: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 36, i64 0, i64 16908287, i64 1, i64 7)
+// OMP50: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 1073741860, i64 0, i64 16908287, i64 1, i64 7)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32* [[OMP_ISLAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
@@ -282,7 +290,8 @@ void test_auto(float *a, float *b, float *c, float *d) {
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 5, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
 // CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, i32* nonnull align 4 dereferenceable(4) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
-// CHECK: call void @__kmpc_dispatch_init_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 38, i64 0, i64 [[LAST_ITER:%[^,]+]], i64 1, i64 1)
+// OMP45: call void @__kmpc_dispatch_init_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 38, i64 0, i64 [[LAST_ITER:%[^,]+]], i64 1, i64 1)
+// OMP50: call void @__kmpc_dispatch_init_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 1073741862, i64 0, i64 [[LAST_ITER:%[^,]+]], i64 1, i64 1)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32* [[OMP_ISLAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
@@ -326,7 +335,8 @@ void runtime(float *a, float *b, float *c, float *d) {
 // CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float**, float**, float**, float**)* [[OMP_PARALLEL_FUNC:@.+]] to void (i32*, i32*, ...)*),
 // CHECK: define internal void [[OMP_PARALLEL_FUNC]](i32* noalias [[GTID_PARAM_ADDR:%.+]], i32* noalias %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}}, float** nonnull align 8 dereferenceable(8) %{{.+}})
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
-// CHECK: call void @__kmpc_dispatch_init_4([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 37, i32 0, i32 199, i32 1, i32 1)
+// OMP45: call void @__kmpc_dispatch_init_4([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 37, i32 0, i32 199, i32 1, i32 1)
+// OMP50: call void @__kmpc_dispatch_init_4([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 1073741861, i32 0, i32 199, i32 1, i32 1)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_4([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32* [[OMP_ISLAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
