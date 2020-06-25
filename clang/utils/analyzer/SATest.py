@@ -108,8 +108,10 @@ def docker(parser, args):
 
     if args.build_image:
         docker_build_image()
+    elif args.shell:
+        docker_shell(args)
     else:
-        docker_run(args)
+        sys.exit(docker_run(args, ' '.join(args.rest)))
 
 
 def docker_build_image():
@@ -117,21 +119,40 @@ def docker_build_image():
                   shell=True))
 
 
-def docker_run(args):
-    sys.exit(call("docker run --rm --name satest "
-                  "-v {llvm}:/llvm-project "
-                  "-v {build}:/build "
-                  "-v {clang}:/analyzer "
-                  "-v {scripts}:/scripts "
-                  "-v {projects}:/projects "
-                  "satest-image:latest {args}"
-                  .format(llvm=args.llvm_project_dir,
-                          build=args.build_dir,
-                          clang=args.clang_dir,
-                          scripts=SCRIPTS_DIR,
-                          projects=PROJECTS_DIR,
-                          args=' '.join(args.rest)),
-                  shell=True))
+def docker_shell(args):
+    try:
+        # First we need to start the docker container in a waiting mode,
+        # so it doesn't do anything, but most importantly keeps working
+        # while the shell session is in progress.
+        docker_run(args, "--wait", "--detach")
+        # Since the docker container is running, we can actually connect to it
+        call("docker exec -it satest bash", shell=True)
+
+    except KeyboardInterrupt:
+        pass
+
+    finally:
+        print("Please wait for docker to clean up")
+        call("docker stop satest", shell=True)
+
+
+def docker_run(args, command, docker_args=""):
+    return call("docker run --rm --name satest "
+                "-v {llvm}:/llvm-project "
+                "-v {build}:/build "
+                "-v {clang}:/analyzer "
+                "-v {scripts}:/scripts "
+                "-v {projects}:/projects "
+                "{docker_args} "
+                "satest-image:latest {command}"
+                .format(llvm=args.llvm_project_dir,
+                        build=args.build_dir,
+                        clang=args.clang_dir,
+                        scripts=SCRIPTS_DIR,
+                        projects=PROJECTS_DIR,
+                        docker_args=docker_args,
+                        command=command),
+                shell=True)
 
 
 def main():
