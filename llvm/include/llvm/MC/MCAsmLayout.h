@@ -49,6 +49,10 @@ public:
   /// Get the assembler object this is a layout for.
   MCAssembler &getAssembler() const { return Assembler; }
 
+  /// \returns whether the offset of fragment \p F can be obtained via
+  /// getFragmentOffset.
+  bool canGetFragmentOffset(const MCFragment *F) const;
+
   /// Invalidate the fragments starting with F because it has been
   /// resized. The fragment's size should have already been updated, but
   /// its bundle padding will be recomputed.
