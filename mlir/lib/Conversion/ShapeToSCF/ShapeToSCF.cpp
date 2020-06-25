@@ -95,7 +95,7 @@ ShapeOfOpConverter::matchAndRewrite(ShapeOfOp op, ArrayRef<Value> operands,
 
   // Allocate stack memory.
   auto loc = op.getLoc();
-  auto rankVal = rewriter.create<RankOp>(loc, tensorVal);
+  auto rankVal = rewriter.create<mlir::RankOp>(loc, tensorVal);
   auto i64Ty = rewriter.getI64Type();
   auto memTy = MemRefType::get({ShapedType::kDynamicSize}, i64Ty);
   auto memVal = rewriter.create<AllocaOp>(loc, memTy, ValueRange({rankVal}));
