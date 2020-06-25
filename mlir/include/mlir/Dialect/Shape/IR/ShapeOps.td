@@ -179,6 +179,8 @@ def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
   let results = (outs Shape_SizeType:$rank);
 
   let assemblyFormat = "attr-dict $shape";
+
+  let hasFolder = 1;
 }
 
 def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [NoSideEffect]> {

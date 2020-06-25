@@ -442,3 +442,27 @@ func @f(%arg0 : !shape.shape) {
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
+
+// -----
+
+// Fold `rank` based on constant shape.
+// CHECK-LABEL: @fold_rank
+func @fold_rank() -> !shape.size {
+  // CHECK-DAG: %[[RESULT:.*]] = shape.const_size 5
+  // CHECK-DAG: return %[[RESULT]] : !shape.size
+  %shape = shape.const_shape [3, 4, 5, 6, 7]
+  %rank = shape.rank %shape
+  return %rank : !shape.size
+}
+
+// -----
+
+// Do not fold `rank` if shape is dynamic.
+// CHECK-LABEL: @dont_fold_rank
+// CHECK-SAME: (%[[SHAPE:.*]]: !shape.shape) -> !shape.size
+func @dont_fold_rank(%shape : !shape.shape) -> !shape.size {
+  // CHECK-DAG: %[[RESULT:.*]] = shape.rank %[[SHAPE]]
+  // CHECK-DAG: return %[[RESULT]] : !shape.size
+  %rank = shape.rank %shape
+  return %rank : !shape.size
+}
