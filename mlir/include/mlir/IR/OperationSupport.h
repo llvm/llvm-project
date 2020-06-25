@@ -19,7 +19,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/InterfaceSupport.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
@@ -136,8 +136,7 @@ public:
   /// was registered to this operation, null otherwise. This should not be used
   /// directly.
   template <typename T> typename T::Concept *getInterface() const {
-    return reinterpret_cast<typename T::Concept *>(
-        getRawInterface(T::getInterfaceID()));
+    return interfaceMap.lookup<T>();
   }
 
   /// Returns if the operation has a particular trait.
@@ -157,7 +156,7 @@ public:
         T::getOperationName(), dialect, T::getOperationProperties(),
         TypeID::get<T>(), T::parseAssembly, T::printAssembly,
         T::verifyInvariants, T::foldHook, T::getCanonicalizationPatterns,
-        T::getRawInterface, T::hasTrait);
+        T::getInterfaceMap(), T::hasTrait);
   }
 
 private:
@@ -171,22 +170,19 @@ private:
                                 SmallVectorImpl<OpFoldResult> &results),
       void (&getCanonicalizationPatterns)(OwningRewritePatternList &results,
                                           MLIRContext *context),
-      void *(&getRawInterface)(TypeID interfaceID),
-      bool (&hasTrait)(TypeID traitID))
+      detail::InterfaceMap &&interfaceMap, bool (&hasTrait)(TypeID traitID))
       : name(name), dialect(dialect), typeID(typeID),
         parseAssembly(parseAssembly), printAssembly(printAssembly),
         verifyInvariants(verifyInvariants), foldHook(foldHook),
         getCanonicalizationPatterns(getCanonicalizationPatterns),
-        opProperties(opProperties), getRawInterface(getRawInterface),
+        opProperties(opProperties), interfaceMap(std::move(interfaceMap)),
         hasRawTrait(hasTrait) {}
 
   /// The properties of the operation.
   const OperationProperties opProperties;
 
-  /// Returns a raw instance of the concept for the given interface id if it is
-  /// registered to this operation, nullptr otherwise. This should not be used
-  /// directly.
-  void *(&getRawInterface)(TypeID interfaceID);
+  /// A map of interfaces that were registered to this operation.
+  detail::InterfaceMap interfaceMap;
 
   /// This hook returns if the operation contains the trait corresponding
   /// to the given TypeID.
