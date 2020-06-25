@@ -1027,6 +1027,7 @@ static void showSectionInfo(sampleprof::SampleProfileReader *Reader,
   }
 }
 
+namespace {
 struct HotFuncInfo {
   StringRef FuncName;
   uint64_t TotalCount;
@@ -1042,6 +1043,7 @@ struct HotFuncInfo {
       : FuncName(FN), TotalCount(TS), TotalCountPercent(TSP), MaxCount(MS),
         EntryCount(ES) {}
 };
+} // namespace
 
 // Print out detailed information about hot functions in PrintValues vector.
 // Users specify titles and offset of every columns through ColumnTitle and
@@ -1079,7 +1081,7 @@ static void dumpHotFunctionList(const std::vector<std::string> &ColumnTitle,
   }
   FOS << "\n";
 
-  for (const auto &R : PrintValues) {
+  for (const HotFuncInfo &R : PrintValues) {
     FOS.PadToColumn(ColumnOffset[0]);
     FOS << R.TotalCount << " (" << format("%.2f%%", R.TotalCountPercent) << ")";
     FOS.PadToColumn(ColumnOffset[1]);
@@ -1100,7 +1102,7 @@ showHotFunctionList(const StringMap<sampleprof::FunctionSamples> &Profiles,
   const uint32_t HotFuncCutoff = 990000;
   auto &SummaryVector = PS.getDetailedSummary();
   uint64_t MinCountThreshold = 0;
-  for (const auto &SummaryEntry : SummaryVector) {
+  for (const ProfileSummaryEntry &SummaryEntry : SummaryVector) {
     if (SummaryEntry.Cutoff == HotFuncCutoff) {
       MinCountThreshold = SummaryEntry.MinCount;
       break;
@@ -1119,7 +1121,7 @@ showHotFunctionList(const StringMap<sampleprof::FunctionSamples> &Profiles,
   uint64_t HotFuncCount = 0;
   uint64_t MaxCount = 0;
   for (const auto &I : Profiles) {
-    const auto &FuncProf = I.second;
+    const FunctionSamples &FuncProf = I.second;
     ProfileTotalSample += FuncProf.getTotalSamples();
     MaxCount = FuncProf.getMaxCountInside();
 
@@ -1141,14 +1143,14 @@ showHotFunctionList(const StringMap<sampleprof::FunctionSamples> &Profiles,
       std::string("max sample >= ") + std::to_string(MinCountThreshold);
   std::vector<HotFuncInfo> PrintValues;
   for (const auto &FuncPair : HotFunc) {
-    const auto &FuncPtr = FuncPair.second.first;
+    const FunctionSamples &Func = *FuncPair.second.first;
     double TotalSamplePercent =
         (ProfileTotalSample > 0)
-            ? (FuncPtr->getTotalSamples() * 100.0) / ProfileTotalSample
+            ? (Func.getTotalSamples() * 100.0) / ProfileTotalSample
             : 0;
     PrintValues.emplace_back(HotFuncInfo(
-        FuncPtr->getFuncName(), FuncPtr->getTotalSamples(), TotalSamplePercent,
-        FuncPair.second.second, FuncPtr->getEntrySamples()));
+        Func.getFuncName(), Func.getTotalSamples(), TotalSamplePercent,
+        FuncPair.second.second, Func.getEntrySamples()));
   }
   dumpHotFunctionList(ColumnTitle, ColumnOffset, PrintValues, HotFuncCount,
                       Profiles.size(), HotFuncSample, ProfileTotalSample,
