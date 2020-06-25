@@ -23,14 +23,19 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
     return parser.parse_known_args()
 
 
-def build_llvm() -> None:
+def build_llvm():
     os.chdir('/build')
     try:
-        cmake()
+        if is_cmake_needed():
+            cmake()
         ninja()
     except CalledProcessError:
         print("Build failed!")
         sys.exit(1)
+
+
+def is_cmake_needed():
+    return "build.ninja" not in os.listdir()
 
 
 CMAKE_COMMAND = "cmake -G Ninja -DCMAKE_BUILD_TYPE=Release " \
