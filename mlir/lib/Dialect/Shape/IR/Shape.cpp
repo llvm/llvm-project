@@ -364,6 +364,11 @@ OpFoldResult CstrEqOp::fold(ArrayRef<Attribute> operands) {
 // ConstSizeOp
 //===----------------------------------------------------------------------===//
 
+void ConstSizeOp::build(OpBuilder &builder, OperationState &result,
+                        int64_t value) {
+  build(builder, result, builder.getIndexAttr(value));
+}
+
 OpFoldResult ConstSizeOp::fold(ArrayRef<Attribute>) { return valueAttr(); }
 
 void ConstSizeOp::getAsmResultNames(
@@ -448,6 +453,45 @@ OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
   int64_t rank = shape.getNumElements();
   Builder builder(getContext());
   return builder.getIndexAttr(rank);
+}
+
+/// Evaluate the `rank` operation for shapes of ranked tensors at compile time.
+/// Constant folding fails in cases where only the rank is constant, not the
+/// shape itself.
+/// This canonicalization matches `shape.rank(shape.shape_of(%ranked_tensor))`.
+///
+/// Example:
+///
+/// %shape = shape.shape_of %ranked_tensor : tensor<1x2x?xf32>
+/// %rank = shape.rank %shape
+///
+/// becomes
+///
+/// %rank = shape.const_size 3
+
+namespace {
+struct RankShapeOfCanonicalizationPattern : public OpRewritePattern<RankOp> {
+  using OpRewritePattern<RankOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(RankOp op,
+                                PatternRewriter &rewriter) const override {
+    auto shapeOfOp = op.shape().getDefiningOp<ShapeOfOp>();
+    if (!shapeOfOp)
+      return failure();
+    auto rankedTensorType =
+        shapeOfOp.arg().getType().dyn_cast<RankedTensorType>();
+    if (!rankedTensorType)
+      return failure();
+    int64_t rank = rankedTensorType.getRank();
+    rewriter.replaceOpWithNewOp<ConstSizeOp>(op.getOperation(), rank);
+    return success();
+  }
+};
+} // namespace
+
+void RankOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+                                         MLIRContext *context) {
+  patterns.insert<RankShapeOfCanonicalizationPattern>(context);
 }
 
 //===----------------------------------------------------------------------===//
