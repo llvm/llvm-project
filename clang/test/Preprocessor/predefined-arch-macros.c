@@ -2379,7 +2379,6 @@
 // CHECK_AMDFAM10_M32: #define __LZCNT__ 1
 // CHECK_AMDFAM10_M32: #define __MMX__ 1
 // CHECK_AMDFAM10_M32: #define __POPCNT__ 1
-// CHECK_AMDFAM10_M32: #define __PRFCHW__ 1
 // CHECK_AMDFAM10_M32: #define __SSE2_MATH__ 1
 // CHECK_AMDFAM10_M32: #define __SSE2__ 1
 // CHECK_AMDFAM10_M32: #define __SSE3__ 1
@@ -2400,7 +2399,6 @@
 // CHECK_AMDFAM10_M64: #define __LZCNT__ 1
 // CHECK_AMDFAM10_M64: #define __MMX__ 1
 // CHECK_AMDFAM10_M64: #define __POPCNT__ 1
-// CHECK_AMDFAM10_M64: #define __PRFCHW__ 1
 // CHECK_AMDFAM10_M64: #define __SSE2_MATH__ 1
 // CHECK_AMDFAM10_M64: #define __SSE2__ 1
 // CHECK_AMDFAM10_M64: #define __SSE3__ 1
