@@ -75,12 +75,12 @@ SBValueList::SBValueList(const SBValueList &rhs) : m_opaque_up() {
   LLDB_RECORD_CONSTRUCTOR(SBValueList, (const lldb::SBValueList &), rhs);
 
   if (rhs.IsValid())
-    m_opaque_up.reset(new ValueListImpl(*rhs));
+    m_opaque_up = std::make_unique<ValueListImpl>(*rhs);
 }
 
 SBValueList::SBValueList(const ValueListImpl *lldb_object_ptr) : m_opaque_up() {
   if (lldb_object_ptr)
-    m_opaque_up.reset(new ValueListImpl(*lldb_object_ptr));
+    m_opaque_up = std::make_unique<ValueListImpl>(*lldb_object_ptr);
 }
 
 SBValueList::~SBValueList() = default;
@@ -107,7 +107,7 @@ const SBValueList &SBValueList::operator=(const SBValueList &rhs) {
 
   if (this != &rhs) {
     if (rhs.IsValid())
-      m_opaque_up.reset(new ValueListImpl(*rhs));
+      m_opaque_up = std::make_unique<ValueListImpl>(*rhs);
     else
       m_opaque_up.reset();
   }
@@ -173,7 +173,7 @@ uint32_t SBValueList::GetSize() const {
 
 void SBValueList::CreateIfNeeded() {
   if (m_opaque_up == nullptr)
-    m_opaque_up.reset(new ValueListImpl());
+    m_opaque_up = std::make_unique<ValueListImpl>();
 }
 
 SBValue SBValueList::FindValueObjectByUID(lldb::user_id_t uid) {
