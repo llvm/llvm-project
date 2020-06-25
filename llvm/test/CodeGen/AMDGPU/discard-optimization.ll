@@ -134,8 +134,8 @@ endif:
 ; DEMOTE: s_and_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], vcc
 ; GCN: image_sample
 ; GCN: v_add_f32_e32
-; GCN: image_sample
 ; DEMOTE: s_and_b64 exec, exec, [[LIVE]]
+; GCN: image_sample
 ; KILL: s_and_b64 exec, exec, [[ORIG]]
 define amdgpu_ps <4 x float> @wqm_kill_to_demote1(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, i32 %idx, float %data, float %coord, float %coord2, float %z) {
 .entry:
