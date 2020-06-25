@@ -642,7 +642,6 @@ static void checkNoThrow(Sema &S, const Stmt *E,
   } else if (SC == Expr::CallExprClass || SC == Expr::CXXMemberCallExprClass ||
              SC == Expr::CXXOperatorCallExprClass) {
     if (!cast<CallExpr>(E)->isTypeDependent()) {
-      // FIXME: Handle dependent types.
       checkDeclNoexcept(cast<CallExpr>(E)->getCalleeDecl());
       auto ReturnType = cast<CallExpr>(E)->getCallReturnType(S.getASTContext());
       // Check the destructor of the call return type, if any.
@@ -662,22 +661,20 @@ static void checkNoThrow(Sema &S, const Stmt *E,
   }
 }
 
-/// Check that the expression co_await promise.final_suspend() shall not be
-/// potentially-throwing.
-static bool checkNoThrow(Sema &S, const Stmt *FinalSuspend) {
+bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
   llvm::SmallPtrSet<const Decl *, 4> ThrowingDecls;
   // We first collect all declarations that should not throw but not declared
   // with noexcept. We then sort them based on the location before printing.
   // This is to avoid emitting the same note multiple times on the same
   // declaration, and also provide a deterministic order for the messages.
-  checkNoThrow(S, FinalSuspend, ThrowingDecls);
+  checkNoThrow(*this, FinalSuspend, ThrowingDecls);
   auto SortedDecls = llvm::SmallVector<const Decl *, 4>{ThrowingDecls.begin(),
                                                         ThrowingDecls.end()};
   sort(SortedDecls, [](const Decl *A, const Decl *B) {
     return A->getEndLoc() < B->getEndLoc();
   });
   for (const auto *D : SortedDecls) {
-    S.Diag(D->getEndLoc(), diag::note_coroutine_function_declare_noexcept);
+    Diag(D->getEndLoc(), diag::note_coroutine_function_declare_noexcept);
   }
   return ThrowingDecls.empty();
 }
@@ -724,7 +721,7 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
     return true;
 
   StmtResult FinalSuspend = buildSuspends("final_suspend");
-  if (FinalSuspend.isInvalid() || !checkNoThrow(*this, FinalSuspend.get()))
+  if (FinalSuspend.isInvalid() || !checkFinalSuspendNoThrow(FinalSuspend.get()))
     return true;
 
   ScopeInfo->setCoroutineSuspends(InitSuspend.get(), FinalSuspend.get());
