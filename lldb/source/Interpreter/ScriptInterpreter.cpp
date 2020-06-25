@@ -102,6 +102,5 @@ Status ScriptInterpreter::SetBreakpointCommandCallbackFunction(
 
 std::unique_ptr<ScriptInterpreterLocker>
 ScriptInterpreter::AcquireInterpreterLock() {
-  return std::unique_ptr<ScriptInterpreterLocker>(
-      new ScriptInterpreterLocker());
+  return std::make_unique<ScriptInterpreterLocker>();
 }

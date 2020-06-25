@@ -66,9 +66,9 @@ emulateLookupInCtxt(Sema &sema, llvm::StringRef name, DeclContext *ctxt) {
   IdentifierInfo &ident = sema.getASTContext().Idents.get(name);
 
   std::unique_ptr<LookupResult> lookup_result;
-  lookup_result.reset(new LookupResult(sema, DeclarationName(&ident),
-                                       SourceLocation(),
-                                       Sema::LookupOrdinaryName));
+  lookup_result = std::make_unique<LookupResult>(sema, DeclarationName(&ident),
+                                                 SourceLocation(),
+                                                 Sema::LookupOrdinaryName);
 
   // Usually during parsing we already encountered the scopes we would use. But
   // here don't have these scopes so we have to emulate the behavior of the

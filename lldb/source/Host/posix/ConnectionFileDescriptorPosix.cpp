@@ -209,7 +209,7 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
           // this. For now, we assume we must assume we don't own it.
 
           std::unique_ptr<TCPSocket> tcp_socket;
-          tcp_socket.reset(new TCPSocket(fd, false, false));
+          tcp_socket = std::make_unique<TCPSocket>(fd, false, false);
           // Try and get a socket option from this file descriptor to see if
           // this is a socket and set m_is_socket accordingly.
           int resuse;
