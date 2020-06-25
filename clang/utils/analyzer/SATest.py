@@ -11,7 +11,7 @@ import argparse
 import sys
 import os
 
-from subprocess import check_call
+from subprocess import call
 
 SCRIPTS_DIR = os.path.dirname(os.path.realpath(__file__))
 PROJECTS_DIR = os.path.join(SCRIPTS_DIR, "projects")
@@ -101,22 +101,25 @@ def docker(parser, args):
 
 
 def docker_build_image():
-    check_call("docker build --tag satest-image {}".format(SCRIPTS_DIR),
-               shell=True)
+    sys.exit(call("docker build --tag satest-image {}".format(SCRIPTS_DIR),
+                  shell=True))
 
 
 def docker_run(args):
-    check_call("docker run --rm --name satest "
-               "-v {llvm}:/llvm-project "
-               "-v {build}:/build "
-               "-v {clang}:/analyzer "
-               "-v {scripts}:/scripts "
-               "-v {projects}:/projects "
-               "satest-image:latest {args}"
-               .format(llvm=args.llvm_project_dir, build=args.build_dir,
-                       clang=args.clang_dir, scripts=SCRIPTS_DIR,
-                       projects=PROJECTS_DIR, args=' '.join(args.rest)),
-               shell=True)
+    sys.exit(call("docker run --rm --name satest "
+                  "-v {llvm}:/llvm-project "
+                  "-v {build}:/build "
+                  "-v {clang}:/analyzer "
+                  "-v {scripts}:/scripts "
+                  "-v {projects}:/projects "
+                  "satest-image:latest {args}"
+                  .format(llvm=args.llvm_project_dir,
+                          build=args.build_dir,
+                          clang=args.clang_dir,
+                          scripts=SCRIPTS_DIR,
+                          projects=PROJECTS_DIR,
+                          args=' '.join(args.rest)),
+                  shell=True))
 
 
 def main():
