@@ -62,6 +62,8 @@ def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
 def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add a directory to the library search path">;
 
+def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
+
 def mllvm: S<"mllvm">, HelpText<"Options to pass to LLVM">;
 
 def no_color_diagnostics: F<"no-color-diagnostics">,
@@ -179,7 +181,6 @@ def: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def: J<"entry=">, Alias<entry>;
 def: Flag<["-"], "E">, Alias<export_dynamic>, HelpText<"Alias for --export-dynamic">;
 def: Flag<["-"], "i">, Alias<initial_memory>;
-def: Flag<["-"], "m">, Alias<max_memory>;
 def: Flag<["-"], "r">, Alias<relocatable>;
 def: Flag<["-"], "s">, Alias<strip_all>, HelpText<"Alias for --strip-all">;
 def: Flag<["-"], "S">, Alias<strip_debug>, HelpText<"Alias for --strip-debug">;
