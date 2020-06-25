@@ -1348,120 +1348,39 @@ private:
                               traitID);
   }
 
-  /// Returns an opaque pointer to a concept instance of the interface with the
-  /// given ID if one was registered to this operation.
-  static void *getRawInterface(TypeID id) {
-    return InterfaceLookup::template lookup<Traits<ConcreteType>...>(id);
+  /// Returns an interface map for the interfaces registered to this operation.
+  static detail::InterfaceMap getInterfaceMap() {
+    return detail::InterfaceMap::template get<Traits<ConcreteType>...>();
   }
 
-  struct InterfaceLookup {
-    /// Trait to check if T provides a static 'getInterfaceID' method.
-    template <typename T, typename... Args>
-    using has_get_interface_id = decltype(T::getInterfaceID());
-
-    /// If 'T' is the same interface as 'interfaceID' return the concept
-    /// instance.
-    template <typename T>
-    static typename std::enable_if<
-        llvm::is_detected<has_get_interface_id, T>::value, void *>::type
-    lookup(TypeID interfaceID) {
-      return (T::getInterfaceID() == interfaceID) ? &T::instance() : nullptr;
-    }
-
-    /// 'T' is known to not be an interface, return nullptr.
-    template <typename T>
-    static typename std::enable_if<
-        !llvm::is_detected<has_get_interface_id, T>::value, void *>::type
-    lookup(TypeID) {
-      return nullptr;
-    }
-
-    template <typename T, typename T2, typename... Ts>
-    static void *lookup(TypeID interfaceID) {
-      auto *concept = lookup<T>(interfaceID);
-      return concept ? concept : lookup<T2, Ts...>(interfaceID);
-    }
-  };
-
-  /// Allow access to 'hasTrait' and 'getRawInterface'.
+  /// Allow access to 'hasTrait' and 'getInterfaceMap'.
   friend AbstractOperation;
 };
 
-/// This class represents the base of an operation interface. Operation
-/// interfaces provide access to derived *Op properties through an opaquely
-/// Operation instance. Derived interfaces must also provide a 'Traits' class
-/// that defines a 'Concept' and a 'Model' class. The 'Concept' class defines an
-/// abstract virtual interface, where as the 'Model' class implements this
-/// interface for a specific derived *Op type. Both of these classes *must* not
-/// contain non-static data. A simple example is shown below:
-///
-///  struct ExampleOpInterfaceTraits {
-///    struct Concept {
-///      virtual unsigned getNumInputs(Operation *op) = 0;
-///    };
-///    template <typename OpT> class Model {
-///      unsigned getNumInputs(Operation *op) final {
-///        return cast<OpT>(op).getNumInputs();
-///      }
-///    };
-///  };
-///
+/// This class represents the base of an operation interface. See the definition
+/// of `detail::Interface` for requirements on the `Traits` type.
 template <typename ConcreteType, typename Traits>
-class OpInterface : public Op<ConcreteType> {
+class OpInterface
+    : public detail::Interface<ConcreteType, Operation *, Traits,
+                               Op<ConcreteType>, OpTrait::TraitBase> {
 public:
-  using Concept = typename Traits::Concept;
-  template <typename T> using Model = typename Traits::template Model<T>;
   using Base = OpInterface<ConcreteType, Traits>;
+  using InterfaceBase = detail::Interface<ConcreteType, Operation *, Traits,
+                                          Op<ConcreteType>, OpTrait::TraitBase>;
 
-  OpInterface(Operation *op = nullptr)
-      : Op<ConcreteType>(op), impl(op ? getInterfaceFor(op) : nullptr) {
-    assert((!op || impl) &&
-           "instantiating an interface with an unregistered operation");
-  }
-
-  /// Support 'classof' by checking if the given operation defines the concrete
-  /// interface.
-  static bool classof(Operation *op) { return getInterfaceFor(op); }
-
-  /// Define an accessor for the ID of this interface.
-  static TypeID getInterfaceID() { return TypeID::get<ConcreteType>(); }
-
-  /// This is a special trait that registers a given interface with an
-  /// operation.
-  template <typename ConcreteOp>
-  struct Trait : public OpTrait::TraitBase<ConcreteOp, Trait> {
-    /// Define an accessor for the ID of this interface.
-    static TypeID getInterfaceID() { return TypeID::get<ConcreteType>(); }
-
-    /// Provide an accessor to a static instance of the interface model for the
-    /// concrete operation type.
-    /// The implementation is inspired from Sean Parent's concept-based
-    /// polymorphism. A key difference is that the set of classes erased is
-    /// statically known, which alleviates the need for using dynamic memory
-    /// allocation.
-    /// We use a zero-sized templated class `Model<ConcreteOp>` to emit the
-    /// virtual table and generate a singleton object for each instantiation of
-    /// this class.
-    static Concept &instance() {
-      static Model<ConcreteOp> singleton;
-      return singleton;
-    }
-  };
-
-protected:
-  /// Get the raw concept in the correct derived concept type.
-  Concept *getImpl() { return impl; }
+  /// Inherit the base class constructor.
+  using InterfaceBase::InterfaceBase;
 
 private:
   /// Returns the impl interface instance for the given operation.
-  static Concept *getInterfaceFor(Operation *op) {
+  static typename InterfaceBase::Concept *getInterfaceFor(Operation *op) {
     // Access the raw interface from the abstract operation.
     auto *abstractOp = op->getAbstractOperation();
     return abstractOp ? abstractOp->getInterface<ConcreteType>() : nullptr;
   }
 
-  /// A pointer to the impl concept object.
-  Concept *impl;
+  /// Allow access to `getInterfaceFor`.
+  friend InterfaceBase;
 };
 
 //===----------------------------------------------------------------------===//

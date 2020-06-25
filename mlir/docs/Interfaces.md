@@ -131,14 +131,14 @@ struct ExampleOpInterfaceTraits {
   /// to be overridden.
   struct Concept {
     virtual ~Concept();
-    virtual unsigned getNumInputs(Operation *op) = 0;
+    virtual unsigned getNumInputs(Operation *op) const = 0;
   };
 
   /// Define a model class that specializes a concept on a given operation type.
   template <typename OpT>
   struct Model : public Concept {
     /// Override the method to dispatch on the concrete operation.
-    unsigned getNumInputs(Operation *op) final {
+    unsigned getNumInputs(Operation *op) const final {
       return llvm::cast<OpT>(op).getNumInputs();
     }
   };
@@ -151,7 +151,7 @@ public:
   using OpInterface<ExampleOpInterface, ExampleOpInterfaceTraits>::OpInterface;
 
   /// The interface dispatches to 'getImpl()', an instance of the concept.
-  unsigned getNumInputs() {
+  unsigned getNumInputs() const {
     return getImpl()->getNumInputs(getOperation());
   }
 };

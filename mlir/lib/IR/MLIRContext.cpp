@@ -560,9 +560,10 @@ void Dialect::addOperation(AbstractOperation opInfo) {
   auto &impl = context->getImpl();
 
   // Lock access to the context registry.
+  StringRef opName = opInfo.name;
   ScopedWriterLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
-  if (!impl.registeredOperations.insert({opInfo.name, opInfo}).second) {
-    llvm::errs() << "error: operation named '" << opInfo.name
+  if (!impl.registeredOperations.insert({opName, std::move(opInfo)}).second) {
+    llvm::errs() << "error: operation named '" << opName
                  << "' is already registered.\n";
     abort();
   }
