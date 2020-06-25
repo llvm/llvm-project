@@ -46,6 +46,7 @@ enum class NodeKind : uint16_t {
   CxxNullPtrExpression,
   IntegerLiteralExpression,
   BoolLiteralExpression,
+  CharacterLiteralExpression,
   IdExpression,
 
   // Statements.
@@ -253,6 +254,17 @@ public:
     return N->kind() == NodeKind::CxxNullPtrExpression;
   }
   syntax::Leaf *nullPtrKeyword();
+};
+
+/// Expression for character literals. C++ [lex.ccon]
+class CharacterLiteralExpression final : public Expression {
+public:
+  CharacterLiteralExpression()
+      : Expression(NodeKind::CharacterLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::CharacterLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
 };
 
 /// Expression for integer literals.
