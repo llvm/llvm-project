@@ -333,6 +333,8 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     MPM.addPass(NewPMDebugifyPass());
 
   if (!PassPipeline.empty()) {
+    assert(Passes.empty() &&
+           "PassPipeline and Passes should not both contain passes");
     if (auto Err =
             PB.parsePassPipeline(MPM, PassPipeline, VerifyEachPass, DebugPM)) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
