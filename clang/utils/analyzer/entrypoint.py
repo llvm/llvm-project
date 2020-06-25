@@ -2,13 +2,15 @@ import argparse
 import os
 import sys
 
-from typing import List, Tuple
-
 from subprocess import call, check_call, CalledProcessError
+from time import sleep
+from typing import List, Tuple
 
 
 def main():
     settings, rest = parse_arguments()
+    if settings.wait:
+        wait()
     if settings.build_llvm or settings.build_llvm_only:
         build_llvm()
     if settings.build_llvm_only:
@@ -16,8 +18,16 @@ def main():
     sys.exit(test(rest))
 
 
+def wait():
+    # It is an easy on CPU way of keeping the docker container running
+    # while the user has a terminal session in that container.
+    while True:
+        sleep(3600)
+
+
 def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
     parser = argparse.ArgumentParser()
+    parser.add_argument('--wait', action='store_true')
     parser.add_argument('--build-llvm', action='store_true')
     parser.add_argument('--build-llvm-only', action='store_true')
     return parser.parse_known_args()
