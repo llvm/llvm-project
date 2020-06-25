@@ -330,10 +330,54 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
 }
 
 namespace llvm {
+namespace sys {
 
-ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
-                      bool WaitUntilTerminates, std::string *ErrMsg,
-                      Optional<ProcessStatistics> *ProcStat) {
+#ifndef _AIX
+using ::wait4;
+#else
+static pid_t (wait4)(pid_t pid, int *status, int options, struct rusage *usage);
+#endif
+
+} // namespace sys
+} // namespace llvm
+
+#ifdef _AIX
+#ifndef _ALL_SOURCE
+extern "C" pid_t (wait4)(pid_t pid, int *status, int options,
+                         struct rusage *usage);
+#endif
+pid_t (llvm::sys::wait4)(pid_t pid, int *status, int options,
+                         struct rusage *usage) {
+  assert(pid > 0 && "Only expecting to handle actual PID values!");
+  assert((options & ~WNOHANG) == 0 && "Expecting WNOHANG at most!");
+  assert(usage && "Expecting usage collection!");
+
+  // AIX wait4 does not work well with WNOHANG.
+  if (!(options & WNOHANG))
+    return ::wait4(pid, status, options, usage);
+
+  // For WNOHANG, we use waitid (which supports WNOWAIT) until the child process
+  // has terminated.
+  siginfo_t WaitIdInfo;
+  WaitIdInfo.si_pid = 0;
+  int WaitIdRetVal =
+      waitid(P_PID, pid, &WaitIdInfo, WNOWAIT | WEXITED | options);
+
+  if (WaitIdRetVal == -1 || WaitIdInfo.si_pid == 0)
+    return WaitIdRetVal;
+
+  assert(WaitIdInfo.si_pid == pid);
+
+  // The child has already terminated, so a blocking wait on it is okay in the
+  // absence of indiscriminate `wait` calls from the current process (which
+  // would cause the call here to fail with ECHILD).
+  return ::wait4(pid, status, options & ~WNOHANG, usage);
+}
+#endif
+
+ProcessInfo llvm::sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
+                            bool WaitUntilTerminates, std::string *ErrMsg,
+                            Optional<ProcessStatistics> *ProcStat) {
   struct sigaction Act, Old;
   assert(PI.Pid && "invalid pid to wait on, process not started?");
 
@@ -349,6 +393,7 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
     Act.sa_handler = TimeOutHandler;
     sigemptyset(&Act.sa_mask);
     sigaction(SIGALRM, &Act, &Old);
+    // FIXME The alarm signal may be delivered to another thread.
     alarm(SecondsToWait);
   } else if (SecondsToWait == 0)
     WaitPidOptions = WNOHANG;
@@ -361,7 +406,7 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
     ProcStat->reset();
 
   do {
-    WaitResult.Pid = wait4(ChildPid, &status, WaitPidOptions, &Info);
+    WaitResult.Pid = sys::wait4(ChildPid, &status, WaitPidOptions, &Info);
   } while (WaitUntilTerminates && WaitResult.Pid == -1 && errno == EINTR);
 
   if (WaitResult.Pid != PI.Pid) {
@@ -378,6 +423,8 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
         sigaction(SIGALRM, &Old, nullptr);
 
         // Wait for child to die
+        // FIXME This could grab some other child process out from another
+        // waiting thread and then leave a zombie anyway.
         if (wait(&status) != ChildPid)
           MakeErrMsg(ErrMsg, "Child timed out but wouldn't die");
         else
@@ -440,12 +487,12 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
   return WaitResult;
 }
 
-std::error_code sys::ChangeStdinToBinary() {
+std::error_code llvm::sys::ChangeStdinToBinary() {
   // Do nothing, as Unix doesn't differentiate between text and binary.
   return std::error_code();
 }
 
-std::error_code sys::ChangeStdoutToBinary() {
+std::error_code llvm::sys::ChangeStdoutToBinary() {
   // Do nothing, as Unix doesn't differentiate between text and binary.
   return std::error_code();
 }
@@ -506,5 +553,4 @@ bool llvm::sys::commandLineFitsWithinSystemLimits(StringRef Program,
   }
 
   return true;
-}
 }
