@@ -787,7 +787,8 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
   }
 
   // Build our vtable dispatch handler here:
-  m_vtables_up.reset(new AppleObjCVTables(process_sp, m_objc_module_sp));
+  m_vtables_up =
+      std::make_unique<AppleObjCVTables>(process_sp, m_objc_module_sp);
   if (m_vtables_up)
     m_vtables_up->ReadRegions();
 }

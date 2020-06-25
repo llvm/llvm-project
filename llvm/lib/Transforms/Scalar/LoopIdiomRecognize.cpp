@@ -1553,9 +1553,9 @@ bool LoopIdiomRecognize::recognizeAndInsertFFS() {
   //  %inc = add nsw %i.0, 1
   //  br i1 %tobool
 
-  Value *Args[] =
-      {InitX, ZeroCheck ? ConstantInt::getTrue(InitX->getContext())
-                        : ConstantInt::getFalse(InitX->getContext())};
+  const Value *Args[] = {
+      InitX, ZeroCheck ? ConstantInt::getTrue(InitX->getContext())
+                       : ConstantInt::getFalse(InitX->getContext())};
 
   // @llvm.dbg doesn't count as they have no semantic effect.
   auto InstWithoutDebugIt = CurLoop->getHeader()->instructionsWithoutDebug();

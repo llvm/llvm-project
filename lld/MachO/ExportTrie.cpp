@@ -64,10 +64,7 @@ struct ExportInfo {
 
 } // namespace
 
-namespace lld {
-namespace macho {
-
-struct TrieNode {
+struct macho::TrieNode {
   std::vector<Edge> edges;
   Optional<ExportInfo> info;
   // Estimated offset from the start of the serialized trie to the current node.
@@ -277,13 +274,10 @@ void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString) {
   }
 }
 
-void parseTrie(const uint8_t *buf, size_t size,
-               const TrieEntryCallback &callback) {
+void macho::parseTrie(const uint8_t *buf, size_t size,
+                      const TrieEntryCallback &callback) {
   if (size == 0)
     return;
 
   TrieParser(buf, size, callback).parse();
 }
-
-} // namespace macho
-} // namespace lld

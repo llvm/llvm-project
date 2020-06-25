@@ -1253,7 +1253,7 @@ Symtab *ObjectFileMachO::GetSymtab() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_symtab_up == nullptr) {
-      m_symtab_up.reset(new Symtab(this));
+      m_symtab_up = std::make_unique<Symtab>(this);
       std::lock_guard<std::recursive_mutex> symtab_guard(
           m_symtab_up->GetMutex());
       ParseSymtab();
@@ -1820,7 +1820,7 @@ void ObjectFileMachO::CreateSections(SectionList &unified_section_list) {
   if (m_sections_up)
     return;
 
-  m_sections_up.reset(new SectionList());
+  m_sections_up = std::make_unique<SectionList>();
 
   lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
   // bool dump_sections = false;

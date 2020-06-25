@@ -14,9 +14,10 @@
 #include <iomanip>
 #include <sstream>
 
-namespace llvm {
-namespace MachO {
-namespace detail {
+using namespace llvm;
+using namespace llvm::MachO;
+
+namespace {
 template <typename C>
 typename C::iterator addEntry(C &Container, StringRef InstallName) {
   auto I = partition_point(Container, [=](const InterfaceFileRef &O) {
@@ -39,21 +40,21 @@ typename C::iterator addEntry(C &Container, const Target &Target_) {
 
   return Container.insert(Iter, Target_);
 }
-} // end namespace detail.
+} // end namespace
 
 void InterfaceFileRef::addTarget(const Target &Target) {
-  detail::addEntry(Targets, Target);
+  addEntry(Targets, Target);
 }
 
 void InterfaceFile::addAllowableClient(StringRef InstallName,
                                        const Target &Target) {
-  auto Client = detail::addEntry(AllowableClients, InstallName);
+  auto Client = addEntry(AllowableClients, InstallName);
   Client->addTarget(Target);
 }
 
 void InterfaceFile::addReexportedLibrary(StringRef InstallName,
                                          const Target &Target) {
-  auto Lib = detail::addEntry(ReexportedLibraries, InstallName);
+  auto Lib = addEntry(ReexportedLibraries, InstallName);
   Lib->addTarget(Target);
 }
 
@@ -97,7 +98,7 @@ void InterfaceFile::addUUID(const Target &Target, uint8_t UUID[16]) {
 }
 
 void InterfaceFile::addTarget(const Target &Target) {
-  detail::addEntry(Targets, Target);
+  addEntry(Targets, Target);
 }
 
 InterfaceFile::const_filtered_target_range
@@ -118,6 +119,3 @@ void InterfaceFile::addSymbol(SymbolKind Kind, StringRef Name,
     for (const auto &Target : Targets)
       result.first->second->addTarget(Target);
 }
-
-} // end namespace MachO.
-} // end namespace llvm.

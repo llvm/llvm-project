@@ -191,7 +191,7 @@ Error DWARFYAML::emitPubSection(raw_ostream &OS,
   for (auto Entry : Sect.Entries) {
     writeInteger((uint32_t)Entry.DieOffset, OS, IsLittleEndian);
     if (Sect.IsGNUStyle)
-      writeInteger((uint32_t)Entry.Descriptor, OS, IsLittleEndian);
+      writeInteger((uint8_t)Entry.Descriptor, OS, IsLittleEndian);
     OS.write(Entry.Name.data(), Entry.Name.size());
     OS.write('\0');
   }

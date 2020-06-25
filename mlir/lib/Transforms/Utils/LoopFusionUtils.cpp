@@ -105,7 +105,7 @@ static Operation *getLastDependentOpInRange(Operation *opA, Operation *opB) {
        it != Block::reverse_iterator(opA); ++it) {
     Operation *opX = &(*it);
     opX->walk([&](Operation *op) {
-      if (isa<AffineReadOpInterface>(op) || isa<AffineWriteOpInterface>(op)) {
+      if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op)) {
         if (isDependentLoadOrStoreOp(op, values)) {
           lastDepOp = opX;
           return WalkResult::interrupt();
@@ -179,7 +179,7 @@ gatherLoadsAndStores(AffineForOp forOp,
                      SmallVectorImpl<Operation *> &loadAndStoreOps) {
   bool hasIfOp = false;
   forOp.walk([&](Operation *op) {
-    if (isa<AffineReadOpInterface>(op) || isa<AffineWriteOpInterface>(op))
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
       loadAndStoreOps.push_back(op);
     else if (isa<AffineIfOp>(op))
       hasIfOp = true;

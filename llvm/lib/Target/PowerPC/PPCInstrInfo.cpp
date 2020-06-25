@@ -289,12 +289,11 @@ bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
 // Index 0(InfoArrayIdxFMAInst): FMA instruction;
 // Index 1(InfoArrayIdxFAddInst): ADD instruction assoaicted with FMA;
 // Index 2(InfoArrayIdxFMULInst): MUL instruction assoaicted with FMA;
-// Index 3(InfoArrayIdxAddOpIdx): ADD operand index in the FMA operand list;
-// Index 4(InfoArrayIdxMULOpIdx): first MUL operand index in the FMA operand
-//                                list;
+// Index 3(InfoArrayIdxAddOpIdx): ADD operand index in FMA operands;
+// Index 4(InfoArrayIdxMULOpIdx): first MUL operand index in FMA operands;
 //                                second MUL operand index is plus 1.
 static const uint16_t FMAOpIdxInfo[][5] = {
-    // FIXME: add more FMA instructions like XSNMADDADP and so on.
+    // FIXME: Add more FMA instructions like XSNMADDADP and so on.
     {PPC::XSMADDADP, PPC::XSADDDP, PPC::XSMULDP, 1, 2},
     {PPC::XSMADDASP, PPC::XSADDSP, PPC::XSMULSP, 1, 2},
     {PPC::XVMADDADP, PPC::XVADDDP, PPC::XVMULDP, 1, 2},
@@ -362,12 +361,12 @@ bool PPCInstrInfo::getFMAPatterns(
       return false;
 
     // Instruction can be reassociated.
-    // fast match flags may prohibit reassociation.
+    // fast math flags may prohibit reassociation.
     if (!(Instr.getFlag(MachineInstr::MIFlag::FmReassoc) &&
           Instr.getFlag(MachineInstr::MIFlag::FmNsz)))
       return false;
 
-    // Instruction operands are virtual registers for reassociating.
+    // Instruction operands are virtual registers for reassociation.
     if (!IsAllOpsVirtualReg(Instr))
       return false;
 
@@ -544,7 +543,7 @@ void PPCInstrInfo::reassociateFMA(
             .addReg(RegY, getKillRegState(KillY))
             .addReg(RegM31, getKillRegState(KillM31))
             .addReg(RegM32, getKillRegState(KillM32));
-    // if AddOpIdx is not 1, adjust the order.
+    // If AddOpIdx is not 1, adjust the order.
     if (AddOpIdx != 1) {
       AdjustOperandOrder(MINewB, RegX, KillX, RegM21, KillM21, RegM22, KillM22);
       AdjustOperandOrder(MINewA, RegY, KillY, RegM31, KillM31, RegM32, KillM32);
@@ -556,7 +555,7 @@ void PPCInstrInfo::reassociateFMA(
             .addReg(NewVRB, getKillRegState(true))
             .addReg(NewVRA, getKillRegState(true));
 
-    // update flags for new created instructions.
+    // Update flags for newly created instructions.
     setSpecialOperandAttr(*MINewA, IntersectedFlags);
     setSpecialOperandAttr(*MINewB, IntersectedFlags);
     setSpecialOperandAttr(*MINewC, IntersectedFlags);
@@ -596,7 +595,7 @@ void PPCInstrInfo::reassociateFMA(
             .addReg(NewVRB, getKillRegState(true))
             .addReg(NewVRD, getKillRegState(true));
 
-    // update flags for new created instructions.
+    // Update flags for newly created instructions.
     setSpecialOperandAttr(*MINewA, IntersectedFlags);
     setSpecialOperandAttr(*MINewB, IntersectedFlags);
     setSpecialOperandAttr(*MINewD, IntersectedFlags);

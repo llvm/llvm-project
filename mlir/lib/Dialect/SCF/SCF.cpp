@@ -831,7 +831,7 @@ static LogicalResult verify(YieldOp op) {
   auto results = parentOp->getResults();
   auto operands = op.getOperands();
 
-  if (isa<IfOp>(parentOp) || isa<ForOp>(parentOp)) {
+  if (isa<IfOp, ForOp>(parentOp)) {
     if (parentOp->getNumResults() != op.getNumOperands())
       return op.emitOpError() << "parent of yield must have same number of "
                                  "results as the yield operands";

@@ -135,7 +135,9 @@ public:
       Context BackgroundContext, const ThreadsafeFS &,
       const GlobalCompilationDatabase &CDB,
       BackgroundIndexStorage::Factory IndexStorageFactory,
-      size_t ThreadPoolSize = 0, // 0 = use all hardware threads
+      // Arbitrary value to ensure some concurrency in tests.
+      // In production an explicit value is passed.
+      size_t ThreadPoolSize = 4,
       std::function<void(BackgroundQueue::Stats)> OnProgress = nullptr);
   ~BackgroundIndex(); // Blocks while the current task finishes.
 

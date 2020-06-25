@@ -7503,9 +7503,12 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
                       << Entry.second.size() << ".\n");
 
     // Process the GEP list in chunks suitable for the target's supported
-    // vector size. If a vector register can't hold 1 element, we are done.
+    // vector size. If a vector register can't hold 1 element, we are done. We
+    // are trying to vectorize the index computations, so the maximum number of
+    // elements is based on the size of the index expression, rather than the
+    // size of the GEP itself (the target's pointer size).
     unsigned MaxVecRegSize = R.getMaxVecRegSize();
-    unsigned EltSize = R.getVectorElementSize(Entry.second[0]);
+    unsigned EltSize = R.getVectorElementSize(*Entry.second[0]->idx_begin());
     if (MaxVecRegSize < EltSize)
       continue;
 

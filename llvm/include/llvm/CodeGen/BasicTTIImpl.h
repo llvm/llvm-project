@@ -1139,14 +1139,14 @@ public:
                              : 1);
     assert((RetVF == 1 || VF == 1) && "VF > 1 and RetVF is a vector type");
     const IntrinsicInst *I = ICA.getInst();
-    const SmallVectorImpl<Value *> &Args = ICA.getArgs();
+    const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
     FastMathFlags FMF = ICA.getFlags();
 
     switch (IID) {
     default: {
       // Assume that we need to scalarize this intrinsic.
       SmallVector<Type *, 4> Types;
-      for (Value *Op : Args) {
+      for (const Value *Op : Args) {
         Type *OpTy = Op->getType();
         assert(VF == 1 || !OpTy->isVectorTy());
         Types.push_back(VF == 1 ? OpTy : FixedVectorType::get(OpTy, VF));
@@ -1173,7 +1173,7 @@ public:
     }
     case Intrinsic::masked_scatter: {
       assert(VF == 1 && "Can't vectorize types here.");
-      Value *Mask = Args[3];
+      const Value *Mask = Args[3];
       bool VarMask = !isa<Constant>(Mask);
       unsigned Alignment = cast<ConstantInt>(Args[2])->getZExtValue();
       return ConcreteTTI->getGatherScatterOpCost(Instruction::Store,
@@ -1183,7 +1183,7 @@ public:
     }
     case Intrinsic::masked_gather: {
       assert(VF == 1 && "Can't vectorize types here.");
-      Value *Mask = Args[2];
+      const Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
       unsigned Alignment = cast<ConstantInt>(Args[1])->getZExtValue();
       return ConcreteTTI->getGatherScatterOpCost(
@@ -1207,9 +1207,9 @@ public:
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
-      Value *X = Args[0];
-      Value *Y = Args[1];
-      Value *Z = Args[2];
+      const Value *X = Args[0];
+      const Value *Y = Args[1];
+      const Value *Z = Args[2];
       TTI::OperandValueProperties OpPropsX, OpPropsY, OpPropsZ, OpPropsBW;
       TTI::OperandValueKind OpKindX = TTI::getOperandInfo(X, OpPropsX);
       TTI::OperandValueKind OpKindY = TTI::getOperandInfo(Y, OpPropsY);

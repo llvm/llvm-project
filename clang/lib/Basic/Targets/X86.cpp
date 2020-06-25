@@ -1553,15 +1553,8 @@ unsigned X86TargetInfo::multiVersionSortPriority(StringRef Name) const {
   using namespace llvm::X86;
   CPUKind Kind = parseArchX86(Name);
   if (Kind != CK_None) {
-    switch (Kind) {
-    default:
-      llvm_unreachable(
-          "CPU Type without a key feature used in 'target' attribute");
-#define PROC_WITH_FEAT(ENUM, STR, IS64, KEY_FEAT)                              \
-  case CK_##ENUM:                                                              \
-    return (getFeaturePriority(llvm::X86::KEY_FEAT) << 1) + 1;
-#include "llvm/Support/X86TargetParser.def"
-    }
+    ProcessorFeatures KeyFeature = getKeyFeature(Kind);
+    return (getFeaturePriority(KeyFeature) << 1) + 1;
   }
 
   // Now we know we have a feature, so get its priority and shift it a few so

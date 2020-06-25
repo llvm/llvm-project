@@ -558,7 +558,7 @@ StringRef tblgen::Operator::getSummary() const {
 
 bool tblgen::Operator::hasAssemblyFormat() const {
   auto *valueInit = def.getValueInit("assemblyFormat");
-  return isa<llvm::CodeInit>(valueInit) || isa<llvm::StringInit>(valueInit);
+  return isa<llvm::CodeInit, llvm::StringInit>(valueInit);
 }
 
 StringRef tblgen::Operator::getAssemblyFormat() const {

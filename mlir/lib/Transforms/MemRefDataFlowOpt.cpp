@@ -207,7 +207,7 @@ void MemRefDataFlowOpt::runOnFunction() {
       // could still erase it if the call had no side-effects.
       continue;
     if (llvm::any_of(memref.getUsers(), [&](Operation *ownerOp) {
-          return (!isa<AffineStoreOp>(ownerOp) && !isa<DeallocOp>(ownerOp));
+          return !isa<AffineStoreOp, DeallocOp>(ownerOp);
         }))
       continue;
 

@@ -291,8 +291,7 @@ isVectorizableLoopBodyWithOpCond(AffineForOp loop,
 
   // No vectorization across unknown regions.
   auto regions = matcher::Op([](Operation &op) -> bool {
-    return op.getNumRegions() != 0 &&
-           !(isa<AffineIfOp>(op) || isa<AffineForOp>(op));
+    return op.getNumRegions() != 0 && !isa<AffineIfOp, AffineForOp>(op);
   });
   SmallVector<NestedMatch, 8> regionsMatched;
   regions.match(forOp, &regionsMatched);

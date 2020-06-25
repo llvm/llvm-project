@@ -393,9 +393,30 @@ template <class T> static ErrorOr<T> getAsInteger(StringRef Val) {
   return Result;
 }
 
+namespace {
+
+enum class ToolType { Objcopy, Strip, InstallNameTool };
+
+} // anonymous namespace
+
 static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
-                      StringRef ToolName) {
-  OptTable.PrintHelp(OS, (ToolName + " input [output]").str().c_str(),
+                      ToolType Tool) {
+  StringRef HelpText, ToolName;
+  switch (Tool) {
+  case ToolType::Objcopy:
+    ToolName = "llvm-objcopy";
+    HelpText = " [options] input [output]";
+    break;
+  case ToolType::Strip:
+    ToolName = "llvm-strip";
+    HelpText = " [options] inputs...";
+    break;
+  case ToolType::InstallNameTool:
+    ToolName = "llvm-install-name-tool";
+    HelpText = " [options] input";
+    break;
+  }
+  OptTable.PrintHelp(OS, (ToolName + HelpText).str().c_str(),
                      (ToolName + " tool").str().c_str());
   // TODO: Replace this with libOption call once it adds extrahelp support.
   // The CommandLine library has a cl::extrahelp class to support this,
@@ -416,12 +437,12 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
   if (InputArgs.size() == 0) {
-    printHelp(T, errs(), "llvm-objcopy");
+    printHelp(T, errs(), ToolType::Objcopy);
     exit(1);
   }
 
   if (InputArgs.hasArg(OBJCOPY_help)) {
-    printHelp(T, outs(), "llvm-objcopy");
+    printHelp(T, outs(), ToolType::Objcopy);
     exit(0);
   }
 
@@ -807,12 +828,12 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
   if (InputArgs.size() == 0) {
-    printHelp(T, errs(), "llvm-install-name-tool");
+    printHelp(T, errs(), ToolType::InstallNameTool);
     exit(1);
   }
 
   if (InputArgs.hasArg(INSTALL_NAME_TOOL_help)) {
-    printHelp(T, outs(), "llvm-install-name-tool");
+    printHelp(T, outs(), ToolType::InstallNameTool);
     exit(0);
   }
 
@@ -870,12 +891,12 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
   if (InputArgs.size() == 0) {
-    printHelp(T, errs(), "llvm-strip");
+    printHelp(T, errs(), ToolType::Strip);
     exit(1);
   }
 
   if (InputArgs.hasArg(STRIP_help)) {
-    printHelp(T, outs(), "llvm-strip");
+    printHelp(T, outs(), ToolType::Strip);
     exit(0);
   }
 

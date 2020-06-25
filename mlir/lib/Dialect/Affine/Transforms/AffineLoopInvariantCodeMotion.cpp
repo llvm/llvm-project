@@ -63,10 +63,7 @@ areAllOpsInTheBlockListInvariant(Region &blockList, Value indVar,
 
 static bool isMemRefDereferencingOp(Operation &op) {
   // TODO(asabne): Support DMA Ops.
-  if (isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op)) {
-    return true;
-  }
-  return false;
+  return isa<AffineLoadOp, AffineStoreOp>(op);
 }
 
 // Returns true if the individual op is loop invariant.

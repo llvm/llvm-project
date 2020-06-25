@@ -16830,6 +16830,21 @@ vec_clrr(vector unsigned char __a, unsigned int __n) {
   return __builtin_altivec_vclrrb((vector signed char)__a, __n);
 #endif
 }
+
+/* vec_cntlzm */
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_cntlzm(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vclzdm(__a, __b);
+}
+
+/* vec_cnttzm */
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_cnttzm(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vctzdm(__a, __b);
+}
+
 #endif /* __POWER10_VECTOR__ */
 
 #undef __ATTRS_o_ai

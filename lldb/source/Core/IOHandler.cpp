@@ -253,9 +253,9 @@ IOHandlerEditline::IOHandlerEditline(
                  m_input_sp && m_input_sp->GetIsRealTerminal();
 
   if (use_editline) {
-    m_editline_up.reset(new Editline(editline_name, GetInputFILE(),
-                                     GetOutputFILE(), GetErrorFILE(),
-                                     m_color_prompts));
+    m_editline_up = std::make_unique<Editline>(editline_name, GetInputFILE(),
+                                               GetOutputFILE(), GetErrorFILE(),
+                                               m_color_prompts);
     m_editline_up->SetIsInputCompleteCallback(IsInputCompleteCallback, this);
     m_editline_up->SetAutoCompleteCallback(AutoCompleteCallback, this);
     // See if the delegate supports fixing indentation

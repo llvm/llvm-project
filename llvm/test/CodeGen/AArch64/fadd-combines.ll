@@ -207,6 +207,19 @@ define double @fadd_fma_fmul_1(double %a, double %b, double %c, double %d, doubl
   ret double %a2
 }
 
+define float @fadd_fma_fmul_fmf(float %a, float %b, float %c, float %d, float %n0) nounwind {
+; CHECK-LABEL: fadd_fma_fmul_fmf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmadd s2, s2, s3, s4
+; CHECK-NEXT:    fmadd s0, s0, s1, s2
+; CHECK-NEXT:    ret
+  %m1 = fmul float %a, %b
+  %m2 = fmul float %c, %d
+  %a1 = fadd contract float %m1, %m2
+  %a2 = fadd reassoc float %n0, %a1
+  ret float %a2
+}
+
 ; Minimum FMF, commute final add operands, change type.
 
 define float @fadd_fma_fmul_2(float %a, float %b, float %c, float %d, float %n0) nounwind {
