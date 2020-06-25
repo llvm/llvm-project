@@ -22,3 +22,7 @@ def IndexToSizeToIndexCanonicalization : Pat<
   (Shape_SizeToIndexOp (Shape_IndexToSizeOp $arg)),
   (replaceWithValue $arg)>;
 
+def SizeToIndexToSizeCanonicalization : Pat<
+  (Shape_IndexToSizeOp (Shape_SizeToIndexOp $arg)),
+  (replaceWithValue $arg)>;
+
