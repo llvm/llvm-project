@@ -176,4 +176,12 @@ define <vscale x 4 x float*> @scalable_vector_idx_mix_scalar_vector() {
   ret <vscale x 4 x float*> %gep
 }
 
+define <vscale x 2 x i64*> @ptr_idx_mix_scalar_scalable_vector() {
+; CHECK-LABEL: @ptr_idx_mix_scalar_scalable_vector(
+; CHECK-NEXT:    ret <vscale x 2 x i64*> zeroinitializer
+;
+  %v = getelementptr [2 x i64], [2 x i64]* null, i64 0, <vscale x 2 x i64> zeroinitializer
+  ret <vscale x 2 x i64*> %v
+}
+
 ; Check ConstantExpr::getGetElementPtr() using ElementCount for size queries - end.
