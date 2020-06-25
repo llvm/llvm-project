@@ -726,6 +726,10 @@ public:
 
   void dump();
 
+  // Prints the same analysis as dump(), but its definition is not dependent
+  // on the build.
+  void print();
+
   Optional<InstructionCostDetail> getCostDetails(const Instruction *I) {
     if (InstructionCostDetailMap.find(I) != InstructionCostDetailMap.end())
       return InstructionCostDetailMap[I];
@@ -2168,9 +2172,7 @@ InlineResult CallAnalyzer::analyze() {
   return finalizeAnalysis();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-/// Dump stats about this call's analysis.
-LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() {
+void InlineCostCallAnalyzer::print() {
 #define DEBUG_PRINT_STAT(x) dbgs() << "      " #x ": " << x << "\n"
   if (PrintInstructionComments)
     F.print(dbgs(), &Writer);
@@ -2188,6 +2190,12 @@ LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() {
   DEBUG_PRINT_STAT(Cost);
   DEBUG_PRINT_STAT(Threshold);
 #undef DEBUG_PRINT_STAT
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// Dump stats about this call's analysis.
+LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() {
+  print();
 }
 #endif
 
