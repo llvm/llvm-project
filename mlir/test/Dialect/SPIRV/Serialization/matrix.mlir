@@ -22,6 +22,13 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     spv.ReturnValue %result : !spv.matrix<3 x vector<3xf16>>
 
   }
+
+  // CHECK-LABEL: @matrix_transpose_1
+  spv.func @matrix_transpose_1(%arg0 : !spv.matrix<3 x vector<2xf32>>) -> !spv.matrix<2 x vector<3xf32>> "None" {
+    // CHECK: {{%.*}} = spv.Transpose {{%.*}} : !spv.matrix<3 x vector<2xf32>> -> !spv.matrix<2 x vector<3xf32>>
+    %result = spv.Transpose %arg0 : !spv.matrix<3 x vector<2xf32>> -> !spv.matrix<2 x vector<3xf32>>
+    spv.ReturnValue %result : !spv.matrix<2 x vector<3xf32>>
+  }
 }
 
 // -----

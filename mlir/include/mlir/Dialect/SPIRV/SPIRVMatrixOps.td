@@ -45,6 +45,13 @@ def SPV_MatrixTimesScalarOp : SPV_Op<"MatrixTimesScalar", []> {
     ```
   }];
 
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[]>,
+    Capability<[SPV_C_Matrix]>
+  ];
+
   let arguments = (ins
     SPV_AnyMatrix:$matrix,
     SPV_Float:$scalar
@@ -68,6 +75,60 @@ def SPV_MatrixTimesScalarOp : SPV_Op<"MatrixTimesScalar", []> {
   ];
 
   let verifier = [{ return verifyMatrixTimesScalar(*this); }];
+}
+
+// -----
+
+def SPV_TransposeOp : SPV_Op<"Transpose", []> {
+  let summary = "Transpose a matrix.";
+
+  let description = [{
+    Result Type must be an OpTypeMatrix.
+
+    Matrix must be an object of type OpTypeMatrix. The number of columns and
+    the column size of Matrix must be the reverse of those in Result Type.
+    The types of the scalar components in Matrix and Result Type must be the
+    same.
+
+    Matrix must have of type of OpTypeMatrix.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    transpose-op ::= ssa-id `=` `spv.Transpose` ssa-use `:` matrix-type `->`
+    matrix-type
+
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spv.Transpose %matrix: !spv.matrix<2 x vector<3xf32>> ->
+    !spv.matrix<3 x vector<2xf32>>
+
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[]>,
+    Capability<[SPV_C_Matrix]>
+  ];
+
+  let arguments = (ins
+    SPV_AnyMatrix:$matrix
+  );
+
+  let results = (outs
+    SPV_AnyMatrix:$result
+  );
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($matrix) `->` type($result)
+  }];
+
+  let verifier = [{ return verifyTranspose(*this); }];
 }
 
 // -----
