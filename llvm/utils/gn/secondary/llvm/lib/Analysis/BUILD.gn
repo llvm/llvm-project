@@ -99,6 +99,7 @@ static_library("Analysis") {
     "RegionPrinter.cpp",
     "ScalarEvolution.cpp",
     "ScalarEvolutionAliasAnalysis.cpp",
+    "ScalarEvolutionDivision.cpp",
     "ScalarEvolutionNormalization.cpp",
     "ScopedNoAliasAA.cpp",
     "StackLifetime.cpp",
