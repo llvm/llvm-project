@@ -16,6 +16,7 @@ unittest("FrontendTests") {
     "ASTUnitTest.cpp",
     "CodeGenActionTest.cpp",
     "CompilerInstanceTest.cpp",
+    "CompilerInvocationTest.cpp",
     "FixedPointString.cpp",
     "FrontendActionTest.cpp",
     "OutputStreamTest.cpp",
