@@ -34,7 +34,7 @@ Sections:
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
 
-# RUN: not llvm-readelf --file-headers --sections %t2 2>&1 | \
+# RUN: llvm-readelf --file-headers --sections %t2 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t2 --check-prefix=GNU2
 # GNU2: Number of section headers:         0
 # GNU2: Section header string table index: 65535 (corrupt: out of range)
@@ -43,7 +43,8 @@ Sections:
 # GNU2-EMPTY:
 # GNU2-NEXT:  Section Headers:
 # GNU2-NEXT:   [Nr] Name Type Address Off Size ES Flg Lk Inf Al
-# GNU2-NEXT:   error: '[[FILE]]': e_shstrndx == SHN_XINDEX, but the section header table is empty
+# GNU2-NEXT:  warning: '[[FILE]]': e_shstrndx == SHN_XINDEX, but the section header table is empty
+# GNU2-NEXT:  Key to Flags:
 
 # RUN: llvm-readobj --file-headers --sections %t2 | \
 # RUN:   FileCheck %s --check-prefix=LLVM2 --implicit-check-not="warning:"
