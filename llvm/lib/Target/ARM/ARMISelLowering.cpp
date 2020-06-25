@@ -14268,7 +14268,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   if (!St->isSimple() || St->isTruncatingStore() || !St->isUnindexed())
     return SDValue();
   SDValue Trunc = St->getValue();
-  if (Trunc->getOpcode() != ISD::TRUNCATE)
+  if (Trunc->getOpcode() != ISD::TRUNCATE && Trunc->getOpcode() != ISD::FP_ROUND)
     return SDValue();
   EVT FromVT = Trunc->getOperand(0).getValueType();
   EVT ToVT = Trunc.getValueType();
@@ -14283,7 +14283,10 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
     NumElements = 4;
   if (FromEltVT == MVT::i16 && ToEltVT == MVT::i8)
     NumElements = 8;
-  if (NumElements == 0 || FromVT.getVectorNumElements() == NumElements ||
+  if (FromEltVT == MVT::f32 && ToEltVT == MVT::f16)
+    NumElements = 4;
+  if (NumElements == 0 ||
+      (FromEltVT != MVT::f32 && FromVT.getVectorNumElements() == NumElements) ||
       FromVT.getVectorNumElements() % NumElements != 0)
     return SDValue();
 
@@ -14293,7 +14296,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   //  rev: N 0 N+1 1 N+2 2 ...
   auto isVMOVNOriginalMask = [&](ArrayRef<int> M, bool rev) {
     unsigned NumElts = ToVT.getVectorNumElements();
-    if (NumElts != M.size() || (ToVT != MVT::v8i16 && ToVT != MVT::v16i8))
+    if (NumElts != M.size())
       return false;
 
     unsigned Off0 = rev ? NumElts : 0;
@@ -14314,6 +14317,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
         isVMOVNOriginalMask(Shuffle->getMask(), true))
       return SDValue();
 
+  LLVMContext &C = *DAG.getContext();
   SDLoc DL(St);
   // Details about the old store
   SDValue Ch = St->getChain();
@@ -14322,8 +14326,11 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
   AAMDNodes AAInfo = St->getAAInfo();
 
-  EVT NewFromVT = EVT::getVectorVT(*DAG.getContext(), FromEltVT, NumElements);
-  EVT NewToVT = EVT::getVectorVT(*DAG.getContext(), ToEltVT, NumElements);
+  // We split the store into slices of NumElements. fp16 trunc stores are vcvt
+  // and then stored as truncating integer stores.
+  EVT NewFromVT = EVT::getVectorVT(C, FromEltVT, NumElements);
+  EVT NewToVT = EVT::getVectorVT(
+      C, EVT::getIntegerVT(C, ToEltVT.getSizeInBits()), NumElements);
 
   SmallVector<SDValue, 4> Stores;
   for (unsigned i = 0; i < FromVT.getVectorNumElements() / NumElements; i++) {
@@ -14333,6 +14340,14 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
     SDValue Extract =
         DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewFromVT, Trunc.getOperand(0),
                     DAG.getConstant(i * NumElements, DL, MVT::i32));
+
+    if (ToEltVT == MVT::f16) {
+      SDValue FPTrunc =
+          DAG.getNode(ARMISD::VCVTN, DL, MVT::v8f16, DAG.getUNDEF(MVT::v8f16),
+                      Extract, DAG.getConstant(0, DL, MVT::i32));
+      Extract = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, MVT::v4i32, FPTrunc);
+    }
+
     SDValue Store = DAG.getTruncStore(
         Ch, DL, Extract, NewPtr, St->getPointerInfo().getWithOffset(NewOffset),
         NewToVT, Alignment.value(), MMOFlags, AAInfo);
