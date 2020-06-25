@@ -769,7 +769,7 @@ SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() {
 
 const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
   if (m_func_aranges_up == nullptr) {
-    m_func_aranges_up.reset(new DWARFDebugAranges());
+    m_func_aranges_up = std::make_unique<DWARFDebugAranges>();
     const DWARFDebugInfoEntry *die = DIEPtr();
     if (die)
       die->BuildFunctionAddressRangeTable(this, m_func_aranges_up.get());

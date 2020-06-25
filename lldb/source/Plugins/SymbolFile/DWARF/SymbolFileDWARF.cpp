@@ -651,7 +651,7 @@ DWARFDebugRanges *SymbolFileDWARF::GetDebugRanges() {
                        static_cast<void *>(this));
 
     if (m_context.getOrLoadRangesData().GetByteSize() > 0)
-      m_ranges.reset(new DWARFDebugRanges());
+      m_ranges = std::make_unique<DWARFDebugRanges>();
 
     if (m_ranges)
       m_ranges->Extract(m_context);
@@ -1192,15 +1192,15 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
             (name != nullptr || mangled_name != nullptr)) {
           std::unique_ptr<Declaration> decl_up;
           if (decl_file != 0 || decl_line != 0 || decl_column != 0)
-            decl_up.reset(new Declaration(
+            decl_up = std::make_unique<Declaration>(
                 comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file),
-                decl_line, decl_column));
+                decl_line, decl_column);
 
           std::unique_ptr<Declaration> call_up;
           if (call_file != 0 || call_line != 0 || call_column != 0)
-            call_up.reset(new Declaration(
+            call_up = std::make_unique<Declaration>(
                 comp_unit.GetSupportFiles().GetFileSpecAtIndex(call_file),
-                call_line, call_column));
+                call_line, call_column);
 
           block->SetInlinedFunctionInfo(name, mangled_name, decl_up.get(),
                                         call_up.get());
@@ -1763,7 +1763,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
 SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
   if (!m_global_aranges_up) {
-    m_global_aranges_up.reset(new GlobalVariableMap());
+    m_global_aranges_up = std::make_unique<GlobalVariableMap>();
 
     ModuleSP module_sp = GetObjectFile()->GetModule();
     if (module_sp) {

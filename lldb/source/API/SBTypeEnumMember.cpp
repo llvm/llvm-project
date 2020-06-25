@@ -141,7 +141,7 @@ operator=(const SBTypeEnumMemberList &rhs) {
       rhs);
 
   if (this != &rhs) {
-    m_opaque_up.reset(new TypeEnumMemberListImpl());
+    m_opaque_up = std::make_unique<TypeEnumMemberListImpl>();
     for (uint32_t i = 0,
                   rhs_size = const_cast<SBTypeEnumMemberList &>(rhs).GetSize();
          i < rhs_size; i++)

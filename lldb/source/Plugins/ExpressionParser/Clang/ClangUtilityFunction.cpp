@@ -167,7 +167,7 @@ void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
     auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
     ast_importer = persistent_vars->GetClangASTImporter();
   }
-  m_expr_decl_map_up.reset(
-      new ClangExpressionDeclMap(keep_result_in_memory, nullptr,
-                                 exe_ctx.GetTargetSP(), ast_importer, nullptr));
+  m_expr_decl_map_up = std::make_unique<ClangExpressionDeclMap>(
+      keep_result_in_memory, nullptr, exe_ctx.GetTargetSP(), ast_importer,
+      nullptr);
 }

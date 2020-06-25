@@ -1,0 +1,47 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
+
+# Designed to provoke calling SIInstrInfo::insertBranch in wave32 mode
+# The implicit $vcc operand should be $vcc_lo in this case
+
+...
+# CHECK-LABEL: bb.1:
+# CHECK: S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo
+
+name:            _amdgpu_cs_main
+body:             |
+  bb.0:
+    $vgpr1 = V_MOV_B32_e32 1050, implicit $exec
+    $sgpr0 = S_MOV_B32 1123418112
+    $vcc_hi = IMPLICIT_DEF
+  bb.1:
+    $vgpr0 = COPY killed $vgpr1, implicit $exec
+    V_CMP_GT_U32_e32 5, $vgpr1, implicit-def $vcc_lo, implicit $exec, implicit-def $vcc
+    $vcc_lo = S_AND_B32 $exec_lo, $vcc_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo, implicit $vcc
+    S_BRANCH %bb.2
+  
+  bb.2:
+    $sgpr1 = COPY $sgpr0
+    S_BRANCH %bb.1
+
+...
+
+# CHECK-LABEL: bb.1:
+# CHECK: S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc_lo
+---
+name:            _amdgpu_cs_main_undef
+body:             |
+  bb.0:
+    $vgpr1 = V_MOV_B32_e32 1050, implicit $exec
+    $sgpr0 = S_MOV_B32 1123418112
+    $vcc_hi = IMPLICIT_DEF
+  bb.1:
+    $vgpr0 = COPY killed $vgpr1, implicit $exec
+    S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc_lo, implicit undef $vcc
+    S_BRANCH %bb.2
+  
+  bb.2:
+    $sgpr1 = COPY $sgpr0
+    S_BRANCH %bb.1
+
+...

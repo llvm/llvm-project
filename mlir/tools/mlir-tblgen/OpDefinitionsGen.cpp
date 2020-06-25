@@ -131,7 +131,7 @@ static std::string replaceAllSubstrs(std::string str, const std::string &match,
 static inline bool hasStringAttribute(const Record &record,
                                       StringRef fieldName) {
   auto valueInit = record.getValueInit(fieldName);
-  return isa<CodeInit>(valueInit) || isa<StringInit>(valueInit);
+  return isa<CodeInit, StringInit>(valueInit);
 }
 
 static std::string getArgumentName(const Operator &op, int index) {

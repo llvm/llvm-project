@@ -130,6 +130,10 @@ def Shape_ConstSizeOp : Shape_Op<"const_size", [
   let arguments = (ins IndexAttr:$value);
   let results = (outs Shape_SizeType:$result);
 
+  let builders = [
+    OpBuilder<"OpBuilder &builder, OperationState &result, int64_t value">
+  ];
+
   let assemblyFormat = "$value attr-dict";
   let hasFolder = 1;
 }
@@ -167,6 +171,21 @@ def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", [NoSideEffect]> {
   let results = (outs Shape_ShapeType:$result);
 
   let assemblyFormat = "attr-dict $input `:` type($input)";
+}
+
+def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
+  let summary = "Gets the rank of a shape";
+  let description = [{
+    Returns the rank of the shape, i.e. the number of extents.
+  }];
+
+  let arguments = (ins Shape_ShapeType:$shape);
+  let results = (outs Shape_SizeType:$rank);
+
+  let assemblyFormat = "attr-dict $shape";
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [NoSideEffect]> {

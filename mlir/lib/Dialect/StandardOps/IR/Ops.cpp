@@ -1273,8 +1273,13 @@ void DimOp::build(OpBuilder &builder, OperationState &result,
                   Value memrefOrTensor, int64_t index) {
   auto loc = result.location;
   Value indexValue = builder.create<ConstantIndexOp>(loc, index);
+  build(builder, result, memrefOrTensor, indexValue);
+}
+
+void DimOp::build(OpBuilder &builder, OperationState &result,
+                  Value memrefOrTensor, Value index) {
   auto indexTy = builder.getIndexType();
-  build(builder, result, indexTy, memrefOrTensor, indexValue);
+  build(builder, result, indexTy, memrefOrTensor, index);
 }
 
 Optional<int64_t> DimOp::getConstantIndex() {

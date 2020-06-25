@@ -177,7 +177,7 @@ lldb_private::Stream *SBStream::get() { return m_opaque_up.get(); }
 
 lldb_private::Stream &SBStream::ref() {
   if (m_opaque_up == nullptr)
-    m_opaque_up.reset(new StreamString());
+    m_opaque_up = std::make_unique<StreamString>();
   return *m_opaque_up;
 }
 

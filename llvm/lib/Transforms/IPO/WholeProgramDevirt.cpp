@@ -1713,7 +1713,6 @@ void DevirtModule::scanTypeTestUsers(Function *TypeTestFunc) {
   // points to a member of the type identifier %md. Group calls by (type ID,
   // offset) pair (effectively the identity of the virtual function) and store
   // to CallSlots.
-  DenseSet<CallBase *> SeenCallSites;
   for (auto I = TypeTestFunc->use_begin(), E = TypeTestFunc->use_end();
        I != E;) {
     auto CI = dyn_cast<CallInst>(I->getUser());
@@ -1732,15 +1731,8 @@ void DevirtModule::scanTypeTestUsers(Function *TypeTestFunc) {
       Metadata *TypeId =
           cast<MetadataAsValue>(CI->getArgOperand(1))->getMetadata();
       Value *Ptr = CI->getArgOperand(0)->stripPointerCasts();
-      for (DevirtCallSite Call : DevirtCalls) {
-        // Only add this CallSite if we haven't seen it before. The vtable
-        // pointer may have been CSE'd with pointers from other call sites,
-        // and we don't want to process call sites multiple times. We can't
-        // just skip the vtable Ptr if it has been seen before, however, since
-        // it may be shared by type tests that dominate different calls.
-        if (SeenCallSites.insert(&Call.CB).second)
-          CallSlots[{TypeId, Call.Offset}].addCallSite(Ptr, Call.CB, nullptr);
-      }
+      for (DevirtCallSite Call : DevirtCalls)
+        CallSlots[{TypeId, Call.Offset}].addCallSite(Ptr, Call.CB, nullptr);
     }
 
     // We no longer need the assumes or the type test.

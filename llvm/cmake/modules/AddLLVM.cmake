@@ -891,7 +891,7 @@ endmacro(add_llvm_executable name)
 #   only an object library is built, and no module is built. This is specific to the Polly use case.
 #
 #   The SUBPROJECT argument contains the LLVM project the plugin belongs
-#   to. If set, the plugin will link statically by default it if the
+#   to. If set, the plugin will link statically by default it if the 
 #   project was enabled.
 function(add_llvm_pass_plugin name)
   cmake_parse_arguments(ARG

@@ -16,7 +16,7 @@ using namespace lldb_private;
 
 bool ClassDescriptorV2::Read_objc_class(
     Process *process, std::unique_ptr<objc_class_t> &objc_class) const {
-  objc_class.reset(new objc_class_t);
+  objc_class = std::make_unique<objc_class_t>();
 
   bool ret = objc_class->Read(process, m_objc_class_ptr);
 
@@ -197,14 +197,14 @@ bool ClassDescriptorV2::Read_class_row(
     return false;
 
   if (class_row_t_flags & RW_REALIZED) {
-    class_rw.reset(new class_rw_t);
+    class_rw = std::make_unique<class_rw_t>();
 
     if (!class_rw->Read(process, objc_class.m_data_ptr)) {
       class_rw.reset();
       return false;
     }
 
-    class_ro.reset(new class_ro_t);
+    class_ro = std::make_unique<class_ro_t>();
 
     if (!class_ro->Read(process, class_rw->m_ro_ptr)) {
       class_rw.reset();
@@ -212,7 +212,7 @@ bool ClassDescriptorV2::Read_class_row(
       return false;
     }
   } else {
-    class_ro.reset(new class_ro_t);
+    class_ro = std::make_unique<class_ro_t>();
 
     if (!class_ro->Read(process, objc_class.m_data_ptr)) {
       class_ro.reset();
@@ -357,7 +357,7 @@ bool ClassDescriptorV2::Describe(
   if (instance_method_func) {
     std::unique_ptr<method_list_t> base_method_list;
 
-    base_method_list.reset(new method_list_t);
+    base_method_list = std::make_unique<method_list_t>();
     if (!base_method_list->Read(process, class_ro->m_baseMethods_ptr))
       return false;
 
@@ -365,7 +365,7 @@ bool ClassDescriptorV2::Describe(
       return false;
 
     std::unique_ptr<method_t> method;
-    method.reset(new method_t);
+    method = std::make_unique<method_t>();
 
     for (uint32_t i = 0, e = base_method_list->m_count; i < e; ++i) {
       method->Read(process, base_method_list->m_first_ptr +

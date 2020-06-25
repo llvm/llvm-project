@@ -953,7 +953,7 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(
 }
 
 unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                            Value *Ptr, bool VariableMask,
+                                            const Value *Ptr, bool VariableMask,
                                             unsigned Alignment,
                                             TTI::TargetCostKind CostKind,
                                             const Instruction *I) {
@@ -1032,9 +1032,9 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
   if (ExtSize != 8 && ExtSize != 16)
     return ScalarCost;
 
-  if (auto BC = dyn_cast<BitCastInst>(Ptr))
+  if (const auto *BC = dyn_cast<BitCastInst>(Ptr))
     Ptr = BC->getOperand(0);
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+  if (const auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
     if (GEP->getNumOperands() != 2)
       return ScalarCost;
     unsigned Scale = DL.getTypeAllocSize(GEP->getResultElementType());
@@ -1042,7 +1042,7 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
     if (Scale != 1 && Scale * 8 != ExtSize)
       return ScalarCost;
     // And we need to zext (not sext) the indexes from a small enough type.
-    if (auto ZExt = dyn_cast<ZExtInst>(GEP->getOperand(1))) {
+    if (const auto *ZExt = dyn_cast<ZExtInst>(GEP->getOperand(1))) {
       if (ZExt->getOperand(0)->getType()->getScalarSizeInBits() <= ExtSize)
         return VectorCost;
     }

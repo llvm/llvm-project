@@ -90,6 +90,20 @@ public:
   }
 };
 
+class RankOpConverter : public OpConversionPattern<shape::RankOp> {
+public:
+  using OpConversionPattern<shape::RankOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(shape::RankOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    shape::RankOp::Adaptor transformed(operands);
+    rewriter.replaceOpWithNewOp<DimOp>(op.getOperation(), transformed.shape(),
+                                       0);
+    return success();
+  }
+};
+
 /// Type conversions.
 class ShapeTypeConverter : public TypeConverter {
 public:
@@ -147,6 +161,7 @@ void mlir::populateShapeToStandardConversionPatterns(
       BinaryOpConversion<AddOp, AddIOp>,
       BinaryOpConversion<MulOp, MulIOp>,
       ConstSizeOpConverter,
+      RankOpConverter,
       ShapeOfOpConversion>(ctx);
   // clang-format on
 }

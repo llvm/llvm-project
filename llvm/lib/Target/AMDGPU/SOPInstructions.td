@@ -465,9 +465,19 @@ def S_MAX_U32 : SOP2_32 <"s_max_u32",
 } // End isCommutable = 1
 } // End Defs = [SCC]
 
+class SelectPat<SDPatternOperator select> : PatFrag <
+  (ops node:$src1, node:$src2),
+  (select SCC, $src1, $src2),
+  [{ return N->getOperand(0)->hasOneUse() && !N->isDivergent(); }]
+>;
 
 let Uses = [SCC] in {
-  def S_CSELECT_B32 : SOP2_32 <"s_cselect_b32">;
+  let AddedComplexity = 20 in {
+    def S_CSELECT_B32 : SOP2_32 <"s_cselect_b32",
+      [(set i32:$sdst, (SelectPat<select> i32:$src0, i32:$src1))]
+    >;
+  }
+
   def S_CSELECT_B64 : SOP2_64 <"s_cselect_b64">;
 } // End Uses = [SCC]
 

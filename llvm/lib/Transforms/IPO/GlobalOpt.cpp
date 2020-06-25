@@ -443,7 +443,7 @@ static bool IsSRASequential(Type *T) {
 static uint64_t GetSRASequentialNumElements(Type *T) {
   if (ArrayType *AT = dyn_cast<ArrayType>(T))
     return AT->getNumElements();
-  return cast<VectorType>(T)->getNumElements();
+  return cast<FixedVectorType>(T)->getNumElements();
 }
 static Type *GetSRASequentialElementType(Type *T) {
   if (ArrayType *AT = dyn_cast<ArrayType>(T))
@@ -2570,7 +2570,7 @@ static Constant *EvaluateStoreInto(Constant *Init, Constant *Val,
   if (ArrayType *ATy = dyn_cast<ArrayType>(Init->getType()))
     NumElts = ATy->getNumElements();
   else
-    NumElts = cast<VectorType>(Init->getType())->getNumElements();
+    NumElts = cast<FixedVectorType>(Init->getType())->getNumElements();
 
   // Break up the array into elements.
   for (uint64_t i = 0, e = NumElts; i != e; ++i)
@@ -2706,7 +2706,7 @@ static void BatchCommitValueTo(const DenseMap<Constant*, Constant*> &Mem) {
       else if (auto *ATy = dyn_cast<ArrayType>(Ty))
         NumElts = ATy->getNumElements();
       else
-        NumElts = cast<VectorType>(Ty)->getNumElements();
+        NumElts = cast<FixedVectorType>(Ty)->getNumElements();
       for (unsigned i = 0, e = NumElts; i != e; ++i)
         Elts.push_back(Init->getAggregateElement(i));
     }

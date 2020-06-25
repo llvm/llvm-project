@@ -68,6 +68,14 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
       : GCCBuiltin<"__builtin_pextd">,
         Intrinsic <[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
 
+  // Count Leading / Trailing Zeroes under bit Mask Builtins.
+  def int_ppc_cntlzdm
+      : GCCBuiltin<"__builtin_cntlzdm">,
+        Intrinsic <[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_cnttzdm
+      : GCCBuiltin<"__builtin_cnttzdm">,
+        Intrinsic <[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+
   def int_ppc_truncf128_round_to_odd
       : GCCBuiltin<"__builtin_truncf128_round_to_odd">,
         Intrinsic <[llvm_double_ty], [llvm_f128_ty], [IntrNoMem]>;
@@ -672,6 +680,14 @@ let TargetPrefix = "ppc" in {  // All PPC intrinsics start with "llvm.ppc.".
   def int_ppc_altivec_vsubecuq : GCCBuiltin<"__builtin_altivec_vsubecuq">,
               Intrinsic<[llvm_v1i128_ty],
                         [llvm_v1i128_ty, llvm_v1i128_ty, llvm_v1i128_ty],
+                        [IntrNoMem]>;
+
+  // P10 Vector Count Leading / Trailing Zeroes under bit Mask Builtins.
+  def int_ppc_altivec_vclzdm : GCCBuiltin<"__builtin_altivec_vclzdm">,
+              Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vctzdm : GCCBuiltin<"__builtin_altivec_vctzdm">,
+              Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty],
                         [IntrNoMem]>;
 }
 

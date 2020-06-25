@@ -30,10 +30,8 @@ using namespace mlir;
 // Temporary utility: will be replaced when this is modeled through
 // side-effects/op traits. TODO(b/117228571)
 static bool isMemRefDereferencingOp(Operation &op) {
-  if (isa<AffineReadOpInterface>(op) || isa<AffineWriteOpInterface>(op) ||
-      isa<AffineDmaStartOp>(op) || isa<AffineDmaWaitOp>(op))
-    return true;
-  return false;
+  return isa<AffineReadOpInterface, AffineWriteOpInterface, AffineDmaStartOp,
+             AffineDmaWaitOp>(op);
 }
 
 /// Return the AffineMapAttr associated with memory 'op' on 'memref'.

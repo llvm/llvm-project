@@ -1,17 +1,23 @@
 #!/usr/bin/env python
 
-import SATestAdd
-import SATestBuild
-import SATestUpdateDiffs
-import CmpRuns
-
-from ProjectMap import ProjectInfo, ProjectMap
-
 import argparse
 import sys
+import os
+
+from subprocess import call
+
+SCRIPTS_DIR = os.path.dirname(os.path.realpath(__file__))
+PROJECTS_DIR = os.path.join(SCRIPTS_DIR, "projects")
+DEFAULT_LLVM_DIR = os.path.realpath(os.path.join(SCRIPTS_DIR,
+                                                 os.path.pardir,
+                                                 os.path.pardir,
+                                                 os.path.pardir))
 
 
 def add(parser, args):
+    import SATestAdd
+    from ProjectMap import ProjectInfo
+
     if args.source == "git" and (args.origin == "" or args.commit == ""):
         parser.error(
             "Please provide both --origin and --commit if source is 'git'")
@@ -27,6 +33,9 @@ def add(parser, args):
 
 
 def build(parser, args):
+    import SATestBuild
+    from ProjectMap import ProjectMap
+
     SATestBuild.VERBOSE = args.verbose
 
     project_map = ProjectMap()
@@ -62,6 +71,16 @@ def build(parser, args):
 
 
 def compare(parser, args):
+    import CmpRuns
+
+    choices = [CmpRuns.HistogramType.RELATIVE.value,
+               CmpRuns.HistogramType.LOG_RELATIVE.value,
+               CmpRuns.HistogramType.ABSOLUTE.value]
+
+    if args.histogram is not None and args.histogram not in choices:
+        parser.error("Incorrect histogram type, available choices are {}"
+                     .format(choices))
+
     dir_old = CmpRuns.ResultsDirectory(args.old[0], args.root_old)
     dir_new = CmpRuns.ResultsDirectory(args.new[0], args.root_new)
 
@@ -73,9 +92,67 @@ def compare(parser, args):
 
 
 def update(parser, args):
+    import SATestUpdateDiffs
+    from ProjectMap import ProjectMap
+
     project_map = ProjectMap()
     for project in project_map.projects:
         SATestUpdateDiffs.update_reference_results(project)
+
+
+def docker(parser, args):
+    if len(args.rest) > 0:
+        if args.rest[0] != "--":
+            parser.error("REST arguments should start with '--'")
+        args.rest = args.rest[1:]
+
+    if args.build_image:
+        docker_build_image()
+    elif args.shell:
+        docker_shell(args)
+    else:
+        sys.exit(docker_run(args, ' '.join(args.rest)))
+
+
+def docker_build_image():
+    sys.exit(call("docker build --tag satest-image {}".format(SCRIPTS_DIR),
+                  shell=True))
+
+
+def docker_shell(args):
+    try:
+        # First we need to start the docker container in a waiting mode,
+        # so it doesn't do anything, but most importantly keeps working
+        # while the shell session is in progress.
+        docker_run(args, "--wait", "--detach")
+        # Since the docker container is running, we can actually connect to it
+        call("docker exec -it satest bash", shell=True)
+
+    except KeyboardInterrupt:
+        pass
+
+    finally:
+        print("Please wait for docker to clean up")
+        call("docker stop satest", shell=True)
+
+
+def docker_run(args, command, docker_args=""):
+    return call("docker run --rm --name satest "
+                "-v {llvm}:/llvm-project "
+                "-v {build}:/build "
+                "-v {clang}:/analyzer "
+                "-v {scripts}:/scripts "
+                "-v {projects}:/projects "
+                "{docker_args} "
+                "satest-image:latest {command}"
+                .format(llvm=args.llvm_project_dir,
+                        build=args.build_dir,
+                        clang=args.clang_dir,
+                        scripts=SCRIPTS_DIR,
+                        projects=PROJECTS_DIR,
+                        docker_args=docker_args,
+                        command=command),
+                shell=True)
 
 
 def main():
@@ -101,8 +178,7 @@ def main():
                             "(please provide --origin and --commit), "
                             "'zip' for unpacking source from a zip file, "
                             "'script' for downloading source by running "
-                            "a custom script {}"
-                            .format(SATestBuild.DOWNLOAD_SCRIPT))
+                            "a custom script")
     add_parser.add_argument("--origin", action="store", default="",
                             help="Origin link for a git repository")
     add_parser.add_argument("--commit", action="store", default="",
@@ -163,9 +239,6 @@ def main():
                             dest="show_stats", default=False,
                             help="Show change in statistics")
     cmp_parser.add_argument("--histogram", action="store", default=None,
-                            choices=[CmpRuns.HistogramType.RELATIVE.value,
-                                     CmpRuns.HistogramType.LOG_RELATIVE.value,
-                                     CmpRuns.HistogramType.ABSOLUTE.value],
                             help="Show histogram of paths differences. "
                             "Requires matplotlib")
     cmp_parser.add_argument("old", nargs=1, help="Directory with old results")
@@ -179,6 +252,29 @@ def main():
         "run of SATest build. Assumes that SATest build was just run.")
     # TODO: add option to decide whether we should use git
     upd_parser.set_defaults(func=update)
+
+    # docker subcommand
+    dock_parser = subparsers.add_parser(
+        "docker",
+        help="Run regression system in the docker.")
+
+    dock_parser.add_argument("--build-image", action="store_true",
+                             help="Build docker image for running tests.")
+    dock_parser.add_argument("--shell", action="store_true",
+                             help="Start a shell on docker.")
+    dock_parser.add_argument("--llvm-project-dir", action="store",
+                             default=DEFAULT_LLVM_DIR,
+                             help="Path to LLVM source code. Defaults "
+                             "to the repo where this script is located. ")
+    dock_parser.add_argument("--build-dir", action="store", default="",
+                             help="Path to a directory where docker should "
+                             "build LLVM code.")
+    dock_parser.add_argument("--clang-dir", action="store", default="",
+                             help="Path to find/install LLVM installation.")
+    dock_parser.add_argument("rest", nargs=argparse.REMAINDER, default=[],
+                             help="Additionall args that will be forwarded "
+                             "to the docker's entrypoint.")
+    dock_parser.set_defaults(func=docker)
 
     args = parser.parse_args()
     args.func(parser, args)

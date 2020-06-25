@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=40 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=45 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le50 -fopenmp-version=50 -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -DCCODE -verify=expected,le45 -fopenmp -ferror-limit 200 -x c %s -Wno-openmp-mapping -Wuninitialized
 #ifdef CCODE
 void foo(int arg) {

@@ -1408,7 +1408,9 @@ def DimOp : Std_Op<"dim", [NoSideEffect]> {
 
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "Value memrefOrTensor, int64_t index">
+              "Value memrefOrTensor, int64_t index">,
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+              "Value memrefOrTensor, Value index">
   ];
 
   let extraClassDeclaration = [{

@@ -144,7 +144,7 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find op
 ;--------------------------------------------------
 ; Check multiple -dump-input options.
 ;
-; This ocurrs most commonly when a test author specifies -dump-input on a
+; This occurs most commonly when a test author specifies -dump-input on a
 ; specific FileCheck call while a test runner specifies -dump-input in
 ; FILECHECK_OPTS, but check the behavior generally.
 ;

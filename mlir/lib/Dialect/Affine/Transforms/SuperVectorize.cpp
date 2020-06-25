@@ -561,7 +561,7 @@ makePatterns(const DenseSet<Operation *> &parallelLoops, int vectorRank,
 
 static NestedPattern &vectorTransferPattern() {
   static auto pattern = matcher::Op([](Operation &op) {
-    return isa<vector::TransferReadOp>(op) || isa<vector::TransferWriteOp>(op);
+    return isa<vector::TransferReadOp, vector::TransferWriteOp>(op);
   });
   return pattern;
 }

@@ -200,6 +200,7 @@ private:
   const Function *F;
   std::string CurrentFnName;
 
+  void emitStartOfAsmFile(Module &M) override;
   void emitBasicBlockStart(const MachineBasicBlock &MBB) override;
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyStart() override;

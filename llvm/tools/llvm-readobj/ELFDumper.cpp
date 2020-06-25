@@ -3825,10 +3825,13 @@ void GNUStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
     printField(F);
   OS << "\n";
 
-  const ELFObjectFile<ELFT> *ElfObj = this->dumper()->getElfObject();
-  StringRef SecStrTable = unwrapOrError<StringRef>(
-      ElfObj->getFileName(),
-      Obj->getSectionStringTable(Sections, this->dumper()->WarningHandler));
+  StringRef SecStrTable;
+  if (Expected<StringRef> SecStrTableOrErr =
+          Obj->getSectionStringTable(Sections, this->dumper()->WarningHandler))
+    SecStrTable = *SecStrTableOrErr;
+  else
+    this->reportUniqueWarning(SecStrTableOrErr.takeError());
+
   size_t SectionIndex = 0;
   for (const Elf_Shdr &Sec : Sections) {
     Fields[0].Str = to_string(SectionIndex);
@@ -3836,7 +3839,7 @@ void GNUStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
       Fields[1].Str = "<no-strings>";
     else
       Fields[1].Str = std::string(unwrapOrError<StringRef>(
-          ElfObj->getFileName(), Obj->getSectionName(&Sec, SecStrTable)));
+          this->FileName, Obj->getSectionName(&Sec, SecStrTable)));
     Fields[2].Str =
         getSectionTypeString(Obj->getHeader()->e_machine, Sec.sh_type);
     Fields[3].Str =

@@ -3301,12 +3301,16 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
           D.isFunctionDeclarator())
         break;
       bool Cxx = SemaRef.getLangOpts().CPlusPlus;
-      switch (cast<TagDecl>(SemaRef.CurContext)->getTagKind()) {
-      case TTK_Enum: llvm_unreachable("unhandled tag kind");
-      case TTK_Struct: Error = Cxx ? 1 : 2; /* Struct member */ break;
-      case TTK_Union:  Error = Cxx ? 3 : 4; /* Union member */ break;
-      case TTK_Class:  Error = 5; /* Class member */ break;
-      case TTK_Interface: Error = 6; /* Interface member */ break;
+      if (isa<ObjCContainerDecl>(SemaRef.CurContext)) {
+        Error = 6; // Interface member.
+      } else {
+        switch (cast<TagDecl>(SemaRef.CurContext)->getTagKind()) {
+        case TTK_Enum: llvm_unreachable("unhandled tag kind");
+        case TTK_Struct: Error = Cxx ? 1 : 2; /* Struct member */ break;
+        case TTK_Union:  Error = Cxx ? 3 : 4; /* Union member */ break;
+        case TTK_Class:  Error = 5; /* Class member */ break;
+        case TTK_Interface: Error = 6; /* Interface member */ break;
+        }
       }
       if (D.getDeclSpec().isFriendSpecified())
         Error = 20; // Friend type
@@ -7031,15 +7035,15 @@ static bool checkNullabilityTypeSpecifier(TypeProcessingState &state,
   // attributes, require that the type be a single-level pointer.
   if (isContextSensitive) {
     // Make sure that the pointee isn't itself a pointer type.
-    const Type *pointeeType;
+    const Type *pointeeType = nullptr;
     if (desugared->isArrayType())
       pointeeType = desugared->getArrayElementTypeNoTypeQual();
-    else
+    else if (desugared->isAnyPointerType())
       pointeeType = desugared->getPointeeType().getTypePtr();
 
-    if (pointeeType->isAnyPointerType() ||
-        pointeeType->isObjCObjectPointerType() ||
-        pointeeType->isMemberPointerType()) {
+    if (pointeeType && (pointeeType->isAnyPointerType() ||
+                        pointeeType->isObjCObjectPointerType() ||
+                        pointeeType->isMemberPointerType())) {
       S.Diag(nullabilityLoc, diag::err_nullability_cs_multilevel)
         << DiagNullabilityKind(nullability, true)
         << type;

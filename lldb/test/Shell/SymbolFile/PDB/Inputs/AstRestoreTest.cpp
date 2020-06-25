@@ -3,6 +3,7 @@ namespace N1 {
 
 namespace {
 enum Enum { Enum_0 = 1, Enum_1 = 2, Enum_2 = 4, Enum_3 = 8 };
+enum class ScopedEnum { Enum_0 = 1, Enum_1 = 2, Enum_2 = 4, Enum_3 = 8 };
 }
 
 Enum Global = Enum_3;
@@ -22,6 +23,13 @@ public:
   const Enum m_ce;
 
   static int ClassStatic;
+  static const int ClassStaticConst = 8;
+  static constexpr int ClassStaticConstexpr = 9;
+  static constexpr float ClassStaticConstexprFloat = 10.f;
+  static constexpr double ClassStaticConstexprDouble = 11.0;
+  static constexpr long double ClassStaticConstexprLongDouble = 12.0;
+  static const Enum ClassStaticConstEnum = Enum_3;
+  static const ScopedEnum ClassStaticConstScopedEnum = ScopedEnum::Enum_2;
 
 private:
   struct Inner {

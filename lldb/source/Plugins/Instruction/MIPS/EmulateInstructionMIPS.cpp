@@ -159,8 +159,8 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
       target->createMCSubtargetInfo(triple.getTriple(), cpu, features));
   assert(m_asm_info.get() && m_subtype_info.get());
 
-  m_context.reset(
-      new llvm::MCContext(m_asm_info.get(), m_reg_info.get(), nullptr));
+  m_context = std::make_unique<llvm::MCContext>(m_asm_info.get(),
+                                                m_reg_info.get(), nullptr);
   assert(m_context.get());
 
   m_disasm.reset(target->createMCDisassembler(*m_subtype_info, *m_context));

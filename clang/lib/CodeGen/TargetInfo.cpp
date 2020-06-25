@@ -9535,11 +9535,15 @@ public:
 
 class XCoreTargetCodeGenInfo : public TargetCodeGenInfo {
   mutable TypeStringCache TSC;
+  void emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
+                    const CodeGen::CodeGenModule &M) const;
+
 public:
   XCoreTargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<XCoreABIInfo>(CGT)) {}
-  void emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
-                    CodeGen::CodeGenModule &M) const override;
+  void emitTargetMetadata(CodeGen::CodeGenModule &CGM,
+                          const llvm::MapVector<GlobalDecl, StringRef>
+                              &MangledDeclNames) const override;
 };
 
 } // End anonymous namespace.
@@ -9700,11 +9704,13 @@ StringRef TypeStringCache::lookupStr(const IdentifierInfo *ID) {
 /// The output is tested by test/CodeGen/xcore-stringtype.c.
 ///
 static bool getTypeString(SmallStringEnc &Enc, const Decl *D,
-                          CodeGen::CodeGenModule &CGM, TypeStringCache &TSC);
+                          const CodeGen::CodeGenModule &CGM,
+                          TypeStringCache &TSC);
 
 /// XCore uses emitTargetMD to emit TypeString metadata for global symbols.
-void XCoreTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
-                                          CodeGen::CodeGenModule &CGM) const {
+void XCoreTargetCodeGenInfo::emitTargetMD(
+    const Decl *D, llvm::GlobalValue *GV,
+    const CodeGen::CodeGenModule &CGM) const {
   SmallStringEnc Enc;
   if (getTypeString(Enc, D, CGM, TSC)) {
     llvm::LLVMContext &Ctx = CGM.getModule().getContext();
@@ -9716,6 +9722,21 @@ void XCoreTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
   }
 }
 
+void XCoreTargetCodeGenInfo::emitTargetMetadata(
+    CodeGen::CodeGenModule &CGM,
+    const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames) const {
+  // Warning, new MangledDeclNames may be appended within this loop.
+  // We rely on MapVector insertions adding new elements to the end
+  // of the container.
+  for (unsigned I = 0; I != MangledDeclNames.size(); ++I) {
+    auto Val = *(MangledDeclNames.begin() + I);
+    llvm::GlobalValue *GV = CGM.GetGlobalValue(Val.second);
+    if (GV) {
+      const Decl *D = Val.first.getDecl()->getMostRecentDecl();
+      emitTargetMD(D, GV, CGM);
+    }
+  }
+}
 //===----------------------------------------------------------------------===//
 // SPIR ABI Implementation
 //===----------------------------------------------------------------------===//
@@ -10049,7 +10070,8 @@ static bool appendType(SmallStringEnc &Enc, QualType QType,
 }
 
 static bool getTypeString(SmallStringEnc &Enc, const Decl *D,
-                          CodeGen::CodeGenModule &CGM, TypeStringCache &TSC) {
+                          const CodeGen::CodeGenModule &CGM,
+                          TypeStringCache &TSC) {
   if (!D)
     return false;
 
