@@ -4554,7 +4554,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       // FIXME need to be more flexible about rounding mode.
       (void)V.convert(APFloat::IEEEhalf(),
                       APFloat::rmNearestTiesToEven, &Ignored);
-      return getConstant(V.bitcastToAPInt(), DL, VT);
+      return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
     }
     }
   }
