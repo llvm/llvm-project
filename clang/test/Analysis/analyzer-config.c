@@ -50,6 +50,7 @@
 // CHECK-NEXT: debug.AnalysisOrder:Bind = false
 // CHECK-NEXT: debug.AnalysisOrder:EndAnalysis = false
 // CHECK-NEXT: debug.AnalysisOrder:EndFunction = false
+// CHECK-NEXT: debug.AnalysisOrder:EvalCall = false
 // CHECK-NEXT: debug.AnalysisOrder:LiveSymbols = false
 // CHECK-NEXT: debug.AnalysisOrder:NewAllocator = false
 // CHECK-NEXT: debug.AnalysisOrder:PointerEscape = false

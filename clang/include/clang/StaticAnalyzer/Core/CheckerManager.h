@@ -47,6 +47,7 @@ class ExplodedGraph;
 class ExplodedNode;
 class ExplodedNodeSet;
 class ExprEngine;
+struct EvalCallOptions;
 class MemRegion;
 struct NodeBuilderContext;
 class ObjCMethodCall;
@@ -433,9 +434,9 @@ public:
   /// Run checkers for evaluating a call.
   ///
   /// Warning: Currently, the CallEvent MUST come from a CallExpr!
-  void runCheckersForEvalCall(ExplodedNodeSet &Dst,
-                              const ExplodedNodeSet &Src,
-                              const CallEvent &CE, ExprEngine &Eng);
+  void runCheckersForEvalCall(ExplodedNodeSet &Dst, const ExplodedNodeSet &Src,
+                              const CallEvent &CE, ExprEngine &Eng,
+                              const EvalCallOptions &CallOpts);
 
   /// Run checkers for the entire Translation Unit.
   void runCheckersOnEndOfTranslationUnit(const TranslationUnitDecl *TU,
