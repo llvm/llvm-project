@@ -42,6 +42,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 
@@ -895,15 +896,6 @@ bool ScriptInterpreterPythonImpl::GetEmbeddedInterpreterModuleObjects() {
   return m_run_one_line_function.IsValid();
 }
 
-static void ReadThreadBytesReceived(void *baton, const void *src,
-                                    size_t src_len) {
-  if (src && src_len) {
-    Stream *strm = (Stream *)baton;
-    strm->Write(src, src_len);
-    strm->Flush();
-  }
-}
-
 bool ScriptInterpreterPythonImpl::ExecuteOneLine(
     llvm::StringRef command, CommandReturnObject *result,
     const ExecuteScriptOptions &options) {
@@ -919,76 +911,22 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
     // another string to pass to PyRun_SimpleString messes up the escaping.  So
     // we use the following more complicated method to pass the command string
     // directly down to Python.
-    Debugger &debugger = m_debugger;
-
-    FileSP input_file_sp;
-    StreamFileSP output_file_sp;
-    StreamFileSP error_file_sp;
-    Communication output_comm(
-        "lldb.ScriptInterpreterPythonImpl.ExecuteOneLine.comm");
-    bool join_read_thread = false;
-    if (options.GetEnableIO()) {
-      if (result) {
-        input_file_sp = debugger.GetInputFileSP();
-        // Set output to a temporary file so we can forward the results on to
-        // the result object
-
-        Pipe pipe;
-        Status pipe_result = pipe.CreateNew(false);
-        if (pipe_result.Success()) {
-#if defined(_WIN32)
-          lldb::file_t read_file = pipe.GetReadNativeHandle();
-          pipe.ReleaseReadFileDescriptor();
-          std::unique_ptr<ConnectionGenericFile> conn_up(
-              new ConnectionGenericFile(read_file, true));
-#else
-          std::unique_ptr<ConnectionFileDescriptor> conn_up(
-              new ConnectionFileDescriptor(pipe.ReleaseReadFileDescriptor(),
-                                           true));
-#endif
-          if (conn_up->IsConnected()) {
-            output_comm.SetConnection(std::move(conn_up));
-            output_comm.SetReadThreadBytesReceivedCallback(
-                ReadThreadBytesReceived, &result->GetOutputStream());
-            output_comm.StartReadThread();
-            join_read_thread = true;
-            FILE *outfile_handle =
-                fdopen(pipe.ReleaseWriteFileDescriptor(), "w");
-            output_file_sp = std::make_shared<StreamFile>(outfile_handle, true);
-            error_file_sp = output_file_sp;
-            if (outfile_handle)
-              ::setbuf(outfile_handle, nullptr);
-
-            result->SetImmediateOutputFile(
-                debugger.GetOutputStream().GetFileSP());
-            result->SetImmediateErrorFile(
-                debugger.GetErrorStream().GetFileSP());
-          }
-        }
-      }
-      if (!input_file_sp || !output_file_sp || !error_file_sp)
-        debugger.AdoptTopIOHandlerFilesIfInvalid(input_file_sp, output_file_sp,
-                                                 error_file_sp);
-    } else {
-      auto nullin = FileSystem::Instance().Open(
-                                  FileSpec(FileSystem::DEV_NULL),
-                                  File::eOpenOptionRead);
-      auto nullout = FileSystem::Instance().Open(
-                                  FileSpec(FileSystem::DEV_NULL),
-                                  File::eOpenOptionWrite);
-      if (!nullin) {
-        result->AppendErrorWithFormatv("failed to open /dev/null: {0}\n",
-                                       llvm::fmt_consume(nullin.takeError()));
-        return false;
-      }
-      if (!nullout) {
-        result->AppendErrorWithFormatv("failed to open /dev/null: {0}\n",
-                                       llvm::fmt_consume(nullout.takeError()));
-        return false;
-      }
-      input_file_sp = std::move(nullin.get());
-      error_file_sp = output_file_sp = std::make_shared<StreamFile>(std::move(nullout.get()));
+    llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>>
+        io_redirect_or_error =
+            options.GetEnableIO()
+                ? ScriptInterpreterIORedirect::Create(m_debugger, result)
+                : ScriptInterpreterIORedirect::Create();
+    if (!io_redirect_or_error) {
+      if (result)
+        result->AppendErrorWithFormatv(
+            "failed to redirect I/O: {0}\n",
+            llvm::fmt_consume(io_redirect_or_error.takeError()));
+      else
+        llvm::consumeError(io_redirect_or_error.takeError());
+      return false;
     }
+
+    ScriptInterpreterIORedirect &io_redirect = **io_redirect_or_error;
 
     bool success = false;
     {
@@ -1005,8 +943,9 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
           Locker::AcquireLock | Locker::InitSession |
               (options.GetSetLLDBGlobals() ? Locker::InitGlobals : 0) |
               ((result && result->GetInteractive()) ? 0 : Locker::NoSTDIN),
-          Locker::FreeAcquiredLock | Locker::TearDownSession, input_file_sp,
-          output_file_sp->GetFileSP(), error_file_sp->GetFileSP());
+          Locker::FreeAcquiredLock | Locker::TearDownSession,
+          io_redirect.GetInputFile(), io_redirect.GetOutputFile(),
+          io_redirect.GetErrorFile());
 
       // Find the correct script interpreter dictionary in the main module.
       PythonDictionary &session_dict = GetSessionDictionary();
@@ -1032,21 +971,7 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
         }
       }
 
-      // Flush our output and error file handles
-      output_file_sp->Flush();
-      error_file_sp->Flush();
-    }
-
-    if (join_read_thread) {
-      // Close the write end of the pipe since we are done with our one line
-      // script. This should cause the read thread that output_comm is using to
-      // exit
-      output_file_sp->GetFile().Close();
-      // The close above should cause this thread to exit when it gets to the
-      // end of file, so let it get all its data
-      output_comm.JoinReadThread();
-      // Now we can close the read end of the pipe
-      output_comm.Disconnect();
+      io_redirect.Flush();
     }
 
     if (success)
