@@ -61,6 +61,7 @@ static_library("clangd") {
     "CollectMacros.cpp",
     "CompileCommands.cpp",
     "Compiler.cpp",
+    "ConfigYAML.cpp",
     "Diagnostics.cpp",
     "DraftStore.cpp",
     "ExpectedTypes.cpp",

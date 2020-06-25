@@ -315,6 +315,36 @@ return:
   ret i32 192
 }
 
+; PR44565 - https://bugs.llvm.org/show_bug.cgi?id=44565
+
+define i32 @vec_extract_branch(<2 x double> %x)  {
+; CHECK-LABEL: vec_extract_branch:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorpd %xmm1, %xmm1
+; CHECK-NEXT:    cmpltpd %xmm0, %xmm1
+; CHECK-NEXT:    movmskpd %xmm1, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je .LBB16_3
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    shrb %al
+; CHECK-NEXT:    je .LBB16_3
+; CHECK-NEXT:  # %bb.2: # %true
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB16_3: # %false
+; CHECK-NEXT:    movl $88, %eax
+; CHECK-NEXT:    retq
+  %t1 = fcmp ogt <2 x double> %x, zeroinitializer
+  %t2 = extractelement <2 x i1> %t1, i32 0
+  %t3 = extractelement <2 x i1> %t1, i32 1
+  %t4 = and i1 %t2, %t3
+  br i1 %t4, label %true, label %false
+true:
+  ret i32 42
+false:
+  ret i32 88
+}
+
 define <4 x i1> @all_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 ; CHECK-LABEL: all_bits_clear_vec:
 ; CHECK:       # %bb.0:

@@ -967,6 +967,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::UMIN);
     setTargetDAGCombine(ISD::SMAX);
     setTargetDAGCombine(ISD::UMAX);
+    setTargetDAGCombine(ISD::FP_EXTEND);
   }
 
   if (!Subtarget->hasFP64()) {
@@ -1693,6 +1694,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VQMOVNs:       return "ARMISD::VQMOVNs";
   case ARMISD::VQMOVNu:       return "ARMISD::VQMOVNu";
   case ARMISD::VCVTN:         return "ARMISD::VCVTN";
+  case ARMISD::VCVTL:         return "ARMISD::VCVTL";
   case ARMISD::VMULLs:        return "ARMISD::VMULLs";
   case ARMISD::VMULLu:        return "ARMISD::VMULLu";
   case ARMISD::VADDVs:        return "ARMISD::VADDVs";
@@ -7244,7 +7246,7 @@ static bool isVMOVNMask(ArrayRef<int> M, EVT VT, bool Top) {
   return true;
 }
 
-// Reconstruct an MVE VCVT from a BuildVector of scalar fptrunc, all extract
+// Reconstruct an MVE VCVT from a BuildVector of scalar fptrunc, all extracted
 // from a pair of inputs. For example:
 // BUILDVECTOR(FP_ROUND(EXTRACT_ELT(X, 0),
 //             FP_ROUND(EXTRACT_ELT(Y, 0),
@@ -7296,6 +7298,50 @@ static SDValue LowerBuildVectorOfFPTrunc(SDValue BV, SelectionDAG &DAG,
                            DAG.getConstant(0, dl, MVT::i32));
   return DAG.getNode(ARMISD::VCVTN, dl, VT, N1, Op1,
                      DAG.getConstant(1, dl, MVT::i32));
+}
+
+// Reconstruct an MVE VCVT from a BuildVector of scalar fpext, all extracted
+// from a single input on alternating lanes. For example:
+// BUILDVECTOR(FP_ROUND(EXTRACT_ELT(X, 0),
+//             FP_ROUND(EXTRACT_ELT(X, 2),
+//             FP_ROUND(EXTRACT_ELT(X, 4), ...)
+static SDValue LowerBuildVectorOfFPExt(SDValue BV, SelectionDAG &DAG,
+                                       const ARMSubtarget *ST) {
+  assert(BV.getOpcode() == ISD::BUILD_VECTOR && "Unknown opcode!");
+  if (!ST->hasMVEFloatOps())
+    return SDValue();
+
+  SDLoc dl(BV);
+  EVT VT = BV.getValueType();
+  if (VT != MVT::v4f32)
+    return SDValue();
+
+  // We are looking for a buildvector of fptext elements, where all the
+  // elements are alternating lanes from a single source. For example <0,2,4,6>
+  // or <1,3,5,7>. Check the first two items are valid enough and extract some
+  // info from them (they are checked properly in the loop below).
+  if (BV.getOperand(0).getOpcode() != ISD::FP_EXTEND ||
+      BV.getOperand(0).getOperand(0).getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+  SDValue Op0 = BV.getOperand(0).getOperand(0).getOperand(0);
+  int Offset = BV.getOperand(0).getOperand(0).getConstantOperandVal(1);
+  if (Op0.getValueType() != MVT::v8f16 || (Offset != 0 && Offset != 1))
+    return SDValue();
+
+  // Check all the values in the BuildVector line up with our expectations.
+  for (unsigned i = 1; i < 4; i++) {
+    auto Check = [](SDValue Trunc, SDValue Op, unsigned Idx) {
+      return Trunc.getOpcode() == ISD::FP_EXTEND &&
+             Trunc.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+             Trunc.getOperand(0).getOperand(0) == Op &&
+             Trunc.getOperand(0).getConstantOperandVal(1) == Idx;
+    };
+    if (!Check(BV.getOperand(i), Op0, 2 * i + Offset))
+      return SDValue();
+  }
+
+  return DAG.getNode(ARMISD::VCVTL, dl, VT, Op0,
+                     DAG.getConstant(Offset, dl, MVT::i32));
 }
 
 // If N is an integer constant that can be moved into a register in one
@@ -7560,8 +7606,11 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     if (SDValue shuffle = ReconstructShuffle(Op, DAG))
       return shuffle;
 
-  // Attempt to turn a buildvector of scalar fptrunc's back into VCVT's
+  // Attempt to turn a buildvector of scalar fptrunc's or fpext's back into
+  // VCVT's
   if (SDValue VCVT = LowerBuildVectorOfFPTrunc(Op, DAG, Subtarget))
+    return VCVT;
+  if (SDValue VCVT = LowerBuildVectorOfFPExt(Op, DAG, Subtarget))
     return VCVT;
 
   if (ST->hasNEON() && VT.is128BitVector() && VT != MVT::v2f64 && VT != MVT::v4f32) {
@@ -15014,9 +15063,10 @@ static SDValue PerformShiftCombine(SDNode *N,
   return SDValue();
 }
 
-// Look for a sign/zero extend of a larger than legal load. This can be split
-// into two extending loads, which are simpler to deal with than an arbitrary
-// sign extend.
+// Look for a sign/zero/fpextend extend of a larger than legal load. This can be
+// split into multiple extending loads, which are simpler to deal with than an
+// arbitrary extend. For fp extends we use an integer extending load and a VCVTL
+// to convert the type to an f32.
 static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   if (N0.getOpcode() != ISD::LOAD)
@@ -15038,12 +15088,15 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
     NumElements = 4;
   if (ToEltVT == MVT::i16 && FromEltVT == MVT::i8)
     NumElements = 8;
+  if (ToEltVT == MVT::f32 && FromEltVT == MVT::f16)
+    NumElements = 4;
   if (NumElements == 0 ||
-      FromVT.getVectorNumElements() == NumElements ||
+      (FromEltVT != MVT::f16 && FromVT.getVectorNumElements() == NumElements) ||
       FromVT.getVectorNumElements() % NumElements != 0 ||
       !isPowerOf2_32(NumElements))
     return SDValue();
 
+  LLVMContext &C = *DAG.getContext();
   SDLoc DL(LD);
   // Details about the old load
   SDValue Ch = LD->getChain();
@@ -15055,28 +15108,43 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
   ISD::LoadExtType NewExtType =
       N->getOpcode() == ISD::SIGN_EXTEND ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
   SDValue Offset = DAG.getUNDEF(BasePtr.getValueType());
-  EVT NewFromVT = FromVT.getHalfNumVectorElementsVT(*DAG.getContext());
-  EVT NewToVT = ToVT.getHalfNumVectorElementsVT(*DAG.getContext());
-  unsigned NewOffset = NewFromVT.getSizeInBits() / 8;
-  SDValue NewPtr = DAG.getObjectPtrOffset(DL, BasePtr, NewOffset);
+  EVT NewFromVT = EVT::getVectorVT(
+      C, EVT::getIntegerVT(C, FromEltVT.getScalarSizeInBits()), NumElements);
+  EVT NewToVT = EVT::getVectorVT(
+      C, EVT::getIntegerVT(C, ToEltVT.getScalarSizeInBits()), NumElements);
 
-  // Split the load in half, each side of which is extended separately. This
-  // is good enough, as legalisation will take it from there. They are either
-  // already legal or they will be split further into something that is
-  // legal.
-  SDValue NewLoad1 = DAG.getLoad(
-      ISD::UNINDEXED, NewExtType, NewToVT, DL, Ch, BasePtr, Offset,
-      LD->getPointerInfo(), NewFromVT, Alignment.value(), MMOFlags, AAInfo);
-  SDValue NewLoad2 =
-      DAG.getLoad(ISD::UNINDEXED, NewExtType, NewToVT, DL, Ch, NewPtr, Offset,
-                  LD->getPointerInfo().getWithOffset(NewOffset), NewFromVT,
-                  Alignment.value(), MMOFlags, AAInfo);
+  SmallVector<SDValue, 4> Loads;
+  SmallVector<SDValue, 4> Chains;
+  for (unsigned i = 0; i < FromVT.getVectorNumElements() / NumElements; i++) {
+    unsigned NewOffset = (i * NewFromVT.getSizeInBits()) / 8;
+    SDValue NewPtr = DAG.getObjectPtrOffset(DL, BasePtr, NewOffset);
 
-  SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
-                                 SDValue(NewLoad1.getNode(), 1),
-                                 SDValue(NewLoad2.getNode(), 1));
+    SDValue NewLoad =
+        DAG.getLoad(ISD::UNINDEXED, NewExtType, NewToVT, DL, Ch, NewPtr, Offset,
+                    LD->getPointerInfo().getWithOffset(NewOffset), NewFromVT,
+                    Alignment.value(), MMOFlags, AAInfo);
+    Loads.push_back(NewLoad);
+    Chains.push_back(SDValue(NewLoad.getNode(), 1));
+  }
+
+  // Float truncs need to extended with VCVTB's into their floating point types.
+  if (FromEltVT == MVT::f16) {
+    SmallVector<SDValue, 4> Extends;
+
+    for (unsigned i = 0; i < Loads.size(); i++) {
+      SDValue LoadBC =
+          DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, MVT::v8f16, Loads[i]);
+      SDValue FPExt = DAG.getNode(ARMISD::VCVTL, DL, MVT::v4f32, LoadBC,
+                                  DAG.getConstant(0, DL, MVT::i32));
+      Extends.push_back(FPExt);
+    }
+
+    Loads = Extends;
+  }
+
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
   DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewChain);
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, ToVT, NewLoad1, NewLoad2);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, ToVT, Loads);
 }
 
 /// PerformExtendCombine - Target-specific DAG combining for ISD::SIGN_EXTEND,
@@ -15118,6 +15186,15 @@ static SDValue PerformExtendCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   if (ST->hasMVEIntegerOps())
+    if (SDValue NewLoad = PerformSplittingToWideningLoad(N, DAG))
+      return NewLoad;
+
+  return SDValue();
+}
+
+static SDValue PerformFPExtendCombine(SDNode *N, SelectionDAG &DAG,
+                                      const ARMSubtarget *ST) {
+  if (ST->hasMVEFloatOps())
     if (SDValue NewLoad = PerformSplittingToWideningLoad(N, DAG))
       return NewLoad;
 
@@ -15782,6 +15859,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ZERO_EXTEND:
   case ISD::ANY_EXTEND:
     return PerformExtendCombine(N, DCI.DAG, Subtarget);
+  case ISD::FP_EXTEND:
+    return PerformFPExtendCombine(N, DCI.DAG, Subtarget);
   case ISD::SMIN:
   case ISD::UMIN:
   case ISD::SMAX:

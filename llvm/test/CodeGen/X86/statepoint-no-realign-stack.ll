@@ -76,8 +76,8 @@ define <4 x i8 addrspace(1)*> @spillfill_can_realign(<4 x i8 addrspace(1)*> %obj
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0, <4 x i8 addrspace(1)*> %obj)
-  %obj.relocated = call coldcc <4 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v4p1i8(token %safepoint_token, i32 7, i32 7) ; (%obj, %obj)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) ["gc-live" (<4 x i8 addrspace(1)*> %obj)]
+  %obj.relocated = call coldcc <4 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v4p1i8(token %safepoint_token, i32 0, i32 0) ; (%obj, %obj)
   ret <4 x i8 addrspace(1)*> %obj.relocated
 }
 
@@ -95,8 +95,8 @@ define <4 x i8 addrspace(1)*> @spillfill_no_realign(<4 x i8 addrspace(1)*> %obj)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0, <4 x i8 addrspace(1)*> %obj)
-  %obj.relocated = call coldcc <4 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v4p1i8(token %safepoint_token, i32 7, i32 7) ; (%obj, %obj)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) ["gc-live" (<4 x i8 addrspace(1)*> %obj)]
+  %obj.relocated = call coldcc <4 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v4p1i8(token %safepoint_token, i32 0, i32 0) ; (%obj, %obj)
   ret <4 x i8 addrspace(1)*> %obj.relocated
 }
 
