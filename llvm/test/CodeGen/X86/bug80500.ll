@@ -8,7 +8,7 @@ define i32 @load_fold_udiv1(i32* %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl $-2004318071, %edx # imm = 0x88888889
-; CHECK-NEXT:    mulxl %eax, %eax, %eax
+; CHECK-NEXT:    mulxl (%eax), %eax, %eax
 ; CHECK-NEXT:    shrl $3, %eax
 ; CHECK-NEXT:    retl
   %v = load i32, i32* %p, align 4
