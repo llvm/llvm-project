@@ -1099,6 +1099,11 @@ def ObjCSignedCharBool : DiagGroup<"objc-signed-char-bool",
    ObjCBoolConstantConversion,
    TautologicalObjCBoolCompare]>;
 
+def ObjCPotentiallyDirectSelector : DiagGroup<"potentially-direct-selector">;
+def ObjCStrictPotentiallyDirectSelector :
+  DiagGroup<"strict-potentially-direct-selector",
+            [ObjCPotentiallyDirectSelector]>;
+
 // Inline ASM warnings.
 def ASMOperandWidths : DiagGroup<"asm-operand-widths">;
 def ASM : DiagGroup<"asm", [
