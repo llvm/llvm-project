@@ -402,7 +402,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
-static Instruction *foldFPSignBitOps(BinaryOperator &I) {
+Instruction *InstCombiner::foldFPSignBitOps(BinaryOperator &I) {
   BinaryOperator::BinaryOps Opcode = I.getOpcode();
   assert((Opcode == Instruction::FMul || Opcode == Instruction::FDiv) &&
          "Expected fmul or fdiv");
@@ -419,6 +419,19 @@ static Instruction *foldFPSignBitOps(BinaryOperator &I) {
   // fabs(X) / fabs(X) -> X / X
   if (Op0 == Op1 && match(Op0, m_Intrinsic<Intrinsic::fabs>(m_Value(X))))
     return BinaryOperator::CreateWithCopiedFlags(Opcode, X, X, &I);
+
+  // fabs(X) * fabs(Y) --> fabs(X * Y)
+  // fabs(X) / fabs(Y) --> fabs(X / Y)
+  if (match(Op0, m_Intrinsic<Intrinsic::fabs>(m_Value(X))) &&
+      match(Op1, m_Intrinsic<Intrinsic::fabs>(m_Value(Y))) &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+    Builder.setFastMathFlags(I.getFastMathFlags());
+    Value *XY = Builder.CreateBinOp(Opcode, X, Y);
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, XY);
+    Fabs->takeName(&I);
+    return replaceInstUsesWith(I, Fabs);
+  }
 
   return nullptr;
 }
