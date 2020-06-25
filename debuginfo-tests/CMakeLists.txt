@@ -16,6 +16,7 @@ set(DEBUGINFO_TEST_DEPS
   clang
   FileCheck
   count
+  llvm-config
   llvm-objdump
   check-gdb-llvm-support
   not
