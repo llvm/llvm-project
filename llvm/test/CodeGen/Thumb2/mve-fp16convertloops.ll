@@ -166,18 +166,9 @@ define void @from_4(half* nocapture readonly %x, float* noalias nocapture %y) {
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB3_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r2, [r0]
-; CHECK-NEXT:    ldr r3, [r0, #4]
-; CHECK-NEXT:    adds r0, #8
-; CHECK-NEXT:    vmov.32 q1[0], r2
-; CHECK-NEXT:    vmov.32 q1[1], r3
-; CHECK-NEXT:    vmovx.f16 s10, s5
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s15, s10
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s13, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s4
-; CHECK-NEXT:    vmul.f32 q1, q3, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0], #8
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vstrb.8 q1, [r1], #16
 ; CHECK-NEXT:    le lr, .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
@@ -215,34 +206,22 @@ define void @from_8(half* nocapture readonly %x, float* noalias nocapture %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    adr r2, .LCPI4_0
 ; CHECK-NEXT:    mov.w lr, #128
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q1, [r0], #16
-; CHECK-NEXT:    vmovx.f16 s8, s5
-; CHECK-NEXT:    vmovx.f16 s13, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s11, s8
-; CHECK-NEXT:    vmovx.f16 s14, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s10, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s19, s13
-; CHECK-NEXT:    vcvtb.f32.f16 s18, s7
-; CHECK-NEXT:    vmovx.f16 s12, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s17, s14
-; CHECK-NEXT:    vcvtb.f32.f16 s16, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s9, s12
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s4
-; CHECK-NEXT:    vmul.f32 q1, q4, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #8]
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #16]
-; CHECK-NEXT:    vmul.f32 q1, q2, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0], #16
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vstrw.32 q1, [r1], #32
 ; CHECK-NEXT:    le lr, .LBB4_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
-; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
@@ -277,51 +256,30 @@ define void @from_16(half* nocapture readonly %x, float* noalias nocapture %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    adr r2, .LCPI5_0
 ; CHECK-NEXT:    mov.w lr, #64
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB5_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q1, [r0], #32
-; CHECK-NEXT:    vmovx.f16 s12, s5
-; CHECK-NEXT:    vldrh.u16 q2, [r0, #-16]
-; CHECK-NEXT:    vcvtb.f32.f16 s15, s12
-; CHECK-NEXT:    vmovx.f16 s18, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s5
-; CHECK-NEXT:    vmovx.f16 s16, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s13, s18
-; CHECK-NEXT:    vmovx.f16 s20, s9
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s19, s16
-; CHECK-NEXT:    vmovx.f16 s22, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s18, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s17, s22
-; CHECK-NEXT:    vcvtb.f32.f16 s23, s20
-; CHECK-NEXT:    vmovx.f16 s28, s11
-; CHECK-NEXT:    vcvtb.f32.f16 s22, s9
-; CHECK-NEXT:    vcvtb.f32.f16 s31, s28
-; CHECK-NEXT:    vmovx.f16 s26, s10
-; CHECK-NEXT:    vcvtb.f32.f16 s30, s11
-; CHECK-NEXT:    vmovx.f16 s24, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s29, s26
-; CHECK-NEXT:    vcvtb.f32.f16 s28, s10
-; CHECK-NEXT:    vcvtb.f32.f16 s21, s24
-; CHECK-NEXT:    vcvtb.f32.f16 s20, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s16, s6
-; CHECK-NEXT:    vmul.f32 q1, q7, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #24]
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #48]
-; CHECK-NEXT:    vmul.f32 q1, q5, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #16]
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #32]
-; CHECK-NEXT:    vmul.f32 q1, q4, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #8]
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #16]
-; CHECK-NEXT:    vmul.f32 q1, q3, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0], #32
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vstrw.32 q1, [r1], #64
 ; CHECK-NEXT:    le lr, .LBB5_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
@@ -362,18 +320,9 @@ define void @both_4(half* nocapture readonly %x, half* noalias nocapture %y) {
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB6_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r2, [r0]
-; CHECK-NEXT:    ldr r3, [r0, #4]
-; CHECK-NEXT:    adds r0, #8
-; CHECK-NEXT:    vmov.32 q1[0], r2
-; CHECK-NEXT:    vmov.32 q1[1], r3
-; CHECK-NEXT:    vmovx.f16 s10, s5
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s15, s10
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s13, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s4
-; CHECK-NEXT:    vmul.f32 q1, q3, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0], #8
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
 ; CHECK-NEXT:    vstrh.32 q1, [r1], #8
 ; CHECK-NEXT:    le lr, .LBB6_1
@@ -419,23 +368,14 @@ define void @both_8(half* nocapture readonly %x, half* noalias nocapture %y) {
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q1, [r0], #16
-; CHECK-NEXT:    vmovx.f16 s10, s7
-; CHECK-NEXT:    vmovx.f16 s8, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s15, s10
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s13, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s6
-; CHECK-NEXT:    vmul.f32 q2, q3, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q2, q2
-; CHECK-NEXT:    vstrh.32 q2, [r1, #8]
-; CHECK-NEXT:    vmovx.f16 s10, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s15, s10
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s13, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s4
-; CHECK-NEXT:    vmul.f32 q1, q3, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #8]
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
+; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
+; CHECK-NEXT:    vstrh.32 q1, [r1, #8]
+; CHECK-NEXT:    vldrh.u32 q1, [r0], #16
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
 ; CHECK-NEXT:    vstrh.32 q1, [r1], #16
 ; CHECK-NEXT:    le lr, .LBB7_1
@@ -481,42 +421,24 @@ define void @both_16(half* nocapture readonly %x, half* noalias nocapture %y) {
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q1, [r0, #16]
-; CHECK-NEXT:    vmovx.f16 s10, s7
-; CHECK-NEXT:    vmovx.f16 s8, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s15, s10
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s13, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s6
-; CHECK-NEXT:    vmul.f32 q2, q3, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q2, q2
-; CHECK-NEXT:    vstrh.32 q2, [r1, #24]
-; CHECK-NEXT:    vmovx.f16 s10, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s15, s10
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s13, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s4
-; CHECK-NEXT:    vmul.f32 q1, q3, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #24]
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
+; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
+; CHECK-NEXT:    vstrh.32 q1, [r1, #24]
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #16]
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
 ; CHECK-NEXT:    vstrh.32 q1, [r1, #16]
-; CHECK-NEXT:    vldrh.u16 q1, [r0], #32
-; CHECK-NEXT:    vmovx.f16 s10, s7
-; CHECK-NEXT:    vmovx.f16 s8, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s15, s10
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s13, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s6
-; CHECK-NEXT:    vmul.f32 q2, q3, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q2, q2
-; CHECK-NEXT:    vstrh.32 q2, [r1, #8]
-; CHECK-NEXT:    vmovx.f16 s10, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s15, s10
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s13, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s4
-; CHECK-NEXT:    vmul.f32 q1, q3, q0
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #8]
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
+; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
+; CHECK-NEXT:    vstrh.32 q1, [r1, #8]
+; CHECK-NEXT:    vldrh.u32 q1, [r0], #32
+; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q1, q1, q0
 ; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
 ; CHECK-NEXT:    vstrh.32 q1, [r1], #32
 ; CHECK-NEXT:    le lr, .LBB8_1
