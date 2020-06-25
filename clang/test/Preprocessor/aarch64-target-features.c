@@ -95,6 +95,23 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE %s
 // CHECK-SVE: __ARM_FEATURE_SVE 1
 
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+bf16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-BF16 %s
+// CHECK-SVE-BF16: __ARM_FEATURE_BF16_SCALAR_ARITHMETIC 1
+// CHECK-SVE-BF16: __ARM_FEATURE_SVE 1
+// CHECK-SVE-BF16: __ARM_FEATURE_SVE_BF16 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+i8mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-I8MM %s
+// CHECK-SVE-I8MM: __ARM_FEATURE_SVE 1
+// CHECK-SVE-I8MM: __ARM_FEATURE_SVE_MATMUL_INT8 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-F32MM %s
+// CHECK-SVE-F32MM: __ARM_FEATURE_SVE 1
+// CHECK-SVE-F32MM: __ARM_FEATURE_SVE_MATMUL_FP32 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+f64mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-F64MM %s
+// CHECK-SVE-F64MM: __ARM_FEATURE_SVE 1
+// CHECK-SVE-F64MM: __ARM_FEATURE_SVE_MATMUL_FP64 1
+
 // The following tests may need to be revised in the future since
 // SVE2 is currently still part of Future Architecture Technologies
 // (https://developer.arm.com/docs/ddi0602/latest)
