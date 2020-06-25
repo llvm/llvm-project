@@ -119,7 +119,12 @@ static void ReadThreadBytesReceived(void *baton, const void *src,
 }
 
 llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>>
-ScriptInterpreterIORedirect::Create() {
+ScriptInterpreterIORedirect::Create(bool enable_io, Debugger &debugger,
+                                    CommandReturnObject *result) {
+  if (enable_io)
+    return std::unique_ptr<ScriptInterpreterIORedirect>(
+        new ScriptInterpreterIORedirect(debugger, result));
+
   auto nullin = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
                                             File::eOpenOptionRead);
   if (!nullin)
@@ -132,13 +137,6 @@ ScriptInterpreterIORedirect::Create() {
 
   return std::unique_ptr<ScriptInterpreterIORedirect>(
       new ScriptInterpreterIORedirect(std::move(*nullin), std::move(*nullout)));
-}
-
-llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>>
-ScriptInterpreterIORedirect::Create(Debugger &debugger,
-                                    CommandReturnObject *result) {
-  return std::unique_ptr<ScriptInterpreterIORedirect>(
-      new ScriptInterpreterIORedirect(debugger, result));
 }
 
 ScriptInterpreterIORedirect::ScriptInterpreterIORedirect(
