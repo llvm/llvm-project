@@ -354,8 +354,14 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
           return false;
         MaskedInsts.push_back(cast<IntrinsicInst>(&I));
       } else if (auto *Int = dyn_cast<IntrinsicInst>(&I)) {
-        if (Int->getIntrinsicID() == Intrinsic::fma)
-          continue;
+        switch (Int->getIntrinsicID()) {
+          case Intrinsic::fma:
+          case Intrinsic::sadd_sat:
+          case Intrinsic::uadd_sat:
+            continue;
+          default:
+            break;
+        }
         for (auto &U : Int->args()) {
           if (isa<VectorType>(U->getType()))
             return false;
