@@ -57,8 +57,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instrprof"
 
-// FIXME: These are to be removed after switching to the new memop value
-// profiling.
 // The start and end values of precise value profile range for memory
 // intrinsic sizes
 cl::opt<std::string> MemOPSizeRange(
@@ -73,12 +71,6 @@ cl::opt<unsigned> MemOPSizeLarge(
     cl::desc("Set large value thresthold in memory intrinsic size profiling. "
              "Value of 0 disables the large value profiling."),
     cl::init(8192));
-
-cl::opt<bool> UseOldMemOpValueProf(
-    "use-old-memop-value-prof",
-    cl::desc("Use the old memop value profiling buckets. This is "
-             "transitional and to be removed after switching. "),
-    cl::init(true));
 
 namespace {
 
@@ -397,19 +389,6 @@ private:
   BlockFrequencyInfo *BFI;
 };
 
-enum class ValueProfilingCallType {
-  // Individual values are tracked. Currently used for indiret call target
-  // profiling.
-  Default,
-
-  // The old memop size value profiling. FIXME: To be removed after switching to
-  // the new one.
-  OldMemOp,
-
-  // MemOp: the (new) memop size value profiling with extended buckets.
-  MemOp
-};
-
 } // end anonymous namespace
 
 PreservedAnalyses InstrProfiling::run(Module &M, ModuleAnalysisManager &AM) {
@@ -594,9 +573,9 @@ bool InstrProfiling::run(
   return true;
 }
 
-static FunctionCallee getOrInsertValueProfilingCall(
-    Module &M, const TargetLibraryInfo &TLI,
-    ValueProfilingCallType CallType = ValueProfilingCallType::Default) {
+static FunctionCallee
+getOrInsertValueProfilingCall(Module &M, const TargetLibraryInfo &TLI,
+                              bool IsRange = false) {
   LLVMContext &Ctx = M.getContext();
   auto *ReturnTy = Type::getVoidTy(M.getContext());
 
@@ -604,22 +583,16 @@ static FunctionCallee getOrInsertValueProfilingCall(
   if (auto AK = TLI.getExtAttrForI32Param(false))
     AL = AL.addParamAttribute(M.getContext(), 2, AK);
 
-  if (CallType == ValueProfilingCallType::Default ||
-      CallType == ValueProfilingCallType::MemOp) {
+  if (!IsRange) {
     Type *ParamTypes[] = {
 #define VALUE_PROF_FUNC_PARAM(ParamType, ParamName, ParamLLVMType) ParamLLVMType
 #include "llvm/ProfileData/InstrProfData.inc"
     };
     auto *ValueProfilingCallTy =
         FunctionType::get(ReturnTy, makeArrayRef(ParamTypes), false);
-    StringRef FuncName = CallType == ValueProfilingCallType::Default
-                             ? getInstrProfValueProfFuncName()
-                             : getInstrProfValueProfMemOpFuncName();
-    return M.getOrInsertFunction(FuncName, ValueProfilingCallTy, AL);
+    return M.getOrInsertFunction(getInstrProfValueProfFuncName(),
+                                 ValueProfilingCallTy, AL);
   } else {
-    // FIXME: This code is to be removed after switching to the new memop value
-    // profiling.
-    assert(CallType == ValueProfilingCallType::OldMemOp);
     Type *RangeParamTypes[] = {
 #define VALUE_RANGE_PROF 1
 #define VALUE_PROF_FUNC_PARAM(ParamType, ParamName, ParamLLVMType) ParamLLVMType
@@ -659,8 +632,8 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
     Index += It->second.NumValueSites[Kind];
 
   IRBuilder<> Builder(Ind);
-  bool IsMemOpSize = (Ind->getValueKind()->getZExtValue() ==
-                      llvm::InstrProfValueKind::IPVK_MemOPSize);
+  bool IsRange = (Ind->getValueKind()->getZExtValue() ==
+                  llvm::InstrProfValueKind::IPVK_MemOPSize);
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
 
@@ -670,19 +643,12 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   // WinEHPrepare pass.
   SmallVector<OperandBundleDef, 1> OpBundles;
   Ind->getOperandBundlesAsDefs(OpBundles);
-  if (!IsMemOpSize) {
+  if (!IsRange) {
     Value *Args[3] = {Ind->getTargetValue(),
                       Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
                       Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args,
                               OpBundles);
-  } else if (!UseOldMemOpValueProf) {
-    Value *Args[3] = {Ind->getTargetValue(),
-                      Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
-                      Builder.getInt32(Index)};
-    Call = Builder.CreateCall(
-        getOrInsertValueProfilingCall(*M, *TLI, ValueProfilingCallType::MemOp),
-        Args, OpBundles);
   } else {
     Value *Args[6] = {
         Ind->getTargetValue(),
@@ -691,8 +657,7 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
         Builder.getInt64(MemOPSizeRangeStart),
         Builder.getInt64(MemOPSizeRangeLast),
         Builder.getInt64(MemOPSizeLarge == 0 ? INT64_MIN : MemOPSizeLarge)};
-    Call = Builder.CreateCall(getOrInsertValueProfilingCall(
-                                  *M, *TLI, ValueProfilingCallType::OldMemOp),
+    Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI, true),
                               Args, OpBundles);
   }
   if (auto AK = TLI->getExtAttrForI32Param(false))
