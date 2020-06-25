@@ -38,28 +38,27 @@ define void @caller1(i1 %c, i64* align 1 %ptr) {
 ; ASSUMPTIONS-OFF-NEXT:    ret void
 ;
 ; ASSUMPTIONS-ON-LABEL: @caller1(
-; ASSUMPTIONS-ON-NEXT:    br i1 [[C:%.*]], label [[TRUE1:%.*]], label [[FALSE1:%.*]]
-; ASSUMPTIONS-ON:       true1:
-; ASSUMPTIONS-ON-NEXT:    [[C_PR:%.*]] = phi i1 [ false, [[FALSE1]] ], [ true, [[TMP0:%.*]] ]
-; ASSUMPTIONS-ON-NEXT:    [[PTRINT:%.*]] = ptrtoint i64* [[PTR:%.*]] to i64
-; ASSUMPTIONS-ON-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 7
-; ASSUMPTIONS-ON-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-; ASSUMPTIONS-ON-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
+; ASSUMPTIONS-ON-NEXT:    br i1 [[C:%.*]], label [[TRUE2_CRITEDGE:%.*]], label [[FALSE1:%.*]]
+; ASSUMPTIONS-ON:       false1:
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 1, i64* [[PTR:%.*]], align 8
+; ASSUMPTIONS-ON-NEXT:    call void @llvm.assume(i1 true) [ "align"(i64* [[PTR]], i64 8) ]
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    br i1 [[C_PR]], label [[TRUE2:%.*]], label [[FALSE2:%.*]]
-; ASSUMPTIONS-ON:       false1:
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 1, i64* [[PTR]], align 4
-; ASSUMPTIONS-ON-NEXT:    br label [[TRUE1]]
-; ASSUMPTIONS-ON:       true2:
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 2, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    ret void
-; ASSUMPTIONS-ON:       false2:
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 3, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    ret void
+; ASSUMPTIONS-ON:       true2.critedge:
+; ASSUMPTIONS-ON-NEXT:    call void @llvm.assume(i1 true) [ "align"(i64* [[PTR]], i64 8) ]
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 2, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    ret void
 ;
   br i1 %c, label %true1, label %false1
@@ -101,10 +100,7 @@ define amdgpu_kernel void @caller2() {
 ; ASSUMPTIONS-ON-LABEL: @caller2(
 ; ASSUMPTIONS-ON-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8, addrspace(5)
 ; ASSUMPTIONS-ON-NEXT:    [[CAST:%.*]] = addrspacecast i64 addrspace(5)* [[ALLOCA]] to i64*
-; ASSUMPTIONS-ON-NEXT:    [[PTRINT:%.*]] = ptrtoint i64* [[CAST]] to i64
-; ASSUMPTIONS-ON-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 7
-; ASSUMPTIONS-ON-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-; ASSUMPTIONS-ON-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+; ASSUMPTIONS-ON-NEXT:    call void @llvm.assume(i1 true) [ "align"(i64* [[CAST]], i64 8) ]
 ; ASSUMPTIONS-ON-NEXT:    ret void
 ;
   %alloca = alloca i64, align 8, addrspace(5)
