@@ -55,3 +55,8 @@ autoconf/autom4te.cache
 .vs
 # clangd index
 .clangd
+# static analyzer regression testing project files
+/clang/utils/analyzer/projects/*/CachedSource
+/clang/utils/analyzer/projects/*/PatchedSource
+/clang/utils/analyzer/projects/*/ScanBuildResults
+/clang/utils/analyzer/projects/*/RefScanBuildResults
