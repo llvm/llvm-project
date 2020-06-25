@@ -438,6 +438,19 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
 }
 
 //===----------------------------------------------------------------------===//
+// RankOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
+  auto shape = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
+  if (!shape)
+    return {};
+  int64_t rank = shape.getNumElements();
+  Builder builder(getContext());
+  return builder.getIndexAttr(rank);
+}
+
+//===----------------------------------------------------------------------===//
 // NumElementsOp
 //===----------------------------------------------------------------------===//
 
