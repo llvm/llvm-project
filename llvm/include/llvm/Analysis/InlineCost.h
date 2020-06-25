@@ -49,6 +49,9 @@ const int ColdccPenalty = 2000;
 /// Do not inline functions which allocate this many bytes on the stack
 /// when the caller is recursive.
 const unsigned TotalAllocaSizeRecursiveCaller = 1024;
+/// Do not inline dynamic allocas that have been constant propagated to be
+/// static allocas above this amount in bytes.
+const uint64_t MaxSimplifiedDynamicAllocaToInline = 65536;
 } // namespace InlineConstants
 
 /// Represents the cost of inlining a function.
