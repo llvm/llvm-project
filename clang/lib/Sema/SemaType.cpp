@@ -8110,6 +8110,15 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_AcquireHandle: {
       if (!type->isFunctionType())
         return;
+
+      if (attr.getNumArgs() != 1) {
+        state.getSema().Diag(attr.getLoc(),
+                             diag::err_attribute_wrong_number_arguments)
+            << attr << 1;
+        attr.setInvalid();
+        return;
+      }
+
       StringRef HandleType;
       if (!state.getSema().checkStringLiteralArgumentAttr(attr, 0, HandleType))
         return;
