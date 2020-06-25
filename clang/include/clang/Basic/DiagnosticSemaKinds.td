@@ -10789,13 +10789,13 @@ def err_matrix_separate_incomplete_index: Error<
   "matrix row and column subscripts cannot be separated by any expression">;
 def err_matrix_subscript_comma: Error<
   "comma expressions are not allowed as indices in matrix subscript expressions">;
-def err_builtin_matrix_arg: Error<"first argument must be a matrix">;
+def err_builtin_matrix_arg: Error<"1st argument must be a matrix">;
 def err_builtin_matrix_scalar_unsigned_arg: Error<
   "%0 argument must be a constant unsigned integer expression">;
 def err_builtin_matrix_pointer_arg: Error<
-  "%0 argument must be a pointer to a valid matrix element type">;
+  "%ordinal0 argument must be a pointer to a valid matrix element type">;
 def err_builtin_matrix_pointer_arg_mismatch: Error<
-  "the pointee of the second argument must match the element type of the first argument (%0 != %1)">;
+  "the pointee of the 2nd argument must match the element type of the 1st argument (%0 != %1)">;
 def err_builtin_matrix_store_to_const: Error<
   "cannot store matrix to read-only pointer">;
 def err_builtin_matrix_stride_too_small: Error<
