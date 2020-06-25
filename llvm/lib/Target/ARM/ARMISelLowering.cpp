@@ -1692,6 +1692,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VMOVN:         return "ARMISD::VMOVN";
   case ARMISD::VQMOVNs:       return "ARMISD::VQMOVNs";
   case ARMISD::VQMOVNu:       return "ARMISD::VQMOVNu";
+  case ARMISD::VCVTN:         return "ARMISD::VCVTN";
   case ARMISD::VMULLs:        return "ARMISD::VMULLs";
   case ARMISD::VMULLu:        return "ARMISD::VMULLu";
   case ARMISD::VADDVs:        return "ARMISD::VADDVs";
@@ -7243,6 +7244,60 @@ static bool isVMOVNMask(ArrayRef<int> M, EVT VT, bool Top) {
   return true;
 }
 
+// Reconstruct an MVE VCVT from a BuildVector of scalar fptrunc, all extract
+// from a pair of inputs. For example:
+// BUILDVECTOR(FP_ROUND(EXTRACT_ELT(X, 0),
+//             FP_ROUND(EXTRACT_ELT(Y, 0),
+//             FP_ROUND(EXTRACT_ELT(X, 1),
+//             FP_ROUND(EXTRACT_ELT(Y, 1), ...)
+static SDValue LowerBuildVectorOfFPTrunc(SDValue BV, SelectionDAG &DAG,
+                                         const ARMSubtarget *ST) {
+  assert(BV.getOpcode() == ISD::BUILD_VECTOR && "Unknown opcode!");
+  if (!ST->hasMVEFloatOps())
+    return SDValue();
+
+  SDLoc dl(BV);
+  EVT VT = BV.getValueType();
+  if (VT != MVT::v8f16)
+    return SDValue();
+
+  // We are looking for a buildvector of fptrunc elements, where all the
+  // elements are interleavingly extracted from two sources. Check the first two
+  // items are valid enough and extract some info from them (they are checked
+  // properly in the loop below).
+  if (BV.getOperand(0).getOpcode() != ISD::FP_ROUND ||
+      BV.getOperand(0).getOperand(0).getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      BV.getOperand(0).getOperand(0).getConstantOperandVal(1) != 0)
+    return SDValue();
+  if (BV.getOperand(1).getOpcode() != ISD::FP_ROUND ||
+      BV.getOperand(1).getOperand(0).getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      BV.getOperand(1).getOperand(0).getConstantOperandVal(1) != 0)
+    return SDValue();
+  SDValue Op0 = BV.getOperand(0).getOperand(0).getOperand(0);
+  SDValue Op1 = BV.getOperand(1).getOperand(0).getOperand(0);
+  if (Op0.getValueType() != MVT::v4f32 || Op1.getValueType() != MVT::v4f32)
+    return SDValue();
+
+  // Check all the values in the BuildVector line up with our expectations.
+  for (int i = 1; i < 4; i++) {
+    auto Check = [](SDValue Trunc, SDValue Op, int Idx) {
+      return Trunc.getOpcode() == ISD::FP_ROUND &&
+             Trunc.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+             Trunc.getOperand(0).getOperand(0) == Op &&
+             Trunc.getOperand(0).getConstantOperandVal(1) == Idx;
+    };
+    if (!Check(BV.getOperand(i * 2 + 0), Op0, i))
+      return SDValue();
+    if (!Check(BV.getOperand(i * 2 + 1), Op1, i))
+      return SDValue();
+  }
+
+  SDValue N1 = DAG.getNode(ARMISD::VCVTN, dl, VT, DAG.getUNDEF(VT), Op0,
+                           DAG.getConstant(0, dl, MVT::i32));
+  return DAG.getNode(ARMISD::VCVTN, dl, VT, N1, Op1,
+                     DAG.getConstant(1, dl, MVT::i32));
+}
+
 // If N is an integer constant that can be moved into a register in one
 // instruction, return an SDValue of such a constant (will become a MOV
 // instruction).  Otherwise return null.
@@ -7498,12 +7553,16 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   if (isConstant)
     return SDValue();
 
-  // Empirical tests suggest this is rarely worth it for vectors of length <= 2.
-  if (NumElts >= 4) {
-    SDValue shuffle = ReconstructShuffle(Op, DAG);
-    if (shuffle != SDValue())
+  // Reconstruct the BUILDVECTOR to one of the legal shuffles (such as vext and
+  // vmovn). Empirical tests suggest this is rarely worth it for vectors of
+  // length <= 2.
+  if (NumElts >= 4)
+    if (SDValue shuffle = ReconstructShuffle(Op, DAG))
       return shuffle;
-  }
+
+  // Attempt to turn a buildvector of scalar fptrunc's back into VCVT's
+  if (SDValue VCVT = LowerBuildVectorOfFPTrunc(Op, DAG, Subtarget))
+    return VCVT;
 
   if (ST->hasNEON() && VT.is128BitVector() && VT != MVT::v2f64 && VT != MVT::v4f32) {
     // If we haven't found an efficient lowering, try splitting a 128-bit vector
