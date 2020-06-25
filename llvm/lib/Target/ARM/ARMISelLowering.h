@@ -208,6 +208,9 @@ class VectorType;
       VQMOVNs,      // Vector (V) Saturating (Q) Move and Narrow (N), signed (s)
       VQMOVNu,      // Vector (V) Saturating (Q) Move and Narrow (N), unsigned (u)
 
+      // MVE float <> half converts
+      VCVTN,        // MVE vcvt f32 -> f16, truncating into either the bottom or top lanes
+
       // Vector multiply long:
       VMULLs,       // ...signed
       VMULLu,       // ...unsigned
