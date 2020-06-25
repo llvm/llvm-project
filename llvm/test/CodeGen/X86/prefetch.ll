@@ -10,7 +10,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mattr=-sse,+prefetchwt1 | FileCheck %s -check-prefix=PREFETCHWT1
 ; RUN: llc < %s -mtriple=i686-- -mattr=-sse,+3dnow,+prefetchwt1 | FileCheck %s -check-prefix=PREFETCHWT1
 ; RUN: llc < %s -mtriple=i686-- -mattr=+3dnow | FileCheck %s -check-prefix=3DNOW
-; RUN: llc < %s -mtriple=i686-- -mattr=+3dnow,+prfchw | FileCheck %s -check-prefix=3DNOW
+; RUN: llc < %s -mtriple=i686-- -mattr=+3dnow,+prfchw | FileCheck %s -check-prefix=PRFCHW3DNOW
 
 ; Rules:
 ; 3dnow by itself get you just the single prefetch instruction with no hints
@@ -68,11 +68,24 @@ define void @t(i8* %ptr) nounwind  {
 ; 3DNOW-NEXT:    prefetch (%eax)
 ; 3DNOW-NEXT:    prefetch (%eax)
 ; 3DNOW-NEXT:    prefetch (%eax)
-; 3DNOW-NEXT:    prefetchw (%eax)
-; 3DNOW-NEXT:    prefetchw (%eax)
-; 3DNOW-NEXT:    prefetchw (%eax)
-; 3DNOW-NEXT:    prefetchw (%eax)
+; 3DNOW-NEXT:    prefetch (%eax)
+; 3DNOW-NEXT:    prefetch (%eax)
+; 3DNOW-NEXT:    prefetch (%eax)
+; 3DNOW-NEXT:    prefetch (%eax)
 ; 3DNOW-NEXT:    retl
+;
+; PRFCHW3DNOW-LABEL: t:
+; PRFCHW3DNOW:       # %bb.0: # %entry
+; PRFCHW3DNOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; PRFCHW3DNOW-NEXT:    prefetch (%eax)
+; PRFCHW3DNOW-NEXT:    prefetch (%eax)
+; PRFCHW3DNOW-NEXT:    prefetch (%eax)
+; PRFCHW3DNOW-NEXT:    prefetch (%eax)
+; PRFCHW3DNOW-NEXT:    prefetchw (%eax)
+; PRFCHW3DNOW-NEXT:    prefetchw (%eax)
+; PRFCHW3DNOW-NEXT:    prefetchw (%eax)
+; PRFCHW3DNOW-NEXT:    prefetchw (%eax)
+; PRFCHW3DNOW-NEXT:    retl
 entry:
 	tail call void @llvm.prefetch( i8* %ptr, i32 0, i32 1, i32 1 )
 	tail call void @llvm.prefetch( i8* %ptr, i32 0, i32 2, i32 1 )
