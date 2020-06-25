@@ -419,6 +419,44 @@ TEST_FUNC(operator_and) {
   f.erase();
 }
 
+TEST_FUNC(divis_op_i32) {
+  using namespace edsc::op;
+  auto f = makeFunction("divis_op", {}, {});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  auto i32Type = builder.getI32Type();
+  std_divis(std_constant_int(10, i32Type), std_constant_int(2, i32Type));
+
+  // clang-format off
+  // CHECK-LABEL: @divis_op
+  //   CHECK-DAG:     {{.*}} = constant 10
+  //   CHECK-DAG:     {{.*}} = constant 2
+  //  CHECK-NEXT:     {{.*}} = divi_signed
+  // clang-format on
+  f.print(llvm::outs());
+  f.erase();
+}
+
+TEST_FUNC(diviu_op_i32) {
+  using namespace edsc::op;
+  auto f = makeFunction("diviu_op", {}, {});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  auto i32Type = builder.getI32Type();
+  std_diviu(std_constant_int(10, i32Type), std_constant_int(2, i32Type));
+
+  // clang-format off
+  // CHECK-LABEL: @diviu_op
+  //   CHECK-DAG:     {{.*}} = constant 10
+  //   CHECK-DAG:     {{.*}} = constant 2
+  //  CHECK-NEXT:     {{.*}} = divi_unsigned
+  // clang-format on
+  f.print(llvm::outs());
+  f.erase();
+}
+
 TEST_FUNC(select_op_i32) {
   using namespace edsc::op;
   auto f32Type = FloatType::getF32(&globalContext());
@@ -920,6 +958,28 @@ TEST_FUNC(linalg_tensors_test) {
   Value o1 = linalg_generic_matmul(A, B, tensorType)->getResult(0);
   linalg_generic_matmul(A, B, o1, tensorType);
 
+  f.print(llvm::outs());
+  f.erase();
+}
+
+TEST_FUNC(vector_extractelement_op_i32) {
+  using namespace edsc::op;
+  auto f = makeFunction("vector_extractelement_op", {}, {});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  auto i32Type = builder.getI32Type();
+  auto vectorType = VectorType::get(/*shape=*/{8}, i32Type);
+  vector_extractelement(
+      i32Type, std_constant(vectorType, builder.getI32VectorAttr({10})),
+      std_constant_int(0, i32Type));
+
+  // clang-format off
+  // CHECK-LABEL: @vector_extractelement_op
+  //   CHECK-DAG:     {{.*}} = constant dense<10>
+  //   CHECK-DAG:     {{.*}} = constant 0
+  //  CHECK-NEXT:     {{.*}} = vector.extractelement
+  // clang-format on
   f.print(llvm::outs());
   f.erase();
 }
