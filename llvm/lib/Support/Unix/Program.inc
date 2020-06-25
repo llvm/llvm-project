@@ -15,6 +15,8 @@
 //===          is guaranteed to work on *all* UNIX variants.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Program.h"
+
 #include "Unix.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
@@ -59,8 +61,7 @@
 #endif
 #endif
 
-namespace llvm {
-
+using namespace llvm;
 using namespace sys;
 
 ProcessInfo::ProcessInfo() : Pid(0), ReturnCode(0) {}
@@ -159,8 +160,6 @@ static void SetMemoryLimits(unsigned size) {
   setrlimit (RLIMIT_RSS, &r);
 #endif
 #endif
-}
-
 }
 
 static std::vector<const char *>
