@@ -332,6 +332,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   config->disableVerify = args.hasArg(OPT_disable_verify);
   config->emitRelocs = args.hasArg(OPT_emit_relocs);
+  config->experimentalPic = args.hasArg(OPT_experimental_pic);
   config->entry = getEntry(args);
   config->exportAll = args.hasArg(OPT_export_all);
   config->exportTable = args.hasArg(OPT_export_table);
@@ -377,6 +378,18 @@ static void readConfigs(opt::InputArgList &args) {
   // Default value of exportDynamic depends on `-shared`
   config->exportDynamic =
       args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, config->shared);
+
+  // Parse wasm32/64.
+  config->is64 = false;
+  if (auto *arg = args.getLastArg(OPT_m)) {
+    StringRef s = arg->getValue();
+    if (s == "wasm32")
+      config->is64 = false;
+    else if (s == "wasm64")
+      config->is64 = true;
+    else
+      error("invalid target architecture: " + s);
+  }
 
   // --threads= takes a positive integer and provides the default value for
   // --thinlto-jobs=.
@@ -456,6 +469,23 @@ static void checkOptions(opt::InputArgList &args) {
     if (config->sharedMemory)
       error("-r and --shared-memory may not be used together");
   }
+
+  // To begin to prepare for Module Linking-style shared libraries, start
+  // warning about uses of `-shared` and related flags outside of Experimental
+  // mode, to give anyone using them a heads-up that they will be changing.
+  //
+  // Also, warn about flags which request explicit exports.
+  if (!config->experimentalPic) {
+    // -shared will change meaning when Module Linking is implemented.
+    if (config->shared) {
+      warn("creating shared libraries, with -shared, is not yet stable");
+    }
+
+    // -pie will change meaning when Module Linking is implemented.
+    if (config->pie) {
+      warn("creating PIEs, with -pie, is not yet stable");
+    }
+  }
 }
 
 // Force Sym to be entered in the output. Used for -u or equivalent.
@@ -498,9 +528,15 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
 static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
                                           int value) {
   llvm::wasm::WasmGlobal wasmGlobal;
-  wasmGlobal.Type = {WASM_TYPE_I32, isMutable};
-  wasmGlobal.InitExpr.Value.Int32 = value;
-  wasmGlobal.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+  if (config->is64) {
+    wasmGlobal.Type = {WASM_TYPE_I64, isMutable};
+    wasmGlobal.InitExpr.Value.Int64 = value;
+    wasmGlobal.InitExpr.Opcode = WASM_OPCODE_I64_CONST;
+  } else {
+    wasmGlobal.Type = {WASM_TYPE_I32, isMutable};
+    wasmGlobal.InitExpr.Value.Int32 = value;
+    wasmGlobal.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+  }
   wasmGlobal.SymbolName = name;
   return symtab->addSyntheticGlobal(name, WASM_SYMBOL_VISIBILITY_HIDDEN,
                                     make<InputGlobal>(wasmGlobal, nullptr));
@@ -513,8 +549,12 @@ static void createSyntheticSymbols() {
 
   static WasmSignature nullSignature = {{}, {}};
   static WasmSignature i32ArgSignature = {{}, {ValType::I32}};
+  static WasmSignature i64ArgSignature = {{}, {ValType::I64}};
   static llvm::wasm::WasmGlobalType globalTypeI32 = {WASM_TYPE_I32, false};
+  static llvm::wasm::WasmGlobalType globalTypeI64 = {WASM_TYPE_I64, false};
   static llvm::wasm::WasmGlobalType mutableGlobalTypeI32 = {WASM_TYPE_I32,
+                                                            true};
+  static llvm::wasm::WasmGlobalType mutableGlobalTypeI64 = {WASM_TYPE_I64,
                                                             true};
   WasmSym::callCtors = symtab->addSyntheticFunction(
       "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
@@ -530,15 +570,16 @@ static void createSyntheticSymbols() {
 
 
   if (config->isPic) {
-    WasmSym::stackPointer =
-        createUndefinedGlobal("__stack_pointer", &mutableGlobalTypeI32);
+    WasmSym::stackPointer = createUndefinedGlobal(
+        "__stack_pointer",
+        config->is64 ? &mutableGlobalTypeI64 : &mutableGlobalTypeI32);
     // For PIC code, we import two global variables (__memory_base and
     // __table_base) from the environment and use these as the offset at
     // which to load our static data and function table.
     // See:
     // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
-    WasmSym::memoryBase =
-        createUndefinedGlobal("__memory_base", &globalTypeI32);
+    WasmSym::memoryBase = createUndefinedGlobal(
+        "__memory_base", config->is64 ? &globalTypeI64 : &globalTypeI32);
     WasmSym::tableBase = createUndefinedGlobal("__table_base", &globalTypeI32);
     WasmSym::memoryBase->markLive();
     WasmSym::tableBase->markLive();
@@ -563,7 +604,9 @@ static void createSyntheticSymbols() {
     WasmSym::tlsAlign = createGlobalVariable("__tls_align", false, 1);
     WasmSym::initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(i32ArgSignature, "__wasm_init_tls"));
+        make<SyntheticFunction>(config->is64 ? i64ArgSignature
+                                             : i32ArgSignature,
+                                "__wasm_init_tls"));
   }
 }
 

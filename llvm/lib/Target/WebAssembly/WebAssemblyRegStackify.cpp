@@ -248,7 +248,8 @@ static void query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
   }
 
   // Check for writes to __stack_pointer global.
-  if (MI.getOpcode() == WebAssembly::GLOBAL_SET_I32 &&
+  if ((MI.getOpcode() == WebAssembly::GLOBAL_SET_I32 ||
+       MI.getOpcode() == WebAssembly::GLOBAL_SET_I64) &&
       strcmp(MI.getOperand(0).getSymbolName(), "__stack_pointer") == 0)
     StackPointer = true;
 
