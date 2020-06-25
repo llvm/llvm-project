@@ -118,7 +118,6 @@ for arch in ${architectures}; do
             -GNinja \
             -DCMAKE_MAKE_PROGRAM="$(xcrun --sdk "${sdk}" --find ninja)" \
             -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
-            -DLLVM_INCLUDE_BENCHMARKS=OFF \
             -C "${cache}" \
             -DCMAKE_INSTALL_PREFIX="${build_dir}/${arch}-install" \
             -DCMAKE_INSTALL_NAME_DIR="${install_name_dir}" \
