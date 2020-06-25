@@ -536,6 +536,11 @@ OpFoldResult SizeToIndexOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+void SizeToIndexOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<IndexToSizeToIndexCanonicalization>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
