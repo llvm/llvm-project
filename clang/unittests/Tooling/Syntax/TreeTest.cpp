@@ -73,6 +73,10 @@ struct TestClangConfig {
     return Language == Lang_C89 || Language == Lang_C99;
   }
 
+  bool isCXX17OrLater() const {
+    return Language == Lang_CXX17 || Language == Lang_CXX20;
+  }
+
   bool supportsCXXDynamicExceptionSpecification() const {
     return Language == Lang_CXX03 || Language == Lang_CXX11 ||
            Language == Lang_CXX14;
@@ -1227,6 +1231,135 @@ void test() {
     |-ExpressionStatement
     | |-CxxNullPtrExpression
     | | `-nullptr
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, CharacterLiteral) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  'a';
+  '\n';
+  '\x20';
+  '\0';
+  L'a';
+  L'α';
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-'a'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-'\n'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-'\x20'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-'\0'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-L'a'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-L'α'
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, CharacterLiteralUtf) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  u'a';
+  u'構';
+  U'a';
+  U'🌲';
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-u'a'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-u'構'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-U'a'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-U'🌲'
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, CharacterLiteralUtf8) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  u8'a';
+  u8'\x7f';
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-u8'a'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-u8'\x7f'
     | `-;
     `-}
 )txt"));

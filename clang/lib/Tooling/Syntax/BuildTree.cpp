@@ -661,6 +661,13 @@ public:
     return true;
   }
 
+  bool WalkUpFromCharacterLiteral(CharacterLiteral *S) {
+    Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::CharacterLiteralExpression, S);
+    return true;
+  }
+
   bool WalkUpFromCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *S) {
     Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
     Builder.foldNode(Builder.getExprRange(S),
