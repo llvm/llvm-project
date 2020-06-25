@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=40 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=45 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le50 -fopenmp -fopenmp-version=50 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -DCCODE -verify -fopenmp -ferror-limit 200 -x c %s -Wno-openmp -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -fopenmp-version=40 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
