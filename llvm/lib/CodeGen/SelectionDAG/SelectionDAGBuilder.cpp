@@ -9119,6 +9119,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     Entry.IsSRet = true;
     Entry.IsNest = false;
     Entry.IsByVal = false;
+    Entry.IsByRef = false;
     Entry.IsReturned = false;
     Entry.IsSwiftSelf = false;
     Entry.IsSwiftError = false;
@@ -9239,6 +9240,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         Flags.setCFGuardTarget();
       if (Args[i].IsByVal)
         Flags.setByVal();
+      if (Args[i].IsByRef)
+        Flags.setByRef();
       if (Args[i].IsPreallocated) {
         Flags.setPreallocated();
         // Set the byval flag for CCAssignFn callbacks that don't know about
@@ -9752,6 +9755,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         Flags.setSwiftError();
       if (Arg.hasAttribute(Attribute::ByVal))
         Flags.setByVal();
+      if (Arg.hasAttribute(Attribute::ByRef))
+        Flags.setByRef();
       if (Arg.hasAttribute(Attribute::InAlloca)) {
         Flags.setInAlloca();
         // Set the byval flag for CCAssignFn callbacks that don't know about
@@ -9770,27 +9775,39 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // preallocated handling in the various CC lowering callbacks.
         Flags.setByVal();
       }
+
+      Type *ArgMemTy = nullptr;
       if (F.getCallingConv() == CallingConv::X86_INTR) {
         // IA Interrupt passes frame (1st parameter) by value in the stack.
-        if (ArgNo == 0)
+        if (ArgNo == 0) {
           Flags.setByVal();
+          // FIXME: Dependence on pointee element type. See bug 46672.
+          ArgMemTy = Arg.getType()->getPointerElementType();
+        }
       }
-      if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
-        Type *ElementTy = Arg.getParamByValType();
+      if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated() ||
+          Flags.isByRef()) {
+        if (!ArgMemTy)
+          ArgMemTy = Arg.getPointeeInMemoryValueType();
 
-        // For ByVal, size and alignment should be passed from FE.  BE will
-        // guess if this info is not there but there are cases it cannot get
-        // right.
-        unsigned FrameSize = DL.getTypeAllocSize(Arg.getParamByValType());
-        Flags.setByValSize(FrameSize);
+        uint64_t MemSize = DL.getTypeAllocSize(ArgMemTy);
 
-        unsigned FrameAlign;
-        if (Arg.getParamAlignment())
-          FrameAlign = Arg.getParamAlignment();
-        else
-          FrameAlign = TLI->getByValTypeAlignment(ElementTy, DL);
-        Flags.setByValAlign(Align(FrameAlign));
+        // For in-memory arguments, size and alignment should be passed from FE.
+        // BE will guess if this info is not there but there are cases it cannot
+        // get right.
+        MaybeAlign MemAlign = Arg.getParamAlign();
+        if (!MemAlign)
+          MemAlign = Align(TLI->getByValTypeAlignment(ArgMemTy, DL));
+
+        if (Flags.isByRef()) {
+          Flags.setByRefSize(MemSize);
+          Flags.setByRefAlign(*MemAlign);
+        } else {
+          Flags.setByValSize(MemSize);
+          Flags.setByValAlign(*MemAlign);
+        }
       }
+
       if (Arg.hasAttribute(Attribute::Nest))
         Flags.setNest();
       if (NeedsRegBlock)
