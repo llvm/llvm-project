@@ -1317,8 +1317,6 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
 /// 'encodeLLVMAttributesForBitcode'.
 static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
                                            uint64_t EncodedAttrs) {
-  // FIXME: Remove in 4.0.
-
   // The alignment is stored as a 16-bit raw value from bits 31--16.  We shift
   // the bits above 31 down by 11 bits.
   unsigned Alignment = (EncodedAttrs & (0xffffULL << 16)) >> 16;
@@ -1369,7 +1367,7 @@ Error BitcodeReader::parseAttributeBlock() {
     default:  // Default behavior: ignore.
       break;
     case bitc::PARAMATTR_CODE_ENTRY_OLD: // ENTRY: [paramidx0, attr0, ...]
-      // FIXME: Remove in 4.0.
+      // Deprecated, but still needed to read old bitcode files.
       if (Record.size() & 1)
         return error("Invalid record");
 
@@ -1777,7 +1775,7 @@ Error BitcodeReader::parseTypeTableBody() {
       break;
     }
     case bitc::TYPE_CODE_FUNCTION_OLD: {
-      // FIXME: attrid is dead, remove it in LLVM 4.0
+      // Deprecated, but still needed to read old bitcode files.
       // FUNCTION: [vararg, attrid, retty, paramty x N]
       if (Record.size() < 3)
         return error("Invalid record");
@@ -2700,8 +2698,10 @@ Error BitcodeReader::parseConstants() {
         if (!IdxTy)
           return error("Invalid record");
         Op1 = ValueList.getConstantFwdRef(Record[3], IdxTy);
-      } else // TODO: Remove with llvm 4.0
+      } else {
+        // Deprecated, but still needed to read old bitcode files.
         Op1 = ValueList.getConstantFwdRef(Record[2], Type::getInt32Ty(Context));
+      }
       if (!Op1)
         return error("Invalid record");
       V = ConstantExpr::getExtractElement(Op0, Op1);
@@ -2721,8 +2721,10 @@ Error BitcodeReader::parseConstants() {
         if (!IdxTy)
           return error("Invalid record");
         Op2 = ValueList.getConstantFwdRef(Record[3], IdxTy);
-      } else // TODO: Remove with llvm 4.0
+      } else {
+        // Deprecated, but still needed to read old bitcode files.
         Op2 = ValueList.getConstantFwdRef(Record[2], Type::getInt32Ty(Context));
+      }
       if (!Op2)
         return error("Invalid record");
       V = ConstantExpr::getInsertElement(Op0, Op1, Op2);
@@ -2762,7 +2764,7 @@ Error BitcodeReader::parseConstants() {
       break;
     }
     // This maintains backward compatibility, pre-asm dialect keywords.
-    // FIXME: Remove with the 4.0 release.
+    // Deprecated, but still needed to read old bitcode files.
     case bitc::CST_CODE_INLINEASM_OLD: {
       if (Record.size() < 2)
         return error("Invalid record");
@@ -3163,8 +3165,8 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   }
   GlobalValue::VisibilityTypes Visibility = GlobalValue::DefaultVisibility;
   // Local linkage must have default visibility.
+  // auto-upgrade `hidden` and `protected` for old bitcode.
   if (Record.size() > 6 && !GlobalValue::isLocalLinkage(Linkage))
-    // FIXME: Change to an error if non-default in 4.0.
     Visibility = getDecodedVisibility(Record[6]);
 
   GlobalVariable::ThreadLocalMode TLM = GlobalVariable::NotThreadLocal;
@@ -3293,8 +3295,8 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
     Func->setSection(SectionTable[Record[6] - 1]);
   }
   // Local linkage must have default visibility.
+  // auto-upgrade `hidden` and `protected` for old bitcode.
   if (!Func->hasLocalLinkage())
-    // FIXME: Change to an error if non-default in 4.0.
     Func->setVisibility(getDecodedVisibility(Record[7]));
   if (Record.size() > 8 && Record[8]) {
     if (Record[8] - 1 >= GCTable.size())
@@ -3401,12 +3403,11 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 
   assert(NewGA->getValueType() == flattenPointerTypes(FullTy) &&
          "Incorrect fully structured type provided for GlobalIndirectSymbol");
-  // Old bitcode files didn't have visibility field.
   // Local linkage must have default visibility.
+  // auto-upgrade `hidden` and `protected` for old bitcode.
   if (OpNum != Record.size()) {
     auto VisInd = OpNum++;
     if (!NewGA->hasLocalLinkage())
-      // FIXME: Change to an error if non-default in 4.0.
       NewGA->setVisibility(getDecodedVisibility(Record[VisInd]));
   }
   if (BitCode == bitc::MODULE_CODE_ALIAS ||
@@ -3659,7 +3660,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       break;
     }
     case bitc::MODULE_CODE_DEPLIB: {  // DEPLIB: [strchr x N]
-      // FIXME: Remove in 4.0.
+      // Deprecated, but still needed to read old bitcode files.
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");

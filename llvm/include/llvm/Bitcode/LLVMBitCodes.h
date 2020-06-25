@@ -85,7 +85,7 @@ enum ModuleCodes {
   MODULE_CODE_ASM = 4,         // ASM:         [strchr x N]
   MODULE_CODE_SECTIONNAME = 5, // SECTIONNAME: [strchr x N]
 
-  // FIXME: Remove DEPLIB in 4.0.
+  // Deprecated, but still needed to read old bitcode files.
   MODULE_CODE_DEPLIB = 6, // DEPLIB:      [strchr x N]
 
   // GLOBALVAR: [pointer type, isconst, initid,
@@ -121,7 +121,7 @@ enum ModuleCodes {
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.
 enum AttributeCodes {
-  // FIXME: Remove `PARAMATTR_CODE_ENTRY_OLD' in 4.0
+  // Deprecated, but still needed to read old bitcode files.
   PARAMATTR_CODE_ENTRY_OLD = 1, // ENTRY: [paramidx0, attr0,
                                 //         paramidx1, attr1...]
   PARAMATTR_CODE_ENTRY = 2,     // ENTRY: [attrgrp0, attrgrp1, ...]
