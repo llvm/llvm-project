@@ -532,6 +532,22 @@ let Predicates = [IsISA3_1] in {
    def PEXTD : XForm_6<31, 188, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
                        "pextd $rA, $rS, $rB", IIC_IntGeneral,
                        [(set i64:$rA, (int_ppc_pextd i64:$rS, i64:$rB))]>;
+   def VCLZDM : VXForm_1<1924, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vclzdm $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD,
+                         (int_ppc_altivec_vclzdm v2i64:$vA, v2i64:$vB))]>;
+   def VCTZDM : VXForm_1<1988, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vctzdm $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD,
+                         (int_ppc_altivec_vctzdm v2i64:$vA, v2i64:$vB))]>;
+   def CNTLZDM : XForm_6<31, 59, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
+                         "cntlzdm $rA, $rS, $rB", IIC_IntGeneral,
+                         [(set i64:$rA,
+                         (int_ppc_cntlzdm i64:$rS, i64:$rB))]>;
+   def CNTTZDM : XForm_6<31, 571, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
+                         "cnttzdm $rA, $rS, $rB", IIC_IntGeneral,
+                         [(set i64:$rA,
+                         (int_ppc_cnttzdm i64:$rS, i64:$rB))]>;
    def XXGENPCVBM :
      XForm_XT6_IMM5_VB5<60, 916, (outs vsrc:$XT), (ins vrrc:$VRB, s5imm:$IMM),
                         "xxgenpcvbm $XT, $VRB, $IMM", IIC_VecGeneral, []>;
