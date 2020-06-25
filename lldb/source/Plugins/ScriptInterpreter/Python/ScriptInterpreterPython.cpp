@@ -16,7 +16,6 @@
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
 #include "ScriptInterpreterPythonImpl.h"
-
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
@@ -26,7 +25,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
-#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
@@ -35,11 +33,6 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/Timer.h"
-
-#if defined(_WIN32)
-#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
-#endif
-
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
