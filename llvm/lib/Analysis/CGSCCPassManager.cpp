@@ -73,13 +73,13 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
       AM.getCachedResult<FunctionAnalysisManagerCGSCCProxy>(*C)->getManager();
 
   for (auto &Pass : Passes) {
-    if (DebugLogging)
-      dbgs() << "Running pass: " << Pass->name() << " on " << *C << "\n";
-
     // Check the PassInstrumentation's BeforePass callbacks before running the
     // pass, skip its execution completely if asked to (callback returns false).
     if (!PI.runBeforePass(*Pass, *C))
       continue;
+
+    if (DebugLogging)
+      dbgs() << "Running pass: " << Pass->name() << " on " << *C << "\n";
 
     PreservedAnalyses PassPA;
     {
