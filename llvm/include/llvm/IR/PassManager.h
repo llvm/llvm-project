@@ -503,15 +503,16 @@ public:
 
     for (unsigned Idx = 0, Size = Passes.size(); Idx != Size; ++Idx) {
       auto *P = Passes[Idx].get();
-      if (DebugLogging)
-        dbgs() << "Running pass: " << P->name() << " on " << IR.getName()
-               << "\n";
 
       // Check the PassInstrumentation's BeforePass callbacks before running the
       // pass, skip its execution completely if asked to (callback returns
       // false).
       if (!PI.runBeforePass<IRUnitT>(*P, IR))
         continue;
+
+      if (DebugLogging)
+        dbgs() << "Running pass: " << P->name() << " on " << IR.getName()
+               << "\n";
 
       PreservedAnalyses PassPA;
       {
