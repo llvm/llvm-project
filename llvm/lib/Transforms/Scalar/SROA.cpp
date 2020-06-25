@@ -1757,20 +1757,14 @@ static Value *convertValue(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
                               NewTy);
   }
 
-  // See if we need ptrtoint for this type pair. A cast involving both scalars
-  // and vectors requires and additional bitcast.
+  // See if we need ptrtoint for this type pair. May require additional bitcast.
   if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
     // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
-    if (OldTy->isVectorTy() && !NewTy->isVectorTy())
-      return IRB.CreateBitCast(IRB.CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
-                               NewTy);
-
     // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
-    if (!OldTy->isVectorTy() && NewTy->isVectorTy())
-      return IRB.CreateBitCast(IRB.CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
-                               NewTy);
-
-    return IRB.CreatePtrToInt(V, NewTy);
+    // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>
+    // Expand i8* to i64 --> i8* to i64 to i64
+    return IRB.CreateBitCast(IRB.CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
+                             NewTy);
   }
 
   if (OldTy->isPtrOrPtrVectorTy() && NewTy->isPtrOrPtrVectorTy()) {

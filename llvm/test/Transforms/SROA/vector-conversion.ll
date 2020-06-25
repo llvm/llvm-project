@@ -70,3 +70,22 @@ define <2 x i8*> @vector_inttoptrbitcast_vector({<16 x i8>, <16 x i8>} %x) {
 
   ret <2 x i8*> %vec
 }
+
+define <16 x i8> @vector_ptrtointbitcast_vector({<2 x i8*>, <2 x i8*>} %x) {
+; CHECK-LABEL: @vector_ptrtointbitcast_vector(
+  %a = alloca {<2 x i8*>, <2 x i8*>}
+; CHECK-NOT: alloca
+
+  store {<2 x i8*>, <2 x i8*>} %x, {<2 x i8*>, <2 x i8*>}* %a
+; CHECK-NOT: store
+
+  %cast = bitcast {<2 x i8*>, <2 x i8*>}* %a to <16 x i8>*
+  %vec = load <16 x i8>, <16 x i8>* %cast
+; CHECK-NOT: load
+; CHECK: extractvalue
+; CHECK: ptrtoint
+; CHECK: bitcast
+; CHECK: extractvalue
+
+  ret <16 x i8> %vec
+}
