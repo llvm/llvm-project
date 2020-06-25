@@ -1981,7 +1981,7 @@ def SVWHILEWR_S : SInst<"svwhilewr[_{1}]", "Pcc", "iUif", MergeNone, "aarch64_sv
 def SVWHILEWR_D : SInst<"svwhilewr[_{1}]", "Pcc", "lUld", MergeNone, "aarch64_sve_whilewr_d", [IsOverloadWhileRW]>;
 }
 
-let ArchGuard = "defined(__ARM_FEATURE_SVE2) && defined(__ARM_FEATURE_SVE_BF16)" in {
+let ArchGuard = "defined(__ARM_FEATURE_SVE2) && defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)" in {
 def SVWHILERW_H_BF16 : SInst<"svwhilerw[_{1}]", "Pcc", "b", MergeNone, "aarch64_sve_whilerw_h", [IsOverloadWhileRW]>;
 def SVWHILEWR_H_BF16 : SInst<"svwhilewr[_{1}]", "Pcc", "b", MergeNone, "aarch64_sve_whilewr_h", [IsOverloadWhileRW]>;
 }
