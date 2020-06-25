@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace Fortran::lower {
 
@@ -238,7 +239,7 @@ public:
   void clear() { symbolMap.clear(); }
 
   /// Dump the map. For debugging.
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   /// Add `symbol` to the current map and bind a `box`.
