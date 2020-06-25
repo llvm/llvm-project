@@ -85,6 +85,9 @@ enum OpenMPRTLFunctionNVPTX {
   /// Call to void* __kmpc_data_sharing_coalesced_push_stack(size_t size,
   /// int16_t UseSharedMemory);
   OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack,
+  /// Call to void* __kmpc_data_sharing_push_stack(size_t size, int16_t
+  /// UseSharedMemory);
+  OMPRTL_NVPTX__kmpc_data_sharing_push_stack,
   /// Call to void __kmpc_data_sharing_pop_stack(void *a);
   OMPRTL_NVPTX__kmpc_data_sharing_pop_stack,
   /// Call to void __kmpc_begin_sharing_variables(void ***args,
@@ -1753,6 +1756,16 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
         FnTy, /*Name=*/"__kmpc_data_sharing_coalesced_push_stack");
     break;
   }
+  case OMPRTL_NVPTX__kmpc_data_sharing_push_stack: {
+    // Build void *__kmpc_data_sharing_push_stack(size_t size, int16_t
+    // UseSharedMemory);
+    llvm::Type *TypeParams[] = {CGM.SizeTy, CGM.Int16Ty};
+    auto *FnTy =
+        llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(
+        FnTy, /*Name=*/"__kmpc_data_sharing_push_stack");
+    break;
+  }
   case OMPRTL_NVPTX__kmpc_data_sharing_pop_stack: {
     // Build void __kmpc_data_sharing_pop_stack(void *a);
     llvm::Type *TypeParams[] = {CGM.VoidPtrTy};
@@ -2210,7 +2223,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
       GlobalRecCastAddr = Phi;
       I->getSecond().GlobalRecordAddr = Phi;
       I->getSecond().IsInSPMDModeFlag = IsSPMD;
-    } else if (IsInTTDRegion) {
+    } else if (!CGM.getLangOpts().OpenMPCUDATargetParallel && IsInTTDRegion) {
       assert(GlobalizedRecords.back().Records.size() < 2 &&
              "Expected less than 2 globalized records: one for target and one "
              "for teams.");
@@ -2283,12 +2296,16 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
     } else {
       // TODO: allow the usage of shared memory to be controlled by
       // the user, for now, default to global.
+      bool UseSharedMemory =
+          IsInTTDRegion && GlobalRecordSize <= SharedMemorySize;
       llvm::Value *GlobalRecordSizeArg[] = {
           llvm::ConstantInt::get(CGM.SizeTy, GlobalRecordSize),
-          CGF.Builder.getInt16(/*UseSharedMemory=*/0)};
+          CGF.Builder.getInt16(UseSharedMemory ? 1 : 0)};
       llvm::Value *GlobalRecValue = CGF.EmitRuntimeCall(
           createNVPTXRuntimeFunction(
-              OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack),
+              IsInTTDRegion
+                  ? OMPRTL_NVPTX__kmpc_data_sharing_push_stack
+                  : OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack),
           GlobalRecordSizeArg);
       GlobalRecCastAddr = Bld.CreatePointerBitCastOrAddrSpaceCast(
           GlobalRecValue, GlobalRecPtrTy);
@@ -2435,7 +2452,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsEpilog(CodeGenFunction &CGF,
                 OMPRTL_NVPTX__kmpc_data_sharing_pop_stack),
             CGF.EmitCastToVoidPtr(I->getSecond().GlobalRecordAddr));
         CGF.EmitBlock(ExitBB);
-      } else if (IsInTTDRegion) {
+      } else if (!CGM.getLangOpts().OpenMPCUDATargetParallel && IsInTTDRegion) {
         assert(GlobalizedRecords.back().RegionCounter > 0 &&
                "region counter must be > 0.");
         --GlobalizedRecords.back().RegionCounter;
@@ -5085,7 +5102,8 @@ static std::pair<unsigned, unsigned> getSMsBlocksPerSM(CodeGenModule &CGM) {
 }
 
 void CGOpenMPRuntimeNVPTX::clear() {
-  if (!GlobalizedRecords.empty()) {
+  if (!GlobalizedRecords.empty() &&
+      !CGM.getLangOpts().OpenMPCUDATargetParallel) {
     ASTContext &C = CGM.getContext();
     llvm::SmallVector<const GlobalPtrSizeRecsTy *, 4> GlobalRecs;
     llvm::SmallVector<const GlobalPtrSizeRecsTy *, 4> SharedRecs;
