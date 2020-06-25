@@ -123,6 +123,24 @@ private:
 // InterfaceMap
 //===----------------------------------------------------------------------===//
 
+/// Utility to filter a given sequence of types base upon a predicate.
+template <bool>
+struct FilterTypeT {
+  template <class E>
+  using type = std::tuple<E>;
+};
+template <>
+struct FilterTypeT<false> {
+  template <class E>
+  using type = std::tuple<>;
+};
+template <template <class> class Pred, class... Es>
+struct FilterTypes {
+  using type = decltype(std::tuple_cat(
+      std::declval<
+          typename FilterTypeT<Pred<Es>::value>::template type<Es>>()...));
+};
+
 /// This class provides an efficient mapping between a given `Interface` type,
 /// and a particular implementation of its concept.
 class InterfaceMap {
@@ -163,18 +181,6 @@ private:
     template <typename T>
     using detect_get_interface_id = llvm::is_detected<has_get_interface_id, T>;
 
-    /// Utility to filter a given sequence of types base upon a predicate.
-    template <bool> struct FilterTypeT {
-      template <class E> using type = std::tuple<E>;
-    };
-    template <> struct FilterTypeT<false> {
-      template <class E> using type = std::tuple<>;
-    };
-    template <template <class> class Pred, class... Es> struct FilterTypes {
-      using type = decltype(std::tuple_cat(
-          std::declval<
-              typename FilterTypeT<Pred<Es>::value>::template type<Es>>()...));
-    };
     template <typename... Ts>
     static std::unique_ptr<llvm::SmallDenseMap<TypeID, void *>>
     createImpl(std::tuple<Ts...> *) {
