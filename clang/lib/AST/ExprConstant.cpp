@@ -4475,37 +4475,48 @@ static bool HandleBaseToDerivedCast(EvalInfo &Info, const CastExpr *E,
 }
 
 /// Get the value to use for a default-initialized object of type T.
-static APValue getDefaultInitValue(QualType T) {
+/// Return false if it encounters something invalid.
+static bool getDefaultInitValue(QualType T, APValue &Result) {
+  bool Success = true;
   if (auto *RD = T->getAsCXXRecordDecl()) {
-    if (RD->isUnion())
-      return APValue((const FieldDecl*)nullptr);
-
-    APValue Struct(APValue::UninitStruct(), RD->getNumBases(),
-                   std::distance(RD->field_begin(), RD->field_end()));
+    if (RD->isInvalidDecl()) {
+      Result = APValue();
+      return false;
+    }
+    if (RD->isUnion()) {
+      Result = APValue((const FieldDecl *)nullptr);
+      return true;
+    }
+    Result = APValue(APValue::UninitStruct(), RD->getNumBases(),
+                     std::distance(RD->field_begin(), RD->field_end()));
 
     unsigned Index = 0;
     for (CXXRecordDecl::base_class_const_iterator I = RD->bases_begin(),
-           End = RD->bases_end(); I != End; ++I, ++Index)
-      Struct.getStructBase(Index) = getDefaultInitValue(I->getType());
+                                                  End = RD->bases_end();
+         I != End; ++I, ++Index)
+      Success &= getDefaultInitValue(I->getType(), Result.getStructBase(Index));
 
     for (const auto *I : RD->fields()) {
       if (I->isUnnamedBitfield())
         continue;
-      Struct.getStructField(I->getFieldIndex()) =
-          getDefaultInitValue(I->getType());
+      Success &= getDefaultInitValue(I->getType(),
+                                     Result.getStructField(I->getFieldIndex()));
     }
-    return Struct;
+    return Success;
   }
 
   if (auto *AT =
           dyn_cast_or_null<ConstantArrayType>(T->getAsArrayTypeUnsafe())) {
-    APValue Array(APValue::UninitArray(), 0, AT->getSize().getZExtValue());
-    if (Array.hasArrayFiller())
-      Array.getArrayFiller() = getDefaultInitValue(AT->getElementType());
-    return Array;
+    Result = APValue(APValue::UninitArray(), 0, AT->getSize().getZExtValue());
+    if (Result.hasArrayFiller())
+      Success &=
+          getDefaultInitValue(AT->getElementType(), Result.getArrayFiller());
+
+    return Success;
   }
 
-  return APValue::IndeterminateValue();
+  Result = APValue::IndeterminateValue();
+  return true;
 }
 
 namespace {
@@ -4535,10 +4546,8 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
       Info.CurrentCall->createTemporary(VD, VD->getType(), true, Result);
 
   const Expr *InitE = VD->getInit();
-  if (!InitE) {
-    Val = getDefaultInitValue(VD->getType());
-    return true;
-  }
+  if (!InitE)
+    return getDefaultInitValue(VD->getType(), Val);
 
   if (InitE->isValueDependent())
     return false;
@@ -5535,11 +5544,11 @@ struct StartLifetimeOfUnionMemberHandler {
   const Expr *LHSExpr;
   const FieldDecl *Field;
   bool DuringInit;
-
+  bool Failed = false;
   static const AccessKinds AccessKind = AK_Assign;
 
   typedef bool result_type;
-  bool failed() { return false; }
+  bool failed() { return Failed; }
   bool found(APValue &Subobj, QualType SubobjType) {
     // We are supposed to perform no initialization but begin the lifetime of
     // the object. We interpret that as meaning to do what default
@@ -5563,8 +5572,9 @@ struct StartLifetimeOfUnionMemberHandler {
                   diag::note_constexpr_union_member_change_during_init);
       return false;
     }
-
-    Subobj.setUnion(Field, getDefaultInitValue(Field->getType()));
+    APValue Result;
+    Failed = !getDefaultInitValue(Field->getType(), Result);
+    Subobj.setUnion(Field, Result);
     return true;
   }
   bool found(APSInt &Value, QualType SubobjType) {
@@ -5880,8 +5890,9 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     for (; !declaresSameEntity(*FieldIt, FD); ++FieldIt) {
       assert(FieldIt != RD->field_end() && "missing field?");
       if (!FieldIt->isUnnamedBitfield())
-        Result.getStructField(FieldIt->getFieldIndex()) =
-            getDefaultInitValue(FieldIt->getType());
+        Success &= getDefaultInitValue(
+            FieldIt->getType(),
+            Result.getStructField(FieldIt->getFieldIndex()));
     }
     ++FieldIt;
   };
@@ -5933,10 +5944,10 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
           if (CD->isUnion())
             *Value = APValue(FD);
           else
-            // FIXME: This immediately starts the lifetime of all members of an
-            // anonymous struct. It would be preferable to strictly start member
-            // lifetime in initialization order.
-            *Value = getDefaultInitValue(Info.Ctx.getRecordType(CD));
+            // FIXME: This immediately starts the lifetime of all members of
+            // an anonymous struct. It would be preferable to strictly start
+            // member lifetime in initialization order.
+            Success &= getDefaultInitValue(Info.Ctx.getRecordType(CD), *Value);
         }
         // Store Subobject as its parent before updating it for the last element
         // in the chain.
@@ -5983,8 +5994,9 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
   if (!RD->isUnion()) {
     for (; FieldIt != RD->field_end(); ++FieldIt) {
       if (!FieldIt->isUnnamedBitfield())
-        Result.getStructField(FieldIt->getFieldIndex()) =
-            getDefaultInitValue(FieldIt->getType());
+        Success &= getDefaultInitValue(
+            FieldIt->getType(),
+            Result.getStructField(FieldIt->getFieldIndex()));
     }
   }
 
@@ -9070,8 +9082,8 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
   } else if (Init) {
     if (!EvaluateInPlace(*Val, Info, Result, Init))
       return false;
-  } else {
-    *Val = getDefaultInitValue(AllocType);
+  } else if (!getDefaultInitValue(AllocType, *Val)) {
+    return false;
   }
 
   // Array new returns a pointer to the first element, not a pointer to the
@@ -9442,8 +9454,7 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
     if (ZeroInit)
       return ZeroInitialization(E, T);
 
-    Result = getDefaultInitValue(T);
-    return true;
+    return getDefaultInitValue(T, Result);
   }
 
   const FunctionDecl *Definition = nullptr;
@@ -14209,10 +14220,11 @@ bool VarDecl::evaluateDestruction(
   // Make a copy of the value for the destructor to mutate, if we know it.
   // Otherwise, treat the value as default-initialized; if the destructor works
   // anyway, then the destruction is constant (and must be essentially empty).
-  APValue DestroyedValue =
-      (getEvaluatedValue() && !getEvaluatedValue()->isAbsent())
-          ? *getEvaluatedValue()
-          : getDefaultInitValue(getType());
+  APValue DestroyedValue;
+  if (getEvaluatedValue() && !getEvaluatedValue()->isAbsent())
+    DestroyedValue = *getEvaluatedValue();
+  else if (!getDefaultInitValue(getType(), DestroyedValue))
+    return false;
 
   EvalInfo Info(getASTContext(), EStatus, EvalInfo::EM_ConstantExpression);
   Info.setEvaluatingDecl(this, DestroyedValue,
