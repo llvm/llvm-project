@@ -19,7 +19,6 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerSumType.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Metadata.h"
@@ -35,6 +34,7 @@
 
 namespace llvm {
 
+class AAResults;
 class AssumptionCache;
 class DominatorTree;
 class Function;
@@ -355,7 +355,7 @@ private:
   ReverseDepMapType ReverseNonLocalDeps;
 
   /// Current AA implementation, just a cache.
-  AliasAnalysis &AA;
+  AAResults &AA;
   AssumptionCache &AC;
   const TargetLibraryInfo &TLI;
   DominatorTree &DT;
@@ -365,7 +365,7 @@ private:
   unsigned DefaultBlockScanLimit;
 
 public:
-  MemoryDependenceResults(AliasAnalysis &AA, AssumptionCache &AC,
+  MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
                           const TargetLibraryInfo &TLI, DominatorTree &DT,
                           PhiValues &PV, unsigned DefaultBlockScanLimit)
       : AA(AA), AC(AC), TLI(TLI), DT(DT), PV(PV),
