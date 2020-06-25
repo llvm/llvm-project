@@ -7,6 +7,7 @@ declare void @usei8ptr(i8* %ptr)
 
 ; Ensure that we do not crash when looking at such a weird bitcast.
 define i1 @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptr1vec, i8* %ptr2) {
+; CHECK-LABEL: @bitcast_from_single_element_pointer_vector_to_pointer(
   %ptr1 = bitcast <1 x i8*> %ptr1vec to i8*
   call void @usei8ptr(i8* %ptr1)
   %cmp = icmp eq i8* %ptr1, %ptr2
