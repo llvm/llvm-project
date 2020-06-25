@@ -31,7 +31,41 @@ against Python comes with some constraints to be aware of.
     the one used to build and link LLDB.
 
 The previous considerations are especially important during development, but
-apply to binary distributions of LLDB as well. For example, the LLDB that comes
-with Xcode links against the Python 3 that's part of Xcode. Therefore you
-should always use the Python in Xcode (through ``xcrun python3`` or
-``/usr/bin/python3``) to import the lldb module or install packages.
+apply to binary distributions of LLDB as well.
+
+LLDB in Xcode on macOS
+``````````````````````
+
+Users of lldb in Xcode on macOS commonly run into these issues when they
+install Python, often unknowingly as a dependency pulled in by Homebrew or
+other package managers. The problem is the symlinks that get created in
+``/usr/local/bin``, which comes before ``/usr/bin`` in your path. You can use
+``which python3`` to check to what it resolves.
+
+To be sure you use the Python that matches with the lldb in Xcode use ``xcrun``
+or use the absolute path to the shims in ``/usr/bin``.
+
+::
+
+   $ xcrun python3
+   $ /usr/bin/python3
+
+Similarly, to install packages and be able to use them from within lldb, you'll
+need to install them with the matching ``pip3``.
+
+::
+
+   $ xcrun pip3
+   $ /usr/bin/pip3
+
+The same is true for Python 2. Although Python 2 comes with the operating
+system rather than Xcode, you can still use ``xcrun`` to launch the system
+variant.
+
+::
+
+   $ xcrun python
+   $ /usr/bin/python
+
+Keep in mind that Python 2 is deprecated and no longer maintained. Future
+versions of macOS will not include Python 2.7.
