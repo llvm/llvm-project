@@ -2471,8 +2471,9 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
   if (DestTy == Src->getType())
     return replaceInstUsesWith(CI, Src);
 
-  if (PointerType *DstPTy = dyn_cast<PointerType>(DestTy)) {
+  if (isa<PointerType>(SrcTy) && isa<PointerType>(DestTy)) {
     PointerType *SrcPTy = cast<PointerType>(SrcTy);
+    PointerType *DstPTy = cast<PointerType>(DestTy);
     Type *DstElTy = DstPTy->getElementType();
     Type *SrcElTy = SrcPTy->getElementType();
 
