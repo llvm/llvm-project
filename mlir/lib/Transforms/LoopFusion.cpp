@@ -70,10 +70,8 @@ mlir::createLoopFusionPass(unsigned fastMemorySpace,
 
 // TODO(b/117228571) Replace when this is modeled through side-effects/op traits
 static bool isMemRefDereferencingOp(Operation &op) {
-  if (isa<AffineReadOpInterface>(op) || isa<AffineWriteOpInterface>(op) ||
-      isa<AffineDmaStartOp>(op) || isa<AffineDmaWaitOp>(op))
-    return true;
-  return false;
+  return isa<AffineReadOpInterface, AffineWriteOpInterface, AffineDmaStartOp,
+             AffineDmaWaitOp>(op);
 }
 
 namespace {

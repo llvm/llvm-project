@@ -106,7 +106,7 @@ private:
   /// Globals are inserted before the first function, if any.
   Block::iterator getGlobalInsertPt() {
     auto i = module.getBody()->begin();
-    while (!isa<LLVMFuncOp>(i) && !isa<ModuleTerminatorOp>(i))
+    while (!isa<LLVMFuncOp, ModuleTerminatorOp>(i))
       ++i;
     return i;
   }

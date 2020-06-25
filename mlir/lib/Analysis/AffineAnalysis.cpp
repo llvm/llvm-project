@@ -859,8 +859,7 @@ void mlir::getDependenceComponents(
   // Collect all load and store ops in loop nest rooted at 'forOp'.
   SmallVector<Operation *, 8> loadAndStoreOpInsts;
   forOp.getOperation()->walk([&](Operation *opInst) {
-    if (isa<AffineReadOpInterface>(opInst) ||
-        isa<AffineWriteOpInterface>(opInst))
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(opInst))
       loadAndStoreOpInsts.push_back(opInst);
   });
 

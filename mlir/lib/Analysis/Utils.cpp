@@ -196,7 +196,7 @@ LogicalResult MemRefRegion::unionBoundingBox(const MemRefRegion &other) {
 LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
                                     ComputationSliceState *sliceState,
                                     bool addMemRefDimBounds) {
-  assert((isa<AffineReadOpInterface>(op) || isa<AffineWriteOpInterface>(op)) &&
+  assert((isa<AffineReadOpInterface, AffineWriteOpInterface>(op)) &&
          "affine read/write op expected");
 
   MemRefAccess access(op);
