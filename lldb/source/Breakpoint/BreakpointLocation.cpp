@@ -369,7 +369,7 @@ BreakpointOptions *BreakpointLocation::GetLocationOptions() {
   // potentially expensive and we don't want to do that for the simple case
   // where someone is just disabling the location.
   if (m_options_up == nullptr)
-    m_options_up.reset(new BreakpointOptions(false));
+    m_options_up = std::make_unique<BreakpointOptions>(false);
 
   return m_options_up.get();
 }

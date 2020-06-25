@@ -399,7 +399,8 @@ uint32_t Materializer::AddPersistentVariable(
     lldb::ExpressionVariableSP &persistent_variable_sp,
     PersistentVariableDelegate *delegate, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityPersistentVariable(persistent_variable_sp, delegate));
+  *iter = std::make_unique<EntityPersistentVariable>(persistent_variable_sp,
+                                                     delegate);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -752,7 +753,7 @@ private:
 
 uint32_t Materializer::AddVariable(lldb::VariableSP &variable_sp, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityVariable(variable_sp));
+  *iter = std::make_unique<EntityVariable>(variable_sp);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -1030,8 +1031,8 @@ uint32_t Materializer::AddResultVariable(const CompilerType &type,
                                          PersistentVariableDelegate *delegate,
                                          Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityResultVariable(type, is_program_reference,
-                                       keep_in_memory, delegate));
+  *iter = std::make_unique<EntityResultVariable>(type, is_program_reference,
+                                                 keep_in_memory, delegate);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -1147,7 +1148,7 @@ private:
 
 uint32_t Materializer::AddSymbol(const Symbol &symbol_sp, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntitySymbol(symbol_sp));
+  *iter = std::make_unique<EntitySymbol>(symbol_sp);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -1324,7 +1325,7 @@ private:
 uint32_t Materializer::AddRegister(const RegisterInfo &register_info,
                                    Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityRegister(register_info));
+  *iter = std::make_unique<EntityRegister>(register_info);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;

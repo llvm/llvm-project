@@ -1031,8 +1031,8 @@ protected:
     std::unique_ptr<RegularExpression> formatter_regex;
 
     if (m_options.m_category_regex.OptionWasSet()) {
-      category_regex.reset(new RegularExpression(
-          m_options.m_category_regex.GetCurrentValueAsRef()));
+      category_regex = std::make_unique<RegularExpression>(
+          m_options.m_category_regex.GetCurrentValueAsRef());
       if (!category_regex->IsValid()) {
         result.AppendErrorWithFormat(
             "syntax error in category regular expression '%s'",
@@ -1044,8 +1044,8 @@ protected:
 
     if (argc == 1) {
       const char *arg = command.GetArgumentAtIndex(0);
-      formatter_regex.reset(
-          new RegularExpression(llvm::StringRef::withNullAsEmpty(arg)));
+      formatter_regex = std::make_unique<RegularExpression>(
+          llvm::StringRef::withNullAsEmpty(arg));
       if (!formatter_regex->IsValid()) {
         result.AppendErrorWithFormat("syntax error in regular expression '%s'",
                                      arg);
@@ -2092,7 +2092,8 @@ protected:
 
     if (argc == 1) {
       const char *arg = command.GetArgumentAtIndex(0);
-      regex.reset(new RegularExpression(llvm::StringRef::withNullAsEmpty(arg)));
+      regex = std::make_unique<RegularExpression>(
+          llvm::StringRef::withNullAsEmpty(arg));
       if (!regex->IsValid()) {
         result.AppendErrorWithFormat(
             "syntax error in category regular expression '%s'", arg);

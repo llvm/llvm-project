@@ -187,9 +187,9 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
       m_parser(std::move(parser)) {
 
   // Initialize our TypeSystemClang.
-  m_ast_context.reset(
-      new TypeSystemClang("ClangModulesDeclVendor ASTContext",
-                          m_compiler_instance->getASTContext()));
+  m_ast_context =
+      std::make_unique<TypeSystemClang>("ClangModulesDeclVendor ASTContext",
+                                        m_compiler_instance->getASTContext());
 }
 
 void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(

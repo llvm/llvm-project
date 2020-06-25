@@ -51,7 +51,7 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
   }
   if (!sym_objfile_sp)
     sym_objfile_sp = module_sp->GetObjectFile()->shared_from_this();
-  instance_up.reset(new SymbolVendor(module_sp));
+  instance_up = std::make_unique<SymbolVendor>(module_sp);
   instance_up->AddSymbolFileRepresentation(sym_objfile_sp);
   return instance_up.release();
 }

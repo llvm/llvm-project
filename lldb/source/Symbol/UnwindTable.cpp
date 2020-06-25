@@ -57,26 +57,28 @@ void UnwindTable::Initialize() {
 
   SectionSP sect = sl->FindSectionByType(eSectionTypeEHFrame, true);
   if (sect.get()) {
-    m_eh_frame_up.reset(
-        new DWARFCallFrameInfo(*object_file, sect, DWARFCallFrameInfo::EH));
+    m_eh_frame_up = std::make_unique<DWARFCallFrameInfo>(
+        *object_file, sect, DWARFCallFrameInfo::EH);
   }
 
   sect = sl->FindSectionByType(eSectionTypeDWARFDebugFrame, true);
   if (sect) {
-    m_debug_frame_up.reset(
-        new DWARFCallFrameInfo(*object_file, sect, DWARFCallFrameInfo::DWARF));
+    m_debug_frame_up = std::make_unique<DWARFCallFrameInfo>(
+        *object_file, sect, DWARFCallFrameInfo::DWARF);
   }
 
   sect = sl->FindSectionByType(eSectionTypeCompactUnwind, true);
   if (sect) {
-    m_compact_unwind_up.reset(new CompactUnwindInfo(*object_file, sect));
+    m_compact_unwind_up =
+        std::make_unique<CompactUnwindInfo>(*object_file, sect);
   }
 
   sect = sl->FindSectionByType(eSectionTypeARMexidx, true);
   if (sect) {
     SectionSP sect_extab = sl->FindSectionByType(eSectionTypeARMextab, true);
     if (sect_extab.get()) {
-      m_arm_unwind_up.reset(new ArmUnwindInfo(*object_file, sect, sect_extab));
+      m_arm_unwind_up =
+          std::make_unique<ArmUnwindInfo>(*object_file, sect, sect_extab);
     }
   }
 }

@@ -4622,8 +4622,8 @@ protected:
     //  First step, make the specifier.
     std::unique_ptr<SymbolContextSpecifier> specifier_up;
     if (m_options.m_sym_ctx_specified) {
-      specifier_up.reset(
-          new SymbolContextSpecifier(GetDebugger().GetSelectedTarget()));
+      specifier_up = std::make_unique<SymbolContextSpecifier>(
+          GetDebugger().GetSelectedTarget());
 
       if (!m_options.m_module_name.empty()) {
         specifier_up->AddSpecification(
