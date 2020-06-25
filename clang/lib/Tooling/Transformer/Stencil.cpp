@@ -298,17 +298,11 @@ public:
 };
 } // namespace
 
-Stencil transformer::detail::makeStencil(StringRef Text) { return text(Text); }
-
-Stencil transformer::detail::makeStencil(RangeSelector Selector) {
-  return selection(std::move(Selector));
-}
-
-Stencil transformer::text(StringRef Text) {
+Stencil transformer::detail::makeStencil(StringRef Text) {
   return std::make_shared<StencilImpl<RawTextData>>(std::string(Text));
 }
 
-Stencil transformer::selection(RangeSelector Selector) {
+Stencil transformer::detail::makeStencil(RangeSelector Selector) {
   return std::make_shared<StencilImpl<SelectorData>>(std::move(Selector));
 }
 
