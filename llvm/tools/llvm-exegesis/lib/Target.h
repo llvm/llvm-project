@@ -148,9 +148,10 @@ public:
                          const LLVMState &State,
                          const SnippetGenerator::Options &Opts) const;
   // Creates a benchmark runner for the given mode.
-  Expected<std::unique_ptr<BenchmarkRunner>>
-  createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
-                        const LLVMState &State) const;
+  Expected<std::unique_ptr<BenchmarkRunner>> createBenchmarkRunner(
+      InstructionBenchmark::ModeE Mode, const LLVMState &State,
+      InstructionBenchmark::ResultAggregationModeE ResultAggMode =
+          InstructionBenchmark::Min) const;
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
   // does not exist.
@@ -176,9 +177,11 @@ private:
   std::unique_ptr<SnippetGenerator> virtual createParallelSnippetGenerator(
       const LLVMState &State, const SnippetGenerator::Options &Opts) const;
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
-      const LLVMState &State, InstructionBenchmark::ModeE Mode) const;
+      const LLVMState &State, InstructionBenchmark::ModeE Mode,
+      InstructionBenchmark::ResultAggregationModeE ResultAggMode) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
-      const LLVMState &State) const;
+      const LLVMState &State,
+      InstructionBenchmark::ResultAggregationModeE ResultAggMode) const;
 
   const ExegesisTarget *Next = nullptr;
   const ArrayRef<CpuAndPfmCounters> CpuPfmCounters;
