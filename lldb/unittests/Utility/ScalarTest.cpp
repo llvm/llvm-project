@@ -78,6 +78,7 @@ TEST(ScalarTest, RightShiftOperator) {
 }
 
 TEST(ScalarTest, GetBytes) {
+  uint8_t Storage[256];
   int a = 0x01020304;
   long long b = 0x0102030405060708LL;
   float c = 1234567.89e32f;
@@ -99,14 +100,20 @@ TEST(ScalarTest, GetBytes) {
                        sizeof(void *));
   Status f_error =
       f_scalar.SetValueFromData(f_data, lldb::eEncodingUint, sizeof(f));
-  ASSERT_EQ(0, memcmp(&a, a_scalar.GetBytes(), sizeof(a)));
-  ASSERT_EQ(0, memcmp(&b, b_scalar.GetBytes(), sizeof(b)));
-  ASSERT_EQ(0, memcmp(&c, c_scalar.GetBytes(), sizeof(c)));
-  ASSERT_EQ(0, memcmp(&d, d_scalar.GetBytes(), sizeof(d)));
+  a_scalar.GetBytes(Storage);
+  ASSERT_EQ(0, memcmp(&a, Storage, sizeof(a)));
+  b_scalar.GetBytes(Storage);
+  ASSERT_EQ(0, memcmp(&b, Storage, sizeof(b)));
+  c_scalar.GetBytes(Storage);
+  ASSERT_EQ(0, memcmp(&c, Storage, sizeof(c)));
+  d_scalar.GetBytes(Storage);
+  ASSERT_EQ(0, memcmp(&d, Storage, sizeof(d)));
   ASSERT_EQ(0, e_error.Fail());
-  ASSERT_EQ(0, memcmp(e, e_scalar.GetBytes(), sizeof(e)));
+  e_scalar.GetBytes(Storage);
+  ASSERT_EQ(0, memcmp(e, Storage, sizeof(e)));
   ASSERT_EQ(0, f_error.Fail());
-  ASSERT_EQ(0, memcmp(f, f_scalar.GetBytes(), sizeof(f)));
+  f_scalar.GetBytes(Storage);
+  ASSERT_EQ(0, memcmp(f, Storage, sizeof(f)));
 }
 
 TEST(ScalarTest, CastOperations) {
@@ -137,21 +144,21 @@ TEST(ScalarTest, ExtractBitfield) {
   long long b1 = 0xff1f2f3f4f5f6f7fLL;
   Scalar s_scalar(a1);
   ASSERT_TRUE(s_scalar.ExtractBitfield(0, 0));
-  ASSERT_EQ(0, memcmp(&a1, s_scalar.GetBytes(), sizeof(a1)));
+  EXPECT_EQ(s_scalar, a1);
   ASSERT_TRUE(s_scalar.ExtractBitfield(len, 0));
-  ASSERT_EQ(0, memcmp(&a1, s_scalar.GetBytes(), sizeof(a1)));
+  EXPECT_EQ(s_scalar, a1);
   ASSERT_TRUE(s_scalar.ExtractBitfield(len - 4, 4));
-  ASSERT_EQ(0, memcmp(&b1, s_scalar.GetBytes(), sizeof(b1)));
+  EXPECT_EQ(s_scalar, b1);
 
   unsigned long long a2 = 0xf1f2f3f4f5f6f7f8ULL;
   unsigned long long b2 = 0x0f1f2f3f4f5f6f7fULL;
   Scalar u_scalar(a2);
   ASSERT_TRUE(u_scalar.ExtractBitfield(0, 0));
-  ASSERT_EQ(0, memcmp(&a2, u_scalar.GetBytes(), sizeof(a2)));
+  EXPECT_EQ(u_scalar, a2);
   ASSERT_TRUE(u_scalar.ExtractBitfield(len, 0));
-  ASSERT_EQ(0, memcmp(&a2, u_scalar.GetBytes(), sizeof(a2)));
+  EXPECT_EQ(u_scalar, a2);
   ASSERT_TRUE(u_scalar.ExtractBitfield(len - 4, 4));
-  ASSERT_EQ(0, memcmp(&b2, u_scalar.GetBytes(), sizeof(b2)));
+  EXPECT_EQ(u_scalar, b2);
 }
 
 template <typename T> static std::string ScalarGetValue(T value) {
