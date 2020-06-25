@@ -566,6 +566,8 @@ if (MSVC)
       # avoid unwanted alignment warnings.
       -wd4324 # Suppress 'structure was padded due to __declspec(align())'
 
+      -wd4307 # Suppress integral constant overflow warning - not required for VS 2019 +
+
       # Promoted warnings.
       -w14062 # Promote 'enumerator in switch of enum is not handled' to level 1 warning.
 
