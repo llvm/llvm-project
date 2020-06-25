@@ -14235,9 +14235,14 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   case PPC::BI__builtin_vsx_xvsqrtdp: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
-    ID = Intrinsic::sqrt;
-    llvm::Function *F = CGM.getIntrinsic(ID, ResultType);
-    return Builder.CreateCall(F, X);
+    if (Builder.getIsFPConstrained()) {
+      llvm::Function *F = CGM.getIntrinsic(
+          Intrinsic::experimental_constrained_sqrt, ResultType);
+      return Builder.CreateConstrainedFPCall(F, X);
+    } else {
+      llvm::Function *F = CGM.getIntrinsic(Intrinsic::sqrt, ResultType);
+      return Builder.CreateCall(F, X);
+    }
   }
   // Count leading zeros
   case PPC::BI__builtin_altivec_vclzb:
@@ -14294,21 +14299,32 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *X = EmitScalarExpr(E->getArg(0));
     if (BuiltinID == PPC::BI__builtin_vsx_xvrdpim ||
         BuiltinID == PPC::BI__builtin_vsx_xvrspim)
-      ID = Intrinsic::floor;
+      ID = Builder.getIsFPConstrained()
+               ? Intrinsic::experimental_constrained_floor
+               : Intrinsic::floor;
     else if (BuiltinID == PPC::BI__builtin_vsx_xvrdpi ||
              BuiltinID == PPC::BI__builtin_vsx_xvrspi)
-      ID = Intrinsic::round;
+      ID = Builder.getIsFPConstrained()
+               ? Intrinsic::experimental_constrained_round
+               : Intrinsic::round;
     else if (BuiltinID == PPC::BI__builtin_vsx_xvrdpic ||
              BuiltinID == PPC::BI__builtin_vsx_xvrspic)
-      ID = Intrinsic::nearbyint;
+      ID = Builder.getIsFPConstrained()
+               ? Intrinsic::experimental_constrained_nearbyint
+               : Intrinsic::nearbyint;
     else if (BuiltinID == PPC::BI__builtin_vsx_xvrdpip ||
              BuiltinID == PPC::BI__builtin_vsx_xvrspip)
-      ID = Intrinsic::ceil;
+      ID = Builder.getIsFPConstrained()
+               ? Intrinsic::experimental_constrained_ceil
+               : Intrinsic::ceil;
     else if (BuiltinID == PPC::BI__builtin_vsx_xvrdpiz ||
              BuiltinID == PPC::BI__builtin_vsx_xvrspiz)
-      ID = Intrinsic::trunc;
+      ID = Builder.getIsFPConstrained()
+               ? Intrinsic::experimental_constrained_trunc
+               : Intrinsic::trunc;
     llvm::Function *F = CGM.getIntrinsic(ID, ResultType);
-    return Builder.CreateCall(F, X);
+    return Builder.getIsFPConstrained() ? Builder.CreateConstrainedFPCall(F, X)
+                                        : Builder.CreateCall(F, X);
   }
 
   // Absolute value
@@ -14333,21 +14349,43 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *X = EmitScalarExpr(E->getArg(0));
     Value *Y = EmitScalarExpr(E->getArg(1));
     Value *Z = EmitScalarExpr(E->getArg(2));
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::fma, ResultType);
+    llvm::Function *F;
+    if (Builder.getIsFPConstrained())
+      F = CGM.getIntrinsic(Intrinsic::experimental_constrained_fma, ResultType);
+    else
+      F = CGM.getIntrinsic(Intrinsic::fma, ResultType);
     switch (BuiltinID) {
       case PPC::BI__builtin_vsx_xvmaddadp:
       case PPC::BI__builtin_vsx_xvmaddasp:
-        return Builder.CreateCall(F, {X, Y, Z});
+        if (Builder.getIsFPConstrained())
+          return Builder.CreateConstrainedFPCall(F, {X, Y, Z});
+        else
+          return Builder.CreateCall(F, {X, Y, Z});
       case PPC::BI__builtin_vsx_xvnmaddadp:
       case PPC::BI__builtin_vsx_xvnmaddasp:
-        return Builder.CreateFNeg(Builder.CreateCall(F, {X, Y, Z}), "neg");
+        if (Builder.getIsFPConstrained())
+          return Builder.CreateFNeg(
+              Builder.CreateConstrainedFPCall(F, {X, Y, Z}), "neg");
+        else
+          return Builder.CreateFNeg(Builder.CreateCall(F, {X, Y, Z}), "neg");
       case PPC::BI__builtin_vsx_xvmsubadp:
       case PPC::BI__builtin_vsx_xvmsubasp:
-        return Builder.CreateCall(F, {X, Y, Builder.CreateFNeg(Z, "neg")});
+        if (Builder.getIsFPConstrained())
+          return Builder.CreateConstrainedFPCall(
+              F, {X, Y, Builder.CreateFNeg(Z, "neg")});
+        else
+          return Builder.CreateCall(F, {X, Y, Builder.CreateFNeg(Z, "neg")});
       case PPC::BI__builtin_vsx_xvnmsubadp:
       case PPC::BI__builtin_vsx_xvnmsubasp:
-        return Builder.CreateFNeg(
-            Builder.CreateCall(F, {X, Y, Builder.CreateFNeg(Z, "neg")}), "neg");
+        if (Builder.getIsFPConstrained())
+          return Builder.CreateFNeg(
+              Builder.CreateConstrainedFPCall(
+                  F, {X, Y, Builder.CreateFNeg(Z, "neg")}),
+              "neg");
+        else
+          return Builder.CreateFNeg(
+              Builder.CreateCall(F, {X, Y, Builder.CreateFNeg(Z, "neg")}),
+              "neg");
     }
     llvm_unreachable("Unknown FMA operation");
     return nullptr; // Suppress no-return warning

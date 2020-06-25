@@ -635,6 +635,7 @@ private:
   Value *getSelectCondition(Value *A, Value *B);
 
   Instruction *foldIntrinsicWithOverflowCommon(IntrinsicInst *II);
+  Instruction *foldFPSignBitOps(BinaryOperator &I);
 
 public:
   /// Inserts an instruction \p New before instruction \p Old

@@ -547,8 +547,10 @@ static void AttemptToFoldSymbolOffsetDifference(
   if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(*Asm, A, B, InSet))
     return;
 
-  if (SA.getFragment() == SB.getFragment() && !SA.isVariable() &&
-      !SA.isUnset() && !SB.isVariable() && !SB.isUnset()) {
+  MCFragment *FA = SA.getFragment();
+  MCFragment *FB = SB.getFragment();
+  if (FA == FB && !SA.isVariable() && !SA.isUnset() && !SB.isVariable() &&
+      !SB.isUnset()) {
     Addend += (SA.getOffset() - SB.getOffset());
 
     // Pointers to Thumb symbols need to have their low-bit set to allow
@@ -570,10 +572,15 @@ static void AttemptToFoldSymbolOffsetDifference(
   if (!Layout)
     return;
 
-  const MCSection &SecA = *SA.getFragment()->getParent();
-  const MCSection &SecB = *SB.getFragment()->getParent();
+  const MCSection &SecA = *FA->getParent();
+  const MCSection &SecB = *FB->getParent();
 
   if ((&SecA != &SecB) && !Addrs)
+    return;
+
+  // One of the symbol involved is part of a fragment being laid out. Quit now
+  // to avoid a self loop.
+  if (!Layout->canGetFragmentOffset(FA) || !Layout->canGetFragmentOffset(FB))
     return;
 
   // Eagerly evaluate.

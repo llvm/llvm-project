@@ -1414,7 +1414,8 @@ def warn_cxx14_compat_inline_variable : Warning<
   DefaultIgnore, InGroup<CXXPre17Compat>;
 
 def warn_inline_namespace_reopened_noninline : Warning<
-  "inline namespace reopened as a non-inline namespace">;
+  "inline namespace reopened as a non-inline namespace">,
+  InGroup<InlineNamespaceReopenedNoninline>;
 def err_inline_namespace_mismatch : Error<
   "non-inline namespace cannot be reopened as inline">;
 
