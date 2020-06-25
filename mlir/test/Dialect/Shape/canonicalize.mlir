@@ -466,3 +466,29 @@ func @dont_fold_rank(%shape : !shape.shape) -> !shape.size {
   %rank = shape.rank %shape
   return %rank : !shape.size
 }
+
+// -----
+
+// Canonicalize `rank` when shape is derived from ranked tensor.
+// CHECK-LABEL: @canonicalize_rank
+func @canonicalize_rank(%arg : tensor<1x2x?xf32>) -> !shape.size {
+// CHECK-DAG: %[[RESULT:.*]] = shape.const_size 3
+// CHECK-DAG: return %[[RESULT]] : !shape.size
+%shape = shape.shape_of %arg : tensor<1x2x?xf32>
+%rank = shape.rank %shape
+return %rank : !shape.size
+}
+
+// -----
+
+// Do not canonicalize `rank` when shape is derived from unranked tensor.
+// CHECK-LABEL: @dont_canonicalize_rank
+// CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>) -> !shape.size
+func @dont_canonicalize_rank(%arg : tensor<*xf32>) -> !shape.size {
+// CHECK-DAG: %[[SHAPE:.*]] = shape.shape_of %[[ARG]] : tensor<*xf32>
+// CHECK-DAG: %[[SIZE:.*]] = shape.rank %[[SHAPE]]
+// CHECK-DAG: return %[[SIZE]] : !shape.size
+%shape = shape.shape_of %arg : tensor<*xf32>
+%rank = shape.rank %shape
+return %rank : !shape.size
+}
