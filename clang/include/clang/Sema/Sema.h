@@ -9804,6 +9804,9 @@ public:
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
   ClassTemplateDecl *lookupCoroutineTraits(SourceLocation KwLoc,
                                            SourceLocation FuncLoc);
+  /// Check that the expression co_await promise.final_suspend() shall not be
+  /// potentially-throwing.
+  bool checkFinalSuspendNoThrow(const Stmt *FinalSuspend);
 
   //===--------------------------------------------------------------------===//
   // OpenCL extensions.

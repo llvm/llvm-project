@@ -18,12 +18,18 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "TranslationUnit";
   case NodeKind::UnknownExpression:
     return OS << "UnknownExpression";
-  case NodeKind::CxxNullPtrExpression:
-    return OS << "CxxNullPtrExpression";
   case NodeKind::IntegerLiteralExpression:
     return OS << "IntegerLiteralExpression";
+  case NodeKind::CharacterLiteralExpression:
+    return OS << "CharacterLiteralExpression";
+  case NodeKind::FloatingLiteralExpression:
+    return OS << "FloatingLiteralExpression";
+  case NodeKind::StringLiteralExpression:
+    return OS << "StringLiteralExpression";
   case NodeKind::BoolLiteralExpression:
     return OS << "BoolLiteralExpression";
+  case NodeKind::CxxNullPtrExpression:
+    return OS << "CxxNullPtrExpression";
   case NodeKind::PrefixUnaryOperatorExpression:
     return OS << "PrefixUnaryOperatorExpression";
   case NodeKind::PostfixUnaryOperatorExpression:
@@ -198,6 +204,21 @@ syntax::UnqualifiedId *syntax::IdExpression::unqualifiedId() {
 }
 
 syntax::Leaf *syntax::IntegerLiteralExpression::literalToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Leaf *syntax::CharacterLiteralExpression::literalToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Leaf *syntax::FloatingLiteralExpression::literalToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Leaf *syntax::StringLiteralExpression::literalToken() {
   return llvm::cast_or_null<syntax::Leaf>(
       findChild(syntax::NodeRole::LiteralToken));
 }

@@ -374,10 +374,12 @@
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -m3dnow -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=3DNOWPRFCHW %s
 
-// 3DNOWPRFCHW: #define __PRFCHW__ 1
+// 3DNOWPRFCHW: #define __3dNOW__ 1
+// 3DNOWPRFCHW-NOT: #define __PRFCHW__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mno-prfchw -m3dnow -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=3DNOWNOPRFCHW %s
 
+// 3DNOWNOPRFCHW: #define __3dNOW__ 1
 // 3DNOWNOPRFCHW-NOT: #define __PRFCHW__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mprfchw -mno-3dnow -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NO3DNOWPRFCHW %s

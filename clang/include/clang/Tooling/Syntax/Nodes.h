@@ -43,9 +43,12 @@ enum class NodeKind : uint16_t {
   PrefixUnaryOperatorExpression,
   PostfixUnaryOperatorExpression,
   BinaryOperatorExpression,
-  CxxNullPtrExpression,
   IntegerLiteralExpression,
+  CharacterLiteralExpression,
+  FloatingLiteralExpression,
+  StringLiteralExpression,
   BoolLiteralExpression,
+  CxxNullPtrExpression,
   IdExpression,
 
   // Statements.
@@ -245,22 +248,44 @@ public:
   }
 };
 
-/// C++11 'nullptr' expression.
-class CxxNullPtrExpression final : public Expression {
-public:
-  CxxNullPtrExpression() : Expression(NodeKind::CxxNullPtrExpression) {}
-  static bool classof(const Node *N) {
-    return N->kind() == NodeKind::CxxNullPtrExpression;
-  }
-  syntax::Leaf *nullPtrKeyword();
-};
-
-/// Expression for integer literals.
+/// Expression for integer literals. C++ [lex.icon]
 class IntegerLiteralExpression final : public Expression {
 public:
   IntegerLiteralExpression() : Expression(NodeKind::IntegerLiteralExpression) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::IntegerLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// Expression for character literals. C++ [lex.ccon]
+class CharacterLiteralExpression final : public Expression {
+public:
+  CharacterLiteralExpression()
+      : Expression(NodeKind::CharacterLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::CharacterLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// Expression for floating-point literals. C++ [lex.fcon]
+class FloatingLiteralExpression final : public Expression {
+public:
+  FloatingLiteralExpression()
+      : Expression(NodeKind::FloatingLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::FloatingLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// Expression for string-literals. C++ [lex.string]
+class StringLiteralExpression final : public Expression {
+public:
+  StringLiteralExpression() : Expression(NodeKind::StringLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::StringLiteralExpression;
   }
   syntax::Leaf *literalToken();
 };
@@ -273,6 +298,16 @@ public:
     return N->kind() == NodeKind::BoolLiteralExpression;
   }
   syntax::Leaf *literalToken();
+};
+
+/// Expression for the `nullptr` literal. C++ [lex.nullptr]
+class CxxNullPtrExpression final : public Expression {
+public:
+  CxxNullPtrExpression() : Expression(NodeKind::CxxNullPtrExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::CxxNullPtrExpression;
+  }
+  syntax::Leaf *nullPtrKeyword();
 };
 
 /// An abstract class for prefix and postfix unary operators.

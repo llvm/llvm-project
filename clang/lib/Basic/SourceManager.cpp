@@ -898,9 +898,8 @@ FileID SourceManager::getFileIDLocal(unsigned SLocOffset) const {
     }
 
     // If the middle index contains the value, succeed and return.
-    // FIXME: This could be made faster by using a function that's aware of
-    // being in the local area.
-    if (isOffsetInFileID(FileID::get(MiddleIndex), SLocOffset)) {
+    if (MiddleIndex + 1 == LocalSLocEntryTable.size() ||
+        SLocOffset < getLocalSLocEntry(MiddleIndex + 1).getOffset()) {
       FileID Res = FileID::get(MiddleIndex);
 
       // If this isn't a macro expansion, remember it.  We have good locality

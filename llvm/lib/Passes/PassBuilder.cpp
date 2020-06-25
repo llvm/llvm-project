@@ -2657,3 +2657,11 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
 
   return Error::success();
 }
+
+bool PassBuilder::isAAPassName(StringRef PassName) {
+#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
+  if (PassName == NAME)                                                        \
+    return true;
+#include "PassRegistry.def"
+  return false;
+}

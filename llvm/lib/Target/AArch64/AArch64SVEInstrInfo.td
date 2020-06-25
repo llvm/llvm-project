@@ -284,6 +284,11 @@ let Predicates = [HasSVE] in {
   defm CLS_ZPmZ  : sve_int_un_pred_arit_1<   0b000, "cls",  int_aarch64_sve_cls>;
   defm CLZ_ZPmZ  : sve_int_un_pred_arit_1<   0b001, "clz",  int_aarch64_sve_clz>;
   defm CNT_ZPmZ  : sve_int_un_pred_arit_1<   0b010, "cnt",  int_aarch64_sve_cnt>;
+
+ let Predicates = [HasSVE, HasBF16] in {
+  def : SVE_3_Op_Pat<nxv8i16, int_aarch64_sve_cnt, nxv8i16, nxv8i1, nxv8bf16, !cast<Instruction>(CNT_ZPmZ_H)>;
+ }
+
   defm CNOT_ZPmZ : sve_int_un_pred_arit_1<   0b011, "cnot", int_aarch64_sve_cnot>;
   defm NOT_ZPmZ  : sve_int_un_pred_arit_1<   0b110, "not",  int_aarch64_sve_not>;
   defm FABS_ZPmZ : sve_int_un_pred_arit_1_fp<0b100, "fabs", int_aarch64_sve_fabs>;
@@ -991,6 +996,10 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
             (ADR_LSL_ZZZ_D_3 $Op1, $Op2)>;
 
   defm TBL_ZZZ  : sve_int_perm_tbl<"tbl", AArch64tbl>;
+
+  let Predicates = [HasSVE, HasBF16] in {
+    def : SVE_2_Op_Pat<nxv8bf16, AArch64tbl, nxv8bf16, nxv8i16, TBL_ZZZ_H>;
+  }
 
   defm ZIP1_ZZZ : sve_int_perm_bin_perm_zz<0b000, "zip1", AArch64zip1>;
   defm ZIP2_ZZZ : sve_int_perm_bin_perm_zz<0b001, "zip2", AArch64zip2>;
@@ -2346,6 +2355,13 @@ let Predicates = [HasSVE2] in {
   // SVE2 table lookup (three sources)
   defm TBL_ZZZZ : sve2_int_perm_tbl<"tbl", int_aarch64_sve_tbl2>;
   defm TBX_ZZZ  : sve2_int_perm_tbx<"tbx", int_aarch64_sve_tbx>;
+
+  let Predicates = [HasSVE, HasBF16] in {
+    def : SVE_3_Op_Pat<nxv8bf16, int_aarch64_sve_tbx, nxv8bf16, nxv8bf16, nxv8i16, TBX_ZZZ_H>;
+    def : Pat<(nxv8bf16 (int_aarch64_sve_tbl2 nxv8bf16:$Op1, nxv8bf16:$Op2, nxv8i16:$Op3)),
+              (nxv8bf16 (TBL_ZZZZ_H (REG_SEQUENCE ZPR2, nxv8bf16:$Op1, zsub0, nxv8bf16:$Op2, zsub1),
+                        nxv8i16:$Op3))>;
+  }
 
   // SVE2 integer compare scalar count and limit
   defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege", int_aarch64_sve_whilege>;

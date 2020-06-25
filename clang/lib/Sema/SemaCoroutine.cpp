@@ -614,6 +614,17 @@ static void checkNoThrow(Sema &S, const Stmt *E,
     // In the case of dtor, the call to dtor is implicit and hence we should
     // pass nullptr to canCalleeThrow.
     if (Sema::canCalleeThrow(S, IsDtor ? nullptr : cast<Expr>(E), D)) {
+      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+        // co_await promise.final_suspend() could end up calling
+        // __builtin_coro_resume for symmetric transfer if await_suspend()
+        // returns a handle. In that case, even __builtin_coro_resume is not
+        // declared as noexcept and may throw, it does not throw _into_ the
+        // coroutine that just suspended, but rather throws back out from
+        // whoever called coroutine_handle::resume(), hence we claim that
+        // logically it does not throw.
+        if (FD->getBuiltinID() == Builtin::BI__builtin_coro_resume)
+          return;
+      }
       if (ThrowingDecls.empty()) {
         // First time seeing an error, emit the error message.
         S.Diag(cast<FunctionDecl>(S.CurContext)->getLocation(),
@@ -631,7 +642,6 @@ static void checkNoThrow(Sema &S, const Stmt *E,
   } else if (SC == Expr::CallExprClass || SC == Expr::CXXMemberCallExprClass ||
              SC == Expr::CXXOperatorCallExprClass) {
     if (!cast<CallExpr>(E)->isTypeDependent()) {
-      // FIXME: Handle dependent types.
       checkDeclNoexcept(cast<CallExpr>(E)->getCalleeDecl());
       auto ReturnType = cast<CallExpr>(E)->getCallReturnType(S.getASTContext());
       // Check the destructor of the call return type, if any.
@@ -651,22 +661,20 @@ static void checkNoThrow(Sema &S, const Stmt *E,
   }
 }
 
-/// Check that the expression co_await promise.final_suspend() shall not be
-/// potentially-throwing.
-static bool checkNoThrow(Sema &S, const Stmt *FinalSuspend) {
+bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
   llvm::SmallPtrSet<const Decl *, 4> ThrowingDecls;
   // We first collect all declarations that should not throw but not declared
   // with noexcept. We then sort them based on the location before printing.
   // This is to avoid emitting the same note multiple times on the same
   // declaration, and also provide a deterministic order for the messages.
-  checkNoThrow(S, FinalSuspend, ThrowingDecls);
+  checkNoThrow(*this, FinalSuspend, ThrowingDecls);
   auto SortedDecls = llvm::SmallVector<const Decl *, 4>{ThrowingDecls.begin(),
                                                         ThrowingDecls.end()};
   sort(SortedDecls, [](const Decl *A, const Decl *B) {
     return A->getEndLoc() < B->getEndLoc();
   });
   for (const auto *D : SortedDecls) {
-    S.Diag(D->getEndLoc(), diag::note_coroutine_function_declare_noexcept);
+    Diag(D->getEndLoc(), diag::note_coroutine_function_declare_noexcept);
   }
   return ThrowingDecls.empty();
 }
@@ -713,7 +721,7 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
     return true;
 
   StmtResult FinalSuspend = buildSuspends("final_suspend");
-  if (FinalSuspend.isInvalid() || !checkNoThrow(*this, FinalSuspend.get()))
+  if (FinalSuspend.isInvalid() || !checkFinalSuspendNoThrow(FinalSuspend.get()))
     return true;
 
   ScopeInfo->setCoroutineSuspends(InitSuspend.get(), FinalSuspend.get());

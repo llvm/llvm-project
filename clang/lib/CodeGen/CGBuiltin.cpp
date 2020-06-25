@@ -8465,6 +8465,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svtbl2_u64:
   case SVE::BI__builtin_sve_svtbl2_s64:
   case SVE::BI__builtin_sve_svtbl2_f16:
+  case SVE::BI__builtin_sve_svtbl2_bf16:
   case SVE::BI__builtin_sve_svtbl2_f32:
   case SVE::BI__builtin_sve_svtbl2_f64: {
     SVETypeFlags TF(Builtin->TypeModifier);

@@ -8133,8 +8133,8 @@ static void AddObjCKeyValueCompletions(ObjCPropertyDecl *Property,
         Builder.AddChunk(CodeCompletionString::CK_RightParen);
       }
 
-      Builder.AddTypedTextChunk(Allocator.CopyString(SelectorId->getName()));
-      Builder.AddTypedTextChunk(":");
+      Builder.AddTypedTextChunk(
+          Allocator.CopyString(SelectorId->getName() + ":"));
       AddObjCPassingTypeChunk(Property->getType(), /*Quals=*/0, Context, Policy,
                               Builder);
       Builder.AddTextChunk(Key);
@@ -8722,39 +8722,43 @@ void Sema::CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
 
     Selector Sel = Method->getSelector();
 
-    // Add the first part of the selector to the pattern.
-    Builder.AddTypedTextChunk(
-        Builder.getAllocator().CopyString(Sel.getNameForSlot(0)));
+    if (Sel.isUnarySelector()) {
+      // Unary selectors have no arguments.
+      Builder.AddTypedTextChunk(
+          Builder.getAllocator().CopyString(Sel.getNameForSlot(0)));
+    } else {
+      // Add all parameters to the pattern.
+      unsigned I = 0;
+      for (ObjCMethodDecl::param_iterator P = Method->param_begin(),
+                                          PEnd = Method->param_end();
+           P != PEnd; (void)++P, ++I) {
+        // Add the part of the selector name.
+        if (I == 0)
+          Builder.AddTypedTextChunk(
+              Builder.getAllocator().CopyString(Sel.getNameForSlot(I) + ":"));
+        else if (I < Sel.getNumArgs()) {
+          Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+          Builder.AddTypedTextChunk(
+              Builder.getAllocator().CopyString(Sel.getNameForSlot(I) + ":"));
+        } else
+          break;
 
-    // Add parameters to the pattern.
-    unsigned I = 0;
-    for (ObjCMethodDecl::param_iterator P = Method->param_begin(),
-                                        PEnd = Method->param_end();
-         P != PEnd; (void)++P, ++I) {
-      // Add the part of the selector name.
-      if (I == 0)
-        Builder.AddTypedTextChunk(":");
-      else if (I < Sel.getNumArgs()) {
-        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-        Builder.AddTypedTextChunk(
-            Builder.getAllocator().CopyString(Sel.getNameForSlot(I) + ":"));
-      } else
-        break;
+        // Add the parameter type.
+        QualType ParamType;
+        if ((*P)->getObjCDeclQualifier() & Decl::OBJC_TQ_CSNullability)
+          ParamType = (*P)->getType();
+        else
+          ParamType = (*P)->getOriginalType();
+        ParamType = ParamType.substObjCTypeArgs(
+            Context, {}, ObjCSubstitutionContext::Parameter);
+        AttributedType::stripOuterNullability(ParamType);
+        AddObjCPassingTypeChunk(ParamType, (*P)->getObjCDeclQualifier(),
+                                Context, Policy, Builder);
 
-      // Add the parameter type.
-      QualType ParamType;
-      if ((*P)->getObjCDeclQualifier() & Decl::OBJC_TQ_CSNullability)
-        ParamType = (*P)->getType();
-      else
-        ParamType = (*P)->getOriginalType();
-      ParamType = ParamType.substObjCTypeArgs(
-          Context, {}, ObjCSubstitutionContext::Parameter);
-      AttributedType::stripOuterNullability(ParamType);
-      AddObjCPassingTypeChunk(ParamType, (*P)->getObjCDeclQualifier(), Context,
-                              Policy, Builder);
-
-      if (IdentifierInfo *Id = (*P)->getIdentifier())
-        Builder.AddTextChunk(Builder.getAllocator().CopyString(Id->getName()));
+        if (IdentifierInfo *Id = (*P)->getIdentifier())
+          Builder.AddTextChunk(
+              Builder.getAllocator().CopyString(Id->getName()));
+      }
     }
 
     if (Method->isVariadic()) {

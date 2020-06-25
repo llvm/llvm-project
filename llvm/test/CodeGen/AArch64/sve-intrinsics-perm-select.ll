@@ -1027,6 +1027,15 @@ define <vscale x 8 x half> @tbl_f16(<vscale x 8 x half> %a, <vscale x 8 x i16> %
   ret <vscale x 8 x half> %out
 }
 
+define <vscale x 8 x bfloat> @tbl_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x i16> %b) #0 {
+; CHECK-LABEL: tbl_bf16:
+; CHECK: tbl z0.h, { z0.h }, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbl.nxv8bf16(<vscale x 8 x bfloat> %a,
+                                                                   <vscale x 8 x i16> %b)
+  ret <vscale x 8 x bfloat> %out
+}
+
 define <vscale x 4 x float> @tbl_f32(<vscale x 4 x float> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: tbl_f32:
 ; CHECK: tbl z0.s, { z0.s }, z1.s
@@ -1933,6 +1942,7 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16>, <vs
 declare <vscale x 4 x i32> @llvm.aarch64.sve.tbl.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.tbl.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>)
 declare <vscale x 8 x half> @llvm.aarch64.sve.tbl.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i16>)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.tbl.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x i16>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.tbl.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i32>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.tbl.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i64>)
 
@@ -2027,3 +2037,6 @@ declare <vscale x 8 x bfloat> @llvm.aarch64.sve.zip2.nxv8bf16(<vscale x 8 x bflo
 declare <vscale x 8 x half> @llvm.aarch64.sve.zip2.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.zip2.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.zip2.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+bf16" }

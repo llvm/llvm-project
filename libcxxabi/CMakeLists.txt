@@ -135,6 +135,9 @@ message(STATUS "Libc++abi will be using libc++ includes from ${LIBCXXABI_LIBCXX_
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." OFF)
 
+set(LIBCXXABI_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/lit.site.cfg.in" CACHE STRING
+    "The Lit testing configuration to use when running the tests.")
+
 #===============================================================================
 # Configure System
 #===============================================================================

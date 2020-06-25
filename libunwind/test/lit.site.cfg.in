@@ -1,4 +1,8 @@
 @AUTO_GEN_COMMENT@
+
+import os
+import site
+
 config.cxx_under_test           = "@LIBUNWIND_COMPILER@"
 config.project_obj_root         = "@CMAKE_BINARY_DIR@"
 config.libunwind_src_root       = "@LIBUNWIND_SOURCE_DIR@"
@@ -26,5 +30,33 @@ config.sysroot                  = "@LIBUNWIND_SYSROOT@"
 config.gcc_toolchain            = "@LIBUNWIND_GCC_TOOLCHAIN@"
 config.cxx_ext_threads          = @LIBUNWIND_BUILD_EXTERNAL_THREAD_LIBRARY@
 
-# Let the main config do the real work.
-lit_config.load_config(config, "@LIBUNWIND_SOURCE_DIR@/test/lit.cfg")
+site.addsitedir(os.path.join(config.libunwind_src_root, 'test'))
+site.addsitedir(os.path.join(config.libcxx_src_root, 'utils'))
+
+# name: The name of this test suite.
+config.name = 'libunwind'
+
+# suffixes: A list of file extensions to treat as test files.
+config.suffixes = ['.cpp', '.s']
+
+# test_source_root: The root path where tests are located.
+config.test_source_root = os.path.join(config.libunwind_src_root, 'test')
+
+# Allow expanding substitutions that are based on other substitutions
+config.recursiveExpansionLimit = 10
+
+# Infer the test_exec_root from the build directory.
+config.test_exec_root = os.path.join(config.libunwind_obj_root, 'test')
+
+lit_config.note('Using configuration variant: libunwind')
+import libunwind.test.config
+configuration = libunwind.test.config.Configuration(lit_config, config)
+configuration.configure()
+configuration.print_config_info()
+if lit_config.params.get('use_old_format', False):
+    lit_config.note("Using the old libc++ testing format")
+    config.test_format = configuration.get_test_format()
+else:
+    lit_config.note("Using the new libc++ testing format")
+    import libcxx.test.newformat
+    config.test_format = libcxx.test.newformat.CxxStandardLibraryTest()
