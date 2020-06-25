@@ -2815,6 +2815,36 @@ static LogicalResult verifyMatrixTimesScalar(spirv::MatrixTimesScalarOp op) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// spv.Transpose
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyTranspose(spirv::TransposeOp op) {
+  auto inputMatrix = op.matrix().getType().cast<spirv::MatrixType>();
+  auto resultMatrix = op.result().getType().cast<spirv::MatrixType>();
+
+  // Verify that the input and output matrices have correct shapes.
+  if (auto inputMatrixColumns =
+          inputMatrix.getElementType().dyn_cast<VectorType>()) {
+    if (inputMatrixColumns.getNumElements() != resultMatrix.getNumElements())
+      return op.emitError("input matrix rows count must be equal to "
+                          "output matrix columns count");
+    if (auto resultMatrixColumns =
+            resultMatrix.getElementType().dyn_cast<VectorType>()) {
+      if (resultMatrixColumns.getNumElements() != inputMatrix.getNumElements())
+        return op.emitError("input matrix columns count must be equal "
+                            "to output matrix rows count");
+
+      // Verify that the input and output matrices have the same component type
+      if (inputMatrixColumns.getElementType() !=
+          resultMatrixColumns.getElementType())
+        return op.emitError("input and output matrices must have the "
+                            "same component type");
+    }
+  }
+  return success();
+}
+
 namespace mlir {
 namespace spirv {
 
