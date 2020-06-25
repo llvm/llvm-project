@@ -51,6 +51,11 @@ test:
     i64.const   0
     f32.store   .L.str    # relocatable offset!
 
+    ### 64-bit SP
+
+    global.get  __stack_pointer
+    drop
+
     end_function
 
     .section    .rodata..L.str,"",@
@@ -62,7 +67,7 @@ test:
     .size       .L.str, 24
 
     .globaltype myglob64, i64
-
+    .globaltype __stack_pointer, i64
 
 
 # CHECK:              .functype       test (i64) -> ()
@@ -155,6 +160,11 @@ test:
 # BIN-NEXT:         Kind:            GLOBAL
 # BIN-NEXT:         GlobalType:      I64
 # BIN-NEXT:         GlobalMutable:   true
+# BIN-NEXT:       - Module:          env
+# BIN-NEXT:         Field:           __stack_pointer
+# BIN-NEXT:         Kind:            GLOBAL
+# BIN-NEXT:         GlobalType:      I64
+# BIN-NEXT:         GlobalMutable:   true
 # BIN-NEXT:   - Type:            FUNCTION
 # BIN-NEXT:     FunctionTypes:   [ 0 ]
 # BIN-NEXT:   - Type:            DATACOUNT
@@ -179,12 +189,15 @@ test:
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB64
 # BIN-NEXT:         Index:           1
 # BIN-NEXT:         Offset:          0x00000078
+# BIN-NEXT:       - Type: R_WASM_GLOBAL_INDEX_LEB
+# BIN-NEXT:         Index: 3
+# BIN-NEXT:         Offset: 0x00000083
 # BIN-NEXT:     Functions:
 # BIN-NEXT:       - Index:           0
 # BIN-NEXT:         Locals:
 # BIN-NEXT:           - Type:            I64
 # BIN-NEXT:             Count:           1
-# BIN-NEXT:         Body:            42002A02001A20002A02001A42808080808080808080002A02001A2380808080002A02001A42002A02808080808080808080001A4300000000420038020043000000002000380200430000000042808080808080808080003802004300000000238080808000380200430000000042003802808080808080808080000B
+# BIN-NEXT:         Body:            42002A02001A20002A02001A42808080808080808080002A02001A2380808080002A02001A42002A02808080808080808080001A4300000000420038020043000000002000380200430000000042808080808080808080003802004300000000238080808000380200430000000042003802808080808080808080002381808080001A0B
 # BIN-NEXT:   - Type:            DATA
 # BIN-NEXT:     Relocations:
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I64
@@ -217,6 +230,11 @@ test:
 # BIN-NEXT:         Name:            myglob64
 # BIN-NEXT:         Flags:           [ UNDEFINED ]
 # BIN-NEXT:         Global:          0
+# BIN-NEXT:       - Index:           3
+# BIN-NEXT:         Kind:            GLOBAL
+# BIN-NEXT:         Name:            __stack_pointer
+# BIN-NEXT:         Flags:           [ UNDEFINED ]
+# BIN-NEXT:         Global:          1
 # BIN-NEXT:     SegmentInfo:
 # BIN-NEXT:       - Index:           0
 # BIN-NEXT:         Name:            .rodata..L.str
