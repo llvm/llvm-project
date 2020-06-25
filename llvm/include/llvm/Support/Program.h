@@ -57,7 +57,7 @@ namespace sys {
   struct ProcessStatistics {
     std::chrono::microseconds TotalTime;
     std::chrono::microseconds UserTime;
-    uint64_t PeakMemory = 0;
+    uint64_t PeakMemory = 0; ///< Maximum resident set size in KiB.
   };
 
   /// Find the first executable file \p Name in \p Paths.
