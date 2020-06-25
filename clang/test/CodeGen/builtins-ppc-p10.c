@@ -13,3 +13,13 @@ unsigned long long test_pextd(void) {
   // CHECK: @llvm.ppc.pextd
   return __builtin_pextd(ulla, ullb);
 }
+
+unsigned long long test_cntlzdm(void) {
+  // CHECK: @llvm.ppc.cntlzdm
+  return __builtin_cntlzdm(ulla, ullb);
+}
+
+unsigned long long test_cnttzdm(void) {
+  // CHECK: @llvm.ppc.cnttzdm
+  return __builtin_cnttzdm(ulla, ullb);
+}
