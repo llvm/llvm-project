@@ -34,6 +34,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext());
 
   OwningRewritePatternList patterns;
+  populateSPIRVToLLVMModuleConversionPatterns(context, converter, patterns);
   populateSPIRVToLLVMConversionPatterns(context, converter, patterns);
   populateSPIRVToLLVMFunctionConversionPatterns(context, converter, patterns);
 
@@ -45,6 +46,11 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addIllegalDialect<spirv::SPIRVDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
+
+  // set `ModuleOp` and `ModuleTerminatorOp` as legal for `spv.module`
+  // conversion.
+  target.addLegalOp<ModuleOp>();
+  target.addLegalOp<ModuleTerminatorOp>();
   if (failed(applyPartialConversion(module, target, patterns)))
     signalPassFailure();
 }
