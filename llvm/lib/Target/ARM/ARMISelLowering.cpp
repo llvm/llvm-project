@@ -7279,8 +7279,8 @@ static SDValue LowerBuildVectorOfFPTrunc(SDValue BV, SelectionDAG &DAG,
     return SDValue();
 
   // Check all the values in the BuildVector line up with our expectations.
-  for (int i = 1; i < 4; i++) {
-    auto Check = [](SDValue Trunc, SDValue Op, int Idx) {
+  for (unsigned i = 1; i < 4; i++) {
+    auto Check = [](SDValue Trunc, SDValue Op, unsigned Idx) {
       return Trunc.getOpcode() == ISD::FP_ROUND &&
              Trunc.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
              Trunc.getOperand(0).getOperand(0) == Op &&
