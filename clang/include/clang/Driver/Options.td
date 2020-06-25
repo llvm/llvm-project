@@ -1687,6 +1687,12 @@ def fopenmp_optimistic_collapse : Flag<["-"], "fopenmp-optimistic-collapse">, Gr
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fno_openmp_optimistic_collapse : Flag<["-"], "fno-openmp-optimistic-collapse">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>;
+def fopenmp_cuda_parallel_target_regions : Flag<["-"], "fopenmp-cuda-parallel-target-regions">, Group<f_Group>,
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>,
+  HelpText<"Support parallel execution of target regions on Cuda-based devices.">;
+def fno_openmp_cuda_parallel_target_regions : Flag<["-"], "fno-openmp-cuda-parallel-target-regions">, Group<f_Group>,
+  Flags<[NoArgumentUnused, HelpHidden]>,
+  HelpText<"Support only serial execution of target regions on Cuda-based devices.">;
 def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
 def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>;

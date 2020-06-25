@@ -249,6 +249,7 @@ def Shape_IndexToSizeOp : Shape_Op<"index_to_size", [NoSideEffect]> {
   let assemblyFormat = "$arg attr-dict";
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Shape_JoinOp : Shape_Op<"join", []> {
@@ -392,6 +393,7 @@ def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [NoSideEffect]> {
   let assemblyFormat = "$arg attr-dict";
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Shape_YieldOp : Shape_Op<"yield",

@@ -1535,7 +1535,7 @@ struct DSEState {
 
         auto *MD = dyn_cast_or_null<MemoryDef>(MA);
         if (MD && State.MemDefs.size() < MemorySSADefsPerBlockLimit &&
-            State.getLocForWriteEx(&I) && isRemovable(&I))
+            State.getLocForWriteEx(&I))
           State.MemDefs.push_back(MD);
 
         // Track whether alloca and alloca-like objects are visible in the
@@ -1980,7 +1980,8 @@ struct DSEState {
         << "Trying to eliminate MemoryDefs at the end of the function\n");
     for (int I = MemDefs.size() - 1; I >= 0; I--) {
       MemoryDef *Def = MemDefs[I];
-      if (SkipStores.find(Def) != SkipStores.end())
+      if (SkipStores.find(Def) != SkipStores.end() ||
+          !isRemovable(Def->getMemoryInst()))
         continue;
 
       // TODO: Consider doing the underlying object check first, if it is
@@ -2069,7 +2070,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     const Value *SILocUnd = GetUnderlyingObject(SILoc.Ptr, DL);
 
     // Check if the store is a no-op.
-    if (State.storeIsNoop(KillingDef, SILoc, SILocUnd)) {
+    if (isRemovable(SI) && State.storeIsNoop(KillingDef, SILoc, SILocUnd)) {
       LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *SI << '\n');
       State.deleteDeadInstruction(SI);
       NumNoopStores++;

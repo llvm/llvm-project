@@ -5257,6 +5257,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_openmp_cuda_mode, /*Default=*/false))
         CmdArgs.push_back("-fopenmp-cuda-mode");
 
+      // When in OpenMP offloading mode with NVPTX target, forward
+      // cuda-parallel-target-regions flag
+      if (Args.hasFlag(options::OPT_fopenmp_cuda_parallel_target_regions,
+                       options::OPT_fno_openmp_cuda_parallel_target_regions,
+                       /*Default=*/true))
+        CmdArgs.push_back("-fopenmp-cuda-parallel-target-regions");
+
       // When in OpenMP offloading mode with NVPTX target, check if full runtime
       // is required.
       if (Args.hasFlag(options::OPT_fopenmp_cuda_force_full_runtime,

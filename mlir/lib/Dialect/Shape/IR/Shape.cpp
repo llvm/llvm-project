@@ -397,6 +397,11 @@ OpFoldResult IndexToSizeOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+void IndexToSizeOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<SizeToIndexToSizeCanonicalization>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // FromExtentsOp
 //===----------------------------------------------------------------------===//
@@ -534,6 +539,11 @@ OpFoldResult SizeToIndexOp::fold(ArrayRef<Attribute> operands) {
   if (Attribute arg = operands[0])
     return arg;
   return {};
+}
+
+void SizeToIndexOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<IndexToSizeToIndexCanonicalization>(context);
 }
 
 //===----------------------------------------------------------------------===//

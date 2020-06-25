@@ -3195,6 +3195,12 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.OpenMPCUDAMode = Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN()) &&
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
 
+  // Set CUDA support for parallel execution of target regions for OpenMP target
+  // NVPTX/AMDGCN if specified in options.
+  Opts.OpenMPCUDATargetParallel =
+      Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN()) &&
+      Args.hasArg(options::OPT_fopenmp_cuda_parallel_target_regions);
+
   // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options
   Opts.OpenMPCUDAForceFullRuntime =
       Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN()) &&
