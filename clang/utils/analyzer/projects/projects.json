@@ -68,5 +68,40 @@
     "source": "git",
     "origin": "https://github.com/facebook/zstd.git",
     "commit": "2af4e073"
+  },
+  {
+    "name": "simbody",
+    "mode": 1,
+    "source": "git",
+    "origin": "https://github.com/simbody/simbody.git",
+    "commit": "5cf513d"
+  },
+  {
+    "name": "duckdb",
+    "mode": 1,
+    "source": "git",
+    "origin": "https://github.com/cwida/duckdb.git",
+    "commit": "d098c9f"
+  },
+  {
+    "name": "drogon",
+    "mode": 1,
+    "source": "git",
+    "origin": "https://github.com/an-tao/drogon.git",
+    "commit": "fd2a612"
+  },
+  {
+    "name": "fmt",
+    "mode": 1,
+    "source": "git",
+    "origin": "https://github.com/fmtlib/fmt.git",
+    "commit": "5e7c70e"
+  },
+  {
+    "name": "re2",
+    "mode": 1,
+    "source": "git",
+    "origin": "https://github.com/google/re2.git",
+    "commit": "2b25567"
   }
 ]

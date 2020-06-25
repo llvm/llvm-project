@@ -33,6 +33,15 @@ RUN apt-get install -y \
     libgmp10 \
     libgmp-dev
 
+# simbody dependencies
+RUN apt-get install -y \
+    liblapack-dev
+
+# drogon dependencies
+RUN apt-get install -y \
+    libjsonrpccpp-dev \
+    uuid-dev
+
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 
 VOLUME /analyzer
