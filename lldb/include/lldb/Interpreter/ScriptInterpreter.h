@@ -36,13 +36,11 @@ private:
 
 class ScriptInterpreterIORedirect {
 public:
-  /// Create an IO redirect with /dev/null as input, output and error file.
-  static llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>> Create();
-
-  /// Create an IO redirect that redirects the output to the command return
-  /// object if set or to the debugger otherwise.
+  /// Create an IO redirect. If IO is enabled, this will redirects the output
+  /// to the command return object if set or to the debugger otherwise. If IO
+  /// is disabled, it will redirect all IO to /dev/null.
   static llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>>
-  Create(Debugger &debugger, CommandReturnObject *result);
+  Create(bool enable_io, Debugger &debugger, CommandReturnObject *result);
 
   ~ScriptInterpreterIORedirect();
 

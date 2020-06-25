@@ -912,10 +912,8 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
     // we use the following more complicated method to pass the command string
     // directly down to Python.
     llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>>
-        io_redirect_or_error =
-            options.GetEnableIO()
-                ? ScriptInterpreterIORedirect::Create(m_debugger, result)
-                : ScriptInterpreterIORedirect::Create();
+        io_redirect_or_error = ScriptInterpreterIORedirect::Create(
+            options.GetEnableIO(), m_debugger, result);
     if (!io_redirect_or_error) {
       if (result)
         result->AppendErrorWithFormatv(
