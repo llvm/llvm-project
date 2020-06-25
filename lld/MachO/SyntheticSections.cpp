@@ -25,9 +25,11 @@ using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::support;
 using namespace llvm::support::endian;
+using namespace lld;
+using namespace lld::macho;
 
-namespace lld {
-namespace macho {
+InStruct macho::in;
+std::vector<SyntheticSection *> macho::syntheticSections;
 
 SyntheticSection::SyntheticSection(const char *segname, const char *name)
     : OutputSection(SyntheticKind, name), segname(segname) {
@@ -345,9 +347,3 @@ void StringTableSection::writeTo(uint8_t *buf) const {
     off += str.size() + 1; // account for null terminator
   }
 }
-
-InStruct in;
-std::vector<SyntheticSection *> syntheticSections;
-
-} // namespace macho
-} // namespace lld
