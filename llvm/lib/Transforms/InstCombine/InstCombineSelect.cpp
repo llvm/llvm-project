@@ -2469,6 +2469,11 @@ static Instruction *foldSelectToPhi(SelectInst &Sel, const DominatorTree &DT,
   } else
     return nullptr;
 
+  // We want to replace select %cond, %a, %b with a phi that takes value %a
+  // for all incoming edges that are dominated by condition `%cond == true`,
+  // and value %b for edges dominated by condition `%cond == false`. If %a
+  // or %b are also phis from the same basic block, we can go further and take
+  // their incoming values from the corresponding blocks.
   BasicBlockEdge TrueEdge(IDom, TrueSucc);
   BasicBlockEdge FalseEdge(IDom, FalseSucc);
   DenseMap<BasicBlock *, Value *> Inputs;
@@ -2476,9 +2481,9 @@ static Instruction *foldSelectToPhi(SelectInst &Sel, const DominatorTree &DT,
     // Check implication.
     BasicBlockEdge Incoming(Pred, BB);
     if (DT.dominates(TrueEdge, Incoming))
-      Inputs[Pred] = IfTrue;
+      Inputs[Pred] = IfTrue->DoPHITranslation(BB, Pred);
     else if (DT.dominates(FalseEdge, Incoming))
-      Inputs[Pred] = IfFalse;
+      Inputs[Pred] = IfFalse->DoPHITranslation(BB, Pred);
     else
       return nullptr;
     // Check availability.
