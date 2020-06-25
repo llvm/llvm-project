@@ -177,6 +177,54 @@ class XForm_XT6_IMM5_VB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   let Inst{31} = XT{5};
 }
 
+class 8RR_XX4Form_IMM8_XTAB6<bits<6> opcode, bits<2> xo,
+                             dag OOL, dag IOL, string asmstr,
+                             InstrItinClass itin, list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+    bits<6> XT;
+    bits<6> XA;
+    bits<6> XB;
+    bits<6> XC;
+    bits<8> IMM;
+
+    let Pattern = pattern;
+
+    // The prefix.
+    let Inst{6-7} = 1;
+    let Inst{8} = 0;
+    let Inst{9-11} = 0;
+    let Inst{12-13} = 0;
+    let Inst{14-23} = 0;
+    let Inst{24-31} = IMM;
+
+    // The instruction.
+    let Inst{38-42} = XT{4-0};
+    let Inst{43-47} = XA{4-0};
+    let Inst{48-52} = XB{4-0};
+    let Inst{53-57} = XC{4-0};
+    let Inst{58-59} = xo;
+    let Inst{60} = XC{5};
+    let Inst{61} = XA{5};
+    let Inst{62} = XB{5};
+    let Inst{63} = XT{5};
+}
+
+class VXForm_RD5_N3_VB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
+                        InstrItinClass itin, list<dag> pattern>
+  : I<4, OOL, IOL, asmstr, itin> {
+  bits<5> RD;
+  bits<5> VB;
+  bits<3> N;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = RD;
+  let Inst{11-12} = 0;
+  let Inst{13-15} = N;
+  let Inst{16-20} = VB;
+  let Inst{21-31} = xo;
+}
+
 multiclass MLS_DForm_R_SI34_RTA5_MEM_p<bits<6> opcode, dag OOL, dag IOL,
                                        dag PCRel_IOL, string asmstr,
                                        InstrItinClass itin> {
@@ -532,6 +580,23 @@ let Predicates = [IsISA3_1] in {
    def PEXTD : XForm_6<31, 188, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
                        "pextd $rA, $rS, $rB", IIC_IntGeneral,
                        [(set i64:$rA, (int_ppc_pextd i64:$rS, i64:$rB))]>;
+   def VCFUGED : VXForm_1<1357, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                          "vcfuged $vD, $vA, $vB", IIC_VecGeneral,
+                          [(set v2i64:$vD,
+                          (int_ppc_altivec_vcfuged v2i64:$vA, v2i64:$vB))]>;
+   def VGNB : VXForm_RD5_N3_VB5<1228, (outs g8rc:$rD), (ins vrrc:$vB, u3imm:$N),
+                                "vgnb $rD, $vB, $N", IIC_VecGeneral,
+                                [(set i64:$rD,
+                                (int_ppc_altivec_vgnb v1i128:$vB, timm:$N))]>;
+   def CFUGED : XForm_6<31, 220, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
+                        "cfuged $rA, $rS, $rB", IIC_IntGeneral,
+                        [(set i64:$rA, (int_ppc_cfuged i64:$rS, i64:$rB))]>;
+   def XXEVAL :
+     8RR_XX4Form_IMM8_XTAB6<34, 1, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
+                            vsrc:$XC, u8imm:$IMM),
+                            "xxeval $XT, $XA, $XB, $XC, $IMM", IIC_VecGeneral,
+                            [(set v2i64:$XT, (int_ppc_vsx_xxeval v2i64:$XA,
+                                  v2i64:$XB, v2i64:$XC, timm:$IMM))]>;
    def VCLZDM : VXForm_1<1924, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vclzdm $vD, $vA, $vB", IIC_VecGeneral,
                          [(set v2i64:$vD,
