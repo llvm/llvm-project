@@ -1492,10 +1492,11 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
                                      VA1.getLocVT(), CCValAssign::Full));
   } else {
     // Both halves must be passed on the stack, with proper alignment.
-    unsigned StackAlign = std::max(XLenInBytes, ArgFlags1.getOrigAlign());
+    Align StackAlign =
+        std::max(Align(XLenInBytes), ArgFlags1.getNonZeroOrigAlign());
     State.addLoc(
         CCValAssign::getMem(VA1.getValNo(), VA1.getValVT(),
-                            State.AllocateStack(XLenInBytes, Align(StackAlign)),
+                            State.AllocateStack(XLenInBytes, StackAlign),
                             VA1.getLocVT(), CCValAssign::Full));
     State.addLoc(CCValAssign::getMem(
         ValNo2, ValVT2, State.AllocateStack(XLenInBytes, Align(XLenInBytes)),
@@ -1579,7 +1580,7 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   // original type is larger than 2*XLEN, so the register alignment rule does
   // not apply.
   unsigned TwoXLenInBytes = (2 * XLen) / 8;
-  if (!IsFixed && ArgFlags.getOrigAlign() == TwoXLenInBytes &&
+  if (!IsFixed && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
       DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
     // Skip 'odd' register if necessary.
