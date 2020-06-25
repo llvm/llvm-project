@@ -139,7 +139,7 @@ Deleting an IR-level Instruction
 --------------------------------
 
 When an ``Instruction`` is deleted, its debug uses change to ``undef``. This is
-a loss of debug info: the value of a one or more source variables becomes
+a loss of debug info: the value of one or more source variables becomes
 unavailable, starting with the ``llvm.dbg.value(undef, ...)``. When there is no
 way to reconstitute the value of the lost instruction, this is the best
 possible outcome. However, it's often possible to do better:
