@@ -153,15 +153,15 @@ public:
 
   bool isProfitableLSRChainElement(Instruction *I);
 
-  bool isLegalMaskedLoad(Type *DataTy, MaybeAlign Alignment);
+  bool isLegalMaskedLoad(Type *DataTy, Align Alignment);
 
-  bool isLegalMaskedStore(Type *DataTy, MaybeAlign Alignment) {
+  bool isLegalMaskedStore(Type *DataTy, Align Alignment) {
     return isLegalMaskedLoad(DataTy, Alignment);
   }
 
-  bool isLegalMaskedGather(Type *Ty, MaybeAlign Alignment);
+  bool isLegalMaskedGather(Type *Ty, Align Alignment);
 
-  bool isLegalMaskedScatter(Type *Ty, MaybeAlign Alignment) {
+  bool isLegalMaskedScatter(Type *Ty, Align Alignment) {
     return isLegalMaskedGather(Ty, Alignment);
   }
 

@@ -10,9 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// CCIfAlign - Match of the original alignment of the arg
-class CCIfAlign<string Align, CCAction A> :
-  CCIf<!strconcat("ArgFlags.getOrigAlign() == ", Align), A>;
 /// CCIfBigEndian - Match only if we're in big endian mode.
 class CCIfBigEndian<CCAction A> :
   CCIf<"State.getMachineFunction().getDataLayout().isBigEndian()", A>;

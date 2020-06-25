@@ -156,7 +156,7 @@ public:
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info);
 
-  bool isLegalMaskedLoadStore(Type *DataType, MaybeAlign Alignment) {
+  bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
     if (!isa<VectorType>(DataType) || !ST->hasSVE())
       return false;
 
@@ -172,11 +172,11 @@ public:
     return false;
   }
 
-  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
-  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 

@@ -42,7 +42,7 @@ static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
   unsigned Size = LocVT.getSizeInBits() / 8;
   const Align StackAlign =
       State.getMachineFunction().getDataLayout().getStackAlignment();
-  const Align OrigAlign(ArgFlags.getOrigAlign());
+  const Align OrigAlign = ArgFlags.getNonZeroOrigAlign();
   const Align Alignment = std::min(OrigAlign, StackAlign);
 
   for (auto &It : PendingMembers) {
