@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/FPEnv.h"
+#include "llvm/ADT/StringSwitch.h"
 
 namespace llvm {
 
