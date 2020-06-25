@@ -8,6 +8,7 @@
 
 #include "llvm/CodeGen/ModuloSchedule.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopUtils.h"
