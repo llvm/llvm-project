@@ -260,8 +260,9 @@ protected:
   Scalar m_scalar;
 
   struct {
-    uint8_t bytes[kMaxRegisterByteSize]; // This must be big enough to hold any
-                                         // register for any supported target.
+    mutable uint8_t
+        bytes[kMaxRegisterByteSize]; // This must be big enough to hold any
+                                     // register for any supported target.
     uint16_t length;
     lldb::ByteOrder byte_order;
   } buffer;

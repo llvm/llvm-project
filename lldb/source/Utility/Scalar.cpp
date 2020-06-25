@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Scalar.h"
-
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
@@ -73,36 +73,36 @@ Scalar::Scalar() : m_type(e_void), m_float(static_cast<float>(0)) {}
 
 bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
   size_t byte_size = GetByteSize();
-  if (byte_size > 0) {
-    const uint8_t *bytes = static_cast<const uint8_t *>(GetBytes());
-
-    if (limit_byte_size < byte_size) {
-      if (endian::InlHostByteOrder() == eByteOrderLittle) {
-        // On little endian systems if we want fewer bytes from the current
-        // type we just specify fewer bytes since the LSByte is first...
-        byte_size = limit_byte_size;
-      } else if (endian::InlHostByteOrder() == eByteOrderBig) {
-        // On big endian systems if we want fewer bytes from the current type
-        // have to advance our initial byte pointer and trim down the number of
-        // bytes since the MSByte is first
-        bytes += byte_size - limit_byte_size;
-        byte_size = limit_byte_size;
-      }
-    }
-
-    data.SetData(bytes, byte_size, endian::InlHostByteOrder());
-    return true;
+  if (byte_size == 0) {
+    data.Clear();
+    return false;
   }
-  data.Clear();
-  return false;
+  auto buffer_up = std::make_unique<DataBufferHeap>(byte_size, 0);
+  GetBytes(buffer_up->GetData());
+  lldb::offset_t offset = 0;
+
+  if (limit_byte_size < byte_size) {
+    if (endian::InlHostByteOrder() == eByteOrderLittle) {
+      // On little endian systems if we want fewer bytes from the current
+      // type we just specify fewer bytes since the LSByte is first...
+      byte_size = limit_byte_size;
+    } else if (endian::InlHostByteOrder() == eByteOrderBig) {
+      // On big endian systems if we want fewer bytes from the current type
+      // have to advance our initial byte pointer and trim down the number of
+      // bytes since the MSByte is first
+      offset = byte_size - limit_byte_size;
+      byte_size = limit_byte_size;
+    }
+  }
+
+  data.SetData(std::move(buffer_up), offset, byte_size);
+  data.SetByteOrder(endian::InlHostByteOrder());
+  return true;
 }
 
-const void *Scalar::GetBytes() const {
-  const uint64_t *apint_words;
-  const uint8_t *bytes;
-  static float_t flt_val;
-  static double_t dbl_val;
-  static uint64_t swapped_words[8];
+void Scalar::GetBytes(llvm::MutableArrayRef<uint8_t> storage) const {
+  assert(storage.size() >= GetByteSize());
+
   switch (m_type) {
   case e_void:
     break;
@@ -112,73 +112,31 @@ const void *Scalar::GetBytes() const {
   case e_ulong:
   case e_slonglong:
   case e_ulonglong:
-    bytes = reinterpret_cast<const uint8_t *>(m_integer.getRawData());
-    // getRawData always returns a pointer to an uint64_t.  If we have a
-    // smaller type, we need to update the pointer on big-endian systems.
-    if (endian::InlHostByteOrder() == eByteOrderBig) {
-      size_t byte_size = m_integer.getBitWidth() / 8;
-      if (byte_size < 8)
-        bytes += 8 - byte_size;
-    }
-    return bytes;
-  // getRawData always returns a pointer to an array of uint64_t values,
-  // where the least-significant word always comes first.  On big-endian
-  // systems we need to swap the words.
   case e_sint128:
   case e_uint128:
-    apint_words = m_integer.getRawData();
-    if (endian::InlHostByteOrder() == eByteOrderBig) {
-      swapped_words[0] = apint_words[1];
-      swapped_words[1] = apint_words[0];
-      apint_words = swapped_words;
-    }
-    return static_cast<const void *>(apint_words);
   case e_sint256:
   case e_uint256:
-    apint_words = m_integer.getRawData();
-    if (endian::InlHostByteOrder() == eByteOrderBig) {
-      swapped_words[0] = apint_words[3];
-      swapped_words[1] = apint_words[2];
-      swapped_words[2] = apint_words[1];
-      swapped_words[3] = apint_words[0];
-      apint_words = swapped_words;
-    }
-    return static_cast<const void *>(apint_words);
   case e_sint512:
   case e_uint512:
-    apint_words = m_integer.getRawData();
-    if (endian::InlHostByteOrder() == eByteOrderBig) {
-      swapped_words[0] = apint_words[7];
-      swapped_words[1] = apint_words[6];
-      swapped_words[2] = apint_words[5];
-      swapped_words[3] = apint_words[4];
-      swapped_words[4] = apint_words[3];
-      swapped_words[5] = apint_words[2];
-      swapped_words[6] = apint_words[1];
-      swapped_words[7] = apint_words[0];
-      apint_words = swapped_words;
-    }
-    return static_cast<const void *>(apint_words);
-  case e_float:
-    flt_val = m_float.convertToFloat();
-    return static_cast<const void *>(&flt_val);
-  case e_double:
-    dbl_val = m_float.convertToDouble();
-    return static_cast<const void *>(&dbl_val);
-  case e_long_double:
-    llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    apint_words = ldbl_val.getRawData();
-    // getRawData always returns a pointer to an array of two uint64_t values,
-    // where the least-significant word always comes first.  On big-endian
-    // systems we need to swap the two words.
-    if (endian::InlHostByteOrder() == eByteOrderBig) {
-      swapped_words[0] = apint_words[1];
-      swapped_words[1] = apint_words[0];
-      apint_words = swapped_words;
-    }
-    return static_cast<const void *>(apint_words);
+    StoreIntToMemory(m_integer, storage.data(),
+                     (m_integer.getBitWidth() + 7) / 8);
+    break;
+  case e_float: {
+    float val = m_float.convertToFloat();
+    memcpy(storage.data(), &val, sizeof(val));
+    break;
   }
-  return nullptr;
+  case e_double: {
+    double val = m_float.convertToDouble();
+    memcpy(storage.data(), &val, sizeof(double));
+    break;
+  }
+  case e_long_double: {
+    llvm::APInt val = m_float.bitcastToAPInt();
+    StoreIntToMemory(val, storage.data(), storage.size());
+    break;
+  }
+  }
 }
 
 size_t Scalar::GetByteSize() const {
