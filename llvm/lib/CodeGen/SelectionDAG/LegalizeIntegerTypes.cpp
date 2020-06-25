@@ -271,8 +271,20 @@ SDValue DAGTypeLegalizer::PromoteIntRes_AtomicCmpSwap(AtomicSDNode *N,
     return Res.getValue(1);
   }
 
-  SDValue Op2 = GetPromotedInteger(N->getOperand(2));
+  // Op2 is used for the comparison and thus must be extended according to the
+  // target's atomic operations. Op3 is merely stored and so can be left alone.
+  SDValue Op2 = N->getOperand(2);
   SDValue Op3 = GetPromotedInteger(N->getOperand(3));
+  if (TLI.getTargetMachine().getTargetTriple().isRISCV()) {
+    // The comparison argument must be sign-extended for RISC-V. This is
+    // abstracted using a new TargetLowering hook in the main LLVM development
+    // branch, but handled here directly in order to fix the codegen bug for
+    // 10.x without breaking the libLLVM.so ABI.
+    Op2 = SExtPromotedInteger(Op2);
+  } else {
+    Op2 = GetPromotedInteger(Op2);
+  }
+
   SDVTList VTs =
       DAG.getVTList(Op2.getValueType(), N->getValueType(1), MVT::Other);
   SDValue Res = DAG.getAtomicCmpSwap(
