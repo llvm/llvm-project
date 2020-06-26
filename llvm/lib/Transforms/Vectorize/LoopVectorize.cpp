@@ -431,8 +431,9 @@ public:
 
   /// Vectorize a single GetElementPtrInst based on information gathered and
   /// decisions taken during planning.
-  void widenGEP(GetElementPtrInst *GEP, unsigned UF, unsigned VF,
-                bool IsPtrLoopInvariant, SmallBitVector &IsIndexLoopInvariant);
+  void widenGEP(GetElementPtrInst *GEP, VPUser &Indices, unsigned UF,
+                unsigned VF, bool IsPtrLoopInvariant,
+                SmallBitVector &IsIndexLoopInvariant, VPTransformState &State);
 
   /// Vectorize a single PHINode in a block. This method handles the induction
   /// variable canonicalization. It supports both VF = 1 for unrolled loops and
@@ -4074,9 +4075,11 @@ void InnerLoopVectorizer::fixNonInductionPHIs() {
   }
 }
 
-void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, unsigned UF,
-                                   unsigned VF, bool IsPtrLoopInvariant,
-                                   SmallBitVector &IsIndexLoopInvariant) {
+void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPUser &Operands,
+                                   unsigned UF, unsigned VF,
+                                   bool IsPtrLoopInvariant,
+                                   SmallBitVector &IsIndexLoopInvariant,
+                                   VPTransformState &State) {
   // Construct a vector GEP by widening the operands of the scalar GEP as
   // necessary. We mark the vector GEP 'inbounds' if appropriate. A GEP
   // results in a vector of pointers when at least one operand of the GEP
@@ -4113,19 +4116,18 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, unsigned UF,
     for (unsigned Part = 0; Part < UF; ++Part) {
       // The pointer operand of the new GEP. If it's loop-invariant, we
       // won't broadcast it.
-      auto *Ptr = IsPtrLoopInvariant
-                      ? GEP->getPointerOperand()
-                      : getOrCreateVectorValue(GEP->getPointerOperand(), Part);
+      auto *Ptr = IsPtrLoopInvariant ? State.get(Operands.getOperand(0), {0, 0})
+                                     : State.get(Operands.getOperand(0), Part);
 
       // Collect all the indices for the new GEP. If any index is
       // loop-invariant, we won't broadcast it.
       SmallVector<Value *, 4> Indices;
-      for (auto Index : enumerate(GEP->indices())) {
-        Value *User = Index.value().get();
-        if (IsIndexLoopInvariant[Index.index()])
-          Indices.push_back(User);
+      for (unsigned I = 1, E = Operands.getNumOperands(); I < E; I++) {
+        VPValue *Operand = Operands.getOperand(I);
+        if (IsIndexLoopInvariant[I - 1])
+          Indices.push_back(State.get(Operand, {0, 0}));
         else
-          Indices.push_back(getOrCreateVectorValue(User, Part));
+          Indices.push_back(State.get(Operand, Part));
       }
 
       // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
@@ -7139,7 +7141,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
     return nullptr;
 
   if (auto GEP = dyn_cast<GetElementPtrInst>(Instr))
-    return new VPWidenGEPRecipe(GEP, OrigLoop);
+    return new VPWidenGEPRecipe(GEP, Plan->mapToVPValues(GEP->operands()),
+                                OrigLoop);
 
   if (auto *SI = dyn_cast<SelectInst>(Instr)) {
     bool InvariantCond =
@@ -7447,8 +7450,8 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
-  State.ILV->widenGEP(GEP, State.UF, State.VF, IsPtrLoopInvariant,
-                      IsIndexLoopInvariant);
+  State.ILV->widenGEP(GEP, User, State.UF, State.VF, IsPtrLoopInvariant,
+                      IsIndexLoopInvariant, State);
 }
 
 void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
