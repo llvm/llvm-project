@@ -12037,6 +12037,7 @@ static MVT getSVEContainerType(EVT ContentTy) {
   case MVT::nxv8i8:
   case MVT::nxv8i16:
   case MVT::nxv8f16:
+  case MVT::nxv8bf16:
     return MVT::nxv8i16;
   case MVT::nxv16i8:
     return MVT::nxv16i8;
@@ -12127,6 +12128,11 @@ static SDValue performST1Combine(SDNode *N, SelectionDAG &DAG) {
   EVT HwSrcVt = getSVEContainerType(DataVT);
   SDValue InputVT = DAG.getValueType(DataVT);
 
+  if (DataVT == MVT::nxv8bf16)
+    assert(
+        static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16() &&
+        "Unsupported type (BF16)");
+
   if (DataVT.isFloatingPoint())
     InputVT = DAG.getValueType(HwSrcVt);
 
@@ -12152,6 +12158,11 @@ static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
   SDValue Data = N->getOperand(2);
   EVT DataVT = Data.getValueType();
   EVT PtrTy = N->getOperand(4).getValueType();
+
+  if (DataVT == MVT::nxv8bf16)
+    assert(
+        static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16() &&
+        "Unsupported type (BF16)");
 
   if (DataVT.isFloatingPoint())
     Data = DAG.getNode(ISD::BITCAST, DL, DataVT.changeTypeToInteger(), Data);
