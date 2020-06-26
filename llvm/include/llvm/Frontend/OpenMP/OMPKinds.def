@@ -322,10 +322,10 @@ __OMP_FUNCTION_TYPE(TaskRoutineEntry, false, Int32, Int32,
 #define __ICV_DATA_ENV(Name, EnvVarName, Init)                                 \
   ICV_DATA_ENV(ICV_##Name, #Name, #EnvVarName, Init)
 
-__ICV_DATA_ENV(nthreads, OMP_NUM_THREADS, IMPLEMENTATION_DEFINED)
-__ICV_DATA_ENV(active_levels, NONE, ZERO)
-__ICV_DATA_ENV(cancel, OMP_CANCELLATION, FALSE)
-__ICV_DATA_ENV(__last, last, LAST)
+__ICV_DATA_ENV(nthreads, OMP_NUM_THREADS, ICV_IMPLEMENTATION_DEFINED)
+__ICV_DATA_ENV(active_levels, NONE, ICV_ZERO)
+__ICV_DATA_ENV(cancel, OMP_CANCELLATION, ICV_FALSE)
+__ICV_DATA_ENV(__last, last, ICV_LAST)
 
 #undef __ICV_DATA_ENV
 #undef ICV_DATA_ENV
