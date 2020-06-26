@@ -1,4 +1,3 @@
-!RUN: %S/test_any.sh %s %t %f18
 ! Tests -fget-definition with COMMON block with same name as variable.
 program main
   integer :: x
@@ -7,5 +6,5 @@ program main
   x = y
 end program
 
-! EXEC: ${F18} -fget-definition 7 3 4 -fparse-only %s | ${FileCheck} %s
-! CHECK:x:.*getdefinition04.f90, 4, 14-15
+! RUN: %f18 -fget-definition 6 3 4 -fparse-only %s | FileCheck %s
+! CHECK: x:{{.*}}getdefinition04.f90, 3, 14-15
