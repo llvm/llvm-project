@@ -28,6 +28,10 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
     [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
   def int_ppc_dcbtst: Intrinsic<[], [llvm_ptr_ty],
     [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+  def int_ppc_dcbt_with_hint: Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
+    [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_dcbtst_with_hint: Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
+    [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
   def int_ppc_dcbz  : Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_dcbzl : Intrinsic<[], [llvm_ptr_ty], []>;
 
@@ -36,6 +40,8 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
 
   // sync instruction (i.e. sync 0, a.k.a hwsync)
   def int_ppc_sync : Intrinsic<[], [], []>;
+  // isync instruction
+  def int_ppc_isync : Intrinsic<[], [], []>;
   // lwsync is sync 1
   def int_ppc_lwsync : Intrinsic<[], [], []>;
   // eieio instruction
