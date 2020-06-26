@@ -409,6 +409,17 @@ protected:
     return TargetPlatform == MacOS;
   }
 
+  bool isTargetMacOSBased() const {
+    assert(TargetInitialized && "Target not initialized!");
+    // FIXME (Alex L): Add remaining MacCatalyst suppport.
+    return TargetPlatform == MacOS;
+  }
+
+  bool isTargetAppleSiliconMac() const {
+    assert(TargetInitialized && "Target not initialized!");
+    return isTargetMacOSBased() && getArch() == llvm::Triple::aarch64;
+  }
+
   bool isTargetInitialized() const { return TargetInitialized; }
 
   VersionTuple getTargetVersion() const {
