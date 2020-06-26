@@ -28,8 +28,8 @@ class QualType;
 /// The fixed point semantics work similarly to llvm::fltSemantics. The width
 /// specifies the whole bit width of the underlying scaled integer (with padding
 /// if any). The scale represents the number of fractional bits in this type.
-/// When HasUnsignedPadding is true and this type is signed, the first bit
-/// in the value this represents is treaded as padding.
+/// When HasUnsignedPadding is true and this type is unsigned, the first bit
+/// in the value this represents is treated as padding.
 class FixedPointSemantics {
 public:
   FixedPointSemantics(unsigned Width, unsigned Scale, bool IsSigned,
@@ -125,9 +125,10 @@ class APFixedPoint {
 
    // Perform binary operations on a fixed point type. The resulting fixed point
    // value will be in the common, full precision semantics that can represent
-   // the precision and ranges os both input values. See convert() for an
+   // the precision and ranges of both input values. See convert() for an
    // explanation of the Overflow parameter.
    APFixedPoint add(const APFixedPoint &Other, bool *Overflow = nullptr) const;
+   APFixedPoint sub(const APFixedPoint &Other, bool *Overflow = nullptr) const;
 
    /// Perform a unary negation (-X) on this fixed point type, taking into
    /// account saturation if applicable.
