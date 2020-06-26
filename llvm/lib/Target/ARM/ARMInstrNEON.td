@@ -2455,57 +2455,6 @@ def : Pat<(byte_alignedstore (v2f64 QPR:$value), addrmode6:$addr),
 }
 
 //===----------------------------------------------------------------------===//
-// NEON pattern fragments
-//===----------------------------------------------------------------------===//
-
-// Extract D sub-registers of Q registers.
-def DSubReg_i8_reg  : SDNodeXForm<imm, [{
-  assert(ARM::dsub_7 == ARM::dsub_0+7 && "Unexpected subreg numbering");
-  return CurDAG->getTargetConstant(ARM::dsub_0 + N->getZExtValue()/8, SDLoc(N),
-                                   MVT::i32);
-}]>;
-def DSubReg_i16_reg : SDNodeXForm<imm, [{
-  assert(ARM::dsub_7 == ARM::dsub_0+7 && "Unexpected subreg numbering");
-  return CurDAG->getTargetConstant(ARM::dsub_0 + N->getZExtValue()/4, SDLoc(N),
-                                   MVT::i32);
-}]>;
-def DSubReg_i32_reg : SDNodeXForm<imm, [{
-  assert(ARM::dsub_7 == ARM::dsub_0+7 && "Unexpected subreg numbering");
-  return CurDAG->getTargetConstant(ARM::dsub_0 + N->getZExtValue()/2, SDLoc(N),
-                                   MVT::i32);
-}]>;
-def DSubReg_f64_reg : SDNodeXForm<imm, [{
-  assert(ARM::dsub_7 == ARM::dsub_0+7 && "Unexpected subreg numbering");
-  return CurDAG->getTargetConstant(ARM::dsub_0 + N->getZExtValue(), SDLoc(N),
-                                   MVT::i32);
-}]>;
-
-// Extract S sub-registers of Q/D registers.
-def SSubReg_f32_reg : SDNodeXForm<imm, [{
-  assert(ARM::ssub_3 == ARM::ssub_0+3 && "Unexpected subreg numbering");
-  return CurDAG->getTargetConstant(ARM::ssub_0 + N->getZExtValue(), SDLoc(N),
-                                   MVT::i32);
-}]>;
-
-// Extract S sub-registers of Q/D registers containing a given f16/bf16 lane.
-def SSubReg_f16_reg : SDNodeXForm<imm, [{
-  assert(ARM::ssub_3 == ARM::ssub_0+3 && "Unexpected subreg numbering");
-  return CurDAG->getTargetConstant(ARM::ssub_0 + N->getZExtValue()/2, SDLoc(N),
-                                   MVT::i32);
-}]>;
-
-// Translate lane numbers from Q registers to D subregs.
-def SubReg_i8_lane  : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & 7, SDLoc(N), MVT::i32);
-}]>;
-def SubReg_i16_lane : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & 3, SDLoc(N), MVT::i32);
-}]>;
-def SubReg_i32_lane : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & 1, SDLoc(N), MVT::i32);
-}]>;
-
-//===----------------------------------------------------------------------===//
 // Instruction Classes
 //===----------------------------------------------------------------------===//
 
@@ -6409,9 +6358,6 @@ def : Pat<(extractelt (v4f32 QPR:$src1), imm:$src2),
 def : Pat<(extractelt (v2f64 QPR:$src1), imm:$src2),
           (EXTRACT_SUBREG QPR:$src1, (DSubReg_f64_reg imm:$src2))>;
 }
-
-def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;
-def imm_odd : ImmLeaf<i32, [{ return (Imm & 1) == 1; }]>;
 
 multiclass ExtractEltEvenF16<ValueType VT4, ValueType VT8> {
   def : Pat<(extractelt (VT4 DPR:$src), imm_even:$lane),

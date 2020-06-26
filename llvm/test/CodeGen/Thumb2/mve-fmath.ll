@@ -123,8 +123,7 @@ define arm_aapcs_vfpcc <8 x half> @cos_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r4, s0
-; CHECK-NEXT:    vmovx.f16 s0, s16
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s0, r0
@@ -138,8 +137,7 @@ define arm_aapcs_vfpcc <8 x half> @cos_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s17
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov.16 q5[2], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
@@ -153,8 +151,7 @@ define arm_aapcs_vfpcc <8 x half> @cos_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s18
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov.16 q5[4], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
@@ -168,8 +165,7 @@ define arm_aapcs_vfpcc <8 x half> @cos_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s19
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov.16 q5[6], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
@@ -254,8 +250,7 @@ define arm_aapcs_vfpcc <8 x half> @sin_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r4, s0
-; CHECK-NEXT:    vmovx.f16 s0, s16
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s0, r0
@@ -269,8 +264,7 @@ define arm_aapcs_vfpcc <8 x half> @sin_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s17
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov.16 q5[2], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
@@ -284,8 +278,7 @@ define arm_aapcs_vfpcc <8 x half> @sin_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s18
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov.16 q5[4], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
@@ -299,8 +292,7 @@ define arm_aapcs_vfpcc <8 x half> @sin_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s19
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov.16 q5[6], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
@@ -385,8 +377,7 @@ define arm_aapcs_vfpcc <8 x half> @exp_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r4, s0
-; CHECK-NEXT:    vmovx.f16 s0, s16
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s0, r0
@@ -400,8 +391,7 @@ define arm_aapcs_vfpcc <8 x half> @exp_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s17
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov.16 q5[2], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
@@ -415,8 +405,7 @@ define arm_aapcs_vfpcc <8 x half> @exp_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s18
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov.16 q5[4], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
@@ -430,8 +419,7 @@ define arm_aapcs_vfpcc <8 x half> @exp_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s19
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov.16 q5[6], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
@@ -516,8 +504,7 @@ define arm_aapcs_vfpcc <8 x half> @exp2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r4, s0
-; CHECK-NEXT:    vmovx.f16 s0, s16
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s0, r0
@@ -531,8 +518,7 @@ define arm_aapcs_vfpcc <8 x half> @exp2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s17
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov.16 q5[2], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
@@ -546,8 +532,7 @@ define arm_aapcs_vfpcc <8 x half> @exp2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s18
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov.16 q5[4], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
@@ -561,8 +546,7 @@ define arm_aapcs_vfpcc <8 x half> @exp2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s19
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov.16 q5[6], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
@@ -647,8 +631,7 @@ define arm_aapcs_vfpcc <8 x half> @log_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r4, s0
-; CHECK-NEXT:    vmovx.f16 s0, s16
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s0, r0
@@ -662,8 +645,7 @@ define arm_aapcs_vfpcc <8 x half> @log_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s17
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov.16 q5[2], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
@@ -677,8 +659,7 @@ define arm_aapcs_vfpcc <8 x half> @log_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s18
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov.16 q5[4], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
@@ -692,8 +673,7 @@ define arm_aapcs_vfpcc <8 x half> @log_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s19
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov.16 q5[6], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
@@ -778,8 +758,7 @@ define arm_aapcs_vfpcc <8 x half> @log2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r4, s0
-; CHECK-NEXT:    vmovx.f16 s0, s16
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s0, r0
@@ -793,8 +772,7 @@ define arm_aapcs_vfpcc <8 x half> @log2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s17
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov.16 q5[2], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
@@ -808,8 +786,7 @@ define arm_aapcs_vfpcc <8 x half> @log2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s18
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov.16 q5[4], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
@@ -823,8 +800,7 @@ define arm_aapcs_vfpcc <8 x half> @log2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s19
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov.16 q5[6], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
@@ -909,8 +885,7 @@ define arm_aapcs_vfpcc <8 x half> @log10_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r4, s0
-; CHECK-NEXT:    vmovx.f16 s0, s16
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s0, r0
@@ -924,8 +899,7 @@ define arm_aapcs_vfpcc <8 x half> @log10_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s17
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov.16 q5[2], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
@@ -939,8 +913,7 @@ define arm_aapcs_vfpcc <8 x half> @log10_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s18
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov.16 q5[4], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
@@ -954,8 +927,7 @@ define arm_aapcs_vfpcc <8 x half> @log10_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s19
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov.16 q5[6], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
@@ -1039,82 +1011,74 @@ define arm_aapcs_vfpcc <8 x half> @pow_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov q5, q1
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s16
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov q5, q0
+; CHECK-NEXT:    vmov q4, q1
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s20
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vmovx.f16 s2, s16
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-NEXT:    vmov r4, s0
-; CHECK-NEXT:    vmovx.f16 s0, s20
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s20
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vmov.16 q6[0], r4
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s21
 ; CHECK-NEXT:    vmov.16 q6[1], r0
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s21
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vmovx.f16 s2, s17
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s21
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s21
 ; CHECK-NEXT:    vmov.16 q6[2], r0
-; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
-; CHECK-NEXT:    vmov.16 q6[3], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s22
+; CHECK-NEXT:    vmov.16 q6[3], r0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vmovx.f16 s2, s18
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s22
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s22
 ; CHECK-NEXT:    vmov.16 q6[4], r0
-; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
-; CHECK-NEXT:    vmov.16 q6[5], r0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s23
+; CHECK-NEXT:    vmov.16 q6[5], r0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vmovx.f16 s2, s19
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmovx.f16 s0, s23
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s23
 ; CHECK-NEXT:    vmov.16 q6[6], r0
-; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0

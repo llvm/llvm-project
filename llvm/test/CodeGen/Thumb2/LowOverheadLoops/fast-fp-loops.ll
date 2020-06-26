@@ -344,18 +344,16 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    vmov.16 q6[3], r2
 ; CHECK-NEXT:  .LBB2_3: @ %else26
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
-; CHECK-NEXT:    vmul.f16 q5, q6, q5
+; CHECK-NEXT:    vmul.f16 q0, q6, q5
 ; CHECK-NEXT:    adds r0, #8
-; CHECK-NEXT:    vmovx.f16 s2, s21
-; CHECK-NEXT:    vmovx.f16 s0, s20
-; CHECK-NEXT:    vcvtb.f32.f16 s27, s2
+; CHECK-NEXT:    vcvtt.f32.f16 s23, s1
 ; CHECK-NEXT:    adds r1, #8
-; CHECK-NEXT:    vcvtb.f32.f16 s26, s21
+; CHECK-NEXT:    vcvtb.f32.f16 s22, s1
 ; CHECK-NEXT:    adds r3, #4
-; CHECK-NEXT:    vcvtb.f32.f16 s25, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s21, s0
 ; CHECK-NEXT:    subs.w lr, lr, #1
-; CHECK-NEXT:    vcvtb.f32.f16 s24, s20
-; CHECK-NEXT:    vadd.f32 q5, q3, q6
+; CHECK-NEXT:    vcvtb.f32.f16 s20, s0
+; CHECK-NEXT:    vadd.f32 q5, q3, q5
 ; CHECK-NEXT:    bne .LBB2_4
 ; CHECK-NEXT:    b .LBB2_21
 ; CHECK-NEXT:  .LBB2_4: @ %vector.body
