@@ -57,3 +57,43 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     spv.Return
   }
 }
+
+// -----
+
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
+  spv.func @copy_memory_simple() "None" {
+    %0 = spv.Variable : !spv.ptr<f32, Function>
+    %1 = spv.Variable : !spv.ptr<f32, Function>
+    // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} : f32
+    spv.CopyMemory "Function" %0, "Function" %1 : f32
+    spv.Return
+  }
+}
+
+// -----
+
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
+  spv.func @copy_memory_different_storage_classes(%in : !spv.ptr<!spv.array<4xf32>, Input>, %out : !spv.ptr<!spv.array<4xf32>, Output>) "None" {
+    // CHECK: spv.CopyMemory "Output" %{{.*}}, "Input" %{{.*}} : !spv.array<4 x f32>
+    spv.CopyMemory "Output" %out, "Input" %in : !spv.array<4xf32>
+    spv.Return
+  }
+}
+
+
+// -----
+
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
+  spv.func @copy_memory_with_access_operands() "None" {
+    %0 = spv.Variable : !spv.ptr<f32, Function>
+    %1 = spv.Variable : !spv.ptr<f32, Function>
+    // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 4] : f32
+    spv.CopyMemory "Function" %0, "Function" %1 ["Aligned", 4] : f32
+
+    // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Volatile"] : f32
+    spv.CopyMemory "Function" %0, "Function" %1 ["Volatile"] : f32
+
+    spv.Return
+  }
+}
+
