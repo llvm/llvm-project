@@ -30,15 +30,16 @@ func @parallel_many_dims() {
 // CHECK:         [[C6:%.*]] = constant 6 : index
 // CHECK:         [[C9:%.*]] = constant 9 : index
 // CHECK:         [[C10:%.*]] = constant 10 : index
-// CHECK:         [[C12:%.*]] = constant 12 : index
 // CHECK:         [[C0:%.*]] = constant 0 : index
 // CHECK:         [[C1:%.*]] = constant 1 : index
 // CHECK:         [[C2:%.*]] = constant 2 : index
 // CHECK:         [[C3:%.*]] = constant 3 : index
+// CHECK:         [[C12:%.*]] = constant 12 : index
 // CHECK:         scf.parallel ([[NEW_I0:%.*]]) = ([[C0]]) to ([[C2]]) step ([[C1]]) {
 // CHECK:           [[I0:%.*]] = remi_signed [[NEW_I0]], [[C2]] : index
-// CHECK:           [[V18:%.*]] = muli [[NEW_I0]], [[C10]] : index
-// CHECK:           [[I3:%.*]] = addi [[V18]], [[C9]] : index
+// CHECK:           [[V0:%.*]] = divi_signed [[NEW_I0]], [[C2]] : index
+// CHECK:           [[V2:%.*]] = muli [[V0]], [[C10]] : index
+// CHECK:           [[I3:%.*]] = addi [[V2]], [[C9]] : index
 // CHECK:           "magic.op"([[I0]], [[C3]], [[C6]], [[I3]], [[C12]]) : (index, index, index, index, index) -> index
 // CHECK:           scf.yield
 // CHECK-NEXT:    }

@@ -1491,7 +1491,7 @@ void mlir::collapseParallelLoops(
             // Remove the effect of the current induction value to prepare for
             // the next value.
             previous = insideBuilder.create<SignedDivIOp>(
-                loc, previous, normalizedUpperBounds[idx + 1]);
+                loc, previous, normalizedUpperBounds[idx]);
           }
 
           // The final induction value is just the remaining value.
