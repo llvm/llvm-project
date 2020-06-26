@@ -17,13 +17,13 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 
 class CallBase;
+class Instruction;
 class LoadInst;
 class StoreInst;
 class MemTransferInst;
