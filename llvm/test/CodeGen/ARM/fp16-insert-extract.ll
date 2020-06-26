@@ -77,19 +77,15 @@ entry:
 define <4 x half> @test_vset_lane_f16(<4 x half> %a, float %fb) nounwind {
 ; CHECKHARD-LABEL: test_vset_lane_f16:
 ; CHECKHARD:       @ %bb.0: @ %entry
-; CHECKHARD-NEXT:    vcvtb.f16.f32 s2, s2
-; CHECKHARD-NEXT:    vmov r0, s2
-; CHECKHARD-NEXT:    vmov.16 d0[3], r0
+; CHECKHARD-NEXT:    vcvtt.f16.f32 s1, s2
 ; CHECKHARD-NEXT:    bx lr
 ;
 ; CHECKSOFT-LABEL: test_vset_lane_f16:
 ; CHECKSOFT:       @ %bb.0: @ %entry
-; CHECKSOFT-NEXT:    vmov s0, r2
-; CHECKSOFT-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECKSOFT-NEXT:    vmov d16, r0, r1
-; CHECKSOFT-NEXT:    vmov r2, s0
-; CHECKSOFT-NEXT:    vmov.16 d16[3], r2
-; CHECKSOFT-NEXT:    vmov r0, r1, d16
+; CHECKSOFT-NEXT:    vmov d0, r0, r1
+; CHECKSOFT-NEXT:    vmov s2, r2
+; CHECKSOFT-NEXT:    vcvtt.f16.f32 s1, s2
+; CHECKSOFT-NEXT:    vmov r0, r1, d0
 ; CHECKSOFT-NEXT:    bx lr
 entry:
   %b = fptrunc float %fb to half
@@ -100,21 +96,17 @@ entry:
 define <8 x half> @test_vset_laneq_f16_1(<8 x half> %a, float %fb) nounwind {
 ; CHECKHARD-LABEL: test_vset_laneq_f16_1:
 ; CHECKHARD:       @ %bb.0: @ %entry
-; CHECKHARD-NEXT:    vcvtb.f16.f32 s4, s4
-; CHECKHARD-NEXT:    vmov r0, s4
-; CHECKHARD-NEXT:    vmov.16 d0[1], r0
+; CHECKHARD-NEXT:    vcvtt.f16.f32 s0, s4
 ; CHECKHARD-NEXT:    bx lr
 ;
 ; CHECKSOFT-LABEL: test_vset_laneq_f16_1:
 ; CHECKSOFT:       @ %bb.0: @ %entry
-; CHECKSOFT-NEXT:    vldr s0, [sp]
-; CHECKSOFT-NEXT:    vmov d17, r2, r3
-; CHECKSOFT-NEXT:    vmov d16, r0, r1
-; CHECKSOFT-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECKSOFT-NEXT:    vmov r12, s0
-; CHECKSOFT-NEXT:    vmov.16 d16[1], r12
-; CHECKSOFT-NEXT:    vmov r2, r3, d17
-; CHECKSOFT-NEXT:    vmov r0, r1, d16
+; CHECKSOFT-NEXT:    vmov d1, r2, r3
+; CHECKSOFT-NEXT:    vldr s4, [sp]
+; CHECKSOFT-NEXT:    vmov d0, r0, r1
+; CHECKSOFT-NEXT:    vcvtt.f16.f32 s0, s4
+; CHECKSOFT-NEXT:    vmov r2, r3, d1
+; CHECKSOFT-NEXT:    vmov r0, r1, d0
 ; CHECKSOFT-NEXT:    bx lr
 entry:
   %b = fptrunc float %fb to half
@@ -125,21 +117,17 @@ entry:
 define <8 x half> @test_vset_laneq_f16_7(<8 x half> %a, float %fb) nounwind {
 ; CHECKHARD-LABEL: test_vset_laneq_f16_7:
 ; CHECKHARD:       @ %bb.0: @ %entry
-; CHECKHARD-NEXT:    vcvtb.f16.f32 s4, s4
-; CHECKHARD-NEXT:    vmov r0, s4
-; CHECKHARD-NEXT:    vmov.16 d1[3], r0
+; CHECKHARD-NEXT:    vcvtt.f16.f32 s3, s4
 ; CHECKHARD-NEXT:    bx lr
 ;
 ; CHECKSOFT-LABEL: test_vset_laneq_f16_7:
 ; CHECKSOFT:       @ %bb.0: @ %entry
-; CHECKSOFT-NEXT:    vldr s0, [sp]
-; CHECKSOFT-NEXT:    vmov d17, r2, r3
-; CHECKSOFT-NEXT:    vmov d16, r0, r1
-; CHECKSOFT-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECKSOFT-NEXT:    vmov r12, s0
-; CHECKSOFT-NEXT:    vmov.16 d17[3], r12
-; CHECKSOFT-NEXT:    vmov r0, r1, d16
-; CHECKSOFT-NEXT:    vmov r2, r3, d17
+; CHECKSOFT-NEXT:    vmov d1, r2, r3
+; CHECKSOFT-NEXT:    vldr s4, [sp]
+; CHECKSOFT-NEXT:    vmov d0, r0, r1
+; CHECKSOFT-NEXT:    vcvtt.f16.f32 s3, s4
+; CHECKSOFT-NEXT:    vmov r0, r1, d0
+; CHECKSOFT-NEXT:    vmov r2, r3, d1
 ; CHECKSOFT-NEXT:    bx lr
 entry:
   %b = fptrunc float %fb to half
