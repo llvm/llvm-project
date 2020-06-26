@@ -721,6 +721,7 @@ func @reduce_f32(%arg0: vector<16xf32>) -> f32 {
 // CHECK-SAME: %[[A:.*]]: !llvm<"<16 x float>">)
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : !llvm.float
 //      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fadd"(%[[C]], %[[A]])
+// CHECK-SAME: {reassoc = false} : (!llvm.float, !llvm<"<16 x float>">) -> !llvm.float
 //      CHECK: llvm.return %[[V]] : !llvm.float
 
 func @reduce_f64(%arg0: vector<16xf64>) -> f64 {
@@ -731,6 +732,7 @@ func @reduce_f64(%arg0: vector<16xf64>) -> f64 {
 // CHECK-SAME: %[[A:.*]]: !llvm<"<16 x double>">)
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f64) : !llvm.double
 //      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fadd"(%[[C]], %[[A]])
+// CHECK-SAME: {reassoc = false} : (!llvm.double, !llvm<"<16 x double>">) -> !llvm.double
 //      CHECK: llvm.return %[[V]] : !llvm.double
 
 func @reduce_i32(%arg0: vector<16xi32>) -> i32 {
