@@ -669,3 +669,68 @@ DWARF:
         - AbbrCode: 1
           Values:
             - Value: 0x1234
+
+## j) Test that yaml2obj emits the correct DWARF64 unit headers.
+
+## DWARFv5 unit header.
+
+# RUN: yaml2obj --docnum=11 %s -o %t11.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t11.o | \
+# RUN:   FileCheck %s --check-prefix=DWARFV5-HEADER
+
+#      DWARFV5-HEADER: Hex dump of section '.debug_info':
+# DWARFV5-HEADER-NEXT: 0x00000000 ffffffff 0c000000 00000000 05000208 ................
+##                                ^-------------------------          unit_length (12-byte)
+##                                                           ^---     version (2-byte)
+##                                                               ^-   unit_type (1-byte)
+##                                                                 ^- address_size (1-byte)
+# DWARFV5-HEADER-NEXT: 0x00000010 34120000 00000000                   4.......
+##                                ^----------------                   debug_abbrev_offset (8-byte)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_info:
+    - Length:
+        TotalLength:   0xffffffff
+        TotalLength64: 0x0c
+      Version:    5
+      UnitType:   DW_UT_type
+      AbbrOffset: 0x1234
+      AddrSize:   8
+      Entries:    []
+
+## DWARFv4 unit header.
+
+# RUN: yaml2obj --docnum=12 %s -o %t12.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t12.o | \
+# RUN:   FileCheck %s --check-prefix=DWARFV4-HEADER
+
+#      DWARFV4-HEADER: Hex dump of section '.debug_info':
+# DWARFV4-HEADER-NEXT: 0x00000000 ffffffff 0c000000 00000000 04003412 ..............4.
+##                                ^-------------------------          unit_length (12-byte)
+##                                                           ^---     version (2-byte)
+##                                                               ^--- debug_abbrev_offset (8-byte)
+# DWARFV4-HEADER-NEXT: 0x00000010 00000000 000008                     .......
+##                                -------------
+##                                             ^-                     address_size (1-byte)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_info:
+    - Length:
+        TotalLength:   0xffffffff
+        TotalLength64: 0x0c
+      Version:    4
+      AbbrOffset: 0x1234
+      AddrSize:   8
+      Entries:    []
