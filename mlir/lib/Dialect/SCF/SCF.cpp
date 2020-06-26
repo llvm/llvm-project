@@ -8,17 +8,8 @@
 
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/Module.h"
-#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/StandardTypes.h"
-#include "mlir/IR/Value.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -740,6 +731,68 @@ ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {
   assert(ivArg.getOwner() && "unlinked block argument");
   auto *containingOp = ivArg.getOwner()->getParentOp();
   return dyn_cast<ParallelOp>(containingOp);
+}
+
+namespace {
+// Collapse loop dimensions that perform a single iteration.
+struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
+  using OpRewritePattern<ParallelOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ParallelOp op,
+                                PatternRewriter &rewriter) const override {
+    BlockAndValueMapping mapping;
+    // Compute new loop bounds that omit all single-iteration loop dimensions.
+    SmallVector<Value, 2> newLowerBounds;
+    SmallVector<Value, 2> newUpperBounds;
+    SmallVector<Value, 2> newSteps;
+    newLowerBounds.reserve(op.lowerBound().size());
+    newUpperBounds.reserve(op.upperBound().size());
+    newSteps.reserve(op.step().size());
+    for (auto dim : llvm::zip(op.lowerBound(), op.upperBound(), op.step(),
+                              op.getInductionVars())) {
+      Value lowerBound, upperBound, step, iv;
+      std::tie(lowerBound, upperBound, step, iv) = dim;
+      // Collect the statically known loop bounds.
+      auto lowerBoundConstant =
+          dyn_cast_or_null<ConstantIndexOp>(lowerBound.getDefiningOp());
+      auto upperBoundConstant =
+          dyn_cast_or_null<ConstantIndexOp>(upperBound.getDefiningOp());
+      auto stepConstant =
+          dyn_cast_or_null<ConstantIndexOp>(step.getDefiningOp());
+      // Replace the loop induction variable by the lower bound if the loop
+      // performs a single iteration. Otherwise, copy the loop bounds.
+      if (lowerBoundConstant && upperBoundConstant && stepConstant &&
+          (upperBoundConstant.getValue() - lowerBoundConstant.getValue()) > 0 &&
+          (upperBoundConstant.getValue() - lowerBoundConstant.getValue()) <=
+              stepConstant.getValue()) {
+        mapping.map(iv, lowerBound);
+      } else {
+        newLowerBounds.push_back(lowerBound);
+        newUpperBounds.push_back(upperBound);
+        newSteps.push_back(step);
+      }
+    }
+    // Exit if all or none of the loop dimensions perform a single iteration.
+    if (newLowerBounds.size() == 0 ||
+        newLowerBounds.size() == op.lowerBound().size())
+      return failure();
+    // Replace the parallel loop by lower-dimensional parallel loop.
+    auto newOp =
+        rewriter.create<ParallelOp>(op.getLoc(), newLowerBounds, newUpperBounds,
+                                    newSteps, op.initVals(), nullptr);
+    // Clone the loop body and remap the block arguments of the collapsed loops
+    // (inlining does not support a cancellable block argument mapping).
+    rewriter.cloneRegionBefore(op.region(), newOp.region(),
+                               newOp.region().begin(), mapping);
+    rewriter.replaceOp(op, newOp.getResults());
+    return success();
+  }
+};
+} // namespace
+
+void ParallelOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                             MLIRContext *context) {
+  results.insert<CollapseSingleIterationLoops>(context);
 }
 
 //===----------------------------------------------------------------------===//
