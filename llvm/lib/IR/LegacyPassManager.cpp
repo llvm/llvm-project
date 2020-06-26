@@ -437,7 +437,8 @@ public:
   /// Return function pass corresponding to PassInfo PI, that is
   /// required by module pass MP. Instantiate analysis pass, by using
   /// its runOnFunction() for function F.
-  Pass* getOnTheFlyPass(Pass *MP, AnalysisID PI, Function &F) override;
+  std::tuple<Pass *, bool> getOnTheFlyPass(Pass *MP, AnalysisID PI,
+                                           Function &F) override;
 
   StringRef getPassName() const override { return "Module Pass Manager"; }
 
@@ -1290,7 +1291,8 @@ void PMDataManager::addLowerLevelRequiredPass(Pass *P, Pass *RequiredPass) {
   llvm_unreachable("Unable to schedule pass");
 }
 
-Pass *PMDataManager::getOnTheFlyPass(Pass *P, AnalysisID PI, Function &F) {
+std::tuple<Pass *, bool> PMDataManager::getOnTheFlyPass(Pass *P, AnalysisID PI,
+                                                        Function &F) {
   llvm_unreachable("Unable to find on the fly pass");
 }
 
@@ -1307,8 +1309,8 @@ Pass *AnalysisResolver::getAnalysisIfAvailable(AnalysisID ID, bool dir) const {
   return PM.findAnalysisPass(ID, dir);
 }
 
-Pass *AnalysisResolver::findImplPass(Pass *P, AnalysisID AnalysisPI,
-                                     Function &F) {
+std::tuple<Pass *, bool>
+AnalysisResolver::findImplPass(Pass *P, AnalysisID AnalysisPI, Function &F) {
   return PM.getOnTheFlyPass(P, AnalysisPI, F);
 }
 
@@ -1665,15 +1667,16 @@ void MPPassManager::addLowerLevelRequiredPass(Pass *P, Pass *RequiredPass) {
 /// Return function pass corresponding to PassInfo PI, that is
 /// required by module pass MP. Instantiate analysis pass, by using
 /// its runOnFunction() for function F.
-Pass* MPPassManager::getOnTheFlyPass(Pass *MP, AnalysisID PI, Function &F){
+std::tuple<Pass *, bool> MPPassManager::getOnTheFlyPass(Pass *MP, AnalysisID PI,
+                                                        Function &F) {
   FunctionPassManagerImpl *FPP = OnTheFlyManagers[MP];
   assert(FPP && "Unable to find on the fly pass");
 
   FPP->releaseMemoryOnTheFly();
-  FPP->run(F);
-  return ((PMTopLevelManager*)FPP)->findAnalysisPass(PI);
+  bool Changed = FPP->run(F);
+  return std::make_tuple(((PMTopLevelManager *)FPP)->findAnalysisPass(PI),
+                         Changed);
 }
-
 
 //===----------------------------------------------------------------------===//
 // PassManagerImpl implementation
