@@ -58,4 +58,9 @@ add_lit_testsuite(check-debuginfo "Running debug info integration tests"
   DEPENDS ${DEBUGINFO_TEST_DEPS}
   )
 
+# Add check-debuginfo-* targets.
+add_lit_testsuites(DEBUGINFO ${CMAKE_CURRENT_SOURCE_DIR}
+  DEPENDS ${DEBUGINFO_TEST_DEPS}
+  )
+
 set_target_properties(check-debuginfo PROPERTIES FOLDER "Debug info tests")

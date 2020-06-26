@@ -35,6 +35,12 @@ public:
   //
   // Further sentinels can be allocated from the small negative integers.
   // DenseMapInfo<unsigned> uses -1u and -2u.
+  static_assert(std::numeric_limits<decltype(Reg)>::max() >= 0xFFFFFFFF,
+                "Reg isn't large enough to hold full range.");
+  static constexpr unsigned NoRegister = 0u;
+  static constexpr unsigned FirstPhysicalReg = 1u;
+  static constexpr unsigned FirstStackSlot = 1u << 30;
+  static constexpr unsigned VirtualRegFlag = 1u << 31;
 
   /// This is the portion of the positive number space that is not a physical
   /// register. StackSlot values do not exist in the MC layer, see
@@ -44,14 +50,15 @@ public:
   /// slots, so if a variable may contains a stack slot, always check
   /// isStackSlot() first.
   static bool isStackSlot(unsigned Reg) {
-    return int(Reg) >= (1 << 30);
+    return !(Reg & VirtualRegFlag) &&
+           uint32_t(Reg & ~VirtualRegFlag) >= FirstStackSlot;
   }
 
   /// Return true if the specified register number is in
   /// the physical register namespace.
   static bool isPhysicalRegister(unsigned Reg) {
     assert(!isStackSlot(Reg) && "Not a register! Check isStackSlot() first.");
-    return int(Reg) > 0;
+    return Reg >= FirstPhysicalReg && !(Reg & VirtualRegFlag);
   }
 
   /// Return true if the specified register number is in the physical register
@@ -68,9 +75,7 @@ public:
     return Reg;
   }
 
-  bool isValid() const {
-    return Reg != 0;
-  }
+  bool isValid() const { return Reg != NoRegister; }
 
   /// Comparisons between register objects
   bool operator==(const MCRegister &Other) const { return Reg == Other.Reg; }

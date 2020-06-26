@@ -255,9 +255,11 @@ public:
 class VectorReductionOpConversion : public ConvertToLLVMPattern {
 public:
   explicit VectorReductionOpConversion(MLIRContext *context,
-                                       LLVMTypeConverter &typeConverter)
+                                       LLVMTypeConverter &typeConverter,
+                                       bool reassociateFP)
       : ConvertToLLVMPattern(vector::ReductionOp::getOperationName(), context,
-                             typeConverter) {}
+                             typeConverter),
+        reassociateFPReductions(reassociateFP) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -302,7 +304,8 @@ public:
                                               op->getLoc(), llvmType,
                                               rewriter.getZeroAttr(eltType));
         rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_v2_fadd>(
-            op, llvmType, acc, operands[0]);
+            op, llvmType, acc, operands[0],
+            rewriter.getBoolAttr(reassociateFPReductions));
       } else if (kind == "mul") {
         // Optional accumulator (or one).
         Value acc = operands.size() > 1
@@ -311,7 +314,8 @@ public:
                               op->getLoc(), llvmType,
                               rewriter.getFloatAttr(eltType, 1.0));
         rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_v2_fmul>(
-            op, llvmType, acc, operands[0]);
+            op, llvmType, acc, operands[0],
+            rewriter.getBoolAttr(reassociateFPReductions));
       } else if (kind == "min")
         rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_fmin>(
             op, llvmType, operands[0]);
@@ -324,6 +328,9 @@ public:
     }
     return failure();
   }
+
+private:
+  const bool reassociateFPReductions;
 };
 
 class VectorShuffleOpConversion : public ConvertToLLVMPattern {
@@ -1139,16 +1146,18 @@ public:
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
 void mlir::populateVectorToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool reassociateFPReductions) {
   MLIRContext *ctx = converter.getDialect()->getContext();
   // clang-format off
   patterns.insert<VectorFMAOpNDRewritePattern,
                   VectorInsertStridedSliceOpDifferentRankRewritePattern,
                   VectorInsertStridedSliceOpSameRankRewritePattern,
                   VectorStridedSliceOpConversion>(ctx);
+  patterns.insert<VectorReductionOpConversion>(
+      ctx, converter, reassociateFPReductions);
   patterns
-      .insert<VectorReductionOpConversion,
-              VectorShuffleOpConversion,
+      .insert<VectorShuffleOpConversion,
               VectorExtractElementOpConversion,
               VectorExtractOpConversion,
               VectorFMAOp1DConversion,
@@ -1190,7 +1199,8 @@ void LowerVectorToLLVMPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext());
   OwningRewritePatternList patterns;
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
-  populateVectorToLLVMConversionPatterns(converter, patterns);
+  populateVectorToLLVMConversionPatterns(converter, patterns,
+                                         reassociateFPReductions);
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
   populateStdToLLVMConversionPatterns(converter, patterns);
 

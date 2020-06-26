@@ -3952,6 +3952,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_log_clamp:
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
+    case Intrinsic::amdgcn_sqrt:
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_rsq_clamp:

@@ -1220,7 +1220,7 @@ are listed below.
 
    * ``-fno-math-errno``
 
-   * ``-ffinite-math``
+   * ``-ffinite-math-only``
 
    * ``-fassociative-math``
 
@@ -1306,14 +1306,14 @@ are listed below.
 **-f[no-]honor-infinities**
 
    If both ``-fno-honor-infinities`` and ``-fno-honor-nans`` are used,
-   has the same effect as specifying ``-ffinite-math``.
+   has the same effect as specifying ``-ffinite-math-only``.
 
 .. _opt_fhonor-nans:
 
 **-f[no-]honor-nans**
 
    If both ``-fno-honor-infinities`` and ``-fno-honor-nans`` are used,
-   has the same effect as specifying ``-ffinite-math``.
+   has the same effect as specifying ``-ffinite-math-only``.
 
 .. _opt_fsigned-zeros:
 
@@ -1351,7 +1351,7 @@ are listed below.
 
    Defaults to ``-fno-unsafe-math-optimizations``.
 
-.. _opt_ffinite-math:
+.. _opt_ffinite-math-only:
 
 **-f[no-]finite-math**
 
