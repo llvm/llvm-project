@@ -1,0 +1,26 @@
+//===--- FPOptions.def - Floating Point Options database --------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// This file defines the Floating Point language options. Users of this file
+//  must define the FPOPT macro to make use of this information.
+#ifndef OPTION
+#  error Define the OPTION macro to handle floating point language options
+#endif
+
+// OPTION(name, type, width, previousName)
+OPTION(FPContractMode, LangOptions::FPModeKind, 2, First)
+OPTION(RoundingMode, RoundingMode, 3, FPContractMode)
+OPTION(FPExceptionMode, LangOptions::FPExceptionModeKind, 2, RoundingMode)
+OPTION(AllowFEnvAccess, bool, 1, FPExceptionMode)
+OPTION(AllowFPReassociate, bool, 1, AllowFEnvAccess)
+OPTION(NoHonorNaNs, bool, 1, AllowFPReassociate)
+OPTION(NoHonorInfs, bool, 1, NoHonorNaNs)
+OPTION(NoSignedZero, bool, 1, NoHonorInfs)
+OPTION(AllowReciprocal, bool, 1, NoSignedZero)
+OPTION(AllowApproxFunc, bool, 1, AllowReciprocal)
+#undef OPTION
