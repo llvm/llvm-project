@@ -5,15 +5,13 @@
 define float @test_vget_lane_f16_1(<4 x half> %a) nounwind {
 ; CHECKHARD-LABEL: test_vget_lane_f16_1:
 ; CHECKHARD:       @ %bb.0: @ %entry
-; CHECKHARD-NEXT:    vmovx.f16 s0, s0
-; CHECKHARD-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECKHARD-NEXT:    vcvtt.f32.f16 s0, s0
 ; CHECKHARD-NEXT:    bx lr
 ;
 ; CHECKSOFT-LABEL: test_vget_lane_f16_1:
 ; CHECKSOFT:       @ %bb.0: @ %entry
 ; CHECKSOFT-NEXT:    vmov d0, r0, r1
-; CHECKSOFT-NEXT:    vmovx.f16 s0, s0
-; CHECKSOFT-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECKSOFT-NEXT:    vcvtt.f32.f16 s0, s0
 ; CHECKSOFT-NEXT:    vmov r0, s0
 ; CHECKSOFT-NEXT:    bx lr
 entry:
@@ -61,15 +59,13 @@ entry:
 define float @test_vget_laneq_f16_7(<8 x half> %a) nounwind {
 ; CHECKHARD-LABEL: test_vget_laneq_f16_7:
 ; CHECKHARD:       @ %bb.0: @ %entry
-; CHECKHARD-NEXT:    vmovx.f16 s0, s3
-; CHECKHARD-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECKHARD-NEXT:    vcvtt.f32.f16 s0, s3
 ; CHECKHARD-NEXT:    bx lr
 ;
 ; CHECKSOFT-LABEL: test_vget_laneq_f16_7:
 ; CHECKSOFT:       @ %bb.0: @ %entry
 ; CHECKSOFT-NEXT:    vmov d1, r2, r3
-; CHECKSOFT-NEXT:    vmovx.f16 s0, s3
-; CHECKSOFT-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECKSOFT-NEXT:    vcvtt.f32.f16 s0, s3
 ; CHECKSOFT-NEXT:    vmov r0, s0
 ; CHECKSOFT-NEXT:    bx lr
 entry:
