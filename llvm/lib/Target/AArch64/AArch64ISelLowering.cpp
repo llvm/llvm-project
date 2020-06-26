@@ -12078,10 +12078,9 @@ static SDValue performLDNT1Combine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   EVT PtrTy = N->getOperand(3).getValueType();
 
-  if (VT == MVT::nxv8bf16)
-    assert(
-        static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16() &&
-        "Unsupported type (BF16)");
+  if (VT == MVT::nxv8bf16 &&
+      !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
+    return SDValue();
 
   EVT LoadVT = VT;
   if (VT.isFloatingPoint())
@@ -12131,10 +12130,9 @@ static SDValue performST1Combine(SDNode *N, SelectionDAG &DAG) {
   EVT HwSrcVt = getSVEContainerType(DataVT);
   SDValue InputVT = DAG.getValueType(DataVT);
 
-  if (DataVT == MVT::nxv8bf16)
-    assert(
-        static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16() &&
-        "Unsupported type (BF16)");
+  if (DataVT == MVT::nxv8bf16 &&
+      !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
+    return SDValue();
 
   if (DataVT.isFloatingPoint())
     InputVT = DAG.getValueType(HwSrcVt);
@@ -12162,10 +12160,9 @@ static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
   EVT DataVT = Data.getValueType();
   EVT PtrTy = N->getOperand(4).getValueType();
 
-  if (DataVT == MVT::nxv8bf16)
-    assert(
-        static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16() &&
-        "Unsupported type (BF16)");
+  if (DataVT == MVT::nxv8bf16 &&
+      !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
+    return SDValue();
 
   if (DataVT.isFloatingPoint())
     Data = DAG.getNode(ISD::BITCAST, DL, DataVT.changeTypeToInteger(), Data);
