@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: opt < %s -basicaa -newgvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -newgvn -S | FileCheck %s
 
 declare void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> , <2 x i32*> , i32 , <2 x i1> )
 declare <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*>, i32, <2 x i1>, <2 x i32>)
