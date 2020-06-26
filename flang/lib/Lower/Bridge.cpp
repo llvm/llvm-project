@@ -1106,9 +1106,10 @@ private:
   }
   void genFIR(const Fortran::parser::InquireStmt &stmt) {
     auto iostat = genInquireStatement(*this, stmt);
-    genIoConditionBranches(
-        getEval(), std::get<std::list<Fortran::parser::InquireSpec>>(stmt.u),
-        iostat);
+    if (const auto *specs =
+            std::get_if<std::list<Fortran::parser::InquireSpec>>(&stmt.u)) {
+      genIoConditionBranches(getEval(), *specs, iostat);
+    }
   }
   void genFIR(const Fortran::parser::OpenStmt &stmt) {
     auto iostat = genOpenStatement(*this, stmt);
