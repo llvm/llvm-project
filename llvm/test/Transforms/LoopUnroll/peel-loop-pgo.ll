@@ -1,8 +1,8 @@
 ; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll 2>&1 | FileCheck %s
-; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<profile-summary>,function(require<opt-remark-emit>,unroll)' 2>&1 | FileCheck %s
+; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll)' 2>&1 | FileCheck %s
 ; Confirm that peeling is disabled if the number of counts required to reach
 ; the hot percentile is above the threshold.
-; RUN: opt < %s -S -profile-summary-huge-working-set-size-threshold=9 -debug-only=loop-unroll -passes='require<profile-summary>,function(require<opt-remark-emit>,unroll)' 2>&1 | FileCheck %s --check-prefix=NOPEEL
+; RUN: opt < %s -S -profile-summary-huge-working-set-size-threshold=9 -debug-only=loop-unroll -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll)' 2>&1 | FileCheck %s --check-prefix=NOPEEL
 ; REQUIRES: asserts
 
 ; Make sure we use the profile information correctly to peel-off 3 iterations
@@ -14,7 +14,7 @@
 ; CHECK-NOT: PEELING
 
 ; Confirm that no peeling occurs when we are performing full unrolling.
-; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<opt-remark-emit>,loop(unroll-full)' 2>&1 | FileCheck %s --check-prefix=NOPEEL
+; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<opt-remark-emit>,loop(loop-unroll-full)' 2>&1 | FileCheck %s --check-prefix=NOPEEL
 ; NOPEEL-NOT: PEELING
 
 ; CHECK-LABEL: @basic

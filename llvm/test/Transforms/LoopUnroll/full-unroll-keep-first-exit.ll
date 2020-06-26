@@ -1,5 +1,5 @@
 ; RUN: opt -S -loop-unroll < %s | FileCheck %s
-; RUN: opt -S -passes='require<opt-remark-emit>,loop(unroll-full)' < %s | FileCheck %s
+; RUN: opt -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' < %s | FileCheck %s
 
 ; Unroll twice, with first loop exit kept
 ; CHECK-LABEL: @s32_max1
