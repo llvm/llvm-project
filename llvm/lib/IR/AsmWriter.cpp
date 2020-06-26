@@ -2510,10 +2510,10 @@ public:
   void printTypeIdInfo(const FunctionSummary::TypeIdInfo &TIDInfo);
   void printVFuncId(const FunctionSummary::VFuncId VFId);
   void
-  printNonConstVCalls(const std::vector<FunctionSummary::VFuncId> VCallList,
+  printNonConstVCalls(const std::vector<FunctionSummary::VFuncId> &VCallList,
                       const char *Tag);
   void
-  printConstVCalls(const std::vector<FunctionSummary::ConstVCall> VCallList,
+  printConstVCalls(const std::vector<FunctionSummary::ConstVCall> &VCallList,
                    const char *Tag);
 
 private:
@@ -3184,7 +3184,7 @@ void AssemblyWriter::printVFuncId(const FunctionSummary::VFuncId VFId) {
 }
 
 void AssemblyWriter::printNonConstVCalls(
-    const std::vector<FunctionSummary::VFuncId> VCallList, const char *Tag) {
+    const std::vector<FunctionSummary::VFuncId> &VCallList, const char *Tag) {
   Out << Tag << ": (";
   FieldSeparator FS;
   for (auto &VFuncId : VCallList) {
@@ -3195,7 +3195,8 @@ void AssemblyWriter::printNonConstVCalls(
 }
 
 void AssemblyWriter::printConstVCalls(
-    const std::vector<FunctionSummary::ConstVCall> VCallList, const char *Tag) {
+    const std::vector<FunctionSummary::ConstVCall> &VCallList,
+    const char *Tag) {
   Out << Tag << ": (";
   FieldSeparator FS;
   for (auto &ConstVCall : VCallList) {
