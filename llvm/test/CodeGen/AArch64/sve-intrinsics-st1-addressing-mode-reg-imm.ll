@@ -126,6 +126,17 @@ define void @st1h_f16_inbound(<vscale x 8 x half> %data, <vscale x 8 x i1> %pg, 
   ret void
 }
 
+define void @st1h_bf16_inbound(<vscale x 8 x bfloat> %data, <vscale x 8 x i1> %pg, bfloat* %a) #0 {
+; CHECK-LABEL: st1h_bf16_inbound:
+; CHECK: st1h { z0.h }, p0, [x0, #-5, mul vl]
+; CHECK-NEXT: ret
+  %base_scalable = bitcast bfloat* %a to <vscale x 8 x bfloat>*
+  %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %base_scalable, i64 -5
+  %base_scalar = bitcast <vscale x 8 x bfloat>* %base to bfloat*
+  call void @llvm.aarch64.sve.st1.nxv8bf16(<vscale x 8 x bfloat> %data, <vscale x 8 x i1> %pg, bfloat* %base_scalar)
+  ret void
+}
+
 define void @st1h_s_inbound(<vscale x 4 x i32> %data, <vscale x 4 x i1> %pg, i16* %a) {
 ; CHECK-LABEL: st1h_s_inbound:
 ; CHECK: st1h { z0.s }, p0, [x0, #2, mul vl]
@@ -219,6 +230,7 @@ declare void @llvm.aarch64.sve.st1.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1
 declare void @llvm.aarch64.sve.st1.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i1>, i8*)
 declare void @llvm.aarch64.sve.st1.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, i16*)
 declare void @llvm.aarch64.sve.st1.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, half*)
+declare void @llvm.aarch64.sve.st1.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x i1>, bfloat*)
 
 declare void @llvm.aarch64.sve.st1.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i1>, i8*)
 declare void @llvm.aarch64.sve.st1.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i1>, i16*)
@@ -230,3 +242,6 @@ declare void @llvm.aarch64.sve.st1.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i1>
 declare void @llvm.aarch64.sve.st1.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i1>, i32*)
 declare void @llvm.aarch64.sve.st1.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, i64*)
 declare void @llvm.aarch64.sve.st1.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, double*)
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+bf16" }
