@@ -115,9 +115,10 @@ public:
                            unsigned AddressSpace,
                            TTI::TargetCostKind CostKind,
                            const Instruction *I = nullptr);
-  unsigned getMaskedMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
-                                 unsigned AddressSpace,
-                           TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
+  unsigned
+  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                        unsigned AddressSpace,
+                        TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
   unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
             Type *SubTp);
   unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
