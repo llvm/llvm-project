@@ -84,6 +84,31 @@ void tools::handleTargetFeaturesGroup(const ArgList &Args,
   }
 }
 
+std::vector<StringRef>
+tools::unifyTargetFeatures(const std::vector<StringRef> &Features) {
+  std::vector<StringRef> UnifiedFeatures;
+  // Find the last of each feature.
+  llvm::StringMap<unsigned> LastOpt;
+  for (unsigned I = 0, N = Features.size(); I < N; ++I) {
+    StringRef Name = Features[I];
+    assert(Name[0] == '-' || Name[0] == '+');
+    LastOpt[Name.drop_front(1)] = I;
+  }
+
+  for (unsigned I = 0, N = Features.size(); I < N; ++I) {
+    // If this feature was overridden, ignore it.
+    StringRef Name = Features[I];
+    llvm::StringMap<unsigned>::iterator LastI = LastOpt.find(Name.drop_front(1));
+    assert(LastI != LastOpt.end());
+    unsigned Last = LastI->second;
+    if (Last != I)
+      continue;
+
+    UnifiedFeatures.push_back(Name);
+  }
+  return UnifiedFeatures;
+}
+
 void tools::addDirectoryList(const ArgList &Args, ArgStringList &CmdArgs,
                              const char *ArgName, const char *EnvVar) {
   const char *DirList = ::getenv(EnvVar);
