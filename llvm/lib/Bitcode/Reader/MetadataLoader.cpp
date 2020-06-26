@@ -1132,7 +1132,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_OLD_FN_NODE: {
-    // FIXME: Remove in 4.0.
+    // Deprecated, but still needed to read old bitcode files.
     // This is a LocalAsMetadata record, the only type of function-local
     // metadata.
     if (Record.size() % 2 == 1)
@@ -1162,7 +1162,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_OLD_NODE: {
-    // FIXME: Remove in 4.0.
+    // Deprecated, but still needed to read old bitcode files.
     if (Record.size() % 2 == 1)
       return error("Invalid record");
 
