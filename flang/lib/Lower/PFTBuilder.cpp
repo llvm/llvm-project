@@ -346,7 +346,9 @@ private:
                   std::is_same_v<A, parser::WriteStmt>) {
       processIfLabel(stmt.controls);
     } else if constexpr (std::is_same_v<A, parser::InquireStmt>) {
-      processIfLabel(std::get<std::list<parser::InquireSpec>>(stmt.u));
+      if (const auto *specs =
+              std::get_if<std::list<parser::InquireSpec>>(&stmt.u))
+        processIfLabel(*specs);
     } else if constexpr (common::HasMember<A, OtherIOStmts>) {
       processIfLabel(stmt.v);
     } else {
