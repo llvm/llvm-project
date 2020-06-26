@@ -22,7 +22,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -33,6 +32,7 @@
 
 namespace llvm {
 
+class AAResults;
 class LiveIntervals;
 class MachineBlockFrequencyInfo;
 class MachineInstr;
@@ -94,7 +94,7 @@ private:
   SmallPtrSet<const VNInfo *, 4> Rematted;
 
   /// scanRemattable - Identify the Parent values that may rematerialize.
-  void scanRemattable(AliasAnalysis *aa);
+  void scanRemattable(AAResults *aa);
 
   /// allUsesAvailableAt - Return true if all registers used by OrigMI at
   /// OrigIdx are also available with the same value at UseIdx.
@@ -110,7 +110,7 @@ private:
 
   /// Helper for eliminateDeadDefs.
   void eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
-                        AliasAnalysis *AA);
+                        AAResults *AA);
 
   /// MachineRegisterInfo callback to notify when new virtual
   /// registers are created.
@@ -190,12 +190,12 @@ public:
   /// anyRematerializable - Return true if any parent values may be
   /// rematerializable.
   /// This function must be called before any rematerialization is attempted.
-  bool anyRematerializable(AliasAnalysis *);
+  bool anyRematerializable(AAResults *);
 
   /// checkRematerializable - Manually add VNI to the list of rematerializable
   /// values if DefMI may be rematerializable.
   bool checkRematerializable(VNInfo *VNI, const MachineInstr *DefMI,
-                             AliasAnalysis *);
+                             AAResults *);
 
   /// Remat - Information needed to rematerialize at a specific location.
   struct Remat {
@@ -244,7 +244,7 @@ public:
   /// as currently those new intervals are not guaranteed to spill.
   void eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
                          ArrayRef<unsigned> RegsBeingSpilled = None,
-                         AliasAnalysis *AA = nullptr);
+                         AAResults *AA = nullptr);
 
   /// calculateRegClassAndHint - Recompute register class and hint for each new
   /// register.
