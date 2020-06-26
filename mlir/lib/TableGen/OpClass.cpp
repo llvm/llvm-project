@@ -222,7 +222,7 @@ void tblgen::OpClass::addTrait(Twine trait) {
 }
 
 void tblgen::OpClass::writeDeclTo(raw_ostream &os) const {
-  os << "class " << className << " : public Op<" << className;
+  os << "class " << className << " : public ::mlir::Op<" << className;
   for (const auto &trait : traitsVec)
     os << ", " << trait;
   os << "> {\npublic:\n";

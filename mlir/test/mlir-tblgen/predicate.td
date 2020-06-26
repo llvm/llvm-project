@@ -17,7 +17,7 @@ def OpA : NS_Op<"op_for_CPred_containing_multiple_same_placeholder", []> {
 
 // CHECK-LABEL: OpA::verify
 // CHECK: auto valueGroup0 = getODSOperands(0);
-// CHECK: for (Value v : valueGroup0) {
+// CHECK: for (::mlir::Value v : valueGroup0) {
 // CHECK:   if (!((v.getType().isInteger(32) || v.getType().isF32())))
 
 def OpB : NS_Op<"op_for_And_PredOpTrait", [
@@ -33,7 +33,7 @@ def OpF : NS_Op<"op_for_int_min_val", []> {
 }
 
 // CHECK-LABEL: OpFAdaptor::verify
-// CHECK:       (tblgen_attr.cast<IntegerAttr>().getInt() >= 10)
+// CHECK:       (tblgen_attr.cast<::mlir::IntegerAttr>().getInt() >= 10)
 // CHECK-SAME:  "attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 10"
 
 def OpFX : NS_Op<"op_for_int_max_val", []> {
@@ -41,7 +41,7 @@ def OpFX : NS_Op<"op_for_int_max_val", []> {
 }
 
 // CHECK-LABEL: OpFXAdaptor::verify
-// CHECK:       (tblgen_attr.cast<IntegerAttr>().getInt() <= 10)
+// CHECK:       (tblgen_attr.cast<::mlir::IntegerAttr>().getInt() <= 10)
 // CHECK-SAME:  "attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute whose maximum value is 10"
 
 def OpG : NS_Op<"op_for_arr_min_count", []> {
@@ -49,7 +49,7 @@ def OpG : NS_Op<"op_for_arr_min_count", []> {
 }
 
 // CHECK-LABEL: OpGAdaptor::verify
-// CHECK:       (tblgen_attr.cast<ArrayAttr>().size() >= 8)
+// CHECK:       (tblgen_attr.cast<::mlir::ArrayAttr>().size() >= 8)
 // CHECK-SAME:  "attribute 'attr' failed to satisfy constraint: array attribute with at least 8 elements"
 
 def OpH : NS_Op<"op_for_arr_value_at_index", []> {
@@ -57,7 +57,7 @@ def OpH : NS_Op<"op_for_arr_value_at_index", []> {
 }
 
 // CHECK-LABEL: OpHAdaptor::verify
-// CHECK: (((tblgen_attr.cast<ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<ArrayAttr>()[0].cast<IntegerAttr>().getInt() == 8)))))
+// CHECK: (((tblgen_attr.cast<::mlir::ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() == 8)))))
 // CHECK-SAME:  "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be 8"
 
 def OpI: NS_Op<"op_for_arr_min_value_at_index", []> {
@@ -65,7 +65,7 @@ def OpI: NS_Op<"op_for_arr_min_value_at_index", []> {
 }
 
 // CHECK-LABEL: OpIAdaptor::verify
-// CHECK: (((tblgen_attr.cast<ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<ArrayAttr>()[0].cast<IntegerAttr>().getInt() >= 8)))))
+// CHECK: (((tblgen_attr.cast<::mlir::ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() >= 8)))))
 // CHECK-SAME: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 8"
 
 def OpJ: NS_Op<"op_for_TCopVTEtAreSameAt", [
@@ -81,8 +81,8 @@ def OpJ: NS_Op<"op_for_TCopVTEtAreSameAt", [
 }
 
 // CHECK-LABEL: OpJAdaptor::verify
-// CHECK:      llvm::is_splat(llvm::map_range(
-// CHECK-SAME:   llvm::ArrayRef<unsigned>({0, 2, 3}),
+// CHECK:      ::llvm::is_splat(::llvm::map_range(
+// CHECK-SAME:   ::mlir::ArrayRef<unsigned>({0, 2, 3}),
 // CHECK-SAME:   [this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); }))
 // CHECK: "failed to verify that operands indexed at 0, 2, 3 should all have the same type"
 
@@ -92,5 +92,5 @@ def OpK : NS_Op<"op_for_AnyTensorOf", []> {
 
 // CHECK-LABEL: OpK::verify
 // CHECK: auto valueGroup0 = getODSOperands(0);
-// CHECK: for (Value v : valueGroup0) {
-// CHECK: if (!(((v.getType().isa<TensorType>())) && (((v.getType().cast<ShapedType>().getElementType().isF32())) || ((v.getType().cast<ShapedType>().getElementType().isSignlessInteger(32))))))
+// CHECK: for (::mlir::Value v : valueGroup0) {
+// CHECK: if (!(((v.getType().isa<::mlir::TensorType>())) && (((v.getType().cast<::mlir::ShapedType>().getElementType().isF32())) || ((v.getType().cast<::mlir::ShapedType>().getElementType().isSignlessInteger(32))))))
