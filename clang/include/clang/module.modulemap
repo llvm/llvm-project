@@ -54,7 +54,6 @@ module Clang_Basic {
   textual header "Basic/CodeGenOptions.def"
   textual header "Basic/DiagnosticOptions.def"
   textual header "Basic/Features.def"
-  textual header "Basic/FPOptions.def"
   textual header "Basic/MSP430Target.def"
   textual header "Basic/LangOptions.def"
   textual header "Basic/OpenCLExtensions.def"
