@@ -49,7 +49,7 @@ define <vscale x 8 x half> @trn1_f16(<vscale x 8 x half> %a, <vscale x 8 x half>
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 8 x bfloat> @trn1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind {
+define <vscale x 8 x bfloat> @trn1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind #0 {
 ; CHECK-LABEL: trn1_bf16:
 ; CHECK-NEXT:  trn1 z0.q, z0.q, z1.q
 ; CHECK-NEXT:  ret
@@ -125,7 +125,7 @@ define <vscale x 8 x half> @trn2_f16(<vscale x 8 x half> %a, <vscale x 8 x half>
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 8 x bfloat> @trn2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind {
+define <vscale x 8 x bfloat> @trn2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind #0 {
 ; CHECK-LABEL: trn2_bf16:
 ; CHECK-NEXT:  trn2 z0.q, z0.q, z1.q
 ; CHECK-NEXT:  ret
@@ -201,7 +201,7 @@ define <vscale x 8 x half> @uzp1_f16(<vscale x 8 x half> %a, <vscale x 8 x half>
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 8 x bfloat> @uzp1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind {
+define <vscale x 8 x bfloat> @uzp1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind #0 {
 ; CHECK-LABEL: uzp1_bf16:
 ; CHECK-NEXT:  uzp1 z0.q, z0.q, z1.q
 ; CHECK-NEXT:  ret
@@ -277,7 +277,7 @@ define <vscale x 8 x half> @uzp2_f16(<vscale x 8 x half> %a, <vscale x 8 x half>
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 8 x bfloat> @uzp2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind {
+define <vscale x 8 x bfloat> @uzp2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind #0 {
 ; CHECK-LABEL: uzp2_bf16:
 ; CHECK-NEXT:  uzp2 z0.q, z0.q, z1.q
 ; CHECK-NEXT:  ret
@@ -353,7 +353,7 @@ define <vscale x 8 x half> @zip1_f16(<vscale x 8 x half> %a, <vscale x 8 x half>
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 8 x bfloat> @zip1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind {
+define <vscale x 8 x bfloat> @zip1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind #0 {
 ; CHECK-LABEL: zip1_bf16:
 ; CHECK-NEXT:  zip1 z0.q, z0.q, z1.q
 ; CHECK-NEXT:  ret
@@ -429,7 +429,7 @@ define <vscale x 8 x half> @zip2_f16(<vscale x 8 x half> %a, <vscale x 8 x half>
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 8 x bfloat> @zip2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind {
+define <vscale x 8 x bfloat> @zip2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) nounwind #0 {
 ; CHECK-LABEL: zip2_bf16:
 ; CHECK-NEXT:  zip2 z0.q, z0.q, z1.q
 ; CHECK-NEXT:  ret
@@ -510,3 +510,6 @@ declare <vscale x 8 x bfloat> @llvm.aarch64.sve.zip2q.nxv8bf16(<vscale x 8 x bfl
 declare <vscale x 8 x half> @llvm.aarch64.sve.zip2q.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.zip2q.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.zip2q.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+fp64mm,+bf16" }
