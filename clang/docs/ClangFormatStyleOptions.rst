@@ -2694,6 +2694,23 @@ the configuration (without a prefix: ``Auto``).
     Use tabs whenever we need to fill whitespace that spans at least from
     one tab stop to the next one.
 
+**WhitespaceSensitiveMacros** (``std::vector<std::string>``)
+  A vector of macros which are whitespace-sensitive and should not be touched.
+
+  These are expected to be macros of the form:
+
+  .. code-block:: c++
+
+    STRINGIZE(...)
+
+  In the .clang-format configuration file, this can be configured like:
+
+  .. code-block:: yaml
+
+    WhitespaceSensitiveMacros: ['STRINGIZE', 'PP_STRINGIZE']
+
+  For example: BOOST_PP_STRINGIZE.
+
 
 
 .. END_FORMAT_STYLE_OPTIONS

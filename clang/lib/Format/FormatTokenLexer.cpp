@@ -43,6 +43,11 @@ FormatTokenLexer::FormatTokenLexer(const SourceManager &SourceMgr, FileID ID,
     Macros.insert({&IdentTable.get(TypenameMacro), TT_TypenameMacro});
   for (const std::string &NamespaceMacro : Style.NamespaceMacros)
     Macros.insert({&IdentTable.get(NamespaceMacro), TT_NamespaceMacro});
+  for (const std::string &WhitespaceSensitiveMacro :
+       Style.WhitespaceSensitiveMacros) {
+    Macros.insert(
+        {&IdentTable.get(WhitespaceSensitiveMacro), TT_UntouchableMacroFunc});
+  }
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
