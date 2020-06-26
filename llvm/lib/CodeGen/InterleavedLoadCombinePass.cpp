@@ -1207,7 +1207,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   for (unsigned i = 0; i < Factor; i++)
     Indices.push_back(i);
   InterleavedCost = TTI.getInterleavedMemoryOpCost(
-      Instruction::Load, ILTy, Factor, Indices, InsertionPoint->getAlignment(),
+      Instruction::Load, ILTy, Factor, Indices, InsertionPoint->getAlign(),
       InsertionPoint->getPointerAddressSpace());
 
   if (InterleavedCost >= InstructionCost) {
