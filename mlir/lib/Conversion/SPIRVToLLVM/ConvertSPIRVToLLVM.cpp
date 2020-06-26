@@ -72,7 +72,8 @@ public:
     auto dstType = this->typeConverter.convertType(operation.getType());
     if (!dstType)
       return failure();
-    rewriter.template replaceOpWithNewOp<LLVMOp>(operation, dstType, operands);
+    rewriter.template replaceOpWithNewOp<LLVMOp>(operation, dstType, operands,
+                                                 operation.getAttrs());
     return success();
   }
 };
@@ -340,6 +341,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
 
       // Bitwise ops
+      DirectConversionPattern<spirv::BitCountOp, LLVM::CtPopOp>,
+      DirectConversionPattern<spirv::BitReverseOp, LLVM::BitReverseOp>,
       DirectConversionPattern<spirv::BitwiseAndOp, LLVM::AndOp>,
       DirectConversionPattern<spirv::BitwiseOrOp, LLVM::OrOp>,
       DirectConversionPattern<spirv::BitwiseXorOp, LLVM::XOrOp>,

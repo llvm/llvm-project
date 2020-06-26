@@ -222,17 +222,17 @@ struct OMPInformationCache : public InformationCache {
     ICV.InitKind = Init;                                                       \
     ICV.EnvVarName = _EnvVarName;                                              \
     switch (ICV.InitKind) {                                                    \
-    case IMPLEMENTATION_DEFINED:                                               \
+    case ICV_IMPLEMENTATION_DEFINED:                                           \
       ICV.InitValue = nullptr;                                                 \
       break;                                                                   \
-    case ZERO:                                                                 \
+    case ICV_ZERO:                                                             \
       ICV.InitValue =                                                          \
           ConstantInt::get(Type::getInt32Ty(Int32->getContext()), 0);          \
       break;                                                                   \
-    case FALSE:                                                                \
+    case ICV_FALSE:                                                            \
       ICV.InitValue = ConstantInt::getFalse(Int1->getContext());               \
       break;                                                                   \
-    case LAST:                                                                 \
+    case ICV_LAST:                                                             \
       break;                                                                   \
     }                                                                          \
   }

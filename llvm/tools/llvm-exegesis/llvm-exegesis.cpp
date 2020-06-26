@@ -83,6 +83,21 @@ static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
                clEnumValN(exegesis::InstructionBenchmark::Unknown, "analysis",
                           "Analysis")));
 
+static cl::opt<exegesis::InstructionBenchmark::ResultAggregationModeE>
+    ResultAggMode(
+        "result-aggregation-mode",
+        cl::desc("How to aggregate multi-values result"), cl::cat(Options),
+        cl::values(clEnumValN(exegesis::InstructionBenchmark::Min, "min",
+                              "Keep min reading"),
+                   clEnumValN(exegesis::InstructionBenchmark::Max, "max",
+                              "Keep max reading"),
+                   clEnumValN(exegesis::InstructionBenchmark::Mean, "mean",
+                              "Compute mean of all readings"),
+                   clEnumValN(exegesis::InstructionBenchmark::MinVariance,
+                              "min-variance",
+                              "Keep readings set with min-variance")),
+        cl::init(exegesis::InstructionBenchmark::Min));
+
 static cl::opt<exegesis::InstructionBenchmark::RepetitionModeE> RepetitionMode(
     "repetition-mode", cl::desc("how to repeat the instruction snippet"),
     cl::cat(BenchmarkOptions),
@@ -281,8 +296,9 @@ void benchmarkMain() {
 
   const LLVMState State(CpuName);
 
-  const std::unique_ptr<BenchmarkRunner> Runner = ExitOnErr(
-      State.getExegesisTarget().createBenchmarkRunner(BenchmarkMode, State));
+  const std::unique_ptr<BenchmarkRunner> Runner =
+      ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
+          BenchmarkMode, State, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }
