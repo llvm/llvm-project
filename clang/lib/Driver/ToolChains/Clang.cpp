@@ -721,6 +721,38 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
   }
 }
 
+static void appendUserToPath(SmallVectorImpl<char> &Result) {
+#ifdef LLVM_ON_UNIX
+  const char *Username = getenv("LOGNAME");
+#else
+  const char *Username = getenv("USERNAME");
+#endif
+  if (Username) {
+    // Validate that LoginName can be used in a path, and get its length.
+    size_t Len = 0;
+    for (const char *P = Username; *P; ++P, ++Len) {
+      if (!clang::isAlphanumeric(*P) && *P != '_') {
+        Username = nullptr;
+        break;
+      }
+    }
+
+    if (Username && Len > 0) {
+      Result.append(Username, Username + Len);
+      return;
+    }
+  }
+
+// Fallback to user id.
+#ifdef LLVM_ON_UNIX
+  std::string UID = llvm::utostr(getuid());
+#else
+  // FIXME: Windows seems to have an 'SID' that might work.
+  std::string UID = "9999";
+#endif
+  Result.append(UID.begin(), UID.end());
+}
+
 static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                                    const Driver &D, const InputInfo &Output,
                                    const ArgList &Args,
@@ -3169,13 +3201,11 @@ static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
     CmdArgs.push_back("-fno-math-builtin");
 }
 
-bool Driver::getDefaultModuleCachePath(SmallVectorImpl<char> &Result) {
-  if (llvm::sys::path::cache_directory(Result)) {
-    llvm::sys::path::append(Result, "clang");
-    llvm::sys::path::append(Result, "ModuleCache");
-    return true;
-  }
-  return false;
+void Driver::getDefaultModuleCachePath(SmallVectorImpl<char> &Result) {
+  llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/false, Result);
+  llvm::sys::path::append(Result, "org.llvm.clang.");
+  appendUserToPath(Result);
+  llvm::sys::path::append(Result, "ModuleCache");
 }
 
 static void RenderModulesOptions(Compilation &C, const Driver &D,
@@ -3232,7 +3262,6 @@ static void RenderModulesOptions(Compilation &C, const Driver &D,
     if (Arg *A = Args.getLastArg(options::OPT_fmodules_cache_path))
       Path = A->getValue();
 
-    bool HasPath = true;
     if (C.isForDiagnostics()) {
       // When generating crash reports, we want to emit the modules along with
       // the reproduction sources, so we ignore any provided module path.
@@ -3241,16 +3270,12 @@ static void RenderModulesOptions(Compilation &C, const Driver &D,
       llvm::sys::path::append(Path, "modules");
     } else if (Path.empty()) {
       // No module path was provided: use the default.
-      HasPath = Driver::getDefaultModuleCachePath(Path);
+      Driver::getDefaultModuleCachePath(Path);
     }
 
-    // `HasPath` will only be false if getDefaultModuleCachePath() fails.
-    // That being said, that failure is unlikely and not caching is harmless.
-    if (HasPath) {
-      const char Arg[] = "-fmodules-cache-path=";
-      Path.insert(Path.begin(), Arg, Arg + strlen(Arg));
-      CmdArgs.push_back(Args.MakeArgString(Path));
-    }
+    const char Arg[] = "-fmodules-cache-path=";
+    Path.insert(Path.begin(), Arg, Arg + strlen(Arg));
+    CmdArgs.push_back(Args.MakeArgString(Path));
   }
 
   if (HaveModules) {
