@@ -952,7 +952,7 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(
 
 unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                             const Value *Ptr, bool VariableMask,
-                                            unsigned Alignment,
+                                            Align Alignment,
                                             TTI::TargetCostKind CostKind,
                                             const Instruction *I) {
   using namespace PatternMatch;
