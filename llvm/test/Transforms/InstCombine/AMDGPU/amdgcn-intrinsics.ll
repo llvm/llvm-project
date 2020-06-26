@@ -74,6 +74,119 @@ define float @test_constant_fold_rcp_f32_43_strictfp() nounwind strictfp {
 }
 
 ; --------------------------------------------------------------------
+; llvm.amdgcn.sqrt
+; --------------------------------------------------------------------
+
+declare half @llvm.amdgcn.sqrt.f16(half) nounwind readnone
+declare float @llvm.amdgcn.sqrt.f32(float) nounwind readnone
+declare double @llvm.amdgcn.sqrt.f64(double) nounwind readnone
+
+define half @test_constant_fold_sqrt_f16_undef() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f16_undef(
+; CHECK-NEXT:    ret half 0xH7E00
+;
+  %val = call half @llvm.amdgcn.sqrt.f16(half undef) nounwind readnone
+  ret half %val
+}
+
+define float @test_constant_fold_sqrt_f32_undef() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f32_undef(
+; CHECK-NEXT:    ret float 0x7FF8000000000000
+;
+  %val = call float @llvm.amdgcn.sqrt.f32(float undef) nounwind readnone
+  ret float %val
+}
+
+define double @test_constant_fold_sqrt_f64_undef() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f64_undef(
+; CHECK-NEXT:    ret double 0x7FF8000000000000
+;
+  %val = call double @llvm.amdgcn.sqrt.f64(double undef) nounwind readnone
+  ret double %val
+}
+
+define half @test_constant_fold_sqrt_f16_0() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f16_0(
+; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.sqrt.f16(half 0xH0000) #[[ATTR15:[0-9]+]]
+; CHECK-NEXT:    ret half [[VAL]]
+;
+  %val = call half @llvm.amdgcn.sqrt.f16(half 0.0) nounwind readnone
+  ret half %val
+}
+
+define float @test_constant_fold_sqrt_f32_0() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f32_0(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float 0.000000e+00) #[[ATTR15]]
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.amdgcn.sqrt.f32(float 0.0) nounwind readnone
+  ret float %val
+}
+
+define double @test_constant_fold_sqrt_f64_0() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f64_0(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0.000000e+00) #[[ATTR15]]
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.sqrt.f64(double 0.0) nounwind readnone
+  ret double %val
+}
+
+define half @test_constant_fold_sqrt_f16_neg0() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f16_neg0(
+; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.sqrt.f16(half 0xH8000) #[[ATTR15]]
+; CHECK-NEXT:    ret half [[VAL]]
+;
+  %val = call half @llvm.amdgcn.sqrt.f16(half -0.0) nounwind readnone
+  ret half %val
+}
+
+define float @test_constant_fold_sqrt_f32_neg0() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f32_neg0(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float -0.000000e+00) #[[ATTR15]]
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.amdgcn.sqrt.f32(float -0.0) nounwind readnone
+  ret float %val
+}
+
+define double @test_constant_fold_sqrt_f64_neg0() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f64_neg0(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double -0.000000e+00) #[[ATTR15]]
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.sqrt.f64(double -0.0) nounwind readnone
+  ret double %val
+}
+
+define double @test_constant_fold_sqrt_snan_f64() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_snan_f64(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0x7FF0000000000001)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.sqrt.f64(double 0x7FF0000000000001)
+  ret double %val
+}
+
+define double @test_constant_fold_sqrt_qnan_f64() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_qnan_f64(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0x7FF8000000000000)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.sqrt.f64(double 0x7FF8000000000000)
+  ret double %val
+}
+
+define double @test_constant_fold_sqrt_neg1() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_neg1(
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double -1.000000e+00)
+; CHECK-NEXT:    ret double [[VAL]]
+;
+  %val = call double @llvm.amdgcn.sqrt.f64(double -1.0)
+  ret double %val
+}
+
+; --------------------------------------------------------------------
 ; llvm.amdgcn.rsq
 ; --------------------------------------------------------------------
 
