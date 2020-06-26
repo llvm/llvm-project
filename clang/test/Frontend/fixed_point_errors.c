@@ -250,3 +250,17 @@ unsigned u_const = -2.5hk;                // expected-warning{{implicit conversi
 char c_const = 256.0uk;                   // expected-warning{{implicit conversion from 256.0 cannot fit within the range of values for 'char'}}
 short _Accum sa_const5 = 256;             // expected-warning{{implicit conversion from 256 cannot fit within the range of values for 'short _Accum'}}
 unsigned short _Accum usa_const2 = -2;    // expected-warning{{implicit conversion from -2 cannot fit within the range of values for 'unsigned short _Accum'}}
+
+short _Accum add_ovf1 = 255.0hk + 20.0hk;                     // expected-warning {{overflow in expression; result is -237.0 with type 'short _Accum'}}
+short _Accum add_ovf2 = 10 + 0.5hr;                           // expected-warning {{overflow in expression; result is 0.5 with type 'short _Fract'}}
+short _Accum sub_ovf1 = 16.0uhk - 32.0uhk;                    // expected-warning {{overflow in expression; result is 240.0 with type 'unsigned short _Accum'}}
+short _Accum sub_ovf2 = -255.0hk - 20;                        // expected-warning {{overflow in expression; result is 237.0 with type 'short _Accum'}}
+short _Accum mul_ovf1 = 200.0uhk * 10.0uhk;                   // expected-warning {{overflow in expression; result is 208.0 with type 'unsigned short _Accum'}}
+short _Accum mul_ovf2 = (-0.5hr - 0.5hr) * (-0.5hr - 0.5hr);  // expected-warning {{overflow in expression; result is -1.0 with type 'short _Fract'}}
+short _Accum div_ovf1 = 255.0hk / 0.5hk;                      // expected-warning {{overflow in expression; result is -2.0 with type 'short _Accum'}}
+
+// No warnings for saturation
+short _Fract add_sat  = (_Sat short _Fract)0.5hr + 0.5hr;
+short _Accum sub_sat  = (_Sat short _Accum)-200.0hk - 80.0hk;
+short _Accum mul_sat  = (_Sat short _Accum)80.0hk * 10.0hk;
+short _Fract div_sat  = (_Sat short _Fract)0.9hr / 0.1hr;
