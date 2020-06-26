@@ -41,9 +41,9 @@
 // CHECK-NOT: {{".*/llvm-link"}}
 // CHECK-NOT: {{".*/opt"}}
 // CHECK-NOT: {{".*/llc"}}
-// CHECK: "{{.*lld.*}}" {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// CHECK: "{{.*lld.*}}" {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
 // CHECK-SAME: "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx900" "obj1-hip-amdgcn-amd-amdhsa-gfx900.o" "obj2-hip-amdgcn-amd-amdhsa-gfx900.o"
-// CHECK: "{{.*lld.*}}" {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// CHECK: "{{.*lld.*}}" {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
 // CHECK-SAME: "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx906" "obj1-hip-amdgcn-amd-amdhsa-gfx906.o" "obj2-hip-amdgcn-amd-amdhsa-gfx906.o"
 // CHECK: {{".*llvm-mc.*"}} "-triple" "amdgcn-amd-amdhsa" "-o"
 // CHECK-SAME: "[[OBJBUNDLE:.*.o]]" "{{.*}}.mcin" "--filetype=obj"

@@ -57,14 +57,38 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                                           const llvm::opt::ArgList &Args) const {
   // Construct lld command.
   // The output from ld.lld is an HSA code object file.
-  ArgStringList LldArgs{"-flavor",
-                        "gnu",
-                        "--no-undefined",
-                        "-shared",
-                        "-mllvm",
-                        "-amdgpu-internalize-symbols",
-                        "-o",
-                        Output.getFilename()};
+  ArgStringList LldArgs{"-flavor", "gnu", "--no-undefined", "-shared",
+                        "-plugin-opt=-amdgpu-internalize-symbols"};
+
+  auto &TC = getToolChain();
+  auto &D = TC.getDriver();
+  assert(!Inputs.empty() && "Must have at least one input.");
+  addLTOOptions(TC, Args, LldArgs, Output, Inputs[0],
+                D.getLTOMode() == LTOK_Thin);
+
+  // Extract all the -m options
+  std::vector<llvm::StringRef> Features;
+  amdgpu::getAMDGPUTargetFeatures(D, Args, Features);
+
+  // Add features to mattr such as cumode
+  std::string MAttrString = "-plugin-opt=-mattr=";
+  for (auto OneFeature : unifyTargetFeatures(Features)) {
+    MAttrString.append(Args.MakeArgString(OneFeature));
+    if (OneFeature != Features.back())
+      MAttrString.append(",");
+  }
+  if (!Features.empty())
+    LldArgs.push_back(Args.MakeArgString(MAttrString));
+
+  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
+    LldArgs.push_back(
+        Args.MakeArgString(Twine("-plugin-opt=") + A->getValue(0)));
+  }
+
+  if (C.getDriver().isSaveTempsEnabled())
+    LldArgs.push_back("-save-temps");
+
+  LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
