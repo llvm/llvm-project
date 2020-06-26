@@ -9,8 +9,7 @@
 #ifndef LLVM_ADT_TRIPLE_H
 #define LLVM_ADT_TRIPLE_H
 
-#include "llvm/ADT/StringRef.h"
-#include <cassert>
+#include "llvm/ADT/Twine.h"
 
 // Some system headers or GCC predefined macros conflict with identifiers in
 // this file.  Undefine them here.
@@ -20,7 +19,6 @@
 
 namespace llvm {
 
-class Twine;
 class VersionTuple;
 
 /// Triple - Helper class for working with autoconf configuration names. For
