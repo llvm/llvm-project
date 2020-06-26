@@ -130,7 +130,7 @@ namespace {
         return UnaryOperator::Create(
             S.Context, e, uop->getOpcode(), uop->getType(), uop->getValueKind(),
             uop->getObjectKind(), uop->getOperatorLoc(), uop->canOverflow(),
-            S.CurFPFeatures);
+            S.CurFPFeatureOverrides());
       }
 
       if (GenericSelectionExpr *gse = dyn_cast<GenericSelectionExpr>(e)) {
@@ -446,9 +446,10 @@ PseudoOpBuilder::buildAssignmentOperation(Scope *Sc, SourceLocation opcLoc,
   ExprResult result;
   if (opcode == BO_Assign) {
     result = semanticRHS;
-    syntactic = BinaryOperator::Create(
-        S.Context, syntacticLHS, capturedRHS, opcode, capturedRHS->getType(),
-        capturedRHS->getValueKind(), OK_Ordinary, opcLoc, S.CurFPFeatures);
+    syntactic = BinaryOperator::Create(S.Context, syntacticLHS, capturedRHS,
+                                       opcode, capturedRHS->getType(),
+                                       capturedRHS->getValueKind(), OK_Ordinary,
+                                       opcLoc, S.CurFPFeatureOverrides());
 
   } else {
     ExprResult opLHS = buildGet();
@@ -462,8 +463,9 @@ PseudoOpBuilder::buildAssignmentOperation(Scope *Sc, SourceLocation opcLoc,
 
     syntactic = CompoundAssignOperator::Create(
         S.Context, syntacticLHS, capturedRHS, opcode, result.get()->getType(),
-        result.get()->getValueKind(), OK_Ordinary, opcLoc, S.CurFPFeatures,
-        opLHS.get()->getType(), result.get()->getType());
+        result.get()->getValueKind(), OK_Ordinary, opcLoc,
+        S.CurFPFeatureOverrides(), opLHS.get()->getType(),
+        result.get()->getType());
   }
 
   // The result of the assignment, if not void, is the value set into
@@ -531,7 +533,7 @@ PseudoOpBuilder::buildIncDecOperation(Scope *Sc, SourceLocation opcLoc,
                                 ? S.Context.getTypeSize(resultType) >=
                                       S.Context.getTypeSize(S.Context.IntTy)
                                 : false,
-                            S.CurFPFeatures);
+                            S.CurFPFeatureOverrides());
   return complete(syntactic);
 }
 
@@ -1553,7 +1555,7 @@ ExprResult Sema::checkPseudoObjectIncDec(Scope *Sc, SourceLocation opcLoc,
   if (op->isTypeDependent())
     return UnaryOperator::Create(Context, op, opcode, Context.DependentTy,
                                  VK_RValue, OK_Ordinary, opcLoc, false,
-                                 CurFPFeatures);
+                                 CurFPFeatureOverrides());
 
   assert(UnaryOperator::isIncrementDecrementOp(opcode));
   Expr *opaqueRef = op->IgnoreParens();
@@ -1584,7 +1586,7 @@ ExprResult Sema::checkPseudoObjectAssignment(Scope *S, SourceLocation opcLoc,
   if (LHS->isTypeDependent() || RHS->isTypeDependent())
     return BinaryOperator::Create(Context, LHS, RHS, opcode,
                                   Context.DependentTy, VK_RValue, OK_Ordinary,
-                                  opcLoc, CurFPFeatures);
+                                  opcLoc, CurFPFeatureOverrides());
 
   // Filter out non-overload placeholder types in the RHS.
   if (RHS->getType()->isNonOverloadPlaceholderType()) {
@@ -1640,7 +1642,7 @@ Expr *Sema::recreateSyntacticForm(PseudoObjectExpr *E) {
     return UnaryOperator::Create(Context, op, uop->getOpcode(), uop->getType(),
                                  uop->getValueKind(), uop->getObjectKind(),
                                  uop->getOperatorLoc(), uop->canOverflow(),
-                                 CurFPFeatures);
+                                 CurFPFeatureOverrides());
   } else if (CompoundAssignOperator *cop
                = dyn_cast<CompoundAssignOperator>(syntax)) {
     Expr *lhs = stripOpaqueValuesFromPseudoObjectRef(*this, cop->getLHS());
@@ -1648,7 +1650,7 @@ Expr *Sema::recreateSyntacticForm(PseudoObjectExpr *E) {
     return CompoundAssignOperator::Create(
         Context, lhs, rhs, cop->getOpcode(), cop->getType(),
         cop->getValueKind(), cop->getObjectKind(), cop->getOperatorLoc(),
-        CurFPFeatures, cop->getComputationLHSType(),
+        CurFPFeatureOverrides(), cop->getComputationLHSType(),
         cop->getComputationResultType());
 
   } else if (BinaryOperator *bop = dyn_cast<BinaryOperator>(syntax)) {
@@ -1657,7 +1659,7 @@ Expr *Sema::recreateSyntacticForm(PseudoObjectExpr *E) {
     return BinaryOperator::Create(Context, lhs, rhs, bop->getOpcode(),
                                   bop->getType(), bop->getValueKind(),
                                   bop->getObjectKind(), bop->getOperatorLoc(),
-                                  CurFPFeatures);
+                                  CurFPFeatureOverrides());
 
   } else if (isa<CallExpr>(syntax)) {
     return syntax;
