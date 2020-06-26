@@ -756,6 +756,12 @@ def : FP16Pat<(f16 (fpround SPR:$Sm)),
               (COPY_TO_REGCLASS (VCVTBSH SPR:$Sm), HPR)>;
 def : FP16Pat<(fp_to_f16 SPR:$a),
               (i32 (COPY_TO_REGCLASS (VCVTBSH SPR:$a), GPR))>;
+def : FP16Pat<(insertelt (v8f16 MQPR:$src1), (f16 (fpround (f32 SPR:$src2))), imm_even:$lane),
+              (v8f16 (INSERT_SUBREG (v8f16 MQPR:$src1), (VCVTBSH SPR:$src2),
+                                    (SSubReg_f16_reg imm:$lane)))>;
+def : FP16Pat<(insertelt (v4f16 DPR:$src1), (f16 (fpround (f32 SPR:$src2))), imm_even:$lane),
+              (v4f16 (INSERT_SUBREG (v4f16 DPR:$src1), (VCVTBSH SPR:$src2),
+                                    (SSubReg_f16_reg imm:$lane)))>;
 
 def VCVTTHS: ASuI<0b11101, 0b11, 0b0010, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtt", ".f32.f16\t$Sd, $Sm",
@@ -772,9 +778,16 @@ def : FP16Pat<(f32 (fpextend (extractelt (v4f16 DPR:$src), imm_odd:$lane))),
 
 def VCVTTSH: ASuI<0b11101, 0b11, 0b0011, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTHS, "vcvtt", ".f16.f32\t$Sd, $Sm",
-                 [/* For disassembly only; pattern left blank */]>,
+                 [/* Intentionally left blank, see patterns below */]>,
                  Requires<[HasFP16]>,
             Sched<[WriteFPCVT]>;
+
+def : FP16Pat<(insertelt (v8f16 MQPR:$src1), (f16 (fpround (f32 SPR:$src2))), imm_odd:$lane),
+              (v8f16 (INSERT_SUBREG (v8f16 MQPR:$src1), (VCVTTSH SPR:$src2),
+                                    (SSubReg_f16_reg imm:$lane)))>;
+def : FP16Pat<(insertelt (v4f16 DPR:$src1), (f16 (fpround (f32 SPR:$src2))), imm_odd:$lane),
+              (v4f16 (INSERT_SUBREG (v4f16 DPR:$src1), (VCVTTSH SPR:$src2),
+                                    (SSubReg_f16_reg imm:$lane)))>;
 
 def VCVTBHD : ADuI<0b11101, 0b11, 0b0010, 0b01, 0,
                    (outs DPR:$Dd), (ins SPR:$Sm),
