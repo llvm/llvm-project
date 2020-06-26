@@ -101,6 +101,42 @@ static bool isExplicitShape(const Fortran::semantics::Symbol &sym) {
   return det && det->IsArray() && det->shape().IsExplicitShape();
 }
 
+// Retrieve a copy of a character literal string from a SomeExpr.
+template <int KIND>
+llvm::Optional<std::tuple<std::string, std::size_t>> getCharacterLiteralCopy(
+    const Fortran::evaluate::Expr<
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, KIND>>
+        &x) {
+  if (const auto *con =
+          Fortran::evaluate::UnwrapConstantValue<Fortran::evaluate::Type<
+              Fortran::common::TypeCategory::Character, KIND>>(x))
+    if (auto val = con->GetScalarValue())
+      return std::tuple<std::string, std::size_t>{
+          std::string{(const char *)val->c_str(),
+                      KIND * (std::size_t)con->LEN()},
+          (std::size_t)con->LEN()};
+  return llvm::None;
+}
+llvm::Optional<std::tuple<std::string, std::size_t>> getCharacterLiteralCopy(
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter> &x) {
+  return std::visit([](const auto &e) { return getCharacterLiteralCopy(e); },
+                    x.u);
+}
+llvm::Optional<std::tuple<std::string, std::size_t>> getCharacterLiteralCopy(
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &x) {
+  if (const auto *e = Fortran::evaluate::UnwrapExpr<
+          Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter>>(x))
+    return getCharacterLiteralCopy(*e);
+  return llvm::None;
+}
+template <typename A>
+llvm::Optional<std::tuple<std::string, std::size_t>>
+getCharacterLiteralCopy(const std::optional<A> &x) {
+  if (x)
+    return getCharacterLiteralCopy(*x);
+  return llvm::None;
+}
+
 namespace {
 struct SymbolBoxAnalyzer {
   using FromBox = std::monostate;
@@ -752,12 +788,11 @@ private:
         info.isStructured() ? builder->getIndexType() : info.loopVariableType;
     auto lowerValue = genFIRLoopIndex(info.lowerExpr, type);
     auto upperValue = genFIRLoopIndex(info.upperExpr, type);
-    info.stepValue = info.stepExpr.has_value()
-                         ? genFIRLoopIndex(*info.stepExpr, type)
-                         : info.isStructured()
-                               ? builder->create<mlir::ConstantIndexOp>(loc, 1)
-                               : builder->createIntegerConstant(
-                                     loc, info.loopVariableType, 1);
+    info.stepValue =
+        info.stepExpr.has_value() ? genFIRLoopIndex(*info.stepExpr, type)
+        : info.isStructured()
+            ? builder->create<mlir::ConstantIndexOp>(loc, 1)
+            : builder->createIntegerConstant(loc, info.loopVariableType, 1);
     assert(info.stepValue && "step value must be set");
     info.loopVariable = createTemp(loc, *info.loopVariableSym);
 
@@ -1535,6 +1570,7 @@ private:
     fir::GlobalOp global;
     bool isConst = sym.attrs().test(Fortran::semantics::Attr::PARAMETER);
     auto loc = toLocation();
+    // FIXME: name returned does not consider subprogram's scope, is not unique
     if (builder->getNamedGlobal(globalName))
       return;
     if (const auto *details =
@@ -1544,13 +1580,28 @@ private:
           TODO(); // Derived type / polymorphic
         }
         auto symTy = genType(var);
-        global = builder->createGlobal(
-            loc, symTy, globalName, isConst,
-            [&](Fortran::lower::FirOpBuilder &builder) {
-              auto initVal = genExprValue(details->init().value());
-              auto castTo = builder.createConvert(loc, symTy, initVal);
-              builder.create<fir::HasValueOp>(loc, castTo);
-            });
+        if (symTy.isa<fir::CharType>()) {
+          if (auto chLit = getCharacterLiteralCopy(details->init().value())) {
+            fir::SequenceType::Shape len;
+            len.push_back(std::get<std::size_t>(*chLit));
+            symTy = fir::SequenceType::get(len, symTy);
+            auto init = builder->getStringAttr(std::get<std::string>(*chLit));
+            auto linkage = builder->getStringAttr("internal");
+            global = builder->createGlobal(loc, symTy, globalName, linkage,
+                                           init, isConst);
+          } else {
+            llvm::report_fatal_error(
+                "global CHARACTER has unexpected initial value");
+          }
+        } else {
+          global = builder->createGlobal(
+              loc, symTy, globalName, isConst,
+              [&](Fortran::lower::FirOpBuilder &builder) {
+                auto initVal = genExprValue(details->init().value());
+                auto castTo = builder.createConvert(loc, symTy, initVal);
+                builder.create<fir::HasValueOp>(loc, castTo);
+              });
+        }
       } else {
         global = builder->createGlobal(loc, genType(var), globalName);
       }
