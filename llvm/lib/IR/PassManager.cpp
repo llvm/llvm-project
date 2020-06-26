@@ -89,7 +89,7 @@ bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
   // Return false to indicate that this result is still a valid proxy.
   return false;
 }
-}
+} // namespace llvm
 
 AnalysisSetKey CFGAnalyses::SetKey;
 

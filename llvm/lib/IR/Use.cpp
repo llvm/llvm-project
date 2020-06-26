@@ -48,4 +48,4 @@ void Use::zap(Use *Start, const Use *Stop, bool del) {
     ::operator delete(Start);
 }
 
-} // End llvm namespace
+} // namespace llvm
