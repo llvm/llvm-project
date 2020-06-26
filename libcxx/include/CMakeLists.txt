@@ -211,7 +211,7 @@ set(generated_config_deps cxx-generated-config)
 if (NOT CXX_HEADER_TARGET)
   set(CXX_HEADER_TARGET cxx-headers)
 endif()
-if(NOT LIBCXX_USING_INSTALLED_LLVM AND LIBCXX_HEADER_DIR)
+if(LIBCXX_HEADER_DIR)
   set(output_dir ${LIBCXX_HEADER_DIR}/include/c++/v1)
 
   set(out_files)

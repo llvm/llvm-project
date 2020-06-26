@@ -52,7 +52,7 @@ macro(setup_abi_lib abidefines abishared abistatic abifiles abidirs)
             COMMENT "Copying C++ ABI header ${fpath}...")
         list(APPEND abilib_headers "${dst}")
 
-        if (NOT LIBCXX_USING_INSTALLED_LLVM AND LIBCXX_HEADER_DIR)
+        if (LIBCXX_HEADER_DIR)
           set(dst "${LIBCXX_HEADER_DIR}/include/c++/v1/${dstdir}/${fpath}")
           add_custom_command(OUTPUT ${dst}
               DEPENDS ${src}
