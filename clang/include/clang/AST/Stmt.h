@@ -614,6 +614,9 @@ protected:
     /// The kind of this overloaded operator. One of the enumerator
     /// value of OverloadedOperatorKind.
     unsigned OperatorKind : 6;
+
+    // Only meaningful for floating point types.
+    unsigned FPFeatures : 14;
   };
 
   class CXXRewrittenBinaryOperatorBitfields {
