@@ -10167,19 +10167,18 @@ public:
   QualType ActOnOpenMPDeclareMapperType(SourceLocation TyLoc,
                                         TypeResult ParsedType);
   /// Called on start of '#pragma omp declare mapper'.
-  OMPDeclareMapperDecl *ActOnOpenMPDeclareMapperDirectiveStart(
+  DeclGroupPtrTy ActOnOpenMPDeclareMapperDirective(
       Scope *S, DeclContext *DC, DeclarationName Name, QualType MapperType,
       SourceLocation StartLoc, DeclarationName VN, AccessSpecifier AS,
+      Expr *MapperVarRef, ArrayRef<OMPClause *> Clauses,
       Decl *PrevDeclInScope = nullptr);
   /// Build the mapper variable of '#pragma omp declare mapper'.
-  void ActOnOpenMPDeclareMapperDirectiveVarDecl(OMPDeclareMapperDecl *DMD,
-                                                Scope *S, QualType MapperType,
-                                                SourceLocation StartLoc,
-                                                DeclarationName VN);
-  /// Called at the end of '#pragma omp declare mapper'.
-  DeclGroupPtrTy
-  ActOnOpenMPDeclareMapperDirectiveEnd(OMPDeclareMapperDecl *D, Scope *S,
-                                       ArrayRef<OMPClause *> ClauseList);
+  ExprResult ActOnOpenMPDeclareMapperDirectiveVarDecl(Scope *S,
+                                                      QualType MapperType,
+                                                      SourceLocation StartLoc,
+                                                      DeclarationName VN);
+  bool isOpenMPDeclareMapperVarDeclAllowed(const VarDecl *VD) const;
+  const ValueDecl *getOpenMPDeclareMapperVarName() const;
 
   /// Called on the start of target region i.e. '#pragma omp declare target'.
   bool ActOnStartOpenMPDeclareTargetDirective(SourceLocation Loc);

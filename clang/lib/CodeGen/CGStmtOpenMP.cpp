@@ -4778,7 +4778,7 @@ static llvm::Function *emitOutlinedOrderedFunction(CodeGenModule &CGM,
 
 void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
   if (S.hasClausesOfKind<OMPDependClause>()) {
-    assert(!S.getAssociatedStmt() &&
+    assert(!S.hasAssociatedStmt() &&
            "No associated statement must be in ordered depend construct.");
     for (const auto *DC : S.getClausesOfKind<OMPDependClause>())
       CGM.getOpenMPRuntime().emitDoacrossOrdered(*this, DC);
