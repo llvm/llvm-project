@@ -1,7 +1,5 @@
-! RUN: %S/test_any.sh %s %t %f18
-! negative test -- invalid labels, out of range
 
-! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
+! RUN: not %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: Label '50' was not found
 ! CHECK: Label '55' is not in scope
 ! CHECK: Label '70' is not a branch target
