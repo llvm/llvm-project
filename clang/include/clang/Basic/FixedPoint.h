@@ -129,6 +129,7 @@ class APFixedPoint {
    // explanation of the Overflow parameter.
    APFixedPoint add(const APFixedPoint &Other, bool *Overflow = nullptr) const;
    APFixedPoint sub(const APFixedPoint &Other, bool *Overflow = nullptr) const;
+   APFixedPoint mul(const APFixedPoint &Other, bool *Overflow = nullptr) const;
 
    /// Perform a unary negation (-X) on this fixed point type, taking into
    /// account saturation if applicable.
