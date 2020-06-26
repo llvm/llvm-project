@@ -15,6 +15,20 @@
 # CHECK-BE: pextd 1, 2, 4                         # encoding: [0x7c,0x41,0x21,0x78]
 # CHECK-LE: pextd 1, 2, 4                         # encoding: [0x78,0x21,0x41,0x7c]
             pextd 1, 2, 4
+# CHECK-BE: vcfuged 1, 2, 4                       # encoding: [0x10,0x22,0x25,0x4d]
+# CHECK-LE: vcfuged 1, 2, 4                       # encoding: [0x4d,0x25,0x22,0x10]
+            vcfuged 1, 2, 4
+# CHECK-BE: cfuged 1, 2, 4                        # encoding: [0x7c,0x41,0x21,0xb8]
+# CHECK-LE: cfuged 1, 2, 4                        # encoding: [0xb8,0x21,0x41,0x7c]
+            cfuged 1, 2, 4
+# CHECK-BE: vgnb 1, 2, 2                          # encoding: [0x10,0x22,0x14,0xcc]
+# CHECK-LE: vgnb 1, 2, 2                          # encoding: [0xcc,0x14,0x22,0x10]
+            vgnb 1, 2, 2
+# CHECK-BE: xxeval 32, 1, 2, 3, 2                 # encoding: [0x05,0x00,0x00,0x02,
+# CHECK-BE-SAME:                                               0x88,0x01,0x10,0xd1]
+# CHECK-LE: xxeval 32, 1, 2, 3, 2                 # encoding: [0x02,0x00,0x00,0x05,
+# CHECK-LE-SAME:                                               0xd1,0x10,0x01,0x88]
+            xxeval 32, 1, 2, 3, 2
 # CHECK-BE: vclzdm 1, 2, 3                        # encoding: [0x10,0x22,0x1f,0x84]
 # CHECK-LE: vclzdm 1, 2, 3                        # encoding: [0x84,0x1f,0x22,0x10]
             vclzdm 1, 2, 3
