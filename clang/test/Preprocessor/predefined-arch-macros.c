@@ -2397,6 +2397,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_AMDFAM10_M64
 // CHECK_AMDFAM10_M64: #define __3dNOW_A__ 1
 // CHECK_AMDFAM10_M64: #define __3dNOW__ 1
+// CHECK_AMDFAM10_M64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
 // CHECK_AMDFAM10_M64: #define __LZCNT__ 1
 // CHECK_AMDFAM10_M64: #define __MMX__ 1
 // CHECK_AMDFAM10_M64: #define __POPCNT__ 1
