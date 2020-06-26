@@ -1835,6 +1835,11 @@ def : Pat<(prefetch xoaddr:$dst, (i32 1), imm, (i32 1)),
 def : Pat<(prefetch xoaddr:$dst, (i32 0), imm, (i32 0)),
           (ICBT 0, xoaddr:$dst)>, Requires<[HasICBT]>; // inst prefetch (for read)
 
+def : Pat<(int_ppc_dcbt_with_hint xoaddr:$dst, i32:$TH),
+          (DCBT i32:$TH, xoaddr:$dst)>;
+def : Pat<(int_ppc_dcbtst_with_hint xoaddr:$dst, i32:$TH),
+          (DCBTST i32:$TH, xoaddr:$dst)>;
+
 // Atomic operations
 // FIXME: some of these might be used with constant operands. This will result
 // in constant materialization instructions that may be redundant. We currently
@@ -4506,6 +4511,7 @@ def DCBFx  : PPCAsmPseudo<"dcbf $dst", (ins memrr:$dst)>;
 def DCBFL  : PPCAsmPseudo<"dcbfl $dst", (ins memrr:$dst)>;
 def DCBFLP : PPCAsmPseudo<"dcbflp $dst", (ins memrr:$dst)>;
 
+def : Pat<(int_ppc_isync),  (ISYNC)>;
 def : Pat<(int_ppc_dcbfl xoaddr:$dst),
           (DCBF 1, xoaddr:$dst)>;
 def : Pat<(int_ppc_dcbflp xoaddr:$dst),
