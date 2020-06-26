@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -basicaa-recphi=1 -gvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -basicaa-recphi=1 -gvn -S | FileCheck %s
 ;
 ; Check that section->word_ofs doesn't get reloaded in every iteration of the
 ; for loop.
