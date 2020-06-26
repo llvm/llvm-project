@@ -1172,7 +1172,7 @@ public:
       assert(VF == 1 && "Can't vectorize types here.");
       const Value *Mask = Args[3];
       bool VarMask = !isa<Constant>(Mask);
-      unsigned Alignment = cast<ConstantInt>(Args[2])->getZExtValue();
+      Align Alignment = cast<ConstantInt>(Args[2])->getAlignValue();
       return ConcreteTTI->getGatherScatterOpCost(Instruction::Store,
                                                  Args[0]->getType(), Args[1],
                                                  VarMask, Alignment, CostKind,
@@ -1182,7 +1182,7 @@ public:
       assert(VF == 1 && "Can't vectorize types here.");
       const Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
-      unsigned Alignment = cast<ConstantInt>(Args[1])->getZExtValue();
+      Align Alignment = cast<ConstantInt>(Args[1])->getAlignValue();
       return ConcreteTTI->getGatherScatterOpCost(
           Instruction::Load, RetTy, Args[0], VarMask, Alignment, CostKind, I);
     }
