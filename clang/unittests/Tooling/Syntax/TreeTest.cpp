@@ -1636,33 +1636,33 @@ TEST_P(SyntaxTreeTest, StringLiteralRaw) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
-      R"cpp(
-void test() {
-  R"SyntaxTree(
-  Hello "Syntax" \"
-  )SyntaxTree";
-}
-)cpp",
-      R"txt(
-*: TranslationUnit
-`-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
-  `-CompoundStatement
-    |-{
-    |-ExpressionStatement
-    | |-StringLiteralExpression
-    | | `-R"SyntaxTree(
-  Hello "Syntax" \"
-  )SyntaxTree"
-    | `-;
-    `-}
-)txt"));
+  // This test uses regular string literals instead of raw string literals to
+  // hold source code and expected output because of a bug in MSVC up to MSVC
+  // 2019 16.2:
+  // https://developercommunity.visualstudio.com/content/problem/67300/stringifying-raw-string-literal.html
+  EXPECT_TRUE(treeDumpEqual( //
+      "void test() {\n"
+      "  R\"SyntaxTree(\n"
+      "  Hello \"Syntax\" \\\"\n"
+      "  )SyntaxTree\";\n"
+      "}\n",
+      "*: TranslationUnit\n"
+      "`-SimpleDeclaration\n"
+      "  |-void\n"
+      "  |-SimpleDeclarator\n"
+      "  | |-test\n"
+      "  | `-ParametersAndQualifiers\n"
+      "  |   |-(\n"
+      "  |   `-)\n"
+      "  `-CompoundStatement\n"
+      "    |-{\n"
+      "    |-ExpressionStatement\n"
+      "    | |-StringLiteralExpression\n"
+      "    | | `-R\"SyntaxTree(\n"
+      "  Hello \"Syntax\" \\\"\n"
+      "  )SyntaxTree\"\n"
+      "    | `-;\n"
+      "    `-}\n"));
 }
 
 TEST_P(SyntaxTreeTest, BoolLiteral) {
