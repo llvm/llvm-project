@@ -1,9 +1,7 @@
-! RUN: %S/test_any.sh %s %t %f18
-! EXEC: ${F18} -funparse-with-symbols %s -o /dev/null 2>&1 | grep -v 'procedure conflicts' | ${FileCheck} %s
-! CHECK-NOT: error:[[:space:]]
-
-! FIXME: filter out the array/function syntax issues (procedure conflicts)
-! for now...
+! RUN: %f18 -funparse-with-symbols -DSTRICT_F18 -Mstandard %s 2>&1 | FileCheck %s
+! RUN: %f18 -funparse-with-symbols -DARCHAIC_FORTRAN %s 2>&1 | FileCheck %s
+! CHECK-NOT: error:{{[[:space:]]}}
+! FIXME: the above check line does not work because diags are not emitted with error: in them.
 
 ! these are the conformance tests
 ! define STRICT_F18 to eliminate tests of features not in F18
@@ -83,6 +81,7 @@ subroutine do_loop07(a,n)
   end do loopone
 end subroutine do_loop07
 
+#ifndef STRICT_F18
 subroutine do_loop08(a,b,n,m,nn)
   integer :: n, m, nn
   real, dimension(n,n) :: a
@@ -114,6 +113,7 @@ subroutine do_loop08(a,b,n,m,nn)
   end do loopone
 111 print *, "done"
 end subroutine do_loop08
+#endif
 
 #ifndef STRICT_F18
 ! extended ranges supported by PGI, gfortran gives warnings
@@ -123,7 +123,7 @@ subroutine do_loop09(a,n,j)
   goto 400
 200 print *, "found the index", j
   print *, "value at", j, "is", a(j)
-  goto 300
+  goto 300 ! FIXME: emits diagnostic even without -Mstandard
 400  do 100 i = 1, n
      if (i .eq. j) then
         goto 200	! extension: extended GOTO ranges
@@ -168,7 +168,7 @@ subroutine arith_if12(i)
 end subroutine arith_if12
 #endif
 
-#if 0
+#ifndef STRICT_F18
 subroutine alt_return_spec13(i,*,*,*)
 9 continue
 8 labelme: if (i .lt. 42) then
@@ -192,6 +192,7 @@ subroutine alt_return_spec14(i)
 end subroutine alt_return_spec14
 #endif
 
+#ifndef STRICT_F18
 subroutine specifiers15(a,b,x)
   integer x
   OPEN (10, file="myfile.dat", err=100)
@@ -212,6 +213,7 @@ subroutine specifiers15(a,b,x)
 50 WRITE (11,30,err=100) b
   CLOSE (11)
 end subroutine specifiers15
+#endif
 
 #if !defined(STRICT_F18) && defined(ARCHAIC_FORTRAN)
 ! assigned goto was deleted in F95. PGI supports, gfortran gives warnings
