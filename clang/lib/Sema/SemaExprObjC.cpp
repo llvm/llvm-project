@@ -4487,7 +4487,8 @@ Expr *Sema::stripARCUnbridgedCast(Expr *e) {
     Expr *sub = stripARCUnbridgedCast(uo->getSubExpr());
     return UnaryOperator::Create(Context, sub, UO_Extension, sub->getType(),
                                  sub->getValueKind(), sub->getObjectKind(),
-                                 uo->getOperatorLoc(), false, CurFPFeatures);
+                                 uo->getOperatorLoc(), false,
+                                 CurFPFeatureOverrides());
   } else if (GenericSelectionExpr *gse = dyn_cast<GenericSelectionExpr>(e)) {
     assert(!gse->isResultDependent());
 
