@@ -29,8 +29,11 @@ struct VulkanDeviceMemoryBuffer {
   BindingIndex bindingIndex{0};
   VkDescriptorType descriptorType{VK_DESCRIPTOR_TYPE_MAX_ENUM};
   VkDescriptorBufferInfo bufferInfo{};
-  VkBuffer buffer{VK_NULL_HANDLE};
+  VkBuffer hostBuffer{VK_NULL_HANDLE};
+  VkDeviceMemory hostMemory{VK_NULL_HANDLE};
+  VkBuffer deviceBuffer{VK_NULL_HANDLE};
   VkDeviceMemory deviceMemory{VK_NULL_HANDLE};
+  uint32_t bufferSize{0};
 };
 
 /// Struct containing information regarding to a host memory buffer.
@@ -137,6 +140,9 @@ private:
   LogicalResult createQueryPool();
   LogicalResult createComputeCommandBuffer();
   LogicalResult submitCommandBuffersToQueue();
+  // Copy resources from host (staging buffer) to device buffer or from device
+  // buffer to host buffer.
+  LogicalResult copyResource(bool deviceToHost);
 
   //===--------------------------------------------------------------------===//
   // Helper methods.
@@ -203,7 +209,8 @@ private:
 
   uint32_t queueFamilyIndex{0};
   VkQueueFamilyProperties queueFamilyProperties{};
-  uint32_t memoryTypeIndex{VK_MAX_MEMORY_TYPES};
+  uint32_t hostMemoryTypeIndex{VK_MAX_MEMORY_TYPES};
+  uint32_t deviceMemoryTypeIndex{VK_MAX_MEMORY_TYPES};
   VkDeviceSize memorySize{0};
 
   //===--------------------------------------------------------------------===//
