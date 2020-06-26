@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
+#include <tuple>
 #include <utility>
 #include <vector>
 
