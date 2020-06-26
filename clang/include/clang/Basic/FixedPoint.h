@@ -130,6 +130,7 @@ class APFixedPoint {
    APFixedPoint add(const APFixedPoint &Other, bool *Overflow = nullptr) const;
    APFixedPoint sub(const APFixedPoint &Other, bool *Overflow = nullptr) const;
    APFixedPoint mul(const APFixedPoint &Other, bool *Overflow = nullptr) const;
+   APFixedPoint div(const APFixedPoint &Other, bool *Overflow = nullptr) const;
 
    /// Perform a unary negation (-X) on this fixed point type, taking into
    /// account saturation if applicable.
