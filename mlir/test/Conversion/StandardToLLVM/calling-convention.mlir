@@ -109,3 +109,134 @@ func @other_callee(%arg0: memref<?xf32>, %arg1: index) attributes { llvm.emit_c_
 
 // EMIT_C_ATTRIBUTE: @_mlir_ciface_other_callee
 // EMIT_C_ATTRIBUTE:   llvm.call @other_callee
+
+//===========================================================================//
+// Calling convention on returning unranked memrefs.
+//===========================================================================//
+
+// CHECK-LABEL: llvm.func @return_var_memref_caller
+func @return_var_memref_caller(%arg0: memref<4x3xf32>) {
+  // CHECK: %[[CALL_RES:.*]] = llvm.call @return_var_memref
+  %0 = call @return_var_memref(%arg0) : (memref<4x3xf32>) -> memref<*xf32>
+
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : index)
+  // CHECK: %[[TWO:.*]] = llvm.mlir.constant(2 : index)
+  // These sizes may depend on the data layout, not matching specific values.
+  // CHECK: %[[PTR_SIZE:.*]] = llvm.mlir.constant
+  // CHECK: %[[IDX_SIZE:.*]] = llvm.mlir.constant
+
+  // CHECK: %[[DOUBLE_PTR_SIZE:.*]] = llvm.mul %[[TWO]], %[[PTR_SIZE]]
+  // CHECK: %[[RANK:.*]] = llvm.extractvalue %[[CALL_RES]][0] : !llvm<"{ i64, i8* }">
+  // CHECK: %[[DOUBLE_RANK:.*]] = llvm.mul %[[TWO]], %[[RANK]]
+  // CHECK: %[[DOUBLE_RANK_INC:.*]] = llvm.add %[[DOUBLE_RANK]], %[[ONE]]
+  // CHECK: %[[TABLES_SIZE:.*]] = llvm.mul %[[DOUBLE_RANK_INC]], %[[IDX_SIZE]]
+  // CHECK: %[[ALLOC_SIZE:.*]] = llvm.add %[[DOUBLE_PTR_SIZE]], %[[TABLES_SIZE]]
+  // CHECK: %[[FALSE:.*]] = llvm.mlir.constant(false)
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[ALLOC_SIZE]] x !llvm.i8
+  // CHECK: %[[SOURCE:.*]] = llvm.extractvalue %[[CALL_RES]][1]
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[SOURCE]], %[[ALLOC_SIZE]], %[[FALSE]])
+  // CHECK: llvm.call @free(%[[SOURCE]])
+  // CHECK: %[[DESC:.*]] = llvm.mlir.undef : !llvm<"{ i64, i8* }">
+  // CHECK: %[[RANK:.*]] = llvm.extractvalue %[[CALL_RES]][0] : !llvm<"{ i64, i8* }">
+  // CHECK: %[[DESC_1:.*]] = llvm.insertvalue %[[RANK]], %[[DESC]][0]
+  // CHECK: llvm.insertvalue %[[ALLOCA]], %[[DESC_1]][1]
+  return
+}
+
+// CHECK-LABEL: llvm.func @return_var_memref
+func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
+  // Match the construction of the unranked descriptor.
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca
+  // CHECK: %[[MEMORY:.*]] = llvm.bitcast %[[ALLOCA]]
+  // CHECK: %[[DESC_0:.*]] = llvm.mlir.undef : !llvm<"{ i64, i8* }">
+  // CHECK: %[[DESC_1:.*]] = llvm.insertvalue %{{.*}}, %[[DESC_0]][0]
+  // CHECK: %[[DESC_2:.*]] = llvm.insertvalue %[[MEMORY]], %[[DESC_1]][1]
+  %0 = memref_cast %arg0: memref<4x3xf32> to memref<*xf32>
+
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : index)
+  // CHECK: %[[TWO:.*]] = llvm.mlir.constant(2 : index)
+  // These sizes may depend on the data layout, not matching specific values.
+  // CHECK: %[[PTR_SIZE:.*]] = llvm.mlir.constant
+  // CHECK: %[[IDX_SIZE:.*]] = llvm.mlir.constant
+
+  // CHECK: %[[DOUBLE_PTR_SIZE:.*]] = llvm.mul %[[TWO]], %[[PTR_SIZE]]
+  // CHECK: %[[RANK:.*]] = llvm.extractvalue %[[DESC_2]][0] : !llvm<"{ i64, i8* }">
+  // CHECK: %[[DOUBLE_RANK:.*]] = llvm.mul %[[TWO]], %[[RANK]]
+  // CHECK: %[[DOUBLE_RANK_INC:.*]] = llvm.add %[[DOUBLE_RANK]], %[[ONE]]
+  // CHECK: %[[TABLES_SIZE:.*]] = llvm.mul %[[DOUBLE_RANK_INC]], %[[IDX_SIZE]]
+  // CHECK: %[[ALLOC_SIZE:.*]] = llvm.add %[[DOUBLE_PTR_SIZE]], %[[TABLES_SIZE]]
+  // CHECK: %[[FALSE:.*]] = llvm.mlir.constant(false)
+  // CHECK: %[[ALLOCATED:.*]] = llvm.call @malloc(%[[ALLOC_SIZE]])
+  // CHECK: %[[SOURCE:.*]] = llvm.extractvalue %[[DESC_2]][1]
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCATED]], %[[SOURCE]], %[[ALLOC_SIZE]], %[[FALSE]])
+  // CHECK: %[[NEW_DESC:.*]] = llvm.mlir.undef : !llvm<"{ i64, i8* }">
+  // CHECK: %[[RANK:.*]] = llvm.extractvalue %[[DESC_2]][0] : !llvm<"{ i64, i8* }">
+  // CHECK: %[[NEW_DESC_1:.*]] = llvm.insertvalue %[[RANK]], %[[NEW_DESC]][0]
+  // CHECK: %[[NEW_DESC_2:.*]] = llvm.insertvalue %[[ALLOCATED]], %[[NEW_DESC_1]][1]
+  // CHECL: llvm.return %[[NEW_DESC_2]]
+  return %0 : memref<*xf32>
+}
+
+// CHECK-LABEL: llvm.func @return_two_var_memref_caller
+func @return_two_var_memref_caller(%arg0: memref<4x3xf32>) {
+  // Only check that we create two different descriptors using different
+  // memory, and deallocate both sources. The size computation is same as for
+  // the single result.
+  // CHECK: %[[CALL_RES:.*]] = llvm.call @return_two_var_memref
+  // CHECK: %[[RES_1:.*]] = llvm.extractvalue %[[CALL_RES]][0]
+  // CHECK: %[[RES_2:.*]] = llvm.extractvalue %[[CALL_RES]][1]
+  %0:2 = call @return_two_var_memref(%arg0) : (memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>)
+
+  // CHECK: %[[ALLOCA_1:.*]] = llvm.alloca %{{.*}} x !llvm.i8
+  // CHECK: %[[SOURCE_1:.*]] = llvm.extractvalue %[[RES_1:.*]][1] : ![[DESC_TYPE:.*]]
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA_1]], %[[SOURCE_1]], %{{.*}}, %[[FALSE:.*]])
+  // CHECK: llvm.call @free(%[[SOURCE_1]])
+  // CHECK: %[[DESC_1:.*]] = llvm.mlir.undef : ![[DESC_TYPE]]
+  // CHECK: %[[DESC_11:.*]] = llvm.insertvalue %{{.*}}, %[[DESC_1]][0]
+  // CHECK: llvm.insertvalue %[[ALLOCA_1]], %[[DESC_11]][1]
+
+  // CHECK: %[[ALLOCA_2:.*]] = llvm.alloca %{{.*}} x !llvm.i8
+  // CHECK: %[[SOURCE_2:.*]] = llvm.extractvalue %[[RES_2:.*]][1]
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA_2]], %[[SOURCE_2]], %{{.*}}, %[[FALSE]])
+  // CHECK: llvm.call @free(%[[SOURCE_2]])
+  // CHECK: %[[DESC_2:.*]] = llvm.mlir.undef : ![[DESC_TYPE]]
+  // CHECK: %[[DESC_21:.*]] = llvm.insertvalue %{{.*}}, %[[DESC_2]][0]
+  // CHECK: llvm.insertvalue %[[ALLOCA_2]], %[[DESC_21]][1]
+  return
+}
+
+// CHECK-LABEL: llvm.func @return_two_var_memref
+func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>) {
+  // Match the construction of the unranked descriptor.
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca
+  // CHECK: %[[MEMORY:.*]] = llvm.bitcast %[[ALLOCA]]
+  // CHECK: %[[DESC_0:.*]] = llvm.mlir.undef : !llvm<"{ i64, i8* }">
+  // CHECK: %[[DESC_1:.*]] = llvm.insertvalue %{{.*}}, %[[DESC_0]][0]
+  // CHECK: %[[DESC_2:.*]] = llvm.insertvalue %[[MEMORY]], %[[DESC_1]][1]
+  %0 = memref_cast %arg0 : memref<4x3xf32> to memref<*xf32>
+
+  // Only check that we allocate the memory for each operand of the "return"
+  // separately, even if both operands are the same value. The calling
+  // convention requires the caller to free them and the caller cannot know
+  // whether they are the same value or not.
+  // CHECK: %[[ALLOCATED_1:.*]] = llvm.call @malloc(%{{.*}})
+  // CHECK: %[[SOURCE_1:.*]] = llvm.extractvalue %[[DESC_2]][1]
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCATED_1]], %[[SOURCE_1]], %{{.*}}, %[[FALSE:.*]])
+  // CHECK: %[[RES_1:.*]] = llvm.mlir.undef
+  // CHECK: %[[RES_11:.*]] = llvm.insertvalue %{{.*}}, %[[RES_1]][0]
+  // CHECK: %[[RES_12:.*]] = llvm.insertvalue %[[ALLOCATED_1]], %[[RES_11]][1]
+
+  // CHECK: %[[ALLOCATED_2:.*]] = llvm.call @malloc(%{{.*}})
+  // CHECK: %[[SOURCE_2:.*]] = llvm.extractvalue %[[DESC_2]][1]
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCATED_2]], %[[SOURCE_2]], %{{.*}}, %[[FALSE]])
+  // CHECK: %[[RES_2:.*]] = llvm.mlir.undef
+  // CHECK: %[[RES_21:.*]] = llvm.insertvalue %{{.*}}, %[[RES_2]][0]
+  // CHECK: %[[RES_22:.*]] = llvm.insertvalue %[[ALLOCATED_2]], %[[RES_21]][1]
+
+  // CHECK: %[[RESULTS:.*]] = llvm.mlir.undef : !llvm<"{ { i64, i8* }, { i64, i8* } }">
+  // CHECK: %[[RESULTS_1:.*]] = llvm.insertvalue %[[RES_12]], %[[RESULTS]]
+  // CHECK: %[[RESULTS_2:.*]] = llvm.insertvalue %[[RES_22]], %[[RESULTS_1]]
+  // CHECK: llvm.return %[[RESULTS_2]]
+  return %0, %0 : memref<*xf32>, memref<*xf32>
+}
+
