@@ -1,4 +1,4 @@
-; RUN: opt -S -basicaa -gvn < %s | FileCheck %s
+; RUN: opt -S -basic-aa -gvn < %s | FileCheck %s
 
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 target triple = "i386-apple-macosx10.6.0"
