@@ -119,23 +119,27 @@ void Counter::stop() { ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, 0); }
 
 int64_t Counter::read() const {
   auto ValueOrError = readOrError();
-  if (ValueOrError)
-    return ValueOrError.get();
-
-  errs() << ValueOrError.takeError() << "\n";
+  if (ValueOrError) {
+    if (!ValueOrError.get().empty())
+      return ValueOrError.get()[0];
+    errs() << "Counter has no reading\n";
+  } else
+    errs() << ValueOrError.takeError() << "\n";
   return -1;
 }
 
-llvm::Expected<int64_t> Counter::readOrError() const {
+llvm::Expected<llvm::SmallVector<int64_t, 4>> Counter::readOrError() const {
   int64_t Count = 0;
   ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
   if (ReadSize != sizeof(Count))
     return llvm::make_error<llvm::StringError>("Failed to read event counter",
                                                llvm::errc::io_error);
-
-  return Count;
+  llvm::SmallVector<int64_t, 4> Result;
+  Result.push_back(Count);
+  return Result;
 }
 
+int Counter::numValues() const { return 1; }
 #else
 
 Counter::Counter(PerfEvent &&Event) : Event(std::move(Event)) {}
@@ -148,10 +152,12 @@ void Counter::stop() {}
 
 int64_t Counter::read() const { return 42; }
 
-llvm::Expected<int64_t> Counter::readOrError() const {
+llvm::Expected<llvm::SmallVector<int64_t, 4>> Counter::readOrError() const {
   return llvm::make_error<llvm::StringError>("Not implemented",
                                              llvm::errc::io_error);
 }
+
+int Counter::numValues() const { return 1; }
 
 #endif
 
