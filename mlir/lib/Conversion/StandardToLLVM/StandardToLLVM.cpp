@@ -24,6 +24,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
@@ -182,6 +183,10 @@ llvm::LLVMContext &LLVMTypeConverter::getLLVMContext() {
 
 LLVM::LLVMType LLVMTypeConverter::getIndexType() {
   return LLVM::LLVMType::getIntNTy(llvmDialect, getIndexTypeBitwidth());
+}
+
+unsigned LLVMTypeConverter::getPointerBitwidth(unsigned addressSpace) {
+  return module->getDataLayout().getPointerSizeInBits(addressSpace);
 }
 
 Type LLVMTypeConverter::convertIndexType(IndexType type) {
@@ -767,6 +772,51 @@ void UnrankedMemRefDescriptor::unpack(OpBuilder &builder, Location loc,
   results.reserve(results.size() + 2);
   results.push_back(d.rank(builder, loc));
   results.push_back(d.memRefDescPtr(builder, loc));
+}
+
+void UnrankedMemRefDescriptor::computeSizes(
+    OpBuilder &builder, Location loc, LLVMTypeConverter &typeConverter,
+    ArrayRef<UnrankedMemRefDescriptor> values, SmallVectorImpl<Value> &sizes) {
+  if (values.empty())
+    return;
+
+  // Cache the index type.
+  LLVM::LLVMType indexType = typeConverter.getIndexType();
+
+  // Initialize shared constants.
+  Value one = createIndexAttrConstant(builder, loc, indexType, 1);
+  Value two = createIndexAttrConstant(builder, loc, indexType, 2);
+  Value pointerSize = createIndexAttrConstant(
+      builder, loc, indexType, ceilDiv(typeConverter.getPointerBitwidth(), 8));
+  Value indexSize =
+      createIndexAttrConstant(builder, loc, indexType,
+                              ceilDiv(typeConverter.getIndexTypeBitwidth(), 8));
+
+  sizes.reserve(sizes.size() + values.size());
+  for (UnrankedMemRefDescriptor desc : values) {
+    // Emit IR computing the memory necessary to store the descriptor. This
+    // assumes the descriptor to be
+    //   { type*, type*, index, index[rank], index[rank] }
+    // and densely packed, so the total size is
+    //   2 * sizeof(pointer) + (1 + 2 * rank) * sizeof(index).
+    // TODO: consider including the actual size (including eventual padding due
+    // to data layout) into the unranked descriptor.
+    Value doublePointerSize =
+        builder.create<LLVM::MulOp>(loc, indexType, two, pointerSize);
+
+    // (1 + 2 * rank) * sizeof(index)
+    Value rank = desc.rank(builder, loc);
+    Value doubleRank = builder.create<LLVM::MulOp>(loc, indexType, two, rank);
+    Value doubleRankIncremented =
+        builder.create<LLVM::AddOp>(loc, indexType, doubleRank, one);
+    Value rankIndexSize = builder.create<LLVM::MulOp>(
+        loc, indexType, doubleRankIncremented, indexSize);
+
+    // Total allocation size.
+    Value allocationSize = builder.create<LLVM::AddOp>(
+        loc, indexType, doublePointerSize, rankIndexSize);
+    sizes.push_back(allocationSize);
+  }
 }
 
 LLVM::LLVMDialect &ConvertToLLVMPattern::getDialect() const {
@@ -1863,6 +1913,104 @@ struct AllocOpLowering : public AllocLikeOpLowering<AllocOp> {
 
 using AllocaOpLowering = AllocLikeOpLowering<AllocaOp>;
 
+/// Copies the shaped descriptor part to (if `toDynamic` is set) or from
+/// (otherwise) the dynamically allocated memory for any operands that were
+/// unranked descriptors originally.
+static LogicalResult copyUnrankedDescriptors(OpBuilder &builder, Location loc,
+                                             LLVMTypeConverter &typeConverter,
+                                             TypeRange origTypes,
+                                             SmallVectorImpl<Value> &operands,
+                                             bool toDynamic) {
+  assert(origTypes.size() == operands.size() &&
+         "expected as may original types as operands");
+
+  // Find operands of unranked memref type and store them.
+  SmallVector<UnrankedMemRefDescriptor, 4> unrankedMemrefs;
+  for (unsigned i = 0, e = operands.size(); i < e; ++i) {
+    if (!origTypes[i].isa<UnrankedMemRefType>())
+      continue;
+    unrankedMemrefs.emplace_back(operands[i]);
+  }
+
+  if (unrankedMemrefs.empty())
+    return success();
+
+  // Compute allocation sizes.
+  SmallVector<Value, 4> sizes;
+  UnrankedMemRefDescriptor::computeSizes(builder, loc, typeConverter,
+                                         unrankedMemrefs, sizes);
+
+  // Get frequently used types.
+  auto voidType = LLVM::LLVMType::getVoidTy(typeConverter.getDialect());
+  auto voidPtrType = LLVM::LLVMType::getInt8PtrTy(typeConverter.getDialect());
+  auto i1Type = LLVM::LLVMType::getInt1Ty(typeConverter.getDialect());
+  LLVM::LLVMType indexType = typeConverter.getIndexType();
+
+  // Find the malloc and free, or declare them if necessary.
+  auto module = builder.getInsertionPoint()->getParentOfType<ModuleOp>();
+  auto mallocFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("malloc");
+  if (!mallocFunc && toDynamic) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(module.getBody());
+    mallocFunc = builder.create<LLVM::LLVMFuncOp>(
+        builder.getUnknownLoc(), "malloc",
+        LLVM::LLVMType::getFunctionTy(
+            voidPtrType, llvm::makeArrayRef(indexType), /*isVarArg=*/false));
+  }
+  auto freeFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("free");
+  if (!freeFunc && !toDynamic) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(module.getBody());
+    freeFunc = builder.create<LLVM::LLVMFuncOp>(
+        builder.getUnknownLoc(), "free",
+        LLVM::LLVMType::getFunctionTy(voidType, llvm::makeArrayRef(voidPtrType),
+                                      /*isVarArg=*/false));
+  }
+
+  // Initialize shared constants.
+  Value zero =
+      builder.create<LLVM::ConstantOp>(loc, i1Type, builder.getBoolAttr(false));
+
+  unsigned unrankedMemrefPos = 0;
+  for (unsigned i = 0, e = operands.size(); i < e; ++i) {
+    Type type = origTypes[i];
+    if (!type.isa<UnrankedMemRefType>())
+      continue;
+    Value allocationSize = sizes[unrankedMemrefPos++];
+    UnrankedMemRefDescriptor desc(operands[i]);
+
+    // Allocate memory, copy, and free the source if necessary.
+    Value memory =
+        toDynamic
+            ? builder.create<LLVM::CallOp>(loc, mallocFunc, allocationSize)
+                  .getResult(0)
+            : builder.create<LLVM::AllocaOp>(loc, voidPtrType, allocationSize,
+                                             /*alignment=*/0);
+
+    Value source = desc.memRefDescPtr(builder, loc);
+    builder.create<LLVM::MemcpyOp>(loc, memory, source, allocationSize, zero);
+    if (!toDynamic)
+      builder.create<LLVM::CallOp>(loc, freeFunc, source);
+
+    // Create a new descriptor. The same descriptor can be returned multiple
+    // times, attempting to modify its pointer can lead to memory leaks
+    // (allocated twice and overwritten) or double frees (the caller does not
+    // know if the descriptor points to the same memory).
+    Type descriptorType = typeConverter.convertType(type);
+    if (!descriptorType)
+      return failure();
+    auto updatedDesc =
+        UnrankedMemRefDescriptor::undef(builder, loc, descriptorType);
+    Value rank = desc.rank(builder, loc);
+    updatedDesc.setRank(builder, loc, rank);
+    updatedDesc.setMemRefDescPtr(builder, loc, memory);
+
+    operands[i] = updatedDesc;
+  }
+
+  return success();
+}
+
 // A CallOp automatically promotes MemRefType to a sequence of alloca/store and
 // passes the pointer to the MemRef across function boundaries.
 template <typename CallOpType>
@@ -1882,13 +2030,6 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
     unsigned numResults = callOp.getNumResults();
     auto resultTypes = llvm::to_vector<4>(callOp.getResultTypes());
 
-    for (Type resType : resultTypes) {
-      assert(!resType.isa<UnrankedMemRefType>() &&
-             "Returning unranked memref is not supported. Pass result as an"
-             "argument instead.");
-      (void)resType;
-    }
-
     if (numResults != 0) {
       if (!(packedResult =
                 this->typeConverter.packFunctionResults(resultTypes)))
@@ -1900,25 +2041,25 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
     auto newOp = rewriter.create<LLVM::CallOp>(op->getLoc(), packedResult,
                                                promoted, op->getAttrs());
 
-    // If < 2 results, packing did not do anything and we can just return.
-    if (numResults < 2) {
-      rewriter.replaceOp(op, newOp.getResults());
-      return success();
-    }
-
-    // Otherwise, it had been converted to an operation producing a structure.
-    // Extract individual results from the structure and return them as list.
-    // TODO(aminim, ntv, riverriddle, zinenko): this seems like patching around
-    // a particular interaction between MemRefType and CallOp lowering. Find a
-    // way to avoid special casing.
     SmallVector<Value, 4> results;
-    results.reserve(numResults);
-    for (unsigned i = 0; i < numResults; ++i) {
-      auto type = this->typeConverter.convertType(op->getResult(i).getType());
-      results.push_back(rewriter.create<LLVM::ExtractValueOp>(
-          op->getLoc(), type, newOp.getOperation()->getResult(0),
-          rewriter.getI64ArrayAttr(i)));
+    if (numResults < 2) {
+      // If < 2 results, packing did not do anything and we can just return.
+      results.append(newOp.result_begin(), newOp.result_end());
+    } else {
+      // Otherwise, it had been converted to an operation producing a structure.
+      // Extract individual results from the structure and return them as list.
+      results.reserve(numResults);
+      for (unsigned i = 0; i < numResults; ++i) {
+        auto type = this->typeConverter.convertType(op->getResult(i).getType());
+        results.push_back(rewriter.create<LLVM::ExtractValueOp>(
+            op->getLoc(), type, newOp.getOperation()->getResult(0),
+            rewriter.getI64ArrayAttr(i)));
+      }
     }
+    if (failed(copyUnrankedDescriptors(
+            rewriter, op->getLoc(), this->typeConverter, op->getResultTypes(),
+            results, /*toDynamic=*/false)))
+      return failure();
     rewriter.replaceOp(op, results);
 
     return success();
@@ -2397,6 +2538,10 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     unsigned numArguments = op->getNumOperands();
+    auto updatedOperands = llvm::to_vector<4>(operands);
+    copyUnrankedDescriptors(rewriter, op->getLoc(), typeConverter,
+                            op->getOperands().getTypes(), updatedOperands,
+                            /*toDynamic=*/true);
 
     // If ReturnOp has 0 or 1 operand, create it and return immediately.
     if (numArguments == 0) {
@@ -2406,7 +2551,7 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
     }
     if (numArguments == 1) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-          op, ArrayRef<Type>(), operands.front(), op->getAttrs());
+          op, ArrayRef<Type>(), updatedOperands, op->getAttrs());
       return success();
     }
 
@@ -2418,7 +2563,7 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
     Value packed = rewriter.create<LLVM::UndefOp>(op->getLoc(), packedType);
     for (unsigned i = 0; i < numArguments; ++i) {
       packed = rewriter.create<LLVM::InsertValueOp>(
-          op->getLoc(), packedType, packed, operands[i],
+          op->getLoc(), packedType, packed, updatedOperands[i],
           rewriter.getI64ArrayAttr(i));
     }
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, ArrayRef<Type>(), packed,

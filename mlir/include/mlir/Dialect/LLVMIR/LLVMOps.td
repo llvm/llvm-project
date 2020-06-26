@@ -794,6 +794,13 @@ def LLVM_PowOp : LLVM_BinarySameArgsIntrinsicOp<"pow">;
 def LLVM_BitReverseOp : LLVM_UnaryIntrinsicOp<"bitreverse">;
 def LLVM_CtPopOp : LLVM_UnaryIntrinsicOp<"ctpop">;
 
+def LLVM_MemcpyOp : LLVM_ZeroResultIntrOp<"memcpy", [0, 1, 2]>,
+                    Arguments<(ins LLVM_Type:$dst, LLVM_Type:$src,
+                               LLVM_Type:$len, LLVM_Type:$isVolatile)>;
+def LLVM_MemcpyInlineOp : LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2]>,
+                          Arguments<(ins LLVM_Type:$dst, LLVM_Type:$src,
+                                     LLVM_Type:$len, LLVM_Type:$isVolatile)>;
+
 //
 // Vector Reductions.
 //
