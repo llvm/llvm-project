@@ -44,15 +44,21 @@ void abort_message(const char* format, ...)
 
     // Format the arguments into an allocated buffer. We leak the buffer on
     // purpose, since we're about to abort() anyway.
+#if defined(_LIBCXXABI_USE_CRASHREPORTER_CLIENT)
     char* buffer;
     va_list list;
     va_start(list, format);
     vasprintf(&buffer, format, list);
     va_end(list);
 
-#if defined(_LIBCXXABI_USE_CRASHREPORTER_CLIENT)
     CRSetCrashLogMessage(buffer);
 #elif defined(__BIONIC__)
+    char* buffer;
+    va_list list;
+    va_start(list, format);
+    vasprintf(&buffer, format, list);
+    va_end(list);
+
 #   if __ANDROID_API__ >= 21
     // Show error in tombstone.
     android_set_abort_message(buffer);
