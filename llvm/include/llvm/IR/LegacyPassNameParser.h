@@ -73,6 +73,11 @@ public:
       llvm_unreachable(nullptr);
     }
     addLiteralOption(P->getPassArgument().data(), P, P->getPassName().data());
+
+    // Temporary alias for basicaa -> basic-aa
+    // TODO: remove once everything is migrated to basic-aa
+    if (P->getPassArgument() == "basic-aa")
+      addLiteralOption("basicaa", P, "deprecated alias for basic-aa");
   }
   void passEnumerate(const PassInfo *P) override { passRegistered(P); }
 
