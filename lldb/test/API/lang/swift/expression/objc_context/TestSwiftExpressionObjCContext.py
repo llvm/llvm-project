@@ -29,9 +29,9 @@ class TestSwiftExpressionObjCContext(TestBase):
     def test(self):
         self.build()
 
-        # Register shlib so it can run on-device.
         target,  _, _, _ = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec('main.m'))
+        # Register shlib so it can run on-device.
         self.registerSharedLibrariesWithTarget(target, ['Foo'])
 
         # This is expected to fail because we can't yet import ObjC
