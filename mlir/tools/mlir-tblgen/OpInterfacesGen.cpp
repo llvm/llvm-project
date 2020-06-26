@@ -119,7 +119,7 @@ static void emitModelDecl(OpInterface &interface, raw_ostream &os) {
 
     // Provide a definition of the concrete op if this is non static.
     if (!method.isStatic()) {
-      os << "      auto op = llvm::cast<ConcreteOp>(tablegen_opaque_op);\n"
+      os << "      auto op = ::mlir::cast<ConcreteOp>(tablegen_opaque_op);\n"
          << "      (void)op;\n";
     }
 
@@ -146,7 +146,7 @@ static void emitTraitDecl(OpInterface &interface, raw_ostream &os,
                           StringRef interfaceName,
                           StringRef interfaceTraitsName) {
   os << "  template <typename ConcreteOp>\n  "
-     << llvm::formatv("struct {0}Trait : public OpInterface<{0},"
+     << llvm::formatv("struct {0}Trait : public ::mlir::OpInterface<{0},"
                       " detail::{1}>::Trait<ConcreteOp> {{\n",
                       interfaceName, interfaceTraitsName);
 
@@ -171,7 +171,7 @@ static void emitTraitDecl(OpInterface &interface, raw_ostream &os,
   tblgen::FmtContext traitCtx;
   traitCtx.withOp("op");
   if (auto verify = interface.getVerify()) {
-    os << "    static LogicalResult verifyTrait(Operation* op) {\n"
+    os << "    static ::mlir::LogicalResult verifyTrait(Operation* op) {\n"
        << std::string(tblgen::tgfmt(*verify, &traitCtx)) << "\n  }\n";
   }
   if (auto extraTraitDecls = interface.getExtraTraitClassDeclaration())
@@ -197,10 +197,11 @@ static void emitInterfaceDecl(OpInterface &interface, raw_ostream &os) {
   os << "};\n} // end namespace detail\n";
 
   // Emit the main interface class declaration.
-  os << llvm::formatv("class {0} : public OpInterface<{1}, detail::{2}> {\n"
-                      "public:\n"
-                      "  using OpInterface<{1}, detail::{2}>::OpInterface;\n",
-                      interfaceName, interfaceName, interfaceTraitsName);
+  os << llvm::formatv(
+      "class {0} : public ::mlir::OpInterface<{1}, detail::{2}> {\n"
+      "public:\n"
+      "  using ::mlir::OpInterface<{1}, detail::{2}>::OpInterface;\n",
+      interfaceName, interfaceName, interfaceTraitsName);
 
   // Emit the derived trait for the interface.
   emitTraitDecl(interface, os, interfaceName, interfaceTraitsName);
