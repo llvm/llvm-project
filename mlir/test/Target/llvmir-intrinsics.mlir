@@ -161,6 +161,10 @@ llvm.func @vector_reductions(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">, %a
   "llvm.intr.experimental.vector.reduce.v2.fadd"(%arg0, %arg1) : (!llvm.float, !llvm<"<8 x float>">) -> !llvm.float
   // CHECK: call float @llvm.experimental.vector.reduce.v2.fmul.f32.v8f32
   "llvm.intr.experimental.vector.reduce.v2.fmul"(%arg0, %arg1) : (!llvm.float, !llvm<"<8 x float>">) -> !llvm.float
+  // CHECK: call reassoc float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32
+  "llvm.intr.experimental.vector.reduce.v2.fadd"(%arg0, %arg1) {reassoc = true} : (!llvm.float, !llvm<"<8 x float>">) -> !llvm.float
+  // CHECK: call reassoc float @llvm.experimental.vector.reduce.v2.fmul.f32.v8f32
+  "llvm.intr.experimental.vector.reduce.v2.fmul"(%arg0, %arg1) {reassoc = true} : (!llvm.float, !llvm<"<8 x float>">) -> !llvm.float
   // CHECK: call i32 @llvm.experimental.vector.reduce.xor.v8i32
   "llvm.intr.experimental.vector.reduce.xor"(%arg2) : (!llvm<"<8 x i32>">) -> !llvm.i32
   llvm.return
