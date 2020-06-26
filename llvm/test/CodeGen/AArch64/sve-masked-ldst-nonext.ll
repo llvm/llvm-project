@@ -87,7 +87,7 @@ define <vscale x 8 x half> @masked_load_nxv8f16(<vscale x 8 x half> *%a, <vscale
   ret <vscale x 8 x half> %load
 }
 
-define <vscale x 8 x bfloat> @masked_load_nxv8bf16(<vscale x 8 x bfloat> *%a, <vscale x 8 x i1> %mask) nounwind {
+define <vscale x 8 x bfloat> @masked_load_nxv8bf16(<vscale x 8 x bfloat> *%a, <vscale x 8 x i1> %mask) nounwind #0 {
 ; CHECK-LABEL: masked_load_nxv8bf16:
 ; CHECK-NEXT: ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT: ret
@@ -203,3 +203,6 @@ declare void @llvm.masked.store.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>
 declare void @llvm.masked.store.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>*, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.store.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>*, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.store.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>*, i32, <vscale x 8 x i1>)
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+bf16" }

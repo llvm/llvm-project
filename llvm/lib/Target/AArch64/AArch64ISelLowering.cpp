@@ -12074,6 +12074,11 @@ static SDValue performLDNT1Combine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   EVT PtrTy = N->getOperand(3).getValueType();
 
+  if (VT == MVT::nxv8bf16)
+    assert(
+        static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16() &&
+        "Unsupported type (BF16)");
+
   EVT LoadVT = VT;
   if (VT.isFloatingPoint())
     LoadVT = VT.changeTypeToInteger();

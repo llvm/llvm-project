@@ -806,7 +806,7 @@ define <vscale x 2 x i64> @rev_i64(<vscale x 2 x i64> %a) {
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 8 x bfloat> @rev_bf16(<vscale x 8 x bfloat> %a) {
+define <vscale x 8 x bfloat> @rev_bf16(<vscale x 8 x bfloat> %a) #0 {
 ; CHECK-LABEL: rev_bf16
 ; CHECK: rev z0.h, z0.h
 ; CHECK-NEXT: ret
@@ -882,7 +882,7 @@ define <vscale x 2 x i64> @splice_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> 
   ret <vscale x 2 x i64> %out
 }
 
-define <vscale x 8 x bfloat> @splice_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+define <vscale x 8 x bfloat> @splice_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
 ; CHECK-LABEL: splice_bf16:
 ; CHECK: splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -1195,7 +1195,7 @@ define <vscale x 4 x half> @trn1_f16_v4(<vscale x 4 x half> %a, <vscale x 4 x ha
   ret <vscale x 4 x half> %out
 }
 
-define <vscale x 8 x bfloat> @trn1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+define <vscale x 8 x bfloat> @trn1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
 ; CHECK-LABEL: trn1_bf16:
 ; CHECK: trn1 z0.h, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -1316,7 +1316,7 @@ define <vscale x 4 x half> @trn2_f16_v4(<vscale x 4 x half> %a, <vscale x 4 x ha
   ret <vscale x 4 x half> %out
 }
 
-define <vscale x 8 x bfloat> @trn2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+define <vscale x 8 x bfloat> @trn2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
 ; CHECK-LABEL: trn2_bf16:
 ; CHECK: trn2 z0.h, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -1437,7 +1437,7 @@ define <vscale x 4 x half> @uzp1_f16_v4(<vscale x 4 x half> %a, <vscale x 4 x ha
   ret <vscale x 4 x half> %out
 }
 
-define <vscale x 8 x bfloat> @uzp1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+define <vscale x 8 x bfloat> @uzp1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
 ; CHECK-LABEL: uzp1_bf16:
 ; CHECK: uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -1558,7 +1558,7 @@ define <vscale x 4 x half> @uzp2_f16_v4(<vscale x 4 x half> %a, <vscale x 4 x ha
   ret <vscale x 4 x half> %out
 }
 
-define <vscale x 8 x bfloat> @uzp2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+define <vscale x 8 x bfloat> @uzp2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
 ; CHECK-LABEL: uzp2_bf16:
 ; CHECK: uzp2 z0.h, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -1679,7 +1679,7 @@ define <vscale x 4 x half> @zip1_f16_v4(<vscale x 4 x half> %a, <vscale x 4 x ha
   ret <vscale x 4 x half> %out
 }
 
-define <vscale x 8 x bfloat> @zip1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+define <vscale x 8 x bfloat> @zip1_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
 ; CHECK-LABEL: zip1_bf16:
 ; CHECK: zip1 z0.h, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -1800,7 +1800,7 @@ define <vscale x 4 x half> @zip2_f16_v4(<vscale x 4 x half> %a, <vscale x 4 x ha
   ret <vscale x 4 x half> %out
 }
 
-define <vscale x 8 x bfloat> @zip2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+define <vscale x 8 x bfloat> @zip2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
 ; CHECK-LABEL: zip2_bf16:
 ; CHECK: zip2 z0.h, z0.h, z1.h
 ; CHECK-NEXT: ret

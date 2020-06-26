@@ -290,679 +290,159 @@ void Scalar::TruncOrExtendTo(uint16_t bits, bool sign) {
   m_type = GetBestTypeForBitSize(bits, sign);
 }
 
+static size_t GetBitSize(Scalar::Type type) {
+  switch (type) {
+  case Scalar::e_void:
+    return 0;
+  case Scalar::e_sint:
+    return 8 * sizeof(int);
+  case Scalar::e_uint:
+    return 8 * sizeof(unsigned int);
+  case Scalar::e_slong:
+    return 8 * sizeof(long);
+  case Scalar::e_ulong:
+    return 8 * sizeof(unsigned long);
+  case Scalar::e_slonglong:
+    return 8 * sizeof(long long);
+  case Scalar::e_ulonglong:
+    return 8 * sizeof(unsigned long long);
+  case Scalar::e_sint128:
+  case Scalar::e_uint128:
+    return BITWIDTH_INT128;
+  case Scalar::e_sint256:
+  case Scalar::e_uint256:
+    return BITWIDTH_INT256;
+  case Scalar::e_sint512:
+  case Scalar::e_uint512:
+    return BITWIDTH_INT512;
+  case Scalar::e_float:
+    return 8 * sizeof(float);
+  case Scalar::e_double:
+    return 8 * sizeof(double);
+  case Scalar::e_long_double:
+    return 8 * sizeof(long double);
+  }
+  llvm_unreachable("Unhandled type!");
+}
+
+static bool IsSigned(Scalar::Type type) {
+  switch (type) {
+  case Scalar::e_void:
+  case Scalar::e_uint:
+  case Scalar::e_ulong:
+  case Scalar::e_ulonglong:
+  case Scalar::e_uint128:
+  case Scalar::e_uint256:
+  case Scalar::e_uint512:
+    return false;
+  case Scalar::e_sint:
+  case Scalar::e_slong:
+  case Scalar::e_slonglong:
+  case Scalar::e_sint128:
+  case Scalar::e_sint256:
+  case Scalar::e_sint512:
+  case Scalar::e_float:
+  case Scalar::e_double:
+  case Scalar::e_long_double:
+    return true;
+  }
+  llvm_unreachable("Unhandled type!");
+}
+
+namespace {
+enum class Category { Void, Integral, Float };
+}
+
+static Category GetCategory(Scalar::Type type) {
+  switch (type) {
+  case Scalar::e_void:
+    return Category::Void;
+  case Scalar::e_float:
+  case Scalar::e_double:
+  case Scalar::e_long_double:
+    return Category::Float;
+  case Scalar::e_sint:
+  case Scalar::e_slong:
+  case Scalar::e_slonglong:
+  case Scalar::e_sint128:
+  case Scalar::e_sint256:
+  case Scalar::e_sint512:
+  case Scalar::e_uint:
+  case Scalar::e_ulong:
+  case Scalar::e_ulonglong:
+  case Scalar::e_uint128:
+  case Scalar::e_uint256:
+  case Scalar::e_uint512:
+    return Category::Integral;
+  }
+  llvm_unreachable("Unhandled type!");
+}
+
+static const llvm::fltSemantics &GetFltSemantics(Scalar::Type type) {
+  switch (type) {
+  case Scalar::e_void:
+  case Scalar::e_sint:
+  case Scalar::e_slong:
+  case Scalar::e_slonglong:
+  case Scalar::e_sint128:
+  case Scalar::e_sint256:
+  case Scalar::e_sint512:
+  case Scalar::e_uint:
+  case Scalar::e_ulong:
+  case Scalar::e_ulonglong:
+  case Scalar::e_uint128:
+  case Scalar::e_uint256:
+  case Scalar::e_uint512:
+    llvm_unreachable("Only floating point types supported!");
+  case Scalar::e_float:
+    return llvm::APFloat::IEEEsingle();
+  case Scalar::e_double:
+    return llvm::APFloat::IEEEdouble();
+  case Scalar::e_long_double:
+    return llvm::APFloat::x87DoubleExtended();
+  }
+  llvm_unreachable("Unhandled type!");
+}
+
 bool Scalar::Promote(Scalar::Type type) {
   bool success = false;
-  switch (m_type) {
-  case e_void:
+  switch (GetCategory(m_type)) {
+  case Category::Void:
     break;
-
-  case e_sint:
-    switch (type) {
-    case e_void:
+  case Category::Integral:
+    switch (GetCategory(type)) {
+    case Category::Void:
       break;
-    case e_sint:
+    case Category::Integral:
+      if (type < m_type)
+        break;
       success = true;
+      if (IsSigned(m_type))
+        m_integer = m_integer.sextOrTrunc(GetBitSize(type));
+      else
+        m_integer = m_integer.zextOrTrunc(GetBitSize(type));
       break;
-    case e_uint:
-      m_integer = m_integer.sextOrTrunc(sizeof(uint_t) * 8);
-      success = true;
-      break;
-
-    case e_slong:
-      m_integer = m_integer.sextOrTrunc(sizeof(slong_t) * 8);
-      success = true;
-      break;
-
-    case e_ulong:
-      m_integer = m_integer.sextOrTrunc(sizeof(ulong_t) * 8);
-      success = true;
-      break;
-
-    case e_slonglong:
-      m_integer = m_integer.sextOrTrunc(sizeof(slonglong_t) * 8);
-      success = true;
-      break;
-
-    case e_ulonglong:
-      m_integer = m_integer.sextOrTrunc(sizeof(ulonglong_t) * 8);
-      success = true;
-      break;
-
-    case e_sint128:
-    case e_uint128:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT128);
-      success = true;
-      break;
-
-    case e_sint256:
-    case e_uint256:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT256);
-      success = true;
-      break;
-
-    case e_sint512:
-    case e_uint512:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT512);
-      success = true;
-      break;
-
-    case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_long_double:
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, true,
+    case Category::Float:
+      m_float = llvm::APFloat(GetFltSemantics(type));
+      m_float.convertFromAPInt(m_integer, IsSigned(m_type),
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
       break;
     }
     break;
-
-  case e_uint:
-    switch (type) {
-    case e_void:
-    case e_sint:
-      break;
-    case e_uint:
-      success = true;
-      break;
-    case e_slong:
-      m_integer = m_integer.zextOrTrunc(sizeof(slong_t) * 8);
-      success = true;
-      break;
-
-    case e_ulong:
-      m_integer = m_integer.zextOrTrunc(sizeof(ulong_t) * 8);
-      success = true;
-      break;
-
-    case e_slonglong:
-      m_integer = m_integer.zextOrTrunc(sizeof(slonglong_t) * 8);
-      success = true;
-      break;
-
-    case e_ulonglong:
-      m_integer = m_integer.zextOrTrunc(sizeof(ulonglong_t) * 8);
-      success = true;
-      break;
-
-    case e_sint128:
-    case e_uint128:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT128);
-      success = true;
-      break;
-
-    case e_sint256:
-    case e_uint256:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT256);
-      success = true;
-      break;
-
-    case e_sint512:
-    case e_uint512:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT512);
-      success = true;
-      break;
-
-    case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_long_double:
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-    }
-    break;
-
-  case e_slong:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-      break;
-    case e_slong:
-      success = true;
-      break;
-    case e_ulong:
-      m_integer = m_integer.sextOrTrunc(sizeof(ulong_t) * 8);
-      success = true;
-      break;
-
-    case e_slonglong:
-      m_integer = m_integer.sextOrTrunc(sizeof(slonglong_t) * 8);
-      success = true;
-      break;
-
-    case e_ulonglong:
-      m_integer = m_integer.sextOrTrunc(sizeof(ulonglong_t) * 8);
-      success = true;
-      break;
-
-    case e_sint128:
-    case e_uint128:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT128);
-      success = true;
-      break;
-
-    case e_sint256:
-    case e_uint256:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT256);
-      success = true;
-      break;
-
-    case e_sint512:
-    case e_uint512:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT512);
-      success = true;
-      break;
-
-    case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_long_double:
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-    }
-    break;
-
-  case e_ulong:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-    case e_slong:
-      break;
-    case e_ulong:
-      success = true;
-      break;
-    case e_slonglong:
-      m_integer = m_integer.zextOrTrunc(sizeof(slonglong_t) * 8);
-      success = true;
-      break;
-
-    case e_ulonglong:
-      m_integer = m_integer.zextOrTrunc(sizeof(ulonglong_t) * 8);
-      success = true;
-      break;
-
-    case e_sint128:
-    case e_uint128:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT128);
-      success = true;
-      break;
-
-    case e_sint256:
-    case e_uint256:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT256);
-      success = true;
-      break;
-
-    case e_sint512:
-    case e_uint512:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT512);
-      success = true;
-      break;
-
-    case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_long_double:
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-    }
-    break;
-
-  case e_slonglong:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-    case e_slong:
-    case e_ulong:
-      break;
-    case e_slonglong:
-      success = true;
-      break;
-    case e_ulonglong:
-      m_integer = m_integer.sextOrTrunc(sizeof(ulonglong_t) * 8);
-      success = true;
-      break;
-
-    case e_sint128:
-    case e_uint128:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT128);
-      success = true;
-      break;
-
-    case e_sint256:
-    case e_uint256:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT256);
-      success = true;
-      break;
-
-    case e_sint512:
-    case e_uint512:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT512);
-      success = true;
-      break;
-
-    case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_long_double:
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-    }
-    break;
-
-  case e_ulonglong:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-    case e_slong:
-    case e_ulong:
-    case e_slonglong:
-      break;
-    case e_ulonglong:
-      success = true;
-      break;
-    case e_sint128:
-    case e_uint128:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT128);
-      success = true;
-      break;
-
-    case e_sint256:
-    case e_uint256:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT256);
-      success = true;
-      break;
-
-    case e_sint512:
-    case e_uint512:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT512);
-      success = true;
-      break;
-
-    case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_long_double:
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-    }
-    break;
-
-  case e_sint128:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-    case e_slong:
-    case e_ulong:
-    case e_slonglong:
-    case e_ulonglong:
-      break;
-    case e_sint128:
-      success = true;
-      break;
-    case e_uint128:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT128);
-      success = true;
-      break;
-
-    case e_sint256:
-    case e_uint256:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT256);
-      success = true;
-      break;
-
-    case e_sint512:
-    case e_uint512:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT512);
-      success = true;
-      break;
-
-    case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_long_double:
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-    }
-    break;
-
-  case e_uint128:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-    case e_slong:
-    case e_ulong:
-    case e_slonglong:
-    case e_ulonglong:
-    case e_sint128:
-      break;
-    case e_uint128:
-      success = true;
-      break;
-    case e_sint256:
-    case e_uint256:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT256);
-      success = true;
-      break;
-
-    case e_sint512:
-    case e_uint512:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT512);
-      success = true;
-      break;
-
-    case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_long_double:
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-    }
-    break;
-
-  case e_sint256:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-    case e_slong:
-    case e_ulong:
-    case e_slonglong:
-    case e_ulonglong:
-    case e_sint128:
-    case e_uint128:
-      break;
-    case e_sint256:
-      success = true;
-      break;
-    case e_uint256:
-      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT256);
-      success = true;
-      break;
-
-    case e_sint512:
-    case e_uint512:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT512);
-      success = true;
-      break;
-
-    case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_long_double:
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-    }
-    break;
-
-  case e_uint256:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-    case e_slong:
-    case e_ulong:
-    case e_slonglong:
-    case e_ulonglong:
-    case e_sint128:
-    case e_uint128:
-    case e_sint256:
-      break;
-    case e_uint256:
-      success = true;
-      break;
-
-    case e_sint512:
-    case e_uint512:
-      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT512);
-      success = true;
-      break;
-
-    case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-
-    case e_long_double:
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
-      success = true;
-      break;
-    }
-    break;
-
-  case e_sint512:
-  case e_uint512:
-    lldbassert(false && "unimplemented");
-    break;
-
-  case e_float:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-    case e_slong:
-    case e_ulong:
-    case e_slonglong:
-    case e_ulonglong:
-    case e_sint128:
-    case e_uint128:
-    case e_sint256:
-    case e_uint256:
-    case e_uint512:
-    case e_sint512:
-      break;
-    case e_float:
-      success = true;
-      break;
-    case e_double:
-      m_float = llvm::APFloat(static_cast<double_t>(m_float.convertToFloat()));
-      success = true;
-      break;
-
-    case e_long_double: {
+  case Category::Float:
+    switch (GetCategory(type)) {
+    case Category::Void:
+    case Category::Integral:
+      break;
+    case Category::Float:
+      if (type < m_type)
+        break;
       bool ignore;
-      m_float.convert(llvm::APFloat::x87DoubleExtended(),
-                      llvm::APFloat::rmNearestTiesToEven, &ignore);
       success = true;
-      break;
+      m_float.convert(GetFltSemantics(type), llvm::APFloat::rmNearestTiesToEven,
+                      &ignore);
     }
-    }
-    break;
-
-  case e_double:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-    case e_slong:
-    case e_ulong:
-    case e_slonglong:
-    case e_ulonglong:
-    case e_sint128:
-    case e_uint128:
-    case e_sint256:
-    case e_uint256:
-    case e_sint512:
-    case e_uint512:
-    case e_float:
-      break;
-    case e_double:
-      success = true;
-      break;
-    case e_long_double: {
-      bool ignore;
-      m_float.convert(llvm::APFloat::x87DoubleExtended(),
-                      llvm::APFloat::rmNearestTiesToEven, &ignore);
-      success = true;
-      break;
-    }
-    }
-    break;
-
-  case e_long_double:
-    switch (type) {
-    case e_void:
-    case e_sint:
-    case e_uint:
-    case e_slong:
-    case e_ulong:
-    case e_slonglong:
-    case e_ulonglong:
-    case e_sint128:
-    case e_uint128:
-    case e_sint256:
-    case e_uint256:
-    case e_sint512:
-    case e_uint512:
-    case e_float:
-    case e_double:
-      break;
-    case e_long_double:
-      success = true;
-      break;
-    }
-    break;
   }
 
   if (success)
