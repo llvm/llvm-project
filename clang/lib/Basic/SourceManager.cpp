@@ -882,11 +882,8 @@ FileID SourceManager::getFileIDLocal(unsigned SLocOffset) const {
   unsigned LessIndex = 0;
   NumProbes = 0;
   while (true) {
-    bool Invalid = false;
     unsigned MiddleIndex = (GreaterIndex-LessIndex)/2+LessIndex;
-    unsigned MidOffset = getLocalSLocEntry(MiddleIndex, &Invalid).getOffset();
-    if (Invalid)
-      return FileID::get(0);
+    unsigned MidOffset = getLocalSLocEntry(MiddleIndex).getOffset();
 
     ++NumProbes;
 
@@ -1694,11 +1691,7 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
   // The location we're looking for isn't in the main file; look
   // through all of the local source locations.
   for (unsigned I = 0, N = local_sloc_entry_size(); I != N; ++I) {
-    bool Invalid = false;
-    const SLocEntry &SLoc = getLocalSLocEntry(I, &Invalid);
-    if (Invalid)
-      return FileID();
-
+    const SLocEntry &SLoc = getLocalSLocEntry(I);
     if (SLoc.isFile() && SLoc.getFile().getContentCache() &&
         SLoc.getFile().getContentCache()->OrigEntry == SourceFile)
       return FileID::get(I);
