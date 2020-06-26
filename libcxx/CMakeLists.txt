@@ -874,22 +874,15 @@ if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
 endif()
 
 set(site_config_path "${LIBCXX_BINARY_DIR}/__config_site")
-if (LIBCXX_NEEDS_SITE_CONFIG)
-  configure_file("include/__config_site.in"
-                 "${site_config_path}"
-                 @ONLY)
-elseif(EXISTS "${site_config_path}")
-  message(STATUS "Removing stale site configuration ${site_config_path}")
-  file(REMOVE "${site_config_path}")
-endif()
+configure_file("include/__config_site.in"
+               "${site_config_path}"
+               @ONLY)
 
 function(cxx_add_config_site target)
-  if (LIBCXX_NEEDS_SITE_CONFIG)
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-      target_compile_options(${target} PUBLIC /FI "${site_config_path}")
-    else()
-      target_compile_options(${target} PUBLIC -include "${site_config_path}")
-    endif()
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    target_compile_options(${target} PUBLIC /FI "${site_config_path}")
+  else()
+    target_compile_options(${target} PUBLIC -include "${site_config_path}")
   endif()
 endfunction()
 
