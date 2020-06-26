@@ -1493,7 +1493,8 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
 
   BinaryOperator *assign = BinaryOperator::Create(
       getContext(), &ivarRef, finalArg, BO_Assign, ivarRef.getType(), VK_RValue,
-      OK_Ordinary, SourceLocation(), FPOptionsOverride());
+      OK_Ordinary, SourceLocation(),
+      FPOptions(getContext().getLangOpts()));
   EmitStmt(assign);
 }
 
@@ -3555,18 +3556,18 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   DeclRefExpr DstExpr(C, &DstDecl, false, DestTy, VK_RValue, SourceLocation());
   UnaryOperator *DST = UnaryOperator::Create(
       C, &DstExpr, UO_Deref, DestTy->getPointeeType(), VK_LValue, OK_Ordinary,
-      SourceLocation(), false, FPOptionsOverride());
+      SourceLocation(), false, FPOptions(C.getLangOpts()));
 
   DeclRefExpr SrcExpr(C, &SrcDecl, false, SrcTy, VK_RValue, SourceLocation());
   UnaryOperator *SRC = UnaryOperator::Create(
       C, &SrcExpr, UO_Deref, SrcTy->getPointeeType(), VK_LValue, OK_Ordinary,
-      SourceLocation(), false, FPOptionsOverride());
+      SourceLocation(), false, FPOptions(C.getLangOpts()));
 
   Expr *Args[2] = {DST, SRC};
   CallExpr *CalleeExp = cast<CallExpr>(PID->getSetterCXXAssignment());
   CXXOperatorCallExpr *TheCall = CXXOperatorCallExpr::Create(
       C, OO_Equal, CalleeExp->getCallee(), Args, DestTy->getPointeeType(),
-      VK_LValue, SourceLocation(), FPOptionsOverride());
+      VK_LValue, SourceLocation(), FPOptions(C.getLangOpts()));
 
   EmitStmt(TheCall);
 
@@ -3640,7 +3641,7 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
 
   UnaryOperator *SRC = UnaryOperator::Create(
       C, &SrcExpr, UO_Deref, SrcTy->getPointeeType(), VK_LValue, OK_Ordinary,
-      SourceLocation(), false, FPOptionsOverride());
+      SourceLocation(), false, FPOptions(C.getLangOpts()));
 
   CXXConstructExpr *CXXConstExpr =
     cast<CXXConstructExpr>(PID->getGetterCXXConstructor());

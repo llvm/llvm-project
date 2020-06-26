@@ -10564,10 +10564,8 @@ TreeTransform<Derived>::TransformBinaryOperator(BinaryOperator *E) {
     return getDerived().RebuildBinaryOperator(
         E->getOperatorLoc(), E->getOpcode(), LHS.get(), RHS.get());
   Sema::FPFeaturesStateRAII FPFeaturesState(getSema());
-  FPOptionsOverride NewOverrides(E->getFPFeatures(getSema().getLangOpts()));
-  getSema().CurFPFeatures =
-      NewOverrides.applyOverrides(getSema().getLangOpts());
-  getSema().FpPragmaStack.CurrentValue = NewOverrides.getAsOpaqueInt();
+  getSema().CurFPFeatures = E->getFPFeatures(getSema().getLangOpts());
+
   return getDerived().RebuildBinaryOperator(E->getOperatorLoc(), E->getOpcode(),
                                             LHS.get(), RHS.get());
 }
@@ -10621,10 +10619,7 @@ ExprResult
 TreeTransform<Derived>::TransformCompoundAssignOperator(
                                                       CompoundAssignOperator *E) {
   Sema::FPFeaturesStateRAII FPFeaturesState(getSema());
-  FPOptionsOverride NewOverrides(E->getFPFeatures(getSema().getLangOpts()));
-  getSema().CurFPFeatures =
-      NewOverrides.applyOverrides(getSema().getLangOpts());
-  getSema().FpPragmaStack.CurrentValue = NewOverrides.getAsOpaqueInt();
+  getSema().CurFPFeatures = E->getFPFeatures(getSema().getLangOpts());
   return getDerived().TransformBinaryOperator(E);
 }
 
@@ -11099,10 +11094,7 @@ TreeTransform<Derived>::TransformCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
     return SemaRef.MaybeBindToTemporary(E);
 
   Sema::FPFeaturesStateRAII FPFeaturesState(getSema());
-  FPOptionsOverride NewOverrides(E->getFPFeatures());
-  getSema().CurFPFeatures =
-      NewOverrides.applyOverrides(getSema().getLangOpts());
-  getSema().FpPragmaStack.CurrentValue = NewOverrides.getAsOpaqueInt();
+  getSema().CurFPFeatures = E->getFPFeatures();
 
   return getDerived().RebuildCXXOperatorCallExpr(E->getOperator(),
                                                  E->getOperatorLoc(),

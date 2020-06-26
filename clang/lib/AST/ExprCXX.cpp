@@ -525,27 +525,27 @@ CXXOperatorCallExpr::CXXOperatorCallExpr(OverloadedOperatorKind OpKind,
                                          Expr *Fn, ArrayRef<Expr *> Args,
                                          QualType Ty, ExprValueKind VK,
                                          SourceLocation OperatorLoc,
-                                         FPOptionsOverride FPFeatures,
+                                         FPOptions FPFeatures,
                                          ADLCallKind UsesADL)
     : CallExpr(CXXOperatorCallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
                OperatorLoc, /*MinNumArgs=*/0, UsesADL) {
   CXXOperatorCallExprBits.OperatorKind = OpKind;
+  CXXOperatorCallExprBits.FPFeatures = FPFeatures.getAsOpaqueInt();
   assert(
       (CXXOperatorCallExprBits.OperatorKind == static_cast<unsigned>(OpKind)) &&
       "OperatorKind overflow!");
+  assert((CXXOperatorCallExprBits.FPFeatures == FPFeatures.getAsOpaqueInt()) &&
+         "FPFeatures overflow!");
   Range = getSourceRangeImpl();
-  Overrides = FPFeatures;
 }
 
 CXXOperatorCallExpr::CXXOperatorCallExpr(unsigned NumArgs, EmptyShell Empty)
     : CallExpr(CXXOperatorCallExprClass, /*NumPreArgs=*/0, NumArgs, Empty) {}
 
-CXXOperatorCallExpr *
-CXXOperatorCallExpr::Create(const ASTContext &Ctx,
-                            OverloadedOperatorKind OpKind, Expr *Fn,
-                            ArrayRef<Expr *> Args, QualType Ty,
-                            ExprValueKind VK, SourceLocation OperatorLoc,
-                            FPOptionsOverride FPFeatures, ADLCallKind UsesADL) {
+CXXOperatorCallExpr *CXXOperatorCallExpr::Create(
+    const ASTContext &Ctx, OverloadedOperatorKind OpKind, Expr *Fn,
+    ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
+    SourceLocation OperatorLoc, FPOptions FPFeatures, ADLCallKind UsesADL) {
   // Allocate storage for the trailing objects of CallExpr.
   unsigned NumArgs = Args.size();
   unsigned SizeOfTrailingObjects =
