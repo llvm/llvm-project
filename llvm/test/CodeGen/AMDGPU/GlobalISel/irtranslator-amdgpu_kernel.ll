@@ -656,18 +656,7 @@ define amdgpu_kernel void @empty_struct_arg({} %in) nounwind {
 
 ; With the SelectionDAG argument lowering, the alignments for the
 ; struct members is not properly considered, making these wrong.
-
-; FIXME: GlobalISel extractvalue emission broken
-
 define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32, i64} %arg1) {
-  ; %val0 = extractvalue {i32, i64} %arg0, 0
-  ; %val1 = extractvalue {i32, i64} %arg0, 1
-  ; %val2 = extractvalue {i32, i64} %arg1, 0
-  ; %val3 = extractvalue {i32, i64} %arg1, 1
-  ; store volatile i32 %val0, i32 addrspace(1)* null
-  ; store volatile i64 %val1, i64 addrspace(1)* null
-  ; store volatile i32 %val2, i32 addrspace(1)* null
-  ; store volatile i64 %val3, i64 addrspace(1)* null
   ; HSA-VI-LABEL: name: struct_argument_alignment
   ; HSA-VI: bb.1 (%ir-block.1):
   ; HSA-VI:   liveins: $sgpr4_sgpr5
@@ -685,21 +674,27 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
   ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 16, align 8, addrspace 4)
   ; HSA-VI:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD2]](s128), 0
   ; HSA-VI:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD2]](s128), 64
+  ; HSA-VI:   [[C3:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
+  ; HSA-VI:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[C3]](p1)
+  ; HSA-VI:   G_STORE [[EXTRACT]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
+  ; HSA-VI:   G_STORE [[EXTRACT1]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
+  ; HSA-VI:   G_STORE [[EXTRACT2]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
+  ; HSA-VI:   G_STORE [[EXTRACT3]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
   ; HSA-VI:   S_ENDPGM 0
+  %val0 = extractvalue {i32, i64} %arg0, 0
+  %val1 = extractvalue {i32, i64} %arg0, 1
+  %val2 = extractvalue {i32, i64} %arg1, 0
+  %val3 = extractvalue {i32, i64} %arg1, 1
+  store volatile i32 %val0, i32 addrspace(1)* null
+  store volatile i64 %val1, i64 addrspace(1)* null
+  store volatile i32 %val2, i32 addrspace(1)* null
+  store volatile i64 %val3, i64 addrspace(1)* null
   ret void
 }
 
 ; No padding between i8 and next struct, but round up at end to 4 byte
 ; multiple.
 define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, i8, <{i32, i64}> %arg1) {
-  ; %val0 = extractvalue <{i32, i64}> %arg0, 0
-  ; %val1 = extractvalue <{i32, i64}> %arg0, 1
-  ; %val2 = extractvalue <{i32, i64}> %arg1, 0
-  ; %val3 = extractvalue <{i32, i64}> %arg1, 1
-  ; store volatile i32 %val0, i32 addrspace(1)* null
-  ; store volatile i64 %val1, i64 addrspace(1)* null
-  ; store volatile i32 %val2, i32 addrspace(1)* null
-  ; store volatile i64 %val3, i64 addrspace(1)* null
   ; HSA-VI-LABEL: name: packed_struct_argument_alignment
   ; HSA-VI: bb.1 (%ir-block.1):
   ; HSA-VI:   liveins: $sgpr4_sgpr5
@@ -717,6 +712,20 @@ define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, 
   ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s96) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 12, align 1, addrspace 4)
   ; HSA-VI:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD2]](s96), 0
   ; HSA-VI:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD2]](s96), 32
+  ; HSA-VI:   [[C3:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
+  ; HSA-VI:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[C3]](p1)
+  ; HSA-VI:   G_STORE [[EXTRACT]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
+  ; HSA-VI:   G_STORE [[EXTRACT1]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
+  ; HSA-VI:   G_STORE [[EXTRACT2]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
+  ; HSA-VI:   G_STORE [[EXTRACT3]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
   ; HSA-VI:   S_ENDPGM 0
+  %val0 = extractvalue <{i32, i64}> %arg0, 0
+  %val1 = extractvalue <{i32, i64}> %arg0, 1
+  %val2 = extractvalue <{i32, i64}> %arg1, 0
+  %val3 = extractvalue <{i32, i64}> %arg1, 1
+  store volatile i32 %val0, i32 addrspace(1)* null
+  store volatile i64 %val1, i64 addrspace(1)* null
+  store volatile i32 %val2, i32 addrspace(1)* null
+  store volatile i64 %val3, i64 addrspace(1)* null
   ret void
 }
