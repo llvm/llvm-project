@@ -195,4 +195,4 @@ LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE void User::operator delete(void *Usr) {
   }
 }
 
-} // End llvm namespace
+} // namespace llvm
