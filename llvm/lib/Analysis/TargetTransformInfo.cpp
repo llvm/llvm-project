@@ -910,13 +910,13 @@ bool TargetTransformInfo::isLegalToVectorizeStore(StoreInst *SI) const {
 }
 
 bool TargetTransformInfo::isLegalToVectorizeLoadChain(
-    unsigned ChainSizeInBytes, unsigned Alignment, unsigned AddrSpace) const {
+    unsigned ChainSizeInBytes, Align Alignment, unsigned AddrSpace) const {
   return TTIImpl->isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment,
                                               AddrSpace);
 }
 
 bool TargetTransformInfo::isLegalToVectorizeStoreChain(
-    unsigned ChainSizeInBytes, unsigned Alignment, unsigned AddrSpace) const {
+    unsigned ChainSizeInBytes, Align Alignment, unsigned AddrSpace) const {
   return TTIImpl->isLegalToVectorizeStoreChain(ChainSizeInBytes, Alignment,
                                                AddrSpace);
 }
