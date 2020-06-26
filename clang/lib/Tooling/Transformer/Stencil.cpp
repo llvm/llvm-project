@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include <atomic>
 #include <memory>
 #include <string>
@@ -232,8 +233,31 @@ Error evalData(const SelectorData &Data, const MatchFinder::MatchResult &Match,
     return RawRange.takeError();
   CharSourceRange Range = Lexer::makeFileCharRange(
       *RawRange, *Match.SourceManager, Match.Context->getLangOpts());
+  if (Range.isInvalid()) {
+    // Validate the original range to attempt to get a meaningful error message.
+    // If it's valid, then something else is the cause and we just return the
+    // generic failure message.
+    if (auto Err = tooling::validateEditRange(*RawRange, *Match.SourceManager))
+      return handleErrors(std::move(Err), [](std::unique_ptr<StringError> E) {
+        assert(E->convertToErrorCode() ==
+                   llvm::make_error_code(errc::invalid_argument) &&
+               "Validation errors must carry the invalid_argument code");
+        return llvm::createStringError(
+            errc::invalid_argument,
+            "selected range could not be resolved to a valid source range; " +
+                E->getMessage());
+      });
+    return llvm::createStringError(
+        errc::invalid_argument,
+        "selected range could not be resolved to a valid source range");
+  }
+  // Validate `Range`, because `makeFileCharRange` accepts some ranges that
+  // `validateEditRange` rejects.
   if (auto Err = tooling::validateEditRange(Range, *Match.SourceManager))
-    return Err;
+    return joinErrors(
+        llvm::createStringError(errc::invalid_argument,
+                                "selected range is not valid for editing"),
+        std::move(Err));
   *Result += tooling::getText(Range, *Match.Context);
   return Error::success();
 }
