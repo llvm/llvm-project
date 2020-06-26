@@ -1353,7 +1353,7 @@ are listed below.
 
 .. _opt_ffinite-math-only:
 
-**-f[no-]finite-math**
+**-f[no-]finite-math-only**
 
    Allow floating-point optimizations that assume arguments and results are
    not NaNs or +-Inf.  This defines the ``__FINITE_MATH_ONLY__`` preprocessor macro.
@@ -1362,7 +1362,7 @@ are listed below.
    * ``-fno-honor-infinities``
    * ``-fno-honor-nans``
 
-   Defaults to ``-fno-finite-math``.
+   Defaults to ``-fno-finite-math-only``.
 
 .. _opt_frounding-math:
 
