@@ -1181,13 +1181,11 @@ public:
   bool isLegalToVectorizeStore(StoreInst *SI) const;
 
   /// \returns True if it is legal to vectorize the given load chain.
-  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
-                                   unsigned Alignment,
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes, Align Alignment,
                                    unsigned AddrSpace) const;
 
   /// \returns True if it is legal to vectorize the given store chain.
-  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
-                                    unsigned Alignment,
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const;
 
   /// \returns The new vector factor value if the target doesn't support \p
@@ -1478,10 +1476,10 @@ public:
   virtual bool isLegalToVectorizeLoad(LoadInst *LI) const = 0;
   virtual bool isLegalToVectorizeStore(StoreInst *SI) const = 0;
   virtual bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
-                                           unsigned Alignment,
+                                           Align Alignment,
                                            unsigned AddrSpace) const = 0;
   virtual bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
-                                            unsigned Alignment,
+                                            Align Alignment,
                                             unsigned AddrSpace) const = 0;
   virtual unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                        unsigned ChainSizeInBytes,
@@ -1943,14 +1941,12 @@ public:
   bool isLegalToVectorizeStore(StoreInst *SI) const override {
     return Impl.isLegalToVectorizeStore(SI);
   }
-  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
-                                   unsigned Alignment,
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes, Align Alignment,
                                    unsigned AddrSpace) const override {
     return Impl.isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment,
                                             AddrSpace);
   }
-  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
-                                    unsigned Alignment,
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const override {
     return Impl.isLegalToVectorizeStoreChain(ChainSizeInBytes, Alignment,
                                              AddrSpace);
