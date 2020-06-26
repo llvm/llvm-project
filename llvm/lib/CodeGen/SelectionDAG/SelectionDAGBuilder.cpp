@@ -6914,6 +6914,39 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              DAG.getZExtOrTrunc(Const, getCurSDLoc(), PtrVT)));
     return;
   }
+  case Intrinsic::get_active_lane_mask: {
+    auto DL = getCurSDLoc();
+    SDValue Index = getValue(I.getOperand(0));
+    SDValue BTC = getValue(I.getOperand(1));
+    Type *ElementTy = I.getOperand(0)->getType();
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    unsigned VecWidth = VT.getVectorNumElements();
+
+    SmallVector<SDValue, 16> OpsBTC;
+    SmallVector<SDValue, 16> OpsIndex;
+    SmallVector<SDValue, 16> OpsStepConstants;
+    for (unsigned i = 0; i < VecWidth; i++) {
+      OpsBTC.push_back(BTC);
+      OpsIndex.push_back(Index);
+      OpsStepConstants.push_back(DAG.getConstant(i, DL, MVT::getVT(ElementTy)));
+    }
+
+    EVT CCVT = MVT::i1;
+    CCVT = EVT::getVectorVT(I.getContext(), CCVT, VecWidth);
+
+    auto VecTy = MVT::getVT(FixedVectorType::get(ElementTy, VecWidth));
+    SDValue VectorIndex = DAG.getBuildVector(VecTy, DL, OpsIndex);
+    SDValue VectorStep = DAG.getBuildVector(VecTy, DL, OpsStepConstants);
+    SDValue VectorInduction = DAG.getNode(
+       ISD::UADDO, DL, DAG.getVTList(VecTy, CCVT), VectorIndex, VectorStep);
+    SDValue VectorBTC = DAG.getBuildVector(VecTy, DL, OpsBTC);
+    SDValue SetCC = DAG.getSetCC(DL, CCVT, VectorInduction.getValue(0),
+                                 VectorBTC, ISD::CondCode::SETULE);
+    setValue(&I, DAG.getNode(ISD::AND, DL, CCVT,
+                             DAG.getNOT(DL, VectorInduction.getValue(1), CCVT),
+                             SetCC));
+    return;
+  }
   }
 }
 
