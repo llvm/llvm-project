@@ -1550,7 +1550,10 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm : pred_load<nxv8i16,  nxv8i1, asext_masked_load_i8, LD1SB_H, LD1SB_H_IMM, am_sve_regreg_lsl0>;
   defm : pred_load<nxv8i16,  nxv8i1, nonext_masked_load,   LD1H,    LD1H_IMM,    am_sve_regreg_lsl1>;
   defm : pred_load<nxv8f16,  nxv8i1, nonext_masked_load,   LD1H,    LD1H_IMM,    am_sve_regreg_lsl1>;
-  defm : pred_load<nxv8bf16, nxv8i1, nonext_masked_load,   LD1H,    LD1H_IMM,    am_sve_regreg_lsl1>;
+
+  let Predicates = [HasBF16, HasSVE] in {
+    defm : pred_load<nxv8bf16, nxv8i1, nonext_masked_load,   LD1H,    LD1H_IMM,    am_sve_regreg_lsl1>;
+  }
 
   // 16-element contiguous loads
   defm : pred_load<nxv16i8, nxv16i1, nonext_masked_load, LD1B, LD1B_IMM, am_sve_regreg_lsl0>;
@@ -1737,7 +1740,10 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm : ld1<LD1SB_H, LD1SB_H_IMM, nxv8i16,  AArch64ld1s, nxv8i1, nxv8i8,   am_sve_regreg_lsl0>;
   defm : ld1<LD1H,    LD1H_IMM,    nxv8i16,  AArch64ld1,  nxv8i1, nxv8i16,  am_sve_regreg_lsl1>;
   defm : ld1<LD1H,    LD1H_IMM,    nxv8f16,  AArch64ld1,  nxv8i1, nxv8f16,  am_sve_regreg_lsl1>;
-  defm : ld1<LD1H,    LD1H_IMM,    nxv8bf16, AArch64ld1,  nxv8i1, nxv8bf16, am_sve_regreg_lsl1>;
+
+  let Predicates = [HasBF16, HasSVE] in {
+    defm : ld1<LD1H,    LD1H_IMM,    nxv8bf16, AArch64ld1,  nxv8i1, nxv8bf16, am_sve_regreg_lsl1>;
+  }
 
   // 16-element contiguous loads
   defm : ld1<LD1B, LD1B_IMM, nxv16i8, AArch64ld1, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
@@ -1777,7 +1783,10 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm : ldnf1<LDNF1SB_H_IMM, nxv8i16,  AArch64ldnf1s, nxv8i1, nxv8i8>;
   defm : ldnf1<LDNF1H_IMM,    nxv8i16,  AArch64ldnf1,  nxv8i1, nxv8i16>;
   defm : ldnf1<LDNF1H_IMM,    nxv8f16,  AArch64ldnf1,  nxv8i1, nxv8f16>;
-  defm : ldnf1<LDNF1H_IMM,    nxv8bf16, AArch64ldnf1,  nxv8i1, nxv8bf16>;
+
+  let Predicates = [HasBF16, HasSVE] in {
+    defm : ldnf1<LDNF1H_IMM,    nxv8bf16, AArch64ldnf1,  nxv8i1, nxv8bf16>;
+  }
 
   // 16-element contiguous non-faulting loads
   defm : ldnf1<LDNF1B_IMM,    nxv16i8,  AArch64ldnf1, nxv16i1, nxv16i8>;
@@ -1818,7 +1827,10 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm : ldff1<LDFF1SB_H, nxv8i16,  AArch64ldff1s, nxv8i1, nxv8i8,   am_sve_regreg_lsl0>;
   defm : ldff1<LDFF1H,    nxv8i16,  AArch64ldff1,  nxv8i1, nxv8i16,  am_sve_regreg_lsl1>;
   defm : ldff1<LDFF1H,    nxv8f16,  AArch64ldff1,  nxv8i1, nxv8f16,  am_sve_regreg_lsl1>;
-  defm : ldff1<LDFF1H,    nxv8bf16, AArch64ldff1,  nxv8i1, nxv8bf16, am_sve_regreg_lsl1>;
+
+  let Predicates = [HasBF16, HasSVE] in {
+    defm : ldff1<LDFF1H,    nxv8bf16, AArch64ldff1,  nxv8i1, nxv8bf16, am_sve_regreg_lsl1>;
+  }
 
   // 16-element contiguous first faulting loads
   defm : ldff1<LDFF1B, nxv16i8, AArch64ldff1, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
