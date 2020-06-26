@@ -963,10 +963,10 @@ public:
     unsigned Cost;
     if (UseMaskForCond || UseMaskForGaps)
       Cost = static_cast<T *>(this)->getMaskedMemoryOpCost(
-          Opcode, VecTy, Alignment, AddressSpace, CostKind);
+          Opcode, VecTy, Align(Alignment), AddressSpace, CostKind);
     else
       Cost = static_cast<T *>(this)->getMemoryOpCost(
-          Opcode, VecTy, MaybeAlign(Alignment), AddressSpace, CostKind);
+          Opcode, VecTy, Align(Alignment), AddressSpace, CostKind);
 
     // Legalize the vector type, and get the legalized and unlegalized type
     // sizes.
@@ -1389,13 +1389,13 @@ public:
       return 0;
     case Intrinsic::masked_store: {
       Type *Ty = Tys[0];
-      unsigned TyAlign = ConcreteTTI->DL.getABITypeAlignment(Ty);
+      Align TyAlign = ConcreteTTI->DL.getABITypeAlign(Ty);
       return ConcreteTTI->getMaskedMemoryOpCost(Instruction::Store, Ty, TyAlign,
                                                 0, CostKind);
     }
     case Intrinsic::masked_load: {
       Type *Ty = RetTy;
-      unsigned TyAlign = ConcreteTTI->DL.getABITypeAlignment(Ty);
+      Align TyAlign = ConcreteTTI->DL.getABITypeAlign(Ty);
       return ConcreteTTI->getMaskedMemoryOpCost(Instruction::Load, Ty, TyAlign,
                                                 0, CostKind);
     }

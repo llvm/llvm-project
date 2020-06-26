@@ -3031,8 +3031,7 @@ int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
-                                      unsigned Alignment,
-                                      unsigned AddressSpace,
+                                      Align Alignment, unsigned AddressSpace,
                                       TTI::TargetCostKind CostKind) {
   bool IsLoad = (Instruction::Load == Opcode);
   bool IsStore = (Instruction::Store == Opcode);
@@ -3040,14 +3039,13 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
   VectorType *SrcVTy = dyn_cast<VectorType>(SrcTy);
   if (!SrcVTy)
     // To calculate scalar take the regular cost, without mask
-    return getMemoryOpCost(Opcode, SrcTy, MaybeAlign(Alignment), AddressSpace,
-                           CostKind);
+    return getMemoryOpCost(Opcode, SrcTy, Alignment, AddressSpace, CostKind);
 
   unsigned NumElem = SrcVTy->getNumElements();
   auto *MaskTy =
       FixedVectorType::get(Type::getInt8Ty(SrcVTy->getContext()), NumElem);
-  if ((IsLoad && !isLegalMaskedLoad(SrcVTy, Align(Alignment))) ||
-      (IsStore && !isLegalMaskedStore(SrcVTy, Align(Alignment))) ||
+  if ((IsLoad && !isLegalMaskedLoad(SrcVTy, Alignment)) ||
+      (IsStore && !isLegalMaskedStore(SrcVTy, Alignment)) ||
       !isPowerOf2_32(NumElem)) {
     // Scalarization
     APInt DemandedElts = APInt::getAllOnesValue(NumElem);
@@ -3062,8 +3060,7 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
         getScalarizationOverhead(SrcVTy, DemandedElts, IsLoad, IsStore);
     int MemopCost =
         NumElem * BaseT::getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                         MaybeAlign(Alignment), AddressSpace,
-                                         CostKind);
+                                         Alignment, AddressSpace, CostKind);
     return MemopCost + ValueSplitCost + MaskSplitCost + MaskCmpCost;
   }
 
