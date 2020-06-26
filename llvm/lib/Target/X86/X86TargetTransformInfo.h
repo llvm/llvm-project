@@ -141,11 +141,11 @@ public:
                       unsigned AddressSpace,
                       TTI::TargetCostKind CostKind,
                       const Instruction *I = nullptr);
-  int getMaskedMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
-                            unsigned AddressSpace,
-                            TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
+  int getMaskedMemoryOpCost(
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
   int getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                             bool VariableMask, unsigned Alignment,
+                             bool VariableMask, Align Alignment,
                              TTI::TargetCostKind CostKind,
                              const Instruction *I);
   int getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
@@ -168,24 +168,21 @@ public:
                              bool IsPairwiseForm, bool IsUnsigned,
                              TTI::TargetCostKind CostKind);
 
-  int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
-                                 unsigned Factor, ArrayRef<unsigned> Indices,
-                                 unsigned Alignment, unsigned AddressSpace,
-                                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-                                 bool UseMaskForCond = false,
-                                 bool UseMaskForGaps = false);
-  int getInterleavedMemoryOpCostAVX512(unsigned Opcode, Type *VecTy,
-                                 unsigned Factor, ArrayRef<unsigned> Indices,
-                                 unsigned Alignment, unsigned AddressSpace,
-                                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-                                 bool UseMaskForCond = false,
-                                 bool UseMaskForGaps = false);
-  int getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
-                                 unsigned Factor, ArrayRef<unsigned> Indices,
-                                 unsigned Alignment, unsigned AddressSpace,
-                                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-                                 bool UseMaskForCond = false,
-                                 bool UseMaskForGaps = false);
+  int getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false);
+  int getInterleavedMemoryOpCostAVX512(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false);
+  int getInterleavedMemoryOpCostAVX2(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false);
 
   int getIntImmCost(int64_t);
 
@@ -229,9 +226,9 @@ public:
 
 private:
   int getGSScalarCost(unsigned Opcode, Type *DataTy, bool VariableMask,
-                      unsigned Alignment, unsigned AddressSpace);
+                      Align Alignment, unsigned AddressSpace);
   int getGSVectorCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                      unsigned Alignment, unsigned AddressSpace);
+                      Align Alignment, unsigned AddressSpace);
 
   /// @}
 };

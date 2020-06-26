@@ -944,13 +944,10 @@ public:
     return Cost;
   }
 
-  unsigned getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
-                                      unsigned Factor,
-                                      ArrayRef<unsigned> Indices,
-                                      unsigned Alignment, unsigned AddressSpace,
-                                      TTI::TargetCostKind CostKind,
-                                      bool UseMaskForCond = false,
-                                      bool UseMaskForGaps = false) {
+  unsigned getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) {
     auto *VT = cast<FixedVectorType>(VecTy);
 
     unsigned NumElts = VT->getNumElements();
@@ -966,7 +963,7 @@ public:
           Opcode, VecTy, Alignment, AddressSpace, CostKind);
     else
       Cost = static_cast<T *>(this)->getMemoryOpCost(
-          Opcode, VecTy, MaybeAlign(Alignment), AddressSpace, CostKind);
+          Opcode, VecTy, Alignment, AddressSpace, CostKind);
 
     // Legalize the vector type, and get the legalized and unlegalized type
     // sizes.
@@ -1178,7 +1175,7 @@ public:
       assert(VF == 1 && "Can't vectorize types here.");
       const Value *Mask = Args[3];
       bool VarMask = !isa<Constant>(Mask);
-      unsigned Alignment = cast<ConstantInt>(Args[2])->getZExtValue();
+      Align Alignment = cast<ConstantInt>(Args[2])->getAlignValue();
       return ConcreteTTI->getGatherScatterOpCost(Instruction::Store,
                                                  Args[0]->getType(), Args[1],
                                                  VarMask, Alignment, CostKind,
@@ -1188,7 +1185,7 @@ public:
       assert(VF == 1 && "Can't vectorize types here.");
       const Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
-      unsigned Alignment = cast<ConstantInt>(Args[1])->getZExtValue();
+      Align Alignment = cast<ConstantInt>(Args[1])->getAlignValue();
       return ConcreteTTI->getGatherScatterOpCost(
           Instruction::Load, RetTy, Args[0], VarMask, Alignment, CostKind, I);
     }
@@ -1392,13 +1389,13 @@ public:
       return 0;
     case Intrinsic::masked_store: {
       Type *Ty = Tys[0];
-      unsigned TyAlign = ConcreteTTI->DL.getABITypeAlignment(Ty);
+      Align TyAlign = ConcreteTTI->DL.getABITypeAlign(Ty);
       return ConcreteTTI->getMaskedMemoryOpCost(Instruction::Store, Ty, TyAlign,
                                                 0, CostKind);
     }
     case Intrinsic::masked_load: {
       Type *Ty = RetTy;
-      unsigned TyAlign = ConcreteTTI->DL.getABITypeAlignment(Ty);
+      Align TyAlign = ConcreteTTI->DL.getABITypeAlign(Ty);
       return ConcreteTTI->getMaskedMemoryOpCost(Instruction::Load, Ty, TyAlign,
                                                 0, CostKind);
     }

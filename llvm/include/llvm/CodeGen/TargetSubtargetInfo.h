@@ -25,7 +25,6 @@
 #include <memory>
 #include <vector>
 
-
 namespace llvm {
 
 class CallLowering;
@@ -42,9 +41,6 @@ struct MCWriteProcResEntry;
 class RegisterBankInfo;
 class SDep;
 class SelectionDAGTargetInfo;
-struct SubtargetFeatureKV;
-struct SubtargetSubTypeKV;
-struct SubtargetInfoKV;
 class SUnit;
 class TargetFrameLowering;
 class TargetInstrInfo;

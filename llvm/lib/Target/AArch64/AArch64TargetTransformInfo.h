@@ -197,12 +197,11 @@ public:
     return BaseT::isLegalNTStore(DataType, Alignment);
   }
 
-  int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
-                                 ArrayRef<unsigned> Indices, unsigned Alignment,
-                                 unsigned AddressSpace,
-                                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-                                 bool UseMaskForCond = false,
-                                 bool UseMaskForGaps = false);
+  int getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false);
 
   bool
   shouldConsiderAddressTypePromotion(const Instruction &I,

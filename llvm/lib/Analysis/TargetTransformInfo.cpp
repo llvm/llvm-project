@@ -757,10 +757,9 @@ int TargetTransformInfo::getMemoryOpCost(unsigned Opcode, Type *Src,
   return Cost;
 }
 
-int TargetTransformInfo::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                               unsigned Alignment,
-                                               unsigned AddressSpace,
-                                               TTI::TargetCostKind CostKind) const {
+int TargetTransformInfo::getMaskedMemoryOpCost(
+    unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind) const {
   int Cost =
       TTIImpl->getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                      CostKind);
@@ -768,12 +767,9 @@ int TargetTransformInfo::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   return Cost;
 }
 
-int TargetTransformInfo::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                                const Value *Ptr,
-                                                bool VariableMask,
-                                                unsigned Alignment,
-                                                TTI::TargetCostKind CostKind,
-                                                const Instruction *I) const {
+int TargetTransformInfo::getGatherScatterOpCost(
+    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   int Cost = TTIImpl->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                              Alignment, CostKind, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
@@ -782,8 +778,7 @@ int TargetTransformInfo::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
 
 int TargetTransformInfo::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    unsigned Alignment, unsigned AddressSpace,
-    TTI::TargetCostKind CostKind,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) const {
   int Cost = TTIImpl->getInterleavedMemoryOpCost(
       Opcode, VecTy, Factor, Indices, Alignment, AddressSpace, CostKind,

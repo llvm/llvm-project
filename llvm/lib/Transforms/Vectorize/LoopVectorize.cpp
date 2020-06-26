@@ -5890,8 +5890,8 @@ unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
   const Align Alignment = getLoadStoreAlignment(I);
   unsigned Cost = 0;
   if (Legal->isMaskRequired(I))
-    Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy,
-                                      Alignment.value(), AS, CostKind);
+    Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
+                                      CostKind);
   else
     Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                 CostKind, I);
@@ -5935,10 +5935,9 @@ unsigned LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
   const Value *Ptr = getLoadStorePointerOperand(I);
 
   return TTI.getAddressComputationCost(VectorTy) +
-         TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
-                                    Legal->isMaskRequired(I), Alignment.value(),
-                                    TargetTransformInfo::TCK_RecipThroughput,
-                                    I);
+         TTI.getGatherScatterOpCost(
+             I->getOpcode(), VectorTy, Ptr, Legal->isMaskRequired(I), Alignment,
+             TargetTransformInfo::TCK_RecipThroughput, I);
 }
 
 unsigned LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
@@ -5966,9 +5965,8 @@ unsigned LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   bool UseMaskForGaps =
       Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed();
   unsigned Cost = TTI.getInterleavedMemoryOpCost(
-      I->getOpcode(), WideVecTy, Group->getFactor(), Indices,
-      Group->getAlign().value(), AS, TTI::TCK_RecipThroughput,
-      Legal->isMaskRequired(I), UseMaskForGaps);
+      I->getOpcode(), WideVecTy, Group->getFactor(), Indices, Group->getAlign(),
+      AS, TTI::TCK_RecipThroughput, Legal->isMaskRequired(I), UseMaskForGaps);
 
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.

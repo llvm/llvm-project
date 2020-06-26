@@ -913,8 +913,7 @@ int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
 int ARMTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    unsigned Alignment, unsigned AddressSpace,
-    TTI::TargetCostKind CostKind,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
   assert(Factor >= 2 && "Invalid interleave factor");
   assert(isa<VectorType>(VecTy) && "Expect a vector type");
@@ -953,7 +952,7 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(
 
 unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                             const Value *Ptr, bool VariableMask,
-                                            unsigned Alignment,
+                                            Align Alignment,
                                             TTI::TargetCostKind CostKind,
                                             const Instruction *I) {
   using namespace PatternMatch;

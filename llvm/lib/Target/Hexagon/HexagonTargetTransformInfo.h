@@ -115,21 +115,21 @@ public:
                            unsigned AddressSpace,
                            TTI::TargetCostKind CostKind,
                            const Instruction *I = nullptr);
-  unsigned getMaskedMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
-                                 unsigned AddressSpace,
-                           TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
+  unsigned
+  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                        unsigned AddressSpace,
+                        TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
   unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
             Type *SubTp);
   unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                   const Value *Ptr, bool VariableMask,
-                                  unsigned Alignment,
-                                  TTI::TargetCostKind CostKind,
+                                  Align Alignment, TTI::TargetCostKind CostKind,
                                   const Instruction *I);
-  unsigned getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
-            unsigned Factor, ArrayRef<unsigned> Indices, unsigned Alignment,
-            unsigned AddressSpace,
-            TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-            bool UseMaskForCond = false, bool UseMaskForGaps = false);
+  unsigned getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false);
   unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                               TTI::TargetCostKind CostKind,
                               const Instruction *I = nullptr);

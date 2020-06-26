@@ -3031,8 +3031,7 @@ int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
-                                      unsigned Alignment,
-                                      unsigned AddressSpace,
+                                      Align Alignment, unsigned AddressSpace,
                                       TTI::TargetCostKind CostKind) {
   bool IsLoad = (Instruction::Load == Opcode);
   bool IsStore = (Instruction::Store == Opcode);
@@ -3040,14 +3039,13 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
   VectorType *SrcVTy = dyn_cast<VectorType>(SrcTy);
   if (!SrcVTy)
     // To calculate scalar take the regular cost, without mask
-    return getMemoryOpCost(Opcode, SrcTy, MaybeAlign(Alignment), AddressSpace,
-                           CostKind);
+    return getMemoryOpCost(Opcode, SrcTy, Alignment, AddressSpace, CostKind);
 
   unsigned NumElem = SrcVTy->getNumElements();
   auto *MaskTy =
       FixedVectorType::get(Type::getInt8Ty(SrcVTy->getContext()), NumElem);
-  if ((IsLoad && !isLegalMaskedLoad(SrcVTy, Align(Alignment))) ||
-      (IsStore && !isLegalMaskedStore(SrcVTy, Align(Alignment))) ||
+  if ((IsLoad && !isLegalMaskedLoad(SrcVTy, Alignment)) ||
+      (IsStore && !isLegalMaskedStore(SrcVTy, Alignment)) ||
       !isPowerOf2_32(NumElem)) {
     // Scalarization
     APInt DemandedElts = APInt::getAllOnesValue(NumElem);
@@ -3062,8 +3060,7 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
         getScalarizationOverhead(SrcVTy, DemandedElts, IsLoad, IsStore);
     int MemopCost =
         NumElem * BaseT::getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                         MaybeAlign(Alignment), AddressSpace,
-                                         CostKind);
+                                         Alignment, AddressSpace, CostKind);
     return MemopCost + ValueSplitCost + MaskSplitCost + MaskCmpCost;
   }
 
@@ -3850,7 +3847,7 @@ X86TTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
 
 // Return an average cost of Gather / Scatter instruction, maybe improved later
 int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, const Value *Ptr,
-                                unsigned Alignment, unsigned AddressSpace) {
+                                Align Alignment, unsigned AddressSpace) {
 
   assert(isa<VectorType>(SrcVTy) && "Unexpected type in getGSVectorCost");
   unsigned VF = cast<VectorType>(SrcVTy)->getNumElements();
@@ -3922,7 +3919,7 @@ int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, const Value *Ptr,
 /// AddressSpace - pointer[s] address space.
 ///
 int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
-                                bool VariableMask, unsigned Alignment,
+                                bool VariableMask, Align Alignment,
                                 unsigned AddressSpace) {
   unsigned VF = cast<VectorType>(SrcVTy)->getNumElements();
   APInt DemandedElts = APInt::getAllOnesValue(VF);
@@ -3964,7 +3961,7 @@ int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
 /// Calculate the cost of Gather / Scatter operation
 int X86TTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *SrcVTy,
                                        const Value *Ptr, bool VariableMask,
-                                       unsigned Alignment,
+                                       Align Alignment,
                                        TTI::TargetCostKind CostKind,
                                        const Instruction *I = nullptr) {
 
@@ -4247,14 +4244,10 @@ bool X86TTIImpl::enableInterleavedAccessVectorization() {
 // computing the cost using a generic formula as a function of generic
 // shuffles. We therefore use a lookup table instead, filled according to
 // the instruction sequences that codegen currently generates.
-int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
-                                               unsigned Factor,
-                                               ArrayRef<unsigned> Indices,
-                                               unsigned Alignment,
-                                               unsigned AddressSpace,
-                                               TTI::TargetCostKind CostKind,
-                                               bool UseMaskForCond,
-                                               bool UseMaskForGaps) {
+int X86TTIImpl::getInterleavedMemoryOpCostAVX2(
+    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+    bool UseMaskForCond, bool UseMaskForGaps) {
 
   if (UseMaskForCond || UseMaskForGaps)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
@@ -4369,14 +4362,10 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
 // \p Indices contains indices for strided load.
 // \p Factor - the factor of interleaving.
 // AVX-512 provides 3-src shuffles that significantly reduces the cost.
-int X86TTIImpl::getInterleavedMemoryOpCostAVX512(unsigned Opcode, Type *VecTy,
-                                                 unsigned Factor,
-                                                 ArrayRef<unsigned> Indices,
-                                                 unsigned Alignment,
-                                                 unsigned AddressSpace,
-                                                 TTI::TargetCostKind CostKind,
-                                                 bool UseMaskForCond,
-                                                 bool UseMaskForGaps) {
+int X86TTIImpl::getInterleavedMemoryOpCostAVX512(
+    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+    bool UseMaskForCond, bool UseMaskForGaps) {
 
   if (UseMaskForCond || UseMaskForGaps)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
@@ -4498,14 +4487,10 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX512(unsigned Opcode, Type *VecTy,
   return Cost;
 }
 
-int X86TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
-                                           unsigned Factor,
-                                           ArrayRef<unsigned> Indices,
-                                           unsigned Alignment,
-                                           unsigned AddressSpace,
-                                           TTI::TargetCostKind CostKind,
-                                           bool UseMaskForCond,
-                                           bool UseMaskForGaps) {
+int X86TTIImpl::getInterleavedMemoryOpCost(
+    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+    bool UseMaskForCond, bool UseMaskForGaps) {
   auto isSupportedOnAVX512 = [](Type *VecTy, bool HasBW) {
     Type *EltTy = cast<VectorType>(VecTy)->getElementType();
     if (EltTy->isFloatTy() || EltTy->isDoubleTy() || EltTy->isIntegerTy(64) ||
