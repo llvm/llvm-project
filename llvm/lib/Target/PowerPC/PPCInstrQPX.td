@@ -1,9 +1,9 @@
 //===- PPCInstrQPX.td - The PowerPC QPX Extension --*- tablegen -*-===//
-// 
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// 
+//
 //===----------------------------------------------------------------------===//
 //
 // This file describes the QPX extension to the PowerPC instruction set.
@@ -101,7 +101,7 @@ let FastIselShouldIgnore = 1 in // FastIsel should ignore all u12 instrs.
 //===----------------------------------------------------------------------===//
 // Instruction Definitions.
 
-def HasQPX : Predicate<"PPCSubTarget->hasQPX()">;
+def HasQPX : Predicate<"Subtarget->hasQPX()">;
 let Predicates = [HasQPX] in {
 let DecoderNamespace = "QPX" in {
 let hasSideEffects = 0 in { // QPX instructions don't have side effects.
@@ -1210,4 +1210,3 @@ def : Pat<(fmaxnum v4f32:$FRA, v4f32:$FRB),
                                  (QVFTSTNANbs $FRB, $FRB), (i32 7)),
                    $FRB, $FRA)>;
 }
-

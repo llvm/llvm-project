@@ -1,4 +1,3 @@
-!RUN: %S/test_any.sh %s %t %f18
 ! Tests -fget-symbols-sources finding all symbols in file.
 module mm1
  private :: f
@@ -16,11 +15,11 @@ contains
  end function
 end module
 
-! EXEC: ${F18} -fget-symbols-sources -fparse-only %s 2>&1 | ${FileCheck} %s
-! CHECK-ONCE:mm1:.*getsymbols01.f90, 3, 8-11
-! CHECK-ONCE:f:.*getsymbols01.f90, 13, 26-27
-! CHECK-ONCE:s:.*getsymbols01.f90, 6, 18-19
-! CHECK-ONCE:ss:.*getsymbols01.f90, 10, 19-21
-! CHECK-ONCE:x:.*getsymbols01.f90, 6, 21-22
-! CHECK-ONCE:y:.*getsymbols01.f90, 6, 24-25
-! CHECK-ONCE:x:.*getsymbols01.f90, 14, 24-25
+! RUN: %f18 -fget-symbols-sources -fparse-only %s 2>&1 | FileCheck %s
+! CHECK-COUNT-1:mm1:{{.*}}getsymbols01.f90, 2, 8-11
+! CHECK-COUNT-1:s:{{.*}}getsymbols01.f90, 5, 18-19
+! CHECK-COUNT-1:x:{{.*}}getsymbols01.f90, 5, 21-22
+! CHECK-COUNT-1:y:{{.*}}getsymbols01.f90, 5, 24-25
+! CHECK-COUNT-1:ss:{{.*}}getsymbols01.f90, 9, 19-21
+! CHECK-COUNT-1:f:{{.*}}getsymbols01.f90, 12, 26-27
+! CHECK-COUNT-1:x:{{.*}}getsymbols01.f90, 13, 24-25

@@ -7,8 +7,8 @@ target triple = "x86_64-pc-linux-gnu"
 ; gcrelocate call should not be an LLVM Machine Block by itself.
 define i8 addrspace(1)* @test_gcrelocate(i8 addrspace(1)* %v) gc "statepoint-example" {
 entry:
-  %tok = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %v)
-  %vnew = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tok,  i32 7, i32 7)
+  %tok = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %v)]
+  %vnew = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tok,  i32 0, i32 0)
   ret i8 addrspace(1)* %vnew
 }
 
@@ -26,9 +26,9 @@ exit:
 ; block.
 define i1 @test_gcresult_gcrelocate(i8 addrspace(1)* %v) gc "statepoint-example" {
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %v)
+  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %v)]
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
-  %vnew = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token,  i32 7, i32 7)
+  %vnew = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token,  i32 0, i32 0)
   br label %exit
 exit:
   ret i1 %call1
@@ -42,8 +42,8 @@ entry:
 
 func_call:
  call void @dummy()
- %tok = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %v)
- %vnew = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tok,  i32 7, i32 7)
+ %tok = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %v)]
+ %vnew = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tok,  i32 0, i32 0)
  ret i8 addrspace(1)* %vnew
 
 exit:
