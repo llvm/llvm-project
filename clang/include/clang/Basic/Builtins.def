@@ -65,6 +65,7 @@
 // & -> reference (optionally followed by an address space number)
 // C -> const
 // D -> volatile
+// R -> restrict
 
 // The third value provided to the macro specifies information about attributes
 // of the function.  These must be kept in sync with the predicates in the
