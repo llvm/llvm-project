@@ -1053,10 +1053,10 @@ public:
   /// \p UseMaskForCond indicates if the memory access is predicated.
   /// \p UseMaskForGaps indicates if gaps should be masked.
   int getInterleavedMemoryOpCost(
-    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    unsigned Alignment, unsigned AddressSpace,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-    bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
 
   /// Calculate the cost of performing a vector reduction.
   ///
@@ -1435,13 +1435,10 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      const Instruction *I = nullptr) = 0;
 
-  virtual int
-  getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
-                             ArrayRef<unsigned> Indices, unsigned Alignment,
-                             unsigned AddressSpace,
-                             TTI::TargetCostKind CostKind,
-                             bool UseMaskForCond = false,
-                             bool UseMaskForGaps = false) = 0;
+  virtual int getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) = 0;
   virtual int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                          bool IsPairwiseForm,
                                          TTI::TargetCostKind CostKind) = 0;
@@ -1857,7 +1854,7 @@ public:
                                        Alignment, CostKind, I);
   }
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
-                                 ArrayRef<unsigned> Indices, unsigned Alignment,
+                                 ArrayRef<unsigned> Indices, Align Alignment,
                                  unsigned AddressSpace,
                                  TTI::TargetCostKind CostKind,
                                  bool UseMaskForCond,
