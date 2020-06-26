@@ -50,44 +50,44 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 
 // CHECK: class AOpAdaptor {
 // CHECK: public:
-// CHECK:   AOpAdaptor(ValueRange values
-// CHECK:   ValueRange getODSOperands(unsigned index);
-// CHECK:   Value a();
-// CHECK:   ValueRange b();
-// CHECK:   IntegerAttr attr1();
-// CHECL:   FloatAttr attr2();
+// CHECK:   AOpAdaptor(::mlir::ValueRange values
+// CHECK:   ::mlir::ValueRange getODSOperands(unsigned index);
+// CHECK:   ::mlir::Value a();
+// CHECK:   ::mlir::ValueRange b();
+// CHECK:   ::mlir::IntegerAttr attr1();
+// CHECL:   ::mlir::FloatAttr attr2();
 // CHECK: private:
-// CHECK:   ValueRange odsOperands;
+// CHECK:   ::mlir::ValueRange odsOperands;
 // CHECK: };
 
-// CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNRegions<1>::Impl, OpTrait::AtLeastNResults<1>::Impl, OpTrait::ZeroSuccessor, OpTrait::AtLeastNOperands<1>::Impl, OpTrait::IsIsolatedFromAbove
+// CHECK: class AOp : public ::mlir::Op<AOp, OpTrait::AtLeastNRegions<1>::Impl, OpTrait::AtLeastNResults<1>::Impl, OpTrait::ZeroSuccessor, OpTrait::AtLeastNOperands<1>::Impl, OpTrait::IsIsolatedFromAbove
 // CHECK-NOT: OpTrait::IsIsolatedFromAbove
 // CHECK: public:
 // CHECK:   using Op::Op;
 // CHECK:   using Adaptor = AOpAdaptor;
-// CHECK:   static StringRef getOperationName();
-// CHECK:   Operation::operand_range getODSOperands(unsigned index);
-// CHECK:   Value a();
-// CHECK:   Operation::operand_range b();
+// CHECK:   static ::llvm::StringRef getOperationName();
+// CHECK:   ::mlir::Operation::operand_range getODSOperands(unsigned index);
+// CHECK:   ::mlir::Value a();
+// CHECK:   ::mlir::Operation::operand_range b();
 // CHECK:   ::mlir::MutableOperandRange aMutable();
 // CHECK:   ::mlir::MutableOperandRange bMutable();
-// CHECK:   Operation::result_range getODSResults(unsigned index);
-// CHECK:   Value r();
-// CHECK:   Region &someRegion();
-// CHECK:   MutableArrayRef<Region> someRegions();
-// CHECK:   IntegerAttr attr1Attr()
-// CHECK:   APInt attr1();
-// CHECK:   FloatAttr attr2Attr()
-// CHECK:   Optional< APFloat > attr2();
+// CHECK:   ::mlir::Operation::result_range getODSResults(unsigned index);
+// CHECK:   ::mlir::Value r();
+// CHECK:   ::mlir::Region &someRegion();
+// CHECK:   ::mlir::MutableArrayRef<Region> someRegions();
+// CHECK:   ::mlir::IntegerAttr attr1Attr()
+// CHECK:   ::llvm::APInt attr1();
+// CHECK:   ::mlir::FloatAttr attr2Attr()
+// CHECK:   ::llvm::Optional< ::llvm::APFloat > attr2();
 // CHECK:   static void build(Value val);
-// CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, Type r, ArrayRef<Type> s, Value a, ValueRange b, IntegerAttr attr1, /*optional*/FloatAttr attr2, unsigned someRegionsCount)
-// CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, Type r, ArrayRef<Type> s, Value a, ValueRange b, APInt attr1, /*optional*/FloatAttr attr2, unsigned someRegionsCount)
-// CHECK:   static void build(OpBuilder &, OperationState &odsState, ArrayRef<Type> resultTypes, ValueRange operands, ArrayRef<NamedAttribute> attributes, unsigned numRegions)
-// CHECK:   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-// CHECK:   void print(OpAsmPrinter &p);
-// CHECK:   LogicalResult verify();
-// CHECK:   static void getCanonicalizationPatterns(OwningRewritePatternList &results, MLIRContext *context);
-// CHECK:   LogicalResult fold(ArrayRef<Attribute> operands, SmallVectorImpl<OpFoldResult> &results);
+// CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type r, ::llvm::ArrayRef<::mlir::Type> s, ::mlir::Value a, ::mlir::ValueRange b, ::mlir::IntegerAttr attr1, /*optional*/::mlir::FloatAttr attr2, unsigned someRegionsCount)
+// CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type r, ::llvm::ArrayRef<::mlir::Type> s, ::mlir::Value a, ::mlir::ValueRange b, ::llvm::APInt attr1, /*optional*/::mlir::FloatAttr attr2, unsigned someRegionsCount)
+// CHECK:   static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes, unsigned numRegions)
+// CHECK:   static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser, ::mlir::OperationState &result);
+// CHECK:   void print(::mlir::OpAsmPrinter &p);
+// CHECK:   ::mlir::LogicalResult verify();
+// CHECK:   static void getCanonicalizationPatterns(::mlir::OwningRewritePatternList &results, ::mlir::MLIRContext *context);
+// CHECK:   ::mlir::LogicalResult fold(::llvm::ArrayRef<::mlir::Attribute> operands, ::llvm::SmallVectorImpl<::mlir::OpFoldResult> &results);
 // CHECK:   // Display a graph for debugging purposes.
 // CHECK:   void displayGraph();
 // CHECK: };
@@ -107,13 +107,13 @@ def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
 }
 
 // CHECK-LABEL: AttrSizedOperandOpAdaptor(
-// CHECK-SAME:    ValueRange values
-// CHECK-SAME:    DictionaryAttr attrs
-// CHECK:  ValueRange a();
-// CHECK:  ValueRange b();
-// CHECK:  Value c();
-// CHECK:  ValueRange d();
-// CHECK:  DenseIntElementsAttr operand_segment_sizes();
+// CHECK-SAME:    ::mlir::ValueRange values
+// CHECK-SAME:    ::mlir::DictionaryAttr attrs
+// CHECK:  ::mlir::ValueRange a();
+// CHECK:  ::mlir::ValueRange b();
+// CHECK:  ::mlir::Value c();
+// CHECK:  ::mlir::ValueRange d();
+// CHECK:  ::mlir::DenseIntElementsAttr operand_segment_sizes();
 
 // Check op trait for different number of operands
 // ---
@@ -145,10 +145,10 @@ def NS_EOp : NS_Op<"op_with_optionals", []> {
 }
 
 // CHECK-LABEL: NS::EOp declarations
-// CHECK:   Value a();
+// CHECK:   ::mlir::Value a();
 // CHECK:   ::mlir::MutableOperandRange aMutable();
-// CHECK:   Value b();
-// CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, /*optional*/Type b, /*optional*/Value a)
+// CHECK:   ::mlir::Value b();
+// CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, /*optional*/::mlir::Type b, /*optional*/::mlir::Value a)
 
 // Check that all types match constraint results in generating builder.
 // ---
@@ -160,7 +160,7 @@ def NS_FOp : NS_Op<"op_with_all_types_constraint",
 }
 
 // CHECK-LABEL: class FOp :
-// CHECK: static LogicalResult inferReturnTypes
+// CHECK: static ::mlir::LogicalResult inferReturnTypes
 
 def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
   let arguments = (ins AnyType:$a);
@@ -168,7 +168,7 @@ def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
 }
 
 // CHECK-LABEL: class GOp :
-// CHECK: static LogicalResult inferReturnTypes
+// CHECK: static ::mlir::LogicalResult inferReturnTypes
 
 // Check that default builders can be suppressed.
 // ---
@@ -180,7 +180,7 @@ def NS_SkipDefaultBuildersOp : NS_Op<"skip_default_builders", []> {
 
 // CHECK-LABEL: NS::SkipDefaultBuildersOp declarations
 // CHECK:     class SkipDefaultBuildersOp
-// CHECK-NOT:   static void build(Builder
+// CHECK-NOT:   static void build(::mlir::Builder
 // CHECK:       static void build(Value
 
 // Check leading underscore in op name
@@ -189,12 +189,12 @@ def NS_SkipDefaultBuildersOp : NS_Op<"skip_default_builders", []> {
 def NS__AOp : NS_Op<"_op_with_leading_underscore", []>;
 
 // CHECK-LABEL: NS::_AOp declarations
-// CHECK: class _AOp : public Op<_AOp
+// CHECK: class _AOp : public ::mlir::Op<_AOp
 
 def _BOp : NS_Op<"_op_with_leading_underscore_and_no_namespace", []>;
 
 // CHECK-LABEL: _BOp declarations
-// CHECK: class _BOp : public Op<_BOp
+// CHECK: class _BOp : public ::mlir::Op<_BOp
 
 // REDUCE-LABEL: NS::AOp declarations
 // REDUCE-NOT: NS::BOp declarations

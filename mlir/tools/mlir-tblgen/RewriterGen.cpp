@@ -39,7 +39,8 @@ using llvm::RecordKeeper;
 #define DEBUG_TYPE "mlir-tblgen-rewritergen"
 
 namespace llvm {
-template <> struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
+template <>
+struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
   static void format(const mlir::tblgen::Pattern::IdentifierLine &v,
                      raw_ostream &os, StringRef style) {
     os << v.first << ":" << v.second;
@@ -489,9 +490,9 @@ void PatternEmitter::emit(StringRef rewriteName) {
   auto locs = pattern.getLocation();
   os << formatv("/* Generated from:\n\t{0:$[ instantiating\n\t]}\n*/\n",
                 make_range(locs.rbegin(), locs.rend()));
-  os << formatv(R"(struct {0} : public RewritePattern {
-  {0}(MLIRContext *context)
-      : RewritePattern("{1}", {{)",
+  os << formatv(R"(struct {0} : public ::mlir::RewritePattern {
+  {0}(::mlir::MLIRContext *context)
+      : ::mlir::RewritePattern("{1}", {{)",
                 rewriteName, rootName);
   // Sort result operators by name.
   llvm::SmallVector<const Operator *, 4> sortedResultOps(resultOps.begin(),
@@ -506,8 +507,9 @@ void PatternEmitter::emit(StringRef rewriteName) {
 
   // Emit matchAndRewrite() function.
   os << R"(
-  LogicalResult matchAndRewrite(Operation *op0,
-                                     PatternRewriter &rewriter) const override {
+  ::mlir::LogicalResult
+  matchAndRewrite(::mlir::Operation *op0,
+                  ::mlir::PatternRewriter &rewriter) const override {
 )";
 
   // Register all symbols bound in the source pattern.
@@ -526,7 +528,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   }
   // TODO(jpienaar): capture ops with consistent numbering so that it can be
   // reused for fused loc.
-  os.indent(4) << formatv("Operation *tblgen_ops[{0}];\n\n",
+  os.indent(4) << formatv("::mlir::Operation *tblgen_ops[{0}];\n\n",
                           pattern.getSourcePattern().getNumOps());
   LLVM_DEBUG(
       llvm::dbgs() << "done creating local variables for capturing matches\n");
@@ -606,7 +608,8 @@ void PatternEmitter::emitRewriteLogic() {
     os.indent(4) << "rewriter.eraseOp(op0);\n";
   } else {
     // Process replacement result patterns.
-    os.indent(4) << "SmallVector<Value, 4> tblgen_repl_values;\n";
+    os.indent(4)
+        << "::llvm::SmallVector<::mlir::Value, 4> tblgen_repl_values;\n";
     for (int i = replStartIndex; i < numResultPatterns; ++i) {
       DagNode resultTree = pattern.getResultPattern(i);
       auto val = handleResultPattern(resultTree, offsets[i], 0);
@@ -619,7 +622,7 @@ void PatternEmitter::emitRewriteLogic() {
       // TODO(b/147096809): Revisit the need for materializing a vector.
       os << symbolInfoMap.getAllRangeUse(
           val,
-          "    for (auto v : SmallVector<Value, 4>{ {0} }) {{ "
+          "    for (auto v : ::llvm::SmallVector<::mlir::Value, 4>{ {0} }) {{ "
           "tblgen_repl_values.push_back(v); }",
           "\n");
     }
@@ -697,7 +700,7 @@ std::string PatternEmitter::handleLocationDirective(DagNode tree) {
   if (tree.getNumArgs() == 1) {
     DagLeaf leaf = tree.getArgAsLeaf(0);
     if (leaf.isStringAttr())
-      return formatv("mlir::NameLoc::get(rewriter.getIdentifier(\"{0}\"), "
+      return formatv("::mlir::NameLoc::get(rewriter.getIdentifier(\"{0}\"), "
                      "rewriter.getContext())",
                      leaf.getStringAttr())
           .str();
@@ -918,8 +921,8 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
 
   // Then prepare the result types. We need to specify the types for all
   // results.
-  os.indent(6) << formatv(
-      "SmallVector<Type, 4> tblgen_types; (void)tblgen_types;\n");
+  os.indent(6) << formatv("::mlir::SmallVector<::mlir::Type, 4> tblgen_types; "
+                          "(void)tblgen_types;\n");
   int numResults = resultOp.getNumResults();
   if (numResults != 0) {
     for (int i = 0; i < numResults; ++i)
@@ -956,7 +959,8 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
     std::string varName;
     if (operand->isVariadic()) {
       varName = std::string(formatv("tblgen_values_{0}", valueIndex++));
-      os.indent(6) << formatv("SmallVector<Value, 4> {0};\n", varName);
+      os.indent(6) << formatv("::mlir::SmallVector<::mlir::Value, 4> {0};\n",
+                              varName);
       std::string range;
       if (node.isNestedDagArg(argIndex)) {
         range = childNodeNames[argIndex];
@@ -970,7 +974,7 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
                               varName);
     } else {
       varName = std::string(formatv("tblgen_value_{0}", valueIndex++));
-      os.indent(6) << formatv("Value {0} = ", varName);
+      os.indent(6) << formatv("::mlir::Value {0} = ", varName);
       if (node.isNestedDagArg(argIndex)) {
         os << symbolInfoMap.getValueAndRangeUse(childNodeNames[argIndex]);
       } else {
@@ -1039,10 +1043,10 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
     DagNode node, const ChildNodeIndexNameMap &childNodeNames) {
   Operator &resultOp = node.getDialectOp(opMap);
 
-  os.indent(6) << formatv(
-      "SmallVector<Value, 4> tblgen_values; (void)tblgen_values;\n");
-  os.indent(6) << formatv(
-      "SmallVector<NamedAttribute, 4> tblgen_attrs; (void)tblgen_attrs;\n");
+  os.indent(6) << formatv("::mlir::SmallVector<::mlir::Value, 4> "
+                          "tblgen_values; (void)tblgen_values;\n");
+  os.indent(6) << formatv("::mlir::SmallVector<::mlir::NamedAttribute, 4> "
+                          "tblgen_attrs; (void)tblgen_attrs;\n");
 
   const char *addAttrCmd =
       "if (auto tmpAttr = {1}) "

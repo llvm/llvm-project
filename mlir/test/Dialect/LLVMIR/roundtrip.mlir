@@ -1,7 +1,9 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
-// CHECK-LABEL: func @ops(%arg0: !llvm.i32, %arg1: !llvm.float)
-func @ops(%arg0 : !llvm.i32, %arg1 : !llvm.float) {
+// CHECK-LABEL: func @ops
+func @ops(%arg0: !llvm.i32, %arg1: !llvm.float,
+          %arg2: !llvm<"i8*">, %arg3: !llvm<"i8*">,
+          %arg4: !llvm.i1) {
 // Integer arithmetic binary operations.
 //
 // CHECK-NEXT:  %0 = llvm.add %arg0, %arg0 : !llvm.i32
@@ -108,6 +110,17 @@ func @ops(%arg0 : !llvm.i32, %arg1 : !llvm.float) {
 
 // CHECK: "llvm.intr.ctpop"(%{{.*}}) : (!llvm.i32) -> !llvm.i32
   %33 = "llvm.intr.ctpop"(%arg0) : (!llvm.i32) -> !llvm.i32
+
+// CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm<"i8*">, !llvm<"i8*">, !llvm.i32, !llvm.i1) -> ()
+  "llvm.intr.memcpy"(%arg2, %arg3, %arg0, %arg4) : (!llvm<"i8*">, !llvm<"i8*">, !llvm.i32, !llvm.i1) -> ()
+
+// CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm<"i8*">, !llvm<"i8*">, !llvm.i32, !llvm.i1) -> ()
+  "llvm.intr.memcpy"(%arg2, %arg3, %arg0, %arg4) : (!llvm<"i8*">, !llvm<"i8*">, !llvm.i32, !llvm.i1) -> ()
+
+// CHECK: %[[SZ:.*]] = llvm.mlir.constant
+  %sz = llvm.mlir.constant(10: i64) : !llvm.i64
+// CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm<"i8*">, !llvm<"i8*">, !llvm.i64, !llvm.i1) -> ()
+  "llvm.intr.memcpy.inline"(%arg2, %arg3, %sz, %arg4) : (!llvm<"i8*">, !llvm<"i8*">, !llvm.i64, !llvm.i1) -> ()
 
 // CHECK:  llvm.return
   llvm.return

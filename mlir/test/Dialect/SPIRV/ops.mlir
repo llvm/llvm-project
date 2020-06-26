@@ -1244,3 +1244,38 @@ func @cannot_be_generic_storage_class(%arg0: f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Generic>
   return
 }
+
+// -----
+
+func @copy_memory_incompatible_ptrs() -> () {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  %1 = spv.Variable : !spv.ptr<i32, Function>
+  // expected-error @+1 {{both operands must be pointers to the same type}}
+  "spv.CopyMemory"(%0, %1) {} : (!spv.ptr<f32, Function>, !spv.ptr<i32, Function>) -> ()
+  spv.Return
+}
+
+// -----
+
+func @copy_memory_invalid_maa() -> () {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  %1 = spv.Variable : !spv.ptr<f32, Function>
+  // expected-error @+1 {{missing alignment value}}
+  "spv.CopyMemory"(%0, %1) {memory_access=0x0002 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
+  spv.Return
+}
+
+// -----
+
+func @copy_memory_print_maa() -> () {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  %1 = spv.Variable : !spv.ptr<f32, Function>
+
+  // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Volatile"] : f32
+  "spv.CopyMemory"(%0, %1) {memory_access=0x0001 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
+
+  // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 4] : f32
+  "spv.CopyMemory"(%0, %1) {memory_access=0x0002 : i32, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
+
+  spv.Return
+}
