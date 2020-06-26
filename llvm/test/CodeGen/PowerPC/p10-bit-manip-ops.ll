@@ -9,6 +9,10 @@ declare <2 x i64> @llvm.ppc.altivec.vpdepd(<2 x i64>, <2 x i64>)
 declare <2 x i64> @llvm.ppc.altivec.vpextd(<2 x i64>, <2 x i64>)
 declare i64 @llvm.ppc.pdepd(i64, i64)
 declare i64 @llvm.ppc.pextd(i64, i64)
+declare <2 x i64> @llvm.ppc.altivec.vcfuged(<2 x i64>, <2 x i64>)
+declare i64 @llvm.ppc.cfuged(i64, i64)
+declare i64 @llvm.ppc.altivec.vgnb(<1 x i128>, i32)
+declare <2 x i64> @llvm.ppc.vsx.xxeval(<2 x i64>, <2 x i64>, <2 x i64>, i32)
 declare <2 x i64> @llvm.ppc.altivec.vclzdm(<2 x i64>, <2 x i64>)
 declare <2 x i64> @llvm.ppc.altivec.vctzdm(<2 x i64>, <2 x i64>)
 declare i64 @llvm.ppc.cntlzdm(i64, i64)
@@ -52,6 +56,66 @@ define i64 @test_pextd(i64 %a, i64 %b) {
 entry:
   %tmp = tail call i64 @llvm.ppc.pextd(i64 %a, i64 %b)
   ret i64 %tmp
+}
+
+define <2 x i64> @test_vcfuged(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: test_vcfuged:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcfuged v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %tmp = tail call <2 x i64> @llvm.ppc.altivec.vcfuged(<2 x i64> %a, <2 x i64> %b)
+  ret <2 x i64> %tmp
+}
+
+define i64 @test_cfuged(i64 %a, i64 %b) {
+; CHECK-LABEL: test_cfuged:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cfuged r3, r3, r4
+; CHECK-NEXT:    blr
+entry:
+  %tmp = tail call i64 @llvm.ppc.cfuged(i64 %a, i64 %b)
+  ret i64 %tmp
+}
+
+define i64 @test_vgnb_1(<1 x i128> %a) {
+; CHECK-LABEL: test_vgnb_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vgnb r3, v2, 2
+; CHECK-NEXT:    blr
+entry:
+  %tmp = tail call i64 @llvm.ppc.altivec.vgnb(<1 x i128> %a, i32 2)
+  ret i64 %tmp
+}
+
+define i64 @test_vgnb_2(<1 x i128> %a) {
+; CHECK-LABEL: test_vgnb_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vgnb r3, v2, 7
+; CHECK-NEXT:    blr
+entry:
+  %tmp = tail call i64 @llvm.ppc.altivec.vgnb(<1 x i128> %a, i32 7)
+  ret i64 %tmp
+}
+
+define i64 @test_vgnb_3(<1 x i128> %a) {
+; CHECK-LABEL: test_vgnb_3:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vgnb r3, v2, 5
+; CHECK-NEXT:    blr
+entry:
+  %tmp = tail call i64 @llvm.ppc.altivec.vgnb(<1 x i128> %a, i32 5)
+  ret i64 %tmp
+}
+
+define <2 x i64> @test_xxeval(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) {
+; CHECK-LABEL: test_xxeval:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 255
+; CHECK-NEXT:    blr
+entry:
+  %tmp = tail call <2 x i64> @llvm.ppc.vsx.xxeval(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, i32 255)
+  ret <2 x i64> %tmp
 }
 
 define <2 x i64> @test_vclzdm(<2 x i64> %a, <2 x i64> %b) {
