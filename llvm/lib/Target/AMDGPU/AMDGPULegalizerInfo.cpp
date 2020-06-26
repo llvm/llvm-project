@@ -360,6 +360,52 @@ static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
          !isRegisterVectorElementType(Ty.getElementType());
 }
 
+/// Return true if we should legalize a load by widening an odd sized memory
+/// access up to the alignment. Note this case when the memory access itself
+/// changes, not the size of the result register.
+static bool shouldWidenLoad(const GCNSubtarget &ST, unsigned SizeInBits,
+                            unsigned AlignInBits, unsigned AddrSpace,
+                            unsigned Opcode) {
+  // We don't want to widen cases that are naturally legal.
+  if (isPowerOf2_32(SizeInBits))
+    return false;
+
+  // If we have 96-bit memory operations, we shouldn't touch them. Note we may
+  // end up widening these for a scalar load during RegBankSelect, since there
+  // aren't 96-bit scalar loads.
+  if (SizeInBits == 96 && ST.hasDwordx3LoadStores())
+    return false;
+
+  if (SizeInBits >= maxSizeForAddrSpace(ST, AddrSpace, Opcode))
+    return false;
+
+  // A load is known dereferenceable up to the alignment, so it's legal to widen
+  // to it.
+  //
+  // TODO: Could check dereferenceable for less aligned cases.
+  unsigned RoundedSize = NextPowerOf2(SizeInBits);
+  if (AlignInBits < RoundedSize)
+    return false;
+
+  // Do not widen if it would introduce a slow unaligned load.
+  const SITargetLowering *TLI = ST.getTargetLowering();
+  bool Fast = false;
+  return TLI->allowsMisalignedMemoryAccessesImpl(
+             RoundedSize, AddrSpace, Align(AlignInBits / 8),
+             MachineMemOperand::MOLoad, &Fast) &&
+         Fast;
+}
+
+static bool shouldWidenLoad(const GCNSubtarget &ST, const LegalityQuery &Query,
+                            unsigned Opcode) {
+  if (Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic)
+    return false;
+
+  return shouldWidenLoad(ST, Query.MMODescrs[0].SizeInBits,
+                         Query.MMODescrs[0].AlignInBits,
+                         Query.Types[1].getAddressSpace(), Opcode);
+}
+
 AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                          const GCNTargetMachine &TM)
   :  ST(ST_) {
@@ -1005,24 +1051,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     return false;
   };
 
-  const auto shouldWidenLoadResult = [=](const LegalityQuery &Query,
-                                         unsigned Opc) -> bool {
-    unsigned Size = Query.Types[0].getSizeInBits();
-    if (isPowerOf2_32(Size))
-      return false;
-
-    if (Size == 96 && ST.hasDwordx3LoadStores())
-      return false;
-
-    unsigned AddrSpace = Query.Types[1].getAddressSpace();
-    if (Size >= maxSizeForAddrSpace(ST, AddrSpace, Opc))
-      return false;
-
-    unsigned Align = Query.MMODescrs[0].AlignInBits;
-    unsigned RoundedSize = NextPowerOf2(Size);
-    return (Align >= RoundedSize);
-  };
-
   unsigned GlobalAlign32 = ST.hasUnalignedBufferAccess() ? 0 : 32;
   unsigned GlobalAlign16 = ST.hasUnalignedBufferAccess() ? 0 : 16;
   unsigned GlobalAlign8 = ST.hasUnalignedBufferAccess() ? 0 : 8;
@@ -1087,19 +1115,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                           Query.MMODescrs[0].SizeInBits);
       }, bitcastToRegisterType(0));
 
+    if (!IsStore) {
+      // Widen suitably aligned loads by loading extra bytes. The standard
+      // legalization actions can't properly express widening memory operands.
+      Actions.customIf([=](const LegalityQuery &Query) -> bool {
+        return shouldWidenLoad(ST, Query, G_LOAD);
+      });
+    }
+
+    // FIXME: load/store narrowing should be moved to lower action
     Actions
-        .customIf(typeIs(1, Constant32Ptr))
-        // Widen suitably aligned loads by loading extra elements.
-        .moreElementsIf([=](const LegalityQuery &Query) {
-            const LLT Ty = Query.Types[0];
-            return Op == G_LOAD && Ty.isVector() &&
-                   shouldWidenLoadResult(Query, Op);
-          }, moreElementsToNextPow2(0))
-        .widenScalarIf([=](const LegalityQuery &Query) {
-            const LLT Ty = Query.Types[0];
-            return Op == G_LOAD && !Ty.isVector() &&
-                   shouldWidenLoadResult(Query, Op);
-          }, widenScalarOrEltToNextPow2(0))
         .narrowScalarIf(
             [=](const LegalityQuery &Query) -> bool {
               return !Query.Types[0].isVector() &&
@@ -1205,15 +1230,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // May need relegalization for the scalars.
               return std::make_pair(0, EltTy);
             })
-        .minScalar(0, S32);
+    .lowerIfMemSizeNotPow2()
+    .minScalar(0, S32);
 
     if (IsStore)
       Actions.narrowScalarIf(isWideScalarTruncStore(0), changeTo(0, S32));
 
-    // TODO: Need a bitcast lower option?
     Actions
         .widenScalarToNextPow2(0)
-        .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0));
+        .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0))
+        .lower();
   }
 
   auto &ExtLoads = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
@@ -2303,6 +2329,12 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
   return true;
 }
 
+static LLT widenToNextPowerOf2(LLT Ty) {
+  if (Ty.isVector())
+    return Ty.changeNumElements(PowerOf2Ceil(Ty.getNumElements()));
+  return LLT::scalar(PowerOf2Ceil(Ty.getSizeInBits()));
+}
+
 bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
                                        MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -2319,6 +2351,66 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     Observer.changingInstr(MI);
     MI.getOperand(1).setReg(Cast.getReg(0));
     Observer.changedInstr(MI);
+    return true;
+  }
+
+  Register ValReg = MI.getOperand(0).getReg();
+  LLT ValTy = MRI.getType(ValReg);
+
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  const unsigned ValSize = ValTy.getSizeInBits();
+  const unsigned MemSize = 8 * MMO->getSize();
+  const Align MemAlign = MMO->getAlign();
+  const unsigned AlignInBits = 8 * MemAlign.value();
+
+  // Widen non-power-of-2 loads to the alignment if needed
+  if (shouldWidenLoad(ST, MemSize, AlignInBits, AddrSpace, MI.getOpcode())) {
+    const unsigned WideMemSize = PowerOf2Ceil(MemSize);
+
+    // This was already the correct extending load result type, so just adjust
+    // the memory type.
+    if (WideMemSize == ValSize) {
+      MachineFunction &MF = B.getMF();
+
+      // FIXME: This is losing AA metadata
+      MachineMemOperand *WideMMO =
+          MF.getMachineMemOperand(MMO, 0, WideMemSize / 8);
+      Observer.changingInstr(MI);
+      MI.setMemRefs(MF, {WideMMO});
+      Observer.changedInstr(MI);
+      return true;
+    }
+
+    // Don't bother handling edge case that should probably never be produced.
+    if (ValSize > WideMemSize)
+      return false;
+
+    LLT WideTy = widenToNextPowerOf2(ValTy);
+
+    // FIXME: This is losing AA metadata
+    Register WideLoad;
+    if (!WideTy.isVector()) {
+      WideLoad = B.buildLoadFromOffset(WideTy, PtrReg, *MMO, 0).getReg(0);
+      B.buildTrunc(ValReg, WideLoad).getReg(0);
+    } else {
+      // Extract the subvector.
+
+      if (isRegisterType(ValTy)) {
+        // If this a case where G_EXTRACT is legal, use it.
+        // (e.g. <3 x s32> -> <4 x s32>)
+        WideLoad = B.buildLoadFromOffset(WideTy, PtrReg, *MMO, 0).getReg(0);
+        B.buildExtract(ValReg, WideLoad, 0);
+      } else {
+        // For cases where the widened type isn't a nice register value, unmerge
+        // from a widened register (e.g. <3 x s16> -> <4 x s16>)
+        B.setInsertPt(B.getMBB(), ++B.getInsertPt());
+        WideLoad = Helper.widenWithUnmerge(WideTy, ValReg);
+        B.setInsertPt(B.getMBB(), MI.getIterator());
+        B.buildLoadFromOffset(WideLoad, PtrReg, *MMO, 0);
+      }
+    }
+
+    MI.eraseFromParent();
     return true;
   }
 
