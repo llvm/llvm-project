@@ -2,6 +2,7 @@
 # those expressions refer to the frame's CFA value.
 
 # UNSUPPORTED: system-windows
+# UNSUPPORTED: system-darwin
 # REQUIRES: target-x86_64, native
 
 # RUN: %clang_host %p/Inputs/call-asm.c %p/Inputs/eh-frame-augment-noop.s -o %t
