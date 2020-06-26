@@ -8,7 +8,6 @@
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
-#include "llvm/ADT/Twine.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
