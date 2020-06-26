@@ -80,8 +80,10 @@ private:
     // It should emit diagnostics if the value is invalid (e.g. wrong type).
     // If Key is seen twice, Parse runs only once and an error is reported.
     void handle(llvm::StringLiteral Key, std::function<bool(Node &)> Parse) {
-      for (const auto &Entry : Keys)
+      for (const auto &Entry : Keys) {
+        (void) Entry;
         assert(Entry.first != Key && "duplicate key handler");
+      }
       Keys.emplace_back(Key, std::move(Parse));
     }
 
