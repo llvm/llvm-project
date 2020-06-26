@@ -1130,7 +1130,7 @@ Currently, only the following parameter attributes are defined:
 
 .. _attr_align:
 
-``align <n>``
+``align <n>`` or ``align(<n>)``
     This indicates that the pointer value may be assumed by the optimizer to
     have the specified alignment.  If the pointer value does not have the
     specified alignment, behavior is undefined.
