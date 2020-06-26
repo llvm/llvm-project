@@ -557,6 +557,15 @@ public:
 
   // This stack tracks the current state of Sema.CurFPFeatures.
   PragmaStack<unsigned> FpPragmaStack;
+  FPOptionsOverride CurFPFeatureOverrides() {
+    FPOptionsOverride result;
+    if (!FpPragmaStack.hasValue()) {
+      result = FPOptionsOverride();
+    } else {
+      result = FPOptionsOverride(FpPragmaStack.CurrentValue);
+    }
+    return result;
+  }
 
   // RAII object to push / pop sentinel slots for all MS #pragma stacks.
   // Actions should be performed only if we enter / exit a C++ method body.
@@ -1358,12 +1367,19 @@ public:
   /// statements.
   class FPFeaturesStateRAII {
   public:
-    FPFeaturesStateRAII(Sema &S) : S(S), OldFPFeaturesState(S.CurFPFeatures) {}
-    ~FPFeaturesStateRAII() { S.CurFPFeatures = OldFPFeaturesState; }
+    FPFeaturesStateRAII(Sema &S) : S(S), OldFPFeaturesState(S.CurFPFeatures) {
+      OldOverrides = S.FpPragmaStack.CurrentValue;
+    }
+    ~FPFeaturesStateRAII() {
+      S.CurFPFeatures = OldFPFeaturesState;
+      S.FpPragmaStack.CurrentValue = OldOverrides;
+    }
+    unsigned getOverrides() { return OldOverrides; }
 
   private:
     Sema& S;
     FPOptions OldFPFeaturesState;
+    unsigned OldOverrides;
   };
 
   void addImplicitTypedef(StringRef Name, QualType T);
@@ -9606,10 +9622,10 @@ public:
 
   /// Are precise floating point semantics currently enabled?
   bool isPreciseFPEnabled() {
-    return !CurFPFeatures.allowAssociativeMath() &&
-           !CurFPFeatures.noSignedZeros() &&
-           !CurFPFeatures.allowReciprocalMath() &&
-           !CurFPFeatures.allowApproximateFunctions();
+    return !CurFPFeatures.getAllowFPReassociate() &&
+           !CurFPFeatures.getNoSignedZero() &&
+           !CurFPFeatures.getAllowReciprocal() &&
+           !CurFPFeatures.getAllowApproxFunc();
   }
 
   /// ActOnPragmaFloatControl - Call on well-formed \#pragma float_control
@@ -9652,21 +9668,21 @@ public:
   /// ActOnPragmaFPContract - Called on well formed
   /// \#pragma {STDC,OPENCL} FP_CONTRACT and
   /// \#pragma clang fp contract
-  void ActOnPragmaFPContract(LangOptions::FPModeKind FPC);
+  void ActOnPragmaFPContract(SourceLocation Loc, LangOptions::FPModeKind FPC);
 
   /// Called on well formed
   /// \#pragma clang fp reassociate
-  void ActOnPragmaFPReassociate(bool IsEnabled);
+  void ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled);
 
   /// ActOnPragmaFenvAccess - Called on well formed
   /// \#pragma STDC FENV_ACCESS
   void ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled);
 
   /// Called to set rounding mode for floating point operations.
-  void setRoundingMode(llvm::RoundingMode);
+  void setRoundingMode(SourceLocation Loc, llvm::RoundingMode);
 
   /// Called to set exception behavior for floating point operations.
-  void setExceptionMode(LangOptions::FPExceptionModeKind);
+  void setExceptionMode(SourceLocation Loc, LangOptions::FPExceptionModeKind);
 
   /// AddAlignmentAttributesForRecord - Adds any needed alignment attributes to
   /// a the record decl, to handle '\#pragma pack' and '\#pragma options align'.
