@@ -22,6 +22,15 @@ set(DEBUGINFO_TEST_DEPS
   not
   )
 
+# llgdb-tests/asan.c and other asan* files.
+if(TARGET asan)
+  list(APPEND DEBUGINFO_TEST_DEPS asan)
+endif()
+# llgdb-tests/safestack.c
+if(TARGET safestack)
+  list(APPEND DEBUGINFO_TEST_DEPS safestack)
+endif()
+
 # The Windows builder scripts pass -fuse-ld=lld.
 if (WIN32)
   set(DEBUGINFO_TEST_DEPS ${DEBUGINFO_TEST_DEPS} lld)
