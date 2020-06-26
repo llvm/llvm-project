@@ -42,10 +42,10 @@ public:
   {0}Base(const {0}Base &) : {1}(::mlir::TypeID::get<DerivedT>()) {{}
 
   /// Returns the command-line argument attached to this pass.
-  llvm::StringRef getArgument() const override { return "{2}"; }
+  ::llvm::StringRef getArgument() const override { return "{2}"; }
 
   /// Returns the derived pass name.
-  llvm::StringRef getName() const override { return "{0}"; }
+  ::llvm::StringRef getName() const override { return "{0}"; }
 
   /// Support isa/dyn_cast functionality for the derived pass class.
   static bool classof(const ::mlir::Pass *pass) {{
@@ -63,13 +63,14 @@ protected:
 /// Emit the declarations for each of the pass options.
 static void emitPassOptionDecls(const Pass &pass, raw_ostream &os) {
   for (const PassOption &opt : pass.getOptions()) {
-    os.indent(2) << "Pass::" << (opt.isListOption() ? "ListOption" : "Option");
+    os.indent(2) << "::mlir::Pass::"
+                 << (opt.isListOption() ? "ListOption" : "Option");
 
-    os << llvm::formatv("<{0}> {1}{{*this, \"{2}\", llvm::cl::desc(\"{3}\")",
+    os << llvm::formatv("<{0}> {1}{{*this, \"{2}\", ::llvm::cl::desc(\"{3}\")",
                         opt.getType(), opt.getCppVariableName(),
                         opt.getArgument(), opt.getDescription());
     if (Optional<StringRef> defaultVal = opt.getDefaultValue())
-      os << ", llvm::cl::init(" << defaultVal << ")";
+      os << ", ::llvm::cl::init(" << defaultVal << ")";
     if (Optional<StringRef> additionalFlags = opt.getAdditionalFlags())
       os << ", " << *additionalFlags;
     os << "};\n";
@@ -79,9 +80,9 @@ static void emitPassOptionDecls(const Pass &pass, raw_ostream &os) {
 /// Emit the declarations for each of the pass statistics.
 static void emitPassStatisticDecls(const Pass &pass, raw_ostream &os) {
   for (const PassStatistic &stat : pass.getStatistics()) {
-    os << llvm::formatv("  Pass::Statistic {0}{{this, \"{1}\", \"{2}\"};\n",
-                        stat.getCppVariableName(), stat.getName(),
-                        stat.getDescription());
+    os << llvm::formatv(
+        "  ::mlir::Pass::Statistic {0}{{this, \"{1}\", \"{2}\"};\n",
+        stat.getCppVariableName(), stat.getName(), stat.getDescription());
   }
 }
 
