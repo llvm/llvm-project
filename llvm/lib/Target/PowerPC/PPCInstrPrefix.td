@@ -254,8 +254,8 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_p<bits<5> opcode, dag OOL, dag IOL,
                                     isPCRel;
 }
 
-def PrefixInstrs : Predicate<"PPCSubTarget->hasPrefixInstrs()">;
-def IsISA3_1 : Predicate<"PPCSubTarget->isISA3_1()">;
+def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
+def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
 
 let Predicates = [PrefixInstrs] in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
