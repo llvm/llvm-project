@@ -57,7 +57,7 @@ void foo() {
   // CHECK-CC1: COMPLETION: TYPEDEF : TYPEDEF
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>;
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#std::type_info#]typeid(<#expression-or-type#>)
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : typename <#name#>
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC1-NEXT: COMPLETION: union
@@ -107,7 +107,7 @@ void foo() {
   // CHECK-CC2-NEXT: COMPLETION: thread_local
   // CHECK-CC2-NEXT: COMPLETION: TYPEDEF : TYPEDEF
   // CHECK-CC2-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>;
-  // CHECK-CC2-NEXT: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
+  // CHECK-CC2-NEXT: COMPLETION: Pattern : typename <#name#>
   // CHECK-CC2-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-CC2-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC2-NEXT: COMPLETION: union
@@ -150,7 +150,7 @@ void foo() {
   // CHECK-CC3-NEXT: COMPLETION: Pattern : template<<#parameters#>>
   // CHECK-CC3-NEXT: COMPLETION: thread_local
   // CHECK-CC3-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>;
-  // CHECK-CC3-NEXT: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
+  // CHECK-CC3-NEXT: COMPLETION: Pattern : typename <#name#>
   // CHECK-CC3-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-CC3-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC3-NEXT: COMPLETION: union
@@ -198,7 +198,7 @@ void foo() {
   // CHECK-CC4-NEXT: COMPLETION: Pattern : [#bool#]true
   // CHECK-CC4-NEXT: COMPLETION: TYPEDEF : TYPEDEF
   // CHECK-CC4-NEXT: COMPLETION: Pattern : [#std::type_info#]typeid(<#expression-or-type#>)
-  // CHECK-CC4-NEXT: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
+  // CHECK-CC4-NEXT: COMPLETION: Pattern : typename <#name#>
   // CHECK-CC4-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-CC4-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC4-NEXT: COMPLETION: union
@@ -259,7 +259,7 @@ void foo() {
   // CHECK-NO-RTTI: COMPLETION: TYPEDEF : TYPEDEF
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>;
   // CHECK-NO-RTTI-NOT: typeid
-  // CHECK-NO-RTTI: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
+  // CHECK-NO-RTTI: COMPLETION: Pattern : typename <#name#>
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-NO-RTTI-NEXT: COMPLETION: union
