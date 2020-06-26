@@ -1,5 +1,5 @@
 ; RUN: opt -loop-unroll-and-jam -allow-unroll-and-jam -verify-loop-info < %s -S | FileCheck %s
-; RUN: opt -passes='unroll-and-jam,verify<loops>' -allow-unroll-and-jam < %s -S | FileCheck %s
+; RUN: opt -passes='loop-unroll-and-jam,verify<loops>' -allow-unroll-and-jam < %s -S | FileCheck %s
 
 ; Check that the newly created loops to not fail to be added to LI
 ; This test deliberately disables UnJ on the middle loop, performing it instead on the

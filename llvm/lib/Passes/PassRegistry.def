@@ -209,6 +209,7 @@ FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("load-store-vectorizer", LoadStoreVectorizerPass())
 FUNCTION_PASS("loop-simplify", LoopSimplifyPass())
 FUNCTION_PASS("loop-sink", LoopSinkPass())
+FUNCTION_PASS("loop-unroll-and-jam", LoopUnrollAndJamPass())
 FUNCTION_PASS("lowerinvoke", LowerInvokePass())
 FUNCTION_PASS("mem2reg", PromotePass())
 FUNCTION_PASS("memcpyopt", MemCpyOptPass())
@@ -249,7 +250,6 @@ FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
 FUNCTION_PASS("spec-phis", SpeculateAroundPHIsPass())
 FUNCTION_PASS("sroa", SROA())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
-FUNCTION_PASS("unroll-and-jam", LoopUnrollAndJamPass())
 FUNCTION_PASS("vector-combine", VectorCombinePass())
 FUNCTION_PASS("verify", VerifierPass())
 FUNCTION_PASS("verify<domtree>", DominatorTreeVerifierPass())
@@ -271,7 +271,7 @@ FUNCTION_PASS("tsan", ThreadSanitizerPass())
 #ifndef FUNCTION_PASS_WITH_PARAMS
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)
 #endif
-FUNCTION_PASS_WITH_PARAMS("unroll",
+FUNCTION_PASS_WITH_PARAMS("loop-unroll",
                            [](LoopUnrollOptions Opts) {
                              return LoopUnrollPass(Opts);
                            },
@@ -333,7 +333,7 @@ LOOP_PASS("loop-deletion", LoopDeletionPass())
 LOOP_PASS("simplify-cfg", LoopSimplifyCFGPass())
 LOOP_PASS("strength-reduce", LoopStrengthReducePass())
 LOOP_PASS("indvars", IndVarSimplifyPass())
-LOOP_PASS("unroll-full", LoopFullUnrollPass())
+LOOP_PASS("loop-unroll-full", LoopFullUnrollPass())
 LOOP_PASS("print-access-info", LoopAccessInfoPrinterPass(dbgs()))
 LOOP_PASS("print<ddg>", DDGAnalysisPrinterPass(dbgs()))
 LOOP_PASS("print<ivusers>", IVUsersPrinterPass(dbgs()))
