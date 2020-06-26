@@ -41,26 +41,14 @@ class TestSwiftDedupMacros(TestBase):
         """
         self.build()
             
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target,  _, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec('dylib.swift'))
 
         self.registerSharedLibrariesWithTarget(target, ['Dylib'])
 
-        # Set the breakpoints.
-        foo_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('dylib.swift'))
-
-        process = target.LaunchSimple(None, None, os.getcwd())
-
         # Turn on logging.
-        command_result = lldb.SBCommandReturnObject()
-        interpreter = self.dbg.GetCommandInterpreter()
         log = self.getBuildArtifact("types.log")
-        interpreter.HandleCommand("log enable lldb types -f "+log, command_result)
+        self.expect("log enable lldb types -f "+log)
         
         self.expect("p foo", DATA_TYPES_DISPLAYED_CORRECTLY, substrs=["42"])
         debug = 0
@@ -77,7 +65,7 @@ class TestSwiftDedupMacros(TestBase):
                 space_with_space += 1
             if "-UNDEBUG" in line:
                 ndebug += 1
-        self.assertTrue(debug == 1)
-        self.assertTrue(space == 1)
-        self.assertTrue(space_with_space == 0)
-        self.assertTrue(ndebug == 1)
+        self.assertEqual(debug, 1)
+        self.assertEqual(space, 1)
+        self.assertEqual(space_with_space, 0)
+        self.assertEqual(ndebug, 1)
