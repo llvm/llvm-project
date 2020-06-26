@@ -1,6 +1,38 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// spv.BitCount
+//===----------------------------------------------------------------------===//
+
+func @bitcount_scalar(%arg0: i16) {
+	// CHECK: %{{.*}} = "llvm.intr.ctpop"(%{{.*}}) : (!llvm.i16) -> !llvm.i16
+	%0 = spv.BitCount %arg0: i16
+	return
+}
+
+func @bitcount_vector(%arg0: vector<3xi32>) {
+	// CHECK: %{{.*}} = "llvm.intr.ctpop"(%{{.*}}) : (!llvm<"<3 x i32>">) -> !llvm<"<3 x i32>">
+	%0 = spv.BitCount %arg0: vector<3xi32>
+	return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.BitReverse
+//===----------------------------------------------------------------------===//
+
+func @bitreverse_scalar(%arg0: i64) {
+	// CHECK: %{{.*}} = "llvm.intr.bitreverse"(%{{.*}}) : (!llvm.i64) -> !llvm.i64
+	%0 = spv.BitReverse %arg0: i64
+	return
+}
+
+func @bitreverse_vector(%arg0: vector<4xi32>) {
+	// CHECK: %{{.*}} = "llvm.intr.bitreverse"(%{{.*}}) : (!llvm<"<4 x i32>">) -> !llvm<"<4 x i32>">
+	%0 = spv.BitReverse %arg0: vector<4xi32>
+	return
+}
+
+//===----------------------------------------------------------------------===//
 // spv.BitwiseAnd
 //===----------------------------------------------------------------------===//
 
