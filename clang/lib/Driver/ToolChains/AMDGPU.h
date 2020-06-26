@@ -85,6 +85,8 @@ public:
     return true;
   }
 
+  /// Needed for translating LTO options.
+  const char *getDefaultLinker() const override { return "ld.lld"; }
 };
 
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {

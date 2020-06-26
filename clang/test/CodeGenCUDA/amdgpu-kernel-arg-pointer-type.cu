@@ -1,4 +1,6 @@
+// REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
+
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck --check-prefixes=COMMON,CHECK %s
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -disable-O0-optnone -o - | opt -S -O2 | FileCheck %s --check-prefixes=COMMON,OPT
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -x hip %s -o - | FileCheck -check-prefix=HOST %s
