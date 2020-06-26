@@ -48,7 +48,6 @@ class BranchInst;
 class DominatorTree;
 class Instruction;
 class LoopBlocksRPO;
-class WeakVH;
 
 using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
 using PhiToDefMap = SmallDenseMap<MemoryPhi *, MemoryAccess *>;
