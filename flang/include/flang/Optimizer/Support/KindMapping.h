@@ -1,4 +1,4 @@
-//===-- Optimizer/Support/KindMapping.h -------------------------*- C++ -*-===//
+//===-- Optimizer/Support/KindMapping.h -- support kind mapping -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,14 +14,8 @@
 #include "llvm/IR/Type.h"
 
 namespace llvm {
-template <typename>
-class Optional;
 struct fltSemantics;
 } // namespace llvm
-
-namespace mlir {
-class MLIRContext;
-} // namespace mlir
 
 namespace fir {
 
@@ -57,24 +51,27 @@ public:
   explicit KindMapping(mlir::MLIRContext *context, llvm::StringRef map);
 
   /// Get the size in bits of !fir.char<kind>
-  Bitsize getCharacterBitsize(KindTy kind);
+  Bitsize getCharacterBitsize(KindTy kind) const;
 
   /// Get the size in bits of !fir.int<kind>
-  Bitsize getIntegerBitsize(KindTy kind);
+  Bitsize getIntegerBitsize(KindTy kind) const;
 
   /// Get the size in bits of !fir.logical<kind>
-  Bitsize getLogicalBitsize(KindTy kind);
+  Bitsize getLogicalBitsize(KindTy kind) const;
+
+  /// Get the size in bits of !fir.real<kind>
+  Bitsize getRealBitsize(KindTy kind) const;
 
   /// Get the LLVM Type::TypeID of !fir.real<kind>
-  LLVMTypeID getRealTypeID(KindTy kind);
+  LLVMTypeID getRealTypeID(KindTy kind) const;
 
   /// Get the LLVM Type::TypeID of !fir.complex<kind>
-  LLVMTypeID getComplexTypeID(KindTy kind);
+  LLVMTypeID getComplexTypeID(KindTy kind) const;
 
   mlir::MLIRContext *getContext() const { return context; }
 
   /// Get the float semantics of !fir.real<kind>
-  const llvm::fltSemantics &getFloatSemantics(KindTy kind);
+  const llvm::fltSemantics &getFloatSemantics(KindTy kind) const;
 
 private:
   MatchResult badMapString(const llvm::Twine &ptr);
