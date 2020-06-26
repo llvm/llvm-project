@@ -1464,7 +1464,6 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
 
     def : Pat<(nxv8f16 (bitconvert (nxv16i8 ZPR:$src))), (nxv8f16 ZPR:$src)>;
     def : Pat<(nxv8f16 (bitconvert (nxv8i16 ZPR:$src))), (nxv8f16 ZPR:$src)>;
-    def : Pat<(nxv8bf16 (bitconvert (nxv8i16 ZPR:$src))), (nxv8bf16 ZPR:$src)>;
     def : Pat<(nxv8f16 (bitconvert (nxv4i32 ZPR:$src))), (nxv8f16 ZPR:$src)>;
     def : Pat<(nxv8f16 (bitconvert (nxv2i64 ZPR:$src))), (nxv8f16 ZPR:$src)>;
     def : Pat<(nxv8f16 (bitconvert (nxv4f32 ZPR:$src))), (nxv8f16 ZPR:$src)>;
@@ -1483,6 +1482,24 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
     def : Pat<(nxv2f64 (bitconvert (nxv2i64 ZPR:$src))), (nxv2f64 ZPR:$src)>;
     def : Pat<(nxv2f64 (bitconvert (nxv8f16 ZPR:$src))), (nxv2f64 ZPR:$src)>;
     def : Pat<(nxv2f64 (bitconvert (nxv4f32 ZPR:$src))), (nxv2f64 ZPR:$src)>;
+  }
+
+  let Predicates = [IsLE, HasSVE, HasBF16] in {
+    def : Pat<(nxv8bf16 (bitconvert (nxv16i8 ZPR:$src))), (nxv8bf16 ZPR:$src)>;
+    def : Pat<(nxv8bf16 (bitconvert (nxv8i16 ZPR:$src))), (nxv8bf16 ZPR:$src)>;
+    def : Pat<(nxv8bf16 (bitconvert (nxv4i32 ZPR:$src))), (nxv8bf16 ZPR:$src)>;
+    def : Pat<(nxv8bf16 (bitconvert (nxv2i64 ZPR:$src))), (nxv8bf16 ZPR:$src)>;
+    def : Pat<(nxv8bf16 (bitconvert (nxv8f16 ZPR:$src))), (nxv8bf16 ZPR:$src)>;
+    def : Pat<(nxv8bf16 (bitconvert (nxv4f32 ZPR:$src))), (nxv8bf16 ZPR:$src)>;
+    def : Pat<(nxv8bf16 (bitconvert (nxv2f64 ZPR:$src))), (nxv8bf16 ZPR:$src)>;
+
+    def : Pat<(nxv16i8 (bitconvert (nxv8bf16 ZPR:$src))), (nxv16i8 ZPR:$src)>;
+    def : Pat<(nxv8i16 (bitconvert (nxv8bf16 ZPR:$src))), (nxv8i16 ZPR:$src)>;
+    def : Pat<(nxv4i32 (bitconvert (nxv8bf16 ZPR:$src))), (nxv4i32 ZPR:$src)>;
+    def : Pat<(nxv2i64 (bitconvert (nxv8bf16 ZPR:$src))), (nxv2i64 ZPR:$src)>;
+    def : Pat<(nxv8f16 (bitconvert (nxv8bf16 ZPR:$src))), (nxv8f16 ZPR:$src)>;
+    def : Pat<(nxv4f32 (bitconvert (nxv8bf16 ZPR:$src))), (nxv4f32 ZPR:$src)>;
+    def : Pat<(nxv2f64 (bitconvert (nxv8bf16 ZPR:$src))), (nxv2f64 ZPR:$src)>;
   }
 
   def : Pat<(nxv16i1 (reinterpret_cast (nxv16i1 PPR:$src))), (COPY_TO_REGCLASS PPR:$src, PPR)>;
