@@ -16777,6 +16777,42 @@ vec_pext(vector unsigned long long __a, vector unsigned long long __b) {
   return __builtin_altivec_vpextd(__a, __b);
 }
 
+/* vec_cfuge */
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_cfuge(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vcfuged(__a, __b);
+}
+
+/* vec_gnb */
+
+#define vec_gnb(__a, __b) __builtin_altivec_vgnb(__a, __b)
+
+/* vec_ternarylogic */
+#ifdef __VSX__
+#define vec_ternarylogic(__a, __b, __c, __imm)                                 \
+  _Generic((__a), vector unsigned char                                         \
+           : __builtin_vsx_xxeval((vector unsigned long long)(__a),            \
+                                  (vector unsigned long long)(__b),            \
+                                  (vector unsigned long long)(__c), (__imm)),  \
+             vector unsigned short                                             \
+           : __builtin_vsx_xxeval((vector unsigned long long)(__a),            \
+                                  (vector unsigned long long)(__b),            \
+                                  (vector unsigned long long)(__c), (__imm)),  \
+             vector unsigned int                                               \
+           : __builtin_vsx_xxeval((vector unsigned long long)(__a),            \
+                                  (vector unsigned long long)(__b),            \
+                                  (vector unsigned long long)(__c), (__imm)),  \
+             vector unsigned long long                                         \
+           : __builtin_vsx_xxeval((vector unsigned long long)(__a),            \
+                                  (vector unsigned long long)(__b),            \
+                                  (vector unsigned long long)(__c), (__imm)),  \
+             vector unsigned __int128                                          \
+           : __builtin_vsx_xxeval((vector unsigned long long)(__a),            \
+                                  (vector unsigned long long)(__b),            \
+                                  (vector unsigned long long)(__c), (__imm)))
+#endif /* __VSX__ */
+
 /* vec_genpcvm */
 
 #ifdef __VSX__

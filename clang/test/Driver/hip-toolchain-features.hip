@@ -35,3 +35,13 @@
 
 // ALL3: {{.*}}clang{{.*}}"-target-feature" "+xnack" "-target-feature" "+sram-ecc"
 // NOALL3: {{.*}}clang{{.*}}"-target-feature" "-xnack" "-target-feature" "-sram-ecc"
+
+// RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx1010 %s \
+// RUN:   -mcumode -mcumode -mno-cumode -mwavefrontsize64 -mcumode \
+// RUN:   -mwavefrontsize64 -mno-wavefrontsize64 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=DUP
+// DUP: {{.*}}clang{{.*}} "-target-feature" "-wavefrontsize16"
+// DUP-SAME: "-target-feature" "+wavefrontsize32"
+// DUP-SAME: "-target-feature" "-wavefrontsize64"
+// DUP-SAME: "-target-feature" "+cumode"
