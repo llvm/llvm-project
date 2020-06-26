@@ -184,6 +184,10 @@ if(LIBCXX_INSTALL_SUPPORT_HEADERS)
     )
 endif()
 
+configure_file("__config_site.in"
+               "${LIBCXX_BINARY_DIR}/__config_site"
+               @ONLY)
+
 # Generate a custom __config header. The new header is created
 # by prepending __config_site to the current __config header.
 add_custom_command(OUTPUT ${LIBCXX_BINARY_DIR}/__generated_config
