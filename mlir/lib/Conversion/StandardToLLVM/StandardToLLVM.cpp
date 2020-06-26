@@ -1785,12 +1785,14 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
     auto module = allocOp.getParentOfType<ModuleOp>();
     auto allocFunc = module.lookupSymbol<LLVM::LLVMFuncOp>(allocFuncName);
     if (!allocFunc) {
-      OpBuilder moduleBuilder(op->getParentOfType<ModuleOp>().getBodyRegion());
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(
+          op->getParentOfType<ModuleOp>().getBody());
       SmallVector<LLVM::LLVMType, 2> callArgTypes = {getIndexType()};
       // aligned_alloc(size_t alignment, size_t size)
       if (useAlignedAlloc)
         callArgTypes.push_back(getIndexType());
-      allocFunc = moduleBuilder.create<LLVM::LLVMFuncOp>(
+      allocFunc = rewriter.create<LLVM::LLVMFuncOp>(
           rewriter.getUnknownLoc(), allocFuncName,
           LLVM::LLVMType::getFunctionTy(getVoidPtrType(), callArgTypes,
                                         /*isVarArg=*/false));
@@ -2093,8 +2095,10 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<DeallocOp> {
     auto freeFunc =
         op->getParentOfType<ModuleOp>().lookupSymbol<LLVM::LLVMFuncOp>("free");
     if (!freeFunc) {
-      OpBuilder moduleBuilder(op->getParentOfType<ModuleOp>().getBodyRegion());
-      freeFunc = moduleBuilder.create<LLVM::LLVMFuncOp>(
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(
+          op->getParentOfType<ModuleOp>().getBody());
+      freeFunc = rewriter.create<LLVM::LLVMFuncOp>(
           rewriter.getUnknownLoc(), "free",
           LLVM::LLVMType::getFunctionTy(getVoidType(), getVoidPtrType(),
                                         /*isVarArg=*/false));
