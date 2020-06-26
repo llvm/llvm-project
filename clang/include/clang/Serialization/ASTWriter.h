@@ -62,7 +62,6 @@ class CXXRecordDecl;
 class CXXTemporary;
 class FileEntry;
 class FPOptions;
-class FPOptionsOverride;
 class FunctionDecl;
 class HeaderSearch;
 class HeaderSearchOptions;
@@ -507,7 +506,7 @@ private:
                             bool IsModule);
   void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(const DeclContext *DC);
-  void WriteFPPragmaOptions(const FPOptionsOverride &Opts);
+  void WriteFPPragmaOptions(const FPOptions &Opts);
   void WriteOpenCLExtensions(Sema &SemaRef);
   void WriteOpenCLExtensionTypes(Sema &SemaRef);
   void WriteOpenCLExtensionDecls(Sema &SemaRef);
