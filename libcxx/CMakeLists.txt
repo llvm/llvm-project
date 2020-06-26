@@ -873,16 +873,13 @@ if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
   config_define(ON _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
-set(site_config_path "${LIBCXX_BINARY_DIR}/__config_site")
-configure_file("include/__config_site.in"
-               "${site_config_path}"
-               @ONLY)
-
+# We generate a __config_site header (see libcxx/include/CMakeLists.txt) and
+# we make sure to include it when building the library.
 function(cxx_add_config_site target)
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    target_compile_options(${target} PUBLIC /FI "${site_config_path}")
+    target_compile_options(${target} PUBLIC /FI "${LIBCXX_BINARY_DIR}/__config_site")
   else()
-    target_compile_options(${target} PUBLIC -include "${site_config_path}")
+    target_compile_options(${target} PUBLIC -include "${LIBCXX_BINARY_DIR}/__config_site")
   endif()
 endfunction()
 
