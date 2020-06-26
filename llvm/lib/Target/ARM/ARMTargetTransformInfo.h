@@ -232,8 +232,7 @@ public:
 
   unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                   const Value *Ptr, bool VariableMask,
-                                  unsigned Alignment,
-                                  TTI::TargetCostKind CostKind,
+                                  Align Alignment, TTI::TargetCostKind CostKind,
                                   const Instruction *I = nullptr);
 
   bool isLoweredToCall(const Function *F);
