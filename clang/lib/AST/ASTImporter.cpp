@@ -6676,7 +6676,7 @@ ExpectedStmt ASTNodeImporter::VisitUnaryOperator(UnaryOperator *E) {
   return UnaryOperator::Create(
       Importer.getToContext(), ToSubExpr, E->getOpcode(), ToType,
       E->getValueKind(), E->getObjectKind(), ToOperatorLoc, E->canOverflow(),
-      E->getFPOptionsOverride());
+      E->getFPFeatures(Importer.getFromContext().getLangOpts()));
 }
 
 ExpectedStmt
