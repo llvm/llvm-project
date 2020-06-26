@@ -18,6 +18,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysignl
     libc.src.math.ceil
     libc.src.math.ceilf
+    libc.src.math.ceill
     libc.src.math.cosf
     libc.src.math.expf
     libc.src.math.exp2f
@@ -26,6 +27,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabsl
     libc.src.math.floor
     libc.src.math.floorf
+    libc.src.math.floorl
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
@@ -37,6 +39,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modfl
     libc.src.math.round
     libc.src.math.roundf
+    libc.src.math.roundl
     libc.src.math.sincosf
     libc.src.math.sinf
     libc.src.math.trunc
