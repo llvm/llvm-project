@@ -59,10 +59,10 @@ struct CapturedDiags {
       Out.Pos.character = D.getColumnNo(); // Zero-based - bug in SourceMgr?
       if (!D.getRanges().empty()) {
         const auto &R = D.getRanges().front();
-        Out.Range.emplace();
-        Out.Range->start.line = Out.Range->end.line = Out.Pos.line;
-        Out.Range->start.character = R.first;
-        Out.Range->end.character = R.second;
+        Out.Rng.emplace();
+        Out.Rng->start.line = Out.Rng->end.line = Out.Pos.line;
+        Out.Rng->start.character = R.first;
+        Out.Rng->end.character = R.second;
       }
     };
   }
@@ -70,7 +70,7 @@ struct CapturedDiags {
     std::string Message;
     llvm::SourceMgr::DiagKind Kind;
     Position Pos;
-    llvm::Optional<Range> Range;
+    llvm::Optional<Range> Rng;
 
     friend void PrintTo(const Diag &D, std::ostream *OS) {
       *OS << (D.Kind == llvm::SourceMgr::DK_Error ? "error: " : "warning: ")
@@ -83,7 +83,7 @@ struct CapturedDiags {
 MATCHER_P(DiagMessage, M, "") { return arg.Message == M; }
 MATCHER_P(DiagKind, K, "") { return arg.Kind == K; }
 MATCHER_P(DiagPos, P, "") { return arg.Pos == P; }
-MATCHER_P(DiagRange, R, "") { return arg.Range == R; }
+MATCHER_P(DiagRange, R, "") { return arg.Rng == R; }
 
 TEST(ParseYAML, SyntacticForms) {
   CapturedDiags Diags;
