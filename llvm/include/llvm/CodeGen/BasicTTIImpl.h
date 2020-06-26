@@ -944,13 +944,10 @@ public:
     return Cost;
   }
 
-  unsigned getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
-                                      unsigned Factor,
-                                      ArrayRef<unsigned> Indices,
-                                      unsigned Alignment, unsigned AddressSpace,
-                                      TTI::TargetCostKind CostKind,
-                                      bool UseMaskForCond = false,
-                                      bool UseMaskForGaps = false) {
+  unsigned getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) {
     auto *VT = cast<FixedVectorType>(VecTy);
 
     unsigned NumElts = VT->getNumElements();
@@ -963,10 +960,10 @@ public:
     unsigned Cost;
     if (UseMaskForCond || UseMaskForGaps)
       Cost = static_cast<T *>(this)->getMaskedMemoryOpCost(
-          Opcode, VecTy, Align(Alignment), AddressSpace, CostKind);
+          Opcode, VecTy, Alignment, AddressSpace, CostKind);
     else
       Cost = static_cast<T *>(this)->getMemoryOpCost(
-          Opcode, VecTy, Align(Alignment), AddressSpace, CostKind);
+          Opcode, VecTy, Alignment, AddressSpace, CostKind);
 
     // Legalize the vector type, and get the legalized and unlegalized type
     // sizes.

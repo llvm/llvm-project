@@ -126,11 +126,11 @@ public:
                                   unsigned Alignment,
                                   TTI::TargetCostKind CostKind,
                                   const Instruction *I);
-  unsigned getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
-            unsigned Factor, ArrayRef<unsigned> Indices, unsigned Alignment,
-            unsigned AddressSpace,
-            TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-            bool UseMaskForCond = false, bool UseMaskForGaps = false);
+  unsigned getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false);
   unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                               TTI::TargetCostKind CostKind,
                               const Instruction *I = nullptr);
