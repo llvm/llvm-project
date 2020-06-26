@@ -248,13 +248,13 @@ private:
     const char *Type;
     const char *BuiltinType;
   };
-  SmallVector<ReinterpretTypeInfo, 12> Reinterprets = {
+  SmallVector<ReinterpretTypeInfo, 11> Reinterprets = {
       {"s8", "svint8_t", "q16Sc"},   {"s16", "svint16_t", "q8Ss"},
       {"s32", "svint32_t", "q4Si"},  {"s64", "svint64_t", "q2SWi"},
       {"u8", "svuint8_t", "q16Uc"},  {"u16", "svuint16_t", "q8Us"},
       {"u32", "svuint32_t", "q4Ui"}, {"u64", "svuint64_t", "q2UWi"},
-      {"f16", "svfloat16_t", "q8h"}, {"bf16", "svbfloat16_t", "q8y"},
-      {"f32", "svfloat32_t", "q4f"}, {"f64", "svfloat64_t", "q2d"}};
+      {"f16", "svfloat16_t", "q8h"}, {"f32", "svfloat32_t", "q4f"},
+      {"f64", "svfloat64_t", "q2d"}};
 
   RecordKeeper &Records;
   llvm::StringMap<uint64_t> EltTypes;
@@ -1208,10 +1208,6 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   for (auto ShortForm : { false, true } )
     for (const ReinterpretTypeInfo &From : Reinterprets)
       for (const ReinterpretTypeInfo &To : Reinterprets) {
-        const bool IsBFloat = StringRef(From.Suffix).equals("bf16") ||
-                              StringRef(To.Suffix).equals("bf16");
-        if (IsBFloat)
-          OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
         if (ShortForm) {
           OS << "__aio " << From.Type << " svreinterpret_" << From.Suffix;
           OS << "(" << To.Type << " op) {\n";
@@ -1222,8 +1218,6 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
           OS << "#define svreinterpret_" << From.Suffix << "_" << To.Suffix
              << "(...) __builtin_sve_reinterpret_" << From.Suffix << "_"
              << To.Suffix << "(__VA_ARGS__)\n";
-        if (IsBFloat)
-          OS << "#endif /* #if defined(__ARM_FEATURE_SVE_BF16) */\n";
       }
 
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
