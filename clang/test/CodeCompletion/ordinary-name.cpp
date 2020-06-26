@@ -59,6 +59,7 @@ void foo() {
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC1-NEXT: COMPLETION: union
   // CHECK-CC1-NEXT: COMPLETION: unsigned
+  // CHECK-CC1-NOT: COMPLETION: Pattern : using <#name#> = <#type#>;
   // CHECK-CC1-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
   // CHECK-CC1-NEXT: COMPLETION: void
   // CHECK-CC1-NEXT: COMPLETION: volatile
@@ -103,6 +104,7 @@ void foo() {
   // CHECK-CC2-NEXT: COMPLETION: union
   // CHECK-CC2-NEXT: COMPLETION: unsigned
   // CHECK-CC2-NEXT: COMPLETION: Pattern : using <#qualifier#>::<#name#>;
+  // CHECK-CC2-NOT: COMPLETION: Pattern : using <#name#> = <#type#>;
   // CHECK-CC2-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
   // CHECK-CC2-NEXT: COMPLETION: void
   // CHECK-CC2-NEXT: COMPLETION: volatile
@@ -140,6 +142,7 @@ void foo() {
   // CHECK-CC3-NEXT: COMPLETION: union
   // CHECK-CC3-NEXT: COMPLETION: unsigned
   // CHECK-CC3-NEXT: COMPLETION: Pattern : using <#qualifier#>::<#name#>;
+  // CHECK-CC3-NOT: COMPLETION: Pattern : using <#name#> = <#type#>;
   // CHECK-CC3-NEXT: COMPLETION: virtual
   // CHECK-CC3-NEXT: COMPLETION: void
   // CHECK-CC3-NEXT: COMPLETION: volatile
@@ -232,6 +235,7 @@ void foo() {
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-NO-RTTI-NEXT: COMPLETION: union
   // CHECK-NO-RTTI-NEXT: COMPLETION: unsigned
+  // CHECK-NO-RTTI-NOT: COMPLETION: Pattern : using <#name#> = <#type#>;
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
   // CHECK-NO-RTTI-NEXT: COMPLETION: void
   // CHECK-NO-RTTI-NEXT: COMPLETION: volatile
