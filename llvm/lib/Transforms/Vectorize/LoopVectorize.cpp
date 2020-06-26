@@ -5890,8 +5890,8 @@ unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
   const Align Alignment = getLoadStoreAlignment(I);
   unsigned Cost = 0;
   if (Legal->isMaskRequired(I))
-    Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy,
-                                      Alignment.value(), AS, CostKind);
+    Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
+                                      CostKind);
   else
     Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                 CostKind, I);
