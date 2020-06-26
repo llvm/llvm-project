@@ -3328,11 +3328,11 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
     // Generate condition for loop.
     BinaryOperator *Cond = BinaryOperator::Create(
         C, &IVRefExpr, &UBRefExpr, BO_LE, C.BoolTy, VK_RValue, OK_Ordinary,
-        S.getBeginLoc(), FPOptionsOverride());
+        S.getBeginLoc(), FPOptions(C.getLangOpts()));
     // Increment for loop counter.
     UnaryOperator *Inc = UnaryOperator::Create(
         C, &IVRefExpr, UO_PreInc, KmpInt32Ty, VK_RValue, OK_Ordinary,
-        S.getBeginLoc(), true, FPOptionsOverride());
+        S.getBeginLoc(), true, FPOptions(C.getLangOpts()));
     auto &&BodyGen = [CapturedStmt, CS, &S, &IV](CodeGenFunction &CGF) {
       // Iterate through all sections and emit a switch construct:
       // switch (IV) {

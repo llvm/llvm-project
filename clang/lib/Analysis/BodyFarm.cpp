@@ -116,17 +116,18 @@ BinaryOperator *ASTMaker::makeAssignment(const Expr *LHS, const Expr *RHS,
                                          QualType Ty) {
   return BinaryOperator::Create(
       C, const_cast<Expr *>(LHS), const_cast<Expr *>(RHS), BO_Assign, Ty,
-      VK_RValue, OK_Ordinary, SourceLocation(), FPOptionsOverride());
+      VK_RValue, OK_Ordinary, SourceLocation(), FPOptions(C.getLangOpts()));
 }
 
 BinaryOperator *ASTMaker::makeComparison(const Expr *LHS, const Expr *RHS,
                                          BinaryOperator::Opcode Op) {
   assert(BinaryOperator::isLogicalOp(Op) ||
          BinaryOperator::isComparisonOp(Op));
-  return BinaryOperator::Create(
-      C, const_cast<Expr *>(LHS), const_cast<Expr *>(RHS), Op,
-      C.getLogicalOperationType(), VK_RValue, OK_Ordinary, SourceLocation(),
-      FPOptionsOverride());
+  return BinaryOperator::Create(C, const_cast<Expr *>(LHS),
+                                const_cast<Expr *>(RHS), Op,
+                                C.getLogicalOperationType(), VK_RValue,
+                                OK_Ordinary, SourceLocation(),
+                                FPOptions(C.getLangOpts()));
 }
 
 CompoundStmt *ASTMaker::makeCompound(ArrayRef<Stmt *> Stmts) {
@@ -147,7 +148,8 @@ DeclRefExpr *ASTMaker::makeDeclRefExpr(
 UnaryOperator *ASTMaker::makeDereference(const Expr *Arg, QualType Ty) {
   return UnaryOperator::Create(C, const_cast<Expr *>(Arg), UO_Deref, Ty,
                                VK_LValue, OK_Ordinary, SourceLocation(),
-                               /*CanOverflow*/ false, FPOptionsOverride());
+                               /*CanOverflow*/ false,
+                               FPOptions(C.getLangOpts()));
 }
 
 ImplicitCastExpr *ASTMaker::makeLvalueToRvalue(const Expr *Arg, QualType Ty) {
@@ -295,7 +297,7 @@ static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
       /*QualType=*/C.VoidTy,
       /*ExprValueType=*/VK_RValue,
       /*SourceLocation=*/SourceLocation(),
-      /*FPFeatures=*/FPOptionsOverride());
+      /*FPFeatures=*/FPOptions(C.getLangOpts()));
 }
 
 /// Create a fake body for std::call_once.
@@ -455,7 +457,7 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
       /* QualType=*/C.IntTy,
       /* ExprValueKind=*/VK_RValue,
       /* ExprObjectKind=*/OK_Ordinary, SourceLocation(),
-      /* CanOverflow*/ false, FPOptionsOverride());
+      /* CanOverflow*/ false, FPOptions(C.getLangOpts()));
 
   // Create assignment.
   BinaryOperator *FlagAssignment = M.makeAssignment(
@@ -520,7 +522,7 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
   Expr *DoneValue =
       UnaryOperator::Create(C, M.makeIntegerLiteral(0, C.LongTy), UO_Not,
                             C.LongTy, VK_RValue, OK_Ordinary, SourceLocation(),
-                            /*CanOverflow*/ false, FPOptionsOverride());
+                            /*CanOverflow*/ false, FPOptions(C.getLangOpts()));
 
   BinaryOperator *B =
     M.makeAssignment(

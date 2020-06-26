@@ -654,8 +654,8 @@ void Parser::HandlePragmaFPContract() {
     break;
   }
 
-  SourceLocation PragmaLoc = ConsumeAnnotationToken();
-  Actions.ActOnPragmaFPContract(PragmaLoc, FPC);
+  Actions.ActOnPragmaFPContract(FPC);
+  ConsumeAnnotationToken();
 }
 
 void Parser::HandlePragmaFloatControl() {
@@ -2935,8 +2935,8 @@ void Parser::HandlePragmaFP() {
       reinterpret_cast<TokFPAnnotValue *>(Tok.getAnnotationValue());
 
   if (AnnotValue->FlagKind == TokFPAnnotValue::Reassociate)
-    Actions.ActOnPragmaFPReassociate(
-        Tok.getLocation(), AnnotValue->FlagValue == TokFPAnnotValue::On);
+    Actions.ActOnPragmaFPReassociate(AnnotValue->FlagValue ==
+                                     TokFPAnnotValue::On);
   else {
     LangOptions::FPModeKind FPC;
     switch (AnnotValue->FlagValue) {
@@ -2950,7 +2950,7 @@ void Parser::HandlePragmaFP() {
       FPC = LangOptions::FPM_Fast;
       break;
     }
-    Actions.ActOnPragmaFPContract(Tok.getLocation(), FPC);
+    Actions.ActOnPragmaFPContract(FPC);
   }
   ConsumeAnnotationToken();
 }
