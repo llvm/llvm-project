@@ -26,7 +26,7 @@ ways where logical constness and physical constness coincide:
 
 Specifically, this check will not suggest to add a ``const`` to a non-const
 method if the method reads a private member variable of pointer type because
-that allows to modify the pointee which might not preserve logical constness.
+that allows to modify the pointer which might not preserve logical constness.
 For the same reason, it does not allow to call private member functions
 or member functions on private member variables.
 
