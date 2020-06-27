@@ -21,5 +21,8 @@ def add_rpath : Option<["-", "--"], "add_rpath", KIND_SEPARATE>,
 def delete_rpath: Option<["-", "--"], "delete_rpath", KIND_SEPARATE>,
                   HelpText<"Delete specified rpath">;
 
+def rpath: MultiArg<["-", "--"], "rpath", 2>,
+           HelpText<"Change rpath path name">;
+
 def version : Flag<["--"], "version">,
               HelpText<"Print the version and exit.">;
