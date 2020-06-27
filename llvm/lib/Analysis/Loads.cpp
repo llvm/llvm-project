@@ -41,6 +41,7 @@ static bool isDereferenceableAndAlignedPointer(
     const Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
     const Instruction *CtxI, const DominatorTree *DT,
     SmallPtrSetImpl<const Value *> &Visited, unsigned MaxDepth) {
+  assert(V->getType()->isPointerTy() && "Base must be pointer");
 
   // Recursion limit.
   if (MaxDepth-- == 0)
@@ -54,10 +55,11 @@ static bool isDereferenceableAndAlignedPointer(
   // malloc may return null.
 
   // bitcast instructions are no-ops as far as dereferenceability is concerned.
-  if (const BitCastOperator *BC = dyn_cast<BitCastOperator>(V))
-    return isDereferenceableAndAlignedPointer(BC->getOperand(0), Alignment,
-                                              Size, DL, CtxI, DT, Visited,
-                                              MaxDepth);
+  if (const BitCastOperator *BC = dyn_cast<BitCastOperator>(V)) {
+    if (BC->getSrcTy()->isPointerTy())
+      return isDereferenceableAndAlignedPointer(
+          BC->getOperand(0), Alignment, Size, DL, CtxI, DT, Visited, MaxDepth);
+  }
 
   bool CheckForNonNull = false;
   APInt KnownDerefBytes(Size.getBitWidth(),
