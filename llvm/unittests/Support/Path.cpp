@@ -424,7 +424,8 @@ TEST(Support, HomeDirectory) {
   }
 }
 
-#ifdef LLVM_ON_UNIX
+// Apple has their own solution for this.
+#if defined(LLVM_ON_UNIX) && !defined(__APPLE__)
 TEST(Support, HomeDirectoryWithNoEnv) {
   WithEnv Env("HOME", nullptr);
 
