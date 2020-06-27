@@ -723,18 +723,16 @@ define <16 x i8> @test_buildvector_v16i8_register_zero_2(i8 %a2, i8 %a3, i8 %a6,
   ret <16 x i8> %ins15
 }
 
-; TODO - PR46461 - reduceBuildVecExtToExtBuildVec is breaking the splat(zero_extend)
-; pattern, resulting in th BUILD_VECTOR lowering to individual insertions into zero vector.
+; PR46461 - Don't let reduceBuildVecExtToExtBuildVec break splat(zero_extend) patterns,
+; resulting in the BUILD_VECTOR lowering to individual insertions into a zero vector.
 
 define void @PR46461(i16 %x, <16 x i32>* %y) {
 ; SSE-LABEL: PR46461:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    shrl %edi
-; SSE-NEXT:    andl $32767, %edi # imm = 0x7FFF
-; SSE-NEXT:    movd %edi, %xmm0
-; SSE-NEXT:    pinsrw $2, %edi, %xmm0
-; SSE-NEXT:    pinsrw $4, %edi, %xmm0
-; SSE-NEXT:    pinsrw $6, %edi, %xmm0
+; SSE-NEXT:    movzwl %di, %eax
+; SSE-NEXT:    shrl %eax
+; SSE-NEXT:    movd %eax, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    movdqa %xmm0, 48(%rsi)
 ; SSE-NEXT:    movdqa %xmm0, 32(%rsi)
 ; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
@@ -743,12 +741,10 @@ define void @PR46461(i16 %x, <16 x i32>* %y) {
 ;
 ; AVX1-LABEL: PR46461:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    shrl %edi
-; AVX1-NEXT:    andl $32767, %edi # imm = 0x7FFF
-; AVX1-NEXT:    vmovd %edi, %xmm0
-; AVX1-NEXT:    vpinsrw $2, %edi, %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrw $4, %edi, %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrw $6, %edi, %xmm0, %xmm0
+; AVX1-NEXT:    movzwl %di, %eax
+; AVX1-NEXT:    shrl %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
@@ -757,13 +753,10 @@ define void @PR46461(i16 %x, <16 x i32>* %y) {
 ;
 ; AVX2-LABEL: PR46461:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    shrl %edi
-; AVX2-NEXT:    andl $32767, %edi # imm = 0x7FFF
-; AVX2-NEXT:    vmovd %edi, %xmm0
-; AVX2-NEXT:    vpinsrw $2, %edi, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $4, %edi, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $6, %edi, %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-NEXT:    movzwl %di, %eax
+; AVX2-NEXT:    shrl %eax
+; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, 32(%rsi)
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
