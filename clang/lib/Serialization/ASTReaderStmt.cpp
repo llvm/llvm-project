@@ -706,7 +706,7 @@ void ASTStmtReader::VisitUnaryOperator(UnaryOperator *E) {
   E->setOperatorLoc(readSourceLocation());
   E->setCanOverflow(Record.readInt());
   if (hasFP_Features)
-    E->setStoredFPFeatures(FPOptions(Record.readInt()));
+    E->setStoredFPFeatures(FPOptionsOverride(Record.readInt()));
 }
 
 void ASTStmtReader::VisitOffsetOfExpr(OffsetOfExpr *E) {
@@ -1089,7 +1089,7 @@ void ASTStmtReader::VisitBinaryOperator(BinaryOperator *E) {
   E->setRHS(Record.readSubExpr());
   E->setOperatorLoc(readSourceLocation());
   if (hasFP_Features)
-    E->setStoredFPFeatures(FPOptions(Record.readInt()));
+    E->setStoredFPFeatures(FPOptionsOverride(Record.readInt()));
 }
 
 void ASTStmtReader::VisitCompoundAssignOperator(CompoundAssignOperator *E) {
@@ -1657,8 +1657,8 @@ void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 void ASTStmtReader::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
   E->CXXOperatorCallExprBits.OperatorKind = Record.readInt();
-  E->CXXOperatorCallExprBits.FPFeatures = Record.readInt();
   E->Range = Record.readSourceRange();
+  E->setFPFeatures(FPOptionsOverride(Record.readInt()));
 }
 
 void ASTStmtReader::VisitCXXRewrittenBinaryOperator(
