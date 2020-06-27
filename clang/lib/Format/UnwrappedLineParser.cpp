@@ -2220,8 +2220,13 @@ void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
     parseBlock(/*MustBeDeclaration=*/false);
     if (FormatTok->Tok.is(tok::kw_break)) {
       if (Style.BraceWrapping.AfterControlStatement ==
-          FormatStyle::BWACS_Always)
+          FormatStyle::BWACS_Always) {
         addUnwrappedLine();
+        if (!Style.IndentCaseBlocks &&
+            Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
+          Line->Level++;
+        }
+      }
       parseStructuralElement();
     }
     addUnwrappedLine();
