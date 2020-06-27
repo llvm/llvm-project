@@ -723,6 +723,59 @@ define <16 x i8> @test_buildvector_v16i8_register_zero_2(i8 %a2, i8 %a3, i8 %a6,
   ret <16 x i8> %ins15
 }
 
+; TODO - PR46461 - reduceBuildVecExtToExtBuildVec is breaking the splat(zero_extend)
+; pattern, resulting in th BUILD_VECTOR lowering to individual insertions into zero vector.
+
+define void @PR46461(i16 %x, <16 x i32>* %y) {
+; SSE-LABEL: PR46461:
+; SSE:       # %bb.0:
+; SSE-NEXT:    shrl %edi
+; SSE-NEXT:    andl $32767, %edi # imm = 0x7FFF
+; SSE-NEXT:    movd %edi, %xmm0
+; SSE-NEXT:    pinsrw $2, %edi, %xmm0
+; SSE-NEXT:    pinsrw $4, %edi, %xmm0
+; SSE-NEXT:    pinsrw $6, %edi, %xmm0
+; SSE-NEXT:    movdqa %xmm0, 48(%rsi)
+; SSE-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR46461:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    shrl %edi
+; AVX1-NEXT:    andl $32767, %edi # imm = 0x7FFF
+; AVX1-NEXT:    vmovd %edi, %xmm0
+; AVX1-NEXT:    vpinsrw $2, %edi, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrw $4, %edi, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrw $6, %edi, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR46461:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    shrl %edi
+; AVX2-NEXT:    andl $32767, %edi # imm = 0x7FFF
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpinsrw $2, %edi, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $4, %edi, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $6, %edi, %xmm0, %xmm0
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+  %z = lshr i16 %x, 1
+  %a = zext i16 %z to i32
+  %b = insertelement <16 x i32> undef, i32 %a, i32 0
+  %c = shufflevector <16 x i32> %b, <16 x i32> undef, <16 x i32> zeroinitializer
+  store <16 x i32> %c, <16 x i32>* %y
+  ret void
+}
+
 ; OSS-Fuzz #5688
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=5688
 define <4 x i32> @ossfuzz5688(i32 %a0) {
