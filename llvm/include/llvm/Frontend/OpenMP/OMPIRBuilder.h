@@ -315,7 +315,7 @@ public:
                              BodyGenCallbackTy BodyGenCB,
                              FinalizeCallbackTy FiniCB);
 
-  /// Generator for '#omp master'
+  /// Generator for '#omp critical'
   ///
   /// \param Loc The insert and source location description.
   /// \param BodyGenCB Callback that will generate the region body code.
@@ -328,6 +328,58 @@ public:
                                BodyGenCallbackTy BodyGenCB,
                                FinalizeCallbackTy FiniCB,
                                StringRef CriticalName, Value *HintInst);
+
+  /// Generate conditional branch and relevant BasicBlocks through which private
+  /// threads copy the 'copyin' variables from Master copy to threadprivate
+  /// copies.
+  ///
+  /// \param IP insertion block for copyin conditional
+  /// \param MasterVarPtr a pointer to the master variable
+  /// \param PrivateVarPtr a pointer to the threadprivate variable
+  /// \param IntPtrTy Pointer size type
+  /// \param BranchtoEnd Create a branch between the copyin.not.master blocks
+  //				 and copy.in.end block
+  ///
+  /// \returns The insertion point where copying operation to be emitted.
+  InsertPointTy CreateCopyinClauseBlocks(InsertPointTy IP, Value *MasterAddr,
+                                         Value *PrivateAddr,
+                                         llvm::IntegerType *IntPtrTy,
+                                         bool BranchtoEnd = true);
+
+  /// Create a runtime call for kmpc_Alloc
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param Size Size of allocated memory space
+  /// \param Allocator Allocator information instruction
+  /// \param Name Name of call Instruction for OMP_alloc
+  ///
+  /// \returns CallInst to the OMP_Alloc call
+  CallInst *CreateOMPAlloc(const LocationDescription &Loc, Value *Size,
+                           Value *Allocator, std::string Name = "");
+
+  /// Create a runtime call for kmpc_free
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param Addr Address of memory space to be freed
+  /// \param Allocator Allocator information instruction
+  /// \param Name Name of call Instruction for OMP_Free
+  ///
+  /// \returns CallInst to the OMP_Free call
+  CallInst *CreateOMPFree(const LocationDescription &Loc, Value *Addr,
+                          Value *Allocator, std::string Name = "");
+
+  /// Create a runtime call for kmpc_threadprivate_cached
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param Pointer pointer to data to be cached
+  /// \param Size size of data to be cached
+  /// \param Name Name of call Instruction for callinst
+  ///
+  /// \returns CallInst to the thread private cache call.
+  CallInst *CreateCachedThreadPrivate(const LocationDescription &Loc,
+                                      llvm::Value *Pointer,
+                                      llvm::ConstantInt *Size,
+                                      const llvm::Twine &Name = Twine(""));
 
 private:
   /// Common interface for generating entry calls for OMP Directives.
@@ -387,7 +439,7 @@ private:
   /// \param Parts different parts of the final name that needs separation
   /// \param FirstSeparator First separator used between the initial two
   ///        parts of the name.
-  /// \param Separator separator used between all of the rest consecutinve
+  /// \param Separator separator used between all of the rest consecutive
   ///        parts of the name
   static std::string getNameWithSeparators(ArrayRef<StringRef> Parts,
                                            StringRef FirstSeparator,
