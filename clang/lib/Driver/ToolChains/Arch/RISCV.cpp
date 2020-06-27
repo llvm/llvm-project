@@ -62,6 +62,8 @@ isExperimentalExtension(StringRef Ext) {
       Ext == "zbf" || Ext == "zbm" || Ext == "zbp" || Ext == "zbr" ||
       Ext == "zbs" || Ext == "zbt" || Ext == "zbproposedc")
     return RISCVExtensionVersion{"0", "92"};
+  if (Ext == "v")
+    return RISCVExtensionVersion{"0", "8"};
   return None;
 }
 
@@ -398,6 +400,9 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
       break;
     case 'b':
       Features.push_back("+experimental-b");
+      break;
+    case 'v':
+      Features.push_back("+experimental-v");
       break;
     }
 
