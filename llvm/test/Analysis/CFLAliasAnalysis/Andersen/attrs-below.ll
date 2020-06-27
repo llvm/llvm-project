@@ -1,7 +1,7 @@
 ; This testcase ensures that AliasAttrs are propagated not only on the same 
 ; level but also downward.
 
-; RUN: opt < %s -disable-basicaa -cfl-anders-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -disable-basic-aa -cfl-anders-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-anders-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Function: test_attr_below
