@@ -12979,9 +12979,7 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
                "  }\n",
                WhitesmithsBraceStyle);
 
-  // FIXME: the block and the break under case 2 in this test don't get indented
-  // correctly
-  /*
+  WhitesmithsBraceStyle.IndentCaseBlocks = true;
   verifyFormat("void switchTest1(int a)\n"
                "  {\n"
                "  switch (a)\n"
@@ -12989,35 +12987,101 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
                "    case 2:\n"
                "      {\n"
                "      }\n"
-               "      break;\n"
+               "    break;\n"
                "    }\n"
                "  }\n",
                WhitesmithsBraceStyle);
-  */
 
-  // FIXME: the block and the break under case 2 in this test don't get indented
-  // correctly
-  /*
   verifyFormat("void switchTest2(int a)\n"
                "  {\n"
                "  switch (a)\n"
                "    {\n"
-               "  case 0:\n"
+               "    case 0:\n"
                "    break;\n"
-               "  case 1:\n"
-               "    {\n"
+               "    case 1:\n"
+               "      {\n"
+               "      break;\n"
+               "      }\n"
+               "    case 2:\n"
+               "      {\n"
+               "      }\n"
                "    break;\n"
-               "    }\n"
-               "  case 2:\n"
-               "    {\n"
-               "    }\n"
-               "    break;\n"
-               "  default:\n"
+               "    default:\n"
                "    break;\n"
                "    }\n"
                "  }\n",
                WhitesmithsBraceStyle);
-  */
+
+  verifyFormat("void switchTest3(int a)\n"
+               "  {\n"
+               "  switch (a)\n"
+               "    {\n"
+               "    case 0:\n"
+               "      {\n"
+               "      foo(x);\n"
+               "      }\n"
+               "    break;\n"
+               "    default:\n"
+               "      {\n"
+               "      foo(1);\n"
+               "      }\n"
+               "    break;\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+
+  WhitesmithsBraceStyle.IndentCaseBlocks = false;
+
+  verifyFormat("void switchTest4(int a)\n"
+               "  {\n"
+               "  switch (a)\n"
+               "    {\n"
+               "    case 2:\n"
+               "    {\n"
+               "    }\n"
+               "    break;\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("void switchTest5(int a)\n"
+               "  {\n"
+               "  switch (a)\n"
+               "    {\n"
+               "    case 0:\n"
+               "    break;\n"
+               "    case 1:\n"
+               "    {\n"
+               "    foo();\n"
+               "    break;\n"
+               "    }\n"
+               "    case 2:\n"
+               "    {\n"
+               "    }\n"
+               "    break;\n"
+               "    default:\n"
+               "    break;\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("void switchTest6(int a)\n"
+               "  {\n"
+               "  switch (a)\n"
+               "    {\n"
+               "    case 0:\n"
+               "    {\n"
+               "    foo(x);\n"
+               "    }\n"
+               "    break;\n"
+               "    default:\n"
+               "    {\n"
+               "    foo(1);\n"
+               "    }\n"
+               "    break;\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
 
   verifyFormat("enum X\n"
                "  {\n"
