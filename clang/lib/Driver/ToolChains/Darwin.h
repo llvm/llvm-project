@@ -424,6 +424,11 @@ protected:
     return TargetPlatform == MacOS || isTargetMacABI();
   }
 
+  bool isTargetAppleSiliconMac() const {
+    assert(TargetInitialized && "Target not initialized!");
+    return isTargetMacOSBased() && getArch() == llvm::Triple::aarch64;
+  }
+
   bool isTargetInitialized() const { return TargetInitialized; }
 
   /// The version of the OS that's used by the OS specified in the target
