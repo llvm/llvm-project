@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -loop-interchange -pass-remarks='loop-interchange' -pass-remarks-output=%t -S \
+; RUN: opt < %s -basic-aa -loop-interchange -pass-remarks='loop-interchange' -pass-remarks-output=%t -S \
 ; RUN:     -verify-dom-info -verify-loop-info | FileCheck %s
 ; RUN: FileCheck -check-prefix=REMARK --input-file=%t %s
 

@@ -1,6 +1,6 @@
-; RUN: opt < %s -basicaa -licm -S | FileCheck %s
-; RUN: opt < %s -debugify -basicaa -licm -S | FileCheck %s -check-prefix=DEBUGIFY
-; RUN: opt < %s -basicaa -licm -S -enable-mssa-loop-dependency=true -verify-memoryssa | FileCheck %s
+; RUN: opt < %s -basic-aa -licm -S | FileCheck %s
+; RUN: opt < %s -debugify -basic-aa -licm -S | FileCheck %s -check-prefix=DEBUGIFY
+; RUN: opt < %s -basic-aa -licm -S -enable-mssa-loop-dependency=true -verify-memoryssa | FileCheck %s
 
 
 declare i32 @strlen(i8*) readonly nounwind

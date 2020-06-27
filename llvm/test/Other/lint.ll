@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -lint -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -basic-aa -lint -disable-output < %s 2>&1 | FileCheck %s
 target datalayout = "e-p:64:64:64"
 
 declare fastcc void @bar()

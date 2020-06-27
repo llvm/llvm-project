@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -inline -S -sroa -gvn -instcombine < %s | FileCheck %s
+; RUN: opt -basic-aa -inline -S -sroa -gvn -instcombine < %s | FileCheck %s
 ; PR5009
 
 ; CHECK: define i32 @main() 

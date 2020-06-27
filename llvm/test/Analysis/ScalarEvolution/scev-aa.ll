@@ -3,7 +3,7 @@
 ; RUN: opt -disable-output < %s -aa-pipeline=scev-aa -passes=aa-eval -print-all-alias-modref-info \
 ; RUN:   2>&1 | FileCheck %s
 
-; At the time of this writing, -basicaa misses the example of the form
+; At the time of this writing, -basic-aa misses the example of the form
 ; A[i+(j+1)] != A[i+j], which can arise from multi-dimensional array references,
 ; and the example of the form A[0] != A[i+1], where i+1 is known to be positive.
 
