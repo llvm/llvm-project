@@ -827,6 +827,13 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
+  if (MissingArgumentCount)
+    return createStringError(
+        errc::invalid_argument,
+        "missing argument to " +
+            StringRef(InputArgs.getArgString(MissingArgumentIndex)) +
+            " option");
+
   if (InputArgs.size() == 0) {
     printHelp(T, errs(), ToolType::InstallNameTool);
     exit(1);
@@ -858,6 +865,43 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
           RPath.str().c_str(), RPath.str().c_str());
 
     Config.RPathsToRemove.insert(RPath);
+  }
+
+  for (auto *Arg : InputArgs.filtered(INSTALL_NAME_TOOL_rpath)) {
+    StringRef Old = Arg->getValue(0);
+    StringRef New = Arg->getValue(1);
+
+    auto Match = [=](StringRef RPath) { return RPath == Old || RPath == New; };
+
+    // Cannot specify duplicate -rpath entries
+    auto It1 = find_if(Config.RPathsToUpdate,
+                       [&Match](const std::pair<StringRef, StringRef> &OldNew) {
+                         return Match(OldNew.first) || Match(OldNew.second);
+                       });
+    if (It1 != Config.RPathsToUpdate.end())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both -rpath %s %s and -rpath %s %s",
+          It1->first.str().c_str(), It1->second.str().c_str(),
+          Old.str().c_str(), New.str().c_str());
+
+    // Cannot specify the same rpath under both -delete_rpath and -rpath
+    auto It2 = find_if(Config.RPathsToRemove, Match);
+    if (It2 != Config.RPathsToRemove.end())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both -delete_rpath %s and -rpath %s %s",
+          It2->str().c_str(), Old.str().c_str(), New.str().c_str());
+
+    // Cannot specify the same rpath under both -add_rpath and -rpath
+    auto It3 = find_if(Config.RPathToAdd, Match);
+    if (It3 != Config.RPathToAdd.end())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both -add_rpath %s and -rpath %s %s",
+          It3->str().c_str(), Old.str().c_str(), New.str().c_str());
+
+    Config.RPathsToUpdate.emplace_back(Old, New);
   }
 
   SmallVector<StringRef, 2> Positional;

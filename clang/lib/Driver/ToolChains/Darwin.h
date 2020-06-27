@@ -357,6 +357,7 @@ protected:
       const_cast<Darwin *>(this)->setTripleEnvironment(llvm::Triple::Simulator);
   }
 
+public:
   bool isTargetIPhoneOS() const {
     assert(TargetInitialized && "Target not initialized!");
     return (TargetPlatform == IPhoneOS || TargetPlatform == TvOS) &&
@@ -409,6 +410,17 @@ protected:
     return TargetPlatform == MacOS;
   }
 
+  bool isTargetMacOSBased() const {
+    assert(TargetInitialized && "Target not initialized!");
+    // FIXME (Alex L): Add remaining MacCatalyst suppport.
+    return TargetPlatform == MacOS;
+  }
+
+  bool isTargetAppleSiliconMac() const {
+    assert(TargetInitialized && "Target not initialized!");
+    return isTargetMacOSBased() && getArch() == llvm::Triple::aarch64;
+  }
+
   bool isTargetInitialized() const { return TargetInitialized; }
 
   VersionTuple getTargetVersion() const {
@@ -427,6 +439,7 @@ protected:
     return TargetVersion < VersionTuple(V0, V1, V2);
   }
 
+protected:
   /// Return true if c++17 aligned allocation/deallocation functions are not
   /// implemented in the c++ standard library of the deployment target we are
   /// targeting.

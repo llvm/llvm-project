@@ -147,6 +147,7 @@ private:
   void SkipToEndOfLine();
   bool MustSkipToEndOfLine() const;
   void NextChar();
+  void SkipToNextSignificantCharacter();
   void SkipCComments();
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
