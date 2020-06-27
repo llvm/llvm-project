@@ -895,6 +895,7 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     bool IsConstant = evaluateConstantImm(getImm(), Imm, VK);
     assert(IsConstant && "Expect constant value!");
+    (void)IsConstant;
     Inst.addOperand(MCOperand::createImm(Imm - 1));
   }
 
