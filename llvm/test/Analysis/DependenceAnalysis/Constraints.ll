@@ -1,5 +1,5 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1
-; RUN: opt < %s -analyze -basicaa -da
+; RUN: opt < %s -analyze -basic-aa -da
 ;; Check that this code doesn't abort. Test case is reduced version of lnt Polybench benchmark test case dynprog.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -globals-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -globals-aa -gvn -S | FileCheck %s
 
 ; See PR26774
 

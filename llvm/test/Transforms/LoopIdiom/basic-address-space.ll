@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -loop-idiom < %s -S | FileCheck %s
+; RUN: opt -basic-aa -loop-idiom < %s -S | FileCheck %s
 
 target datalayout = "e-p:32:32:32-p1:64:64:64-p2:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:32-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
