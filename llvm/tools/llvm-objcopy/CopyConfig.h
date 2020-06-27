@@ -178,6 +178,7 @@ struct CopyConfig {
   std::vector<StringRef> DumpSection;
   std::vector<StringRef> SymbolsToAdd;
   std::vector<StringRef> RPathToAdd;
+  std::vector<std::pair<StringRef, StringRef>> RPathsToUpdate;
   DenseSet<StringRef> RPathsToRemove;
 
   // Section matchers
