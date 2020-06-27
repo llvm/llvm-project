@@ -1230,7 +1230,8 @@ void UnwrappedLineFormatter::formatFirstToken(
 
   // If in Whitemsmiths mode, indent start and end of blocks
   if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
-    if (RootToken.isOneOf(tok::l_brace, tok::r_brace, tok::kw_case))
+    if (RootToken.isOneOf(tok::l_brace, tok::r_brace, tok::kw_case,
+                          tok::kw_default))
       Indent += Style.IndentWidth;
   }
 
