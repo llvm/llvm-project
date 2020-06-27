@@ -3317,7 +3317,10 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   }
 
   // Add the total offset from all the GEP indices to the base.
-  return getAddExpr(BaseExpr, TotalOffset, Wrap);
+  auto *GEPExpr = getAddExpr(BaseExpr, TotalOffset, Wrap);
+  assert(BaseExpr->getType() == GEPExpr->getType() &&
+         "GEP should not change type mid-flight.");
+  return GEPExpr;
 }
 
 std::tuple<SCEV *, FoldingSetNodeID, void *>
