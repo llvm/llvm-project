@@ -35,6 +35,8 @@ static_assert(RISCV::F31_F == RISCV::F0_F + 31,
 static_assert(RISCV::F1_D == RISCV::F0_D + 1, "Register list not consecutive");
 static_assert(RISCV::F31_D == RISCV::F0_D + 31,
               "Register list not consecutive");
+static_assert(RISCV::V1 == RISCV::V0 + 1, "Register list not consecutive");
+static_assert(RISCV::V31 == RISCV::V0 + 31, "Register list not consecutive");
 
 RISCVRegisterInfo::RISCVRegisterInfo(unsigned HwMode)
     : RISCVGenRegisterInfo(RISCV::X1, /*DwarfFlavour*/0, /*EHFlavor*/0,

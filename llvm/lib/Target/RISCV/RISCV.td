@@ -147,6 +147,14 @@ def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
                             AssemblerPredicate<(all_of FeatureRVCHints),
                             "RVC Hint Instructions">;
 
+def FeatureStdExtV
+    : SubtargetFeature<"experimental-v", "HasStdExtV", "true",
+                       "'V' (Vector Instructions)",
+                       [FeatureStdExtF]>;
+def HasStdExtV : Predicate<"Subtarget->hasStdExtV()">,
+                           AssemblerPredicate<(all_of FeatureStdExtV),
+                           "'V' (Vector Instructions)">;
+
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasRV64", "true", "Implements RV64">;
 def IsRV64 : Predicate<"Subtarget->is64Bit()">,
