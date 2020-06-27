@@ -1114,13 +1114,11 @@ define <4 x i32> @var_shuffle_v4i32_from_v8i32(<8 x i32> %v, <4 x i32> %indices)
 ;
 ; AVX1-LABEL: var_shuffle_v4i32_from_v8i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vpermilps %ymm1, %ymm2, %ymm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vpermilps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vpermilps %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; AVX1-NEXT:    vpermilps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpgtd {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

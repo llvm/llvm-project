@@ -37122,7 +37122,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       }
       break;
     }
-      // Target Shuffles.
+      // (Non-Lane Crossing) Target Shuffles.
+    case X86ISD::VPERMILPV:
     case X86ISD::PSHUFB:
     case X86ISD::UNPCKL:
     case X86ISD::UNPCKH:
