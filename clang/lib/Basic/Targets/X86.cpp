@@ -414,6 +414,8 @@ SkylakeCommon:
   case CK_BDVER4:
     setFeatureEnabledImpl(Features, "avx2", true);
     setFeatureEnabledImpl(Features, "bmi2", true);
+    setFeatureEnabledImpl(Features, "movbe", true);
+    setFeatureEnabledImpl(Features, "rdrnd", true);
     setFeatureEnabledImpl(Features, "mwaitx", true);
     LLVM_FALLTHROUGH;
   case CK_BDVER3:
