@@ -780,7 +780,6 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
 }
 
 TEST_F(OpenMPIRBuilderTest, CopyinBlocks) {
-  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
   F->setName("func");

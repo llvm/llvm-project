@@ -13,11 +13,13 @@
 #ifndef LLVM_OBJECT_ERROR_H
 #define LLVM_OBJECT_ERROR_H
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include <system_error>
 
 namespace llvm {
+
+class Twine;
+
 namespace object {
 
 class Binary;
@@ -65,8 +67,8 @@ public:
 class GenericBinaryError : public ErrorInfo<GenericBinaryError, BinaryError> {
 public:
   static char ID;
-  GenericBinaryError(Twine Msg);
-  GenericBinaryError(Twine Msg, object_error ECOverride);
+  GenericBinaryError(const Twine &Msg);
+  GenericBinaryError(const Twine &Msg, object_error ECOverride);
   const std::string &getMessage() const { return Msg; }
   void log(raw_ostream &OS) const override;
 private:

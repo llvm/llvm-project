@@ -3317,7 +3317,10 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   }
 
   // Add the total offset from all the GEP indices to the base.
-  return getAddExpr(BaseExpr, TotalOffset, Wrap);
+  auto *GEPExpr = getAddExpr(BaseExpr, TotalOffset, Wrap);
+  assert(BaseExpr->getType() == GEPExpr->getType() &&
+         "GEP should not change type mid-flight.");
+  return GEPExpr;
 }
 
 std::tuple<SCEV *, FoldingSetNodeID, void *>
@@ -3953,23 +3956,25 @@ const SCEV *ScalarEvolution::getPointerBase(const SCEV *V) {
   if (!V->getType()->isPointerTy())
     return V;
 
-  if (const SCEVCastExpr *Cast = dyn_cast<SCEVCastExpr>(V)) {
-    return getPointerBase(Cast->getOperand());
-  } else if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(V)) {
-    const SCEV *PtrOp = nullptr;
-    for (const SCEV *NAryOp : NAry->operands()) {
-      if (NAryOp->getType()->isPointerTy()) {
-        // Cannot find the base of an expression with multiple pointer operands.
-        if (PtrOp)
-          return V;
-        PtrOp = NAryOp;
+  while (true) {
+    if (const SCEVCastExpr *Cast = dyn_cast<SCEVCastExpr>(V)) {
+      V = Cast->getOperand();
+    } else if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(V)) {
+      const SCEV *PtrOp = nullptr;
+      for (const SCEV *NAryOp : NAry->operands()) {
+        if (NAryOp->getType()->isPointerTy()) {
+          // Cannot find the base of an expression with multiple pointer ops.
+          if (PtrOp)
+            return V;
+          PtrOp = NAryOp;
+        }
       }
-    }
-    if (!PtrOp)
+      if (!PtrOp) // All operands were non-pointer.
+        return V;
+      V = PtrOp;
+    } else // Not something we can look further into.
       return V;
-    return getPointerBase(PtrOp);
   }
-  return V;
 }
 
 /// Push users of the given Instruction onto the given Worklist.

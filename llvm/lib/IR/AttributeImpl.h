@@ -282,6 +282,8 @@ private:
   unsigned NumAttrSets; ///< Number of entries in this set.
   /// Available enum function attributes.
   AttributeBitSet AvailableFunctionAttrs;
+  /// Union of enum attributes available at any index.
+  AttributeBitSet AvailableSomewhereAttrs;
 
   // Helper fn for TrailingObjects class.
   size_t numTrailingObjects(OverloadToken<AttributeSet>) { return NumAttrSets; }
@@ -298,6 +300,12 @@ public:
   bool hasFnAttribute(Attribute::AttrKind Kind) const {
     return AvailableFunctionAttrs.hasAttribute(Kind);
   }
+
+  /// Return true if the specified attribute is set for at least one
+  /// parameter or for the return value. If Index is not nullptr, the index
+  /// of a parameter with the specified attribute is provided.
+  bool hasAttrSomewhere(Attribute::AttrKind Kind,
+                        unsigned *Index = nullptr) const;
 
   using iterator = const AttributeSet *;
 

@@ -17,8 +17,6 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -70,8 +68,10 @@ class MDNode;
 class Module;
 class raw_ostream;
 class StackMaps;
+class StringRef;
 class TargetLoweringObjectFile;
 class TargetMachine;
+class Twine;
 
 namespace remarks {
 class RemarkStreamer;

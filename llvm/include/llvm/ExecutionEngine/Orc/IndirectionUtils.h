@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/Support/Error.h"
@@ -42,6 +41,7 @@ class GlobalVariable;
 class Module;
 class PointerType;
 class Triple;
+class Twine;
 class Value;
 
 namespace orc {

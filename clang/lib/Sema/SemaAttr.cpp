@@ -417,8 +417,10 @@ void Sema::ActOnPragmaDetectMismatch(SourceLocation Loc, StringRef Name,
 void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
                                    PragmaMsStackAction Action,
                                    PragmaFloatControlKind Value) {
-  auto NewValue = FpPragmaStack.CurrentValue;
-  FPOptions NewFPFeatures(NewValue);
+  unsigned NewValue = FpPragmaStack.hasValue()
+                          ? FpPragmaStack.CurrentValue
+                          : CurFPFeatureOverrides().getAsOpaqueInt();
+  FPOptionsOverride NewFPFeatures(NewValue);
   if ((Action == PSK_Push_Set || Action == PSK_Push || Action == PSK_Pop) &&
       !(CurContext->isTranslationUnit()) && !CurContext->isNamespace()) {
     // Push and pop can only occur at file or namespace scope.
@@ -429,38 +431,34 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
   default:
     llvm_unreachable("invalid pragma float_control kind");
   case PFC_Precise:
-    CurFPFeatures.setFPPreciseEnabled(true);
-    NewValue = CurFPFeatures.getAsOpaqueInt();
+    NewFPFeatures.setFPPreciseEnabled(true);
+    NewValue = NewFPFeatures.getAsOpaqueInt();
     FpPragmaStack.Act(Loc, Action, StringRef(), NewValue);
     break;
   case PFC_NoPrecise:
-    if (CurFPFeatures.getExceptionMode() == LangOptions::FPE_Strict)
+    if (CurFPFeatures.getFPExceptionMode() == LangOptions::FPE_Strict)
       Diag(Loc, diag::err_pragma_fc_noprecise_requires_noexcept);
-    else if (CurFPFeatures.allowFEnvAccess())
+    else if (CurFPFeatures.getAllowFEnvAccess())
       Diag(Loc, diag::err_pragma_fc_noprecise_requires_nofenv);
     else
-      CurFPFeatures.setFPPreciseEnabled(false);
-    NewValue = CurFPFeatures.getAsOpaqueInt();
+      NewFPFeatures.setFPPreciseEnabled(false);
+    NewValue = NewFPFeatures.getAsOpaqueInt();
     FpPragmaStack.Act(Loc, Action, StringRef(), NewValue);
     break;
   case PFC_Except:
     if (!isPreciseFPEnabled())
       Diag(Loc, diag::err_pragma_fc_except_requires_precise);
     else
-      CurFPFeatures.setExceptionMode(LangOptions::FPE_Strict);
-    NewValue = CurFPFeatures.getAsOpaqueInt();
+      NewFPFeatures.setFPExceptionModeOverride(LangOptions::FPE_Strict);
+    NewValue = NewFPFeatures.getAsOpaqueInt();
     FpPragmaStack.Act(Loc, Action, StringRef(), NewValue);
     break;
   case PFC_NoExcept:
-    CurFPFeatures.setExceptionMode(LangOptions::FPE_Ignore);
-    NewValue = CurFPFeatures.getAsOpaqueInt();
+    NewFPFeatures.setFPExceptionModeOverride(LangOptions::FPE_Ignore);
+    NewValue = NewFPFeatures.getAsOpaqueInt();
     FpPragmaStack.Act(Loc, Action, StringRef(), NewValue);
     break;
   case PFC_Push:
-    if (FpPragmaStack.Stack.empty()) {
-      FpPragmaStack.Act(Loc, Sema::PSK_Set, StringRef(),
-                        CurFPFeatures.getAsOpaqueInt());
-    }
     FpPragmaStack.Act(Loc, Sema::PSK_Push_Set, StringRef(),
                       NewFPFeatures.getAsOpaqueInt());
     break;
@@ -472,9 +470,12 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
     }
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures.getAsOpaqueInt());
     NewValue = FpPragmaStack.CurrentValue;
-    CurFPFeatures.getFromOpaqueInt(NewValue);
     break;
   }
+  FPOptionsOverride NewOverrides;
+  if (NewValue != FpPragmaStack.DefaultValue)
+    NewOverrides.getFromOpaqueInt(NewValue);
+  CurFPFeatures = NewOverrides.applyOverrides(getLangOpts());
 }
 
 void Sema::ActOnPragmaMSPointersToMembers(
@@ -1003,33 +1004,70 @@ void Sema::ActOnPragmaVisibility(const IdentifierInfo* VisType,
   }
 }
 
-void Sema::ActOnPragmaFPContract(LangOptions::FPModeKind FPC) {
+void Sema::ActOnPragmaFPContract(SourceLocation Loc,
+                                 LangOptions::FPModeKind FPC) {
+  unsigned NewValue = FpPragmaStack.hasValue()
+                          ? FpPragmaStack.CurrentValue
+                          : CurFPFeatureOverrides().getAsOpaqueInt();
+  FPOptionsOverride NewFPFeatures(NewValue);
   switch (FPC) {
   case LangOptions::FPM_On:
-    CurFPFeatures.setAllowFPContractWithinStatement();
+    NewFPFeatures.setAllowFPContractWithinStatement();
     break;
   case LangOptions::FPM_Fast:
-    CurFPFeatures.setAllowFPContractAcrossStatement();
+    NewFPFeatures.setAllowFPContractAcrossStatement();
     break;
   case LangOptions::FPM_Off:
-    CurFPFeatures.setDisallowFPContract();
+    NewFPFeatures.setDisallowFPContract();
     break;
   }
+  CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
+  FpPragmaStack.Act(Loc, Sema::PSK_Set, StringRef(),
+                    NewFPFeatures.getAsOpaqueInt());
 }
 
-void Sema::ActOnPragmaFPReassociate(bool IsEnabled) {
-  CurFPFeatures.setAllowAssociativeMath(IsEnabled);
+void Sema::ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled) {
+  unsigned NewValue = FpPragmaStack.hasValue()
+                          ? FpPragmaStack.CurrentValue
+                          : CurFPFeatureOverrides().getAsOpaqueInt();
+  FPOptionsOverride NewFPFeatures(NewValue);
+  NewFPFeatures.setAllowFPReassociateOverride(IsEnabled);
+  NewValue = NewFPFeatures.getAsOpaqueInt();
+  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewValue);
+  FPOptionsOverride NewOverrides(NewValue);
+  CurFPFeatures = NewOverrides.applyOverrides(getLangOpts());
 }
 
-void Sema::setRoundingMode(llvm::RoundingMode FPR) {
-  CurFPFeatures.setRoundingMode(FPR);
+void Sema::setRoundingMode(SourceLocation Loc, llvm::RoundingMode FPR) {
+  unsigned NewValue = FpPragmaStack.hasValue()
+                          ? FpPragmaStack.CurrentValue
+                          : CurFPFeatureOverrides().getAsOpaqueInt();
+  FPOptionsOverride NewFPFeatures(NewValue);
+  NewFPFeatures.setRoundingModeOverride(FPR);
+  NewValue = NewFPFeatures.getAsOpaqueInt();
+  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewValue);
+  FPOptionsOverride NewOverrides(NewValue);
+  CurFPFeatures = NewOverrides.applyOverrides(getLangOpts());
 }
 
-void Sema::setExceptionMode(LangOptions::FPExceptionModeKind FPE) {
-  CurFPFeatures.setExceptionMode(FPE);
+void Sema::setExceptionMode(SourceLocation Loc,
+                            LangOptions::FPExceptionModeKind FPE) {
+  unsigned NewValue = FpPragmaStack.hasValue()
+                          ? FpPragmaStack.CurrentValue
+                          : CurFPFeatureOverrides().getAsOpaqueInt();
+  FPOptionsOverride NewFPFeatures(NewValue);
+  NewFPFeatures.setFPExceptionModeOverride(FPE);
+  NewValue = NewFPFeatures.getAsOpaqueInt();
+  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewValue);
+  FPOptionsOverride NewOverrides(NewValue);
+  CurFPFeatures = NewOverrides.applyOverrides(getLangOpts());
 }
 
 void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
+  unsigned NewValue = FpPragmaStack.hasValue()
+                          ? FpPragmaStack.CurrentValue
+                          : CurFPFeatureOverrides().getAsOpaqueInt();
+  FPOptionsOverride NewFPFeatures(NewValue);
   if (IsEnabled) {
     // Verify Microsoft restriction:
     // You can't enable fenv_access unless precise semantics are enabled.
@@ -1037,9 +1075,13 @@ void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
     // pragma, or by using the /fp:precise or /fp:strict compiler options
     if (!isPreciseFPEnabled())
       Diag(Loc, diag::err_pragma_fenv_requires_precise);
-    CurFPFeatures.setAllowFEnvAccess();
+    NewFPFeatures.setAllowFEnvAccessOverride(true);
   } else
-    CurFPFeatures.setDisallowFEnvAccess();
+    NewFPFeatures.setAllowFEnvAccessOverride(false);
+  NewValue = NewFPFeatures.getAsOpaqueInt();
+  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewValue);
+  FPOptionsOverride NewOverrides(NewValue);
+  CurFPFeatures = NewOverrides.applyOverrides(getLangOpts());
 }
 
 void Sema::PushNamespaceVisibilityAttr(const VisibilityAttr *Attr,
