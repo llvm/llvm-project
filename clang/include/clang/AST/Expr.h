@@ -2118,21 +2118,21 @@ public:
 ///
 class UnaryOperator final
     : public Expr,
-      private llvm::TrailingObjects<UnaryOperator, FPOptions> {
+      private llvm::TrailingObjects<UnaryOperator, FPOptionsOverride> {
   Stmt *Val;
 
-  size_t numTrailingObjects(OverloadToken<FPOptions>) const {
+  size_t numTrailingObjects(OverloadToken<FPOptionsOverride>) const {
     return UnaryOperatorBits.HasFPFeatures ? 1 : 0;
   }
 
-  FPOptions &getTrailingFPFeatures() {
+  FPOptionsOverride &getTrailingFPFeatures() {
     assert(UnaryOperatorBits.HasFPFeatures);
-    return *getTrailingObjects<FPOptions>();
+    return *getTrailingObjects<FPOptionsOverride>();
   }
 
-  const FPOptions &getTrailingFPFeatures() const {
+  const FPOptionsOverride &getTrailingFPFeatures() const {
     assert(UnaryOperatorBits.HasFPFeatures);
-    return *getTrailingObjects<FPOptions>();
+    return *getTrailingObjects<FPOptionsOverride>();
   }
 
 public:
@@ -2141,7 +2141,7 @@ public:
 protected:
   UnaryOperator(const ASTContext &Ctx, Expr *input, Opcode opc, QualType type,
                 ExprValueKind VK, ExprObjectKind OK, SourceLocation l,
-                bool CanOverflow, FPOptions FPFeatures);
+                bool CanOverflow, FPOptionsOverride FPFeatures);
 
   /// Build an empty unary operator.
   explicit UnaryOperator(bool HasFPFeatures, EmptyShell Empty)
@@ -2156,7 +2156,7 @@ public:
   static UnaryOperator *Create(const ASTContext &C, Expr *input, Opcode opc,
                                QualType type, ExprValueKind VK,
                                ExprObjectKind OK, SourceLocation l,
-                               bool CanOverflow, FPOptions FPFeatures);
+                               bool CanOverflow, FPOptionsOverride FPFeatures);
 
   Opcode getOpcode() const {
     return static_cast<Opcode>(UnaryOperatorBits.Opc);
@@ -2182,13 +2182,13 @@ public:
   // Get the FP contractability status of this operator. Only meaningful for
   // operations on floating point types.
   bool isFPContractableWithinStatement(const LangOptions &LO) const {
-    return getFPFeatures(LO).allowFPContractWithinStatement();
+    return getFPFeaturesInEffect(LO).allowFPContractWithinStatement();
   }
 
   // Get the FENV_ACCESS status of this operator. Only meaningful for
   // operations on floating point types.
   bool isFEnvAccessOn(const LangOptions &LO) const {
-    return getFPFeatures(LO).allowFEnvAccess();
+    return getFPFeaturesInEffect(LO).getAllowFEnvAccess();
   }
 
   /// isPostfix - Return true if this is a postfix operation, like x++.
@@ -2263,18 +2263,25 @@ public:
 
 protected:
   /// Get FPFeatures from trailing storage
-  FPOptions getStoredFPFeatures() const { return getTrailingFPFeatures(); }
+  FPOptionsOverride getStoredFPFeatures() const {
+    return getTrailingFPFeatures();
+  }
 
   /// Set FPFeatures in trailing storage, used only by Serialization
-  void setStoredFPFeatures(FPOptions F) { getTrailingFPFeatures() = F; }
+  void setStoredFPFeatures(FPOptionsOverride F) { getTrailingFPFeatures() = F; }
 
 public:
   // Get the FP features status of this operator. Only meaningful for
   // operations on floating point types.
-  FPOptions getFPFeatures(const LangOptions &LO) const {
+  FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
+    if (UnaryOperatorBits.HasFPFeatures)
+      return getStoredFPFeatures().applyOverrides(LO);
+    return FPOptions::defaultWithoutTrailingStorage(LO);
+  }
+  FPOptionsOverride getFPOptionsOverride() const {
     if (UnaryOperatorBits.HasFPFeatures)
       return getStoredFPFeatures();
-    return FPOptions::defaultWithoutTrailingStorage(LO);
+    return FPOptionsOverride();
   }
 
   friend TrailingObjects;
@@ -3633,14 +3640,14 @@ protected:
   size_t offsetOfTrailingStorage() const;
 
   /// Return a pointer to the trailing FPOptions
-  FPOptions *getTrailingFPFeatures() {
+  FPOptionsOverride *getTrailingFPFeatures() {
     assert(BinaryOperatorBits.HasFPFeatures);
-    return reinterpret_cast<FPOptions *>(reinterpret_cast<char *>(this) +
-                                         offsetOfTrailingStorage());
+    return reinterpret_cast<FPOptionsOverride *>(
+        reinterpret_cast<char *>(this) + offsetOfTrailingStorage());
   }
-  const FPOptions *getTrailingFPFeatures() const {
+  const FPOptionsOverride *getTrailingFPFeatures() const {
     assert(BinaryOperatorBits.HasFPFeatures);
-    return reinterpret_cast<const FPOptions *>(
+    return reinterpret_cast<const FPOptionsOverride *>(
         reinterpret_cast<const char *>(this) + offsetOfTrailingStorage());
   }
 
@@ -3648,7 +3655,7 @@ protected:
   /// allocated for the trailing objects when needed.
   BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs, Opcode opc,
                  QualType ResTy, ExprValueKind VK, ExprObjectKind OK,
-                 SourceLocation opLoc, FPOptions FPFeatures);
+                 SourceLocation opLoc, FPOptionsOverride FPFeatures);
 
   /// Construct an empty binary operator.
   explicit BinaryOperator(EmptyShell Empty) : Expr(BinaryOperatorClass, Empty) {
@@ -3661,7 +3668,7 @@ public:
   static BinaryOperator *Create(const ASTContext &C, Expr *lhs, Expr *rhs,
                                 Opcode opc, QualType ResTy, ExprValueKind VK,
                                 ExprObjectKind OK, SourceLocation opLoc,
-                                FPOptions FPFeatures);
+                                FPOptionsOverride FPFeatures);
   SourceLocation getExprLoc() const { return getOperatorLoc(); }
   SourceLocation getOperatorLoc() const { return BinaryOperatorBits.OpLoc; }
   void setOperatorLoc(SourceLocation L) { BinaryOperatorBits.OpLoc = L; }
@@ -3808,40 +3815,48 @@ public:
   bool hasStoredFPFeatures() const { return BinaryOperatorBits.HasFPFeatures; }
 
   /// Get FPFeatures from trailing storage
-  FPOptions getStoredFPFeatures() const {
+  FPOptionsOverride getStoredFPFeatures() const {
     assert(hasStoredFPFeatures());
     return *getTrailingFPFeatures();
   }
   /// Set FPFeatures in trailing storage, used only by Serialization
-  void setStoredFPFeatures(FPOptions F) {
+  void setStoredFPFeatures(FPOptionsOverride F) {
     assert(BinaryOperatorBits.HasFPFeatures);
     *getTrailingFPFeatures() = F;
   }
 
   // Get the FP features status of this operator. Only meaningful for
   // operations on floating point types.
-  FPOptions getFPFeatures(const LangOptions &LO) const {
+  FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
+    if (BinaryOperatorBits.HasFPFeatures)
+      return getStoredFPFeatures().applyOverrides(LO);
+    return FPOptions::defaultWithoutTrailingStorage(LO);
+  }
+
+  // This is used in ASTImporter
+  FPOptionsOverride getFPFeatures(const LangOptions &LO) const {
     if (BinaryOperatorBits.HasFPFeatures)
       return getStoredFPFeatures();
-    return FPOptions::defaultWithoutTrailingStorage(LO);
+    return FPOptionsOverride();
   }
 
   // Get the FP contractability status of this operator. Only meaningful for
   // operations on floating point types.
   bool isFPContractableWithinStatement(const LangOptions &LO) const {
-    return getFPFeatures(LO).allowFPContractWithinStatement();
+    return getFPFeaturesInEffect(LO).allowFPContractWithinStatement();
   }
 
   // Get the FENV_ACCESS status of this operator. Only meaningful for
   // operations on floating point types.
   bool isFEnvAccessOn(const LangOptions &LO) const {
-    return getFPFeatures(LO).allowFEnvAccess();
+    return getFPFeaturesInEffect(LO).getAllowFEnvAccess();
   }
 
 protected:
   BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs, Opcode opc,
                  QualType ResTy, ExprValueKind VK, ExprObjectKind OK,
-                 SourceLocation opLoc, FPOptions FPFeatures, bool dead2);
+                 SourceLocation opLoc, FPOptionsOverride FPFeatures,
+                 bool dead2);
 
   /// Construct an empty BinaryOperator, SC is CompoundAssignOperator.
   BinaryOperator(StmtClass SC, EmptyShell Empty) : Expr(SC, Empty) {
@@ -3851,7 +3866,7 @@ protected:
   /// Return the size in bytes needed for the trailing objects.
   /// Used to allocate the right amount of storage.
   static unsigned sizeOfTrailingObjects(bool HasFPFeatures) {
-    return HasFPFeatures * sizeof(FPOptions);
+    return HasFPFeatures * sizeof(FPOptionsOverride);
   }
 };
 
@@ -3873,7 +3888,7 @@ class CompoundAssignOperator : public BinaryOperator {
 protected:
   CompoundAssignOperator(const ASTContext &C, Expr *lhs, Expr *rhs, Opcode opc,
                          QualType ResType, ExprValueKind VK, ExprObjectKind OK,
-                         SourceLocation OpLoc, FPOptions FPFeatures,
+                         SourceLocation OpLoc, FPOptionsOverride FPFeatures,
                          QualType CompLHSType, QualType CompResultType)
       : BinaryOperator(C, lhs, rhs, opc, ResType, VK, OK, OpLoc, FPFeatures,
                        true),
@@ -3889,7 +3904,7 @@ public:
   static CompoundAssignOperator *
   Create(const ASTContext &C, Expr *lhs, Expr *rhs, Opcode opc, QualType ResTy,
          ExprValueKind VK, ExprObjectKind OK, SourceLocation opLoc,
-         FPOptions FPFeatures, QualType CompLHSType = QualType(),
+         FPOptionsOverride FPFeatures, QualType CompLHSType = QualType(),
          QualType CompResultType = QualType());
 
   // The two computation types are the type the LHS is converted
