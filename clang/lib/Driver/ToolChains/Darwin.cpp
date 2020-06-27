@@ -1013,6 +1013,8 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
   // Avoid linking compatibility stubs on i386 mac.
   if (isTargetMacOSBased() && getArch() == llvm::Triple::x86)
     return;
+  if (isTargetAppleSiliconMac())
+    return;
 
   ObjCRuntime runtime = getDefaultObjCRuntime(/*nonfragile*/ true);
 
