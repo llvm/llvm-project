@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: opt < %s -basicaa -newgvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -newgvn -S | FileCheck %s
 
 ; GVN should eliminate the fully redundant %9 GEP which 
 ; allows DEAD to be removed.  This is PR3198.

@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -newgvn -S < %s | FileCheck %s
+; RUN: opt -basic-aa -newgvn -S < %s | FileCheck %s
 ; ModuleID = 'test3.ll'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
