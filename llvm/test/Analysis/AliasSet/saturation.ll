@@ -1,5 +1,5 @@
-; RUN: opt -basicaa -print-alias-sets -alias-set-saturation-threshold=2 -S -o - < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=NOSAT
-; RUN: opt -basicaa -print-alias-sets -alias-set-saturation-threshold=1 -S -o - < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=SAT
+; RUN: opt -basic-aa -print-alias-sets -alias-set-saturation-threshold=2 -S -o - < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=NOSAT
+; RUN: opt -basic-aa -print-alias-sets -alias-set-saturation-threshold=1 -S -o - < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=SAT
 
 ; CHECK-LABEL: 'allmust'
 ; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %a, LocationSize::precise(4))

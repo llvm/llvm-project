@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -memcpyopt -S | FileCheck %s
+; RUN: opt < %s -basic-aa -memcpyopt -S | FileCheck %s
 ; PR10067
 ; Make sure the call+copy isn't optimized in such a way that
 ; %ret ends up with the wrong value.

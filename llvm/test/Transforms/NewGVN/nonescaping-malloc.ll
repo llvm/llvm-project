@@ -1,6 +1,6 @@
 ; XFAIL: *
 ; REQUIRES: asserts
-; RUN: opt < %s -basicaa -newgvn -stats -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -basic-aa -newgvn -stats -disable-output 2>&1 | FileCheck %s
 ; rdar://7363102
 
 ; CHECK: Number of loads deleted

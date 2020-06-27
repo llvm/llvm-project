@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -basicaa -loop-interchange -verify-dom-info -verify-loop-info \
+; RUN: opt < %s -basic-aa -loop-interchange -verify-dom-info -verify-loop-info \
 ; RUN:     -S -debug 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
