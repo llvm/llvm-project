@@ -412,7 +412,7 @@ public:
 // graphs by the generic graph algorithms.
 //
 
-// Provide graph traits for tranversing call graphs using standard graph
+// Provide graph traits for traversing call graphs using standard graph
 // traversals.
 template <> struct GraphTraits<CallGraphNode *> {
   using NodeRef = CallGraphNode *;
