@@ -294,15 +294,16 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> undef, double [[MUL]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP7]], <double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i1> [[TMP8]], [[SHIFT]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = extractelement <2 x i1> [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[TMP8]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
+; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[TMP9]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP4]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
 ; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <2 x i1> [[TMP10]], <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP10]], [[SHIFT2]]
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x i1> [[TMP10]], <2 x i1> undef, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP10]], [[SHIFT]]
 ; CHECK-NEXT:    [[NOT_OR_COND1:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
 ; CHECK-NEXT:    ret i1 [[NOT_OR_COND1]]
 ; CHECK:       cleanup:
