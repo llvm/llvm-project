@@ -821,7 +821,7 @@ public:
   BitVector getPristineRegs(const MachineFunction &MF) const;
 
   /// Used by the MachineFunction printer to print information about
-  /// stack objects.
+  /// stack objects. Implemented in MachineFunction.cpp.
   void print(const MachineFunction &MF, raw_ostream &OS) const;
 
   /// dump - Print the function to stderr.
