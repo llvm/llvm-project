@@ -105,6 +105,11 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties()
+      .set(MachineFunctionProperties::Property::IsSSA);
+  }
+
 private:
   int getDPPOp(unsigned Op) const;
 };
@@ -563,8 +568,6 @@ bool GCNDPPCombine::runOnMachineFunction(MachineFunction &MF) {
 
   MRI = &MF.getRegInfo();
   TII = ST.getInstrInfo();
-
-  assert(MRI->isSSA() && "Must be run on SSA");
 
   bool Changed = false;
   for (auto &MBB : MF) {
