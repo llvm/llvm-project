@@ -41,7 +41,7 @@ define i32 @f(i32 %c) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], [7 x i32]* @switch.table.f, i32 0, i32 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 15
@@ -80,7 +80,7 @@ define i8 @char(i32 %c) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [9 x i8], [9 x i8]* @switch.table.char, i32 0, i32 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, i8* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, i8* [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    ret i8 [[SWITCH_LOAD]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i8 15
@@ -126,7 +126,7 @@ define void @h(i32 %x) {
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i32 89655594, [[SWITCH_SHIFTAMT]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i32 [[SWITCH_DOWNSHIFT]] to i8
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x float], [4 x float]* @switch.table.h, i32 0, i32 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load float, float* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load float, float* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:    [[A_0:%.*]] = phi i8 [ [[SWITCH_MASKED]], [[SWITCH_LOOKUP]] ], [ 7, [[ENTRY:%.*]] ]
@@ -171,7 +171,7 @@ define i8* @foostring(i32 %x)  {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i8*], [4 x i8*]* @switch.table.foostring, i32 0, i32 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8*, i8** [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8*, i8** [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    ret i8* [[SWITCH_LOAD]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str4, i64 0, i64 0)
@@ -209,7 +209,7 @@ define i32 @earlyreturncrash(i32 %x)  {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[SW_EPILOG:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.earlyreturncrash, i32 0, i32 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:    ret i32 7
@@ -383,7 +383,7 @@ define i32 @large(i32 %x) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [199 x i32], [199 x i32]* @switch.table.large, i32 0, i32 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 0
@@ -813,7 +813,7 @@ define i32 @cprop(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], [7 x i32]* @switch.table.cprop, i32 0, i32 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 123
@@ -862,7 +862,7 @@ define i32 @unreachable_case(i32 %x)  {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [9 x i32], [9 x i32]* @switch.table.unreachable_case, i32 0, i32 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 2
@@ -896,7 +896,7 @@ define i32 @unreachable_default(i32 %x)  {
 ; CHECK-LABEL: @unreachable_default(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.unreachable_default, i32 0, i32 [[X:%.*]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ;
 entry:
@@ -976,7 +976,7 @@ define i32 @nodefaultnoholes(i32 %c) {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.nodefaultnoholes, i32 0, i32 [[C]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ;
 entry:
@@ -1014,7 +1014,7 @@ define i32 @nodefaultwithholes(i32 %c) {
 ; CHECK-NEXT:    br i1 [[SWITCH_LOBIT]], label [[SWITCH_LOOKUP:%.*]], label [[SW_DEFAULT]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [6 x i32], [6 x i32]* @switch.table.nodefaultwithholes, i32 0, i32 [[C]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ;
 entry:
@@ -1079,7 +1079,7 @@ define i32 @threecases(i32 %c) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* @switch.table.threecases, i32 0, i32 [[C]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 3
@@ -1550,7 +1550,7 @@ define i32 @covered_switch_with_bit_tests(i3) {
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i4
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @switch.table.covered_switch_with_bit_tests, i32 0, i4 [[SWITCH_TABLEIDX_ZEXT]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[L6]]
 ; CHECK:       l6:
 ; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ]
