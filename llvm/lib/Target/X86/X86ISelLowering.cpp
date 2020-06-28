@@ -48038,13 +48038,25 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
                            Src.getOperand(1));
 
   // Reduce v2i64 to v4i32 if we don't need the upper bits.
-  // TODO: Move to DAGCombine?
-  if (VT == MVT::v2i64 && Src.getOpcode() == ISD::ANY_EXTEND &&
-      Src.getValueType() == MVT::i64 && Src.hasOneUse() &&
-      Src.getOperand(0).getScalarValueSizeInBits() <= 32)
-    return DAG.getBitcast(
-        VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32,
-                        DAG.getAnyExtOrTrunc(Src.getOperand(0), DL, MVT::i32)));
+  // TODO: Move to DAGCombine/SimplifyDemandedBits?
+  if (VT == MVT::v2i64 || VT == MVT::v2f64) {
+    auto IsAnyExt64 = [](SDValue Op) {
+      if (Op.getValueType() != MVT::i64 || !Op.hasOneUse())
+        return SDValue();
+      if (Op.getOpcode() == ISD::ANY_EXTEND &&
+          Op.getOperand(0).getScalarValueSizeInBits() <= 32)
+        return Op.getOperand(0);
+      if (auto *Ld = dyn_cast<LoadSDNode>(Op))
+        if (Ld->getExtensionType() == ISD::EXTLOAD &&
+            Ld->getMemoryVT().getScalarSizeInBits() <= 32)
+          return Op;
+      return SDValue();
+    };
+    if (SDValue ExtSrc = IsAnyExt64(peekThroughOneUseBitcasts(Src)))
+      return DAG.getBitcast(
+          VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32,
+                          DAG.getAnyExtOrTrunc(ExtSrc, DL, MVT::i32)));
+  }
 
   // Combine (v2i64 (scalar_to_vector (i64 (bitconvert (mmx))))) to MOVQ2DQ.
   if (VT == MVT::v2i64 && Src.getOpcode() == ISD::BITCAST &&

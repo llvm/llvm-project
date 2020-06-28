@@ -18,8 +18,6 @@ define i32 @t(i8* %ref_frame_ptr, i32 %ref_frame_stride, i32 %idxX, i32 %idxY) n
 ; X64-NEXT:    addl %edx, %esi
 ; X64-NEXT:    movslq %esi, %rax
 ; X64-NEXT:    movl (%rdi,%rax), %eax
-; X64-NEXT:    movq %rax, %xmm0
-; X64-NEXT:    movd %xmm0, %eax
 ; X64-NEXT:    retq
 entry:
 	%tmp7 = mul i32 %idxY, %ref_frame_stride		; <i32> [#uses=2]

@@ -1093,17 +1093,30 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueExtractValue(
   return ValueLatticeElement::getOverdefined();
 }
 
+static bool matchICmpOperand(const APInt *&Offset, Value *LHS, Value *Val) {
+  if (LHS == Val)
+    return true;
+
+  // Handle range checking idiom produced by InstCombine. We will subtract the
+  // offset from the allowed range for RHS in this case.
+  if (match(LHS, m_Add(m_Specific(Val), m_APInt(Offset))))
+    return true;
+
+  return false;
+}
+
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
                                                      bool isTrueDest) {
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
-  CmpInst::Predicate Predicate = ICI->getPredicate();
+
+  // Get the predicate that must hold along the considered edge.
+  CmpInst::Predicate EdgePred =
+      isTrueDest ? ICI->getPredicate() : ICI->getInversePredicate();
 
   if (isa<Constant>(RHS)) {
     if (ICI->isEquality() && LHS == Val) {
-      // We know that V has the RHS constant if this is a true SETEQ or
-      // false SETNE.
-      if (isTrueDest == (Predicate == ICmpInst::ICMP_EQ))
+      if (EdgePred == ICmpInst::ICMP_EQ)
         return ValueLatticeElement::get(cast<Constant>(RHS));
       else if (!isa<UndefValue>(RHS))
         return ValueLatticeElement::getNot(cast<Constant>(RHS));
@@ -1113,47 +1126,31 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
   if (!Val->getType()->isIntegerTy())
     return ValueLatticeElement::getOverdefined();
 
-  // Use ConstantRange::makeAllowedICmpRegion in order to determine the possible
-  // range of Val guaranteed by the condition. Recognize comparisons in the from
-  // of:
-  //  icmp <pred> Val, ...
-  //  icmp <pred> (add Val, Offset), ...
-  // The latter is the range checking idiom that InstCombine produces. Subtract
-  // the offset from the allowed range for RHS in this case.
-
-  // Val or (add Val, Offset) can be on either hand of the comparison
-  if (LHS != Val && !match(LHS, m_Add(m_Specific(Val), m_ConstantInt()))) {
+  const APInt *Offset = nullptr;
+  if (!matchICmpOperand(Offset, LHS, Val)) {
     std::swap(LHS, RHS);
-    Predicate = CmpInst::getSwappedPredicate(Predicate);
+    EdgePred = CmpInst::getSwappedPredicate(EdgePred);
+    if (!matchICmpOperand(Offset, LHS, Val))
+      return ValueLatticeElement::getOverdefined();
   }
 
-  ConstantInt *Offset = nullptr;
-  if (LHS != Val)
-    match(LHS, m_Add(m_Specific(Val), m_ConstantInt(Offset)));
+  // Calculate the range of values that are allowed by the comparison.
+  ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
+                         /*isFullSet=*/true);
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
+    RHSRange = ConstantRange(CI->getValue());
+  else if (Instruction *I = dyn_cast<Instruction>(RHS))
+    if (auto *Ranges = I->getMetadata(LLVMContext::MD_range))
+      RHSRange = getConstantRangeFromMetadata(*Ranges);
 
-  if (LHS == Val || Offset) {
-    // Calculate the range of values that are allowed by the comparison
-    ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
-                           /*isFullSet=*/true);
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
-      RHSRange = ConstantRange(CI->getValue());
-    else if (Instruction *I = dyn_cast<Instruction>(RHS))
-      if (auto *Ranges = I->getMetadata(LLVMContext::MD_range))
-        RHSRange = getConstantRangeFromMetadata(*Ranges);
+  // If we're interested in the false dest, invert the condition
+  ConstantRange TrueValues =
+      ConstantRange::makeAllowedICmpRegion(EdgePred, RHSRange);
 
-    // If we're interested in the false dest, invert the condition
-    CmpInst::Predicate Pred =
-            isTrueDest ? Predicate : CmpInst::getInversePredicate(Predicate);
-    ConstantRange TrueValues =
-            ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
+  if (Offset) // Apply the offset from above.
+    TrueValues = TrueValues.subtract(*Offset);
 
-    if (Offset) // Apply the offset from above.
-      TrueValues = TrueValues.subtract(Offset->getValue());
-
-    return ValueLatticeElement::getRange(std::move(TrueValues));
-  }
-
-  return ValueLatticeElement::getOverdefined();
+  return ValueLatticeElement::getRange(std::move(TrueValues));
 }
 
 // Handle conditions of the form
