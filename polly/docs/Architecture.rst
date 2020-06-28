@@ -27,7 +27,7 @@ executed in the so-called **Inliner cycle**, This is again a set of **Scalar
 Simplification** passes, a set of **Simple Loop Optimizations**, and the
 **Inliner** itself. Even though these passes make up the majority of the LLVM
 pass pipeline, the primary goal of these passes is still canonicalization
-without loosing semantic information that complicates later analysis. As part of
+without losing semantic information that complicates later analysis. As part of
 the inliner cycle, the LLVM inliner step-by-step tries to inline functions, runs
 canonicalization passes to exploit newly exposed simplification opportunities,
 and then tries to inline the further simplified functions. Some simple loop
@@ -47,8 +47,7 @@ vectorization opportunities.
 .. image:: images/LLVM-Passes-only.png
     :align: center
 
-Polly can conceptually be run at three different positions in the pass pipeline.
-As an early optimizer before the standard LLVM pass pipeline, as a later
+Polly can conceptually be run at three different positions in the pass pipeline: an early optimizer before the standard LLVM pass pipeline, as a later
 optimizer as part of the target specialization sequence, and theoretically also
 with the loop optimizations in the inliner cycle. We only discuss the first two
 options, as running Polly in the inline loop, is likely to disturb the inliner
