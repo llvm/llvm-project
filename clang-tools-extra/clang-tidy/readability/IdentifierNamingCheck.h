@@ -76,7 +76,7 @@ private:
 
 } // namespace readability
 template <>
-struct ::clang::tidy::OptionEnumMapping<
+struct OptionEnumMapping<
     readability::IdentifierNamingCheck::CaseType> {
   static llvm::ArrayRef<
       std::pair<readability::IdentifierNamingCheck::CaseType, StringRef>>
