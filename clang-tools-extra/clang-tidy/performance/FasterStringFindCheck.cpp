@@ -59,9 +59,6 @@ void FasterStringFindCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto SingleChar =
       expr(ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal")));
   const auto StringFindFunctions =
