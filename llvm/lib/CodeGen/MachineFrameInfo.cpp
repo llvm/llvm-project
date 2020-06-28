@@ -210,10 +210,15 @@ void MachineFrameInfo::computeMaxCallFrameSize(const MachineFunction &MF) {
 }
 
 void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
-  if (Objects.empty()) return;
-
+  OS << "MF name: " << MF.getName() << "\n";
+  if (Objects.empty()) {
+    OS << "No stack objects.\n";
+    return;
+  }
   const TargetFrameLowering *FI = MF.getSubtarget().getFrameLowering();
   int ValOffset = (FI ? FI->getOffsetOfLocalArea() : 0);
+
+  OS << "NumFixedObjects=" << static_cast<unsigned>(NumFixedObjects) << "\n";
 
   OS << "Frame Objects:\n";
 
@@ -222,12 +227,13 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
     OS << "  fi#" << (int)(i-NumFixedObjects) << ": ";
 
     if (SO.StackID != 0)
-      OS << "id=" << static_cast<unsigned>(SO.StackID) << ' ';
+      OS << "stackid=" << static_cast<unsigned>(SO.StackID) << ", ";
 
     if (SO.Size == ~0ULL) {
       OS << "dead\n";
       continue;
     }
+    OS << "isSplitSplot=" << static_cast<bool>(SO.isSpillSlot) << ", ";
     if (SO.Size == 0)
       OS << "variable sized";
     else
@@ -235,7 +241,7 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
     OS << ", align=" << SO.Alignment.value();
 
     if (i < NumFixedObjects)
-      OS << ", fixed";
+      OS << ", fixed objects:";
     if (i < NumFixedObjects || SO.SPOffset != -1) {
       int64_t Off = SO.SPOffset - ValOffset;
       OS << ", at location [SP";
