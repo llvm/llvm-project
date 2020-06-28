@@ -32,7 +32,6 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), Rule(MakeRule(getLangOpts(), Options)),
       IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
-                                            IncludeSorter::getMapping(),
                                             IncludeSorter::IS_LLVM)) {
   if (Rule)
     assert(llvm::all_of(Rule->Cases, hasExplanation) &&
@@ -45,7 +44,6 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(RewriteRule R,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), Rule(std::move(R)),
       IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
-                                            IncludeSorter::getMapping(),
                                             IncludeSorter::IS_LLVM)) {
   assert(llvm::all_of(Rule->Cases, hasExplanation) &&
          "clang-tidy checks must have an explanation by default;"
@@ -111,8 +109,7 @@ void TransformerClangTidyCheck::check(
 
 void TransformerClangTidyCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeStyle,
-                IncludeSorter::getMapping());
+  Options.store(Opts, "IncludeStyle", IncludeStyle);
 }
 
 } // namespace utils
