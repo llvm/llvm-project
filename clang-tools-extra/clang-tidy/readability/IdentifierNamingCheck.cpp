@@ -26,26 +26,6 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-
-llvm::ArrayRef<
-    std::pair<readability::IdentifierNamingCheck::CaseType, StringRef>>
-OptionEnumMapping<
-    readability::IdentifierNamingCheck::CaseType>::getEnumMapping() {
-  static constexpr std::pair<readability::IdentifierNamingCheck::CaseType,
-                             StringRef>
-      Mapping[] = {
-          {readability::IdentifierNamingCheck::CT_AnyCase, "aNy_CasE"},
-          {readability::IdentifierNamingCheck::CT_LowerCase, "lower_case"},
-          {readability::IdentifierNamingCheck::CT_UpperCase, "UPPER_CASE"},
-          {readability::IdentifierNamingCheck::CT_CamelBack, "camelBack"},
-          {readability::IdentifierNamingCheck::CT_CamelCase, "CamelCase"},
-          {readability::IdentifierNamingCheck::CT_CamelSnakeCase,
-           "Camel_Snake_Case"},
-          {readability::IdentifierNamingCheck::CT_CamelSnakeBack,
-           "camel_Snake_Back"}};
-  return llvm::makeArrayRef(Mapping);
-}
-
 namespace readability {
 
 // clang-format off
@@ -119,6 +99,16 @@ static StringRef const StyleNames[] = {
 #undef NAMING_KEYS
 // clang-format on
 
+static constexpr std::pair<StringRef, IdentifierNamingCheck::CaseType>
+    Mapping[] = {
+        {"aNy_CasE", IdentifierNamingCheck::CT_AnyCase},
+        {"lower_case", IdentifierNamingCheck::CT_LowerCase},
+        {"UPPER_CASE", IdentifierNamingCheck::CT_UpperCase},
+        {"camelBack", IdentifierNamingCheck::CT_CamelBack},
+        {"CamelCase", IdentifierNamingCheck::CT_CamelCase},
+        {"Camel_Snake_Case", IdentifierNamingCheck::CT_CamelSnakeCase},
+        {"camel_Snake_Back", IdentifierNamingCheck::CT_CamelSnakeBack}};
+
 IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : RenamerClangTidyCheck(Name, Context),
@@ -127,7 +117,7 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
 
   for (auto const &Name : StyleNames) {
     auto CaseOptional = [&]() -> llvm::Optional<CaseType> {
-      auto ValueOr = Options.get<CaseType>((Name + "Case").str());
+      auto ValueOr = Options.get((Name + "Case").str(), makeArrayRef(Mapping));
       if (ValueOr)
         return *ValueOr;
       llvm::logAllUnhandledErrors(
@@ -158,7 +148,7 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
     if (NamingStyles[i]) {
       if (NamingStyles[i]->Case) {
         Options.store(Opts, (StyleNames[i] + "Case").str(),
-                      *NamingStyles[i]->Case);
+                      *NamingStyles[i]->Case, llvm::makeArrayRef(Mapping));
       }
       Options.store(Opts, (StyleNames[i] + "Prefix").str(),
                     NamingStyles[i]->Prefix);

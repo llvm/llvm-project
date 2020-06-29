@@ -1400,10 +1400,15 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
 
   Address address = Address::invalid();
   Address AllocaAddr = Address::invalid();
-  Address OpenMPLocalAddr =
-      getLangOpts().OpenMP
-          ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
-          : Address::invalid();
+  Address OpenMPLocalAddr = Address::invalid();
+  if (CGM.getOpenMPIRBuilder())
+    OpenMPLocalAddr = OMPBuilderCBHelpers::getAddressOfLocalVariable(*this, &D);
+  else
+    OpenMPLocalAddr =
+        getLangOpts().OpenMP
+            ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
+            : Address::invalid();
+
   bool NRVO = getLangOpts().ElideConstructors && D.isNRVOVariable();
 
   if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {

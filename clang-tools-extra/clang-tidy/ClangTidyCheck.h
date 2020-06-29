@@ -27,13 +27,6 @@ class CompilerInstance;
 
 namespace tidy {
 
-/// This class should be specialized by any enum type that needs to be converted
-/// to and from an \ref llvm::StringRef.
-template <class T> struct OptionEnumMapping {
-  // Specializations of this struct must implement this function.
-  static ArrayRef<std::pair<T, StringRef>> getEnumMapping() = delete;
-};
-
 template <typename T> class OptionError : public llvm::ErrorInfo<T> {
   std::error_code convertToErrorCode() const override {
     return llvm::inconvertibleErrorCode();
@@ -320,38 +313,36 @@ public:
     }
 
     /// Read a named option from the ``Context`` and parse it as an
-    /// enum type ``T``.
+    /// enum type ``T`` using the \p Mapping provided. If \p IgnoreCase is set,
+    /// it will search the mapping ignoring the case.
     ///
     /// Reads the option with the check-local name \p LocalName from the
     /// ``CheckOptions``. If the corresponding key is not present, returns a
     /// ``MissingOptionError``. If the key can't be parsed as a ``T`` returns a
     /// ``UnparseableEnumOptionError``.
-    ///
-    /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
-    /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, llvm::Expected<T>>
-    get(StringRef LocalName, bool IgnoreCase = false) {
-      if (llvm::Expected<int64_t> ValueOr =
-              getEnumInt(LocalName, typeEraseMapping<T>(), false, IgnoreCase))
+    get(StringRef LocalName, ArrayRef<std::pair<StringRef, T>> Mapping,
+        bool IgnoreCase = false) {
+      if (llvm::Expected<int64_t> ValueOr = getEnumInt(
+              LocalName, typeEraseMapping(Mapping), false, IgnoreCase))
         return static_cast<T>(*ValueOr);
       else
         return std::move(ValueOr.takeError());
     }
 
     /// Read a named option from the ``Context`` and parse it as an
-    /// enum type ``T``.
+    /// enum type ``T`` using the \p Mapping provided. If \p IgnoreCase is set,
+    /// it will search the mapping ignoring the case.
     ///
     /// Reads the option with the check-local name \p LocalName from the
     /// ``CheckOptions``. If the corresponding key is not present or it can't be
     /// parsed as a ``T``, returns \p Default.
-    ///
-    /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
-    /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, T>
-    get(StringRef LocalName, T Default, bool IgnoreCase = false) {
-      if (auto ValueOr = get<T>(LocalName, IgnoreCase))
+    get(StringRef LocalName, ArrayRef<std::pair<StringRef, T>> Mapping,
+        T Default, bool IgnoreCase = false) {
+      if (auto ValueOr = get(LocalName, Mapping, IgnoreCase))
         return *ValueOr;
       else
         logErrToStdErr(ValueOr.takeError());
@@ -359,41 +350,40 @@ public:
     }
 
     /// Read a named option from the ``Context`` and parse it as an
-    /// enum type ``T``.
+    /// enum type ``T`` using the \p Mapping provided. If \p IgnoreCase is set,
+    /// it will search the mapping ignoring the case.
     ///
     /// Reads the option with the check-local name \p LocalName from local or
     /// global ``CheckOptions``. Gets local option first. If local is not
     /// present, falls back to get global option. If global option is not
     /// present either, returns a ``MissingOptionError``. If the key can't be
     /// parsed as a ``T`` returns a ``UnparseableEnumOptionError``.
-    ///
-    /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
-    /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, llvm::Expected<T>>
     getLocalOrGlobal(StringRef LocalName,
+                     ArrayRef<std::pair<StringRef, T>> Mapping,
                      bool IgnoreCase = false) {
-      if (llvm::Expected<int64_t> ValueOr =
-              getEnumInt(LocalName, typeEraseMapping<T>(), true, IgnoreCase))
+      if (llvm::Expected<int64_t> ValueOr = getEnumInt(
+              LocalName, typeEraseMapping(Mapping), true, IgnoreCase))
         return static_cast<T>(*ValueOr);
       else
         return std::move(ValueOr.takeError());
     }
 
     /// Read a named option from the ``Context`` and parse it as an
-    /// enum type ``T``.
+    /// enum type ``T`` using the \p Mapping provided. If \p IgnoreCase is set,
+    /// it will search the mapping ignoring the case.
     ///
     /// Reads the option with the check-local name \p LocalName from local or
     /// global ``CheckOptions``. Gets local option first. If local is not
     /// present, falls back to get global option. If global option is not
     /// present either or it can't be parsed as a ``T``, returns \p Default.
-    ///
-    /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
-    /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, T>
-    getLocalOrGlobal(StringRef LocalName, T Default, bool IgnoreCase = false) {
-      if (auto ValueOr = getLocalOrGlobal<T>(LocalName, IgnoreCase))
+    getLocalOrGlobal(StringRef LocalName,
+                     ArrayRef<std::pair<StringRef, T>> Mapping, T Default,
+                     bool IgnoreCase = false) {
+      if (auto ValueOr = getLocalOrGlobal(LocalName, Mapping, IgnoreCase))
         return *ValueOr;
       else
         logErrToStdErr(ValueOr.takeError());
@@ -411,25 +401,21 @@ public:
                int64_t Value) const;
 
     /// Stores an option with the check-local name \p LocalName as the string
-    /// representation of the Enum \p Value to \p Options.
-    ///
-    /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
-    /// supply the mapping required to convert between ``T`` and a string.
+    /// representation of the Enum \p Value using the \p Mapping to \p Options.
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value>
-    store(ClangTidyOptions::OptionMap &Options, StringRef LocalName, T Value) {
-      ArrayRef<std::pair<T, StringRef>> Mapping =
-          OptionEnumMapping<T>::getEnumMapping();
+    store(ClangTidyOptions::OptionMap &Options, StringRef LocalName, T Value,
+          ArrayRef<std::pair<StringRef, T>> Mapping) {
       auto Iter = llvm::find_if(
-          Mapping, [&](const std::pair<T, StringRef> &NameAndEnum) {
-            return NameAndEnum.first == Value;
+          Mapping, [&](const std::pair<StringRef, T> &NameAndEnum) {
+            return NameAndEnum.second == Value;
           });
       assert(Iter != Mapping.end() && "Unknown Case Value");
-      store(Options, LocalName, Iter->second);
+      store(Options, LocalName, Iter->first);
     }
 
   private:
-    using NameAndValue = std::pair<int64_t, StringRef>;
+    using NameAndValue = std::pair<StringRef, int64_t>;
 
     llvm::Expected<int64_t> getEnumInt(StringRef LocalName,
                                        ArrayRef<NameAndValue> Mapping,
@@ -437,14 +423,12 @@ public:
 
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, std::vector<NameAndValue>>
-    typeEraseMapping() {
-      ArrayRef<std::pair<T, StringRef>> Mapping =
-          OptionEnumMapping<T>::getEnumMapping();
+    typeEraseMapping(ArrayRef<std::pair<StringRef, T>> Mapping) {
       std::vector<NameAndValue> Result;
       Result.reserve(Mapping.size());
       for (auto &MappedItem : Mapping) {
-        Result.emplace_back(static_cast<int64_t>(MappedItem.first),
-                            MappedItem.second);
+        Result.emplace_back(MappedItem.first,
+                            static_cast<int64_t>(MappedItem.second));
       }
       return Result;
     }
