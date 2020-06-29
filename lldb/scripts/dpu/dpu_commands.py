@@ -305,7 +305,7 @@ def dpu_attach(debugger, command, result, internal_dict):
                       ':2066'],
                      env=lldb_server_dpu_env)
 
-    if not os.path.exists(program_path):
+    if program_path is not None and not os.path.exists(program_path):
         program_path = None
     target_dpu = \
         debugger.CreateTargetWithFileAndTargetTriple(program_path,
