@@ -10,6 +10,8 @@
 // Details of the algorithm:
 //  https://github.com/google/sanitizers/wiki/AddressSanitizerAlgorithm
 //
+// FIXME: This sanitizer does not yet handle scalable vectors
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
@@ -1504,8 +1506,8 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
                                         unsigned Granularity, uint32_t TypeSize,
                                         bool IsWrite, Value *SizeArgument,
                                         bool UseCalls, uint32_t Exp) {
-  auto *VTy =
-      cast<VectorType>(cast<PointerType>(Addr->getType())->getElementType());
+  auto *VTy = cast<FixedVectorType>(
+      cast<PointerType>(Addr->getType())->getElementType());
   uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   unsigned Num = VTy->getNumElements();
   auto Zero = ConstantInt::get(IntptrTy, 0);
