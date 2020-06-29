@@ -1,7 +1,5 @@
 ; RUN: llc -mcpu=gfx900 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - %s | llvm-dwarfdump -debug-frame - | FileCheck %s
 
-; XFAIL: *
-
 ; CHECK: .debug_frame contents:
 ; CHECK: 00000000 0000001c ffffffff CIE
 ; CHECK-NEXT:   Format:                DWARF32

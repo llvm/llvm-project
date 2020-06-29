@@ -104,11 +104,11 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
         break;
       case DW_CFA_LLVM_def_aspace_cfa:
       case DW_CFA_LLVM_def_aspace_cfa_sf: {
-        auto RegNum = Data.getULEB128(Offset);
+        auto RegNum = Data.getULEB128(C);
         auto CfaOffset = Opcode == DW_CFA_LLVM_def_aspace_cfa
-                             ? Data.getULEB128(Offset)
-                             : Data.getSLEB128(Offset);
-        auto AddressSpace = Data.getULEB128(Offset);
+                             ? Data.getULEB128(C)
+                             : Data.getSLEB128(C);
+        auto AddressSpace = Data.getULEB128(C);
         addInstruction(Opcode, RegNum, CfaOffset, AddressSpace);
         break;
       }
