@@ -124,7 +124,9 @@ unsigned LLVMPreferredAlignmentOfType(LLVMTargetDataRef TD, LLVMTypeRef Ty) {
 
 unsigned LLVMPreferredAlignmentOfGlobal(LLVMTargetDataRef TD,
                                         LLVMValueRef GlobalVar) {
-  return unwrap(TD)->getPreferredAlignment(unwrap<GlobalVariable>(GlobalVar));
+  return unwrap(TD)
+      ->getPreferredAlign(unwrap<GlobalVariable>(GlobalVar))
+      .value();
 }
 
 unsigned LLVMElementAtOffset(LLVMTargetDataRef TD, LLVMTypeRef StructTy,
