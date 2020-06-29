@@ -981,6 +981,18 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
 endif()
 
+set(TENSORFLOW_C_LIB_PATH "" CACHE PATH "Path to TensorFlow C library install")
+find_library(tensorflow_c_api tensorflow PATHS ${TENSORFLOW_C_LIB_PATH}/lib)
+
+# Similar to the above Tensorflow dependency, please refer to the same script.
+# In this case, the latest C API library is available for download from
+# https://www.tensorflow.org/install/lang_c
+if (tensorflow_c_api)
+  set(LLVM_HAVE_TF_API "ON" CACHE BOOL "Full Tensorflow API available")
+  add_definitions("-DLLVM_HAVE_TF_API")
+  include_directories(${TENSORFLOW_C_LIB_PATH}/include)
+endif()
+
 # Put this before tblgen. Else we have a circular dependence.
 add_subdirectory(lib/Demangle)
 add_subdirectory(lib/Support)
