@@ -1120,7 +1120,8 @@ static LogicalResult verify(ConstantOp &op) {
     auto fn =
         op.getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnAttr.getValue());
     if (!fn)
-      return op.emitOpError("reference to undefined function 'bar'");
+      return op.emitOpError()
+             << "reference to undefined function '" << fnAttr.getValue() << "'";
 
     // Check that the referenced function has the correct type.
     if (fn.getType() != type)
