@@ -124,8 +124,8 @@ std::string printType(QualType QT, const PrintingPolicy &Policy) {
   // TypePrinter doesn't resolve decltypes, so resolve them here.
   // FIXME: This doesn't handle composite types that contain a decltype in them.
   // We should rather have a printing policy for that.
-  while (const auto *DT = QT->getAs<DecltypeType>())
-    QT = DT->getUnderlyingType();
+  while (!QT.isNull() && QT->isDecltypeType())
+    QT = QT->getAs<DecltypeType>()->getUnderlyingType();
   return QT.getAsString(Policy);
 }
 
@@ -297,15 +297,7 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
   for (const ParmVarDecl *PVD : FD->parameters()) {
     HI.Parameters->emplace_back();
     auto &P = HI.Parameters->back();
-    if (!PVD->getType().isNull()) {
-      P.Type = printType(PVD->getType(), Policy);
-    } else {
-      std::string Param;
-      llvm::raw_string_ostream OS(Param);
-      PVD->dump(OS);
-      OS.flush();
-      elog("Got param with null type: {0}", Param);
-    }
+    P.Type = printType(PVD->getType(), Policy);
     if (!PVD->getName().empty())
       P.Name = PVD->getNameAsString();
     if (const Expr *DefArg = getDefaultArg(PVD)) {
