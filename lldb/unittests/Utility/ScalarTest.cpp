@@ -66,6 +66,44 @@ TEST(ScalarTest, ComparisonFloat) {
   ASSERT_TRUE(s2 >= s1);
 }
 
+template <typename T1, typename T2>
+static T2 ConvertHost(T1 val, T2 (Scalar::*)(T2) const) {
+  return T2(val);
+}
+
+template <typename T1, typename T2>
+static T2 ConvertScalar(T1 val, T2 (Scalar::*conv)(T2) const) {
+  return (Scalar(val).*conv)(T2());
+}
+
+template <typename T> static void CheckConversion(T val) {
+  SCOPED_TRACE("val = " + std::to_string(val));
+  EXPECT_EQ((signed char)val, Scalar(val).SChar());
+  EXPECT_EQ((unsigned char)val, Scalar(val).UChar());
+  EXPECT_EQ((short)val, Scalar(val).SShort());
+  EXPECT_EQ((unsigned short)val, Scalar(val).UShort());
+  EXPECT_EQ((int)val, Scalar(val).SInt());
+  EXPECT_EQ((unsigned)val, Scalar(val).UInt());
+  EXPECT_EQ((long)val, Scalar(val).SLong());
+  EXPECT_EQ((unsigned long)val, Scalar(val).ULong());
+  EXPECT_EQ((long long)val, Scalar(val).SLongLong());
+  EXPECT_EQ((unsigned long long)val, Scalar(val).ULongLong());
+  EXPECT_NEAR((float)val, Scalar(val).Float(), std::abs(val / 1e6));
+  EXPECT_NEAR((double)val, Scalar(val).Double(), std::abs(val / 1e12));
+  EXPECT_NEAR((long double)val, Scalar(val).LongDouble(), std::abs(val / 1e12));
+}
+
+TEST(ScalarTest, Getters) {
+  CheckConversion<int>(0x87654321);
+  CheckConversion<unsigned int>(0x87654321u);
+  CheckConversion<long>(0x87654321l);
+  CheckConversion<unsigned long>(0x87654321ul);
+  CheckConversion<long long>(0x8765432112345678ll);
+  CheckConversion<unsigned long long>(0x8765432112345678ull);
+  CheckConversion<float>(42.25f);
+  CheckConversion<double>(42.25);
+}
+
 TEST(ScalarTest, RightShiftOperator) {
   int a = 0x00001000;
   int b = 0xFFFFFFFF;
@@ -336,11 +374,11 @@ TEST(ScalarTest, Scalar_512) {
 TEST(ScalarTest, TruncOrExtendTo) {
   Scalar S(0xffff);
   S.TruncOrExtendTo(12, true);
-  EXPECT_EQ(S.ULong(), 0xfffu);
+  EXPECT_EQ(S.UInt128(APInt()), APInt(12, 0xfffu));
   S.TruncOrExtendTo(20, true);
-  EXPECT_EQ(S.ULong(), 0xfffffu);
+  EXPECT_EQ(S.UInt128(APInt()), APInt(20, 0xfffffu));
   S.TruncOrExtendTo(24, false);
-  EXPECT_EQ(S.ULong(), 0x0fffffu);
+  EXPECT_EQ(S.UInt128(APInt()), APInt(24, 0x0fffffu));
   S.TruncOrExtendTo(16, false);
-  EXPECT_EQ(S.ULong(), 0xffffu);
+  EXPECT_EQ(S.UInt128(APInt()), APInt(16, 0xffffu));
 }
