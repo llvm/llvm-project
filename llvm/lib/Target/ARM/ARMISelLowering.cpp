@@ -296,6 +296,10 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::VECREDUCE_UMAX, VT, Legal);
     setOperationAction(ISD::VECREDUCE_SMIN, VT, Legal);
     setOperationAction(ISD::VECREDUCE_UMIN, VT, Legal);
+    setOperationAction(ISD::VECREDUCE_MUL, VT, Custom);
+    setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+    setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+    setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
 
     if (!HasMVEFP) {
       setOperationAction(ISD::SINT_TO_FP, VT, Expand);
@@ -345,6 +349,10 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
       setOperationAction(ISD::FMINNUM, VT, Legal);
       setOperationAction(ISD::FMAXNUM, VT, Legal);
       setOperationAction(ISD::FROUND, VT, Legal);
+      setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_FMUL, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
 
       // No native support for these.
       setOperationAction(ISD::FDIV, VT, Expand);
@@ -361,6 +369,17 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
       setOperationAction(ISD::FNEARBYINT, VT, Expand);
     }
   }
+
+  // Custom Expand smaller than legal vector reductions to prevent false zero
+  // items being added.
+  setOperationAction(ISD::VECREDUCE_FADD, MVT::v4f16, Custom);
+  setOperationAction(ISD::VECREDUCE_FMUL, MVT::v4f16, Custom);
+  setOperationAction(ISD::VECREDUCE_FMIN, MVT::v4f16, Custom);
+  setOperationAction(ISD::VECREDUCE_FMAX, MVT::v4f16, Custom);
+  setOperationAction(ISD::VECREDUCE_FADD, MVT::v2f16, Custom);
+  setOperationAction(ISD::VECREDUCE_FMUL, MVT::v2f16, Custom);
+  setOperationAction(ISD::VECREDUCE_FMIN, MVT::v2f16, Custom);
+  setOperationAction(ISD::VECREDUCE_FMAX, MVT::v2f16, Custom);
 
   // We 'support' these types up to bitcast/load/store level, regardless of
   // MVE integer-only / float support. Only doing FP data processing on the FP
@@ -9498,6 +9517,79 @@ static SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) {
   return DAG.getMergeValues({Combo, NewLoad.getValue(1)}, dl);
 }
 
+static SDValue LowerVecReduce(SDValue Op, SelectionDAG &DAG,
+                              const ARMSubtarget *ST) {
+  if (!ST->hasMVEIntegerOps())
+    return SDValue();
+
+  SDLoc dl(Op);
+  unsigned BaseOpcode = 0;
+  switch (Op->getOpcode()) {
+  default: llvm_unreachable("Expected VECREDUCE opcode");
+  case ISD::VECREDUCE_FADD: BaseOpcode = ISD::FADD; break;
+  case ISD::VECREDUCE_FMUL: BaseOpcode = ISD::FMUL; break;
+  case ISD::VECREDUCE_MUL:  BaseOpcode = ISD::MUL; break;
+  case ISD::VECREDUCE_AND:  BaseOpcode = ISD::AND; break;
+  case ISD::VECREDUCE_OR:   BaseOpcode = ISD::OR; break;
+  case ISD::VECREDUCE_XOR:  BaseOpcode = ISD::XOR; break;
+  case ISD::VECREDUCE_FMAX: BaseOpcode = ISD::FMAXNUM; break;
+  case ISD::VECREDUCE_FMIN: BaseOpcode = ISD::FMINNUM; break;
+  }
+
+  SDValue Op0 = Op->getOperand(0);
+  EVT VT = Op0.getValueType();
+  EVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned NumActiveLanes = NumElts;
+
+  assert((NumActiveLanes == 16 || NumActiveLanes == 8 || NumActiveLanes == 4 ||
+          NumActiveLanes == 2) &&
+         "Only expected a power 2 vector size");
+
+  // Use Mul(X, Rev(X)) until 4 items remain. Going down to 4 vector elements
+  // allows us to easily extract vector elements from the lanes.
+  while (NumActiveLanes > 4) {
+    unsigned RevOpcode = NumActiveLanes == 16 ? ARMISD::VREV16 : ARMISD::VREV32;
+    SDValue Rev = DAG.getNode(RevOpcode, dl, VT, Op0);
+    Op0 = DAG.getNode(BaseOpcode, dl, VT, Op0, Rev);
+    NumActiveLanes /= 2;
+  }
+
+  SDValue Res;
+  if (NumActiveLanes == 4) {
+    // The remaining 4 elements are summed sequentially
+    SDValue Ext0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op0,
+                              DAG.getConstant(0 * NumElts / 4, dl, MVT::i32));
+    SDValue Ext1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op0,
+                              DAG.getConstant(1 * NumElts / 4, dl, MVT::i32));
+    SDValue Ext2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op0,
+                              DAG.getConstant(2 * NumElts / 4, dl, MVT::i32));
+    SDValue Ext3 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op0,
+                              DAG.getConstant(3 * NumElts / 4, dl, MVT::i32));
+    SDValue Res0 = DAG.getNode(BaseOpcode, dl, EltVT, Ext0, Ext1, Op->getFlags());
+    SDValue Res1 = DAG.getNode(BaseOpcode, dl, EltVT, Ext2, Ext3, Op->getFlags());
+    Res = DAG.getNode(BaseOpcode, dl, EltVT, Res0, Res1, Op->getFlags());
+  } else {
+    SDValue Ext0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op0,
+                              DAG.getConstant(0, dl, MVT::i32));
+    SDValue Ext1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op0,
+                              DAG.getConstant(1, dl, MVT::i32));
+    Res = DAG.getNode(BaseOpcode, dl, EltVT, Ext0, Ext1, Op->getFlags());
+  }
+
+  // Result type may be wider than element type.
+  if (EltVT != Op->getValueType(0))
+    Res = DAG.getNode(ISD::ANY_EXTEND, dl, Op->getValueType(0), Res);
+  return Res;
+}
+
+static SDValue LowerVecReduceF(SDValue Op, SelectionDAG &DAG,
+                               const ARMSubtarget *ST) {
+  if (!ST->hasMVEFloatOps())
+    return SDValue();
+  return LowerVecReduce(Op, DAG, ST);
+}
+
 static SDValue LowerAtomicLoadStore(SDValue Op, SelectionDAG &DAG) {
   if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getOrdering()))
     // Acquire/Release load/store is not legal for targets without a dmb or
@@ -9702,6 +9794,16 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTORE(Op, DAG, Subtarget);
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+    return LowerVecReduce(Op, DAG, Subtarget);
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAX:
+    return LowerVecReduceF(Op, DAG, Subtarget);
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:  return LowerAtomicLoadStore(Op, DAG);
   case ISD::FSINCOS:       return LowerFSINCOS(Op, DAG);
