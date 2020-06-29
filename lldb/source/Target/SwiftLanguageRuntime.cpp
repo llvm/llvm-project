@@ -1153,8 +1153,10 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   if (!ast_context || error.Fail())
     return error_valobj_sp;
 
-  lldb::DataBufferSP buffer(new lldb_private::DataBufferHeap(
-      arg0->GetScalar().GetBytes(), arg0->GetScalar().GetByteSize()));
+  auto buffer_up =
+      std::make_unique<DataBufferHeap>(arg0->GetScalar().GetByteSize(), 0);
+  arg0->GetScalar().GetBytes(buffer_up->GetData());
+  lldb::DataBufferSP buffer(std::move(buffer_up));
 
   CompilerType swift_error_proto_type = ast_context->GetErrorType();
   if (!swift_error_proto_type.IsValid())
