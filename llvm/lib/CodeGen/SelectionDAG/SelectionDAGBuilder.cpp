@@ -745,12 +745,16 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   NumParts = NumRegs; // Silence a compiler warning.
   assert(RegisterVT == PartVT && "Part type doesn't match vector breakdown!");
 
-  unsigned IntermediateNumElts = IntermediateVT.isVector() ?
-    IntermediateVT.getVectorNumElements() : 1;
+  assert(IntermediateVT.isScalableVector() == ValueVT.isScalableVector() &&
+         "Mixing scalable and fixed vectors when copying in parts");
 
-  // Convert the vector to the appropriate type if necessary.
-  auto DestEltCnt = ElementCount(NumIntermediates * IntermediateNumElts,
-                                 ValueVT.isScalableVector());
+  ElementCount DestEltCnt;
+
+  if (IntermediateVT.isVector())
+    DestEltCnt = IntermediateVT.getVectorElementCount() * NumIntermediates;
+  else
+    DestEltCnt = ElementCount(NumIntermediates, false);
+
   EVT BuiltVectorTy = EVT::getVectorVT(
       *DAG.getContext(), IntermediateVT.getScalarType(), DestEltCnt);
   if (ValueVT != BuiltVectorTy) {
@@ -764,6 +768,9 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   SmallVector<SDValue, 8> Ops(NumIntermediates);
   for (unsigned i = 0; i != NumIntermediates; ++i) {
     if (IntermediateVT.isVector()) {
+      // This does something sensible for scalable vectors - see the
+      // definition of EXTRACT_SUBVECTOR for further details.
+      unsigned IntermediateNumElts = IntermediateVT.getVectorMinNumElements();
       Ops[i] =
           DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, IntermediateVT, Val,
                       DAG.getVectorIdxConstant(i * IntermediateNumElts, DL));
