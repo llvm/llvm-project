@@ -956,8 +956,7 @@ static Optional<int64_t> getMemoryFootprintBytes(Block &block,
 
   // Walk this 'affine.for' operation to gather all memory regions.
   auto result = block.walk(start, end, [&](Operation *opInst) -> WalkResult {
-    if (!isa<AffineReadOpInterface>(opInst) &&
-        !isa<AffineWriteOpInterface>(opInst)) {
+    if (!isa<AffineReadOpInterface, AffineWriteOpInterface>(opInst)) {
       // Neither load nor a store op.
       return WalkResult::advance();
     }
@@ -1017,11 +1016,9 @@ bool mlir::isLoopParallel(AffineForOp forOp) {
   // Collect all load and store ops in loop nest rooted at 'forOp'.
   SmallVector<Operation *, 8> loadAndStoreOpInsts;
   auto walkResult = forOp.walk([&](Operation *opInst) -> WalkResult {
-    if (isa<AffineReadOpInterface>(opInst) ||
-        isa<AffineWriteOpInterface>(opInst))
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(opInst))
       loadAndStoreOpInsts.push_back(opInst);
-    else if (!isa<AffineForOp>(opInst) && !isa<AffineTerminatorOp>(opInst) &&
-             !isa<AffineIfOp>(opInst) &&
+    else if (!isa<AffineForOp, AffineTerminatorOp, AffineIfOp>(opInst) &&
              !MemoryEffectOpInterface::hasNoEffect(opInst))
       return WalkResult::interrupt();
 

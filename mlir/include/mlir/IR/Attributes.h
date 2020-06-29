@@ -85,6 +85,8 @@ public:
   bool operator!() const { return impl == nullptr; }
 
   template <typename U> bool isa() const;
+  template <typename First, typename Second, typename... Rest>
+  bool isa() const;
   template <typename U> U dyn_cast() const;
   template <typename U> U dyn_cast_or_null() const;
   template <typename U> U cast() const;
@@ -1630,6 +1632,12 @@ template <typename U> bool Attribute::isa() const {
   assert(impl && "isa<> used on a null attribute.");
   return U::classof(*this);
 }
+
+template <typename First, typename Second, typename... Rest>
+bool Attribute::isa() const {
+  return isa<First>() || isa<Second, Rest...>();
+}
+
 template <typename U> U Attribute::dyn_cast() const {
   return isa<U>() ? U(impl) : U(nullptr);
 }

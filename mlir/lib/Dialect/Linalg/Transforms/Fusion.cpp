@@ -923,11 +923,11 @@ Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
     return nullptr;
 
   // Fuse when consumer is GenericOp or IndexedGenericOp.
-  if (isa<GenericOp>(consumer) || isa<IndexedGenericOp>(consumer)) {
+  if (isa<GenericOp, IndexedGenericOp>(consumer)) {
     auto linalgOpConsumer = cast<LinalgOp>(consumer);
     if (!linalgOpConsumer.hasTensorSemantics())
       return nullptr;
-    if (isa<GenericOp>(producer) || isa<IndexedGenericOp>(producer)) {
+    if (isa<GenericOp, IndexedGenericOp>(producer)) {
       auto linalgOpProducer = cast<LinalgOp>(producer);
       if (linalgOpProducer.hasTensorSemantics())
         return FuseGenericOpsOnTensors::fuse(linalgOpProducer, linalgOpConsumer,
