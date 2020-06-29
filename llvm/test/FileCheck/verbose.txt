@@ -10,6 +10,22 @@
 ; RUN: FileCheck --dump-input=never -vv --input-file %s %s 2>&1 | \
 ; RUN:   FileCheck --strict-whitespace --check-prefixes V,VV %s
 
+; RUN: %ProtectFileCheckOutput \
+; RUN: FileCheck --dump-input=never -v -v --input-file %s %s 2>&1 | \
+; RUN:   FileCheck --strict-whitespace --check-prefix V %s
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: FileCheck --dump-input=never -vv -vv --input-file %s %s 2>&1 | \
+; RUN:   FileCheck --strict-whitespace --check-prefixes V,VV %s
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: FileCheck --dump-input=never -v -vv --input-file %s %s 2>&1 | \
+; RUN:   FileCheck --strict-whitespace --check-prefixes V,VV %s
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: FileCheck --dump-input=never -vv -v --input-file %s %s 2>&1 | \
+; RUN:   FileCheck --strict-whitespace --check-prefixes V,VV %s
+
 ; END.
 
 foo
