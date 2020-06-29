@@ -110,7 +110,7 @@ template <typename T, unsigned Bits> struct BitPatterns {
   static constexpr Unsigned SignBitMask = Unsigned(1) << (Bits - 1); // 00100000
   static constexpr Unsigned Smax = Umax >> 1U;                       // 00011111
   static constexpr Unsigned Smin = ~Smax;                            // 11100000
-  static constexpr Unsigned SignExtend = Smin << 1U;                 // 11000000
+  static constexpr Unsigned SignExtend = Unsigned(Smin << 1U);       // 11000000
 };
 
 /// `Compressor` is used to manipulate the bits of a (possibly signed) integer
