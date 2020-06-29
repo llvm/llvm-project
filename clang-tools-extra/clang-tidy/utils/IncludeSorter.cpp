@@ -174,14 +174,13 @@ Optional<FixItHint> IncludeSorter::CreateIncludeInsertion(StringRef FileName,
                                     IncludeStmt);
 }
 
-} // namespace utils
-
-llvm::ArrayRef<std::pair<utils::IncludeSorter::IncludeStyle, StringRef>>
-OptionEnumMapping<utils::IncludeSorter::IncludeStyle>::getEnumMapping() {
-  static constexpr std::pair<utils::IncludeSorter::IncludeStyle, StringRef>
-      Mapping[] = {{utils::IncludeSorter::IS_LLVM, "llvm"},
-                   {utils::IncludeSorter::IS_Google, "google"}};
+llvm::ArrayRef<std::pair<StringRef, IncludeSorter::IncludeStyle>>
+IncludeSorter::getMapping() {
+  static constexpr std::pair<StringRef, IncludeSorter::IncludeStyle> Mapping[] =
+      {{"llvm", IS_LLVM}, {"google", IS_Google}};
   return makeArrayRef(Mapping);
 }
+
+} // namespace utils
 } // namespace tidy
 } // namespace clang
