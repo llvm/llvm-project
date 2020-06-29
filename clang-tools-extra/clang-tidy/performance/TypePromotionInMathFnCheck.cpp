@@ -32,6 +32,7 @@ TypePromotionInMathFnCheck::TypePromotionInMathFnCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
+                                            utils::IncludeSorter::getMapping(),
                                             utils::IncludeSorter::IS_LLVM)) {}
 
 void TypePromotionInMathFnCheck::registerPPCallbacks(
@@ -43,7 +44,8 @@ void TypePromotionInMathFnCheck::registerPPCallbacks(
 
 void TypePromotionInMathFnCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeStyle);
+  Options.store(Opts, "IncludeStyle", IncludeStyle,
+                utils::IncludeSorter::getMapping());
 }
 
 void TypePromotionInMathFnCheck::registerMatchers(MatchFinder *Finder) {
