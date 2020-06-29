@@ -63,6 +63,9 @@ private:
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
 
+  ExtractElementInst *getShuffleExtract(ExtractElementInst *Ext0,
+                                        ExtractElementInst *Ext1,
+                                        unsigned PreferredExtractIndex) const;
   bool isExtractExtractCheap(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
                              unsigned Opcode,
                              ExtractElementInst *&ConvertToShuffle,
@@ -79,6 +82,46 @@ private:
 static void replaceValue(Value &Old, Value &New) {
   Old.replaceAllUsesWith(&New);
   New.takeName(&Old);
+}
+
+/// Determine which, if any, of the inputs should be replaced by a shuffle
+/// followed by extract from a different index.
+ExtractElementInst *VectorCombine::getShuffleExtract(
+    ExtractElementInst *Ext0, ExtractElementInst *Ext1,
+    unsigned PreferredExtractIndex = InvalidIndex) const {
+  assert(isa<ConstantInt>(Ext0->getIndexOperand()) &&
+         isa<ConstantInt>(Ext1->getIndexOperand()) &&
+         "Expected constant extract indexes");
+
+  unsigned Index0 = cast<ConstantInt>(Ext0->getIndexOperand())->getZExtValue();
+  unsigned Index1 = cast<ConstantInt>(Ext1->getIndexOperand())->getZExtValue();
+
+  // If the extract indexes are identical, no shuffle is needed.
+  if (Index0 == Index1)
+    return nullptr;
+
+  Type *VecTy = Ext0->getVectorOperand()->getType();
+  assert(VecTy == Ext1->getVectorOperand()->getType() && "Need matching types");
+  int Cost0 = TTI.getVectorInstrCost(Ext0->getOpcode(), VecTy, Index0);
+  int Cost1 = TTI.getVectorInstrCost(Ext1->getOpcode(), VecTy, Index1);
+
+  // We are extracting from 2 different indexes, so one operand must be shuffled
+  // before performing a vector operation and/or extract. The more expensive
+  // extract will be replaced by a shuffle.
+  if (Cost0 > Cost1)
+    return Ext0;
+  if (Cost1 > Cost0)
+    return Ext1;
+
+  // If the costs are equal and there is a preferred extract index, shuffle the
+  // opposite operand.
+  if (PreferredExtractIndex == Index0)
+    return Ext1;
+  if (PreferredExtractIndex == Index1)
+    return Ext0;
+
+  // Otherwise, replace the extract with the higher index.
+  return Index0 > Index1 ? Ext0 : Ext1;
 }
 
 /// Compare the relative costs of 2 extracts followed by scalar operation vs.
@@ -152,10 +195,8 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
               !Ext1->hasOneUse() * Extract1Cost;
   }
 
-  if (Ext0Index == Ext1Index) {
-    // If the extract indexes are identical, no shuffle is needed.
-    ConvertToShuffle = nullptr;
-  } else {
+  ConvertToShuffle = getShuffleExtract(Ext0, Ext1, PreferredExtractIndex);
+  if (ConvertToShuffle) {
     if (IsBinOp && DisableBinopExtractShuffle)
       return true;
 
@@ -168,20 +209,6 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
     //       (splat-from-element-0), but no option for a more general splat.
     NewCost +=
         TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
-
-    // The more expensive extract will be replaced by a shuffle. If the costs
-    // are equal and there is a preferred extract index, shuffle the opposite
-    // operand. Otherwise, replace the extract with the higher index.
-    if (Extract0Cost > Extract1Cost)
-      ConvertToShuffle = Ext0;
-    else if (Extract1Cost > Extract0Cost)
-      ConvertToShuffle = Ext1;
-    else if (PreferredExtractIndex == Ext0Index)
-      ConvertToShuffle = Ext1;
-    else if (PreferredExtractIndex == Ext1Index)
-      ConvertToShuffle = Ext0;
-    else
-      ConvertToShuffle = Ext0Index > Ext1Index ? Ext0 : Ext1;
   }
 
   // Aggressively form a vector op if the cost is equal because the transform
