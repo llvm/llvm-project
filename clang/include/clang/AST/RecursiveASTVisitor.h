@@ -669,9 +669,6 @@ bool RecursiveASTVisitor<Derived>::TraverseStmt(Stmt *S,
   return true;
 }
 
-#define DISPATCH(NAME, CLASS, VAR)                                             \
-  return getDerived().Traverse##NAME(static_cast<CLASS *>(VAR))
-
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseType(QualType T) {
   if (T.isNull())
@@ -681,7 +678,8 @@ bool RecursiveASTVisitor<Derived>::TraverseType(QualType T) {
 #define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
   case Type::CLASS:                                                            \
-    DISPATCH(CLASS##Type, CLASS##Type, const_cast<Type *>(T.getTypePtr()));
+    return getDerived().Traverse##CLASS##Type(                                 \
+        static_cast<CLASS##Type *>(const_cast<Type *>(T.getTypePtr())));
 #include "clang/AST/TypeNodes.inc"
   }
 
@@ -730,8 +728,6 @@ bool RecursiveASTVisitor<Derived>::TraverseDecl(Decl *D) {
   }
   return true;
 }
-
-#undef DISPATCH
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifier(
