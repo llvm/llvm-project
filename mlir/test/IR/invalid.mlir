@@ -513,7 +513,7 @@ func @foo() {
 
 func @undefined_function() {
 ^bb0:
-  %x = constant @bar : (i32) -> ()  // expected-error {{reference to undefined function 'bar'}}
+  %x = constant @qux : (i32) -> ()  // expected-error {{reference to undefined function 'qux'}}
   return
 }
 
