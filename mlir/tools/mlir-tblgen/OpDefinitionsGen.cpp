@@ -1601,7 +1601,12 @@ void OpEmitter::genTypeInterfaceMethods() {
     if (type.isArg()) {
       auto argIndex = type.getArg();
       assert(!op.getArg(argIndex).is<NamedAttribute *>());
-      return os << "operands[" << argIndex << "].getType()";
+      auto arg = op.getArgToOperandOrAttribute(argIndex);
+      if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand)
+        return os << "operands[" << arg.operandOrAttributeIndex()
+                  << "].getType()";
+      return os << "attributes[" << arg.operandOrAttributeIndex()
+                << "].getType()";
     } else {
       return os << tgfmt(*type.getType().getBuilderCall(), &fctx);
     }
