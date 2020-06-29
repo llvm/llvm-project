@@ -6,20 +6,6 @@
 
 namespace clang {
 namespace tidy {
-
-enum class Colours { Red, Orange, Yellow, Green, Blue, Indigo, Violet };
-
-template <> struct OptionEnumMapping<Colours> {
-  static llvm::ArrayRef<std::pair<Colours, StringRef>> getEnumMapping() {
-    static constexpr std::pair<Colours, StringRef> Mapping[] = {
-        {Colours::Red, "Red"},       {Colours::Orange, "Orange"},
-        {Colours::Yellow, "Yellow"}, {Colours::Green, "Green"},
-        {Colours::Blue, "Blue"},     {Colours::Indigo, "Indigo"},
-        {Colours::Violet, "Violet"}};
-    return makeArrayRef(Mapping);
-  }
-};
-
 namespace test {
 
 TEST(ParseLineFilter, EmptyFilter) {
@@ -223,6 +209,15 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
 }
 
 TEST(ValidConfiguration, ValidEnumOptions) {
+
+  enum class Colours { Red, Orange, Yellow, Green, Blue, Indigo, Violet };
+  static constexpr std::pair<StringRef, Colours> Mapping[] = {
+      {"Red", Colours::Red},       {"Orange", Colours::Orange},
+      {"Yellow", Colours::Yellow}, {"Green", Colours::Green},
+      {"Blue", Colours::Blue},     {"Indigo", Colours::Indigo},
+      {"Violet", Colours::Violet}};
+  static const auto Map = makeArrayRef(Mapping);
+
   ClangTidyOptions Options;
   auto &CheckOptions = Options.CheckOptions;
 
@@ -242,30 +237,29 @@ TEST(ValidConfiguration, ValidEnumOptions) {
 #define CHECK_ERROR_ENUM(Name, Expected)                                       \
   CHECK_ERROR(Name, UnparseableEnumOptionError, Expected)
 
-  CHECK_VAL(TestCheck.getIntLocal<Colours>("Valid"), Colours::Red);
-  CHECK_VAL(TestCheck.getIntGlobal<Colours>("GlobalValid"), Colours::Violet);
+  CHECK_VAL(TestCheck.getLocal("Valid", Map), Colours::Red);
+  CHECK_VAL(TestCheck.getGlobal("GlobalValid", Map), Colours::Violet);
+  CHECK_VAL(TestCheck.getLocal("ValidWrongCase", Map, /*IgnoreCase*/ true),
+            Colours::Red);
   CHECK_VAL(
-      TestCheck.getIntLocal<Colours>("ValidWrongCase", /*IgnoreCase*/ true),
-      Colours::Red);
-  CHECK_VAL(TestCheck.getIntGlobal<Colours>("GlobalValidWrongCase",
-                                            /*IgnoreCase*/ true),
-            Colours::Violet);
-  CHECK_ERROR_ENUM(TestCheck.getIntLocal<Colours>("Invalid"),
+      TestCheck.getGlobal("GlobalValidWrongCase", Map, /*IgnoreCase*/ true),
+      Colours::Violet);
+  CHECK_ERROR_ENUM(TestCheck.getLocal("Invalid", Map),
                    "invalid configuration value "
                    "'Scarlet' for option 'test.Invalid'");
-  CHECK_ERROR_ENUM(TestCheck.getIntLocal<Colours>("ValidWrongCase"),
+  CHECK_ERROR_ENUM(TestCheck.getLocal("ValidWrongCase", Map),
                    "invalid configuration value 'rED' for option "
                    "'test.ValidWrongCase'; did you mean 'Red'?");
-  CHECK_ERROR_ENUM(TestCheck.getIntLocal<Colours>("NearMiss"),
+  CHECK_ERROR_ENUM(TestCheck.getLocal("NearMiss", Map),
                    "invalid configuration value 'Oragne' for option "
                    "'test.NearMiss'; did you mean 'Orange'?");
-  CHECK_ERROR_ENUM(TestCheck.getIntGlobal<Colours>("GlobalInvalid"),
+  CHECK_ERROR_ENUM(TestCheck.getGlobal("GlobalInvalid", Map),
                    "invalid configuration value "
                    "'Purple' for option 'GlobalInvalid'");
-  CHECK_ERROR_ENUM(TestCheck.getIntGlobal<Colours>("GlobalValidWrongCase"),
+  CHECK_ERROR_ENUM(TestCheck.getGlobal("GlobalValidWrongCase", Map),
                    "invalid configuration value 'vIOLET' for option "
                    "'GlobalValidWrongCase'; did you mean 'Violet'?");
-  CHECK_ERROR_ENUM(TestCheck.getIntGlobal<Colours>("GlobalNearMiss"),
+  CHECK_ERROR_ENUM(TestCheck.getGlobal("GlobalNearMiss", Map),
                    "invalid configuration value 'Yelow' for option "
                    "'GlobalNearMiss'; did you mean 'Yellow'?");
 
