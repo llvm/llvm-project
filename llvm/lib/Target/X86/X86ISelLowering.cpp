@@ -33221,18 +33221,49 @@ X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
                                                 const APInt &DemandedBits,
                                                 const APInt &DemandedElts,
                                                 TargetLoweringOpt &TLO) const {
+  EVT VT = Op.getValueType();
+  unsigned Opcode = Op.getOpcode();
+  unsigned EltSize = VT.getScalarSizeInBits();
+
+  if (VT.isVector()) {
+    // If the constant is only all signbits in the active bits, then we should
+    // extend it to the entire constant to allow it act as a boolean constant
+    // vector.
+    auto NeedsSignExtension = [&](SDValue V, unsigned ActiveBits) {
+      if (!ISD::isBuildVectorOfConstantSDNodes(V.getNode()))
+        return false;
+      for (unsigned i = 0, e = V.getNumOperands(); i != e; ++i) {
+        if (!DemandedElts[i] || V.getOperand(i).isUndef())
+          continue;
+        const APInt &Val = V.getConstantOperandAPInt(i);
+        if (Val.getBitWidth() > Val.getNumSignBits() &&
+            Val.trunc(ActiveBits).getNumSignBits() == ActiveBits)
+          return true;
+      }
+      return false;
+    };
+    // For vectors - if we have a constant, then try to sign extend.
+    // TODO: Handle AND/ANDN cases.
+    unsigned ActiveBits = DemandedBits.getActiveBits();
+    if (EltSize > ActiveBits && EltSize > 1 && isTypeLegal(VT) &&
+        (Opcode == ISD::OR || Opcode == ISD::XOR) &&
+        NeedsSignExtension(Op.getOperand(1), ActiveBits)) {
+      EVT BoolVT = EVT::getVectorVT(*TLO.DAG.getContext(), MVT::i1,
+                                    VT.getVectorNumElements());
+      SDValue NewC =
+          TLO.DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(Op), VT,
+                          Op.getOperand(1), TLO.DAG.getValueType(BoolVT));
+      SDValue NewOp =
+          TLO.DAG.getNode(Opcode, SDLoc(Op), VT, Op.getOperand(0), NewC);
+      return TLO.CombineTo(Op, NewOp);
+    }
+    return false;
+  }
+
   // Only optimize Ands to prevent shrinking a constant that could be
   // matched by movzx.
-  if (Op.getOpcode() != ISD::AND)
+  if (Opcode != ISD::AND)
     return false;
-
-  EVT VT = Op.getValueType();
-
-  // Ignore vectors.
-  if (VT.isVector())
-    return false;
-
-  unsigned Size = VT.getSizeInBits();
 
   // Make sure the RHS really is a constant.
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1));
@@ -33254,10 +33285,10 @@ X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
   // Find the next power of 2 width, rounding up to a byte.
   Width = PowerOf2Ceil(std::max(Width, 8U));
   // Truncate the width to size to handle illegal types.
-  Width = std::min(Width, Size);
+  Width = std::min(Width, EltSize);
 
   // Calculate a possible zero extend mask for this constant.
-  APInt ZeroExtendMask = APInt::getLowBitsSet(Size, Width);
+  APInt ZeroExtendMask = APInt::getLowBitsSet(EltSize, Width);
 
   // If we aren't changing the mask, just return true to keep it and prevent
   // the caller from optimizing.
