@@ -52,21 +52,19 @@ The instructions are for building libc++ on
 FreeBSD, Linux, or Mac using `libc++abi`_ as the C++ ABI library.
 On Linux, it is also possible to use :ref:`libsupc++ <libsupcxx>` or libcxxrt.
 
-It is possible to keep your LLVM and libc++ trees separate so you can avoid
-rebuilding LLVM as often. An out-of-tree build would look like this:
+It is possible to build libc++ standalone (i.e. without building other LLVM
+projects). A standalone build would look like this:
 
 .. code-block:: bash
 
-  $ cd where-you-want-libcxx-to-live
-  $ # Check out the sources (includes everything, but we'll only use libcxx)
-  $ ``git clone https://github.com/llvm/llvm-project.git``
-  $ cd where-you-want-to-build
+  $ git clone https://github.com/llvm/llvm-project.git llvm-project
+  $ cd llvm-project
   $ mkdir build && cd build
-  $ export CC=clang CXX=clang++
-  $ cmake -DLLVM_PATH=path/to/separate/llvm \
+  $ cmake -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_COMPILER=clang++ \
           -DLIBCXX_CXX_ABI=libcxxabi \
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/separate/libcxxabi/include \
-          path/to/llvm-project/libcxx
+          ../libcxx
   $ make
   $ make check-cxx # optional
 
