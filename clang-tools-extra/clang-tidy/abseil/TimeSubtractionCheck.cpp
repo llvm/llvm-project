@@ -10,6 +10,7 @@
 #include "DurationRewriter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;

@@ -9,9 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_MULTIWAY_PATHS_COVERED_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_MULTIWAY_PATHS_COVERED_H
 
-#include "../ClangTidy.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <iostream>
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {

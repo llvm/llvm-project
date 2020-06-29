@@ -9,19 +9,22 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDY_H
 
-#include "ClangTidyCheck.h"
 #include "ClangTidyDiagnosticConsumer.h"
 #include "ClangTidyOptions.h"
-#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <vector>
 
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
+
 namespace clang {
 
+class ASTConsumer;
 class CompilerInstance;
 namespace tooling {
 class CompilationDatabase;
-}
+} // namespace tooling
 
 namespace tidy {
 
