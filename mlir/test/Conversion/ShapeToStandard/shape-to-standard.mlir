@@ -143,3 +143,18 @@ func @get_extent_shape_of(%arg : tensor<2x3xf32>, %idx : !shape.size)
   return %result : !shape.size
 }
 
+// -----
+
+// Express `get_extent` as `std.extract_element` when it relies directly on the
+// outcome of a `from_extent_tensor` operation.
+// CHECK-LABEL: @get_extent_from_extent_tensor
+// CHECK-SAME: (%[[EXTENTS:.*]]: tensor<?xindex>, %[[IDX:.*]]: index) -> index
+func @get_extent_from_extent_tensor(%extents : tensor<?xindex>,
+                                    %idx : !shape.size) -> !shape.size {
+  // CHECK: %[[RESULT:.*]] = extract_element %[[EXTENTS]][%[[IDX]]] : tensor<?xindex>
+  // CHECK: return %[[RESULT]] : index
+  %shape = shape.from_extent_tensor %extents : tensor<?xindex>
+  %result = shape.get_extent %shape, %idx
+  return %result : !shape.size
+}
+
