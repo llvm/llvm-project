@@ -1,5 +1,3 @@
-// Test lowering FIR to LLVM IR of fir.select{|_rank|_case}
-
 // RUN: tco %s | FileCheck %s
 
 // CHECK-LABEL: @x

@@ -22,6 +22,12 @@ static llvm::cl::opt<bool>
                          llvm::cl::desc("disable FIR to CFG pass"),
                          llvm::cl::init(false));
 
+/// minimum trip count is 1, not 0
+static llvm::cl::opt<bool> forceLoopToExecuteOnce(
+    "always-execute-loop-body",
+    llvm::cl::desc("force the body of a loop to execute at least once"),
+    llvm::cl::init(false));
+
 using namespace fir;
 
 namespace {
@@ -68,7 +74,16 @@ public:
     rewriter.setInsertionPointToEnd(initBlock);
     auto diff = rewriter.create<mlir::SubIOp>(loc, high, low);
     auto distance = rewriter.create<mlir::AddIOp>(loc, diff, step);
-    auto iters = rewriter.create<mlir::SignedDivIOp>(loc, distance, step);
+    mlir::Value iters =
+        rewriter.create<mlir::SignedDivIOp>(loc, distance, step);
+
+    if (forceLoopToExecuteOnce) {
+      auto zero = rewriter.create<mlir::ConstantIndexOp>(loc, 0);
+      auto cond =
+          rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sle, iters, zero);
+      auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
+      iters = rewriter.create<mlir::SelectOp>(loc, cond, one, iters);
+    }
 
     llvm::SmallVector<mlir::Value, 8> loopOperands;
     loopOperands.push_back(low);
@@ -76,14 +91,7 @@ public:
     loopOperands.append(operands.begin(), operands.end());
     loopOperands.push_back(iters);
 
-    // TODO: replace with a command line flag
-    // onetrip flag determines whether loop should be executed once, before
-    // conditionals are checked
-    static const bool onetrip = false;
-    if (onetrip)
-      rewriter.create<mlir::BranchOp>(loc, firstBlock, ArrayRef<mlir::Value>());
-    else
-      rewriter.create<mlir::BranchOp>(loc, conditionalBlock, loopOperands);
+    rewriter.create<mlir::BranchOp>(loc, conditionalBlock, loopOperands);
 
     // Last loop block
     auto *terminator = lastBlock->getTerminator();
@@ -275,9 +283,9 @@ public:
 
     // apply the patterns
     target.addIllegalOp<ResultOp, LoopOp, WhereOp, IterWhileOp>();
-    target.markUnknownOpDynamicallyLegal([](Operation*) { return true; });
-    if (mlir::failed(mlir::applyPartialConversion(getFunction(), target,
-                                                  patterns))) {
+    target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
+    if (mlir::failed(
+            mlir::applyPartialConversion(getFunction(), target, patterns))) {
       mlir::emitError(mlir::UnknownLoc::get(context),
                       "error in converting to CFG\n");
       signalPassFailure();
