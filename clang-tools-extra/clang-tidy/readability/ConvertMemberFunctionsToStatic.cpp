@@ -13,6 +13,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 

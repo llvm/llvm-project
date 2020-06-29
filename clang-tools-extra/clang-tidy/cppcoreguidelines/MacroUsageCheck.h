@@ -9,11 +9,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_MACROUSAGECHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_MACROUSAGECHECK_H
 
-#include "../ClangTidy.h"
-#include "clang/Lex/Preprocessor.h"
+#include "../ClangTidyCheck.h"
+#include "clang/Lex/MacroInfo.h"
 #include <string>
 
 namespace clang {
+class MacroDirective;
 namespace tidy {
 namespace cppcoreguidelines {
 

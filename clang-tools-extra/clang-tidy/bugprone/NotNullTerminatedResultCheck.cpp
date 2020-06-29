@@ -12,6 +12,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 
 using namespace clang::ast_matchers;
 

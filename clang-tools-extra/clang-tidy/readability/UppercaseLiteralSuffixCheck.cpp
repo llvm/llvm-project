@@ -8,9 +8,9 @@
 
 #include "UppercaseLiteralSuffixCheck.h"
 #include "../utils/ASTUtils.h"
-#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 

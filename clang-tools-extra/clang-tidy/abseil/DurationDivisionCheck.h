@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONDIVISIONCHECK_H_
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONDIVISIONCHECK_H_
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {

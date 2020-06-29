@@ -10,6 +10,8 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 
 using namespace clang::ast_matchers;
 
