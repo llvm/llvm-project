@@ -929,7 +929,22 @@ Tool *MachO::getTool(Action::ActionClass AC) const {
   }
 }
 
-Tool *MachO::buildLinker() const { return new tools::darwin::Linker(*this); }
+Tool *MachO::buildLinker() const {
+  // Determine whether to use an @responsefile or the old -filelist mechanism.
+  bool UseAtFile = false;
+  unsigned Version[5] = {0, 0, 0, 0, 0};
+  if (Arg *A =
+          getArgs_DO_NOT_USE().getLastArg(options::OPT_mlinker_version_EQ)) {
+    // We don't need to diagnose a parse error here, it'll be caught in
+    // ConstructJob.
+    if (Driver::GetReleaseVersion(A->getValue(), Version)) {
+      if (Version[0] >= 607)
+        UseAtFile = true;
+    }
+  }
+
+  return new tools::darwin::Linker(*this, UseAtFile);
+}
 
 Tool *MachO::buildAssembler() const {
   return new tools::darwin::Assembler(*this);
