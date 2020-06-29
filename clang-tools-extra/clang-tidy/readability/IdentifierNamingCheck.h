@@ -75,13 +75,6 @@ private:
 };
 
 } // namespace readability
-template <>
-struct OptionEnumMapping<
-    readability::IdentifierNamingCheck::CaseType> {
-  static llvm::ArrayRef<
-      std::pair<readability::IdentifierNamingCheck::CaseType, StringRef>>
-  getEnumMapping();
-};
 } // namespace tidy
 } // namespace clang
 

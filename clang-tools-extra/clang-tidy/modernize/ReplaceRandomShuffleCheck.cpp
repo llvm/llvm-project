@@ -24,6 +24,7 @@ ReplaceRandomShuffleCheck::ReplaceRandomShuffleCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
+                                            utils::IncludeSorter::getMapping(),
                                             utils::IncludeSorter::IS_LLVM)) {}
 
 void ReplaceRandomShuffleCheck::registerMatchers(MatchFinder *Finder) {
@@ -51,7 +52,8 @@ void ReplaceRandomShuffleCheck::registerPPCallbacks(
 
 void ReplaceRandomShuffleCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeStyle);
+  Options.store(Opts, "IncludeStyle", IncludeStyle,
+                utils::IncludeSorter::getMapping());
 }
 
 void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
