@@ -121,7 +121,7 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
       elementType = arrayTy->getElementType();
       numElements = arrayTy->getNumElements();
     } else {
-      auto *vectorTy = cast<llvm::VectorType>(llvmType);
+      auto *vectorTy = cast<llvm::FixedVectorType>(llvmType);
       elementType = vectorTy->getElementType();
       numElements = vectorTy->getNumElements();
     }

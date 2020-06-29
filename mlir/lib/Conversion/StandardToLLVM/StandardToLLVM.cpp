@@ -2184,7 +2184,7 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<RsqrtOp> {
         [&](LLVM::LLVMType llvmVectorTy, ValueRange operands) {
           auto splatAttr = SplatElementsAttr::get(
               mlir::VectorType::get(
-                  {cast<llvm::VectorType>(llvmVectorTy.getUnderlyingType())
+                  {cast<llvm::FixedVectorType>(llvmVectorTy.getUnderlyingType())
                        ->getNumElements()},
                   floatType),
               floatOne);
