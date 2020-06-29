@@ -26,3 +26,13 @@ def GetExtentShapeOfConversion : Pat<
     (Shape_IndexToSizeOp (DimOp $arg, (Shape_SizeToIndexOp $idx))),
     [],
     (addBenefit 10)>;
+def GetExtentFromExtentTensorConversion : Pattern<
+    (Shape_GetExtentOp (Shape_FromExtentTensorOp $extents), $idx),
+    [
+      (Shape_SizeToIndexOp:$std_idx $idx),
+      (ExtractElementOp:$std_result $extents, (NativeCodeCall<"ValueRange({$0})"> $std_idx)),
+      (Shape_IndexToSizeOp $std_result)
+    ],
+    [],
+    (addBenefit 10)>;
+
