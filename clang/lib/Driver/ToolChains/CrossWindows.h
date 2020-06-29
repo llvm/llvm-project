@@ -33,8 +33,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const ToolChain &TC)
-      : Tool("CrossWindows::Linker", "ld", TC, RF_Full) {}
+  Linker(const ToolChain &TC) : Tool("CrossWindows::Linker", "ld", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }

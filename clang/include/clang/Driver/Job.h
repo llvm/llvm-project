@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Program.h"
 #include <memory>
 #include <string>
 #include <utility>
@@ -36,6 +37,69 @@ struct CrashReportInfo {
       : Filename(Filename), VFSPath(VFSPath) {}
 };
 
+// Encodes the kind of response file supported for a command invocation.
+// Response files are necessary if the command line gets too large, requiring
+// the arguments to be transferred to a file.
+struct ResponseFileSupport {
+  enum ResponseFileKind {
+    // Provides full support for response files, which means we can transfer
+    // all tool input arguments to a file.
+    RF_Full,
+    // Input file names can live in a file, but flags can't. This is a special
+    // case for old versions of Apple's ld64.
+    RF_FileList,
+    // Does not support response files: all arguments must be passed via
+    // command line.
+    RF_None
+  };
+  /// The level of support for response files.
+  ResponseFileKind ResponseKind;
+
+  /// The encoding to use when writing response files on Windows. Ignored on
+  /// other host OSes.
+  ///
+  /// Windows use cases: - GCC and Binutils on mingw only accept ANSI response
+  /// files encoded with the system current code page.
+  /// - MSVC's CL.exe and LINK.exe accept UTF16 on Windows.
+  /// - Clang accepts both UTF8 and UTF16.
+  ///
+  /// FIXME: When GNU tools learn how to parse UTF16 on Windows, we should
+  /// always use UTF16 for Windows, which is the Windows official encoding for
+  /// international characters.
+  llvm::sys::WindowsEncodingMethod ResponseEncoding;
+
+  /// What prefix to use for the command-line argument when passing a response
+  /// file.
+  const char *ResponseFlag;
+
+  /// Returns a ResponseFileSupport indicating that response files are not
+  /// supported.
+  static constexpr ResponseFileSupport None() {
+    return {RF_None, llvm::sys::WEM_UTF8, nullptr};
+  }
+
+  /// Returns a ResponseFileSupport indicating that response files are
+  /// supported, using the @file syntax. On windows, the file is written in the
+  /// UTF8 encoding. On other OSes, no re-encoding occurs.
+  static constexpr ResponseFileSupport AtFileUTF8() {
+    return {RF_Full, llvm::sys::WEM_UTF8, "@"};
+  }
+
+  /// Returns a ResponseFileSupport indicating that response files are
+  /// supported, using the @file syntax. On windows, the file is written in the
+  /// current ANSI code-page encoding. On other OSes, no re-encoding occurs.
+  static constexpr ResponseFileSupport AtFileCurCP() {
+    return {RF_Full, llvm::sys::WEM_CurrentCodePage, "@"};
+  }
+
+  /// Returns a ResponseFileSupport indicating that response files are
+  /// supported, using the @file syntax. On windows, the file is written in the
+  /// UTF-16 encoding. On other OSes, no re-encoding occurs.
+  static constexpr ResponseFileSupport AtFileUTF16() {
+    return {RF_Full, llvm::sys::WEM_UTF16, "@"};
+  }
+};
+
 /// Command - An executable path/name and argument vector to
 /// execute.
 class Command {
@@ -44,6 +108,9 @@ class Command {
 
   /// Tool - The tool which caused the creation of this job.
   const Tool &Creator;
+
+  /// Whether and how to generate response files if the arguments are too long.
+  ResponseFileSupport ResponseSupport;
 
   /// The executable to run.
   const char *Executable;
@@ -89,7 +156,8 @@ public:
   /// Whether the command will be executed in this process or not.
   bool InProcess = false;
 
-  Command(const Action &Source, const Tool &Creator, const char *Executable,
+  Command(const Action &Source, const Tool &Creator,
+          ResponseFileSupport ResponseSupport, const char *Executable,
           const llvm::opt::ArgStringList &Arguments,
           ArrayRef<InputInfo> Inputs);
   // FIXME: This really shouldn't be copyable, but is currently copied in some
@@ -109,11 +177,16 @@ public:
   /// getCreator - Return the Tool which caused the creation of this job.
   const Tool &getCreator() const { return Creator; }
 
+  /// Returns the kind of response file supported by the current invocation.
+  const ResponseFileSupport &getResponseFileSupport() {
+    return ResponseSupport;
+  }
+
   /// Set to pass arguments via a response file when launching the command
   void setResponseFile(const char *FileName);
 
-  /// Set an input file list, necessary if we need to use a response file but
-  /// the tool being called only supports input files lists.
+  /// Set an input file list, necessary if you specified an RF_FileList response
+  /// file support.
   void setInputFileList(llvm::opt::ArgStringList List) {
     InputFileList = std::move(List);
   }
@@ -136,7 +209,8 @@ protected:
 /// Use the CC1 tool callback when available, to avoid creating a new process
 class CC1Command : public Command {
 public:
-  CC1Command(const Action &Source, const Tool &Creator, const char *Executable,
+  CC1Command(const Action &Source, const Tool &Creator,
+             ResponseFileSupport ResponseSupport, const char *Executable,
              const llvm::opt::ArgStringList &Arguments,
              ArrayRef<InputInfo> Inputs);
 
@@ -154,7 +228,7 @@ public:
 class FallbackCommand : public Command {
 public:
   FallbackCommand(const Action &Source_, const Tool &Creator_,
-                  const char *Executable_,
+                  ResponseFileSupport ResponseSupport, const char *Executable_,
                   const llvm::opt::ArgStringList &Arguments_,
                   ArrayRef<InputInfo> Inputs,
                   std::unique_ptr<Command> Fallback_);
@@ -173,6 +247,7 @@ private:
 class ForceSuccessCommand : public Command {
 public:
   ForceSuccessCommand(const Action &Source_, const Tool &Creator_,
+                      ResponseFileSupport ResponseSupport,
                       const char *Executable_,
                       const llvm::opt::ArgStringList &Arguments_,
                       ArrayRef<InputInfo> Inputs);

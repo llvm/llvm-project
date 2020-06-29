@@ -4296,8 +4296,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         II.getInputArg().renderAsInput(Args, CmdArgs);
     }
 
-    C.addCommand(std::make_unique<Command>(JA, *this, D.getClangProgramPath(),
-                                            CmdArgs, Inputs));
+    C.addCommand(
+        std::make_unique<Command>(JA, *this, ResponseFileSupport::AtFileUTF8(),
+                                  D.getClangProgramPath(), CmdArgs, Inputs));
     return;
   }
 
@@ -6215,19 +6216,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     auto CLCommand =
         getCLFallback()->GetCommand(C, JA, Output, Inputs, Args, LinkingOutput);
     C.addCommand(std::make_unique<FallbackCommand>(
-        JA, *this, Exec, CmdArgs, Inputs, std::move(CLCommand)));
+        JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,
+        std::move(CLCommand)));
   } else if (Args.hasArg(options::OPT__SLASH_fallback) &&
              isa<PrecompileJobAction>(JA)) {
     // In /fallback builds, run the main compilation even if the pch generation
     // fails, so that the main compilation's fallback to cl.exe runs.
-    C.addCommand(std::make_unique<ForceSuccessCommand>(JA, *this, Exec,
-                                                        CmdArgs, Inputs));
+    C.addCommand(std::make_unique<ForceSuccessCommand>(
+        JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
   } else if (D.CC1Main && !D.CCGenDiagnostics) {
     // Invoke the CC1 directly in this process
-    C.addCommand(
-        std::make_unique<CC1Command>(JA, *this, Exec, CmdArgs, Inputs));
+    C.addCommand(std::make_unique<CC1Command>(
+        JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
   } else {
-    C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
   }
 
   // Make the compile command echo its inputs for /showFilenames.
@@ -6262,7 +6265,7 @@ Clang::Clang(const ToolChain &TC)
     // CAUTION! The first constructor argument ("clang") is not arbitrary,
     // as it is for other tools. Some operations on a Tool actually test
     // whether that tool is Clang based on the Tool's Name as a string.
-    : Tool("clang", "clang frontend", TC, RF_Full) {}
+    : Tool("clang", "clang frontend", TC) {}
 
 Clang::~Clang() {}
 
@@ -6965,7 +6968,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Input.getFilename());
 
   const char *Exec = getToolChain().getDriver().getClangProgramPath();
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
 }
 
 // Begin OffloadBundler
@@ -7049,7 +7053,7 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
 
   // All the inputs are encoded as commands.
   C.addCommand(std::make_unique<Command>(
-      JA, *this,
+      JA, *this, ResponseFileSupport::None(),
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, None));
 }
@@ -7115,7 +7119,7 @@ void OffloadBundler::ConstructJobMultipleOutputs(
 
   // All the inputs are encoded as commands.
   C.addCommand(std::make_unique<Command>(
-      JA, *this,
+      JA, *this, ResponseFileSupport::None(),
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, None));
 }
@@ -7145,7 +7149,7 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   C.addCommand(std::make_unique<Command>(
-      JA, *this,
+      JA, *this, ResponseFileSupport::None(),
       Args.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, Inputs));
 }
