@@ -9,43 +9,29 @@
 declare i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64>)
 
 define i1 @parseHeaders(i64 * %ptr) nounwind {
-; SSE-LABEL: parseHeaders:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqu (%rdi), %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    movq %xmm1, %rax
-; SSE-NEXT:    testq %rax, %rax
-; SSE-NEXT:    sete %al
-; SSE-NEXT:    retq
+; SSE2-LABEL: parseHeaders:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqu (%rdi), %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
+; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: parseHeaders:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    testq %rax, %rax
-; AVX1-NEXT:    sete %al
-; AVX1-NEXT:    retq
+; SSE41-LABEL: parseHeaders:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqu (%rdi), %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
+; SSE41-NEXT:    sete %al
+; SSE41-NEXT:    retq
 ;
-; AVX2-LABEL: parseHeaders:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq 8(%rdi), %xmm0
-; AVX2-NEXT:    vpor (%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    testq %rax, %rax
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: parseHeaders:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq 8(%rdi), %xmm0
-; AVX512-NEXT:    vpor (%rdi), %xmm0, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, %rax
-; AVX512-NEXT:    testq %rax, %rax
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    retq
+; AVX-LABEL: parseHeaders:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %vptr = bitcast i64 * %ptr to <2 x i64> *
   %vload = load <2 x i64>, <2 x i64> * %vptr, align 8
   %vreduce = call i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64> %vload)
