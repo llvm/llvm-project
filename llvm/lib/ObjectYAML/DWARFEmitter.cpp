@@ -23,6 +23,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -475,13 +476,19 @@ private:
 Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
 DWARFYAML::emitDebugSections(StringRef YAMLString, bool ApplyFixups,
                              bool IsLittleEndian) {
-  yaml::Input YIn(YAMLString);
+  auto CollectDiagnostic = [](const SMDiagnostic &Diag, void *DiagContext) {
+    *static_cast<SMDiagnostic *>(DiagContext) = Diag;
+  };
+
+  SMDiagnostic GeneratedDiag;
+  yaml::Input YIn(YAMLString, /*Ctxt=*/nullptr, CollectDiagnostic,
+                  &GeneratedDiag);
 
   DWARFYAML::Data DI;
   DI.IsLittleEndian = IsLittleEndian;
   YIn >> DI;
   if (YIn.error())
-    return errorCodeToError(YIn.error());
+    return createStringError(YIn.error(), GeneratedDiag.getMessage());
 
   if (ApplyFixups) {
     DIEFixupVisitor DIFixer(DI);

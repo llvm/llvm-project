@@ -708,6 +708,17 @@ class Foo {})cpp";
          HI.Definition = "X x";
          HI.Type = "struct X";
        }},
+      {// Don't crash on null types.
+       R"cpp(auto [^[[x]]] = 1; /*error-ok*/)cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "x";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.NamespaceScope = "";
+         HI.Definition = "";
+         HI.Type = "NULL TYPE";
+         // Bindings are in theory public members of an anonymous struct.
+         HI.AccessSpecifier = "public";
+       }},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
