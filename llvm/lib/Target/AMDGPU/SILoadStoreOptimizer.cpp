@@ -292,6 +292,11 @@ public:
 
     MachineFunctionPass::getAnalysisUsage(AU);
   }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties()
+      .set(MachineFunctionProperties::Property::IsSSA);
+  }
 };
 
 static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
@@ -2164,8 +2169,6 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   MRI = &MF.getRegInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-
-  assert(MRI->isSSA() && "Must be run on SSA");
 
   LLVM_DEBUG(dbgs() << "Running SILoadStoreOptimizer\n");
 
