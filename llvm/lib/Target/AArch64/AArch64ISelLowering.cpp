@@ -1162,7 +1162,8 @@ static bool optimizeLogicalImm(SDValue Op, unsigned Size, uint64_t Imm,
 }
 
 bool AArch64TargetLowering::targetShrinkDemandedConstant(
-    SDValue Op, const APInt &Demanded, TargetLoweringOpt &TLO) const {
+    SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+    TargetLoweringOpt &TLO) const {
   // Delay this optimization to as late as possible.
   if (!TLO.LegalOps)
     return false;
@@ -1179,7 +1180,7 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
          "i32 or i64 is expected after legalization.");
 
   // Exit early if we demand all bits.
-  if (Demanded.countPopulation() == Size)
+  if (DemandedBits.countPopulation() == Size)
     return false;
 
   unsigned NewOpc;
@@ -1200,7 +1201,7 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
   if (!C)
     return false;
   uint64_t Imm = C->getZExtValue();
-  return optimizeLogicalImm(Op, Size, Imm, Demanded, TLO, NewOpc);
+  return optimizeLogicalImm(Op, Size, Imm, DemandedBits, TLO, NewOpc);
 }
 
 /// computeKnownBitsForTargetNode - Determine which of the bits specified in
