@@ -857,25 +857,40 @@ static ParseResult parseReturnOp(OpAsmParser &parser, OperationState &result) {
 // Verifier for LLVM::AddressOfOp.
 //===----------------------------------------------------------------------===//
 
-GlobalOp AddressOfOp::getGlobal() {
-  Operation *module = getParentOp();
+template <typename OpTy>
+static OpTy lookupSymbolInModule(Operation *parent, StringRef name) {
+  Operation *module = parent;
   while (module && !satisfiesLLVMModule(module))
     module = module->getParentOp();
   assert(module && "unexpected operation outside of a module");
-  return dyn_cast_or_null<LLVM::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(module, global_name()));
+  return dyn_cast_or_null<OpTy>(
+      mlir::SymbolTable::lookupSymbolIn(module, name));
+}
+
+GlobalOp AddressOfOp::getGlobal() {
+  return lookupSymbolInModule<LLVM::GlobalOp>(getParentOp(), global_name());
+}
+
+LLVMFuncOp AddressOfOp::getFunction() {
+  return lookupSymbolInModule<LLVM::LLVMFuncOp>(getParentOp(), global_name());
 }
 
 static LogicalResult verify(AddressOfOp op) {
   auto global = op.getGlobal();
-  if (!global)
+  auto function = op.getFunction();
+  if (!global && !function)
     return op.emitOpError(
-        "must reference a global defined by 'llvm.mlir.global'");
+        "must reference a global defined by 'llvm.mlir.global' or 'llvm.func'");
 
-  if (global.getType().getPointerTo(global.addr_space().getZExtValue()) !=
-      op.getResult().getType())
+  if (global &&
+      global.getType().getPointerTo(global.addr_space().getZExtValue()) !=
+          op.getResult().getType())
     return op.emitOpError(
-        "the type must be a pointer to the type of the referred global");
+        "the type must be a pointer to the type of the referenced global");
+
+  if (function && function.getType().getPointerTo() != op.getResult().getType())
+    return op.emitOpError(
+        "the type must be a pointer to the type of the referenced function");
 
   return success();
 }
@@ -1392,6 +1407,18 @@ static LogicalResult verify(LLVM::NullOp op) {
   auto llvmType = op.getType().dyn_cast<LLVM::LLVMType>();
   if (!llvmType || !llvmType.isPointerTy())
     return op.emitOpError("expected LLVM IR pointer type");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Verification for LLVM::ConstantOp.
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(LLVM::ConstantOp op) {
+  if (!(op.value().isa<IntegerAttr>() || op.value().isa<FloatAttr>() ||
+        op.value().isa<ElementsAttr>() || op.value().isa<StringAttr>()))
+    return op.emitOpError()
+           << "only supports integer, float, string or elements attributes";
   return success();
 }
 

@@ -405,6 +405,9 @@ Value Importer::processConstant(llvm::Constant *c) {
     LLVMType type = processType(c->getType());
     if (!type)
       return nullptr;
+    if (auto symbolRef = attr.dyn_cast<FlatSymbolRefAttr>())
+      return instMap[c] = bEntry.create<AddressOfOp>(unknownLoc, type,
+                                                     symbolRef.getValue());
     return instMap[c] = bEntry.create<ConstantOp>(unknownLoc, type, attr);
   }
   if (auto *cn = dyn_cast<llvm::ConstantPointerNull>(c)) {
