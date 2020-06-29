@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HeaderGuardCheck.h"
+#include "clang/Tooling/Tooling.h"
 
 namespace clang {
 namespace tidy {

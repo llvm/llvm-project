@@ -13,17 +13,16 @@
 #include "ClangTidyOptions.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
-#include <memory>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace clang {
 
 class CompilerInstance;
+class SourceManager;
 
 namespace tidy {
 

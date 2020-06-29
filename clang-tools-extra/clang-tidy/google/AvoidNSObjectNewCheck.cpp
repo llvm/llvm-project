@@ -12,6 +12,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <map>
 #include <string>
