@@ -33,6 +33,10 @@
 
 using namespace llvm;
 
+static const char *BugReportMsg =
+    "PLEASE submit a bug report to " BUG_REPORT_URL
+    " and include the crash backtrace.\n";
+
 // If backtrace support is not enabled, compile out support for pretty stack
 // traces.  This has the secondary effect of not requiring thread local storage
 // when backtrace support is disabled.
@@ -142,10 +146,6 @@ using CrashHandlerStringStorage =
 static CrashHandlerStringStorage crashHandlerStringStorage;
 #endif
 
-static const char *BugReportMsg =
-    "PLEASE submit a bug report to " BUG_REPORT_URL
-    " and include the crash backtrace.\n";
-
 /// This callback is run if a fatal signal is delivered to the process, it
 /// prints the pretty stack trace.
 static void CrashHandler(void *) {
@@ -203,9 +203,11 @@ static void printForSigInfoIfNeeded() {
 #endif // ENABLE_BACKTRACES
 
 void llvm::setBugReportMsg(const char *Msg) {
-#if ENABLE_BACKTRACES
   BugReportMsg = Msg;
-#endif
+}
+
+const char *llvm::getBugReportMsg() {
+  return BugReportMsg;
 }
 
 PrettyStackTraceEntry::PrettyStackTraceEntry() {
