@@ -2362,7 +2362,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     // A byval, inalloca may not be null in a non-default addres space. A
     // nonnull argument is assumed never 0.
     if (const Argument *A = dyn_cast<Argument>(V)) {
-      if (((A->hasPassPointeeByValueAttr() &&
+      if (((A->hasPassPointeeByValueCopyAttr() &&
             !NullPointerIsDefined(A->getParent(), PtrTy->getAddressSpace())) ||
            A->hasNonNullAttr()))
         return true;
