@@ -1265,10 +1265,11 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     return scalarizeVectorStore(StoreNode, DAG);
   }
 
-  unsigned Align = StoreNode->getAlignment();
-  if (Align < MemVT.getStoreSize() &&
-      !allowsMisalignedMemoryAccesses(
-          MemVT, AS, Align, StoreNode->getMemOperand()->getFlags(), nullptr)) {
+  Align Alignment = StoreNode->getAlign();
+  if (Alignment < MemVT.getStoreSize() &&
+      !allowsMisalignedMemoryAccesses(MemVT, AS, Alignment.value(),
+                                      StoreNode->getMemOperand()->getFlags(),
+                                      nullptr)) {
     return expandUnalignedStore(StoreNode, DAG);
   }
 
