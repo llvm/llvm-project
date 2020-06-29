@@ -19,3 +19,10 @@ def SizeToIndexOpConversion : Pat<
     (Shape_SizeToIndexOp $arg),
     (replaceWithValue $arg)>;
 
+// Derive shape extent directly from shape origin if possible.
+// This circumvents the necessity to materialize the shape in memory.
+def GetExtentShapeOfConversion : Pat<
+    (Shape_GetExtentOp (Shape_ShapeOfOp $arg), $idx),
+    (Shape_IndexToSizeOp (DimOp $arg, (Shape_SizeToIndexOp $idx))),
+    [],
+    (addBenefit 10)>;
