@@ -1457,8 +1457,8 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 
   auto NewDecl = Intrinsic::getDeclaration(F->getParent(), ID, ArgTys);
   NewDecl->setCallingConv(F->getCallingConv());
-  FunctionType *FTy = F->getFunctionType();
-  assert(NewDecl->getFunctionType() == FTy && "Shouldn't change the signature");
+  assert(NewDecl->getFunctionType() == F->getFunctionType() &&
+         "Shouldn't change the signature");
   return NewDecl;
 }
 
