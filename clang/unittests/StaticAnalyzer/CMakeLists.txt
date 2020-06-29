@@ -7,6 +7,7 @@ add_clang_unittest(StaticAnalysisTests
   AnalyzerOptionsTest.cpp
   CallDescriptionTest.cpp
   CallEventTest.cpp
+  FalsePositiveRefutationBRVisitorTest.cpp
   ParamRegionTest.cpp
   RangeSetTest.cpp
   RegisterCustomCheckersTest.cpp
