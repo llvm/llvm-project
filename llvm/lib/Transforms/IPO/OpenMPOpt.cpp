@@ -54,7 +54,46 @@ STATISTIC(NumOpenMPRuntimeFunctionUsesIdentified,
 static constexpr auto TAG = "[" DEBUG_TYPE "]";
 #endif
 
+/// Helper struct to store tracked ICV values at specif instructions.
+struct ICVValue {
+  Instruction *Inst;
+  Value *TrackedValue;
+
+  ICVValue(Instruction *I, Value *Val) : Inst(I), TrackedValue(Val) {}
+};
+
+namespace llvm {
+
+// Provide DenseMapInfo for ICVValue
+template <> struct DenseMapInfo<ICVValue> {
+  using InstInfo = DenseMapInfo<Instruction *>;
+  using ValueInfo = DenseMapInfo<Value *>;
+
+  static inline ICVValue getEmptyKey() {
+    return ICVValue(InstInfo::getEmptyKey(), ValueInfo::getEmptyKey());
+  };
+
+  static inline ICVValue getTombstoneKey() {
+    return ICVValue(InstInfo::getTombstoneKey(), ValueInfo::getTombstoneKey());
+  };
+
+  static unsigned getHashValue(const ICVValue &ICVVal) {
+    return detail::combineHashValue(
+        InstInfo::getHashValue(ICVVal.Inst),
+        ValueInfo::getHashValue(ICVVal.TrackedValue));
+  }
+
+  static bool isEqual(const ICVValue &LHS, const ICVValue &RHS) {
+    return InstInfo::isEqual(LHS.Inst, RHS.Inst) &&
+           ValueInfo::isEqual(LHS.TrackedValue, RHS.TrackedValue);
+  }
+};
+
+} // end namespace llvm
+
 namespace {
+
+struct AAICVTracker;
 
 /// OpenMP specific information. For now, stores RFIs and ICVs also needed for
 /// Attributor runs.
@@ -122,9 +161,9 @@ struct OMPInformationCache : public InformationCache {
 
     /// Return the vector of uses in function \p F.
     UseVector &getOrCreateUseVector(Function *F) {
-      std::unique_ptr<UseVector> &UV = UsesMap[F];
+      std::shared_ptr<UseVector> &UV = UsesMap[F];
       if (!UV)
-        UV = std::make_unique<UseVector>();
+        UV = std::make_shared<UseVector>();
       return *UV;
     }
 
@@ -180,7 +219,7 @@ struct OMPInformationCache : public InformationCache {
   private:
     /// Map from functions to all uses of this runtime function contained in
     /// them.
-    DenseMap<Function *, std::unique_ptr<UseVector>> UsesMap;
+    DenseMap<Function *, std::shared_ptr<UseVector>> UsesMap;
   };
 
   /// The slice of the module we are allowed to look at.
@@ -330,9 +369,9 @@ struct OpenMPOpt {
 
   OpenMPOpt(SmallVectorImpl<Function *> &SCC, CallGraphUpdater &CGUpdater,
             OptimizationRemarkGetter OREGetter,
-            OMPInformationCache &OMPInfoCache)
+            OMPInformationCache &OMPInfoCache, Attributor &A)
       : M(*(*SCC.begin())->getParent()), SCC(SCC), CGUpdater(CGUpdater),
-        OREGetter(OREGetter), OMPInfoCache(OMPInfoCache) {}
+        OREGetter(OREGetter), OMPInfoCache(OMPInfoCache), A(A) {}
 
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.
   bool run() {
@@ -363,6 +402,7 @@ struct OpenMPOpt {
       }
     }
 
+    Changed |= runAttributor();
     Changed |= deduplicateRuntimeCalls();
     Changed |= deleteParallelRegions();
 
@@ -724,8 +764,205 @@ private:
 
   /// OpenMP-specific information cache. Also Used for Attributor runs.
   OMPInformationCache &OMPInfoCache;
+
+  /// Attributor instance.
+  Attributor &A;
+
+  /// Helper function to run Attributor on SCC.
+  bool runAttributor() {
+    if (SCC.empty())
+      return false;
+
+    registerAAs();
+
+    ChangeStatus Changed = A.run();
+
+    LLVM_DEBUG(dbgs() << "[Attributor] Done with " << SCC.size()
+                      << " functions, result: " << Changed << ".\n");
+
+    return Changed == ChangeStatus::CHANGED;
+  }
+
+  /// Populate the Attributor with abstract attribute opportunities in the
+  /// function.
+  void registerAAs() {
+    for (Function *F : SCC) {
+      if (F->isDeclaration())
+        continue;
+
+      A.getOrCreateAAFor<AAICVTracker>(IRPosition::function(*F));
+    }
+  }
+};
+
+/// Abstract Attribute for tracking ICV values.
+struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAICVTracker(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Returns true if value is assumed to be tracked.
+  bool isAssumedTracked() const { return getAssumed(); }
+
+  /// Returns true if value is known to be tracked.
+  bool isKnownTracked() const { return getAssumed(); }
+
+  /// Create an abstract attribute biew for the position \p IRP.
+  static AAICVTracker &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// Return the value with which \p I can be replaced for specific \p ICV.
+  virtual Value *getReplacementValue(InternalControlVar ICV,
+                                     const Instruction *I, Attributor &A) = 0;
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAICVTracker"; }
+
+  static const char ID;
+};
+
+struct AAICVTrackerFunction : public AAICVTracker {
+  AAICVTrackerFunction(const IRPosition &IRP, Attributor &A)
+      : AAICVTracker(IRP, A) {}
+
+  // FIXME: come up with better string.
+  const std::string getAsStr() const override { return "ICVTracker"; }
+
+  // FIXME: come up with some stats.
+  void trackStatistics() const override {}
+
+  /// TODO: decide whether to deduplicate here, or use current
+  /// deduplicateRuntimeCalls function.
+  ChangeStatus manifest(Attributor &A) override {
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+    for (InternalControlVar &ICV : TrackableICVs)
+      if (deduplicateICVGetters(ICV, A))
+        Changed = ChangeStatus::CHANGED;
+
+    return Changed;
+  }
+
+  bool deduplicateICVGetters(InternalControlVar &ICV, Attributor &A) {
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+    auto &ICVInfo = OMPInfoCache.ICVs[ICV];
+    auto &GetterRFI = OMPInfoCache.RFIs[ICVInfo.Getter];
+
+    bool Changed = false;
+
+    auto ReplaceAndDeleteCB = [&](Use &U, Function &Caller) {
+      CallInst *CI = OpenMPOpt::getCallIfRegularCall(U, &GetterRFI);
+      Instruction *UserI = cast<Instruction>(U.getUser());
+      Value *ReplVal = getReplacementValue(ICV, UserI, A);
+
+      if (!ReplVal || !CI)
+        return false;
+
+      A.removeCallSite(CI);
+      CI->replaceAllUsesWith(ReplVal);
+      CI->eraseFromParent();
+      Changed = true;
+      return true;
+    };
+
+    GetterRFI.foreachUse(ReplaceAndDeleteCB);
+    return Changed;
+  }
+
+  // Map of ICV to their values at specific program point.
+  EnumeratedArray<SmallSetVector<ICVValue, 4>, InternalControlVar,
+                  InternalControlVar::ICV___last>
+      ICVValuesMap;
+
+  // Currently only nthreads is being tracked.
+  // this array will only grow with time.
+  InternalControlVar TrackableICVs[1] = {ICV_nthreads};
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
+
+    Function *F = getAnchorScope();
+
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+
+    for (InternalControlVar ICV : TrackableICVs) {
+      auto &SetterRFI = OMPInfoCache.RFIs[OMPInfoCache.ICVs[ICV].Setter];
+
+      auto TrackValues = [&](Use &U, Function &) {
+        CallInst *CI = OpenMPOpt::getCallIfRegularCall(U);
+        if (!CI)
+          return false;
+
+        // FIXME: handle setters with more that 1 arguments.
+        /// Track new value.
+        if (ICVValuesMap[ICV].insert(ICVValue(CI, CI->getArgOperand(0))))
+          HasChanged = ChangeStatus::CHANGED;
+
+        return false;
+      };
+
+      SetterRFI.foreachUse(TrackValues, F);
+    }
+
+    return HasChanged;
+  }
+
+  /// Return the value with which \p I can be replaced for specific \p ICV.
+  Value *getReplacementValue(InternalControlVar ICV, const Instruction *I,
+                             Attributor &A) override {
+    const BasicBlock *CurrBB = I->getParent();
+
+    auto &ValuesSet = ICVValuesMap[ICV];
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+    auto &GetterRFI = OMPInfoCache.RFIs[OMPInfoCache.ICVs[ICV].Getter];
+
+    for (const auto &ICVVal : ValuesSet) {
+      if (CurrBB == ICVVal.Inst->getParent()) {
+        if (!ICVVal.Inst->comesBefore(I))
+          continue;
+
+        // both instructions are in the same BB and at \p I we know the ICV
+        // value.
+        while (I != ICVVal.Inst) {
+          // we don't yet know if a call might update an ICV.
+          // TODO: check callsite AA for value.
+          if (const auto *CB = dyn_cast<CallBase>(I))
+            if (CB->getCalledFunction() != GetterRFI.Declaration)
+              return nullptr;
+
+          I = I->getPrevNode();
+        }
+
+        // No call in between, return the value.
+        return ICVVal.TrackedValue;
+      }
+    }
+
+    // No value was tracked.
+    return nullptr;
+  }
 };
 } // namespace
+
+const char AAICVTracker::ID = 0;
+
+AAICVTracker &AAICVTracker::createForPosition(const IRPosition &IRP,
+                                              Attributor &A) {
+  AAICVTracker *AA = nullptr;
+  switch (IRP.getPositionKind()) {
+  case IRPosition::IRP_INVALID:
+  case IRPosition::IRP_FLOAT:
+  case IRPosition::IRP_ARGUMENT:
+  case IRPosition::IRP_RETURNED:
+  case IRPosition::IRP_CALL_SITE_RETURNED:
+  case IRPosition::IRP_CALL_SITE_ARGUMENT:
+  case IRPosition::IRP_CALL_SITE:
+    llvm_unreachable("ICVTracker can only be created for function position!");
+  case IRPosition::IRP_FUNCTION:
+    AA = new (A.Allocator) AAICVTrackerFunction(IRP, A);
+    break;
+  }
+
+  return *AA;
+}
 
 PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
                                      CGSCCAnalysisManager &AM,
@@ -763,8 +1000,10 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
                                 /*CGSCC*/ &Functions, ModuleSlice);
 
+  Attributor A(Functions, InfoCache, CGUpdater);
+
   // TODO: Compute the module slice we are allowed to look at.
-  OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache);
+  OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run();
   (void)Changed;
   return PreservedAnalyses::all();
@@ -828,8 +1067,10 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
                                   Allocator,
                                   /*CGSCC*/ &Functions, ModuleSlice);
 
+    Attributor A(Functions, InfoCache, CGUpdater);
+
     // TODO: Compute the module slice we are allowed to look at.
-    OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache);
+    OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
     return OMPOpt.run();
   }
 
