@@ -1580,7 +1580,7 @@ private:
           TODO(); // Derived type / polymorphic
         }
         auto symTy = genType(var);
-        if (symTy.isa<fir::CharType>()) {
+        if (symTy.isa<fir::CharacterType>()) {
           if (auto chLit = getCharacterLiteralCopy(details->init().value())) {
             fir::SequenceType::Shape len;
             len.push_back(std::get<std::size_t>(*chLit));
