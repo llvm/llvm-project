@@ -42,7 +42,8 @@ private:
   SDValue getImplicitArgPtr(SelectionDAG &DAG, const SDLoc &SL) const;
   SDValue lowerKernargMemParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
                                    const SDLoc &SL, SDValue Chain,
-                                   uint64_t Offset, unsigned Align, bool Signed,
+                                   uint64_t Offset, Align Alignment,
+                                   bool Signed,
                                    const ISD::InputArg *Arg = nullptr) const;
 
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
@@ -216,7 +217,7 @@ private:
   /// \returns 0 If there is a non-constant offset or if the offset is 0.
   /// Otherwise returns the constant offset.
   unsigned setBufferOffsets(SDValue CombinedOffset, SelectionDAG &DAG,
-                           SDValue *Offsets, unsigned Align = 4) const;
+                            SDValue *Offsets, Align Alignment = Align(4)) const;
 
   // Handle 8 bit and 16 bit buffer loads
   SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,
