@@ -184,7 +184,7 @@ CommandMangler CommandMangler::forTests() {
 
 void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
   // FIXME: remove const_cast once unique_function is const-compatible.
-  for (auto &Edit : const_cast<Config &>(config()).CompileFlags.Edits)
+  for (auto &Edit : const_cast<Config &>(Config::current()).CompileFlags.Edits)
     Edit(Cmd);
 
   // Check whether the flag exists, either as -flag or -flag=*
