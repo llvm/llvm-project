@@ -14365,10 +14365,16 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
 
   // Adjust the mask so we are pulling in the same index from the splat
   // as the index from the interesting vector in consecutive elements.
-  // Example:
+  // Example (even elements from first vector):
   // vector_shuffle<0,16,1,17,2,18,3,19,4,20,5,21,6,22,7,23> t1, <zero>
-  for (int i = 1, e = Mask.size(); i < e; i += 2)
-    ShuffV[i] = (ShuffV[i - 1] + NumElts);
+  if (Mask[0] < NumElts)
+    for (int i = 1, e = Mask.size(); i < e; i += 2)
+      ShuffV[i] = (ShuffV[i - 1] + NumElts);
+  // Example (odd elements from first vector):
+  // vector_shuffle<16,0,17,1,18,2,19,3,20,4,21,5,22,6,23,7> t1, <zero>
+  else
+    for (int i = 0, e = Mask.size(); i < e; i += 2)
+      ShuffV[i] = (ShuffV[i + 1] + NumElts);
 
   Res = DAG.getVectorShuffle(SVN->getValueType(0), dl, LHS, RHS, ShuffV);
   return Res;
