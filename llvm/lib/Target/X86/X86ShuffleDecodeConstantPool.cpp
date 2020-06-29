@@ -36,7 +36,7 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
   //
   //   <4 x i32> <i32 -2147483648, i32 -2147483648,
   //              i32 -2147483648, i32 -2147483648>
-  auto *CstTy = dyn_cast<VectorType>(C->getType());
+  auto *CstTy = dyn_cast<FixedVectorType>(C->getType());
   if (!CstTy)
     return false;
 
