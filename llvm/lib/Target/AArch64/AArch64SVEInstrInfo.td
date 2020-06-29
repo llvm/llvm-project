@@ -10,6 +10,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+// For predicated nodes where the entire operation is controlled by a governing
+// predicate, please stick to a similar naming convention as used for the
+// ISD nodes:
+//
+//    SDNode      <=>     AArch64ISD
+//    -------------------------------
+//    _m<n>       <=>     _MERGE_OP<n>
+//    _mt         <=>     _MERGE_PASSTHRU
+//    _z          <=>     _MERGE_ZERO
+//    _p          <=>     _PRED
+//
+//  Given the context of this file, it is not strictly necessary to use _p to
+//  distinguish predicated from unpredicated nodes given that most SVE
+//  instructions are predicated.
+
 // Contiguous loads - node definitions
 //
 def SDT_AArch64_LD1 : SDTypeProfile<1, 3, [
@@ -17,16 +32,16 @@ def SDT_AArch64_LD1 : SDTypeProfile<1, 3, [
   SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
 ]>;
 
-def AArch64ld1  : SDNode<"AArch64ISD::LD1",    SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
-def AArch64ld1s : SDNode<"AArch64ISD::LD1S",   SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ld1_z  : SDNode<"AArch64ISD::LD1_MERGE_ZERO",    SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ld1s_z : SDNode<"AArch64ISD::LD1S_MERGE_ZERO",   SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 
 // Non-faulting & first-faulting loads - node definitions
 //
-def AArch64ldnf1 : SDNode<"AArch64ISD::LDNF1", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1 : SDNode<"AArch64ISD::LDFF1", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldnf1_z : SDNode<"AArch64ISD::LDNF1_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1_z : SDNode<"AArch64ISD::LDFF1_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
 
-def AArch64ldnf1s : SDNode<"AArch64ISD::LDNF1S", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s : SDNode<"AArch64ISD::LDFF1S", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldnf1s_z : SDNode<"AArch64ISD::LDNF1S_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1s_z : SDNode<"AArch64ISD::LDFF1S_MERGE_ZERO", SDT_AArch64_LD1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
 
 // Contiguous load and replicate - node definitions
 //
@@ -36,8 +51,8 @@ def SDT_AArch64_LD1Replicate : SDTypeProfile<1, 2, [
   SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
 ]>;
 
-def AArch64ld1rq : SDNode<"AArch64ISD::LD1RQ",  SDT_AArch64_LD1Replicate, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1ro : SDNode<"AArch64ISD::LD1RO",  SDT_AArch64_LD1Replicate, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1rq_z : SDNode<"AArch64ISD::LD1RQ_MERGE_ZERO",  SDT_AArch64_LD1Replicate, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1ro_z : SDNode<"AArch64ISD::LD1RO_MERGE_ZERO",  SDT_AArch64_LD1Replicate, [SDNPHasChain, SDNPMayLoad]>;
 
 // Gather loads - node definitions
 //
@@ -51,40 +66,40 @@ def SDT_AArch64_GATHER_VS : SDTypeProfile<1, 4, [
   SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
 ]>;
 
-def AArch64ld1_gather             : SDNode<"AArch64ISD::GLD1",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1_gather_scaled      : SDNode<"AArch64ISD::GLD1_SCALED",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1_gather_uxtw        : SDNode<"AArch64ISD::GLD1_UXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1_gather_sxtw        : SDNode<"AArch64ISD::GLD1_SXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1_gather_uxtw_scaled : SDNode<"AArch64ISD::GLD1_UXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1_gather_sxtw_scaled : SDNode<"AArch64ISD::GLD1_SXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1_gather_imm         : SDNode<"AArch64ISD::GLD1_IMM",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1_gather_z             : SDNode<"AArch64ISD::GLD1_MERGE_ZERO",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1_gather_scaled_z      : SDNode<"AArch64ISD::GLD1_SCALED_MERGE_ZERO",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1_gather_uxtw_z        : SDNode<"AArch64ISD::GLD1_UXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1_gather_sxtw_z        : SDNode<"AArch64ISD::GLD1_SXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1_gather_uxtw_scaled_z : SDNode<"AArch64ISD::GLD1_UXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1_gather_sxtw_scaled_z : SDNode<"AArch64ISD::GLD1_SXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1_gather_imm_z         : SDNode<"AArch64ISD::GLD1_IMM_MERGE_ZERO",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 
-def AArch64ld1s_gather             : SDNode<"AArch64ISD::GLD1S",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1s_gather_scaled      : SDNode<"AArch64ISD::GLD1S_SCALED",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1s_gather_uxtw        : SDNode<"AArch64ISD::GLD1S_UXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1s_gather_sxtw        : SDNode<"AArch64ISD::GLD1S_SXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1s_gather_uxtw_scaled : SDNode<"AArch64ISD::GLD1S_UXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1s_gather_sxtw_scaled : SDNode<"AArch64ISD::GLD1S_SXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ld1s_gather_imm         : SDNode<"AArch64ISD::GLD1S_IMM",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1s_gather_z             : SDNode<"AArch64ISD::GLD1S_MERGE_ZERO",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1s_gather_scaled_z      : SDNode<"AArch64ISD::GLD1S_SCALED_MERGE_ZERO",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1s_gather_uxtw_z        : SDNode<"AArch64ISD::GLD1S_UXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1s_gather_sxtw_z        : SDNode<"AArch64ISD::GLD1S_SXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1s_gather_uxtw_scaled_z : SDNode<"AArch64ISD::GLD1S_UXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1s_gather_sxtw_scaled_z : SDNode<"AArch64ISD::GLD1S_SXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ld1s_gather_imm_z         : SDNode<"AArch64ISD::GLD1S_IMM_MERGE_ZERO",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 
-def AArch64ldff1_gather             : SDNode<"AArch64ISD::GLDFF1",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_scaled      : SDNode<"AArch64ISD::GLDFF1_SCALED",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_uxtw        : SDNode<"AArch64ISD::GLDFF1_UXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_sxtw        : SDNode<"AArch64ISD::GLDFF1_SXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_uxtw_scaled : SDNode<"AArch64ISD::GLDFF1_UXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_sxtw_scaled : SDNode<"AArch64ISD::GLDFF1_SXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1_gather_imm         : SDNode<"AArch64ISD::GLDFF1_IMM",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1_gather_z             : SDNode<"AArch64ISD::GLDFF1_MERGE_ZERO",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1_gather_scaled_z      : SDNode<"AArch64ISD::GLDFF1_SCALED_MERGE_ZERO",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1_gather_uxtw_z        : SDNode<"AArch64ISD::GLDFF1_UXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1_gather_sxtw_z        : SDNode<"AArch64ISD::GLDFF1_SXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1_gather_uxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1_UXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1_gather_sxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1_SXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1_gather_imm_z         : SDNode<"AArch64ISD::GLDFF1_IMM_MERGE_ZERO",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
 
-def AArch64ldff1s_gather             : SDNode<"AArch64ISD::GLDFF1S",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_scaled      : SDNode<"AArch64ISD::GLDFF1S_SCALED",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_uxtw        : SDNode<"AArch64ISD::GLDFF1S_UXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_sxtw        : SDNode<"AArch64ISD::GLDFF1S_SXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_uxtw_scaled : SDNode<"AArch64ISD::GLDFF1S_UXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_sxtw_scaled : SDNode<"AArch64ISD::GLDFF1S_SXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64ldff1s_gather_imm         : SDNode<"AArch64ISD::GLDFF1S_IMM",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1s_gather_z             : SDNode<"AArch64ISD::GLDFF1S_MERGE_ZERO",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1s_gather_scaled_z      : SDNode<"AArch64ISD::GLDFF1S_SCALED_MERGE_ZERO",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1s_gather_uxtw_z        : SDNode<"AArch64ISD::GLDFF1S_UXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1s_gather_sxtw_z        : SDNode<"AArch64ISD::GLDFF1S_SXTW_MERGE_ZERO",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1s_gather_uxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1S_UXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1s_gather_sxtw_scaled_z : SDNode<"AArch64ISD::GLDFF1S_SXTW_SCALED_MERGE_ZERO", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64ldff1s_gather_imm_z         : SDNode<"AArch64ISD::GLDFF1S_IMM_MERGE_ZERO",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue, SDNPOutGlue]>;
 
-def AArch64ldnt1_gather  : SDNode<"AArch64ISD::GLDNT1",  SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
-def AArch64ldnt1s_gather : SDNode<"AArch64ISD::GLDNT1S", SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldnt1_gather_z  : SDNode<"AArch64ISD::GLDNT1_MERGE_ZERO",  SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldnt1s_gather_z : SDNode<"AArch64ISD::GLDNT1S_MERGE_ZERO", SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 
 // Contiguous stores - node definitions
 //
@@ -93,7 +108,7 @@ def SDT_AArch64_ST1 : SDTypeProfile<0, 4, [
   SDTCVecEltisVT<2,i1>, SDTCisSameNumEltsAs<0,2>
 ]>;
 
-def AArch64st1 : SDNode<"AArch64ISD::ST1", SDT_AArch64_ST1, [SDNPHasChain, SDNPMayStore]>;
+def AArch64st1 : SDNode<"AArch64ISD::ST1_PRED", SDT_AArch64_ST1, [SDNPHasChain, SDNPMayStore]>;
 
 // Scatter stores - node definitions
 //
@@ -107,15 +122,15 @@ def SDT_AArch64_SCATTER_VS : SDTypeProfile<0, 5, [
   SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
 ]>;
 
-def AArch64st1_scatter             : SDNode<"AArch64ISD::SST1",             SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
-def AArch64st1_scatter_scaled      : SDNode<"AArch64ISD::SST1_SCALED",      SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
-def AArch64st1_scatter_uxtw        : SDNode<"AArch64ISD::SST1_UXTW",        SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
-def AArch64st1_scatter_sxtw        : SDNode<"AArch64ISD::SST1_SXTW",        SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
-def AArch64st1_scatter_uxtw_scaled : SDNode<"AArch64ISD::SST1_UXTW_SCALED", SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
-def AArch64st1_scatter_sxtw_scaled : SDNode<"AArch64ISD::SST1_SXTW_SCALED", SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
-def AArch64st1_scatter_imm         : SDNode<"AArch64ISD::SST1_IMM",         SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
+def AArch64st1_scatter             : SDNode<"AArch64ISD::SST1_PRED",             SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
+def AArch64st1_scatter_scaled      : SDNode<"AArch64ISD::SST1_SCALED_PRED",      SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
+def AArch64st1_scatter_uxtw        : SDNode<"AArch64ISD::SST1_UXTW_PRED",        SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
+def AArch64st1_scatter_sxtw        : SDNode<"AArch64ISD::SST1_SXTW_PRED",        SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
+def AArch64st1_scatter_uxtw_scaled : SDNode<"AArch64ISD::SST1_UXTW_SCALED_PRED", SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
+def AArch64st1_scatter_sxtw_scaled : SDNode<"AArch64ISD::SST1_SXTW_SCALED_PRED", SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore]>;
+def AArch64st1_scatter_imm         : SDNode<"AArch64ISD::SST1_IMM_PRED",         SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
 
-def AArch64stnt1_scatter : SDNode<"AArch64ISD::SSTNT1", SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
+def AArch64stnt1_scatter : SDNode<"AArch64ISD::SSTNT1_PRED", SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
 
 // AArch64 SVE/SVE2 - the remaining node definitions
 //
@@ -132,42 +147,43 @@ def sve_cntw_imm_neg : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, -4>">;
 def sve_cntd_imm_neg : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, -2>">;
 
 def SDT_AArch64Reduce : SDTypeProfile<1, 2, [SDTCisVec<1>, SDTCisVec<2>]>;
-def AArch64faddv_pred   : SDNode<"AArch64ISD::FADDV_PRED",   SDT_AArch64Reduce>;
-def AArch64fmaxv_pred   : SDNode<"AArch64ISD::FMAXV_PRED",   SDT_AArch64Reduce>;
-def AArch64fmaxnmv_pred : SDNode<"AArch64ISD::FMAXNMV_PRED", SDT_AArch64Reduce>;
-def AArch64fminv_pred   : SDNode<"AArch64ISD::FMINV_PRED",   SDT_AArch64Reduce>;
-def AArch64fminnmv_pred : SDNode<"AArch64ISD::FMINNMV_PRED", SDT_AArch64Reduce>;
-def AArch64smaxv_pred   : SDNode<"AArch64ISD::SMAXV_PRED",   SDT_AArch64Reduce>;
-def AArch64umaxv_pred   : SDNode<"AArch64ISD::UMAXV_PRED",   SDT_AArch64Reduce>;
-def AArch64sminv_pred   : SDNode<"AArch64ISD::SMINV_PRED",   SDT_AArch64Reduce>;
-def AArch64uminv_pred   : SDNode<"AArch64ISD::UMINV_PRED",   SDT_AArch64Reduce>;
-def AArch64orv_pred     : SDNode<"AArch64ISD::ORV_PRED",     SDT_AArch64Reduce>;
-def AArch64eorv_pred    : SDNode<"AArch64ISD::EORV_PRED",    SDT_AArch64Reduce>;
-def AArch64andv_pred    : SDNode<"AArch64ISD::ANDV_PRED",    SDT_AArch64Reduce>;
-def AArch64lasta        : SDNode<"AArch64ISD::LASTA",        SDT_AArch64Reduce>;
-def AArch64lastb        : SDNode<"AArch64ISD::LASTB",        SDT_AArch64Reduce>;
+def AArch64faddv_p   : SDNode<"AArch64ISD::FADDV_PRED",   SDT_AArch64Reduce>;
+def AArch64fmaxv_p   : SDNode<"AArch64ISD::FMAXV_PRED",   SDT_AArch64Reduce>;
+def AArch64fmaxnmv_p : SDNode<"AArch64ISD::FMAXNMV_PRED", SDT_AArch64Reduce>;
+def AArch64fminv_p   : SDNode<"AArch64ISD::FMINV_PRED",   SDT_AArch64Reduce>;
+def AArch64fminnmv_p : SDNode<"AArch64ISD::FMINNMV_PRED", SDT_AArch64Reduce>;
+def AArch64smaxv_p   : SDNode<"AArch64ISD::SMAXV_PRED",   SDT_AArch64Reduce>;
+def AArch64umaxv_p   : SDNode<"AArch64ISD::UMAXV_PRED",   SDT_AArch64Reduce>;
+def AArch64sminv_p   : SDNode<"AArch64ISD::SMINV_PRED",   SDT_AArch64Reduce>;
+def AArch64uminv_p   : SDNode<"AArch64ISD::UMINV_PRED",   SDT_AArch64Reduce>;
+def AArch64orv_p     : SDNode<"AArch64ISD::ORV_PRED",     SDT_AArch64Reduce>;
+def AArch64eorv_p    : SDNode<"AArch64ISD::EORV_PRED",    SDT_AArch64Reduce>;
+def AArch64andv_p    : SDNode<"AArch64ISD::ANDV_PRED",    SDT_AArch64Reduce>;
+def AArch64lasta     : SDNode<"AArch64ISD::LASTA",        SDT_AArch64Reduce>;
+def AArch64lastb     : SDNode<"AArch64ISD::LASTB",        SDT_AArch64Reduce>;
 
 def SDT_AArch64Arith : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>,
   SDTCVecEltisVT<1,i1>, SDTCisSameAs<2,3>
 ]>;
 
-def AArch64add_pred  :  SDNode<"AArch64ISD::ADD_PRED",  SDT_AArch64Arith>;
-def AArch64fadd_pred :  SDNode<"AArch64ISD::FADD_PRED", SDT_AArch64Arith>;
-def AArch64sdiv_pred :  SDNode<"AArch64ISD::SDIV_PRED", SDT_AArch64Arith>;
-def AArch64udiv_pred :  SDNode<"AArch64ISD::UDIV_PRED", SDT_AArch64Arith>;
-def AArch64smin_pred :  SDNode<"AArch64ISD::SMIN_PRED", SDT_AArch64Arith>;
-def AArch64umin_pred :  SDNode<"AArch64ISD::UMIN_PRED", SDT_AArch64Arith>;
-def AArch64smax_pred :  SDNode<"AArch64ISD::SMAX_PRED", SDT_AArch64Arith>;
-def AArch64umax_pred :  SDNode<"AArch64ISD::UMAX_PRED", SDT_AArch64Arith>;
-def AArch64lsl_pred  :  SDNode<"AArch64ISD::SHL_PRED",  SDT_AArch64Arith>;
-def AArch64lsr_pred  :  SDNode<"AArch64ISD::SRL_PRED",  SDT_AArch64Arith>;
-def AArch64asr_pred  :  SDNode<"AArch64ISD::SRA_PRED",  SDT_AArch64Arith>;
+// Merging op1 into the inactive lanes.
+def AArch64add_m1  :  SDNode<"AArch64ISD::ADD_MERGE_OP1",  SDT_AArch64Arith>;
+def AArch64fadd_m1 :  SDNode<"AArch64ISD::FADD_MERGE_OP1", SDT_AArch64Arith>;
+def AArch64sdiv_m1 :  SDNode<"AArch64ISD::SDIV_MERGE_OP1", SDT_AArch64Arith>;
+def AArch64udiv_m1 :  SDNode<"AArch64ISD::UDIV_MERGE_OP1", SDT_AArch64Arith>;
+def AArch64smin_m1 :  SDNode<"AArch64ISD::SMIN_MERGE_OP1", SDT_AArch64Arith>;
+def AArch64umin_m1 :  SDNode<"AArch64ISD::UMIN_MERGE_OP1", SDT_AArch64Arith>;
+def AArch64smax_m1 :  SDNode<"AArch64ISD::SMAX_MERGE_OP1", SDT_AArch64Arith>;
+def AArch64umax_m1 :  SDNode<"AArch64ISD::UMAX_MERGE_OP1", SDT_AArch64Arith>;
+def AArch64lsl_m1  :  SDNode<"AArch64ISD::SHL_MERGE_OP1",  SDT_AArch64Arith>;
+def AArch64lsr_m1  :  SDNode<"AArch64ISD::SRL_MERGE_OP1",  SDT_AArch64Arith>;
+def AArch64asr_m1  :  SDNode<"AArch64ISD::SRA_MERGE_OP1",  SDT_AArch64Arith>;
 
 def SDT_AArch64ReduceWithInit : SDTypeProfile<1, 3, [SDTCisVec<1>, SDTCisVec<3>]>;
 def AArch64clasta_n   : SDNode<"AArch64ISD::CLASTA_N",   SDT_AArch64ReduceWithInit>;
 def AArch64clastb_n   : SDNode<"AArch64ISD::CLASTB_N",   SDT_AArch64ReduceWithInit>;
-def AArch64fadda_pred : SDNode<"AArch64ISD::FADDA_PRED", SDT_AArch64ReduceWithInit>;
+def AArch64fadda_p    : SDNode<"AArch64ISD::FADDA_PRED", SDT_AArch64ReduceWithInit>;
 
 def SDT_AArch64Rev   : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
 def AArch64rev       : SDNode<"AArch64ISD::REV", SDT_AArch64Rev>;
@@ -175,8 +191,8 @@ def AArch64rev       : SDNode<"AArch64ISD::REV", SDT_AArch64Rev>;
 def SDT_AArch64PTest : SDTypeProfile<0, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
 def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 
-def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>, SDTCisVec<2>, SDTCVecEltisVT<2,i1>]>;
-def AArch64dup_pred : SDNode<"AArch64ISD::DUP_PRED", SDT_AArch64DUP_PRED>;
+def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0, 3>, SDTCisVec<1>, SDTCVecEltisVT<1,i1>]>;
+def AArch64dup_mt : SDNode<"AArch64ISD::DUP_MERGE_PASSTHRU", SDT_AArch64DUP_PRED>;
 
 def SDT_IndexVector : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<1, 2>, SDTCisInt<2>]>;
 def index_vector : SDNode<"AArch64ISD::INDEX_VECTOR", SDT_IndexVector, []>;
@@ -206,7 +222,7 @@ let Predicates = [HasSVE] in {
   defm SUB_ZPmZ  : sve_int_bin_pred_arit_0<0b001, "sub",  "SUB_ZPZZ", int_aarch64_sve_sub, DestructiveBinaryCommWithRev, "SUBR_ZPmZ", 1>;
   defm SUBR_ZPmZ : sve_int_bin_pred_arit_0<0b011, "subr", "SUBR_ZPZZ", int_aarch64_sve_subr, DestructiveBinaryCommWithRev, "SUB_ZPmZ", 0>;
 
-  defm ADD_ZPZZ  : sve_int_bin_pred_zx<int_aarch64_sve_add, AArch64add_pred>;
+  defm ADD_ZPZZ  : sve_int_bin_pred_zx<int_aarch64_sve_add, AArch64add_m1>;
   defm SUB_ZPZZ  : sve_int_bin_pred_zx<int_aarch64_sve_sub>;
   defm SUBR_ZPZZ : sve_int_bin_pred_zx<int_aarch64_sve_subr>;
 
@@ -231,22 +247,22 @@ let Predicates = [HasSVE] in {
   // SVE predicated integer reductions.
   defm SADDV_VPZ : sve_int_reduce_0_saddv<0b000, "saddv", int_aarch64_sve_saddv>;
   defm UADDV_VPZ : sve_int_reduce_0_uaddv<0b001, "uaddv", int_aarch64_sve_uaddv, int_aarch64_sve_saddv>;
-  defm SMAXV_VPZ : sve_int_reduce_1<0b000, "smaxv", AArch64smaxv_pred>;
-  defm UMAXV_VPZ : sve_int_reduce_1<0b001, "umaxv", AArch64umaxv_pred>;
-  defm SMINV_VPZ : sve_int_reduce_1<0b010, "sminv", AArch64sminv_pred>;
-  defm UMINV_VPZ : sve_int_reduce_1<0b011, "uminv", AArch64uminv_pred>;
-  defm ORV_VPZ   : sve_int_reduce_2<0b000, "orv", AArch64orv_pred>;
-  defm EORV_VPZ  : sve_int_reduce_2<0b001, "eorv", AArch64eorv_pred>;
-  defm ANDV_VPZ  : sve_int_reduce_2<0b010, "andv", AArch64andv_pred>;
+  defm SMAXV_VPZ : sve_int_reduce_1<0b000, "smaxv", AArch64smaxv_p>;
+  defm UMAXV_VPZ : sve_int_reduce_1<0b001, "umaxv", AArch64umaxv_p>;
+  defm SMINV_VPZ : sve_int_reduce_1<0b010, "sminv", AArch64sminv_p>;
+  defm UMINV_VPZ : sve_int_reduce_1<0b011, "uminv", AArch64uminv_p>;
+  defm ORV_VPZ   : sve_int_reduce_2<0b000, "orv", AArch64orv_p>;
+  defm EORV_VPZ  : sve_int_reduce_2<0b001, "eorv", AArch64eorv_p>;
+  defm ANDV_VPZ  : sve_int_reduce_2<0b010, "andv", AArch64andv_p>;
 
   defm ORR_ZI : sve_int_log_imm<0b00, "orr", "orn", or>;
   defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon", xor>;
   defm AND_ZI : sve_int_log_imm<0b10, "and", "bic", and>;
 
-  defm SMAX_ZI   : sve_int_arith_imm1<0b00, "smax", AArch64smax_pred>;
-  defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", AArch64smin_pred>;
-  defm UMAX_ZI   : sve_int_arith_imm1_unsigned<0b01, "umax", AArch64umax_pred>;
-  defm UMIN_ZI   : sve_int_arith_imm1_unsigned<0b11, "umin", AArch64umin_pred>;
+  defm SMAX_ZI   : sve_int_arith_imm1<0b00, "smax", AArch64smax_m1>;
+  defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", AArch64smin_m1>;
+  defm UMAX_ZI   : sve_int_arith_imm1_unsigned<0b01, "umax", AArch64umax_m1>;
+  defm UMIN_ZI   : sve_int_arith_imm1_unsigned<0b11, "umin", AArch64umin_m1>;
 
   defm MUL_ZI     : sve_int_arith_imm2<"mul", mul>;
   defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul",   int_aarch64_sve_mul>;
@@ -263,8 +279,8 @@ let Predicates = [HasSVE] in {
   def : Pat<(mul nxv2i64:$Op1, nxv2i64:$Op2),
             (MUL_ZPmZ_D (PTRUE_D 31), $Op1, $Op2)>;
 
-  defm SDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b100, "sdiv",  AArch64sdiv_pred>;
-  defm UDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b101, "udiv",  AArch64udiv_pred>;
+  defm SDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b100, "sdiv",  AArch64sdiv_m1>;
+  defm UDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b101, "udiv",  AArch64udiv_m1>;
   defm SDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b110, "sdivr", int_aarch64_sve_sdivr>;
   defm UDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b111, "udivr", int_aarch64_sve_udivr>;
 
@@ -296,10 +312,10 @@ let Predicates = [HasSVE] in {
   defm FABS_ZPmZ : sve_int_un_pred_arit_1_fp<0b100, "fabs", int_aarch64_sve_fabs>;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_1_fp<0b101, "fneg", int_aarch64_sve_fneg>;
 
-  defm SMAX_ZPmZ : sve_int_bin_pred_arit_1<0b000, "smax", AArch64smax_pred>;
-  defm UMAX_ZPmZ : sve_int_bin_pred_arit_1<0b001, "umax", AArch64umax_pred>;
-  defm SMIN_ZPmZ : sve_int_bin_pred_arit_1<0b010, "smin", AArch64smin_pred>;
-  defm UMIN_ZPmZ : sve_int_bin_pred_arit_1<0b011, "umin", AArch64umin_pred>;
+  defm SMAX_ZPmZ : sve_int_bin_pred_arit_1<0b000, "smax", AArch64smax_m1>;
+  defm UMAX_ZPmZ : sve_int_bin_pred_arit_1<0b001, "umax", AArch64umax_m1>;
+  defm SMIN_ZPmZ : sve_int_bin_pred_arit_1<0b010, "smin", AArch64smin_m1>;
+  defm UMIN_ZPmZ : sve_int_bin_pred_arit_1<0b011, "umin", AArch64umin_m1>;
   defm SABD_ZPmZ : sve_int_bin_pred_arit_1<0b100, "sabd", int_aarch64_sve_sabd>;
   defm UABD_ZPmZ : sve_int_bin_pred_arit_1<0b101, "uabd", int_aarch64_sve_uabd>;
 
@@ -329,7 +345,7 @@ let Predicates = [HasSVE] in {
   defm FDIVR_ZPmZ  : sve_fp_2op_p_zds<0b1100, "fdivr", "FDIVR_ZPZZ", int_aarch64_sve_fdivr, DestructiveBinaryCommWithRev, "FDIV_ZPmZ", 0>;
   defm FDIV_ZPmZ   : sve_fp_2op_p_zds<0b1101, "fdiv", "FDIV_ZPZZ", int_aarch64_sve_fdiv, DestructiveBinaryCommWithRev, "FDIVR_ZPmZ", 1>;
 
-  defm FADD_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fadd, AArch64fadd_pred>;
+  defm FADD_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fadd, AArch64fadd_m1>;
   defm FSUB_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fsub>;
   defm FMUL_ZPZZ   : sve_fp_2op_p_zds_zx<int_aarch64_sve_fmul>;
   defm FSUBR_ZPZZ  : sve_fp_2op_p_zds_zx<int_aarch64_sve_fsubr>;
@@ -373,12 +389,12 @@ let Predicates = [HasSVE] in {
   defm FMUL_ZZZI   : sve_fp_fmul_by_indexed_elem<"fmul", int_aarch64_sve_fmul_lane>;
 
   // SVE floating point reductions.
-  defm FADDA_VPZ   : sve_fp_2op_p_vd<0b000, "fadda",   AArch64fadda_pred>;
-  defm FADDV_VPZ   : sve_fp_fast_red<0b000, "faddv",   AArch64faddv_pred>;
-  defm FMAXNMV_VPZ : sve_fp_fast_red<0b100, "fmaxnmv", AArch64fmaxnmv_pred>;
-  defm FMINNMV_VPZ : sve_fp_fast_red<0b101, "fminnmv", AArch64fminnmv_pred>;
-  defm FMAXV_VPZ   : sve_fp_fast_red<0b110, "fmaxv",   AArch64fmaxv_pred>;
-  defm FMINV_VPZ   : sve_fp_fast_red<0b111, "fminv",   AArch64fminv_pred>;
+  defm FADDA_VPZ   : sve_fp_2op_p_vd<0b000, "fadda",   AArch64fadda_p>;
+  defm FADDV_VPZ   : sve_fp_fast_red<0b000, "faddv",   AArch64faddv_p>;
+  defm FMAXNMV_VPZ : sve_fp_fast_red<0b100, "fmaxnmv", AArch64fmaxnmv_p>;
+  defm FMINNMV_VPZ : sve_fp_fast_red<0b101, "fminnmv", AArch64fminnmv_p>;
+  defm FMAXV_VPZ   : sve_fp_fast_red<0b110, "fmaxv",   AArch64fmaxv_p>;
+  defm FMINV_VPZ   : sve_fp_fast_red<0b111, "fminv",   AArch64fminv_p>;
 
   // Use more efficient NEON instructions to extract elements within the NEON
   // part (first 128bits) of an SVE register.
@@ -404,8 +420,8 @@ let Predicates = [HasSVE] in {
   defm DUP_ZZI : sve_int_perm_dup_i<"dup">;
 
   // Splat scalar register (predicated)
-  defm CPY_ZPmR : sve_int_perm_cpy_r<"cpy", AArch64dup_pred>;
-  defm CPY_ZPmV : sve_int_perm_cpy_v<"cpy", AArch64dup_pred>;
+  defm CPY_ZPmR : sve_int_perm_cpy_r<"cpy", AArch64dup_mt>;
+  defm CPY_ZPmV : sve_int_perm_cpy_v<"cpy", AArch64dup_mt>;
 
   // Duplicate FP scalar into all vector elements
   def : Pat<(nxv8f16 (AArch64dup (f16 FPR16:$src))),
@@ -673,115 +689,115 @@ let Predicates = [HasSVE] in {
 
   // Gathers using unscaled 32-bit offsets, e.g.
   //    ld1h z0.s, p0/z, [x0, z0.s, uxtw]
-  defm GLD1SB_S   : sve_mem_32b_gld_vs_32_unscaled<0b0000, "ld1sb",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
-  defm GLDFF1SB_S : sve_mem_32b_gld_vs_32_unscaled<0b0001, "ldff1sb", AArch64ldff1s_gather_sxtw, AArch64ldff1s_gather_uxtw, ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
-  defm GLD1B_S    : sve_mem_32b_gld_vs_32_unscaled<0b0010, "ld1b",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
-  defm GLDFF1B_S  : sve_mem_32b_gld_vs_32_unscaled<0b0011, "ldff1b",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
-  defm GLD1SH_S   : sve_mem_32b_gld_vs_32_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
-  defm GLDFF1SH_S : sve_mem_32b_gld_vs_32_unscaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw, AArch64ldff1s_gather_uxtw, ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
-  defm GLD1H_S    : sve_mem_32b_gld_vs_32_unscaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
-  defm GLDFF1H_S  : sve_mem_32b_gld_vs_32_unscaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
-  defm GLD1W      : sve_mem_32b_gld_vs_32_unscaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i32>;
-  defm GLDFF1W    : sve_mem_32b_gld_vs_32_unscaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i32>;
+  defm GLD1SB_S   : sve_mem_32b_gld_vs_32_unscaled<0b0000, "ld1sb",   AArch64ld1s_gather_sxtw_z,   AArch64ld1s_gather_uxtw_z,   ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
+  defm GLDFF1SB_S : sve_mem_32b_gld_vs_32_unscaled<0b0001, "ldff1sb", AArch64ldff1s_gather_sxtw_z, AArch64ldff1s_gather_uxtw_z, ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
+  defm GLD1B_S    : sve_mem_32b_gld_vs_32_unscaled<0b0010, "ld1b",    AArch64ld1_gather_sxtw_z,    AArch64ld1_gather_uxtw_z,    ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
+  defm GLDFF1B_S  : sve_mem_32b_gld_vs_32_unscaled<0b0011, "ldff1b",  AArch64ldff1_gather_sxtw_z,  AArch64ldff1_gather_uxtw_z,  ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
+  defm GLD1SH_S   : sve_mem_32b_gld_vs_32_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw_z,   AArch64ld1s_gather_uxtw_z,   ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
+  defm GLDFF1SH_S : sve_mem_32b_gld_vs_32_unscaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw_z, AArch64ldff1s_gather_uxtw_z, ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
+  defm GLD1H_S    : sve_mem_32b_gld_vs_32_unscaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw_z,    AArch64ld1_gather_uxtw_z,    ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
+  defm GLDFF1H_S  : sve_mem_32b_gld_vs_32_unscaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw_z,  AArch64ldff1_gather_uxtw_z,  ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
+  defm GLD1W      : sve_mem_32b_gld_vs_32_unscaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw_z,    AArch64ld1_gather_uxtw_z,    ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i32>;
+  defm GLDFF1W    : sve_mem_32b_gld_vs_32_unscaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw_z,  AArch64ldff1_gather_uxtw_z,  ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i32>;
 
   // Gathers using scaled 32-bit offsets, e.g.
   //    ld1h z0.s, p0/z, [x0, z0.s, uxtw #1]
-  defm GLD1SH_S   : sve_mem_32b_gld_sv_32_scaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw_scaled,   AArch64ld1s_gather_uxtw_scaled,   ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
-  defm GLDFF1SH_S : sve_mem_32b_gld_sv_32_scaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw_scaled, AArch64ldff1s_gather_uxtw_scaled, ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
-  defm GLD1H_S    : sve_mem_32b_gld_sv_32_scaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw_scaled,    AArch64ld1_gather_uxtw_scaled,    ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
-  defm GLDFF1H_S  : sve_mem_32b_gld_sv_32_scaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw_scaled,  AArch64ldff1_gather_uxtw_scaled,  ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
-  defm GLD1W      : sve_mem_32b_gld_sv_32_scaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw_scaled,    AArch64ld1_gather_uxtw_scaled,    ZPR32ExtSXTW32, ZPR32ExtUXTW32, nxv4i32>;
-  defm GLDFF1W    : sve_mem_32b_gld_sv_32_scaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw_scaled,  AArch64ldff1_gather_uxtw_scaled,  ZPR32ExtSXTW32, ZPR32ExtUXTW32, nxv4i32>;
+  defm GLD1SH_S   : sve_mem_32b_gld_sv_32_scaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw_scaled_z,   AArch64ld1s_gather_uxtw_scaled_z,   ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
+  defm GLDFF1SH_S : sve_mem_32b_gld_sv_32_scaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw_scaled_z, AArch64ldff1s_gather_uxtw_scaled_z, ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
+  defm GLD1H_S    : sve_mem_32b_gld_sv_32_scaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw_scaled_z,    AArch64ld1_gather_uxtw_scaled_z,    ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
+  defm GLDFF1H_S  : sve_mem_32b_gld_sv_32_scaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw_scaled_z,  AArch64ldff1_gather_uxtw_scaled_z,  ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
+  defm GLD1W      : sve_mem_32b_gld_sv_32_scaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw_scaled_z,    AArch64ld1_gather_uxtw_scaled_z,    ZPR32ExtSXTW32, ZPR32ExtUXTW32, nxv4i32>;
+  defm GLDFF1W    : sve_mem_32b_gld_sv_32_scaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw_scaled_z,  AArch64ldff1_gather_uxtw_scaled_z,  ZPR32ExtSXTW32, ZPR32ExtUXTW32, nxv4i32>;
 
   // Gathers using 32-bit pointers with scaled offset, e.g.
   //    ld1h z0.s, p0/z, [z0.s, #16]
-  defm GLD1SB_S   : sve_mem_32b_gld_vi_32_ptrs<0b0000, "ld1sb",   imm0_31, AArch64ld1s_gather_imm,   nxv4i8>;
-  defm GLDFF1SB_S : sve_mem_32b_gld_vi_32_ptrs<0b0001, "ldff1sb", imm0_31, AArch64ldff1s_gather_imm, nxv4i8>;
-  defm GLD1B_S    : sve_mem_32b_gld_vi_32_ptrs<0b0010, "ld1b",    imm0_31, AArch64ld1_gather_imm,    nxv4i8>;
-  defm GLDFF1B_S  : sve_mem_32b_gld_vi_32_ptrs<0b0011, "ldff1b",  imm0_31, AArch64ldff1_gather_imm,  nxv4i8>;
-  defm GLD1SH_S   : sve_mem_32b_gld_vi_32_ptrs<0b0100, "ld1sh",   uimm5s2, AArch64ld1s_gather_imm,   nxv4i16>;
-  defm GLDFF1SH_S : sve_mem_32b_gld_vi_32_ptrs<0b0101, "ldff1sh", uimm5s2, AArch64ldff1s_gather_imm, nxv4i16>;
-  defm GLD1H_S    : sve_mem_32b_gld_vi_32_ptrs<0b0110, "ld1h",    uimm5s2, AArch64ld1_gather_imm,    nxv4i16>;
-  defm GLDFF1H_S  : sve_mem_32b_gld_vi_32_ptrs<0b0111, "ldff1h",  uimm5s2, AArch64ldff1_gather_imm,  nxv4i16>;
-  defm GLD1W      : sve_mem_32b_gld_vi_32_ptrs<0b1010, "ld1w",    uimm5s4, AArch64ld1_gather_imm,    nxv4i32>;
-  defm GLDFF1W    : sve_mem_32b_gld_vi_32_ptrs<0b1011, "ldff1w",  uimm5s4, AArch64ldff1_gather_imm,  nxv4i32>;
+  defm GLD1SB_S   : sve_mem_32b_gld_vi_32_ptrs<0b0000, "ld1sb",   imm0_31, AArch64ld1s_gather_imm_z,   nxv4i8>;
+  defm GLDFF1SB_S : sve_mem_32b_gld_vi_32_ptrs<0b0001, "ldff1sb", imm0_31, AArch64ldff1s_gather_imm_z, nxv4i8>;
+  defm GLD1B_S    : sve_mem_32b_gld_vi_32_ptrs<0b0010, "ld1b",    imm0_31, AArch64ld1_gather_imm_z,    nxv4i8>;
+  defm GLDFF1B_S  : sve_mem_32b_gld_vi_32_ptrs<0b0011, "ldff1b",  imm0_31, AArch64ldff1_gather_imm_z,  nxv4i8>;
+  defm GLD1SH_S   : sve_mem_32b_gld_vi_32_ptrs<0b0100, "ld1sh",   uimm5s2, AArch64ld1s_gather_imm_z,   nxv4i16>;
+  defm GLDFF1SH_S : sve_mem_32b_gld_vi_32_ptrs<0b0101, "ldff1sh", uimm5s2, AArch64ldff1s_gather_imm_z, nxv4i16>;
+  defm GLD1H_S    : sve_mem_32b_gld_vi_32_ptrs<0b0110, "ld1h",    uimm5s2, AArch64ld1_gather_imm_z,    nxv4i16>;
+  defm GLDFF1H_S  : sve_mem_32b_gld_vi_32_ptrs<0b0111, "ldff1h",  uimm5s2, AArch64ldff1_gather_imm_z,  nxv4i16>;
+  defm GLD1W      : sve_mem_32b_gld_vi_32_ptrs<0b1010, "ld1w",    uimm5s4, AArch64ld1_gather_imm_z,    nxv4i32>;
+  defm GLDFF1W    : sve_mem_32b_gld_vi_32_ptrs<0b1011, "ldff1w",  uimm5s4, AArch64ldff1_gather_imm_z,  nxv4i32>;
 
   // Gathers using 64-bit pointers with scaled offset, e.g.
   //    ld1h z0.d, p0/z, [z0.d, #16]
-  defm GLD1SB_D   : sve_mem_64b_gld_vi_64_ptrs<0b0000, "ld1sb",   imm0_31, AArch64ld1s_gather_imm,   nxv2i8>;
-  defm GLDFF1SB_D : sve_mem_64b_gld_vi_64_ptrs<0b0001, "ldff1sb", imm0_31, AArch64ldff1s_gather_imm, nxv2i8>;
-  defm GLD1B_D    : sve_mem_64b_gld_vi_64_ptrs<0b0010, "ld1b",    imm0_31, AArch64ld1_gather_imm,    nxv2i8>;
-  defm GLDFF1B_D  : sve_mem_64b_gld_vi_64_ptrs<0b0011, "ldff1b",  imm0_31, AArch64ldff1_gather_imm,  nxv2i8>;
-  defm GLD1SH_D   : sve_mem_64b_gld_vi_64_ptrs<0b0100, "ld1sh",   uimm5s2, AArch64ld1s_gather_imm,   nxv2i16>;
-  defm GLDFF1SH_D : sve_mem_64b_gld_vi_64_ptrs<0b0101, "ldff1sh", uimm5s2, AArch64ldff1s_gather_imm, nxv2i16>;
-  defm GLD1H_D    : sve_mem_64b_gld_vi_64_ptrs<0b0110, "ld1h",    uimm5s2, AArch64ld1_gather_imm,    nxv2i16>;
-  defm GLDFF1H_D  : sve_mem_64b_gld_vi_64_ptrs<0b0111, "ldff1h",  uimm5s2, AArch64ldff1_gather_imm,  nxv2i16>;
-  defm GLD1SW_D   : sve_mem_64b_gld_vi_64_ptrs<0b1000, "ld1sw",   uimm5s4, AArch64ld1s_gather_imm,   nxv2i32>;
-  defm GLDFF1SW_D : sve_mem_64b_gld_vi_64_ptrs<0b1001, "ldff1sw", uimm5s4, AArch64ldff1s_gather_imm, nxv2i32>;
-  defm GLD1W_D    : sve_mem_64b_gld_vi_64_ptrs<0b1010, "ld1w",    uimm5s4, AArch64ld1_gather_imm,    nxv2i32>;
-  defm GLDFF1W_D  : sve_mem_64b_gld_vi_64_ptrs<0b1011, "ldff1w",  uimm5s4, AArch64ldff1_gather_imm,  nxv2i32>;
-  defm GLD1D      : sve_mem_64b_gld_vi_64_ptrs<0b1110, "ld1d",    uimm5s8, AArch64ld1_gather_imm,    nxv2i64>;
-  defm GLDFF1D    : sve_mem_64b_gld_vi_64_ptrs<0b1111, "ldff1d",  uimm5s8, AArch64ldff1_gather_imm,  nxv2i64>;
+  defm GLD1SB_D   : sve_mem_64b_gld_vi_64_ptrs<0b0000, "ld1sb",   imm0_31, AArch64ld1s_gather_imm_z,   nxv2i8>;
+  defm GLDFF1SB_D : sve_mem_64b_gld_vi_64_ptrs<0b0001, "ldff1sb", imm0_31, AArch64ldff1s_gather_imm_z, nxv2i8>;
+  defm GLD1B_D    : sve_mem_64b_gld_vi_64_ptrs<0b0010, "ld1b",    imm0_31, AArch64ld1_gather_imm_z,    nxv2i8>;
+  defm GLDFF1B_D  : sve_mem_64b_gld_vi_64_ptrs<0b0011, "ldff1b",  imm0_31, AArch64ldff1_gather_imm_z,  nxv2i8>;
+  defm GLD1SH_D   : sve_mem_64b_gld_vi_64_ptrs<0b0100, "ld1sh",   uimm5s2, AArch64ld1s_gather_imm_z,   nxv2i16>;
+  defm GLDFF1SH_D : sve_mem_64b_gld_vi_64_ptrs<0b0101, "ldff1sh", uimm5s2, AArch64ldff1s_gather_imm_z, nxv2i16>;
+  defm GLD1H_D    : sve_mem_64b_gld_vi_64_ptrs<0b0110, "ld1h",    uimm5s2, AArch64ld1_gather_imm_z,    nxv2i16>;
+  defm GLDFF1H_D  : sve_mem_64b_gld_vi_64_ptrs<0b0111, "ldff1h",  uimm5s2, AArch64ldff1_gather_imm_z,  nxv2i16>;
+  defm GLD1SW_D   : sve_mem_64b_gld_vi_64_ptrs<0b1000, "ld1sw",   uimm5s4, AArch64ld1s_gather_imm_z,   nxv2i32>;
+  defm GLDFF1SW_D : sve_mem_64b_gld_vi_64_ptrs<0b1001, "ldff1sw", uimm5s4, AArch64ldff1s_gather_imm_z, nxv2i32>;
+  defm GLD1W_D    : sve_mem_64b_gld_vi_64_ptrs<0b1010, "ld1w",    uimm5s4, AArch64ld1_gather_imm_z,    nxv2i32>;
+  defm GLDFF1W_D  : sve_mem_64b_gld_vi_64_ptrs<0b1011, "ldff1w",  uimm5s4, AArch64ldff1_gather_imm_z,  nxv2i32>;
+  defm GLD1D      : sve_mem_64b_gld_vi_64_ptrs<0b1110, "ld1d",    uimm5s8, AArch64ld1_gather_imm_z,    nxv2i64>;
+  defm GLDFF1D    : sve_mem_64b_gld_vi_64_ptrs<0b1111, "ldff1d",  uimm5s8, AArch64ldff1_gather_imm_z,  nxv2i64>;
 
   // Gathers using unscaled 64-bit offsets, e.g.
   //    ld1h z0.d, p0/z, [x0, z0.d]
-  defm GLD1SB_D   : sve_mem_64b_gld_vs2_64_unscaled<0b0000, "ld1sb",   AArch64ld1s_gather,   nxv2i8>;
-  defm GLDFF1SB_D : sve_mem_64b_gld_vs2_64_unscaled<0b0001, "ldff1sb", AArch64ldff1s_gather, nxv2i8>;
-  defm GLD1B_D    : sve_mem_64b_gld_vs2_64_unscaled<0b0010, "ld1b",    AArch64ld1_gather,    nxv2i8>;
-  defm GLDFF1B_D  : sve_mem_64b_gld_vs2_64_unscaled<0b0011, "ldff1b",  AArch64ldff1_gather,  nxv2i8>;
-  defm GLD1SH_D   : sve_mem_64b_gld_vs2_64_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather,   nxv2i16>;
-  defm GLDFF1SH_D : sve_mem_64b_gld_vs2_64_unscaled<0b0101, "ldff1sh", AArch64ldff1s_gather, nxv2i16>;
-  defm GLD1H_D    : sve_mem_64b_gld_vs2_64_unscaled<0b0110, "ld1h",    AArch64ld1_gather,    nxv2i16>;
-  defm GLDFF1H_D  : sve_mem_64b_gld_vs2_64_unscaled<0b0111, "ldff1h",  AArch64ldff1_gather,  nxv2i16>;
-  defm GLD1SW_D   : sve_mem_64b_gld_vs2_64_unscaled<0b1000, "ld1sw",   AArch64ld1s_gather,   nxv2i32>;
-  defm GLDFF1SW_D : sve_mem_64b_gld_vs2_64_unscaled<0b1001, "ldff1sw", AArch64ldff1s_gather, nxv2i32>;
-  defm GLD1W_D    : sve_mem_64b_gld_vs2_64_unscaled<0b1010, "ld1w",    AArch64ld1_gather,    nxv2i32>;
-  defm GLDFF1W_D  : sve_mem_64b_gld_vs2_64_unscaled<0b1011, "ldff1w",  AArch64ldff1_gather,  nxv2i32>;
-  defm GLD1D      : sve_mem_64b_gld_vs2_64_unscaled<0b1110, "ld1d",    AArch64ld1_gather,    nxv2i64>;
-  defm GLDFF1D    : sve_mem_64b_gld_vs2_64_unscaled<0b1111, "ldff1d",  AArch64ldff1_gather,  nxv2i64>;
+  defm GLD1SB_D   : sve_mem_64b_gld_vs2_64_unscaled<0b0000, "ld1sb",   AArch64ld1s_gather_z,   nxv2i8>;
+  defm GLDFF1SB_D : sve_mem_64b_gld_vs2_64_unscaled<0b0001, "ldff1sb", AArch64ldff1s_gather_z, nxv2i8>;
+  defm GLD1B_D    : sve_mem_64b_gld_vs2_64_unscaled<0b0010, "ld1b",    AArch64ld1_gather_z,    nxv2i8>;
+  defm GLDFF1B_D  : sve_mem_64b_gld_vs2_64_unscaled<0b0011, "ldff1b",  AArch64ldff1_gather_z,  nxv2i8>;
+  defm GLD1SH_D   : sve_mem_64b_gld_vs2_64_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather_z,   nxv2i16>;
+  defm GLDFF1SH_D : sve_mem_64b_gld_vs2_64_unscaled<0b0101, "ldff1sh", AArch64ldff1s_gather_z, nxv2i16>;
+  defm GLD1H_D    : sve_mem_64b_gld_vs2_64_unscaled<0b0110, "ld1h",    AArch64ld1_gather_z,    nxv2i16>;
+  defm GLDFF1H_D  : sve_mem_64b_gld_vs2_64_unscaled<0b0111, "ldff1h",  AArch64ldff1_gather_z,  nxv2i16>;
+  defm GLD1SW_D   : sve_mem_64b_gld_vs2_64_unscaled<0b1000, "ld1sw",   AArch64ld1s_gather_z,   nxv2i32>;
+  defm GLDFF1SW_D : sve_mem_64b_gld_vs2_64_unscaled<0b1001, "ldff1sw", AArch64ldff1s_gather_z, nxv2i32>;
+  defm GLD1W_D    : sve_mem_64b_gld_vs2_64_unscaled<0b1010, "ld1w",    AArch64ld1_gather_z,    nxv2i32>;
+  defm GLDFF1W_D  : sve_mem_64b_gld_vs2_64_unscaled<0b1011, "ldff1w",  AArch64ldff1_gather_z,  nxv2i32>;
+  defm GLD1D      : sve_mem_64b_gld_vs2_64_unscaled<0b1110, "ld1d",    AArch64ld1_gather_z,    nxv2i64>;
+  defm GLDFF1D    : sve_mem_64b_gld_vs2_64_unscaled<0b1111, "ldff1d",  AArch64ldff1_gather_z,  nxv2i64>;
 
   // Gathers using scaled 64-bit offsets, e.g.
   //    ld1h z0.d, p0/z, [x0, z0.d, lsl #1]
-  defm GLD1SH_D   : sve_mem_64b_gld_sv2_64_scaled<0b0100, "ld1sh",    AArch64ld1s_gather_scaled,   ZPR64ExtLSL16, nxv2i16>;
-  defm GLDFF1SH_D : sve_mem_64b_gld_sv2_64_scaled<0b0101, "ldff1sh",  AArch64ldff1s_gather_scaled, ZPR64ExtLSL16, nxv2i16>;
-  defm GLD1H_D    : sve_mem_64b_gld_sv2_64_scaled<0b0110, "ld1h",     AArch64ld1_gather_scaled,    ZPR64ExtLSL16, nxv2i16>;
-  defm GLDFF1H_D  : sve_mem_64b_gld_sv2_64_scaled<0b0111, "ldff1h",   AArch64ldff1_gather_scaled,  ZPR64ExtLSL16, nxv2i16>;
-  defm GLD1SW_D   : sve_mem_64b_gld_sv2_64_scaled<0b1000, "ld1sw",    AArch64ld1s_gather_scaled,   ZPR64ExtLSL32, nxv2i32>;
-  defm GLDFF1SW_D : sve_mem_64b_gld_sv2_64_scaled<0b1001, "ldff1sw",  AArch64ldff1s_gather_scaled, ZPR64ExtLSL32, nxv2i32>;
-  defm GLD1W_D    : sve_mem_64b_gld_sv2_64_scaled<0b1010, "ld1w",     AArch64ld1_gather_scaled,    ZPR64ExtLSL32, nxv2i32>;
-  defm GLDFF1W_D  : sve_mem_64b_gld_sv2_64_scaled<0b1011, "ldff1w",   AArch64ldff1_gather_scaled,  ZPR64ExtLSL32, nxv2i32>;
-  defm GLD1D      : sve_mem_64b_gld_sv2_64_scaled<0b1110, "ld1d",     AArch64ld1_gather_scaled,    ZPR64ExtLSL64, nxv2i64>;
-  defm GLDFF1D    : sve_mem_64b_gld_sv2_64_scaled<0b1111, "ldff1d",   AArch64ldff1_gather_scaled,  ZPR64ExtLSL64, nxv2i64>;
+  defm GLD1SH_D   : sve_mem_64b_gld_sv2_64_scaled<0b0100, "ld1sh",    AArch64ld1s_gather_scaled_z,   ZPR64ExtLSL16, nxv2i16>;
+  defm GLDFF1SH_D : sve_mem_64b_gld_sv2_64_scaled<0b0101, "ldff1sh",  AArch64ldff1s_gather_scaled_z, ZPR64ExtLSL16, nxv2i16>;
+  defm GLD1H_D    : sve_mem_64b_gld_sv2_64_scaled<0b0110, "ld1h",     AArch64ld1_gather_scaled_z,    ZPR64ExtLSL16, nxv2i16>;
+  defm GLDFF1H_D  : sve_mem_64b_gld_sv2_64_scaled<0b0111, "ldff1h",   AArch64ldff1_gather_scaled_z,  ZPR64ExtLSL16, nxv2i16>;
+  defm GLD1SW_D   : sve_mem_64b_gld_sv2_64_scaled<0b1000, "ld1sw",    AArch64ld1s_gather_scaled_z,   ZPR64ExtLSL32, nxv2i32>;
+  defm GLDFF1SW_D : sve_mem_64b_gld_sv2_64_scaled<0b1001, "ldff1sw",  AArch64ldff1s_gather_scaled_z, ZPR64ExtLSL32, nxv2i32>;
+  defm GLD1W_D    : sve_mem_64b_gld_sv2_64_scaled<0b1010, "ld1w",     AArch64ld1_gather_scaled_z,    ZPR64ExtLSL32, nxv2i32>;
+  defm GLDFF1W_D  : sve_mem_64b_gld_sv2_64_scaled<0b1011, "ldff1w",   AArch64ldff1_gather_scaled_z,  ZPR64ExtLSL32, nxv2i32>;
+  defm GLD1D      : sve_mem_64b_gld_sv2_64_scaled<0b1110, "ld1d",     AArch64ld1_gather_scaled_z,    ZPR64ExtLSL64, nxv2i64>;
+  defm GLDFF1D    : sve_mem_64b_gld_sv2_64_scaled<0b1111, "ldff1d",   AArch64ldff1_gather_scaled_z,  ZPR64ExtLSL64, nxv2i64>;
 
   // Gathers using unscaled 32-bit offsets unpacked in 64-bits elements, e.g.
   //    ld1h z0.d, p0/z, [x0, z0.d, uxtw]
-  defm GLD1SB_D   : sve_mem_64b_gld_vs_32_unscaled<0b0000, "ld1sb",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
-  defm GLDFF1SB_D : sve_mem_64b_gld_vs_32_unscaled<0b0001, "ldff1sb", AArch64ldff1s_gather_sxtw, AArch64ldff1s_gather_uxtw, ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
-  defm GLD1B_D    : sve_mem_64b_gld_vs_32_unscaled<0b0010, "ld1b",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
-  defm GLDFF1B_D  : sve_mem_64b_gld_vs_32_unscaled<0b0011, "ldff1b",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
-  defm GLD1SH_D   : sve_mem_64b_gld_vs_32_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
-  defm GLDFF1SH_D : sve_mem_64b_gld_vs_32_unscaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw, AArch64ldff1s_gather_uxtw, ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
-  defm GLD1H_D    : sve_mem_64b_gld_vs_32_unscaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
-  defm GLDFF1H_D  : sve_mem_64b_gld_vs_32_unscaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
-  defm GLD1SW_D   : sve_mem_64b_gld_vs_32_unscaled<0b1000, "ld1sw",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
-  defm GLDFF1SW_D : sve_mem_64b_gld_vs_32_unscaled<0b1001, "ldff1sw", AArch64ldff1s_gather_sxtw, AArch64ldff1s_gather_uxtw, ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
-  defm GLD1W_D    : sve_mem_64b_gld_vs_32_unscaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
-  defm GLDFF1W_D  : sve_mem_64b_gld_vs_32_unscaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
-  defm GLD1D      : sve_mem_64b_gld_vs_32_unscaled<0b1110, "ld1d",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i64>;
-  defm GLDFF1D    : sve_mem_64b_gld_vs_32_unscaled<0b1111, "ldff1d",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i64>;
+  defm GLD1SB_D   : sve_mem_64b_gld_vs_32_unscaled<0b0000, "ld1sb",   AArch64ld1s_gather_sxtw_z,   AArch64ld1s_gather_uxtw_z,   ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
+  defm GLDFF1SB_D : sve_mem_64b_gld_vs_32_unscaled<0b0001, "ldff1sb", AArch64ldff1s_gather_sxtw_z, AArch64ldff1s_gather_uxtw_z, ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
+  defm GLD1B_D    : sve_mem_64b_gld_vs_32_unscaled<0b0010, "ld1b",    AArch64ld1_gather_sxtw_z,    AArch64ld1_gather_uxtw_z,    ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
+  defm GLDFF1B_D  : sve_mem_64b_gld_vs_32_unscaled<0b0011, "ldff1b",  AArch64ldff1_gather_sxtw_z,  AArch64ldff1_gather_uxtw_z,  ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
+  defm GLD1SH_D   : sve_mem_64b_gld_vs_32_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw_z,   AArch64ld1s_gather_uxtw_z,   ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
+  defm GLDFF1SH_D : sve_mem_64b_gld_vs_32_unscaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw_z, AArch64ldff1s_gather_uxtw_z, ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
+  defm GLD1H_D    : sve_mem_64b_gld_vs_32_unscaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw_z,    AArch64ld1_gather_uxtw_z,    ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
+  defm GLDFF1H_D  : sve_mem_64b_gld_vs_32_unscaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw_z,  AArch64ldff1_gather_uxtw_z,  ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
+  defm GLD1SW_D   : sve_mem_64b_gld_vs_32_unscaled<0b1000, "ld1sw",   AArch64ld1s_gather_sxtw_z,   AArch64ld1s_gather_uxtw_z,   ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
+  defm GLDFF1SW_D : sve_mem_64b_gld_vs_32_unscaled<0b1001, "ldff1sw", AArch64ldff1s_gather_sxtw_z, AArch64ldff1s_gather_uxtw_z, ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
+  defm GLD1W_D    : sve_mem_64b_gld_vs_32_unscaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw_z,    AArch64ld1_gather_uxtw_z,    ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
+  defm GLDFF1W_D  : sve_mem_64b_gld_vs_32_unscaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw_z,  AArch64ldff1_gather_uxtw_z,  ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
+  defm GLD1D      : sve_mem_64b_gld_vs_32_unscaled<0b1110, "ld1d",    AArch64ld1_gather_sxtw_z,    AArch64ld1_gather_uxtw_z,    ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i64>;
+  defm GLDFF1D    : sve_mem_64b_gld_vs_32_unscaled<0b1111, "ldff1d",  AArch64ldff1_gather_sxtw_z,  AArch64ldff1_gather_uxtw_z,  ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i64>;
 
   // Gathers using scaled 32-bit offsets unpacked in 64-bits elements, e.g.
   //    ld1h z0.d, p0/z, [x0, z0.d, uxtw #1]
-  defm GLD1SH_D   : sve_mem_64b_gld_sv_32_scaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw_scaled,   AArch64ld1s_gather_uxtw_scaled,   ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
-  defm GLDFF1SH_D : sve_mem_64b_gld_sv_32_scaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw_scaled, AArch64ldff1s_gather_uxtw_scaled, ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
-  defm GLD1H_D    : sve_mem_64b_gld_sv_32_scaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw_scaled,    AArch64ld1_gather_uxtw_scaled,    ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
-  defm GLDFF1H_D  : sve_mem_64b_gld_sv_32_scaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw_scaled,  AArch64ldff1_gather_uxtw_scaled,  ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
-  defm GLD1SW_D   : sve_mem_64b_gld_sv_32_scaled<0b1000, "ld1sw",   AArch64ld1s_gather_sxtw_scaled,   AArch64ld1s_gather_uxtw_scaled,   ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
-  defm GLDFF1SW_D : sve_mem_64b_gld_sv_32_scaled<0b1001, "ldff1sw", AArch64ldff1s_gather_sxtw_scaled, AArch64ldff1s_gather_uxtw_scaled, ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
-  defm GLD1W_D    : sve_mem_64b_gld_sv_32_scaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw_scaled,    AArch64ld1_gather_uxtw_scaled,    ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
-  defm GLDFF1W_D  : sve_mem_64b_gld_sv_32_scaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw_scaled,  AArch64ldff1_gather_uxtw_scaled,  ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
-  defm GLD1D      : sve_mem_64b_gld_sv_32_scaled<0b1110, "ld1d",    AArch64ld1_gather_sxtw_scaled,    AArch64ld1_gather_uxtw_scaled,    ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
-  defm GLDFF1D    : sve_mem_64b_gld_sv_32_scaled<0b1111, "ldff1d",  AArch64ldff1_gather_sxtw_scaled,  AArch64ldff1_gather_uxtw_scaled,  ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
+  defm GLD1SH_D   : sve_mem_64b_gld_sv_32_scaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw_scaled_z,   AArch64ld1s_gather_uxtw_scaled_z,   ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
+  defm GLDFF1SH_D : sve_mem_64b_gld_sv_32_scaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw_scaled_z, AArch64ldff1s_gather_uxtw_scaled_z, ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
+  defm GLD1H_D    : sve_mem_64b_gld_sv_32_scaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw_scaled_z,    AArch64ld1_gather_uxtw_scaled_z,    ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
+  defm GLDFF1H_D  : sve_mem_64b_gld_sv_32_scaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw_scaled_z,  AArch64ldff1_gather_uxtw_scaled_z,  ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
+  defm GLD1SW_D   : sve_mem_64b_gld_sv_32_scaled<0b1000, "ld1sw",   AArch64ld1s_gather_sxtw_scaled_z,   AArch64ld1s_gather_uxtw_scaled_z,   ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
+  defm GLDFF1SW_D : sve_mem_64b_gld_sv_32_scaled<0b1001, "ldff1sw", AArch64ldff1s_gather_sxtw_scaled_z, AArch64ldff1s_gather_uxtw_scaled_z, ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
+  defm GLD1W_D    : sve_mem_64b_gld_sv_32_scaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw_scaled_z,    AArch64ld1_gather_uxtw_scaled_z,    ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
+  defm GLDFF1W_D  : sve_mem_64b_gld_sv_32_scaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw_scaled_z,  AArch64ldff1_gather_uxtw_scaled_z,  ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
+  defm GLD1D      : sve_mem_64b_gld_sv_32_scaled<0b1110, "ld1d",    AArch64ld1_gather_sxtw_scaled_z,    AArch64ld1_gather_uxtw_scaled_z,    ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
+  defm GLDFF1D    : sve_mem_64b_gld_sv_32_scaled<0b1111, "ldff1d",  AArch64ldff1_gather_sxtw_scaled_z,  AArch64ldff1_gather_uxtw_scaled_z,  ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
 
   // Non-temporal contiguous loads (register + immediate)
   defm LDNT1B_ZRI : sve_mem_cldnt_si<0b00, "ldnt1b", Z_b, ZPR8>;
@@ -1193,9 +1209,9 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm INDEX_II : sve_int_index_ii<"index", index_vector>;
 
   // Unpredicated shifts
-  defm ASR_ZZI : sve_int_bin_cons_shift_imm_right<0b00, "asr", AArch64asr_pred>;
-  defm LSR_ZZI : sve_int_bin_cons_shift_imm_right<0b01, "lsr", AArch64lsr_pred>;
-  defm LSL_ZZI : sve_int_bin_cons_shift_imm_left< 0b11, "lsl", AArch64lsl_pred>;
+  defm ASR_ZZI : sve_int_bin_cons_shift_imm_right<0b00, "asr", AArch64asr_m1>;
+  defm LSR_ZZI : sve_int_bin_cons_shift_imm_right<0b01, "lsr", AArch64lsr_m1>;
+  defm LSL_ZZI : sve_int_bin_cons_shift_imm_left< 0b11, "lsl", AArch64lsl_m1>;
 
   defm ASR_WIDE_ZZZ : sve_int_bin_cons_shift_wide<0b00, "asr">;
   defm LSR_WIDE_ZZZ : sve_int_bin_cons_shift_wide<0b01, "lsr">;
@@ -1207,14 +1223,14 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm LSL_ZPmI  : sve_int_bin_pred_shift_imm_left< 0b0011, "lsl">;
   defm ASRD_ZPmI : sve_int_bin_pred_shift_imm_right<0b0100, "asrd", "ASRD_ZPZI", int_aarch64_sve_asrd>;
 
-  defm ASR_ZPZZ  : sve_int_bin_pred_zx<AArch64asr_pred>;
-  defm LSR_ZPZZ  : sve_int_bin_pred_zx<AArch64lsr_pred>;
-  defm LSL_ZPZZ  : sve_int_bin_pred_zx<AArch64lsl_pred>;
+  defm ASR_ZPZZ  : sve_int_bin_pred_zx<AArch64asr_m1>;
+  defm LSR_ZPZZ  : sve_int_bin_pred_zx<AArch64lsr_m1>;
+  defm LSL_ZPZZ  : sve_int_bin_pred_zx<AArch64lsl_m1>;
   defm ASRD_ZPZI : sve_int_bin_pred_shift_0_right_zx<int_aarch64_sve_asrd>;
 
-  defm ASR_ZPmZ  : sve_int_bin_pred_shift<0b000, "asr", "ASR_ZPZZ", AArch64asr_pred, "ASRR_ZPmZ", 1>;
-  defm LSR_ZPmZ  : sve_int_bin_pred_shift<0b001, "lsr", "LSR_ZPZZ", AArch64lsr_pred, "LSRR_ZPmZ", 1>;
-  defm LSL_ZPmZ  : sve_int_bin_pred_shift<0b011, "lsl", "LSL_ZPZZ", AArch64lsl_pred, "LSLR_ZPmZ", 1>;
+  defm ASR_ZPmZ  : sve_int_bin_pred_shift<0b000, "asr", "ASR_ZPZZ", AArch64asr_m1, "ASRR_ZPmZ", 1>;
+  defm LSR_ZPmZ  : sve_int_bin_pred_shift<0b001, "lsr", "LSR_ZPZZ", AArch64lsr_m1, "LSRR_ZPmZ", 1>;
+  defm LSL_ZPmZ  : sve_int_bin_pred_shift<0b011, "lsl", "LSL_ZPZZ", AArch64lsl_m1, "LSLR_ZPmZ", 1>;
   defm ASRR_ZPmZ : sve_int_bin_pred_shift<0b100, "asrr", "ASRR_ZPZZ", null_frag, "ASR_ZPmZ", 0>;
   defm LSRR_ZPmZ : sve_int_bin_pred_shift<0b101, "lsrr", "LSRR_ZPZZ", null_frag, "LSR_ZPmZ", 0>;
   defm LSLR_ZPmZ : sve_int_bin_pred_shift<0b111, "lslr", "LSLR_ZPZZ", null_frag, "LSL_ZPmZ", 0>;
@@ -1389,22 +1405,22 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
             (PTEST_PP PPR:$pg, PPR:$src)>;
 
   // LD1R of 128-bit masked data
-  def : Pat<(nxv16i8 (AArch64ld1rq PPR:$gp, GPR64:$base)),
+  def : Pat<(nxv16i8 (AArch64ld1rq_z PPR:$gp, GPR64:$base)),
             (LD1RQ_B_IMM $gp, $base, (i64 0))>;
-  def : Pat<(nxv8i16 (AArch64ld1rq PPR:$gp, GPR64:$base)),
+  def : Pat<(nxv8i16 (AArch64ld1rq_z PPR:$gp, GPR64:$base)),
             (LD1RQ_H_IMM $gp, $base, (i64 0))>;
-  def : Pat<(nxv4i32 (AArch64ld1rq PPR:$gp, GPR64:$base)),
+  def : Pat<(nxv4i32 (AArch64ld1rq_z PPR:$gp, GPR64:$base)),
             (LD1RQ_W_IMM $gp, $base, (i64 0))>;
-  def : Pat<(nxv2i64 (AArch64ld1rq PPR:$gp, GPR64:$base)),
+  def : Pat<(nxv2i64 (AArch64ld1rq_z PPR:$gp, GPR64:$base)),
             (LD1RQ_D_IMM $gp, $base, (i64 0))>;
 
-  def : Pat<(nxv16i8 (AArch64ld1rq PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
+  def : Pat<(nxv16i8 (AArch64ld1rq_z PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
             (LD1RQ_B_IMM $gp, $base, simm4s16:$imm)>;
-  def : Pat<(nxv8i16 (AArch64ld1rq PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
+  def : Pat<(nxv8i16 (AArch64ld1rq_z PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
             (LD1RQ_H_IMM $gp, $base, simm4s16:$imm)>;
-  def : Pat<(nxv4i32 (AArch64ld1rq PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
+  def : Pat<(nxv4i32 (AArch64ld1rq_z PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
             (LD1RQ_W_IMM $gp, $base, simm4s16:$imm)>;
-  def : Pat<(nxv2i64 (AArch64ld1rq PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
+  def : Pat<(nxv2i64 (AArch64ld1rq_z PPR:$gp, (add GPR64:$base, (i64 simm4s16:$imm)))),
             (LD1RQ_D_IMM $gp, $base, simm4s16:$imm)>;
 
   def : Pat<(sext_inreg (nxv2i64 ZPR:$Zs), nxv2i32), (SXTW_ZPmZ_D (IMPLICIT_DEF), (PTRUE_D 31), ZPR:$Zs)>;
@@ -1741,35 +1757,35 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   }
 
   // 2-element contiguous loads
-  defm : ld1<LD1B_D,  LD1B_D_IMM,  nxv2i64, AArch64ld1,  nxv2i1, nxv2i8,  am_sve_regreg_lsl0>;
-  defm : ld1<LD1SB_D, LD1SB_D_IMM, nxv2i64, AArch64ld1s, nxv2i1, nxv2i8,  am_sve_regreg_lsl0>;
-  defm : ld1<LD1H_D,  LD1H_D_IMM,  nxv2i64, AArch64ld1,  nxv2i1, nxv2i16, am_sve_regreg_lsl1>;
-  defm : ld1<LD1SH_D, LD1SH_D_IMM, nxv2i64, AArch64ld1s, nxv2i1, nxv2i16, am_sve_regreg_lsl1>;
-  defm : ld1<LD1W_D,  LD1W_D_IMM,  nxv2i64, AArch64ld1,  nxv2i1, nxv2i32, am_sve_regreg_lsl2>;
-  defm : ld1<LD1SW_D, LD1SW_D_IMM, nxv2i64, AArch64ld1s, nxv2i1, nxv2i32, am_sve_regreg_lsl2>;
-  defm : ld1<LD1D,    LD1D_IMM,    nxv2i64, AArch64ld1,  nxv2i1, nxv2i64, am_sve_regreg_lsl3>;
-  defm : ld1<LD1D,    LD1D_IMM,    nxv2f64, AArch64ld1,  nxv2i1, nxv2f64, am_sve_regreg_lsl3>;
+  defm : ld1<LD1B_D,  LD1B_D_IMM,  nxv2i64, AArch64ld1_z,  nxv2i1, nxv2i8,  am_sve_regreg_lsl0>;
+  defm : ld1<LD1SB_D, LD1SB_D_IMM, nxv2i64, AArch64ld1s_z, nxv2i1, nxv2i8,  am_sve_regreg_lsl0>;
+  defm : ld1<LD1H_D,  LD1H_D_IMM,  nxv2i64, AArch64ld1_z,  nxv2i1, nxv2i16, am_sve_regreg_lsl1>;
+  defm : ld1<LD1SH_D, LD1SH_D_IMM, nxv2i64, AArch64ld1s_z, nxv2i1, nxv2i16, am_sve_regreg_lsl1>;
+  defm : ld1<LD1W_D,  LD1W_D_IMM,  nxv2i64, AArch64ld1_z,  nxv2i1, nxv2i32, am_sve_regreg_lsl2>;
+  defm : ld1<LD1SW_D, LD1SW_D_IMM, nxv2i64, AArch64ld1s_z, nxv2i1, nxv2i32, am_sve_regreg_lsl2>;
+  defm : ld1<LD1D,    LD1D_IMM,    nxv2i64, AArch64ld1_z,  nxv2i1, nxv2i64, am_sve_regreg_lsl3>;
+  defm : ld1<LD1D,    LD1D_IMM,    nxv2f64, AArch64ld1_z,  nxv2i1, nxv2f64, am_sve_regreg_lsl3>;
 
   // 4-element contiguous loads
-  defm : ld1<LD1B_S,  LD1B_S_IMM,  nxv4i32, AArch64ld1,  nxv4i1, nxv4i8,  am_sve_regreg_lsl0>;
-  defm : ld1<LD1SB_S, LD1SB_S_IMM, nxv4i32, AArch64ld1s, nxv4i1, nxv4i8,  am_sve_regreg_lsl0>;
-  defm : ld1<LD1H_S,  LD1H_S_IMM,  nxv4i32, AArch64ld1,  nxv4i1, nxv4i16, am_sve_regreg_lsl1>;
-  defm : ld1<LD1SH_S, LD1SH_S_IMM, nxv4i32, AArch64ld1s, nxv4i1, nxv4i16, am_sve_regreg_lsl1>;
-  defm : ld1<LD1W,    LD1W_IMM,    nxv4i32, AArch64ld1,  nxv4i1, nxv4i32, am_sve_regreg_lsl2>;
-  defm : ld1<LD1W,    LD1W_IMM,    nxv4f32, AArch64ld1,  nxv4i1, nxv4f32, am_sve_regreg_lsl2>;
+  defm : ld1<LD1B_S,  LD1B_S_IMM,  nxv4i32, AArch64ld1_z,  nxv4i1, nxv4i8,  am_sve_regreg_lsl0>;
+  defm : ld1<LD1SB_S, LD1SB_S_IMM, nxv4i32, AArch64ld1s_z, nxv4i1, nxv4i8,  am_sve_regreg_lsl0>;
+  defm : ld1<LD1H_S,  LD1H_S_IMM,  nxv4i32, AArch64ld1_z,  nxv4i1, nxv4i16, am_sve_regreg_lsl1>;
+  defm : ld1<LD1SH_S, LD1SH_S_IMM, nxv4i32, AArch64ld1s_z, nxv4i1, nxv4i16, am_sve_regreg_lsl1>;
+  defm : ld1<LD1W,    LD1W_IMM,    nxv4i32, AArch64ld1_z,  nxv4i1, nxv4i32, am_sve_regreg_lsl2>;
+  defm : ld1<LD1W,    LD1W_IMM,    nxv4f32, AArch64ld1_z,  nxv4i1, nxv4f32, am_sve_regreg_lsl2>;
 
   // 8-element contiguous loads
-  defm : ld1<LD1B_H,  LD1B_H_IMM,  nxv8i16,  AArch64ld1,  nxv8i1, nxv8i8,   am_sve_regreg_lsl0>;
-  defm : ld1<LD1SB_H, LD1SB_H_IMM, nxv8i16,  AArch64ld1s, nxv8i1, nxv8i8,   am_sve_regreg_lsl0>;
-  defm : ld1<LD1H,    LD1H_IMM,    nxv8i16,  AArch64ld1,  nxv8i1, nxv8i16,  am_sve_regreg_lsl1>;
-  defm : ld1<LD1H,    LD1H_IMM,    nxv8f16,  AArch64ld1,  nxv8i1, nxv8f16,  am_sve_regreg_lsl1>;
+  defm : ld1<LD1B_H,  LD1B_H_IMM,  nxv8i16,  AArch64ld1_z,  nxv8i1, nxv8i8,   am_sve_regreg_lsl0>;
+  defm : ld1<LD1SB_H, LD1SB_H_IMM, nxv8i16,  AArch64ld1s_z, nxv8i1, nxv8i8,   am_sve_regreg_lsl0>;
+  defm : ld1<LD1H,    LD1H_IMM,    nxv8i16,  AArch64ld1_z,  nxv8i1, nxv8i16,  am_sve_regreg_lsl1>;
+  defm : ld1<LD1H,    LD1H_IMM,    nxv8f16,  AArch64ld1_z,  nxv8i1, nxv8f16,  am_sve_regreg_lsl1>;
 
   let Predicates = [HasBF16, HasSVE] in {
-    defm : ld1<LD1H,    LD1H_IMM,    nxv8bf16, AArch64ld1,  nxv8i1, nxv8bf16, am_sve_regreg_lsl1>;
+    defm : ld1<LD1H,    LD1H_IMM,    nxv8bf16, AArch64ld1_z,  nxv8i1, nxv8bf16, am_sve_regreg_lsl1>;
   }
 
   // 16-element contiguous loads
-  defm : ld1<LD1B, LD1B_IMM, nxv16i8, AArch64ld1, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
+  defm : ld1<LD1B, LD1B_IMM, nxv16i8, AArch64ld1_z, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
 
   multiclass ldnf1<Instruction I, ValueType Ty, SDPatternOperator Load, ValueType PredTy, ValueType MemVT> {
     // scalar + immediate (mul vl)
@@ -1784,35 +1800,35 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   }
 
   // 2-element contiguous non-faulting loads
-  defm : ldnf1<LDNF1B_D_IMM,  nxv2i64,  AArch64ldnf1,  nxv2i1, nxv2i8>;
-  defm : ldnf1<LDNF1SB_D_IMM, nxv2i64,  AArch64ldnf1s, nxv2i1, nxv2i8>;
-  defm : ldnf1<LDNF1H_D_IMM,  nxv2i64,  AArch64ldnf1,  nxv2i1, nxv2i16>;
-  defm : ldnf1<LDNF1SH_D_IMM, nxv2i64,  AArch64ldnf1s, nxv2i1, nxv2i16>;
-  defm : ldnf1<LDNF1W_D_IMM,  nxv2i64,  AArch64ldnf1,  nxv2i1, nxv2i32>;
-  defm : ldnf1<LDNF1SW_D_IMM, nxv2i64,  AArch64ldnf1s, nxv2i1, nxv2i32>;
-  defm : ldnf1<LDNF1D_IMM,    nxv2i64,  AArch64ldnf1,  nxv2i1, nxv2i64>;
-  defm : ldnf1<LDNF1D_IMM,    nxv2f64,  AArch64ldnf1,  nxv2i1, nxv2f64>;
+  defm : ldnf1<LDNF1B_D_IMM,  nxv2i64,  AArch64ldnf1_z,  nxv2i1, nxv2i8>;
+  defm : ldnf1<LDNF1SB_D_IMM, nxv2i64,  AArch64ldnf1s_z, nxv2i1, nxv2i8>;
+  defm : ldnf1<LDNF1H_D_IMM,  nxv2i64,  AArch64ldnf1_z,  nxv2i1, nxv2i16>;
+  defm : ldnf1<LDNF1SH_D_IMM, nxv2i64,  AArch64ldnf1s_z, nxv2i1, nxv2i16>;
+  defm : ldnf1<LDNF1W_D_IMM,  nxv2i64,  AArch64ldnf1_z,  nxv2i1, nxv2i32>;
+  defm : ldnf1<LDNF1SW_D_IMM, nxv2i64,  AArch64ldnf1s_z, nxv2i1, nxv2i32>;
+  defm : ldnf1<LDNF1D_IMM,    nxv2i64,  AArch64ldnf1_z,  nxv2i1, nxv2i64>;
+  defm : ldnf1<LDNF1D_IMM,    nxv2f64,  AArch64ldnf1_z,  nxv2i1, nxv2f64>;
 
   // 4-element contiguous non-faulting loads
-  defm : ldnf1<LDNF1B_S_IMM,  nxv4i32,  AArch64ldnf1,  nxv4i1, nxv4i8>;
-  defm : ldnf1<LDNF1SB_S_IMM, nxv4i32,  AArch64ldnf1s, nxv4i1, nxv4i8>;
-  defm : ldnf1<LDNF1H_S_IMM,  nxv4i32,  AArch64ldnf1,  nxv4i1, nxv4i16>;
-  defm : ldnf1<LDNF1SH_S_IMM, nxv4i32,  AArch64ldnf1s, nxv4i1, nxv4i16>;
-  defm : ldnf1<LDNF1W_IMM,    nxv4i32,  AArch64ldnf1,  nxv4i1, nxv4i32>;
-  defm : ldnf1<LDNF1W_IMM,    nxv4f32,  AArch64ldnf1,  nxv4i1, nxv4f32>;
+  defm : ldnf1<LDNF1B_S_IMM,  nxv4i32,  AArch64ldnf1_z,  nxv4i1, nxv4i8>;
+  defm : ldnf1<LDNF1SB_S_IMM, nxv4i32,  AArch64ldnf1s_z, nxv4i1, nxv4i8>;
+  defm : ldnf1<LDNF1H_S_IMM,  nxv4i32,  AArch64ldnf1_z,  nxv4i1, nxv4i16>;
+  defm : ldnf1<LDNF1SH_S_IMM, nxv4i32,  AArch64ldnf1s_z, nxv4i1, nxv4i16>;
+  defm : ldnf1<LDNF1W_IMM,    nxv4i32,  AArch64ldnf1_z,  nxv4i1, nxv4i32>;
+  defm : ldnf1<LDNF1W_IMM,    nxv4f32,  AArch64ldnf1_z,  nxv4i1, nxv4f32>;
 
   // 8-element contiguous non-faulting loads
-  defm : ldnf1<LDNF1B_H_IMM,  nxv8i16,  AArch64ldnf1,  nxv8i1, nxv8i8>;
-  defm : ldnf1<LDNF1SB_H_IMM, nxv8i16,  AArch64ldnf1s, nxv8i1, nxv8i8>;
-  defm : ldnf1<LDNF1H_IMM,    nxv8i16,  AArch64ldnf1,  nxv8i1, nxv8i16>;
-  defm : ldnf1<LDNF1H_IMM,    nxv8f16,  AArch64ldnf1,  nxv8i1, nxv8f16>;
+  defm : ldnf1<LDNF1B_H_IMM,  nxv8i16,  AArch64ldnf1_z,  nxv8i1, nxv8i8>;
+  defm : ldnf1<LDNF1SB_H_IMM, nxv8i16,  AArch64ldnf1s_z, nxv8i1, nxv8i8>;
+  defm : ldnf1<LDNF1H_IMM,    nxv8i16,  AArch64ldnf1_z,  nxv8i1, nxv8i16>;
+  defm : ldnf1<LDNF1H_IMM,    nxv8f16,  AArch64ldnf1_z,  nxv8i1, nxv8f16>;
 
   let Predicates = [HasBF16, HasSVE] in {
-    defm : ldnf1<LDNF1H_IMM,    nxv8bf16, AArch64ldnf1,  nxv8i1, nxv8bf16>;
+    defm : ldnf1<LDNF1H_IMM,    nxv8bf16, AArch64ldnf1_z,  nxv8i1, nxv8bf16>;
   }
 
   // 16-element contiguous non-faulting loads
-  defm : ldnf1<LDNF1B_IMM,    nxv16i8,  AArch64ldnf1, nxv16i1, nxv16i8>;
+  defm : ldnf1<LDNF1B_IMM,    nxv16i8,  AArch64ldnf1_z, nxv16i1, nxv16i8>;
 
   multiclass ldff1<Instruction I, ValueType Ty, SDPatternOperator Load, ValueType PredTy, ValueType MemVT, ComplexPattern AddrCP> {
     // reg + reg
@@ -1827,36 +1843,36 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   }
 
   // 2-element contiguous first faulting loads
-  defm : ldff1<LDFF1B_D,  nxv2i64,  AArch64ldff1,  nxv2i1, nxv2i8,   am_sve_regreg_lsl0>;
-  defm : ldff1<LDFF1SB_D, nxv2i64,  AArch64ldff1s, nxv2i1, nxv2i8,   am_sve_regreg_lsl0>;
-  defm : ldff1<LDFF1H_D,  nxv2i64,  AArch64ldff1,  nxv2i1, nxv2i16,  am_sve_regreg_lsl1>;
-  defm : ldff1<LDFF1SH_D, nxv2i64,  AArch64ldff1s, nxv2i1, nxv2i16,  am_sve_regreg_lsl1>;
-  defm : ldff1<LDFF1W_D,  nxv2i64,  AArch64ldff1,  nxv2i1, nxv2i32,  am_sve_regreg_lsl2>;
-  defm : ldff1<LDFF1SW_D, nxv2i64,  AArch64ldff1s, nxv2i1, nxv2i32,  am_sve_regreg_lsl2>;
-  defm : ldff1<LDFF1D,    nxv2i64,  AArch64ldff1,  nxv2i1, nxv2i64,  am_sve_regreg_lsl3>;
-  defm : ldff1<LDFF1W_D,  nxv2f32,  AArch64ldff1,  nxv2i1, nxv2f32,  am_sve_regreg_lsl2>;
-  defm : ldff1<LDFF1D,    nxv2f64,  AArch64ldff1,  nxv2i1, nxv2f64,  am_sve_regreg_lsl3>;
+  defm : ldff1<LDFF1B_D,  nxv2i64,  AArch64ldff1_z,  nxv2i1, nxv2i8,   am_sve_regreg_lsl0>;
+  defm : ldff1<LDFF1SB_D, nxv2i64,  AArch64ldff1s_z, nxv2i1, nxv2i8,   am_sve_regreg_lsl0>;
+  defm : ldff1<LDFF1H_D,  nxv2i64,  AArch64ldff1_z,  nxv2i1, nxv2i16,  am_sve_regreg_lsl1>;
+  defm : ldff1<LDFF1SH_D, nxv2i64,  AArch64ldff1s_z, nxv2i1, nxv2i16,  am_sve_regreg_lsl1>;
+  defm : ldff1<LDFF1W_D,  nxv2i64,  AArch64ldff1_z,  nxv2i1, nxv2i32,  am_sve_regreg_lsl2>;
+  defm : ldff1<LDFF1SW_D, nxv2i64,  AArch64ldff1s_z, nxv2i1, nxv2i32,  am_sve_regreg_lsl2>;
+  defm : ldff1<LDFF1D,    nxv2i64,  AArch64ldff1_z,  nxv2i1, nxv2i64,  am_sve_regreg_lsl3>;
+  defm : ldff1<LDFF1W_D,  nxv2f32,  AArch64ldff1_z,  nxv2i1, nxv2f32,  am_sve_regreg_lsl2>;
+  defm : ldff1<LDFF1D,    nxv2f64,  AArch64ldff1_z,  nxv2i1, nxv2f64,  am_sve_regreg_lsl3>;
 
   // 4-element contiguous first faulting loads
-  defm : ldff1<LDFF1B_S,  nxv4i32,  AArch64ldff1,  nxv4i1, nxv4i8,   am_sve_regreg_lsl0>;
-  defm : ldff1<LDFF1SB_S, nxv4i32,  AArch64ldff1s, nxv4i1, nxv4i8,   am_sve_regreg_lsl0>;
-  defm : ldff1<LDFF1H_S,  nxv4i32,  AArch64ldff1,  nxv4i1, nxv4i16,  am_sve_regreg_lsl1>;
-  defm : ldff1<LDFF1SH_S, nxv4i32,  AArch64ldff1s, nxv4i1, nxv4i16,  am_sve_regreg_lsl1>;
-  defm : ldff1<LDFF1W,    nxv4i32,  AArch64ldff1,  nxv4i1, nxv4i32,  am_sve_regreg_lsl2>;
-  defm : ldff1<LDFF1W,    nxv4f32,  AArch64ldff1,  nxv4i1, nxv4f32,  am_sve_regreg_lsl2>;
+  defm : ldff1<LDFF1B_S,  nxv4i32,  AArch64ldff1_z,  nxv4i1, nxv4i8,   am_sve_regreg_lsl0>;
+  defm : ldff1<LDFF1SB_S, nxv4i32,  AArch64ldff1s_z, nxv4i1, nxv4i8,   am_sve_regreg_lsl0>;
+  defm : ldff1<LDFF1H_S,  nxv4i32,  AArch64ldff1_z,  nxv4i1, nxv4i16,  am_sve_regreg_lsl1>;
+  defm : ldff1<LDFF1SH_S, nxv4i32,  AArch64ldff1s_z, nxv4i1, nxv4i16,  am_sve_regreg_lsl1>;
+  defm : ldff1<LDFF1W,    nxv4i32,  AArch64ldff1_z,  nxv4i1, nxv4i32,  am_sve_regreg_lsl2>;
+  defm : ldff1<LDFF1W,    nxv4f32,  AArch64ldff1_z,  nxv4i1, nxv4f32,  am_sve_regreg_lsl2>;
 
   // 8-element contiguous first faulting loads
-  defm : ldff1<LDFF1B_H,  nxv8i16,  AArch64ldff1,  nxv8i1, nxv8i8,   am_sve_regreg_lsl0>;
-  defm : ldff1<LDFF1SB_H, nxv8i16,  AArch64ldff1s, nxv8i1, nxv8i8,   am_sve_regreg_lsl0>;
-  defm : ldff1<LDFF1H,    nxv8i16,  AArch64ldff1,  nxv8i1, nxv8i16,  am_sve_regreg_lsl1>;
-  defm : ldff1<LDFF1H,    nxv8f16,  AArch64ldff1,  nxv8i1, nxv8f16,  am_sve_regreg_lsl1>;
+  defm : ldff1<LDFF1B_H,  nxv8i16,  AArch64ldff1_z,  nxv8i1, nxv8i8,   am_sve_regreg_lsl0>;
+  defm : ldff1<LDFF1SB_H, nxv8i16,  AArch64ldff1s_z, nxv8i1, nxv8i8,   am_sve_regreg_lsl0>;
+  defm : ldff1<LDFF1H,    nxv8i16,  AArch64ldff1_z,  nxv8i1, nxv8i16,  am_sve_regreg_lsl1>;
+  defm : ldff1<LDFF1H,    nxv8f16,  AArch64ldff1_z,  nxv8i1, nxv8f16,  am_sve_regreg_lsl1>;
 
   let Predicates = [HasBF16, HasSVE] in {
-    defm : ldff1<LDFF1H,    nxv8bf16, AArch64ldff1,  nxv8i1, nxv8bf16, am_sve_regreg_lsl1>;
+    defm : ldff1<LDFF1H,    nxv8bf16, AArch64ldff1_z,  nxv8i1, nxv8bf16, am_sve_regreg_lsl1>;
   }
 
   // 16-element contiguous first faulting loads
-  defm : ldff1<LDFF1B, nxv16i8, AArch64ldff1, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
+  defm : ldff1<LDFF1B, nxv16i8, AArch64ldff1_z, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
 
   multiclass st1<Instruction RegRegInst, Instruction RegImmInst, ValueType Ty,
                  SDPatternOperator Store, ValueType PredTy, ValueType MemVT, ComplexPattern AddrCP> {
@@ -2023,14 +2039,14 @@ let Predicates = [HasSVE, HasMatMulFP32] in {
 
 let Predicates = [HasSVE, HasMatMulFP64] in {
   defm FMMLA_ZZZ_D : sve_fp_matrix_mla<1, "fmmla", ZPR64, int_aarch64_sve_fmmla, nxv2f64>;
-  defm LD1RO_B_IMM : sve_mem_ldor_si<0b00, "ld1rob", Z_b, ZPR8,  nxv16i8, nxv16i1, AArch64ld1ro>;
-  defm LD1RO_H_IMM : sve_mem_ldor_si<0b01, "ld1roh", Z_h, ZPR16, nxv8i16, nxv8i1,  AArch64ld1ro>;
-  defm LD1RO_W_IMM : sve_mem_ldor_si<0b10, "ld1row", Z_s, ZPR32, nxv4i32, nxv4i1,  AArch64ld1ro>;
-  defm LD1RO_D_IMM : sve_mem_ldor_si<0b11, "ld1rod", Z_d, ZPR64, nxv2i64, nxv2i1,  AArch64ld1ro>;
-  defm LD1RO_B     : sve_mem_ldor_ss<0b00, "ld1rob", Z_b, ZPR8,  GPR64NoXZRshifted8,  nxv16i8, nxv16i1, AArch64ld1ro, am_sve_regreg_lsl0>;
-  defm LD1RO_H     : sve_mem_ldor_ss<0b01, "ld1roh", Z_h, ZPR16, GPR64NoXZRshifted16, nxv8i16, nxv8i1,  AArch64ld1ro, am_sve_regreg_lsl1>;
-  defm LD1RO_W     : sve_mem_ldor_ss<0b10, "ld1row", Z_s, ZPR32, GPR64NoXZRshifted32, nxv4i32, nxv4i1,  AArch64ld1ro, am_sve_regreg_lsl2>;
-  defm LD1RO_D     : sve_mem_ldor_ss<0b11, "ld1rod", Z_d, ZPR64, GPR64NoXZRshifted64, nxv2i64, nxv2i1,  AArch64ld1ro, am_sve_regreg_lsl3>;
+  defm LD1RO_B_IMM : sve_mem_ldor_si<0b00, "ld1rob", Z_b, ZPR8,  nxv16i8, nxv16i1, AArch64ld1ro_z>;
+  defm LD1RO_H_IMM : sve_mem_ldor_si<0b01, "ld1roh", Z_h, ZPR16, nxv8i16, nxv8i1,  AArch64ld1ro_z>;
+  defm LD1RO_W_IMM : sve_mem_ldor_si<0b10, "ld1row", Z_s, ZPR32, nxv4i32, nxv4i1,  AArch64ld1ro_z>;
+  defm LD1RO_D_IMM : sve_mem_ldor_si<0b11, "ld1rod", Z_d, ZPR64, nxv2i64, nxv2i1,  AArch64ld1ro_z>;
+  defm LD1RO_B     : sve_mem_ldor_ss<0b00, "ld1rob", Z_b, ZPR8,  GPR64NoXZRshifted8,  nxv16i8, nxv16i1, AArch64ld1ro_z, am_sve_regreg_lsl0>;
+  defm LD1RO_H     : sve_mem_ldor_ss<0b01, "ld1roh", Z_h, ZPR16, GPR64NoXZRshifted16, nxv8i16, nxv8i1,  AArch64ld1ro_z, am_sve_regreg_lsl1>;
+  defm LD1RO_W     : sve_mem_ldor_ss<0b10, "ld1row", Z_s, ZPR32, GPR64NoXZRshifted32, nxv4i32, nxv4i1,  AArch64ld1ro_z, am_sve_regreg_lsl2>;
+  defm LD1RO_D     : sve_mem_ldor_ss<0b11, "ld1rod", Z_d, ZPR64, GPR64NoXZRshifted64, nxv2i64, nxv2i1,  AArch64ld1ro_z, am_sve_regreg_lsl3>;
   defm ZIP1_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b00, 0, "zip1", int_aarch64_sve_zip1q>;
   defm ZIP2_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b00, 1, "zip2", int_aarch64_sve_zip2q>;
   defm UZP1_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b01, 0, "uzp1", int_aarch64_sve_uzp1q>;
@@ -2388,19 +2404,19 @@ let Predicates = [HasSVE2] in {
   def EXT_ZZI_B : sve2_int_perm_extract_i_cons<"ext">;
 
   // SVE2 non-temporal gather loads
-  defm LDNT1SB_ZZR_S : sve2_mem_gldnt_vs_32_ptrs<0b00000, "ldnt1sb", AArch64ldnt1s_gather, nxv4i8>;
-  defm LDNT1B_ZZR_S  : sve2_mem_gldnt_vs_32_ptrs<0b00001, "ldnt1b",  AArch64ldnt1_gather,  nxv4i8>;
-  defm LDNT1SH_ZZR_S : sve2_mem_gldnt_vs_32_ptrs<0b00100, "ldnt1sh", AArch64ldnt1s_gather, nxv4i16>;
-  defm LDNT1H_ZZR_S  : sve2_mem_gldnt_vs_32_ptrs<0b00101, "ldnt1h",  AArch64ldnt1_gather,  nxv4i16>;
-  defm LDNT1W_ZZR_S  : sve2_mem_gldnt_vs_32_ptrs<0b01001, "ldnt1w",  AArch64ldnt1_gather,  nxv4i32>;
+  defm LDNT1SB_ZZR_S : sve2_mem_gldnt_vs_32_ptrs<0b00000, "ldnt1sb", AArch64ldnt1s_gather_z, nxv4i8>;
+  defm LDNT1B_ZZR_S  : sve2_mem_gldnt_vs_32_ptrs<0b00001, "ldnt1b",  AArch64ldnt1_gather_z,  nxv4i8>;
+  defm LDNT1SH_ZZR_S : sve2_mem_gldnt_vs_32_ptrs<0b00100, "ldnt1sh", AArch64ldnt1s_gather_z, nxv4i16>;
+  defm LDNT1H_ZZR_S  : sve2_mem_gldnt_vs_32_ptrs<0b00101, "ldnt1h",  AArch64ldnt1_gather_z,  nxv4i16>;
+  defm LDNT1W_ZZR_S  : sve2_mem_gldnt_vs_32_ptrs<0b01001, "ldnt1w",  AArch64ldnt1_gather_z,  nxv4i32>;
 
-  defm LDNT1SB_ZZR_D : sve2_mem_gldnt_vs_64_ptrs<0b10000, "ldnt1sb", AArch64ldnt1s_gather, nxv2i8>;
-  defm LDNT1B_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b10010, "ldnt1b",  AArch64ldnt1_gather,  nxv2i8>;
-  defm LDNT1SH_ZZR_D : sve2_mem_gldnt_vs_64_ptrs<0b10100, "ldnt1sh", AArch64ldnt1s_gather, nxv2i16>;
-  defm LDNT1H_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b10110, "ldnt1h",  AArch64ldnt1_gather,  nxv2i16>;
-  defm LDNT1SW_ZZR_D : sve2_mem_gldnt_vs_64_ptrs<0b11000, "ldnt1sw", AArch64ldnt1s_gather, nxv2i32>;
-  defm LDNT1W_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b11010, "ldnt1w",  AArch64ldnt1_gather,  nxv2i32>;
-  defm LDNT1D_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b11110, "ldnt1d",  AArch64ldnt1_gather,  nxv2i64>;
+  defm LDNT1SB_ZZR_D : sve2_mem_gldnt_vs_64_ptrs<0b10000, "ldnt1sb", AArch64ldnt1s_gather_z, nxv2i8>;
+  defm LDNT1B_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b10010, "ldnt1b",  AArch64ldnt1_gather_z,  nxv2i8>;
+  defm LDNT1SH_ZZR_D : sve2_mem_gldnt_vs_64_ptrs<0b10100, "ldnt1sh", AArch64ldnt1s_gather_z, nxv2i16>;
+  defm LDNT1H_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b10110, "ldnt1h",  AArch64ldnt1_gather_z,  nxv2i16>;
+  defm LDNT1SW_ZZR_D : sve2_mem_gldnt_vs_64_ptrs<0b11000, "ldnt1sw", AArch64ldnt1s_gather_z, nxv2i32>;
+  defm LDNT1W_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b11010, "ldnt1w",  AArch64ldnt1_gather_z,  nxv2i32>;
+  defm LDNT1D_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b11110, "ldnt1d",  AArch64ldnt1_gather_z,  nxv2i64>;
 
   // SVE2 vector splice (constructive)
   defm SPLICE_ZPZZ : sve2_int_perm_splice_cons<"splice">;
