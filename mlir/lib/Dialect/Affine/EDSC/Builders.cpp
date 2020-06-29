@@ -221,29 +221,51 @@ Value mlir::edsc::op::ne(Value lhs, Value rhs) {
              ? createFComparisonExpr(CmpFPredicate::ONE, lhs, rhs)
              : createIComparisonExpr(CmpIPredicate::ne, lhs, rhs);
 }
-Value mlir::edsc::op::operator<(Value lhs, Value rhs) {
+Value mlir::edsc::op::slt(Value lhs, Value rhs) {
   auto type = lhs.getType();
   return type.isa<FloatType>()
              ? createFComparisonExpr(CmpFPredicate::OLT, lhs, rhs)
-             :
-             // TODO(ntv,zinenko): signed by default, how about unsigned?
-             createIComparisonExpr(CmpIPredicate::slt, lhs, rhs);
+             : createIComparisonExpr(CmpIPredicate::slt, lhs, rhs);
 }
-Value mlir::edsc::op::operator<=(Value lhs, Value rhs) {
+Value mlir::edsc::op::sle(Value lhs, Value rhs) {
   auto type = lhs.getType();
   return type.isa<FloatType>()
              ? createFComparisonExpr(CmpFPredicate::OLE, lhs, rhs)
              : createIComparisonExpr(CmpIPredicate::sle, lhs, rhs);
 }
-Value mlir::edsc::op::operator>(Value lhs, Value rhs) {
+Value mlir::edsc::op::sgt(Value lhs, Value rhs) {
   auto type = lhs.getType();
   return type.isa<FloatType>()
              ? createFComparisonExpr(CmpFPredicate::OGT, lhs, rhs)
              : createIComparisonExpr(CmpIPredicate::sgt, lhs, rhs);
 }
-Value mlir::edsc::op::operator>=(Value lhs, Value rhs) {
+Value mlir::edsc::op::sge(Value lhs, Value rhs) {
   auto type = lhs.getType();
   return type.isa<FloatType>()
              ? createFComparisonExpr(CmpFPredicate::OGE, lhs, rhs)
              : createIComparisonExpr(CmpIPredicate::sge, lhs, rhs);
+}
+Value mlir::edsc::op::ult(Value lhs, Value rhs) {
+  auto type = lhs.getType();
+  return type.isa<FloatType>()
+             ? createFComparisonExpr(CmpFPredicate::OLT, lhs, rhs)
+             : createIComparisonExpr(CmpIPredicate::ult, lhs, rhs);
+}
+Value mlir::edsc::op::ule(Value lhs, Value rhs) {
+  auto type = lhs.getType();
+  return type.isa<FloatType>()
+             ? createFComparisonExpr(CmpFPredicate::OLE, lhs, rhs)
+             : createIComparisonExpr(CmpIPredicate::ule, lhs, rhs);
+}
+Value mlir::edsc::op::ugt(Value lhs, Value rhs) {
+  auto type = lhs.getType();
+  return type.isa<FloatType>()
+             ? createFComparisonExpr(CmpFPredicate::OGT, lhs, rhs)
+             : createIComparisonExpr(CmpIPredicate::ugt, lhs, rhs);
+}
+Value mlir::edsc::op::uge(Value lhs, Value rhs) {
+  auto type = lhs.getType();
+  return type.isa<FloatType>()
+             ? createFComparisonExpr(CmpFPredicate::OGE, lhs, rhs)
+             : createIComparisonExpr(CmpIPredicate::uge, lhs, rhs);
 }
