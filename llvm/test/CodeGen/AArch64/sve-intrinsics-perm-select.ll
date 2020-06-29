@@ -516,6 +516,16 @@ define <vscale x 2 x i64> @ext_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
 }
 
+define <vscale x 8 x bfloat> @ext_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
+; CHECK-LABEL: ext_bf16:
+; CHECK: ext z0.b, z0.b, z1.b, #6
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ext.nxv8bf16(<vscale x 8 x bfloat> %a,
+                                                                   <vscale x 8 x bfloat> %b,
+                                                                   i32 3)
+  ret <vscale x 8 x bfloat> %out
+}
+
 define <vscale x 8 x half> @ext_f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: ext_f16:
 ; CHECK: ext z0.b, z0.b, z1.b, #6
@@ -1885,6 +1895,7 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.ext.nxv16i8(<vscale x 16 x i8>, <vs
 declare <vscale x 8 x i16> @llvm.aarch64.sve.ext.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.ext.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, i32)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.ext.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, i32)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ext.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, i32)
 declare <vscale x 8 x half> @llvm.aarch64.sve.ext.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, i32)
 declare <vscale x 4 x float> @llvm.aarch64.sve.ext.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, i32)
 declare <vscale x 2 x double> @llvm.aarch64.sve.ext.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, i32)
