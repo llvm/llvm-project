@@ -1425,6 +1425,17 @@ struct FormatStyle {
   /// For example: TESTSUITE
   std::vector<std::string> NamespaceMacros;
 
+  /// A vector of macros which are whitespace-sensitive and shouldn't be
+  /// touched.
+  ///
+  /// These are expected to be macros of the form:
+  /// \code
+  ///   STRINGIZE(...)
+  /// \endcode
+  ///
+  /// For example: STRINGIZE
+  std::vector<std::string> WhitespaceSensitiveMacros;
+
   tooling::IncludeStyle IncludeStyle;
 
   /// Indent case labels one level from the switch statement.
