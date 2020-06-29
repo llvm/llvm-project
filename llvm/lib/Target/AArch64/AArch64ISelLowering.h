@@ -403,7 +403,8 @@ public:
     return MVT::getIntegerVT(64);
   }
 
-  bool targetShrinkDemandedConstant(SDValue Op, const APInt &Demanded,
+  bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,
+                                    const APInt &DemandedElts,
                                     TargetLoweringOpt &TLO) const override;
 
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;

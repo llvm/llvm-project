@@ -447,10 +447,15 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
   // emit any LLVM instruction.
   if (auto addressOfOp = dyn_cast<LLVM::AddressOfOp>(opInst)) {
     LLVM::GlobalOp global = addressOfOp.getGlobal();
-    // The verifier should not have allowed this.
-    assert(global && "referencing an undefined global");
+    LLVM::LLVMFuncOp function = addressOfOp.getFunction();
 
-    valueMapping[addressOfOp.getResult()] = globalsMapping.lookup(global);
+    // The verifier should not have allowed this.
+    assert((global || function) &&
+           "referencing an undefined global or function");
+
+    valueMapping[addressOfOp.getResult()] =
+        global ? globalsMapping.lookup(global)
+               : functionMapping.lookup(function.getName());
     return success();
   }
 

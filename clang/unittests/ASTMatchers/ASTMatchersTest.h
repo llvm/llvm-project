@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Testing/CommandLineArgs.h"
+#include "clang/Testing/TestClangConfig.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
 
@@ -94,17 +95,29 @@ testing::AssertionResult matchesConditionally(
     return testing::AssertionFailure() << "Could not add dynamic matcher";
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory(&Finder));
-  // Some tests need rtti/exceptions on.  Use an unknown-unknown triple so we
-  // don't instantiate the full system toolchain.  On Linux, instantiating the
-  // toolchain involves stat'ing large portions of /usr/lib, and this slows down
-  // not only this test, but all other tests, via contention in the kernel.
-  //
-  // FIXME: This is a hack to work around the fact that there's no way to do the
-  // equivalent of runToolOnCodeWithArgs without instantiating a full Driver.
-  // We should consider having a function, at least for tests, that invokes cc1.
-  std::vector<std::string> Args(CompileArgs.begin(), CompileArgs.end());
-  Args.insert(Args.end(), {"-frtti", "-fexceptions",
-                           "-target", "i386-unknown-unknown"});
+  std::vector<std::string> Args = {
+      // Some tests need rtti/exceptions on.
+      "-frtti", "-fexceptions",
+      // Ensure that tests specify the C++ standard version that they need.
+      "-Werror=c++14-extensions", "-Werror=c++17-extensions",
+      "-Werror=c++20-extensions"};
+  // Append additional arguments at the end to allow overriding the default
+  // choices that we made above.
+  llvm::copy(CompileArgs, std::back_inserter(Args));
+  if (llvm::find(Args, "-target") == Args.end()) {
+    // Use an unknown-unknown triple so we don't instantiate the full system
+    // toolchain.  On Linux, instantiating the toolchain involves stat'ing
+    // large portions of /usr/lib, and this slows down not only this test, but
+    // all other tests, via contention in the kernel.
+    //
+    // FIXME: This is a hack to work around the fact that there's no way to do
+    // the equivalent of runToolOnCodeWithArgs without instantiating a full
+    // Driver.  We should consider having a function, at least for tests, that
+    // invokes cc1.
+    Args.push_back("-target");
+    Args.push_back("i386-unknown-unknown");
+  }
+
   if (!runToolOnCodeWithArgs(
           Factory->create(), Code, Args, Filename, "clang-tool",
           std::make_shared<PCHContainerOperations>(), VirtualMappedFiles)) {
@@ -131,13 +144,9 @@ testing::AssertionResult
 matchesConditionally(const Twine &Code, const T &AMatcher, bool ExpectMatch,
                      ArrayRef<TestLanguage> TestLanguages) {
   for (auto Lang : TestLanguages) {
-    std::vector<std::string> Args = getCommandLineArgsForTesting(Lang);
-    Args.insert(Args.end(),
-                {"-Werror=c++14-extensions", "-Werror=c++17-extensions",
-                 "-Werror=c++20-extensions"});
-    auto Result = matchesConditionally(Code, AMatcher, ExpectMatch, Args,
-                                       FileContentMappings(),
-                                       getFilenameForTesting(Lang));
+    auto Result = matchesConditionally(
+        Code, AMatcher, ExpectMatch, getCommandLineArgsForTesting(Lang),
+        FileContentMappings(), getFilenameForTesting(Lang));
     if (!Result)
       return Result;
   }
@@ -172,11 +181,6 @@ template <typename T>
 testing::AssertionResult matchesC(const Twine &Code, const T &AMatcher) {
   return matchesConditionally(Code, AMatcher, true, {}, FileContentMappings(),
                               "input.c");
-}
-
-template <typename T>
-testing::AssertionResult matchesC99(const Twine &Code, const T &AMatcher) {
-  return matchesConditionally(Code, AMatcher, true, {Lang_C99});
 }
 
 template <typename T>
@@ -408,6 +412,26 @@ private:
   int Count;
   const std::string ExpectedName;
   std::string Name;
+};
+
+class ASTMatchersTest : public ::testing::Test,
+                        public ::testing::WithParamInterface<TestClangConfig> {
+protected:
+  template <typename T>
+  testing::AssertionResult matches(const Twine &Code, const T &AMatcher) {
+    const TestClangConfig &TestConfig = GetParam();
+    return clang::ast_matchers::matchesConditionally(
+        Code, AMatcher, /*ExpectMatch=*/true, TestConfig.getCommandLineArgs(),
+        FileContentMappings(), getFilenameForTesting(TestConfig.Language));
+  }
+
+  template <typename T>
+  testing::AssertionResult notMatches(const Twine &Code, const T &AMatcher) {
+    const TestClangConfig &TestConfig = GetParam();
+    return clang::ast_matchers::matchesConditionally(
+        Code, AMatcher, /*ExpectMatch=*/false, TestConfig.getCommandLineArgs(),
+        FileContentMappings(), getFilenameForTesting(TestConfig.Language));
+  }
 };
 
 } // namespace ast_matchers

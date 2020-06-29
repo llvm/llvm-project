@@ -768,7 +768,7 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
           // it the preferred alignment. Otherwise, we have to assume that it
           // may only have the minimum ABI alignment.
           if (GVar->isStrongDefinitionForLinker())
-            return Align(DL.getPreferredAlignment(GVar));
+            return DL.getPreferredAlign(GVar);
           else
             return DL.getABITypeAlign(ObjectType);
         }
