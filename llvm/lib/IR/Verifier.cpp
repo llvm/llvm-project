@@ -2314,13 +2314,24 @@ void Verifier::visitFunction(const Function &F) {
     Assert(!F.hasStructRetAttr(),
            "Calling convention does not allow sret", &F);
     if (F.getCallingConv() != CallingConv::SPIR_KERNEL) {
-      for (unsigned i = 0, e = F.arg_size(); i != e; ++i) {
+      const unsigned StackAS = DL.getAllocaAddrSpace();
+      unsigned i = 0;
+      for (const Argument &Arg : F.args()) {
         Assert(!Attrs.hasParamAttribute(i, Attribute::ByVal),
                "Calling convention disallows byval", &F);
         Assert(!Attrs.hasParamAttribute(i, Attribute::Preallocated),
                "Calling convention disallows preallocated", &F);
         Assert(!Attrs.hasParamAttribute(i, Attribute::InAlloca),
                "Calling convention disallows inalloca", &F);
+
+        if (Attrs.hasParamAttribute(i, Attribute::ByRef)) {
+          // FIXME: Should also disallow LDS and GDS, but we don't have the enum
+          // value here.
+          Assert(Arg.getType()->getPointerAddressSpace() != StackAS,
+                 "Calling convention disallows stack byref", &F);
+        }
+
+        ++i;
       }
     }
 
