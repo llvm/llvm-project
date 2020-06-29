@@ -967,12 +967,22 @@ Error Section::removeSectionReferences(
 }
 
 void GroupSection::finalize() {
-  this->Info = Sym->Index;
-  this->Link = SymTab->Index;
+  this->Info = Sym ? Sym->Index : 0;
+  this->Link = SymTab ? SymTab->Index : 0;
 }
 
 Error GroupSection::removeSectionReferences(
     bool AllowBrokenLinks, function_ref<bool(const SectionBase *)> ToRemove) {
+  if (ToRemove(SymTab)) {
+    if (!AllowBrokenLinks)
+      return createStringError(
+          llvm::errc::invalid_argument,
+          "section '.symtab' cannot be removed because it is "
+          "referenced by the group section '%s'",
+          this->Name.data());
+    SymTab = nullptr;
+    Sym = nullptr;
+  }
   llvm::erase_if(GroupMembers, ToRemove);
   return Error::success();
 }
@@ -1339,18 +1349,20 @@ void ELFBuilder<ELFT>::initGroupSection(GroupSection *GroupSec) {
     error("invalid alignment " + Twine(GroupSec->Align) + " of group section '" +
           GroupSec->Name + "'");
   SectionTableRef SecTable = Obj.sections();
-  auto SymTab = SecTable.template getSectionOfType<SymbolTableSection>(
-      GroupSec->Link,
-      "link field value '" + Twine(GroupSec->Link) + "' in section '" +
-          GroupSec->Name + "' is invalid",
-      "link field value '" + Twine(GroupSec->Link) + "' in section '" +
-          GroupSec->Name + "' is not a symbol table");
-  Symbol *Sym = SymTab->getSymbolByIndex(GroupSec->Info);
-  if (!Sym)
-    error("info field value '" + Twine(GroupSec->Info) + "' in section '" +
-          GroupSec->Name + "' is not a valid symbol index");
-  GroupSec->setSymTab(SymTab);
-  GroupSec->setSymbol(Sym);
+  if (GroupSec->Link != SHN_UNDEF) {
+    auto SymTab = SecTable.template getSectionOfType<SymbolTableSection>(
+        GroupSec->Link,
+        "link field value '" + Twine(GroupSec->Link) + "' in section '" +
+            GroupSec->Name + "' is invalid",
+        "link field value '" + Twine(GroupSec->Link) + "' in section '" +
+            GroupSec->Name + "' is not a symbol table");
+    Symbol *Sym = SymTab->getSymbolByIndex(GroupSec->Info);
+    if (!Sym)
+      error("info field value '" + Twine(GroupSec->Info) + "' in section '" +
+            GroupSec->Name + "' is not a valid symbol index");
+    GroupSec->setSymTab(SymTab);
+    GroupSec->setSymbol(Sym);
+  }
   if (GroupSec->Contents.size() % sizeof(ELF::Elf32_Word) ||
       GroupSec->Contents.empty())
     error("the content of the section " + GroupSec->Name + " is malformed");
