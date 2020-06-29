@@ -18,7 +18,7 @@
 /// packed together but are not required to. This is problematic when storage is
 /// sparse and data must be stored in a particular integer type.
 ///
-/// The methods provided in this file ensures precise control over the
+/// The methods provided in this file ensure precise control over the
 /// layout/storage as well as protection against out of range values.
 ///
 /// Usage example
@@ -190,7 +190,7 @@ template <typename Bitfield, typename StorageType> struct Impl {
 /// - signed and unsigned integer
 /// - `bool`
 /// Internally though we only manipulate integer with well defined and
-/// consistent semantic, this excludes typed enums and `bool` that are replaced
+/// consistent semantics, this excludes typed enums and `bool` that are replaced
 /// with their unsigned counterparts. The correct type is restored in the public
 /// API.
 template <typename T, bool = std::is_enum<T>::value>
