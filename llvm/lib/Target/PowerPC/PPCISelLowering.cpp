@@ -14283,7 +14283,7 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
 
   // None of these combines are useful on big endian systems since the ISA
   // already has a big endian bias.
-  if (!Subtarget.isLittleEndian())
+  if (!Subtarget.isLittleEndian() || !Subtarget.hasVSX())
     return Res;
 
   // If this is not a shuffle of a shuffle and the first element comes from

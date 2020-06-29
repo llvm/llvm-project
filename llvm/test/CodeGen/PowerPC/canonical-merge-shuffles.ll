@@ -5,6 +5,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:     -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN: FileCheck %s --check-prefix=CHECK-P9
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:     -mcpu=pwr8 -mattr=-vsx -ppc-asm-full-reg-names \
+; RUN:     -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-NOVSX
 
 define dso_local <16 x i8> @testmrghb(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrghb:
@@ -16,6 +19,11 @@ define dso_local <16 x i8> @testmrghb(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrghb v2, v3, v2
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrghb:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    vmrghb v2, v3, v2
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
   ret <16 x i8> %shuffle
@@ -30,6 +38,14 @@ define dso_local <16 x i8> @testmrghb2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrghb v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrghb2:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
+; CHECK-NOVSX-NEXT:    addi r3, r3, .LCPI1_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v4, 0, r3
+; CHECK-NOVSX-NEXT:    vperm v2, v3, v2, v4
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 24, i32 8, i32 25, i32 9, i32 26, i32 10, i32 27, i32 11, i32 28, i32 12, i32 29, i32 13, i32 30, i32 14, i32 31, i32 15>
   ret <16 x i8> %shuffle
@@ -44,6 +60,11 @@ define dso_local <16 x i8> @testmrghh(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrghh v2, v3, v2
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrghh:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    vmrghh v2, v3, v2
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 9, i32 24, i32 25, i32 10, i32 11, i32 26, i32 27, i32 12, i32 13, i32 28, i32 29, i32 14, i32 15, i32 30, i32 31>
   ret <16 x i8> %shuffle
@@ -58,6 +79,14 @@ define dso_local <16 x i8> @testmrghh2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrghh v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrghh2:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
+; CHECK-NOVSX-NEXT:    addi r3, r3, .LCPI3_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v4, 0, r3
+; CHECK-NOVSX-NEXT:    vperm v2, v3, v2, v4
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 24, i32 25, i32 8, i32 9, i32 26, i32 27, i32 10, i32 11, i32 28, i32 29, i32 12, i32 13, i32 30, i32 31, i32 14, i32 15>
   ret <16 x i8> %shuffle
@@ -72,6 +101,11 @@ define dso_local <16 x i8> @testmrglb(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrglb v2, v3, v2
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrglb:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    vmrglb v2, v3, v2
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
   ret <16 x i8> %shuffle
@@ -86,6 +120,14 @@ define dso_local <16 x i8> @testmrglb2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrglb v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrglb2:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
+; CHECK-NOVSX-NEXT:    addi r3, r3, .LCPI5_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v4, 0, r3
+; CHECK-NOVSX-NEXT:    vperm v2, v3, v2, v4
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 0, i32 17, i32 1, i32 18, i32 2, i32 19, i32 3, i32 20, i32 4, i32 21, i32 5, i32 22, i32 6, i32 23, i32 7>
   ret <16 x i8> %shuffle
@@ -100,6 +142,11 @@ define dso_local <16 x i8> @testmrglh(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrglh v2, v3, v2
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrglh:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    vmrglh v2, v3, v2
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 1, i32 16, i32 17, i32 2, i32 3, i32 18, i32 19, i32 4, i32 5, i32 20, i32 21, i32 6, i32 7, i32 22, i32 23>
   ret <16 x i8> %shuffle
@@ -114,6 +161,14 @@ define dso_local <16 x i8> @testmrglh2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrglh v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrglh2:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    addis r3, r2, .LCPI7_0@toc@ha
+; CHECK-NOVSX-NEXT:    addi r3, r3, .LCPI7_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v4, 0, r3
+; CHECK-NOVSX-NEXT:    vperm v2, v3, v2, v4
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 0, i32 1, i32 18, i32 19, i32 2, i32 3, i32 20, i32 21, i32 4, i32 5, i32 22, i32 23, i32 6, i32 7>
   ret <16 x i8> %shuffle
@@ -128,6 +183,11 @@ define dso_local <16 x i8> @testmrghw(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrghw v2, v3, v2
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrghw:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    vmrghw v2, v3, v2
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 24, i32 25, i32 26, i32 27, i32 12, i32 13, i32 14, i32 15, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %shuffle
@@ -142,6 +202,14 @@ define dso_local <16 x i8> @testmrghw2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrghw v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrghw2:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    addis r3, r2, .LCPI9_0@toc@ha
+; CHECK-NOVSX-NEXT:    addi r3, r3, .LCPI9_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v4, 0, r3
+; CHECK-NOVSX-NEXT:    vperm v2, v3, v2, v4
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 24, i32 25, i32 26, i32 27, i32 8, i32 9, i32 10, i32 11, i32 28, i32 29, i32 30, i32 31, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i8> %shuffle
@@ -156,6 +224,11 @@ define dso_local <16 x i8> @testmrglw(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrglw v2, v3, v2
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrglw:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    vmrglw v2, v3, v2
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23>
   ret <16 x i8> %shuffle
@@ -170,6 +243,14 @@ define dso_local <16 x i8> @testmrglw2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrglw v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrglw2:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    addis r3, r2, .LCPI11_0@toc@ha
+; CHECK-NOVSX-NEXT:    addi r3, r3, .LCPI11_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v4, 0, r3
+; CHECK-NOVSX-NEXT:    vperm v2, v3, v2, v4
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 4, i32 5, i32 6, i32 7>
   ret <16 x i8> %shuffle
@@ -190,6 +271,19 @@ define dso_local <8 x i16> @testmrglb3(<8 x i8>* nocapture readonly %a) local_un
 ; CHECK-P9-NEXT:    xxlxor v3, v3, v3
 ; CHECK-P9-NEXT:    vmrghb v2, v3, v2
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testmrglb3:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    vxor v2, v2, v2
+; CHECK-NOVSX-NEXT:    ld r3, 0(r3)
+; CHECK-NOVSX-NEXT:    addis r4, r2, .LCPI12_0@toc@ha
+; CHECK-NOVSX-NEXT:    addi r4, r4, .LCPI12_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v3, 0, r4
+; CHECK-NOVSX-NEXT:    std r3, -16(r1)
+; CHECK-NOVSX-NEXT:    addi r3, r1, -16
+; CHECK-NOVSX-NEXT:    lvx v4, 0, r3
+; CHECK-NOVSX-NEXT:    vperm v2, v4, v2, v3
+; CHECK-NOVSX-NEXT:    blr
 entry:
   %0 = load <8 x i8>, <8 x i8>* %a, align 8
   %1 = zext <8 x i8> %0 to <8 x i16>
