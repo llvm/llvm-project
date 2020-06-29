@@ -28,6 +28,31 @@ using namespace llvm;
 
 namespace clang {
 namespace tidy {
+
+template <> struct OptionEnumMapping<modernize::Confidence::Level> {
+  static llvm::ArrayRef<std::pair<modernize::Confidence::Level, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<modernize::Confidence::Level, StringRef>
+        Mapping[] = {{modernize::Confidence::CL_Reasonable, "reasonable"},
+                     {modernize::Confidence::CL_Safe, "safe"},
+                     {modernize::Confidence::CL_Risky, "risky"}};
+    return makeArrayRef(Mapping);
+  }
+};
+
+template <> struct OptionEnumMapping<modernize::VariableNamer::NamingStyle> {
+  static llvm::ArrayRef<
+      std::pair<modernize::VariableNamer::NamingStyle, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<modernize::VariableNamer::NamingStyle, StringRef>
+        Mapping[] = {{modernize::VariableNamer::NS_CamelCase, "CamelCase"},
+                     {modernize::VariableNamer::NS_CamelBack, "camelBack"},
+                     {modernize::VariableNamer::NS_LowerCase, "lower_case"},
+                     {modernize::VariableNamer::NS_UpperCase, "UPPER_CASE"}};
+    return makeArrayRef(Mapping);
+  }
+};
+
 namespace modernize {
 
 static const char LoopNameArray[] = "forLoopArray";
@@ -43,25 +68,6 @@ static const char ConditionEndVarName[] = "conditionEndVar";
 static const char EndVarName[] = "endVar";
 static const char DerefByValueResultName[] = "derefByValueResult";
 static const char DerefByRefResultName[] = "derefByRefResult";
-
-static ArrayRef<std::pair<StringRef, Confidence::Level>>
-getConfidenceMapping() {
-  static constexpr std::pair<StringRef, Confidence::Level> Mapping[] = {
-      {"reasonable", Confidence::CL_Reasonable},
-      {"safe", Confidence::CL_Safe},
-      {"risky", Confidence::CL_Risky}};
-  return makeArrayRef(Mapping);
-}
-
-static ArrayRef<std::pair<StringRef, VariableNamer::NamingStyle>>
-getStyleMapping() {
-  static constexpr std::pair<StringRef, VariableNamer::NamingStyle> Mapping[] =
-      {{"CamelCase", VariableNamer::NS_CamelCase},
-       {"camelBack", VariableNamer::NS_CamelBack},
-       {"lower_case", VariableNamer::NS_LowerCase},
-       {"UPPER_CASE", VariableNamer::NS_UpperCase}};
-  return makeArrayRef(Mapping);
-}
 
 // shared matchers
 static const TypeMatcher AnyType() { return anything(); }
@@ -477,15 +483,13 @@ LoopConvertCheck::RangeDescriptor::RangeDescriptor()
 LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), TUInfo(new TUTrackingInfo),
       MaxCopySize(Options.get("MaxCopySize", 16ULL)),
-      MinConfidence(Options.get("MinConfidence", getConfidenceMapping(),
-                                Confidence::CL_Reasonable)),
-      NamingStyle(Options.get("NamingStyle", getStyleMapping(),
-                              VariableNamer::NS_CamelCase)) {}
+      MinConfidence(Options.get("MinConfidence", Confidence::CL_Reasonable)),
+      NamingStyle(Options.get("NamingStyle", VariableNamer::NS_CamelCase)) {}
 
 void LoopConvertCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MaxCopySize", std::to_string(MaxCopySize));
-  Options.store(Opts, "MinConfidence", MinConfidence, getConfidenceMapping());
-  Options.store(Opts, "NamingStyle", NamingStyle, getStyleMapping());
+  Options.store(Opts, "MinConfidence", MinConfidence);
+  Options.store(Opts, "NamingStyle", NamingStyle);
 }
 
 void LoopConvertCheck::registerMatchers(MatchFinder *Finder) {

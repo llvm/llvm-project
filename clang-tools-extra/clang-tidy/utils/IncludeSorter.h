@@ -25,8 +25,6 @@ public:
   /// Supported include styles.
   enum IncludeStyle { IS_LLVM = 0, IS_Google = 1 };
 
-  static ArrayRef<std::pair<StringRef, IncludeStyle>> getMapping();
-
   /// The classifications of inclusions, in the order they should be sorted.
   enum IncludeKinds {
     IK_MainTUInclude = 0,    ///< e.g. ``#include "foo.h"`` when editing foo.cc
@@ -66,6 +64,11 @@ private:
 };
 
 } // namespace utils
+
+template <> struct OptionEnumMapping<utils::IncludeSorter::IncludeStyle> {
+  static ArrayRef<std::pair<utils::IncludeSorter::IncludeStyle, StringRef>>
+  getEnumMapping();
+};
 } // namespace tidy
 } // namespace clang
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H

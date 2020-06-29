@@ -158,7 +158,7 @@ void ClangTidyCheck::OptionsView::store(ClangTidyOptions::OptionMap &Options,
 }
 
 llvm::Expected<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
-    StringRef LocalName, ArrayRef<std::pair<StringRef, int64_t>> Mapping,
+    StringRef LocalName, ArrayRef<std::pair<int64_t, StringRef>> Mapping,
     bool CheckGlobal, bool IgnoreCase) {
   auto Iter = CheckOptions.find((NamePrefix + LocalName).str());
   if (CheckGlobal && Iter == CheckOptions.end())
@@ -171,19 +171,19 @@ llvm::Expected<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
   unsigned EditDistance = -1;
   for (const auto &NameAndEnum : Mapping) {
     if (IgnoreCase) {
-      if (Value.equals_lower(NameAndEnum.first))
-        return NameAndEnum.second;
-    } else if (Value.equals(NameAndEnum.first)) {
-      return NameAndEnum.second;
-    } else if (Value.equals_lower(NameAndEnum.first)) {
-      Closest = NameAndEnum.first;
+      if (Value.equals_lower(NameAndEnum.second))
+        return NameAndEnum.first;
+    } else if (Value.equals(NameAndEnum.second)) {
+      return NameAndEnum.first;
+    } else if (Value.equals_lower(NameAndEnum.second)) {
+      Closest = NameAndEnum.second;
       EditDistance = 0;
       continue;
     }
-    unsigned Distance = Value.edit_distance(NameAndEnum.first);
+    unsigned Distance = Value.edit_distance(NameAndEnum.second);
     if (Distance < EditDistance) {
       EditDistance = Distance;
-      Closest = NameAndEnum.first;
+      Closest = NameAndEnum.second;
     }
   }
   if (EditDistance < 3)
