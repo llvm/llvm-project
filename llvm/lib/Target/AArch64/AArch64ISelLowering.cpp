@@ -1336,245 +1336,243 @@ AArch64TargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
 }
 
 const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
+#define MAKE_CASE(V)                                                           \
+  case V:                                                                      \
+    return #V;
   switch ((AArch64ISD::NodeType)Opcode) {
-  case AArch64ISD::FIRST_NUMBER:      break;
-  case AArch64ISD::CALL:              return "AArch64ISD::CALL";
-  case AArch64ISD::ADRP:              return "AArch64ISD::ADRP";
-  case AArch64ISD::ADR:               return "AArch64ISD::ADR";
-  case AArch64ISD::ADDlow:            return "AArch64ISD::ADDlow";
-  case AArch64ISD::LOADgot:           return "AArch64ISD::LOADgot";
-  case AArch64ISD::RET_FLAG:          return "AArch64ISD::RET_FLAG";
-  case AArch64ISD::BRCOND:            return "AArch64ISD::BRCOND";
-  case AArch64ISD::CSEL:              return "AArch64ISD::CSEL";
-  case AArch64ISD::FCSEL:             return "AArch64ISD::FCSEL";
-  case AArch64ISD::CSINV:             return "AArch64ISD::CSINV";
-  case AArch64ISD::CSNEG:             return "AArch64ISD::CSNEG";
-  case AArch64ISD::CSINC:             return "AArch64ISD::CSINC";
-  case AArch64ISD::THREAD_POINTER:    return "AArch64ISD::THREAD_POINTER";
-  case AArch64ISD::TLSDESC_CALLSEQ:   return "AArch64ISD::TLSDESC_CALLSEQ";
-  case AArch64ISD::ADD_PRED:          return "AArch64ISD::ADD_PRED";
-  case AArch64ISD::SDIV_PRED:         return "AArch64ISD::SDIV_PRED";
-  case AArch64ISD::UDIV_PRED:         return "AArch64ISD::UDIV_PRED";
-  case AArch64ISD::SMIN_PRED:         return "AArch64ISD::SMIN_PRED";
-  case AArch64ISD::UMIN_PRED:         return "AArch64ISD::UMIN_PRED";
-  case AArch64ISD::SMAX_PRED:         return "AArch64ISD::SMAX_PRED";
-  case AArch64ISD::UMAX_PRED:         return "AArch64ISD::UMAX_PRED";
-  case AArch64ISD::SHL_PRED:          return "AArch64ISD::SHL_PRED";
-  case AArch64ISD::SRL_PRED:          return "AArch64ISD::SRL_PRED";
-  case AArch64ISD::SRA_PRED:          return "AArch64ISD::SRA_PRED";
-  case AArch64ISD::SETCC_PRED:        return "AArch64ISD::SETCC_PRED";
-  case AArch64ISD::ADC:               return "AArch64ISD::ADC";
-  case AArch64ISD::SBC:               return "AArch64ISD::SBC";
-  case AArch64ISD::ADDS:              return "AArch64ISD::ADDS";
-  case AArch64ISD::SUBS:              return "AArch64ISD::SUBS";
-  case AArch64ISD::ADCS:              return "AArch64ISD::ADCS";
-  case AArch64ISD::SBCS:              return "AArch64ISD::SBCS";
-  case AArch64ISD::ANDS:              return "AArch64ISD::ANDS";
-  case AArch64ISD::CCMP:              return "AArch64ISD::CCMP";
-  case AArch64ISD::CCMN:              return "AArch64ISD::CCMN";
-  case AArch64ISD::FCCMP:             return "AArch64ISD::FCCMP";
-  case AArch64ISD::FCMP:              return "AArch64ISD::FCMP";
-  case AArch64ISD::STRICT_FCMP:       return "AArch64ISD::STRICT_FCMP";
-  case AArch64ISD::STRICT_FCMPE:      return "AArch64ISD::STRICT_FCMPE";
-  case AArch64ISD::DUP:               return "AArch64ISD::DUP";
-  case AArch64ISD::DUPLANE8:          return "AArch64ISD::DUPLANE8";
-  case AArch64ISD::DUPLANE16:         return "AArch64ISD::DUPLANE16";
-  case AArch64ISD::DUPLANE32:         return "AArch64ISD::DUPLANE32";
-  case AArch64ISD::DUPLANE64:         return "AArch64ISD::DUPLANE64";
-  case AArch64ISD::MOVI:              return "AArch64ISD::MOVI";
-  case AArch64ISD::MOVIshift:         return "AArch64ISD::MOVIshift";
-  case AArch64ISD::MOVIedit:          return "AArch64ISD::MOVIedit";
-  case AArch64ISD::MOVImsl:           return "AArch64ISD::MOVImsl";
-  case AArch64ISD::FMOV:              return "AArch64ISD::FMOV";
-  case AArch64ISD::MVNIshift:         return "AArch64ISD::MVNIshift";
-  case AArch64ISD::MVNImsl:           return "AArch64ISD::MVNImsl";
-  case AArch64ISD::BICi:              return "AArch64ISD::BICi";
-  case AArch64ISD::ORRi:              return "AArch64ISD::ORRi";
-  case AArch64ISD::BSP:               return "AArch64ISD::BSP";
-  case AArch64ISD::NEG:               return "AArch64ISD::NEG";
-  case AArch64ISD::EXTR:              return "AArch64ISD::EXTR";
-  case AArch64ISD::ZIP1:              return "AArch64ISD::ZIP1";
-  case AArch64ISD::ZIP2:              return "AArch64ISD::ZIP2";
-  case AArch64ISD::UZP1:              return "AArch64ISD::UZP1";
-  case AArch64ISD::UZP2:              return "AArch64ISD::UZP2";
-  case AArch64ISD::TRN1:              return "AArch64ISD::TRN1";
-  case AArch64ISD::TRN2:              return "AArch64ISD::TRN2";
-  case AArch64ISD::REV16:             return "AArch64ISD::REV16";
-  case AArch64ISD::REV32:             return "AArch64ISD::REV32";
-  case AArch64ISD::REV64:             return "AArch64ISD::REV64";
-  case AArch64ISD::EXT:               return "AArch64ISD::EXT";
-  case AArch64ISD::VSHL:              return "AArch64ISD::VSHL";
-  case AArch64ISD::VLSHR:             return "AArch64ISD::VLSHR";
-  case AArch64ISD::VASHR:             return "AArch64ISD::VASHR";
-  case AArch64ISD::VSLI:              return "AArch64ISD::VSLI";
-  case AArch64ISD::VSRI:              return "AArch64ISD::VSRI";
-  case AArch64ISD::CMEQ:              return "AArch64ISD::CMEQ";
-  case AArch64ISD::CMGE:              return "AArch64ISD::CMGE";
-  case AArch64ISD::CMGT:              return "AArch64ISD::CMGT";
-  case AArch64ISD::CMHI:              return "AArch64ISD::CMHI";
-  case AArch64ISD::CMHS:              return "AArch64ISD::CMHS";
-  case AArch64ISD::FCMEQ:             return "AArch64ISD::FCMEQ";
-  case AArch64ISD::FCMGE:             return "AArch64ISD::FCMGE";
-  case AArch64ISD::FCMGT:             return "AArch64ISD::FCMGT";
-  case AArch64ISD::CMEQz:             return "AArch64ISD::CMEQz";
-  case AArch64ISD::CMGEz:             return "AArch64ISD::CMGEz";
-  case AArch64ISD::CMGTz:             return "AArch64ISD::CMGTz";
-  case AArch64ISD::CMLEz:             return "AArch64ISD::CMLEz";
-  case AArch64ISD::CMLTz:             return "AArch64ISD::CMLTz";
-  case AArch64ISD::FCMEQz:            return "AArch64ISD::FCMEQz";
-  case AArch64ISD::FCMGEz:            return "AArch64ISD::FCMGEz";
-  case AArch64ISD::FCMGTz:            return "AArch64ISD::FCMGTz";
-  case AArch64ISD::FCMLEz:            return "AArch64ISD::FCMLEz";
-  case AArch64ISD::FCMLTz:            return "AArch64ISD::FCMLTz";
-  case AArch64ISD::SADDV:             return "AArch64ISD::SADDV";
-  case AArch64ISD::UADDV:             return "AArch64ISD::UADDV";
-  case AArch64ISD::SMINV:             return "AArch64ISD::SMINV";
-  case AArch64ISD::UMINV:             return "AArch64ISD::UMINV";
-  case AArch64ISD::SMAXV:             return "AArch64ISD::SMAXV";
-  case AArch64ISD::UMAXV:             return "AArch64ISD::UMAXV";
-  case AArch64ISD::SMAXV_PRED:        return "AArch64ISD::SMAXV_PRED";
-  case AArch64ISD::UMAXV_PRED:        return "AArch64ISD::UMAXV_PRED";
-  case AArch64ISD::SMINV_PRED:        return "AArch64ISD::SMINV_PRED";
-  case AArch64ISD::UMINV_PRED:        return "AArch64ISD::UMINV_PRED";
-  case AArch64ISD::ORV_PRED:          return "AArch64ISD::ORV_PRED";
-  case AArch64ISD::EORV_PRED:         return "AArch64ISD::EORV_PRED";
-  case AArch64ISD::ANDV_PRED:         return "AArch64ISD::ANDV_PRED";
-  case AArch64ISD::CLASTA_N:          return "AArch64ISD::CLASTA_N";
-  case AArch64ISD::CLASTB_N:          return "AArch64ISD::CLASTB_N";
-  case AArch64ISD::LASTA:             return "AArch64ISD::LASTA";
-  case AArch64ISD::LASTB:             return "AArch64ISD::LASTB";
-  case AArch64ISD::REV:               return "AArch64ISD::REV";
-  case AArch64ISD::REINTERPRET_CAST:  return "AArch64ISD::REINTERPRET_CAST";
-  case AArch64ISD::TBL:               return "AArch64ISD::TBL";
-  case AArch64ISD::FADD_PRED:         return "AArch64ISD::FADD_PRED";
-  case AArch64ISD::FADDA_PRED:        return "AArch64ISD::FADDA_PRED";
-  case AArch64ISD::FADDV_PRED:        return "AArch64ISD::FADDV_PRED";
-  case AArch64ISD::FMAXV_PRED:        return "AArch64ISD::FMAXV_PRED";
-  case AArch64ISD::FMAXNMV_PRED:      return "AArch64ISD::FMAXNMV_PRED";
-  case AArch64ISD::FMINV_PRED:        return "AArch64ISD::FMINV_PRED";
-  case AArch64ISD::FMINNMV_PRED:      return "AArch64ISD::FMINNMV_PRED";
-  case AArch64ISD::NOT:               return "AArch64ISD::NOT";
-  case AArch64ISD::BIT:               return "AArch64ISD::BIT";
-  case AArch64ISD::CBZ:               return "AArch64ISD::CBZ";
-  case AArch64ISD::CBNZ:              return "AArch64ISD::CBNZ";
-  case AArch64ISD::TBZ:               return "AArch64ISD::TBZ";
-  case AArch64ISD::TBNZ:              return "AArch64ISD::TBNZ";
-  case AArch64ISD::TC_RETURN:         return "AArch64ISD::TC_RETURN";
-  case AArch64ISD::PREFETCH:          return "AArch64ISD::PREFETCH";
-  case AArch64ISD::SITOF:             return "AArch64ISD::SITOF";
-  case AArch64ISD::UITOF:             return "AArch64ISD::UITOF";
-  case AArch64ISD::NVCAST:            return "AArch64ISD::NVCAST";
-  case AArch64ISD::SQSHL_I:           return "AArch64ISD::SQSHL_I";
-  case AArch64ISD::UQSHL_I:           return "AArch64ISD::UQSHL_I";
-  case AArch64ISD::SRSHR_I:           return "AArch64ISD::SRSHR_I";
-  case AArch64ISD::URSHR_I:           return "AArch64ISD::URSHR_I";
-  case AArch64ISD::SQSHLU_I:          return "AArch64ISD::SQSHLU_I";
-  case AArch64ISD::WrapperLarge:      return "AArch64ISD::WrapperLarge";
-  case AArch64ISD::LD2post:           return "AArch64ISD::LD2post";
-  case AArch64ISD::LD3post:           return "AArch64ISD::LD3post";
-  case AArch64ISD::LD4post:           return "AArch64ISD::LD4post";
-  case AArch64ISD::ST2post:           return "AArch64ISD::ST2post";
-  case AArch64ISD::ST3post:           return "AArch64ISD::ST3post";
-  case AArch64ISD::ST4post:           return "AArch64ISD::ST4post";
-  case AArch64ISD::LD1x2post:         return "AArch64ISD::LD1x2post";
-  case AArch64ISD::LD1x3post:         return "AArch64ISD::LD1x3post";
-  case AArch64ISD::LD1x4post:         return "AArch64ISD::LD1x4post";
-  case AArch64ISD::ST1x2post:         return "AArch64ISD::ST1x2post";
-  case AArch64ISD::ST1x3post:         return "AArch64ISD::ST1x3post";
-  case AArch64ISD::ST1x4post:         return "AArch64ISD::ST1x4post";
-  case AArch64ISD::LD1DUPpost:        return "AArch64ISD::LD1DUPpost";
-  case AArch64ISD::LD2DUPpost:        return "AArch64ISD::LD2DUPpost";
-  case AArch64ISD::LD3DUPpost:        return "AArch64ISD::LD3DUPpost";
-  case AArch64ISD::LD4DUPpost:        return "AArch64ISD::LD4DUPpost";
-  case AArch64ISD::LD1LANEpost:       return "AArch64ISD::LD1LANEpost";
-  case AArch64ISD::LD2LANEpost:       return "AArch64ISD::LD2LANEpost";
-  case AArch64ISD::LD3LANEpost:       return "AArch64ISD::LD3LANEpost";
-  case AArch64ISD::LD4LANEpost:       return "AArch64ISD::LD4LANEpost";
-  case AArch64ISD::ST2LANEpost:       return "AArch64ISD::ST2LANEpost";
-  case AArch64ISD::ST3LANEpost:       return "AArch64ISD::ST3LANEpost";
-  case AArch64ISD::ST4LANEpost:       return "AArch64ISD::ST4LANEpost";
-  case AArch64ISD::SMULL:             return "AArch64ISD::SMULL";
-  case AArch64ISD::UMULL:             return "AArch64ISD::UMULL";
-  case AArch64ISD::FRECPE:            return "AArch64ISD::FRECPE";
-  case AArch64ISD::FRECPS:            return "AArch64ISD::FRECPS";
-  case AArch64ISD::FRSQRTE:           return "AArch64ISD::FRSQRTE";
-  case AArch64ISD::FRSQRTS:           return "AArch64ISD::FRSQRTS";
-  case AArch64ISD::STG:               return "AArch64ISD::STG";
-  case AArch64ISD::STZG:              return "AArch64ISD::STZG";
-  case AArch64ISD::ST2G:              return "AArch64ISD::ST2G";
-  case AArch64ISD::STZ2G:             return "AArch64ISD::STZ2G";
-  case AArch64ISD::SUNPKHI:           return "AArch64ISD::SUNPKHI";
-  case AArch64ISD::SUNPKLO:           return "AArch64ISD::SUNPKLO";
-  case AArch64ISD::UUNPKHI:           return "AArch64ISD::UUNPKHI";
-  case AArch64ISD::UUNPKLO:           return "AArch64ISD::UUNPKLO";
-  case AArch64ISD::INSR:              return "AArch64ISD::INSR";
-  case AArch64ISD::PTEST:             return "AArch64ISD::PTEST";
-  case AArch64ISD::PTRUE:             return "AArch64ISD::PTRUE";
-  case AArch64ISD::LD1:               return "AArch64ISD::LD1";
-  case AArch64ISD::LD1S:              return "AArch64ISD::LD1S";
-  case AArch64ISD::LDNF1:             return "AArch64ISD::LDNF1";
-  case AArch64ISD::LDNF1S:            return "AArch64ISD::LDNF1S";
-  case AArch64ISD::LDFF1:             return "AArch64ISD::LDFF1";
-  case AArch64ISD::LDFF1S:            return "AArch64ISD::LDFF1S";
-  case AArch64ISD::LD1RQ:             return "AArch64ISD::LD1RQ";
-  case AArch64ISD::LD1RO:             return "AArch64ISD::LD1RO";
-  case AArch64ISD::SVE_LD2:           return "AArch64ISD::SVE_LD2";
-  case AArch64ISD::SVE_LD3:           return "AArch64ISD::SVE_LD3";
-  case AArch64ISD::SVE_LD4:           return "AArch64ISD::SVE_LD4";
-  case AArch64ISD::GLD1:              return "AArch64ISD::GLD1";
-  case AArch64ISD::GLD1_SCALED:       return "AArch64ISD::GLD1_SCALED";
-  case AArch64ISD::GLD1_SXTW:         return "AArch64ISD::GLD1_SXTW";
-  case AArch64ISD::GLD1_UXTW:         return "AArch64ISD::GLD1_UXTW";
-  case AArch64ISD::GLD1_SXTW_SCALED:  return "AArch64ISD::GLD1_SXTW_SCALED";
-  case AArch64ISD::GLD1_UXTW_SCALED:  return "AArch64ISD::GLD1_UXTW_SCALED";
-  case AArch64ISD::GLD1_IMM:          return "AArch64ISD::GLD1_IMM";
-  case AArch64ISD::GLD1S:             return "AArch64ISD::GLD1S";
-  case AArch64ISD::GLD1S_SCALED:      return "AArch64ISD::GLD1S_SCALED";
-  case AArch64ISD::GLD1S_SXTW:        return "AArch64ISD::GLD1S_SXTW";
-  case AArch64ISD::GLD1S_UXTW:        return "AArch64ISD::GLD1S_UXTW";
-  case AArch64ISD::GLD1S_SXTW_SCALED: return "AArch64ISD::GLD1S_SXTW_SCALED";
-  case AArch64ISD::GLD1S_UXTW_SCALED: return "AArch64ISD::GLD1S_UXTW_SCALED";
-  case AArch64ISD::GLD1S_IMM:         return "AArch64ISD::GLD1S_IMM";
-  case AArch64ISD::GLDFF1:            return "AArch64ISD::GLDFF1";
-  case AArch64ISD::GLDFF1_SCALED:     return "AArch64ISD::GLDFF1_SCALED";
-  case AArch64ISD::GLDFF1_SXTW:       return "AArch64ISD::GLDFF1_SXTW";
-  case AArch64ISD::GLDFF1_UXTW:       return "AArch64ISD::GLDFF1_UXTW";
-  case AArch64ISD::GLDFF1_SXTW_SCALED:return "AArch64ISD::GLDFF1_SXTW_SCALED";
-  case AArch64ISD::GLDFF1_UXTW_SCALED:return "AArch64ISD::GLDFF1_UXTW_SCALED";
-  case AArch64ISD::GLDFF1_IMM:        return "AArch64ISD::GLDFF1_IMM";
-  case AArch64ISD::GLDFF1S:           return "AArch64ISD::GLDFF1S";
-  case AArch64ISD::GLDFF1S_SCALED:    return "AArch64ISD::GLDFF1S_SCALED";
-  case AArch64ISD::GLDFF1S_SXTW:      return "AArch64ISD::GLDFF1S_SXTW";
-  case AArch64ISD::GLDFF1S_UXTW:      return "AArch64ISD::GLDFF1S_UXTW";
-  case AArch64ISD::GLDFF1S_SXTW_SCALED:
-    return "AArch64ISD::GLDFF1S_SXTW_SCALED";
-  case AArch64ISD::GLDFF1S_UXTW_SCALED:
-    return "AArch64ISD::GLDFF1S_UXTW_SCALED";
-  case AArch64ISD::GLDFF1S_IMM:       return "AArch64ISD::GLDFF1S_IMM";
-
-  case AArch64ISD::GLDNT1:            return "AArch64ISD::GLDNT1";
-  case AArch64ISD::GLDNT1_INDEX:      return "AArch64ISD::GLDNT1_INDEX";
-  case AArch64ISD::GLDNT1S:           return "AArch64ISD::GLDNT1S";
-
-  case AArch64ISD::ST1:               return "AArch64ISD::ST1";
-
-  case AArch64ISD::SST1:              return "AArch64ISD::SST1";
-  case AArch64ISD::SST1_SCALED:       return "AArch64ISD::SST1_SCALED";
-  case AArch64ISD::SST1_SXTW:         return "AArch64ISD::SST1_SXTW";
-  case AArch64ISD::SST1_UXTW:         return "AArch64ISD::SST1_UXTW";
-  case AArch64ISD::SST1_SXTW_SCALED:  return "AArch64ISD::SST1_SXTW_SCALED";
-  case AArch64ISD::SST1_UXTW_SCALED:  return "AArch64ISD::SST1_UXTW_SCALED";
-  case AArch64ISD::SST1_IMM:          return "AArch64ISD::SST1_IMM";
-
-  case AArch64ISD::SSTNT1:            return "AArch64ISD::SSTNT1";
-  case AArch64ISD::SSTNT1_INDEX:      return "AArch64ISD::SSTNT1_INDEX";
-
-  case AArch64ISD::LDP:               return "AArch64ISD::LDP";
-  case AArch64ISD::STP:               return "AArch64ISD::STP";
-  case AArch64ISD::STNP:              return "AArch64ISD::STNP";
-  case AArch64ISD::DUP_PRED:          return "AArch64ISD::DUP_PRED";
-  case AArch64ISD::INDEX_VECTOR:      return "AArch64ISD::INDEX_VECTOR";
+  case AArch64ISD::FIRST_NUMBER:
+    break;
+    MAKE_CASE(AArch64ISD::CALL)
+    MAKE_CASE(AArch64ISD::ADRP)
+    MAKE_CASE(AArch64ISD::ADR)
+    MAKE_CASE(AArch64ISD::ADDlow)
+    MAKE_CASE(AArch64ISD::LOADgot)
+    MAKE_CASE(AArch64ISD::RET_FLAG)
+    MAKE_CASE(AArch64ISD::BRCOND)
+    MAKE_CASE(AArch64ISD::CSEL)
+    MAKE_CASE(AArch64ISD::FCSEL)
+    MAKE_CASE(AArch64ISD::CSINV)
+    MAKE_CASE(AArch64ISD::CSNEG)
+    MAKE_CASE(AArch64ISD::CSINC)
+    MAKE_CASE(AArch64ISD::THREAD_POINTER)
+    MAKE_CASE(AArch64ISD::TLSDESC_CALLSEQ)
+    MAKE_CASE(AArch64ISD::ADD_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::SDIV_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::UDIV_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::SMIN_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::UMIN_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::SMAX_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::UMAX_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::SHL_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::SRL_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::SRA_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::SETCC_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::ADC)
+    MAKE_CASE(AArch64ISD::SBC)
+    MAKE_CASE(AArch64ISD::ADDS)
+    MAKE_CASE(AArch64ISD::SUBS)
+    MAKE_CASE(AArch64ISD::ADCS)
+    MAKE_CASE(AArch64ISD::SBCS)
+    MAKE_CASE(AArch64ISD::ANDS)
+    MAKE_CASE(AArch64ISD::CCMP)
+    MAKE_CASE(AArch64ISD::CCMN)
+    MAKE_CASE(AArch64ISD::FCCMP)
+    MAKE_CASE(AArch64ISD::FCMP)
+    MAKE_CASE(AArch64ISD::STRICT_FCMP)
+    MAKE_CASE(AArch64ISD::STRICT_FCMPE)
+    MAKE_CASE(AArch64ISD::DUP)
+    MAKE_CASE(AArch64ISD::DUPLANE8)
+    MAKE_CASE(AArch64ISD::DUPLANE16)
+    MAKE_CASE(AArch64ISD::DUPLANE32)
+    MAKE_CASE(AArch64ISD::DUPLANE64)
+    MAKE_CASE(AArch64ISD::MOVI)
+    MAKE_CASE(AArch64ISD::MOVIshift)
+    MAKE_CASE(AArch64ISD::MOVIedit)
+    MAKE_CASE(AArch64ISD::MOVImsl)
+    MAKE_CASE(AArch64ISD::FMOV)
+    MAKE_CASE(AArch64ISD::MVNIshift)
+    MAKE_CASE(AArch64ISD::MVNImsl)
+    MAKE_CASE(AArch64ISD::BICi)
+    MAKE_CASE(AArch64ISD::ORRi)
+    MAKE_CASE(AArch64ISD::BSP)
+    MAKE_CASE(AArch64ISD::NEG)
+    MAKE_CASE(AArch64ISD::EXTR)
+    MAKE_CASE(AArch64ISD::ZIP1)
+    MAKE_CASE(AArch64ISD::ZIP2)
+    MAKE_CASE(AArch64ISD::UZP1)
+    MAKE_CASE(AArch64ISD::UZP2)
+    MAKE_CASE(AArch64ISD::TRN1)
+    MAKE_CASE(AArch64ISD::TRN2)
+    MAKE_CASE(AArch64ISD::REV16)
+    MAKE_CASE(AArch64ISD::REV32)
+    MAKE_CASE(AArch64ISD::REV64)
+    MAKE_CASE(AArch64ISD::EXT)
+    MAKE_CASE(AArch64ISD::VSHL)
+    MAKE_CASE(AArch64ISD::VLSHR)
+    MAKE_CASE(AArch64ISD::VASHR)
+    MAKE_CASE(AArch64ISD::VSLI)
+    MAKE_CASE(AArch64ISD::VSRI)
+    MAKE_CASE(AArch64ISD::CMEQ)
+    MAKE_CASE(AArch64ISD::CMGE)
+    MAKE_CASE(AArch64ISD::CMGT)
+    MAKE_CASE(AArch64ISD::CMHI)
+    MAKE_CASE(AArch64ISD::CMHS)
+    MAKE_CASE(AArch64ISD::FCMEQ)
+    MAKE_CASE(AArch64ISD::FCMGE)
+    MAKE_CASE(AArch64ISD::FCMGT)
+    MAKE_CASE(AArch64ISD::CMEQz)
+    MAKE_CASE(AArch64ISD::CMGEz)
+    MAKE_CASE(AArch64ISD::CMGTz)
+    MAKE_CASE(AArch64ISD::CMLEz)
+    MAKE_CASE(AArch64ISD::CMLTz)
+    MAKE_CASE(AArch64ISD::FCMEQz)
+    MAKE_CASE(AArch64ISD::FCMGEz)
+    MAKE_CASE(AArch64ISD::FCMGTz)
+    MAKE_CASE(AArch64ISD::FCMLEz)
+    MAKE_CASE(AArch64ISD::FCMLTz)
+    MAKE_CASE(AArch64ISD::SADDV)
+    MAKE_CASE(AArch64ISD::UADDV)
+    MAKE_CASE(AArch64ISD::SMINV)
+    MAKE_CASE(AArch64ISD::UMINV)
+    MAKE_CASE(AArch64ISD::SMAXV)
+    MAKE_CASE(AArch64ISD::UMAXV)
+    MAKE_CASE(AArch64ISD::SMAXV_PRED)
+    MAKE_CASE(AArch64ISD::UMAXV_PRED)
+    MAKE_CASE(AArch64ISD::SMINV_PRED)
+    MAKE_CASE(AArch64ISD::UMINV_PRED)
+    MAKE_CASE(AArch64ISD::ORV_PRED)
+    MAKE_CASE(AArch64ISD::EORV_PRED)
+    MAKE_CASE(AArch64ISD::ANDV_PRED)
+    MAKE_CASE(AArch64ISD::CLASTA_N)
+    MAKE_CASE(AArch64ISD::CLASTB_N)
+    MAKE_CASE(AArch64ISD::LASTA)
+    MAKE_CASE(AArch64ISD::LASTB)
+    MAKE_CASE(AArch64ISD::REV)
+    MAKE_CASE(AArch64ISD::REINTERPRET_CAST)
+    MAKE_CASE(AArch64ISD::TBL)
+    MAKE_CASE(AArch64ISD::FADD_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::FADDA_PRED)
+    MAKE_CASE(AArch64ISD::FADDV_PRED)
+    MAKE_CASE(AArch64ISD::FMAXV_PRED)
+    MAKE_CASE(AArch64ISD::FMAXNMV_PRED)
+    MAKE_CASE(AArch64ISD::FMINV_PRED)
+    MAKE_CASE(AArch64ISD::FMINNMV_PRED)
+    MAKE_CASE(AArch64ISD::NOT)
+    MAKE_CASE(AArch64ISD::BIT)
+    MAKE_CASE(AArch64ISD::CBZ)
+    MAKE_CASE(AArch64ISD::CBNZ)
+    MAKE_CASE(AArch64ISD::TBZ)
+    MAKE_CASE(AArch64ISD::TBNZ)
+    MAKE_CASE(AArch64ISD::TC_RETURN)
+    MAKE_CASE(AArch64ISD::PREFETCH)
+    MAKE_CASE(AArch64ISD::SITOF)
+    MAKE_CASE(AArch64ISD::UITOF)
+    MAKE_CASE(AArch64ISD::NVCAST)
+    MAKE_CASE(AArch64ISD::SQSHL_I)
+    MAKE_CASE(AArch64ISD::UQSHL_I)
+    MAKE_CASE(AArch64ISD::SRSHR_I)
+    MAKE_CASE(AArch64ISD::URSHR_I)
+    MAKE_CASE(AArch64ISD::SQSHLU_I)
+    MAKE_CASE(AArch64ISD::WrapperLarge)
+    MAKE_CASE(AArch64ISD::LD2post)
+    MAKE_CASE(AArch64ISD::LD3post)
+    MAKE_CASE(AArch64ISD::LD4post)
+    MAKE_CASE(AArch64ISD::ST2post)
+    MAKE_CASE(AArch64ISD::ST3post)
+    MAKE_CASE(AArch64ISD::ST4post)
+    MAKE_CASE(AArch64ISD::LD1x2post)
+    MAKE_CASE(AArch64ISD::LD1x3post)
+    MAKE_CASE(AArch64ISD::LD1x4post)
+    MAKE_CASE(AArch64ISD::ST1x2post)
+    MAKE_CASE(AArch64ISD::ST1x3post)
+    MAKE_CASE(AArch64ISD::ST1x4post)
+    MAKE_CASE(AArch64ISD::LD1DUPpost)
+    MAKE_CASE(AArch64ISD::LD2DUPpost)
+    MAKE_CASE(AArch64ISD::LD3DUPpost)
+    MAKE_CASE(AArch64ISD::LD4DUPpost)
+    MAKE_CASE(AArch64ISD::LD1LANEpost)
+    MAKE_CASE(AArch64ISD::LD2LANEpost)
+    MAKE_CASE(AArch64ISD::LD3LANEpost)
+    MAKE_CASE(AArch64ISD::LD4LANEpost)
+    MAKE_CASE(AArch64ISD::ST2LANEpost)
+    MAKE_CASE(AArch64ISD::ST3LANEpost)
+    MAKE_CASE(AArch64ISD::ST4LANEpost)
+    MAKE_CASE(AArch64ISD::SMULL)
+    MAKE_CASE(AArch64ISD::UMULL)
+    MAKE_CASE(AArch64ISD::FRECPE)
+    MAKE_CASE(AArch64ISD::FRECPS)
+    MAKE_CASE(AArch64ISD::FRSQRTE)
+    MAKE_CASE(AArch64ISD::FRSQRTS)
+    MAKE_CASE(AArch64ISD::STG)
+    MAKE_CASE(AArch64ISD::STZG)
+    MAKE_CASE(AArch64ISD::ST2G)
+    MAKE_CASE(AArch64ISD::STZ2G)
+    MAKE_CASE(AArch64ISD::SUNPKHI)
+    MAKE_CASE(AArch64ISD::SUNPKLO)
+    MAKE_CASE(AArch64ISD::UUNPKHI)
+    MAKE_CASE(AArch64ISD::UUNPKLO)
+    MAKE_CASE(AArch64ISD::INSR)
+    MAKE_CASE(AArch64ISD::PTEST)
+    MAKE_CASE(AArch64ISD::PTRUE)
+    MAKE_CASE(AArch64ISD::LD1_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::LD1S_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::LDNF1_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::LDNF1S_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::LDFF1_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::LDFF1S_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::LD1RQ_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::LD1RO_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::SVE_LD2_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::SVE_LD3_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::SVE_LD4_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1_SXTW_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1_UXTW_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1_SXTW_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1_UXTW_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1_IMM_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1S_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1S_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1S_SXTW_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1S_UXTW_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1S_SXTW_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1S_UXTW_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1S_IMM_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1_SXTW_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1_UXTW_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1_SXTW_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1_UXTW_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1_IMM_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1S_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1S_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1S_SXTW_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1S_UXTW_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1S_SXTW_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1S_UXTW_SCALED_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDFF1S_IMM_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDNT1_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDNT1_INDEX_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLDNT1S_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::ST1_PRED)
+    MAKE_CASE(AArch64ISD::SST1_PRED)
+    MAKE_CASE(AArch64ISD::SST1_SCALED_PRED)
+    MAKE_CASE(AArch64ISD::SST1_SXTW_PRED)
+    MAKE_CASE(AArch64ISD::SST1_UXTW_PRED)
+    MAKE_CASE(AArch64ISD::SST1_SXTW_SCALED_PRED)
+    MAKE_CASE(AArch64ISD::SST1_UXTW_SCALED_PRED)
+    MAKE_CASE(AArch64ISD::SST1_IMM_PRED)
+    MAKE_CASE(AArch64ISD::SSTNT1_PRED)
+    MAKE_CASE(AArch64ISD::SSTNT1_INDEX_PRED)
+    MAKE_CASE(AArch64ISD::LDP)
+    MAKE_CASE(AArch64ISD::STP)
+    MAKE_CASE(AArch64ISD::STNP)
+    MAKE_CASE(AArch64ISD::DUP_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::INDEX_VECTOR)
   }
+#undef MAKE_CASE
   return nullptr;
 }
 
@@ -3426,7 +3424,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerXALUO(Op, DAG);
   case ISD::FADD:
     if (useSVEForFixedLengthVectorVT(Op.getValueType()))
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FADD_PRED);
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FADD_MERGE_OP1);
     return LowerF128Call(Op, DAG, RTLIB::ADD_F128);
   case ISD::FSUB:
     return LowerF128Call(Op, DAG, RTLIB::SUB_F128);
@@ -3460,17 +3458,17 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::EXTRACT_SUBVECTOR:
     return LowerEXTRACT_SUBVECTOR(Op, DAG);
   case ISD::SDIV:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SDIV_PRED);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SDIV_MERGE_OP1);
   case ISD::UDIV:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UDIV_PRED);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UDIV_MERGE_OP1);
   case ISD::SMIN:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_PRED);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_MERGE_OP1);
   case ISD::UMIN:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMIN_PRED);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMIN_MERGE_OP1);
   case ISD::SMAX:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMAX_PRED);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMAX_MERGE_OP1);
   case ISD::UMAX:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMAX_PRED);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMAX_MERGE_OP1);
   case ISD::SRA:
   case ISD::SRL:
   case ISD::SHL:
@@ -3532,7 +3530,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     llvm_unreachable("Unexpected request to lower ISD::LOAD");
   case ISD::ADD:
     if (useSVEForFixedLengthVectorVT(Op.getValueType()))
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ADD_PRED);
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ADD_MERGE_OP1);
     llvm_unreachable("Unexpected request to lower ISD::ADD");
   }
 }
@@ -8792,7 +8790,7 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
 
   case ISD::SHL:
     if (VT.isScalableVector())
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::SHL_PRED);
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::SHL_MERGE_OP1);
 
     if (isVShiftLImm(Op.getOperand(1), VT, false, Cnt) && Cnt < EltSize)
       return DAG.getNode(AArch64ISD::VSHL, DL, VT, Op.getOperand(0),
@@ -8804,8 +8802,8 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
   case ISD::SRA:
   case ISD::SRL:
     if (VT.isScalableVector()) {
-      unsigned Opc = Op.getOpcode() == ISD::SRA ? AArch64ISD::SRA_PRED
-                                                : AArch64ISD::SRL_PRED;
+      unsigned Opc = Op.getOpcode() == ISD::SRA ? AArch64ISD::SRA_MERGE_OP1
+                                                : AArch64ISD::SRL_MERGE_OP1;
       return LowerToPredicatedOp(Op, DAG, Opc);
     }
 
@@ -8934,7 +8932,7 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
   if (Op.getValueType().isScalableVector()) {
     if (Op.getOperand(0).getValueType().isFloatingPoint())
       return Op;
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SETCC_PRED);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SETCC_MERGE_ZERO);
   }
 
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
@@ -9929,9 +9927,9 @@ SDValue AArch64TargetLowering::LowerSVEStructLoad(unsigned Intrinsic,
 
   unsigned N, Opcode;
   static std::map<unsigned, std::pair<unsigned, unsigned>> IntrinsicMap = {
-      {Intrinsic::aarch64_sve_ld2, {2, AArch64ISD::SVE_LD2}},
-      {Intrinsic::aarch64_sve_ld3, {3, AArch64ISD::SVE_LD3}},
-      {Intrinsic::aarch64_sve_ld4, {4, AArch64ISD::SVE_LD4}}};
+      {Intrinsic::aarch64_sve_ld2, {2, AArch64ISD::SVE_LD2_MERGE_ZERO}},
+      {Intrinsic::aarch64_sve_ld3, {3, AArch64ISD::SVE_LD3_MERGE_ZERO}},
+      {Intrinsic::aarch64_sve_ld4, {4, AArch64ISD::SVE_LD4_MERGE_ZERO}}};
 
   std::tie(N, Opcode) = IntrinsicMap[Intrinsic];
   assert(VT.getVectorElementCount().Min % N == 0 &&
@@ -10872,26 +10870,26 @@ static SDValue performSVEAndCombine(SDNode *N,
   // SVE load instructions perform an implicit zero-extend, which makes them
   // perfect candidates for combining.
   switch (Opc) {
-  case AArch64ISD::LD1:
-  case AArch64ISD::LDNF1:
-  case AArch64ISD::LDFF1:
+  case AArch64ISD::LD1_MERGE_ZERO:
+  case AArch64ISD::LDNF1_MERGE_ZERO:
+  case AArch64ISD::LDFF1_MERGE_ZERO:
     MemVT = cast<VTSDNode>(Src->getOperand(3))->getVT();
     break;
-  case AArch64ISD::GLD1:
-  case AArch64ISD::GLD1_SCALED:
-  case AArch64ISD::GLD1_SXTW:
-  case AArch64ISD::GLD1_SXTW_SCALED:
-  case AArch64ISD::GLD1_UXTW:
-  case AArch64ISD::GLD1_UXTW_SCALED:
-  case AArch64ISD::GLD1_IMM:
-  case AArch64ISD::GLDFF1:
-  case AArch64ISD::GLDFF1_SCALED:
-  case AArch64ISD::GLDFF1_SXTW:
-  case AArch64ISD::GLDFF1_SXTW_SCALED:
-  case AArch64ISD::GLDFF1_UXTW:
-  case AArch64ISD::GLDFF1_UXTW_SCALED:
-  case AArch64ISD::GLDFF1_IMM:
-  case AArch64ISD::GLDNT1:
+  case AArch64ISD::GLD1_MERGE_ZERO:
+  case AArch64ISD::GLD1_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLD1_SXTW_MERGE_ZERO:
+  case AArch64ISD::GLD1_SXTW_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLD1_UXTW_MERGE_ZERO:
+  case AArch64ISD::GLD1_UXTW_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLD1_IMM_MERGE_ZERO:
+  case AArch64ISD::GLDFF1_MERGE_ZERO:
+  case AArch64ISD::GLDFF1_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLDFF1_SXTW_MERGE_ZERO:
+  case AArch64ISD::GLDFF1_SXTW_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLDFF1_UXTW_MERGE_ZERO:
+  case AArch64ISD::GLDFF1_UXTW_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLDFF1_IMM_MERGE_ZERO:
+  case AArch64ISD::GLDNT1_MERGE_ZERO:
     MemVT = cast<VTSDNode>(Src->getOperand(4))->getVT();
     break;
   default:
@@ -11525,8 +11523,10 @@ static SDValue LowerSVEIntrinsicDUP(SDNode *N, SelectionDAG &DAG) {
   if ((ScalarTy == MVT::i8) || (ScalarTy == MVT::i16))
     Scalar = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, Scalar);
 
-  return DAG.getNode(AArch64ISD::DUP_PRED, dl, N->getValueType(0),
-                     N->getOperand(1), N->getOperand(2), Scalar);
+  SDValue Passthru = N->getOperand(1);
+  SDValue Pred = N->getOperand(2);
+  return DAG.getNode(AArch64ISD::DUP_MERGE_PASSTHRU, dl, N->getValueType(0),
+                     Pred, Scalar, Passthru);
 }
 
 static SDValue LowerSVEIntrinsicEXT(SDNode *N, SelectionDAG &DAG) {
@@ -11611,8 +11611,8 @@ static SDValue tryConvertSVEWideCompare(SDNode *N, ISD::CondCode CC,
       return SDValue();
 
     SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, DL, CmpVT, Imm);
-    return DAG.getNode(AArch64ISD::SETCC_PRED, DL, VT, Pred, N->getOperand(2),
-                       Splat, DAG.getCondCode(CC));
+    return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, VT, Pred,
+                       N->getOperand(2), Splat, DAG.getCondCode(CC));
   }
 
   return SDValue();
@@ -11760,67 +11760,67 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_ext:
     return LowerSVEIntrinsicEXT(N, DAG);
   case Intrinsic::aarch64_sve_sdiv:
-    return DAG.getNode(AArch64ISD::SDIV_PRED, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(AArch64ISD::SDIV_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_udiv:
-    return DAG.getNode(AArch64ISD::UDIV_PRED, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(AArch64ISD::UDIV_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_smin:
-    return DAG.getNode(AArch64ISD::SMIN_PRED, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(AArch64ISD::SMIN_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_umin:
-    return DAG.getNode(AArch64ISD::UMIN_PRED, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(AArch64ISD::UMIN_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_smax:
-    return DAG.getNode(AArch64ISD::SMAX_PRED, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(AArch64ISD::SMAX_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_umax:
-    return DAG.getNode(AArch64ISD::UMAX_PRED, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(AArch64ISD::UMAX_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_lsl:
-    return DAG.getNode(AArch64ISD::SHL_PRED, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(AArch64ISD::SHL_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_lsr:
-    return DAG.getNode(AArch64ISD::SRL_PRED, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(AArch64ISD::SRL_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_asr:
-    return DAG.getNode(AArch64ISD::SRA_PRED, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(AArch64ISD::SRA_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_cmphs:
     if (!N->getOperand(2).getValueType().isFloatingPoint())
-      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
-                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
-                         DAG.getCondCode(ISD::SETUGE));
+      return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                         N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                         N->getOperand(3), DAG.getCondCode(ISD::SETUGE));
     break;
   case Intrinsic::aarch64_sve_cmphi:
     if (!N->getOperand(2).getValueType().isFloatingPoint())
-      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
-                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
-                         DAG.getCondCode(ISD::SETUGT));
+      return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                         N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                         N->getOperand(3), DAG.getCondCode(ISD::SETUGT));
     break;
   case Intrinsic::aarch64_sve_cmpge:
     if (!N->getOperand(2).getValueType().isFloatingPoint())
-      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
-                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
-                         DAG.getCondCode(ISD::SETGE));
+      return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                         N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                         N->getOperand(3), DAG.getCondCode(ISD::SETGE));
     break;
   case Intrinsic::aarch64_sve_cmpgt:
     if (!N->getOperand(2).getValueType().isFloatingPoint())
-      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
-                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
-                         DAG.getCondCode(ISD::SETGT));
+      return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                         N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                         N->getOperand(3), DAG.getCondCode(ISD::SETGT));
     break;
   case Intrinsic::aarch64_sve_cmpeq:
     if (!N->getOperand(2).getValueType().isFloatingPoint())
-      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
-                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
-                         DAG.getCondCode(ISD::SETEQ));
+      return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                         N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                         N->getOperand(3), DAG.getCondCode(ISD::SETEQ));
     break;
   case Intrinsic::aarch64_sve_cmpne:
     if (!N->getOperand(2).getValueType().isFloatingPoint())
-      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
-                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
-                         DAG.getCondCode(ISD::SETNE));
+      return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                         N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                         N->getOperand(3), DAG.getCondCode(ISD::SETNE));
     break;
   case Intrinsic::aarch64_sve_fadda:
     return combineSVEReductionOrderedFP(N, AArch64ISD::FADDA_PRED, DAG);
@@ -12092,7 +12092,8 @@ static SDValue performLDNT1Combine(SDNode *N, SelectionDAG &DAG) {
 
 template <unsigned Opcode>
 static SDValue performLD1ReplicateCombine(SDNode *N, SelectionDAG &DAG) {
-  static_assert(Opcode == AArch64ISD::LD1RQ || Opcode == AArch64ISD::LD1RO,
+  static_assert(Opcode == AArch64ISD::LD1RQ_MERGE_ZERO ||
+                    Opcode == AArch64ISD::LD1RO_MERGE_ZERO,
                 "Unsupported opcode.");
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
@@ -12138,7 +12139,7 @@ static SDValue performST1Combine(SDNode *N, SelectionDAG &DAG) {
                     InputVT
                   };
 
-  return DAG.getNode(AArch64ISD::ST1, DL, N->getValueType(0), Ops);
+  return DAG.getNode(AArch64ISD::ST1_PRED, DL, N->getValueType(0), Ops);
 }
 
 static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
@@ -13299,10 +13300,10 @@ static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
   // For "scalar + vector of indices", just scale the indices. This only
   // applies to non-temporal scatters because there's no instruction that takes
   // indicies.
-  if (Opcode == AArch64ISD::SSTNT1_INDEX) {
+  if (Opcode == AArch64ISD::SSTNT1_INDEX_PRED) {
     Offset =
         getScaledOffsetForBitWidth(DAG, Offset, DL, SrcElVT.getSizeInBits());
-    Opcode = AArch64ISD::SSTNT1;
+    Opcode = AArch64ISD::SSTNT1_PRED;
   }
 
   // In the case of non-temporal gather loads there's only one SVE instruction
@@ -13310,8 +13311,8 @@ static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
   //    * stnt1{b|h|w|d} { z0.s }, p0/z, [z0.s, x0]
   // Since we do have intrinsics that allow the arguments to be in a different
   // order, we may need to swap them to match the spec.
-  if (Opcode == AArch64ISD::SSTNT1 && Offset.getValueType().isVector())
-      std::swap(Base, Offset);
+  if (Opcode == AArch64ISD::SSTNT1_PRED && Offset.getValueType().isVector())
+    std::swap(Base, Offset);
 
   // SST1_IMM requires that the offset is an immediate that is:
   //    * a multiple of #SizeInBytes,
@@ -13319,13 +13320,13 @@ static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
   // where #SizeInBytes is the size in bytes of the stored items. For
   // immediates outside that range and non-immediate scalar offsets use SST1 or
   // SST1_UXTW instead.
-  if (Opcode == AArch64ISD::SST1_IMM) {
+  if (Opcode == AArch64ISD::SST1_IMM_PRED) {
     if (!isValidImmForSVEVecImmAddrMode(Offset,
                                         SrcVT.getScalarSizeInBits() / 8)) {
       if (MVT::nxv4i32 == Base.getValueType().getSimpleVT().SimpleTy)
-        Opcode = AArch64ISD::SST1_UXTW;
+        Opcode = AArch64ISD::SST1_UXTW_PRED;
       else
-        Opcode = AArch64ISD::SST1;
+        Opcode = AArch64ISD::SST1_PRED;
 
       std::swap(Base, Offset);
     }
@@ -13396,10 +13397,10 @@ static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
   // For "scalar + vector of indices", just scale the indices. This only
   // applies to non-temporal gathers because there's no instruction that takes
   // indicies.
-  if (Opcode == AArch64ISD::GLDNT1_INDEX) {
+  if (Opcode == AArch64ISD::GLDNT1_INDEX_MERGE_ZERO) {
     Offset = getScaledOffsetForBitWidth(DAG, Offset, DL,
                                         RetVT.getScalarSizeInBits());
-    Opcode = AArch64ISD::GLDNT1;
+    Opcode = AArch64ISD::GLDNT1_MERGE_ZERO;
   }
 
   // In the case of non-temporal gather loads there's only one SVE instruction
@@ -13407,24 +13408,28 @@ static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
   //    * ldnt1{b|h|w|d} { z0.s }, p0/z, [z0.s, x0]
   // Since we do have intrinsics that allow the arguments to be in a different
   // order, we may need to swap them to match the spec.
-  if (Opcode == AArch64ISD::GLDNT1 && Offset.getValueType().isVector())
-      std::swap(Base, Offset);
+  if (Opcode == AArch64ISD::GLDNT1_MERGE_ZERO &&
+      Offset.getValueType().isVector())
+    std::swap(Base, Offset);
 
   // GLD{FF}1_IMM requires that the offset is an immediate that is:
   //    * a multiple of #SizeInBytes,
   //    * in the range [0, 31 x #SizeInBytes],
   // where #SizeInBytes is the size in bytes of the loaded items. For
-  // immediates outside that range and non-immediate scalar offsets use GLD1 or
-  // GLD1_UXTW instead.
-  if (Opcode == AArch64ISD::GLD1_IMM || Opcode == AArch64ISD::GLDFF1_IMM) {
+  // immediates outside that range and non-immediate scalar offsets use
+  // GLD1_MERGE_ZERO or GLD1_UXTW_MERGE_ZERO instead.
+  if (Opcode == AArch64ISD::GLD1_IMM_MERGE_ZERO ||
+      Opcode == AArch64ISD::GLDFF1_IMM_MERGE_ZERO) {
     if (!isValidImmForSVEVecImmAddrMode(Offset,
                                         RetVT.getScalarSizeInBits() / 8)) {
       if (MVT::nxv4i32 == Base.getValueType().getSimpleVT().SimpleTy)
-        Opcode = (Opcode == AArch64ISD::GLD1_IMM) ? AArch64ISD::GLD1_UXTW
-                                                  : AArch64ISD::GLDFF1_UXTW;
+        Opcode = (Opcode == AArch64ISD::GLD1_IMM_MERGE_ZERO)
+                     ? AArch64ISD::GLD1_UXTW_MERGE_ZERO
+                     : AArch64ISD::GLDFF1_UXTW_MERGE_ZERO;
       else
-        Opcode = (Opcode == AArch64ISD::GLD1_IMM) ? AArch64ISD::GLD1
-                                                  : AArch64ISD::GLDFF1;
+        Opcode = (Opcode == AArch64ISD::GLD1_IMM_MERGE_ZERO)
+                     ? AArch64ISD::GLD1_MERGE_ZERO
+                     : AArch64ISD::GLDFF1_MERGE_ZERO;
 
       std::swap(Base, Offset);
     }
@@ -13517,62 +13522,62 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   unsigned NewOpc;
   unsigned MemVTOpNum = 4;
   switch (Opc) {
-  case AArch64ISD::LD1:
-    NewOpc = AArch64ISD::LD1S;
+  case AArch64ISD::LD1_MERGE_ZERO:
+    NewOpc = AArch64ISD::LD1S_MERGE_ZERO;
     MemVTOpNum = 3;
     break;
-  case AArch64ISD::LDNF1:
-    NewOpc = AArch64ISD::LDNF1S;
+  case AArch64ISD::LDNF1_MERGE_ZERO:
+    NewOpc = AArch64ISD::LDNF1S_MERGE_ZERO;
     MemVTOpNum = 3;
     break;
-  case AArch64ISD::LDFF1:
-    NewOpc = AArch64ISD::LDFF1S;
+  case AArch64ISD::LDFF1_MERGE_ZERO:
+    NewOpc = AArch64ISD::LDFF1S_MERGE_ZERO;
     MemVTOpNum = 3;
     break;
-  case AArch64ISD::GLD1:
-    NewOpc = AArch64ISD::GLD1S;
+  case AArch64ISD::GLD1_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLD1S_MERGE_ZERO;
     break;
-  case AArch64ISD::GLD1_SCALED:
-    NewOpc = AArch64ISD::GLD1S_SCALED;
+  case AArch64ISD::GLD1_SCALED_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLD1S_SCALED_MERGE_ZERO;
     break;
-  case AArch64ISD::GLD1_SXTW:
-    NewOpc = AArch64ISD::GLD1S_SXTW;
+  case AArch64ISD::GLD1_SXTW_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLD1S_SXTW_MERGE_ZERO;
     break;
-  case AArch64ISD::GLD1_SXTW_SCALED:
-    NewOpc = AArch64ISD::GLD1S_SXTW_SCALED;
+  case AArch64ISD::GLD1_SXTW_SCALED_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLD1S_SXTW_SCALED_MERGE_ZERO;
     break;
-  case AArch64ISD::GLD1_UXTW:
-    NewOpc = AArch64ISD::GLD1S_UXTW;
+  case AArch64ISD::GLD1_UXTW_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLD1S_UXTW_MERGE_ZERO;
     break;
-  case AArch64ISD::GLD1_UXTW_SCALED:
-    NewOpc = AArch64ISD::GLD1S_UXTW_SCALED;
+  case AArch64ISD::GLD1_UXTW_SCALED_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLD1S_UXTW_SCALED_MERGE_ZERO;
     break;
-  case AArch64ISD::GLD1_IMM:
-    NewOpc = AArch64ISD::GLD1S_IMM;
+  case AArch64ISD::GLD1_IMM_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLD1S_IMM_MERGE_ZERO;
     break;
-  case AArch64ISD::GLDFF1:
-    NewOpc = AArch64ISD::GLDFF1S;
+  case AArch64ISD::GLDFF1_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLDFF1S_MERGE_ZERO;
     break;
-  case AArch64ISD::GLDFF1_SCALED:
-    NewOpc = AArch64ISD::GLDFF1S_SCALED;
+  case AArch64ISD::GLDFF1_SCALED_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLDFF1S_SCALED_MERGE_ZERO;
     break;
-  case AArch64ISD::GLDFF1_SXTW:
-    NewOpc = AArch64ISD::GLDFF1S_SXTW;
+  case AArch64ISD::GLDFF1_SXTW_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLDFF1S_SXTW_MERGE_ZERO;
     break;
-  case AArch64ISD::GLDFF1_SXTW_SCALED:
-    NewOpc = AArch64ISD::GLDFF1S_SXTW_SCALED;
+  case AArch64ISD::GLDFF1_SXTW_SCALED_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLDFF1S_SXTW_SCALED_MERGE_ZERO;
     break;
-  case AArch64ISD::GLDFF1_UXTW:
-    NewOpc = AArch64ISD::GLDFF1S_UXTW;
+  case AArch64ISD::GLDFF1_UXTW_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLDFF1S_UXTW_MERGE_ZERO;
     break;
-  case AArch64ISD::GLDFF1_UXTW_SCALED:
-    NewOpc = AArch64ISD::GLDFF1S_UXTW_SCALED;
+  case AArch64ISD::GLDFF1_UXTW_SCALED_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLDFF1S_UXTW_SCALED_MERGE_ZERO;
     break;
-  case AArch64ISD::GLDFF1_IMM:
-    NewOpc = AArch64ISD::GLDFF1S_IMM;
+  case AArch64ISD::GLDFF1_IMM_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLDFF1S_IMM_MERGE_ZERO;
     break;
-  case AArch64ISD::GLDNT1:
-    NewOpc = AArch64ISD::GLDNT1S;
+  case AArch64ISD::GLDNT1_MERGE_ZERO:
+    NewOpc = AArch64ISD::GLDNT1S_MERGE_ZERO;
     break;
   default:
     return SDValue();
@@ -13750,89 +13755,101 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_ldnt1:
       return performLDNT1Combine(N, DAG);
     case Intrinsic::aarch64_sve_ld1rq:
-      return performLD1ReplicateCombine<AArch64ISD::LD1RQ>(N, DAG);
+      return performLD1ReplicateCombine<AArch64ISD::LD1RQ_MERGE_ZERO>(N, DAG);
     case Intrinsic::aarch64_sve_ld1ro:
-      return performLD1ReplicateCombine<AArch64ISD::LD1RO>(N, DAG);
+      return performLD1ReplicateCombine<AArch64ISD::LD1RO_MERGE_ZERO>(N, DAG);
     case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1);
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ldnt1_gather:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1);
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ldnt1_gather_index:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1_INDEX);
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLDNT1_INDEX_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1);
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ld1:
-      return performLD1Combine(N, DAG, AArch64ISD::LD1);
+      return performLD1Combine(N, DAG, AArch64ISD::LD1_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ldnf1:
-      return performLD1Combine(N, DAG, AArch64ISD::LDNF1);
+      return performLD1Combine(N, DAG, AArch64ISD::LDNF1_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ldff1:
-      return performLD1Combine(N, DAG, AArch64ISD::LDFF1);
+      return performLD1Combine(N, DAG, AArch64ISD::LDFF1_MERGE_ZERO);
     case Intrinsic::aarch64_sve_st1:
       return performST1Combine(N, DAG);
     case Intrinsic::aarch64_sve_stnt1:
       return performSTNT1Combine(N, DAG);
     case Intrinsic::aarch64_sve_stnt1_scatter_scalar_offset:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1_PRED);
     case Intrinsic::aarch64_sve_stnt1_scatter_uxtw:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1_PRED);
     case Intrinsic::aarch64_sve_stnt1_scatter:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1_PRED);
     case Intrinsic::aarch64_sve_stnt1_scatter_index:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1_INDEX);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SSTNT1_INDEX_PRED);
     case Intrinsic::aarch64_sve_ld1_gather:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1);
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ld1_gather_index:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_SCALED);
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLD1_SCALED_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ld1_gather_sxtw:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_SXTW,
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_SXTW_MERGE_ZERO,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_uxtw:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_UXTW,
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_UXTW_MERGE_ZERO,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_sxtw_index:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_SXTW_SCALED,
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLD1_SXTW_SCALED_MERGE_ZERO,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_UXTW_SCALED,
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLD1_UXTW_SCALED_MERGE_ZERO,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_IMM);
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_IMM_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ldff1_gather:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1);
+      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ldff1_gather_index:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_SCALED);
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLDFF1_SCALED_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ldff1_gather_sxtw:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_SXTW,
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLDFF1_SXTW_MERGE_ZERO,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ldff1_gather_uxtw:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_UXTW,
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLDFF1_UXTW_MERGE_ZERO,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ldff1_gather_sxtw_index:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_SXTW_SCALED,
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLDFF1_SXTW_SCALED_MERGE_ZERO,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ldff1_gather_uxtw_index:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_UXTW_SCALED,
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLDFF1_UXTW_SCALED_MERGE_ZERO,
                                       /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_ldff1_gather_scalar_offset:
-      return performGatherLoadCombine(N, DAG, AArch64ISD::GLDFF1_IMM);
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLDFF1_IMM_MERGE_ZERO);
     case Intrinsic::aarch64_sve_st1_scatter:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_PRED);
     case Intrinsic::aarch64_sve_st1_scatter_index:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_SCALED);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_SCALED_PRED);
     case Intrinsic::aarch64_sve_st1_scatter_sxtw:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_SXTW,
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_SXTW_PRED,
                                         /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_st1_scatter_uxtw:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_UXTW,
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_UXTW_PRED,
                                         /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_st1_scatter_sxtw_index:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_SXTW_SCALED,
+      return performScatterStoreCombine(N, DAG,
+                                        AArch64ISD::SST1_SXTW_SCALED_PRED,
                                         /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_st1_scatter_uxtw_index:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_UXTW_SCALED,
+      return performScatterStoreCombine(N, DAG,
+                                        AArch64ISD::SST1_UXTW_SCALED_PRED,
                                         /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
-      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_IMM);
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_IMM_PRED);
     case Intrinsic::aarch64_sve_tuple_get: {
       SDLoc DL(N);
       SDValue Chain = N->getOperand(0);

@@ -18,6 +18,7 @@
 const int x = MODULE_MACRO;
 
 // CRASH_ENV: failing because environment variable 'FORCE_CLANG_DIAGNOSTICS_CRASH' is set
+// CRASH_ENV: PLEASE submit a bug report to {{.*}} and include the crash backtrace, preprocessed source, and associated run script.
 // CRASH_ENV: Preprocessed source(s) and associated run script(s) are located at:
 // CRASH_ENV-NEXT: note: diagnostic msg: {{.*}}.m
 // CRASH_ENV-NEXT: note: diagnostic msg: {{.*}}.cache

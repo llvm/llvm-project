@@ -736,16 +736,15 @@ bool AMDGPUPromoteAlloca::hasSufficientLocalMem(const Function &F) {
         continue;
 
       if (Use->getParent()->getParent() == &F) {
-        unsigned Align = GV.getAlignment();
-        if (Align == 0)
-          Align = DL.getABITypeAlignment(GV.getValueType());
+        Align Alignment =
+            DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
 
         // FIXME: Try to account for padding here. The padding is currently
         // determined from the inverse order of uses in the function. I'm not
         // sure if the use list order is in any way connected to this, so the
         // total reported size is likely incorrect.
         uint64_t AllocSize = DL.getTypeAllocSize(GV.getValueType());
-        CurrentLocalMemUsage = alignTo(CurrentLocalMemUsage, Align);
+        CurrentLocalMemUsage = alignTo(CurrentLocalMemUsage, Alignment);
         CurrentLocalMemUsage += AllocSize;
         break;
       }
@@ -837,9 +836,8 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, ContainingFunction);
   unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(ContainingFunction).second;
 
-  unsigned Align = I.getAlignment();
-  if (Align == 0)
-    Align = DL.getABITypeAlignment(I.getAllocatedType());
+  Align Alignment =
+      DL.getValueOrABITypeAlignment(I.getAlign(), I.getAllocatedType());
 
   // FIXME: This computed padding is likely wrong since it depends on inverse
   // usage order.
@@ -847,7 +845,7 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   // FIXME: It is also possible that if we're allowed to use all of the memory
   // could could end up using more than the maximum due to alignment padding.
 
-  uint32_t NewSize = alignTo(CurrentLocalMemUsage, Align);
+  uint32_t NewSize = alignTo(CurrentLocalMemUsage, Alignment);
   uint32_t AllocSize = WorkGroupSize * DL.getTypeAllocSize(AllocaTy);
   NewSize += AllocSize;
 

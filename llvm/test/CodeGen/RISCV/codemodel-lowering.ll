@@ -82,23 +82,23 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-MEDIUM:       # %bb.0: # %entry
 ; RV32I-MEDIUM-NEXT:    addi sp, sp, -16
 ; RV32I-MEDIUM-NEXT:    sw ra, 12(sp)
-; RV32I-MEDIUM-NEXT:  .LBB2_5: # %entry
+; RV32I-MEDIUM-NEXT:  .LBB2_1: # %entry
 ; RV32I-MEDIUM-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.Ltmp0)
-; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.LBB2_5)
+; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.LBB2_1)
 ; RV32I-MEDIUM-NEXT:    addi a2, zero, 101
 ; RV32I-MEDIUM-NEXT:    sw a1, 8(sp)
-; RV32I-MEDIUM-NEXT:    blt a0, a2, .LBB2_3
-; RV32I-MEDIUM-NEXT:  # %bb.1: # %if.then
+; RV32I-MEDIUM-NEXT:    blt a0, a2, .LBB2_4
+; RV32I-MEDIUM-NEXT:  # %bb.2: # %if.then
 ; RV32I-MEDIUM-NEXT:    lw a0, 8(sp)
 ; RV32I-MEDIUM-NEXT:    jr a0
 ; RV32I-MEDIUM-NEXT:  .Ltmp0: # Block address taken
-; RV32I-MEDIUM-NEXT:  .LBB2_2: # %return
+; RV32I-MEDIUM-NEXT:  .LBB2_3: # %return
 ; RV32I-MEDIUM-NEXT:    addi a0, zero, 4
-; RV32I-MEDIUM-NEXT:    j .LBB2_4
-; RV32I-MEDIUM-NEXT:  .LBB2_3: # %return.clone
+; RV32I-MEDIUM-NEXT:    j .LBB2_5
+; RV32I-MEDIUM-NEXT:  .LBB2_4: # %return.clone
 ; RV32I-MEDIUM-NEXT:    addi a0, zero, 3
-; RV32I-MEDIUM-NEXT:  .LBB2_4: # %.split
+; RV32I-MEDIUM-NEXT:  .LBB2_5: # %.split
 ; RV32I-MEDIUM-NEXT:    lw ra, 12(sp)
 ; RV32I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV32I-MEDIUM-NEXT:    ret

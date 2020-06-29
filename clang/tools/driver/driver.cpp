@@ -511,6 +511,11 @@ int main(int argc_, const char **argv_) {
       for (const auto &J : C->getJobs())
         if (const Command *C = dyn_cast<Command>(&J))
           FailingCommands.push_back(std::make_pair(-1, C));
+
+      // Print the bug report message that would be printed if we did actually
+      // crash, but only if we're crashing due to FORCE_CLANG_DIAGNOSTICS_CRASH.
+      if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
+        llvm::dbgs() << llvm::getBugReportMsg();
     }
 
     for (const auto &P : FailingCommands) {
