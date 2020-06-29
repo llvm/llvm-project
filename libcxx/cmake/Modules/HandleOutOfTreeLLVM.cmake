@@ -40,10 +40,10 @@ include(AddLLVM OPTIONAL)
 
 # LLVM Options --------------------------------------------------------------
 if (NOT DEFINED LLVM_INCLUDE_TESTS)
-  set(LLVM_INCLUDE_TESTS ${LLVM_FOUND})
+  set(LLVM_INCLUDE_TESTS ON)
 endif()
 if (NOT DEFINED LLVM_INCLUDE_DOCS)
-  set(LLVM_INCLUDE_DOCS ${LLVM_FOUND})
+  set(LLVM_INCLUDE_DOCS ON)
 endif()
 if (NOT DEFINED LLVM_ENABLE_SPHINX)
   set(LLVM_ENABLE_SPHINX OFF)
