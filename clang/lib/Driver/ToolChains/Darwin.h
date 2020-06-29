@@ -434,9 +434,17 @@ public:
     return TargetVersion < VersionTuple(V0, V1, V2);
   }
 
+  /// Returns true if the minimum supported macOS version for the slice that's
+  /// being built is less than the specified version. If there's no minimum
+  /// supported macOS version, the deployment target version is compared to the
+  /// specifed version instead.
   bool isMacosxVersionLT(unsigned V0, unsigned V1 = 0, unsigned V2 = 0) const {
-    assert(isTargetMacOS() && "Unexpected call for non OS X target!");
-    return TargetVersion < VersionTuple(V0, V1, V2);
+    assert(isTargetMacOS() && getTriple().isMacOSX() &&
+           "Unexpected call for non OS X target!");
+    VersionTuple MinVers = getTriple().getMinimumSupportedOSVersion();
+    return (!MinVers.empty() && MinVers > TargetVersion
+                ? MinVers
+                : TargetVersion) < VersionTuple(V0, V1, V2);
   }
 
 protected:
