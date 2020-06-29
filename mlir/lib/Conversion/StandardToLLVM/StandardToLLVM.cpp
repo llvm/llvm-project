@@ -1366,8 +1366,6 @@ using AddFOpLowering = VectorConvertToLLVMPattern<AddFOp, LLVM::FAddOp>;
 using AddIOpLowering = VectorConvertToLLVMPattern<AddIOp, LLVM::AddOp>;
 using AndOpLowering = VectorConvertToLLVMPattern<AndOp, LLVM::AndOp>;
 using CeilFOpLowering = VectorConvertToLLVMPattern<CeilFOp, LLVM::FCeilOp>;
-using ConstLLVMOpLowering =
-    OneToOneConvertToLLVMPattern<ConstantOp, LLVM::ConstantOp>;
 using CopySignOpLowering =
     VectorConvertToLLVMPattern<CopySignOp, LLVM::CopySignOp>;
 using CosOpLowering = VectorConvertToLLVMPattern<CosOp, LLVM::CosOp>;
@@ -1538,6 +1536,39 @@ struct SubCFOpLowering : public ConvertOpToLLVMPattern<SubCFOp> {
 
     rewriter.replaceOp(op, {result});
     return success();
+  }
+};
+
+struct ConstantOpLowering : public ConvertOpToLLVMPattern<ConstantOp> {
+  using ConvertOpToLLVMPattern<ConstantOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto op = cast<ConstantOp>(operation);
+    // If constant refers to a function, convert it to "addressof".
+    if (auto symbolRef = op.getValue().dyn_cast<FlatSymbolRefAttr>()) {
+      auto type = typeConverter.convertType(op.getResult().getType())
+                      .dyn_cast_or_null<LLVM::LLVMType>();
+      if (!type)
+        return rewriter.notifyMatchFailure(op, "failed to convert result type");
+
+      MutableDictionaryAttr attrs(op.getAttrs());
+      attrs.remove(rewriter.getIdentifier("value"));
+      rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(
+          op, type.cast<LLVM::LLVMType>(), symbolRef.getValue(),
+          attrs.getAttrs());
+      return success();
+    }
+
+    // Calling into other scopes (non-flat reference) is not supported in LLVM.
+    if (op.getValue().isa<SymbolRefAttr>())
+      return rewriter.notifyMatchFailure(
+          op, "referring to a symbol outside of the current module");
+
+    return LLVM::detail::oneToOneRewrite(op,
+                                         LLVM::ConstantOp::getOperationName(),
+                                         operands, typeConverter, rewriter);
   }
 };
 
@@ -3129,7 +3160,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       CondBranchOpLowering,
       CopySignOpLowering,
       CosOpLowering,
-      ConstLLVMOpLowering,
+      ConstantOpLowering,
       CreateComplexOpLowering,
       DialectCastOpLowering,
       DivFOpLowering,

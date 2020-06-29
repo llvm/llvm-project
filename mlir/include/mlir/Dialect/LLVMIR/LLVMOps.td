@@ -575,6 +575,8 @@ def Linkage : LLVM_EnumAttr<
 def LLVM_AddressOfOp
     : LLVM_OneResultOp<"mlir.addressof">,
       Arguments<(ins FlatSymbolRefAttr:$global_name)> {
+  let summary = "Creates a pointer pointing to a global or a function";
+
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result, LLVMType resType, "
               "StringRef name, ArrayRef<NamedAttribute> attrs = {}", [{
@@ -586,13 +588,21 @@ def LLVM_AddressOfOp
               "ArrayRef<NamedAttribute> attrs = {}", [{
       build(builder, result,
             global.getType().getPointerTo(global.addr_space().getZExtValue()),
-            global.sym_name(), attrs);}]>
+            global.sym_name(), attrs);}]>,
+
+    OpBuilder<"OpBuilder &builder, OperationState &result, LLVMFuncOp func, "
+              "ArrayRef<NamedAttribute> attrs = {}", [{
+      build(builder, result,
+            func.getType().getPointerTo(), func.getName(), attrs);}]>
   ];
 
   let extraClassDeclaration = [{
     /// Return the llvm.mlir.global operation that defined the value referenced
     /// here.
     GlobalOp getGlobal();
+
+    /// Return the llvm.func operation that is referenced here.
+    LLVMFuncOp getFunction();
   }];
 
   let assemblyFormat = "$global_name attr-dict `:` type($res)";
@@ -733,6 +743,7 @@ def LLVM_ConstantOp
       LLVM_Builder<"$res = getLLVMConstant($_resultType, $value, $_location);">
 {
   let assemblyFormat = "`(` $value `)` attr-dict `:` type($res)";
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def LLVM_DialectCastOp : LLVM_Op<"mlir.cast", [NoSideEffect]>,

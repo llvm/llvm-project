@@ -55,12 +55,12 @@ func @ops(%arg0: !llvm.i32, %arg1: !llvm.float,
 // CHECK: %[[STRUCT:.*]] = llvm.call @foo(%[[I32]]) : (!llvm.i32) -> !llvm<"{ i32, double, i32 }">
 // CHECK: %[[VALUE:.*]] = llvm.extractvalue %[[STRUCT]][0] : !llvm<"{ i32, double, i32 }">
 // CHECK: %[[NEW_STRUCT:.*]] = llvm.insertvalue %[[VALUE]], %[[STRUCT]][2] : !llvm<"{ i32, double, i32 }">
-// CHECK: %[[FUNC:.*]] = llvm.mlir.constant(@foo) : !llvm<"{ i32, double, i32 } (i32)*">
+// CHECK: %[[FUNC:.*]] = llvm.mlir.addressof @foo : !llvm<"{ i32, double, i32 } (i32)*">
 // CHECK: %{{.*}} = llvm.call %[[FUNC]](%[[I32]]) : (!llvm.i32) -> !llvm<"{ i32, double, i32 }">
   %17 = llvm.call @foo(%arg0) : (!llvm.i32) -> !llvm<"{ i32, double, i32 }">
   %18 = llvm.extractvalue %17[0] : !llvm<"{ i32, double, i32 }">
   %19 = llvm.insertvalue %18, %17[2] : !llvm<"{ i32, double, i32 }">
-  %20 = llvm.mlir.constant(@foo) : !llvm<"{ i32, double, i32 } (i32)*">
+  %20 = llvm.mlir.addressof @foo : !llvm<"{ i32, double, i32 } (i32)*">
   %21 = llvm.call %20(%arg0) : (!llvm.i32) -> !llvm<"{ i32, double, i32 }">
 
 
@@ -130,8 +130,8 @@ func @ops(%arg0: !llvm.i32, %arg1: !llvm.float,
 }
 
 // An larger self-contained function.
-// CHECK-LABEL: func @foo(%{{.*}}: !llvm.i32) -> !llvm<"{ i32, double, i32 }"> {
-func @foo(%arg0: !llvm.i32) -> !llvm<"{ i32, double, i32 }"> {
+// CHECK-LABEL: llvm.func @foo(%{{.*}}: !llvm.i32) -> !llvm<"{ i32, double, i32 }"> {
+llvm.func @foo(%arg0: !llvm.i32) -> !llvm<"{ i32, double, i32 }"> {
 // CHECK:  %[[V0:.*]] = llvm.mlir.constant(3 : i64) : !llvm.i32
 // CHECK:  %[[V1:.*]] = llvm.mlir.constant(3 : i64) : !llvm.i32
 // CHECK:  %[[V2:.*]] = llvm.mlir.constant(4.200000e+01 : f64) : !llvm.double
