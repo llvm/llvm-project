@@ -15,6 +15,7 @@
 #ifndef MLIR_CONVERSION_STANDARDTOLLVM_CONVERTSTANDARDTOLLVM_H
 #define MLIR_CONVERSION_STANDARDTOLLVM_CONVERTSTANDARDTOLLVM_H
 
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace llvm {
@@ -34,22 +35,6 @@ namespace LLVM {
 class LLVMDialect;
 class LLVMType;
 } // namespace LLVM
-
-/// Set of callbacks that allows the customization of LLVMTypeConverter.
-struct LLVMTypeConverterCustomization {
-  using CustomCallback = std::function<LogicalResult(LLVMTypeConverter &, Type,
-                                                     SmallVectorImpl<Type> &)>;
-
-  /// Customize the type conversion of function arguments.
-  CustomCallback funcArgConverter;
-
-  /// Used to determine the bitwidth of the LLVM integer type that the index
-  /// type gets lowered to. Defaults to deriving the size from the data layout.
-  unsigned indexBitwidth;
-
-  /// Initialize customization to default callbacks.
-  LLVMTypeConverterCustomization();
-};
 
 /// Callback to convert function argument types. It converts a MemRef function
 /// argument to a list of non-aggregate types containing descriptor
@@ -75,13 +60,11 @@ class LLVMTypeConverter : public TypeConverter {
 public:
   using TypeConverter::convertType;
 
-  /// Create an LLVMTypeConverter using the default
-  /// LLVMTypeConverterCustomization.
+  /// Create an LLVMTypeConverter using the default LowerToLLVMOptions.
   LLVMTypeConverter(MLIRContext *ctx);
 
-  /// Create an LLVMTypeConverter using 'custom' customizations.
-  LLVMTypeConverter(MLIRContext *ctx,
-                    const LLVMTypeConverterCustomization &custom);
+  /// Create an LLVMTypeConverter using custom LowerToLLVMOptions.
+  LLVMTypeConverter(MLIRContext *ctx, const LowerToLLVMOptions &options);
 
   /// Convert a function type.  The arguments and results are converted one by
   /// one and results are packed into a wrapped LLVM IR structure type. `result`
@@ -127,7 +110,7 @@ public:
   LLVM::LLVMType getIndexType();
 
   /// Gets the bitwidth of the index type when converted to LLVM.
-  unsigned getIndexTypeBitwidth() { return customizations.indexBitwidth; }
+  unsigned getIndexTypeBitwidth() { return options.indexBitwidth; }
 
   /// Gets the pointer bitwidth.
   unsigned getPointerBitwidth(unsigned addressSpace = 0);
@@ -196,8 +179,8 @@ private:
   // Convert a 1D vector type into an LLVM vector type.
   Type convertVectorType(VectorType type);
 
-  /// Callbacks for customizing the type conversion.
-  LLVMTypeConverterCustomization customizations;
+  /// Options for customizing the llvm lowering.
+  LowerToLLVMOptions options;
 };
 
 /// Helper class to produce LLVM dialect operations extracting or inserting
@@ -398,12 +381,17 @@ public:
                            SmallVectorImpl<Value> &sizes);
 };
 
-/// Base class for operation conversions targeting the LLVM IR dialect. Provides
-/// conversion patterns with access to an LLVMTypeConverter.
+/// Base class for operation conversions targeting the LLVM IR dialect. It
+/// provides the conversion patterns with access to the LLVMTypeConverter and
+/// the LowerToLLVMOptions. The class captures the LLVMTypeConverter and the
+/// LowerToLLVMOptions by reference meaning the references have to remain alive
+/// during the entire pattern lifetime.
 class ConvertToLLVMPattern : public ConversionPattern {
 public:
   ConvertToLLVMPattern(StringRef rootOpName, MLIRContext *context,
                        LLVMTypeConverter &typeConverter,
+                       const LowerToLLVMOptions &options =
+                           LowerToLLVMOptions::getDefaultOptions(),
                        PatternBenefit benefit = 1);
 
   /// Returns the LLVM dialect.
@@ -455,6 +443,9 @@ public:
 protected:
   /// Reference to the type converter, with potential extensions.
   LLVMTypeConverter &typeConverter;
+
+  /// Reference to the llvm lowering options.
+  const LowerToLLVMOptions &options;
 };
 
 /// Utility class for operation conversions targeting the LLVM dialect that
@@ -463,10 +454,11 @@ template <typename OpTy>
 class ConvertOpToLLVMPattern : public ConvertToLLVMPattern {
 public:
   ConvertOpToLLVMPattern(LLVMTypeConverter &typeConverter,
+                         const LowerToLLVMOptions &options,
                          PatternBenefit benefit = 1)
       : ConvertToLLVMPattern(OpTy::getOperationName(),
                              &typeConverter.getContext(), typeConverter,
-                             benefit) {}
+                             options, benefit) {}
 };
 
 namespace LLVM {
