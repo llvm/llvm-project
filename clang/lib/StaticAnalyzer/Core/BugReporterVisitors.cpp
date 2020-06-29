@@ -52,6 +52,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -2812,12 +2813,19 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
 // Implementation of FalsePositiveRefutationBRVisitor.
 //===----------------------------------------------------------------------===//
 
+#define DEBUG_TYPE "FalsePositiveRefutationBRVisitor"
+STATISTIC(CrosscheckedBugReports,
+          "The # of bug reports which were checked for infeasible constraints");
+STATISTIC(CrosscheckInvalidatedBugReports,
+          "The # of bug reports invalidated due to infeasible constraints");
+
 FalsePositiveRefutationBRVisitor::FalsePositiveRefutationBRVisitor()
     : Constraints(ConstraintRangeTy::Factory().getEmptyMap()) {}
 
 void FalsePositiveRefutationBRVisitor::finalizeVisitor(
     BugReporterContext &BRC, const ExplodedNode *EndPathNode,
     PathSensitiveBugReport &BR) {
+  ++CrosscheckedBugReports;
   // Collect new constraints
   VisitNode(EndPathNode, BRC, BR);
 
@@ -2848,8 +2856,10 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
   if (!isSat.hasValue())
     return;
 
-  if (!isSat.getValue())
+  if (!isSat.getValue()) {
+    ++CrosscheckInvalidatedBugReports;
     BR.markInvalid("Infeasible constraints", EndPathNode->getLocationContext());
+  }
 }
 
 PathDiagnosticPieceRef FalsePositiveRefutationBRVisitor::VisitNode(
