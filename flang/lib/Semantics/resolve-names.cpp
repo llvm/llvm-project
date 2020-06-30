@@ -1436,7 +1436,7 @@ private:
 
   void PreSpecificationConstruct(const parser::SpecificationConstruct &);
   void CreateGeneric(const parser::GenericSpec &);
-  void FinishSpecificationPart();
+  void FinishSpecificationPart(const std::list<parser::DeclarationConstruct> &);
   void CheckImports();
   void CheckImport(const SourceName &, const SourceName &);
   void HandleCall(Symbol::Flag, const parser::Call &);
@@ -2714,11 +2714,9 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
   details.set_result(result);
   const auto &parsedExpr{std::get<parser::Scalar<parser::Expr>>(x.t)};
   Walk(parsedExpr);
-  if (auto expr{AnalyzeExpr(context(), parsedExpr)}) {
-    details.set_stmtFunction(std::move(*expr));
-  } else {
-    context().SetError(symbol);
-  }
+  // The analysis of the expression that constitutes the body of the
+  // statement function is deferred to FinishSpecificationPart() so that
+  // all declarations and implicit typing are complete.
   PopScope();
   return true;
 }
@@ -6011,7 +6009,7 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
     }
   }
   Walk(decls);
-  FinishSpecificationPart();
+  FinishSpecificationPart(decls);
   return false;
 }
 
@@ -6068,7 +6066,8 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
   info.Resolve(&MakeSymbol(symbolName, Attrs{}, std::move(genericDetails)));
 }
 
-void ResolveNamesVisitor::FinishSpecificationPart() {
+void ResolveNamesVisitor::FinishSpecificationPart(
+    const std::list<parser::DeclarationConstruct> &decls) {
   badStmtFuncFound_ = false;
   CheckImports();
   bool inModule{currScope().kind() == Scope::Kind::Module};
@@ -6089,6 +6088,25 @@ void ResolveNamesVisitor::FinishSpecificationPart() {
     }
   }
   currScope().InstantiateDerivedTypes(context());
+  // Analyze the bodies of statement functions now that the symbol in this
+  // specification part have been fully declared and implicitly typed.
+  for (const auto &decl : decls) {
+    if (const auto *statement{std::get_if<
+            parser::Statement<common::Indirection<parser::StmtFunctionStmt>>>(
+            &decl.u)}) {
+      const parser::StmtFunctionStmt &stmtFunc{statement->statement.value()};
+      if (Symbol * symbol{std::get<parser::Name>(stmtFunc.t).symbol}) {
+        if (auto *details{symbol->detailsIf<SubprogramDetails>()}) {
+          if (auto expr{AnalyzeExpr(context(),
+                  std::get<parser::Scalar<parser::Expr>>(stmtFunc.t))}) {
+            details->set_stmtFunction(std::move(*expr));
+          } else {
+            context().SetError(*symbol);
+          }
+        }
+      }
+    }
+  }
   // TODO: what about instantiations in BLOCK?
   CheckSaveStmts();
   CheckCommonBlocks();
@@ -6278,8 +6296,8 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
       node.stmt());
   Walk(node.spec());
   // If this is a function, convert result to an object. This is to prevent the
-  // result to be converted later to a function symbol if it is called inside
-  // the function.
+  // result from being converted later to a function symbol if it is called
+  // inside the function.
   // If the result is function pointer, then ConvertToObjectEntity will not
   // convert the result to an object, and calling the symbol inside the function
   // will result in calls to the result pointer.
