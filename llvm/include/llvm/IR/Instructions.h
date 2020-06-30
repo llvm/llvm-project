@@ -525,6 +525,11 @@ public:
     return User::operator new(s, 3);
   }
 
+  /// Always returns the natural type alignment.
+  /// FIXME: Introduce a proper alignment
+  /// https://bugs.llvm.org/show_bug.cgi?id=27168
+  Align getAlign() const;
+
   /// Return true if this is a cmpxchg from a volatile memory
   /// location.
   ///
@@ -742,6 +747,11 @@ public:
     setInstructionSubclassData((SubclassData & 31) |
                                (Operation << 5));
   }
+
+  /// Always returns the natural type alignment.
+  /// FIXME: Introduce a proper alignment
+  /// https://bugs.llvm.org/show_bug.cgi?id=27168
+  Align getAlign() const;
 
   /// Return true if this is a RMW on a volatile memory location.
   ///
