@@ -195,6 +195,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance-faster-string-find>` check.
+
+  Now checks ``std::basic_string_view`` by default.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability-identifier-naming>` check.
 
