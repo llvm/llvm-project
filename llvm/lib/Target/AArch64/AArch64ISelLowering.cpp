@@ -9486,8 +9486,8 @@ static bool areExtractShuffleVectors(Value *Op1, Value *Op2) {
   };
 
   auto extractHalf = [](Value *FullV, Value *HalfV) {
-    auto *FullVT = cast<VectorType>(FullV->getType());
-    auto *HalfVT = cast<VectorType>(HalfV->getType());
+    auto *FullVT = cast<FixedVectorType>(FullV->getType());
+    auto *HalfVT = cast<FixedVectorType>(HalfV->getType());
     return FullVT->getNumElements() == 2 * HalfVT->getNumElements();
   };
 
@@ -9507,7 +9507,7 @@ static bool areExtractShuffleVectors(Value *Op1, Value *Op2) {
   // elements.
   int M1Start = -1;
   int M2Start = -1;
-  int NumElements = cast<VectorType>(Op1->getType())->getNumElements() * 2;
+  int NumElements = cast<FixedVectorType>(Op1->getType())->getNumElements() * 2;
   if (!ShuffleVectorInst::isExtractSubvectorMask(M1, NumElements, M1Start) ||
       !ShuffleVectorInst::isExtractSubvectorMask(M2, NumElements, M2Start) ||
       M1Start != M2Start || (M1Start != 0 && M2Start != (NumElements / 2)))
@@ -9639,7 +9639,7 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
   unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
 
   // Ensure the number of vector elements is greater than 1.
-  if (VecTy->getNumElements() < 2)
+  if (cast<FixedVectorType>(VecTy)->getNumElements() < 2)
     return false;
 
   // Ensure the element type is legal.
@@ -9673,22 +9673,24 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
 
-  VectorType *VecTy = Shuffles[0]->getType();
+  VectorType *VTy = Shuffles[0]->getType();
 
   // Skip if we do not have NEON and skip illegal vector types. We can
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
-  if (!Subtarget->hasNEON() || !isLegalInterleavedAccessType(VecTy, DL))
+  if (!Subtarget->hasNEON() || !isLegalInterleavedAccessType(VTy, DL))
     return false;
 
-  unsigned NumLoads = getNumInterleavedAccesses(VecTy, DL);
+  unsigned NumLoads = getNumInterleavedAccesses(VTy, DL);
+
+  auto *FVTy = cast<FixedVectorType>(VTy);
 
   // A pointer vector can not be the return type of the ldN intrinsics. Need to
   // load integer vectors first and then convert to pointer vectors.
-  Type *EltTy = VecTy->getElementType();
+  Type *EltTy = FVTy->getElementType();
   if (EltTy->isPointerTy())
-    VecTy =
-        FixedVectorType::get(DL.getIntPtrType(EltTy), VecTy->getNumElements());
+    FVTy =
+        FixedVectorType::get(DL.getIntPtrType(EltTy), FVTy->getNumElements());
 
   IRBuilder<> Builder(LI);
 
@@ -9698,19 +9700,19 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   if (NumLoads > 1) {
     // If we're going to generate more than one load, reset the sub-vector type
     // to something legal.
-    VecTy = FixedVectorType::get(VecTy->getElementType(),
-                                 VecTy->getNumElements() / NumLoads);
+    FVTy = FixedVectorType::get(FVTy->getElementType(),
+                                FVTy->getNumElements() / NumLoads);
 
     // We will compute the pointer operand of each load from the original base
     // address using GEPs. Cast the base address to a pointer to the scalar
     // element type.
     BaseAddr = Builder.CreateBitCast(
         BaseAddr,
-        VecTy->getElementType()->getPointerTo(LI->getPointerAddressSpace()));
+        FVTy->getElementType()->getPointerTo(LI->getPointerAddressSpace()));
   }
 
-  Type *PtrTy = VecTy->getPointerTo(LI->getPointerAddressSpace());
-  Type *Tys[2] = {VecTy, PtrTy};
+  Type *PtrTy = FVTy->getPointerTo(LI->getPointerAddressSpace());
+  Type *Tys[2] = {FVTy, PtrTy};
   static const Intrinsic::ID LoadInts[3] = {Intrinsic::aarch64_neon_ld2,
                                             Intrinsic::aarch64_neon_ld3,
                                             Intrinsic::aarch64_neon_ld4};
@@ -9727,8 +9729,8 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
     // If we're generating more than one load, compute the base address of
     // subsequent loads as an offset from the previous.
     if (LoadCount > 0)
-      BaseAddr = Builder.CreateConstGEP1_32(VecTy->getElementType(), BaseAddr,
-                                            VecTy->getNumElements() * Factor);
+      BaseAddr = Builder.CreateConstGEP1_32(FVTy->getElementType(), BaseAddr,
+                                            FVTy->getNumElements() * Factor);
 
     CallInst *LdN = Builder.CreateCall(
         LdNFunc, Builder.CreateBitCast(BaseAddr, PtrTy), "ldN");
@@ -9744,7 +9746,7 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
       if (EltTy->isPointerTy())
         SubVec = Builder.CreateIntToPtr(
             SubVec, FixedVectorType::get(SVI->getType()->getElementType(),
-                                         VecTy->getNumElements()));
+                                         FVTy->getNumElements()));
       SubVecs[SVI].push_back(SubVec);
     }
   }
@@ -9795,7 +9797,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
 
-  VectorType *VecTy = SVI->getType();
+  auto *VecTy = cast<FixedVectorType>(SVI->getType());
   assert(VecTy->getNumElements() % Factor == 0 && "Invalid interleaved store");
 
   unsigned LaneLen = VecTy->getNumElements() / Factor;
@@ -9820,7 +9822,8 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   // vectors to integer vectors.
   if (EltTy->isPointerTy()) {
     Type *IntTy = DL.getIntPtrType(EltTy);
-    unsigned NumOpElts = cast<VectorType>(Op0->getType())->getNumElements();
+    unsigned NumOpElts =
+        cast<FixedVectorType>(Op0->getType())->getNumElements();
 
     // Convert to the corresponding integer vector.
     auto *IntVecTy = FixedVectorType::get(IntTy, NumOpElts);
