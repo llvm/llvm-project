@@ -993,7 +993,6 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
           DeclRelation::TemplatePattern | DeclRelation::Alias;
       auto Decls = targetDecl(N->ASTNode, Relations);
       if (!Decls.empty()) {
-        auto Refs = findRefs({Decls.begin(), Decls.end()}, AST);
         // FIXME: we may get multiple DocumentHighlights with the same location
         // and different kinds, deduplicate them.
         for (const auto &Ref : findRefs({Decls.begin(), Decls.end()}, AST))
