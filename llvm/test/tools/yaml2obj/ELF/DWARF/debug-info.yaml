@@ -200,8 +200,7 @@ DWARF:
         - Attribute: 0x01
           Form:      DW_FORM_addrx4         ## 0x2c
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -262,8 +261,7 @@ DWARF:
             - Value: 0x1234             ## DW_FORM_addrx2
             - Value: 0x123456           ## DW_FORM_addrx3 (unimplemented)
             - Value: 0x12345678         ## DW_FORM_addrx4
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       ## Test another unit type.
       UnitType:   DW_UT_compile
@@ -272,8 +270,7 @@ DWARF:
       Entries:
         - AbbrCode: 0
           Values:   []
-    - Length:
-        TotalLength: 0x5678
+    - Length:     0x5678
       ## Test DWARFv4
       Version:    4
       AbbrOffset: 0x5678
@@ -440,8 +437,7 @@ DWARF:
       Children:   DW_CHILDREN_no
       Attributes: []
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -470,8 +466,7 @@ DWARF:
       Children:   DW_CHILDREN_no
       Attributes: []
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -539,8 +534,7 @@ DWARF:
       Children:   DW_CHILDREN_no
       Attributes: []
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -568,8 +562,7 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -620,8 +613,7 @@ DWARF:
         - Attribute: DW_AT_high_pc
           Form:      DW_FORM_data4
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -659,8 +651,7 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -695,9 +686,8 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_info:
-    - Length:
-        TotalLength:   0xffffffff
-        TotalLength64: 0x0c
+    - Format:     DWARF64
+      Length:     0x0c
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -727,9 +717,8 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_info:
-    - Length:
-        TotalLength:   0xffffffff
-        TotalLength64: 0x0c
+    - Format:     DWARF64
+      Length:     0x0c
       Version:    4
       AbbrOffset: 0x1234
       AddrSize:   8
