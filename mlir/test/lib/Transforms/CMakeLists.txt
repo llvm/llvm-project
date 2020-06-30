@@ -39,7 +39,7 @@ add_mlir_library(MLIRTestTransforms
   MLIRAnalysis
   MLIREDSC
   MLIRGPU
-  MLIRGPUtoGPURuntimeTransforms
+  MLIRGPUToGPURuntimeTransforms
   MLIRLinalgOps
   MLIRLinalgTransforms
   MLIRNVVMIR
