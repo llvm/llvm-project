@@ -1,6 +1,6 @@
 SWIFT_OBJC_INTEROP := 1
 SWIFT_SOURCES := main.swift
-SWIFTFLAGS_EXTRAS := -Xcc -DDEBUG=1 -Xcc -DSPACE -Xcc -UNDEBUG -I. -L. -lDylib
+SWIFTFLAGS_EXTRAS := -Xcc -DCONFLICT=1 -Xcc -Werror -I. -L. -lDylib
 
 all: libDylib.dylib a.out
 

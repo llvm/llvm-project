@@ -1460,6 +1460,8 @@ void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
         clang_argument == "-working-directory")
       continue;
 
+    auto clear_arg = llvm::make_scope_exit([&] { clang_argument.clear(); });
+
     // Enable uniquing for -D and -U options.
     bool is_macro = (clang_argument.size() >= 2 && clang_argument[0] == '-' &&
                      (clang_argument[1] == 'D' || clang_argument[1] == 'U'));
@@ -1467,15 +1469,18 @@ void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
 
     // Consume any -working-directory arguments.
     StringRef cwd(clang_argument);
-    if (cwd.consume_front("-working-directory"))
+    if (cwd.consume_front("-working-directory")) {
       cur_working_dir = cwd;
-    else {
-      // Otherwise add the argument to the list.
-      if (!is_macro)
-        ApplyWorkingDir(clang_argument, cur_working_dir);
-      AddClangArgument(clang_argument.str(), unique);
+      continue;
     }
-    clang_argument.clear();
+    // Drop -Werror; it would only cause trouble in the debugger.
+    if (clang_argument.startswith("-Werror")) {
+      continue;
+    }
+    // Otherwise add the argument to the list.
+    if (!is_macro)
+      ApplyWorkingDir(clang_argument, cur_working_dir);
+    AddClangArgument(clang_argument.str(), unique);
   }
 }
 
