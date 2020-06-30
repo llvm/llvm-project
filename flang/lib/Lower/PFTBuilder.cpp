@@ -83,7 +83,7 @@ public:
     } else if constexpr (UnwrapStmt<A>::isStmt) {
       using T = typename UnwrapStmt<A>::Type;
       // Node "a" being visited has one of the following types:
-      // Statement<T>, Statement<Indirection<T>, UnlabeledStatement<T>,
+      // Statement<T>, Statement<Indirection<T>>, UnlabeledStatement<T>,
       // or UnlabeledStatement<Indirection<T>>
       auto stmt{UnwrapStmt<A>(a)};
       if constexpr (lower::pft::isConstructStmt<T> ||
