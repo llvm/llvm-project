@@ -13,14 +13,8 @@
 // RUN:   | FileCheck --check-prefix=ARM64_NEW %s
 // RUN: %clang -target arm64-apple-macos11.1 -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=520 -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_NEW_1 %s
-// RUN: %clang -arch arm64 -mmacosx-version-min=10.15 -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=520 -### %t.o 2>&1 \
-// RUN:   | FileCheck --check-prefix=ARM64_NEW %s
 // RUN: %clang -target arm64-apple-macos10.13 -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=400 -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_OLD %s
-// RUN: %clang -arch arm64 -mmacosx-version-min=10.15 -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=400 -### %t.o 2>&1 \
-// RUN:   | FileCheck --check-prefix=ARM64_OLD %s
-// RUN: %clang -target arm64e-apple-macos10.13 -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=520 -### %t.o 2>&1 \
-// RUN:   | FileCheck --check-prefix=ARM64_NEW %s
 
 // LINKER-OLD: "-macosx_version_min" "10.13.0"
 // LINKER-NEW: "-platform_version" "macos" "10.13.0" "10.14"
