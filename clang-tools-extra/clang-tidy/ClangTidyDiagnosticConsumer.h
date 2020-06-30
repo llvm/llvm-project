@@ -14,10 +14,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
-
-namespace llvm {
-class Regex;
-}
+#include "llvm/Support/Regex.h"
 
 namespace clang {
 
