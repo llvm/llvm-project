@@ -61,7 +61,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
          (ins "Value":$value,
               "SmallVectorImpl<SideEffects::EffectInstance<"
               # baseEffect # ">> &":$effects), [{
-          op.getEffects(effects);
+          $_op.getEffects(effects);
           llvm::erase_if(effects, [&](auto &it) {
             return it.getValue() != value;
           });
@@ -75,7 +75,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
          (ins "SideEffects::Resource *":$resource,
               "SmallVectorImpl<SideEffects::EffectInstance<"
               # baseEffect # ">> &":$effects), [{
-          op.getEffects(effects);
+          $_op.getEffects(effects);
           llvm::erase_if(effects, [&](auto &it) {
             return it.getResource() != resource;
           });
