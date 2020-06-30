@@ -47,8 +47,7 @@ debug_abbrev:
       - Attribute:       DW_AT_APPLE_sdk
         Form:            DW_FORM_strp
 debug_info:
-  - Length:
-      TotalLength:     8
+  - Length:          8
     Version:         2
     AbbrOffset:      0
     AddrSize:        8
