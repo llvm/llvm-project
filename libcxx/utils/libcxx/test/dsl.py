@@ -6,7 +6,7 @@
 #
 #===----------------------------------------------------------------------===##
 
-import libcxx.test.newformat
+import libcxx.test.format
 import lit
 import lit.util
 import os
@@ -29,7 +29,7 @@ def _executeScriptInternal(test, commands):
 
   TODO: This really should be easier to access from Lit itself
   """
-  parsedCommands = libcxx.test.newformat.parseScript(test, preamble=commands)
+  parsedCommands = libcxx.test.format.parseScript(test, preamble=commands)
 
   litConfig = lit.LitConfig.LitConfig(
     progname='lit',
@@ -42,7 +42,7 @@ def _executeScriptInternal(test, commands):
     debug=False,
     isWindows=platform.system() == 'Windows',
     params={})
-  _, tmpBase = libcxx.test.newformat._getTempPaths(test)
+  _, tmpBase = libcxx.test.format._getTempPaths(test)
   execDir = os.path.dirname(test.getExecPath())
   for d in (execDir, os.path.dirname(tmpBase)):
     if not os.path.exists(d):
