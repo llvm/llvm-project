@@ -386,6 +386,8 @@ public:
 
   void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
                        PathSensitiveBugReport &BR) override;
+  void addConstraints(const ExplodedNode *N,
+                      bool OverwriteConstraintsOnExistingSyms);
 };
 
 
