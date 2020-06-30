@@ -2187,20 +2187,20 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
 
 /// Helper for getByValTypeAlignment to determine
 /// the desired ByVal argument alignment.
-static void getMaxByValAlign(Type *Ty, unsigned &MaxAlign) {
+static void getMaxByValAlign(Type *Ty, Align &MaxAlign) {
   if (MaxAlign == 16)
     return;
   if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
     if (VTy->getPrimitiveSizeInBits().getFixedSize() == 128)
-      MaxAlign = 16;
+      MaxAlign = Align(16);
   } else if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
-    unsigned EltAlign = 0;
+    Align EltAlign;
     getMaxByValAlign(ATy->getElementType(), EltAlign);
     if (EltAlign > MaxAlign)
       MaxAlign = EltAlign;
   } else if (StructType *STy = dyn_cast<StructType>(Ty)) {
     for (auto *EltTy : STy->elements()) {
-      unsigned EltAlign = 0;
+      Align EltAlign;
       getMaxByValAlign(EltTy, EltAlign);
       if (EltAlign > MaxAlign)
         MaxAlign = EltAlign;
@@ -2218,16 +2218,16 @@ unsigned X86TargetLowering::getByValTypeAlignment(Type *Ty,
                                                   const DataLayout &DL) const {
   if (Subtarget.is64Bit()) {
     // Max of 8 and alignment of type.
-    unsigned TyAlign = DL.getABITypeAlignment(Ty);
+    Align TyAlign = DL.getABITypeAlign(Ty);
     if (TyAlign > 8)
-      return TyAlign;
+      return TyAlign.value();
     return 8;
   }
 
-  unsigned Align = 4;
+  Align Alignment(4);
   if (Subtarget.hasSSE1())
-    getMaxByValAlign(Ty, Align);
-  return Align;
+    getMaxByValAlign(Ty, Alignment);
+  return Alignment.value();
 }
 
 /// It returns EVT::Other if the type should be determined using generic
@@ -30961,7 +30961,7 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
   MachineOperand &Segment = MI.getOperand(5);
   unsigned ArgSize = MI.getOperand(6).getImm();
   unsigned ArgMode = MI.getOperand(7).getImm();
-  unsigned Align = MI.getOperand(8).getImm();
+  Align Alignment = Align(MI.getOperand(8).getImm());
 
   MachineFunction *MF = MBB->getParent();
 
@@ -31001,7 +31001,7 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
 
   /* Align ArgSize to a multiple of 8 */
   unsigned ArgSizeA8 = (ArgSize + 7) & ~7;
-  bool NeedsAlign = (Align > 8);
+  bool NeedsAlign = (Alignment > 8);
 
   MachineBasicBlock *thisMBB = MBB;
   MachineBasicBlock *overflowMBB;
@@ -31149,17 +31149,16 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
   // to OverflowDestReg.
   if (NeedsAlign) {
     // Align the overflow address
-    assert(isPowerOf2_32(Align) && "Alignment must be a power of 2");
     Register TmpReg = MRI.createVirtualRegister(AddrRegClass);
 
     // aligned_addr = (addr + (align-1)) & ~(align-1)
     BuildMI(overflowMBB, DL, TII->get(X86::ADD64ri32), TmpReg)
-      .addReg(OverflowAddrReg)
-      .addImm(Align-1);
+        .addReg(OverflowAddrReg)
+        .addImm(Alignment.value() - 1);
 
     BuildMI(overflowMBB, DL, TII->get(X86::AND64ri32), OverflowDestReg)
-      .addReg(TmpReg)
-      .addImm(~(uint64_t)(Align-1));
+        .addReg(TmpReg)
+        .addImm(~(uint64_t)(Alignment.value() - 1));
   } else {
     BuildMI(overflowMBB, DL, TII->get(TargetOpcode::COPY), OverflowDestReg)
       .addReg(OverflowAddrReg);
