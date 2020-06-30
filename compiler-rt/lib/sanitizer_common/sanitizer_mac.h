@@ -47,9 +47,7 @@ struct VersionBase {
 };
 
 struct MacosVersion : VersionBase<MacosVersion> {
-  MacosVersion(u16 ten, u16 major) : VersionBase(ten, major) {
-    CHECK_EQ(ten, 10);
-  }
+  MacosVersion(u16 major, u16 minor) : VersionBase(major, minor) {}
 };
 
 struct DarwinKernelVersion : VersionBase<DarwinKernelVersion> {
