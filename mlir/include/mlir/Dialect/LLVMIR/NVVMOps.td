@@ -34,15 +34,24 @@ class NVVM_Op<string mnemonic, list<OpTrait> traits = []> :
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM intrinsic operations
+//===----------------------------------------------------------------------===//
+
+class NVVM_IntrOp<string mnem, list<int> overloadedResults,
+                  list<int> overloadedOperands, list<OpTrait> traits,
+                  bit hasResult>
+  : LLVM_IntrOpBase<NVVM_Dialect, mnem, "nvvm_" # !subst(".", "_", mnem),
+                    overloadedResults, overloadedOperands, traits, hasResult>;
+
+
+//===----------------------------------------------------------------------===//
 // NVVM special register op definitions
 //===----------------------------------------------------------------------===//
 
 class NVVM_SpecialRegisterOp<string mnemonic,
     list<OpTrait> traits = []> :
-  NVVM_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
-  Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
-  string llvmBuilder = "$res = createIntrinsicCall(builder,"
-    # "llvm::Intrinsic::nvvm_" # !subst(".","_", mnemonic) # ");";
+  NVVM_IntrOp<mnemonic, [], [], !listconcat(traits, [NoSideEffect]), 1>,
+  Arguments<(ins)> {
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 

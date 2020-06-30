@@ -276,12 +276,12 @@ void IntMultiplication() {
   // SIGNED-NEXT:   [[RESIZE7:%.*]] = zext i16 [[TMP6]] to i40
   // SIGNED-NEXT:   [[RESIZE8:%.*]] = sext i32 [[TMP7]] to i40
   // SIGNED-NEXT:   [[UPSCALE9:%.*]] = shl i40 [[RESIZE8]], 8
-  // SIGNED-NEXT:   [[TMP8:%.*]] = call i40 @llvm.umul.fix.i40(i40 [[RESIZE7]], i40 [[UPSCALE9]], i32 8)
+  // SIGNED-NEXT:   [[TMP8:%.*]] = call i40 @llvm.smul.fix.i40(i40 [[RESIZE7]], i40 [[UPSCALE9]], i32 8)
   // SIGNED-NEXT:   [[RESIZE10:%.*]] = trunc i40 [[TMP8]] to i16
   // UNSIGNED-NEXT: [[RESIZE7:%.*]] = zext i16 [[TMP6]] to i39
   // UNSIGNED-NEXT: [[RESIZE8:%.*]] = sext i32 [[TMP7]] to i39
   // UNSIGNED-NEXT: [[UPSCALE9:%.*]] = shl i39 [[RESIZE8]], 7
-  // UNSIGNED-NEXT: [[TMP8:%.*]] = call i39 @llvm.umul.fix.i39(i39 [[RESIZE7]], i39 [[UPSCALE9]], i32 7)
+  // UNSIGNED-NEXT: [[TMP8:%.*]] = call i39 @llvm.smul.fix.i39(i39 [[RESIZE7]], i39 [[UPSCALE9]], i32 7)
   // UNSIGNED-NEXT: [[RESIZE10:%.*]] = trunc i39 [[TMP8]] to i16
   // CHECK-NEXT:    store i16 [[RESIZE10]], i16* %usa, align 2
   usa = usa * i;
@@ -454,7 +454,7 @@ void SaturatedMultiplication() {
   // SIGNED-NEXT: [[USA_SAT_RESIZE:%[a-z0-9]+]] = zext i16 [[USA_SAT]] to i40
   // SIGNED-NEXT: [[I_RESIZE:%[a-z0-9]+]] = sext i32 [[I]] to i40
   // SIGNED-NEXT: [[I_UPSCALE:%[a-z0-9]+]] = shl i40 [[I_RESIZE]], 8
-  // SIGNED-NEXT: [[SUM:%[0-9]+]] = call i40 @llvm.umul.fix.sat.i40(i40 [[USA_SAT_RESIZE]], i40 [[I_UPSCALE]], i32 8)
+  // SIGNED-NEXT: [[SUM:%[0-9]+]] = call i40 @llvm.smul.fix.sat.i40(i40 [[USA_SAT_RESIZE]], i40 [[I_UPSCALE]], i32 8)
   // SIGNED-NEXT: [[USE_MAX:%[0-9]+]] = icmp sgt i40 [[SUM]], 65535
   // SIGNED-NEXT: [[RESULT:%[a-z0-9]+]] = select i1 [[USE_MAX]], i40 65535, i40 [[SUM]]
   // SIGNED-NEXT: [[USE_MIN:%[0-9]+]] = icmp slt i40 [[RESULT]], 0
@@ -463,7 +463,7 @@ void SaturatedMultiplication() {
   // UNSIGNED-NEXT: [[USA_SAT_RESIZE:%[a-z0-9]+]] = zext i16 [[USA_SAT]] to i39
   // UNSIGNED-NEXT: [[I_RESIZE:%[a-z0-9]+]] = sext i32 [[I]] to i39
   // UNSIGNED-NEXT: [[I_UPSCALE:%[a-z0-9]+]] = shl i39 [[I_RESIZE]], 7
-  // UNSIGNED-NEXT: [[SUM:%[0-9]+]] = call i39 @llvm.umul.fix.sat.i39(i39 [[USA_SAT_RESIZE]], i39 [[I_UPSCALE]], i32 7)
+  // UNSIGNED-NEXT: [[SUM:%[0-9]+]] = call i39 @llvm.smul.fix.sat.i39(i39 [[USA_SAT_RESIZE]], i39 [[I_UPSCALE]], i32 7)
   // UNSIGNED-NEXT: [[USE_MAX:%[0-9]+]] = icmp sgt i39 [[SUM]], 32767
   // UNSIGNED-NEXT: [[RESULT:%[a-z0-9]+]] = select i1 [[USE_MAX]], i39 32767, i39 [[SUM]]
   // UNSIGNED-NEXT: [[USE_MIN:%[0-9]+]] = icmp slt i39 [[RESULT]], 0

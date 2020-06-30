@@ -57,7 +57,6 @@ using namespace llvm;
 #define DEBUG_TYPE "vec-merger"
 
 static bool isImplicitlyDef(MachineRegisterInfo &MRI, unsigned Reg) {
-  assert(MRI.isSSA());
   if (Register::isPhysicalRegister(Reg))
     return false;
   const MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
@@ -128,6 +127,11 @@ public:
     AU.addRequired<MachineLoopInfo>();
     AU.addPreserved<MachineLoopInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties()
+      .set(MachineFunctionProperties::Property::IsSSA);
   }
 
   StringRef getPassName() const override {

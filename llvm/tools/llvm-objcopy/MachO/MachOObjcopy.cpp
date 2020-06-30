@@ -22,6 +22,7 @@ using namespace object;
 using SectionPred = std::function<bool(const std::unique_ptr<Section> &Sec)>;
 using LoadCommandPred = std::function<bool(const LoadCommand &LC)>;
 
+#ifndef NDEBUG
 static bool isLoadCommandWithPayloadString(const LoadCommand &LC) {
   // TODO: Add support for LC_REEXPORT_DYLIB, LC_LOAD_UPWARD_DYLIB and
   // LC_LAZY_LOAD_DYLIB
@@ -30,6 +31,7 @@ static bool isLoadCommandWithPayloadString(const LoadCommand &LC) {
          LC.MachOLoadCommand.load_command_data.cmd == MachO::LC_LOAD_DYLIB ||
          LC.MachOLoadCommand.load_command_data.cmd == MachO::LC_LOAD_WEAK_DYLIB;
 }
+#endif
 
 static StringRef getPayloadString(const LoadCommand &LC) {
   assert(isLoadCommandWithPayloadString(LC) &&

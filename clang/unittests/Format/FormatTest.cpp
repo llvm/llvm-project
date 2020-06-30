@@ -14021,6 +14021,19 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("NamespaceMacros: [TESTSUITE, SUITE]", NamespaceMacros,
               std::vector<std::string>({"TESTSUITE", "SUITE"}));
 
+  Style.WhitespaceSensitiveMacros.clear();
+  CHECK_PARSE("WhitespaceSensitiveMacros: [STRINGIZE]",
+              WhitespaceSensitiveMacros, std::vector<std::string>{"STRINGIZE"});
+  CHECK_PARSE("WhitespaceSensitiveMacros: [STRINGIZE, ASSERT]",
+              WhitespaceSensitiveMacros,
+              std::vector<std::string>({"STRINGIZE", "ASSERT"}));
+  Style.WhitespaceSensitiveMacros.clear();
+  CHECK_PARSE("WhitespaceSensitiveMacros: ['STRINGIZE']",
+              WhitespaceSensitiveMacros, std::vector<std::string>{"STRINGIZE"});
+  CHECK_PARSE("WhitespaceSensitiveMacros: ['STRINGIZE', 'ASSERT']",
+              WhitespaceSensitiveMacros,
+              std::vector<std::string>({"STRINGIZE", "ASSERT"}));
+
   Style.IncludeStyle.IncludeCategories.clear();
   std::vector<tooling::IncludeStyle::IncludeCategory> ExpectedCategories = {
       {"abc/.*", 2, 0}, {".*", 1, 0}};
@@ -16528,6 +16541,36 @@ TEST_F(FormatTest, OperatorPassedAsAFunctionPtr) {
   verifyFormat("foo(-42, operator--);", Style);
   verifyFormat("foo(-42, operator, );", Style);
   verifyFormat("foo(operator, , -42);", Style);
+}
+
+TEST_F(FormatTest, WhitespaceSensitiveMacros) {
+  FormatStyle Style = getLLVMStyle();
+  Style.WhitespaceSensitiveMacros.push_back("FOO");
+
+  // Don't use the helpers here, since 'mess up' will change the whitespace
+  // and these are all whitespace sensitive by definition
+  EXPECT_EQ("FOO(String-ized&Messy+But(: :Still)=Intentional);",
+            format("FOO(String-ized&Messy+But(: :Still)=Intentional);", Style));
+  EXPECT_EQ(
+      "FOO(String-ized&Messy+But\\(: :Still)=Intentional);",
+      format("FOO(String-ized&Messy+But\\(: :Still)=Intentional);", Style));
+  EXPECT_EQ("FOO(String-ized&Messy+But,: :Still=Intentional);",
+            format("FOO(String-ized&Messy+But,: :Still=Intentional);", Style));
+  EXPECT_EQ("FOO(String-ized&Messy+But,: :\n"
+            "       Still=Intentional);",
+            format("FOO(String-ized&Messy+But,: :\n"
+                   "       Still=Intentional);",
+                   Style));
+  Style.AlignConsecutiveAssignments = true;
+  EXPECT_EQ("FOO(String-ized=&Messy+But,: :\n"
+            "       Still=Intentional);",
+            format("FOO(String-ized=&Messy+But,: :\n"
+                   "       Still=Intentional);",
+                   Style));
+
+  Style.ColumnLimit = 21;
+  EXPECT_EQ("FOO(String-ized&Messy+But: :Still=Intentional);",
+            format("FOO(String-ized&Messy+But: :Still=Intentional);", Style));
 }
 
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
