@@ -174,6 +174,14 @@ private:
 /// Attempt to eliminate a redundant operation.
 LogicalResult BasicCSE::simplifyOperation(ScopedMapTy &knownValues,
                                           Operation *op) {
+  if (op->isKnownTerminator())
+    return failure();
+
+  if (isOpTriviallyDead(op)) {
+    opsToErase.push_back(op);
+    return success();
+  }
+
   // Don't simplify operations with nested blocks. We don't currently model
   // equality comparisons correctly among other things. It is also unclear
   // whether we would want to CSE such operations.
@@ -183,12 +191,6 @@ LogicalResult BasicCSE::simplifyOperation(ScopedMapTy &knownValues,
   if (!MemoryEffectOpInterface::hasNoEffect(op) && !fir::nonVolatileLoad(op) &&
       !fir::pureCall(op))
     return failure();
-
-  // If the operation is already trivially dead just add it to the erase list.
-  if (isOpTriviallyDead(op)) {
-    opsToErase.push_back(op);
-    return success();
-  }
 
   // Look for an existing definition for the operation.
   if (auto *existing = knownValues.lookup(op)) {
@@ -220,7 +222,8 @@ void BasicCSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
     if (fir::nonVolatileLoad(&inst) || fir::pureCall(&inst))
       inst.setAttr("effects_token",
                    IntegerAttr::get(IndexType::get(inst.getContext()), token));
-    if (dyn_cast<fir::StoreOp>(&inst) || fir::impureCall(&inst))
+    if (isa<fir::StoreOp>(&inst) || fir::impureCall(&inst) ||
+        inst.getNumRegions() != 0)
       token = reinterpret_cast<std::intptr_t>(&inst);
   }
   for (auto &inst : *bb) {
