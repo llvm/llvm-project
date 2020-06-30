@@ -170,6 +170,54 @@ TEST(FalsePositiveRefutationBRVisitor, UnSatAtErrorNodeWithNewSymbolNoReport) {
             "test.FalsePositiveGenerator:CAN_BE_TRUE\n");
 }
 
+TEST(FalsePositiveRefutationBRVisitor,
+     UnSatAtErrorNodeDueToRefinedConstraintNoReport) {
+  SKIP_WITHOUT_Z3;
+  constexpr auto Code = R"(
+    void reportIfCanBeTrue(bool);
+    void reachedWithNoContradiction();
+    void test(unsigned x, unsigned n) {
+      if (n >= 1 && n <= 2) {
+        if (x >= 3)
+          return;
+        // x: [0,2] and n: [1,2]
+        int y = x + n; // y: '(x+n)' Which is in approximately between 1 and 4.
+
+        // Registers the symbol 'y' with the constraint [1, MAX] in the true
+        // branch.
+        if (y > 0) {
+          // Since the x: [0,2] and n: [1,2], the 'y' is indeed greater than
+          // zero. If we emit a warning here, the constraints on the BugPath is
+          // SAT. Therefore that report is NOT invalidated.
+          reachedWithNoContradiction(); // 'y' can be greater than zero. OK
+
+          // If we ask the analyzer whether the 'y' can be 5. It won't know,
+          // therefore, the state will be created where the 'y' expression is 5.
+          // Although, this assumption is false!
+          // 'y' can not be 5 if the maximal value of both x and n is 2.
+          // The BugPath which become UnSAT in the ErrorNode with a refined
+          // constraint, should be invalidated.
+          reportIfCanBeTrue(y == 5);
+        }
+      }
+    })";
+
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCodeWithArgs<addFalsePositiveGenerator>(
+      Code, LazyAssumeAndCrossCheckArgs, Diags));
+  EXPECT_EQ(Diags,
+            "test.FalsePositiveGenerator:REACHED_WITH_NO_CONTRADICTION\n");
+  // Single warning. The second report was invalidated by the visitor.
+
+  // Without enabling the crosscheck-with-z3 both reports are displayed.
+  std::string Diags2;
+  EXPECT_TRUE(runCheckerOnCodeWithArgs<addFalsePositiveGenerator>(
+      Code, LazyAssumeArgs, Diags2));
+  EXPECT_EQ(Diags2,
+            "test.FalsePositiveGenerator:REACHED_WITH_NO_CONTRADICTION\n"
+            "test.FalsePositiveGenerator:CAN_BE_TRUE\n");
+}
+
 } // namespace
 } // namespace ento
 } // namespace clang
