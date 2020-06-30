@@ -189,21 +189,6 @@ static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
 #define HIGH_PORT (49151u)
 #endif
 
-#if defined(__APPLE__) &&                                                      \
-    (defined(__arm__) || defined(__arm64__) || defined(__aarch64__))
-static bool rand_initialized = false;
-
-static inline uint16_t get_random_port() {
-  if (!rand_initialized) {
-    time_t seed = time(NULL);
-
-    rand_initialized = true;
-    srand(seed);
-  }
-  return (rand() % (HIGH_PORT - LOW_PORT)) + LOW_PORT;
-}
-#endif
-
 ConstString ProcessGDBRemote::GetPluginNameStatic() {
   static ConstString g_name("gdb-remote");
   return g_name;
