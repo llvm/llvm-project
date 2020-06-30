@@ -15,6 +15,7 @@ cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 # find the llvm compiler
 find_package(LLVM QUIET CONFIG
   PATHS
+  ${LLVM_INSTALL_PREFIX}
   $ENV{AOMP}
   ${CMAKE_CXX_COMPILER_DIR}
   NO_DEFAULT_PATH
@@ -120,7 +121,7 @@ macro(add_hip_bc_library name dir)
     -I${ROCM_DIR}/include)
 
   if(NOT ${AOMP_STANDALONE_BUILD})
-    set(hip_cmd "${hip_cmd};--hip-device-lib-path=${ROCM_DIR}/lib/bitcode")
+    set(hip_cmd "${hip_cmd};--hip-device-lib-path=${ROCM_DIR}/amdgcn/bitcode")
   endif(NOT ${AOMP_STANDALONE_BUILD})
 
   set(bc1_files)

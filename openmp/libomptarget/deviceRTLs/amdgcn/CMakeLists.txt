@@ -12,6 +12,7 @@
 
 find_package(LLVM QUIET CONFIG
   PATHS
+  ${LLVM_INSTALL_PREFIX}
   $ENV{AOMP}
   $ENV{HOME}/rocm/aomp
   /opt/rocm/aomp
@@ -122,7 +123,7 @@ macro(add_cuda_bc_library)
     -I${devicertl_base_directory})
 
   if(NOT ${AOMP_STANDALONE_BUILD})
-    set(cu_cmd "${cu_cmd};--hip-device-lib-path=${ROCM_DIR}/lib/bitcode")
+    set(cu_cmd "${cu_cmd};--hip-device-lib-path=${ROCM_DIR}/amdgcn/bitcode")
   endif(NOT ${AOMP_STANDALONE_BUILD})
 
   set(bc1_files)
