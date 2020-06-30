@@ -181,6 +181,9 @@ struct CopyConfig {
   std::vector<std::pair<StringRef, StringRef>> RPathsToUpdate;
   DenseSet<StringRef> RPathsToRemove;
 
+  // install-name-tool's id option
+  Optional<StringRef> SharedLibId;
+
   // Section matchers
   NameMatcher KeepSection;
   NameMatcher OnlySection;
