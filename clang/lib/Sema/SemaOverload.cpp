@@ -13506,6 +13506,10 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         if (R.isInvalid())
           return ExprError();
 
+        R = CheckForImmediateInvocation(R, FnDecl);
+        if (R.isInvalid())
+          return ExprError();
+
         // For a rewritten candidate, we've already reversed the arguments
         // if needed. Perform the rest of the rewrite now.
         if ((Best->RewriteKind & CRK_DifferentOperator) ||
@@ -13541,7 +13545,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         if (Best->RewriteKind != CRK_None)
           R = new (Context) CXXRewrittenBinaryOperator(R.get(), IsReversed);
 
-        return CheckForImmediateInvocation(R, FnDecl);
+        return R;
       } else {
         // We matched a built-in operator. Convert the arguments, then
         // break out so that we will build the appropriate built-in
