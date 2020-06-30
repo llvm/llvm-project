@@ -909,8 +909,9 @@ SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
   // Set the dependency tracker.
   if (auto g = repro::Reproducer::Instance().GetGenerator()) {
     repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-    m_dependency_tracker =
-        std::make_unique<swift::DependencyTracker>(true, fp.GetFileCollector());
+    m_dependency_tracker = std::make_unique<swift::DependencyTracker>(
+        swift::IntermoduleDepTrackingMode::IncludeSystem,
+        fp.GetFileCollector());
   }
   // rdar://53971116
   m_compiler_invocation_ap->disableASTScopeLookup();
