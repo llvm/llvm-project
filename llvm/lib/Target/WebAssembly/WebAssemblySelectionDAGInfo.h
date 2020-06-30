@@ -28,11 +28,12 @@ public:
                                   bool AlwaysInline,
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
-  SDValue EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &dl,
-                                   SDValue Chain, SDValue Op1, SDValue Op2,
-                                   SDValue Op3, unsigned Align, bool isVolatile,
-                                   MachinePointerInfo DstPtrInfo,
-                                   MachinePointerInfo SrcPtrInfo) const override;
+  SDValue
+  EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                           SDValue Op1, SDValue Op2, SDValue Op3,
+                           Align Alignment, bool isVolatile,
+                           MachinePointerInfo DstPtrInfo,
+                           MachinePointerInfo SrcPtrInfo) const override;
   SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &DL,
                                   SDValue Chain, SDValue Op1, SDValue Op2,
                                   SDValue Op3, Align Alignment, bool IsVolatile,
