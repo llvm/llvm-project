@@ -21375,19 +21375,31 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
 
 // Helper function for comparing all bits of a vector against zero.
 static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
+                                  const APInt &Mask,
                                   const X86Subtarget &Subtarget,
                                   SelectionDAG &DAG, X86::CondCode &X86CC) {
   EVT VT = V.getValueType();
+  assert(Mask.getBitWidth() == VT.getScalarSizeInBits() &&
+         "Element Mask vs Vector bitwidth mismatch");
 
   assert((CC == ISD::SETEQ || CC == ISD::SETNE) && "Unsupported ISD::CondCode");
   X86CC = (CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE);
+
+  auto MaskBits = [&](SDValue Src) {
+    if (Mask.isAllOnesValue())
+      return Src;
+    EVT SrcVT = Src.getValueType();
+    SDValue MaskValue = DAG.getConstant(Mask, DL, SrcVT);
+    return DAG.getNode(ISD::AND, DL, SrcVT, Src, MaskValue);
+  };
 
   // For sub-128-bit vector, cast to (legal) integer and compare with zero.
   if (VT.getSizeInBits() < 128) {
     EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
     if (!DAG.getTargetLoweringInfo().isTypeLegal(IntVT))
       return SDValue();
-    return DAG.getNode(X86ISD::CMP, DL, MVT::i32, DAG.getBitcast(IntVT, V),
+    return DAG.getNode(X86ISD::CMP, DL, MVT::i32,
+                       DAG.getBitcast(IntVT, MaskBits(V)),
                        DAG.getConstant(0, DL, IntVT));
   }
 
@@ -21406,11 +21418,16 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
   bool UsePTEST = Subtarget.hasSSE41();
   if (UsePTEST) {
     MVT TestVT = VT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
-    V = DAG.getBitcast(TestVT, V);
+    V = DAG.getBitcast(TestVT, MaskBits(V));
     return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, V, V);
   }
 
-  V = DAG.getBitcast(MVT::v16i8, V);
+  // Without PTEST, a masked v2i64 or-reduction is not faster than
+  // scalarization.
+  if (!Mask.isAllOnesValue() && VT.getScalarSizeInBits() > 32)
+      return SDValue();
+
+  V = DAG.getBitcast(MVT::v16i8, MaskBits(V));
   V = DAG.getNode(X86ISD::PCMPEQ, DL, MVT::v16i8, V,
                   getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
   V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
@@ -21428,6 +21445,26 @@ static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
 
   if (!Subtarget.hasSSE2() || !Op->hasOneUse())
     return SDValue();
+
+  // Check whether we're masking/truncating an OR-reduction result, in which
+  // case track the masked bits.
+  APInt Mask = APInt::getAllOnesValue(Op.getScalarValueSizeInBits());
+  switch (Op.getOpcode()) {
+  case ISD::TRUNCATE: {
+    SDValue Src = Op.getOperand(0);
+    Mask = APInt::getLowBitsSet(Src.getScalarValueSizeInBits(),
+                                Op.getScalarValueSizeInBits());
+    Op = Src;
+    break;
+  }
+  case ISD::AND: {
+    if (auto *Cst = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      Mask = Cst->getAPIntValue();
+      Op = Op.getOperand(0);
+    }
+    break;
+  }
+  }
 
   SmallVector<SDValue, 8> VecIns;
   if (Op.getOpcode() == ISD::OR && matchScalarReduction(Op, ISD::OR, VecIns)) {
@@ -21451,8 +21488,8 @@ static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
     }
 
     X86::CondCode CCode;
-    if (SDValue V =
-            LowerVectorAllZero(DL, VecIns.back(), CC, Subtarget, DAG, CCode)) {
+    if (SDValue V = LowerVectorAllZero(DL, VecIns.back(), CC, Mask, Subtarget,
+                                       DAG, CCode)) {
       X86CC = DAG.getTargetConstant(CCode, DL, MVT::i8);
       return V;
     }
@@ -21464,7 +21501,7 @@ static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
             DAG.matchBinOpReduction(Op.getNode(), BinOp, {ISD::OR})) {
       X86::CondCode CCode;
       if (SDValue V =
-              LowerVectorAllZero(DL, Match, CC, Subtarget, DAG, CCode)) {
+              LowerVectorAllZero(DL, Match, CC, Mask, Subtarget, DAG, CCode)) {
         X86CC = DAG.getTargetConstant(CCode, DL, MVT::i8);
         return V;
       }
