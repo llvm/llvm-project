@@ -1,14 +1,3 @@
-// main.swift
-//
-// This source file is part of the Swift.org open source project
-//
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
-// Licensed under Apache License v2.0 with Runtime Library Exception
-//
-// See https://swift.org/LICENSE.txt for license information
-// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
-//
-// -----------------------------------------------------------------------------
 class DefaultMirror {
   var a = "y12"
   var b = "q24"
@@ -65,8 +54,8 @@ func main() {
   //% self.expect("po cs", substrs=['CustomDebugStringConvertible'])
   //% self.expect("po cs", substrs=['CustomStringConvertible'], matching=False)
   //% self.expect("po cs", substrs=['y12', 'q24'], matching=False)
-  //% self.expect("po [dm as Any,cm as Any,48 as Any]", substrs=['t36', '48'])
-  //% self.expect("po [dm as Any,cm as Any,48 as Any]", substrs=['y12', 'q24'], matching=False)
+  //% self.expect("po (dm as Any,cm as Any, 48 as Any)", substrs=['t36', '48'])
+  //% self.expect("po (dm as Any,cm as Any, 48 as Any)", substrs=['y12', 'q24'], matching=False)
   //% self.expect("po td", substrs=['TheDescendant', 'y12','q24'])
   //% self.expect("po td", substrs=['t36'], matching=False)
   //% self.expect("po tr", substrs=['TheReflectiveDescendant', 'w48', 'q24', 'y12'])
