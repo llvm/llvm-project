@@ -469,6 +469,14 @@ int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
   return Cost + getCastInstrCost(Opcode, Dst, Src, CostKind);
 }
 
+unsigned AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
+                                        TTI::TargetCostKind CostKind) {
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Opcode == Instruction::PHI ? 0 : 1;
+  // Branches are assumed to be predicted.
+  return CostKind == TTI::TCK_RecipThroughput ? 0 : 1;
+}
+
 int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                        unsigned Index) {
   assert(Val->isVectorTy() && "This must be a vector type");
