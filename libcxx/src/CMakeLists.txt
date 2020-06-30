@@ -29,6 +29,7 @@ set(LIBCXX_SOURCES
   new.cpp
   optional.cpp
   random.cpp
+  random_shuffle.cpp
   regex.cpp
   shared_mutex.cpp
   stdexcept.cpp

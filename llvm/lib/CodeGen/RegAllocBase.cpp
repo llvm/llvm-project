@@ -107,7 +107,7 @@ void RegAllocBase::allocatePhysRegs() {
                       << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
                       << ':' << *VirtReg << " w=" << VirtReg->weight << '\n');
 
-    using VirtRegVec = SmallVector<unsigned, 4>;
+    using VirtRegVec = SmallVector<Register, 4>;
 
     VirtRegVec SplitVRegs;
     unsigned AvailablePhysReg = selectOrSplit(*VirtReg, SplitVRegs);

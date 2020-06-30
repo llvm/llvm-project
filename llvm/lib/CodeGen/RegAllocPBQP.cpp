@@ -166,7 +166,7 @@ private:
   void initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM, Spiller &VRegSpiller);
 
   /// Spill the given VReg.
-  void spillVReg(unsigned VReg, SmallVectorImpl<unsigned> &NewIntervals,
+  void spillVReg(Register VReg, SmallVectorImpl<Register> &NewIntervals,
                  MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM,
                  Spiller &VRegSpiller);
 
@@ -637,7 +637,7 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
     // Check for vregs that have no allowed registers. These should be
     // pre-spilled and the new vregs added to the worklist.
     if (VRegAllowed.empty()) {
-      SmallVector<unsigned, 8> NewVRegs;
+      SmallVector<Register, 8> NewVRegs;
       spillVReg(VReg, NewVRegs, MF, LIS, VRM, VRegSpiller);
       Worklist.insert(Worklist.end(), NewVRegs.begin(), NewVRegs.end());
       continue;
@@ -673,8 +673,8 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
   }
 }
 
-void RegAllocPBQP::spillVReg(unsigned VReg,
-                             SmallVectorImpl<unsigned> &NewIntervals,
+void RegAllocPBQP::spillVReg(Register VReg,
+                             SmallVectorImpl<Register> &NewIntervals,
                              MachineFunction &MF, LiveIntervals &LIS,
                              VirtRegMap &VRM, Spiller &VRegSpiller) {
   VRegsToAlloc.erase(VReg);
@@ -730,7 +730,7 @@ bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
     } else {
       // Spill VReg. If this introduces new intervals we'll need another round
       // of allocation.
-      SmallVector<unsigned, 8> NewVRegs;
+      SmallVector<Register, 8> NewVRegs;
       spillVReg(VReg, NewVRegs, MF, LIS, VRM, VRegSpiller);
       AnotherRoundNeeded |= !NewVRegs.empty();
     }

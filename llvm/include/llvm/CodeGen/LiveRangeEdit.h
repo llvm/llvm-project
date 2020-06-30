@@ -68,7 +68,7 @@ public:
 
 private:
   LiveInterval *Parent;
-  SmallVectorImpl<unsigned> &NewRegs;
+  SmallVectorImpl<Register> &NewRegs;
   MachineRegisterInfo &MRI;
   LiveIntervals &LIS;
   VirtRegMap *VRM;
@@ -121,7 +121,7 @@ private:
   bool useIsKill(const LiveInterval &LI, const MachineOperand &MO) const;
 
   /// Create a new empty interval based on OldReg.
-  LiveInterval &createEmptyIntervalFrom(unsigned OldReg, bool createSubRanges);
+  LiveInterval &createEmptyIntervalFrom(Register OldReg, bool createSubRanges);
 
 public:
   /// Create a LiveRangeEdit for breaking down parent into smaller pieces.
@@ -135,7 +135,7 @@ public:
   ///            be done.  This could be the case if called before Regalloc.
   /// @param deadRemats The collection of all the instructions defining an
   ///                   original reg and are dead after remat.
-  LiveRangeEdit(LiveInterval *parent, SmallVectorImpl<unsigned> &newRegs,
+  LiveRangeEdit(LiveInterval *parent, SmallVectorImpl<Register> &newRegs,
                 MachineFunction &MF, LiveIntervals &lis, VirtRegMap *vrm,
                 Delegate *delegate = nullptr,
                 SmallPtrSet<MachineInstr *, 32> *deadRemats = nullptr)
@@ -152,15 +152,15 @@ public:
     return *Parent;
   }
 
-  unsigned getReg() const { return getParent().reg; }
+  Register getReg() const { return getParent().reg; }
 
   /// Iterator for accessing the new registers added by this edit.
-  using iterator = SmallVectorImpl<unsigned>::const_iterator;
+  using iterator = SmallVectorImpl<Register>::const_iterator;
   iterator begin() const { return NewRegs.begin() + FirstNew; }
   iterator end() const { return NewRegs.end(); }
   unsigned size() const { return NewRegs.size() - FirstNew; }
   bool empty() const { return size() == 0; }
-  unsigned get(unsigned idx) const { return NewRegs[idx + FirstNew]; }
+  Register get(unsigned idx) const { return NewRegs[idx + FirstNew]; }
 
   /// pop_back - It allows LiveRangeEdit users to drop new registers.
   /// The context is when an original def instruction of a register is
@@ -172,12 +172,12 @@ public:
   /// we want to drop it from the NewRegs set.
   void pop_back() { NewRegs.pop_back(); }
 
-  ArrayRef<unsigned> regs() const {
+  ArrayRef<Register> regs() const {
     return makeArrayRef(NewRegs).slice(FirstNew);
   }
 
   /// createFrom - Create a new virtual register based on OldReg.
-  unsigned createFrom(unsigned OldReg);
+  Register createFrom(Register OldReg);
 
   /// create - Create a new register with the same class and original slot as
   /// parent.
@@ -185,7 +185,7 @@ public:
     return createEmptyIntervalFrom(getReg(), true);
   }
 
-  unsigned create() { return createFrom(getReg()); }
+  Register create() { return createFrom(getReg()); }
 
   /// anyRematerializable - Return true if any parent values may be
   /// rematerializable.
@@ -234,7 +234,7 @@ public:
 
   /// eraseVirtReg - Notify the delegate that Reg is no longer in use, and try
   /// to erase it from LIS.
-  void eraseVirtReg(unsigned Reg);
+  void eraseVirtReg(Register Reg);
 
   /// eliminateDeadDefs - Try to delete machine instructions that are now dead
   /// (allDefsAreDead returns true). This may cause live intervals to be trimmed
@@ -243,7 +243,7 @@ public:
   /// allocator.  These registers should not be split into new intervals
   /// as currently those new intervals are not guaranteed to spill.
   void eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
-                         ArrayRef<unsigned> RegsBeingSpilled = None,
+                         ArrayRef<Register> RegsBeingSpilled = None,
                          AAResults *AA = nullptr);
 
   /// calculateRegClassAndHint - Recompute register class and hint for each new

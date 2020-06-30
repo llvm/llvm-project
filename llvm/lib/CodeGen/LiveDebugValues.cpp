@@ -189,7 +189,7 @@ static bool isRegOtherThanSPAndFP(const MachineOperand &Op,
 
   const MachineFunction *MF = MI.getParent()->getParent();
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  Register SP = TLI->getStackPointerRegisterToSaveRestore();
   Register FP = TRI->getFrameRegister(*MF);
   Register Reg = Op.getReg();
 
@@ -354,7 +354,7 @@ private:
     /// Take the variable and machine-location in DBG_VALUE MI, and build an
     /// entry location using the given expression.
     static VarLoc CreateEntryLoc(const MachineInstr &MI, LexicalScopes &LS,
-                                 const DIExpression *EntryExpr, unsigned Reg) {
+                                 const DIExpression *EntryExpr, Register Reg) {
       VarLoc VL(MI, LS);
       assert(VL.Kind == RegisterKind);
       VL.Kind = EntryValueKind;
@@ -383,7 +383,7 @@ private:
     static VarLoc CreateEntryCopyBackupLoc(const MachineInstr &MI,
                                            LexicalScopes &LS,
                                            const DIExpression *EntryExpr,
-                                           unsigned NewReg) {
+                                           Register NewReg) {
       VarLoc VL(MI, LS);
       assert(VL.Kind == RegisterKind);
       VL.Kind = EntryValueCopyBackupKind;
@@ -395,7 +395,7 @@ private:
     /// Copy the register location in DBG_VALUE MI, updating the register to
     /// be NewReg.
     static VarLoc CreateCopyLoc(const MachineInstr &MI, LexicalScopes &LS,
-                                unsigned NewReg) {
+                                Register NewReg) {
       VarLoc VL(MI, LS);
       assert(VL.Kind == RegisterKind);
       VL.Loc.RegNo = NewReg;
@@ -736,7 +736,7 @@ private:
   /// TODO: Store optimization can fold spills into other stores (including
   /// other spills). We do not handle this yet (more than one memory operand).
   bool isLocationSpill(const MachineInstr &MI, MachineFunction *MF,
-                       unsigned &Reg);
+                       Register &Reg);
 
   /// Returns true if the given machine instruction is a debug value which we
   /// can emit entry values for.
@@ -750,14 +750,14 @@ private:
   /// and set \p Reg to the spilled register.
   Optional<VarLoc::SpillLoc> isRestoreInstruction(const MachineInstr &MI,
                                                   MachineFunction *MF,
-                                                  unsigned &Reg);
+                                                  Register &Reg);
   /// Given a spill instruction, extract the register and offset used to
   /// address the spill location in a target independent way.
   VarLoc::SpillLoc extractSpillBaseRegAndOffset(const MachineInstr &MI);
   void insertTransferDebugPair(MachineInstr &MI, OpenRangesSet &OpenRanges,
                                TransferMap &Transfers, VarLocMap &VarLocIDs,
                                LocIndex OldVarID, TransferKind Kind,
-                               unsigned NewReg = 0);
+                               Register NewReg = Register());
 
   void transferDebugValue(const MachineInstr &MI, OpenRangesSet &OpenRanges,
                           VarLocMap &VarLocIDs);
@@ -1153,7 +1153,7 @@ void LiveDebugValues::emitEntryValues(MachineInstr &MI,
 void LiveDebugValues::insertTransferDebugPair(
     MachineInstr &MI, OpenRangesSet &OpenRanges, TransferMap &Transfers,
     VarLocMap &VarLocIDs, LocIndex OldVarID, TransferKind Kind,
-    unsigned NewReg) {
+    Register NewReg) {
   const MachineInstr *DebugInstr = &VarLocIDs[OldVarID].MI;
 
   auto ProcessVarLoc = [&MI, &OpenRanges, &Transfers, &VarLocIDs](VarLoc &VL) {
@@ -1228,7 +1228,7 @@ void LiveDebugValues::transferRegisterDef(
 
   MachineFunction *MF = MI.getMF();
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  Register SP = TLI->getStackPointerRegisterToSaveRestore();
 
   // Find the regs killed by MI, and find regmasks of preserved regs.
   DefinedRegsSet DeadRegs;
@@ -1299,11 +1299,11 @@ bool LiveDebugValues::isSpillInstruction(const MachineInstr &MI,
 }
 
 bool LiveDebugValues::isLocationSpill(const MachineInstr &MI,
-                                      MachineFunction *MF, unsigned &Reg) {
+                                      MachineFunction *MF, Register &Reg) {
   if (!isSpillInstruction(MI, MF))
     return false;
 
-  auto isKilledReg = [&](const MachineOperand MO, unsigned &Reg) {
+  auto isKilledReg = [&](const MachineOperand MO, Register &Reg) {
     if (!MO.isReg() || !MO.isUse()) {
       Reg = 0;
       return false;
@@ -1325,7 +1325,7 @@ bool LiveDebugValues::isLocationSpill(const MachineInstr &MI,
       // Skip next instruction that points to basic block end iterator.
       if (MI.getParent()->end() == NextI)
         continue;
-      unsigned RegNext;
+      Register RegNext;
       for (const MachineOperand &MONext : NextI->operands()) {
         // Return true if we came across the register from the
         // previous spill instruction that is killed in NextI.
@@ -1340,7 +1340,7 @@ bool LiveDebugValues::isLocationSpill(const MachineInstr &MI,
 
 Optional<LiveDebugValues::VarLoc::SpillLoc>
 LiveDebugValues::isRestoreInstruction(const MachineInstr &MI,
-                                      MachineFunction *MF, unsigned &Reg) {
+                                      MachineFunction *MF, Register &Reg) {
   if (!MI.hasOneMemOperand())
     return None;
 
@@ -1366,7 +1366,7 @@ void LiveDebugValues::transferSpillOrRestoreInst(MachineInstr &MI,
                                                  TransferMap &Transfers) {
   MachineFunction *MF = MI.getMF();
   TransferKind TKind;
-  unsigned Reg;
+  Register Reg;
   Optional<VarLoc::SpillLoc> Loc;
 
   LLVM_DEBUG(dbgs() << "Examining instruction: "; MI.dump(););
@@ -1463,7 +1463,7 @@ void LiveDebugValues::transferRegisterCopy(MachineInstr &MI,
   if (!DestRegOp->isDef())
     return;
 
-  auto isCalleeSavedReg = [&](unsigned Reg) {
+  auto isCalleeSavedReg = [&](Register Reg) {
     for (MCRegAliasIterator RAI(Reg, TRI, true); RAI.isValid(); ++RAI)
       if (CalleeSavedRegs.test(*RAI))
         return true;

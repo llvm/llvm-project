@@ -861,7 +861,7 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
       LiveRegs.clear();
       LiveRegs.addLiveOuts(*Pred);
       MachineBasicBlock::iterator InsertBefore = Pred->getFirstTerminator();
-      for (unsigned Reg : NewLiveIns) {
+      for (Register Reg : NewLiveIns) {
         if (!LiveRegs.available(*MRI, Reg))
           continue;
         DebugLoc DL;
@@ -1774,9 +1774,9 @@ static MachineBasicBlock *findFalseBlock(MachineBasicBlock *BB,
 }
 
 template <class Container>
-static void addRegAndItsAliases(unsigned Reg, const TargetRegisterInfo *TRI,
+static void addRegAndItsAliases(Register Reg, const TargetRegisterInfo *TRI,
                                 Container &Set) {
-  if (Register::isPhysicalRegister(Reg)) {
+  if (Reg.isPhysical()) {
     for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
       Set.insert(*AI);
   } else {
@@ -1795,8 +1795,8 @@ static
 MachineBasicBlock::iterator findHoistingInsertPosAndDeps(MachineBasicBlock *MBB,
                                                   const TargetInstrInfo *TII,
                                                   const TargetRegisterInfo *TRI,
-                                                  SmallSet<unsigned,4> &Uses,
-                                                  SmallSet<unsigned,4> &Defs) {
+                                                  SmallSet<Register, 4> &Uses,
+                                                  SmallSet<Register, 4> &Defs) {
   MachineBasicBlock::iterator Loc = MBB->getFirstTerminator();
   if (!TII->isUnpredicatedTerminator(*Loc))
     return MBB->end();
@@ -1907,14 +1907,14 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   // Find a suitable position to hoist the common instructions to. Also figure
   // out which registers are used or defined by instructions from the insertion
   // point to the end of the block.
-  SmallSet<unsigned, 4> Uses, Defs;
+  SmallSet<Register, 4> Uses, Defs;
   MachineBasicBlock::iterator Loc =
     findHoistingInsertPosAndDeps(MBB, TII, TRI, Uses, Defs);
   if (Loc == MBB->end())
     return false;
 
   bool HasDups = false;
-  SmallSet<unsigned, 4> ActiveDefsSet, AllDefsSet;
+  SmallSet<Register, 4> ActiveDefsSet, AllDefsSet;
   MachineBasicBlock::iterator TIB = TBB->begin();
   MachineBasicBlock::iterator FIB = FBB->begin();
   MachineBasicBlock::iterator TIE = TBB->end();
@@ -1998,7 +1998,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       if (!AllDefsSet.count(Reg)) {
         continue;
       }
-      if (Register::isPhysicalRegister(Reg)) {
+      if (Reg.isPhysical()) {
         for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
           ActiveDefsSet.erase(*AI);
       } else {
@@ -2011,7 +2011,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       if (!MO.isReg() || !MO.isDef() || MO.isDead())
         continue;
       Register Reg = MO.getReg();
-      if (!Reg || Register::isVirtualRegister(Reg))
+      if (!Reg || Reg.isVirtual())
         continue;
       addRegAndItsAliases(Reg, TRI, ActiveDefsSet);
       addRegAndItsAliases(Reg, TRI, AllDefsSet);

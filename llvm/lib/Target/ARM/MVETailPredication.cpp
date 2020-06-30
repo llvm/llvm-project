@@ -79,13 +79,9 @@ namespace {
 class MVETailPredication : public LoopPass {
   SmallVector<IntrinsicInst*, 4> MaskedInsts;
   Loop *L = nullptr;
-  LoopInfo *LI = nullptr;
-  const DataLayout *DL;
-  DominatorTree *DT = nullptr;
   ScalarEvolution *SE = nullptr;
   TargetTransformInfo *TTI = nullptr;
-  TargetLibraryInfo *TLI = nullptr;
-  bool ClonedVCTPInExitBlock = false;
+  const ARMSubtarget *ST = nullptr;
 
 public:
   static char ID;
@@ -97,8 +93,6 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.setPreservesCFG();
   }
@@ -122,8 +116,7 @@ private:
 
   /// Insert the intrinsic to represent the effect of tail predication.
   void InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask, Value *TripCount,
-                           FixedVectorType *VecTy,
-                           DenseMap<Instruction *, Instruction *> &NewPredicates);
+                           FixedVectorType *VecTy);
 
   /// Rematerialize the iteration count in exit blocks, which enables
   /// ARMLowOverheadLoops to better optimise away loop update statements inside
@@ -152,16 +145,6 @@ static bool IsMasked(Instruction *I) {
   return ID == Intrinsic::masked_store || ID == Intrinsic::masked_load;
 }
 
-void MVETailPredication::RematerializeIterCount() {
-  SmallVector<WeakTrackingVH, 16> DeadInsts;
-  SCEVExpander Rewriter(*SE, *DL, "mvetp");
-  ReplaceExitVal ReplaceExitValue = AlwaysRepl;
-
-  formLCSSARecursively(*L, *DT, LI, SE);
-  rewriteLoopExitValues(L, LI, TLI, SE, TTI, Rewriter, DT, ReplaceExitValue,
-                        DeadInsts);
-}
-
 bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
   if (skipLoop(L) || DisableTailPredication)
     return false;
@@ -170,14 +153,9 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
   Function &F = *L->getHeader()->getParent();
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<TargetMachine>();
-  auto *ST = &TM.getSubtarget<ARMSubtarget>(F);
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  ST = &TM.getSubtarget<ARMSubtarget>(F);
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-  TLI = TLIP ? &TLIP->getTLI(*L->getHeader()->getParent()) : nullptr;
-  DL = &L->getHeader()->getModule()->getDataLayout();
   this->L = L;
 
   // The MVE and LOB extensions are combined to enable tail-predication, but
@@ -231,7 +209,6 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
   if (!Decrement)
     return false;
 
-  ClonedVCTPInExitBlock = false;
   LLVM_DEBUG(dbgs() << "ARM TP: Running on Loop: " << *L << *Setup << "\n"
              << *Decrement << "\n");
 
@@ -240,8 +217,6 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
     return false;
   }
 
-  if (ClonedVCTPInExitBlock)
-    RematerializeIterCount();
   return true;
 }
 
@@ -268,10 +243,21 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
       case Intrinsic::get_active_lane_mask:
         ActiveLaneMask = true;
         LLVM_FALLTHROUGH;
-      case Intrinsic::fma:
       case Intrinsic::sadd_sat:
       case Intrinsic::uadd_sat:
+      case Intrinsic::ssub_sat:
+      case Intrinsic::usub_sat:
         continue;
+      case Intrinsic::fma:
+      case Intrinsic::trunc:
+      case Intrinsic::rint:
+      case Intrinsic::round:
+      case Intrinsic::floor:
+      case Intrinsic::ceil:
+      case Intrinsic::fabs:
+        if (ST->hasMVEFloatOps())
+          continue;
+        LLVM_FALLTHROUGH;
       default:
         break;
       }
@@ -310,32 +296,11 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
 // in the block. This means that the VPR doesn't have to be live into the
 // exit block which should make it easier to convert this loop into a proper
 // tail predicated loop.
-static bool Cleanup(DenseMap<Instruction*, Instruction*> &NewPredicates,
-                    SetVector<Instruction*> &MaybeDead, Loop *L) {
+static void Cleanup(SetVector<Instruction*> &MaybeDead, Loop *L) {
   BasicBlock *Exit = L->getUniqueExitBlock();
   if (!Exit) {
     LLVM_DEBUG(dbgs() << "ARM TP: can't find loop exit block\n");
-    return false;
-  }
-
-  bool ClonedVCTPInExitBlock = false;
-
-  for (auto &Pair : NewPredicates) {
-    Instruction *OldPred = Pair.first;
-    Instruction *NewPred = Pair.second;
-
-    for (auto &I : *Exit) {
-      if (I.isSameOperationAs(OldPred)) {
-        Instruction *PredClone = NewPred->clone();
-        PredClone->insertBefore(&I);
-        I.replaceAllUsesWith(PredClone);
-        MaybeDead.insert(&I);
-        ClonedVCTPInExitBlock = true;
-        LLVM_DEBUG(dbgs() << "ARM TP: replacing: "; I.dump();
-                   dbgs() << "ARM TP: with:      "; PredClone->dump());
-        break;
-      }
-    }
+    return;
   }
 
   // Drop references and add operands to check for dead.
@@ -360,8 +325,6 @@ static bool Cleanup(DenseMap<Instruction*, Instruction*> &NewPredicates,
 
   for (auto I : L->blocks())
     DeleteDeadPHIs(I);
-
-  return ClonedVCTPInExitBlock;
 }
 
 // The active lane intrinsic has this form:
@@ -540,8 +503,7 @@ static Value *getNumElements(BasicBlock *Preheader, Value *BTC) {
 }
 
 void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
-    Value *TripCount, FixedVectorType *VecTy,
-    DenseMap<Instruction*, Instruction*> &NewPredicates) {
+    Value *TripCount, FixedVectorType *VecTy) {
   IRBuilder<> Builder(L->getLoopPreheader()->getTerminator());
   Module *M = L->getHeader()->getModule();
   Type *Ty = IntegerType::get(M->getContext(), 32);
@@ -582,7 +544,6 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   Function *VCTP = Intrinsic::getDeclaration(M, VCTPID);
   Value *VCTPCall = Builder.CreateCall(VCTP, Processed);
   ActiveLaneMask->replaceAllUsesWith(VCTPCall);
-  NewPredicates[ActiveLaneMask] = cast<Instruction>(VCTPCall);
 
   // Add the incoming value to the new phi.
   // TODO: This add likely already exists in the loop.
@@ -600,9 +561,7 @@ bool MVETailPredication::TryConvert(Value *TripCount) {
   }
 
   LLVM_DEBUG(dbgs() << "ARM TP: Found predicated vector loop.\n");
-
   SetVector<Instruction*> Predicates;
-  DenseMap<Instruction*, Instruction*> NewPredicates;
 
   // Walk through the masked intrinsics and try to find whether the predicate
   // operand is generated by intrinsic @llvm.get.active.lane.mask().
@@ -627,11 +586,10 @@ bool MVETailPredication::TryConvert(Value *TripCount) {
       return false;
     }
     LLVM_DEBUG(dbgs() << "ARM TP: Safe to insert VCTP.\n");
-    InsertVCTPIntrinsic(ActiveLaneMask, TripCount, VecTy, NewPredicates);
+    InsertVCTPIntrinsic(ActiveLaneMask, TripCount, VecTy);
   }
 
-  // Now clean up.
-  ClonedVCTPInExitBlock = Cleanup(NewPredicates, Predicates, L);
+  Cleanup(Predicates, L);
   return true;
 }
 
