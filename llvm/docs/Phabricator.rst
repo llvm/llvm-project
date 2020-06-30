@@ -82,8 +82,7 @@ To upload a new patch:
 * Add reviewers (see below for advice). (If you set the Repository field
   correctly, llvm-commits or cfe-commits will be subscribed automatically;
   otherwise, you will have to manually subscribe them.)
-* In the Repository field, enter the name of the project (LLVM, Clang,
-  etc.) to which the review should be sent.
+* In the Repository field, enter "rG LLVM Github Monorepo".
 * Click *Save*.
 
 To submit an updated patch:
