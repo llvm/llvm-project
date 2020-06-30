@@ -254,6 +254,7 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
       case Intrinsic::round:
       case Intrinsic::floor:
       case Intrinsic::ceil:
+      case Intrinsic::fabs:
         if (ST->hasMVEFloatOps())
           continue;
         LLVM_FALLTHROUGH;
