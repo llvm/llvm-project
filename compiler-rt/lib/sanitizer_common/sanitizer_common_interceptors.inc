@@ -3092,6 +3092,32 @@ INTERCEPTOR(int, sendmmsg, int fd, struct __sanitizer_mmsghdr *msgvec,
 #define INIT_SENDMMSG
 #endif
 
+#if SANITIZER_INTERCEPT_SYSMSG
+INTERCEPTOR(int, msgsnd, int msqid, const void *msgp, SIZE_T msgsz, int msgflg) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, msgsnd, msqid, msgp, msgsz, msgflg);
+  if (msgp)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, msgp, sizeof(long) + msgsz);
+  int res = REAL(msgsnd)(msqid, msgp, msgsz, msgflg);
+  return res;
+}
+
+INTERCEPTOR(SSIZE_T, msgrcv, int msqid, void *msgp, SIZE_T msgsz, long msgtyp, int msgflg) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, msgrcv, msqid, msgp, msgsz, msgtyp, msgflg);
+  SSIZE_T len = REAL(msgrcv)(msqid, msgp, msgsz, msgtyp, msgflg);
+  if (len != -1)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, msgp, sizeof(long) + len);
+  return len;
+}
+
+#define INIT_SYSMSG                  \
+  COMMON_INTERCEPT_FUNCTION(msgsnd); \
+  COMMON_INTERCEPT_FUNCTION(msgrcv);
+#else
+#define INIT_SYSMSG
+#endif
+
 #if SANITIZER_INTERCEPT_GETPEERNAME
 INTERCEPTOR(int, getpeername, int sockfd, void *addr, unsigned *addrlen) {
   void *ctx;
@@ -9879,6 +9905,7 @@ static void InitializeCommonInterceptors() {
   INIT_SENDMSG;
   INIT_RECVMMSG;
   INIT_SENDMMSG;
+  INIT_SYSMSG;
   INIT_GETPEERNAME;
   INIT_IOCTL;
   INIT_INET_ATON;

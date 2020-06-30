@@ -25,7 +25,7 @@ class Record;
 namespace mlir {
 namespace tblgen {
 
-class OpInterface;
+struct OpInterface;
 
 // Wrapper class with helper methods for accessing OpTrait constraints defined
 // in TableGen.

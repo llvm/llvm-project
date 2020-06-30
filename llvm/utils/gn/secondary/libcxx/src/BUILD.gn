@@ -135,6 +135,7 @@ cxx_sources = [
   "new.cpp",
   "optional.cpp",
   "random.cpp",
+  "random_shuffle.cpp",
   "regex.cpp",
   "shared_mutex.cpp",
   "stdexcept.cpp",

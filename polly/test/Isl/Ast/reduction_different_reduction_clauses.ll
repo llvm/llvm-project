@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
 ;
 ; CHECK: #pragma simd reduction (+ : MemRef_sum{{[1,2]}}, MemRef_sum{{[1,2]}}) reduction (* : MemRef_prod) reduction (| : MemRef_or) reduction (& : MemRef_and)
 ; CHECK: #pragma known-parallel reduction (+ : MemRef_sum{{[1,2]}}, MemRef_sum{{[1,2]}}) reduction (* : MemRef_prod) reduction (| : MemRef_or) reduction (& : MemRef_and)

@@ -12,8 +12,8 @@
 
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/OpClass.h"
-#include "mlir/TableGen/OpInterfaces.h"
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/Sequence.h"

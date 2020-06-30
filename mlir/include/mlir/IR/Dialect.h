@@ -190,13 +190,19 @@ protected:
 
   /// This method is used by derived classes to add their types to the set.
   template <typename... Args> void addTypes() {
-    (void)std::initializer_list<int>{0, (addSymbol(Args::getTypeID()), 0)...};
+    (void)std::initializer_list<int>{
+        0, (addType(Args::getTypeID(), AbstractType::get<Args>(*this)), 0)...};
   }
+  void addType(TypeID typeID, AbstractType &&typeInfo);
 
   /// This method is used by derived classes to add their attributes to the set.
   template <typename... Args> void addAttributes() {
-    (void)std::initializer_list<int>{0, (addSymbol(Args::getTypeID()), 0)...};
+    (void)std::initializer_list<int>{
+        0,
+        (addAttribute(Args::getTypeID(), AbstractAttribute::get<Args>(*this)),
+         0)...};
   }
+  void addAttribute(TypeID typeID, AbstractAttribute &&attrInfo);
 
   /// Enable support for unregistered operations.
   void allowUnknownOperations(bool allow = true) { unknownOpsAllowed = allow; }
@@ -214,9 +220,6 @@ protected:
   }
 
 private:
-  // Register a symbol(e.g. type) with its given unique class identifier.
-  void addSymbol(TypeID typeID);
-
   Dialect(const Dialect &) = delete;
   void operator=(Dialect &) = delete;
 
@@ -255,10 +258,12 @@ private:
 };
 /// Registers all dialects and hooks from the global registries with the
 /// specified MLIRContext.
+/// Note: This method is not thread-safe.
 void registerAllDialects(MLIRContext *context);
 
 /// Utility to register a dialect. Client can register their dialect with the
 /// global registry by calling registerDialect<MyDialect>();
+/// Note: This method is not thread-safe.
 template <typename ConcreteDialect> void registerDialect() {
   Dialect::registerDialectAllocator(TypeID::get<ConcreteDialect>(),
                                     [](MLIRContext *ctx) {
