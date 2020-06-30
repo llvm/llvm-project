@@ -1955,11 +1955,9 @@ static LogicalResult copyUnrankedDescriptors(OpBuilder &builder, Location loc,
 
   // Find operands of unranked memref type and store them.
   SmallVector<UnrankedMemRefDescriptor, 4> unrankedMemrefs;
-  for (unsigned i = 0, e = operands.size(); i < e; ++i) {
-    if (!origTypes[i].isa<UnrankedMemRefType>())
-      continue;
-    unrankedMemrefs.emplace_back(operands[i]);
-  }
+  for (unsigned i = 0, e = operands.size(); i < e; ++i)
+    if (origTypes[i].isa<UnrankedMemRefType>())
+      unrankedMemrefs.emplace_back(operands[i]);
 
   if (unrankedMemrefs.empty())
     return success();

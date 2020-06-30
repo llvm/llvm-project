@@ -378,7 +378,7 @@ to function-length lifetime, creation of multiple unranked memref descriptors,
 e.g., in a loop, may lead to stack overflows.) If an unranked descriptor has to
 be returned from a function, the ranked descriptor it points to is copied into
 dynamically allocated memory, and the pointer in the unranked descriptor is
-updated accodingly. The allocation happens immediately before returning. It is
+updated accordingly. The allocation happens immediately before returning. It is
 the responsibility of the caller to free the dynamically allocated memory. The
 default conversion of `std.call` and `std.call_indirect` copies the ranked
 descriptor to newly allocated memory on the caller's stack. Thus, the convention
