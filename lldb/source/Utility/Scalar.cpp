@@ -736,7 +736,17 @@ long long Scalar::SLongLong(long long fail_value) const {
 }
 
 unsigned long long Scalar::ULongLong(unsigned long long fail_value) const {
-  return GetAsUnsigned<unsigned long long>(fail_value);
+  switch (m_type) {
+  case e_double: {
+    double d_val = m_float.convertToDouble();
+    llvm::APInt rounded_double =
+        llvm::APIntOps::RoundDoubleToAPInt(d_val, sizeof(ulonglong_t) * 8);
+    return static_cast<ulonglong_t>(
+        (rounded_double.zextOrTrunc(sizeof(ulonglong_t) * 8)).getZExtValue());
+  }
+  default:
+    return GetAsUnsigned<unsigned long long>(fail_value);
+  }
 }
 
 llvm::APInt Scalar::SInt128(const llvm::APInt &fail_value) const {
