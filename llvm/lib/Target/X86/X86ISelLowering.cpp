@@ -32469,12 +32469,17 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   MBB->addSuccessor(checkSspMBB);
 
   // Initialize a register with zero.
-  Register ZReg = MRI.createVirtualRegister(PtrRC);
-  unsigned XorRROpc = (PVT == MVT::i64) ? X86::XOR64rr : X86::XOR32rr;
-  BuildMI(checkSspMBB, DL, TII->get(XorRROpc))
-      .addDef(ZReg)
-      .addReg(ZReg, RegState::Undef)
-      .addReg(ZReg, RegState::Undef);
+  Register ZReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+  BuildMI(checkSspMBB, DL, TII->get(X86::MOV32r0), ZReg);
+
+  if (PVT == MVT::i64) {
+    Register TmpZReg = MRI.createVirtualRegister(PtrRC);
+    BuildMI(checkSspMBB, DL, TII->get(X86::SUBREG_TO_REG), TmpZReg)
+      .addImm(0)
+      .addReg(ZReg)
+      .addImm(X86::sub_32bit);
+    ZReg = TmpZReg;
+  }
 
   // Read the current SSP Register value to the zeroed register.
   Register SSPCopyReg = MRI.createVirtualRegister(PtrRC);
