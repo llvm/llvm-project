@@ -273,12 +273,13 @@ int b = a;
 TEST_F(ClangdVFSTest, PropagatesContexts) {
   static Key<int> Secret;
   struct ContextReadingFS : public ThreadsafeFS {
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-    view(llvm::NoneType) const override {
+    mutable int Got;
+
+  private:
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
       Got = Context::current().getExisting(Secret);
       return buildTestFS({});
     }
-    mutable int Got;
   } FS;
   struct Callbacks : public ClangdServer::Callbacks {
     void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
@@ -925,12 +926,17 @@ TEST_F(ClangdVFSTest, ChangedHeaderFromISystem) {
 // preamble again. (They should be using the preamble's stat-cache)
 TEST(ClangdTests, PreambleVFSStatCache) {
   class StatRecordingFS : public ThreadsafeFS {
+    llvm::StringMap<unsigned> &CountStats;
+
   public:
+    // If relative paths are used, they are resolved with testPath().
+    llvm::StringMap<std::string> Files;
+
     StatRecordingFS(llvm::StringMap<unsigned> &CountStats)
         : CountStats(CountStats) {}
 
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-    view(llvm::NoneType) const override {
+  private:
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
       class StatRecordingVFS : public llvm::vfs::ProxyFileSystem {
       public:
         StatRecordingVFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
@@ -954,10 +960,6 @@ TEST(ClangdTests, PreambleVFSStatCache) {
       return IntrusiveRefCntPtr<StatRecordingVFS>(
           new StatRecordingVFS(buildTestFS(Files), CountStats));
     }
-
-    // If relative paths are used, they are resolved with testPath().
-    llvm::StringMap<std::string> Files;
-    llvm::StringMap<unsigned> &CountStats;
   };
 
   llvm::StringMap<unsigned> CountStats;
