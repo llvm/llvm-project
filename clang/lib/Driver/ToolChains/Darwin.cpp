@@ -790,7 +790,7 @@ bool MachO::HasNativeLLVMSupport() const { return true; }
 
 ToolChain::CXXStdlibType Darwin::GetDefaultCXXStdlibType() const {
   // Default to use libc++ on OS X 10.9+ and iOS 7+.
-  if ((isTargetMacOSBased() && !isMacosxVersionLT(10, 9)) ||
+  if ((isTargetMacOS() && !isMacosxVersionLT(10, 9)) ||
       (isTargetIOSBased() && !isIPhoneOSVersionLT(7, 0)) ||
       isTargetWatchOSBased())
     return ToolChain::CST_Libcxx;
@@ -811,12 +811,12 @@ ObjCRuntime Darwin::getDefaultObjCRuntime(bool isNonFragile) const {
 
 /// Darwin provides a blocks runtime starting in MacOS X 10.6 and iOS 3.2.
 bool Darwin::hasBlocksRuntime() const {
-  if (isTargetWatchOSBased())
+  if (isTargetWatchOSBased() || isTargetMacABI())
     return true;
   else if (isTargetIOSBased())
     return !isIPhoneOSVersionLT(3, 2);
   else {
-    assert(isTargetMacOSBased() && "unexpected darwin target");
+    assert(isTargetMacOS() && "unexpected darwin target");
     return !isMacosxVersionLT(10, 6);
   }
 }
@@ -1066,7 +1066,7 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
 
 unsigned DarwinClang::GetDefaultDwarfVersion() const {
   // Default to use DWARF 2 on OS X 10.10 / iOS 8 and lower.
-  if ((isTargetMacOSBased() && isMacosxVersionLT(10, 11)) ||
+  if ((isTargetMacOS() && isMacosxVersionLT(10, 11)) ||
       (isTargetIOSBased() && isIPhoneOSVersionLT(9)))
     return 2;
   return 4;
@@ -2698,7 +2698,7 @@ static void addDynamicLibLinkArgs(const Darwin &D, const ArgList &Args,
     return;
   }
 
-  if (!D.isTargetMacOSBased())
+  if (!D.isTargetMacOS())
     return;
   if (D.isMacosxVersionLT(10, 5))
     CmdArgs.push_back("-ldylib1.o");
@@ -2713,14 +2713,14 @@ static void addBundleLinkArgs(const Darwin &D, const ArgList &Args,
     return;
   // Derived from darwin_bundle1 spec.
   if ((D.isTargetIPhoneOS() && D.isIPhoneOSVersionLT(3, 1)) ||
-      (D.isTargetMacOSBased() && D.isMacosxVersionLT(10, 6)))
+      (D.isTargetMacOS() && D.isMacosxVersionLT(10, 6)))
     CmdArgs.push_back("-lbundle1.o");
 }
 
 // Add additional link args for the -pg option.
 static void addPgProfilingLinkArgs(const Darwin &D, const ArgList &Args,
                                    ArgStringList &CmdArgs) {
-  if (D.isTargetMacOSBased() && D.isMacosxVersionLT(10, 9)) {
+  if (D.isTargetMacOS() && D.isMacosxVersionLT(10, 9)) {
     if (Args.hasArg(options::OPT_static) || Args.hasArg(options::OPT_object) ||
         Args.hasArg(options::OPT_preload)) {
       CmdArgs.push_back("-lgcrt0.o");
@@ -2738,7 +2738,7 @@ static void addPgProfilingLinkArgs(const Darwin &D, const ArgList &Args,
       CmdArgs.push_back("-no_new_main");
   } else {
     D.getDriver().Diag(diag::err_drv_clang_unsupported_opt_pg_darwin)
-        << D.isTargetMacOSBased();
+        << D.isTargetMacOS();
   }
 }
 
@@ -2755,7 +2755,7 @@ static void addDefaultCRTLinkArgs(const Darwin &D, const ArgList &Args,
     return;
   }
 
-  if (!D.isTargetMacOSBased())
+  if (!D.isTargetMacOS())
     return;
   if (D.isMacosxVersionLT(10, 5))
     CmdArgs.push_back("-lcrt1.o");
@@ -2782,7 +2782,7 @@ void Darwin::addStartObjectFileArgs(const ArgList &Args,
   else
     addDefaultCRTLinkArgs(*this, Args, CmdArgs);
 
-  if (isTargetMacOSBased() && Args.hasArg(options::OPT_shared_libgcc) &&
+  if (isTargetMacOS() && Args.hasArg(options::OPT_shared_libgcc) &&
       isMacosxVersionLT(10, 5)) {
     const char *Str = Args.MakeArgString(GetFilePath("crt3.o"));
     CmdArgs.push_back(Str);
@@ -2791,7 +2791,7 @@ void Darwin::addStartObjectFileArgs(const ArgList &Args,
 
 void Darwin::CheckObjCARC() const {
   if (isTargetIOSBased() || isTargetWatchOSBased() ||
-      (isTargetMacOSBased() && !isMacosxVersionLT(10, 6)))
+      (isTargetMacOS() && !isMacosxVersionLT(10, 6)))
     return;
   getDriver().Diag(diag::err_arc_unsupported_on_toolchain);
 }
@@ -2813,8 +2813,8 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   // Prior to 10.9, macOS shipped a version of the C++ standard library without
   // C++11 support. The same is true of iOS prior to version 5. These OS'es are
   // incompatible with -fsanitize=vptr.
-  if (!(isTargetMacOSBased() && isMacosxVersionLT(10, 9))
-      && !(isTargetIPhoneOS() && isIPhoneOSVersionLT(5, 0)))
+  if (!(isTargetMacOS() && isMacosxVersionLT(10, 9)) &&
+      !(isTargetIPhoneOS() && isIPhoneOSVersionLT(5, 0)))
     Res |= SanitizerKind::Vptr;
 
   if (IsX86_64 && (isTargetMacOSBased() || isTargetIOSSimulator() ||
