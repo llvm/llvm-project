@@ -1597,19 +1597,19 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   ArchSpec arch = module.GetArchitecture();
   if (!arch.IsValid()) {
     logError("invalid module architecture");
-    return TypeSystemSP();
+    return {};
   }
 
   ObjectFile *objfile = module.GetObjectFile();
   if (!objfile) {
     logError("no object file for module");
-    return TypeSystemSP();
+    return {};
   }
 
   ArchSpec object_arch = objfile->GetArchitecture();
   if (!object_arch.IsValid()) {
     logError("invalid objfile architecture");
-    return TypeSystemSP();
+    return {};
   }
 
   lldb::CompUnitSP main_compile_unit_sp = module.GetCompileUnitAtIndex(0);
@@ -1906,7 +1906,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   ArchSpec arch = target.GetArchitecture();
   if (!arch.IsValid()) {
     logError("invalid target architecture");
-    return TypeSystemSP();
+    return {};
   }
 
   // This is a scratch AST context, mark it as such.
@@ -2046,7 +2046,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           exe_module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
       if (!type_system_or_err) {
         llvm::consumeError(type_system_or_err.takeError());
-        return TypeSystemSP();
+        return {};
       }
 
       if (ModuleSP exe_module_sp = target.GetExecutableModule()) {
@@ -2205,7 +2205,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                             framework_search_paths);
   if (!swift_ast_sp->GetClangImporter()) {
     logError("couldn't create a ClangImporter");
-    return TypeSystemSP();
+    return {};
   }
 
   for (size_t mi = 0; mi != num_images; ++mi) {
