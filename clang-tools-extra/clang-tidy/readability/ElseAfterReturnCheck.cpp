@@ -26,6 +26,7 @@ static const char BreakStr[] = "break";
 static const char ThrowStr[] = "throw";
 static const char WarningMessage[] = "do not use 'else' after '%0'";
 static const char WarnOnUnfixableStr[] = "WarnOnUnfixable";
+static const char WarnOnConditionVariablesStr[] = "WarnOnConditionVariables";
 
 const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
   if (!Node)
@@ -138,10 +139,13 @@ void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
 ElseAfterReturnCheck::ElseAfterReturnCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WarnOnUnfixable(Options.get(WarnOnUnfixableStr, true)) {}
+      WarnOnUnfixable(Options.get(WarnOnUnfixableStr, true)),
+      WarnOnConditionVariables(Options.get(WarnOnConditionVariablesStr, true)) {
+}
 
 void ElseAfterReturnCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, WarnOnUnfixableStr, WarnOnUnfixable);
+  Options.store(Opts, WarnOnConditionVariablesStr, WarnOnConditionVariables);
 }
 
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
@@ -186,6 +190,8 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (checkConditionVarUsageInElse(If) != nullptr) {
+    if (!WarnOnConditionVariables)
+      return;
     if (IsLastInScope) {
       // If the if statement is the last statement its enclosing statements
       // scope, we can pull the decl out of the if statement.
@@ -219,6 +225,8 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (checkInitDeclUsageInElse(If) != nullptr) {
+    if (!WarnOnConditionVariables)
+      return;
     if (IsLastInScope) {
       // If the if statement is the last statement its enclosing statements
       // scope, we can pull the decl out of the if statement.
