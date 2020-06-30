@@ -8,11 +8,11 @@
 
 // Precondition: a != 0
 
-COMPILER_RT_ABI si_int __ctzsi2(si_int a);
+COMPILER_RT_ABI int __ctzsi2(si_int a);
 
-int test__ctzsi2(si_int a, si_int expected)
+int test__ctzsi2(si_int a, int expected)
 {
-    si_int x = __ctzsi2(a);
+    int x = __ctzsi2(a);
     if (x != expected)
         printf("error in __ctzsi2(0x%X) = %d, expected %d\n", a, x, expected);
     return x != expected;
