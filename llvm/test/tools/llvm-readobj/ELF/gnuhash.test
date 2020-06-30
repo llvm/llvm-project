@@ -1,7 +1,7 @@
 ## Check how the GNU Hash section is dumped with --gnu-hash-table.
 
-# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 -D MASKWORDS=2 -D NBUCKETS=3 %s -o %t.x64
-# RUN: yaml2obj --docnum=1 -DBITS=32 -DMACHINE=EM_386 %s -D MASKWORDS=2 -D NBUCKETS=3 -o %t.x32
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 %s -o %t.x64
+# RUN: yaml2obj --docnum=1 -DBITS=32 -DMACHINE=EM_386 %s -o %t.x32
 
 # RUN: llvm-readobj --gnu-hash-table %t.x64 | FileCheck %s
 # RUN: llvm-readelf --gnu-hash-table %t.x64 | FileCheck %s
@@ -33,9 +33,9 @@ Sections:
       SymNdx: 0x1
       Shift2: 0x2
 ## The number of words in the Bloom filter. The value of 2 is no-op.
-      MaskWords: [[MASKWORDS]]
+      MaskWords: [[MASKWORDS=2]]
 ## The number of hash buckets. The value of 3 is no-op.
-      NBuckets:  [[NBUCKETS]]
+      NBuckets:  [[NBUCKETS=3]]
     BloomFilter: [0x3, 0x4]
     HashBuckets: [0x5, 0x6, 0x7]
     HashValues:  [0x8, 0x9, 0xA, 0xB]
@@ -290,15 +290,15 @@ ProgramHeaders:
 
 ## Check we report a proper warning when a hash table goes past the end of the file.
 
-## Case A: the 'nbuckets' field is set so that the table goes past the end of the file.
-# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 -D MASKWORDS=4294967295 -D NBUCKETS=3 %s -o %t.err.maskwords
+## Case A: the 'maskwords' field is set so that the table goes past the end of the file.
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 -D MASKWORDS=4294967295 %s -o %t.err.maskwords
 # RUN: llvm-readobj --gnu-hash-table %t.err.maskwords 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.err.maskwords -DMASKWORDS=4294967295 -DNBUCKETS=3 --check-prefix=ERR
 # RUN: llvm-readelf --gnu-hash-table %t.err.maskwords 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.err.maskwords -DMASKWORDS=4294967295 -DNBUCKETS=3 --check-prefix=ERR
 
-## Case B: the 'maskwords' field is set so that the table goes past the end of the file.
-# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 -D MASKWORDS=2 -D NBUCKETS=4294967295 %s -o %t.err.nbuckets
+## Case B: the 'nbuckets' field is set so that the table goes past the end of the file.
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 -D NBUCKETS=4294967295 %s -o %t.err.nbuckets
 # RUN: llvm-readobj --gnu-hash-table %t.err.nbuckets 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.err.nbuckets -DMASKWORDS=2 -DNBUCKETS=4294967295 --check-prefix=ERR
 # RUN: llvm-readelf --gnu-hash-table %t.err.nbuckets 2>&1 | \
