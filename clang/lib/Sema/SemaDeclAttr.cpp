@@ -2432,6 +2432,15 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   AvailabilityChange Introduced = AL.getAvailabilityIntroduced();
   AvailabilityChange Deprecated = AL.getAvailabilityDeprecated();
   AvailabilityChange Obsoleted = AL.getAvailabilityObsoleted();
+  if (II->getName() == "macos" || II->getName() == "macos_app_extension") {
+    // Canonicalize macOS availability versions.
+    Introduced.Version = llvm::Triple::getCanonicalVersionForOS(
+        llvm::Triple::MacOSX, Introduced.Version);
+    Deprecated.Version = llvm::Triple::getCanonicalVersionForOS(
+        llvm::Triple::MacOSX, Deprecated.Version);
+    Obsoleted.Version = llvm::Triple::getCanonicalVersionForOS(
+        llvm::Triple::MacOSX, Obsoleted.Version);
+  }
   bool IsUnavailable = AL.getUnavailableLoc().isValid();
   bool IsStrict = AL.getStrictLoc().isValid();
   StringRef Str;
