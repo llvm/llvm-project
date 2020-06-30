@@ -439,6 +439,29 @@ TEST_F(TransformerTest, RemoveEdit) {
       Input, Expected);
 }
 
+TEST_F(TransformerTest, WithMetadata) {
+  std::string Input = R"cc(
+    int f() {
+      int x = 5;
+      return 7;
+    }
+  )cc";
+
+  Transformer T(
+      makeRule(declStmt().bind("decl"),
+               withMetadata(remove(statement(std::string("decl"))), 17)),
+      consumer());
+  T.registerMatchers(&MatchFinder);
+  auto Factory = newFrontendActionFactory(&MatchFinder);
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      Factory->create(), Input, std::vector<std::string>(), "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(), {}));
+  ASSERT_EQ(Changes.size(), 1u);
+  const llvm::Any &Metadata = Changes[0].getMetadata();
+  ASSERT_TRUE(llvm::any_isa<int>(Metadata));
+  EXPECT_THAT(llvm::any_cast<int>(Metadata), 17);
+}
+
 TEST_F(TransformerTest, MultiChange) {
   std::string Input = R"cc(
     void foo() {

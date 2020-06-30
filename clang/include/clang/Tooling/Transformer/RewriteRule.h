@@ -21,6 +21,7 @@
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Transformer/MatchConsumer.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
+#include "llvm/ADT/Any.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
@@ -35,6 +36,7 @@ namespace transformer {
 struct Edit {
   CharSourceRange Range;
   std::string Replacement;
+  llvm::Any Metadata;
 };
 
 /// Maps a match result to a list of concrete edits (with possible
@@ -85,6 +87,7 @@ struct ASTEdit {
   RangeSelector TargetRange;
   TextGenerator Replacement;
   TextGenerator Note;
+  llvm::Any Metadata;
 };
 
 /// Lifts a list of `ASTEdit`s into an `EditGenerator`.
@@ -257,6 +260,11 @@ inline ASTEdit insertAfter(RangeSelector S, TextGenerator Replacement) {
 
 /// Removes the source selected by \p S.
 ASTEdit remove(RangeSelector S);
+
+inline ASTEdit withMetadata(ASTEdit edit, llvm::Any Metadata) {
+  edit.Metadata = std::move(Metadata);
+  return edit;
+}
 
 /// The following three functions are a low-level part of the RewriteRule
 /// API. We expose them for use in implementing the fixtures that interpret
