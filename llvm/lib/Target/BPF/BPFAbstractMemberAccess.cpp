@@ -808,8 +808,10 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     CInfo = StackElem.second;
     CallStack.pop();
 
-    if (CInfo.Kind == BPFPreserveFieldInfoAI)
+    if (CInfo.Kind == BPFPreserveFieldInfoAI) {
+      InfoKind = CInfo.AccessIndex;
       break;
+    }
 
     // If the next Call (the top of the stack) is a BPFPreserveFieldInfoAI,
     // the action will be extracting field info.
