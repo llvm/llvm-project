@@ -225,6 +225,137 @@ class VXForm_RD5_N3_VB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
   let Inst{21-31} = xo;
 }
 
+// VN-Form: [PO VRT VRA VRB PS SD XO]
+// SD is "Shift Direction"
+class VNForm_VTAB5_SD3<bits<6> xo, bits<2> ps, dag OOL, dag IOL, string asmstr,
+                       InstrItinClass itin, list<dag> pattern>
+    : I<4, OOL, IOL, asmstr, itin> {
+  bits<5> VRT;
+  bits<5> VRA;
+  bits<5> VRB;
+  bits<3> SD;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = VRT;
+  let Inst{11-15} = VRA;
+  let Inst{16-20} = VRB;
+  let Inst{21-22} = ps;
+  let Inst{23-25} = SD;
+  let Inst{26-31} = xo;
+}
+
+// 8RR:D-Form: [ 1 1 0 // // imm0
+//               PO T XO TX imm1 ].
+class 8RR_DForm_IMM32_XT6<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
+                          string asmstr, InstrItinClass itin,
+                          list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<6> XT;
+  bits<32> IMM32;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 1;
+  let Inst{8-11} = 0;
+  let Inst{12-13} = 0; // reserved
+  let Inst{14-15} = 0; // reserved
+  let Inst{16-31} = IMM32{31-16};
+
+  // The instruction.
+  let Inst{38-42} = XT{4-0};
+  let Inst{43-46} = xo;
+  let Inst{47} = XT{5};
+  let Inst{48-63} = IMM32{15-0};
+}
+
+// 8RR:D-Form: [ 1 1 0 // // imm0
+//               PO T XO IX TX imm1 ].
+class 8RR_DForm_IMM32_XT6_IX<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
+                             string asmstr, InstrItinClass itin,
+                             list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<6> XT;
+  bit IX;
+  bits<32> IMM32;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 1;
+  let Inst{8-11} = 0;
+  let Inst{12-13} = 0; // reserved
+  let Inst{14-15} = 0; // reserved
+  let Inst{16-31} = IMM32{31-16};
+
+  // The instruction.
+  let Inst{38-42} = XT{4-0};
+  let Inst{43-45} = xo;
+  let Inst{46} = IX;
+  let Inst{47} = XT{5};
+  let Inst{48-63} = IMM32{15-0};
+}
+
+class 8RR_XX4Form_XTABC6<bits<6> opcode, bits<2> xo, dag OOL, dag IOL,
+                         string asmstr, InstrItinClass itin, list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<6> XT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<6> XC;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 1;
+  let Inst{8-11} = 0;
+  let Inst{12-13} = 0;
+  let Inst{14-31} = 0;
+
+  // The instruction.
+  let Inst{38-42} = XT{4-0};
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-57} = XC{4-0};
+  let Inst{58-59} = xo;
+  let Inst{60} = XC{5};
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = XT{5};
+}
+
+class 8RR_XX4Form_IMM3_XTABC6<bits<6> opcode, bits<2> xo, dag OOL, dag IOL,
+                              string asmstr, InstrItinClass itin,
+                              list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<6> XT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<6> XC;
+  bits<3> IMM;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 1;
+  let Inst{8-11} = 0;
+  let Inst{12-13} = 0;
+  let Inst{14-28} = 0;
+  let Inst{29-31} = IMM;
+
+  // The instruction.
+  let Inst{38-42} = XT{4-0};
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-57} = XC{4-0};
+  let Inst{58-59} = xo;
+  let Inst{60} = XC{5};
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = XT{5};
+}
+
 multiclass MLS_DForm_R_SI34_RTA5_MEM_p<bits<6> opcode, dag OOL, dag IOL,
                                        dag PCRel_IOL, string asmstr,
                                        InstrItinClass itin> {
@@ -565,7 +696,52 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   def : Pat<(PPCmatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
 }
 
+let Predicates = [PrefixInstrs] in {
+  def XXSPLTIW : 8RR_DForm_IMM32_XT6<32, 3, (outs vsrc:$XT),
+                                     (ins i32imm:$IMM32),
+                                     "xxspltiw $XT, $IMM32", IIC_VecGeneral,
+                                     []>;
+  def XXSPLTIDP : 8RR_DForm_IMM32_XT6<32, 2, (outs vsrc:$XT),
+                                      (ins i32imm:$IMM32),
+                                      "xxspltidp $XT, $IMM32", IIC_VecGeneral,
+                                      []>;
+  def XXSPLTI32DX :
+      8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
+                             (ins vsrc:$XTi, i1imm:$IX, i32imm:$IMM32),
+                             "xxsplti32dx $XT, $IX, $IMM32", IIC_VecGeneral, []>,
+                             RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
+  def XXPERMX :
+    8RR_XX4Form_IMM3_XTABC6<34, 0, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
+                            vsrc:$XC, u3imm:$UIM),
+                            "xxpermx $XT, $XA, $XB, $XC, $UIM",
+                            IIC_VecPerm, []>;
+  def XXBLENDVB :
+    8RR_XX4Form_XTABC6<33, 0, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
+                       vsrc:$XC), "xxblendvb $XT, $XA, $XB, $XC",
+                       IIC_VecGeneral, []>;
+  def XXBLENDVH :
+    8RR_XX4Form_XTABC6<33, 1, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
+                       vsrc:$XC), "xxblendvh $XT, $XA, $XB, $XC",
+                       IIC_VecGeneral, []>;
+  def XXBLENDVW :
+    8RR_XX4Form_XTABC6<33, 2, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
+                       vsrc:$XC), "xxblendvw $XT, $XA, $XB, $XC",
+                       IIC_VecGeneral, []>;
+  def XXBLENDVD :
+    8RR_XX4Form_XTABC6<33, 3, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
+                       vsrc:$XC), "xxblendvd $XT, $XA, $XB, $XC",
+                       IIC_VecGeneral, []>;
+}
+
 let Predicates = [IsISA3_1] in {
+  def VSLDBI : VNForm_VTAB5_SD3<22, 0, (outs vrrc:$VRT),
+                                (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SH),
+                                "vsldbi $VRT, $VRA, $VRB, $SH",
+                                IIC_VecGeneral, []>;
+  def VSRDBI : VNForm_VTAB5_SD3<22, 1, (outs vrrc:$VRT),
+                                (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SH),
+                                "vsrdbi $VRT, $VRA, $VRB, $SH",
+                                IIC_VecGeneral, []>;
    def VPDEPD : VXForm_1<1485, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vpdepd $vD, $vA, $vB", IIC_VecGeneral,
                          [(set v2i64:$vD,
