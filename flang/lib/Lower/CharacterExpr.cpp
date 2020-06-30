@@ -35,8 +35,11 @@ static fir::CharacterType getCharacterType(const fir::CharBoxValue &box) {
 }
 
 static bool needToMaterialize(const fir::CharBoxValue &box) {
-  return box.getBuffer().getType().isa<fir::SequenceType>() ||
-         box.getBuffer().getType().isa<fir::CharacterType>();
+  auto buffTy = box.getBuffer().getType();
+  if (auto seqTy = buffTy.dyn_cast<fir::SequenceType>())
+    if (seqTy.getShape().size() == 1)
+      buffTy = seqTy.getEleTy();
+  return buffTy.isa<fir::CharacterType>();
 }
 
 static std::optional<fir::SequenceType::Extent>
