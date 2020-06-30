@@ -1,14 +1,3 @@
-// main.swift
-//
-// This source file is part of the Swift.org open source project
-//
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
-// Licensed under Apache License v2.0 with Runtime Library Exception
-//
-// See https://swift.org/LICENSE.txt for license information
-// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
-//
-// -----------------------------------------------------------------------------
 struct DefaultMirror {
   var a = 12
   var b = 24
@@ -44,7 +33,7 @@ func main() {
   //% self.expect("po cs", substrs=['a', '12', 'b', '24'])
   //% self.expect("script lldb.frame.FindVariable('cs').GetObjectDescription()", substrs=['a', '12', 'b', '24'])
   //% self.expect("po (12,24,36,48)", substrs=['12', '24', '36', '48'])
-  //% self.expect("po [dm as Any,cm as Any,48 as Any]", substrs=['12', '24', '36', '48'])
+  //% self.expect("po (dm as Any, cm as Any,48 as Any)", substrs=['12', '24', '36', '48'])
   //% self.expect("po patatino", substrs=['foo'])
 }
 

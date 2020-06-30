@@ -39,7 +39,7 @@ class TestSwiftExpressionObjCContext(TestBase):
         self.expect("expr -lang Swift -- Bar()", "failure",
                     substrs=["cannot find 'Bar' in scope"],
                     error=True)
-        self.expect("expr -lang Swift -- [1, 2, 3]",
+        self.expect("expr -lang Swift -- (1, 2, 3)",
                     "context-less swift expression works",
-                    substrs=["([Int])"])
+                    substrs=["(Int, Int, Int)"])
 
