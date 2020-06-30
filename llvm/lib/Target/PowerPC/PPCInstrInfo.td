@@ -998,8 +998,10 @@ def IsE500  : Predicate<"Subtarget->isE500()">;
 def HasSPE  : Predicate<"Subtarget->hasSPE()">;
 def HasICBT : Predicate<"Subtarget->hasICBT()">;
 def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
-def NoNaNsFPMath : Predicate<"TM.Options.NoNaNsFPMath">;
-def NaNsFPMath   : Predicate<"!TM.Options.NoNaNsFPMath">;
+def NoNaNsFPMath
+    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
+def NaNsFPMath
+    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
 def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
 def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
 def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
