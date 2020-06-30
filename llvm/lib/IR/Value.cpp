@@ -111,6 +111,10 @@ void Value::deleteValue() {
     static_cast<DerivedUser *>(this)->DeleteValue(                             \
         static_cast<DerivedUser *>(this));                                     \
     break;
+#define HANDLE_CONSTANT(Name)                                                  \
+  case Value::Name##Val:                                                       \
+    llvm_unreachable("constants should be destroyed with destroyConstant");    \
+    break;
 #define HANDLE_INSTRUCTION(Name)  /* nothing */
 #include "llvm/IR/Value.def"
 

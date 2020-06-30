@@ -24,5 +24,11 @@ def delete_rpath: Option<["-", "--"], "delete_rpath", KIND_SEPARATE>,
 def rpath: MultiArg<["-", "--"], "rpath", 2>,
            HelpText<"Change rpath path name">;
 
+def id : Option<["-","--"], "id", KIND_SEPARATE>,
+                 HelpText<"Change dynamic shared library id">;
+
+def change: MultiArg<["-", "--"], "change", 2>,
+            HelpText<"Change dependent shared library install name">;
+
 def version : Flag<["--"], "version">,
               HelpText<"Print the version and exit.">;

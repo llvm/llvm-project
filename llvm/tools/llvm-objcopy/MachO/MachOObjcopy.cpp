@@ -273,6 +273,34 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       for (std::unique_ptr<Section> &Sec : LC.Sections)
         Sec->Relocations.clear();
 
+  for (LoadCommand &LC : Obj.LoadCommands) {
+    switch (LC.MachOLoadCommand.load_command_data.cmd) {
+    case MachO::LC_ID_DYLIB:
+      if (Config.SharedLibId) {
+        StringRef Id = Config.SharedLibId.getValue();
+        if (Id.empty())
+          return createStringError(errc::invalid_argument,
+                                   "cannot specify an empty id");
+        updateLoadCommandPayloadString<MachO::dylib_command>(LC, Id);
+      }
+      break;
+
+    // TODO: Add LC_REEXPORT_DYLIB, LC_LAZY_LOAD_DYLIB, and LC_LOAD_UPWARD_DYLIB
+    // here once llvm-objcopy supports them.
+    case MachO::LC_LOAD_DYLIB:
+    case MachO::LC_LOAD_WEAK_DYLIB:
+      StringRef Old, New;
+      StringRef CurrentInstallName = getPayloadString(LC);
+      for (const auto &InstallNamePair : Config.InstallNamesToUpdate) {
+        std::tie(Old, New) = InstallNamePair;
+        if (CurrentInstallName == Old) {
+          updateLoadCommandPayloadString<MachO::dylib_command>(LC, New);
+          break;
+        }
+      }
+    }
+  }
+
   for (const auto &Flag : Config.AddSection) {
     std::pair<StringRef, StringRef> SecPair = Flag.split("=");
     StringRef SecName = SecPair.first;

@@ -548,6 +548,8 @@ bool StructType::indexValid(const Value *V) const {
   // vector case all of the indices must be equal.
   if (!V->getType()->isIntOrIntVectorTy(32))
     return false;
+  if (isa<ScalableVectorType>(V->getType()))
+    return false;
   const Constant *C = dyn_cast<Constant>(V);
   if (C && V->getType()->isVectorTy())
     C = C->getSplatValue();

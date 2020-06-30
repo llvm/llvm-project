@@ -120,6 +120,8 @@ public:
   int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
                                unsigned Index);
 
+  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
+
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
   int getArithmeticInstrCost(
@@ -189,7 +191,8 @@ public:
     // the element type fits into a register and the number of elements is a
     // power of 2 > 1.
     if (auto *DataTypeVTy = dyn_cast<VectorType>(DataType)) {
-      unsigned NumElements = DataTypeVTy->getNumElements();
+      unsigned NumElements =
+          cast<FixedVectorType>(DataTypeVTy)->getNumElements();
       unsigned EltSize = DataTypeVTy->getElementType()->getScalarSizeInBits();
       return NumElements > 1 && isPowerOf2_64(NumElements) && EltSize >= 8 &&
              EltSize <= 128 && isPowerOf2_64(EltSize);

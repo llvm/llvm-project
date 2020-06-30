@@ -899,6 +899,8 @@ protected:
     setValueSubclassData(Opcode);
   }
 
+  ~ConstantExpr() = default;
+
 public:
   // Static methods to construct a ConstantExpr of different kinds.  Note that
   // these methods may return a object that is not an instance of the
