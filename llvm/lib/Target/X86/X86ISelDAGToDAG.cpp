@@ -4001,159 +4001,50 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
 
 static unsigned getVPTESTMOpc(MVT TestVT, bool IsTestN, bool FoldedLoad,
                               bool FoldedBCast, bool Masked) {
-  if (Masked) {
-    if (FoldedLoad) {
-      switch (TestVT.SimpleTy) {
-      default: llvm_unreachable("Unexpected VT!");
-      case MVT::v16i8:
-        return IsTestN ? X86::VPTESTNMBZ128rmk : X86::VPTESTMBZ128rmk;
-      case MVT::v8i16:
-        return IsTestN ? X86::VPTESTNMWZ128rmk : X86::VPTESTMWZ128rmk;
-      case MVT::v4i32:
-        return IsTestN ? X86::VPTESTNMDZ128rmk : X86::VPTESTMDZ128rmk;
-      case MVT::v2i64:
-        return IsTestN ? X86::VPTESTNMQZ128rmk : X86::VPTESTMQZ128rmk;
-      case MVT::v32i8:
-        return IsTestN ? X86::VPTESTNMBZ256rmk : X86::VPTESTMBZ256rmk;
-      case MVT::v16i16:
-        return IsTestN ? X86::VPTESTNMWZ256rmk : X86::VPTESTMWZ256rmk;
-      case MVT::v8i32:
-        return IsTestN ? X86::VPTESTNMDZ256rmk : X86::VPTESTMDZ256rmk;
-      case MVT::v4i64:
-        return IsTestN ? X86::VPTESTNMQZ256rmk : X86::VPTESTMQZ256rmk;
-      case MVT::v64i8:
-        return IsTestN ? X86::VPTESTNMBZrmk : X86::VPTESTMBZrmk;
-      case MVT::v32i16:
-        return IsTestN ? X86::VPTESTNMWZrmk : X86::VPTESTMWZrmk;
-      case MVT::v16i32:
-        return IsTestN ? X86::VPTESTNMDZrmk : X86::VPTESTMDZrmk;
-      case MVT::v8i64:
-        return IsTestN ? X86::VPTESTNMQZrmk : X86::VPTESTMQZrmk;
-      }
-    }
+#define VPTESTM_CASE(VT, SUFFIX) \
+case MVT::VT: \
+  if (Masked) \
+    return IsTestN ? X86::VPTESTNM##SUFFIX##k: X86::VPTESTM##SUFFIX##k; \
+  return IsTestN ? X86::VPTESTNM##SUFFIX : X86::VPTESTM##SUFFIX;
 
-    if (FoldedBCast) {
-      switch (TestVT.SimpleTy) {
-      default: llvm_unreachable("Unexpected VT!");
-      case MVT::v4i32:
-        return IsTestN ? X86::VPTESTNMDZ128rmbk : X86::VPTESTMDZ128rmbk;
-      case MVT::v2i64:
-        return IsTestN ? X86::VPTESTNMQZ128rmbk : X86::VPTESTMQZ128rmbk;
-      case MVT::v8i32:
-        return IsTestN ? X86::VPTESTNMDZ256rmbk : X86::VPTESTMDZ256rmbk;
-      case MVT::v4i64:
-        return IsTestN ? X86::VPTESTNMQZ256rmbk : X86::VPTESTMQZ256rmbk;
-      case MVT::v16i32:
-        return IsTestN ? X86::VPTESTNMDZrmbk : X86::VPTESTMDZrmbk;
-      case MVT::v8i64:
-        return IsTestN ? X86::VPTESTNMQZrmbk : X86::VPTESTMQZrmbk;
-      }
-    }
 
-    switch (TestVT.SimpleTy) {
-    default: llvm_unreachable("Unexpected VT!");
-    case MVT::v16i8:
-      return IsTestN ? X86::VPTESTNMBZ128rrk : X86::VPTESTMBZ128rrk;
-    case MVT::v8i16:
-      return IsTestN ? X86::VPTESTNMWZ128rrk : X86::VPTESTMWZ128rrk;
-    case MVT::v4i32:
-      return IsTestN ? X86::VPTESTNMDZ128rrk : X86::VPTESTMDZ128rrk;
-    case MVT::v2i64:
-      return IsTestN ? X86::VPTESTNMQZ128rrk : X86::VPTESTMQZ128rrk;
-    case MVT::v32i8:
-      return IsTestN ? X86::VPTESTNMBZ256rrk : X86::VPTESTMBZ256rrk;
-    case MVT::v16i16:
-      return IsTestN ? X86::VPTESTNMWZ256rrk : X86::VPTESTMWZ256rrk;
-    case MVT::v8i32:
-      return IsTestN ? X86::VPTESTNMDZ256rrk : X86::VPTESTMDZ256rrk;
-    case MVT::v4i64:
-      return IsTestN ? X86::VPTESTNMQZ256rrk : X86::VPTESTMQZ256rrk;
-    case MVT::v64i8:
-      return IsTestN ? X86::VPTESTNMBZrrk : X86::VPTESTMBZrrk;
-    case MVT::v32i16:
-      return IsTestN ? X86::VPTESTNMWZrrk : X86::VPTESTMWZrrk;
-    case MVT::v16i32:
-      return IsTestN ? X86::VPTESTNMDZrrk : X86::VPTESTMDZrrk;
-    case MVT::v8i64:
-      return IsTestN ? X86::VPTESTNMQZrrk : X86::VPTESTMQZrrk;
-    }
-  }
+#define VPTESTM_BROADCAST_CASES(SUFFIX) \
+default: llvm_unreachable("Unexpected VT!"); \
+VPTESTM_CASE(v4i32, DZ128##SUFFIX) \
+VPTESTM_CASE(v2i64, QZ128##SUFFIX) \
+VPTESTM_CASE(v8i32, DZ256##SUFFIX) \
+VPTESTM_CASE(v4i64, QZ256##SUFFIX) \
+VPTESTM_CASE(v16i32, DZ##SUFFIX) \
+VPTESTM_CASE(v8i64, QZ##SUFFIX)
+
+#define VPTESTM_FULL_CASES(SUFFIX) \
+VPTESTM_BROADCAST_CASES(SUFFIX) \
+VPTESTM_CASE(v16i8, BZ128##SUFFIX) \
+VPTESTM_CASE(v8i16, WZ128##SUFFIX) \
+VPTESTM_CASE(v32i8, BZ256##SUFFIX) \
+VPTESTM_CASE(v16i16, WZ256##SUFFIX) \
+VPTESTM_CASE(v64i8, BZ##SUFFIX) \
+VPTESTM_CASE(v32i16, WZ##SUFFIX)
 
   if (FoldedLoad) {
     switch (TestVT.SimpleTy) {
-    default: llvm_unreachable("Unexpected VT!");
-    case MVT::v16i8:
-      return IsTestN ? X86::VPTESTNMBZ128rm : X86::VPTESTMBZ128rm;
-    case MVT::v8i16:
-      return IsTestN ? X86::VPTESTNMWZ128rm : X86::VPTESTMWZ128rm;
-    case MVT::v4i32:
-      return IsTestN ? X86::VPTESTNMDZ128rm : X86::VPTESTMDZ128rm;
-    case MVT::v2i64:
-      return IsTestN ? X86::VPTESTNMQZ128rm : X86::VPTESTMQZ128rm;
-    case MVT::v32i8:
-      return IsTestN ? X86::VPTESTNMBZ256rm : X86::VPTESTMBZ256rm;
-    case MVT::v16i16:
-      return IsTestN ? X86::VPTESTNMWZ256rm : X86::VPTESTMWZ256rm;
-    case MVT::v8i32:
-      return IsTestN ? X86::VPTESTNMDZ256rm : X86::VPTESTMDZ256rm;
-    case MVT::v4i64:
-      return IsTestN ? X86::VPTESTNMQZ256rm : X86::VPTESTMQZ256rm;
-    case MVT::v64i8:
-      return IsTestN ? X86::VPTESTNMBZrm : X86::VPTESTMBZrm;
-    case MVT::v32i16:
-      return IsTestN ? X86::VPTESTNMWZrm : X86::VPTESTMWZrm;
-    case MVT::v16i32:
-      return IsTestN ? X86::VPTESTNMDZrm : X86::VPTESTMDZrm;
-    case MVT::v8i64:
-      return IsTestN ? X86::VPTESTNMQZrm : X86::VPTESTMQZrm;
+    VPTESTM_FULL_CASES(rm)
     }
   }
 
   if (FoldedBCast) {
     switch (TestVT.SimpleTy) {
-    default: llvm_unreachable("Unexpected VT!");
-    case MVT::v4i32:
-      return IsTestN ? X86::VPTESTNMDZ128rmb : X86::VPTESTMDZ128rmb;
-    case MVT::v2i64:
-      return IsTestN ? X86::VPTESTNMQZ128rmb : X86::VPTESTMQZ128rmb;
-    case MVT::v8i32:
-      return IsTestN ? X86::VPTESTNMDZ256rmb : X86::VPTESTMDZ256rmb;
-    case MVT::v4i64:
-      return IsTestN ? X86::VPTESTNMQZ256rmb : X86::VPTESTMQZ256rmb;
-    case MVT::v16i32:
-      return IsTestN ? X86::VPTESTNMDZrmb : X86::VPTESTMDZrmb;
-    case MVT::v8i64:
-      return IsTestN ? X86::VPTESTNMQZrmb : X86::VPTESTMQZrmb;
+    VPTESTM_BROADCAST_CASES(rmb)
     }
   }
 
   switch (TestVT.SimpleTy) {
-  default: llvm_unreachable("Unexpected VT!");
-  case MVT::v16i8:
-    return IsTestN ? X86::VPTESTNMBZ128rr : X86::VPTESTMBZ128rr;
-  case MVT::v8i16:
-    return IsTestN ? X86::VPTESTNMWZ128rr : X86::VPTESTMWZ128rr;
-  case MVT::v4i32:
-    return IsTestN ? X86::VPTESTNMDZ128rr : X86::VPTESTMDZ128rr;
-  case MVT::v2i64:
-    return IsTestN ? X86::VPTESTNMQZ128rr : X86::VPTESTMQZ128rr;
-  case MVT::v32i8:
-    return IsTestN ? X86::VPTESTNMBZ256rr : X86::VPTESTMBZ256rr;
-  case MVT::v16i16:
-    return IsTestN ? X86::VPTESTNMWZ256rr : X86::VPTESTMWZ256rr;
-  case MVT::v8i32:
-    return IsTestN ? X86::VPTESTNMDZ256rr : X86::VPTESTMDZ256rr;
-  case MVT::v4i64:
-    return IsTestN ? X86::VPTESTNMQZ256rr : X86::VPTESTMQZ256rr;
-  case MVT::v64i8:
-    return IsTestN ? X86::VPTESTNMBZrr : X86::VPTESTMBZrr;
-  case MVT::v32i16:
-    return IsTestN ? X86::VPTESTNMWZrr : X86::VPTESTMWZrr;
-  case MVT::v16i32:
-    return IsTestN ? X86::VPTESTNMDZrr : X86::VPTESTMDZrr;
-  case MVT::v8i64:
-    return IsTestN ? X86::VPTESTNMQZrr : X86::VPTESTMQZrr;
+  VPTESTM_FULL_CASES(rr)
   }
+
+#undef VPTESTM_FULL_CASES
+#undef VPTESTM_BROADCAST_CASES
+#undef VPTESTM_CASE
 }
 
 // Try to create VPTESTM instruction. If InMask is not null, it will be used
