@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFVisitor.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -36,7 +37,7 @@ void DWARFYAML::VisitorImpl<T>::onVariableSizeValue(uint64_t U, unsigned Size) {
 }
 
 static unsigned getOffsetSize(const DWARFYAML::Unit &Unit) {
-  return Unit.Length.isDWARF64() ? 8 : 4;
+  return Unit.Format == dwarf::DWARF64 ? 8 : 4;
 }
 
 static unsigned getRefSize(const DWARFYAML::Unit &Unit) {

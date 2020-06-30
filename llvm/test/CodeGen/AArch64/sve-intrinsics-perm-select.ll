@@ -57,6 +57,16 @@ define <vscale x 8 x half> @clasta_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half
   ret <vscale x 8 x half> %out
 }
 
+define <vscale x 8 x bfloat> @clasta_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
+; CHECK-LABEL: clasta_bf16:
+; CHECK: clasta z0.h, p0, z0.h, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.clasta.nxv8bf16(<vscale x 8 x i1> %pg,
+                                                                      <vscale x 8 x bfloat> %a,
+                                                                      <vscale x 8 x bfloat> %b)
+  ret <vscale x 8 x bfloat> %out
+}
+
 define <vscale x 4 x float> @clasta_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: clasta_f32:
 ; CHECK: clasta z0.s, p0, z0.s, z1.s
@@ -129,6 +139,16 @@ define half @clasta_n_f16(<vscale x 8 x i1> %pg, half %a, <vscale x 8 x half> %b
                                                       half %a,
                                                       <vscale x 8 x half> %b)
   ret half %out
+}
+
+define bfloat @clasta_n_bf16(<vscale x 8 x i1> %pg, bfloat %a, <vscale x 8 x bfloat> %b) #0 {
+; CHECK-LABEL: clasta_n_bf16:
+; CHECK: clasta h0, p0, h0, z1.h
+; CHECK-NEXT: ret
+  %out = call bfloat @llvm.aarch64.sve.clasta.n.nxv8bf16(<vscale x 8 x i1> %pg,
+                                                         bfloat %a,
+                                                         <vscale x 8 x bfloat> %b)
+  ret bfloat %out
 }
 
 define float @clasta_n_f32(<vscale x 4 x i1> %pg, float %a, <vscale x 4 x float> %b) {
@@ -205,6 +225,16 @@ define <vscale x 8 x half> @clastb_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half
   ret <vscale x 8 x half> %out
 }
 
+define <vscale x 8 x bfloat> @clastb_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
+; CHECK-LABEL: clastb_bf16:
+; CHECK: clastb z0.h, p0, z0.h, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.clastb.nxv8bf16(<vscale x 8 x i1> %pg,
+                                                                      <vscale x 8 x bfloat> %a,
+                                                                      <vscale x 8 x bfloat> %b)
+  ret <vscale x 8 x bfloat> %out
+}
+
 define <vscale x 4 x float> @clastb_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: clastb_f32:
 ; CHECK: clastb z0.s, p0, z0.s, z1.s
@@ -279,6 +309,16 @@ define half @clastb_n_f16(<vscale x 8 x i1> %pg, half %a, <vscale x 8 x half> %b
   ret half %out
 }
 
+define bfloat @clastb_n_bf16(<vscale x 8 x i1> %pg, bfloat %a, <vscale x 8 x bfloat> %b) #0 {
+; CHECK-LABEL: clastb_n_bf16:
+; CHECK: clastb h0, p0, h0, z1.h
+; CHECK-NEXT: ret
+  %out = call bfloat @llvm.aarch64.sve.clastb.n.nxv8bf16(<vscale x 8 x i1> %pg,
+                                                         bfloat %a,
+                                                         <vscale x 8 x bfloat> %b)
+  ret bfloat %out
+}
+
 define float @clastb_n_f32(<vscale x 4 x i1> %pg, float %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: clastb_n_f32:
 ; CHECK: clastb s0, p0, s0, z1.s
@@ -341,6 +381,14 @@ define <vscale x 8 x half> @dupq_f16(<vscale x 8 x half> %a) {
 ; CHECK-NEXT: ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %a, i64 0)
   ret <vscale x 8 x half> %out
+}
+
+define <vscale x 8 x bfloat> @dupq_bf16(<vscale x 8 x bfloat> %a) #0 {
+; CHECK-LABEL: dupq_bf16:
+; CHECK: mov z0.q, q0
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %a, i64 0)
+  ret <vscale x 8 x bfloat> %out
 }
 
 define <vscale x 4 x float> @dupq_f32(<vscale x 4 x float> %a) {
@@ -430,6 +478,20 @@ define <vscale x 8 x half> @dupq_lane_f16(<vscale x 8 x half> %a, i64 %idx) {
 ; CHECK-NEXT: ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %a, i64 %idx)
   ret <vscale x 8 x half> %out
+}
+
+; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
+define <vscale x 8 x bfloat> @dupq_lane_bf16(<vscale x 8 x bfloat> %a, i64 %idx) #0 {
+; CHECK-LABEL: dupq_lane_bf16:
+; CHECK-DAG:  index [[Z1:z[0-9]+]].d, #0, #1
+; CHECK-DAG:  and   [[Z2:z[0-9]+]].d, [[Z1]].d, #0x1
+; CHECK-DAG:  add   [[X1:x[0-9]+]], x0, x0
+; CHECK-DAG:  mov   [[Z3:z[0-9]+]].d, [[X1]]
+; CHECK:      add   [[Z4:z[0-9]+]].d, [[Z2]].d, [[Z3]].d
+; CHECK: tbl z0.d, { z0.d }, [[Z4]].d
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %a, i64 %idx)
+  ret <vscale x 8 x bfloat> %out
 }
 
 ; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
@@ -605,6 +667,15 @@ define half @lasta_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a) {
   ret half %res
 }
 
+define bfloat @lasta_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a) #0 {
+; CHECK-LABEL: lasta_bf16
+; CHECK: lasta h0, p0, z0.h
+; CHECK-NEXT: ret
+  %res = call bfloat @llvm.aarch64.sve.lasta.nxv8bf16(<vscale x 8 x i1> %pg,
+                                                      <vscale x 8 x bfloat> %a)
+  ret bfloat %res
+}
+
 define float @lasta_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) {
 ; CHECK-LABEL: lasta_f32
 ; CHECK: lasta s0, p0, z0.s
@@ -679,6 +750,15 @@ define half @lastb_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a) {
   %res = call half @llvm.aarch64.sve.lastb.nxv8f16(<vscale x 8 x i1> %pg,
                                                    <vscale x 8 x half> %a)
   ret half %res
+}
+
+define bfloat @lastb_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a) #0 {
+; CHECK-LABEL: lastb_bf16
+; CHECK: lastb h0, p0, z0.h
+; CHECK-NEXT: ret
+  %res = call bfloat @llvm.aarch64.sve.lastb.nxv8bf16(<vscale x 8 x i1> %pg,
+                                                      <vscale x 8 x bfloat> %a)
+  ret bfloat %res
 }
 
 define float @lastb_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) {
@@ -1851,6 +1931,7 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.clasta.nxv8i16(<vscale x 8 x i1>, <
 declare <vscale x 4 x i32> @llvm.aarch64.sve.clasta.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.clasta.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 declare <vscale x 8 x half> @llvm.aarch64.sve.clasta.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.clasta.nxv8bf16(<vscale x 8 x i1>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.clasta.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.clasta.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
 
@@ -1859,6 +1940,7 @@ declare i16 @llvm.aarch64.sve.clasta.n.nxv8i16(<vscale x 8 x i1>, i16, <vscale x
 declare i32 @llvm.aarch64.sve.clasta.n.nxv4i32(<vscale x 4 x i1>, i32, <vscale x 4 x i32>)
 declare i64 @llvm.aarch64.sve.clasta.n.nxv2i64(<vscale x 2 x i1>, i64, <vscale x 2 x i64>)
 declare half @llvm.aarch64.sve.clasta.n.nxv8f16(<vscale x 8 x i1>, half, <vscale x 8 x half>)
+declare bfloat @llvm.aarch64.sve.clasta.n.nxv8bf16(<vscale x 8 x i1>, bfloat, <vscale x 8 x bfloat>)
 declare float @llvm.aarch64.sve.clasta.n.nxv4f32(<vscale x 4 x i1>, float, <vscale x 4 x float>)
 declare double @llvm.aarch64.sve.clasta.n.nxv2f64(<vscale x 2 x i1>, double, <vscale x 2 x double>)
 
@@ -1867,6 +1949,7 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.clastb.nxv8i16(<vscale x 8 x i1>, <
 declare <vscale x 4 x i32> @llvm.aarch64.sve.clastb.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.clastb.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 declare <vscale x 8 x half> @llvm.aarch64.sve.clastb.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.clastb.nxv8bf16(<vscale x 8 x i1>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.clastb.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.clastb.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
 
@@ -1875,6 +1958,7 @@ declare i16 @llvm.aarch64.sve.clastb.n.nxv8i16(<vscale x 8 x i1>, i16, <vscale x
 declare i32 @llvm.aarch64.sve.clastb.n.nxv4i32(<vscale x 4 x i1>, i32, <vscale x 4 x i32>)
 declare i64 @llvm.aarch64.sve.clastb.n.nxv2i64(<vscale x 2 x i1>, i64, <vscale x 2 x i64>)
 declare half @llvm.aarch64.sve.clastb.n.nxv8f16(<vscale x 8 x i1>, half, <vscale x 8 x half>)
+declare bfloat @llvm.aarch64.sve.clastb.n.nxv8bf16(<vscale x 8 x i1>, bfloat, <vscale x 8 x bfloat>)
 declare float @llvm.aarch64.sve.clastb.n.nxv4f32(<vscale x 4 x i1>, float, <vscale x 4 x float>)
 declare double @llvm.aarch64.sve.clastb.n.nxv2f64(<vscale x 2 x i1>, double, <vscale x 2 x double>)
 
@@ -1888,6 +1972,7 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16
 declare <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32>, i64)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64>, i64)
 declare <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half>, i64)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat>, i64)
 declare <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float>, i64)
 declare <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double>, i64)
 
@@ -1905,6 +1990,7 @@ declare i16 @llvm.aarch64.sve.lasta.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16
 declare i32 @llvm.aarch64.sve.lasta.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>)
 declare i64 @llvm.aarch64.sve.lasta.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>)
 declare half @llvm.aarch64.sve.lasta.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>)
+declare bfloat @llvm.aarch64.sve.lasta.nxv8bf16(<vscale x 8 x i1>, <vscale x 8 x bfloat>)
 declare float @llvm.aarch64.sve.lasta.nxv2f32(<vscale x 2 x i1>, <vscale x 2 x float>)
 declare float @llvm.aarch64.sve.lasta.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>)
 declare double @llvm.aarch64.sve.lasta.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>)
@@ -1914,6 +2000,7 @@ declare i16 @llvm.aarch64.sve.lastb.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16
 declare i32 @llvm.aarch64.sve.lastb.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>)
 declare i64 @llvm.aarch64.sve.lastb.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>)
 declare half @llvm.aarch64.sve.lastb.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>)
+declare bfloat @llvm.aarch64.sve.lastb.nxv8bf16(<vscale x 8 x i1>, <vscale x 8 x bfloat>)
 declare float @llvm.aarch64.sve.lastb.nxv2f32(<vscale x 2 x i1>, <vscale x 2 x float>)
 declare float @llvm.aarch64.sve.lastb.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>)
 declare double @llvm.aarch64.sve.lastb.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>)

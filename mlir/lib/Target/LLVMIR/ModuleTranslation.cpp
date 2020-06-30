@@ -121,7 +121,7 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
       elementType = arrayTy->getElementType();
       numElements = arrayTy->getNumElements();
     } else {
-      auto *vectorTy = cast<llvm::VectorType>(llvmType);
+      auto *vectorTy = cast<llvm::FixedVectorType>(llvmType);
       elementType = vectorTy->getElementType();
       numElements = vectorTy->getNumElements();
     }
@@ -778,8 +778,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
 LogicalResult ModuleTranslation::checkSupportedModuleOps(Operation *m) {
   for (Operation &o : getModuleBody(m).getOperations())
-    if (!isa<LLVM::LLVMFuncOp>(&o) && !isa<LLVM::GlobalOp>(&o) &&
-        !o.isKnownTerminator())
+    if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp>(&o) && !o.isKnownTerminator())
       return o.emitOpError("unsupported module-level operation");
   return success();
 }

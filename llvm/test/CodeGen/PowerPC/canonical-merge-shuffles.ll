@@ -290,4 +290,58 @@ entry:
   ret <8 x i16> %1
 }
 
+define dso_local void @no_crash_elt0_from_RHS(<2 x double>* noalias nocapture dereferenceable(16) %.vtx6) #0 {
+; CHECK-P8-LABEL: no_crash_elt0_from_RHS:
+; CHECK-P8:       # %bb.0: # %test_entry
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    std r0, 16(r1)
+; CHECK-P8-NEXT:    stdu r1, -48(r1)
+; CHECK-P8-NEXT:    mr r30, r3
+; CHECK-P8-NEXT:    bl dummy
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    xxlxor f0, f0, f0
+; CHECK-P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; CHECK-P8-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-P8-NEXT:    xxswapd vs0, vs0
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
+;
+; CHECK-P9-LABEL: no_crash_elt0_from_RHS:
+; CHECK-P9:       # %bb.0: # %test_entry
+; CHECK-P9-NEXT:    mflr r0
+; CHECK-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-P9-NEXT:    std r0, 16(r1)
+; CHECK-P9-NEXT:    stdu r1, -48(r1)
+; CHECK-P9-NEXT:    mr r30, r3
+; CHECK-P9-NEXT:    bl dummy
+; CHECK-P9-NEXT:    nop
+; CHECK-P9-NEXT:    xxlxor f0, f0, f0
+; CHECK-P9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-P9-NEXT:    stxv vs0, 0(r30)
+;
+; CHECK-NOVSX-LABEL: no_crash_elt0_from_RHS:
+; CHECK-NOVSX:       # %bb.0: # %test_entry
+; CHECK-NOVSX-NEXT:    mflr r0
+; CHECK-NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NOVSX-NEXT:    std r0, 16(r1)
+; CHECK-NOVSX-NEXT:    stdu r1, -48(r1)
+; CHECK-NOVSX-NEXT:    mr r30, r3
+; CHECK-NOVSX-NEXT:    bl dummy
+; CHECK-NOVSX-NEXT:    nop
+; CHECK-NOVSX-NEXT:    li r3, 0
+; CHECK-NOVSX-NEXT:    stfd f1, 8(r30)
+; CHECK-NOVSX-NEXT:    std r3, 0(r30)
+test_entry:
+  %_div_result = tail call double @dummy()
+  %oldret = insertvalue { double, double } undef, double %_div_result, 0
+  %0 = extractvalue { double, double } %oldret, 0
+  %.splatinsert = insertelement <2 x double> undef, double %0, i32 0
+  %.splat = shufflevector <2 x double> %.splatinsert, <2 x double> undef, <2 x i32> zeroinitializer
+  %1 = shufflevector <2 x double> zeroinitializer, <2 x double> %.splat, <2 x i32> <i32 0, i32 3>
+  store <2 x double> %1, <2 x double>* %.vtx6, align 16
+  unreachable
+}
+
+declare double @dummy() local_unnamed_addr
 attributes #0 = { nounwind }

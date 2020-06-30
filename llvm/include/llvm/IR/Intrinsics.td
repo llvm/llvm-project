@@ -117,6 +117,8 @@ class ReadNone<AttrIndex idx> : IntrinsicProperty {
 
 def IntrNoReturn : IntrinsicProperty;
 
+def IntrNoFree : IntrinsicProperty;
+
 def IntrWillReturn : IntrinsicProperty;
 
 // IntrCold - Calls to this intrinsic are cold.

@@ -189,22 +189,8 @@ class Configuration(object):
             exec_env=self.exec_env)
 
     def configure_executor(self):
-        if self.get_lit_conf('use_old_format'):
-            exec_str = self.get_lit_conf('executor', "None")
-            te = eval(exec_str)
-            if te:
-                self.lit_config.note("Using executor: %r" % exec_str)
-                if self.lit_config.useValgrind:
-                    self.lit_config.fatal("The libc++ test suite can't run under Valgrind with a custom executor")
-            else:
-                te = LocalExecutor()
-
-            te.target_info = self.target_info
-            self.target_info.executor = te
-            self.executor = te
-        else:
-            self.executor = self.get_lit_conf('executor')
-            self.lit_config.note("Using executor: {}".format(self.executor))
+        self.executor = self.get_lit_conf('executor')
+        self.lit_config.note("Using executor: {}".format(self.executor))
 
     def configure_target_info(self):
         self.target_info = make_target_info(self)
@@ -751,8 +737,7 @@ class Configuration(object):
             '--codesign_identity "{}"'.format(codesign_ident),
             '--env {}'.format(env_vars)
         ]
-        if not self.get_lit_conf('use_old_format'):
-            sub.append(('%{exec}', '{} {} -- '.format(self.executor, ' '.join(exec_args))))
+        sub.append(('%{exec}', '{} {} -- '.format(self.executor, ' '.join(exec_args))))
         if self.get_lit_conf('libcxx_gdb'):
             sub.append(('%{libcxx_gdb}', self.get_lit_conf('libcxx_gdb')))
 

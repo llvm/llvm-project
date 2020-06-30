@@ -296,8 +296,7 @@ DWARF:
         - Attribute:       DW_AT_type
           Form:            DW_FORM_ref4
   debug_info:      
-    - Length:          
-        TotalLength:     122
+    - Length:          122
       Version:         4
       AbbrOffset:      0
       AddrSize:        8

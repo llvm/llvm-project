@@ -1,6 +1,7 @@
 // RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
@@ -111,3 +112,15 @@ def OpK : NS_Op<"only_input_is_variadic_with_same_value_type_op", [SameOperandsA
 
 // CHECK-LABEL: OpK::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange input)
 // CHECK: odsState.addTypes({input.front().getType()});
+
+// Test with inferred shapes and interleaved with operands/attributes.
+//
+def OpL : NS_Op<"op_with_all_types_constraint",
+    [AllTypesMatch<["a", "b"]>]> {
+  let arguments = (ins I32Attr:$attr1, AnyType:$a);
+  let results = (outs Res<AnyType, "output b", []>:$b);
+}
+
+// CHECK-LABEL: LogicalResult OpL::inferReturnTypes
+// CHECK-NOT: }
+// CHECK: inferredReturnTypes[0] = operands[0].getType();

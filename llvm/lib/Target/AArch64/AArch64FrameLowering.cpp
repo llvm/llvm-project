@@ -2519,8 +2519,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
       const TargetRegisterClass &RC = AArch64::GPR64RegClass;
       unsigned Size = TRI->getSpillSize(RC);
-      unsigned Align = TRI->getSpillAlignment(RC);
-      int FI = MFI.CreateStackObject(Size, Align, false);
+      Align Alignment = TRI->getSpillAlign(RC);
+      int FI = MFI.CreateStackObject(Size, Alignment, false);
       RS->addScavengingFrameIndex(FI);
       LLVM_DEBUG(dbgs() << "No available CS registers, allocated fi#" << FI
                         << " as the emergency spill slot.\n");

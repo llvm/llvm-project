@@ -50,7 +50,7 @@ namespace {
     const BlockAddress *BlockAddr = nullptr;
     const char *ES = nullptr;
     int JT = -1;
-    unsigned Align = 0;  // CP alignment.
+    Align Alignment; // CP alignment.
 
     MSP430ISelAddressMode() = default;
 
@@ -74,12 +74,12 @@ namespace {
       } else if (CP) {
         errs() << " CP ";
         CP->dump();
-        errs() << " Align" << Align << '\n';
+        errs() << " Align" << Alignment.value() << '\n';
       } else if (ES) {
         errs() << "ES ";
         errs() << ES << '\n';
       } else if (JT != -1)
-        errs() << " JT" << JT << " Align" << Align << '\n';
+        errs() << " JT" << JT << " Align" << Alignment.value() << '\n';
     }
 #endif
   };
@@ -146,7 +146,7 @@ bool MSP430DAGToDAGISel::MatchWrapper(SDValue N, MSP430ISelAddressMode &AM) {
     //AM.SymbolFlags = G->getTargetFlags();
   } else if (ConstantPoolSDNode *CP = dyn_cast<ConstantPoolSDNode>(N0)) {
     AM.CP = CP->getConstVal();
-    AM.Align = CP->getAlign().value();
+    AM.Alignment = CP->getAlign();
     AM.Disp += CP->getOffset();
     //AM.SymbolFlags = CP->getTargetFlags();
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(N0)) {
@@ -263,8 +263,8 @@ bool MSP430DAGToDAGISel::SelectAddr(SDValue N,
                                           MVT::i16, AM.Disp,
                                           0/*AM.SymbolFlags*/);
   else if (AM.CP)
-    Disp = CurDAG->getTargetConstantPool(AM.CP, MVT::i16, Align(AM.Align),
-                                         AM.Disp, 0 /*AM.SymbolFlags*/);
+    Disp = CurDAG->getTargetConstantPool(AM.CP, MVT::i16, AM.Alignment, AM.Disp,
+                                         0 /*AM.SymbolFlags*/);
   else if (AM.ES)
     Disp = CurDAG->getTargetExternalSymbol(AM.ES, MVT::i16, 0/*AM.SymbolFlags*/);
   else if (AM.JT != -1)

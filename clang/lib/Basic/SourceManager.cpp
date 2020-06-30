@@ -896,10 +896,8 @@ FileID SourceManager::getFileIDLocal(unsigned SLocOffset) const {
         SLocOffset < getLocalSLocEntry(MiddleIndex + 1).getOffset()) {
       FileID Res = FileID::get(MiddleIndex);
 
-      // If this isn't a macro expansion, remember it.  We have good locality
-      // across FileID lookups.
-      if (!LocalSLocEntryTable[MiddleIndex].isExpansion())
-        LastFileIDLookup = Res;
+      // Remember it.  We have good locality across FileID lookups.
+      LastFileIDLookup = Res;
       NumBinaryProbes += NumProbes;
       return Res;
     }

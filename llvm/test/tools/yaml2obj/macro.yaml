@@ -58,3 +58,34 @@ Symbols:
   - Name: "[[a]"
   - Name: "[[a[[a]]"
   - Name: "[[a][[a]][[b]]"
+
+## Check that it is possible to set a default value for a macro in the YAML description.
+## Check that we are able to provide an empty default value for a macro.
+# RUN: yaml2obj --docnum=4 %s -o %t4.1
+# RUN: llvm-nm --no-sort %t4.1 | FileCheck %s --check-prefix=DEFAULT
+
+# DEFAULT:      U _foo_
+# DEFAULT-NEXT: U __
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Name: _[[FOO=foo]]_
+  - Name: _[[BAR=]]_
+
+## Check that it is possible to override a default macro value.
+# RUN: yaml2obj --docnum=4 %s -o %t4.2 -DFOO=bar -DBAR=foo
+# RUN: llvm-nm --no-sort %t4.2 | FileCheck %s --check-prefix=OVERRIDE-DEFAULT1
+
+# OVERRIDE-DEFAULT1:      U _bar_
+# OVERRIDE-DEFAULT1-NEXT: U _foo_
+
+# RUN: yaml2obj --docnum=4 %s -o %t4.3 -DFOO=bar=foo -DBAR=foo=bar
+# RUN: llvm-nm --no-sort %t4.3 | FileCheck %s --check-prefix=OVERRIDE-DEFAULT2
+
+# OVERRIDE-DEFAULT2:      U _bar=foo_
+# OVERRIDE-DEFAULT2-NEXT: U _foo=bar_

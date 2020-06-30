@@ -104,8 +104,9 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
     return parser.emitError(trailingTypeLoc, "expected LLVM IR dialect type");
   if (argType.getUnderlyingType()->isVectorTy())
     resultType = LLVMType::getVectorTy(
-        resultType, llvm::cast<llvm::VectorType>(argType.getUnderlyingType())
-                        ->getNumElements());
+        resultType,
+        llvm::cast<llvm::FixedVectorType>(argType.getUnderlyingType())
+            ->getNumElements());
 
   result.addTypes({resultType});
   return success();
@@ -1815,7 +1816,8 @@ LLVMType LLVMType::getVectorElementType() {
       llvm::cast<llvm::VectorType>(getUnderlyingType())->getElementType());
 }
 unsigned LLVMType::getVectorNumElements() {
-  return llvm::cast<llvm::VectorType>(getUnderlyingType())->getNumElements();
+  return llvm::cast<llvm::FixedVectorType>(getUnderlyingType())
+      ->getNumElements();
 }
 bool LLVMType::isVectorTy() { return getUnderlyingType()->isVectorTy(); }
 

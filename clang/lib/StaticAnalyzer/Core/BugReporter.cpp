@@ -38,6 +38,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -2783,7 +2784,7 @@ Optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
         R->clearVisitors();
         R->addVisitor(std::make_unique<FalsePositiveRefutationBRVisitor>());
 
-        // We don't overrite the notes inserted by other visitors because the
+        // We don't overwrite the notes inserted by other visitors because the
         // refutation manager does not add any new note to the path
         generateVisitorsDiagnostics(R, BugPath->ErrorNode, BRC);
       }

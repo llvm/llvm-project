@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:   | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
-// RUN:   -target-feature +sve | FileCheck %s
+// RUN:   -target-feature +sve,+bf16 | FileCheck %s
 
 template<typename T> struct S {};
 
@@ -27,8 +27,10 @@ void f9(S<__SVFloat16_t>) {}
 void f10(S<__SVFloat32_t>) {}
 // CHECK: _Z3f111SIu13__SVFloat64_tE
 void f11(S<__SVFloat64_t>) {}
-// CHECK: _Z3f121SIu10__SVBool_tE
-void f12(S<__SVBool_t>) {}
+// CHECK: _Z3f121SIu14__SVBFloat16_tE
+void f12(S<__SVBFloat16_t>) {}
+// CHECK: _Z3f131SIu10__SVBool_tE
+void f13(S<__SVBool_t>) {}
 
 // The tuple types don't use the internal name for mangling.
 
@@ -98,3 +100,9 @@ void f43(S<__clang_svfloat64x2_t>) {}
 void f44(S<__clang_svfloat64x3_t>) {}
 // CHECK: _Z3f451SI13svfloat64x4_tE
 void f45(S<__clang_svfloat64x4_t>) {}
+// CHECK: _Z3f461SI14svbfloat16x2_tE
+void f46(S<__clang_svbfloat16x2_t>) {}
+// CHECK: _Z3f471SI14svbfloat16x3_tE
+void f47(S<__clang_svbfloat16x3_t>) {}
+// CHECK: _Z3f481SI14svbfloat16x4_tE
+void f48(S<__clang_svbfloat16x4_t>) {}

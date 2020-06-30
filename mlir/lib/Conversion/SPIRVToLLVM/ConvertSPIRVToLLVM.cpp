@@ -53,6 +53,16 @@ static unsigned getBitWidth(Type type) {
   return elementType.getIntOrFloatBitWidth();
 }
 
+/// Creates `IntegerAttribute` with all bits set for given type.
+IntegerAttr minusOneIntegerAttribute(Type type, Builder builder) {
+  if (auto vecType = type.dyn_cast<VectorType>()) {
+    auto integerType = vecType.getElementType().cast<IntegerType>();
+    return builder.getIntegerAttr(integerType, -1);
+  }
+  auto integerType = type.cast<IntegerType>();
+  return builder.getIntegerAttr(integerType, -1);
+}
+
 //===----------------------------------------------------------------------===//
 // Operation conversion
 //===----------------------------------------------------------------------===//
@@ -150,6 +160,35 @@ public:
         operation, dstType,
         rewriter.getI64IntegerAttr(static_cast<int64_t>(predicate)),
         operation.operand1(), operation.operand2());
+    return success();
+  }
+};
+
+/// Converts `spv.Not` and `spv.LogicalNot` into LLVM dialect.
+template <typename SPIRVOp>
+class NotPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp notOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto srcType = notOp.getType();
+    auto dstType = this->typeConverter.convertType(srcType);
+    if (!dstType)
+      return failure();
+
+    Location loc = notOp.getLoc();
+    IntegerAttr minusOne = minusOneIntegerAttribute(srcType, rewriter);
+    auto mask = srcType.template isa<VectorType>()
+                    ? rewriter.create<LLVM::ConstantOp>(
+                          loc, dstType,
+                          SplatElementsAttr::get(
+                              srcType.template cast<VectorType>(), minusOne))
+                    : rewriter.create<LLVM::ConstantOp>(loc, dstType, minusOne);
+    rewriter.template replaceOpWithNewOp<LLVM::XOrOp>(notOp, dstType,
+                                                      notOp.operand(), mask);
     return success();
   }
 };
@@ -346,8 +385,10 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::BitwiseAndOp, LLVM::AndOp>,
       DirectConversionPattern<spirv::BitwiseOrOp, LLVM::OrOp>,
       DirectConversionPattern<spirv::BitwiseXorOp, LLVM::XOrOp>,
+      NotPattern<spirv::NotOp>,
 
       // Cast ops
+      DirectConversionPattern<spirv::BitcastOp, LLVM::BitcastOp>,
       DirectConversionPattern<spirv::ConvertFToSOp, LLVM::FPToSIOp>,
       DirectConversionPattern<spirv::ConvertFToUOp, LLVM::FPToUIOp>,
       DirectConversionPattern<spirv::ConvertSToFOp, LLVM::SIToFPOp>,
@@ -386,6 +427,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::LogicalOrOp, LLVM::OrOp>,
       IComparePattern<spirv::LogicalEqualOp, LLVM::ICmpPredicate::eq>,
       IComparePattern<spirv::LogicalNotEqualOp, LLVM::ICmpPredicate::ne>,
+      NotPattern<spirv::LogicalNotOp>,
 
       // Shift ops
       ShiftPattern<spirv::ShiftRightArithmeticOp, LLVM::AShrOp>,

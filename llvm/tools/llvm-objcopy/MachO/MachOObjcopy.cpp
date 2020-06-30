@@ -338,9 +338,18 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
   if (Error E = handleArgs(Config, *O))
     return createFileError(Config.InputFilename, std::move(E));
 
-  // TODO: Support 16KB pages which are employed in iOS arm64 binaries:
-  //       https://github.com/llvm/llvm-project/commit/1bebb2832ee312d3b0316dacff457a7a29435edb
-  const uint64_t PageSize = 4096;
+  // Page size used for alignment of segment sizes in Mach-O executables and
+  // dynamic libraries.
+  uint64_t PageSize;
+  switch (In.getArch()) {
+  case Triple::ArchType::arm:
+  case Triple::ArchType::aarch64:
+  case Triple::ArchType::aarch64_32:
+    PageSize = 16384;
+    break;
+  default:
+    PageSize = 4096;
+  }
 
   MachOWriter Writer(*O, In.is64Bit(), In.isLittleEndian(), PageSize, Out);
   if (auto E = Writer.finalize())
