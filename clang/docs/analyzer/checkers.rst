@@ -1423,6 +1423,25 @@ Raw pointers and references to uncounted types can't be used as class members. O
    // ...
  };
 
+.. _webkit-UncountedLambdaCapturesChecker:
+
+webkit.UncountedLambdaCapturesChecker
+"""""""""""""""""""""""""""""""""""""
+Raw pointers and references to uncounted types can't be captured in lambdas. Only ref-counted types are allowed.
+
+.. code-block:: cpp
+
+ struct RefCntbl {
+   void ref() {}
+   void deref() {}
+ };
+
+ void foo(RefCntbl* a, RefCntbl& b) {
+   [&, a](){ // warn about 'a'
+     do_something(b); // warn about 'b'
+   };
+ };
+
 .. _alpha-checkers:
 
 Experimental Checkers
