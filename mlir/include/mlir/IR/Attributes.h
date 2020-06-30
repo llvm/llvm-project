@@ -64,9 +64,10 @@ public:
 
   /// Utility class for implementing attributes.
   template <typename ConcreteType, typename BaseType = Attribute,
-            typename StorageType = AttributeStorage>
+            typename StorageType = AttributeStorage,
+            template <typename T> class... Traits>
   using AttrBase = detail::StorageUserBase<ConcreteType, BaseType, StorageType,
-                                           detail::AttributeUniquer>;
+                                           detail::AttributeUniquer, Traits...>;
 
   using ImplType = AttributeStorage;
   using ValueType = void;
@@ -119,6 +120,11 @@ public:
 
   friend ::llvm::hash_code hash_value(Attribute arg);
 
+  /// Return the abstract descriptor for this attribute.
+  const AbstractAttribute &getAbstractAttribute() const {
+    return impl->getAbstractAttribute();
+  }
+
 protected:
   ImplType *impl;
 };
@@ -127,6 +133,46 @@ inline raw_ostream &operator<<(raw_ostream &os, Attribute attr) {
   attr.print(os);
   return os;
 }
+
+//===----------------------------------------------------------------------===//
+// AttributeTraitBase
+//===----------------------------------------------------------------------===//
+
+namespace AttributeTrait {
+/// This class represents the base of an attribute trait.
+template <typename ConcreteType, template <typename> class TraitType>
+using TraitBase = detail::StorageUserTraitBase<ConcreteType, TraitType>;
+} // namespace AttributeTrait
+
+//===----------------------------------------------------------------------===//
+// AttributeInterface
+//===----------------------------------------------------------------------===//
+
+/// This class represents the base of an attribute interface. See the definition
+/// of `detail::Interface` for requirements on the `Traits` type.
+template <typename ConcreteType, typename Traits>
+class AttributeInterface
+    : public detail::Interface<ConcreteType, Attribute, Traits, Attribute,
+                               AttributeTrait::TraitBase> {
+public:
+  using Base = AttributeInterface<ConcreteType, Traits>;
+  using InterfaceBase = detail::Interface<ConcreteType, Type, Traits, Type,
+                                          AttributeTrait::TraitBase>;
+  using InterfaceBase::InterfaceBase;
+
+private:
+  /// Returns the impl interface instance for the given type.
+  static typename InterfaceBase::Concept *getInterfaceFor(Attribute attr) {
+    return attr.getAbstractAttribute().getInterface<ConcreteType>();
+  }
+
+  /// Allow access to 'getInterfaceFor'.
+  friend InterfaceBase;
+};
+
+//===----------------------------------------------------------------------===//
+// StandardAttributes
+//===----------------------------------------------------------------------===//
 
 namespace StandardAttributes {
 enum Kind {

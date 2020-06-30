@@ -282,12 +282,11 @@ public:
   /// operations.
   llvm::StringMap<AbstractOperation> registeredOperations;
 
-  /// This is a mapping from type id to Dialect for registered attributes and
-  /// types.
-  DenseMap<TypeID, Dialect *> registeredDialectSymbols;
-
   /// These are identifiers uniqued into this MLIRContext.
   llvm::StringSet<llvm::BumpPtrAllocator &> identifiers;
+
+  /// An allocator used for AbstractAttribute and AbstractType objects.
+  llvm::BumpPtrAllocator abstractDialectSymbolAllocator;
 
   //===--------------------------------------------------------------------===//
   // Affine uniquing
@@ -311,6 +310,8 @@ public:
   //===--------------------------------------------------------------------===//
   // Type uniquing
   //===--------------------------------------------------------------------===//
+
+  DenseMap<TypeID, const AbstractType *> registeredTypes;
   StorageUniquer typeUniquer;
 
   /// Cached Type Instances.
@@ -322,6 +323,8 @@ public:
   //===--------------------------------------------------------------------===//
   // Attribute uniquing
   //===--------------------------------------------------------------------===//
+
+  DenseMap<TypeID, const AbstractAttribute *> registeredAttributes;
   StorageUniquer attributeUniquer;
 
   /// Cached Attribute Instances.
@@ -569,16 +572,39 @@ void Dialect::addOperation(AbstractOperation opInfo) {
   }
 }
 
-/// Register a dialect-specific symbol(e.g. type) with the current context.
-void Dialect::addSymbol(TypeID typeID) {
+void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
   auto &impl = context->getImpl();
 
   // Lock access to the context registry.
   ScopedWriterLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
-  if (!impl.registeredDialectSymbols.insert({typeID, this}).second) {
-    llvm::errs() << "error: dialect symbol already registered.\n";
-    abort();
-  }
+  auto *newInfo =
+      new (impl.abstractDialectSymbolAllocator.Allocate<AbstractType>())
+          AbstractType(std::move(typeInfo));
+  if (!impl.registeredTypes.insert({typeID, newInfo}).second)
+    llvm::report_fatal_error("Dialect Type already registered.");
+}
+
+void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
+  auto &impl = context->getImpl();
+
+  // Lock access to the context registry.
+  ScopedWriterLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
+  auto *newInfo =
+      new (impl.abstractDialectSymbolAllocator.Allocate<AbstractAttribute>())
+          AbstractAttribute(std::move(attrInfo));
+  if (!impl.registeredAttributes.insert({typeID, newInfo}).second)
+    llvm::report_fatal_error("Dialect Attribute already registered.");
+}
+
+/// Get the dialect that registered the attribute with the provided typeid.
+const AbstractAttribute &AbstractAttribute::lookup(TypeID typeID,
+                                                   MLIRContext *context) {
+  auto &impl = context->getImpl();
+  auto it = impl.registeredAttributes.find(typeID);
+  if (it == impl.registeredAttributes.end())
+    llvm::report_fatal_error("Trying to create an Attribute that was not "
+                             "registered in this MLIRContext.");
+  return *it->second;
 }
 
 /// Look up the specified operation in the operation set and return a pointer
@@ -593,6 +619,16 @@ const AbstractOperation *AbstractOperation::lookup(StringRef opName,
   if (it != impl.registeredOperations.end())
     return &it->second;
   return nullptr;
+}
+
+/// Get the dialect that registered the type with the provided typeid.
+const AbstractType &AbstractType::lookup(TypeID typeID, MLIRContext *context) {
+  auto &impl = context->getImpl();
+  auto it = impl.registeredTypes.find(typeID);
+  if (it == impl.registeredTypes.end())
+    llvm::report_fatal_error(
+        "Trying to create a Type that was not registered in this MLIRContext.");
+  return *it->second;
 }
 
 //===----------------------------------------------------------------------===//
@@ -628,23 +664,9 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
 // Type uniquing
 //===----------------------------------------------------------------------===//
 
-static Dialect &lookupDialectForSymbol(MLIRContext *ctx, TypeID typeID) {
-  auto &impl = ctx->getImpl();
-  auto it = impl.registeredDialectSymbols.find(typeID);
-  if (it == impl.registeredDialectSymbols.end())
-    llvm::report_fatal_error(
-        "Trying to create a type that was not registered in this MLIRContext.");
-  return *it->second;
-}
-
 /// Returns the storage uniquer used for constructing type storage instances.
 /// This should not be used directly.
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
-
-/// Get the dialect that registered the type with the provided typeid.
-Dialect &TypeUniquer::lookupDialectForType(MLIRContext *ctx, TypeID typeID) {
-  return lookupDialectForSymbol(ctx, typeID);
-}
 
 FloatType FloatType::get(StandardTypes::Kind kind, MLIRContext *context) {
   assert(kindof(kind) && "Not a FP kind.");
@@ -738,7 +760,7 @@ StorageUniquer &MLIRContext::getAttributeUniquer() {
 void AttributeUniquer::initializeAttributeStorage(AttributeStorage *storage,
                                                   MLIRContext *ctx,
                                                   TypeID attrID) {
-  storage->initializeDialect(lookupDialectForSymbol(ctx, attrID));
+  storage->initialize(AbstractAttribute::lookup(attrID, ctx));
 
   // If the attribute did not provide a type, then default to NoneType.
   if (!storage->getType())

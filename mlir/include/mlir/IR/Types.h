@@ -101,9 +101,10 @@ public:
 
   /// Utility class for implementing types.
   template <typename ConcreteType, typename BaseType,
-            typename StorageType = DefaultTypeStorage>
+            typename StorageType = DefaultTypeStorage,
+            template <typename T> class... Traits>
   using TypeBase = detail::StorageUserBase<ConcreteType, BaseType, StorageType,
-                                           detail::TypeUniquer>;
+                                           detail::TypeUniquer, Traits...>;
 
   using ImplType = TypeStorage;
 
@@ -196,6 +197,9 @@ public:
     return Type(reinterpret_cast<ImplType *>(const_cast<void *>(pointer)));
   }
 
+  /// Return the abstract type descriptor for this type.
+  const AbstractType &getAbstractType() { return impl->getAbstractType(); }
+
 protected:
   ImplType *impl;
 };
@@ -204,6 +208,45 @@ inline raw_ostream &operator<<(raw_ostream &os, Type type) {
   type.print(os);
   return os;
 }
+
+//===----------------------------------------------------------------------===//
+// TypeTraitBase
+//===----------------------------------------------------------------------===//
+
+namespace TypeTrait {
+/// This class represents the base of a type trait.
+template <typename ConcreteType, template <typename> class TraitType>
+using TraitBase = detail::StorageUserTraitBase<ConcreteType, TraitType>;
+} // namespace TypeTrait
+
+//===----------------------------------------------------------------------===//
+// TypeInterface
+//===----------------------------------------------------------------------===//
+
+/// This class represents the base of a type interface. See the definition  of
+/// `detail::Interface` for requirements on the `Traits` type.
+template <typename ConcreteType, typename Traits>
+class TypeInterface : public detail::Interface<ConcreteType, Type, Traits, Type,
+                                               TypeTrait::TraitBase> {
+public:
+  using Base = TypeInterface<ConcreteType, Traits>;
+  using InterfaceBase =
+      detail::Interface<ConcreteType, Type, Traits, Type, TypeTrait::TraitBase>;
+  using InterfaceBase::InterfaceBase;
+
+private:
+  /// Returns the impl interface instance for the given type.
+  static typename InterfaceBase::Concept *getInterfaceFor(Type type) {
+    return type.getAbstractType().getInterface<ConcreteType>();
+  }
+
+  /// Allow access to 'getInterfaceFor'.
+  friend InterfaceBase;
+};
+
+//===----------------------------------------------------------------------===//
+// FunctionType
+//===----------------------------------------------------------------------===//
 
 /// Function types map from a list of inputs to a list of results.
 class FunctionType
@@ -231,6 +274,10 @@ public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool kindof(unsigned kind) { return kind == Kind::Function; }
 };
+
+//===----------------------------------------------------------------------===//
+// OpaqueType
+//===----------------------------------------------------------------------===//
 
 /// Opaque types represent types of non-registered dialects. These are types
 /// represented in their raw string form, and can only usefully be tested for
