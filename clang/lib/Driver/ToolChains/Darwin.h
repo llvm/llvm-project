@@ -367,6 +367,7 @@ protected:
     }
   }
 
+public:
   bool isTargetIPhoneOS() const {
     assert(TargetInitialized && "Target not initialized!");
     return (TargetPlatform == IPhoneOS || TargetPlatform == TvOS) &&
@@ -419,9 +420,19 @@ protected:
     return TargetPlatform == IPhoneOS && TargetEnvironment == MacABI;
   }
 
+  bool isTargetMacOS() const {
+    assert(TargetInitialized && "Target not initialized!");
+    return TargetPlatform == MacOS;
+  }
+
   bool isTargetMacOSBased() const {
     assert(TargetInitialized && "Target not initialized!");
     return TargetPlatform == MacOS || isTargetMacABI();
+  }
+
+  bool isTargetAppleSiliconMac() const {
+    assert(TargetInitialized && "Target not initialized!");
+    return isTargetMacOSBased() && getArch() == llvm::Triple::aarch64;
   }
 
   bool isTargetInitialized() const { return TargetInitialized; }
@@ -439,11 +450,20 @@ protected:
     return TargetVersion < VersionTuple(V0, V1, V2);
   }
 
+  /// Returns true if the minimum supported macOS version for the slice that's
+  /// being built is less than the specified version. If there's no minimum
+  /// supported macOS version, the deployment target version is compared to the
+  /// specifed version instead.
   bool isMacosxVersionLT(unsigned V0, unsigned V1 = 0, unsigned V2 = 0) const {
-    assert(isTargetMacOSBased() && "Unexpected call for non OS X target!");
-    return TargetVersion < VersionTuple(V0, V1, V2);
+    assert(isTargetMacOS() && getTriple().isMacOSX() &&
+           "Unexpected call for non OS X target!");
+    VersionTuple MinVers = getTriple().getMinimumSupportedOSVersion();
+    return (!MinVers.empty() && MinVers > TargetVersion
+                ? MinVers
+                : TargetVersion) < VersionTuple(V0, V1, V2);
   }
 
+protected:
   /// Return true if c++17 aligned allocation/deallocation functions are not
   /// implemented in the c++ standard library of the deployment target we are
   /// targeting.
@@ -483,7 +503,7 @@ public:
     // This is only used with the non-fragile ABI and non-legacy dispatch.
 
     // Mixed dispatch is used everywhere except OS X before 10.6.
-    return !(isTargetMacOSBased() && isMacosxVersionLT(10, 6));
+    return !(isTargetMacOS() && isMacosxVersionLT(10, 6));
   }
 
   unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
@@ -491,9 +511,11 @@ public:
     // and for everything in 10.6 and beyond
     if (isTargetIOSBased() || isTargetWatchOSBased())
       return 1;
-    else if (isTargetMacOSBased() && !isMacosxVersionLT(10, 6))
+    if (isTargetMacABI())
       return 1;
-    else if (isTargetMacOSBased() && !isMacosxVersionLT(10, 5) && !KernelOrKext)
+    else if (isTargetMacOS() && !isMacosxVersionLT(10, 6))
+      return 1;
+    else if (isTargetMacOS() && !isMacosxVersionLT(10, 5) && !KernelOrKext)
       return 1;
 
     return 0;
