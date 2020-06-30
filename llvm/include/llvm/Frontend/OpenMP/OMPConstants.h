@@ -15,6 +15,7 @@
 #define LLVM_OPENMP_CONSTANTS_H
 
 #include "llvm/ADT/BitmaskEnum.h"
+
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 namespace llvm {
@@ -87,18 +88,6 @@ enum class IdentFlag {
 
 #define OMP_IDENT_FLAG(Enum, ...) constexpr auto Enum = omp::IdentFlag::Enum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
-
-/// Parse \p Str and return the directive it matches or OMPD_unknown if none.
-Directive getOpenMPDirectiveKind(StringRef Str);
-
-/// Return a textual representation of the directive \p D.
-StringRef getOpenMPDirectiveName(Directive D);
-
-/// Parse \p Str and return the clause it matches or OMPC_unknown if none.
-Clause getOpenMPClauseKind(StringRef Str);
-
-/// Return a textual representation of the clause \p C.
-StringRef getOpenMPClauseName(Clause C);
 
 /// Return true if \p C is a valid clause for \p D in version \p Version.
 bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
