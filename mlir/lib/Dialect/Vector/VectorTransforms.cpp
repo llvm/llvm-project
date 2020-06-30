@@ -1291,8 +1291,8 @@ public:
       Value b = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
       Value m;
       if (acc) {
-        Value z = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
-        m = rewriter.create<vector::FMAOp>(loc, b, op.rhs(), z);
+        Value e = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
+        m = rewriter.create<vector::FMAOp>(loc, b, op.rhs(), e);
       } else {
         m = rewriter.create<MulFOp>(loc, b, op.rhs());
       }
@@ -1732,7 +1732,7 @@ void ContractionOpToOuterProductOpLowering::rewrite(
 ///   ..
 ///   %x = combine %a %b ..
 /// until a pure contraction is reached (no free/batch dimensions),
-/// which is replaced by a fma/reduction op.
+/// which is replaced by a dot-product/reduction pair.
 ///
 /// TODO(ajcbik): break down into transpose/reshape/cast ops
 ///               when they become available to avoid code dup
@@ -1882,11 +1882,9 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   // Base case.
   if (lhsType.getRank() == 1) {
     assert(rhsType.getRank() == 1 && "corrupt contraction");
-    Value zero = rewriter.create<ConstantOp>(loc, lhsType,
-                                             rewriter.getZeroAttr(lhsType));
-    Value fma = rewriter.create<vector::FMAOp>(loc, op.lhs(), op.rhs(), zero);
+    Value m = rewriter.create<MulFOp>(loc, op.lhs(), op.rhs());
     StringAttr kind = rewriter.getStringAttr("add");
-    return rewriter.create<vector::ReductionOp>(loc, resType, kind, fma,
+    return rewriter.create<vector::ReductionOp>(loc, resType, kind, m,
                                                 op.acc());
   }
   // Construct new iterator types and affine map array attribute.
