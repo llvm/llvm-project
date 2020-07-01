@@ -119,22 +119,34 @@ TEST(ScalarTest, GetBytes) {
 TEST(ScalarTest, CastOperations) {
   long long a = 0xf1f2f3f4f5f6f7f8LL;
   Scalar a_scalar(a);
-  ASSERT_EQ((signed char)a, a_scalar.SChar());
-  ASSERT_EQ((unsigned char)a, a_scalar.UChar());
-  ASSERT_EQ((signed short)a, a_scalar.SShort());
-  ASSERT_EQ((unsigned short)a, a_scalar.UShort());
-  ASSERT_EQ((signed int)a, a_scalar.SInt());
-  ASSERT_EQ((unsigned int)a, a_scalar.UInt());
-  ASSERT_EQ((signed long)a, a_scalar.SLong());
-  ASSERT_EQ((unsigned long)a, a_scalar.ULong());
-  ASSERT_EQ((signed long long)a, a_scalar.SLongLong());
-  ASSERT_EQ((unsigned long long)a, a_scalar.ULongLong());
+  EXPECT_EQ((signed char)a, a_scalar.SChar());
+  EXPECT_EQ((unsigned char)a, a_scalar.UChar());
+  EXPECT_EQ((signed short)a, a_scalar.SShort());
+  EXPECT_EQ((unsigned short)a, a_scalar.UShort());
+  EXPECT_EQ((signed int)a, a_scalar.SInt());
+  EXPECT_EQ((unsigned int)a, a_scalar.UInt());
+  EXPECT_EQ((signed long)a, a_scalar.SLong());
+  EXPECT_EQ((unsigned long)a, a_scalar.ULong());
+  EXPECT_EQ((signed long long)a, a_scalar.SLongLong());
+  EXPECT_EQ((unsigned long long)a, a_scalar.ULongLong());
 
   int a2 = 23;
   Scalar a2_scalar(a2);
-  ASSERT_EQ((float)a2, a2_scalar.Float());
-  ASSERT_EQ((double)a2, a2_scalar.Double());
-  ASSERT_EQ((long double)a2, a2_scalar.LongDouble());
+  EXPECT_EQ((float)a2, a2_scalar.Float());
+  EXPECT_EQ((double)a2, a2_scalar.Double());
+  EXPECT_EQ((long double)a2, a2_scalar.LongDouble());
+
+  EXPECT_EQ(std::numeric_limits<unsigned int>::min(), Scalar(-1.0f).UInt());
+  EXPECT_EQ(std::numeric_limits<unsigned int>::max(), Scalar(1e11f).UInt());
+  EXPECT_EQ(std::numeric_limits<unsigned long long>::min(),
+            Scalar(-1.0).ULongLong());
+  EXPECT_EQ(std::numeric_limits<unsigned long long>::max(),
+            Scalar(1e22).ULongLong());
+
+  EXPECT_EQ(std::numeric_limits<int>::min(), Scalar(-1e11f).SInt());
+  EXPECT_EQ(std::numeric_limits<int>::max(), Scalar(1e11f).SInt());
+  EXPECT_EQ(std::numeric_limits<long long>::min(), Scalar(-1e22).SLongLong());
+  EXPECT_EQ(std::numeric_limits<long long>::max(), Scalar(1e22).SLongLong());
 }
 
 TEST(ScalarTest, ExtractBitfield) {
