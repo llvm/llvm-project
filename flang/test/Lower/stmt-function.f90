@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s
 
 ! Test statement function lowering
 
@@ -44,15 +44,15 @@ real function test_stmt_1(x, a)
 
   b = 5
 
-  !CHECK: %[[cst_8:.*]] = constant 8.000000e+00
-  !CHECK: fir.store %[[cst_8]] to %[[tmp1:.*]] : !fir.ref<f32>
+  !CHECK-DAG: %[[cst_8:.*]] = constant 8.000000e+00
+  !CHECK-DAG: fir.store %[[cst_8]] to %[[tmp1:.*]] : !fir.ref<f32>
   !CHECK-DAG: %[[foocall1:.*]] = fir.call @_QPfoo(%[[tmp1]])
   !CHECK-DAG: %[[aload1:.*]] = fir.load %arg1
-  !CHECK-DAG: %[[add1:.*]] = fir.addf %[[aload1]], %[[foocall1]]
+  !CHECK: %[[add1:.*]] = fir.addf %[[aload1]], %[[foocall1]]
   !CHECK: fir.store %[[add1]] to %[[res1]]
   res1 =  func1(8.)
 
-  !CHECK: %[[x:.*]] = fir.load %arg0
+  !CHECK-DAG: %[[x:.*]] = fir.load %arg0
   !CHECK-DAG: fir.store %[[x]] to %[[tmp2:.*]] : !fir.ref<f32>
   !CHECK-DAG: %[[foocall2:.*]] = fir.call @_QPfoo(%[[tmp2]])
   !CHECK-DAG: %[[aload2:.*]] = fir.load %arg1
@@ -81,16 +81,17 @@ real function test_stmt_no_args(x, y)
 end function
   
 ! Test statement function with character arguments
-integer function test_stmt_character(c, j, n)
+integer function test_stmt_character(c, j)
    integer :: i, j, func, argj
-   integer(8) :: n
-   character(n) :: c, arg
-   func(arg, argj) = len(arg) + argj
-   !CHECK: %[[j:.*]] = fir.load %arg1
-   !CHECK: %[[n:.*]] = fir.load %arg2
-   !CHECK: %[[n32:.*]] = fir.convert %[[n]] : (i64) -> i32
-   !CHECK: addi %[[n32]], %[[j]]
+   character(10) :: c, argc
+   !CHECK-DAG: %[[unboxed:.*]]:2 = fir.unboxchar %arg0 :
+   !CHECK-DAG: %[[c10:.*]] = constant 10 :
+   !CHECK: %[[c:.*]] = fir.emboxchar %[[unboxed]]#0, %[[c10]] 
+
+   func(argc, argj) = len_trim(argc, 4) + argj
+   !CHECK-DAG: %[[j:.*]] = fir.load %arg1
+   !CHECK-DAG: %[[c4:.*]] = constant 4 :
+   !CHECK-DAG: %[[len_trim:.*]] = call @fir.len_trim.i32.bc1.i32(%[[c]], %[[c4]])
+   !CHECK: addi %[[len_trim]], %[[j]]
    test_stmt_character = func(c, j)
-end function
-  
-  
+end function  
