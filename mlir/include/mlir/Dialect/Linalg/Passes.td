@@ -61,7 +61,9 @@ def LinalgPromotion : FunctionPass<"linalg-promote-subviews"> {
   let constructor = "mlir::createLinalgPromotionPass()";
   let options = [
     Option<"dynamicBuffers", "test-promote-dynamic", "bool",
-           /*default=*/"false", "Test generation of dynamic promoted buffers">
+           /*default=*/"false", "Test generation of dynamic promoted buffers">,
+    Option<"useAlloca", "test-use-alloca", "bool",
+           /*default=*/"false", "Test generation of alloca'ed buffers.">
   ];
 }
 
