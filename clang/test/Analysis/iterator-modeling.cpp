@@ -1976,26 +1976,23 @@ void clang_analyzer_printState();
 
 void print_state(std::vector<int> &V) {
   const auto i0 = V.cbegin();
-  const auto i1 = V.cbegin() + 1;
   clang_analyzer_printState();
 
   // CHECK:      "checker_messages": [
   // CHECK:   { "checker": "alpha.cplusplus.IteratorModeling", "messages": [
   // CHECK-NEXT:     "Iterator Positions :",
   // CHECK-NEXT:     "i0 : Valid ; Container == SymRegion{reg_$[[#]]<std::vector<int> & V>} ; Offset == conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]}"
-  // CHECK-NEXT:     "i1 : Valid ; Container == SymRegion{reg_$[[#]]<std::vector<int> & V>} ; Offset == (conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]}) + 1"
   // CHECK-NEXT:   ]}
 
   *i0;
-  *i1;
-  const auto i2 = V.cend();
+  const auto i1 = V.cend();
   clang_analyzer_printState();
 
   // CHECK:      "checker_messages": [
   // CHECK:   { "checker": "alpha.cplusplus.IteratorModeling", "messages": [
   // CHECK-NEXT:     "Iterator Positions :",
-  // CHECK-NEXT:     "i2 : Valid ; Container == SymRegion{reg_$[[#]]<std::vector<int> & V>} ; Offset == conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]}"
+  // CHECK-NEXT:     "i1 : Valid ; Container == SymRegion{reg_$[[#]]<std::vector<int> & V>} ; Offset == conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]}"
   // CHECK-NEXT:   ]}
 
-  *i2;
+  *i1;
 }
