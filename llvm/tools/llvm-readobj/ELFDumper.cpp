@@ -2215,13 +2215,17 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
     // equal nchain". Check to see if the DT_HASH hash table nchain value
     // conflicts with the number of symbols in the dynamic symbol table
     // according to the section header.
-    if (HashTable &&
-        HashTable->nchain != DynSymRegion->Size / DynSymRegion->EntSize)
-      reportUniqueWarning(createError(
-          "hash table nchain (" + Twine(HashTable->nchain) +
-          ") differs from symbol count derived from SHT_DYNSYM section "
-          "header (" +
-          Twine(DynSymRegion->Size / DynSymRegion->EntSize) + ")"));
+    if (HashTable) {
+      if (DynSymRegion->EntSize == 0)
+        reportUniqueWarning(
+            createError("SHT_DYNSYM section has sh_entsize == 0"));
+      else if (HashTable->nchain != DynSymRegion->Size / DynSymRegion->EntSize)
+        reportUniqueWarning(createError(
+            "hash table nchain (" + Twine(HashTable->nchain) +
+            ") differs from symbol count derived from SHT_DYNSYM section "
+            "header (" +
+            Twine(DynSymRegion->Size / DynSymRegion->EntSize) + ")"));
+    }
   }
 
   // Delay the creation of the actual dynamic symbol table until now, so that

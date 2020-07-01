@@ -73,10 +73,10 @@ enum NodeType : unsigned {
   SBC, // adc, sbc instructions
 
   // Arithmetic instructions
-  ADD_MERGE_OP1,
-  FADD_MERGE_OP1,
-  SDIV_MERGE_OP1,
-  UDIV_MERGE_OP1,
+  ADD_PRED,
+  FADD_PRED,
+  SDIV_PRED,
+  UDIV_PRED,
   SMIN_MERGE_OP1,
   UMIN_MERGE_OP1,
   SMAX_MERGE_OP1,

@@ -35,15 +35,15 @@ public:
   // The private parse() helpers follow the same pattern.
   bool parse(Fragment &F, Node &N) {
     DictParser Dict("Config", this);
-    Dict.handle("If", [&](Node &N) { return parse(F.Condition, N); });
+    Dict.handle("If", [&](Node &N) { return parse(F.If, N); });
     Dict.handle("CompileFlags",
                 [&](Node &N) { return parse(F.CompileFlags, N); });
     return Dict.parse(N);
   }
 
 private:
-  bool parse(Fragment::ConditionBlock &F, Node &N) {
-    DictParser Dict("Condition", this);
+  bool parse(Fragment::IfBlock &F, Node &N) {
+    DictParser Dict("If", this);
     Dict.unrecognized(
         [&](llvm::StringRef) { F.HasUnrecognizedCondition = true; });
     Dict.handle("PathMatch", [&](Node &N) {

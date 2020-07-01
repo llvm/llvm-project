@@ -32,6 +32,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONFIGFRAGMENT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONFIGFRAGMENT_H
 
+#include "ConfigProvider.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
@@ -59,11 +60,6 @@ private:
   T Value;
 };
 
-/// Used to report problems in parsing or interpreting a config.
-/// Errors reflect structurally invalid config that should be user-visible.
-/// Warnings reflect e.g. unknown properties that are recoverable.
-using DiagnosticCallback = llvm::function_ref<void(const llvm::SMDiagnostic &)>;
-
 /// A chunk of configuration obtained from a config file, LSP, or elsewhere.
 struct Fragment {
   /// Parses fragments from a YAML file (one from each --- delimited document).
@@ -72,6 +68,17 @@ struct Fragment {
   static std::vector<Fragment> parseYAML(llvm::StringRef YAML,
                                          llvm::StringRef BufferName,
                                          DiagnosticCallback);
+
+  /// Analyzes and consumes this fragment, possibly yielding more diagnostics.
+  /// This always produces a usable result (errors are recovered).
+  ///
+  /// Typically, providers will compile a Fragment once when it's first loaded,
+  /// caching the result for reuse.
+  /// Like a compiled program, this is good for performance and also encourages
+  /// errors to be reported early and only once.
+  ///
+  /// The returned function is a cheap-copyable wrapper of refcounted internals.
+  CompiledFragment compile(DiagnosticCallback) &&;
 
   /// These fields are not part of the user-specified configuration, but
   /// instead are populated by the parser to describe the configuration source.
@@ -87,24 +94,25 @@ struct Fragment {
   };
   SourceInfo Source;
 
-  /// Conditions restrict when a Fragment applies.
+  /// Conditions in the If block restrict when a Fragment applies.
   ///
   /// Each separate condition must match (combined with AND).
   /// When one condition has multiple values, any may match (combined with OR).
+  /// e.g. `PathMatch: [foo/.*, bar/.*]` matches files in either directory.
   ///
   /// Conditions based on a file's path use the following form:
   /// - if the fragment came from a project directory, the path is relative
   /// - if the fragment is global (e.g. user config), the path is absolute
   /// - paths always use forward-slashes (UNIX-style)
   /// If no file is being processed, these conditions will not match.
-  struct ConditionBlock {
+  struct IfBlock {
     /// The file being processed must fully match a regular expression.
     std::vector<Located<std::string>> PathMatch;
     /// An unrecognized key was found while parsing the condition.
     /// The condition will evaluate to false.
     bool HasUnrecognizedCondition = false;
   };
-  ConditionBlock Condition;
+  IfBlock If;
 
   struct CompileFlagsBlock {
     std::vector<Located<std::string>> Add;
