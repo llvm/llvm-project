@@ -114,9 +114,6 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
 
 /// Basic common sub-expression elimination.
 struct BasicCSE : public fir::BasicCSEBase<BasicCSE> {
-  BasicCSE() {}
-  BasicCSE(const BasicCSE &) {}
-
   /// Shared implementation of operation elimination and scoped map definitions.
   using AllocatorTy = llvm::RecyclingAllocator<
       llvm::BumpPtrAllocator,
