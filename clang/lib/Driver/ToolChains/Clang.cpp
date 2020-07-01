@@ -3953,7 +3953,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  const llvm::Triple *AuxTriple = IsCuda ? TC.getAuxTriple() : nullptr;
+  const llvm::Triple *AuxTriple =
+      (IsCuda || IsHIP) ? TC.getAuxTriple() : nullptr;
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
   bool IsIAMCU = RawTriple.isOSIAMCU();
 
@@ -4868,10 +4869,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                   options::OPT_finstrument_functions_after_inlining,
                   options::OPT_finstrument_function_entry_bare);
 
-  // NVPTX doesn't support PGO or coverage. There's no runtime support for
-  // sampling, overhead of call arc collection is way too high and there's no
-  // way to collect the output.
-  if (!Triple.isNVPTX())
+  // NVPTX/AMDGCN doesn't support PGO or coverage. There's no runtime support
+  // for sampling, overhead of call arc collection is way too high and there's
+  // no way to collect the output.
+  if (!Triple.isNVPTX() && !Triple.isAMDGCN())
     addPGOAndCoverageFlags(TC, C, D, Output, Args, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
@@ -4990,6 +4991,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     Args.AddLastArg(CmdArgs, options::OPT_ftrigraphs,
                     options::OPT_fno_trigraphs);
+
+    // HIP headers has minimum C++ standard requirements. Therefore set the
+    // default language standard.
+    if (IsHIP)
+      CmdArgs.push_back(IsWindowsMSVC ? "-std=c++14" : "-std=c++11");
   }
 
   // GCC's behavior for -Wwrite-strings is a bit strange:
@@ -5398,8 +5404,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Forward -cl options to -cc1
   RenderOpenCLOptions(Args, CmdArgs);
 
-  if (Args.hasFlag(options::OPT_fhip_new_launch_api,
-                   options::OPT_fno_hip_new_launch_api, false))
+  if (IsHIP && Args.hasFlag(options::OPT_fhip_new_launch_api,
+                            options::OPT_fno_hip_new_launch_api, true))
     CmdArgs.push_back("-fhip-new-launch-api");
 
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
