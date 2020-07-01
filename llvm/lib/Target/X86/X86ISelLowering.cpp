@@ -33318,11 +33318,12 @@ X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
     if (EltSize > ActiveBits && EltSize > 1 && isTypeLegal(VT) &&
         (Opcode == ISD::OR || Opcode == ISD::XOR) &&
         NeedsSignExtension(Op.getOperand(1), ActiveBits)) {
-      EVT BoolVT = EVT::getVectorVT(*TLO.DAG.getContext(), MVT::i1,
+      EVT ExtSVT = EVT::getIntegerVT(*TLO.DAG.getContext(), ActiveBits);
+      EVT ExtVT = EVT::getVectorVT(*TLO.DAG.getContext(), ExtSVT,
                                     VT.getVectorNumElements());
       SDValue NewC =
           TLO.DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(Op), VT,
-                          Op.getOperand(1), TLO.DAG.getValueType(BoolVT));
+                          Op.getOperand(1), TLO.DAG.getValueType(ExtVT));
       SDValue NewOp =
           TLO.DAG.getNode(Opcode, SDLoc(Op), VT, Op.getOperand(0), NewC);
       return TLO.CombineTo(Op, NewOp);
