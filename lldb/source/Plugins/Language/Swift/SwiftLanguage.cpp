@@ -328,6 +328,13 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       "Swift.Array summary provider",
       ConstString("_TtCs22__SwiftDeferredNSArray"), summary_flags, false);
 
+  AddCXXSummary(
+      swift_category_sp,
+      lldb_private::formatters::swift::UnsafeBufferPointerSummaryProvider,
+      "Swift.Unsafe[Mutable][Raw]BufferPointer",
+      ConstString("^Swift.Unsafe(Mutable)?(Raw)?BufferPointer(<.+>)?$"),
+      summary_flags, true);
+
   DictionaryConfig::Get()
     .RegisterSummaryProviders(swift_category_sp, summary_flags);
   SetConfig::Get()
@@ -384,6 +391,14 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                   ConstString("Swift.__SwiftDeferredNSArray"),
                   synth_flags,
                   false);
+
+  AddCXXSynthetic(
+      swift_category_sp,
+      lldb_private::formatters::swift::
+          UnsafeBufferPointerSyntheticFrontEndCreator,
+      "Swift.Unsafe[Mutable][Raw]BufferPointer",
+      ConstString("^Swift.Unsafe(Mutable)?(Raw)?BufferPointer(<.+>)?$"),
+      synth_flags, true);
 
   DictionaryConfig::Get()
     .RegisterSyntheticChildrenCreators(swift_category_sp, synth_flags);
