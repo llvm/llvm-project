@@ -5,62 +5,62 @@
 ## Specifying -change once:
 # RUN: cp %t %t.copy
 # RUN: llvm-install-name-tool -change /usr/dylib/LOAD /usr/long/long/dylib/LOAD %t.copy
-# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE --implicit-check-not=/usr
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE --implicit-check-not='name /usr'
 
-# CHANGE: /usr/long/long/dylib/LOAD
-# CHANGE: /usr/dylib/WEAK
+# CHANGE: name /usr/long/long/dylib/LOAD
+# CHANGE: name /usr/dylib/WEAK
 
 ## Specifying -change multiple times:
 # RUN: cp %t %t.copy
 # RUN: llvm-install-name-tool -change /usr/dylib/WEAK /usr/sh/WEAK \
 # RUN:                        -change /usr/dylib/LOAD /usr/sh/LOAD  %t.copy
-# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-MULTIPLE --implicit-check-not=/usr
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-MULTIPLE --implicit-check-not='name /usr'
 
-# CHANGE-MULTIPLE: /usr/sh/LOAD
-# CHANGE-MULTIPLE: /usr/sh/WEAK
+# CHANGE-MULTIPLE: name /usr/sh/LOAD
+# CHANGE-MULTIPLE: name /usr/sh/WEAK
 
 ## Changing same dependent library name multiple times:
 # RUN: cp %t %t.copy
 # RUN: llvm-install-name-tool -change /usr/dylib/LOAD /usr/LOAD \
 # RUN:                        -change /usr/dylib/LOAD /usr/XXXX %t.copy
-# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-REPEAT --implicit-check-not=/usr
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-REPEAT --implicit-check-not='name /usr'
 
-# CHANGE-REPEAT: /usr/LOAD
-# CHANGE-REPEAT: /usr/dylib/WEAK
+# CHANGE-REPEAT: name /usr/LOAD
+# CHANGE-REPEAT: name /usr/dylib/WEAK
 
 ## Specifying dependent library names in a chain:
 # RUN: cp %t %t.copy
 # RUN: llvm-install-name-tool -change /usr/dylib/LOAD /usr/XX/LOAD \
 # RUN:                        -change /usr/XX/LOAD /usr/YY/LOAD %t.copy
-# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-CHAIN --implicit-check-not=/usr
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-CHAIN --implicit-check-not='name /usr'
 
-# CHANGE-CHAIN: /usr/XX/LOAD
-# CHANGE-CHAIN: /usr/dylib/WEAK
+# CHANGE-CHAIN: name /usr/XX/LOAD
+# CHANGE-CHAIN: name /usr/dylib/WEAK
 
 ## Changing multiple dependent library names where one exists and the other doesn't:
 # RUN: cp %t %t.copy
 # RUN: llvm-install-name-tool -change /usr/dylib/LOAD /usr/JOJO/LOAD \
 # RUN:                        -change /usr/BIZARRE /usr/KOKO/LOAD %t.copy
-# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-SWITCH --implicit-check-not=/usr
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-SWITCH --implicit-check-not='name /usr'
 
-# CHANGE-SWITCH: /usr/JOJO/LOAD
-# CHANGE-SWITCH: /usr/dylib/WEAK
+# CHANGE-SWITCH: name /usr/JOJO/LOAD
+# CHANGE-SWITCH: name /usr/dylib/WEAK
 
 ## Changing to a common dependent library name:
 # RUN: cp %t %t.copy
 # RUN: llvm-install-name-tool -change /usr/dylib/LOAD /usr/COMMON \
 # RUN:                        -change /usr/dylib/WEAK /usr/COMMON %t.copy
-# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-COMMON --implicit-check-not=/usr
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-COMMON --implicit-check-not='name /usr'
 
-# CHANGE-COMMON: /usr/COMMON
-# CHANGE-COMMON: /usr/COMMON
+# CHANGE-COMMON: name /usr/COMMON
+# CHANGE-COMMON: name /usr/COMMON
 
 ## Change all common dependent library names at once:
 # RUN: llvm-install-name-tool -change /usr/COMMON /usr/ONCE %t.copy
-# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-ONCE --implicit-check-not=/usr
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-ONCE --implicit-check-not='name /usr'
 
-# CHANGE-ONCE: /usr/ONCE
-# CHANGE-ONCE: /usr/ONCE
+# CHANGE-ONCE: name /usr/ONCE
+# CHANGE-ONCE: name /usr/ONCE
 
 ## Check that -change option has no effect if the binary doesn't contain old install name:
 # RUN: cp %t %t1
