@@ -75,10 +75,11 @@ to provide our own storage class.
 ```c++
 /// This class defines a simple parameterless type. All derived types must
 /// inherit from the CRTP class 'Type::TypeBase'. It takes as template
-/// parameters the concrete type (SimpleType), and the base class to use (Type).
+/// parameters the concrete type (SimpleType), the base class to use (Type),
+/// using the default storage class (TypeStorage) as the storage type.
 /// 'Type::TypeBase' also provides several utility methods to simplify type
 /// construction.
-class SimpleType : public Type::TypeBase<SimpleType, Type> {
+class SimpleType : public Type::TypeBase<SimpleType, Type, TypeStorage> {
 public:
   /// Inherit some necessary constructors from 'TypeBase'.
   using Base::Base;
