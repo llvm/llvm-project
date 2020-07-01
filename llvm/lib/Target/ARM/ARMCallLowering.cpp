@@ -203,7 +203,7 @@ void ARMCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
     // Even if there is no splitting to do, we still want to replace the
     // original type (e.g. pointer type -> integer).
     auto Flags = OrigArg.Flags[0];
-    Flags.setOrigAlign(Align(DL.getABITypeAlignment(OrigArg.Ty)));
+    Flags.setOrigAlign(DL.getABITypeAlign(OrigArg.Ty));
     SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
                            Flags, OrigArg.IsFixed);
     return;
@@ -215,7 +215,7 @@ void ARMCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
     Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
     auto Flags = OrigArg.Flags[0];
 
-    Flags.setOrigAlign(Align(DL.getABITypeAlignment(SplitTy)));
+    Flags.setOrigAlign(DL.getABITypeAlign(SplitTy));
 
     bool NeedsConsecutiveRegisters =
         TLI.functionArgumentNeedsConsecutiveRegisters(

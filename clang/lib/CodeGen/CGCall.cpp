@@ -4245,7 +4245,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   llvm::FunctionType *IRFuncTy = getTypes().GetFunctionType(CallInfo);
 
   const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
     // We can only guarantee that a function is called from the correct
     // context/function based on the appropriate target attributes,
     // so only check in the case where we have both always_inline and target
@@ -4255,6 +4255,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     if (TargetDecl->hasAttr<AlwaysInlineAttr>() &&
         TargetDecl->hasAttr<TargetAttr>())
       checkTargetFeatures(Loc, FD);
+
+    // Some architectures (such as x86-64) have the ABI changed based on
+    // attribute-target/features. Give them a chance to diagnose.
+    CGM.getTargetCodeGenInfo().checkFunctionCallABI(
+        CGM, Loc, dyn_cast_or_null<FunctionDecl>(CurCodeDecl), FD, CallArgs);
+  }
 
 #ifndef NDEBUG
   if (!(CallInfo.isVariadic() && CallInfo.getArgStruct())) {

@@ -1652,10 +1652,8 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
 
   // Align the before byte array to the global's minimum alignment so that we
   // don't break any alignment requirements on the global.
-  MaybeAlign Alignment(B.GV->getAlignment());
-  if (!Alignment)
-    Alignment =
-        Align(M.getDataLayout().getABITypeAlignment(B.GV->getValueType()));
+  Align Alignment = M.getDataLayout().getValueOrABITypeAlignment(
+      B.GV->getAlign(), B.GV->getValueType());
   B.Before.Bytes.resize(alignTo(B.Before.Bytes.size(), Alignment));
 
   // Before was stored in reverse order; flip it now.

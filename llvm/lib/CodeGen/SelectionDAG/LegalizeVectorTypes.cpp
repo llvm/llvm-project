@@ -1912,11 +1912,11 @@ void DAGTypeLegalizer::SplitVecRes_VAARG(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue SV = N->getOperand(2);
   SDLoc dl(N);
 
-  const unsigned Alignment = DAG.getDataLayout().getABITypeAlignment(
-      NVT.getTypeForEVT(*DAG.getContext()));
+  const Align Alignment =
+      DAG.getDataLayout().getABITypeAlign(NVT.getTypeForEVT(*DAG.getContext()));
 
-  Lo = DAG.getVAArg(NVT, dl, Chain, Ptr, SV, Alignment);
-  Hi = DAG.getVAArg(NVT, dl, Lo.getValue(1), Ptr, SV, Alignment);
+  Lo = DAG.getVAArg(NVT, dl, Chain, Ptr, SV, Alignment.value());
+  Hi = DAG.getVAArg(NVT, dl, Lo.getValue(1), Ptr, SV, Alignment.value());
   Chain = Hi.getValue(1);
 
   // Modified the chain - switch anything that used the old chain to use

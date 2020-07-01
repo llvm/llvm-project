@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -linalg-promote-subviews | FileCheck %s
 // RUN: mlir-opt %s -linalg-promote-subviews="test-promote-dynamic" | FileCheck %s --check-prefix=DYNAMIC
+// RUN: mlir-opt %s -linalg-promote-subviews="test-use-alloca" | FileCheck %s --check-prefix=ALLOCA
 
 #map1 = affine_map<(d0) -> (d0 + 2)>
 #map2 = affine_map<(d0) -> (d0 + 4)>
@@ -45,16 +46,19 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         %[[vC:.*]] = subview {{.*}} : memref<?x?xf32>
 ///
 //       CHECK:         %[[tmpA:.*]] = alloc() : memref<32xi8>
+//      ALLOCA:         %[[tmpA:.*]] = alloca() : memref<32xi8>
 //       CHECK:         %[[fullA:.*]] = std.view %[[tmpA]][{{.*}}][{{.*}}] : memref<32xi8> to memref<?x?xf32>
 //     DYNAMIC:         std.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?x?xf32>
 //       CHECK:         %[[partialA:.*]] = subview %[[fullA]]{{.*}} : memref<?x?xf32> to memref<?x?xf32, #[[$strided2D_dynamic]]>
 ///
 //       CHECK:         %[[tmpB:.*]] = alloc() : memref<48xi8>
+//      ALLOCA:         %[[tmpB:.*]] = alloca() : memref<48xi8>
 //       CHECK:         %[[fullB:.*]] = std.view %[[tmpB]][{{.*}}][{{.*}}] : memref<48xi8> to memref<?x?xf32>
 //     DYNAMIC:         std.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?x?xf32>
 //       CHECK:         %[[partialB:.*]] = subview %[[fullB]]{{.*}} : memref<?x?xf32> to memref<?x?xf32, #[[$strided2D_dynamic]]>
 ///
 //       CHECK:         %[[tmpC:.*]] = alloc() : memref<24xi8>
+//      ALLOCA:         %[[tmpC:.*]] = alloca() : memref<24xi8>
 //       CHECK:         %[[fullC:.*]] = std.view %[[tmpC]][{{.*}}][{{.*}}] : memref<24xi8> to memref<?x?xf32>
 //     DYNAMIC:         std.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?x?xf32>
 //       CHECK:         %[[partialC:.*]] = subview %[[fullC]]{{.*}} : memref<?x?xf32> to memref<?x?xf32, #[[$strided2D_dynamic]]>
@@ -75,6 +79,9 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         dealloc %[[tmpA]] : memref<32xi8>
 //       CHECK:         dealloc %[[tmpB]] : memref<48xi8>
 //       CHECK:         dealloc %[[tmpC]] : memref<24xi8>
+//  ALLOCA-NOT:         dealloc %[[tmpA]] : memref<32xi8>
+//  ALLOCA-NOT:         dealloc %[[tmpB]] : memref<48xi8>
+//  ALLOCA-NOT:         dealloc %[[tmpC]] : memref<24xi8>
 
 // -----
 

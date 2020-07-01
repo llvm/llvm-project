@@ -8617,7 +8617,7 @@ void SelectionDAGBuilder::visitVAArg(const VAArgInst &I) {
   SDValue V = DAG.getVAArg(
       TLI.getMemValueType(DAG.getDataLayout(), I.getType()), getCurSDLoc(),
       getRoot(), getValue(I.getOperand(0)), DAG.getSrcValue(I.getOperand(0)),
-      DL.getABITypeAlignment(I.getType()));
+      DL.getABITypeAlign(I.getType()).value());
   DAG.setRoot(V.getValue(1));
 
   if (I.getType()->isPointerTy())
