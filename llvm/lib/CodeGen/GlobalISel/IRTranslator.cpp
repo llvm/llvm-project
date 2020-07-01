@@ -1938,7 +1938,7 @@ bool IRTranslator::translateVAArg(const User &U, MachineIRBuilder &MIRBuilder) {
   // anyway but that's not guaranteed.
   MIRBuilder.buildInstr(TargetOpcode::G_VAARG, {getOrCreateVReg(U)},
                         {getOrCreateVReg(*U.getOperand(0)),
-                         uint64_t(DL->getABITypeAlignment(U.getType()))});
+                         DL->getABITypeAlign(U.getType()).value()});
   return true;
 }
 

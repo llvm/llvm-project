@@ -119,7 +119,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   }
   if (Attrs.hasAttribute(OpIdx, Attribute::Nest))
     Flags.setNest();
-  Flags.setOrigAlign(Align(DL.getABITypeAlignment(Arg.Ty)));
+  Flags.setOrigAlign(DL.getABITypeAlign(Arg.Ty));
 }
 
 template void
