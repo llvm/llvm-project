@@ -17,79 +17,62 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
+
+using OmpDirectiveSet = Fortran::common::EnumSet<llvm::omp::Directive,
+    llvm::omp::Directive_enumSize>;
+
+using OmpClauseSet =
+    Fortran::common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
+
+namespace llvm {
+namespace omp {
+static OmpDirectiveSet parallelSet{Directive::OMPD_distribute_parallel_do,
+    Directive::OMPD_distribute_parallel_do_simd, Directive::OMPD_parallel,
+    Directive::OMPD_parallel_do, Directive::OMPD_parallel_do_simd,
+    Directive::OMPD_parallel_sections, Directive::OMPD_parallel_workshare,
+    Directive::OMPD_target_parallel, Directive::OMPD_target_parallel_do,
+    Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_parallel_do,
+    Directive::OMPD_teams_distribute_parallel_do_simd};
+static OmpDirectiveSet doSet{Directive::OMPD_distribute_parallel_do,
+    Directive::OMPD_distribute_parallel_do_simd, Directive::OMPD_parallel,
+    Directive::OMPD_parallel_do, Directive::OMPD_parallel_do_simd,
+    Directive::OMPD_do, Directive::OMPD_do_simd,
+    Directive::OMPD_target_parallel_do, Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_parallel_do,
+    Directive::OMPD_teams_distribute_parallel_do_simd};
+static OmpDirectiveSet doSimdSet{Directive::OMPD_distribute_parallel_do_simd,
+    Directive::OMPD_parallel_do_simd, Directive::OMPD_do_simd,
+    Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_parallel_do_simd};
+static OmpDirectiveSet taskloopSet{
+    Directive::OMPD_taskloop, Directive::OMPD_taskloop_simd};
+static OmpDirectiveSet targetSet{Directive::OMPD_target,
+    Directive::OMPD_target_parallel, Directive::OMPD_target_parallel_do,
+    Directive::OMPD_target_parallel_do_simd, Directive::OMPD_target_simd,
+    Directive::OMPD_target_teams, Directive::OMPD_target_teams_distribute,
+    Directive::OMPD_target_teams_distribute_simd};
+static OmpDirectiveSet simdSet{Directive::OMPD_distribute_parallel_do_simd,
+    Directive::OMPD_distribute_simd, Directive::OMPD_parallel_do_simd,
+    Directive::OMPD_do_simd, Directive::OMPD_simd,
+    Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_simd, Directive::OMPD_target_simd,
+    Directive::OMPD_taskloop_simd,
+    Directive::OMPD_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_simd};
+static OmpDirectiveSet taskGeneratingSet{
+    OmpDirectiveSet{Directive::OMPD_task} | taskloopSet};
+} // namespace omp
+} // namespace llvm
 
 namespace Fortran::semantics {
-
-ENUM_CLASS(OmpDirective, ATOMIC, BARRIER, CANCEL, CANCELLATION_POINT, CRITICAL,
-    DECLARE_REDUCTION, DECLARE_SIMD, DECLARE_TARGET, DISTRIBUTE,
-    DISTRIBUTE_PARALLEL_DO, DISTRIBUTE_PARALLEL_DO_SIMD, DISTRIBUTE_SIMD, DO,
-    DO_SIMD, END_CRITICAL, END_DO, END_DO_SIMD, END_SECTIONS, END_SINGLE,
-    END_WORKSHARE, FLUSH, MASTER, ORDERED, PARALLEL, PARALLEL_DO,
-    PARALLEL_DO_SIMD, PARALLEL_SECTIONS, PARALLEL_WORKSHARE, SECTION, SECTIONS,
-    SIMD, SINGLE, TARGET, TARGET_DATA, TARGET_ENTER_DATA, TARGET_EXIT_DATA,
-    TARGET_PARALLEL, TARGET_PARALLEL_DO, TARGET_PARALLEL_DO_SIMD, TARGET_SIMD,
-    TARGET_TEAMS, TARGET_TEAMS_DISTRIBUTE, TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO,
-    TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD, TARGET_TEAMS_DISTRIBUTE_SIMD,
-    TARGET_UPDATE, TASK, TASKGROUP, TASKLOOP, TASKLOOP_SIMD, TASKWAIT,
-    TASKYIELD, TEAMS, TEAMS_DISTRIBUTE, TEAMS_DISTRIBUTE_PARALLEL_DO,
-    TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD, TEAMS_DISTRIBUTE_SIMD, THREADPRIVATE,
-    WORKSHARE)
-
-using OmpDirectiveSet = common::EnumSet<OmpDirective, OmpDirective_enumSize>;
-
-ENUM_CLASS(OmpClause, ALIGNED, COLLAPSE, COPYIN, COPYPRIVATE, DEFAULT,
-    DEFAULTMAP, DEPEND, DEVICE, DIST_SCHEDULE, FINAL, FIRSTPRIVATE, FROM,
-    GRAINSIZE, IF, INBRANCH, IS_DEVICE_PTR, LASTPRIVATE, LINEAR, LINK, MAP,
-    MERGEABLE, NOGROUP, NOTINBRANCH, NOWAIT, NUM_TASKS, NUM_TEAMS, NUM_THREADS,
-    ORDERED, PRIORITY, PRIVATE, PROC_BIND, REDUCTION, SAFELEN, SCHEDULE, SHARED,
-    SIMD, SIMDLEN, THREAD_LIMIT, THREADS, TO, UNIFORM, UNTIED, USE_DEVICE_PTR)
-
-using OmpClauseSet = common::EnumSet<OmpClause, OmpClause_enumSize>;
-
-static constexpr OmpDirectiveSet parallelSet{
-    OmpDirective::DISTRIBUTE_PARALLEL_DO,
-    OmpDirective::DISTRIBUTE_PARALLEL_DO_SIMD, OmpDirective::PARALLEL,
-    OmpDirective::PARALLEL_DO, OmpDirective::PARALLEL_DO_SIMD,
-    OmpDirective::PARALLEL_SECTIONS, OmpDirective::PARALLEL_WORKSHARE,
-    OmpDirective::TARGET_PARALLEL, OmpDirective::TARGET_PARALLEL_DO,
-    OmpDirective::TARGET_PARALLEL_DO_SIMD,
-    OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO,
-    OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD,
-    OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO,
-    OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD};
-static constexpr OmpDirectiveSet doSet{OmpDirective::DISTRIBUTE_PARALLEL_DO,
-    OmpDirective::DISTRIBUTE_PARALLEL_DO_SIMD, OmpDirective::PARALLEL_DO,
-    OmpDirective::PARALLEL_DO_SIMD, OmpDirective::DO, OmpDirective::DO_SIMD,
-    OmpDirective::TARGET_PARALLEL_DO, OmpDirective::TARGET_PARALLEL_DO_SIMD,
-    OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO,
-    OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD,
-    OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO,
-    OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD};
-static constexpr OmpDirectiveSet doSimdSet{
-    OmpDirective::DISTRIBUTE_PARALLEL_DO_SIMD, OmpDirective::PARALLEL_DO_SIMD,
-    OmpDirective::DO_SIMD, OmpDirective::TARGET_PARALLEL_DO_SIMD,
-    OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD,
-    OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD};
-static constexpr OmpDirectiveSet taskloopSet{
-    OmpDirective::TASKLOOP, OmpDirective::TASKLOOP_SIMD};
-static constexpr OmpDirectiveSet targetSet{OmpDirective::TARGET,
-    OmpDirective::TARGET_PARALLEL, OmpDirective::TARGET_PARALLEL_DO,
-    OmpDirective::TARGET_PARALLEL_DO_SIMD, OmpDirective::TARGET_SIMD,
-    OmpDirective::TARGET_TEAMS, OmpDirective::TARGET_TEAMS_DISTRIBUTE,
-    OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO,
-    OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD,
-    OmpDirective::TARGET_TEAMS_DISTRIBUTE_SIMD};
-static constexpr OmpDirectiveSet simdSet{
-    OmpDirective::DISTRIBUTE_PARALLEL_DO_SIMD, OmpDirective::DISTRIBUTE_SIMD,
-    OmpDirective::PARALLEL_DO_SIMD, OmpDirective::DO_SIMD, OmpDirective::SIMD,
-    OmpDirective::TARGET_PARALLEL_DO_SIMD,
-    OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD,
-    OmpDirective::TARGET_TEAMS_DISTRIBUTE_SIMD, OmpDirective::TARGET_SIMD,
-    OmpDirective::TASKLOOP_SIMD,
-    OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD,
-    OmpDirective::TEAMS_DISTRIBUTE_SIMD};
-static constexpr OmpDirectiveSet taskGeneratingSet{
-    OmpDirectiveSet{OmpDirective::TASK} | taskloopSet};
 
 class OmpStructureChecker : public virtual BaseChecker {
 public:
@@ -169,18 +152,18 @@ public:
 
 private:
   struct OmpContext {
-    OmpContext(parser::CharBlock source, OmpDirective d)
+    OmpContext(parser::CharBlock source, llvm::omp::Directive d)
         : directiveSource{source}, directive{d} {}
     parser::CharBlock directiveSource{nullptr};
     parser::CharBlock clauseSource{nullptr};
-    OmpDirective directive;
+    llvm::omp::Directive directive;
     OmpClauseSet allowedClauses{};
     OmpClauseSet allowedOnceClauses{};
     OmpClauseSet allowedExclusiveClauses{};
     OmpClauseSet requiredClauses{};
 
     const parser::OmpClause *clause{nullptr};
-    std::multimap<OmpClause, const parser::OmpClause *> clauseInfo;
+    std::multimap<llvm::omp::Clause, const parser::OmpClause *> clauseInfo;
   };
   // back() is the top of the stack
   OmpContext &GetContext() {
@@ -205,7 +188,7 @@ private:
     GetContext().clauseSource = clause.source;
     GetContext().clause = &clause;
   }
-  void SetContextDirectiveEnum(OmpDirective dir) {
+  void SetContextDirectiveEnum(llvm::omp::Directive dir) {
     GetContext().directive = dir;
   }
   void SetContextAllowed(const OmpClauseSet &allowed) {
@@ -220,30 +203,30 @@ private:
   void SetContextRequired(const OmpClauseSet &required) {
     GetContext().requiredClauses = required;
   }
-  void SetContextClauseInfo(OmpClause type) {
+  void SetContextClauseInfo(llvm::omp::Clause type) {
     GetContext().clauseInfo.emplace(type, GetContext().clause);
   }
-  const parser::OmpClause *FindClause(OmpClause type) {
+  const parser::OmpClause *FindClause(llvm::omp::Clause type) {
     auto it{GetContext().clauseInfo.find(type)};
     if (it != GetContext().clauseInfo.end()) {
       return it->second;
     }
     return nullptr;
   }
-  void PushContext(const parser::CharBlock &source, OmpDirective dir) {
+  void PushContext(const parser::CharBlock &source, llvm::omp::Directive dir) {
     ompContext_.emplace_back(source, dir);
   }
 
   void RequiresConstantPositiveParameter(
-      const OmpClause &clause, const parser::ScalarIntConstantExpr &i);
+      const llvm::omp::Clause &clause, const parser::ScalarIntConstantExpr &i);
   void RequiresPositiveParameter(
-      const OmpClause &clause, const parser::ScalarIntExpr &i);
+      const llvm::omp::Clause &clause, const parser::ScalarIntExpr &i);
 
   bool CurrentDirectiveIsNested() { return ompContext_.size() > 0; };
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
-  void CheckAllowed(OmpClause);
-  void CheckRequired(OmpClause);
+  void CheckAllowed(llvm::omp::Clause);
+  void CheckRequired(llvm::omp::Clause);
   std::string ContextDirectiveAsFortran();
   void SayNotMatching(const parser::CharBlock &, const parser::CharBlock &);
   template <typename A, typename B, typename C>

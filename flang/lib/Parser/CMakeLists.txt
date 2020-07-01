@@ -29,4 +29,7 @@ add_flang_library(FortranParser
 
   LINK_COMPONENTS
   Support
+
+  DEPENDS
+  omp_gen
 )
