@@ -10,7 +10,9 @@
   # following nops, doing so would make the jmp misaligned.
 # CHECK:      18:          jmp
   jmp bar
-# CHECK:      1d:          nopl (%rax)
+# CHECK:      1d:          nop
+# CHECK:      1e:          nop
+# CHECK:      1f:          nop
 # CHECK:      20:          int3
   .p2align 5
   int3
