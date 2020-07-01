@@ -37,26 +37,25 @@ define i32 @test_values(i32 %a, i32 %b) minsize optsize {
 ; CHECK-V7M:         mov r2, r0
 ; CHECK-V7M-NEXT:    ldr r0, .LCPI0_0
 ; CHECK-V7M-NEXT:    cmp r2, #50
-; CHECK-V7M-NEXT:    beq .LBB0_5
+; CHECK-V7M-NEXT:    beq .LBB0_3
 ; CHECK-V7M-NEXT:    cmp r2, #1
-; CHECK-V7M-NEXT:    beq .LBB0_7
+; CHECK-V7M-NEXT:    ittt eq
+; CHECK-V7M-NEXT:    addeq r0, r1
+; CHECK-V7M-NEXT:    addeq r0, #1
+; CHECK-V7M-NEXT:    bxeq lr
 ; CHECK-V7M-NEXT:    cmp r2, #30
-; CHECK-V7M-NEXT:    beq .LBB0_8
-; CHECK-V7M-NEXT:    cbnz r2, .LBB0_6
+; CHECK-V7M-NEXT:    ittt eq
+; CHECK-V7M-NEXT:    addeq r0, r1
+; CHECK-V7M-NEXT:    addeq r0, #2
+; CHECK-V7M-NEXT:    bxeq lr
+; CHECK-V7M-NEXT:    cbnz r2, .LBB0_4
+; CHECK-V7M-NEXT:  .LBB0_2:
 ; CHECK-V7M-NEXT:    add r0, r1
 ; CHECK-V7M-NEXT:    bx lr
-; CHECK-V7M-NEXT:  .LBB0_5:
+; CHECK-V7M-NEXT:  .LBB0_3:
 ; CHECK-V7M-NEXT:    add r0, r1
 ; CHECK-V7M-NEXT:    adds r0, #4
-; CHECK-V7M-NEXT:  .LBB0_6:
-; CHECK-V7M-NEXT:    bx lr
-; CHECK-V7M-NEXT:  .LBB0_7:
-; CHECK-V7M-NEXT:    add r0, r1
-; CHECK-V7M-NEXT:    adds r0, #1
-; CHECK-V7M-NEXT:    bx lr
-; CHECK-V7M-NEXT:  .LBB0_8:
-; CHECK-V7M-NEXT:    add r0, r1
-; CHECK-V7M-NEXT:    adds r0, #2
+; CHECK-V7M-NEXT:  .LBB0_4:
 ; CHECK-V7M-NEXT:    bx lr
 ; CHECK-V7M-NEXT:    .p2align 2
 ; CHECK-V7M-NEXT:  .LCPI0_0:
