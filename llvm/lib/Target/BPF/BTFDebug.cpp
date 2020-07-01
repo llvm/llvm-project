@@ -568,7 +568,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
         auto CTag = CTy->getTag();
         if ((CTag == dwarf::DW_TAG_structure_type ||
              CTag == dwarf::DW_TAG_union_type) &&
-            !CTy->isForwardDecl()) {
+            !CTy->getName().empty() && !CTy->isForwardDecl()) {
           /// Find a candidate, generate a fixup. Later on the struct/union
           /// pointee type will be replaced with either a real type or
           /// a forward declaration.

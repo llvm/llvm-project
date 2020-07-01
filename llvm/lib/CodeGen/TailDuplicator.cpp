@@ -716,7 +716,7 @@ bool TailDuplicator::duplicateSimpleBB(
                                             TailBB->pred_end());
   bool Changed = false;
   for (MachineBasicBlock *PredBB : Preds) {
-    if (PredBB->hasEHPadSuccessor())
+    if (PredBB->hasEHPadSuccessor() || PredBB->mayHaveInlineAsmBr())
       continue;
 
     if (bothUsedInPHI(*PredBB, Succs))

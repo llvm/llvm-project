@@ -135,10 +135,8 @@ bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
   BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo,
                       getAnalysis<MachineBranchProbabilityInfo>(),
                       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
-  auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
-  return Folder.OptimizeFunction(
-      MF, MF.getSubtarget().getInstrInfo(), MF.getSubtarget().getRegisterInfo(),
-      MMIWP ? &MMIWP->getMMI() : nullptr);
+  return Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
+                                 MF.getSubtarget().getRegisterInfo());
 }
 
 BranchFolder::BranchFolder(bool defaultEnableTailMerge, bool CommonHoist,
@@ -184,7 +182,6 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
 bool BranchFolder::OptimizeFunction(MachineFunction &MF,
                                     const TargetInstrInfo *tii,
                                     const TargetRegisterInfo *tri,
-                                    MachineModuleInfo *mmi,
                                     MachineLoopInfo *mli, bool AfterPlacement) {
   if (!tii) return false;
 
@@ -194,7 +191,6 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   AfterBlockPlacement = AfterPlacement;
   TII = tii;
   TRI = tri;
-  MMI = mmi;
   MLI = mli;
   this->MRI = &MRI;
 
@@ -1087,8 +1083,9 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
       if (!UniquePreds.insert(PBB).second)
         continue;
 
-      // Skip blocks which may jump to a landing pad. Can't tail merge these.
-      if (PBB->hasEHPadSuccessor())
+      // Skip blocks which may jump to a landing pad or jump from an asm blob.
+      // Can't tail merge these.
+      if (PBB->hasEHPadSuccessor() || PBB->mayHaveInlineAsmBr())
         continue;
 
       // After block placement, only consider predecessors that belong to the
@@ -1669,13 +1666,15 @@ ReoptimizeBlock:
 
     if (!MBB->isEHPad()) {
       // Check all the predecessors of this block.  If one of them has no fall
-      // throughs, move this block right after it.
+      // throughs, and analyzeBranch thinks it _could_ fallthrough to this
+      // block, move this block right after it.
       for (MachineBasicBlock *PredBB : MBB->predecessors()) {
         // Analyze the branch at the end of the pred.
         MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
         SmallVector<MachineOperand, 4> PredCond;
         if (PredBB != MBB && !PredBB->canFallThrough() &&
             !TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true) &&
+            (PredTBB == MBB || PredFBB == MBB) &&
             (!CurFallsThru || !CurTBB || !CurFBB) &&
             (!CurFallsThru || MBB->getNumber() >= PredBB->getNumber())) {
           // If the current block doesn't fall through, just move it.
@@ -1701,21 +1700,24 @@ ReoptimizeBlock:
     }
 
     if (!CurFallsThru) {
-      // Check all successors to see if we can move this block before it.
-      for (MachineBasicBlock *SuccBB : MBB->successors()) {
-        // Analyze the branch at the end of the block before the succ.
-        MachineFunction::iterator SuccPrev = --SuccBB->getIterator();
+      // Check analyzable branch-successors to see if we can move this block
+      // before one.
+      if (!CurUnAnalyzable) {
+        for (MachineBasicBlock *SuccBB : {CurFBB, CurTBB}) {
+          if (!SuccBB)
+            continue;
+          // Analyze the branch at the end of the block before the succ.
+          MachineFunction::iterator SuccPrev = --SuccBB->getIterator();
 
-        // If this block doesn't already fall-through to that successor, and if
-        // the succ doesn't already have a block that can fall through into it,
-        // and if the successor isn't an EH destination, we can arrange for the
-        // fallthrough to happen.
-        if (SuccBB != MBB && &*SuccPrev != MBB &&
-            !SuccPrev->canFallThrough() && !CurUnAnalyzable &&
-            !SuccBB->isEHPad()) {
-          MBB->moveBefore(SuccBB);
-          MadeChange = true;
-          goto ReoptimizeBlock;
+          // If this block doesn't already fall-through to that successor, and
+          // if the succ doesn't already have a block that can fall through into
+          // it, we can arrange for the fallthrough to happen.
+          if (SuccBB != MBB && &*SuccPrev != MBB &&
+              !SuccPrev->canFallThrough()) {
+            MBB->moveBefore(SuccBB);
+            MadeChange = true;
+            goto ReoptimizeBlock;
+          }
         }
       }
 

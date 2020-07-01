@@ -1730,6 +1730,10 @@ bool HexagonInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (MI.getDesc().isTerminator() || MI.isPosition())
     return true;
 
+  // INLINEASM_BR can jump to another block
+  if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
+    return true;
+
   if (MI.isInlineAsm() && !ScheduleInlineAsm)
     return true;
 

@@ -272,6 +272,11 @@ bool PPCBranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
     return false;
   }
 
+  if (Cand.BranchBlock->mayHaveInlineAsmBr()) {
+    LLVM_DEBUG(dbgs() << "Inline Asm Br - skip\n");
+    return false;
+  }
+
   // For now only consider triangles (i.e, BranchTargetBlock is set,
   // FalseMBB is null, and BranchTargetBlock is a successor to BranchBlock)
   if (!Cand.BranchTargetBlock || FalseMBB ||
