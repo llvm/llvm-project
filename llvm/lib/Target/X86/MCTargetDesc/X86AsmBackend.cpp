@@ -1096,7 +1096,7 @@ bool X86AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
 
   // This CPU doesn't support long nops. If needed add more.
   // FIXME: We could generated something better than plain 0x90.
-  if (!STI.getFeatureBits()[X86::FeatureNOPL]) {
+  if (!STI.hasFeature(X86::FeatureNOPL) && !STI.hasFeature(X86::Mode64Bit)) {
     for (uint64_t i = 0; i < Count; ++i)
       OS << '\x90';
     return true;
