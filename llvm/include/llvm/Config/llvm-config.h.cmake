@@ -14,6 +14,9 @@
 #ifndef LLVM_CONFIG_H
 #define LLVM_CONFIG_H
 
+/* Indicate that this is LLVM compiled from the amd-gfx branch. */
+#define LLVM_HAVE_BRANCH_AMD_GFX
+
 /* Define if LLVM_ENABLE_DUMP is enabled */
 #cmakedefine LLVM_ENABLE_DUMP
 
