@@ -26,6 +26,7 @@
 namespace clang {
 namespace clangd {
 struct Config;
+class ThreadsafeFS;
 namespace config {
 
 /// Describes the context used to evaluate configuration fragments.
@@ -46,6 +47,48 @@ using DiagnosticCallback = llvm::function_ref<void(const llvm::SMDiagnostic &)>;
 /// Calling it updates the configuration to reflect settings from the fragment.
 /// Returns true if the condition was met and the settings were used.
 using CompiledFragment = std::function<bool(const Params &, Config &)>;
+
+/// A source of configuration fragments.
+/// Generally these providers reflect a fixed policy for obtaining config,
+/// but return different concrete configuration over time.
+/// e.g. a provider that reads config from files is responsive to file changes.
+class Provider {
+public:
+  virtual ~Provider() = default;
+
+  // Reads fragments from a single YAML file with a fixed path.
+  static std::unique_ptr<Provider> fromYAMLFile(llvm::StringRef AbsPathPath,
+                                                const ThreadsafeFS &);
+  // Reads fragments from YAML files found relative to ancestors of Params.Path.
+  //
+  // All fragments that exist are returned, starting from distant ancestors.
+  // For instance, given RelPath of ".clangd", then for source file /foo/bar.cc,
+  // the searched fragments are [/.clangd, /foo/.clangd].
+  //
+  // If Params does not specify a path, no fragments are returned.
+  static std::unique_ptr<Provider>
+  fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath, const ThreadsafeFS &);
+
+  /// A provider that includes fragments from all the supplied providers.
+  /// Order is preserved; later providers take precedence over earlier ones.
+  static std::unique_ptr<Provider>
+      combine(std::vector<std::unique_ptr<Provider>>);
+
+  /// Build a config based on this provider.
+  Config getConfig(const Params &, DiagnosticCallback) const;
+
+private:
+  /// Provide fragments that may be relevant to the file.
+  /// The configuration provider is not responsible for testing conditions.
+  ///
+  /// Providers are expected to cache compiled fragments, and only
+  /// reparse/recompile when the source data has changed.
+  /// Despite the need for caching, this function must be threadsafe.
+  ///
+  /// When parsing/compiling, the DiagnosticCallback is used to report errors.
+  virtual std::vector<CompiledFragment>
+  getFragments(const Params &, DiagnosticCallback) const = 0;
+};
 
 } // namespace config
 } // namespace clangd
