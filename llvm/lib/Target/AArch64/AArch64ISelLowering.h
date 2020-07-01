@@ -505,7 +505,7 @@ public:
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
 
-  bool hasPairedLoad(EVT LoadedType, unsigned &RequiredAligment) const override;
+  bool hasPairedLoad(EVT LoadedType, Align &RequiredAligment) const override;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
