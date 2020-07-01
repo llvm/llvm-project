@@ -1860,6 +1860,9 @@ static MachineInstr *swapRegAndNonRegOperand(MachineInstr &MI,
   else
     return nullptr;
 
+  // Make sure we don't reinterpret a subreg index in the target flags.
+  RegOp.setTargetFlags(NonRegOp.getTargetFlags());
+
   NonRegOp.ChangeToRegister(Reg, false, false, IsKill, IsDead, IsUndef, IsDebug);
   NonRegOp.setSubReg(SubReg);
 
