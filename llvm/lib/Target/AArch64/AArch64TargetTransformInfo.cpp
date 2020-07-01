@@ -473,8 +473,9 @@ unsigned AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
                                         TTI::TargetCostKind CostKind) {
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? 0 : 1;
+  assert(CostKind == TTI::TCK_RecipThroughput && "unexpected CostKind");
   // Branches are assumed to be predicted.
-  return CostKind == TTI::TCK_RecipThroughput ? 0 : 1;
+  return 0;
 }
 
 int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
