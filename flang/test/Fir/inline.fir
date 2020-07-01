@@ -1,4 +1,4 @@
-// RUN: tco --enable-inlining %s -o - | FileCheck %s
+// RUN: tco --inline-all %s -o - | FileCheck %s
 
 // CHECK-LABEL: @add
 func @add(%a : i32, %b : i32) -> i32 {
