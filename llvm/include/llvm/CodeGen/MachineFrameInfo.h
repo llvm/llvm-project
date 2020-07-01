@@ -768,8 +768,9 @@ public:
   /// Create a new statically sized stack object that represents a spill slot,
   /// returning a nonnegative identifier to represent it.
   int CreateSpillStackObject(uint64_t Size, Align Alignment);
-  /// FIXME: Remove this function when transition to Align is over.
-  inline int CreateSpillStackObject(uint64_t Size, unsigned Alignment) {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline int CreateSpillStackObject(uint64_t Size, unsigned Alignment),
+      "Use CreateSpillStackObject that takes an Align instead") {
     return CreateSpillStackObject(Size, assumeAligned(Alignment));
   }
 
