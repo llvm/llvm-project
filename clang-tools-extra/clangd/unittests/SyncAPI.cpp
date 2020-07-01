@@ -118,20 +118,6 @@ std::string runDumpAST(ClangdServer &Server, PathRef File) {
   return std::move(*Result);
 }
 
-llvm::Expected<std::vector<SymbolInformation>>
-runWorkspaceSymbols(ClangdServer &Server, llvm::StringRef Query, int Limit) {
-  llvm::Optional<llvm::Expected<std::vector<SymbolInformation>>> Result;
-  Server.workspaceSymbols(Query, Limit, capture(Result));
-  return std::move(*Result);
-}
-
-llvm::Expected<std::vector<DocumentSymbol>>
-runDocumentSymbols(ClangdServer &Server, PathRef File) {
-  llvm::Optional<llvm::Expected<std::vector<DocumentSymbol>>> Result;
-  Server.documentSymbols(File, capture(Result));
-  return std::move(*Result);
-}
-
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, llvm::StringRef Query) {
   FuzzyFindRequest Req;
   Req.Query = std::string(Query);
