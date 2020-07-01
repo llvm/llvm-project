@@ -1356,9 +1356,9 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CSINC)
     MAKE_CASE(AArch64ISD::THREAD_POINTER)
     MAKE_CASE(AArch64ISD::TLSDESC_CALLSEQ)
-    MAKE_CASE(AArch64ISD::ADD_MERGE_OP1)
-    MAKE_CASE(AArch64ISD::SDIV_MERGE_OP1)
-    MAKE_CASE(AArch64ISD::UDIV_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::ADD_PRED)
+    MAKE_CASE(AArch64ISD::SDIV_PRED)
+    MAKE_CASE(AArch64ISD::UDIV_PRED)
     MAKE_CASE(AArch64ISD::SMIN_MERGE_OP1)
     MAKE_CASE(AArch64ISD::UMIN_MERGE_OP1)
     MAKE_CASE(AArch64ISD::SMAX_MERGE_OP1)
@@ -1450,7 +1450,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::REV)
     MAKE_CASE(AArch64ISD::REINTERPRET_CAST)
     MAKE_CASE(AArch64ISD::TBL)
-    MAKE_CASE(AArch64ISD::FADD_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::FADD_PRED)
     MAKE_CASE(AArch64ISD::FADDA_PRED)
     MAKE_CASE(AArch64ISD::FADDV_PRED)
     MAKE_CASE(AArch64ISD::FMAXV_PRED)
@@ -3424,7 +3424,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerXALUO(Op, DAG);
   case ISD::FADD:
     if (useSVEForFixedLengthVectorVT(Op.getValueType()))
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FADD_MERGE_OP1);
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FADD_PRED);
     return LowerF128Call(Op, DAG, RTLIB::ADD_F128);
   case ISD::FSUB:
     return LowerF128Call(Op, DAG, RTLIB::SUB_F128);
@@ -3458,9 +3458,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::EXTRACT_SUBVECTOR:
     return LowerEXTRACT_SUBVECTOR(Op, DAG);
   case ISD::SDIV:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SDIV_MERGE_OP1);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SDIV_PRED);
   case ISD::UDIV:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UDIV_MERGE_OP1);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UDIV_PRED);
   case ISD::SMIN:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_MERGE_OP1);
   case ISD::UMIN:
@@ -3530,7 +3530,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     llvm_unreachable("Unexpected request to lower ISD::LOAD");
   case ISD::ADD:
     if (useSVEForFixedLengthVectorVT(Op.getValueType()))
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ADD_MERGE_OP1);
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ADD_PRED);
     llvm_unreachable("Unexpected request to lower ISD::ADD");
   }
 }
@@ -11761,12 +11761,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
                        N->getOperand(1));
   case Intrinsic::aarch64_sve_ext:
     return LowerSVEIntrinsicEXT(N, DAG);
-  case Intrinsic::aarch64_sve_sdiv:
-    return DAG.getNode(AArch64ISD::SDIV_MERGE_OP1, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
-  case Intrinsic::aarch64_sve_udiv:
-    return DAG.getNode(AArch64ISD::UDIV_MERGE_OP1, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_smin:
     return DAG.getNode(AArch64ISD::SMIN_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
