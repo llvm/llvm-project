@@ -102,7 +102,7 @@ public:
 
 /// Index is a special integer-like type with unknown platform-dependent bit
 /// width.
-class IndexType : public Type::TypeBase<IndexType, Type> {
+class IndexType : public Type::TypeBase<IndexType, Type, TypeStorage> {
 public:
   using Base::Base;
 
@@ -188,7 +188,7 @@ public:
 // FloatType
 //===----------------------------------------------------------------------===//
 
-class FloatType : public Type::TypeBase<FloatType, Type> {
+class FloatType : public Type::TypeBase<FloatType, Type, TypeStorage> {
 public:
   using Base::Base;
 
@@ -227,7 +227,7 @@ public:
 
 /// NoneType is a unit type, i.e. a type with exactly one possible value, where
 /// its value does not have a defined dynamic representation.
-class NoneType : public Type::TypeBase<NoneType, Type> {
+class NoneType : public Type::TypeBase<NoneType, Type, TypeStorage> {
 public:
   using Base::Base;
 

@@ -282,6 +282,7 @@ public:
                                 LiveIntervals *LIS)
       : Schedule(S), MF(MF), ST(MF.getSubtarget()), MRI(MF.getRegInfo()),
         TII(ST.getInstrInfo()), LIS(LIS) {}
+  virtual ~PeelingModuloScheduleExpander() {}
 
   virtual void expand();
 

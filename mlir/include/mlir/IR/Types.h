@@ -100,8 +100,7 @@ public:
   };
 
   /// Utility class for implementing types.
-  template <typename ConcreteType, typename BaseType,
-            typename StorageType = DefaultTypeStorage,
+  template <typename ConcreteType, typename BaseType, typename StorageType,
             template <typename T> class... Traits>
   using TypeBase = detail::StorageUserBase<ConcreteType, BaseType, StorageType,
                                            detail::TypeUniquer, Traits...>;

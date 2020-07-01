@@ -63,8 +63,7 @@ public:
   };
 
   /// Utility class for implementing attributes.
-  template <typename ConcreteType, typename BaseType = Attribute,
-            typename StorageType = AttributeStorage,
+  template <typename ConcreteType, typename BaseType, typename StorageType,
             template <typename T> class... Traits>
   using AttrBase = detail::StorageUserBase<ConcreteType, BaseType, StorageType,
                                            detail::AttributeUniquer, Traits...>;
@@ -636,7 +635,8 @@ public:
 
 /// Unit attributes are attributes that hold no specific value and are given
 /// meaning by their existence.
-class UnitAttr : public Attribute::AttrBase<UnitAttr> {
+class UnitAttr
+    : public Attribute::AttrBase<UnitAttr, Attribute, AttributeStorage> {
 public:
   using Base::Base;
 
