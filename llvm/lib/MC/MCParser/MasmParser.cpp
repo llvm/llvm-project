@@ -245,6 +245,8 @@ public:
   }
   bool isParsingMSInlineAsm() override { return ParsingMSInlineAsm; }
 
+  bool isParsingMasm() const override { return true; }
+
   bool parseMSInlineAsm(void *AsmLoc, std::string &AsmString,
                         unsigned &NumOutputs, unsigned &NumInputs,
                         SmallVectorImpl<std::pair<void *,bool>> &OpDecls,
