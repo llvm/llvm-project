@@ -673,7 +673,7 @@ SBError SBBreakpoint::AddNameWithErrorHandling(const char *new_name) {
     status.SetErrorString("invalid breakpoint");
   }
 
-  return status;
+  return LLDB_RECORD_RESULT(status);
 }
 
 void SBBreakpoint::RemoveName(const char *name_to_remove) {

@@ -113,7 +113,7 @@ subroutine s9
   equivalence(d(1:n), i)
   character(4) :: a(10)
   equivalence(c, a(10)(1:2))
-  !ERROR: 'a(10)' and 'a(10)(2:)' cannot have the same first storage unit
+  !ERROR: 'a(10_8)(2_8:2_8)' and 'a(10_8)(1_8:1_8)' cannot have the same first storage unit
   equivalence(c, a(10)(2:3))
 end
 
@@ -165,13 +165,20 @@ end
 
 module s14
   real :: a(10), b, c, d
-  !ERROR: 'a(1)' and 'a(2)' cannot have the same first storage unit
+  !ERROR: 'a(2_8)' and 'a(1_8)' cannot have the same first storage unit
   equivalence(a(1), a(2))
   equivalence(b, a(3))
-  !ERROR: 'a(3)' and 'a(4)' cannot have the same first storage unit
+  !ERROR: 'a(4_8)' and 'a(3_8)' cannot have the same first storage unit
   equivalence(a(4), b)
   equivalence(c, a(5))
+  !ERROR: 'a(6_8)' and 'a(5_8)' cannot have the same first storage unit
   equivalence(a(6), d)
-  !ERROR: 'a(5)' and 'a(6)' cannot have the same first storage unit
   equivalence(c, d)
 end
+
+module s15
+  real :: a(2), b(2)
+  equivalence(a(2),b(1))
+  !ERROR: 'a(3_8)' and 'a(1_8)' cannot have the same first storage unit
+  equivalence(b(2),a(1))
+end module

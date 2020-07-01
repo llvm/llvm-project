@@ -37,11 +37,17 @@ StringRef clang::tooling::getText(CharSourceRange Range,
 CharSourceRange clang::tooling::maybeExtendRange(CharSourceRange Range,
                                                  tok::TokenKind Next,
                                                  ASTContext &Context) {
-  Optional<Token> Tok = Lexer::findNextToken(
-      Range.getEnd(), Context.getSourceManager(), Context.getLangOpts());
-  if (!Tok || !Tok->is(Next))
+  CharSourceRange R = Lexer::getAsCharRange(Range, Context.getSourceManager(),
+                                            Context.getLangOpts());
+  if (R.isInvalid())
     return Range;
-  return CharSourceRange::getTokenRange(Range.getBegin(), Tok->getLocation());
+  Token Tok;
+  bool Err =
+      Lexer::getRawToken(R.getEnd(), Tok, Context.getSourceManager(),
+                         Context.getLangOpts(), /*IgnoreWhiteSpace=*/true);
+  if (Err || !Tok.is(Next))
+    return Range;
+  return CharSourceRange::getTokenRange(Range.getBegin(), Tok.getLocation());
 }
 
 llvm::Error clang::tooling::validateEditRange(const CharSourceRange &Range,
