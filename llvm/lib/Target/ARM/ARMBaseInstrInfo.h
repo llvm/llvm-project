@@ -679,7 +679,6 @@ static inline bool isSubImmOpcode(int Opc) {
 static inline bool isMovRegOpcode(int Opc) {
   return Opc == ARM::MOVr || Opc == ARM::tMOVr || Opc == ARM::t2MOVr;
 }
-
 /// isValidCoprocessorNumber - decide whether an explicit coprocessor
 /// number is legal in generic instructions like CDP. The answer can
 /// vary with the subtarget.
