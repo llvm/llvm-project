@@ -1656,7 +1656,7 @@ The following provides an example using pseudo LLVM MIR.
         DW_AT_name = "__divergent_lane_pc_1_then";
         DW_AT_location = DIExpression[
           DW_OP_call_ref %__divergent_lane_pc;
-          DW_OP_xaddr &lex_1_start;
+          DW_OP_addrx &lex_1_start;
           DW_OP_stack_value;
           DW_OP_LLVM_extend 64, 64;
           DW_OP_call_ref %__lex_1_save_exec;
@@ -1679,7 +1679,7 @@ The following provides an example using pseudo LLVM MIR.
           DW_AT_name = "__divergent_lane_pc_1_1_then";
           DW_AT_location = DIExpression[
             DW_OP_call_ref %__divergent_lane_pc_1_then;
-            DW_OP_xaddr &lex_1_1_start;
+            DW_OP_addrx &lex_1_1_start;
             DW_OP_stack_value;
             DW_OP_LLVM_extend 64, 64;
             DW_OP_call_ref %__lex_1_1_save_exec;
@@ -1698,7 +1698,7 @@ The following provides an example using pseudo LLVM MIR.
           DW_AT_name = "__divergent_lane_pc_1_1_else";
           DW_AT_location = DIExpression[
             DW_OP_call_ref %__divergent_lane_pc_1_then;
-            DW_OP_xaddr &lex_1_1_end;
+            DW_OP_addrx &lex_1_1_end;
             DW_OP_stack_value;
             DW_OP_LLVM_extend 64, 64;
             DW_OP_call_ref %__lex_1_1_save_exec;
@@ -1724,7 +1724,7 @@ The following provides an example using pseudo LLVM MIR.
         DW_AT_name = "__divergent_lane_pc_1_else";
         DW_AT_location = DIExpression[
           DW_OP_call_ref %__divergent_lane_pc;
-          DW_OP_xaddr &lex_1_end;
+          DW_OP_addrx &lex_1_end;
           DW_OP_stack_value;
           DW_OP_LLVM_extend 64, 64;
           DW_OP_call_ref %__lex_1_save_exec;
