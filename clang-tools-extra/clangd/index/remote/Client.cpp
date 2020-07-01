@@ -15,6 +15,8 @@
 #include "support/Logger.h"
 #include "support/Trace.h"
 
+#include <chrono>
+
 namespace clang {
 namespace clangd {
 namespace remote {
@@ -25,7 +27,6 @@ class IndexClient : public clangd::SymbolIndex {
   using StreamingCall = std::unique_ptr<grpc::ClientReader<ReplyT>> (
       remote::SymbolIndex::Stub::*)(grpc::ClientContext *, const RequestT &);
 
-  // FIXME(kirillbobyrev): Set deadlines for requests.
   template <typename RequestT, typename ReplyT, typename ClangdRequestT,
             typename CallbackT>
   bool streamRPC(ClangdRequestT Request,
@@ -35,6 +36,9 @@ class IndexClient : public clangd::SymbolIndex {
     trace::Span Tracer(RequestT::descriptor()->name());
     const auto RPCRequest = toProtobuf(Request);
     grpc::ClientContext Context;
+    std::chrono::system_clock::time_point Deadline =
+        std::chrono::system_clock::now() + DeadlineWaitingTime;
+    Context.set_deadline(Deadline);
     auto Reader = (Stub.get()->*RPCCall)(&Context, RPCRequest);
     llvm::BumpPtrAllocator Arena;
     llvm::UniqueStringSaver Strings(Arena);
@@ -54,8 +58,11 @@ class IndexClient : public clangd::SymbolIndex {
   }
 
 public:
-  IndexClient(std::shared_ptr<grpc::Channel> Channel)
-      : Stub(remote::SymbolIndex::NewStub(Channel)) {}
+  IndexClient(
+      std::shared_ptr<grpc::Channel> Channel,
+      std::chrono::milliseconds DeadlineTime = std::chrono::milliseconds(1000))
+      : Stub(remote::SymbolIndex::NewStub(Channel)),
+        DeadlineWaitingTime(DeadlineTime) {}
 
   void lookup(const clangd::LookupRequest &Request,
               llvm::function_ref<void(const clangd::Symbol &)> Callback) const {
@@ -84,6 +91,8 @@ public:
 
 private:
   std::unique_ptr<remote::SymbolIndex::Stub> Stub;
+  // Each request will be terminated if it takes too long.
+  std::chrono::milliseconds DeadlineWaitingTime;
 };
 
 } // namespace
