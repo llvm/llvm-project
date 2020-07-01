@@ -647,7 +647,7 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
     }
     for (auto &BB : F) {
       for (auto &I : BB) {
-        auto remapDebugLoc = [&](DebugLoc DL) -> DebugLoc {
+        auto remapDebugLoc = [&](const DebugLoc &DL) -> DebugLoc {
           auto *Scope = DL.getScope();
           MDNode *InlinedAt = DL.getInlinedAt();
           Scope = remap(Scope);

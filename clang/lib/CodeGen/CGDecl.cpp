@@ -1880,9 +1880,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
 ///
 /// \param init the initializing expression
 /// \param D the object to act as if we're initializing
-/// \param loc the address to initialize; its type is a pointer
-///   to the LLVM mapping of the object's type
-/// \param alignment the alignment of the address
+/// \param lvalue the lvalue to initialize
 /// \param capturedByInit true if \p D is a __block variable
 ///   whose address is potentially changed by the initializer
 void CodeGenFunction::EmitExprAsInit(const Expr *init, const ValueDecl *D,

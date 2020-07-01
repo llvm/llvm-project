@@ -4041,9 +4041,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Triple.isOSWindows() && (Triple.getArch() == llvm::Triple::arm ||
                                Triple.getArch() == llvm::Triple::thumb)) {
     unsigned Offset = Triple.getArch() == llvm::Triple::arm ? 4 : 6;
-    unsigned Version;
-    Triple.getArchName().substr(Offset).getAsInteger(10, Version);
-    if (Version < 7)
+    unsigned Version = 0;
+    bool Failure =
+        Triple.getArchName().substr(Offset).consumeInteger(10, Version);
+    if (Failure || Version < 7)
       D.Diag(diag::err_target_unsupported_arch) << Triple.getArchName()
                                                 << TripleStr;
   }

@@ -206,6 +206,9 @@ public:
     bool
     AddName (const char *new_name);
 
+    SBError
+    AddNameWithErrorHandling (const char *new_name);
+
     void
     RemoveName (const char *name_to_remove);
 
