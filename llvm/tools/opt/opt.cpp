@@ -71,9 +71,8 @@ static codegen::RegisterCodeGenFlags CFG;
 static cl::list<const PassInfo*, bool, PassNameParser>
 PassList(cl::desc("Optimizations available:"));
 
-static cl::opt<bool>
-    EnableNewPassManager("enable-new-pm",
-                         cl::desc("Enable the new pass manager"));
+static cl::opt<bool> EnableNewPassManager(
+    "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
 
 // This flag specifies a textual description of the optimization pass pipeline
 // to run over the module. This flag switches opt to use the new pass manager
