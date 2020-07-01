@@ -3147,7 +3147,6 @@ void RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
   }
 
   const MachineFrameInfo &MFI = MF->getFrameInfo();
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   int FI;
 
   for (MachineBasicBlock *MBB : L->getBlocks())

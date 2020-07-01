@@ -33,9 +33,6 @@ add_flang_library(FortranEvaluate
   FortranDecimal
   FortranSemantics
   FortranParser
-
-  DEPENDS
-  omp_gen
 )
 
 if (LIBPGMATH_DIR)

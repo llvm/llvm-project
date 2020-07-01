@@ -409,11 +409,7 @@ public:
   NODE(parser, OmpBeginLoopDirective)
   NODE(parser, OmpBeginSectionsDirective)
   NODE(parser, OmpBlockDirective)
-  static std::string GetNodeName(const llvm::omp::Directive &x) {
-    return llvm::Twine(
-        "llvm::omp::Directive = ", llvm::omp::getOpenMPDirectiveName(x))
-        .str();
-  }
+  NODE_ENUM(OmpBlockDirective, Directive)
   NODE(parser, OmpCancelType)
   NODE_ENUM(OmpCancelType, Type)
   NODE(parser, OmpClause)
@@ -481,6 +477,7 @@ public:
   NODE(parser, OmpLinearModifier)
   NODE_ENUM(OmpLinearModifier, Type)
   NODE(parser, OmpLoopDirective)
+  NODE_ENUM(OmpLoopDirective, Directive)
   NODE(parser, OmpMapClause)
   NODE(parser, OmpMapType)
   NODE(OmpMapType, Always)
@@ -508,7 +505,9 @@ public:
   NODE_ENUM(OmpScheduleModifierType, ModType)
   NODE(parser, OmpSectionBlocks)
   NODE(parser, OmpSectionsDirective)
+  NODE_ENUM(OmpSectionsDirective, Directive)
   NODE(parser, OmpSimpleStandaloneDirective)
+  NODE_ENUM(OmpSimpleStandaloneDirective, Directive)
   NODE(parser, Only)
   NODE(parser, OpenMPAtomicConstruct)
   NODE(parser, OpenMPBlockConstruct)

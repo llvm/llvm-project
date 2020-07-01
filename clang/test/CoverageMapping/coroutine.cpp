@@ -1,3 +1,5 @@
+// fixme: the following line is added to cleanup bots, will be removed in weeks.
+// RUN: rm -f %S/coroutine.ll
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping %s -o - | FileCheck %s
 
 namespace std::experimental {

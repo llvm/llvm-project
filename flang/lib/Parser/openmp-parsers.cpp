@@ -240,38 +240,45 @@ TYPE_PARSER(construct<OmpObjectList>(nonemptyList(Parser<OmpObject>{})))
 // Omp directives enclosing do loop
 TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
     "DISTRIBUTE PARALLEL DO SIMD" >>
-        pure(llvm::omp::Directive::OMPD_distribute_parallel_do_simd),
+        pure(OmpLoopDirective::Directive::DistributeParallelDoSimd),
     "DISTRIBUTE PARALLEL DO" >>
-        pure(llvm::omp::Directive::OMPD_distribute_parallel_do),
-    "DISTRIBUTE SIMD" >> pure(llvm::omp::Directive::OMPD_distribute_simd),
-    "DISTRIBUTE" >> pure(llvm::omp::Directive::OMPD_distribute),
-    "DO SIMD" >> pure(llvm::omp::Directive::OMPD_do_simd),
-    "DO" >> pure(llvm::omp::Directive::OMPD_do),
-    "PARALLEL DO SIMD" >> pure(llvm::omp::Directive::OMPD_parallel_do_simd),
-    "PARALLEL DO" >> pure(llvm::omp::Directive::OMPD_parallel_do),
-    "SIMD" >> pure(llvm::omp::Directive::OMPD_simd),
+        pure(OmpLoopDirective::Directive::DistributeParallelDo),
+
+    "DISTRIBUTE SIMD" >> pure(OmpLoopDirective::Directive::DistributeSimd),
+
+    "DISTRIBUTE" >> pure(OmpLoopDirective::Directive::Distribute),
+
+    "DO SIMD" >> pure(OmpLoopDirective::Directive::DoSimd),
+    "DO" >> pure(OmpLoopDirective::Directive::Do),
+    "PARALLEL DO SIMD" >> pure(OmpLoopDirective::Directive::ParallelDoSimd),
+
+    "PARALLEL DO" >> pure(OmpLoopDirective::Directive::ParallelDo),
+
+    "SIMD" >> pure(OmpLoopDirective::Directive::Simd),
     "TARGET PARALLEL DO SIMD" >>
-        pure(llvm::omp::Directive::OMPD_target_parallel_do_simd),
-    "TARGET PARALLEL DO" >> pure(llvm::omp::Directive::OMPD_target_parallel_do),
-    "TARGET SIMD" >> pure(llvm::omp::Directive::OMPD_target_simd),
+        pure(OmpLoopDirective::Directive::TargetParallelDoSimd),
+    "TARGET PARALLEL DO" >> pure(OmpLoopDirective::Directive::TargetParallelDo),
+
+    "TARGET SIMD" >> pure(OmpLoopDirective::Directive::TargetSimd),
     "TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD" >>
-        pure(llvm::omp::Directive::
-                OMPD_target_teams_distribute_parallel_do_simd),
+        pure(OmpLoopDirective::Directive::TargetTeamsDistributeParallelDoSimd),
     "TARGET TEAMS DISTRIBUTE PARALLEL DO" >>
-        pure(llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do),
+        pure(OmpLoopDirective::Directive::TargetTeamsDistributeParallelDo),
     "TARGET TEAMS DISTRIBUTE SIMD" >>
-        pure(llvm::omp::Directive::OMPD_target_teams_distribute_simd),
+        pure(OmpLoopDirective::Directive::TargetTeamsDistributeSimd),
     "TARGET TEAMS DISTRIBUTE" >>
-        pure(llvm::omp::Directive::OMPD_target_teams_distribute),
-    "TASKLOOP SIMD" >> pure(llvm::omp::Directive::OMPD_taskloop_simd),
-    "TASKLOOP" >> pure(llvm::omp::Directive::OMPD_taskloop),
+        pure(OmpLoopDirective::Directive::TargetTeamsDistribute),
+
+    "TASKLOOP SIMD" >> pure(OmpLoopDirective::Directive::TaskloopSimd),
+
+    "TASKLOOP" >> pure(OmpLoopDirective::Directive::Taskloop),
     "TEAMS DISTRIBUTE PARALLEL DO SIMD" >>
-        pure(llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd),
+        pure(OmpLoopDirective::Directive::TeamsDistributeParallelDoSimd),
     "TEAMS DISTRIBUTE PARALLEL DO" >>
-        pure(llvm::omp::Directive::OMPD_teams_distribute_parallel_do),
+        pure(OmpLoopDirective::Directive::TeamsDistributeParallelDo),
     "TEAMS DISTRIBUTE SIMD" >>
-        pure(llvm::omp::Directive::OMPD_teams_distribute_simd),
-    "TEAMS DISTRIBUTE" >> pure(llvm::omp::Directive::OMPD_teams_distribute)))))
+        pure(OmpLoopDirective::Directive::TeamsDistributeSimd),
+    "TEAMS DISTRIBUTE" >> pure(OmpLoopDirective::Directive::TeamsDistribute)))))
 
 TYPE_PARSER(sourced(construct<OmpBeginLoopDirective>(
     sourced(Parser<OmpLoopDirective>{}), Parser<OmpClauseList>{})))
@@ -297,13 +304,16 @@ TYPE_PARSER(sourced(construct<OpenMPFlushConstruct>(
 
 // Simple Standalone Directives
 TYPE_PARSER(sourced(construct<OmpSimpleStandaloneDirective>(first(
-    "BARRIER" >> pure(llvm::omp::Directive::OMPD_barrier),
-    "ORDERED" >> pure(llvm::omp::Directive::OMPD_ordered),
-    "TARGET ENTER DATA" >> pure(llvm::omp::Directive::OMPD_target_enter_data),
-    "TARGET EXIT DATA" >> pure(llvm::omp::Directive::OMPD_target_exit_data),
-    "TARGET UPDATE" >> pure(llvm::omp::Directive::OMPD_target_update),
-    "TASKWAIT" >> pure(llvm::omp::Directive::OMPD_taskwait),
-    "TASKYIELD" >> pure(llvm::omp::Directive::OMPD_taskyield)))))
+    "BARRIER" >> pure(OmpSimpleStandaloneDirective::Directive::Barrier),
+    "ORDERED" >> pure(OmpSimpleStandaloneDirective::Directive::Ordered),
+    "TARGET ENTER DATA" >>
+        pure(OmpSimpleStandaloneDirective::Directive::TargetEnterData),
+    "TARGET EXIT DATA" >>
+        pure(OmpSimpleStandaloneDirective::Directive::TargetExitData),
+    "TARGET UPDATE" >>
+        pure(OmpSimpleStandaloneDirective::Directive::TargetUpdate),
+    "TASKWAIT" >> pure(OmpSimpleStandaloneDirective::Directive::Taskwait),
+    "TASKYIELD" >> pure(OmpSimpleStandaloneDirective::Directive::Taskyield)))))
 
 TYPE_PARSER(sourced(construct<OpenMPSimpleStandaloneConstruct>(
     Parser<OmpSimpleStandaloneDirective>{}, Parser<OmpClauseList>{})))
@@ -319,20 +329,21 @@ TYPE_PARSER(
     endOfLine)
 
 // Directives enclosing structured-block
-TYPE_PARSER(construct<OmpBlockDirective>(first(
-    "MASTER" >> pure(llvm::omp::Directive::OMPD_master),
-    "ORDERED" >> pure(llvm::omp::Directive::OMPD_ordered),
-    "PARALLEL WORKSHARE" >> pure(llvm::omp::Directive::OMPD_parallel_workshare),
-    "PARALLEL" >> pure(llvm::omp::Directive::OMPD_parallel),
-    "SINGLE" >> pure(llvm::omp::Directive::OMPD_single),
-    "TARGET DATA" >> pure(llvm::omp::Directive::OMPD_target_data),
-    "TARGET PARALLEL" >> pure(llvm::omp::Directive::OMPD_target_parallel),
-    "TARGET TEAMS" >> pure(llvm::omp::Directive::OMPD_target_teams),
-    "TARGET" >> pure(llvm::omp::Directive::OMPD_target),
-    "TASK"_id >> pure(llvm::omp::Directive::OMPD_task),
-    "TASKGROUP" >> pure(llvm::omp::Directive::OMPD_taskgroup),
-    "TEAMS" >> pure(llvm::omp::Directive::OMPD_teams),
-    "WORKSHARE" >> pure(llvm::omp::Directive::OMPD_workshare))))
+TYPE_PARSER(construct<OmpBlockDirective>(
+    first("MASTER" >> pure(OmpBlockDirective::Directive::Master),
+        "ORDERED" >> pure(OmpBlockDirective::Directive::Ordered),
+        "PARALLEL WORKSHARE" >>
+            pure(OmpBlockDirective::Directive::ParallelWorkshare),
+        "PARALLEL" >> pure(OmpBlockDirective::Directive::Parallel),
+        "SINGLE" >> pure(OmpBlockDirective::Directive::Single),
+        "TARGET DATA" >> pure(OmpBlockDirective::Directive::TargetData),
+        "TARGET PARALLEL" >> pure(OmpBlockDirective::Directive::TargetParallel),
+        "TARGET TEAMS" >> pure(OmpBlockDirective::Directive::TargetTeams),
+        "TARGET" >> pure(OmpBlockDirective::Directive::Target),
+        "TASK"_id >> pure(OmpBlockDirective::Directive::Task),
+        "TASKGROUP" >> pure(OmpBlockDirective::Directive::Taskgroup),
+        "TEAMS" >> pure(OmpBlockDirective::Directive::Teams),
+        "WORKSHARE" >> pure(OmpBlockDirective::Directive::Workshare))))
 
 TYPE_PARSER(sourced(construct<OmpBeginBlockDirective>(
     sourced(Parser<OmpBlockDirective>{}), Parser<OmpClauseList>{})))
@@ -465,9 +476,10 @@ TYPE_PARSER(construct<OpenMPBlockConstruct>(
     Parser<OmpEndBlockDirective>{} / endOmpLine))
 
 // OMP SECTIONS Directive
-TYPE_PARSER(construct<OmpSectionsDirective>(first(
-    "SECTIONS" >> pure(llvm::omp::Directive::OMPD_sections),
-    "PARALLEL SECTIONS" >> pure(llvm::omp::Directive::OMPD_parallel_sections))))
+TYPE_PARSER(construct<OmpSectionsDirective>(
+    first("SECTIONS" >> pure(OmpSectionsDirective::Directive::Sections),
+        "PARALLEL SECTIONS" >>
+            pure(OmpSectionsDirective::Directive::ParallelSections))))
 
 // OMP BEGIN and END SECTIONS Directive
 TYPE_PARSER(sourced(construct<OmpBeginSectionsDirective>(

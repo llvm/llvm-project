@@ -39,14 +39,10 @@ add_flang_library(FortranSemantics
   type.cpp
   unparse-with-symbols.cpp
 
-  DEPENDS
-  omp_gen
-
   LINK_LIBS
   FortranCommon
   FortranEvaluate
 
   LINK_COMPONENTS
   Support
-  FrontendOpenMP
 )
