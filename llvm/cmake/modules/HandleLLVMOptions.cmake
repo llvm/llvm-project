@@ -911,6 +911,7 @@ if (CLANG_CL AND (LLVM_BUILD_INSTRUMENTED OR LLVM_USE_SANITIZER))
   file(TO_CMAKE_PATH "${clang_resource_dir}" clang_resource_dir)
   append("/libpath:${clang_resource_dir}/lib/windows"
     CMAKE_EXE_LINKER_FLAGS
+    CMAKE_MODULE_LINKER_FLAGS
     CMAKE_SHARED_LINKER_FLAGS)
 endif()
 
