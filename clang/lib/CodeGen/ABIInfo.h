@@ -28,7 +28,6 @@ namespace clang {
 
 namespace CodeGen {
   class ABIArgInfo;
-  class Address;
   class CGCXXABI;
   class CGFunctionInfo;
   class CodeGenFunction;

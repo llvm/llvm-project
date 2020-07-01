@@ -25,7 +25,9 @@
 
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/ABI.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "llvm/IR/BasicBlock.h"
 
 namespace llvm {
 class AttrBuilder;
@@ -40,6 +42,7 @@ class Type;
 namespace clang {
 class ASTContext;
 class CXXConstructorDecl;
+class CXXDestructorDecl;
 class CXXRecordDecl;
 class CXXMethodDecl;
 class CodeGenOptions;
@@ -89,6 +92,12 @@ const CGFunctionInfo &arrangeFreeFunctionCall(CodeGenModule &CGM,
 /// constructor call.
 ImplicitCXXConstructorArgs
 getImplicitCXXConstructorArgs(CodeGenModule &CGM, const CXXConstructorDecl *D);
+
+llvm::Value *
+getCXXDestructorImplicitParam(CodeGenModule &CGM, llvm::BasicBlock *InsertBlock,
+                              llvm::BasicBlock::iterator InsertPoint,
+                              const CXXDestructorDecl *D, CXXDtorType Type,
+                              bool ForVirtualBase, bool Delegating);
 
 /// Returns null if the function type is incomplete and can't be lowered.
 llvm::FunctionType *convertFreeFunctionType(CodeGenModule &CGM,

@@ -681,11 +681,16 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
         loaded_module_list.AppendIfNeeded(image_module_sp);
       }
 
-      // macCatalyst support:
-      // Update the module's platform with the DYLD info.
+      // To support macCatalyst and legacy iOS simulator,
+      // update the module's platform with the DYLD info.
       ArchSpec dyld_spec = image_infos[idx].GetArchitecture();
-      if (dyld_spec.GetTriple().getOS() == llvm::Triple::IOS &&
-          dyld_spec.GetTriple().getEnvironment() == llvm::Triple::MacABI)
+      auto &dyld_triple = dyld_spec.GetTriple();
+      if ((dyld_triple.getEnvironment() == llvm::Triple::MacABI &&
+           dyld_triple.getOS() == llvm::Triple::IOS) ||
+          (dyld_triple.getEnvironment() == llvm::Triple::Simulator &&
+           (dyld_triple.getOS() == llvm::Triple::IOS ||
+            dyld_triple.getOS() == llvm::Triple::TvOS ||
+            dyld_triple.getOS() == llvm::Triple::WatchOS)))
         image_module_sp->MergeArchitecture(dyld_spec);
     }
   }
@@ -748,12 +753,22 @@ lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
   // Update the module's platform with the DYLD info.
   lldb_private::ArchSpec arch_spec(lldb_private::eArchTypeMachO, header.cputype,
                                    header.cpusubtype);
-  if (os_type == llvm::Triple::IOS && os_env == llvm::Triple::MacABI) {
-    llvm::Triple triple(llvm::Twine("x86_64-apple-ios") + min_version_os_sdk +
-                        "-macabi");
+  if (os_env == llvm::Triple::MacABI && os_type == llvm::Triple::IOS) {
+    llvm::Triple triple(llvm::Twine(arch_spec.GetArchitectureName()) +
+                        "-apple-ios" + min_version_os_sdk + "-macabi");
     ArchSpec maccatalyst_spec(triple);
     if (arch_spec.IsCompatibleMatch(maccatalyst_spec))
       arch_spec.MergeFrom(maccatalyst_spec);
+  }
+  if (os_env == llvm::Triple::Simulator &&
+      (os_type == llvm::Triple::IOS || os_type == llvm::Triple::TvOS ||
+       os_type == llvm::Triple::WatchOS)) {
+    llvm::Triple triple(llvm::Twine(arch_spec.GetArchitectureName()) +
+                        "-apple-" + llvm::Triple::getOSTypeName(os_type) +
+                        min_version_os_sdk + "-simulator");
+    ArchSpec sim_spec(triple);
+    if (arch_spec.IsCompatibleMatch(sim_spec))
+      arch_spec.MergeFrom(sim_spec);
   }
   return arch_spec;
 }

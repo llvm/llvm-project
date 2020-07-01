@@ -1869,8 +1869,14 @@ static MachineInstr *swapRegAndNonRegOperand(MachineInstr &MI,
     RegOp.ChangeToImmediate(NonRegOp.getImm());
   else if (NonRegOp.isFI())
     RegOp.ChangeToFrameIndex(NonRegOp.getIndex());
-  else
+  else if (NonRegOp.isGlobal()) {
+    RegOp.ChangeToGA(NonRegOp.getGlobal(), NonRegOp.getOffset(),
+                     NonRegOp.getTargetFlags());
+  } else
     return nullptr;
+
+  // Make sure we don't reinterpret a subreg index in the target flags.
+  RegOp.setTargetFlags(NonRegOp.getTargetFlags());
 
   NonRegOp.ChangeToRegister(Reg, false, false, IsKill, IsDead, IsUndef, IsDebug);
   NonRegOp.setSubReg(SubReg);
