@@ -636,6 +636,36 @@ def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
                                     FeatureDotProd
                                     ]>;
 
+def ProcA78 : SubtargetFeature<"cortex-a78", "ARMProcFamily",
+                               "CortexA78",
+                               "Cortex-A78 ARM processors", [
+                               HasV8_2aOps,
+                               FeatureCrypto,
+                               FeatureFPARMv8,
+                               FeatureFuseAES,
+                               FeatureNEON,
+                               FeatureRCPC,
+                               FeaturePerfMon,
+                               FeaturePostRAScheduler,
+                               FeatureSPE,
+                               FeatureFullFP16,
+                               FeatureSSBS,
+                               FeatureDotProd]>;
+
+def ProcX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
+                                  "Cortex-X1 ARM processors", [
+                                  HasV8_2aOps,
+                                  FeatureCrypto,
+                                  FeatureFPARMv8,
+                                  FeatureFuseAES,
+                                  FeatureNEON,
+                                  FeatureRCPC,
+                                  FeaturePerfMon,
+                                  FeaturePostRAScheduler,
+                                  FeatureSPE,
+                                  FeatureFullFP16,
+                                  FeatureDotProd]>;
+
 def ProcA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  "Fujitsu A64FX processors", [
                                   HasV8_2aOps,
@@ -978,6 +1008,8 @@ def : ProcessorModel<"cortex-a75", CortexA57Model, [ProcA75]>;
 def : ProcessorModel<"cortex-a76", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cortex-a76ae", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cortex-a77", CortexA57Model, [ProcA77]>;
+def : ProcessorModel<"cortex-a78", CortexA57Model, [ProcA78]>;
+def : ProcessorModel<"cortex-x1", CortexA57Model, [ProcX1]>;
 def : ProcessorModel<"neoverse-e1", CortexA53Model, [ProcNeoverseE1]>;
 def : ProcessorModel<"neoverse-n1", CortexA57Model, [ProcNeoverseN1]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
