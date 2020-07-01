@@ -204,7 +204,7 @@ LoadCommands:
       - sectname:        __debug_abbrev
         segname:         __DWARF
         addr:            0x000000010000312C
-        size:            84
+        size:            86
         offset:          0x00002167
         align:           0
         reloff:          0x00000000
@@ -217,7 +217,7 @@ LoadCommands:
         segname:         __DWARF
         addr:            0x0000000100003178
         size:            83
-        offset:          0x000021BB
+        offset:          0x000021BC
         align:           0
         reloff:          0x00000000
         nreloc:          0
