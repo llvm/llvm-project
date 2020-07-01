@@ -3584,7 +3584,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       EVT ResVT = VA.getValVT();
       unsigned Opc = ResVT == MVT::f32 ? X86::ST_Fp80m32 : X86::ST_Fp80m64;
       unsigned MemSize = ResVT.getSizeInBits()/8;
-      int FI = MFI.CreateStackObject(MemSize, MemSize, false);
+      int FI = MFI.CreateStackObject(MemSize, Align(MemSize), false);
       addFrameReference(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                                 TII.get(Opc)), FI)
         .addReg(CopyReg);

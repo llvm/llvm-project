@@ -128,22 +128,52 @@ bool isAccessOperator(OverloadedOperatorKind OK) {
          isDecrementOperator(OK) || isRandomIncrOrDecrOperator(OK);
 }
 
+bool isAccessOperator(UnaryOperatorKind OK) {
+  return isDereferenceOperator(OK) || isIncrementOperator(OK) ||
+         isDecrementOperator(OK);
+}
+
+bool isAccessOperator(BinaryOperatorKind OK) {
+  return isDereferenceOperator(OK) || isRandomIncrOrDecrOperator(OK);
+}
+
 bool isDereferenceOperator(OverloadedOperatorKind OK) {
   return OK == OO_Star || OK == OO_Arrow || OK == OO_ArrowStar ||
          OK == OO_Subscript;
+}
+
+bool isDereferenceOperator(UnaryOperatorKind OK) {
+  return OK == UO_Deref;
+}
+
+bool isDereferenceOperator(BinaryOperatorKind OK) {
+  return OK == BO_PtrMemI;
 }
 
 bool isIncrementOperator(OverloadedOperatorKind OK) {
   return OK == OO_PlusPlus;
 }
 
+bool isIncrementOperator(UnaryOperatorKind OK) {
+  return OK == UO_PreInc || OK == UO_PostInc;
+}
+
 bool isDecrementOperator(OverloadedOperatorKind OK) {
   return OK == OO_MinusMinus;
+}
+
+bool isDecrementOperator(UnaryOperatorKind OK) {
+  return OK == UO_PreDec || OK == UO_PostDec;
 }
 
 bool isRandomIncrOrDecrOperator(OverloadedOperatorKind OK) {
   return OK == OO_Plus || OK == OO_PlusEqual || OK == OO_Minus ||
          OK == OO_MinusEqual;
+}
+
+bool isRandomIncrOrDecrOperator(BinaryOperatorKind OK) {
+  return OK == BO_Add || OK == BO_AddAssign ||
+         OK == BO_Sub || OK == BO_SubAssign;
 }
 
 const ContainerData *getContainerData(ProgramStateRef State,

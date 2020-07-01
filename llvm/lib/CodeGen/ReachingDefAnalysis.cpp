@@ -389,6 +389,12 @@ ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, int PhysReg,
   }
 }
 
+void ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB, int PhysReg,
+                                      InstSet &Defs) const {
+  SmallPtrSet<MachineBasicBlock*, 2> VisitedBBs;
+  getLiveOuts(MBB, PhysReg, Defs, VisitedBBs);
+}
+
 void
 ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB, int PhysReg,
                                  InstSet &Defs, BlockSet &VisitedBBs) const {

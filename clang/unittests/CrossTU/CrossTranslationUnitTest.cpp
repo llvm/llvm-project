@@ -8,6 +8,7 @@
 
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
@@ -43,6 +44,10 @@ public:
     const FunctionDecl *FD = FindFInTU(TU);
     assert(FD && FD->getName() == "f");
     bool OrigFDHasBody = FD->hasBody();
+
+    const DynTypedNodeList ParentsBeforeImport =
+        Ctx.getParentMapContext().getParents<Decl>(*FD);
+    ASSERT_FALSE(ParentsBeforeImport.empty());
 
     // Prepare the index file and the AST file.
     int ASTFD;
@@ -105,8 +110,27 @@ public:
             EXPECT_EQ(OrigSLoc, FDWithDefinition->getLocation());
           }
         }
+
+        // Check parent map.
+        const DynTypedNodeList ParentsAfterImport =
+            Ctx.getParentMapContext().getParents<Decl>(*FD);
+        const DynTypedNodeList ParentsOfImported =
+            Ctx.getParentMapContext().getParents<Decl>(*NewFD);
+        EXPECT_TRUE(
+            checkParentListsEq(ParentsBeforeImport, ParentsAfterImport));
+        EXPECT_FALSE(ParentsOfImported.empty());
       }
     }
+  }
+
+  static bool checkParentListsEq(const DynTypedNodeList &L1,
+                                 const DynTypedNodeList &L2) {
+    if (L1.size() != L2.size())
+      return false;
+    for (unsigned int I = 0; I < L1.size(); ++I)
+      if (L1[I] != L2[I])
+        return false;
+    return true;
   }
 
 private:

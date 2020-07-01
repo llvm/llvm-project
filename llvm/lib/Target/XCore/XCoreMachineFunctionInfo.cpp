@@ -43,7 +43,7 @@ int XCoreFunctionInfo::createLRSpillSlot(MachineFunction &MF) {
     LRSpillSlot = MFI.CreateFixedObject(TRI.getSpillSize(RC), 0, true);
   } else {
     LRSpillSlot = MFI.CreateStackObject(TRI.getSpillSize(RC),
-                                        TRI.getSpillAlignment(RC), true);
+                                        TRI.getSpillAlign(RC), true);
   }
   LRSpillSlotSet = true;
   return LRSpillSlot;
@@ -56,8 +56,8 @@ int XCoreFunctionInfo::createFPSpillSlot(MachineFunction &MF) {
   const TargetRegisterClass &RC = XCore::GRRegsRegClass;
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  FPSpillSlot = MFI.CreateStackObject(TRI.getSpillSize(RC),
-                                      TRI.getSpillAlignment(RC), true);
+  FPSpillSlot =
+      MFI.CreateStackObject(TRI.getSpillSize(RC), TRI.getSpillAlign(RC), true);
   FPSpillSlotSet = true;
   return FPSpillSlot;
 }

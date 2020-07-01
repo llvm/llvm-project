@@ -1032,7 +1032,7 @@ unsigned PPCFastISel::PPCMoveToFPReg(MVT SrcVT, unsigned SrcReg,
   // Get a stack slot 8 bytes wide, aligned on an 8-byte boundary.
   Address Addr;
   Addr.BaseType = Address::FrameIndexBase;
-  Addr.Base.FI = MFI.CreateStackObject(8, 8, false);
+  Addr.Base.FI = MFI.CreateStackObject(8, Align(8), false);
 
   // Store the value from the GPR.
   if (!PPCEmitStore(MVT::i64, SrcReg, Addr))
@@ -1161,7 +1161,7 @@ unsigned PPCFastISel::PPCMoveToIntReg(const Instruction *I, MVT VT,
   // easiest code gen possible.
   Address Addr;
   Addr.BaseType = Address::FrameIndexBase;
-  Addr.Base.FI = MFI.CreateStackObject(8, 8, false);
+  Addr.Base.FI = MFI.CreateStackObject(8, Align(8), false);
 
   // Store the value from the FPR.
   if (!PPCEmitStore(MVT::f64, SrcReg, Addr))
