@@ -48,6 +48,11 @@ config.available_features.add('target-is-%s' % config.target_arch)
 
 if config.enable_per_target_runtime_dir:
   set_default("target_suffix", "")
+elif config.android:
+  if config.target_arch == "i386":
+    set_default("target_suffix", "-i686-android")
+  else:
+    set_default("target_suffix", "-%s-android" % config.target_arch)
 else:
   set_default("target_suffix", "-%s" % config.target_arch)
 
