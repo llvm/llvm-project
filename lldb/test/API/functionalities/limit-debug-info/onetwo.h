@@ -9,3 +9,18 @@ struct Two : One {
   constexpr Two() = default;
   ~Two() override;
 };
+
+namespace member {
+struct One {
+  int member = 147;
+  constexpr One() = default;
+  virtual ~One();
+};
+
+struct Two {
+  One one;
+  int member = 247;
+  constexpr Two() = default;
+  virtual ~Two();
+};
+} // namespace member
