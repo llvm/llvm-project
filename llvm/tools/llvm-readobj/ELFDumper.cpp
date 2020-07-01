@@ -682,11 +682,32 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
   } else {
     if (!DotSymtabSec)
       return;
-    StrTable = unwrapOrError(ObjF->getFileName(),
-                             Obj->getStringTableForSymtab(*DotSymtabSec));
-    Syms = unwrapOrError(ObjF->getFileName(), Obj->symbols(DotSymtabSec));
-    SymtabName =
-        unwrapOrError(ObjF->getFileName(), Obj->getSectionName(DotSymtabSec));
+
+    if (Expected<StringRef> StrTableOrErr =
+            Obj->getStringTableForSymtab(*DotSymtabSec))
+      StrTable = *StrTableOrErr;
+    else
+      reportUniqueWarning(createError(
+          "unable to get the string table for the SHT_SYMTAB section: " +
+          toString(StrTableOrErr.takeError())));
+
+    if (Expected<Elf_Sym_Range> SymsOrErr = Obj->symbols(DotSymtabSec))
+      Syms = *SymsOrErr;
+    else
+      reportUniqueWarning(
+          createError("unable to read symbols from the SHT_SYMTAB section: " +
+                      toString(SymsOrErr.takeError())));
+
+    if (Expected<StringRef> SymtabNameOrErr =
+            Obj->getSectionName(DotSymtabSec)) {
+      SymtabName = *SymtabNameOrErr;
+    } else {
+      reportUniqueWarning(
+          createError("unable to get the name of the SHT_SYMTAB section: " +
+                      toString(SymtabNameOrErr.takeError())));
+      SymtabName = "<?>";
+    }
+
     Entries = DotSymtabSec->getEntityCount();
   }
   if (Syms.begin() == Syms.end())
@@ -1156,8 +1177,13 @@ template <typename ELFT>
 std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym *Symbol,
                                                StringRef StrTable,
                                                bool IsDynamic) const {
-  std::string SymbolName = maybeDemangle(
-      unwrapOrError(ObjF->getFileName(), Symbol->getName(StrTable)));
+  std::string SymbolName;
+  if (Expected<StringRef> NameOrErr = Symbol->getName(StrTable)) {
+    SymbolName = maybeDemangle(*NameOrErr);
+  } else {
+    reportUniqueWarning(NameOrErr.takeError());
+    return "<?>";
+  }
 
   if (SymbolName.empty() && Symbol->getType() == ELF::STT_SECTION) {
     Elf_Sym_Range Syms = unwrapOrError(
