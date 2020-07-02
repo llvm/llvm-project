@@ -53,7 +53,7 @@ void Transformer::run(const MatchFinder::MatchResult &Result) {
     auto ID = Result.SourceManager->getFileID(T.Range.getBegin());
     auto Iter = ChangesByFileID
                     .emplace(ID, AtomicChange(*Result.SourceManager,
-                                              T.Range.getBegin()))
+                                              T.Range.getBegin(), T.Metadata))
                     .first;
     auto &AC = Iter->second;
     if (auto Err = AC.replace(*Result.SourceManager, T.Range, T.Replacement)) {
