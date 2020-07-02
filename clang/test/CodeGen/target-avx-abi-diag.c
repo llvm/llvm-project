@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -verify=no256,no512 -o - -S
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx -verify=no512 -o - -S
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -verify=both -o - -S
+// REQUIRES: x86-registered-target
 
 // both-no-diagnostics
 
