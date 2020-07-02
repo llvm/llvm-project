@@ -461,6 +461,7 @@ public:
   CheckerNameRef CheckNames[CK_NumCheckKinds];
 
   bool DisplayLoadedSummaries = false;
+  bool ModelPOSIX = false;
 
 private:
   Optional<Summary> findFunctionSummary(const FunctionDecl *FD,
@@ -736,13 +737,18 @@ llvm::Optional<QualType> lookupType(StringRef Name, const ASTContext &ACtx) {
   //   typedef struct FILE FILE;
   // In this case, we have a RecordDecl 'struct FILE' with the name 'FILE' and
   // we have a TypedefDecl with the name 'FILE'.
-  for (Decl *D : LookupRes) {
+  for (Decl *D : LookupRes)
     if (auto *TD = dyn_cast<TypedefNameDecl>(D))
       return ACtx.getTypeDeclType(TD).getCanonicalType();
-  }
-  assert(LookupRes.size() == 1 && "Type identifier should be unique");
-  auto *D = cast<TypeDecl>(LookupRes.front());
-  return ACtx.getTypeDeclType(D).getCanonicalType();
+
+  // Find the first TypeDecl.
+  // There maybe cases when a function has the same name as a struct.
+  // E.g. in POSIX: `struct stat` and the function `stat()`:
+  //   int stat(const char *restrict path, struct stat *restrict buf);
+  for (Decl *D : LookupRes)
+    if (auto *TD = dyn_cast<TypeDecl>(D))
+      return ACtx.getTypeDeclType(TD).getCanonicalType();
+  return None;
 }
 
 void StdLibraryFunctionsChecker::initFunctionSummaries(
@@ -761,26 +767,46 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   // of function summary for common cases (eg. ssize_t could be int or long
   // or long long, so three summary variants would be enough).
   // Of course, function variants are also useful for C++ overloads.
+  const QualType VoidTy = ACtx.VoidTy;
   const QualType IntTy = ACtx.IntTy;
+  const QualType UnsignedIntTy = ACtx.UnsignedIntTy;
   const QualType LongTy = ACtx.LongTy;
   const QualType LongLongTy = ACtx.LongLongTy;
   const QualType SizeTy = ACtx.getSizeType();
+
   const QualType VoidPtrTy = ACtx.VoidPtrTy; // void *
+  const QualType IntPtrTy = ACtx.getPointerType(IntTy); // int *
+  const QualType UnsignedIntPtrTy =
+      ACtx.getPointerType(UnsignedIntTy); // unsigned int *
   const QualType VoidPtrRestrictTy =
       ACtx.getLangOpts().C99 ? ACtx.getRestrictType(VoidPtrTy) // void *restrict
                              : VoidPtrTy;
   const QualType ConstVoidPtrTy =
       ACtx.getPointerType(ACtx.VoidTy.withConst()); // const void *
+  const QualType CharPtrTy = ACtx.getPointerType(ACtx.CharTy); // char *
+  const QualType CharPtrRestrictTy =
+      ACtx.getLangOpts().C99 ? ACtx.getRestrictType(CharPtrTy) // char *restrict
+                             : CharPtrTy;
   const QualType ConstCharPtrTy =
       ACtx.getPointerType(ACtx.CharTy.withConst()); // const char *
+  const QualType ConstCharPtrRestrictTy =
+      ACtx.getLangOpts().C99
+          ? ACtx.getRestrictType(ConstCharPtrTy) // const char *restrict
+          : ConstCharPtrTy;
+  const QualType Wchar_tPtrTy = ACtx.getPointerType(ACtx.WCharTy); // wchar_t *
+  const QualType ConstWchar_tPtrTy =
+      ACtx.getPointerType(ACtx.WCharTy.withConst()); // const wchar_t *
   const QualType ConstVoidPtrRestrictTy =
       ACtx.getLangOpts().C99
           ? ACtx.getRestrictType(ConstVoidPtrTy) // const void *restrict
           : ConstVoidPtrTy;
 
   const RangeInt IntMax = BVF.getMaxValue(IntTy).getLimitedValue();
+  const RangeInt UnsignedIntMax =
+      BVF.getMaxValue(UnsignedIntTy).getLimitedValue();
   const RangeInt LongMax = BVF.getMaxValue(LongTy).getLimitedValue();
   const RangeInt LongLongMax = BVF.getMaxValue(LongLongTy).getLimitedValue();
+  const RangeInt SizeMax = BVF.getMaxValue(SizeTy).getLimitedValue();
 
   // Set UCharRangeMax to min of int or uchar maximum value.
   // The C standard states that the arguments of functions like isalpha must
@@ -1110,6 +1136,573 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                           {Getline(IntTy, IntMax), Getline(LongTy, LongMax),
                            Getline(LongLongTy, LongLongMax)});
 
+  if (ModelPOSIX) {
+
+    // long a64l(const char *str64);
+    addToFunctionSummaryMap(
+        "a64l", Summary(ArgTypes{ConstCharPtrTy}, RetType{LongTy}, NoEvalCall)
+                    .ArgConstraint(NotNull(ArgNo(0))));
+
+    // char *l64a(long value);
+    addToFunctionSummaryMap(
+        "l64a", Summary(ArgTypes{LongTy}, RetType{CharPtrTy}, NoEvalCall)
+                    .ArgConstraint(
+                        ArgumentCondition(0, WithinRange, Range(0, LongMax))));
+
+    // int access(const char *pathname, int amode);
+    addToFunctionSummaryMap("access", Summary(ArgTypes{ConstCharPtrTy, IntTy},
+                                              RetType{IntTy}, NoEvalCall)
+                                          .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int faccessat(int dirfd, const char *pathname, int mode, int flags);
+    addToFunctionSummaryMap(
+        "faccessat", Summary(ArgTypes{IntTy, ConstCharPtrTy, IntTy, IntTy},
+                             RetType{IntTy}, NoEvalCall)
+                         .ArgConstraint(NotNull(ArgNo(1))));
+
+    // int dup(int fildes);
+    addToFunctionSummaryMap(
+        "dup", Summary(ArgTypes{IntTy}, RetType{IntTy}, NoEvalCall)
+                   .ArgConstraint(
+                       ArgumentCondition(0, WithinRange, Range(0, IntMax))));
+
+    // int dup2(int fildes1, int filedes2);
+    addToFunctionSummaryMap(
+        "dup2",
+        Summary(ArgTypes{IntTy, IntTy}, RetType{IntTy}, NoEvalCall)
+            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(
+                ArgumentCondition(1, WithinRange, Range(0, IntMax))));
+
+    // int fdatasync(int fildes);
+    addToFunctionSummaryMap(
+        "fdatasync", Summary(ArgTypes{IntTy}, RetType{IntTy}, NoEvalCall)
+                         .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                          Range(0, IntMax))));
+
+    // int fnmatch(const char *pattern, const char *string, int flags);
+    addToFunctionSummaryMap(
+        "fnmatch", Summary(ArgTypes{ConstCharPtrTy, ConstCharPtrTy, IntTy},
+                           RetType{IntTy}, EvalCallAsPure)
+                       .ArgConstraint(NotNull(ArgNo(0)))
+                       .ArgConstraint(NotNull(ArgNo(1))));
+
+    // int fsync(int fildes);
+    addToFunctionSummaryMap(
+        "fsync", Summary(ArgTypes{IntTy}, RetType{IntTy}, NoEvalCall)
+                     .ArgConstraint(
+                         ArgumentCondition(0, WithinRange, Range(0, IntMax))));
+
+    Optional<QualType> Off_tTy = lookupType("off_t", ACtx);
+
+    if (Off_tTy)
+      // int truncate(const char *path, off_t length);
+      addToFunctionSummaryMap("truncate",
+                              Summary(ArgTypes{ConstCharPtrTy, *Off_tTy},
+                                      RetType{IntTy}, NoEvalCall)
+                                  .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int symlink(const char *oldpath, const char *newpath);
+    addToFunctionSummaryMap("symlink",
+                            Summary(ArgTypes{ConstCharPtrTy, ConstCharPtrTy},
+                                    RetType{IntTy}, NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(0)))
+                                .ArgConstraint(NotNull(ArgNo(1))));
+
+    // int symlinkat(const char *oldpath, int newdirfd, const char *newpath);
+    addToFunctionSummaryMap(
+        "symlinkat",
+        Summary(ArgTypes{ConstCharPtrTy, IntTy, ConstCharPtrTy}, RetType{IntTy},
+                NoEvalCall)
+            .ArgConstraint(NotNull(ArgNo(0)))
+            .ArgConstraint(ArgumentCondition(1, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(NotNull(ArgNo(2))));
+
+    if (Off_tTy)
+      // int lockf(int fd, int cmd, off_t len);
+      addToFunctionSummaryMap(
+          "lockf",
+          Summary(ArgTypes{IntTy, IntTy, *Off_tTy}, RetType{IntTy}, NoEvalCall)
+              .ArgConstraint(
+                  ArgumentCondition(0, WithinRange, Range(0, IntMax))));
+
+    Optional<QualType> Mode_tTy = lookupType("mode_t", ACtx);
+
+    if (Mode_tTy)
+      // int creat(const char *pathname, mode_t mode);
+      addToFunctionSummaryMap("creat",
+                              Summary(ArgTypes{ConstCharPtrTy, *Mode_tTy},
+                                      RetType{IntTy}, NoEvalCall)
+                                  .ArgConstraint(NotNull(ArgNo(0))));
+
+    // unsigned int sleep(unsigned int seconds);
+    addToFunctionSummaryMap(
+        "sleep",
+        Summary(ArgTypes{UnsignedIntTy}, RetType{UnsignedIntTy}, NoEvalCall)
+            .ArgConstraint(
+                ArgumentCondition(0, WithinRange, Range(0, UnsignedIntMax))));
+
+    Optional<QualType> DirTy = lookupType("DIR", ACtx);
+    Optional<QualType> DirPtrTy;
+    if (DirTy)
+      DirPtrTy = ACtx.getPointerType(*DirTy);
+
+    if (DirPtrTy)
+      // int dirfd(DIR *dirp);
+      addToFunctionSummaryMap(
+          "dirfd", Summary(ArgTypes{*DirPtrTy}, RetType{IntTy}, NoEvalCall)
+                       .ArgConstraint(NotNull(ArgNo(0))));
+
+    // unsigned int alarm(unsigned int seconds);
+    addToFunctionSummaryMap(
+        "alarm",
+        Summary(ArgTypes{UnsignedIntTy}, RetType{UnsignedIntTy}, NoEvalCall)
+            .ArgConstraint(
+                ArgumentCondition(0, WithinRange, Range(0, UnsignedIntMax))));
+
+    if (DirPtrTy)
+      // int closedir(DIR *dir);
+      addToFunctionSummaryMap(
+          "closedir", Summary(ArgTypes{*DirPtrTy}, RetType{IntTy}, NoEvalCall)
+                          .ArgConstraint(NotNull(ArgNo(0))));
+
+    // char *strdup(const char *s);
+    addToFunctionSummaryMap("strdup", Summary(ArgTypes{ConstCharPtrTy},
+                                              RetType{CharPtrTy}, NoEvalCall)
+                                          .ArgConstraint(NotNull(ArgNo(0))));
+
+    // char *strndup(const char *s, size_t n);
+    addToFunctionSummaryMap(
+        "strndup", Summary(ArgTypes{ConstCharPtrTy, SizeTy}, RetType{CharPtrTy},
+                           NoEvalCall)
+                       .ArgConstraint(NotNull(ArgNo(0)))
+                       .ArgConstraint(ArgumentCondition(1, WithinRange,
+                                                        Range(0, SizeMax))));
+
+    // wchar_t *wcsdup(const wchar_t *s);
+    addToFunctionSummaryMap("wcsdup", Summary(ArgTypes{ConstWchar_tPtrTy},
+                                              RetType{Wchar_tPtrTy}, NoEvalCall)
+                                          .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int mkstemp(char *template);
+    addToFunctionSummaryMap(
+        "mkstemp", Summary(ArgTypes{CharPtrTy}, RetType{IntTy}, NoEvalCall)
+                       .ArgConstraint(NotNull(ArgNo(0))));
+
+    // char *mkdtemp(char *template);
+    addToFunctionSummaryMap(
+        "mkdtemp", Summary(ArgTypes{CharPtrTy}, RetType{CharPtrTy}, NoEvalCall)
+                       .ArgConstraint(NotNull(ArgNo(0))));
+
+    // char *getcwd(char *buf, size_t size);
+    addToFunctionSummaryMap(
+        "getcwd",
+        Summary(ArgTypes{CharPtrTy, SizeTy}, RetType{CharPtrTy}, NoEvalCall)
+            .ArgConstraint(
+                ArgumentCondition(1, WithinRange, Range(0, SizeMax))));
+
+    if (Mode_tTy) {
+      // int mkdir(const char *pathname, mode_t mode);
+      addToFunctionSummaryMap("mkdir",
+                              Summary(ArgTypes{ConstCharPtrTy, *Mode_tTy},
+                                      RetType{IntTy}, NoEvalCall)
+                                  .ArgConstraint(NotNull(ArgNo(0))));
+
+      // int mkdirat(int dirfd, const char *pathname, mode_t mode);
+      addToFunctionSummaryMap(
+          "mkdirat", Summary(ArgTypes{IntTy, ConstCharPtrTy, *Mode_tTy},
+                             RetType{IntTy}, NoEvalCall)
+                         .ArgConstraint(NotNull(ArgNo(1))));
+    }
+
+    Optional<QualType> Dev_tTy = lookupType("dev_t", ACtx);
+
+    if (Mode_tTy && Dev_tTy) {
+      // int mknod(const char *pathname, mode_t mode, dev_t dev);
+      addToFunctionSummaryMap(
+          "mknod", Summary(ArgTypes{ConstCharPtrTy, *Mode_tTy, *Dev_tTy},
+                           RetType{IntTy}, NoEvalCall)
+                       .ArgConstraint(NotNull(ArgNo(0))));
+
+      // int mknodat(int dirfd, const char *pathname, mode_t mode, dev_t dev);
+      addToFunctionSummaryMap("mknodat", Summary(ArgTypes{IntTy, ConstCharPtrTy,
+                                                          *Mode_tTy, *Dev_tTy},
+                                                 RetType{IntTy}, NoEvalCall)
+                                             .ArgConstraint(NotNull(ArgNo(1))));
+    }
+
+    if (Mode_tTy) {
+      // int chmod(const char *path, mode_t mode);
+      addToFunctionSummaryMap("chmod",
+                              Summary(ArgTypes{ConstCharPtrTy, *Mode_tTy},
+                                      RetType{IntTy}, NoEvalCall)
+                                  .ArgConstraint(NotNull(ArgNo(0))));
+
+      // int fchmodat(int dirfd, const char *pathname, mode_t mode, int flags);
+      addToFunctionSummaryMap(
+          "fchmodat", Summary(ArgTypes{IntTy, ConstCharPtrTy, *Mode_tTy, IntTy},
+                              RetType{IntTy}, NoEvalCall)
+                          .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                           Range(0, IntMax)))
+                          .ArgConstraint(NotNull(ArgNo(1))));
+
+      // int fchmod(int fildes, mode_t mode);
+      addToFunctionSummaryMap(
+          "fchmod",
+          Summary(ArgTypes{IntTy, *Mode_tTy}, RetType{IntTy}, NoEvalCall)
+              .ArgConstraint(
+                  ArgumentCondition(0, WithinRange, Range(0, IntMax))));
+    }
+
+    Optional<QualType> Uid_tTy = lookupType("uid_t", ACtx);
+    Optional<QualType> Gid_tTy = lookupType("gid_t", ACtx);
+
+    if (Uid_tTy && Gid_tTy) {
+      // int fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group,
+      //              int flags);
+      addToFunctionSummaryMap(
+          "fchownat",
+          Summary(ArgTypes{IntTy, ConstCharPtrTy, *Uid_tTy, *Gid_tTy, IntTy},
+                  RetType{IntTy}, NoEvalCall)
+              .ArgConstraint(
+                  ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+              .ArgConstraint(NotNull(ArgNo(1))));
+
+      // int chown(const char *path, uid_t owner, gid_t group);
+      addToFunctionSummaryMap(
+          "chown", Summary(ArgTypes{ConstCharPtrTy, *Uid_tTy, *Gid_tTy},
+                           RetType{IntTy}, NoEvalCall)
+                       .ArgConstraint(NotNull(ArgNo(0))));
+
+      // int lchown(const char *path, uid_t owner, gid_t group);
+      addToFunctionSummaryMap(
+          "lchown", Summary(ArgTypes{ConstCharPtrTy, *Uid_tTy, *Gid_tTy},
+                            RetType{IntTy}, NoEvalCall)
+                        .ArgConstraint(NotNull(ArgNo(0))));
+
+      // int fchown(int fildes, uid_t owner, gid_t group);
+      addToFunctionSummaryMap(
+          "fchown", Summary(ArgTypes{IntTy, *Uid_tTy, *Gid_tTy}, RetType{IntTy},
+                            NoEvalCall)
+                        .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                         Range(0, IntMax))));
+    }
+
+    // int rmdir(const char *pathname);
+    addToFunctionSummaryMap(
+        "rmdir", Summary(ArgTypes{ConstCharPtrTy}, RetType{IntTy}, NoEvalCall)
+                     .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int chdir(const char *path);
+    addToFunctionSummaryMap(
+        "chdir", Summary(ArgTypes{ConstCharPtrTy}, RetType{IntTy}, NoEvalCall)
+                     .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int link(const char *oldpath, const char *newpath);
+    addToFunctionSummaryMap("link",
+                            Summary(ArgTypes{ConstCharPtrTy, ConstCharPtrTy},
+                                    RetType{IntTy}, NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(0)))
+                                .ArgConstraint(NotNull(ArgNo(1))));
+
+    // int linkat(int fd1, const char *path1, int fd2, const char *path2,
+    //            int flag);
+    addToFunctionSummaryMap(
+        "linkat",
+        Summary(ArgTypes{IntTy, ConstCharPtrTy, IntTy, ConstCharPtrTy, IntTy},
+                RetType{IntTy}, NoEvalCall)
+            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(NotNull(ArgNo(1)))
+            .ArgConstraint(ArgumentCondition(2, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(NotNull(ArgNo(3))));
+
+    // int unlink(const char *pathname);
+    addToFunctionSummaryMap(
+        "unlink", Summary(ArgTypes{ConstCharPtrTy}, RetType{IntTy}, NoEvalCall)
+                      .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int unlinkat(int fd, const char *path, int flag);
+    addToFunctionSummaryMap(
+        "unlinkat",
+        Summary(ArgTypes{IntTy, ConstCharPtrTy, IntTy}, RetType{IntTy},
+                NoEvalCall)
+            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(NotNull(ArgNo(1))));
+
+    Optional<QualType> StructStatTy = lookupType("stat", ACtx);
+    Optional<QualType> StructStatPtrTy, StructStatPtrRestrictTy;
+    if (StructStatTy) {
+      StructStatPtrTy = ACtx.getPointerType(*StructStatTy);
+      StructStatPtrRestrictTy = ACtx.getLangOpts().C99
+                                    ? ACtx.getRestrictType(*StructStatPtrTy)
+                                    : *StructStatPtrTy;
+    }
+
+    if (StructStatPtrTy)
+      // int fstat(int fd, struct stat *statbuf);
+      addToFunctionSummaryMap(
+          "fstat",
+          Summary(ArgTypes{IntTy, *StructStatPtrTy}, RetType{IntTy}, NoEvalCall)
+              .ArgConstraint(
+                  ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+              .ArgConstraint(NotNull(ArgNo(1))));
+
+    if (StructStatPtrRestrictTy) {
+      // int stat(const char *restrict path, struct stat *restrict buf);
+      addToFunctionSummaryMap(
+          "stat",
+          Summary(ArgTypes{ConstCharPtrRestrictTy, *StructStatPtrRestrictTy},
+                  RetType{IntTy}, NoEvalCall)
+              .ArgConstraint(NotNull(ArgNo(0)))
+              .ArgConstraint(NotNull(ArgNo(1))));
+
+      // int lstat(const char *restrict path, struct stat *restrict buf);
+      addToFunctionSummaryMap(
+          "lstat",
+          Summary(ArgTypes{ConstCharPtrRestrictTy, *StructStatPtrRestrictTy},
+                  RetType{IntTy}, NoEvalCall)
+              .ArgConstraint(NotNull(ArgNo(0)))
+              .ArgConstraint(NotNull(ArgNo(1))));
+
+      // int fstatat(int fd, const char *restrict path,
+      //             struct stat *restrict buf, int flag);
+      addToFunctionSummaryMap(
+          "fstatat", Summary(ArgTypes{IntTy, ConstCharPtrRestrictTy,
+                                      *StructStatPtrRestrictTy, IntTy},
+                             RetType{IntTy}, NoEvalCall)
+                         .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                          Range(0, IntMax)))
+                         .ArgConstraint(NotNull(ArgNo(1)))
+                         .ArgConstraint(NotNull(ArgNo(2))));
+    }
+
+    if (DirPtrTy) {
+      // DIR *opendir(const char *name);
+      addToFunctionSummaryMap("opendir", Summary(ArgTypes{ConstCharPtrTy},
+                                                 RetType{*DirPtrTy}, NoEvalCall)
+                                             .ArgConstraint(NotNull(ArgNo(0))));
+
+      // DIR *fdopendir(int fd);
+      addToFunctionSummaryMap(
+          "fdopendir", Summary(ArgTypes{IntTy}, RetType{*DirPtrTy}, NoEvalCall)
+                           .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                            Range(0, IntMax))));
+    }
+
+    // int isatty(int fildes);
+    addToFunctionSummaryMap(
+        "isatty", Summary(ArgTypes{IntTy}, RetType{IntTy}, NoEvalCall)
+                      .ArgConstraint(
+                          ArgumentCondition(0, WithinRange, Range(0, IntMax))));
+
+    if (FilePtrTy) {
+      // FILE *popen(const char *command, const char *type);
+      addToFunctionSummaryMap("popen",
+                              Summary(ArgTypes{ConstCharPtrTy, ConstCharPtrTy},
+                                      RetType{*FilePtrTy}, NoEvalCall)
+                                  .ArgConstraint(NotNull(ArgNo(0)))
+                                  .ArgConstraint(NotNull(ArgNo(1))));
+
+      // int pclose(FILE *stream);
+      addToFunctionSummaryMap(
+          "pclose", Summary(ArgTypes{*FilePtrTy}, RetType{IntTy}, NoEvalCall)
+                        .ArgConstraint(NotNull(ArgNo(0))));
+    }
+
+    // int close(int fildes);
+    addToFunctionSummaryMap(
+        "close", Summary(ArgTypes{IntTy}, RetType{IntTy}, NoEvalCall)
+                     .ArgConstraint(
+                         ArgumentCondition(0, WithinRange, Range(0, IntMax))));
+
+    // long fpathconf(int fildes, int name);
+    addToFunctionSummaryMap(
+        "fpathconf",
+        Summary(ArgTypes{IntTy, IntTy}, RetType{LongTy}, NoEvalCall)
+            .ArgConstraint(
+                ArgumentCondition(0, WithinRange, Range(0, IntMax))));
+
+    // long pathconf(const char *path, int name);
+    addToFunctionSummaryMap("pathconf", Summary(ArgTypes{ConstCharPtrTy, IntTy},
+                                                RetType{LongTy}, NoEvalCall)
+                                            .ArgConstraint(NotNull(ArgNo(0))));
+
+    if (FilePtrTy)
+      // FILE *fdopen(int fd, const char *mode);
+      addToFunctionSummaryMap(
+          "fdopen", Summary(ArgTypes{IntTy, ConstCharPtrTy},
+                            RetType{*FilePtrTy}, NoEvalCall)
+                        .ArgConstraint(
+                            ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+                        .ArgConstraint(NotNull(ArgNo(1))));
+
+    if (DirPtrTy) {
+      // void rewinddir(DIR *dir);
+      addToFunctionSummaryMap(
+          "rewinddir", Summary(ArgTypes{*DirPtrTy}, RetType{VoidTy}, NoEvalCall)
+                           .ArgConstraint(NotNull(ArgNo(0))));
+
+      // void seekdir(DIR *dirp, long loc);
+      addToFunctionSummaryMap("seekdir", Summary(ArgTypes{*DirPtrTy, LongTy},
+                                                 RetType{VoidTy}, NoEvalCall)
+                                             .ArgConstraint(NotNull(ArgNo(0))));
+    }
+
+    // int rand_r(unsigned int *seedp);
+    addToFunctionSummaryMap("rand_r", Summary(ArgTypes{UnsignedIntPtrTy},
+                                              RetType{IntTy}, NoEvalCall)
+                                          .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int strcasecmp(const char *s1, const char *s2);
+    addToFunctionSummaryMap("strcasecmp",
+                            Summary(ArgTypes{ConstCharPtrTy, ConstCharPtrTy},
+                                    RetType{IntTy}, EvalCallAsPure)
+                                .ArgConstraint(NotNull(ArgNo(0)))
+                                .ArgConstraint(NotNull(ArgNo(1))));
+
+    // int strncasecmp(const char *s1, const char *s2, size_t n);
+    addToFunctionSummaryMap(
+        "strncasecmp", Summary(ArgTypes{ConstCharPtrTy, ConstCharPtrTy, SizeTy},
+                               RetType{IntTy}, EvalCallAsPure)
+                           .ArgConstraint(NotNull(ArgNo(0)))
+                           .ArgConstraint(NotNull(ArgNo(1)))
+                           .ArgConstraint(ArgumentCondition(
+                               2, WithinRange, Range(0, SizeMax))));
+
+    if (FilePtrTy && Off_tTy) {
+
+      // int fileno(FILE *stream);
+      addToFunctionSummaryMap(
+          "fileno", Summary(ArgTypes{*FilePtrTy}, RetType{IntTy}, NoEvalCall)
+                        .ArgConstraint(NotNull(ArgNo(0))));
+
+      // int fseeko(FILE *stream, off_t offset, int whence);
+      addToFunctionSummaryMap("fseeko",
+                              Summary(ArgTypes{*FilePtrTy, *Off_tTy, IntTy},
+                                      RetType{IntTy}, NoEvalCall)
+                                  .ArgConstraint(NotNull(ArgNo(0))));
+
+      // off_t ftello(FILE *stream);
+      addToFunctionSummaryMap(
+          "ftello", Summary(ArgTypes{*FilePtrTy}, RetType{*Off_tTy}, NoEvalCall)
+                        .ArgConstraint(NotNull(ArgNo(0))));
+    }
+
+    if (Off_tTy) {
+      Optional<RangeInt> Off_tMax = BVF.getMaxValue(*Off_tTy).getLimitedValue();
+
+      // void *mmap(void *addr, size_t length, int prot, int flags, int fd,
+      // off_t offset);
+      addToFunctionSummaryMap(
+          "mmap",
+          Summary(ArgTypes{VoidPtrTy, SizeTy, IntTy, IntTy, IntTy, *Off_tTy},
+                  RetType{VoidPtrTy}, NoEvalCall)
+              .ArgConstraint(
+                  ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
+              .ArgConstraint(
+                  ArgumentCondition(4, WithinRange, Range(0, *Off_tMax))));
+    }
+
+    Optional<QualType> Off64_tTy = lookupType("off64_t", ACtx);
+    Optional<RangeInt> Off64_tMax;
+    if (Off64_tTy) {
+      Off64_tMax = BVF.getMaxValue(*Off_tTy).getLimitedValue();
+      // void *mmap64(void *addr, size_t length, int prot, int flags, int fd,
+      // off64_t offset);
+      addToFunctionSummaryMap(
+          "mmap64",
+          Summary(ArgTypes{VoidPtrTy, SizeTy, IntTy, IntTy, IntTy, *Off64_tTy},
+                  RetType{VoidPtrTy}, NoEvalCall)
+              .ArgConstraint(
+                  ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
+              .ArgConstraint(
+                  ArgumentCondition(4, WithinRange, Range(0, *Off64_tMax))));
+    }
+
+    // int pipe(int fildes[2]);
+    addToFunctionSummaryMap(
+        "pipe", Summary(ArgTypes{IntPtrTy}, RetType{IntTy}, NoEvalCall)
+                    .ArgConstraint(NotNull(ArgNo(0))));
+
+    if (Off_tTy)
+      // off_t lseek(int fildes, off_t offset, int whence);
+      addToFunctionSummaryMap(
+          "lseek", Summary(ArgTypes{IntTy, *Off_tTy, IntTy}, RetType{*Off_tTy},
+                           NoEvalCall)
+                       .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                        Range(0, IntMax))));
+
+    Optional<QualType> Ssize_tTy = lookupType("ssize_t", ACtx);
+
+    if (Ssize_tTy) {
+      // ssize_t readlink(const char *restrict path, char *restrict buf,
+      //                  size_t bufsize);
+      addToFunctionSummaryMap(
+          "readlink",
+          Summary(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
+                  RetType{*Ssize_tTy}, NoEvalCall)
+              .ArgConstraint(NotNull(ArgNo(0)))
+              .ArgConstraint(NotNull(ArgNo(1)))
+              .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
+                                        /*BufSize=*/ArgNo(2)))
+              .ArgConstraint(
+                  ArgumentCondition(2, WithinRange, Range(0, SizeMax))));
+
+      // ssize_t readlinkat(int fd, const char *restrict path,
+      //                    char *restrict buf, size_t bufsize);
+      addToFunctionSummaryMap(
+          "readlinkat", Summary(ArgTypes{IntTy, ConstCharPtrRestrictTy,
+                                         CharPtrRestrictTy, SizeTy},
+                                RetType{*Ssize_tTy}, NoEvalCall)
+                            .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                             Range(0, IntMax)))
+                            .ArgConstraint(NotNull(ArgNo(1)))
+                            .ArgConstraint(NotNull(ArgNo(2)))
+                            .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(2),
+                                                      /*BufSize=*/ArgNo(3)))
+                            .ArgConstraint(ArgumentCondition(
+                                3, WithinRange, Range(0, SizeMax))));
+    }
+
+    // int renameat(int olddirfd, const char *oldpath, int newdirfd, const char
+    // *newpath);
+    addToFunctionSummaryMap("renameat", Summary(ArgTypes{IntTy, ConstCharPtrTy,
+                                                         IntTy, ConstCharPtrTy},
+                                                RetType{IntTy}, NoEvalCall)
+                                            .ArgConstraint(NotNull(ArgNo(1)))
+                                            .ArgConstraint(NotNull(ArgNo(3))));
+
+    // char *realpath(const char *restrict file_name,
+    //                char *restrict resolved_name);
+    addToFunctionSummaryMap(
+        "realpath", Summary(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy},
+                            RetType{CharPtrTy}, NoEvalCall)
+                        .ArgConstraint(NotNull(ArgNo(0))));
+
+    QualType CharPtrConstPtr = ACtx.getPointerType(CharPtrTy.withConst());
+
+    // int execv(const char *path, char *const argv[]);
+    addToFunctionSummaryMap("execv",
+                            Summary(ArgTypes{ConstCharPtrTy, CharPtrConstPtr},
+                                    RetType{IntTy}, NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int execvp(const char *file, char *const argv[]);
+    addToFunctionSummaryMap("execvp",
+                            Summary(ArgTypes{ConstCharPtrTy, CharPtrConstPtr},
+                                    RetType{IntTy}, NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int getopt(int argc, char * const argv[], const char *optstring);
+    addToFunctionSummaryMap(
+        "getopt",
+        Summary(ArgTypes{IntTy, CharPtrConstPtr, ConstCharPtrTy},
+                RetType{IntTy}, NoEvalCall)
+            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(NotNull(ArgNo(1)))
+            .ArgConstraint(NotNull(ArgNo(2))));
+  }
+
   // Functions for testing.
   if (ChecksEnabled[CK_StdCLibraryFunctionsTesterChecker]) {
     addToFunctionSummaryMap(
@@ -1151,6 +1744,8 @@ void ento::registerStdCLibraryFunctionsChecker(CheckerManager &mgr) {
   Checker->DisplayLoadedSummaries =
       mgr.getAnalyzerOptions().getCheckerBooleanOption(
           Checker, "DisplayLoadedSummaries");
+  Checker->ModelPOSIX =
+      mgr.getAnalyzerOptions().getCheckerBooleanOption(Checker, "ModelPOSIX");
 }
 
 bool ento::shouldRegisterStdCLibraryFunctionsChecker(const CheckerManager &mgr) {

@@ -3,9 +3,9 @@
 ; CHECK-LABEL: Function: simple: 5 pointers, 0 call sites
 ; CHECK:         NoAlias:      float* %src1, float* %src2
 ; CHECK:         NoAlias:      float* %phi, float* %src1
-; CHECK:         MustAlias:    float* %phi, float* %src2
+; CHECK:         MayAlias:     float* %phi, float* %src2
 ; CHECK:         NoAlias:      float* %next, float* %src1
-; CHECK:         NoAlias:      float* %next, float* %src2
+; CHECK:         MayAlias:     float* %next, float* %src2
 ; CHECK:         NoAlias:      float* %next, float* %phi
 ; CHECK:         NoAlias:      float* %g, float* %src1
 ; CHECK:         NoAlias:      float* %g, float* %src2
@@ -38,13 +38,13 @@ end:
 ; CHECK:        MustAlias:    [2 x i32]* %tab, i32* %arrayidx1
 ; CHECK:        MustAlias:    i32* %arrayidx1, i8* %0
 ; CHECK:        NoAlias:      i32* %arrayidx, i32* %arrayidx1
-; CHECK:        MustAlias:    [2 x i32]* %tab, i32* %p.addr.05.i
-; CHECK:        MustAlias:    i32* %p.addr.05.i, i8* %0
-; CHECK:        NoAlias:      i32* %arrayidx, i32* %p.addr.05.i
-; CHECK:        MustAlias:    i32* %arrayidx1, i32* %p.addr.05.i
-; CHECK:        PartialAlias: [2 x i32]* %tab, i32* %incdec.ptr.i
+; CHECK:        MayAlias:     [2 x i32]* %tab, i32* %p.addr.05.i
+; CHECK:        MayAlias:     i32* %p.addr.05.i, i8* %0
+; CHECK:        MayAlias:     i32* %arrayidx, i32* %p.addr.05.i
+; CHECK:        MayAlias:     i32* %arrayidx1, i32* %p.addr.05.i
+; CHECK:        MayAlias:     [2 x i32]* %tab, i32* %incdec.ptr.i
 ; CHECK:        NoAlias:      i32* %incdec.ptr.i, i8* %0
-; CHECK:        MustAlias:    i32* %arrayidx, i32* %incdec.ptr.i
+; CHECK:        MayAlias:     i32* %arrayidx, i32* %incdec.ptr.i
 ; CHECK:        NoAlias:      i32* %arrayidx1, i32* %incdec.ptr.i
 ; CHECK:        NoAlias:      i32* %incdec.ptr.i, i32* %p.addr.05.i
 define i32 @notmust() nounwind {
