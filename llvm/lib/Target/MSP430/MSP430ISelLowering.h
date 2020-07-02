@@ -79,6 +79,10 @@ namespace llvm {
       return MVT::i8;
     }
 
+    MVT::SimpleValueType getCmpLibcallReturnType() const override {
+      return MVT::i16;
+    }
+
     /// LowerOperation - Provide custom lowering hooks for some operations.
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
