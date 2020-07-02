@@ -218,7 +218,7 @@ void AffineDataCopyGeneration::runOnFunction() {
     nest->walk([&](Operation *op) {
       if (auto forOp = dyn_cast<AffineForOp>(op))
         promoteIfSingleIteration(forOp);
-      else if (isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op))
+      else if (isa<AffineLoadOp, AffineStoreOp>(op))
         copyOps.push_back(op);
     });
 

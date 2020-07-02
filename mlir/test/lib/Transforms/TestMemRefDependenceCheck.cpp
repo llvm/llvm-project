@@ -103,7 +103,7 @@ void TestMemRefDependenceCheck::runOnFunction() {
   // Collect the loads and stores within the function.
   loadsAndStores.clear();
   getFunction().walk([&](Operation *op) {
-    if (isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op))
+    if (isa<AffineLoadOp, AffineStoreOp>(op))
       loadsAndStores.push_back(op);
   });
 

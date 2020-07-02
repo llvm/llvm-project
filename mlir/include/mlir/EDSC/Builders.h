@@ -139,15 +139,12 @@ struct StructuredIndexed {
 
   StructuredIndexed(Value v, ArrayRef<AffineExpr> indexings)
       : value(v), exprs(indexings.begin(), indexings.end()) {
-    assert((v.getType().isa<MemRefType>() ||
-            v.getType().isa<RankedTensorType>() ||
-            v.getType().isa<VectorType>()) &&
+    assert((v.getType().isa<MemRefType, RankedTensorType, VectorType>()) &&
            "MemRef, RankedTensor or Vector expected");
   }
   StructuredIndexed(Type t, ArrayRef<AffineExpr> indexings)
       : type(t), exprs(indexings.begin(), indexings.end()) {
-    assert((t.isa<MemRefType>() || t.isa<RankedTensorType>() ||
-            t.isa<VectorType>()) &&
+    assert((t.isa<MemRefType, RankedTensorType, VectorType>()) &&
            "MemRef, RankedTensor or Vector expected");
   }
 

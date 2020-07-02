@@ -294,7 +294,7 @@ bool mlir::getLoopNestStats(AffineForOp forOpRoot, LoopNestStats *stats) {
     unsigned count = 0;
     stats->opCountMap[childForOp] = 0;
     for (auto &op : *forOp.getBody()) {
-      if (!isa<AffineForOp>(op) && !isa<AffineIfOp>(op))
+      if (!isa<AffineForOp, AffineIfOp>(op))
         ++count;
     }
     stats->opCountMap[childForOp] = count;

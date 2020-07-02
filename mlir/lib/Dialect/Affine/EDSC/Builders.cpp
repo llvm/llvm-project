@@ -117,7 +117,7 @@ static Value createBinaryHandle(
     return ValueBuilder<IOp>(lhs, rhs);
   } else if (thisType.isa<FloatType>()) {
     return ValueBuilder<FOp>(lhs, rhs);
-  } else if (thisType.isa<VectorType>() || thisType.isa<TensorType>()) {
+  } else if (thisType.isa<VectorType, TensorType>()) {
     auto aggregateType = thisType.cast<ShapedType>();
     if (aggregateType.getElementType().isSignlessInteger())
       return ValueBuilder<IOp>(lhs, rhs);

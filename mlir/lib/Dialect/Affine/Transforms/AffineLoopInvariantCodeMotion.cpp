@@ -80,7 +80,7 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
     // If the body of a predicated region has a for loop, we don't hoist the
     // 'affine.if'.
     return false;
-  } else if (isa<AffineDmaStartOp>(op) || isa<AffineDmaWaitOp>(op)) {
+  } else if (isa<AffineDmaStartOp, AffineDmaWaitOp>(op)) {
     // TODO(asabne): Support DMA ops.
     return false;
   } else if (!isa<ConstantOp>(op)) {
@@ -91,7 +91,7 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
       for (auto *user : memref.getUsers()) {
         // If this memref has a user that is a DMA, give up because these
         // operations write to this memref.
-        if (isa<AffineDmaStartOp>(op) || isa<AffineDmaWaitOp>(op)) {
+        if (isa<AffineDmaStartOp, AffineDmaWaitOp>(op)) {
           return false;
         }
         // If the memref used by the load/store is used in a store elsewhere in
