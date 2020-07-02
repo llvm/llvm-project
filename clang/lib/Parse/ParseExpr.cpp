@@ -940,6 +940,11 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   auto SavedType = PreferredType;
   NotCastExpr = false;
 
+  // Are postfix-expression suffix operators permitted after this
+  // cast-expression? If not, and we find some, we'll parse them anyway and
+  // diagnose them.
+  bool AllowSuffix = true;
+
   // This handles all of cast-expression, unary-expression, postfix-expression,
   // and primary-expression.  We handle them together like this for efficiency
   // and to simplify handling of an expression starting with a '(' token: which
@@ -949,8 +954,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   // If the parsed tokens consist of a primary-expression, the cases below
   // break out of the switch;  at the end we call ParsePostfixExpressionSuffix
   // to handle the postfix expression suffixes.  Cases that cannot be followed
-  // by postfix exprs should return without invoking
-  // ParsePostfixExpressionSuffix.
+  // by postfix exprs should set AllowSuffix to false.
   switch (SavedKind) {
   case tok::l_paren: {
     // If this expression is limited to being a unary-expression, the paren can
@@ -973,8 +977,11 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     Res = ParseParenExpression(ParenExprType, false/*stopIfCastExr*/,
                                isTypeCast == IsTypeCast, CastTy, RParenLoc);
 
+    // FIXME: What should we do if a vector literal is followed by a
+    // postfix-expression suffix? Usually postfix operators are permitted on
+    // literals.
     if (isVectorLiteral)
-        return Res;
+      return Res;
 
     switch (ParenExprType) {
     case SimpleExpr:   break;    // Nothing else to do.
@@ -1012,11 +1019,13 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 
   case tok::kw___objc_yes:
   case tok::kw___objc_no:
-      return ParseObjCBoolLiteral();
+    Res = ParseObjCBoolLiteral();
+    break;
 
   case tok::kw_nullptr:
     Diag(Tok, diag::warn_cxx98_compat_nullptr);
-    return Actions.ActOnCXXNullPtrLiteral(ConsumeToken());
+    Res = Actions.ActOnCXXNullPtrLiteral(ConsumeToken());
+    break;
 
   case tok::annot_uneval_primary_expr:
   case tok::annot_primary_expr:
@@ -1315,7 +1324,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     Res = ParseGenericSelectionExpression();
     break;
   case tok::kw___builtin_available:
-    return ParseAvailabilityCheckExpr(Tok.getLocation());
+    Res = ParseAvailabilityCheckExpr(Tok.getLocation());
+    break;
   case tok::kw___builtin_va_arg:
   case tok::kw___builtin_offsetof:
   case tok::kw___builtin_choose_expr:
@@ -1327,9 +1337,11 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw___builtin_LINE:
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
+    // This parses the complete suffix; we can return early.
     return ParseBuiltinPrimaryExpression();
   case tok::kw___null:
-    return Actions.ActOnGNUNullExpr(ConsumeToken());
+    Res = Actions.ActOnGNUNullExpr(ConsumeToken());
+    break;
 
   case tok::plusplus:      // unary-expression: '++' unary-expression [C99]
   case tok::minusminus: {  // unary-expression: '--' unary-expression [C99]
@@ -1441,7 +1453,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw___builtin_omp_required_simd_align:
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
-    return ParseUnaryExprOrTypeTraitExpression();
+    AllowSuffix = false;
+    Res = ParseUnaryExprOrTypeTraitExpression();
+    break;
   case tok::ampamp: {      // unary-expression: '&&' identifier
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
@@ -1457,7 +1471,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                                 Tok.getLocation());
     Res = Actions.ActOnAddrLabel(AmpAmpLoc, Tok.getLocation(), LD);
     ConsumeToken();
-    return Res;
+    AllowSuffix = false;
+    break;
   }
   case tok::kw_const_cast:
   case tok::kw_dynamic_cast:
@@ -1652,12 +1667,16 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     if (Tok.is(tok::kw_new)) {
       if (NotPrimaryExpression)
         *NotPrimaryExpression = true;
-      return ParseCXXNewExpression(true, CCLoc);
+      Res = ParseCXXNewExpression(true, CCLoc);
+      AllowSuffix = false;
+      break;
     }
     if (Tok.is(tok::kw_delete)) {
       if (NotPrimaryExpression)
         *NotPrimaryExpression = true;
-      return ParseCXXDeleteExpression(true, CCLoc);
+      Res = ParseCXXDeleteExpression(true, CCLoc);
+      AllowSuffix = false;
+      break;
     }
 
     // This is not a type name or scope specifier, it is an invalid expression.
@@ -1668,15 +1687,21 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw_new: // [C++] new-expression
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
-    return ParseCXXNewExpression(false, Tok.getLocation());
+    Res = ParseCXXNewExpression(false, Tok.getLocation());
+    AllowSuffix = false;
+    break;
 
   case tok::kw_delete: // [C++] delete-expression
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
-    return ParseCXXDeleteExpression(false, Tok.getLocation());
+    Res = ParseCXXDeleteExpression(false, Tok.getLocation());
+    AllowSuffix = false;
+    break;
 
   case tok::kw_requires: // [C++2a] requires-expression
-    return ParseRequiresExpression();
+    Res = ParseRequiresExpression();
+    AllowSuffix = false;
+    break;
 
   case tok::kw_noexcept: { // [C++0x] 'noexcept' '(' expression ')'
     if (NotPrimaryExpression)
@@ -1692,26 +1717,29 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     //   which is an unevaluated operand, can throw an exception.
     EnterExpressionEvaluationContext Unevaluated(
         Actions, Sema::ExpressionEvaluationContext::Unevaluated);
-    ExprResult Result = ParseExpression();
+    Res = ParseExpression();
 
     T.consumeClose();
 
-    if (!Result.isInvalid())
-      Result = Actions.ActOnNoexceptExpr(KeyLoc, T.getOpenLocation(),
-                                         Result.get(), T.getCloseLocation());
-    return Result;
+    if (!Res.isInvalid())
+      Res = Actions.ActOnNoexceptExpr(KeyLoc, T.getOpenLocation(), Res.get(),
+                                      T.getCloseLocation());
+    AllowSuffix = false;
+    break;
   }
 
 #define TYPE_TRAIT(N,Spelling,K) \
   case tok::kw_##Spelling:
 #include "clang/Basic/TokenKinds.def"
-    return ParseTypeTrait();
+    Res = ParseTypeTrait();
+    break;
 
   case tok::kw___array_rank:
   case tok::kw___array_extent:
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
-    return ParseArrayTypeTrait();
+    Res = ParseArrayTypeTrait();
+    break;
 
   case tok::kw___builtin_ptrauth_type_discriminator:
     return ParseBuiltinPtrauthTypeDiscriminator();
@@ -1720,7 +1748,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw___is_rvalue_expr:
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
-    return ParseExpressionTrait();
+    Res = ParseExpressionTrait();
+    break;
 
   case tok::at: {
     if (NotPrimaryExpression)
@@ -1776,6 +1805,41 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     // This is strictly a primary-expression - no postfix-expr pieces should be
     // parsed.
     return Res;
+
+  if (!AllowSuffix) {
+    // FIXME: Don't parse a primary-expression suffix if we encountered a parse
+    // error already.
+    if (Res.isInvalid())
+      return Res;
+
+    switch (Tok.getKind()) {
+    case tok::l_square:
+    case tok::l_paren:
+    case tok::plusplus:
+    case tok::minusminus:
+      // "expected ';'" or similar is probably the right diagnostic here. Let
+      // the caller decide what to do.
+      if (Tok.isAtStartOfLine())
+        return Res;
+
+      LLVM_FALLTHROUGH;
+    case tok::period:
+    case tok::arrow:
+      break;
+
+    default:
+      return Res;
+    }
+
+    // This was a unary-expression for which a postfix-expression suffix is
+    // not permitted by the grammar (eg, a sizeof expression or
+    // new-expression or similar). Diagnose but parse the suffix anyway.
+    Diag(Tok.getLocation(), diag::err_postfix_after_unary_requires_parens)
+        << Tok.getKind() << Res.get()->getSourceRange()
+        << FixItHint::CreateInsertion(Res.get()->getBeginLoc(), "(")
+        << FixItHint::CreateInsertion(PP.getLocForEndOfToken(PrevTokLocation),
+                                      ")");
+  }
 
   // These can be followed by postfix-expr pieces.
   PreferredType = SavedType;
