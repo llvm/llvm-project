@@ -154,8 +154,8 @@ void MipsFunctionInfo::createEhDataRegsFI(MachineFunction &MF) {
             ? Mips::GPR64RegClass
             : Mips::GPR32RegClass;
 
-    EhDataRegFI[I] = MF.getFrameInfo().CreateStackObject(TRI.getSpillSize(RC),
-        TRI.getSpillAlignment(RC), false);
+    EhDataRegFI[I] = MF.getFrameInfo().CreateStackObject(
+        TRI.getSpillSize(RC), TRI.getSpillAlign(RC), false);
   }
 }
 
@@ -169,7 +169,7 @@ void MipsFunctionInfo::createISRRegFI(MachineFunction &MF) {
 
   for (int I = 0; I < 2; ++I)
     ISRDataRegFI[I] = MF.getFrameInfo().CreateStackObject(
-        TRI.getSpillSize(RC), TRI.getSpillAlignment(RC), false);
+        TRI.getSpillSize(RC), TRI.getSpillAlign(RC), false);
 }
 
 bool MipsFunctionInfo::isEhDataRegFI(int FI) const {
@@ -195,7 +195,7 @@ int MipsFunctionInfo::getMoveF64ViaSpillFI(MachineFunction &MF,
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   if (MoveF64ViaSpillFI == -1) {
     MoveF64ViaSpillFI = MF.getFrameInfo().CreateStackObject(
-        TRI.getSpillSize(*RC), TRI.getSpillAlignment(*RC), false);
+        TRI.getSpillSize(*RC), TRI.getSpillAlign(*RC), false);
   }
   return MoveF64ViaSpillFI;
 }

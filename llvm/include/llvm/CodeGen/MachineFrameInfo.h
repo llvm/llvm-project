@@ -755,11 +755,12 @@ public:
   /// a nonnegative identifier to represent it.
   int CreateStackObject(uint64_t Size, Align Alignment, bool isSpillSlot,
                         const AllocaInst *Alloca = nullptr, uint8_t ID = 0);
-  /// FIXME: Remove this function when transition to Align is over.
-  inline int CreateStackObject(uint64_t Size, unsigned Alignment,
-                               bool isSpillSlot,
-                               const AllocaInst *Alloca = nullptr,
-                               uint8_t ID = 0) {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline int CreateStackObject(uint64_t Size, unsigned Alignment,
+                                   bool isSpillSlot,
+                                   const AllocaInst *Alloca = nullptr,
+                                   uint8_t ID = 0),
+      "Use CreateStackObject that takes an Align instead") {
     return CreateStackObject(Size, assumeAligned(Alignment), isSpillSlot,
                              Alloca, ID);
   }
