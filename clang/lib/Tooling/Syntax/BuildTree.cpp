@@ -647,6 +647,16 @@ public:
     return true;
   }
 
+  bool WalkUpFromParenExpr(ParenExpr *S) {
+    Builder.markChildToken(S->getLParen(), syntax::NodeRole::OpenParen);
+    Builder.markExprChild(S->getSubExpr(),
+                          syntax::NodeRole::ParenExpression_subExpression);
+    Builder.markChildToken(S->getRParen(), syntax::NodeRole::CloseParen);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::ParenExpression, S);
+    return true;
+  }
+
   bool WalkUpFromIntegerLiteral(IntegerLiteral *S) {
     Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
     Builder.foldNode(Builder.getExprRange(S),

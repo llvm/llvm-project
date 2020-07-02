@@ -43,6 +43,7 @@ enum class NodeKind : uint16_t {
   PrefixUnaryOperatorExpression,
   PostfixUnaryOperatorExpression,
   BinaryOperatorExpression,
+  ParenExpression,
   IntegerLiteralExpression,
   CharacterLiteralExpression,
   FloatingLiteralExpression,
@@ -161,7 +162,8 @@ enum class NodeRole : uint8_t {
   ParametersAndQualifiers_trailingReturn,
   IdExpression_id,
   IdExpression_qualifier,
-  NestedNameSpecifier_specifier
+  NestedNameSpecifier_specifier,
+  ParenExpression_subExpression
 };
 /// For debugging purposes.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeRole R);
@@ -246,6 +248,19 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::UnknownExpression;
   }
+};
+
+/// Models a parenthesized expression `(E)`. C++ [expr.prim.paren]
+/// e.g. `(3 + 2)` in `a = 1 + (3 + 2);`
+class ParenExpression final : public Expression {
+public:
+  ParenExpression() : Expression(NodeKind::ParenExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ParenExpression;
+  }
+  syntax::Leaf *openParen();
+  syntax::Expression *subExpression();
+  syntax::Leaf *closeParen();
 };
 
 /// Expression for integer literals. C++ [lex.icon]
