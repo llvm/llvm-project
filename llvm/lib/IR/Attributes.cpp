@@ -1706,7 +1706,7 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
 
   Attrs |= B.Attrs;
 
-  for (auto I : B.td_attrs())
+  for (const auto &I : B.td_attrs())
     TargetDepAttrs[I.first] = I.second;
 
   return *this;
@@ -1737,7 +1737,7 @@ AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
 
   Attrs &= ~B.Attrs;
 
-  for (auto I : B.td_attrs())
+  for (const auto &I : B.td_attrs())
     TargetDepAttrs.erase(I.first);
 
   return *this;
