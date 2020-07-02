@@ -3775,7 +3775,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
 
     if (isVOP3(MI) && LiteralCount) {
-      if (LiteralCount && !ST.hasVOP3Literal()) {
+      if (!ST.hasVOP3Literal()) {
         ErrInfo = "VOP3 instruction uses literal";
         return false;
       }
