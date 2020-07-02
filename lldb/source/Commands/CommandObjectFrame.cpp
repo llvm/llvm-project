@@ -936,6 +936,33 @@ public:
 
   ~CommandObjectFrameRecognizerDelete() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex() != 0)
+      return;
+
+    StackFrameRecognizerManager::ForEach(
+        [&request](uint32_t rid, std::string rname, std::string module,
+                   llvm::ArrayRef<lldb_private::ConstString> symbols,
+                   bool regexp) {
+          StreamString strm;
+          if (rname.empty())
+            rname = "(internal)";
+
+          strm << rname;
+          if (!module.empty())
+            strm << ", module " << module;
+          if (!symbols.empty())
+            for (auto &symbol : symbols)
+              strm << ", symbol " << symbol;
+          if (regexp)
+            strm << " (regexp)";
+
+          request.TryCompleteCurrentArg(std::to_string(rid), strm.GetString());
+        });
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() == 0) {
