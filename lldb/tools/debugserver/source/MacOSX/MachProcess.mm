@@ -672,7 +672,7 @@ const char *MachProcess::GetPlatformString(unsigned char platform) {
   case PLATFORM_DRIVERKIT:
     return "driverkit";
   }
-  return "";
+  return nullptr;
 }
 
 // Given an address, read the mach-o header and load commands out of memory to
