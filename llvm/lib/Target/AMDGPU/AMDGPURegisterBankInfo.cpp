@@ -3106,6 +3106,59 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   return applyDefaultMapping(OpdMapper);
 }
 
+// vgpr, sgpr -> vgpr
+// vgpr, agpr -> vgpr
+// agpr, agpr -> agpr
+// agpr, sgpr -> vgpr
+static unsigned regBankUnion(unsigned RB0, unsigned RB1) {
+  if (RB0 == AMDGPU::InvalidRegBankID)
+    return RB1;
+  if (RB1 == AMDGPU::InvalidRegBankID)
+    return RB0;
+
+  if (RB0 == AMDGPU::SGPRRegBankID && RB1 == AMDGPU::SGPRRegBankID)
+    return AMDGPU::SGPRRegBankID;
+
+  if (RB0 == AMDGPU::AGPRRegBankID && RB1 == AMDGPU::AGPRRegBankID)
+    return AMDGPU::AGPRRegBankID;
+
+  return AMDGPU::VGPRRegBankID;
+}
+
+static unsigned regBankBoolUnion(unsigned RB0, unsigned RB1) {
+  if (RB0 == AMDGPU::InvalidRegBankID)
+    return RB1;
+  if (RB1 == AMDGPU::InvalidRegBankID)
+    return RB0;
+
+  // vcc, vcc -> vcc
+  // vcc, sgpr -> vcc
+  // vcc, vgpr -> vcc
+  if (RB0 == AMDGPU::VCCRegBankID || RB1 == AMDGPU::VCCRegBankID)
+    return AMDGPU::VCCRegBankID;
+
+  // vcc, vgpr -> vgpr
+  return regBankUnion(RB0, RB1);
+}
+
+unsigned AMDGPURegisterBankInfo::getMappingType(const MachineRegisterInfo &MRI,
+                                                const MachineInstr &MI) const {
+  unsigned RegBank = AMDGPU::InvalidRegBankID;
+
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    if (!MI.getOperand(i).isReg())
+      continue;
+    Register Reg = MI.getOperand(i).getReg();
+    if (const RegisterBank *Bank = getRegBank(Reg, MRI, *TRI)) {
+      RegBank = regBankUnion(RegBank, Bank->getID());
+      if (RegBank == AMDGPU::VGPRRegBankID)
+        break;
+    }
+  }
+
+  return RegBank;
+}
+
 bool AMDGPURegisterBankInfo::isSALUMapping(const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -3294,28 +3347,6 @@ AMDGPURegisterBankInfo::getRegBankID(Register Reg,
                                      unsigned Default) const {
   const RegisterBank *Bank = getRegBank(Reg, MRI, *TRI);
   return Bank ? Bank->getID() : Default;
-}
-
-
-static unsigned regBankUnion(unsigned RB0, unsigned RB1) {
-  return (RB0 == AMDGPU::SGPRRegBankID && RB1 == AMDGPU::SGPRRegBankID) ?
-    AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
-}
-
-static unsigned regBankBoolUnion(unsigned RB0, unsigned RB1) {
-  if (RB0 == AMDGPU::InvalidRegBankID)
-    return RB1;
-  if (RB1 == AMDGPU::InvalidRegBankID)
-    return RB0;
-
-  // vcc, vcc -> vcc
-  // vcc, sgpr -> vcc
-  // vcc, vgpr -> vcc
-  if (RB0 == AMDGPU::VCCRegBankID || RB1 == AMDGPU::VCCRegBankID)
-    return AMDGPU::VCCRegBankID;
-
-  // vcc, vgpr -> vgpr
-  return regBankUnion(RB0, RB1);
 }
 
 const RegisterBankInfo::ValueMapping *
@@ -3618,8 +3649,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case AMDGPU::G_INSERT: {
-    unsigned BankID = isSALUMapping(MI) ? AMDGPU::SGPRRegBankID :
-                                          AMDGPU::VGPRRegBankID;
+    unsigned BankID = getMappingType(MRI, MI);
     unsigned DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
     unsigned SrcSize = getSizeInBits(MI.getOperand(1).getReg(), MRI, *TRI);
     unsigned EltSize = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
@@ -3658,8 +3688,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case AMDGPU::G_MERGE_VALUES:
   case AMDGPU::G_CONCAT_VECTORS: {
-    unsigned Bank = isSALUMapping(MI) ?
-      AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
+    unsigned Bank = getMappingType(MRI, MI);
     unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     unsigned SrcSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
 
@@ -3826,8 +3855,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case AMDGPU::G_UNMERGE_VALUES: {
-    unsigned Bank = isSALUMapping(MI) ? AMDGPU::SGPRRegBankID :
-      AMDGPU::VGPRRegBankID;
+    unsigned Bank = getMappingType(MRI, MI);
 
     // Op1 and Dst should use the same register bank.
     // FIXME: Shouldn't this be the default? Why do we need to handle this?
