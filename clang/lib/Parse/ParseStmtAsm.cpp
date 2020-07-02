@@ -941,7 +941,7 @@ const char *Parser::GNUAsmQualifiers::getQualifierName(AQ Qualifier) {
     case AQ_goto: return "goto";
     case AQ_unspecified: return "unspecified";
   }
-  llvm_unreachable("Unkown GNUAsmQualifier");
+  llvm_unreachable("Unknown GNUAsmQualifier");
 }
 
 Parser::GNUAsmQualifiers::AQ
