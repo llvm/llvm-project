@@ -80,10 +80,15 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
   std::pair<SlotIndex, SlotIndex> &LIP = LastInsertPoint[Num];
   SlotIndex MBBEnd = LIS.getMBBEndIdx(&MBB);
 
-  SmallVector<const MachineBasicBlock *, 1> EHPadSuccessors;
-  for (const MachineBasicBlock *SMBB : MBB.successors())
-    if (SMBB->isEHPad())
-      EHPadSuccessors.push_back(SMBB);
+  SmallVector<const MachineBasicBlock *, 1> ExceptionalSuccessors;
+  bool EHPadSuccessor = false;
+  for (const MachineBasicBlock *SMBB : MBB.successors()) {
+    if (SMBB->isEHPad()) {
+      ExceptionalSuccessors.push_back(SMBB);
+      EHPadSuccessor = true;
+    } else if (SMBB->isInlineAsmBrIndirectTarget())
+      ExceptionalSuccessors.push_back(SMBB);
+  }
 
   // Compute insert points on the first call. The pair is independent of the
   // current live interval.
@@ -94,15 +99,17 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
     else
       LIP.first = LIS.getInstructionIndex(*FirstTerm);
 
-    // If there is a landing pad successor, also find the call instruction.
-    if (EHPadSuccessors.empty())
+    // If there is a landing pad or inlineasm_br successor, also find the
+    // instruction. If there is no such instruction, we don't need to do
+    // anything special.  We assume there cannot be multiple instructions that
+    // are Calls with EHPad successors or INLINEASM_BR in a block. Further, we
+    // assume that if there are any, they will be after any other call
+    // instructions in the block.
+    if (ExceptionalSuccessors.empty())
       return LIP.first;
-    // There may not be a call instruction (?) in which case we ignore LPad.
-    LIP.second = LIP.first;
-    for (MachineBasicBlock::const_iterator I = MBB.end(), E = MBB.begin();
-         I != E;) {
-      --I;
-      if (I->isCall()) {
+    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
+      if ((EHPadSuccessor && I->isCall()) ||
+          I->getOpcode() == TargetOpcode::INLINEASM_BR) {
         LIP.second = LIS.getInstructionIndex(*I);
         break;
       }
@@ -114,7 +121,7 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
   if (!LIP.second)
     return LIP.first;
 
-  if (none_of(EHPadSuccessors, [&](const MachineBasicBlock *EHPad) {
+  if (none_of(ExceptionalSuccessors, [&](const MachineBasicBlock *EHPad) {
         return LIS.isLiveInToMBB(CurLI, EHPad);
       }))
     return LIP.first;
