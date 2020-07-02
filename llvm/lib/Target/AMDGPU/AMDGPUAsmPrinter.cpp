@@ -1365,9 +1365,9 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     if (AMDGPU::isInlinableIntLiteral(Val)) {
       O << Val;
     } else if (isUInt<16>(Val)) {
-      O << format("0x%" PRIx64, static_cast<uint16_t>(Val));
+      O << format("0x%" PRIx16, static_cast<uint16_t>(Val));
     } else if (isUInt<32>(Val)) {
-      O << format("0x%" PRIx64, static_cast<uint32_t>(Val));
+      O << format("0x%" PRIx32, static_cast<uint32_t>(Val));
     } else {
       O << format("0x%" PRIx64, static_cast<uint64_t>(Val));
     }
