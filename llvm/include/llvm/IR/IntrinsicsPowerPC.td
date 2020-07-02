@@ -1024,6 +1024,19 @@ def int_ppc_vsx_xxpermx :
       Intrinsic<[llvm_v16i8_ty],
                 [llvm_v16i8_ty,llvm_v16i8_ty,llvm_v16i8_ty,llvm_i32_ty],
                 [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+// P10 VSX Vector Blend Variable.
+def  int_ppc_vsx_xxblendvb: GCCBuiltin<"__builtin_vsx_xxblendvb">,
+       Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty],
+                 [IntrNoMem]>;
+def  int_ppc_vsx_xxblendvh: GCCBuiltin<"__builtin_vsx_xxblendvh">,
+       Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty, llvm_v8i16_ty,llvm_v8i16_ty],
+                 [IntrNoMem]>;
+def  int_ppc_vsx_xxblendvw: GCCBuiltin<"__builtin_vsx_xxblendvw">,
+       Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty],
+                 [IntrNoMem]>;
+def  int_ppc_vsx_xxblendvd: GCCBuiltin<"__builtin_vsx_xxblendvd">,
+       Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty, llvm_v2i64_ty],
+                 [IntrNoMem]>;
 }
 
 //===----------------------------------------------------------------------===//

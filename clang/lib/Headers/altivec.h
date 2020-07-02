@@ -16896,6 +16896,65 @@ vec_cnttzm(vector unsigned long long __a, vector unsigned long long __b) {
 #define vec_permx(__a, __b, __c, __d)                                          \
   __builtin_vsx_xxpermx((__a), (__b), (__c), (__d))
 
+/* vec_blendv */
+
+static __inline__ vector signed char __ATTRS_o_ai vec_blendv(
+    vector signed char __a, vector signed char __b, vector unsigned char __c) {
+  return __builtin_vsx_xxblendvb(__a, __b, __c);
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_blendv(vector unsigned char __a, vector unsigned char __b,
+           vector unsigned char __c) {
+  return __builtin_vsx_xxblendvb(__a, __b, __c);
+}
+
+static __inline__ vector signed short __ATTRS_o_ai
+vec_blendv(vector signed short __a, vector signed short __b,
+           vector unsigned short __c) {
+  return __builtin_vsx_xxblendvh(__a, __b, __c);
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai
+vec_blendv(vector unsigned short __a, vector unsigned short __b,
+           vector unsigned short __c) {
+  return __builtin_vsx_xxblendvh(__a, __b, __c);
+}
+
+static __inline__ vector signed int __ATTRS_o_ai
+vec_blendv(vector signed int __a, vector signed int __b,
+           vector unsigned int __c) {
+  return __builtin_vsx_xxblendvw(__a, __b, __c);
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_blendv(vector unsigned int __a, vector unsigned int __b,
+           vector unsigned int __c) {
+  return __builtin_vsx_xxblendvw(__a, __b, __c);
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_blendv(vector signed long long __a, vector signed long long __b,
+           vector unsigned long long __c) {
+  return __builtin_vsx_xxblendvd(__a, __b, __c);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_blendv(vector unsigned long long __a, vector unsigned long long __b,
+           vector unsigned long long __c) {
+  return __builtin_vsx_xxblendvd(__a, __b, __c);
+}
+
+static __inline__ vector float __ATTRS_o_ai
+vec_blendv(vector float __a, vector float __b, vector unsigned int __c) {
+  return __builtin_vsx_xxblendvw(__a, __b, __c);
+}
+
+static __inline__ vector double __ATTRS_o_ai
+vec_blendv(vector double __a, vector double __b,
+           vector unsigned long long __c) {
+  return __builtin_vsx_xxblendvd(__a, __b, __c);
+}
 #endif /* __VSX__ */
 #endif /* __POWER10_VECTOR__ */
 
