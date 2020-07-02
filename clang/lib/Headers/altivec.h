@@ -16881,6 +16881,14 @@ vec_cnttzm(vector unsigned long long __a, vector unsigned long long __b) {
   return __builtin_altivec_vctzdm(__a, __b);
 }
 
+/* vec_sldbi */
+
+#define vec_sldb(__a, __b, __c) __builtin_altivec_vsldbi(__a, __b, (__c & 0x7))
+
+/* vec_srdbi */
+
+#define vec_srdb(__a, __b, __c) __builtin_altivec_vsrdbi(__a, __b, (__c & 0x7))
+
 #endif /* __POWER10_VECTOR__ */
 
 #undef __ATTRS_o_ai

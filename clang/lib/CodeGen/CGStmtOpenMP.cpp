@@ -1377,6 +1377,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     case OMPD_begin_declare_variant:
     case OMPD_end_declare_variant:
     case OMPD_unknown:
+    default:
       llvm_unreachable("Enexpected directive with task reductions.");
     }
 
@@ -5302,6 +5303,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_exclusive:
   case OMPC_uses_allocators:
   case OMPC_affinity:
+  default:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }

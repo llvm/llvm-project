@@ -14,6 +14,7 @@
 #include "mlir/Conversion/GPUToSPIRV/ConvertGPUToSPIRVPass.h"
 #include "../PassDetail.h"
 #include "mlir/Conversion/GPUToSPIRV/ConvertGPUToSPIRV.h"
+#include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRV.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -57,8 +58,10 @@ void GPUToSPIRVPass::runOnOperation() {
       spirv::SPIRVConversionTarget::get(targetAttr);
 
   SPIRVTypeConverter typeConverter(targetAttr);
+  ScfToSPIRVContext scfContext;
   OwningRewritePatternList patterns;
   populateGPUToSPIRVPatterns(context, typeConverter, patterns);
+  populateSCFToSPIRVPatterns(context, typeConverter,scfContext, patterns);
   populateStandardToSPIRVPatterns(context, typeConverter, patterns);
 
   if (failed(applyFullConversion(kernelModules, *target, patterns)))

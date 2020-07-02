@@ -97,6 +97,11 @@ namespace llvm {
     ///
     XXSPLT,
 
+    /// XXSPLTI_SP_TO_DP - The PPC VSX splat instructions for immediates for
+    /// converting immediate single precision numbers to double precision
+    /// vector or scalar.
+    XXSPLTI_SP_TO_DP,
+
     /// VECINSERT - The PPC vector insert instruction
     ///
     VECINSERT,
@@ -1272,6 +1277,9 @@ namespace llvm {
 
   bool isIntS16Immediate(SDNode *N, int16_t &Imm);
   bool isIntS16Immediate(SDValue Op, int16_t &Imm);
+
+  bool convertToNonDenormSingle(APInt &ArgAPInt);
+  bool convertToNonDenormSingle(APFloat &ArgAPFloat);
 
 } // end namespace llvm
 

@@ -454,6 +454,16 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
    def int_ppc_altivec_vclrrb :  GCCBuiltin<"__builtin_altivec_vclrrb">,
                Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty],
                          [IntrNoMem]>;
+
+  // P10 Vector Shift Double Bit Immediate.
+  def int_ppc_altivec_vsldbi : GCCBuiltin<"__builtin_altivec_vsldbi">,
+              Intrinsic<[llvm_v16i8_ty],
+                        [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_ppc_altivec_vsrdbi : GCCBuiltin<"__builtin_altivec_vsrdbi">,
+              Intrinsic<[llvm_v16i8_ty],
+                        [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 }
 
 // Vector average.

@@ -18,4 +18,6 @@ void ModFilter::anchor() { }
 
 void ExtendedFilter::anchor() { }
 
+void ExtendedRMFilter::anchor() { }
+
 void ExactFilter::anchor() { }

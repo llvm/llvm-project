@@ -315,6 +315,11 @@ struct X86Operand final : public MCParsedAsmOperand {
   bool isMem512() const {
     return Kind == Memory && (!Mem.Size || Mem.Size == 512);
   }
+
+  bool isSibMem() const {
+    return isMem() && Mem.BaseReg != X86::RIP && Mem.BaseReg != X86::EIP;
+  }
+
   bool isMemIndexReg(unsigned LowR, unsigned HighR) const {
     assert(Kind == Memory && "Invalid access!");
     return Mem.IndexReg >= LowR && Mem.IndexReg <= HighR;

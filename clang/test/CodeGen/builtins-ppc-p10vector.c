@@ -5,10 +5,13 @@
 
 #include <altivec.h>
 
-vector signed char vsca;
+vector signed char vsca, vscb;
 vector unsigned char vuca, vucb, vucc;
+vector signed short vssa, vssb;
 vector unsigned short vusa, vusb, vusc;
+vector signed int vsia, vsib;
 vector unsigned int vuia, vuib, vuic;
+vector signed long long vslla, vsllb;
 vector unsigned long long vulla, vullb, vullc;
 vector unsigned __int128 vui128a, vui128b, vui128c;
 unsigned int uia;
@@ -145,4 +148,112 @@ vector unsigned long long test_vctzdm(void) {
   // CHECK: @llvm.ppc.altivec.vctzdm(<2 x i64>
   // CHECK-NEXT: ret <2 x i64>
   return vec_cnttzm(vulla, vullb);
+}
+
+vector signed char test_vec_sldb_sc(void) {
+  // CHECK: @llvm.ppc.altivec.vsldbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 0
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_sldb(vsca, vscb, 0);
+  }
+
+vector unsigned char test_vec_sldb_uc(void) {
+  // CHECK: @llvm.ppc.altivec.vsldbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 1
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_sldb(vuca, vucb, 1);
+}
+
+vector signed short test_vec_sldb_ss(void) {
+  // CHECK: @llvm.ppc.altivec.vsldbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 2
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <8 x i16>
+  // CHECK-NEXT: ret <8 x i16>
+  return vec_sldb(vssa, vssb, 2);
+}
+
+vector unsigned short test_vec_sldb_us(void) {
+  // CHECK: @llvm.ppc.altivec.vsldbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 3
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <8 x i16>
+  // CHECK-NEXT: ret <8 x i16>
+  return vec_sldb(vusa, vusb, 3);
+}
+
+vector signed int test_vec_sldb_si(void) {
+  // CHECK: @llvm.ppc.altivec.vsldbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 4
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_sldb(vsia, vsib, 4);
+}
+
+vector unsigned int test_vec_sldb_ui(void) {
+  // CHECK: @llvm.ppc.altivec.vsldbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 5
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_sldb(vuia, vuib, 5);
+}
+
+vector signed long long test_vec_sldb_sll(void) {
+  // CHECK: @llvm.ppc.altivec.vsldbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 6
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_sldb(vslla, vsllb, 6);
+}
+
+vector unsigned long long test_vec_sldb_ull(void) {
+  // CHECK: @llvm.ppc.altivec.vsldbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 7
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_sldb(vulla, vullb, 7);
+}
+
+vector signed char test_vec_srdb_sc(void) {
+  // CHECK: @llvm.ppc.altivec.vsrdbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 0
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_srdb(vsca, vscb, 8);
+}
+
+vector unsigned char test_vec_srdb_uc(void) {
+  // CHECK: @llvm.ppc.altivec.vsrdbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 1
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_srdb(vuca, vucb, 9);
+}
+
+vector signed short test_vec_srdb_ss(void) {
+  // CHECK: @llvm.ppc.altivec.vsrdbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 2
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <8 x i16>
+  // CHECK-NEXT: ret <8 x i16>
+  return vec_srdb(vssa, vssb, 10);
+}
+
+vector unsigned short test_vec_srdb_us(void) {
+  // CHECK: @llvm.ppc.altivec.vsrdbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 3
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <8 x i16>
+  // CHECK-NEXT: ret <8 x i16>
+  return vec_srdb(vusa, vusb, 3);
+}
+
+vector signed int test_vec_srdb_si(void) {
+  // CHECK: @llvm.ppc.altivec.vsrdbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 4
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_srdb(vsia, vsib, 4);
+}
+
+vector unsigned int test_vec_srdb_ui(void) {
+  // CHECK: @llvm.ppc.altivec.vsrdbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 5
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_srdb(vuia, vuib, 5);
+}
+
+vector signed long long test_vec_srdb_sll(void) {
+  // CHECK: @llvm.ppc.altivec.vsrdbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 6
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_srdb(vslla, vsllb, 6);
+}
+
+vector unsigned long long test_vec_srdb_ull(void) {
+  // CHECK: @llvm.ppc.altivec.vsrdbi(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32 7
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_srdb(vulla, vullb, 7);
 }

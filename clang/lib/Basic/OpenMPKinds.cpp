@@ -178,6 +178,8 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_uses_allocators:
   case OMPC_affinity:
     break;
+  default:
+    break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
 }
@@ -426,6 +428,8 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_exclusive:
   case OMPC_uses_allocators:
   case OMPC_affinity:
+    break;
+  default:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -681,6 +685,7 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_end_declare_variant:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
+  default:
     llvm_unreachable("Unknown OpenMP directive");
   }
 }

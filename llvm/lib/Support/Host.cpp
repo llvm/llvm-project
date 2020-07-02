@@ -1392,8 +1392,8 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   // If CPUID indicates support for XSAVE, XRESTORE and AVX, and XGETBV
   // indicates that the AVX registers will be saved and restored on context
   // switch, then we have full AVX support.
-  bool HasAVXSave = ((ECX >> 27) & 1) && ((ECX >> 28) & 1) &&
-                    !getX86XCR0(&EAX, &EDX) && ((EAX & 0x6) == 0x6);
+  bool HasXSave = ((ECX >> 27) & 1) && !getX86XCR0(&EAX, &EDX);
+  bool HasAVXSave = HasXSave && ((ECX >> 28) & 1) && ((EAX & 0x6) == 0x6);
 #if defined(__APPLE__)
   // Darwin lazily saves the AVX512 context on first use: trust that the OS will
   // save the AVX512 context if we use AVX512 instructions, even the bit is not
@@ -1403,6 +1403,9 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   // AVX512 requires additional context to be saved by the OS.
   bool HasAVX512Save = HasAVXSave && ((EAX & 0xe0) == 0xe0);
 #endif
+  // AMX requires additional context to be saved by the OS.
+  const unsigned AMXBits = (1 << 17) | (1 << 18);
+  bool HasAMXSave = HasXSave && ((EAX & AMXBits) == AMXBits);
 
   Features["avx"]   = HasAVXSave;
   Features["fma"]   = ((ECX >> 12) & 1) && HasAVXSave;
@@ -1493,6 +1496,9 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   // detecting features using the "-march=native" flag.
   // For more info, see X86 ISA docs.
   Features["pconfig"] = HasLeaf7 && ((EDX >> 18) & 1);
+  Features["amx-bf16"]   = HasLeaf7 && ((EDX >> 22) & 1) && HasAMXSave;
+  Features["amx-tile"]   = HasLeaf7 && ((EDX >> 24) & 1) && HasAMXSave;
+  Features["amx-int8"]   = HasLeaf7 && ((EDX >> 25) & 1) && HasAMXSave;
   bool HasLeaf7Subleaf1 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x1, &EAX, &EBX, &ECX, &EDX);
   Features["avx512bf16"] = HasLeaf7Subleaf1 && ((EAX >> 5) & 1) && HasAVX512Save;

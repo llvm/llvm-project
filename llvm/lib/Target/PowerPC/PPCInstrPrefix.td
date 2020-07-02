@@ -704,7 +704,8 @@ let Predicates = [PrefixInstrs] in {
   def XXSPLTIDP : 8RR_DForm_IMM32_XT6<32, 2, (outs vsrc:$XT),
                                       (ins i32imm:$IMM32),
                                       "xxspltidp $XT, $IMM32", IIC_VecGeneral,
-                                      []>;
+                                      [(set v2f64:$XT,
+                                            (PPCxxspltidp i32:$IMM32))]>;
   def XXSPLTI32DX :
       8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
                              (ins vsrc:$XTi, i1imm:$IX, i32imm:$IMM32),
@@ -737,11 +738,19 @@ let Predicates = [IsISA3_1] in {
   def VSLDBI : VNForm_VTAB5_SD3<22, 0, (outs vrrc:$VRT),
                                 (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SH),
                                 "vsldbi $VRT, $VRA, $VRB, $SH",
-                                IIC_VecGeneral, []>;
+                                IIC_VecGeneral, 
+                                [(set v16i8:$VRT,
+                                      (int_ppc_altivec_vsldbi v16i8:$VRA,
+                                                              v16i8:$VRB,
+                                                              i32:$SH))]>;
   def VSRDBI : VNForm_VTAB5_SD3<22, 1, (outs vrrc:$VRT),
                                 (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SH),
                                 "vsrdbi $VRT, $VRA, $VRB, $SH",
-                                IIC_VecGeneral, []>;
+                                IIC_VecGeneral,
+                                [(set v16i8:$VRT,
+                                      (int_ppc_altivec_vsrdbi v16i8:$VRA,
+                                                              v16i8:$VRB, 
+                                                              i32:$SH))]>;
    def VPDEPD : VXForm_1<1485, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vpdepd $vD, $vA, $vB", IIC_VecGeneral,
                          [(set v2i64:$vD,
@@ -821,4 +830,18 @@ let Predicates = [IsISA3_1] in {
             (v4i32 (COPY_TO_REGCLASS (XXGENPCVWM $VRB, imm:$IMM), VRRC))>;
   def : Pat<(v2i64 (int_ppc_vsx_xxgenpcvdm v2i64:$VRB, imm:$IMM)),
             (v2i64 (COPY_TO_REGCLASS (XXGENPCVDM $VRB, imm:$IMM), VRRC))>;
+}
+
+let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
+ def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
+                                i32immNonAllOneNonZero:$A,
+                                i32immNonAllOneNonZero:$A,
+                                i32immNonAllOneNonZero:$A)),
+           (v4i32 (XXSPLTIW imm:$A))>;
+ def : Pat<(f32 nzFPImmAsi32:$A),
+           (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
+                             VSFRC)>;
+ def : Pat<(f64 nzFPImmAsi32:$A),
+           (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
+                             VSFRC)>;
 }
