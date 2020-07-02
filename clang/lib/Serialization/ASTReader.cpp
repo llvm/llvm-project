@@ -11998,6 +11998,8 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::Enum:                                                        \
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
+  default:
+    break;
   }
   assert(C && "Unknown OMPClause type");
 

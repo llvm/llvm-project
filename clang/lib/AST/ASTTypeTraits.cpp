@@ -118,6 +118,8 @@ ASTNodeKind ASTNodeKind::getFromNode(const OMPClause &C) {
 #define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Clause::Enum:                                                \
     llvm_unreachable("unexpected OpenMP clause kind");
+  default:
+    break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
   llvm_unreachable("invalid stmt kind");
