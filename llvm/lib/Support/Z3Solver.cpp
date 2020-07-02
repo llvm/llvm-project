@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/SMTAPI.h"
@@ -723,10 +724,25 @@ public:
   }
 
   SMTExprRef mkBitvector(const llvm::APSInt Int, unsigned BitWidth) override {
-    const SMTSortRef Sort = getBitvectorSort(BitWidth);
-    return newExprRef(
-        Z3Expr(Context, Z3_mk_numeral(Context.Context, Int.toString(10).c_str(),
-                                      toZ3Sort(*Sort).Sort)));
+    const Z3_sort Z3Sort = toZ3Sort(*getBitvectorSort(BitWidth)).Sort;
+
+    // Slow path, when 64 bits are not enough.
+    if (LLVM_UNLIKELY(Int.getBitWidth() > 64u)) {
+      SmallString<40> Buffer;
+      Int.toString(Buffer, 10);
+      return newExprRef(Z3Expr(
+          Context, Z3_mk_numeral(Context.Context, Buffer.c_str(), Z3Sort)));
+    }
+
+    const int64_t BitReprAsSigned = Int.getExtValue();
+    const uint64_t BitReprAsUnsigned =
+        reinterpret_cast<const uint64_t &>(BitReprAsSigned);
+
+    Z3_ast Literal =
+        Int.isSigned()
+            ? Z3_mk_int64(Context.Context, BitReprAsSigned, Z3Sort)
+            : Z3_mk_unsigned_int64(Context.Context, BitReprAsUnsigned, Z3Sort);
+    return newExprRef(Z3Expr(Context, Literal));
   }
 
   SMTExprRef mkFloat(const llvm::APFloat Float) override {
