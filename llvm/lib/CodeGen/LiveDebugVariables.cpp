@@ -184,7 +184,7 @@ class UserValue {
 
   /// Replace OldLocNo ranges with NewRegs ranges where NewRegs
   /// is live. Returns true if any changes were made.
-  bool splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
+  bool splitLocation(unsigned OldLocNo, ArrayRef<Register> NewRegs,
                      LiveIntervals &LIS);
 
 public:
@@ -332,7 +332,7 @@ public:
 
   /// Replace OldReg ranges with NewRegs ranges where NewRegs is
   /// live. Returns true if any changes were made.
-  bool splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs,
+  bool splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
                      LiveIntervals &LIS);
 
   /// Rewrite virtual register locations according to the provided virtual
@@ -420,7 +420,7 @@ class LDVImpl {
                           const DebugLoc &DL);
 
   /// Find the EC leader for VirtReg or null.
-  UserValue *lookupVirtReg(unsigned VirtReg);
+  UserValue *lookupVirtReg(Register VirtReg);
 
   /// Add DBG_VALUE instruction to our maps.
   ///
@@ -470,10 +470,10 @@ public:
   }
 
   /// Map virtual register to an equivalence class.
-  void mapVirtReg(unsigned VirtReg, UserValue *EC);
+  void mapVirtReg(Register VirtReg, UserValue *EC);
 
   /// Replace all references to OldReg with NewRegs.
-  void splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs);
+  void splitRegister(Register OldReg, ArrayRef<Register> NewRegs);
 
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM);
@@ -593,13 +593,13 @@ UserValue *LDVImpl::getUserValue(const DILocalVariable *Var,
   return UV;
 }
 
-void LDVImpl::mapVirtReg(unsigned VirtReg, UserValue *EC) {
+void LDVImpl::mapVirtReg(Register VirtReg, UserValue *EC) {
   assert(Register::isVirtualRegister(VirtReg) && "Only map VirtRegs");
   UserValue *&Leader = virtRegToEqClass[VirtReg];
   Leader = UserValue::merge(Leader, EC);
 }
 
-UserValue *LDVImpl::lookupVirtReg(unsigned VirtReg) {
+UserValue *LDVImpl::lookupVirtReg(Register VirtReg) {
   if (UserValue *UV = virtRegToEqClass.lookup(VirtReg))
     return UV->getLeader();
   return nullptr;
@@ -1030,7 +1030,7 @@ LiveDebugVariables::~LiveDebugVariables() {
 //===----------------------------------------------------------------------===//
 
 bool
-UserValue::splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
+UserValue::splitLocation(unsigned OldLocNo, ArrayRef<Register> NewRegs,
                          LiveIntervals& LIS) {
   LLVM_DEBUG({
     dbgs() << "Splitting Loc" << OldLocNo << '\t';
@@ -1130,7 +1130,7 @@ UserValue::splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
 }
 
 bool
-UserValue::splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs,
+UserValue::splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
                          LiveIntervals &LIS) {
   bool DidChange = false;
   // Split locations referring to OldReg. Iterate backwards so splitLocation can
@@ -1145,7 +1145,7 @@ UserValue::splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs,
   return DidChange;
 }
 
-void LDVImpl::splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs) {
+void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
   bool DidChange = false;
   for (UserValue *UV = lookupVirtReg(OldReg); UV; UV = UV->getNext())
     DidChange |= UV->splitRegister(OldReg, NewRegs, *LIS);
@@ -1160,7 +1160,7 @@ void LDVImpl::splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs) {
 }
 
 void LiveDebugVariables::
-splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs, LiveIntervals &LIS) {
+splitRegister(Register OldReg, ArrayRef<Register> NewRegs, LiveIntervals &LIS) {
   if (pImpl)
     static_cast<LDVImpl*>(pImpl)->splitRegister(OldReg, NewRegs);
 }
