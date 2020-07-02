@@ -128,7 +128,7 @@ bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
                                              Register Reg,
                                              int &FrameIdx) const {
   const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  if (!RVFI->useSaveRestoreLibCalls())
+  if (!RVFI->useSaveRestoreLibCalls(MF))
     return false;
 
   auto FII = FixedCSRFIMap.find(Reg);
