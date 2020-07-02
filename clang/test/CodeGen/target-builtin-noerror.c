@@ -6,15 +6,15 @@
 
 // No warnings.
 extern __m256i a;
-int __attribute__((target("avx"))) bar(__m256i a) {
+int __attribute__((target("avx"))) bar() {
   return _mm256_extract_epi32(a, 3);
 }
 
 int baz() {
-  return bar(a);
+  return bar();
 }
 
-int __attribute__((target("avx"))) qq_avx(__m256i a) {
+int __attribute__((target("avx"))) qq_avx() {
   return _mm256_extract_epi32(a, 3);
 }
 
@@ -25,7 +25,7 @@ int qq_noavx() {
 extern __m256i a;
 int qq() {
   if (__builtin_cpu_supports("avx"))
-    return qq_avx(a);
+    return qq_avx();
   else
     return qq_noavx();
 }
