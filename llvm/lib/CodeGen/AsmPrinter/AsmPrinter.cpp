@@ -1208,6 +1208,8 @@ void AsmPrinter::emitFunctionBody() {
       if (!MBB.sameSection(&MF->front())) {
         if (MAI->hasDotTypeDotSizeDirective())
           emitELFSizeDirective(CurrentSectionBeginSym);
+        MBBSectionRanges[MBB.getSectionIDNum()] =
+            MBBSectionRange{CurrentSectionBeginSym, CurrentBBEnd};
       }
     }
     emitBasicBlockEnd(MBB);
@@ -1284,6 +1286,8 @@ void AsmPrinter::emitFunctionBody() {
     HI.Handler->markFunctionEnd();
   }
 
+  MBBSectionRanges[MF->front().getSectionIDNum()] =
+      MBBSectionRange{CurrentFnBegin, CurrentFnEnd};
 
   // Print out jump tables referenced by the function.
   emitJumpTableInfo();
@@ -1783,6 +1787,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnSymForSize = CurrentFnSym;
   CurrentFnBegin = nullptr;
   CurrentSectionBeginSym = nullptr;
+  MBBSectionRanges.clear();
   CurExceptionSym = nullptr;
   bool NeedsLocalForSize = MAI->needsLocalForSize();
   if (F.hasFnAttribute("patchable-function-entry") ||
