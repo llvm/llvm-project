@@ -1711,6 +1711,7 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm : unpred_store<truncstorevi32, nxv2i64, ST1W_D_IMM, PTRUE_D>;
   defm : unpred_store<         store, nxv2i64,   ST1D_IMM, PTRUE_D>;
   defm : unpred_store<         store, nxv8f16,   ST1H_IMM, PTRUE_H>;
+  defm : unpred_store<         store, nxv8bf16,  ST1H_IMM, PTRUE_H>;
   defm : unpred_store<         store, nxv4f16, ST1H_S_IMM, PTRUE_S>;
   defm : unpred_store<         store, nxv2f16, ST1H_D_IMM, PTRUE_D>;
   defm : unpred_store<         store, nxv4f32,   ST1W_IMM, PTRUE_S>;
@@ -1756,6 +1757,7 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm : unpred_load<sextloadvi32, nxv2i64, LD1SW_D_IMM, PTRUE_D>;
   defm : unpred_load<        load, nxv2i64,    LD1D_IMM, PTRUE_D>;
   defm : unpred_load<        load, nxv8f16,    LD1H_IMM, PTRUE_H>;
+  defm : unpred_load<        load, nxv8bf16,   LD1H_IMM, PTRUE_H>;
   defm : unpred_load<        load, nxv4f16,  LD1H_S_IMM, PTRUE_S>;
   defm : unpred_load<        load, nxv2f16,  LD1H_D_IMM, PTRUE_D>;
   defm : unpred_load<        load, nxv4f32,    LD1W_IMM, PTRUE_S>;
