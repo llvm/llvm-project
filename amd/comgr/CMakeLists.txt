@@ -278,13 +278,13 @@ add_subdirectory(test)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   # Add packaging directives for amd_comgr
   set(CPACK_PACKAGE_NAME comgr)
-  set(CPACK_PACKAGE_VENDOR "AMD")
+  set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc.")
   set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to provide support functions")
   set(CPACK_PACKAGE_VERSION "${amd_comgr_VERSION}")
   set(CPACK_PACKAGE_VERSION_MAJOR "${amd_comgr_VERSION_MAJOR}")
   set(CPACK_PACKAGE_VERSION_MINOR "${amd_comgr_VERSION_MINOR}")
   set(CPACK_PACKAGE_VERSION_PATCH "${amd_comgr_VERSION_PATCH}")
-  set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc.")
+  set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices, Inc.")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
   # Debian package specific variables
@@ -296,6 +296,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
       "${CPACK_PACKAGING_INSTALL_PREFIX}")
   endif()
+
+  # Debian and RPM conditionals for generator
+  set(CPACK_PROJECT_CONFIG_FILE ${CMAKE_CURRENT_SOURCE_DIR}/cpack_project_config.cmake)
 
   include(CPack)
 endif()
