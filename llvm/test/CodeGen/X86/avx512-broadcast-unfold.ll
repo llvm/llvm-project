@@ -4641,15 +4641,16 @@ define void @bcast_unfold_vpternlog_v16i32(i32* %arg, i32* %arg1) {
 ; CHECK-LABEL: bcast_unfold_vpternlog_v16i32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB131_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovdqu64 4096(%rdi,%rax), %zmm0
-; CHECK-NEXT:    vmovdqu64 4096(%rsi,%rax), %zmm1
-; CHECK-NEXT:    vpmulld %zmm1, %zmm0, %zmm2
-; CHECK-NEXT:    vpternlogd $216, {{.*}}(%rip){1to16}, %zmm0, %zmm1
-; CHECK-NEXT:    vpmulld %zmm2, %zmm1, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, 4096(%rdi,%rax)
+; CHECK-NEXT:    vmovdqu64 4096(%rdi,%rax), %zmm1
+; CHECK-NEXT:    vmovdqu64 4096(%rsi,%rax), %zmm2
+; CHECK-NEXT:    vpmulld %zmm2, %zmm1, %zmm3
+; CHECK-NEXT:    vpternlogd $216, %zmm0, %zmm1, %zmm2
+; CHECK-NEXT:    vpmulld %zmm3, %zmm2, %zmm1
+; CHECK-NEXT:    vmovdqu64 %zmm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
 ; CHECK-NEXT:    jne .LBB131_1
 ; CHECK-NEXT:  # %bb.2: # %bb20
