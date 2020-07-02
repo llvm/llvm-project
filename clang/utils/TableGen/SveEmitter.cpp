@@ -1262,6 +1262,11 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   if (!InGuard.empty())
     OS << "#endif  //" << InGuard << "\n";
 
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
+  OS << "#define svcvtnt_bf16_x      svcvtnt_bf16_m\n";
+  OS << "#define svcvtnt_bf16_f32_x  svcvtnt_bf16_f32_m\n";
+  OS << "#endif /*__ARM_FEATURE_SVE_BF16 */\n\n";
+
   OS << "#if defined(__ARM_FEATURE_SVE2)\n";
   OS << "#define svcvtnt_f16_x      svcvtnt_f16_m\n";
   OS << "#define svcvtnt_f16_f32_x  svcvtnt_f16_f32_m\n";
