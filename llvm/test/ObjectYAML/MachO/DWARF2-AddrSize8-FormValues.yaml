@@ -334,8 +334,7 @@ DWARF:
         - Attribute:       0x201A
           Form:            DW_FORM_addr
   debug_info:      
-    - Length:          
-        TotalLength:     168
+    - Length:          168
       Version:         2
       AbbrOffset:      0
       AddrSize:        8
@@ -416,8 +415,7 @@ DWARF:
 ...
 
 #CHECK:   debug_info:      
-#CHECK:     - Length:          
-#CHECK:         TotalLength:     168
+#CHECK:     - Length:          168
 #CHECK:       Version:         2
 #CHECK:       AbbrOffset:      0
 #CHECK:       AddrSize:        8
