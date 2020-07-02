@@ -31,6 +31,15 @@ using namespace mlir;
 // Utility functions
 //===----------------------------------------------------------------------===//
 
+/// Returns true if the given type is a signed integer or vector type.
+static bool isSignedIntegerOrVector(Type type) {
+  if (type.isSignedInteger())
+    return true;
+  if (auto vecType = type.dyn_cast<VectorType>())
+    return vecType.getElementType().isSignedInteger();
+  return false;
+}
+
 /// Returns true if the given type is an unsigned integer or vector type
 static bool isUnsignedIntegerOrVector(Type type) {
   if (type.isUnsignedInteger())
@@ -193,6 +202,52 @@ public:
         loc, dstType, op.insert(), optionallyCastedOffset);
     rewriter.replaceOpWithNewOp<LLVM::OrOp>(op, dstType, baseAndMask,
                                             insertShiftedByOffset);
+    return success();
+  }
+};
+
+/// Converts SPIR-V ConstantOp with scalar or vector type.
+class ConstantScalarAndVectorPattern
+    : public SPIRVToLLVMConversion<spirv::ConstantOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::ConstantOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::ConstantOp constOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = constOp.getType();
+    if (!srcType.isa<VectorType>() && !srcType.isIntOrFloat())
+      return failure();
+
+    auto dstType = typeConverter.convertType(srcType);
+    if (!dstType)
+      return failure();
+
+    // SPIR-V constant can be a signed/unsigned integer, which has to be
+    // casted to signless integer when converting to LLVM dialect. Removing the
+    // sign bit may have unexpected behaviour. However, it is better to handle
+    // it case-by-case, given that the purpose of the conversion is not to
+    // cover all possible corner cases.
+    if (isSignedIntegerOrVector(srcType) ||
+        isUnsignedIntegerOrVector(srcType)) {
+      auto *context = rewriter.getContext();
+      auto signlessType = IntegerType::get(getBitWidth(srcType), context);
+
+      if (srcType.isa<VectorType>()) {
+        auto dstElementsAttr = constOp.value().cast<DenseIntElementsAttr>();
+        rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(
+            constOp, dstType,
+            dstElementsAttr.mapValues(
+                signlessType, [&](const APInt &value) { return value; }));
+        return success();
+      }
+      auto srcAttr = constOp.value().cast<IntegerAttr>();
+      auto dstAttr = rewriter.getIntegerAttr(signlessType, srcAttr.getValue());
+      rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(constOp, dstType, dstAttr);
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(constOp, dstType, operands,
+                                                  constOp.getAttrs());
     return success();
   }
 };
@@ -572,6 +627,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::UGreaterThanEqualOp, LLVM::ICmpPredicate::uge>,
       IComparePattern<spirv::ULessThanEqualOp, LLVM::ICmpPredicate::ule>,
       IComparePattern<spirv::ULessThanOp, LLVM::ICmpPredicate::ult>,
+
+      // Constant op
+      ConstantScalarAndVectorPattern,
 
       // Function Call op
       FunctionCallPattern,
