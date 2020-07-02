@@ -1724,6 +1724,10 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   // Other results are not possible.
   if (Alias == MayAlias)
     return MayAlias;
+  // With recursive phis we cannot guarantee that MustAlias/PartialAlias will
+  // remain valid to all elements and needs to conservatively return MayAlias.
+  if (isRecursive && Alias != NoAlias)
+    return MayAlias;
 
   // If all sources of the PHI node NoAlias or MustAlias V2, then returns
   // NoAlias / MustAlias. Otherwise, returns MayAlias.
