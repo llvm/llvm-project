@@ -540,6 +540,12 @@ MachOLinkingContext::searchDirForLibrary(StringRef path,
     return llvm::None;
   }
 
+  // Search for stub library
+  fullPath.assign(path);
+  llvm::sys::path::append(fullPath, Twine("lib") + libName + ".tbd");
+  if (fileExists(fullPath))
+    return fullPath.str().copy(_allocator);
+
   // Search for dynamic library
   fullPath.assign(path);
   llvm::sys::path::append(fullPath, Twine("lib") + libName + ".dylib");
