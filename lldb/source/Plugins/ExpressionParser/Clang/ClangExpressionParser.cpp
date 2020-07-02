@@ -200,6 +200,9 @@ public:
       return;
     }
 
+    // Update error/warning counters.
+    DiagnosticConsumer::HandleDiagnostic(DiagLevel, Info);
+
     // Render diagnostic message to m_output.
     m_output.clear();
     m_passthrough->HandleDiagnostic(DiagLevel, Info);
@@ -261,7 +264,11 @@ public:
     }
   }
 
-  clang::TextDiagnosticPrinter *GetPassthrough() { return m_passthrough.get(); }
+  void BeginSourceFile(const LangOptions &LO, const Preprocessor *PP) override {
+    m_passthrough->BeginSourceFile(LO, PP);
+  }
+
+  void EndSourceFile() override { m_passthrough->EndSourceFile(); }
 
 private:
   DiagnosticManager *m_manager = nullptr;
@@ -967,7 +974,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   ClangDiagnosticManagerAdapter *adapter =
       static_cast<ClangDiagnosticManagerAdapter *>(
           m_compiler->getDiagnostics().getClient());
-  auto diag_buf = adapter->GetPassthrough();
 
   adapter->ResetManager(&diagnostic_manager);
 
@@ -1022,8 +1028,8 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     source_mgr.setMainFileID(source_mgr.createFileID(std::move(memory_buffer)));
   }
 
-  diag_buf->BeginSourceFile(m_compiler->getLangOpts(),
-                            &m_compiler->getPreprocessor());
+  adapter->BeginSourceFile(m_compiler->getLangOpts(),
+                           &m_compiler->getPreprocessor());
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());
@@ -1108,9 +1114,9 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   // original behavior of ParseAST (which also destroys the Sema after parsing).
   m_compiler->setSema(nullptr);
 
-  diag_buf->EndSourceFile();
+  adapter->EndSourceFile();
 
-  unsigned num_errors = diag_buf->getNumErrors();
+  unsigned num_errors = adapter->getNumErrors();
 
   if (m_pp_callbacks && m_pp_callbacks->hasErrors()) {
     num_errors++;
