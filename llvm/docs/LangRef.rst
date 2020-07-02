@@ -4146,7 +4146,13 @@ AMDGPU:
 - ``[0-9]v``: The 32-bit VGPR register, number 0-9.
 - ``[0-9]s``: The 32-bit SGPR register, number 0-9.
 - ``[0-9]a``: The 32-bit AGPR register, number 0-9.
+- ``I``: An integer inline constant in the range from -16 to 64.
+- ``J``: A 16-bit signed integer constant.
 - ``A``: An integer or a floating-point inline constant.
+- ``B``: A 32-bit signed integer constant.
+- ``C``: A 32-bit unsigned integer constant or an integer inline constant in the range from -16 to 64.
+- ``DA``: A 64-bit constant that can be split into two "A" constants.
+- ``DB``: A 64-bit constant that can be split into two "B" constants.
 
 All ARM modes:
 

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AffineStructures.h"
+#include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -1033,6 +1034,28 @@ bool FlatAffineConstraints::isEmptyByGCDTest() const {
     }
   }
   return false;
+}
+
+// First, try the GCD test heuristic.
+//
+// If that doesn't find the set empty, check if the set is unbounded. If it is,
+// we cannot use the GBR algorithm and we conservatively return false.
+//
+// If the set is bounded, we use the complete emptiness check for this case
+// provided by Simplex::findIntegerSample(), which gives a definitive answer.
+bool FlatAffineConstraints::isIntegerEmpty() const {
+  if (isEmptyByGCDTest())
+    return true;
+
+  Simplex simplex(*this);
+  if (simplex.isUnbounded())
+    return false;
+  return !simplex.findIntegerSample().hasValue();
+}
+
+Optional<SmallVector<int64_t, 8>>
+FlatAffineConstraints::findIntegerSample() const {
+  return Simplex(*this).findIntegerSample();
 }
 
 /// Tightens inequalities given that we are dealing with integer spaces. This is

@@ -397,9 +397,13 @@ public:
                                     std::string &Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
-  void LowerAsmOperandForConstraintA(SDValue Op,
-                                     std::vector<SDValue> &Ops,
-                                     SelectionDAG &DAG) const;
+  bool getAsmOperandConstVal(SDValue Op, uint64_t &Val) const;
+  bool checkAsmConstraintVal(SDValue Op,
+                             const std::string &Constraint,
+                             uint64_t Val) const;
+  bool checkAsmConstraintValA(SDValue Op,
+                              uint64_t Val,
+                              unsigned MaxSize = 64) const;
   SDValue copyToM0(SelectionDAG &DAG, SDValue Chain, const SDLoc &DL,
                    SDValue V) const;
 

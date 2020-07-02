@@ -87,6 +87,12 @@ TEST_P(ASTMatchersTest, MatchesNameRE_CXX) {
   EXPECT_TRUE(matches("namespace x { int kTest; }", StartsWithK));
   EXPECT_TRUE(matches("class C { int k; };", StartsWithK));
   EXPECT_TRUE(notMatches("class C { int ckc; };", StartsWithK));
+  EXPECT_TRUE(notMatches("int K;", StartsWithK));
+
+  DeclarationMatcher StartsWithKIgnoreCase =
+      namedDecl(matchesName(":k[^:]*$", llvm::Regex::IgnoreCase));
+  EXPECT_TRUE(matches("int k;", StartsWithKIgnoreCase));
+  EXPECT_TRUE(matches("int K;", StartsWithKIgnoreCase));
 }
 
 TEST_P(ASTMatchersTest, DeclarationMatcher_MatchClass) {
