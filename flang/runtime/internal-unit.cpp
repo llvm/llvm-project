@@ -17,6 +17,7 @@ namespace Fortran::runtime::io {
 template <Direction DIR>
 InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
     Scalar scalar, std::size_t length) {
+  isFixedRecordLength = true;
   recordLength = length;
   endfileRecordNumber = 2;
   void *pointer{reinterpret_cast<void *>(const_cast<char *>(scalar))};
@@ -33,6 +34,7 @@ InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
       terminator, that.SizeInBytes() <= d.SizeInBytes(maxRank, true, 0));
   new (&d) Descriptor{that};
   d.Check();
+  isFixedRecordLength = true;
   recordLength = d.ElementBytes();
   endfileRecordNumber = d.Elements() + 1;
 }
@@ -123,8 +125,7 @@ bool InternalDescriptorUnit<DIR>::AdvanceRecord(IoErrorHandler &handler) {
     }
   }
   ++currentRecordNumber;
-  positionInRecord = 0;
-  furthestPositionInRecord = 0;
+  BeginRecord();
   return true;
 }
 
@@ -132,8 +133,7 @@ template <Direction DIR>
 void InternalDescriptorUnit<DIR>::BackspaceRecord(IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, currentRecordNumber > 1);
   --currentRecordNumber;
-  positionInRecord = 0;
-  furthestPositionInRecord = 0;
+  BeginRecord();
 }
 
 template class InternalDescriptorUnit<Direction::Output>;
