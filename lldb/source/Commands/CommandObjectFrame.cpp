@@ -289,6 +289,22 @@ public:
 
   ~CommandObjectFrameSelect() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
+      return;
+
+    lldb::ThreadSP thread_sp = m_exe_ctx.GetThreadSP();
+    const uint32_t frame_num = thread_sp->GetStackFrameCount();
+    for (uint32_t i = 0; i < frame_num; ++i) {
+      lldb::StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(i);
+      StreamString strm;
+      frame_sp->Dump(&strm, false, true);
+      request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
+    }
+  }
+
   Options *GetOptions() override { return &m_options; }
 
 protected:
