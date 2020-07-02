@@ -90,7 +90,7 @@ define amdgpu_kernel void @mul_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> add
 
 
 ; ALL: 'mul_v8i64'
-; ALL: estimated cost of 128 for {{.*}} mul <8 x i64>
+; ALL: estimated cost of 256 for {{.*}} mul <8 x i64>
 define amdgpu_kernel void @mul_v8i64(<8 x i64> addrspace(1)* %out, <8 x i64> addrspace(1)* %vaddr, <8 x i64> %b) #0 {
   %vec = load <8 x i64>, <8 x i64> addrspace(1)* %vaddr
   %mul = mul <8 x i64> %vec, %b
