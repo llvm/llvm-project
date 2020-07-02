@@ -18,8 +18,6 @@ import sys
 
 from libcxx.compiler import CXXCompiler
 from libcxx.test.target_info import make_target_info
-from libcxx.test.executor import *
-from libcxx.test.tracing import *
 import libcxx.util
 import libcxx.test.features
 import libcxx.test.params
