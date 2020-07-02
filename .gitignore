@@ -53,8 +53,9 @@ autoconf/autom4te.cache
 # VS2017 and VSCode config files.
 .vscode
 .vs
-# clangd index
-.clangd
+# clangd index. (".clangd" is a config file now, thus trailing slash)
+.clangd/
+.cache
 # static analyzer regression testing project files
 /clang/utils/analyzer/projects/*/CachedSource
 /clang/utils/analyzer/projects/*/PatchedSource
