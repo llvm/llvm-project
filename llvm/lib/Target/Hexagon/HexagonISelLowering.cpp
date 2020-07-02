@@ -3277,12 +3277,12 @@ bool HexagonTargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // The type Ty passed here would then be "void". Skip the alignment
     // checks, but do not return false right away, since that confuses
     // LSR into crashing.
-    unsigned A = DL.getABITypeAlignment(Ty);
+    Align A = DL.getABITypeAlign(Ty);
     // The base offset must be a multiple of the alignment.
-    if ((AM.BaseOffs % A) != 0)
+    if (!isAligned(A, AM.BaseOffs))
       return false;
     // The shifted offset must fit in 11 bits.
-    if (!isInt<11>(AM.BaseOffs >> Log2_32(A)))
+    if (!isInt<11>(AM.BaseOffs >> Log2(A)))
       return false;
   }
 
