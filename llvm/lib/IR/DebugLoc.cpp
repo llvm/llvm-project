@@ -79,7 +79,7 @@ DebugLoc DebugLoc::get(unsigned Line, unsigned Col, const MDNode *Scope,
                          const_cast<MDNode *>(InlinedAt), ImplicitCode);
 }
 
-DebugLoc DebugLoc::appendInlinedAt(DebugLoc DL, DILocation *InlinedAt,
+DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
                                    LLVMContext &Ctx,
                                    DenseMap<const MDNode *, MDNode *> &Cache,
                                    bool ReplaceLast) {
