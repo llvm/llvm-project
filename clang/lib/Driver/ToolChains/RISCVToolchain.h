@@ -46,9 +46,9 @@ private:
 
 namespace tools {
 namespace RISCV {
-class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const ToolChain &TC) : GnuTool("RISCV::Linker", "ld", TC) {}
+  Linker(const ToolChain &TC) : Tool("RISCV::Linker", "ld", TC) {}
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
   void ConstructJob(Compilation &C, const JobAction &JA,

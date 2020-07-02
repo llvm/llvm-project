@@ -40,13 +40,8 @@ protected:
   }
 
 public:
-  MachOTool(
-      const char *Name, const char *ShortName, const ToolChain &TC,
-      ResponseFileSupport ResponseSupport = RF_None,
-      llvm::sys::WindowsEncodingMethod ResponseEncoding = llvm::sys::WEM_UTF8,
-      const char *ResponseFlag = "@")
-      : Tool(Name, ShortName, TC, ResponseSupport, ResponseEncoding,
-             ResponseFlag) {}
+  MachOTool(const char *Name, const char *ShortName, const ToolChain &TC)
+      : Tool(Name, ShortName, TC) {}
 };
 
 class LLVM_LIBRARY_VISIBILITY Assembler : public MachOTool {
@@ -66,13 +61,10 @@ class LLVM_LIBRARY_VISIBILITY Linker : public MachOTool {
   bool NeedsTempPath(const InputInfoList &Inputs) const;
   void AddLinkArgs(Compilation &C, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs,
-                   const InputInfoList &Inputs) const;
+                   const InputInfoList &Inputs, unsigned Version[5]) const;
 
 public:
-  Linker(const ToolChain &TC, bool UseAtFile)
-      : MachOTool("darwin::Linker", "linker", TC,
-                  UseAtFile ? RF_Full : RF_FileList, llvm::sys::WEM_UTF8,
-                  UseAtFile ? "@" : "-filelist") {}
+  Linker(const ToolChain &TC) : MachOTool("darwin::Linker", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
