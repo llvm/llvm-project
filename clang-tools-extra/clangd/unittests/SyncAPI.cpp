@@ -105,6 +105,13 @@ llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
   return std::move(*Result);
 }
 
+llvm::Expected<tooling::Replacements>
+runFormatFile(ClangdServer &Server, PathRef File, StringRef Code) {
+  llvm::Optional<llvm::Expected<tooling::Replacements>> Result;
+  Server.formatFile(File, Code, capture(Result));
+  return std::move(*Result);
+}
+
 std::string runDumpAST(ClangdServer &Server, PathRef File) {
   llvm::Optional<std::string> Result;
   Server.dumpAST(File, capture(Result));
