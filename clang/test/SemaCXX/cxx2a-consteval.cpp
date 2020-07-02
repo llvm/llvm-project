@@ -476,6 +476,25 @@ namespace override {
   }
 }
 
+namespace operator_rewrite {
+  struct A {
+    friend consteval int operator<=>(const A&, const A&) { return 0; }
+  };
+  const bool k = A() < A();
+  static_assert(!k);
+
+  A a;
+  bool k2 = A() < a; // OK, does not access 'a'.
+
+  struct B {
+    friend consteval int operator<=>(const B &l, const B &r) { return r.n - l.n; } // expected-note {{read of }}
+    int n;
+  };
+  static_assert(B() >= B());
+  B b; // expected-note {{here}}
+  bool k3 = B() < b; // expected-error-re {{call to consteval function '{{.*}}::operator<=>' is not a constant expression}} expected-note {{in call}}
+}
+
 struct A {
   int(*ptr)();
   consteval A(int(*p)() = nullptr) : ptr(p) {}
