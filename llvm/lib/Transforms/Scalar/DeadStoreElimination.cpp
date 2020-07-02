@@ -210,18 +210,16 @@ static bool hasAnalyzableMemoryWrite(Instruction *I,
     }
   }
   if (auto *CB = dyn_cast<CallBase>(I)) {
-    if (Function *F = CB->getCalledFunction()) {
-      LibFunc LF;
-      if (TLI.getLibFunc(*F, LF) && TLI.has(LF)) {
-        switch (LF) {
-        case LibFunc_strcpy:
-        case LibFunc_strncpy:
-        case LibFunc_strcat:
-        case LibFunc_strncat:
-          return true;
-        default:
-          return false;
-        }
+    LibFunc LF;
+    if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
+      switch (LF) {
+      case LibFunc_strcpy:
+      case LibFunc_strncpy:
+      case LibFunc_strcat:
+      case LibFunc_strncat:
+        return true;
+      default:
+        return false;
       }
     }
   }
@@ -1581,16 +1579,17 @@ struct DSEState {
       return {MemoryLocation::getForDest(MTI)};
 
     if (auto *CB = dyn_cast<CallBase>(I)) {
-      if (Function *F = CB->getCalledFunction()) {
-        StringRef FnName = F->getName();
-        if (TLI.has(LibFunc_strcpy) && FnName == TLI.getName(LibFunc_strcpy))
+      LibFunc LF;
+      if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
+        switch (LF) {
+        case LibFunc_strcpy:
+        case LibFunc_strncpy:
+        case LibFunc_strcat:
+        case LibFunc_strncat:
           return {MemoryLocation(CB->getArgOperand(0))};
-        if (TLI.has(LibFunc_strncpy) && FnName == TLI.getName(LibFunc_strncpy))
-          return {MemoryLocation(CB->getArgOperand(0))};
-        if (TLI.has(LibFunc_strcat) && FnName == TLI.getName(LibFunc_strcat))
-          return {MemoryLocation(CB->getArgOperand(0))};
-        if (TLI.has(LibFunc_strncat) && FnName == TLI.getName(LibFunc_strncat))
-          return {MemoryLocation(CB->getArgOperand(0))};
+        default:
+          break;
+        }
       }
       return None;
     }
