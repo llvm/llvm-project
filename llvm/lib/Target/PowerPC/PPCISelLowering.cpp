@@ -14452,6 +14452,11 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
     for (int i = 0, e = Mask.size(); i < e; i += 2)
       ShuffV[i] = (ShuffV[i + 1] + NumElts);
 
+  // If the RHS has undefs, we need to remove them since we may have created
+  // a shuffle that adds those instead of the splat value.
+  SDValue SplatVal = cast<BuildVectorSDNode>(RHS.getNode())->getSplatValue();
+  RHS = DAG.getSplatBuildVector(RHS.getValueType(), dl, SplatVal);
+
   Res = DAG.getVectorShuffle(SVN->getValueType(0), dl, LHS, RHS, ShuffV);
   return Res;
 }

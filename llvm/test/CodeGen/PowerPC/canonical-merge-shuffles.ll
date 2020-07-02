@@ -343,5 +343,37 @@ test_entry:
   unreachable
 }
 
+define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_addr #0 {
+; CHECK-P8-LABEL: replace_undefs_in_splat:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI14_0@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, .LCPI14_0@toc@l
+; CHECK-P8-NEXT:    lvx v3, 0, r3
+; CHECK-P8-NEXT:    vmrgow v2, v3, v2
+; CHECK-P8-NEXT:    blr
+;
+; CHECK-P9-LABEL: replace_undefs_in_splat:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    addis r3, r2, .LCPI14_0@toc@ha
+; CHECK-P9-NEXT:    addi r3, r3, .LCPI14_0@toc@l
+; CHECK-P9-NEXT:    lxvx v3, 0, r3
+; CHECK-P9-NEXT:    vmrgow v2, v3, v2
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: replace_undefs_in_splat:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    addis r3, r2, .LCPI14_0@toc@ha
+; CHECK-NOVSX-NEXT:    addis r4, r2, .LCPI14_1@toc@ha
+; CHECK-NOVSX-NEXT:    addi r3, r3, .LCPI14_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v3, 0, r3
+; CHECK-NOVSX-NEXT:    addi r3, r4, .LCPI14_1@toc@l
+; CHECK-NOVSX-NEXT:    lvx v4, 0, r3
+; CHECK-NOVSX-NEXT:    vperm v2, v4, v2, v3
+; CHECK-NOVSX-NEXT:    blr
+entry:
+  %vecins1 = shufflevector <4 x i32> %a, <4 x i32> <i32 undef, i32 566, i32 undef, i32 566>, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i32> %vecins1
+}
+
 declare double @dummy() local_unnamed_addr
 attributes #0 = { nounwind }
