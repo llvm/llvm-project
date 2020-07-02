@@ -258,10 +258,12 @@ private:
 };
 /// Registers all dialects and hooks from the global registries with the
 /// specified MLIRContext.
+/// Note: This method is not thread-safe.
 void registerAllDialects(MLIRContext *context);
 
 /// Utility to register a dialect. Client can register their dialect with the
 /// global registry by calling registerDialect<MyDialect>();
+/// Note: This method is not thread-safe.
 template <typename ConcreteDialect> void registerDialect() {
   Dialect::registerDialectAllocator(TypeID::get<ConcreteDialect>(),
                                     [](MLIRContext *ctx) {
