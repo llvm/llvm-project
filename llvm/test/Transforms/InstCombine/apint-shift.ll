@@ -331,8 +331,8 @@ define <2 x i1> @test16vec(<2 x i84> %X) {
 
 define <2 x i1> @test16vec_nonuniform(<2 x i84> %X) {
 ; CHECK-LABEL: @test16vec_nonuniform(
-; CHECK-NEXT:    [[SHR1:%.*]] = lshr <2 x i84> [[X:%.*]], <i84 4, i84 2>
-; CHECK-NEXT:    [[CMP:%.*]] = trunc <2 x i84> [[SHR1]] to <2 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i84> [[X:%.*]], <i84 16, i84 4>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shr = ashr <2 x i84> %X, <i84 4, i84 2>
@@ -343,8 +343,8 @@ define <2 x i1> @test16vec_nonuniform(<2 x i84> %X) {
 
 define <2 x i1> @test16vec_undef(<2 x i84> %X) {
 ; CHECK-LABEL: @test16vec_undef(
-; CHECK-NEXT:    [[SHR1:%.*]] = lshr <2 x i84> [[X:%.*]], <i84 4, i84 undef>
-; CHECK-NEXT:    [[CMP:%.*]] = trunc <2 x i84> [[SHR1]] to <2 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i84> [[X:%.*]], <i84 16, i84 undef>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shr = ashr <2 x i84> %X, <i84 4, i84 undef>

@@ -742,18 +742,21 @@ Instruction *InstCombiner::visitTrunc(TruncInst &Trunc) {
     // For vectors, we do not canonicalize all truncs to icmp, so optimize
     // patterns that would be covered within visitICmpInst.
     Value *X;
-    const APInt *C;
-    if (match(Src, m_OneUse(m_LShr(m_Value(X), m_APInt(C))))) {
+    Constant *C;
+    if (match(Src, m_OneUse(m_LShr(m_Value(X), m_Constant(C))))) {
       // trunc (lshr X, C) to i1 --> icmp ne (and X, C'), 0
-      APInt MaskC = APInt(SrcWidth, 1).shl(*C);
-      Value *And = Builder.CreateAnd(X, ConstantInt::get(SrcTy, MaskC));
+      Constant *One = ConstantInt::get(SrcTy, APInt(SrcWidth, 1));
+      Constant *MaskC = ConstantExpr::getShl(One, C);
+      Value *And = Builder.CreateAnd(X, MaskC);
       return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
     }
-    if (match(Src, m_OneUse(m_c_Or(m_LShr(m_Value(X), m_APInt(C)),
+    if (match(Src, m_OneUse(m_c_Or(m_LShr(m_Value(X), m_Constant(C)),
                                    m_Deferred(X))))) {
       // trunc (or (lshr X, C), X) to i1 --> icmp ne (and X, C'), 0
-      APInt MaskC = APInt(SrcWidth, 1).shl(*C) | 1;
-      Value *And = Builder.CreateAnd(X, ConstantInt::get(SrcTy, MaskC));
+      Constant *One = ConstantInt::get(SrcTy, APInt(SrcWidth, 1));
+      Constant *MaskC = ConstantExpr::getShl(One, C);
+      MaskC = ConstantExpr::getOr(MaskC, One);
+      Value *And = Builder.CreateAnd(X, MaskC);
       return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
     }
   }
