@@ -135,6 +135,33 @@ private:
   vector::VectorTransformsOptions vectorTransformsOptions;
 };
 
+/// Progressive lowering of a `vector.contract %a, %b, %c` with
+/// matvec semantics to series of AXPY operations that are chained
+/// through FMA operations.
+///
+/// This only kicks in when VectorTransformsOptions is set to AXPY.
+//
+// TODO (ajcbik): this is very similar, but not quite the same as
+//                the outerproduct lowering above; merge the two?
+class ContractionOpToAXPYLowering
+    : public OpRewritePattern<vector::ContractionOp> {
+public:
+  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  ContractionOpToAXPYLowering(
+      vector::VectorTransformsOptions vectorTransformsOptions,
+      MLIRContext *context)
+      : OpRewritePattern<vector::ContractionOp>(context),
+        vectorTransformsOptions(vectorTransformsOptions) {}
+
+  LogicalResult match(vector::ContractionOp op) const override;
+  void rewrite(vector::ContractionOp op,
+               PatternRewriter &rewriter) const override;
+
+private:
+  /// Options to control the vector patterns.
+  vector::VectorTransformsOptions vectorTransformsOptions;
+};
+
 /// Progressive lowering of ContractionOp.
 ///
 /// One:
@@ -145,10 +172,10 @@ private:
 ///   ..
 ///   %x = combine %a %b ..
 /// until a pure contraction is reached (no free/batch dimensions),
-/// which is replaced by a fma/reduction op.
+/// which is replaced by a dot-product.
 ///
-/// This only kicks in when either VectorTransformsOptions is set to FMA or when
-/// other contraction patterns fail.
+/// This only kicks in when either VectorTransformsOptions is set
+/// to Dot or when other contraction patterns fail.
 class ContractionOpLowering : public OpRewritePattern<vector::ContractionOp> {
 public:
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
