@@ -11,7 +11,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionValidators.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -546,8 +545,13 @@ public:
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
-      const lldb::user_id_t fd =
-          StringConvert::ToUInt64(cmd_line.c_str(), UINT64_MAX);
+      lldb::user_id_t fd;
+      if (!llvm::to_integer(cmd_line, fd)) {
+        result.AppendErrorWithFormatv("'{0}' is not a valid file descriptor.\n",
+                                      cmd_line);
+        result.SetStatus(eReturnStatusFailed);
+        return result.Succeeded();
+      }
       Status error;
       bool success = platform_sp->CloseFile(fd, error);
       if (success) {
@@ -586,8 +590,13 @@ public:
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
-      const lldb::user_id_t fd =
-          StringConvert::ToUInt64(cmd_line.c_str(), UINT64_MAX);
+      lldb::user_id_t fd;
+      if (!llvm::to_integer(cmd_line, fd)) {
+        result.AppendErrorWithFormatv("'{0}' is not a valid file descriptor.\n",
+                                      cmd_line);
+        result.SetStatus(eReturnStatusFailed);
+        return result.Succeeded();
+      }
       std::string buffer(m_options.m_count, 0);
       Status error;
       uint32_t retcode = platform_sp->ReadFile(
@@ -674,8 +683,13 @@ public:
       std::string cmd_line;
       args.GetCommandString(cmd_line);
       Status error;
-      const lldb::user_id_t fd =
-          StringConvert::ToUInt64(cmd_line.c_str(), UINT64_MAX);
+      lldb::user_id_t fd;
+      if (!llvm::to_integer(cmd_line, fd)) {
+        result.AppendErrorWithFormatv("'{0}' is not a valid file descriptor.",
+                                      cmd_line);
+        result.SetStatus(eReturnStatusFailed);
+        return result.Succeeded();
+      }
       uint32_t retcode =
           platform_sp->WriteFile(fd, m_options.m_offset, &m_options.m_data[0],
                                  m_options.m_data.size(), error);
