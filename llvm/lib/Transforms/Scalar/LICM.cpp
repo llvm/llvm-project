@@ -1894,7 +1894,7 @@ bool llvm::promoteLoopAccessesToScalars(
 
   // We start with an alignment of one and try to find instructions that allow
   // us to prove better alignment.
-  unsigned Alignment = 1;
+  Align Alignment;
   // Keep track of which types of access we see
   bool SawUnorderedAtomic = false;
   bool SawNotAtomic = false;
@@ -1942,10 +1942,7 @@ bool llvm::promoteLoopAccessesToScalars(
         SawUnorderedAtomic |= Load->isAtomic();
         SawNotAtomic |= !Load->isAtomic();
 
-        unsigned InstAlignment = Load->getAlignment();
-        if (!InstAlignment)
-          InstAlignment =
-              MDL.getABITypeAlignment(Load->getType());
+        Align InstAlignment = Load->getAlign();
 
         // Note that proving a load safe to speculate requires proving
         // sufficient alignment at the target location.  Proving it guaranteed
@@ -1973,10 +1970,7 @@ bool llvm::promoteLoopAccessesToScalars(
         // already know that promotion is safe, since it may have higher
         // alignment than any other guaranteed stores, in which case we can
         // raise the alignment on the promoted store.
-        unsigned InstAlignment = Store->getAlignment();
-        if (!InstAlignment)
-          InstAlignment =
-              MDL.getABITypeAlignment(Store->getValueOperand()->getType());
+        Align InstAlignment = Store->getAlign();
 
         if (!DereferenceableInPH || !SafeToInsertStore ||
             (InstAlignment > Alignment)) {
@@ -2079,7 +2073,8 @@ bool llvm::promoteLoopAccessesToScalars(
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, PointerMustAliases, ExitBlocks,
                         InsertPts, MSSAInsertPts, PIC, *CurAST, MSSAU, *LI, DL,
-                        Alignment, SawUnorderedAtomic, AATags, *SafetyInfo);
+                        Alignment.value(), SawUnorderedAtomic, AATags,
+                        *SafetyInfo);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
@@ -2088,7 +2083,7 @@ bool llvm::promoteLoopAccessesToScalars(
       SomePtr->getName() + ".promoted", Preheader->getTerminator());
   if (SawUnorderedAtomic)
     PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
-  PreheaderLoad->setAlignment(Align(Alignment));
+  PreheaderLoad->setAlignment(Alignment);
   PreheaderLoad->setDebugLoc(DebugLoc());
   if (AATags)
     PreheaderLoad->setAAMetadata(AATags);
