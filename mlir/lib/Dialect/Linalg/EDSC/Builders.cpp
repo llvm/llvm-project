@@ -169,8 +169,8 @@ Operation *mlir::edsc::ops::linalg_generic_pointwise_max(StructuredIndexed I1,
                                                          StructuredIndexed I2,
                                                          StructuredIndexed O) {
   BinaryPointwiseOpBuilder binOp([](Value a, Value b) -> Value {
-    using edsc::op::operator>;
-    return std_select(a > b, a, b);
+    using edsc::op::sgt;
+    return std_select(sgt(a, b), a, b);
   });
   return linalg_generic_pointwise(binOp, I1, I2, O);
 }
