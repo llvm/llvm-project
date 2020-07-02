@@ -1867,10 +1867,7 @@ define void @store_i8_i1(i8 %x, i1 *%y) {
 define <32 x i16> @test_build_vec_v32i1(<32 x i16> %x) {
 ; KNL-LABEL: test_build_vec_v32i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm1
-; KNL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_build_vec_v32i1:
@@ -1885,10 +1882,7 @@ define <32 x i16> @test_build_vec_v32i1(<32 x i16> %x) {
 ;
 ; AVX512DQ-LABEL: test_build_vec_v32i1:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm1
-; AVX512DQ-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX512DQ-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: test_build_vec_v32i1:
@@ -1902,10 +1896,7 @@ define <32 x i16> @test_build_vec_v32i1(<32 x i16> %x) {
 define <32 x i16> @test_build_vec_v32i1_optsize(<32 x i16> %x) optsize {
 ; KNL-LABEL: test_build_vec_v32i1_optsize:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm1
-; KNL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_build_vec_v32i1_optsize:
@@ -1924,10 +1915,7 @@ define <32 x i16> @test_build_vec_v32i1_optsize(<32 x i16> %x) optsize {
 ;
 ; AVX512DQ-LABEL: test_build_vec_v32i1_optsize:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm1
-; AVX512DQ-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX512DQ-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: test_build_vec_v32i1_optsize:
@@ -1943,10 +1931,7 @@ define <32 x i16> @test_build_vec_v32i1_optsize(<32 x i16> %x) optsize {
 define <32 x i16> @test_build_vec_v32i1_pgso(<32 x i16> %x) !prof !14 {
 ; KNL-LABEL: test_build_vec_v32i1_pgso:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm1
-; KNL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_build_vec_v32i1_pgso:
@@ -1965,10 +1950,7 @@ define <32 x i16> @test_build_vec_v32i1_pgso(<32 x i16> %x) !prof !14 {
 ;
 ; AVX512DQ-LABEL: test_build_vec_v32i1_pgso:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm1
-; AVX512DQ-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX512DQ-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: test_build_vec_v32i1_pgso:
@@ -1984,10 +1966,7 @@ define <32 x i16> @test_build_vec_v32i1_pgso(<32 x i16> %x) !prof !14 {
 define <64 x i8> @test_build_vec_v64i1(<64 x i8> %x) {
 ; KNL-LABEL: test_build_vec_v64i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm1
-; KNL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_build_vec_v64i1:
@@ -2002,10 +1981,7 @@ define <64 x i8> @test_build_vec_v64i1(<64 x i8> %x) {
 ;
 ; AVX512DQ-LABEL: test_build_vec_v64i1:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm1
-; AVX512DQ-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX512DQ-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: test_build_vec_v64i1:
