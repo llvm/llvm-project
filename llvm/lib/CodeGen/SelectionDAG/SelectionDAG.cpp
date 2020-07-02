@@ -6524,9 +6524,9 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Then check to see if we should lower the memmove with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
-    SDValue Result = TSI->EmitTargetCodeForMemmove(
-        *this, dl, Chain, Dst, Src, Size, Alignment.value(), isVol, DstPtrInfo,
-        SrcPtrInfo);
+    SDValue Result =
+        TSI->EmitTargetCodeForMemmove(*this, dl, Chain, Dst, Src, Size,
+                                      Alignment, isVol, DstPtrInfo, SrcPtrInfo);
     if (Result.getNode())
       return Result;
   }
