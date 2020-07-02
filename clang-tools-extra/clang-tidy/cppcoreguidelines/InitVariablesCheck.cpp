@@ -42,6 +42,7 @@ void InitVariablesCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       varDecl(unless(hasInitializer(anything())), unless(isInstantiated()),
               isLocalVarDecl(), unless(isStaticLocal()), isDefinition(),
+              unless(hasParent(cxxCatchStmt())),
               optionally(hasParent(declStmt(hasParent(
                   cxxForRangeStmt(hasLoopVariable(varDecl().bind(BadDecl))))))),
               unless(equalsBoundNode(BadDecl)))
