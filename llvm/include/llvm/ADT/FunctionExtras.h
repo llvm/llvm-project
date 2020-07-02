@@ -249,8 +249,8 @@ protected:
 
     // Now move into the storage.
     new (CallableAddr) CallableT(std::move(Callable));
-    CallbackAndInlineFlag = {&CallbacksHolder<CallableT, CalledAsT>::Callbacks,
-                             IsInlineStorage};
+    CallbackAndInlineFlag.setPointerAndInt(
+        &CallbacksHolder<CallableT, CalledAsT>::Callbacks, IsInlineStorage);
   }
 
   ~UniqueFunctionBase() {
