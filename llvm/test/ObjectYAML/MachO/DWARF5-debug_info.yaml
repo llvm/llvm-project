@@ -581,23 +581,8 @@ DWARF:
 
 ## Test DWARF32 unit header.
 
-# RUN: yaml2obj --docnum=2 -DFORMAT=DWARF32 -DLENGTH=12 %s -o %t2.dwarf32.o
-# RUN: llvm-readobj --hex-dump=__debug_info %t2.dwarf32.o | \
-# RUN:   FileCheck %s --check-prefix=DWARF32-HEADER
-
-#      DWARF32-HEADER: Hex dump of section '__debug_info':
-# DWARF32-HEADER-NEXT: 0x00000000 0c000000 05000108 00000000 01341200 .............4..
-##                                ^-------                            unit_header (4-byte)
-##                                         ^---                       version (2-byte)
-##                                             ^-                     unit_type (1-byte)
-##                                               ^-                   address_size (1-byte)
-##                                                  ^-------          deubug_abbrev_offset (4-byte)
-##                                                           ^-       abbrev code (ULEB128)
-##                                                             ^----- value, Form: DW_AT_addr (8-byte)
-# DWARF32-HEADER-NEXT: 0x00000010 00000000 00                         .....
-##                                -----------
-
-# RUN: obj2yaml %t2.dwarf32.o | FileCheck %s --check-prefix=DWARF32-YAML
+# RUN: yaml2obj --docnum=2 -DFORMAT=DWARF32 -DLENGTH=12 %s | \
+# RUN:   obj2yaml | FileCheck %s --check-prefix=DWARF32-YAML
 
 #      DWARF32-YAML: debug_info:
 # DWARF32-YAML-NEXT:   - Length:     12
@@ -679,24 +664,8 @@ DWARF:
 
 ## Test DWARF64 unit header.
 
-# RUN: yaml2obj --docnum=2 -DFORMAT=DWARF64 -DLENGTH=20 %s -o %t2.dwarf64.o
-# RUN: llvm-readobj --hex-dump=__debug_info %t2.dwarf64.o | \
-# RUN:   FileCheck %s --check-prefix=DWARF64-HEADER
-
-#      DWARF64-HEADER: Hex dump of section '__debug_info':
-# DWARF64-HEADER-NEXT: 0x00000000 ffffffff 14000000 00000000 05000108 ................
-##                                ^-------------------------          unit_length (12-byte)
-##                                                           ^---     version (2-byte)
-##                                                               ^-   unit_type (1-byte)
-##                                                                 ^- address_size (1-byte)
-# DWARF64-HEADER-NEXT: 0x00000010 00000000 00000000 01341200 00000000 .........4......
-##                                ^----------------                   debug_abbrev_offset (8-byte)
-##                                                  ^-                abbrev code (ULEB128)
-##                                                    ^-------------- value, Form: DW_AT_addr (8-byte)
-# DWARF64-HEADER-NEXT: 0x00000020 00                                  .
-##                                --
-
-# RUN: obj2yaml %t2.dwarf64.o | FileCheck %s --check-prefix=DWARF64-YAML
+# RUN: yaml2obj --docnum=2 -DFORMAT=DWARF64 -DLENGTH=20 %s | \
+# RUN:   obj2yaml | FileCheck %s --check-prefix=DWARF64-YAML
 
 #      DWARF64-YAML: debug_info:
 # DWARF64-YAML-NEXT:   - Format:     DWARF64
