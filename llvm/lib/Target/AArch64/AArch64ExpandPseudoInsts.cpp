@@ -444,10 +444,13 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
 
   // Resolve the reverse opcode
   if (UseRev) {
-    if (AArch64::getSVERevInstr(Opcode) != -1)
-      Opcode = AArch64::getSVERevInstr(Opcode);
-    else if (AArch64::getSVEOrigInstr(Opcode) != -1)
-      Opcode = AArch64::getSVEOrigInstr(Opcode);
+    int NewOpcode;
+    // e.g. DIV -> DIVR
+    if ((NewOpcode = AArch64::getSVERevInstr(Opcode)) != -1)
+      Opcode = NewOpcode;
+    // e.g. DIVR -> DIV
+    else if ((NewOpcode = AArch64::getSVENonRevInstr(Opcode)) != -1)
+      Opcode = NewOpcode;
   }
 
   // Get the right MOVPRFX
