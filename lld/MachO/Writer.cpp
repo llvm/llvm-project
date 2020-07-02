@@ -358,6 +358,10 @@ static int sectionOrder(OutputSection *osec) {
         .Case(section_names::stringTable, -1)
         .Default(0);
   }
+  // ZeroFill sections must always be the at the end of their segments,
+  // otherwise subsequent sections may get overwritten with zeroes at runtime.
+  if (isZeroFill(osec->flags))
+    return std::numeric_limits<int>::max();
   return 0;
 }
 

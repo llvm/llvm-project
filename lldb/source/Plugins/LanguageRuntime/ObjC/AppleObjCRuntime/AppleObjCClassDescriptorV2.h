@@ -133,7 +133,9 @@ private:
   };
 
   struct method_list_t {
-    uint32_t m_entsize;
+    uint16_t m_entsize;
+    bool m_is_small;
+    bool m_has_direct_selector;
     uint32_t m_count;
     lldb::addr_t m_first_ptr;
 
@@ -148,15 +150,19 @@ private:
     std::string m_name;
     std::string m_types;
 
-    static size_t GetSize(Process *process) {
-      size_t ptr_size = process->GetAddressByteSize();
+    static size_t GetSize(Process *process, bool is_small) {
+      size_t field_size;
+      if (is_small)
+        field_size = 4; // uint32_t relative indirect fields
+      else
+        field_size = process->GetAddressByteSize();
 
-      return ptr_size    // SEL name;
-             + ptr_size  // const char *types;
-             + ptr_size; // IMP imp;
+      return field_size    // SEL name;
+             + field_size  // const char *types;
+             + field_size; // IMP imp;
     }
 
-    bool Read(Process *process, lldb::addr_t addr);
+    bool Read(Process *process, lldb::addr_t addr, bool, bool);
   };
 
   struct ivar_list_t {
