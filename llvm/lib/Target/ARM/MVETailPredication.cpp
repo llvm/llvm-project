@@ -245,6 +245,8 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
         LLVM_FALLTHROUGH;
       case Intrinsic::sadd_sat:
       case Intrinsic::uadd_sat:
+      case Intrinsic::ssub_sat:
+      case Intrinsic::usub_sat:
         continue;
       case Intrinsic::fma:
       case Intrinsic::trunc:
