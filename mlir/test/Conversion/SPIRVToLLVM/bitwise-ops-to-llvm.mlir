@@ -79,3 +79,21 @@ func @bitwise_xor_vector(%arg0: vector<2xi16>, %arg1: vector<2xi16>) {
 	%0 = spv.BitwiseXor %arg0, %arg1 : vector<2xi16>
 	return
 }
+
+//===----------------------------------------------------------------------===//
+// spv.Not
+//===----------------------------------------------------------------------===//
+
+func @not__scalar(%arg0: i32) {
+  // CHECK: %[[CONST:.*]] = llvm.mlir.constant(-1 : i32) : !llvm.i32
+  // CHECK: %{{.*}} = llvm.xor %{{.*}}, %[[CONST]] : !llvm.i32
+	%0 = spv.Not %arg0 : i32
+  return
+}
+
+func @not_vector(%arg0: vector<2xi16>) {
+  // CHECK: %[[CONST:.*]] = llvm.mlir.constant(dense<-1> : vector<2xi16>) : !llvm<"<2 x i16>">
+  // CHECK: %{{.*}} = llvm.xor %{{.*}}, %[[CONST]] : !llvm<"<2 x i16>">
+	%0 = spv.Not %arg0 : vector<2xi16>
+  return
+}
