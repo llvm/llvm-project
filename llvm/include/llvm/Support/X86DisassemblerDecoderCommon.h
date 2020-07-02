@@ -323,6 +323,7 @@ typedef uint16_t InstrUID;
   ENUM_ENTRY(MODRM_SPLITRM)   \
   ENUM_ENTRY(MODRM_SPLITMISC)  \
   ENUM_ENTRY(MODRM_SPLITREG)  \
+  ENUM_ENTRY(MODRM_SPLITREGM) \
   ENUM_ENTRY(MODRM_FULL)
 
 #define ENUM_ENTRY(n) n,
@@ -361,6 +362,7 @@ enum ModRMDecisionType {
   ENUM_ENTRY(ENCODING_RM_CD16,"R/M operand with CDisp scaling of 16")          \
   ENUM_ENTRY(ENCODING_RM_CD32,"R/M operand with CDisp scaling of 32")          \
   ENUM_ENTRY(ENCODING_RM_CD64,"R/M operand with CDisp scaling of 64")          \
+  ENUM_ENTRY(ENCODING_SIB,      "Force SIB operand in ModR/M byte.")           \
   ENUM_ENTRY(ENCODING_VSIB,     "VSIB operand in ModR/M byte.")                \
   ENUM_ENTRY(ENCODING_VSIB_CD2, "VSIB operand with CDisp scaling of 2")        \
   ENUM_ENTRY(ENCODING_VSIB_CD4, "VSIB operand with CDisp scaling of 4")        \
@@ -411,6 +413,7 @@ enum OperandEncoding {
   ENUM_ENTRY(TYPE_IMM,        "immediate operand")                             \
   ENUM_ENTRY(TYPE_UIMM8,      "1-byte unsigned immediate operand")             \
   ENUM_ENTRY(TYPE_M,          "Memory operand")                                \
+  ENUM_ENTRY(TYPE_MSIB,       "Memory operand force sib encoding")             \
   ENUM_ENTRY(TYPE_MVSIBX,     "Memory operand using XMM index")                \
   ENUM_ENTRY(TYPE_MVSIBY,     "Memory operand using YMM index")                \
   ENUM_ENTRY(TYPE_MVSIBZ,     "Memory operand using ZMM index")                \
@@ -424,6 +427,7 @@ enum OperandEncoding {
   ENUM_ENTRY(TYPE_ZMM,        "64-byte")                                       \
   ENUM_ENTRY(TYPE_VK,         "mask register")                                 \
   ENUM_ENTRY(TYPE_VK_PAIR,    "mask register pair")                            \
+  ENUM_ENTRY(TYPE_TMM,        "tile")                                          \
   ENUM_ENTRY(TYPE_SEGMENTREG, "Segment register operand")                      \
   ENUM_ENTRY(TYPE_DEBUGREG,   "Debug register operand")                        \
   ENUM_ENTRY(TYPE_CONTROLREG, "Control register operand")                      \
