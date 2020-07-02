@@ -163,18 +163,18 @@ define i92 @test7(i64 %A) {
 
 define i64 @test8(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[TMP38:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP32:%.*]] = zext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[TMP33:%.*]] = shl nuw i64 [[TMP32]], 32
-; CHECK-NEXT:    [[INS35:%.*]] = or i64 [[TMP33]], [[TMP38]]
-; CHECK-NEXT:    ret i64 [[INS35]]
+; CHECK-NEXT:    [[C:%.*]] = zext i32 [[A:%.*]] to i64
+; CHECK-NEXT:    [[D:%.*]] = zext i32 [[B:%.*]] to i64
+; CHECK-NEXT:    [[E:%.*]] = shl nuw i64 [[D]], 32
+; CHECK-NEXT:    [[F:%.*]] = or i64 [[E]], [[C]]
+; CHECK-NEXT:    ret i64 [[F]]
 ;
-  %tmp38 = zext i32 %A to i128
-  %tmp32 = zext i32 %B to i128
-  %tmp33 = shl i128 %tmp32, 32
-  %ins35 = or i128 %tmp33, %tmp38
-  %tmp42 = trunc i128 %ins35 to i64
-  ret i64 %tmp42
+  %C = zext i32 %A to i128
+  %D = zext i32 %B to i128
+  %E = shl i128 %D, 32
+  %F = or i128 %E, %C
+  %G = trunc i128 %F to i64
+  ret i64 %G
 }
 
 define i8 @test9(i32 %X) {
@@ -409,79 +409,79 @@ define void @trunc_shl_31_i32_i64_multi_use(i64 %val, i32 addrspace(1)* %ptr0, i
 
 define i32 @trunc_shl_lshr_infloop(i64 %arg) {
 ; CHECK-LABEL: @trunc_shl_lshr_infloop(
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[B:%.*]] = shl i64 [[A]], 2
+; CHECK-NEXT:    [[C:%.*]] = trunc i64 [[B]] to i32
+; CHECK-NEXT:    ret i32 [[C]]
 ;
-  %tmp0 = lshr i64 %arg, 1
-  %tmp1 = shl i64 %tmp0, 2
-  %tmp2 = trunc i64 %tmp1 to i32
-  ret i32 %tmp2
+  %A = lshr i64 %arg, 1
+  %B = shl i64 %A, 2
+  %C = trunc i64 %B to i32
+  ret i32 %C
 }
 
 define i32 @trunc_shl_ashr_infloop(i64 %arg) {
 ; CHECK-LABEL: @trunc_shl_ashr_infloop(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i64 [[ARG:%.*]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[A:%.*]] = ashr i64 [[ARG:%.*]], 3
+; CHECK-NEXT:    [[B:%.*]] = shl nsw i64 [[A]], 2
+; CHECK-NEXT:    [[C:%.*]] = trunc i64 [[B]] to i32
+; CHECK-NEXT:    ret i32 [[C]]
 ;
-  %tmp0 = ashr i64 %arg, 3
-  %tmp1 = shl i64 %tmp0, 2
-  %tmp2 = trunc i64 %tmp1 to i32
-  ret i32 %tmp2
+  %A = ashr i64 %arg, 3
+  %B = shl i64 %A, 2
+  %C = trunc i64 %B to i32
+  ret i32 %C
 }
 
 define i32 @trunc_shl_shl_infloop(i64 %arg) {
 ; CHECK-LABEL: @trunc_shl_shl_infloop(
 ; CHECK-NEXT:    [[ARG_TR:%.*]] = trunc i64 [[ARG:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[ARG_TR]], 3
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[C:%.*]] = shl i32 [[ARG_TR]], 3
+; CHECK-NEXT:    ret i32 [[C]]
 ;
-  %tmp0 = shl i64 %arg, 1
-  %tmp1 = shl i64 %tmp0, 2
-  %tmp2 = trunc i64 %tmp1 to i32
-  ret i32 %tmp2
+  %A = shl i64 %arg, 1
+  %B = shl i64 %A, 2
+  %C = trunc i64 %B to i32
+  ret i32 %C
 }
 
 define i32 @trunc_shl_lshr_var(i64 %arg, i64 %val) {
 ; CHECK-LABEL: @trunc_shl_lshr_var(
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[ARG:%.*]], [[VAL:%.*]]
-; CHECK-NEXT:    [[TMP0_TR:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0_TR]], 2
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[ARG:%.*]], [[VAL:%.*]]
+; CHECK-NEXT:    [[A_TR:%.*]] = trunc i64 [[A]] to i32
+; CHECK-NEXT:    [[C:%.*]] = shl i32 [[A_TR]], 2
+; CHECK-NEXT:    ret i32 [[C]]
 ;
-  %tmp0 = lshr i64 %arg, %val
-  %tmp1 = shl i64 %tmp0, 2
-  %tmp2 = trunc i64 %tmp1 to i32
-  ret i32 %tmp2
+  %A = lshr i64 %arg, %val
+  %B = shl i64 %A, 2
+  %C = trunc i64 %B to i32
+  ret i32 %C
 }
 
 define i32 @trunc_shl_ashr_var(i64 %arg, i64 %val) {
 ; CHECK-LABEL: @trunc_shl_ashr_var(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr i64 [[ARG:%.*]], [[VAL:%.*]]
-; CHECK-NEXT:    [[TMP0_TR:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0_TR]], 2
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[A:%.*]] = ashr i64 [[ARG:%.*]], [[VAL:%.*]]
+; CHECK-NEXT:    [[A_TR:%.*]] = trunc i64 [[A]] to i32
+; CHECK-NEXT:    [[C:%.*]] = shl i32 [[A_TR]], 2
+; CHECK-NEXT:    ret i32 [[C]]
 ;
-  %tmp0 = ashr i64 %arg, %val
-  %tmp1 = shl i64 %tmp0, 2
-  %tmp2 = trunc i64 %tmp1 to i32
-  ret i32 %tmp2
+  %A = ashr i64 %arg, %val
+  %B = shl i64 %A, 2
+  %C = trunc i64 %B to i32
+  ret i32 %C
 }
 
 define i32 @trunc_shl_shl_var(i64 %arg, i64 %val) {
 ; CHECK-LABEL: @trunc_shl_shl_var(
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[ARG:%.*]], [[VAL:%.*]]
-; CHECK-NEXT:    [[TMP0_TR:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0_TR]], 2
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[A:%.*]] = shl i64 [[ARG:%.*]], [[VAL:%.*]]
+; CHECK-NEXT:    [[A_TR:%.*]] = trunc i64 [[A]] to i32
+; CHECK-NEXT:    [[C:%.*]] = shl i32 [[A_TR]], 2
+; CHECK-NEXT:    ret i32 [[C]]
 ;
-  %tmp0 = shl i64 %arg, %val
-  %tmp1 = shl i64 %tmp0, 2
-  %tmp2 = trunc i64 %tmp1 to i32
-  ret i32 %tmp2
+  %A = shl i64 %arg, %val
+  %B = shl i64 %A, 2
+  %C = trunc i64 %B to i32
+  ret i32 %C
 }
 
 define <8 x i16> @trunc_shl_v8i15_v8i32_15(<8 x i32> %a) {
