@@ -111,11 +111,11 @@ unsigned long long LLVMABISizeOfType(LLVMTargetDataRef TD, LLVMTypeRef Ty) {
 }
 
 unsigned LLVMABIAlignmentOfType(LLVMTargetDataRef TD, LLVMTypeRef Ty) {
-  return unwrap(TD)->getABITypeAlignment(unwrap(Ty));
+  return unwrap(TD)->getABITypeAlign(unwrap(Ty)).value();
 }
 
 unsigned LLVMCallFrameAlignmentOfType(LLVMTargetDataRef TD, LLVMTypeRef Ty) {
-  return unwrap(TD)->getABITypeAlignment(unwrap(Ty));
+  return unwrap(TD)->getABITypeAlign(unwrap(Ty)).value();
 }
 
 unsigned LLVMPreferredAlignmentOfType(LLVMTargetDataRef TD, LLVMTypeRef Ty) {
