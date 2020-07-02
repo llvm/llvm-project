@@ -845,3 +845,11 @@ let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
            (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
                              VSFRC)>;
 }
+
+let Predicates = [PrefixInstrs] in {
+  def : Pat<(v16i8 (int_ppc_vsx_xxpermx v16i8:$A, v16i8:$B, v16i8:$C, timm:$D)),
+            (COPY_TO_REGCLASS (XXPERMX (COPY_TO_REGCLASS $A, VSRC),
+                                       (COPY_TO_REGCLASS $B, VSRC),
+                                       (COPY_TO_REGCLASS $C, VSRC), $D), VSRC)>;
+}
+

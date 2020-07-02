@@ -16889,6 +16889,14 @@ vec_cnttzm(vector unsigned long long __a, vector unsigned long long __b) {
 
 #define vec_srdb(__a, __b, __c) __builtin_altivec_vsrdbi(__a, __b, (__c & 0x7))
 
+#ifdef __VSX__
+
+/* vec_permx */
+
+#define vec_permx(__a, __b, __c, __d)                                          \
+  __builtin_vsx_xxpermx((__a), (__b), (__c), (__d))
+
+#endif /* __VSX__ */
 #endif /* __POWER10_VECTOR__ */
 
 #undef __ATTRS_o_ai
