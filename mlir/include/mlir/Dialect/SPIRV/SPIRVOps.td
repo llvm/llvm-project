@@ -198,7 +198,7 @@ def SPV_CopyMemoryOp : SPV_Op<"CopyMemory", []> {
     ```
     copy-memory-op ::= `spv.CopyMemory ` storage-class ssa-use
                        storage-class ssa-use
-                       (`[` memory-access `]`)?
+                       (`[` memory-access `]` (`, [` memory-access `]`)?)?
                        ` : ` spirv-element-type
     ```
 
@@ -215,12 +215,16 @@ def SPV_CopyMemoryOp : SPV_Op<"CopyMemory", []> {
     SPV_AnyPtr:$target,
     SPV_AnyPtr:$source,
     OptionalAttr<SPV_MemoryAccessAttr>:$memory_access,
-    OptionalAttr<I32Attr>:$alignment
+    OptionalAttr<I32Attr>:$alignment,
+    OptionalAttr<SPV_MemoryAccessAttr>:$source_memory_access,
+    OptionalAttr<I32Attr>:$source_alignment
   );
 
   let results = (outs);
 
   let verifier = [{ return verifyCopyMemory(*this); }];
+
+  let autogenSerialization = 0;
 }
 
 // -----

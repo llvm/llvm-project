@@ -400,7 +400,8 @@ private:
   /// Method to deserialize an operation in the SPIR-V dialect that is a mirror
   /// of an instruction in the SPIR-V spec. This is auto generated if hasOpcode
   /// == 1 and autogenSerialization == 1 in ODS.
-  template <typename OpTy> LogicalResult processOp(ArrayRef<uint32_t> words) {
+  template <typename OpTy>
+  LogicalResult processOp(ArrayRef<uint32_t> words) {
     return emitError(unknownLoc, "unsupported deserialization for ")
            << OpTy::getOperationName() << " op";
   }
@@ -1566,8 +1567,8 @@ LogicalResult Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
     return success();
   }
 
-    return emitError(unknownLoc, "unsupported OpConstantNull type: ")
-           << resultType;
+  return emitError(unknownLoc, "unsupported OpConstantNull type: ")
+         << resultType;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2506,6 +2507,76 @@ Deserializer::processOp<spirv::MemoryBarrierOp>(ArrayRef<uint32_t> operands) {
 
   opBuilder.create<spirv::MemoryBarrierOp>(unknownLoc, argAttrs[0],
                                            argAttrs[1]);
+  return success();
+}
+
+template <>
+LogicalResult
+Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
+  SmallVector<Type, 1> resultTypes;
+  size_t wordIndex = 0;
+  SmallVector<Value, 4> operands;
+  SmallVector<NamedAttribute, 4> attributes;
+
+  if (wordIndex < words.size()) {
+    auto arg = getValue(words[wordIndex]);
+
+    if (!arg) {
+      return emitError(unknownLoc, "unknown result <id> : ")
+             << words[wordIndex];
+    }
+
+    operands.push_back(arg);
+    wordIndex++;
+  }
+
+  if (wordIndex < words.size()) {
+    auto arg = getValue(words[wordIndex]);
+
+    if (!arg) {
+      return emitError(unknownLoc, "unknown result <id> : ")
+             << words[wordIndex];
+    }
+
+    operands.push_back(arg);
+    wordIndex++;
+  }
+
+  bool isAlignedAttr = false;
+
+  if (wordIndex < words.size()) {
+    auto attrValue = words[wordIndex++];
+    attributes.push_back(opBuilder.getNamedAttr(
+        "memory_access", opBuilder.getI32IntegerAttr(attrValue)));
+    isAlignedAttr = (attrValue == 2);
+  }
+
+  if (isAlignedAttr && wordIndex < words.size()) {
+    attributes.push_back(opBuilder.getNamedAttr(
+        "alignment", opBuilder.getI32IntegerAttr(words[wordIndex++])));
+  }
+
+  if (wordIndex < words.size()) {
+    attributes.push_back(opBuilder.getNamedAttr(
+        "source_memory_access",
+        opBuilder.getI32IntegerAttr(words[wordIndex++])));
+  }
+
+  if (wordIndex < words.size()) {
+    attributes.push_back(opBuilder.getNamedAttr(
+        "source_alignment", opBuilder.getI32IntegerAttr(words[wordIndex++])));
+  }
+
+  if (wordIndex != words.size()) {
+    return emitError(unknownLoc,
+                     "found more operands than expected when deserializing "
+                     "spirv::CopyMemoryOp, only ")
+           << wordIndex << " of " << words.size() << " processed";
+  }
+
+  Location loc = createFileLineColLoc(opBuilder);
+  opBuilder.create<spirv::CopyMemoryOp>(loc, resultTypes, operands, attributes);
+
   return success();
 }
 
