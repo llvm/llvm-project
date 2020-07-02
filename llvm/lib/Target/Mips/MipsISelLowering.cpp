@@ -142,8 +142,9 @@ unsigned MipsTargetLowering::getVectorTypeBreakdownForCallingConv(
 }
 
 SDValue MipsTargetLowering::getGlobalReg(SelectionDAG &DAG, EVT Ty) const {
-  MipsFunctionInfo *FI = DAG.getMachineFunction().getInfo<MipsFunctionInfo>();
-  return DAG.getRegister(FI->getGlobalBaseReg(), Ty);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MipsFunctionInfo *FI = MF.getInfo<MipsFunctionInfo>();
+  return DAG.getRegister(FI->getGlobalBaseReg(MF), Ty);
 }
 
 SDValue MipsTargetLowering::getTargetNode(GlobalAddressSDNode *N, EVT Ty,
@@ -3420,11 +3421,11 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       else if (Subtarget.useXGOT()) {
         Callee = getAddrGlobalLargeGOT(G, DL, Ty, DAG, MipsII::MO_CALL_HI16,
                                        MipsII::MO_CALL_LO16, Chain,
-                                       FuncInfo->callPtrInfo(Val));
+                                       FuncInfo->callPtrInfo(MF, Val));
         IsCallReloc = true;
       } else {
         Callee = getAddrGlobal(G, DL, Ty, DAG, MipsII::MO_GOT_CALL, Chain,
-                               FuncInfo->callPtrInfo(Val));
+                               FuncInfo->callPtrInfo(MF, Val));
         IsCallReloc = true;
       }
     } else
@@ -3442,11 +3443,11 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     else if (Subtarget.useXGOT()) {
       Callee = getAddrGlobalLargeGOT(S, DL, Ty, DAG, MipsII::MO_CALL_HI16,
                                      MipsII::MO_CALL_LO16, Chain,
-                                     FuncInfo->callPtrInfo(Sym));
+                                     FuncInfo->callPtrInfo(MF, Sym));
       IsCallReloc = true;
     } else { // PIC
       Callee = getAddrGlobal(S, DL, Ty, DAG, MipsII::MO_GOT_CALL, Chain,
-                             FuncInfo->callPtrInfo(Sym));
+                             FuncInfo->callPtrInfo(MF, Sym));
       IsCallReloc = true;
     }
 
