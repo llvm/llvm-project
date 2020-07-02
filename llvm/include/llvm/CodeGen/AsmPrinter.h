@@ -126,6 +126,14 @@ public:
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
 
+  /// Map a basic block section ID to the begin and end symbols of that section
+  ///  which determine the section's range.
+  struct MBBSectionRange {
+    MCSymbol *BeginLabel, *EndLabel;
+  };
+
+  MapVector<unsigned, MBBSectionRange> MBBSectionRanges;
+
   /// Map global GOT equivalent MCSymbols to GlobalVariables and keep track of
   /// its number of uses by other globals.
   using GOTEquivUsePair = std::pair<const GlobalVariable *, unsigned>;

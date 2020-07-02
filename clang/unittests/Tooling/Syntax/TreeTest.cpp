@@ -1129,6 +1129,61 @@ void test(S s) {
 )txt"));
 }
 
+TEST_P(SyntaxTreeTest, ParenExpr) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  (1);
+  ((1));
+  (1 + (2));
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-ParenExpression
+    | | |-(
+    | | |-IntegerLiteralExpression
+    | | | `-1
+    | | `-)
+    | `-;
+    |-ExpressionStatement
+    | |-ParenExpression
+    | | |-(
+    | | |-ParenExpression
+    | | | |-(
+    | | | |-IntegerLiteralExpression
+    | | | | `-1
+    | | | `-)
+    | | `-)
+    | `-;
+    |-ExpressionStatement
+    | |-ParenExpression
+    | | |-(
+    | | |-BinaryOperatorExpression
+    | | | |-IntegerLiteralExpression
+    | | | | `-1
+    | | | |-+
+    | | | `-ParenExpression
+    | | |   |-(
+    | | |   |-IntegerLiteralExpression
+    | | |   | `-2
+    | | |   `-)
+    | | `-)
+    | `-;
+    `-}
+)txt"));
+}
+
 TEST_P(SyntaxTreeTest, IntegerLiteral) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
@@ -2040,7 +2095,7 @@ void test(int a, int b) {
     |-{
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-ParenExpression
     | | | |-(
     | | | |-BinaryOperatorExpression
     | | | | |-IntegerLiteralExpression
@@ -2050,7 +2105,7 @@ void test(int a, int b) {
     | | | |   `-2
     | | | `-)
     | | |-*
-    | | `-UnknownExpression
+    | | `-ParenExpression
     | |   |-(
     | |   |-BinaryOperatorExpression
     | |   | |-IntegerLiteralExpression

@@ -158,12 +158,12 @@ static void AddAllFixIts(ClangDiagnostic *diag, const clang::Diagnostic &Info) {
 class ClangDiagnosticManagerAdapter : public clang::DiagnosticConsumer {
 public:
   ClangDiagnosticManagerAdapter(DiagnosticOptions &opts) {
-    DiagnosticOptions *m_options = new DiagnosticOptions(opts);
-    m_options->ShowPresumedLoc = true;
-    m_options->ShowLevel = false;
+    DiagnosticOptions *options = new DiagnosticOptions(opts);
+    options->ShowPresumedLoc = true;
+    options->ShowLevel = false;
     m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
     m_passthrough =
-        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
+        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, options);
   }
 
   void ResetManager(DiagnosticManager *manager = nullptr) {

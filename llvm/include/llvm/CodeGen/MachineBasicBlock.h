@@ -465,6 +465,12 @@ public:
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }
 
+  /// Returns the unique section ID number of this basic block.
+  unsigned getSectionIDNum() const {
+    return ((unsigned)MBBSectionID::SectionType::Cold) -
+           ((unsigned)SectionID.Type) + SectionID.Number;
+  }
+
   /// Sets the section ID for this basic block.
   void setSectionID(MBBSectionID V) { SectionID = V; }
 
