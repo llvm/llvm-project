@@ -1715,12 +1715,12 @@ void ASTStmtReader::VisitLambdaExpr(LambdaExpr *E) {
 
   // Read capture initializers.
   for (LambdaExpr::capture_init_iterator C = E->capture_init_begin(),
-                                      CEnd = E->capture_init_end();
+                                         CEnd = E->capture_init_end();
        C != CEnd; ++C)
     *C = Record.readSubExpr();
 
-  // Ok, not one past the end.
-  E->getStoredStmts()[NumCaptures] = Record.readSubStmt();
+  // The body will be lazily deserialized when needed from the call operator
+  // declaration.
 }
 
 void
