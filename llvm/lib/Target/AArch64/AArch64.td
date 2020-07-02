@@ -103,6 +103,24 @@ def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
 def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
   "Enable Scalable Vector Extension (SVE) instructions", [FeatureFullFP16]>;
 
+// This flag is currently still labeled as Experimental, but when fully
+// implemented this should tell the compiler to use the zeroing pseudos to
+// benefit from the reverse instructions (e.g. SUB vs SUBR) if the inactive
+// lanes are known to be zero. The pseudos will then be expanded using the
+// MOVPRFX instruction to zero the inactive lanes. This feature should only be
+// enabled if MOVPRFX instructions are known to merge with the destructive
+// operations they prefix.
+//
+// This feature could similarly be extended to support cheap merging of _any_
+// value into the inactive lanes using the MOVPRFX instruction that uses
+// merging-predication.
+def FeatureExperimentalZeroingPseudos
+    : SubtargetFeature<"use-experimental-zeroing-pseudos",
+                       "UseExperimentalZeroingPseudos", "true",
+                       "Hint to the compiler that the MOVPRFX instruction is "
+                       "merged with destructive operations",
+                       []>;
+
 def FeatureSVE2 : SubtargetFeature<"sve2", "HasSVE2", "true",
   "Enable Scalable Vector Extension 2 (SVE2) instructions", [FeatureSVE]>;
 
