@@ -53,7 +53,15 @@ static unsigned getBitWidth(Type type) {
   return elementType.getIntOrFloatBitWidth();
 }
 
-/// Creates `IntegerAttribute` with all bits set for given type.
+/// Returns the bit width of LLVMType integer or vector.
+static unsigned getLLVMTypeBitWidth(LLVM::LLVMType type) {
+  return type.isVectorTy() ? type.getVectorElementType()
+                                 .getUnderlyingType()
+                                 ->getIntegerBitWidth()
+                           : type.getUnderlyingType()->getIntegerBitWidth();
+}
+
+/// Creates `IntegerAttribute` with all bits set for given type
 IntegerAttr minusOneIntegerAttribute(Type type, Builder builder) {
   if (auto vecType = type.dyn_cast<VectorType>()) {
     auto integerType = vecType.getElementType().cast<IntegerType>();
@@ -63,11 +71,131 @@ IntegerAttr minusOneIntegerAttribute(Type type, Builder builder) {
   return builder.getIntegerAttr(integerType, -1);
 }
 
+/// Creates `llvm.mlir.constant` with all bits set for the given type.
+static Value createConstantAllBitsSet(Location loc, Type srcType, Type dstType,
+                                      PatternRewriter &rewriter) {
+  if (srcType.isa<VectorType>())
+    return rewriter.create<LLVM::ConstantOp>(
+        loc, dstType,
+        SplatElementsAttr::get(srcType.cast<ShapedType>(),
+                               minusOneIntegerAttribute(srcType, rewriter)));
+  return rewriter.create<LLVM::ConstantOp>(
+      loc, dstType, minusOneIntegerAttribute(srcType, rewriter));
+}
+
+/// Utility function for bitfiled ops:
+///   - `BitFieldInsert`
+///   - `BitFieldSExtract`
+///   - `BitFieldUExtract`
+/// Truncates or extends the value. If the bitwidth of the value is the same as
+/// `dstType` bitwidth, the value remains unchanged.
+static Value optionallyTruncateOrExtend(Location loc, Value value, Type dstType,
+                                        PatternRewriter &rewriter) {
+  auto srcType = value.getType();
+  auto llvmType = dstType.cast<LLVM::LLVMType>();
+  unsigned targetBitWidth = getLLVMTypeBitWidth(llvmType);
+  unsigned valueBitWidth =
+      srcType.isa<LLVM::LLVMType>()
+          ? getLLVMTypeBitWidth(srcType.cast<LLVM::LLVMType>())
+          : getBitWidth(srcType);
+
+  if (valueBitWidth < targetBitWidth)
+    return rewriter.create<LLVM::ZExtOp>(loc, llvmType, value);
+  // If the bit widths of `Count` and `Offset` are greater than the bit width
+  // of the target type, they are truncated. Truncation is safe since `Count`
+  // and `Offset` must be no more than 64 for op behaviour to be defined. Hence,
+  // both values can be expressed in 8 bits.
+  if (valueBitWidth > targetBitWidth)
+    return rewriter.create<LLVM::TruncOp>(loc, llvmType, value);
+  return value;
+}
+
+/// Broadcasts the value to vector with `numElements` number of elements
+static Value broadcast(Location loc, Value toBroadcast, unsigned numElements,
+                       LLVMTypeConverter &typeConverter,
+                       ConversionPatternRewriter &rewriter) {
+  auto vectorType = VectorType::get(numElements, toBroadcast.getType());
+  auto llvmVectorType = typeConverter.convertType(vectorType);
+  auto llvmI32Type = typeConverter.convertType(rewriter.getIntegerType(32));
+  Value broadcasted = rewriter.create<LLVM::UndefOp>(loc, llvmVectorType);
+  for (unsigned i = 0; i < numElements; ++i) {
+    auto index = rewriter.create<LLVM::ConstantOp>(
+        loc, llvmI32Type, rewriter.getI32IntegerAttr(i));
+    broadcasted = rewriter.create<LLVM::InsertElementOp>(
+        loc, llvmVectorType, broadcasted, toBroadcast, index);
+  }
+  return broadcasted;
+}
+
 //===----------------------------------------------------------------------===//
 // Operation conversion
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+class BitFieldInsertPattern
+    : public SPIRVToLLVMConversion<spirv::BitFieldInsertOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::BitFieldInsertOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::BitFieldInsertOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = this->typeConverter.convertType(srcType);
+    if (!dstType)
+      return failure();
+    Location loc = op.getLoc();
+
+    // Broadcast `Offset` and `Count` to match the type of `Base` and `Insert`.
+    // If `Base` is of a vector type, construct a vector that has:
+    //  - same number of elements as `Base`
+    //  - each element has the type that is the same as the type of `Offset` or
+    //    `Count`
+    //  - each element has the same value as `Offset` or `Count`
+    Value offset;
+    Value count;
+    if (auto vectorType = srcType.dyn_cast<VectorType>()) {
+      unsigned numElements = vectorType.getNumElements();
+      offset =
+          broadcast(loc, op.offset(), numElements, typeConverter, rewriter);
+      count = broadcast(loc, op.count(), numElements, typeConverter, rewriter);
+    } else {
+      offset = op.offset();
+      count = op.count();
+    }
+
+    // Create a mask with all bits set of the same type as `srcType`
+    Value minusOne = createConstantAllBitsSet(loc, srcType, dstType, rewriter);
+
+    // Need to cast `Offset` and `Count` if their bit width is different
+    // from `Base` bit width.
+    Value optionallyCastedCount =
+        optionallyTruncateOrExtend(loc, count, dstType, rewriter);
+    Value optionallyCastedOffset =
+        optionallyTruncateOrExtend(loc, offset, dstType, rewriter);
+
+    // Create a mask with bits set outside [Offset, Offset + Count - 1].
+    Value maskShiftedByCount = rewriter.create<LLVM::ShlOp>(
+        loc, dstType, minusOne, optionallyCastedCount);
+    Value negated = rewriter.create<LLVM::XOrOp>(loc, dstType,
+                                                 maskShiftedByCount, minusOne);
+    Value maskShiftedByCountAndOffset = rewriter.create<LLVM::ShlOp>(
+        loc, dstType, negated, optionallyCastedOffset);
+    Value mask = rewriter.create<LLVM::XOrOp>(
+        loc, dstType, maskShiftedByCountAndOffset, minusOne);
+
+    // Extract unchanged bits from the `Base`  that are outside of
+    // [Offset, Offset + Count - 1]. Then `or` with shifted `Insert`.
+    Value baseAndMask =
+        rewriter.create<LLVM::AndOp>(loc, dstType, op.base(), mask);
+    Value insertShiftedByOffset = rewriter.create<LLVM::ShlOp>(
+        loc, dstType, op.insert(), optionallyCastedOffset);
+    rewriter.replaceOpWithNewOp<LLVM::OrOp>(op, dstType, baseAndMask,
+                                            insertShiftedByOffset);
+    return success();
+  }
+};
 
 /// Converts SPIR-V operations that have straightforward LLVM equivalent
 /// into LLVM dialect operations.
@@ -380,6 +508,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
 
       // Bitwise ops
+      BitFieldInsertPattern,
       DirectConversionPattern<spirv::BitCountOp, LLVM::CtPopOp>,
       DirectConversionPattern<spirv::BitReverseOp, LLVM::BitReverseOp>,
       DirectConversionPattern<spirv::BitwiseAndOp, LLVM::AndOp>,
