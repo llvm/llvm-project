@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-scops -analyze \
+; RUN: opt %loadPolly -basic-aa -polly-scops -analyze \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ; void f(long A[], int N, int *init_ptr) {
