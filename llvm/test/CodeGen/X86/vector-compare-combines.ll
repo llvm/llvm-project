@@ -42,25 +42,3 @@ define <4 x i32> @PR27924_cmpgt(<4 x i32> %a, <4 x i32> %b) {
   %ret = sext <4 x i1> %untruth to <4 x i32>
   ret <4 x i32> %ret
 }
-
-define <2 x i64> @vblend_pcmpeq_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2) {
-  %a = and <2 x i64> %a0, <i64 2, i64 2>
-  %c = icmp eq <2 x i64> %a, zeroinitializer
-  %r = select <2 x i1> %c, <2 x i64> %a2, <2 x i64> %a1
-  ret <2 x i64> %r
-}
-
-define void @PR46531(i32* noalias nocapture %x, i32* nocapture readonly %y, i32* nocapture readonly %z) {
-  %vy = bitcast i32* %y to <4 x i32>*
-  %a = load <4 x i32>, <4 x i32>* %vy, align 4
-  %vz = bitcast i32* %z to <4 x i32>*
-  %b = load <4 x i32>, <4 x i32>* %vz, align 4
-  %or = or <4 x i32> %b, %a
-  %and = and <4 x i32> %b, <i32 1, i32 1, i32 1, i32 1>
-  %cmp = icmp eq <4 x i32> %and, zeroinitializer
-  %xor = xor <4 x i32> %b, %a
-  %sel = select <4 x i1> %cmp, <4 x i32> %or, <4 x i32> %xor
-  %vx = bitcast i32* %x to <4 x i32>*
-  store <4 x i32> %sel, <4 x i32>* %vx, align 4
-  ret void
-}
