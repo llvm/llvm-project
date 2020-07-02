@@ -153,6 +153,8 @@ const char *DataLayout::getManglingComponent(const Triple &T) {
     return "-m:o";
   if (T.isOSWindows() && T.isOSBinFormatCOFF())
     return T.getArch() == Triple::x86 ? "-m:x" : "-m:w";
+  if (T.isOSBinFormatXCOFF())
+    return "-m:a";
   return "-m:e";
 }
 
@@ -443,6 +445,9 @@ void DataLayout::parseSpecifier(StringRef Desc) {
         break;
       case 'x':
         ManglingMode = MM_WinCOFFX86;
+        break;
+      case 'a':
+        ManglingMode = MM_XCOFF;
         break;
       }
       break;
