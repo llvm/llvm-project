@@ -156,8 +156,8 @@ struct VectorLayout {
   VectorLayout() = default;
 
   // Return the alignment of element I.
-  uint64_t getElemAlign(unsigned I) {
-    return MinAlign(VecAlign, I * ElemSize);
+  Align getElemAlign(unsigned I) {
+    return commonAlignment(VecAlign, I * ElemSize);
   }
 
   // The type of the vector.
@@ -167,7 +167,7 @@ struct VectorLayout {
   Type *ElemTy = nullptr;
 
   // The alignment of the vector.
-  uint64_t VecAlign = 0;
+  Align VecAlign;
 
   // The size of each element.
   uint64_t ElemSize = 0;
@@ -203,8 +203,8 @@ private:
   void gather(Instruction *Op, const ValueVector &CV);
   bool canTransferMetadata(unsigned Kind);
   void transferMetadataAndIRFlags(Instruction *Op, const ValueVector &CV);
-  bool getVectorLayout(Type *Ty, unsigned Alignment, VectorLayout &Layout,
-                       const DataLayout &DL);
+  Optional<VectorLayout> getVectorLayout(Type *Ty, Align Alignment,
+                                         const DataLayout &DL);
   bool finish();
 
   template<typename T> bool splitUnary(Instruction &, const T &);
@@ -434,25 +434,22 @@ void ScalarizerVisitor::transferMetadataAndIRFlags(Instruction *Op,
 }
 
 // Try to fill in Layout from Ty, returning true on success.  Alignment is
-// the alignment of the vector, or 0 if the ABI default should be used.
-bool ScalarizerVisitor::getVectorLayout(Type *Ty, unsigned Alignment,
-                                 VectorLayout &Layout, const DataLayout &DL) {
+// the alignment of the vector, or None if the ABI default should be used.
+Optional<VectorLayout>
+ScalarizerVisitor::getVectorLayout(Type *Ty, Align Alignment,
+                                   const DataLayout &DL) {
+  VectorLayout Layout;
   // Make sure we're dealing with a vector.
   Layout.VecTy = dyn_cast<VectorType>(Ty);
   if (!Layout.VecTy)
-    return false;
-
+    return None;
   // Check that we're dealing with full-byte elements.
   Layout.ElemTy = Layout.VecTy->getElementType();
   if (!DL.typeSizeEqualsStoreSize(Layout.ElemTy))
-    return false;
-
-  if (Alignment)
-    Layout.VecAlign = Alignment;
-  else
-    Layout.VecAlign = DL.getABITypeAlignment(Layout.VecTy);
+    return None;
+  Layout.VecAlign = Alignment;
   Layout.ElemSize = DL.getTypeStoreSize(Layout.ElemTy);
-  return true;
+  return Layout;
 }
 
 // Scalarize one-operand instruction I, using Split(Builder, X, Name)
@@ -798,20 +795,20 @@ bool ScalarizerVisitor::visitLoadInst(LoadInst &LI) {
   if (!LI.isSimple())
     return false;
 
-  VectorLayout Layout;
-  if (!getVectorLayout(LI.getType(), LI.getAlignment(), Layout,
-                       LI.getModule()->getDataLayout()))
+  Optional<VectorLayout> Layout = getVectorLayout(
+      LI.getType(), LI.getAlign(), LI.getModule()->getDataLayout());
+  if (!Layout)
     return false;
 
-  unsigned NumElems = Layout.VecTy->getNumElements();
+  unsigned NumElems = Layout->VecTy->getNumElements();
   IRBuilder<> Builder(&LI);
   Scatterer Ptr = scatter(&LI, LI.getPointerOperand());
   ValueVector Res;
   Res.resize(NumElems);
 
   for (unsigned I = 0; I < NumElems; ++I)
-    Res[I] = Builder.CreateAlignedLoad(Layout.VecTy->getElementType(), Ptr[I],
-                                       Align(Layout.getElemAlign(I)),
+    Res[I] = Builder.CreateAlignedLoad(Layout->VecTy->getElementType(), Ptr[I],
+                                       Align(Layout->getElemAlign(I)),
                                        LI.getName() + ".i" + Twine(I));
   gather(&LI, Res);
   return true;
@@ -823,13 +820,13 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
   if (!SI.isSimple())
     return false;
 
-  VectorLayout Layout;
   Value *FullValue = SI.getValueOperand();
-  if (!getVectorLayout(FullValue->getType(), SI.getAlignment(), Layout,
-                       SI.getModule()->getDataLayout()))
+  Optional<VectorLayout> Layout = getVectorLayout(
+      FullValue->getType(), SI.getAlign(), SI.getModule()->getDataLayout());
+  if (!Layout)
     return false;
 
-  unsigned NumElems = Layout.VecTy->getNumElements();
+  unsigned NumElems = Layout->VecTy->getNumElements();
   IRBuilder<> Builder(&SI);
   Scatterer VPtr = scatter(&SI, SI.getPointerOperand());
   Scatterer VVal = scatter(&SI, FullValue);
@@ -837,10 +834,9 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
   ValueVector Stores;
   Stores.resize(NumElems);
   for (unsigned I = 0; I < NumElems; ++I) {
-    unsigned Align = Layout.getElemAlign(I);
     Value *Val = VVal[I];
     Value *Ptr = VPtr[I];
-    Stores[I] = Builder.CreateAlignedStore(Val, Ptr, MaybeAlign(Align));
+    Stores[I] = Builder.CreateAlignedStore(Val, Ptr, Layout->getElemAlign(I));
   }
   transferMetadataAndIRFlags(&SI, Stores);
   return true;
