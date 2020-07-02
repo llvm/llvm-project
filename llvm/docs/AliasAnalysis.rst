@@ -516,7 +516,7 @@ returns any useful information.  This pass can be useful if you think that alias
 analysis is doing something wrong and are trying to narrow down a problem.
 
 The ``-basic-aa`` pass
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 
 The ``-basic-aa`` pass is an aggressive local analysis that *knows* many
 important facts:
