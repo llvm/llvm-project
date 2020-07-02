@@ -20,7 +20,7 @@ class Terminator;
 
 [[nodiscard]] void *AllocateMemoryOrCrash(
     const Terminator &, std::size_t bytes);
-template <typename A>[[nodiscard]] A &AllocateOrCrash(const Terminator &t) {
+template <typename A> [[nodiscard]] A &AllocateOrCrash(const Terminator &t) {
   return *reinterpret_cast<A *>(AllocateMemoryOrCrash(t, sizeof(A)));
 }
 void FreeMemory(void *);
