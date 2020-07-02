@@ -14,8 +14,8 @@ namespace clangd {
 
 Key<Config> Config::Key;
 
-const Config &config() {
-  if (const Config *C = Context::current().get(Config::Key))
+const Config &Config::current() {
+  if (const Config *C = Context::current().get(Key))
     return *C;
   static Config Default;
   return Default;
