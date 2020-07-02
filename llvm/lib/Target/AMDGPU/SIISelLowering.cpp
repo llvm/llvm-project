@@ -11163,6 +11163,24 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
+static bool isImmConstraint(StringRef Constraint) {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    default: break;
+    case 'I':
+    case 'J':
+    case 'A':
+    case 'B':
+    case 'C':
+      return true;
+    }
+  } else if (Constraint == "DA" ||
+             Constraint == "DB") {
+    return true;
+  }
+  return false;
+}
+
 SITargetLowering::ConstraintType
 SITargetLowering::getConstraintType(StringRef Constraint) const {
   if (Constraint.size() == 1) {
@@ -11172,67 +11190,115 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'v':
     case 'a':
       return C_RegisterClass;
-    case 'A':
-      return C_Other;
     }
   }
+  if (isImmConstraint(Constraint)) {
+    return C_Other;
+  }
   return TargetLowering::getConstraintType(Constraint);
+}
+
+static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {
+  if (!AMDGPU::isInlinableIntLiteral(Val)) {
+    Val = Val & maskTrailingOnes<uint64_t>(Size);
+  }
+  return Val;
 }
 
 void SITargetLowering::LowerAsmOperandForConstraint(SDValue Op,
                                                     std::string &Constraint,
                                                     std::vector<SDValue> &Ops,
                                                     SelectionDAG &DAG) const {
-  if (Constraint.length() == 1 && Constraint[0] == 'A') {
-    LowerAsmOperandForConstraintA(Op, Ops, DAG);
+  if (isImmConstraint(Constraint)) {
+    uint64_t Val;
+    if (getAsmOperandConstVal(Op, Val) &&
+        checkAsmConstraintVal(Op, Constraint, Val)) {
+      Val = clearUnusedBits(Val, Op.getScalarValueSizeInBits());
+      Ops.push_back(DAG.getTargetConstant(Val, SDLoc(Op), MVT::i64));
+    }
   } else {
     TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
   }
 }
 
-void SITargetLowering::LowerAsmOperandForConstraintA(SDValue Op,
-                                                     std::vector<SDValue> &Ops,
-                                                     SelectionDAG &DAG) const {
+bool SITargetLowering::getAsmOperandConstVal(SDValue Op, uint64_t &Val) const {
   unsigned Size = Op.getScalarValueSizeInBits();
   if (Size > 64)
-    return;
+    return false;
 
-  uint64_t Val;
-  bool IsConst = false;
+  if (Size == 16 && !Subtarget->has16BitInsts())
+    return false;
+
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
     Val = C->getSExtValue();
-    IsConst = true;
-  } else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op)) {
+    return true;
+  }
+  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op)) {
     Val = C->getValueAPF().bitcastToAPInt().getSExtValue();
-    IsConst = true;
-  } else if (BuildVectorSDNode *V = dyn_cast<BuildVectorSDNode>(Op)) {
+    return true;
+  }
+  if (BuildVectorSDNode *V = dyn_cast<BuildVectorSDNode>(Op)) {
     if (Size != 16 || Op.getNumOperands() != 2)
-      return;
+      return false;
     if (Op.getOperand(0).isUndef() || Op.getOperand(1).isUndef())
-      return;
+      return false;
     if (ConstantSDNode *C = V->getConstantSplatNode()) {
       Val = C->getSExtValue();
-      IsConst = true;
-    } else if (ConstantFPSDNode *C = V->getConstantFPSplatNode()) {
+      return true;
+    }
+    if (ConstantFPSDNode *C = V->getConstantFPSplatNode()) {
       Val = C->getValueAPF().bitcastToAPInt().getSExtValue();
-      IsConst = true;
+      return true;
     }
   }
 
-  if (IsConst) {
-    bool HasInv2Pi = Subtarget->hasInv2PiInlineImm();
-    if ((Size == 16 && AMDGPU::isInlinableLiteral16(Val, HasInv2Pi)) ||
-        (Size == 32 && AMDGPU::isInlinableLiteral32(Val, HasInv2Pi)) ||
-        (Size == 64 && AMDGPU::isInlinableLiteral64(Val, HasInv2Pi))) {
-      // Clear unused bits of fp constants
-      if (!AMDGPU::isInlinableIntLiteral(Val)) {
-        unsigned UnusedBits = 64 - Size;
-        Val = (Val << UnusedBits) >> UnusedBits;
-      }
-      auto Res = DAG.getTargetConstant(Val, SDLoc(Op), MVT::i64);
-      Ops.push_back(Res);
+  return false;
+}
+
+bool SITargetLowering::checkAsmConstraintVal(SDValue Op,
+                                             const std::string &Constraint,
+                                             uint64_t Val) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    case 'I':
+      return AMDGPU::isInlinableIntLiteral(Val);
+    case 'J':
+      return isInt<16>(Val);
+    case 'A':
+      return checkAsmConstraintValA(Op, Val);
+    case 'B':
+      return isInt<32>(Val);
+    case 'C':
+      return isUInt<32>(clearUnusedBits(Val, Op.getScalarValueSizeInBits())) ||
+             AMDGPU::isInlinableIntLiteral(Val);
+    default:
+      break;
+    }
+  } else if (Constraint.size() == 2) {
+    if (Constraint == "DA") {
+      int64_t HiBits = static_cast<int32_t>(Val >> 32);
+      int64_t LoBits = static_cast<int32_t>(Val);
+      return checkAsmConstraintValA(Op, HiBits, 32) &&
+             checkAsmConstraintValA(Op, LoBits, 32);
+    }
+    if (Constraint == "DB") {
+      return true;
     }
   }
+  llvm_unreachable("Invalid asm constraint");
+}
+
+bool SITargetLowering::checkAsmConstraintValA(SDValue Op,
+                                              uint64_t Val,
+                                              unsigned MaxSize) const {
+  unsigned Size = std::min<unsigned>(Op.getScalarValueSizeInBits(), MaxSize);
+  bool HasInv2Pi = Subtarget->hasInv2PiInlineImm();
+  if ((Size == 16 && AMDGPU::isInlinableLiteral16(Val, HasInv2Pi)) ||
+      (Size == 32 && AMDGPU::isInlinableLiteral32(Val, HasInv2Pi)) ||
+      (Size == 64 && AMDGPU::isInlinableLiteral64(Val, HasInv2Pi))) {
+    return true;
+  }
+  return false;
 }
 
 // Figure out which registers should be reserved for stack access. Only after
