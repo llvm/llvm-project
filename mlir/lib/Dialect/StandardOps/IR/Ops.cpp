@@ -1176,8 +1176,7 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
   if (value.getType() != type)
     return false;
   // Finally, check that the attribute kind is handled.
-  return value.isa<IntegerAttr>() || value.isa<FloatAttr>() ||
-         value.isa<ElementsAttr>() || value.isa<UnitAttr>();
+  return value.isa<IntegerAttr, FloatAttr, ElementsAttr, UnitAttr>();
 }
 
 void ConstantFloatOp::build(OpBuilder &builder, OperationState &result,
@@ -2103,7 +2102,7 @@ static LogicalResult verify(SelectOp op) {
   // If the result type is a vector or tensor, the type can be a mask with the
   // same elements.
   Type resultType = op.getType();
-  if (!resultType.isa<TensorType>() && !resultType.isa<VectorType>())
+  if (!resultType.isa<TensorType, VectorType>())
     return op.emitOpError()
            << "expected condition to be a signless i1, but got "
            << conditionType;
@@ -2222,8 +2221,7 @@ OpFoldResult SplatOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 1 && "splat takes one operand");
 
   auto constOperand = operands.front();
-  if (!constOperand ||
-      (!constOperand.isa<IntegerAttr>() && !constOperand.isa<FloatAttr>()))
+  if (!constOperand || !constOperand.isa<IntegerAttr, FloatAttr>())
     return {};
 
   auto shapedType = getType().cast<ShapedType>();

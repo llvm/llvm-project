@@ -1292,7 +1292,7 @@ static ParseResult parseConstantOp(OpAsmParser &parser, OperationState &state) {
     return failure();
 
   Type type = value.getType();
-  if (type.isa<NoneType>() || type.isa<TensorType>()) {
+  if (type.isa<NoneType, TensorType>()) {
     if (parser.parseColonType(type))
       return failure();
   }
@@ -1827,8 +1827,8 @@ static LogicalResult verify(spirv::GlobalVariableOp varOp) {
     // TODO: Currently only variable initialization with specialization
     // constants and other variables is supported. They could be normal
     // constants in the module scope as well.
-    if (!initOp || !(isa<spirv::GlobalVariableOp>(initOp) ||
-                     isa<spirv::SpecConstantOp>(initOp))) {
+    if (!initOp ||
+        !isa<spirv::GlobalVariableOp, spirv::SpecConstantOp>(initOp)) {
       return varOp.emitOpError("initializer must be result of a "
                                "spv.specConstant or spv.globalVariable op");
     }
@@ -2093,8 +2093,7 @@ void spirv::LoopOp::addEntryAndMergeBlock() {
 
 static LogicalResult verify(spirv::MergeOp mergeOp) {
   auto *parentOp = mergeOp.getParentOp();
-  if (!parentOp ||
-      (!isa<spirv::SelectionOp>(parentOp) && !isa<spirv::LoopOp>(parentOp)))
+  if (!parentOp || !isa<spirv::SelectionOp, spirv::LoopOp>(parentOp))
     return mergeOp.emitOpError(
         "expected parent op to be 'spv.selection' or 'spv.loop'");
 
@@ -2620,9 +2619,9 @@ static LogicalResult verify(spirv::VariableOp varOp) {
     // SPIR-V spec: "Initializer must be an <id> from a constant instruction or
     // a global (module scope) OpVariable instruction".
     auto *initOp = varOp.getOperand(0).getDefiningOp();
-    if (!initOp || !(isa<spirv::ConstantOp>(initOp) ||    // for normal constant
-                     isa<spirv::ReferenceOfOp>(initOp) || // for spec constant
-                     isa<spirv::AddressOfOp>(initOp)))
+    if (!initOp || !isa<spirv::ConstantOp,    // for normal constant
+                        spirv::ReferenceOfOp, // for spec constant
+                        spirv::AddressOfOp>(initOp))
       return varOp.emitOpError("initializer must be the result of a "
                                "constant or spv.globalVariable op");
   }

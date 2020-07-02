@@ -357,7 +357,7 @@ public:
   /// Returns true of the given type can be used as an element of a vector type.
   /// In particular, vectors can consist of integer or float primitives.
   static bool isValidElementType(Type t) {
-    return t.isa<IntegerType>() || t.isa<FloatType>();
+    return t.isa<IntegerType, FloatType>();
   }
 
   ArrayRef<int64_t> getShape() const;
@@ -381,9 +381,8 @@ public:
     // Note: Non standard/builtin types are allowed to exist within tensor
     // types. Dialects are expected to verify that tensor types have a valid
     // element type within that dialect.
-    return type.isa<ComplexType>() || type.isa<FloatType>() ||
-           type.isa<IntegerType>() || type.isa<OpaqueType>() ||
-           type.isa<VectorType>() || type.isa<IndexType>() ||
+    return type.isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
+                    IndexType>() ||
            (type.getKind() > Type::Kind::LAST_STANDARD_TYPE);
   }
 
