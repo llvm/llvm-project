@@ -33,7 +33,7 @@ class TestExpressionResultNumbering(TestBase):
 
         # Get the number of the last expression:
         result = thread.frames[0].EvaluateExpression("call_me(200)")
-        self.assertTrue(result.GetError().Success(), "Our expression succeeded")
+        self.assertSuccess(result.GetError(), "Our expression succeeded")
         name = result.GetName()
         ordinal = int(name[1:])
         
@@ -42,7 +42,7 @@ class TestExpressionResultNumbering(TestBase):
         # The condition evaluation had to run a 4 expressions, but we haven't
         # run any user expressions.
         result = thread.frames[0].EvaluateExpression("call_me(200)")
-        self.assertTrue(result.GetError().Success(), "Our expression succeeded the second time")
+        self.assertSuccess(result.GetError(), "Our expression succeeded the second time")
         after_name = result.GetName()
         after_ordinal = int(after_name[1:])
         self.assertEqual(ordinal + 1, after_ordinal) 
