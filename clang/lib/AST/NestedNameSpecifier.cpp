@@ -243,6 +243,10 @@ bool NestedNameSpecifier::containsUnexpandedParameterPack() const {
   return getDependence() & NestedNameSpecifierDependence::UnexpandedPack;
 }
 
+bool NestedNameSpecifier::containsErrors() const {
+  return getDependence() & NestedNameSpecifierDependence::Error;
+}
+
 /// Print this nested name specifier to the given output
 /// stream.
 void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
