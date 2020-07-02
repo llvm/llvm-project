@@ -327,3 +327,65 @@ vector double test_vec_permx_d(void) {
   // CHECK-NEXT: ret <2 x double>
   return vec_permx(vda, vdb, vucc, 1);
 }
+
+vector signed char test_vec_blend_sc(void) {
+  // CHECK: @llvm.ppc.vsx.xxblendvb(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8>
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_blendv(vsca, vscb, vucc);
+}
+
+vector unsigned char test_vec_blend_uc(void) {
+  // CHECK: @llvm.ppc.vsx.xxblendvb(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8>
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_blendv(vuca, vucb, vucc);
+}
+
+vector signed short test_vec_blend_ss(void) {
+  // CHECK: @llvm.ppc.vsx.xxblendvh(<8 x i16> %{{.+}}, <8 x i16> %{{.+}}, <8 x i16>
+  // CHECK-NEXT: ret <8 x i16>
+  return vec_blendv(vssa, vssb, vusc);
+}
+
+vector unsigned short test_vec_blend_us(void) {
+  // CHECK: @llvm.ppc.vsx.xxblendvh(<8 x i16> %{{.+}}, <8 x i16> %{{.+}}, <8 x i16>
+  // CHECK-NEXT: ret <8 x i16>
+  return vec_blendv(vusa, vusb, vusc);
+}
+
+vector signed int test_vec_blend_si(void) {
+  // CHECK: @llvm.ppc.vsx.xxblendvw(<4 x i32> %{{.+}}, <4 x i32> %{{.+}}, <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_blendv(vsia, vsib, vuic);
+}
+
+vector unsigned int test_vec_blend_ui(void) {
+  // CHECK: @llvm.ppc.vsx.xxblendvw(<4 x i32> %{{.+}}, <4 x i32> %{{.+}}, <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_blendv(vuia, vuib, vuic);
+}
+
+vector signed long long test_vec_blend_sll(void) {
+  // CHECK: @llvm.ppc.vsx.xxblendvd(<2 x i64> %{{.+}}, <2 x i64> %{{.+}}, <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_blendv(vslla, vsllb, vullc);
+}
+
+vector unsigned long long test_vec_blend_ull(void) {
+  // CHECK: @llvm.ppc.vsx.xxblendvd(<2 x i64> %{{.+}}, <2 x i64> %{{.+}}, <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_blendv(vulla, vullb, vullc);
+}
+
+vector float test_vec_blend_f(void) {
+  // CHECK: @llvm.ppc.vsx.xxblendvw(<4 x i32> %{{.+}}, <4 x i32> %{{.+}}, <4 x i32>
+  // CHECK-NEXT: bitcast <4 x i32> %{{.*}} to <4 x float>
+  // CHECK-NEXT: ret <4 x float>
+  return vec_blendv(vfa, vfb, vuic);
+}
+
+vector double test_vec_blend_d(void) {
+  // CHECK: @llvm.ppc.vsx.xxblendvd(<2 x i64> %{{.+}}, <2 x i64> %{{.+}}, <2 x i64>
+  // CHECK-NEXT: bitcast <2 x i64> %{{.*}} to <2 x double>
+  // CHECK-NEXT: ret <2 x double>
+  return vec_blendv(vda, vdb, vullc);
+}

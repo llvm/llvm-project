@@ -891,5 +891,19 @@ let Predicates = [PrefixInstrs] in {
             (COPY_TO_REGCLASS (XXPERMX (COPY_TO_REGCLASS $A, VSRC),
                                        (COPY_TO_REGCLASS $B, VSRC),
                                        (COPY_TO_REGCLASS $C, VSRC), $D), VSRC)>;
+  def : Pat<(v16i8 (int_ppc_vsx_xxblendvb v16i8:$A, v16i8:$B, v16i8:$C)),
+            (COPY_TO_REGCLASS
+                   (XXBLENDVB (COPY_TO_REGCLASS $A, VSRC),
+                              (COPY_TO_REGCLASS $B, VSRC),
+                              (COPY_TO_REGCLASS $C, VSRC)), VSRC)>;
+  def : Pat<(v8i16 (int_ppc_vsx_xxblendvh v8i16:$A, v8i16:$B, v8i16:$C)),
+            (COPY_TO_REGCLASS
+                   (XXBLENDVH (COPY_TO_REGCLASS $A, VSRC),
+                              (COPY_TO_REGCLASS $B, VSRC),
+                              (COPY_TO_REGCLASS $C, VSRC)), VSRC)>;
+  def : Pat<(int_ppc_vsx_xxblendvw v4i32:$A, v4i32:$B, v4i32:$C),
+            (XXBLENDVW $A, $B, $C)>;
+  def : Pat<(int_ppc_vsx_xxblendvd v2i64:$A, v2i64:$B, v2i64:$C),
+            (XXBLENDVD $A, $B, $C)>;
 }
 
