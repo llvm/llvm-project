@@ -19263,14 +19263,14 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   }
 
   if (V.getOpcode() == ISD::CONCAT_VECTORS) {
-    unsigned ExtNumElts = NVT.getVectorNumElements();
+    unsigned ExtNumElts = NVT.getVectorMinNumElements();
     EVT ConcatSrcVT = V.getOperand(0).getValueType();
     assert(ConcatSrcVT.getVectorElementType() == NVT.getVectorElementType() &&
            "Concat and extract subvector do not change element type");
     assert((ExtIdx % ExtNumElts) == 0 &&
            "Extract index is not a multiple of the input vector length.");
 
-    unsigned ConcatSrcNumElts = ConcatSrcVT.getVectorNumElements();
+    unsigned ConcatSrcNumElts = ConcatSrcVT.getVectorMinNumElements();
     unsigned ConcatOpIdx = ExtIdx / ConcatSrcNumElts;
 
     // If the concatenated source types match this extract, it's a direct
@@ -19284,7 +19284,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     // concat operand. Example:
     //   v2i8 extract_subvec (v16i8 concat (v8i8 X), (v8i8 Y), 14 -->
     //   v2i8 extract_subvec v8i8 Y, 6
-    if (ConcatSrcNumElts % ExtNumElts == 0) {
+    if (NVT.isFixedLengthVector() && ConcatSrcNumElts % ExtNumElts == 0) {
       SDLoc DL(N);
       unsigned NewExtIdx = ExtIdx - ConcatOpIdx * ConcatSrcNumElts;
       assert(NewExtIdx + ExtNumElts <= ConcatSrcNumElts &&
