@@ -3023,7 +3023,7 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
   if (std::optional<DynamicType> type{GetType(i)}) {
     return type->category() == TypeCategory::Derived
         ? "TYPE("s + type->AsFortran() + ')'
-    : type->category() == TypeCategory::Character
+        : type->category() == TypeCategory::Character
         ? "CHARACTER(KIND="s + std::to_string(type->kind()) + ')'
         : ToUpperCase(type->AsFortran());
   } else {

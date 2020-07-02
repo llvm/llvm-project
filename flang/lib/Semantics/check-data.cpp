@@ -61,18 +61,18 @@ public:
     const Scope &scope{context_.FindScope(source_)};
     bool isFirstSymbol{isFirstSymbol_};
     isFirstSymbol_ = false;
-    if (const char *whyNot{IsAutomatic(symbol)          ? "Automatic variable"
-            : IsDummy(symbol)                           ? "Dummy argument"
-            : IsFunctionResult(symbol)                  ? "Function result"
-            : IsAllocatable(symbol)                     ? "Allocatable"
-            : IsInitialized(symbol, true)               ? "Default-initialized"
-            : IsInBlankCommon(symbol)                   ? "Blank COMMON object"
-            : IsProcedure(symbol) && !IsPointer(symbol) ? "Procedure"
-            // remaining checks don't apply to components
-            : !isFirstSymbol                  ? nullptr
-            : IsHostAssociated(symbol, scope) ? "Host-associated object"
-            : IsUseAssociated(symbol, scope)  ? "USE-associated object"
-                                              : nullptr}) {
+    if (const char *whyNot{IsAutomatic(symbol) ? "Automatic variable"
+                : IsDummy(symbol)              ? "Dummy argument"
+                : IsFunctionResult(symbol)     ? "Function result"
+                : IsAllocatable(symbol)        ? "Allocatable"
+                : IsInitialized(symbol, true)  ? "Default-initialized"
+                : IsInBlankCommon(symbol)      ? "Blank COMMON object"
+                : IsProcedure(symbol) && !IsPointer(symbol) ? "Procedure"
+                // remaining checks don't apply to components
+                : !isFirstSymbol                  ? nullptr
+                : IsHostAssociated(symbol, scope) ? "Host-associated object"
+                : IsUseAssociated(symbol, scope)  ? "USE-associated object"
+                                                  : nullptr}) {
       context_.Say(source_,
           "%s '%s' must not be initialized in a DATA statement"_err_en_US,
           whyNot, symbol.name());
