@@ -361,6 +361,8 @@ let RenderMethod = "addMemOperands", SuperClasses = [X86MemAsmOperand] in {
   def X86Mem512_RC256XOperand : AsmOperandClass { let Name = "Mem512_RC256X"; }
   def X86Mem256_RC512Operand  : AsmOperandClass { let Name = "Mem256_RC512"; }
   def X86Mem512_RC512Operand  : AsmOperandClass { let Name = "Mem512_RC512"; }
+
+  def X86SibMemOperand : AsmOperandClass { let Name = "SibMem"; }
 }
 
 def X86AbsMemAsmOperand : AsmOperandClass {
@@ -391,6 +393,8 @@ def X86any_fcmp : PatFrags<(ops node:$lhs, node:$rhs),
 // FIXME: Right now we allow any size during parsing, but we might want to
 // restrict to only unsized memory.
 def opaquemem : X86MemOperand<"printMemReference">;
+
+def sibmem: X86MemOperand<"printMemReference", X86SibMemOperand>;
 
 def i8mem   : X86MemOperand<"printbytemem",   X86Mem8AsmOperand>;
 def i16mem  : X86MemOperand<"printwordmem",  X86Mem16AsmOperand>;
@@ -955,6 +959,9 @@ def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def HasENQCMD    : Predicate<"Subtarget->hasENQCMD()">;
 def HasSERIALIZE : Predicate<"Subtarget->hasSERIALIZE()">;
 def HasTSXLDTRK  : Predicate<"Subtarget->hasTSXLDTRK()">;
+def HasAMXTILE   : Predicate<"Subtarget->hasAMXTILE()">;
+def HasAMXBF16   : Predicate<"Subtarget->hasAMXBF16()">;
+def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
                              AssemblerPredicate<(all_of (not Mode64Bit)), "Not 64-bit mode">;
 def In64BitMode  : Predicate<"Subtarget->is64Bit()">,
@@ -3069,6 +3076,9 @@ include "X86InstrSVM.td"
 
 include "X86InstrTSX.td"
 include "X86InstrSGX.td"
+
+// AMX instructions
+include "X86InstrAMX.td"
 
 // System instructions.
 include "X86InstrSystem.td"

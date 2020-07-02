@@ -403,6 +403,11 @@ protected:
   /// Processor supports TSXLDTRK instruction
   bool HasTSXLDTRK = false;
 
+  /// Processor has AMX support
+  bool HasAMXTILE = false;
+  bool HasAMXBF16 = false;
+  bool HasAMXINT8 = false;
+
   /// Processor has a single uop BEXTR implementation.
   bool HasFastBEXTR = false;
 
@@ -735,6 +740,9 @@ public:
   bool useRetpolineIndirectBranches() const {
     return UseRetpolineIndirectBranches;
   }
+  bool hasAMXTILE() const { return HasAMXTILE; }
+  bool hasAMXBF16() const { return HasAMXBF16; }
+  bool hasAMXINT8() const { return HasAMXINT8; }
   bool useRetpolineExternalThunk() const { return UseRetpolineExternalThunk; }
 
   // These are generic getters that OR together all of the thunk types
