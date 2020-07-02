@@ -34,10 +34,12 @@ namespace clangd {
 
 /// Settings that express user/project preferences and control clangd behavior.
 ///
-/// Generally, features should consume config() and the caller is responsible
-/// for setting it appropriately. In practice these callers are ClangdServer,
-/// TUScheduler, and BackgroundQueue.
+/// Generally, features should consume Config::current() and the caller is
+/// responsible for setting it appropriately. In practice these callers are
+/// ClangdServer, TUScheduler, and BackgroundQueue.
 struct Config {
+  /// Returns the Config of the current Context, or an empty configuration.
+  static const Config &current();
   /// Context key which can be used to set the current Config.
   static clangd::Key<Config> Key;
 
@@ -54,9 +56,6 @@ struct Config {
     std::vector<llvm::unique_function<void(std::vector<std::string> &)>> Edits;
   } CompileFlags;
 };
-
-/// Returns the Config of the current Context, or an empty configuration.
-const Config &config();
 
 } // namespace clangd
 } // namespace clang
