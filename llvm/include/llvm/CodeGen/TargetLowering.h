@@ -1613,7 +1613,7 @@ public:
   /// target).
   virtual bool
   allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
-                     unsigned AddrSpace = 0, unsigned Alignment = 1,
+                     unsigned AddrSpace = 0, Align Alignment = Align(1),
                      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
                      bool *Fast = nullptr) const;
 
