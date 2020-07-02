@@ -248,6 +248,28 @@ public:
   }
 };
 
+class FunctionCallPattern
+    : public SPIRVToLLVMConversion<spirv::FunctionCallOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::FunctionCallOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::FunctionCallOp callOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (callOp.getNumResults() == 0) {
+      rewriter.replaceOpWithNewOp<LLVM::CallOp>(callOp, llvm::None, operands,
+                                                callOp.getAttrs());
+      return success();
+    }
+
+    // Function returns a single result.
+    auto dstType = this->typeConverter.convertType(callOp.getType(0));
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(callOp, dstType, operands,
+                                              callOp.getAttrs());
+    return success();
+  }
+};
+
 /// Converts SPIR-V floating-point comparisons to llvm.fcmp "predicate"
 template <typename SPIRVOp, LLVM::FCmpPredicate predicate>
 class FComparePattern : public SPIRVToLLVMConversion<SPIRVOp> {
@@ -550,6 +572,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::UGreaterThanEqualOp, LLVM::ICmpPredicate::uge>,
       IComparePattern<spirv::ULessThanEqualOp, LLVM::ICmpPredicate::ule>,
       IComparePattern<spirv::ULessThanOp, LLVM::ICmpPredicate::ult>,
+
+      // Function Call op
+      FunctionCallPattern,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,
