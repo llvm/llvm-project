@@ -458,7 +458,7 @@ void IteratorModeling::processComparison(CheckerContext &C,
     StateTrue = StateTrue->assume(*ConditionVal, true);
     C.addTransition(StateTrue);
   }
-  
+
   if (auto StateFalse = relateSymbols(State, Sym1, Sym2, Op != OO_EqualEqual)) {
     StateFalse = StateFalse->assume(*ConditionVal, false);
     C.addTransition(StateFalse);
@@ -540,14 +540,16 @@ void IteratorModeling::handleRandomIncrOrDecr(CheckerContext &C,
 
   auto &TgtVal = (Op == OO_PlusEqual || Op == OO_MinusEqual) ? LHS : RetVal;
 
-  auto NewState =
-    advancePosition(State, LHS, Op, *value);
-  if (NewState) {
-    const auto *NewPos = getIteratorPosition(NewState, LHS);
+  // `AdvancedState` is a state where the position of `LHS` is advanced. We
+  // only need this state to retrieve the new position, but we do not want
+  // to change the position of `LHS` (in every case).
+  auto AdvancedState = advancePosition(State, LHS, Op, *value);
+  if (AdvancedState) {
+    const auto *NewPos = getIteratorPosition(AdvancedState, LHS);
     assert(NewPos &&
            "Iterator should have position after successful advancement");
 
-    State = setIteratorPosition(NewState, TgtVal, *NewPos);
+    State = setIteratorPosition(State, TgtVal, *NewPos);
     C.addTransition(State);
   } else {
     assignToContainer(C, CE, TgtVal, Pos->getContainer());
@@ -611,10 +613,15 @@ void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
                                   const char *NL, const char *Sep) const {
   auto SymbolMap = State->get<IteratorSymbolMap>();
   auto RegionMap = State->get<IteratorRegionMap>();
+  // Use a counter to add newlines before every line except the first one.
+  unsigned Count = 0;
 
   if (!SymbolMap.isEmpty() || !RegionMap.isEmpty()) {
     Out << Sep << "Iterator Positions :" << NL;
     for (const auto &Sym : SymbolMap) {
+      if (Count++)
+        Out << NL;
+
       Sym.first->dumpToStream(Out);
       Out << " : ";
       const auto Pos = Sym.second;
@@ -625,6 +632,9 @@ void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
     }
 
     for (const auto &Reg : RegionMap) {
+      if (Count++)
+        Out << NL;
+
       Reg.first->dumpToStream(Out);
       Out << " : ";
       const auto Pos = Reg.second;
