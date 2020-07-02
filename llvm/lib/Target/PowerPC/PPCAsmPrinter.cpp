@@ -631,7 +631,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     } else {
       MCSymbol *PICOffset =
-        MF->getInfo<PPCFunctionInfo>()->getPICOffsetSymbol();
+        MF->getInfo<PPCFunctionInfo>()->getPICOffsetSymbol(*MF);
       TmpInst.setOpcode(PPC::LWZ);
       const MCExpr *Exp =
         MCSymbolRefExpr::create(PICOffset, MCSymbolRefExpr::VK_None, OutContext);
@@ -1341,7 +1341,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
   if (!Subtarget->isPPC64()) {
     const PPCFunctionInfo *PPCFI = MF->getInfo<PPCFunctionInfo>();
     if (PPCFI->usesPICBase() && !Subtarget->isSecurePlt()) {
-      MCSymbol *RelocSymbol = PPCFI->getPICOffsetSymbol();
+      MCSymbol *RelocSymbol = PPCFI->getPICOffsetSymbol(*MF);
       MCSymbol *PICBase = MF->getPICBaseSymbol();
       OutStreamer->emitLabel(RelocSymbol);
 
@@ -1369,14 +1369,14 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
       const PPCFunctionInfo *PPCFI = MF->getInfo<PPCFunctionInfo>();
 
       MCSymbol *TOCSymbol = OutContext.getOrCreateSymbol(StringRef(".TOC."));
-      MCSymbol *GlobalEPSymbol = PPCFI->getGlobalEPSymbol();
+      MCSymbol *GlobalEPSymbol = PPCFI->getGlobalEPSymbol(*MF);
       const MCExpr *TOCDeltaExpr =
         MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCSymbol, OutContext),
                                 MCSymbolRefExpr::create(GlobalEPSymbol,
                                                         OutContext),
                                 OutContext);
 
-      OutStreamer->emitLabel(PPCFI->getTOCOffsetSymbol());
+      OutStreamer->emitLabel(PPCFI->getTOCOffsetSymbol(*MF));
       OutStreamer->emitValue(TOCDeltaExpr, 8);
     }
     return AsmPrinter::emitFunctionEntryLabel();
@@ -1483,7 +1483,7 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
     // Note: The logic here must be synchronized with the code in the
     // branch-selection pass which sets the offset of the first block in the
     // function. This matters because it affects the alignment.
-    MCSymbol *GlobalEntryLabel = PPCFI->getGlobalEPSymbol();
+    MCSymbol *GlobalEntryLabel = PPCFI->getGlobalEPSymbol(*MF);
     OutStreamer->emitLabel(GlobalEntryLabel);
     const MCSymbolRefExpr *GlobalEntryLabelExp =
       MCSymbolRefExpr::create(GlobalEntryLabel, OutContext);
@@ -1506,7 +1506,7 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
                                    .addReg(PPC::X2)
                                    .addExpr(TOCDeltaLo));
     } else {
-      MCSymbol *TOCOffset = PPCFI->getTOCOffsetSymbol();
+      MCSymbol *TOCOffset = PPCFI->getTOCOffsetSymbol(*MF);
       const MCExpr *TOCOffsetDeltaExpr =
         MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCOffset, OutContext),
                                 GlobalEntryLabelExp, OutContext);
@@ -1521,7 +1521,7 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
                                    .addReg(PPC::X12));
     }
 
-    MCSymbol *LocalEntryLabel = PPCFI->getLocalEPSymbol();
+    MCSymbol *LocalEntryLabel = PPCFI->getLocalEPSymbol(*MF);
     OutStreamer->emitLabel(LocalEntryLabel);
     const MCSymbolRefExpr *LocalEntryLabelExp =
        MCSymbolRefExpr::create(LocalEntryLabel, OutContext);
