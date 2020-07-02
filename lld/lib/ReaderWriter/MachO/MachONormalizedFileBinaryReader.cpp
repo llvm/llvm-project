@@ -576,6 +576,26 @@ private:
   MachOLinkingContext &_ctx;
 };
 
+class MachOTAPIReader : public Reader {
+public:
+  MachOTAPIReader(MachOLinkingContext &ctx) : _ctx(ctx) {}
+
+  bool canParse(file_magic magic, MemoryBufferRef mb) const override {
+    return magic == file_magic::tapi_file;
+  }
+
+  ErrorOr<std::unique_ptr<File>>
+  loadFile(std::unique_ptr<MemoryBuffer> mb,
+           const Registry &registry) const override {
+    std::unique_ptr<File> ret =
+        std::make_unique<TAPIFile>(std::move(mb), &_ctx);
+    return std::move(ret);
+  }
+
+private:
+  MachOLinkingContext &_ctx;
+};
+
 } // namespace normalized
 } // namespace mach_o
 
@@ -583,6 +603,7 @@ void Registry::addSupportMachOObjects(MachOLinkingContext &ctx) {
   MachOLinkingContext::Arch arch = ctx.arch();
   add(std::unique_ptr<Reader>(new mach_o::normalized::MachOObjectReader(ctx)));
   add(std::unique_ptr<Reader>(new mach_o::normalized::MachODylibReader(ctx)));
+  add(std::unique_ptr<Reader>(new mach_o::normalized::MachOTAPIReader(ctx)));
   addKindTable(Reference::KindNamespace::mach_o, ctx.archHandler().kindArch(),
                ctx.archHandler().kindStrings());
   add(std::unique_ptr<YamlIOTaggedDocumentHandler>(

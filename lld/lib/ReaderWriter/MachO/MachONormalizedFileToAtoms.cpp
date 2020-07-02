@@ -223,10 +223,11 @@ Atom::Scope atomScope(uint8_t scope) {
   llvm_unreachable("unknown scope value!");
 }
 
-void appendSymbolsInSection(const std::vector<Symbol> &inSymbols,
-                            uint32_t sectionIndex,
-                            SmallVector<const Symbol *, 64> &outSyms) {
-  for (const Symbol &sym : inSymbols) {
+void appendSymbolsInSection(
+    const std::vector<lld::mach_o::normalized::Symbol> &inSymbols,
+    uint32_t sectionIndex,
+    SmallVector<const lld::mach_o::normalized::Symbol *, 64> &outSyms) {
+  for (const lld::mach_o::normalized::Symbol &sym : inSymbols) {
     // Only look at definition symbols.
     if ((sym.type & N_TYPE) != N_SECT)
       continue;
@@ -286,13 +287,14 @@ llvm::Error processSymboledSection(DefinedAtom::ContentType atomType,
   }
 
   // Find all symbols in this section.
-  SmallVector<const Symbol *, 64> symbols;
+  SmallVector<const lld::mach_o::normalized::Symbol *, 64> symbols;
   appendSymbolsInSection(normalizedFile.globalSymbols, sectIndex, symbols);
   appendSymbolsInSection(normalizedFile.localSymbols,  sectIndex, symbols);
 
   // Sort symbols.
   std::sort(symbols.begin(), symbols.end(),
-            [](const Symbol *lhs, const Symbol *rhs) -> bool {
+            [](const lld::mach_o::normalized::Symbol *lhs,
+               const lld::mach_o::normalized::Symbol *rhs) -> bool {
               if (lhs == rhs)
                 return false;
               // First by address.
@@ -300,7 +302,7 @@ llvm::Error processSymboledSection(DefinedAtom::ContentType atomType,
               uint64_t rhsAddr = rhs->value;
               if (lhsAddr != rhsAddr)
                 return lhsAddr < rhsAddr;
-               // If same address, one is an alias so sort by scope.
+              // If same address, one is an alias so sort by scope.
               Atom::Scope lScope = atomScope(lhs->scope);
               Atom::Scope rScope = atomScope(rhs->scope);
               if (lScope != rScope)
@@ -339,8 +341,8 @@ llvm::Error processSymboledSection(DefinedAtom::ContentType atomType,
                    scatterable, copyRefs);
   }
 
-  const Symbol *lastSym = nullptr;
-  for (const Symbol *sym : symbols) {
+  const lld::mach_o::normalized::Symbol *lastSym = nullptr;
+  for (const lld::mach_o::normalized::Symbol *sym : symbols) {
     if (lastSym != nullptr) {
       // Ignore any assembler added "ltmpNNN" symbol at start of section
       // if there is another symbol at the start.
@@ -550,7 +552,7 @@ llvm::Error convertRelocs(const Section &section,
   auto atomBySymbol = [&] (uint32_t symbolIndex, const lld::Atom **result)
                            -> llvm::Error {
     // Find symbol from index.
-    const Symbol *sym = nullptr;
+    const lld::mach_o::normalized::Symbol *sym = nullptr;
     uint32_t numStabs  = normalizedFile.stabsSymbols.size();
     uint32_t numLocal  = normalizedFile.localSymbols.size();
     uint32_t numGlobal = normalizedFile.globalSymbols.size();
