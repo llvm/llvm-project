@@ -201,9 +201,6 @@ public:
 
   // Accessors
 
-  /// Temporary for Darwin::Linker
-  const llvm::opt::ArgList &getArgs_DO_NOT_USE() const { return Args; }
-
   const Driver &getDriver() const { return D; }
   llvm::vfs::FileSystem &getVFS() const;
   const llvm::Triple &getTriple() const { return Triple; }

@@ -92,7 +92,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Lld, LldArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Lld, LldArgs, Inputs));
 }
 
 // Construct a clang-offload-bundler command to bundle code objects for
@@ -125,7 +126,8 @@ void AMDGCN::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 
   const char *Bundler = Args.MakeArgString(
       T.getToolChain().GetProgramPath("clang-offload-bundler"));
-  C.addCommand(std::make_unique<Command>(JA, T, Bundler, BundlerArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         Bundler, BundlerArgs, Inputs));
 }
 
 /// Add Generated HIP Object File which has device images embedded into the
@@ -195,7 +197,8 @@ void AMDGCN::Linker::constructGenerateObjFileFromHIPFatBinary(
                        "-o",      Output.getFilename(),
                        McinFile,  "--filetype=obj"};
   const char *Mc = Args.MakeArgString(TC.GetProgramPath("llvm-mc"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Mc, McArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Mc, McArgs, Inputs));
 }
 
 // For amdgcn the inputs of the linker job are device bitcode and output is
