@@ -9,7 +9,6 @@
 #include "transformational.h"
 #include "memory.h"
 #include "terminator.h"
-#include "flang/Evaluate/integer.h"
 #include <algorithm>
 #include <cinttypes>
 

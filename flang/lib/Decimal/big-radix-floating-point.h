@@ -27,7 +27,6 @@
 #include "flang/Common/unsigned-const-division.h"
 #include "flang/Decimal/binary-floating-point.h"
 #include "flang/Decimal/decimal.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
 #include <limits>
 #include <type_traits>
@@ -112,7 +111,7 @@ public:
   void Minimize(
       BigRadixFloatingPointNumber &&less, BigRadixFloatingPointNumber &&more);
 
-  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
+  template <typename STREAM> STREAM &Dump(STREAM &) const;
 
 private:
   BigRadixFloatingPointNumber(const BigRadixFloatingPointNumber &that)
