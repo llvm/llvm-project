@@ -141,7 +141,7 @@ namespace llvm {
 /// DominatorTree GraphTraits specialization so the DominatorTree can be
 /// iterated by generic graph iterators.
 template <> struct GraphTraits<mlir::DominanceInfoNode *> {
-  using ChildIteratorType = mlir::DominanceInfoNode::iterator;
+  using ChildIteratorType = mlir::DominanceInfoNode::const_iterator;
   using NodeRef = mlir::DominanceInfoNode *;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
