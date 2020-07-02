@@ -6,7 +6,7 @@
 
 # RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB %s -o %t1.le.o
 # RUN: llvm-readobj --sections --section-data %t1.le.o | \
-# RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9A -DSIZE=171 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-LE-CONTENT
+# RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9B -DSIZE=171 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-LE-CONTENT
 
 #                    SHDR: Index: [[INDEX]]
 #               SHDR-NEXT: Name: .debug_info ([[NAME]])
@@ -287,7 +287,7 @@ DWARF:
 
 # RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB %s -o %t1.be.o
 # RUN: llvm-readobj --sections --section-data %t1.be.o | \
-# RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9A -DSIZE=171 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-BE-CONTENT
+# RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9B -DSIZE=171 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-BE-CONTENT
 
 # DWARF32-BE-CONTENT-NEXT: SectionData (
 # DWARF32-BE-CONTENT-NEXT:   0000: 00001234 00050204 00001234 01123456
