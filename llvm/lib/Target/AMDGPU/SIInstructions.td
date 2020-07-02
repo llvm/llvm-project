@@ -447,7 +447,7 @@ def SI_INIT_EXEC_FROM_INPUT : SPseudoInstSI <
 
 def : GCNPat <
   (int_amdgcn_init_exec timm:$src),
-  (SI_INIT_EXEC_LO (as_i32imm imm:$src))> {
+  (SI_INIT_EXEC_LO (as_i32timm timm:$src))> {
   let WaveSizePredicate = isWave32;
 }
 
