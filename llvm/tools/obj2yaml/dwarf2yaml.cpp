@@ -165,7 +165,8 @@ void dumpDebugPubSections(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   for (const auto &CU : DCtx.compile_units()) {
     DWARFYAML::Unit NewUnit;
-    NewUnit.Length.setLength(CU->getLength());
+    NewUnit.Format = CU->getFormat();
+    NewUnit.Length = CU->getLength();
     NewUnit.Version = CU->getVersion();
     if(NewUnit.Version >= 5)
       NewUnit.Type = (dwarf::UnitType)CU->getUnitType();
