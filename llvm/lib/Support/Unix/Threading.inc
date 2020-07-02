@@ -94,6 +94,10 @@ llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
     if ((errnum = ::pthread_join(Thread, nullptr)) != 0) {
       ReportErrnumFatal("pthread_join failed", errnum);
     }
+  } else if (JP == JoiningPolicy::Detach) {
+    if ((errnum = ::pthread_detach(Thread)) != 0) {
+      ReportErrnumFatal("pthread_detach failed", errnum);
+    }
   }
 }
 
