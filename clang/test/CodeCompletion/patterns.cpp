@@ -74,3 +74,30 @@ int Cls::*memptr_return() {
 // RUN: %clang_cc1 -fsyntax-only -std=c++03 -code-completion-patterns -code-completion-at=%s:37:1 %s -o - | FileCheck -check-prefix=RETURN-PTR-STD03 %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++03 -code-completion-patterns -code-completion-at=%s:41:1 %s -o - | FileCheck -check-prefix=RETURN-PTR-STD03 %s
 // RETURN-PTR-STD03-NOT: COMPLETION: Pattern : return nullptr;
+
+void something();
+
+void unbraced_if() {
+  if (true)
+    something();
+  // line 83
+}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:83:3 %s -o - | FileCheck -check-prefix=UNBRACED-IF %s
+// UNBRACED-IF: COMPLETION: Pattern : else
+// UNBRACED-IF-NEXT: <#statement#>;
+// UNBRACED-IF: COMPLETION: Pattern : else if (<#condition#>)
+// UNBRACED-IF-NEXT: <#statement#>;
+
+void braced_if() {
+  if (true) {
+    something();
+  }
+  // line 95
+}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:95:3 %s -o - | FileCheck -check-prefix=BRACED-IF %s
+// BRACED-IF: COMPLETION: Pattern : else {
+// BRACED-IF-NEXT: <#statements#>
+// BRACED-IF-NEXT: }
+// BRACED-IF: COMPLETION: Pattern : else if (<#condition#>) {
+// BRACED-IF-NEXT: <#statements#>
+// BRACED-IF-NEXT: }

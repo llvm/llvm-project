@@ -5717,7 +5717,7 @@ void Sema::CodeCompleteInitializer(Scope *S, Decl *D) {
   CodeCompleteExpression(S, Data);
 }
 
-void Sema::CodeCompleteAfterIf(Scope *S) {
+void Sema::CodeCompleteAfterIf(Scope *S, bool IsBracedThen) {
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         mapCodeCompletionContext(*this, PCC_Statement));
@@ -5734,15 +5734,25 @@ void Sema::CodeCompleteAfterIf(Scope *S) {
   // "else" block
   CodeCompletionBuilder Builder(Results.getAllocator(),
                                 Results.getCodeCompletionTUInfo());
+
+  auto AddElseBodyPattern = [&] {
+    if (IsBracedThen) {
+      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddPlaceholderChunk("statements");
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+    } else {
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+      Builder.AddPlaceholderChunk("statement");
+      Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+    }
+  };
   Builder.AddTypedTextChunk("else");
-  if (Results.includeCodePatterns()) {
-    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-    Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
-    Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
-    Builder.AddPlaceholderChunk("statements");
-    Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
-    Builder.AddChunk(CodeCompletionString::CK_RightBrace);
-  }
+  if (Results.includeCodePatterns())
+    AddElseBodyPattern();
   Results.AddResult(Builder.TakeString());
 
   // "else if" block
@@ -5755,12 +5765,7 @@ void Sema::CodeCompleteAfterIf(Scope *S) {
     Builder.AddPlaceholderChunk("expression");
   Builder.AddChunk(CodeCompletionString::CK_RightParen);
   if (Results.includeCodePatterns()) {
-    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-    Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
-    Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
-    Builder.AddPlaceholderChunk("statements");
-    Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
-    Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+    AddElseBodyPattern();
   }
   Results.AddResult(Builder.TakeString());
 
