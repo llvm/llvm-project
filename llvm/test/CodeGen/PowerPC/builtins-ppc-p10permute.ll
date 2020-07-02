@@ -37,3 +37,47 @@ entry:
   ret <16 x i8> %0
 }
 declare <16 x i8> @llvm.ppc.vsx.xxpermx(<16 x i8>, <16 x i8>, <16 x i8>, i32 immarg)
+
+define <16 x i8> @testXXBLENDVB(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
+; CHECK-LABEL: testXXBLENDVB:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxblendvb v2, v2, v3, v4
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <16 x i8> @llvm.ppc.vsx.xxblendvb(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c)
+  ret <16 x i8> %0
+}
+declare <16 x i8> @llvm.ppc.vsx.xxblendvb(<16 x i8>, <16 x i8>, <16 x i8>)
+
+define <8 x i16> @testXXBLENDVH(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
+; CHECK-LABEL: testXXBLENDVH:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxblendvh v2, v2, v3, v4
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <8 x i16> @llvm.ppc.vsx.xxblendvh(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c)
+  ret <8 x i16> %0
+}
+declare <8 x i16> @llvm.ppc.vsx.xxblendvh(<8 x i16>, <8 x i16>, <8 x i16>)
+
+define <4 x i32> @testXXBLENDVW(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+; CHECK-LABEL: testXXBLENDVW:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxblendvw v2, v2, v3, v4
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.vsx.xxblendvw(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c)
+  ret <4 x i32> %0
+}
+declare <4 x i32> @llvm.ppc.vsx.xxblendvw(<4 x i32>, <4 x i32>, <4 x i32>)
+
+define <2 x i64> @testXXBLENDVD(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) {
+; CHECK-LABEL: testXXBLENDVD:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxblendvd v2, v2, v3, v4
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.vsx.xxblendvd(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c)
+  ret <2 x i64> %0
+}
+declare <2 x i64> @llvm.ppc.vsx.xxblendvd(<2 x i64>, <2 x i64>, <2 x i64>)

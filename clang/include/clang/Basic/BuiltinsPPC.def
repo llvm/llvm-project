@@ -454,6 +454,12 @@ BUILTIN(__builtin_vsx_xxeval, "V2ULLiV2ULLiV2ULLiV2ULLiIi", "")
 // P10 Vector Permute Extended built-in.
 BUILTIN(__builtin_vsx_xxpermx, "V16UcV16UcV16UcV16UcIi", "")
 
+// P10 Vector Blend built-ins.
+BUILTIN(__builtin_vsx_xxblendvb, "V16UcV16UcV16UcV16Uc", "")
+BUILTIN(__builtin_vsx_xxblendvh, "V8UsV8UsV8UsV8Us", "")
+BUILTIN(__builtin_vsx_xxblendvw, "V4UiV4UiV4UiV4Ui", "")
+BUILTIN(__builtin_vsx_xxblendvd, "V2ULLiV2ULLiV2ULLiV2ULLi", "")
+
 // Float 128 built-ins
 BUILTIN(__builtin_sqrtf128_round_to_odd, "LLdLLd", "")
 BUILTIN(__builtin_addf128_round_to_odd, "LLdLLdLLd", "")
