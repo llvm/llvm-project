@@ -139,23 +139,19 @@ class TextNodeDumper
   const char *LastLocFilename = "";
   unsigned LastLocLine = ~0U;
 
-  /// \p Context, \p SM, and \p Traits can be null. This is because we want
-  /// to be able to call \p dump() in a debugger without having to pass the
-  /// \p ASTContext to \p dump. Not all parts of the AST dump output will be
-  /// available without the \p ASTContext.
-  const ASTContext *Context = nullptr;
-  const SourceManager *SM = nullptr;
+  const SourceManager *SM;
 
   /// The policy to use for printing; can be defaulted.
-  PrintingPolicy PrintPolicy = LangOptions();
+  PrintingPolicy PrintPolicy;
 
-  const comments::CommandTraits *Traits = nullptr;
+  const comments::CommandTraits *Traits;
 
   const char *getCommandName(unsigned CommandID);
 
 public:
-  TextNodeDumper(raw_ostream &OS, const ASTContext &Context, bool ShowColors);
-  TextNodeDumper(raw_ostream &OS, bool ShowColors);
+  TextNodeDumper(raw_ostream &OS, bool ShowColors, const SourceManager *SM,
+                 const PrintingPolicy &PrintPolicy,
+                 const comments::CommandTraits *Traits);
 
   void Visit(const comments::Comment *C, const comments::FullComment *FC);
 

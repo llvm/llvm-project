@@ -152,14 +152,13 @@ void DynTypedNode::print(llvm::raw_ostream &OS,
     OS << "Unable to print values of type " << NodeKind.asStringRef() << "\n";
 }
 
-void DynTypedNode::dump(llvm::raw_ostream &OS,
-                        const ASTContext &Context) const {
+void DynTypedNode::dump(llvm::raw_ostream &OS, SourceManager &SM) const {
   if (const Decl *D = get<Decl>())
     D->dump(OS);
   else if (const Stmt *S = get<Stmt>())
-    S->dump(OS, Context);
+    S->dump(OS, SM);
   else if (const Type *T = get<Type>())
-    T->dump(OS, Context);
+    T->dump(OS);
   else
     OS << "Unable to dump values of type " << NodeKind.asStringRef() << "\n";
 }

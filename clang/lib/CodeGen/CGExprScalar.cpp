@@ -413,7 +413,7 @@ public:
   }
 
   Value *VisitStmt(Stmt *S) {
-    S->dump(llvm::errs(), CGF.getContext());
+    S->dump(CGF.getContext().getSourceManager());
     llvm_unreachable("Stmt can't have complex result type!");
   }
   Value *VisitExpr(Expr *S);
