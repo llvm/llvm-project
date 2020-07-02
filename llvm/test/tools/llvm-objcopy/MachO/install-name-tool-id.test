@@ -4,15 +4,15 @@
 
 ## Specifying -id once:
 # RUN: llvm-install-name-tool -id /usr/lib/A_long_long_test %t
-# RUN: llvm-objdump -p %t | FileCheck %s --check-prefix=ID --implicit-check-not=/usr
+# RUN: llvm-objdump -p %t | FileCheck %s --check-prefix=ID --implicit-check-not='name /usr'
 
-# ID: /usr/lib/A_long_long_test
+# ID: name /usr/lib/A_long_long_test
 
 ## Specifying -id more than once:
 # RUN: llvm-install-name-tool -id /usr/lib/B_long -id /usr/lib/K_long -id /usr/A_short  %t
-# RUN: llvm-objdump -p %t | FileCheck %s --check-prefix=ID-MULTIPLE --implicit-check-not=/usr
+# RUN: llvm-objdump -p %t | FileCheck %s --check-prefix=ID-MULTIPLE --implicit-check-not='name /usr'
 
-# ID-MULTIPLE: /usr/A_short
+# ID-MULTIPLE: name /usr/A_short
 
 ## Specifying -id with empty string:
 # RUN: not llvm-install-name-tool -id '' %t 2>&1 | \
