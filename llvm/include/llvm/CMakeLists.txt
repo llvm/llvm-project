@@ -7,5 +7,3 @@ add_subdirectory(Frontend/OpenMP)
 if (NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
   configure_file(module.modulemap.build module.modulemap COPYONLY)
 endif (NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
-
-set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
