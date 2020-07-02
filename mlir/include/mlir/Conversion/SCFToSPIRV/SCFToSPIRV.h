@@ -21,11 +21,23 @@ class Pass;
 // Owning list of rewriting patterns.
 class OwningRewritePatternList;
 class SPIRVTypeConverter;
+struct ScfToSPIRVContextImpl;
+
+struct ScfToSPIRVContext {
+  ScfToSPIRVContext();
+  ~ScfToSPIRVContext();
+
+  ScfToSPIRVContextImpl *getImpl() { return impl.get(); }
+
+private:
+  std::unique_ptr<ScfToSPIRVContextImpl> impl;
+};
 
 /// Collects a set of patterns to lower from scf.for, scf.if, and
 /// loop.terminator to CFG operations within the SPIR-V dialect.
 void populateSCFToSPIRVPatterns(MLIRContext *context,
                                 SPIRVTypeConverter &typeConverter,
+                                ScfToSPIRVContext &scfToSPIRVContext,
                                 OwningRewritePatternList &patterns);
 } // namespace mlir
 
