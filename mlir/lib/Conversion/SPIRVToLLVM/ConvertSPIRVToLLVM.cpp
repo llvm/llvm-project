@@ -388,6 +388,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       NotPattern<spirv::NotOp>,
 
       // Cast ops
+      DirectConversionPattern<spirv::BitcastOp, LLVM::BitcastOp>,
       DirectConversionPattern<spirv::ConvertFToSOp, LLVM::FPToSIOp>,
       DirectConversionPattern<spirv::ConvertFToUOp, LLVM::FPToUIOp>,
       DirectConversionPattern<spirv::ConvertSToFOp, LLVM::SIToFPOp>,
