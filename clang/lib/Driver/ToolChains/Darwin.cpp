@@ -2643,6 +2643,9 @@ void Darwin::addMinVersionArgs(const ArgList &Args,
     CmdArgs.push_back("-macosx_version_min");
   }
 
+  VersionTuple MinTgtVers = getEffectiveTriple().getMinimumSupportedOSVersion();
+  if (!MinTgtVers.empty() && MinTgtVers > TargetVersion)
+    TargetVersion = MinTgtVers;
   CmdArgs.push_back(Args.MakeArgString(TargetVersion.getAsString()));
 }
 
@@ -2680,6 +2683,9 @@ void Darwin::addPlatformVersionArgs(const llvm::opt::ArgList &Args,
     if (Platform == Darwin::IPhoneOS && Environment == Darwin::MacABI &&
         TargetVersion.getMajor() < 13)
       TargetVersion = VersionTuple(13, 0);
+    VersionTuple MinTgtVers = getEffectiveTriple().getMinimumSupportedOSVersion();
+    if (!MinTgtVers.empty() && MinTgtVers > TargetVersion)
+      TargetVersion = MinTgtVers;
     CmdArgs.push_back(Args.MakeArgString(TargetVersion.getAsString()));
     if (SDKInfo) {
       VersionTuple SDKVersion = SDKInfo->getVersion().withoutBuild();
