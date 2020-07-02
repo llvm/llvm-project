@@ -209,7 +209,9 @@ public:
 
   void dump() const;
   void dumpColor() const;
-  void dump(raw_ostream &OS, const ASTContext &Context) const;
+  void dump(const ASTContext &Context) const;
+  void dump(raw_ostream &OS, const CommandTraits *Traits,
+            const SourceManager *SM) const;
 
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
 

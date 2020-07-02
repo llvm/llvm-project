@@ -1058,7 +1058,7 @@ public:
 
   void dump(const char *s) const;
   void dump() const;
-  void dump(llvm::raw_ostream &OS, const ASTContext &Context) const;
+  void dump(llvm::raw_ostream &OS) const;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddPointer(getAsOpaquePtr());
@@ -2471,7 +2471,7 @@ public:
 
   CanQualType getCanonicalTypeUnqualified() const; // in CanonicalType.h
   void dump() const;
-  void dump(llvm::raw_ostream &OS, const ASTContext &Context) const;
+  void dump(llvm::raw_ostream &OS) const;
 };
 
 /// This will check for a TypedefType by removing any existing sugar
