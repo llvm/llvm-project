@@ -366,9 +366,12 @@ def VOPProfileMAI_F32_V4F16_X16 : VOPProfileMAI<VOP_V16F32_V4F16_V4F16_V16F32, A
 def VOPProfileMAI_F32_V4F16_X32 : VOPProfileMAI<VOP_V32F32_V4F16_V4F16_V32F32, AISrc_1024_b32, ADst_1024, AVSrc_64>;
 
 let Predicates = [HasMAIInsts] in {
+
+let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
 def V_ACCVGPR_READ_B32  : VOP3Inst<"v_accvgpr_read_b32",  VOPProfileAccRead>;
 def V_ACCVGPR_WRITE_B32 : VOP3Inst<"v_accvgpr_write_b32", VOPProfileAccWrite> {
   let isMoveImm = 1;
+}
 }
 
 // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
