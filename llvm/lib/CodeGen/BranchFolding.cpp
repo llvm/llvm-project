@@ -135,10 +135,8 @@ bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
   BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo,
                       getAnalysis<MachineBranchProbabilityInfo>(),
                       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
-  auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
-  return Folder.OptimizeFunction(
-      MF, MF.getSubtarget().getInstrInfo(), MF.getSubtarget().getRegisterInfo(),
-      MMIWP ? &MMIWP->getMMI() : nullptr);
+  return Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
+                                 MF.getSubtarget().getRegisterInfo());
 }
 
 BranchFolder::BranchFolder(bool defaultEnableTailMerge, bool CommonHoist,
@@ -184,7 +182,6 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
 bool BranchFolder::OptimizeFunction(MachineFunction &MF,
                                     const TargetInstrInfo *tii,
                                     const TargetRegisterInfo *tri,
-                                    MachineModuleInfo *mmi,
                                     MachineLoopInfo *mli, bool AfterPlacement) {
   if (!tii) return false;
 
@@ -194,7 +191,6 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   AfterBlockPlacement = AfterPlacement;
   TII = tii;
   TRI = tri;
-  MMI = mmi;
   MLI = mli;
   this->MRI = &MRI;
 
