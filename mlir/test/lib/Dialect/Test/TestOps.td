@@ -90,6 +90,10 @@ def MultiTensorRankOf : TEST_Op<"multi_tensor_rank_of"> {
   );
 }
 
+def TEST_TestType : DialectType<Test_Dialect,
+    CPred<"$_self.isa<::mlir::TestType>()">, "test">,
+    BuildableType<"$_builder.getType<::mlir::TestType>()">;
+
 //===----------------------------------------------------------------------===//
 // Test Symbols
 //===----------------------------------------------------------------------===//

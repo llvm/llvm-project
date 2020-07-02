@@ -14,8 +14,8 @@
 #include "OpFormatGen.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/OpClass.h"
-#include "mlir/TableGen/OpInterfaces.h"
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/SideEffects.h"
@@ -1469,7 +1469,7 @@ void OpEmitter::genOpInterfaceMethod(const tblgen::InterfaceOpTrait *opTrait) {
   alwaysDeclaredMethods.insert(alwaysDeclaredMethodsVec.begin(),
                                alwaysDeclaredMethodsVec.end());
 
-  for (const OpInterfaceMethod &method : interface.getMethods()) {
+  for (const InterfaceMethod &method : interface.getMethods()) {
     // Don't declare if the method has a body.
     if (method.getBody())
       continue;
@@ -1482,7 +1482,7 @@ void OpEmitter::genOpInterfaceMethod(const tblgen::InterfaceOpTrait *opTrait) {
     std::string args;
     llvm::raw_string_ostream os(args);
     interleaveComma(method.getArguments(), os,
-                    [&](const OpInterfaceMethod::Argument &arg) {
+                    [&](const InterfaceMethod::Argument &arg) {
                       os << arg.type << " " << arg.name;
                     });
     opClass.newMethod(method.getReturnType(), method.getName(), os.str(),

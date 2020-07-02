@@ -205,7 +205,8 @@ static void emitConceptDecl(const Availability &availability, raw_ostream &os) {
      << "  public:\n"
      << "    virtual ~Concept() = default;\n"
      << "    virtual " << availability.getQueryFnRetType() << " "
-     << availability.getQueryFnName() << "(Operation *tblgen_opaque_op) = 0;\n"
+     << availability.getQueryFnName()
+     << "(Operation *tblgen_opaque_op) const = 0;\n"
      << "  };\n";
 }
 
@@ -215,7 +216,7 @@ static void emitModelDecl(const Availability &availability, raw_ostream &os) {
      << "  public:\n"
      << "    " << availability.getQueryFnRetType() << " "
      << availability.getQueryFnName()
-     << "(Operation *tblgen_opaque_op) final {\n"
+     << "(Operation *tblgen_opaque_op) const final {\n"
      << "      auto op = llvm::cast<ConcreteOp>(tblgen_opaque_op);\n"
      << "      (void)op;\n"
      // Forward to the method on the concrete operation type.

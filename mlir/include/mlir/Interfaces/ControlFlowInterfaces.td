@@ -55,10 +55,10 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
       }],
       "Optional<BlockArgument>", "getSuccessorBlockArgument",
       (ins "unsigned":$operandIndex), [{
-        Operation *opaqueOp = op;
+        Operation *opaqueOp = $_op;
         for (unsigned i = 0, e = opaqueOp->getNumSuccessors(); i != e; ++i) {
           if (Optional<BlockArgument> arg = detail::getBranchSuccessorArgument(
-                op.getSuccessorOperands(i), operandIndex,
+                $_op.getSuccessorOperands(i), operandIndex,
                 opaqueOp->getSuccessor(i)))
             return arg;
         }
