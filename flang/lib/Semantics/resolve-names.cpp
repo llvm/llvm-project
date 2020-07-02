@@ -1150,9 +1150,9 @@ bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
   const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
   const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
   switch (beginDir.v) {
-  case parser::OmpBlockDirective::Directive::TargetData:
-  case parser::OmpBlockDirective::Directive::Master:
-  case parser::OmpBlockDirective::Directive::Ordered:
+  case llvm::omp::Directive::OMPD_target_data:
+  case llvm::omp::Directive::OMPD_master:
+  case llvm::omp::Directive::OMPD_ordered:
     return false;
   default:
     return true;
@@ -1236,10 +1236,11 @@ public:
 
 private:
   struct OmpContext {
-    OmpContext(const parser::CharBlock &source, OmpDirective d, Scope &s)
+    OmpContext(
+        const parser::CharBlock &source, llvm::omp::Directive d, Scope &s)
         : directiveSource{source}, directive{d}, scope{s} {}
     parser::CharBlock directiveSource;
-    OmpDirective directive;
+    llvm::omp::Directive directive;
     Scope &scope;
     // TODO: default DSA is implicitly determined in different ways
     Symbol::Flag defaultDSA{Symbol::Flag::OmpShared};
@@ -1253,14 +1254,14 @@ private:
     CHECK(!ompContext_.empty());
     return ompContext_.back();
   }
-  void PushContext(const parser::CharBlock &source, OmpDirective dir) {
+  void PushContext(const parser::CharBlock &source, llvm::omp::Directive dir) {
     ompContext_.emplace_back(source, dir, context_.FindScope(source));
   }
   void PopContext() { ompContext_.pop_back(); }
   void SetContextDirectiveSource(parser::CharBlock &dir) {
     GetContext().directiveSource = dir;
   }
-  void SetContextDirectiveEnum(OmpDirective dir) {
+  void SetContextDirectiveEnum(llvm::omp::Directive dir) {
     GetContext().directive = dir;
   }
   Scope &currScope() { return GetContext().scope; }
@@ -6441,41 +6442,19 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
   const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
   switch (beginDir.v) {
-  case parser::OmpBlockDirective::Directive::Master:
-    PushContext(beginDir.source, OmpDirective::MASTER);
-    break;
-  case parser::OmpBlockDirective::Directive::Ordered:
-    PushContext(beginDir.source, OmpDirective::ORDERED);
-    break;
-  case parser::OmpBlockDirective::Directive::Parallel:
-    PushContext(beginDir.source, OmpDirective::PARALLEL);
-    break;
-  case parser::OmpBlockDirective::Directive::Single:
-    PushContext(beginDir.source, OmpDirective::SINGLE);
-    break;
-  case parser::OmpBlockDirective::Directive::Target:
-    PushContext(beginDir.source, OmpDirective::TARGET);
-    break;
-  case parser::OmpBlockDirective::Directive::TargetData:
-    PushContext(beginDir.source, OmpDirective::TARGET_DATA);
-    break;
-  case parser::OmpBlockDirective::Directive::Task:
-    PushContext(beginDir.source, OmpDirective::TASK);
-    break;
-  case parser::OmpBlockDirective::Directive::Teams:
-    PushContext(beginDir.source, OmpDirective::TEAMS);
-    break;
-  case parser::OmpBlockDirective::Directive::Workshare:
-    PushContext(beginDir.source, OmpDirective::WORKSHARE);
-    break;
-  case parser::OmpBlockDirective::Directive::ParallelWorkshare:
-    PushContext(beginDir.source, OmpDirective::PARALLEL_WORKSHARE);
-    break;
-  case parser::OmpBlockDirective::Directive::TargetTeams:
-    PushContext(beginDir.source, OmpDirective::TARGET_TEAMS);
-    break;
-  case parser::OmpBlockDirective::Directive::TargetParallel:
-    PushContext(beginDir.source, OmpDirective::TARGET_PARALLEL);
+  case llvm::omp::Directive::OMPD_master:
+  case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_parallel:
+  case llvm::omp::Directive::OMPD_single:
+  case llvm::omp::Directive::OMPD_target:
+  case llvm::omp::Directive::OMPD_target_data:
+  case llvm::omp::Directive::OMPD_task:
+  case llvm::omp::Directive::OMPD_teams:
+  case llvm::omp::Directive::OMPD_workshare:
+  case llvm::omp::Directive::OMPD_parallel_workshare:
+  case llvm::omp::Directive::OMPD_target_teams:
+  case llvm::omp::Directive::OMPD_target_parallel:
+    PushContext(beginDir.source, beginDir.v);
     break;
   default:
     // TODO others
@@ -6490,74 +6469,31 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   const auto &beginDir{std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
   const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
   switch (beginDir.v) {
-  case parser::OmpLoopDirective::Directive::Distribute:
-    PushContext(beginDir.source, OmpDirective::DISTRIBUTE);
+  case llvm::omp::Directive::OMPD_distribute:
+  case llvm::omp::Directive::OMPD_distribute_parallel_do:
+  case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
+  case llvm::omp::Directive::OMPD_distribute_simd:
+  case llvm::omp::Directive::OMPD_do:
+  case llvm::omp::Directive::OMPD_do_simd:
+  case llvm::omp::Directive::OMPD_parallel_do:
+  case llvm::omp::Directive::OMPD_parallel_do_simd:
+  case llvm::omp::Directive::OMPD_simd:
+  case llvm::omp::Directive::OMPD_target_parallel_do:
+  case llvm::omp::Directive::OMPD_target_parallel_do_simd:
+  case llvm::omp::Directive::OMPD_target_teams_distribute:
+  case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do:
+  case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do_simd:
+  case llvm::omp::Directive::OMPD_target_teams_distribute_simd:
+  case llvm::omp::Directive::OMPD_target_simd:
+  case llvm::omp::Directive::OMPD_taskloop:
+  case llvm::omp::Directive::OMPD_taskloop_simd:
+  case llvm::omp::Directive::OMPD_teams_distribute:
+  case llvm::omp::Directive::OMPD_teams_distribute_parallel_do:
+  case llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd:
+  case llvm::omp::Directive::OMPD_teams_distribute_simd:
+    PushContext(beginDir.source, beginDir.v);
     break;
-  case parser::OmpLoopDirective::Directive::DistributeParallelDo:
-    PushContext(beginDir.source, OmpDirective::DISTRIBUTE_PARALLEL_DO);
-    break;
-  case parser::OmpLoopDirective::Directive::DistributeParallelDoSimd:
-    PushContext(beginDir.source, OmpDirective::DISTRIBUTE_PARALLEL_DO_SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::DistributeSimd:
-    PushContext(beginDir.source, OmpDirective::DISTRIBUTE_SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::Do:
-    PushContext(beginDir.source, OmpDirective::DO);
-    break;
-  case parser::OmpLoopDirective::Directive::DoSimd:
-    PushContext(beginDir.source, OmpDirective::DO_SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::ParallelDo:
-    PushContext(beginDir.source, OmpDirective::PARALLEL_DO);
-    break;
-  case parser::OmpLoopDirective::Directive::ParallelDoSimd:
-    PushContext(beginDir.source, OmpDirective::PARALLEL_DO_SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::Simd:
-    PushContext(beginDir.source, OmpDirective::SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::TargetParallelDo:
-    PushContext(beginDir.source, OmpDirective::TARGET_PARALLEL_DO);
-    break;
-  case parser::OmpLoopDirective::Directive::TargetParallelDoSimd:
-    PushContext(beginDir.source, OmpDirective::TARGET_PARALLEL_DO_SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::TargetTeamsDistribute:
-    PushContext(beginDir.source, OmpDirective::TARGET_TEAMS_DISTRIBUTE);
-    break;
-  case parser::OmpLoopDirective::Directive::TargetTeamsDistributeParallelDo:
-    PushContext(
-        beginDir.source, OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO);
-    break;
-  case parser::OmpLoopDirective::Directive::TargetTeamsDistributeParallelDoSimd:
-    PushContext(beginDir.source,
-        OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::TargetTeamsDistributeSimd:
-    PushContext(beginDir.source, OmpDirective::TARGET_TEAMS_DISTRIBUTE_SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::TargetSimd:
-    PushContext(beginDir.source, OmpDirective::TARGET_SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::Taskloop:
-    PushContext(beginDir.source, OmpDirective::TASKLOOP);
-    break;
-  case parser::OmpLoopDirective::Directive::TaskloopSimd:
-    PushContext(beginDir.source, OmpDirective::TASKLOOP_SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::TeamsDistribute:
-    PushContext(beginDir.source, OmpDirective::TEAMS_DISTRIBUTE);
-    break;
-  case parser::OmpLoopDirective::Directive::TeamsDistributeParallelDo:
-    PushContext(beginDir.source, OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO);
-    break;
-  case parser::OmpLoopDirective::Directive::TeamsDistributeParallelDoSimd:
-    PushContext(
-        beginDir.source, OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD);
-    break;
-  case parser::OmpLoopDirective::Directive::TeamsDistributeSimd:
-    PushContext(beginDir.source, OmpDirective::TEAMS_DISTRIBUTE_SIMD);
+  default:
     break;
   }
   ClearDataSharingAttributeObjects();
@@ -6581,8 +6517,8 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     if (targetIt == ompContext_.rend()) {
       return;
     }
-    if (parallelSet.test(targetIt->directive) ||
-        taskGeneratingSet.test(targetIt->directive)) {
+    if (llvm::omp::parallelSet.test(targetIt->directive) ||
+        llvm::omp::taskGeneratingSet.test(targetIt->directive)) {
       break;
     }
   }
@@ -6669,7 +6605,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
   if (level <= 0)
     return;
   Symbol::Flag ivDSA{Symbol::Flag::OmpPrivate};
-  if (simdSet.test(GetContext().directive)) {
+  if (llvm::omp::simdSet.test(GetContext().directive)) {
     if (level == 1) {
       ivDSA = Symbol::Flag::OmpLinear;
     } else {
@@ -6700,11 +6636,11 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
   const auto &beginDir{
       std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
   switch (beginDir.v) {
-  case parser::OmpSectionsDirective::Directive::ParallelSections:
-    PushContext(beginDir.source, OmpDirective::PARALLEL_SECTIONS);
+  case llvm::omp::Directive::OMPD_parallel_sections:
+  case llvm::omp::Directive::OMPD_sections:
+    PushContext(beginDir.source, beginDir.v);
     break;
-  case parser::OmpSectionsDirective::Directive::Sections:
-    PushContext(beginDir.source, OmpDirective::SECTIONS);
+  default:
     break;
   }
   ClearDataSharingAttributeObjects();
@@ -6712,7 +6648,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
-  PushContext(x.source, OmpDirective::THREADPRIVATE);
+  PushContext(x.source, llvm::omp::Directive::OMPD_threadprivate);
   const auto &list{std::get<parser::OmpObjectList>(x.t)};
   ResolveOmpObjectList(list, Symbol::Flag::OmpThreadprivate);
   return false;
