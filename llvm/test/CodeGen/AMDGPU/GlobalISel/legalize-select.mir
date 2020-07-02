@@ -1003,7 +1003,7 @@ body: |
     %3:_(s32) = G_CONSTANT i32 0
     %4:_(s1) = G_ICMP intpred(ne), %2, %3
     %5:_(<2 x s128>) = G_SELECT %4, %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7   = COPY %5
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %5
 
 ...
 

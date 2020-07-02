@@ -207,7 +207,7 @@ body: |
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
     ; WAVE32: S_ENDPGM 0, implicit [[COPY]]
     %0:sreg_64_xexec = COPY $sgpr0_sgpr1
-    %1:sreg_64_xexec  = COPY %0
+    %1:sreg_64_xexec = COPY %0
     S_ENDPGM 0, implicit %1
 
 ...
