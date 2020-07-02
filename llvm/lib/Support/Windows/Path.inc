@@ -555,6 +555,11 @@ std::error_code rename(const Twine &From, const Twine &To) {
                       NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (FromHandle)
       break;
+
+    // We don't want to loop if the file doesn't exist.
+    auto EC = mapWindowsError(GetLastError());
+    if (EC == errc::no_such_file_or_directory)
+      return EC;
   }
   if (!FromHandle)
     return mapWindowsError(GetLastError());
