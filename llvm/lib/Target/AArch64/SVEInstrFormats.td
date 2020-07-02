@@ -419,25 +419,27 @@ class SVEPseudo2Instr<string name, bit instr> {
   bit IsInstr = instr;
 }
 
+// Lookup e.g. DIV -> DIVR
 def getSVERevInstr : InstrMapping {
   let FilterClass = "SVEInstr2Rev";
   let RowFields = ["InstrName"];
-  let ColFields = ["IsOrig"];
-  let KeyCol = ["1"];
-  let ValueCols = [["0"]];
-}
-
-def getSVEOrigInstr : InstrMapping {
-  let FilterClass = "SVEInstr2Rev";
-  let RowFields = ["InstrName"];
-  let ColFields = ["IsOrig"];
+  let ColFields = ["isReverseInstr"];
   let KeyCol = ["0"];
   let ValueCols = [["1"]];
 }
 
-class SVEInstr2Rev<string name, string revname, bit nameIsOrig> {
-  string InstrName = !if(nameIsOrig, name, revname);
-  bit IsOrig = nameIsOrig;
+// Lookup e.g. DIVR -> DIV
+def getSVENonRevInstr : InstrMapping {
+  let FilterClass = "SVEInstr2Rev";
+  let RowFields = ["InstrName"];
+  let ColFields = ["isReverseInstr"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
+}
+
+class SVEInstr2Rev<string name1, string name2, bit name1IsReverseInstr> {
+  string InstrName = !if(name1IsReverseInstr, name1, name2);
+  bit isReverseInstr = name1IsReverseInstr;
 }
 
 //
@@ -1570,14 +1572,14 @@ class sve_fp_2op_p_zds<bits<2> sz, bits<4> opc, string asm,
 
 multiclass sve_fp_2op_p_zds<bits<4> opc, string asm, string Ps,
                             SDPatternOperator op, DestructiveInstTypeEnum flags,
-                            string revname="", bit isOrig=0> {
+                            string revname="", bit isReverseInstr=0> {
   let DestructiveInstType = flags in {
   def _H : sve_fp_2op_p_zds<0b01, opc, asm, ZPR16>,
-           SVEPseudo2Instr<Ps # _H, 1>, SVEInstr2Rev<NAME # _H, revname # _H, isOrig>;
+           SVEPseudo2Instr<Ps # _H, 1>, SVEInstr2Rev<NAME # _H, revname # _H, isReverseInstr>;
   def _S : sve_fp_2op_p_zds<0b10, opc, asm, ZPR32>,
-           SVEPseudo2Instr<Ps # _S, 1>, SVEInstr2Rev<NAME # _S, revname # _S, isOrig>;
+           SVEPseudo2Instr<Ps # _S, 1>, SVEInstr2Rev<NAME # _S, revname # _S, isReverseInstr>;
   def _D : sve_fp_2op_p_zds<0b11, opc, asm, ZPR64>,
-           SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isOrig>;
+           SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isReverseInstr>;
   }
 
   def : SVE_3_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
@@ -2352,16 +2354,16 @@ multiclass sve_int_bin_pred_log<bits<3> opc, string asm, SDPatternOperator op> {
 multiclass sve_int_bin_pred_arit_0<bits<3> opc, string asm, string Ps,
                                    SDPatternOperator op,
                                    DestructiveInstTypeEnum flags,
-                                   string revname="", bit isOrig=0> {
+                                   string revname="", bit isReverseInstr=0> {
   let DestructiveInstType = flags in {
   def _B : sve_int_bin_pred_arit_log<0b00, 0b00, opc, asm, ZPR8>,
-             SVEPseudo2Instr<Ps # _B, 1>, SVEInstr2Rev<NAME # _B, revname # _B, isOrig>;
+             SVEPseudo2Instr<Ps # _B, 1>, SVEInstr2Rev<NAME # _B, revname # _B, isReverseInstr>;
   def _H : sve_int_bin_pred_arit_log<0b01, 0b00, opc, asm, ZPR16>,
-             SVEPseudo2Instr<Ps # _H, 1>, SVEInstr2Rev<NAME # _H, revname # _H, isOrig>;
+             SVEPseudo2Instr<Ps # _H, 1>, SVEInstr2Rev<NAME # _H, revname # _H, isReverseInstr>;
   def _S : sve_int_bin_pred_arit_log<0b10, 0b00, opc, asm, ZPR32>,
-             SVEPseudo2Instr<Ps # _S, 1>, SVEInstr2Rev<NAME # _S, revname # _S, isOrig>;
+             SVEPseudo2Instr<Ps # _S, 1>, SVEInstr2Rev<NAME # _S, revname # _S, isReverseInstr>;
   def _D : sve_int_bin_pred_arit_log<0b11, 0b00, opc, asm, ZPR64>,
-             SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isOrig>;
+             SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isReverseInstr>;
   }
 
   def : SVE_3_Op_Pat<nxv16i8, op, nxv16i1, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
@@ -2398,12 +2400,12 @@ multiclass sve_int_bin_pred_arit_2<bits<3> opc, string asm, SDPatternOperator op
 multiclass sve_int_bin_pred_arit_2_div<bits<3> opc, string asm, string Ps,
                                        SDPatternOperator op,
                                        DestructiveInstTypeEnum flags,
-                                       string revname="", bit isOrig=0> {
+                                       string revname="", bit isReverseInstr=0> {
   let DestructiveInstType = flags in {
   def _S : sve_int_bin_pred_arit_log<0b10, 0b10, opc, asm, ZPR32>,
-             SVEPseudo2Instr<Ps # _S, 1>, SVEInstr2Rev<NAME # _S, revname # _S, isOrig>;
+             SVEPseudo2Instr<Ps # _S, 1>, SVEInstr2Rev<NAME # _S, revname # _S, isReverseInstr>;
   def _D : sve_int_bin_pred_arit_log<0b11, 0b10, opc, asm, ZPR64>,
-             SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isOrig>;
+             SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isReverseInstr>;
   }
 
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i1, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
@@ -4843,16 +4845,16 @@ class sve_int_bin_pred_shift<bits<2> sz8_64, bit wide, bits<3> opc,
 }
 
 multiclass sve_int_bin_pred_shift<bits<3> opc, string asm, string Ps,
-                                  SDPatternOperator op, string revname, bit isOrig> {
+                                  SDPatternOperator op, string revname, bit isReverseInstr = 0> {
   let DestructiveInstType = DestructiveBinaryCommWithRev in {
   def _B : sve_int_bin_pred_shift<0b00, 0b0, opc, asm, ZPR8, ZPR8>,
-           SVEPseudo2Instr<Ps # _B, 1>, SVEInstr2Rev<NAME # _B, revname # _B, isOrig>;
+           SVEPseudo2Instr<Ps # _B, 1>, SVEInstr2Rev<NAME # _B, revname # _B, isReverseInstr>;
   def _H : sve_int_bin_pred_shift<0b01, 0b0, opc, asm, ZPR16, ZPR16>,
-           SVEPseudo2Instr<Ps # _H, 1>, SVEInstr2Rev<NAME # _H, revname # _H, isOrig>;
+           SVEPseudo2Instr<Ps # _H, 1>, SVEInstr2Rev<NAME # _H, revname # _H, isReverseInstr>;
   def _S : sve_int_bin_pred_shift<0b10, 0b0, opc, asm, ZPR32, ZPR32>,
-           SVEPseudo2Instr<Ps # _S, 1>, SVEInstr2Rev<NAME # _S, revname # _S, isOrig>;
+           SVEPseudo2Instr<Ps # _S, 1>, SVEInstr2Rev<NAME # _S, revname # _S, isReverseInstr>;
   def _D : sve_int_bin_pred_shift<0b11, 0b0, opc, asm, ZPR64, ZPR64>,
-           SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isOrig>;
+           SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isReverseInstr>;
   }
   def : SVE_3_Op_Pat<nxv16i8, op, nxv16i1, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
   def : SVE_3_Op_Pat<nxv8i16, op, nxv8i1,  nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
