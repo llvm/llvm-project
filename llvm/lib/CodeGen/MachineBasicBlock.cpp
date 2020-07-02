@@ -277,8 +277,16 @@ LLVM_DUMP_METHOD void MachineBasicBlock::dump() const {
 }
 #endif
 
+bool MachineBasicBlock::mayHaveInlineAsmBr() const {
+  for (const MachineBasicBlock *Succ : successors()) {
+    if (Succ->isInlineAsmBrIndirectTarget())
+      return true;
+  }
+  return false;
+}
+
 bool MachineBasicBlock::isLegalToHoistInto() const {
-  if (isReturnBlock() || hasEHPadSuccessor())
+  if (isReturnBlock() || hasEHPadSuccessor() || mayHaveInlineAsmBr())
     return false;
   return true;
 }
@@ -1132,7 +1140,7 @@ bool MachineBasicBlock::canSplitCriticalEdge(
 
   // Splitting the critical edge to a callbr's indirect block isn't advised.
   // Don't do it in this generic function.
-  if (isInlineAsmBrIndirectTarget(Succ))
+  if (Succ->isInlineAsmBrIndirectTarget())
     return false;
 
   const MachineFunction *MF = getParent();

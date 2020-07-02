@@ -734,6 +734,13 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
   if (SuccToSinkTo && SuccToSinkTo->isEHPad())
     return nullptr;
 
+  // It ought to be okay to sink instructions into an INLINEASM_BR target, but
+  // only if we make sure that MI occurs _before_ an INLINEASM_BR instruction in
+  // the source block (which this code does not yet do). So for now, forbid
+  // doing so.
+  if (SuccToSinkTo && SuccToSinkTo->isInlineAsmBrIndirectTarget())
+    return nullptr;
+
   return SuccToSinkTo;
 }
 
