@@ -86,6 +86,20 @@ subroutine dim_testi(i, j, k)
   k = dim(i, j)
 end subroutine
 
+! DPROD
+! CHECK-LABEL: dprod_test
+subroutine dprod_test (x, y, z)
+  real :: x,y
+  double precision :: z
+  z = dprod(x,y)
+  ! CHECK-DAG: %[[x:.*]] = fir.load %arg0
+  ! CHECK-DAG: %[[y:.*]] = fir.load %arg1
+  ! CHECK-DAG: %[[a:.*]] = fir.convert %[[x]] : (f32) -> f64 
+  ! CHECK-DAG: %[[b:.*]] = fir.convert %[[y]] : (f32) -> f64 
+  ! CHECK: %[[res:.*]] = fir.mulf %[[a]], %[[b]]
+  ! CHECK: fir.store %[[res]] to %arg2
+end subroutine
+
 ! CEILING
 ! CHECK-LABEL: ceiling_test1
 subroutine ceiling_test1(i, a)
