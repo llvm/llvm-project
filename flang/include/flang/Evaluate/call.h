@@ -190,8 +190,10 @@ struct ProcedureDesignator {
 class ProcedureRef {
 public:
   CLASS_BOILERPLATE(ProcedureRef)
-  ProcedureRef(ProcedureDesignator &&p, ActualArguments &&a)
-      : proc_{std::move(p)}, arguments_(std::move(a)) {}
+  ProcedureRef(ProcedureDesignator &&p, ActualArguments &&a,
+      bool hasAlternateReturns = false)
+      : proc_{std::move(p)}, arguments_{std::move(a)},
+        hasAlternateReturns_{hasAlternateReturns} {}
   ~ProcedureRef();
 
   ProcedureDesignator &proc() { return proc_; }
@@ -202,12 +204,14 @@ public:
   std::optional<Expr<SubscriptInteger>> LEN() const;
   int Rank() const;
   bool IsElemental() const { return proc_.IsElemental(); }
+  bool hasAlternateReturns() const { return hasAlternateReturns_; }
   bool operator==(const ProcedureRef &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 protected:
   ProcedureDesignator proc_;
   ActualArguments arguments_;
+  bool hasAlternateReturns_;
 };
 
 template <typename A> class FunctionRef : public ProcedureRef {

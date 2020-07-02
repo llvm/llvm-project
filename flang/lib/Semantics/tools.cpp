@@ -1292,4 +1292,13 @@ void LabelEnforce::SayWithConstruct(SemanticsContext &context,
       .Attach(constructLocation, GetEnclosingConstructMsg());
 }
 
+bool HasAlternateReturns(const Symbol &subprogram) {
+  for (const auto *dummyArg : subprogram.get<SubprogramDetails>().dummyArgs()) {
+    if (!dummyArg) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace Fortran::semantics

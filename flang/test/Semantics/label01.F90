@@ -1,12 +1,11 @@
 ! RUN: %f18 -funparse-with-symbols -DSTRICT_F18 -Mstandard %s 2>&1 | FileCheck %s
 ! RUN: %f18 -funparse-with-symbols -DARCHAIC_FORTRAN %s 2>&1 | FileCheck %s
-! CHECK-NOT: error:{{[[:space:]]}}
+! CHECK-NOT: :{{[[:space:]]}}error:{{[[:space:]]}}
 ! FIXME: the above check line does not work because diags are not emitted with error: in them.
 
 ! these are the conformance tests
 ! define STRICT_F18 to eliminate tests of features not in F18
 ! define ARCHAIC_FORTRAN to add test of feature found in Fortran before F95
-
 
 subroutine sub00(a,b,n,m)
   integer :: n, m
