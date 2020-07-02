@@ -139,17 +139,15 @@
 
 ## Very short prologue length for V5 (ends during parameters).
 # NONFATAL:      debug_line[0x000001b1]
-# SOME-ERR-NEXT: warning: parsing line table prologue at 0x000001b1 found an invalid directory or file table description at 0x000001cd
-# SOME-ERR-NEXT: warning: failed to parse entry content descriptors: unexpected end of data at offset 0x1cd while reading [0x1cd, 0x1ce)
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      standard_opcode_lengths[DW_LNS_set_prologue_end] = 1
 # NONFATAL-NEXT: standard_opcode_lengths[DW_LNS_set_epilogue_begin] = 0
-# NONFATAL-NOT:  include_directories
-# VERBOSE:       DW_LNE_set_address (0x0000babb1ebabb1e)
-# VERBOSE-NEXT:  DW_LNE_end_sequence
+# NONFATAL-NEXT: standard_opcode_lengths[DW_LNS_set_isa] = 0
+# NONFATAL-EMPTY:
+# SOME-ERR-NEXT: warning: parsing line table prologue at offset 0x000001b1: unexpected end of data at offset 0x1cd while reading [0x1cd, 0x1ce)
 
 ## V5 prologue ends during file table.
-# NONFATAL:      debug_line[0x000001db]
+# NONFATAL-NEXT: debug_line[0x000001db]
 # SOME-ERR-NEXT: warning: parsing line table prologue at 0x000001db found an invalid directory or file table description at 0x00000206
 # SOME-ERR-NEXT: warning: failed to parse entry content descriptors: unable to decode LEB128 at offset 0x00000206: malformed uleb128, extends past end
 # NONFATAL-NEXT: Line table prologue
