@@ -51,3 +51,13 @@ svbfloat16_t test_svdup_n_bf16_x(svbool_t pg, bfloat16_t op) {
   // expected-warning@+1 {{implicit declaration of function 'svdup_n_bf16_x'}}
   return SVE_ACLE_FUNC(svdup, _n, _bf16_x, )(pg, op);
 }
+
+svbfloat16_t test_svdup_lane_bf16(svbfloat16_t data, uint16_t index)
+{
+  // CHECK-LABEL: test_svdup_lane_bf16
+  // CHECK: %[[DUP:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 %index)
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbl.nxv8bf16(<vscale x 8 x bfloat> %data, <vscale x 8 x i16> %[[DUP]])
+  // CHECK: ret <vscale x 8 x bfloat> %[[INTRINSIC]]
+  // expected-warning@+1 {{implicit declaration of function 'svdup_lane_bf16'}}
+  return SVE_ACLE_FUNC(svdup_lane,_bf16,,)(data, index);
+}

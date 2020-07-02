@@ -1110,7 +1110,7 @@ defm SVFCVTZS_S64_F32 : SInstCvtMXZ<"svcvt_s64[_f32]", "ddPM", "dPM", "l",  "aar
 
 let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
   defm SVCVT_BF16_F32   : SInstCvtMXZ<"svcvt_bf16[_f32]",  "ddPM", "dPM", "b",  "aarch64_sve_fcvt_bf16f32">;
-  defm SVCVTNT_BF16_F32 : SInstCvtMX<"svcvtnt_bf16[_f32]", "ddPM", "dPM", "b",  "aarch64_sve_fcvtnt_bf16f32">;
+  def SVCVTNT_BF16_F32 : SInst<"svcvtnt_bf16[_f32]", "ddPM", "b",  MergeOp1, "aarch64_sve_fcvtnt_bf16f32", [IsOverloadNone]>;
 }
 
 // svcvt_s##_f64
@@ -1204,6 +1204,11 @@ def SVCOMPACT    : SInst<"svcompact[_{d}]",   "dPd",  "ilUiUlfd",        MergeNo
 // instruction such as DUP (indexed) if the lane index fits the range of the
 // instruction's immediate.
 def SVDUP_LANE   : SInst<"svdup_lane[_{d}]",  "ddL",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tbl">;
+let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
+def SVDUP_LANE_BF16 :
+                   SInst<"svdup_lane[_{d}]",  "ddL",  "b",               MergeNone, "aarch64_sve_tbl">;
+}
+
 def SVDUPQ_LANE  : SInst<"svdupq_lane[_{d}]", "ddn",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_dupq_lane">;
 let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
   def SVDUPQ_LANE_BF16  : SInst<"svdupq_lane[_{d}]", "ddn",  "b", MergeNone, "aarch64_sve_dupq_lane">;
