@@ -225,6 +225,30 @@ class VXForm_RD5_N3_VB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
   let Inst{21-31} = xo;
 }
 
+
+// VX-Form: [PO VRT / UIM RB XO].
+// We use VXForm_1 to implement it, that is, we use "VRA" (5 bit) to represent
+// "/ UIM" (unused bit followed by a 4-bit immediate)
+// Destructive (insert) forms are suffixed with _ins.
+class VXForm_VRT5_UIM5_RB5_ins<bits<11> xo, string opc, list<dag> pattern>
+  : VXForm_1<xo, (outs vrrc:$vD), (ins vrrc:$vDi, u4imm:$UIM, g8rc:$rB),
+             !strconcat(opc, " $vD, $rB, $UIM"), IIC_VecGeneral, pattern>,
+             RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
+
+// VX-Form: [PO VRT RA VRB XO].
+// Destructive (insert) forms are suffixed with _ins.
+class VXForm_VTB5_RA5_ins<bits<11> xo, string opc, list<dag> pattern>
+  : VXForm_1<xo, (outs vrrc:$vD), (ins vrrc:$vDi, g8rc:$rA, vrrc:$vB),
+             !strconcat(opc, " $vD, $rA, $vB"), IIC_VecGeneral, pattern>,
+             RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
+
+// VX-Form: [PO VRT RA RB XO].
+// Destructive (insert) forms are suffixed with _ins.
+class VXForm_VRT5_RAB5_ins<bits<11> xo, string opc, list<dag> pattern>
+  : VXForm_1<xo, (outs vrrc:$vD), (ins vrrc:$vDi, g8rc:$rA, g8rc:$rB),
+             !strconcat(opc, " $vD, $rA, $rB"), IIC_VecGeneral, pattern>,
+             RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
+
 // VN-Form: [PO VRT VRA VRB PS SD XO]
 // SD is "Shift Direction"
 class VNForm_VTAB5_SD3<bits<6> xo, bits<2> ps, dag OOL, dag IOL, string asmstr,
@@ -751,6 +775,22 @@ let Predicates = [IsISA3_1] in {
                                       (int_ppc_altivec_vsrdbi v16i8:$VRA,
                                                               v16i8:$VRB, 
                                                               i32:$SH))]>;
+  def VINSW : VXForm_VRT5_UIM5_RB5_ins<207, "vinsw", []>;
+  def VINSD : VXForm_VRT5_UIM5_RB5_ins<463, "vinsd", []>;
+  def VINSBVLX : VXForm_VTB5_RA5_ins<15, "vinsbvlx", []>;
+  def VINSBVRX : VXForm_VTB5_RA5_ins<271, "vinsbvrx", []>;
+  def VINSHVLX : VXForm_VTB5_RA5_ins<79, "vinshvlx", []>;
+  def VINSHVRX : VXForm_VTB5_RA5_ins<335, "vinshvrx", []>;
+  def VINSWVLX : VXForm_VTB5_RA5_ins<143, "vinswvlx", []>;
+  def VINSWVRX : VXForm_VTB5_RA5_ins<399, "vinswvrx", []>;
+  def VINSBLX : VXForm_VRT5_RAB5_ins<527, "vinsblx", []>;
+  def VINSBRX : VXForm_VRT5_RAB5_ins<783, "vinsbrx", []>;
+  def VINSHLX : VXForm_VRT5_RAB5_ins<591, "vinshlx", []>;
+  def VINSHRX : VXForm_VRT5_RAB5_ins<847, "vinshrx", []>;
+  def VINSWLX : VXForm_VRT5_RAB5_ins<655, "vinswlx", []>;
+  def VINSWRX : VXForm_VRT5_RAB5_ins<911, "vinswrx", []>;
+  def VINSDLX : VXForm_VRT5_RAB5_ins<719, "vinsdlx", []>;
+  def VINSDRX : VXForm_VRT5_RAB5_ins<975, "vinsdrx", []>;
    def VPDEPD : VXForm_1<1485, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vpdepd $vD, $vA, $vB", IIC_VecGeneral,
                          [(set v2i64:$vD,
