@@ -6,16 +6,15 @@ define i32 @vec_extract_branch(<2 x double> %x, i32 %y)  {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmgt v0.2d, v0.2d, #0.0
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tbz w8, #0, .LBB0_3
-; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    tbz w8, #0, .LBB0_3
-; CHECK-NEXT:  // %bb.2: // %true
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    tbz w8, #0, .LBB0_2
+; CHECK-NEXT:  // %bb.1: // %true
 ; CHECK-NEXT:    mov w8, #42
 ; CHECK-NEXT:    sdiv w0, w8, w0
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_3: // %false
+; CHECK-NEXT:  .LBB0_2: // %false
 ; CHECK-NEXT:    mov w0, #88
 ; CHECK-NEXT:    ret
   %t1 = fcmp ogt <2 x double> %x, zeroinitializer
