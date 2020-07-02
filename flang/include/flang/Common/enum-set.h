@@ -190,7 +190,7 @@ public:
       // std::bitset: just iterate
       for (std::size_t j{0}; j < BITS; ++j) {
         auto enumerator{static_cast<enumerationType>(j)};
-        if (bitset_.test(enumerator)) {
+        if (bitset_.test(j)) {
           return {enumerator};
         }
       }
