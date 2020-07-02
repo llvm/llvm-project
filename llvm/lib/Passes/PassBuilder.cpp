@@ -584,7 +584,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   }
 
   // Speculative execution if the target has divergent branches; otherwise nop.
-  FPM.addPass(SpeculativeExecutionPass());
+  FPM.addPass(SpeculativeExecutionPass(/* OnlyIfDivergentTarget =*/true));
 
   // Optimize based on known information about branches, and cleanup afterward.
   FPM.addPass(JumpThreadingPass());
