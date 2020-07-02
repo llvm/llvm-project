@@ -448,7 +448,7 @@ bool BBSectionsPrepare::doInitialization(Module &M) {
 
 void BBSectionsPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineModuleInfoWrapperPass>();
+  MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 MachineFunctionPass *
