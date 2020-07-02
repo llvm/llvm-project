@@ -468,11 +468,10 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     llvm_unreachable("Can't load this register from stack slot");
 }
 
-unsigned SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const
-{
+Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   SparcMachineFunctionInfo *SparcFI = MF->getInfo<SparcMachineFunctionInfo>();
-  unsigned GlobalBaseReg = SparcFI->getGlobalBaseReg();
-  if (GlobalBaseReg != 0)
+  Register GlobalBaseReg = SparcFI->getGlobalBaseReg();
+  if (GlobalBaseReg)
     return GlobalBaseReg;
 
   // Insert the set of GlobalBaseReg into the first MBB of the function
