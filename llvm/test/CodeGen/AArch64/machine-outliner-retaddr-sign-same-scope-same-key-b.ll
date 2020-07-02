@@ -72,10 +72,8 @@ define void @c() "sign-return-address"="all" "sign-return-address-key"="b_key" n
 
 ; CHECK-LABEL:      OUTLINED_FUNCTION_0:
 ; CHECK:            // %bb.0:
-; CHECK-NEXT:           .cfi_b_key_frame
 ; V8A-NEXT:             hint #27
 ; V83A-NEXT:            pacibsp
-; CHECK-NEXT:           .cfi_negate_ra_state
 ; V8A:                  hint #31
 ; V83A:                 autibsp
 ; CHECK-NEXT:           ret
