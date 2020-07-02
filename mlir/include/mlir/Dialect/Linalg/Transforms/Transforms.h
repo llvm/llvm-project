@@ -122,6 +122,12 @@ struct LinalgPromotionOptions {
     alignment = align;
     return *this;
   }
+  /// Use alloca with the default allocation scheme.
+  bool useAlloca = false;
+  LinalgPromotionOptions &setUseAlloca(bool use) {
+    useAlloca = use;
+    return *this;
+  }
   /// Callback function to do the allocation of the promoted buffer. If None,
   /// then the default allocation scheme of allocating a memref<?xi8> buffer
   /// followed by a view operation is used.
@@ -134,7 +140,6 @@ struct LinalgPromotionOptions {
     deallocationFn = deallocFn;
     return *this;
   }
-
   /// Callback function to do the copy of data to and from the promoted
   /// subview. If None then a linalg.copy is used.
   Optional<CopyCallbackFn> copyInFn = None;
