@@ -1389,25 +1389,24 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
 /// getMaxByValAlign - Helper for getByValTypeAlignment to determine
 /// the desired ByVal argument alignment.
-static void getMaxByValAlign(Type *Ty, unsigned &MaxAlign,
-                             unsigned MaxMaxAlign) {
+static void getMaxByValAlign(Type *Ty, Align &MaxAlign, Align MaxMaxAlign) {
   if (MaxAlign == MaxMaxAlign)
     return;
   if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
     if (MaxMaxAlign >= 32 &&
         VTy->getPrimitiveSizeInBits().getFixedSize() >= 256)
-      MaxAlign = 32;
+      MaxAlign = Align(32);
     else if (VTy->getPrimitiveSizeInBits().getFixedSize() >= 128 &&
              MaxAlign < 16)
-      MaxAlign = 16;
+      MaxAlign = Align(16);
   } else if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
-    unsigned EltAlign = 0;
+    Align EltAlign;
     getMaxByValAlign(ATy->getElementType(), EltAlign, MaxMaxAlign);
     if (EltAlign > MaxAlign)
       MaxAlign = EltAlign;
   } else if (StructType *STy = dyn_cast<StructType>(Ty)) {
     for (auto *EltTy : STy->elements()) {
-      unsigned EltAlign = 0;
+      Align EltAlign;
       getMaxByValAlign(EltTy, EltAlign, MaxMaxAlign);
       if (EltAlign > MaxAlign)
         MaxAlign = EltAlign;
@@ -1423,10 +1422,10 @@ unsigned PPCTargetLowering::getByValTypeAlignment(Type *Ty,
                                                   const DataLayout &DL) const {
   // 16byte and wider vectors are passed on 16byte boundary.
   // The rest is 8 on PPC64 and 4 on PPC32 boundary.
-  unsigned Align = Subtarget.isPPC64() ? 8 : 4;
+  Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
   if (Subtarget.hasAltivec() || Subtarget.hasQPX())
-    getMaxByValAlign(Ty, Align, Subtarget.hasQPX() ? 32 : 16);
-  return Align;
+    getMaxByValAlign(Ty, Alignment, Subtarget.hasQPX() ? Align(32) : Align(16));
+  return Alignment.value();
 }
 
 bool PPCTargetLowering::useSoftFloat() const {
