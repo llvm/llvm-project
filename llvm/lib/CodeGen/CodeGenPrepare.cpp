@@ -4356,15 +4356,20 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
           cast<ConstantInt>(AddrInst->getOperand(i))->getZExtValue();
         ConstantOffset += SL->getElementOffset(Idx);
       } else {
-        uint64_t TypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
-        if (ConstantInt *CI = dyn_cast<ConstantInt>(AddrInst->getOperand(i))) {
-          const APInt &CVal = CI->getValue();
-          if (CVal.getMinSignedBits() <= 64) {
-            ConstantOffset += CVal.getSExtValue() * TypeSize;
-            continue;
+        TypeSize TS = DL.getTypeAllocSize(GTI.getIndexedType());
+        if (TS.isNonZero()) {
+          // The optimisations below currently only work for fixed offsets.
+          if (TS.isScalable())
+            return false;
+          int64_t TypeSize = TS.getFixedSize();
+          if (ConstantInt *CI =
+                  dyn_cast<ConstantInt>(AddrInst->getOperand(i))) {
+            const APInt &CVal = CI->getValue();
+            if (CVal.getMinSignedBits() <= 64) {
+              ConstantOffset += CVal.getSExtValue() * TypeSize;
+              continue;
+            }
           }
-        }
-        if (TypeSize) {  // Scales of zero don't do anything.
           // We only allow one variable index at the moment.
           if (VariableOperand != -1)
             return false;
