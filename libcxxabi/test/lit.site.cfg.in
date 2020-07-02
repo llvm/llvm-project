@@ -54,8 +54,8 @@ config.recursiveExpansionLimit = 10
 # Infer the test_exec_root from the build directory.
 config.test_exec_root = os.path.join(config.libcxxabi_obj_root, 'test')
 
-import libcxx.test.newformat
-config.test_format = libcxx.test.newformat.CxxStandardLibraryTest()
+import libcxx.test.format
+config.test_format = libcxx.test.format.CxxStandardLibraryTest()
 
 lit_config.note('Using configuration variant: libcxxabi')
 import libcxxabi.test.config
