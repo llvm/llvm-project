@@ -46,12 +46,14 @@ void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
 
 /// Enum to control the lowering of `vector.contract` operations.
 enum class VectorContractLowering {
-  /// Progressively lower to finer grained `vector.contract` and `vector.fma`.
-  FMA = 0,
+  /// Progressively lower to finer grained `vector.contract` and dot-products.
+  Dot = 0,
   /// Lower to `vector.matrix_multiply`, maps 1-1 to LLVM matrix intrinsics.
   Matmul = 1,
   /// Lower to `vector.outerproduct`.
   OuterProduct = 2,
+  /// Lower to series of AXPY chained through FMA.
+  AXPY = 3,
 };
 /// Enum to control the lowering of `vector.transpose` operations.
 enum class VectorTransposeLowering {
@@ -63,7 +65,7 @@ enum class VectorTransposeLowering {
 };
 /// Structure to control the behavior of vector transform patterns.
 struct VectorTransformsOptions {
-  VectorContractLowering vectorContractLowering = VectorContractLowering::FMA;
+  VectorContractLowering vectorContractLowering = VectorContractLowering::Dot;
   VectorTransposeLowering vectorTransposeLowering =
       VectorTransposeLowering::EltWise;
   VectorTransformsOptions &
