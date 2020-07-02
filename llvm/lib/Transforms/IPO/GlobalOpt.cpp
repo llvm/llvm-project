@@ -555,8 +555,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
       // propagate info to each field.
       uint64_t FieldOffset = Layout.getElementOffset(ElementIdx);
       Align NewAlign(MinAlign(StartAlignment, FieldOffset));
-      if (NewAlign >
-          Align(DL.getABITypeAlignment(STy->getElementType(ElementIdx))))
+      if (NewAlign > DL.getABITypeAlign(STy->getElementType(ElementIdx)))
         NGV->setAlignment(NewAlign);
 
       // Copy over the debug info for the variable.
@@ -565,7 +564,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
       transferSRADebugInfo(GV, NGV, FragmentOffsetInBits, Size);
     } else {
       uint64_t EltSize = DL.getTypeAllocSize(ElTy);
-      Align EltAlign(DL.getABITypeAlignment(ElTy));
+      Align EltAlign = DL.getABITypeAlign(ElTy);
       uint64_t FragmentSizeInBits = DL.getTypeAllocSizeInBits(ElTy);
 
       // Calculate the known alignment of the field.  If the original aggregate

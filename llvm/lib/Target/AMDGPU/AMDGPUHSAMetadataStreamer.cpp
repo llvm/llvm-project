@@ -346,12 +346,11 @@ void MetadataStreamerV2::emitKernelArg(const Argument &Arg) {
   Type *Ty = Arg.getType();
   const DataLayout &DL = Func->getParent()->getDataLayout();
 
-  unsigned PointeeAlign = 0;
+  MaybeAlign PointeeAlign;
   if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
     if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-      PointeeAlign = Arg.getParamAlignment();
-      if (PointeeAlign == 0)
-        PointeeAlign = DL.getABITypeAlignment(PtrTy->getElementType());
+      PointeeAlign = DL.getValueOrABITypeAlignment(Arg.getParamAlign(),
+                                                   PtrTy->getElementType());
     }
   }
 
@@ -361,7 +360,7 @@ void MetadataStreamerV2::emitKernelArg(const Argument &Arg) {
 
 void MetadataStreamerV2::emitKernelArg(const DataLayout &DL, Type *Ty,
                                        ValueKind ValueKind,
-                                       unsigned PointeeAlign, StringRef Name,
+                                       MaybeAlign PointeeAlign, StringRef Name,
                                        StringRef TypeName,
                                        StringRef BaseTypeName,
                                        StringRef AccQual, StringRef TypeQual) {
@@ -371,10 +370,10 @@ void MetadataStreamerV2::emitKernelArg(const DataLayout &DL, Type *Ty,
   Arg.mName = std::string(Name);
   Arg.mTypeName = std::string(TypeName);
   Arg.mSize = DL.getTypeAllocSize(Ty);
-  Arg.mAlign = DL.getABITypeAlignment(Ty);
+  Arg.mAlign = DL.getABITypeAlign(Ty).value();
   Arg.mValueKind = ValueKind;
   Arg.mValueType = getValueType(Ty, BaseTypeName);
-  Arg.mPointeeAlign = PointeeAlign;
+  Arg.mPointeeAlign = PointeeAlign ? PointeeAlign->value() : 0;
 
   if (auto PtrTy = dyn_cast<PointerType>(Ty))
     Arg.mAddrSpaceQual = getAddressSpaceQualifier(PtrTy->getAddressSpace());
@@ -768,12 +767,11 @@ void MetadataStreamerV3::emitKernelArg(const Argument &Arg, unsigned &Offset,
   Type *Ty = Arg.getType();
   const DataLayout &DL = Func->getParent()->getDataLayout();
 
-  unsigned PointeeAlign = 0;
+  MaybeAlign PointeeAlign;
   if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
     if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-      PointeeAlign = Arg.getParamAlignment();
-      if (PointeeAlign == 0)
-        PointeeAlign = DL.getABITypeAlignment(PtrTy->getElementType());
+      PointeeAlign = DL.getValueOrABITypeAlignment(Arg.getParamAlign(),
+                                                   PtrTy->getElementType());
     }
   }
 
@@ -786,7 +784,7 @@ void MetadataStreamerV3::emitKernelArg(const Argument &Arg, unsigned &Offset,
 void MetadataStreamerV3::emitKernelArg(const DataLayout &DL, Type *Ty,
                                        StringRef ValueKind, unsigned &Offset,
                                        msgpack::ArrayDocNode Args,
-                                       unsigned PointeeAlign, StringRef Name,
+                                       MaybeAlign PointeeAlign, StringRef Name,
                                        StringRef TypeName,
                                        StringRef BaseTypeName,
                                        StringRef AccQual, StringRef TypeQual) {
@@ -797,16 +795,16 @@ void MetadataStreamerV3::emitKernelArg(const DataLayout &DL, Type *Ty,
   if (!TypeName.empty())
     Arg[".type_name"] = Arg.getDocument()->getNode(TypeName, /*Copy=*/true);
   auto Size = DL.getTypeAllocSize(Ty);
-  auto Align = DL.getABITypeAlignment(Ty);
+  Align Alignment = DL.getABITypeAlign(Ty);
   Arg[".size"] = Arg.getDocument()->getNode(Size);
-  Offset = alignTo(Offset, Align);
+  Offset = alignTo(Offset, Alignment);
   Arg[".offset"] = Arg.getDocument()->getNode(Offset);
   Offset += Size;
   Arg[".value_kind"] = Arg.getDocument()->getNode(ValueKind, /*Copy=*/true);
   Arg[".value_type"] =
       Arg.getDocument()->getNode(getValueType(Ty, BaseTypeName), /*Copy=*/true);
   if (PointeeAlign)
-    Arg[".pointee_align"] = Arg.getDocument()->getNode(PointeeAlign);
+    Arg[".pointee_align"] = Arg.getDocument()->getNode(PointeeAlign->value());
 
   if (auto PtrTy = dyn_cast<PointerType>(Ty))
     if (auto Qualifier = getAddressSpaceQualifier(PtrTy->getAddressSpace()))
