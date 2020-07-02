@@ -10,9 +10,9 @@
 
 // Returns: a ^ b
 
-COMPILER_RT_ABI long double __powitf2(long double a, si_int b);
+COMPILER_RT_ABI long double __powitf2(long double a, int b);
 
-int test__powitf2(long double a, si_int b, long double expected)
+int test__powitf2(long double a, int b, long double expected)
 {
     long double x = __powitf2(a, b);
     int correct = (x == expected) && (signbit(x) == signbit(expected));
@@ -57,9 +57,9 @@ int main()
         return 1;
     if (test__powitf2(0, 4, 0))
         return 1;
-    if (test__powitf2(0, 0x7FFFFFFE, 0))
+    if (test__powitf2(0, INT_MAX - 1, 0))
         return 1;
-    if (test__powitf2(0, 0x7FFFFFFF, 0))
+    if (test__powitf2(0, INT_MAX, 0))
         return 1;
 
     if (test__powitf2(-0., 1, -0.))
@@ -70,9 +70,9 @@ int main()
         return 1;
     if (test__powitf2(-0., 4, 0))
         return 1;
-    if (test__powitf2(-0., 0x7FFFFFFE, 0))
+    if (test__powitf2(-0., INT_MAX - 1, 0))
         return 1;
-    if (test__powitf2(-0., 0x7FFFFFFF, -0.))
+    if (test__powitf2(-0., INT_MAX, -0.))
         return 1;
 
     if (test__powitf2(1, 1, 1))
@@ -83,9 +83,9 @@ int main()
         return 1;
     if (test__powitf2(1, 4, 1))
         return 1;
-    if (test__powitf2(1, 0x7FFFFFFE, 1))
+    if (test__powitf2(1, INT_MAX - 1, 1))
         return 1;
-    if (test__powitf2(1, 0x7FFFFFFF, 1))
+    if (test__powitf2(1, INT_MAX, 1))
         return 1;
 
     if (test__powitf2(INFINITY, 1, INFINITY))
@@ -96,9 +96,9 @@ int main()
         return 1;
     if (test__powitf2(INFINITY, 4, INFINITY))
         return 1;
-    if (test__powitf2(INFINITY, 0x7FFFFFFE, INFINITY))
+    if (test__powitf2(INFINITY, INT_MAX - 1, INFINITY))
         return 1;
-    if (test__powitf2(INFINITY, 0x7FFFFFFF, INFINITY))
+    if (test__powitf2(INFINITY, INT_MAX, INFINITY))
         return 1;
 
     if (test__powitf2(-INFINITY, 1, -INFINITY))
@@ -109,9 +109,9 @@ int main()
         return 1;
     if (test__powitf2(-INFINITY, 4, INFINITY))
         return 1;
-    if (test__powitf2(-INFINITY, 0x7FFFFFFE, INFINITY))
+    if (test__powitf2(-INFINITY, INT_MAX - 1, INFINITY))
         return 1;
-    if (test__powitf2(-INFINITY, 0x7FFFFFFF, -INFINITY))
+    if (test__powitf2(-INFINITY, INT_MAX, -INFINITY))
         return 1;
 
     if (test__powitf2(0, -1, INFINITY))
@@ -122,11 +122,11 @@ int main()
         return 1;
     if (test__powitf2(0, -4, INFINITY))
         return 1;
-    if (test__powitf2(0, 0x80000002, INFINITY))
+    if (test__powitf2(0, INT_MIN + 2, INFINITY))
         return 1;
-    if (test__powitf2(0, 0x80000001, INFINITY))
+    if (test__powitf2(0, INT_MIN + 1, INFINITY))
         return 1;
-    if (test__powitf2(0, 0x80000000, INFINITY))
+    if (test__powitf2(0, INT_MIN, INFINITY))
         return 1;
 
     if (test__powitf2(-0., -1, -INFINITY))
@@ -137,11 +137,11 @@ int main()
         return 1;
     if (test__powitf2(-0., -4, INFINITY))
         return 1;
-    if (test__powitf2(-0., 0x80000002, INFINITY))
+    if (test__powitf2(-0., INT_MIN + 2, INFINITY))
         return 1;
-    if (test__powitf2(-0., 0x80000001, -INFINITY))
+    if (test__powitf2(-0., INT_MIN + 1, -INFINITY))
         return 1;
-    if (test__powitf2(-0., 0x80000000, INFINITY))
+    if (test__powitf2(-0., INT_MIN, INFINITY))
         return 1;
 
     if (test__powitf2(1, -1, 1))
@@ -152,11 +152,11 @@ int main()
         return 1;
     if (test__powitf2(1, -4, 1))
         return 1;
-    if (test__powitf2(1, 0x80000002, 1))
+    if (test__powitf2(1, INT_MIN + 2, 1))
         return 1;
-    if (test__powitf2(1, 0x80000001, 1))
+    if (test__powitf2(1, INT_MIN + 1, 1))
         return 1;
-    if (test__powitf2(1, 0x80000000, 1))
+    if (test__powitf2(1, INT_MIN, 1))
         return 1;
 
     if (test__powitf2(INFINITY, -1, 0))
@@ -167,11 +167,11 @@ int main()
         return 1;
     if (test__powitf2(INFINITY, -4, 0))
         return 1;
-    if (test__powitf2(INFINITY, 0x80000002, 0))
+    if (test__powitf2(INFINITY, INT_MIN + 2, 0))
         return 1;
-    if (test__powitf2(INFINITY, 0x80000001, 0))
+    if (test__powitf2(INFINITY, INT_MIN + 1, 0))
         return 1;
-    if (test__powitf2(INFINITY, 0x80000000, 0))
+    if (test__powitf2(INFINITY, INT_MIN, 0))
         return 1;
 
     if (test__powitf2(-INFINITY, -1, -0.))
@@ -182,11 +182,11 @@ int main()
         return 1;
     if (test__powitf2(-INFINITY, -4, 0))
         return 1;
-    if (test__powitf2(-INFINITY, 0x80000002, 0))
+    if (test__powitf2(-INFINITY, INT_MIN + 2, 0))
         return 1;
-    if (test__powitf2(-INFINITY, 0x80000001, -0.))
+    if (test__powitf2(-INFINITY, INT_MIN + 1, -0.))
         return 1;
-    if (test__powitf2(-INFINITY, 0x80000000, 0))
+    if (test__powitf2(-INFINITY, INT_MIN, 0))
         return 1;
 
     if (test__powitf2(2, 10, 1024.))
