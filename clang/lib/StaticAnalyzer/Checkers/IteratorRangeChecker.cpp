@@ -27,7 +27,10 @@ using namespace iterator;
 namespace {
 
 class IteratorRangeChecker
-  : public Checker<check::PreCall> {
+  : public Checker<check::PreCall, check::PreStmt<UnaryOperator>,
+                   check::PreStmt<BinaryOperator>,
+                   check::PreStmt<ArraySubscriptExpr>,
+                   check::PreStmt<MemberExpr>> {
 
   std::unique_ptr<BugType> OutOfRangeBugType;
 
@@ -46,6 +49,10 @@ public:
   IteratorRangeChecker();
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkPreStmt(const UnaryOperator *UO, CheckerContext &C) const;
+  void checkPreStmt(const BinaryOperator *BO, CheckerContext &C) const;
+  void checkPreStmt(const ArraySubscriptExpr *ASE, CheckerContext &C) const;
+  void checkPreStmt(const MemberExpr *ME, CheckerContext &C) const;
 
   using AdvanceFn = void (IteratorRangeChecker::*)(CheckerContext &, SVal,
                                                    SVal) const;
@@ -132,6 +139,56 @@ void IteratorRangeChecker::checkPreCall(const CallEvent &Call,
       }
     }
   }
+}
+
+void IteratorRangeChecker::checkPreStmt(const UnaryOperator *UO,
+                                        CheckerContext &C) const {
+  if (isa<CXXThisExpr>(UO->getSubExpr()))
+    return;
+
+  ProgramStateRef State = C.getState();
+  UnaryOperatorKind OK = UO->getOpcode();
+  SVal SubVal = State->getSVal(UO->getSubExpr(), C.getLocationContext());
+
+  if (isDereferenceOperator(OK)) {
+    verifyDereference(C, SubVal);
+  } else if (isIncrementOperator(OK)) {
+    verifyIncrement(C, SubVal);
+  } else if (isDecrementOperator(OK)) {
+    verifyDecrement(C, SubVal);
+  }
+}
+
+void IteratorRangeChecker::checkPreStmt(const BinaryOperator *BO,
+                                        CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  BinaryOperatorKind OK = BO->getOpcode();
+  SVal LVal = State->getSVal(BO->getLHS(), C.getLocationContext());
+
+  if (isDereferenceOperator(OK)) {
+    verifyDereference(C, LVal);
+  } else if (isRandomIncrOrDecrOperator(OK)) {
+    SVal RVal = State->getSVal(BO->getRHS(), C.getLocationContext());
+    verifyRandomIncrOrDecr(C, BinaryOperator::getOverloadedOperator(OK), LVal,
+                           RVal);
+  }
+}
+
+void IteratorRangeChecker::checkPreStmt(const ArraySubscriptExpr *ASE,
+                                        CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  SVal LVal = State->getSVal(ASE->getLHS(), C.getLocationContext());
+  verifyDereference(C, LVal);
+}
+
+void IteratorRangeChecker::checkPreStmt(const MemberExpr *ME,
+                                        CheckerContext &C) const {
+  if (!ME->isArrow() || ME->isImplicitAccess())
+    return;
+
+  ProgramStateRef State = C.getState();
+  SVal BaseVal = State->getSVal(ME->getBase(), C.getLocationContext());
+  verifyDereference(C, BaseVal);
 }
 
 void IteratorRangeChecker::verifyDereference(CheckerContext &C,
