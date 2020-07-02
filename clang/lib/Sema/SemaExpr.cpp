@@ -18197,15 +18197,28 @@ ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
     llvm::ArrayRef<AvailabilitySpec> AvailSpecs, SourceLocation AtLoc,
     SourceLocation RParen) {
 
-  StringRef Platform = getASTContext().getTargetInfo().getPlatformName();
+  auto FindSpecVersion = [&](StringRef Platform)
+      -> Optional<ObjCAvailabilityCheckExpr::VersionAsWritten> {
+    auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
+      return Spec.getPlatform() == Platform;
+    });
+    if (Spec == AvailSpecs.end())
+      return None;
+    if (Platform == "macos") {
+      return ObjCAvailabilityCheckExpr::VersionAsWritten{
+          llvm::Triple::getCanonicalVersionForOS(llvm::Triple::MacOSX,
+                                                 Spec->getVersion()),
+          Spec->getVersion()};
+    }
+    return ObjCAvailabilityCheckExpr::VersionAsWritten{Spec->getVersion(),
+                                                       Spec->getVersion()};
+  };
 
-  auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
-    return Spec.getPlatform() == Platform;
-  });
-
-  VersionTuple Version;
-  if (Spec != AvailSpecs.end())
-    Version = Spec->getVersion();
+  auto MaybeVersion =
+      FindSpecVersion(Context.getTargetInfo().getPlatformName());
+  ObjCAvailabilityCheckExpr::VersionAsWritten Version;
+  if (MaybeVersion)
+    Version = *MaybeVersion;
 
   // The use of `@available` in the enclosing function should be analyzed to
   // warn when it's used inappropriately (i.e. not if(@available)).
