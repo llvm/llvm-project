@@ -273,6 +273,19 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       for (std::unique_ptr<Section> &Sec : LC.Sections)
         Sec->Relocations.clear();
 
+  if (Config.SharedLibId) {
+    StringRef Id = Config.SharedLibId.getValue();
+    if (Id.empty())
+      return createStringError(errc::invalid_argument,
+                               "cannot specify an empty id");
+    for (LoadCommand &LC : Obj.LoadCommands) {
+      if (LC.MachOLoadCommand.load_command_data.cmd == MachO::LC_ID_DYLIB) {
+        updateLoadCommandPayloadString<MachO::dylib_command>(LC, Id);
+        break;
+      }
+    }
+  }
+
   for (const auto &Flag : Config.AddSection) {
     std::pair<StringRef, StringRef> SecPair = Flag.split("=");
     StringRef SecName = SecPair.first;
