@@ -856,6 +856,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const bool isDebug = isDebugSection(*this);
   const bool isDebugLocOrRanges =
       isDebug && (name == ".debug_loc" || name == ".debug_ranges");
+  const bool isDebugLine = isDebug && name == ".debug_line";
 
   for (const RelTy &rel : rels) {
     RelType type = rel.getType(config->isMips64EL);
@@ -926,12 +927,15 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // If the referenced symbol is discarded (made Undefined), or the
       // section defining the referenced symbol is garbage collected,
       // sym.getOutputSection() is nullptr. `ds->section->repl != ds->section`
-      // catches the ICF folded case.
+      // catches the ICF folded case. However, resolving a relocation in
+      // .debug_line to -1 would stop debugger users from setting breakpoints on
+      // the folded-in function, so exclude .debug_line.
       //
       // For pre-DWARF-v5 .debug_loc and .debug_ranges, -1 is a reserved value
       // (base address selection entry), so -2 is used.
       auto *ds = dyn_cast<Defined>(&sym);
-      if (!sym.getOutputSection() || (ds && ds->section->repl != ds->section)) {
+      if (!sym.getOutputSection() ||
+          (ds && ds->section->repl != ds->section && !isDebugLine)) {
         target->relocateNoSym(bufLoc, type,
                               isDebugLocOrRanges ? UINT64_MAX - 1 : UINT64_MAX);
         continue;
