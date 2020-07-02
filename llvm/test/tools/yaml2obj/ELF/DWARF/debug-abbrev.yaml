@@ -25,7 +25,7 @@
 ##                         ^-   DW_CHILDREN_yes     1-byte              ^-   DW_FORM_data2  ULEB128
 ##                           ^- DW_AT_producer      ULEB128               ^- DW_AT_name     ULEB128
 ##
-##     CONTENT:         1A000002                                    2E011101
+##     CONTENT:         1A000002                                    2E011101 |...%............|
 ##                      ^-       DW_AT_strx        ULEB128          ^-       DW_TAG_subprogram ULEB128
 ##                        ^---   terminating entry                    ^-     DW_CHILDREN_yes   1-byte
 ##                            ^- abbreviation code ULEB128              ^-   DW_AT_low_pc      ULEB128
@@ -37,13 +37,13 @@
 ##                          ^--- terminating entry                      ^-   DW_CHILDREN_no    1-byte
 ##                                                                        ^- DW_AT_call_pc     ULEB128 (0x81)
 ##
-#      CONTENT:         01810104                                    02A04021
+#      CONTENT:         01810104                                    02A04021 |..............@!|
 ##                      --                                          ^-       Form: reserved         ULEB128
 ##                        ^---   Form: invalid       ULEB128 (0x81)   ^---   Attribute: reserved    ULEB128 (0x2020)
 ##                            ^- Attribute: reserved ULEB128              ^- DW_FORM_implicit_const ULEB128
 ##
-# CONTENT-NEXT:   0020: CEC2F105                                    0000
-##                      ^------- Value SLEB128 (12345678)           ^--- terminating entry
+# CONTENT-NEXT:   0020: CEC2F105                                    0000     |......|
+##                      ^------- Value SLEB128 (12345678)           ^---     terminating entry
 # CONTENT-NEXT: )
 
 --- !ELF
@@ -119,7 +119,7 @@ Sections:
 # RUN:   FileCheck -DSIZE=16 -DADDRALIGN=0 %s --check-prefixes=SHDR,SIZE
 
 # SIZE-NEXT: SectionData (
-# SIZE-NEXT:   0000: 00000000 00000000 00000000 00000000
+# SIZE-NEXT:   0000: 00000000 00000000 00000000 00000000 |................|
 # SIZE-NEXT: )
 
 --- !ELF
