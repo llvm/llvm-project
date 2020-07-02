@@ -111,7 +111,7 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
     } else if (Opt == "indvars") {
       Args.push_back("-passes=indvars");
     } else if (Opt == "strength_reduce") {
-      Args.push_back("-passes=strength-reduce");
+      Args.push_back("-passes=loop-reduce");
     } else if (Opt == "irce") {
       Args.push_back("-passes=irce");
 
