@@ -264,3 +264,6 @@ short _Fract add_sat  = (_Sat short _Fract)0.5hr + 0.5hr;
 short _Accum sub_sat  = (_Sat short _Accum)-200.0hk - 80.0hk;
 short _Accum mul_sat  = (_Sat short _Accum)80.0hk * 10.0hk;
 short _Fract div_sat  = (_Sat short _Fract)0.9hr / 0.1hr;
+
+// Division by zero
+short _Accum div_zero = 4.5k / 0.0lr;  // expected-error {{initializer element is not a compile-time constant}}

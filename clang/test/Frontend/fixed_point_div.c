@@ -64,6 +64,8 @@ short _Accum sa_const13 = 0.0234375hk / 2.0hk;
 // CHECK-DAG: @sa_const13 = {{.*}}global i16 1, align 2
 short _Accum sa_const14 = -0.0234375hk / 2.0hk;
 // CHECK-DAG: @sa_const14 = {{.*}}global i16 -2, align 2
+short _Accum sa_const15 = -0.0078125hk / 255.28125hk;
+// CHECK-DAG: @sa_const15 = {{.*}}global i16 -1, align 2
 
 void SignedDivision() {
   // CHECK-LABEL: SignedDivision
