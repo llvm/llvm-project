@@ -755,7 +755,7 @@ private:
             return D->getKind() == Decl::TranslationUnit;
           })) {
         llvm::errs() << "Tried to match orphan node:\n";
-        Node.dump(llvm::errs(), *ActiveASTContext);
+        Node.dump(llvm::errs(), ActiveASTContext->getSourceManager());
         llvm_unreachable("Parent map should be complete!");
       }
 #endif
