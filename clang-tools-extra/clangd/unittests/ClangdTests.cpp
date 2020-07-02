@@ -10,6 +10,7 @@
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
 #include "CodeComplete.h"
+#include "ConfigFragment.h"
 #include "GlobalCompilationDatabase.h"
 #include "Matchers.h"
 #include "SyncAPI.h"
@@ -19,6 +20,7 @@
 #include "support/Threading.h"
 #include "clang/Config/config.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "clang/Tooling/ArgumentsAdjusters.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -47,6 +49,7 @@ using ::testing::Field;
 using ::testing::Gt;
 using ::testing::IsEmpty;
 using ::testing::Pair;
+using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
 MATCHER_P2(DeclAt, File, Range, "") {
@@ -299,6 +302,48 @@ TEST_F(ClangdVFSTest, PropagatesContexts) {
   ASSERT_TRUE(Server.blockUntilIdleForTest());
   EXPECT_EQ(FS.Got, 42);
   EXPECT_EQ(Callbacks.Got, 42);
+}
+
+TEST(ClangdServerTest, RespectsConfig) {
+  // Go-to-definition will resolve as marked if FOO is defined.
+  Annotations Example(R"cpp(
+  #ifdef FOO
+  int [[x]];
+  #else
+  int x;
+  #endif
+  int y = ^x;
+  )cpp");
+  // Provide conditional config that defines FOO for foo.cc.
+  class ConfigProvider : public config::Provider {
+    std::vector<config::CompiledFragment>
+    getFragments(const config::Params &,
+                 config::DiagnosticCallback DC) const override {
+      config::Fragment F;
+      F.If.PathMatch.emplace_back(".*foo.cc");
+      F.CompileFlags.Add.emplace_back("-DFOO=1");
+      return {std::move(F).compile(DC)};
+    }
+  } CfgProvider;
+
+  auto Opts = ClangdServer::optsForTest();
+  Opts.ConfigProvider = &CfgProvider;
+  OverlayCDB CDB(/*Base=*/nullptr, /*FallbackFlags=*/{},
+                 tooling::ArgumentsAdjuster(CommandMangler::forTests()));
+  MockFS FS;
+  ClangdServer Server(CDB, FS, Opts);
+  // foo.cc sees the expected definition, as FOO is defined.
+  Server.addDocument(testPath("foo.cc"), Example.code());
+  auto Result = runLocateSymbolAt(Server, testPath("foo.cc"), Example.point());
+  ASSERT_TRUE(bool(Result)) << Result.takeError();
+  ASSERT_THAT(*Result, SizeIs(1));
+  EXPECT_EQ(Result->front().PreferredDeclaration.range, Example.range());
+  // bar.cc gets a different result, as FOO is not defined.
+  Server.addDocument(testPath("bar.cc"), Example.code());
+  Result = runLocateSymbolAt(Server, testPath("bar.cc"), Example.point());
+  ASSERT_TRUE(bool(Result)) << Result.takeError();
+  ASSERT_THAT(*Result, SizeIs(1));
+  EXPECT_NE(Result->front().PreferredDeclaration.range, Example.range());
 }
 
 TEST_F(ClangdVFSTest, PropagatesVersion) {
