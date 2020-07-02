@@ -324,7 +324,7 @@ ANALYZER_OPTION(unsigned, CTUImportThreshold, "ctu-import-threshold",
                 "Lowering this threshold can alleviate the memory burder of "
                 "analysis with many interdependent definitions located in "
                 "various translation units.",
-                100u)
+                8u)
 
 ANALYZER_OPTION(
     unsigned, AlwaysInlineSize, "ipa-always-inline-size",
