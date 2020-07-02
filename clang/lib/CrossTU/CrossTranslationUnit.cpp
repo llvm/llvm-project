@@ -12,6 +12,7 @@
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CrossTU/CrossTUDiagnostic.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -717,6 +718,9 @@ CrossTranslationUnitContext::importDefinitionImpl(const T *D, ASTUnit *Unit) {
   auto *ToDecl = cast<T>(*ToDeclOrError);
   assert(hasBodyOrInit(ToDecl) && "Imported Decl should have body or init.");
   ++NumGetCTUSuccess;
+
+  // Parent map is invalidated after changing the AST.
+  ToDecl->getASTContext().getParentMapContext().clear();
 
   return ToDecl;
 }
