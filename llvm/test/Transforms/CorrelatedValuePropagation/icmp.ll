@@ -656,37 +656,37 @@ define void @test_icmp_or_ult(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_or_ult(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[OR]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[OR]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[A]], 7
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[B]], 7
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp uge i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp uge i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp uge i32 [[B]], 7
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp uge i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %or = or i32 %a, %b
-  %cmp = icmp ult i32 %or, 7
+  %cmp = icmp ult i32 %or, 42
   br i1 %cmp, label %if.true, label %if.false
 
 if.true:
-  %cmp2 = icmp ult i32 %a, 7
+  %cmp2 = icmp ult i32 %a, 42
   call void @check1(i1 %cmp2)
-  %cmp3 = icmp ult i32 %b, 7
+  %cmp3 = icmp ult i32 %b, 42
   call void @check1(i1 %cmp3)
   ret void
 
 if.false:
-  %cmp4 = icmp uge i32 %a, 7
+  %cmp4 = icmp uge i32 %a, 42
   call void @check1(i1 %cmp4)
-  %cmp5 = icmp uge i32 %b, 7
+  %cmp5 = icmp uge i32 %b, 42
   call void @check1(i1 %cmp5)
   ret void
 }
@@ -695,37 +695,37 @@ define void @test_icmp_or_ule(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_or_ule(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[OR]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[OR]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[A]], 7
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[B]], 7
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[B]], 7
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %or = or i32 %a, %b
-  %cmp = icmp ule i32 %or, 7
+  %cmp = icmp ule i32 %or, 42
   br i1 %cmp, label %if.true, label %if.false
 
 if.true:
-  %cmp2 = icmp ule i32 %a, 7
+  %cmp2 = icmp ule i32 %a, 42
   call void @check1(i1 %cmp2)
-  %cmp3 = icmp ule i32 %b, 7
+  %cmp3 = icmp ule i32 %b, 42
   call void @check1(i1 %cmp3)
   ret void
 
 if.false:
-  %cmp4 = icmp ugt i32 %a, 7
+  %cmp4 = icmp ugt i32 %a, 42
   call void @check1(i1 %cmp4)
-  %cmp5 = icmp ugt i32 %b, 7
+  %cmp5 = icmp ugt i32 %b, 42
   call void @check1(i1 %cmp5)
   ret void
 }
@@ -734,37 +734,37 @@ define void @test_icmp_or_ugt(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_or_ugt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[OR]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[OR]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[A]], 7
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[B]], 7
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ule i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ule i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ule i32 [[B]], 7
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ule i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %or = or i32 %a, %b
-  %cmp = icmp ugt i32 %or, 7
+  %cmp = icmp ugt i32 %or, 42
   br i1 %cmp, label %if.true, label %if.false
 
 if.true:
-  %cmp2 = icmp ugt i32 %a, 7
+  %cmp2 = icmp ugt i32 %a, 42
   call void @check1(i1 %cmp2)
-  %cmp3 = icmp ugt i32 %b, 7
+  %cmp3 = icmp ugt i32 %b, 42
   call void @check1(i1 %cmp3)
   ret void
 
 if.false:
-  %cmp4 = icmp ule i32 %a, 7
+  %cmp4 = icmp ule i32 %a, 42
   call void @check1(i1 %cmp4)
-  %cmp5 = icmp ule i32 %b, 7
+  %cmp5 = icmp ule i32 %b, 42
   call void @check1(i1 %cmp5)
   ret void
 }
@@ -773,37 +773,37 @@ define void @test_icmp_or_uge(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_or_uge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[OR]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[OR]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[A]], 7
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[B]], 7
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[B]], 7
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %or = or i32 %a, %b
-  %cmp = icmp uge i32 %or, 7
+  %cmp = icmp uge i32 %or, 42
   br i1 %cmp, label %if.true, label %if.false
 
 if.true:
-  %cmp2 = icmp uge i32 %a, 7
+  %cmp2 = icmp uge i32 %a, 42
   call void @check1(i1 %cmp2)
-  %cmp3 = icmp uge i32 %b, 7
+  %cmp3 = icmp uge i32 %b, 42
   call void @check1(i1 %cmp3)
   ret void
 
 if.false:
-  %cmp4 = icmp ult i32 %a, 7
+  %cmp4 = icmp ult i32 %a, 42
   call void @check1(i1 %cmp4)
-  %cmp5 = icmp ult i32 %b, 7
+  %cmp5 = icmp ult i32 %b, 42
   call void @check1(i1 %cmp5)
   ret void
 }
@@ -812,37 +812,37 @@ define void @test_icmp_or_slt(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_or_slt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[OR]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[OR]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[A]], 7
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[B]], 7
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp sge i32 [[B]], 7
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp sge i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %or = or i32 %a, %b
-  %cmp = icmp slt i32 %or, 7
+  %cmp = icmp slt i32 %or, 42
   br i1 %cmp, label %if.true, label %if.false
 
 if.true:
-  %cmp2 = icmp slt i32 %a, 7
+  %cmp2 = icmp slt i32 %a, 42
   call void @check1(i1 %cmp2)
-  %cmp3 = icmp slt i32 %b, 7
+  %cmp3 = icmp slt i32 %b, 42
   call void @check1(i1 %cmp3)
   ret void
 
 if.false:
-  %cmp4 = icmp sge i32 %a, 7
+  %cmp4 = icmp sge i32 %a, 42
   call void @check1(i1 %cmp4)
-  %cmp5 = icmp sge i32 %b, 7
+  %cmp5 = icmp sge i32 %b, 42
   call void @check1(i1 %cmp5)
   ret void
 }
@@ -851,37 +851,37 @@ define void @test_icmp_and_ugt(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_and_ugt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[AND]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[AND]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[A]], 7
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[B]], 7
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ule i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ule i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ule i32 [[B]], 7
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ule i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %and = and i32 %a, %b
-  %cmp = icmp ugt i32 %and, 7
+  %cmp = icmp ugt i32 %and, 42
   br i1 %cmp, label %if.true, label %if.false
 
 if.true:
-  %cmp2 = icmp ugt i32 %a, 7
+  %cmp2 = icmp ugt i32 %a, 42
   call void @check1(i1 %cmp2)
-  %cmp3 = icmp ugt i32 %b, 7
+  %cmp3 = icmp ugt i32 %b, 42
   call void @check1(i1 %cmp3)
   ret void
 
 if.false:
-  %cmp4 = icmp ule i32 %a, 7
+  %cmp4 = icmp ule i32 %a, 42
   call void @check1(i1 %cmp4)
-  %cmp5 = icmp ule i32 %b, 7
+  %cmp5 = icmp ule i32 %b, 42
   call void @check1(i1 %cmp5)
   ret void
 }
@@ -890,37 +890,37 @@ define void @test_icmp_and_uge(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_and_uge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[AND]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[AND]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[A]], 7
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[B]], 7
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[B]], 7
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %and = and i32 %a, %b
-  %cmp = icmp uge i32 %and, 7
+  %cmp = icmp uge i32 %and, 42
   br i1 %cmp, label %if.true, label %if.false
 
 if.true:
-  %cmp2 = icmp uge i32 %a, 7
+  %cmp2 = icmp uge i32 %a, 42
   call void @check1(i1 %cmp2)
-  %cmp3 = icmp uge i32 %b, 7
+  %cmp3 = icmp uge i32 %b, 42
   call void @check1(i1 %cmp3)
   ret void
 
 if.false:
-  %cmp4 = icmp ult i32 %a, 7
+  %cmp4 = icmp ult i32 %a, 42
   call void @check1(i1 %cmp4)
-  %cmp5 = icmp ult i32 %b, 7
+  %cmp5 = icmp ult i32 %b, 42
   call void @check1(i1 %cmp5)
   ret void
 }
@@ -929,37 +929,37 @@ define void @test_icmp_and_ult(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_and_ult(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[AND]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[AND]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[A]], 7
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[B]], 7
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp uge i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp uge i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp uge i32 [[B]], 7
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp uge i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %and = and i32 %a, %b
-  %cmp = icmp ult i32 %and, 7
+  %cmp = icmp ult i32 %and, 42
   br i1 %cmp, label %if.true, label %if.false
 
 if.true:
-  %cmp2 = icmp ult i32 %a, 7
+  %cmp2 = icmp ult i32 %a, 42
   call void @check1(i1 %cmp2)
-  %cmp3 = icmp ult i32 %b, 7
+  %cmp3 = icmp ult i32 %b, 42
   call void @check1(i1 %cmp3)
   ret void
 
 if.false:
-  %cmp4 = icmp uge i32 %a, 7
+  %cmp4 = icmp uge i32 %a, 42
   call void @check1(i1 %cmp4)
-  %cmp5 = icmp uge i32 %b, 7
+  %cmp5 = icmp uge i32 %b, 42
   call void @check1(i1 %cmp5)
   ret void
 }
@@ -968,37 +968,37 @@ define void @test_icmp_and_sgt(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_and_sgt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[AND]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[AND]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A]], 7
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[B]], 7
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sle i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sle i32 [[A]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp sle i32 [[B]], 7
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp sle i32 [[B]], 42
 ; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %and = and i32 %a, %b
-  %cmp = icmp sgt i32 %and, 7
+  %cmp = icmp sgt i32 %and, 42
   br i1 %cmp, label %if.true, label %if.false
 
 if.true:
-  %cmp2 = icmp sgt i32 %a, 7
+  %cmp2 = icmp sgt i32 %a, 42
   call void @check1(i1 %cmp2)
-  %cmp3 = icmp sgt i32 %b, 7
+  %cmp3 = icmp sgt i32 %b, 42
   call void @check1(i1 %cmp3)
   ret void
 
 if.false:
-  %cmp4 = icmp sle i32 %a, 7
+  %cmp4 = icmp sle i32 %a, 42
   call void @check1(i1 %cmp4)
-  %cmp5 = icmp sle i32 %b, 7
+  %cmp5 = icmp sle i32 %b, 42
   call void @check1(i1 %cmp5)
   ret void
 }
