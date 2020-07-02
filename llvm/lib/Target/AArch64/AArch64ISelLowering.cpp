@@ -13853,9 +13853,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
       SDValue Idx = N->getOperand(3);
 
       uint64_t IdxConst = cast<ConstantSDNode>(Idx)->getZExtValue();
-      if (IdxConst > Src1->getNumOperands() - 1)
-        report_fatal_error("index larger than expected");
-
       EVT ResVT = N->getValueType(0);
       uint64_t NumLanes = ResVT.getVectorElementCount().Min;
       SDValue Val =
