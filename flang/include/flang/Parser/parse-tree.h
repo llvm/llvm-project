@@ -25,6 +25,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <cinttypes>
 #include <list>
 #include <memory>
@@ -3495,8 +3496,7 @@ struct OmpClauseList {
 // 2.7.2 SECTIONS
 // 2.11.2 PARALLEL SECTIONS
 struct OmpSectionsDirective {
-  ENUM_CLASS(Directive, Sections, ParallelSections);
-  WRAPPER_CLASS_BOILERPLATE(OmpSectionsDirective, Directive);
+  WRAPPER_CLASS_BOILERPLATE(OmpSectionsDirective, llvm::omp::Directive);
   CharBlock source;
 };
 
@@ -3527,10 +3527,7 @@ struct OpenMPSectionsConstruct {
 
 // OpenMP directive beginning or ending a block
 struct OmpBlockDirective {
-  ENUM_CLASS(Directive, Master, Ordered, Parallel, ParallelWorkshare, Single,
-      Target, TargetData, TargetParallel, TargetTeams, Task, Taskgroup, Teams,
-      Workshare);
-  WRAPPER_CLASS_BOILERPLATE(OmpBlockDirective, Directive);
+  WRAPPER_CLASS_BOILERPLATE(OmpBlockDirective, llvm::omp::Directive);
   CharBlock source;
 };
 
@@ -3684,15 +3681,7 @@ struct OpenMPAtomicConstruct {
 
 // OpenMP directives that associate with loop(s)
 struct OmpLoopDirective {
-  ENUM_CLASS(Directive, Distribute, DistributeParallelDo,
-      DistributeParallelDoSimd, DistributeSimd, ParallelDo, ParallelDoSimd, Do,
-      DoSimd, Simd, TargetParallelDo, TargetParallelDoSimd,
-      TargetTeamsDistribute, TargetTeamsDistributeParallelDo,
-      TargetTeamsDistributeParallelDoSimd, TargetTeamsDistributeSimd,
-      TargetSimd, Taskloop, TaskloopSimd, TeamsDistribute,
-      TeamsDistributeParallelDo, TeamsDistributeParallelDoSimd,
-      TeamsDistributeSimd)
-  WRAPPER_CLASS_BOILERPLATE(OmpLoopDirective, Directive);
+  WRAPPER_CLASS_BOILERPLATE(OmpLoopDirective, llvm::omp::Directive);
   CharBlock source;
 };
 
@@ -3726,9 +3715,7 @@ struct OpenMPFlushConstruct {
 };
 
 struct OmpSimpleStandaloneDirective {
-  ENUM_CLASS(Directive, Barrier, Taskwait, Taskyield, TargetEnterData,
-      TargetExitData, TargetUpdate, Ordered)
-  WRAPPER_CLASS_BOILERPLATE(OmpSimpleStandaloneDirective, Directive);
+  WRAPPER_CLASS_BOILERPLATE(OmpSimpleStandaloneDirective, llvm::omp::Directive);
   CharBlock source;
 };
 
