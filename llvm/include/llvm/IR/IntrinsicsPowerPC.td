@@ -1017,6 +1017,13 @@ def int_ppc_vsx_xxgenpcvwm :
 def int_ppc_vsx_xxgenpcvdm :
       PowerPC_VSX_Intrinsic<"xxgenpcvdm", [llvm_v2i64_ty],
                             [llvm_v2i64_ty, llvm_i32_ty], [IntrNoMem]>;
+
+// P10 VSX Vector permute extended.
+def int_ppc_vsx_xxpermx : 
+      GCCBuiltin<"__builtin_vsx_xxpermx">,
+      Intrinsic<[llvm_v16i8_ty],
+                [llvm_v16i8_ty,llvm_v16i8_ty,llvm_v16i8_ty,llvm_i32_ty],
+                [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 }
 
 //===----------------------------------------------------------------------===//

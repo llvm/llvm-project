@@ -451,6 +451,9 @@ BUILTIN(__builtin_vsx_xxsldwi, "v.", "t")
 
 BUILTIN(__builtin_vsx_xxeval, "V2ULLiV2ULLiV2ULLiV2ULLiIi", "")
 
+// P10 Vector Permute Extended built-in.
+BUILTIN(__builtin_vsx_xxpermx, "V16UcV16UcV16UcV16UcIi", "")
+
 // Float 128 built-ins
 BUILTIN(__builtin_sqrtf128_round_to_odd, "LLdLLd", "")
 BUILTIN(__builtin_addf128_round_to_odd, "LLdLLdLLd", "")
