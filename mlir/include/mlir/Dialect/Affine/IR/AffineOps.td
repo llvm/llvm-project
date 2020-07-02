@@ -278,7 +278,8 @@ def AffineForOp : Affine_Op<"for",
 }
 
 def AffineIfOp : Affine_Op<"if",
-                           [ImplicitAffineTerminator, RecursiveSideEffects]> {
+                           [ImplicitAffineTerminator, RecursiveSideEffects,
+                            NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     Syntax:

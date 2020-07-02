@@ -33,7 +33,7 @@ class ModuleOp
           OpTrait::IsIsolatedFromAbove, OpTrait::AffineScope,
           OpTrait::SymbolTable,
           OpTrait::SingleBlockImplicitTerminator<ModuleTerminatorOp>::Impl,
-          SymbolOpInterface::Trait> {
+          SymbolOpInterface::Trait, OpTrait::NoRegionArguments> {
 public:
   using Op::Op;
   using Op::print;
