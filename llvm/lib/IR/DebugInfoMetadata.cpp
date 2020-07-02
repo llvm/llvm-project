@@ -435,7 +435,7 @@ DISubrange::BoundType DISubrange::getStride() const {
   return BoundType();
 }
 
-DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, APInt Value,
+DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
                                     bool IsUnsigned, MDString *Name,
                                     StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
