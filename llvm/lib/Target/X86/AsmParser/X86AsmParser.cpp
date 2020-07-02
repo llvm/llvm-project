@@ -1509,8 +1509,9 @@ std::unique_ptr<X86Operand> X86AsmParser::CreateMemForMSInlineAsm(
   } else {
     BaseReg = BaseReg ? BaseReg : 1;
     return X86Operand::CreateMem(getPointerWidth(), SegReg, Disp, BaseReg,
-                                 IndexReg, Scale, Start, End, Size, Identifier,
-                                 Decl, FrontendSize);
+                                 IndexReg, Scale, Start, End, Size,
+                                 /*DefaultBaseReg=*/X86::RIP, Identifier, Decl,
+                                 FrontendSize);
   }
 }
 
@@ -2073,6 +2074,14 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
     return CreateMemForMSInlineAsm(RegNo, Disp, BaseReg, IndexReg, Scale, Start,
                                    End, Size, SM.getSymName(),
                                    SM.getIdentifierInfo());
+
+  // When parsing x64 MS-style assembly, all memory operands default to
+  // RIP-relative when interpreted as non-absolute references.
+  if (Parser.isParsingMasm() && is64BitMode())
+    return X86Operand::CreateMem(getPointerWidth(), RegNo, Disp, BaseReg,
+                                 IndexReg, Scale, Start, End, Size,
+                                 /*DefaultBaseReg=*/X86::RIP);
+
   if (!(BaseReg || IndexReg || RegNo))
     return X86Operand::CreateMem(getPointerWidth(), Disp, Start, End, Size);
   return X86Operand::CreateMem(getPointerWidth(), RegNo, Disp,
