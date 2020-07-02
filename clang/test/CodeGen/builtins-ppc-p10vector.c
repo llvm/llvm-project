@@ -14,6 +14,8 @@ vector unsigned int vuia, vuib, vuic;
 vector signed long long vslla, vsllb;
 vector unsigned long long vulla, vullb, vullc;
 vector unsigned __int128 vui128a, vui128b, vui128c;
+vector float vfa, vfb;
+vector double vda, vdb;
 unsigned int uia;
 
 vector unsigned long long test_vpdepd(void) {
@@ -256,4 +258,72 @@ vector unsigned long long test_vec_srdb_ull(void) {
   // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <2 x i64>
   // CHECK-NEXT: ret <2 x i64>
   return vec_srdb(vulla, vullb, 7);
+}
+
+vector signed char test_vec_permx_sc(void) {
+  // CHECK: @llvm.ppc.vsx.xxpermx(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_permx(vsca, vscb, vucc, 0);
+}
+
+vector unsigned char test_vec_permx_uc(void) {
+  // CHECK: @llvm.ppc.vsx.xxpermx(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_permx(vuca, vucb, vucc, 1);
+}
+
+vector signed short test_vec_permx_ss(void) {
+  // CHECK: @llvm.ppc.vsx.xxpermx(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <8 x i16>
+  // CHECK-NEXT: ret <8 x i16>
+  return vec_permx(vssa, vssb, vucc, 2);
+}
+
+vector unsigned short test_vec_permx_us(void) {
+  // CHECK: @llvm.ppc.vsx.xxpermx(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <8 x i16>
+  // CHECK-NEXT: ret <8 x i16>
+  return vec_permx(vusa, vusb, vucc, 3);
+}
+
+vector signed int test_vec_permx_si(void) {
+  // CHECK: @llvm.ppc.vsx.xxpermx(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_permx(vsia, vsib, vucc, 4);
+}
+
+vector unsigned int test_vec_permx_ui(void) {
+  // CHECK: @llvm.ppc.vsx.xxpermx(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_permx(vuia, vuib, vucc, 5);
+}
+
+vector signed long long test_vec_permx_sll(void) {
+  // CHECK: @llvm.ppc.vsx.xxpermx(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_permx(vslla, vsllb, vucc, 6);
+}
+
+vector unsigned long long test_vec_permx_ull(void) {
+  // CHECK: @llvm.ppc.vsx.xxpermx(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_permx(vulla, vullb, vucc, 7);
+}
+
+vector float test_vec_permx_f(void) {
+  // CHECK: @llvm.ppc.vsx.xxpermx(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <4 x float>
+  // CHECK-NEXT: ret <4 x float>
+  return vec_permx(vfa, vfb, vucc, 0);
+}
+
+vector double test_vec_permx_d(void) {
+  // CHECK: @llvm.ppc.vsx.xxpermx(<16 x i8> %{{.+}}, <16 x i8> %{{.+}}, <16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: bitcast <16 x i8> %{{.*}} to <2 x double>
+  // CHECK-NEXT: ret <2 x double>
+  return vec_permx(vda, vdb, vucc, 1);
 }
