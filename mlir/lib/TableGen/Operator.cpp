@@ -436,9 +436,13 @@ void tblgen::Operator::populateOpStructure() {
       argDef = argDef->getValueAsDef("constraint");
 
     if (argDef->isSubClassOf(typeConstraintClass)) {
+      attrOrOperandMapping.push_back(
+          {OperandOrAttribute::Kind::Operand, operandIndex});
       arguments.emplace_back(&operands[operandIndex++]);
     } else {
       assert(argDef->isSubClassOf(attrClass));
+      attrOrOperandMapping.push_back(
+          {OperandOrAttribute::Kind::Attribute, attrIndex});
       arguments.emplace_back(&attributes[attrIndex++]);
     }
   }
@@ -580,4 +584,9 @@ void tblgen::Operator::print(llvm::raw_ostream &os) const {
 auto tblgen::Operator::VariableDecoratorIterator::unwrap(llvm::Init *init)
     -> VariableDecorator {
   return VariableDecorator(cast<llvm::DefInit>(init)->getDef());
+}
+
+auto tblgen::Operator::getArgToOperandOrAttribute(int index) const
+    -> OperandOrAttribute {
+  return attrOrOperandMapping[index];
 }
