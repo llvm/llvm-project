@@ -200,6 +200,11 @@ Changes in existing checks
 
   Now checks ``std::basic_string_view`` by default.
 
+- Improved :doc:`readability-else-after-return
+  <clang-tidy/checks/readability-else-after-return>` check now supports a 
+  `WarnOnConditionVariables` option to control whether to refactor condition
+  variables where possible.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability-identifier-naming>` check.
 
