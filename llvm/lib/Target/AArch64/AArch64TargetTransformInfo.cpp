@@ -212,7 +212,7 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   // elements in type Ty determine the vector width.
   auto toVectorTy = [&](Type *ArgTy) {
     return FixedVectorType::get(ArgTy->getScalarType(),
-                                cast<VectorType>(DstTy)->getNumElements());
+                                cast<FixedVectorType>(DstTy)->getNumElements());
   };
 
   // Exit early if DstTy is not a vector type whose elements are at least
@@ -724,8 +724,8 @@ int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
       // have to promote the elements to v.2.
       ProfitableNumElements = 8;
 
-    if (cast<VectorType>(Ty)->getNumElements() < ProfitableNumElements) {
-      unsigned NumVecElts = cast<VectorType>(Ty)->getNumElements();
+    if (cast<FixedVectorType>(Ty)->getNumElements() < ProfitableNumElements) {
+      unsigned NumVecElts = cast<FixedVectorType>(Ty)->getNumElements();
       unsigned NumVectorizableInstsToAmortize = NumVecElts * 2;
       // We generate 2 instructions per vector element.
       return NumVectorizableInstsToAmortize * NumVecElts * 2;
@@ -740,7 +740,7 @@ int AArch64TTIImpl::getInterleavedMemoryOpCost(
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
   assert(Factor >= 2 && "Invalid interleave factor");
-  auto *VecVTy = cast<VectorType>(VecTy);
+  auto *VecVTy = cast<FixedVectorType>(VecTy);
 
   if (!UseMaskForCond && !UseMaskForGaps &&
       Factor <= TLI->getMaxSupportedInterleaveFactor()) {
@@ -767,7 +767,8 @@ int AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
   for (auto *I : Tys) {
     if (!I->isVectorTy())
       continue;
-    if (I->getScalarSizeInBits() * cast<VectorType>(I)->getNumElements() == 128)
+    if (I->getScalarSizeInBits() * cast<FixedVectorType>(I)->getNumElements() ==
+        128)
       Cost += getMemoryOpCost(Instruction::Store, I, Align(128), 0, CostKind) +
               getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
   }
@@ -970,9 +971,10 @@ bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
   case Instruction::Mul:
     return false;
   case Instruction::Add:
-    return ScalarBits * VTy->getNumElements() >= 128;
+    return ScalarBits * cast<FixedVectorType>(VTy)->getNumElements() >= 128;
   case Instruction::ICmp:
-    return (ScalarBits < 64) && (ScalarBits * VTy->getNumElements() >= 128);
+    return (ScalarBits < 64) &&
+           (ScalarBits * cast<FixedVectorType>(VTy)->getNumElements() >= 128);
   case Instruction::FCmp:
     return Flags.NoNaN;
   default:
