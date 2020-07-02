@@ -659,10 +659,8 @@ define void @test_icmp_or_ult(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[OR]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[A]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[B]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp uge i32 [[A]], 42
@@ -698,10 +696,8 @@ define void @test_icmp_or_ule(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[OR]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[A]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[B]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[A]], 42
@@ -743,10 +739,8 @@ define void @test_icmp_or_ugt(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ule i32 [[A]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ule i32 [[B]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -782,10 +776,8 @@ define void @test_icmp_or_uge(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[B]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -854,10 +846,8 @@ define void @test_icmp_and_ugt(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[AND]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[A]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[B]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp ule i32 [[A]], 42
@@ -893,10 +883,8 @@ define void @test_icmp_and_uge(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[AND]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[A]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[B]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], 42
@@ -938,10 +926,8 @@ define void @test_icmp_and_ult(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp uge i32 [[A]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp uge i32 [[B]], 42
-; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
