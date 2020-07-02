@@ -207,11 +207,10 @@ static constexpr FeatureBitset FeaturesBTVER2 =
 // AMD Bulldozer architecture processors.
 static constexpr FeatureBitset FeaturesBDVER1 =
     FeatureX87 | FeatureAES | FeatureAVX | FeatureCMPXCHG8B |
-    FeatureCMPXCHG16B | FeatureEM64T | FeatureFMA4 | FeatureFXSR |
-    FeatureLZCNT | FeatureLWP | FeatureLZCNT | FeatureMMX | FeaturePCLMUL |
-    FeaturePOPCNT | FeaturePRFCHW | FeatureSAHF | FeatureSSE | FeatureSSE2 |
-    FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_1 | FeatureSSE4_2 | FeatureSSE4A |
-    FeatureXOP | FeatureXSAVE;
+    FeatureCMPXCHG16B | FeatureEM64T | FeatureFMA4 | FeatureFXSR | FeatureLWP |
+    FeatureLZCNT | FeatureMMX | FeaturePCLMUL | FeaturePOPCNT | FeaturePRFCHW |
+    FeatureSAHF | FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 |
+    FeatureSSE4_1 | FeatureSSE4_2 | FeatureSSE4A | FeatureXOP | FeatureXSAVE;
 static constexpr FeatureBitset FeaturesBDVER2 =
     FeaturesBDVER1 | FeatureBMI | FeatureFMA | FeatureF16C | FeatureTBM;
 static constexpr FeatureBitset FeaturesBDVER3 =
@@ -225,12 +224,12 @@ static constexpr FeatureBitset FeaturesZNVER1 =
     FeatureX87 | FeatureADX | FeatureAES | FeatureAVX | FeatureAVX2 |
     FeatureBMI | FeatureBMI2 | FeatureCLFLUSHOPT | FeatureCLZERO |
     FeatureCMPXCHG8B | FeatureCMPXCHG16B | FeatureEM64T | FeatureF16C |
-    FeatureFMA | FeatureFSGSBASE | FeatureFXSR | FeatureLZCNT | FeatureLWP |
-    FeatureLZCNT | FeatureMOVBE | FeatureMMX | FeatureMWAITX | FeaturePCLMUL |
-    FeaturePOPCNT | FeaturePRFCHW | FeatureRDRND | FeatureRDSEED | FeatureSAHF |
-    FeatureSHA | FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 |
-    FeatureSSE4_1 | FeatureSSE4_2 | FeatureSSE4A | FeatureXSAVE |
-    FeatureXSAVEC | FeatureXSAVEOPT | FeatureXSAVES;
+    FeatureFMA | FeatureFSGSBASE | FeatureFXSR | FeatureLZCNT | FeatureMMX |
+    FeatureMOVBE | FeatureMWAITX | FeaturePCLMUL | FeaturePOPCNT |
+    FeaturePRFCHW | FeatureRDRND | FeatureRDSEED | FeatureSAHF | FeatureSHA |
+    FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_1 |
+    FeatureSSE4_2 | FeatureSSE4A | FeatureXSAVE | FeatureXSAVEC |
+    FeatureXSAVEOPT | FeatureXSAVES;
 static constexpr FeatureBitset FeaturesZNVER2 =
     FeaturesZNVER1 | FeatureCLWB | FeatureRDPID | FeatureWBNOINVD;
 
