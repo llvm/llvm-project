@@ -1443,21 +1443,6 @@ struct TruncatedExtendedOpcodeFixture
   void SetUp() {
     std::tie(BodyLength, OpcodeLength, Opcode, Operands, ExpectedOutput,
              ExpectedErr) = GetParam();
-    // Swap the byte order of the operands on big endian hosts, so that the raw
-    // bytes are always in the same order. ValLen.Value is a uint64_t, so make
-    // sure to shift the value back to the actually used bits for the
-    // appropriate type.
-    if (sys::IsBigEndianHost)
-      for (LineTable::ValueAndLength &ValLen : Operands)
-        if (ValLen.Length != LineTable::SLEB &&
-            ValLen.Length != LineTable::ULEB &&
-            ValLen.Length != LineTable::Byte) {
-          sys::swapByteOrder(ValLen.Value);
-          if (ValLen.Length == LineTable::Long)
-              ValLen.Value >>= 32;
-          if (ValLen.Length == LineTable::Half)
-              ValLen.Value >>= 48;
-        }
   }
 
   uint64_t OpcodeLength;
@@ -1492,8 +1477,8 @@ INSTANTIATE_TEST_CASE_P(
             "unexpected end of data at offset 0x32 while reading [0x32, 0x3a)"),
         std::make_tuple(
             10, 9, DW_LNE_set_address,
-            ValueAndLengths{{0x1234567890abcdef, LineTable::Quad}},
-            "DW_LNE_set_address (<parsing error> ef cd ab 90 78 56 34)",
+            ValueAndLengths{{0x1234567878563412, LineTable::Quad}},
+            "DW_LNE_set_address (<parsing error> 12 34 56 78 78 56 34)",
             "unexpected end of data at offset 0x39 while reading [0x32, 0x3a)"),
         std::make_tuple(3, 6, DW_LNE_define_file,
                         ValueAndLengths{{'a', LineTable::Byte},
@@ -1537,8 +1522,8 @@ INSTANTIATE_TEST_CASE_P(
                         "malformed uleb128, extends past end"),
         std::make_tuple(
             6, 5, /*Unknown=*/0x7f,
-            ValueAndLengths{{0x12345678, LineTable::Long}},
-            "Unrecognized extended op 0x7f length 5 (<parsing error> 78 56 34)",
+            ValueAndLengths{{0x12343412, LineTable::Long}},
+            "Unrecognized extended op 0x7f length 5 (<parsing error> 12 34 34)",
             "unexpected end of data at offset 0x35 while reading [0x32, "
             "0x36)")), );
 
