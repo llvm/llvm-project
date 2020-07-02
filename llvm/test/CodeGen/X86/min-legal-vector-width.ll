@@ -1665,31 +1665,21 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-leg
 ; CHECK-LABEL: var_rotate_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm2
-; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm2, %ymm2
-; CHECK-NEXT:    vpsllw $5, %ymm1, %ymm3
-; CHECK-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm2
-; CHECK-NEXT:    vpsllw $2, %ymm2, %ymm4
-; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm4, %ymm4
-; CHECK-NEXT:    vpaddb %ymm3, %ymm3, %ymm3
-; CHECK-NEXT:    vpblendvb %ymm3, %ymm4, %ymm2, %ymm2
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm4 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; CHECK-NEXT:    vpsubb %ymm1, %ymm4, %ymm1
-; CHECK-NEXT:    vpaddb %ymm2, %ymm2, %ymm4
-; CHECK-NEXT:    vpaddb %ymm3, %ymm3, %ymm3
-; CHECK-NEXT:    vpblendvb %ymm3, %ymm4, %ymm2, %ymm2
+; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm3
+; CHECK-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm2, %ymm3
 ; CHECK-NEXT:    vpsllw $5, %ymm1, %ymm1
-; CHECK-NEXT:    vpaddb %ymm1, %ymm1, %ymm3
-; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm4
-; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm4, %ymm4
-; CHECK-NEXT:    vpblendvb %ymm1, %ymm4, %ymm0, %ymm0
-; CHECK-NEXT:    vpsrlw $2, %ymm0, %ymm1
-; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; CHECK-NEXT:    vpblendvb %ymm3, %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpsrlw $1, %ymm0, %ymm1
-; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; CHECK-NEXT:    vpaddb %ymm3, %ymm3, %ymm3
-; CHECK-NEXT:    vpblendvb %ymm3, %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
+; CHECK-NEXT:    vpsllw $2, %ymm0, %ymm2
+; CHECK-NEXT:    vpsrlw $6, %ymm0, %ymm3
+; CHECK-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm2, %ymm3
+; CHECK-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; CHECK-NEXT:    vpsrlw $7, %ymm0, %ymm3
+; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm3, %ymm3
+; CHECK-NEXT:    vpor %ymm3, %ymm2, %ymm2
+; CHECK-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %b8 = sub <32 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>, %b
   %shl = shl <32 x i8> %a, %b
@@ -1701,15 +1691,17 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-leg
 define <32 x i8> @splatvar_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: splatvar_rotate_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm3 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsllw %xmm3, %ymm0, %ymm2
+; CHECK-NEXT:    vpbroadcastb %xmm1, %xmm1
+; CHECK-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsllw %xmm2, %ymm0, %ymm3
 ; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vpsllw %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vpbroadcastb %xmm3, %ymm3
-; CHECK-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; CHECK-NEXT:    vpsllw %xmm2, %xmm4, %xmm2
+; CHECK-NEXT:    vpbroadcastb %xmm2, %ymm2
+; CHECK-NEXT:    vpand %ymm2, %ymm3, %ymm2
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm3 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; CHECK-NEXT:    vpsubb %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpsrlw %xmm1, %xmm4, %xmm1
 ; CHECK-NEXT:    vpsrlw $8, %xmm1, %xmm1
@@ -1730,7 +1722,7 @@ define <32 x i8> @constant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-vector
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-AVX512-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; CHECK-AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,57600,41152,24704,8256,8192,24640,41088,57536,57600,41152,24704,8256]
+; CHECK-AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,57344,41152,24704,8256,8192,24640,41088,57536,57344,41152,24704,8256]
 ; CHECK-AVX512-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-AVX512-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm1
 ; CHECK-AVX512-NEXT:    vpsllw $2, %ymm1, %ymm3
@@ -1755,7 +1747,7 @@ define <32 x i8> @constant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-vector
 ; CHECK-VBMI:       # %bb.0:
 ; CHECK-VBMI-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-VBMI-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; CHECK-VBMI-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,57600,41152,24704,8256,8192,24640,41088,57536,57600,41152,24704,8256]
+; CHECK-VBMI-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,57344,41152,24704,8256,8192,24640,41088,57536,57344,41152,24704,8256]
 ; CHECK-VBMI-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-VBMI-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm1
 ; CHECK-VBMI-NEXT:    vpsllw $2, %ymm1, %ymm3
@@ -1798,9 +1790,8 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; CHECK-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm1, %ymm0
 ; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; CHECK-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %lshr = lshr <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
