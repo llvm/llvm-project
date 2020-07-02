@@ -64,41 +64,26 @@ struct TypeDependenceScope {
 };
 using TypeDependence = TypeDependenceScope::TypeDependence;
 
-struct TemplateArgumentDependenceScope {
-  enum TemplateArgumentDependence : uint8_t {
-    UnexpandedPack = 1,
-    Instantiation = 2,
-    Dependent = 4,
-
-    Error = 8,
-
-    DependentInstantiation = Dependent | Instantiation,
-    None = 0,
-    All = 15,
-    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Error)
-  };
-};
-using TemplateArgumentDependence =
-    TemplateArgumentDependenceScope ::TemplateArgumentDependence;
-
 #define LLVM_COMMON_DEPENDENCE(NAME)                                           \
   struct NAME##Scope {                                                         \
     enum NAME : uint8_t {                                                      \
       UnexpandedPack = 1,                                                      \
       Instantiation = 2,                                                       \
       Dependent = 4,                                                           \
+      Error = 8,                                                               \
                                                                                \
       None = 0,                                                                \
       DependentInstantiation = Dependent | Instantiation,                      \
-      All = 7,                                                                 \
+      All = 15,                                                                \
                                                                                \
-      LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Dependent)                    \
+      LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Error)                        \
     };                                                                         \
   };                                                                           \
   using NAME = NAME##Scope::NAME;
 
 LLVM_COMMON_DEPENDENCE(NestedNameSpecifierDependence)
 LLVM_COMMON_DEPENDENCE(TemplateNameDependence)
+LLVM_COMMON_DEPENDENCE(TemplateArgumentDependence)
 #undef LLVM_COMMON_DEPENDENCE
 
 // A combined space of all dependence concepts for all node types.
@@ -149,7 +134,8 @@ public:
   Dependence(NestedNameSpecifierDependence D) :
     V ( translate(D, NNSDependence::UnexpandedPack, UnexpandedPack) |
             translate(D, NNSDependence::Instantiation, Instantiation) |
-            translate(D, NNSDependence::Dependent, Dependent)){}
+            translate(D, NNSDependence::Dependent, Dependent) |
+            translate(D, NNSDependence::Error, Error)) {}
 
   Dependence(TemplateArgumentDependence D)
       : V(translate(D, TADependence::UnexpandedPack, UnexpandedPack) |
@@ -160,7 +146,8 @@ public:
   Dependence(TemplateNameDependence D)
       : V(translate(D, TNDependence::UnexpandedPack, UnexpandedPack) |
              translate(D, TNDependence::Instantiation, Instantiation) |
-             translate(D, TNDependence::Dependent, Dependent)) {}
+             translate(D, TNDependence::Dependent, Dependent) |
+             translate(D, TNDependence::Error, Error)) {}
 
   TypeDependence type() const {
     return translate(V, UnexpandedPack, TypeDependence::UnexpandedPack) |
@@ -181,7 +168,8 @@ public:
   NestedNameSpecifierDependence nestedNameSpecifier() const {
     return translate(V, UnexpandedPack, NNSDependence::UnexpandedPack) |
            translate(V, Instantiation, NNSDependence::Instantiation) |
-           translate(V, Dependent, NNSDependence::Dependent);
+           translate(V, Dependent, NNSDependence::Dependent) |
+           translate(V, Error, NNSDependence::Error);
   }
 
   TemplateArgumentDependence templateArgument() const {
@@ -194,7 +182,8 @@ public:
   TemplateNameDependence templateName() const {
     return translate(V, UnexpandedPack, TNDependence::UnexpandedPack) |
            translate(V, Instantiation, TNDependence::Instantiation) |
-           translate(V, Dependent, TNDependence::Dependent);
+           translate(V, Dependent, TNDependence::Dependent) |
+           translate(V, Error, TNDependence::Error);
   }
 
 private:
