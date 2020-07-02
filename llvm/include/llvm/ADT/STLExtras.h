@@ -1121,6 +1121,14 @@ public:
     assert(index < size() && "invalid index for value range");
     return DerivedT::dereference_iterator(base, index);
   }
+  ReferenceT front() const {
+    assert(!empty() && "expected non-empty range");
+    return (*this)[0];
+  }
+  ReferenceT back() const {
+    assert(!empty() && "expected non-empty range");
+    return (*this)[size() - 1];
+  }
 
   /// Compare this range with another.
   template <typename OtherT> bool operator==(const OtherT &other) const {

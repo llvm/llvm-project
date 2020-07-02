@@ -124,6 +124,12 @@ def MixedNormalVariadicOperandOp : TEST_Op<
     Variadic<AnyTensor>:$input3
   );
 }
+def VariadicWithSameOperandsResult :
+      TEST_Op<"variadic_with_same_operand_results",
+              [SameOperandsAndResultType]> {
+  let arguments = (ins Variadic<AnySignlessInteger>:$operands);
+  let results = (outs AnySignlessInteger:$result);
+}
 
 //===----------------------------------------------------------------------===//
 // Test Results
