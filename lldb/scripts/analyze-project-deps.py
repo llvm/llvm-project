@@ -109,7 +109,7 @@ def expand(path_queue, path_lengths, cycles, src_map):
         next_len = path_lengths.pop(0) + 1
         last_component = cur_path[-1]
 
-        for item in src_map[last_component]:
+        for item in src_map.get(last_component, []):
             if item.startswith("clang"):
                 continue
 
