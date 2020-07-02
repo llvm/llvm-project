@@ -243,6 +243,7 @@ bool ClassDescriptorV2::method_list_t::Read(Process *process,
 
   uint32_t entsize = extractor.GetU32_unchecked(&cursor);
   m_is_small = (entsize & 0x80000000) != 0;
+  m_has_direct_selector = (entsize & 0x40000000) != 0;
   m_entsize = entsize & 0xfffc;
   m_count = extractor.GetU32_unchecked(&cursor);
   m_first_ptr = addr + cursor;
@@ -251,7 +252,7 @@ bool ClassDescriptorV2::method_list_t::Read(Process *process,
 }
 
 bool ClassDescriptorV2::method_t::Read(Process *process, lldb::addr_t addr,
-                                       bool is_small) {
+                                       bool is_small, bool has_direct_sel) {
   size_t ptr_size = process->GetAddressByteSize();
   size_t size = GetSize(process, is_small);
 
@@ -272,12 +273,15 @@ bool ClassDescriptorV2::method_t::Read(Process *process, lldb::addr_t addr,
     uint32_t types_offset = extractor.GetU32_unchecked(&cursor);
     uint32_t imp_offset = extractor.GetU32_unchecked(&cursor);
 
-    // The SEL offset points to a SELRef. We need to dereference twice.
-    lldb::addr_t selref_addr = addr + nameref_offset;
-    m_name_ptr =
-        process->ReadUnsignedIntegerFromMemory(selref_addr, ptr_size, 0, error);
-    if (!error.Success())
-      return false;
+    m_name_ptr = addr + nameref_offset;
+
+    if (!has_direct_sel) {
+      // The SEL offset points to a SELRef. We need to dereference twice.
+      m_name_ptr = process->ReadUnsignedIntegerFromMemory(m_name_ptr, ptr_size,
+                                                          0, error);
+      if (!error.Success())
+        return false;
+    }
     m_types_ptr = addr + 4 + types_offset;
     m_imp_ptr = addr + 8 + imp_offset;
   } else {
@@ -380,6 +384,8 @@ bool ClassDescriptorV2::Describe(
       return false;
 
     bool is_small = base_method_list->m_is_small;
+    bool has_direct_selector = base_method_list->m_has_direct_selector;
+
     if (base_method_list->m_entsize != method_t::GetSize(process, is_small))
       return false;
 
@@ -390,7 +396,7 @@ bool ClassDescriptorV2::Describe(
       method->Read(process,
                    base_method_list->m_first_ptr +
                        (i * base_method_list->m_entsize),
-                   is_small);
+                   is_small, has_direct_selector);
 
       if (instance_method_func(method->m_name.c_str(), method->m_types.c_str()))
         break;
