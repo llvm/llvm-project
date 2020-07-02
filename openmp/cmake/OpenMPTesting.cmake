@@ -133,8 +133,8 @@ else()
   set(OPENMP_TEST_COMPILER_ID "Clang")
   # Cannot use CLANG_VERSION because we are not guaranteed that this is already set.
   set(OPENMP_TEST_COMPILER_VERSION "${LLVM_VERSION}")
-  set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${LLVM_MAJOR_VERSION}")
-  set(OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR "${LLVM_MAJOR_VERSION}.${LLVM_MINOR_VERSION}")
+  set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${LLVM_VERSION_MAJOR}")
+  set(OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
   # Unfortunately the top-level cmake/config-ix.cmake file mangles CMake's
   # CMAKE_THREAD_LIBS_INIT variable from the FindThreads package, so work
   # around that, until it is fixed there.
