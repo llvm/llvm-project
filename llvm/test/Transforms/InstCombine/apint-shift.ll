@@ -341,6 +341,18 @@ define <2 x i1> @test16vec_nonuniform(<2 x i84> %X) {
   ret <2 x i1> %cmp
 }
 
+define <2 x i1> @test16vec_undef(<2 x i84> %X) {
+; CHECK-LABEL: @test16vec_undef(
+; CHECK-NEXT:    [[SHR1:%.*]] = lshr <2 x i84> [[X:%.*]], <i84 4, i84 undef>
+; CHECK-NEXT:    [[CMP:%.*]] = trunc <2 x i84> [[SHR1]] to <2 x i1>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shr = ashr <2 x i84> %X, <i84 4, i84 undef>
+  %and = and <2 x i84> %shr, <i84 1, i84 1>
+  %cmp = icmp ne <2 x i84> %and, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
 define i1 @test17(i106 %A) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[B_MASK:%.*]] = and i106 [[A:%.*]], -8
