@@ -372,7 +372,7 @@ define float @fma_x_y_0(float %x, float %y) {
 
 define float @fma_x_y_0_nsz(float %x, float %y) {
 ; CHECK-LABEL: @fma_x_y_0_nsz(
-; CHECK-NEXT:    [[FMA:%.*]] = call nsz float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul nsz float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call nsz float @llvm.fma.f32(float %x, float %y, float 0.0)
@@ -390,7 +390,7 @@ define <8 x half> @fma_x_y_0_v(<8 x half> %x, <8 x half> %y) {
 
 define <8 x half> @fma_x_y_0_nsz_v(<8 x half> %x, <8 x half> %y) {
 ; CHECK-LABEL: @fma_x_y_0_nsz_v(
-; CHECK-NEXT:    [[FMA:%.*]] = call nsz <8 x half> @llvm.fma.v8f16(<8 x half> [[X:%.*]], <8 x half> [[Y:%.*]], <8 x half> zeroinitializer)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul nsz <8 x half> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x half> [[FMA]]
 ;
   %fma = call nsz <8 x half> @llvm.fma.v8f16(<8 x half> %x, <8 x half> %y, <8 x half> zeroinitializer)
@@ -408,7 +408,7 @@ define float @fmuladd_x_y_0(float %x, float %y) {
 
 define float @fmuladd_x_y_0_nsz(float %x, float %y) {
 ; CHECK-LABEL: @fmuladd_x_y_0_nsz(
-; CHECK-NEXT:    [[FMA:%.*]] = call nsz float @llvm.fmuladd.f32(float [[X:%.*]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul nsz float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call nsz float @llvm.fmuladd.f32(float %x, float %y, float 0.0)
@@ -417,7 +417,7 @@ define float @fmuladd_x_y_0_nsz(float %x, float %y) {
 
 define float @fma_x_y_m0(float %x, float %y) {
 ; CHECK-LABEL: @fma_x_y_m0(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float -0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fma.f32(float %x, float %y, float -0.0)
@@ -426,7 +426,7 @@ define float @fma_x_y_m0(float %x, float %y) {
 
 define <8 x half> @fma_x_y_m0_v(<8 x half> %x, <8 x half> %y) {
 ; CHECK-LABEL: @fma_x_y_m0_v(
-; CHECK-NEXT:    [[FMA:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[X:%.*]], <8 x half> [[Y:%.*]], <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul <8 x half> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <8 x half> [[FMA]]
 ;
   %fma = call <8 x half> @llvm.fma.v8f16(<8 x half> %x, <8 x half> %y, <8 x half> <half -0.0, half -0.0, half -0.0, half -0.0, half -0.0, half -0.0, half -0.0, half -0.0>)
@@ -435,7 +435,7 @@ define <8 x half> @fma_x_y_m0_v(<8 x half> %x, <8 x half> %y) {
 
 define float @fmuladd_x_y_m0(float %x, float %y) {
 ; CHECK-LABEL: @fmuladd_x_y_m0(
-; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fmuladd.f32(float [[X:%.*]], float [[Y:%.*]], float -0.000000e+00)
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
   %fma = call float @llvm.fmuladd.f32(float %x, float %y, float -0.0)

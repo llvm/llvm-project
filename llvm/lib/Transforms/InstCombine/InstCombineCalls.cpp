@@ -2379,6 +2379,14 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return FAdd;
     }
 
+    // fma x, y, 0 -> fmul x, y
+    // This is always valid for -0.0, but requires nsz for +0.0 as
+    // -0.0 + 0.0 = 0.0, which would not be the same as the fmul on its own.
+    if (match(II->getArgOperand(2), m_NegZeroFP()) ||
+        (match(II->getArgOperand(2), m_PosZeroFP()) &&
+         II->getFastMathFlags().noSignedZeros()))
+      return BinaryOperator::CreateFMulFMF(Src0, Src1, II);
+
     break;
   }
   case Intrinsic::copysign: {
