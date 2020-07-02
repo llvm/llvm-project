@@ -851,6 +851,10 @@ private:
   void printHashHistogram(const Elf_Hash &HashTable);
   void printGnuHashHistogram(const Elf_GnuHash &GnuHashTable);
 
+  void printHashTableSymbols(const ELFO *Obj, const Elf_Hash &HashTable);
+  void printGnuHashTableSymbols(const ELFO *Obj,
+                                const Elf_GnuHash &GnuHashTable);
+
   struct Field {
     std::string Str;
     unsigned Column;
@@ -4068,78 +4072,62 @@ void GNUStyle<ELFT>::printSymbols(const ELFO *Obj, bool PrintSymbols,
     this->dumper()->printSymbolsHelper(false);
 }
 
-template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
-  if (this->dumper()->getDynamicStringTable().empty())
-    return;
-  auto StringTable = this->dumper()->getDynamicStringTable();
-  Elf_Sym_Range DynSyms = this->dumper()->dynamic_symbols();
-
-  auto PrintHashTable = [&](const Elf_Hash *SysVHash) {
-    if (ELFT::Is64Bits)
-      OS << "  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name";
-    else
-      OS << "  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name";
-    OS << "\n";
-
-    const Elf_Sym *FirstSym = DynSyms.empty() ? nullptr : &DynSyms[0];
-    if (!FirstSym) {
-      Optional<DynRegionInfo> DynSymRegion = this->dumper()->getDynSymRegion();
-      this->reportUniqueWarning(
-          createError(Twine("unable to print symbols for the .hash table: the "
-                            "dynamic symbol table ") +
-                      (DynSymRegion ? "is empty" : "was not found")));
-      return;
-    }
-
-    auto Buckets = SysVHash->buckets();
-    auto Chains = SysVHash->chains();
-    for (uint32_t Buc = 0; Buc < SysVHash->nbucket; Buc++) {
-      if (Buckets[Buc] == ELF::STN_UNDEF)
-        continue;
-      std::vector<bool> Visited(SysVHash->nchain);
-      for (uint32_t Ch = Buckets[Buc]; Ch < SysVHash->nchain; Ch = Chains[Ch]) {
-        if (Ch == ELF::STN_UNDEF)
-          break;
-
-        if (Visited[Ch]) {
-          reportWarning(
-              createError(".hash section is invalid: bucket " + Twine(Ch) +
-                          ": a cycle was detected in the linked chain"),
-              this->FileName);
-          break;
-        }
-
-        printHashedSymbol(Obj, FirstSym, Ch, StringTable, Buc);
-        Visited[Ch] = true;
-      }
-    }
-  };
-
-  if (const Elf_Hash *SysVHash = this->dumper()->getHashTable()) {
-    OS << "\n Symbol table of .hash for image:\n";
-    if (Error E = checkHashTable<ELFT>(Obj, SysVHash))
-      this->reportUniqueWarning(std::move(E));
-    else
-      PrintHashTable(SysVHash);
-  }
-
-  // Try printing the .gnu.hash table.
-  const Elf_GnuHash *GnuHash = this->dumper()->getGnuHashTable();
-  if (!GnuHash)
+template <class ELFT>
+void GNUStyle<ELFT>::printHashTableSymbols(const ELFO *Obj,
+                                           const Elf_Hash &SysVHash) {
+  StringRef StringTable = this->dumper()->getDynamicStringTable();
+  if (StringTable.empty())
     return;
 
-  OS << "\n Symbol table of .gnu.hash for image:\n";
   if (ELFT::Is64Bits)
     OS << "  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name";
   else
     OS << "  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name";
   OS << "\n";
 
-  if (Error E = checkGNUHashTable<ELFT>(Obj, GnuHash)) {
-    this->reportUniqueWarning(std::move(E));
+  Elf_Sym_Range DynSyms = this->dumper()->dynamic_symbols();
+  const Elf_Sym *FirstSym = DynSyms.empty() ? nullptr : &DynSyms[0];
+  if (!FirstSym) {
+    Optional<DynRegionInfo> DynSymRegion = this->dumper()->getDynSymRegion();
+    this->reportUniqueWarning(
+        createError(Twine("unable to print symbols for the .hash table: the "
+                          "dynamic symbol table ") +
+                    (DynSymRegion ? "is empty" : "was not found")));
     return;
   }
 
+  auto Buckets = SysVHash.buckets();
+  auto Chains = SysVHash.chains();
+  for (uint32_t Buc = 0; Buc < SysVHash.nbucket; Buc++) {
+    if (Buckets[Buc] == ELF::STN_UNDEF)
+      continue;
+    std::vector<bool> Visited(SysVHash.nchain);
+    for (uint32_t Ch = Buckets[Buc]; Ch < SysVHash.nchain; Ch = Chains[Ch]) {
+      if (Ch == ELF::STN_UNDEF)
+        break;
+
+      if (Visited[Ch]) {
+        reportWarning(createError(".hash section is invalid: bucket " +
+                                  Twine(Ch) +
+                                  ": a cycle was detected in the linked chain"),
+                      this->FileName);
+        break;
+      }
+
+      printHashedSymbol(Obj, FirstSym, Ch, StringTable, Buc);
+      Visited[Ch] = true;
+    }
+  }
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printGnuHashTableSymbols(const ELFO *Obj,
+                                              const Elf_GnuHash &GnuHash) {
+  StringRef StringTable = this->dumper()->getDynamicStringTable();
+  if (StringTable.empty())
+    return;
+
+  Elf_Sym_Range DynSyms = this->dumper()->dynamic_symbols();
   const Elf_Sym *FirstSym = DynSyms.empty() ? nullptr : &DynSyms[0];
   if (!FirstSym) {
     Optional<DynRegionInfo> DynSymRegion = this->dumper()->getDynSymRegion();
@@ -4150,19 +4138,44 @@ template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
     return;
   }
 
-  auto Buckets = GnuHash->buckets();
-  for (uint32_t Buc = 0; Buc < GnuHash->nbuckets; Buc++) {
+  ArrayRef<Elf_Word> Buckets = GnuHash.buckets();
+  for (uint32_t Buc = 0; Buc < GnuHash.nbuckets; Buc++) {
     if (Buckets[Buc] == ELF::STN_UNDEF)
       continue;
     uint32_t Index = Buckets[Buc];
-    uint32_t GnuHashable = Index - GnuHash->symndx;
+    uint32_t GnuHashable = Index - GnuHash.symndx;
     // Print whole chain
     while (true) {
       printHashedSymbol(Obj, FirstSym, Index++, StringTable, Buc);
       // Chain ends at symbol with stopper bit
-      if ((GnuHash->values(DynSyms.size())[GnuHashable++] & 1) == 1)
+      if ((GnuHash.values(DynSyms.size())[GnuHashable++] & 1) == 1)
         break;
     }
+  }
+}
+
+template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
+  if (const Elf_Hash *SysVHash = this->dumper()->getHashTable()) {
+    OS << "\n Symbol table of .hash for image:\n";
+    if (Error E = checkHashTable<ELFT>(Obj, SysVHash))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printHashTableSymbols(Obj, *SysVHash);
+  }
+
+  // Try printing the .gnu.hash table.
+  if (const Elf_GnuHash *GnuHash = this->dumper()->getGnuHashTable()) {
+    OS << "\n Symbol table of .gnu.hash for image:\n";
+    if (ELFT::Is64Bits)
+      OS << "  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name";
+    else
+      OS << "  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name";
+    OS << "\n";
+
+    if (Error E = checkGNUHashTable<ELFT>(Obj, GnuHash))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printGnuHashTableSymbols(Obj, *GnuHash);
   }
 }
 
