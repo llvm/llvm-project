@@ -54,6 +54,10 @@ std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
   if (StringRef(Guard).startswith("clang"))
     Guard = "LLVM_" + Guard;
 
+  // The prevalent style in flang is FORTRAN_FOO_BAR_H
+  if (StringRef(Guard).startswith("flang"))
+    Guard = "FORTRAN" + Guard.substr(sizeof("flang") - 1);
+
   return StringRef(Guard).upper();
 }
 
