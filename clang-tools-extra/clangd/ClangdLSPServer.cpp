@@ -879,7 +879,8 @@ void ClangdLSPServer::onDocumentOnTypeFormatting(
         "onDocumentOnTypeFormatting called for non-added file",
         ErrorCode::InvalidParams));
 
-  Reply(Server->formatOnType(Code->Contents, File, Params.position, Params.ch));
+  Server->formatOnType(File, Code->Contents, Params.position, Params.ch,
+                       std::move(Reply));
 }
 
 void ClangdLSPServer::onDocumentRangeFormatting(
@@ -892,12 +893,15 @@ void ClangdLSPServer::onDocumentRangeFormatting(
         "onDocumentRangeFormatting called for non-added file",
         ErrorCode::InvalidParams));
 
-  auto ReplacementsOrError =
-      Server->formatRange(Code->Contents, File, Params.range);
-  if (ReplacementsOrError)
-    Reply(replacementsToEdits(Code->Contents, ReplacementsOrError.get()));
-  else
-    Reply(ReplacementsOrError.takeError());
+  Server->formatRange(
+      File, Code->Contents, Params.range,
+      [Code = Code->Contents, Reply = std::move(Reply)](
+          llvm::Expected<tooling::Replacements> Result) mutable {
+        if (Result)
+          Reply(replacementsToEdits(Code, Result.get()));
+        else
+          Reply(Result.takeError());
+      });
 }
 
 void ClangdLSPServer::onDocumentFormatting(
@@ -910,11 +914,14 @@ void ClangdLSPServer::onDocumentFormatting(
         "onDocumentFormatting called for non-added file",
         ErrorCode::InvalidParams));
 
-  auto ReplacementsOrError = Server->formatFile(Code->Contents, File);
-  if (ReplacementsOrError)
-    Reply(replacementsToEdits(Code->Contents, ReplacementsOrError.get()));
-  else
-    Reply(ReplacementsOrError.takeError());
+  Server->formatFile(File, Code->Contents,
+                     [Code = Code->Contents, Reply = std::move(Reply)](
+                         llvm::Expected<tooling::Replacements> Result) mutable {
+                       if (Result)
+                         Reply(replacementsToEdits(Code, Result.get()));
+                       else
+                         Reply(Result.takeError());
+                     });
 }
 
 /// The functions constructs a flattened view of the DocumentSymbol hierarchy.
