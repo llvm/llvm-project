@@ -267,8 +267,7 @@ protected:
   llvm::APInt m_integer;
   llvm::APFloat m_float;
 
-  template <typename T> T GetAsSigned(T fail_value) const;
-  template <typename T> T GetAsUnsigned(T fail_value) const;
+  template <typename T> T GetAs(T fail_value) const;
 
 private:
   friend const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
