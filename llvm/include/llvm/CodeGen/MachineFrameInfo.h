@@ -785,7 +785,9 @@ public:
   /// created, whether or not the index returned is actually used.
   int CreateVariableSizedObject(Align Alignment, const AllocaInst *Alloca);
   /// FIXME: Remove this function when transition to Align is over.
-  int CreateVariableSizedObject(unsigned Alignment, const AllocaInst *Alloca) {
+  LLVM_ATTRIBUTE_DEPRECATED(int CreateVariableSizedObject(
+                                unsigned Alignment, const AllocaInst *Alloca),
+                            "Use the version that takes an Align instead") {
     return CreateVariableSizedObject(assumeAligned(Alignment), Alloca);
   }
 
