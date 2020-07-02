@@ -792,6 +792,16 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
   if (::futimes(FD, Times))
     return std::error_code(errno, std::generic_category());
   return std::error_code();
+#elif defined(__MVS__)
+  attrib_t Attr;
+  memset(&Attr, 0, sizeof(Attr));
+  Attr.att_atimechg = 1;
+  Attr.att_atime = sys::toTimeT(AccessTime);
+  Attr.att_mtimechg = 1;
+  Attr.att_mtime = sys::toTimeT(ModificationTime);
+  if (::__fchattr(FD, &Attr, sizeof(Attr)) != 0)
+    return std::error_code(errno, std::generic_category());
+  return std::error_code();
 #else
 #warning Missing futimes() and futimens()
   return make_error_code(errc::function_not_supported);
