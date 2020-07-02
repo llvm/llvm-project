@@ -344,38 +344,6 @@ class Configuration(object):
             self.cxx.compile_flags += shlex.split(additional_flags)
 
     def configure_default_compile_flags(self):
-        # Try and get the std version from the command line. Fall back to
-        # default given in lit.site.cfg is not present. If default is not
-        # present then force c++11.
-        std = self.get_lit_conf('std')
-        if not std:
-            # Choose the newest possible language dialect if none is given.
-            possible_stds = ['c++2a', 'c++17', 'c++1z', 'c++14', 'c++11',
-                             'c++03']
-            if self.cxx.type == 'gcc':
-                maj_v, _, _ = self.cxx.version
-                maj_v = int(maj_v)
-                if maj_v < 7:
-                    possible_stds.remove('c++1z')
-                    possible_stds.remove('c++17')
-                # FIXME: How many C++14 tests actually fail under GCC 5 and 6?
-                # Should we XFAIL them individually instead?
-                if maj_v <= 6:
-                    possible_stds.remove('c++14')
-            for s in possible_stds:
-                if self.cxx.hasCompileFlag('-std=%s' % s):
-                    std = s
-                    self.lit_config.note(
-                        'inferred language dialect as: %s' % std)
-                    break
-            if not std:
-                self.lit_config.fatal(
-                    'Failed to infer a supported language dialect from one of %r'
-                    % possible_stds)
-        self.cxx.compile_flags += ['-std={0}'.format(std)]
-        std_feature = std.replace('gnu++', 'c++')
-        std_feature = std.replace('1z', '17')
-        self.config.available_features.add(std_feature)
         # Configure include paths
         self.configure_compile_flags_header_includes()
         self.target_info.add_cxx_compile_flags(self.cxx.compile_flags)
