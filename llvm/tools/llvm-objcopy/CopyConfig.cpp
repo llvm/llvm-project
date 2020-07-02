@@ -904,6 +904,9 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
     Config.RPathsToUpdate.emplace_back(Old, New);
   }
 
+  if (auto *Arg = InputArgs.getLastArg(INSTALL_NAME_TOOL_id))
+    Config.SharedLibId = Arg->getValue();
+
   SmallVector<StringRef, 2> Positional;
   for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_UNKNOWN))
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
