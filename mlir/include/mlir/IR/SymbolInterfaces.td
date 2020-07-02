@@ -33,7 +33,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       "StringRef", "getName", (ins), [{
         // Don't rely on the trait implementation as optional symbol operations
         // may override this.
-        return mlir::SymbolTable::getSymbolName(op);
+        return mlir::SymbolTable::getSymbolName($_op);
       }], /*defaultImplementation=*/[{
         return mlir::SymbolTable::getSymbolName(this->getOperation());
       }]

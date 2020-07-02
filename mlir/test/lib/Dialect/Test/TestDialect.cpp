@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/PatternMatch.h"
@@ -135,7 +137,19 @@ TestDialect::TestDialect(MLIRContext *context)
       >();
   addInterfaces<TestOpAsmInterface, TestOpFolderDialectInterface,
                 TestInlinerInterface>();
+  addTypes<TestType>();
   allowUnknownOperations();
+}
+
+Type TestDialect::parseType(DialectAsmParser &parser) const {
+  if (failed(parser.parseKeyword("test_type")))
+    return Type();
+  return TestType::get(getContext());
+}
+
+void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
+  assert(type.isa<TestType>() && "unexpected type");
+  printer << "test_type";
 }
 
 LogicalResult TestDialect::verifyOperationAttribute(Operation *op,
@@ -598,6 +612,7 @@ static mlir::DialectRegistration<mlir::TestDialect> testDialect;
 
 #include "TestOpEnums.cpp.inc"
 #include "TestOpStructs.cpp.inc"
+#include "TestTypeInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "TestOps.cpp.inc"
