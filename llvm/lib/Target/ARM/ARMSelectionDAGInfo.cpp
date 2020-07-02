@@ -248,8 +248,8 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemmove(
 
 SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, unsigned Align, bool isVolatile,
+    SDValue Size, Align Alignment, bool isVolatile,
     MachinePointerInfo DstPtrInfo) const {
-  return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size, Align,
-                                RTLIB::MEMSET);
+  return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
+                                Alignment.value(), RTLIB::MEMSET);
 }
