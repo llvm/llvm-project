@@ -1166,9 +1166,7 @@ public:
   /// Dumps the specified AST fragment and all subtrees to
   /// \c llvm::errs().
   void dump() const;
-  void dump(SourceManager &SM) const;
-  void dump(raw_ostream &OS, SourceManager &SM) const;
-  void dump(raw_ostream &OS) const;
+  void dump(raw_ostream &OS, const ASTContext &Context) const;
 
   /// \return Unique reproducible object identifier
   int64_t getID(const ASTContext &Context) const;

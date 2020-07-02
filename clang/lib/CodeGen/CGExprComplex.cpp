@@ -98,7 +98,7 @@ public:
   }
 
   ComplexPairTy VisitStmt(Stmt *S) {
-    S->dump(CGF.getContext().getSourceManager());
+    S->dump(llvm::errs(), CGF.getContext());
     llvm_unreachable("Stmt can't have complex result type!");
   }
   ComplexPairTy VisitExpr(Expr *S);

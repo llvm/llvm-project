@@ -378,11 +378,6 @@ void APValue::swap(APValue &RHS) {
   memcpy(RHS.Data.buffer, TmpData, DataSize);
 }
 
-LLVM_DUMP_METHOD void APValue::dump() const {
-  dump(llvm::errs());
-  llvm::errs() << '\n';
-}
-
 static double GetApproxValue(const llvm::APFloat &F) {
   llvm::APFloat V = F;
   bool ignored;
@@ -391,7 +386,13 @@ static double GetApproxValue(const llvm::APFloat &F) {
   return V.convertToDouble();
 }
 
-void APValue::dump(raw_ostream &OS) const {
+LLVM_DUMP_METHOD void APValue::dump() const {
+  dump(llvm::errs(), /*Context=*/nullptr);
+  llvm::errs() << '\n';
+}
+
+LLVM_DUMP_METHOD void APValue::dump(raw_ostream &OS,
+                                    const ASTContext *Context) const {
   switch (getKind()) {
   case None:
     OS << "None";
@@ -410,10 +411,10 @@ void APValue::dump(raw_ostream &OS) const {
     return;
   case Vector:
     OS << "Vector: ";
-    getVectorElt(0).dump(OS);
+    getVectorElt(0).dump(OS, Context);
     for (unsigned i = 1; i != getVectorLength(); ++i) {
       OS << ", ";
-      getVectorElt(i).dump(OS);
+      getVectorElt(i).dump(OS, Context);
     }
     return;
   case ComplexInt:
@@ -429,36 +430,37 @@ void APValue::dump(raw_ostream &OS) const {
   case Array:
     OS << "Array: ";
     for (unsigned I = 0, N = getArrayInitializedElts(); I != N; ++I) {
-      getArrayInitializedElt(I).dump(OS);
-      if (I != getArraySize() - 1) OS << ", ";
+      getArrayInitializedElt(I).dump(OS, Context);
+      if (I != getArraySize() - 1)
+        OS << ", ";
     }
     if (hasArrayFiller()) {
       OS << getArraySize() - getArrayInitializedElts() << " x ";
-      getArrayFiller().dump(OS);
+      getArrayFiller().dump(OS, Context);
     }
     return;
   case Struct:
     OS << "Struct ";
     if (unsigned N = getStructNumBases()) {
       OS << " bases: ";
-      getStructBase(0).dump(OS);
+      getStructBase(0).dump(OS, Context);
       for (unsigned I = 1; I != N; ++I) {
         OS << ", ";
-        getStructBase(I).dump(OS);
+        getStructBase(I).dump(OS, Context);
       }
     }
     if (unsigned N = getStructNumFields()) {
       OS << " fields: ";
-      getStructField(0).dump(OS);
+      getStructField(0).dump(OS, Context);
       for (unsigned I = 1; I != N; ++I) {
         OS << ", ";
-        getStructField(I).dump(OS);
+        getStructField(I).dump(OS, Context);
       }
     }
     return;
   case Union:
     OS << "Union: ";
-    getUnionValue().dump(OS);
+    getUnionValue().dump(OS, Context);
     return;
   case MemberPointer:
     OS << "MemberPointer: <todo>";
