@@ -4844,10 +4844,7 @@ bool Sema::CheckTemplateTypeArgument(TemplateTypeParmDecl *Param,
     CXXScopeSpec SS;
     DeclarationNameInfo NameInfo;
 
-    if (DeclRefExpr *ArgExpr = dyn_cast<DeclRefExpr>(Arg.getAsExpr())) {
-      SS.Adopt(ArgExpr->getQualifierLoc());
-      NameInfo = ArgExpr->getNameInfo();
-    } else if (DependentScopeDeclRefExpr *ArgExpr =
+   if (DependentScopeDeclRefExpr *ArgExpr =
                dyn_cast<DependentScopeDeclRefExpr>(Arg.getAsExpr())) {
       SS.Adopt(ArgExpr->getQualifierLoc());
       NameInfo = ArgExpr->getNameInfo();
@@ -4866,6 +4863,7 @@ bool Sema::CheckTemplateTypeArgument(TemplateTypeParmDecl *Param,
       if (Result.getAsSingle<TypeDecl>() ||
           Result.getResultKind() ==
               LookupResult::NotFoundInCurrentInstantiation) {
+        assert(SS.getScopeRep() && "dependent scope expr must has a scope!");
         // Suggest that the user add 'typename' before the NNS.
         SourceLocation Loc = AL.getSourceRange().getBegin();
         Diag(Loc, getLangOpts().MSVCCompat
