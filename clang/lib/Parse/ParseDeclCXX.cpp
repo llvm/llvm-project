@@ -2713,6 +2713,11 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
           DefinitionKind = FDK_Defaulted;
         else if (KW.is(tok::kw_delete))
           DefinitionKind = FDK_Deleted;
+        else if (KW.is(tok::code_completion)) {
+          Actions.CodeCompleteAfterFunctionEquals(DeclaratorInfo);
+          cutOffParsing();
+          return nullptr;
+        }
       }
     }
     DeclaratorInfo.setFunctionDefinitionKind(DefinitionKind);
