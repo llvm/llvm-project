@@ -71,14 +71,14 @@ namespace {
     const char *ES;
     MCSymbol *MCSym;
     int JT;
-    unsigned Align;    // CP alignment.
+    Align Alignment;            // CP alignment.
     unsigned char SymbolFlags;  // X86II::MO_*
     bool NegateIndex = false;
 
     X86ISelAddressMode()
         : BaseType(RegBase), Base_FrameIndex(0), Scale(1), IndexReg(), Disp(0),
           Segment(), GV(nullptr), CP(nullptr), BlockAddr(nullptr), ES(nullptr),
-          MCSym(nullptr), JT(-1), Align(0), SymbolFlags(X86II::MO_NO_FLAG) {}
+          MCSym(nullptr), JT(-1), SymbolFlags(X86II::MO_NO_FLAG) {}
 
     bool hasSymbolicDisplacement() const {
       return GV != nullptr || CP != nullptr || ES != nullptr ||
@@ -144,7 +144,7 @@ namespace {
         dbgs() << MCSym;
       else
         dbgs() << "nul";
-      dbgs() << " JT" << JT << " Align" << Align << '\n';
+      dbgs() << " JT" << JT << " Align" << Alignment.value() << '\n';
     }
 #endif
   };
@@ -296,7 +296,7 @@ namespace {
                                               MVT::i32, AM.Disp,
                                               AM.SymbolFlags);
       else if (AM.CP)
-        Disp = CurDAG->getTargetConstantPool(AM.CP, MVT::i32, Align(AM.Align),
+        Disp = CurDAG->getTargetConstantPool(AM.CP, MVT::i32, AM.Alignment,
                                              AM.Disp, AM.SymbolFlags);
       else if (AM.ES) {
         assert(!AM.Disp && "Non-zero displacement is ignored with ES.");
@@ -1622,7 +1622,7 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
     Offset = G->getOffset();
   } else if (ConstantPoolSDNode *CP = dyn_cast<ConstantPoolSDNode>(N0)) {
     AM.CP = CP->getConstVal();
-    AM.Align = CP->getAlign().value();
+    AM.Alignment = CP->getAlign();
     AM.SymbolFlags = CP->getTargetFlags();
     Offset = CP->getOffset();
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(N0)) {
