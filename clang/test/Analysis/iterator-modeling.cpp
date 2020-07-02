@@ -18,6 +18,7 @@ template <typename Container>
 long clang_analyzer_container_end(const Container&);
 template <typename Iterator>
 long clang_analyzer_iterator_position(const Iterator&);
+long clang_analyzer_iterator_position(int*);
 template <typename Iterator>
 void* clang_analyzer_iterator_container(const Iterator&);
 template <typename Iterator>
@@ -1862,6 +1863,113 @@ void non_std_find(std::vector<int> &V, int e) {
     clang_analyzer_eval(clang_analyzer_container_end(V) ==
                         clang_analyzer_iterator_position(first)); // expected-warning@-1{{FALSE}}
   }
+}
+
+template<typename T>
+struct cont_with_ptr_iterator {
+  typedef T* iterator;
+  T* begin() const;
+  T* end() const;
+};
+
+void begin_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.begin();
+
+  clang_analyzer_eval(clang_analyzer_iterator_container(i) == &c); // expected-warning{{TRUE}}
+  clang_analyzer_denote(clang_analyzer_container_begin(c), "$c.begin()");
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.begin()}}
+
+  if (i != c.begin()) {
+    clang_analyzer_warnIfReached();
+  }
+  }
+
+void prefix_increment_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(c), "$c.begin()");
+
+  auto j = ++i;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning{{$c.begin() + 1}}
+}
+
+void prefix_decrement_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(c), "$c.end()");
+
+  auto j = --i;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.end() - 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning{{$c.end() - 1}}
+}
+
+void postfix_increment_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(c), "$c.begin()");
+
+  auto j = i++;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning{{$c.begin()}}
+}
+
+void postfix_decrement_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(c), "$c.end()");
+
+  auto j = i--;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.end() - 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning{{$c.end()}}
+}
+
+void plus_equal_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(c), "$c.begin()");
+
+  i += 2;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.begin() + 2}}
+}
+
+void minus_equal_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(c), "$c.end()");
+
+  i -= 2;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.end() - 2}}
+}
+
+void plus_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i1 = c.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(c), "$c.begin()");
+
+  auto i2 = i1 + 2;
+
+  clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &c); // expected-warning{{TRUE}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$c.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$c.begin() + 2}}
+}
+
+void minus_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i1 = c.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(c), "$c.end()");
+
+  auto i2 = i1 - 2;
+
+  clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &c); // expected-warning{{TRUE}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$c.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$c.end() - 2}}
 }
 
 void clang_analyzer_printState();

@@ -115,9 +115,12 @@ class IteratorSymbolMap {};
 class IteratorRegionMap {};
 class ContainerMap {};
 
-using IteratorSymbolMapTy = CLANG_ENTO_PROGRAMSTATE_MAP(SymbolRef, IteratorPosition);
-using IteratorRegionMapTy = CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *, IteratorPosition);
-using ContainerMapTy = CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *, ContainerData);
+using IteratorSymbolMapTy =
+  CLANG_ENTO_PROGRAMSTATE_MAP(SymbolRef, IteratorPosition);
+using IteratorRegionMapTy =
+  CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *, IteratorPosition);
+using ContainerMapTy =
+  CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *, ContainerData);
 
 } // namespace iterator
 
@@ -149,10 +152,17 @@ bool isEraseCall(const FunctionDecl *Func);
 bool isEraseAfterCall(const FunctionDecl *Func);
 bool isEmplaceCall(const FunctionDecl *Func);
 bool isAccessOperator(OverloadedOperatorKind OK);
+bool isAccessOperator(UnaryOperatorKind OK);
+bool isAccessOperator(BinaryOperatorKind OK);
 bool isDereferenceOperator(OverloadedOperatorKind OK);
+bool isDereferenceOperator(UnaryOperatorKind OK);
+bool isDereferenceOperator(BinaryOperatorKind OK);
 bool isIncrementOperator(OverloadedOperatorKind OK);
+bool isIncrementOperator(UnaryOperatorKind OK);
 bool isDecrementOperator(OverloadedOperatorKind OK);
+bool isDecrementOperator(UnaryOperatorKind OK);
 bool isRandomIncrOrDecrOperator(OverloadedOperatorKind OK);
+bool isRandomIncrOrDecrOperator(BinaryOperatorKind OK);
 const ContainerData *getContainerData(ProgramStateRef State,
                                       const MemRegion *Cont);
 const IteratorPosition *getIteratorPosition(ProgramStateRef State,
