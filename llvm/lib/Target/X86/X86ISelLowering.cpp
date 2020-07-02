@@ -17487,8 +17487,17 @@ static SDValue lower512BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                   Subtarget, DAG))
     return Broadcast;
 
-  if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.hasBWI())
+  if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.hasBWI()) {
+    // Try using bit ops for masking and blending before falling back to
+    // splitting.
+    if (SDValue V = lowerShuffleAsBitMask(DL, VT, V1, V2, Mask, Zeroable,
+                                          Subtarget, DAG))
+      return V;
+    if (SDValue V = lowerShuffleAsBitBlend(DL, VT, V1, V2, Mask, DAG))
+      return V;
+
     return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
+  }
 
   // Dispatch to each element type for lowering. If we don't have support for
   // specific element type shuffles at 512 bits, immediately split them and

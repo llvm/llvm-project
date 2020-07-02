@@ -3,29 +3,10 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,X64
 
 define <16 x float> @PR45443() {
-; X86-LABEL: PR45443:
-; X86:       # %bb.0: # %bb
-; X86-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080]
-; X86-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm0
-; X86-NEXT:    vpcmpltud {{\.LCPI.*}}{1to16}, %zmm1, %k1
-; X86-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215]
-; X86-NEXT:    vpand %ymm2, %ymm1, %ymm1
-; X86-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
-; X86-NEXT:    vptestmd %zmm1, %zmm1, %k1 {%k1}
-; X86-NEXT:    vbroadcastss {{\.LCPI.*}}, %zmm0 {%k1}
-; X86-NEXT:    retl
-;
-; X64-LABEL: PR45443:
-; X64:       # %bb.0: # %bb
-; X64-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080]
-; X64-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm0
-; X64-NEXT:    vpcmpltud {{.*}}(%rip){1to16}, %zmm1, %k1
-; X64-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215]
-; X64-NEXT:    vpand %ymm2, %ymm1, %ymm1
-; X64-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
-; X64-NEXT:    vptestmd %zmm1, %zmm1, %k1 {%k1}
-; X64-NEXT:    vbroadcastss {{.*}}(%rip), %zmm0 {%k1}
-; X64-NEXT:    retq
+; CHECK-LABEL: PR45443:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
 bb:
   %tmp = tail call <16 x i32> @llvm.x86.avx512.psll.d.512(<16 x i32> <i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040>, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>)
   %tmp4 = tail call fast <16 x float> @llvm.fma.v16f32(<16 x float> undef, <16 x float> <float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000>, <16 x float> undef)

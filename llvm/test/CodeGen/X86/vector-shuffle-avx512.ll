@@ -313,11 +313,8 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ; KNL-LABEL: test_mm512_mask_blend_epi8:
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm3
-; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm4
-; KNL-NEXT:    vpblendvb %ymm2, %ymm3, %ymm4, %ymm3
-; KNL-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; KNL-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm0
+; KNL-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
+; KNL-NEXT:    vpternlogq $216, %zmm2, %zmm1, %zmm0
 ; KNL-NEXT:    ret{{[l|q]}}
 ;
 ; SKX32-LABEL: test_mm512_mask_blend_epi8:
@@ -342,11 +339,8 @@ define <32 x i16> @test_mm512_mask_blend_epi16(<32 x i16> %A, <32 x i16> %W){
 ;
 ; KNL-LABEL: test_mm512_mask_blend_epi16:
 ; KNL:       # %bb.0: # %entry
-; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm3
-; KNL-NEXT:    vpblendw {{.*#+}} ymm2 = ymm3[0],ymm2[1],ymm3[2],ymm2[3],ymm3[4],ymm2[5],ymm3[6],ymm2[7],ymm3[8],ymm2[9],ymm3[10],ymm2[11],ymm3[12],ymm2[13],ymm3[14],ymm2[15]
-; KNL-NEXT:    vpblendw {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7],ymm1[8],ymm0[9],ymm1[10],ymm0[11],ymm1[12],ymm0[13],ymm1[14],ymm0[15]
-; KNL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; KNL-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535]
+; KNL-NEXT:    vpternlogq $216, %zmm2, %zmm1, %zmm0
 ; KNL-NEXT:    ret{{[l|q]}}
 entry:
   %0 = shufflevector <32 x i16> %A, <32 x i16> %W, <32 x i32>  <i32 32, i32 1, i32 34, i32 3, i32 36, i32 5, i32 38, i32 7, i32 40, i32 9, i32 42, i32 11, i32 44, i32 13, i32 46, i32 15, i32 48, i32 17, i32 50, i32 19, i32 52, i32 21, i32 54, i32 23, i32 56, i32 25, i32 58, i32 27, i32 60, i32 29, i32 62, i32 31>
