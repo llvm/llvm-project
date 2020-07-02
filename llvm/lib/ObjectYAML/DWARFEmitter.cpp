@@ -111,6 +111,10 @@ Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
     encodeULEB128(0, OS);
   }
 
+  // The abbreviations for a given compilation unit end with an entry consisting
+  // of a 0 byte for the abbreviation code.
+  OS.write_zeros(1);
+
   return Error::success();
 }
 
