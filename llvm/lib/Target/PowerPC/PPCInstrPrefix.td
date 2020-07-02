@@ -738,11 +738,19 @@ let Predicates = [IsISA3_1] in {
   def VSLDBI : VNForm_VTAB5_SD3<22, 0, (outs vrrc:$VRT),
                                 (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SH),
                                 "vsldbi $VRT, $VRA, $VRB, $SH",
-                                IIC_VecGeneral, []>;
+                                IIC_VecGeneral, 
+                                [(set v16i8:$VRT,
+                                      (int_ppc_altivec_vsldbi v16i8:$VRA,
+                                                              v16i8:$VRB,
+                                                              i32:$SH))]>;
   def VSRDBI : VNForm_VTAB5_SD3<22, 1, (outs vrrc:$VRT),
                                 (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SH),
                                 "vsrdbi $VRT, $VRA, $VRB, $SH",
-                                IIC_VecGeneral, []>;
+                                IIC_VecGeneral,
+                                [(set v16i8:$VRT,
+                                      (int_ppc_altivec_vsrdbi v16i8:$VRA,
+                                                              v16i8:$VRB, 
+                                                              i32:$SH))]>;
    def VPDEPD : VXForm_1<1485, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vpdepd $vD, $vA, $vB", IIC_VecGeneral,
                          [(set v2i64:$vD,

@@ -316,6 +316,10 @@ BUILTIN(__builtin_altivec_vclrrb, "V16cV16cUi", "")
 BUILTIN(__builtin_altivec_vclzdm, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vctzdm, "V2ULLiV2ULLiV2ULLi", "")
 
+// P10 Vector Shift built-ins.
+BUILTIN(__builtin_altivec_vsldbi, "V16UcV16UcV16UcIi", "")
+BUILTIN(__builtin_altivec_vsrdbi, "V16UcV16UcV16UcIi", "")
+
 // VSX built-ins.
 
 BUILTIN(__builtin_vsx_lxvd2x, "V2divC*", "")
