@@ -396,7 +396,14 @@ void DwarfCompileUnit::attachLowHighPC(DIE &D, const MCSymbol *Begin,
 DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
   DIE *SPDie = getOrCreateSubprogramDIE(SP, includeMinimalInlineScopes());
 
-  attachLowHighPC(*SPDie, Asm->getFunctionBegin(), Asm->getFunctionEnd());
+  SmallVector<RangeSpan, 2> BB_List;
+  // If basic block sections are on, ranges for each basic block section has
+  // to be emitted separately.
+  for (const auto &R : Asm->MBBSectionRanges)
+    BB_List.push_back({R.second.BeginLabel, R.second.EndLabel});
+
+  attachRangesOrLowHighPC(*SPDie, BB_List);
+
   if (DD->useAppleExtensionAttributes() &&
       !DD->getCurrentFunction()->getTarget().Options.DisableFramePointerElim(
           *DD->getCurrentFunction()))
@@ -570,9 +577,33 @@ void DwarfCompileUnit::attachRangesOrLowHighPC(
     DIE &Die, const SmallVectorImpl<InsnRange> &Ranges) {
   SmallVector<RangeSpan, 2> List;
   List.reserve(Ranges.size());
-  for (const InsnRange &R : Ranges)
-    List.push_back(
-        {DD->getLabelBeforeInsn(R.first), DD->getLabelAfterInsn(R.second)});
+  for (const InsnRange &R : Ranges) {
+    auto *BeginLabel = DD->getLabelBeforeInsn(R.first);
+    auto *EndLabel = DD->getLabelAfterInsn(R.second);
+
+    const auto *BeginMBB = R.first->getParent();
+    const auto *EndMBB = R.second->getParent();
+
+    const auto *MBB = BeginMBB;
+    // Basic block sections allows basic block subsets to be placed in unique
+    // sections. For each section, the begin and end label must be added to the
+    // list. If there is more than one range, debug ranges must be used.
+    // Otherwise, low/high PC can be used.
+    // FIXME: Debug Info Emission depends on block order and this assumes that
+    // the order of blocks will be frozen beyond this point.
+    do {
+      if (MBB->sameSection(EndMBB) || MBB->isEndSection()) {
+        auto MBBSectionRange = Asm->MBBSectionRanges[MBB->getSectionIDNum()];
+        List.push_back(
+            {MBB->sameSection(BeginMBB) ? BeginLabel
+                                        : MBBSectionRange.BeginLabel,
+             MBB->sameSection(EndMBB) ? EndLabel : MBBSectionRange.EndLabel});
+      }
+      if (MBB->sameSection(EndMBB))
+        break;
+      MBB = MBB->getNextNode();
+    } while (true);
+  }
   attachRangesOrLowHighPC(Die, std::move(List));
 }
 
