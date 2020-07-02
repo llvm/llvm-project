@@ -263,16 +263,16 @@ Value getConvOpInput(ConvOp convOp, StdIndexedValue im,
       continue;
     }
 
-    using edsc::op::operator<;
-    using edsc::op::operator>=;
+    using edsc::op::sge;
+    using edsc::op::slt;
     using edsc::op::operator||;
-    Value leftOutOfBound = dim < zeroIndex;
+    Value leftOutOfBound = slt(dim, zeroIndex);
     if (conds.empty())
       conds.push_back(leftOutOfBound);
     else
       conds.push_back(conds.back() || leftOutOfBound);
     Value rightBound = std_dim(convOp.input(), idx);
-    conds.push_back(conds.back() || (dim >= rightBound));
+    conds.push_back(conds.back() || (sge(dim, rightBound)));
 
     // When padding is involved, the indices will only be shifted to negative,
     // so having a max op is enough.
@@ -337,8 +337,8 @@ void emitScalarImplementation(ArrayRef<Value> allIvs, PoolingMaxOp op) {
   // Emit scalar form.
   Value lhs = std_load(op.output(), indices.outputs);
   Value rhs = std_load(op.input(), indices.inputs);
-  using edsc::op::operator>;
-  Value maxValue = std_select(lhs > rhs, lhs, rhs);
+  using edsc::op::sgt;
+  Value maxValue = std_select(sgt(lhs, rhs), lhs, rhs);
   std_store(maxValue, op.output(), indices.outputs);
 }
 template <typename IndexedValueType>
@@ -347,8 +347,8 @@ void emitScalarImplementation(ArrayRef<Value> allIvs, PoolingMinOp op) {
   // Emit scalar form.
   Value lhs = std_load(op.output(), indices.outputs);
   Value rhs = std_load(op.input(), indices.inputs);
-  using edsc::op::operator<;
-  Value minValue = std_select(lhs < rhs, lhs, rhs);
+  using edsc::op::slt;
+  Value minValue = std_select(slt(lhs, rhs), lhs, rhs);
   std_store(minValue, op.output(), indices.outputs);
 }
 template <typename IndexedValueType>
