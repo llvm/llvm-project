@@ -10,6 +10,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Regex.h"
 #include <string>
 
 static llvm::Optional<std::string>
@@ -109,4 +110,63 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
                           "UETT_");
   return llvm::None;
+}
+
+static constexpr std::pair<llvm::StringRef, llvm::Regex::RegexFlags>
+    RegexMap[] = {
+        {"NoFlags", llvm::Regex::RegexFlags::NoFlags},
+        {"IgnoreCase", llvm::Regex::RegexFlags::IgnoreCase},
+        {"Newline", llvm::Regex::RegexFlags::Newline},
+        {"BasicRegex", llvm::Regex::RegexFlags::BasicRegex},
+};
+
+llvm::Optional<llvm::Regex::RegexFlags> getRegexFlag(llvm::StringRef Flag) {
+  for (const auto &StringFlag : RegexMap) {
+    if (Flag == StringFlag.first)
+      return StringFlag.second;
+  }
+  return llvm::None;
+}
+
+llvm::Optional<llvm::StringRef> getCloseRegexMatch(llvm::StringRef Flag) {
+  for (const auto &StringFlag : RegexMap) {
+    if (Flag.edit_distance(StringFlag.first) < 3)
+      return StringFlag.first;
+  }
+  return llvm::None;
+}
+
+llvm::Optional<llvm::Regex::RegexFlags>
+clang::ast_matchers::dynamic::internal::ArgTypeTraits<
+    llvm::Regex::RegexFlags>::getFlags(llvm::StringRef Flags) {
+  llvm::Optional<llvm::Regex::RegexFlags> Flag;
+  SmallVector<StringRef, 4> Split;
+  Flags.split(Split, '|', -1, false);
+  for (StringRef OrFlag : Split) {
+    if (llvm::Optional<llvm::Regex::RegexFlags> NextFlag =
+            getRegexFlag(OrFlag.trim()))
+      Flag = Flag.getValueOr(llvm::Regex::NoFlags) | *NextFlag;
+    else
+      return None;
+  }
+  return Flag;
+}
+
+llvm::Optional<std::string>
+clang::ast_matchers::dynamic::internal::ArgTypeTraits<
+    llvm::Regex::RegexFlags>::getBestGuess(const VariantValue &Value) {
+  if (!Value.isString())
+    return llvm::None;
+  SmallVector<StringRef, 4> Split;
+  llvm::StringRef(Value.getString()).split(Split, '|', -1, false);
+  for (llvm::StringRef &Flag : Split) {
+    if (llvm::Optional<llvm::StringRef> BestGuess =
+            getCloseRegexMatch(Flag.trim()))
+      Flag = *BestGuess;
+    else
+      return None;
+  }
+  if (Split.empty())
+    return None;
+  return llvm::join(Split, " | ");
 }
