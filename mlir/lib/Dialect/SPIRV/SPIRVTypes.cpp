@@ -589,9 +589,6 @@ StorageClass PointerType::getStorageClass() const {
 
 void PointerType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                                 Optional<StorageClass> storage) {
-  if (storage)
-    assert(*storage == getStorageClass() && "inconsistent storage class!");
-
   // Use this pointer type's storage class because this pointer indicates we are
   // using the pointee type in that specific storage class.
   getPointeeType().cast<SPIRVType>().getExtensions(extensions,
@@ -604,9 +601,6 @@ void PointerType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
 void PointerType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     Optional<StorageClass> storage) {
-  if (storage)
-    assert(*storage == getStorageClass() && "inconsistent storage class!");
-
   // Use this pointer type's storage class because this pointer indicates we are
   // using the pointee type in that specific storage class.
   getPointeeType().cast<SPIRVType>().getCapabilities(capabilities,

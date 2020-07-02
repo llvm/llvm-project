@@ -58,9 +58,10 @@ void GPUToSPIRVPass::runOnOperation() {
       spirv::SPIRVConversionTarget::get(targetAttr);
 
   SPIRVTypeConverter typeConverter(targetAttr);
+  ScfToSPIRVContext scfContext;
   OwningRewritePatternList patterns;
   populateGPUToSPIRVPatterns(context, typeConverter, patterns);
-  populateSCFToSPIRVPatterns(context, typeConverter, patterns);
+  populateSCFToSPIRVPatterns(context, typeConverter,scfContext, patterns);
   populateStandardToSPIRVPatterns(context, typeConverter, patterns);
 
   if (failed(applyFullConversion(kernelModules, *target, patterns)))

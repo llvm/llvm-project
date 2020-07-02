@@ -18,12 +18,44 @@
 
 using namespace mlir;
 
+namespace mlir {
+struct ScfToSPIRVContextImpl {
+  // Map between the spirv region control flow operation (spv.loop or
+  // spv.selection) to the VariableOp created to store the region results. The
+  // order of the VariableOp matches the order of the results.
+  DenseMap<Operation *, SmallVector<spirv::VariableOp, 8>> outputVars;
+};
+} // namespace mlir
+
+/// We use ScfToSPIRVContext to store information about the lowering of the scf
+/// region that need to be used later on. When we lower scf.for/scf.if we create
+/// VariableOp to store the results. We need to keep track of the VariableOp
+/// created as we need to insert stores into them when lowering Yield. Those
+/// StoreOp cannot be created earlier as they may use a different type than
+/// yield operands.
+ScfToSPIRVContext::ScfToSPIRVContext() {
+  impl = std::make_unique<ScfToSPIRVContextImpl>();
+}
+ScfToSPIRVContext::~ScfToSPIRVContext() = default;
+
 namespace {
+/// Common class for all vector to GPU patterns.
+template <typename OpTy>
+class SCFToSPIRVPattern : public SPIRVOpLowering<OpTy> {
+public:
+  SCFToSPIRVPattern<OpTy>(MLIRContext *context, SPIRVTypeConverter &converter,
+                          ScfToSPIRVContextImpl *scfToSPIRVContext)
+      : SPIRVOpLowering<OpTy>::SPIRVOpLowering(context, converter),
+        scfToSPIRVContext(scfToSPIRVContext) {}
+
+protected:
+  ScfToSPIRVContextImpl *scfToSPIRVContext;
+};
 
 /// Pattern to convert a scf::ForOp within kernel functions into spirv::LoopOp.
-class ForOpConversion final : public SPIRVOpLowering<scf::ForOp> {
+class ForOpConversion final : public SCFToSPIRVPattern<scf::ForOp> {
 public:
-  using SPIRVOpLowering<scf::ForOp>::SPIRVOpLowering;
+  using SCFToSPIRVPattern<scf::ForOp>::SCFToSPIRVPattern;
 
   LogicalResult
   matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
@@ -32,28 +64,53 @@ public:
 
 /// Pattern to convert a scf::IfOp within kernel functions into
 /// spirv::SelectionOp.
-class IfOpConversion final : public SPIRVOpLowering<scf::IfOp> {
+class IfOpConversion final : public SCFToSPIRVPattern<scf::IfOp> {
 public:
-  using SPIRVOpLowering<scf::IfOp>::SPIRVOpLowering;
+  using SCFToSPIRVPattern<scf::IfOp>::SCFToSPIRVPattern;
 
   LogicalResult
   matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern to erase a scf::YieldOp.
-class TerminatorOpConversion final : public SPIRVOpLowering<scf::YieldOp> {
+class TerminatorOpConversion final : public SCFToSPIRVPattern<scf::YieldOp> {
 public:
-  using SPIRVOpLowering<scf::YieldOp>::SPIRVOpLowering;
+  using SCFToSPIRVPattern<scf::YieldOp>::SCFToSPIRVPattern;
 
   LogicalResult
   matchAndRewrite(scf::YieldOp terminatorOp, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.eraseOp(terminatorOp);
-    return success();
-  }
+                  ConversionPatternRewriter &rewriter) const override;
 };
 } // namespace
+
+/// Helper function to replaces SCF op outputs with SPIR-V variable loads.
+/// We create VariableOp to handle the results value of the control flow region.
+/// spv.loop/spv.selection currently don't yield value. Right after the loop
+/// we load the value from the allocation and use it as the SCF op result.
+template <typename ScfOp, typename OpTy>
+static void replaceSCFOutputValue(ScfOp scfOp, OpTy newOp,
+                                  SPIRVTypeConverter &typeConverter,
+                                  ConversionPatternRewriter &rewriter,
+                                  ScfToSPIRVContextImpl *scfToSPIRVContext) {
+
+  Location loc = scfOp.getLoc();
+  auto &allocas = scfToSPIRVContext->outputVars[newOp];
+  SmallVector<Value, 8> resultValue;
+  for (Value result : scfOp.results()) {
+    auto convertedType = typeConverter.convertType(result.getType());
+    auto pointerType =
+        spirv::PointerType::get(convertedType, spirv::StorageClass::Function);
+    rewriter.setInsertionPoint(newOp);
+    auto alloc = rewriter.create<spirv::VariableOp>(
+        loc, pointerType, spirv::StorageClass::Function,
+        /*initializer=*/nullptr);
+    allocas.push_back(alloc);
+    rewriter.setInsertionPointAfter(newOp);
+    Value loadResult = rewriter.create<spirv::LoadOp>(loc, alloc);
+    resultValue.push_back(loadResult);
+  }
+  rewriter.replaceOp(scfOp, resultValue);
+}
 
 //===----------------------------------------------------------------------===//
 // scf::ForOp.
@@ -83,6 +140,8 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   // Create the new induction variable to use.
   BlockArgument newIndVar =
       header->addArgument(forOperands.lowerBound().getType());
+  for (Value arg : forOperands.initArgs())
+    header->addArgument(arg.getType());
   Block *body = forOp.getBody();
 
   // Apply signature conversion to the body of the forOp. It has a single block,
@@ -91,29 +150,28 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   TypeConverter::SignatureConversion signatureConverter(
       body->getNumArguments());
   signatureConverter.remapInput(0, newIndVar);
-  FailureOr<Block *> newBody = rewriter.convertRegionTypes(
-      &forOp.getLoopBody(), typeConverter, &signatureConverter);
-  if (failed(newBody))
-    return failure();
-  body = *newBody;
-
-  // Delete the loop terminator.
-  rewriter.eraseOp(body->getTerminator());
+  for (unsigned i = 1, e = body->getNumArguments(); i < e; i++)
+    signatureConverter.remapInput(i, header->getArgument(i));
+  body = rewriter.applySignatureConversion(&forOp.getLoopBody(),
+                                           signatureConverter);
 
   // Move the blocks from the forOp into the loopOp. This is the body of the
   // loopOp.
   rewriter.inlineRegionBefore(forOp.getOperation()->getRegion(0), loopOp.body(),
                               std::next(loopOp.body().begin(), 2));
 
+  SmallVector<Value, 8> args(1, forOperands.lowerBound());
+  args.append(forOperands.initArgs().begin(), forOperands.initArgs().end());
   // Branch into it from the entry.
   rewriter.setInsertionPointToEnd(&(loopOp.body().front()));
-  rewriter.create<spirv::BranchOp>(loc, header, forOperands.lowerBound());
+  rewriter.create<spirv::BranchOp>(loc, header, args);
 
   // Generate the rest of the loop header.
   rewriter.setInsertionPointToEnd(header);
   auto *mergeBlock = loopOp.getMergeBlock();
   auto cmpOp = rewriter.create<spirv::SLessThanOp>(
       loc, rewriter.getI1Type(), newIndVar, forOperands.upperBound());
+
   rewriter.create<spirv::BranchConditionalOp>(
       loc, cmpOp, body, ArrayRef<Value>(), mergeBlock, ArrayRef<Value>());
 
@@ -127,7 +185,8 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
       loc, newIndVar.getType(), newIndVar, forOperands.step());
   rewriter.create<spirv::BranchOp>(loc, header, updatedIndVar);
 
-  rewriter.eraseOp(forOp);
+  replaceSCFOutputValue(forOp, loopOp, typeConverter, rewriter,
+                        scfToSPIRVContext);
   return success();
 }
 
@@ -179,13 +238,45 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
                                               thenBlock, ArrayRef<Value>(),
                                               elseBlock, ArrayRef<Value>());
 
-  rewriter.eraseOp(ifOp);
+  replaceSCFOutputValue(ifOp, selectionOp, typeConverter, rewriter,
+                        scfToSPIRVContext);
+  return success();
+}
+
+/// Yield is lowered to stores to the VariableOp created during lowering of the
+/// parent region. For loops we also need to update the branch looping back to
+/// the header with the loop carried values.
+LogicalResult TerminatorOpConversion::matchAndRewrite(
+    scf::YieldOp terminatorOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  // If the region is return values, store each value into the associated
+  // VariableOp created during lowering of the parent region.
+  if (!operands.empty()) {
+    auto loc = terminatorOp.getLoc();
+    auto &allocas = scfToSPIRVContext->outputVars[terminatorOp.getParentOp()];
+    assert(allocas.size() == operands.size());
+    for (unsigned i = 0, e = operands.size(); i < e; i++)
+      rewriter.create<spirv::StoreOp>(loc, allocas[i], operands[i]);
+    if (isa<spirv::LoopOp>(terminatorOp.getParentOp())) {
+      // For loops we also need to update the branch jumping back to the header.
+      auto br =
+          cast<spirv::BranchOp>(rewriter.getInsertionBlock()->getTerminator());
+      SmallVector<Value, 8> args(br.getBlockArguments());
+      args.append(operands.begin(), operands.end());
+      rewriter.setInsertionPoint(br);
+      rewriter.create<spirv::BranchOp>(terminatorOp.getLoc(), br.getTarget(),
+                                       args);
+      rewriter.eraseOp(br);
+    }
+  }
+  rewriter.eraseOp(terminatorOp);
   return success();
 }
 
 void mlir::populateSCFToSPIRVPatterns(MLIRContext *context,
                                       SPIRVTypeConverter &typeConverter,
+                                      ScfToSPIRVContext &scfToSPIRVContext,
                                       OwningRewritePatternList &patterns) {
   patterns.insert<ForOpConversion, IfOpConversion, TerminatorOpConversion>(
-      context, typeConverter);
+      context, typeConverter, scfToSPIRVContext.getImpl());
 }
