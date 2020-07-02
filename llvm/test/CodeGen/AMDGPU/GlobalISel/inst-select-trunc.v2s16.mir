@@ -30,7 +30,7 @@ body: |
     ; GFX8: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
     ; GFX8: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_LSHL_B32_]], [[S_AND_B32_]], implicit-def $scc
     ; GFX8: S_ENDPGM 0, implicit [[S_OR_B32_]]
-    %0:sgpr(<2 x s32>) =COPY $sgpr0_sgpr1
+    %0:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
     %1:sgpr(<2 x s16>) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
@@ -59,7 +59,7 @@ body: |
     ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
     ; GFX8: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[COPY2]], 0, 5, 2, 4, implicit $exec, implicit [[COPY1]](tied-def 0)
     ; GFX8: S_ENDPGM 0, implicit [[V_MOV_B32_sdwa]]
-    %0:vgpr(<2 x s32>) =COPY $vgpr0_vgpr1
+    %0:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:vgpr(<2 x s16>) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
