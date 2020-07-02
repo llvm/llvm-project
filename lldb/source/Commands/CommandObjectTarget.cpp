@@ -16,7 +16,6 @@
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
@@ -506,11 +505,9 @@ public:
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.GetArgumentCount() == 1) {
-      bool success = false;
       const char *target_idx_arg = args.GetArgumentAtIndex(0);
-      uint32_t target_idx =
-          StringConvert::ToUInt32(target_idx_arg, UINT32_MAX, 0, &success);
-      if (success) {
+      uint32_t target_idx;
+      if (llvm::to_integer(target_idx_arg, target_idx)) {
         TargetList &target_list = GetDebugger().GetTargetList();
         const uint32_t num_targets = target_list.GetNumTargets();
         if (target_idx < num_targets) {
@@ -1176,12 +1173,9 @@ protected:
     size_t argc = command.GetArgumentCount();
     // check for at least 3 arguments and an odd number of parameters
     if (argc >= 3 && argc & 1) {
-      bool success = false;
+      uint32_t insert_idx;
 
-      uint32_t insert_idx = StringConvert::ToUInt32(
-          command.GetArgumentAtIndex(0), UINT32_MAX, 0, &success);
-
-      if (!success) {
+      if (!llvm::to_integer(command.GetArgumentAtIndex(0), insert_idx)) {
         result.AppendErrorWithFormat(
             "<index> parameter is not an integer: '%s'.\n",
             command.GetArgumentAtIndex(0));
@@ -2748,10 +2742,8 @@ protected:
                   const char *load_addr_cstr = args.GetArgumentAtIndex(i + 1);
                   if (sect_name && load_addr_cstr) {
                     ConstString const_sect_name(sect_name);
-                    bool success = false;
-                    addr_t load_addr = StringConvert::ToUInt64(
-                        load_addr_cstr, LLDB_INVALID_ADDRESS, 0, &success);
-                    if (success) {
+                    addr_t load_addr;
+                    if (llvm::to_integer(load_addr_cstr, load_addr)) {
                       SectionSP section_sp(
                           section_list->FindSectionByName(const_sect_name));
                       if (section_sp) {
@@ -4732,18 +4724,15 @@ protected:
         target.RemoveAllStopHooks();
       }
     } else {
-      bool success;
       for (size_t i = 0; i < num_args; i++) {
-        lldb::user_id_t user_id = StringConvert::ToUInt32(
-            command.GetArgumentAtIndex(i), 0, 0, &success);
-        if (!success) {
+        lldb::user_id_t user_id;
+        if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
           result.AppendErrorWithFormat("invalid stop hook id: \"%s\".\n",
                                        command.GetArgumentAtIndex(i));
           result.SetStatus(eReturnStatusFailed);
           return false;
         }
-        success = target.RemoveStopHookByID(user_id);
-        if (!success) {
+        if (!target.RemoveStopHookByID(user_id)) {
           result.AppendErrorWithFormat("unknown stop hook id: \"%s\".\n",
                                        command.GetArgumentAtIndex(i));
           result.SetStatus(eReturnStatusFailed);
@@ -4781,9 +4770,8 @@ protected:
       target.SetAllStopHooksActiveState(m_enable);
     } else {
       for (size_t i = 0; i < num_args; i++) {
-        lldb::user_id_t user_id = StringConvert::ToUInt32(
-            command.GetArgumentAtIndex(i), 0, 0, &success);
-        if (!success) {
+        lldb::user_id_t user_id;
+        if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
           result.AppendErrorWithFormat("invalid stop hook id: \"%s\".\n",
                                        command.GetArgumentAtIndex(i));
           result.SetStatus(eReturnStatusFailed);
