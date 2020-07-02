@@ -84,6 +84,7 @@ class MVETailPredication : public LoopPass {
   DominatorTree *DT = nullptr;
   ScalarEvolution *SE = nullptr;
   TargetTransformInfo *TTI = nullptr;
+  const ARMSubtarget *ST = nullptr;
   TargetLibraryInfo *TLI = nullptr;
   bool ClonedVCTPInExitBlock = false;
 
@@ -170,7 +171,7 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
   Function &F = *L->getHeader()->getParent();
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<TargetMachine>();
-  auto *ST = &TM.getSubtarget<ARMSubtarget>(F);
+  ST = &TM.getSubtarget<ARMSubtarget>(F);
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
@@ -268,10 +269,18 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
       case Intrinsic::get_active_lane_mask:
         ActiveLaneMask = true;
         LLVM_FALLTHROUGH;
-      case Intrinsic::fma:
       case Intrinsic::sadd_sat:
       case Intrinsic::uadd_sat:
         continue;
+      case Intrinsic::fma:
+      case Intrinsic::trunc:
+      case Intrinsic::rint:
+      case Intrinsic::round:
+      case Intrinsic::floor:
+      case Intrinsic::ceil:
+        if (ST->hasMVEFloatOps())
+          continue;
+        LLVM_FALLTHROUGH;
       default:
         break;
       }
