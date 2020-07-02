@@ -90,6 +90,29 @@ public:
   }
 };
 
+class GetExtentOpConverter : public OpConversionPattern<GetExtentOp> {
+  using OpConversionPattern<GetExtentOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(GetExtentOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    GetExtentOp::Adaptor transformed(operands);
+
+    // Derive shape extent directly from shape origin if possible.
+    // This circumvents the necessity to materialize the shape in memory.
+    if (auto shapeOfOp = op.shape().getDefiningOp<ShapeOfOp>()) {
+      rewriter.replaceOpWithNewOp<DimOp>(op, shapeOfOp.arg(),
+                                         transformed.dim());
+      return success();
+    }
+
+    rewriter.replaceOpWithNewOp<ExtractElementOp>(
+        op, rewriter.getIndexType(), transformed.shape(),
+        ValueRange{transformed.dim()});
+    return success();
+  }
+};
+
 class RankOpConverter : public OpConversionPattern<shape::RankOp> {
 public:
   using OpConversionPattern<shape::RankOp>::OpConversionPattern;
@@ -161,6 +184,7 @@ void mlir::populateShapeToStandardConversionPatterns(
       BinaryOpConversion<AddOp, AddIOp>,
       BinaryOpConversion<MulOp, MulIOp>,
       ConstSizeOpConverter,
+      GetExtentOpConverter,
       RankOpConverter,
       ShapeOfOpConversion>(ctx);
   // clang-format on
