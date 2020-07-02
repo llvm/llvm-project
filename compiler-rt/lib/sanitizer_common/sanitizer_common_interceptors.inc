@@ -3093,7 +3093,8 @@ INTERCEPTOR(int, sendmmsg, int fd, struct __sanitizer_mmsghdr *msgvec,
 #endif
 
 #if SANITIZER_INTERCEPT_SYSMSG
-INTERCEPTOR(int, msgsnd, int msqid, const void *msgp, SIZE_T msgsz, int msgflg) {
+INTERCEPTOR(int, msgsnd, int msqid, const void *msgp, SIZE_T msgsz,
+            int msgflg) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, msgsnd, msqid, msgp, msgsz, msgflg);
   if (msgp)
@@ -3102,7 +3103,8 @@ INTERCEPTOR(int, msgsnd, int msqid, const void *msgp, SIZE_T msgsz, int msgflg) 
   return res;
 }
 
-INTERCEPTOR(SSIZE_T, msgrcv, int msqid, void *msgp, SIZE_T msgsz, long msgtyp, int msgflg) {
+INTERCEPTOR(SSIZE_T, msgrcv, int msqid, void *msgp, SIZE_T msgsz,
+            long msgtyp, int msgflg) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, msgrcv, msqid, msgp, msgsz, msgtyp, msgflg);
   SSIZE_T len = REAL(msgrcv)(msqid, msgp, msgsz, msgtyp, msgflg);
