@@ -17418,6 +17418,11 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
             lowerShuffleAsBitRotate(DL, MVT::v64i8, V1, Mask, Subtarget, DAG))
       return Rotate;
 
+  // Lower as AND if possible.
+  if (SDValue Masked = lowerShuffleAsBitMask(DL, MVT::v64i8, V1, V2, Mask,
+                                             Zeroable, Subtarget, DAG))
+    return Masked;
+
   if (SDValue PSHUFB = lowerShuffleWithPSHUFB(DL, MVT::v64i8, Mask, V1, V2,
                                               Zeroable, Subtarget, DAG))
     return PSHUFB;
