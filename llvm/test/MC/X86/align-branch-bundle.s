@@ -6,6 +6,7 @@
 # CHECK-NEXT:       1:       testq    $2, %rdx
 # CHECK-NEXT:       8:       jne
 # CHECK-NEXT:       e:       nop
+# CHECK-NEXT:       f:       nop
 # CHECK-NEXT:      10:       jle
 
     .text
