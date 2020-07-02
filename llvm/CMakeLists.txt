@@ -1131,7 +1131,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   # Installing the headers needs to depend on generating any public
   # tablegen'd headers.
-  add_custom_target(llvm-headers DEPENDS intrinsics_gen)
+  add_custom_target(llvm-headers DEPENDS intrinsics_gen omp_gen)
   set_target_properties(llvm-headers PROPERTIES FOLDER "Misc")
 
   if (NOT LLVM_ENABLE_IDE)
