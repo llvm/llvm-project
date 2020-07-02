@@ -16,6 +16,7 @@
 #ifndef LLVM_SUPPORT_REGEX_H
 #define LLVM_SUPPORT_REGEX_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include <string>
 
 struct llvm_regex;
@@ -26,20 +27,22 @@ namespace llvm {
 
   class Regex {
   public:
-    enum {
-      NoFlags=0,
+    enum RegexFlags : unsigned {
+      NoFlags = 0,
       /// Compile for matching that ignores upper/lower case distinctions.
-      IgnoreCase=1,
+      IgnoreCase = 1,
       /// Compile for newline-sensitive matching. With this flag '[^' bracket
       /// expressions and '.' never match newline. A ^ anchor matches the
       /// null string after any newline in the string in addition to its normal
       /// function, and the $ anchor matches the null string before any
       /// newline in the string in addition to its normal function.
-      Newline=2,
+      Newline = 2,
       /// By default, the POSIX extended regular expression (ERE) syntax is
       /// assumed. Pass this flag to turn on basic regular expressions (BRE)
       /// instead.
-      BasicRegex=4
+      BasicRegex = 4,
+
+      LLVM_MARK_AS_BITMASK_ENUM(BasicRegex)
     };
 
     Regex();
@@ -47,7 +50,8 @@ namespace llvm {
     ///
     /// \param Regex - referenced string is no longer needed after this
     /// constructor does finish.  Only its compiled form is kept stored.
-    Regex(StringRef Regex, unsigned Flags = NoFlags);
+    Regex(StringRef Regex, RegexFlags Flags = NoFlags);
+    Regex(StringRef Regex, unsigned Flags);
     Regex(const Regex &) = delete;
     Regex &operator=(Regex regex) {
       std::swap(preg, regex.preg);
