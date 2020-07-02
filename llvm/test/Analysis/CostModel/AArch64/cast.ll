@@ -267,7 +267,7 @@ define i32 @casts_no_users() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %r247 = sitofp <16 x i16> undef to <16 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r248 = uitofp <16 x i64> undef to <16 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r249 = sitofp <16 x i64> undef to <16 x double>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %r0 = sext i1 undef to i8
   %r1 = zext i1 undef to i8
@@ -609,7 +609,7 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r23, i16* undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r24, i32* undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r25, i64* undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %r12
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %r12
 ;
   %r0 = sext i8 %a to i16
   %r1 = sext i8 %a to i32
@@ -683,7 +683,7 @@ define i32 @bitcasts() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = bitcast double undef to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = bitcast half undef to i16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = bitcast i16 undef to half
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %a = bitcast i32 undef to i32
   %b = bitcast float undef to float
@@ -731,7 +731,7 @@ define i32 @load_extends() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v9 = zext <2 x i16> %loadv2i16 to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v10 = sext <2 x i32> %loadv2i32 to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v11 = zext <2 x i32> %loadv2i32 to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %loadi8 = load i8, i8* undef
   %loadi16 = load i16, i16* undef
@@ -786,7 +786,7 @@ define i32 @store_truncs() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r4, i16* undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r5 = trunc i16 undef to i8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r5, i8* undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %r0 = trunc i64 undef to i8
   store i8 %r0, i8* undef
