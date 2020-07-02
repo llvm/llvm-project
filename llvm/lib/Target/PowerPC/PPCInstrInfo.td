@@ -50,6 +50,10 @@ def SDT_PPCVecSplat : SDTypeProfile<1, 2, [ SDTCisVec<0>,
   SDTCisVec<1>, SDTCisInt<2>
 ]>;
 
+def SDT_PPCSpToDp : SDTypeProfile<1, 1, [ SDTCisVT<0, v2f64>,
+  SDTCisInt<1>
+]>;
+
 def SDT_PPCVecShift : SDTypeProfile<1, 3, [ SDTCisVec<0>,
   SDTCisVec<1>, SDTCisVec<2>, SDTCisPtrTy<3>
 ]>;
@@ -194,6 +198,7 @@ def PPCaddiDtprelL   : SDNode<"PPCISD::ADDI_DTPREL_L", SDTIntBinOp>;
 
 def PPCvperm     : SDNode<"PPCISD::VPERM", SDT_PPCvperm, []>;
 def PPCxxsplt    : SDNode<"PPCISD::XXSPLT", SDT_PPCVecSplat, []>;
+def PPCxxspltidp : SDNode<"PPCISD::XXSPLTI_SP_TO_DP", SDT_PPCSpToDp, []>;
 def PPCvecinsert : SDNode<"PPCISD::VECINSERT", SDT_PPCVecInsert, []>;
 def PPCxxpermdi  : SDNode<"PPCISD::XXPERMDI", SDT_PPCxxpermdi, []>;
 def PPCvecshl    : SDNode<"PPCISD::VECSHL", SDT_PPCVecShift, []>;
@@ -326,6 +331,23 @@ def PPCmatpcreladdr : SDNode<"PPCISD::MAT_PCREL_ADDR", SDTIntUnaryOp, []>;
 // PowerPC specific transformation functions and pattern fragments.
 //
 
+// A floating point immediate that is not a positive zero and can be converted
+// to a single precision floating point non-denormal immediate without loss of
+// information.
+def nzFPImmAsi32 : PatLeaf<(fpimm), [{
+  APFloat APFloatOfN = N->getValueAPF();
+  return convertToNonDenormSingle(APFloatOfN) && !N->isExactlyValue(+0.0);
+}]>;
+
+// Convert the floating point immediate into a 32 bit floating point immediate
+// and get a i32 with the resulting bits.
+def getFPAs32BitInt : SDNodeXForm<fpimm, [{
+  APFloat APFloatOfN = N->getValueAPF();
+  convertToNonDenormSingle(APFloatOfN);
+  return CurDAG->getTargetConstant(APFloatOfN.bitcastToAPInt().getZExtValue(),
+                                   SDLoc(N), MVT::i32);
+}]>;
+
 def SHL32 : SDNodeXForm<imm, [{
   // Transformation function: 31 - imm
   return getI32Imm(31 - N->getZExtValue(), SDLoc(N));
@@ -392,6 +414,7 @@ def immZExt16  : PatLeaf<(imm), [{
 def immNonAllOneAnyExt8 : ImmLeaf<i32, [{
   return (isInt<8>(Imm) && (Imm != -1)) || (isUInt<8>(Imm) && (Imm != 0xFF));
 }]>;
+def i32immNonAllOneNonZero : ImmLeaf<i32, [{ return Imm && (Imm != -1); }]>;
 def immSExt5NonZero : ImmLeaf<i32, [{ return Imm && isInt<5>(Imm); }]>;
 
 // imm16Shifted* - These match immediates where the low 16-bits are zero.  There

@@ -1473,6 +1473,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::STFIWX:          return "PPCISD::STFIWX";
   case PPCISD::VPERM:           return "PPCISD::VPERM";
   case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
+  case PPCISD::XXSPLTI_SP_TO_DP:
+    return "PPCISD::XXSPLTI_SP_TO_DP";
   case PPCISD::VECINSERT:       return "PPCISD::VECINSERT";
   case PPCISD::XXPERMDI:        return "PPCISD::XXPERMDI";
   case PPCISD::VECSHL:          return "PPCISD::VECSHL";
@@ -8966,19 +8968,21 @@ SDValue PPCTargetLowering::LowerSRA_PARTS(SDValue Op, SelectionDAG &DAG) const {
 // Vector related lowering.
 //
 
-/// BuildSplatI - Build a canonical splati of Val with an element size of
-/// SplatSize.  Cast the result to VT.
-static SDValue BuildSplatI(int Val, unsigned SplatSize, EVT VT,
-                           SelectionDAG &DAG, const SDLoc &dl) {
+/// getCanonicalConstSplat - Build a canonical splat immediate of Val with an
+/// element size of SplatSize. Cast the result to VT.
+static SDValue getCanonicalConstSplat(uint64_t Val, unsigned SplatSize, EVT VT,
+                                      SelectionDAG &DAG, const SDLoc &dl) {
   static const MVT VTys[] = { // canonical VT to use for each size.
     MVT::v16i8, MVT::v8i16, MVT::Other, MVT::v4i32
   };
 
   EVT ReqVT = VT != MVT::Other ? VT : VTys[SplatSize-1];
 
-  // Force vspltis[hw] -1 to vspltisb -1 to canonicalize.
-  if (Val == -1)
+  // For a splat with all ones, turn it to vspltisb 0xFF to canonicalize.
+  if (Val == ((1LU << (SplatSize * 8)) - 1)) {
     SplatSize = 1;
+    Val = 0xFF;
+  }
 
   EVT CanonicalVT = VTys[SplatSize-1];
 
@@ -9113,6 +9117,34 @@ static const SDValue *getNormalLoadInput(const SDValue &Op) {
   return ISD::isNormalLoad(LD) ? InputLoad : nullptr;
 }
 
+// Convert the argument APFloat to a single precision APFloat if there is no
+// loss in information during the conversion to single precision APFloat and the
+// resulting number is not a denormal number. Return true if successful.
+bool llvm::convertToNonDenormSingle(APFloat &ArgAPFloat) {
+  APFloat APFloatToConvert = ArgAPFloat;
+  bool LosesInfo = true;
+  APFloatToConvert.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
+                           &LosesInfo);
+  bool Success = (!LosesInfo && !APFloatToConvert.isDenormal());
+  if (Success)
+    ArgAPFloat = APFloatToConvert;
+  return Success;
+}
+
+// Bitcast the argument APInt to a double and convert it to a single precision
+// APFloat, bitcast the APFloat to an APInt and assign it to the original
+// argument if there is no loss in information during the conversion from
+// double to single precision APFloat and the resulting number is not a denormal
+// number. Return true if successful.
+bool llvm::convertToNonDenormSingle(APInt &ArgAPInt) {
+  double DpValue = ArgAPInt.bitsToDouble();
+  APFloat APFloatDp(DpValue);
+  bool Success = convertToNonDenormSingle(APFloatDp);
+  if (Success)
+    ArgAPInt = APFloatDp.bitcastToAPInt();
+  return Success;
+}
+
 // If this is a case we can't handle, return null and let the default
 // expansion code take care of it.  If we CAN select this case, and if it
 // selects to a single instruction, return Op.  Otherwise, if we can codegen
@@ -9232,9 +9264,23 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   APInt APSplatBits, APSplatUndef;
   unsigned SplatBitSize;
   bool HasAnyUndefs;
-  if (! BVN->isConstantSplat(APSplatBits, APSplatUndef, SplatBitSize,
-                             HasAnyUndefs, 0, !Subtarget.isLittleEndian()) ||
-      SplatBitSize > 32) {
+  bool BVNIsConstantSplat =
+      BVN->isConstantSplat(APSplatBits, APSplatUndef, SplatBitSize,
+                           HasAnyUndefs, 0, !Subtarget.isLittleEndian());
+
+  // If it is a splat of a double, check if we can shrink it to a 32 bit
+  // non-denormal float which when converted back to double gives us the same
+  // double. This is to exploit the XXSPLTIDP instruction.
+  if (BVNIsConstantSplat && Subtarget.hasPrefixInstrs() &&
+      (SplatBitSize == 64) && (Op->getValueType(0) == MVT::v2f64) &&
+      convertToNonDenormSingle(APSplatBits)) {
+    SDValue SplatNode = DAG.getNode(
+        PPCISD::XXSPLTI_SP_TO_DP, dl, MVT::v2f64,
+        DAG.getTargetConstant(APSplatBits.getZExtValue(), dl, MVT::i32));
+    return DAG.getBitcast(Op.getValueType(), SplatNode);
+  }
+
+  if (!BVNIsConstantSplat || SplatBitSize > 32) {
 
     const SDValue *InputLoad = getNormalLoadInput(Op.getOperand(0));
     // Handle load-and-splat patterns as we have instructions that will do this
@@ -9273,8 +9319,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     return SDValue();
   }
 
-  unsigned SplatBits = APSplatBits.getZExtValue();
-  unsigned SplatUndef = APSplatUndef.getZExtValue();
+  uint64_t SplatBits = APSplatBits.getZExtValue();
+  uint64_t SplatUndef = APSplatUndef.getZExtValue();
   unsigned SplatSize = SplatBitSize / 8;
 
   // First, handle single instruction cases.
@@ -9289,17 +9335,30 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     return Op;
   }
 
-  // We have XXSPLTIB for constant splats one byte wide
-  // FIXME: SplatBits is an unsigned int being cast to an int while passing it
-  // as an argument to BuildSplatiI. Given SplatSize == 1 it is okay here.
+  // We have XXSPLTIW for constant splats four bytes wide.
+  // Given vector length is a multiple of 4, 2-byte splats can be replaced
+  // with 4-byte splats. We replicate the SplatBits in case of 2-byte splat to
+  // make a 4-byte splat element. For example: 2-byte splat of 0xABAB can be
+  // turned into a 4-byte splat of 0xABABABAB.
+  if (Subtarget.hasPrefixInstrs() && SplatSize == 2)
+    return getCanonicalConstSplat((SplatBits |= SplatBits << 16), SplatSize * 2,
+                                  Op.getValueType(), DAG, dl);
+
+  if (Subtarget.hasPrefixInstrs() && SplatSize == 4)
+    return getCanonicalConstSplat(SplatBits, SplatSize, Op.getValueType(), DAG,
+                                  dl);
+
+  // We have XXSPLTIB for constant splats one byte wide.
   if (Subtarget.hasP9Vector() && SplatSize == 1)
-    return BuildSplatI(SplatBits, SplatSize, Op.getValueType(), DAG, dl);
+    return getCanonicalConstSplat(SplatBits, SplatSize, Op.getValueType(), DAG,
+                                  dl);
 
   // If the sign extended value is in the range [-16,15], use VSPLTI[bhw].
   int32_t SextVal= (int32_t(SplatBits << (32-SplatBitSize)) >>
                     (32-SplatBitSize));
   if (SextVal >= -16 && SextVal <= 15)
-    return BuildSplatI(SextVal, SplatSize, Op.getValueType(), DAG, dl);
+    return getCanonicalConstSplat(SextVal, SplatSize, Op.getValueType(), DAG,
+                                  dl);
 
   // Two instruction sequences.
 
@@ -9330,7 +9389,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // for fneg/fabs.
   if (SplatSize == 4 && SplatBits == (0x7FFFFFFF&~SplatUndef)) {
     // Make -1 and vspltisw -1:
-    SDValue OnesV = BuildSplatI(-1, 4, MVT::v4i32, DAG, dl);
+    SDValue OnesV = getCanonicalConstSplat(-1, 4, MVT::v4i32, DAG, dl);
 
     // Make the VSLW intrinsic, computing 0x8000_0000.
     SDValue Res = BuildIntrinsicOp(Intrinsic::ppc_altivec_vslw, OnesV,
@@ -9358,7 +9417,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
     // vsplti + shl self.
     if (SextVal == (int)((unsigned)i << TypeShiftAmt)) {
-      SDValue Res = BuildSplatI(i, SplatSize, MVT::Other, DAG, dl);
+      SDValue Res = getCanonicalConstSplat(i, SplatSize, MVT::Other, DAG, dl);
       static const unsigned IIDs[] = { // Intrinsic to use for each size.
         Intrinsic::ppc_altivec_vslb, Intrinsic::ppc_altivec_vslh, 0,
         Intrinsic::ppc_altivec_vslw
@@ -9369,7 +9428,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
     // vsplti + srl self.
     if (SextVal == (int)((unsigned)i >> TypeShiftAmt)) {
-      SDValue Res = BuildSplatI(i, SplatSize, MVT::Other, DAG, dl);
+      SDValue Res = getCanonicalConstSplat(i, SplatSize, MVT::Other, DAG, dl);
       static const unsigned IIDs[] = { // Intrinsic to use for each size.
         Intrinsic::ppc_altivec_vsrb, Intrinsic::ppc_altivec_vsrh, 0,
         Intrinsic::ppc_altivec_vsrw
@@ -9380,7 +9439,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
     // vsplti + sra self.
     if (SextVal == (int)((unsigned)i >> TypeShiftAmt)) {
-      SDValue Res = BuildSplatI(i, SplatSize, MVT::Other, DAG, dl);
+      SDValue Res = getCanonicalConstSplat(i, SplatSize, MVT::Other, DAG, dl);
       static const unsigned IIDs[] = { // Intrinsic to use for each size.
         Intrinsic::ppc_altivec_vsrab, Intrinsic::ppc_altivec_vsrah, 0,
         Intrinsic::ppc_altivec_vsraw
@@ -9392,7 +9451,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // vsplti + rol self.
     if (SextVal == (int)(((unsigned)i << TypeShiftAmt) |
                          ((unsigned)i >> (SplatBitSize-TypeShiftAmt)))) {
-      SDValue Res = BuildSplatI(i, SplatSize, MVT::Other, DAG, dl);
+      SDValue Res = getCanonicalConstSplat(i, SplatSize, MVT::Other, DAG, dl);
       static const unsigned IIDs[] = { // Intrinsic to use for each size.
         Intrinsic::ppc_altivec_vrlb, Intrinsic::ppc_altivec_vrlh, 0,
         Intrinsic::ppc_altivec_vrlw
@@ -9403,19 +9462,19 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
     // t = vsplti c, result = vsldoi t, t, 1
     if (SextVal == (int)(((unsigned)i << 8) | (i < 0 ? 0xFF : 0))) {
-      SDValue T = BuildSplatI(i, SplatSize, MVT::v16i8, DAG, dl);
+      SDValue T = getCanonicalConstSplat(i, SplatSize, MVT::v16i8, DAG, dl);
       unsigned Amt = Subtarget.isLittleEndian() ? 15 : 1;
       return BuildVSLDOI(T, T, Amt, Op.getValueType(), DAG, dl);
     }
     // t = vsplti c, result = vsldoi t, t, 2
     if (SextVal == (int)(((unsigned)i << 16) | (i < 0 ? 0xFFFF : 0))) {
-      SDValue T = BuildSplatI(i, SplatSize, MVT::v16i8, DAG, dl);
+      SDValue T = getCanonicalConstSplat(i, SplatSize, MVT::v16i8, DAG, dl);
       unsigned Amt = Subtarget.isLittleEndian() ? 14 : 2;
       return BuildVSLDOI(T, T, Amt, Op.getValueType(), DAG, dl);
     }
     // t = vsplti c, result = vsldoi t, t, 3
     if (SextVal == (int)(((unsigned)i << 24) | (i < 0 ? 0xFFFFFF : 0))) {
-      SDValue T = BuildSplatI(i, SplatSize, MVT::v16i8, DAG, dl);
+      SDValue T = getCanonicalConstSplat(i, SplatSize, MVT::v16i8, DAG, dl);
       unsigned Amt = Subtarget.isLittleEndian() ? 13 : 3;
       return BuildVSLDOI(T, T, Amt, Op.getValueType(), DAG, dl);
     }
@@ -10817,9 +10876,9 @@ SDValue PPCTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   if (Op.getValueType() == MVT::v4i32) {
     SDValue LHS = Op.getOperand(0), RHS = Op.getOperand(1);
 
-    SDValue Zero  = BuildSplatI(  0, 1, MVT::v4i32, DAG, dl);
-    SDValue Neg16 = BuildSplatI(-16, 4, MVT::v4i32, DAG, dl);//+16 as shift amt.
-
+    SDValue Zero = getCanonicalConstSplat(0, 1, MVT::v4i32, DAG, dl);
+    // +16 as shift amt.
+    SDValue Neg16 = getCanonicalConstSplat(-16, 4, MVT::v4i32, DAG, dl);
     SDValue RHSSwap =   // = vrlw RHS, 16
       BuildIntrinsicOp(Intrinsic::ppc_altivec_vrlw, RHS, Neg16, DAG, dl);
 
@@ -16239,6 +16298,13 @@ bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
   case MVT::f32:
   case MVT::f64:
+    if (Subtarget.hasPrefixInstrs()) {
+      // With prefixed instructions, we can materialize anything that can be
+      // represented with a 32-bit immediate, not just positive zero.
+      APFloat APFloatOfImm = Imm;
+      return convertToNonDenormSingle(APFloatOfImm);
+    }
+    LLVM_FALLTHROUGH;
   case MVT::ppcf128:
     return Imm.isPosZero();
   }

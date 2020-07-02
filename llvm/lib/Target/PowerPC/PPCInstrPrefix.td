@@ -704,7 +704,8 @@ let Predicates = [PrefixInstrs] in {
   def XXSPLTIDP : 8RR_DForm_IMM32_XT6<32, 2, (outs vsrc:$XT),
                                       (ins i32imm:$IMM32),
                                       "xxspltidp $XT, $IMM32", IIC_VecGeneral,
-                                      []>;
+                                      [(set v2f64:$XT,
+                                            (PPCxxspltidp i32:$IMM32))]>;
   def XXSPLTI32DX :
       8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
                              (ins vsrc:$XTi, i1imm:$IX, i32imm:$IMM32),
@@ -821,4 +822,18 @@ let Predicates = [IsISA3_1] in {
             (v4i32 (COPY_TO_REGCLASS (XXGENPCVWM $VRB, imm:$IMM), VRRC))>;
   def : Pat<(v2i64 (int_ppc_vsx_xxgenpcvdm v2i64:$VRB, imm:$IMM)),
             (v2i64 (COPY_TO_REGCLASS (XXGENPCVDM $VRB, imm:$IMM), VRRC))>;
+}
+
+let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
+ def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
+                                i32immNonAllOneNonZero:$A,
+                                i32immNonAllOneNonZero:$A,
+                                i32immNonAllOneNonZero:$A)),
+           (v4i32 (XXSPLTIW imm:$A))>;
+ def : Pat<(f32 nzFPImmAsi32:$A),
+           (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
+                             VSFRC)>;
+ def : Pat<(f64 nzFPImmAsi32:$A),
+           (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
+                             VSFRC)>;
 }
