@@ -33,8 +33,7 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
 // A VFS provider that returns TestFSes containing a provided set of files.
 class MockFS : public ThreadsafeFS {
 public:
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  view(llvm::NoneType) const override {
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
     return buildTestFS(Files, Timestamps);
   }
 
