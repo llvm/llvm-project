@@ -22,7 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
-  return procRef.HasAlternateReturns();
+  return procRef.hasAlternateReturns();
 }
 
 std::string Fortran::lower::CallerInterface::getMangledName() const {
