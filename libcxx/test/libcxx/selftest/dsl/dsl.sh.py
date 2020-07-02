@@ -6,11 +6,15 @@
 #
 #===----------------------------------------------------------------------===##
 
-# RUN: %{python} %s %S %T %{escaped_exec} \
-# RUN:                    %{escaped_cxx} \
-# RUN:                    %{escaped_flags} \
-# RUN:                    %{escaped_compile_flags} \
-# RUN:                    %{escaped_link_flags}
+# Note: We prepend arguments with 'x' to avoid thinking there are too few
+#       arguments in case an argument is an empty string.
+# RUN: %{python} %s x%S \
+# RUN:              x%T \
+# RUN:              x%{escaped_exec} \
+# RUN:              x%{escaped_cxx} \
+# RUN:              x%{escaped_flags} \
+# RUN:              x%{escaped_compile_flags} \
+# RUN:              x%{escaped_link_flags}
 # END.
 
 import base64
@@ -33,7 +37,8 @@ import lit.util
 
 # Steal some parameters from the config running this test so that we can
 # bootstrap our own TestingConfig.
-SOURCE_ROOT, EXEC_PATH, EXEC, CXX, FLAGS, COMPILE_FLAGS, LINK_FLAGS = sys.argv[1:8]
+args = list(map(lambda s: s[1:], sys.argv[1:8])) # Remove the leading 'x'
+SOURCE_ROOT, EXEC_PATH, EXEC, CXX, FLAGS, COMPILE_FLAGS, LINK_FLAGS = args
 sys.argv[1:8] = []
 
 class SetupConfigs(unittest.TestCase):
