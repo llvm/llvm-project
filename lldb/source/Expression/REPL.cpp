@@ -457,6 +457,10 @@ void REPL::IOHandlerComplete(IOHandler &io_handler,
     debugger.GetCommandInterpreter().HandleCompletion(sub_request);
     StringList matches, descriptions;
     sub_result.GetMatches(matches);
+    // Prepend command prefix that was excluded in the completion request.
+    if (request.GetCursorIndex() == 0)
+      for (auto &match : matches)
+        match.insert(0, 1, ':');
     sub_result.GetDescriptions(descriptions);
     request.AddCompletions(matches, descriptions);
     return;
