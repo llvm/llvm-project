@@ -1053,6 +1053,8 @@ static TTI::ReductionKind matchPairwiseReductionAtLevel(Instruction *I,
   // Check that the next levels binary operation exists and matches with the
   // current one.
   if (Level + 1 != NumLevels) {
+    if (!isa<Instruction>(NextLevelOp))
+      return TTI::RK_None;
     Optional<TTI::ReductionData> NextLevelRD =
         getReductionData(cast<Instruction>(NextLevelOp));
     if (!NextLevelRD || !RD->hasSameData(*NextLevelRD))
@@ -1074,7 +1076,7 @@ static TTI::ReductionKind matchPairwiseReductionAtLevel(Instruction *I,
     return RD->Kind;
 
   // Match next level.
-  return matchPairwiseReductionAtLevel(cast<Instruction>(NextLevelOp), Level,
+  return matchPairwiseReductionAtLevel(dyn_cast<Instruction>(NextLevelOp), Level,
                                        NumLevels);
 }
 
