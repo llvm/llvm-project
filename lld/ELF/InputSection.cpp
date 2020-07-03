@@ -907,12 +907,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       continue;
     }
 
-    if (sym.isTls() && !Out::tlsPhdr) {
-      target->relocateNoSym(bufLoc, type, 0);
-      continue;
-    }
-
-    if (isDebug && type == target->symbolicRel) {
+    if (isDebug && (type == target->symbolicRel || expr == R_DTPREL)) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -923,6 +918,10 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // .debug_* sections. We have to ignore the addend because we don't want
       // to resolve an address attribute (which may have a non-zero addend) to
       // -1+addend (wrap around to a low address).
+      //
+      // R_DTPREL type relocations represent an offset into the dynamic thread
+      // vector. The computed value is st_value plus a non-negative offset.
+      // Negative values are invalid, so -1 can be used as the tombstone value.
       //
       // If the referenced symbol is discarded (made Undefined), or the
       // section defining the referenced symbol is garbage collected,
