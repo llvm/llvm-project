@@ -54,6 +54,13 @@ int main() {
 // CHECK-SAME: parallel_id=[[PARALLEL_ID]],
 // CHECK-SAME: task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
 
+// The following is to match the taskwait task created in __kmpc_omp_wait_deps
+// this should go away, once codegen for "detached if(0)" is fixed
+
+// CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
+// CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID]],
+// CHECK-SAME: has_dependences=yes
+
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
 // CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID]],
 // CHECK-SAME: parent_task_frame.exit=0x{{[0-f]+}},
