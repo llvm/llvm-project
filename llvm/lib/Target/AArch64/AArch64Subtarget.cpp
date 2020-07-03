@@ -101,6 +101,7 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA73:
   case CortexA75:
   case CortexA76:
+  case CortexA77:
     PrefFunctionLogAlignment = 4;
     break;
   case A64FX:
