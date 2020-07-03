@@ -1,4 +1,12 @@
-// RUN: %clang_cc1 -Wdocumentation -ast-dump -ast-dump-filter Test %s | FileCheck -strict-whitespace %s
+// Without serialization:
+// RUN: %clang_cc1 -Wdocumentation -ast-dump -ast-dump-filter Test %s \
+// RUN: | FileCheck -strict-whitespace %s
+//
+// With serialization:
+// RUN: %clang_cc1 -Wdocumentation -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -Wdocumentation -include-pch %t -ast-dump-all -ast-dump-filter Test /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck --strict-whitespace %s
 
 /// Aaa
 int TestLocation;
