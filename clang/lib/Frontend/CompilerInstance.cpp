@@ -815,17 +815,15 @@ std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::createOutputFile(
 // Initialization Utilities
 
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
-  return InitializeSourceManager(
-      Input, getDiagnostics(), getFileManager(), getSourceManager(),
-      hasPreprocessor() ? &getPreprocessor().getHeaderSearchInfo() : nullptr,
-      getDependencyOutputOpts(), getFrontendOpts());
+  return InitializeSourceManager(Input, getDiagnostics(), getFileManager(),
+                                 getSourceManager());
 }
 
 // static
-bool CompilerInstance::InitializeSourceManager(
-    const FrontendInputFile &Input, DiagnosticsEngine &Diags,
-    FileManager &FileMgr, SourceManager &SourceMgr, HeaderSearch *HS,
-    DependencyOutputOptions &DepOpts, const FrontendOptions &Opts) {
+bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
+                                               DiagnosticsEngine &Diags,
+                                               FileManager &FileMgr,
+                                               SourceManager &SourceMgr) {
   SrcMgr::CharacteristicKind Kind =
       Input.getKind().getFormat() == InputKind::ModuleMap
           ? Input.isSystem() ? SrcMgr::C_System_ModuleMap
