@@ -483,6 +483,7 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
   Align MaxAlign = MFI.getMaxAlign();
   assert(isAligned(MaxAlign, maxCallFrameSize) &&
          "Maximum call-frame size not sufficiently aligned");
+  (void)MaxAlign;
 
   const TargetRegisterClass *G8RC = &PPC::G8RCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
