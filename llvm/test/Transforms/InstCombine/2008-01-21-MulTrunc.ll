@@ -35,12 +35,10 @@ define <2 x i16> @test1_vec(<2 x i16> %a) {
 
 define <2 x i16> @test1_vec_nonuniform(<2 x i16> %a) {
 ; CHECK-LABEL: @test1_vec_nonuniform(
-; CHECK-NEXT:    [[B:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 8, i32 9>
-; CHECK-NEXT:    [[D:%.*]] = mul nuw nsw <2 x i32> [[B]], <i32 5, i32 6>
-; CHECK-NEXT:    [[E:%.*]] = or <2 x i32> [[C]], [[D]]
-; CHECK-NEXT:    [[F:%.*]] = trunc <2 x i32> [[E]] to <2 x i16>
-; CHECK-NEXT:    ret <2 x i16> [[F]]
+; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 8, i16 9>
+; CHECK-NEXT:    [[D:%.*]] = mul <2 x i16> [[A]], <i16 5, i16 6>
+; CHECK-NEXT:    [[E:%.*]] = or <2 x i16> [[C]], [[D]]
+; CHECK-NEXT:    ret <2 x i16> [[E]]
 ;
   %b = zext <2 x i16> %a to <2 x i32>
   %c = lshr <2 x i32> %b, <i32 8, i32 9>
