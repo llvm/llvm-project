@@ -95,7 +95,6 @@ config("cxx_config") {
     } else {
       cflags_cc += [ "-fno-exceptions" ]
     }
-    defines += [ "_LIBCPP_NO_EXCEPTIONS" ]
   }
   if (!libcxx_enable_rtti) {
     if (current_os == "win") {
