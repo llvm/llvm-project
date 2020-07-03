@@ -31800,8 +31800,8 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
 
   BuildMI(testMBB, DL,
           TII->get(TFI.Uses64BitFramePtr ? X86::CMP64rr : X86::CMP32rr))
-      .addReg(physSPReg)
-      .addReg(FinalStackPtr);
+      .addReg(FinalStackPtr)
+      .addReg(physSPReg);
 
   BuildMI(testMBB, DL, TII->get(X86::JCC_1))
       .addMBB(tailMBB)
