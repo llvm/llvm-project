@@ -51,12 +51,15 @@ static void dumpPreviousDecl(raw_ostream &OS, const Decl *D) {
   llvm_unreachable("Decl that isn't part of DeclNodes.inc!");
 }
 
-TextNodeDumper::TextNodeDumper(raw_ostream &OS, bool ShowColors,
-                               const SourceManager *SM,
-                               const PrintingPolicy &PrintPolicy,
-                               const comments::CommandTraits *Traits)
-    : TextTreeStructure(OS, ShowColors), OS(OS), ShowColors(ShowColors), SM(SM),
-      PrintPolicy(PrintPolicy), Traits(Traits) {}
+TextNodeDumper::TextNodeDumper(raw_ostream &OS, const ASTContext &Context,
+                               bool ShowColors)
+    : TextTreeStructure(OS, ShowColors), OS(OS), ShowColors(ShowColors),
+      Context(&Context), SM(&Context.getSourceManager()),
+      PrintPolicy(Context.getPrintingPolicy()),
+      Traits(&Context.getCommentCommandTraits()) {}
+
+TextNodeDumper::TextNodeDumper(raw_ostream &OS, bool ShowColors)
+    : TextTreeStructure(OS, ShowColors), OS(OS), ShowColors(ShowColors) {}
 
 void TextNodeDumper::Visit(const comments::Comment *C,
                            const comments::FullComment *FC) {
@@ -712,7 +715,7 @@ void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
   if (Node->getResultAPValueKind() != APValue::None) {
     ColorScope Color(OS, ShowColors, ValueColor);
     OS << " ";
-    Node->getAPValueResult().dump(OS);
+    Node->getAPValueResult().dump(OS, Context);
   }
 }
 
