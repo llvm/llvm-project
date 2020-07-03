@@ -45,8 +45,8 @@ debug_addr:
     Length:  0x1234
     Version: 5
 )";
-  auto SectionsOrErr = DWARFYAML::emitDebugSections(Yaml);
-  EXPECT_THAT_EXPECTED(SectionsOrErr, Succeeded());
+  auto DWARFOrErr = parseDWARFYAML(Yaml);
+  EXPECT_THAT_EXPECTED(DWARFOrErr, Succeeded());
 }
 
 TEST(DebugAddrSection, TestMissingVersion) {
@@ -55,8 +55,8 @@ debug_addr:
   - Format: DWARF64
     Length: 0x1234
 )";
-  auto SectionsOrErr = DWARFYAML::emitDebugSections(Yaml);
-  EXPECT_THAT_ERROR(SectionsOrErr.takeError(),
+  auto DWARFOrErr = parseDWARFYAML(Yaml);
+  EXPECT_THAT_ERROR(DWARFOrErr.takeError(),
                     FailedWithMessage("missing required key 'Version'"));
 }
 
@@ -68,8 +68,8 @@ debug_addr:
     Version: 5
     Blah:    unexpected
 )";
-  auto SectionsOrErr = DWARFYAML::emitDebugSections(Yaml);
-  EXPECT_THAT_ERROR(SectionsOrErr.takeError(),
+  auto DWARFOrErr = parseDWARFYAML(Yaml);
+  EXPECT_THAT_ERROR(DWARFOrErr.takeError(),
                     FailedWithMessage("unknown key 'Blah'"));
 }
 
