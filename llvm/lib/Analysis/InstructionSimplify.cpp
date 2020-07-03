@@ -3281,6 +3281,29 @@ static Value *simplifyICmpWithMinMax(CmpInst::Predicate Pred, Value *LHS,
   return nullptr;
 }
 
+static Value *simplifyICmpWithDominatingAssume(CmpInst::Predicate Predicate,
+                                               Value *LHS, Value *RHS,
+                                               const SimplifyQuery &Q) {
+  if (!Q.AC || !Q.CxtI)
+    return nullptr;
+
+  for (Value *AssumeBaseOp : {LHS, RHS}) {
+    for (auto &AssumeVH : Q.AC->assumptionsFor(AssumeBaseOp)) {
+      if (!AssumeVH)
+        continue;
+
+      CallInst *Assume = cast<CallInst>(AssumeVH);
+      if (Optional<bool> Imp =
+              isImpliedCondition(Assume->getArgOperand(0), Predicate, LHS, RHS,
+                                 Q.DL))
+        if (isValidAssumeForContext(Assume, Q.CxtI, Q.DT))
+          return ConstantInt::get(GetCompareTy(LHS), *Imp);
+    }
+  }
+
+  return nullptr;
+}
+
 /// Given operands for an ICmpInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
@@ -3513,6 +3536,9 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     return V;
 
   if (Value *V = simplifyICmpWithMinMax(Pred, LHS, RHS, Q, MaxRecurse))
+    return V;
+
+  if (Value *V = simplifyICmpWithDominatingAssume(Pred, LHS, RHS, Q))
     return V;
 
   // Simplify comparisons of related pointers using a powerful, recursive
