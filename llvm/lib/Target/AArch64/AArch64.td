@@ -626,6 +626,16 @@ def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
                                     FeatureSSBS
                                     ]>;
 
+def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
+                                   "Cortex-A77 ARM processors", [
+                                    HasV8_2aOps,
+                                    FeatureFPARMv8,
+                                    FeatureNEON, FeatureRCPC,
+                                    FeatureCrypto,
+                                    FeatureFullFP16,
+                                    FeatureDotProd
+                                    ]>;
+
 def ProcA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  "Fujitsu A64FX processors", [
                                   HasV8_2aOps,
@@ -967,6 +977,7 @@ def : ProcessorModel<"cortex-a73", CortexA57Model, [ProcA73]>;
 def : ProcessorModel<"cortex-a75", CortexA57Model, [ProcA75]>;
 def : ProcessorModel<"cortex-a76", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cortex-a76ae", CortexA57Model, [ProcA76]>;
+def : ProcessorModel<"cortex-a77", CortexA57Model, [ProcA77]>;
 def : ProcessorModel<"neoverse-e1", CortexA53Model, [ProcNeoverseE1]>;
 def : ProcessorModel<"neoverse-n1", CortexA57Model, [ProcNeoverseN1]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
