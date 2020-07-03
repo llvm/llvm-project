@@ -1729,6 +1729,11 @@ class SBBreakpoint(_object):
         return _lldb.SBBreakpoint_AddName(self, new_name)
 
 
+    def AddNameWithErrorHandling(self, new_name):
+        """AddNameWithErrorHandling(SBBreakpoint self, char const * new_name) -> SBError"""
+        return _lldb.SBBreakpoint_AddNameWithErrorHandling(self, new_name)
+
+
     def RemoveName(self, name_to_remove):
         """RemoveName(SBBreakpoint self, char const * name_to_remove)"""
         return _lldb.SBBreakpoint_RemoveName(self, name_to_remove)
