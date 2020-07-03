@@ -447,6 +447,15 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
         break;
       }
 
+      case AMDGPU::SI_KILL_CLEANUP:
+        if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS &&
+            dominatesAllReachable(MBB)) {
+          KillInstrs.push_back(&MI);
+        } else {
+          MI.eraseFromParent();
+        }
+        break;
+
       default:
         break;
       }
