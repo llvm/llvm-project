@@ -13003,6 +13003,29 @@ bool FixedPointExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
                   .convert(ResultFXSema, &ConversionOverflow);
     break;
   }
+  case BO_Shl:
+  case BO_Shr: {
+    FixedPointSemantics LHSSema = LHSFX.getSemantics();
+    llvm::APSInt RHSVal = RHSFX.getValue();
+
+    unsigned ShiftBW =
+        LHSSema.getWidth() - (unsigned)LHSSema.hasUnsignedPadding();
+    unsigned Amt = RHSVal.getLimitedValue(ShiftBW - 1);
+    // Embedded-C 4.1.6.2.2:
+    //   The right operand must be nonnegative and less than the total number
+    //   of (nonpadding) bits of the fixed-point operand ...
+    if (RHSVal.isNegative())
+      Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHSVal;
+    else if (Amt != RHSVal)
+      Info.CCEDiag(E, diag::note_constexpr_large_shift)
+          << RHSVal << E->getType() << ShiftBW;
+
+    if (E->getOpcode() == BO_Shl)
+      Result = LHSFX.shl(Amt, &OpOverflow);
+    else
+      Result = LHSFX.shr(Amt, &OpOverflow);
+    break;
+  }
   default:
     return false;
   }

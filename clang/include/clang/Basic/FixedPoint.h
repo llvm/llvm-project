@@ -132,17 +132,20 @@ public:
   APFixedPoint mul(const APFixedPoint &Other, bool *Overflow = nullptr) const;
   APFixedPoint div(const APFixedPoint &Other, bool *Overflow = nullptr) const;
 
-  /// Perform a unary negation (-X) on this fixed point type, taking into
-  /// account saturation if applicable.
-  APFixedPoint negate(bool *Overflow = nullptr) const;
-
-  APFixedPoint shr(unsigned Amt) const {
+  // Perform shift operations on a fixed point type. Unlike the other binary
+  // operations, the resulting fixed point value will be in the original
+  // semantic.
+  APFixedPoint shl(unsigned Amt, bool *Overflow = nullptr) const;
+  APFixedPoint shr(unsigned Amt, bool *Overflow = nullptr) const {
+    // Right shift cannot overflow.
+    if (Overflow)
+      *Overflow = false;
     return APFixedPoint(Val >> Amt, Sema);
   }
 
-  APFixedPoint shl(unsigned Amt) const {
-    return APFixedPoint(Val << Amt, Sema);
-  }
+  /// Perform a unary negation (-X) on this fixed point type, taking into
+  /// account saturation if applicable.
+  APFixedPoint negate(bool *Overflow = nullptr) const;
 
   /// Return the integral part of this fixed point number, rounded towards
   /// zero. (-2.5k -> -2)
