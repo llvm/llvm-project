@@ -129,8 +129,8 @@ define <2 x i32> @mul_bool_vec_commute(<2 x i32> %x, <2 x i1> %y) {
 
 define <3 x i7> @mul_bools(<3 x i1> %x, <3 x i1> %y) {
 ; CHECK-LABEL: @mul_bools(
-; CHECK-NEXT:    [[NARROW:%.*]] = and <3 x i1> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = zext <3 x i1> [[NARROW]] to <3 x i7>
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and <3 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext <3 x i1> [[MULBOOL]] to <3 x i7>
 ; CHECK-NEXT:    ret <3 x i7> [[R]]
 ;
   %zx = zext <3 x i1> %x to <3 x i7>
@@ -143,7 +143,8 @@ define i32 @mul_bools_use1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @mul_bools_use1(
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZY]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[X:%.*]], i32 [[ZY]], i32 0
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[MULBOOL]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i1 %x to i32
@@ -157,8 +158,8 @@ define i32 @mul_bools_use2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @mul_bools_use2(
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZY]])
-; CHECK-NEXT:    [[NARROW:%.*]] = and i1 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[MULBOOL]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i1 %x to i32
