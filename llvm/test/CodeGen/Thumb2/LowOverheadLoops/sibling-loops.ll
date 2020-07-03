@@ -29,16 +29,16 @@ define arm_aapcs_vfpcc void @test(i16* noalias nocapture readonly %off, i16* noa
 ; CHECK-NEXT:  @ %bb.4: @ %for.body15.us.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB0_5: @ %for.body15.us
 ; CHECK-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ldrh.w r6, [r0, r5, lsl #1]
-; CHECK-NEXT:    ldrh.w r7, [r1, r5, lsl #1]
-; CHECK-NEXT:    add r7, r6
-; CHECK-NEXT:    strh.w r7, [r2, r5, lsl #1]
+; CHECK-NEXT:    ldrh.w r7, [r0, r5, lsl #1]
+; CHECK-NEXT:    ldrh.w r6, [r1, r5, lsl #1]
+; CHECK-NEXT:    add r6, r7
+; CHECK-NEXT:    strh.w r6, [r2, r5, lsl #1]
 ; CHECK-NEXT:    adds r5, #1
-; CHECK-NEXT:    cmp r3, r5
-; CHECK-NEXT:    bne .LBB0_5
+; CHECK-NEXT:    le lr, .LBB0_5
 ; CHECK-NEXT:  @ %bb.6: @ %for.cond.cleanup14.us
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    add.w r8, r8, #1

@@ -245,13 +245,16 @@ bool HardwareLoops::runOnFunction(Function &F) {
 // converted and the parent loop doesn't support containing a hardware loop.
 bool HardwareLoops::TryConvertLoop(Loop *L) {
   // Process nested loops first.
-  for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I) {
-    if (TryConvertLoop(*I)) {
-      reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
-                          ORE, L);
-      return true; // Stop search.
-    }
+  bool AnyChanged = false;
+  for (Loop *SL : *L)
+    AnyChanged |= TryConvertLoop(SL);
+  if (AnyChanged) {
+    reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
+                        ORE, L);
+    return true; // Stop search.
   }
+
+  LLVM_DEBUG(dbgs() << "HWLoops: Loop " << L->getHeader()->getName() << "\n");
 
   HardwareLoopInfo HWLoopInfo(L);
   if (!HWLoopInfo.canAnalyze(*LI)) {
