@@ -29,6 +29,9 @@ using namespace llvm;
 
 static_assert(RISCV::X1 == RISCV::X0 + 1, "Register list not consecutive");
 static_assert(RISCV::X31 == RISCV::X0 + 31, "Register list not consecutive");
+static_assert(RISCV::F1_H == RISCV::F0_H + 1, "Register list not consecutive");
+static_assert(RISCV::F31_H == RISCV::F0_H + 31,
+              "Register list not consecutive");
 static_assert(RISCV::F1_F == RISCV::F0_F + 1, "Register list not consecutive");
 static_assert(RISCV::F31_F == RISCV::F0_F + 31,
               "Register list not consecutive");
