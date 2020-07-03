@@ -578,19 +578,15 @@ public:
     // RAV traverses it as a statement, we produce invalid node kinds in that
     // case.
     // FIXME: should do this in RAV instead?
-    bool Result = [&, this]() {
-      if (S->getInit() && !TraverseStmt(S->getInit()))
-        return false;
-      if (S->getLoopVariable() && !TraverseDecl(S->getLoopVariable()))
-        return false;
-      if (S->getRangeInit() && !TraverseStmt(S->getRangeInit()))
-        return false;
-      if (S->getBody() && !TraverseStmt(S->getBody()))
-        return false;
-      return true;
-    }();
-    WalkUpFromCXXForRangeStmt(S);
-    return Result;
+    if (S->getInit() && !TraverseStmt(S->getInit()))
+      return false;
+    if (S->getLoopVariable() && !TraverseDecl(S->getLoopVariable()))
+      return false;
+    if (S->getRangeInit() && !TraverseStmt(S->getRangeInit()))
+      return false;
+    if (S->getBody() && !TraverseStmt(S->getBody()))
+      return false;
+    return true;
   }
 
   bool TraverseStmt(Stmt *S) {
