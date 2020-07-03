@@ -323,6 +323,7 @@ def SDTDynOp  : SDTypeProfile<1, 2, []>;
 def SDTDynAreaOp  : SDTypeProfile<1, 1, []>;
 def PPCdynalloc   : SDNode<"PPCISD::DYNALLOC", SDTDynOp, [SDNPHasChain]>;
 def PPCdynareaoffset   : SDNode<"PPCISD::DYNAREAOFFSET", SDTDynAreaOp, [SDNPHasChain]>;
+def PPCprobedalloca : SDNode<"PPCISD::PROBED_ALLOCA", SDTDynOp, [SDNPHasChain]>;
 
 // PC Relative Specific Nodes
 def PPCmatpcreladdr : SDNode<"PPCISD::MAT_PCREL_ADDR", SDTIntUnaryOp, []>;
@@ -1399,6 +1400,16 @@ def DYNALLOC : PPCEmitTimePseudo<(outs gprc:$result), (ins gprc:$negsize, memri:
                              (PPCdynalloc i32:$negsize, iaddr:$fpsi))]>;
 def DYNAREAOFFSET : PPCEmitTimePseudo<(outs i32imm:$result), (ins memri:$fpsi), "#DYNAREAOFFSET",
                        [(set i32:$result, (PPCdynareaoffset iaddr:$fpsi))]>;
+// Probed alloca to support stack clash protection.
+let Defs = [R1], Uses = [R1], hasNoSchedulingInfo = 1 in {
+def PROBED_ALLOCA_32 : PPCCustomInserterPseudo<(outs gprc:$result),
+                         (ins gprc:$negsize, memri:$fpsi), "#PROBED_ALLOCA_32",
+                           [(set i32:$result,
+                             (PPCprobedalloca i32:$negsize, iaddr:$fpsi))]>;
+def PREPARE_PROBED_ALLOCA_32 : PPCEmitTimePseudo<(outs gprc:$fp,
+    gprc:$sp),
+    (ins gprc:$negsize, memri:$fpsi), "#PREPARE_PROBED_ALLOCA_32", []>;
+}
 
 // SELECT_CC_* - Used to implement the SELECT_CC DAG operation.  Expanded after
 // instruction selection into a branch sequence.
