@@ -142,6 +142,12 @@ private:
         this->aliases[std::get<0>(entry)].insert(std::get<1>(entry));
     };
 
+    // Add additional aliases created by view changes to the alias list.
+    op->walk([&](ViewLikeOpInterface viewInterface) {
+      aliases[viewInterface.getViewSource()].insert(
+          viewInterface.getOperation()->getResult(0));
+    });
+
     // Query all branch interfaces to link block argument aliases.
     op->walk([&](BranchOpInterface branchInterface) {
       Block *parentBlock = branchInterface.getOperation()->getBlock();

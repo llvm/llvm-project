@@ -914,3 +914,22 @@ func @inner_region_control_flow_div(
 // CHECK-NEXT: test.region_if_yield %[[ALLOC8]]
 //      CHECK: dealloc %[[ALLOC0]]
 // CHECK-NEXT: return %[[ALLOC1]]
+
+// -----
+
+// CHECK-LABEL: func @subview
+func @subview(%arg0 : index, %arg1 : index, %arg2 : memref<?x?xf32>) {
+  %0 = alloc() : memref<64x4xf32, offset: 0, strides: [4, 1]>
+  %1 = subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
+    memref<64x4xf32, offset: 0, strides: [4, 1]>
+  to memref<?x?xf32, offset: ?, strides: [?, ?]>
+  "linalg.copy"(%1, %arg2) :
+    (memref<?x?xf32, offset: ?, strides: [?, ?]>, memref<?x?xf32>) -> ()
+  return
+}
+
+// CHECK-NEXT: %[[ALLOC:.*]] = alloc()
+// CHECK-NEXT: subview
+// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: dealloc %[[ALLOC]]
+// CHECK-NEXT: return

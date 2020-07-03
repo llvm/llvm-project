@@ -502,12 +502,10 @@ define <2 x i16> @test40vec(<2 x i16> %a) {
 
 define <2 x i16> @test40vec_nonuniform(<2 x i16> %a) {
 ; ALL-LABEL: @test40vec_nonuniform(
-; ALL-NEXT:    [[T:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[T21:%.*]] = lshr <2 x i32> [[T]], <i32 9, i32 10>
-; ALL-NEXT:    [[T5:%.*]] = shl <2 x i32> [[T]], <i32 8, i32 9>
-; ALL-NEXT:    [[T32:%.*]] = or <2 x i32> [[T21]], [[T5]]
-; ALL-NEXT:    [[R:%.*]] = trunc <2 x i32> [[T32]] to <2 x i16>
-; ALL-NEXT:    ret <2 x i16> [[R]]
+; ALL-NEXT:    [[T21:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 9, i16 10>
+; ALL-NEXT:    [[T5:%.*]] = shl <2 x i16> [[A]], <i16 8, i16 9>
+; ALL-NEXT:    [[T32:%.*]] = or <2 x i16> [[T21]], [[T5]]
+; ALL-NEXT:    ret <2 x i16> [[T32]]
 ;
   %t = zext <2 x i16> %a to <2 x i32>
   %t21 = lshr <2 x i32> %t, <i32 9, i32 10>
