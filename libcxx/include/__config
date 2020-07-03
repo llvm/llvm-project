@@ -419,8 +419,8 @@ typedef __char16_t char16_t;
 typedef __char32_t char32_t;
 #endif
 
-#if !(__has_feature(cxx_exceptions)) && !defined(_LIBCPP_NO_EXCEPTIONS)
-#define _LIBCPP_NO_EXCEPTIONS
+#if !__has_feature(cxx_exceptions)
+#  define _LIBCPP_NO_EXCEPTIONS
 #endif
 
 #if !(__has_feature(cxx_rtti)) && !defined(_LIBCPP_NO_RTTI)
@@ -528,8 +528,8 @@ typedef __char32_t char32_t;
 
 #define _LIBCPP_NORETURN __attribute__((noreturn))
 
-#if !__EXCEPTIONS && !defined(_LIBCPP_NO_EXCEPTIONS)
-#define _LIBCPP_NO_EXCEPTIONS
+#if !__EXCEPTIONS
+#  define _LIBCPP_NO_EXCEPTIONS
 #endif
 
 // Determine if GCC supports relaxed constexpr

@@ -1,3 +1,7 @@
+## Unsupported on FreeBSD as FreeBSD 12 and earlier allow reading directories
+## by default.
+# UNSUPPORTED: system-freebsd
+
 # RUN: rm -rf %t && mkdir -p %t
 
 ## Passing in a directory:

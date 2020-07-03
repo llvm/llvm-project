@@ -2366,6 +2366,7 @@ as follows:
       starting with ``?`` are not mangled in any way.
     * ``w``: Windows COFF mangling: Similar to ``x``, except that normal C
       symbols do not receive a ``_`` prefix.
+    * ``a``: XCOFF mangling: Private symbols get a ``L..`` prefix.
 ``n<size1>:<size2>:<size3>...``
     This specifies a set of native integer widths for the target CPU in
     bits. For example, it might contain ``n32`` for 32-bit PowerPC,

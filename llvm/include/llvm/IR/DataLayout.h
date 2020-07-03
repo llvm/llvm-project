@@ -133,7 +133,8 @@ private:
     MM_MachO,
     MM_WinCOFF,
     MM_WinCOFFX86,
-    MM_Mips
+    MM_Mips,
+    MM_XCOFF
   };
   ManglingModeT ManglingMode;
 
@@ -309,6 +310,7 @@ public:
     case MM_ELF:
     case MM_Mips:
     case MM_WinCOFF:
+    case MM_XCOFF:
       return '\0';
     case MM_MachO:
     case MM_WinCOFFX86:
@@ -329,6 +331,8 @@ public:
     case MM_MachO:
     case MM_WinCOFFX86:
       return "L";
+    case MM_XCOFF:
+      return "L..";
     }
     llvm_unreachable("invalid mangling mode");
   }
