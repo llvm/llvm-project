@@ -61,9 +61,11 @@ loop:
   br label %loop
 }
 
-; In case there's an epilog, we shouldn't have to do this.
+; Check that the epilog is the final block
 ; CHECK-LABEL: return_nonvoid
-; CHECK-NOT: exp null off, off, off, off done vm
+; CHECK: exp null off, off, off, off done vm
+; CHECK-NEXT: s_endpgm
+; CHECK-NEXT: BB{{[0-9]+}}_{{[0-9]+}}:
 define amdgpu_ps float @return_nonvoid(float %0) #0 {
 main_body:
   %cmp = fcmp olt float %0, 1.000000e+01

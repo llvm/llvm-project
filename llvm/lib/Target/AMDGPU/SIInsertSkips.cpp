@@ -239,7 +239,16 @@ void SIInsertSkips::skipIfDead(MachineBasicBlock &MBB,
       for (auto LiveIn : MBB.liveins())
         SplitBB->addLiveIn(LiveIn);
       MBB.addSuccessor(SplitBB);
-      MDT->addNewBlock(SplitBB, &MBB);
+
+      // Update dominator tree
+      using DomTreeT = DomTreeBase<MachineBasicBlock>;
+      SmallVector<DomTreeT::UpdateType, 16> DTUpdates;
+      for (MachineBasicBlock *Succ : SplitBB->successors()) {
+        DTUpdates.push_back({DomTreeT::Insert, SplitBB, Succ});
+        DTUpdates.push_back({DomTreeT::Delete, &MBB, Succ});
+      }
+      DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
+      MDT->getBase().applyUpdates(DTUpdates);
     }
 
     MBB.addSuccessor(EarlyExitBlock);
@@ -446,6 +455,15 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
         }
         break;
       }
+
+      case AMDGPU::SI_KILL_CLEANUP:
+        if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS &&
+            dominatesAllReachable(MBB)) {
+          KillInstrs.push_back(&MI);
+        } else {
+          MI.eraseFromParent();
+        }
+        break;
 
       default:
         break;
