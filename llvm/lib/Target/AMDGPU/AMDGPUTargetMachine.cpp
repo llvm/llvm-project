@@ -1052,8 +1052,8 @@ void GCNPassConfig::addPreEmitPass() {
     addPass(&SIInsertHardClausesID);
 
   addPass(&SIRemoveShortExecBranchesID);
-  addPass(&SIPreEmitPeepholeID);
   addPass(&SIInsertSkipsPassID);
+  addPass(&SIPreEmitPeepholeID);
   addPass(&BranchRelaxationPassID);
 }
 
