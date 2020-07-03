@@ -286,12 +286,11 @@ define <2 x i64> @test8_vec(<2 x i32> %A, <2 x i32> %B) {
 
 define <2 x i64> @test8_vec_nonuniform(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test8_vec_nonuniform(
-; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i128>
-; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i128>
-; CHECK-NEXT:    [[E:%.*]] = shl <2 x i128> [[D]], <i128 32, i128 48>
-; CHECK-NEXT:    [[F:%.*]] = or <2 x i128> [[E]], [[C]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[G]]
+; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[E:%.*]] = shl <2 x i64> [[D]], <i64 32, i64 48>
+; CHECK-NEXT:    [[F:%.*]] = or <2 x i64> [[E]], [[C]]
+; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
   %D = zext <2 x i32> %B to <2 x i128>
@@ -343,12 +342,11 @@ define i8 @test10(i32 %X) {
 
 define i64 @test11(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[C:%.*]] = zext i32 [[A:%.*]] to i128
+; CHECK-NEXT:    [[C:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], 31
-; CHECK-NEXT:    [[E:%.*]] = zext i32 [[TMP1]] to i128
-; CHECK-NEXT:    [[F:%.*]] = shl i128 [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc i128 [[F]] to i64
-; CHECK-NEXT:    ret i64 [[G]]
+; CHECK-NEXT:    [[E:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[F:%.*]] = shl i64 [[C]], [[E]]
+; CHECK-NEXT:    ret i64 [[F]]
 ;
   %C = zext i32 %A to i128
   %D = zext i32 %B to i128
@@ -360,12 +358,11 @@ define i64 @test11(i32 %A, i32 %B) {
 
 define <2 x i64> @test11_vec(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test11_vec(
-; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i128>
-; CHECK-NEXT:    [[F:%.*]] = shl <2 x i128> [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[G]]
+; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[F:%.*]] = shl <2 x i64> [[C]], [[E]]
+; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
   %D = zext <2 x i32> %B to <2 x i128>
@@ -377,12 +374,11 @@ define <2 x i64> @test11_vec(<2 x i32> %A, <2 x i32> %B) {
 
 define <2 x i64> @test11_vec_nonuniform(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test11_vec_nonuniform(
-; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], <i32 31, i32 15>
-; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i128>
-; CHECK-NEXT:    [[F:%.*]] = shl <2 x i128> [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[G]]
+; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[F:%.*]] = shl <2 x i64> [[C]], [[E]]
+; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
   %D = zext <2 x i32> %B to <2 x i128>
@@ -411,12 +407,11 @@ define <2 x i64> @test11_vec_undef(<2 x i32> %A, <2 x i32> %B) {
 
 define i64 @test12(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[C:%.*]] = zext i32 [[A:%.*]] to i128
+; CHECK-NEXT:    [[C:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], 31
-; CHECK-NEXT:    [[E:%.*]] = zext i32 [[TMP1]] to i128
-; CHECK-NEXT:    [[F:%.*]] = lshr i128 [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc i128 [[F]] to i64
-; CHECK-NEXT:    ret i64 [[G]]
+; CHECK-NEXT:    [[E:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[F:%.*]] = lshr i64 [[C]], [[E]]
+; CHECK-NEXT:    ret i64 [[F]]
 ;
   %C = zext i32 %A to i128
   %D = zext i32 %B to i128
@@ -428,12 +423,11 @@ define i64 @test12(i32 %A, i32 %B) {
 
 define <2 x i64> @test12_vec(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test12_vec(
-; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i128>
-; CHECK-NEXT:    [[F:%.*]] = lshr <2 x i128> [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[G]]
+; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[F:%.*]] = lshr <2 x i64> [[C]], [[E]]
+; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
   %D = zext <2 x i32> %B to <2 x i128>
@@ -445,12 +439,11 @@ define <2 x i64> @test12_vec(<2 x i32> %A, <2 x i32> %B) {
 
 define <2 x i64> @test12_vec_nonuniform(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test12_vec_nonuniform(
-; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], <i32 31, i32 15>
-; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i128>
-; CHECK-NEXT:    [[F:%.*]] = lshr <2 x i128> [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[G]]
+; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[F:%.*]] = lshr <2 x i64> [[C]], [[E]]
+; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
   %D = zext <2 x i32> %B to <2 x i128>
@@ -479,12 +472,11 @@ define <2 x i64> @test12_vec_undef(<2 x i32> %A, <2 x i32> %B) {
 
 define i64 @test13(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[C:%.*]] = sext i32 [[A:%.*]] to i128
+; CHECK-NEXT:    [[C:%.*]] = sext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], 31
-; CHECK-NEXT:    [[E:%.*]] = zext i32 [[TMP1]] to i128
-; CHECK-NEXT:    [[F:%.*]] = ashr i128 [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc i128 [[F]] to i64
-; CHECK-NEXT:    ret i64 [[G]]
+; CHECK-NEXT:    [[E:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[F:%.*]] = ashr i64 [[C]], [[E]]
+; CHECK-NEXT:    ret i64 [[F]]
 ;
   %C = sext i32 %A to i128
   %D = zext i32 %B to i128
@@ -496,12 +488,11 @@ define i64 @test13(i32 %A, i32 %B) {
 
 define <2 x i64> @test13_vec(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test13_vec(
-; CHECK-NEXT:    [[C:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[C:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i128>
-; CHECK-NEXT:    [[F:%.*]] = ashr <2 x i128> [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[G]]
+; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[F:%.*]] = ashr <2 x i64> [[C]], [[E]]
+; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = sext <2 x i32> %A to <2 x i128>
   %D = zext <2 x i32> %B to <2 x i128>
@@ -513,12 +504,11 @@ define <2 x i64> @test13_vec(<2 x i32> %A, <2 x i32> %B) {
 
 define <2 x i64> @test13_vec_nonuniform(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test13_vec_nonuniform(
-; CHECK-NEXT:    [[C:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[C:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], <i32 31, i32 15>
-; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i128>
-; CHECK-NEXT:    [[F:%.*]] = ashr <2 x i128> [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[G]]
+; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[F:%.*]] = ashr <2 x i64> [[C]], [[E]]
+; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = sext <2 x i32> %A to <2 x i128>
   %D = zext <2 x i32> %B to <2 x i128>
