@@ -103,9 +103,9 @@ namespace {
         // FIXME: Support OutputFormat in type dumping.
         // FIXME: Support combining -ast-dump-decl-types with -ast-dump-lookups.
         if (auto *VD = dyn_cast<ValueDecl>(InnerD))
-          VD->getType().dump(Out);
+          VD->getType().dump(Out, VD->getASTContext());
         if (auto *TD = dyn_cast<TypeDecl>(InnerD))
-          TD->getTypeForDecl()->dump(Out);
+          TD->getTypeForDecl()->dump(Out, TD->getASTContext());
       }
     }
 

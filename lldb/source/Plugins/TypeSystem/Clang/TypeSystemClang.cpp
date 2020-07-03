@@ -8244,7 +8244,8 @@ void TypeSystemClang::DumpFromSymbolFile(Stream &s,
         continue;
       }
     }
-    GetCanonicalQualType(full_type.GetOpaqueQualType()).dump(s.AsRawOstream());
+    GetCanonicalQualType(full_type.GetOpaqueQualType())
+        .dump(s.AsRawOstream(), getASTContext());
   }
 }
 
@@ -8963,7 +8964,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
         }
       } else {
         if (level == eDescriptionLevelVerbose)
-          qual_type->dump(llvm_ostrm);
+          qual_type->dump(llvm_ostrm, getASTContext());
         else {
           std::string clang_type_name(qual_type.getAsString());
           if (!clang_type_name.empty())
