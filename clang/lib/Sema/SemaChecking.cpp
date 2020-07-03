@@ -237,8 +237,8 @@ static bool SemaBuiltinAlignment(Sema &S, CallExpr *TheCall, unsigned ID) {
   }
   Expr::EvalResult AlignResult;
   unsigned MaxAlignmentBits = S.Context.getIntWidth(SrcTy) - 1;
-  // We can't check validity of alignment if it is type dependent.
-  if (!AlignOp->isInstantiationDependent() &&
+  // We can't check validity of alignment if it is value dependent.
+  if (!AlignOp->isValueDependent() &&
       AlignOp->EvaluateAsInt(AlignResult, S.Context,
                              Expr::SE_AllowSideEffects)) {
     llvm::APSInt AlignValue = AlignResult.Val.getInt();
