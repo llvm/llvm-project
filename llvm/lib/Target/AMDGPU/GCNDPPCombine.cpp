@@ -513,15 +513,32 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       break;
     }
 
+    auto *Src0 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src0);
+    auto *Src1 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1);
+    if (Use != Src0 && !(Use == Src1 && OrigMI.isCommutable())) { // [1]
+      LLVM_DEBUG(dbgs() << "  failed: no suitable operands\n");
+      break;
+    }
+
+    assert(Src0 && "Src1 without Src0?");
+    if (Src1 && Src1->isIdenticalTo(*Src0)) {
+      assert(Src1->isReg());
+      LLVM_DEBUG(
+          dbgs()
+          << "  " << OrigMI
+          << "  failed: DPP register is used more than once per instruction\n");
+      break;
+    }
+
     LLVM_DEBUG(dbgs() << "  combining: " << OrigMI);
-    if (Use == TII->getNamedOperand(OrigMI, AMDGPU::OpName::src0)) {
+    if (Use == Src0) {
       if (auto *DPPInst = createDPPInst(OrigMI, MovMI, CombOldVGPR,
                                         OldOpndValue, CombBCZ)) {
         DPPMIs.push_back(DPPInst);
         Rollback = false;
       }
-    } else if (OrigMI.isCommutable() &&
-               Use == TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1)) {
+    } else {
+      assert(Use == Src1 && OrigMI.isCommutable()); // by check [1]
       auto *BB = OrigMI.getParent();
       auto *NewMI = BB->getParent()->CloneMachineInstr(&OrigMI);
       BB->insert(OrigMI, NewMI);
@@ -535,8 +552,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       } else
         LLVM_DEBUG(dbgs() << "  failed: cannot be commuted\n");
       NewMI->eraseFromParent();
-    } else
-      LLVM_DEBUG(dbgs() << "  failed: no suitable operands\n");
+    }
     if (Rollback)
       break;
     OrigMIs.push_back(&OrigMI);
