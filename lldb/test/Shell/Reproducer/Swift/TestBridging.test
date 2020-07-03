@@ -16,3 +16,19 @@
 # RUN: rm -rf %t.build
 # RUN: rm -rf %t.run && mkdir %t.run && cd %t.run
 
+# Capture the reproducer.
+# RUN: %lldb -x -b \
+# RUN:       -S %p/Inputs/swift.lldbinit \
+# RUN:       -s %S/Inputs/Bridging.in \
+# RUN:       --capture \
+# RUN:       --capture-path %t.repro \
+# RUN:       %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+
+# Replay the reproducer in place.
+# RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK
+
+# CHECK: Breakpoint 1
+# CHECK: Process {{.*}} stopped
+# CHECK: thread {{.*}} stop reason = breakpoint
+# CHECK: frame {{.*}} Bridging.swift
+# CHECK: $R0 = 95126
