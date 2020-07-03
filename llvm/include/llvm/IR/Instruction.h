@@ -54,6 +54,17 @@ protected:
   // The 15 first bits of `Value::SubclassData` are available for subclasses of
   // `Instruction` to use.
   using OpaqueField = Bitfield::Element<uint16_t, 0, 15>; // Next bit:15
+
+  // Template alias so that all Instruction storing alignment use the same
+  // definiton.
+  // Valid alignments are powers of two from 2^0 to 2^MaxAlignmentExponent =
+  // 2^29. We store them as Log2(Alignment), so we need 5 bits to encode the 30
+  // possible values.
+  template <unsigned Offset>
+  using AlignmentBitfieldElement =
+      typename Bitfield::Element<unsigned, Offset, 5,
+                                 Value::MaxAlignmentExponent>;
+
 private:
   // The last bit is used to store whether the instruction has metadata attached
   // or not.

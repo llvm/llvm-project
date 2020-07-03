@@ -60,7 +60,7 @@ class LLVMContext;
 class AllocaInst : public UnaryInstruction {
   Type *AllocatedType;
 
-  using AlignmentField = Bitfield::Element<unsigned, 0, 5>;    // Next bit:5
+  using AlignmentField = AlignmentBitfieldElement<0>;          // Next bit:5
   using UsedWithInAllocaField = Bitfield::Element<bool, 5, 1>; // Next bit:6
   using SwiftErrorField = Bitfield::Element<bool, 6, 1>;       // Next bit:7
 
@@ -113,11 +113,15 @@ public:
   /// Return the alignment of the memory that is being allocated by the
   /// instruction.
   Align getAlign() const {
-    return *decodeMaybeAlign(getSubclassData<AlignmentField>());
+    return Align(1ULL << getSubclassData<AlignmentField>());
   }
+
+  void setAlignment(Align Align) {
+    setSubclassData<AlignmentField>(Log2(Align));
+  }
+
   // FIXME: Remove this one transition to Align is over.
   unsigned getAlignment() const { return getAlign().value(); }
-  void setAlignment(Align Align);
 
   /// Return true if this alloca is in the entry block of the function and is a
   /// constant size. If so, the code generator will fold it into the
@@ -165,9 +169,9 @@ private:
 /// Value to store whether or not the load is volatile.
 class LoadInst : public UnaryInstruction {
   using VolatileField = Bitfield::Element<bool, 0, 1>;      // Next bit:1
-  using AlignmentField = Bitfield::Element<unsigned, 1, 6>; // Next bit:7
-  using OrderingField = Bitfield::Element<AtomicOrdering, 7, 3,
-                                          AtomicOrdering::LAST>; // Next bit:10
+  using AlignmentField = AlignmentBitfieldElement<1>;       // Next bit:6
+  using OrderingField = Bitfield::Element<AtomicOrdering, 6, 3,
+                                          AtomicOrdering::LAST>; // Next bit:9
 
   void AssertOK();
 
@@ -210,10 +214,12 @@ public:
 
   /// Return the alignment of the access that is being performed.
   Align getAlign() const {
-    return *decodeMaybeAlign(getSubclassData<AlignmentField>());
+    return Align(1ULL << (getSubclassData<AlignmentField>()));
   }
 
-  void setAlignment(Align Alignment);
+  void setAlignment(Align Align) {
+    setSubclassData<AlignmentField>(Log2(Align));
+  }
 
   /// Returns the ordering constraint of this load instruction.
   AtomicOrdering getOrdering() const {
@@ -290,9 +296,9 @@ private:
 /// An instruction for storing to memory.
 class StoreInst : public Instruction {
   using VolatileField = Bitfield::Element<bool, 0, 1>;      // Next bit:1
-  using AlignmentField = Bitfield::Element<unsigned, 1, 6>; // Next bit:7
-  using OrderingField = Bitfield::Element<AtomicOrdering, 7, 3,
-                                          AtomicOrdering::LAST>; // Next bit:10
+  using AlignmentField = AlignmentBitfieldElement<1>;       // Next bit:6
+  using OrderingField = Bitfield::Element<AtomicOrdering, 6, 3,
+                                          AtomicOrdering::LAST>; // Next bit:9
 
   void AssertOK();
 
@@ -337,10 +343,12 @@ public:
   unsigned getAlignment() const { return getAlign().value(); }
 
   Align getAlign() const {
-    return *decodeMaybeAlign(getSubclassData<AlignmentField>());
+    return Align(1ULL << (getSubclassData<AlignmentField>()));
   }
 
-  void setAlignment(Align Alignment);
+  void setAlignment(Align Align) {
+    setSubclassData<AlignmentField>(Log2(Align));
+  }
 
   /// Returns the ordering constraint of this store instruction.
   AtomicOrdering getOrdering() const {
