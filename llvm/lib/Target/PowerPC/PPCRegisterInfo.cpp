@@ -610,6 +610,38 @@ void PPCRegisterInfo::prepareDynamicAlloca(MachineBasicBlock::iterator II,
   }
 }
 
+void PPCRegisterInfo::lowerPrepareProbedAlloca(
+    MachineBasicBlock::iterator II) const {
+  MachineInstr &MI = *II;
+  // Get the instruction's basic block.
+  MachineBasicBlock &MBB = *MI.getParent();
+  // Get the basic block's function.
+  MachineFunction &MF = *MBB.getParent();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  // Get the instruction info.
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  // Determine whether 64-bit pointers are used.
+  bool LP64 = TM.isPPC64();
+  DebugLoc dl = MI.getDebugLoc();
+  Register FramePointer = MI.getOperand(0).getReg();
+  Register FinalStackPtr = MI.getOperand(1).getReg();
+  bool KillNegSizeReg = MI.getOperand(2).isKill();
+  Register NegSizeReg = MI.getOperand(2).getReg();
+  prepareDynamicAlloca(II, NegSizeReg, KillNegSizeReg, FramePointer);
+  if (LP64) {
+    BuildMI(MBB, II, dl, TII.get(PPC::ADD8), FinalStackPtr)
+        .addReg(PPC::X1)
+        .addReg(NegSizeReg, getKillRegState(KillNegSizeReg));
+
+  } else {
+    BuildMI(MBB, II, dl, TII.get(PPC::ADD4), FinalStackPtr)
+        .addReg(PPC::R1)
+        .addReg(NegSizeReg, getKillRegState(KillNegSizeReg));
+  }
+
+  MBB.erase(II);
+}
+
 void PPCRegisterInfo::lowerDynamicAreaOffset(
     MachineBasicBlock::iterator II) const {
   // Get the instruction.
@@ -1047,6 +1079,13 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (FPSI && FrameIndex == FPSI &&
       (OpC == PPC::DYNALLOC || OpC == PPC::DYNALLOC8)) {
     lowerDynamicAlloc(II);
+    return;
+  }
+
+  if (FPSI && FrameIndex == FPSI &&
+      (OpC == PPC::PREPARE_PROBED_ALLOCA_64 ||
+       OpC == PPC::PREPARE_PROBED_ALLOCA_32)) {
+    lowerPrepareProbedAlloca(II);
     return;
   }
 
