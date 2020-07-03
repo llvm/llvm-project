@@ -64,7 +64,7 @@ void UnitMap::CloseAll(IoErrorHandler &handler) {
 }
 
 ExternalFileUnit &UnitMap::Create(int n, const Terminator &terminator) {
-  Chain &chain{New<Chain>{}(terminator, n)};
+  Chain &chain{*New<Chain>{terminator}(n).release()};
   chain.next.reset(&chain);
   bucket_[Hash(n)].swap(chain.next); // pushes new node as list head
   return chain.unit;

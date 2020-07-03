@@ -352,7 +352,7 @@ bool OpenFile::RawSeekToEnd() {
 
 int OpenFile::PendingResult(const Terminator &terminator, int iostat) {
   int id{nextId_++};
-  pending_.reset(&New<Pending>{}(terminator, id, iostat, std::move(pending_)));
+  pending_ = New<Pending>{terminator}(id, iostat, std::move(pending_));
   return id;
 }
 } // namespace Fortran::runtime::io

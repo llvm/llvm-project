@@ -95,7 +95,7 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
     return *unitMap;
   }
   Terminator terminator{__FILE__, __LINE__};
-  unitMap = &New<UnitMap>{}(terminator);
+  unitMap = New<UnitMap>{terminator}().release();
   ExternalFileUnit &out{ExternalFileUnit::LookUpOrCreate(6, terminator)};
   out.Predefine(1);
   out.set_mayRead(false);
