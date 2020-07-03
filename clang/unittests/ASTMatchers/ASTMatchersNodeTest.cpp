@@ -1207,7 +1207,12 @@ TEST_P(ASTMatchersTest, CastExpression_MatchesImplicitCasts) {
 }
 
 TEST_P(ASTMatchersTest, CastExpr_DoesNotMatchNonCasts) {
-  EXPECT_TRUE(notMatches("char c = '0';", castExpr()));
+  if (GetParam().Language == Lang_C89 || GetParam().Language == Lang_C99) {
+    // This does have a cast in C
+    EXPECT_TRUE(matches("char c = '0';", implicitCastExpr()));
+  } else {
+    EXPECT_TRUE(notMatches("char c = '0';", castExpr()));
+  }
   EXPECT_TRUE(notMatches("int i = (0);", castExpr()));
   EXPECT_TRUE(notMatches("int i = 0;", castExpr()));
 }
